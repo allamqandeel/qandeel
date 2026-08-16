@@ -11,7 +11,7 @@ This branch intentionally implements only the backend skeleton and the first hea
 From the repository root:
 
 ```bash
-npm install
+npm ci
 npm run start:api
 ```
 
