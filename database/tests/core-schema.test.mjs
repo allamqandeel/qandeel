@@ -45,3 +45,14 @@ test('indexes user sessions and ordered session turns', () => {
   assert.match(sql, /ON conversation_sessions \(user_id, last_activity_at DESC\)/i);
   assert.match(sql, /ON conversation_turns \(session_id, created_at, id\)/i);
 });
+
+test('provides an explicit real PostgreSQL integration verifier', async () => {
+  const verifierUrl = new URL('../verify-migration-0001.mjs', import.meta.url);
+  const verifier = await readFile(verifierUrl, 'utf8');
+
+  assert.match(verifier, /process\.env\.DATABASE_URL/);
+  assert.match(verifier, /pg_get_constraintdef/);
+  assert.match(verifier, /conversation_turns_session_user_fk/);
+  assert.match(verifier, /ROLLBACK/);
+  assert.doesNotMatch(verifier, /supabase\.co|postgres(?:ql)?:\/\//i);
+});
