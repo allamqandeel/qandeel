@@ -60,6 +60,19 @@ The explicit Auth smoke command signs a dedicated test user in through Supabase 
 and exercises the application tables through Supabase's authenticated PostgREST path.
 It is a local integration gate and is not part of ordinary secret-free CI.
 
+The `qandeel-dev` project must have the Supabase Data API enabled and the intended
+`public` schema exposed. Diagnose configuration and service availability without
+displaying local values or response bodies before running the destructive smoke
+fixture lifecycle:
+
+```sh
+npm run verify:integrations:diagnose
+```
+
+The diagnostic reports configuration missing, PostgreSQL unavailable, Supabase Auth
+unavailable, and Supabase Data API unavailable as distinct safe statuses. It does not
+replace either real verifier.
+
 Create the dedicated email/password user manually in the Supabase Dashboard. Add the
 following values only to the ignored root `.env` file:
 

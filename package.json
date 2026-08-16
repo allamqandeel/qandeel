@@ -7,10 +7,13 @@
     "packages/*"
   ],
   "scripts": {
+    "preflight": "node scripts/preflight.mjs",
     "build:api": "npm run build --workspace @qandeel/api",
     "start:api": "npm run start:dev --workspace @qandeel/api",
     "test:api": "npm run test --workspace @qandeel/api",
     "test:database": "node --test database/tests/*.test.mjs",
+    "test:toolchain": "node --test tests/toolchain.test.mjs",
+    "verify:integrations:diagnose": "node scripts/diagnose-integrations.mjs",
     "verify:database:integration": "node --env-file=.env database/verify-migration-0002.mjs",
     "verify:auth:smoke": "node --env-file=.env database/verify-supabase-auth.mjs"
   },
@@ -18,6 +21,7 @@
     "pg": "^8.16.3"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "npm": ">=10"
   }
 }
