@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'apps/api/**'
+      - 'database/**'
       - 'package.json'
       - 'tsconfig.base.json'
       - '.github/workflows/api-ci.yml'
@@ -12,6 +13,7 @@ on:
       - main
     paths:
       - 'apps/api/**'
+      - 'database/**'
       - 'package.json'
       - 'tsconfig.base.json'
       - '.github/workflows/api-ci.yml'
@@ -37,3 +39,6 @@ jobs:
 
       - name: Test API
         run: npm run test:api
+
+      - name: Verify database migrations
+        run: npm run test:database
