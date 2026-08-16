@@ -11,7 +11,7 @@
     "start:api": "npm run start:dev --workspace @qandeel/api",
     "test:api": "npm run test --workspace @qandeel/api",
     "test:database": "node --test database/tests/*.test.mjs",
-    "verify:database:integration": "node --env-file=.env database/verify-migration-0001.mjs"
+    "verify:database:integration": "node --env-file=.env database/verify-migration-0002.mjs"
   },
   "devDependencies": {
     "pg": "^8.16.3"
