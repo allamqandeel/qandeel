@@ -1,0 +1,39 @@
+name: API CI
+
+on:
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'package.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/api-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'package.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/api-ci.yml'
+
+jobs:
+  verify-api:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build API
+        run: npm run build:api
+
+      - name: Test API
+        run: npm run test:api

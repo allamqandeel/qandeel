@@ -1,0 +1,17 @@
+{
+  "name": "qandeel",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build:api": "npm run build --workspace @qandeel/api",
+    "start:api": "npm run start:dev --workspace @qandeel/api",
+    "test:api": "npm run test --workspace @qandeel/api"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
