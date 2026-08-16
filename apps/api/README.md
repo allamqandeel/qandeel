@@ -1,5 +1,37 @@
 # Qandeel API
 
-Backend application placeholder.
+NestJS backend for the Qandeel runtime.
 
-The first implementation target will be the controlled authenticated text vertical slice. Product behavior must follow the frozen Qandeel runtime contracts.
+## Current scope
+
+This branch intentionally implements only the backend skeleton and the first health endpoint. It does **not** implement authentication, database access, model providers, memory, voice, or product behavior yet.
+
+## Local commands
+
+From the repository root:
+
+```bash
+npm install
+npm run start:api
+```
+
+Then open:
+
+```text
+GET http://localhost:3000/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "service": "qandeel-api"
+}
+```
+
+Tests:
+
+```bash
+npm run test:api
+```
