@@ -19,12 +19,19 @@ Turn isolation is enforced both by a direct user foreign key and by the composit
 unique within that same session and user scope. Indexes support user session lookup
 and deterministic chronological turn reads.
 
-This slice does not add Memory Runtime tables, RLS policies, provider routing data,
-voice-provider data, or repository/service code.
+Migration 0002 maps new Supabase Auth identities to Qandeel users and establishes
+the first RLS baseline. The Auth trigger creates `public.users.id = auth.users.id`
+and preserves `auth_subject` as the textual form of that UUID. It copies no email
+or profile metadata.
+
+Authenticated users can read their own user row and can select, insert, and update
+only their own sessions and turns. Ownership changes are rejected. No application
+table privileges are granted to `anon`, and end-user deletion is deliberately not
+part of this slice.
 
 ## Real PostgreSQL verification
 
-Migration 0001 can be intentionally applied and verified against a supplied
+Migrations 0001 and 0002 can be intentionally applied and verified against a supplied
 PostgreSQL database. Put the connection string in the ignored local `.env` file as
 `DATABASE_URL`; never paste it into a command, log, screenshot, or committed file.
 For Supabase, use the direct connection when supported or the Session Pooler, with
@@ -37,13 +44,16 @@ From the repository root, run:
 npm run verify:database:integration
 ```
 
-The verifier refuses a partially initialized core schema. When none of the three V1
-tables exists, it applies `0001_core_conversation_schema.sql` in its own transaction.
-When all three already exist, it performs verification without reapplying the
-migration. It checks tables, foreign keys, CHECK and unique constraints, and expected
-indexes through PostgreSQL catalogs. It also runs a cross-user turn integrity check
-inside a transaction and rolls all temporary rows back.
+Apply migration 0001 first on a clean database. The current verifier applies migration
+0002 only when none of its expected objects exists and refuses partial state. It then
+checks the safe Auth trigger/function definition, proves Auth provisioning with a
+rolled-back `auth.users` insert, checks RLS and policy catalogs, and exercises owner,
+cross-user, ownership-transfer, and anon behavior. All temporary rows are rolled back.
 
 This command is an explicit integration gate and is not run by ordinary CI because
 CI does not receive a development database secret. The secret-free structural test
 remains available through `npm run test:database`.
+
+A client-side Auth sign-in smoke test remains a later explicit gate. It is not added
+here because proving the database Auth trigger and RLS boundary does not require a
+new Auth client dependency or committed test-account configuration.
