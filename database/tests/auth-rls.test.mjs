@@ -54,3 +54,24 @@ test('provides a secret-free real PostgreSQL verifier for migration 0002', async
   assert.match(verifier, /ROLLBACK/i);
   assert.doesNotMatch(verifier, /supabase\.co|postgres(?:ql)?:\/\//i);
 });
+
+test('provides a privacy-safe authenticated Supabase smoke runner', async () => {
+  const smokeUrl = new URL('../verify-supabase-auth.mjs', import.meta.url);
+  const smoke = await readFile(smokeUrl, 'utf8');
+
+  for (const variable of [
+    'SUPABASE_URL',
+    'SUPABASE_PUBLISHABLE_KEY',
+    'SUPABASE_TEST_EMAIL',
+    'SUPABASE_TEST_PASSWORD',
+  ]) {
+    assert.match(smoke, new RegExp(`process\\.env\\.${variable}`));
+  }
+  assert.match(smoke, /grant_type=password/);
+  assert.match(smoke, /Authorization: `Bearer \$\{accessToken\}`/);
+  assert.match(smoke, /\/auth\/v1\/logout/);
+  assert.match(smoke, /cross-user fixture is hidden and immutable/i);
+  assert.doesNotMatch(smoke, /service[_-]?role/i);
+  assert.doesNotMatch(smoke, /console\.(?:log|error)\([^)]*(?:email|password|token|userId|otherUserId)/i);
+  assert.doesNotMatch(smoke, /supabase\.co|postgres(?:ql)?:\/\//i);
+});

@@ -54,6 +54,35 @@ This command is an explicit integration gate and is not run by ordinary CI becau
 CI does not receive a development database secret. The secret-free structural test
 remains available through `npm run test:database`.
 
-A client-side Auth sign-in smoke test remains a later explicit gate. It is not added
-here because proving the database Auth trigger and RLS boundary does not require a
-new Auth client dependency or committed test-account configuration.
+## Real Supabase Auth smoke test
+
+The explicit Auth smoke command signs a dedicated test user in through Supabase Auth
+and exercises the application tables through Supabase's authenticated PostgREST path.
+It is a local integration gate and is not part of ordinary secret-free CI.
+
+Create the dedicated email/password user manually in the Supabase Dashboard. Add the
+following values only to the ignored root `.env` file:
+
+```dotenv
+SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_TEST_EMAIL=
+SUPABASE_TEST_PASSWORD=
+```
+
+Use the project's public publishable key (or its supported legacy anon key), never a
+service-role key. `DATABASE_URL` is also required solely to create and remove a
+temporary cross-user fixture; every isolation assertion is made through the signed-in
+client-facing request path.
+
+Run from the repository root:
+
+```sh
+npm run verify:auth:smoke
+```
+
+The runner signs in, verifies the stable Auth UUID and canonical `public.users`
+mapping, exercises permitted own-session and own-turn operations, proves a committed
+cross-user fixture is hidden and cannot be mutated, signs out, and removes all smoke
+rows. Its output intentionally contains no email, UUID, key, password, JWT, refresh
+token, response body, or connection detail.
