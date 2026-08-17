@@ -23,6 +23,7 @@ interface OpenAIResponsesClient {
         instructions: string;
         input: Array<{ role: 'user' | 'assistant'; content: string }>;
         max_output_tokens: number;
+        reasoning: { effort: 'none' | 'low' };
         store: false;
       },
       options: { timeout: number; maxRetries: 0; signal: AbortSignal },
@@ -42,6 +43,7 @@ export class OpenAIModelRouter implements ModelRouter {
   ) {}
 
   async generate(request: ModelRouterRequest): Promise<ModelRouterResult> {
+    const modelConfiguration = this.config.resolveModel(request.path);
     const timeout = Math.min(request.latencyBudgetMs, this.config.timeoutMs);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
@@ -49,13 +51,14 @@ export class OpenAIModelRouter implements ModelRouter {
     try {
       const response = await this.client.responses.create(
         {
-          model: this.config.model,
+          model: modelConfiguration.model,
           instructions: request.behavioralGuidance,
           input: request.context.map((message) => ({
             role: message.role === 'USER' ? 'user' : 'assistant',
             content: message.content,
           })),
           max_output_tokens: this.config.maxOutputTokens,
+          reasoning: { effort: modelConfiguration.reasoningEffort },
           store: false,
         },
         { timeout, maxRetries: 0, signal: controller.signal },

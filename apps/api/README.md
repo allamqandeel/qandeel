@@ -30,8 +30,18 @@ calls a provider-independent Model Router contract. Runtime generation supports
 Anthropic and OpenAI through separate official-SDK adapters. Select exactly one with
 the server-owned `MODEL_PROVIDER=anthropic|openai` setting and provide the matching
 `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` in the ignored local environment before
-starting the API. Missing, invalid, or incomplete provider configuration fails closed;
-there is no fallback, client override, or FAST/DEEP provider routing in this gate.
+starting the API. Missing, invalid, or incomplete provider configuration fails closed.
+The selected server-owned profile maps the Orchestrator's already-selected path as follows:
+
+| Provider profile | FAST | DEEP | Reasoning |
+| --- | --- | --- | --- |
+| `anthropic` | `claude-haiku-4-5-20251001` | `claude-sonnet-4-6` | Thinking disabled for both paths |
+| `openai` | `gpt-5.6-luna` | `gpt-5.6-terra` | FAST `none`; DEEP `low` |
+
+Provider activation remains static for the process. There is no fallback, per-turn
+provider switching, client override, adaptive reasoning, or extended/adaptive Claude
+thinking. Model and reasoning configuration remain internal to the Model Router and
+are not returned in client or domain contracts.
 Tests use an in-process fake and never make paid provider calls. Database-atomic
 finalization suppresses late output after cancellation or
 other terminalization and enforces one assistant result per source turn.

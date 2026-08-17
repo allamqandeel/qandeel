@@ -41,10 +41,11 @@ export class ClaudeModelRouter implements ModelRouter {
   ) {}
 
   async generate(request: ModelRouterRequest): Promise<ModelRouterResult> {
+    const modelConfiguration = this.config.resolveModel(request.path);
     try {
       const response = await this.client.messages.create(
         {
-          model: this.config.model,
+          model: modelConfiguration.model,
           max_tokens: this.config.maxOutputTokens,
           system: request.behavioralGuidance,
           messages: request.context.map((message) => ({
