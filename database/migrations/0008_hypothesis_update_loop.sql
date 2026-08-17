@@ -46,9 +46,34 @@ BEGIN
     WHERE id=p_hypothesis_id AND user_id=canonical_user FOR UPDATE;
   IF NOT FOUND THEN RETURN; END IF;
   IF current_hypothesis.version <> p_expected_version THEN RAISE EXCEPTION 'Stale hypothesis version.' USING ERRCODE='40001'; END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.memories WHERE id=memory_id AND user_id=canonical_user
-      AND status='ACTIVE' AND source IN ('USER_STATED','USER_CONFIRMED') AND type<>'DERIVED_INSIGHT'
-      AND (expires_at IS NULL OR expires_at>CURRENT_TIMESTAMP))
+  -- This CTE deliberately mirrors EvidenceService.listEligibleForUser(): MemoryRepository's
+  -- bounded candidate query, then eligibility, deterministic exact deduplication, and output cap.
+  IF NOT EXISTS (
+    WITH candidates AS MATERIALIZED (
+      SELECT memory.* FROM public.memories memory
+      WHERE memory.user_id=canonical_user AND memory.status='ACTIVE'
+        AND (memory.expires_at IS NULL OR memory.expires_at>CURRENT_TIMESTAMP)
+      ORDER BY memory.updated_at DESC,memory.id DESC
+      LIMIT 64
+    ), eligible AS (
+      SELECT candidate.id,candidate.updated_at,
+        row_number() OVER (
+          PARTITION BY candidate.type,candidate.source,
+            regexp_replace(
+              regexp_replace(normalize(candidate.content,NFKC), '^\s+|\s+$', '', 'g'),
+              '\s+', ' ', 'g'
+            )
+          ORDER BY candidate.updated_at DESC,candidate.id ASC
+        ) duplicate_rank
+      FROM candidates candidate
+      WHERE candidate.source IN ('USER_STATED','USER_CONFIRMED') AND candidate.type<>'DERIVED_INSIGHT'
+    ), canonical_evidence AS (
+      SELECT eligible.id FROM eligible WHERE eligible.duplicate_rank=1
+      ORDER BY eligible.updated_at DESC,eligible.id ASC
+      LIMIT 64
+    )
+    SELECT 1 FROM canonical_evidence WHERE id=memory_id
+  )
   THEN RAISE EXCEPTION 'Evidence is not eligible.' USING ERRCODE='22023'; END IF;
   IF p_evidence_id=ANY(current_hypothesis.supporting_evidence_ids) OR p_evidence_id=ANY(current_hypothesis.contradicting_evidence_ids)
   THEN RAISE EXCEPTION 'Evidence is already attached.' USING ERRCODE='22023'; END IF;

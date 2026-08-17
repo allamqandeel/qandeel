@@ -8,6 +8,8 @@ This internal provider-neutral coordinator follows Question / Information Gap Ru
 
 The request contains only `hypothesisId`, positive `expectedVersion`, memory-derived `evidenceId`, and explicit `evidenceRole` (`SUPPORTING` or `CONTRADICTING`). The loop does not infer the role, create Evidence or Memory, read question answers, or assess evidence weight or quality. The canonical database mutation rechecks authenticated ownership and current Evidence eligibility and rejects malformed, duplicate, opposite-role, cross-user, or ineligible links.
 
+Atomicity requires the SQL boundary to mirror the Evidence Layer projection explicitly. It selects the same 64 active/unexpired Memory candidates in `updated_at DESC, id DESC` repository order, applies the same source/type rules, deduplicates by `type + source + NFKC/trim/whitespace-normalized content` with the projection's `updated_at DESC, id ASC` winner order, and caps the resulting set at `MAX_ELIGIBLE_EVIDENCE = 64`. Static and real PostgreSQL tests guard this duplicated invariant against drift.
+
 ## Concurrency, mutation, and audit
 
 `apply_hypothesis_evidence_update` locks the owned hypothesis, compares its server-read version with `expectedVersion`, and fails stale requests closed. One transaction appends exactly one role-specific link, increments the hypothesis version exactly once, and inserts a `hypothesis_updates` row whose owner, before/after versions, source, and timestamp are server-derived. Direct authenticated mutation is denied; owner-only RLS reads are allowed. The audit contains UUIDs, role, canonical source, versions, and timestamp only—no rationale, transcript, provider payload, scratchpad, or hidden reasoning.
