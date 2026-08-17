@@ -9,6 +9,8 @@ import { ConversationOrchestratorService } from './conversation-orchestrator.ser
 import { ModelRouterModule } from '../model-router/model-router.module';
 import { CONTEXT_BUILDER } from './context-builder.types';
 import { ContextBuilderService } from './context-builder.service';
+import { BehavioralResponsePolicyService } from './behavioral-response-policy.service';
+import { BEHAVIORAL_RESPONSE_POLICY } from './behavioral-response-policy.types';
 
 @Module({
   imports: [ModelRouterModule],
@@ -20,6 +22,8 @@ import { ContextBuilderService } from './context-builder.service';
     ConversationRepository,
     ContextBuilderService,
     { provide: CONTEXT_BUILDER, useExisting: ContextBuilderService },
+    BehavioralResponsePolicyService,
+    { provide: BEHAVIORAL_RESPONSE_POLICY, useExisting: BehavioralResponsePolicyService },
     ConversationOrchestratorService,
     ConversationService,
   ],

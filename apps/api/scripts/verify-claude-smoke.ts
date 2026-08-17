@@ -11,6 +11,7 @@ async function main(): Promise<void> {
       task: 'CONVERSATIONAL_RESPONSE',
       path: 'FAST',
       complexity: 'LOW',
+      behavioralGuidance: 'Respond with only the requested short answer.',
       context: [{ role: 'USER', content: 'Reply with one short word.' }],
       locale: 'en',
       modality: 'TEXT',

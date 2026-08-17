@@ -21,6 +21,7 @@ interface AnthropicMessagesClient {
       body: {
         model: string;
         max_tokens: number;
+        system: string;
         messages: Array<{ role: 'user' | 'assistant'; content: string }>;
       },
       options: { timeout: number },
@@ -45,6 +46,7 @@ export class ClaudeModelRouter implements ModelRouter {
         {
           model: this.config.model,
           max_tokens: this.config.maxOutputTokens,
+          system: request.behavioralGuidance,
           messages: request.context.map((message) => ({
             role: message.role === 'USER' ? 'user' : 'assistant',
             content: message.content,
