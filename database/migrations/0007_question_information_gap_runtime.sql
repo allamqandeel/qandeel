@@ -64,12 +64,14 @@ BEGIN
  RETURN NEXT result;
 END $$;
 
-CREATE FUNCTION public.create_validated_question_candidate(p_candidate jsonb) RETURNS SETOF public.question_candidates LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+CREATE OR REPLACE FUNCTION public.create_validated_question_candidate(p_candidate jsonb) RETURNS SETOF public.question_candidates LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE canonical_user uuid := (SELECT auth.uid()); DECLARE gap public.information_gaps; DECLARE targets uuid[]; DECLARE deps uuid[];
 BEGIN
+ IF EXISTS(SELECT 1 FROM jsonb_object_keys(p_candidate) key WHERE key<>ALL(ARRAY['id','questionText','questionType','informationGapId','targetHypothesisIds','informationNeeded','answerFormat','dependencyIds'])) THEN RAISE EXCEPTION 'Candidate contains forbidden fields' USING ERRCODE='22023'; END IF;
  SELECT * INTO gap FROM public.information_gaps WHERE id=(p_candidate->>'informationGapId')::uuid AND user_id=canonical_user; IF NOT FOUND THEN RETURN; END IF;
  targets:=ARRAY(SELECT jsonb_array_elements_text(coalesce(p_candidate->'targetHypothesisIds','[]'::jsonb))::uuid); deps:=ARRAY(SELECT jsonb_array_elements_text(coalesce(p_candidate->'dependencyIds','[]'::jsonb))::uuid);
- IF cardinality(targets)>16 OR cardinality(deps)>16 OR NOT targets<@gap.related_hypothesis_ids THEN RAISE EXCEPTION 'Invalid candidate links' USING ERRCODE='22023'; END IF;
+ IF cardinality(targets)>16 OR cardinality(deps)>16 OR cardinality(targets)<>(SELECT count(DISTINCT id) FROM unnest(targets) id) OR cardinality(deps)<>(SELECT count(DISTINCT id) FROM unnest(deps) id) OR NOT targets<@gap.related_hypothesis_ids THEN RAISE EXCEPTION 'Invalid candidate links' USING ERRCODE='22023'; END IF;
+ IF (p_candidate->>'questionText') ~* '\m(password|passcode|api[ -]?key|private key|secret|credential|access token|refresh token)\M' OR (p_candidate->>'informationNeeded') ~* '\m(password|passcode|api[ -]?key|private key|secret|credential|access token|refresh token)\M' THEN RAISE EXCEPTION 'Candidate must not request secrets or credentials' USING ERRCODE='22023'; END IF;
  RETURN QUERY INSERT INTO public.question_candidates(id,user_id,information_gap_id,question_text,normalized_question_text,question_type,target_hypothesis_ids,information_needed,answer_format,dependency_ids)
  VALUES((p_candidate->>'id')::uuid,canonical_user,gap.id,btrim(p_candidate->>'questionText'),lower(regexp_replace(btrim(p_candidate->>'questionText'),'\s+',' ','g')),p_candidate->>'questionType',targets,p_candidate->>'informationNeeded',p_candidate->>'answerFormat',deps) RETURNING *;
 END $$;
