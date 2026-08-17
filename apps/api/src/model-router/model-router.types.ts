@@ -14,7 +14,7 @@ export interface ModelRouterRequest {
 
 export interface ModelRouterResult {
   content: string;
-  routingMetadata: { implementation: 'IN_PROCESS_FAKE'; path: ProcessingPath };
+  routingMetadata: { path: ProcessingPath };
 }
 
 export const MODEL_ROUTER = Symbol('MODEL_ROUTER');

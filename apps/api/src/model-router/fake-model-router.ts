@@ -7,7 +7,7 @@ export class FakeModelRouter implements ModelRouter {
     const userInput = request.context.at(-1)?.content ?? '';
     return {
       content: `Qandeel test response: ${userInput}`,
-      routingMetadata: { implementation: 'IN_PROCESS_FAKE', path: request.path },
+      routingMetadata: { path: request.path },
     };
   }
 }

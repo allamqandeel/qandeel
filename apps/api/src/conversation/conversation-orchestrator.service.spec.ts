@@ -24,7 +24,7 @@ describe('ConversationOrchestratorService', () => {
       claimTurn: jest.fn(), finalizeTurn: jest.fn(), failTurn: jest.fn(), findTurn: jest.fn(),
       findAssistantForSource: jest.fn(),
     } as unknown as jest.Mocked<ConversationRepository>;
-    router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { implementation: 'IN_PROCESS_FAKE', path: 'FAST' } }) };
+    router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' } }) };
     orchestrator = new ConversationOrchestratorService(repository, router);
   });
 
