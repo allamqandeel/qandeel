@@ -56,6 +56,27 @@ export class ConversationRepository {
     return (await this.dataApi.request<ConversationTurn[]>(accessToken, `conversation_turns?${query}`))[0];
   }
 
+  async findRecentAuthoritativeTurns(
+    accessToken: string,
+    sessionId: string,
+    userId: string,
+    sourceTurnId: string,
+    limit: number,
+  ): Promise<ConversationTurn[]> {
+    const query = new URLSearchParams({
+      select: TURN_FIELDS,
+      session_id: `eq.${sessionId}`,
+      user_id: `eq.${userId}`,
+      id: `neq.${sourceTurnId}`,
+      status: 'eq.COMPLETED',
+      role: 'in.(USER,ASSISTANT)',
+      or: '(role.eq.USER,source_turn_id.not.is.null)',
+      order: 'created_at.desc,id.desc',
+      limit: String(limit),
+    });
+    return this.dataApi.request<ConversationTurn[]>(accessToken, `conversation_turns?${query}`);
+  }
+
   async claimTurn(accessToken: string, sessionId: string, userId: string, turnId: string, selection: { path: 'FAST' | 'DEEP'; reason: string }): Promise<ConversationTurn | undefined> {
     const query = new URLSearchParams({ select: TURN_FIELDS, id: `eq.${turnId}`, session_id: `eq.${sessionId}`, user_id: `eq.${userId}`, status: 'eq.RECEIVED' });
     const rows = await this.dataApi.request<ConversationTurn[]>(accessToken, `conversation_turns?${query}`, {

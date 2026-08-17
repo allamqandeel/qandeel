@@ -1,10 +1,15 @@
 export type ProcessingPath = 'FAST' | 'DEEP';
 
+export interface ModelRouterContextMessage {
+  role: 'USER' | 'ASSISTANT';
+  content: string;
+}
+
 export interface ModelRouterRequest {
   task: 'CONVERSATIONAL_RESPONSE';
   path: ProcessingPath;
   complexity: 'LOW' | 'HIGH';
-  context: ReadonlyArray<{ role: 'USER'; content: string }>;
+  context: ReadonlyArray<ModelRouterContextMessage>;
   locale: 'ar' | 'en' | 'und';
   modality: 'TEXT';
   latencyBudgetMs: number;
