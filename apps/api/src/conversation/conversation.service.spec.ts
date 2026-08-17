@@ -40,6 +40,7 @@ describe('ConversationService', () => {
   it('rejects client attempts to override authoritative fields', async () => {
     await expect(service.createTurn('user-a', 'token-a', session.id, {
       content: 'hello', userId: 'user-b', role: 'ASSISTANT', status: 'COMPLETED',
+      provider: 'openai', model: 'gpt-5.6-terra', profile: 'openai', reasoning: { effort: 'max' },
     })).rejects.toBeInstanceOf(BadRequestException);
     expect(repository.createTurn).not.toHaveBeenCalled();
   });

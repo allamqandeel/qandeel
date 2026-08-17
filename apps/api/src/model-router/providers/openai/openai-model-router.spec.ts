@@ -2,9 +2,9 @@ import { ModelRouterProviderError, type ModelRouterRequest } from '../../model-r
 import { createOpenAIClient, OpenAIModelRouter } from './openai-model-router';
 import {
   loadOpenAIModelRouterConfig,
-  OPENAI_TEXT_MODEL_ID,
   type OpenAIModelRouterConfig,
 } from './openai-model-router.config';
+import { resolveOpenAIModel } from '../../model-profile.registry';
 
 const request = (path: 'FAST' | 'DEEP' = 'FAST'): ModelRouterRequest => ({
   task: 'CONVERSATIONAL_RESPONSE', path, complexity: path === 'FAST' ? 'LOW' : 'HIGH',
@@ -19,7 +19,7 @@ const request = (path: 'FAST' | 'DEEP' = 'FAST'): ModelRouterRequest => ({
 });
 
 const config: OpenAIModelRouterConfig = {
-  apiKey: 'test-only', model: OPENAI_TEXT_MODEL_ID, maxOutputTokens: 1024,
+  apiKey: 'test-only', resolveModel: resolveOpenAIModel, maxOutputTokens: 1024,
   timeoutMs: 10_000, maxRetries: 0,
 };
 
@@ -35,7 +35,7 @@ describe('OpenAIModelRouter', () => {
       usage: { inputTokens: 12, outputTokens: 4 },
     });
     expect(create).toHaveBeenCalledWith({
-      model: OPENAI_TEXT_MODEL_ID,
+      model: 'gpt-5.6-luna',
       instructions: 'provider-neutral policy',
       input: [
         { role: 'user', content: 'first' },
@@ -43,6 +43,7 @@ describe('OpenAIModelRouter', () => {
         { role: 'user', content: 'third' },
       ],
       max_output_tokens: 1024,
+      reasoning: { effort: 'none' },
       store: false,
     }, expect.objectContaining({ timeout: 3_000, maxRetries: 0 }));
   });
@@ -56,11 +57,17 @@ describe('OpenAIModelRouter', () => {
     expect(JSON.stringify(body.input)).not.toContain('provider-neutral policy');
   });
 
-  it.each(['FAST', 'DEEP'] as const)('uses the same centralized model for provider-neutral %s', async (path) => {
+  it.each([
+    ['FAST', 'gpt-5.6-luna', 'none'],
+    ['DEEP', 'gpt-5.6-terra', 'low'],
+  ] as const)('uses the registry-owned %s model configuration', async (path, model, reasoningEffort) => {
     const create = jest.fn().mockResolvedValue({ output_text: 'ok', usage: { input_tokens: 1, output_tokens: 1 } });
     const router = new OpenAIModelRouter(config, { responses: { create } });
     await expect(router.generate(request(path))).resolves.toMatchObject({ routingMetadata: { path } });
-    expect(create.mock.calls[0][0].model).toBe(OPENAI_TEXT_MODEL_ID);
+    expect(create.mock.calls[0][0]).toMatchObject({
+      model,
+      reasoning: { effort: reasoningEffort },
+    });
   });
 
   it('disables hidden retries and bounds one attempt to the FAST route budget', async () => {

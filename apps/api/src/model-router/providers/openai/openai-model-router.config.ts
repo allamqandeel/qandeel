@@ -1,11 +1,13 @@
-export const OPENAI_TEXT_MODEL_ID = 'gpt-5.4';
+import { resolveOpenAIModel } from '../../model-profile.registry';
+import type { ProcessingPath } from '../../model-router.types';
+
 export const OPENAI_MAX_OUTPUT_TOKENS = 1024;
 export const OPENAI_PROVIDER_TIMEOUT_MS = 10_000;
 export const OPENAI_MAX_RETRIES = 0;
 
 export interface OpenAIModelRouterConfig {
   apiKey: string;
-  model: typeof OPENAI_TEXT_MODEL_ID;
+  resolveModel: typeof resolveOpenAIModel;
   maxOutputTokens: number;
   timeoutMs: number;
   maxRetries: typeof OPENAI_MAX_RETRIES;
@@ -19,7 +21,7 @@ export function loadOpenAIModelRouterConfig(
 
   return {
     apiKey,
-    model: OPENAI_TEXT_MODEL_ID,
+    resolveModel: (path: ProcessingPath) => resolveOpenAIModel(path),
     maxOutputTokens: OPENAI_MAX_OUTPUT_TOKENS,
     timeoutMs: OPENAI_PROVIDER_TIMEOUT_MS,
     maxRetries: OPENAI_MAX_RETRIES,
