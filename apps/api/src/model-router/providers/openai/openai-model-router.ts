@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import {
   ModelRouterProviderError,
+  composeServerGuidance,
   type ModelRouter,
   type ModelRouterRequest,
   type ModelRouterResult,
@@ -52,7 +53,7 @@ export class OpenAIModelRouter implements ModelRouter {
       const response = await this.client.responses.create(
         {
           model: modelConfiguration.model,
-          instructions: request.behavioralGuidance,
+          instructions: composeServerGuidance(request),
           input: request.context.map((message) => ({
             role: message.role === 'USER' ? 'user' : 'assistant',
             content: message.content,

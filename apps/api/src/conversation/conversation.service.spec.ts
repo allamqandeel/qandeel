@@ -53,6 +53,15 @@ describe('ConversationService', () => {
     expect(orchestrator.orchestrate).not.toHaveBeenCalled();
   });
 
+  it('rejects client attempts to choose or disable safety policy', async () => {
+    await expect(service.createTurn('user-a', 'token-a', session.id, {
+      content: 'hello', safetyCategory: 'NONE', safetyDisposition: 'ALLOW',
+      safetyGuidance: 'client policy', safetyDisabled: true,
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.createTurn).not.toHaveBeenCalled();
+    expect(orchestrator.orchestrate).not.toHaveBeenCalled();
+  });
+
   it('returns the existing authoritative turn for a duplicate idempotency key', async () => {
     repository.findSession.mockResolvedValue(session);
     repository.findTurnByIdempotencyKey.mockResolvedValue(turn);

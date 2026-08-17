@@ -63,6 +63,14 @@ describe('ClaudeModelRouter', () => {
     expect(JSON.stringify(body.messages)).not.toContain('provider-neutral policy');
   });
 
+  it('composes server-owned safety guidance outside history without adapter rules', async () => {
+    const create = jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 1, output_tokens: 1 } });
+    const router = new ClaudeModelRouter(config, { messages: { create } });
+    await router.generate({ ...request(), safetyGuidance: 'identical safety guidance' });
+    expect(create.mock.calls[0][0].system).toBe('provider-neutral policy\n\nSafety guidance for this turn:\nidentical safety guidance');
+    expect(JSON.stringify(create.mock.calls[0][0].messages)).not.toContain('safety guidance');
+  });
+
   it('disables SDK retries and bounds the single provider attempt to the route budget', async () => {
     const client = createClaudeClient(config);
     expect(client.maxRetries).toBe(0);

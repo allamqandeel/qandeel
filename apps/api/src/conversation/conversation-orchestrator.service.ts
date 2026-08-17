@@ -8,6 +8,7 @@ import {
   BEHAVIORAL_RESPONSE_POLICY,
   type BehavioralResponsePolicy,
 } from './behavioral-response-policy.types';
+import { SAFETY_RESPONSE_GATE, type SafetyResponseGate } from './safety-response-gate.types';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -16,6 +17,7 @@ export class ConversationOrchestratorService {
   constructor(
     private readonly repository: ConversationRepository,
     @Inject(CONTEXT_BUILDER) private readonly contextBuilder: ContextBuilder,
+    @Inject(SAFETY_RESPONSE_GATE) private readonly safetyGate: SafetyResponseGate,
     @Inject(BEHAVIORAL_RESPONSE_POLICY) private readonly behavioralPolicy: BehavioralResponsePolicy,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
   ) {}
@@ -29,11 +31,21 @@ export class ConversationOrchestratorService {
 
     try {
       const context = await this.contextBuilder.build(accessToken, userId, userTurn);
+      const safety = this.safetyGate.evaluate(userTurn.content, context);
+      if (safety.disposition === 'BLOCK') {
+        const finalized = await this.repository.finalizeTurn(accessToken, {
+          sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
+          assistantTurnId: randomUUID(), content: safety.deterministicResponse!,
+        });
+        if (!finalized) return this.currentResult(accessToken, userId, claimed);
+        return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
+      }
       const behavioralGuidance = this.behavioralPolicy.buildTextGuidance();
       const candidate = await this.router.generate({
         task: 'CONVERSATIONAL_RESPONSE', path: selection.path,
         complexity: selection.path === 'DEEP' ? 'HIGH' : 'LOW',
-        behavioralGuidance, context, locale: 'und', modality: 'TEXT',
+        behavioralGuidance, ...(safety.safetyGuidance ? { safetyGuidance: safety.safetyGuidance } : {}),
+        context, locale: 'und', modality: 'TEXT',
         latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
       });
