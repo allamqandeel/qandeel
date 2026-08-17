@@ -22,4 +22,8 @@ export class ConfidenceRepository {
     });
     return this.dataApi.request<ConfidenceEvaluationRecord[]>(token, `confidence_evaluations?${query}`);
   }
+  async find(token: string, userId: string, id: string): Promise<ConfidenceEvaluationRecord | undefined> {
+    const query = new URLSearchParams({ select: FIELDS, id: `eq.${id}`, user_id: `eq.${userId}`, limit: '1' });
+    return (await this.dataApi.request<ConfidenceEvaluationRecord[]>(token, `confidence_evaluations?${query}`))[0];
+  }
 }
