@@ -1,5 +1,5 @@
 import { ModelRouterProviderError, type ModelRouterRequest } from '../../model-router.types';
-import { ClaudeModelRouter } from './claude-model-router';
+import { ClaudeModelRouter, createClaudeClient } from './claude-model-router';
 import {
   CLAUDE_MODEL_ID,
   loadClaudeModelRouterConfig,
@@ -19,6 +19,7 @@ const request = (path: 'FAST' | 'DEEP' = 'FAST'): ModelRouterRequest => ({
 
 const config: ClaudeModelRouterConfig = {
   apiKey: 'test-only', model: CLAUDE_MODEL_ID, maxOutputTokens: 1024, timeoutMs: 10_000,
+  maxRetries: 0,
 };
 
 describe('ClaudeModelRouter', () => {
@@ -42,6 +43,19 @@ describe('ClaudeModelRouter', () => {
         { role: 'user', content: 'third' },
       ],
     }, { timeout: 3_000 });
+  });
+
+  it('disables SDK retries and bounds the single provider attempt to the route budget', async () => {
+    const client = createClaudeClient(config);
+    expect(client.maxRetries).toBe(0);
+
+    const create = jest.fn().mockRejectedValue(
+      Object.assign(new Error('private timeout detail'), { name: 'APIConnectionTimeoutError' }),
+    );
+    const router = new ClaudeModelRouter(config, { messages: { create } });
+    await expect(router.generate(request())).rejects.toEqual(new ModelRouterProviderError());
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledWith(expect.any(Object), { timeout: 3_000 });
   });
 
   it.each(['FAST', 'DEEP'] as const)('keeps %s as metadata without adapter-owned model routing', async (path) => {

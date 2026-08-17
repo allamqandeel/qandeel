@@ -31,7 +31,7 @@ interface AnthropicMessagesClient {
 export class ClaudeModelRouter implements ModelRouter {
   static fromEnvironment(): ClaudeModelRouter {
     const config = loadClaudeModelRouterConfig();
-    return new ClaudeModelRouter(config, new Anthropic({ apiKey: config.apiKey }));
+    return new ClaudeModelRouter(config, createClaudeClient(config));
   }
 
   constructor(
@@ -71,4 +71,12 @@ export class ClaudeModelRouter implements ModelRouter {
       throw new ModelRouterProviderError();
     }
   }
+}
+
+export function createClaudeClient(config: ClaudeModelRouterConfig): Anthropic {
+  return new Anthropic({
+    apiKey: config.apiKey,
+    maxRetries: config.maxRetries,
+    timeout: config.timeoutMs,
+  });
 }

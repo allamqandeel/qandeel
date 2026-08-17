@@ -15,7 +15,8 @@
     "test:toolchain": "node --test tests/toolchain.test.mjs",
     "verify:integrations:diagnose": "node scripts/diagnose-integrations.mjs",
     "verify:database:integration": "node --env-file=.env database/verify-migration-0002.mjs",
-    "verify:auth:smoke": "node --env-file=.env database/verify-supabase-auth.mjs"
+    "verify:auth:smoke": "node --env-file=.env database/verify-supabase-auth.mjs",
+    "verify:claude:smoke": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/verify-claude-smoke.ts"
   },
   "devDependencies": {
     "pg": "^8.16.3"

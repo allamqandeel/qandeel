@@ -66,3 +66,15 @@ Tests:
 npm run test:api
 ```
 
+An explicit local Claude smoke gate is available:
+
+```bash
+npm run verify:claude:smoke
+```
+
+It reads `ANTHROPIC_API_KEY` from the process or ignored root `.env`, makes exactly
+one minimal request with SDK retries disabled, and verifies only that normalized
+text and token usage are present. It is not part of ordinary CI. Its output never
+includes the prompt, context, credential, raw provider response, transcript, or
+private identifiers; without a credential it reports `NOT RUN` without making a call.
+
