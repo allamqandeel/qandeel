@@ -12,6 +12,6 @@ import { EvidenceService } from './evidence.service';
     MemoryDataApiService, MemoryRepository, MemoryRuntimeService, MemoryRetrieverService,
     MemoryWriteEvaluatorService, MemoryWriteService, EvidenceService,
   ],
-  exports: [MemoryRuntimeService, MemoryRetrieverService, MemoryWriteService, EvidenceService],
+  exports: [MemoryDataApiService, MemoryRuntimeService, MemoryRetrieverService, MemoryWriteService, EvidenceService],
 })
 export class MemoryModule {}

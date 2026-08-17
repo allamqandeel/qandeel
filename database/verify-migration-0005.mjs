@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict'; import { randomUUID } from 'node:crypto'; import { readFile } from 'node:fs/promises'; import process from 'node:process'; import pg from 'pg';
+const { Client }=pg; const databaseUrl=process.env.DATABASE_URL; if(!databaseUrl) throw new Error('DATABASE_URL is required in the ignored local .env file.');
+const migration=await readFile(new URL('./migrations/0005_hypothesis_runtime.sql',import.meta.url),'utf8'); const client=new Client({connectionString:databaseUrl});
+async function setIdentity(id){await client.query('SET LOCAL ROLE authenticated');await client.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:id,role:'authenticated'})]);}
+async function main(){await client.connect();try{const exists=(await client.query("SELECT to_regclass('public.hypotheses') IS NOT NULL present")).rows[0].present;if(!exists) await client.query(migration);await client.query('BEGIN');try{
+  const a=randomUUID(),b=randomUUID(),ha=randomUUID(),hb=randomUUID();await client.query('RESET ROLE');await client.query('INSERT INTO public.users(id,auth_subject) VALUES($1::uuid,$1::text),($2::uuid,$2::text)',[a,b]);await setIdentity(a);
+  await client.query("INSERT INTO public.hypotheses(id,user_id,statement,type,domain,scope,origin) VALUES($1,$2,'Provisional','CAUSAL','GENERAL','Test','HUMAN_REVIEWED')",[ha,a]);
+  await client.query('SAVEPOINT cross_user');let rejected=false;try{await client.query("INSERT INTO public.hypotheses(id,user_id,statement,type,domain,scope,origin) VALUES($1,$2,'Cross user','CAUSAL','GENERAL','Test','HUMAN_REVIEWED')",[hb,b]);}catch{rejected=true;}await client.query('ROLLBACK TO SAVEPOINT cross_user');assert.equal(rejected,true);
+  assert.equal((await client.query('SELECT count(*)::int count FROM public.hypotheses WHERE user_id=$1',[b])).rows[0].count,0);
+}finally{await client.query('ROLLBACK');}}finally{await client.end();}}
+main().then(()=>console.log('Verified migration 0005 hypothesis constraints and cross-user RLS isolation.')).catch((error)=>{console.error(`Hypothesis database verification failed (${error?.code??'verification'}, position ${error?.position??'unknown'}, routine ${error?.routine??'unknown'}). Connection details were suppressed.`);process.exitCode=1;});
