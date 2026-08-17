@@ -88,6 +88,25 @@ describe('ConversationOrchestratorService', () => {
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: { ...claimed, status: 'CANCELLED' } });
   });
 
+  it('does not let a delayed provider-neutral OpenAI result defeat cancellation', async () => {
+    let release!: (result: Awaited<ReturnType<ModelRouter['generate']>>) => void;
+    router.generate.mockReturnValue(new Promise((resolve) => { release = resolve; }));
+    repository.claimTurn.mockResolvedValue(claimed);
+    repository.finalizeTurn.mockResolvedValue(undefined);
+    repository.findTurn.mockResolvedValue({ ...claimed, status: 'CANCELLED' });
+    repository.findAssistantForSource.mockResolvedValue(undefined);
+
+    const pending = orchestrator.orchestrate('token', 'user', userTurn);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    release({
+      content: 'late OpenAI text', routingMetadata: { path: 'FAST' },
+      usage: { inputTokens: 1, outputTokens: 1 },
+    });
+
+    await expect(pending).resolves.toEqual({ userTurn: { ...claimed, status: 'CANCELLED' } });
+    expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+  });
+
   it('does not duplicate routing or assistant side effects for a duplicate request', async () => {
     repository.claimTurn.mockResolvedValue(undefined);
     repository.findTurn.mockResolvedValue(completedUser);
