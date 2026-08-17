@@ -8,6 +8,7 @@ import {
 
 const request = (path: 'FAST' | 'DEEP' = 'FAST'): ModelRouterRequest => ({
   task: 'CONVERSATIONAL_RESPONSE', path, complexity: path === 'FAST' ? 'LOW' : 'HIGH',
+  behavioralGuidance: 'provider-neutral policy',
   context: [
     { role: 'USER', content: 'first' },
     { role: 'ASSISTANT', content: 'second' },
@@ -37,12 +38,29 @@ describe('ClaudeModelRouter', () => {
     expect(create).toHaveBeenCalledWith({
       model: CLAUDE_MODEL_ID,
       max_tokens: 1024,
+      system: 'provider-neutral policy',
       messages: [
         { role: 'user', content: 'first' },
         { role: 'assistant', content: 'second' },
         { role: 'user', content: 'third' },
       ],
     }, { timeout: 3_000 });
+  });
+
+  it('passes guidance unchanged only through system and does not add adapter-owned behavior', async () => {
+    const create = jest.fn().mockResolvedValue({
+      content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 1, output_tokens: 1 },
+    });
+    const router = new ClaudeModelRouter(config, { messages: { create } });
+    await router.generate(request());
+    const body = create.mock.calls[0][0];
+    expect(body.system).toBe('provider-neutral policy');
+    expect(body.messages).toEqual([
+      { role: 'user', content: 'first' },
+      { role: 'assistant', content: 'second' },
+      { role: 'user', content: 'third' },
+    ]);
+    expect(JSON.stringify(body.messages)).not.toContain('provider-neutral policy');
   });
 
   it('disables SDK retries and bounds the single provider attempt to the route budget', async () => {

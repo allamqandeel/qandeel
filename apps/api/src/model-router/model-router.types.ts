@@ -9,6 +9,7 @@ export interface ModelRouterRequest {
   task: 'CONVERSATIONAL_RESPONSE';
   path: ProcessingPath;
   complexity: 'LOW' | 'HIGH';
+  behavioralGuidance: string;
   context: ReadonlyArray<ModelRouterContextMessage>;
   locale: 'ar' | 'en' | 'und';
   modality: 'TEXT';

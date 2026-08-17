@@ -4,11 +4,13 @@ import { ConversationOrchestratorService } from './conversation-orchestrator.ser
 import { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn } from './conversation.types';
 import type { ContextBuilder } from './context-builder.types';
+import type { BehavioralResponsePolicy } from './behavioral-response-policy.types';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
   let router: jest.Mocked<ModelRouter>;
   let contextBuilder: jest.Mocked<ContextBuilder>;
+  let behavioralPolicy: jest.Mocked<BehavioralResponsePolicy>;
   let orchestrator: ConversationOrchestratorService;
   const userTurn: ConversationTurn = {
     id: 'user-turn', session_id: 'session', role: 'USER', status: 'RECEIVED', content: 'hello',
@@ -28,7 +30,8 @@ describe('ConversationOrchestratorService', () => {
     } as unknown as jest.Mocked<ConversationRepository>;
     router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' }, usage: { inputTokens: 1, outputTokens: 1 } }) };
     contextBuilder = { build: jest.fn().mockResolvedValue([{ role: 'USER', content: userTurn.content }]) };
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, router);
+    behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, behavioralPolicy, router);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -39,10 +42,16 @@ describe('ConversationOrchestratorService', () => {
     expect(result).not.toHaveProperty('provider');
     expect(result).not.toHaveProperty('model');
     expect(result).not.toHaveProperty('usage');
+    expect(result).not.toHaveProperty('routingMetadata');
+    expect(result).not.toHaveProperty('behavioralGuidance');
     expect(router.generate).toHaveBeenCalledTimes(1);
     expect(contextBuilder.build).toHaveBeenCalledWith('token', 'user', userTurn);
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
-    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ modality: 'TEXT', path: 'FAST' }));
+    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
+      modality: 'TEXT', path: 'FAST', behavioralGuidance: 'server-owned policy',
+      context: [{ role: 'USER', content: 'hello' }],
+    }));
+    expect(behavioralPolicy.buildTextGuidance).toHaveBeenCalledTimes(1);
     expect(await orchestrator.orchestrate('token', 'user', completedUser)).toEqual({ userTurn: completedUser });
   });
 
@@ -85,6 +94,7 @@ describe('ConversationOrchestratorService', () => {
     repository.findAssistantForSource.mockResolvedValue(assistant);
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
     expect(router.generate).not.toHaveBeenCalled();
+    expect(behavioralPolicy.buildTextGuidance).not.toHaveBeenCalled();
     expect(contextBuilder.build).not.toHaveBeenCalled();
     expect(repository.finalizeTurn).not.toHaveBeenCalled();
   });
