@@ -7,6 +7,7 @@ import type { ContextBuilder } from './context-builder.types';
 import type { BehavioralResponsePolicy } from './behavioral-response-policy.types';
 import type { SafetyResponseGate } from './safety-response-gate.types';
 import { MemoryRetrieverService } from '../memory/memory-retriever.service';
+import { MemoryWriteService } from '../memory/memory-write.service';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -15,6 +16,7 @@ describe('ConversationOrchestratorService', () => {
   let behavioralPolicy: jest.Mocked<BehavioralResponsePolicy>;
   let safetyGate: jest.Mocked<SafetyResponseGate>;
   let memoryRetriever: jest.Mocked<MemoryRetrieverService>;
+  let memoryWriter: jest.Mocked<MemoryWriteService>;
   let orchestrator: ConversationOrchestratorService;
   const userTurn: ConversationTurn = {
     id: 'user-turn', session_id: 'session', role: 'USER', status: 'RECEIVED', content: 'hello',
@@ -38,9 +40,10 @@ describe('ConversationOrchestratorService', () => {
       assemble: jest.fn((messages, memoryContext) => ({ messages, ...(memoryContext.length ? { memoryContext } : {}) })),
     };
     memoryRetriever = { retrieve: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<MemoryRetrieverService>;
+    memoryWriter = { evaluateAndWrite: jest.fn().mockResolvedValue({ decision: 'SKIP', reason: 'NO_SUPPORTED_EXPLICIT_PATTERN' }) } as unknown as jest.Mocked<MemoryWriteService>;
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, router);
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, memoryWriter, router);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -57,6 +60,7 @@ describe('ConversationOrchestratorService', () => {
     expect(contextBuilder.build).toHaveBeenCalledWith('token', 'user', userTurn);
     expect(memoryRetriever.retrieve).toHaveBeenCalledWith('user', 'token', 'hello');
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+    expect(memoryWriter.evaluateAndWrite).toHaveBeenCalledWith('user', 'token', 'hello');
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
       modality: 'TEXT', path: 'FAST', behavioralGuidance: 'server-owned policy',
       context: [{ role: 'USER', content: 'hello' }],
@@ -88,6 +92,7 @@ describe('ConversationOrchestratorService', () => {
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(repository.failTurn).toHaveBeenCalledWith('token', 'session', 'user', 'user-turn');
     expect(repository.finalizeTurn).not.toHaveBeenCalled();
+    expect(memoryWriter.evaluateAndWrite).not.toHaveBeenCalled();
   });
 
   it('suppresses a late result when atomic finalization reports cancellation or staleness', async () => {
@@ -127,6 +132,7 @@ describe('ConversationOrchestratorService', () => {
     expect(behavioralPolicy.buildTextGuidance).not.toHaveBeenCalled();
     expect(contextBuilder.build).not.toHaveBeenCalled();
     expect(repository.finalizeTurn).not.toHaveBeenCalled();
+    expect(memoryWriter.evaluateAndWrite).not.toHaveBeenCalled();
   });
 
   it('keeps selected memory separate from history without changing FAST routing', async () => {
@@ -156,6 +162,29 @@ describe('ConversationOrchestratorService', () => {
     expect(memoryRetriever.retrieve).not.toHaveBeenCalled();
     expect(behavioralPolicy.buildTextGuidance).not.toHaveBeenCalled();
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+    expect(memoryWriter.evaluateAndWrite).not.toHaveBeenCalled();
+  });
+
+  it('keeps a finalized response authoritative when memory persistence fails', async () => {
+    repository.claimTurn.mockResolvedValue(claimed);
+    repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    memoryWriter.evaluateAndWrite.mockRejectedValue(new Error('private memory failure'));
+    await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({
+      userTurn: completedUser, assistantTurn: assistant,
+    });
+    expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+    expect(repository.failTurn).not.toHaveBeenCalled();
+    expect(router.generate).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips automatic writes for GUIDED safety content', async () => {
+    safetyGate.evaluate.mockReturnValue({
+      category: 'SELF_HARM_OR_SUICIDE', disposition: 'GUIDED', safetyGuidance: 'server safety guidance',
+    });
+    repository.claimTurn.mockResolvedValue(claimed);
+    repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    await orchestrator.orchestrate('token', 'user', userTurn);
+    expect(memoryWriter.evaluateAndWrite).not.toHaveBeenCalled();
   });
 
   it('carries GUIDED safety separately and invokes the provider exactly once', async () => {
