@@ -26,12 +26,14 @@ exactly one `assistantTurn`.
 
 Conversation Orchestrator owns this TEXT lifecycle. It claims a new user turn once,
 uses Fast by default, selects Deep only for the explicit input-size threshold, and
-calls a provider-independent Model Router contract. Issue #16 uses only a
-deterministic in-process fake router; no external model SDK or credentials are
-required. Database-atomic finalization suppresses late output after cancellation or
+calls a provider-independent Model Router contract. Runtime generation uses the
+official Anthropic SDK with Claude Sonnet 4.6. Set `ANTHROPIC_API_KEY` in the ignored
+local environment before starting the API; startup fails closed when it is absent.
+Tests use an in-process fake and never make paid provider calls. Database-atomic
+finalization suppresses late output after cancellation or
 other terminalization and enforces one assistant result per source turn.
 
-Memory Runtime, real model providers, full Behavioral/Safety runtimes, streaming,
+Memory Runtime, additional model providers, full Behavioral/Safety runtimes, streaming,
 voice, and UI remain later focused implementation gates.
 
 ## Local commands
