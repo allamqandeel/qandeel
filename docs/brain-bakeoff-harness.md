@@ -11,4 +11,6 @@ This local, evaluation-only harness compares Anthropic FAST with OpenAI FAST and
 
 Generated files live under ignored `artifacts/evals/`: `results.json`, `blinded-review.json`, `provider-map.json`, and `summary.json`. Keep `provider-map.json` separate until the blind review is complete. Score each rubric dimension from 1 through 5 and set `overallPreference` to `A`, `B`, or `Tie`.
 
+Candidate assignment is reproducible from the stable case ID and balanced 12/12 across providers. The assigned Candidate A provider executes first for that case, so provider execution order is balanced too; artifact mapping uses the assignment rather than result order.
+
 Pricing rates are intentionally `null` and marked unverified in the centralized evaluation-only pricing file. Verify official input/output rates immediately before the first paid bake-off and update that configuration; measured tokens remain distinct from estimated cost. No real bake-off was run while implementing v1.

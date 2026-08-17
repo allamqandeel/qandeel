@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { relative } from 'node:path';
 import { BehavioralResponsePolicyService } from '../conversation/behavioral-response-policy.service';
 import { CLAUDE_MAX_OUTPUT_TOKENS, CLAUDE_MAX_RETRIES } from '../model-router/providers/anthropic/claude-model-router.config';
 import { OPENAI_MAX_OUTPUT_TOKENS, OPENAI_MAX_RETRIES } from '../model-router/providers/openai/openai-model-router.config';
-import { EVALUATION_ARTIFACT_DIRECTORY, expectedRequestCount } from './brain-eval.harness';
+import { expectedRequestCount } from './brain-eval.harness';
+import { REPOSITORY_ROOT } from './brain-eval.paths';
 import { EVALUATION_PRICING } from './brain-eval.pricing';
 import type { BrainEvaluationCase } from './brain-eval.types';
 
@@ -22,7 +22,7 @@ export function validateEvaluationSuite(cases: ReadonlyArray<BrainEvaluationCase
   if (!new BehavioralResponsePolicyService().buildTextGuidance().trim()) throw new Error('Production Behavioral Response Policy returned empty guidance.');
   if (CLAUDE_MAX_OUTPUT_TOKENS !== OPENAI_MAX_OUTPUT_TOKENS) throw new Error('Provider output token bounds differ.');
   if (CLAUDE_MAX_RETRIES !== 0 || OPENAI_MAX_RETRIES !== 0) throw new Error('Evaluation requires zero hidden retries.');
-  const ignored = execFileSync('git', ['check-ignore', '-q', `${relative(process.cwd(), EVALUATION_ARTIFACT_DIRECTORY)}/probe.json`], { stdio: 'ignore' });
+  const ignored = execFileSync('git', ['-C', REPOSITORY_ROOT, 'check-ignore', '-q', 'artifacts/evals/probe.json'], { stdio: 'ignore' });
   void ignored;
   const warnings = Object.values(EVALUATION_PRICING).flatMap((paths) => Object.values(paths)).filter((price) => !price.verified).map((price) => price.note);
   return {
