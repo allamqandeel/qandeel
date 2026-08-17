@@ -5,5 +5,7 @@ import { HypothesisGenerationService } from './hypothesis-generation.service';
 import { HypothesisService } from './hypothesis.service';
 import { ConfidenceRepository } from './confidence.repository';
 import { ConfidenceService } from './confidence.service';
-@Module({ imports: [MemoryModule], providers: [HypothesisRepository, HypothesisService, HypothesisGenerationService, ConfidenceRepository, ConfidenceService], exports: [HypothesisService, HypothesisGenerationService, ConfidenceService, ConfidenceRepository] })
+import { HypothesisUpdateRepository } from './hypothesis-update.repository';
+import { HypothesisUpdateService } from './hypothesis-update.service';
+@Module({ imports: [MemoryModule], providers: [HypothesisRepository, HypothesisService, HypothesisGenerationService, ConfidenceRepository, ConfidenceService, HypothesisUpdateRepository, HypothesisUpdateService], exports: [HypothesisService, HypothesisGenerationService, ConfidenceService, ConfidenceRepository, HypothesisUpdateService] })
 export class HypothesisModule {}

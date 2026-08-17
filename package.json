@@ -19,6 +19,7 @@
     "verify:hypothesis:integration": "node --env-file=.env database/verify-migration-0005.mjs",
     "verify:confidence:integration": "node --env-file=.env database/verify-migration-0006.mjs",
     "verify:question:integration": "node --env-file=.env database/verify-migration-0007.mjs",
+    "verify:hypothesis-update:integration": "node --env-file=.env database/verify-migration-0008.mjs",
     "verify:auth:smoke": "node --env-file=.env database/verify-supabase-auth.mjs",
     "verify:claude:smoke": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/verify-claude-smoke.ts",
     "verify:openai:smoke": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/verify-openai-smoke.ts",
