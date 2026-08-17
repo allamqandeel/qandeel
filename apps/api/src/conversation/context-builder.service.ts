@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { ModelRouterContextMessage } from '../model-router/model-router.types';
+import type { ModelRouterContextMessage, ModelRouterMemoryContext } from '../model-router/model-router.types';
 import type { ContextBuilder } from './context-builder.types';
 import { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn } from './conversation.types';
@@ -48,5 +48,9 @@ export class ContextBuilderService implements ContextBuilder {
       ]),
       { role: 'USER' as const, content: sourceTurn.content },
     ];
+  }
+
+  assemble(messages: ReadonlyArray<ModelRouterContextMessage>, memoryContext: ReadonlyArray<ModelRouterMemoryContext>) {
+    return { messages, ...(memoryContext.length > 0 ? { memoryContext } : {}) };
   }
 }

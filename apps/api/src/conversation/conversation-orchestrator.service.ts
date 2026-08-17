@@ -9,6 +9,7 @@ import {
   type BehavioralResponsePolicy,
 } from './behavioral-response-policy.types';
 import { SAFETY_RESPONSE_GATE, type SafetyResponseGate } from './safety-response-gate.types';
+import { MemoryRetrieverService } from '../memory/memory-retriever.service';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -19,6 +20,7 @@ export class ConversationOrchestratorService {
     @Inject(CONTEXT_BUILDER) private readonly contextBuilder: ContextBuilder,
     @Inject(SAFETY_RESPONSE_GATE) private readonly safetyGate: SafetyResponseGate,
     @Inject(BEHAVIORAL_RESPONSE_POLICY) private readonly behavioralPolicy: BehavioralResponsePolicy,
+    private readonly memoryRetriever: MemoryRetrieverService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
   ) {}
 
@@ -40,12 +42,16 @@ export class ConversationOrchestratorService {
         if (!finalized) return this.currentResult(accessToken, userId, claimed);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
+      const memoryContext = await this.memoryRetriever.retrieve(userId, accessToken, userTurn.content);
+      const assembledContext = this.contextBuilder.assemble(context, memoryContext);
       const behavioralGuidance = this.behavioralPolicy.buildTextGuidance();
       const candidate = await this.router.generate({
         task: 'CONVERSATIONAL_RESPONSE', path: selection.path,
         complexity: selection.path === 'DEEP' ? 'HIGH' : 'LOW',
         behavioralGuidance, ...(safety.safetyGuidance ? { safetyGuidance: safety.safetyGuidance } : {}),
-        context, locale: 'und', modality: 'TEXT',
+        context: assembledContext.messages,
+        ...(assembledContext.memoryContext ? { memoryContext: assembledContext.memoryContext } : {}),
+        locale: 'und', modality: 'TEXT',
         latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
       });

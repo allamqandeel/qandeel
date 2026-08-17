@@ -34,6 +34,14 @@ describe('ContextBuilderService', () => {
     );
   });
 
+  it('assembles durable memory separately and omits an empty memory channel', () => {
+    const messages = [{ role: 'USER' as const, content: 'current input' }];
+    expect(builder.assemble(messages, [])).toEqual({ messages });
+    expect(builder.assemble(messages, [{ type: 'GOAL', content: 'leave work' }])).toEqual({
+      messages, memoryContext: [{ type: 'GOAL', content: 'leave work' }],
+    });
+  });
+
   it('orders prior complete USER/ASSISTANT exchanges chronologically before the current turn', async () => {
     repository.findRecentAuthoritativeExchanges.mockResolvedValue([exchange(1), exchange(0)]);
     await expect(builder.build('token-a', 'user-a', current)).resolves.toEqual([

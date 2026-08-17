@@ -23,11 +23,12 @@ describe('MemoryRepository', () => {
 
   it('returns only ACTIVE and unexpired rows from active queries', async () => {
     const now = new Date('2026-08-17T12:00:00.000Z');
-    await repository.listActiveForUser('token-a', 'user-a', now);
+    await repository.listActiveForUser('token-a', 'user-a', 32, now);
     const query = new URL(`https://local/${dataApi.request.mock.calls[0][1]}`).searchParams;
     expect(query.get('user_id')).toBe('eq.user-a');
     expect(query.get('status')).toBe('eq.ACTIVE');
     expect(query.get('or')).toBe('(expires_at.is.null,expires_at.gt.2026-08-17T12:00:00.000Z)');
+    expect(query.get('limit')).toBe('32');
   });
 
   it('uses an atomic database operation for supersession without a client user id', async () => {
