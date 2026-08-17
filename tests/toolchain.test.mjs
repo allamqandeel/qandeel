@@ -8,6 +8,7 @@ const packageLock = JSON.parse(await readFile(new URL('package-lock.json', root)
 const preflight = await readFile(new URL('scripts/preflight.mjs', root), 'utf8');
 const diagnostic = await readFile(new URL('scripts/diagnose-integrations.mjs', root), 'utf8');
 const claudeSmoke = await readFile(new URL('apps/api/scripts/verify-claude-smoke.ts', root), 'utf8');
+const openAISmoke = await readFile(new URL('apps/api/scripts/verify-openai-smoke.ts', root), 'utf8');
 
 test('standardizes the repository on npm and the root lockfile', () => {
   assert.equal(packageJson.engines.npm, '>=10');
@@ -28,6 +29,7 @@ test('keeps verification commands explicit and non-destructive', () => {
     'verify:database:integration',
     'verify:auth:smoke',
     'verify:claude:smoke',
+    'verify:openai:smoke',
   ]) assert.equal(typeof packageJson.scripts[name], 'string', `missing ${name}`);
 
   const commands = Object.values(packageJson.scripts).join('\n');
@@ -41,6 +43,17 @@ test('keeps the real Claude smoke explicit, single-attempt, and privacy-safe', (
   assert.match(claudeSmoke, /ClaudeModelRouter\.fromEnvironment\(\)\.generate/u);
   assert.doesNotMatch(
     claudeSmoke,
+    /console\.(?:log|error)\([^\n]*(?:\$\{|result\.content|process\.env|apiKey)/u,
+  );
+});
+
+test('keeps the real OpenAI smoke explicit, single-attempt, and privacy-safe', () => {
+  assert.doesNotMatch(packageJson.scripts['test:api'], /openai/iu);
+  assert.match(openAISmoke, /OPENAI_API_KEY/u);
+  assert.match(openAISmoke, /NOT RUN/u);
+  assert.match(openAISmoke, /OpenAIModelRouter\.fromEnvironment\(\)\.generate/u);
+  assert.doesNotMatch(
+    openAISmoke,
     /console\.(?:log|error)\([^\n]*(?:\$\{|result\.content|process\.env|apiKey)/u,
   );
 });

@@ -26,9 +26,12 @@ exactly one `assistantTurn`.
 
 Conversation Orchestrator owns this TEXT lifecycle. It claims a new user turn once,
 uses Fast by default, selects Deep only for the explicit input-size threshold, and
-calls a provider-independent Model Router contract. Runtime generation uses the
-official Anthropic SDK with Claude Sonnet 4.6. Set `ANTHROPIC_API_KEY` in the ignored
-local environment before starting the API; startup fails closed when it is absent.
+calls a provider-independent Model Router contract. Runtime generation supports
+Anthropic and OpenAI through separate official-SDK adapters. Select exactly one with
+the server-owned `MODEL_PROVIDER=anthropic|openai` setting and provide the matching
+`ANTHROPIC_API_KEY` or `OPENAI_API_KEY` in the ignored local environment before
+starting the API. Missing, invalid, or incomplete provider configuration fails closed;
+there is no fallback, client override, or FAST/DEEP provider routing in this gate.
 Tests use an in-process fake and never make paid provider calls. Database-atomic
 finalization suppresses late output after cancellation or
 other terminalization and enforces one assistant result per source turn.
@@ -77,4 +80,14 @@ one minimal request with SDK retries disabled, and verifies only that normalized
 text and token usage are present. It is not part of ordinary CI. Its output never
 includes the prompt, context, credential, raw provider response, transcript, or
 private identifiers; without a credential it reports `NOT RUN` without making a call.
+
+The equivalent explicit OpenAI gate is:
+
+```bash
+npm run verify:openai:smoke
+```
+
+It uses the centralized OpenAI text baseline through the Responses API, makes one
+bounded attempt with retries disabled, and applies the same safe output rules. It is
+never invoked by tests or CI and reports `NOT RUN` when `OPENAI_API_KEY` is absent.
 
