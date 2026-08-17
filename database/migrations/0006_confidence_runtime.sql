@@ -51,52 +51,43 @@ CREATE POLICY confidence_evaluations_select_own ON public.confidence_evaluations
 
 CREATE FUNCTION public.create_confidence_evaluation(p_evaluation jsonb)
 RETURNS SETOF public.confidence_evaluations LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
-DECLARE target public.hypotheses; evidence_id text; memory_id uuid;
+DECLARE target public.hypotheses;
+DECLARE canonical_supporting text[]; canonical_contradicting text[]; canonical_missing text[];
 BEGIN
   SELECT * INTO target FROM public.hypotheses
     WHERE id=(p_evaluation->>'target_id')::uuid AND user_id=(SELECT auth.uid());
-  IF NOT FOUND OR p_evaluation->>'user_id'<>(SELECT auth.uid())::text THEN RETURN; END IF;
+  IF NOT FOUND THEN RETURN; END IF;
   IF (p_evaluation->>'target_version')::integer<>target.version THEN
     RAISE EXCEPTION 'Stale hypothesis version.' USING ERRCODE='22023';
   END IF;
-  FOR evidence_id IN SELECT jsonb_array_elements_text(p_evaluation->'supporting_evidence_ids') LOOP
-    IF evidence_id !~ '^memory:[0-9a-fA-F-]{36}$' OR
-       NOT evidence_id=ANY(target.supporting_evidence_ids) THEN
-      RAISE EXCEPTION 'Supporting evidence role is invalid.' USING ERRCODE='22023';
-    END IF;
-    memory_id:=substring(evidence_id FROM 8)::uuid;
-    IF NOT EXISTS (SELECT 1 FROM public.memories WHERE id=memory_id AND user_id=(SELECT auth.uid())
-      AND status='ACTIVE' AND source IN ('USER_STATED','USER_CONFIRMED') AND type<>'DERIVED_INSIGHT'
-      AND (expires_at IS NULL OR expires_at>CURRENT_TIMESTAMP)) THEN
-      RAISE EXCEPTION 'Evidence is not currently eligible.' USING ERRCODE='22023';
-    END IF;
-  END LOOP;
-  FOR evidence_id IN SELECT jsonb_array_elements_text(p_evaluation->'contradicting_evidence_ids') LOOP
-    IF evidence_id !~ '^memory:[0-9a-fA-F-]{36}$' OR
-       NOT evidence_id=ANY(target.contradicting_evidence_ids) THEN
-      RAISE EXCEPTION 'Contradicting evidence role is invalid.' USING ERRCODE='22023';
-    END IF;
-    memory_id:=substring(evidence_id FROM 8)::uuid;
-    IF NOT EXISTS (SELECT 1 FROM public.memories WHERE id=memory_id AND user_id=(SELECT auth.uid())
-      AND status='ACTIVE' AND source IN ('USER_STATED','USER_CONFIRMED') AND type<>'DERIVED_INSIGHT'
-      AND (expires_at IS NULL OR expires_at>CURRENT_TIMESTAMP)) THEN
-      RAISE EXCEPTION 'Evidence is not currently eligible.' USING ERRCODE='22023';
-    END IF;
-  END LOOP;
+  SELECT coalesce(array_agg(link.evidence_id ORDER BY link.ordinality), '{}'::text[])
+    INTO canonical_supporting
+    FROM unnest(target.supporting_evidence_ids) WITH ORDINALITY link(evidence_id, ordinality)
+    JOIN public.memories memory ON link.evidence_id='memory:' || memory.id::text
+    WHERE memory.user_id=(SELECT auth.uid()) AND memory.status='ACTIVE'
+      AND memory.source IN ('USER_STATED','USER_CONFIRMED') AND memory.type<>'DERIVED_INSIGHT'
+      AND (memory.expires_at IS NULL OR memory.expires_at>CURRENT_TIMESTAMP);
+  SELECT coalesce(array_agg(link.evidence_id ORDER BY link.ordinality), '{}'::text[])
+    INTO canonical_contradicting
+    FROM unnest(target.contradicting_evidence_ids) WITH ORDINALITY link(evidence_id, ordinality)
+    JOIN public.memories memory ON link.evidence_id='memory:' || memory.id::text
+    WHERE memory.user_id=(SELECT auth.uid()) AND memory.status='ACTIVE'
+      AND memory.source IN ('USER_STATED','USER_CONFIRMED') AND memory.type<>'DERIVED_INSIGHT'
+      AND (memory.expires_at IS NULL OR memory.expires_at>CURRENT_TIMESTAMP);
+  canonical_missing := ARRAY[]::text[];
+  IF cardinality(target.competing_hypothesis_ids)>0 THEN canonical_missing:=array_append(canonical_missing,'COMPETING_HYPOTHESES_UNASSESSED'); END IF;
+  IF cardinality(target.assumptions)>0 THEN canonical_missing:=array_append(canonical_missing,'UNVERIFIED_ASSUMPTIONS'); END IF;
+  IF cardinality(canonical_supporting)+cardinality(canonical_contradicting)=0 THEN canonical_missing:=array_append(canonical_missing,'NO_ELIGIBLE_EVIDENCE'); END IF;
+  canonical_missing:=array_append(canonical_missing,'CONFIDENCE_MODEL_UNCALIBRATED');
   RETURN QUERY INSERT INTO public.confidence_evaluations (
     id,user_id,target_id,target_type,target_version,version,lifecycle_state,numeric_score,confidence_band,
     calibration_state,stability,supporting_evidence_ids,contradicting_evidence_ids,assumptions,
     alternative_hypothesis_ids,missing_information_codes,policy_version,provenance
   ) VALUES (
-    (p_evaluation->>'id')::uuid,(p_evaluation->>'user_id')::uuid,(p_evaluation->>'target_id')::uuid,
-    p_evaluation->>'target_type',(p_evaluation->>'target_version')::integer,(p_evaluation->>'version')::integer,
-    p_evaluation->>'lifecycle_state',NULL,NULL,p_evaluation->>'calibration_state',p_evaluation->>'stability',
-    ARRAY(SELECT jsonb_array_elements_text(p_evaluation->'supporting_evidence_ids')),
-    ARRAY(SELECT jsonb_array_elements_text(p_evaluation->'contradicting_evidence_ids')),
-    ARRAY(SELECT jsonb_array_elements_text(p_evaluation->'assumptions')),
-    ARRAY(SELECT jsonb_array_elements_text(p_evaluation->'alternative_hypothesis_ids'))::uuid[],
-    ARRAY(SELECT jsonb_array_elements_text(p_evaluation->'missing_information_codes')),
-    p_evaluation->>'policy_version',p_evaluation->>'provenance'
+    (p_evaluation->>'id')::uuid,(SELECT auth.uid()),target.id,'HYPOTHESIS',target.version,1,
+    'EVALUATED',NULL,NULL,'UNCALIBRATED','UNASSESSED',canonical_supporting,canonical_contradicting,
+    target.assumptions,target.competing_hypothesis_ids,canonical_missing,
+    'confidence-foundation-v1','QANDEEL_CONFIDENCE_RUNTIME'
   ) RETURNING *;
 END; $$;
 

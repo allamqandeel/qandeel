@@ -11,7 +11,9 @@ test('confidence evaluations are separate, immutable, versioned hypothesis snaps
   assert.match(sql, /policy_version text NOT NULL/u);
   assert.doesNotMatch(sql, /GRANT (?:INSERT|UPDATE|DELETE) ON TABLE/iu);
   assert.match(sql, /CREATE FUNCTION public\.create_confidence_evaluation/u);
-  assert.match(sql, /Evidence is not currently eligible/u);
+  assert.match(sql, /target\.assumptions,target\.competing_hypothesis_ids,canonical_missing/u);
+  assert.match(sql, /canonical_supporting,canonical_contradicting/u);
+  assert.match(sql, /\(SELECT auth\.uid\(\)\),target\.id,'HYPOTHESIS',target\.version,1/u);
 });
 
 test('uncalibrated foundation cannot persist invented precision', () => {
