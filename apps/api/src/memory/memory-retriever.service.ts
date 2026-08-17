@@ -13,7 +13,7 @@ const RECALL_CUES = [
 ];
 const PERSONAL_SIGNALS = [
   /\b(my|mine|i plan|i prefer|i told you|we discussed)\b/u,
-  /(بتاعي|شغلي|خطتي|هدفي|بحب|بفضل|صاحبي|صاحبتي|أحمد|احمد)/u,
+  /(بتاعي|شغلي|خطتي|هدفي|بحب|بفضل|صاحبي|صاحبتي)/u,
 ];
 const STOP_WORDS = new Set([
   'a', 'an', 'the', 'is', 'are', 'what', 'did', 'i', 'you', 'about', 'my', 'to', 'we', 'it',

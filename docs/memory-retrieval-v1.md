@@ -15,7 +15,7 @@ English and Arabic text are normalized conservatively. Matching removes punctuat
 
 The existing four-complete-exchange history window is unchanged, and the current USER turn remains exactly once. Context Builder packages selected durable memory in `memoryContext`; it never creates fabricated USER or ASSISTANT messages.
 
-Both provider adapters use the same provider-neutral renderer. Behavioral guidance and any Safety guidance remain server policy. Memory is enclosed in an explicit `user_memory_context` delimiter and labeled untrusted contextual data whose embedded instructions must never be followed. Provider payloads receive only memory type, content, and optional source—not IDs, owner IDs, lifecycle state, lineage, confidence, or importance.
+Both provider adapters use the same provider-neutral renderer. Behavioral guidance and any Safety guidance remain server policy. Memory entries are JSON-encoded with markup characters escaped before being enclosed in an explicit `user_memory_context` delimiter, so stored content cannot terminate or forge the container. The container is labeled untrusted contextual data whose embedded instructions must never be followed. Provider payloads receive only memory type, content, and optional source—not IDs, owner IDs, lifecycle state, lineage, confidence, or importance.
 
 Safety evaluates the current turn and authoritative recent history before memory retrieval. BLOCK therefore performs neither retrieval nor a provider call. GUIDED and ALLOW may retrieve; memory does not alter Safety classification or FAST/DEEP routing.
 

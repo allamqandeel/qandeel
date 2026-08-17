@@ -31,6 +31,12 @@ describe('MemoryRetrieverService', () => {
     expect(runtime.listActiveForUser).toHaveBeenCalledWith('user-a', 'token-a', MEMORY_CANDIDATE_LIMIT);
   });
 
+  it('uses generic explicit recall for arbitrary names without treating names alone as policy signals', async () => {
+    expect(retriever.shouldRetrieve('يوسف')).toBe(false);
+    await retriever.retrieve('user-a', 'token-a', 'فاكر موضوع يوسف؟');
+    expect(runtime.listActiveForUser).toHaveBeenCalledWith('user-a', 'token-a', MEMORY_CANDIDATE_LIMIT);
+  });
+
   it('returns no fabricated memory when an explicit recall has no relevant lexical match', async () => {
     runtime.listActiveForUser.mockResolvedValue([memory('1', 'I prefer tea')]);
     await expect(retriever.retrieve('user-a', 'token-a', 'remember my job?')).resolves.toEqual([]);
