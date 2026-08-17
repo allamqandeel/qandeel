@@ -29,6 +29,13 @@ only their own sessions and turns. Ownership changes are rejected. No applicatio
 table privileges are granted to `anon`, and end-user deletion is deliberately not
 part of this slice.
 
+Migration 0004 adds the separate durable `memories` table. Rows are strictly owned
+by `auth.uid()`, constrained to the frozen v1 types, sources, and lifecycle statuses,
+and protected by RLS. Corrections use the atomic `supersede_memory` function to keep
+the predecessor and create a versioned successor. V1 deletion uses the `DELETED`
+state; authenticated users receive no physical `DELETE` privilege. See
+`docs/memory-runtime-persistence.md` for the complete boundary.
+
 ## Real PostgreSQL verification
 
 Migrations 0001 and 0002 can be intentionally applied and verified against a supplied
@@ -42,6 +49,7 @@ From the repository root, run:
 
 ```sh
 npm run verify:database:integration
+npm run verify:memory:integration
 ```
 
 Apply migration 0001 first on a clean database. The current verifier applies migration
@@ -49,6 +57,10 @@ Apply migration 0001 first on a clean database. The current verifier applies mig
 checks the safe Auth trigger/function definition, proves Auth provisioning with a
 rolled-back `auth.users` insert, checks RLS and policy catalogs, and exercises owner,
 cross-user, ownership-transfer, and anon behavior. All temporary rows are rolled back.
+
+The memory verifier applies migration 0004 only from an absent state, then verifies
+constraints, atomic supersession, expiration filtering, lifecycle deletion, and
+cross-user isolation with rolled-back fixtures.
 
 This command is an explicit integration gate and is not run by ordinary CI because
 CI does not receive a development database secret. The secret-free structural test
