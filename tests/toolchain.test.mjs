@@ -30,7 +30,13 @@ test('keeps verification commands explicit and non-destructive', () => {
     'verify:auth:smoke',
     'verify:claude:smoke',
     'verify:openai:smoke',
+    'eval:brain:validate',
+    'eval:brain:run',
+    'eval:brain:dry-run',
+    'eval:brain:summarize',
   ]) assert.equal(typeof packageJson.scripts[name], 'string', `missing ${name}`);
+
+  assert.doesNotMatch(packageJson.scripts['test:api'], /eval:brain:run/iu);
 
   const commands = Object.values(packageJson.scripts).join('\n');
   assert.doesNotMatch(commands, /(?:rm|rmdir|remove-item|rename-item|mv|move).*node_modules/iu);

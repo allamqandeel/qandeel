@@ -17,7 +17,11 @@
     "verify:database:integration": "node --env-file=.env database/verify-migration-0002.mjs",
     "verify:auth:smoke": "node --env-file=.env database/verify-supabase-auth.mjs",
     "verify:claude:smoke": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/verify-claude-smoke.ts",
-    "verify:openai:smoke": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/verify-openai-smoke.ts"
+    "verify:openai:smoke": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/verify-openai-smoke.ts",
+    "eval:brain:validate": "node node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/brain-eval.ts validate",
+    "eval:brain:run": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/brain-eval.ts run",
+    "eval:brain:dry-run": "node node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/brain-eval.ts dry-run",
+    "eval:brain:summarize": "node node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/brain-eval.ts summarize"
   },
   "devDependencies": {
     "pg": "^8.16.3"
