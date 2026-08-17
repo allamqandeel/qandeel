@@ -5,12 +5,14 @@ import { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn } from './conversation.types';
 import type { ContextBuilder } from './context-builder.types';
 import type { BehavioralResponsePolicy } from './behavioral-response-policy.types';
+import type { SafetyResponseGate } from './safety-response-gate.types';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
   let router: jest.Mocked<ModelRouter>;
   let contextBuilder: jest.Mocked<ContextBuilder>;
   let behavioralPolicy: jest.Mocked<BehavioralResponsePolicy>;
+  let safetyGate: jest.Mocked<SafetyResponseGate>;
   let orchestrator: ConversationOrchestratorService;
   const userTurn: ConversationTurn = {
     id: 'user-turn', session_id: 'session', role: 'USER', status: 'RECEIVED', content: 'hello',
@@ -31,7 +33,8 @@ describe('ConversationOrchestratorService', () => {
     router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' }, usage: { inputTokens: 1, outputTokens: 1 } }) };
     contextBuilder = { build: jest.fn().mockResolvedValue([{ role: 'USER', content: userTurn.content }]) };
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, behavioralPolicy, router);
+    safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, router);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -116,5 +119,54 @@ describe('ConversationOrchestratorService', () => {
     expect(behavioralPolicy.buildTextGuidance).not.toHaveBeenCalled();
     expect(contextBuilder.build).not.toHaveBeenCalled();
     expect(repository.finalizeTurn).not.toHaveBeenCalled();
+  });
+
+  it('atomically finalizes BLOCK without behavioral policy or router calls', async () => {
+    safetyGate.evaluate.mockReturnValue({
+      category: 'SELF_HARM_OR_SUICIDE', disposition: 'BLOCK', deterministicResponse: 'safe deterministic response',
+    });
+    repository.claimTurn.mockResolvedValue(claimed);
+    repository.finalizeTurn.mockResolvedValue({
+      userTurn: completedUser, assistantTurn: { ...assistant, content: 'safe deterministic response' },
+    });
+
+    await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toMatchObject({
+      assistantTurn: { content: 'safe deterministic response' },
+    });
+    expect(router.generate).not.toHaveBeenCalled();
+    expect(behavioralPolicy.buildTextGuidance).not.toHaveBeenCalled();
+    expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+  });
+
+  it('carries GUIDED safety separately and invokes the provider exactly once', async () => {
+    safetyGate.evaluate.mockReturnValue({
+      category: 'SELF_HARM_OR_SUICIDE', disposition: 'GUIDED', safetyGuidance: 'server safety guidance',
+    });
+    repository.claimTurn.mockResolvedValue(claimed);
+    repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    await orchestrator.orchestrate('token', 'user', userTurn);
+    expect(router.generate).toHaveBeenCalledTimes(1);
+    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
+      safetyGuidance: 'server safety guidance',
+      context: [{ role: 'USER', content: 'hello' }],
+    }));
+    expect(router.generate.mock.calls[0][0].context).not.toContainEqual(
+      expect.objectContaining({ content: 'server safety guidance' }),
+    );
+  });
+
+  it('suppresses stale BLOCK finalization and does not create a second assistant result', async () => {
+    safetyGate.evaluate.mockReturnValue({
+      category: 'VIOLENCE_OR_HARM_TO_OTHERS', disposition: 'BLOCK', deterministicResponse: 'safe response',
+    });
+    repository.claimTurn.mockResolvedValue(claimed);
+    repository.finalizeTurn.mockResolvedValue(undefined);
+    repository.findTurn.mockResolvedValue({ ...claimed, status: 'CANCELLED' });
+    repository.findAssistantForSource.mockResolvedValue(undefined);
+    await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({
+      userTurn: { ...claimed, status: 'CANCELLED' },
+    });
+    expect(router.generate).not.toHaveBeenCalled();
+    expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
   });
 });

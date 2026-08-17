@@ -10,6 +10,7 @@ export interface ModelRouterRequest {
   path: ProcessingPath;
   complexity: 'LOW' | 'HIGH';
   behavioralGuidance: string;
+  safetyGuidance?: string;
   context: ReadonlyArray<ModelRouterContextMessage>;
   locale: 'ar' | 'en' | 'und';
   modality: 'TEXT';
@@ -29,6 +30,14 @@ export interface ModelRouterResult {
 
 export const MODEL_ROUTER = Symbol('MODEL_ROUTER');
 export interface ModelRouter { generate(request: ModelRouterRequest): Promise<ModelRouterResult>; }
+
+export function composeServerGuidance(
+  request: Pick<ModelRouterRequest, 'behavioralGuidance' | 'safetyGuidance'>,
+): string {
+  return request.safetyGuidance
+    ? `${request.behavioralGuidance}\n\nSafety guidance for this turn:\n${request.safetyGuidance}`
+    : request.behavioralGuidance;
+}
 
 export class ModelRouterProviderError extends Error {
   constructor(message = 'Model generation failed.') {

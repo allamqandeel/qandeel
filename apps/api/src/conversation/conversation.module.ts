@@ -11,6 +11,8 @@ import { CONTEXT_BUILDER } from './context-builder.types';
 import { ContextBuilderService } from './context-builder.service';
 import { BehavioralResponsePolicyService } from './behavioral-response-policy.service';
 import { BEHAVIORAL_RESPONSE_POLICY } from './behavioral-response-policy.types';
+import { SafetyResponseGateService } from './safety-response-gate.service';
+import { SAFETY_RESPONSE_GATE } from './safety-response-gate.types';
 
 @Module({
   imports: [ModelRouterModule],
@@ -22,6 +24,8 @@ import { BEHAVIORAL_RESPONSE_POLICY } from './behavioral-response-policy.types';
     ConversationRepository,
     ContextBuilderService,
     { provide: CONTEXT_BUILDER, useExisting: ContextBuilderService },
+    SafetyResponseGateService,
+    { provide: SAFETY_RESPONSE_GATE, useExisting: SafetyResponseGateService },
     BehavioralResponsePolicyService,
     { provide: BEHAVIORAL_RESPONSE_POLICY, useExisting: BehavioralResponsePolicyService },
     ConversationOrchestratorService,

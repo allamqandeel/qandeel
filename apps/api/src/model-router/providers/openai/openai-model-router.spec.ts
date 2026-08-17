@@ -57,6 +57,14 @@ describe('OpenAIModelRouter', () => {
     expect(JSON.stringify(body.input)).not.toContain('provider-neutral policy');
   });
 
+  it('composes server-owned safety guidance outside history without adapter rules', async () => {
+    const create = jest.fn().mockResolvedValue({ output_text: 'ok', usage: null });
+    const router = new OpenAIModelRouter(config, { responses: { create } });
+    await router.generate({ ...request(), safetyGuidance: 'identical safety guidance' });
+    expect(create.mock.calls[0][0].instructions).toBe('provider-neutral policy\n\nSafety guidance for this turn:\nidentical safety guidance');
+    expect(JSON.stringify(create.mock.calls[0][0].input)).not.toContain('safety guidance');
+  });
+
   it.each([
     ['FAST', 'gpt-5.6-luna', 'none'],
     ['DEEP', 'gpt-5.6-terra', 'low'],

@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {
   ModelRouterProviderError,
+  composeServerGuidance,
   type ModelRouter,
   type ModelRouterRequest,
   type ModelRouterResult,
@@ -47,7 +48,7 @@ export class ClaudeModelRouter implements ModelRouter {
         {
           model: modelConfiguration.model,
           max_tokens: this.config.maxOutputTokens,
-          system: request.behavioralGuidance,
+          system: composeServerGuidance(request),
           messages: request.context.map((message) => ({
             role: message.role === 'USER' ? 'user' : 'assistant',
             content: message.content,
