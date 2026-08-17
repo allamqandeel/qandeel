@@ -10,6 +10,7 @@ import {
 } from './behavioral-response-policy.types';
 import { SAFETY_RESPONSE_GATE, type SafetyResponseGate } from './safety-response-gate.types';
 import { MemoryRetrieverService } from '../memory/memory-retriever.service';
+import { MemoryWriteService } from '../memory/memory-write.service';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -21,6 +22,7 @@ export class ConversationOrchestratorService {
     @Inject(SAFETY_RESPONSE_GATE) private readonly safetyGate: SafetyResponseGate,
     @Inject(BEHAVIORAL_RESPONSE_POLICY) private readonly behavioralPolicy: BehavioralResponsePolicy,
     private readonly memoryRetriever: MemoryRetrieverService,
+    private readonly memoryWriter: MemoryWriteService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
   ) {}
 
@@ -60,10 +62,25 @@ export class ConversationOrchestratorService {
         assistantTurnId: randomUUID(), content: candidate.content,
       });
       if (!finalized) return this.currentResult(accessToken, userId, claimed);
+      await this.writeMemoryFailSoft(userId, accessToken, userTurn.content, safety.disposition);
       return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
     } catch {
       await this.repository.failTurn(accessToken, userTurn.session_id, userId, userTurn.id);
       throw new ServiceUnavailableException('Conversation generation failed.');
+    }
+  }
+
+  private async writeMemoryFailSoft(
+    userId: string,
+    accessToken: string,
+    content: string,
+    safetyDisposition: 'ALLOW' | 'GUIDED' | 'BLOCK',
+  ): Promise<void> {
+    if (safetyDisposition !== 'ALLOW') return;
+    try {
+      await this.memoryWriter.evaluateAndWrite(userId, accessToken, content);
+    } catch {
+      // Memory is a non-authoritative side capability. Finalized conversation output remains authoritative.
     }
   }
 
