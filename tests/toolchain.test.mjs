@@ -7,6 +7,7 @@ const packageJson = JSON.parse(await readFile(new URL('package.json', root), 'ut
 const packageLock = JSON.parse(await readFile(new URL('package-lock.json', root), 'utf8'));
 const preflight = await readFile(new URL('scripts/preflight.mjs', root), 'utf8');
 const diagnostic = await readFile(new URL('scripts/diagnose-integrations.mjs', root), 'utf8');
+const claudeSmoke = await readFile(new URL('apps/api/scripts/verify-claude-smoke.ts', root), 'utf8');
 
 test('standardizes the repository on npm and the root lockfile', () => {
   assert.equal(packageJson.engines.npm, '>=10');
@@ -26,10 +27,22 @@ test('keeps verification commands explicit and non-destructive', () => {
     'verify:integrations:diagnose',
     'verify:database:integration',
     'verify:auth:smoke',
+    'verify:claude:smoke',
   ]) assert.equal(typeof packageJson.scripts[name], 'string', `missing ${name}`);
 
   const commands = Object.values(packageJson.scripts).join('\n');
   assert.doesNotMatch(commands, /(?:rm|rmdir|remove-item|rename-item|mv|move).*node_modules/iu);
+});
+
+test('keeps the real Claude smoke explicit, single-attempt, and privacy-safe', () => {
+  assert.doesNotMatch(packageJson.scripts['test:api'], /claude|anthropic/iu);
+  assert.match(claudeSmoke, /ANTHROPIC_API_KEY/u);
+  assert.match(claudeSmoke, /NOT RUN/u);
+  assert.match(claudeSmoke, /ClaudeModelRouter\.fromEnvironment\(\)\.generate/u);
+  assert.doesNotMatch(
+    claudeSmoke,
+    /console\.(?:log|error)\([^\n]*(?:\$\{|result\.content|process\.env|apiKey)/u,
+  );
 });
 
 test('keeps preflight and diagnostics privacy-safe', () => {

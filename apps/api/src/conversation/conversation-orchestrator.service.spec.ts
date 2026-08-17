@@ -26,7 +26,7 @@ describe('ConversationOrchestratorService', () => {
       claimTurn: jest.fn(), finalizeTurn: jest.fn(), failTurn: jest.fn(), findTurn: jest.fn(),
       findAssistantForSource: jest.fn(),
     } as unknown as jest.Mocked<ConversationRepository>;
-    router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' } }) };
+    router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' }, usage: { inputTokens: 1, outputTokens: 1 } }) };
     contextBuilder = { build: jest.fn().mockResolvedValue([{ role: 'USER', content: userTurn.content }]) };
     orchestrator = new ConversationOrchestratorService(repository, contextBuilder, router);
   });
@@ -34,11 +34,16 @@ describe('ConversationOrchestratorService', () => {
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
     repository.claimTurn.mockResolvedValue(claimed);
     repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
-    await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+    const result = await orchestrator.orchestrate('token', 'user', userTurn);
+    expect(result).toEqual({ userTurn: completedUser, assistantTurn: assistant });
+    expect(result).not.toHaveProperty('provider');
+    expect(result).not.toHaveProperty('model');
+    expect(result).not.toHaveProperty('usage');
     expect(router.generate).toHaveBeenCalledTimes(1);
     expect(contextBuilder.build).toHaveBeenCalledWith('token', 'user', userTurn);
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ modality: 'TEXT', path: 'FAST' }));
+    expect(await orchestrator.orchestrate('token', 'user', completedUser)).toEqual({ userTurn: completedUser });
   });
 
   it('uses Fast by default with an explicit default reason', async () => {

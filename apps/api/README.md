@@ -26,12 +26,14 @@ exactly one `assistantTurn`.
 
 Conversation Orchestrator owns this TEXT lifecycle. It claims a new user turn once,
 uses Fast by default, selects Deep only for the explicit input-size threshold, and
-calls a provider-independent Model Router contract. Issue #16 uses only a
-deterministic in-process fake router; no external model SDK or credentials are
-required. Database-atomic finalization suppresses late output after cancellation or
+calls a provider-independent Model Router contract. Runtime generation uses the
+official Anthropic SDK with Claude Sonnet 4.6. Set `ANTHROPIC_API_KEY` in the ignored
+local environment before starting the API; startup fails closed when it is absent.
+Tests use an in-process fake and never make paid provider calls. Database-atomic
+finalization suppresses late output after cancellation or
 other terminalization and enforces one assistant result per source turn.
 
-Memory Runtime, real model providers, full Behavioral/Safety runtimes, streaming,
+Memory Runtime, additional model providers, full Behavioral/Safety runtimes, streaming,
 voice, and UI remain later focused implementation gates.
 
 ## Local commands
@@ -63,4 +65,16 @@ Tests:
 ```bash
 npm run test:api
 ```
+
+An explicit local Claude smoke gate is available:
+
+```bash
+npm run verify:claude:smoke
+```
+
+It reads `ANTHROPIC_API_KEY` from the process or ignored root `.env`, makes exactly
+one minimal request with SDK retries disabled, and verifies only that normalized
+text and token usage are present. It is not part of ordinary CI. Its output never
+includes the prompt, context, credential, raw provider response, transcript, or
+private identifiers; without a credential it reports `NOT RUN` without making a call.
 

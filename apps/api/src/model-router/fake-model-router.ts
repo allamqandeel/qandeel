@@ -8,6 +8,7 @@ export class FakeModelRouter implements ModelRouter {
     return {
       content: `Qandeel test response: ${userInput}`,
       routingMetadata: { path: request.path },
+      usage: { inputTokens: 0, outputTokens: 0 },
     };
   }
 }
