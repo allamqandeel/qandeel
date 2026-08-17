@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationRepository } from './conversation.repository';
-import type { ConversationSession, ConversationTurn } from './conversation.types';
+import type { ConversationSession, ConversationTurn, OrchestratedTurnResult } from './conversation.types';
 import { DataApiError } from './supabase-data-api.service';
+import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 
 @Injectable()
 export class ConversationService {
-  constructor(private readonly repository: ConversationRepository) {}
+  constructor(private readonly repository: ConversationRepository, private readonly orchestrator: ConversationOrchestratorService) {}
 
   createSession(userId: string, accessToken: string): Promise<ConversationSession> {
     return this.repository.createSession(accessToken, randomUUID(), userId);
@@ -18,21 +19,22 @@ export class ConversationService {
     return session;
   }
 
-  async createTurn(userId: string, accessToken: string, sessionId: string, body: unknown): Promise<ConversationTurn> {
+  async createTurn(userId: string, accessToken: string, sessionId: string, body: unknown): Promise<OrchestratedTurnResult> {
     const input = this.validateTurnInput(body);
     await this.resumeSession(userId, accessToken, sessionId);
     if (input.idempotencyKey) {
       const existing = await this.repository.findTurnByIdempotencyKey(accessToken, sessionId, userId, input.idempotencyKey);
-      if (existing) return existing;
+      if (existing) return this.orchestrator.orchestrate(accessToken, userId, existing);
     }
     try {
-      return await this.repository.createTurn(accessToken, {
+      const turn = await this.repository.createTurn(accessToken, {
         id: randomUUID(), sessionId, userId, content: input.content, idempotencyKey: input.idempotencyKey,
       });
+      return this.orchestrator.orchestrate(accessToken, userId, turn);
     } catch (error) {
       if (input.idempotencyKey && error instanceof DataApiError && error.status === 409) {
         const winner = await this.repository.findTurnByIdempotencyKey(accessToken, sessionId, userId, input.idempotencyKey);
-        if (winner) return winner;
+        if (winner) return this.orchestrator.orchestrate(accessToken, userId, winner);
       }
       throw error;
     }

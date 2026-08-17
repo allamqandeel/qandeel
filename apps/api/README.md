@@ -19,14 +19,20 @@ PATCH /conversation/sessions/:sessionId/turns/:turnId/cancel
 ```
 
 The turn body accepts only `content` and optional `idempotencyKey`. User identity,
-role, initial lifecycle state, channel, and server identifiers are authoritative and
-cannot be supplied by the client. Duplicate idempotency keys resolve to the existing
-turn. Cancellation updates only non-terminal turns, so completed, failed, cancelled,
-or superseded outcomes cannot be rewritten by a late request.
+role, lifecycle state, processing path, complexity, routing metadata, channel, and
+server identifiers are authoritative and cannot be supplied by the client. The
+response contains the authoritative `userTurn` and, after successful generation,
+exactly one `assistantTurn`.
 
-This boundary deliberately does not generate an assistant response yet. Model Router,
-provider adapters, Context Builder, Memory Runtime, and complete Behavioral/Safety
-policy stages remain later focused implementation gates.
+Conversation Orchestrator owns this TEXT lifecycle. It claims a new user turn once,
+uses Fast by default, selects Deep only for the explicit input-size threshold, and
+calls a provider-independent Model Router contract. Issue #16 uses only a
+deterministic in-process fake router; no external model SDK or credentials are
+required. Database-atomic finalization suppresses late output after cancellation or
+other terminalization and enforces one assistant result per source turn.
+
+Memory Runtime, real model providers, full Behavioral/Safety runtimes, streaming,
+voice, and UI remain later focused implementation gates.
 
 ## Local commands
 
