@@ -13,9 +13,10 @@ import { BehavioralResponsePolicyService } from './behavioral-response-policy.se
 import { BEHAVIORAL_RESPONSE_POLICY } from './behavioral-response-policy.types';
 import { SafetyResponseGateService } from './safety-response-gate.service';
 import { SAFETY_RESPONSE_GATE } from './safety-response-gate.types';
+import { MemoryModule } from '../memory/memory.module';
 
 @Module({
-  imports: [ModelRouterModule],
+  imports: [ModelRouterModule, MemoryModule],
   controllers: [ConversationController],
   providers: [
     SupabaseAuthService,

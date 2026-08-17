@@ -26,13 +26,14 @@ export class MemoryRepository {
     return (await this.dataApi.request<MemoryRecord[]>(accessToken, `memories?${query}`))[0];
   }
 
-  async listActiveForUser(accessToken: string, userId: string, now = new Date()): Promise<MemoryRecord[]> {
+  async listActiveForUser(accessToken: string, userId: string, limit: number, now = new Date()): Promise<MemoryRecord[]> {
     const query = new URLSearchParams({
       select: MEMORY_FIELDS,
       user_id: `eq.${userId}`,
       status: 'eq.ACTIVE',
       or: `(expires_at.is.null,expires_at.gt.${now.toISOString()})`,
       order: 'updated_at.desc,id.desc',
+      limit: String(limit),
     });
     return this.dataApi.request<MemoryRecord[]>(accessToken, `memories?${query}`);
   }

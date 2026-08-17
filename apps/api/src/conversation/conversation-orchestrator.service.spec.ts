@@ -6,6 +6,7 @@ import type { ConversationTurn } from './conversation.types';
 import type { ContextBuilder } from './context-builder.types';
 import type { BehavioralResponsePolicy } from './behavioral-response-policy.types';
 import type { SafetyResponseGate } from './safety-response-gate.types';
+import { MemoryRetrieverService } from '../memory/memory-retriever.service';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -13,6 +14,7 @@ describe('ConversationOrchestratorService', () => {
   let contextBuilder: jest.Mocked<ContextBuilder>;
   let behavioralPolicy: jest.Mocked<BehavioralResponsePolicy>;
   let safetyGate: jest.Mocked<SafetyResponseGate>;
+  let memoryRetriever: jest.Mocked<MemoryRetrieverService>;
   let orchestrator: ConversationOrchestratorService;
   const userTurn: ConversationTurn = {
     id: 'user-turn', session_id: 'session', role: 'USER', status: 'RECEIVED', content: 'hello',
@@ -31,10 +33,14 @@ describe('ConversationOrchestratorService', () => {
       findAssistantForSource: jest.fn(),
     } as unknown as jest.Mocked<ConversationRepository>;
     router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' }, usage: { inputTokens: 1, outputTokens: 1 } }) };
-    contextBuilder = { build: jest.fn().mockResolvedValue([{ role: 'USER', content: userTurn.content }]) };
+    contextBuilder = {
+      build: jest.fn().mockResolvedValue([{ role: 'USER', content: userTurn.content }]),
+      assemble: jest.fn((messages, memoryContext) => ({ messages, ...(memoryContext.length ? { memoryContext } : {}) })),
+    };
+    memoryRetriever = { retrieve: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<MemoryRetrieverService>;
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, router);
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, router);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -49,6 +55,7 @@ describe('ConversationOrchestratorService', () => {
     expect(result).not.toHaveProperty('behavioralGuidance');
     expect(router.generate).toHaveBeenCalledTimes(1);
     expect(contextBuilder.build).toHaveBeenCalledWith('token', 'user', userTurn);
+    expect(memoryRetriever.retrieve).toHaveBeenCalledWith('user', 'token', 'hello');
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
       modality: 'TEXT', path: 'FAST', behavioralGuidance: 'server-owned policy',
@@ -116,9 +123,21 @@ describe('ConversationOrchestratorService', () => {
     repository.findAssistantForSource.mockResolvedValue(assistant);
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
     expect(router.generate).not.toHaveBeenCalled();
+    expect(memoryRetriever.retrieve).not.toHaveBeenCalled();
     expect(behavioralPolicy.buildTextGuidance).not.toHaveBeenCalled();
     expect(contextBuilder.build).not.toHaveBeenCalled();
     expect(repository.finalizeTurn).not.toHaveBeenCalled();
+  });
+
+  it('keeps selected memory separate from history without changing FAST routing', async () => {
+    memoryRetriever.retrieve.mockResolvedValue([{ type: 'GOAL', content: 'Leave my job', source: 'USER_STATED' }]);
+    repository.claimTurn.mockResolvedValue(claimed);
+    repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    await orchestrator.orchestrate('token', 'user', userTurn);
+    const request = router.generate.mock.calls[0][0];
+    expect(request.path).toBe('FAST');
+    expect(request.context).toEqual([{ role: 'USER', content: 'hello' }]);
+    expect(request.memoryContext).toEqual([{ type: 'GOAL', content: 'Leave my job', source: 'USER_STATED' }]);
   });
 
   it('atomically finalizes BLOCK without behavioral policy or router calls', async () => {
@@ -134,6 +153,7 @@ describe('ConversationOrchestratorService', () => {
       assistantTurn: { content: 'safe deterministic response' },
     });
     expect(router.generate).not.toHaveBeenCalled();
+    expect(memoryRetriever.retrieve).not.toHaveBeenCalled();
     expect(behavioralPolicy.buildTextGuidance).not.toHaveBeenCalled();
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
   });

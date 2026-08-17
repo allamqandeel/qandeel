@@ -1,4 +1,4 @@
-import type { ModelRouterContextMessage } from '../model-router/model-router.types';
+import type { ModelRouterContextMessage, ModelRouterMemoryContext } from '../model-router/model-router.types';
 import type { ConversationTurn } from './conversation.types';
 
 export const CONTEXT_BUILDER = Symbol('CONTEXT_BUILDER');
@@ -9,4 +9,8 @@ export interface ContextBuilder {
     userId: string,
     sourceTurn: ConversationTurn,
   ): Promise<ReadonlyArray<ModelRouterContextMessage>>;
+  assemble(
+    messages: ReadonlyArray<ModelRouterContextMessage>,
+    memoryContext: ReadonlyArray<ModelRouterMemoryContext>,
+  ): { messages: ReadonlyArray<ModelRouterContextMessage>; memoryContext?: ReadonlyArray<ModelRouterMemoryContext> };
 }

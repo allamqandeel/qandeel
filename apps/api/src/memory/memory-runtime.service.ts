@@ -21,8 +21,8 @@ export class MemoryRuntimeService {
     return memory;
   }
 
-  listActiveForUser(userId: string, accessToken: string): Promise<MemoryRecord[]> {
-    return this.repository.listActiveForUser(accessToken, userId);
+  listActiveForUser(userId: string, accessToken: string, limit: number): Promise<MemoryRecord[]> {
+    return this.repository.listActiveForUser(accessToken, userId, limit);
   }
 
   async markDeleted(userId: string, accessToken: string, id: string): Promise<MemoryRecord> {
