@@ -3,6 +3,7 @@ import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common'
 import { MODEL_ROUTER, type ModelRouter, type ProcessingPath } from '../model-router/model-router.types';
 import { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn, OrchestratedTurnResult } from './conversation.types';
+import { CONTEXT_BUILDER, type ContextBuilder } from './context-builder.types';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -10,6 +11,7 @@ const DEEP_INPUT_LENGTH = 1000;
 export class ConversationOrchestratorService {
   constructor(
     private readonly repository: ConversationRepository,
+    @Inject(CONTEXT_BUILDER) private readonly contextBuilder: ContextBuilder,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
   ) {}
 
@@ -21,10 +23,11 @@ export class ConversationOrchestratorService {
     if (!claimed) return this.currentResult(accessToken, userId, userTurn);
 
     try {
+      const context = await this.contextBuilder.build(accessToken, userId, userTurn);
       const candidate = await this.router.generate({
         task: 'CONVERSATIONAL_RESPONSE', path: selection.path,
         complexity: selection.path === 'DEEP' ? 'HIGH' : 'LOW',
-        context: [{ role: 'USER', content: userTurn.content }], locale: 'und', modality: 'TEXT',
+        context, locale: 'und', modality: 'TEXT',
         latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
       });

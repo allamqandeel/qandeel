@@ -32,3 +32,8 @@ export interface OrchestratedTurnResult {
   userTurn: ConversationTurn;
   assistantTurn?: ConversationTurn;
 }
+
+export interface ConversationExchange {
+  userTurn: ConversationTurn;
+  assistantTurn: ConversationTurn;
+}

@@ -3,10 +3,12 @@ import type { ModelRouter } from '../model-router/model-router.types';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 import { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn } from './conversation.types';
+import type { ContextBuilder } from './context-builder.types';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
   let router: jest.Mocked<ModelRouter>;
+  let contextBuilder: jest.Mocked<ContextBuilder>;
   let orchestrator: ConversationOrchestratorService;
   const userTurn: ConversationTurn = {
     id: 'user-turn', session_id: 'session', role: 'USER', status: 'RECEIVED', content: 'hello',
@@ -25,7 +27,8 @@ describe('ConversationOrchestratorService', () => {
       findAssistantForSource: jest.fn(),
     } as unknown as jest.Mocked<ConversationRepository>;
     router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' } }) };
-    orchestrator = new ConversationOrchestratorService(repository, router);
+    contextBuilder = { build: jest.fn().mockResolvedValue([{ role: 'USER', content: userTurn.content }]) };
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, router);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -33,6 +36,7 @@ describe('ConversationOrchestratorService', () => {
     repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
     expect(router.generate).toHaveBeenCalledTimes(1);
+    expect(contextBuilder.build).toHaveBeenCalledWith('token', 'user', userTurn);
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ modality: 'TEXT', path: 'FAST' }));
   });
@@ -76,6 +80,7 @@ describe('ConversationOrchestratorService', () => {
     repository.findAssistantForSource.mockResolvedValue(assistant);
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
     expect(router.generate).not.toHaveBeenCalled();
+    expect(contextBuilder.build).not.toHaveBeenCalled();
     expect(repository.finalizeTurn).not.toHaveBeenCalled();
   });
 });
