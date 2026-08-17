@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { ConversationSession, ConversationTurn } from './conversation.types';
+import type { ConversationExchange, ConversationSession, ConversationTurn } from './conversation.types';
 import { SupabaseDataApiService } from './supabase-data-api.service';
 
 const SESSION_FIELDS = 'id,status,channel,created_at,updated_at,last_activity_at,closed_at';
@@ -56,25 +56,43 @@ export class ConversationRepository {
     return (await this.dataApi.request<ConversationTurn[]>(accessToken, `conversation_turns?${query}`))[0];
   }
 
-  async findRecentAuthoritativeTurns(
+  async findRecentAuthoritativeExchanges(
     accessToken: string,
     sessionId: string,
     userId: string,
     sourceTurnId: string,
     limit: number,
-  ): Promise<ConversationTurn[]> {
-    const query = new URLSearchParams({
+  ): Promise<ConversationExchange[]> {
+    const assistantQuery = new URLSearchParams({
       select: TURN_FIELDS,
       session_id: `eq.${sessionId}`,
       user_id: `eq.${userId}`,
-      id: `neq.${sourceTurnId}`,
+      source_turn_id: `not.eq.${sourceTurnId}`,
       status: 'eq.COMPLETED',
-      role: 'in.(USER,ASSISTANT)',
-      or: '(role.eq.USER,source_turn_id.not.is.null)',
+      role: 'eq.ASSISTANT',
       order: 'created_at.desc,id.desc',
       limit: String(limit),
     });
-    return this.dataApi.request<ConversationTurn[]>(accessToken, `conversation_turns?${query}`);
+    const assistants = await this.dataApi.request<ConversationTurn[]>(accessToken, `conversation_turns?${assistantQuery}`);
+    if (assistants.length === 0) return [];
+
+    const sourceIds = assistants.map(({ source_turn_id: sourceTurn }) => sourceTurn).filter((id): id is string => id !== null);
+    if (sourceIds.length === 0) return [];
+    const userQuery = new URLSearchParams({
+      select: TURN_FIELDS,
+      session_id: `eq.${sessionId}`,
+      user_id: `eq.${userId}`,
+      id: `in.(${sourceIds.join(',')})`,
+      status: 'eq.COMPLETED',
+      role: 'eq.USER',
+    });
+    const users = await this.dataApi.request<ConversationTurn[]>(accessToken, `conversation_turns?${userQuery}`);
+    const usersById = new Map(users.map((turn) => [turn.id, turn]));
+
+    return assistants.flatMap((assistantTurn) => {
+      const userTurn = assistantTurn.source_turn_id ? usersById.get(assistantTurn.source_turn_id) : undefined;
+      return userTurn ? [{ userTurn, assistantTurn }] : [];
+    });
   }
 
   async claimTurn(accessToken: string, sessionId: string, userId: string, turnId: string, selection: { path: 'FAST' | 'DEEP'; reason: string }): Promise<ConversationTurn | undefined> {
