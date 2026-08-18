@@ -1,49 +1,23 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { HIM_CONTEXT_KINDS, HIM_SEMANTIC_TYPES, MAX_HIM_DEPENDENCIES, type HimMetricDefinition } from './him.types';
-
-const KEY = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
-const bounded = (value: unknown, max: number, field: string): string => {
-  if (typeof value !== 'string' || value.trim() !== value || value.length === 0 || value.length > max) throw new BadRequestException(`Invalid ${field}.`);
-  return value;
-};
-const unique = (values: string[], max: number, field: string): void => {
-  if (!Array.isArray(values) || values.length > max || new Set(values).size !== values.length) throw new BadRequestException(`Invalid ${field}.`);
-  values.forEach((value) => bounded(value, 128, field));
-};
-
+import { INITIAL_HIM_METRICS } from './initial-him-metrics.catalog';
+import { HIM_CALCULATION_STATUSES, HIM_CONTEXT_KINDS, HIM_OWNERS, HIM_SEMANTIC_TYPES, MAX_HIM_DEPENDENCIES, type HimMetricDefinition } from './him.types';
+const KEY=/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
+const bounded=(v:unknown,max:number,f:string):string=>{if(typeof v!=='string'||v.trim()!==v||v.length===0||v.length>max)throw new BadRequestException(`Invalid ${f}.`);return v;};
+const unique=(v:string[],max:number,f:string):void=>{if(!Array.isArray(v)||v.length>max||new Set(v).size!==v.length)throw new BadRequestException(`Invalid ${f}.`);v.forEach(x=>bounded(x,128,f));};
 @Injectable()
 export class HimDefinitionRegistry {
-  private readonly definitions = new Map<string, HimMetricDefinition>();
-
-  register(definition: HimMetricDefinition): void {
-    this.validate(definition);
-    const identity = `${definition.metricKey}@${definition.definitionVersion}`;
-    if (this.definitions.has(identity)) throw new BadRequestException('Duplicate HIM metric identity/version.');
-    this.definitions.set(identity, Object.freeze({ ...definition, validContextKinds: [...definition.validContextKinds], consumers: [...definition.consumers], sourceMetadata: [...definition.sourceMetadata], dependencyIds: [...definition.dependencyIds] }));
-    try { this.validateDependencies(); } catch (error) { this.definitions.delete(identity); throw error; }
+  private readonly definitions=new Map<string,HimMetricDefinition>();
+  constructor(){INITIAL_HIM_METRICS.forEach(definition=>this.register(definition));}
+  register(definition:HimMetricDefinition):void{this.validate(definition);const id=`${definition.metricKey}@${definition.definitionVersion}`;if(this.definitions.has(id))throw new BadRequestException('Duplicate HIM metric identity/version.');this.definitions.set(id,Object.freeze({...definition,validContextKinds:[...definition.validContextKinds],consumers:[...definition.consumers],sourceMetadata:[...definition.sourceMetadata],dependencyIds:[...definition.dependencyIds]}));try{this.validateDependencies();}catch(e){this.definitions.delete(id);throw e;}}
+  get(k:string,v:number){return this.definitions.get(`${k}@${v}`);} list(){return [...this.definitions.values()];}
+  private validate(d:HimMetricDefinition):void{
+    if(!KEY.test(bounded(d.metricKey,128,'metricKey')))throw new BadRequestException('Invalid metricKey.');
+    bounded(d.canonicalName,160,'canonicalName');bounded(d.canonicalDefinition,2000,'canonicalDefinition');bounded(d.canonicalSource,256,'canonicalSource');bounded(d.scaleReference,256,'scaleReference');bounded(d.requiredInputContract,1000,'requiredInputContract');bounded(d.confidenceRequirementReference,256,'confidenceRequirementReference');
+    if(!Number.isSafeInteger(d.definitionVersion)||d.definitionVersion<1)throw new BadRequestException('Invalid definitionVersion.');
+    if(!HIM_OWNERS.includes(d.hifOwner)||!HIM_CALCULATION_STATUSES.includes(d.calculationStatus)||!HIM_SEMANTIC_TYPES.includes(d.semanticType))throw new BadRequestException('Unsupported canonical metadata.');
+    if(!Array.isArray(d.validContextKinds)||d.validContextKinds.length===0||new Set(d.validContextKinds).size!==d.validContextKinds.length||d.validContextKinds.some(k=>!HIM_CONTEXT_KINDS.includes(k)))throw new BadRequestException('Invalid validContextKinds.');
+    unique(d.consumers,16,'consumers');unique(d.sourceMetadata,16,'sourceMetadata');unique(d.dependencyIds,MAX_HIM_DEPENDENCIES,'dependencyIds');if(d.dependencyIds.includes(d.metricKey))throw new BadRequestException('A HIM metric cannot depend on itself.');
   }
-
-  get(metricKey: string, definitionVersion: number): HimMetricDefinition | undefined { return this.definitions.get(`${metricKey}@${definitionVersion}`); }
-  list(): HimMetricDefinition[] { return [...this.definitions.values()]; }
-
-  private validate(definition: HimMetricDefinition): void {
-    if (!KEY.test(bounded(definition.metricKey, 128, 'metricKey'))) throw new BadRequestException('Invalid metricKey.');
-    bounded(definition.canonicalName, 160, 'canonicalName'); bounded(definition.canonicalDefinition, 2000, 'canonicalDefinition');
-    bounded(definition.canonicalSource, 256, 'canonicalSource'); bounded(definition.scaleReference, 256, 'scaleReference');
-    bounded(definition.requiredInputContract, 1000, 'requiredInputContract'); bounded(definition.confidenceRequirementReference, 256, 'confidenceRequirementReference');
-    if (!Number.isSafeInteger(definition.definitionVersion) || definition.definitionVersion < 1) throw new BadRequestException('Invalid definitionVersion.');
-    if (!HIM_SEMANTIC_TYPES.includes(definition.semanticType)) throw new BadRequestException('Unsupported semanticType.');
-    if (!Array.isArray(definition.validContextKinds) || definition.validContextKinds.length === 0 || new Set(definition.validContextKinds).size !== definition.validContextKinds.length || definition.validContextKinds.some((kind) => !HIM_CONTEXT_KINDS.includes(kind))) throw new BadRequestException('Invalid validContextKinds.');
-    unique(definition.consumers, 16, 'consumers'); unique(definition.sourceMetadata, 16, 'sourceMetadata'); unique(definition.dependencyIds, MAX_HIM_DEPENDENCIES, 'dependencyIds');
-    if (definition.dependencyIds.includes(definition.metricKey)) throw new BadRequestException('A HIM metric cannot depend on itself.');
-  }
-
-  private validateDependencies(): void {
-    const latest = new Map<string, HimMetricDefinition>();
-    for (const definition of this.definitions.values()) if (!latest.has(definition.metricKey) || latest.get(definition.metricKey)!.definitionVersion < definition.definitionVersion) latest.set(definition.metricKey, definition);
-    for (const definition of latest.values()) for (const dependency of definition.dependencyIds) if (!latest.has(dependency)) throw new BadRequestException(`Unresolved HIM dependency: ${dependency}.`);
-    const visiting = new Set<string>(), visited = new Set<string>();
-    const visit = (key: string): void => { if (visiting.has(key)) throw new BadRequestException('Cyclic HIM dependency.'); if (visited.has(key)) return; visiting.add(key); latest.get(key)?.dependencyIds.forEach(visit); visiting.delete(key); visited.add(key); };
-    latest.forEach((_, key) => visit(key));
-  }
+  private validateDependencies():void{const latest=new Map<string,HimMetricDefinition>();for(const d of this.definitions.values())if(!latest.has(d.metricKey)||latest.get(d.metricKey)!.definitionVersion<d.definitionVersion)latest.set(d.metricKey,d);for(const d of latest.values())for(const x of d.dependencyIds)if(!latest.has(x))throw new BadRequestException(`Unresolved HIM dependency: ${x}.`);const visiting=new Set<string>(),visited=new Set<string>();const visit=(k:string):void=>{if(visiting.has(k))throw new BadRequestException('Cyclic HIM dependency.');if(visited.has(k))return;visiting.add(k);latest.get(k)?.dependencyIds.forEach(visit);visiting.delete(k);visited.add(k);};latest.forEach((_,k)=>visit(k));}
 }
+
