@@ -64,4 +64,6 @@ jobs:
         run: for migration in database/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
       - name: Verify Initial HIM against real PostgreSQL
         run: npm run verify:initial-him:integration
+      - name: Verify HIM calculation/calibration runtime against real PostgreSQL
+        run: npm run verify:him-calculation:integration
 
