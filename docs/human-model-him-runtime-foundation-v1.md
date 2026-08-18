@@ -18,17 +18,17 @@ The bounded canonical set is `STATE`, `TRAIT`, `CAPABILITY`, `READINESS`, `ALIGN
 
 ## Metric observations and snapshots
 
-Snapshots are user-owned, append-only records bound to an exact definition identity/version and semantic type. They carry explicit value state, bounded supporting and contradicting evidence references, source engines, exact context, scope, server timestamp, optional structural evidence window, validity, server-derived per-context snapshot version, and bounded update reason/provenance.
+Snapshots are user-owned, append-only records bound to an exact definition identity/version and semantic type. They carry explicit value state, bounded supporting and contradicting evidence references, a server-derived canonical source engine, exact context, scope, server timestamp, optional structural evidence window, validity, server-derived per-context snapshot version, caller-authored descriptive update metadata, and server-derived canonical provenance.
 
 `UNASSESSED` always stores `NULL`; it is distinct from assessed numeric zero. `ASSESSED` requires a finite numeric value. The foundation assigns no values and implements no production scale, formula, weight, threshold, band, composite, or calculation.
 
 ## Exact context behavior
 
-Supported context kinds are `GLOBAL`, `RELATIONSHIP`, `DECISION`, `GOAL`, `CONVERSATION_SESSION`, and `SITUATION`, following the canonical bridge. Global identity is exactly `GLOBAL`; non-global records cannot use that identity. Every read supplies both context kind and context identity, and indexes/history keys include both. A contextual value never falls back or generalizes to another context or global state.
+Supported context kinds are `GLOBAL`, `RELATIONSHIP`, `DECISION`, `GOAL`, `CONVERSATION_SESSION`, and `SITUATION`, following the canonical bridge. Global identity is exactly `GLOBAL`; relationship, decision, goal, and conversation/session identities are UUIDs; situation identity follows the chosen bounded non-empty identifier contract and cannot equal `GLOBAL`. Both service and database RPC enforce these rules. Every read supplies both context kind and context identity, and indexes/history keys include both. A contextual value never falls back or generalizes to another context or global state.
 
 ## Provenance and evidence
 
-HIM consumes the existing Memory/Evidence boundary; it neither creates nor mutates evidence. Persisted supporting, contradicting, and update-provenance references are bounded, role-disjoint where applicable, and verified by the database as active, unexpired, same-user memory references. Conflict is retained. Source-engine provenance is bounded.
+HIM consumes the existing Memory/Evidence boundary; it neither creates nor mutates evidence. Persisted supporting, contradicting, and descriptive update references are bounded, role-disjoint where applicable, and verified by the database as active, unexpired, same-user memory references. Conflict is retained. The caller may explain an update through `descriptive_update_reason` and owned `descriptive_update_reference_ids`; neither is canonical provenance. The RPC derives canonical `source_engines = [QANDEEL_HIM_RUNTIME]` and `canonical_provenance = QANDEEL_HIM_RUNTIME_FOUNDATION_V1`, and rejects caller attempts to supply either.
 
 The schema has no chain-of-thought, scratchpad, provider payload, raw transcript, diagnosis, unrestricted rationale, or personality-label field. No Memory, Evidence, Hypothesis, Confidence, Question, or Information Gap row is mutated.
 
@@ -42,7 +42,7 @@ Definition versions are immutable identities and snapshots retain the exact refe
 
 ## Security and privacy
 
-Snapshot reads use RLS and default-deny cross-user access. Creation is available only through a security-definer function that derives `auth.uid()`, verifies definition identity/version and context support, canonicalizes semantic type and confidence state, validates evidence ownership, and derives history metadata. Definitions cannot be created by the authenticated role. The real PostgreSQL verifier exercises direct-RPC forgery and cross-user failure cases.
+Snapshot reads use RLS and default-deny cross-user access. Creation is available only through a security-definer function that derives `auth.uid()`, verifies definition identity/version and exact context identity, canonicalizes semantic type, confidence state, source engine and provenance, validates evidence ownership, and derives history metadata. Definitions cannot be created by the authenticated role. The real PostgreSQL verifier exercises invalid UUID-bound contexts, forged canonical source/provenance, other direct-RPC forgery, and cross-user failure cases.
 
 ## Deliberately open
 

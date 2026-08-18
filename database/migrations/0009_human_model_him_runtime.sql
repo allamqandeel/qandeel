@@ -20,10 +20,11 @@ CREATE TABLE public.him_metric_snapshots (
   id uuid PRIMARY KEY, user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
   metric_key text NOT NULL, definition_version integer NOT NULL, semantic_type text NOT NULL,
   value_state text NOT NULL, numeric_value double precision, confidence_state text NOT NULL DEFAULT 'UNASSESSED', confidence_reference text,
-  supporting_evidence_ids text[] NOT NULL DEFAULT '{}', contradicting_evidence_ids text[] NOT NULL DEFAULT '{}', source_engines text[] NOT NULL,
+  supporting_evidence_ids text[] NOT NULL DEFAULT '{}', contradicting_evidence_ids text[] NOT NULL DEFAULT '{}', source_engines text[] NOT NULL DEFAULT ARRAY['QANDEEL_HIM_RUNTIME'],
   context_kind text NOT NULL, context_id text NOT NULL, scope text NOT NULL, observed_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
   temporal_window_start timestamptz, temporal_window_end timestamptz, validity_status text NOT NULL, snapshot_version integer NOT NULL,
-  update_reason text NOT NULL, update_provenance_ids text[] NOT NULL DEFAULT '{}', created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  descriptive_update_reason text NOT NULL, descriptive_update_reference_ids text[] NOT NULL DEFAULT '{}',
+  canonical_provenance text NOT NULL DEFAULT 'QANDEEL_HIM_RUNTIME_FOUNDATION_V1', created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT him_snapshot_definition_fk FOREIGN KEY(metric_key,definition_version) REFERENCES public.him_metric_definitions(metric_key,definition_version) ON DELETE RESTRICT,
   CONSTRAINT him_snapshot_definition_identity UNIQUE(id,user_id),
   CONSTRAINT him_snapshot_history_unique UNIQUE(user_id,metric_key,context_kind,context_id,snapshot_version),
@@ -31,14 +32,15 @@ CREATE TABLE public.him_metric_snapshots (
   CONSTRAINT him_snapshot_value_check CHECK((value_state='UNASSESSED' AND numeric_value IS NULL) OR (value_state='ASSESSED' AND numeric_value>'-Infinity'::double precision AND numeric_value<'Infinity'::double precision)),
   CONSTRAINT him_snapshot_confidence_check CHECK(confidence_state='UNASSESSED' AND confidence_reference IS NULL),
   CONSTRAINT him_snapshot_evidence_bounds CHECK(public.bounded_nonempty_text_array(supporting_evidence_ids,32,64) AND public.bounded_nonempty_text_array(contradicting_evidence_ids,32,64) AND NOT supporting_evidence_ids&&contradicting_evidence_ids),
-  CONSTRAINT him_snapshot_source_bounds CHECK(cardinality(source_engines) BETWEEN 1 AND 16 AND public.bounded_nonempty_text_array(source_engines,16,128)),
-  CONSTRAINT him_snapshot_context_check CHECK(context_kind=ANY(ARRAY['GLOBAL','RELATIONSHIP','DECISION','GOAL','CONVERSATION_SESSION','SITUATION']) AND length(context_id) BETWEEN 1 AND 128 AND context_id=btrim(context_id) AND ((context_kind='GLOBAL' AND context_id='GLOBAL') OR (context_kind<>'GLOBAL' AND context_id<>'GLOBAL'))),
+  CONSTRAINT him_snapshot_source_check CHECK(source_engines=ARRAY['QANDEEL_HIM_RUNTIME']::text[]),
+  CONSTRAINT him_snapshot_context_check CHECK(context_kind=ANY(ARRAY['GLOBAL','RELATIONSHIP','DECISION','GOAL','CONVERSATION_SESSION','SITUATION']) AND length(context_id) BETWEEN 1 AND 128 AND context_id=btrim(context_id) AND ((context_kind='GLOBAL' AND context_id='GLOBAL') OR (context_kind=ANY(ARRAY['RELATIONSHIP','DECISION','GOAL','CONVERSATION_SESSION']) AND context_id~*'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$') OR (context_kind='SITUATION' AND context_id<>'GLOBAL'))),
   CONSTRAINT him_snapshot_scope_check CHECK(length(scope) BETWEEN 1 AND 256 AND scope=btrim(scope)),
   CONSTRAINT him_snapshot_window_check CHECK((temporal_window_start IS NULL AND temporal_window_end IS NULL) OR (temporal_window_start IS NOT NULL AND temporal_window_end IS NOT NULL AND temporal_window_start<=temporal_window_end)),
   CONSTRAINT him_snapshot_validity_check CHECK(validity_status=ANY(ARRAY['VALID','INVALIDATED'])),
   CONSTRAINT him_snapshot_version_check CHECK(snapshot_version>0),
-  CONSTRAINT him_snapshot_reason_check CHECK(length(update_reason) BETWEEN 1 AND 500 AND update_reason=btrim(update_reason)),
-  CONSTRAINT him_snapshot_update_provenance_check CHECK(public.bounded_nonempty_text_array(update_provenance_ids,32,64))
+  CONSTRAINT him_snapshot_descriptive_reason_check CHECK(length(descriptive_update_reason) BETWEEN 1 AND 500 AND descriptive_update_reason=btrim(descriptive_update_reason)),
+  CONSTRAINT him_snapshot_descriptive_references_check CHECK(public.bounded_nonempty_text_array(descriptive_update_reference_ids,32,64)),
+  CONSTRAINT him_snapshot_canonical_provenance_check CHECK(canonical_provenance='QANDEEL_HIM_RUNTIME_FOUNDATION_V1')
 );
 
 CREATE FUNCTION public.validate_him_metric_dependencies()
@@ -85,20 +87,23 @@ $$;
 CREATE FUNCTION public.create_him_metric_snapshot(p_observation jsonb)
 RETURNS SETOF public.him_metric_snapshots LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE canonical_user uuid := (SELECT auth.uid()); definition public.him_metric_definitions; next_version integer;
-DECLARE supporting text[]; contradicting text[]; provenance_ids text[]; engines text[]; value_number double precision;
+DECLARE supporting text[]; contradicting text[]; descriptive_reference_ids text[]; value_number double precision;
 DECLARE window_start timestamptz; window_end timestamptz;
 BEGIN
   IF canonical_user IS NULL THEN RETURN; END IF;
-  IF EXISTS(SELECT 1 FROM jsonb_object_keys(p_observation) key WHERE key<>ALL(ARRAY['id','metricKey','definitionVersion','valueState','numericValue','supportingEvidenceIds','contradictingEvidenceIds','sourceEngines','contextKind','contextId','scope','temporalWindowStart','temporalWindowEnd','validityStatus','updateReason','updateProvenanceIds'])) THEN RAISE EXCEPTION 'Observation contains forbidden fields' USING ERRCODE='22023'; END IF;
+  IF EXISTS(SELECT 1 FROM jsonb_object_keys(p_observation) key WHERE key<>ALL(ARRAY['id','metricKey','definitionVersion','valueState','numericValue','supportingEvidenceIds','contradictingEvidenceIds','contextKind','contextId','scope','temporalWindowStart','temporalWindowEnd','validityStatus','descriptiveUpdateReason','descriptiveUpdateReferenceIds'])) THEN RAISE EXCEPTION 'Observation contains forbidden fields' USING ERRCODE='22023'; END IF;
   SELECT * INTO definition FROM public.him_metric_definitions WHERE metric_key=p_observation->>'metricKey' AND definition_version=(p_observation->>'definitionVersion')::integer;
   IF NOT FOUND THEN RAISE EXCEPTION 'Unknown HIM definition identity/version' USING ERRCODE='22023'; END IF;
   IF NOT (p_observation->>'contextKind'=ANY(definition.valid_context_kinds)) THEN RAISE EXCEPTION 'Unsupported exact context kind' USING ERRCODE='22023'; END IF;
   supporting:=ARRAY(SELECT jsonb_array_elements_text(coalesce(p_observation->'supportingEvidenceIds','[]'::jsonb)));
   contradicting:=ARRAY(SELECT jsonb_array_elements_text(coalesce(p_observation->'contradictingEvidenceIds','[]'::jsonb)));
-  provenance_ids:=ARRAY(SELECT jsonb_array_elements_text(coalesce(p_observation->'updateProvenanceIds','[]'::jsonb)));
-  engines:=ARRAY(SELECT jsonb_array_elements_text(coalesce(p_observation->'sourceEngines','[]'::jsonb)));
-  IF NOT public.bounded_nonempty_text_array(supporting,32,64) OR NOT public.bounded_nonempty_text_array(contradicting,32,64) OR supporting&&contradicting OR NOT public.bounded_nonempty_text_array(provenance_ids,32,64) OR cardinality(engines) NOT BETWEEN 1 AND 16 OR NOT public.bounded_nonempty_text_array(engines,16,128) THEN RAISE EXCEPTION 'Invalid bounded HIM provenance' USING ERRCODE='22023'; END IF;
-  IF EXISTS(SELECT 1 FROM unnest(supporting||contradicting||provenance_ids) ref WHERE ref!~'^memory:[0-9a-fA-F-]{36}$' OR NOT EXISTS(SELECT 1 FROM public.memories m WHERE m.id=substring(ref from 8)::uuid AND m.user_id=canonical_user AND m.status='ACTIVE' AND (m.expires_at IS NULL OR m.expires_at>CURRENT_TIMESTAMP))) THEN RAISE EXCEPTION 'Ineligible or cross-user HIM evidence reference' USING ERRCODE='22023'; END IF;
+  descriptive_reference_ids:=ARRAY(SELECT jsonb_array_elements_text(coalesce(p_observation->'descriptiveUpdateReferenceIds','[]'::jsonb)));
+  IF NOT public.bounded_nonempty_text_array(supporting,32,64) OR NOT public.bounded_nonempty_text_array(contradicting,32,64) OR supporting&&contradicting OR NOT public.bounded_nonempty_text_array(descriptive_reference_ids,32,64) THEN RAISE EXCEPTION 'Invalid bounded HIM evidence metadata' USING ERRCODE='22023'; END IF;
+  IF EXISTS(SELECT 1 FROM unnest(supporting||contradicting||descriptive_reference_ids) ref WHERE ref!~'^memory:[0-9a-fA-F-]{36}$' OR NOT EXISTS(SELECT 1 FROM public.memories m WHERE m.id=substring(ref from 8)::uuid AND m.user_id=canonical_user AND m.status='ACTIVE' AND (m.expires_at IS NULL OR m.expires_at>CURRENT_TIMESTAMP))) THEN RAISE EXCEPTION 'Ineligible or cross-user HIM evidence reference' USING ERRCODE='22023'; END IF;
+  IF p_observation->>'contextKind'='GLOBAL' THEN IF p_observation->>'contextId'<>'GLOBAL' THEN RAISE EXCEPTION 'Invalid exact GLOBAL context identity' USING ERRCODE='22023'; END IF;
+  ELSIF p_observation->>'contextKind'=ANY(ARRAY['RELATIONSHIP','DECISION','GOAL','CONVERSATION_SESSION']) THEN IF p_observation->>'contextId'!~*'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' THEN RAISE EXCEPTION 'Invalid exact UUID context identity' USING ERRCODE='22023'; END IF;
+  ELSIF p_observation->>'contextKind'='SITUATION' THEN IF length(p_observation->>'contextId') NOT BETWEEN 1 AND 128 OR p_observation->>'contextId'<>btrim(p_observation->>'contextId') OR p_observation->>'contextId'='GLOBAL' THEN RAISE EXCEPTION 'Invalid exact SITUATION context identity' USING ERRCODE='22023'; END IF;
+  ELSE RAISE EXCEPTION 'Invalid HIM context kind' USING ERRCODE='22023'; END IF;
   IF p_observation->>'valueState'='UNASSESSED' THEN IF p_observation?'numericValue' THEN RAISE EXCEPTION 'Unassessed HIM value cannot carry numeric value' USING ERRCODE='22023'; END IF; value_number:=NULL;
   ELSIF p_observation->>'valueState'='ASSESSED' THEN value_number:=(p_observation->>'numericValue')::double precision; IF value_number IS NULL OR value_number<='-Infinity'::double precision OR value_number>='Infinity'::double precision OR value_number<>value_number THEN RAISE EXCEPTION 'Assessed HIM value requires finite numeric value' USING ERRCODE='22023'; END IF;
   ELSE RAISE EXCEPTION 'Invalid HIM value state' USING ERRCODE='22023'; END IF;
@@ -106,8 +111,8 @@ BEGIN
   IF p_observation?'temporalWindowStart' THEN window_start:=(p_observation->>'temporalWindowStart')::timestamptz; window_end:=(p_observation->>'temporalWindowEnd')::timestamptz; IF window_start>window_end THEN RAISE EXCEPTION 'Invalid temporal window' USING ERRCODE='22023'; END IF; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended(canonical_user::text||definition.metric_key||(p_observation->>'contextKind')||(p_observation->>'contextId'),0));
   SELECT coalesce(max(snapshot_version),0)+1 INTO next_version FROM public.him_metric_snapshots WHERE user_id=canonical_user AND metric_key=definition.metric_key AND context_kind=p_observation->>'contextKind' AND context_id=p_observation->>'contextId';
-  RETURN QUERY INSERT INTO public.him_metric_snapshots(id,user_id,metric_key,definition_version,semantic_type,value_state,numeric_value,confidence_state,confidence_reference,supporting_evidence_ids,contradicting_evidence_ids,source_engines,context_kind,context_id,scope,observed_at,temporal_window_start,temporal_window_end,validity_status,snapshot_version,update_reason,update_provenance_ids,created_at)
-  VALUES((p_observation->>'id')::uuid,canonical_user,definition.metric_key,definition.definition_version,definition.semantic_type,p_observation->>'valueState',value_number,'UNASSESSED',NULL,supporting,contradicting,engines,p_observation->>'contextKind',p_observation->>'contextId',p_observation->>'scope',CURRENT_TIMESTAMP,window_start,window_end,p_observation->>'validityStatus',next_version,p_observation->>'updateReason',provenance_ids,CURRENT_TIMESTAMP) RETURNING *;
+  RETURN QUERY INSERT INTO public.him_metric_snapshots(id,user_id,metric_key,definition_version,semantic_type,value_state,numeric_value,confidence_state,confidence_reference,supporting_evidence_ids,contradicting_evidence_ids,source_engines,context_kind,context_id,scope,observed_at,temporal_window_start,temporal_window_end,validity_status,snapshot_version,descriptive_update_reason,descriptive_update_reference_ids,canonical_provenance,created_at)
+  VALUES((p_observation->>'id')::uuid,canonical_user,definition.metric_key,definition.definition_version,definition.semantic_type,p_observation->>'valueState',value_number,'UNASSESSED',NULL,supporting,contradicting,ARRAY['QANDEEL_HIM_RUNTIME'],p_observation->>'contextKind',p_observation->>'contextId',p_observation->>'scope',CURRENT_TIMESTAMP,window_start,window_end,p_observation->>'validityStatus',next_version,p_observation->>'descriptiveUpdateReason',descriptive_reference_ids,'QANDEEL_HIM_RUNTIME_FOUNDATION_V1',CURRENT_TIMESTAMP) RETURNING *;
 END; $$;
 
 REVOKE ALL ON FUNCTION public.get_him_metric_definition(text,integer),public.list_him_metric_definitions(),public.create_him_metric_snapshot(jsonb) FROM PUBLIC,anon;

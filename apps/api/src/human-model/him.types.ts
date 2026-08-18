@@ -11,8 +11,9 @@ export type HimValueState = (typeof HIM_VALUE_STATES)[number];
 
 export const MAX_HIM_CONTEXT_ID_LENGTH = 128;
 export const MAX_HIM_EVIDENCE_PER_ROLE = 32;
-export const MAX_HIM_SOURCE_ENGINES = 16;
 export const MAX_HIM_DEPENDENCIES = 32;
+export const HIM_CANONICAL_SOURCE_ENGINE = 'QANDEEL_HIM_RUNTIME' as const;
+export const HIM_CANONICAL_PROVENANCE = 'QANDEEL_HIM_RUNTIME_FOUNDATION_V1' as const;
 
 export interface HimMetricDefinition {
   metricKey: string;
@@ -38,13 +39,14 @@ export interface HimMetricSnapshot {
   context_kind: HimContextKind; context_id: string; scope: string;
   observed_at: string; temporal_window_start: string | null; temporal_window_end: string | null;
   validity_status: HimValidityStatus; snapshot_version: number;
-  update_reason: string; update_provenance_ids: string[]; created_at: string;
+  descriptive_update_reason: string; descriptive_update_reference_ids: string[];
+  canonical_provenance: typeof HIM_CANONICAL_PROVENANCE; created_at: string;
 }
 
 export interface CreateHimMetricObservation {
   id: string; metricKey: string; definitionVersion: number; valueState: HimValueState;
   numericValue?: number; supportingEvidenceIds?: string[]; contradictingEvidenceIds?: string[];
-  sourceEngines: string[]; contextKind: HimContextKind; contextId: string; scope: string;
+  contextKind: HimContextKind; contextId: string; scope: string;
   temporalWindowStart?: string; temporalWindowEnd?: string; validityStatus: HimValidityStatus;
-  updateReason: string; updateProvenanceIds?: string[];
+  descriptiveUpdateReason: string; descriptiveUpdateReferenceIds?: string[];
 }
