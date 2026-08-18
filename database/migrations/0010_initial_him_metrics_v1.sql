@@ -32,6 +32,13 @@ VALUES
 ('hgs.habit-strength',1,'Habit Strength','Canonical HIF Part 8 HGS metric identity: Habit Strength. Capability tag only; no score or growth trajectory is defined.','HIF Part 8 — Human Intelligence Metrics v0.1 / HGS','HGS','CAPABILITY','UNCALIBRATED','UNCALIBRATED_NO_PRODUCTION_SCALE',ARRAY['GOAL','SITUATION'],'APPROVED_MEASUREMENT_MODEL_REQUIRED','UNRESOLVED_METRIC_CONFIDENCE_MODEL','{}',ARRAY['HIF_PART_8_HUMAN_INTELLIGENCE_METRICS_V0_1'],'{}')
 ON CONFLICT (metric_key,definition_version) DO NOTHING;
 
+DO $$
+BEGIN
+  IF (SELECT count(*) FROM public.him_metric_definitions)<>17
+    OR EXISTS(SELECT 1 FROM public.him_metric_definitions WHERE definition_version<>1 OR calculation_status<>'UNCALIBRATED' OR scale_reference<>'UNCALIBRATED_NO_PRODUCTION_SCALE' OR confidence_requirement_reference<>'UNRESOLVED_METRIC_CONFIDENCE_MODEL' OR cardinality(dependency_ids)<>0)
+  THEN RAISE EXCEPTION 'Initial HIM catalog drift detected' USING ERRCODE='23514'; END IF;
+END; $$;
+
 CREATE OR REPLACE FUNCTION public.create_him_metric_snapshot(p_observation jsonb)
 RETURNS SETOF public.him_metric_snapshots LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE canonical_user uuid := (SELECT auth.uid()); definition public.him_metric_definitions; next_version integer;
