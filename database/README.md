@@ -62,6 +62,15 @@ The memory verifier applies migration 0004 only from an absent state, then verif
 constraints, atomic supersession, expiration filtering, lifecycle deletion, and
 cross-user isolation with rolled-back fixtures.
 
+Migration 0009 adds the empty canonical HIM definition registry and append-only,
+exact-context metric snapshots. Its verifier proves explicit missingness versus
+numeric zero, unresolved metric confidence, definition identity/version integrity,
+server-derived ownership/history, bounded same-user provenance, and RLS isolation:
+
+```sh
+npm run verify:him:integration
+```
+
 This command is an explicit integration gate and is not run by ordinary CI because
 CI does not receive a development database secret. The secret-free structural test
 remains available through `npm run test:database`.
