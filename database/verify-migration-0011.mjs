@@ -1,6 +1,6 @@
 import pg from 'pg';const{Client}=pg;const client=new Client({connectionString:process.env.DATABASE_URL});
 const one='00000000-0000-4000-8000-000000000001',two='00000000-0000-4000-8000-000000000002';
-const rejects=async(sql,params=[])=>{let failed=false;try{await client.query(sql,params);}catch{failed=true;}if(!failed)throw new Error(`Expected rejection: ${sql}`);};
+const rejects=async(sql,params=[])=>{await client.query('SAVEPOINT expected_rejection');let failed=false;try{await client.query(sql,params);}catch{failed=true;await client.query('ROLLBACK TO SAVEPOINT expected_rejection');}await client.query('RELEASE SAVEPOINT expected_rejection');if(!failed)throw new Error(`Expected rejection: ${sql}`);};
 await client.connect();try{
  const count=await client.query("SELECT count(*)::int n FROM public.him_metric_definitions WHERE calculation_status='UNCALIBRATED'");if(count.rows[0].n!==17)throw new Error('All 17 production metrics must remain uncalibrated');
  const grants=await client.query("SELECT privilege_type FROM information_schema.role_table_grants WHERE grantee='authenticated' AND table_name IN ('him_calculation_models','him_calculation_results','him_calibration_evaluations') AND privilege_type<>'SELECT'");if(grants.rowCount)throw new Error('Authenticated role has HIM runtime write privilege');
