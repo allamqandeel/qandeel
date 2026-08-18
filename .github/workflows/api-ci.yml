@@ -9,36 +9,59 @@ on:
       - 'tsconfig.base.json'
       - '.github/workflows/api-ci.yml'
   push:
-    branches:
-      - main
-    paths:
-      - 'apps/api/**'
-      - 'database/**'
-      - 'package.json'
-      - 'tsconfig.base.json'
-      - '.github/workflows/api-ci.yml'
+    branches: [main]
 
 jobs:
   verify-api:
     runs-on: ubuntu-latest
-
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: qandeel_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres -d qandeel_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/qandeel_test
+      PGPASSWORD: postgres
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
+          cache: npm
       - name: Install dependencies
         run: npm ci
-
       - name: Build API
         run: npm run build:api
-
       - name: Test API
         run: npm run test:api
-
-      - name: Verify database migrations
+      - name: Verify database migration contracts
         run: npm run test:database
+      - name: Bootstrap fresh Supabase-compatible PostgreSQL roles
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE anon NOLOGIN;
+          CREATE ROLE authenticated NOLOGIN;
+          CREATE SCHEMA auth;
+          CREATE TABLE auth.users (id uuid PRIMARY KEY);
+          CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
+            SELECT (nullif(current_setting('request.jwt.claims', true), '')::jsonb->>'sub')::uuid
+          $$;
+          ALTER FUNCTION auth.uid() OWNER TO postgres;
+          GRANT USAGE ON SCHEMA auth TO anon, authenticated;
+          GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated;
+          SQL
+      - name: Apply all migrations to fresh PostgreSQL
+        run: for migration in database/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
+      - name: Verify Initial HIM against real PostgreSQL
+        run: npm run verify:initial-him:integration
+

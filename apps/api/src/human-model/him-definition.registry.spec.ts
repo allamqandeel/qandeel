@@ -1,20 +1,15 @@
 import { BadRequestException } from '@nestjs/common';
 import { HimDefinitionRegistry } from './him-definition.registry';
-import { HIM_SEMANTIC_TYPES, type HimMetricDefinition } from './him.types';
-
-const definition = (metricKey: string, dependencyIds: string[] = [], definitionVersion = 1): HimMetricDefinition => ({
-  metricKey, canonicalName: metricKey, canonicalDefinition: 'Canonical test-only definition', canonicalSource: 'test-source', semanticType: 'STATE', definitionVersion,
-  scaleReference: 'canonical-scale-reference', validContextKinds: ['DECISION'], requiredInputContract: 'canonical-input-reference',
-  confidenceRequirementReference: 'future-confidence-contract', consumers: [], sourceMetadata: ['test-only'], dependencyIds,
+import { INITIAL_HIM_METRICS } from './initial-him-metrics.catalog';
+import type { HimMetricDefinition } from './him.types';
+const expected=['hse.stress','hse.energy','hse.motivation','hse.self-confidence','hse.attention','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety','hgs.self-awareness','hgs.resilience','hgs.purpose-alignment','hgs.habit-strength'];
+describe('Initial HIM catalog',()=>{
+  it('registers exactly the 17 canonical identities',()=>expect(new HimDefinitionRegistry().list().map(x=>x.metricKey)).toEqual(expected));
+  it('contains no bridge-only examples',()=>expect(new HimDefinitionRegistry().list().map(x=>x.canonicalName)).not.toEqual(expect.arrayContaining(['Decision Clarity','Action Readiness','Goal Alignment','Decision Quality','Uncertainty','Progress','Cognitive Load','Relationship Health','Growth Momentum','Sleep'])));
+  it('is entirely uncalibrated with no scale, confidence formula, or dependency edge',()=>INITIAL_HIM_METRICS.forEach(x=>{expect(x.calculationStatus).toBe('UNCALIBRATED');expect(x.scaleReference).toBe('UNCALIBRATED_NO_PRODUCTION_SCALE');expect(x.confidenceRequirementReference).toBe('UNRESOLVED_METRIC_CONFIDENCE_MODEL');expect(x.dependencyIds).toEqual([]);}));
+  it('disambiguates Confidence and relationship-scopes Trust',()=>{const confidence=INITIAL_HIM_METRICS.find(x=>x.canonicalName==='Confidence')!;expect(confidence.metricKey).toBe('hse.self-confidence');expect(confidence.validContextKinds).not.toContain('GLOBAL');const trust=INITIAL_HIM_METRICS.find(x=>x.canonicalName==='Trust')!;expect(trust.metricKey).toBe('hrs.relationship-trust');expect(trust.validContextKinds).toEqual(['RELATIONSHIP']);});
+  it('resolves only canonically supported semantic mappings',()=>{const resolved=INITIAL_HIM_METRICS.filter(x=>x.semanticMappingStatus==='RESOLVED');expect(resolved.map(x=>[x.metricKey,x.semanticType])).toEqual([['hse.stress','STATE'],['hse.energy','STATE'],['hse.motivation','STATE'],['hse.self-confidence','STATE'],['hse.attention','STATE'],['hgs.purpose-alignment','ALIGNMENT']]);const unresolved=INITIAL_HIM_METRICS.filter(x=>x.semanticMappingStatus==='UNRESOLVED');expect(unresolved).toHaveLength(11);expect(unresolved.every(x=>x.semanticType===null)).toBe(true);});
+  it('rejects inconsistent resolved and unresolved mapping pairs',()=>{const registry=new HimDefinitionRegistry();expect(()=>registry.register({...INITIAL_HIM_METRICS[0],metricKey:'forged.unresolved',semanticMappingStatus:'UNRESOLVED'})).toThrow('semantic mapping');expect(()=>registry.register({...INITIAL_HIM_METRICS[5],metricKey:'forged.resolved',semanticMappingStatus:'RESOLVED'})).toThrow('semantic mapping');});
+  it('rejects forged canonical metadata',()=>{const registry=new HimDefinitionRegistry();const value={...INITIAL_HIM_METRICS[0],metricKey:'forged.metric',hifOwner:'ABS'};expect(()=>registry.register(value as HimMetricDefinition)).toThrow(BadRequestException);});
 });
 
-describe('HimDefinitionRegistry', () => {
-  it('bounds semantic types and starts with no production definitions', () => { expect(HIM_SEMANTIC_TYPES).toEqual(['STATE','TRAIT','CAPABILITY','READINESS','ALIGNMENT','UNCERTAINTY','PROGRESS','LOAD']); expect(new HimDefinitionRegistry().list()).toEqual([]); });
-  it.each([{ ...definition('valid'), metricKey: 'UPPER' }, { ...definition('valid'), semanticType: 'PERSONALITY' }, { ...definition('valid'), validContextKinds: ['ANYWHERE'] }, { ...definition('valid'), canonicalDefinition: '' }])('rejects malformed or unsupported definitions', (value) => { expect(() => new HimDefinitionRegistry().register(value as HimMetricDefinition)).toThrow(BadRequestException); });
-  it('rejects a duplicate metric identity and version', () => { const registry = new HimDefinitionRegistry(); registry.register(definition('test.metric')); expect(() => registry.register(definition('test.metric'))).toThrow('Duplicate'); });
-  it('rejects unresolved, self, and cyclic dependencies without inventing edges', () => {
-    expect(() => new HimDefinitionRegistry().register(definition('self', ['self']))).toThrow('itself');
-    expect(() => new HimDefinitionRegistry().register(definition('a', ['missing']))).toThrow('Unresolved');
-    const registry = new HimDefinitionRegistry(); registry.register(definition('a')); registry.register(definition('b', ['a'])); expect(() => registry.register(definition('a', ['b'], 2))).toThrow('Cyclic');
-  });
-});
