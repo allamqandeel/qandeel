@@ -4,6 +4,8 @@ export const HIM_CONTEXT_KINDS = ['GLOBAL', 'RELATIONSHIP', 'DECISION', 'GOAL', 
 export type HimContextKind = (typeof HIM_CONTEXT_KINDS)[number];
 export const HIM_CALCULATION_STATUSES = ['UNCALIBRATED', 'CALIBRATED'] as const;
 export type HimCalculationStatus = (typeof HIM_CALCULATION_STATUSES)[number];
+export const HIM_SEMANTIC_MAPPING_STATUSES = ['RESOLVED', 'UNRESOLVED'] as const;
+export type HimSemanticMappingStatus = (typeof HIM_SEMANTIC_MAPPING_STATUSES)[number];
 export const HIM_OWNERS = ['HSE', 'HBS', 'HRS', 'HGS'] as const;
 export type HimOwner = (typeof HIM_OWNERS)[number];
 export const HIM_VALIDITY_STATUSES = ['VALID', 'INVALIDATED'] as const;
@@ -18,13 +20,13 @@ export const HIM_CANONICAL_PROVENANCE = 'QANDEEL_HIM_RUNTIME_FOUNDATION_V1' as c
 
 export interface HimMetricDefinition {
   metricKey: string; canonicalName: string; canonicalDefinition: string; canonicalSource: string;
-  hifOwner: HimOwner; semanticType: HimSemanticType; definitionVersion: number;
+  hifOwner: HimOwner; semanticMappingStatus: HimSemanticMappingStatus; semanticType: HimSemanticType | null; definitionVersion: number;
   calculationStatus: HimCalculationStatus; scaleReference: string; validContextKinds: HimContextKind[];
   requiredInputContract: string; confidenceRequirementReference: string; consumers: string[];
   sourceMetadata: string[]; dependencyIds: string[];
 }
 export interface HimMetricSnapshot {
-  id:string; user_id:string; metric_key:string; definition_version:number; semantic_type:HimSemanticType;
+  id:string; user_id:string; metric_key:string; definition_version:number; semantic_mapping_status:HimSemanticMappingStatus; semantic_type:HimSemanticType|null;
   value_state:HimValueState; numeric_value:number|null; confidence_state:'UNASSESSED'; confidence_reference:null;
   supporting_evidence_ids:string[]; contradicting_evidence_ids:string[]; source_engines:string[];
   context_kind:HimContextKind; context_id:string; scope:string; observed_at:string;
