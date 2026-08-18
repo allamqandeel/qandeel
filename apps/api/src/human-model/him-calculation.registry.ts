@@ -1,0 +1,40 @@
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { HimDefinitionRegistry } from './him-definition.registry';
+import { HIM_CONFIDENCE_CONTRACTS, HIM_CONTRADICTION_BEHAVIORS, HIM_MISSING_BEHAVIORS, HIM_MODEL_ENVIRONMENTS, HIM_MODEL_LIFECYCLES, type HimCalculationModel, type HimCalibrationApproval } from './him-calculation.types';
+import { HIM_CONTEXT_KINDS } from './him.types';
+
+const ID=/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/; const bounded=(v:unknown,n:number,f:string)=>{if(typeof v!=='string'||v.trim()!==v||!v.length||v.length>n)throw new BadRequestException(`Invalid ${f}.`);return v;};
+@Injectable()
+export class HimCalculationModelRegistry {
+  private readonly models=new Map<string,HimCalculationModel>();
+  constructor(private readonly definitions:HimDefinitionRegistry){}
+  register(model:HimCalculationModel):void {
+    this.validate(model); const identity=`${model.modelId}@${model.modelVersion}`;
+    if(this.models.has(identity))throw new BadRequestException('Duplicate HIM calculation model identity/version.');
+    const definition=this.definitions.get(model.targetMetricKey,model.targetDefinitionVersion);
+    if(!definition)throw new BadRequestException('Unknown target metric identity/version.');
+    if(model.environment==='TEST_ONLY' && !model.targetMetricKey.startsWith('test.synthetic.'))throw new BadRequestException('Test-only models cannot bind production metrics.');
+    if(model.environment==='PRODUCTION' && model.targetMetricKey.startsWith('test.synthetic.'))throw new BadRequestException('Production models cannot bind test metrics.');
+    if(model.supportedContextKinds.some(k=>!definition.validContextKinds.includes(k)))throw new BadRequestException('Model context contract exceeds target metric contexts.');
+    this.models.set(identity,Object.freeze({...model,requiredInputKeys:[...model.requiredInputKeys],supportedContextKinds:[...model.supportedContextKinds]}));
+  }
+  get(id:string,version:number){return this.models.get(`${id}@${version}`);}
+  promote(id:string,version:number,approval:HimCalibrationApproval):HimCalculationModel {
+    const model=this.get(id,version); if(!model)throw new BadRequestException('Unknown calculation model.');
+    if(model.environment!=='PRODUCTION'||model.lifecycle!=='VALIDATED')throw new BadRequestException('Model is not eligible for calibration promotion.');
+    if(approval.modelId!==id||approval.modelVersion!==version||!approval.authorityId||!approval.canonicalSource)throw new BadRequestException('Invalid protected calibration approval.');
+    const promoted=Object.freeze({...model,lifecycle:'CALIBRATED' as const}); this.models.set(`${id}@${version}`,promoted); return promoted;
+  }
+  private validate(m:HimCalculationModel):void {
+    if(!ID.test(bounded(m.modelId,128,'modelId'))||!Number.isSafeInteger(m.modelVersion)||m.modelVersion<1)throw new BadRequestException('Invalid calculation model identity/version.');
+    if(!ID.test(bounded(m.targetMetricKey,128,'targetMetricKey'))||!Number.isSafeInteger(m.targetDefinitionVersion)||m.targetDefinitionVersion<1)throw new BadRequestException('Invalid target identity/version.');
+    if(!HIM_MODEL_LIFECYCLES.includes(m.lifecycle)||!HIM_MODEL_ENVIRONMENTS.includes(m.environment))throw new BadRequestException('Invalid model lifecycle/environment.');
+    ['canonicalOwner','canonicalSource','methodType','scaleContractReference','requiredEvidenceContract','implementationId'].forEach(f=>bounded(m[f as keyof HimCalculationModel],256,f));
+    if(!Array.isArray(m.requiredInputKeys)||m.requiredInputKeys.length>32||new Set(m.requiredInputKeys).size!==m.requiredInputKeys.length)throw new BadRequestException('Invalid required input contract.');
+    m.requiredInputKeys.forEach(x=>bounded(x,128,'requiredInputKeys'));
+    if(!Array.isArray(m.supportedContextKinds)||!m.supportedContextKinds.length||new Set(m.supportedContextKinds).size!==m.supportedContextKinds.length||m.supportedContextKinds.some(k=>!HIM_CONTEXT_KINDS.includes(k)))throw new BadRequestException('Invalid supported contexts.');
+    if(!HIM_MISSING_BEHAVIORS.includes(m.missingDataBehavior)||!HIM_CONTRADICTION_BEHAVIORS.includes(m.contradictionBehavior)||!HIM_CONFIDENCE_CONTRACTS.includes(m.confidenceContract))throw new BadRequestException('Invalid fail-closed model contracts.');
+    if(!Number.isFinite(Date.parse(m.createdAt))||!Number.isFinite(Date.parse(m.versionedAt)))throw new BadRequestException('Invalid model timestamps.');
+  }
+}
+

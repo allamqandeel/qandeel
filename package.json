@@ -28,7 +28,8 @@
     "eval:brain:run": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/brain-eval.ts run",
     "eval:brain:dry-run": "node node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/brain-eval.ts dry-run",
     "eval:brain:summarize": "node node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.json apps/api/scripts/brain-eval.ts summarize",
-    "verify:initial-him:integration": "node --env-file-if-exists=.env database/verify-migration-0010.mjs"
+    "verify:initial-him:integration": "node --env-file-if-exists=.env database/verify-migration-0010.mjs",
+    "verify:him-calculation:integration": "node --env-file-if-exists=.env database/verify-migration-0011.mjs"
   },
   "devDependencies": {
     "pg": "^8.16.3"
