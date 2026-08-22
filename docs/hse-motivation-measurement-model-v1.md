@@ -4,7 +4,7 @@
 
 `hse.motivation@1` is an HSE `STATE`: the user's current self-reported motivational drive toward one explicit target bound to one exact `GOAL` or `SITUATION`. It is not Energy, readiness, ability, availability, importance, obligation, execution, productivity, excitement, mood, priority, evidence count, Memory content, or model inference. `GLOBAL` and untargeted conversation-session measurements are unsupported.
 
-Instrument `hse.motivation.direct-self-report@1` uses `DIRECT_STRUCTURED_SELF_REPORT` with RIGHT_NOW meaning and the semantic template “Right now, how strong is your motivation/drive toward [explicit target]?” The target is required data and its context kind/id must equal the observation's bound context. The founder-tested ar-EG example is `دلوقتي، قد إيه حاسس إن عندك دافع تكمل شغل QANDEEL؟`; QANDEEL is only an example target and is not hard-coded.
+Instrument `hse.motivation.direct-self-report@1` uses `DIRECT_STRUCTURED_SELF_REPORT` with RIGHT_NOW meaning and the semantic template “Right now, how strong is your motivation/drive toward [explicit target]?” Because no Goal or Situation domain exists yet, v1 uses a narrowly scoped `him_measurement_targets` authority rather than treating caller strings or UUIDs as domain entities. The authenticated target-creation RPC accepts exact `GOAL`/`SITUATION` kind and bounded display text, then assigns identity and ownership server-side. Measurement creation accepts only that owned target ID and derives event context, observation target identity/kind, and display text from the stored artifact. The founder-tested ar-EG example is `دلوقتي، قد إيه حاسس إن عندك دافع تكمل شغل QANDEEL؟`; QANDEEL is only an example target and is not hard-coded.
 
 ## Scale and calculation
 
@@ -20,7 +20,7 @@ Motivation minimally generalizes the Energy substrate: Measurement Event → imm
 
 The calibrated production model is `hse.motivation.direct-structured-self-report@1`, approved by `qandeel.him.motivation.foundation-approval@1`. Separate ACTIVE bindings authorize exact `GOAL` and `SITUATION` contexts. Binding triggers validate model lifecycle/environment, metric/definition/context, instrument, scale, and exact approval/model identity. Binding transitions remain database-owner governed; authenticated users cannot forge or mutate governance artifacts.
 
-Artifacts are owner-scoped through RLS. RPCs derive ownership and canonical metadata server-side, validate exact context shape and mandatory target binding, and reject cross-user/cross-metric operations. Generic direct assessed snapshot writes remain blocked.
+Targets, events, observations, results, and snapshots are owner-scoped through RLS. A composite foreign key binds observation target ID, owner, and kind to the authoritative target row, while a database check binds that same ID/kind to the Measurement Event context. RPCs derive ownership and canonical metadata server-side and reject nonexistent, fabricated, cross-user, mismatched, or cross-metric references. Generic direct assessed snapshot writes remain blocked.
 
 `CALIBRATED` means internally approved deterministic production measurement under this exact contract. It is not clinical, diagnostic, population, or psychometric validation. Energy remains calibrated and semantically unchanged; the other 15 initial HIM metrics remain uncalibrated.
 
