@@ -47,4 +47,5 @@ jobs:
       - {name: Verify HIM calculation/calibration historical runtime, run: npm run verify:him-calculation:integration}
       - {name: Verify active HSE Energy model against real PostgreSQL, run: npm run verify:hse-energy:integration}
       - {name: Verify active HSE Motivation model against real PostgreSQL, run: npm run verify:hse-motivation:integration}
+      - {name: Verify active HSE Attention model against real PostgreSQL, run: npm run verify:hse-attention:integration}
 

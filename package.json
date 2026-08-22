@@ -28,7 +28,8 @@
     "verify:initial-him:integration": "node --env-file-if-exists=.env database/verify-migration-0010.mjs",
     "verify:him-calculation:integration": "node --env-file-if-exists=.env database/verify-migration-0011.mjs",
     "verify:hse-energy:integration": "node --env-file-if-exists=.env database/verify-migration-0012.mjs",
-    "verify:hse-motivation:integration": "node --env-file-if-exists=.env database/verify-migration-0013.mjs"
+    "verify:hse-motivation:integration": "node --env-file-if-exists=.env database/verify-migration-0013.mjs",
+    "verify:hse-attention:integration": "node --env-file-if-exists=.env database/verify-migration-0014.mjs"
   },
   "devDependencies": {"pg": "^8.16.3"},
   "engines": {"node": ">=20", "npm": ">=10"}
