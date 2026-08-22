@@ -1,0 +1,14 @@
+import { BadRequestException } from '@nestjs/common';
+import { calculateHseMotivation,HSE_MOTIVATION_INSTRUMENT_ID,HSE_MOTIVATION_MODEL,HSE_MOTIVATION_MODEL_ID,HSE_MOTIVATION_SCALE_REFERENCE } from './hse-motivation.model';
+import type { HimMetricCalculationInput } from './him-calculation.types';
+const goal='00000000-0000-4000-8000-000000000010';
+const observation=(responseCode:string,change:Record<string,unknown>={})=>({observationId:'o',measurementEventId:'e',userId:'u',metricKey:'hse.motivation',definitionVersion:1,contextKind:'GOAL',contextId:goal,target:'finish the proposal',targetContextKind:'GOAL',targetContextId:goal,instrumentId:HSE_MOTIVATION_INSTRUMENT_ID,instrumentVersion:1,scaleContractReference:HSE_MOTIVATION_SCALE_REFERENCE,scaleVersion:1,responseCode,reportTimestamp:new Date().toISOString(),source:'DIRECT_STRUCTURED_USER_REPORT',superseded:false,...change});
+const input=(responseCode:string,change:Partial<HimMetricCalculationInput>={}):HimMetricCalculationInput=>({metricKey:'hse.motivation',definitionVersion:1,modelId:HSE_MOTIVATION_MODEL_ID,modelVersion:1,context:{kind:'GOAL',id:goal},inputs:{observation:observation(responseCode)},supportingEvidenceRefs:[],contradictoryEvidenceRefs:[],provenance:'HIM_CALCULATION_RUNTIME_V1',traceId:'t',updateReason:'DIRECT_STRUCTURED_USER_REPORT',...change});
+describe('HSE Motivation v1',()=>{
+ it('is calibrated only for exact GOAL and SITUATION contexts',()=>{expect(HSE_MOTIVATION_MODEL.lifecycle).toBe('CALIBRATED');expect(HSE_MOTIVATION_MODEL.supportedContextKinds).toEqual(['GOAL','SITUATION']);});
+ it.each([['VERY_LOW',1],['LOW',2],['MODERATE',3],['HIGH',4],['VERY_HIGH',5]])('preserves %s as ordinal %i',(code,value)=>expect(calculateHseMotivation(input(code)).numericValue).toBe(value));
+ it('keeps NOT_SURE and missing unassessed',()=>{expect(calculateHseMotivation(input('NOT_SURE')).numericValue).toBeNull();expect(calculateHseMotivation({...input('LOW'),inputs:{}} as never).resultState).toBe('UNASSESSED');});
+ it('accepts an exact SITUATION target',()=>{const o=observation('HIGH',{contextKind:'SITUATION',contextId:'proposal review',targetContextKind:'SITUATION',targetContextId:'proposal review'});expect(calculateHseMotivation({...input('HIGH'),context:{kind:'SITUATION',id:'proposal review'},inputs:{observation:o}} as never).numericValue).toBe(4);});
+ it('rejects global, implicit/mismatched targets, wrong contracts and superseded observations',()=>{for(const change of [{target:''},{targetContextId:'other'},{instrumentId:'other'},{scaleContractReference:'other'},{responseCode:'3.5'},{superseded:true}])expect(()=>calculateHseMotivation({...input('LOW'),inputs:{observation:observation('LOW',change)}} as never)).toThrow(BadRequestException);expect(()=>calculateHseMotivation({...input('LOW'),context:{kind:'GLOBAL',id:'GLOBAL'}} as never)).toThrow();});
+});
+
