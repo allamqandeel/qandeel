@@ -9,13 +9,19 @@ DO $$DECLARE c record;BEGIN
 END$$;
 ALTER TABLE public.him_measurement_events ALTER COLUMN context_id TYPE text USING context_id::text;
 ALTER TABLE public.him_measurement_observations ALTER COLUMN context_id TYPE text USING context_id::text;
+CREATE TABLE public.him_measurement_targets(
+ id uuid PRIMARY KEY,user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,context_kind text NOT NULL CHECK(context_kind=ANY(ARRAY['GOAL','SITUATION'])),
+ display_text text NOT NULL CHECK(length(display_text) BETWEEN 1 AND 256 AND display_text=btrim(display_text)),created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ canonical_provenance text NOT NULL CHECK(canonical_provenance='QANDEEL_HIM_MEASUREMENT_TARGET_V1'),UNIQUE(id,user_id,context_kind)
+);
 ALTER TABLE public.him_measurement_observations
- ADD COLUMN target_label text,ADD COLUMN target_context_kind text,ADD COLUMN target_context_id text,
+ ADD COLUMN target_label text,ADD COLUMN target_context_kind text,ADD COLUMN target_context_id uuid,
  ADD CONSTRAINT him_observation_event_context_fk FOREIGN KEY(measurement_event_id,user_id,context_kind,context_id) REFERENCES public.him_measurement_events(id,user_id,context_kind,context_id),
+ ADD CONSTRAINT him_observation_owned_target_fk FOREIGN KEY(target_context_id,user_id,target_context_kind) REFERENCES public.him_measurement_targets(id,user_id,context_kind),
  ADD CONSTRAINT him_structured_observation_contract CHECK(
   (metric_key='hse.energy' AND definition_version=1 AND context_kind='CONVERSATION_SESSION' AND instrument_id='hse.energy.ar-eg.right-now' AND instrument_version=1 AND scale_contract_reference='hse.energy.ordinal-5.v1' AND scale_version=1 AND canonical_provenance='QANDEEL_HSE_ENERGY_MEASUREMENT_V1' AND target_label IS NULL AND target_context_kind IS NULL AND target_context_id IS NULL)
   OR
-  (metric_key='hse.motivation' AND definition_version=1 AND context_kind=ANY(ARRAY['GOAL','SITUATION']) AND instrument_id='hse.motivation.direct-self-report' AND instrument_version=1 AND scale_contract_reference='hse.motivation.ordinal-5.v1' AND scale_version=1 AND canonical_provenance='QANDEEL_HSE_MOTIVATION_MEASUREMENT_V1' AND length(target_label) BETWEEN 1 AND 256 AND target_label=btrim(target_label) AND target_context_kind=context_kind AND target_context_id=context_id)
+  (metric_key='hse.motivation' AND definition_version=1 AND context_kind=ANY(ARRAY['GOAL','SITUATION']) AND instrument_id='hse.motivation.direct-self-report' AND instrument_version=1 AND scale_contract_reference='hse.motivation.ordinal-5.v1' AND scale_version=1 AND canonical_provenance='QANDEEL_HSE_MOTIVATION_MEASUREMENT_V1' AND length(target_label) BETWEEN 1 AND 256 AND target_label=btrim(target_label) AND target_context_kind=context_kind AND target_context_id::text=context_id)
  );
 ALTER TABLE public.him_measurement_events ADD CONSTRAINT him_measurement_event_context_kind_check CHECK(context_kind=ANY(ARRAY['CONVERSATION_SESSION','GOAL','SITUATION']));
 ALTER TABLE public.him_canonical_model_bindings ADD CONSTRAINT him_structured_binding_contract CHECK(
@@ -60,7 +66,7 @@ CREATE FUNCTION public.calculate_hse_structured_measurement(p_observation_id uui
  PERFORM pg_advisory_xact_lock(hashtextextended(p_expected_metric||'.observation:'||p_observation_id::text,0));
  SELECT * INTO o FROM public.him_measurement_observations WHERE id=p_observation_id AND user_id=u AND metric_key=p_expected_metric;
  IF NOT FOUND OR EXISTS(SELECT 1 FROM public.him_measurement_observations x WHERE x.supersedes_observation_id=o.id) THEN RAISE EXCEPTION 'Unknown, cross-user, cross-metric, or superseded structured observation' USING ERRCODE='42501';END IF;
- IF o.metric_key='hse.motivation' AND (o.target_label IS NULL OR o.target_context_kind<>o.context_kind OR o.target_context_id<>o.context_id) THEN RAISE EXCEPTION 'Motivation target/context mismatch' USING ERRCODE='22023';END IF;
+ IF o.metric_key='hse.motivation' AND (o.target_label IS NULL OR o.target_context_kind<>o.context_kind OR o.target_context_id::text<>o.context_id OR NOT EXISTS(SELECT 1 FROM public.him_measurement_targets t WHERE t.id=o.target_context_id AND t.user_id=o.user_id AND t.context_kind=o.context_kind AND t.display_text=o.target_label)) THEN RAISE EXCEPTION 'Motivation target/context mismatch' USING ERRCODE='22023';END IF;
  SELECT cb.* INTO b FROM public.him_canonical_model_bindings cb JOIN public.him_calculation_models m ON(m.model_id,m.model_version)=(cb.model_id,cb.model_version) JOIN public.him_governance_approvals a ON(a.approval_id,a.approval_version)=(cb.approval_id,cb.approval_version) WHERE cb.metric_key=o.metric_key AND cb.definition_version=o.definition_version AND cb.context_kind=o.context_kind AND cb.status='ACTIVE' AND m.lifecycle='CALIBRATED' AND m.environment='PRODUCTION' AND (a.model_id,a.model_version)=(m.model_id,m.model_version) AND cb.instrument_id=o.instrument_id AND cb.instrument_version=o.instrument_version AND cb.scale_contract_reference=o.scale_contract_reference AND cb.scale_version=o.scale_version;
  IF NOT FOUND THEN RAISE EXCEPTION 'No exact active canonical structured binding' USING ERRCODE='22023';END IF;
  SELECT s0.* INTO s FROM public.him_metric_snapshots s0 JOIN public.him_calculation_results r0 ON r0.id=s0.calculation_result_id WHERE r0.measurement_observation_id=o.id AND r0.canonical_binding_id=b.id;IF FOUND THEN RETURN s;END IF;
@@ -74,22 +80,30 @@ CREATE FUNCTION public.calculate_hse_structured_measurement(p_observation_id uui
 CREATE OR REPLACE FUNCTION public.correct_hse_energy_measurement(p_supersedes_observation_id uuid,p_response_code text,p_reported_at timestamptz) RETURNS public.him_measurement_observations LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$SELECT public.correct_hse_structured_measurement(p_supersedes_observation_id,'hse.energy',p_response_code,p_reported_at)$$;
 CREATE OR REPLACE FUNCTION public.calculate_hse_energy_measurement(p_observation_id uuid) RETURNS public.him_metric_snapshots LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$SELECT public.calculate_hse_structured_measurement(p_observation_id,'hse.energy')$$;
 
-CREATE FUNCTION public.create_hse_motivation_measurement(p_context_kind text,p_context_id text,p_target text,p_response_code text,p_client_reported_at_untrusted timestamptz) RETURNS public.him_measurement_observations LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$DECLARE u uuid:=auth.uid();e uuid:=gen_random_uuid();canonical_now timestamptz:=clock_timestamp();o public.him_measurement_observations;BEGIN
+CREATE FUNCTION public.create_him_motivation_measurement_target(p_context_kind text,p_display_text text) RETURNS public.him_measurement_targets LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$DECLARE u uuid:=auth.uid();t public.him_measurement_targets;BEGIN
  IF u IS NULL THEN RAISE EXCEPTION 'Authentication required' USING ERRCODE='42501';END IF;
- IF NOT((p_context_kind='GOAL' AND p_context_id~*'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$') OR (p_context_kind='SITUATION' AND length(p_context_id) BETWEEN 1 AND 128 AND p_context_id=btrim(p_context_id) AND p_context_id<>'GLOBAL')) THEN RAISE EXCEPTION 'Invalid Motivation exact context' USING ERRCODE='22023';END IF;
- IF p_target IS NULL OR length(p_target) NOT BETWEEN 1 AND 256 OR p_target<>btrim(p_target) THEN RAISE EXCEPTION 'Explicit Motivation target required' USING ERRCODE='22023';END IF;
+ IF p_context_kind<>ALL(ARRAY['GOAL','SITUATION']) OR p_display_text IS NULL OR length(p_display_text) NOT BETWEEN 1 AND 256 OR p_display_text<>btrim(p_display_text) THEN RAISE EXCEPTION 'Invalid Motivation measurement target' USING ERRCODE='22023';END IF;
+ INSERT INTO public.him_measurement_targets(id,user_id,context_kind,display_text,canonical_provenance) VALUES(gen_random_uuid(),u,p_context_kind,p_display_text,'QANDEEL_HIM_MEASUREMENT_TARGET_V1') RETURNING * INTO t;RETURN t;END$$;
+CREATE FUNCTION public.create_hse_motivation_measurement(p_target_context_id uuid,p_response_code text,p_client_reported_at_untrusted timestamptz) RETURNS public.him_measurement_observations LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$DECLARE u uuid:=auth.uid();e uuid:=gen_random_uuid();canonical_now timestamptz:=clock_timestamp();target public.him_measurement_targets;o public.him_measurement_observations;BEGIN
+ IF u IS NULL THEN RAISE EXCEPTION 'Authentication required' USING ERRCODE='42501';END IF;
+ SELECT * INTO target FROM public.him_measurement_targets WHERE id=p_target_context_id AND user_id=u;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Unknown or cross-user Motivation measurement target' USING ERRCODE='42501';END IF;
  IF p_response_code<>ALL(ARRAY['VERY_LOW','LOW','MODERATE','HIGH','VERY_HIGH','NOT_SURE']) THEN RAISE EXCEPTION 'Invalid Motivation response' USING ERRCODE='22023';END IF;
- INSERT INTO public.him_measurement_events(id,user_id,context_kind,context_id,created_at)VALUES(e,u,p_context_kind,p_context_id,canonical_now);
+ INSERT INTO public.him_measurement_events(id,user_id,context_kind,context_id,created_at)VALUES(e,u,target.context_kind,target.id::text,canonical_now);
  INSERT INTO public.him_measurement_observations(id,user_id,measurement_event_id,metric_key,definition_version,instrument_id,instrument_version,scale_contract_reference,scale_version,context_kind,context_id,response_code,reported_at,client_reported_at_untrusted,locale,source,canonical_provenance,created_at,target_label,target_context_kind,target_context_id)
- VALUES(gen_random_uuid(),u,e,'hse.motivation',1,'hse.motivation.direct-self-report',1,'hse.motivation.ordinal-5.v1',1,p_context_kind,p_context_id,p_response_code,canonical_now,p_client_reported_at_untrusted,'ar-EG','DIRECT_STRUCTURED_USER_REPORT','QANDEEL_HSE_MOTIVATION_MEASUREMENT_V1',canonical_now,p_target,p_context_kind,p_context_id) RETURNING * INTO o;RETURN o;END$$;
+ VALUES(gen_random_uuid(),u,e,'hse.motivation',1,'hse.motivation.direct-self-report',1,'hse.motivation.ordinal-5.v1',1,target.context_kind,target.id::text,p_response_code,canonical_now,p_client_reported_at_untrusted,'ar-EG','DIRECT_STRUCTURED_USER_REPORT','QANDEEL_HSE_MOTIVATION_MEASUREMENT_V1',canonical_now,target.display_text,target.context_kind,target.id) RETURNING * INTO o;RETURN o;END$$;
 CREATE FUNCTION public.correct_hse_motivation_measurement(uuid,text,timestamptz) RETURNS public.him_measurement_observations LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$SELECT public.correct_hse_structured_measurement($1,'hse.motivation',$2,$3)$$;
 CREATE FUNCTION public.calculate_hse_motivation_measurement(uuid) RETURNS public.him_metric_snapshots LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$SELECT public.calculate_hse_structured_measurement($1,'hse.motivation')$$;
 
 CREATE VIEW public.him_current_structured_measurements WITH(security_invoker=true) AS SELECT s.* FROM public.him_measurement_observations o JOIN public.him_metric_snapshots s ON s.measurement_observation_id=o.id WHERE o.metric_key=ANY(ARRAY['hse.energy','hse.motivation']) AND NOT EXISTS(SELECT 1 FROM public.him_measurement_observations newer WHERE newer.supersedes_observation_id=o.id) AND NOT EXISTS(SELECT 1 FROM public.him_energy_calculation_supersessions x WHERE x.snapshot_id=s.id);
+CREATE TRIGGER him_measurement_target_immutable BEFORE UPDATE OR DELETE ON public.him_measurement_targets FOR EACH ROW EXECUTE FUNCTION public.reject_him_energy_immutable_mutation();
+ALTER TABLE public.him_measurement_targets ENABLE ROW LEVEL SECURITY;
+CREATE POLICY him_measurement_targets_owner_select ON public.him_measurement_targets FOR SELECT TO authenticated USING(user_id=(SELECT auth.uid()));
+REVOKE ALL ON public.him_measurement_targets FROM PUBLIC,anon,authenticated;GRANT SELECT ON public.him_measurement_targets TO authenticated;
 REVOKE ALL ON public.him_current_structured_measurements FROM PUBLIC,anon,authenticated;GRANT SELECT ON public.him_current_structured_measurements TO authenticated;
 REVOKE ALL ON FUNCTION public.correct_hse_structured_measurement(uuid,text,text,timestamptz),public.calculate_hse_structured_measurement(uuid,text) FROM PUBLIC,anon,authenticated;
-REVOKE ALL ON FUNCTION public.create_hse_motivation_measurement(text,text,text,text,timestamptz),public.correct_hse_motivation_measurement(uuid,text,timestamptz),public.calculate_hse_motivation_measurement(uuid) FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.create_hse_motivation_measurement(text,text,text,text,timestamptz),public.correct_hse_motivation_measurement(uuid,text,timestamptz),public.calculate_hse_motivation_measurement(uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.create_him_motivation_measurement_target(text,text),public.create_hse_motivation_measurement(uuid,text,timestamptz),public.correct_hse_motivation_measurement(uuid,text,timestamptz),public.calculate_hse_motivation_measurement(uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.create_him_motivation_measurement_target(text,text),public.create_hse_motivation_measurement(uuid,text,timestamptz),public.correct_hse_motivation_measurement(uuid,text,timestamptz),public.calculate_hse_motivation_measurement(uuid) TO authenticated;
 DO $$BEGIN IF (SELECT count(*) FROM public.him_metric_definitions WHERE calculation_status='CALIBRATED')<>2 OR NOT EXISTS(SELECT 1 FROM public.him_metric_definitions WHERE metric_key='hse.energy' AND calculation_status='CALIBRATED') OR NOT EXISTS(SELECT 1 FROM public.him_metric_definitions WHERE metric_key='hse.motivation' AND calculation_status='CALIBRATED') THEN RAISE EXCEPTION 'Energy and Motivation-only calibration invariant failed';END IF;END$$;
 COMMIT;
 
