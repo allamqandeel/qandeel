@@ -31,7 +31,7 @@ try{
  await rejects("UPDATE public.him_canonical_model_bindings SET status='RETIRED',retired_at=now() WHERE id='12000000-0000-4000-8000-000000000004'");
  await identity(one);
  await rejects("SELECT public.activate_him_canonical_model_binding('22000000-0000-4000-8000-000000000024')");
- await client.query('RESET ROLE');await client.query('SET LOCAL ROLE service_role');
+ await client.query('RESET ROLE');
  await client.query("SELECT public.activate_him_canonical_model_binding('22000000-0000-4000-8000-000000000024')");
  const transitioned=await client.query("SELECT count(*) FILTER(WHERE status='ACTIVE' AND id='22000000-0000-4000-8000-000000000024')::int active,count(*) FILTER(WHERE status='RETIRED' AND id='12000000-0000-4000-8000-000000000004')::int retired FROM public.him_canonical_model_bindings");
  if(transitioned.rows[0].active!==1||transitioned.rows[0].retired!==1)throw new Error('Protected binding transition failed');
