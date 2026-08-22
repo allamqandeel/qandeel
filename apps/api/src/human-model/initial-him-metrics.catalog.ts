@@ -25,7 +25,7 @@ const metric = (
 /** The single application catalog; migration 0010 is its integrity-enforced persisted projection. */
 export const INITIAL_HIM_METRICS = Object.freeze([
   metric('hse.stress', 'Stress', 'HSE', 'STATE', ['SITUATION', 'CONVERSATION_SESSION'], 'No quantitative interpretation is approved.'),
-  metric('hse.energy', 'Energy', 'HSE', 'STATE', ['SITUATION', 'CONVERSATION_SESSION'], 'No quantitative interpretation is approved.'),
+  {...metric('hse.energy','Energy','HSE','STATE',['SITUATION','CONVERSATION_SESSION'],'Direct structured ar-EG RIGHT_NOW self-report is approved for CONVERSATION_SESSION only.'),calculationStatus:'CALIBRATED',scaleReference:'hse.energy.ordinal-5.v1',requiredInputContract:'DIRECT_STRUCTURED_USER_REPORT_AR_EG_RIGHT_NOW_V1'},
   metric('hse.motivation', 'Motivation', 'HSE', 'STATE', ['SITUATION', 'GOAL'], 'No quantitative interpretation is approved.'),
   metric('hse.self-confidence', 'Confidence', 'HSE', 'STATE', ['SITUATION', 'DECISION'], 'Human self-confidence in context; not Hypothesis Confidence Runtime.'),
   metric('hse.attention', 'Attention', 'HSE', 'STATE', ['SITUATION', 'CONVERSATION_SESSION', 'DECISION'], 'No quantitative interpretation is approved.'),
