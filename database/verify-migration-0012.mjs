@@ -9,7 +9,7 @@ const between=(value,start,end)=>new Date(value)>=new Date(start)&&new Date(valu
 await client.connect();
 try{
  const state=await client.query("SELECT metric_key,calculation_status FROM public.him_metric_definitions");
- if(state.rows.filter(x=>x.calculation_status==='CALIBRATED').map(x=>x.metric_key).join()!=='hse.energy'||state.rows.filter(x=>x.calculation_status==='UNCALIBRATED').length!==16)throw new Error('Expected Energy-only calibration state');
+ if(state.rows.filter(x=>x.calculation_status==='CALIBRATED').map(x=>x.metric_key).sort().join()!=='hse.energy,hse.motivation'||state.rows.filter(x=>x.calculation_status==='UNCALIBRATED').length!==15)throw new Error('Expected Energy/Motivation calibration state');
  const binding=await client.query("SELECT count(*)::int n FROM public.him_canonical_model_bindings WHERE status='ACTIVE' AND metric_key='hse.energy' AND context_kind='CONVERSATION_SESSION'");
  if(binding.rows[0].n!==1)throw new Error('Expected one active Energy binding');
  await client.query('INSERT INTO auth.users(id) VALUES($1),($2) ON CONFLICT DO NOTHING',[one,two]);
@@ -96,5 +96,5 @@ try{
   if(racedArtifacts.rows[0].results!==0||racedArtifacts.rows[0].snapshots!==0)throw new Error('Superseded observation was newly calculated after correction');
  }finally{await racer.end();}
 }finally{await client.end();}
-console.log('Verified server-authoritative Energy time, correction supersession, calculation idempotency, binding integrity/lifecycle, trusted snapshots, RLS and Energy-only activation.');
+console.log('Verified server-authoritative Energy time, correction supersession, calculation idempotency, binding integrity/lifecycle, trusted snapshots, RLS and Energy regression after Motivation activation.');
 
