@@ -1,6 +1,6 @@
 import pg from 'pg';const{Client}=pg;const client=new Client({connectionString:process.env.DATABASE_URL});
 const one='00000000-0000-4000-8000-000000000001',two='00000000-0000-4000-8000-000000000002';
-const rejects=async(sql,params=[])=>{let failed=false;try{await client.query(sql,params);}catch{failed=true;}if(!failed)throw new Error(`Expected rejection: ${sql}`);};
+const rejects=async(sql,params=[])=>{let failed=false;await client.query('SAVEPOINT expected_rejection');try{await client.query(sql,params);}catch{failed=true;await client.query('ROLLBACK TO SAVEPOINT expected_rejection');}await client.query('RELEASE SAVEPOINT expected_rejection');if(!failed)throw new Error(`Expected rejection: ${sql}`);};
 await client.connect();try{
  const counts=await client.query("SELECT count(*) FILTER(WHERE calculation_status='UNCALIBRATED')::int uncalibrated,count(*) FILTER(WHERE calculation_status='CALIBRATED' AND metric_key='hse.energy')::int energy FROM public.him_metric_definitions");if(counts.rows[0].uncalibrated!==16||counts.rows[0].energy!==1)throw new Error('Latest state must contain one calibrated Energy metric and 16 uncalibrated metrics');
  const grants=await client.query("SELECT privilege_type FROM information_schema.role_table_grants WHERE grantee='authenticated' AND table_name IN ('him_calculation_models','him_calculation_results','him_calibration_evaluations') AND privilege_type<>'SELECT'");if(grants.rowCount)throw new Error('Authenticated role has HIM runtime write privilege');
