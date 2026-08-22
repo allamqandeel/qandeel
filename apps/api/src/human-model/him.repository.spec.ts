@@ -10,8 +10,10 @@ describe('HimRepository current reads',()=>{
     expect(dataApi.request.mock.calls[1][1]).toMatch(/^him_current_structured_measurements\?/);
     await repository.getLatest('token','user','hse.attention','DECISION','00000000-0000-4000-8000-000000000011');
     expect(dataApi.request.mock.calls[2][1]).toMatch(/^him_current_structured_measurements\?/);
+    await repository.getLatest('token','user','hse.self-confidence','SITUATION','00000000-0000-4000-8000-000000000012');
+    expect(dataApi.request.mock.calls[3][1]).toMatch(/^him_current_structured_measurements\?/);
     await repository.getLatest('token','user','hse.stress','SITUATION','situation');
-    expect(dataApi.request.mock.calls[3][1]).toMatch(/^him_metric_snapshots\?/);
+    expect(dataApi.request.mock.calls[4][1]).toMatch(/^him_metric_snapshots\?/);
   });
 });
 
