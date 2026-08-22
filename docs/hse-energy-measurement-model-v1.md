@@ -14,13 +14,13 @@ Scale `hse.energy.ordinal-5.v1` maps `VERY_LOW`, `LOW`, `MODERATE`, `HIGH`, `VER
 
 ## Events, observations, and correction
 
-A server-generated Measurement Event is distinct from its exact session context. Separate events in one session may validly differ. A structured report is stored as an owned first-class Measurement Observation, never automatically as Memory or generic Evidence. It binds event, metric/definition, instrument, scale, exact context, response, report time, locale, source, and provenance.
+A server-generated Measurement Event is distinct from its exact session context. Separate events in one session may validly differ. A structured report is stored as an owned first-class Measurement Observation, never automatically as Memory or generic Evidence. It binds event, metric/definition, instrument, scale, exact context, response, report time, locale, source, and provenance. Canonical `reported_at` and snapshot `observed_at` are assigned by the database at receipt; the RPC's timestamp argument is retained only as `client_reported_at_untrusted` diagnostic metadata and never controls RIGHT_NOW ordering or canonical state.
 
-An explicit correction appends an observation in the same event with `supersedes_observation_id`. The server verifies same owner, metric, event, context, instrument, and scale. Timestamp order alone never implies correction. Superseded observations remain immutable history and cannot be calculated. A later state change creates a new event.
+An explicit correction appends an observation in the same event with `supersedes_observation_id`. The server verifies same owner, metric, event, context, instrument, and scale. Timestamp order alone never implies correction. If the old observation was calculated, an immutable supersession record links its result and snapshot to the correcting observation. The old rows remain audit history but are excluded from `him_current_energy_measurements`; only the corrected calculated observation is canonical/current for the event. Superseded observations cannot be calculated again. A later state change creates a new event.
 
 ## Deterministic calculation and confidence
 
-The calibrated model is `hse.energy.direct-structured-user-report@1`. It supports `CONVERSATION_SESSION` only and uses the one active canonical binding. Scored responses map exactly to integers 1–5. `NOT_SURE` is unassessed/null. Missing, superseded, cross-user, wrong-context, wrong-instrument, wrong-scale, and out-of-contract inputs fail closed. Competing current observations are never averaged.
+The calibrated model is `hse.energy.direct-structured-user-report@1`. It supports `CONVERSATION_SESSION` only and uses the one active canonical binding. Scored responses map exactly to integers 1–5. `NOT_SURE` is unassessed/null. Missing, superseded, cross-user, wrong-context, wrong-instrument, wrong-scale, and out-of-contract inputs fail closed. Recalculating the same current observation with the same binding returns its existing result/snapshot; database uniqueness prevents duplicates under concurrent retries. Competing current observations are never averaged.
 
 Metric value remains separate from Metric Confidence. V1 always stores confidence as `UNASSESSED` with a null reference and never reuses Hypothesis Confidence.
 
@@ -28,7 +28,7 @@ Metric value remains separate from Metric Confidence. V1 always stores confidenc
 
 The immutable approval `qandeel.him.energy.foundation-approval@1` represents QANDEEL Foundation authorization of the exact construct, method, recall period, context, Arabic instrument, ordinal scale, Founder/Design F1+F2 validation, deterministic mapping, event/correction/missingness rules, security invariants, and explicit absence of an external-validation claim.
 
-For this exact model, `CALIBRATED` means approved for deterministic production measurement under QANDEEL's internal v1 contract. It does not mean clinically, physiologically, population, target-user, or psychometrically validated. Ordinary authenticated callers cannot author model, binding, scale, or approval records or promote arbitrary authority strings.
+For this exact model, `CALIBRATED` means approved for deterministic production measurement under QANDEEL's internal v1 contract. It does not mean clinically, physiologically, population, target-user, or psychometrically validated. Binding validation enforces the exact approved model/version, target metric/definition/context, calibrated production lifecycle, instrument, and scale. A service-role-only transition can atomically retire the prior ACTIVE binding and activate a validated PENDING successor while preserving both records; ordinary authenticated callers cannot author or transition model, binding, scale, or approval records or promote arbitrary authority strings.
 
 ## Trusted assessed-write path
 
