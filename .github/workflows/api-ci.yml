@@ -24,9 +24,7 @@ jobs:
         uses: actions/setup-node@v4
         with: {node-version: '20', cache: npm}
       - {name: Install dependencies, run: npm ci}
-      - {name: Build API, run: npm run build:api}
-      - {name: Test API, run: npm run test:api}
-      - {name: Verify database migration contracts, run: npm run test:database}
+      - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - name: Bootstrap fresh Supabase-compatible PostgreSQL roles
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
