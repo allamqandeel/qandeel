@@ -82,11 +82,13 @@ try{
  try{
   await client.query('BEGIN');await identity(one);
   await client.query("SELECT pg_advisory_xact_lock(hashtextextended('hse.energy.observation:'||$1::text,0))",[raced.id]);
+  await client.query('RESET ROLE');
  await racer.query('BEGIN');await racer.query('SET LOCAL ROLE authenticated');await racer.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:one,role:'authenticated'})]);
   const racerPid=(await racer.query('SELECT pg_backend_pid() pid')).rows[0].pid;
   const waitingCalculation=racer.query('SELECT * FROM public.calculate_hse_energy_measurement($1)',[raced.id]).then(()=>false,()=>true);
   let blocked=false;for(let attempt=0;attempt<50&&!blocked;attempt++){await new Promise(resolve=>setTimeout(resolve,20));const activity=await client.query("SELECT wait_event_type FROM pg_stat_activity WHERE pid=$1",[racerPid]);blocked=activity.rows[0]?.wait_event_type==='Lock';}
   if(!blocked)throw new Error('Concurrent calculation did not wait on the observation lock');
+  await identity(one);
   await client.query("SELECT * FROM public.correct_hse_energy_measurement($1,'VERY_HIGH',NULL)",[raced.id]);await client.query('COMMIT');
   if(!(await waitingCalculation))throw new Error('Waiting calculation accepted a superseded observation');
   await racer.query('ROLLBACK');
