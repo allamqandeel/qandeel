@@ -97,7 +97,7 @@ CREATE FUNCTION public.create_hse_energy_measurement(p_context_id uuid,p_respons
  INSERT INTO public.him_measurement_observations(id,user_id,measurement_event_id,metric_key,definition_version,instrument_id,instrument_version,scale_contract_reference,scale_version,context_kind,context_id,response_code,reported_at,client_reported_at_untrusted,locale,source,canonical_provenance,created_at)
  VALUES(gen_random_uuid(),u,e,'hse.energy',1,'hse.energy.ar-eg.right-now',1,'hse.energy.ordinal-5.v1',1,'CONVERSATION_SESSION',p_context_id,p_response_code,canonical_now,p_reported_at,'ar-EG','DIRECT_STRUCTURED_USER_REPORT','QANDEEL_HSE_ENERGY_MEASUREMENT_V1',canonical_now) RETURNING * INTO o;RETURN o;END$$;
 CREATE FUNCTION public.correct_hse_energy_measurement(p_supersedes_observation_id uuid,p_response_code text,p_reported_at timestamptz) RETURNS public.him_measurement_observations LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$DECLARE u uuid:=auth.uid();canonical_now timestamptz:=clock_timestamp();prior public.him_measurement_observations;o public.him_measurement_observations;BEGIN
- PERFORM pg_advisory_xact_lock(hashtextextended(p_supersedes_observation_id::text,0));SELECT * INTO prior FROM public.him_measurement_observations WHERE id=p_supersedes_observation_id AND user_id=u;
+ PERFORM pg_advisory_xact_lock(hashtextextended('hse.energy.observation:'||p_supersedes_observation_id::text,0));SELECT * INTO prior FROM public.him_measurement_observations WHERE id=p_supersedes_observation_id AND user_id=u;
  IF NOT FOUND OR EXISTS(SELECT 1 FROM public.him_measurement_observations WHERE supersedes_observation_id=prior.id) THEN RAISE EXCEPTION 'Unknown, cross-user, or already corrected observation' USING ERRCODE='42501';END IF;
  IF p_response_code<>ALL(ARRAY['VERY_LOW','LOW','MODERATE','HIGH','VERY_HIGH','NOT_SURE']) THEN RAISE EXCEPTION 'Invalid Energy correction' USING ERRCODE='22023';END IF;
  INSERT INTO public.him_measurement_observations(id,user_id,measurement_event_id,metric_key,definition_version,instrument_id,instrument_version,scale_contract_reference,scale_version,context_kind,context_id,response_code,reported_at,client_reported_at_untrusted,locale,source,supersedes_observation_id,canonical_provenance,created_at)
@@ -107,11 +107,12 @@ CREATE FUNCTION public.correct_hse_energy_measurement(p_supersedes_observation_i
  RETURN o;END$$;
 
 CREATE FUNCTION public.calculate_hse_energy_measurement(p_observation_id uuid) RETURNS public.him_metric_snapshots LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$DECLARE u uuid:=auth.uid();o public.him_measurement_observations;b public.him_canonical_model_bindings;r public.him_calculation_results;score double precision;state text;next_version integer;s public.him_metric_snapshots;BEGIN
+ PERFORM pg_advisory_xact_lock(hashtextextended('hse.energy.observation:'||p_observation_id::text,0));
  SELECT * INTO o FROM public.him_measurement_observations WHERE id=p_observation_id AND user_id=u;
  IF NOT FOUND OR EXISTS(SELECT 1 FROM public.him_measurement_observations x WHERE x.supersedes_observation_id=o.id) THEN RAISE EXCEPTION 'Unknown, cross-user, or superseded Energy observation' USING ERRCODE='42501';END IF;
  SELECT cb.* INTO b FROM public.him_canonical_model_bindings cb JOIN public.him_calculation_models m ON(m.model_id,m.model_version)=(cb.model_id,cb.model_version) WHERE cb.metric_key=o.metric_key AND cb.definition_version=o.definition_version AND cb.context_kind=o.context_kind AND cb.status='ACTIVE' AND m.lifecycle='CALIBRATED' AND cb.instrument_id=o.instrument_id AND cb.instrument_version=o.instrument_version AND cb.scale_contract_reference=o.scale_contract_reference AND cb.scale_version=o.scale_version;
  IF NOT FOUND THEN RAISE EXCEPTION 'No exact active canonical Energy binding' USING ERRCODE='22023';END IF;
- PERFORM pg_advisory_xact_lock(hashtextextended(o.id::text||b.id::text,0));SELECT s0.* INTO s FROM public.him_metric_snapshots s0 JOIN public.him_calculation_results r0 ON r0.id=s0.calculation_result_id WHERE r0.measurement_observation_id=o.id AND r0.canonical_binding_id=b.id;
+ SELECT s0.* INTO s FROM public.him_metric_snapshots s0 JOIN public.him_calculation_results r0 ON r0.id=s0.calculation_result_id WHERE r0.measurement_observation_id=o.id AND r0.canonical_binding_id=b.id;
  IF FOUND THEN RETURN s;END IF;
  score:=CASE o.response_code WHEN 'VERY_LOW' THEN 1 WHEN 'LOW' THEN 2 WHEN 'MODERATE' THEN 3 WHEN 'HIGH' THEN 4 WHEN 'VERY_HIGH' THEN 5 ELSE NULL END;state:=CASE WHEN score IS NULL THEN 'UNASSESSED' ELSE 'ASSESSED' END;
  INSERT INTO public.him_calculation_results(id,user_id,metric_key,definition_version,model_id,model_version,context_kind,context_id,result_state,numeric_value,missing_input_keys,contradiction_state,supporting_evidence_refs,contradictory_evidence_refs,provenance,confidence_state,confidence_reference,trace_id,update_reason,measurement_event_id,measurement_observation_id,canonical_binding_id,scale_contract_reference,scale_version)
@@ -121,7 +122,7 @@ CREATE FUNCTION public.calculate_hse_energy_measurement(p_observation_id uuid) R
  VALUES(gen_random_uuid(),u,o.metric_key,o.definition_version,'RESOLVED','STATE',state,score,'UNASSESSED',NULL,ARRAY[]::text[],ARRAY[]::text[],ARRAY['QANDEEL_HIM_RUNTIME'],o.context_kind,o.context_id::text,'exact measurement event',o.reported_at,'VALID',next_version,'DIRECT_STRUCTURED_USER_REPORT',ARRAY[]::text[],'QANDEEL_HIM_RUNTIME_FOUNDATION_V1',CURRENT_TIMESTAMP,r.id,o.measurement_event_id,o.id,b.id,o.scale_contract_reference,o.scale_version) RETURNING * INTO s;RETURN s;END$$;
 
 CREATE VIEW public.him_current_energy_measurements WITH (security_invoker=true) AS
- SELECT o.user_id,o.measurement_event_id,o.id AS measurement_observation_id,o.context_kind,o.context_id,o.response_code,o.reported_at,s.id AS snapshot_id,s.value_state,s.numeric_value,s.calculation_result_id,s.canonical_binding_id
+ SELECT s.*
  FROM public.him_measurement_observations o JOIN public.him_metric_snapshots s ON s.measurement_observation_id=o.id
  WHERE NOT EXISTS(SELECT 1 FROM public.him_measurement_observations newer WHERE newer.supersedes_observation_id=o.id)
  AND NOT EXISTS(SELECT 1 FROM public.him_energy_calculation_supersessions x WHERE x.snapshot_id=s.id);
