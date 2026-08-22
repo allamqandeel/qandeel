@@ -26,7 +26,7 @@ const metric = (
 export const INITIAL_HIM_METRICS = Object.freeze([
   metric('hse.stress', 'Stress', 'HSE', 'STATE', ['SITUATION', 'CONVERSATION_SESSION'], 'No quantitative interpretation is approved.'),
   {...metric('hse.energy','Energy','HSE','STATE',['SITUATION','CONVERSATION_SESSION'],'Direct structured ar-EG RIGHT_NOW self-report is approved for CONVERSATION_SESSION only.'),calculationStatus:'CALIBRATED',scaleReference:'hse.energy.ordinal-5.v1',requiredInputContract:'DIRECT_STRUCTURED_USER_REPORT_AR_EG_RIGHT_NOW_V1'},
-  metric('hse.motivation', 'Motivation', 'HSE', 'STATE', ['SITUATION', 'GOAL'], 'No quantitative interpretation is approved.'),
+  {...metric('hse.motivation','Motivation','HSE','STATE',['SITUATION','GOAL'],'Direct structured RIGHT_NOW target-bound self-report is approved for GOAL and SITUATION only.'),calculationStatus:'CALIBRATED',scaleReference:'hse.motivation.ordinal-5.v1',requiredInputContract:'DIRECT_STRUCTURED_TARGET_BOUND_USER_REPORT_RIGHT_NOW_V1'},
   metric('hse.self-confidence', 'Confidence', 'HSE', 'STATE', ['SITUATION', 'DECISION'], 'Human self-confidence in context; not Hypothesis Confidence Runtime.'),
   metric('hse.attention', 'Attention', 'HSE', 'STATE', ['SITUATION', 'CONVERSATION_SESSION', 'DECISION'], 'No quantitative interpretation is approved.'),
   metric('hbs.avoidance', 'Avoidance', 'HBS', null, ['SITUATION', 'GOAL'], 'Foundation semantic mapping is unresolved; not a permanent trait.'),
