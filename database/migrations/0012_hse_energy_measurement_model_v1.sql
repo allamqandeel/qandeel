@@ -135,7 +135,6 @@ GRANT SELECT ON public.him_measurement_events,public.him_measurement_observation
 REVOKE ALL ON FUNCTION public.create_hse_energy_measurement(uuid,text,timestamptz),public.correct_hse_energy_measurement(uuid,text,timestamptz),public.calculate_hse_energy_measurement(uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.create_hse_energy_measurement(uuid,text,timestamptz),public.correct_hse_energy_measurement(uuid,text,timestamptz),public.calculate_hse_energy_measurement(uuid) TO authenticated;
 REVOKE ALL ON FUNCTION public.activate_him_canonical_model_binding(uuid) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.activate_him_canonical_model_binding(uuid) TO service_role;
 
 DO $$BEGIN IF (SELECT count(*) FROM public.him_metric_definitions WHERE calculation_status='CALIBRATED')<>1 OR NOT EXISTS(SELECT 1 FROM public.him_metric_definitions WHERE metric_key='hse.energy' AND calculation_status='CALIBRATED') THEN RAISE EXCEPTION 'Energy-only calibration invariant failed';END IF;END$$;
 COMMIT;
