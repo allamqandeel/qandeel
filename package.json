@@ -31,8 +31,10 @@
     "verify:hse-motivation:integration": "node --env-file-if-exists=.env database/verify-migration-0013.mjs",
     "verify:hse-attention:integration": "node --env-file-if-exists=.env database/verify-migration-0014.mjs",
     "verify:hse-self-confidence:integration": "node --env-file-if-exists=.env database/verify-migration-0015.mjs",
+    "verify:hse-stress:integration": "node --env-file-if-exists=.env database/verify-migration-0016.mjs",
     "verify:him-measurement-preflight": "node --test tests/him-structured-measurement-preflight.test.mjs && npm run test:api && npm run test:database && npx tsc -p apps/api/tsconfig.json --noEmit && npm run build:api"
   },
   "devDependencies": {"pg": "^8.16.3"},
   "engines": {"node": ">=20", "npm": ">=10"}
 }
+

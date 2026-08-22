@@ -6,7 +6,10 @@ const expected=['hse.stress','hse.energy','hse.motivation','hse.self-confidence'
 describe('Initial HIM catalog',()=>{
   it('registers exactly the 17 canonical identities',()=>expect(new HimDefinitionRegistry().list().map(x=>x.metricKey)).toEqual(expected));
   it('contains no bridge-only examples',()=>expect(new HimDefinitionRegistry().list().map(x=>x.canonicalName)).not.toEqual(expect.arrayContaining(['Decision Clarity','Action Readiness','Goal Alignment','Decision Quality','Uncertainty','Progress','Cognitive Load','Relationship Health','Growth Momentum','Sleep'])));
-  it('activates only Energy, Motivation, Attention and Self-Confidence while leaving 13 metrics uncalibrated',()=>{
+  it('activates five structured HSE metrics while leaving 12 metrics uncalibrated',()=>{
+    const stress=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.stress')!;
+    expect(stress.calculationStatus).toBe('CALIBRATED');
+    expect(stress.scaleReference).toBe('hse.stress.ordinal-5.v1');
     const energy=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.energy')!;
     expect(energy.calculationStatus).toBe('CALIBRATED');
     expect(energy.scaleReference).toBe('hse.energy.ordinal-5.v1');
@@ -20,7 +23,7 @@ describe('Initial HIM catalog',()=>{
     const selfConfidence=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.self-confidence')!;
     expect(selfConfidence.calculationStatus).toBe('CALIBRATED');
     expect(selfConfidence.scaleReference).toBe('hse.self-confidence.ordinal-5.v1');
-    INITIAL_HIM_METRICS.filter(x=>!['hse.energy','hse.motivation','hse.attention','hse.self-confidence'].includes(x.metricKey)).forEach(x=>{
+    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence'].includes(x.metricKey)).forEach(x=>{
       expect(x.calculationStatus).toBe('UNCALIBRATED');
       expect(x.scaleReference).toBe('UNCALIBRATED_NO_PRODUCTION_SCALE');
     });
