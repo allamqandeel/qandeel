@@ -3,12 +3,13 @@ import { HimDefinitionRegistry } from './him-definition.registry';
 import { HIM_CONFIDENCE_CONTRACTS, HIM_CONTRADICTION_BEHAVIORS, HIM_MISSING_BEHAVIORS, HIM_MODEL_ENVIRONMENTS, HIM_MODEL_LIFECYCLES, type HimCalculationModel, type HimCalibrationApproval } from './him-calculation.types';
 import { HIM_CONTEXT_KINDS } from './him.types';
 import { HSE_ENERGY_MODEL } from './hse-energy.model';
+import { HSE_MOTIVATION_MODEL } from './hse-motivation.model';
 
 const ID=/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/; const bounded=(v:unknown,n:number,f:string)=>{if(typeof v!=='string'||v.trim()!==v||!v.length||v.length>n)throw new BadRequestException(`Invalid ${f}.`);return v;};
 @Injectable()
 export class HimCalculationModelRegistry {
   private readonly models=new Map<string,HimCalculationModel>();
-  constructor(private readonly definitions:HimDefinitionRegistry){const energy=this.definitions.get('hse.energy',1);if(energy?.metricKey==='hse.energy')this.register(HSE_ENERGY_MODEL);}
+  constructor(private readonly definitions:HimDefinitionRegistry){const energy=this.definitions.get('hse.energy',1);if(energy?.metricKey==='hse.energy')this.register(HSE_ENERGY_MODEL);const motivation=this.definitions.get('hse.motivation',1);if(motivation?.metricKey==='hse.motivation')this.register(HSE_MOTIVATION_MODEL);}
   register(model:HimCalculationModel):void {
     this.validate(model); const identity=`${model.modelId}@${model.modelVersion}`;
     if(this.models.has(identity))throw new BadRequestException('Duplicate HIM calculation model identity/version.');
