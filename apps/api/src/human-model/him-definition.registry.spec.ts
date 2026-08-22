@@ -6,7 +6,20 @@ const expected=['hse.stress','hse.energy','hse.motivation','hse.self-confidence'
 describe('Initial HIM catalog',()=>{
   it('registers exactly the 17 canonical identities',()=>expect(new HimDefinitionRegistry().list().map(x=>x.metricKey)).toEqual(expected));
   it('contains no bridge-only examples',()=>expect(new HimDefinitionRegistry().list().map(x=>x.canonicalName)).not.toEqual(expect.arrayContaining(['Decision Clarity','Action Readiness','Goal Alignment','Decision Quality','Uncertainty','Progress','Cognitive Load','Relationship Health','Growth Momentum','Sleep'])));
-  it('is entirely uncalibrated with no scale, confidence formula, or dependency edge',()=>INITIAL_HIM_METRICS.forEach(x=>{expect(x.calculationStatus).toBe('UNCALIBRATED');expect(x.scaleReference).toBe('UNCALIBRATED_NO_PRODUCTION_SCALE');expect(x.confidenceRequirementReference).toBe('UNRESOLVED_METRIC_CONFIDENCE_MODEL');expect(x.dependencyIds).toEqual([]);}));
+  it('activates only Energy while leaving every other metric uncalibrated',()=>{
+    const energy=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.energy')!;
+    expect(energy.calculationStatus).toBe('CALIBRATED');
+    expect(energy.scaleReference).toBe('hse.energy.ordinal-5.v1');
+    expect(energy.requiredInputContract).toBe('DIRECT_STRUCTURED_USER_REPORT_AR_EG_RIGHT_NOW_V1');
+    INITIAL_HIM_METRICS.filter(x=>x.metricKey!=='hse.energy').forEach(x=>{
+      expect(x.calculationStatus).toBe('UNCALIBRATED');
+      expect(x.scaleReference).toBe('UNCALIBRATED_NO_PRODUCTION_SCALE');
+    });
+    INITIAL_HIM_METRICS.forEach(x=>{
+      expect(x.confidenceRequirementReference).toBe('UNRESOLVED_METRIC_CONFIDENCE_MODEL');
+      expect(x.dependencyIds).toEqual([]);
+    });
+  });
   it('disambiguates Confidence and relationship-scopes Trust',()=>{const confidence=INITIAL_HIM_METRICS.find(x=>x.canonicalName==='Confidence')!;expect(confidence.metricKey).toBe('hse.self-confidence');expect(confidence.validContextKinds).not.toContain('GLOBAL');const trust=INITIAL_HIM_METRICS.find(x=>x.canonicalName==='Trust')!;expect(trust.metricKey).toBe('hrs.relationship-trust');expect(trust.validContextKinds).toEqual(['RELATIONSHIP']);});
   it('resolves only canonically supported semantic mappings',()=>{const resolved=INITIAL_HIM_METRICS.filter(x=>x.semanticMappingStatus==='RESOLVED');expect(resolved.map(x=>[x.metricKey,x.semanticType])).toEqual([['hse.stress','STATE'],['hse.energy','STATE'],['hse.motivation','STATE'],['hse.self-confidence','STATE'],['hse.attention','STATE'],['hgs.purpose-alignment','ALIGNMENT']]);const unresolved=INITIAL_HIM_METRICS.filter(x=>x.semanticMappingStatus==='UNRESOLVED');expect(unresolved).toHaveLength(11);expect(unresolved.every(x=>x.semanticType===null)).toBe(true);});
   it('rejects inconsistent resolved and unresolved mapping pairs',()=>{const registry=new HimDefinitionRegistry();expect(()=>registry.register({...INITIAL_HIM_METRICS[0],metricKey:'forged.unresolved',semanticMappingStatus:'UNRESOLVED'})).toThrow('semantic mapping');expect(()=>registry.register({...INITIAL_HIM_METRICS[5],metricKey:'forged.resolved',semanticMappingStatus:'RESOLVED'})).toThrow('semantic mapping');});
