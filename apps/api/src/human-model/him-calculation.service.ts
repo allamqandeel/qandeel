@@ -3,6 +3,7 @@ import { HimCalculationModelRegistry } from './him-calculation.registry';
 import { MAX_HIM_CALCULATION_REFS, type HimMetricCalculationInput, type HimMetricCalculationResult } from './him-calculation.types';
 import { calculateHseEnergy,HSE_ENERGY_MODEL_ID,HSE_ENERGY_MODEL_VERSION } from './hse-energy.model';
 import { calculateHseMotivation,HSE_MOTIVATION_MODEL_ID,HSE_MOTIVATION_MODEL_VERSION } from './hse-motivation.model';
+import { calculateHseAttention,HSE_ATTENTION_MODEL_ID,HSE_ATTENTION_MODEL_VERSION } from './hse-attention.model';
 
 const exactContext=(kind:string,id:string)=>kind==='GLOBAL'?id==='GLOBAL':kind==='SITUATION'?id.length>0&&id.length<=128&&id.trim()===id&&id!=='GLOBAL':/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 @Injectable()
@@ -19,6 +20,7 @@ export class HimCalculationService {
     if(missing.length||conflict||model.lifecycle!=='CALIBRATED')return this.unassessed(input,missing,conflict);
     if(model.modelId===HSE_ENERGY_MODEL_ID&&model.modelVersion===HSE_ENERGY_MODEL_VERSION){const result=calculateHseEnergy(input);this.validateResult(input,result);return result;}
     if(model.modelId===HSE_MOTIVATION_MODEL_ID&&model.modelVersion===HSE_MOTIVATION_MODEL_VERSION){const result=calculateHseMotivation(input);this.validateResult(input,result);return result;}
+    if(model.modelId===HSE_ATTENTION_MODEL_ID&&model.modelVersion===HSE_ATTENTION_MODEL_VERSION){const result=calculateHseAttention(input);this.validateResult(input,result);return result;}
     throw new BadRequestException('No approved deterministic implementation is registered.');
   }
   validateResult(input:HimMetricCalculationInput,result:HimMetricCalculationResult):void {
