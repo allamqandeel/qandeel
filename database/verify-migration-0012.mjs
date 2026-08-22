@@ -53,6 +53,8 @@ try{
  const corrected=(await client.query("SELECT * FROM public.correct_hse_energy_measurement($1,'VERY_HIGH',$2)",[low.id,future])).rows[0];
  const correctionEnded=(await client.query('SELECT clock_timestamp() now')).rows[0].now;
  if(corrected.measurement_event_id!==low.measurement_event_id||corrected.supersedes_observation_id!==low.id||!between(corrected.reported_at,correctionStarted,correctionEnded)||new Date(corrected.client_reported_at_untrusted).toISOString()!==new Date(future).toISOString())throw new Error('Correction identity or server time failed');
+ const currentGap=await client.query('SELECT * FROM public.him_current_energy_measurements WHERE measurement_event_id=$1',[low.measurement_event_id]);
+ if(currentGap.rowCount!==0)throw new Error('Superseded LOW remained current before correction calculation');
  await rejects('SELECT * FROM public.calculate_hse_energy_measurement($1)',[low.id]);
  const correctedSnap=(await client.query('SELECT * FROM public.calculate_hse_energy_measurement($1)',[corrected.id])).rows[0];
  const current=await client.query('SELECT * FROM public.him_current_energy_measurements WHERE measurement_event_id=$1',[low.measurement_event_id]);
@@ -71,6 +73,26 @@ try{
  await rejects('SELECT * FROM public.correct_hse_energy_measurement($1,$2,now())',[high.id,'LOW']);
  if((await client.query('SELECT * FROM public.him_measurement_observations')).rowCount!==0)throw new Error('Cross-user observation RLS failed');
  await client.query('ROLLBACK');
+
+ // Two transactions prove correction wins the shared observation lock and a waiting calculation revalidates currentness.
+ await client.query('BEGIN');await identity(one);
+ const raced=(await client.query("SELECT * FROM public.create_hse_energy_measurement($1,'LOW',NULL)",[session])).rows[0];
+ await client.query('COMMIT');
+ const racer=new Client({connectionString:process.env.DATABASE_URL});await racer.connect();
+ try{
+  await client.query('BEGIN');await identity(one);
+  await client.query("SELECT pg_advisory_xact_lock(hashtextextended('hse.energy.observation:'||$1::text,0))",[raced.id]);
+ await racer.query('BEGIN');await racer.query('SET LOCAL ROLE authenticated');await racer.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:one,role:'authenticated'})]);
+  const racerPid=(await racer.query('SELECT pg_backend_pid() pid')).rows[0].pid;
+  const waitingCalculation=racer.query('SELECT * FROM public.calculate_hse_energy_measurement($1)',[raced.id]).then(()=>false,()=>true);
+  let blocked=false;for(let attempt=0;attempt<50&&!blocked;attempt++){await new Promise(resolve=>setTimeout(resolve,20));const activity=await client.query("SELECT wait_event_type FROM pg_stat_activity WHERE pid=$1",[racerPid]);blocked=activity.rows[0]?.wait_event_type==='Lock';}
+  if(!blocked)throw new Error('Concurrent calculation did not wait on the observation lock');
+  await client.query("SELECT * FROM public.correct_hse_energy_measurement($1,'VERY_HIGH',NULL)",[raced.id]);await client.query('COMMIT');
+  if(!(await waitingCalculation))throw new Error('Waiting calculation accepted a superseded observation');
+  await racer.query('ROLLBACK');
+  const racedArtifacts=await client.query('SELECT (SELECT count(*)::int FROM public.him_calculation_results WHERE measurement_observation_id=$1) results,(SELECT count(*)::int FROM public.him_metric_snapshots WHERE measurement_observation_id=$1) snapshots',[raced.id]);
+  if(racedArtifacts.rows[0].results!==0||racedArtifacts.rows[0].snapshots!==0)throw new Error('Superseded observation was newly calculated after correction');
+ }finally{await racer.end();}
 }finally{await client.end();}
 console.log('Verified server-authoritative Energy time, correction supersession, calculation idempotency, binding integrity/lifecycle, trusted snapshots, RLS and Energy-only activation.');
 
