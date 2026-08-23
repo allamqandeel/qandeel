@@ -77,8 +77,9 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   const hypothesisContext = { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) };
   const hypothesisEligibility = { evaluateWithContext: jest.fn().mockResolvedValue({ eligibility: { status: 'NOT_ELIGIBLE', reason: 'NO_TRIGGER' } }) };
   const hypothesisExtraction = { extract: jest.fn() };
+  const hypothesisRequestAssembler = { assemble: jest.fn() };
   const correlation=new CorrelationService();
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, memoryWriter as never, selector, snapshot, bridge, policy, hypothesisContext as never, hypothesisEligibility as never, hypothesisExtraction as never, router,correlation,new TelemetryService(correlation));
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, memoryWriter as never, selector, snapshot, bridge, policy, hypothesisContext as never, hypothesisEligibility as never, hypothesisExtraction as never, hypothesisRequestAssembler as never, router,correlation,new TelemetryService(correlation));
   return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy };
 }
 
