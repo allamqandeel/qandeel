@@ -13,6 +13,8 @@ import { HimIntelligenceSnapshotService } from '../human-model/him-intelligence-
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
 import type { HimIntelligenceSnapshot } from '../human-model/him-intelligence-snapshot.types';
 import type { HimReasoningContext } from '../human-model/him-reasoning-consumption.types';
+import { HimFastDeepConsumptionService } from '../human-model/him-fast-deep-consumption.service';
+import type { HimModelContext } from '../human-model/him-fast-deep-consumption.types';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -25,6 +27,7 @@ describe('ConversationOrchestratorService', () => {
   let himSelector: jest.Mocked<HimTurnContextSelectionService>;
   let himSnapshot: jest.Mocked<HimIntelligenceSnapshotService>;
   let himBridge: jest.Mocked<HimReasoningConsumptionService>;
+  let himConsumptionPolicy: jest.Mocked<HimFastDeepConsumptionService>;
   let orchestrator: ConversationOrchestratorService;
   const userTurn: ConversationTurn = {
     id: 'user-turn', session_id: 'session', role: 'USER', status: 'RECEIVED', content: 'hello',
@@ -37,11 +40,17 @@ describe('ConversationOrchestratorService', () => {
     ...completedUser, id: 'assistant-turn', role: 'ASSISTANT', content: 'response', source_turn_id: userTurn.id, idempotency_key: null,
   };
   const snapshot = { snapshotContractVersion: 1, coverageState: 'EMPTY' } as HimIntelligenceSnapshot;
-  const himContext = {
+  const himReasoningContext = {
     source: 'HIM_INTELLIGENCE_SNAPSHOT', sourceSnapshotContractVersion: 1,
     contextKind: 'CONVERSATION_SESSION', contextId: 'session', generatedAt: 'now', coverageState: 'EMPTY',
     eligibleMetricCount: 3, assessedMetricCount: 0, unassessedMetricCount: 3, metrics: [],
   } as HimReasoningContext;
+  const himContext = {
+    contractVersion: 1, source: 'HIM_REASONING_CONTEXT', consumptionMode: 'FAST',
+    sourceSnapshotContractVersion: 1, contextKind: 'CONVERSATION_SESSION', contextId: 'session',
+    coverageState: 'EMPTY', eligibleMetricCount: 3, knownMetricCount: 0, unknownMetricCount: 3,
+    freshnessPolicy: 'UNASSESSED', confidencePolicy: 'UNASSESSED', metrics: [],
+  } as HimModelContext;
 
   beforeEach(() => {
     repository = {
@@ -61,10 +70,11 @@ describe('ConversationOrchestratorService', () => {
       selectionReason: 'AUTHORITATIVE_SESSION_BINDING',
     })) } as unknown as jest.Mocked<HimTurnContextSelectionService>;
     himSnapshot = { getSnapshot: jest.fn().mockResolvedValue(snapshot) } as unknown as jest.Mocked<HimIntelligenceSnapshotService>;
-    himBridge = { transform: jest.fn().mockReturnValue(himContext) } as unknown as jest.Mocked<HimReasoningConsumptionService>;
+    himBridge = { transform: jest.fn().mockReturnValue(himReasoningContext) } as unknown as jest.Mocked<HimReasoningConsumptionService>;
+    himConsumptionPolicy = { project: jest.fn().mockImplementation((path) => ({ ...himContext, consumptionMode: path })) } as unknown as jest.Mocked<HimFastDeepConsumptionService>;
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, memoryWriter, himSelector, himSnapshot, himBridge, router);
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, memoryWriter, himSelector, himSnapshot, himBridge, himConsumptionPolicy, router);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -105,7 +115,7 @@ describe('ConversationOrchestratorService', () => {
     repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
     await orchestrator.orchestrate('token', 'user', deepTurn);
     expect(repository.claimTurn).toHaveBeenCalledWith('token', 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
-    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'DEEP', complexity: 'HIGH', himContext }));
+    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'DEEP', complexity: 'HIGH', himContext: expect.objectContaining({ consumptionMode: 'DEEP', contextId: 'session' }) }));
     expect(router.generate.mock.calls[0][0]).not.toHaveProperty('trend');
   });
 
@@ -159,6 +169,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himSelector.select).not.toHaveBeenCalled();
     expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
     expect(himBridge.transform).not.toHaveBeenCalled();
+    expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
   });
 
   it('keeps selected memory separate from history without changing FAST routing', async () => {
@@ -170,7 +181,7 @@ describe('ConversationOrchestratorService', () => {
     expect(request.path).toBe('FAST');
     expect(request.context).toEqual([{ role: 'USER', content: 'hello' }]);
     expect(request.memoryContext).toEqual([{ type: 'GOAL', content: 'Leave my job', source: 'USER_STATED' }]);
-    expect(request.himContext).toBe(himContext);
+    expect(request.himContext).toEqual(himContext);
   });
 
   it('atomically finalizes BLOCK without behavioral policy or router calls', async () => {
@@ -193,6 +204,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himSelector.select).not.toHaveBeenCalled();
     expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
     expect(himBridge.transform).not.toHaveBeenCalled();
+    expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
   });
 
   it('keeps a finalized response authoritative when memory persistence fails', async () => {
@@ -232,6 +244,7 @@ describe('ConversationOrchestratorService', () => {
     expect(router.generate.mock.calls[0][0].context).not.toContainEqual(
       expect.objectContaining({ content: 'server safety guidance' }),
     );
+    expect(himConsumptionPolicy.project).toHaveBeenCalledWith('FAST', himReasoningContext);
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himContext }));
     expect(router.generate.mock.calls[0][0].safetyGuidance).toBe('server safety guidance');
   });
@@ -266,17 +279,20 @@ describe('ConversationOrchestratorService', () => {
     expect(himSelector.select).toHaveBeenCalledWith(serverClaim);
     expect(himSnapshot.getSnapshot).toHaveBeenCalledWith('token', 'CONVERSATION_SESSION', 'claimed-session');
     expect(himBridge.transform).toHaveBeenCalledWith(snapshot);
+    expect(himConsumptionPolicy.project).toHaveBeenCalledWith('FAST', himReasoningContext);
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himContext }));
     expect(himSelector.select.mock.invocationCallOrder[0]).toBeLessThan(himSnapshot.getSnapshot.mock.invocationCallOrder[0]);
     expect(himSnapshot.getSnapshot.mock.invocationCallOrder[0]).toBeLessThan(himBridge.transform.mock.invocationCallOrder[0]);
-    expect(himBridge.transform.mock.invocationCallOrder[0]).toBeLessThan(router.generate.mock.invocationCallOrder[0]);
+    expect(himBridge.transform.mock.invocationCallOrder[0]).toBeLessThan(himConsumptionPolicy.project.mock.invocationCallOrder[0]);
+    expect(himConsumptionPolicy.project.mock.invocationCallOrder[0]).toBeLessThan(router.generate.mock.invocationCallOrder[0]);
   });
 
-  it.each(['selector', 'snapshot', 'bridge'] as const)('fails closed when the HIM %s fails', async (stage) => {
+  it.each(['selector', 'snapshot', 'bridge', 'policy'] as const)('fails closed when the HIM %s fails', async (stage) => {
     repository.claimTurn.mockResolvedValue(claimed);
     if (stage === 'selector') himSelector.select.mockImplementation(() => { throw new Error('integrity'); });
     if (stage === 'snapshot') himSnapshot.getSnapshot.mockRejectedValue(new Error('snapshot'));
     if (stage === 'bridge') himBridge.transform.mockImplementation(() => { throw new Error('bridge'); });
+    if (stage === 'policy') himConsumptionPolicy.project.mockImplementation(() => { throw new Error('policy'); });
 
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(router.generate).not.toHaveBeenCalled();
@@ -290,5 +306,6 @@ describe('ConversationOrchestratorService', () => {
     expect(himSelector.select).not.toHaveBeenCalled();
     expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
     expect(himBridge.transform).not.toHaveBeenCalled();
+    expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
   });
 });

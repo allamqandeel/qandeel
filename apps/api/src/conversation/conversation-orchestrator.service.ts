@@ -14,6 +14,7 @@ import { MemoryWriteService } from '../memory/memory-write.service';
 import { HimTurnContextSelectionService } from '../human-model/him-turn-context-selection.service';
 import { HimIntelligenceSnapshotService } from '../human-model/him-intelligence-snapshot.service';
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
+import { HimFastDeepConsumptionService } from '../human-model/him-fast-deep-consumption.service';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -29,6 +30,7 @@ export class ConversationOrchestratorService {
     private readonly himContextSelector: HimTurnContextSelectionService,
     private readonly himSnapshot: HimIntelligenceSnapshotService,
     private readonly himReasoningConsumption: HimReasoningConsumptionService,
+    private readonly himFastDeepConsumption: HimFastDeepConsumptionService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
   ) {}
 
@@ -56,7 +58,8 @@ export class ConversationOrchestratorService {
         himSelection.contextKind,
         himSelection.contextId,
       );
-      const himContext = this.himReasoningConsumption.transform(himSnapshot);
+      const himReasoningContext = this.himReasoningConsumption.transform(himSnapshot);
+      const himContext = this.himFastDeepConsumption.project(selection.path, himReasoningContext);
       const memoryContext = await this.memoryRetriever.retrieve(userId, accessToken, userTurn.content);
       const assembledContext = this.contextBuilder.assemble(context, memoryContext);
       const behavioralGuidance = this.behavioralPolicy.buildTextGuidance();
