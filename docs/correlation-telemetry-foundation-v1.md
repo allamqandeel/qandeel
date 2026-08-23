@@ -18,4 +18,8 @@ Observability is fail-soft and does not participate in database transactions or 
 
 Configuration uses standard `OTEL_*` variables, including explicit OTLP trace/metric endpoints, plus `SENTRY_DSN`, `NODE_ENV`, and service/environment/version resource metadata.
 
-Outbox / RuntimeEventPublisher and expanded health/readiness work are explicitly deferred, as are persistence for correlation IDs, voice correlation, product analytics, and prompt/response monitoring.
+## Reconciliation status
+
+Transactional Runtime Outbox + Event Publisher v1 and Health / Readiness / Dependency Probes v1 were completed after this telemetry foundation and are now part of the reconciled Foundation v1. They remain separate operational surfaces and do not change this document's correlation or telemetry ownership rules.
+
+Still deferred beyond Foundation are persistence of correlation IDs beyond the implemented runtime propagation model, voice correlation, product analytics, and prompt/response monitoring.

@@ -10,4 +10,8 @@ Workers atomically claim due `PENDING`/`RETRY` or expired `IN_FLIGHT` rows with 
 
 Before transport, the publisher structurally validates the event type/version/schema mapping, UUID identities, required exact payload shape, terminal-state mapping, subject/payload identity equality, bounded processing/routing values, and the no-content flag. Bounded operational metrics record only operation, outcome, and the fixed `redis_streams` transport; identifiers, payloads, endpoints, credentials, and raw errors are never dimensions. Telemetry is fail-soft and cannot change claim, publish, ack, retry, or quarantine behavior.
 
-Deferred domains include session-start, received/context/routing/provider events, Memory, HIM, proactive, voice, commerce, and consent/deletion propagation. V1 does not implement inbox workflows, Kafka, RabbitMQ, NATS, health/readiness changes, or an event-driven runtime rewrite.
+## Reconciliation status
+
+Health / Readiness / Dependency Probes v1 was completed after this outbox foundation and now reports the Runtime Events subsystem as an optional operational dependency using local publisher/transport state. Health probing does not publish events, claim outbox rows, retry, acknowledge, quarantine, or change delivery semantics.
+
+Deferred event domains include session-start, received/context/routing/provider events, Memory, HIM, proactive, voice, commerce, and consent/deletion propagation. V1 still does not implement inbox workflows, Kafka, RabbitMQ, NATS, or an event-driven runtime rewrite.
