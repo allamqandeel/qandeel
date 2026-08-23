@@ -15,6 +15,8 @@ import type { HimIntelligenceSnapshot } from '../human-model/him-intelligence-sn
 import type { HimReasoningContext } from '../human-model/him-reasoning-consumption.types';
 import { HimFastDeepConsumptionService } from '../human-model/him-fast-deep-consumption.service';
 import type { HimModelContext } from '../human-model/him-fast-deep-consumption.types';
+import { CorrelationService } from '../observability/correlation.service';
+import { TelemetryService } from '../observability/telemetry.service';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -74,7 +76,8 @@ describe('ConversationOrchestratorService', () => {
     himConsumptionPolicy = { project: jest.fn().mockImplementation((path) => ({ ...himContext, consumptionMode: path })) } as unknown as jest.Mocked<HimFastDeepConsumptionService>;
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, memoryWriter, himSelector, himSnapshot, himBridge, himConsumptionPolicy, router);
+    const correlation=new CorrelationService();
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, memoryWriter, himSelector, himSnapshot, himBridge, himConsumptionPolicy, router,correlation,new TelemetryService(correlation));
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {

@@ -4,18 +4,22 @@ import { ConversationRepository } from './conversation.repository';
 import type { ConversationSession, ConversationTurn, OrchestratedTurnResult } from './conversation.types';
 import { DataApiError } from './supabase-data-api.service';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
+import { CorrelationService } from '../observability/correlation.service';
 
 @Injectable()
 export class ConversationService {
-  constructor(private readonly repository: ConversationRepository, private readonly orchestrator: ConversationOrchestratorService) {}
+  constructor(private readonly repository: ConversationRepository, private readonly orchestrator: ConversationOrchestratorService,private readonly correlation:CorrelationService) {}
 
-  createSession(userId: string, accessToken: string): Promise<ConversationSession> {
-    return this.repository.createSession(accessToken, randomUUID(), userId);
+  async createSession(userId: string, accessToken: string): Promise<ConversationSession> {
+    const session=await this.repository.createSession(accessToken, randomUUID(), userId);
+    this.correlation.bindCanonical(session.id);
+    return session;
   }
 
   async resumeSession(userId: string, accessToken: string, sessionId: string): Promise<ConversationSession> {
     const session = await this.repository.findSession(accessToken, sessionId, userId);
     if (!session) throw new NotFoundException('Conversation session was not found.');
+    this.correlation.bindCanonical(session.id);
     return session;
   }
 
@@ -24,17 +28,18 @@ export class ConversationService {
     await this.resumeSession(userId, accessToken, sessionId);
     if (input.idempotencyKey) {
       const existing = await this.repository.findTurnByIdempotencyKey(accessToken, sessionId, userId, input.idempotencyKey);
-      if (existing) return this.orchestrator.orchestrate(accessToken, userId, existing);
+      if (existing){this.correlation.bindCanonical(existing.session_id,existing.id);return this.orchestrator.orchestrate(accessToken, userId, existing);}
     }
     try {
       const turn = await this.repository.createTurn(accessToken, {
         id: randomUUID(), sessionId, userId, content: input.content, idempotencyKey: input.idempotencyKey,
       });
+      this.correlation.bindCanonical(turn.session_id,turn.id);
       return this.orchestrator.orchestrate(accessToken, userId, turn);
     } catch (error) {
       if (input.idempotencyKey && error instanceof DataApiError && error.status === 409) {
         const winner = await this.repository.findTurnByIdempotencyKey(accessToken, sessionId, userId, input.idempotencyKey);
-        if (winner) return this.orchestrator.orchestrate(accessToken, userId, winner);
+        if (winner){this.correlation.bindCanonical(winner.session_id,winner.id);return this.orchestrator.orchestrate(accessToken, userId, winner);}
       }
       throw error;
     }
@@ -44,6 +49,7 @@ export class ConversationService {
     await this.resumeSession(userId, accessToken, sessionId);
     const turn = await this.repository.cancelTurn(accessToken, sessionId, turnId, userId);
     if (!turn) throw new ConflictException('Turn is missing or already terminal.');
+    this.correlation.bindCanonical(turn.session_id,turn.id);
     return turn;
   }
 

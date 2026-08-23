@@ -10,6 +10,7 @@ import {
   loadClaudeModelRouterConfig,
   type ClaudeModelRouterConfig,
 } from './claude-model-router.config';
+import { TelemetryService } from '../../../observability/telemetry.service';
 
 interface AnthropicTextBlock { type: 'text'; text: string }
 interface AnthropicMessageResponse {
@@ -31,20 +32,21 @@ interface AnthropicMessagesClient {
 }
 
 export class ClaudeModelRouter implements ModelRouter {
-  static fromEnvironment(): ClaudeModelRouter {
+  static fromEnvironment(telemetry:TelemetryService): ClaudeModelRouter {
     const config = loadClaudeModelRouterConfig();
-    return new ClaudeModelRouter(config, createClaudeClient(config));
+    return new ClaudeModelRouter(config, createClaudeClient(config),telemetry);
   }
 
   constructor(
     private readonly config: ClaudeModelRouterConfig,
     private readonly client: AnthropicMessagesClient,
+    private readonly telemetry?:TelemetryService,
   ) {}
 
   async generate(request: ModelRouterRequest): Promise<ModelRouterResult> {
     const modelConfiguration = this.config.resolveModel(request.path);
     try {
-      const response = await this.client.messages.create(
+      const call=()=>this.client.messages.create(
         {
           model: modelConfiguration.model,
           max_tokens: this.config.maxOutputTokens,
@@ -56,6 +58,7 @@ export class ClaudeModelRouter implements ModelRouter {
         },
         { timeout: Math.min(request.latencyBudgetMs, this.config.timeoutMs) },
       );
+      const response=this.telemetry?await this.telemetry.withProvider('anthropic',modelConfiguration.model,request.path,Math.min(request.latencyBudgetMs,this.config.timeoutMs),call,value=>({inputTokens:value.usage.input_tokens,outputTokens:value.usage.output_tokens})):await call();
       const content = response.content
         .filter((block): block is AnthropicTextBlock => block.type === 'text')
         .map((block) => block.text)

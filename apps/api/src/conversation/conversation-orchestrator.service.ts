@@ -15,6 +15,8 @@ import { HimTurnContextSelectionService } from '../human-model/him-turn-context-
 import { HimIntelligenceSnapshotService } from '../human-model/him-intelligence-snapshot.service';
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
 import { HimFastDeepConsumptionService } from '../human-model/him-fast-deep-consumption.service';
+import { CorrelationService } from '../observability/correlation.service';
+import { TelemetryService } from '../observability/telemetry.service';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -32,6 +34,8 @@ export class ConversationOrchestratorService {
     private readonly himReasoningConsumption: HimReasoningConsumptionService,
     private readonly himFastDeepConsumption: HimFastDeepConsumptionService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
+    private readonly correlation:CorrelationService,
+    private readonly telemetry:TelemetryService,
   ) {}
 
   async orchestrate(accessToken: string, userId: string, userTurn: ConversationTurn): Promise<OrchestratedTurnResult> {
@@ -41,29 +45,30 @@ export class ConversationOrchestratorService {
     const claimed = await this.repository.claimTurn(accessToken, userTurn.session_id, userId, userTurn.id, selection);
     if (!claimed) return this.currentResult(accessToken, userId, userTurn);
 
-    try {
-      const context = await this.contextBuilder.build(accessToken, userId, userTurn);
-      const safety = this.safetyGate.evaluate(userTurn.content, context);
+    const execute=async()=>{try {
+      const context = await this.engine('context_builder',selection.path,()=>this.contextBuilder.build(accessToken, userId, userTurn));
+      const safety = await this.engine('safety_gate',selection.path,()=>this.safetyGate.evaluate(userTurn.content, context));
       if (safety.disposition === 'BLOCK') {
         const finalized = await this.repository.finalizeTurn(accessToken, {
           sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
           assistantTurnId: randomUUID(), content: safety.deterministicResponse!,
         });
         if (!finalized) return this.currentResult(accessToken, userId, claimed);
+        this.telemetry.recordTurnOutcome('blocked',selection.path);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
-      const himSelection = this.himContextSelector.select(claimed);
+      const himContext=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
       const himSnapshot = await this.himSnapshot.getSnapshot(
         accessToken,
         himSelection.contextKind,
         himSelection.contextId,
       );
       const himReasoningContext = this.himReasoningConsumption.transform(himSnapshot);
-      const himContext = this.himFastDeepConsumption.project(selection.path, himReasoningContext);
-      const memoryContext = await this.memoryRetriever.retrieve(userId, accessToken, userTurn.content);
+      return this.himFastDeepConsumption.project(selection.path, himReasoningContext);});
+      const memoryContext = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));
       const assembledContext = this.contextBuilder.assemble(context, memoryContext);
       const behavioralGuidance = this.behavioralPolicy.buildTextGuidance();
-      const candidate = await this.router.generate({
+      const candidate = await this.engine('model_router',selection.path,()=>this.router.generate({
         task: 'CONVERSATIONAL_RESPONSE', path: selection.path,
         complexity: selection.path === 'DEEP' ? 'HIGH' : 'LOW',
         behavioralGuidance, ...(safety.safetyGuidance ? { safetyGuidance: safety.safetyGuidance } : {}),
@@ -73,18 +78,21 @@ export class ConversationOrchestratorService {
         locale: 'und', modality: 'TEXT',
         latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
-      });
+      }));
       const finalized = await this.repository.finalizeTurn(accessToken, {
         sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
         assistantTurnId: randomUUID(), content: candidate.content,
       });
       if (!finalized) return this.currentResult(accessToken, userId, claimed);
       await this.writeMemoryFailSoft(userId, accessToken, userTurn.content, safety.disposition);
+      this.telemetry.recordTurnOutcome('completed',selection.path);
       return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
     } catch {
+      this.telemetry.recordTurnOutcome('failed',selection.path);
       await this.repository.failTurn(accessToken, userTurn.session_id, userId, userTurn.id);
       throw new ServiceUnavailableException('Conversation generation failed.');
-    }
+    }};
+    if(!this.correlation.current())return execute();this.correlation.bindCanonical(claimed.session_id,claimed.id);return this.correlation.withOrchestration(execute);
   }
 
   private async writeMemoryFailSoft(
@@ -95,11 +103,13 @@ export class ConversationOrchestratorService {
   ): Promise<void> {
     if (safetyDisposition !== 'ALLOW') return;
     try {
-      await this.memoryWriter.evaluateAndWrite(userId, accessToken, content);
+      await this.engine('memory_write',undefined,()=>this.memoryWriter.evaluateAndWrite(userId, accessToken, content));
     } catch {
       // Memory is a non-authoritative side capability. Finalized conversation output remains authoritative.
     }
   }
+
+  private engine<T>(name:string,path:ProcessingPath|undefined,work:()=>Promise<T>|T):Promise<T>{return this.correlation.current()?this.telemetry.withEngine(name,path,work):Promise.resolve().then(work);}
 
   private async currentResult(accessToken: string, userId: string, turn: ConversationTurn): Promise<OrchestratedTurnResult> {
     const userTurn = await this.repository.findTurn(accessToken, turn.session_id, userId, turn.id) ?? turn;

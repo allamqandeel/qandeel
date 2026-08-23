@@ -15,9 +15,10 @@ import { SafetyResponseGateService } from './safety-response-gate.service';
 import { SAFETY_RESPONSE_GATE } from './safety-response-gate.types';
 import { MemoryModule } from '../memory/memory.module';
 import { HimModule } from '../human-model/him.module';
+import { ObservabilityModule } from '../observability/observability.module';
 
 @Module({
-  imports: [ModelRouterModule, MemoryModule, HimModule],
+  imports: [ModelRouterModule, MemoryModule, HimModule, ObservabilityModule],
   controllers: [ConversationController],
   providers: [
     SupabaseAuthService,
