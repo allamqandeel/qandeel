@@ -1,5 +1,7 @@
 # Qandeel Documentation
 
+- [Hypothesis Reasoning Consumption Integration v1](hypothesis-reasoning-consumption-integration-v1.md)
+
 Implementation-facing Markdown specifications live here.
 
 The original Word documents remain the canonical archive. Markdown files record implementation-facing contracts and reconciliations used by the repository.

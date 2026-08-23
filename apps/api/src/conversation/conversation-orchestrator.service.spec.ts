@@ -17,6 +17,7 @@ import { HimFastDeepConsumptionService } from '../human-model/him-fast-deep-cons
 import type { HimModelContext } from '../human-model/him-fast-deep-consumption.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
+import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -30,6 +31,7 @@ describe('ConversationOrchestratorService', () => {
   let himSnapshot: jest.Mocked<HimIntelligenceSnapshotService>;
   let himBridge: jest.Mocked<HimReasoningConsumptionService>;
   let himConsumptionPolicy: jest.Mocked<HimFastDeepConsumptionService>;
+  let hypothesisContext: jest.Mocked<HypothesisReasoningContextService>;
   let orchestrator: ConversationOrchestratorService;
   const userTurn: ConversationTurn = {
     id: 'user-turn', session_id: 'session', role: 'USER', status: 'RECEIVED', content: 'hello',
@@ -74,10 +76,11 @@ describe('ConversationOrchestratorService', () => {
     himSnapshot = { getSnapshot: jest.fn().mockResolvedValue(snapshot) } as unknown as jest.Mocked<HimIntelligenceSnapshotService>;
     himBridge = { transform: jest.fn().mockReturnValue(himReasoningContext) } as unknown as jest.Mocked<HimReasoningConsumptionService>;
     himConsumptionPolicy = { project: jest.fn().mockImplementation((path) => ({ ...himContext, consumptionMode: path })) } as unknown as jest.Mocked<HimFastDeepConsumptionService>;
+    hypothesisContext = { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as jest.Mocked<HypothesisReasoningContextService>;
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
     const correlation=new CorrelationService();
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, memoryWriter, himSelector, himSnapshot, himBridge, himConsumptionPolicy, router,correlation,new TelemetryService(correlation));
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, memoryWriter, himSelector, himSnapshot, himBridge, himConsumptionPolicy, hypothesisContext, router,correlation,new TelemetryService(correlation));
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -173,6 +176,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
+    expect(hypothesisContext.build).not.toHaveBeenCalled();
   });
 
   it('keeps selected memory separate from history without changing FAST routing', async () => {
@@ -208,6 +212,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
+    expect(hypothesisContext.build).not.toHaveBeenCalled();
   });
 
   it('keeps a finalized response authoritative when memory persistence fails', async () => {
@@ -310,5 +315,25 @@ describe('ConversationOrchestratorService', () => {
     expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
+    expect(hypothesisContext.build).not.toHaveBeenCalled();
+  });
+
+  it('passes AVAILABLE hypothesis data as an independent channel for ALLOW and calls the router once', async () => {
+    const context = { contractVersion: 1 as const, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT' as const, coverageState: 'AVAILABLE' as const, candidateHypothesisCount: 1, includedHypothesisCount: 1, truncated: false, hypotheses: [] };
+    hypothesisContext.build.mockResolvedValue({ coverageState: 'AVAILABLE', context });
+    repository.claimTurn.mockResolvedValue(claimed); repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    await orchestrator.orchestrate('token', 'user', userTurn);
+    expect(hypothesisContext.build).toHaveBeenCalledWith('user', 'token'); expect(router.generate).toHaveBeenCalledTimes(1);
+    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ hypothesisContext: context }));
+    expect(router.generate.mock.calls[0][0]).not.toHaveProperty('memoryContext');
+    expect(router.generate.mock.calls[0][0].context).toEqual([{ role: 'USER', content: 'hello' }]);
+  });
+
+  it('omits the channel for EMPTY and fails closed before routing on query or invariant failure', async () => {
+    repository.claimTurn.mockResolvedValue(claimed); repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    await orchestrator.orchestrate('token', 'user', userTurn); expect(router.generate.mock.calls[0][0]).not.toHaveProperty('hypothesisContext');
+    router.generate.mockClear(); hypothesisContext.build.mockRejectedValue(new Error('private query failure'));
+    await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(router.generate).not.toHaveBeenCalled(); expect(repository.failTurn).toHaveBeenCalled();
   });
 });

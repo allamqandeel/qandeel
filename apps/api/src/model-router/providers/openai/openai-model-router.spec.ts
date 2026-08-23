@@ -56,6 +56,13 @@ describe('OpenAIModelRouter', () => {
     expect(body.instructions).toBe('provider-neutral policy');
     expect(JSON.stringify(body.input)).not.toContain('provider-neutral policy');
   });
+  it('receives the provider-neutral escaped hypothesis channel only through central guidance', async () => {
+    const create = jest.fn().mockResolvedValue({ output_text: 'ok', usage: null });
+    const router = new OpenAIModelRouter(config, { responses: { create } });
+    await router.generate({ ...request(), hypothesisContext: { contractVersion: 1, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT', coverageState: 'AVAILABLE', candidateHypothesisCount: 1, includedHypothesisCount: 1, truncated: false, hypotheses: [] } });
+    expect(create.mock.calls[0][0].instructions).toContain('<hypothesis_reasoning_context>');
+    expect(JSON.stringify(create.mock.calls[0][0].input)).not.toContain('hypothesis_reasoning_context');
+  });
 
   it('composes server-owned safety guidance outside history without adapter rules', async () => {
     const create = jest.fn().mockResolvedValue({ output_text: 'ok', usage: null });
