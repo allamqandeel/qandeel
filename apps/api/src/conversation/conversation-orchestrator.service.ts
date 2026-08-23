@@ -24,6 +24,12 @@ import type { HypothesisGenerationEligibilityResult } from '../hypothesis/hypoth
 import { HypothesisGenerationIntentExtractionService } from '../hypothesis/hypothesis-generation-intent-extraction.service';
 import type { HypothesisGenerationIntentExtractionResult } from '../hypothesis/hypothesis-generation-intent-extraction.types';
 import { HypothesisGenerationRequestAssemblerService } from '../hypothesis/hypothesis-generation-request-assembler.service';
+import { HypothesisGenerationService } from '../hypothesis/hypothesis-generation.service';
+import {
+  HYPOTHESIS_CANDIDATE_GENERATOR,
+  HypothesisCandidateGeneratorError,
+  type BoundHypothesisCandidateGenerator,
+} from '../hypothesis/hypothesis-candidate-generator-provider.types';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -44,6 +50,8 @@ export class ConversationOrchestratorService {
     private readonly hypothesisGenerationEligibility: HypothesisGenerationEligibilityService,
     private readonly hypothesisIntentExtraction: HypothesisGenerationIntentExtractionService,
     private readonly hypothesisGenerationRequestAssembler: HypothesisGenerationRequestAssemblerService,
+    private readonly hypothesisGeneration: HypothesisGenerationService,
+    @Inject(HYPOTHESIS_CANDIDATE_GENERATOR) private readonly hypothesisCandidateGenerator: BoundHypothesisCandidateGenerator,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
     private readonly correlation:CorrelationService,
     private readonly telemetry:TelemetryService,
@@ -183,12 +191,38 @@ export class ConversationOrchestratorService {
             assembly.reason === 'INVARIANT_REJECTED' ? 'invariant_rejected' : 'not_ready',
           path,
         );
+        if (assembly.status === 'READY') {
+          await this.generateHypothesesFailSoft(userId, accessToken, assembly.request, path);
+        }
       } catch {
         this.telemetry.recordHypothesisGenerationRequestAssembly('not_ready', path);
       }
     } catch {
       this.telemetry.recordHypothesisGenerationEligibility('failed', path);
       this.telemetry.recordHypothesisIntentExtraction('provider_failed', path);
+    }
+  }
+
+  private async generateHypothesesFailSoft(
+    userId: string,
+    accessToken: string,
+    request: Parameters<HypothesisGenerationService['generate']>[2],
+    path: ProcessingPath,
+  ): Promise<void> {
+    this.telemetry.recordControlledHypothesisGeneration('invoked', path);
+    try {
+      const result = await this.engine('controlled_hypothesis_generation', path, () =>
+        this.hypothesisGeneration.generate(userId, accessToken, request, this.hypothesisCandidateGenerator));
+      this.telemetry.recordControlledHypothesisGeneration(
+        result.accepted.length > 0 ? 'accepted_nonzero' : 'accepted_zero', path);
+    } catch (error) {
+      const outcome = error instanceof HypothesisCandidateGeneratorError
+        ? error.code === 'UNAVAILABLE' ? 'generator_unavailable'
+          : error.code === 'TIMEOUT' ? 'generator_timeout'
+            : error.code === 'INVALID_STRUCTURED_OUTPUT' ? 'invalid_generator_output'
+              : 'generation_failed'
+        : 'generation_failed';
+      this.telemetry.recordControlledHypothesisGeneration(outcome, path);
     }
   }
 
