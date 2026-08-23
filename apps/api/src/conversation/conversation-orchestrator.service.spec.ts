@@ -25,6 +25,7 @@ import type { AuthorizedHypothesisGenerationIntent } from '../hypothesis/hypothe
 import { HypothesisGenerationService } from '../hypothesis/hypothesis-generation.service';
 import type { HypothesisCandidateGenerator } from '../hypothesis/hypothesis-generation.types';
 import { HypothesisCandidateGeneratorError } from '../hypothesis/hypothesis-candidate-generator-provider.types';
+import { ConfidenceService } from '../hypothesis/confidence.service';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -43,6 +44,7 @@ describe('ConversationOrchestratorService', () => {
   let hypothesisExtraction: jest.Mocked<HypothesisGenerationIntentExtractionService>;
   let hypothesisRequestAssembler: jest.Mocked<HypothesisGenerationRequestAssemblerService>;
   let hypothesisGeneration: jest.Mocked<HypothesisGenerationService>;
+  let confidence: jest.Mocked<ConfidenceService>;
   let hypothesisCandidateGenerator: jest.Mocked<HypothesisCandidateGenerator>;
   let orchestrator: ConversationOrchestratorService;
   const userTurn: ConversationTurn = {
@@ -93,11 +95,12 @@ describe('ConversationOrchestratorService', () => {
     hypothesisExtraction = { extract: jest.fn().mockResolvedValue({ status: 'NOT_AUTHORIZED', reason: 'AUTHORITY_REJECTED', authorityReason: 'PROBLEM_NOT_GROUNDED' }) } as unknown as jest.Mocked<HypothesisGenerationIntentExtractionService>;
     hypothesisRequestAssembler = { assemble: jest.fn().mockReturnValue({ status: 'READY', request: { problem: 'problem', domain: 'GENERAL', scope: 'CONVERSATION_SESSION:session', evidenceIds: [] } }) } as unknown as jest.Mocked<HypothesisGenerationRequestAssemblerService>;
     hypothesisGeneration = { generate: jest.fn().mockResolvedValue({ accepted: [], rejected: [] }) } as unknown as jest.Mocked<HypothesisGenerationService>;
+    confidence = { evaluateHypothesis: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<ConfidenceService>;
     hypothesisCandidateGenerator = { generate: jest.fn().mockResolvedValue([]) };
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
     const correlation=new CorrelationService();
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, memoryWriter, himSelector, himSnapshot, himBridge, himConsumptionPolicy, hypothesisContext, hypothesisEligibility, hypothesisExtraction, hypothesisRequestAssembler, hypothesisGeneration, hypothesisCandidateGenerator, router,correlation,new TelemetryService(correlation));
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, memoryWriter, himSelector, himSnapshot, himBridge, himConsumptionPolicy, hypothesisContext, hypothesisEligibility, hypothesisExtraction, hypothesisRequestAssembler, hypothesisGeneration, confidence, hypothesisCandidateGenerator, router,correlation,new TelemetryService(correlation));
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -183,6 +186,7 @@ describe('ConversationOrchestratorService', () => {
         evidenceIds: [...authorizedIntent.evidenceIds],
       },
     });
+    hypothesisGeneration.generate.mockResolvedValue({ accepted: [{ id: 'accepted-1' }] as never, rejected: [] });
 
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({
       userTurn: completedUser, assistantTurn: assistant,
@@ -197,6 +201,73 @@ describe('ConversationOrchestratorService', () => {
     }, hypothesisCandidateGenerator);
     expect(hypothesisExtraction.extract.mock.invocationCallOrder[0]).toBeLessThan(hypothesisRequestAssembler.assemble.mock.invocationCallOrder[0]);
     expect(hypothesisRequestAssembler.assemble.mock.invocationCallOrder[0]).toBeLessThan(hypothesisGeneration.generate.mock.invocationCallOrder[0]);
+    expect(confidence.evaluateHypothesis).toHaveBeenCalledTimes(1);
+    expect(confidence.evaluateHypothesis).toHaveBeenCalledWith('user', 'token', 'accepted-1');
+    expect(hypothesisGeneration.generate.mock.invocationCallOrder[0]).toBeLessThan(confidence.evaluateHypothesis.mock.invocationCallOrder[0]);
+    expect(repository.failTurn).not.toHaveBeenCalled();
+  });
+
+  it('evaluates each accepted target once and preserves successful snapshots on partial failure', async () => {
+    repository.claimTurn.mockResolvedValue(claimed);
+    repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    hypothesisEligibility.evaluateWithContext.mockResolvedValue({
+      eligibility: { status: 'ELIGIBLE', reason: 'TRIGGER_AND_EVIDENCE_AVAILABLE' },
+      triggerClassification: { classification: 'TRIGGER', reason: 'EXPLICIT_WHY_SELF' }, eligibleEvidence: [],
+    } as never);
+    hypothesisExtraction.extract.mockResolvedValue({ status: 'AUTHORIZED', intent: {} } as never);
+    hypothesisGeneration.generate.mockResolvedValue({
+      accepted: Array.from({ length: 5 }, (_, index) => ({ id: `accepted-${index + 1}` })) as never,
+      rejected: [],
+    });
+    confidence.evaluateHypothesis
+      .mockResolvedValueOnce({} as never)
+      .mockRejectedValueOnce(new Error('bounded confidence failure'))
+      .mockResolvedValue({} as never);
+
+    await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({
+      userTurn: completedUser, assistantTurn: assistant,
+    });
+    expect(confidence.evaluateHypothesis).toHaveBeenCalledTimes(5);
+    expect(confidence.evaluateHypothesis.mock.calls.map((call) => call[2])).toEqual([
+      'accepted-1', 'accepted-2', 'accepted-3', 'accepted-4', 'accepted-5',
+    ]);
+    expect(hypothesisGeneration.generate).toHaveBeenCalledTimes(1);
+    expect(repository.failTurn).not.toHaveBeenCalled();
+  });
+
+  it('performs zero Confidence evaluations when generation accepts zero proposals', async () => {
+    repository.claimTurn.mockResolvedValue(claimed);
+    repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    hypothesisEligibility.evaluateWithContext.mockResolvedValue({
+      eligibility: { status: 'ELIGIBLE', reason: 'TRIGGER_AND_EVIDENCE_AVAILABLE' },
+      triggerClassification: { classification: 'TRIGGER', reason: 'EXPLICIT_WHY_SELF' }, eligibleEvidence: [],
+    } as never);
+    hypothesisExtraction.extract.mockResolvedValue({ status: 'AUTHORIZED', intent: {} } as never);
+
+    await orchestrator.orchestrate('token', 'user', userTurn);
+
+    expect(hypothesisGeneration.generate).toHaveBeenCalledTimes(1);
+    expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
+  });
+
+  it('contains all Confidence failures without retrying or invalidating persisted generation', async () => {
+    repository.claimTurn.mockResolvedValue(claimed);
+    repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    hypothesisEligibility.evaluateWithContext.mockResolvedValue({
+      eligibility: { status: 'ELIGIBLE', reason: 'TRIGGER_AND_EVIDENCE_AVAILABLE' },
+      triggerClassification: { classification: 'TRIGGER', reason: 'EXPLICIT_WHY_SELF' }, eligibleEvidence: [],
+    } as never);
+    hypothesisExtraction.extract.mockResolvedValue({ status: 'AUTHORIZED', intent: {} } as never);
+    hypothesisGeneration.generate.mockResolvedValue({
+      accepted: [{ id: 'accepted-1' }, { id: 'accepted-2' }] as never, rejected: [],
+    });
+    confidence.evaluateHypothesis.mockRejectedValue(new Error('confidence persistence failure'));
+
+    await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({
+      userTurn: completedUser, assistantTurn: assistant,
+    });
+    expect(hypothesisGeneration.generate).toHaveBeenCalledTimes(1);
+    expect(confidence.evaluateHypothesis).toHaveBeenCalledTimes(2);
     expect(repository.failTurn).not.toHaveBeenCalled();
   });
 
@@ -228,6 +299,7 @@ describe('ConversationOrchestratorService', () => {
       userTurn: completedUser, assistantTurn: assistant,
     });
     expect(hypothesisGeneration.generate).toHaveBeenCalledTimes(1);
+    expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
     expect(repository.failTurn).not.toHaveBeenCalled();
   });
 
@@ -242,6 +314,7 @@ describe('ConversationOrchestratorService', () => {
     hypothesisRequestAssembler.assemble.mockReturnValue({ status: 'NOT_READY', reason: 'BOUND_VIOLATION' });
     await orchestrator.orchestrate('token', 'user', userTurn);
     expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
+    expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
   });
 
   it('keeps the finalized response authoritative when assembly fails', async () => {

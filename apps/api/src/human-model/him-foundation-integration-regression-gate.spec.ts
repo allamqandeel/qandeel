@@ -80,8 +80,9 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   const hypothesisRequestAssembler = { assemble: jest.fn() };
   const correlation=new CorrelationService();
   const hypothesisGeneration = { generate: jest.fn().mockResolvedValue({ accepted: [], rejected: [] }) };
+  const confidence = { evaluateHypothesis: jest.fn().mockResolvedValue({}) };
   const hypothesisCandidateGenerator = { generate: jest.fn().mockResolvedValue([]) };
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, memoryWriter as never, selector, snapshot, bridge, policy, hypothesisContext as never, hypothesisEligibility as never, hypothesisExtraction as never, hypothesisRequestAssembler as never, hypothesisGeneration as never, hypothesisCandidateGenerator as never, router,correlation,new TelemetryService(correlation));
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, memoryWriter as never, selector, snapshot, bridge, policy, hypothesisContext as never, hypothesisEligibility as never, hypothesisExtraction as never, hypothesisRequestAssembler as never, hypothesisGeneration as never, confidence as never, hypothesisCandidateGenerator as never, router,correlation,new TelemetryService(correlation));
   return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy };
 }
 

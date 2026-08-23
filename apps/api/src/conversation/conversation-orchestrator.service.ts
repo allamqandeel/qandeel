@@ -30,6 +30,7 @@ import {
   HypothesisCandidateGeneratorError,
   type BoundHypothesisCandidateGenerator,
 } from '../hypothesis/hypothesis-candidate-generator-provider.types';
+import { ConfidenceService } from '../hypothesis/confidence.service';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -51,6 +52,7 @@ export class ConversationOrchestratorService {
     private readonly hypothesisIntentExtraction: HypothesisGenerationIntentExtractionService,
     private readonly hypothesisGenerationRequestAssembler: HypothesisGenerationRequestAssemblerService,
     private readonly hypothesisGeneration: HypothesisGenerationService,
+    private readonly confidence: ConfidenceService,
     @Inject(HYPOTHESIS_CANDIDATE_GENERATOR) private readonly hypothesisCandidateGenerator: BoundHypothesisCandidateGenerator,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
     private readonly correlation:CorrelationService,
@@ -215,6 +217,8 @@ export class ConversationOrchestratorService {
         this.hypothesisGeneration.generate(userId, accessToken, request, this.hypothesisCandidateGenerator));
       this.telemetry.recordControlledHypothesisGeneration(
         result.accepted.length > 0 ? 'accepted_nonzero' : 'accepted_zero', path);
+      await this.evaluateGeneratedConfidenceFailSoft(
+        userId, accessToken, result.accepted.map(({ id }) => id), path);
     } catch (error) {
       const outcome = error instanceof HypothesisCandidateGeneratorError
         ? error.code === 'UNAVAILABLE' ? 'generator_unavailable'
@@ -224,6 +228,29 @@ export class ConversationOrchestratorService {
         : 'generation_failed';
       this.telemetry.recordControlledHypothesisGeneration(outcome, path);
     }
+  }
+
+  private async evaluateGeneratedConfidenceFailSoft(
+    userId: string,
+    accessToken: string,
+    acceptedHypothesisIds: readonly string[],
+    path: ProcessingPath,
+  ): Promise<void> {
+    let evaluatedCount = 0;
+    for (const hypothesisId of acceptedHypothesisIds) {
+      try {
+        await this.engine('post_generation_confidence', path, () =>
+          this.confidence.evaluateHypothesis(userId, accessToken, hypothesisId));
+        evaluatedCount += 1;
+      } catch {
+        // Each immutable snapshot is independent; failed targets remain unevaluated without retry.
+      }
+    }
+    const outcome = acceptedHypothesisIds.length === 0 ? 'skipped_zero_accepted'
+      : evaluatedCount === acceptedHypothesisIds.length ? 'evaluated_all'
+        : evaluatedCount === 0 ? 'evaluated_none' : 'evaluated_partial';
+    this.telemetry.recordPostGenerationConfidence(
+      outcome, path, acceptedHypothesisIds.length, evaluatedCount);
   }
 
   private extractionOutcome(result: HypothesisGenerationIntentExtractionResult):
