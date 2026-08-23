@@ -7,6 +7,7 @@
 - [Hypothesis Intent Extraction Provider Binding v1](hypothesis-intent-extraction-provider-binding-v1.md)
 - [Model-Assisted Hypothesis Intent Extraction v1](model-assisted-hypothesis-intent-extraction-v1.md)
 - [Hypothesis Generation Request Assembly v1](hypothesis-generation-request-assembly-v1.md)
+- [Controlled Hypothesis Candidate Generation Provider Binding v1](controlled-hypothesis-candidate-generation-provider-binding-v1.md)
 
 Implementation-facing Markdown specifications live here.
 
