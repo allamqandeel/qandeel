@@ -18,6 +18,7 @@ import type { HimModelContext } from '../human-model/him-fast-deep-consumption.t
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
+import { HypothesisGenerationEligibilityService } from '../hypothesis/hypothesis-generation-eligibility.service';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -32,6 +33,7 @@ describe('ConversationOrchestratorService', () => {
   let himBridge: jest.Mocked<HimReasoningConsumptionService>;
   let himConsumptionPolicy: jest.Mocked<HimFastDeepConsumptionService>;
   let hypothesisContext: jest.Mocked<HypothesisReasoningContextService>;
+  let hypothesisEligibility: jest.Mocked<HypothesisGenerationEligibilityService>;
   let orchestrator: ConversationOrchestratorService;
   const userTurn: ConversationTurn = {
     id: 'user-turn', session_id: 'session', role: 'USER', status: 'RECEIVED', content: 'hello',
@@ -77,10 +79,11 @@ describe('ConversationOrchestratorService', () => {
     himBridge = { transform: jest.fn().mockReturnValue(himReasoningContext) } as unknown as jest.Mocked<HimReasoningConsumptionService>;
     himConsumptionPolicy = { project: jest.fn().mockImplementation((path) => ({ ...himContext, consumptionMode: path })) } as unknown as jest.Mocked<HimFastDeepConsumptionService>;
     hypothesisContext = { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as jest.Mocked<HypothesisReasoningContextService>;
+    hypothesisEligibility = { evaluate: jest.fn().mockResolvedValue({ status: 'NOT_ELIGIBLE', reason: 'NO_TRIGGER' }) } as unknown as jest.Mocked<HypothesisGenerationEligibilityService>;
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
     const correlation=new CorrelationService();
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, memoryWriter, himSelector, himSnapshot, himBridge, himConsumptionPolicy, hypothesisContext, router,correlation,new TelemetryService(correlation));
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, memoryWriter, himSelector, himSnapshot, himBridge, himConsumptionPolicy, hypothesisContext, hypothesisEligibility, router,correlation,new TelemetryService(correlation));
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -98,6 +101,8 @@ describe('ConversationOrchestratorService', () => {
     expect(memoryRetriever.retrieve).toHaveBeenCalledWith('user', 'token', 'hello');
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
     expect(memoryWriter.evaluateAndWrite).toHaveBeenCalledWith('user', 'token', 'hello');
+    expect(hypothesisEligibility.evaluate).toHaveBeenCalledWith('user', 'token', 'hello', 'ALLOW');
+    expect(memoryWriter.evaluateAndWrite.mock.invocationCallOrder[0]).toBeLessThan(hypothesisEligibility.evaluate.mock.invocationCallOrder[0]);
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
       modality: 'TEXT', path: 'FAST', behavioralGuidance: 'server-owned policy',
       context: [{ role: 'USER', content: 'hello' }], himContext,
@@ -177,6 +182,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
+    expect(hypothesisEligibility.evaluate).not.toHaveBeenCalled();
   });
 
   it('keeps selected memory separate from history without changing FAST routing', async () => {
@@ -213,6 +219,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
+    expect(hypothesisEligibility.evaluate).toHaveBeenCalledWith('user', 'token', 'hello', 'BLOCK');
   });
 
   it('keeps a finalized response authoritative when memory persistence fails', async () => {
@@ -225,6 +232,19 @@ describe('ConversationOrchestratorService', () => {
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
     expect(repository.failTurn).not.toHaveBeenCalled();
     expect(router.generate).toHaveBeenCalledTimes(1);
+    expect(hypothesisEligibility.evaluate).not.toHaveBeenCalled();
+  });
+
+  it('keeps a finalized response authoritative when eligibility evaluation fails', async () => {
+    repository.claimTurn.mockResolvedValue(claimed);
+    repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    hypothesisEligibility.evaluate.mockRejectedValue(new Error('eligibility failure'));
+    await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({
+      userTurn: completedUser, assistantTurn: assistant,
+    });
+    expect(repository.failTurn).not.toHaveBeenCalled();
+    expect(router.generate).toHaveBeenCalledTimes(1);
+    expect(hypothesisEligibility.evaluate).toHaveBeenCalledTimes(1);
   });
 
   it('skips automatic writes for GUIDED safety content', async () => {
@@ -235,6 +255,7 @@ describe('ConversationOrchestratorService', () => {
     repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
     await orchestrator.orchestrate('token', 'user', userTurn);
     expect(memoryWriter.evaluateAndWrite).not.toHaveBeenCalled();
+    expect(hypothesisEligibility.evaluate).toHaveBeenCalledWith('user', 'token', 'hello', 'GUIDED');
   });
 
   it('carries GUIDED safety separately and invokes the provider exactly once', async () => {
@@ -316,6 +337,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
+    expect(hypothesisEligibility.evaluate).not.toHaveBeenCalled();
   });
 
   it('passes AVAILABLE hypothesis data as an independent channel for ALLOW and calls the router once', async () => {

@@ -19,6 +19,8 @@ import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
 import { HypothesisReasoningInvariantError } from '../hypothesis/hypothesis-reasoning-context.types';
+import { HypothesisGenerationEligibilityService } from '../hypothesis/hypothesis-generation-eligibility.service';
+import type { HypothesisGenerationEligibilityResult } from '../hypothesis/hypothesis-generation-eligibility.types';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -36,17 +38,24 @@ export class ConversationOrchestratorService {
     private readonly himReasoningConsumption: HimReasoningConsumptionService,
     private readonly himFastDeepConsumption: HimFastDeepConsumptionService,
     private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
+    private readonly hypothesisGenerationEligibility: HypothesisGenerationEligibilityService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
     private readonly correlation:CorrelationService,
     private readonly telemetry:TelemetryService,
   ) {}
 
   async orchestrate(accessToken: string, userId: string, userTurn: ConversationTurn): Promise<OrchestratedTurnResult> {
-    if (userTurn.status === 'COMPLETED') return this.currentResult(accessToken, userId, userTurn);
+    if (userTurn.status === 'COMPLETED') {
+      this.telemetry.recordHypothesisGenerationEligibility('replay_skipped', userTurn.processing_path ?? undefined);
+      return this.currentResult(accessToken, userId, userTurn);
+    }
 
     const selection = this.selectPath(userTurn.content);
     const claimed = await this.repository.claimTurn(accessToken, userTurn.session_id, userId, userTurn.id, selection);
-    if (!claimed) return this.currentResult(accessToken, userId, userTurn);
+    if (!claimed) {
+      this.telemetry.recordHypothesisGenerationEligibility('replay_skipped', selection.path);
+      return this.currentResult(accessToken, userId, userTurn);
+    }
 
     const execute=async()=>{try {
       const context = await this.engine('context_builder',selection.path,()=>this.contextBuilder.build(accessToken, userId, userTurn));
@@ -57,6 +66,7 @@ export class ConversationOrchestratorService {
           assistantTurnId: randomUUID(), content: safety.deterministicResponse!,
         });
         if (!finalized) return this.currentResult(accessToken, userId, claimed);
+        await this.evaluateEligibilityFailSoft(userId, accessToken, userTurn.content, safety.disposition, selection.path);
         this.telemetry.recordTurnOutcome('blocked',selection.path);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
@@ -98,7 +108,12 @@ export class ConversationOrchestratorService {
         assistantTurnId: randomUUID(), content: candidate.content,
       });
       if (!finalized) return this.currentResult(accessToken, userId, claimed);
-      await this.writeMemoryFailSoft(userId, accessToken, userTurn.content, safety.disposition);
+      const memoryCompleted = await this.writeMemoryFailSoft(userId, accessToken, userTurn.content, safety.disposition);
+      if (memoryCompleted) {
+        await this.evaluateEligibilityFailSoft(userId, accessToken, userTurn.content, safety.disposition, selection.path);
+      } else {
+        this.telemetry.recordHypothesisGenerationEligibility('failed', selection.path);
+      }
       this.telemetry.recordTurnOutcome('completed',selection.path);
       return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
     } catch {
@@ -114,13 +129,41 @@ export class ConversationOrchestratorService {
     accessToken: string,
     content: string,
     safetyDisposition: 'ALLOW' | 'GUIDED' | 'BLOCK',
-  ): Promise<void> {
-    if (safetyDisposition !== 'ALLOW') return;
+  ): Promise<boolean> {
+    if (safetyDisposition !== 'ALLOW') return true;
     try {
       await this.engine('memory_write',undefined,()=>this.memoryWriter.evaluateAndWrite(userId, accessToken, content));
+      return true;
     } catch {
       // Memory is a non-authoritative side capability. Finalized conversation output remains authoritative.
+      return false;
     }
+  }
+
+  private async evaluateEligibilityFailSoft(
+    userId: string,
+    accessToken: string,
+    content: string,
+    safetyDisposition: 'ALLOW' | 'GUIDED' | 'BLOCK',
+    path: ProcessingPath,
+  ): Promise<void> {
+    try {
+      const result = await this.engine('hypothesis_generation_eligibility', path, () =>
+        this.hypothesisGenerationEligibility.evaluate(userId, accessToken, content, safetyDisposition));
+      this.telemetry.recordHypothesisGenerationEligibility(this.eligibilityOutcome(result), path);
+    } catch {
+      this.telemetry.recordHypothesisGenerationEligibility('failed', path);
+    }
+  }
+
+  private eligibilityOutcome(result: HypothesisGenerationEligibilityResult):
+    'eligible' | 'not_eligible' | 'ambiguous' | 'safety_ineligible' | 'no_evidence' | 'failed' {
+    if (result.status === 'ELIGIBLE') return 'eligible';
+    if (result.reason === 'AMBIGUOUS_TRIGGER') return 'ambiguous';
+    if (result.reason === 'SAFETY_INELIGIBLE') return 'safety_ineligible';
+    if (result.reason === 'NO_ELIGIBLE_EVIDENCE') return 'no_evidence';
+    if (result.reason === 'EVALUATION_FAILED') return 'failed';
+    return 'not_eligible';
   }
 
   private engine<T>(name:string,path:ProcessingPath|undefined,work:()=>Promise<T>|T):Promise<T>{return this.correlation.current()?this.telemetry.withEngine(name,path,work):Promise.resolve().then(work);}
