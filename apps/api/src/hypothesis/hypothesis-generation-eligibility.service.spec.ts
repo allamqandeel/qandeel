@@ -66,4 +66,15 @@ describe('HypothesisGenerationEligibilityService', () => {
     expect(JSON.stringify(result)).not.toContain('memory:');
     expect(Object.keys(result)).toEqual(['status', 'reason']);
   });
+
+  it('returns the same bounded Evidence projection and Trigger result for eligible orchestration reuse', async () => {
+    const result = await service.evaluateWithContext('user', 'token', 'Why do I repeat this?', 'ALLOW');
+    expect(result).toEqual({
+      eligibility: { status: 'ELIGIBLE', reason: 'TRIGGER_AND_EVIDENCE_AVAILABLE' },
+      triggerClassification: { classification: 'TRIGGER', reason: 'EXPLICIT_WHY_SELF' },
+      eligibleEvidence: [eligibleEvidence],
+    });
+    expect(evidence.listEligibleForUser).toHaveBeenCalledTimes(1);
+    expect(classifier.classify).toHaveBeenCalledTimes(1);
+  });
 });

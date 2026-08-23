@@ -1,3 +1,6 @@
+import type { EvidenceItem } from '../memory/evidence.types';
+import type { HypothesisGenerationTriggerClassification } from './hypothesis-generation-trigger-classification.types';
+
 export const HYPOTHESIS_GENERATION_ELIGIBILITY_REASONS = [
   'TRIGGER_AND_EVIDENCE_AVAILABLE',
   'NO_TRIGGER',
@@ -19,4 +22,12 @@ export type HypothesisGenerationEligibilityResult =
         HypothesisGenerationEligibilityReason,
         'TRIGGER_AND_EVIDENCE_AVAILABLE'
       >;
+    };
+
+export type HypothesisGenerationEligibilityAssessment =
+  | { eligibility: Exclude<HypothesisGenerationEligibilityResult, { status: 'ELIGIBLE' }> }
+  | {
+      eligibility: Extract<HypothesisGenerationEligibilityResult, { status: 'ELIGIBLE' }>;
+      triggerClassification: Extract<HypothesisGenerationTriggerClassification, { classification: 'TRIGGER' }>;
+      eligibleEvidence: ReadonlyArray<EvidenceItem>;
     };
