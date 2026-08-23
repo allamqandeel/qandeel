@@ -23,6 +23,7 @@ import { HypothesisGenerationEligibilityService } from '../hypothesis/hypothesis
 import type { HypothesisGenerationEligibilityResult } from '../hypothesis/hypothesis-generation-eligibility.types';
 import { HypothesisGenerationIntentExtractionService } from '../hypothesis/hypothesis-generation-intent-extraction.service';
 import type { HypothesisGenerationIntentExtractionResult } from '../hypothesis/hypothesis-generation-intent-extraction.types';
+import { HypothesisGenerationRequestAssemblerService } from '../hypothesis/hypothesis-generation-request-assembler.service';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -42,6 +43,7 @@ export class ConversationOrchestratorService {
     private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
     private readonly hypothesisGenerationEligibility: HypothesisGenerationEligibilityService,
     private readonly hypothesisIntentExtraction: HypothesisGenerationIntentExtractionService,
+    private readonly hypothesisGenerationRequestAssembler: HypothesisGenerationRequestAssemblerService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
     private readonly correlation:CorrelationService,
     private readonly telemetry:TelemetryService,
@@ -172,6 +174,18 @@ export class ConversationOrchestratorService {
           eligibleEvidence: assessment.eligibleEvidence,
         }));
       this.telemetry.recordHypothesisIntentExtraction(this.extractionOutcome(result), path);
+      if (result.status !== 'AUTHORIZED') return;
+      try {
+        const assembly = await this.engine('hypothesis_generation_request_assembly', path, () =>
+          this.hypothesisGenerationRequestAssembler.assemble(result.intent));
+        this.telemetry.recordHypothesisGenerationRequestAssembly(
+          assembly.status === 'READY' ? 'ready' :
+            assembly.reason === 'INVARIANT_REJECTED' ? 'invariant_rejected' : 'not_ready',
+          path,
+        );
+      } catch {
+        this.telemetry.recordHypothesisGenerationRequestAssembly('not_ready', path);
+      }
     } catch {
       this.telemetry.recordHypothesisGenerationEligibility('failed', path);
       this.telemetry.recordHypothesisIntentExtraction('provider_failed', path);
