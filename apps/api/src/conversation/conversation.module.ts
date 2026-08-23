@@ -14,9 +14,10 @@ import { BEHAVIORAL_RESPONSE_POLICY } from './behavioral-response-policy.types';
 import { SafetyResponseGateService } from './safety-response-gate.service';
 import { SAFETY_RESPONSE_GATE } from './safety-response-gate.types';
 import { MemoryModule } from '../memory/memory.module';
+import { HimModule } from '../human-model/him.module';
 
 @Module({
-  imports: [ModelRouterModule, MemoryModule],
+  imports: [ModelRouterModule, MemoryModule, HimModule],
   controllers: [ConversationController],
   providers: [
     SupabaseAuthService,

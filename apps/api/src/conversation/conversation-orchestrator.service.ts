@@ -11,6 +11,9 @@ import {
 import { SAFETY_RESPONSE_GATE, type SafetyResponseGate } from './safety-response-gate.types';
 import { MemoryRetrieverService } from '../memory/memory-retriever.service';
 import { MemoryWriteService } from '../memory/memory-write.service';
+import { HimTurnContextSelectionService } from '../human-model/him-turn-context-selection.service';
+import { HimIntelligenceSnapshotService } from '../human-model/him-intelligence-snapshot.service';
+import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -23,6 +26,9 @@ export class ConversationOrchestratorService {
     @Inject(BEHAVIORAL_RESPONSE_POLICY) private readonly behavioralPolicy: BehavioralResponsePolicy,
     private readonly memoryRetriever: MemoryRetrieverService,
     private readonly memoryWriter: MemoryWriteService,
+    private readonly himContextSelector: HimTurnContextSelectionService,
+    private readonly himSnapshot: HimIntelligenceSnapshotService,
+    private readonly himReasoningConsumption: HimReasoningConsumptionService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
   ) {}
 
@@ -44,6 +50,13 @@ export class ConversationOrchestratorService {
         if (!finalized) return this.currentResult(accessToken, userId, claimed);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
+      const himSelection = this.himContextSelector.select(claimed);
+      const himSnapshot = await this.himSnapshot.getSnapshot(
+        accessToken,
+        himSelection.contextKind,
+        himSelection.contextId,
+      );
+      const himContext = this.himReasoningConsumption.transform(himSnapshot);
       const memoryContext = await this.memoryRetriever.retrieve(userId, accessToken, userTurn.content);
       const assembledContext = this.contextBuilder.assemble(context, memoryContext);
       const behavioralGuidance = this.behavioralPolicy.buildTextGuidance();
@@ -53,6 +66,7 @@ export class ConversationOrchestratorService {
         behavioralGuidance, ...(safety.safetyGuidance ? { safetyGuidance: safety.safetyGuidance } : {}),
         context: assembledContext.messages,
         ...(assembledContext.memoryContext ? { memoryContext: assembledContext.memoryContext } : {}),
+        himContext,
         locale: 'und', modality: 'TEXT',
         latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
