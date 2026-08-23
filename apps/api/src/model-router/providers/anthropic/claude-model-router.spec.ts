@@ -24,6 +24,13 @@ const config: ClaudeModelRouterConfig = {
 };
 
 describe('ClaudeModelRouter', () => {
+  it('receives the provider-neutral hypothesis channel only through central guidance', async () => {
+    const create = jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 1, output_tokens: 1 } });
+    const router = new ClaudeModelRouter(config, { messages: { create } });
+    await router.generate({ ...request(), hypothesisContext: { contractVersion: 1, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT', coverageState: 'AVAILABLE', candidateHypothesisCount: 1, includedHypothesisCount: 1, truncated: false, hypotheses: [] } });
+    expect(create.mock.calls[0][0].system).toContain('<hypothesis_reasoning_context>');
+    expect(JSON.stringify(create.mock.calls[0][0].messages)).not.toContain('hypothesis_reasoning_context');
+  });
   it('translates multi-turn context and normalizes text and token usage', async () => {
     const create = jest.fn().mockResolvedValue({
       content: [{ type: 'text', text: ' normalized response ' }],

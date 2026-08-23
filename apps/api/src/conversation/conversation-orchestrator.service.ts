@@ -17,6 +17,8 @@ import { HimReasoningConsumptionService } from '../human-model/him-reasoning-con
 import { HimFastDeepConsumptionService } from '../human-model/him-fast-deep-consumption.service';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
+import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
+import { HypothesisReasoningInvariantError } from '../hypothesis/hypothesis-reasoning-context.types';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -33,6 +35,7 @@ export class ConversationOrchestratorService {
     private readonly himSnapshot: HimIntelligenceSnapshotService,
     private readonly himReasoningConsumption: HimReasoningConsumptionService,
     private readonly himFastDeepConsumption: HimFastDeepConsumptionService,
+    private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
     private readonly correlation:CorrelationService,
     private readonly telemetry:TelemetryService,
@@ -66,6 +69,15 @@ export class ConversationOrchestratorService {
       const himReasoningContext = this.himReasoningConsumption.transform(himSnapshot);
       return this.himFastDeepConsumption.project(selection.path, himReasoningContext);});
       const memoryContext = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));
+      let hypothesisResult;
+      try {
+        hypothesisResult = await this.engine('hypothesis_context',selection.path,()=>this.hypothesisReasoningContext.build(userId, accessToken));
+      } catch (error) {
+        this.telemetry.recordHypothesisContext(error instanceof HypothesisReasoningInvariantError ? 'rejected' : 'failed', selection.path);
+        throw error;
+      }
+      if (hypothesisResult.coverageState === 'EMPTY') this.telemetry.recordHypothesisContext('empty', selection.path);
+      else this.telemetry.recordHypothesisContext('available', selection.path, hypothesisResult.context.contractVersion, hypothesisResult.context.candidateHypothesisCount, hypothesisResult.context.includedHypothesisCount);
       const assembledContext = this.contextBuilder.assemble(context, memoryContext);
       const behavioralGuidance = this.behavioralPolicy.buildTextGuidance();
       const candidate = await this.engine('model_router',selection.path,()=>this.router.generate({
@@ -75,10 +87,12 @@ export class ConversationOrchestratorService {
         context: assembledContext.messages,
         ...(assembledContext.memoryContext ? { memoryContext: assembledContext.memoryContext } : {}),
         himContext,
+        ...(hypothesisResult.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesisResult.context } : {}),
         locale: 'und', modality: 'TEXT',
         latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
       }));
+      if (hypothesisResult.coverageState === 'AVAILABLE') this.telemetry.recordHypothesisContext('consumed', selection.path, hypothesisResult.context.contractVersion, hypothesisResult.context.candidateHypothesisCount, hypothesisResult.context.includedHypothesisCount);
       const finalized = await this.repository.finalizeTurn(accessToken, {
         sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
         assistantTurnId: randomUUID(), content: candidate.content,
