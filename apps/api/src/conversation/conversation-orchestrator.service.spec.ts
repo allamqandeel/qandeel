@@ -458,6 +458,21 @@ describe('ConversationOrchestratorService', () => {
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
   });
 
+  it('preserves the bounded fresh-Evidence identity in the internal Memory completion handoff', async () => {
+    memoryWriter.evaluateAndWrite.mockResolvedValue({
+      decision: 'WRITE', type: 'GOAL', memoryId: 'persisted-memory-id',
+      evidenceId: 'memory:persisted-memory-id',
+    });
+    await expect((orchestrator as any).writeMemoryFailSoft('user', 'token', 'My goal is focus.', 'ALLOW'))
+      .resolves.toEqual({
+        completion: 'COMPLETED',
+        writeResult: {
+          decision: 'WRITE', type: 'GOAL', memoryId: 'persisted-memory-id',
+          evidenceId: 'memory:persisted-memory-id',
+        },
+      });
+  });
+
   it('keeps a finalized response authoritative when eligibility evaluation fails', async () => {
     repository.claimTurn.mockResolvedValue(claimed);
     repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });

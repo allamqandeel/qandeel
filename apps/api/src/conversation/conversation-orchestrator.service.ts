@@ -11,6 +11,7 @@ import {
 import { SAFETY_RESPONSE_GATE, type SafetyResponseGate } from './safety-response-gate.types';
 import { MemoryRetrieverService } from '../memory/memory-retriever.service';
 import { MemoryWriteService } from '../memory/memory-write.service';
+import type { MemoryWriteResult } from '../memory/memory-write.service';
 import { HimTurnContextSelectionService } from '../human-model/him-turn-context-selection.service';
 import { HimIntelligenceSnapshotService } from '../human-model/him-intelligence-snapshot.service';
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
@@ -125,8 +126,8 @@ export class ConversationOrchestratorService {
         assistantTurnId: randomUUID(), content: candidate.content,
       });
       if (!finalized) return this.currentResult(accessToken, userId, claimed);
-      const memoryCompleted = await this.writeMemoryFailSoft(userId, accessToken, userTurn.content, safety.disposition);
-      if (memoryCompleted) {
+      const memoryOutcome = await this.writeMemoryFailSoft(userId, accessToken, userTurn.content, safety.disposition);
+      if (memoryOutcome.completion === 'COMPLETED') {
         await this.evaluateEligibilityFailSoft(userId, accessToken, finalized.userTurn, safety.disposition, selection.path);
       } else {
         this.telemetry.recordHypothesisGenerationEligibility('failed', selection.path);
@@ -146,14 +147,18 @@ export class ConversationOrchestratorService {
     accessToken: string,
     content: string,
     safetyDisposition: 'ALLOW' | 'GUIDED' | 'BLOCK',
-  ): Promise<boolean> {
-    if (safetyDisposition !== 'ALLOW') return true;
+  ): Promise<
+    | { completion: 'COMPLETED'; writeResult?: MemoryWriteResult }
+    | { completion: 'FAILED' }
+  > {
+    if (safetyDisposition !== 'ALLOW') return { completion: 'COMPLETED' };
     try {
-      await this.engine('memory_write',undefined,()=>this.memoryWriter.evaluateAndWrite(userId, accessToken, content));
-      return true;
+      const writeResult = await this.engine('memory_write',undefined,()=>
+        this.memoryWriter.evaluateAndWrite(userId, accessToken, content));
+      return { completion: 'COMPLETED', writeResult };
     } catch {
       // Memory is a non-authoritative side capability. Finalized conversation output remains authoritative.
-      return false;
+      return { completion: 'FAILED' };
     }
   }
 
