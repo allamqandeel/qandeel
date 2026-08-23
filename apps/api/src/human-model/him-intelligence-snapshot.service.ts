@@ -1,0 +1,38 @@
+import { Injectable } from '@nestjs/common';
+import { HimRepository } from './him.repository';
+import type { HimContextKind } from './him.types';
+import type { HimIntelligenceSnapshot,HimIntelligenceSnapshotMetric,HimSnapshotContextKind,HimSnapshotOrdinalCategory,HimSnapshotSourceRow,HimSnapshotUnassessedReason } from './him-intelligence-snapshot.types';
+
+export const HIM_SNAPSHOT_SLOTS=Object.freeze<Record<HimSnapshotContextKind,readonly string[]>>({SITUATION:['hse.stress','hse.motivation','hse.self-confidence','hse.attention'],CONVERSATION_SESSION:['hse.stress','hse.energy','hse.attention'],DECISION:['hse.self-confidence','hse.attention'],GOAL:['hse.motivation']});
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CATEGORIES=Object.freeze<Record<number,HimSnapshotOrdinalCategory>>({1:'VERY_LOW',2:'LOW',3:'MODERATE',4:'HIGH',5:'VERY_HIGH'});
+const SLOT_ORDER=Object.freeze<Record<string,number>>({'hse.stress':1,'hse.energy':2,'hse.motivation':3,'hse.self-confidence':4,'hse.attention':5});
+
+@Injectable()
+export class HimIntelligenceSnapshotService {
+  constructor(private readonly repository:HimRepository){}
+  async getSnapshot(token:string,contextKind:HimContextKind,contextId:string):Promise<HimIntelligenceSnapshot>{
+    if(!(contextKind in HIM_SNAPSHOT_SLOTS))throw new Error('UNSUPPORTED_CONTEXT');
+    if(!UUID.test(contextId))throw new Error('INVALID_OR_UNOWNED_CONTEXT');
+    let rows:HimSnapshotSourceRow[];try{rows=await this.repository.readIntelligenceSnapshot(token,{contextKind,contextId});}catch(error){if(error instanceof Error&&error.message.includes('active binding integrity failure'))throw new Error('INTEGRITY_FAILURE');throw new Error('INVALID_OR_UNOWNED_CONTEXT');}
+    const kind=contextKind as HimSnapshotContextKind,expected=HIM_SNAPSHOT_SLOTS[kind];
+    if(rows.length!==expected.length||rows.some((r,i)=>r.slot_order!==SLOT_ORDER[r.metric_key]||r.metric_key!==expected[i]||r.definition_version!==1||r.semantic_type!=='STATE'||r.context_kind!==kind||r.context_id!==contextId))throw new Error('INTEGRITY_FAILURE');
+    const generatedAt=rows[0]?.generated_at;if(!generatedAt||rows.some(r=>r.generated_at!==generatedAt))throw new Error('INTEGRITY_FAILURE');
+    const metrics=rows.map(r=>this.metric(r));const assessedMetricCount=metrics.filter(m=>m.valueState==='ASSESSED').length;
+    return{snapshotContractVersion:1,contextKind:kind,contextId,generatedAt,coverageState:assessedMetricCount===metrics.length?'FULL':assessedMetricCount===0?'EMPTY':'PARTIAL',eligibleMetricCount:metrics.length,assessedMetricCount,unassessedMetricCount:metrics.length-assessedMetricCount,metrics};
+  }
+  private metric(r:HimSnapshotSourceRow):HimIntelligenceSnapshotMetric{
+    this.active(r);if(!r.measurement_event_id){if(r.measurement_observation_id||r.snapshot_id||r.calculation_result_id||r.canonical_binding_id)throw new Error('INTEGRITY_FAILURE');return this.entry(r,'NO_MEASUREMENT_EVENT');}
+    if(!r.event_observed_at||!r.measurement_observation_id||!r.response_code||!r.observation_instrument_id||!r.observation_instrument_version||!r.observation_scale_reference||!r.observation_scale_version)throw new Error('INTEGRITY_FAILURE');
+    if(r.response_code==='NOT_SURE'){if(r.snapshot_id){if(!r.calculation_result_id||!r.canonical_binding_id||!r.source_binding_status||!r.source_instrument_id||!r.source_instrument_version||!r.source_scale_reference||!r.source_scale_version||!r.source_model_id||!r.source_model_version)throw new Error('INTEGRITY_FAILURE');this.chain(r);if(r.validity_status==='INVALIDATED')return this.entry(r,'LATEST_EVENT_INVALIDATED');if(r.validity_status!=='VALID'||r.value_state!=='UNASSESSED'||r.numeric_value!==null||r.result_state!=='UNASSESSED'||r.result_numeric_value!==null)throw new Error('INTEGRITY_FAILURE');}return this.entry(r,'LATEST_EVENT_UNASSESSED');}
+    if(!['VERY_LOW','LOW','MODERATE','HIGH','VERY_HIGH'].includes(r.response_code)||!r.snapshot_id||!r.calculation_result_id||!r.canonical_binding_id||!r.source_binding_status||!r.source_instrument_id||!r.source_instrument_version||!r.source_scale_reference||!r.source_scale_version||!r.source_model_id||!r.source_model_version)throw new Error('INTEGRITY_FAILURE');
+    this.chain(r);if(r.validity_status==='INVALIDATED')return this.entry(r,'LATEST_EVENT_INVALIDATED');if(r.validity_status!=='VALID')throw new Error('INTEGRITY_FAILURE');
+    const incompatible=r.canonical_binding_id!==r.active_binding_id||r.source_binding_status!=='ACTIVE'||r.source_instrument_id!==r.active_instrument_id||r.source_instrument_version!==r.active_instrument_version||r.source_scale_reference!==r.active_scale_reference||r.source_scale_version!==r.active_scale_version||r.source_model_id!==r.active_model_id||r.source_model_version!==r.active_model_version;
+    if(incompatible)return this.entry(r,'INCOMPATIBLE_ACTIVE_BINDING');
+    if(r.value_state!=='ASSESSED'||!Number.isInteger(r.numeric_value)||r.numeric_value!<1||r.numeric_value!>5||r.result_state!=='ASSESSED'||r.result_numeric_value!==r.numeric_value)throw new Error('INTEGRITY_FAILURE');
+    return this.entry(r,null,CATEGORIES[r.numeric_value!]);
+  }
+  private active(r:HimSnapshotSourceRow):void{if(!r.active_binding_id||!r.active_instrument_id||!Number.isSafeInteger(r.active_instrument_version)||!r.active_scale_reference||!Number.isSafeInteger(r.active_scale_version)||!r.active_model_id||!Number.isSafeInteger(r.active_model_version))throw new Error('INTEGRITY_FAILURE');}
+  private chain(r:HimSnapshotSourceRow):void{if(r.snapshot_provenance!=='QANDEEL_HIM_RUNTIME_FOUNDATION_V1'||r.result_provenance!=='QANDEEL_HIM_CALCULATION_RUNTIME_V1'||r.result_confidence_state!=='UNASSESSED'||r.result_confidence_reference!==null||r.observation_instrument_id!==r.source_instrument_id||r.observation_instrument_version!==r.source_instrument_version||r.observation_scale_reference!==r.source_scale_reference||r.observation_scale_version!==r.source_scale_version||r.snapshot_scale_reference!==r.source_scale_reference||r.snapshot_scale_version!==r.source_scale_version||r.result_model_id!==r.source_model_id||r.result_model_version!==r.source_model_version)throw new Error('INTEGRITY_FAILURE');}
+  private entry(r:HimSnapshotSourceRow,reason:HimSnapshotUnassessedReason|null,ordinalCategory:HimSnapshotOrdinalCategory|null=null):HimIntelligenceSnapshotMetric{const assessed=reason===null;return{metricKey:r.metric_key,definitionVersion:1,semanticType:'STATE',valueState:assessed?'ASSESSED':'UNASSESSED',unassessedReason:reason,ordinalCategory:assessed?ordinalCategory:null,scaleReference:r.snapshot_id?r.source_scale_reference:null,scaleVersion:r.snapshot_id?r.source_scale_version:null,observedAt:r.event_observed_at,freshnessState:'UNASSESSED',freshnessReference:null,confidenceState:'UNASSESSED',confidenceReference:null,validityStatus:r.validity_status as HimIntelligenceSnapshotMetric['validityStatus'],measurementEventId:r.measurement_event_id,measurementObservationId:r.measurement_observation_id,calculationResultId:r.calculation_result_id,canonicalBindingId:r.canonical_binding_id,instrumentId:r.snapshot_id?r.source_instrument_id:null,instrumentVersion:r.snapshot_id?r.source_instrument_version:null,modelId:r.snapshot_id?r.source_model_id:null,modelVersion:r.snapshot_id?r.source_model_version:null};}
+}

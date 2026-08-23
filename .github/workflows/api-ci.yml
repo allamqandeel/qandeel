@@ -49,4 +49,5 @@ jobs:
       - {name: Verify active HSE Self-Confidence model against real PostgreSQL, run: npm run verify:hse-self-confidence:integration}
       - {name: Verify active HSE Stress model against real PostgreSQL, run: npm run verify:hse-stress:integration}
       - {name: Verify HIM temporal trend source against real PostgreSQL, run: npm run verify:him-trends:integration}
+      - {name: Verify HIM Intelligence Snapshot against real PostgreSQL, run: npm run verify:him-snapshot:integration}
 

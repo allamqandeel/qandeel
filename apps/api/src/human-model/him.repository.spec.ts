@@ -17,5 +17,6 @@ describe('HimRepository current reads',()=>{
     await repository.getLatest('token','user','hbs.avoidance','SITUATION','situation');
     expect(dataApi.request.mock.calls[5][1]).toMatch(/^him_metric_snapshots\?/);
   });
+  it('assembles an Intelligence Snapshot with exactly one RPC call',async()=>{const dataApi={request:jest.fn().mockResolvedValue([])};const repository=new HimRepository(dataApi as never);await repository.readIntelligenceSnapshot('token',{contextKind:'SITUATION',contextId:'00000000-0000-4000-8000-000000000010'});expect(dataApi.request).toHaveBeenCalledTimes(1);expect(dataApi.request).toHaveBeenCalledWith('token','rpc/read_him_intelligence_snapshot_v1',{method:'POST',body:JSON.stringify({p_context_kind:'SITUATION',p_context_id:'00000000-0000-4000-8000-000000000010'})});});
 });
 
