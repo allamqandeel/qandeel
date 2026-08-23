@@ -75,9 +75,10 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   const memoryWriter = { evaluateAndWrite: jest.fn().mockResolvedValue({ decision: 'SKIP' }) };
   const router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' }, usage: { inputTokens: 1, outputTokens: 1 } }) };
   const hypothesisContext = { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) };
-  const hypothesisEligibility = { evaluate: jest.fn().mockResolvedValue({ status: 'NOT_ELIGIBLE', reason: 'NO_TRIGGER' }) };
+  const hypothesisEligibility = { evaluateWithContext: jest.fn().mockResolvedValue({ eligibility: { status: 'NOT_ELIGIBLE', reason: 'NO_TRIGGER' } }) };
+  const hypothesisExtraction = { extract: jest.fn() };
   const correlation=new CorrelationService();
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, memoryWriter as never, selector, snapshot, bridge, policy, hypothesisContext as never, hypothesisEligibility as never, router,correlation,new TelemetryService(correlation));
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, memoryWriter as never, selector, snapshot, bridge, policy, hypothesisContext as never, hypothesisEligibility as never, hypothesisExtraction as never, router,correlation,new TelemetryService(correlation));
   return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy };
 }
 

@@ -21,6 +21,8 @@ import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reas
 import { HypothesisReasoningInvariantError } from '../hypothesis/hypothesis-reasoning-context.types';
 import { HypothesisGenerationEligibilityService } from '../hypothesis/hypothesis-generation-eligibility.service';
 import type { HypothesisGenerationEligibilityResult } from '../hypothesis/hypothesis-generation-eligibility.types';
+import { HypothesisGenerationIntentExtractionService } from '../hypothesis/hypothesis-generation-intent-extraction.service';
+import type { HypothesisGenerationIntentExtractionResult } from '../hypothesis/hypothesis-generation-intent-extraction.types';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -39,6 +41,7 @@ export class ConversationOrchestratorService {
     private readonly himFastDeepConsumption: HimFastDeepConsumptionService,
     private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
     private readonly hypothesisGenerationEligibility: HypothesisGenerationEligibilityService,
+    private readonly hypothesisIntentExtraction: HypothesisGenerationIntentExtractionService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
     private readonly correlation:CorrelationService,
     private readonly telemetry:TelemetryService,
@@ -47,6 +50,7 @@ export class ConversationOrchestratorService {
   async orchestrate(accessToken: string, userId: string, userTurn: ConversationTurn): Promise<OrchestratedTurnResult> {
     if (userTurn.status === 'COMPLETED') {
       this.telemetry.recordHypothesisGenerationEligibility('replay_skipped', userTurn.processing_path ?? undefined);
+      this.telemetry.recordHypothesisIntentExtraction('skipped_replay', userTurn.processing_path ?? undefined);
       return this.currentResult(accessToken, userId, userTurn);
     }
 
@@ -54,6 +58,7 @@ export class ConversationOrchestratorService {
     const claimed = await this.repository.claimTurn(accessToken, userTurn.session_id, userId, userTurn.id, selection);
     if (!claimed) {
       this.telemetry.recordHypothesisGenerationEligibility('replay_skipped', selection.path);
+      this.telemetry.recordHypothesisIntentExtraction('skipped_replay', selection.path);
       return this.currentResult(accessToken, userId, userTurn);
     }
 
@@ -66,7 +71,7 @@ export class ConversationOrchestratorService {
           assistantTurnId: randomUUID(), content: safety.deterministicResponse!,
         });
         if (!finalized) return this.currentResult(accessToken, userId, claimed);
-        await this.evaluateEligibilityFailSoft(userId, accessToken, userTurn.content, safety.disposition, selection.path);
+        await this.evaluateEligibilityFailSoft(userId, accessToken, finalized.userTurn, safety.disposition, selection.path);
         this.telemetry.recordTurnOutcome('blocked',selection.path);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
@@ -110,7 +115,7 @@ export class ConversationOrchestratorService {
       if (!finalized) return this.currentResult(accessToken, userId, claimed);
       const memoryCompleted = await this.writeMemoryFailSoft(userId, accessToken, userTurn.content, safety.disposition);
       if (memoryCompleted) {
-        await this.evaluateEligibilityFailSoft(userId, accessToken, userTurn.content, safety.disposition, selection.path);
+        await this.evaluateEligibilityFailSoft(userId, accessToken, finalized.userTurn, safety.disposition, selection.path);
       } else {
         this.telemetry.recordHypothesisGenerationEligibility('failed', selection.path);
       }
@@ -143,17 +148,45 @@ export class ConversationOrchestratorService {
   private async evaluateEligibilityFailSoft(
     userId: string,
     accessToken: string,
-    content: string,
+    currentTurn: ConversationTurn,
     safetyDisposition: 'ALLOW' | 'GUIDED' | 'BLOCK',
     path: ProcessingPath,
   ): Promise<void> {
     try {
-      const result = await this.engine('hypothesis_generation_eligibility', path, () =>
-        this.hypothesisGenerationEligibility.evaluate(userId, accessToken, content, safetyDisposition));
-      this.telemetry.recordHypothesisGenerationEligibility(this.eligibilityOutcome(result), path);
+      const assessment = await this.engine('hypothesis_generation_eligibility', path, () =>
+        this.hypothesisGenerationEligibility.evaluateWithContext(
+          userId, accessToken, currentTurn.content, safetyDisposition));
+      this.telemetry.recordHypothesisGenerationEligibility(this.eligibilityOutcome(assessment.eligibility), path);
+      if (!('triggerClassification' in assessment)) {
+        this.telemetry.recordHypothesisIntentExtraction('skipped_not_eligible', path);
+        return;
+      }
+      const result = await this.engine('hypothesis_intent_extraction', path, () =>
+        this.hypothesisIntentExtraction.extract({
+          currentTurn: {
+            id: currentTurn.id, sessionId: currentTurn.session_id, role: 'USER', status: 'COMPLETED',
+            text: currentTurn.content,
+          },
+          eligibility: assessment.eligibility,
+          triggerReason: assessment.triggerClassification.reason,
+          eligibleEvidence: assessment.eligibleEvidence,
+        }));
+      this.telemetry.recordHypothesisIntentExtraction(this.extractionOutcome(result), path);
     } catch {
       this.telemetry.recordHypothesisGenerationEligibility('failed', path);
+      this.telemetry.recordHypothesisIntentExtraction('provider_failed', path);
     }
+  }
+
+  private extractionOutcome(result: HypothesisGenerationIntentExtractionResult):
+    'authorized' | 'authority_rejected' | 'provider_unavailable' | 'provider_timeout' |
+    'invalid_provider_output' | 'provider_failed' {
+    if (result.status === 'AUTHORIZED') return 'authorized';
+    if (result.reason === 'AUTHORITY_REJECTED') return 'authority_rejected';
+    if (result.reason === 'PROVIDER_UNAVAILABLE') return 'provider_unavailable';
+    if (result.reason === 'PROVIDER_TIMEOUT') return 'provider_timeout';
+    if (result.reason === 'INVALID_PROVIDER_OUTPUT') return 'invalid_provider_output';
+    return 'provider_failed';
   }
 
   private eligibilityOutcome(result: HypothesisGenerationEligibilityResult):
