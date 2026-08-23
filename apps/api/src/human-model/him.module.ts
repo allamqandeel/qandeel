@@ -5,6 +5,7 @@ import { HimRepository } from './him.repository';
 import { HimService } from './him.service';
 import { HimCalculationModelRegistry } from './him-calculation.registry';
 import { HimCalculationService } from './him-calculation.service';
+import { HimIntelligenceSnapshotService } from './him-intelligence-snapshot.service';
 
-@Module({ imports: [MemoryModule], providers: [HimDefinitionRegistry, HimRepository, HimService, HimCalculationModelRegistry, HimCalculationService], exports: [HimDefinitionRegistry, HimRepository, HimService, HimCalculationModelRegistry, HimCalculationService] })
+@Module({ imports: [MemoryModule], providers: [HimDefinitionRegistry, HimRepository, HimService, HimCalculationModelRegistry, HimCalculationService, HimIntelligenceSnapshotService], exports: [HimDefinitionRegistry, HimRepository, HimService, HimCalculationModelRegistry, HimCalculationService, HimIntelligenceSnapshotService] })
 export class HimModule {}

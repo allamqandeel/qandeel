@@ -1,0 +1,13 @@
+# HIM Intelligence Snapshot Foundation v1
+
+The HIM Intelligence Snapshot is an internal, deterministic, read-only view of the latest known production measurement state in one exact owned context. It is not a profile, score, portrait, trend, recommendation, inference, dashboard, public API, or user-visible response-path feature.
+
+The server-owned slots are: SITUATION — Stress, Motivation, Self-Confidence, Attention; CONVERSATION_SESSION — Stress, Energy, Attention; DECISION — Self-Confidence, Attention; GOAL — Motivation. Their order follows canonical HSE order and has no ranking meaning. GLOBAL, RELATIONSHIP, Energy-in-SITUATION, and the twelve uncalibrated HBS/HRS/HGS metrics are excluded.
+
+`read_him_intelligence_snapshot_v1` performs context ownership, slot expansion, active production binding checks, latest-event selection, correction currentness, and provenance resolution in one PostgreSQL statement-level MVCC view. Chronology uses immutable `him_measurement_events.created_at` with event ID only as a stable tie-break. A correction replaces the value for its event without moving it or creating a new point.
+
+Every eligible slot is returned. No event is `NO_MEASUREMENT_EVENT`; a latest NOT_SURE/UNASSESSED event is `LATEST_EVENT_UNASSESSED` without fallback; invalidated latest state is `LATEST_EVENT_INVALIDATED`; a coherent historical chain that differs from the active binding is `INCOMPATIBLE_ACTIVE_BINDING`. Missing or inconsistent active slot configuration and malformed trusted chains fail the read as integrity failures.
+
+Assessed numeric storage codes are validated and exposed only as VERY_LOW, LOW, MODERATE, HIGH, or VERY_HIGH. No consumer numeric value, arithmetic, composite, score, percentage, baseline, decay, or cross-metric formula exists. Coverage is only FULL, PARTIAL, or EMPTY across frozen slots. Freshness and metric confidence remain UNASSESSED with null references. `observedAt` is original event time; database-owned `generatedAt` is read time.
+
+The read creates no table, cache, history, event, or mutation. It calls no Trend service, provider, embedding, Memory, Evidence, Hypothesis, Question, Confidence, ContextBuilder, ModelRouter, Safety, Behavioral, voice, proactive, client, or UI path.
