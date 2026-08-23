@@ -1,6 +1,7 @@
 # Qandeel Documentation
 
 - [Hypothesis Reasoning Consumption Integration v1](hypothesis-reasoning-consumption-integration-v1.md)
+- [Hypothesis Generation Trigger Classification v1](hypothesis-generation-trigger-classification-v1.md)
 
 Implementation-facing Markdown specifications live here.
 

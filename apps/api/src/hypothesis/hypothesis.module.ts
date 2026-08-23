@@ -8,5 +8,6 @@ import { ConfidenceService } from './confidence.service';
 import { HypothesisUpdateRepository } from './hypothesis-update.repository';
 import { HypothesisUpdateService } from './hypothesis-update.service';
 import { HypothesisReasoningContextService } from './hypothesis-reasoning-context.service';
-@Module({ imports: [MemoryModule], providers: [HypothesisRepository, HypothesisService, HypothesisGenerationService, ConfidenceRepository, ConfidenceService, HypothesisUpdateRepository, HypothesisUpdateService, HypothesisReasoningContextService], exports: [HypothesisService, HypothesisGenerationService, ConfidenceService, ConfidenceRepository, HypothesisUpdateService, HypothesisReasoningContextService] })
+import { HypothesisGenerationTriggerClassificationService } from './hypothesis-generation-trigger-classification.service';
+@Module({ imports: [MemoryModule], providers: [HypothesisRepository, HypothesisService, HypothesisGenerationService, ConfidenceRepository, ConfidenceService, HypothesisUpdateRepository, HypothesisUpdateService, HypothesisReasoningContextService, HypothesisGenerationTriggerClassificationService], exports: [HypothesisService, HypothesisGenerationService, ConfidenceService, ConfidenceRepository, HypothesisUpdateService, HypothesisReasoningContextService, HypothesisGenerationTriggerClassificationService] })
 export class HypothesisModule {}
