@@ -9,6 +9,7 @@
 - [Hypothesis Generation Request Assembly v1](hypothesis-generation-request-assembly-v1.md)
 - [Controlled Hypothesis Candidate Generation Provider Binding v1](controlled-hypothesis-candidate-generation-provider-binding-v1.md)
 - [Controlled Hypothesis Generation Invocation v1](controlled-hypothesis-generation-invocation-v1.md)
+- [Post-Generation Confidence Snapshot Integration v1](post-generation-confidence-snapshot-integration-v1.md)
 
 Implementation-facing Markdown specifications live here.
 
