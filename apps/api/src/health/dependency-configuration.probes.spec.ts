@@ -1,0 +1,6 @@
+import { modelProviderConfigurationStatus } from './model-provider-health.probe';import { observabilityConfigurationStatus } from './observability-health.probe';
+describe('local dependency configuration probes',()=>{
+ it.each([{}, {MODEL_PROVIDER:'invalid'},{MODEL_PROVIDER:'openai'},{MODEL_PROVIDER:'anthropic'}])('rejects missing/invalid/incomplete provider configuration without network',environment=>{const request=jest.spyOn(global,'fetch');expect(modelProviderConfigurationStatus(environment)).toBe('not_configured');expect(request).not.toHaveBeenCalled();request.mockRestore();});
+ it('accepts either canonical provider with its existing adapter configuration only',()=>{expect(modelProviderConfigurationStatus({MODEL_PROVIDER:'openai',OPENAI_API_KEY:'secret'})).toBe('configured');expect(modelProviderConfigurationStatus({MODEL_PROVIDER:'anthropic',ANTHROPIC_API_KEY:'secret'})).toBe('configured');});
+ it('keeps observability optional and distinguishes absent, initialized, and failed initialization',()=>{expect(observabilityConfigurationStatus({}, {otel:false,sentry:false})).toBe('not_configured');expect(observabilityConfigurationStatus({SENTRY_DSN:'SENTINEL_DSN'},{otel:false,sentry:false})).toBe('degraded');expect(observabilityConfigurationStatus({OTEL_EXPORTER_OTLP_ENDPOINT:'SENTINEL_ENDPOINT'},{otel:true,sentry:false})).toBe('configured');});
+});
