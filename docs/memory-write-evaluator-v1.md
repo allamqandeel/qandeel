@@ -48,6 +48,8 @@ Before persistence, the writer requests at most 32 ACTIVE, unexpired memories th
 
 The authenticated `userId` and access token scope both lookup and creation, so another user's memory cannot suppress a write.
 
+After a successful create, the writer returns the exact persisted Memory ID and mechanically derived `memory:<id>` Evidence identity. This internal identity handoff does not change evaluator classification or grant lasting Evidence eligibility; downstream consumers must still revalidate through the Evidence Layer when they use it.
+
 ## Sensitive-data denial
 
 A small high-confidence boundary rejects obvious password/passcode labels, API/authentication keys or tokens, OTP/verification codes, common credential token shapes, payment-card-length digit sequences, and explicitly labelled government identifiers. Rejected raw content is neither logged nor returned. This is intentionally not a general PII engine; ambiguity defaults to `SKIP` where a deny pattern applies.
