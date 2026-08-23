@@ -10,4 +10,4 @@ export function sanitizeSentryEvent(event:any):any{try{
 }catch{return null;}}
 
 export const sentryOptions={dsn:process.env.SENTRY_DSN,enabled:Boolean(process.env.SENTRY_DSN)&&process.env.NODE_ENV!=='test',tracesSampleRate:0,skipOpenTelemetrySetup:true,sendDefaultPii:false,beforeSend:sanitizeSentryEvent,beforeBreadcrumb:(_breadcrumb:any)=>null};
-if(sentryOptions.enabled)try{Sentry.init(sentryOptions);}catch{}
+export let sentryInitialized=false;if(sentryOptions.enabled)try{Sentry.init(sentryOptions);sentryInitialized=true;}catch{}
