@@ -1,6 +1,7 @@
 import { ConversationRepository } from './conversation.repository';
 import { SupabaseDataApiService } from './supabase-data-api.service';
 import type { ConversationTurn } from './conversation.types';
+import { CorrelationService } from '../observability/correlation.service';
 
 describe('ConversationRepository context history', () => {
   const row = (overrides: Partial<ConversationTurn>): ConversationTurn => ({
@@ -13,7 +14,7 @@ describe('ConversationRepository context history', () => {
     const assistant = row({});
     const user = row({ id: 'user-a', role: 'USER', content: 'input', source_turn_id: null, created_at: '2026-01-01T00:00:00.000Z' });
     const dataApi = { request: jest.fn().mockResolvedValueOnce([assistant]).mockResolvedValueOnce([user]) } as unknown as jest.Mocked<SupabaseDataApiService>;
-    const repository = new ConversationRepository(dataApi);
+    const repository = new ConversationRepository(dataApi,new CorrelationService());
     await expect(repository.findRecentAuthoritativeExchanges('caller-token', 'session-a', 'owner-a', 'current-a', 4))
       .resolves.toEqual([{ userTurn: user, assistantTurn: assistant }]);
 
@@ -37,7 +38,9 @@ describe('ConversationRepository context history', () => {
 
   it('drops an assistant when its authoritative source USER is unavailable', async () => {
     const dataApi = { request: jest.fn().mockResolvedValueOnce([row({})]).mockResolvedValueOnce([]) } as unknown as jest.Mocked<SupabaseDataApiService>;
-    const repository = new ConversationRepository(dataApi);
+    const repository = new ConversationRepository(dataApi,new CorrelationService());
     await expect(repository.findRecentAuthoritativeExchanges('token', 'session-a', 'owner-a', 'current-a', 4)).resolves.toEqual([]);
   });
+
+  it('passes a fresh event ID and only canonical request/orchestration correlation to terminal RPCs',async()=>{const dataApi={request:jest.fn().mockResolvedValue([])}as unknown as jest.Mocked<SupabaseDataApiService>,correlation=new CorrelationService(),repository=new ConversationRepository(dataApi,correlation);await correlation.runRequest(()=>correlation.withOrchestration(()=>repository.failTurn('token','session','user','turn')));const body=JSON.parse((dataApi.request.mock.calls[0][2] as RequestInit).body as string);expect(dataApi.request.mock.calls[0][1]).toBe('rpc/fail_conversation_turn');expect(body).toMatchObject({p_session_id:'session',p_user_id:'user',p_source_turn_id:'turn',p_event_id:expect.stringMatching(/^[0-9a-f-]{36}$/),p_correlation_id:expect.stringMatching(/^[0-9a-f-]{36}$/),p_orchestration_id:expect.stringMatching(/^[0-9a-f-]{36}$/)});expect(JSON.stringify(body)).not.toMatch(/content|idempotency|token/);});
 });

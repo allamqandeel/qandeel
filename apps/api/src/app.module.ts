@@ -8,9 +8,10 @@ import { HypothesisModule } from './hypothesis/hypothesis.module';
 import { QuestionModule } from './question/question.module';
 import { HimModule } from './human-model/him.module';
 import { ObservabilityModule } from './observability/observability.module';
+import { RuntimeEventsModule } from './runtime-events/runtime-events.module';
 
 @Module({
-  imports: [SentryModule.forRoot(),ObservabilityModule,HealthModule, ConversationModule, MemoryModule, HypothesisModule, QuestionModule, HimModule],
+  imports: [SentryModule.forRoot(),ObservabilityModule,RuntimeEventsModule,HealthModule, ConversationModule, MemoryModule, HypothesisModule, QuestionModule, HimModule],
   providers:[{provide:APP_FILTER,useClass:SentryGlobalFilter}],
 })
 export class AppModule {}
