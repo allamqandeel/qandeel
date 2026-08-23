@@ -13,11 +13,11 @@ BEGIN
  IF NOT((p_metric_key='hse.energy' AND p_context_kind='CONVERSATION_SESSION')OR(p_metric_key='hse.motivation' AND p_context_kind=ANY(ARRAY['GOAL','SITUATION']))OR(p_metric_key='hse.attention' AND p_context_kind=ANY(ARRAY['SITUATION','CONVERSATION_SESSION','DECISION']))OR(p_metric_key='hse.self-confidence' AND p_context_kind=ANY(ARRAY['SITUATION','DECISION']))OR(p_metric_key='hse.stress' AND p_context_kind=ANY(ARRAY['SITUATION','CONVERSATION_SESSION'])))OR p_definition_version<>1 THEN RAISE EXCEPTION 'Unsupported HIM trend metric or context' USING ERRCODE='22023';END IF;
  SELECT * INTO b FROM public.him_canonical_model_bindings x WHERE x.metric_key=p_metric_key AND x.definition_version=p_definition_version AND x.context_kind=p_context_kind AND x.status='ACTIVE';
  RETURN QUERY WITH source AS(
-   SELECT s.*,cb.instrument_id,cb.instrument_version,cb.model_id,cb.model_version,cb.metric_key binding_metric_key,cb.definition_version binding_definition_version,cb.context_kind binding_context_kind
-   FROM public.him_current_structured_measurements s LEFT JOIN public.him_canonical_model_bindings cb ON cb.id=s.canonical_binding_id
-   WHERE s.user_id=u AND s.metric_key=p_metric_key AND s.definition_version=p_definition_version AND s.context_kind=p_context_kind AND s.context_id=p_context_id AND s.observed_at>=p_window_start AND s.observed_at<p_window_end
- ),candidate AS(SELECT * FROM source WHERE value_state='ASSESSED' ORDER BY observed_at,id LIMIT 129)
- SELECT coalesce((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.observed_at,c.id)FROM candidate c),'[]'::jsonb),least((SELECT count(*) FROM source WHERE value_state<>'ASSESSED'),128)::integer,
+   SELECT s.*,e.created_at event_observed_at,cb.instrument_id,cb.instrument_version,cb.model_id,cb.model_version,cb.metric_key binding_metric_key,cb.definition_version binding_definition_version,cb.context_kind binding_context_kind
+   FROM public.him_current_structured_measurements s JOIN public.him_measurement_events e ON e.id=s.measurement_event_id AND e.user_id=s.user_id LEFT JOIN public.him_canonical_model_bindings cb ON cb.id=s.canonical_binding_id
+   WHERE s.user_id=u AND s.metric_key=p_metric_key AND s.definition_version=p_definition_version AND s.context_kind=p_context_kind AND s.context_id=p_context_id AND e.created_at>=p_window_start AND e.created_at<p_window_end
+ ),candidate AS(SELECT * FROM source WHERE value_state='ASSESSED' ORDER BY event_observed_at,id LIMIT 129)
+ SELECT coalesce((SELECT jsonb_agg((to_jsonb(c)-'event_observed_at')||jsonb_build_object('observed_at',c.event_observed_at) ORDER BY c.event_observed_at,c.id)FROM candidate c),'[]'::jsonb),least((SELECT count(*) FROM source WHERE value_state<>'ASSESSED'),128)::integer,
    CASE WHEN b.id IS NULL THEN NULL ELSE jsonb_build_object('id',b.id,'metricKey',b.metric_key,'definitionVersion',b.definition_version,'contextKind',b.context_kind,'instrumentId',b.instrument_id,'instrumentVersion',b.instrument_version,'scaleReference',b.scale_contract_reference,'scaleVersion',b.scale_version,'modelId',b.model_id,'modelVersion',b.model_version)END;
 END$$;
 REVOKE ALL ON FUNCTION public.read_him_trend_source_v1(uuid,text,integer,text,text,timestamptz,timestamptz) FROM PUBLIC,anon;
