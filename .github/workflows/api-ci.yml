@@ -1,7 +1,7 @@
 name: API CI
 on:
   pull_request:
-    paths: ['apps/api/**','database/**','package.json','tsconfig.base.json','.github/workflows/api-ci.yml']
+    paths: ['apps/api/**','database/**','tests/him-foundation-integration-regression-gate.test.mjs','package.json','tsconfig.base.json','.github/workflows/api-ci.yml']
   push:
     branches: [main]
 jobs:
@@ -25,6 +25,7 @@ jobs:
         with: {node-version: '20', cache: npm}
       - {name: Install dependencies, run: npm ci}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
+      - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}
       - name: Bootstrap fresh Supabase-compatible PostgreSQL roles
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
