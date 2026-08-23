@@ -1,16 +1,27 @@
 # Qandeel Documentation
 
-Implementation-facing Markdown specifications will live here.
+Implementation-facing Markdown specifications live here.
 
-The original Word documents remain the canonical archive. Only coding-relevant specifications need Markdown working copies initially.
+The original Word documents remain the canonical archive. Markdown files record implementation-facing contracts and reconciliations used by the repository.
 
-Recommended first set:
-1. [Foundation Freeze](foundation-freeze-v1.md) — **CLOSED**
-2. Tech Stack
-3. Project Skeleton
-4. Core Runtime
-5. Model Router
-6. Memory Runtime
-7. Conversation Orchestrator
-8. Safety Runtime
-9. Behavioral Runtime
+## Foundation closure
+
+1. [Foundation Freeze v1](foundation-freeze-v1.md) — **CLOSED / OPERATIONALLY RECONCILED**
+2. [Foundation Closure Reconciliation v1](foundation-closure-reconciliation-v1.md) — final documentation-only reconciliation after Operational Hardening
+
+## Operational Foundation hardening
+
+- [Correlation & Telemetry Foundation v1](correlation-telemetry-foundation-v1.md)
+- [Runtime Event Outbox + Publisher v1](runtime-event-outbox-publisher-v1.md)
+- [Health / Readiness / Dependency Probes v1](health-readiness-dependency-probes-v1.md)
+
+## Recommended implementation-facing set
+
+- Tech Stack
+- Project Skeleton
+- Core Runtime
+- Model Router
+- Memory Runtime
+- Conversation Orchestrator
+- Safety Runtime
+- Behavioral Runtime
