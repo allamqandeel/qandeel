@@ -10,6 +10,7 @@ import {
   loadOpenAIModelRouterConfig,
   type OpenAIModelRouterConfig,
 } from './openai-model-router.config';
+import { TelemetryService } from '../../../observability/telemetry.service';
 
 interface OpenAIResponse {
   output_text: string;
@@ -33,14 +34,15 @@ interface OpenAIResponsesClient {
 }
 
 export class OpenAIModelRouter implements ModelRouter {
-  static fromEnvironment(): OpenAIModelRouter {
+  static fromEnvironment(telemetry:TelemetryService): OpenAIModelRouter {
     const config = loadOpenAIModelRouterConfig();
-    return new OpenAIModelRouter(config, createOpenAIClient(config));
+    return new OpenAIModelRouter(config, createOpenAIClient(config),telemetry);
   }
 
   constructor(
     private readonly config: OpenAIModelRouterConfig,
     private readonly client: OpenAIResponsesClient,
+    private readonly telemetry?:TelemetryService,
   ) {}
 
   async generate(request: ModelRouterRequest): Promise<ModelRouterResult> {
@@ -50,7 +52,7 @@ export class OpenAIModelRouter implements ModelRouter {
     const timer = setTimeout(() => controller.abort(), timeout);
 
     try {
-      const response = await this.client.responses.create(
+      const call=()=>this.client.responses.create(
         {
           model: modelConfiguration.model,
           instructions: composeServerGuidance(request),
@@ -64,6 +66,9 @@ export class OpenAIModelRouter implements ModelRouter {
         },
         { timeout, maxRetries: 0, signal: controller.signal },
       );
+      const response = this.telemetry
+        ? await this.telemetry.withProvider('openai',modelConfiguration.model,request.path,timeout,call,value=>value.usage?{inputTokens:value.usage.input_tokens,outputTokens:value.usage.output_tokens}:undefined)
+        : await call();
       const content = response.output_text.trim();
       if (!content) throw new ModelRouterProviderError();
 

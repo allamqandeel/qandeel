@@ -1,5 +1,7 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConversationOrchestratorService } from '../conversation/conversation-orchestrator.service';
+import { CorrelationService } from '../observability/correlation.service';
+import { TelemetryService } from '../observability/telemetry.service';
 import type { ConversationTurn } from '../conversation/conversation.types';
 import { composeServerGuidance, type ModelRouterRequest } from '../model-router/model-router.types';
 import { HimTurnContextSelectionService } from './him-turn-context-selection.service';
@@ -72,7 +74,8 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   const memoryRetriever = { retrieve: jest.fn().mockResolvedValue([{ type: 'GOAL', content: 'memory-only' }]) };
   const memoryWriter = { evaluateAndWrite: jest.fn().mockResolvedValue({ decision: 'SKIP' }) };
   const router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' }, usage: { inputTokens: 1, outputTokens: 1 } }) };
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, memoryWriter as never, selector, snapshot, bridge, policy, router);
+  const correlation=new CorrelationService();
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, memoryWriter as never, selector, snapshot, bridge, policy, router,correlation,new TelemetryService(correlation));
   return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, router, selector, snapshot, bridge, policy };
 }
 

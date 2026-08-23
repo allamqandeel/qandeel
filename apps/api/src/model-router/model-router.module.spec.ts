@@ -2,8 +2,11 @@ import { FakeModelRouter } from './fake-model-router';
 import { createConfiguredModelRouter } from './model-router.module';
 import { ClaudeModelRouter } from './providers/anthropic/claude-model-router';
 import { OpenAIModelRouter } from './providers/openai/openai-model-router';
+import { CorrelationService } from '../observability/correlation.service';
+import { TelemetryService } from '../observability/telemetry.service';
 
 describe('ModelRouter provider activation', () => {
+  const telemetry=new TelemetryService(new CorrelationService());
   afterEach(() => jest.restoreAllMocks());
 
   it('keeps the deterministic fake test-only without provider credentials', () => {
@@ -16,13 +19,17 @@ describe('ModelRouter provider activation', () => {
   ] as const)('selects only the server-owned %s configuration', (provider, Router) => {
     const instance = {} as InstanceType<typeof Router>;
     jest.spyOn(Router, 'fromEnvironment').mockReturnValue(instance);
-    expect(createConfiguredModelRouter({ NODE_ENV: 'production', MODEL_PROVIDER: provider })).toBe(instance);
+    expect(createConfiguredModelRouter({ NODE_ENV: 'production', MODEL_PROVIDER: provider },telemetry)).toBe(instance);
   });
 
   it.each([undefined, '', 'client-choice', 'claude'])('fails closed for invalid production configuration: %s', (provider) => {
     expect(() => createConfiguredModelRouter({
       NODE_ENV: 'production',
       ...(provider === undefined ? {} : { MODEL_PROVIDER: provider }),
-    })).toThrow('MODEL_PROVIDER must be either anthropic or openai.');
+    },telemetry)).toThrow('MODEL_PROVIDER must be either anthropic or openai.');
+  });
+
+  it('requires canonical telemetry for every production provider',()=>{
+    expect(()=>createConfiguredModelRouter({NODE_ENV:'production',MODEL_PROVIDER:'openai'})).toThrow('TelemetryService is required');
   });
 });

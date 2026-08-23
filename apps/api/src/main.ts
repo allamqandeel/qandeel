@@ -1,3 +1,5 @@
+import './observability/instrumentation';
+import './observability/sentry';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 

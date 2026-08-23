@@ -3,6 +3,7 @@ import { ConversationRepository } from './conversation.repository';
 import { ConversationService } from './conversation.service';
 import type { ConversationSession, ConversationTurn } from './conversation.types';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
+import { CorrelationService } from '../observability/correlation.service';
 
 describe('ConversationService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -23,13 +24,18 @@ describe('ConversationService', () => {
       findTurnByIdempotencyKey: jest.fn(), cancelTurn: jest.fn(),
     } as unknown as jest.Mocked<ConversationRepository>;
     orchestrator = { orchestrate: jest.fn().mockResolvedValue({ userTurn: turn }) } as unknown as jest.Mocked<ConversationOrchestratorService>;
-    service = new ConversationService(repository, orchestrator);
+    service = new ConversationService(repository, orchestrator,new CorrelationService());
   });
 
   it('creates a text session under the authenticated user only', async () => {
     repository.createSession.mockResolvedValue(session);
     await expect(service.createSession('user-a', 'token-a')).resolves.toBe(session);
     expect(repository.createSession).toHaveBeenCalledWith('token-a', expect.any(String), 'user-a');
+  });
+
+  it('binds the repository-returned canonical session ID to the active request scope',async()=>{
+    const correlation=new CorrelationService();service=new ConversationService(repository,orchestrator,correlation);repository.createSession.mockResolvedValue(session);
+    await correlation.runRequest(async()=>{await service.createSession('user-a','token-a');expect(correlation.current()?.session_id).toBe(session.id);});
   });
 
   it('fails closed when a user-scoped session is invisible', async () => {
