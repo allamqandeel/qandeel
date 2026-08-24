@@ -29,6 +29,8 @@ export class BackgroundIntelligenceEnrichmentService {
 
  async listEligibleEvidence(context:BackgroundIntelligenceExecutionContext,now=new Date()):Promise<ReadonlyArray<EvidenceItem>>{this.assert(context);return projectEligibleEvidence(context.userId,await this.data.listActiveMemories(context,EVIDENCE_CANDIDATE_LIMIT,now),now).slice(0,MAX_ELIGIBLE_EVIDENCE);}
 
+ async listActiveHypotheses(context:BackgroundIntelligenceExecutionContext):Promise<ReadonlyArray<HypothesisRecord>>{this.assert(context);return this.data.listActiveHypotheses(context,MAX_ACTIVE_HYPOTHESES);}
+
  async evaluateGenerationEligibility(context:BackgroundIntelligenceExecutionContext,text:string,safetyDisposition:SafetyDisposition):Promise<HypothesisGenerationEligibilityAssessment>{
   this.assert(context);if(safetyDisposition!=='ALLOW')return{eligibility:{status:'NOT_ELIGIBLE',reason:'SAFETY_INELIGIBLE'}};
   try{const evidence=await this.listEligibleEvidence(context);if(!boundedEvidence(evidence))return{eligibility:{status:'NOT_ELIGIBLE',reason:'EVALUATION_FAILED'}};const classification=this.classifier.classify({text,safetyDisposition});if(classification.classification==='NO_TRIGGER')return{eligibility:{status:'NOT_ELIGIBLE',reason:'NO_TRIGGER'}};if(classification.classification==='AMBIGUOUS')return{eligibility:{status:'NOT_ELIGIBLE',reason:'AMBIGUOUS_TRIGGER'}};if(evidence.length===0)return{eligibility:{status:'NOT_ELIGIBLE',reason:'NO_ELIGIBLE_EVIDENCE'}};return{eligibility:{status:'ELIGIBLE',reason:'TRIGGER_AND_EVIDENCE_AVAILABLE'},triggerClassification:classification,eligibleEvidence:evidence};}catch{return{eligibility:{status:'NOT_ELIGIBLE',reason:'EVALUATION_FAILED'}};}

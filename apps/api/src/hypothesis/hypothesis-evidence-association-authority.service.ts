@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EvidenceService } from '../memory/evidence.service';
+import type { EvidenceItem } from '../memory/evidence.types';
 import {
   HYPOTHESIS_DOMAINS, HYPOTHESIS_STATUSES, HYPOTHESIS_TYPES, MAX_ACTIVE_HYPOTHESES,
   MAX_ASSUMPTIONS, MAX_DISCONFIRMING_CONDITIONS, MAX_EVIDENCE_LINKS_PER_ROLE,
@@ -35,6 +36,16 @@ export class HypothesisEvidenceAssociationAuthorityService {
       this.evidence.listEligibleForUser(userId, token),
       this.hypotheses.listActiveForUser(userId, token),
     ]);
+    return this.prepareFromCanonicalState(userId, sessionId, freshEvidenceId, eligibleEvidence, activeHypotheses);
+  }
+
+  prepareFromCanonicalState(
+    userId: string, sessionId: string, freshEvidenceId: string,
+    eligibleEvidence: ReadonlyArray<EvidenceItem>, activeHypotheses: ReadonlyArray<HypothesisRecord>,
+  ): HypothesisEvidenceAssociationPreparation {
+    if (!UUID.test(sessionId) || !/^memory:[0-9a-f-]{36}$/i.test(freshEvidenceId)) {
+      return { status: 'NOT_AUTHORIZED', reason: 'INVARIANT_REJECTED' };
+    }
     const freshEvidence = eligibleEvidence.find(({ evidenceId }) => evidenceId === freshEvidenceId);
     if (!freshEvidence) return { status: 'NOT_AUTHORIZED', reason: 'FRESH_EVIDENCE_NOT_ELIGIBLE' };
     if (!Array.isArray(activeHypotheses) || activeHypotheses.length > MAX_ACTIVE_HYPOTHESES ||
@@ -55,6 +66,7 @@ export class HypothesisEvidenceAssociationAuthorityService {
       candidates.push(candidate);
       characters += candidateCharacters;
     }
+    if (candidates.length === 0) return { status: 'EMPTY', reason: 'NO_SAME_SESSION_HYPOTHESES' };
     return { status: 'PREPARED', snapshot: {
       contractVersion: HYPOTHESIS_EVIDENCE_ASSOCIATION_CONTRACT_VERSION,
       freshEvidence: {
@@ -95,6 +107,34 @@ export class HypothesisEvidenceAssociationAuthorityService {
       this.evidence.listEligibleForUser(userId, token),
       this.hypotheses.listActiveForUser(userId, token),
     ]);
+    return this.authorizeFromCanonicalState(userId, sessionId, snapshot, proposals, currentlyEligibleEvidence, current);
+  }
+
+  authorizeFromCanonicalState(
+    userId: string, sessionId: string, snapshot: HypothesisEvidenceAssociationSnapshot, proposals: unknown,
+    currentlyEligibleEvidence: ReadonlyArray<EvidenceItem>, current: ReadonlyArray<HypothesisRecord>,
+  ): HypothesisEvidenceAssociationAuthorization {
+    if (!this.validSnapshot(snapshot, sessionId)) return { status: 'NOT_AUTHORIZED', reason: 'INVARIANT_REJECTED' };
+    if (!Array.isArray(proposals)) return { status: 'NOT_AUTHORIZED', reason: 'INVALID_PROVIDER_OUTPUT' };
+    if (proposals.length === 0) return { status: 'NO_ASSOCIATION' };
+    if (proposals.length > MAX_FRESH_EVIDENCE_ASSOCIATIONS) return { status: 'NOT_AUTHORIZED', reason: 'BOUND_EXCEEDED' };
+    const parsed: HypothesisEvidenceAssociationProposal[] = [];
+    const seen = new Set<string>();
+    for (const value of proposals) {
+      if (!value || typeof value !== 'object' || Array.isArray(value) ||
+        Object.keys(value).length !== 2 || !('hypothesisId' in value) || !('evidenceRole' in value) ||
+        typeof value.hypothesisId !== 'string' ||
+        (value.evidenceRole !== 'SUPPORTING' && value.evidenceRole !== 'CONTRADICTING')) {
+        return { status: 'NOT_AUTHORIZED', reason: 'INVALID_PROVIDER_OUTPUT' };
+      }
+      if (seen.has(value.hypothesisId)) return { status: 'NOT_AUTHORIZED', reason: 'DUPLICATE_TARGET' };
+      seen.add(value.hypothesisId);
+      parsed.push(value as HypothesisEvidenceAssociationProposal);
+    }
+    const supplied = new Map(snapshot.candidateHypotheses.map((item) => [item.hypothesisId, item]));
+    if (parsed.some(({ hypothesisId }) => !supplied.has(hypothesisId))) {
+      return { status: 'NOT_AUTHORIZED', reason: 'TARGET_OUT_OF_UNIVERSE' };
+    }
     if (!currentlyEligibleEvidence.some(({ evidenceId }) => evidenceId === snapshot.freshEvidence.evidenceId)) {
       return { status: 'NOT_AUTHORIZED', reason: 'FRESH_EVIDENCE_NOT_ELIGIBLE' };
     }
