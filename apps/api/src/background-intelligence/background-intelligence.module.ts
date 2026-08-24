@@ -5,6 +5,6 @@ import { BackgroundIntelligenceDataApiService } from './background-intelligence-
 
 @Module({
   providers: [BackgroundIntelligenceContextFactory, BackgroundIntelligenceDataApiService, BackgroundIntelligenceAuthorityService],
-  exports: [BackgroundIntelligenceAuthorityService, BackgroundIntelligenceDataApiService],
+  exports: [BackgroundIntelligenceAuthorityService],
 })
 export class BackgroundIntelligenceModule {}

@@ -1,4 +1,4 @@
-import { BackgroundIntelligenceContextFactory } from './background-intelligence-context.factory';
+import { BackgroundIntelligenceContextFactory, isBackgroundIntelligenceExecutionContext } from './background-intelligence-context.factory';
 import type { RuntimeEventEnvelope } from '../runtime-events/runtime-event.types';
 
 const IDS = {
@@ -15,9 +15,10 @@ const completedEvent = (overrides: Partial<RuntimeEventEnvelope> = {}): RuntimeE
 
 describe('BackgroundIntelligenceContextFactory', () => {
   const factory = new BackgroundIntelligenceContextFactory();
-  it('creates only the frozen identifier authority from a valid completed event', () => {
+  it('creates only the frozen pre-authorization identity from a valid completed event', () => {
     const context = factory.create(completedEvent());
-    expect(context).toEqual({ authority: 'BACKGROUND_INTELLIGENCE_V1', eventId: IDS.event, userId: IDS.user, sessionId: IDS.session, sourceTurnId: IDS.turn });
+    expect(context).toEqual({ stage: 'VALIDATED_RUNTIME_EVENT_V1', eventId: IDS.event, userId: IDS.user, sessionId: IDS.session, sourceTurnId: IDS.turn });
+    expect(isBackgroundIntelligenceExecutionContext(context)).toBe(false);
     expect(Object.isFrozen(context)).toBe(true);
     expect(JSON.stringify(context)).not.toMatch(/jwt|token|key|content|credential/i);
   });

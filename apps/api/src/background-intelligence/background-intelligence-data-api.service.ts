@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import type { SessionStatus, TurnStatus } from '../conversation/conversation.types';
 import type { MemoryRecord, MemorySource, MemoryStatus, MemoryType } from '../memory/memory.types';
-import { BackgroundIntelligenceExecutionContext } from './background-intelligence-context.factory';
+import {
+  type BackgroundIntelligenceEventContext,
+  type BackgroundIntelligenceExecutionContext,
+  isBackgroundIntelligenceEventContext,
+  isBackgroundIntelligenceExecutionContext,
+} from './background-intelligence-context.factory';
 
 const SESSION_FIELDS = 'id,status,channel';
 const TURN_FIELDS = 'id,session_id,role,status,source_turn_id';
@@ -22,26 +27,26 @@ export interface BackgroundMemoryCreateInput {
 
 @Injectable()
 export class BackgroundIntelligenceDataApiService {
-  async findSession(context: BackgroundIntelligenceExecutionContext): Promise<BackgroundConversationSessionState | undefined> {
-    this.assertTrusted(context);
+  async findSession(context: BackgroundIntelligenceEventContext): Promise<BackgroundConversationSessionState | undefined> {
+    this.assertOwnershipContext(context);
     const query = new URLSearchParams({ select: SESSION_FIELDS, id: `eq.${context.sessionId}`, user_id: `eq.${context.userId}`, limit: '1' });
     return (await this.request<BackgroundConversationSessionState[]>(`conversation_sessions?${query}`))[0];
   }
 
-  async findSourceTurn(context: BackgroundIntelligenceExecutionContext): Promise<BackgroundConversationTurnState | undefined> {
-    this.assertTrusted(context);
+  async findSourceTurn(context: BackgroundIntelligenceEventContext): Promise<BackgroundConversationTurnState | undefined> {
+    this.assertOwnershipContext(context);
     const query = new URLSearchParams({ select: TURN_FIELDS, id: `eq.${context.sourceTurnId}`, session_id: `eq.${context.sessionId}`, user_id: `eq.${context.userId}`, limit: '1' });
     return (await this.request<BackgroundConversationTurnState[]>(`conversation_turns?${query}`))[0];
   }
 
-  async findCompletedAssistant(context: BackgroundIntelligenceExecutionContext): Promise<BackgroundConversationTurnState | undefined> {
-    this.assertTrusted(context);
+  async findCompletedAssistant(context: BackgroundIntelligenceEventContext): Promise<BackgroundConversationTurnState | undefined> {
+    this.assertOwnershipContext(context);
     const query = new URLSearchParams({ select: TURN_FIELDS, source_turn_id: `eq.${context.sourceTurnId}`, session_id: `eq.${context.sessionId}`, user_id: `eq.${context.userId}`, role: 'eq.ASSISTANT', status: 'eq.COMPLETED', limit: '1' });
     return (await this.request<BackgroundConversationTurnState[]>(`conversation_turns?${query}`))[0];
   }
 
   async createMemory(context: BackgroundIntelligenceExecutionContext, input: BackgroundMemoryCreateInput): Promise<MemoryRecord> {
-    this.assertTrusted(context);
+    this.assertExecutionContext(context);
     const rows = await this.request<MemoryRecord[]>('memories', {
       method: 'POST',
       headers: { Prefer: 'return=representation' },
@@ -80,7 +85,11 @@ export class BackgroundIntelligenceDataApiService {
     return response.json() as Promise<T>;
   }
 
-  private assertTrusted(context: BackgroundIntelligenceExecutionContext): void {
-    if (!(context instanceof BackgroundIntelligenceExecutionContext)) throw new Error('BACKGROUND_INTELLIGENCE_AUTHORITY_REQUIRED');
+  private assertOwnershipContext(context: BackgroundIntelligenceEventContext): void {
+    if (!isBackgroundIntelligenceEventContext(context)) throw new Error('BACKGROUND_INTELLIGENCE_EVENT_CONTEXT_REQUIRED');
+  }
+
+  private assertExecutionContext(context: BackgroundIntelligenceExecutionContext): void {
+    if (!isBackgroundIntelligenceExecutionContext(context)) throw new Error('BACKGROUND_INTELLIGENCE_AUTHORITY_REQUIRED');
   }
 }
