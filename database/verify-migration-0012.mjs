@@ -1,7 +1,8 @@
 import pg from 'pg';
+import {randomUUID} from'node:crypto';import{cleanupVerifierUsers}from'./verifier-fixture-cleanup.mjs';
 const {Client}=pg;
 const client=new Client({connectionString:process.env.DATABASE_URL});
-const one='00000000-0000-4000-8000-000000000001',two='00000000-0000-4000-8000-000000000002',session='10000000-0000-4000-8000-000000000001';
+const one=randomUUID(),two=randomUUID(),session=randomUUID();
 const past='2001-01-01T00:00:00Z',future='2099-01-01T00:00:00Z';
 const rejects=async(sql,params=[])=>{await client.query('SAVEPOINT expected_rejection');let failed=false;try{await client.query(sql,params);}catch{failed=true;await client.query('ROLLBACK TO SAVEPOINT expected_rejection');}await client.query('RELEASE SAVEPOINT expected_rejection');if(!failed)throw new Error(`Expected rejection: ${sql}`);};
 const identity=async id=>{await client.query('SET LOCAL ROLE authenticated');await client.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:id,role:'authenticated'})]);};
@@ -95,6 +96,6 @@ try{
   const racedArtifacts=await client.query('SELECT (SELECT count(*)::int FROM public.him_calculation_results WHERE measurement_observation_id=$1) results,(SELECT count(*)::int FROM public.him_metric_snapshots WHERE measurement_observation_id=$1) snapshots',[raced.id]);
   if(racedArtifacts.rows[0].results!==0||racedArtifacts.rows[0].snapshots!==0)throw new Error('Superseded observation was newly calculated after correction');
  }finally{await racer.end();}
-}finally{await client.end();}
+}finally{await cleanupVerifierUsers(client,[one,two]);await client.end();}
 console.log('Verified server-authoritative Energy time, correction supersession, calculation idempotency, binding integrity/lifecycle, trusted snapshots, RLS and Energy regression after Motivation activation.');
 

@@ -1,5 +1,5 @@
-import pg from'pg';const{Client}=pg;const client=new Client({connectionString:process.env.DATABASE_URL});
-const one='00000000-0000-4000-8000-000000000001',two='00000000-0000-4000-8000-000000000002';
+import pg from'pg';import{randomUUID}from'node:crypto';import{cleanupVerifierUsers}from'./verifier-fixture-cleanup.mjs';const{Client}=pg;const client=new Client({connectionString:process.env.DATABASE_URL});
+const one=randomUUID(),two=randomUUID();
 const identity=async id=>{await client.query('SET LOCAL ROLE authenticated');await client.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:id,role:'authenticated'})]);};const rejects=async(sql,p=[])=>{await client.query('SAVEPOINT expected');let failed=false;try{await client.query(sql,p);}catch{failed=true;await client.query('ROLLBACK TO SAVEPOINT expected');}await client.query('RELEASE SAVEPOINT expected');if(!failed)throw new Error(`Expected rejection: ${sql}`);};
 await client.connect();try{await client.query('INSERT INTO auth.users(id)VALUES($1),($2)ON CONFLICT DO NOTHING',[one,two]);await client.query('BEGIN');await identity(one);
  const context=(await client.query("SELECT * FROM public.create_him_stress_measurement_context('trend verifier')")).rows[0];
@@ -12,4 +12,4 @@ await client.connect();try{await client.query('INSERT INTO auth.users(id)VALUES(
  if((await client.query("SELECT to_regclass('public.him_trends') rel")).rows[0].rel!==null)throw new Error('Trend persistence exists');
  await client.query('RESET ROLE');await identity(two);await rejects("SELECT * FROM public.read_him_trend_source_v1($1,'hse.stress',1,'SITUATION',$2,now()-interval '1 hour',now()+interval '1 hour')",[two,context.id]);
  await client.query('RESET ROLE');const state=await client.query('SELECT calculation_status,count(*)::int n FROM public.him_metric_definitions GROUP BY calculation_status');const counts=Object.fromEntries(state.rows.map(x=>[x.calculation_status,x.n]));if(counts.CALIBRATED!==5||counts.UNCALIBRATED!==12)throw new Error('Five/twelve metric invariant failed');await client.query('ROLLBACK');
-}finally{await client.end();}console.log('Verified bounded owned exact-context trend source, correction/currentness, audit preservation, RLS isolation, no trend persistence, and 5 calibrated / 12 uncalibrated.');
+}finally{await cleanupVerifierUsers(client,[one,two]);await client.end();}console.log('Verified bounded owned exact-context trend source, correction/currentness, audit preservation, RLS isolation, no trend persistence, and 5 calibrated / 12 uncalibrated.');
