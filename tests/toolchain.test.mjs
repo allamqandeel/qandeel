@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
@@ -11,12 +13,27 @@ const claudeSmoke = await readFile(new URL('apps/api/scripts/verify-claude-smoke
 const openAISmoke = await readFile(new URL('apps/api/scripts/verify-openai-smoke.ts', root), 'utf8');
 const apiCi = await readFile(new URL('.github/workflows/api-ci.yml', root), 'utf8');
 
+function isIgnored(path) {
+  const result = spawnSync('git', ['check-ignore', '--quiet', '--no-index', path], {
+    cwd: fileURLToPath(root),
+  });
+  assert.equal(result.error, undefined, `git check-ignore failed for ${path}`);
+  assert.ok([0, 1].includes(result.status), `git check-ignore exited ${result.status} for ${path}`);
+  return result.status === 0;
+}
+
 test('standardizes the repository on npm and the root lockfile', () => {
   assert.equal(packageJson.engines.npm, '>=10');
   assert.equal(packageLock.lockfileVersion, 3);
   assert.equal(packageLock.packages[''].name, packageJson.name);
   const commands = Object.values(packageJson.scripts).join('\n');
   assert.doesNotMatch(commands, /\b(?:pnpm|yarn|npx)\b/u);
+});
+
+test('ignores PostgreSQL backup archives without hiding normal source files', () => {
+  assert.equal(isIgnored('qandeel-cert-test.dump'), true);
+  assert.equal(isIgnored('qandeel-cert-test.backup'), true);
+  assert.equal(isIgnored('qandeel-cert-test.ts'), false);
 });
 
 test('keeps verification commands explicit and non-destructive', () => {

@@ -9,6 +9,8 @@ coverage/
 .env.*
 !.env.example
 *.log
+*.dump
+*.backup
 .DS_Store
 .idea/
 .vscode/
