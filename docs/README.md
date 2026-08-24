@@ -11,6 +11,7 @@
 - [Controlled Hypothesis Generation Invocation v1](controlled-hypothesis-generation-invocation-v1.md)
 - [Post-Generation Confidence Snapshot Integration v1](post-generation-confidence-snapshot-integration-v1.md)
 - [Fresh Evidence Handoff Authority v1](fresh-evidence-handoff-authority-v1.md)
+- [Existing-Hypothesis Fresh-Evidence Association Authority Foundation v1](fresh-evidence-hypothesis-association-authority-foundation-v1.md)
 
 Implementation-facing Markdown specifications live here.
 
