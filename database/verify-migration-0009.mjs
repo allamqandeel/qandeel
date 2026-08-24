@@ -1,11 +1,27 @@
-import assert from 'node:assert/strict'; import { randomUUID } from 'node:crypto'; import { readFile } from 'node:fs/promises'; import process from 'node:process'; import pg from 'pg';
+import assert from 'node:assert/strict'; import { randomUUID } from 'node:crypto'; import process from 'node:process'; import pg from 'pg';
 const {Client}=pg; if(!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required in the ignored local .env file.');
-const migration=await readFile(new URL('./migrations/0009_human_model_him_runtime.sql',import.meta.url),'utf8'); const client=new Client({connectionString:process.env.DATABASE_URL});
+const client=new Client({connectionString:process.env.DATABASE_URL});
 async function identity(id){ await client.query('SET LOCAL ROLE authenticated'); await client.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:id,role:'authenticated'})]); }
 async function rejects(text,values=[]){ await client.query('SAVEPOINT expected_failure'); try{ await assert.rejects(client.query(text,values)); }finally{ await client.query('ROLLBACK TO SAVEPOINT expected_failure'); await client.query('RELEASE SAVEPOINT expected_failure'); } }
+async function verifyCanonicalContract(){
+  const contract=(await client.query(`SELECT to_regclass('public.him_metric_definitions') IS NOT NULL definitions_present,
+    to_regclass('public.him_metric_snapshots') IS NOT NULL snapshots_present,
+    p.prosecdef security_definer,p.provolatile volatility,pg_get_function_result(p.oid) result_identity,
+    pg_get_functiondef(p.oid) definition,
+    has_function_privilege('authenticated',p.oid,'EXECUTE') authenticated_execute,
+    has_function_privilege('anon',p.oid,'EXECUTE') anon_execute
+   FROM pg_proc p WHERE p.oid=to_regprocedure('public.validate_him_metric_dependencies()')`)).rows[0];
+  assert.ok(contract,'Schema contract mismatch: validate_him_metric_dependencies() is absent.');
+  assert.equal(contract.definitions_present,true,'Schema contract mismatch: him_metric_definitions is absent.'); assert.equal(contract.snapshots_present,true,'Schema contract mismatch: him_metric_snapshots is absent.');
+  assert.equal(contract.security_definer,false,'Schema contract mismatch: dependency validator authority changed.'); assert.equal(contract.volatility,'v','Schema contract mismatch: dependency validator volatility changed.'); assert.equal(contract.result_identity,'trigger','Schema contract mismatch: dependency validator result changed.');
+  assert.match(contract.definition,/Unresolved HIM metric dependency/u,'Schema contract mismatch: unresolved-dependency guard changed.'); assert.match(contract.definition,/Cyclic HIM metric dependency/u,'Schema contract mismatch: cyclic-dependency guard changed.');
+  assert.equal(contract.authenticated_execute,false,'Schema contract mismatch: authenticated can execute dependency validator.'); assert.equal(contract.anon_execute,false,'Schema contract mismatch: anon can execute dependency validator.');
+  const trigger=(await client.query(`SELECT t.tgdeferrable,t.tginitdeferred,t.tgenabled,pg_get_triggerdef(t.oid) definition
+    FROM pg_trigger t WHERE t.tgrelid='public.him_metric_definitions'::regclass AND t.tgname='him_metric_dependencies_valid' AND NOT t.tgisinternal`)).rows[0];
+  assert.ok(trigger,'Schema contract mismatch: HIM dependency constraint trigger is absent.'); assert.equal(trigger.tgdeferrable,true,'Schema contract mismatch: dependency trigger is not deferrable.'); assert.equal(trigger.tginitdeferred,true,'Schema contract mismatch: dependency trigger is not initially deferred.'); assert.equal(trigger.tgenabled,'O','Schema contract mismatch: dependency trigger is disabled.'); assert.match(trigger.definition,/validate_him_metric_dependencies\(\)/u,'Schema contract mismatch: dependency trigger binding changed.');
+}
 async function main(){ await client.connect(); try{
-  if(!(await client.query("SELECT to_regclass('public.him_metric_snapshots') IS NOT NULL present")).rows[0].present) await client.query(migration);
-  else if(!(await client.query("SELECT to_regprocedure('public.validate_him_metric_dependencies()') IS NOT NULL present")).rows[0].present){ const dependencyGuard=migration.match(/CREATE FUNCTION public\.validate_him_metric_dependencies\(\)[\s\S]*?FOR EACH ROW EXECUTE FUNCTION public\.validate_him_metric_dependencies\(\);/u)?.[0]; assert.ok(dependencyGuard); await client.query(dependencyGuard); await client.query('REVOKE ALL ON FUNCTION public.validate_him_metric_dependencies() FROM PUBLIC,anon,authenticated'); }
+  await verifyCanonicalContract();
   await client.query('BEGIN'); try{
     const user=randomUUID(),other=randomUUID(),memory=randomUUID(),otherMemory=randomUUID(),decision=randomUUID(),otherDecision=randomUUID(); await client.query('RESET ROLE');
     await client.query('INSERT INTO auth.users(id) VALUES($1),($2)',[user,other]);

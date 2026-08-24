@@ -1,9 +1,25 @@
-import assert from 'node:assert/strict'; import { randomUUID } from 'node:crypto'; import { readFile } from 'node:fs/promises'; import process from 'node:process'; import pg from 'pg';
+import assert from 'node:assert/strict'; import { randomUUID } from 'node:crypto'; import process from 'node:process'; import pg from 'pg';
 const {Client}=pg; const databaseUrl=process.env.DATABASE_URL; if(!databaseUrl) throw new Error('DATABASE_URL is required in the ignored local .env file.');
-const migration=await readFile(new URL('./migrations/0007_question_information_gap_runtime.sql',import.meta.url),'utf8'); const client=new Client({connectionString:databaseUrl});
+const client=new Client({connectionString:databaseUrl});
 async function identity(id){ await client.query('SET LOCAL ROLE authenticated'); await client.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:id,role:'authenticated'})]); }
 async function rejectsQuery(text,values){ await client.query('SAVEPOINT expected_failure'); try { await assert.rejects(client.query(text,values)); } finally { await client.query('ROLLBACK TO SAVEPOINT expected_failure'); await client.query('RELEASE SAVEPOINT expected_failure'); } }
-async function main(){ await client.connect(); try { const exists=(await client.query("SELECT to_regclass('public.question_candidates') IS NOT NULL present")).rows[0].present; if(!exists) await client.query(migration); else { const definition=migration.match(/CREATE OR REPLACE FUNCTION public\.create_validated_question_candidate[\s\S]*?END \$\$;/u)?.[0]; assert.ok(definition,'candidate function definition must be present'); await client.query(definition); } await client.query('BEGIN'); try {
+async function verifyCanonicalContract(){
+ const contract=(await client.query(`SELECT to_regclass('public.question_candidates') IS NOT NULL table_present,
+  to_regprocedure('public.create_validated_question_candidate(jsonb)') IS NOT NULL function_present,
+  p.prosecdef security_definer,p.provolatile volatility,pg_get_function_result(p.oid) result_identity,
+  pg_get_functiondef(p.oid) definition,
+  has_function_privilege('authenticated',p.oid,'EXECUTE') authenticated_execute,
+  has_function_privilege('anon',p.oid,'EXECUTE') anon_execute
+ FROM pg_proc p WHERE p.oid=to_regprocedure('public.create_validated_question_candidate(jsonb)')`)).rows[0];
+ assert.ok(contract,'Schema contract mismatch: create_validated_question_candidate(jsonb) is absent.');
+ assert.equal(contract.table_present,true,'Schema contract mismatch: question_candidates is absent.');
+ assert.equal(contract.function_present,true,'Schema contract mismatch: candidate function signature is absent.');
+ assert.equal(contract.security_definer,true,'Schema contract mismatch: candidate function authority changed.'); assert.equal(contract.volatility,'v','Schema contract mismatch: candidate function volatility changed.');
+ assert.match(contract.result_identity,/SETOF (?:public\.)?question_candidates/u,'Schema contract mismatch: candidate result identity changed.');
+ for(const fingerprint of [/auth\.uid\(\)/u,/Candidate contains forbidden fields/u,/Candidate must not request secrets or credentials/u,/INSERT INTO public\.question_candidates/u]) assert.match(contract.definition,fingerprint,'Schema contract mismatch: candidate function behavior changed.');
+ assert.equal(contract.authenticated_execute,true,'Schema contract mismatch: authenticated execute grant is absent.'); assert.equal(contract.anon_execute,false,'Schema contract mismatch: anon can execute candidate function.');
+}
+async function main(){ await client.connect(); try { await verifyCanonicalContract(); await client.query('BEGIN'); try {
  const user=randomUUID(),other=randomUUID(),hypothesis=randomUUID(),otherHypothesis=randomUUID(); await client.query('RESET ROLE');
  await client.query('INSERT INTO public.users(id,auth_subject) VALUES($1::uuid,$1::text),($2::uuid,$2::text)',[user,other]);
  await client.query("INSERT INTO public.hypotheses(id,user_id,statement,type,domain,scope,origin,status) VALUES($1,$3,'owned','CAUSAL','GENERAL','test','HUMAN_REVIEWED','ACTIVE'),($2,$4,'other','CAUSAL','GENERAL','test','HUMAN_REVIEWED','ACTIVE')",[hypothesis,otherHypothesis,user,other]);
