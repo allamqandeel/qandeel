@@ -9,6 +9,7 @@ const preflight = await readFile(new URL('scripts/preflight.mjs', root), 'utf8')
 const diagnostic = await readFile(new URL('scripts/diagnose-integrations.mjs', root), 'utf8');
 const claudeSmoke = await readFile(new URL('apps/api/scripts/verify-claude-smoke.ts', root), 'utf8');
 const openAISmoke = await readFile(new URL('apps/api/scripts/verify-openai-smoke.ts', root), 'utf8');
+const apiCi = await readFile(new URL('.github/workflows/api-ci.yml', root), 'utf8');
 
 test('standardizes the repository on npm and the root lockfile', () => {
   assert.equal(packageJson.engines.npm, '>=10');
@@ -70,4 +71,42 @@ test('keeps preflight and diagnostics privacy-safe', () => {
   assert.match(diagnostic, /response bodies were displayed/u);
   assert.doesNotMatch(diagnostic, /response\.(?:json|text)\(/u);
   assert.doesNotMatch(diagnostic, /console\.log\([^\n]*environment\[/u);
+});
+
+test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () => {
+  assert.match(apiCi, /image: postgres:17/u);
+  assert.match(apiCi, /run: npm run test:toolchain/u);
+  assert.match(apiCi, /paths: \[[^\n]*'tests\/\*\*'[^\n]*'package-lock\.json'/u);
+  for (const command of [
+    'verify:database:integration',
+    'verify:memory:integration',
+    'verify:hypothesis:integration',
+    'verify:confidence:integration',
+    'verify:question:integration',
+    'verify:hypothesis-update:integration',
+    'verify:him:integration',
+    'verify:initial-him:integration',
+    'verify:him-calculation:integration',
+    'verify:hse-energy:integration',
+    'verify:hse-motivation:integration',
+    'verify:hse-attention:integration',
+    'verify:hse-self-confidence:integration',
+    'verify:hse-stress:integration',
+    'verify:him-trends:integration',
+    'verify:him-snapshot:integration',
+    'verify:runtime-events:integration',
+  ]) assert.match(apiCi, new RegExp(`run: npm run ${command}`,'u'), `missing ${command}`);
+  assert.doesNotMatch(apiCi, /verify:(?:claude|openai|auth):smoke|eval:brain:(?:run|validate|summarize)/u);
+});
+
+test('lets CI-provided database configuration run safe historical verifiers without a local env file', () => {
+  for (const command of [
+    'verify:database:integration',
+    'verify:memory:integration',
+    'verify:hypothesis:integration',
+    'verify:confidence:integration',
+    'verify:question:integration',
+    'verify:hypothesis-update:integration',
+    'verify:him:integration',
+  ]) assert.match(packageJson.scripts[command], /--env-file-if-exists=\.env/u, `${command} requires a physical .env file`);
 });
