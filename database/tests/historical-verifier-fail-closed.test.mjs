@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const sources=Object.fromEntries(await Promise.all(['0007','0008','0009'].map(async number=>[number,await readFile(new URL(`../verify-migration-${number}.mjs`,import.meta.url),'utf8')])));
+const sources=Object.fromEntries(await Promise.all(['0005','0007','0008','0009'].map(async number=>[number,await readFile(new URL(`../verify-migration-${number}.mjs`,import.meta.url),'utf8')])));
+
+test('0005 verifier fails closed instead of applying or repairing the Hypothesis schema',()=>{
+  assert.match(sources['0005'],/assert\.equal\(exists,true,'Required canonical Hypothesis schema is absent'\)/);
+  assert.doesNotMatch(sources['0005'],/readFile|await client\.query\(migration\)|migration\.match|CREATE TABLE|CREATE FUNCTION|GRANT EXECUTE|REVOKE ALL/);
+});
 
 test('0007 verifier fails closed instead of applying or extracting canonical DDL',()=>{
   assert.match(sources['0007'],/Schema contract mismatch: create_validated_question_candidate/);
