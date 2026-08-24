@@ -1,17 +1,23 @@
-import assert from 'node:assert/strict'; import { randomUUID } from 'node:crypto'; import { readFile } from 'node:fs/promises'; import process from 'node:process'; import pg from 'pg';
+import assert from 'node:assert/strict'; import { randomUUID } from 'node:crypto'; import process from 'node:process'; import pg from 'pg';
 const {Client}=pg; if(!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required in the ignored local .env file.');
-const migration=await readFile(new URL('./migrations/0008_hypothesis_update_loop.sql',import.meta.url),'utf8'); const client=new Client({connectionString:process.env.DATABASE_URL});
+const client=new Client({connectionString:process.env.DATABASE_URL});
 async function identity(id){ await client.query('SET LOCAL ROLE authenticated'); await client.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:id,role:'authenticated'})]); }
 async function rejects(text,values){ await client.query('SAVEPOINT expected_failure'); try{ await assert.rejects(client.query(text,values)); }finally{ await client.query('ROLLBACK TO SAVEPOINT expected_failure'); await client.query('RELEASE SAVEPOINT expected_failure'); } }
+async function verifyCanonicalContract(){
+  const contract=(await client.query(`SELECT to_regclass('public.hypothesis_updates') IS NOT NULL table_present,
+    p.prosecdef security_definer,p.provolatile volatility,pg_get_function_result(p.oid) result_identity,
+    pg_get_functiondef(p.oid) definition,
+    has_function_privilege('authenticated',p.oid,'EXECUTE') authenticated_execute,
+    has_function_privilege('anon',p.oid,'EXECUTE') anon_execute
+   FROM pg_proc p WHERE p.oid=to_regprocedure('public.apply_hypothesis_evidence_update(uuid,uuid,integer,text,text)')`)).rows[0];
+  assert.ok(contract,'Schema contract mismatch: apply_hypothesis_evidence_update(uuid,uuid,integer,text,text) is absent.');
+  assert.equal(contract.table_present,true,'Schema contract mismatch: hypothesis_updates is absent.'); assert.equal(contract.security_definer,true,'Schema contract mismatch: hypothesis update authority changed.'); assert.equal(contract.volatility,'v','Schema contract mismatch: hypothesis update volatility changed.');
+  assert.match(contract.result_identity,/TABLE\(update jsonb, hypothesis jsonb\)/u,'Schema contract mismatch: hypothesis update result identity changed.');
+  for(const fingerprint of [/auth\.uid\(\)/u,/FOR UPDATE/u,/LIMIT 64/u,/QANDEEL_HYPOTHESIS_UPDATE_LOOP/u,/INSERT INTO public\.hypothesis_updates/u]) assert.match(contract.definition,fingerprint,'Schema contract mismatch: hypothesis update behavior changed.');
+  assert.equal(contract.authenticated_execute,true,'Schema contract mismatch: authenticated execute grant is absent.'); assert.equal(contract.anon_execute,false,'Schema contract mismatch: anon can execute hypothesis update function.');
+}
 async function main(){ await client.connect(); try{
-  if(!(await client.query("SELECT to_regclass('public.hypothesis_updates') IS NOT NULL present")).rows[0].present) await client.query(migration);
-  else {
-    const definition=migration.match(/CREATE FUNCTION public\.apply_hypothesis_evidence_update[\s\S]*?END; \$\$;/u)?.[0]; assert.ok(definition);
-    await client.query('DROP FUNCTION public.apply_hypothesis_evidence_update(uuid,uuid,integer,text,text)');
-    await client.query(definition);
-    await client.query('REVOKE ALL ON FUNCTION public.apply_hypothesis_evidence_update(uuid,uuid,integer,text,text) FROM PUBLIC, anon');
-    await client.query('GRANT EXECUTE ON FUNCTION public.apply_hypothesis_evidence_update(uuid,uuid,integer,text,text) TO authenticated');
-  }
+  await verifyCanonicalContract();
   await client.query('BEGIN'); try{
     const user=randomUUID(),other=randomUUID(),hypothesis=randomUUID(),otherHypothesis=randomUUID(),support=randomUUID(),contradict=randomUUID(),otherMemory=randomUUID(),ineligible=randomUUID(),duplicateWinner=randomUUID(),duplicateLoser=randomUUID(); await client.query('RESET ROLE');
     await client.query('INSERT INTO public.users(id,auth_subject) VALUES($1::uuid,$1::text),($2::uuid,$2::text)',[user,other]);
