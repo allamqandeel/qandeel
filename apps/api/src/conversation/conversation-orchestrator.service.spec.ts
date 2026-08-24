@@ -100,7 +100,7 @@ describe('ConversationOrchestratorService', () => {
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
     const correlation=new CorrelationService();
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, memoryWriter, himSelector, himSnapshot, himBridge, himConsumptionPolicy, hypothesisContext, hypothesisEligibility, hypothesisExtraction, hypothesisRequestAssembler, hypothesisGeneration, confidence, hypothesisCandidateGenerator, router,correlation,new TelemetryService(correlation));
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, hypothesisContext, router,correlation,new TelemetryService(correlation));
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -117,9 +117,9 @@ describe('ConversationOrchestratorService', () => {
     expect(contextBuilder.build).toHaveBeenCalledWith('token', 'user', userTurn);
     expect(memoryRetriever.retrieve).toHaveBeenCalledWith('user', 'token', 'hello');
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
-    expect(memoryWriter.evaluateAndWrite).toHaveBeenCalledWith('user', 'token', 'hello');
-    expect(hypothesisEligibility.evaluateWithContext).toHaveBeenCalledWith('user', 'token', 'hello', 'ALLOW');
-    expect(memoryWriter.evaluateAndWrite.mock.invocationCallOrder[0]).toBeLessThan(hypothesisEligibility.evaluateWithContext.mock.invocationCallOrder[0]);
+    expect(repository.finalizeTurn).toHaveBeenCalledWith(expect.any(String),expect.objectContaining({safetyDisposition:'ALLOW'}));
+    expect(memoryWriter.evaluateAndWrite).not.toHaveBeenCalled();
+    expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
       modality: 'TEXT', path: 'FAST', behavioralGuidance: 'server-owned policy',
       context: [{ role: 'USER', content: 'hello' }], himContext,
@@ -150,14 +150,7 @@ describe('ConversationOrchestratorService', () => {
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({
       userTurn: completedUser, assistantTurn: assistant,
     });
-    expect(hypothesisExtraction.extract).toHaveBeenCalledTimes(1);
-    expect(hypothesisExtraction.extract).toHaveBeenCalledWith({
-      currentTurn: { id: completedUser.id, sessionId: completedUser.session_id, role: 'USER', status: 'COMPLETED', text: completedUser.content },
-      eligibility: { status: 'ELIGIBLE', reason: 'TRIGGER_AND_EVIDENCE_AVAILABLE' },
-      triggerReason: 'EXPLICIT_WHY_SELF', eligibleEvidence,
-    });
-    expect(repository.finalizeTurn.mock.invocationCallOrder[0]).toBeLessThan(hypothesisExtraction.extract.mock.invocationCallOrder[0]);
-    expect(memoryWriter.evaluateAndWrite.mock.invocationCallOrder[0]).toBeLessThan(hypothesisExtraction.extract.mock.invocationCallOrder[0]);
+    expect(hypothesisExtraction.extract).not.toHaveBeenCalled();
     expect(repository.failTurn).not.toHaveBeenCalled();
     expect(hypothesisRequestAssembler.assemble).not.toHaveBeenCalled();
   });
@@ -191,19 +184,9 @@ describe('ConversationOrchestratorService', () => {
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({
       userTurn: completedUser, assistantTurn: assistant,
     });
-    expect(hypothesisRequestAssembler.assemble).toHaveBeenCalledTimes(1);
-    expect(hypothesisRequestAssembler.assemble).toHaveBeenCalledWith(authorizedIntent);
-    expect(hypothesisGeneration.generate).toHaveBeenCalledTimes(1);
-    expect(hypothesisGeneration.generate).toHaveBeenCalledWith('user', 'token', {
-      problem: 'hello', domain: 'GENERAL',
-      scope: 'CONVERSATION_SESSION:20000000-0000-4000-8000-000000000002',
-      evidenceIds: ['memory:30000000-0000-4000-8000-000000000003'],
-    }, hypothesisCandidateGenerator);
-    expect(hypothesisExtraction.extract.mock.invocationCallOrder[0]).toBeLessThan(hypothesisRequestAssembler.assemble.mock.invocationCallOrder[0]);
-    expect(hypothesisRequestAssembler.assemble.mock.invocationCallOrder[0]).toBeLessThan(hypothesisGeneration.generate.mock.invocationCallOrder[0]);
-    expect(confidence.evaluateHypothesis).toHaveBeenCalledTimes(1);
-    expect(confidence.evaluateHypothesis).toHaveBeenCalledWith('user', 'token', 'accepted-1');
-    expect(hypothesisGeneration.generate.mock.invocationCallOrder[0]).toBeLessThan(confidence.evaluateHypothesis.mock.invocationCallOrder[0]);
+    expect(hypothesisRequestAssembler.assemble).not.toHaveBeenCalled();
+    expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
+    expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
     expect(repository.failTurn).not.toHaveBeenCalled();
   });
 
@@ -227,11 +210,8 @@ describe('ConversationOrchestratorService', () => {
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({
       userTurn: completedUser, assistantTurn: assistant,
     });
-    expect(confidence.evaluateHypothesis).toHaveBeenCalledTimes(5);
-    expect(confidence.evaluateHypothesis.mock.calls.map((call) => call[2])).toEqual([
-      'accepted-1', 'accepted-2', 'accepted-3', 'accepted-4', 'accepted-5',
-    ]);
-    expect(hypothesisGeneration.generate).toHaveBeenCalledTimes(1);
+    expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
+    expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
     expect(repository.failTurn).not.toHaveBeenCalled();
   });
 
@@ -246,7 +226,7 @@ describe('ConversationOrchestratorService', () => {
 
     await orchestrator.orchestrate('token', 'user', userTurn);
 
-    expect(hypothesisGeneration.generate).toHaveBeenCalledTimes(1);
+    expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
     expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
   });
 
@@ -266,8 +246,8 @@ describe('ConversationOrchestratorService', () => {
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({
       userTurn: completedUser, assistantTurn: assistant,
     });
-    expect(hypothesisGeneration.generate).toHaveBeenCalledTimes(1);
-    expect(confidence.evaluateHypothesis).toHaveBeenCalledTimes(2);
+    expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
+    expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
     expect(repository.failTurn).not.toHaveBeenCalled();
   });
 
@@ -298,7 +278,7 @@ describe('ConversationOrchestratorService', () => {
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({
       userTurn: completedUser, assistantTurn: assistant,
     });
-    expect(hypothesisGeneration.generate).toHaveBeenCalledTimes(1);
+    expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
     expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
     expect(repository.failTurn).not.toHaveBeenCalled();
   });
@@ -334,7 +314,7 @@ describe('ConversationOrchestratorService', () => {
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({
       userTurn: completedUser, assistantTurn: assistant,
     });
-    expect(hypothesisRequestAssembler.assemble).toHaveBeenCalledTimes(1);
+    expect(hypothesisRequestAssembler.assemble).not.toHaveBeenCalled();
     expect(repository.failTurn).not.toHaveBeenCalled();
   });
 
@@ -434,13 +414,14 @@ describe('ConversationOrchestratorService', () => {
     expect(memoryRetriever.retrieve).not.toHaveBeenCalled();
     expect(behavioralPolicy.buildTextGuidance).not.toHaveBeenCalled();
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+    expect(repository.finalizeTurn).toHaveBeenCalledWith(expect.any(String),expect.objectContaining({safetyDisposition:'BLOCK'}));
     expect(memoryWriter.evaluateAndWrite).not.toHaveBeenCalled();
     expect(himSelector.select).not.toHaveBeenCalled();
     expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
-    expect(hypothesisEligibility.evaluateWithContext).toHaveBeenCalledWith('user', 'token', 'hello', 'BLOCK');
+    expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
     expect(hypothesisExtraction.extract).not.toHaveBeenCalled();
     expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
   });
@@ -458,19 +439,9 @@ describe('ConversationOrchestratorService', () => {
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
   });
 
-  it('preserves the bounded fresh-Evidence identity in the internal Memory completion handoff', async () => {
-    memoryWriter.evaluateAndWrite.mockResolvedValue({
-      decision: 'WRITE', type: 'GOAL', memoryId: 'persisted-memory-id',
-      evidenceId: 'memory:persisted-memory-id',
-    });
-    await expect((orchestrator as any).writeMemoryFailSoft('user', 'token', 'My goal is focus.', 'ALLOW'))
-      .resolves.toEqual({
-        completion: 'COMPLETED',
-        writeResult: {
-          decision: 'WRITE', type: 'GOAL', memoryId: 'persisted-memory-id',
-          evidenceId: 'memory:persisted-memory-id',
-        },
-      });
+  it('exposes no synchronous post-finalization enrichment helper', () => {
+    expect((orchestrator as any).writeMemoryFailSoft).toBeUndefined();
+    expect((orchestrator as any).evaluateEligibilityFailSoft).toBeUndefined();
   });
 
   it('keeps a finalized response authoritative when eligibility evaluation fails', async () => {
@@ -482,7 +453,7 @@ describe('ConversationOrchestratorService', () => {
     });
     expect(repository.failTurn).not.toHaveBeenCalled();
     expect(router.generate).toHaveBeenCalledTimes(1);
-    expect(hypothesisEligibility.evaluateWithContext).toHaveBeenCalledTimes(1);
+    expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
     expect(hypothesisExtraction.extract).not.toHaveBeenCalled();
   });
 
@@ -494,7 +465,7 @@ describe('ConversationOrchestratorService', () => {
     repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
     await orchestrator.orchestrate('token', 'user', userTurn);
     expect(memoryWriter.evaluateAndWrite).not.toHaveBeenCalled();
-    expect(hypothesisEligibility.evaluateWithContext).toHaveBeenCalledWith('user', 'token', 'hello', 'GUIDED');
+    expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
     expect(hypothesisExtraction.extract).not.toHaveBeenCalled();
   });
 
@@ -505,6 +476,7 @@ describe('ConversationOrchestratorService', () => {
     repository.claimTurn.mockResolvedValue(claimed);
     repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
     await orchestrator.orchestrate('token', 'user', userTurn);
+    expect(repository.finalizeTurn).toHaveBeenCalledWith(expect.any(String),expect.objectContaining({safetyDisposition:'GUIDED'}));
     expect(router.generate).toHaveBeenCalledTimes(1);
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
       safetyGuidance: 'server safety guidance',

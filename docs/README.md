@@ -29,6 +29,7 @@ The original Word documents remain the canonical archive. Markdown files record 
 - [Runtime Event Outbox + Publisher v1](runtime-event-outbox-publisher-v1.md)
 - [Health / Readiness / Dependency Probes v1](health-readiness-dependency-probes-v1.md)
 - [Background Intelligence Repository Adapters v1](background-intelligence-repository-adapters-v1.md)
+- [Post-Response Intelligence Dispatch Runtime v1](post-response-intelligence-dispatch-runtime-v1.md)
 
 ## Recommended implementation-facing set
 

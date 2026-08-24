@@ -92,6 +92,7 @@ test('keeps preflight and diagnostics privacy-safe', () => {
 
 test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () => {
   assert.match(apiCi, /image: postgres:17/u);
+  assert.match(apiCi, /image: redis:7/u);
   assert.match(apiCi, /run: npm run test:toolchain/u);
   assert.match(apiCi, /paths: \[[^\n]*'tests\/\*\*'[^\n]*'package-lock\.json'/u);
   for (const command of [
@@ -113,6 +114,8 @@ test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () =>
     'verify:him-snapshot:integration',
     'verify:runtime-events:integration',
     'verify:background-intelligence-adapters:integration',
+    'verify:post-response-intelligence-db:integration',
+    'verify:post-response-dispatch:integration',
   ]) assert.match(apiCi, new RegExp(`run: npm run ${command}`,'u'), `missing ${command}`);
   assert.doesNotMatch(apiCi, /verify:(?:claude|openai|auth):smoke|eval:brain:(?:run|validate|summarize)/u);
 });
@@ -127,5 +130,6 @@ test('lets CI-provided database configuration run safe historical verifiers with
     'verify:hypothesis-update:integration',
     'verify:him:integration',
     'verify:background-intelligence-adapters:integration',
+    'verify:post-response-intelligence-db:integration',
   ]) assert.match(packageJson.scripts[command], /--env-file-if-exists=\.env/u, `${command} requires a physical .env file`);
 });
