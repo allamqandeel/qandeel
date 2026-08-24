@@ -10,8 +10,6 @@ import {
 } from './behavioral-response-policy.types';
 import { SAFETY_RESPONSE_GATE, type SafetyResponseGate } from './safety-response-gate.types';
 import { MemoryRetrieverService } from '../memory/memory-retriever.service';
-import { MemoryWriteService } from '../memory/memory-write.service';
-import type { MemoryWriteResult } from '../memory/memory-write.service';
 import { HimTurnContextSelectionService } from '../human-model/him-turn-context-selection.service';
 import { HimIntelligenceSnapshotService } from '../human-model/him-intelligence-snapshot.service';
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
@@ -20,18 +18,6 @@ import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
 import { HypothesisReasoningInvariantError } from '../hypothesis/hypothesis-reasoning-context.types';
-import { HypothesisGenerationEligibilityService } from '../hypothesis/hypothesis-generation-eligibility.service';
-import type { HypothesisGenerationEligibilityResult } from '../hypothesis/hypothesis-generation-eligibility.types';
-import { HypothesisGenerationIntentExtractionService } from '../hypothesis/hypothesis-generation-intent-extraction.service';
-import type { HypothesisGenerationIntentExtractionResult } from '../hypothesis/hypothesis-generation-intent-extraction.types';
-import { HypothesisGenerationRequestAssemblerService } from '../hypothesis/hypothesis-generation-request-assembler.service';
-import { HypothesisGenerationService } from '../hypothesis/hypothesis-generation.service';
-import {
-  HYPOTHESIS_CANDIDATE_GENERATOR,
-  HypothesisCandidateGeneratorError,
-  type BoundHypothesisCandidateGenerator,
-} from '../hypothesis/hypothesis-candidate-generator-provider.types';
-import { ConfidenceService } from '../hypothesis/confidence.service';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -43,18 +29,11 @@ export class ConversationOrchestratorService {
     @Inject(SAFETY_RESPONSE_GATE) private readonly safetyGate: SafetyResponseGate,
     @Inject(BEHAVIORAL_RESPONSE_POLICY) private readonly behavioralPolicy: BehavioralResponsePolicy,
     private readonly memoryRetriever: MemoryRetrieverService,
-    private readonly memoryWriter: MemoryWriteService,
     private readonly himContextSelector: HimTurnContextSelectionService,
     private readonly himSnapshot: HimIntelligenceSnapshotService,
     private readonly himReasoningConsumption: HimReasoningConsumptionService,
     private readonly himFastDeepConsumption: HimFastDeepConsumptionService,
     private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
-    private readonly hypothesisGenerationEligibility: HypothesisGenerationEligibilityService,
-    private readonly hypothesisIntentExtraction: HypothesisGenerationIntentExtractionService,
-    private readonly hypothesisGenerationRequestAssembler: HypothesisGenerationRequestAssemblerService,
-    private readonly hypothesisGeneration: HypothesisGenerationService,
-    private readonly confidence: ConfidenceService,
-    @Inject(HYPOTHESIS_CANDIDATE_GENERATOR) private readonly hypothesisCandidateGenerator: BoundHypothesisCandidateGenerator,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
     private readonly correlation:CorrelationService,
     private readonly telemetry:TelemetryService,
@@ -62,16 +41,12 @@ export class ConversationOrchestratorService {
 
   async orchestrate(accessToken: string, userId: string, userTurn: ConversationTurn): Promise<OrchestratedTurnResult> {
     if (userTurn.status === 'COMPLETED') {
-      this.telemetry.recordHypothesisGenerationEligibility('replay_skipped', userTurn.processing_path ?? undefined);
-      this.telemetry.recordHypothesisIntentExtraction('skipped_replay', userTurn.processing_path ?? undefined);
       return this.currentResult(accessToken, userId, userTurn);
     }
 
     const selection = this.selectPath(userTurn.content);
     const claimed = await this.repository.claimTurn(accessToken, userTurn.session_id, userId, userTurn.id, selection);
     if (!claimed) {
-      this.telemetry.recordHypothesisGenerationEligibility('replay_skipped', selection.path);
-      this.telemetry.recordHypothesisIntentExtraction('skipped_replay', selection.path);
       return this.currentResult(accessToken, userId, userTurn);
     }
 
@@ -81,10 +56,9 @@ export class ConversationOrchestratorService {
       if (safety.disposition === 'BLOCK') {
         const finalized = await this.repository.finalizeTurn(accessToken, {
           sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
-          assistantTurnId: randomUUID(), content: safety.deterministicResponse!,
+          assistantTurnId: randomUUID(), content: safety.deterministicResponse!, safetyDisposition: safety.disposition,
         });
         if (!finalized) return this.currentResult(accessToken, userId, claimed);
-        await this.evaluateEligibilityFailSoft(userId, accessToken, finalized.userTurn, safety.disposition, selection.path);
         this.telemetry.recordTurnOutcome('blocked',selection.path);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
@@ -123,15 +97,9 @@ export class ConversationOrchestratorService {
       if (hypothesisResult.coverageState === 'AVAILABLE') this.telemetry.recordHypothesisContext('consumed', selection.path, hypothesisResult.context.contractVersion, hypothesisResult.context.candidateHypothesisCount, hypothesisResult.context.includedHypothesisCount);
       const finalized = await this.repository.finalizeTurn(accessToken, {
         sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
-        assistantTurnId: randomUUID(), content: candidate.content,
+        assistantTurnId: randomUUID(), content: candidate.content, safetyDisposition: safety.disposition,
       });
       if (!finalized) return this.currentResult(accessToken, userId, claimed);
-      const memoryOutcome = await this.writeMemoryFailSoft(userId, accessToken, userTurn.content, safety.disposition);
-      if (memoryOutcome.completion === 'COMPLETED') {
-        await this.evaluateEligibilityFailSoft(userId, accessToken, finalized.userTurn, safety.disposition, selection.path);
-      } else {
-        this.telemetry.recordHypothesisGenerationEligibility('failed', selection.path);
-      }
       this.telemetry.recordTurnOutcome('completed',selection.path);
       return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
     } catch {
@@ -140,143 +108,6 @@ export class ConversationOrchestratorService {
       throw new ServiceUnavailableException('Conversation generation failed.');
     }};
     if(!this.correlation.current())return execute();this.correlation.bindCanonical(claimed.session_id,claimed.id);return this.correlation.withOrchestration(execute);
-  }
-
-  private async writeMemoryFailSoft(
-    userId: string,
-    accessToken: string,
-    content: string,
-    safetyDisposition: 'ALLOW' | 'GUIDED' | 'BLOCK',
-  ): Promise<
-    | { completion: 'COMPLETED'; writeResult?: MemoryWriteResult }
-    | { completion: 'FAILED' }
-  > {
-    if (safetyDisposition !== 'ALLOW') return { completion: 'COMPLETED' };
-    try {
-      const writeResult = await this.engine('memory_write',undefined,()=>
-        this.memoryWriter.evaluateAndWrite(userId, accessToken, content));
-      return { completion: 'COMPLETED', writeResult };
-    } catch {
-      // Memory is a non-authoritative side capability. Finalized conversation output remains authoritative.
-      return { completion: 'FAILED' };
-    }
-  }
-
-  private async evaluateEligibilityFailSoft(
-    userId: string,
-    accessToken: string,
-    currentTurn: ConversationTurn,
-    safetyDisposition: 'ALLOW' | 'GUIDED' | 'BLOCK',
-    path: ProcessingPath,
-  ): Promise<void> {
-    try {
-      const assessment = await this.engine('hypothesis_generation_eligibility', path, () =>
-        this.hypothesisGenerationEligibility.evaluateWithContext(
-          userId, accessToken, currentTurn.content, safetyDisposition));
-      this.telemetry.recordHypothesisGenerationEligibility(this.eligibilityOutcome(assessment.eligibility), path);
-      if (!('triggerClassification' in assessment)) {
-        this.telemetry.recordHypothesisIntentExtraction('skipped_not_eligible', path);
-        return;
-      }
-      const result = await this.engine('hypothesis_intent_extraction', path, () =>
-        this.hypothesisIntentExtraction.extract({
-          currentTurn: {
-            id: currentTurn.id, sessionId: currentTurn.session_id, role: 'USER', status: 'COMPLETED',
-            text: currentTurn.content,
-          },
-          eligibility: assessment.eligibility,
-          triggerReason: assessment.triggerClassification.reason,
-          eligibleEvidence: assessment.eligibleEvidence,
-        }));
-      this.telemetry.recordHypothesisIntentExtraction(this.extractionOutcome(result), path);
-      if (result.status !== 'AUTHORIZED') return;
-      try {
-        const assembly = await this.engine('hypothesis_generation_request_assembly', path, () =>
-          this.hypothesisGenerationRequestAssembler.assemble(result.intent));
-        this.telemetry.recordHypothesisGenerationRequestAssembly(
-          assembly.status === 'READY' ? 'ready' :
-            assembly.reason === 'INVARIANT_REJECTED' ? 'invariant_rejected' : 'not_ready',
-          path,
-        );
-        if (assembly.status === 'READY') {
-          await this.generateHypothesesFailSoft(userId, accessToken, assembly.request, path);
-        }
-      } catch {
-        this.telemetry.recordHypothesisGenerationRequestAssembly('not_ready', path);
-      }
-    } catch {
-      this.telemetry.recordHypothesisGenerationEligibility('failed', path);
-      this.telemetry.recordHypothesisIntentExtraction('provider_failed', path);
-    }
-  }
-
-  private async generateHypothesesFailSoft(
-    userId: string,
-    accessToken: string,
-    request: Parameters<HypothesisGenerationService['generate']>[2],
-    path: ProcessingPath,
-  ): Promise<void> {
-    this.telemetry.recordControlledHypothesisGeneration('invoked', path);
-    try {
-      const result = await this.engine('controlled_hypothesis_generation', path, () =>
-        this.hypothesisGeneration.generate(userId, accessToken, request, this.hypothesisCandidateGenerator));
-      this.telemetry.recordControlledHypothesisGeneration(
-        result.accepted.length > 0 ? 'accepted_nonzero' : 'accepted_zero', path);
-      await this.evaluateGeneratedConfidenceFailSoft(
-        userId, accessToken, result.accepted.map(({ id }) => id), path);
-    } catch (error) {
-      const outcome = error instanceof HypothesisCandidateGeneratorError
-        ? error.code === 'UNAVAILABLE' ? 'generator_unavailable'
-          : error.code === 'TIMEOUT' ? 'generator_timeout'
-            : error.code === 'INVALID_STRUCTURED_OUTPUT' ? 'invalid_generator_output'
-              : 'generation_failed'
-        : 'generation_failed';
-      this.telemetry.recordControlledHypothesisGeneration(outcome, path);
-    }
-  }
-
-  private async evaluateGeneratedConfidenceFailSoft(
-    userId: string,
-    accessToken: string,
-    acceptedHypothesisIds: readonly string[],
-    path: ProcessingPath,
-  ): Promise<void> {
-    let evaluatedCount = 0;
-    for (const hypothesisId of acceptedHypothesisIds) {
-      try {
-        await this.engine('post_generation_confidence', path, () =>
-          this.confidence.evaluateHypothesis(userId, accessToken, hypothesisId));
-        evaluatedCount += 1;
-      } catch {
-        // Each immutable snapshot is independent; failed targets remain unevaluated without retry.
-      }
-    }
-    const outcome = acceptedHypothesisIds.length === 0 ? 'skipped_zero_accepted'
-      : evaluatedCount === acceptedHypothesisIds.length ? 'evaluated_all'
-        : evaluatedCount === 0 ? 'evaluated_none' : 'evaluated_partial';
-    this.telemetry.recordPostGenerationConfidence(
-      outcome, path, acceptedHypothesisIds.length, evaluatedCount);
-  }
-
-  private extractionOutcome(result: HypothesisGenerationIntentExtractionResult):
-    'authorized' | 'authority_rejected' | 'provider_unavailable' | 'provider_timeout' |
-    'invalid_provider_output' | 'provider_failed' {
-    if (result.status === 'AUTHORIZED') return 'authorized';
-    if (result.reason === 'AUTHORITY_REJECTED') return 'authority_rejected';
-    if (result.reason === 'PROVIDER_UNAVAILABLE') return 'provider_unavailable';
-    if (result.reason === 'PROVIDER_TIMEOUT') return 'provider_timeout';
-    if (result.reason === 'INVALID_PROVIDER_OUTPUT') return 'invalid_provider_output';
-    return 'provider_failed';
-  }
-
-  private eligibilityOutcome(result: HypothesisGenerationEligibilityResult):
-    'eligible' | 'not_eligible' | 'ambiguous' | 'safety_ineligible' | 'no_evidence' | 'failed' {
-    if (result.status === 'ELIGIBLE') return 'eligible';
-    if (result.reason === 'AMBIGUOUS_TRIGGER') return 'ambiguous';
-    if (result.reason === 'SAFETY_INELIGIBLE') return 'safety_ineligible';
-    if (result.reason === 'NO_ELIGIBLE_EVIDENCE') return 'no_evidence';
-    if (result.reason === 'EVALUATION_FAILED') return 'failed';
-    return 'not_eligible';
   }
 
   private engine<T>(name:string,path:ProcessingPath|undefined,work:()=>Promise<T>|T):Promise<T>{return this.correlation.current()?this.telemetry.withEngine(name,path,work):Promise.resolve().then(work);}

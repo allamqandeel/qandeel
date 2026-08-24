@@ -106,10 +106,10 @@ export class ConversationRepository {
     return rows[0];
   }
 
-  async finalizeTurn(accessToken: string, input: { sessionId: string; userId: string; sourceTurnId: string; assistantTurnId: string; content: string }): Promise<{ userTurn: ConversationTurn; assistantTurn: ConversationTurn } | undefined> {
+  async finalizeTurn(accessToken: string, input: { sessionId: string; userId: string; sourceTurnId: string; assistantTurnId: string; content: string; safetyDisposition:'ALLOW'|'GUIDED'|'BLOCK' }): Promise<{ userTurn: ConversationTurn; assistantTurn: ConversationTurn } | undefined> {
     const rows = await this.dataApi.request<Array<{ user_turn: ConversationTurn; assistant_turn: ConversationTurn }>>(accessToken, 'rpc/finalize_conversation_turn', {
       method: 'POST',
-      body: JSON.stringify({ p_session_id: input.sessionId, p_user_id: input.userId, p_source_turn_id: input.sourceTurnId, p_assistant_turn_id: input.assistantTurnId, p_content: input.content,...this.eventMetadata() }),
+      body: JSON.stringify({ p_session_id: input.sessionId, p_user_id: input.userId, p_source_turn_id: input.sourceTurnId, p_assistant_turn_id: input.assistantTurnId, p_content: input.content,p_safety_disposition:input.safetyDisposition,...this.eventMetadata() }),
     });
     return rows[0] ? { userTurn: rows[0].user_turn, assistantTurn: rows[0].assistant_turn } : undefined;
   }

@@ -35,7 +35,7 @@ export function isBackgroundIntelligenceEventContext(value: unknown): value is B
 @Injectable()
 export class BackgroundIntelligenceContextFactory {
   create(event: RuntimeEventEnvelope): BackgroundIntelligenceEventContext | undefined {
-    if (!isValidRuntimeEventEnvelope(event) || event.event_type !== 'ConversationTurnCompleted' || event.payload.terminal_status !== 'COMPLETED') return undefined;
+    if (!isValidRuntimeEventEnvelope(event) || event.event_type !== 'ConversationTurnCompleted' || event.event_version !== '2.0' || event.payload.terminal_status !== 'COMPLETED') return undefined;
     return new BackgroundIntelligenceEventContext(event.event_id, event.subject_user_id, event.subject_session_id, event.subject_turn_id, EVENT_CONTEXT_ISSUER);
   }
 }

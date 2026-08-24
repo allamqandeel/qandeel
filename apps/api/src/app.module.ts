@@ -10,9 +10,10 @@ import { HimModule } from './human-model/him.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { RuntimeEventsModule } from './runtime-events/runtime-events.module';
 import { BackgroundIntelligenceModule } from './background-intelligence/background-intelligence.module';
+import { PostResponseIntelligenceModule } from './post-response-intelligence/post-response-intelligence.module';
 
 @Module({
-  imports: [SentryModule.forRoot(),ObservabilityModule,RuntimeEventsModule,BackgroundIntelligenceModule,HealthModule, ConversationModule, MemoryModule, HypothesisModule, QuestionModule, HimModule],
+  imports: [SentryModule.forRoot(),ObservabilityModule,RuntimeEventsModule,BackgroundIntelligenceModule,PostResponseIntelligenceModule,HealthModule, ConversationModule, MemoryModule, HypothesisModule, QuestionModule, HimModule],
   providers:[{provide:APP_FILTER,useClass:SentryGlobalFilter}],
 })
 export class AppModule {}

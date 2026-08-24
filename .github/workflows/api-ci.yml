@@ -15,9 +15,16 @@ jobs:
         options: >-
           --health-cmd="pg_isready -U postgres -d qandeel_test"
           --health-interval=5s --health-timeout=5s --health-retries=12
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=5s --health-retries=12
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/qandeel_test
       PGPASSWORD: postgres
+      REDIS_URL: redis://localhost:6379
     steps:
       - {name: Checkout, uses: actions/checkout@v4}
       - name: Setup Node.js
@@ -62,4 +69,6 @@ jobs:
       - {name: Verify HIM Intelligence Snapshot against real PostgreSQL, run: npm run verify:him-snapshot:integration}
       - {name: Verify Runtime Event Outbox against real PostgreSQL, run: npm run verify:runtime-events:integration}
       - {name: Verify background intelligence repository adapters, run: npm run verify:background-intelligence-adapters:integration}
+      - {name: Verify post-response intelligence dispatch ledger, run: npm run verify:post-response-intelligence-db:integration}
+      - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
 
