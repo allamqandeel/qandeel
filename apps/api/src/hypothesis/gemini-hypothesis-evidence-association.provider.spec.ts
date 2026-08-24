@@ -28,6 +28,11 @@ describe('GeminiHypothesisEvidenceAssociationProvider', () => {
     await expect(new GeminiHypothesisEvidenceAssociationProvider(config, http).propose(bad)).rejects.toEqual(new HypothesisEvidenceAssociationProviderError('INVALID_STRUCTURED_OUTPUT'));
     expect(http).not.toHaveBeenCalled();
   });
+  it('rejects an empty candidate universe before HTTP', async () => {
+    const http = jest.fn(); const empty = snapshot(); empty.candidateHypotheses = [];
+    await expect(new GeminiHypothesisEvidenceAssociationProvider(config, http).propose(empty)).rejects.toEqual(new HypothesisEvidenceAssociationProviderError('INVALID_STRUCTURED_OUTPUT'));
+    expect(http).not.toHaveBeenCalled();
+  });
   it.each([ 'not json', JSON.stringify([{ hypothesisId: id, evidenceRole: 'SUPPORTING', extra: true }]), JSON.stringify([{ hypothesisId: id }]), JSON.stringify([{ hypothesisId: id, evidenceRole: 'BAD' }]), JSON.stringify([{ hypothesisId: '22222222-2222-4222-8222-222222222222', evidenceRole: 'SUPPORTING' }]), JSON.stringify(Array.from({ length: 5 }, () => ({ hypothesisId: id, evidenceRole: 'SUPPORTING' }))), 'x'.repeat(16_385) ])('rejects invalid structured output', async (text) => {
     await expect(new GeminiHypothesisEvidenceAssociationProvider(config, async () => response(text)).propose(snapshot())).rejects.toEqual(new HypothesisEvidenceAssociationProviderError('INVALID_STRUCTURED_OUTPUT'));
   });
