@@ -1,4 +1,5 @@
-import { BackgroundIntelligenceContextFactory, isBackgroundIntelligenceExecutionContext } from './background-intelligence-context.factory';
+import { isBackgroundIntelligenceExecutionContext } from './background-intelligence-authority.service';
+import { BackgroundIntelligenceContextFactory } from './background-intelligence-context.factory';
 import type { RuntimeEventEnvelope } from '../runtime-events/runtime-event.types';
 
 const IDS = {
@@ -15,6 +16,9 @@ const completedEvent = (overrides: Partial<RuntimeEventEnvelope> = {}): RuntimeE
 
 describe('BackgroundIntelligenceContextFactory', () => {
   const factory = new BackgroundIntelligenceContextFactory();
+  it('exposes no execution-authority issuance method', () => {
+    expect((factory as unknown as Record<string, unknown>).issueExecutionContext).toBeUndefined();
+  });
   it('creates only the frozen pre-authorization identity from a valid completed event', () => {
     const context = factory.create(completedEvent());
     expect(context).toEqual({ stage: 'VALIDATED_RUNTIME_EVENT_V1', eventId: IDS.event, userId: IDS.user, sessionId: IDS.session, sourceTurnId: IDS.turn });

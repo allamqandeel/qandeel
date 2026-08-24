@@ -1,4 +1,5 @@
 export const BACKGROUND_INTELLIGENCE_AUTHORITY = 'BACKGROUND_INTELLIGENCE_V1' as const;
+export const BACKGROUND_INTELLIGENCE_DATA_API = Symbol('BACKGROUND_INTELLIGENCE_DATA_API');
 
 export type BackgroundIntelligenceAuthorizationOutcome =
   | 'AUTHORIZED'
@@ -8,5 +9,5 @@ export type BackgroundIntelligenceAuthorizationOutcome =
 
 export interface BackgroundIntelligenceAuthorizationResult {
   readonly outcome: BackgroundIntelligenceAuthorizationOutcome;
-  readonly context?: import('./background-intelligence-context.factory').BackgroundIntelligenceExecutionContext;
+  readonly context?: import('./background-intelligence-authority.service').BackgroundIntelligenceExecutionContext;
 }

@@ -1,5 +1,5 @@
-import { BackgroundIntelligenceAuthorityService } from './background-intelligence-authority.service';
-import { BackgroundIntelligenceContextFactory, isBackgroundIntelligenceExecutionContext } from './background-intelligence-context.factory';
+import { BackgroundIntelligenceAuthorityService, BackgroundIntelligenceExecutionContext, isBackgroundIntelligenceExecutionContext } from './background-intelligence-authority.service';
+import { BackgroundIntelligenceContextFactory } from './background-intelligence-context.factory';
 import type { BackgroundIntelligenceDataApiService, BackgroundConversationSessionState, BackgroundConversationTurnState } from './background-intelligence-data-api.service';
 import type { RuntimeEventEnvelope } from '../runtime-events/runtime-event.types';
 
@@ -12,6 +12,7 @@ const assistant=turn({id:'10000000-0000-4000-8000-000000000005',role:'ASSISTANT'
 describe('BackgroundIntelligenceAuthorityService',()=>{
  const setup=()=>{const contexts=new BackgroundIntelligenceContextFactory(),dataApi={findSession:jest.fn().mockResolvedValue(session),findSourceTurn:jest.fn().mockResolvedValue(turn()),findCompletedAssistant:jest.fn().mockResolvedValue(assistant)}as unknown as jest.Mocked<BackgroundIntelligenceDataApiService>;return{service:new BackgroundIntelligenceAuthorityService(contexts,dataApi),dataApi};};
  it('issues execution authority only after the canonical completed exchange is reread',async()=>{const result=await setup().service.authorize(event());expect(result.outcome).toBe('AUTHORIZED');expect(isBackgroundIntelligenceExecutionContext(result.context)).toBe(true);expect(result.context).toMatchObject({authority:'BACKGROUND_INTELLIGENCE_V1',eventId:IDS.event,userId:IDS.user,sessionId:IDS.session,sourceTurnId:IDS.turn});});
+ it('does not let a valid pre-authorization context independently issue execution authority',()=>{const ownership=new BackgroundIntelligenceContextFactory().create(event());expect(ownership).toBeDefined();expect(()=>Reflect.construct(BackgroundIntelligenceExecutionContext as unknown as new(...args:unknown[])=>unknown,[ownership,Symbol('forged issuer')])).toThrow('BACKGROUND_INTELLIGENCE_AUTHORITY_REQUIRED');expect(isBackgroundIntelligenceExecutionContext(ownership)).toBe(false);});
  it('rejects an invalid event before ownership reads or authority issuance',async()=>{const s=setup(),invalid=event({event_type:'ConversationTurnFailed',schema_ref:'qandeel.runtime.conversation-turn-failed.v1',payload:{...event().payload,terminal_status:'FAILED'}});await expect(s.service.authorize(invalid)).resolves.toEqual({outcome:'NOT_AUTHORIZED_INVALID_EVENT'});expect(s.dataApi.findSession).not.toHaveBeenCalled();});
  it.each([
   ['missing session','session',undefined,'NOT_AUTHORIZED_OWNER_MISMATCH'],

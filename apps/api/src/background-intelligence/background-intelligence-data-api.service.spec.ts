@@ -1,5 +1,5 @@
-import { BackgroundIntelligenceAuthorityService } from './background-intelligence-authority.service';
-import { BackgroundIntelligenceContextFactory, BackgroundIntelligenceEventContext, BackgroundIntelligenceExecutionContext, type BackgroundIntelligenceExecutionContext as ExecutionContext } from './background-intelligence-context.factory';
+import { BackgroundIntelligenceAuthorityService, BackgroundIntelligenceExecutionContext, type BackgroundIntelligenceExecutionContext as ExecutionContext } from './background-intelligence-authority.service';
+import { BackgroundIntelligenceContextFactory, BackgroundIntelligenceEventContext } from './background-intelligence-context.factory';
 import { BackgroundIntelligenceDataApiService, type BackgroundConversationSessionState, type BackgroundConversationTurnState } from './background-intelligence-data-api.service';
 import type { RuntimeEventEnvelope } from '../runtime-events/runtime-event.types';
 

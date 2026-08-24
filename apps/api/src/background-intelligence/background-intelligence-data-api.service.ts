@@ -3,10 +3,9 @@ import type { SessionStatus, TurnStatus } from '../conversation/conversation.typ
 import type { MemoryRecord, MemorySource, MemoryStatus, MemoryType } from '../memory/memory.types';
 import {
   type BackgroundIntelligenceEventContext,
-  type BackgroundIntelligenceExecutionContext,
   isBackgroundIntelligenceEventContext,
-  isBackgroundIntelligenceExecutionContext,
 } from './background-intelligence-context.factory';
+import { type BackgroundIntelligenceExecutionContext, isBackgroundIntelligenceExecutionContext } from './background-intelligence-authority.service';
 
 const SESSION_FIELDS = 'id,status,channel';
 const TURN_FIELDS = 'id,session_id,role,status,source_turn_id';
