@@ -61,4 +61,5 @@ jobs:
       - {name: Verify HIM temporal trend source against real PostgreSQL, run: npm run verify:him-trends:integration}
       - {name: Verify HIM Intelligence Snapshot against real PostgreSQL, run: npm run verify:him-snapshot:integration}
       - {name: Verify Runtime Event Outbox against real PostgreSQL, run: npm run verify:runtime-events:integration}
+      - {name: Verify background intelligence repository adapters, run: npm run verify:background-intelligence-adapters:integration}
 

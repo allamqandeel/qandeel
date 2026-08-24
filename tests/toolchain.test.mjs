@@ -112,6 +112,7 @@ test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () =>
     'verify:him-trends:integration',
     'verify:him-snapshot:integration',
     'verify:runtime-events:integration',
+    'verify:background-intelligence-adapters:integration',
   ]) assert.match(apiCi, new RegExp(`run: npm run ${command}`,'u'), `missing ${command}`);
   assert.doesNotMatch(apiCi, /verify:(?:claude|openai|auth):smoke|eval:brain:(?:run|validate|summarize)/u);
 });
@@ -125,5 +126,6 @@ test('lets CI-provided database configuration run safe historical verifiers with
     'verify:question:integration',
     'verify:hypothesis-update:integration',
     'verify:him:integration',
+    'verify:background-intelligence-adapters:integration',
   ]) assert.match(packageJson.scripts[command], /--env-file-if-exists=\.env/u, `${command} requires a physical .env file`);
 });
