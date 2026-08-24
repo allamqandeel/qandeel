@@ -14,11 +14,11 @@ const CONTRACT:Record<RuntimeEventType,{status:string;schema:string}>={
 const uuid=(value:unknown):value is string=>typeof value==='string'&&UUID.test(value);
 const nullableUuid=(value:unknown):boolean=>value===null||uuid(value);
 
-export function isValidRuntimeEvent(value:ClaimedRuntimeEvent):boolean{
+export function isValidRuntimeEventEnvelope(value:RuntimeEventEnvelope):boolean{
  if(!value||typeof value!=='object'||!Object.prototype.hasOwnProperty.call(CONTRACT,value.event_type))return false;
  const contract=CONTRACT[value.event_type];
  if(value.event_version!=='1.0'||value.schema_ref!==contract.schema||value.producer!=='conversation-service'||value.classification!=='SENSITIVE'||value.contains_content!==false||value.retention_class!=='OPERATIONAL_EVENT_V1')return false;
- if(!uuid(value.event_id)||!uuid(value.subject_user_id)||!uuid(value.subject_session_id)||!uuid(value.subject_turn_id)||!nullableUuid(value.correlation_id)||!nullableUuid(value.causation_id)||value.causation_id===value.event_id||!uuid(value.claim_token))return false;
+ if(!uuid(value.event_id)||!uuid(value.subject_user_id)||!uuid(value.subject_session_id)||!uuid(value.subject_turn_id)||!nullableUuid(value.correlation_id)||!nullableUuid(value.causation_id)||value.causation_id===value.event_id)return false;
  if(typeof value.occurred_at!=='string'||!Number.isFinite(Date.parse(value.occurred_at))||value.payload===null||Array.isArray(value.payload)||typeof value.payload!=='object')return false;
  const keys=Object.keys(value.payload).sort();if(keys.length!==PAYLOAD_KEYS.length||keys.some((key,index)=>key!==PAYLOAD_KEYS[index]))return false;
  const payload=value.payload;
@@ -28,4 +28,8 @@ export function isValidRuntimeEvent(value:ClaimedRuntimeEvent):boolean{
  if(payload.routing_reason!==null&&payload.routing_reason!=='FAST_DEFAULT'&&payload.routing_reason!=='INPUT_LENGTH_REQUIRES_DEEP_CONTEXT')return false;
  if((payload.processing_path==='FAST'&&payload.routing_reason!=='FAST_DEFAULT')||(payload.processing_path==='DEEP'&&payload.routing_reason!=='INPUT_LENGTH_REQUIRES_DEEP_CONTEXT')||(payload.processing_path===null&&payload.routing_reason!==null))return false;
  return true;
+}
+
+export function isValidRuntimeEvent(value:ClaimedRuntimeEvent):boolean{
+ return isValidRuntimeEventEnvelope(value)&&uuid(value.claim_token)&&value.status==='IN_FLIGHT'&&Number.isInteger(value.attempt_count)&&value.attempt_count>0&&typeof value.claimed_at==='string'&&Number.isFinite(Date.parse(value.claimed_at))&&typeof value.lease_expires_at==='string'&&Number.isFinite(Date.parse(value.lease_expires_at));
 }

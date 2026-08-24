@@ -1,0 +1,13 @@
+# Background Intelligence Execution Authority v1
+
+Background workers cannot retain or replay user bearer tokens. The Supabase service-role key is also not a substitute user identity: it bypasses RLS and therefore supplies persistence access, not ownership authority.
+
+The internal trust boundary is a validated, content-free `ConversationTurnCompleted` runtime-event envelope. `BackgroundIntelligenceContextFactory` accepts only the exact v1 event contract and creates a frozen context containing the authority label plus event, user, session, and source-turn IDs. It contains no JWT, service-role key, content, or provider credential. No controller accepts this context and no public API can request background authority.
+
+`BackgroundIntelligenceAuthorityService` rereads canonical state before authorization. Its service-owned data boundary explicitly filters the session and turns by the authorized `user_id`, session ID, and source-turn ID. Authorization requires an ACTIVE or IDLE text session, a completed USER source turn, and its completed canonical ASSISTANT response. Failures return bounded codes without content or identifiers.
+
+`BackgroundIntelligenceDataApiService` alone reads `SUPABASE_SERVICE_ROLE_KEY`. The key is never a method argument, context value, return value, or log field. Every user-owned read has an explicit owner predicate. The representative Memory persistence primitive writes `user_id` only from the validated context; caller data cannot override it. Existing publishable-key/user-JWT repositories and public API contracts are unchanged.
+
+This foundation does not make the enrichment chain background-ready. Canonical conversation reread is supported, and the Memory create primitive proves owner-forced writes, but Memory evaluation/runtime adaptation remains pending. Evidence projection, Hypothesis mutation, and Confidence creation remain user-token/RPC-oriented; their existing semantics are untouched. The next bounded prerequisite is **Background Intelligence Repository Adapters v1**. Existing Hypothesis and Confidence SECURITY DEFINER RPCs derive authority from `auth.uid()` and must not receive the service-role key as a user token.
+
+No Redis consumer, event acknowledgment/retry, background job, orchestrator timing change, provider call, or per-turn enrichment idempotency behavior is introduced. Paid-call redelivery protection remains the separate **Post-Response Intelligence Idempotency Authority v1** concern.
