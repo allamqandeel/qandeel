@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { EvidenceService } from '../memory/evidence.service';
 import { HypothesisService } from './hypothesis.service';
 import type { HypothesisRecord } from './hypothesis.types';
