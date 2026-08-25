@@ -32,7 +32,7 @@ interface AnthropicMessagesClient {
 }
 
 export class ClaudeModelRouter implements ModelRouter {
-  static fromEnvironment(telemetry:TelemetryService): ClaudeModelRouter {
+  static fromEnvironment(telemetry?:TelemetryService): ClaudeModelRouter {
     const config = loadClaudeModelRouterConfig();
     return new ClaudeModelRouter(config, createClaudeClient(config),telemetry);
   }
