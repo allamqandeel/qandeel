@@ -73,21 +73,29 @@ const CREATION_OR_REQUEST = /\b(?:write|create|make|generate|draw|show|find|send
 // deliberately plays no role, so third-person operational requests remain blocked while purely
 // defensive explanations ("how password managers protect credentials") are not isolated-keyword hits.
 const ILLEGAL_HARM = /\b(?:build|make|create|give|write|explain)\b[\s\S]{0,30}\b(?:bomb|explosive)\b|\b(?:write|create|deploy|spread|give)\b[\s\S]{0,50}\b(?:ransomware|destructive malware)\b|\b(?:steal(?:s|ing)?|hack(?:s|ing)?|crack(?:s|ing)?|phish(?:es|ing)?|intercept(?:s|ing)?|bypass(?:es|ing)?|dump(?:s|ing)?|exfiltrat\w*|obtain(?:s|ing)?)\b[\s\S]{0,50}\b(?:credential(?:s)?|password(?:s)?)\b|\b(?:poison|toxin)\b[\s\S]{0,70}\b(?:instructions?|steps?|recipe|undetected|without (?:being )?detected|evade)\b|\b(?:instructions?|steps?|step[ -]by[ -]step|recipe)\b[\s\S]{0,70}\b(?:bomb|explosive|ransomware|destructive malware|credential theft|poison|toxin)\b|(?:اصنع|أصنع|اعمل|اشرح|اديني)[\s\S]{0,50}(?:قنبلة|متفجرات|برمجية خبيثة|فدية|سرقة كلمات مرور|سم|مادة سامة)|(?:خطوات|تعليمات|طريقة)[\s\S]{0,70}(?:قنبلة|متفجرات|برمجية خبيثة|فدية|سرقة كلمات المرور|تسميم)/i;
-const MEDICAL_EMERGENCY = /\b(?:can't breathe|cannot breathe|severe chest pain|signs? of (?:a )?stroke|face droop|severe bleeding|won't stop bleeding|unconscious|not breathing|anaphylaxis|severe allergic reaction|overdos(?:e|ed)|seizure)\b|(?:مش قادر أتنفس|مش قادرة أتنفس|لا أستطيع التنفس|ألم شديد في الصدر|الم شديد في الصدر|علامات جلطة|نزيف شديد|النزيف مش بيقف|فاقد الوعي|لا يتنفس|حساسية شديدة|جرعة زائدة|تشنجات|تشنج)/i;
+const MEDICAL_EMERGENCY = /\b(?:can't breathe|cannot breathe|severe chest pain|signs? of (?:a )?stroke|face droop|severe bleeding|won't stop bleeding|unconscious|not breathing|anaphylaxis|severe allergic reaction|overdos(?:e|ed)|seizure)\b|(?:مش قادر أتنفس|مش قادرة أتنفس|مش قادر يتنفس|مش قادرة تتنفس|مش بيتنفس|مش بتتنفس|لا أستطيع التنفس|ألم شديد في الصدر|الم شديد في الصدر|علامات جلطة|نزيف شديد|النزيف مش بيقف|فاقد الوعي|لا يتنفس|حساسية شديدة|جرعة زائدة|تشنجات|تشنج)/i;
 const ACUTE_PERSON_CONTEXT = /\b(?:i have|i'm having|i am having|my |he is|he's|she is|she's|they are|they're|someone is|right now|just )\b|(?:عندي|عنده|عندها|معايا|معاه|معاها|أنا|انا|هو |هي |دلوقتي|الآن|الان|حالًا|حالا|جاله|جالها|ابني|بنتي)/i;
 const INFORMATIONAL_FRAME = /\b(?:history|historical|research|news|reported|documentary|fiction|fictional|novel|movie|film|video game|game boss|prevention)\b|(?:تاريخ|تاريخي|تاريخية|بحث|الأخبار|الاخبار|خبر|وثائقي|خيالي|خيالية|رواية|فيلم|لعبة|في اللعبة|وقاية)/i;
 const SAFETY_OR_PREVENTION_FRAME = /\b(?:bomb shelters?|bomb disposal|explosive detection|malware prevention|ransomware defense|credential theft prevention)\b|(?:ملجأ قنابل|التخلص من القنابل|كشف المتفجرات|منع البرمجيات الخبيثة|الحماية من الفدية)/i;
 
-// --- Medical temporality (v2). A clearly past-bound event may release the medical block only
-// when nothing marks the state as current: acute facts outrank benign framing, never the reverse.
+// --- Medical temporality (v2). A past-bound event may release the medical block only when the
+// SAME clause carries the past marker and nothing in that clause marks the state as current:
+// acute facts outrank benign framing, and a historical clause never releases a separate acute one.
+const MEDICAL_CLAUSE_SPLIT = /[.!?؟;؛\n]|،/;
 const MEDICAL_PAST_BOUND = /\b(?:last (?:year|month|week)|years? ago|months? ago|weeks? ago|when (?:i|he|she|they) (?:was|were)|used to have)\b|(?:من سنة|من سنه|من سنتين|من شهر|من شهرين|من أسبوع|من اسبوع|السنة اللي فاتت|قبل سنة|قبل سنه|قبل شهر|وهو صغير|وهي صغيرة|زمان)/i;
 const MEDICAL_ONGOING_STATE = /\b(?:is|are|am|'s)\s+(?:still\s+)?(?:unconscious|not breathing|bleeding|seizing|having (?:a )?seizure)\b|\bstill\s+(?:unconscious|not breathing|bleeding)\b|\bwon't stop\b|\bright now\b|(?:لسه|لسة|ما زال|مازال|لا يزال)\s*(?:فاقد الوعي|مغمى عليه|مش بيتنفس|لا يتنفس|بينزف)|النزيف مش بيقف|دلوقتي|حالًا|حالا/i;
 
 // --- Actor attribution (v2). These surfaces exist so the semantic actor of self-harm language
 // can be distinguished before method interpretation. None of them is a standalone allow-list:
 // protective framing only matters when facilitation and direct-user signals are absent.
-const THIRD_PARTY_PERSON = /\b(?:my|our)\s+(?:best )?(?:friend|brother|sister|mom|mother|dad|father|son|daughter|husband|wife|cousin|colleague|coworker|classmate|roommate|neighbou?r|mate)\b|\b(?:someone|somebody|a friend(?: of mine)?)\b|(?:صاحبي|صاحبتي|أخويا|اخويا|أختي|اختي|ابني|بنتي|جوزي|مراتي|زميلي|زميلتي|واحد صاحبي|حد قريب مني|حد أعرفه|حد اعرفه)/i;
-const THIRD_PERSON_RISK_STATE = /\b(?:suicidal|thinking about (?:suicide|killing (?:him|her|them)sel(?:f|ves))|wants? to die|wants? to kill (?:him|her|them)sel(?:f|ves)|kill(?:s|ing)? (?:him|her|them)sel(?:f|ves)|hurt(?:s|ing)? (?:him|her)self|end(?:s|ing)? (?:his|her|their) (?:own )?life|from committing suicide|(?:he|she|they)\s+(?:can|could|will|would|wants? to)\s*die)\b|(?:بيفكر في الانتحار|بتفكر في الانتحار|عايز يموت|عاوز يموت|عايزة تموت|هينتحر|ينتحر|تنتحر|هيقتل نفسه|يقتل نفسه|تقتل نفسها|يأذي نفسه|يؤذي نفسه|ينهي حياته|هينهي حياته|يجرح نفسه|يموت|تموت|هيموت)/i;
+const THIRD_PARTY_PERSON = /\b(?:my|our)\s+(?:best )?(?:friend|brother|sister|mom|mother|dad|father|son|daughter|husband|wife|cousin|colleague|coworker|classmate|roommate|neighbou?r|mate)\b|\b(?:someone|somebody|a friend(?: of mine)?|(?:a |the )?person|people)\b|(?:صاحبي|صاحبتي|أخويا|اخويا|أختي|اختي|ابني|بنتي|جوزي|مراتي|زميلي|زميلتي|واحد صاحبي|حد قريب مني|حد أعرفه|حد اعرفه|شخص|ناس)/i;
+// "want to die" is deliberately NOT free-floating: the third-person reading requires either the
+// third-person inflection (wants) or an explicit third-person subject binding, so first-person
+// "I want to die" can never be reassigned to a nearby third-party noun.
+const THIRD_PERSON_RISK_STATE = /\b(?:suicidal|thinking about (?:suicide|killing (?:him|her|them)sel(?:f|ves))|wants to die|(?:who|he|she|they) want to die|wants? to kill (?:him|her|them)sel(?:f|ves)|kill(?:s|ing)? (?:him|her|them)sel(?:f|ves)|hurt(?:s|ing)? (?:him|her)self|end(?:s|ing)? (?:his|her|their) (?:own )?life|from committing suicide|(?:he|she|they)\s+(?:can|could|will|would|wants? to)\s*die)\b|(?:بيفكر في الانتحار|بتفكر في الانتحار|عايز يموت|عاوز يموت|عايزة تموت|هينتحر|ينتحر|تنتحر|هيقتل نفسه|يقتل نفسه|تقتل نفسها|يأذي نفسه|يؤذي نفسه|ينهي حياته|هينهي حياته|يجرح نفسه|يموت|تموت|هيموت)/i;
+// First-person death wish: strictly first-person surfaces, used both for risk detection and to
+// give the user's own risk precedence over any third-party support reading.
+const FIRST_PERSON_DEATH_WISH = /\bi (?:just )?want(?:ed)? to die\b|\bi wish i (?:was|were) dead\b|(?:أنا |انا )?(?:عايز|عاوز|نفسي) (?:أموت|اموت)|عايزة (?:أموت|اموت)|عاوزة (?:أموت|اموت)/i;
 const PROTECTIVE_REQUEST = /\b(?:what (?:should|can|do) i (?:say|tell|do)|how (?:do|can|should) i (?:help|support|talk|be there|respond|reply|approach|reach)|help(?:ing)?|support(?:ing)?|talk to (?:him|her|them)|warning signs?|watch (?:for|out)|look out for|convince (?:him|her|them)|encourage (?:him|her|them)|stop (?:him|her|them)|keep (?:him|her|them) safe|get (?:him|her|them) (?:help|to a (?:doctor|hospital|therapist|counsell?or))|take (?:him|her|them) to|de-?escalat)/i;
 const PROTECTIVE_REQUEST_AR = /(?:أساعد|اساعد|أساعده|اساعده|أساعدها|اساعدها|أدعم|ادعم|أدعمه|ادعمه|أتكلم مع|اتكلم مع|أقول له|اقول له|أقوله|اقوله|أقولها|اقولها|أطمنه|اطمنه|أطمنها|أتصرف|اتصرف|أعمل إيه|اعمل ايه|أعمل ايه|اعمل إيه|علامات الخطر|علامات التحذير|آخد بالي|أخد بالي|اخد بالي|أنقذه|انقذه|أحميه|احميه|أمنعه|امنعه|أوقفه|اوقفه)/;
 // Facilitation spans are "tempered": between the enabling verb and the death verb no relative-clause,
@@ -98,24 +106,28 @@ const FACILITATION_REQUEST = new RegExp(
     String.raw`\b(?:help|support|assist)\b(?:(?!\b(?:who|that|says?|said|not|stop|from)\b)[^.?!؟\n]){0,45}\b(?:die|kill (?:him|her|them)sel(?:f|ves)|end (?:his|her|their) life|commit suicide)\b`,
     String.raw`\b(?:pills?|drugs?|poison)\b[^.?!؟\n]{0,45}\b(?:give|slip|hand)\b|\b(?:give|slip|hand)\b[^.?!؟\n]{0,45}\b(?:pills?|drugs?|poison)\b`,
     String.raw`\b(?:what|which)\s+(?:method|way|pills?|drugs?)s?\b[^.?!؟\n]{0,60}\b(?:him|her|them)\b(?![^.?!؟\n]{0,25}\b(?:get|seek|find)\s+help\b)`,
-    String.raw`\b(?:most effective|fastest|quickest|easiest|best|painless)\s+(?:way|method)s?\b(?![^.?!؟\n]{0,35}\b(?:to|of)\s+(?:help|support|talk|convinc|calm|stop|get|reach|approach))`,
-    String.raw`\btell (?:him|her|them)\b[^.?!؟\n]{0,30}\b(?:use|take|method)\b`,
+    String.raw`\b(?:most effective|fastest|quickest|easiest|best|painless)\s+(?:\w+\s+){0,2}(?:way|method)s?\b(?![^.?!؟\n]{0,35}\b(?:to|of)\s+(?:help|support|talk|convinc|calm|stop|get|reach|approach))`,
+    String.raw`\btell (?:him|her|them)\b[^.?!؟\n]{0,30}\b(?:method|pills?|overdose|rope)\b|\b(?:method|pills?)\b[^.?!؟\n]{0,30}\btell (?:him|her|them)\b`,
   ].join('|'),
   'i',
 );
+// Arabic facilitation requires locally bound lethal/method semantics: a bare give/tell verb
+// ("أديله رقم دكتور", "أقوله يعمل إيه عشان يطلب مساعدة") is not facilitation; an open means
+// question ("أديله إيه", "يستخدم إيه") or a harmful object bound to the verb is.
 const FACILITATION_REQUEST_AR = new RegExp(
   [
     '(?:أساعد|اساعد|ساعد|أدعم|ادعم)(?:(?!اللي|إللي|بيقول|قال|عشان ما|علشان ما|مش|ما )[\\s\\S]){0,30}(?:يموت|تموت|ينتحر|تنتحر|ينهي حياته|يقتل نفسه)',
-    '(?:أقوله|اقوله|أقول له|اقول له|أقولها|اقولها)[\\s\\S]{0,15}(?:يستخدم|تستخدم|ياخد|تاخد|يعمل)',
     '(?:يستخدم|تستخدم|ياخد|تاخد)\\s*(?:إيه|ايه)',
-    '(?:أديله|اديله|أجيبله|اجيبله|أديلها|اديلها)',
+    '(?:أقوله|اقوله|أقول له|اقول له|أقولها|اقولها)[\\s\\S]{0,15}(?:يستخدم|ياخد)[^.؟!\\n]{0,20}(?:حبوب|سم|سلاح|سكينة|حبل|جرعة)',
+    '(?:أديله|اديله|أجيبله|اجيبله|أديلها|اديلها)\\s*(?:إيه|ايه)',
+    '(?:أديله|اديله|أجيبله|اجيبله|أديلها|اديلها)[^.؟!\\n]{0,20}(?:حبوب|سم|سلاح|سكينة|حبل|جرعة)',
     '(?:من غير ما حد يلحقه|قبل ما حد يلحقه|من غير ما حد يعرف|أسرع طريقة|اسرع طريقة)',
   ].join('|'),
   'u',
 );
 // Removing these third-person constructions before first-person analysis prevents "he wants to
 // kill himself" or Arabic "ينتحر" from masquerading as the user's own self-harm statement.
-const THIRD_PERSON_SELF_HARM_PHRASES = /\b(?:kill(?:s|ing)? (?:him|her|them)sel(?:f|ves)|end(?:s|ing)? (?:his|her|their) (?:own )?life|hurt(?:s|ing)? (?:him|her)self|wants? to die|from committing suicide|(?:he|she|they)\s+(?:can|could|will|would)\s*die)\b|(?:هينتحر|ينتحر|تنتحر|هيقتل نفسه|يقتل نفسه|تقتل نفسها|يأذي نفسه|يؤذي نفسه|ينهي حياته|هينهي حياته|يجرح نفسه|عايز يموت|عاوز يموت|عايزة تموت)/gi;
+const THIRD_PERSON_SELF_HARM_PHRASES = /\b(?:kill(?:s|ing)? (?:him|her|them)sel(?:f|ves)|end(?:s|ing)? (?:his|her|their) (?:own )?life|hurt(?:s|ing)? (?:him|her)self|wants to die|(?:who|he|she|they) want to die|from committing suicide|(?:he|she|they)\s+(?:can|could|will|would)\s*die)\b|(?:هينتحر|ينتحر|تنتحر|هيقتل نفسه|يقتل نفسه|تقتل نفسها|يأذي نفسه|يؤذي نفسه|ينهي حياته|هينهي حياته|يجرح نفسه|عايز يموت|عاوز يموت|عايزة تموت)/gi;
 // Bounded euphemisms that count as risk evidence when they appear inside reported speech.
 const QUOTED_RISK_EUPHEMISM = /\bend it(?: all)?\b|\b(?:i )?(?:can'?t|cannot) go on\b|(?:أرتاح من الدنيا|أخلص من نفسي|خلاص هرتاح|عايز أرتاح خلاص|هخلص على نفسي)/i;
 const QUOTED_SPEECH = /"[^"\n]{1,300}"|“[^”\n]{1,300}”|«[^»\n]{1,300}»/g;
@@ -144,18 +156,20 @@ export class SafetyResponseGateService implements SafetyResponseGate {
       deterministicResponse: THIRD_PARTY_FACILITATION_RESPONSES[language],
     });
 
-    // Medical crisis first: current acute facts outrank every benign frame. A clearly past-bound
-    // event releases the block only when no marker presents the state as current or ongoing.
+    // Medical crisis first: current acute facts outrank every benign frame. Temporality is bound
+    // per clause: a historical marker releases only the clause it appears in, so a past event can
+    // never release a separate, currently acute clause in the same message.
     if (MEDICAL_EMERGENCY.test(currentTurn) && ACUTE_PERSON_CONTEXT.test(currentTurn)) {
-      const historicallyResolved =
-        MEDICAL_PAST_BOUND.test(currentTurn) &&
-        !IMMINENT_TIME.test(currentTurn) &&
-        !MEDICAL_ONGOING_STATE.test(currentTurn);
-      if (!historicallyResolved) return block('HIGH_STAKES_MEDICAL_CRISIS');
+      const emergencyClauses = currentTurn.split(MEDICAL_CLAUSE_SPLIT).filter((clause) => MEDICAL_EMERGENCY.test(clause));
+      const everyEmergencyClauseHistorical = emergencyClauses.every((clause) =>
+        MEDICAL_PAST_BOUND.test(clause) && !IMMINENT_TIME.test(clause) && !MEDICAL_ONGOING_STATE.test(clause),
+      );
+      if (!everyEmergencyClauseHistorical) return block('HIGH_STAKES_MEDICAL_CRISIS');
     }
 
     const frame = this.buildSelfHarmActorFrame(currentTurn);
-    const firstPersonRisk = SELF_HARM_ACTION.test(frame.firstPersonSurface);
+    const firstPersonRisk =
+      SELF_HARM_ACTION.test(frame.firstPersonSurface) || FIRST_PERSON_DEATH_WISH.test(frame.firstPersonSurface);
     const methodSeeking = METHOD_SEEKING.test(frame.dequoted);
     const thirdPartyAtRisk =
       frame.quotedThirdPartyRisk ||
@@ -167,9 +181,11 @@ export class SafetyResponseGateService implements SafetyResponseGate {
       SUICIDE_TOPIC.test(currentTurn) || SELF_HARM_ACTION.test(currentTurn) ||
       THIRD_PERSON_RISK_STATE.test(currentTurn) || frame.quotedThirdPartyRisk;
 
-    // 1) Direct user intent with imminence or means.
+    // 1) Direct user intent with imminence or means. A first-person death wish plus imminence or
+    //    means is treated like decided intent (fail closed).
     if (
-      firstPersonRisk && DECIDED_INTENT.test(frame.firstPersonSurface) &&
+      firstPersonRisk &&
+      (DECIDED_INTENT.test(frame.firstPersonSurface) || FIRST_PERSON_DEATH_WISH.test(frame.firstPersonSurface)) &&
       (IMMINENT_TIME.test(frame.dequoted) || HARM_MEANS.test(frame.firstPersonSurface))
     ) {
       return block('SELF_HARM_OR_SUICIDE');
@@ -209,8 +225,9 @@ export class SafetyResponseGateService implements SafetyResponseGate {
     if (contextual) return block(contextual);
 
     // 5) Third-party support or reported third-party crisis: guide as a supporter, never as if
-    //    the user were the suicidal actor.
-    if (thirdPartyAtRisk && !CLEAR_FIGURATIVE_IDIOM.test(currentTurn)) {
+    //    the user were the suicidal actor. The user's own first-person risk always takes
+    //    precedence over the supporter reading.
+    if (thirdPartyAtRisk && !firstPersonRisk && !CLEAR_FIGURATIVE_IDIOM.test(currentTurn)) {
       return { category: 'SELF_HARM_OR_SUICIDE', disposition: 'GUIDED', safetyGuidance: THIRD_PARTY_SUPPORT_GUIDANCE };
     }
     // 6) First-person non-imminent disclosure and ambiguous first-person wording.
@@ -259,7 +276,11 @@ export class SafetyResponseGateService implements SafetyResponseGate {
     currentTurn: string,
     context: ReadonlyArray<ModelRouterContextMessage>,
   ): 'SELF_HARM_OR_SUICIDE' | 'VIOLENCE_OR_HARM_TO_OTHERS' | 'THIRD_PARTY_FACILITATION' | undefined {
-    if (!INCOMPLETE_HARM_FOLLOW_UP.test(currentTurn) || INFORMATIONAL_FRAME.test(currentTurn)) return undefined;
+    // Actionable method-seeking outranks informational framing in the CURRENT turn: after a real
+    // risk disclosure, "For research, what's the best method?" is still a harmful follow-up. A
+    // benign informational PRIOR (checked below) is what releases the follow-up, not current-turn
+    // frame words.
+    if (!INCOMPLETE_HARM_FOLLOW_UP.test(currentTurn)) return undefined;
 
     const priorUserTurns = context.slice(0, -1)
       .filter((message) => message.role === 'USER' && message.content !== currentTurn)
