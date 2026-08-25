@@ -11,14 +11,18 @@ if (!databaseUrl) {
   throw new Error('DATABASE_URL is required. Add it to the ignored local .env file.');
 }
 
+// Final-state policy expectations. Migration 0002 created permissive
+// conversation_turns INSERT/UPDATE policies; migration 0025 (Conversation
+// Authority Hardening) drops them so conversational authority is server-only.
+// This verifier proves the hardened effective state, not the superseded 0002
+// grant. Migration 0002's historical text is left intact and asserted by
+// database/tests/auth-rls.test.mjs.
 const expectedPolicies = new Map([
   ['users_select_own', ['users', 'SELECT']],
   ['conversation_sessions_select_own', ['conversation_sessions', 'SELECT']],
   ['conversation_sessions_insert_own', ['conversation_sessions', 'INSERT']],
   ['conversation_sessions_update_own', ['conversation_sessions', 'UPDATE']],
   ['conversation_turns_select_own', ['conversation_turns', 'SELECT']],
-  ['conversation_turns_insert_own', ['conversation_turns', 'INSERT']],
-  ['conversation_turns_update_own', ['conversation_turns', 'UPDATE']],
 ]);
 const migrationUrl = new URL('./migrations/0002_supabase_auth_identity_rls.sql', import.meta.url);
 const migrationSql = await readFile(migrationUrl, 'utf8');
@@ -132,9 +136,11 @@ async function verifyTablePrivileges() {
     ['authenticated', 'conversation_sessions', 'INSERT', true],
     ['authenticated', 'conversation_sessions', 'UPDATE', true],
     ['authenticated', 'conversation_sessions', 'DELETE', false],
+    // conversation_turns is read-only for authenticated after migration 0025:
+    // all write authority flows through server-owned definer commands.
     ['authenticated', 'conversation_turns', 'SELECT', true],
-    ['authenticated', 'conversation_turns', 'INSERT', true],
-    ['authenticated', 'conversation_turns', 'UPDATE', true],
+    ['authenticated', 'conversation_turns', 'INSERT', false],
+    ['authenticated', 'conversation_turns', 'UPDATE', false],
     ['authenticated', 'conversation_turns', 'DELETE', false],
   ];
 

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { ConversationExchange, ConversationSession, ConversationTurn } from './conversation.types';
 import { SupabaseDataApiService } from './supabase-data-api.service';
+import { SupabaseServiceRoleApiService } from './supabase-service-role-api.service';
 import { CorrelationService } from '../observability/correlation.service';
 
 const SESSION_FIELDS = 'id,status,channel,created_at,updated_at,last_activity_at,closed_at';
@@ -9,7 +10,11 @@ const TURN_FIELDS = 'id,session_id,role,status,content,processing_path,routing_r
 
 @Injectable()
 export class ConversationRepository {
-  constructor(private readonly dataApi: SupabaseDataApiService,private readonly correlation:CorrelationService) {}
+  constructor(
+    private readonly dataApi: SupabaseDataApiService,
+    private readonly serviceApi: SupabaseServiceRoleApiService,
+    private readonly correlation:CorrelationService,
+  ) {}
 
   async createSession(accessToken: string, id: string, userId: string): Promise<ConversationSession> {
     const rows = await this.dataApi.request<ConversationSession[]>(accessToken, 'conversation_sessions', {
@@ -26,14 +31,16 @@ export class ConversationRepository {
     return rows[0];
   }
 
+  // User-authored turn creation runs through the narrow authenticated definer
+  // command. The caller supplies only id/session/content/idempotency key; role,
+  // status, user identity, and every server-owned column are forced server-side
+  // (identity from auth.uid()). The unique-idempotency 409 path is preserved.
   async createTurn(accessToken: string, input: { id: string; sessionId: string; userId: string; content: string; idempotencyKey?: string }): Promise<ConversationTurn> {
-    const rows = await this.dataApi.request<ConversationTurn[]>(accessToken, 'conversation_turns', {
+    const rows = await this.dataApi.request<ConversationTurn[]>(accessToken, 'rpc/create_user_conversation_turn', {
       method: 'POST',
-      headers: { Prefer: 'return=representation' },
       body: JSON.stringify({
-        id: input.id, session_id: input.sessionId, user_id: input.userId,
-        role: 'USER', status: 'RECEIVED', content: input.content,
-        idempotency_key: input.idempotencyKey ?? null,
+        p_id: input.id, p_session_id: input.sessionId, p_content: input.content,
+        p_idempotency_key: input.idempotencyKey ?? null,
       }),
     });
     return rows[0];
@@ -97,25 +104,26 @@ export class ConversationRepository {
     });
   }
 
-  async claimTurn(accessToken: string, sessionId: string, userId: string, turnId: string, selection: { path: 'FAST' | 'DEEP'; reason: string }): Promise<ConversationTurn | undefined> {
-    const query = new URLSearchParams({ select: TURN_FIELDS, id: `eq.${turnId}`, session_id: `eq.${sessionId}`, user_id: `eq.${userId}`, status: 'eq.RECEIVED' });
-    const rows = await this.dataApi.request<ConversationTurn[]>(accessToken, `conversation_turns?${query}`, {
-      method: 'PATCH', headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({ status: 'GENERATING', processing_path: selection.path, routing_reason: selection.reason }),
+  // Claim / finalize / fail are server authority. They run through the explicit
+  // service-role channel — never a caller-supplied user token — and each definer
+  // command still validates session/source ownership, role, and state.
+  async claimTurn(sessionId: string, userId: string, turnId: string, selection: { path: 'FAST' | 'DEEP'; reason: string }): Promise<ConversationTurn | undefined> {
+    const rows = await this.serviceApi.rpc<ConversationTurn[]>('claim_conversation_turn', {
+      p_session_id: sessionId, p_user_id: userId, p_source_turn_id: turnId,
+      p_processing_path: selection.path, p_routing_reason: selection.reason,
     });
     return rows[0];
   }
 
-  async finalizeTurn(accessToken: string, input: { sessionId: string; userId: string; sourceTurnId: string; assistantTurnId: string; content: string; safetyDisposition:'ALLOW'|'GUIDED'|'BLOCK' }): Promise<{ userTurn: ConversationTurn; assistantTurn: ConversationTurn } | undefined> {
-    const rows = await this.dataApi.request<Array<{ user_turn: ConversationTurn; assistant_turn: ConversationTurn }>>(accessToken, 'rpc/finalize_conversation_turn', {
-      method: 'POST',
-      body: JSON.stringify({ p_session_id: input.sessionId, p_user_id: input.userId, p_source_turn_id: input.sourceTurnId, p_assistant_turn_id: input.assistantTurnId, p_content: input.content,p_safety_disposition:input.safetyDisposition,...this.eventMetadata() }),
+  async finalizeTurn(input: { sessionId: string; userId: string; sourceTurnId: string; assistantTurnId: string; content: string; safetyDisposition:'ALLOW'|'GUIDED'|'BLOCK' }): Promise<{ userTurn: ConversationTurn; assistantTurn: ConversationTurn } | undefined> {
+    const rows = await this.serviceApi.rpc<Array<{ user_turn: ConversationTurn; assistant_turn: ConversationTurn }>>('finalize_conversation_turn', {
+      p_session_id: input.sessionId, p_user_id: input.userId, p_source_turn_id: input.sourceTurnId, p_assistant_turn_id: input.assistantTurnId, p_content: input.content, p_safety_disposition: input.safetyDisposition, ...this.eventMetadata(),
     });
     return rows[0] ? { userTurn: rows[0].user_turn, assistantTurn: rows[0].assistant_turn } : undefined;
   }
 
-  async failTurn(accessToken: string, sessionId: string, userId: string, turnId: string): Promise<void> {
-    await this.dataApi.request(accessToken,'rpc/fail_conversation_turn',{method:'POST',body:JSON.stringify({p_session_id:sessionId,p_user_id:userId,p_source_turn_id:turnId,...this.eventMetadata()})});
+  async failTurn(sessionId: string, userId: string, turnId: string): Promise<void> {
+    await this.serviceApi.rpc('fail_conversation_turn', { p_session_id: sessionId, p_user_id: userId, p_source_turn_id: turnId, ...this.eventMetadata() });
   }
 
   async cancelTurn(accessToken: string, sessionId: string, turnId: string, userId: string): Promise<ConversationTurn | undefined> {

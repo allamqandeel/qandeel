@@ -117,7 +117,7 @@ describe('ConversationOrchestratorService', () => {
     expect(contextBuilder.build).toHaveBeenCalledWith('token', 'user', userTurn);
     expect(memoryRetriever.retrieve).toHaveBeenCalledWith('user', 'token', 'hello');
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
-    expect(repository.finalizeTurn).toHaveBeenCalledWith(expect.any(String),expect.objectContaining({safetyDisposition:'ALLOW'}));
+    expect(repository.finalizeTurn).toHaveBeenCalledWith(expect.objectContaining({safetyDisposition:'ALLOW'}));
     expect(memoryWriter.evaluateAndWrite).not.toHaveBeenCalled();
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
@@ -132,7 +132,7 @@ describe('ConversationOrchestratorService', () => {
     repository.claimTurn.mockResolvedValue(claimed);
     repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
     await orchestrator.orchestrate('token', 'user', userTurn);
-    expect(repository.claimTurn).toHaveBeenCalledWith('token', 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
+    expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'FAST', himContext }));
   });
 
@@ -324,7 +324,7 @@ describe('ConversationOrchestratorService', () => {
     repository.claimTurn.mockResolvedValue(deepClaim);
     repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
     await orchestrator.orchestrate('token', 'user', deepTurn);
-    expect(repository.claimTurn).toHaveBeenCalledWith('token', 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+    expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'DEEP', complexity: 'HIGH', himContext: expect.objectContaining({ consumptionMode: 'DEEP', contextId: 'session' }) }));
     expect(router.generate.mock.calls[0][0]).not.toHaveProperty('trend');
   });
@@ -333,7 +333,7 @@ describe('ConversationOrchestratorService', () => {
     repository.claimTurn.mockResolvedValue(claimed);
     router.generate.mockRejectedValue(new Error('private provider detail'));
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
-    expect(repository.failTurn).toHaveBeenCalledWith('token', 'session', 'user', 'user-turn');
+    expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
     expect(repository.finalizeTurn).not.toHaveBeenCalled();
     expect(memoryWriter.evaluateAndWrite).not.toHaveBeenCalled();
   });
@@ -414,7 +414,7 @@ describe('ConversationOrchestratorService', () => {
     expect(memoryRetriever.retrieve).not.toHaveBeenCalled();
     expect(behavioralPolicy.buildTextGuidance).not.toHaveBeenCalled();
     expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
-    expect(repository.finalizeTurn).toHaveBeenCalledWith(expect.any(String),expect.objectContaining({safetyDisposition:'BLOCK'}));
+    expect(repository.finalizeTurn).toHaveBeenCalledWith(expect.objectContaining({safetyDisposition:'BLOCK'}));
     expect(memoryWriter.evaluateAndWrite).not.toHaveBeenCalled();
     expect(himSelector.select).not.toHaveBeenCalled();
     expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
@@ -476,7 +476,7 @@ describe('ConversationOrchestratorService', () => {
     repository.claimTurn.mockResolvedValue(claimed);
     repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
     await orchestrator.orchestrate('token', 'user', userTurn);
-    expect(repository.finalizeTurn).toHaveBeenCalledWith(expect.any(String),expect.objectContaining({safetyDisposition:'GUIDED'}));
+    expect(repository.finalizeTurn).toHaveBeenCalledWith(expect.objectContaining({safetyDisposition:'GUIDED'}));
     expect(router.generate).toHaveBeenCalledTimes(1);
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
       safetyGuidance: 'server safety guidance',
@@ -537,7 +537,7 @@ describe('ConversationOrchestratorService', () => {
 
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(router.generate).not.toHaveBeenCalled();
-    expect(repository.failTurn).toHaveBeenCalledWith('token', 'session', 'user', 'user-turn');
+    expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
   });
 
   it('performs zero HIM calls for the COMPLETED early-return path', async () => {

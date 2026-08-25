@@ -5,6 +5,7 @@ import { ConversationController } from './conversation.controller';
 import { ConversationRepository } from './conversation.repository';
 import { ConversationService } from './conversation.service';
 import { SupabaseDataApiService } from './supabase-data-api.service';
+import { SupabaseServiceRoleApiService } from './supabase-service-role-api.service';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 import { ModelRouterModule } from '../model-router/model-router.module';
 import { CONTEXT_BUILDER } from './context-builder.types';
@@ -25,6 +26,7 @@ import { HypothesisModule } from '../hypothesis/hypothesis.module';
     SupabaseAuthService,
     SupabaseAuthGuard,
     SupabaseDataApiService,
+    SupabaseServiceRoleApiService,
     ConversationRepository,
     ContextBuilderService,
     { provide: CONTEXT_BUILDER, useExisting: ContextBuilderService },

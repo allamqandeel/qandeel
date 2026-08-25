@@ -97,6 +97,7 @@ test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () =>
   assert.match(apiCi, /paths: \[[^\n]*'tests\/\*\*'[^\n]*'package-lock\.json'/u);
   for (const command of [
     'verify:database:integration',
+    'verify:conversation-authority:integration',
     'verify:memory:integration',
     'verify:hypothesis:integration',
     'verify:confidence:integration',
@@ -123,6 +124,7 @@ test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () =>
 test('lets CI-provided database configuration run safe historical verifiers without a local env file', () => {
   for (const command of [
     'verify:database:integration',
+    'verify:conversation-authority:integration',
     'verify:memory:integration',
     'verify:hypothesis:integration',
     'verify:confidence:integration',
