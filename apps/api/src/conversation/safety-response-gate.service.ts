@@ -39,6 +39,12 @@ export const AMBIGUOUS_SAFETY_GUIDANCE = [
   'Do not use canned crisis language or provide harmful methods. Escalate only if the user confirms real or current danger.',
 ].join('\n');
 
+export const THIRD_PARTY_SELF_HARM_GUIDANCE = [
+  'The user is asking how to help, support, or recognize warning signs for someone else who may be at risk, not disclosing their own risk.',
+  'Offer practical, compassionate guidance for supporting that other person, including encouraging them toward appropriate human or professional support.',
+  'Do not address the user as if they are the one at risk, and do not provide self-harm methods.',
+].join('\n');
+
 const ARABIC = /[\u0600-\u06ff]/;
 const METHOD_SEEKING = /\b(?:how (?:can|do|would) i|ways? to|best (?:way|method)|methods? (?:to|for)|instructions? (?:to|for)|step[ -]by[ -]step)\b|(?:ازاي|إزاي|كيف|إيه أفضل طريقة|ايه افضل طريقة|أفضل طريقة|افضل طريقة|طريقة|طرق|خطوات|تعليمات)/i;
 const SELF_HARM_ACTION = /\b(?:kill(?:ing)? myself|end(?:ing)? my life|commit(?:ting)? suicide|hurt(?:ing)? myself|harm(?:ing)? myself|cut(?:ting)? myself|overdos(?:e|ing))\b|(?:أ?قتل نفسي|هقتل نفسي|أ?نتحر|هنتحر|أنهي حياتي|انهي حياتي|هأنهي حياتي|أؤذي نفسي|اؤذي نفسي|أأذي نفسي|اأذي نفسي|أجرح نفسي|اجرّح نفسي|جرح نفسي|أقطع شراييني|اقطع شراييني|جرعة زائدة)/i;
@@ -56,11 +62,14 @@ const INCOMPLETE_HARM_FOLLOW_UP = /\b(?:best method|what methods?|how do i do it
 const MINOR = /\b(?:child|children|kid|minor|underage|teen(?:ager)?|(?:1[0-7]|[0-9])[ -]?year[ -]?old)\b|(?:طفل|طفلة|أطفال|اطفال|قاصر|قاصرة|تحت السن|مراهق|مراهقة|عمره \d{1,2}|عمرها \d{1,2})/i;
 const SEXUAL = /\b(?:sex|sexual|nude|naked|porn|erotic|explicit (?:photo|image|video|scene))\b|(?:جنس|جنسي|جنسية|عاري|عارية|عراة|إباحي|اباحي|فاضح|فاضحة|مشهد مثير)/i;
 const CREATION_OR_REQUEST = /\b(?:write|create|make|generate|draw|show|find|send|describe|give me|tell me)\b|(?:اكتب|أنشئ|انشئ|اعمل|ارسم|وريني|ابعت|اوصف|صف|هات|اديني|قل لي)/i;
-const ILLEGAL_HARM = /\b(?:build|make|create|give|write|explain)\b[\s\S]{0,30}\b(?:bomb|explosive)\b|\b(?:write|create|deploy|spread|give)\b[\s\S]{0,50}\b(?:ransomware|destructive malware)\b|\b(?:steal|hack|give|explain)\b[\s\S]{0,50}\b(?:credential(?:s)?|password(?:s)?)\b|\b(?:poison|toxin)\b[\s\S]{0,70}\b(?:instructions?|steps?|recipe|undetected|without (?:being )?detected|evade)\b|\b(?:instructions?|steps?|step[ -]by[ -]step|recipe)\b[\s\S]{0,70}\b(?:bomb|explosive|ransomware|destructive malware|credential theft|poison|toxin)\b|(?:اصنع|أصنع|اعمل|اشرح|اديني)[\s\S]{0,50}(?:قنبلة|متفجرات|برمجية خبيثة|فدية|سرقة كلمات مرور|سم|مادة سامة)|(?:خطوات|تعليمات|طريقة)[\s\S]{0,70}(?:قنبلة|متفجرات|برمجية خبيثة|فدية|سرقة كلمات المرور|تسميم)/i;
+const ILLEGAL_HARM = /\b(?:build|make|create|give|write|explain)\b[\s\S]{0,30}\b(?:bomb|explosive)\b|\b(?:write|create|deploy|spread|give)\b[\s\S]{0,50}\b(?:ransomware|destructive malware)\b|\b(?:steal|hack|crack|phish|brute[- ]force|obtain|extract)\b[\s\S]{0,50}\b(?:credential(?:s)?|password(?:s)?)\b|\b(?:poison|toxin)\b[\s\S]{0,70}\b(?:instructions?|steps?|recipe|undetected|without (?:being )?detected|evade)\b|\b(?:instructions?|steps?|step[ -]by[ -]step|recipe)\b[\s\S]{0,70}\b(?:bomb|explosive|ransomware|destructive malware|credential theft|poison|toxin)\b|(?:اصنع|أصنع|اعمل|اشرح|اديني)[\s\S]{0,50}(?:قنبلة|متفجرات|برمجية خبيثة|فدية|سرقة كلمات مرور|سم|مادة سامة)|(?:خطوات|تعليمات|طريقة)[\s\S]{0,70}(?:قنبلة|متفجرات|برمجية خبيثة|فدية|سرقة كلمات المرور|تسميم)/i;
 const MEDICAL_EMERGENCY = /\b(?:can't breathe|cannot breathe|severe chest pain|signs? of (?:a )?stroke|face droop|severe bleeding|won't stop bleeding|unconscious|not breathing|anaphylaxis|severe allergic reaction|overdos(?:e|ed)|seizure)\b|(?:مش قادر أتنفس|مش قادرة أتنفس|لا أستطيع التنفس|ألم شديد في الصدر|الم شديد في الصدر|علامات جلطة|نزيف شديد|النزيف مش بيقف|فاقد الوعي|لا يتنفس|حساسية شديدة|جرعة زائدة|تشنجات)/i;
 const ACUTE_PERSON_CONTEXT = /\b(?:i have|i'm having|i am having|my |he is|he's|she is|she's|they are|they're|someone is|right now|just )\b|(?:عندي|عنده|عندها|معايا|معاه|معاها|أنا|انا|هو |هي |دلوقتي|الآن|الان|حالًا|حالا)/i;
 const INFORMATIONAL_FRAME = /\b(?:history|historical|research|news|reported|documentary|fiction|fictional|novel|movie|film|video game|game boss|prevention)\b|(?:تاريخ|تاريخي|تاريخية|بحث|الأخبار|الاخبار|خبر|وثائقي|خيالي|خيالية|رواية|فيلم|لعبة|في اللعبة|وقاية)/i;
 const SAFETY_OR_PREVENTION_FRAME = /\b(?:bomb shelters?|bomb disposal|explosive detection|malware prevention|ransomware defense|credential theft prevention)\b|(?:ملجأ قنابل|التخلص من القنابل|كشف المتفجرات|منع البرمجيات الخبيثة|الحماية من الفدية)/i;
+const THIRD_PARTY_ATTACKER_FRAME = /\b(?:attacker|hacker|cybercriminal|scammer|fraudster|criminal)s?\b[\s\S]{0,20}\b(?:steal|hack|crack|phish|obtain)\b|(?:المهاجم|المهاجمون|المخترق|المخترقون|المحتال|المحتالون)[\s\S]{0,20}(?:يسرق|يسرقون|يخترق|يخترقون)/i;
+const THIRD_PARTY_HELP_SEEKING = /\b(?:help|support)(?:ing)?\s+(?:someone|a friend|my [a-z]+|him|her|them)\b|\bsomeone\s+(?:who(?:'s| is)|that(?:'s| is))?\s*(?:is\s+)?suicidal\b|\bwarning signs? of suicide\b|(?:أساعد|اساعد|ادعم|أدعم)\s*(?:حد|شخص|صاحبي|صاحبتي|صديقي|صديقتي|أخويا|اخويا|أختي|اختي)|علامات (?:التحذير|تحذيرية)/iu;
+const MEDICAL_NON_ACUTE_FRAME = /\b(?:last (?:year|month|week)|years? ago|used to have|recovery (?:time|process)?|how (?:long|common)|warning signs?|what (?:is|are|causes)|causes? of)\b|(?:من سنة|من سنه|قبل سنة|قبل سنه|فترة النقاهة|التعافي|ايه اسباب|ما هي اسباب|ما أسباب|علامات)/iu;
 
 @Injectable()
 export class SafetyResponseGateService implements SafetyResponseGate {
@@ -73,13 +82,19 @@ export class SafetyResponseGateService implements SafetyResponseGate {
     const methodSeeking = METHOD_SEEKING.test(currentTurn);
     const meansAndTiming = HARM_MEANS.test(currentTurn) && IMMINENT_TIME.test(currentTurn);
 
-    if (MEDICAL_EMERGENCY.test(currentTurn) && ACUTE_PERSON_CONTEXT.test(currentTurn)) {
+    const medicalNonAcute =
+      (INFORMATIONAL_FRAME.test(currentTurn) || MEDICAL_NON_ACUTE_FRAME.test(currentTurn)) &&
+      !IMMINENT_TIME.test(currentTurn);
+    if (MEDICAL_EMERGENCY.test(currentTurn) && ACUTE_PERSON_CONTEXT.test(currentTurn) && !medicalNonAcute) {
       return block('HIGH_STAKES_MEDICAL_CRISIS');
     }
     if (
       (explicitSelfHarm && DECIDED_INTENT.test(currentTurn) && (IMMINENT_TIME.test(currentTurn) || HARM_MEANS.test(currentTurn))) ||
       (methodSeeking && (explicitSelfHarm || SUICIDE_TOPIC.test(currentTurn)))
     ) {
+      if (!explicitSelfHarm && THIRD_PARTY_HELP_SEEKING.test(currentTurn)) {
+        return { category: 'SELF_HARM_OR_SUICIDE', disposition: 'GUIDED', safetyGuidance: THIRD_PARTY_SELF_HARM_GUIDANCE };
+      }
       return block('SELF_HARM_OR_SUICIDE');
     }
     if (
@@ -91,7 +106,11 @@ export class SafetyResponseGateService implements SafetyResponseGate {
     if (MINOR.test(currentTurn) && SEXUAL.test(currentTurn) && CREATION_OR_REQUEST.test(currentTurn)) {
       return block('SEXUAL_CONTENT_MINOR');
     }
-    if (!SAFETY_OR_PREVENTION_FRAME.test(currentTurn) && ILLEGAL_HARM.test(currentTurn)) {
+    if (
+      !SAFETY_OR_PREVENTION_FRAME.test(currentTurn) &&
+      !THIRD_PARTY_ATTACKER_FRAME.test(currentTurn) &&
+      ILLEGAL_HARM.test(currentTurn)
+    ) {
       return block('SEVERE_ILLEGAL_ACTIONABLE_HARM');
     }
 
