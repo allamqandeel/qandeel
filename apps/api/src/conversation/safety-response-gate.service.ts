@@ -108,6 +108,9 @@ const FACILITATION_REQUEST = new RegExp(
     String.raw`\b(?:what|which)\s+(?:method|way|pills?|drugs?)s?\b[^.?!؟\n]{0,60}\b(?:him|her|them)\b(?![^.?!؟\n]{0,25}\b(?:get|seek|find)\s+help\b)`,
     String.raw`\b(?:most effective|fastest|quickest|easiest|best|painless)\s+(?:\w+\s+){0,2}(?:way|method)s?\b(?![^.?!؟\n]{0,35}\b(?:to|of)\s+(?:help|support|talk|convinc|calm|stop|get|reach|approach))`,
     String.raw`\btell (?:him|her|them)\b[^.?!؟\n]{0,30}\b(?:method|pills?|overdose|rope)\b|\b(?:method|pills?)\b[^.?!؟\n]{0,30}\btell (?:him|her|them)\b`,
+    // Lethal PURPOSE binding: a transfer verb whose stated purpose is the person's death is
+    // facilitation regardless of the object ("give him something so he can die").
+    String.raw`\b(?:give|hand|buy|bring|get|send)\b[^.?!؟\n]{0,50}\bso (?:that )?(?:he|she|they)\b[^.?!؟\n]{0,15}\bdie\b`,
   ].join('|'),
   'i',
 );
@@ -121,6 +124,10 @@ const FACILITATION_REQUEST_AR = new RegExp(
     '(?:أقوله|اقوله|أقول له|اقول له|أقولها|اقولها)[\\s\\S]{0,15}(?:يستخدم|ياخد)[^.؟!\\n]{0,20}(?:حبوب|سم|سلاح|سكينة|حبل|جرعة)',
     '(?:أديله|اديله|أجيبله|اجيبله|أديلها|اديلها)\\s*(?:إيه|ايه)',
     '(?:أديله|اديله|أجيبله|اجيبله|أديلها|اديلها)[^.؟!\\n]{0,20}(?:حبوب|سم|سلاح|سكينة|حبل|جرعة)',
+    // Lethal PURPOSE binding: transfer verb + explicit death purpose, object-independent
+    // ("أديله حاجة عشان يموت"). Negated purposes ("عشان ما يموتش") do not match because the
+    // purpose marker must be immediately followed by the death verb.
+    '(?:أديله|اديله|أجيبله|اجيبله|أديلها|اديلها|أبعتله|ابعتله)[^.؟!\\n]{0,25}(?:عشان|علشان)\\s*(?:يموت|تموت|ينتحر|تنتحر)',
     '(?:من غير ما حد يلحقه|قبل ما حد يلحقه|من غير ما حد يعرف|أسرع طريقة|اسرع طريقة)',
   ].join('|'),
   'u',
@@ -130,6 +137,12 @@ const FACILITATION_REQUEST_AR = new RegExp(
 const THIRD_PERSON_SELF_HARM_PHRASES = /\b(?:kill(?:s|ing)? (?:him|her|them)sel(?:f|ves)|end(?:s|ing)? (?:his|her|their) (?:own )?life|hurt(?:s|ing)? (?:him|her)self|wants to die|(?:who|he|she|they) want to die|from committing suicide|(?:he|she|they)\s+(?:can|could|will|would)\s*die)\b|(?:هينتحر|ينتحر|تنتحر|هيقتل نفسه|يقتل نفسه|تقتل نفسها|يأذي نفسه|يؤذي نفسه|ينهي حياته|هينهي حياته|يجرح نفسه|عايز يموت|عاوز يموت|عايزة تموت)/gi;
 // Bounded euphemisms that count as risk evidence when they appear inside reported speech.
 const QUOTED_RISK_EUPHEMISM = /\bend it(?: all)?\b|\b(?:i )?(?:can'?t|cannot) go on\b|(?:أرتاح من الدنيا|أخلص من نفسي|خلاص هرتاح|عايز أرتاح خلاص|هخلص على نفسي)/i;
+// Bounded UNQUOTED reported speech (Arabic): an explicit third-party speaker + speech verb
+// immediately followed by content up to the next clause boundary. Written Egyptian reported
+// speech commonly keeps the speaker's first person ("صاحبي قال لي أنا عايز أموت"), so that span
+// is attributed to the speaker when it carries risk content. This is speaker-marker bound and
+// clause-bounded — not a general reporting exemption; risk OUTSIDE the span stays the user's own.
+const UNQUOTED_REPORTED_SPEECH_AR = /((?:صاحبي|صاحبتي|أخويا|اخويا|أختي|اختي|ابني|بنتي|جوزي|مراتي|زميلي|زميلتي)\s*(?:قال لي|قالت لي|قال|قالت|بيقولي|بيقول لي|بيقول|بتقولي|بتقول لي|بتقول)\s*(?:إنه|انه|إنها|انها|إني|اني)?\s*)([^،.؟!\n]{1,60})/g;
 const QUOTED_SPEECH = /"[^"\n]{1,300}"|“[^”\n]{1,300}”|«[^»\n]{1,300}»/g;
 const THIRD_PARTY_SPEAKER = /(?:\b(?:my|our)\s+(?:best )?(?:friend|brother|sister|mom|mother|dad|father|son|daughter|husband|wife|cousin|colleague|coworker|classmate|roommate|neighbou?r|mate)\b|\b(?:he|she|they|someone|somebody)\b|(?:صاحبي|صاحبتي|أخويا|اخويا|أختي|اختي|ابني|بنتي|جوزي|مراتي|زميلي|زميلتي))[\s\S]{0,30}(?:\b(?:said|says|texted|told\s+(?:me|us)|wrote|messaged|sent|posted)\b|(?:قال|قالت|قالوا|بعت|بعتت|كتب|كتبت|باعت))(?:\s*(?:لي|لنا|me|to me|:|,))?\s*$/i;
 // Arabic بعت/كتبت are person-ambiguous in written Egyptian; the self reading requires an explicit
@@ -156,20 +169,19 @@ export class SafetyResponseGateService implements SafetyResponseGate {
       deterministicResponse: THIRD_PARTY_FACILITATION_RESPONSES[language],
     });
 
-    // Medical crisis first: current acute facts outrank every benign frame. Temporality is bound
-    // per clause: a historical marker releases only the clause it appears in, so a past event can
-    // never release a separate, currently acute clause in the same message.
-    if (MEDICAL_EMERGENCY.test(currentTurn) && ACUTE_PERSON_CONTEXT.test(currentTurn)) {
-      const emergencyClauses = currentTurn.split(MEDICAL_CLAUSE_SPLIT).filter((clause) => MEDICAL_EMERGENCY.test(clause));
-      const everyEmergencyClauseHistorical = emergencyClauses.every((clause) =>
-        MEDICAL_PAST_BOUND.test(clause) && !IMMINENT_TIME.test(clause) && !MEDICAL_ONGOING_STATE.test(clause),
+    // Medical crisis first: current acute facts outrank every benign frame. Both temporality AND
+    // the person/acute context are bound per clause: an unrelated person mention or a historical
+    // marker in one clause neither creates nor releases an emergency in another clause.
+    if (MEDICAL_EMERGENCY.test(currentTurn)) {
+      const currentlyAcuteClause = currentTurn.split(MEDICAL_CLAUSE_SPLIT).some((clause) =>
+        MEDICAL_EMERGENCY.test(clause) && ACUTE_PERSON_CONTEXT.test(clause) &&
+        !(MEDICAL_PAST_BOUND.test(clause) && !IMMINENT_TIME.test(clause) && !MEDICAL_ONGOING_STATE.test(clause)),
       );
-      if (!everyEmergencyClauseHistorical) return block('HIGH_STAKES_MEDICAL_CRISIS');
+      if (currentlyAcuteClause) return block('HIGH_STAKES_MEDICAL_CRISIS');
     }
 
     const frame = this.buildSelfHarmActorFrame(currentTurn);
-    const firstPersonRisk =
-      SELF_HARM_ACTION.test(frame.firstPersonSurface) || FIRST_PERSON_DEATH_WISH.test(frame.firstPersonSurface);
+    const firstPersonRisk = this.isFirstPersonRisk(frame.firstPersonSurface);
     const methodSeeking = METHOD_SEEKING.test(frame.dequoted);
     const thirdPartyAtRisk =
       frame.quotedThirdPartyRisk ||
@@ -191,7 +203,12 @@ export class SafetyResponseGateService implements SafetyResponseGate {
       return block('SELF_HARM_OR_SUICIDE');
     }
     // 2) Direct user method-seeking, or generic suicide method-seeking not bound to a third party.
-    if (methodSeeking && (firstPersonRisk || (SUICIDE_TOPIC.test(frame.dequoted) && !thirdPartyAtRisk))) {
+    //    Incomplete method requests ("What should I use?") count when the user themself is at
+    //    risk in the same turn — a direct risk plus an actionable follow-up fails closed.
+    if (
+      (methodSeeking || INCOMPLETE_HARM_FOLLOW_UP.test(frame.dequoted)) &&
+      (firstPersonRisk || (SUICIDE_TOPIC.test(frame.dequoted) && !thirdPartyAtRisk))
+    ) {
       return block('SELF_HARM_OR_SUICIDE');
     }
     // 3) Facilitation of another person's death is blocked regardless of helper framing.
@@ -230,8 +247,13 @@ export class SafetyResponseGateService implements SafetyResponseGate {
     if (thirdPartyAtRisk && !firstPersonRisk && !CLEAR_FIGURATIVE_IDIOM.test(currentTurn)) {
       return { category: 'SELF_HARM_OR_SUICIDE', disposition: 'GUIDED', safetyGuidance: THIRD_PARTY_SUPPORT_GUIDANCE };
     }
-    // 6) First-person non-imminent disclosure and ambiguous first-person wording.
-    if (firstPersonRisk && NON_IMMINENT_DISCLOSURE.test(frame.firstPersonSurface) && !CLEAR_FIGURATIVE_IDIOM.test(currentTurn)) {
+    // 6) First-person non-imminent disclosure and ambiguous first-person wording. A first-person
+    //    death wish is itself a credible disclosure — it never falls through to ALLOW.
+    if (
+      firstPersonRisk &&
+      (NON_IMMINENT_DISCLOSURE.test(frame.firstPersonSurface) || FIRST_PERSON_DEATH_WISH.test(frame.firstPersonSurface)) &&
+      !CLEAR_FIGURATIVE_IDIOM.test(currentTurn)
+    ) {
       return { category: 'SELF_HARM_OR_SUICIDE', disposition: 'GUIDED', safetyGuidance: SELF_HARM_GUIDANCE };
     }
     if (AMBIGUOUS_SELF_HARM.test(frame.firstPersonSurface) && !DECIDED_INTENT.test(frame.firstPersonSurface) && !CLEAR_FIGURATIVE_IDIOM.test(currentTurn)) {
@@ -268,8 +290,26 @@ export class SafetyResponseGateService implements SafetyResponseGate {
       lastIndex = match.index + match[0].length;
     }
     dequoted += currentTurn.slice(lastIndex);
+    // Bounded unquoted reported speech: content immediately after a third-party speaker marker,
+    // up to the next clause boundary, is the speaker's — not the user's — when it carries risk.
+    dequoted = dequoted.replace(new RegExp(UNQUOTED_REPORTED_SPEECH_AR.source, 'g'), (match, speaker: string, span: string) => {
+      if (
+        SELF_HARM_ACTION.test(span) || FIRST_PERSON_DEATH_WISH.test(span) || SUICIDE_TOPIC.test(span) ||
+        DECIDED_INTENT.test(span) || HARM_MEANS.test(span) || QUOTED_RISK_EUPHEMISM.test(span)
+      ) {
+        quotedThirdPartyRisk = true;
+        return speaker;
+      }
+      return match;
+    });
     const firstPersonSurface = dequoted.replace(new RegExp(THIRD_PERSON_SELF_HARM_PHRASES.source, 'gi'), ' ');
     return { dequoted, firstPersonSurface, quotedThirdPartyRisk };
+  }
+
+  // Single definition of first-person self-harm risk, shared by the current-turn ladder and the
+  // contextual prior-turn ownership logic so the two paths can never diverge.
+  private isFirstPersonRisk(firstPersonSurface: string): boolean {
+    return SELF_HARM_ACTION.test(firstPersonSurface) || FIRST_PERSON_DEATH_WISH.test(firstPersonSurface);
   }
 
   private contextualCategory(
@@ -287,21 +327,26 @@ export class SafetyResponseGateService implements SafetyResponseGate {
       .map((message) => message.content)
       .reverse();
     const mostRecentRelevant = priorUserTurns.find((content) =>
-      SELF_HARM_ACTION.test(content) || SUICIDE_TOPIC.test(content) || THIRD_PERSON_RISK_STATE.test(content) ||
-      VIOLENT_ACTION.test(content) || INFORMATIONAL_FRAME.test(content),
+      SELF_HARM_ACTION.test(content) || FIRST_PERSON_DEATH_WISH.test(content) || SUICIDE_TOPIC.test(content) ||
+      THIRD_PERSON_RISK_STATE.test(content) || VIOLENT_ACTION.test(content) || INFORMATIONAL_FRAME.test(content),
     );
     if (!mostRecentRelevant || INFORMATIONAL_FRAME.test(mostRecentRelevant)) return undefined;
 
     // Prior third-party risk (support or otherwise) + a method-seeking follow-up fails closed as
-    // facilitation, without reinterpreting the user as the suicidal actor.
+    // facilitation, without reinterpreting the user as the suicidal actor. Prior first-person
+    // risk uses the same shared definition as the current-turn ladder.
     const priorFrame = this.buildSelfHarmActorFrame(mostRecentRelevant);
     const priorThirdParty =
       priorFrame.quotedThirdPartyRisk ||
       (THIRD_PARTY_PERSON.test(priorFrame.dequoted) &&
         (THIRD_PERSON_RISK_STATE.test(priorFrame.dequoted) || SUICIDE_TOPIC.test(priorFrame.dequoted)));
-    const priorFirstPerson = SELF_HARM_ACTION.test(priorFrame.firstPersonSurface);
+    const priorFirstPerson = this.isFirstPersonRisk(priorFrame.firstPersonSurface);
     if (priorThirdParty && !priorFirstPerson) return 'THIRD_PARTY_FACILITATION';
-    if (priorFirstPerson && (DECIDED_INTENT.test(priorFrame.firstPersonSurface) || NON_IMMINENT_DISCLOSURE.test(priorFrame.firstPersonSurface))) {
+    if (
+      priorFirstPerson &&
+      (DECIDED_INTENT.test(priorFrame.firstPersonSurface) || NON_IMMINENT_DISCLOSURE.test(priorFrame.firstPersonSurface) ||
+        FIRST_PERSON_DEATH_WISH.test(priorFrame.firstPersonSurface))
+    ) {
       return 'SELF_HARM_OR_SUICIDE';
     }
     if (VIOLENT_ACTION.test(mostRecentRelevant) && VIOLENT_INTENT.test(mostRecentRelevant)) {
