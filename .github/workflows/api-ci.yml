@@ -73,5 +73,6 @@ jobs:
       - {name: Verify post-response intelligence dispatch ledger, run: npm run verify:post-response-intelligence-db:integration}
       - {name: Verify association provider effect key, run: npm run verify:association-provider-effect-key:integration}
       - {name: Verify durable Memory effect results, run: npm run verify:durable-memory-effect-result:integration}
+      - {name: Verify durable Association command results, run: npm run verify:durable-association-effect-result:integration}
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
 

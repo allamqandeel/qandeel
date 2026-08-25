@@ -31,6 +31,7 @@ The original Word documents remain the canonical archive. Markdown files record 
 - [Background Intelligence Repository Adapters v1](background-intelligence-repository-adapters-v1.md)
 - [Post-Response Intelligence Dispatch Runtime v1](post-response-intelligence-dispatch-runtime-v1.md)
 - [Durable Memory Effect Result Persistence v1](durable-memory-effect-result-persistence-v1.md)
+- [Durable Authorized Association Command Persistence v1](durable-association-command-persistence-v1.md)
 
 ## Recommended implementation-facing set
 
