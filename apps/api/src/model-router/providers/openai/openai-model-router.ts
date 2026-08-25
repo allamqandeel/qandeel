@@ -34,7 +34,7 @@ interface OpenAIResponsesClient {
 }
 
 export class OpenAIModelRouter implements ModelRouter {
-  static fromEnvironment(telemetry:TelemetryService): OpenAIModelRouter {
+  static fromEnvironment(telemetry?:TelemetryService): OpenAIModelRouter {
     const config = loadOpenAIModelRouterConfig();
     return new OpenAIModelRouter(config, createOpenAIClient(config),telemetry);
   }
