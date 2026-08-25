@@ -45,7 +45,7 @@ export class ConversationOrchestratorService {
     }
 
     const selection = this.selectPath(userTurn.content);
-    const claimed = await this.repository.claimTurn(accessToken, userTurn.session_id, userId, userTurn.id, selection);
+    const claimed = await this.repository.claimTurn(userTurn.session_id, userId, userTurn.id, selection);
     if (!claimed) {
       return this.currentResult(accessToken, userId, userTurn);
     }
@@ -54,7 +54,7 @@ export class ConversationOrchestratorService {
       const context = await this.engine('context_builder',selection.path,()=>this.contextBuilder.build(accessToken, userId, userTurn));
       const safety = await this.engine('safety_gate',selection.path,()=>this.safetyGate.evaluate(userTurn.content, context));
       if (safety.disposition === 'BLOCK') {
-        const finalized = await this.repository.finalizeTurn(accessToken, {
+        const finalized = await this.repository.finalizeTurn({
           sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
           assistantTurnId: randomUUID(), content: safety.deterministicResponse!, safetyDisposition: safety.disposition,
         });
@@ -95,7 +95,7 @@ export class ConversationOrchestratorService {
         costBudget: 'LOW', safetyLevel: 'STANDARD',
       }));
       if (hypothesisResult.coverageState === 'AVAILABLE') this.telemetry.recordHypothesisContext('consumed', selection.path, hypothesisResult.context.contractVersion, hypothesisResult.context.candidateHypothesisCount, hypothesisResult.context.includedHypothesisCount);
-      const finalized = await this.repository.finalizeTurn(accessToken, {
+      const finalized = await this.repository.finalizeTurn({
         sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
         assistantTurnId: randomUUID(), content: candidate.content, safetyDisposition: safety.disposition,
       });
@@ -104,7 +104,7 @@ export class ConversationOrchestratorService {
       return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
     } catch {
       this.telemetry.recordTurnOutcome('failed',selection.path);
-      await this.repository.failTurn(accessToken, userTurn.session_id, userId, userTurn.id);
+      await this.repository.failTurn(userTurn.session_id, userId, userTurn.id);
       throw new ServiceUnavailableException('Conversation generation failed.');
     }};
     if(!this.correlation.current())return execute();this.correlation.bindCanonical(claimed.session_id,claimed.id);return this.correlation.withOrchestration(execute);
