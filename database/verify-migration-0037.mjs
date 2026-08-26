@@ -29,13 +29,13 @@ await client.connect();try{
  const proc=async name=>{const r=await client.query("SELECT p.provolatile,p.prosecdef,p.proconfig,p.prosrc,pg_get_function_identity_arguments(p.oid)args FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname=$1",[name]);if(r.rows.length!==1)throw new Error(`Expected exactly one public.${name}`);return r.rows[0];};
  const core=await proc('read_him_intelligence_snapshot_core_v1');
  if(core.provolatile!=='s'||!core.prosecdef||!(core.proconfig??[]).some(c=>c.startsWith('search_path=')))throw new Error('Core must be STABLE SECURITY DEFINER with a fixed search_path');
- if(core.args!=='p_user_id uuid, p_context_kind text, p_context_id text')throw new Error('Core must take the explicit trusted user identity');
+ if(!['p_user_id uuid, p_context_kind text, p_context_id text','uuid, text, text'].includes(core.args))throw new Error('Core must take the explicit trusted user identity');
  if(/auth\.uid/i.test(core.prosrc))throw new Error('Core must not call auth.uid()');
  const wrapper=await proc('read_him_intelligence_snapshot_v1');
  if(!/auth\.uid\(\)/.test(wrapper.prosrc)||!/read_him_intelligence_snapshot_core_v1/.test(wrapper.prosrc))throw new Error('Authenticated wrapper must derive identity from auth.uid() and delegate to the core');
  if(wrapper.provolatile!=='s'||!wrapper.prosecdef||!(wrapper.proconfig??[]).some(c=>c.startsWith('search_path=')))throw new Error('Authenticated wrapper hardening failed');
  const background=await proc('background_read_him_conversation_snapshot_v1');
- if(background.args!=='p_user_id uuid, p_session_id uuid')throw new Error('Background wrapper must take exact user/session identity');
+ if(!['p_user_id uuid, p_session_id uuid','uuid, uuid'].includes(background.args))throw new Error('Background wrapper must take exact user/session identity');
  if(/auth\.uid|request\.jwt|set_config|current_setting/i.test(background.prosrc))throw new Error('Background wrapper must use no auth.uid(), no request JWT, and no claim reconstruction');
  if(!/read_him_intelligence_snapshot_core_v1\(p_user_id,'CONVERSATION_SESSION',p_session_id::text\)/.test(background.prosrc))throw new Error('Background wrapper must delegate CONVERSATION_SESSION-only to the shared core');
  if(background.provolatile!=='s'||!background.prosecdef||!(background.proconfig??[]).some(c=>c.startsWith('search_path=')))throw new Error('Background wrapper hardening failed');

@@ -82,7 +82,7 @@ const INSTRUCTIONS = [
   'An UNKNOWN himContext metric must remain unknown; never fill, guess, or reinterpret it.',
   'Do not infer trends from a single himContext snapshot, and do not infer diagnosis, fixed personality, traits, certainty, or readiness from it.',
   'Never manufacture Evidence IDs from himContext; only the supplied Evidence IDs are valid Evidence identities.',
-  'himContext may help form or distinguish plausible hypotheses but cannot bypass server validation or Evidence grounding, and must not be used to rank or select a winner.',
+  'himContext may help form or distinguish plausible hypotheses but cannot bypass server validation or the Evidence-based support rules, and must not be used to rank or select a winner.',
 ].join(' ');
 
 function requestBody(request: HypothesisGenerationRequest, config: HypothesisCandidateGenerationGeminiConfig) {
