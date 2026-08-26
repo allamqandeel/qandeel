@@ -12,7 +12,10 @@
 // HYPOTHESIS_PERSISTENCE (generated graph + CANDIDATE → ACTIVE admission +
 // immutable lifecycle audit, all before durable completion) → managed
 // QAN-AUD-06 generation Confidence Batch against the exact ACTIVE version →
-// terminal COMPLETED → Redis ACK → duplicate-delivery zero replay.
+// idempotent Information Gap synchronization from the exact durable Confidence
+// receipts (one internal gap per exact actionable missing-information source,
+// zero Question Candidates, calibration-only code excluded) → terminal
+// COMPLETED → Redis ACK → duplicate-delivery zero replay.
 //
 // Deterministic in-process doubles stand in ONLY at the three model/provider
 // boundaries; every authority, validation, durability, mutation and Confidence
@@ -91,6 +94,16 @@ const SOURCE_TURN_TEXT = 'I decided to train every morning even though I keep sk
 const ASSISTANT_TURN_TEXT = 'Acknowledged — a deterministic assistant response for the A2 runtime smoke.';
 const SEEDED_HYPOTHESIS_STATEMENT = 'Evening fatigue is the main reason planned training gets skipped.';
 const GENERATED_CANDIDATE_STATEMENT = 'Committing to a fixed morning training window reduces skipped sessions.';
+// Information Gap / Question Integration v1 fixture: one bounded explicit
+// assumption on each side, carried through the existing canonical creation
+// command (seeded) and the existing provider-double output (generated), so the
+// canonical Confidence Runtime itself reports UNVERIFIED_ASSUMPTIONS alongside
+// the intentionally present CONFIDENCE_MODEL_UNCALIBRATED. No Confidence row
+// is hand-inserted or patched.
+const SEEDED_HYPOTHESIS_ASSUMPTION = 'Evening fatigue persists on rest days.';
+const GENERATED_CANDIDATE_ASSUMPTION = 'A fixed morning window stays available on workdays.';
+const UNVERIFIED_ASSUMPTIONS_INFORMATION_NEEDED = 'One or more assumptions in the current Hypothesis remain unverified.';
+const UNVERIFIED_ASSUMPTIONS_WHY_IT_MATTERS = 'Confidence Runtime reported UNVERIFIED_ASSUMPTIONS for this exact Hypothesis version.';
 const INTENT_DOMAIN = 'DECISION' as const;
 const EXPECTED_EFFECT_KEYS = [
   'ASSOCIATION_PROVIDER',
@@ -199,7 +212,7 @@ async function main(): Promise<void> {
     // the canonical narrow server command, before finalization.
     const [seeded] = await db.asRole<{ id: string; version: number; status: string; origin: string; scope: string }>(
       'service_role', 'SELECT * FROM public.background_create_system_hypothesis_v1($1, $2, $3, $4, $5, $6, $7, $8)',
-      [userId, seededHypothesisId, SEEDED_HYPOTHESIS_STATEMENT, 'CAUSAL', 'GENERAL', sessionScope, [], []]);
+      [userId, seededHypothesisId, SEEDED_HYPOTHESIS_STATEMENT, 'CAUSAL', 'GENERAL', sessionScope, [SEEDED_HYPOTHESIS_ASSUMPTION], []]);
     assert.equal(seeded?.id, seededHypothesisId);
     assert.equal(seeded?.version, 1, 'seeded Hypothesis starts at version 1');
     assert.equal(seeded?.status, 'CANDIDATE');
@@ -239,7 +252,7 @@ async function main(): Promise<void> {
     // Providers exist and have never been called; nothing background has run.
     const associationProvider = new DeterministicAssociationProposalProvider(seededHypothesisId, 'SUPPORTING');
     const intentProvider = new DeterministicIntentExtractionProvider(INTENT_DOMAIN);
-    const candidateGenerator = new DeterministicCandidateGenerator(GENERATED_CANDIDATE_STATEMENT, 'BEHAVIORAL');
+    const candidateGenerator = new DeterministicCandidateGenerator(GENERATED_CANDIDATE_STATEMENT, 'BEHAVIORAL', [GENERATED_CANDIDATE_ASSUMPTION]);
 
     const [outboxRow] = await db.observer<Record<string, unknown>>(
       'SELECT * FROM public.runtime_event_outbox WHERE event_id = $1', [eventId]);
@@ -294,7 +307,8 @@ async function main(): Promise<void> {
     // -----------------------------------------------------------------------
     const pgDataAdapter = new PgBackgroundIntelligenceDataApiAdapter(db);
     const dataApi = pgDataAdapter as unknown as BackgroundIntelligenceDataApiService;
-    const ledger = new PgPostResponseIntelligenceRepositoryAdapter(db) as unknown as PostResponseIntelligenceRepository;
+    const pgLedgerAdapter = new PgPostResponseIntelligenceRepositoryAdapter(db);
+    const ledger = pgLedgerAdapter as unknown as PostResponseIntelligenceRepository;
     const authority = new BackgroundIntelligenceAuthorityService(new BackgroundIntelligenceContextFactory(), dataApi);
     const enrichment = new BackgroundIntelligenceEnrichmentService(
       dataApi, new MemoryWriteEvaluatorService(), new HypothesisGenerationTriggerClassificationService(),
@@ -414,6 +428,12 @@ async function main(): Promise<void> {
     assert.equal(updateConfidence.target_version, 2, 'Confidence targets exactly the receipt afterVersion');
     assert.equal(updateConfidence.user_id, userId);
     assert.equal(updateConfidence.provenance, 'QANDEEL_CONFIDENCE_RUNTIME');
+    // The canonical Confidence Runtime itself reported the seeded assumption:
+    // the actionable structural code exists alongside the intentionally present
+    // calibration-only code, with no hand-inserted or patched Confidence row.
+    assert.deepEqual(updateConfidence.missing_information_codes, ['UNVERIFIED_ASSUMPTIONS', 'CONFIDENCE_MODEL_UNCALIBRATED'],
+      'canonical update Confidence carries UNVERIFIED_ASSUMPTIONS alongside CONFIDENCE_MODEL_UNCALIBRATED');
+    assert.deepEqual(updateConfidence.assumptions, [SEEDED_HYPOTHESIS_ASSUMPTION]);
 
     // -----------------------------------------------------------------------
     stage = 'INTENT';
@@ -446,6 +466,8 @@ async function main(): Promise<void> {
     assert.equal(validated[0].domain, INTENT_DOMAIN);
     assert.equal(validated[0].scope, sessionScope);
     assert.deepEqual(validated[0].supportingEvidenceIds, [freshEvidenceId]);
+    assert.deepEqual(validated[0].assumptions, [GENERATED_CANDIDATE_ASSUMPTION],
+      'the provider-double assumption survived the real validation/persistence path');
 
     // -----------------------------------------------------------------------
     stage = 'HIM_CONSUMPTION';
@@ -547,6 +569,9 @@ async function main(): Promise<void> {
     assert.deepEqual(generatedConfidence[0].supporting_evidence_ids, generated.supporting_evidence_ids,
       'the Confidence snapshot is the ACTIVE Hypothesis state');
     assert.equal(generatedConfidence[0].provenance, 'QANDEEL_CONFIDENCE_RUNTIME');
+    assert.deepEqual(generatedConfidence[0].missing_information_codes, ['UNVERIFIED_ASSUMPTIONS', 'CONFIDENCE_MODEL_UNCALIBRATED'],
+      'canonical generation Confidence carries UNVERIFIED_ASSUMPTIONS alongside CONFIDENCE_MODEL_UNCALIBRATED');
+    assert.deepEqual(generatedConfidence[0].assumptions, [GENERATED_CANDIDATE_ASSUMPTION]);
     const confidenceItems = await db.observer<Record<string, unknown>>(
       'SELECT * FROM public.post_response_confidence_batch_items WHERE execution_id = $1 ORDER BY ordinal', [executionId]);
     assert.equal(confidenceItems.length, 1, 'exactly one durable Confidence batch item');
@@ -555,6 +580,70 @@ async function main(): Promise<void> {
     assert.equal(confidenceItems[0].hypothesis_id, generatedHypothesisId);
     assert.equal(confidenceItems[0].target_version, generatedVersion);
     assert.equal(confidenceItems[0].confidence_evaluation_id, confidenceReceipts[0].confidenceEvaluationId);
+
+    // -----------------------------------------------------------------------
+    stage = 'INFORMATION_GAPS';
+    // -----------------------------------------------------------------------
+    // Information Gap / Question Integration v1: the canonical sync command
+    // ran once after the managed Update batch (before Intent/Candidate) and
+    // once after the managed generation Confidence batch (before terminal),
+    // and the second run reused the first run's update gap instead of
+    // duplicating it.
+    assert.equal(pgLedgerAdapter.informationGapSyncCount, 2,
+      'the Information Gap sync command executed exactly twice: post-update and post-generation');
+    const informationGaps = await db.observer<Record<string, unknown>>(
+      'SELECT * FROM public.information_gaps WHERE user_id = $1', [userId]);
+    assert.equal(informationGaps.length, 2,
+      'exactly one automatic gap per exact actionable Confidence source: update gap reused, calibration-only code produced no gap');
+    const updateGap = informationGaps.find((gap) => (gap.related_hypothesis_ids as string[])[0] === seededHypothesisId);
+    const generatedGap = informationGaps.find((gap) => (gap.related_hypothesis_ids as string[])[0] === generatedHypothesisId);
+    assert.ok(updateGap, 'the update-side automatic gap targets the exact seeded Hypothesis');
+    assert.ok(generatedGap, 'the generation-side automatic gap targets the exact generated Hypothesis');
+    for (const [gap, expectedEvaluationId] of [
+      [updateGap!, receipt.confidenceEvaluationId as string],
+      [generatedGap!, confidenceReceipts[0].confidenceEvaluationId as string],
+    ] as const) {
+      assert.equal(gap.status, 'OPEN');
+      assert.equal(gap.version, 1);
+      assert.equal(gap.provenance, 'QANDEEL_QUESTION_RUNTIME');
+      assert.equal(gap.user_answerability, 'UNASSESSED', 'automatic answerability is never inferred');
+      assert.equal(gap.preferred_question_type, null, 'no preferred Question type is ever inferred');
+      assert.equal(gap.information_needed, UNVERIFIED_ASSUMPTIONS_INFORMATION_NEEDED, 'exact controlled information_needed text');
+      assert.equal(gap.why_it_matters, UNVERIFIED_ASSUMPTIONS_WHY_IT_MATTERS, 'exact controlled why_it_matters text');
+      assert.equal((gap.related_hypothesis_ids as string[]).length, 1, 'exact single-Hypothesis linkage');
+      assert.equal(gap.confidence_evaluation_id, expectedEvaluationId, 'exact canonical Confidence evaluation linkage');
+    }
+    const gapSources = await db.observer<Record<string, unknown>>(
+      'SELECT * FROM public.information_gap_confidence_sources WHERE user_id = $1 ORDER BY hypothesis_id', [userId]);
+    assert.equal(gapSources.length, 2, 'exactly one durable source row per automatic gap');
+    const updateSource = gapSources.find((row) => row.hypothesis_id === seededHypothesisId);
+    const generatedSource = gapSources.find((row) => row.hypothesis_id === generatedHypothesisId);
+    assert.deepEqual(
+      {
+        gapId: updateSource?.information_gap_id, version: updateSource?.target_version,
+        code: updateSource?.missing_information_code, evaluationId: updateSource?.confidence_evaluation_id,
+      },
+      {
+        gapId: updateGap!.id, version: 2,
+        code: 'UNVERIFIED_ASSUMPTIONS', evaluationId: receipt.confidenceEvaluationId,
+      },
+      'the update source row binds the exact seeded Hypothesis, exact post-update version, exact code and exact evaluation');
+    assert.deepEqual(
+      {
+        gapId: generatedSource?.information_gap_id, version: generatedSource?.target_version,
+        code: generatedSource?.missing_information_code, evaluationId: generatedSource?.confidence_evaluation_id,
+      },
+      {
+        gapId: generatedGap!.id, version: generatedVersion,
+        code: 'UNVERIFIED_ASSUMPTIONS', evaluationId: confidenceReceipts[0].confidenceEvaluationId,
+      },
+      'the generation source row binds the exact generated Hypothesis, exact frozen ACTIVE version, exact code and exact evaluation');
+    assert.equal(gapSources.some((row) => row.missing_information_code === 'CONFIDENCE_MODEL_UNCALIBRATED'), false,
+      'the calibration-only code never materialized a gap or a source row');
+    // The prerequisite is connected; the unresolved selection/asking policy is
+    // not faked: zero automatic Question Candidates, no user-visible Question.
+    assert.equal((await db.observer('SELECT id FROM public.question_candidates WHERE user_id = $1', [userId])).length, 0,
+      'zero automatic Question Candidate rows exist for the automatic gaps');
 
     // -----------------------------------------------------------------------
     stage = 'TERMINAL';
@@ -591,14 +680,23 @@ async function main(): Promise<void> {
     const lifecycleAuditRows = async (): Promise<unknown[]> => db.observer<Record<string, unknown>>(
       'SELECT * FROM public.hypothesis_lifecycle_transitions WHERE user_id = $1 ORDER BY created_at, id', [userId]);
     const lifecycleBeforeDuplicate = JSON.stringify(await lifecycleAuditRows());
+    const informationGapRows = async (): Promise<unknown[]> => db.observer<Record<string, unknown>>(
+      'SELECT * FROM public.information_gaps WHERE user_id = $1 ORDER BY id', [userId]);
+    const gapSourceRows = async (): Promise<unknown[]> => db.observer<Record<string, unknown>>(
+      'SELECT * FROM public.information_gap_confidence_sources WHERE user_id = $1 ORDER BY hypothesis_id', [userId]);
+    const informationGapsBeforeDuplicate = JSON.stringify(await informationGapRows());
+    const gapSourcesBeforeDuplicate = JSON.stringify(await gapSourceRows());
     const countsBefore = {
       memories: (await db.observer('SELECT id FROM public.memories WHERE user_id = $1', [userId])).length,
       hypotheses: (await db.observer('SELECT id FROM public.hypotheses WHERE user_id = $1', [userId])).length,
       audits: (await db.observer('SELECT id FROM public.hypothesis_updates WHERE user_id = $1', [userId])).length,
       confidence: (await db.observer('SELECT id FROM public.confidence_evaluations WHERE user_id = $1', [userId])).length,
       lifecycle: (await db.observer('SELECT id FROM public.hypothesis_lifecycle_transitions WHERE user_id = $1', [userId])).length,
+      informationGaps: (await informationGapRows()).length,
+      gapSources: (await gapSourceRows()).length,
+      questionCandidates: (await db.observer('SELECT id FROM public.question_candidates WHERE user_id = $1', [userId])).length,
     };
-    assert.deepEqual(countsBefore, { memories: 1, hypotheses: 2, audits: 1, confidence: 2, lifecycle: 1 });
+    assert.deepEqual(countsBefore, { memories: 1, hypotheses: 2, audits: 1, confidence: 2, lifecycle: 1, informationGaps: 2, gapSources: 2, questionCandidates: 0 });
 
     // One duplicate Redis message carrying the byte-identical runtime envelope.
     await redisObserver.xAdd(STREAM, '*', { event_id: eventId, envelope: entries[0].envelope });
@@ -621,9 +719,18 @@ async function main(): Promise<void> {
       audits: (await db.observer('SELECT id FROM public.hypothesis_updates WHERE user_id = $1', [userId])).length,
       confidence: (await db.observer('SELECT id FROM public.confidence_evaluations WHERE user_id = $1', [userId])).length,
       lifecycle: (await db.observer('SELECT id FROM public.hypothesis_lifecycle_transitions WHERE user_id = $1', [userId])).length,
+      informationGaps: (await informationGapRows()).length,
+      gapSources: (await gapSourceRows()).length,
+      questionCandidates: (await db.observer('SELECT id FROM public.question_candidates WHERE user_id = $1', [userId])).length,
     };
     assert.deepEqual(countsAfter, countsBefore,
-      'no second Memory write, Hypothesis mutation, audit, generated Hypothesis, lifecycle transition or duplicate Confidence');
+      'no second Memory write, Hypothesis mutation, audit, generated Hypothesis, lifecycle transition, duplicate Confidence, duplicate Information Gap, duplicate gap source or Question Candidate');
+    assert.equal(pgLedgerAdapter.informationGapSyncCount, 2,
+      'terminal duplicate delivery performed zero Information Gap sync calls');
+    assert.equal(JSON.stringify(await informationGapRows()), informationGapsBeforeDuplicate,
+      'durable Information Gap rows byte-equivalent after duplicate: exact gap identities unchanged');
+    assert.equal(JSON.stringify(await gapSourceRows()), gapSourcesBeforeDuplicate,
+      'durable gap source rows byte-equivalent after duplicate: exact source identities unchanged');
     const [seededAfter] = await db.observer<{ version: number }>('SELECT version FROM public.hypotheses WHERE id = $1', [seededHypothesisId]);
     assert.equal(seededAfter.version, 2, 'seeded Hypothesis version unchanged by redelivery');
     const [generatedAfter] = await db.observer<{ version: number; status: string }>(
@@ -654,6 +761,10 @@ async function main(): Promise<void> {
       'Confidence batch items rolled back');
     assert.equal((await db.afterRollback('SELECT id FROM public.hypothesis_lifecycle_transitions WHERE user_id = $1', [userId])).length, 0,
       'lifecycle transition audit rolled back');
+    assert.equal((await db.afterRollback('SELECT id FROM public.information_gaps WHERE user_id = $1', [userId])).length, 0,
+      'automatic Information Gaps rolled back');
+    assert.equal((await db.afterRollback('SELECT information_gap_id FROM public.information_gap_confidence_sources WHERE user_id = $1', [userId])).length, 0,
+      'Information Gap source rows rolled back');
     const [{ rolbypassrls: finalBypass }] = await db.afterRollback<{ rolbypassrls: boolean }>(
       "SELECT rolbypassrls FROM pg_roles WHERE rolname = 'service_role'");
     assert.equal(finalBypass, initialBypass, 'transaction-scoped service_role attribute restored by rollback');

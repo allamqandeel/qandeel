@@ -121,6 +121,7 @@ test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () =>
     'verify:server-hypothesis-update:integration',
     'verify:hypothesis-update-auto-invocation:integration',
     'verify:confidence-batch-reliability:integration',
+    'verify:information-gap-question-integration:integration',
     'verify:post-response-dispatch:integration',
     'verify:a2-e2e-runtime-smoke',
   ]) assert.match(apiCi, new RegExp(`run: npm run ${command}`,'u'), `missing ${command}`);
