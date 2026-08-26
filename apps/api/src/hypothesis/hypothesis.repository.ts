@@ -1,12 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { MemoryDataApiService } from '../memory/memory-data-api.service';
+import { HypothesisServiceRoleApiService } from './hypothesis-service-role-api.service';
 import type { CreateHypothesisInput, EvidenceRole, HypothesisRecord, HypothesisStatus } from './hypothesis.types';
 const FIELDS = 'id,user_id,statement,type,domain,scope,origin,status,version,supporting_evidence_ids,contradicting_evidence_ids,competing_hypothesis_ids,assumptions,disconfirming_conditions,created_at,updated_at';
+// Reads stay on the authenticated owner-scoped path. Creation goes through the
+// narrow server-only database command added by migration 0027: `authenticated`
+// holds no INSERT on public.hypotheses any more, so a user token is neither
+// used nor usable as Hypothesis creation authority here, and status, version,
+// Evidence lists, competitors and both timestamps are derived in the database
+// rather than submitted. The existing constrained transition / evidence /
+// competition commands are unchanged and still run on the caller's identity.
 @Injectable()
 export class HypothesisRepository {
-  constructor(private readonly dataApi: MemoryDataApiService) {}
-  async create(token: string, id: string, userId: string, input: CreateHypothesisInput): Promise<HypothesisRecord> {
-    const rows = await this.dataApi.request<HypothesisRecord[]>(token, 'hypotheses', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ id, user_id: userId, statement: input.statement, type: input.type, domain: input.domain, scope: input.scope, origin: input.origin, status: 'CANDIDATE', assumptions: input.assumptions ?? [], disconfirming_conditions: input.disconfirmingConditions ?? [] }) });
+  constructor(
+    private readonly dataApi: MemoryDataApiService,
+    private readonly serverAuthority: HypothesisServiceRoleApiService,
+  ) {}
+  async create(id: string, userId: string, input: CreateHypothesisInput): Promise<HypothesisRecord> {
+    const rows = await this.serverAuthority.rpc<HypothesisRecord[]>('server_create_hypothesis_v1', {
+      p_user_id: userId, p_hypothesis_id: id, p_statement: input.statement, p_type: input.type,
+      p_domain: input.domain, p_scope: input.scope, p_origin: input.origin,
+      p_assumptions: input.assumptions ?? [], p_disconfirming_conditions: input.disconfirmingConditions ?? [],
+    });
     return rows[0];
   }
   async find(token: string, userId: string, id: string): Promise<HypothesisRecord | undefined> {

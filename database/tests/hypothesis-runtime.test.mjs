@@ -16,8 +16,19 @@ test('centralizes lifecycle, evidence eligibility, and symmetric competition', (
   assert.match(sql,/source IN \('USER_STATED','USER_CONFIRMED'\)/u); assert.match(sql,/expires_at>CURRENT_TIMESTAMP/u); assert.match(sql,/supporting_evidence_ids && contradicting_evidence_ids/u);
   assert.equal((sql.match(/array_append\(competing_hypothesis_ids/gu)??[]).length,2);
 });
-test('forward migration grants only the helper execution needed by authenticated Hypothesis inserts', () => {
+test('forward migration 0020 grants only the bounded-array constraint helper execution', () => {
   assert.match(acl,/REVOKE ALL ON FUNCTION public\.bounded_nonempty_text_array\(text\[\],integer,integer\) FROM PUBLIC,anon/u);
   assert.match(acl,/GRANT EXECUTE ON FUNCTION public\.bounded_nonempty_text_array\(text\[\],integer,integer\) TO authenticated/u);
   assert.doesNotMatch(acl,/ALTER TABLE|CREATE POLICY|GRANT (?:INSERT|UPDATE|DELETE)|SECURITY DEFINER|provider|openai|claude|gemini/iu);
+});
+// Migrations 0005 and 0020 stay historical source-of-truth text: the direct
+// authenticated INSERT grant and hypotheses_insert_own policy they created are
+// asserted here as history, and are revoked/dropped by the forward migration
+// 0027 whose hardened effective state is asserted in
+// hypothesis-authority-hardening-v1.test.mjs.
+test('directs the effective Hypothesis write authority to the forward hardening migration', async () => {
+  const hardening = await readFile(new URL('../migrations/0027_hypothesis_authority_hardening_v1.sql', import.meta.url), 'utf8');
+  assert.match(sql,/GRANT SELECT, INSERT ON TABLE public\.hypotheses TO authenticated/u);
+  assert.match(hardening,/REVOKE INSERT, UPDATE, DELETE ON TABLE public\.hypotheses FROM authenticated/u);
+  assert.match(hardening,/DROP POLICY IF EXISTS hypotheses_insert_own ON public\.hypotheses/u);
 });

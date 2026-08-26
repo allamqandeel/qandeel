@@ -63,7 +63,9 @@ describe('HypothesisGenerationService', () => {
     const result = await run(new DeterministicFakeGenerator([invalid, candidate()]));
     expect(result.rejected).toEqual([{ candidateIndex: 0, reason: 'INVALID_CANDIDATE' }]);
     expect(hypotheses.create).toHaveBeenCalledTimes(1);
-    expect(hypotheses.create).toHaveBeenCalledWith('user-a', 'token-a', expect.objectContaining({ origin: 'SYSTEM_GENERATED' }));
+    // Creation is server-authoritative: the owner is passed, the caller token is not.
+    expect(hypotheses.create).toHaveBeenCalledWith('user-a', expect.objectContaining({ origin: 'SYSTEM_GENERATED' }));
+    expect(hypotheses.create.mock.calls[0]).toHaveLength(2);
     expect(result.accepted[0]).toMatchObject({ origin: 'SYSTEM_GENERATED', status: 'CANDIDATE' });
   });
 
@@ -109,7 +111,7 @@ describe('HypothesisGenerationService', () => {
 
   it('enforces the server cap, preserves distinct alternatives, links competition, and selects no winner', async () => {
     const proposals = Array.from({ length: MAX_GENERATED_HYPOTHESIS_CANDIDATES + 1 }, (_, index) => candidate({ statement: `Alternative ${index}` }));
-    hypotheses.create.mockImplementation(async (_u, _t, value) => record({ id: `id-${value.statement}`, statement: value.statement }));
+    hypotheses.create.mockImplementation(async (_u, value) => record({ id: `id-${value.statement}`, statement: value.statement }));
     const result = await run(new DeterministicFakeGenerator(proposals));
     expect(result.accepted).toHaveLength(MAX_GENERATED_HYPOTHESIS_CANDIDATES);
     expect(result.rejected).toContainEqual({ candidateIndex: 5, reason: 'CANDIDATE_LIMIT_EXCEEDED' });

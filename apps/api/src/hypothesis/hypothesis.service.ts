@@ -8,8 +8,13 @@ import { HYPOTHESIS_DOMAINS, HYPOTHESIS_ORIGINS, HYPOTHESIS_STATUSES, HYPOTHESIS
 @Injectable()
 export class HypothesisService {
   constructor(private readonly repository: HypothesisRepository, private readonly evidence: EvidenceService) {}
-  async create(userId: string, token: string, input: CreateHypothesisInput): Promise<HypothesisRecord> {
-    return this.repository.create(token, randomUUID(), userId, this.validateCreate(input));
+  // Creation takes no access token. After migration 0027 the authoritative
+  // Hypothesis write is a server-authority command, so a caller credential is
+  // never the authority for one; validation is unchanged, and reads and the
+  // existing constrained mutation commands keep the owner-scoped
+  // authenticated path.
+  async create(userId: string, input: CreateHypothesisInput): Promise<HypothesisRecord> {
+    return this.repository.create(randomUUID(), userId, this.validateCreate(input));
   }
   async find(userId: string, token: string, id: string): Promise<HypothesisView> {
     const hypothesis = await this.getOwned(userId, token, id);
