@@ -4,6 +4,7 @@ import { ConversationService } from './conversation.service';
 import type { ConversationSession, ConversationTurn } from './conversation.types';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 import { CorrelationService } from '../observability/correlation.service';
+import { DataApiError } from './supabase-data-api.service';
 
 describe('ConversationService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -70,14 +71,49 @@ describe('ConversationService', () => {
     expect(orchestrator.orchestrate).not.toHaveBeenCalled();
   });
 
-  it('maps an owned but non-ACTIVE/TEXT parent session to a stable conflict without reaching turn creation', async () => {
-    // The database definer command remains authoritative for ACTIVE/TEXT
-    // admission; this service pre-check mirrors it exactly for error mapping.
-    repository.findSession.mockResolvedValue({ ...session, status: 'CLOSED', closed_at: 'now' });
-    await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello' }))
+  it.each(['IDLE', 'CLOSED', 'EXPIRED'] as const)(
+    'rejects NEW turn creation in an owned %s session with no existing idempotency winner',
+    async (status) => {
+      // The database definer command remains authoritative for ACTIVE/TEXT
+      // admission; this service pre-check mirrors it exactly for error mapping.
+      repository.findSession.mockResolvedValue({ ...session, status, closed_at: status === 'CLOSED' ? 'now' : null });
+      repository.findTurnByIdempotencyKey.mockResolvedValue(undefined);
+      await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' }))
+        .rejects.toBeInstanceOf(ConflictException);
+      expect(repository.findTurnByIdempotencyKey).toHaveBeenCalledWith('token-a', session.id, 'user-a', 'client-1');
+      expect(repository.createTurn).not.toHaveBeenCalled();
+      expect(orchestrator.orchestrate).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rejects NEW turn creation in a VOICE session with no existing idempotency winner', async () => {
+    repository.findSession.mockResolvedValue({ ...session, channel: 'VOICE' } as unknown as ConversationSession);
+    repository.findTurnByIdempotencyKey.mockResolvedValue(undefined);
+    await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' }))
       .rejects.toBeInstanceOf(ConflictException);
     expect(repository.createTurn).not.toHaveBeenCalled();
     expect(orchestrator.orchestrate).not.toHaveBeenCalled();
+  });
+
+  it('replays the durable idempotency winner even after the session left ACTIVE/TEXT', async () => {
+    // Replay recovers already-admitted history; it is not a new turn
+    // admission, so the parent lifecycle state does not gate it.
+    repository.findSession.mockResolvedValue({ ...session, status: 'CLOSED', closed_at: 'now' });
+    repository.findTurnByIdempotencyKey.mockResolvedValue(turn);
+    await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' }))
+      .resolves.toEqual({ userTurn: turn });
+    expect(repository.createTurn).not.toHaveBeenCalled();
+    expect(orchestrator.orchestrate).toHaveBeenCalledWith('token-a', 'user-a', turn);
+  });
+
+  it('recovers the durable winner through the unchanged unique-violation race path', async () => {
+    repository.findSession.mockResolvedValue(session);
+    repository.findTurnByIdempotencyKey.mockResolvedValueOnce(undefined).mockResolvedValueOnce(turn);
+    repository.createTurn.mockRejectedValue(new DataApiError(409));
+    await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' }))
+      .resolves.toEqual({ userTurn: turn });
+    expect(repository.createTurn).toHaveBeenCalledTimes(1);
+    expect(orchestrator.orchestrate).toHaveBeenCalledWith('token-a', 'user-a', turn);
   });
 
   it('returns the existing authoritative turn for a duplicate idempotency key', async () => {

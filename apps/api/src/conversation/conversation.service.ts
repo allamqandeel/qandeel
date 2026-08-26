@@ -29,16 +29,21 @@ export class ConversationService {
   async createTurn(userId: string, accessToken: string, sessionId: string, body: unknown): Promise<OrchestratedTurnResult> {
     const input = this.validateTurnInput(body);
     const session = await this.resumeSession(userId, accessToken, sessionId);
-    // The database definer command is authoritative for ACTIVE/TEXT admission
-    // (migration 0030). This pre-check mirrors that predicate exactly — it adds
-    // no weaker or different rule — so an inadmissible parent session maps to a
-    // stable 409 instead of a raw data-api failure.
-    if (session.status !== 'ACTIVE' || session.channel !== 'TEXT') {
-      throw new ConflictException('Conversation session does not accept new turns.');
-    }
+    // Idempotent replay is resolved first: a turn that was already admitted
+    // durably under this key is returned regardless of the session's later
+    // lifecycle state — replay recovers existing history, it is not a new
+    // turn admission.
     if (input.idempotencyKey) {
       const existing = await this.repository.findTurnByIdempotencyKey(accessToken, sessionId, userId, input.idempotencyKey);
       if (existing){this.correlation.bindCanonical(existing.session_id,existing.id);return this.orchestrator.orchestrate(accessToken, userId, existing);}
+    }
+    // Only NEW turn creation requires an ACTIVE/TEXT parent. The database
+    // definer command (migration 0030) is authoritative for this admission;
+    // this pre-check mirrors that predicate exactly — it adds no weaker or
+    // different rule — so an inadmissible parent session maps to a stable 409
+    // instead of a raw data-api failure.
+    if (session.status !== 'ACTIVE' || session.channel !== 'TEXT') {
+      throw new ConflictException('Conversation session does not accept new turns.');
     }
     try {
       const turn = await this.repository.createTurn(accessToken, {
