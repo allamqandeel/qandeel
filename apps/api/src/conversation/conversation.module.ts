@@ -18,9 +18,10 @@ import { MemoryModule } from '../memory/memory.module';
 import { HimModule } from '../human-model/him.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { HypothesisModule } from '../hypothesis/hypothesis.module';
+import { RecommendationModule } from '../recommendation/recommendation.module';
 
 @Module({
-  imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, ObservabilityModule],
+  imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, RecommendationModule, ObservabilityModule],
   controllers: [ConversationController],
   providers: [
     SupabaseAuthService,
