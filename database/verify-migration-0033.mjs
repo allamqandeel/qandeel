@@ -18,10 +18,11 @@
 // same transaction; that a forced mid-batch Evidence-ineligibility failure
 // rolls back every generated write and leaves the effect CLAIMED and
 // result-less; that the generic completion fails closed for all five typed
-// effects while CONFIDENCE_BATCH keeps parity; that legacy all-null generation
-// rows stay representable and are never backfilled; and that a pre-0033
-// database upgrades with every existing row byte-identical. Every fixture is
-// rolled back; no data is retained. No paid provider is ever invoked.
+// effects (and, since migration 0035, for the managed CONFIDENCE_BATCH too);
+// that legacy all-null generation rows stay representable and are never
+// backfilled; and that a pre-0033 database upgrades with every existing row
+// byte-identical. Every fixture is rolled back; no data is retained. No paid
+// provider is ever invoked.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -143,12 +144,13 @@ async function verifySurfaceAndAcls() {
     'post_response_intelligence_effects_association_result_check',
     'post_response_intelligence_effects_candidate_result_check',
     'post_response_intelligence_effects_claimed_result_check',
+    'post_response_intelligence_effects_confidence_batch_result_check',
     'post_response_intelligence_effects_intent_result_check',
     'post_response_intelligence_effects_memory_result_check',
     'post_response_intelligence_effects_persistence_result_check',
     'post_response_intelligence_effects_untyped_result_check',
     'post_response_intelligence_effects_update_batch_result_check',
-  ], 'the 0029/0031 checks survive, each generation effect states its own domain, and the 0034 check joins them');
+  ], 'the 0029/0031 checks survive, each generation effect states its own domain, and the 0034/0035 checks join them');
   const registry = (await one(
     `SELECT pg_get_constraintdef(oid) definition FROM pg_constraint
       WHERE conrelid='public.post_response_intelligence_effects'::regclass
@@ -299,12 +301,15 @@ async function verifyGenericCompletion() {
       `${key} stays CLAIMED and result-less`,
     );
   }
-  // CONFIDENCE_BATCH is the sole remaining generic effect and keeps parity.
+  // Migration 0035 made CONFIDENCE_BATCH managed too, so no generic effect
+  // remains: the last formerly generic key fails closed on both the ordinary
+  // claim and the generic completion. The 0033 generation contracts above are
+  // unaffected.
   const generic = await newExecution({ withIntent: false, claimCandidate: false });
   await identity('service_role');
   for (const key of EFFECT_KEYS.filter((value) => value === 'CONFIDENCE_BATCH')) {
-    assert.equal((await one(CLAIM, [generic.id, key])).ok, true, `claim ${key}`);
-    assert.equal((await one(COMPLETE_GENERIC, [generic.id, key])).ok, true, `generic completion parity for ${key}`);
+    assert.equal((await rejected(() => q(CLAIM, [generic.id, key]), ['22023'])).message, 'CONFIDENCE_BATCH_MANAGED');
+    assert.equal((await rejected(() => q(COMPLETE_GENERIC, [generic.id, key]), ['22023'])).message, 'CONFIDENCE_BATCH_COMMAND_REQUIRED');
   }
 }
 
@@ -645,15 +650,18 @@ async function verifyPre0033DefectsAndUpgrade() {
   await q("UPDATE public.memories SET status='ACTIVE', updated_at=CURRENT_TIMESTAMP WHERE id=$1", [memories.third]);
 
   // A pre-0033 database also holds typed Memory, Intent and Association
-  // results and a generic Confidence completion.
+  // results and generic completions of the then-untyped effects. Since
+  // migration 0035 CONFIDENCE_BATCH is managed and can no longer be claimed
+  // ordinarily, so a still-claimable key stands in for them here; the legacy
+  // Confidence upgrade path is proven by verify-migration-0035.
   const seeded = await newExecution({ claimCandidate: false });
   await identity('service_role');
   assert.equal((await one(CLAIM, [seeded.id, 'MEMORY_WRITE'])).ok, true);
   assert.equal((await one(COMPLETE_MEMORY, [seeded.id, 'NO_FRESH_EVIDENCE', null])).ok, true);
   assert.equal((await one(CLAIM, [seeded.id, 'ASSOCIATION_PROVIDER'])).ok, true);
   assert.equal((await one(COMPLETE_ASSOCIATION, [seeded.id, 'NO_ASSOCIATION', null])).ok, true);
-  assert.equal((await one(CLAIM, [seeded.id, 'CONFIDENCE_BATCH'])).ok, true);
-  assert.equal((await one(COMPLETE_GENERIC, [seeded.id, 'CONFIDENCE_BATCH'])).ok, true);
+  assert.equal((await one(CLAIM, [seeded.id, 'CANDIDATE_PROVIDER'])).ok, true);
+  assert.equal((await one(COMPLETE_GENERIC, [seeded.id, 'CANDIDATE_PROVIDER'])).ok, true);
 
   await identity('postgres');
   const executionIds = [legacyGeneration.id, seeded.id];
@@ -752,7 +760,7 @@ async function main() {
     await identity('postgres');
     assert.equal((await one(EFFECT, [completed.id, 'CANDIDATE_PROVIDER'])).result_code, 'VALIDATED_CANDIDATES');
 
-    console.log('Verified migration 0033: reproduced both pre-0033 QAN-AUD-05 defects on the canonical 0032 chain (a result-less completed generation pair recovers no accepted Hypothesis IDs, and the old multi-request persistence loop leaves a partial canonical graph), then proved the typed durable candidate plan with stable pre-assigned IDs on the reused result_payload field, service-role-only typed Candidate completion bound to the durable authorized Intent (domain, serialized scope, Evidence subset) with an immutable write-once first result, the ONE atomic persistence command that replays the durable plan through the canonical background primitives and completes HYPOTHESIS_PERSISTENCE with the exact ordered persisted IDs in the same transaction, a forced mid-batch Evidence-ineligibility failure that rolls back every generated write and leaves the effect CLAIMED and result-less, the generic completion closed for all five typed effects while CONFIDENCE_BATCH keeps parity, unchanged Memory/Intent/Association error contracts, legacy all-null generation rows representable and never backfilled, internal-only validator ACLs, and a clean upgrade that leaves every historical row byte-identical.');
+    console.log('Verified migration 0033: reproduced both pre-0033 QAN-AUD-05 defects on the canonical 0032 chain (a result-less completed generation pair recovers no accepted Hypothesis IDs, and the old multi-request persistence loop leaves a partial canonical graph), then proved the typed durable candidate plan with stable pre-assigned IDs on the reused result_payload field, service-role-only typed Candidate completion bound to the durable authorized Intent (domain, serialized scope, Evidence subset) with an immutable write-once first result, the ONE atomic persistence command that replays the durable plan through the canonical background primitives and completes HYPOTHESIS_PERSISTENCE with the exact ordered persisted IDs in the same transaction, a forced mid-batch Evidence-ineligibility failure that rolls back every generated write and leaves the effect CLAIMED and result-less, the generic completion closed for all five typed effects and for the migration-0035 managed CONFIDENCE_BATCH (CONFIDENCE_BATCH_MANAGED / CONFIDENCE_BATCH_COMMAND_REQUIRED), unchanged Memory/Intent/Association error contracts, legacy all-null generation rows representable and never backfilled, internal-only validator ACLs, and a clean upgrade that leaves every historical row byte-identical.');
   } finally {
     try { await q('ROLLBACK'); } catch { /* ignore */ }
     await client.end();

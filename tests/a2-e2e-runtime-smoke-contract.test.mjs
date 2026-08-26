@@ -43,15 +43,27 @@ test('the smoke command exists and CI invokes it exactly once, after the Redis d
   const smokeIndex = apiCi.indexOf('run: npm run verify:a2-e2e-runtime-smoke');
   assert.ok(smokeIndex > apiCi.indexOf('run: npm run verify:hypothesis-update-auto-invocation:integration'),
     'runtime smoke runs after the migration 0034 verifier');
+  assert.ok(smokeIndex > apiCi.indexOf('run: npm run verify:confidence-batch-reliability:integration'),
+    'runtime smoke runs after the migration 0035 verifier');
   assert.ok(smokeIndex > apiCi.indexOf('run: npm run verify:post-response-dispatch:integration'),
     'runtime smoke runs after the Redis Streams dispatch verifier');
   assert.match(apiCi, /run: npm run test:a2-e2e-smoke-contract/u, 'CI runs this static contract');
 });
 
-test('the canonical migration chain still ends at 0034 — this task adds no migration 0035', async () => {
+test('the canonical migration chain ends at the QAN-AUD-06 forward migration 0035', async () => {
   const migrations = (await readdir(new URL('database/migrations/', root))).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0034_automatic_hypothesis_update_invocation_recovery_v1.sql');
-  assert.equal(migrations.some((name) => name.startsWith('0035')), false, 'no migration 0035');
+  assert.equal(migrations.at(-1), '0035_confidence_batch_reliability_v1.sql');
+  assert.equal(migrations.some((name) => name.startsWith('0036')), false, 'no migration 0036');
+});
+
+test('the smoke proves the managed typed Confidence batch rather than a generic result-less effect', () => {
+  assert.match(smokeScript, /CONFIDENCE_BATCH_EVALUATED/u, 'the typed durable Confidence result is asserted');
+  assert.doesNotMatch(smokeScript, /CONFIDENCE_BATCH stays the generic result-less effect/u,
+    'the old generic Confidence assertion is gone');
+  assert.match(smokeScript, /public\.post_response_confidence_batch_items/u, 'the durable item plan is observed');
+  assert.match(smokeScript, /the receipt points at the exact generated Confidence evaluation/u);
+  assert.match(smokeScript, /durable Confidence batch items byte-equivalent after duplicate/u,
+    'duplicate delivery proves zero item or Confidence mutation');
 });
 
 test('production modules never import the smoke-only transport adapters', async () => {

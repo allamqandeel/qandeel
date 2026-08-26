@@ -1,18 +1,20 @@
 import type{AuthorizedHypothesisGenerationIntent}from'../hypothesis/hypothesis-generation-intent-authority.types';
 import type{AssociationEffectResultCode}from'./durable-association-result';
+import type{ConfidenceBatchEffectResultCode}from'./durable-confidence-batch-result';
 import type{CandidateProviderEffectResultCode,HypothesisPersistenceEffectResultCode}from'./durable-generation-result';
 import type{HypothesisUpdateBatchEffectResultCode}from'./durable-hypothesis-update-batch-result';
 export const INTELLIGENCE_EFFECTS=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_UPDATE_BATCH','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH']as const;
 export type IntelligenceEffect=typeof INTELLIGENCE_EFFECTS[number];
-/** The managed A2.3c effect. Its claim, mutations, Confidence attempts and completion happen inside ONE database transaction driven by the specialized execute command, so the ordinary claim path can never touch it. */
-export type ManagedIntelligenceEffect='HYPOTHESIS_UPDATE_BATCH';
-/** Effects the ordinary claim-then-work pattern may claim. HYPOTHESIS_UPDATE_BATCH is managed: claiming it outside its one-transaction execute command would create an unrecoverable CLAIMED state. */
+/** The managed effects. Each one's claim, work and typed completion happen inside ONE database transaction driven by its specialized execute command, so the ordinary claim path can never touch either: A2.3c HYPOTHESIS_UPDATE_BATCH (migration 0034) and QAN-AUD-06 CONFIDENCE_BATCH (migration 0035, which additionally owns the durable per-target item plan). */
+export type ManagedIntelligenceEffect='HYPOTHESIS_UPDATE_BATCH'|'CONFIDENCE_BATCH';
+/** Effects the ordinary claim-then-work pattern may claim. The managed effects are excluded: claiming one outside its one-transaction execute command would create an unrecoverable CLAIMED state. */
 export type ClaimableIntelligenceEffect=Exclude<IntelligenceEffect,ManagedIntelligenceEffect>;
-/** Effects whose completion carries no durable result and therefore still uses the generic completion RPC. MEMORY_WRITE, INTENT_PROVIDER, ASSOCIATION_PROVIDER, CANDIDATE_PROVIDER, HYPOTHESIS_UPDATE_BATCH and HYPOTHESIS_PERSISTENCE each carry a typed durable result and are completed through their dedicated commands; only CONFIDENCE_BATCH remains generic. */
-export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'|'INTENT_PROVIDER'|'ASSOCIATION_PROVIDER'|'CANDIDATE_PROVIDER'|'HYPOTHESIS_PERSISTENCE'|'HYPOTHESIS_UPDATE_BATCH'>;
 export type MemoryWriteEffectResultCode='NO_FRESH_EVIDENCE'|'FRESH_EVIDENCE_CREATED';
 export type IntentProviderEffectResultCode='INTENT_AUTHORIZED'|'INTENT_NOT_AUTHORIZED';
-export type IntelligenceEffectResultCode=MemoryWriteEffectResultCode|IntentProviderEffectResultCode|AssociationEffectResultCode|CandidateProviderEffectResultCode|HypothesisPersistenceEffectResultCode|HypothesisUpdateBatchEffectResultCode;
+export type IntelligenceEffectResultCode=MemoryWriteEffectResultCode|IntentProviderEffectResultCode|AssociationEffectResultCode|CandidateProviderEffectResultCode|HypothesisPersistenceEffectResultCode|HypothesisUpdateBatchEffectResultCode|ConfidenceBatchEffectResultCode;
+/** Typed outcome of the managed QAN-AUD-06 Confidence-batch command. COMPLETED means the typed effect is durably complete; RETRY_PENDING means at least one item still needs retry and the execution stays RUNNING; QUARANTINED means an irrecoverable item/work mismatch; NO_OP is a race/missing/terminal condition that requires a durable reread before deciding. */
+export const CONFIDENCE_BATCH_COMMAND_STATUSES=['COMPLETED','RETRY_PENDING','QUARANTINED','NO_OP']as const;
+export type ConfidenceBatchCommandStatus=typeof CONFIDENCE_BATCH_COMMAND_STATUSES[number];
 /** Durable post-authority outcome of a completed INTENT_PROVIDER effect. A durable NOT_AUTHORIZED carries no reason because none was persisted. */
 export type DurableIntentProviderResult={readonly status:'AUTHORIZED';readonly intent:AuthorizedHypothesisGenerationIntent}|{readonly status:'NOT_AUTHORIZED'};
 /** INDETERMINATE covers a legacy null result, a malformed persisted result, mismatched provenance, and any impossible code/payload pairing. It is never NOT_AUTHORIZED. */

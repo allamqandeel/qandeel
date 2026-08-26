@@ -76,9 +76,11 @@ test('the pure recovery module cross-checks receipts against the durable command
  assert.doesNotMatch(module,/fetch\(|randomUUID|BackgroundIntelligence|applyHypothesisUpdate|findHypothesis/u);
 });
 
-test('the effect types add the managed key with compile-time claim exclusion and only CONFIDENCE_BATCH generic',()=>{
+test('the effect types add the managed key with compile-time claim exclusion',()=>{
  assert.match(types,/'HYPOTHESIS_UPDATE_BATCH'/u);
- assert.match(types,/ManagedIntelligenceEffect='HYPOTHESIS_UPDATE_BATCH'/u);
+ // Migration 0035 joined CONFIDENCE_BATCH to the managed set; the A2.3c key
+ // keeps its exact managed posture.
+ assert.match(types,/ManagedIntelligenceEffect='HYPOTHESIS_UPDATE_BATCH'\|'CONFIDENCE_BATCH'/u);
  assert.match(types,/ClaimableIntelligenceEffect=Exclude<IntelligenceEffect,ManagedIntelligenceEffect>/u);
  assert.match(types,/HypothesisUpdateBatchEffectResultCode/u);
  assert.match(repository,/claim\(id:string,effect:ClaimableIntelligenceEffect\)/u);
@@ -87,7 +89,7 @@ test('the effect types add the managed key with compile-time claim exclusion and
 test('the repository managed method sends only the execution identity and generated identities',()=>{
  assert.match(repository,/execute_post_response_hypothesis_update_batch_v1/u);
  assert.match(repository,/executeHypothesisUpdateBatch\(id:string,invocationIds:ReadonlyArray<\{updateId:string;confidenceEvaluationId:string\}>\)/u);
- const method=repository.slice(repository.indexOf('async executeHypothesisUpdateBatch'),repository.indexOf('async finish'));
+ const method=repository.split('\n').find(line=>line.includes('async executeHypothesisUpdateBatch'));
  assert.doesNotMatch(method,/userId|sessionId|commands|token|jwt/iu);
 });
 
@@ -107,6 +109,6 @@ test('the dispatcher consumes the durable batch before generation with no token 
 });
 
 test('the verifier adversarially proves the managed batch contract end to end',()=>{
- for(const proof of['HYPOTHESIS_UPDATE_BATCH_MANAGED','HYPOTHESIS_UPDATE_BATCH_COMMAND_REQUIRED','UPDATES_APPLIED','UPDATES_REJECTED','rolls back the entire batch','zero duplicate mutation','PENDING_RETRY','no later-version substitution','cross-user','cross-session','byte-identical','generic completion parity for'])assert.match(verifier,new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&'),'iu'),`missing proof: ${proof}`);
+ for(const proof of['HYPOTHESIS_UPDATE_BATCH_MANAGED','HYPOTHESIS_UPDATE_BATCH_COMMAND_REQUIRED','UPDATES_APPLIED','UPDATES_REJECTED','rolls back the entire batch','zero duplicate mutation','PENDING_RETRY','no later-version substitution','cross-user','cross-session','byte-identical','CONFIDENCE_BATCH_MANAGED','CONFIDENCE_BATCH_COMMAND_REQUIRED'])assert.match(verifier,new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&'),'iu'),`missing proof: ${proof}`);
  assert.doesNotMatch(verifier,/TRUNCATE|DROP TABLE|DELETE FROM/iu);
 });

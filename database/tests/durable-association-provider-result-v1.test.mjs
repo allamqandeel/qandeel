@@ -57,10 +57,12 @@ test('the pure result module maps and recovers on result_payload without inferri
 });
 
 test('the effect types exclude every typed effect from generic completion and carry no result_commands',()=>{
- // Migration 0033 extended the exclusion with both generation effects and
- // migration 0034 with the managed update batch; the Association exclusion
- // itself is unchanged.
- assert.match(types,/GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'\|'CANDIDATE_PROVIDER'\|'HYPOTHESIS_PERSISTENCE'\|'HYPOTHESIS_UPDATE_BATCH'>/u);
+ // Migration 0033 extended the exclusion with both generation effects,
+ // migration 0034 with the managed update batch, and migration 0035 removed the
+ // generic completion outright by making CONFIDENCE_BATCH managed; the
+ // Association exclusion itself is unchanged.
+ assert.doesNotMatch(types,/GenericIntelligenceEffect/u);
+ assert.match(types,/ManagedIntelligenceEffect='HYPOTHESIS_UPDATE_BATCH'\|'CONFIDENCE_BATCH'/u);
  assert.match(types,/AssociationEffectResultCode/u);
  assert.match(types,/result_payload:unknown/u);
  assert.doesNotMatch(types,/result_commands/u);
@@ -84,6 +86,6 @@ test('dispatcher persists and recovers the durable Association result, preserves
 });
 
 test('the verifier adversarially proves persistence, atomicity, binding, fail-closed, and the upgrade from canonical 0030',()=>{
- for(const proof of['pre-0031','result_payload exists and result_commands does not','the durable payload is the exact ordered command batch','a rejected result never completes the effect','ASSOCIATION_EVIDENCE_MISMATCH','ASSOCIATION_EVIDENCE_UNAVAILABLE','a terminal execution cannot complete an effect','a second, different result cannot replace the first','ASSOCIATION_RESULT_REQUIRED','INTENT_RESULT_REQUIRED','MEMORY_RESULT_REQUIRED','generic completion parity for','byte-identical','never backfilled'])assert.match(verifier,new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&'),'iu'),`missing proof: ${proof}`);
+ for(const proof of['pre-0031','result_payload exists and result_commands does not','the durable payload is the exact ordered command batch','a rejected result never completes the effect','ASSOCIATION_EVIDENCE_MISMATCH','ASSOCIATION_EVIDENCE_UNAVAILABLE','a terminal execution cannot complete an effect','a second, different result cannot replace the first','ASSOCIATION_RESULT_REQUIRED','INTENT_RESULT_REQUIRED','MEMORY_RESULT_REQUIRED','CONFIDENCE_BATCH_MANAGED','byte-identical','never backfilled'])assert.match(verifier,new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&'),'iu'),`missing proof: ${proof}`);
  assert.doesNotMatch(verifier,/TRUNCATE|DROP TABLE|DELETE FROM/iu);
 });

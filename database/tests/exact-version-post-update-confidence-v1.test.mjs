@@ -47,15 +47,19 @@ test('the background exact-version method never rediscovers the target and the A
  assert.match(boundary,/evaluateHypothesisConfidenceVersion\(context,request\.hypothesisId,mutation\.update\.after_version\)/u);
  assert.match(boundary,/isCanonicalHypothesisUpdateMutation\(mutation,context\.userId,updateId,request\)/u);
  assert.doesNotMatch(boundary,/evaluateHypothesisConfidence\(context,/u,'no latest-version helper on the post-update path');
- // The general/latest method is preserved for the generation Confidence Batch.
+ // The general/latest background Confidence capability is preserved: migration
+ // 0035 moved the generation batch to a managed database command, but the
+ // application-level helper is neither deleted nor weakened.
  const latest=section(enrichment,'async evaluateHypothesisConfidence(','// Exact-version');
  assert.match(latest,/findHypothesis/u);
  assert.match(latest,/hypothesis\.version/u);
 });
 
-test('the dispatcher stays A2.3c-isolated and the generation Confidence Batch is unchanged',()=>{
+test('the dispatcher stays A2.3c-isolated and generation Confidence runs only through the managed batch',()=>{
  assert.doesNotMatch(dispatcher,/applyAuthorizedHypothesisUpdate|applyHypothesisUpdate|evaluateHypothesisConfidenceVersion|HypothesisUpdateService|apply_hypothesis_evidence_update/u);
- assert.match(dispatcher,/evaluateHypothesisConfidence\(context,hypothesisId\)/u);
+ // QAN-AUD-06 removed the swallowing per-target application loop entirely.
+ assert.doesNotMatch(dispatcher,/evaluateHypothesisConfidence/u);
+ assert.match(dispatcher,/executeConfidenceBatch\(execution\.id\)/u);
  assert.match(dispatcher,/CONFIDENCE_BATCH/u);
 });
 

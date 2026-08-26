@@ -1,10 +1,23 @@
-import{randomUUID}from'node:crypto';import{Inject,Injectable}from'@nestjs/common';import{BackgroundIntelligenceAuthorityService}from'../background-intelligence/background-intelligence-authority.service';import type{BackgroundIntelligenceExecutionContext}from'../background-intelligence/background-intelligence-authority.service';import{BackgroundIntelligenceEnrichmentService}from'../background-intelligence/background-intelligence-enrichment.service';import{HypothesisGenerationIntentExtractionService}from'../hypothesis/hypothesis-generation-intent-extraction.service';import type{AuthorizedHypothesisGenerationIntent}from'../hypothesis/hypothesis-generation-intent-authority.types';import{HypothesisGenerationRequestAssemblerService}from'../hypothesis/hypothesis-generation-request-assembler.service';import{HYPOTHESIS_CANDIDATE_GENERATOR,type BoundHypothesisCandidateGenerator}from'../hypothesis/hypothesis-candidate-generator-provider.types';import type{HypothesisEvidenceAssociationSnapshot}from'../hypothesis/hypothesis-evidence-association.types';import{isValidRuntimeEventEnvelope,type RuntimeEventEnvelope}from'../runtime-events/runtime-event.types';import{recoverAssociationResult,toDurableAssociationResult}from'./durable-association-result';import type{AssociationRecovery,DurableAssociationResult}from'./durable-association-result';import{recoverCandidateProviderResult,recoverHypothesisPersistenceResult}from'./durable-generation-result';import type{CandidateProviderRecovery,DurableCandidateProviderResult}from'./durable-generation-result';import{recoverHypothesisUpdateBatchResult}from'./durable-hypothesis-update-batch-result';import{recoverDurableIntentProviderResult}from'./durable-intent-provider-result';import{ModelAssistedHypothesisAssociationService}from'./model-assisted-hypothesis-association.service';import{PostResponseIntelligenceRepository}from'./post-response-intelligence.repository';import type{GenericIntelligenceEffect,IntelligenceEffect,IntelligenceEffectState,IntelligenceExecution}from'./post-response-intelligence.types';
+import{randomUUID}from'node:crypto';import{Inject,Injectable}from'@nestjs/common';import{BackgroundIntelligenceAuthorityService}from'../background-intelligence/background-intelligence-authority.service';import type{BackgroundIntelligenceExecutionContext}from'../background-intelligence/background-intelligence-authority.service';import{BackgroundIntelligenceEnrichmentService}from'../background-intelligence/background-intelligence-enrichment.service';import{HypothesisGenerationIntentExtractionService}from'../hypothesis/hypothesis-generation-intent-extraction.service';import type{AuthorizedHypothesisGenerationIntent}from'../hypothesis/hypothesis-generation-intent-authority.types';import{HypothesisGenerationRequestAssemblerService}from'../hypothesis/hypothesis-generation-request-assembler.service';import{HYPOTHESIS_CANDIDATE_GENERATOR,type BoundHypothesisCandidateGenerator}from'../hypothesis/hypothesis-candidate-generator-provider.types';import type{HypothesisEvidenceAssociationSnapshot}from'../hypothesis/hypothesis-evidence-association.types';import{isValidRuntimeEventEnvelope,type RuntimeEventEnvelope}from'../runtime-events/runtime-event.types';import{recoverAssociationResult,toDurableAssociationResult}from'./durable-association-result';import type{AssociationRecovery,DurableAssociationResult}from'./durable-association-result';import{recoverConfidenceBatchResult}from'./durable-confidence-batch-result';import{recoverCandidateProviderResult,recoverHypothesisPersistenceResult}from'./durable-generation-result';import type{CandidateProviderRecovery,DurableCandidateProviderResult}from'./durable-generation-result';import{recoverHypothesisUpdateBatchResult}from'./durable-hypothesis-update-batch-result';import{recoverDurableIntentProviderResult}from'./durable-intent-provider-result';import{ModelAssistedHypothesisAssociationService}from'./model-assisted-hypothesis-association.service';import{PostResponseIntelligenceRepository}from'./post-response-intelligence.repository';import type{ConfidenceBatchCommandStatus,IntelligenceEffect,IntelligenceEffectState,IntelligenceExecution}from'./post-response-intelligence.types';
 
 @Injectable()
 export class PostResponseIntelligenceDispatcherService{
  constructor(private readonly ledger:PostResponseIntelligenceRepository,private readonly authority:BackgroundIntelligenceAuthorityService,private readonly enrichment:BackgroundIntelligenceEnrichmentService,private readonly extraction:HypothesisGenerationIntentExtractionService,private readonly assembler:HypothesisGenerationRequestAssemblerService,@Inject(HYPOTHESIS_CANDIDATE_GENERATOR)private readonly generator:BoundHypothesisCandidateGenerator,private readonly association:ModelAssistedHypothesisAssociationService){}
  async dispatch(raw:string):Promise<boolean>{let event:RuntimeEventEnvelope;try{event=JSON.parse(raw)as RuntimeEventEnvelope;}catch{return true;}if(!isValidRuntimeEventEnvelope(event))return true;if(event.event_type!=='ConversationTurnCompleted')return true;const v2=event.event_version==='2.0';const execution=await this.ledger.acquire({id:randomUUID(),eventId:event.event_id,userId:event.subject_user_id,sessionId:event.subject_session_id,sourceTurnId:event.subject_turn_id,eventVersion:event.event_version,processingPath:(event.payload.processing_path??null)as'FAST'|'DEEP'|null,safetyDisposition:v2?event.payload.safety_disposition as'ALLOW'|'GUIDED'|'BLOCK':null});if(execution.state!=='RUNNING')return true;const effects=await this.ledger.effects(execution.id);if(effects.some(effect=>effect.state==='CLAIMED'))return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','EFFECT_RECOVERY');if(execution.attempt_count>=5)return this.terminal(execution,'QUARANTINED','MAX_ATTEMPTS','DELIVERY');if(!v2)return this.terminal(execution,'SKIPPED','LEGACY_UNSUPPORTED','VALIDATION');const authorized=await this.authority.authorize(event);if(authorized.outcome!=='AUTHORIZED'||!authorized.context)return this.terminal(execution,'QUARANTINED',authorized.outcome==='NOT_AUTHORIZED_OWNER_MISMATCH'?'CANONICAL_MISMATCH':'AUTHORITY_REJECTED','AUTHORITY');if(execution.safety_disposition!=='ALLOW')return this.terminal(execution,'SKIPPED','SAFETY_SKIPPED','SAFETY');const context=authorized.context;const turn=await this.enrichment.readCanonicalSourceTurn(context);if(turn.processing_path!==execution.processing_path)return this.terminal(execution,'QUARANTINED','CANONICAL_MISMATCH','CANONICAL_REREAD');
   const completed=new Set(effects.filter(effect=>effect.state==='COMPLETED').map(effect=>effect.effect_key));
+  // QAN-AUD-06 post-persistence durable resume. Once generation persistence is
+  // durably COMPLETED, the only work this execution can still owe is the
+  // managed Confidence batch, so a redelivery rebuilds the generation result
+  // from the durable Intent -> Candidate -> Persistence chain and resumes
+  // directly at Confidence. It reruns NO Memory write, NO Association
+  // preparation or provider, NO automatic Hypothesis Update, NO eligibility
+  // recomputation, NO Intent or Candidate provider and NO persistence write -
+  // otherwise a world change between the original persistence and the retry
+  // could terminate the execution SKIPPED and strand a durable generated
+  // Hypothesis without its required Confidence evaluation. Missing, legacy,
+  // malformed, foreign, reordered or inconsistent durable generation state
+  // quarantines: nothing is inferred or repaired from current Hypothesis rows.
+  if(completed.has('HYPOTHESIS_PERSISTENCE'))return this.resumeGenerationConfidence(execution,effects);
   const persistedMemory=effects.find(effect=>effect.effect_key==='MEMORY_WRITE'&&effect.state==='COMPLETED');let freshEvidenceId:string|undefined;
   if(persistedMemory){if(persistedMemory.result_code==='NO_FRESH_EVIDENCE'&&persistedMemory.result_reference===null){}else if(persistedMemory.result_code==='FRESH_EVIDENCE_CREATED'&&validEvidenceReference(persistedMemory.result_reference))freshEvidenceId=persistedMemory.result_reference;else return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','ASSOCIATION_RECOVERY');}
   else{if(!await this.ledger.claim(execution.id,'MEMORY_WRITE'))return true;try{const result=await this.enrichment.evaluateAndWriteMemory(context,turn.content);if(!await this.ledger.completeMemory(execution.id,result))return true;completed.add('MEMORY_WRITE');if(result.decision==='WRITE')freshEvidenceId=result.evidenceId;}catch{return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','MEMORY_WRITE');}}
@@ -72,8 +85,56 @@ export class PostResponseIntelligenceDispatcherService{
   if(persistedPersistence){const recovered=recoverHypothesisPersistenceResult(persistedPersistence,candidate);if(recovered.status==='INDETERMINATE')return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','HYPOTHESIS_PERSISTENCE_RECOVERY');acceptedHypothesisIds=recovered.hypothesisIds;}
   else{if(!await this.ledger.claim(execution.id,'HYPOTHESIS_PERSISTENCE'))return true;try{if(!await this.ledger.persistHypothesisGeneration(execution.id))return true;}catch{return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','HYPOTHESIS_PERSISTENCE');}
    completed.add('HYPOTHESIS_PERSISTENCE');acceptedHypothesisIds=candidate.status==='VALIDATED_CANDIDATES'?candidate.candidates.map(item=>item.hypothesisId):[];}
-  if(!await this.effect(execution,'CONFIDENCE_BATCH',completed,async()=>{for(const hypothesisId of acceptedHypothesisIds){try{await this.enrichment.evaluateHypothesisConfidence(context,hypothesisId);}catch{}}}))return true;return this.terminal(execution,'COMPLETED','COMPLETED','DONE');}
- private async effect(execution:IntelligenceExecution,key:GenericIntelligenceEffect,completed:Set<IntelligenceEffect>,work:()=>Promise<unknown>):Promise<boolean>{if(completed.has(key))return true;if(!await this.ledger.claim(execution.id,key))return false;try{await work();const done=await this.ledger.complete(execution.id,key);if(done)completed.add(key);return done;}catch{await this.ledger.finish(execution.id,'QUARANTINED','INDETERMINATE_EFFECT',key);return false;}}
+  return this.confidenceBatch(execution,effects,acceptedHypothesisIds);}
+ // QAN-AUD-06 post-persistence resume. It rebuilds the exact generation result
+ // from durable state ONLY, using the same pure recovery functions the fresh
+ // path uses, and never touches a provider, a Hypothesis row or an upstream
+ // effect. Any gap in the durable chain is indeterminate and quarantines under
+ // the existing stage vocabulary.
+ private async resumeGenerationConfidence(execution:IntelligenceExecution,effects:readonly IntelligenceEffectState[]):Promise<boolean>{
+  const persistedIntent=effects.find(effect=>effect.effect_key==='INTENT_PROVIDER'&&effect.state==='COMPLETED');
+  if(!persistedIntent)return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','INTENT_RECOVERY');
+  const intent=recoverDurableIntentProviderResult(persistedIntent,execution);
+  if(intent.status!=='AUTHORIZED')return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','INTENT_RECOVERY');
+  // A completed persistence with no completed Candidate effect is the same
+  // broken generation chain the fresh path already quarantines under
+  // HYPOTHESIS_PERSISTENCE_RECOVERY; the label is preserved exactly.
+  const persistedCandidate=effects.find(effect=>effect.effect_key==='CANDIDATE_PROVIDER'&&effect.state==='COMPLETED');
+  if(!persistedCandidate)return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','HYPOTHESIS_PERSISTENCE_RECOVERY');
+  const candidate=recoverCandidateProviderResult(persistedCandidate,intent.intent);
+  if(candidate.status==='INDETERMINATE')return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','CANDIDATE_RECOVERY');
+  const persistence=recoverHypothesisPersistenceResult(effects.find(effect=>effect.effect_key==='HYPOTHESIS_PERSISTENCE'&&effect.state==='COMPLETED')!,candidate);
+  if(persistence.status==='INDETERMINATE')return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','HYPOTHESIS_PERSISTENCE_RECOVERY');
+  return this.confidenceBatch(execution,effects,persistence.hypothesisIds);}
+ // The managed QAN-AUD-06 Confidence stage. There is no application-level
+ // per-target loop and no generic claim/completion: the application supplies
+ // only the execution identity, and the database freezes the exact target
+ // versions, owns the stable evaluation identities, evaluates only unfinished
+ // items through the canonical Confidence boundary and completes the typed
+ // effect ONLY when every target has a valid result. A durably completed batch
+ // is recovered with zero Confidence replay; RETRY_PENDING returns false so the
+ // Redis entry stays pending for the existing bounded reclaim path and the
+ // execution is NOT finished; QUARANTINED fails closed; and an ambiguous
+ // transport outcome is reconciled from durable state - never fabricated from
+ // an HTTP result.
+ private async confidenceBatch(execution:IntelligenceExecution,effects:readonly IntelligenceEffectState[],hypothesisIds:readonly string[]):Promise<boolean>{
+  const persisted=effects.find(effect=>effect.effect_key==='CONFIDENCE_BATCH'&&effect.state==='COMPLETED');
+  if(persisted)return this.finishConfidence(execution,persisted,hypothesisIds);
+  let status:ConfidenceBatchCommandStatus|undefined;try{status=await this.ledger.executeConfidenceBatch(execution.id);}catch{status=undefined;}
+  if(status==='RETRY_PENDING')return false;
+  if(status==='QUARANTINED')return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','CONFIDENCE_BATCH');
+  let reread:readonly IntelligenceEffectState[];try{reread=await this.ledger.effects(execution.id);}catch{return false;}
+  const durable=reread.find(effect=>effect.effect_key==='CONFIDENCE_BATCH');
+  // No completed Confidence effect safely covers both "nothing committed" and a
+  // committed RETRY_PENDING/QUARANTINED item state the managed command resolves
+  // on the next attempt, and an impossible persisted CLAIMED row is caught by
+  // the global fail-closed rule on redelivery.
+  if(!durable||durable.state!=='COMPLETED')return false;
+  return this.finishConfidence(execution,durable,hypothesisIds);}
+ private async finishConfidence(execution:IntelligenceExecution,effect:IntelligenceEffectState,hypothesisIds:readonly string[]):Promise<true>{
+  return recoverConfidenceBatchResult(effect,hypothesisIds).status==='INDETERMINATE'
+   ?this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','CONFIDENCE_BATCH_RECOVERY')
+   :this.terminal(execution,'COMPLETED','COMPLETED','DONE');}
  // Result-aware completion for a newly executed ASSOCIATION_PROVIDER effect. The
  // provider is invoked at most once; a successful post-authority outcome persists
  // its typed durable result atomically with completion, and any non-success
