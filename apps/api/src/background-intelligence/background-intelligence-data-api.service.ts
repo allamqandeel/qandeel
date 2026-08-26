@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { SessionStatus, TurnStatus } from '../conversation/conversation.types';
+import type { HimSnapshotSourceRow } from '../human-model/him-intelligence-snapshot.types';
 import type { MemoryRecord, MemorySource, MemoryStatus, MemoryType } from '../memory/memory.types';
 import type { HypothesisRecord, HypothesisType, HypothesisDomain, EvidenceRole } from '../hypothesis/hypothesis.types';
 import type { HypothesisMutationResult, HypothesisUpdateRequest } from '../hypothesis/hypothesis-update.types';
@@ -123,6 +124,16 @@ export class BackgroundIntelligenceDataApiService {
 
   async createConfidenceEvaluation(context:BackgroundIntelligenceExecutionContext,evaluationId:string,hypothesisId:string,targetVersion:number):Promise<ConfidenceEvaluationRecord>{
     this.assertExecutionContext(context);return(await this.request<ConfidenceEvaluationRecord[]>('rpc/background_create_confidence_evaluation_v1',{method:'POST',body:JSON.stringify({p_user_id:context.userId,p_evaluation_id:evaluationId,p_hypothesis_id:hypothesisId,p_target_version:targetVersion})}))[0];
+  }
+
+  // HIM Runtime Consumption v1: the ONE narrow background HIM read. It calls
+  // only the CONVERSATION_SESSION-only service-role snapshot wrapper
+  // (migration 0037) with the authority-issued context's exact user/session
+  // identity - no user credential of any kind, no request claims, no direct
+  // HIM table read, no generic user/context read authority, nothing persisted.
+  async readHimConversationSnapshot(context:BackgroundIntelligenceExecutionContext):Promise<HimSnapshotSourceRow[]>{
+    this.assertExecutionContext(context);
+    return this.request<HimSnapshotSourceRow[]>('rpc/background_read_him_conversation_snapshot_v1',{method:'POST',body:JSON.stringify({p_user_id:context.userId,p_session_id:context.sessionId})});
   }
 
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {

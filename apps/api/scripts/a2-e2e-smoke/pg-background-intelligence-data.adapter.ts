@@ -25,6 +25,7 @@ import type {
   BackgroundMemoryCreateInput,
 } from '../../src/background-intelligence/background-intelligence-data-api.service';
 import type { ConfidenceEvaluationRecord } from '../../src/hypothesis/confidence.types';
+import type { HimSnapshotSourceRow } from '../../src/human-model/him-intelligence-snapshot.types';
 import type { EvidenceRole, HypothesisRecord } from '../../src/hypothesis/hypothesis.types';
 import type { HypothesisMutationResult, HypothesisUpdateRequest } from '../../src/hypothesis/hypothesis-update.types';
 import type { MemoryRecord } from '../../src/memory/memory.types';
@@ -39,6 +40,9 @@ const HYPOTHESIS_FIELDS =
   'id, user_id, statement, type, domain, scope, origin, status, version, supporting_evidence_ids, contradicting_evidence_ids, competing_hypothesis_ids, assumptions, disconfirming_conditions, created_at, updated_at';
 
 export class PgBackgroundIntelligenceDataApiAdapter {
+  /** HIM Runtime Consumption v1: exact background HIM read count, so the smoke can prove zero re-consumption after durable Candidate completion. */
+  himSnapshotReadCount = 0;
+
   constructor(private readonly db: SmokeDbSession) {}
 
   async findSession(context: BackgroundIntelligenceEventContext): Promise<BackgroundConversationSessionState | undefined> {
@@ -167,6 +171,19 @@ export class PgBackgroundIntelligenceDataApiAdapter {
       [context.userId, context.sessionId, updateId, request.hypothesisId, request.expectedVersion, request.evidenceId, request.evidenceRole],
     );
     return rows[0];
+  }
+
+  // HIM Runtime Consumption v1: the production PostgREST call targets the SAME
+  // migration-0037 CONVERSATION_SESSION-only service-role snapshot wrapper this
+  // adapter invokes directly - identical function, identity binding and rows.
+  async readHimConversationSnapshot(context: BackgroundIntelligenceExecutionContext): Promise<HimSnapshotSourceRow[]> {
+    this.assertExecutionContext(context);
+    this.himSnapshotReadCount += 1;
+    return this.db.asRole<HimSnapshotSourceRow>(
+      'service_role',
+      'SELECT * FROM public.background_read_him_conversation_snapshot_v1($1, $2)',
+      [context.userId, context.sessionId],
+    );
   }
 
   async createConfidenceEvaluation(

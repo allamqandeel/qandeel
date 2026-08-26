@@ -34,6 +34,7 @@
     "verify:hse-stress:integration": "node --env-file-if-exists=.env database/verify-migration-0016.mjs",
     "verify:him-trends:integration": "node --env-file-if-exists=.env database/verify-him-trends-v1.mjs",
     "verify:him-snapshot:integration": "node --env-file-if-exists=.env database/verify-him-intelligence-snapshot-v1.mjs",
+    "verify:background-him-runtime-consumption:integration": "node --env-file-if-exists=.env database/verify-migration-0037.mjs",
     "verify:runtime-events:integration": "node --env-file-if-exists=.env database/verify-runtime-event-outbox-v1.mjs",
     "verify:background-intelligence-adapters:integration": "node --env-file-if-exists=.env database/verify-migration-0021.mjs",
     "verify:post-response-intelligence-db:integration": "node --env-file-if-exists=.env database/verify-migration-0022.mjs",
