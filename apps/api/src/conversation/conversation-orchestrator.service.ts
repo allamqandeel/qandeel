@@ -18,6 +18,7 @@ import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
 import { HypothesisReasoningInvariantError } from '../hypothesis/hypothesis-reasoning-context.types';
+import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 
 const DEEP_INPUT_LENGTH = 1000;
 
@@ -34,6 +35,7 @@ export class ConversationOrchestratorService {
     private readonly himReasoningConsumption: HimReasoningConsumptionService,
     private readonly himFastDeepConsumption: HimFastDeepConsumptionService,
     private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
+    private readonly recommendationGrounding: RecommendationGroundingService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
     private readonly correlation:CorrelationService,
     private readonly telemetry:TelemetryService,
@@ -80,6 +82,7 @@ export class ConversationOrchestratorService {
       }
       if (hypothesisResult.coverageState === 'EMPTY') this.telemetry.recordHypothesisContext('empty', selection.path);
       else this.telemetry.recordHypothesisContext('available', selection.path, hypothesisResult.context.contractVersion, hypothesisResult.context.candidateHypothesisCount, hypothesisResult.context.includedHypothesisCount);
+      const recommendationGrounding = this.recommendationGrounding.ground(hypothesisResult);
       const assembledContext = this.contextBuilder.assemble(context, memoryContext);
       const behavioralGuidance = this.behavioralPolicy.buildTextGuidance();
       const candidate = await this.engine('model_router',selection.path,()=>this.router.generate({
@@ -90,6 +93,7 @@ export class ConversationOrchestratorService {
         ...(assembledContext.memoryContext ? { memoryContext: assembledContext.memoryContext } : {}),
         himContext,
         ...(hypothesisResult.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesisResult.context } : {}),
+        ...(recommendationGrounding.coverageState === 'AVAILABLE' ? { recommendationContext: recommendationGrounding.context } : {}),
         locale: 'und', modality: 'TEXT',
         latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',

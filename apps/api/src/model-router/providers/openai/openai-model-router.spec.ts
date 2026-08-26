@@ -63,6 +63,17 @@ describe('OpenAIModelRouter', () => {
     expect(create.mock.calls[0][0].instructions).toContain('<hypothesis_reasoning_context>');
     expect(JSON.stringify(create.mock.calls[0][0].input)).not.toContain('hypothesis_reasoning_context');
   });
+  it('receives the provider-neutral recommendation grounding channel only through central guidance', async () => {
+    const create = jest.fn().mockResolvedValue({ output_text: 'ok', usage: null });
+    const router = new OpenAIModelRouter(config, { responses: { create } });
+    await router.generate({ ...request(), recommendationContext: { contractVersion: 1, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT', sourceContractVersion: 1, currentVersionConfidenceCoverage: 'NONE', actionableMissingInformationCodes: [], unverifiedAssumptionsPresent: false, contradictingEvidencePresent: false, sourceTruncated: false } });
+    expect(create).toHaveBeenCalledTimes(1);
+    const body = create.mock.calls[0][0];
+    expect(body.instructions).toContain('<recommendation_grounding_context>');
+    expect(body.instructions).toContain('does not by itself authorize a recommendation');
+    expect(body.instructions).toContain('coverage only, never confidence strength');
+    expect(JSON.stringify(body.input)).not.toContain('recommendation_grounding_context');
+  });
 
   it('composes server-owned safety guidance outside history without adapter rules', async () => {
     const create = jest.fn().mockResolvedValue({ output_text: 'ok', usage: null });

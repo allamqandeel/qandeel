@@ -26,6 +26,8 @@ import { HypothesisGenerationService } from '../hypothesis/hypothesis-generation
 import type { HypothesisCandidateGenerator } from '../hypothesis/hypothesis-generation.types';
 import { HypothesisCandidateGeneratorError } from '../hypothesis/hypothesis-candidate-generator-provider.types';
 import { ConfidenceService } from '../hypothesis/confidence.service';
+import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
+import { RecommendationGroundingInvariantError, type RecommendationGroundingContext } from '../recommendation/recommendation-grounding.types';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -40,6 +42,7 @@ describe('ConversationOrchestratorService', () => {
   let himBridge: jest.Mocked<HimReasoningConsumptionService>;
   let himConsumptionPolicy: jest.Mocked<HimFastDeepConsumptionService>;
   let hypothesisContext: jest.Mocked<HypothesisReasoningContextService>;
+  let recommendationGrounding: jest.Mocked<RecommendationGroundingService>;
   let hypothesisEligibility: jest.Mocked<HypothesisGenerationEligibilityService>;
   let hypothesisExtraction: jest.Mocked<HypothesisGenerationIntentExtractionService>;
   let hypothesisRequestAssembler: jest.Mocked<HypothesisGenerationRequestAssemblerService>;
@@ -91,6 +94,7 @@ describe('ConversationOrchestratorService', () => {
     himBridge = { transform: jest.fn().mockReturnValue(himReasoningContext) } as unknown as jest.Mocked<HimReasoningConsumptionService>;
     himConsumptionPolicy = { project: jest.fn().mockImplementation((path) => ({ ...himContext, consumptionMode: path })) } as unknown as jest.Mocked<HimFastDeepConsumptionService>;
     hypothesisContext = { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as jest.Mocked<HypothesisReasoningContextService>;
+    recommendationGrounding = { ground: jest.fn().mockReturnValue({ coverageState: 'EMPTY', reason: 'NO_ACTIVE_HYPOTHESES' }) } as unknown as jest.Mocked<RecommendationGroundingService>;
     hypothesisEligibility = { evaluateWithContext: jest.fn().mockResolvedValue({ eligibility: { status: 'NOT_ELIGIBLE', reason: 'NO_TRIGGER' } }) } as unknown as jest.Mocked<HypothesisGenerationEligibilityService>;
     hypothesisExtraction = { extract: jest.fn().mockResolvedValue({ status: 'NOT_AUTHORIZED', reason: 'AUTHORITY_REJECTED', authorityReason: 'PROBLEM_NOT_GROUNDED' }) } as unknown as jest.Mocked<HypothesisGenerationIntentExtractionService>;
     hypothesisRequestAssembler = { assemble: jest.fn().mockReturnValue({ status: 'READY', request: { problem: 'problem', domain: 'GENERAL', scope: 'CONVERSATION_SESSION:session', evidenceIds: [] } }) } as unknown as jest.Mocked<HypothesisGenerationRequestAssemblerService>;
@@ -100,7 +104,7 @@ describe('ConversationOrchestratorService', () => {
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
     const correlation=new CorrelationService();
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, hypothesisContext, router,correlation,new TelemetryService(correlation));
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, hypothesisContext, recommendationGrounding, router,correlation,new TelemetryService(correlation));
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -381,6 +385,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
+    expect(recommendationGrounding.ground).not.toHaveBeenCalled();
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
     expect(hypothesisExtraction.extract).not.toHaveBeenCalled();
     expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
@@ -421,6 +426,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
+    expect(recommendationGrounding.ground).not.toHaveBeenCalled();
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
     expect(hypothesisExtraction.extract).not.toHaveBeenCalled();
     expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
@@ -549,6 +555,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
+    expect(recommendationGrounding.ground).not.toHaveBeenCalled();
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
     expect(hypothesisExtraction.extract).not.toHaveBeenCalled();
   });
@@ -570,5 +577,89 @@ describe('ConversationOrchestratorService', () => {
     router.generate.mockClear(); hypothesisContext.build.mockRejectedValue(new Error('private query failure'));
     await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(router.generate).not.toHaveBeenCalled(); expect(repository.failTurn).toHaveBeenCalled();
+  });
+
+  describe('Recommendation grounding bridge', () => {
+    const availableHypothesisContext = {
+      contractVersion: 1 as const, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT' as const,
+      coverageState: 'AVAILABLE' as const, candidateHypothesisCount: 2, includedHypothesisCount: 1, truncated: true,
+      hypotheses: [{
+        statement: 'statement', type: 'CAUSAL' as const, domain: 'GENERAL' as const, scope: 'session',
+        origin: 'USER_PROPOSED' as const, status: 'ACTIVE' as const, hypothesisVersion: 2,
+        currentlyEligibleSupportingEvidenceCount: 1, currentlyEligibleContradictingEvidenceCount: 1,
+        assumptions: ['unverified'], disconfirmingConditions: [],
+        confidence: { state: 'NOT_EVALUATED_FOR_CURRENT_VERSION' as const, targetVersion: 2 },
+      }],
+    };
+    const groundedContext: RecommendationGroundingContext = {
+      contractVersion: 1, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT', sourceContractVersion: 1,
+      currentVersionConfidenceCoverage: 'NONE', actionableMissingInformationCodes: [],
+      unverifiedAssumptionsPresent: true, contradictingEvidencePresent: true, sourceTruncated: true,
+    };
+
+    it('transforms EMPTY reasoning exactly once and omits recommendationContext from the single router call', async () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(recommendationGrounding.ground).toHaveBeenCalledTimes(1);
+      expect(recommendationGrounding.ground).toHaveBeenCalledWith({ coverageState: 'EMPTY', candidateHypothesisCount: 0 });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('recommendationContext');
+    });
+
+    it('transforms AVAILABLE reasoning exactly once and passes the minimized context without touching other channels', async () => {
+      hypothesisContext.build.mockResolvedValue({ coverageState: 'AVAILABLE', context: availableHypothesisContext });
+      recommendationGrounding.ground.mockReturnValue({ coverageState: 'AVAILABLE', context: groundedContext });
+      memoryRetriever.retrieve.mockResolvedValue([{ type: 'GOAL', content: 'Leave my job', source: 'USER_STATED' }] as never);
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(recommendationGrounding.ground).toHaveBeenCalledTimes(1);
+      expect(recommendationGrounding.ground).toHaveBeenCalledWith({ coverageState: 'AVAILABLE', context: availableHypothesisContext });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      const request = router.generate.mock.calls[0][0];
+      expect(request.recommendationContext).toBe(groundedContext);
+      expect(request.hypothesisContext).toBe(availableHypothesisContext);
+      expect(request.himContext).toEqual(himContext);
+      expect(request.memoryContext).toEqual([{ type: 'GOAL', content: 'Leave my job', source: 'USER_STATED' }]);
+      expect(request.context).toEqual([{ role: 'USER', content: 'hello' }]);
+      expect(request.recommendationContext).not.toBe(request.hypothesisContext);
+    });
+
+    it('keeps the minimized context free of IDs, statements, and numeric authority fields', async () => {
+      hypothesisContext.build.mockResolvedValue({ coverageState: 'AVAILABLE', context: availableHypothesisContext });
+      recommendationGrounding.ground.mockReturnValue({ coverageState: 'AVAILABLE', context: groundedContext });
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      const serialized = JSON.stringify(router.generate.mock.calls[0][0].recommendationContext);
+      expect(serialized).not.toMatch(/user-turn|session|statement|unverified|memory:|evaluation|score|band|rank|risk|reversibility|readiness|Count/u);
+    });
+
+    it('fails closed before the provider call when grounding rejects an impossible source shape', async () => {
+      hypothesisContext.build.mockResolvedValue({ coverageState: 'AVAILABLE', context: availableHypothesisContext });
+      recommendationGrounding.ground.mockImplementation(() => { throw new RecommendationGroundingInvariantError(); });
+      repository.claimTurn.mockResolvedValue(claimed);
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(router.generate).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+      expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
+    });
+
+    it('applies identical grounding semantics on DEEP without changing routing or provider count', async () => {
+      const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
+      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+      hypothesisContext.build.mockResolvedValue({ coverageState: 'AVAILABLE', context: availableHypothesisContext });
+      recommendationGrounding.ground.mockReturnValue({ coverageState: 'AVAILABLE', context: groundedContext });
+      repository.claimTurn.mockResolvedValue(deepClaim);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
+      await orchestrator.orchestrate('token', 'user', deepTurn);
+      expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+      expect(recommendationGrounding.ground).toHaveBeenCalledTimes(1);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
+        path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: 10000, recommendationContext: groundedContext,
+      }));
+    });
   });
 });

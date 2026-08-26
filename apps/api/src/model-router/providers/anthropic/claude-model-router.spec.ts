@@ -31,6 +31,17 @@ describe('ClaudeModelRouter', () => {
     expect(create.mock.calls[0][0].system).toContain('<hypothesis_reasoning_context>');
     expect(JSON.stringify(create.mock.calls[0][0].messages)).not.toContain('hypothesis_reasoning_context');
   });
+  it('receives the provider-neutral recommendation grounding channel only through central guidance', async () => {
+    const create = jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 1, output_tokens: 1 } });
+    const router = new ClaudeModelRouter(config, { messages: { create } });
+    await router.generate({ ...request(), recommendationContext: { contractVersion: 1, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT', sourceContractVersion: 1, currentVersionConfidenceCoverage: 'NONE', actionableMissingInformationCodes: [], unverifiedAssumptionsPresent: false, contradictingEvidencePresent: false, sourceTruncated: false } });
+    expect(create).toHaveBeenCalledTimes(1);
+    const body = create.mock.calls[0][0];
+    expect(body.system).toContain('<recommendation_grounding_context>');
+    expect(body.system).toContain('does not by itself authorize a recommendation');
+    expect(body.system).toContain('coverage only, never confidence strength');
+    expect(JSON.stringify(body.messages)).not.toContain('recommendation_grounding_context');
+  });
   it('translates multi-turn context and normalizes text and token usage', async () => {
     const create = jest.fn().mockResolvedValue({
       content: [{ type: 'text', text: ' normalized response ' }],
