@@ -1,14 +1,18 @@
-import type { AssociationEffectResultCode } from './durable-association-result';
-
+import type{AuthorizedHypothesisGenerationIntent}from'../hypothesis/hypothesis-generation-intent-authority.types';
+import type{AssociationEffectResultCode}from'./durable-association-result';
 export const INTELLIGENCE_EFFECTS=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH']as const;
 export type IntelligenceEffect=typeof INTELLIGENCE_EFFECTS[number];
-// MEMORY_WRITE and ASSOCIATION_PROVIDER each carry a typed durable result and are
-// completed through their dedicated functions, never the generic one.
-export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'|'ASSOCIATION_PROVIDER'>;
+/** Effects whose completion carries no durable result and therefore still uses the generic completion RPC. MEMORY_WRITE, INTENT_PROVIDER and ASSOCIATION_PROVIDER each carry a typed durable result and are completed through their dedicated commands. */
+export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'|'INTENT_PROVIDER'|'ASSOCIATION_PROVIDER'>;
 export type MemoryWriteEffectResultCode='NO_FRESH_EVIDENCE'|'FRESH_EVIDENCE_CREATED';
-export type EffectResultCode=MemoryWriteEffectResultCode|AssociationEffectResultCode;
+export type IntentProviderEffectResultCode='INTENT_AUTHORIZED'|'INTENT_NOT_AUTHORIZED';
+export type IntelligenceEffectResultCode=MemoryWriteEffectResultCode|IntentProviderEffectResultCode|AssociationEffectResultCode;
+/** Durable post-authority outcome of a completed INTENT_PROVIDER effect. A durable NOT_AUTHORIZED carries no reason because none was persisted. */
+export type DurableIntentProviderResult={readonly status:'AUTHORIZED';readonly intent:AuthorizedHypothesisGenerationIntent}|{readonly status:'NOT_AUTHORIZED'};
+/** INDETERMINATE covers a legacy null result, a malformed persisted result, mismatched provenance, and any impossible code/payload pairing. It is never NOT_AUTHORIZED. */
+export type IntentProviderRecovery=DurableIntentProviderResult|{readonly status:'INDETERMINATE'};
 export interface IntelligenceExecution{readonly id:string;readonly event_id:string;readonly user_id:string;readonly session_id:string;readonly source_turn_id:string;readonly event_version:'1.0'|'2.0';readonly processing_path:'FAST'|'DEEP'|null;readonly safety_disposition:'ALLOW'|'GUIDED'|'BLOCK'|null;readonly state:'RUNNING'|'COMPLETED'|'SKIPPED'|'QUARANTINED'|'FAILED';readonly attempt_count:number;}
-export interface IntelligenceEffectState{readonly effect_key:IntelligenceEffect;readonly state:'CLAIMED'|'COMPLETED';readonly result_code:EffectResultCode|null;readonly result_reference:string|null;readonly result_commands:readonly unknown[]|null;}
+export interface IntelligenceEffectState{readonly effect_key:IntelligenceEffect;readonly state:'CLAIMED'|'COMPLETED';readonly result_code:IntelligenceEffectResultCode|null;readonly result_reference:string|null;readonly result_payload:unknown;}
 export interface RedisRuntimeEventEntry{readonly id:string;readonly envelope:string;}
 export const POST_RESPONSE_REDIS_CONSUMER=Symbol('POST_RESPONSE_REDIS_CONSUMER');
 export interface PostResponseRedisConsumer{readonly enabled:boolean;connect():Promise<void>;read():Promise<readonly RedisRuntimeEventEntry[]>;reclaim():Promise<readonly RedisRuntimeEventEntry[]>;ack(id:string):Promise<void>;close():Promise<void>;}

@@ -241,6 +241,11 @@ async function main() {
     const owner = randomUUID(), other = randomUUID();
     const session = randomUUID(), otherSession = randomUUID(), received = randomUUID();
     await q('INSERT INTO auth.users(id) VALUES($1),($2)', [owner, other]);
+    // Fixture sessions are deliberately ACTIVE/TEXT: migration 0030 narrowed
+    // create_user_conversation_turn admission to owned ACTIVE/TEXT parents, so
+    // every Finding-02 turn-authority assertion here still runs against an
+    // admissible session. The non-admissible matrix is proven by
+    // verify-migration-0030.mjs.
     await q("INSERT INTO public.conversation_sessions(id,user_id,status,channel) VALUES($1,$2,'ACTIVE','TEXT'),($3,$4,'ACTIVE','TEXT')", [session, owner, otherSession, other]);
     await q("INSERT INTO public.conversation_turns(id,session_id,user_id,role,status,content) VALUES($1,$2,$3,'USER','RECEIVED','baseline')", [received, session, owner]);
 

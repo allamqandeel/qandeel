@@ -47,6 +47,28 @@ describe('ConversationRepository context history', () => {
 });
 
 describe('ConversationRepository write authority', () => {
+  it('creates a session through the narrow authenticated command, sending only the generated UUID', async () => {
+    const session = {
+      id: 'session-1', status: 'ACTIVE', channel: 'TEXT', created_at: 'now', updated_at: 'now',
+      last_activity_at: 'now', closed_at: null,
+    };
+    const dataApi = { request: jest.fn().mockResolvedValue([session]) } as unknown as jest.Mocked<SupabaseDataApiService>;
+    const repository = new ConversationRepository(dataApi, serviceApiMock(), new CorrelationService());
+
+    await expect(repository.createSession('user-token', 'session-1')).resolves.toEqual(session);
+
+    expect(dataApi.request).toHaveBeenCalledTimes(1);
+    const [token, path, init] = dataApi.request.mock.calls[0];
+    expect(token).toBe('user-token');
+    // Never a direct table POST: session creation is the migration-0030 RPC.
+    expect(path).toBe('rpc/create_conversation_session_v1');
+    const body = JSON.parse((init as RequestInit).body as string);
+    // The body carries exactly the server-generated UUID and nothing else — no
+    // owner, lifecycle state, channel, or timestamp can be chosen by a client.
+    expect(body).toEqual({ p_id: 'session-1' });
+    expect(Object.keys(body)).toEqual(['p_id']);
+  });
+
   it('creates a user turn through the narrow authenticated command and never supplies server-owned columns', async () => {
     const created: ConversationTurn = {
       id: 'turn-1', session_id: 'session-1', role: 'USER', status: 'RECEIVED', content: 'hello',

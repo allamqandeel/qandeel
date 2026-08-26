@@ -1,0 +1,153 @@
+{
+  "contract": "value.normalize('NFKC').trim().replace(/\\s+/gu, ' ')",
+  "note": "Golden parity fixtures shared by the TypeScript Evidence projector (normalizeExact) and the canonical SQL Evidence content key (public.canonical_evidence_content_key_v1). Every raw string is written with escaped code units so the committed file is pure ASCII.",
+  "normalization": [
+    {
+      "name": "ascii-leading-trailing",
+      "raw": "   I live in Cairo.   ",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "ascii-repeated-interior",
+      "raw": "I   live    in Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "tab",
+      "raw": "I\tlive in\tCairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "newline-crlf",
+      "raw": "I\nlive\r\nin Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "vertical-tab-form-feed",
+      "raw": "I\u000blive\fin Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "nbsp-u00a0",
+      "raw": "I\u00a0live in Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "em-space-u2003",
+      "raw": "I\u2003live in\u2003Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "en-quad-u2000",
+      "raw": "I\u2000live in Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "thin-space-u2009",
+      "raw": "I\u2009live in Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "figure-space-u2007",
+      "raw": "I\u2007live in Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "narrow-nbsp-u202f",
+      "raw": "I\u202flive in Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "medium-math-space-u205f",
+      "raw": "I\u205flive in Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "ideographic-space-u3000",
+      "raw": "I\u3000live in Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "ogham-space-u1680",
+      "raw": "I\u1680live in Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "line-paragraph-separator",
+      "raw": "I\u2028live\u2029in Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "bom-zwnbsp-ufeff",
+      "raw": "\ufeffI live in Cairo.\ufeff",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "fullwidth-nfkc",
+      "raw": "\uff29 \uff4c\uff49\uff56\uff45 in Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "ligature-nfkc",
+      "raw": "The \ufb01le is in Cairo.",
+      "expected": "The file is in Cairo."
+    },
+    {
+      "name": "nfd-combining-accent",
+      "raw": "I live in Ale\u0301xandria.",
+      "expected": "I live in Al\u00e9xandria."
+    },
+    {
+      "name": "nfc-precomposed-accent",
+      "raw": "I live in Al\u00e9xandria.",
+      "expected": "I live in Al\u00e9xandria."
+    },
+    {
+      "name": "mixed-unicode-whitespace-nfkc",
+      "raw": "\u3000\uff29\u00a0 live\t\tin\u2003Cairo.\u2028",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "already-canonical",
+      "raw": "I live in Cairo.",
+      "expected": "I live in Cairo."
+    },
+    {
+      "name": "semantic-conflict",
+      "raw": "I live in Alexandria.",
+      "expected": "I live in Alexandria."
+    },
+    {
+      "name": "whitespace-only",
+      "raw": " \t   ",
+      "expected": ""
+    }
+  ],
+  "duplicateGroups": [
+    [
+      "ascii-leading-trailing",
+      "ascii-repeated-interior",
+      "tab",
+      "newline-crlf",
+      "vertical-tab-form-feed",
+      "nbsp-u00a0",
+      "em-space-u2003",
+      "en-quad-u2000",
+      "thin-space-u2009",
+      "figure-space-u2007",
+      "narrow-nbsp-u202f",
+      "medium-math-space-u205f",
+      "ideographic-space-u3000",
+      "ogham-space-u1680",
+      "line-paragraph-separator",
+      "bom-zwnbsp-ufeff",
+      "fullwidth-nfkc",
+      "mixed-unicode-whitespace-nfkc",
+      "already-canonical"
+    ],
+    [
+      "nfd-combining-accent",
+      "nfc-precomposed-accent"
+    ]
+  ]
+}

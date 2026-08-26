@@ -10,9 +10,12 @@ import {
 export class MemoryRuntimeService {
   constructor(private readonly repository: MemoryRepository) {}
 
-  async create(userId: string, accessToken: string, input: CreateMemoryInput): Promise<MemoryRecord> {
+  // Mutations take no access token. Authoritative Memory writes are
+  // server-authority commands, so a caller credential is never the authority
+  // for one; reads keep the owner-scoped authenticated path.
+  async create(userId: string, input: CreateMemoryInput): Promise<MemoryRecord> {
     const validated = this.validate(input);
-    return this.repository.create(accessToken, randomUUID(), userId, validated);
+    return this.repository.create(randomUUID(), userId, validated);
   }
 
   async find(userId: string, accessToken: string, id: string): Promise<MemoryRecord> {
@@ -25,16 +28,16 @@ export class MemoryRuntimeService {
     return this.repository.listActiveForUser(accessToken, userId, limit);
   }
 
-  async markDeleted(userId: string, accessToken: string, id: string): Promise<MemoryRecord> {
-    const memory = await this.repository.markDeleted(accessToken, userId, id);
+  async markDeleted(userId: string, id: string): Promise<MemoryRecord> {
+    const memory = await this.repository.markDeleted(userId, id);
     if (!memory) throw new NotFoundException('Memory not found.');
     return memory;
   }
 
-  async supersede(userId: string, accessToken: string, oldMemoryId: string, input: CreateMemoryInput): Promise<MemoryRecord> {
+  async supersede(userId: string, oldMemoryId: string, input: CreateMemoryInput): Promise<MemoryRecord> {
     const newMemoryId = randomUUID();
     if (newMemoryId === oldMemoryId) throw new BadRequestException('A memory cannot supersede itself.');
-    const successor = await this.repository.supersede(accessToken, oldMemoryId, newMemoryId, this.validate(input));
+    const successor = await this.repository.supersede(userId, oldMemoryId, newMemoryId, this.validate(input));
     if (!successor) throw new NotFoundException('Active memory not found.');
     if (successor.user_id !== userId) throw new NotFoundException('Active memory not found.');
     return successor;

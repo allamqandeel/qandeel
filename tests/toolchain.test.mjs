@@ -99,6 +99,7 @@ test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () =>
     'verify:database:integration',
     'verify:conversation-authority:integration',
     'verify:memory:integration',
+    'verify:memory-authority:integration',
     'verify:hypothesis:integration',
     'verify:confidence:integration',
     'verify:question:integration',
@@ -116,7 +117,7 @@ test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () =>
     'verify:runtime-events:integration',
     'verify:background-intelligence-adapters:integration',
     'verify:post-response-intelligence-db:integration',
-    'verify:durable-association-effect-result:integration',
+    'verify:durable-association-provider-result:integration',
     'verify:post-response-dispatch:integration',
   ]) assert.match(apiCi, new RegExp(`run: npm run ${command}`,'u'), `missing ${command}`);
   assert.doesNotMatch(apiCi, /verify:(?:claude|openai|auth):smoke|eval:brain:(?:run|validate|summarize)/u);
@@ -127,6 +128,7 @@ test('lets CI-provided database configuration run safe historical verifiers with
     'verify:database:integration',
     'verify:conversation-authority:integration',
     'verify:memory:integration',
+    'verify:memory-authority:integration',
     'verify:hypothesis:integration',
     'verify:confidence:integration',
     'verify:question:integration',
@@ -134,6 +136,6 @@ test('lets CI-provided database configuration run safe historical verifiers with
     'verify:him:integration',
     'verify:background-intelligence-adapters:integration',
     'verify:post-response-intelligence-db:integration',
-    'verify:durable-association-effect-result:integration',
+    'verify:durable-association-provider-result:integration',
   ]) assert.match(packageJson.scripts[command], /--env-file-if-exists=\.env/u, `${command} requires a physical .env file`);
 });

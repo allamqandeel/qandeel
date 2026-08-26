@@ -13,7 +13,15 @@ async function verifyCanonicalContract(){
   assert.ok(contract,'Schema contract mismatch: apply_hypothesis_evidence_update(uuid,uuid,integer,text,text) is absent.');
   assert.equal(contract.table_present,true,'Schema contract mismatch: hypothesis_updates is absent.'); assert.equal(contract.security_definer,true,'Schema contract mismatch: hypothesis update authority changed.'); assert.equal(contract.volatility,'v','Schema contract mismatch: hypothesis update volatility changed.');
   assert.match(contract.result_identity,/TABLE\(update jsonb, hypothesis jsonb\)/u,'Schema contract mismatch: hypothesis update result identity changed.');
-  for(const fingerprint of [/auth\.uid\(\)/u,/FOR UPDATE/u,/LIMIT 64/u,/QANDEEL_HYPOTHESIS_UPDATE_LOOP/u,/INSERT INTO public\.hypothesis_updates/u]) assert.match(contract.definition,fingerprint,'Schema contract mismatch: hypothesis update behavior changed.');
+  for(const fingerprint of [/auth\.uid\(\)/u,/FOR UPDATE/u,/canonical_eligible_memory_ids_v1/u,/QANDEEL_HYPOTHESIS_UPDATE_LOOP/u,/INSERT INTO public\.hypothesis_updates/u]) assert.match(contract.definition,fingerprint,'Schema contract mismatch: hypothesis update behavior changed.');
+  // Migration 0028 moved the bounded Evidence projection out of this function's
+  // inline CTE and into the one canonical membership primitive, so the
+  // 64-candidate bound is asserted where it now lives. The Update Loop must
+  // carry no second copy of it.
+  assert.doesNotMatch(contract.definition,/WITH candidates AS MATERIALIZED/u,'Schema contract mismatch: a duplicated Evidence projection reappeared.');
+  const canonical=(await client.query("SELECT pg_get_functiondef(to_regprocedure('public.canonical_eligible_memory_ids_v1(uuid,timestamptz)')) definition")).rows[0];
+  assert.ok(canonical?.definition,'Schema contract mismatch: canonical Evidence membership primitive is absent.');
+  for(const fingerprint of [/LIMIT 64/u,/updated_at DESC, memory\.id DESC/u,/canonical_evidence_content_key_v1/u]) assert.match(canonical.definition,fingerprint,'Schema contract mismatch: canonical Evidence membership behavior changed.');
   assert.equal(contract.authenticated_execute,true,'Schema contract mismatch: authenticated execute grant is absent.'); assert.equal(contract.anon_execute,false,'Schema contract mismatch: anon can execute hypothesis update function.');
 }
 async function main(){ await client.connect(); try{
@@ -34,6 +42,10 @@ async function main(){ await client.connect(); try{
     assert.equal((await client.query(call,[randomUUID(),otherHypothesis,1,`memory:${contradict}`,'CONTRADICTING'])).rowCount,0);
     const second=(await client.query(call,[randomUUID(),hypothesis,2,`memory:${contradict}`,'CONTRADICTING'])).rows[0]; assert.equal(second.update.before_version,2); assert.equal(second.update.after_version,3); assert.deepEqual(second.hypothesis.contradicting_evidence_ids,[`memory:${contradict}`]);
     const boundedIds=Array.from({length:65},()=>randomUUID());
+    // Memory fixtures are seeded as the owner role: after migration 0026 the
+    // authenticated role holds no INSERT on public.memories. The authenticated
+    // identity is re-established immediately after the loop.
+    await client.query('RESET ROLE');
     for(let index=0;index<boundedIds.length;index+=1) await client.query(`INSERT INTO public.memories(id,user_id,scope,type,content,source,confidence,importance,status,created_at,updated_at)
       VALUES($1,$2,'USER','PERSONAL_FACT',$3,'USER_STATED',.9,.5,'ACTIVE',$4,$4)`,[boundedIds[index],user,`bounded-${index}`,new Date(Date.UTC(2099,0,1,0,0,index)).toISOString()]);
     await identity(user); await rejects(call,[randomUUID(),hypothesis,3,`memory:${boundedIds[0]}`,'SUPPORTING']);

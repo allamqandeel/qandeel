@@ -14,17 +14,25 @@ describe('HypothesisService', () => {
     service = new HypothesisService(repository, evidence);
   });
   it('creates an owned CANDIDATE with UUID identity and no confidence or reasoning fields', async () => {
-    repository.create.mockImplementation(async (_t, id, userId, value) => record({ id, user_id: userId, status: 'CANDIDATE', assumptions: value.assumptions }));
-    const created = await service.create('user-a', 'token-a', input);
+    repository.create.mockImplementation(async (id, userId, value) => record({ id, user_id: userId, status: 'CANDIDATE', assumptions: value.assumptions }));
+    const created = await service.create('user-a', input);
     expect(created.id).toMatch(/^[0-9a-f-]{36}$/iu); expect(created.status).toBe('CANDIDATE');
     expect(created).not.toHaveProperty('confidence'); expect(created).not.toHaveProperty('chainOfThought'); expect(created).not.toHaveProperty('diagnosis');
   });
-  it.each(HYPOTHESIS_TYPES)('accepts canonical type %s', async (type) => { repository.create.mockResolvedValue(record({ type })); await expect(service.create('user-a', 't', { ...input, type })).resolves.toBeDefined(); });
+  it('takes no caller access token as creation authority', async () => {
+    repository.create.mockResolvedValue(record());
+    await service.create('user-a', input);
+    // (id, userId, validatedInput) - a user credential is never passed to, or
+    // usable by, the server-authoritative creation path.
+    expect(repository.create).toHaveBeenCalledWith(expect.any(String), 'user-a', expect.objectContaining({ origin: input.origin }));
+    expect(HypothesisService.prototype.create).toHaveLength(2);
+  });
+  it.each(HYPOTHESIS_TYPES)('accepts canonical type %s', async (type) => { repository.create.mockResolvedValue(record({ type })); await expect(service.create('user-a', { ...input, type })).resolves.toBeDefined(); });
   it('rejects invalid type, domain, origin, and bounded metadata overflow', async () => {
-    await expect(service.create('u','t',{ ...input, type: 'FACT' as never })).rejects.toBeInstanceOf(BadRequestException);
-    await expect(service.create('u','t',{ ...input, domain: 'HEALTH' as never })).rejects.toBeInstanceOf(BadRequestException);
-    await expect(service.create('u','t',{ ...input, origin: 'MODEL' as never })).rejects.toBeInstanceOf(BadRequestException);
-    await expect(service.create('u','t',{ ...input, assumptions: Array(MAX_ASSUMPTIONS + 1).fill('x') })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.create('u',{ ...input, type: 'FACT' as never })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.create('u',{ ...input, domain: 'HEALTH' as never })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.create('u',{ ...input, origin: 'MODEL' as never })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.create('u',{ ...input, assumptions: Array(MAX_ASSUMPTIONS + 1).fill('x') })).rejects.toBeInstanceOf(BadRequestException);
   });
   it.each(HYPOTHESIS_STATUSES)('represents canonical status %s', (status) => expect(HYPOTHESIS_STATUSES).toContain(status));
   it('validates lifecycle and versioned transition results', async () => {

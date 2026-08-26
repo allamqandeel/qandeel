@@ -42,7 +42,10 @@ export class HypothesisGenerationService {
         continue;
       }
       const proposal = proposals[index];
-      const created = await this.hypotheses.create(userId, accessToken, {
+      // Generation keeps its owner-scoped authenticated reads; only the final
+      // canonical Hypothesis creation is server-authoritative. Ordering,
+      // validation, Evidence attachment and competition linking are unchanged.
+      const created = await this.hypotheses.create(userId, {
         statement: proposal.statement,
         type: proposal.type,
         domain: proposal.domain,

@@ -53,8 +53,12 @@ jobs:
         run: for migration in database/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
       - {name: Verify authenticated database foundation, run: npm run verify:database:integration}
       - {name: Verify conversation authority hardening, run: npm run verify:conversation-authority:integration}
+      - {name: Verify conversation session authority hardening, run: npm run verify:conversation-session-authority:integration}
       - {name: Verify Memory runtime, run: npm run verify:memory:integration}
+      - {name: Verify Memory authority hardening, run: npm run verify:memory-authority:integration}
       - {name: Verify Hypothesis runtime, run: npm run verify:hypothesis:integration}
+      - {name: Verify Hypothesis authority hardening, run: npm run verify:hypothesis-authority:integration}
+      - {name: Verify canonical Evidence eligibility, run: npm run verify:canonical-evidence:integration}
       - {name: Verify Confidence runtime, run: npm run verify:confidence:integration}
       - {name: Verify Question runtime, run: npm run verify:question:integration}
       - {name: Verify Hypothesis update runtime, run: npm run verify:hypothesis-update:integration}
@@ -73,6 +77,7 @@ jobs:
       - {name: Verify post-response intelligence dispatch ledger, run: npm run verify:post-response-intelligence-db:integration}
       - {name: Verify association provider effect key, run: npm run verify:association-provider-effect-key:integration}
       - {name: Verify durable Memory effect results, run: npm run verify:durable-memory-effect-result:integration}
-      - {name: Verify durable Association command results, run: npm run verify:durable-association-effect-result:integration}
+      - {name: Verify durable Intent provider results, run: npm run verify:durable-intent-result:integration}
+      - {name: Verify durable Association provider results, run: npm run verify:durable-association-provider-result:integration}
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
 

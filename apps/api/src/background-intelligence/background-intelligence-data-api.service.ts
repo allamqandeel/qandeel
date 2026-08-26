@@ -51,22 +51,26 @@ export class BackgroundIntelligenceDataApiService {
     return (await this.request<BackgroundConversationTurnState[]>(`conversation_turns?${query}`))[0];
   }
 
+  // Canonical background Memory creation. It is a narrow server-only database
+  // command (migration 0026), not a broad table write: the owner is taken from
+  // the authority-issued execution context and never from the input, and scope,
+  // version, lineage and both timestamps are derived in the database. The
+  // supplied Memory UUID is returned unchanged so the `memory:<uuid>` Evidence
+  // identity formed by the caller stays exact.
   async createMemory(context: BackgroundIntelligenceExecutionContext, input: BackgroundMemoryCreateInput): Promise<MemoryRecord> {
     this.assertExecutionContext(context);
-    const rows = await this.request<MemoryRecord[]>('memories', {
+    const rows = await this.request<MemoryRecord[]>('rpc/server_create_memory_v1', {
       method: 'POST',
-      headers: { Prefer: 'return=representation' },
       body: JSON.stringify({
-        id: input.id,
-        user_id: context.userId,
-        scope: 'USER',
-        type: input.type,
-        content: input.content,
-        source: input.source,
-        confidence: input.confidence,
-        importance: input.importance,
-        status: input.status,
-        expires_at: input.expiresAt ?? null,
+        p_user_id: context.userId,
+        p_memory_id: input.id,
+        p_type: input.type,
+        p_content: input.content,
+        p_source: input.source,
+        p_confidence: input.confidence,
+        p_importance: input.importance,
+        p_status: input.status,
+        p_expires_at: input.expiresAt ?? null,
       }),
     });
     return rows[0];

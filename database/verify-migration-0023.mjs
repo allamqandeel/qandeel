@@ -14,7 +14,7 @@ await db.connect();try{
  const rows=(await db.query('SELECT effect_key,state FROM public.list_post_response_intelligence_effects_v1($1)',[execution])).rows;if(rows.length!==canonical.length||rows.some(row=>row.state!=='CLAIMED'))throw new Error('Independent canonical effect claims were not preserved.');
  if((await db.query("SELECT public.claim_post_response_intelligence_effect_v1($1,'ASSOCIATION_PROVIDER') ok",[execution])).rows[0].ok)throw new Error('Duplicate association claim was accepted.');
  if(rows.filter(row=>row.effect_key==='CANDIDATE_PROVIDER'||row.effect_key==='ASSOCIATION_PROVIDER').length!==2)throw new Error('Candidate and association effects collided.');
- if(!(await db.query("SELECT public.complete_post_response_association_effect_v1($1,'NO_ASSOCIATION',NULL) ok",[execution])).rows[0].ok)throw new Error('Association completion failed.');
+ if(!(await db.query("SELECT public.complete_post_response_association_provider_effect_v1($1,'NO_ASSOCIATION',NULL) ok",[execution])).rows[0].ok)throw new Error('Association completion failed.');
  if((await db.query("SELECT public.claim_post_response_intelligence_effect_v1($1,'ASSOCIATION_PROVIDER') ok",[execution])).rows[0].ok)throw new Error('Completed association effect was reset or recreated.');
  const completed=(await db.query('SELECT * FROM public.list_post_response_intelligence_effects_v1($1)',[execution])).rows.find(row=>row.effect_key==='ASSOCIATION_PROVIDER');if(completed?.state!=='COMPLETED'||!completed.completed_at||completed.result_code!=='NO_ASSOCIATION')throw new Error('Association CLAIMED to COMPLETED transition mismatch.');
  await rejected('SELECT public.claim_post_response_intelligence_effect_v1($1,$2)',[execution,'UNKNOWN_EFFECT']);await db.query('ROLLBACK');

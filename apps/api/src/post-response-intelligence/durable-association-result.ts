@@ -25,10 +25,13 @@ export type AssociationRecovery =
   | { status: 'AUTHORIZED_COMMANDS'; commands: HypothesisUpdateRequest[] }
   | { status: 'INDETERMINATE' };
 
+// The durable row shape on the canonical effect ledger: the authorized command
+// batch lives in the shared result_payload field established by migration 0029
+// (there is no dedicated result_commands column).
 export interface DurableAssociationEffectRow {
   readonly result_code: string | null;
   readonly result_reference: string | null;
-  readonly result_commands: readonly unknown[] | null;
+  readonly result_payload: unknown;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -58,14 +61,15 @@ export function recoverAssociationResult(
 ): AssociationRecovery {
   if (!MEMORY_REFERENCE.test(freshEvidenceId)) return { status: 'INDETERMINATE' };
   if (effect.result_code === 'NO_ASSOCIATION') {
-    if (effect.result_reference !== null || effect.result_commands !== null) return { status: 'INDETERMINATE' };
+    if (effect.result_reference !== null || (effect.result_payload !== null && effect.result_payload !== undefined)) return { status: 'INDETERMINATE' };
     return { status: 'NO_ASSOCIATION' };
   }
   if (effect.result_code === 'AUTHORIZED_COMMANDS') {
-    if (effect.result_reference !== null || !isValidCommandBatch(effect.result_commands, freshEvidenceId)) {
+    const payload = effect.result_payload;
+    if (effect.result_reference !== null || !isValidCommandBatch(payload, freshEvidenceId)) {
       return { status: 'INDETERMINATE' };
     }
-    return { status: 'AUTHORIZED_COMMANDS', commands: effect.result_commands.map(normalizeCommand) };
+    return { status: 'AUTHORIZED_COMMANDS', commands: payload.map(normalizeCommand) };
   }
   return { status: 'INDETERMINATE' };
 }
