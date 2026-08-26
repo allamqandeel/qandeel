@@ -10,4 +10,76 @@ describe('BackgroundIntelligenceEnrichmentService',()=>{const setup=(overrides:R
  it('uses the shared trigger classifier without a provider',async()=>{const valid=await context(),{service}=setup({listActiveMemories:jest.fn().mockResolvedValue([memory()])});const result=await service.evaluateGenerationEligibility(valid,'Why do I always give up?','ALLOW');expect(result.eligibility.status).toBe('ELIGIBLE');});
  it('sends only authoritative minimal inputs to Confidence RPC',async()=>{const valid=await context(),hypothesis={id:'30000000-0000-4000-8000-000000000001',version:7},createConfidenceEvaluation=jest.fn().mockResolvedValue({id:'x'}),{service}=setup({findHypothesis:jest.fn().mockResolvedValue(hypothesis),createConfidenceEvaluation});await service.evaluateHypothesisConfidence(valid,hypothesis.id);expect(createConfidenceEvaluation).toHaveBeenCalledWith(valid,expect.any(String),hypothesis.id,7);});
  it('exports only authority and the narrow enrichment facade',()=>{const exports=Reflect.getMetadata('exports',BackgroundIntelligenceModule);expect(exports).toEqual([BackgroundIntelligenceAuthorityService,BackgroundIntelligenceEnrichmentService]);expect(exports).not.toContain(RawDataApi);});
+
+ describe('applyAuthorizedHypothesisUpdate (A2.3b invocation boundary)',()=>{
+  const updateRequest={hypothesisId:'30000000-0000-4000-8000-000000000001',expectedVersion:3,evidenceId:'memory:20000000-0000-4000-8000-000000000001',evidenceRole:'SUPPORTING' as const};
+  const canonicalMutation=(updateId:string,overrides:{update?:Record<string,unknown>;hypothesis?:Record<string,unknown>}={})=>({
+   update:{id:updateId,user_id:ids.user,hypothesis_id:updateRequest.hypothesisId,before_version:3,after_version:4,evidence_id:updateRequest.evidenceId,evidence_role:'SUPPORTING',source:'QANDEEL_HYPOTHESIS_UPDATE_LOOP',created_at:'now',...overrides.update},
+   hypothesis:{id:updateRequest.hypothesisId,user_id:ids.user,version:4,...overrides.hypothesis},
+  });
+  const boundarySetup=(overrides:Record<string,unknown>={})=>setup({
+   applyHypothesisUpdate:jest.fn().mockImplementation(async(_context:unknown,updateId:string)=>canonicalMutation(updateId)),
+   findHypothesis:jest.fn().mockResolvedValue({id:updateRequest.hypothesisId,version:4}),
+   createConfidenceEvaluation:jest.fn().mockResolvedValue({id:'evaluation-a'}),
+   ...overrides,
+  });
+  it('applies a validated command through the context-bound mutation and evaluates Confidence afterwards',async()=>{
+   const valid=await context(),{service,data}=boundarySetup();
+   const result=await service.applyAuthorizedHypothesisUpdate(valid,updateRequest);
+   expect(result.confidenceStatus).toBe('EVALUATED');
+   expect(result.confidenceEvaluation).toEqual({id:'evaluation-a'});
+   expect(data.applyHypothesisUpdate).toHaveBeenCalledTimes(1);
+   const[calledContext,calledUpdateId,calledRequest]=(data.applyHypothesisUpdate as jest.Mock).mock.calls[0];
+   expect(calledContext).toBe(valid);
+   expect(calledUpdateId).toMatch(/^[0-9a-f-]{36}$/);
+   expect(calledRequest).toBe(updateRequest);
+   expect(result.update.id).toBe(calledUpdateId);
+   // Confidence runs only AFTER the committed mutation.
+   expect((data.applyHypothesisUpdate as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan((data.createConfidenceEvaluation as jest.Mock).mock.invocationCallOrder[0]);
+  });
+  it('returns PENDING_RETRY on Confidence failure with the mutation performed exactly once',async()=>{
+   const valid=await context(),{service,data}=boundarySetup({createConfidenceEvaluation:jest.fn().mockRejectedValue(new Error('confidence down'))});
+   const result=await service.applyAuthorizedHypothesisUpdate(valid,updateRequest);
+   expect(result.confidenceStatus).toBe('PENDING_RETRY');
+   expect(result.confidenceEvaluation).toBeNull();
+   expect(result.hypothesis.version).toBe(4);
+   expect(data.applyHypothesisUpdate).toHaveBeenCalledTimes(1);
+  });
+  it('fails closed when no canonical mutation is returned',async()=>{
+   const valid=await context(),{service,data}=boundarySetup({applyHypothesisUpdate:jest.fn().mockResolvedValue(undefined)});
+   await expect(service.applyAuthorizedHypothesisUpdate(valid,updateRequest)).rejects.toThrow('Hypothesis update target not found.');
+   expect(data.createConfidenceEvaluation).not.toHaveBeenCalled();
+  });
+  it.each([
+   ['a foreign owner',{update:{user_id:'40000000-0000-4000-8000-000000000009'}}],
+   ['a different hypothesis',{update:{hypothesis_id:'40000000-0000-4000-8000-000000000008'}}],
+   ['a different evidence identity',{update:{evidence_id:'memory:40000000-0000-4000-8000-000000000007'}}],
+   ['a flipped evidence role',{update:{evidence_role:'CONTRADICTING'}}],
+   ['a wrong before version',{update:{before_version:2}}],
+   ['a wrong after version',{update:{after_version:5}}],
+   ['a hypothesis/audit version mismatch',{hypothesis:{version:5}}],
+   ['a foreign audit source',{update:{source:'FORGED_SOURCE'}}],
+  ] as const)('fails closed on a returned mutation carrying %s',async(_label,overrides)=>{
+   const valid=await context(),{service,data}=boundarySetup({applyHypothesisUpdate:jest.fn().mockImplementation(async(_context:unknown,updateId:string)=>canonicalMutation(updateId,overrides as never))});
+   await expect(service.applyAuthorizedHypothesisUpdate(valid,updateRequest)).rejects.toThrow('BACKGROUND_HYPOTHESIS_UPDATE_INTEGRITY');
+   expect(data.createConfidenceEvaluation).not.toHaveBeenCalled();
+  });
+  it('rejects malformed requests through the shared validator before any database call',async()=>{
+   const valid=await context(),{service,data}=boundarySetup();
+   for(const malformed of[
+    {...updateRequest,hypothesisId:'not-a-uuid'},
+    {...updateRequest,evidenceId:'evidence-1'},
+    {...updateRequest,expectedVersion:0},
+    {...updateRequest,expectedVersion:1.5},
+    {...updateRequest,evidenceRole:'NEUTRAL' as never},
+   ])await expect(service.applyAuthorizedHypothesisUpdate(valid,malformed)).rejects.toThrow(/Malformed hypothesis update identifiers|Expected version must be a positive integer|Invalid evidence role/);
+   expect(data.applyHypothesisUpdate).not.toHaveBeenCalled();
+  });
+  it('rejects pre-authorization, spread, and prototype-forged contexts before any database call',async()=>{
+   const valid=await context(),{service,data}=boundarySetup(),pre=new BackgroundIntelligenceContextFactory().create(event);
+   for(const forged of[pre,{...valid},Object.create(BackgroundIntelligenceExecutionContext.prototype)])
+    await expect(service.applyAuthorizedHypothesisUpdate(forged as never,updateRequest)).rejects.toThrow('BACKGROUND_INTELLIGENCE_AUTHORITY_REQUIRED');
+   expect(data.applyHypothesisUpdate).not.toHaveBeenCalled();
+  });
+ });
 });

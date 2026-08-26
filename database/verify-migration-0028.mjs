@@ -20,6 +20,11 @@ const { Client } = pg;
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required. Add it to the ignored local .env file.');
 
 const migrationSql = await readFile(new URL('./migrations/0028_canonical_evidence_eligibility_v1.sql', import.meta.url), 'utf8');
+// Migration 0032 factored the Update Loop mutation body into one internal core
+// with a server-authorized background wrapper. The upgrade simulation below
+// rebuilds the true pre-0028 schema from the live post-0032 state and
+// re-applies both migrations to return to it.
+const serverInvocationSql = await readFile(new URL('./migrations/0032_server_authorized_hypothesis_update_invocation_v1.sql', import.meta.url), 'utf8');
 const fixtures = JSON.parse(await readFile(new URL('./fixtures/canonical-evidence-normalization-v1.json', import.meta.url), 'utf8'));
 const fixtureByName = new Map(fixtures.normalization.map((row) => [row.name, row]));
 const historical = Object.fromEntries(await Promise.all([
@@ -170,8 +175,12 @@ async function verifyEffectiveAcls() {
         AND p.proname <> 'canonical_eligible_memory_ids_v1'
       ORDER BY p.proname`,
   )).map((row) => row.proname);
+  // Migration 0032 moved the Update Loop's membership test into the shared
+  // internal mutation core, so the core - not the thin authenticated wrapper -
+  // is the primitive's consumer. Still exactly five, still one SQL source of
+  // truth.
   assert.deepEqual(users, [
-    'apply_hypothesis_evidence_update', 'attach_hypothesis_evidence',
+    'apply_hypothesis_evidence_update_core_v1', 'attach_hypothesis_evidence',
     'background_attach_hypothesis_evidence_v1', 'background_create_confidence_evaluation_v1',
     'create_confidence_evaluation',
   ], 'canonical primitive consumers');
@@ -549,6 +558,10 @@ async function verifyUpgradePath() {
   await q('SAVEPOINT upgrade');
   await identity('postgres');
   for (const [key, name] of HISTORICAL_DEFINITIONS) await q(historicalDefinition(key, name));
+  // The 0032 server-invocation surface postdates 0028 and is removed the same
+  // way so the reconstructed baseline is the true pre-0028 schema.
+  await q('DROP FUNCTION public.background_apply_hypothesis_evidence_update_v1(uuid,uuid,uuid,uuid,integer,text,text)');
+  await q('DROP FUNCTION public.apply_hypothesis_evidence_update_core_v1(uuid,uuid,uuid,integer,text,text)');
   await q(`DROP FUNCTION ${HELPER}`);
   await q(`DROP FUNCTION ${KEY}`);
 
@@ -606,6 +619,15 @@ async function verifyUpgradePath() {
     'the upgrade leaves Confidence history byte-identical');
   const [{ total: memoriesAfter }] = await rows('SELECT count(*)::int total FROM public.memories');
   assert.equal(memoriesAfter, memoriesBefore, 'the upgrade deletes nothing');
+
+  // Migration 0032 follows 0028 on the canonical chain, so re-applying it
+  // returns the schema to the live final state before it is re-verified. It
+  // touches no existing row.
+  await q(serverInvocationSql.replace(/^\s*BEGIN;/mu, '').replace(/^\s*COMMIT;\s*$/mu, ''));
+  assert.deepEqual(await rows('SELECT * FROM public.hypotheses WHERE user_id=$1 ORDER BY id', [owner]), beforeHypotheses,
+    'migration 0032 also leaves Hypothesis rows byte-identical');
+  assert.deepEqual(await rows('SELECT * FROM public.hypothesis_updates ORDER BY id'), beforeUpdates,
+    'migration 0032 also leaves the hypothesis_updates audit byte-identical');
 
   // The upgraded database reaches the hardened contract.
   await verifyEffectiveAcls();

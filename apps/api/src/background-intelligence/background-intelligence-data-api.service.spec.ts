@@ -20,6 +20,26 @@ describe('BackgroundIntelligenceDataApiService',()=>{
   // The canonical Memory UUID round-trips unchanged so `memory:<uuid>` stays exact.
   expect(created.id).toBe('memory-a');});
  it('owner-scopes every execution read and uses minimal explicit-user RPC inputs',async()=>{const service=new BackgroundIntelligenceDataApiService(),context=await authorize();await service.readCanonicalSourceTurn(context);await service.listActiveMemories(context,32);await service.listActiveHypotheses(context,32);await service.findHypothesis(context,'hypothesis-a');for(const[url]of(fetch as jest.Mock).mock.calls)expect(new URL(url).searchParams.get('user_id')).toBe(`eq.${context.userId}`);(fetch as jest.Mock).mockClear();await service.createConfidenceEvaluation(context,'evaluation-a','hypothesis-a',3);const body=JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);expect(body).toEqual({p_user_id:context.userId,p_evaluation_id:'evaluation-a',p_hypothesis_id:'hypothesis-a',p_target_version:3});expect(body).not.toHaveProperty('accessToken');});
+ it('routes the server-authorized Hypothesis Update through the background wrapper and derives identity from the context',async()=>{
+  const mutation={update:{id:'update-a'},hypothesis:{id:'hypothesis-a'}};
+  (fetch as jest.Mock).mockResolvedValueOnce({ok:true,status:200,json:async()=>[mutation]}as Response);
+  const service=new BackgroundIntelligenceDataApiService(),context=await authorize();
+  const request={hypothesisId:'hypothesis-a',expectedVersion:3,evidenceId:'memory:20000000-0000-4000-8000-000000000001',evidenceRole:'SUPPORTING' as const};
+  await expect(service.applyHypothesisUpdate(context,'update-a',request)).resolves.toEqual(mutation);
+  expect((fetch as jest.Mock).mock.calls[0][0]).toBe('https://database.invalid/rest/v1/rpc/background_apply_hypothesis_evidence_update_v1');
+  const body=JSON.parse(((fetch as jest.Mock).mock.calls[0][1]as RequestInit).body as string);
+  // Owner and session come from the issued context alone; there is no access
+  // token, user JWT, or caller-selected identity on this path.
+  expect(body).toEqual({p_user_id:context.userId,p_session_id:context.sessionId,p_update_id:'update-a',p_hypothesis_id:'hypothesis-a',p_expected_version:3,p_evidence_id:'memory:20000000-0000-4000-8000-000000000001',p_evidence_role:'SUPPORTING'});
+  for(const forbidden of['accessToken','token','jwt','p_access_token','p_jwt','Authorization'])expect(body).not.toHaveProperty(forbidden);
+  const headers=((fetch as jest.Mock).mock.calls[0][1]as RequestInit).headers as Record<string,string>;
+  expect(headers.Authorization).toBe('Bearer SENTINEL_SERVICE_ROLE');});
+ it('rejects pre-authorization, spread, and prototype-forged contexts for the Hypothesis Update wrapper before network I/O',async()=>{
+  const service=new BackgroundIntelligenceDataApiService(),authorized=await authorize();
+  const request={hypothesisId:'hypothesis-a',expectedVersion:3,evidenceId:'memory:20000000-0000-4000-8000-000000000001',evidenceRole:'SUPPORTING' as const};
+  for(const forged of[ownership,{...authorized},Object.create(BackgroundIntelligenceExecutionContext.prototype)])
+   await expect(service.applyHypothesisUpdate(forged as ExecutionContext,'update-a',request)).rejects.toThrow('BACKGROUND_INTELLIGENCE_AUTHORITY_REQUIRED');
+  expect(fetch).not.toHaveBeenCalled();});
  it('rejects pre-authorization context, spread copies, and prototype forgeries for writes',async()=>{const service=new BackgroundIntelligenceDataApiService(),authorized=await authorize();for(const forged of [ownership,{...authorized},Object.create(BackgroundIntelligenceExecutionContext.prototype)])await expect(service.createMemory(forged as ExecutionContext,{ }as never)).rejects.toThrow('BACKGROUND_INTELLIGENCE_AUTHORITY_REQUIRED');expect(fetch).not.toHaveBeenCalled();});
  it('rejects spread copies and prototype forgeries for ownership reads',async()=>{const service=new BackgroundIntelligenceDataApiService();for(const forged of [{...ownership},Object.create(BackgroundIntelligenceEventContext.prototype)])await expect(service.findSession(forged as BackgroundIntelligenceEventContext)).rejects.toThrow('BACKGROUND_INTELLIGENCE_EVENT_CONTEXT_REQUIRED');expect(fetch).not.toHaveBeenCalled();});
  it('keeps service-role credentials internal and failures sanitized',async()=>{const service=new BackgroundIntelligenceDataApiService();(fetch as jest.Mock).mockRejectedValueOnce(new Error('raw secret'));await expect(service.findSession(ownership)).rejects.toThrow('BACKGROUND_INTELLIGENCE_DATABASE_UNAVAILABLE');expect(JSON.stringify(ownership)).not.toContain('SENTINEL_SERVICE_ROLE');});

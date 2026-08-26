@@ -11,6 +11,8 @@ import { MAX_ACTIVE_HYPOTHESES, type HypothesisRecord } from '../hypothesis/hypo
 import { MAX_GENERATED_HYPOTHESIS_CANDIDATES, type HypothesisCandidateGenerator, type HypothesisGenerationInput, type HypothesisGenerationRequest, type HypothesisGenerationResult } from '../hypothesis/hypothesis-generation.types';
 import { hypothesisCollisionKey, normalizeGenerationInput, validateGenerationEvidenceIds, validateHypothesisCandidate } from '../hypothesis/hypothesis-generation.policy';
 import type { ConfidenceEvaluationRecord } from '../hypothesis/confidence.types';
+import { validateHypothesisUpdateRequest } from '../hypothesis/hypothesis-update.policy';
+import { HYPOTHESIS_UPDATE_SOURCE, type HypothesisMutationResult, type HypothesisUpdateRequest, type HypothesisUpdateResult } from '../hypothesis/hypothesis-update.types';
 import { BackgroundIntelligenceExecutionContext, isBackgroundIntelligenceExecutionContext } from './background-intelligence-authority.service';
 import { BACKGROUND_INTELLIGENCE_DATA_API } from './background-intelligence.types';
 import { type BackgroundCanonicalSourceTurn, type BackgroundIntelligenceDataApiService } from './background-intelligence-data-api.service';
@@ -45,6 +47,48 @@ export class BackgroundIntelligenceEnrichmentService {
  }
 
  async evaluateHypothesisConfidence(context:BackgroundIntelligenceExecutionContext,hypothesisId:string):Promise<ConfidenceEvaluationRecord>{this.assert(context);const hypothesis=await this.data.findHypothesis(context,hypothesisId);if(!hypothesis)throw new NotFoundException('Hypothesis not found.');return this.data.createConfidenceEvaluation(context,randomUUID(),hypothesis.id,hypothesis.version);}
+
+ // A2.3b server-authorized Hypothesis Update invocation boundary. This is
+ // capability only: the dispatcher never calls it, and nothing here consumes
+ // the durable A2.3a command batch automatically - that wiring is A2.3c. The
+ // request passes the SAME validator as the foreground HypothesisUpdateService,
+ // the audit update UUID is generated here (never by a caller), the mutation
+ // runs through the service-role background wrapper bound to the issued
+ // context's user and conversation session, and the returned mutation tuple is
+ // defensively re-verified before the canonical post-success Confidence
+ // contract runs. A Confidence failure never replays the committed mutation:
+ // the result degrades to PENDING_RETRY exactly like the foreground path.
+ async applyAuthorizedHypothesisUpdate(context:BackgroundIntelligenceExecutionContext,request:HypothesisUpdateRequest):Promise<HypothesisUpdateResult>{
+  this.assert(context);
+  validateHypothesisUpdateRequest(request);
+  const updateId=randomUUID();
+  const mutation=await this.data.applyHypothesisUpdate(context,updateId,request);
+  if(!mutation)throw new NotFoundException('Hypothesis update target not found.');
+  if(!canonicalBackgroundMutation(mutation,context.userId,updateId,request))throw new Error('BACKGROUND_HYPOTHESIS_UPDATE_INTEGRITY');
+  try{
+   const confidenceEvaluation=await this.evaluateHypothesisConfidence(context,request.hypothesisId);
+   return{...mutation,confidenceStatus:'EVALUATED',confidenceEvaluation};
+  }catch{
+   return{...mutation,confidenceStatus:'PENDING_RETRY',confidenceEvaluation:null};
+  }
+ }
  private assert(context:BackgroundIntelligenceExecutionContext):void{if(!isBackgroundIntelligenceExecutionContext(context))throw new Error('BACKGROUND_INTELLIGENCE_AUTHORITY_REQUIRED');}
 }
 function boundedEvidence(value:unknown):value is ReadonlyArray<{evidenceId:string}>{if(!Array.isArray(value)||value.length>MAX_ELIGIBLE_EVIDENCE)return false;const ids=value.map(item=>item?.evidenceId);return ids.every(id=>typeof id==='string'&&id.startsWith('memory:')&&id.length>7)&&new Set(ids).size===ids.length;}
+// The returned mutation must be exactly the canonical tuple the invocation
+// asked for: context owner, target Hypothesis, Evidence identity and role,
+// before/after versions around the exact expected version, and the immutable
+// audit source. Anything else fails closed - never a retry, never a repair.
+function canonicalBackgroundMutation(mutation:HypothesisMutationResult,userId:string,updateId:string,request:HypothesisUpdateRequest):boolean{
+ const{update,hypothesis}=mutation;
+ return !!update&&!!hypothesis
+  &&update.id===updateId
+  &&update.user_id===userId&&hypothesis.user_id===userId
+  &&update.hypothesis_id===request.hypothesisId&&hypothesis.id===request.hypothesisId
+  &&update.evidence_id===request.evidenceId
+  &&update.evidence_role===request.evidenceRole
+  &&update.before_version===request.expectedVersion
+  &&update.after_version===request.expectedVersion+1
+  &&hypothesis.version===update.after_version
+  &&update.source===HYPOTHESIS_UPDATE_SOURCE;
+}

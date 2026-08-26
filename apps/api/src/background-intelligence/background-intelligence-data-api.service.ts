@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { SessionStatus, TurnStatus } from '../conversation/conversation.types';
 import type { MemoryRecord, MemorySource, MemoryStatus, MemoryType } from '../memory/memory.types';
 import type { HypothesisRecord, HypothesisType, HypothesisDomain, EvidenceRole } from '../hypothesis/hypothesis.types';
+import type { HypothesisMutationResult, HypothesisUpdateRequest } from '../hypothesis/hypothesis-update.types';
 import type { ConfidenceEvaluationRecord } from '../hypothesis/confidence.types';
 import {
   type BackgroundIntelligenceEventContext,
@@ -108,6 +109,16 @@ export class BackgroundIntelligenceDataApiService {
 
   async linkCompetingHypotheses(context:BackgroundIntelligenceExecutionContext,id:string,competitorId:string):Promise<HypothesisRecord>{
     this.assertExecutionContext(context);return(await this.request<HypothesisRecord[]>('rpc/background_link_competing_hypotheses_v1',{method:'POST',body:JSON.stringify({p_user_id:context.userId,p_hypothesis_id:id,p_competitor_id:competitorId})}))[0];
+  }
+
+  // Server-authorized Hypothesis Update invocation (migration 0032). The owner
+  // and conversation session are derived from the authority-issued execution
+  // context and never from the input; no access token or user JWT exists on
+  // this path. The database wrapper binds the target Hypothesis to that owner
+  // and session scope and re-checks every canonical mutation invariant.
+  async applyHypothesisUpdate(context:BackgroundIntelligenceExecutionContext,updateId:string,request:HypothesisUpdateRequest):Promise<HypothesisMutationResult|undefined>{
+    this.assertExecutionContext(context);
+    return(await this.request<HypothesisMutationResult[]>('rpc/background_apply_hypothesis_evidence_update_v1',{method:'POST',body:JSON.stringify({p_user_id:context.userId,p_session_id:context.sessionId,p_update_id:updateId,p_hypothesis_id:request.hypothesisId,p_expected_version:request.expectedVersion,p_evidence_id:request.evidenceId,p_evidence_role:request.evidenceRole})}))[0];
   }
 
   async createConfidenceEvaluation(context:BackgroundIntelligenceExecutionContext,evaluationId:string,hypothesisId:string,targetVersion:number):Promise<ConfidenceEvaluationRecord>{
