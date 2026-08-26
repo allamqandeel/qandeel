@@ -27,7 +27,7 @@ export type AssociationRecovery =
 
 // The durable row shape on the canonical effect ledger: the authorized command
 // batch lives in the shared result_payload field established by migration 0029
-// (there is no dedicated result_commands column).
+// (there is no dedicated command-batch column).
 export interface DurableAssociationEffectRow {
   readonly result_code: string | null;
   readonly result_reference: string | null;

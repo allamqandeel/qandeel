@@ -12,7 +12,8 @@
 -- migration 0024 did for MEMORY_WRITE and migration 0029 did for
 -- INTENT_PROVIDER. It reuses the canonical result fields established there —
 -- result_code / result_reference / result_payload — and adds NO new column,
--- table, queue or idempotency store (in particular, no result_commands):
+-- table, queue or idempotency store (in particular, no dedicated
+-- command-batch column):
 --   * the durable successful vocabulary is NO_ASSOCIATION (no reference, no
 --     payload) or AUTHORIZED_COMMANDS whose result_payload is the exact
 --     post-authority HypothesisUpdateRequest[] batch;
