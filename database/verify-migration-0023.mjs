@@ -1,5 +1,10 @@
 import pg from'pg';import{randomUUID}from'node:crypto';const{Client}=pg,db=new Client({connectionString:process.env.DATABASE_URL});
-const canonical=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH'];
+// Migration 0034 added the managed HYPOTHESIS_UPDATE_BATCH effect to the
+// registry; it is claimed only inside its one-transaction execute command, so
+// the ordinary claim loop below covers every claimable key and the managed key
+// is proven rejected instead.
+const canonical=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_UPDATE_BATCH','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH'];
+const claimable=canonical.filter(key=>key!=='HYPOTHESIS_UPDATE_BATCH');
 const execution=randomUUID(),event=randomUUID(),user=randomUUID(),session=randomUUID(),turn=randomUUID();
 const signatures=['claim_post_response_intelligence_effect_v1(uuid,text)','complete_post_response_intelligence_effect_v1(uuid,text)','list_post_response_intelligence_effects_v1(uuid)'];
 async function rejected(sql,params=[]){await db.query('SAVEPOINT rejected');let failed=false;try{await db.query(sql,params);}catch{failed=true;await db.query('ROLLBACK TO SAVEPOINT rejected');}await db.query('RELEASE SAVEPOINT rejected');if(!failed)throw new Error('Expected fail-closed rejection.');}
@@ -10,8 +15,9 @@ await db.connect();try{
  const rls=(await db.query("SELECT relrowsecurity FROM pg_class WHERE oid='public.post_response_intelligence_effects'::regclass")).rows[0];if(!rls?.relrowsecurity)throw new Error('Effect table RLS is not enabled.');
  for(const signature of signatures){const acl=(await db.query("SELECT has_function_privilege('service_role',$1,'EXECUTE') service,has_function_privilege('authenticated',$1,'EXECUTE') authenticated,has_function_privilege('anon',$1,'EXECUTE') anon,has_function_privilege('public',$1,'EXECUTE') public",[`public.${signature}`])).rows[0];if(!acl.service||acl.authenticated||acl.anon||acl.public)throw new Error(`Effect RPC ACL mismatch: ${signature}`);}
  await db.query('BEGIN');await db.query('SET LOCAL ROLE service_role');const acquire='SELECT * FROM public.acquire_post_response_intelligence_execution_v1($1,$2,$3,$4,$5,$6,$7,$8)';await db.query(acquire,[execution,event,user,session,turn,'2.0','FAST','ALLOW']);
- for(const key of canonical){const claimed=(await db.query('SELECT public.claim_post_response_intelligence_effect_v1($1,$2) ok',[execution,key])).rows[0].ok;if(!claimed)throw new Error(`Canonical effect claim failed: ${key}`);}
- const rows=(await db.query('SELECT effect_key,state FROM public.list_post_response_intelligence_effects_v1($1)',[execution])).rows;if(rows.length!==canonical.length||rows.some(row=>row.state!=='CLAIMED'))throw new Error('Independent canonical effect claims were not preserved.');
+ for(const key of claimable){const claimed=(await db.query('SELECT public.claim_post_response_intelligence_effect_v1($1,$2) ok',[execution,key])).rows[0].ok;if(!claimed)throw new Error(`Canonical effect claim failed: ${key}`);}
+ await rejected('SELECT public.claim_post_response_intelligence_effect_v1($1,$2)',[execution,'HYPOTHESIS_UPDATE_BATCH']);
+ const rows=(await db.query('SELECT effect_key,state FROM public.list_post_response_intelligence_effects_v1($1)',[execution])).rows;if(rows.length!==claimable.length||rows.some(row=>row.state!=='CLAIMED'))throw new Error('Independent canonical effect claims were not preserved.');
  if((await db.query("SELECT public.claim_post_response_intelligence_effect_v1($1,'ASSOCIATION_PROVIDER') ok",[execution])).rows[0].ok)throw new Error('Duplicate association claim was accepted.');
  if(rows.filter(row=>row.effect_key==='CANDIDATE_PROVIDER'||row.effect_key==='ASSOCIATION_PROVIDER').length!==2)throw new Error('Candidate and association effects collided.');
  if(!(await db.query("SELECT public.complete_post_response_association_provider_effect_v1($1,'NO_ASSOCIATION',NULL) ok",[execution])).rows[0].ok)throw new Error('Association completion failed.');
@@ -20,4 +26,4 @@ await db.connect();try{
  await rejected('SELECT public.claim_post_response_intelligence_effect_v1($1,$2)',[execution,'UNKNOWN_EFFECT']);await db.query('ROLLBACK');
  for(const role of['authenticated','anon']){await db.query('BEGIN');await db.query(`SET LOCAL ROLE ${role}`);await rejected('SELECT * FROM public.list_post_response_intelligence_effects_v1($1)',[execution]);await db.query('ROLLBACK');}
  const residue=await db.query('SELECT(SELECT count(*)FROM public.post_response_intelligence_executions WHERE id=$1)+(SELECT count(*)FROM public.post_response_intelligence_effects WHERE execution_id=$1) total',[execution]);if(Number(residue.rows[0].total)!==0)throw new Error('Migration 0023 verifier residue detected.');
-}finally{await db.end();}console.log('Verified migration 0023 exact six-key registry, independent candidate/association idempotency, completion semantics, ACL/RLS preservation, unknown-key rejection, and zero fixture residue.');
+}finally{await db.end();}console.log('Verified migration 0023 effect-key registry (with the managed 0034 update-batch key claim-rejected), independent candidate/association idempotency, completion semantics, ACL/RLS preservation, unknown-key rejection, and zero fixture residue.');

@@ -57,9 +57,10 @@ test('the pure result module maps and recovers on result_payload without inferri
 });
 
 test('the effect types exclude every typed effect from generic completion and carry no result_commands',()=>{
- // Migration 0033 extended the exclusion with both generation effects; the
- // Association exclusion itself is unchanged.
- assert.match(types,/GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'\|'CANDIDATE_PROVIDER'\|'HYPOTHESIS_PERSISTENCE'>/u);
+ // Migration 0033 extended the exclusion with both generation effects and
+ // migration 0034 with the managed update batch; the Association exclusion
+ // itself is unchanged.
+ assert.match(types,/GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'\|'CANDIDATE_PROVIDER'\|'HYPOTHESIS_PERSISTENCE'\|'HYPOTHESIS_UPDATE_BATCH'>/u);
  assert.match(types,/AssociationEffectResultCode/u);
  assert.match(types,/result_payload:unknown/u);
  assert.doesNotMatch(types,/result_commands/u);

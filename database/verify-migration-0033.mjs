@@ -72,7 +72,7 @@ const VALID_CANDIDATES = 'SELECT public.post_response_generation_candidates_vali
 const VALID_IDS = 'SELECT public.post_response_persisted_hypothesis_ids_valid_v1($1::jsonb) valid';
 const EFFECT = 'SELECT * FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key=$2';
 const HYPOTHESIS = 'SELECT * FROM public.hypotheses WHERE id=$1';
-const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH'];
+const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH'];
 
 const userId = randomUUID();
 const memories = { first: randomUUID(), second: randomUUID(), third: randomUUID() };
@@ -147,7 +147,8 @@ async function verifySurfaceAndAcls() {
     'post_response_intelligence_effects_memory_result_check',
     'post_response_intelligence_effects_persistence_result_check',
     'post_response_intelligence_effects_untyped_result_check',
-  ], 'the 0029/0031 checks survive and each generation effect states its own domain');
+    'post_response_intelligence_effects_update_batch_result_check',
+  ], 'the 0029/0031 checks survive, each generation effect states its own domain, and the 0034 check joins them');
   const registry = (await one(
     `SELECT pg_get_constraintdef(oid) definition FROM pg_constraint
       WHERE conrelid='public.post_response_intelligence_effects'::regclass

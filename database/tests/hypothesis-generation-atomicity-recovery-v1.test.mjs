@@ -87,7 +87,7 @@ test('the pure result module recovers both generation results without providers,
 });
 
 test('the effect types leave only CONFIDENCE_BATCH generic and extend the result-code vocabulary',()=>{
- assert.match(types,/GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'\|'CANDIDATE_PROVIDER'\|'HYPOTHESIS_PERSISTENCE'>/u);
+ assert.match(types,/GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'\|'CANDIDATE_PROVIDER'\|'HYPOTHESIS_PERSISTENCE'\|'HYPOTHESIS_UPDATE_BATCH'>/u);
  assert.match(types,/CandidateProviderEffectResultCode/u);
  assert.match(types,/HypothesisPersistenceEffectResultCode/u);
 });

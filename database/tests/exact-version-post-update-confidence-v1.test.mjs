@@ -3,11 +3,13 @@ const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
 const verifier=read('../verify-exact-version-confidence.mjs'),confidenceService=read('../../apps/api/src/hypothesis/confidence.service.ts'),updateService=read('../../apps/api/src/hypothesis/hypothesis-update.service.ts'),policy=read('../../apps/api/src/hypothesis/hypothesis-update.policy.ts'),enrichment=read('../../apps/api/src/background-intelligence/background-intelligence-enrichment.service.ts'),dispatcher=read('../../apps/api/src/post-response-intelligence/post-response-intelligence-dispatcher.service.ts'),workflow=read('../../.github/workflows/api-ci.yml'),packageJson=read('../../package.json');
 const section=(source,start,end)=>{const from=source.indexOf(start);assert.notEqual(from,-1,`missing ${start}`);const to=end?source.indexOf(end,from):source.length;return source.slice(from,to===-1?source.length:to);};
 
-test('Finding 09 adds no migration: the canonical chain still ends at 0033 and the DB guards are reused',()=>{
+test('Finding 09 added no migration of its own: the DB exact-version guards are reused, never redefined',()=>{
+ // Later tracks may extend the chain (A2.3c added 0034), but no migration ever
+ // exists FOR exact-version Confidence: the 0028-era guards are the authority
+ // and the verifier targets the live current schema, not a migration.
  const migrations=readdirSync(new URL('../migrations/',import.meta.url)).filter(name=>name.endsWith('.sql')).sort();
- assert.equal(migrations[migrations.length-1],'0033_hypothesis_generation_atomicity_recovery_v1.sql','no 0034 migration exists');
- // The existing exact-version guards are the final authority; the verifier
- // targets the live current schema, not a migration.
+ assert.ok(migrations.includes('0033_hypothesis_generation_atomicity_recovery_v1.sql'));
+ assert.equal(migrations.filter(name=>/exact[-_]?version|post[-_]?update[-_]?confidence/iu.test(name)).length,0,'no exact-version Confidence migration exists');
  assert.match(verifier,/create_confidence_evaluation/u);
  assert.match(verifier,/background_create_confidence_evaluation_v1/u);
  assert.doesNotMatch(verifier,/CREATE TABLE|CREATE FUNCTION|ALTER TABLE|TRUNCATE|DROP TABLE|DELETE FROM/iu);
