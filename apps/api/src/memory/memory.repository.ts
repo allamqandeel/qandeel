@@ -1,22 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { MemoryDataApiService } from './memory-data-api.service';
+import { MemoryServiceRoleApiService } from './memory-service-role-api.service';
 import type { CreateMemoryInput, MemoryRecord } from './memory.types';
 
 const MEMORY_FIELDS = 'id,user_id,scope,type,content,source,confidence,importance,status,version,created_at,updated_at,expires_at,supersedes_memory_id';
 
+type ValidatedMemoryInput = Required<Omit<CreateMemoryInput, 'expiresAt'>> & { expiresAt?: string };
+
+// Reads stay on the authenticated owner-scoped path. Every authoritative write
+// goes through a narrow, purpose-specific server-only database command over the
+// service-role channel: after migration 0026 `authenticated` holds no
+// INSERT/UPDATE/DELETE on public.memories and no EXECUTE on the legacy generic
+// supersede_memory RPC, so a user token is neither used nor usable as Memory
+// write authority here. There is no generic column-update path.
 @Injectable()
 export class MemoryRepository {
-  constructor(private readonly dataApi: MemoryDataApiService) {}
+  constructor(
+    private readonly dataApi: MemoryDataApiService,
+    private readonly serverAuthority: MemoryServiceRoleApiService,
+  ) {}
 
-  async create(accessToken: string, id: string, userId: string, input: Required<Omit<CreateMemoryInput, 'expiresAt'>> & { expiresAt?: string }): Promise<MemoryRecord> {
-    const rows = await this.dataApi.request<MemoryRecord[]>(accessToken, 'memories', {
-      method: 'POST',
-      headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({
-        id, user_id: userId, scope: 'USER', type: input.type, content: input.content,
-        source: input.source, confidence: input.confidence, importance: input.importance,
-        status: input.status, expires_at: input.expiresAt ?? null,
-      }),
+  async create(id: string, userId: string, input: ValidatedMemoryInput): Promise<MemoryRecord> {
+    const rows = await this.serverAuthority.rpc<MemoryRecord[]>('server_create_memory_v1', {
+      p_user_id: userId, p_memory_id: id, p_type: input.type, p_content: input.content,
+      p_source: input.source, p_confidence: input.confidence, p_importance: input.importance,
+      p_status: input.status, p_expires_at: input.expiresAt ?? null,
     });
     return rows[0];
   }
@@ -38,27 +46,19 @@ export class MemoryRepository {
     return this.dataApi.request<MemoryRecord[]>(accessToken, `memories?${query}`);
   }
 
-  async update(accessToken: string, userId: string, id: string, input: Partial<Pick<MemoryRecord, 'content' | 'confidence' | 'importance' | 'status' | 'expires_at'>>): Promise<MemoryRecord | undefined> {
-    const query = new URLSearchParams({ select: MEMORY_FIELDS, id: `eq.${id}`, user_id: `eq.${userId}` });
-    const rows = await this.dataApi.request<MemoryRecord[]>(accessToken, `memories?${query}`, {
-      method: 'PATCH', headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({ ...input, updated_at: new Date().toISOString() }),
+  async markDeleted(userId: string, id: string): Promise<MemoryRecord | undefined> {
+    const rows = await this.serverAuthority.rpc<MemoryRecord[]>('server_mark_memory_deleted_v1', {
+      p_user_id: userId, p_memory_id: id,
     });
     return rows[0];
   }
 
-  async markDeleted(accessToken: string, userId: string, id: string): Promise<MemoryRecord | undefined> {
-    return this.update(accessToken, userId, id, { status: 'DELETED' });
-  }
-
-  async supersede(accessToken: string, oldMemoryId: string, newMemoryId: string, input: Required<Omit<CreateMemoryInput, 'expiresAt'>> & { expiresAt?: string }): Promise<MemoryRecord | undefined> {
-    const rows = await this.dataApi.request<MemoryRecord[]>(accessToken, 'rpc/supersede_memory', {
-      method: 'POST',
-      body: JSON.stringify({
-        p_old_memory_id: oldMemoryId, p_new_memory_id: newMemoryId, p_type: input.type,
-        p_content: input.content, p_source: input.source, p_confidence: input.confidence,
-        p_importance: input.importance, p_status: input.status, p_expires_at: input.expiresAt ?? null,
-      }),
+  async supersede(userId: string, oldMemoryId: string, newMemoryId: string, input: ValidatedMemoryInput): Promise<MemoryRecord | undefined> {
+    const rows = await this.serverAuthority.rpc<MemoryRecord[]>('server_supersede_memory_v1', {
+      p_user_id: userId, p_old_memory_id: oldMemoryId, p_new_memory_id: newMemoryId,
+      p_type: input.type, p_content: input.content, p_source: input.source,
+      p_confidence: input.confidence, p_importance: input.importance,
+      p_status: input.status, p_expires_at: input.expiresAt ?? null,
     });
     return rows[0];
   }

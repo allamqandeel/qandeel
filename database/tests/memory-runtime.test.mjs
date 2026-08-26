@@ -3,6 +3,11 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const migration = await readFile(new URL('../migrations/0004_memory_runtime.sql', import.meta.url), 'utf8');
+// Migration 0004 is history and its text is asserted verbatim below. The write
+// authority it granted is superseded by migration 0026 (Memory Authority
+// Hardening), so each superseded grant assertion is paired with the revocation
+// that now governs the effective boundary.
+const hardening = await readFile(new URL('../migrations/0026_memory_authority_hardening_v1.sql', import.meta.url), 'utf8');
 
 test('defines the minimal durable memory record separately from conversation history', () => {
   assert.match(migration, /CREATE TABLE public\.memories/u);
@@ -37,6 +42,13 @@ test('enables explicit owner-only RLS and no physical delete privilege', () => {
   for (const policy of ['memories_select_own', 'memories_insert_own', 'memories_update_own']) {
     assert.match(migration, new RegExp(`CREATE POLICY ${policy}`, 'u'));
   }
+  // Effective boundary: migration 0026 revokes the INSERT/UPDATE grant above,
+  // drops the two write policies, and keeps only the owner-scoped read.
+  assert.match(hardening, /REVOKE INSERT, UPDATE, DELETE ON TABLE public\.memories FROM authenticated/u);
+  assert.match(hardening, /GRANT SELECT ON TABLE public\.memories TO authenticated/u);
+  assert.match(hardening, /DROP POLICY IF EXISTS memories_insert_own ON public\.memories/u);
+  assert.match(hardening, /DROP POLICY IF EXISTS memories_update_own ON public\.memories/u);
+  assert.doesNotMatch(hardening, /DROP POLICY[^;]*memories_select_own/u);
   assert.equal((migration.match(/user_id = \(SELECT auth\.uid\(\)\)/gu) ?? []).length, 5);
   assert.doesNotMatch(migration, /service_role/iu);
 });
@@ -50,6 +62,12 @@ test('makes explicit supersession atomic, owner-derived, and lineage preserving'
   assert.match(migration, /old_memory\.version \+ 1/u);
   assert.match(migration, /old_memory\.id/u);
   assert.doesNotMatch(migration, /p_user_id/u);
+  // Effective boundary: migration 0026 revokes the authenticated EXECUTE this
+  // migration granted - and service_role explicitly, so the contract holds
+  // whatever grants the installation carried - and re-grants it to nobody.
+  assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.supersede_memory\([^)]*\) TO authenticated/u);
+  assert.match(hardening, /REVOKE ALL ON FUNCTION public\.supersede_memory\([^)]*\)\s*\n?\s*FROM PUBLIC, anon, authenticated, service_role;/u);
+  assert.doesNotMatch(hardening, /GRANT EXECUTE ON FUNCTION public\.supersede_memory/u);
 });
 
 test('provides a real rolled-back migration and RLS verifier', async () => {

@@ -23,7 +23,8 @@ describe('MemoryWriteService', () => {
     });
     expect(runtime.listActiveForUser).toHaveBeenCalledWith('user-a', 'token-a', MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT);
     expect(runtime.create).toHaveBeenCalledTimes(1);
-    expect(runtime.create).toHaveBeenCalledWith('user-a', 'token-a', expect.objectContaining({
+    // The token scopes the duplicate lookup only; the write carries no credential.
+    expect(runtime.create).toHaveBeenCalledWith('user-a', expect.objectContaining({
       type: 'STABLE_PREFERENCE', source: 'USER_STATED', status: 'ACTIVE',
     }));
   });
@@ -42,7 +43,7 @@ describe('MemoryWriteService', () => {
   it('does not let another user suppress the authenticated user write', async () => {
     runtime.listActiveForUser.mockImplementation(async (userId) => userId === 'user-b' ? [record({ user_id: 'user-b' })] : []);
     await writer.evaluateAndWrite('user-a', 'token-a', 'I prefer short answers.');
-    expect(runtime.create).toHaveBeenCalledWith('user-a', 'token-a', expect.anything());
+    expect(runtime.create).toHaveBeenCalledWith('user-a', expect.anything());
   });
 
   it('never calls persistence for obvious credentials', async () => {

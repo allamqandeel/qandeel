@@ -54,6 +54,7 @@ jobs:
       - {name: Verify authenticated database foundation, run: npm run verify:database:integration}
       - {name: Verify conversation authority hardening, run: npm run verify:conversation-authority:integration}
       - {name: Verify Memory runtime, run: npm run verify:memory:integration}
+      - {name: Verify Memory authority hardening, run: npm run verify:memory-authority:integration}
       - {name: Verify Hypothesis runtime, run: npm run verify:hypothesis:integration}
       - {name: Verify Confidence runtime, run: npm run verify:confidence:integration}
       - {name: Verify Question runtime, run: npm run verify:question:integration}

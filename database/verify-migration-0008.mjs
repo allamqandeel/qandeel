@@ -34,6 +34,10 @@ async function main(){ await client.connect(); try{
     assert.equal((await client.query(call,[randomUUID(),otherHypothesis,1,`memory:${contradict}`,'CONTRADICTING'])).rowCount,0);
     const second=(await client.query(call,[randomUUID(),hypothesis,2,`memory:${contradict}`,'CONTRADICTING'])).rows[0]; assert.equal(second.update.before_version,2); assert.equal(second.update.after_version,3); assert.deepEqual(second.hypothesis.contradicting_evidence_ids,[`memory:${contradict}`]);
     const boundedIds=Array.from({length:65},()=>randomUUID());
+    // Memory fixtures are seeded as the owner role: after migration 0026 the
+    // authenticated role holds no INSERT on public.memories. The authenticated
+    // identity is re-established immediately after the loop.
+    await client.query('RESET ROLE');
     for(let index=0;index<boundedIds.length;index+=1) await client.query(`INSERT INTO public.memories(id,user_id,scope,type,content,source,confidence,importance,status,created_at,updated_at)
       VALUES($1,$2,'USER','PERSONAL_FACT',$3,'USER_STATED',.9,.5,'ACTIVE',$4,$4)`,[boundedIds[index],user,`bounded-${index}`,new Date(Date.UTC(2099,0,1,0,0,index)).toISOString()]);
     await identity(user); await rejects(call,[randomUUID(),hypothesis,3,`memory:${boundedIds[0]}`,'SUPPORTING']);
