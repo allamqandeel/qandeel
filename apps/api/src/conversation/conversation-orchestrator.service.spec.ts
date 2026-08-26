@@ -587,7 +587,7 @@ describe('ConversationOrchestratorService', () => {
         statement: 'statement', type: 'CAUSAL' as const, domain: 'GENERAL' as const, scope: 'session',
         origin: 'USER_PROPOSED' as const, status: 'ACTIVE' as const, hypothesisVersion: 2,
         currentlyEligibleSupportingEvidenceCount: 1, currentlyEligibleContradictingEvidenceCount: 1,
-        assumptions: ['unverified'], disconfirmingConditions: [],
+        assumptions: ['private assumption text'], disconfirmingConditions: [],
         confidence: { state: 'NOT_EVALUATED_FOR_CURRENT_VERSION' as const, targetVersion: 2 },
       }],
     };
@@ -633,7 +633,7 @@ describe('ConversationOrchestratorService', () => {
       repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
       await orchestrator.orchestrate('token', 'user', userTurn);
       const serialized = JSON.stringify(router.generate.mock.calls[0][0].recommendationContext);
-      expect(serialized).not.toMatch(/user-turn|session|statement|unverified|memory:|evaluation|score|band|rank|risk|reversibility|readiness|Count/u);
+      expect(serialized).not.toMatch(/user-turn|session|statement|private assumption|memory:|evaluation|score|band|rank|risk|reversibility|readiness|Count/u);
     });
 
     it('fails closed before the provider call when grounding rejects an impossible source shape', async () => {

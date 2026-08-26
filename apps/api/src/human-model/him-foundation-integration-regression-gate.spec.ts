@@ -8,6 +8,7 @@ import { HimTurnContextSelectionService } from './him-turn-context-selection.ser
 import { HimIntelligenceSnapshotService } from './him-intelligence-snapshot.service';
 import { HimReasoningConsumptionService } from './him-reasoning-consumption.service';
 import { HimFastDeepConsumptionService } from './him-fast-deep-consumption.service';
+import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 import type { HimSnapshotSourceRow } from './him-intelligence-snapshot.types';
 
 const inputSession = '20000000-0000-4000-8000-000000000001';
@@ -82,7 +83,7 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   const hypothesisGeneration = { generate: jest.fn().mockResolvedValue({ accepted: [], rejected: [] }) };
   const confidence = { evaluateHypothesis: jest.fn().mockResolvedValue({}) };
   const hypothesisCandidateGenerator = { generate: jest.fn().mockResolvedValue([]) };
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, hypothesisContext as never, router,correlation,new TelemetryService(correlation));
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, hypothesisContext as never, new RecommendationGroundingService(), router,correlation,new TelemetryService(correlation));
   return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy };
 }
 
