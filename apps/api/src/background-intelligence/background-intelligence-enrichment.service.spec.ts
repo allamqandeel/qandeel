@@ -42,6 +42,44 @@ describe('BackgroundIntelligenceEnrichmentService',()=>{const setup=(overrides:R
   });
  });
  it('sends only authoritative minimal inputs to Confidence RPC',async()=>{const valid=await context(),hypothesis={id:'30000000-0000-4000-8000-000000000001',version:7},createConfidenceEvaluation=jest.fn().mockResolvedValue({id:'x'}),{service}=setup({findHypothesis:jest.fn().mockResolvedValue(hypothesis),createConfidenceEvaluation});await service.evaluateHypothesisConfidence(valid,hypothesis.id);expect(createConfidenceEvaluation).toHaveBeenCalledWith(valid,expect.any(String),hypothesis.id,7);});
+
+ describe('evaluateHypothesisConfidenceVersion (Finding 09 exact-version post-update Confidence)',()=>{
+  const hypothesisId='30000000-0000-4000-8000-000000000001';
+  const record=(overrides:Record<string,unknown>={})=>({id:'evaluation-v',user_id:ids.user,target_id:hypothesisId,target_type:'HYPOTHESIS',target_version:4,provenance:'QANDEEL_CONFIDENCE_RUNTIME',...overrides});
+  const versionSetup=(overrides:Record<string,unknown>={})=>setup({createConfidenceEvaluation:jest.fn().mockResolvedValue(record()),...overrides});
+  it('sends the exact caller version and never rediscovers the target through findHypothesis',async()=>{
+   const valid=await context(),{service,data}=versionSetup();
+   const result=await service.evaluateHypothesisConfidenceVersion(valid,hypothesisId,4);
+   expect(data.createConfidenceEvaluation).toHaveBeenCalledWith(valid,expect.any(String),hypothesisId,4);
+   expect(data.findHypothesis).not.toHaveBeenCalled();
+   expect(result).toEqual(record());
+  });
+  it.each([[0],[-1],[2.5],[Number.MAX_SAFE_INTEGER+2]])('rejects the invalid target version %p before any database call',async invalid=>{
+   const valid=await context(),{service,data}=versionSetup();
+   await expect(service.evaluateHypothesisConfidenceVersion(valid,hypothesisId,invalid)).rejects.toThrow('Invalid confidence target version.');
+   expect(data.createConfidenceEvaluation).not.toHaveBeenCalled();
+  });
+  it('fails closed when no evaluation comes back',async()=>{
+   const valid=await context(),{service}=versionSetup({createConfidenceEvaluation:jest.fn().mockResolvedValue(undefined)});
+   await expect(service.evaluateHypothesisConfidenceVersion(valid,hypothesisId,4)).rejects.toThrow('Hypothesis not found.');
+  });
+  it.each([
+   ['a foreign owner',{user_id:'40000000-0000-4000-8000-000000000009'}],
+   ['a different target',{target_id:'40000000-0000-4000-8000-000000000008'}],
+   ['a foreign target type',{target_type:'FORGED'}],
+   ['a substituted later version',{target_version:5}],
+   ['a foreign provenance',{provenance:'FORGED'}],
+  ])('fails closed on a returned evaluation carrying %s',async(_label,overrides)=>{
+   const valid=await context(),{service}=versionSetup({createConfidenceEvaluation:jest.fn().mockResolvedValue(record(overrides as Record<string,unknown>))});
+   await expect(service.evaluateHypothesisConfidenceVersion(valid,hypothesisId,4)).rejects.toThrow('BACKGROUND_CONFIDENCE_INTEGRITY');
+  });
+  it('rejects pre-authorization, spread, and prototype-forged contexts before any database call',async()=>{
+   const valid=await context(),{service,data}=versionSetup(),pre=new BackgroundIntelligenceContextFactory().create(event);
+   for(const forged of[pre,{...valid},Object.create(BackgroundIntelligenceExecutionContext.prototype)])
+    await expect(service.evaluateHypothesisConfidenceVersion(forged as never,hypothesisId,4)).rejects.toThrow('BACKGROUND_INTELLIGENCE_AUTHORITY_REQUIRED');
+   expect(data.createConfidenceEvaluation).not.toHaveBeenCalled();
+  });
+ });
  it('exports only authority and the narrow enrichment facade',()=>{const exports=Reflect.getMetadata('exports',BackgroundIntelligenceModule);expect(exports).toEqual([BackgroundIntelligenceAuthorityService,BackgroundIntelligenceEnrichmentService]);expect(exports).not.toContain(RawDataApi);});
 
  describe('applyAuthorizedHypothesisUpdate (A2.3b invocation boundary)',()=>{
@@ -50,25 +88,54 @@ describe('BackgroundIntelligenceEnrichmentService',()=>{const setup=(overrides:R
    update:{id:updateId,user_id:ids.user,hypothesis_id:updateRequest.hypothesisId,before_version:3,after_version:4,evidence_id:updateRequest.evidenceId,evidence_role:'SUPPORTING',source:'QANDEEL_HYPOTHESIS_UPDATE_LOOP',created_at:'now',...overrides.update},
    hypothesis:{id:updateRequest.hypothesisId,user_id:ids.user,version:4,...overrides.hypothesis},
   });
+  const confidenceRecord=(overrides:Record<string,unknown>={})=>({id:'evaluation-a',user_id:ids.user,target_id:updateRequest.hypothesisId,target_type:'HYPOTHESIS',target_version:4,provenance:'QANDEEL_CONFIDENCE_RUNTIME',...overrides});
   const boundarySetup=(overrides:Record<string,unknown>={})=>setup({
    applyHypothesisUpdate:jest.fn().mockImplementation(async(_context:unknown,updateId:string)=>canonicalMutation(updateId)),
    findHypothesis:jest.fn().mockResolvedValue({id:updateRequest.hypothesisId,version:4}),
-   createConfidenceEvaluation:jest.fn().mockResolvedValue({id:'evaluation-a'}),
+   createConfidenceEvaluation:jest.fn().mockResolvedValue(confidenceRecord()),
    ...overrides,
   });
-  it('applies a validated command through the context-bound mutation and evaluates Confidence afterwards',async()=>{
+  it('applies a validated command through the context-bound mutation and evaluates exact-version Confidence afterwards',async()=>{
    const valid=await context(),{service,data}=boundarySetup();
    const result=await service.applyAuthorizedHypothesisUpdate(valid,updateRequest);
    expect(result.confidenceStatus).toBe('EVALUATED');
-   expect(result.confidenceEvaluation).toEqual({id:'evaluation-a'});
+   expect(result.confidenceEvaluation).toEqual(confidenceRecord());
    expect(data.applyHypothesisUpdate).toHaveBeenCalledTimes(1);
    const[calledContext,calledUpdateId,calledRequest]=(data.applyHypothesisUpdate as jest.Mock).mock.calls[0];
    expect(calledContext).toBe(valid);
    expect(calledUpdateId).toMatch(/^[0-9a-f-]{36}$/);
    expect(calledRequest).toBe(updateRequest);
    expect(result.update.id).toBe(calledUpdateId);
+   // Finding 09: the Confidence target is EXACTLY mutation.update.after_version
+   // - the exact-version command receives 4 and no findHypothesis re-read ever
+   // discovers the target.
+   expect(data.createConfidenceEvaluation).toHaveBeenCalledWith(valid,expect.any(String),updateRequest.hypothesisId,4);
+   expect(data.findHypothesis).not.toHaveBeenCalled();
    // Confidence runs only AFTER the committed mutation.
    expect((data.applyHypothesisUpdate as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan((data.createConfidenceEvaluation as jest.Mock).mock.invocationCallOrder[0]);
+  });
+  it('reproduces the QAN-AUD-07 race: a later version is never evaluated on this mutation\'s behalf',async()=>{
+   // Update A commits 3 -> 4; a racing update advances the Hypothesis to 5
+   // before A's Confidence commits, so the exact-version service-role command
+   // rejects as stale instead of evaluating version 5.
+   const valid=await context(),{service,data}=boundarySetup({createConfidenceEvaluation:jest.fn().mockRejectedValue(new Error('Stale hypothesis version.'))});
+   const result=await service.applyAuthorizedHypothesisUpdate(valid,updateRequest);
+   expect(data.createConfidenceEvaluation).toHaveBeenCalledTimes(1);
+   expect(data.createConfidenceEvaluation).toHaveBeenCalledWith(valid,expect.any(String),updateRequest.hypothesisId,4);
+   // No latest-version rediscovery and no version-5 substitution.
+   expect(data.findHypothesis).not.toHaveBeenCalled();
+   expect(result.confidenceStatus).toBe('PENDING_RETRY');
+   expect(result.confidenceEvaluation).toBeNull();
+   // The committed mutation stands and is never replayed.
+   expect(result.update.after_version).toBe(4);
+   expect(data.applyHypothesisUpdate).toHaveBeenCalledTimes(1);
+  });
+  it('degrades a substituted later-version Confidence row to PENDING_RETRY instead of trusting it',async()=>{
+   const valid=await context(),{service,data}=boundarySetup({createConfidenceEvaluation:jest.fn().mockResolvedValue(confidenceRecord({target_version:5}))});
+   const result=await service.applyAuthorizedHypothesisUpdate(valid,updateRequest);
+   expect(result.confidenceStatus).toBe('PENDING_RETRY');
+   expect(result.confidenceEvaluation).toBeNull();
+   expect(data.applyHypothesisUpdate).toHaveBeenCalledTimes(1);
   });
   it('returns PENDING_RETRY on Confidence failure with the mutation performed exactly once',async()=>{
    const valid=await context(),{service,data}=boundarySetup({createConfidenceEvaluation:jest.fn().mockRejectedValue(new Error('confidence down'))});
