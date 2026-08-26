@@ -97,7 +97,12 @@ async function newExecution({ claim = 'INTENT_PROVIDER' } = {}) {
 }
 
 // Section 17.6 / 20.
-async function verifySurfaceAndAcls() {
+// confidenceCheck is false only for the in-savepoint call below, where this
+// verifier has dropped result_payload (taking every result check with it) and
+// rebuilt the surface forward through migration 0034. Migration 0035's
+// Confidence check legitimately does not exist in that reconstructed state; it
+// is asserted exactly in every other state, and 0035's own verifier owns it.
+async function verifySurfaceAndAcls({ confidenceCheck = true } = {}) {
   stage = 'schema surface and ACLs';
   await identity('postgres');
   const column = await one(
@@ -117,6 +122,7 @@ async function verifySurfaceAndAcls() {
     'post_response_intelligence_effects_association_result_check',
     'post_response_intelligence_effects_candidate_result_check',
     'post_response_intelligence_effects_claimed_result_check',
+    ...(confidenceCheck ? ['post_response_intelligence_effects_confidence_result_check'] : []),
     'post_response_intelligence_effects_intent_result_check',
     'post_response_intelligence_effects_memory_result_check',
     'post_response_intelligence_effects_persistence_result_check',
@@ -587,8 +593,9 @@ async function verifyUpgradeFromPreCanonicalState() {
   );
 
   // After the upgrade the same generic completion is prohibited, and the typed
-  // command works on a fresh effect.
-  await verifySurfaceAndAcls();
+  // command works on a fresh effect. The rebuild above stops at migration 0034,
+  // so migration 0035's Confidence result check is legitimately absent here.
+  await verifySurfaceAndAcls({ confidenceCheck: false });
   stage = 'pre-0029 reproduction and upgrade';
   const upgraded = await newExecution();
   await identity('service_role');
