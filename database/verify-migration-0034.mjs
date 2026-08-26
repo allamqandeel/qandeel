@@ -4,7 +4,7 @@
 // Runs against a fully migrated database. It proves the managed
 // HYPOTHESIS_UPDATE_BATCH contract end to end on real PostgreSQL: the effect
 // registry and ACLs (ordinary claim and generic completion both fail closed
-// for the managed effect; only CONFIDENCE_BATCH keeps generic parity); the
+// for the managed effect, and since migration 0035 for CONFIDENCE_BATCH too);
 // internal invocation-ID and receipt validators; that the managed execute
 // command derives user/session from the execution and its commands ONLY from
 // the exact durable ASSOCIATION_PROVIDER / AUTHORIZED_COMMANDS result with the
@@ -135,7 +135,7 @@ async function verifySurfaceAndAcls() {
        AND conname LIKE 'post_response_intelligence_effects_%_result_check' ORDER BY conname`,
   )).map((row) => row.conname);
   assert.ok(constraints.includes('post_response_intelligence_effects_update_batch_result_check'), 'the managed result check exists');
-  assert.equal(constraints.length, 8, 'every earlier result check survives');
+  assert.equal(constraints.length, 9, 'every earlier result check survives alongside the 0035 Confidence check');
 
   for (const [signature, expected] of [
     [EXECUTE_RPC, { service_role: true, authenticated: false, anon: false, public: false }],
@@ -173,8 +173,9 @@ async function verifySurfaceAndAcls() {
   }
 
   // Ordinary claim fails closed for the managed effect and keeps parity for
-  // every claimable key; generic completion fails closed too, and only
-  // CONFIDENCE_BATCH keeps generic parity.
+  // every claimable key; generic completion fails closed too. Migration 0035
+  // made CONFIDENCE_BATCH managed as well, so no generic parity remains and the
+  // A2.3c contracts below are unchanged by it.
   const execution = await newExecution({ withMemory: false, claimAssociation: false });
   await identity('service_role');
   const managedClaim = await rejected(() => q(CLAIM, [execution.id, 'HYPOTHESIS_UPDATE_BATCH']), ['22023']);
@@ -182,9 +183,10 @@ async function verifySurfaceAndAcls() {
   const managedComplete = await rejected(() => q(COMPLETE_GENERIC, [execution.id, 'HYPOTHESIS_UPDATE_BATCH']), ['22023']);
   assert.equal(managedComplete.message, 'HYPOTHESIS_UPDATE_BATCH_COMMAND_REQUIRED');
   for (const key of EFFECT_KEYS.filter((value) => value === 'CONFIDENCE_BATCH')) {
-    assert.equal((await one(CLAIM, [execution.id, key])).ok, true, `claim ${key}`);
-    assert.equal((await one(COMPLETE_GENERIC, [execution.id, key])).ok, true, `generic completion parity for ${key}`);
+    assert.equal((await rejected(() => q(CLAIM, [execution.id, key]), ['22023'])).message, 'CONFIDENCE_BATCH_MANAGED');
+    assert.equal((await rejected(() => q(COMPLETE_GENERIC, [execution.id, key]), ['22023'])).message, 'CONFIDENCE_BATCH_COMMAND_REQUIRED');
   }
+  assert.equal((await one(CLAIM, [execution.id, 'CANDIDATE_PROVIDER'])).ok, true, 'claim parity survives for a claimable key');
   for (const [key, message] of [
     ['MEMORY_WRITE', 'MEMORY_RESULT_REQUIRED'], ['INTENT_PROVIDER', 'INTENT_RESULT_REQUIRED'],
     ['ASSOCIATION_PROVIDER', 'ASSOCIATION_RESULT_REQUIRED'], ['CANDIDATE_PROVIDER', 'CANDIDATE_RESULT_REQUIRED'],
@@ -641,7 +643,7 @@ async function main() {
     await identity('postgres');
     assert.deepEqual(await one(EFFECT, [single.execution.id, 'HYPOTHESIS_UPDATE_BATCH']), single.effect);
 
-    console.log('Verified migration 0034: the managed HYPOTHESIS_UPDATE_BATCH effect joins the registry with ordinary claim and generic completion both failing closed (HYPOTHESIS_UPDATE_BATCH_MANAGED / HYPOTHESIS_UPDATE_BATCH_COMMAND_REQUIRED) while CONFIDENCE_BATCH keeps generic parity; the internal invocation-ID and receipt validators are IMMUTABLE and role-inaccessible; the service-role-only managed command derives user/session from the execution and its commands only from the durable A2.3a AUTHORIZED_COMMANDS result with same-execution Memory Evidence provenance; single and multi-command batches apply through the canonical A2.3b boundary with exact immutable audit IDs, exact-version Confidence rows and the exact ordered durable receipt in one transaction; a stale second command rolls back the entire batch to a payload-free UPDATES_REJECTED with zero mutation, audit or Confidence; Evidence eligibility drift and cross-user / cross-session targets reject with zero partial mutation; a Confidence failure keeps the committed mutation batch and records a durable PENDING_RETRY with no later-version substitution; an unexpected failure aborts the whole managed transaction leaving no batch effect or mutation so redelivery is safe; a second execution performs zero duplicate mutation against the immutable first result; and the upgrade from the canonical 0033 chain leaves every historical row byte-identical with no backfilled mutation.');
+    console.log('Verified migration 0034: the managed HYPOTHESIS_UPDATE_BATCH effect joins the registry with ordinary claim and generic completion both failing closed (HYPOTHESIS_UPDATE_BATCH_MANAGED / HYPOTHESIS_UPDATE_BATCH_COMMAND_REQUIRED) while the migration-0035 managed CONFIDENCE_BATCH fails closed the same way (CONFIDENCE_BATCH_MANAGED / CONFIDENCE_BATCH_COMMAND_REQUIRED) and every claimable key keeps 0022 claim parity; the internal invocation-ID and receipt validators are IMMUTABLE and role-inaccessible; the service-role-only managed command derives user/session from the execution and its commands only from the durable A2.3a AUTHORIZED_COMMANDS result with same-execution Memory Evidence provenance; single and multi-command batches apply through the canonical A2.3b boundary with exact immutable audit IDs, exact-version Confidence rows and the exact ordered durable receipt in one transaction; a stale second command rolls back the entire batch to a payload-free UPDATES_REJECTED with zero mutation, audit or Confidence; Evidence eligibility drift and cross-user / cross-session targets reject with zero partial mutation; a Confidence failure keeps the committed mutation batch and records a durable PENDING_RETRY with no later-version substitution; an unexpected failure aborts the whole managed transaction leaving no batch effect or mutation so redelivery is safe; a second execution performs zero duplicate mutation against the immutable first result; and the upgrade from the canonical 0033 chain leaves every historical row byte-identical with no backfilled mutation.');
   } finally {
     try { await q('ROLLBACK'); } catch { /* ignore */ }
     await client.end();

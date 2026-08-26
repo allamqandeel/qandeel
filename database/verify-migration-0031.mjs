@@ -105,6 +105,7 @@ async function verifySurfaceAndAcls() {
     'post_response_intelligence_effects_association_result_check',
     'post_response_intelligence_effects_candidate_result_check',
     'post_response_intelligence_effects_claimed_result_check',
+    'post_response_intelligence_effects_confidence_result_check',
     'post_response_intelligence_effects_intent_result_check',
     'post_response_intelligence_effects_memory_result_check',
     'post_response_intelligence_effects_persistence_result_check',
@@ -283,14 +284,15 @@ async function verifyGenericCompletion() {
     { state: untouched.state, code: untouched.result_code, payload: untouched.result_payload, completed: untouched.completed_at },
     { state: 'CLAIMED', code: null, payload: null, completed: null },
   );
-  // Only CONFIDENCE_BATCH keeps generic parity: migration 0033 made both
-  // generation effects typed, and verify-migration-0033 proves their own
-  // rejection and typed completion contracts.
+  // No generic parity remains for any key: migration 0033 made both generation
+  // effects typed and migration 0035 made CONFIDENCE_BATCH managed, so the last
+  // formerly generic key now fails closed on both the ordinary claim and the
+  // generic completion. The 0031 Association contract is unaffected.
   const generic = await newExecution({ withMemory: false, claimAssociation: false });
   await identity('service_role');
   for (const key of EFFECT_KEYS.filter((value) => value === 'CONFIDENCE_BATCH')) {
-    assert.equal((await one(CLAIM, [generic.id, key])).ok, true, `claim ${key}`);
-    assert.equal((await one(COMPLETE_GENERIC, [generic.id, key])).ok, true, `generic completion parity for ${key}`);
+    assert.equal((await rejected(() => q(CLAIM, [generic.id, key]), ['22023'])).message, 'CONFIDENCE_BATCH_MANAGED');
+    assert.equal((await rejected(() => q(COMPLETE_GENERIC, [generic.id, key]), ['22023'])).message, 'CONFIDENCE_BATCH_COMMAND_REQUIRED');
   }
 }
 
@@ -494,8 +496,11 @@ async function verifyUpgradeFromCanonical0030() {
   await identity('service_role');
   assert.equal((await one(CLAIM, [seeded.memorySkip.id, 'MEMORY_WRITE'])).ok, true);
   assert.equal((await one(COMPLETE_MEMORY, [seeded.memorySkip.id, 'NO_FRESH_EVIDENCE', null])).ok, true);
-  assert.equal((await one(CLAIM, [seeded.memorySkip.id, 'CONFIDENCE_BATCH'])).ok, true);
-  assert.equal((await one(COMPLETE_GENERIC, [seeded.memorySkip.id, 'CONFIDENCE_BATCH'])).ok, true);
+  // A still-claimable key stands in for the pre-0031 generic completions: since
+  // migration 0035 CONFIDENCE_BATCH is managed and can no longer be claimed
+  // ordinarily, and its own upgrade path is proven by verify-migration-0035.
+  assert.equal((await one(CLAIM, [seeded.memorySkip.id, 'CANDIDATE_PROVIDER'])).ok, true);
+  assert.equal((await one(COMPLETE_GENERIC, [seeded.memorySkip.id, 'CANDIDATE_PROVIDER'])).ok, true);
   seeded.memoryWrite = await newExecution({ claimAssociation: false });
   seeded.intentNotAuthorized = await newExecution({ withMemory: false, claimAssociation: false });
   await identity('service_role');

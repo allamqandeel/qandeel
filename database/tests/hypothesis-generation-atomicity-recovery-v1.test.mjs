@@ -86,8 +86,12 @@ test('the pure result module recovers both generation results without providers,
  assert.doesNotMatch(module,/fetch\(|randomUUID|generate\(|BackgroundIntelligence|createSystemHypothesis/u);
 });
 
-test('the effect types leave only CONFIDENCE_BATCH generic and extend the result-code vocabulary',()=>{
- assert.match(types,/GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'\|'CANDIDATE_PROVIDER'\|'HYPOTHESIS_PERSISTENCE'\|'HYPOTHESIS_UPDATE_BATCH'>/u);
+test('the effect types leave no generic effect and extend the result-code vocabulary',()=>{
+ // Migration 0035 made the last formerly generic key, CONFIDENCE_BATCH,
+ // managed, so the generic type is gone; the 0033 generation vocabulary is
+ // unchanged.
+ assert.doesNotMatch(types,/GenericIntelligenceEffect/u);
+ assert.match(types,/ManagedIntelligenceEffect='HYPOTHESIS_UPDATE_BATCH'\|'CONFIDENCE_BATCH'/u);
  assert.match(types,/CandidateProviderEffectResultCode/u);
  assert.match(types,/HypothesisPersistenceEffectResultCode/u);
 });
@@ -125,6 +129,6 @@ test('the provider stage writes zero Hypotheses and only accepted canonical cand
 });
 
 test('the verifier adversarially proves both pre-0033 defects, atomicity, rollback, recovery, and the upgrade',()=>{
- for(const proof of['pre-0033','CANDIDATE_RESULT_REQUIRED','HYPOTHESIS_PERSISTENCE_COMMAND_REQUIRED','CANDIDATE_INTENT_UNAVAILABLE','CANDIDATE_INTENT_MISMATCH','PERSISTENCE_CANDIDATE_UNAVAILABLE','generic completion parity for','byte-identical','never backfilled','rolls back','Evidence is not eligible'])assert.match(verifier,new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&'),'iu'),`missing proof: ${proof}`);
+ for(const proof of['pre-0033','CANDIDATE_RESULT_REQUIRED','HYPOTHESIS_PERSISTENCE_COMMAND_REQUIRED','CANDIDATE_INTENT_UNAVAILABLE','CANDIDATE_INTENT_MISMATCH','PERSISTENCE_CANDIDATE_UNAVAILABLE','CONFIDENCE_BATCH_MANAGED','byte-identical','never backfilled','rolls back','Evidence is not eligible'])assert.match(verifier,new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&'),'iu'),`missing proof: ${proof}`);
  assert.doesNotMatch(verifier,/TRUNCATE|DROP TABLE|DELETE FROM/iu);
 });

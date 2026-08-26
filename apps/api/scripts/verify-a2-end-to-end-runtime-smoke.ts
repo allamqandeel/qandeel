@@ -9,8 +9,8 @@
 // HYPOTHESIS_UPDATE_BATCH → canonical Hypothesis mutation + immutable audit +
 // exact-version Confidence → generation eligibility → durable
 // INTENT_AUTHORIZED → durable VALIDATED_CANDIDATES → atomic
-// HYPOTHESIS_PERSISTENCE → generation Confidence Batch → terminal COMPLETED →
-// Redis ACK → duplicate-delivery zero replay.
+// HYPOTHESIS_PERSISTENCE → managed QAN-AUD-06 generation Confidence Batch →
+// terminal COMPLETED → Redis ACK → duplicate-delivery zero replay.
 //
 // Deterministic in-process doubles stand in ONLY at the three model/provider
 // boundaries; every authority, validation, durability, mutation and Confidence
@@ -454,12 +454,33 @@ async function main(): Promise<void> {
     // -----------------------------------------------------------------------
     const confidenceBatchEffect = effect('CONFIDENCE_BATCH');
     assert.equal(confidenceBatchEffect.state, 'COMPLETED');
-    assert.equal(confidenceBatchEffect.result_code, null, 'CONFIDENCE_BATCH stays the generic result-less effect');
+    // QAN-AUD-06: CONFIDENCE_BATCH is managed and typed. Its durable result is
+    // the exact ordered receipt of every frozen target, so a completed batch
+    // proves every generated Hypothesis really has its Confidence snapshot.
+    assert.equal(confidenceBatchEffect.result_code, 'CONFIDENCE_BATCH_EVALUATED', 'CONFIDENCE_BATCH carries the typed durable result');
+    assert.equal(confidenceBatchEffect.result_reference, null);
+    const confidenceReceipts = confidenceBatchEffect.result_payload as Array<Record<string, unknown>>;
+    assert.equal(confidenceReceipts.length, 1, 'exactly one Confidence receipt for the single persisted Hypothesis');
+    assert.equal(confidenceReceipts[0].ordinal, 1);
+    assert.equal(confidenceReceipts[0].hypothesisId, generatedHypothesisId, 'the receipt targets the exact durably persisted Hypothesis');
+    assert.equal(confidenceReceipts[0].targetVersion, generatedVersion, 'the receipt carries the exact frozen post-persistence version');
     const generatedConfidence = await db.observer<Record<string, unknown>>(
       'SELECT * FROM public.confidence_evaluations WHERE target_id = $1', [generatedHypothesisId]);
     assert.equal(generatedConfidence.length, 1, 'generation Confidence Batch happy path succeeded');
-    assert.equal(generatedConfidence[0].target_version, generatedVersion, 'canonical Confidence targets the current generated version');
+    assert.equal(generatedConfidence[0].id, confidenceReceipts[0].confidenceEvaluationId,
+      'the receipt points at the exact generated Confidence evaluation');
+    assert.equal(generatedConfidence[0].user_id, userId);
+    assert.equal(generatedConfidence[0].target_type, 'HYPOTHESIS');
+    assert.equal(generatedConfidence[0].target_version, generatedVersion, 'canonical Confidence targets the exact frozen generated version');
     assert.equal(generatedConfidence[0].provenance, 'QANDEEL_CONFIDENCE_RUNTIME');
+    const confidenceItems = await db.observer<Record<string, unknown>>(
+      'SELECT * FROM public.post_response_confidence_batch_items WHERE execution_id = $1 ORDER BY ordinal', [executionId]);
+    assert.equal(confidenceItems.length, 1, 'exactly one durable Confidence batch item');
+    assert.equal(confidenceItems[0].state, 'EVALUATED');
+    assert.equal(confidenceItems[0].failure_code, null);
+    assert.equal(confidenceItems[0].hypothesis_id, generatedHypothesisId);
+    assert.equal(confidenceItems[0].target_version, generatedVersion);
+    assert.equal(confidenceItems[0].confidence_evaluation_id, confidenceReceipts[0].confidenceEvaluationId);
 
     // -----------------------------------------------------------------------
     stage = 'TERMINAL';
@@ -490,6 +511,9 @@ async function main(): Promise<void> {
     stage = 'DUPLICATE_DELIVERY';
     // -----------------------------------------------------------------------
     const effectsBeforeDuplicate = JSON.stringify(await effectRows());
+    const confidenceItemRows = async (): Promise<unknown[]> => db.observer<Record<string, unknown>>(
+      'SELECT * FROM public.post_response_confidence_batch_items WHERE execution_id = $1 ORDER BY ordinal', [executionId]);
+    const confidenceItemsBeforeDuplicate = JSON.stringify(await confidenceItemRows());
     const countsBefore = {
       memories: (await db.observer('SELECT id FROM public.memories WHERE user_id = $1', [userId])).length,
       hypotheses: (await db.observer('SELECT id FROM public.hypotheses WHERE user_id = $1', [userId])).length,
@@ -524,6 +548,8 @@ async function main(): Promise<void> {
     const [seededAfter] = await db.observer<{ version: number }>('SELECT version FROM public.hypotheses WHERE id = $1', [seededHypothesisId]);
     assert.equal(seededAfter.version, 2, 'seeded Hypothesis version unchanged by redelivery');
     assert.equal(JSON.stringify(await effectRows()), effectsBeforeDuplicate, 'durable effect payloads byte-equivalent after duplicate');
+    assert.equal(JSON.stringify(await confidenceItemRows()), confidenceItemsBeforeDuplicate,
+      'durable Confidence batch items byte-equivalent after duplicate: no re-evaluation, no new item, no state churn');
     assert.equal(associationProvider.callCount, 1, 'no Association provider replay');
     assert.equal(intentProvider.callCount, 1, 'no Intent provider replay');
     assert.equal(candidateGenerator.callCount, 1, 'no Candidate generator replay');
@@ -537,6 +563,8 @@ async function main(): Promise<void> {
     assert.equal((await db.afterRollback('SELECT event_id FROM public.runtime_event_outbox WHERE event_id = $1', [eventId])).length, 0, 'outbox row rolled back');
     assert.equal((await db.afterRollback('SELECT id FROM public.post_response_intelligence_executions WHERE source_turn_id = $1', [sourceTurnId])).length, 0, 'execution rolled back');
     assert.equal((await db.afterRollback('SELECT id FROM public.hypotheses WHERE user_id = $1', [userId])).length, 0, 'hypotheses rolled back');
+    assert.equal((await db.afterRollback('SELECT ordinal FROM public.post_response_confidence_batch_items WHERE execution_id = $1', [executionId])).length, 0,
+      'Confidence batch items rolled back');
     const [{ rolbypassrls: finalBypass }] = await db.afterRollback<{ rolbypassrls: boolean }>(
       "SELECT rolbypassrls FROM pg_roles WHERE rolname = 'service_role'");
     assert.equal(finalBypass, initialBypass, 'transaction-scoped service_role attribute restored by rollback');

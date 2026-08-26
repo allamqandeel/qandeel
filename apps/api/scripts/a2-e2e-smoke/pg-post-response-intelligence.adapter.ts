@@ -1,19 +1,20 @@
 // Smoke-only PostgreSQL transport substitute for
 // PostResponseIntelligenceRepository. The production repository reaches the
 // SAME canonical effect-ledger SQL commands (migrations 0022/0024/0029/0031/
-// 0033/0034) through PostgREST with the service_role transport; CI provides
-// PostgreSQL without PostgREST, so this adapter issues the identical RPCs
-// directly through the shared pg client as service_role. It contains NO
-// business logic: acquisition, claim/complete rules, typed durable results,
-// the managed A2.3c batch and atomic generation persistence all live in the
-// canonical SECURITY DEFINER functions.
+// 0033/0034/0035) through PostgREST with the service_role transport; CI
+// provides PostgreSQL without PostgREST, so this adapter issues the identical
+// RPCs directly through the shared pg client as service_role. It contains NO
+// business logic: acquisition, claim rules, typed durable results, the managed
+// A2.3c batch, atomic generation persistence and the managed QAN-AUD-06
+// Confidence batch all live in the canonical SECURITY DEFINER functions.
 import type { HypothesisGenerationIntentExtractionResult } from '../../src/hypothesis/hypothesis-generation-intent-extraction.types';
 import type { MemoryWriteResult } from '../../src/memory/memory-write.service';
 import type { DurableAssociationResult } from '../../src/post-response-intelligence/durable-association-result';
 import type { DurableCandidateProviderResult } from '../../src/post-response-intelligence/durable-generation-result';
+import { CONFIDENCE_BATCH_COMMAND_STATUSES } from '../../src/post-response-intelligence/post-response-intelligence.types';
 import type {
   ClaimableIntelligenceEffect,
-  GenericIntelligenceEffect,
+  ConfidenceBatchCommandStatus,
   IntelligenceEffectState,
   IntelligenceExecution,
 } from '../../src/post-response-intelligence/post-response-intelligence.types';
@@ -52,10 +53,6 @@ export class PgPostResponseIntelligenceRepositoryAdapter {
     return this.booleanRpc('SELECT public.claim_post_response_intelligence_effect_v1($1, $2) AS value', [id, effect]);
   }
 
-  async complete(id: string, effect: GenericIntelligenceEffect): Promise<boolean> {
-    return this.booleanRpc('SELECT public.complete_post_response_intelligence_effect_v1($1, $2) AS value', [id, effect]);
-  }
-
   async completeMemory(id: string, result: MemoryWriteResult): Promise<boolean> {
     return result.decision === 'SKIP'
       ? this.booleanRpc('SELECT public.complete_post_response_memory_write_effect_v1($1, $2, $3) AS value', [id, 'NO_FRESH_EVIDENCE', null])
@@ -92,6 +89,16 @@ export class PgPostResponseIntelligenceRepositoryAdapter {
       'SELECT public.execute_post_response_hypothesis_update_batch_v1($1, $2::jsonb) AS value',
       [id, JSON.stringify(invocationIds)],
     );
+  }
+
+  async executeConfidenceBatch(id: string): Promise<ConfidenceBatchCommandStatus> {
+    const rows = await this.db.asRole<{ value: string | null }>(
+      'service_role',
+      'SELECT public.execute_post_response_confidence_batch_v1($1) AS value',
+      [id],
+    );
+    const value = rows[0]?.value ?? '';
+    return (CONFIDENCE_BATCH_COMMAND_STATUSES as readonly string[]).includes(value) ? (value as ConfidenceBatchCommandStatus) : 'NO_OP';
   }
 
   async finish(id: string, state: 'COMPLETED' | 'SKIPPED' | 'QUARANTINED' | 'FAILED', outcome: string, stage: string): Promise<boolean> {

@@ -7,10 +7,13 @@ await db.connect();try{for(const signature of signatures){const row=(await db.qu
  // Claim semantics are unchanged for every effect key, but since migration 0029
  // INTENT_PROVIDER carries a durable typed result, so the generic result-less
  // completion fails closed for it exactly as it does for MEMORY_WRITE. Since
- // migration 0033 only CONFIDENCE_BATCH remains generic, so the generic
- // completion path itself is exercised on that sole untyped effect below.
+ // migration 0035 no generic effect remains at all: CONFIDENCE_BATCH became
+ // managed, so BOTH the ordinary claim and the generic completion fail closed
+ // for it, while every claimable key keeps the exact 0022 claim semantics.
  await denied("SELECT public.complete_post_response_intelligence_effect_v1($1,'INTENT_PROVIDER')",[execution]);
- if(!(await db.query("SELECT public.claim_post_response_intelligence_effect_v1($1,'CONFIDENCE_BATCH') ok",[execution])).rows[0].ok)throw new Error('Untyped effect claim failed.');if(!(await db.query("SELECT public.complete_post_response_intelligence_effect_v1($1,'CONFIDENCE_BATCH') ok",[execution])).rows[0].ok)throw new Error('Effect completion failed.');row=(await db.query(acquire,[randomUUID(),event,user,session,turn,'2.0','FAST','ALLOW'])).rows[0];if(row.attempt_count!==2)throw new Error('Redelivery attempt was not durable.');await denied(acquire,[randomUUID(),randomUUID(),randomUUID(),session,turn,'2.0','FAST','ALLOW']);if(!(await db.query("SELECT public.finish_post_response_intelligence_execution_v1($1,'COMPLETED','COMPLETED','DONE') ok",[execution])).rows[0].ok)throw new Error('Terminal transition failed.');await db.query('ROLLBACK');
+ await denied("SELECT public.claim_post_response_intelligence_effect_v1($1,'CONFIDENCE_BATCH')",[execution]);
+ await denied("SELECT public.complete_post_response_intelligence_effect_v1($1,'CONFIDENCE_BATCH')",[execution]);
+ if(!(await db.query("SELECT public.claim_post_response_intelligence_effect_v1($1,'CANDIDATE_PROVIDER') ok",[execution])).rows[0].ok)throw new Error('Claimable effect claim failed.');row=(await db.query(acquire,[randomUUID(),event,user,session,turn,'2.0','FAST','ALLOW'])).rows[0];if(row.attempt_count!==2)throw new Error('Redelivery attempt was not durable.');await denied(acquire,[randomUUID(),randomUUID(),randomUUID(),session,turn,'2.0','FAST','ALLOW']);if(!(await db.query("SELECT public.finish_post_response_intelligence_execution_v1($1,'COMPLETED','COMPLETED','DONE') ok",[execution])).rows[0].ok)throw new Error('Terminal transition failed.');await db.query('ROLLBACK');
  for(const role of['authenticated','anon']){await db.query('BEGIN');await db.query(`SET LOCAL ROLE ${role}`);await denied(acquire,[randomUUID(),randomUUID(),user,session,randomUUID(),'1.0',null,null]);await db.query('ROLLBACK');}
  const residue=await db.query('SELECT(SELECT count(*)FROM public.post_response_intelligence_executions WHERE id=$1)+(SELECT count(*)FROM public.post_response_intelligence_effects WHERE execution_id=$1) total',[execution]);if(Number(residue.rows[0].total)!==0)throw new Error('Dispatch verifier residue detected.');
 }finally{await db.end();}console.log('Verified migration 0022 durable execution/effect authority, redelivery semantics, service-role ACL, RLS, and zero fixture residue.');

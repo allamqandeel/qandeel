@@ -97,7 +97,12 @@ async function newExecution({ claim = 'INTENT_PROVIDER' } = {}) {
 }
 
 // Section 17.6 / 20.
-async function verifySurfaceAndAcls() {
+// confidenceCheck is false only for the in-savepoint call below, where this
+// verifier has dropped result_payload (taking every result check with it) and
+// rebuilt the surface forward through migration 0034. Migration 0035's
+// Confidence check legitimately does not exist in that reconstructed state; it
+// is asserted exactly in every other state, and 0035's own verifier owns it.
+async function verifySurfaceAndAcls({ confidenceCheck = true } = {}) {
   stage = 'schema surface and ACLs';
   await identity('postgres');
   const column = await one(
@@ -117,6 +122,7 @@ async function verifySurfaceAndAcls() {
     'post_response_intelligence_effects_association_result_check',
     'post_response_intelligence_effects_candidate_result_check',
     'post_response_intelligence_effects_claimed_result_check',
+    ...(confidenceCheck ? ['post_response_intelligence_effects_confidence_result_check'] : []),
     'post_response_intelligence_effects_intent_result_check',
     'post_response_intelligence_effects_memory_result_check',
     'post_response_intelligence_effects_persistence_result_check',
@@ -309,16 +315,17 @@ async function verifyGenericCompletion() {
     { state: untouched.state, code: untouched.result_code, payload: untouched.result_payload, completed: untouched.completed_at },
     { state: 'CLAIMED', code: null, payload: null, completed: null },
   );
-  // Every effect key without a typed durable result keeps generic parity.
-  // ASSOCIATION_PROVIDER became the third typed effect in migration 0031, and
+  // ASSOCIATION_PROVIDER became the third typed effect in migration 0031,
   // migration 0033 made CANDIDATE_PROVIDER and HYPOTHESIS_PERSISTENCE typed as
-  // well; their generic rejection and typed completion are proven by
-  // verify-migration-0031 and verify-migration-0033.
+  // well, and migration 0035 made CONFIDENCE_BATCH a managed typed effect - so
+  // no generic result-less completion parity remains for ANY effect key. The
+  // 0029 INTENT_PROVIDER contract is unaffected: the last formerly generic key
+  // now fails closed on both the ordinary claim and the generic completion.
   const generic = await newExecution({ claim: null });
   await identity('service_role');
   for (const key of EFFECT_KEYS.filter((value) => value === 'CONFIDENCE_BATCH')) {
-    assert.equal((await one(CLAIM, [generic.id, key])).ok, true, `claim ${key}`);
-    assert.equal((await one(COMPLETE_GENERIC, [generic.id, key])).ok, true, `generic completion parity for ${key}`);
+    assert.equal((await rejected(() => q(CLAIM, [generic.id, key]), ['22023'])).message, 'CONFIDENCE_BATCH_MANAGED');
+    assert.equal((await rejected(() => q(COMPLETE_GENERIC, [generic.id, key]), ['22023'])).message, 'CONFIDENCE_BATCH_COMMAND_REQUIRED');
   }
 }
 
@@ -533,8 +540,11 @@ async function verifyUpgradeFromPreCanonicalState() {
   const legacyMemory = await newExecution({ claim: 'MEMORY_WRITE' });
   await identity('service_role');
   assert.equal((await one(COMPLETE_MEMORY, [legacyMemory.id, 'NO_FRESH_EVIDENCE', null])).ok, true);
-  assert.equal((await one(CLAIM, [legacyMemory.id, 'CONFIDENCE_BATCH'])).ok, true);
-  assert.equal((await one(COMPLETE_GENERIC, [legacyMemory.id, 'CONFIDENCE_BATCH'])).ok, true);
+  // A still-claimable key stands in for the pre-0029 untyped effects: since
+  // migration 0035 CONFIDENCE_BATCH is managed and can no longer be claimed
+  // ordinarily, and its own upgrade path is proven by verify-migration-0035.
+  assert.equal((await one(CLAIM, [legacyMemory.id, 'CANDIDATE_PROVIDER'])).ok, true);
+  assert.equal((await one(COMPLETE_GENERIC, [legacyMemory.id, 'CANDIDATE_PROVIDER'])).ok, true);
 
   await identity('postgres');
   const executionIds = [legacyIntent.id, legacyMemory.id];
@@ -583,8 +593,9 @@ async function verifyUpgradeFromPreCanonicalState() {
   );
 
   // After the upgrade the same generic completion is prohibited, and the typed
-  // command works on a fresh effect.
-  await verifySurfaceAndAcls();
+  // command works on a fresh effect. The rebuild above stops at migration 0034,
+  // so migration 0035's Confidence result check is legitimately absent here.
+  await verifySurfaceAndAcls({ confidenceCheck: false });
   stage = 'pre-0029 reproduction and upgrade';
   const upgraded = await newExecution();
   await identity('service_role');
