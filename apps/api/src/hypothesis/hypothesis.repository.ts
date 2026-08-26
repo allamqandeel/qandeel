@@ -8,8 +8,10 @@ const FIELDS = 'id,user_id,statement,type,domain,scope,origin,status,version,sup
 // holds no INSERT on public.hypotheses any more, so a user token is neither
 // used nor usable as Hypothesis creation authority here, and status, version,
 // Evidence lists, competitors and both timestamps are derived in the database
-// rather than submitted. The existing constrained transition / evidence /
-// competition commands are unchanged and still run on the caller's identity.
+// rather than submitted. The Evidence attachment and competition commands are
+// unchanged and still run on the caller's identity; the lifecycle transition
+// moved to the exact-version, audited migration-0036 boundary below and also
+// runs on the caller's identity.
 @Injectable()
 export class HypothesisRepository {
   constructor(
@@ -32,8 +34,17 @@ export class HypothesisRepository {
     const query = new URLSearchParams({ select: FIELDS, user_id: `eq.${userId}`, status: 'in.(CANDIDATE,ACTIVE,SUPPORTED,MIXED,WEAK,REOPENED)', order: 'updated_at.desc,id.asc', limit: String(limit) });
     return this.dataApi.request<HypothesisRecord[]>(token, `hypotheses?${query}`);
   }
-  async transition(token: string, id: string, status: HypothesisStatus): Promise<HypothesisRecord | undefined> {
-    return (await this.dataApi.request<HypothesisRecord[]>(token, 'rpc/transition_hypothesis', { method: 'POST', body: JSON.stringify({ p_hypothesis_id: id, p_status: status }) }))[0];
+  // Migration 0036: the exact-version, audited lifecycle transition boundary.
+  // The legacy last-writer-wins `transition_hypothesis` RPC holds no
+  // application EXECUTE authority any more, so this is the only authenticated
+  // transition path. The owner is derived from auth.uid() inside the database
+  // and the transition source is forced there; the caller supplies only the
+  // target, the exact expected version taken from the owned current
+  // Hypothesis, and the requested status. A concurrent mutation between that
+  // read and this call fails closed with the canonical stale-version error
+  // rather than transitioning the newer Hypothesis.
+  async transition(token: string, id: string, expectedVersion: number, status: HypothesisStatus): Promise<HypothesisRecord | undefined> {
+    return (await this.dataApi.request<HypothesisRecord[]>(token, 'rpc/transition_hypothesis_v2', { method: 'POST', body: JSON.stringify({ p_hypothesis_id: id, p_expected_version: expectedVersion, p_status: status }) }))[0];
   }
   async attachEvidence(token: string, id: string, evidenceId: string, role: EvidenceRole): Promise<HypothesisRecord | undefined> {
     return (await this.dataApi.request<HypothesisRecord[]>(token, 'rpc/attach_hypothesis_evidence', { method: 'POST', body: JSON.stringify({ p_hypothesis_id: id, p_evidence_id: evidenceId, p_role: role }) }))[0];

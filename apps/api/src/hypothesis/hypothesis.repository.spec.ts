@@ -61,13 +61,37 @@ describe('HypothesisRepository', () => {
   });
 
   it('leaves the existing constrained mutation commands on the caller identity', async () => {
-    await repository.transition('token-a', 'hypothesis-a', 'ACTIVE');
+    await repository.transition('token-a', 'hypothesis-a', 4, 'ACTIVE');
     await repository.attachEvidence('token-a', 'hypothesis-a', 'memory:22222222-2222-4222-8222-222222222222', 'SUPPORTING');
     await repository.linkCompetitor('token-a', 'hypothesis-a', 'hypothesis-b');
     expect(dataApi.request.mock.calls.map(([, path]) => path)).toEqual([
-      'rpc/transition_hypothesis', 'rpc/attach_hypothesis_evidence', 'rpc/link_competing_hypotheses',
+      'rpc/transition_hypothesis_v2', 'rpc/attach_hypothesis_evidence', 'rpc/link_competing_hypotheses',
     ]);
     expect(serverAuthority.rpc).not.toHaveBeenCalled();
+  });
+
+  // Migration 0036: the exact-version, audited lifecycle transition boundary.
+  it('transitions through the exact-version v2 RPC and forges no owner, source or audit metadata', async () => {
+    await repository.transition('token-a', 'hypothesis-a', 7, 'SUPPORTED');
+    const [token, path, init] = dataApi.request.mock.calls[0];
+    expect(token).toBe('token-a');
+    expect(path).toBe('rpc/transition_hypothesis_v2');
+    expect(init?.method).toBe('POST');
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    expect(body).toEqual({ p_hypothesis_id: 'hypothesis-a', p_expected_version: 7, p_status: 'SUPPORTED' });
+    // The owner, the transition source and every audit fact stay database-derived.
+    for (const forbidden of [
+      'p_user_id', 'p_source', 'p_transition_id', 'p_before_version', 'p_after_version',
+      'p_before_status', 'p_after_status', 'p_created_at',
+    ]) expect(body).not.toHaveProperty(forbidden);
+    expect(JSON.stringify(body)).not.toMatch(/token/iu);
+    expect(serverAuthority.rpc).not.toHaveBeenCalled();
+  });
+
+  it('no longer reaches the legacy last-writer-wins transition RPC', () => {
+    const source = readFileSync(join(__dirname, 'hypothesis.repository.ts'), 'utf8');
+    expect(source).toMatch(/'rpc\/transition_hypothesis_v2'/u);
+    expect(source).not.toMatch(/'rpc\/transition_hypothesis'/u);
   });
 
   it('retains no direct authenticated Hypothesis table write and no generic update path', () => {

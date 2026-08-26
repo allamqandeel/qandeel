@@ -9,7 +9,9 @@
 // HYPOTHESIS_UPDATE_BATCH → canonical Hypothesis mutation + immutable audit +
 // exact-version Confidence → generation eligibility → durable
 // INTENT_AUTHORIZED → durable VALIDATED_CANDIDATES → atomic
-// HYPOTHESIS_PERSISTENCE → managed QAN-AUD-06 generation Confidence Batch →
+// HYPOTHESIS_PERSISTENCE (generated graph + CANDIDATE → ACTIVE admission +
+// immutable lifecycle audit, all before durable completion) → managed
+// QAN-AUD-06 generation Confidence Batch against the exact ACTIVE version →
 // terminal COMPLETED → Redis ACK → duplicate-delivery zero replay.
 //
 // Deterministic in-process doubles stand in ONLY at the three model/provider
@@ -445,9 +447,30 @@ async function main(): Promise<void> {
     assert.equal(generated.domain, INTENT_DOMAIN);
     assert.equal(generated.scope, sessionScope);
     assert.equal(generated.origin, 'SYSTEM_GENERATED');
-    assert.equal(generated.status, 'CANDIDATE');
+    // Migration 0036: the generated Hypothesis is admitted CANDIDATE -> ACTIVE
+    // inside this same atomic persistence transaction, so by the time
+    // HYPOTHESIS_PERSISTENCE is durably COMPLETED it is already ACTIVE.
+    assert.equal(generated.status, 'ACTIVE',
+      'the generated Hypothesis is durably ACTIVE by the time HYPOTHESIS_PERSISTENCE is completed');
     assert.deepEqual(generated.supporting_evidence_ids, [freshEvidenceId]);
     const generatedVersion = generated.version as number;
+    const lifecycleAudits = await db.observer<Record<string, unknown>>(
+      'SELECT * FROM public.hypothesis_lifecycle_transitions WHERE hypothesis_id = $1 ORDER BY created_at, id',
+      [generatedHypothesisId]);
+    assert.equal(lifecycleAudits.length, 1, 'exactly one CANDIDATE -> ACTIVE lifecycle audit for the generated target');
+    assert.equal(lifecycleAudits[0].user_id, userId);
+    assert.equal(lifecycleAudits[0].before_status, 'CANDIDATE');
+    assert.equal(lifecycleAudits[0].after_status, 'ACTIVE');
+    assert.equal(lifecycleAudits[0].source, 'SYSTEM_GENERATION_ACTIVATION');
+    assert.equal(lifecycleAudits[0].after_version, (lifecycleAudits[0].before_version as number) + 1,
+      'the activation incremented the version exactly once');
+    assert.equal(lifecycleAudits[0].after_version, generatedVersion,
+      'the audited post-activation version is the durable ACTIVE version');
+    // The seeded Hypothesis was mutated by the Update Loop, never transitioned:
+    // Evidence attachment is not a lifecycle decision.
+    assert.equal((await db.observer(
+      'SELECT id FROM public.hypothesis_lifecycle_transitions WHERE hypothesis_id = $1', [seededHypothesisId])).length, 0,
+      'Evidence attachment produced no lifecycle transition on the seeded Hypothesis');
 
     // -----------------------------------------------------------------------
     stage = 'GENERATION_CONFIDENCE';
@@ -463,7 +486,8 @@ async function main(): Promise<void> {
     assert.equal(confidenceReceipts.length, 1, 'exactly one Confidence receipt for the single persisted Hypothesis');
     assert.equal(confidenceReceipts[0].ordinal, 1);
     assert.equal(confidenceReceipts[0].hypothesisId, generatedHypothesisId, 'the receipt targets the exact durably persisted Hypothesis');
-    assert.equal(confidenceReceipts[0].targetVersion, generatedVersion, 'the receipt carries the exact frozen post-persistence version');
+    assert.equal(confidenceReceipts[0].targetVersion, generatedVersion,
+      'the receipt carries the exact frozen post-activation ACTIVE version, never the pre-activation Candidate version');
     const generatedConfidence = await db.observer<Record<string, unknown>>(
       'SELECT * FROM public.confidence_evaluations WHERE target_id = $1', [generatedHypothesisId]);
     assert.equal(generatedConfidence.length, 1, 'generation Confidence Batch happy path succeeded');
@@ -472,6 +496,15 @@ async function main(): Promise<void> {
     assert.equal(generatedConfidence[0].user_id, userId);
     assert.equal(generatedConfidence[0].target_type, 'HYPOTHESIS');
     assert.equal(generatedConfidence[0].target_version, generatedVersion, 'canonical Confidence targets the exact frozen generated version');
+    // The evaluated snapshot is the ACTIVE state: the target version it froze is
+    // exactly the version the CANDIDATE -> ACTIVE activation produced, and the
+    // Evidence it recorded is the ACTIVE row's Evidence.
+    assert.equal(generatedConfidence[0].target_version, lifecycleAudits[0].after_version,
+      'the Confidence evaluation targets the exact post-activation ACTIVE version');
+    assert.notEqual(generatedConfidence[0].target_version, lifecycleAudits[0].before_version,
+      'no generated Confidence receipt refers to the pre-activation Candidate version');
+    assert.deepEqual(generatedConfidence[0].supporting_evidence_ids, generated.supporting_evidence_ids,
+      'the Confidence snapshot is the ACTIVE Hypothesis state');
     assert.equal(generatedConfidence[0].provenance, 'QANDEEL_CONFIDENCE_RUNTIME');
     const confidenceItems = await db.observer<Record<string, unknown>>(
       'SELECT * FROM public.post_response_confidence_batch_items WHERE execution_id = $1 ORDER BY ordinal', [executionId]);
@@ -514,13 +547,17 @@ async function main(): Promise<void> {
     const confidenceItemRows = async (): Promise<unknown[]> => db.observer<Record<string, unknown>>(
       'SELECT * FROM public.post_response_confidence_batch_items WHERE execution_id = $1 ORDER BY ordinal', [executionId]);
     const confidenceItemsBeforeDuplicate = JSON.stringify(await confidenceItemRows());
+    const lifecycleAuditRows = async (): Promise<unknown[]> => db.observer<Record<string, unknown>>(
+      'SELECT * FROM public.hypothesis_lifecycle_transitions WHERE user_id = $1 ORDER BY created_at, id', [userId]);
+    const lifecycleBeforeDuplicate = JSON.stringify(await lifecycleAuditRows());
     const countsBefore = {
       memories: (await db.observer('SELECT id FROM public.memories WHERE user_id = $1', [userId])).length,
       hypotheses: (await db.observer('SELECT id FROM public.hypotheses WHERE user_id = $1', [userId])).length,
       audits: (await db.observer('SELECT id FROM public.hypothesis_updates WHERE user_id = $1', [userId])).length,
       confidence: (await db.observer('SELECT id FROM public.confidence_evaluations WHERE user_id = $1', [userId])).length,
+      lifecycle: (await db.observer('SELECT id FROM public.hypothesis_lifecycle_transitions WHERE user_id = $1', [userId])).length,
     };
-    assert.deepEqual(countsBefore, { memories: 1, hypotheses: 2, audits: 1, confidence: 2 });
+    assert.deepEqual(countsBefore, { memories: 1, hypotheses: 2, audits: 1, confidence: 2, lifecycle: 1 });
 
     // One duplicate Redis message carrying the byte-identical runtime envelope.
     await redisObserver.xAdd(STREAM, '*', { event_id: eventId, envelope: entries[0].envelope });
@@ -542,11 +579,18 @@ async function main(): Promise<void> {
       hypotheses: (await db.observer('SELECT id FROM public.hypotheses WHERE user_id = $1', [userId])).length,
       audits: (await db.observer('SELECT id FROM public.hypothesis_updates WHERE user_id = $1', [userId])).length,
       confidence: (await db.observer('SELECT id FROM public.confidence_evaluations WHERE user_id = $1', [userId])).length,
+      lifecycle: (await db.observer('SELECT id FROM public.hypothesis_lifecycle_transitions WHERE user_id = $1', [userId])).length,
     };
     assert.deepEqual(countsAfter, countsBefore,
-      'no second Memory write, Hypothesis mutation, audit, generated Hypothesis or duplicate Confidence');
+      'no second Memory write, Hypothesis mutation, audit, generated Hypothesis, lifecycle transition or duplicate Confidence');
     const [seededAfter] = await db.observer<{ version: number }>('SELECT version FROM public.hypotheses WHERE id = $1', [seededHypothesisId]);
     assert.equal(seededAfter.version, 2, 'seeded Hypothesis version unchanged by redelivery');
+    const [generatedAfter] = await db.observer<{ version: number; status: string }>(
+      'SELECT version, status FROM public.hypotheses WHERE id = $1', [generatedHypothesisId]);
+    assert.deepEqual({ version: generatedAfter.version, status: generatedAfter.status },
+      { version: generatedVersion, status: 'ACTIVE' }, 'generated Hypothesis lifecycle unchanged by redelivery');
+    assert.equal(JSON.stringify(await lifecycleAuditRows()), lifecycleBeforeDuplicate,
+      'durable lifecycle audit rows byte-equivalent after duplicate: no duplicate transition, no duplicate audit row');
     assert.equal(JSON.stringify(await effectRows()), effectsBeforeDuplicate, 'durable effect payloads byte-equivalent after duplicate');
     assert.equal(JSON.stringify(await confidenceItemRows()), confidenceItemsBeforeDuplicate,
       'durable Confidence batch items byte-equivalent after duplicate: no re-evaluation, no new item, no state churn');
@@ -565,6 +609,8 @@ async function main(): Promise<void> {
     assert.equal((await db.afterRollback('SELECT id FROM public.hypotheses WHERE user_id = $1', [userId])).length, 0, 'hypotheses rolled back');
     assert.equal((await db.afterRollback('SELECT ordinal FROM public.post_response_confidence_batch_items WHERE execution_id = $1', [executionId])).length, 0,
       'Confidence batch items rolled back');
+    assert.equal((await db.afterRollback('SELECT id FROM public.hypothesis_lifecycle_transitions WHERE user_id = $1', [userId])).length, 0,
+      'lifecycle transition audit rolled back');
     const [{ rolbypassrls: finalBypass }] = await db.afterRollback<{ rolbypassrls: boolean }>(
       "SELECT rolbypassrls FROM pg_roles WHERE rolname = 'service_role'");
     assert.equal(finalBypass, initialBypass, 'transaction-scoped service_role attribute restored by rollback');

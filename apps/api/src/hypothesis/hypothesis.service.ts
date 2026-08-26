@@ -28,7 +28,13 @@ export class HypothesisService {
     if (!HYPOTHESIS_STATUSES.includes(status)) throw new BadRequestException('Invalid hypothesis status.');
     const current = await this.getOwned(userId, token, id);
     if (!canTransitionHypothesis(current.status, status)) throw new BadRequestException('Invalid hypothesis status transition.');
-    return this.requireResult(await this.repository.transition(token, id, status));
+    // The TypeScript graph above stays the early mirror; the database remains
+    // authoritative at mutation time. The owned read supplies the exact
+    // expected version, so a concurrent mutation between it and the migration
+    // 0036 exact-version command fails closed instead of transitioning the
+    // newer Hypothesis. The failure is deliberately not retried against the
+    // newer version here.
+    return this.requireResult(await this.repository.transition(token, id, current.version, status));
   }
   async attachEvidence(userId: string, token: string, id: string, evidenceId: string, role: EvidenceRole): Promise<HypothesisRecord> {
     const current = await this.getOwned(userId, token, id);

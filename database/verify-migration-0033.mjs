@@ -466,8 +466,12 @@ async function verifyAtomicPersistence() {
 
   // The full validated batch commits atomically with the exact semantics of
   // the current successful path: create -> supporting -> contradicting ->
-  // earlier-competitor links, SYSTEM_GENERATED origin, CANDIDATE status, and
-  // database-derived version increments.
+  // earlier-competitor links, SYSTEM_GENERATED origin and database-derived
+  // version increments. Migration 0036 appended one deterministic phase to the
+  // SAME transaction: once the whole generated graph exists, every created
+  // target is admitted CANDIDATE -> ACTIVE before the effect may complete, so
+  // each row ends durable persistence ACTIVE at exactly one version above its
+  // graph-construction version. The graph arithmetic itself is unchanged.
   const full = await newExecution();
   const first = candidateFor(full, {
     supportingEvidenceIds: [evidence.first],
@@ -496,9 +500,10 @@ async function verifyAtomicPersistence() {
     },
     {
       user: userId, statement: first.statement, type: 'CAUSAL', domain: 'GENERAL',
-      scope: scopeFor(full), origin: 'SYSTEM_GENERATED', status: 'CANDIDATE',
-      // create(1) + supporting attach(2) + contradicting attach(3) + competitor link(4).
-      version: 4,
+      scope: scopeFor(full), origin: 'SYSTEM_GENERATED', status: 'ACTIVE',
+      // create(1) + supporting attach(2) + contradicting attach(3) +
+      // competitor link(4) + the single 0036 CANDIDATE -> ACTIVE activation(5).
+      version: 5,
       supporting: [evidence.first], contradicting: [evidence.second],
       competing: [second.hypothesisId], assumptions: first.assumptions, disconfirming: first.disconfirmingConditions,
     },
@@ -506,8 +511,8 @@ async function verifyAtomicPersistence() {
   );
   assert.deepEqual(
     { supporting: createdSecond.supporting_evidence_ids, competing: createdSecond.competing_hypothesis_ids, version: createdSecond.version, origin: createdSecond.origin, status: createdSecond.status },
-    // create(1) + supporting attach(2) + competitor link(3).
-    { supporting: [evidence.second], competing: [first.hypothesisId], version: 3, origin: 'SYSTEM_GENERATED', status: 'CANDIDATE' },
+    // create(1) + supporting attach(2) + competitor link(3) + activation(4).
+    { supporting: [evidence.second], competing: [first.hypothesisId], version: 4, origin: 'SYSTEM_GENERATED', status: 'ACTIVE' },
     'the second Hypothesis and the mutual competitor link match the current path',
   );
   const persistedRow = await one(EFFECT, [full.id, 'HYPOTHESIS_PERSISTENCE']);

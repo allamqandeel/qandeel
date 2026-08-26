@@ -52,6 +52,7 @@
     "verify:exact-version-confidence:integration": "node --env-file-if-exists=.env database/verify-exact-version-confidence.mjs",
     "verify:hypothesis-update-auto-invocation:integration": "node --env-file-if-exists=.env database/verify-migration-0034.mjs",
     "verify:confidence-batch-reliability:integration": "node --env-file-if-exists=.env database/verify-migration-0035.mjs",
+    "verify:hypothesis-lifecycle-completion:integration": "node --env-file-if-exists=.env database/verify-migration-0036.mjs",
     "verify:a2-e2e-runtime-smoke": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/verify-a2-end-to-end-runtime-smoke.ts",
     "test:a2-e2e-smoke-contract": "node --test tests/a2-e2e-runtime-smoke-contract.test.mjs",
     "verify:him-measurement-preflight": "node --test tests/him-structured-measurement-preflight.test.mjs && npm run test:api && npm run test:database && node node_modules/typescript/bin/tsc -p apps/api/tsconfig.json --noEmit && node node_modules/typescript/bin/tsc -p apps/api/tsconfig.scripts.json --noEmit && npm run build:api",

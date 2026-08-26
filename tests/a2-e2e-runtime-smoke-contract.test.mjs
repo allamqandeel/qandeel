@@ -45,15 +45,42 @@ test('the smoke command exists and CI invokes it exactly once, after the Redis d
     'runtime smoke runs after the migration 0034 verifier');
   assert.ok(smokeIndex > apiCi.indexOf('run: npm run verify:confidence-batch-reliability:integration'),
     'runtime smoke runs after the migration 0035 verifier');
+  assert.ok(smokeIndex > apiCi.indexOf('run: npm run verify:hypothesis-lifecycle-completion:integration'),
+    'runtime smoke runs after the migration 0036 verifier');
   assert.ok(smokeIndex > apiCi.indexOf('run: npm run verify:post-response-dispatch:integration'),
     'runtime smoke runs after the Redis Streams dispatch verifier');
   assert.match(apiCi, /run: npm run test:a2-e2e-smoke-contract/u, 'CI runs this static contract');
 });
 
-test('the canonical migration chain ends at the QAN-AUD-06 forward migration 0035', async () => {
+test('CI runs the migration 0036 verifier once, after 0035 and before the Redis and A2 E2E stages', () => {
+  const invocations = apiCi.match(/run: npm run verify:hypothesis-lifecycle-completion:integration/gu) ?? [];
+  assert.equal(invocations.length, 1, 'CI invokes the lifecycle completion verifier exactly once');
+  const lifecycleIndex = apiCi.indexOf('run: npm run verify:hypothesis-lifecycle-completion:integration');
+  assert.ok(lifecycleIndex > apiCi.indexOf('run: npm run verify:confidence-batch-reliability:integration'),
+    'the lifecycle completion verifier runs after the migration 0035 verifier');
+  assert.ok(lifecycleIndex < apiCi.indexOf('run: npm run verify:post-response-dispatch:integration'),
+    'the lifecycle completion verifier runs before the Redis Streams dispatch verifier');
+  assert.equal(typeof packageJson.scripts['verify:hypothesis-lifecycle-completion:integration'], 'string');
+  assert.match(packageJson.scripts['verify:hypothesis-lifecycle-completion:integration'],
+    /^node --env-file-if-exists=\.env database\/verify-migration-0036\.mjs$/u);
+});
+
+test('the canonical migration chain ends at the Hypothesis Lifecycle Completion forward migration 0036', async () => {
   const migrations = (await readdir(new URL('database/migrations/', root))).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0035_confidence_batch_reliability_v1.sql');
-  assert.equal(migrations.some((name) => name.startsWith('0036')), false, 'no migration 0036');
+  assert.equal(migrations.at(-1), '0036_hypothesis_lifecycle_completion_v1.sql');
+  assert.equal(migrations.some((name) => name.startsWith('0037')), false, 'no migration 0037');
+});
+
+test('the smoke proves the generated Candidate -> Active admission and its ACTIVE-version Confidence', () => {
+  assert.match(smokeScript, /public\.hypothesis_lifecycle_transitions/u, 'the immutable lifecycle audit is observed');
+  assert.match(smokeScript, /SYSTEM_GENERATION_ACTIVATION/u, 'the bounded activation source is asserted');
+  assert.match(smokeScript, /the generated Hypothesis is durably ACTIVE by the time HYPOTHESIS_PERSISTENCE is completed/u);
+  assert.match(smokeScript, /exactly one CANDIDATE -> ACTIVE lifecycle audit for the generated target/u);
+  assert.match(smokeScript, /no generated Confidence receipt refers to the pre-activation Candidate version/u);
+  assert.match(smokeScript, /durable lifecycle audit rows byte-equivalent after duplicate/u,
+    'duplicate delivery proves zero duplicate lifecycle transition or audit row');
+  assert.match(smokeScript, /Evidence attachment produced no lifecycle transition on the seeded Hypothesis/u,
+    'Evidence attachment is proven not to be a lifecycle decision');
 });
 
 test('the smoke proves the managed typed Confidence batch rather than a generic result-less effect', () => {
