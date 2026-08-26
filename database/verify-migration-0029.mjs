@@ -25,6 +25,12 @@ const { Client } = pg;
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required. Add it to the ignored local .env file.');
 const migrationSql = await readFile(new URL('./migrations/0029_durable_intent_provider_result_v1.sql', import.meta.url), 'utf8');
 const previousSql = await readFile(new URL('./migrations/0024_durable_memory_effect_result_v1.sql', import.meta.url), 'utf8');
+// Migration 0031 made ASSOCIATION_PROVIDER the third typed-result effect on the
+// same ledger. The upgrade simulation below rebuilds the true pre-0029 state
+// from the live post-0031 schema and re-applies both migrations to return to
+// it, and the final-state assertions recognise the Association result domain
+// without weakening any Intent invariant.
+const associationSql = await readFile(new URL('./migrations/0031_durable_association_provider_result_v1.sql', import.meta.url), 'utf8');
 const client = new Client({ connectionString: process.env.DATABASE_URL });
 let stage = 'connect';
 
@@ -102,6 +108,7 @@ async function verifySurfaceAndAcls() {
        AND conname LIKE 'post_response_intelligence_effects_%_result_check' ORDER BY conname`,
   )).map((row) => row.conname);
   assert.deepEqual(constraints, [
+    'post_response_intelligence_effects_association_result_check',
     'post_response_intelligence_effects_claimed_result_check',
     'post_response_intelligence_effects_intent_result_check',
     'post_response_intelligence_effects_memory_result_check',
@@ -291,10 +298,12 @@ async function verifyGenericCompletion() {
     { state: untouched.state, code: untouched.result_code, payload: untouched.result_payload, completed: untouched.completed_at },
     { state: 'CLAIMED', code: null, payload: null, completed: null },
   );
-  // Every other effect key keeps generic parity.
+  // Every effect key without a typed durable result keeps generic parity.
+  // ASSOCIATION_PROVIDER became the third typed effect in migration 0031; its
+  // generic rejection and typed completion are proven by verify-migration-0031.
   const generic = await newExecution({ claim: null });
   await identity('service_role');
-  for (const key of EFFECT_KEYS.filter((value) => value !== 'MEMORY_WRITE' && value !== 'INTENT_PROVIDER')) {
+  for (const key of EFFECT_KEYS.filter((value) => value !== 'MEMORY_WRITE' && value !== 'INTENT_PROVIDER' && value !== 'ASSOCIATION_PROVIDER')) {
     assert.equal((await one(CLAIM, [generic.id, key])).ok, true, `claim ${key}`);
     assert.equal((await one(COMPLETE_GENERIC, [generic.id, key])).ok, true, `generic completion parity for ${key}`);
   }
@@ -465,11 +474,15 @@ async function verifyUpgradeFromPreCanonicalState() {
   stage = 'pre-0029 reproduction and upgrade';
   await q('SAVEPOINT upgrade');
   await identity('postgres');
-  for (const constraint of ['claimed', 'untyped', 'memory', 'intent']) {
+  for (const constraint of ['association', 'claimed', 'untyped', 'memory', 'intent']) {
     await q(`ALTER TABLE public.post_response_intelligence_effects DROP CONSTRAINT post_response_intelligence_effects_${constraint}_result_check`);
   }
   await q(`DROP FUNCTION ${COMPLETION}`);
   await q(`DROP FUNCTION ${VALIDATOR}`);
+  // The 0031 Association surface postdates 0029 and is removed the same way so
+  // the reconstructed baseline is the true pre-0029 schema.
+  await q('DROP FUNCTION public.complete_post_response_association_provider_effect_v1(uuid,text,jsonb)');
+  await q('DROP FUNCTION public.post_response_association_commands_valid_v1(jsonb)');
   await q('ALTER TABLE public.post_response_intelligence_effects DROP COLUMN result_payload');
   await q(historicalConstraints());
   await q(historicalGenericCompletion());
@@ -534,6 +547,16 @@ async function verifyUpgradeFromPreCanonicalState() {
   assert.deepEqual(
     { state: preserved.state, code: preserved.result_code, reference: preserved.result_reference, payload: preserved.result_payload },
     { state: 'COMPLETED', code: null, reference: null, payload: null },
+  );
+
+  // Migration 0031 follows 0029 on the canonical chain, so re-applying it
+  // returns the schema to the live final state before it is re-verified. It
+  // touches no existing row.
+  await q(associationSql.replace(/^\s*BEGIN;/mu, '').replace(/^\s*COMMIT;\s*$/mu, ''));
+  assert.deepEqual(
+    (await rows("SELECT to_jsonb(effect)-'result_payload' row FROM public.post_response_intelligence_effects effect WHERE execution_id=ANY($1) ORDER BY execution_id, effect_key", [executionIds])).map((r) => r.row),
+    before.map((r) => r.row),
+    'migration 0031 also leaves existing rows byte-identical apart from the nullable column',
   );
 
   // After the upgrade the same generic completion is prohibited, and the typed

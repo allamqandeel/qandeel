@@ -146,10 +146,12 @@ test('both new functions are postgres-owned and reachable only where required', 
   assert.doesNotMatch(migration, /GRANT[^;]*ON TABLE/u);
 });
 
-test('no Association typed-result contract from PR #121 is introduced', () => {
+test('migration 0029 introduces no Association typed-result contract of its own', () => {
   assert.doesNotMatch(migration, /ASSOCIATION_AUTHORIZED|ASSOCIATION_NOT_AUTHORIZED|complete_post_response_association/iu);
-  assert.doesNotMatch(repository, /completeAssociation/u);
-  assert.doesNotMatch(types, /Association[A-Za-z]*Result/u);
+  // The Association typed result arrived later in migration 0031 with its own
+  // dedicated command surface; it never rides the Intent completion RPC.
+  assert.match(repository, /completeAssociation\(id:string,result:DurableAssociationResult\)/u);
+  assert.doesNotMatch(repository, /complete_post_response_intent_provider_effect_v1[^\n]*AUTHORIZED_COMMANDS/u);
 });
 
 test('the repository exposes a typed Intent completion and excludes typed effects from the generic one', () => {
@@ -157,13 +159,16 @@ test('the repository exposes a typed Intent completion and excludes typed effect
   assert.match(repository, /result\.status==='AUTHORIZED'\?this\.booleanRpc\('complete_post_response_intent_provider_effect_v1',\{p_execution_id:id,p_result_code:'INTENT_AUTHORIZED',p_result_payload:result\.intent\}\)/u);
   assert.match(repository, /p_result_code:'INTENT_NOT_AUTHORIZED',p_result_payload:null/u);
   // The generic completion cannot be handed a typed effect at compile time.
+  // Migration 0031 widened the excluded typed set with ASSOCIATION_PROVIDER;
+  // Intent's own exclusion is unchanged.
   assert.match(repository, /async complete\(id:string,effect:GenericIntelligenceEffect\)/u);
-  assert.match(types, /export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'>;/u);
+  assert.match(types, /export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'>;/u);
   assert.match(types, /result_payload:unknown/u);
   assert.match(types, /IntentProviderEffectResultCode='INTENT_AUTHORIZED'\|'INTENT_NOT_AUTHORIZED'/u);
   // Only the post-authority canonical intent is sent: no raw provider output,
-  // and no reason for a durable NOT_AUTHORIZED.
-  assert.doesNotMatch(repositoryCode, /p_result_payload:result(?!\.intent)/u);
+  // and no reason for a durable NOT_AUTHORIZED. (result.commands is the
+  // Association command's own post-authority payload, not raw output.)
+  assert.doesNotMatch(repositoryCode, /p_result_payload:result(?!\.intent|\.commands)/u);
   assert.doesNotMatch(repositoryCode, /reason|providerOutput|raw/u);
 });
 
