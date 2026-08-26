@@ -10,8 +10,11 @@ import { CorrelationService } from '../observability/correlation.service';
 export class ConversationService {
   constructor(private readonly repository: ConversationRepository, private readonly orchestrator: ConversationOrchestratorService,private readonly correlation:CorrelationService) {}
 
-  async createSession(userId: string, accessToken: string): Promise<ConversationSession> {
-    const session=await this.repository.createSession(accessToken, randomUUID(), userId);
+  // userId stays in the signature for the authenticated controller contract,
+  // but it is never serialized as mutation authority: the database derives the
+  // session owner from auth.uid() on the caller token (migration 0030).
+  async createSession(_userId: string, accessToken: string): Promise<ConversationSession> {
+    const session=await this.repository.createSession(accessToken, randomUUID());
     this.correlation.bindCanonical(session.id);
     return session;
   }
@@ -25,7 +28,14 @@ export class ConversationService {
 
   async createTurn(userId: string, accessToken: string, sessionId: string, body: unknown): Promise<OrchestratedTurnResult> {
     const input = this.validateTurnInput(body);
-    await this.resumeSession(userId, accessToken, sessionId);
+    const session = await this.resumeSession(userId, accessToken, sessionId);
+    // The database definer command is authoritative for ACTIVE/TEXT admission
+    // (migration 0030). This pre-check mirrors that predicate exactly — it adds
+    // no weaker or different rule — so an inadmissible parent session maps to a
+    // stable 409 instead of a raw data-api failure.
+    if (session.status !== 'ACTIVE' || session.channel !== 'TEXT') {
+      throw new ConflictException('Conversation session does not accept new turns.');
+    }
     if (input.idempotencyKey) {
       const existing = await this.repository.findTurnByIdempotencyKey(accessToken, sessionId, userId, input.idempotencyKey);
       if (existing){this.correlation.bindCanonical(existing.session_id,existing.id);return this.orchestrator.orchestrate(accessToken, userId, existing);}

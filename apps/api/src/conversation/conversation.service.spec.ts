@@ -27,10 +27,12 @@ describe('ConversationService', () => {
     service = new ConversationService(repository, orchestrator,new CorrelationService());
   });
 
-  it('creates a text session under the authenticated user only', async () => {
+  it('creates a session with only the caller token and a generated UUID — identity stays with the database', async () => {
     repository.createSession.mockResolvedValue(session);
     await expect(service.createSession('user-a', 'token-a')).resolves.toBe(session);
-    expect(repository.createSession).toHaveBeenCalledWith('token-a', expect.any(String), 'user-a');
+    // The repository receives no userId/status/channel/timestamps: the narrow
+    // database command derives the owner from auth.uid() and forces the rest.
+    expect(repository.createSession).toHaveBeenCalledWith('token-a', expect.stringMatching(/^[0-9a-f-]{36}$/));
   });
 
   it('binds the repository-returned canonical session ID to the active request scope',async()=>{
@@ -64,6 +66,16 @@ describe('ConversationService', () => {
       content: 'hello', safetyCategory: 'NONE', safetyDisposition: 'ALLOW',
       safetyGuidance: 'client policy', safetyDisabled: true,
     })).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.createTurn).not.toHaveBeenCalled();
+    expect(orchestrator.orchestrate).not.toHaveBeenCalled();
+  });
+
+  it('maps an owned but non-ACTIVE/TEXT parent session to a stable conflict without reaching turn creation', async () => {
+    // The database definer command remains authoritative for ACTIVE/TEXT
+    // admission; this service pre-check mirrors it exactly for error mapping.
+    repository.findSession.mockResolvedValue({ ...session, status: 'CLOSED', closed_at: 'now' });
+    await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello' }))
+      .rejects.toBeInstanceOf(ConflictException);
     expect(repository.createTurn).not.toHaveBeenCalled();
     expect(orchestrator.orchestrate).not.toHaveBeenCalled();
   });

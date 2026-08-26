@@ -12,16 +12,16 @@ if (!databaseUrl) {
 }
 
 // Final-state policy expectations. Migration 0002 created permissive
-// conversation_turns INSERT/UPDATE policies; migration 0025 (Conversation
-// Authority Hardening) drops them so conversational authority is server-only.
-// This verifier proves the hardened effective state, not the superseded 0002
-// grant. Migration 0002's historical text is left intact and asserted by
-// database/tests/auth-rls.test.mjs.
+// INSERT/UPDATE policies on both conversation tables; migration 0025
+// (Conversation Authority Hardening) dropped the conversation_turns write
+// policies and migration 0030 (Conversation Session Authority Hardening)
+// dropped the conversation_sessions write policies, so conversational and
+// session authority are server-only. This verifier proves the hardened
+// effective state, not the superseded 0002 grants. Migration 0002's historical
+// text is left intact and asserted by database/tests/auth-rls.test.mjs.
 const expectedPolicies = new Map([
   ['users_select_own', ['users', 'SELECT']],
   ['conversation_sessions_select_own', ['conversation_sessions', 'SELECT']],
-  ['conversation_sessions_insert_own', ['conversation_sessions', 'INSERT']],
-  ['conversation_sessions_update_own', ['conversation_sessions', 'UPDATE']],
   ['conversation_turns_select_own', ['conversation_turns', 'SELECT']],
 ]);
 const migrationUrl = new URL('./migrations/0002_supabase_auth_identity_rls.sql', import.meta.url);
@@ -132,9 +132,12 @@ async function verifyTablePrivileges() {
     ['authenticated', 'users', 'INSERT', false],
     ['authenticated', 'users', 'UPDATE', false],
     ['authenticated', 'users', 'DELETE', false],
+    // conversation_sessions is read-only for authenticated after migration
+    // 0030: creation flows through the narrow create_conversation_session_v1
+    // definer command and no direct lifecycle mutation exists.
     ['authenticated', 'conversation_sessions', 'SELECT', true],
-    ['authenticated', 'conversation_sessions', 'INSERT', true],
-    ['authenticated', 'conversation_sessions', 'UPDATE', true],
+    ['authenticated', 'conversation_sessions', 'INSERT', false],
+    ['authenticated', 'conversation_sessions', 'UPDATE', false],
     ['authenticated', 'conversation_sessions', 'DELETE', false],
     // conversation_turns is read-only for authenticated after migration 0025:
     // all write authority flows through server-owned definer commands.
@@ -219,10 +222,13 @@ async function verifyRlsBehavior() {
     assert.deepEqual((await queryRows('SELECT id FROM public.conversation_sessions')).map((row) => row.id), [sessionA]);
     assert.deepEqual((await queryRows('SELECT id FROM public.conversation_turns')).map((row) => row.id), [turnA]);
 
-    await client.query(
+    // After migration 0030 the authenticated role holds no direct Session DML
+    // at all: even an own-tenant, fully canonical INSERT and an own-session
+    // lifecycle UPDATE are rejected, alongside the cross-tenant attempts.
+    await expectRejected(() => client.query(
       `INSERT INTO public.conversation_sessions (id, user_id, status, channel)
        VALUES ($1, $2, 'ACTIVE', 'TEXT')`, [randomUUID(), userA],
-    );
+    ));
     await expectRejected(() => client.query(
       `INSERT INTO public.conversation_sessions (id, user_id, status, channel)
        VALUES ($1, $2, 'ACTIVE', 'TEXT')`, [randomUUID(), userB],
@@ -233,9 +239,12 @@ async function verifyRlsBehavior() {
       [randomUUID(), sessionB, userA],
     ), ['23503', '42501']);
 
-    assert.equal((await client.query(
+    await expectRejected(() => client.query(
+      "UPDATE public.conversation_sessions SET status = 'IDLE' WHERE id = $1", [sessionA],
+    ));
+    await expectRejected(() => client.query(
       "UPDATE public.conversation_sessions SET status = 'IDLE' WHERE id = $1", [sessionB],
-    )).rowCount, 0);
+    ));
     await expectRejected(() => client.query(
       'UPDATE public.conversation_sessions SET user_id = $1 WHERE id = $2', [userB, sessionA],
     ));
