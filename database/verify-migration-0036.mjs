@@ -111,7 +111,10 @@ const CORE_CALL = 'SELECT * FROM public.transition_hypothesis_core_v1($1,$2,$3,$
 const LEGACY_CALL = 'SELECT * FROM public.transition_hypothesis($1,$2)';
 const ALLOWED = 'SELECT public.hypothesis_lifecycle_transition_allowed_v1($1,$2) allowed';
 const HYPOTHESIS = 'SELECT * FROM public.hypotheses WHERE id=$1';
-const AUDIT = `SELECT * FROM ${AUDIT_TABLE} WHERE hypothesis_id=$1 ORDER BY created_at, id`;
+// Ordered by after_version: the whole verifier runs in ONE transaction, so
+// created_at (transaction-fixed CURRENT_TIMESTAMP) cannot order rows, while
+// after_version is unique and monotonic per Hypothesis by construction.
+const AUDIT = `SELECT * FROM ${AUDIT_TABLE} WHERE hypothesis_id=$1 ORDER BY after_version, id`;
 const AUDIT_TOTAL = `SELECT count(*)::int total FROM ${AUDIT_TABLE}`;
 const ATTACH_CALL = 'SELECT * FROM public.attach_hypothesis_evidence($1,$2,$3)';
 
@@ -660,7 +663,7 @@ async function verifyGeneratedActivation() {
   assert.deepEqual(generatedRows.map((row) => row.status), ['ACTIVE', 'ACTIVE', 'ACTIVE'],
     'every generated target in the batch is ACTIVE');
   const batchAudit = await rows(
-    `SELECT * FROM ${AUDIT_TABLE} WHERE hypothesis_id=ANY($1) ORDER BY created_at, id`, [batch.hypothesisIds],
+    `SELECT * FROM ${AUDIT_TABLE} WHERE hypothesis_id=ANY($1) ORDER BY hypothesis_id, after_version`, [batch.hypothesisIds],
   );
   assert.equal(batchAudit.length, 3, 'exactly one activation audit row per generated target');
   for (const row of batchAudit) {
