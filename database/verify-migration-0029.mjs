@@ -34,6 +34,9 @@ const associationSql = await readFile(new URL('./migrations/0031_durable_associa
 // Migration 0033 made CANDIDATE_PROVIDER and HYPOTHESIS_PERSISTENCE typed as
 // well; the upgrade simulation removes and re-applies its surface the same way.
 const generationSql = await readFile(new URL('./migrations/0033_hypothesis_generation_atomicity_recovery_v1.sql', import.meta.url), 'utf8');
+// Migration 0034 added the managed HYPOTHESIS_UPDATE_BATCH effect; its surface
+// is removed and re-applied the same way.
+const updateBatchSql = await readFile(new URL('./migrations/0034_automatic_hypothesis_update_invocation_recovery_v1.sql', import.meta.url), 'utf8');
 const client = new Client({ connectionString: process.env.DATABASE_URL });
 let stage = 'connect';
 
@@ -68,7 +71,7 @@ const COMPLETE_GENERIC = 'SELECT public.complete_post_response_intelligence_effe
 const COMPLETE_MEMORY = 'SELECT public.complete_post_response_memory_write_effect_v1($1,$2,$3) ok';
 const VALID = 'SELECT public.post_response_authorized_intent_valid_v1($1::jsonb) valid';
 const EFFECT = "SELECT * FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key=$2";
-const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH'];
+const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH'];
 
 const userId = randomUUID();
 
@@ -118,6 +121,7 @@ async function verifySurfaceAndAcls() {
     'post_response_intelligence_effects_memory_result_check',
     'post_response_intelligence_effects_persistence_result_check',
     'post_response_intelligence_effects_untyped_result_check',
+    'post_response_intelligence_effects_update_batch_result_check',
   ]);
   const registry = (await one(
     `SELECT pg_get_constraintdef(oid) definition FROM pg_constraint
@@ -483,7 +487,7 @@ async function verifyUpgradeFromPreCanonicalState() {
   stage = 'pre-0029 reproduction and upgrade';
   await q('SAVEPOINT upgrade');
   await identity('postgres');
-  for (const constraint of ['association', 'candidate', 'persistence', 'claimed', 'untyped', 'memory', 'intent']) {
+  for (const constraint of ['association', 'candidate', 'persistence', 'update_batch', 'claimed', 'untyped', 'memory', 'intent']) {
     await q(`ALTER TABLE public.post_response_intelligence_effects DROP CONSTRAINT post_response_intelligence_effects_${constraint}_result_check`);
   }
   await q(`DROP FUNCTION ${COMPLETION}`);
@@ -497,6 +501,9 @@ async function verifyUpgradeFromPreCanonicalState() {
   await q('DROP FUNCTION public.persist_post_response_hypothesis_generation_v1(uuid)');
   await q('DROP FUNCTION public.post_response_generation_candidates_valid_v1(jsonb)');
   await q('DROP FUNCTION public.post_response_persisted_hypothesis_ids_valid_v1(jsonb)');
+  await q('DROP FUNCTION public.execute_post_response_hypothesis_update_batch_v1(uuid,jsonb)');
+  await q('DROP FUNCTION public.post_response_hypothesis_update_invocation_ids_valid_v1(jsonb)');
+  await q('DROP FUNCTION public.post_response_hypothesis_update_batch_result_valid_v1(jsonb)');
   await q('ALTER TABLE public.post_response_intelligence_effects DROP COLUMN result_payload');
   await q(historicalConstraints());
   await q(historicalGenericCompletion());
@@ -568,6 +575,7 @@ async function verifyUpgradeFromPreCanonicalState() {
   // re-verified. Neither touches an existing row.
   await q(associationSql.replace(/^\s*BEGIN;/mu, '').replace(/^\s*COMMIT;\s*$/mu, ''));
   await q(generationSql.replace(/^\s*BEGIN;/mu, '').replace(/^\s*COMMIT;\s*$/mu, ''));
+  await q(updateBatchSql.replace(/^\s*BEGIN;/mu, '').replace(/^\s*COMMIT;\s*$/mu, ''));
   assert.deepEqual(
     (await rows("SELECT to_jsonb(effect)-'result_payload' row FROM public.post_response_intelligence_effects effect WHERE execution_id=ANY($1) ORDER BY execution_id, effect_key", [executionIds])).map((r) => r.row),
     before.map((r) => r.row),

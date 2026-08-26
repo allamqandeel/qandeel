@@ -163,7 +163,7 @@ test('the repository exposes a typed Intent completion and excludes typed effect
   // and migration 0033 with both generation effects; Intent's own exclusion is
   // unchanged.
   assert.match(repository, /async complete\(id:string,effect:GenericIntelligenceEffect\)/u);
-  assert.match(types, /export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'\|'CANDIDATE_PROVIDER'\|'HYPOTHESIS_PERSISTENCE'>;/u);
+  assert.match(types, /export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'\|'CANDIDATE_PROVIDER'\|'HYPOTHESIS_PERSISTENCE'\|'HYPOTHESIS_UPDATE_BATCH'>;/u);
   assert.match(types, /result_payload:unknown/u);
   assert.match(types, /IntentProviderEffectResultCode='INTENT_AUTHORIZED'\|'INTENT_NOT_AUTHORIZED'/u);
   // Only the post-authority canonical intent is sent: no raw provider output,

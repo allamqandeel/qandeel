@@ -96,11 +96,14 @@ test('the invocation boundary validates, generates the update UUID, verifies the
  for(const check of['update\\.id === updateId','update\\.user_id === userId','update\\.before_version === request\\.expectedVersion','update\\.after_version === request\\.expectedVersion \\+ 1','hypothesis\\.version === update\\.after_version','update\\.source === HYPOTHESIS_UPDATE_SOURCE'])assert.match(integrity,new RegExp(check,'u'),`integrity check ${check}`);
 });
 
-test('the dispatcher never invokes the update boundary and no automatic command loop exists',()=>{
- assert.doesNotMatch(dispatcher,/applyAuthorizedHypothesisUpdate|applyHypothesisUpdate|background_apply_hypothesis_evidence_update|HypothesisUpdateService|apply_hypothesis_evidence_update/u);
- // A2.3a recovery still mutates nothing and no new mutation effect key exists.
+test('the dispatcher never invokes the process-level update boundary and runs no application command loop',()=>{
+ // A2.3c consumes the durable commands only through the ONE managed database
+ // command; the A2.3b process-level boundary, the foreground update service
+ // and the raw mutation RPC stay unreachable from the dispatcher.
+ assert.doesNotMatch(dispatcher,/applyAuthorizedHypothesisUpdate|applyHypothesisUpdate\(|background_apply_hypothesis_evidence_update|HypothesisUpdateService|apply_hypothesis_evidence_update/u);
  assert.match(dispatcher,/recoverAssociationResult/u);
- assert.doesNotMatch(dispatcher,/HYPOTHESIS_UPDATE|MUTATION_/u);
+ assert.match(dispatcher,/executeHypothesisUpdateBatch\(execution\.id,invocationIds\)/u);
+ assert.doesNotMatch(dispatcher,/MUTATION_/u);
 });
 
 test('the real PostgreSQL verifier proves the full A2.3b contract adversarially',()=>{

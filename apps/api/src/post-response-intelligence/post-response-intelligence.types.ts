@@ -1,13 +1,18 @@
 import type{AuthorizedHypothesisGenerationIntent}from'../hypothesis/hypothesis-generation-intent-authority.types';
 import type{AssociationEffectResultCode}from'./durable-association-result';
 import type{CandidateProviderEffectResultCode,HypothesisPersistenceEffectResultCode}from'./durable-generation-result';
-export const INTELLIGENCE_EFFECTS=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH']as const;
+import type{HypothesisUpdateBatchEffectResultCode}from'./durable-hypothesis-update-batch-result';
+export const INTELLIGENCE_EFFECTS=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_UPDATE_BATCH','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH']as const;
 export type IntelligenceEffect=typeof INTELLIGENCE_EFFECTS[number];
-/** Effects whose completion carries no durable result and therefore still uses the generic completion RPC. MEMORY_WRITE, INTENT_PROVIDER, ASSOCIATION_PROVIDER, CANDIDATE_PROVIDER and HYPOTHESIS_PERSISTENCE each carry a typed durable result and are completed through their dedicated commands; only CONFIDENCE_BATCH remains generic. */
-export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'|'INTENT_PROVIDER'|'ASSOCIATION_PROVIDER'|'CANDIDATE_PROVIDER'|'HYPOTHESIS_PERSISTENCE'>;
+/** The managed A2.3c effect. Its claim, mutations, Confidence attempts and completion happen inside ONE database transaction driven by the specialized execute command, so the ordinary claim path can never touch it. */
+export type ManagedIntelligenceEffect='HYPOTHESIS_UPDATE_BATCH';
+/** Effects the ordinary claim-then-work pattern may claim. HYPOTHESIS_UPDATE_BATCH is managed: claiming it outside its one-transaction execute command would create an unrecoverable CLAIMED state. */
+export type ClaimableIntelligenceEffect=Exclude<IntelligenceEffect,ManagedIntelligenceEffect>;
+/** Effects whose completion carries no durable result and therefore still uses the generic completion RPC. MEMORY_WRITE, INTENT_PROVIDER, ASSOCIATION_PROVIDER, CANDIDATE_PROVIDER, HYPOTHESIS_UPDATE_BATCH and HYPOTHESIS_PERSISTENCE each carry a typed durable result and are completed through their dedicated commands; only CONFIDENCE_BATCH remains generic. */
+export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'|'INTENT_PROVIDER'|'ASSOCIATION_PROVIDER'|'CANDIDATE_PROVIDER'|'HYPOTHESIS_PERSISTENCE'|'HYPOTHESIS_UPDATE_BATCH'>;
 export type MemoryWriteEffectResultCode='NO_FRESH_EVIDENCE'|'FRESH_EVIDENCE_CREATED';
 export type IntentProviderEffectResultCode='INTENT_AUTHORIZED'|'INTENT_NOT_AUTHORIZED';
-export type IntelligenceEffectResultCode=MemoryWriteEffectResultCode|IntentProviderEffectResultCode|AssociationEffectResultCode|CandidateProviderEffectResultCode|HypothesisPersistenceEffectResultCode;
+export type IntelligenceEffectResultCode=MemoryWriteEffectResultCode|IntentProviderEffectResultCode|AssociationEffectResultCode|CandidateProviderEffectResultCode|HypothesisPersistenceEffectResultCode|HypothesisUpdateBatchEffectResultCode;
 /** Durable post-authority outcome of a completed INTENT_PROVIDER effect. A durable NOT_AUTHORIZED carries no reason because none was persisted. */
 export type DurableIntentProviderResult={readonly status:'AUTHORIZED';readonly intent:AuthorizedHypothesisGenerationIntent}|{readonly status:'NOT_AUTHORIZED'};
 /** INDETERMINATE covers a legacy null result, a malformed persisted result, mismatched provenance, and any impossible code/payload pairing. It is never NOT_AUTHORIZED. */

@@ -82,5 +82,6 @@ jobs:
       - {name: Verify server-authorized Hypothesis Update invocation, run: npm run verify:server-hypothesis-update:integration}
       - {name: Verify hypothesis generation atomicity and durable recovery, run: npm run verify:hypothesis-generation-atomicity:integration}
       - {name: Verify exact-version post-update Confidence, run: npm run verify:exact-version-confidence:integration}
+      - {name: Verify automatic hypothesis update invocation, run: npm run verify:hypothesis-update-auto-invocation:integration}
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
 
