@@ -88,8 +88,12 @@ test('the invocation boundary validates, generates the update UUID, verifies the
  assert.match(boundary,/BACKGROUND_HYPOTHESIS_UPDATE_INTEGRITY/u);
  assert.match(boundary,/confidenceStatus:'EVALUATED'/u);
  assert.match(boundary,/confidenceStatus:'PENDING_RETRY',confidenceEvaluation:null/u);
- const integrity=section(enrichment,'function canonicalBackgroundMutation');
- for(const check of['update\\.id===updateId','update\\.user_id===userId','update\\.before_version===request\\.expectedVersion','update\\.after_version===request\\.expectedVersion\\+1','hypothesis\\.version===update\\.after_version','update\\.source===HYPOTHESIS_UPDATE_SOURCE'])assert.match(integrity,new RegExp(check,'u'),`integrity check ${check}`);
+ // Since Finding 09 the tuple checks live in the ONE shared canonical
+ // integrity policy that the foreground and background paths both call, so
+ // the two invocation boundaries can never drift.
+ assert.match(boundary,/isCanonicalHypothesisUpdateMutation\(mutation,context\.userId,updateId,request\)/u);
+ const integrity=section(policy,'export function isCanonicalHypothesisUpdateMutation');
+ for(const check of['update\\.id === updateId','update\\.user_id === userId','update\\.before_version === request\\.expectedVersion','update\\.after_version === request\\.expectedVersion \\+ 1','hypothesis\\.version === update\\.after_version','update\\.source === HYPOTHESIS_UPDATE_SOURCE'])assert.match(integrity,new RegExp(check,'u'),`integrity check ${check}`);
 });
 
 test('the dispatcher never invokes the update boundary and no automatic command loop exists',()=>{

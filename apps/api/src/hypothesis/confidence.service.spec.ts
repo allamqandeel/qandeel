@@ -67,6 +67,52 @@ describe('ConfidenceService', () => {
     expect(repository.create).not.toHaveBeenCalled();
   });
 
+  describe('evaluateHypothesisVersion (Finding 09 exact-version post-update Confidence)', () => {
+    it('passes the exact caller version to the canonical command and never the re-read version', async () => {
+      // The ID-only re-read already sees the later version 5; the caller's
+      // exact after_version 4 must still be the one and only requested target.
+      hypotheses.find.mockResolvedValue(hypothesis({ version: 5 }));
+      evidence.listEligibleForUser.mockResolvedValue([]);
+      repository.create.mockImplementation(async (_token, value) => ({
+        ...value, created_at: '2026-08-17T00:00:00.000Z', updated_at: '2026-08-17T00:00:00.000Z',
+      }));
+      const result = await service.evaluateHypothesisVersion('user-a', 'token-a', hypothesis().id, 4);
+      expect(repository.create).toHaveBeenCalledWith('token-a', expect.objectContaining({ target_version: 4 }));
+      expect(result.target_version).toBe(4);
+    });
+    it('fails closed when the returned record carries a different target version instead of substituting it', async () => {
+      hypotheses.find.mockResolvedValue(hypothesis());
+      evidence.listEligibleForUser.mockResolvedValue([]);
+      repository.create.mockImplementation(async (_token, value) => ({
+        ...value, target_version: 5, created_at: '2026-08-17T00:00:00.000Z', updated_at: '2026-08-17T00:00:00.000Z',
+      } as never));
+      await expect(service.evaluateHypothesisVersion('user-a', 'token-a', hypothesis().id, 4))
+        .rejects.toThrow('CONFIDENCE_TARGET_VERSION_INTEGRITY');
+    });
+    it.each([[0], [-3], [1.5], [Number.MAX_SAFE_INTEGER + 2], [Number.NaN]])('rejects the invalid target version %p before any read or write', async (invalid) => {
+      await expect(service.evaluateHypothesisVersion('user-a', 'token-a', hypothesis().id, invalid))
+        .rejects.toThrow('Invalid confidence target version.');
+      expect(hypotheses.find).not.toHaveBeenCalled();
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+    it('propagates the database stale-version rejection without a latest-version fallback', async () => {
+      hypotheses.find.mockResolvedValue(hypothesis({ version: 5 }));
+      evidence.listEligibleForUser.mockResolvedValue([]);
+      repository.create.mockRejectedValue(new Error('Stale hypothesis version.'));
+      await expect(service.evaluateHypothesisVersion('user-a', 'token-a', hypothesis().id, 4))
+        .rejects.toThrow('Stale hypothesis version.');
+      // Exactly one create attempt, for the exact version - no retry with 5.
+      expect(repository.create).toHaveBeenCalledTimes(1);
+      expect(repository.create).toHaveBeenCalledWith('token-a', expect.objectContaining({ target_version: 4 }));
+    });
+    it('preserves ownership: an unowned hypothesis fails closed before any write', async () => {
+      hypotheses.find.mockRejectedValue(new NotFoundException());
+      evidence.listEligibleForUser.mockResolvedValue([]);
+      await expect(service.evaluateHypothesisVersion('user-a', 'token-a', 'other', 4)).rejects.toBeInstanceOf(NotFoundException);
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+  });
+
   it('preserves immutable evaluation history behind the owned hypothesis check', async () => {
     hypotheses.find.mockResolvedValue(hypothesis()); repository.listForTarget.mockResolvedValue([]);
     await service.listHistory('user-a', 'token-a', hypothesis().id);
