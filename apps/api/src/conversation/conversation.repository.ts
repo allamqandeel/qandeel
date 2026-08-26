@@ -16,11 +16,15 @@ export class ConversationRepository {
     private readonly correlation:CorrelationService,
   ) {}
 
-  async createSession(accessToken: string, id: string, userId: string): Promise<ConversationSession> {
-    const rows = await this.dataApi.request<ConversationSession[]>(accessToken, 'conversation_sessions', {
+  // Session creation runs through the narrow authenticated definer command
+  // (migration 0030), never a direct table write. The caller supplies only the
+  // server-generated session UUID; owner identity is derived from auth.uid()
+  // and status, channel, timestamps, and closed_at are forced server-side to
+  // the canonical ACTIVE/TEXT creation shape.
+  async createSession(accessToken: string, id: string): Promise<ConversationSession> {
+    const rows = await this.dataApi.request<ConversationSession[]>(accessToken, 'rpc/create_conversation_session_v1', {
       method: 'POST',
-      headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({ id, user_id: userId, status: 'ACTIVE', channel: 'TEXT' }),
+      body: JSON.stringify({ p_id: id }),
     });
     return rows[0];
   }

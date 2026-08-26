@@ -53,6 +53,7 @@ jobs:
         run: for migration in database/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
       - {name: Verify authenticated database foundation, run: npm run verify:database:integration}
       - {name: Verify conversation authority hardening, run: npm run verify:conversation-authority:integration}
+      - {name: Verify conversation session authority hardening, run: npm run verify:conversation-session-authority:integration}
       - {name: Verify Memory runtime, run: npm run verify:memory:integration}
       - {name: Verify Memory authority hardening, run: npm run verify:memory-authority:integration}
       - {name: Verify Hypothesis runtime, run: npm run verify:hypothesis:integration}

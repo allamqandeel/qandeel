@@ -10,8 +10,11 @@ import { CorrelationService } from '../observability/correlation.service';
 export class ConversationService {
   constructor(private readonly repository: ConversationRepository, private readonly orchestrator: ConversationOrchestratorService,private readonly correlation:CorrelationService) {}
 
-  async createSession(userId: string, accessToken: string): Promise<ConversationSession> {
-    const session=await this.repository.createSession(accessToken, randomUUID(), userId);
+  // userId stays in the signature for the authenticated controller contract,
+  // but it is never serialized as mutation authority: the database derives the
+  // session owner from auth.uid() on the caller token (migration 0030).
+  async createSession(_userId: string, accessToken: string): Promise<ConversationSession> {
+    const session=await this.repository.createSession(accessToken, randomUUID());
     this.correlation.bindCanonical(session.id);
     return session;
   }
@@ -25,10 +28,22 @@ export class ConversationService {
 
   async createTurn(userId: string, accessToken: string, sessionId: string, body: unknown): Promise<OrchestratedTurnResult> {
     const input = this.validateTurnInput(body);
-    await this.resumeSession(userId, accessToken, sessionId);
+    const session = await this.resumeSession(userId, accessToken, sessionId);
+    // Idempotent replay is resolved first: a turn that was already admitted
+    // durably under this key is returned regardless of the session's later
+    // lifecycle state — replay recovers existing history, it is not a new
+    // turn admission.
     if (input.idempotencyKey) {
       const existing = await this.repository.findTurnByIdempotencyKey(accessToken, sessionId, userId, input.idempotencyKey);
       if (existing){this.correlation.bindCanonical(existing.session_id,existing.id);return this.orchestrator.orchestrate(accessToken, userId, existing);}
+    }
+    // Only NEW turn creation requires an ACTIVE/TEXT parent. The database
+    // definer command (migration 0030) is authoritative for this admission;
+    // this pre-check mirrors that predicate exactly — it adds no weaker or
+    // different rule — so an inadmissible parent session maps to a stable 409
+    // instead of a raw data-api failure.
+    if (session.status !== 'ACTIVE' || session.channel !== 'TEXT') {
+      throw new ConflictException('Conversation session does not accept new turns.');
     }
     try {
       const turn = await this.repository.createTurn(accessToken, {
