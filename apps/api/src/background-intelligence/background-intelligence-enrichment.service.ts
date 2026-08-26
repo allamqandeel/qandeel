@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { projectHimIntelligenceSnapshot } from '../human-model/him-intelligence-snapshot.projector';
+import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
+import { projectHimHypothesisGenerationContext, type HimHypothesisGenerationContext } from '../hypothesis/him-hypothesis-generation-context';
 import { EVIDENCE_CANDIDATE_LIMIT, MAX_ELIGIBLE_EVIDENCE, projectEligibleEvidence } from '../memory/evidence.service';
 import { MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT, MemoryWriteEvaluatorService, normalizeMemoryContent } from '../memory/memory-write-evaluator.service';
 import type { MemoryWriteResult } from '../memory/memory-write.service';
@@ -20,7 +23,23 @@ import { type BackgroundCanonicalSourceTurn, type BackgroundIntelligenceDataApiS
 
 @Injectable()
 export class BackgroundIntelligenceEnrichmentService {
- constructor(@Inject(BACKGROUND_INTELLIGENCE_DATA_API)private readonly data:BackgroundIntelligenceDataApiService,private readonly evaluator:MemoryWriteEvaluatorService,private readonly classifier:HypothesisGenerationTriggerClassificationService){}
+ constructor(@Inject(BACKGROUND_INTELLIGENCE_DATA_API)private readonly data:BackgroundIntelligenceDataApiService,private readonly evaluator:MemoryWriteEvaluatorService,private readonly classifier:HypothesisGenerationTriggerClassificationService,private readonly himReasoning:HimReasoningConsumptionService){}
+
+ // HIM Runtime Consumption v1: the ONE high-level background HIM boundary. It
+ // reads canonical CONVERSATION_SESSION source rows through the narrow
+ // service-role data boundary, canonicalizes them with the SAME shared
+ // snapshot projector the foreground uses, reuses the existing canonical HIM
+ // reasoning semantics, and maps only the minimal provider-facing fields. Any
+ // read/integrity failure throws - it is NEVER fabricated as EMPTY or as a
+ // silently-omitted context - while a genuinely EMPTY canonical snapshot
+ // proceeds as three explicit UNKNOWN metrics. Read/consume only: no HIM
+ // mutation, no Evidence, no lifecycle, no Confidence.
+ async readHimHypothesisGenerationContext(context:BackgroundIntelligenceExecutionContext):Promise<HimHypothesisGenerationContext>{
+  this.assert(context);
+  const rows=await this.data.readHimConversationSnapshot(context);
+  const snapshot=projectHimIntelligenceSnapshot('CONVERSATION_SESSION',context.sessionId,rows);
+  return projectHimHypothesisGenerationContext(this.himReasoning.transform(snapshot));
+ }
 
  async readCanonicalSourceTurn(context:BackgroundIntelligenceExecutionContext):Promise<BackgroundCanonicalSourceTurn>{this.assert(context);const turn=await this.data.readCanonicalSourceTurn(context);if(!turn)throw new NotFoundException('Canonical source turn not found.');return turn;}
 
@@ -49,9 +68,13 @@ export class BackgroundIntelligenceEnrichmentService {
  // single Hypothesis: all batch writes moved into the one atomic database
  // persistence command. Rejected proposals and their reasons never leave this
  // stage - only the accepted canonical plan may become durable.
- async generateHypothesisCandidatePlan(context:BackgroundIntelligenceExecutionContext,input:HypothesisGenerationInput,generator:HypothesisCandidateGenerator):Promise<DurableCandidateProviderResult>{
+ // HIM Runtime Consumption v1: the optional himContext is minimized advisory
+ // structured state attached to the SAME single provider request - it adds no
+ // provider call, no Evidence identity, no persistence field, and no change to
+ // input normalization, Evidence eligibility, or the validation policy.
+ async generateHypothesisCandidatePlan(context:BackgroundIntelligenceExecutionContext,input:HypothesisGenerationInput,generator:HypothesisCandidateGenerator,himContext?:HimHypothesisGenerationContext):Promise<DurableCandidateProviderResult>{
   this.assert(context);const {problem,domain,scope}=normalizeGenerationInput(input);validateGenerationEvidenceIds(input.evidenceIds);const eligible=await this.listEligibleEvidence(context),eligibleById=new Map(eligible.map(item=>[item.evidenceId,item])),requested=input.evidenceIds.map(id=>eligibleById.get(id));if(requested.some(item=>!item))throw new BadRequestException('Generation evidence is not currently eligible.');
-  const request:HypothesisGenerationRequest={userId:context.userId,problem,domain,scope,eligibleEvidence:requested as EvidenceItem[],existingActiveHypotheses:await this.data.listActiveHypotheses(context,MAX_ACTIVE_HYPOTHESES),maxCandidateCount:MAX_GENERATED_HYPOTHESIS_CANDIDATES};const proposals=await generator.generate(request);if(!Array.isArray(proposals))throw new BadRequestException('Generator returned an invalid candidate batch.');
+  const request:HypothesisGenerationRequest={userId:context.userId,problem,domain,scope,eligibleEvidence:requested as EvidenceItem[],existingActiveHypotheses:await this.data.listActiveHypotheses(context,MAX_ACTIVE_HYPOTHESES),maxCandidateCount:MAX_GENERATED_HYPOTHESIS_CANDIDATES,...(himContext?{himContext}:{})};const proposals=await generator.generate(request);if(!Array.isArray(proposals))throw new BadRequestException('Generator returned an invalid candidate batch.');
   const accepted:DurableGenerationCandidate[]=[],seen=new Set<string>(),active=new Set(request.existingActiveHypotheses.map(item=>hypothesisCollisionKey(item.statement,item.scope)));
   for(let index=0;index<proposals.length;index++){if(index>=request.maxCandidateCount)continue;const reason=validateHypothesisCandidate(proposals[index],request,seen,active);if(reason)continue;const proposal=proposals[index];
    accepted.push({hypothesisId:randomUUID(),statement:proposal.statement,type:proposal.type,domain:proposal.domain,scope:proposal.scope,supportingEvidenceIds:[...proposal.supportingEvidenceIds],contradictingEvidenceIds:[...proposal.contradictingEvidenceIds],assumptions:[...proposal.assumptions],disconfirmingConditions:[...proposal.disconfirmingConditions]});

@@ -42,5 +42,28 @@ describe('BackgroundIntelligenceDataApiService',()=>{
   expect(fetch).not.toHaveBeenCalled();});
  it('rejects pre-authorization context, spread copies, and prototype forgeries for writes',async()=>{const service=new BackgroundIntelligenceDataApiService(),authorized=await authorize();for(const forged of [ownership,{...authorized},Object.create(BackgroundIntelligenceExecutionContext.prototype)])await expect(service.createMemory(forged as ExecutionContext,{ }as never)).rejects.toThrow('BACKGROUND_INTELLIGENCE_AUTHORITY_REQUIRED');expect(fetch).not.toHaveBeenCalled();});
  it('rejects spread copies and prototype forgeries for ownership reads',async()=>{const service=new BackgroundIntelligenceDataApiService();for(const forged of [{...ownership},Object.create(BackgroundIntelligenceEventContext.prototype)])await expect(service.findSession(forged as BackgroundIntelligenceEventContext)).rejects.toThrow('BACKGROUND_INTELLIGENCE_EVENT_CONTEXT_REQUIRED');expect(fetch).not.toHaveBeenCalled();});
+ it('routes the background HIM read only through the session-only snapshot wrapper with exact context identity',async()=>{
+  const service=new BackgroundIntelligenceDataApiService(),context=await authorize();
+  await service.readHimConversationSnapshot(context);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  // The ONE allowed path: the CONVERSATION_SESSION-only service-role RPC. No
+  // direct HIM table/view read exists on this boundary.
+  expect((fetch as jest.Mock).mock.calls[0][0]).toBe('https://database.invalid/rest/v1/rpc/background_read_him_conversation_snapshot_v1');
+  const[, init]=(fetch as jest.Mock).mock.calls[0]as[string,RequestInit];
+  expect(init.method).toBe('POST');
+  const body=JSON.parse(init.body as string);
+  // Exact user/session binding from the issued execution context alone.
+  expect(body).toEqual({p_user_id:context.userId,p_session_id:context.sessionId});
+  // No user bearer token, fake JWT, request claims, or context selection input.
+  for(const forbidden of['accessToken','token','jwt','claims','p_access_token','p_jwt','p_claims','Authorization','p_context_kind','p_context_id'])expect(body).not.toHaveProperty(forbidden);
+  const headers=init.headers as Record<string,string>;
+  expect(headers.Authorization).toBe('Bearer SENTINEL_SERVICE_ROLE');
+ });
+ it('rejects pre-authorization, spread, and prototype-forged contexts for the HIM read before network I/O',async()=>{
+  const service=new BackgroundIntelligenceDataApiService(),authorized=await authorize();
+  for(const forged of[ownership,{...authorized},Object.create(BackgroundIntelligenceExecutionContext.prototype)])
+   await expect(service.readHimConversationSnapshot(forged as ExecutionContext)).rejects.toThrow('BACKGROUND_INTELLIGENCE_AUTHORITY_REQUIRED');
+  expect(fetch).not.toHaveBeenCalled();
+ });
  it('keeps service-role credentials internal and failures sanitized',async()=>{const service=new BackgroundIntelligenceDataApiService();(fetch as jest.Mock).mockRejectedValueOnce(new Error('raw secret'));await expect(service.findSession(ownership)).rejects.toThrow('BACKGROUND_INTELLIGENCE_DATABASE_UNAVAILABLE');expect(JSON.stringify(ownership)).not.toContain('SENTINEL_SERVICE_ROLE');});
 });

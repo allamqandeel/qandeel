@@ -35,6 +35,7 @@ import { HypothesisGenerationIntentAuthorityService } from '../src/hypothesis/hy
 import { HypothesisGenerationIntentExtractionService } from '../src/hypothesis/hypothesis-generation-intent-extraction.service';
 import { HypothesisGenerationRequestAssemblerService } from '../src/hypothesis/hypothesis-generation-request-assembler.service';
 import { HypothesisGenerationTriggerClassificationService } from '../src/hypothesis/hypothesis-generation-trigger-classification.service';
+import { HimReasoningConsumptionService } from '../src/human-model/him-reasoning-consumption.service';
 import { MemoryWriteEvaluatorService } from '../src/memory/memory-write-evaluator.service';
 import { CorrelationService } from '../src/observability/correlation.service';
 import { TelemetryService } from '../src/observability/telemetry.service';
@@ -204,6 +205,19 @@ async function main(): Promise<void> {
     assert.equal(seeded?.status, 'CANDIDATE');
     assert.equal(seeded?.origin, 'SYSTEM_GENERATED');
 
+    // HIM Runtime Consumption v1 fixture: seed exactly ONE session HIM metric
+    // (Stress = HIGH) through the canonical authenticated measurement +
+    // calculation path, so the session snapshot is genuinely PARTIAL: stress
+    // KNOWN, energy and attention UNKNOWN. No raw noncanonical HIM row exists.
+    const [stressObservation] = await db.asRole<{ id: string; metric_key: string; response_code: string }>(
+      'authenticated', "SELECT * FROM public.create_hse_stress_measurement('CONVERSATION_SESSION', $1, 'HIGH', NULL)", [sessionId]);
+    assert.equal(stressObservation?.metric_key, 'hse.stress');
+    assert.equal(stressObservation?.response_code, 'HIGH');
+    const [stressSnapshot] = await db.asRole<{ value_state: string; numeric_value: number }>(
+      'authenticated', 'SELECT * FROM public.calculate_hse_stress_measurement($1)', [stressObservation.id]);
+    assert.equal(stressSnapshot?.value_state, 'ASSESSED', 'canonical stress calculation produced the assessed session state');
+    assert.equal(Number(stressSnapshot?.numeric_value), 4, 'HIGH stores the canonical ordinal code 4');
+
     // -----------------------------------------------------------------------
     stage = 'CONVERSATION_FINALIZE';
     // -----------------------------------------------------------------------
@@ -278,11 +292,13 @@ async function main(): Promise<void> {
     // -----------------------------------------------------------------------
     stage = 'REDIS_READ';
     // -----------------------------------------------------------------------
-    const dataApi = new PgBackgroundIntelligenceDataApiAdapter(db) as unknown as BackgroundIntelligenceDataApiService;
+    const pgDataAdapter = new PgBackgroundIntelligenceDataApiAdapter(db);
+    const dataApi = pgDataAdapter as unknown as BackgroundIntelligenceDataApiService;
     const ledger = new PgPostResponseIntelligenceRepositoryAdapter(db) as unknown as PostResponseIntelligenceRepository;
     const authority = new BackgroundIntelligenceAuthorityService(new BackgroundIntelligenceContextFactory(), dataApi);
     const enrichment = new BackgroundIntelligenceEnrichmentService(
-      dataApi, new MemoryWriteEvaluatorService(), new HypothesisGenerationTriggerClassificationService());
+      dataApi, new MemoryWriteEvaluatorService(), new HypothesisGenerationTriggerClassificationService(),
+      new HimReasoningConsumptionService());
     const associationAuthority = new HypothesisEvidenceAssociationAuthorityService(
       unusedDependency<EvidenceService>('EVIDENCE_SERVICE'), unusedDependency<HypothesisService>('HYPOTHESIS_SERVICE'));
     const association = new ModelAssistedHypothesisAssociationService(enrichment, associationAuthority, authority, associationProvider);
@@ -430,6 +446,31 @@ async function main(): Promise<void> {
     assert.equal(validated[0].domain, INTENT_DOMAIN);
     assert.equal(validated[0].scope, sessionScope);
     assert.deepEqual(validated[0].supportingEvidenceIds, [freshEvidenceId]);
+
+    // -----------------------------------------------------------------------
+    stage = 'HIM_CONSUMPTION';
+    // -----------------------------------------------------------------------
+    // HIM Runtime Consumption v1: the fresh Candidate Generator received the
+    // EXACT minimized session HIM structured state - canonical metric order
+    // stress -> energy -> attention, the seeded KNOWN Stress category exact,
+    // energy/attention explicitly UNKNOWN with null categories - via exactly
+    // one canonical background snapshot read taken before the Candidate claim.
+    assert.equal(pgDataAdapter.himSnapshotReadCount, 1, 'exactly one canonical background HIM snapshot read');
+    const receivedHimContext = candidateGenerator.requests[0].himContext;
+    assert.deepEqual(receivedHimContext, {
+      contractVersion: 1, source: 'HIM_STRUCTURED_STATE', contextKind: 'CONVERSATION_SESSION',
+      metrics: [
+        { metricKey: 'hse.stress', knowledgeState: 'KNOWN', ordinalCategory: 'HIGH' },
+        { metricKey: 'hse.energy', knowledgeState: 'UNKNOWN', ordinalCategory: null },
+        { metricKey: 'hse.attention', knowledgeState: 'UNKNOWN', ordinalCategory: null },
+      ],
+    }, 'provider-facing HIM context is the exact minimized partial-state contract');
+    const serializedHim = JSON.stringify(receivedHimContext);
+    assert.ok(!serializedHim.includes(userId), 'no user UUID in the provider-facing HIM context');
+    assert.ok(!serializedHim.includes(sessionId), 'no session UUID in the provider-facing HIM context');
+    assert.doesNotMatch(serializedHim, /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/iu, 'no UUID of any kind leaks through HIM');
+    assert.doesNotMatch(serializedHim, /observedAt|generatedAt|freshness|confidence|numeric|instrument|scale|model|binding|calculation|provenance|event|observation|trend|score|readiness|diagnosis/iu,
+      'no numeric storage value, timestamp, provenance identifier, or inferred field leaks through HIM');
 
     // -----------------------------------------------------------------------
     stage = 'PERSISTENCE';
@@ -597,6 +638,8 @@ async function main(): Promise<void> {
     assert.equal(associationProvider.callCount, 1, 'no Association provider replay');
     assert.equal(intentProvider.callCount, 1, 'no Intent provider replay');
     assert.equal(candidateGenerator.callCount, 1, 'no Candidate generator replay');
+    assert.equal(pgDataAdapter.himSnapshotReadCount, 1,
+      'zero HIM re-consumption after durable Candidate completion: the duplicate delivery performed no snapshot reread');
 
     // -----------------------------------------------------------------------
     stage = 'CLEANUP';

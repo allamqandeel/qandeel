@@ -75,6 +75,62 @@ describe('GeminiHypothesisCandidateGenerator', () => {
     expect(JSON.stringify(body)).not.toMatch(/tools|grounding|search|stream/i);
   });
 
+  describe('HIM Runtime Consumption v1 - minimized himContext serialization', () => {
+    const himContext = {
+      contractVersion: 1 as const, source: 'HIM_STRUCTURED_STATE' as const, contextKind: 'CONVERSATION_SESSION' as const,
+      metrics: [
+        { metricKey: 'hse.stress' as const, knowledgeState: 'KNOWN' as const, ordinalCategory: 'HIGH' as const },
+        { metricKey: 'hse.energy' as const, knowledgeState: 'UNKNOWN' as const, ordinalCategory: null },
+        { metricKey: 'hse.attention' as const, knowledgeState: 'UNKNOWN' as const, ordinalCategory: null },
+      ],
+    };
+
+    it('includes ONLY the minimized HIM structured state inside the untrusted data envelope, with the advisory guidance', async () => {
+      const http = jest.fn().mockResolvedValue(response(generated([])));
+      await new GeminiHypothesisCandidateGenerator(config, http).generate({ ...request, himContext });
+      expect(http).toHaveBeenCalledTimes(1);
+      const body = JSON.parse(http.mock.calls[0][1].body);
+      const text = body.contents[0].parts[0].text as string;
+      expect(text).toContain('himContext');
+      expect(text).toContain('hse.stress');
+      expect(text).toContain('HIGH');
+      expect(text).toContain('UNKNOWN');
+      // No raw HIM rows, identifiers, timestamps, numeric values, or provenance.
+      for (const forbidden of ['numeric_value', 'measurement_event', 'measurement_observation', 'snapshot_id',
+        'calculation_result', 'canonical_binding', 'instrument', 'scale_contract', 'provenance', 'observedAt',
+        'generatedAt', 'freshness', 'validityStatus', 'unknownReason', 'contextId']) expect(text).not.toContain(forbidden);
+      expect(JSON.stringify(body)).not.toContain('private-user');
+      // Advisory / not-Evidence model guidance is present.
+      const instructions = body.systemInstruction.parts[0].text as string;
+      expect(instructions).toContain('not Evidence and not proof');
+      expect(instructions).toContain('must remain unknown');
+      expect(instructions).toContain('Never manufacture Evidence IDs from himContext');
+      expect(instructions).toContain('rank or select a winner');
+      // The candidate output JSON schema is unchanged: no HIM field can come back.
+      expect(JSON.stringify(body.generationConfig.responseJsonSchema)).not.toMatch(/him|ordinal|knowledgeState/iu);
+    });
+
+    it('omits himContext from the data envelope entirely for frozen callers that do not supply it', async () => {
+      const http = jest.fn().mockResolvedValue(response(generated([])));
+      await new GeminiHypothesisCandidateGenerator(config, http).generate(request);
+      const body = JSON.parse(http.mock.calls[0][1].body);
+      expect(body.contents[0].parts[0].text).not.toContain('himContext');
+    });
+
+    it.each([
+      ['a missing metric', { ...himContext, metrics: himContext.metrics.slice(1) }],
+      ['a non-canonical order', { ...himContext, metrics: [himContext.metrics[1], himContext.metrics[0], himContext.metrics[2]] }],
+      ['KNOWN without a canonical category', { ...himContext, metrics: [{ ...himContext.metrics[0], ordinalCategory: null }, himContext.metrics[1], himContext.metrics[2]] }],
+      ['UNKNOWN carrying a category', { ...himContext, metrics: [himContext.metrics[0], { ...himContext.metrics[1], ordinalCategory: 'LOW' }, himContext.metrics[2]] }],
+      ['a foreign context kind', { ...himContext, contextKind: 'SITUATION' }],
+    ])('rejects %s before any provider call', async (_label, invalid) => {
+      const http = jest.fn();
+      await expect(new GeminiHypothesisCandidateGenerator(config, http).generate({ ...request, himContext: invalid as never }))
+        .rejects.toEqual(new HypothesisCandidateGeneratorError('INVALID_STRUCTURED_OUTPUT'));
+      expect(http).not.toHaveBeenCalled();
+    });
+  });
+
   it.each([
     [[{ ...proposal, confidence: 0.9 }], 'unknown field'],
     [[{ ...proposal, statement: undefined }], 'missing required field'],

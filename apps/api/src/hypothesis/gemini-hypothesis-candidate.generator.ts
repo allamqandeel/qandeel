@@ -77,6 +77,12 @@ const INSTRUCTIONS = [
   'Propose bounded alternatives without diagnosis, confidence, certainty, ranking, a winner, or extra rationale.',
   'Evidence roles are proposals only; do not claim Evidence proves a hypothesis.',
   'Use only the supplied domain, scope, and Evidence IDs. The server validates every proposal.',
+  'Any himContext is structured state context only, not Evidence and not proof.',
+  'A KNOWN himContext category is latest-known within the canonical snapshot contract, not guaranteed current; its freshness and metric confidence are unassessed.',
+  'An UNKNOWN himContext metric must remain unknown; never fill, guess, or reinterpret it.',
+  'Do not infer trends from a single himContext snapshot, and do not infer diagnosis, fixed personality, traits, certainty, or readiness from it.',
+  'Never manufacture Evidence IDs from himContext; only the supplied Evidence IDs are valid Evidence identities.',
+  'himContext may help form or distinguish plausible hypotheses but cannot bypass server validation or Evidence grounding, and must not be used to rank or select a winner.',
 ].join(' ');
 
 function requestBody(request: HypothesisGenerationRequest, config: HypothesisCandidateGenerationGeminiConfig) {
@@ -101,6 +107,19 @@ function providerData(request: HypothesisGenerationRequest) {
     problem: request.problem,
     domain: request.domain,
     scope: request.scope,
+    // HIM Runtime Consumption v1: only the minimized advisory HIM structured
+    // state crosses the provider boundary - the exact bounded contract fields,
+    // re-picked here so no identifier, timestamp, numeric storage value or
+    // provenance can ever leak through a widened upstream object.
+    ...(request.himContext ? {
+      himContext: {
+        contractVersion: request.himContext.contractVersion,
+        source: request.himContext.source,
+        contextKind: request.himContext.contextKind,
+        metrics: request.himContext.metrics.map(({ metricKey, knowledgeState, ordinalCategory }) =>
+          ({ metricKey, knowledgeState, ordinalCategory })),
+      },
+    } : {}),
     eligibleEvidence: request.eligibleEvidence.map(({ evidenceId, evidenceKind, statement }) =>
       ({ evidenceId, evidenceKind, statement })),
     existingActiveHypotheses: request.existingActiveHypotheses.map((item) => ({
@@ -172,7 +191,23 @@ function validRequest(request: HypothesisGenerationRequest): boolean {
     Array.isArray(request.existingActiveHypotheses) && request.existingActiveHypotheses.length <= MAX_ACTIVE_HYPOTHESES &&
     request.existingActiveHypotheses.every(validActiveHypothesis) &&
     Number.isSafeInteger(request.maxCandidateCount) && request.maxCandidateCount >= 1 &&
-    request.maxCandidateCount <= MAX_GENERATED_HYPOTHESIS_CANDIDATES;
+    request.maxCandidateCount <= MAX_GENERATED_HYPOTHESIS_CANDIDATES &&
+    (request.himContext === undefined || validHimContext(request.himContext));
+}
+
+// The exact bounded HIM Runtime Consumption v1 contract: three canonical
+// CONVERSATION_SESSION metric states in stress -> energy -> attention order,
+// KNOWN with a canonical ordinal category or UNKNOWN with null - nothing else.
+function validHimContext(him: NonNullable<HypothesisGenerationRequest['himContext']>): boolean {
+  const keys = ['hse.stress', 'hse.energy', 'hse.attention'];
+  return !!him && him.contractVersion === 1 && him.source === 'HIM_STRUCTURED_STATE' &&
+    him.contextKind === 'CONVERSATION_SESSION' && Array.isArray(him.metrics) &&
+    him.metrics.length === keys.length &&
+    him.metrics.every((metric, index) => !!metric && metric.metricKey === keys[index] &&
+      (metric.knowledgeState === 'KNOWN'
+        ? typeof metric.ordinalCategory === 'string' &&
+          ['VERY_LOW', 'LOW', 'MODERATE', 'HIGH', 'VERY_HIGH'].includes(metric.ordinalCategory)
+        : metric.knowledgeState === 'UNKNOWN' && metric.ordinalCategory === null));
 }
 
 function validActiveHypothesis(item: HypothesisGenerationRequest['existingActiveHypotheses'][number]): boolean {

@@ -1,4 +1,5 @@
 import type { EvidenceItem } from '../memory/evidence.types';
+import type { HimHypothesisGenerationContext } from './him-hypothesis-generation-context';
 import type { HypothesisDomain, HypothesisRecord, HypothesisType } from './hypothesis.types';
 
 export const MAX_GENERATED_HYPOTHESIS_CANDIDATES = 5;
@@ -20,6 +21,14 @@ export interface HypothesisGenerationRequest {
   eligibleEvidence: ReadonlyArray<EvidenceItem>;
   existingActiveHypotheses: ReadonlyArray<HypothesisRecord>;
   maxCandidateCount: number;
+  /**
+   * HIM Runtime Consumption v1: minimized advisory HIM structured state.
+   * Optional ONLY to preserve frozen callers/tests that do not yet supply HIM;
+   * the production background generation path supplies it for every fresh
+   * Candidate Generator call. It is input context only - never Evidence, never
+   * part of the proposal/output schema, never persisted.
+   */
+  himContext?: HimHypothesisGenerationContext;
 }
 
 export interface HypothesisCandidateProposal {

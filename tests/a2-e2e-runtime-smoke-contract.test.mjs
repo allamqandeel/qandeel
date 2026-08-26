@@ -65,10 +65,25 @@ test('CI runs the migration 0036 verifier once, after 0035 and before the Redis 
     /^node --env-file-if-exists=\.env database\/verify-migration-0036\.mjs$/u);
 });
 
-test('the canonical migration chain ends at the Hypothesis Lifecycle Completion forward migration 0036', async () => {
+test('the canonical migration chain ends at the Background HIM Runtime Consumption forward migration 0037', async () => {
   const migrations = (await readdir(new URL('database/migrations/', root))).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0036_hypothesis_lifecycle_completion_v1.sql');
-  assert.equal(migrations.some((name) => name.startsWith('0037')), false, 'no migration 0037');
+  assert.equal(migrations.at(-1), '0037_background_him_runtime_consumption_v1.sql');
+  assert.ok(migrations.includes('0036_hypothesis_lifecycle_completion_v1.sql'), 'migration 0036 remains untouched in the chain');
+  assert.equal(migrations.some((name) => name.startsWith('0038')), false, 'no migration 0038');
+});
+
+test('the smoke proves minimized HIM consumption on the fresh generation path', () => {
+  assert.match(smokeScript, /create_hse_stress_measurement\('CONVERSATION_SESSION'/u,
+    'session HIM state is seeded through the canonical measurement path, never a raw noncanonical row');
+  assert.match(smokeScript, /calculate_hse_stress_measurement/u, 'the canonical calculation path produces the assessed state');
+  assert.match(smokeScript, /HIM_STRUCTURED_STATE/u, 'the exact minimized provider-facing HIM contract is asserted');
+  assert.match(smokeScript, /provider-facing HIM context is the exact minimized partial-state contract/u);
+  assert.match(smokeScript, /no user UUID in the provider-facing HIM context/u);
+  assert.match(smokeScript, /exactly one canonical background HIM snapshot read/u);
+  assert.match(smokeScript, /zero HIM re-consumption after durable Candidate completion/u,
+    'duplicate delivery proves zero HIM reread alongside zero provider replay');
+  assert.match(smokeSources, /background_read_him_conversation_snapshot_v1/u,
+    'the smoke transport uses the migration 0037 service-role wrapper, not a direct HIM table read');
 });
 
 test('the smoke proves the generated Candidate -> Active admission and its ACTIVE-version Confidence', () => {
