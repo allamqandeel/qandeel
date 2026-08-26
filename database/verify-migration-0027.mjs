@@ -499,10 +499,18 @@ async function verifyExistingRuntimeRegression(owner, other, evidenceMemory, ine
   // 45. apply_hypothesis_evidence_update keeps its authority, audit and
   // bounded-Evidence contract. Migration 0028 moved the bounded projection out
   // of this function's inline CTE into the single canonical membership
-  // primitive, so the 64-candidate bound is asserted where it now lives.
+  // primitive, and migration 0032 factored the mutation body into the one
+  // internal core shared with the server-authorized background wrapper, so
+  // each fingerprint is asserted where it now lives.
   const [{ definition }] = await rows('SELECT pg_get_functiondef($1::regprocedure) definition', [UPDATE_LOOP]);
-  for (const fingerprint of [/auth\.uid\(\)/u, /canonical_eligible_memory_ids_v1/u, /QANDEEL_HYPOTHESIS_UPDATE_LOOP/u, /INSERT INTO public\.hypothesis_updates/u]) {
+  for (const fingerprint of [/auth\.uid\(\)/u, /apply_hypothesis_evidence_update_core_v1/u]) {
     assert.match(definition, fingerprint, 'hypothesis update loop definition changed');
+  }
+  const [{ definition: coreDefinition }] = await rows(
+    "SELECT pg_get_functiondef(to_regprocedure('public.apply_hypothesis_evidence_update_core_v1(uuid,uuid,uuid,integer,text,text)')) definition",
+  );
+  for (const fingerprint of [/canonical_eligible_memory_ids_v1/u, /QANDEEL_HYPOTHESIS_UPDATE_LOOP/u, /INSERT INTO public\.hypothesis_updates/u]) {
+    assert.match(coreDefinition, fingerprint, 'hypothesis update mutation core definition changed');
   }
   const [{ canonical }] = await rows(
     "SELECT pg_get_functiondef(to_regprocedure('public.canonical_eligible_memory_ids_v1(uuid,timestamptz)')) canonical",

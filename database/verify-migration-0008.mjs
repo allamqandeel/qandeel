@@ -13,12 +13,22 @@ async function verifyCanonicalContract(){
   assert.ok(contract,'Schema contract mismatch: apply_hypothesis_evidence_update(uuid,uuid,integer,text,text) is absent.');
   assert.equal(contract.table_present,true,'Schema contract mismatch: hypothesis_updates is absent.'); assert.equal(contract.security_definer,true,'Schema contract mismatch: hypothesis update authority changed.'); assert.equal(contract.volatility,'v','Schema contract mismatch: hypothesis update volatility changed.');
   assert.match(contract.result_identity,/TABLE\(update jsonb, hypothesis jsonb\)/u,'Schema contract mismatch: hypothesis update result identity changed.');
-  for(const fingerprint of [/auth\.uid\(\)/u,/FOR UPDATE/u,/canonical_eligible_memory_ids_v1/u,/QANDEEL_HYPOTHESIS_UPDATE_LOOP/u,/INSERT INTO public\.hypothesis_updates/u]) assert.match(contract.definition,fingerprint,'Schema contract mismatch: hypothesis update behavior changed.');
+  // Migration 0032 factored the mutation body into the one internal core
+  // shared with the server-authorized background wrapper; the authenticated
+  // wrapper keeps auth.uid() and converges on that core, and the canonical
+  // mutation fingerprints are asserted where they now live. There must be
+  // exactly one copy of the algorithm.
+  for(const fingerprint of [/auth\.uid\(\)/u,/apply_hypothesis_evidence_update_core_v1/u]) assert.match(contract.definition,fingerprint,'Schema contract mismatch: hypothesis update behavior changed.');
+  const core=(await client.query("SELECT pg_get_functiondef(to_regprocedure('public.apply_hypothesis_evidence_update_core_v1(uuid,uuid,uuid,integer,text,text)')) definition")).rows[0];
+  assert.ok(core?.definition,'Schema contract mismatch: shared hypothesis update mutation core is absent.');
+  for(const fingerprint of [/FOR UPDATE/u,/canonical_eligible_memory_ids_v1/u,/QANDEEL_HYPOTHESIS_UPDATE_LOOP/u,/INSERT INTO public\.hypothesis_updates/u]) assert.match(core.definition,fingerprint,'Schema contract mismatch: hypothesis update behavior changed.');
+  assert.doesNotMatch(core.definition,/auth\.uid/u,'Schema contract mismatch: the internal core must not derive client authority.');
   // Migration 0028 moved the bounded Evidence projection out of this function's
   // inline CTE and into the one canonical membership primitive, so the
   // 64-candidate bound is asserted where it now lives. The Update Loop must
   // carry no second copy of it.
   assert.doesNotMatch(contract.definition,/WITH candidates AS MATERIALIZED/u,'Schema contract mismatch: a duplicated Evidence projection reappeared.');
+  assert.doesNotMatch(core.definition,/WITH candidates AS MATERIALIZED/u,'Schema contract mismatch: a duplicated Evidence projection reappeared.');
   const canonical=(await client.query("SELECT pg_get_functiondef(to_regprocedure('public.canonical_eligible_memory_ids_v1(uuid,timestamptz)')) definition")).rows[0];
   assert.ok(canonical?.definition,'Schema contract mismatch: canonical Evidence membership primitive is absent.');
   for(const fingerprint of [/LIMIT 64/u,/updated_at DESC, memory\.id DESC/u,/canonical_evidence_content_key_v1/u]) assert.match(canonical.definition,fingerprint,'Schema contract mismatch: canonical Evidence membership behavior changed.');
