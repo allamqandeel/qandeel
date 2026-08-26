@@ -545,7 +545,7 @@ async function verifyAtomicPersistence() {
   assert.equal((await one(COMPLETE_CANDIDATE, [forced.id, 'VALIDATED_CANDIDATES', JSON.stringify([survivorBait, poisoned])])).ok, true);
   await claimPersistence(forced);
   await identity('postgres');
-  await q("UPDATE public.memories SET expires_at=CURRENT_TIMESTAMP - interval '1 hour', updated_at=CURRENT_TIMESTAMP WHERE id=$1", [memories.third]);
+  await q("UPDATE public.memories SET status='EXPIRED', updated_at=CURRENT_TIMESTAMP WHERE id=$1", [memories.third]);
   const beforeForced = await hypothesisCount();
   await identity('service_role');
   error = await rejected(() => q(PERSIST, [forced.id]), ['22023']);
@@ -562,7 +562,7 @@ async function verifyAtomicPersistence() {
   );
   // Restoring eligibility shows the CLAIMED, result-less state is a real
   // database state, not corruption: the same durable plan then persists whole.
-  await q('UPDATE public.memories SET expires_at=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=$1', [memories.third]);
+  await q("UPDATE public.memories SET status='ACTIVE', updated_at=CURRENT_TIMESTAMP WHERE id=$1", [memories.third]);
   await identity('service_role');
   assert.equal((await one(PERSIST, [forced.id])).ok, true, 'the durable plan persists once Evidence is canonical again');
   await identity('postgres');
@@ -624,7 +624,7 @@ async function verifyPre0033DefectsAndUpgrade() {
   // Each savepoint below models one committed application request.
   const partialSurvivor = randomUUID();
   const partialPoisoned = randomUUID();
-  await q("UPDATE public.memories SET expires_at=CURRENT_TIMESTAMP - interval '1 hour', updated_at=CURRENT_TIMESTAMP WHERE id=$1", [memories.third]);
+  await q("UPDATE public.memories SET status='EXPIRED', updated_at=CURRENT_TIMESTAMP WHERE id=$1", [memories.third]);
   await identity('service_role');
   await q('SAVEPOINT request_one');
   await q('SELECT * FROM public.background_create_system_hypothesis_v1($1,$2,$3,$4,$5,$6,$7,$8)',
@@ -641,7 +641,7 @@ async function verifyPre0033DefectsAndUpgrade() {
   const partialRow = await one(HYPOTHESIS, [partialPoisoned]);
   assert.ok(partialRow, 'pre-0033 defect 2: the half-written Hypothesis also survives');
   assert.deepEqual(partialRow.supporting_evidence_ids, [], 'pre-0033 defect 2: it survives WITHOUT its Evidence - a partial canonical graph');
-  await q('UPDATE public.memories SET expires_at=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=$1', [memories.third]);
+  await q("UPDATE public.memories SET status='ACTIVE', updated_at=CURRENT_TIMESTAMP WHERE id=$1", [memories.third]);
 
   // A pre-0033 database also holds typed Memory, Intent and Association
   // results and a generic Confidence completion.
