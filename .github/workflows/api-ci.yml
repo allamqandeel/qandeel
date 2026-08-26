@@ -85,6 +85,7 @@ jobs:
       - {name: Verify exact-version post-update Confidence, run: npm run verify:exact-version-confidence:integration}
       - {name: Verify automatic hypothesis update invocation, run: npm run verify:hypothesis-update-auto-invocation:integration}
       - {name: Verify Confidence batch reliability, run: npm run verify:confidence-batch-reliability:integration}
+      - {name: Verify Hypothesis lifecycle completion, run: npm run verify:hypothesis-lifecycle-completion:integration}
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
 

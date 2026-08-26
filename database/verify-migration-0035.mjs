@@ -546,9 +546,15 @@ async function verifyAuthorityGuards() {
   assert.equal((await rows(ITEMS, [execution.id])).length, 0, 'a no-op writes no item');
 
   // A durable target that is no longer owned by the execution user can never be
-  // planned: nothing is fabricated and no item row is written.
+  // planned: nothing is fabricated and no item row is written. Since migration
+  // 0036 a generated target carries its immutable activation audit row, whose
+  // composite owner FK correctly blocks re-owning the Hypothesis; the fixture
+  // removes that audit row first, as the postgres fixture owner, purely to
+  // construct this simulated foreign-target state. The behavioural expectation
+  // asserted below is unchanged.
   const foreign = await newGeneration(1);
   await identity('postgres');
+  await q('DELETE FROM public.hypothesis_lifecycle_transitions WHERE hypothesis_id=$1', [foreign.hypothesisIds[0]]);
   await q('UPDATE public.hypotheses SET user_id=$2 WHERE id=$1', [foreign.hypothesisIds[0], otherUserId]);
   assert.equal(await run(foreign.execution.id), 'QUARANTINED', 'a foreign target quarantines before any plan is written');
   await identity('postgres');
@@ -556,11 +562,13 @@ async function verifyAuthorityGuards() {
   assert.equal(await one(EFFECT, [foreign.execution.id, 'CONFIDENCE_BATCH']), undefined);
 
   // A target that vanished after the plan was frozen is bounded, not inferred.
+  // The same migration-0036 fixture adaptation applies before re-owning it.
   const vanished = await newGeneration(1);
   await armFault(vanished.hypothesisIds[0]);
   assert.equal(await run(vanished.execution.id), 'RETRY_PENDING');
   await armFault(null);
   await identity('postgres');
+  await q('DELETE FROM public.hypothesis_lifecycle_transitions WHERE hypothesis_id=$1', [vanished.hypothesisIds[0]]);
   await q('UPDATE public.hypotheses SET user_id=$2 WHERE id=$1', [vanished.hypothesisIds[0], otherUserId]);
   assert.equal(await run(vanished.execution.id), 'QUARANTINED');
   await identity('postgres');

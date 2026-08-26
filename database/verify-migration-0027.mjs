@@ -8,8 +8,11 @@
 // authority; that anonymous callers have no authority at all; that the server
 // REST role holds no direct table DML; that the narrow server creation command
 // is service-role only and forces every canonical value; that the pre-existing
-// constrained transition / evidence / competition / update commands and the
-// migration-0021 background commands still behave exactly as before; that no
+// constrained evidence / competition / update commands and the
+// migration-0021 background commands still behave exactly as before; that the
+// lifecycle graph, version increment and cross-tenant behaviour are preserved
+// exactly on migration 0036's exact-version transition boundary while the
+// legacy transition RPC is executable by no application role at all; that no
 // alternative end-user-reachable creation surface exists; and that upgrading a
 // pre-0027 database leaves existing Hypothesis rows byte-identical. Every
 // fixture is rolled back; no data is retained.
@@ -61,6 +64,11 @@ const CREATE = 'public.server_create_hypothesis_v1(uuid,uuid,text,text,text,text
 const GUARD = 'public.assert_canonical_hypothesis_text_array_v1(text[],integer,integer)';
 const BACKGROUND_CREATE = 'public.background_create_system_hypothesis_v1(uuid,uuid,text,text,text,text,text[],text[])';
 const TRANSITION = 'public.transition_hypothesis(uuid,text)';
+// Migration 0036 replaced the operational transition path with an exact-version,
+// audited boundary and revoked the legacy function's application authority. The
+// live hardened state asserted below therefore includes the 0036 surface.
+const TRANSITION_V2 = 'public.transition_hypothesis_v2(uuid,integer,text)';
+const TRANSITION_CORE = 'public.transition_hypothesis_core_v1(uuid,uuid,integer,text,text)';
 const ATTACH = 'public.attach_hypothesis_evidence(uuid,text,text)';
 const LINK = 'public.link_competing_hypotheses(uuid,uuid)';
 const UPDATE_LOOP = 'public.apply_hypothesis_evidence_update(uuid,uuid,integer,text,text)';
@@ -68,6 +76,7 @@ const UPDATE_LOOP = 'public.apply_hypothesis_evidence_update(uuid,uuid,integer,t
 const CREATE_CALL = 'SELECT * FROM public.server_create_hypothesis_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)';
 const BACKGROUND_CREATE_CALL = 'SELECT * FROM public.background_create_system_hypothesis_v1($1,$2,$3,$4,$5,$6,$7,$8)';
 const TRANSITION_CALL = 'SELECT * FROM public.transition_hypothesis($1,$2)';
+const TRANSITION_V2_CALL = 'SELECT * FROM public.transition_hypothesis_v2($1,$2,$3)';
 const ATTACH_CALL = 'SELECT * FROM public.attach_hypothesis_evidence($1,$2,$3)';
 const LINK_CALL = 'SELECT * FROM public.link_competing_hypotheses($1,$2)';
 const UPDATE_LOOP_CALL = 'SELECT * FROM public.apply_hypothesis_evidence_update($1,$2,$3,$4,$5)';
@@ -114,8 +123,14 @@ async function verifyEffectiveAcls() {
     // The migration-0021 background creation command stays server-only.
     ['authenticated', BACKGROUND_CREATE, false], ['anon', BACKGROUND_CREATE, false], ['service_role', BACKGROUND_CREATE, true],
     // The pre-existing constrained mutation commands keep exactly the authority
-    // migrations 0005 and 0008 gave them: this task widens nothing.
-    ['authenticated', TRANSITION, true], ['anon', TRANSITION, false],
+    // migrations 0005 and 0008 gave them: this task widened nothing. The one
+    // later change is migration 0036, which revoked the legacy transition RPC's
+    // application authority in favour of the exact-version audited boundary -
+    // the legacy function is no longer executable by ANY application role, and
+    // the internal transition core is executable by none of them either.
+    ['authenticated', TRANSITION, false], ['anon', TRANSITION, false], ['service_role', TRANSITION, false],
+    ['authenticated', TRANSITION_V2, true], ['anon', TRANSITION_V2, false], ['service_role', TRANSITION_V2, false],
+    ['authenticated', TRANSITION_CORE, false], ['anon', TRANSITION_CORE, false], ['service_role', TRANSITION_CORE, false],
     ['authenticated', ATTACH, true], ['anon', ATTACH, false],
     ['authenticated', LINK, true], ['anon', LINK, false],
     ['authenticated', UPDATE_LOOP, true], ['anon', UPDATE_LOOP, false],
@@ -170,6 +185,9 @@ async function verifyCreationSurface() {
     'attach_hypothesis_evidence', 'background_attach_hypothesis_evidence_v1',
     'background_create_system_hypothesis_v1', 'background_link_competing_hypotheses_v1',
     'link_competing_hypotheses', 'server_create_hypothesis_v1', 'transition_hypothesis',
+    // Migration 0036's exact-version lifecycle boundary: the internal core and
+    // its single authenticated wrapper. Neither creates a Hypothesis row.
+    'transition_hypothesis_core_v1', 'transition_hypothesis_v2',
   ], 'Hypothesis command surface');
 
   const creators = (await rows(
@@ -374,6 +392,7 @@ async function verifyAnonymousAttacks(owner, ownedHypothesis) {
   await rejected(() => q(CREATE_CALL, createArgs(owner, randomUUID())));
   await rejected(() => q(BACKGROUND_CREATE_CALL, [owner, randomUUID(), 'anon', 'CAUSAL', 'GENERAL', 'scope', [], []]));
   await rejected(() => q(TRANSITION_CALL, [ownedHypothesis, 'ACTIVE']));
+  await rejected(() => q(TRANSITION_V2_CALL, [ownedHypothesis, 1, 'ACTIVE']));
 }
 
 // E. 16-41.
@@ -464,18 +483,30 @@ async function verifyExistingRuntimeRegression(owner, other, evidenceMemory, ine
     [competitorA, 'competitor a'], [competitorB, 'competitor b'], [updateTarget, 'update target'],
   ]) await rows(CREATE_CALL, createArgs(owner, id, { statement }));
 
-  // 42. transition_hypothesis still obeys the canonical lifecycle graph.
+  // 42. The canonical lifecycle graph is unchanged; only the authority boundary
+  // moved. Migration 0036 made transition_hypothesis_v2 the one authenticated
+  // path, so the graph, version and cross-tenant behaviour this verifier has
+  // always asserted are asserted through it - with the exact expected version -
+  // and the legacy RPC is proven unreachable rather than exercised.
   await identity('authenticated', owner);
-  const [activated] = await rows(TRANSITION_CALL, [lifecycle, 'ACTIVE']);
+  await rejected(() => q(TRANSITION_CALL, [lifecycle, 'ACTIVE']), ['42501']);
+  const [activated] = await rows(TRANSITION_V2_CALL, [lifecycle, 1, 'ACTIVE']);
   assert.equal(activated.status, 'ACTIVE');
   assert.equal(activated.version, 2, 'transition still bumps the version');
-  await rejected(() => q(TRANSITION_CALL, [lifecycle, 'CANDIDATE']), ['22023']);
-  await rejected(() => q(TRANSITION_CALL, [lifecycle, 'REOPENED']), ['22023']);
-  const [supported] = await rows(TRANSITION_CALL, [lifecycle, 'SUPPORTED']);
+  await rejected(() => q(TRANSITION_V2_CALL, [lifecycle, 2, 'CANDIDATE']), ['22023']);
+  await rejected(() => q(TRANSITION_V2_CALL, [lifecycle, 2, 'REOPENED']), ['22023']);
+  // A stale expected version fails closed instead of transitioning the newer row.
+  await rejected(() => q(TRANSITION_V2_CALL, [lifecycle, 1, 'SUPPORTED']), ['40001']);
+  const [supported] = await rows(TRANSITION_V2_CALL, [lifecycle, 2, 'SUPPORTED']);
   assert.equal(supported.status, 'SUPPORTED');
+  assert.equal(supported.version, 3);
   // Cross-tenant transition still finds nothing rather than mutating.
   await identity('authenticated', other);
-  assert.equal((await rows(TRANSITION_CALL, [lifecycle, 'REJECTED'])).length, 0);
+  assert.equal((await rows(TRANSITION_V2_CALL, [lifecycle, 3, 'REJECTED'])).length, 0);
+  // The server REST role cannot use either boundary to move a Hypothesis.
+  await identity('service_role');
+  await rejected(() => q(TRANSITION_CALL, [lifecycle, 'REJECTED']), ['42501']);
+  await rejected(() => q(TRANSITION_V2_CALL, [lifecycle, 3, 'REJECTED']), ['42501']);
 
   // 43. attach_hypothesis_evidence behaviour is unchanged.
   await identity('authenticated', owner);
@@ -692,7 +723,7 @@ async function main() {
     await verifyTenantIsolation(owner, other);
 
     await identity('postgres');
-    console.log('Verified migration 0027: reproduced the baseline Hypothesis creation forgery, then proved server-only Hypothesis creation authority, rejected authenticated and anonymous creation and origin/status/version/Evidence/competitor/timestamp forgery, removed direct service-role table DML, an allowlisted creation surface with no end-user bypass, canonical forced creation values, unchanged transition/evidence/competition/update and background semantics, a clean upgrade that leaves existing rows byte-identical, and tenant isolation.');
+    console.log('Verified migration 0027: reproduced the baseline Hypothesis creation forgery, then proved server-only Hypothesis creation authority, rejected authenticated and anonymous creation and origin/status/version/Evidence/competitor/timestamp forgery, removed direct service-role table DML, an allowlisted creation surface with no end-user bypass, canonical forced creation values, unchanged evidence/competition/update and background semantics, an unchanged lifecycle graph and version increment on the migration-0036 exact-version transition boundary with the legacy transition RPC executable by no application role, a clean upgrade that leaves existing rows byte-identical, and tenant isolation.');
   } finally {
     try { await q('ROLLBACK'); } catch { /* ignore */ }
     await client.end();

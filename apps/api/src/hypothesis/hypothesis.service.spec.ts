@@ -42,6 +42,31 @@ describe('HypothesisService', () => {
     repository.find.mockResolvedValue(record({ status: 'REJECTED' })); repository.transition.mockResolvedValue(record({ status: 'REOPENED', version: 3 }));
     await expect(service.transition('user-a','t',record().id,'REOPENED')).resolves.toMatchObject({ status: 'REOPENED' });
   });
+  // Migration 0036: the exact expected version comes from the owned current
+  // Hypothesis, and a stale-version failure is never retried against a newer row.
+  it('supplies the owned current version as the exact expected version and never retries a stale transition', async () => {
+    repository.find.mockResolvedValue(record({ status: 'WEAK', version: 9 }));
+    repository.transition.mockResolvedValue(record({ status: 'ACTIVE', version: 10 }));
+    await expect(service.transition('user-a','t',record().id,'ACTIVE')).resolves.toMatchObject({ status: 'ACTIVE', version: 10 });
+    expect(repository.transition).toHaveBeenCalledTimes(1);
+    expect(repository.transition).toHaveBeenCalledWith('t', record().id, 9, 'ACTIVE');
+    repository.transition.mockReset();
+    const stale = Object.assign(new Error('Stale hypothesis version.'), { code: '40001' });
+    repository.transition.mockRejectedValue(stale);
+    await expect(service.transition('user-a','t',record().id,'ACTIVE')).rejects.toBe(stale);
+    expect(repository.transition).toHaveBeenCalledTimes(1);
+  });
+  // Evidence attachment is not a lifecycle decision: no automatic SUPPORTED /
+  // MIXED / WEAK / REJECTED / RETIRED / REOPENED is ever derived here.
+  it('never transitions lifecycle state as a side effect of Evidence attachment', async () => {
+    const evidenceId = 'memory:33333333-3333-4333-8333-333333333333';
+    repository.find.mockResolvedValue(record({ status: 'ACTIVE', version: 2 }));
+    evidence.listEligibleForUser.mockResolvedValue([{ evidenceId } as never]);
+    repository.attachEvidence.mockResolvedValue(record({ status: 'ACTIVE', version: 3, supporting_evidence_ids: [evidenceId] }));
+    await expect(service.attachEvidence('user-a','t',record().id,evidenceId,'CONTRADICTING'))
+      .resolves.toMatchObject({ status: 'ACTIVE' });
+    expect(repository.transition).not.toHaveBeenCalled();
+  });
   it('fails closed for cross-user read, update, transition, and competition', async () => {
     repository.find.mockResolvedValue(undefined);
     await expect(service.find('user-a','t','other')).rejects.toBeInstanceOf(NotFoundException);
