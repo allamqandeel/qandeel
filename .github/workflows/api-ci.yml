@@ -57,6 +57,7 @@ jobs:
       - {name: Verify Memory authority hardening, run: npm run verify:memory-authority:integration}
       - {name: Verify Hypothesis runtime, run: npm run verify:hypothesis:integration}
       - {name: Verify Hypothesis authority hardening, run: npm run verify:hypothesis-authority:integration}
+      - {name: Verify canonical Evidence eligibility, run: npm run verify:canonical-evidence:integration}
       - {name: Verify Confidence runtime, run: npm run verify:confidence:integration}
       - {name: Verify Question runtime, run: npm run verify:question:integration}
       - {name: Verify Hypothesis update runtime, run: npm run verify:hypothesis-update:integration}
