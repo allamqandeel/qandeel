@@ -496,11 +496,18 @@ async function verifyExistingRuntimeRegression(owner, other, evidenceMemory, ine
   assert.equal(mirror.version, 2);
   await rejected(() => q(LINK_CALL, [competitorA, competitorB]), ['22023']);
 
-  // 45. apply_hypothesis_evidence_update is unchanged by this task.
+  // 45. apply_hypothesis_evidence_update keeps its authority, audit and
+  // bounded-Evidence contract. Migration 0028 moved the bounded projection out
+  // of this function's inline CTE into the single canonical membership
+  // primitive, so the 64-candidate bound is asserted where it now lives.
   const [{ definition }] = await rows('SELECT pg_get_functiondef($1::regprocedure) definition', [UPDATE_LOOP]);
-  for (const fingerprint of [/auth\.uid\(\)/u, /LIMIT 64/u, /QANDEEL_HYPOTHESIS_UPDATE_LOOP/u, /INSERT INTO public\.hypothesis_updates/u]) {
+  for (const fingerprint of [/auth\.uid\(\)/u, /canonical_eligible_memory_ids_v1/u, /QANDEEL_HYPOTHESIS_UPDATE_LOOP/u, /INSERT INTO public\.hypothesis_updates/u]) {
     assert.match(definition, fingerprint, 'hypothesis update loop definition changed');
   }
+  const [{ canonical }] = await rows(
+    "SELECT pg_get_functiondef(to_regprocedure('public.canonical_eligible_memory_ids_v1(uuid,timestamptz)')) canonical",
+  );
+  assert.match(canonical, /LIMIT 64/u, 'the canonical Evidence candidate bound is absent');
   const [applied] = await rows(UPDATE_LOOP_CALL, [randomUUID(), updateTarget, 1, `memory:${evidenceMemory}`, 'SUPPORTING']);
   assert.equal(applied.update.before_version, 1);
   assert.equal(applied.update.after_version, 2);

@@ -76,6 +76,10 @@ function isEligible(userId: string, memory: MemoryRecord, now: Date): boolean {
     (memory.expires_at === null || new Date(memory.expires_at).getTime() > now.getTime());
 }
 
-function normalizeExact(value: string): string {
+// The canonical exact-normalization used by the Evidence dedup key. Exported so
+// the shared golden parity fixtures can assert it directly against the SQL
+// primitive public.canonical_evidence_content_key_v1 (migration 0028). The
+// behaviour is unchanged.
+export function normalizeExact(value: string): string {
   return value.normalize('NFKC').trim().replace(/\s+/gu, ' ');
 }
