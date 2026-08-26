@@ -56,8 +56,10 @@ test('the pure result module maps and recovers on result_payload without inferri
  assert.doesNotMatch(module,/\.propose|proposeAndAuthorize|fetch\(|randomUUID\(|HypothesisUpdateService|apply_hypothesis_evidence_update/u);
 });
 
-test('the effect types exclude all three typed effects from generic completion and carry no result_commands',()=>{
- assert.match(types,/GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'>/u);
+test('the effect types exclude every typed effect from generic completion and carry no result_commands',()=>{
+ // Migration 0033 extended the exclusion with both generation effects; the
+ // Association exclusion itself is unchanged.
+ assert.match(types,/GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'\|'CANDIDATE_PROVIDER'\|'HYPOTHESIS_PERSISTENCE'>/u);
  assert.match(types,/AssociationEffectResultCode/u);
  assert.match(types,/result_payload:unknown/u);
  assert.doesNotMatch(types,/result_commands/u);

@@ -1,12 +1,13 @@
 import type{AuthorizedHypothesisGenerationIntent}from'../hypothesis/hypothesis-generation-intent-authority.types';
 import type{AssociationEffectResultCode}from'./durable-association-result';
+import type{CandidateProviderEffectResultCode,HypothesisPersistenceEffectResultCode}from'./durable-generation-result';
 export const INTELLIGENCE_EFFECTS=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH']as const;
 export type IntelligenceEffect=typeof INTELLIGENCE_EFFECTS[number];
-/** Effects whose completion carries no durable result and therefore still uses the generic completion RPC. MEMORY_WRITE, INTENT_PROVIDER and ASSOCIATION_PROVIDER each carry a typed durable result and are completed through their dedicated commands. */
-export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'|'INTENT_PROVIDER'|'ASSOCIATION_PROVIDER'>;
+/** Effects whose completion carries no durable result and therefore still uses the generic completion RPC. MEMORY_WRITE, INTENT_PROVIDER, ASSOCIATION_PROVIDER, CANDIDATE_PROVIDER and HYPOTHESIS_PERSISTENCE each carry a typed durable result and are completed through their dedicated commands; only CONFIDENCE_BATCH remains generic. */
+export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'|'INTENT_PROVIDER'|'ASSOCIATION_PROVIDER'|'CANDIDATE_PROVIDER'|'HYPOTHESIS_PERSISTENCE'>;
 export type MemoryWriteEffectResultCode='NO_FRESH_EVIDENCE'|'FRESH_EVIDENCE_CREATED';
 export type IntentProviderEffectResultCode='INTENT_AUTHORIZED'|'INTENT_NOT_AUTHORIZED';
-export type IntelligenceEffectResultCode=MemoryWriteEffectResultCode|IntentProviderEffectResultCode|AssociationEffectResultCode;
+export type IntelligenceEffectResultCode=MemoryWriteEffectResultCode|IntentProviderEffectResultCode|AssociationEffectResultCode|CandidateProviderEffectResultCode|HypothesisPersistenceEffectResultCode;
 /** Durable post-authority outcome of a completed INTENT_PROVIDER effect. A durable NOT_AUTHORIZED carries no reason because none was persisted. */
 export type DurableIntentProviderResult={readonly status:'AUTHORIZED';readonly intent:AuthorizedHypothesisGenerationIntent}|{readonly status:'NOT_AUTHORIZED'};
 /** INDETERMINATE covers a legacy null result, a malformed persisted result, mismatched provenance, and any impossible code/payload pairing. It is never NOT_AUTHORIZED. */

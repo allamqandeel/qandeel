@@ -80,5 +80,6 @@ jobs:
       - {name: Verify durable Intent provider results, run: npm run verify:durable-intent-result:integration}
       - {name: Verify durable Association provider results, run: npm run verify:durable-association-provider-result:integration}
       - {name: Verify server-authorized Hypothesis Update invocation, run: npm run verify:server-hypothesis-update:integration}
+      - {name: Verify hypothesis generation atomicity and durable recovery, run: npm run verify:hypothesis-generation-atomicity:integration}
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
 

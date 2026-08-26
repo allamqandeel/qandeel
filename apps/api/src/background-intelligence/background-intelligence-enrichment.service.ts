@@ -8,8 +8,9 @@ import type { SafetyDisposition } from '../conversation/safety-response-gate.typ
 import { HypothesisGenerationTriggerClassificationService } from '../hypothesis/hypothesis-generation-trigger-classification.service';
 import type { HypothesisGenerationEligibilityAssessment } from '../hypothesis/hypothesis-generation-eligibility.types';
 import { MAX_ACTIVE_HYPOTHESES, type HypothesisRecord } from '../hypothesis/hypothesis.types';
-import { MAX_GENERATED_HYPOTHESIS_CANDIDATES, type HypothesisCandidateGenerator, type HypothesisGenerationInput, type HypothesisGenerationRequest, type HypothesisGenerationResult } from '../hypothesis/hypothesis-generation.types';
+import { MAX_GENERATED_HYPOTHESIS_CANDIDATES, type HypothesisCandidateGenerator, type HypothesisGenerationInput, type HypothesisGenerationRequest } from '../hypothesis/hypothesis-generation.types';
 import { hypothesisCollisionKey, normalizeGenerationInput, validateGenerationEvidenceIds, validateHypothesisCandidate } from '../hypothesis/hypothesis-generation.policy';
+import type { DurableCandidateProviderResult, DurableGenerationCandidate } from '../post-response-intelligence/durable-generation-result';
 import type { ConfidenceEvaluationRecord } from '../hypothesis/confidence.types';
 import { validateHypothesisUpdateRequest } from '../hypothesis/hypothesis-update.policy';
 import { HYPOTHESIS_UPDATE_SOURCE, type HypothesisMutationResult, type HypothesisUpdateRequest, type HypothesisUpdateResult } from '../hypothesis/hypothesis-update.types';
@@ -38,12 +39,24 @@ export class BackgroundIntelligenceEnrichmentService {
   try{const evidence=await this.listEligibleEvidence(context);if(!boundedEvidence(evidence))return{eligibility:{status:'NOT_ELIGIBLE',reason:'EVALUATION_FAILED'}};const classification=this.classifier.classify({text,safetyDisposition});if(classification.classification==='NO_TRIGGER')return{eligibility:{status:'NOT_ELIGIBLE',reason:'NO_TRIGGER'}};if(classification.classification==='AMBIGUOUS')return{eligibility:{status:'NOT_ELIGIBLE',reason:'AMBIGUOUS_TRIGGER'}};if(evidence.length===0)return{eligibility:{status:'NOT_ELIGIBLE',reason:'NO_ELIGIBLE_EVIDENCE'}};return{eligibility:{status:'ELIGIBLE',reason:'TRIGGER_AND_EVIDENCE_AVAILABLE'},triggerClassification:classification,eligibleEvidence:evidence};}catch{return{eligibility:{status:'NOT_ELIGIBLE',reason:'EVALUATION_FAILED'}};}
  }
 
- async generateHypotheses(context:BackgroundIntelligenceExecutionContext,input:HypothesisGenerationInput,generator:HypothesisCandidateGenerator):Promise<HypothesisGenerationResult>{
+ // Finding 08 provider stage. It preserves the exact pre-0033 generation
+ // pipeline up to - and only up to - acceptance: input normalization, canonical
+ // Evidence eligibility, one provider invocation, and the unchanged candidate
+ // validation policy (bounds, duplicate-in-batch, active-collision,
+ // Evidence-outside-request, role-conflict). The accepted proposals are then
+ // canonicalized to their exact final stored form and given stable server
+ // Hypothesis UUIDs, and the typed durable plan is returned WITHOUT writing a
+ // single Hypothesis: all batch writes moved into the one atomic database
+ // persistence command. Rejected proposals and their reasons never leave this
+ // stage - only the accepted canonical plan may become durable.
+ async generateHypothesisCandidatePlan(context:BackgroundIntelligenceExecutionContext,input:HypothesisGenerationInput,generator:HypothesisCandidateGenerator):Promise<DurableCandidateProviderResult>{
   this.assert(context);const {problem,domain,scope}=normalizeGenerationInput(input);validateGenerationEvidenceIds(input.evidenceIds);const eligible=await this.listEligibleEvidence(context),eligibleById=new Map(eligible.map(item=>[item.evidenceId,item])),requested=input.evidenceIds.map(id=>eligibleById.get(id));if(requested.some(item=>!item))throw new BadRequestException('Generation evidence is not currently eligible.');
   const request:HypothesisGenerationRequest={userId:context.userId,problem,domain,scope,eligibleEvidence:requested as EvidenceItem[],existingActiveHypotheses:await this.data.listActiveHypotheses(context,MAX_ACTIVE_HYPOTHESES),maxCandidateCount:MAX_GENERATED_HYPOTHESIS_CANDIDATES};const proposals=await generator.generate(request);if(!Array.isArray(proposals))throw new BadRequestException('Generator returned an invalid candidate batch.');
-  const accepted:HypothesisRecord[]=[],rejected:HypothesisGenerationResult['rejected']=[],seen=new Set<string>(),active=new Set(request.existingActiveHypotheses.map(item=>hypothesisCollisionKey(item.statement,item.scope)));
-  for(let index=0;index<proposals.length;index++){if(index>=request.maxCandidateCount){rejected.push({candidateIndex:index,reason:'CANDIDATE_LIMIT_EXCEEDED'});continue;}const reason=validateHypothesisCandidate(proposals[index],request,seen,active);if(reason){rejected.push({candidateIndex:index,reason});continue;}const proposal=proposals[index];let persisted=await this.data.createSystemHypothesis(context,{id:randomUUID(),statement:proposal.statement,type:proposal.type,domain:proposal.domain,scope:proposal.scope,assumptions:proposal.assumptions,disconfirmingConditions:proposal.disconfirmingConditions});for(const id of proposal.supportingEvidenceIds)persisted=await this.data.attachHypothesisEvidence(context,persisted.id,id,'SUPPORTING');for(const id of proposal.contradictingEvidenceIds)persisted=await this.data.attachHypothesisEvidence(context,persisted.id,id,'CONTRADICTING');for(const alternative of accepted)await this.data.linkCompetingHypotheses(context,alternative.id,persisted.id);accepted.push(persisted);active.add(hypothesisCollisionKey(proposal.statement,proposal.scope));}
-  return{accepted,rejected};
+  const accepted:DurableGenerationCandidate[]=[],seen=new Set<string>(),active=new Set(request.existingActiveHypotheses.map(item=>hypothesisCollisionKey(item.statement,item.scope)));
+  for(let index=0;index<proposals.length;index++){if(index>=request.maxCandidateCount)continue;const reason=validateHypothesisCandidate(proposals[index],request,seen,active);if(reason)continue;const proposal=proposals[index];
+   accepted.push({hypothesisId:randomUUID(),statement:proposal.statement,type:proposal.type,domain:proposal.domain,scope:proposal.scope,supportingEvidenceIds:[...proposal.supportingEvidenceIds],contradictingEvidenceIds:[...proposal.contradictingEvidenceIds],assumptions:[...proposal.assumptions],disconfirmingConditions:[...proposal.disconfirmingConditions]});
+   active.add(hypothesisCollisionKey(proposal.statement,proposal.scope));}
+  return accepted.length===0?{code:'NO_ACCEPTED_CANDIDATES'}:{code:'VALIDATED_CANDIDATES',candidates:accepted};
  }
 
  async evaluateHypothesisConfidence(context:BackgroundIntelligenceExecutionContext,hypothesisId:string):Promise<ConfidenceEvaluationRecord>{this.assert(context);const hypothesis=await this.data.findHypothesis(context,hypothesisId);if(!hypothesis)throw new NotFoundException('Hypothesis not found.');return this.data.createConfidenceEvaluation(context,randomUUID(),hypothesis.id,hypothesis.version);}
