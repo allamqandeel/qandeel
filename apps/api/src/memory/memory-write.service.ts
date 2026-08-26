@@ -29,7 +29,9 @@ export class MemoryWriteService {
     );
     if (duplicate) return { decision: 'SKIP', reason: 'EXACT_NORMALIZED_DUPLICATE', type: decision.candidate.type };
 
-    const created = await this.runtime.create(userId, accessToken, decision.candidate);
+    // The access token scopes the duplicate lookup only; the write itself is a
+    // server-authority command that never carries a caller credential.
+    const created = await this.runtime.create(userId, decision.candidate);
     return {
       decision: 'WRITE', type: decision.candidate.type,
       memoryId: created.id, evidenceId: `memory:${created.id}`,
