@@ -16,6 +16,19 @@ test('0035 adds exactly the bounded child work table, the validator and the mana
  for(const proof of['NO_CONFIDENCE_TARGETS','CONFIDENCE_BATCH_EVALUATED','CONFIDENCE_BATCH_MANAGED','CONFIDENCE_BATCH_COMMAND_REQUIRED'])assert.match(migration,new RegExp(proof,'u'));
 });
 
+test('every explicit identifier 0035 introduces fits PostgreSQL 63-byte identifier limit',()=>{
+ // PostgreSQL truncates an over-long identifier to NAMEDATALEN-1 with a NOTICE,
+ // not an error: the migration still applies, but the object is created under a
+ // name that differs from the one written here, so every later reference by name
+ // silently misses it. Guard the names 0035 states explicitly; PostgreSQL's own
+ // auto-generated PK/UNIQUE names are its business and are asserted by
+ // definition, never by name.
+ const identifiers=[...migration.matchAll(/\b(?:TABLE|FUNCTION|CONSTRAINT|INDEX|TRIGGER)\s+(?:public\.)?([A-Za-z_][A-Za-z0-9_]*)/gu)].map(m=>m[1]);
+ assert.ok(identifiers.length>0,'identifiers were actually scanned');
+ const oversized=[...new Set(identifiers)].filter(name=>Buffer.byteLength(name,'utf8')>63);
+ assert.deepEqual(oversized,[],`identifiers exceed PostgreSQL's 63-byte limit and would be silently truncated: ${oversized.join(', ')}`);
+});
+
 test('the child item table is bounded, exact and service-internal',()=>{
  const table=migration.slice(migration.indexOf('CREATE TABLE public.post_response_confidence_batch_items'),migration.indexOf('ALTER TABLE public.post_response_confidence_batch_items OWNER TO postgres'));
  assert.match(table,/execution_id uuid NOT NULL REFERENCES public\.post_response_intelligence_executions\(id\) ON DELETE RESTRICT/u);
@@ -49,7 +62,7 @@ test('the receipt validator is IMMUTABLE, internal-only and reads no table',()=>
 test('the result domain minimally evolves: only untyped widens and Confidence states its own domain',()=>{
  assert.match(migration,/DROP CONSTRAINT post_response_intelligence_effects_untyped_result_check/u);
  assert.match(migration,/ADD CONSTRAINT post_response_intelligence_effects_untyped_result_check CHECK \(\s*effect_key IN \('MEMORY_WRITE','INTENT_PROVIDER','ASSOCIATION_PROVIDER','CANDIDATE_PROVIDER','HYPOTHESIS_PERSISTENCE','HYPOTHESIS_UPDATE_BATCH','CONFIDENCE_BATCH'\)/u);
- assert.match(migration,/ADD CONSTRAINT post_response_intelligence_effects_confidence_batch_result_check CHECK/u);
+ assert.match(migration,/ADD CONSTRAINT post_response_intelligence_effects_confidence_result_check CHECK/u);
  assert.doesNotMatch(migration,/DROP CONSTRAINT post_response_intelligence_effects_(?:claimed|memory|intent|association|candidate|persistence|update_batch)_result_check/u);
  // A legacy pre-0035 all-null row stays representable and is never rewritten.
  assert.match(migration,/effect_key<>'CONFIDENCE_BATCH'\s*\n?\s*OR \(result_code IS NULL AND result_reference IS NULL AND result_payload IS NULL\)/u);

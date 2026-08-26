@@ -144,7 +144,7 @@ async function verifySurfaceAndAcls() {
     'post_response_intelligence_effects_association_result_check',
     'post_response_intelligence_effects_candidate_result_check',
     'post_response_intelligence_effects_claimed_result_check',
-    'post_response_intelligence_effects_confidence_batch_result_check',
+    'post_response_intelligence_effects_confidence_result_check',
     'post_response_intelligence_effects_intent_result_check',
     'post_response_intelligence_effects_memory_result_check',
     'post_response_intelligence_effects_persistence_result_check',

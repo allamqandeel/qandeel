@@ -168,7 +168,7 @@ async function verifySurfaceAndAcls() {
     'post_response_intelligence_effects_association_result_check',
     'post_response_intelligence_effects_candidate_result_check',
     'post_response_intelligence_effects_claimed_result_check',
-    'post_response_intelligence_effects_confidence_batch_result_check',
+    'post_response_intelligence_effects_confidence_result_check',
     'post_response_intelligence_effects_intent_result_check',
     'post_response_intelligence_effects_memory_result_check',
     'post_response_intelligence_effects_persistence_result_check',
@@ -584,7 +584,7 @@ async function verifyUpgradeFromCanonical0034() {
   await identity('postgres');
   // Reconstruct the exact canonical pre-0035 surface: no child table, no
   // Confidence result domain, and 0034's claim/generic-completion rules.
-  await q('ALTER TABLE public.post_response_intelligence_effects DROP CONSTRAINT post_response_intelligence_effects_confidence_batch_result_check');
+  await q('ALTER TABLE public.post_response_intelligence_effects DROP CONSTRAINT post_response_intelligence_effects_confidence_result_check');
   await q('ALTER TABLE public.post_response_intelligence_effects DROP CONSTRAINT post_response_intelligence_effects_untyped_result_check');
   await q(`ALTER TABLE public.post_response_intelligence_effects ADD CONSTRAINT post_response_intelligence_effects_untyped_result_check CHECK (
     effect_key IN ('MEMORY_WRITE','INTENT_PROVIDER','ASSOCIATION_PROVIDER','CANDIDATE_PROVIDER','HYPOTHESIS_PERSISTENCE','HYPOTHESIS_UPDATE_BATCH')

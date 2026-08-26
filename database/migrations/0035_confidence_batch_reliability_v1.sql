@@ -137,7 +137,7 @@ ALTER TABLE public.post_response_intelligence_effects
     effect_key IN ('MEMORY_WRITE','INTENT_PROVIDER','ASSOCIATION_PROVIDER','CANDIDATE_PROVIDER','HYPOTHESIS_PERSISTENCE','HYPOTHESIS_UPDATE_BATCH','CONFIDENCE_BATCH')
     OR (result_code IS NULL AND result_reference IS NULL AND result_payload IS NULL)
   ),
-  ADD CONSTRAINT post_response_intelligence_effects_confidence_batch_result_check CHECK (
+  ADD CONSTRAINT post_response_intelligence_effects_confidence_result_check CHECK (
     effect_key<>'CONFIDENCE_BATCH'
     OR (result_code IS NULL AND result_reference IS NULL AND result_payload IS NULL)
     OR (state='COMPLETED' AND result_code='NO_CONFIDENCE_TARGETS' AND result_reference IS NULL AND result_payload IS NULL)
