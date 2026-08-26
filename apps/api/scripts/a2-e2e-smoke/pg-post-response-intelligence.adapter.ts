@@ -11,6 +11,8 @@ import type { HypothesisGenerationIntentExtractionResult } from '../../src/hypot
 import type { MemoryWriteResult } from '../../src/memory/memory-write.service';
 import type { DurableAssociationResult } from '../../src/post-response-intelligence/durable-association-result';
 import type { DurableCandidateProviderResult } from '../../src/post-response-intelligence/durable-generation-result';
+import { parseInformationGapSyncResult } from '../../src/post-response-intelligence/information-gap-sync-result';
+import type { InformationGapSyncResult } from '../../src/post-response-intelligence/information-gap-sync-result';
 import { CONFIDENCE_BATCH_COMMAND_STATUSES } from '../../src/post-response-intelligence/post-response-intelligence.types';
 import type {
   ClaimableIntelligenceEffect,
@@ -21,6 +23,9 @@ import type {
 import type { SmokeDbSession } from './smoke-db';
 
 export class PgPostResponseIntelligenceRepositoryAdapter {
+  /** Transport-only observability: how many times the canonical migration-0038 sync command was invoked. */
+  informationGapSyncCount = 0;
+
   constructor(private readonly db: SmokeDbSession) {}
 
   async acquire(input: {
@@ -99,6 +104,20 @@ export class PgPostResponseIntelligenceRepositoryAdapter {
     );
     const value = rows[0]?.value ?? '';
     return (CONFIDENCE_BATCH_COMMAND_STATUSES as readonly string[]).includes(value) ? (value as ConfidenceBatchCommandStatus) : 'NO_OP';
+  }
+
+  async syncInformationGaps(id: string): Promise<InformationGapSyncResult> {
+    // Same canonical SQL command and same strict production parser as the
+    // production repository; this adapter only substitutes the transport.
+    this.informationGapSyncCount += 1;
+    const rows = await this.db.asRole<{ value: unknown }>(
+      'service_role',
+      'SELECT public.sync_post_response_information_gaps_v1($1) AS value',
+      [id],
+    );
+    const parsed = parseInformationGapSyncResult(rows[0]?.value);
+    if (!parsed) throw new Error('POST_RESPONSE_DATABASE_UNAVAILABLE');
+    return parsed;
   }
 
   async finish(id: string, state: 'COMPLETED' | 'SKIPPED' | 'QUARANTINED' | 'FAILED', outcome: string, stage: string): Promise<boolean> {

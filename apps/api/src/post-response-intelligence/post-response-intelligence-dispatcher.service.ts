@@ -52,6 +52,21 @@ export class PostResponseIntelligenceDispatcherService{
     if(durableBatch.state!=='COMPLETED')return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','HYPOTHESIS_UPDATE_BATCH');
     if(recoverHypothesisUpdateBatchResult(durableBatch,association.commands).status!=='UPDATES_APPLIED')return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','HYPOTHESIS_UPDATE_BATCH_RECOVERY');
    }}
+  // Information Gap / Question Integration v1: once a successful or recovered
+  // UPDATES_APPLIED batch exists, its exact-version EVALUATED Confidence
+  // receipts are synchronized into the frozen Information Gap Runtime BEFORE
+  // any downstream Intent/Candidate provider activity. The command receives
+  // ONLY the execution identity and derives/validates every source itself; a
+  // PENDING_RETRY receipt is never fabricated into a gap. A transport failure
+  // returns non-terminal (zero downstream provider work) so the existing
+  // bounded redelivery recovers the completed batch and reruns the idempotent
+  // sync - never replaying the mutation or its Confidence evaluations; a
+  // QUARANTINED sync result fails closed.
+  if(association&&association.status==='AUTHORIZED_COMMANDS'){
+   const gapSync=await this.syncInformationGaps(execution);
+   if(gapSync==='FAILED')return false;
+   if(gapSync==='QUARANTINED')return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','INFORMATION_GAP_SYNC');
+  }
   const assessment=await this.enrichment.evaluateGenerationEligibility(context,turn.content,'ALLOW');if(!('triggerClassification'in assessment))return this.terminal(execution,'SKIPPED','NOT_ELIGIBLE','ELIGIBILITY');
   // A durably COMPLETED INTENT_PROVIDER carries its own post-authority result, so a redelivery recovers the exact authorized intent instead of losing it with the process and false-skipping. A fresh run persists the typed result atomically with completion before consuming it.
   const persistedIntent=effects.find(effect=>effect.effect_key==='INTENT_PROVIDER'&&effect.state==='COMPLETED');let intent:AuthorizedHypothesisGenerationIntent;
@@ -143,10 +158,25 @@ export class PostResponseIntelligenceDispatcherService{
   // the global fail-closed rule on redelivery.
   if(!durable||durable.state!=='COMPLETED')return false;
   return this.finishConfidence(execution,durable,hypothesisIds);}
- private async finishConfidence(execution:IntelligenceExecution,effect:IntelligenceEffectState,hypothesisIds:readonly string[]):Promise<true>{
-  return recoverConfidenceBatchResult(effect,hypothesisIds).status==='INDETERMINATE'
-   ?this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','CONFIDENCE_BATCH_RECOVERY')
-   :this.terminal(execution,'COMPLETED','COMPLETED','DONE');}
+ private async finishConfidence(execution:IntelligenceExecution,effect:IntelligenceEffectState,hypothesisIds:readonly string[]):Promise<boolean>{
+  if(recoverConfidenceBatchResult(effect,hypothesisIds).status==='INDETERMINATE')
+   return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','CONFIDENCE_BATCH_RECOVERY');
+  // Information Gap / Question Integration v1: the idempotent gap sync must
+  // succeed BEFORE terminal success. A transport failure returns non-terminal
+  // (no ACK) so the existing bounded redelivery recovers the durable typed
+  // Confidence result with zero upstream replay - zero Memory, Association,
+  // Update, Eligibility, Intent, Candidate, Persistence, HIM or Confidence
+  // work - and reruns only the sync; a QUARANTINED sync result fails closed.
+  const gapSync=await this.syncInformationGaps(execution);
+  if(gapSync==='FAILED')return false;
+  if(gapSync==='QUARANTINED')return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','INFORMATION_GAP_SYNC');
+  return this.terminal(execution,'COMPLETED','COMPLETED','DONE');}
+ // The migration-0038 sync command owns all source derivation, integrity
+ // validation and materialization; the dispatcher only routes its bounded
+ // outcomes. Transport/database failures are sanitized to FAILED - success is
+ // never fabricated from an HTTP outcome.
+ private async syncInformationGaps(execution:IntelligenceExecution):Promise<'SYNCED'|'QUARANTINED'|'FAILED'>{
+  try{const result=await this.ledger.syncInformationGaps(execution.id);return result.status==='QUARANTINED'?'QUARANTINED':'SYNCED';}catch{return'FAILED';}}
  // Result-aware completion for a newly executed ASSOCIATION_PROVIDER effect. The
  // provider is invoked at most once; a successful post-authority outcome persists
  // its typed durable result atomically with completion, and any non-success

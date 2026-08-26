@@ -78,6 +78,7 @@ export class DeterministicCandidateGenerator implements HypothesisCandidateGener
   constructor(
     private readonly statement: string,
     private readonly type: HypothesisType,
+    private readonly assumptions: readonly string[] = [],
   ) {}
 
   get callCount(): number {
@@ -94,7 +95,7 @@ export class DeterministicCandidateGenerator implements HypothesisCandidateGener
         scope: request.scope,
         supportingEvidenceIds: request.eligibleEvidence.map((item) => item.evidenceId),
         contradictingEvidenceIds: [],
-        assumptions: [],
+        assumptions: [...this.assumptions],
         disconfirmingConditions: [],
       },
     ];

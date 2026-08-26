@@ -65,11 +65,48 @@ test('CI runs the migration 0036 verifier once, after 0035 and before the Redis 
     /^node --env-file-if-exists=\.env database\/verify-migration-0036\.mjs$/u);
 });
 
-test('the canonical migration chain ends at the Background HIM Runtime Consumption forward migration 0037', async () => {
+test('the canonical migration chain ends at the Information Gap / Question Integration forward migration 0038', async () => {
   const migrations = (await readdir(new URL('database/migrations/', root))).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0037_background_him_runtime_consumption_v1.sql');
+  assert.equal(migrations.at(-1), '0038_information_gap_question_integration_v1.sql');
   assert.ok(migrations.includes('0036_hypothesis_lifecycle_completion_v1.sql'), 'migration 0036 remains untouched in the chain');
-  assert.equal(migrations.some((name) => name.startsWith('0038')), false, 'no migration 0038');
+  assert.ok(migrations.includes('0037_background_him_runtime_consumption_v1.sql'), 'migration 0037 remains untouched in the chain');
+  assert.equal(migrations.some((name) => name.startsWith('0039')), false, 'no migration 0039');
+});
+
+test('CI runs the migration 0038 verifier once, after the 0035/0036 verifiers and before the Redis and A2 E2E stages', () => {
+  const invocations = apiCi.match(/run: npm run verify:information-gap-question-integration:integration/gu) ?? [];
+  assert.equal(invocations.length, 1, 'CI invokes the Information Gap integration verifier exactly once');
+  const gapIndex = apiCi.indexOf('run: npm run verify:information-gap-question-integration:integration');
+  assert.ok(gapIndex > apiCi.indexOf('run: npm run verify:confidence-batch-reliability:integration'),
+    'the Information Gap integration verifier runs after the migration 0035 verifier');
+  assert.ok(gapIndex > apiCi.indexOf('run: npm run verify:hypothesis-lifecycle-completion:integration'),
+    'the Information Gap integration verifier runs after the migration 0036 verifier');
+  assert.ok(gapIndex < apiCi.indexOf('run: npm run verify:post-response-dispatch:integration'),
+    'the Information Gap integration verifier runs before the Redis Streams dispatch verifier');
+  assert.ok(gapIndex < apiCi.indexOf('run: npm run verify:a2-e2e-runtime-smoke'),
+    'the Information Gap integration verifier runs before the A2 E2E runtime smoke');
+  assert.match(apiCi, /run: npm run verify:question:integration/u, 'the standalone Question Runtime verifier remains wired');
+  assert.equal(typeof packageJson.scripts['verify:information-gap-question-integration:integration'], 'string');
+  assert.match(packageJson.scripts['verify:information-gap-question-integration:integration'],
+    /^node --env-file-if-exists=\.env database\/verify-migration-0038\.mjs$/u);
+});
+
+test('the smoke proves the idempotent Information Gap synchronization and the frozen Question Candidate boundary', () => {
+  assert.match(smokeSources, /sync_post_response_information_gaps_v1/u,
+    'the smoke transport uses the migration 0038 service-role sync command, not a direct gap write');
+  assert.match(smokeScript, /the Information Gap sync command executed exactly twice: post-update and post-generation/u);
+  assert.match(smokeScript, /public\.information_gap_confidence_sources/u, 'the durable automatic-gap source table is observed');
+  assert.match(smokeScript, /exact controlled information_needed text/u);
+  assert.match(smokeScript, /automatic answerability is never inferred/u);
+  assert.match(smokeScript, /no preferred Question type is ever inferred/u);
+  assert.match(smokeScript, /the calibration-only code never materialized a gap or a source row/u);
+  assert.match(smokeScript, /zero automatic Question Candidate rows exist for the automatic gaps/u,
+    'the frozen Question Candidate boundary is proven untouched');
+  assert.match(smokeScript, /terminal duplicate delivery performed zero Information Gap sync calls/u);
+  assert.match(smokeScript, /durable Information Gap rows byte-equivalent after duplicate/u);
+  assert.match(smokeScript, /durable gap source rows byte-equivalent after duplicate/u);
+  assert.doesNotMatch(smokeSources, /INSERT INTO public\.(?:information_gaps|question_candidates|confidence_evaluations)/u,
+    'the smoke never hand-inserts a gap, a Question Candidate or a Confidence row');
 });
 
 test('the smoke proves minimized HIM consumption on the fresh generation path', () => {
