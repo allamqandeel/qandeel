@@ -103,11 +103,13 @@ async function verifySurfaceAndAcls() {
   )).map((row) => row.conname);
   assert.deepEqual(constraints, [
     'post_response_intelligence_effects_association_result_check',
+    'post_response_intelligence_effects_candidate_result_check',
     'post_response_intelligence_effects_claimed_result_check',
     'post_response_intelligence_effects_intent_result_check',
     'post_response_intelligence_effects_memory_result_check',
+    'post_response_intelligence_effects_persistence_result_check',
     'post_response_intelligence_effects_untyped_result_check',
-  ], 'the 0029 checks survive and Association states its own domain');
+  ], 'the 0029 checks survive, Association states its own domain, and the 0033 generation checks join them');
   const registry = (await one(
     `SELECT pg_get_constraintdef(oid) definition FROM pg_constraint
       WHERE conrelid='public.post_response_intelligence_effects'::regclass
@@ -231,7 +233,9 @@ async function verifyResultDomain() {
   await q('ROLLBACK TO SAVEPOINT accepted');
   await q('RELEASE SAVEPOINT accepted');
 
-  // Untyped effects still carry no result at all, payload included.
+  // A CANDIDATE_PROVIDER row still rejects Association codes and code-less
+  // payloads (via the migration 0033 candidate-scoped check); no Association
+  // invariant is weakened by the later typed generation effects.
   const untyped = await newExecution({ withMemory: false, claimAssociation: false });
   await identity('service_role');
   assert.equal((await one(CLAIM, [untyped.id, 'CANDIDATE_PROVIDER'])).ok, true);
@@ -278,10 +282,12 @@ async function verifyGenericCompletion() {
     { state: untouched.state, code: untouched.result_code, payload: untouched.result_payload, completed: untouched.completed_at },
     { state: 'CLAIMED', code: null, payload: null, completed: null },
   );
-  // Every other effect key keeps generic parity.
+  // Only CONFIDENCE_BATCH keeps generic parity: migration 0033 made both
+  // generation effects typed, and verify-migration-0033 proves their own
+  // rejection and typed completion contracts.
   const generic = await newExecution({ withMemory: false, claimAssociation: false });
   await identity('service_role');
-  for (const key of EFFECT_KEYS.filter((value) => !['MEMORY_WRITE', 'INTENT_PROVIDER', 'ASSOCIATION_PROVIDER'].includes(value))) {
+  for (const key of EFFECT_KEYS.filter((value) => value === 'CONFIDENCE_BATCH')) {
     assert.equal((await one(CLAIM, [generic.id, key])).ok, true, `claim ${key}`);
     assert.equal((await one(COMPLETE_GENERIC, [generic.id, key])).ok, true, `generic completion parity for ${key}`);
   }

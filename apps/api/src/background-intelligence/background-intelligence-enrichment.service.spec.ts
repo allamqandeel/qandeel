@@ -8,6 +8,39 @@ describe('BackgroundIntelligenceEnrichmentService',()=>{const setup=(overrides:R
  it('shares Memory evaluator and normalized duplicate behavior',async()=>{const valid=await context(),skip=setup();await expect(skip.service.evaluateAndWriteMemory(valid,'hello')).resolves.toEqual({decision:'SKIP',reason:'NO_SUPPORTED_EXPLICIT_PATTERN'});const duplicate=setup({listActiveMemories:jest.fn().mockResolvedValue([memory({content:'my GOAL is ship!'})])});await expect(duplicate.service.evaluateAndWriteMemory(valid,'My goal is ship.')).resolves.toMatchObject({decision:'SKIP',reason:'EXACT_NORMALIZED_DUPLICATE'});expect(duplicate.data.createMemory).not.toHaveBeenCalled();});
  it('projects Evidence with the canonical pure projection',async()=>{const valid=await context(),{service}=setup({listActiveMemories:jest.fn().mockResolvedValue([memory()])});await expect(service.listEligibleEvidence(valid,new Date('2026-02-01T00:00:00Z'))).resolves.toEqual([expect.objectContaining({evidenceId:`memory:${memory().id}`,statement:'My goal is ship.'})]);});
  it('uses the shared trigger classifier without a provider',async()=>{const valid=await context(),{service}=setup({listActiveMemories:jest.fn().mockResolvedValue([memory()])});const result=await service.evaluateGenerationEligibility(valid,'Why do I always give up?','ALLOW');expect(result.eligibility.status).toBe('ELIGIBLE');});
+ describe('generateHypothesisCandidatePlan (Finding 08 provider stage)',()=>{
+  const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const generationInput=()=>({problem:'Why do I always give up?',domain:'GENERAL' as const,scope:`CONVERSATION_SESSION:${ids.session}`,evidenceIds:[`memory:${memory().id}`]});
+  const proposal=(overrides:Record<string,unknown>={})=>({statement:'I give up when goals feel vague.',type:'CAUSAL' as const,domain:'GENERAL' as const,scope:`CONVERSATION_SESSION:${ids.session}`,supportingEvidenceIds:[`memory:${memory().id}`],contradictingEvidenceIds:[],assumptions:['Assumes vague goals recur'],disconfirmingConditions:['A vague goal is finished on time'],...overrides});
+  const planSetup=()=>setup({listActiveMemories:jest.fn().mockResolvedValue([memory()])});
+  it('invokes the provider once, assigns stable server UUIDs before completion, and performs zero Hypothesis writes',async()=>{
+   const valid=await context(),{service,data}=planSetup(),generate=jest.fn().mockResolvedValue([proposal(),proposal({statement:'I recover focus after small wins.'})]);
+   const plan=await service.generateHypothesisCandidatePlan(valid,generationInput(),{generate});
+   expect(generate).toHaveBeenCalledTimes(1);
+   if(plan.code!=='VALIDATED_CANDIDATES')throw new Error('expected a validated plan');
+   expect(plan.candidates).toHaveLength(2);
+   for(const candidate of plan.candidates)expect(candidate.hypothesisId).toMatch(UUID);
+   expect(new Set(plan.candidates.map(candidate=>candidate.hypothesisId)).size).toBe(2);
+   // The durable candidate is the exact final stored form of the accepted proposal.
+   expect(plan.candidates[0]).toEqual({hypothesisId:plan.candidates[0].hypothesisId,...proposal()});
+   // Provider stage writes nothing: no create, no attach, no link.
+   expect(data.createSystemHypothesis).not.toHaveBeenCalled();expect(data.attachHypothesisEvidence).not.toHaveBeenCalled();expect(data.linkCompetingHypotheses).not.toHaveBeenCalled();
+  });
+  it('preserves the existing validation policy and returns NO_ACCEPTED_CANDIDATES when nothing survives',async()=>{
+   const valid=await context(),{service,data}=planSetup();
+   const rejectedAll=await service.generateHypothesisCandidatePlan(valid,generationInput(),{generate:jest.fn().mockResolvedValue([proposal({domain:'WORK'}),proposal({supportingEvidenceIds:['memory:20000000-0000-4000-8000-00000000ffff']}),proposal({supportingEvidenceIds:[`memory:${memory().id}`],contradictingEvidenceIds:[`memory:${memory().id}`]})])});
+   expect(rejectedAll).toEqual({code:'NO_ACCEPTED_CANDIDATES'});
+   const partial=await service.generateHypothesisCandidatePlan(valid,generationInput(),{generate:jest.fn().mockResolvedValue([proposal(),proposal()])});
+   if(partial.code!=='VALIDATED_CANDIDATES')throw new Error('expected a validated plan');
+   expect(partial.candidates).toHaveLength(1);
+   expect(data.createSystemHypothesis).not.toHaveBeenCalled();
+  });
+  it('rejects generation evidence that is not currently eligible before calling the provider',async()=>{
+   const valid=await context(),{service}=planSetup(),generate=jest.fn();
+   await expect(service.generateHypothesisCandidatePlan(valid,{...generationInput(),evidenceIds:['memory:20000000-0000-4000-8000-00000000ffff']},{generate})).rejects.toThrow('Generation evidence is not currently eligible.');
+   expect(generate).not.toHaveBeenCalled();
+  });
+ });
  it('sends only authoritative minimal inputs to Confidence RPC',async()=>{const valid=await context(),hypothesis={id:'30000000-0000-4000-8000-000000000001',version:7},createConfidenceEvaluation=jest.fn().mockResolvedValue({id:'x'}),{service}=setup({findHypothesis:jest.fn().mockResolvedValue(hypothesis),createConfidenceEvaluation});await service.evaluateHypothesisConfidence(valid,hypothesis.id);expect(createConfidenceEvaluation).toHaveBeenCalledWith(valid,expect.any(String),hypothesis.id,7);});
  it('exports only authority and the narrow enrichment facade',()=>{const exports=Reflect.getMetadata('exports',BackgroundIntelligenceModule);expect(exports).toEqual([BackgroundIntelligenceAuthorityService,BackgroundIntelligenceEnrichmentService]);expect(exports).not.toContain(RawDataApi);});
 

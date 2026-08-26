@@ -159,16 +159,18 @@ test('the repository exposes a typed Intent completion and excludes typed effect
   assert.match(repository, /result\.status==='AUTHORIZED'\?this\.booleanRpc\('complete_post_response_intent_provider_effect_v1',\{p_execution_id:id,p_result_code:'INTENT_AUTHORIZED',p_result_payload:result\.intent\}\)/u);
   assert.match(repository, /p_result_code:'INTENT_NOT_AUTHORIZED',p_result_payload:null/u);
   // The generic completion cannot be handed a typed effect at compile time.
-  // Migration 0031 widened the excluded typed set with ASSOCIATION_PROVIDER;
-  // Intent's own exclusion is unchanged.
+  // Migration 0031 widened the excluded typed set with ASSOCIATION_PROVIDER
+  // and migration 0033 with both generation effects; Intent's own exclusion is
+  // unchanged.
   assert.match(repository, /async complete\(id:string,effect:GenericIntelligenceEffect\)/u);
-  assert.match(types, /export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'>;/u);
+  assert.match(types, /export type GenericIntelligenceEffect=Exclude<IntelligenceEffect,'MEMORY_WRITE'\|'INTENT_PROVIDER'\|'ASSOCIATION_PROVIDER'\|'CANDIDATE_PROVIDER'\|'HYPOTHESIS_PERSISTENCE'>;/u);
   assert.match(types, /result_payload:unknown/u);
   assert.match(types, /IntentProviderEffectResultCode='INTENT_AUTHORIZED'\|'INTENT_NOT_AUTHORIZED'/u);
   // Only the post-authority canonical intent is sent: no raw provider output,
-  // and no reason for a durable NOT_AUTHORIZED. (result.commands is the
-  // Association command's own post-authority payload, not raw output.)
-  assert.doesNotMatch(repositoryCode, /p_result_payload:result(?!\.intent|\.commands)/u);
+  // and no reason for a durable NOT_AUTHORIZED. (result.commands and
+  // result.candidates are the Association and Candidate commands' own
+  // post-authority payloads, not raw output.)
+  assert.doesNotMatch(repositoryCode, /p_result_payload:result(?!\.intent|\.commands|\.candidates)/u);
   assert.doesNotMatch(repositoryCode, /reason|providerOutput|raw/u);
 });
 
