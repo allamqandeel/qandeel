@@ -47,9 +47,13 @@ await client.connect();try{
  }
  // --- Scenario A: two-event chronology ---------------------------------------
  // Event A strictly older than event B, both calculated under the canonical
- // ACTIVE v1 binding: canonical latest is B by event chronology.
+ // ACTIVE v1 binding: canonical latest is B by event chronology. The binding
+ // table carries no authenticated SELECT grant, so this audit read runs as
+ // superuser before restoring the JWT identity.
+ await client.query('RESET ROLE');
  const v1=(await client.query("SELECT * FROM public.him_canonical_model_bindings WHERE metric_key='hse.energy' AND definition_version=1 AND context_kind='CONVERSATION_SESSION' AND status='ACTIVE'")).rows[0];
  if(!v1)throw new Error('Expected the ACTIVE canonical Energy binding');
+ await identity(one);
  const obsA=(await client.query("SELECT * FROM public.create_hse_energy_measurement($1,'HIGH',NULL)",[sessionMain])).rows[0];
  const obsB=(await client.query("SELECT * FROM public.create_hse_energy_measurement($1,'LOW',NULL)",[sessionMain])).rows[0];
  const eventTimes=(await client.query('SELECT id,created_at FROM public.him_measurement_events WHERE id=ANY($1::uuid[])',[[obsA.measurement_event_id,obsB.measurement_event_id]])).rows;
