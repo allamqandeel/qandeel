@@ -30,4 +30,113 @@ describe('RuntimeEventPublisher',()=>{
  it('quarantines max-attempt events without publishing',async()=>{const max=event({attempt_count:6});const s=setup([max]);await s.publisher.processOnce();expect(s.repository.quarantine).toHaveBeenCalledWith(IDS.event,IDS.claim,'MAX_ATTEMPTS_EXCEEDED');expect(s.transport.publish).not.toHaveBeenCalled();});
  it('keeps delivery behavior authoritative when operational telemetry throws',async()=>{const telemetry={recordPublisherOperation:jest.fn(()=>{throw new Error('telemetry unavailable');})},s=setup([event()],undefined,telemetry);await s.publisher.processOnce();expect(s.transport.publish).toHaveBeenCalledTimes(1);expect(s.repository.ack).toHaveBeenCalledWith(IDS.event,IDS.claim,'1-0');expect(s.repository.retry).not.toHaveBeenCalled();});
  it('does not double-run overlapping polling iterations',async()=>{let release!:()=>void;const pending=new Promise<ClaimedRuntimeEvent[]>(resolve=>{release=()=>resolve([]);}),s=setup([]);s.repository.claim.mockReturnValue(pending);const first=s.publisher.processOnce(),second=s.publisher.processOnce();release();await Promise.all([first,second]);expect(s.repository.claim).toHaveBeenCalledTimes(1);});
+
+ describe('startup recovery supervision (fail-soft liveness)',()=>{
+  const savedNodeEnv=process.env.NODE_ENV;
+  beforeEach(()=>{jest.useFakeTimers();process.env.NODE_ENV='verification';process.env.REDIS_URL='redis://configured';});
+  afterEach(()=>{jest.useRealTimers();if(savedNodeEnv===undefined)delete process.env.NODE_ENV;else process.env.NODE_ENV=savedNodeEnv;});
+  type Readiness='not_configured'|'available'|'degraded';
+  const supervised=(claimed:ClaimedRuntimeEvent[]=[])=>{
+   const transport={readinessStatus:'degraded' as Readiness,connect:jest.fn(),publish:jest.fn().mockResolvedValue('1-0'),close:jest.fn().mockResolvedValue(undefined)};
+   transport.connect.mockImplementation(async()=>{transport.readinessStatus='available';});
+   const repository={enabled:true,claim:jest.fn().mockResolvedValue(claimed),ack:jest.fn().mockResolvedValue(true),retry:jest.fn().mockResolvedValue(true),quarantine:jest.fn().mockResolvedValue(true)}as unknown as jest.Mocked<RuntimeEventAdminRepository>;
+   const telemetry={recordPublisherOperation:jest.fn()};
+   const publisher=new RuntimeEventPublisher(repository,transport as unknown as RuntimeEventTransport,telemetry as unknown as TelemetryService);
+   return{transport,repository,telemetry,publisher};
+  };
+
+  it('keeps supervision alive after a failed startup connection and retries on the next cycle',async()=>{
+   const s=supervised();s.transport.connect.mockRejectedValueOnce(new Error('redis down'));
+   await expect(s.publisher.onModuleInit()).resolves.toBeUndefined();
+   expect(s.telemetry.recordPublisherOperation).toHaveBeenCalledWith('connect','failure');
+   expect(s.repository.claim).toHaveBeenCalledTimes(0);
+   expect(s.publisher.readinessStatus).toBe('degraded');
+   await jest.advanceTimersByTimeAsync(1000);
+   expect(s.transport.connect).toHaveBeenCalledTimes(2);
+   await s.publisher.onModuleDestroy();
+  });
+
+  it('recovers and publishes on the SAME publisher instance without a restart',async()=>{
+   const s=supervised([event()]);s.transport.connect.mockRejectedValueOnce(new Error('redis down'));
+   await s.publisher.onModuleInit();
+   expect(s.repository.claim).toHaveBeenCalledTimes(0);
+   expect(s.publisher.readinessStatus).toBe('degraded');
+   await jest.advanceTimersByTimeAsync(1000);
+   // The same scheduled cycle that reconnected resumes normal claim/publish/ack.
+   expect(s.transport.connect).toHaveBeenCalledTimes(2);
+   expect(s.publisher.readinessStatus).toBe('available');
+   expect(s.repository.claim).toHaveBeenCalledTimes(1);
+   expect(s.transport.publish).toHaveBeenCalledTimes(1);
+   expect(s.repository.ack).toHaveBeenCalledWith(IDS.event,IDS.claim,'1-0');
+   expect(s.repository.retry).not.toHaveBeenCalled();
+   expect(s.repository.quarantine).not.toHaveBeenCalled();
+   await s.publisher.onModuleDestroy();
+  });
+
+  it('never claims outbox rows while the transport stays unavailable — outage burns zero attempts',async()=>{
+   const s=supervised([event()]);s.transport.connect.mockImplementation(async()=>{throw new Error('still down');});
+   await s.publisher.onModuleInit();
+   await jest.advanceTimersByTimeAsync(3000);
+   expect(s.transport.connect).toHaveBeenCalledTimes(4);
+   expect(s.repository.claim).toHaveBeenCalledTimes(0);
+   expect(s.repository.retry).toHaveBeenCalledTimes(0);
+   expect(s.repository.quarantine).toHaveBeenCalledTimes(0);
+   expect(s.transport.publish).not.toHaveBeenCalled();
+   await s.publisher.onModuleDestroy();
+  });
+
+  it('keeps recovery single-flight: overlapping ticks launch no second connect and no claim cycle',async()=>{
+   const s=supervised();s.transport.connect.mockRejectedValueOnce(new Error('redis down'));
+   let release!:()=>void;
+   await s.publisher.onModuleInit();
+   s.transport.connect.mockImplementation(()=>new Promise<void>(resolve=>{release=()=>{s.transport.readinessStatus='available';resolve();};}));
+   await jest.advanceTimersByTimeAsync(1000);
+   await jest.advanceTimersByTimeAsync(2000);
+   expect(s.transport.connect).toHaveBeenCalledTimes(2);
+   expect(s.repository.claim).toHaveBeenCalledTimes(0);
+   release();
+   await jest.advanceTimersByTimeAsync(0);
+   expect(s.repository.claim).toHaveBeenCalledTimes(1);
+   await s.publisher.onModuleDestroy();
+  });
+
+  it('does not reconnect when the transport is already available and keeps normal delivery unchanged',async()=>{
+   const s=supervised([event()]);
+   await s.publisher.onModuleInit();
+   expect(s.transport.connect).toHaveBeenCalledTimes(1);
+   await jest.advanceTimersByTimeAsync(1000);
+   expect(s.transport.connect).toHaveBeenCalledTimes(1);
+   expect(s.repository.claim).toHaveBeenCalledTimes(1);
+   expect(s.repository.ack).toHaveBeenCalledWith(IDS.event,IDS.claim,'1-0');
+   await s.publisher.onModuleDestroy();
+  });
+
+  it('reconnects before any new claim after later degradation and resumes only on success',async()=>{
+   const s=supervised([event()]);
+   await s.publisher.onModuleInit();
+   await jest.advanceTimersByTimeAsync(1000);
+   expect(s.repository.claim).toHaveBeenCalledTimes(1);
+   s.transport.readinessStatus='degraded';
+   s.transport.connect.mockRejectedValueOnce(new Error('redis dropped'));
+   await jest.advanceTimersByTimeAsync(1000);
+   expect(s.transport.connect).toHaveBeenCalledTimes(2);
+   expect(s.repository.claim).toHaveBeenCalledTimes(1);
+   expect(s.publisher.readinessStatus).toBe('degraded');
+   await jest.advanceTimersByTimeAsync(1000);
+   expect(s.transport.connect).toHaveBeenCalledTimes(3);
+   expect(s.repository.claim).toHaveBeenCalledTimes(2);
+   expect(s.publisher.readinessStatus).toBe('available');
+   await s.publisher.onModuleDestroy();
+  });
+
+  it('shutdown clears the timer, closes the transport safely, and prevents any later reconnect or claim',async()=>{
+   const s=supervised();s.transport.connect.mockRejectedValueOnce(new Error('redis down'));
+   await s.publisher.onModuleInit();
+   await s.publisher.onModuleDestroy();
+   expect(s.transport.close).toHaveBeenCalledTimes(1);
+   await jest.advanceTimersByTimeAsync(5000);
+   expect(s.transport.connect).toHaveBeenCalledTimes(1);
+   expect(s.repository.claim).toHaveBeenCalledTimes(0);
+  });
+ });
 });
