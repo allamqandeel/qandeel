@@ -86,6 +86,7 @@ jobs:
       - {name: Verify HIM structured-current binding-transition safety against real PostgreSQL, run: npm run verify:him-structured-current-binding-transition-safety:integration}
       - {name: Verify HIM historical verifier forward compatibility against real PostgreSQL, run: npm run verify:him-historical-verifier-forward-compatibility:integration}
       - {name: Verify HIM legacy snapshot authority retirement and Energy context reconciliation against real PostgreSQL, run: npm run verify:him-legacy-snapshot-authority-energy-context-reconciliation:integration}
+      - {name: Verify HIM canonical latest measurement read semantics against real PostgreSQL, run: npm run verify:him-canonical-latest-measurement-read-semantics:integration}
       - {name: Verify HIM temporal trend source against real PostgreSQL, run: npm run verify:him-trends:integration}
       - {name: Verify HIM Intelligence Snapshot against real PostgreSQL, run: npm run verify:him-snapshot:integration}
       - {name: Verify background HIM runtime consumption against real PostgreSQL, run: npm run verify:background-him-runtime-consumption:integration}
