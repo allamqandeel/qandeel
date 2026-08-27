@@ -5,6 +5,6 @@ export const CALIBRATED_STRUCTURED_METRICS=Object.freeze([
   {metricKey:'hse.attention',model:'hse-attention.model.ts',migration:'0014_hse_attention_measurement_model_v1.sql',approved:['SITUATION','CONVERSATION_SESSION','DECISION'],sqlPositive:[/p_context_kind='CONVERSATION_SESSION'THEN/,/ELSIF p_context_kind=ANY\(ARRAY\['SITUATION','DECISION'\]\)THEN/],routing:/key==='hse\.attention'&&\['SITUATION','CONVERSATION_SESSION','DECISION'\]\.includes\(kind\)/},
   {metricKey:'hse.self-confidence',model:'hse-self-confidence.model.ts',migration:'0015_hse_self_confidence_measurement_model_v1.sql',approved:['SITUATION','DECISION'],sqlPositive:[/IF p_context_kind=ANY\(ARRAY\['SITUATION','DECISION'\]\)THEN/],routing:/key==='hse\.self-confidence'&&\['SITUATION','DECISION'\]\.includes\(kind\)/},
   {metricKey:'hse.stress',model:'hse-stress.model.ts',migration:'0016_hse_stress_measurement_model_v1.sql',approved:['SITUATION','CONVERSATION_SESSION'],sqlPositive:[/p_context_kind='CONVERSATION_SESSION'THEN/,/ELSIF p_context_kind='SITUATION'THEN/],routing:/key==='hse\.stress'&&\['SITUATION','CONVERSATION_SESSION'\]\.includes\(kind\)/},
+  {metricKey:'hbs.avoidance',model:'hbs-avoidance.model.ts',migration:'0040_hbs_avoidance_measurement_model_v1.sql',approved:['GOAL','SITUATION'],sqlPositive:[/context_kind=ANY\(ARRAY\['GOAL','SITUATION'\]\)/,/observation_window_end-e\.observation_window_start<>interval '7 days'/,/canonical_now-interval '7 days',canonical_now/],routing:/key==='hbs\.avoidance'&&\(kind==='GOAL'\|\|kind==='SITUATION'\)/},
 ]);
-export const EXPECTED_UNCALIBRATED_COUNT=12;
-
+export const EXPECTED_UNCALIBRATED_COUNT=11;

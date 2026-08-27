@@ -6,7 +6,7 @@ const expected=['hse.stress','hse.energy','hse.motivation','hse.self-confidence'
 describe('Initial HIM catalog',()=>{
   it('registers exactly the 17 canonical identities',()=>expect(new HimDefinitionRegistry().list().map(x=>x.metricKey)).toEqual(expected));
   it('contains no bridge-only examples',()=>expect(new HimDefinitionRegistry().list().map(x=>x.canonicalName)).not.toEqual(expect.arrayContaining(['Decision Clarity','Action Readiness','Goal Alignment','Decision Quality','Uncertainty','Progress','Cognitive Load','Relationship Health','Growth Momentum','Sleep'])));
-  it('activates five structured HSE metrics while leaving 12 metrics uncalibrated',()=>{
+  it('activates six calibrated structured metrics while leaving 11 metrics uncalibrated',()=>{
     const stress=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.stress')!;
     expect(stress.calculationStatus).toBe('CALIBRATED');
     expect(stress.scaleReference).toBe('hse.stress.ordinal-5.v1');
@@ -23,7 +23,17 @@ describe('Initial HIM catalog',()=>{
     const selfConfidence=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.self-confidence')!;
     expect(selfConfidence.calculationStatus).toBe('CALIBRATED');
     expect(selfConfidence.scaleReference).toBe('hse.self-confidence.ordinal-5.v1');
-    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence'].includes(x.metricKey)).forEach(x=>{
+    // HBS Avoidance is calibrated while its Foundation semantic mapping stays
+    // deliberately unresolved: calibration and semantic mapping are independent.
+    const avoidance=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hbs.avoidance')!;
+    expect(avoidance.calculationStatus).toBe('CALIBRATED');
+    expect(avoidance.scaleReference).toBe('hbs.avoidance.frequency-5.v1');
+    expect(avoidance.requiredInputContract).toBe('DIRECT_STRUCTURED_TARGET_BOUND_PERIOD_USER_REPORT_SEVEN_DAY_V1');
+    expect(avoidance.hifOwner).toBe('HBS');
+    expect(avoidance.semanticMappingStatus).toBe('UNRESOLVED');
+    expect(avoidance.semanticType).toBeNull();
+    expect(avoidance.validContextKinds).toEqual(['SITUATION','GOAL']);
+    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance'].includes(x.metricKey)).forEach(x=>{
       expect(x.calculationStatus).toBe('UNCALIBRATED');
       expect(x.scaleReference).toBe('UNCALIBRATED_NO_PRODUCTION_SCALE');
     });

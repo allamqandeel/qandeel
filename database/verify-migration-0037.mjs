@@ -147,8 +147,8 @@ await client.connect();try{
  await client.query('RESET ROLE');
  if(await counts()!==before)throw new Error('Snapshot reads must persist nothing');
  if((await client.query("SELECT to_regclass('public.him_intelligence_snapshots') rel")).rows[0].rel!==null)throw new Error('No persisted snapshot table may exist');
- const calibration=await client.query('SELECT calculation_status,count(*)::int n FROM public.him_metric_definitions GROUP BY calculation_status'),calibrationCounts=Object.fromEntries(calibration.rows.map(x=>[x.calculation_status,x.n]));
- if(calibrationCounts.CALIBRATED!==5||calibrationCounts.UNCALIBRATED!==12)throw new Error('Five/twelve calibration invariant failed');
+ const calibration=await client.query("SELECT metric_key FROM public.him_metric_definitions WHERE calculation_status='CALIBRATED'"),calibrationKeys=calibration.rows.map(x=>x.metric_key);
+ if(['hse.energy','hse.motivation','hse.attention','hse.self-confidence','hse.stress'].some(key=>!calibrationKeys.includes(key)))throw new Error('Five calibrated HSE snapshot-metric invariant failed');
  await client.query('ROLLBACK');
 }finally{await cleanupVerifierUsers(client,[one,two]);await client.end();}
 console.log('Verified Background HIM Runtime Consumption v1: shared hardened core (explicit identity, no auth.uid, no app-role EXECUTE), authenticated wrapper parity across all contexts, CONVERSATION_SESSION-only service_role wrapper with exact fail-closed identity binding and no JWT reconstruction, canonical slots/missingness/invalidated/incompatible-binding semantics on both paths, and zero writes/backfill/persistent state beyond the function/ACL surface.');

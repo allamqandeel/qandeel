@@ -6,6 +6,7 @@ import { calculateHseMotivation,HSE_MOTIVATION_MODEL_ID,HSE_MOTIVATION_MODEL_VER
 import { calculateHseAttention,HSE_ATTENTION_MODEL_ID,HSE_ATTENTION_MODEL_VERSION } from './hse-attention.model';
 import { calculateHseSelfConfidence,HSE_SELF_CONFIDENCE_MODEL_ID,HSE_SELF_CONFIDENCE_MODEL_VERSION } from './hse-self-confidence.model';
 import { calculateHseStress,HSE_STRESS_MODEL_ID,HSE_STRESS_MODEL_VERSION } from './hse-stress.model';
+import { calculateHbsAvoidance,HBS_AVOIDANCE_MODEL_ID,HBS_AVOIDANCE_MODEL_VERSION } from './hbs-avoidance.model';
 
 const exactContext=(kind:string,id:string)=>kind==='GLOBAL'?id==='GLOBAL':kind==='SITUATION'?id.length>0&&id.length<=128&&id.trim()===id&&id!=='GLOBAL':/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 @Injectable()
@@ -25,6 +26,7 @@ export class HimCalculationService {
     if(model.modelId===HSE_ATTENTION_MODEL_ID&&model.modelVersion===HSE_ATTENTION_MODEL_VERSION){const result=calculateHseAttention(input);this.validateResult(input,result);return result;}
     if(model.modelId===HSE_SELF_CONFIDENCE_MODEL_ID&&model.modelVersion===HSE_SELF_CONFIDENCE_MODEL_VERSION){const result=calculateHseSelfConfidence(input);this.validateResult(input,result);return result;}
     if(model.modelId===HSE_STRESS_MODEL_ID&&model.modelVersion===HSE_STRESS_MODEL_VERSION){const result=calculateHseStress(input);this.validateResult(input,result);return result;}
+    if(model.modelId===HBS_AVOIDANCE_MODEL_ID&&model.modelVersion===HBS_AVOIDANCE_MODEL_VERSION){const result=calculateHbsAvoidance(input);this.validateResult(input,result);return result;}
     throw new BadRequestException('No approved deterministic implementation is registered.');
   }
   validateResult(input:HimMetricCalculationInput,result:HimMetricCalculationResult):void {

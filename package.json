@@ -32,6 +32,7 @@
     "verify:hse-attention:integration": "node --env-file-if-exists=.env database/verify-migration-0014.mjs",
     "verify:hse-self-confidence:integration": "node --env-file-if-exists=.env database/verify-migration-0015.mjs",
     "verify:hse-stress:integration": "node --env-file-if-exists=.env database/verify-migration-0016.mjs",
+    "verify:hbs-avoidance:integration": "node --env-file-if-exists=.env database/verify-migration-0040.mjs",
     "verify:him-trends:integration": "node --env-file-if-exists=.env database/verify-him-trends-v1.mjs",
     "verify:him-snapshot:integration": "node --env-file-if-exists=.env database/verify-him-intelligence-snapshot-v1.mjs",
     "verify:background-him-runtime-consumption:integration": "node --env-file-if-exists=.env database/verify-migration-0037.mjs",

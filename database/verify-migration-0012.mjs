@@ -10,7 +10,7 @@ const between=(value,start,end)=>new Date(value)>=new Date(start)&&new Date(valu
 await client.connect();
 try{
  const state=await client.query("SELECT metric_key,calculation_status FROM public.him_metric_definitions");
- if(state.rows.filter(x=>x.calculation_status==='CALIBRATED').map(x=>x.metric_key).sort().join()!=='hse.attention,hse.energy,hse.motivation,hse.self-confidence,hse.stress'||state.rows.filter(x=>x.calculation_status==='UNCALIBRATED').length!==12)throw new Error('Expected five calibrated HSE metrics');
+ if(!['hse.attention','hse.energy','hse.motivation','hse.self-confidence','hse.stress'].every(key=>state.rows.some(x=>x.metric_key===key&&x.calculation_status==='CALIBRATED')))throw new Error('Expected the five calibrated HSE metrics (later HIM Expansion tasks may calibrate more)');
  const binding=await client.query("SELECT count(*)::int n FROM public.him_canonical_model_bindings WHERE status='ACTIVE' AND metric_key='hse.energy' AND context_kind='CONVERSATION_SESSION'");
  if(binding.rows[0].n!==1)throw new Error('Expected one active Energy binding');
  await client.query('INSERT INTO auth.users(id) VALUES($1),($2) ON CONFLICT DO NOTHING',[one,two]);
