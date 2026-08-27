@@ -1,9 +1,11 @@
 // Real-PostgreSQL verifier for migration 0041 - HBS Consistency + Initiative
 // Measurement & Calibration v1 (HIM Expansion metrics 7-8/17, first combined
-// task). Behaviorally proves: the exact 17-definition catalog with eight
-// calibrated / nine uncalibrated where exactly hbs.consistency and
-// hbs.initiative moved out of the uncalibrated group while keeping HBS
-// ownership and an UNRESOLVED/NULL semantic mapping, and hbs.avoidance stayed
+// task). Behaviorally proves this phase's durable historical guarantees: the
+// exact 17-definition catalog in which the five HSE metrics, hbs.avoidance,
+// hbs.consistency, and hbs.initiative are all calibrated (later HIM Expansion
+// phases may calibrate more - no future global calibrated count is frozen
+// here), the two new metrics keep HBS ownership with an UNRESOLVED/NULL
+// semantic mapping, and hbs.avoidance stays
 // calibrated and unchanged; exact per-metric governance artifacts with no
 // dependency edges and no shared sibling artifacts; owner-only target-bound
 // GOAL/SITUATION creation with the server-derived immutable seven-day window
@@ -21,19 +23,22 @@ const one=randomUUID(),two=randomUUID(),fabricated=randomUUID(),past='2001-01-01
 const identity=async(c,id)=>{await c.query('SET LOCAL ROLE authenticated');await c.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:id,role:'authenticated'})]);};
 const rejects=async(c,sql,params=[])=>{await c.query('SAVEPOINT expected_rejection');let failed=false;try{await c.query(sql,params);}catch{failed=true;await c.query('ROLLBACK TO SAVEPOINT expected_rejection');}await c.query('RELEASE SAVEPOINT expected_rejection');if(!failed)throw new Error(`Expected rejection: ${sql}`);};
 const HSE=['hse.attention','hse.energy','hse.motivation','hse.self-confidence','hse.stress'];
-const UNCALIBRATED_9=['hbs.reflection','hgs.habit-strength','hgs.purpose-alignment','hgs.resilience','hgs.self-awareness','hrs.communication','hrs.emotional-safety','hrs.relationship-trust','hrs.repair'];
 const METRICS={
  'hbs.consistency':{scale:'hbs.consistency.frequency-5.v1',model:'hbs.consistency.direct-structured-seven-day-self-report',instrument:'hbs.consistency.direct-target-bound-seven-day-report',approval:'qandeel.him.consistency.foundation-approval',special:'INSUFFICIENT_REPEATED_OPPORTUNITIES',create:'create_hbs_consistency_measurement_v1',correct:'correct_hbs_consistency_measurement_v1',calculate:'calculate_hbs_consistency_measurement_v1',lockNs:'hbs.consistency.observation:'},
  'hbs.initiative':{scale:'hbs.initiative.frequency-5.v1',model:'hbs.initiative.direct-structured-seven-day-self-report',instrument:'hbs.initiative.direct-target-bound-seven-day-report',approval:'qandeel.him.initiative.foundation-approval',special:'NO_CLEAR_SELF_OWNED_OPPORTUNITY',create:'create_hbs_initiative_measurement_v1',correct:'correct_hbs_initiative_measurement_v1',calculate:'calculate_hbs_initiative_measurement_v1',lockNs:'hbs.initiative.observation:'},
 };
 await client.connect();try{
- // --- Phase inventory: this phase's exact 8/9 guarantee ----------------------
+ // --- Phase inventory: this phase's durable historical guarantees ------------
+ // The one-time 8/9 activation invariant lives inside migration 0041 itself
+ // and ran at migration time. This verifier asserts only what must stay true
+ // forever after this phase: 17 definitions, the five HSE metrics plus
+ // hbs.avoidance, hbs.consistency, and hbs.initiative calibrated with their
+ // exact identities. Later HIM Expansion tasks may calibrate more metrics, so
+ // no global calibrated count or exact uncalibrated list is frozen here.
  const state=await client.query('SELECT metric_key,calculation_status,hif_owner,semantic_mapping_status,semantic_type,scale_reference,required_input_contract,dependency_ids,consumers FROM public.him_metric_definitions');
  if(state.rows.length!==17)throw new Error('Expected exactly 17 metric definitions');
- const calibrated=state.rows.filter(x=>x.calculation_status==='CALIBRATED').map(x=>x.metric_key).sort();
- const uncalibrated=state.rows.filter(x=>x.calculation_status==='UNCALIBRATED').map(x=>x.metric_key).sort();
- if(calibrated.join()!==[...HSE,'hbs.avoidance','hbs.consistency','hbs.initiative'].sort().join())throw new Error('Expected exactly eight calibrated metrics (five HSE plus hbs.avoidance, hbs.consistency, hbs.initiative)');
- if(uncalibrated.length!==9||uncalibrated.join()!==UNCALIBRATED_9.join())throw new Error('Expected exactly the nine remaining uncalibrated metrics: only hbs.consistency and hbs.initiative changed');
+ const calibrated=state.rows.filter(x=>x.calculation_status==='CALIBRATED').map(x=>x.metric_key);
+ if([...HSE,'hbs.avoidance','hbs.consistency','hbs.initiative'].some(key=>!calibrated.includes(key)))throw new Error('Expected the five calibrated HSE metrics plus hbs.avoidance, hbs.consistency, and hbs.initiative (later HIM Expansion tasks may calibrate more)');
  for(const key of Object.keys(METRICS)){
   const definition=state.rows.find(x=>x.metric_key===key);
   if(definition.hif_owner!=='HBS'||definition.semantic_mapping_status!=='UNRESOLVED'||definition.semantic_type!==null||definition.scale_reference!==METRICS[key].scale||definition.required_input_contract!=='DIRECT_STRUCTURED_TARGET_BOUND_PERIOD_USER_REPORT_SEVEN_DAY_V1'||definition.dependency_ids.length!==0||definition.consumers.length!==0)throw new Error(`${key} definition identity failed`);
@@ -201,4 +206,4 @@ await client.connect();try{
   }finally{await racer.end();}
  }
 }finally{await cleanupVerifierUsers(client,[one,two]);await client.end();}
-console.log('Verified HBS Consistency + Initiative v1: eight/nine phase inventory with exactly the two new metrics activated and Avoidance unchanged, HBS/UNRESOLVED/null identities, exact independent per-metric governance artifacts, owner target-bound GOAL/SITUATION creation with the immutable server-derived seven-day window and untrusted client time, full scored and unassessed response semantics with sibling vocabularies rejected, structural cross-metric and Avoidance-reuse impossibility with freely differing sibling values, correction/currentness with the original window preserved, idempotent and race-safe calculation per metric, fail-closed cross-user/anon/forgery authority, supersession-aware current reads, and explicit Trend v1 + Intelligence Snapshot v1 non-consumption with zero provider calls.');
+console.log('Verified HBS Consistency + Initiative v1: five-HSE-plus-three-HBS calibration with the two new metrics activated and Avoidance unchanged, HBS/UNRESOLVED/null identities, exact independent per-metric governance artifacts, owner target-bound GOAL/SITUATION creation with the immutable server-derived seven-day window and untrusted client time, full scored and unassessed response semantics with sibling vocabularies rejected, structural cross-metric and Avoidance-reuse impossibility with freely differing sibling values, correction/currentness with the original window preserved, idempotent and race-safe calculation per metric, fail-closed cross-user/anon/forgery authority, supersession-aware current reads, and explicit Trend v1 + Intelligence Snapshot v1 non-consumption with zero provider calls.');

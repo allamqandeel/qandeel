@@ -8,11 +8,13 @@ const trend=readFileSync(new URL('../migrations/0017_him_temporal_comparability_
 const snapshot=readFileSync(new URL('../migrations/0018_him_intelligence_snapshot_foundation_v1.sql',import.meta.url),'utf8');
 const avoidance=readFileSync(new URL('../migrations/0040_hbs_avoidance_measurement_model_v1.sql',import.meta.url),'utf8');
 
-test('0041 is the only new migration, orders after 0040, and no migration 0042 exists',()=>{
+test('0041 exists exactly once and orders after 0040',()=>{
+ // Historical phase guarantee only: this contract owns migration 0041's
+ // identity and ordering, never a permanent ceiling on later migrations —
+ // future HIM Expansion tasks may add 0042 and beyond.
  const migrations=readdirSync(new URL('../migrations/',import.meta.url)).filter(name=>name.endsWith('.sql')).sort();
  assert.ok(migrations.includes('0041_hbs_consistency_initiative_measurement_models_v1.sql'));
  assert.equal(migrations.filter(name=>name.startsWith('0041')).length,1,'exactly one migration 0041');
- assert.equal(migrations.some(name=>name.startsWith('0042')),false,'no migration 0042');
  assert.ok(migrations.indexOf('0041_hbs_consistency_initiative_measurement_models_v1.sql')>migrations.indexOf('0040_hbs_avoidance_measurement_model_v1.sql'));
 });
 test('freezes both exact model, instrument, and scale identities',()=>{
