@@ -6,7 +6,7 @@ const expected=['hse.stress','hse.energy','hse.motivation','hse.self-confidence'
 describe('Initial HIM catalog',()=>{
   it('registers exactly the 17 canonical identities',()=>expect(new HimDefinitionRegistry().list().map(x=>x.metricKey)).toEqual(expected));
   it('contains no bridge-only examples',()=>expect(new HimDefinitionRegistry().list().map(x=>x.canonicalName)).not.toEqual(expect.arrayContaining(['Decision Clarity','Action Readiness','Goal Alignment','Decision Quality','Uncertainty','Progress','Cognitive Load','Relationship Health','Growth Momentum','Sleep'])));
-  it('activates six calibrated structured metrics while leaving 11 metrics uncalibrated',()=>{
+  it('activates eight calibrated structured metrics while leaving 9 metrics uncalibrated',()=>{
     const stress=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.stress')!;
     expect(stress.calculationStatus).toBe('CALIBRATED');
     expect(stress.scaleReference).toBe('hse.stress.ordinal-5.v1');
@@ -33,7 +33,20 @@ describe('Initial HIM catalog',()=>{
     expect(avoidance.semanticMappingStatus).toBe('UNRESOLVED');
     expect(avoidance.semanticType).toBeNull();
     expect(avoidance.validContextKinds).toEqual(['SITUATION','GOAL']);
-    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance'].includes(x.metricKey)).forEach(x=>{
+    // HBS Consistency and Initiative are calibrated as two fully independent
+    // sibling constructs (each with its own scale) while their Foundation
+    // semantic mapping stays deliberately unresolved, exactly like Avoidance.
+    for(const[metricKey,scaleReference]of[['hbs.consistency','hbs.consistency.frequency-5.v1'],['hbs.initiative','hbs.initiative.frequency-5.v1']] as const){
+      const definition=INITIAL_HIM_METRICS.find(x=>x.metricKey===metricKey)!;
+      expect(definition.calculationStatus).toBe('CALIBRATED');
+      expect(definition.scaleReference).toBe(scaleReference);
+      expect(definition.requiredInputContract).toBe('DIRECT_STRUCTURED_TARGET_BOUND_PERIOD_USER_REPORT_SEVEN_DAY_V1');
+      expect(definition.hifOwner).toBe('HBS');
+      expect(definition.semanticMappingStatus).toBe('UNRESOLVED');
+      expect(definition.semanticType).toBeNull();
+      expect(definition.validContextKinds).toEqual(['SITUATION','GOAL']);
+    }
+    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance','hbs.consistency','hbs.initiative'].includes(x.metricKey)).forEach(x=>{
       expect(x.calculationStatus).toBe('UNCALIBRATED');
       expect(x.scaleReference).toBe('UNCALIBRATED_NO_PRODUCTION_SCALE');
     });

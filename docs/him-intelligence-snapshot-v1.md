@@ -2,7 +2,7 @@
 
 The HIM Intelligence Snapshot is an internal, deterministic, read-only view of the latest known production measurement state in one exact owned context. It is not a profile, score, portrait, trend, recommendation, inference, dashboard, public API, or user-visible response-path feature.
 
-The server-owned slots are: SITUATION — Stress, Motivation, Self-Confidence, Attention; CONVERSATION_SESSION — Stress, Energy, Attention; DECISION — Self-Confidence, Attention; GOAL — Motivation. Their order follows canonical HSE order and has no ranking meaning. GLOBAL, RELATIONSHIP, Energy-in-SITUATION, and the twelve uncalibrated HBS/HRS/HGS metrics are excluded.
+The server-owned slots are: SITUATION — Stress, Motivation, Self-Confidence, Attention; CONVERSATION_SESSION — Stress, Energy, Attention; DECISION — Self-Confidence, Attention; GOAL — Motivation. Their order follows canonical HSE order and has no ranking meaning. GLOBAL, RELATIONSHIP, Energy-in-SITUATION, and all twelve HBS/HRS/HGS metrics are excluded (`hbs.avoidance`, `hbs.consistency`, and `hbs.initiative` are calibrated but deliberately NOT Snapshot v1 eligible; the other nine remain uncalibrated).
 
 `read_him_intelligence_snapshot_v1` performs context ownership, slot expansion, active production binding checks, latest-event selection, correction currentness, and provenance resolution in one PostgreSQL statement-level MVCC view. Chronology uses immutable `him_measurement_events.created_at` with event ID only as a stable tie-break. A correction replaces the value for its event without moving it or creating a new point.
 

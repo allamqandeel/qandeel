@@ -11,7 +11,8 @@ test('0040 is the only new migration and orders after 0039',()=>{
  const migrations=readdirSync(new URL('../migrations/',import.meta.url)).filter(name=>name.endsWith('.sql')).sort();
  assert.ok(migrations.includes('0040_hbs_avoidance_measurement_model_v1.sql'));
  assert.equal(migrations.filter(name=>name.startsWith('0040')).length,1,'exactly one migration 0040');
- assert.equal(migrations.some(name=>name.startsWith('0041')),false,'no migration 0041');
+ // The next-migration phase boundary is owned by the later phase's static
+ // contract (hbs-consistency-initiative-measurement-models-v1.test.mjs).
  assert.ok(migrations.indexOf('0040_hbs_avoidance_measurement_model_v1.sql')>migrations.indexOf('0039_foreground_generating_turn_recovery_v1.sql'));
 });
 test('freezes the exact model, instrument, and scale identities',()=>{
