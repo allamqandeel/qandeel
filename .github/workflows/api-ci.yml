@@ -33,6 +33,7 @@ jobs:
       - {name: Install dependencies, run: npm ci}
       - {name: Verify npm-only toolchain contract, run: npm run test:toolchain}
       - {name: Verify A2 E2E runtime smoke static contract, run: npm run test:a2-e2e-smoke-contract}
+      - {name: Verify Full Intelligence E2E runtime static contract, run: npm run test:full-intelligence-e2e-runtime-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}
       - name: Bootstrap fresh Supabase-compatible PostgreSQL roles
@@ -90,4 +91,5 @@ jobs:
       - {name: Verify Information Gap / Question integration, run: npm run verify:information-gap-question-integration:integration}
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
+      - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
 
