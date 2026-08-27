@@ -6,7 +6,7 @@
 
 ## Instrument and scope
 
-V1 accepts only `DIRECT_STRUCTURED_USER_REPORT` in Arabic Egyptian (`ar-EG`) with recall period `RIGHT_NOW` and prompt `دلوقتي، حاسس إن عندك طاقة قد إيه؟`. Production context is exactly one `CONVERSATION_SESSION`; catalog support for `SITUATION` does not authorize this model there. English is documentation-only and no transcript, Memory, behavior, voice, provider, embedding, or inferred signal is an input.
+V1 accepts only `DIRECT_STRUCTURED_USER_REPORT` in Arabic Egyptian (`ar-EG`) with recall period `RIGHT_NOW` and prompt `دلوقتي، حاسس إن عندك طاقة قد إيه؟`. Production context is exactly one `CONVERSATION_SESSION`, and since migration 0051 the persisted definition and the application catalog carry `CONVERSATION_SESSION` as Energy's only valid context kind — the earlier `SITUATION` entry was Foundation-era drift, never production authority, and is gone. English is documentation-only and no transcript, Memory, behavior, voice, provider, embedding, or inferred signal is an input.
 
 ## Ordinal scale
 
@@ -32,15 +32,15 @@ For this exact model, `CALIBRATED` means approved for deterministic production m
 
 ## Trusted assessed-write path
 
-Canonical assessed snapshots can arise only through `Measurement Event → Measurement Observation → Active Canonical Binding → Deterministic Calculation Result → HIM Metric Snapshot`. Database provenance binds the exact event, observation, model, binding, instrument, scale, and result. Generic authenticated snapshot creation remains unassessed-only in effect: an assessed insert without trusted calculation provenance is rejected by the database.
+Canonical assessed snapshots can arise only through `Measurement Event → Measurement Observation → Active Canonical Binding → Deterministic Calculation Result → HIM Metric Snapshot`. Database provenance binds the exact event, observation, model, binding, instrument, scale, and result. Generic authenticated snapshot creation is no longer an available write path of any kind: migration 0051 retired `create_him_metric_snapshot(jsonb)` as a fail-closed no-write tombstone with EXECUTE revoked from every application role, so canonical measurement state can be created only through the metric-owned structured measurement RPCs. Assessed inserts without trusted calculation provenance remain rejected by the database independently of that retirement.
 
 ## Security, privacy, and current catalog state
 
 Events and observations are UUID-based, user-owned, RLS-protected, and append-only. Canonical tables are default-deny for authenticated writes. Server functions derive ownership and canonical metadata and validate exact session ownership. Raw unrestricted conversation text is not copied. Memory, Evidence, Hypothesis, Confidence, Question, Behavioral, Safety, routing, and provider runtimes are not mutated.
 
-Current state after migration 0012: `hse.energy` is the single `CALIBRATED` production metric and the other 16 metrics remain `UNCALIBRATED`.
+Historical phase note: immediately after migration 0012, `hse.energy` was the single `CALIBRATED` production metric and the other 16 remained `UNCALIBRATED`. That is a record of the 0012 phase, not current state. Currently all seventeen canonical HIM v1 metrics are `CALIBRATED`, each through its own metric-owned structured measurement path; Energy's own construct, scale, instrument, correction, and confidence contract below are unchanged by that.
 
 ## Explicit limitations
 
-No English production locale, `SITUATION` model, external psychometric validation, clinical claim, metric-confidence formula, trend, averaging, automatic cadence, UI exposure, ContextBuilder injection, provider call, or inferred Energy calculation is included.
+No English production locale, `SITUATION` model, binding, instrument, RPC, Snapshot slot, or Trend eligibility, no external psychometric validation, clinical claim, metric-confidence formula, trend, averaging, automatic cadence, UI exposure, ContextBuilder injection, provider call, or inferred Energy calculation is included. A future SITUATION Energy measurement would require a separately reviewed measurement, version, and authority decision.
 

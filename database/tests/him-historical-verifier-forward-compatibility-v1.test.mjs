@@ -90,7 +90,12 @@ test('the removed ceilings are replaced by explicitly scoped canonical v1 identi
  assert.match(code['verify-migration-0010.mjs'],/semantic_type===null\)\.length,11/,'0010 still proves the v1 unresolved semantic distribution within those identities');
  assert.match(code['verify-migration-0010.mjs'],/hrs\.relationship-trust/,'0010 keeps the Trust identity check');
  assert.match(code['verify-migration-0010.mjs'],/canonical_name,'Confidence'/,'0010 keeps the Self-Confidence identity check');
- assert.match(code['verify-migration-0010.mjs'],/create_him_metric_snapshot/,'0010 keeps the generic-RPC historical behavior checks');
+ // 0010 must still assert something exact about the generic RPC it introduced.
+ // Its authority was later retired (QHIM-003), so what it proves is now the
+ // retirement contract rather than a successful write - later security
+ // hardening is deliberately allowed here, while the QHIM-002 future-ceiling
+ // rules above stay fully enforced for this file like every other verifier.
+ assert.match(code['verify-migration-0010.mjs'],/create_him_metric_snapshot/,'0010 keeps an exact generic-RPC authority check');
  assert.match(code['verify-migration-0011.mjs'],/HSE_V1/,'0011 scopes its calibration proof to the five canonical HSE v1 identities');
  assert.match(code['verify-migration-0011.mjs'],/ordinal-5\.v1/,'0011 proves each exact v1 calibrated scale rather than a global count');
  assert.match(code['verify-migration-0011.mjs'],/role_table_grants/,'0011 keeps its RLS/privilege guarantees');

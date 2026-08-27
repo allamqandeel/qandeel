@@ -2,6 +2,8 @@
 
 This gate registers what QANDEEL may eventually measure. It does not define how to calculate any metric. Every definition is version `1`, has calculation status `UNCALIBRATED`, scale status `UNCALIBRATED_NO_PRODUCTION_SCALE`, confidence status `UNRESOLVED_METRIC_CONFIDENCE_MODEL`, and no dependency edges. Registration creates no user snapshot; missing remains `UNASSESSED`/`NULL`, structurally distinct from numeric zero.
 
+**Scope note.** This page records the Foundation registration gate as it was seeded, not current state. All seventeen identities are now `CALIBRATED`, each through its own separately reviewed measurement model, and the allowed-context column below is the originally registered list. One entry has since been reconciled: `hse.energy` is `CONVERSATION_SESSION` only — its original `SITUATION` entry was Foundation drift that never carried a model, binding, instrument, or RPC, and migration 0051 removed it. Each metric's current production contexts live in that metric's own measurement-model document.
+
 | Stable key | Display name | Category / owner / source | Semantic type | Allowed contexts | Boundary note |
 |---|---|---|---|---|---|
 | `hse.stress` | Stress | State / HSE / HIF Part 8 v0.1 | STATE | SITUATION, CONVERSATION_SESSION | Contextual state |
