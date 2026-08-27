@@ -1,18 +1,25 @@
 # HRS Measurement Expansion v1 (bounded family note)
 
 State of the HRS (Relationship) branch of HIM Expansion & Human
-Intelligence Completion after migration 0043.
+Intelligence Completion after migration 0044.
 
 ## Calibrated HRS metrics
 
 | Metric | Task | Construct (one line) | Special unassessed codes |
 |---|---|---|---|
 | `hrs.relationship-trust@1` | 10/17 (0043) | Relationship-bound current reliance trust under meaningful interpersonal vulnerability/uncertainty | `TOO_CONTEXT_DEPENDENT_TO_RATE`, `INSUFFICIENT_BASIS_TO_JUDGE` |
+| `hrs.communication@1` | 11/17 (0044) | Relationship-bound current communication workability when something important needs to get through | `TOO_TOPIC_DEPENDENT_TO_RATE`, `INSUFFICIENT_BASIS_TO_JUDGE` |
+| `hrs.repair@1` | 12/17 (0044) | Relationship-bound current repair effectiveness after meaningful interpersonal rupture | `NO_MEANINGFUL_REPAIR_OPPORTUNITY`, `TOO_EPISODE_DEPENDENT_TO_RATE` |
 
-Relationship Trust is the **first HRS metric**. `hrs.communication`,
-`hrs.repair`, and `hrs.emotional-safety` remain uncalibrated — they are
-deliberately separate future tasks, and nothing in 0043 scores, infers, or
-constrains them. Phase inventory after 0043: 10/17 calibrated, 7/17
+The HRS family state is now: **Trust — calibrated; Communication —
+calibrated; Repair — calibrated; Emotional Safety — still uncalibrated.**
+`hrs.emotional-safety` is a deliberately separate future task, and nothing
+in 0043/0044 scores, infers, or constrains it. Communication and Repair
+were delivered in one migration **only** because the RELATIONSHIP substrate
+already existed — they are two independent measurement systems (separate
+constructs, vocabularies, instruments, scales, models, approvals, bindings,
+RPC families, and lock namespaces), and combining the delivery never
+combined the constructs. Phase inventory after 0044: 12/17 calibrated, 5/17
 uncalibrated (a one-time migration transition, never a historical-verifier
 ceiling).
 
@@ -30,6 +37,12 @@ target is a private, user-owned measurement context artifact only — no
 social graph, contact/person model, partner account linking, shared/couple
 mode, reciprocal trust, or external identity verification exists, and no
 product "Relationship" domain entity was built.
+
+0044 reuses this substrate unchanged for Communication and Repair: no new
+target authority, no new table, and no Communication- or Repair-specific
+relationship targets — both metrics accept only an existing owned
+RELATIONSHIP target, and the target label stays an opaque binding artifact
+that no calculation ever interprets semantically.
 
 ## Shared HRS rules established with the first metric
 
@@ -53,13 +66,15 @@ product "Relationship" domain entity was built.
 ## Why runtime consumption remains deferred
 
 Trend v1 is a five-HSE point-sequence contract and no HRS
-temporal-comparability contract has been approved: relationship trust is a
-relationship appraisal whose meaningful change may be slow, nonlinear, or
-event-driven, with no canonical comparison cadence, and a single overall
-score may become temporarily UNASSESSED when domain-dependent. HIM
-Intelligence Snapshot v1 (and Reasoning/FAST-DEEP consumption) is a
-five-HSE `STATE`-only contract, and Relationship Trust keeps an unresolved
-NULL semantic mapping. Both surfaces therefore reject Relationship Trust,
+temporal-comparability contract has been approved: HRS metrics are
+relationship appraisals whose meaningful change may be slow, nonlinear, or
+event-driven, with no canonical comparison cadence or minimum-evidence
+policy; a single overall score may become temporarily UNASSESSED when
+domain-, topic-, or episode-dependent; and no "improving/worsening"
+threshold of any kind is approved. HIM Intelligence Snapshot v1 (and
+Reasoning/FAST-DEEP consumption) is a five-HSE `STATE`-only contract, and
+Trust, Communication, and Repair all keep unresolved NULL semantic
+mappings. Both surfaces therefore reject all three calibrated HRS metrics,
 with regression proof. Because relationship metrics are sensitive, no HRS
 value may influence Recommendations, safety handling, or prompt guidance
 before a future, separately versioned and deliberately reviewed **HRS

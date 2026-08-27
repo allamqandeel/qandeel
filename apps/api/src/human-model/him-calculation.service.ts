@@ -11,6 +11,8 @@ import { calculateHbsConsistency,HBS_CONSISTENCY_MODEL_ID,HBS_CONSISTENCY_MODEL_
 import { calculateHbsInitiative,HBS_INITIATIVE_MODEL_ID,HBS_INITIATIVE_MODEL_VERSION } from './hbs-initiative.model';
 import { calculateHbsReflection,HBS_REFLECTION_MODEL_ID,HBS_REFLECTION_MODEL_VERSION } from './hbs-reflection.model';
 import { calculateHrsRelationshipTrust,HRS_RELATIONSHIP_TRUST_MODEL_ID,HRS_RELATIONSHIP_TRUST_MODEL_VERSION } from './hrs-relationship-trust.model';
+import { calculateHrsCommunication,HRS_COMMUNICATION_MODEL_ID,HRS_COMMUNICATION_MODEL_VERSION } from './hrs-communication.model';
+import { calculateHrsRepair,HRS_REPAIR_MODEL_ID,HRS_REPAIR_MODEL_VERSION } from './hrs-repair.model';
 
 const exactContext=(kind:string,id:string)=>kind==='GLOBAL'?id==='GLOBAL':kind==='SITUATION'?id.length>0&&id.length<=128&&id.trim()===id&&id!=='GLOBAL':/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 @Injectable()
@@ -35,6 +37,8 @@ export class HimCalculationService {
     if(model.modelId===HBS_INITIATIVE_MODEL_ID&&model.modelVersion===HBS_INITIATIVE_MODEL_VERSION){const result=calculateHbsInitiative(input);this.validateResult(input,result);return result;}
     if(model.modelId===HBS_REFLECTION_MODEL_ID&&model.modelVersion===HBS_REFLECTION_MODEL_VERSION){const result=calculateHbsReflection(input);this.validateResult(input,result);return result;}
     if(model.modelId===HRS_RELATIONSHIP_TRUST_MODEL_ID&&model.modelVersion===HRS_RELATIONSHIP_TRUST_MODEL_VERSION){const result=calculateHrsRelationshipTrust(input);this.validateResult(input,result);return result;}
+    if(model.modelId===HRS_COMMUNICATION_MODEL_ID&&model.modelVersion===HRS_COMMUNICATION_MODEL_VERSION){const result=calculateHrsCommunication(input);this.validateResult(input,result);return result;}
+    if(model.modelId===HRS_REPAIR_MODEL_ID&&model.modelVersion===HRS_REPAIR_MODEL_VERSION){const result=calculateHrsRepair(input);this.validateResult(input,result);return result;}
     throw new BadRequestException('No approved deterministic implementation is registered.');
   }
   validateResult(input:HimMetricCalculationInput,result:HimMetricCalculationResult):void {
