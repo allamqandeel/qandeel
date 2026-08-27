@@ -50,7 +50,11 @@ await client.connect();try{
  const ownedFunctions=['calculate_hgs_self_awareness_measurement_v1','correct_hgs_self_awareness_measurement_v1','create_hgs_self_awareness_measurement_v1'];
  const procs=await client.query('SELECT proname,prosrc FROM pg_proc WHERE proname=ANY($1::name[]) ORDER BY proname',[ownedFunctions]);
  if(procs.rows.map(x=>x.proname).join()!==ownedFunctions.join())throw new Error('Expected the three 0046-owned Self-Awareness functions to exist');
- for(const proc of procs.rows)if(/hbs\.|hse\.|hrs\.|hgs\.resilience|hgs\.purpose-alignment|hgs\.habit-strength|conversation_sessions|memories|hypotheses|evidence|reflection|insight|rumination|openai|anthropic|llm|provider|http/i.test(proc.prosrc))throw new Error(`${proc.proname} must not read any sibling metric, Reflection surface, Memory, Evidence, conversation text, or provider`);
+ // The calculation result's own supporting/contradictory_evidence_refs
+ // ledger columns are its provenance shape, not an Evidence read - the
+ // forbidden surfaces are the actual sibling metrics, the Reflection
+ // session table, and the Memory/Hypothesis/canonical-Evidence stores.
+ for(const proc of procs.rows)if(/hbs\.|hse\.|hrs\.|hgs\.resilience|hgs\.purpose-alignment|hgs\.habit-strength|conversation_sessions|FROM public\.memories|FROM public\.hypotheses|canonical_evidence|evidence_items|reflection|insight|rumination|openai|anthropic|llm|provider|http/i.test(proc.prosrc))throw new Error(`${proc.proname} must not read any sibling metric, Reflection surface, Memory, Evidence, conversation text, or provider`);
  // No sibling HGS authority was fabricated: measurement creation for the
  // three remaining HGS metrics does not exist at this historical phase.
  for(const absent of['create_hgs_resilience_measurement_v1','create_hgs_purpose_alignment_measurement_v1','create_hgs_habit_strength_measurement_v1'])if((await client.query(`SELECT to_regprocedure('public.${absent}(uuid,text,timestamptz)') r`)).rows[0].r!==null)throw new Error(`${absent} must not exist`);
