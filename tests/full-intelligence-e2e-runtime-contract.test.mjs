@@ -161,11 +161,22 @@ test('the verifier never directly mutates authority-owned derived tables and han
     'the foreground table transport is SELECT-only; every write authority is a canonical database function');
 });
 
-test('the canonical migration chain still ends at 0038 with no migration 0039', async () => {
+test('the PR #137 migration boundary stays historically accurate without freezing the repository chain', async () => {
   const migrations = (await readdir(new URL('database/migrations/', root))).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0038_information_gap_question_integration_v1.sql');
-  assert.equal(migrations.some((name) => name.startsWith('0039')), false, 'no migration 0039');
-  assert.doesNotMatch(smokeSources, /0039/u, 'no migration 0039 reference');
+  // Historically scoped invariant: PR #137 (Full Intelligence E2E Runtime v1)
+  // itself added no forward migration — the Phase II chain through 0038 is
+  // intact and ordered. Post-Phase-II reliability-correction migrations are
+  // allowed; no permanent global migration ceiling is asserted.
+  const phaseTwoTail = ['0037_background_him_runtime_consumption_v1.sql', '0038_information_gap_question_integration_v1.sql'];
+  const indexes = phaseTwoTail.map((name) => migrations.indexOf(name));
+  assert.ok(indexes.every((index) => index >= 0), 'the Phase II chain still reaches 0038');
+  assert.deepEqual([...indexes].sort((left, right) => left - right), indexes, 'the Phase II tail keeps its canonical order');
+  // The Full Intelligence verifier remains independent from post-review
+  // recovery policy: the smoke references no post-Phase-II migration artifact
+  // and does not directly mutate canonical authority-owned state (asserted
+  // separately above).
+  assert.doesNotMatch(smokeSources, /0039|recover_expired_generating_conversation_turn|generation_lease/u,
+    'the smoke stays independent of the post-review recovery migration');
 });
 
 test('the closed-loop scenario order is structurally present', () => {

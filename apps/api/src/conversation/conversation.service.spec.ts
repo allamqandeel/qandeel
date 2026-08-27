@@ -116,6 +116,21 @@ describe('ConversationService', () => {
     expect(orchestrator.orchestrate).toHaveBeenCalledWith('token-a', 'user-a', turn);
   });
 
+  it('replays a GENERATING idempotency winner through the orchestrator without creating a new USER turn', async () => {
+    // Crash-abandoned GENERATING replay: the canonical existing turn is
+    // returned and delegated to the orchestrator (which owns the bounded
+    // lease-recovery check); no new turn admission occurs.
+    const generating: ConversationTurn = { ...turn, status: 'GENERATING', processing_path: 'FAST', routing_reason: 'FAST_DEFAULT' };
+    repository.findSession.mockResolvedValue(session);
+    repository.findTurnByIdempotencyKey.mockResolvedValue(generating);
+    orchestrator.orchestrate.mockResolvedValue({ userTurn: { ...generating, status: 'FAILED' } });
+    await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' }))
+      .resolves.toEqual({ userTurn: { ...generating, status: 'FAILED' } });
+    expect(repository.createTurn).not.toHaveBeenCalled();
+    expect(orchestrator.orchestrate).toHaveBeenCalledTimes(1);
+    expect(orchestrator.orchestrate).toHaveBeenCalledWith('token-a', 'user-a', generating);
+  });
+
   it('returns the existing authoritative turn for a duplicate idempotency key', async () => {
     repository.findSession.mockResolvedValue(session);
     repository.findTurnByIdempotencyKey.mockResolvedValue(turn);

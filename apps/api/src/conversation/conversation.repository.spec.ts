@@ -143,6 +143,32 @@ describe('ConversationRepository write authority', () => {
     expect(JSON.stringify(body)).not.toMatch(/content|idempotency|token/);
   });
 
+  it('recovers an expired GENERATING turn through the server authority channel with canonical metadata and no user token or duration', async () => {
+    const dataApi = { request: jest.fn() } as unknown as jest.Mocked<SupabaseDataApiService>;
+    const serviceApi = serviceApiMock();
+    const correlation = new CorrelationService();
+    const repository = new ConversationRepository(dataApi, serviceApi, correlation);
+
+    await correlation.runRequest(() => correlation.withOrchestration(() => repository.recoverExpiredGeneratingTurn('session', 'user', 'turn')));
+
+    expect(dataApi.request).not.toHaveBeenCalled();
+    const [name, body] = serviceApi.rpc.mock.calls[0];
+    expect(name).toBe('recover_expired_generating_conversation_turn_v1');
+    expect(body).toMatchObject({
+      p_session_id: 'session', p_user_id: 'user', p_source_turn_id: 'turn',
+      p_event_id: expect.stringMatching(/^[0-9a-f-]{36}$/), p_correlation_id: expect.stringMatching(/^[0-9a-f-]{36}$/), p_orchestration_id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+    });
+    // The application never chooses the lease policy and never forwards
+    // content, tokens, or idempotency data to the recovery command.
+    expect(JSON.stringify(body)).not.toMatch(/lease|duration|seconds|content|idempotency|token/);
+  });
+
+  it('returns undefined when recovery was a no-op on a live lease or terminal turn', async () => {
+    const dataApi = { request: jest.fn() } as unknown as jest.Mocked<SupabaseDataApiService>;
+    const repository = new ConversationRepository(dataApi, serviceApiMock(), new CorrelationService());
+    await expect(repository.recoverExpiredGeneratingTurn('session', 'user', 'turn')).resolves.toBeUndefined();
+  });
+
   it('cancels through the caller-authenticated channel, not the server authority channel', async () => {
     const cancelled: ConversationTurn = {
       id: 'turn', session_id: 'session', role: 'USER', status: 'CANCELLED', content: 'hi',
