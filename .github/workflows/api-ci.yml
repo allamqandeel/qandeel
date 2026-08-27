@@ -83,6 +83,7 @@ jobs:
       - {name: Verify HGS Resilience measurement model against real PostgreSQL, run: npm run verify:hgs-resilience:integration}
       - {name: Verify HGS Purpose Alignment measurement model against real PostgreSQL, run: npm run verify:hgs-purpose-alignment:integration}
       - {name: Verify HGS Habit Strength measurement model against real PostgreSQL, run: npm run verify:hgs-habit-strength:integration}
+      - {name: Verify HIM structured-current binding-transition safety against real PostgreSQL, run: npm run verify:him-structured-current-binding-transition-safety:integration}
       - {name: Verify HIM temporal trend source against real PostgreSQL, run: npm run verify:him-trends:integration}
       - {name: Verify HIM Intelligence Snapshot against real PostgreSQL, run: npm run verify:him-snapshot:integration}
       - {name: Verify background HIM runtime consumption against real PostgreSQL, run: npm run verify:background-him-runtime-consumption:integration}
