@@ -45,8 +45,15 @@ const HSE=['hse.attention','hse.energy','hse.motivation','hse.self-confidence','
 const ES={key:'hrs.emotional-safety',scale:'hrs.emotional-safety.openness-safety-5.v1',model:'hrs.emotional-safety.direct-structured-current-emotional-openness-safety',instrument:'hrs.emotional-safety.direct-relationship-bound-emotional-openness-safety-report',approval:'qandeel.him.emotional-safety.foundation-approval',method:'DIRECT_STRUCTURED_RELATIONSHIP_BOUND_CURRENT_EMOTIONAL_OPENNESS_SAFETY_REPORT',inputContract:'DIRECT_STRUCTURED_RELATIONSHIP_BOUND_CURRENT_EMOTIONAL_OPENNESS_SAFETY_REPORT_V1',provenance:'QANDEEL_HRS_EMOTIONAL_SAFETY_MEASUREMENT_V1',specials:['TOO_VULNERABILITY_DEPENDENT_TO_RATE','INSUFFICIENT_BASIS_TO_JUDGE','NOT_SURE'],create:'create_hrs_emotional_safety_measurement_v1',correct:'correct_hrs_emotional_safety_measurement_v1',calculate:'calculate_hrs_emotional_safety_measurement_v1',lock:'hrs.emotional-safety.observation:',basis:['HRS_EMOTIONAL_SAFETY_CURRENT_PERCEIVED_SAFETY_FOR_EMOTIONAL_OPENNESS','DIRECT_STRUCTURED_REPORT','RELATIONSHIP_BOUND_ONLY','EXPERIENCE_GROUNDED_CURRENT_APPRAISAL_NULL_WINDOW','ORDINAL_OPENNESS_SAFETY_5','VULNERABILITY_DEPENDENCE_AND_INSUFFICIENT_BASIS_FAIL_TO_UNASSESSED','EMOTIONAL_SAFETY_NOT_TRUST_COMMUNICATION_REPAIR_OR_OBJECTIVE_ABUSE_SAFETY','DETERMINISTIC_CALCULATION','CORRECTION_CURRENTNESS_IDEMPOTENCY_CONCURRENCY','SECURITY_BINDING_NO_EXTERNAL_OR_CLINICAL_VALIDATION_CLAIM']};
 await client.connect();try{
  // --- Phase inventory: this phase's durable historical guarantees ------------
- const state=await client.query('SELECT metric_key,calculation_status,hif_owner,semantic_mapping_status,semantic_type,scale_reference,required_input_contract,dependency_ids,consumers FROM public.him_metric_definitions');
- if(state.rows.length!==17)throw new Error('Expected exactly 17 metric definitions');
+ const state=await client.query('SELECT metric_key,calculation_status,hif_owner,semantic_mapping_status,semantic_type,scale_reference,required_input_contract,dependency_ids,consumers FROM public.him_metric_definitions WHERE definition_version=1');
+ // Forward-safe canonical scope: the durable historical guarantee is that
+ // every canonical v1 metric identity exists and holds its approved contract,
+ // never that the live definitions table may not grow. The query above is
+ // scoped to definition_version=1, so a later definition version or a later
+ // metric is deliberately tolerated here and proven by its own phase.
+ const CANONICAL_V1=['hse.energy','hse.motivation','hse.attention','hse.self-confidence','hse.stress','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety','hgs.self-awareness','hgs.resilience','hgs.purpose-alignment','hgs.habit-strength'];
+ const present=state.rows.map(x=>x.metric_key);
+ if(CANONICAL_V1.some(key=>!present.includes(key)))throw new Error('Expected every canonical v1 metric identity to exist');
  const calibrated=state.rows.filter(x=>x.calculation_status==='CALIBRATED').map(x=>x.metric_key);
  if([...HSE,'hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety'].some(key=>!calibrated.includes(key)))throw new Error('Expected the five calibrated HSE metrics, the four calibrated HBS metrics, and all four calibrated HRS metrics (later HIM Expansion tasks may calibrate more)');
  const definition=state.rows.find(x=>x.metric_key===ES.key);

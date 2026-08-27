@@ -96,10 +96,12 @@ async function verifyStaticAuthority() {
     const { rows: [privileges] } = await client.query("SELECT has_table_privilege($1,'public.information_gap_confidence_sources','SELECT') can_select,has_table_privilege($1,'public.information_gap_confidence_sources','INSERT') can_insert,has_table_privilege($1,'public.information_gap_confidence_sources','UPDATE') can_update,has_table_privilege($1,'public.information_gap_confidence_sources','DELETE') can_delete", [role]);
     assert.deepEqual(privileges, { can_select: false, can_insert: false, can_update: false, can_delete: false }, `${role} must hold no privilege on the source table`);
   }
-  // The historical background_%_v1 census (verify-migration-0021) is unchanged:
-  // 0038 added no background_%_v1 function.
-  const { rowCount: backgroundCount } = await client.query("SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname LIKE 'background_%_v1'");
-  assert.equal(backgroundCount, 6, 'the six-function background_%_v1 census is preserved');
+  // 0038 owns no background command: the exact functions it does own are ACL
+  // checked above by signature. The former global background_%_v1 census was a
+  // future ceiling - a later, separately reviewed background command is not a
+  // 0038 regression - and that 0038's own migration text creates no background
+  // function is proven statically in the forward-compatibility contract test,
+  // never against the live function universe.
   // No pre-0038 automatic rows exist and nothing was backfilled.
   const { rows: [{ count: preexisting }] } = await client.query('SELECT count(*) count FROM public.information_gap_confidence_sources');
   assert.equal(Number(preexisting), 0, 'the source table starts empty: zero backfill of historical Question rows');

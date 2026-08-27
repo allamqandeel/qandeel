@@ -9,7 +9,7 @@ const identity=async id=>{await client.query('SET LOCAL ROLE authenticated');awa
 const between=(value,start,end)=>new Date(value)>=new Date(start)&&new Date(value)<=new Date(end);
 await client.connect();
 try{
- const state=await client.query("SELECT metric_key,calculation_status FROM public.him_metric_definitions");
+ const state=await client.query("SELECT metric_key,calculation_status FROM public.him_metric_definitions WHERE definition_version=1");
  if(!['hse.attention','hse.energy','hse.motivation','hse.self-confidence','hse.stress'].every(key=>state.rows.some(x=>x.metric_key===key&&x.calculation_status==='CALIBRATED')))throw new Error('Expected the five calibrated HSE metrics (later HIM Expansion tasks may calibrate more)');
  const binding=await client.query("SELECT count(*)::int n FROM public.him_canonical_model_bindings WHERE status='ACTIVE' AND metric_key='hse.energy' AND context_kind='CONVERSATION_SESSION'");
  if(binding.rows[0].n!==1)throw new Error('Expected one active Energy binding');
