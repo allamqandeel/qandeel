@@ -28,7 +28,10 @@ await client.connect();try{
  const avoidance=state.rows.find(x=>x.metric_key==='hbs.avoidance');
  if(avoidance.hif_owner!=='HBS'||avoidance.semantic_mapping_status!=='UNRESOLVED'||avoidance.semantic_type!==null||avoidance.scale_reference!=='hbs.avoidance.frequency-5.v1'||avoidance.required_input_contract!=='DIRECT_STRUCTURED_TARGET_BOUND_PERIOD_USER_REPORT_SEVEN_DAY_V1'||avoidance.dependency_ids.length!==0||avoidance.consumers.length!==0)throw new Error('Avoidance definition identity failed');
  const scale=await client.query("SELECT * FROM public.him_scale_contracts WHERE scale_contract_id='hbs.avoidance.frequency-5.v1' AND scale_version=1");
- if(scale.rowCount!==1||scale.rows[0].scale_kind!=='ORDINAL'||scale.rows[0].interval_operations||scale.rows[0].ratio_operations||JSON.stringify(scale.rows[0].categories)!==JSON.stringify({NEVER:1,RARELY:2,SOMETIMES:3,OFTEN:4,ALMOST_ALWAYS:5}))throw new Error('Avoidance ordinal scale contract failed');
+ const expectedCategories={NEVER:1,RARELY:2,SOMETIMES:3,OFTEN:4,ALMOST_ALWAYS:5};
+ // jsonb reorders object keys, so the category mapping is compared structurally.
+ const categories=scale.rowCount===1?scale.rows[0].categories:{};
+ if(scale.rowCount!==1||scale.rows[0].scale_kind!=='ORDINAL'||scale.rows[0].interval_operations||scale.rows[0].ratio_operations||Object.keys(categories).length!==5||Object.entries(expectedCategories).some(([code,value])=>categories[code]!==value))throw new Error('Avoidance ordinal scale contract failed');
  const model=await client.query("SELECT * FROM public.him_calculation_models WHERE model_id='hbs.avoidance.direct-structured-seven-day-self-report' AND model_version=1");
  if(model.rowCount!==1||model.rows[0].lifecycle!=='CALIBRATED'||model.rows[0].environment!=='PRODUCTION'||model.rows[0].scale_contract_reference!=='hbs.avoidance.frequency-5.v1'||model.rows[0].supported_context_kinds.join()!=='GOAL,SITUATION')throw new Error('Avoidance calibrated model failed');
  const approval=await client.query("SELECT * FROM public.him_governance_approvals WHERE approval_id='qandeel.him.avoidance.foundation-approval'");
