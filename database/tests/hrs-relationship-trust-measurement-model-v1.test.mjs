@@ -60,7 +60,7 @@ test('is RELATIONSHIP-bound only with a minimal owned target substrate and fail-
  assert.match(sql,/'RELATIONSHIP',p_display_text,'QANDEEL_HIM_MEASUREMENT_TARGET_V1'/);
  assert.match(sql,/Invalid RELATIONSHIP measurement target/);
  assert.match(sql,/Unknown, cross-user, or unsupported Relationship Trust RELATIONSHIP target/);
- assert.match(sql,/context_kind=ANY\(ARRAY\['GOAL','SITUATION','RELATIONSHIP'\]\)/);
+ assert.match(sql,/context_kind=ANY\(ARRAY\['GOAL','SITUATION','DECISION','RELATIONSHIP'\]\)/,'the 0014 target kinds stay intact and gain exactly RELATIONSHIP');
  assert.doesNotMatch(executable,/contact|address_book|person_record|linked_user|partner_account|other_user|counterpart/i,'no contact/person/social-graph model exists');
  // Existing GOAL/SITUATION target behavior stays unchanged: 0043 never
  // rewrites the historical Motivation-named target RPC and never fabricates

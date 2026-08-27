@@ -101,8 +101,10 @@ await client.connect();try{
  // historical Motivation-named target RPC still rejects RELATIONSHIP.
  const goalTarget=(await client.query("SELECT * FROM public.create_him_motivation_measurement_target('GOAL','finish thesis draft')")).rows[0];
  const situationTarget=(await client.query("SELECT * FROM public.create_him_motivation_measurement_target('SITUATION','difficult team meeting')")).rows[0];
- if(goalTarget.context_kind!=='GOAL'||situationTarget.context_kind!=='SITUATION')throw new Error('Existing GOAL/SITUATION target creation must remain unchanged');
+ const decisionTarget=(await client.query("SELECT * FROM public.create_him_attention_measurement_context('DECISION','choose launch date')")).rows[0];
+ if(goalTarget.context_kind!=='GOAL'||situationTarget.context_kind!=='SITUATION'||decisionTarget.context_kind!=='DECISION')throw new Error('Existing GOAL/SITUATION/DECISION target creation must remain unchanged');
  await rejects(client,"SELECT * FROM public.create_him_motivation_measurement_target('RELATIONSHIP','my marriage')");
+ await rejects(client,"SELECT * FROM public.create_him_attention_measurement_context('RELATIONSHIP','my marriage')");
  // The pre-existing GOAL/SITUATION measurement authorities are not widened
  // to the new RELATIONSHIP kind in any direction.
  await rejects(client,"SELECT * FROM public.create_hse_motivation_measurement($1,'MODERATE',NULL)",[relationshipTarget.id]);
@@ -113,6 +115,7 @@ await client.connect();try{
  await rejects(client,"SELECT * FROM public.create_hrs_relationship_trust_measurement_v1($1,'MODERATE',NULL)",[fabricated]);
  await rejects(client,"SELECT * FROM public.create_hrs_relationship_trust_measurement_v1($1,'MODERATE',NULL)",[goalTarget.id]);
  await rejects(client,"SELECT * FROM public.create_hrs_relationship_trust_measurement_v1($1,'MODERATE',NULL)",[situationTarget.id]);
+ await rejects(client,"SELECT * FROM public.create_hrs_relationship_trust_measurement_v1($1,'MODERATE',NULL)",[decisionTarget.id]);
  // The Relationship Trust reliance vocabulary is exact: sibling frequency
  // and engagement codes and every sibling special code are rejected.
  for(const invalid of['SOMEWHAT','ALMOST_ALWAYS','NEVER','NO_CLEAR_OPPORTUNITY','INSUFFICIENT_REPEATED_OPPORTUNITIES','NO_CLEAR_SELF_OWNED_OPPORTUNITY','NO_MEANINGFUL_OPPORTUNITY_TO_REFLECT','COMPLETE_TRUST'])await rejects(client,"SELECT * FROM public.create_hrs_relationship_trust_measurement_v1($1,$2,NULL)",[relationshipTarget.id,invalid]);

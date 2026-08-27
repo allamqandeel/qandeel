@@ -68,8 +68,8 @@ and **no external or clinical validation is claimed**.
 
 This task establishes the minimal reusable owned RELATIONSHIP
 measurement-target substrate by generalizing `him_measurement_targets`
-(explicit union: GOAL, SITUATION, RELATIONSHIP) rather than creating a
-parallel table. A RELATIONSHIP target is **a private, user-owned HIM
+(explicit union: the 0014 GOAL/SITUATION/DECISION kinds plus RELATIONSHIP)
+rather than creating a parallel table. A RELATIONSHIP target is **a private, user-owned HIM
 measurement context artifact identifying one relationship for measurement
 purposes**. It is NOT a social graph, a contact record, another QANDEEL
 user link, a mutual relationship object, a verified real-world identity, or

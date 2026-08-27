@@ -21,8 +21,9 @@ ceiling).
 All HRS metrics are relationship-bound, so 0043 established the minimal
 reusable owned RELATIONSHIP measurement-target substrate that later HRS
 metrics can reuse: `him_measurement_targets` generalized by explicit union
-(GOAL, SITUATION, RELATIONSHIP) with unchanged ownership, immutability,
-label bounds, and canonical provenance, plus the narrow
+(the 0014 GOAL/SITUATION/DECISION kinds plus RELATIONSHIP) with unchanged
+ownership, immutability, label bounds, and canonical provenance, plus the
+narrow
 `create_him_relationship_measurement_target_v1` RPC (server-derived owner,
 kind, UUID, and provenance from a bounded trimmed label). A RELATIONSHIP
 target is a private, user-owned measurement context artifact only — no

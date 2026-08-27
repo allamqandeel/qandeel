@@ -37,8 +37,8 @@
 --
 -- This migration also establishes the minimal reusable owned RELATIONSHIP
 -- measurement-target substrate: him_measurement_targets is generalized by
--- explicit union (GOAL/SITUATION plus RELATIONSHIP) with unchanged
--- ownership, immutability, and provenance semantics. A RELATIONSHIP target
+-- explicit union (the 0014 GOAL/SITUATION/DECISION kinds plus RELATIONSHIP)
+-- with unchanged ownership, immutability, and provenance semantics. A RELATIONSHIP target
 -- is a private, user-owned HIM measurement context artifact identifying one
 -- relationship for measurement purposes only - never a social graph,
 -- contact record, other-user link, mutual relationship object, or verified
@@ -54,11 +54,11 @@ BEGIN;
 -- 1. Minimal reusable RELATIONSHIP measurement-target substrate: the owned
 --    target table gains exactly the RELATIONSHIP kind by explicit union.
 --    Ownership, the trimmed 1-256 label rule, immutability, and canonical
---    provenance are untouched, and existing GOAL/SITUATION target creation
---    behavior (the Motivation-named RPC) remains byte-identical: it still
---    rejects RELATIONSHIP.
+--    provenance are untouched, and existing GOAL/SITUATION/DECISION target
+--    creation behavior (the historical Motivation- and Attention-named
+--    RPCs) remains byte-identical: both still reject RELATIONSHIP.
 ALTER TABLE public.him_measurement_targets DROP CONSTRAINT him_measurement_targets_context_kind_check;
-ALTER TABLE public.him_measurement_targets ADD CONSTRAINT him_measurement_targets_context_kind_check CHECK(context_kind=ANY(ARRAY['GOAL','SITUATION','RELATIONSHIP']));
+ALTER TABLE public.him_measurement_targets ADD CONSTRAINT him_measurement_targets_context_kind_check CHECK(context_kind=ANY(ARRAY['GOAL','SITUATION','DECISION','RELATIONSHIP']));
 
 -- 2. Measurement-event context authority gains exactly RELATIONSHIP by
 --    explicit union over the 0014 kinds.
