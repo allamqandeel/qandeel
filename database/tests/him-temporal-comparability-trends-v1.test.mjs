@@ -1,4 +1,4 @@
-import test from'node:test';import assert from'node:assert/strict';import{readFileSync}from'node:fs';import{CALIBRATED_STRUCTURED_METRICS,EXPECTED_UNCALIBRATED_COUNT}from'../../tests/him-structured-measurement.manifest.mjs';const sql=readFileSync(new URL('../migrations/0017_him_temporal_comparability_trends_v1.sql',import.meta.url),'utf8');
+import test from'node:test';import assert from'node:assert/strict';import{readFileSync}from'node:fs';import{CALIBRATED_STRUCTURED_METRICS}from'../../tests/him-structured-measurement.manifest.mjs';const sql=readFileSync(new URL('../migrations/0017_him_temporal_comparability_trends_v1.sql',import.meta.url),'utf8');
 test('is a bounded read-only RLS-preserving source resolver',()=>{assert.match(sql,/SECURITY DEFINER STABLE/);assert.match(sql,/p_user_id IS DISTINCT FROM u/);assert.match(sql,/LIMIT 129/);assert.match(sql,/him_current_structured_measurements/);assert.match(sql,/JOIN public\.him_measurement_events e ON e\.id=s\.measurement_event_id/);assert.match(sql,/e\.created_at>=p_window_start AND e\.created_at<p_window_end/);assert.match(sql,/jsonb_build_object\('observed_at',c\.event_observed_at\)/);assert.match(sql,/ORDER BY c\.event_observed_at,c\.id/);assert.match(sql,/Unknown or unowned HIM trend context/);});
 test('resolves exact binding identities without trend persistence',()=>{assert.match(sql,/canonical_binding_id/);assert.match(sql,/instrumentId/);assert.match(sql,/modelVersion/);assert.doesNotMatch(sql,/CREATE TABLE public\.him_trends|INSERT INTO|UPDATE public|DELETE FROM|openai|embedding/i);});
 
@@ -16,29 +16,37 @@ test('resolves exact binding identities without trend persistence',()=>{assert.m
 // own current-state manifest:
 //
 //   * the seventeen canonical v1 identities, from the frozen 0010 insert;
-//   * the current calibrated inventory, from the existing canonical
+//   * the calibrated identities of the existing canonical
 //     structured-measurement manifest;
 //   * the five-metric Trend scope, from frozen migration 0017 - the source
 //     resolver itself, so the document cannot drift from the runtime.
 //
-// CANONICAL-V1 SCOPING. An earlier revision of this guard enumerated ALL
-// migrations, extracted EVERY calculation_status='CALIBRATED' update, and
-// asserted exact equality between that list and the seventeen-metric manifest.
-// That was a future ceiling of exactly the class QHIM-006 exists to remove: a
-// legitimate later calibration migration - a reviewed hse.energy@2, or an
-// eighteenth canonical metric - adds another CALIBRATED update, and this Trend
-// v1 documentation test would have failed even though the document remained
-// perfectly true. Green CI could not expose it because canonical main contains
-// no later calibration yet.
+// CANONICAL-V1 SCOPING. Two earlier revisions of this guard reached past what
+// the Trend v1 document actually claims, and both were future ceilings of
+// exactly the class QHIM-006 exists to remove:
 //
-// The census is gone. What this guard owns is `canonical HIM v1 calibration
-// truth`, never `all calibration activity the repository may ever contain`, so
-// the check below is COVERAGE of the seventeen frozen canonical v1 identities
-// by the current calibrated inventory - set membership, never equality with it.
-// Later calibration work is simply invisible here. The only migration text
-// still read is 0010, 0017, and the two exactly named frozen migrations that
-// calibrated the metrics QHIM-008 is actually about, each matched on its exact
-// metric_key / definition_version=1 contract.
+//   1. it enumerated ALL migrations, extracted EVERY
+//      calculation_status='CALIBRATED' update and asserted exact equality with
+//      the seventeen-metric manifest - so a legitimate later calibration
+//      migration, a reviewed hse.energy@2 or an eighteenth canonical metric,
+//      would have failed this documentation test;
+//   2. it required the manifest-global EXPECTED_UNCALIBRATED_COUNT to be zero -
+//      so a future, separately reviewed metric or version sitting UNCALIBRATED
+//      while it waits for its own calibration task would have failed it too.
+//
+// Green CI could expose neither, because canonical main contains no later
+// calibration and nothing uncalibrated yet.
+//
+// Both are gone. The document owns exactly one claim about calibration - that
+// the seventeen frozen canonical v1 identities are calibrated - so this guard
+// owns `canonical HIM v1 calibration truth` and never `all calibration activity
+// the repository may ever contain` or `the global state of the shared
+// inventory`. The check below is therefore pure set inclusion, CANONICAL_V1
+// subset of the calibrated manifest identities: extra calibrated entries and
+// extra uncalibrated entries are equally legal and equally invisible. The only
+// migration text still read is 0010, 0017, and the two exactly named frozen
+// migrations that calibrated the metrics QHIM-008 is actually about, each
+// matched on its exact metric_key / definition_version=1 contract.
 //
 // It protects the Trend *v1* document only - a future, separately reviewed
 // Trend v2 contract is deliberately left possible.
@@ -49,17 +57,22 @@ const CANONICAL_V1=[...migration('0010_initial_him_metrics_v1.sql').matchAll(/\(
 const MANIFEST_CALIBRATED=CALIBRATED_STRUCTURED_METRICS.map(entry=>entry.metricKey).sort();
 const TREND_V1=[...new Set([...sql.matchAll(/'(hse\.[a-z-]+)'/g)].map(match=>match[1]))].sort();
 const doc=readFileSync(new URL('../../docs/him-temporal-comparability-trend-v1.md',import.meta.url),'utf8');
-// The checker, canonical-v1 scoped by construction. It asks only whether every
-// frozen canonical v1 identity is covered by the current calibrated inventory
-// and whether anything in that inventory is still uncalibrated. An inventory
-// that legitimately grew cannot produce a violation, because nothing here
-// compares its size or its membership to the canonical v1 set.
-const canonicalV1CalibrationViolations=(canonicalV1,calibratedInventory,uncalibratedCount)=>{
+// The checker, canonical-v1 scoped by construction: it asks one question only -
+// is every frozen canonical v1 identity present in the current calibrated
+// inventory? Set inclusion, CANONICAL_V1 subset of the calibrated identities.
+//
+// It deliberately takes no uncalibrated count, list, or total. The Trend v1
+// document owns exactly one claim about calibration - that the seventeen frozen
+// canonical v1 identities are calibrated - and a later, separately reviewed
+// metric or metric version may legitimately sit UNCALIBRATED in the shared
+// current manifest while waiting for its own calibration task without making
+// that historical v1 statement any less true. Requiring a manifest-global zero
+// would be this document governing unrelated future inventory: the same
+// ownership error as QHIM-006, one level up. Extra calibrated entries and extra
+// uncalibrated entries are both legal and both invisible here.
+const canonicalV1CalibrationViolations=(canonicalV1,calibratedInventory)=>{
  const inventory=new Set(calibratedInventory);
- return[
-  ...canonicalV1.filter(key=>!inventory.has(key)).map(key=>`canonical v1 metric ${key} is missing from the current calibrated inventory`),
-  ...(uncalibratedCount===0?[]:[`${uncalibratedCount} metric(s) remain uncalibrated in the current structured inventory`])
- ];
+ return canonicalV1.filter(key=>!inventory.has(key)).map(key=>`canonical v1 metric ${key} is missing from the current calibrated inventory`);
 };
 // Frozen per-metric corroboration for exactly the two metrics QHIM-008 is
 // about, read from their own exactly named migrations and matched on the exact
@@ -71,32 +84,49 @@ const calibratesCanonicalV1=(text,key)=>new RegExp(`SET calculation_status='CALI
 
 test('the canonical v1 calibration inventory covers all seventeen HIM v1 identities, including both final HGS appraisals',()=>{
  assert.equal(CANONICAL_V1.length,17,'0010 declares the seventeen canonical v1 identities');
- assert.deepEqual(canonicalV1CalibrationViolations(CANONICAL_V1,MANIFEST_CALIBRATED,EXPECTED_UNCALIBRATED_COUNT),[],'every canonical v1 identity is in the current calibrated inventory');
- assert.equal(EXPECTED_UNCALIBRATED_COUNT,0,'nothing in the current structured inventory remains uncalibrated');
+ assert.deepEqual(canonicalV1CalibrationViolations(CANONICAL_V1,MANIFEST_CALIBRATED),[],'every canonical v1 identity is in the current calibrated inventory');
+ for(const key of CANONICAL_V1)assert.ok(MANIFEST_CALIBRATED.includes(key),`${key} is in the calibrated manifest identities`);
  for(const key of['hgs.purpose-alignment','hgs.habit-strength']){
   assert.ok(MANIFEST_CALIBRATED.includes(key),`${key} is CALIBRATED in the canonical manifest, so the Trend document may not call it uncalibrated`);
   assert.ok(calibratesCanonicalV1(migration(FROZEN_V1_CALIBRATION[key]),key),`${key} is calibrated at definition_version=1 by its own frozen migration`);
  }
 });
 
-test('later calibration work cannot invalidate this guard, and a missing canonical v1 metric still fails it',()=>{
- // PASS direction - the QHIM-006 class must not return. Each synthetic
- // inventory below is what the repository would hold after a legitimate later
- // calibration migration; none of them is a violation.
- const withEnergyV2=[...MANIFEST_CALIBRATED,'hse.energy'];              // a reviewed hse.energy@2
- const withNewMetric=[...MANIFEST_CALIBRATED,'hxs.future-appraisal'];   // an eighteenth canonical metric
- const withBoth=[...withEnergyV2,'hxs.future-appraisal'];
- for(const inventory of[withEnergyV2,withNewMetric,withBoth])assert.deepEqual(canonicalV1CalibrationViolations(CANONICAL_V1,inventory,0),[],'a later calibration is outside canonical v1 calibration truth and must be invisible here');
- // The retired all-migrations census would have failed on exactly those
- // fixtures while passing today - which is why green CI could not expose it.
- const equalityCensus=inventory=>inventory.length===CANONICAL_V1.length;
- assert.ok(equalityCensus(MANIFEST_CALIBRATED),'the retired census passed on canonical main');
- for(const inventory of[withEnergyV2,withNewMetric,withBoth])assert.ok(!equalityCensus(inventory),'the retired census would have failed once a later calibration existed');
+test('later calibrated or uncalibrated work cannot invalidate this guard, and a missing canonical v1 metric still fails it',()=>{
+ // Each fixture models what the shared current manifest would report once
+ // later, separately reviewed work lands. `calibrated` is the only field the
+ // checker consumes; `uncalibrated` is carried alongside it precisely to prove
+ // that it is NOT an input to canonical v1 calibration truth.
+ const state=(calibrated,uncalibrated=[])=>({calibrated,uncalibrated});
+ const today=state(MANIFEST_CALIBRATED);
+ const withEnergyV2=state([...MANIFEST_CALIBRATED,'hse.energy']);                       // a reviewed calibrated hse.energy@2
+ const withNewMetric=state([...MANIFEST_CALIBRATED,'hxs.future-appraisal']);            // a calibrated eighteenth metric
+ const withUncalibratedMetric=state(MANIFEST_CALIBRATED,['hxs.future-appraisal']);      // an eighteenth metric awaiting its own calibration task
+ const withUncalibratedVersion=state(MANIFEST_CALIBRATED,['hse.energy']);               // a reviewed hse.energy@2 not yet calibrated
+ const withEverything=state([...MANIFEST_CALIBRATED,'hse.energy'],['hxs.future-appraisal','hxs.second-future-appraisal']);
+ const futures=[today,withEnergyV2,withNewMetric,withUncalibratedMetric,withUncalibratedVersion,withEverything];
+ // PASS direction - the QHIM-006 class must not return, for later CALIBRATED
+ // work or later UNCALIBRATED work.
+ for(const fixture of futures)assert.deepEqual(canonicalV1CalibrationViolations(CANONICAL_V1,fixture.calibrated),[],'later inventory is outside canonical v1 calibration truth and must be invisible here');
+ // The fixtures are meaningful: three of them really do model a non-zero
+ // global uncalibrated count, and three really do grow the calibrated set.
+ assert.equal(futures.filter(fixture=>fixture.uncalibrated.length>0).length,3,'the uncalibrated futures are non-empty');
+ assert.equal(futures.filter(fixture=>fixture.calibrated.length>MANIFEST_CALIBRATED.length).length,3,'the calibrated futures really grew');
+ // Both retired global rules would have failed on exactly those fixtures while
+ // passing today - which is why green CI could not expose either of them.
+ const retiredEqualityCensus=fixture=>fixture.calibrated.length===CANONICAL_V1.length;
+ const retiredGlobalZeroUncalibrated=fixture=>fixture.uncalibrated.length===0;
+ assert.ok(retiredEqualityCensus(today)&&retiredGlobalZeroUncalibrated(today),'both retired global rules passed on canonical main');
+ for(const fixture of[withEnergyV2,withNewMetric])assert.ok(!retiredEqualityCensus(fixture),'the retired all-migrations census would have failed once a later calibration existed');
+ for(const fixture of[withUncalibratedMetric,withUncalibratedVersion,withEverything])assert.ok(!retiredGlobalZeroUncalibrated(fixture),'the retired manifest-global zero-uncalibrated rule would have failed once any future metric entered uncalibrated');
  // FAIL direction - the guard is not vacuous. Dropping either metric QHIM-008
- // is about, or any other canonical v1 identity, is still caught.
- for(const key of['hgs.purpose-alignment','hgs.habit-strength'])assert.deepEqual(canonicalV1CalibrationViolations(CANONICAL_V1,MANIFEST_CALIBRATED.filter(entry=>entry!==key),0),[`canonical v1 metric ${key} is missing from the current calibrated inventory`],`${key} must remain covered`);
- for(const key of CANONICAL_V1)assert.equal(canonicalV1CalibrationViolations(CANONICAL_V1,MANIFEST_CALIBRATED.filter(entry=>entry!==key),0).length,1,`${key} must remain covered`);
- assert.deepEqual(canonicalV1CalibrationViolations(CANONICAL_V1,MANIFEST_CALIBRATED,1),['1 metric(s) remain uncalibrated in the current structured inventory']);
+ // is about, or any other canonical v1 identity, is still caught, including
+ // while later calibrated and uncalibrated work is present.
+ for(const key of['hgs.purpose-alignment','hgs.habit-strength'])assert.deepEqual(canonicalV1CalibrationViolations(CANONICAL_V1,MANIFEST_CALIBRATED.filter(entry=>entry!==key)),[`canonical v1 metric ${key} is missing from the current calibrated inventory`],`${key} must remain covered`);
+ for(const key of CANONICAL_V1){
+  assert.equal(canonicalV1CalibrationViolations(CANONICAL_V1,MANIFEST_CALIBRATED.filter(entry=>entry!==key)).length,1,`${key} must remain covered`);
+  assert.equal(canonicalV1CalibrationViolations(CANONICAL_V1,withEverything.calibrated.filter(entry=>entry!==key)).length,1,`${key} must remain covered even beside later calibrated and uncalibrated work`);
+ }
  // The frozen per-metric corroboration is live too: it matches only the exact
  // canonical v1 identity/version contract, so a v2 calibration is not mistaken
  // for it and a wrong-key calibration does not satisfy it.
