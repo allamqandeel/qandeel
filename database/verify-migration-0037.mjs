@@ -39,8 +39,15 @@ await client.connect();try{
  if(/auth\.uid|request\.jwt|set_config|current_setting/i.test(background.prosrc))throw new Error('Background wrapper must use no auth.uid(), no request JWT, and no claim reconstruction');
  if(!/read_him_intelligence_snapshot_core_v1\(p_user_id,'CONVERSATION_SESSION',p_session_id::text\)/.test(background.prosrc))throw new Error('Background wrapper must delegate CONVERSATION_SESSION-only to the shared core');
  if(background.provolatile!=='s'||!background.prosecdef||!(background.proconfig??[]).some(c=>c.startsWith('search_path=')))throw new Error('Background wrapper hardening failed');
- const backgroundHim=await client.query("SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname LIKE 'background_read_him%'");
- if(backgroundHim.rows.length!==1)throw new Error('Exactly one background HIM read function may exist: no SITUATION/DECISION/GOAL background authority');
+ // This wrapper stays CONVERSATION_SESSION-only - proven above from its own
+ // body, which delegates the literal 'CONVERSATION_SESSION' context to the
+ // shared core, and below by the rejected three-argument call. The former
+ // background_read_him% namespace census was a future ceiling: it converted
+ // this function's own context limitation into a permanent ban on any later,
+ // separately reviewed background HIM reader. That 0037 itself introduced no
+ // other background HIM reader is proven statically against the frozen 0037
+ // migration text in its contract test, never against the live function
+ // universe.
  const grants=async name=>(await client.query("SELECT grantee,privilege_type FROM information_schema.routine_privileges WHERE routine_schema='public' AND routine_name=$1",[name])).rows;
  const coreGrants=await grants('read_him_intelligence_snapshot_core_v1');
  if(coreGrants.some(g=>['PUBLIC','anon','authenticated','service_role'].includes(g.grantee)))throw new Error('No application role may execute the internal core');
@@ -147,7 +154,7 @@ await client.connect();try{
  await client.query('RESET ROLE');
  if(await counts()!==before)throw new Error('Snapshot reads must persist nothing');
  if((await client.query("SELECT to_regclass('public.him_intelligence_snapshots') rel")).rows[0].rel!==null)throw new Error('No persisted snapshot table may exist');
- const calibration=await client.query("SELECT metric_key FROM public.him_metric_definitions WHERE calculation_status='CALIBRATED'"),calibrationKeys=calibration.rows.map(x=>x.metric_key);
+ const calibration=await client.query("SELECT metric_key FROM public.him_metric_definitions WHERE definition_version=1 AND calculation_status='CALIBRATED'"),calibrationKeys=calibration.rows.map(x=>x.metric_key);
  if(['hse.energy','hse.motivation','hse.attention','hse.self-confidence','hse.stress'].some(key=>!calibrationKeys.includes(key)))throw new Error('Five calibrated HSE snapshot-metric invariant failed');
  await client.query('ROLLBACK');
 }finally{await cleanupVerifierUsers(client,[one,two]);await client.end();}

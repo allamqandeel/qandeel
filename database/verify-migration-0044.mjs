@@ -44,8 +44,15 @@ const COMM={key:'hrs.communication',scale:'hrs.communication.workability-5.v1',m
 const REPAIR={key:'hrs.repair',scale:'hrs.repair.effectiveness-5.v1',model:'hrs.repair.direct-structured-current-repair-effectiveness',instrument:'hrs.repair.direct-relationship-bound-repair-effectiveness-report',approval:'qandeel.him.repair.foundation-approval',method:'DIRECT_STRUCTURED_RELATIONSHIP_BOUND_CURRENT_REPAIR_EFFECTIVENESS_REPORT',inputContract:'DIRECT_STRUCTURED_RELATIONSHIP_BOUND_CURRENT_REPAIR_EFFECTIVENESS_REPORT_V1',provenance:'QANDEEL_HRS_REPAIR_MEASUREMENT_V1',specials:['NO_MEANINGFUL_REPAIR_OPPORTUNITY','TOO_EPISODE_DEPENDENT_TO_RATE','NOT_SURE'],create:'create_hrs_repair_measurement_v1',correct:'correct_hrs_repair_measurement_v1',calculate:'calculate_hrs_repair_measurement_v1',lock:'hrs.repair.observation:',basis:['HRS_REPAIR_CURRENT_EFFECTIVENESS_AFTER_MEANINGFUL_RUPTURE','DIRECT_STRUCTURED_REPORT','RELATIONSHIP_BOUND_ONLY','EXPERIENCE_GROUNDED_CURRENT_APPRAISAL_NULL_WINDOW','ORDINAL_EFFECTIVENESS_5','NO_REPAIR_OPPORTUNITY_AND_EPISODE_DEPENDENCE_FAIL_TO_UNASSESSED','REPAIR_NOT_TRUST_COMMUNICATION_EMOTIONAL_SAFETY_FORGIVENESS_OR_CONFLICT_ABSENCE','DETERMINISTIC_CALCULATION','CORRECTION_CURRENTNESS_IDEMPOTENCY_CONCURRENCY','SECURITY_BINDING_NO_EXTERNAL_OR_CLINICAL_VALIDATION_CLAIM']};
 await client.connect();try{
  // --- Phase inventory: this phase's durable historical guarantees ------------
- const state=await client.query('SELECT metric_key,calculation_status,hif_owner,semantic_mapping_status,semantic_type,scale_reference,required_input_contract,dependency_ids,consumers FROM public.him_metric_definitions');
- if(state.rows.length!==17)throw new Error('Expected exactly 17 metric definitions');
+ const state=await client.query('SELECT metric_key,calculation_status,hif_owner,semantic_mapping_status,semantic_type,scale_reference,required_input_contract,dependency_ids,consumers FROM public.him_metric_definitions WHERE definition_version=1');
+ // Forward-safe canonical scope: the durable historical guarantee is that
+ // every canonical v1 metric identity exists and holds its approved contract,
+ // never that the live definitions table may not grow. The query above is
+ // scoped to definition_version=1, so a later definition version or a later
+ // metric is deliberately tolerated here and proven by its own phase.
+ const CANONICAL_V1=['hse.energy','hse.motivation','hse.attention','hse.self-confidence','hse.stress','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety','hgs.self-awareness','hgs.resilience','hgs.purpose-alignment','hgs.habit-strength'];
+ const present=state.rows.map(x=>x.metric_key);
+ if(CANONICAL_V1.some(key=>!present.includes(key)))throw new Error('Expected every canonical v1 metric identity to exist');
  const calibrated=state.rows.filter(x=>x.calculation_status==='CALIBRATED').map(x=>x.metric_key);
  if([...HSE,'hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair'].some(key=>!calibrated.includes(key)))throw new Error('Expected the five calibrated HSE metrics, the four calibrated HBS metrics, hrs.relationship-trust, hrs.communication, and hrs.repair (later HIM Expansion tasks may calibrate more)');
  for(const m of[COMM,REPAIR]){

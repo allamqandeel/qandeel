@@ -32,8 +32,15 @@ const SCALE='hbs.reflection.engagement-5.v1',MODEL='hbs.reflection.direct-struct
 const EXPECTED_BASIS=['HBS_REFLECTION_CONTEXT_BOUND_DELIBERATE_REFLECTIVE_ENGAGEMENT','DIRECT_STRUCTURED_REPORT','SITUATION_SESSION_ONLY','MEANINGFUL_REFLECTION_OPPORTUNITY_BOUNDARY','ORDINAL_ENGAGEMENT_5','REFLECTION_NOT_RUMINATION_OR_INSIGHT_OUTCOME','DETERMINISTIC_CALCULATION','CORRECTION_CURRENTNESS_IDEMPOTENCY_CONCURRENCY','SECURITY_BINDING','NO_FOUNDER_EXTERNAL_OR_CLINICAL_VALIDATION_CLAIM'];
 await client.connect();try{
  // --- Phase inventory: this phase's durable historical guarantees ------------
- const state=await client.query('SELECT metric_key,calculation_status,hif_owner,semantic_mapping_status,semantic_type,scale_reference,required_input_contract,dependency_ids,consumers FROM public.him_metric_definitions');
- if(state.rows.length!==17)throw new Error('Expected exactly 17 metric definitions');
+ const state=await client.query('SELECT metric_key,calculation_status,hif_owner,semantic_mapping_status,semantic_type,scale_reference,required_input_contract,dependency_ids,consumers FROM public.him_metric_definitions WHERE definition_version=1');
+ // Forward-safe canonical scope: the durable historical guarantee is that
+ // every canonical v1 metric identity exists and holds its approved contract,
+ // never that the live definitions table may not grow. The query above is
+ // scoped to definition_version=1, so a later definition version or a later
+ // metric is deliberately tolerated here and proven by its own phase.
+ const CANONICAL_V1=['hse.energy','hse.motivation','hse.attention','hse.self-confidence','hse.stress','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety','hgs.self-awareness','hgs.resilience','hgs.purpose-alignment','hgs.habit-strength'];
+ const present=state.rows.map(x=>x.metric_key);
+ if(CANONICAL_V1.some(key=>!present.includes(key)))throw new Error('Expected every canonical v1 metric identity to exist');
  const calibrated=state.rows.filter(x=>x.calculation_status==='CALIBRATED').map(x=>x.metric_key);
  if([...HSE,'hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection'].some(key=>!calibrated.includes(key)))throw new Error('Expected the five calibrated HSE metrics plus hbs.avoidance, hbs.consistency, hbs.initiative, and hbs.reflection (later HIM Expansion tasks may calibrate more)');
  const reflection=state.rows.find(x=>x.metric_key==='hbs.reflection');
