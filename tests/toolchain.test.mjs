@@ -113,6 +113,7 @@ test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () =>
     'verify:hse-attention:integration',
     'verify:hse-self-confidence:integration',
     'verify:hse-stress:integration',
+    'verify:hbs-avoidance:integration',
     'verify:him-trends:integration',
     'verify:him-snapshot:integration',
     'verify:runtime-events:integration',
