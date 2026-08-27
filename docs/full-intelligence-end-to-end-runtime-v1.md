@@ -1,11 +1,16 @@
 # Full Intelligence End-to-End Runtime v1
 
 Phase: Phase II — Intelligence Runtime Completion (final implementation task)
-No forward migration: migrations `0001`–`0038` are untouched, the migration
-ceiling remains `0038_information_gap_question_integration_v1.sql`, and no
-migration `0039` exists. No new table, RPC, function, RLS policy, effect type,
+No forward migration was added by this task: at its merge (PR #137),
+migrations `0001`–`0038` were untouched and the chain ended at
+`0038_information_gap_question_integration_v1.sql`. That boundary is
+historical to this gate, not a permanent project prohibition: bounded
+post-review corrections may add forward migrations (the first is
+`0039_foreground_generating_turn_recovery_v1.sql`), and this composition
+verifier remains independent of that later recovery policy. This task itself
+added no new table, RPC, function, RLS policy, effect type,
 durable-result schema, queue, stream, Recommendation persistence, or
-Information Gap resolution/closure model was added.
+Information Gap resolution/closure model.
 
 ## Purpose
 

@@ -130,6 +130,18 @@ export class ConversationRepository {
     await this.serviceApi.rpc('fail_conversation_turn', { p_session_id: sessionId, p_user_id: userId, p_source_turn_id: turnId, ...this.eventMetadata() });
   }
 
+  // Bounded fail-closed recovery of an abandoned GENERATING turn (migration
+  // 0039). Server authority only — never a caller token. The database alone
+  // owns the frozen expiry policy; this method sends no timing value, replays
+  // no generation, and returns the recovered FAILED turn only when the
+  // canonical command actually terminalized an expired generation claim.
+  async recoverExpiredGeneratingTurn(sessionId: string, userId: string, turnId: string): Promise<ConversationTurn | undefined> {
+    const rows = await this.serviceApi.rpc<ConversationTurn[]>('recover_expired_generating_conversation_turn_v1', {
+      p_session_id: sessionId, p_user_id: userId, p_source_turn_id: turnId, ...this.eventMetadata(),
+    });
+    return rows[0];
+  }
+
   async cancelTurn(accessToken: string, sessionId: string, turnId: string, userId: string): Promise<ConversationTurn | undefined> {
     const rows=await this.dataApi.request<ConversationTurn[]>(accessToken,'rpc/cancel_conversation_turn',{method:'POST',body:JSON.stringify({p_session_id:sessionId,p_user_id:userId,p_source_turn_id:turnId,...this.eventMetadata()})});
     return rows[0];

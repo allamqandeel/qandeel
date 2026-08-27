@@ -76,7 +76,7 @@ describe('ConversationOrchestratorService', () => {
   beforeEach(() => {
     repository = {
       claimTurn: jest.fn(), finalizeTurn: jest.fn(), failTurn: jest.fn(), findTurn: jest.fn(),
-      findAssistantForSource: jest.fn(),
+      findAssistantForSource: jest.fn(), recoverExpiredGeneratingTurn: jest.fn(),
     } as unknown as jest.Mocked<ConversationRepository>;
     router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' }, usage: { inputTokens: 1, outputTokens: 1 } }) };
     contextBuilder = {
@@ -129,6 +129,7 @@ describe('ConversationOrchestratorService', () => {
       context: [{ role: 'USER', content: 'hello' }], himContext,
     }));
     expect(behavioralPolicy.buildTextGuidance).toHaveBeenCalledTimes(1);
+    expect(repository.recoverExpiredGeneratingTurn).not.toHaveBeenCalled();
     expect(await orchestrator.orchestrate('token', 'user', completedUser)).toEqual({ userTurn: completedUser });
   });
 
@@ -660,6 +661,107 @@ describe('ConversationOrchestratorService', () => {
       expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
         path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: 10000, recommendationContext: groundedContext,
       }));
+    });
+  });
+
+  describe('foreground GENERATING turn recovery (bounded fail-closed replay)', () => {
+    const failedUser: ConversationTurn = { ...claimed, status: 'FAILED' };
+
+    const expectZeroDownstreamWork = () => {
+      expect(repository.claimTurn).not.toHaveBeenCalled();
+      expect(contextBuilder.build).not.toHaveBeenCalled();
+      expect(safetyGate.evaluate).not.toHaveBeenCalled();
+      expect(himSelector.select).not.toHaveBeenCalled();
+      expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
+      expect(himBridge.transform).not.toHaveBeenCalled();
+      expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
+      expect(memoryRetriever.retrieve).not.toHaveBeenCalled();
+      expect(hypothesisContext.build).not.toHaveBeenCalled();
+      expect(recommendationGrounding.ground).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
+      expect(behavioralPolicy.buildTextGuidance).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+      expect(repository.failTurn).not.toHaveBeenCalled();
+    };
+
+    it('checks recovery exactly once for a live GENERATING replay and returns the in-progress canonical state', async () => {
+      repository.recoverExpiredGeneratingTurn.mockResolvedValue(undefined);
+      repository.findTurn.mockResolvedValue(claimed);
+      repository.findAssistantForSource.mockResolvedValue(undefined);
+
+      await expect(orchestrator.orchestrate('token', 'user', claimed)).resolves.toEqual({ userTurn: claimed });
+      expect(repository.recoverExpiredGeneratingTurn).toHaveBeenCalledTimes(1);
+      expect(repository.recoverExpiredGeneratingTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
+      expectZeroDownstreamWork();
+    });
+
+    it('returns the recovered FAILED user turn with no assistant for an expired GENERATING replay', async () => {
+      repository.recoverExpiredGeneratingTurn.mockResolvedValue(failedUser);
+      repository.findTurn.mockResolvedValue(failedUser);
+      repository.findAssistantForSource.mockResolvedValue(undefined);
+
+      const result = await orchestrator.orchestrate('token', 'user', claimed);
+      expect(result).toEqual({ userTurn: failedUser });
+      expect(result).not.toHaveProperty('assistantTurn');
+      expect(repository.recoverExpiredGeneratingTurn).toHaveBeenCalledTimes(1);
+      expectZeroDownstreamWork();
+    });
+
+    it('runs the same bounded recovery check when a stale RECEIVED object loses the claim to a live winner', async () => {
+      repository.claimTurn.mockResolvedValue(undefined);
+      repository.findTurn.mockResolvedValue(claimed);
+      repository.recoverExpiredGeneratingTurn.mockResolvedValue(undefined);
+      repository.findAssistantForSource.mockResolvedValue(undefined);
+
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: claimed });
+      expect(repository.claimTurn).toHaveBeenCalledTimes(1);
+      expect(repository.recoverExpiredGeneratingTurn).toHaveBeenCalledTimes(1);
+      expect(repository.recoverExpiredGeneratingTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
+      // The claim loser never starts a second provider call or any engine work.
+      expect(router.generate).not.toHaveBeenCalled();
+      expect(contextBuilder.build).not.toHaveBeenCalled();
+      expect(safetyGate.evaluate).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+    });
+
+    it('returns the recovered FAILED state when the claim-lost winner is already expired', async () => {
+      repository.claimTurn.mockResolvedValue(undefined);
+      repository.findTurn.mockResolvedValueOnce(claimed).mockResolvedValue(failedUser);
+      repository.recoverExpiredGeneratingTurn.mockResolvedValue(failedUser);
+      repository.findAssistantForSource.mockResolvedValue(undefined);
+
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: failedUser });
+      expect(repository.recoverExpiredGeneratingTurn).toHaveBeenCalledTimes(1);
+      expect(router.generate).not.toHaveBeenCalled();
+    });
+
+    it.each(['FAILED', 'CANCELLED', 'SUPERSEDED'] as const)('never replays generation or recovery for a terminal %s turn', async (status) => {
+      const terminal: ConversationTurn = { ...claimed, status };
+      repository.claimTurn.mockResolvedValue(undefined);
+      repository.findTurn.mockResolvedValue(terminal);
+      repository.findAssistantForSource.mockResolvedValue(undefined);
+
+      await expect(orchestrator.orchestrate('token', 'user', terminal)).resolves.toEqual({ userTurn: terminal });
+      expect(repository.recoverExpiredGeneratingTurn).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+    });
+
+    it('performs no recovery call for the COMPLETED replay path', async () => {
+      repository.findTurn.mockResolvedValue(completedUser);
+      repository.findAssistantForSource.mockResolvedValue(assistant);
+      await expect(orchestrator.orchestrate('token', 'user', completedUser)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(repository.recoverExpiredGeneratingTurn).not.toHaveBeenCalled();
+      expect(repository.claimTurn).not.toHaveBeenCalled();
+    });
+
+    it('keeps the normal freshly claimed RECEIVED success at exactly one provider call with zero recovery calls', async () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(repository.recoverExpiredGeneratingTurn).not.toHaveBeenCalled();
+      expect(repository.findTurn).not.toHaveBeenCalled();
     });
   });
 });

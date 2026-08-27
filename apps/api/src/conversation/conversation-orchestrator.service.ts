@@ -46,10 +46,27 @@ export class ConversationOrchestratorService {
       return this.currentResult(accessToken, userId, userTurn);
     }
 
+    // A GENERATING replay is a liveness check, never new work: the bounded
+    // server-side recovery runs exactly once, and whether the lease is live
+    // (no-op) or expired (canonical FAILED), the caller gets current canonical
+    // state with zero downstream engine or provider calls and no re-claim.
+    if (userTurn.status === 'GENERATING') {
+      const recovered = await this.repository.recoverExpiredGeneratingTurn(userTurn.session_id, userId, userTurn.id);
+      return this.currentResult(accessToken, userId, recovered ?? userTurn);
+    }
+
     const selection = this.selectPath(userTurn.content);
     const claimed = await this.repository.claimTurn(userTurn.session_id, userId, userTurn.id, selection);
     if (!claimed) {
-      return this.currentResult(accessToken, userId, userTurn);
+      // Claim lost: another request/process won RECEIVED -> GENERATING (or the
+      // turn is already terminal). The loser applies the same bounded recovery
+      // check on a canonical GENERATING reread and never starts provider work.
+      const current = await this.repository.findTurn(accessToken, userTurn.session_id, userId, userTurn.id);
+      if (current?.status === 'GENERATING') {
+        const recovered = await this.repository.recoverExpiredGeneratingTurn(current.session_id, userId, current.id);
+        return this.currentResult(accessToken, userId, recovered ?? current);
+      }
+      return this.currentResult(accessToken, userId, current ?? userTurn);
     }
 
     const execute=async()=>{try {

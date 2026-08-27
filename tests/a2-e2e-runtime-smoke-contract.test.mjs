@@ -65,12 +65,20 @@ test('CI runs the migration 0036 verifier once, after 0035 and before the Redis 
     /^node --env-file-if-exists=\.env database\/verify-migration-0036\.mjs$/u);
 });
 
-test('the canonical migration chain ends at the Information Gap / Question Integration forward migration 0038', async () => {
+test('the A2-era migration chain through 0038 remains present and in canonical order', async () => {
   const migrations = (await readdir(new URL('database/migrations/', root))).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0038_information_gap_question_integration_v1.sql');
-  assert.ok(migrations.includes('0036_hypothesis_lifecycle_completion_v1.sql'), 'migration 0036 remains untouched in the chain');
-  assert.ok(migrations.includes('0037_background_him_runtime_consumption_v1.sql'), 'migration 0037 remains untouched in the chain');
-  assert.equal(migrations.some((name) => name.startsWith('0039')), false, 'no migration 0039');
+  // Historically scoped A2 invariant: the A2-gate chain 0036 -> 0037 -> 0038
+  // remains present and ordered. Post-A2 forward migrations (0039+) are
+  // allowed and are governed by their own bounded tasks; no permanent global
+  // repository migration ceiling is asserted here.
+  const a2EraChain = [
+    '0036_hypothesis_lifecycle_completion_v1.sql',
+    '0037_background_him_runtime_consumption_v1.sql',
+    '0038_information_gap_question_integration_v1.sql',
+  ];
+  const indexes = a2EraChain.map((name) => migrations.indexOf(name));
+  assert.ok(indexes.every((index) => index >= 0), 'migrations 0036/0037/0038 remain untouched in the chain');
+  assert.deepEqual([...indexes].sort((left, right) => left - right), indexes, 'the A2-era chain keeps its canonical order');
 });
 
 test('CI runs the migration 0038 verifier once, after the 0035/0036 verifiers and before the Redis and A2 E2E stages', () => {

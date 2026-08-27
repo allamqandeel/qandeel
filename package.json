@@ -43,6 +43,7 @@
     "verify:post-response-dispatch:integration": "node --env-file-if-exists=.env scripts/verify-post-response-redis.mjs",
     "verify:conversation-authority:integration": "node --env-file-if-exists=.env database/verify-migration-0025.mjs",
     "verify:conversation-session-authority:integration": "node --env-file-if-exists=.env database/verify-migration-0030.mjs",
+    "verify:foreground-generating-turn-recovery:integration": "node --env-file-if-exists=.env database/verify-migration-0039.mjs",
     "verify:memory-authority:integration": "node --env-file-if-exists=.env database/verify-migration-0026.mjs",
     "verify:hypothesis-authority:integration": "node --env-file-if-exists=.env database/verify-migration-0027.mjs",
     "verify:canonical-evidence:integration": "node --env-file-if-exists=.env database/verify-migration-0028.mjs",

@@ -98,6 +98,7 @@ test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () =>
   for (const command of [
     'verify:database:integration',
     'verify:conversation-authority:integration',
+    'verify:foreground-generating-turn-recovery:integration',
     'verify:memory:integration',
     'verify:memory-authority:integration',
     'verify:hypothesis:integration',
@@ -134,6 +135,7 @@ test('lets CI-provided database configuration run safe historical verifiers with
   for (const command of [
     'verify:database:integration',
     'verify:conversation-authority:integration',
+    'verify:foreground-generating-turn-recovery:integration',
     'verify:memory:integration',
     'verify:memory-authority:integration',
     'verify:hypothesis:integration',
