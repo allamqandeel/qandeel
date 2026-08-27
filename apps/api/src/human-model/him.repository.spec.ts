@@ -107,17 +107,27 @@ describe('HimRepository current reads',()=>{
     // HGS Purpose Alignment is the sixteenth calibrated structured metric
     // (activated by 0048): its exact goal-bound GOAL read routes through
     // the supersession-aware current view fully independently of
-    // Self-Awareness and Resilience, while its unsupported contexts and
-    // the one remaining uncalibrated HGS metric stay on the raw
-    // snapshot-history path - hgs.habit-strength is never routed.
+    // Self-Awareness and Resilience, while its unsupported contexts stay
+    // on the raw snapshot-history path.
     await repository.getLatest('token','user','hgs.purpose-alignment','GOAL','00000000-0000-4000-8000-000000000033');
     expect(dataApi.request.mock.calls[32][1]).toMatch(/^him_current_structured_measurements\?/);
     await repository.getLatest('token','user','hgs.purpose-alignment','SITUATION','situation');
     expect(dataApi.request.mock.calls[33][1]).toMatch(/^him_metric_snapshots\?/);
     await repository.getLatest('token','user','hgs.purpose-alignment','CONVERSATION_SESSION','00000000-0000-4000-8000-000000000037');
     expect(dataApi.request.mock.calls[34][1]).toMatch(/^him_metric_snapshots\?/);
+    // HGS Habit Strength is the seventeenth calibrated structured metric
+    // (activated by 0049) and completes current structured routing for all
+    // 17 canonical calibrated metrics: its exact target-bound GOAL and
+    // SITUATION reads route through the supersession-aware current view
+    // fully independently of Consistency, Self-Awareness, Resilience, and
+    // Purpose Alignment, while its unsupported contexts stay on the raw
+    // snapshot-history path and no previous route is broadened.
     await repository.getLatest('token','user','hgs.habit-strength','GOAL','00000000-0000-4000-8000-000000000034');
-    expect(dataApi.request.mock.calls[35][1]).toMatch(/^him_metric_snapshots\?/);
+    expect(dataApi.request.mock.calls[35][1]).toMatch(/^him_current_structured_measurements\?/);
+    await repository.getLatest('token','user','hgs.habit-strength','SITUATION','situation');
+    expect(dataApi.request.mock.calls[36][1]).toMatch(/^him_current_structured_measurements\?/);
+    await repository.getLatest('token','user','hgs.habit-strength','CONVERSATION_SESSION','00000000-0000-4000-8000-000000000038');
+    expect(dataApi.request.mock.calls[37][1]).toMatch(/^him_metric_snapshots\?/);
   });
   it('assembles an Intelligence Snapshot with exactly one RPC call',async()=>{const dataApi={request:jest.fn().mockResolvedValue([])};const repository=new HimRepository(dataApi as never);await repository.readIntelligenceSnapshot('token',{contextKind:'SITUATION',contextId:'00000000-0000-4000-8000-000000000010'});expect(dataApi.request).toHaveBeenCalledTimes(1);expect(dataApi.request).toHaveBeenCalledWith('token','rpc/read_him_intelligence_snapshot_v1',{method:'POST',body:JSON.stringify({p_context_kind:'SITUATION',p_context_id:'00000000-0000-4000-8000-000000000010'})});});
 });
