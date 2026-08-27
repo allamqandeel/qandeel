@@ -6,7 +6,7 @@ const expected=['hse.stress','hse.energy','hse.motivation','hse.self-confidence'
 describe('Initial HIM catalog',()=>{
   it('registers exactly the 17 canonical identities',()=>expect(new HimDefinitionRegistry().list().map(x=>x.metricKey)).toEqual(expected));
   it('contains no bridge-only examples',()=>expect(new HimDefinitionRegistry().list().map(x=>x.canonicalName)).not.toEqual(expect.arrayContaining(['Decision Clarity','Action Readiness','Goal Alignment','Decision Quality','Uncertainty','Progress','Cognitive Load','Relationship Health','Growth Momentum','Sleep'])));
-  it('activates thirteen calibrated structured metrics while leaving 4 metrics uncalibrated',()=>{
+  it('activates fourteen calibrated structured metrics while leaving 3 metrics uncalibrated',()=>{
     const stress=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.stress')!;
     expect(stress.calculationStatus).toBe('CALIBRATED');
     expect(stress.scaleReference).toBe('hse.stress.ordinal-5.v1');
@@ -112,7 +112,25 @@ describe('Initial HIM catalog',()=>{
     expect(emotionalSafety.semanticMappingStatus).toBe('UNRESOLVED');
     expect(emotionalSafety.semanticType).toBeNull();
     expect(emotionalSafety.validContextKinds).toEqual(['RELATIONSHIP']);
-    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety'].includes(x.metricKey)).forEach(x=>{
+    // HGS Self-Awareness is calibrated as a target-bound current perceived
+    // self-understanding-clarity appraisal and opens the HGS family:
+    // exactly one owned GOAL or SITUATION target, no temporal window, and
+    // its Foundation semantic mapping stays deliberately unresolved - it
+    // measures perceived clarity only, never Reflection (the deliberate
+    // reflective process), rumination, Self-Confidence, objective insight
+    // accuracy, or growth outcome, and it is not force-mapped to
+    // CAPABILITY merely because it sounds like an ability.
+    const selfAwareness=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hgs.self-awareness')!;
+    expect(selfAwareness.calculationStatus).toBe('CALIBRATED');
+    expect(selfAwareness.scaleReference).toBe('hgs.self-awareness.clarity-5.v1');
+    expect(selfAwareness.requiredInputContract).toBe('DIRECT_STRUCTURED_TARGET_BOUND_CURRENT_SELF_UNDERSTANDING_CLARITY_REPORT_V1');
+    expect(selfAwareness.hifOwner).toBe('HGS');
+    expect(selfAwareness.semanticMappingStatus).toBe('UNRESOLVED');
+    expect(selfAwareness.semanticType).toBeNull();
+    expect(selfAwareness.validContextKinds).toEqual(['GOAL','SITUATION']);
+    expect(selfAwareness.dependencyIds).toEqual([]);
+    expect(selfAwareness.consumers).toEqual([]);
+    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety','hgs.self-awareness'].includes(x.metricKey)).forEach(x=>{
       expect(x.calculationStatus).toBe('UNCALIBRATED');
       expect(x.scaleReference).toBe('UNCALIBRATED_NO_PRODUCTION_SCALE');
     });
