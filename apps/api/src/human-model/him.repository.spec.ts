@@ -60,8 +60,21 @@ describe('HimRepository current reads',()=>{
     expect(dataApi.request.mock.calls[18][1]).toMatch(/^him_current_structured_measurements\?/);
     await repository.getLatest('token','user','hrs.relationship-trust','SITUATION','situation');
     expect(dataApi.request.mock.calls[19][1]).toMatch(/^him_metric_snapshots\?/);
+    // HRS Communication and Repair are the eleventh and twelfth calibrated
+    // structured metrics: each exact RELATIONSHIP-bound read routes through
+    // the supersession-aware current view fully independently, while their
+    // unsupported contexts and the still-uncalibrated hrs.emotional-safety
+    // stay on the raw snapshot-history path.
     await repository.getLatest('token','user','hrs.communication','RELATIONSHIP','00000000-0000-4000-8000-000000000026');
-    expect(dataApi.request.mock.calls[20][1]).toMatch(/^him_metric_snapshots\?/);
+    expect(dataApi.request.mock.calls[20][1]).toMatch(/^him_current_structured_measurements\?/);
+    await repository.getLatest('token','user','hrs.repair','RELATIONSHIP','00000000-0000-4000-8000-000000000027');
+    expect(dataApi.request.mock.calls[21][1]).toMatch(/^him_current_structured_measurements\?/);
+    await repository.getLatest('token','user','hrs.communication','SITUATION','situation');
+    expect(dataApi.request.mock.calls[22][1]).toMatch(/^him_metric_snapshots\?/);
+    await repository.getLatest('token','user','hrs.repair','GOAL','00000000-0000-4000-8000-000000000028');
+    expect(dataApi.request.mock.calls[23][1]).toMatch(/^him_metric_snapshots\?/);
+    await repository.getLatest('token','user','hrs.emotional-safety','RELATIONSHIP','00000000-0000-4000-8000-000000000029');
+    expect(dataApi.request.mock.calls[24][1]).toMatch(/^him_metric_snapshots\?/);
   });
   it('assembles an Intelligence Snapshot with exactly one RPC call',async()=>{const dataApi={request:jest.fn().mockResolvedValue([])};const repository=new HimRepository(dataApi as never);await repository.readIntelligenceSnapshot('token',{contextKind:'SITUATION',contextId:'00000000-0000-4000-8000-000000000010'});expect(dataApi.request).toHaveBeenCalledTimes(1);expect(dataApi.request).toHaveBeenCalledWith('token','rpc/read_him_intelligence_snapshot_v1',{method:'POST',body:JSON.stringify({p_context_kind:'SITUATION',p_context_id:'00000000-0000-4000-8000-000000000010'})});});
 });

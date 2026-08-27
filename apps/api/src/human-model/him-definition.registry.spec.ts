@@ -6,7 +6,7 @@ const expected=['hse.stress','hse.energy','hse.motivation','hse.self-confidence'
 describe('Initial HIM catalog',()=>{
   it('registers exactly the 17 canonical identities',()=>expect(new HimDefinitionRegistry().list().map(x=>x.metricKey)).toEqual(expected));
   it('contains no bridge-only examples',()=>expect(new HimDefinitionRegistry().list().map(x=>x.canonicalName)).not.toEqual(expect.arrayContaining(['Decision Clarity','Action Readiness','Goal Alignment','Decision Quality','Uncertainty','Progress','Cognitive Load','Relationship Health','Growth Momentum','Sleep'])));
-  it('activates ten calibrated structured metrics while leaving 7 metrics uncalibrated',()=>{
+  it('activates twelve calibrated structured metrics while leaving 5 metrics uncalibrated',()=>{
     const stress=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.stress')!;
     expect(stress.calculationStatus).toBe('CALIBRATED');
     expect(stress.scaleReference).toBe('hse.stress.ordinal-5.v1');
@@ -73,7 +73,30 @@ describe('Initial HIM catalog',()=>{
     expect(relationshipTrust.semanticMappingStatus).toBe('UNRESOLVED');
     expect(relationshipTrust.semanticType).toBeNull();
     expect(relationshipTrust.validContextKinds).toEqual(['RELATIONSHIP']);
-    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust'].includes(x.metricKey)).forEach(x=>{
+    // HRS Communication and Repair are calibrated as two fully independent
+    // relationship-bound at-report constructs (each with its own scale and
+    // input contract - nothing is shared even though both are ordinal 1-5)
+    // while their Foundation semantic mappings stay deliberately unresolved:
+    // Communication is not talking frequency, agreement, satisfaction,
+    // Trust, or Repair; Repair is not absence of conflict, forgiveness,
+    // reconciliation, Communication quality, or Trust.
+    const communication=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hrs.communication')!;
+    expect(communication.calculationStatus).toBe('CALIBRATED');
+    expect(communication.scaleReference).toBe('hrs.communication.workability-5.v1');
+    expect(communication.requiredInputContract).toBe('DIRECT_STRUCTURED_RELATIONSHIP_BOUND_CURRENT_COMMUNICATION_WORKABILITY_REPORT_V1');
+    expect(communication.hifOwner).toBe('HRS');
+    expect(communication.semanticMappingStatus).toBe('UNRESOLVED');
+    expect(communication.semanticType).toBeNull();
+    expect(communication.validContextKinds).toEqual(['RELATIONSHIP']);
+    const repair=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hrs.repair')!;
+    expect(repair.calculationStatus).toBe('CALIBRATED');
+    expect(repair.scaleReference).toBe('hrs.repair.effectiveness-5.v1');
+    expect(repair.requiredInputContract).toBe('DIRECT_STRUCTURED_RELATIONSHIP_BOUND_CURRENT_REPAIR_EFFECTIVENESS_REPORT_V1');
+    expect(repair.hifOwner).toBe('HRS');
+    expect(repair.semanticMappingStatus).toBe('UNRESOLVED');
+    expect(repair.semanticType).toBeNull();
+    expect(repair.validContextKinds).toEqual(['RELATIONSHIP']);
+    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair'].includes(x.metricKey)).forEach(x=>{
       expect(x.calculationStatus).toBe('UNCALIBRATED');
       expect(x.scaleReference).toBe('UNCALIBRATED_NO_PRODUCTION_SCALE');
     });
