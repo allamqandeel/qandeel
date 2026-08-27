@@ -8,6 +8,20 @@
 // canonical v1 definitions and their exact owned background functions without
 // treating the extra objects as failure.
 //
+// OWNER SCOPE (QHIM-006). This harness proves QHIM-002's history, and only
+// QHIM-002's history. Its proof universe is the explicit frozen ownership map
+// in ./him-historical-verifier-forward-compatibility-scope-v1.mjs, derived
+// from the merged PR #151 remediation - never a directory listing, never a
+// migration-number cutoff, never a name prefix. It previously discovered its
+// subject files with a live scan of every verify-*.mjs in this directory and
+// then applied historical-v1 semantics to all of them, which meant a future
+// verifier legitimately owning hse.energy@2 would have been failed for reading
+// definition_version=2. The ownership map ends that: the collector below is
+// asked only for the exact historical catalog owners, each must yield exactly
+// the number of owned reads the map declares, and both facts are proven here
+// rather than assumed, so no present or future verifier file can add to,
+// remove from, or reorder this harness's historical query set.
+//
 // This harness must itself obey the QHIM-002 policy it exists to enforce, so
 // every fixture is collision-safe and every residue check is baseline
 // relative. The synthetic definition version is derived from the live maximum
@@ -23,40 +37,46 @@
 // live inside this transaction and would be invisible to another connection,
 // while committing them would pollute the shared CI database for every later
 // verifier step. Instead this proof combines (1) exact static proof of every
-// affected verifier query, extracted verbatim from the verifier sources, and
-// (2) real-PostgreSQL execution of those exact extracted query strings against
-// the fixture-extended database, comparing each result before and after the
-// synthetic future objects exist.
-import pg from'pg';import{randomUUID}from'node:crypto';import{readdirSync,readFileSync}from'node:fs';
+// owned historical verifier query, extracted verbatim from the owned verifier
+// sources, and (2) real-PostgreSQL execution of those exact extracted query
+// strings against the fixture-extended database, comparing each result before
+// and after the synthetic future objects exist.
+import pg from'pg';import{randomUUID}from'node:crypto';
+import{QHIM002_SWEPT_HISTORICAL_VERIFIERS,QHIM002_CATALOG_V1_SCOPE,QHIM002_OWNED_CATALOG_QUERY_COUNT,QHIM002_CANONICAL_V1_KEYS,QHIM002_HSE_V1_KEYS,QHIM002_OWNED_BACKGROUND_SIGNATURES,QHIM002_PROVENANCE,assertOwnedHistoricalArtifactsExist,collectOwnedCatalogQueries,qhim002RulesGoverning,qhim002Violations,readVerifierSource}from'./him-historical-verifier-forward-compatibility-scope-v1.mjs';
 const{Client}=pg;const client=new Client({connectionString:process.env.DATABASE_URL});
-const dir=new URL('./',import.meta.url);
-const HARNESS='verify-him-historical-verifier-forward-compatibility-v1.mjs';
-const CANONICAL_V1=['hse.energy','hse.motivation','hse.attention','hse.self-confidence','hse.stress','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety','hgs.self-awareness','hgs.resilience','hgs.purpose-alignment','hgs.habit-strength'];
-const HSE_V1=['hse.energy','hse.motivation','hse.attention','hse.self-confidence','hse.stress'];
-const OWNED_BACKGROUND=['background_create_system_hypothesis_v1(uuid,uuid,text,text,text,text,text[],text[])','background_attach_hypothesis_evidence_v1(uuid,uuid,text,text)','background_link_competing_hypotheses_v1(uuid,uuid,uuid)','background_create_confidence_evaluation_v1(uuid,uuid,uuid,integer)','background_apply_hypothesis_evidence_update_v1(uuid,uuid,uuid,uuid,integer,text,text)','background_read_him_conversation_snapshot_v1(uuid,uuid)'];
+const CANONICAL_V1=QHIM002_CANONICAL_V1_KEYS;
+const HSE_V1=QHIM002_HSE_V1_KEYS;
+const OWNED_BACKGROUND=QHIM002_OWNED_BACKGROUND_SIGNATURES;
 const EXTENDED_METRIC='hse.energy';
-const executable=text=>text.split('\n').map(line=>{const at=line.indexOf('//');return at===-1?line:(/^\s*\/\//.test(line)?'':line.slice(0,at));}).join('\n');
-const files=readdirSync(dir).filter(name=>name.startsWith('verify-')&&name.endsWith('.mjs')&&name!==HARNESS).sort();
-const catalogQueries=[];
-for(const name of files){
- const code=executable(readFileSync(new URL(name,dir),'utf8'));
- for(const match of code.matchAll(/(['"`])((?:(?!\1)[\s\S])*?)\1/g)){
-  const sql=match[2];
-  if(!/FROM public\.him_metric_definitions/.test(sql))continue;
-  // Static proof: every affected historical query is version scoped.
-  if(!/definition_version=1/.test(sql))throw new Error(`${name} still reads him_metric_definitions without definition_version=1 scoping: ${sql.slice(0,120)}`);
-  if(sql.includes('${'))throw new Error(`${name} builds an interpolated catalog query that cannot be proven verbatim`);
-  catalogQueries.push({name,sql});
- }
+// Existence only: every historical artifact QHIM-002 owns must still be here.
+// The directory is never compared against the map, counted, or required to
+// contain nothing else - extra verifier files are expected and legal.
+assertOwnedHistoricalArtifactsExist();
+// Static proof, applied to each owned historical file under exactly the rules
+// that file's history owns. A file outside the map is governed by no rule at
+// all, so it cannot be inspected or failed here.
+for(const name of QHIM002_SWEPT_HISTORICAL_VERIFIERS){
+ const violations=qhim002Violations(name,readVerifierSource(name));
+ if(violations.length)throw new Error(violations.join('; '));
 }
-if(catalogQueries.length<15)throw new Error('Expected the affected historical catalog queries to be discovered from the verifier sources');
-// Static proof: no historical verifier takes a census of the live function
-// namespace any more, so a synthetic future function in either namespace can
-// never be read as a historical regression.
-for(const name of files){
- const code=executable(readFileSync(new URL(name,dir),'utf8'));
- if(/LIKE\s+'background_/i.test(code)||/proname\s+(?:I?LIKE|~)/i.test(code))throw new Error(`${name} still takes a live function namespace census`);
-}
+// The historical proof universe, fixed by ownership rather than by directory
+// contents: the collector is asked only for the exact catalog owners, in the
+// map's order, and each must contribute exactly its declared owned read count.
+const catalogQueries=collectOwnedCatalogQueries(readVerifierSource);
+// Proof that the previous sentence is mechanically true rather than asserted:
+// a reader that refuses anything outside the ownership map still produces the
+// identical query set, and the exact sequence of files consulted is the map
+// itself. Adding ten unrelated future verifier sources to this directory
+// therefore cannot change catalogQueries at all - they would never be read.
+const consulted=[];
+const ownedOnly=name=>{
+ if(!QHIM002_CATALOG_V1_SCOPE.includes(name))throw new Error(`The QHIM-002 harness read ${name}, which is outside its historical ownership map`);
+ consulted.push(name);return readVerifierSource(name);
+};
+const ownershipFixed=collectOwnedCatalogQueries(ownedOnly);
+if(consulted.join('\n')!==QHIM002_CATALOG_V1_SCOPE.join('\n'))throw new Error('The QHIM-002 harness did not derive its proof universe from the historical ownership map');
+if(JSON.stringify(ownershipFixed)!==JSON.stringify(catalogQueries)||catalogQueries.length!==QHIM002_OWNED_CATALOG_QUERY_COUNT||catalogQueries.length!==QHIM002_PROVENANCE.versionScopedCatalogReads)throw new Error('The QHIM-002 owned historical catalog query set is not exactly the PR #151 sweep result');
+if(qhim002RulesGoverning('verify-migration-0051.mjs').length||qhim002RulesGoverning('verify-migration-0052.mjs').length)throw new Error('A verifier introduced after QHIM-002 is being governed by QHIM-002 historical rules');
 // Key-scoped historical queries are all executed with the canonical v1 key set
 // (a superset of any narrower historical scope such as the five HSE keys), so
 // every extracted query is compared under identical inputs.
@@ -113,9 +133,9 @@ const forwardExtensionProof=async(baseline,reference,label)=>{
  // The fixtures are meaningful: each one changes exactly the global universe
  // the pre-remediation verifiers froze, so every proof below would have failed
  // before this remediation.
- // --- Proof 1: every extracted historical catalog query is version scoped ----
+ // --- Proof 1: every owned historical catalog query is version scoped -------
  const catalog=await snapshotCatalog();
- if(catalog.length!==reference.catalog.length)throw new Error(`${label}: the discovered historical catalog query set changed`);
+ if(catalog.length!==reference.catalog.length)throw new Error(`${label}: the owned historical catalog query set changed`);
  for(let index=0;index<catalog.length;index++){
   const expected=reference.catalog[index],actual=catalog[index];
   if(actual.sql!==expected.sql)throw new Error(`${label}: catalog query drift between snapshots`);
@@ -187,4 +207,4 @@ await client.connect();try{
  for(const name of[...phaseA.probes,...phaseB.probes])if(Number((await client.query("SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace nsp ON nsp.oid=p.pronamespace WHERE nsp.nspname='public' AND p.proname=$1",[name])).rows[0].n)!==0)throw new Error(`Synthetic probe ${name} did not roll back`);
  for(const version of[phaseA.version,phaseB.version,legitimate])if(!baseline.versions.includes(version)&&residual.versions.includes(version))throw new Error(`Synthetic ${EXTENDED_METRIC} version ${version} did not roll back`);
 }finally{try{await client.query('ROLLBACK');}catch{}await client.end();}
-console.log('Verified HIM historical verifier forward compatibility (QHIM-002): every historical catalog query discovered in the verifier sources is version scoped and returns a byte-identical result while a later Energy definition version exists, no historical verifier takes a live function-namespace census, the exact owned background command signatures keep their definitions and service-role-only ACLs with no auth.uid() while uniquely named synthetic functions occupy the formerly frozen background_%_v1 and background_read_him% namespaces, the canonical seventeen v1 identities and the five HSE v1 calibration identities still resolve exactly, and QHIM-001 structured-current selection is untouched. The harness is forward-safe itself: the synthetic version is derived from the live maximum rather than hard-coded, probe names are generated unique and proven unused, and the proof is re-run against a state that already contains a legitimate later Energy definition - which is selected around, survives the synthetic rollback untouched, and leaves the version-scoped historical queries byte-identical - with zero residue measured against the captured pre-fixture baseline rather than by requiring every non-v1 version to be absent.');
+console.log(`Verified HIM historical verifier forward compatibility (QHIM-002), scoped to the ${QHIM002_SWEPT_HISTORICAL_VERIFIERS.length} historical verifiers PR #${QHIM002_PROVENANCE.pullRequest} actually swept: the ${QHIM002_OWNED_CATALOG_QUERY_COUNT} owned historical catalog queries are drawn from the explicit ownership map rather than from whatever verifier files exist, each is version scoped and returns a byte-identical result while a later Energy definition version exists, no owned background phase takes a live function-namespace census, the exact owned background command signatures keep their definitions and service-role-only ACLs with no auth.uid() while uniquely named synthetic functions occupy the formerly frozen background_%_v1 and background_read_him% namespaces, the canonical seventeen v1 identities and the five HSE v1 calibration identities still resolve exactly, and QHIM-001 structured-current selection is untouched. Ownership is provenance, not directory contents: the collector is proven to consult exactly the owned catalog files in map order, so later verifiers - verify-migration-0051.mjs and verify-migration-0052.mjs today, any future verifier tomorrow - are governed by no QHIM-002 rule and cannot alter this proof. The harness is forward-safe itself: the synthetic version is derived from the live maximum rather than hard-coded, probe names are generated unique and proven unused, and the proof is re-run against a state that already contains a legitimate later Energy definition - which is selected around, survives the synthetic rollback untouched, and leaves the version-scoped historical queries byte-identical - with zero residue measured against the captured pre-fixture baseline rather than by requiring every non-v1 version to be absent.`);
