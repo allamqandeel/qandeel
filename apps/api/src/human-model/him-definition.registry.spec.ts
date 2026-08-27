@@ -6,7 +6,7 @@ const expected=['hse.stress','hse.energy','hse.motivation','hse.self-confidence'
 describe('Initial HIM catalog',()=>{
   it('registers exactly the 17 canonical identities',()=>expect(new HimDefinitionRegistry().list().map(x=>x.metricKey)).toEqual(expected));
   it('contains no bridge-only examples',()=>expect(new HimDefinitionRegistry().list().map(x=>x.canonicalName)).not.toEqual(expect.arrayContaining(['Decision Clarity','Action Readiness','Goal Alignment','Decision Quality','Uncertainty','Progress','Cognitive Load','Relationship Health','Growth Momentum','Sleep'])));
-  it('activates fifteen calibrated structured metrics while leaving 2 metrics uncalibrated',()=>{
+  it('activates sixteen calibrated structured metrics while leaving 1 metric uncalibrated',()=>{
     const stress=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.stress')!;
     expect(stress.calculationStatus).toBe('CALIBRATED');
     expect(stress.scaleReference).toBe('hse.stress.ordinal-5.v1');
@@ -149,7 +149,28 @@ describe('Initial HIM catalog',()=>{
     expect(resilience.validContextKinds).toEqual(['GOAL','SITUATION']);
     expect(resilience.dependencyIds).toEqual([]);
     expect(resilience.consumers).toEqual([]);
-    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety','hgs.self-awareness','hgs.resilience'].includes(x.metricKey)).forEach(x=>{
+    // HGS Purpose Alignment is calibrated as a goal-bound current
+    // perceived purpose-congruence appraisal: exactly one owned GOAL
+    // target, no temporal window, and - unlike Self-Awareness and
+    // Resilience - its Foundation semantic mapping is ALREADY RESOLVED as
+    // ALIGNMENT and is preserved exactly (never downgraded to
+    // UNRESOLVED/null and never remapped): it measures perceived
+    // congruence with personally meaningful values/priorities/direction
+    // only, never Motivation, Self-Awareness, Resilience, Consistency,
+    // Habit Strength, goal importance, goal success, or moral/safety
+    // approval, and no motive-subscale weighting or value hierarchy
+    // exists.
+    const purposeAlignment=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hgs.purpose-alignment')!;
+    expect(purposeAlignment.calculationStatus).toBe('CALIBRATED');
+    expect(purposeAlignment.scaleReference).toBe('hgs.purpose-alignment.congruence-5.v1');
+    expect(purposeAlignment.requiredInputContract).toBe('DIRECT_STRUCTURED_GOAL_BOUND_CURRENT_PURPOSE_CONGRUENCE_REPORT_V1');
+    expect(purposeAlignment.hifOwner).toBe('HGS');
+    expect(purposeAlignment.semanticMappingStatus).toBe('RESOLVED');
+    expect(purposeAlignment.semanticType).toBe('ALIGNMENT');
+    expect(purposeAlignment.validContextKinds).toEqual(['GOAL']);
+    expect(purposeAlignment.dependencyIds).toEqual([]);
+    expect(purposeAlignment.consumers).toEqual([]);
+    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety','hgs.self-awareness','hgs.resilience','hgs.purpose-alignment'].includes(x.metricKey)).forEach(x=>{
       expect(x.calculationStatus).toBe('UNCALIBRATED');
       expect(x.scaleReference).toBe('UNCALIBRATED_NO_PRODUCTION_SCALE');
     });
