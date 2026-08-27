@@ -1,7 +1,7 @@
 # HGS Measurement Expansion v1 (bounded family note)
 
 State of the HGS (Growth) branch of HIM Expansion & Human Intelligence
-Completion after migration 0047.
+Completion after migration 0048.
 
 ## Calibrated HGS metrics
 
@@ -9,13 +9,14 @@ Completion after migration 0047.
 |---|---|---|---|
 | `hgs.self-awareness@1` | 14/17 (0046) | Target-bound current perceived self-understanding clarity in one exact GOAL or SITUATION — perceived clarity only, never objective insight accuracy or growth outcome | `TOO_FACET_DEPENDENT_TO_RATE`, `INSUFFICIENT_BASIS_TO_JUDGE` |
 | `hgs.resilience@1` | 15/17 (0047) | Target-bound current perceived adaptive recovery/continuity under actually experienced challenge in one exact GOAL or SITUATION — never low Stress, grit, goal success, HRS Repair, or a global resilience trait | `NO_MEANINGFUL_ADVERSITY_OR_CHALLENGE`, `TOO_EARLY_TO_JUDGE_ADAPTATION`, `TOO_CHALLENGE_DEPENDENT_TO_RATE` |
+| `hgs.purpose-alignment@1` | 16/17 (0048) | Goal-bound current perceived congruence with personally meaningful values/priorities/direction in one exact GOAL — never Motivation, Self-Awareness, Resilience, Consistency, Habit Strength, goal importance, goal success, or moral/safety approval | `TOO_VALUE_CONFLICTED_TO_RATE`, `INSUFFICIENT_PERSONAL_DIRECTION_BASIS_TO_JUDGE` |
 
 The HGS family state is now:
 
 ```text
 Self-Awareness     CALIBRATED
 Resilience         CALIBRATED
-Purpose Alignment  UNCALIBRATED
+Purpose Alignment  CALIBRATED
 Habit Strength     UNCALIBRATED
 ```
 
@@ -23,12 +24,30 @@ Self-Awareness was deliberately implemented alone because its boundary
 with HBS Reflection deserves independent verification; Resilience
 followed with its own actual-challenge grounding and its own
 independence proofs against Stress, Motivation, Self-Confidence,
-Self-Awareness, Consistency, and HRS Repair. The remaining two metrics
-are later, separately reviewed HIM Expansion tasks — nothing in
-0046/0047 or their verifiers freezes them as permanently uncalibrated,
-and no migration-number ceiling exists. Phase inventory after 0047:
-15/17 calibrated, 2/17 uncalibrated (a one-time migration transition,
-never a historical-verifier ceiling).
+Self-Awareness, Consistency, and HRS Repair; Purpose Alignment
+followed as the first HGS metric with an ALREADY RESOLVED Foundation
+semantic mapping (HGS / RESOLVED / ALIGNMENT — preserved exactly,
+never downgraded to UNRESOLVED/null), GOAL-only authority, and its own
+independence proofs against Motivation, Self-Awareness, Resilience,
+and Consistency in both directions. The remaining metric
+(`hgs.habit-strength`) is a later, separately reviewed HIM Expansion
+task — nothing in 0046/0047/0048 or their verifiers freezes it as
+permanently uncalibrated, and no migration-number ceiling exists.
+Phase inventory after 0048: 16/17 calibrated, 1/17 uncalibrated (a
+one-time migration transition, never a historical-verifier ceiling).
+
+## The Purpose Alignment semantic-identity exception
+
+Unlike Self-Awareness and Resilience (deliberately UNRESOLVED/null),
+`hgs.purpose-alignment` arrived at the Foundation freeze with a
+RESOLVED **ALIGNMENT** semantic type and a GOAL-only context
+authority. Calibration preserves that identity exactly on the
+definition and on every produced snapshot. Critically,
+RESOLVED/ALIGNMENT creates **no** consumption eligibility: Trend v1
+stays five-HSE only (no HGS temporal-comparability contract exists)
+and Intelligence Snapshot v1 stays the frozen five-HSE STATE contract
+— `semanticType = ALIGNMENT` does not qualify, with regression proof
+on both surfaces.
 
 ## The Reflection boundary (why Self-Awareness came first)
 

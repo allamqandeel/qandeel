@@ -40,6 +40,7 @@
     "verify:hrs-emotional-safety:integration": "node --env-file-if-exists=.env database/verify-migration-0045.mjs",
     "verify:hgs-self-awareness:integration": "node --env-file-if-exists=.env database/verify-migration-0046.mjs",
     "verify:hgs-resilience:integration": "node --env-file-if-exists=.env database/verify-migration-0047.mjs",
+    "verify:hgs-purpose-alignment:integration": "node --env-file-if-exists=.env database/verify-migration-0048.mjs",
     "verify:him-trends:integration": "node --env-file-if-exists=.env database/verify-him-trends-v1.mjs",
     "verify:him-snapshot:integration": "node --env-file-if-exists=.env database/verify-him-intelligence-snapshot-v1.mjs",
     "verify:background-him-runtime-consumption:integration": "node --env-file-if-exists=.env database/verify-migration-0037.mjs",
