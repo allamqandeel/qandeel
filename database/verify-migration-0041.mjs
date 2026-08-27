@@ -146,8 +146,12 @@ await client.connect();try{
  const currentTriple=(await client.query("SELECT metric_key,numeric_value FROM public.him_current_structured_measurements WHERE context_id=$1 AND measurement_observation_id=ANY($2::uuid[]) ORDER BY metric_key",[goalTarget.id,[consistencyObs.id,initiativeObs.id,avoidanceObs.id]])).rows;
  if(currentTriple.length!==3||currentTriple.map(x=>`${x.metric_key}:${x.numeric_value}`).join()!=='hbs.avoidance:5,hbs.consistency:5,hbs.initiative:1')throw new Error('Freely differing sibling current values failed');
  // Each result/snapshot carries only its own model and binding provenance.
+ // (Bindings are not directly readable by the authenticated role, so this
+ // audit join runs as the superuser and the user identity is restored after.)
+ await client.query('RESET ROLE');
  const provenance=await client.query('SELECT r.metric_key,r.model_id,b.metric_key AS binding_metric FROM public.him_calculation_results r JOIN public.him_canonical_model_bindings b ON b.id=r.canonical_binding_id WHERE r.measurement_observation_id=ANY($1::uuid[])',[[consistencyObs.id,initiativeObs.id,avoidanceObs.id]]);
  if(provenance.rows.length!==3||provenance.rows.some(x=>x.metric_key!==x.binding_metric||!x.model_id.startsWith(x.metric_key)))throw new Error('Per-metric calculation provenance failed');
+ await identity(client,one);
  // --- Trend v1 and Intelligence Snapshot v1 non-consumption ------------------
  await rejects(client,"SELECT * FROM public.read_him_trend_source_v1($1,'hbs.consistency',1,'GOAL',$2,now()-interval '30 days',now())",[one,goalTarget.id]);
  await rejects(client,"SELECT * FROM public.read_him_trend_source_v1($1,'hbs.initiative',1,'GOAL',$2,now()-interval '30 days',now())",[one,goalTarget.id]);
