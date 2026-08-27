@@ -6,7 +6,7 @@ const expected=['hse.stress','hse.energy','hse.motivation','hse.self-confidence'
 describe('Initial HIM catalog',()=>{
   it('registers exactly the 17 canonical identities',()=>expect(new HimDefinitionRegistry().list().map(x=>x.metricKey)).toEqual(expected));
   it('contains no bridge-only examples',()=>expect(new HimDefinitionRegistry().list().map(x=>x.canonicalName)).not.toEqual(expect.arrayContaining(['Decision Clarity','Action Readiness','Goal Alignment','Decision Quality','Uncertainty','Progress','Cognitive Load','Relationship Health','Growth Momentum','Sleep'])));
-  it('activates fourteen calibrated structured metrics while leaving 3 metrics uncalibrated',()=>{
+  it('activates fifteen calibrated structured metrics while leaving 2 metrics uncalibrated',()=>{
     const stress=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.stress')!;
     expect(stress.calculationStatus).toBe('CALIBRATED');
     expect(stress.scaleReference).toBe('hse.stress.ordinal-5.v1');
@@ -130,7 +130,26 @@ describe('Initial HIM catalog',()=>{
     expect(selfAwareness.validContextKinds).toEqual(['GOAL','SITUATION']);
     expect(selfAwareness.dependencyIds).toEqual([]);
     expect(selfAwareness.consumers).toEqual([]);
-    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety','hgs.self-awareness'].includes(x.metricKey)).forEach(x=>{
+    // HGS Resilience is calibrated as a target-bound current
+    // adaptive-recovery appraisal under actually experienced challenge:
+    // exactly one owned GOAL or SITUATION target, no temporal window or
+    // recovery-time score, and its Foundation semantic mapping stays
+    // deliberately unresolved - it measures perceived adaptive
+    // continuity/recovery only, never low Stress, Motivation,
+    // Self-Confidence, Consistency, Habit Strength, grit, goal success,
+    // HRS Repair, or a global resilience trait, and it is not force-mapped
+    // to CAPABILITY or TRAIT merely because it sounds like toughness.
+    const resilience=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hgs.resilience')!;
+    expect(resilience.calculationStatus).toBe('CALIBRATED');
+    expect(resilience.scaleReference).toBe('hgs.resilience.adaptive-recovery-5.v1');
+    expect(resilience.requiredInputContract).toBe('DIRECT_STRUCTURED_TARGET_BOUND_CURRENT_ADAPTIVE_RECOVERY_REPORT_V1');
+    expect(resilience.hifOwner).toBe('HGS');
+    expect(resilience.semanticMappingStatus).toBe('UNRESOLVED');
+    expect(resilience.semanticType).toBeNull();
+    expect(resilience.validContextKinds).toEqual(['GOAL','SITUATION']);
+    expect(resilience.dependencyIds).toEqual([]);
+    expect(resilience.consumers).toEqual([]);
+    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety','hgs.self-awareness','hgs.resilience'].includes(x.metricKey)).forEach(x=>{
       expect(x.calculationStatus).toBe('UNCALIBRATED');
       expect(x.scaleReference).toBe('UNCALIBRATED_NO_PRODUCTION_SCALE');
     });

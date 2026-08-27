@@ -1,23 +1,34 @@
 # HGS Measurement Expansion v1 (bounded family note)
 
 State of the HGS (Growth) branch of HIM Expansion & Human Intelligence
-Completion after migration 0046.
+Completion after migration 0047.
 
 ## Calibrated HGS metrics
 
 | Metric | Task | Construct (one line) | Special unassessed codes |
 |---|---|---|---|
 | `hgs.self-awareness@1` | 14/17 (0046) | Target-bound current perceived self-understanding clarity in one exact GOAL or SITUATION — perceived clarity only, never objective insight accuracy or growth outcome | `TOO_FACET_DEPENDENT_TO_RATE`, `INSUFFICIENT_BASIS_TO_JUDGE` |
+| `hgs.resilience@1` | 15/17 (0047) | Target-bound current perceived adaptive recovery/continuity under actually experienced challenge in one exact GOAL or SITUATION — never low Stress, grit, goal success, HRS Repair, or a global resilience trait | `NO_MEANINGFUL_ADVERSITY_OR_CHALLENGE`, `TOO_EARLY_TO_JUDGE_ADAPTATION`, `TOO_CHALLENGE_DEPENDENT_TO_RATE` |
 
-The HGS family state is now: **Self-Awareness — calibrated; Resilience —
-uncalibrated; Purpose Alignment — uncalibrated; Habit Strength —
-uncalibrated.** Self-Awareness was deliberately implemented alone
-because its boundary with HBS Reflection deserves independent
-verification. The remaining three metrics are later, separately reviewed
-HIM Expansion tasks — nothing in 0046 or its verifiers freezes them as
-permanently uncalibrated, and no migration-number ceiling exists. Phase
-inventory after 0046: 14/17 calibrated, 3/17 uncalibrated (a one-time
-migration transition, never a historical-verifier ceiling).
+The HGS family state is now:
+
+```text
+Self-Awareness     CALIBRATED
+Resilience         CALIBRATED
+Purpose Alignment  UNCALIBRATED
+Habit Strength     UNCALIBRATED
+```
+
+Self-Awareness was deliberately implemented alone because its boundary
+with HBS Reflection deserves independent verification; Resilience
+followed with its own actual-challenge grounding and its own
+independence proofs against Stress, Motivation, Self-Confidence,
+Self-Awareness, Consistency, and HRS Repair. The remaining two metrics
+are later, separately reviewed HIM Expansion tasks — nothing in
+0046/0047 or their verifiers freezes them as permanently uncalibrated,
+and no migration-number ceiling exists. Phase inventory after 0047:
+15/17 calibrated, 2/17 uncalibrated (a one-time migration transition,
+never a historical-verifier ceiling).
 
 ## The Reflection boundary (why Self-Awareness came first)
 
