@@ -1,7 +1,7 @@
 # HRS Measurement Expansion v1 (bounded family note)
 
 State of the HRS (Relationship) branch of HIM Expansion & Human
-Intelligence Completion after migration 0044.
+Intelligence Completion after migration 0045.
 
 ## Calibrated HRS metrics
 
@@ -10,18 +10,27 @@ Intelligence Completion after migration 0044.
 | `hrs.relationship-trust@1` | 10/17 (0043) | Relationship-bound current reliance trust under meaningful interpersonal vulnerability/uncertainty | `TOO_CONTEXT_DEPENDENT_TO_RATE`, `INSUFFICIENT_BASIS_TO_JUDGE` |
 | `hrs.communication@1` | 11/17 (0044) | Relationship-bound current communication workability when something important needs to get through | `TOO_TOPIC_DEPENDENT_TO_RATE`, `INSUFFICIENT_BASIS_TO_JUDGE` |
 | `hrs.repair@1` | 12/17 (0044) | Relationship-bound current repair effectiveness after meaningful interpersonal rupture | `NO_MEANINGFUL_REPAIR_OPPORTUNITY`, `TOO_EPISODE_DEPENDENT_TO_RATE` |
+| `hrs.emotional-safety@1` | 13/17 (0045) | Relationship-bound current perceived safety for emotional openness — subjective perceived safety of emotional exposure, never objective/abuse safety | `TOO_VULNERABILITY_DEPENDENT_TO_RATE`, `INSUFFICIENT_BASIS_TO_JUDGE` |
 
-The HRS family state is now: **Trust — calibrated; Communication —
-calibrated; Repair — calibrated; Emotional Safety — still uncalibrated.**
-`hrs.emotional-safety` is a deliberately separate future task, and nothing
-in 0043/0044 scores, infers, or constrains it. Communication and Repair
-were delivered in one migration **only** because the RELATIONSHIP substrate
-already existed — they are two independent measurement systems (separate
-constructs, vocabularies, instruments, scales, models, approvals, bindings,
-RPC families, and lock namespaces), and combining the delivery never
-combined the constructs. Phase inventory after 0044: 12/17 calibrated, 5/17
-uncalibrated (a one-time migration transition, never a historical-verifier
-ceiling).
+**HRS FAMILY COMPLETE.** The HRS family state is now: **Trust —
+calibrated; Communication — calibrated; Repair — calibrated; Emotional
+Safety — calibrated.** All four HRS metrics are measured through the same
+hardened pattern (owned RELATIONSHIP target, direct structured report,
+NULL window, dedicated RPC family and lock namespace) while remaining
+four fully independent measurement systems — separate constructs,
+vocabularies, instruments, scales, models, approvals, and bindings, with
+no composite, inverse, or relationship-health value. **HRS measurement
+completion does NOT authorize runtime consumption**: no HRS value may
+enter Trend, Intelligence Snapshot, Reasoning Consumption, FAST/DEEP
+projection, prompt guidance, Recommendations, or Safety handling before a
+future, separately versioned and deliberately reviewed HRS Runtime
+Consumption contract. Emotional Safety additionally carries a hard Safety
+Runtime boundary: it is the user's subjective perceived safety of
+emotional exposure only — never an abuse/danger classifier, never
+stay/leave authority, and the existing Safety Runtime remains separate
+and independently authoritative. Phase inventory after 0045: 13/17
+calibrated, 4/17 uncalibrated (a one-time migration transition, never a
+historical-verifier ceiling).
 
 ## RELATIONSHIP measurement-target substrate (established by 0043)
 

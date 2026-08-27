@@ -6,7 +6,7 @@ const expected=['hse.stress','hse.energy','hse.motivation','hse.self-confidence'
 describe('Initial HIM catalog',()=>{
   it('registers exactly the 17 canonical identities',()=>expect(new HimDefinitionRegistry().list().map(x=>x.metricKey)).toEqual(expected));
   it('contains no bridge-only examples',()=>expect(new HimDefinitionRegistry().list().map(x=>x.canonicalName)).not.toEqual(expect.arrayContaining(['Decision Clarity','Action Readiness','Goal Alignment','Decision Quality','Uncertainty','Progress','Cognitive Load','Relationship Health','Growth Momentum','Sleep'])));
-  it('activates twelve calibrated structured metrics while leaving 5 metrics uncalibrated',()=>{
+  it('activates thirteen calibrated structured metrics while leaving 4 metrics uncalibrated',()=>{
     const stress=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.stress')!;
     expect(stress.calculationStatus).toBe('CALIBRATED');
     expect(stress.scaleReference).toBe('hse.stress.ordinal-5.v1');
@@ -96,7 +96,23 @@ describe('Initial HIM catalog',()=>{
     expect(repair.semanticMappingStatus).toBe('UNRESOLVED');
     expect(repair.semanticType).toBeNull();
     expect(repair.validContextKinds).toEqual(['RELATIONSHIP']);
-    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair'].includes(x.metricKey)).forEach(x=>{
+    // HRS Emotional Safety is calibrated as a relationship-bound current
+    // perceived-safety-for-emotional-openness appraisal and completes the
+    // HRS family: exactly one owned RELATIONSHIP target, no temporal
+    // window, and its Foundation semantic mapping stays deliberately
+    // unresolved - it is subjective perceived safety of emotional exposure
+    // only, never objective/physical/abuse safety, never an abuse or danger
+    // classifier, never relationship health, never Trust, Communication, or
+    // Repair, and never Safety Runtime authority.
+    const emotionalSafety=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hrs.emotional-safety')!;
+    expect(emotionalSafety.calculationStatus).toBe('CALIBRATED');
+    expect(emotionalSafety.scaleReference).toBe('hrs.emotional-safety.openness-safety-5.v1');
+    expect(emotionalSafety.requiredInputContract).toBe('DIRECT_STRUCTURED_RELATIONSHIP_BOUND_CURRENT_EMOTIONAL_OPENNESS_SAFETY_REPORT_V1');
+    expect(emotionalSafety.hifOwner).toBe('HRS');
+    expect(emotionalSafety.semanticMappingStatus).toBe('UNRESOLVED');
+    expect(emotionalSafety.semanticType).toBeNull();
+    expect(emotionalSafety.validContextKinds).toEqual(['RELATIONSHIP']);
+    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety'].includes(x.metricKey)).forEach(x=>{
       expect(x.calculationStatus).toBe('UNCALIBRATED');
       expect(x.scaleReference).toBe('UNCALIBRATED_NO_PRODUCTION_SCALE');
     });
