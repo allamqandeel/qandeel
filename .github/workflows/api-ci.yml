@@ -79,6 +79,7 @@ jobs:
       - {name: Verify HRS Relationship Trust measurement model against real PostgreSQL, run: npm run verify:hrs-relationship-trust:integration}
       - {name: Verify HRS Communication and Repair measurement models against real PostgreSQL, run: npm run verify:hrs-communication-repair:integration}
       - {name: Verify HRS Emotional Safety measurement model against real PostgreSQL, run: npm run verify:hrs-emotional-safety:integration}
+      - {name: Verify HGS Self-Awareness measurement model against real PostgreSQL, run: npm run verify:hgs-self-awareness:integration}
       - {name: Verify HIM temporal trend source against real PostgreSQL, run: npm run verify:him-trends:integration}
       - {name: Verify HIM Intelligence Snapshot against real PostgreSQL, run: npm run verify:him-snapshot:integration}
       - {name: Verify background HIM runtime consumption against real PostgreSQL, run: npm run verify:background-him-runtime-consumption:integration}
