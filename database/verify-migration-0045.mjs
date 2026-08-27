@@ -75,17 +75,21 @@ await client.connect();try{
  if(approval.rowCount!==1||approval.rows[0].external_validation_claimed||approval.rows[0].model_id!==ES.model||!Array.isArray(basis)||basis.length!==ES.basis.length||ES.basis.some(entry=>!basis.includes(entry)))throw new Error('hrs.emotional-safety exactly-ten-basis approval failed or claimed external validation');
  const bindings=await client.query("SELECT context_kind,model_id,instrument_id,scale_contract_reference FROM public.him_canonical_model_bindings WHERE metric_key=$1 AND status='ACTIVE' ORDER BY context_kind",[ES.key]);
  if(bindings.rows.map(x=>x.context_kind).join()!=='RELATIONSHIP'||bindings.rows.some(x=>x.model_id!==ES.model||x.instrument_id!==ES.instrument||x.scale_contract_reference!==ES.scale))throw new Error('Expected exactly the one hrs.emotional-safety RELATIONSHIP ACTIVE binding');
- // --- No safety verdict and no Safety Runtime surface in the dedicated path ---
- // The word "Safety" in the metric name grants no system Safety authority:
- // exactly the three dedicated Emotional Safety functions exist, and none
- // of them reads or mutates the Safety Runtime's dispatch disposition,
- // conversation state, or any verdict-shaped artifact - the executable path
- // scores an ordinal self-report and nothing else.
- const procs=await client.query("SELECT proname,prosrc FROM pg_proc WHERE proname LIKE '%emotional_safety%' ORDER BY proname");
- if(procs.rows.map(x=>x.proname).join()!=='calculate_hrs_emotional_safety_measurement_v1,correct_hrs_emotional_safety_measurement_v1,create_hrs_emotional_safety_measurement_v1')throw new Error('Expected exactly the three dedicated Emotional Safety functions');
+ // --- No safety verdict and no Safety Runtime surface in the 0045-owned path ---
+ // The word "Safety" in the metric name grants no system Safety authority.
+ // Historical scope: exactly the three functions INTRODUCED AND OWNED BY
+ // 0045 are queried by exact name and inspected - a future legitimate
+ // Emotional Safety helper, v2 authority, or separately reviewed
+ // runtime-consumption function is deliberately NOT forbidden here (no
+ // "%emotional_safety%" function-universe ceiling exists). Each owned
+ // function must exist and must neither read nor mutate the Safety
+ // Runtime's dispatch disposition, conversation state, or any
+ // verdict-shaped artifact - the 0045 executable path scores an ordinal
+ // self-report and nothing else.
+ const ownedFunctions=['calculate_hrs_emotional_safety_measurement_v1','correct_hrs_emotional_safety_measurement_v1','create_hrs_emotional_safety_measurement_v1'];
+ const procs=await client.query('SELECT proname,prosrc FROM pg_proc WHERE proname=ANY($1::name[]) ORDER BY proname',[ownedFunctions]);
+ if(procs.rows.map(x=>x.proname).join()!==ownedFunctions.join())throw new Error('Expected the three 0045-owned Emotional Safety functions to exist');
  for(const proc of procs.rows)if(/safety_disposition|intelligence_dispatches|conversation_turns|response_gate|\bunsafe\b|abuse|coercion|gaslight|manipulat|harass|danger|imminent|stay_or_leave|verdict|risk_level/i.test(proc.prosrc))throw new Error(`${proc.proname} must not read or mutate Safety Runtime state or emit any safety/abuse/danger verdict`);
- const snapshotColumns=await client.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='him_metric_snapshots' AND (column_name ILIKE '%verdict%' OR column_name ILIKE '%safety%' OR column_name ILIKE '%abuse%' OR column_name ILIKE '%danger%')");
- if(snapshotColumns.rowCount!==0)throw new Error('him_metric_snapshots must carry no safety-verdict-shaped column');
  await client.query('INSERT INTO auth.users(id) VALUES($1),($2) ON CONFLICT DO NOTHING',[one,two]);
  await client.query("INSERT INTO public.conversation_sessions(id,user_id,status,channel)VALUES($1,$2,'ACTIVE','TEXT')ON CONFLICT DO NOTHING",[sessionOne,one]);
  await client.query('BEGIN');
@@ -213,6 +217,14 @@ await client.connect();try{
  const repairSnap=(await client.query('SELECT * FROM public.calculate_hrs_repair_measurement_v1($1)',[repairObs.id])).rows[0];
  const esSnap=(await client.query(`SELECT * FROM public.${ES.calculate}($1)`,[esObs.id])).rows[0];
  if(trustSnap.numeric_value!==5||commSnap.numeric_value!==4||repairSnap.numeric_value!==3||esSnap.numeric_value!==1)throw new Error('Freely differing Trust=5/Communication=4/Repair=3/EmotionalSafety=1 values on the same relationship failed');
+ // Task-scoped verdict proof: the snapshot rows the 0045 path actually
+ // produced - including this deliberately lowest possible Emotional Safety
+ // value - carry an ordinal value and canonical provenance only, and no
+ // text value anywhere in them is a safety/abuse/danger/stay-leave
+ // classification. This proves what the 0045 calculation emits; it is
+ // deliberately NOT an assertion about future him_metric_snapshots columns
+ // (no permanent global schema ceiling exists here).
+ for(const produced of[esSnap,correctedSnapshot])if(Object.values(produced).some(value=>typeof value==='string'&&/\b(UNSAFE|SAFE|ABUSE|ABUSIVE|DANGER|DANGEROUS|AT_RISK|STAY|LEAVE)\b/i.test(value)))throw new Error('The 0045 Emotional Safety calculation path must emit no safety/abuse/danger/stay-leave classification value');
  // The low Emotional Safety value changed nothing else: the sibling current
  // values are untouched (no inverse, composite, or derived mutation), and
  // no verdict-shaped artifact appeared anywhere.

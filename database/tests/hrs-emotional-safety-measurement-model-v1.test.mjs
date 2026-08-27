@@ -22,6 +22,18 @@ test('0045 exists exactly once and orders after 0044',()=>{
  const verifier=readFileSync(new URL('../verify-migration-0045.mjs',import.meta.url),'utf8');
  assert.doesNotMatch(verifier,/0046/,'the historical 0045 verifier asserts no migration-0046 ceiling');
  assert.doesNotMatch(verifier,/<>13(?!\d)|!==13(?!\d)|<>4(?!\d)/,'the historical 0045 verifier freezes no global calibrated/uncalibrated count');
+ // The Safety-Runtime/verdict proof stays scoped to the three functions
+ // 0045 introduced: the historical verifier queries them by exact name and
+ // never asserts a "%emotional_safety%" function-universe ceiling (a future
+ // legitimate helper, v2 authority, or separately reviewed
+ // runtime-consumption function must stay possible), and it never freezes
+ // future him_metric_snapshots column names via an information_schema
+ // column-name scan (the verdict proof is behavioral on the rows the 0045
+ // path actually produced).
+ assert.doesNotMatch(verifier,/I?LIKE\s+'%[^']*emotional_safety[^']*%'/i,'the historical 0045 verifier asserts no Emotional Safety function-universe ceiling');
+ assert.doesNotMatch(verifier,/information_schema\.columns/i,'the historical 0045 verifier freezes no future snapshot column-name ceiling');
+ assert.match(verifier,/proname=ANY\(\$1::name\[\]\)/,'the owned-function proof queries exactly the three 0045 functions by name');
+ for(const fn of['create_hrs_emotional_safety_measurement_v1','correct_hrs_emotional_safety_measurement_v1','calculate_hrs_emotional_safety_measurement_v1'])assert.match(verifier,new RegExp(`'${fn}'`),`the owned-function proof names ${fn} exactly`);
 });
 test('freezes the exact metric, model, instrument, and scale identities',()=>{
  assert.match(sql,/hrs\.emotional-safety\.direct-structured-current-emotional-openness-safety/);
