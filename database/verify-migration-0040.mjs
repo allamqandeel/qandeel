@@ -1,7 +1,8 @@
 // Real-PostgreSQL verifier for migration 0040 - HBS Avoidance Measurement &
 // Calibration v1 (HIM Expansion metric 6/17). Behaviorally proves: the exact
-// 17-definition catalog with six calibrated / eleven uncalibrated and only
-// hbs.avoidance moved out of the uncalibrated group while keeping HBS
+// 17-definition catalog with the five HSE metrics plus hbs.avoidance
+// calibrated (its own historical guarantee - later HIM Expansion phases may
+// calibrate more) while hbs.avoidance keeps HBS
 // ownership and an UNRESOLVED/NULL semantic mapping; exact governance
 // artifacts with no dependency edges; owner-only target-bound GOAL/SITUATION
 // creation with the server-derived immutable seven-day window and untrusted
@@ -16,15 +17,17 @@ const one=randomUUID(),two=randomUUID(),fabricated=randomUUID(),past='2001-01-01
 const identity=async(c,id)=>{await c.query('SET LOCAL ROLE authenticated');await c.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:id,role:'authenticated'})]);};
 const rejects=async(c,sql,params=[])=>{await c.query('SAVEPOINT expected_rejection');let failed=false;try{await c.query(sql,params);}catch{failed=true;await c.query('ROLLBACK TO SAVEPOINT expected_rejection');}await c.query('RELEASE SAVEPOINT expected_rejection');if(!failed)throw new Error(`Expected rejection: ${sql}`);};
 const HSE=['hse.attention','hse.energy','hse.motivation','hse.self-confidence','hse.stress'];
-const UNCALIBRATED_11=['hbs.consistency','hbs.initiative','hbs.reflection','hgs.habit-strength','hgs.purpose-alignment','hgs.resilience','hgs.self-awareness','hrs.communication','hrs.emotional-safety','hrs.relationship-trust','hrs.repair'];
 await client.connect();try{
  // --- Catalog / governance ---------------------------------------------------
+ // This verifier asserts its own historical guarantees: the 0040 phase
+ // activated exactly hbs.avoidance on top of the five HSE metrics. Later HIM
+ // Expansion tasks may calibrate more metrics, so no future global calibrated
+ // count is frozen here; the exact phase inventory belongs to each phase's
+ // own verifier.
  const state=await client.query('SELECT metric_key,calculation_status,hif_owner,semantic_mapping_status,semantic_type,scale_reference,required_input_contract,dependency_ids,consumers FROM public.him_metric_definitions');
  if(state.rows.length!==17)throw new Error('Expected exactly 17 metric definitions');
- const calibrated=state.rows.filter(x=>x.calculation_status==='CALIBRATED').map(x=>x.metric_key).sort();
- const uncalibrated=state.rows.filter(x=>x.calculation_status==='UNCALIBRATED').map(x=>x.metric_key).sort();
- if(calibrated.join()!==[...HSE,'hbs.avoidance'].sort().join())throw new Error('Expected exactly six calibrated metrics (five HSE plus hbs.avoidance)');
- if(uncalibrated.length!==11||uncalibrated.join()!==UNCALIBRATED_11.join())throw new Error('Expected exactly the eleven remaining uncalibrated metrics: only hbs.avoidance changed');
+ const calibrated=state.rows.filter(x=>x.calculation_status==='CALIBRATED').map(x=>x.metric_key);
+ if([...HSE,'hbs.avoidance'].some(key=>!calibrated.includes(key)))throw new Error('Expected the five calibrated HSE metrics plus hbs.avoidance (later HIM Expansion tasks may calibrate more)');
  const avoidance=state.rows.find(x=>x.metric_key==='hbs.avoidance');
  if(avoidance.hif_owner!=='HBS'||avoidance.semantic_mapping_status!=='UNRESOLVED'||avoidance.semantic_type!==null||avoidance.scale_reference!=='hbs.avoidance.frequency-5.v1'||avoidance.required_input_contract!=='DIRECT_STRUCTURED_TARGET_BOUND_PERIOD_USER_REPORT_SEVEN_DAY_V1'||avoidance.dependency_ids.length!==0||avoidance.consumers.length!==0)throw new Error('Avoidance definition identity failed');
  const scale=await client.query("SELECT * FROM public.him_scale_contracts WHERE scale_contract_id='hbs.avoidance.frequency-5.v1' AND scale_version=1");
@@ -42,13 +45,13 @@ await client.connect();try{
  await client.query('BEGIN');
  // --- Governance forgery stays fail closed -----------------------------------
  const bindingInsert="INSERT INTO public.him_canonical_model_bindings(id,metric_key,definition_version,context_kind,binding_version,status,model_id,model_version,instrument_id,instrument_version,scale_contract_reference,scale_version,approval_id,approval_version,effective_at) VALUES($1,'hbs.avoidance',1,$2,$3,$4,'hbs.avoidance.direct-structured-seven-day-self-report',1,$5,1,'hbs.avoidance.frequency-5.v1',1,$6,1,now())";
- await rejects(client,bindingInsert,['41000000-0000-4000-8000-000000000001','GOAL',2,'PENDING','hbs.avoidance.direct-target-bound-seven-day-report','qandeel.him.motivation.foundation-approval']);
- await rejects(client,bindingInsert,['41000000-0000-4000-8000-000000000002','GOAL',3,'PENDING','wrong.instrument','qandeel.him.avoidance.foundation-approval']);
- await rejects(client,bindingInsert,['41000000-0000-4000-8000-000000000003','CONVERSATION_SESSION',4,'PENDING','hbs.avoidance.direct-target-bound-seven-day-report','qandeel.him.avoidance.foundation-approval']);
- await rejects(client,bindingInsert,['41000000-0000-4000-8000-000000000004','GOAL',5,'ACTIVE','hbs.avoidance.direct-target-bound-seven-day-report','qandeel.him.avoidance.foundation-approval']);
+ await rejects(client,bindingInsert,['4e000000-0000-4000-8000-000000000001','GOAL',2,'PENDING','hbs.avoidance.direct-target-bound-seven-day-report','qandeel.him.motivation.foundation-approval']);
+ await rejects(client,bindingInsert,['4e000000-0000-4000-8000-000000000002','GOAL',3,'PENDING','wrong.instrument','qandeel.him.avoidance.foundation-approval']);
+ await rejects(client,bindingInsert,['4e000000-0000-4000-8000-000000000003','CONVERSATION_SESSION',4,'PENDING','hbs.avoidance.direct-target-bound-seven-day-report','qandeel.him.avoidance.foundation-approval']);
+ await rejects(client,bindingInsert,['4e000000-0000-4000-8000-000000000004','GOAL',5,'ACTIVE','hbs.avoidance.direct-target-bound-seven-day-report','qandeel.him.avoidance.foundation-approval']);
  await identity(client,one);
  await rejects(client,"UPDATE public.him_canonical_model_bindings SET status='RETIRED',retired_at=now() WHERE id='40000000-0000-4000-8000-000000000004'");
- await rejects(client,"INSERT INTO public.him_calculation_models(id,model_id,model_version,target_metric_key,target_definition_version,lifecycle,environment,canonical_owner,canonical_source,method_type,scale_contract_reference,required_input_contract,required_evidence_contract,supported_context_kinds,missing_data_behavior,contradiction_behavior,confidence_contract,implementation_id,created_at,versioned_at) VALUES('41000000-0000-4000-8000-000000000005','forged.avoidance.model',1,'hbs.avoidance',1,'CALIBRATED','PRODUCTION','x','x','x','hbs.avoidance.frequency-5.v1','{}'::jsonb,'x',ARRAY['GOAL'],'UNASSESSED','UNASSESSED_PRESERVE_CONFLICT','UNRESOLVED_METRIC_CONFIDENCE','x',now(),now())");
+ await rejects(client,"INSERT INTO public.him_calculation_models(id,model_id,model_version,target_metric_key,target_definition_version,lifecycle,environment,canonical_owner,canonical_source,method_type,scale_contract_reference,required_input_contract,required_evidence_contract,supported_context_kinds,missing_data_behavior,contradiction_behavior,confidence_contract,implementation_id,created_at,versioned_at) VALUES('4e000000-0000-4000-8000-000000000005','forged.avoidance.model',1,'hbs.avoidance',1,'CALIBRATED','PRODUCTION','x','x','x','hbs.avoidance.frequency-5.v1','{}'::jsonb,'x',ARRAY['GOAL'],'UNASSESSED','UNASSESSED_PRESERVE_CONFLICT','UNRESOLVED_METRIC_CONFIDENCE','x',now(),now())");
  // --- Create: owner target binding, server window, untrusted client time -----
  const goalTarget=(await client.query("SELECT * FROM public.create_him_motivation_measurement_target('GOAL','finish thesis draft')")).rows[0];
  const situationTarget=(await client.query("SELECT * FROM public.create_him_motivation_measurement_target('SITUATION','weekly review session')")).rows[0];
@@ -135,4 +138,4 @@ await client.connect();try{
   if(artifacts.rows[0].n!==0)throw new Error('Race created a stale Avoidance result');
  }finally{await racer.end();}
 }finally{await cleanupVerifierUsers(client,[one,two]);await client.end();}
-console.log('Verified HBS Avoidance v1: six/eleven phase inventory with only Avoidance activated, HBS/UNRESOLVED/null identity, exact governance artifacts, owner target-bound GOAL/SITUATION creation with the immutable server-derived seven-day window and untrusted client time, full scored and unassessed response semantics, correction/currentness with the original window preserved, idempotent and race-safe calculation, fail-closed cross-user/anon/forgery authority, supersession-aware current reads, and explicit Trend v1 + Intelligence Snapshot v1 non-consumption with zero provider calls.');
+console.log('Verified HBS Avoidance v1: five-HSE-plus-Avoidance calibration, HBS/UNRESOLVED/null identity, exact governance artifacts, owner target-bound GOAL/SITUATION creation with the immutable server-derived seven-day window and untrusted client time, full scored and unassessed response semantics, correction/currentness with the original window preserved, idempotent and race-safe calculation, fail-closed cross-user/anon/forgery authority, supersession-aware current reads, and explicit Trend v1 + Intelligence Snapshot v1 non-consumption with zero provider calls.');
