@@ -6,7 +6,7 @@ const expected=['hse.stress','hse.energy','hse.motivation','hse.self-confidence'
 describe('Initial HIM catalog',()=>{
   it('registers exactly the 17 canonical identities',()=>expect(new HimDefinitionRegistry().list().map(x=>x.metricKey)).toEqual(expected));
   it('contains no bridge-only examples',()=>expect(new HimDefinitionRegistry().list().map(x=>x.canonicalName)).not.toEqual(expect.arrayContaining(['Decision Clarity','Action Readiness','Goal Alignment','Decision Quality','Uncertainty','Progress','Cognitive Load','Relationship Health','Growth Momentum','Sleep'])));
-  it('activates sixteen calibrated structured metrics while leaving 1 metric uncalibrated',()=>{
+  it('activates all seventeen calibrated structured metrics with no metric left uncalibrated',()=>{
     const stress=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hse.stress')!;
     expect(stress.calculationStatus).toBe('CALIBRATED');
     expect(stress.scaleReference).toBe('hse.stress.ordinal-5.v1');
@@ -170,10 +170,34 @@ describe('Initial HIM catalog',()=>{
     expect(purposeAlignment.validContextKinds).toEqual(['GOAL']);
     expect(purposeAlignment.dependencyIds).toEqual([]);
     expect(purposeAlignment.consumers).toEqual([]);
-    INITIAL_HIM_METRICS.filter(x=>!['hse.stress','hse.energy','hse.motivation','hse.attention','hse.self-confidence','hbs.avoidance','hbs.consistency','hbs.initiative','hbs.reflection','hrs.relationship-trust','hrs.communication','hrs.repair','hrs.emotional-safety','hgs.self-awareness','hgs.resilience','hgs.purpose-alignment'].includes(x.metricKey)).forEach(x=>{
-      expect(x.calculationStatus).toBe('UNCALIBRATED');
-      expect(x.scaleReference).toBe('UNCALIBRATED_NO_PRODUCTION_SCALE');
-    });
+    // HGS Habit Strength is calibrated as a target-bound current
+    // cue-linked-automaticity appraisal of one specific recurring
+    // action/routine grounded in sufficient repeated experience, and
+    // completes the canonical 17-metric v1 measurement inventory: exactly
+    // one owned GOAL or SITUATION target, no temporal window, streak,
+    // repetition count, or time-to-habit score, and its Foundation
+    // semantic mapping stays deliberately unresolved - it measures
+    // perceived cue-linked automaticity only, never Consistency,
+    // follow-through frequency, Initiative, Motivation, Purpose
+    // Alignment, discipline, grit, compulsion, or addiction, and it is
+    // not force-mapped to TRAIT or CAPABILITY (and no HABIT or
+    // AUTOMATICITY semantic type is invented) merely because it sounds
+    // like a stable disposition.
+    const habitStrength=INITIAL_HIM_METRICS.find(x=>x.metricKey==='hgs.habit-strength')!;
+    expect(habitStrength.calculationStatus).toBe('CALIBRATED');
+    expect(habitStrength.scaleReference).toBe('hgs.habit-strength.automaticity-5.v1');
+    expect(habitStrength.requiredInputContract).toBe('DIRECT_STRUCTURED_TARGET_BOUND_CURRENT_CUE_LINKED_AUTOMATICITY_REPORT_V1');
+    expect(habitStrength.hifOwner).toBe('HGS');
+    expect(habitStrength.semanticMappingStatus).toBe('UNRESOLVED');
+    expect(habitStrength.semanticType).toBeNull();
+    expect(habitStrength.validContextKinds).toEqual(['GOAL','SITUATION']);
+    expect(habitStrength.dependencyIds).toEqual([]);
+    expect(habitStrength.consumers).toEqual([]);
+    // The canonical v1 measurement inventory is complete: every one of the
+    // 17 identities is calibrated with its own production scale, and none
+    // remains uncalibrated.
+    expect(INITIAL_HIM_METRICS.filter(x=>x.calculationStatus!=='CALIBRATED')).toEqual([]);
+    expect(INITIAL_HIM_METRICS.filter(x=>x.scaleReference==='UNCALIBRATED_NO_PRODUCTION_SCALE')).toEqual([]);
     INITIAL_HIM_METRICS.forEach(x=>{
       expect(x.confidenceRequirementReference).toBe('UNRESOLVED_METRIC_CONFIDENCE_MODEL');
       expect(x.dependencyIds).toEqual([]);

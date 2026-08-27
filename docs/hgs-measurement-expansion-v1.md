@@ -1,7 +1,7 @@
 # HGS Measurement Expansion v1 (bounded family note)
 
 State of the HGS (Growth) branch of HIM Expansion & Human Intelligence
-Completion after migration 0048.
+Completion after migration 0049.
 
 ## Calibrated HGS metrics
 
@@ -10,6 +10,7 @@ Completion after migration 0048.
 | `hgs.self-awareness@1` | 14/17 (0046) | Target-bound current perceived self-understanding clarity in one exact GOAL or SITUATION — perceived clarity only, never objective insight accuracy or growth outcome | `TOO_FACET_DEPENDENT_TO_RATE`, `INSUFFICIENT_BASIS_TO_JUDGE` |
 | `hgs.resilience@1` | 15/17 (0047) | Target-bound current perceived adaptive recovery/continuity under actually experienced challenge in one exact GOAL or SITUATION — never low Stress, grit, goal success, HRS Repair, or a global resilience trait | `NO_MEANINGFUL_ADVERSITY_OR_CHALLENGE`, `TOO_EARLY_TO_JUDGE_ADAPTATION`, `TOO_CHALLENGE_DEPENDENT_TO_RATE` |
 | `hgs.purpose-alignment@1` | 16/17 (0048) | Goal-bound current perceived congruence with personally meaningful values/priorities/direction in one exact GOAL — never Motivation, Self-Awareness, Resilience, Consistency, Habit Strength, goal importance, goal success, or moral/safety approval | `TOO_VALUE_CONFLICTED_TO_RATE`, `INSUFFICIENT_PERSONAL_DIRECTION_BASIS_TO_JUDGE` |
+| `hgs.habit-strength@1` | 17/17 (0049) | Target-bound current perceived cue-linked automaticity of one specific recurring action/routine, grounded in sufficient repeated experience, in one exact GOAL or SITUATION — never Consistency, follow-through frequency, Initiative, Motivation, Purpose Alignment, discipline, grit, compulsion, or addiction | `INSUFFICIENT_REPETITION_HISTORY_TO_JUDGE`, `NO_SINGLE_RECURRING_PATTERN_TO_RATE`, `TOO_CUE_DEPENDENT_TO_RATE` |
 
 The HGS family state is now:
 
@@ -17,7 +18,19 @@ The HGS family state is now:
 Self-Awareness     CALIBRATED
 Resilience         CALIBRATED
 Purpose Alignment  CALIBRATED
-Habit Strength     UNCALIBRATED
+Habit Strength     CALIBRATED
+```
+
+```text
+HGS FAMILY MEASUREMENT INVENTORY COMPLETE
+17 / 17 canonical HIM v1 metrics calibrated
+0 / 17 uncalibrated
+```
+
+```text
+Measurement inventory completion != Runtime Consumption approval.
+Formal Measurement Foundation closure is pending the planned 17-metric
+system-wide architecture audit.
 ```
 
 Self-Awareness was deliberately implemented alone because its boundary
@@ -29,12 +42,17 @@ followed as the first HGS metric with an ALREADY RESOLVED Foundation
 semantic mapping (HGS / RESOLVED / ALIGNMENT — preserved exactly,
 never downgraded to UNRESOLVED/null), GOAL-only authority, and its own
 independence proofs against Motivation, Self-Awareness, Resilience,
-and Consistency in both directions. The remaining metric
-(`hgs.habit-strength`) is a later, separately reviewed HIM Expansion
-task — nothing in 0046/0047/0048 or their verifiers freezes it as
-permanently uncalibrated, and no migration-number ceiling exists.
-Phase inventory after 0048: 16/17 calibrated, 1/17 uncalibrated (a
-one-time migration transition, never a historical-verifier ceiling).
+and Consistency in both directions. Habit Strength closed the family
+with the highest-risk sibling boundary of the whole inventory — the
+HBS Consistency boundary, proven in both directions on real owned
+targets (Consistency `ALMOST_ALWAYS` → 5 with Habit Strength
+`VERY_LOW` → 1, and Consistency `NEVER` → 1 with Habit Strength
+`VERY_HIGH` → 5) — plus Motivation opposite-value coexistence and
+Initiative/Self-Awareness/Resilience/Purpose-Alignment separation.
+Phase inventory after 0049: 17/17 calibrated, 0/17 uncalibrated (a
+one-time migration transition, never a historical-verifier ceiling —
+nothing in 0046–0049 or their verifiers freezes the global count or
+places any migration-number ceiling).
 
 ## The Purpose Alignment semantic-identity exception
 
