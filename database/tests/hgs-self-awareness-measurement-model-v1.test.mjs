@@ -30,6 +30,17 @@ test('0046 exists exactly once and orders after 0045',()=>{
  // "%self_awareness%" function-universe ceiling.
  assert.doesNotMatch(verifier,/must (?:remain|stay) uncalibrated|UNCALIBRATED'\)\.rows\[0\]/i,'the historical 0046 verifier freezes no permanent uncalibrated requirement on the remaining HGS metrics');
  assert.doesNotMatch(verifier,/I?LIKE\s+'%[^']*self_awareness[^']*%'/i,'the historical 0046 verifier asserts no Self-Awareness function-universe ceiling');
+ // Frozen historical-verifier policy: verifier 0046 proves only its own
+ // durable Self-Awareness guarantees against the fully migrated latest
+ // schema. It must never assert that future sibling HGS measurement
+ // authority functions are ABSENT from the live database - the next
+ // legitimate HGS calibration creates them - so to_regprocedure (or any
+ // other) absence checks against Resilience, Purpose Alignment, or Habit
+ // Strength authority can never be reintroduced. Whether 0046 itself
+ // introduced sibling authority is proven statically below against the
+ // frozen migration text only.
+ assert.doesNotMatch(verifier,/to_regprocedure\([^)]*hgs_(?:resilience|purpose_alignment|habit_strength)/i,'the historical 0046 verifier asserts no future-HGS-authority absence ceiling');
+ assert.doesNotMatch(verifier,/(?:create|correct|calculate)_hgs_(?:resilience|purpose_alignment|habit_strength)_measurement/i,'the historical 0046 verifier never names a future sibling HGS authority function');
  for(const fn of['create_hgs_self_awareness_measurement_v1','correct_hgs_self_awareness_measurement_v1','calculate_hgs_self_awareness_measurement_v1'])assert.match(verifier,new RegExp(`'?${fn}'?`),`the verifier names ${fn} exactly`);
 });
 test('freezes the exact metric, model, instrument, and scale identities',()=>{
@@ -124,6 +135,10 @@ test('keeps Self-Awareness fully independent of Reflection and every sibling wit
  // executable SQL.
  assert.match(sql,/SELF_AWARENESS_NOT_REFLECTION_RUMINATION_SELF_CONFIDENCE_OR_OBJECTIVE_INSIGHT_ACCURACY/);
  assert.match(sql,/FACET_DEPENDENCE_AND_INSUFFICIENT_BASIS_FAIL_TO_UNASSESSED/);
+ // 0046 itself introduces no sibling HGS authority: proven statically
+ // against the frozen migration text only - never against the live
+ // function universe, which later HGS calibrations legitimately extend.
+ assert.doesNotMatch(executable,/(?:create|correct|calculate)_hgs_(?!self_awareness_measurement_v1)/,'0046 introduces only the three Self-Awareness authority functions');
  const authority=executable.slice(executable.indexOf('CREATE FUNCTION public.create_hgs_self_awareness_measurement_v1'),executable.indexOf('CREATE OR REPLACE VIEW'));
  assert.ok(authority.includes('calculate_hgs_self_awareness_measurement_v1'),'the Self-Awareness authority slice covers its three dedicated functions');
  assert.doesNotMatch(authority,/hbs\.reflection|hbs\.avoidance|hbs\.consistency|hbs\.initiative|hgs\.resilience|hgs\.purpose-alignment|hgs\.habit-strength|hrs\.|hse\./,'no sibling HBS, HGS, HRS, or HSE metric is ever scored or read by the Self-Awareness authority');
