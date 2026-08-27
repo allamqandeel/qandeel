@@ -145,6 +145,44 @@ test('every ceiling rule is live and none of them rejects a legitimate scoped or
  assert.match("readdirSync(new URL('../migrations/',import.meta.url))",/readdirSync|readdir\(|migrations\/\*/,'the migration-enumeration guard is live');
 });
 
+test('the proof harness is itself forward-safe: collision-safe fixtures and baseline-relative residue',()=>{
+ // The harness is excluded from the historical ceiling scan because it must
+ // create synthetic future objects, so it carries its own guard: it may not
+ // assume a fixed future definition version or a fixed future function name is
+ // permanently available, and it may not measure residue by requiring every
+ // non-v1 version of a metric to be absent. Those are the same future-ceiling
+ // classes this task removes, and a legitimate canonical hse.energy@2 would
+ // otherwise break the verifier.
+ const harness=readFileSync(new URL(HARNESS,dir),'utf8');
+ const harnessCode=executable(harness);
+ assert.doesNotMatch(harnessCode,/definition_version"\s*:\s*\d/,'the harness must not hard-code a synthetic definition version');
+ assert.doesNotMatch(harnessCode,/definition_version\s*(?:<>|!==|!=|=)\s*(?!1\b)\d/,'the harness must not pin a synthetic definition version literal');
+ assert.doesNotMatch(harnessCode,/definition_version\s*(?:<>|!==|!=)\s*1\b/,'the harness must not measure residue by requiring every non-v1 version to be absent');
+ assert.doesNotMatch(harnessCode,/CREATE FUNCTION public\.background_[a-z0-9_]/,'the harness must not create a fixed-name probe function');
+ assert.doesNotMatch(harnessCode,/proname=ANY\(\$1::name\[\]\)[\s\S]{0,200}FUTURE_PROBES/,'the harness must not assert the absence of fixed probe names');
+ // The collision-safe mechanisms must actually be present, so the guard cannot
+ // be satisfied by deleting the fixtures instead of deriving them.
+ assert.match(harnessCode,/nextSyntheticVersion/,'the harness derives its synthetic version');
+ assert.match(harnessCode,/nextSyntheticVersion=versions=>versions\.reduce\(\(highest,version\)=>Math\.max\(highest,version\),0\)\+1/,'the synthetic version is derived from the live maximum');
+ assert.match(harnessCode,/uniqueProbeNames/,'the harness generates unique probe names');
+ assert.match(harnessCode,/randomUUID/,'probe names carry a generated unique suffix');
+ assert.match(harnessCode,/proname=ANY\(\$1::name\[\]\)/,'generated probe names are proven unused before creation');
+ assert.match(harnessCode,/CREATE FUNCTION public\.\$\{name\}/,'probe functions are created under generated names');
+ assert.match(harnessCode,/assertRestored/,'residue is measured against the captured pre-fixture baseline');
+ // The mandated forward-safety proof: the harness re-runs against a state that
+ // already contains a legitimate later Energy definition.
+ assert.match(harnessCode,/SAVEPOINT phase_b/,'the harness proves itself against a pre-existing legitimate future version');
+ assert.match(harnessCode,/selected the pre-existing legitimate future version/,'the harness proves it selects a different synthetic version');
+ assert.match(harnessCode,/did not survive the synthetic rollback/,'the harness proves the pre-existing future version survives its own rollback');
+ // Legitimate dynamic generation must stay possible: these samples are exactly
+ // what the guard is required to allow.
+ assert.doesNotMatch('const version=nextSyntheticVersion(baseline.versions);',/definition_version\s*(?:<>|!==|!=|=)\s*(?!1\b)\d/,'dynamic version derivation stays legal');
+ assert.doesNotMatch('await client.query(`CREATE FUNCTION public.${name}() RETURNS integer`)',/CREATE FUNCTION public\.background_[a-z0-9_]/,'generated probe names stay legal');
+ assert.match("WHERE metric_key='hse.energy' AND definition_version<>1",/definition_version\s*(?:<>|!==|!=)\s*1\b/,'the non-v1-absence residue guard is live');
+ assert.match('to_jsonb(d)||\'{"definition_version":2}\'::jsonb',/definition_version"\s*:\s*\d/,'the hard-coded synthetic version guard is live');
+ assert.match('CREATE FUNCTION public.background_read_him_future_probe_v1()',/CREATE FUNCTION public\.background_[a-z0-9_]/,'the fixed probe-name guard is live');
+});
+
 test('the forward-compatibility proof harness is wired after the historical chain and before HIM consumption checks',()=>{
  const packageJson=JSON.parse(readFileSync(new URL('../../package.json',import.meta.url),'utf8'));
  assert.match(packageJson.scripts['verify:him-historical-verifier-forward-compatibility:integration'],new RegExp(`--env-file-if-exists=\\.env database/${HARNESS.replace(/[.]/g,'\\.')}`));
