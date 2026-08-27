@@ -9,6 +9,7 @@ import { calculateHseStress,HSE_STRESS_MODEL_ID,HSE_STRESS_MODEL_VERSION } from 
 import { calculateHbsAvoidance,HBS_AVOIDANCE_MODEL_ID,HBS_AVOIDANCE_MODEL_VERSION } from './hbs-avoidance.model';
 import { calculateHbsConsistency,HBS_CONSISTENCY_MODEL_ID,HBS_CONSISTENCY_MODEL_VERSION } from './hbs-consistency.model';
 import { calculateHbsInitiative,HBS_INITIATIVE_MODEL_ID,HBS_INITIATIVE_MODEL_VERSION } from './hbs-initiative.model';
+import { calculateHbsReflection,HBS_REFLECTION_MODEL_ID,HBS_REFLECTION_MODEL_VERSION } from './hbs-reflection.model';
 
 const exactContext=(kind:string,id:string)=>kind==='GLOBAL'?id==='GLOBAL':kind==='SITUATION'?id.length>0&&id.length<=128&&id.trim()===id&&id!=='GLOBAL':/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 @Injectable()
@@ -31,6 +32,7 @@ export class HimCalculationService {
     if(model.modelId===HBS_AVOIDANCE_MODEL_ID&&model.modelVersion===HBS_AVOIDANCE_MODEL_VERSION){const result=calculateHbsAvoidance(input);this.validateResult(input,result);return result;}
     if(model.modelId===HBS_CONSISTENCY_MODEL_ID&&model.modelVersion===HBS_CONSISTENCY_MODEL_VERSION){const result=calculateHbsConsistency(input);this.validateResult(input,result);return result;}
     if(model.modelId===HBS_INITIATIVE_MODEL_ID&&model.modelVersion===HBS_INITIATIVE_MODEL_VERSION){const result=calculateHbsInitiative(input);this.validateResult(input,result);return result;}
+    if(model.modelId===HBS_REFLECTION_MODEL_ID&&model.modelVersion===HBS_REFLECTION_MODEL_VERSION){const result=calculateHbsReflection(input);this.validateResult(input,result);return result;}
     throw new BadRequestException('No approved deterministic implementation is registered.');
   }
   validateResult(input:HimMetricCalculationInput,result:HimMetricCalculationResult):void {
