@@ -15,6 +15,9 @@ import { HimIntelligenceSnapshotService } from '../human-model/him-intelligence-
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
 import { HimFastDeepConsumptionService } from '../human-model/him-fast-deep-consumption.service';
 import { HimInteractionAdaptationService } from '../human-model/him-interaction-adaptation.service';
+import { HimContextualCurrentIntelligenceService } from '../human-model/him-contextual-current-intelligence.service';
+import { HimSessionReflectionConsumptionService } from '../human-model/him-session-reflection-consumption.service';
+import type { HimSessionReflectionGuidance } from '../human-model/him-session-reflection-consumption.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -36,6 +39,8 @@ export class ConversationOrchestratorService {
     private readonly himReasoningConsumption: HimReasoningConsumptionService,
     private readonly himFastDeepConsumption: HimFastDeepConsumptionService,
     private readonly himInteractionAdaptation: HimInteractionAdaptationService,
+    private readonly himContextualCurrentIntelligence: HimContextualCurrentIntelligenceService,
+    private readonly himSessionReflectionConsumption: HimSessionReflectionConsumptionService,
     private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
     private readonly recommendationGrounding: RecommendationGroundingService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
@@ -83,17 +88,43 @@ export class ConversationOrchestratorService {
         this.telemetry.recordTurnOutcome('blocked',selection.path);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
-      const {himContext,himInteractionAdaptation}=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
-      const himSnapshot = await this.himSnapshot.getSnapshot(
+      const {himContext,himInteractionAdaptation,himSessionReflectionGuidance}=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
+      // QHIA-005: the HSE Intelligence Snapshot read and the one-metric
+      // hbs.reflection selective read (QHIA-004 boundary, exactly one batch
+      // request) are LAUNCHED CONCURRENTLY for the same authoritative session
+      // selection - Reflection is never a serial network stage after the
+      // Snapshot, and never a second full contextual read.
+      const himSnapshotPromise = this.himSnapshot.getSnapshot(
         accessToken,
         himSelection.contextKind,
         himSelection.contextId,
       );
+      // Reflection is optional enrichment: a failed read stays visible through
+      // its nested engine span but degrades to no guidance instead of failing
+      // the turn - fail-closed consumption, never invented fallback data.
+      const reflectionReadPromise = this.engine('him_reflection_context',selection.path,()=>this.himContextualCurrentIntelligence.getCurrentSelection(
+        userId,
+        accessToken,
+        'CONVERSATION_SESSION',
+        himSelection.contextId,
+        ['hbs.reflection'],
+      )).then(
+        (value) => ({ state: 'AVAILABLE' as const, value }),
+        () => ({ state: 'UNAVAILABLE' as const }),
+      );
+      const [himSnapshot, reflectionRead] = await Promise.all([himSnapshotPromise, reflectionReadPromise]);
       const himReasoningContext = this.himReasoningConsumption.transform(himSnapshot);
       // The adaptation derives from the reasoning context BEFORE the FAST/DEEP
       // density projection: it is path-independent and never selects the path.
       const adaptation = this.himInteractionAdaptation.derive(himReasoningContext);
-      return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation};});
+      // The pure Reflection consumption boundary fails closed on a malformed
+      // selection; on this optional enrichment path that failure also degrades
+      // to omitted guidance and never alters the HSE adaptation or the turn.
+      let reflectionGuidance: HimSessionReflectionGuidance | undefined;
+      if (reflectionRead.state === 'AVAILABLE') {
+        try { reflectionGuidance = this.himSessionReflectionConsumption.consume(reflectionRead.value); } catch { reflectionGuidance = undefined; }
+      }
+      return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation,himSessionReflectionGuidance:reflectionGuidance};});
       const memoryContext = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));
       let hypothesisResult;
       try {
@@ -115,6 +146,7 @@ export class ConversationOrchestratorService {
         ...(assembledContext.memoryContext ? { memoryContext: assembledContext.memoryContext } : {}),
         himContext,
         ...(himInteractionAdaptation.adaptationState === 'ACTIVE' ? { himInteractionAdaptation } : {}),
+        ...(himSessionReflectionGuidance?.guidanceState === 'ACTIVE' ? { himSessionReflectionGuidance } : {}),
         ...(hypothesisResult.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesisResult.context } : {}),
         ...(recommendationGrounding.coverageState === 'AVAILABLE' ? { recommendationContext: recommendationGrounding.context } : {}),
         locale: 'und', modality: 'TEXT',

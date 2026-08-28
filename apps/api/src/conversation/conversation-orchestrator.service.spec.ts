@@ -17,6 +17,10 @@ import { HimFastDeepConsumptionService } from '../human-model/him-fast-deep-cons
 import type { HimModelContext } from '../human-model/him-fast-deep-consumption.types';
 import { HimInteractionAdaptationService } from '../human-model/him-interaction-adaptation.service';
 import type { HimInteractionAdaptation } from '../human-model/him-interaction-adaptation.types';
+import { HimContextualCurrentIntelligenceService } from '../human-model/him-contextual-current-intelligence.service';
+import type { HimContextualCurrentSelection } from '../human-model/him-contextual-current-intelligence.types';
+import { HimSessionReflectionConsumptionService } from '../human-model/him-session-reflection-consumption.service';
+import type { HimSessionReflectionGuidance } from '../human-model/him-session-reflection-consumption.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -44,6 +48,8 @@ describe('ConversationOrchestratorService', () => {
   let himBridge: jest.Mocked<HimReasoningConsumptionService>;
   let himConsumptionPolicy: jest.Mocked<HimFastDeepConsumptionService>;
   let himAdaptation: jest.Mocked<HimInteractionAdaptationService>;
+  let himContextualCurrent: jest.Mocked<HimContextualCurrentIntelligenceService>;
+  let himReflectionConsumption: jest.Mocked<HimSessionReflectionConsumptionService>;
   let hypothesisContext: jest.Mocked<HypothesisReasoningContextService>;
   let recommendationGrounding: jest.Mocked<RecommendationGroundingService>;
   let hypothesisEligibility: jest.Mocked<HypothesisGenerationEligibilityService>;
@@ -89,6 +95,25 @@ describe('ConversationOrchestratorService', () => {
     directives: { ...noneAdaptation.directives, cognitiveLoad: 'REDUCED', steeringPressure: 'REDUCED', deliveryPacing: 'CALMER' },
     drivers: ['STRESS_HIGH_OR_VERY_HIGH'],
   };
+  const reflectionSelection = (numericValue: number | null): HimContextualCurrentSelection => ({
+    contractVersion: 1, source: 'HIM_CANONICAL_LATEST_MEASUREMENT',
+    contextKind: 'CONVERSATION_SESSION', contextId: 'session',
+    coverageState: numericValue === null ? 'EMPTY' : 'FULL', requestedMetricCount: 1,
+    knownMetricCount: numericValue === null ? 0 : 1, unknownMetricCount: numericValue === null ? 1 : 0,
+    metrics: [{
+      metricKey: 'hbs.reflection', definitionVersion: 1, hifOwner: 'HBS',
+      semanticMappingStatus: 'UNRESOLVED', semanticType: null,
+      knowledgeState: numericValue === null ? 'UNKNOWN' : 'KNOWN', numericValue,
+      unknownReason: numericValue === null ? 'NO_CANONICAL_CURRENT_VALUE' : null,
+      canonicalBindingId: numericValue === null ? null : '40000000-0000-4000-8000-000000000004',
+      observedAt: null, temporalWindowStart: null, temporalWindowEnd: null,
+      freshnessState: 'UNASSESSED', freshnessReference: null,
+      confidenceState: 'UNASSESSED', confidenceReference: null,
+    }],
+  });
+  const noneReflectionGuidance: HimSessionReflectionGuidance = { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' };
+  const inviteReflectionGuidance: HimSessionReflectionGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'GENTLE_REFLECTION_INVITATION' };
+  const avoidReflectionGuidance: HimSessionReflectionGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'AVOID_REDUNDANT_REFLECTION' };
 
   beforeEach(() => {
     repository = {
@@ -111,6 +136,8 @@ describe('ConversationOrchestratorService', () => {
     himBridge = { transform: jest.fn().mockReturnValue(himReasoningContext) } as unknown as jest.Mocked<HimReasoningConsumptionService>;
     himConsumptionPolicy = { project: jest.fn().mockImplementation((path) => ({ ...himContext, consumptionMode: path })) } as unknown as jest.Mocked<HimFastDeepConsumptionService>;
     himAdaptation = { derive: jest.fn().mockReturnValue(noneAdaptation) } as unknown as jest.Mocked<HimInteractionAdaptationService>;
+    himContextualCurrent = { getCurrentSelection: jest.fn().mockResolvedValue(reflectionSelection(null)), getCurrentIntelligence: jest.fn() } as unknown as jest.Mocked<HimContextualCurrentIntelligenceService>;
+    himReflectionConsumption = { consume: jest.fn().mockReturnValue(noneReflectionGuidance) } as unknown as jest.Mocked<HimSessionReflectionConsumptionService>;
     hypothesisContext = { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as jest.Mocked<HypothesisReasoningContextService>;
     recommendationGrounding = { ground: jest.fn().mockReturnValue({ coverageState: 'EMPTY', reason: 'NO_ACTIVE_HYPOTHESES' }) } as unknown as jest.Mocked<RecommendationGroundingService>;
     hypothesisEligibility = { evaluateWithContext: jest.fn().mockResolvedValue({ eligibility: { status: 'NOT_ELIGIBLE', reason: 'NO_TRIGGER' } }) } as unknown as jest.Mocked<HypothesisGenerationEligibilityService>;
@@ -122,7 +149,7 @@ describe('ConversationOrchestratorService', () => {
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
     const correlation=new CorrelationService();
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, hypothesisContext, recommendationGrounding, router,correlation,new TelemetryService(correlation));
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, hypothesisContext, recommendationGrounding, router,correlation,new TelemetryService(correlation));
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -404,6 +431,8 @@ describe('ConversationOrchestratorService', () => {
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
     expect(himAdaptation.derive).not.toHaveBeenCalled();
+    expect(himContextualCurrent.getCurrentSelection).not.toHaveBeenCalled();
+    expect(himReflectionConsumption.consume).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
     expect(recommendationGrounding.ground).not.toHaveBeenCalled();
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
@@ -446,6 +475,8 @@ describe('ConversationOrchestratorService', () => {
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
     expect(himAdaptation.derive).not.toHaveBeenCalled();
+    expect(himContextualCurrent.getCurrentSelection).not.toHaveBeenCalled();
+    expect(himReflectionConsumption.consume).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
     expect(recommendationGrounding.ground).not.toHaveBeenCalled();
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
@@ -628,6 +659,191 @@ describe('ConversationOrchestratorService', () => {
     });
   });
 
+  describe('Session Reflection consumption orchestration (QHIA-005)', () => {
+    const finalizeNormally = () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    };
+
+    it('reuses the authoritative session selection for both the HSE Snapshot and the exact one-metric Reflection selective read', async () => {
+      const serverClaim = { ...claimed, id: 'claimed-turn', session_id: 'claimed-session' };
+      himSelector.select.mockReturnValue({
+        contractVersion: 1, selectionState: 'SELECTED', source: 'AUTHORITATIVE_CONVERSATION_TURN',
+        sourceTurnId: serverClaim.id, contextKind: 'CONVERSATION_SESSION', contextId: serverClaim.session_id,
+        selectionReason: 'AUTHORITATIVE_SESSION_BINDING',
+      });
+      repository.claimTurn.mockResolvedValue(serverClaim);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(himSelector.select).toHaveBeenCalledTimes(1);
+      expect(himSnapshot.getSnapshot).toHaveBeenCalledWith('token', 'CONVERSATION_SESSION', 'claimed-session');
+      expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledTimes(1);
+      expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledWith(
+        'user', 'token', 'CONVERSATION_SESSION', 'claimed-session', ['hbs.reflection'],
+      );
+      // The QHIA-004 selective path only: no full four-slot contextual read.
+      expect(himContextualCurrent.getCurrentIntelligence).not.toHaveBeenCalled();
+    });
+
+    it('launches the HSE Snapshot and the Reflection selective read concurrently, never as a serial network stage', async () => {
+      let releaseSnapshot!: (value: HimIntelligenceSnapshot) => void;
+      let releaseReflection!: (value: HimContextualCurrentSelection) => void;
+      himSnapshot.getSnapshot.mockReturnValue(new Promise((resolve) => { releaseSnapshot = resolve; }));
+      himContextualCurrent.getCurrentSelection.mockReturnValue(new Promise((resolve) => { releaseReflection = resolve; }));
+      finalizeNormally();
+      const pending = orchestrator.orchestrate('token', 'user', userTurn);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      // Both reads are LAUNCHED while both are still unresolved: the
+      // Reflection request was issued before the HSE Snapshot promise was
+      // released, so an `await snapshot; await reflection` serialization is
+      // structurally impossible here.
+      expect(himSnapshot.getSnapshot).toHaveBeenCalledTimes(1);
+      expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledTimes(1);
+      expect(himBridge.transform).not.toHaveBeenCalled();
+      // Releasing only the Snapshot does not proceed: the join genuinely waits
+      // for the already-launched Reflection read (and vice versa).
+      releaseSnapshot(snapshot);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(himBridge.transform).not.toHaveBeenCalled();
+      releaseReflection(reflectionSelection(2));
+      await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+    });
+
+    it('still proceeds when the Snapshot is released only after the Reflection read resolves', async () => {
+      let releaseSnapshot!: (value: HimIntelligenceSnapshot) => void;
+      himSnapshot.getSnapshot.mockReturnValue(new Promise((resolve) => { releaseSnapshot = resolve; }));
+      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(null));
+      finalizeNormally();
+      const pending = orchestrator.orchestrate('token', 'user', userTurn);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledTimes(1);
+      expect(himBridge.transform).not.toHaveBeenCalled();
+      releaseSnapshot(snapshot);
+      await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+    });
+
+    it('consumes the resolved selection through the dedicated pure boundary and passes ACTIVE low guidance to the router', async () => {
+      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(1));
+      himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(himReflectionConsumption.consume).toHaveBeenCalledTimes(1);
+      expect(himReflectionConsumption.consume).toHaveBeenCalledWith(reflectionSelection(1));
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himSessionReflectionGuidance: inviteReflectionGuidance, himContext }));
+    });
+
+    it('passes ACTIVE high guidance to the router as the typed optional field', async () => {
+      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(5));
+      himReflectionConsumption.consume.mockReturnValue(avoidReflectionGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himSessionReflectionGuidance: avoidReflectionGuidance }));
+    });
+
+    it('omits the router field entirely for MODERATE (NONE guidance)', async () => {
+      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(3));
+      himReflectionConsumption.consume.mockReturnValue(noneReflectionGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(himReflectionConsumption.consume).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+    });
+
+    it('omits the router field entirely for UNKNOWN', async () => {
+      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(null));
+      himReflectionConsumption.consume.mockReturnValue(noneReflectionGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+    });
+
+    it('degrades a rejected Reflection read to omitted guidance while the turn generates normally', async () => {
+      himContextualCurrent.getCurrentSelection.mockRejectedValue(new Error('private data api failure'));
+      finalizeNormally();
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(himReflectionConsumption.consume).not.toHaveBeenCalled();
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+      expect(repository.failTurn).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+    });
+
+    it('degrades a malformed selection (pure consumption INTEGRITY_FAILURE) to omitted guidance without altering HSE adaptation', async () => {
+      himAdaptation.derive.mockReturnValue(activeAdaptation);
+      himReflectionConsumption.consume.mockImplementation(() => { throw new Error('INTEGRITY_FAILURE'); });
+      finalizeNormally();
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(himReflectionConsumption.consume).toHaveBeenCalledTimes(1);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himInteractionAdaptation: activeAdaptation }));
+      expect(repository.failTurn).not.toHaveBeenCalled();
+    });
+
+    it('keeps the HSE Snapshot -> Reasoning -> Adaptation chain exactly unchanged when Reflection guidance is active', async () => {
+      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(2));
+      himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(himSnapshot.getSnapshot).toHaveBeenCalledWith('token', 'CONVERSATION_SESSION', 'session');
+      expect(himBridge.transform).toHaveBeenCalledWith(snapshot);
+      expect(himAdaptation.derive).toHaveBeenCalledTimes(1);
+      expect(himAdaptation.derive).toHaveBeenCalledWith(himReasoningContext);
+      expect(himConsumptionPolicy.project).toHaveBeenCalledWith('FAST', himReasoningContext);
+      // Reflection never becomes an input of the HSE consumption chain.
+      expect(himBridge.transform).not.toHaveBeenCalledWith(expect.objectContaining({ metrics: expect.arrayContaining([expect.objectContaining({ metricKey: 'hbs.reflection' })]) }));
+    });
+
+    it('delivers an active HSE adaptation and active Reflection guidance together without cancellation', async () => {
+      himAdaptation.derive.mockReturnValue(activeAdaptation);
+      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(4));
+      himReflectionConsumption.consume.mockReturnValue(avoidReflectionGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
+        himInteractionAdaptation: activeAdaptation,
+        himSessionReflectionGuidance: avoidReflectionGuidance,
+      }));
+    });
+
+    it('gives FAST and DEEP the same Reflection guidance for identical Reflection input and never selects the path', async () => {
+      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(2));
+      himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
+      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+      repository.claimTurn.mockResolvedValue(deepClaim);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
+      await orchestrator.orchestrate('token', 'user', deepTurn);
+      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himSessionReflectionGuidance: inviteReflectionGuidance });
+      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himSessionReflectionGuidance: inviteReflectionGuidance });
+      // Path selection stays owned by the deterministic input-length rule:
+      // Reflection is consumed after the route is claimed and never selects it.
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+    });
+
+    it('adds no Question, Recommendation, Hypothesis, or Memory work: Reflection changes only the router guidance channel', async () => {
+      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(1));
+      himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(memoryRetriever.retrieve).toHaveBeenCalledTimes(1);
+      expect(hypothesisContext.build).toHaveBeenCalledTimes(1);
+      expect(recommendationGrounding.ground).toHaveBeenCalledTimes(1);
+      expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
+      expect(hypothesisExtraction.extract).not.toHaveBeenCalled();
+      expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
+      expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
+    });
+  });
+
   it('performs zero HIM calls for the COMPLETED early-return path', async () => {
     repository.findTurn.mockResolvedValue(completedUser);
     repository.findAssistantForSource.mockResolvedValue(assistant);
@@ -637,6 +853,8 @@ describe('ConversationOrchestratorService', () => {
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
     expect(himAdaptation.derive).not.toHaveBeenCalled();
+    expect(himContextualCurrent.getCurrentSelection).not.toHaveBeenCalled();
+    expect(himReflectionConsumption.consume).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
     expect(recommendationGrounding.ground).not.toHaveBeenCalled();
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
@@ -758,6 +976,8 @@ describe('ConversationOrchestratorService', () => {
       expect(himBridge.transform).not.toHaveBeenCalled();
       expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
       expect(himAdaptation.derive).not.toHaveBeenCalled();
+      expect(himContextualCurrent.getCurrentSelection).not.toHaveBeenCalled();
+      expect(himReflectionConsumption.consume).not.toHaveBeenCalled();
       expect(memoryRetriever.retrieve).not.toHaveBeenCalled();
       expect(hypothesisContext.build).not.toHaveBeenCalled();
       expect(recommendationGrounding.ground).not.toHaveBeenCalled();

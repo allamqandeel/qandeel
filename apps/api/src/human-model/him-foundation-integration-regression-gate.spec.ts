@@ -9,6 +9,8 @@ import { HimIntelligenceSnapshotService } from './him-intelligence-snapshot.serv
 import { HimReasoningConsumptionService } from './him-reasoning-consumption.service';
 import { HimFastDeepConsumptionService } from './him-fast-deep-consumption.service';
 import { HimInteractionAdaptationService } from './him-interaction-adaptation.service';
+import { HimContextualCurrentIntelligenceService } from './him-contextual-current-intelligence.service';
+import { HimSessionReflectionConsumptionService } from './him-session-reflection-consumption.service';
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 import type { HimSnapshotSourceRow } from './him-intelligence-snapshot.types';
 
@@ -84,7 +86,12 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   const hypothesisGeneration = { generate: jest.fn().mockResolvedValue({ accepted: [], rejected: [] }) };
   const confidence = { evaluateHypothesis: jest.fn().mockResolvedValue({}) };
   const hypothesisCandidateGenerator = { generate: jest.fn().mockResolvedValue([]) };
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), hypothesisContext as never, new RecommendationGroundingService(), router,correlation,new TelemetryService(correlation));
+  // QHIA-005: the optional Reflection selective read runs over the REAL
+  // contextual-current service; this gate's repository double rejects the
+  // batch transport, exercising the graceful-degradation contract (guidance
+  // omitted, HSE foreground behavior unchanged) rather than mocking it away.
+  const reflectionBatchRepository = { readContextualCurrentIntelligenceBatch: jest.fn().mockRejectedValue(new Error('foundation gate: reflection transport unavailable')) };
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), hypothesisContext as never, new RecommendationGroundingService(), router,correlation,new TelemetryService(correlation));
   return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy };
 }
 

@@ -52,6 +52,8 @@ import { HimTurnContextSelectionService } from '../src/human-model/him-turn-cont
 import { HimIntelligenceSnapshotService } from '../src/human-model/him-intelligence-snapshot.service';
 import { HimFastDeepConsumptionService } from '../src/human-model/him-fast-deep-consumption.service';
 import { HimInteractionAdaptationService } from '../src/human-model/him-interaction-adaptation.service';
+import { HimContextualCurrentIntelligenceService } from '../src/human-model/him-contextual-current-intelligence.service';
+import { HimSessionReflectionConsumptionService } from '../src/human-model/him-session-reflection-consumption.service';
 import { HimRepository } from '../src/human-model/him.repository';
 import { HypothesisService } from '../src/hypothesis/hypothesis.service';
 import { HypothesisRepository } from '../src/hypothesis/hypothesis.repository';
@@ -219,7 +221,14 @@ async function main(): Promise<void> {
       new MemoryRepository(memoryDataApi, unusedDependency<MemoryServiceRoleApiService>('MEMORY_SERVICE_ROLE_API')));
     const memoryRetriever = new MemoryRetrieverService(memoryRuntime);
     const evidenceService = new EvidenceService(memoryRuntime);
-    const himSnapshotService = new HimIntelligenceSnapshotService(new HimRepository(memoryDataApi));
+    const himRepository = new HimRepository(memoryDataApi);
+    const himSnapshotService = new HimIntelligenceSnapshotService(himRepository);
+    // QHIA-005: the REAL contextual-current service over the same repository;
+    // its one-metric hbs.reflection selective read runs concurrently with the
+    // HSE Snapshot read through the same authenticated transport adapter. No
+    // Reflection fixture exists in this smoke, so the canonical batch read
+    // resolves UNKNOWN and the derived guidance stays NONE (omitted).
+    const himContextualCurrentService = new HimContextualCurrentIntelligenceService(himRepository);
     const hypothesisService = new HypothesisService(
       new HypothesisRepository(memoryDataApi, unusedDependency<HypothesisServiceRoleApiService>('HYPOTHESIS_SERVICE_ROLE_API')),
       evidenceService);
@@ -229,7 +238,8 @@ async function main(): Promise<void> {
     const orchestrator = new ConversationOrchestratorService(
       conversationRepository, contextBuilder, new SafetyResponseGateService(), new BehavioralResponsePolicyService(),
       memoryRetriever, new HimTurnContextSelectionService(), himSnapshotService, new HimReasoningConsumptionService(),
-      new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), hypothesisReasoningContext, new RecommendationGroundingService(),
+      new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), himContextualCurrentService, new HimSessionReflectionConsumptionService(),
+      hypothesisReasoningContext, new RecommendationGroundingService(),
       conversationalRouter, correlation, telemetry);
 
     // Background provider doubles exist from the start so the foreground phase
