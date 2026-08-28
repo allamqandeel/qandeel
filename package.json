@@ -50,6 +50,7 @@
     "verify:him-canonical-latest-measurement-read-semantics:integration": "node --env-file-if-exists=.env database/verify-migration-0052.mjs",
     "verify:him-legacy-energy-current-authority-reconciliation:integration": "node --env-file-if-exists=.env database/verify-migration-0053.mjs",
     "verify:him-contextual-current-intelligence-batch:integration": "node --env-file-if-exists=.env database/verify-migration-0054.mjs",
+    "verify:him-session-context-binding:integration": "node --env-file-if-exists=.env database/verify-migration-0055.mjs",
     "verify:him-trends:integration": "node --env-file-if-exists=.env database/verify-him-trends-v1.mjs",
     "verify:him-snapshot:integration": "node --env-file-if-exists=.env database/verify-him-intelligence-snapshot-v1.mjs",
     "verify:background-him-runtime-consumption:integration": "node --env-file-if-exists=.env database/verify-migration-0037.mjs",
