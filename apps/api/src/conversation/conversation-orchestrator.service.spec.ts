@@ -15,6 +15,8 @@ import type { HimIntelligenceSnapshot } from '../human-model/him-intelligence-sn
 import type { HimReasoningContext } from '../human-model/him-reasoning-consumption.types';
 import { HimFastDeepConsumptionService } from '../human-model/him-fast-deep-consumption.service';
 import type { HimModelContext } from '../human-model/him-fast-deep-consumption.types';
+import { HimInteractionAdaptationService } from '../human-model/him-interaction-adaptation.service';
+import type { HimInteractionAdaptation } from '../human-model/him-interaction-adaptation.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -41,6 +43,7 @@ describe('ConversationOrchestratorService', () => {
   let himSnapshot: jest.Mocked<HimIntelligenceSnapshotService>;
   let himBridge: jest.Mocked<HimReasoningConsumptionService>;
   let himConsumptionPolicy: jest.Mocked<HimFastDeepConsumptionService>;
+  let himAdaptation: jest.Mocked<HimInteractionAdaptationService>;
   let hypothesisContext: jest.Mocked<HypothesisReasoningContextService>;
   let recommendationGrounding: jest.Mocked<RecommendationGroundingService>;
   let hypothesisEligibility: jest.Mocked<HypothesisGenerationEligibilityService>;
@@ -72,6 +75,20 @@ describe('ConversationOrchestratorService', () => {
     coverageState: 'EMPTY', eligibleMetricCount: 3, knownMetricCount: 0, unknownMetricCount: 3,
     freshnessPolicy: 'UNASSESSED', confidencePolicy: 'UNASSESSED', metrics: [],
   } as HimModelContext;
+  const noneAdaptation: HimInteractionAdaptation = {
+    contractVersion: 1, source: 'HIM_REASONING_CONTEXT', sourceSnapshotContractVersion: 1,
+    contextKind: 'CONVERSATION_SESSION', contextId: 'session', adaptationState: 'NONE',
+    directives: {
+      responseDensity: 'DEFAULT', cognitiveLoad: 'DEFAULT', branching: 'DEFAULT',
+      steeringPressure: 'DEFAULT', deliveryPacing: 'DEFAULT', stepBatching: 'DEFAULT',
+    },
+    drivers: [],
+  };
+  const activeAdaptation: HimInteractionAdaptation = {
+    ...noneAdaptation, adaptationState: 'ACTIVE',
+    directives: { ...noneAdaptation.directives, cognitiveLoad: 'REDUCED', steeringPressure: 'REDUCED', deliveryPacing: 'CALMER' },
+    drivers: ['STRESS_HIGH_OR_VERY_HIGH'],
+  };
 
   beforeEach(() => {
     repository = {
@@ -93,6 +110,7 @@ describe('ConversationOrchestratorService', () => {
     himSnapshot = { getSnapshot: jest.fn().mockResolvedValue(snapshot) } as unknown as jest.Mocked<HimIntelligenceSnapshotService>;
     himBridge = { transform: jest.fn().mockReturnValue(himReasoningContext) } as unknown as jest.Mocked<HimReasoningConsumptionService>;
     himConsumptionPolicy = { project: jest.fn().mockImplementation((path) => ({ ...himContext, consumptionMode: path })) } as unknown as jest.Mocked<HimFastDeepConsumptionService>;
+    himAdaptation = { derive: jest.fn().mockReturnValue(noneAdaptation) } as unknown as jest.Mocked<HimInteractionAdaptationService>;
     hypothesisContext = { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as jest.Mocked<HypothesisReasoningContextService>;
     recommendationGrounding = { ground: jest.fn().mockReturnValue({ coverageState: 'EMPTY', reason: 'NO_ACTIVE_HYPOTHESES' }) } as unknown as jest.Mocked<RecommendationGroundingService>;
     hypothesisEligibility = { evaluateWithContext: jest.fn().mockResolvedValue({ eligibility: { status: 'NOT_ELIGIBLE', reason: 'NO_TRIGGER' } }) } as unknown as jest.Mocked<HypothesisGenerationEligibilityService>;
@@ -104,7 +122,7 @@ describe('ConversationOrchestratorService', () => {
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
     const correlation=new CorrelationService();
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, hypothesisContext, recommendationGrounding, router,correlation,new TelemetryService(correlation));
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, hypothesisContext, recommendationGrounding, router,correlation,new TelemetryService(correlation));
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -385,6 +403,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
+    expect(himAdaptation.derive).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
     expect(recommendationGrounding.ground).not.toHaveBeenCalled();
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
@@ -426,6 +445,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
+    expect(himAdaptation.derive).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
     expect(recommendationGrounding.ground).not.toHaveBeenCalled();
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
@@ -547,6 +567,67 @@ describe('ConversationOrchestratorService', () => {
     expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
   });
 
+  describe('HIM interaction adaptation orchestration (QHIA-001)', () => {
+    it('wires Snapshot -> Reasoning -> Adaptation -> Router with adaptation derived before the FAST/DEEP projection', async () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(himAdaptation.derive).toHaveBeenCalledTimes(1);
+      expect(himAdaptation.derive).toHaveBeenCalledWith(himReasoningContext);
+      expect(himSnapshot.getSnapshot.mock.invocationCallOrder[0]).toBeLessThan(himBridge.transform.mock.invocationCallOrder[0]);
+      expect(himBridge.transform.mock.invocationCallOrder[0]).toBeLessThan(himAdaptation.derive.mock.invocationCallOrder[0]);
+      expect(himAdaptation.derive.mock.invocationCallOrder[0]).toBeLessThan(himConsumptionPolicy.project.mock.invocationCallOrder[0]);
+      expect(himConsumptionPolicy.project.mock.invocationCallOrder[0]).toBeLessThan(router.generate.mock.invocationCallOrder[0]);
+    });
+
+    it('passes an ACTIVE adaptation to router.generate as the typed optional field', async () => {
+      himAdaptation.derive.mockReturnValue(activeAdaptation);
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himInteractionAdaptation: activeAdaptation, himContext }));
+    });
+
+    it('omits the optional field entirely for a NONE adaptation, preserving the no-adaptation guidance path', async () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(himAdaptation.derive).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himInteractionAdaptation');
+    });
+
+    it('derives the same adaptation from the same reasoning state on FAST and DEEP without influencing path selection', async () => {
+      himAdaptation.derive.mockReturnValue(activeAdaptation);
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
+      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+      repository.claimTurn.mockResolvedValue(deepClaim);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
+      await orchestrator.orchestrate('token', 'user', deepTurn);
+      expect(himAdaptation.derive).toHaveBeenCalledTimes(2);
+      expect(himAdaptation.derive).toHaveBeenNthCalledWith(1, himReasoningContext);
+      expect(himAdaptation.derive).toHaveBeenNthCalledWith(2, himReasoningContext);
+      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himInteractionAdaptation: activeAdaptation });
+      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himInteractionAdaptation: activeAdaptation });
+      // Path selection stays owned by the deterministic input-length rule.
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+    });
+
+    it('fails closed with no provider generation when adaptation integrity rejects the reasoning context', async () => {
+      himAdaptation.derive.mockImplementation(() => { throw new Error('INTEGRITY_FAILURE'); });
+      repository.claimTurn.mockResolvedValue(claimed);
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+      expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
+    });
+  });
+
   it('performs zero HIM calls for the COMPLETED early-return path', async () => {
     repository.findTurn.mockResolvedValue(completedUser);
     repository.findAssistantForSource.mockResolvedValue(assistant);
@@ -555,6 +636,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
     expect(himBridge.transform).not.toHaveBeenCalled();
     expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
+    expect(himAdaptation.derive).not.toHaveBeenCalled();
     expect(hypothesisContext.build).not.toHaveBeenCalled();
     expect(recommendationGrounding.ground).not.toHaveBeenCalled();
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
@@ -675,6 +757,7 @@ describe('ConversationOrchestratorService', () => {
       expect(himSnapshot.getSnapshot).not.toHaveBeenCalled();
       expect(himBridge.transform).not.toHaveBeenCalled();
       expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
+      expect(himAdaptation.derive).not.toHaveBeenCalled();
       expect(memoryRetriever.retrieve).not.toHaveBeenCalled();
       expect(hypothesisContext.build).not.toHaveBeenCalled();
       expect(recommendationGrounding.ground).not.toHaveBeenCalled();
