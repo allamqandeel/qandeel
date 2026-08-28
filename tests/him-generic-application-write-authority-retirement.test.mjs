@@ -20,6 +20,20 @@ import test from'node:test';import assert from'node:assert/strict';import{readFi
 // the TypeScript compiler's own parser (ts.createSourceFile) and the rules run
 // over AST nodes, with narrow local constant/alias resolution on top.
 //
+// QHIM-014 AMENDMENT 1 (independent final review of the AST checker itself):
+// binding resolution is LEXICAL and location-aware, never file-global - a
+// reference resolves only to the declaration actually visible at its own
+// location, so two unrelated methods reusing one local name never see each
+// other's values; a metric identity reached through `this.<property>` follows
+// the nearest containing class property initializer; dynamic-path write
+// classification requires positive create/correct/calculate verb evidence in
+// the RPC authority path (the `_measurement` noun alone is a legal dynamic
+// READ shape, and a fully dynamic verb is never guessed at); and the direct
+// snapshot-table rule applies only to the application request-call shape -
+// callee member named `request`, target at argument index 1, options at
+// argument index 2 - never to an arbitrary call that merely mentions a table
+// name somewhere and a method object somewhere else.
+//
 // PROOF BOUNDARY - stated honestly. This is NOT a full static analyzer. There
 // is no TypeScript Program, no type checker, no interprocedural or
 // cross-module dataflow, no arbitrary computed-code evaluation, no reflection
@@ -80,7 +94,12 @@ const METRIC_IDENTITY_NAME=/^metric_?[Kk]ey$/;
 const isMetricOwnedWriteRpc=value=>/^(?:rpc\/)?(?:create|correct|calculate)_[a-z0-9_]+_measurement$/i.test(value);
 const isRetiredGenericRpc=value=>/^\/?(?:rpc\/)?create_him_metric_snapshot$/i.test(value);
 const isSnapshotTarget=value=>/^\/?him_metric_snapshots(?:\?|$)/i.test(value);
-const WRITE_PATH_FRAGMENT=/rpc\/(?:create|correct|calculate)|_measurement(?![a-z0-9_])/i;
+// Positive write-verb evidence for a dynamically assembled RPC authority
+// path, tested against the path's skeleton (contiguous static pieces merged,
+// one NUL HOLE per unresolvable substitution). The `_measurement` noun alone
+// is deliberately NOT write evidence: dynamic READ paths are legal, and HTTP
+// POST is never write evidence either.
+const WRITE_VERB_EVIDENCE=/rpc\/\0?(?:create|correct|calculate)(?![a-z0-9])/i;
 const MAX_DEPTH=16;
 
 // --- TypeScript AST layer ----------------------------------------------------
@@ -100,161 +119,228 @@ const declaredName=name=>{
  if(ts.isStringLiteral(name)||ts.isNumericLiteral(name))return name.text;
  return undefined;
 };
-// One narrow local scope per file. `values` maps an identifier or class-property
-// name to the expressions it is initialized from; `identities` records local
-// names destructured from a metric-identity property, so `const {metricKey: k}`
-// is understood as an alias. Object-literal keys are deliberately NOT bound, so
-// a data key can never masquerade as a local alias.
-function scopeOf(sourceFile){
- const values=new Map(),identities=new Set();
- const bind=(name,initializer)=>{if(!name||!initializer)return;values.set(name,[...(values.get(name)??[]),initializer]);};
- const collect=node=>{
-  if(ts.isVariableDeclaration(node)&&node.initializer)bind(declaredName(node.name),node.initializer);
-  else if(ts.isPropertyDeclaration(node)&&node.initializer)bind(declaredName(node.name),node.initializer);
-  else if(ts.isBindingElement(node)){
-   const source=declaredName(node.propertyName)??declaredName(node.name),local=declaredName(node.name);
-   if(source&&local&&METRIC_IDENTITY_NAME.test(source))identities.add(local);
-  }
-  ts.forEachChild(node,collect);
+// --- lexical binding resolution (QHIM-014 Amendment 1, defect 1) -------------
+// Binding resolution is lexical and location-aware, never file-global. A
+// reference resolves only to the declaration actually visible at its own
+// location: nearest enclosing scope first, walking outward, with inner
+// declarations, parameters, and destructured bindings shadowing outer names.
+// Two methods legitimately reusing one local name never see each other's
+// values. Class properties are never lexical names: they are reachable only
+// through `this.<property>` (the nearest containing class) or through the
+// declaring class's own lexically visible name for static members - never by
+// property name alone across unrelated objects. Object-literal data keys are
+// deliberately NOT bound, so a data key can never masquerade as an alias.
+const isScopeBoundary=node=>ts.isSourceFile(node)||ts.isBlock(node)||ts.isModuleBlock(node)||ts.isCaseBlock(node)||ts.isFunctionLike(node)||ts.isForStatement(node)||ts.isForInStatement(node)||ts.isForOfStatement(node)||ts.isCatchClause(node);
+const scopeDeclarationCache=new WeakMap();
+// The declarations one scope node OWNS: its variables and destructured binding
+// elements, its parameters when it is function-like, and the classes and
+// functions declared directly in it. Nested scopes own their declarations
+// themselves and are not entered; class bodies contribute no lexical names.
+function localDeclarationsOf(scope){
+ if(scopeDeclarationCache.has(scope))return scopeDeclarationCache.get(scope);
+ const declarations=new Map();
+ const declare=(name,record)=>{if(name)declarations.set(name,[...(declarations.get(name)??[]),record]);};
+ const declarePattern=(name,initializer,bindingSource)=>{
+  if(!name)return;
+  if(ts.isIdentifier(name))declare(name.text,{initializer,bindingSource});
+  // A destructured element declares its LOCAL name and remembers the source
+  // property, so `const {metricKey: k}` stays a metric-identity alias.
+  else if(ts.isObjectBindingPattern(name))for(const element of name.elements)declarePattern(element.name,element.initializer,declaredName(element.propertyName)??declaredName(element.name));
+  else if(ts.isArrayBindingPattern(name))for(const element of name.elements)if(ts.isBindingElement(element))declarePattern(element.name,element.initializer,undefined);
  };
- collect(sourceFile);
- return{values,identities};
+ const visit=node=>{
+  if(node!==scope&&isScopeBoundary(node))return;
+  if(ts.isClassDeclaration(node)||ts.isClassExpression(node)){if(node.name)declare(node.name.text,{classNode:node});return;}
+  if(ts.isVariableDeclaration(node))declarePattern(node.name,node.initializer,undefined);
+  else if(ts.isParameter(node))declarePattern(node.name,undefined,undefined);
+  else if(ts.isFunctionDeclaration(node)&&node.name)declare(node.name.text,{});
+  ts.forEachChild(node,visit);
+ };
+ visit(scope);
+ scopeDeclarationCache.set(scope,declarations);
+ return declarations;
 }
-// Resolve an expression to the nearest node of a wanted shape, following local
-// identifier and class-property aliases. Bounded and cycle-safe.
-function resolveNode(node,scope,predicate,seen=new Set(),depth=0){
+// The declarations of `name` visible AT the reference: the nearest enclosing
+// scope that declares the name wins outright, so a shadowed outer declaration
+// can never leak inward - even when the outer value would have looked safer.
+function visibleDeclarations(reference,name){
+ for(let node=reference;node;node=node.parent){
+  if(!isScopeBoundary(node))continue;
+  const found=localDeclarationsOf(node).get(name);
+  if(found?.length)return found;
+ }
+ return[];
+}
+// `this.<property>` denotes the NEAREST containing class and nothing else: an
+// outer class's property never leaks into an inner one.
+function nearestClassOf(node){
+ for(let current=node;current;current=current.parent)if(ts.isClassDeclaration(current)||ts.isClassExpression(current))return current;
+ return undefined;
+}
+const classPropertyInitializers=(classNode,propertyName)=>classNode.members.filter(member=>ts.isPropertyDeclaration(member)&&declaredName(member.name)===propertyName&&member.initializer).map(member=>member.initializer);
+// The initializers a property access may resolve to: `this.<p>` follows the
+// nearest containing class's property `<p>`; `<ClassName>.<p>` follows a
+// lexically visible class declaration's own property `<p>`. Arbitrary
+// `<object>.<property>` is never resolved by property name alone - that is
+// exactly the cross-object confusion lexical resolution exists to prevent.
+function propertyInitializersOf(access){
+ const owner=unwrap(access.expression);
+ if(!owner)return[];
+ if(owner.kind===ts.SyntaxKind.ThisKeyword){
+  const classNode=nearestClassOf(access);
+  return classNode?classPropertyInitializers(classNode,access.name.text):[];
+ }
+ if(ts.isIdentifier(owner)){
+  const out=[];
+  for(const declaration of visibleDeclarations(owner,owner.text))if(declaration.classNode)out.push(...classPropertyInitializers(declaration.classNode,access.name.text));
+  return out;
+ }
+ return[];
+}
+// Every initializer an identifier or supported property access may resolve to
+// at this exact location.
+const initializersOf=node=>ts.isIdentifier(node)?visibleDeclarations(node,node.text).map(declaration=>declaration.initializer).filter(Boolean):ts.isPropertyAccessExpression(node)?propertyInitializersOf(node):[];
+// Resolve an expression to the nearest node of a wanted shape, following only
+// lexically visible aliases. Bounded and cycle-safe.
+function resolveNode(node,predicate,seen=new Set(),depth=0){
  const current=unwrap(node);
  if(!current||depth>MAX_DEPTH||seen.has(current))return undefined;
  seen.add(current);
  if(predicate(current))return current;
- const name=ts.isIdentifier(current)?current.text:ts.isPropertyAccessExpression(current)?current.name.text:undefined;
- if(name===undefined)return undefined;
- for(const initializer of scope.values.get(name)??[]){
-  const found=resolveNode(initializer,scope,predicate,seen,depth+1);
+ for(const initializer of initializersOf(current)){
+  const found=resolveNode(initializer,predicate,seen,depth+1);
   if(found)return found;
  }
  return undefined;
 }
 // Conservative, bounded, cycle-safe constant resolution. Returns undefined
-// whenever the value is not an ordinary local constant - never a guess.
-function resolveString(node,bindings,seen=new Set(),depth=0){
+// whenever the value is not an ordinary lexically visible constant - never a
+// guess.
+function resolveString(node,seen=new Set(),depth=0){
  const current=unwrap(node);
  if(!current||depth>MAX_DEPTH||seen.has(current))return undefined;
  seen.add(current);
  if(ts.isStringLiteral(current)||ts.isNoSubstitutionTemplateLiteral(current))return current.text;
- if(ts.isIdentifier(current))return fromBindings(current.text,bindings,seen,depth,resolveString);
- if(ts.isPropertyAccessExpression(current))return fromBindings(current.name.text,bindings,seen,depth,resolveString);
  if(ts.isBinaryExpression(current)&&current.operatorToken.kind===ts.SyntaxKind.PlusToken){
-  const left=resolveString(current.left,bindings,seen,depth+1),right=resolveString(current.right,bindings,seen,depth+1);
+  const left=resolveString(current.left,seen,depth+1),right=resolveString(current.right,seen,depth+1);
   return left===undefined||right===undefined?undefined:left+right;
  }
  if(ts.isTemplateExpression(current)){
   let out=current.head.text;
   for(const span of current.templateSpans){
-   const value=resolveString(span.expression,bindings,seen,depth+1);
+   const value=resolveString(span.expression,seen,depth+1);
    if(value===undefined)return undefined;
    out+=value+span.literal.text;
   }
   return out;
  }
  if(ts.isCallExpression(current)&&ts.isPropertyAccessExpression(current.expression)&&current.expression.name.text==='join'){
-  const parts=resolveStringArray(current.expression.expression,bindings,seen,depth+1);
+  const parts=resolveStringArray(current.expression.expression,seen,depth+1);
   if(!parts)return undefined;
-  const separator=current.arguments.length?resolveString(current.arguments[0],bindings,seen,depth+1):',';
+  const separator=current.arguments.length?resolveString(current.arguments[0],seen,depth+1):',';
   return separator===undefined?undefined:parts.join(separator);
  }
- return undefined;
-}
-function fromBindings(name,bindings,seen,depth,resolver){
- for(const initializer of bindings.values.get(name)??[]){
-  const value=resolver(initializer,bindings,seen,depth+1);
+ for(const initializer of initializersOf(current)){
+  const value=resolveString(initializer,seen,depth+1);
   if(value!==undefined)return value;
  }
  return undefined;
 }
-function resolveStringArray(node,bindings,seen=new Set(),depth=0){
- const array=resolveNode(node,bindings,ts.isArrayLiteralExpression,seen,depth);
+function resolveStringArray(node,seen=new Set(),depth=0){
+ const array=resolveNode(node,ts.isArrayLiteralExpression,seen,depth);
  if(!array)return undefined;
  const out=[];
  for(const element of array.elements){
-  const value=resolveString(element,bindings,new Set(),depth+1);
+  const value=resolveString(element,new Set(),depth+1);
   if(value===undefined)return undefined;
   out.push(value);
  }
  return out;
 }
-// The static fragments of a partially dynamic path, used only to classify what
-// KIND of path is being assembled - never to pretend the value is known.
-function literalFragments(node,bindings,out=[],depth=0){
+// The skeleton of a partially dynamic path: resolvable pieces keep their exact
+// text, every unresolvable substitution becomes exactly one NUL HOLE, and
+// adjacent static pieces stay contiguous. Used only to classify what KIND of
+// path is being assembled - never to pretend the value is known.
+const HOLE='\u0000';
+function pathSkeletonParts(node,out=[],depth=0){
  const current=unwrap(node);
- if(!current||depth>MAX_DEPTH)return out;
- if(ts.isStringLiteral(current)||ts.isNoSubstitutionTemplateLiteral(current)){out.push(current.text);return out;}
+ if(!current||depth>MAX_DEPTH){out.push(HOLE);return out;}
+ const resolved=resolveString(current);
+ if(resolved!==undefined){out.push(resolved);return out;}
  if(ts.isTemplateExpression(current)){
   out.push(current.head.text);
-  for(const span of current.templateSpans){literalFragments(span.expression,bindings,out,depth+1);out.push(span.literal.text);}
+  for(const span of current.templateSpans){pathSkeletonParts(span.expression,out,depth+1);out.push(span.literal.text);}
   return out;
  }
  if(ts.isBinaryExpression(current)&&current.operatorToken.kind===ts.SyntaxKind.PlusToken){
-  literalFragments(current.left,bindings,out,depth+1);literalFragments(current.right,bindings,out,depth+1);return out;
+  pathSkeletonParts(current.left,out,depth+1);pathSkeletonParts(current.right,out,depth+1);return out;
  }
- if(ts.isIdentifier(current)||ts.isPropertyAccessExpression(current)){
-  const value=resolveString(current,bindings);
-  if(value!==undefined)out.push(value);
- }
+ out.push(HOLE);
  return out;
 }
+const pathSkeleton=node=>pathSkeletonParts(node).join('');
+const skeletonRuns=skeleton=>skeleton.split(HOLE);
 // A metric identity: metricKey / metric_key as its own name, reached directly,
-// through a property access, or through a local alias chain. An unrelated
-// string identifier is never one.
-function isMetricIdentity(node,bindings,seen=new Set(),depth=0){
+// through a direct property access, through a lexically visible alias chain,
+// or through a `this.<property>` whose nearest-class initializer is itself a
+// metric identity (Amendment 1, defect 2). An unrelated string identifier is
+// never one, and arbitrary `<object>.<property>` never classifies by property
+// name alone.
+function isMetricIdentity(node,seen=new Set(),depth=0){
  const current=unwrap(node);
  if(!current||depth>MAX_DEPTH||seen.has(current))return false;
  seen.add(current);
- if(ts.isPropertyAccessExpression(current))return METRIC_IDENTITY_NAME.test(current.name.text)||isMetricIdentity(current.expression,bindings,seen,depth+1)&&false;
+ if(ts.isPropertyAccessExpression(current)){
+  if(METRIC_IDENTITY_NAME.test(current.name.text))return true;
+  return propertyInitializersOf(current).some(initializer=>isMetricIdentity(initializer,seen,depth+1));
+ }
  if(ts.isElementAccessExpression(current)){
-  const key=resolveString(current.argumentExpression,bindings);
+  const key=resolveString(current.argumentExpression);
   return key!==undefined&&METRIC_IDENTITY_NAME.test(key);
  }
  if(!ts.isIdentifier(current))return false;
- if(METRIC_IDENTITY_NAME.test(current.text)||bindings.identities.has(current.text))return true;
- for(const initializer of bindings.values.get(current.text)??[])if(isMetricIdentity(initializer,bindings,seen,depth+1))return true;
+ if(METRIC_IDENTITY_NAME.test(current.text))return true;
+ for(const declaration of visibleDeclarations(current,current.text)){
+  if(declaration.bindingSource!==undefined&&METRIC_IDENTITY_NAME.test(declaration.bindingSource))return true;
+  if(declaration.initializer&&isMetricIdentity(declaration.initializer,seen,depth+1))return true;
+ }
  return false;
 }
 // A container's candidate values, for object literals and Map constructors,
-// reached directly or through a local alias. Classification is by CONTENTS,
-// never by variable name.
+// reached directly or through a lexically visible alias. Classification is by
+// CONTENTS, never by variable name.
 const isMapConstruction=node=>ts.isNewExpression(node)&&ts.isIdentifier(node.expression)&&node.expression.text==='Map'&&Boolean(node.arguments?.length);
-function containerValues(node,bindings){
- const objectLiteral=resolveNode(node,bindings,ts.isObjectLiteralExpression);
+function containerValues(node){
+ const objectLiteral=resolveNode(node,ts.isObjectLiteralExpression);
  if(objectLiteral)return objectLiteral.properties.filter(ts.isPropertyAssignment).map(property=>property.initializer);
- const mapConstruction=resolveNode(node,bindings,isMapConstruction);
+ const mapConstruction=resolveNode(node,isMapConstruction);
  if(!mapConstruction)return undefined;
- const entries=resolveNode(mapConstruction.arguments[0],bindings,ts.isArrayLiteralExpression);
+ const entries=resolveNode(mapConstruction.arguments[0],ts.isArrayLiteralExpression);
  if(!entries)return undefined;
- return entries.elements.map(entry=>resolveNode(entry,bindings,ts.isArrayLiteralExpression)).filter(Boolean).map(pair=>pair.elements[1]).filter(Boolean);
+ return entries.elements.map(entry=>resolveNode(entry,ts.isArrayLiteralExpression)).filter(Boolean).map(pair=>pair.elements[1]).filter(Boolean);
 }
-const isWriterContainer=(node,bindings)=>{
- const values=containerValues(node,bindings);
+const isWriterContainer=node=>{
+ const values=containerValues(node);
  if(!values)return false;
- return values.some(value=>{const resolved=resolveString(value,bindings);return resolved!==undefined&&isMetricOwnedWriteRpc(resolved);});
+ return values.some(value=>{const resolved=resolveString(value);return resolved!==undefined&&isMetricOwnedWriteRpc(resolved);});
 };
-const containsWriteRpc=(node,bindings)=>{
+const containsWriteRpc=node=>{
  let found=false;
  const walk=current=>{
   if(found||!current)return;
-  const resolved=resolveString(current,bindings);
+  const resolved=resolveString(current);
   if(resolved!==undefined&&isMetricOwnedWriteRpc(resolved)){found=true;return;}
   ts.forEachChild(current,walk);
  };
  walk(node);
  return found;
 };
-const comparesMetricIdentity=(node,bindings)=>{
+const comparesMetricIdentity=node=>{
  let found=false;
  const walk=current=>{
   if(found||!current)return;
   if(ts.isBinaryExpression(current)&&[ts.SyntaxKind.EqualsEqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsEqualsToken,ts.SyntaxKind.EqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsToken].includes(current.operatorToken.kind)
-   &&(isMetricIdentity(current.left,bindings)||isMetricIdentity(current.right,bindings))){found=true;return;}
+   &&(isMetricIdentity(current.left)||isMetricIdentity(current.right))){found=true;return;}
   ts.forEachChild(current,walk);
  };
  walk(node);
@@ -281,59 +367,69 @@ const himProduction=sources=>new Map([...sources].filter(([path])=>path.startsWi
 // listing, no database state, and no metric inventory to reach a verdict.
 const analysisCache=new Map();
 function fileViolations(path,code){
- const key=`${path} ${code}`;
+ const key=`${path}\u0000${code}`;
  if(analysisCache.has(key))return analysisCache.get(key);
  const violations=[];
  const add=mechanism=>{const message=`${path}: ${mechanism}`;if(!violations.includes(message))violations.push(message);};
  const sourceFile=ts.createSourceFile(path,code,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
- const bindings=scopeOf(sourceFile);
  // The retired generic write DTO is a type identity, checked by name.
  if(/\bCreateHimMetricObservation\b/.test(code))add('references the retired generic HIM write DTO');
  const checkValue=node=>{
   if(!node)return;
-  const resolved=resolveString(node,bindings);
+  const resolved=resolveString(node);
   if(resolved!==undefined){
    if(isRetiredGenericRpc(resolved))add('resolves a target to the retired legacy generic snapshot RPC');
    return;
   }
-  // Not a constant: classify what kind of path is being assembled.
-  const fragments=literalFragments(node,bindings);
-  if(fragments.some(fragment=>fragment.includes(LEGACY_RPC_NAME)))add('resolves a target to the retired legacy generic snapshot RPC');
-  else if(fragments.some(fragment=>WRITE_PATH_FRAGMENT.test(fragment)))add('constructs a measurement-write RPC path dynamically');
+  // Not a constant: classify what KIND of path is being assembled from its
+  // skeleton (contiguous static pieces merged, one HOLE per unknown part).
+  const skeleton=pathSkeleton(node);
+  if(skeleton.includes(LEGACY_RPC_NAME))add('resolves a target to the retired legacy generic snapshot RPC');
+  // Amendment 1, defect 3: positive write-verb evidence is required. The
+  // measurement noun alone never classifies a dynamic path as a write.
+  else if(WRITE_VERB_EVIDENCE.test(skeleton))add('constructs a measurement-write RPC path dynamically');
  };
  const targetNamesSnapshotTable=node=>{
-  const resolved=resolveString(node,bindings);
+  const resolved=resolveString(node);
   if(resolved!==undefined)return isSnapshotTarget(resolved);
-  const fragments=literalFragments(node,bindings);
-  return fragments.some(fragment=>isSnapshotTarget(fragment));
+  return skeletonRuns(pathSkeleton(node)).some(run=>isSnapshotTarget(run));
  };
  const mutatingMethodOf=node=>{
-  const current=resolveNode(node,bindings,ts.isObjectLiteralExpression);
+  const current=resolveNode(node,ts.isObjectLiteralExpression);
   if(!current)return undefined;
   for(const property of current.properties){
    if(!ts.isPropertyAssignment(property)||declaredName(property.name)!=='method')continue;
-   const verb=resolveString(property.initializer,bindings);
+   const verb=resolveString(property.initializer);
    if(verb!==undefined&&MUTATING_METHODS.includes(verb.toUpperCase()))return verb.toUpperCase();
   }
   return undefined;
  };
+ // Amendment 1, defect 4: the application boundary's request-call shape -
+ // a callee whose member name is `request`, the request target at argument
+ // index 1, the options object at argument index 2 when present. Only this
+ // shape carries application data-request semantics.
+ const isApplicationRequestCall=node=>ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)&&node.expression.name.text==='request';
  const walk=node=>{
   if(ts.isCallExpression(node)){
    for(const argument of node.arguments)checkValue(argument);
-   // G. a resolved him_metric_snapshots target with a mutating method.
-   if(node.arguments.some(targetNamesSnapshotTable)&&node.arguments.some(argument=>mutatingMethodOf(argument)!==undefined))add('issues a non-GET request against him_metric_snapshots');
+   // G. an application request whose TARGET argument resolves to
+   // him_metric_snapshots with a mutating method in its OPTIONS argument.
+   // An arbitrary call that merely mentions the table name in one argument
+   // and a method object in another is not an application data request and
+   // is deliberately not matched.
+   if(isApplicationRequestCall(node)&&node.arguments.length>=3&&targetNamesSnapshotTable(node.arguments[1])&&mutatingMethodOf(node.arguments[2])!==undefined)add('issues a non-GET request against him_metric_snapshots');
    // D. a metric identity map-keying a container that HOLDS write RPCs.
    if(ts.isPropertyAccessExpression(node.expression)&&node.expression.name.text==='get'&&node.arguments.length===1
-    &&isMetricIdentity(node.arguments[0],bindings)&&isWriterContainer(node.expression.expression,bindings))add('looks a writer up from a map keyed by a metric identity');
+    &&isMetricIdentity(node.arguments[0])&&isWriterContainer(node.expression.expression))add('looks a writer up from a map keyed by a metric identity');
   }
   if((ts.isVariableDeclaration(node)||ts.isPropertyDeclaration(node)||ts.isPropertyAssignment(node))&&node.initializer)checkValue(node.initializer);
   // D. a metric identity indexing a container that HOLDS write RPCs.
-  if(ts.isElementAccessExpression(node)&&isMetricIdentity(node.argumentExpression,bindings)&&isWriterContainer(node.expression,bindings))add('indexes a writer lookup by a metric identity');
+  if(ts.isElementAccessExpression(node)&&isMetricIdentity(node.argumentExpression)&&isWriterContainer(node.expression))add('indexes a writer lookup by a metric identity');
   // C. a metric identity switched on, where the switch body writes.
-  if(ts.isSwitchStatement(node)&&isMetricIdentity(node.expression,bindings)&&containsWriteRpc(node.caseBlock,bindings))add('switches write authority on a metric identity');
+  if(ts.isSwitchStatement(node)&&isMetricIdentity(node.expression)&&containsWriteRpc(node.caseBlock))add('switches write authority on a metric identity');
   // E. a metric identity compared against to choose between write RPCs.
-  if(ts.isConditionalExpression(node)&&comparesMetricIdentity(node.condition,bindings)&&(containsWriteRpc(node.whenTrue,bindings)||containsWriteRpc(node.whenFalse,bindings)))add('chooses a metric-owned write RPC by comparing a metric identity');
-  if(ts.isIfStatement(node)&&comparesMetricIdentity(node.expression,bindings)&&(containsWriteRpc(node.thenStatement,bindings)||(node.elseStatement&&containsWriteRpc(node.elseStatement,bindings))))add('chooses a metric-owned write RPC by comparing a metric identity');
+  if(ts.isConditionalExpression(node)&&comparesMetricIdentity(node.condition)&&(containsWriteRpc(node.whenTrue)||containsWriteRpc(node.whenFalse)))add('chooses a metric-owned write RPC by comparing a metric identity');
+  if(ts.isIfStatement(node)&&comparesMetricIdentity(node.expression)&&(containsWriteRpc(node.thenStatement)||(node.elseStatement&&containsWriteRpc(node.elseStatement))))add('chooses a metric-owned write RPC by comparing a metric identity');
   // F. the two retired legacy surfaces regaining a generic write member.
   if(RETIRED_GENERIC_SURFACES.includes(path)&&(ts.isMethodDeclaration(node)||ts.isPropertyDeclaration(node)||ts.isMethodSignature(node))){
    const member=declaredName(node.name);
@@ -440,6 +536,59 @@ const MULTILINE_GET_READ=`export class SyntheticHimReader {
   }
 }
 `;
+// Amendment 1 positive controls.
+// P8: two methods legitimately reusing one local name - one read path, one
+// exact metric-specific Energy writer - with no generic routing and no direct
+// table mutation anywhere.
+const P8_HARMLESS_LOCAL_SHADOWING=`export class ScopedTargets {
+  ${API}
+  readLatest(token:string) {
+    const target = 'rpc/read_him_latest_measurement_v1';
+    return this.dataApi.request(token,target,{method:'POST',body:'{}'});
+  }
+  submitEnergyMeasurement(token:string,body:object) {
+    const target = 'rpc/create_hse_energy_measurement';
+    return this.dataApi.request(token,target,{method:'POST',body:JSON.stringify(body)});
+  }
+}
+`;
+// P9: a class property holding an exact metric-identity constant used only as
+// a descriptive constant, never to select a generic writer.
+const P9_CLASS_PROPERTY_IDENTITY_CONSTANT=`export class HseEnergySubmissionService {
+  private readonly key = 'hse.energy';
+  ${API}
+  describe(){ return this.key; }
+  submitEnergyMeasurement(token:string,body:object){
+    return this.dataApi.request(token,'rpc/create_hse_energy_measurement',{method:'POST',body:JSON.stringify(body)});
+  }
+}
+`;
+// P10: a legitimate dynamic READ whose path ends in the measurement noun. The
+// known verb is `read`; HTTP POST is not write evidence.
+const P10_DYNAMIC_MEASUREMENT_READ=`export class FutureReader {
+  ${API}
+  read(token:string,projection:string) {
+    return this.dataApi.request(
+      token,
+      \`rpc/read_him_\${projection}_measurement\`,
+      { method:'POST', body:'{}' },
+    );
+  }
+}
+`;
+// P11: an unrelated call that mentions the snapshot table in one argument and
+// a method object in another. It is not an application data request - the
+// callee member is not \`request\` - so it carries no write semantics.
+const P11_UNRELATED_AUDIT_CALL=`declare function audit(topic:string,detail:object):void;
+export class SnapshotAuditLog {
+  note() {
+    audit(
+      'him_metric_snapshots',
+      { method: 'POST' },
+    );
+  }
+}
+`;
 const POSITIVE_CONTROLS=[
  ['P1 one exact Energy writer',P1_EXACT_ENERGY_WRITER],
  ['P2 exact Energy create + correct adapter',P2_EXACT_ENERGY_CREATE_AND_CORRECT],
@@ -448,6 +597,10 @@ const POSITIVE_CONTROLS=[
  ['P5 exact writer beside an unrelated POST read-side metric lookup',P5_EXACT_WRITER_WITH_READ_LOOKUP],
  ['P6 exact writer reached through a local const alias',P6_ALIASED_EXACT_WRITER],
  ['P7 exact-Energy path container selected by a non-metric operation',P7_EXACT_CONTAINER_WITHOUT_METRIC_SELECTION],
+ ['P8 harmless same-name locals in different methods',P8_HARMLESS_LOCAL_SHADOWING],
+ ['P9 class property holding an exact non-routing identity constant',P9_CLASS_PROPERTY_IDENTITY_CONSTANT],
+ ['P10 dynamic measurement READ path',P10_DYNAMIC_MEASUREMENT_READ],
+ ['P11 unrelated audit call naming the table and a method object',P11_UNRELATED_AUDIT_CALL],
  ['a multiline raw GET audit read',MULTILINE_GET_READ],
 ];
 
@@ -580,6 +733,66 @@ const N16_ALIASED_ROUTING_RESULT=`export class AliasedRoutingResult {
   }
 }
 `;
+// Amendment 1 negative controls.
+// N17: the exact lexical-shadowing bypass from the independent final review -
+// a safe method resolves its own local \`target\` to a read RPC while an
+// unrelated method reuses the same local name for the snapshot table. Under
+// file-global name lookup the bad request could resolve to the earlier safe
+// initializer; under lexical resolution it must reject.
+const N17_LEXICAL_SHADOWED_TABLE_WRITE=`export class ScopeSplitWriter {
+  ${API}
+  safe(token:string) {
+    const target = 'rpc/read_him_x';
+    return this.dataApi.request(
+      token,
+      target,
+      { method: 'POST', body: '{}' },
+    );
+  }
+  bad(token:string,row:object) {
+    const target = 'him_metric_snapshots';
+    return this.dataApi.request(
+      token,
+      target,
+      { method: 'POST', body: JSON.stringify(row) },
+    );
+  }
+}
+`;
+// N18: a class property aliasing a metric identity, then used to index a
+// multi-metric writer container. The metric identity still chooses the
+// writer, so this is prohibited generic write authority.
+const N18_CLASS_PROPERTY_IDENTITY_ROUTER=`export class GenericWriter {
+  private readonly input:{metricKey:string};
+  private readonly key = this.input.metricKey;
+  private readonly writers = {
+    'hse.energy': 'rpc/create_hse_energy_measurement',
+    'hse.stress': 'rpc/create_hse_stress_measurement',
+  };
+  ${API}
+  submit(token:string,body:object) {
+    return this.dataApi.request(
+      token,
+      this.writers[this.key],
+      { method:'POST', body:JSON.stringify(body) },
+    );
+  }
+}
+`;
+// N19: the real application request-call shape - callee member \`request\`,
+// snapshot-table target at argument 1, mutating options at argument 2 - the
+// exact construct P11's unrelated call must be distinguished from.
+const N19_REQUEST_SHAPED_SNAPSHOT_POST=`export class DirectRequestWriter {
+  ${API}
+  write(token:string,row:object) {
+    return this.dataApi.request(
+      token,
+      'him_metric_snapshots',
+      { method:'POST', body:JSON.stringify(row) },
+    );
+  }
+}
+`;
 
 // Control tables are exported alongside the checker so every P/N verdict in the
 // review report can be reproduced against the exact shipped implementation.
@@ -693,7 +906,7 @@ test('S8 - the legitimate read authority is intact',()=>{
  assert.match(service,/validateContext/,'exact context validation needed by the read paths is preserved');
 });
 
-test('P1-P7 - every separately reviewed exact-ownership shape stays accepted',()=>{
+test('P1-P11 - every separately reviewed exact-ownership shape stays accepted',()=>{
  for(const[label,fixture]of POSITIVE_CONTROLS)accepts(label,fixture);
  // The acceptances are non-vacuous: each control really carries the property a
  // broader guard would have wrongly rejected it for.
@@ -704,6 +917,10 @@ test('P1-P7 - every separately reviewed exact-ownership shape stays accepted',()
  assert.match(P5_EXACT_WRITER_WITH_READ_LOOKUP,/rpc\/create_hse_energy_measurement/,'P5 really contains an exact write RPC too');
  assert.match(P6_ALIASED_EXACT_WRITER,/const path = 'rpc\/create_hse_energy_measurement'/,'P6 really aliases its exact write path');
  assert.match(P7_EXACT_CONTAINER_WITHOUT_METRIC_SELECTION,/this\.energyPaths\[mode\]/,'P7 really selects from a write-path container by a non-metric key');
+ assert.equal([...P8_HARMLESS_LOCAL_SHADOWING.matchAll(/const target = /g)].length,2,'P8 really declares the same local name in two methods');
+ assert.match(P9_CLASS_PROPERTY_IDENTITY_CONSTANT,/private readonly key = 'hse\.energy'/,'P9 really carries an exact identity constant on a class property');
+ assert.match(P10_DYNAMIC_MEASUREMENT_READ,/rpc\/read_him_\$\{projection\}_measurement/,'P10 really assembles a dynamic path ending in the measurement noun');
+ assert.ok(!P11_UNRELATED_AUDIT_CALL.includes('.request('),'P11 really makes no application request call');
  // Also accepted: the shipped production source, including the legitimate
  // metric-keyed READ lookups in the definition registry, the Snapshot
  // projector, and the Trend slot table.
@@ -729,9 +946,12 @@ const NEGATIVE_CONTROLS=[
   ['N14 direct snapshot DELETE',directWrite('DELETE'),'issues a non-GET request against him_metric_snapshots',FIXTURE],
   ['N15 retired legacy surface regaining a generic write method',`${read(REPOSITORY)}\n${P1_EXACT_ENERGY_WRITER.replace('submitEnergyMeasurement','submitMeasurement')}`,'redefines the retired generic measurement-write method submitMeasurement(...)',REPOSITORY],
   ['N16 routing result aliased before the request target',N16_ALIASED_ROUTING_RESULT,'indexes a writer lookup by a metric identity',FIXTURE],
+  ['N17 lexically shadowed direct snapshot-table write',N17_LEXICAL_SHADOWED_TABLE_WRITE,'issues a non-GET request against him_metric_snapshots',FIXTURE],
+  ['N18 class-property metric-identity alias indexing a writer container',N18_CLASS_PROPERTY_IDENTITY_ROUTER,'indexes a writer lookup by a metric identity',FIXTURE],
+  ['N19 request-shaped direct snapshot POST',N19_REQUEST_SHAPED_SNAPSHOT_POST,'issues a non-GET request against him_metric_snapshots',FIXTURE],
 ];
 
-test('N1-N16 - every prohibited generic write authority is rejected by its own named rule',()=>{
+test('N1-N19 - every prohibited generic write authority is rejected by its own named rule',()=>{
  for(const[label,fixture,mechanism,path]of NEGATIVE_CONTROLS){
   for(const[,control]of POSITIVE_CONTROLS)assert.notEqual(fixture,control,`${label} really differs from every accepted control`);
   rejects(label,fixture,mechanism,path);
@@ -854,6 +1074,51 @@ test('same-class adversarial expansion - ordinary local equivalences of the same
   ${API}
   w(token:string,body:object){return this.dataApi.request(token,this.writers['hse.energy'],{method:'POST',body:JSON.stringify(body)});} }
 `);
+});
+
+test('Amendment 1 - lexical scoping, class-property identity, write-verb evidence, and the request-call shape',()=>{
+ // Defect 1: binding resolution is lexical. The exact two-method shadowing
+ // bypass from the independent final review must reject, and harmless
+ // same-name locals must stay accepted. Each fixture first proves the
+ // construct is really present.
+ assert.equal([...N17_LEXICAL_SHADOWED_TABLE_WRITE.matchAll(/const target = /g)].length,2,'N17 really reuses one local name across two methods');
+ assert.match(N17_LEXICAL_SHADOWED_TABLE_WRITE,/const target = 'rpc\/read_him_x';/,'N17 really binds the safe read path first');
+ assert.match(N17_LEXICAL_SHADOWED_TABLE_WRITE,/const target = 'him_metric_snapshots';/,'N17 really aliases the table in the writing method');
+ rejects('N17 lexically shadowed direct table write',N17_LEXICAL_SHADOWED_TABLE_WRITE,'issues a non-GET request against him_metric_snapshots');
+ accepts('P8 harmless same-name locals in different methods',P8_HARMLESS_LOCAL_SHADOWING);
+ // Inner block shadowing resolves to the inner declaration, and a parameter
+ // shadows an outer constant rather than leaking its value inward.
+ rejects('an inner block shadowing an outer safe constant',`export class C { ${API}
+  w(token:string,row:object){const target='rpc/read_him_x';{const target='him_metric_snapshots';return this.dataApi.request(token,target,{method:'POST',body:JSON.stringify(row)});}} }
+`,'issues a non-GET request against him_metric_snapshots');
+ accepts('a parameter shadowing an outer table constant',`const target='him_metric_snapshots';
+export class C { ${API}
+  w(token:string,target:string,row:object){return this.dataApi.request(token,target,{method:'POST',body:JSON.stringify(row)});} }
+`);
+ // Defect 2: a class property aliasing a metric identity is followed through
+ // the nearest containing class, while an exact identity CONSTANT on a class
+ // property stays legal because it selects nothing.
+ assert.match(N18_CLASS_PROPERTY_IDENTITY_ROUTER,/private readonly key = this\.input\.metricKey;/,'N18 really aliases the identity through a class property');
+ assert.match(N18_CLASS_PROPERTY_IDENTITY_ROUTER,/this\.writers\[this\.key\]/,'N18 really indexes the writer container by the aliased identity');
+ rejects('N18 class-property metric-identity alias router',N18_CLASS_PROPERTY_IDENTITY_ROUTER,'indexes a writer lookup by a metric identity');
+ accepts('P9 class-property identity constant without routing',P9_CLASS_PROPERTY_IDENTITY_CONSTANT);
+ // Defect 3: the paired proof that the WRITE VERB - not formatting and not
+ // the measurement noun - decides the dynamic-path verdict. The two fixtures
+ // differ only in the verb.
+ const dynamicPath=verb=>`export class D { ${API}
+  go(token:string,projection:string){return this.dataApi.request(token,\`rpc/${verb}_him_\${projection}_measurement\`,{method:'POST',body:'{}'});} }
+`;
+ assert.equal(dynamicPath('create').replace('create','read'),dynamicPath('read'),'the paired dynamic fixtures differ only in the verb');
+ accepts('P10 dynamic measurement READ path',P10_DYNAMIC_MEASUREMENT_READ);
+ accepts('the read-verb side of the pair',dynamicPath('read'));
+ rejects('the create-verb side of the pair',dynamicPath('create'),'constructs a measurement-write RPC path dynamically');
+ rejects('N6 still rejects on its write verb',N6_DYNAMIC_WRITE_INTERPOLATION,'constructs a measurement-write RPC path dynamically');
+ // Defect 4: only the application request-call shape carries data-request
+ // semantics - target at argument 1, options at argument 2.
+ assert.match(P11_UNRELATED_AUDIT_CALL,/audit\(\s*'him_metric_snapshots',\s*\{ method: 'POST' \},?\s*\)/,'P11 really passes the table name and a method object to an unrelated call');
+ accepts('P11 unrelated audit call',P11_UNRELATED_AUDIT_CALL);
+ assert.match(N19_REQUEST_SHAPED_SNAPSHOT_POST,/\.request\(\s*token,\s*'him_metric_snapshots',/,'N19 really targets the table through the request-call shape');
+ rejects('N19 request-shaped direct snapshot POST',N19_REQUEST_SHAPED_SNAPSHOT_POST,'issues a non-GET request against him_metric_snapshots');
 });
 
 test('the guard states no future ceiling and is independent of migration numbering',()=>{
