@@ -26,6 +26,8 @@ import { HimSituationStressConsumptionService } from '../human-model/him-situati
 import type { HimSituationStressGuidance } from '../human-model/him-situation-stress-consumption.types';
 import { HimDecisionAttentionConsumptionService } from '../human-model/him-decision-attention-consumption.service';
 import type { HimDecisionAttentionGuidance } from '../human-model/him-decision-attention-consumption.types';
+import { HimCrossContextForegroundAggregationService } from '../human-model/him-cross-context-foreground-aggregation.service';
+import type { HimCrossContextForegroundGuidance } from '../human-model/him-cross-context-foreground.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -55,8 +57,7 @@ describe('ConversationOrchestratorService', () => {
   let himAdaptation: jest.Mocked<HimInteractionAdaptationService>;
   let himContextualCurrent: jest.Mocked<HimContextualCurrentIntelligenceService>;
   let himReflectionConsumption: jest.Mocked<HimSessionReflectionConsumptionService>;
-  let himSituationStress: jest.Mocked<HimSituationStressConsumptionService>;
-  let himDecisionAttention: jest.Mocked<HimDecisionAttentionConsumptionService>;
+  let himCrossContextForeground: jest.Mocked<HimCrossContextForegroundAggregationService>;
   let hypothesisContext: jest.Mocked<HypothesisReasoningContextService>;
   let recommendationGrounding: jest.Mocked<RecommendationGroundingService>;
   let hypothesisEligibility: jest.Mocked<HypothesisGenerationEligibilityService>;
@@ -124,6 +125,33 @@ describe('ConversationOrchestratorService', () => {
   const activeSituationStressGuidance: HimSituationStressGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'REDUCE_INTERACTION_BURDEN' };
   const noneDecisionAttentionGuidance: HimDecisionAttentionGuidance = { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' };
   const activeDecisionAttentionGuidance: HimDecisionAttentionGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'REDUCE_PRESENTATION_BURDEN' };
+  // QHIA-009: the aggregate carries the two EXISTING guidance contracts side by
+  // side. It adds no field of its own to the provider request.
+  const crossContextGuidance = (
+    situationStress: HimSituationStressGuidance,
+    decisionAttention: HimDecisionAttentionGuidance,
+  ): HimCrossContextForegroundGuidance => ({ contractVersion: 1, situationStress, decisionAttention });
+  // Raw migration-0058 / 0056 / 0057 rows for the tests that drive the REAL
+  // aggregate over REAL child consumers. Both channels are deterministically
+  // unbound, so the decoded answer is bounded NONE on both sides.
+  const CANONICAL_USER = '00000000-0000-4000-8000-000000000001';
+  const CANONICAL_SESSION = '00000000-0000-4000-8000-000000000002';
+  const nullMetricColumns = {
+    binding_context_id: null, slot_order: null, metric_key: null, definition_version: null, hif_owner: null,
+    semantic_mapping_status: null, semantic_type: null, calculation_status: null, valid_context_kinds: null,
+    context_kind: null, context_id: null, has_canonical_current_value: null,
+    source_metric_key: null, source_definition_version: null, source_semantic_mapping_status: null,
+    source_semantic_type: null, source_context_kind: null, source_context_id: null,
+    value_state: null, numeric_value: null, validity_status: null, confidence_state: null, confidence_reference: null,
+    observed_at: null, temporal_window_start: null, temporal_window_end: null,
+    canonical_binding_id: null, active_binding_id: null,
+  };
+  const unboundSituationRow = () => ({ binding_state: 'NO_ACTIVE_SITUATION', ...nullMetricColumns });
+  const unboundDecisionRow = () => ({ binding_state: 'NO_ACTIVE_DECISION', ...nullMetricColumns });
+  const unboundEnvelope = () => [
+    { foreground_slot_order: 1, foreground_slot: 'SITUATION_STRESS', ...unboundSituationRow() },
+    { foreground_slot_order: 2, foreground_slot: 'DECISION_ATTENTION', ...unboundDecisionRow() },
+  ];
   const noneReflectionGuidance: HimSessionReflectionGuidance = { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' };
   const inviteReflectionGuidance: HimSessionReflectionGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'GENTLE_REFLECTION_INVITATION' };
   const avoidReflectionGuidance: HimSessionReflectionGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'AVOID_REDUNDANT_REFLECTION' };
@@ -151,8 +179,7 @@ describe('ConversationOrchestratorService', () => {
     himAdaptation = { derive: jest.fn().mockReturnValue(noneAdaptation) } as unknown as jest.Mocked<HimInteractionAdaptationService>;
     himContextualCurrent = { getCurrentSelection: jest.fn().mockResolvedValue(reflectionSelection(null)), getCurrentIntelligence: jest.fn() } as unknown as jest.Mocked<HimContextualCurrentIntelligenceService>;
     himReflectionConsumption = { consume: jest.fn().mockReturnValue(noneReflectionGuidance) } as unknown as jest.Mocked<HimSessionReflectionConsumptionService>;
-    himSituationStress = { read: jest.fn().mockResolvedValue(noneSituationStressGuidance) } as unknown as jest.Mocked<HimSituationStressConsumptionService>;
-    himDecisionAttention = { read: jest.fn().mockResolvedValue(noneDecisionAttentionGuidance) } as unknown as jest.Mocked<HimDecisionAttentionConsumptionService>;
+    himCrossContextForeground = { read: jest.fn().mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, noneDecisionAttentionGuidance)) } as unknown as jest.Mocked<HimCrossContextForegroundAggregationService>;
     hypothesisContext = { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as jest.Mocked<HypothesisReasoningContextService>;
     recommendationGrounding = { ground: jest.fn().mockReturnValue({ coverageState: 'EMPTY', reason: 'NO_ACTIVE_HYPOTHESES' }) } as unknown as jest.Mocked<RecommendationGroundingService>;
     hypothesisEligibility = { evaluateWithContext: jest.fn().mockResolvedValue({ eligibility: { status: 'NOT_ELIGIBLE', reason: 'NO_TRIGGER' } }) } as unknown as jest.Mocked<HypothesisGenerationEligibilityService>;
@@ -165,7 +192,7 @@ describe('ConversationOrchestratorService', () => {
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
     correlation=new CorrelationService();
     telemetry=new TelemetryService(correlation);
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himSituationStress, himDecisionAttention, hypothesisContext, recommendationGrounding, router,correlation,telemetry);
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, hypothesisContext, recommendationGrounding, router,correlation,telemetry);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -958,259 +985,7 @@ describe('ConversationOrchestratorService', () => {
     });
   });
 
-  describe('Situation-bound stress foreground consumption (QHIA-007)', () => {
-    const finalizeNormally = () => {
-      repository.claimTurn.mockResolvedValue(claimed);
-      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
-    };
-    const flush = () => new Promise<void>((resolve) => setImmediate(resolve));
-
-    it('reads Situation-bound stress once, for the authoritative claimed session, through the dedicated one-request boundary', async () => {
-      const serverClaim = { ...claimed, id: 'claimed-turn', session_id: 'claimed-session' };
-      himSelector.select.mockReturnValue({
-        contractVersion: 1, selectionState: 'SELECTED', source: 'AUTHORITATIVE_CONVERSATION_TURN',
-        sourceTurnId: serverClaim.id, contextKind: 'CONVERSATION_SESSION', contextId: serverClaim.session_id,
-        selectionReason: 'AUTHORITATIVE_SESSION_BINDING',
-      });
-      repository.claimTurn.mockResolvedValue(serverClaim);
-      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
-      await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(himSelector.select).toHaveBeenCalledTimes(1);
-      expect(himSituationStress.read).toHaveBeenCalledTimes(1);
-      expect(himSituationStress.read).toHaveBeenCalledWith('user', 'token', 'claimed-session');
-      // The QHIA-006 application boundary is never used as a foreground
-      // fan-out, and QHIA-007 never becomes a second full contextual read.
-      expect(himContextualCurrent.getCurrentIntelligence).not.toHaveBeenCalled();
-      expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledTimes(1);
-      expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledWith(
-        'user', 'token', 'CONVERSATION_SESSION', 'claimed-session', ['hbs.reflection'],
-      );
-    });
-
-    it('LAUNCHES the Situation-stress read concurrently with the Snapshot and Reflection reads, never after either settles', async () => {
-      let releaseSnapshot!: (value: HimIntelligenceSnapshot) => void;
-      let releaseReflection!: (value: HimContextualCurrentSelection) => void;
-      himSnapshot.getSnapshot.mockReturnValue(new Promise((resolve) => { releaseSnapshot = resolve; }));
-      himContextualCurrent.getCurrentSelection.mockReturnValue(new Promise((resolve) => { releaseReflection = resolve; }));
-      himSituationStress.read.mockReturnValue(new Promise(() => undefined));
-      finalizeNormally();
-      const pending = orchestrator.orchestrate('token', 'user', userTurn);
-      await flush();
-      // All three foreground HIM reads are in flight simultaneously: the
-      // Situation-stress request was issued while the Snapshot and Reflection
-      // promises are both still unresolved, so `await snapshot; await stress`
-      // (or `await reflection; await stress`) is structurally impossible.
-      expect(himSnapshot.getSnapshot).toHaveBeenCalledTimes(1);
-      expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledTimes(1);
-      expect(himSituationStress.read).toHaveBeenCalledTimes(1);
-      expect(himBridge.transform).not.toHaveBeenCalled();
-      releaseSnapshot(snapshot);
-      releaseReflection(reflectionSelection(null));
-      await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-      expect(router.generate).toHaveBeenCalledTimes(1);
-    });
-
-    it('makes the guidance available to provider construction when it settles before the existing barrier', async () => {
-      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
-      finalizeNormally();
-      await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
-        himSituationStressGuidance: activeSituationStressGuidance,
-      }));
-    });
-
-    it('omits the router field entirely for NONE guidance', async () => {
-      himSituationStress.read.mockResolvedValue(noneSituationStressGuidance);
-      finalizeNormally();
-      await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-    });
-
-    it('adds ZERO incremental foreground wait: a still-pending read never delays provider dispatch', async () => {
-      jest.useFakeTimers();
-      try {
-        let releaseStress!: (value: HimSituationStressGuidance) => void;
-        himSituationStress.read.mockReturnValue(new Promise((resolve) => { releaseStress = resolve; }));
-        himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(2));
-        himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
-        finalizeNormally();
-        // Snapshot and Reflection both complete quickly; Situation-stress is
-        // still pending. The turn completes with NO timer advance at all, so
-        // no additional wait of any duration was introduced.
-        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-        expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-        // The optional Reflection enrichment still won its own existing
-        // budget: QHIA-007 changed no QHIA-005 semantics.
-        expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himSessionReflectionGuidance: inviteReflectionGuidance }));
-        // No QHIA-007 timer exists: the only foreground timer in the system is
-        // the pre-existing Reflection budget, and it was cleared by its own
-        // fast resolution.
-        expect(jest.getTimerCount()).toBe(0);
-        // A late completion after dispatch is ignored for this turn.
-        releaseStress(activeSituationStressGuidance);
-        await jest.advanceTimersByTimeAsync(0);
-        expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
-      } finally { jest.useRealTimers(); }
-    });
-
-    it('dispatches at the EXISTING 300 ms Reflection barrier and adds no further wait for a pending Situation-stress read', async () => {
-      jest.useFakeTimers();
-      try {
-        himContextualCurrent.getCurrentSelection.mockReturnValue(new Promise(() => undefined));
-        himSituationStress.read.mockReturnValue(new Promise(() => undefined));
-        finalizeNormally();
-        const pending = orchestrator.orchestrate('token', 'user', userTurn);
-        await jest.advanceTimersByTimeAsync(299);
-        expect(router.generate).not.toHaveBeenCalled();
-        // Crossing the pre-existing QHIA-005 budget releases the foreground,
-        // and the still-pending QHIA-007 read adds not one millisecond.
-        await jest.advanceTimersByTimeAsync(1);
-        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-        expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
-        expect(repository.failTurn).not.toHaveBeenCalled();
-        expect(jest.getTimerCount()).toBe(0);
-      } finally { jest.useRealTimers(); }
-    });
-
-    it('degrades a rejected Situation-stress read to omitted guidance while the turn generates normally', async () => {
-      himSituationStress.read.mockRejectedValue(new Error('private data api failure'));
-      finalizeNormally();
-      await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-      expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-      expect(repository.failTurn).not.toHaveBeenCalled();
-      expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
-    });
-
-    it('absorbs a LATE rejection after dispatch with no unhandled rejection and no behavioural effect', async () => {
-      jest.useFakeTimers();
-      try {
-        let rejectStress!: (error: Error) => void;
-        himSituationStress.read.mockReturnValue(new Promise((_resolve, reject) => { rejectStress = reject; }));
-        finalizeNormally();
-        const pending = orchestrator.orchestrate('token', 'user', userTurn);
-        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-        rejectStress(new Error('late private transport failure'));
-        await jest.advanceTimersByTimeAsync(0);
-        expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(repository.failTurn).not.toHaveBeenCalled();
-        expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
-      } finally { jest.useRealTimers(); }
-    });
-
-    it('never reuses a late result on the NEXT turn: the second turn reads again and gets its own answer', async () => {
-      jest.useFakeTimers();
-      try {
-        let releaseFirst!: (value: HimSituationStressGuidance) => void;
-        himSituationStress.read.mockReturnValueOnce(new Promise((resolve) => { releaseFirst = resolve; }));
-        finalizeNormally();
-        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-        // The first turn's read settles ACTIVE only after that turn dispatched.
-        releaseFirst(activeSituationStressGuidance);
-        await jest.advanceTimersByTimeAsync(0);
-        // The next turn performs its own read; the stale ACTIVE result is not
-        // carried over, and no cross-turn cache exists.
-        himSituationStress.read.mockResolvedValue(noneSituationStressGuidance);
-        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-        expect(himSituationStress.read).toHaveBeenCalledTimes(2);
-        expect(router.generate).toHaveBeenCalledTimes(2);
-        expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himSituationStressGuidance');
-      } finally { jest.useRealTimers(); }
-    });
-
-    it('records the enrichment outcome inside its own him_situation_stress_context engine span', async () => {
-      const withEngine = jest.spyOn(telemetry, 'withEngine');
-      himSituationStress.read.mockRejectedValue(new Error('private transport failure'));
-      finalizeNormally();
-      const pending = correlation.runRequest(() => orchestrator.orchestrate('token', 'user', userTurn));
-      await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-      const stressEngineResults = withEngine.mock.calls
-        .map((call, index) => ({ engine: call[0], result: withEngine.mock.results[index] }))
-        .filter(({ engine }) => engine === 'him_situation_stress_context');
-      expect(stressEngineResults).toHaveLength(1);
-      await expect(stressEngineResults[0].result.value).rejects.toThrow('private transport failure');
-      expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-      expect(repository.failTurn).not.toHaveBeenCalled();
-    });
-
-    it('delivers an active HSE adaptation, active Reflection guidance, and active Situation-stress guidance together', async () => {
-      himAdaptation.derive.mockReturnValue(activeAdaptation);
-      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(4));
-      himReflectionConsumption.consume.mockReturnValue(avoidReflectionGuidance);
-      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
-      finalizeNormally();
-      await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
-        himInteractionAdaptation: activeAdaptation,
-        himSessionReflectionGuidance: avoidReflectionGuidance,
-        himSituationStressGuidance: activeSituationStressGuidance,
-      }));
-    });
-
-    it('gives FAST and DEEP identical guidance and never participates in path selection', async () => {
-      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
-      finalizeNormally();
-      await orchestrator.orchestrate('token', 'user', userTurn);
-      const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
-      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
-      repository.claimTurn.mockResolvedValue(deepClaim);
-      repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
-      await orchestrator.orchestrate('token', 'user', deepTurn);
-      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himSituationStressGuidance: activeSituationStressGuidance });
-      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himSituationStressGuidance: activeSituationStressGuidance });
-      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
-      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
-    });
-
-    it('keeps the HSE Snapshot -> Reasoning -> Adaptation chain and the Reflection channel exactly unchanged', async () => {
-      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
-      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(2));
-      himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
-      finalizeNormally();
-      await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(himSnapshot.getSnapshot).toHaveBeenCalledWith('token', 'CONVERSATION_SESSION', 'session');
-      expect(himBridge.transform).toHaveBeenCalledTimes(1);
-      expect(himBridge.transform).toHaveBeenCalledWith(snapshot);
-      expect(himAdaptation.derive).toHaveBeenCalledTimes(1);
-      expect(himAdaptation.derive).toHaveBeenCalledWith(himReasoningContext);
-      expect(himConsumptionPolicy.project).toHaveBeenCalledWith('FAST', himReasoningContext);
-      expect(himReflectionConsumption.consume).toHaveBeenCalledTimes(1);
-      expect(himReflectionConsumption.consume).toHaveBeenCalledWith(reflectionSelection(2));
-    });
-
-    it('adds no Question, Recommendation, Hypothesis, Memory, or provider work beyond the guidance channel', async () => {
-      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
-      finalizeNormally();
-      await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(memoryRetriever.retrieve).toHaveBeenCalledTimes(1);
-      expect(hypothesisContext.build).toHaveBeenCalledTimes(1);
-      expect(recommendationGrounding.ground).toHaveBeenCalledTimes(1);
-      expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
-      expect(hypothesisExtraction.extract).not.toHaveBeenCalled();
-      expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
-      expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
-    });
-
-    it('performs no Situation-stress read at all when Safety BLOCKs the turn', async () => {
-      safetyGate.evaluate.mockReturnValue({ category: 'SELF_HARM_OR_SUICIDE', disposition: 'BLOCK', deterministicResponse: 'safe deterministic response' });
-      repository.claimTurn.mockResolvedValue(claimed);
-      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
-      await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(himSituationStress.read).not.toHaveBeenCalled();
-      expect(router.generate).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Decision-bound attention foreground consumption (QHIA-008)', () => {
+  describe('Cross-context foreground aggregation (QHIA-009)', () => {
     const finalizeNormally = () => {
       repository.claimTurn.mockResolvedValue(claimed);
       repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
@@ -1221,7 +996,7 @@ describe('ConversationOrchestratorService', () => {
     const ONE_AT_A_TIME = 'When guidance is otherwise appropriate, present one immediate step or unit at a time rather than a bundle.';
     const occurrences = (haystack: string, needle: string): number => haystack.split(needle).length - 1;
 
-    it('reads Decision-bound attention once, for the authoritative claimed session, through the dedicated one-request boundary', async () => {
+    it('reads the cross-context foreground ONCE per eligible turn, for the authoritative claimed session, through the one aggregate boundary', async () => {
       const serverClaim = { ...claimed, id: 'claimed-turn', session_id: 'claimed-session' };
       himSelector.select.mockReturnValue({
         contractVersion: 1, selectionState: 'SELECTED', source: 'AUTHORITATIVE_CONVERSATION_TURN',
@@ -1232,10 +1007,12 @@ describe('ConversationOrchestratorService', () => {
       repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(himSelector.select).toHaveBeenCalledTimes(1);
-      expect(himDecisionAttention.read).toHaveBeenCalledTimes(1);
-      expect(himDecisionAttention.read).toHaveBeenCalledWith('user', 'token', 'claimed-session');
+      // Exactly ONE cross-context foreground read for the whole turn - the two
+      // independent QHIA-007 and QHIA-008 reads it replaces are gone.
+      expect(himCrossContextForeground.read).toHaveBeenCalledTimes(1);
+      expect(himCrossContextForeground.read).toHaveBeenCalledWith('user', 'token', 'claimed-session');
       // The QHIA-006 application boundary is never used as a foreground
-      // fan-out, and QHIA-008 never becomes a second full contextual read.
+      // fan-out, and the aggregate never becomes a second full contextual read.
       expect(himContextualCurrent.getCurrentIntelligence).not.toHaveBeenCalled();
       expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledTimes(1);
       expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledWith(
@@ -1243,24 +1020,22 @@ describe('ConversationOrchestratorService', () => {
       );
     });
 
-    it('LAUNCHES the Decision-attention read concurrently with the Snapshot, Reflection, and Situation-stress reads', async () => {
+    it('LAUNCHES the aggregate read concurrently with the Snapshot and Reflection reads, never after either settles', async () => {
       let releaseSnapshot!: (value: HimIntelligenceSnapshot) => void;
       let releaseReflection!: (value: HimContextualCurrentSelection) => void;
       himSnapshot.getSnapshot.mockReturnValue(new Promise((resolve) => { releaseSnapshot = resolve; }));
       himContextualCurrent.getCurrentSelection.mockReturnValue(new Promise((resolve) => { releaseReflection = resolve; }));
-      himSituationStress.read.mockReturnValue(new Promise(() => undefined));
-      himDecisionAttention.read.mockReturnValue(new Promise(() => undefined));
+      himCrossContextForeground.read.mockReturnValue(new Promise(() => undefined));
       finalizeNormally();
       const pending = orchestrator.orchestrate('token', 'user', userTurn);
       await flush();
-      // All four foreground HIM reads are in flight simultaneously: the
-      // Decision-attention request was issued while the Snapshot, Reflection,
-      // and Situation-stress promises are all still unresolved, so
-      // `await anything; await decisionAttention` is structurally impossible.
+      // All three foreground HIM reads are in flight simultaneously: the
+      // aggregate request was issued while the Snapshot and Reflection promises
+      // are both still unresolved, so `await snapshot; await aggregate` (or
+      // `await reflection; await aggregate`) is structurally impossible.
       expect(himSnapshot.getSnapshot).toHaveBeenCalledTimes(1);
       expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledTimes(1);
-      expect(himSituationStress.read).toHaveBeenCalledTimes(1);
-      expect(himDecisionAttention.read).toHaveBeenCalledTimes(1);
+      expect(himCrossContextForeground.read).toHaveBeenCalledTimes(1);
       expect(himBridge.transform).not.toHaveBeenCalled();
       releaseSnapshot(snapshot);
       releaseReflection(reflectionSelection(null));
@@ -1268,66 +1043,86 @@ describe('ConversationOrchestratorService', () => {
       expect(router.generate).toHaveBeenCalledTimes(1);
     });
 
-    it('makes the guidance available to provider construction when it settles before the existing barrier', async () => {
-      himDecisionAttention.read.mockResolvedValue(activeDecisionAttentionGuidance);
+    it('makes BOTH existing guidance fields available to provider construction when the aggregate settles before the existing barrier', async () => {
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
       expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
+        himSituationStressGuidance: activeSituationStressGuidance,
         himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
       }));
     });
 
-    it('omits the router field entirely for NONE guidance', async () => {
-      himDecisionAttention.read.mockResolvedValue(noneDecisionAttentionGuidance);
+    it('carries ONLY the Situation field when Situation is ACTIVE and Decision is NONE', async () => {
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, noneDecisionAttentionGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate.mock.calls[0][0]).toMatchObject({ himSituationStressGuidance: activeSituationStressGuidance });
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
     });
 
-    it('adds ZERO incremental foreground wait: a still-pending read never delays provider dispatch', async () => {
+    it('carries ONLY the Decision field when Situation is NONE and Decision is ACTIVE', async () => {
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, activeDecisionAttentionGuidance));
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate.mock.calls[0][0]).toMatchObject({ himDecisionAttentionGuidance: activeDecisionAttentionGuidance });
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
+    });
+
+    it('omits BOTH router fields entirely when both channels are NONE', async () => {
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, noneDecisionAttentionGuidance));
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
+    });
+
+    it('adds ZERO incremental foreground wait: a still-pending aggregate never delays provider dispatch', async () => {
       jest.useFakeTimers();
       try {
-        let releaseAttention!: (value: HimDecisionAttentionGuidance) => void;
-        himDecisionAttention.read.mockReturnValue(new Promise((resolve) => { releaseAttention = resolve; }));
+        let releaseAggregate!: (value: HimCrossContextForegroundGuidance) => void;
+        himCrossContextForeground.read.mockReturnValue(new Promise((resolve) => { releaseAggregate = resolve; }));
         himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(2));
         himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
         finalizeNormally();
-        // Snapshot and Reflection both complete quickly; Decision-attention is
-        // still pending. The turn completes with NO timer advance at all, so
-        // no additional wait of any duration was introduced.
+        // Snapshot and Reflection both complete quickly; the aggregate is still
+        // pending. The turn completes with NO timer advance at all, so no
+        // additional wait of any duration was introduced.
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
         // The optional Reflection enrichment still won its own existing
-        // budget: QHIA-008 changed no QHIA-005 semantics.
+        // budget: QHIA-009 changed no QHIA-005 semantics.
         expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himSessionReflectionGuidance: inviteReflectionGuidance }));
-        // No QHIA-008 timer exists: the only foreground timer in the system is
+        // No QHIA-009 timer exists: the only foreground timer in the system is
         // the pre-existing Reflection budget, and it was cleared by its own
         // fast resolution.
         expect(jest.getTimerCount()).toBe(0);
         // A late completion after dispatch is ignored for this turn.
-        releaseAttention(activeDecisionAttentionGuidance);
+        releaseAggregate(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
         await jest.advanceTimersByTimeAsync(0);
         expect(router.generate).toHaveBeenCalledTimes(1);
         expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
       } finally { jest.useRealTimers(); }
     });
 
-    it('dispatches at the EXISTING 300 ms Reflection barrier and adds no further wait for a pending Decision-attention read', async () => {
+    it('dispatches at the EXISTING 300 ms Reflection barrier and adds no further wait for a pending aggregate', async () => {
       jest.useFakeTimers();
       try {
         himContextualCurrent.getCurrentSelection.mockReturnValue(new Promise(() => undefined));
-        himDecisionAttention.read.mockReturnValue(new Promise(() => undefined));
+        himCrossContextForeground.read.mockReturnValue(new Promise(() => undefined));
         finalizeNormally();
         const pending = orchestrator.orchestrate('token', 'user', userTurn);
         await jest.advanceTimersByTimeAsync(299);
         expect(router.generate).not.toHaveBeenCalled();
         // Crossing the pre-existing QHIA-005 budget releases the foreground,
-        // and the still-pending QHIA-008 read adds not one millisecond.
+        // and the still-pending aggregate adds not one millisecond.
         await jest.advanceTimersByTimeAsync(1);
         await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
         expect(repository.failTurn).not.toHaveBeenCalled();
@@ -1335,12 +1130,16 @@ describe('ConversationOrchestratorService', () => {
       } finally { jest.useRealTimers(); }
     });
 
-    it('degrades a rejected Decision-attention read to omitted guidance while the turn generates normally', async () => {
-      himDecisionAttention.read.mockRejectedValue(new Error('private data api failure'));
+    it('degrades a rejected aggregate to BOTH fields omitted while the turn generates normally, with no fallback request', async () => {
+      himCrossContextForeground.read.mockRejectedValue(new Error('private data api failure'));
       finalizeNormally();
       await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
       expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
+      // No second request of any kind: the rejected aggregate is not retried
+      // and the retired direct reads are not fired as backups.
+      expect(himCrossContextForeground.read).toHaveBeenCalledTimes(1);
       expect(repository.failTurn).not.toHaveBeenCalled();
       expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
     });
@@ -1348,14 +1147,13 @@ describe('ConversationOrchestratorService', () => {
     it('absorbs a LATE rejection after dispatch with no unhandled rejection, no mutation, and no second dispatch', async () => {
       jest.useFakeTimers();
       try {
-        let rejectAttention!: (error: Error) => void;
-        himDecisionAttention.read.mockReturnValue(new Promise((_resolve, reject) => { rejectAttention = reject; }));
+        let rejectAggregate!: (error: Error) => void;
+        himCrossContextForeground.read.mockReturnValue(new Promise((_resolve, reject) => { rejectAggregate = reject; }));
         finalizeNormally();
         const pending = orchestrator.orchestrate('token', 'user', userTurn);
         await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-        const dispatched = router.generate.mock.calls[0][0];
-        const dispatchedSnapshot = JSON.stringify(dispatched);
-        rejectAttention(new Error('late private transport failure'));
+        const dispatchedSnapshot = JSON.stringify(router.generate.mock.calls[0][0]);
+        rejectAggregate(new Error('late private transport failure'));
         await jest.advanceTimersByTimeAsync(0);
         expect(router.generate).toHaveBeenCalledTimes(1);
         expect(JSON.stringify(router.generate.mock.calls[0][0])).toBe(dispatchedSnapshot);
@@ -1367,88 +1165,68 @@ describe('ConversationOrchestratorService', () => {
     it('ignores a LATE fulfillment after dispatch: the in-flight provider request is never mutated', async () => {
       jest.useFakeTimers();
       try {
-        let releaseAttention!: (value: HimDecisionAttentionGuidance) => void;
-        himDecisionAttention.read.mockReturnValue(new Promise((resolve) => { releaseAttention = resolve; }));
+        let releaseAggregate!: (value: HimCrossContextForegroundGuidance) => void;
+        himCrossContextForeground.read.mockReturnValue(new Promise((resolve) => { releaseAggregate = resolve; }));
         finalizeNormally();
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         const dispatchedSnapshot = JSON.stringify(router.generate.mock.calls[0][0]);
-        releaseAttention(activeDecisionAttentionGuidance);
+        releaseAggregate(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
         await jest.advanceTimersByTimeAsync(0);
         expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
         expect(JSON.stringify(router.generate.mock.calls[0][0])).toBe(dispatchedSnapshot);
       } finally { jest.useRealTimers(); }
     });
 
-    it('never reuses a late result on the NEXT turn: the second turn reads again and gets its own answer', async () => {
+    it('never reuses a late aggregate on the NEXT turn: the second turn reads again and gets its own answer', async () => {
       jest.useFakeTimers();
       try {
-        let releaseFirst!: (value: HimDecisionAttentionGuidance) => void;
-        himDecisionAttention.read.mockReturnValueOnce(new Promise((resolve) => { releaseFirst = resolve; }));
+        let releaseFirst!: (value: HimCrossContextForegroundGuidance) => void;
+        himCrossContextForeground.read.mockReturnValueOnce(new Promise((resolve) => { releaseFirst = resolve; }));
         finalizeNormally();
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-        // The first turn's read settles ACTIVE only after that turn dispatched.
-        releaseFirst(activeDecisionAttentionGuidance);
+        // The first turn's aggregate settles ACTIVE/ACTIVE only after that turn
+        // dispatched.
+        releaseFirst(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
         await jest.advanceTimersByTimeAsync(0);
-        // The next turn performs its own read; the stale ACTIVE result is not
-        // carried over, and no cross-turn cache exists.
-        himDecisionAttention.read.mockResolvedValue(noneDecisionAttentionGuidance);
+        // The next turn performs its own aggregate read; the stale ACTIVE
+        // result is not carried over, and no cross-turn cache exists.
+        himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, noneDecisionAttentionGuidance));
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-        expect(himDecisionAttention.read).toHaveBeenCalledTimes(2);
+        expect(himCrossContextForeground.read).toHaveBeenCalledTimes(2);
         expect(router.generate).toHaveBeenCalledTimes(2);
+        expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himSituationStressGuidance');
         expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himDecisionAttentionGuidance');
       } finally { jest.useRealTimers(); }
     });
 
-    it('records the enrichment outcome inside its own him_decision_attention_context engine span', async () => {
+    it('records the enrichment outcome inside its own him_cross_context_foreground engine span', async () => {
       const withEngine = jest.spyOn(telemetry, 'withEngine');
-      himDecisionAttention.read.mockRejectedValue(new Error('private transport failure'));
+      himCrossContextForeground.read.mockRejectedValue(new Error('private transport failure'));
       finalizeNormally();
       const pending = correlation.runRequest(() => orchestrator.orchestrate('token', 'user', userTurn));
       await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-      const attentionEngineResults = withEngine.mock.calls
+      const engineResults = withEngine.mock.calls
         .map((call, index) => ({ engine: call[0], result: withEngine.mock.results[index] }))
-        .filter(({ engine }) => engine === 'him_decision_attention_context');
-      expect(attentionEngineResults).toHaveLength(1);
-      await expect(attentionEngineResults[0].result.value).rejects.toThrow('private transport failure');
+        .filter(({ engine }) => engine === 'him_cross_context_foreground');
+      expect(engineResults).toHaveLength(1);
+      await expect(engineResults[0].result.value).rejects.toThrow('private transport failure');
+      // The two retired per-channel spans no longer exist: one transport, one
+      // span.
+      expect(withEngine.mock.calls.map((call) => call[0])).not.toContain('him_situation_stress_context');
+      expect(withEngine.mock.calls.map((call) => call[0])).not.toContain('him_decision_attention_context');
       expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
       expect(repository.failTurn).not.toHaveBeenCalled();
     });
 
-    it('lets a settled QHIA-007 read through while QHIA-008 is still pending: QHIA-008 gates nothing', async () => {
-      jest.useFakeTimers();
-      try {
-        himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
-        himDecisionAttention.read.mockReturnValue(new Promise(() => undefined));
-        finalizeNormally();
-        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-        expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate.mock.calls[0][0]).toMatchObject({ himSituationStressGuidance: activeSituationStressGuidance });
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-        expect(jest.getTimerCount()).toBe(0);
-      } finally { jest.useRealTimers(); }
-    });
-
-    it('lets a settled QHIA-008 read through while QHIA-007 is still pending: QHIA-007 gates nothing', async () => {
-      jest.useFakeTimers();
-      try {
-        himSituationStress.read.mockReturnValue(new Promise(() => undefined));
-        himDecisionAttention.read.mockResolvedValue(activeDecisionAttentionGuidance);
-        finalizeNormally();
-        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-        expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate.mock.calls[0][0]).toMatchObject({ himDecisionAttentionGuidance: activeDecisionAttentionGuidance });
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-        expect(jest.getTimerCount()).toBe(0);
-      } finally { jest.useRealTimers(); }
-    });
-
-    it('carries both cross-context channels when both settle before the barrier, and dedup stays deterministic', async () => {
+    it('keeps provider rendering byte-compatible for both ACTIVE channels: dedup stays deterministic', async () => {
       himAdaptation.derive.mockReturnValue(activeAdaptation);
-      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
-      himDecisionAttention.read.mockResolvedValue(activeDecisionAttentionGuidance);
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
@@ -1457,9 +1235,9 @@ describe('ConversationOrchestratorService', () => {
         himSituationStressGuidance: activeSituationStressGuidance,
         himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
       });
-      // The single common rendering path deduplicates the overlapping bounded
-      // reductions deterministically: the same request renders byte-identical
-      // guidance every time, and no shared instruction is emitted twice.
+      // The single common rendering path is untouched by QHIA-009: the same
+      // request renders byte-identical guidance every time, and no shared
+      // instruction is emitted twice.
       const rendered = composeServerGuidance(dispatched);
       expect(composeServerGuidance(dispatched)).toBe(rendered);
       for (const instruction of [REDUCE_COGNITIVE_LOAD, SINGLE_TRACK, ONE_AT_A_TIME]) {
@@ -1471,8 +1249,7 @@ describe('ConversationOrchestratorService', () => {
       himAdaptation.derive.mockReturnValue(activeAdaptation);
       himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(4));
       himReflectionConsumption.consume.mockReturnValue(avoidReflectionGuidance);
-      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
-      himDecisionAttention.read.mockResolvedValue(activeDecisionAttentionGuidance);
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
@@ -1485,7 +1262,7 @@ describe('ConversationOrchestratorService', () => {
     });
 
     it('gives FAST and DEEP identical guidance and never participates in path selection', async () => {
-      himDecisionAttention.read.mockResolvedValue(activeDecisionAttentionGuidance);
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
@@ -1493,15 +1270,14 @@ describe('ConversationOrchestratorService', () => {
       repository.claimTurn.mockResolvedValue(deepClaim);
       repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
       await orchestrator.orchestrate('token', 'user', deepTurn);
-      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himDecisionAttentionGuidance: activeDecisionAttentionGuidance });
-      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himDecisionAttentionGuidance: activeDecisionAttentionGuidance });
+      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himSituationStressGuidance: activeSituationStressGuidance, himDecisionAttentionGuidance: activeDecisionAttentionGuidance });
+      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himSituationStressGuidance: activeSituationStressGuidance, himDecisionAttentionGuidance: activeDecisionAttentionGuidance });
       expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
       expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
     });
 
-    it('keeps the HSE Snapshot -> Reasoning -> Adaptation chain, Reflection, and QHIA-007 exactly unchanged', async () => {
-      himDecisionAttention.read.mockResolvedValue(activeDecisionAttentionGuidance);
-      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
+    it('keeps the HSE Snapshot -> Reasoning -> Adaptation chain and the Reflection channel exactly unchanged', async () => {
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
       himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(2));
       himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
       finalizeNormally();
@@ -1514,12 +1290,10 @@ describe('ConversationOrchestratorService', () => {
       expect(himConsumptionPolicy.project).toHaveBeenCalledWith('FAST', himReasoningContext);
       expect(himReflectionConsumption.consume).toHaveBeenCalledTimes(1);
       expect(himReflectionConsumption.consume).toHaveBeenCalledWith(reflectionSelection(2));
-      expect(himSituationStress.read).toHaveBeenCalledTimes(1);
-      expect(himSituationStress.read).toHaveBeenCalledWith('user', 'token', 'session');
     });
 
     it('adds no Question, Recommendation, Hypothesis, Memory, or provider work beyond the guidance channel', async () => {
-      himDecisionAttention.read.mockResolvedValue(activeDecisionAttentionGuidance);
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
@@ -1532,14 +1306,79 @@ describe('ConversationOrchestratorService', () => {
       expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
     });
 
-    it('performs no Decision-attention read at all when Safety BLOCKs the turn', async () => {
+    it('performs no cross-context foreground read at all when Safety BLOCKs the turn', async () => {
       safetyGate.evaluate.mockReturnValue({ category: 'SELF_HARM_OR_SUICIDE', disposition: 'BLOCK', deterministicResponse: 'safe deterministic response' });
       repository.claimTurn.mockResolvedValue(claimed);
       repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
       await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(himDecisionAttention.read).not.toHaveBeenCalled();
-      expect(himSituationStress.read).not.toHaveBeenCalled();
+      expect(himCrossContextForeground.read).not.toHaveBeenCalled();
       expect(router.generate).not.toHaveBeenCalled();
+    });
+
+    // The retired direct boundaries, proven at RUNTIME rather than by absence.
+    // The REAL QHIA-007 and QHIA-008 consumption services are wired into the
+    // orchestrator's dependency graph here - as the aggregate's own children,
+    // over their REAL direct repositories - so "the Orchestrator no longer
+    // calls read(...)" is a fact about a reachable object, not about an object
+    // that was simply removed from the test.
+    const realAggregateOrchestrator = () => {
+      const crossContextRepository = { readSessionCrossContextForeground: jest.fn().mockResolvedValue(unboundEnvelope()) };
+      const situationRepository = { readSessionSituationStress: jest.fn().mockResolvedValue([unboundSituationRow()]) };
+      const decisionRepository = { readSessionDecisionAttention: jest.fn().mockResolvedValue([unboundDecisionRow()]) };
+      const situationConsumption = new HimSituationStressConsumptionService(situationRepository as never);
+      const decisionConsumption = new HimDecisionAttentionConsumptionService(decisionRepository as never);
+      const situationDirectRead = jest.spyOn(situationConsumption, 'read');
+      const decisionDirectRead = jest.spyOn(decisionConsumption, 'read');
+      const aggregation = new HimCrossContextForegroundAggregationService(
+        crossContextRepository as never, situationConsumption, decisionConsumption,
+      );
+      const wired = new ConversationOrchestratorService(
+        repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge,
+        himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, aggregation,
+        hypothesisContext, recommendationGrounding, router, correlation, telemetry,
+      );
+      return { wired, crossContextRepository, situationRepository, decisionRepository, situationDirectRead, decisionDirectRead };
+    };
+
+    it('never invokes the direct QHIA-007 or QHIA-008 read(...) methods, and issues exactly one aggregate transport request', async () => {
+      const wiring = realAggregateOrchestrator();
+      const canonicalClaim = { ...claimed, session_id: CANONICAL_SESSION };
+      himSelector.select.mockReturnValue({
+        contractVersion: 1, selectionState: 'SELECTED', source: 'AUTHORITATIVE_CONVERSATION_TURN',
+        sourceTurnId: canonicalClaim.id, contextKind: 'CONVERSATION_SESSION', contextId: CANONICAL_SESSION,
+        selectionReason: 'AUTHORITATIVE_SESSION_BINDING',
+      });
+      repository.claimTurn.mockResolvedValue(canonicalClaim);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await wiring.wired.orchestrate('token', CANONICAL_USER, { ...userTurn, session_id: CANONICAL_SESSION });
+      // Exactly one external cross-context foreground request for the turn.
+      expect(wiring.crossContextRepository.readSessionCrossContextForeground).toHaveBeenCalledTimes(1);
+      expect(wiring.crossContextRepository.readSessionCrossContextForeground).toHaveBeenCalledWith('token', CANONICAL_USER, CANONICAL_SESSION);
+      // The old direct entry points are reachable and untouched: no direct
+      // read, no direct request, no fallback, and no race.
+      expect(wiring.situationDirectRead).not.toHaveBeenCalled();
+      expect(wiring.decisionDirectRead).not.toHaveBeenCalled();
+      expect(wiring.situationRepository.readSessionSituationStress).not.toHaveBeenCalled();
+      expect(wiring.decisionRepository.readSessionDecisionAttention).not.toHaveBeenCalled();
+      // Provider dispatch happens at most once, with the deterministic
+      // unbound answer decoded by the two existing semantic consumers.
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
+    });
+
+    it('keeps the direct QHIA-007 and QHIA-008 boundaries independently callable and correct after the refactor', async () => {
+      const wiring = realAggregateOrchestrator();
+      wiring.situationDirectRead.mockRestore();
+      wiring.decisionDirectRead.mockRestore();
+      const situationConsumption = new HimSituationStressConsumptionService(wiring.situationRepository as never);
+      const decisionConsumption = new HimDecisionAttentionConsumptionService(wiring.decisionRepository as never);
+      // Called directly - outside any orchestrator - the retired-from-the-turn
+      // authorities still answer exactly as they did before QHIA-009.
+      await expect(situationConsumption.read(CANONICAL_USER, 'token', CANONICAL_SESSION)).resolves.toEqual(noneSituationStressGuidance);
+      await expect(decisionConsumption.read(CANONICAL_USER, 'token', CANONICAL_SESSION)).resolves.toEqual(noneDecisionAttentionGuidance);
+      expect(wiring.situationRepository.readSessionSituationStress).toHaveBeenCalledTimes(1);
+      expect(wiring.decisionRepository.readSessionDecisionAttention).toHaveBeenCalledTimes(1);
     });
   });
 

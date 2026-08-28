@@ -15,12 +15,15 @@ import { HimSituationStressConsumptionService } from './him-situation-stress-con
 import { HimSituationStressRepository } from './him-situation-stress.repository';
 import { HimDecisionAttentionConsumptionService } from './him-decision-attention-consumption.service';
 import { HimDecisionAttentionRepository } from './him-decision-attention.repository';
+import { HimCrossContextForegroundAggregationService } from './him-cross-context-foreground-aggregation.service';
+import { HimCrossContextForegroundRepository } from './him-cross-context-foreground.repository';
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 import type { HimSnapshotSourceRow } from './him-intelligence-snapshot.types';
 
 const inputSession = '20000000-0000-4000-8000-000000000001';
 const claimedSession = '20000000-0000-4000-8000-000000000002';
 const turnId = '10000000-0000-4000-8000-000000000001';
+const canonicalUser = '30000000-0000-4000-8000-000000000001';
 const generated = '2026-08-24T00:00:00.000Z';
 const slots = [['hse.stress', 1], ['hse.energy', 2], ['hse.attention', 5]] as const;
 const active = (metricKey: string, order: number): HimSnapshotSourceRow => ({
@@ -95,18 +98,22 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   // batch transport, exercising the graceful-degradation contract (guidance
   // omitted, HSE foreground behavior unchanged) rather than mocking it away.
   const reflectionBatchRepository = { readContextualCurrentIntelligenceBatch: jest.fn().mockRejectedValue(new Error('foundation gate: reflection transport unavailable')) };
-  // QHIA-007: the REAL Situation-stress consumption service over a real
+  // QHIA-009: the REAL cross-context foreground aggregate over a real
   // repository whose Data API double rejects, so this gate exercises the
-  // zero-incremental-wait graceful-degradation contract (guidance omitted,
-  // HSE foreground behaviour unchanged) rather than mocking it away.
+  // zero-incremental-wait graceful-degradation contract (BOTH existing
+  // guidance fields omitted, HSE foreground behaviour unchanged) rather than
+  // mocking it away. Its two child consumers are the REAL QHIA-007 and
+  // QHIA-008 semantic boundaries over their REAL direct repositories, whose
+  // own Data API doubles are proven never to be called: after QHIA-009 the
+  // turn issues exactly one cross-context foreground request and no direct
+  // 007/008 fallback exists.
   const situationStressDataApi = { request: jest.fn().mockRejectedValue(new Error('foundation gate: situation stress transport unavailable')) };
-  // QHIA-008: likewise the REAL Decision-attention consumption service over a
-  // real repository whose Data API double rejects, so this gate exercises the
-  // same zero-incremental-wait graceful-degradation contract for the second
-  // cross-context foreground channel rather than mocking it away.
   const decisionAttentionDataApi = { request: jest.fn().mockRejectedValue(new Error('foundation gate: decision attention transport unavailable')) };
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimSituationStressConsumptionService(new HimSituationStressRepository(situationStressDataApi as never)), new HimDecisionAttentionConsumptionService(new HimDecisionAttentionRepository(decisionAttentionDataApi as never)), hypothesisContext as never, new RecommendationGroundingService(), router,correlation,new TelemetryService(correlation));
-  return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy };
+  const crossContextForegroundDataApi = { request: jest.fn().mockRejectedValue(new Error('foundation gate: cross-context foreground transport unavailable')) };
+  const situationStressConsumption = new HimSituationStressConsumptionService(new HimSituationStressRepository(situationStressDataApi as never));
+  const decisionAttentionConsumption = new HimDecisionAttentionConsumptionService(new HimDecisionAttentionRepository(decisionAttentionDataApi as never));
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption), hypothesisContext as never, new RecommendationGroundingService(), router,correlation,new TelemetryService(correlation));
+  return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy, situationStressDataApi, decisionAttentionDataApi, crossContextForegroundDataApi };
 }
 
 describe('Foundation integration / regression gate v1', () => {
@@ -161,5 +168,29 @@ describe('Foundation integration / regression gate v1', () => {
     const s = setup(malformed);
     await expect(s.orchestrator.orchestrate('access-token', 'user', userTurn())).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(s.repository.failTurn).toHaveBeenCalled(); expect(s.router.generate).not.toHaveBeenCalled();
+  });
+
+  it('issues EXACTLY ONE cross-context foreground request through the real aggregate and no direct QHIA-007/QHIA-008 request', async () => {
+    const s = setup(rows.FULL);
+    // The one gate turn driven with a canonical authenticated identity, so the
+    // real aggregate boundary passes its own fail-closed identity check and the
+    // external transport is genuinely reached rather than short-circuited.
+    await s.orchestrator.orchestrate('access-token', canonicalUser, userTurn());
+    // One aggregate request against the migration-0058 RPC, carrying only the
+    // authenticated user and the exact owned session.
+    expect(s.crossContextForegroundDataApi.request).toHaveBeenCalledTimes(1);
+    expect(s.crossContextForegroundDataApi.request.mock.calls[0][1]).toBe('rpc/read_him_session_cross_context_foreground_v1');
+    // The REAL direct QHIA-007 and QHIA-008 boundaries are wired into this
+    // graph and reachable; the turn never touches their transports, so no
+    // separate, fallback, or backup request exists on the foreground path.
+    expect(s.situationStressDataApi.request).not.toHaveBeenCalled();
+    expect(s.decisionAttentionDataApi.request).not.toHaveBeenCalled();
+    // The rejecting aggregate degrades to omitted guidance: the turn still
+    // dispatches once, with neither existing guidance field and no extra wait.
+    expect(s.router.generate).toHaveBeenCalledTimes(1);
+    const request = s.router.generate.mock.calls[0][0] as ModelRouterRequest;
+    expect(request).not.toHaveProperty('himSituationStressGuidance');
+    expect(request).not.toHaveProperty('himDecisionAttentionGuidance');
+    expect(s.repository.failTurn).not.toHaveBeenCalled();
   });
 });

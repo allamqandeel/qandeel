@@ -58,6 +58,8 @@ import { HimSituationStressConsumptionService } from '../src/human-model/him-sit
 import { HimSituationStressRepository } from '../src/human-model/him-situation-stress.repository';
 import { HimDecisionAttentionConsumptionService } from '../src/human-model/him-decision-attention-consumption.service';
 import { HimDecisionAttentionRepository } from '../src/human-model/him-decision-attention.repository';
+import { HimCrossContextForegroundAggregationService } from '../src/human-model/him-cross-context-foreground-aggregation.service';
+import { HimCrossContextForegroundRepository } from '../src/human-model/him-cross-context-foreground.repository';
 import { HimRepository } from '../src/human-model/him.repository';
 import { HypothesisService } from '../src/hypothesis/hypothesis.service';
 import { HypothesisRepository } from '../src/hypothesis/hypothesis.repository';
@@ -233,21 +235,25 @@ async function main(): Promise<void> {
     // Reflection fixture exists in this smoke, so the canonical batch read
     // resolves UNKNOWN and the derived guidance stays NONE (omitted).
     const himContextualCurrentService = new HimContextualCurrentIntelligenceService(himRepository);
-    // QHIA-007: the REAL Situation-stress consumption boundary over the same
-    // authenticated transport adapter. It is launched concurrently with the
-    // HSE Snapshot and Reflection reads and adds no foreground wait. This
-    // smoke binds no Situation to the session, so the migration-0056
-    // composition returns the deterministic NO_ACTIVE_SITUATION answer and the
-    // derived guidance stays NONE (omitted from the provider request).
+    // QHIA-007: the REAL Situation-stress semantic consumption boundary. After
+    // QHIA-009 it is reached through the aggregate rather than through its own
+    // foreground request, but it remains the only owner of Stress meaning and
+    // its direct repository stays a valid canonical authority.
     const himSituationStressService = new HimSituationStressConsumptionService(new HimSituationStressRepository(memoryDataApi));
-    // QHIA-008: the REAL Decision-attention consumption boundary over the same
-    // authenticated transport adapter. It is launched concurrently with the
-    // HSE Snapshot, Reflection, and Situation-stress reads and adds no
-    // foreground wait. This smoke binds no Decision to the session, so the
-    // migration-0057 composition returns the deterministic NO_ACTIVE_DECISION
-    // answer and the derived guidance stays NONE (omitted from the provider
-    // request).
+    // QHIA-008: likewise the REAL Decision-attention semantic consumption
+    // boundary, the only owner of Attention meaning.
     const himDecisionAttentionService = new HimDecisionAttentionConsumptionService(new HimDecisionAttentionRepository(memoryDataApi));
+    // QHIA-009: the REAL cross-context foreground aggregate over the same
+    // authenticated transport adapter. It is launched concurrently with the
+    // HSE Snapshot and Reflection reads and adds no foreground wait, and it is
+    // now the ONLY cross-context foreground request the turn issues - exactly
+    // one migration-0058 call carrying both channels. This smoke binds neither
+    // a Situation nor a Decision to the session, so the wrapped migration-0056
+    // and migration-0057 authorities return their deterministic
+    // NO_ACTIVE_SITUATION / NO_ACTIVE_DECISION answers and both derived
+    // guidance contracts stay NONE (omitted from the provider request).
+    const himCrossContextForegroundService = new HimCrossContextForegroundAggregationService(
+      new HimCrossContextForegroundRepository(memoryDataApi), himSituationStressService, himDecisionAttentionService);
     const hypothesisService = new HypothesisService(
       new HypothesisRepository(memoryDataApi, unusedDependency<HypothesisServiceRoleApiService>('HYPOTHESIS_SERVICE_ROLE_API')),
       evidenceService);
@@ -257,7 +263,7 @@ async function main(): Promise<void> {
     const orchestrator = new ConversationOrchestratorService(
       conversationRepository, contextBuilder, new SafetyResponseGateService(), new BehavioralResponsePolicyService(),
       memoryRetriever, new HimTurnContextSelectionService(), himSnapshotService, new HimReasoningConsumptionService(),
-      new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), himContextualCurrentService, new HimSessionReflectionConsumptionService(), himSituationStressService, himDecisionAttentionService,
+      new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), himContextualCurrentService, new HimSessionReflectionConsumptionService(), himCrossContextForegroundService,
       hypothesisReasoningContext, new RecommendationGroundingService(),
       conversationalRouter, correlation, telemetry);
 
