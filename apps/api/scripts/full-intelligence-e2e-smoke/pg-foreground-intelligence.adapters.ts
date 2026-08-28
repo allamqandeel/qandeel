@@ -39,6 +39,12 @@ const AUTHENTICATED_RPC_ALLOWLIST = new Set([
   // QHIA-006 relevance authority with the QHIA-004 batch authority server-side,
   // so no separate binding-read request appears on this allowlist.
   'read_him_session_situation_stress_v1',
+  // QHIA-008: the one-request Decision-attention composition for the
+  // foreground DECISION + hse.attention@1 read (migration 0057, read-only). It
+  // composes the QHIA-006 relevance authority with the QHIA-004 batch
+  // authority server-side, so no separate binding-read request appears on this
+  // allowlist - and no hse.self-confidence read appears anywhere.
+  'read_him_session_decision_attention_v1',
 ]);
 const SERVICE_ROLE_RPC_ALLOWLIST = new Set([
   'claim_conversation_turn',

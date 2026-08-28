@@ -2,6 +2,7 @@ import type { HimModelContext } from '../human-model/him-fast-deep-consumption.t
 import type { HimInteractionAdaptation } from '../human-model/him-interaction-adaptation.types';
 import type { HimSessionReflectionGuidance } from '../human-model/him-session-reflection-consumption.types';
 import type { HimSituationStressGuidance } from '../human-model/him-situation-stress-consumption.types';
+import type { HimDecisionAttentionGuidance } from '../human-model/him-decision-attention-consumption.types';
 import type { HypothesisReasoningContext } from '../hypothesis/hypothesis-reasoning-context.types';
 import type { RecommendationGroundingContext } from '../recommendation/recommendation-grounding.types';
 
@@ -30,6 +31,7 @@ export interface ModelRouterRequest {
   himInteractionAdaptation?: HimInteractionAdaptation;
   himSessionReflectionGuidance?: HimSessionReflectionGuidance;
   himSituationStressGuidance?: HimSituationStressGuidance;
+  himDecisionAttentionGuidance?: HimDecisionAttentionGuidance;
   hypothesisContext?: HypothesisReasoningContext;
   recommendationContext?: RecommendationGroundingContext;
   locale: 'ar' | 'en' | 'und';
@@ -58,6 +60,12 @@ export interface ModelRouter { generate(request: ModelRouterRequest): Promise<Mo
 const REDUCE_COGNITIVE_LOAD_INSTRUCTION = 'Use simpler structure and avoid unnecessary detail or cognitive burden.';
 const REDUCE_STEERING_PRESSURE_INSTRUCTION = 'Reduce steering pressure; do not push the user toward an action or conclusion.';
 const CALMER_DELIVERY_PACING_INSTRUCTION = 'Use calmer, steadier delivery without claiming or naming the user\'s internal state.';
+// The two remaining shared reductions. They were already the exact QHIA-001
+// instruction text and are only NAMED here so a second channel asking for the
+// same bounded reduction emits byte-identical text and deduplicates exactly.
+// The strings are unchanged: no rendered guidance differs by one byte.
+const SINGLE_CONVERSATIONAL_TRACK_INSTRUCTION = 'Stay on one main conversational track; avoid multiple parallel branches.';
+const ONE_STEP_AT_A_TIME_INSTRUCTION = 'When guidance is otherwise appropriate, present one immediate step or unit at a time rather than a bundle.';
 
 // Fixed server-authored instruction text per non-DEFAULT directive value.
 // The adaptation renders only these constants: raw metric reasoning is never
@@ -68,10 +76,10 @@ const HIM_INTERACTION_ADAPTATION_DIRECTIVE_INSTRUCTIONS: ReadonlyArray<
 > = [
   ['responseDensity', 'COMPACT', 'Keep this response more compact than the normal default.'],
   ['cognitiveLoad', 'REDUCED', REDUCE_COGNITIVE_LOAD_INSTRUCTION],
-  ['branching', 'SINGLE_TRACK', 'Stay on one main conversational track; avoid multiple parallel branches.'],
+  ['branching', 'SINGLE_TRACK', SINGLE_CONVERSATIONAL_TRACK_INSTRUCTION],
   ['steeringPressure', 'REDUCED', REDUCE_STEERING_PRESSURE_INSTRUCTION],
   ['deliveryPacing', 'CALMER', CALMER_DELIVERY_PACING_INSTRUCTION],
-  ['stepBatching', 'ONE_AT_A_TIME', 'When guidance is otherwise appropriate, present one immediate step or unit at a time rather than a bundle.'],
+  ['stepBatching', 'ONE_AT_A_TIME', ONE_STEP_AT_A_TIME_INSTRUCTION],
 ];
 
 // QHIA-005: fixed server-authored instruction text per ACTIVE Session
@@ -98,8 +106,25 @@ const HIM_SITUATION_STRESS_DIRECTIVE_INSTRUCTIONS: Readonly<Partial<Record<HimSi
   ],
 };
 
+// QHIA-008: the fixed server-authored instruction set for the ACTIVE
+// Decision-bound presentation directive. It is deliberately the SAME bounded
+// direction the QHIA-001 attention driver already expresses - reduce cognitive
+// load, one conversational track, one step at a time - reusing the identical
+// constants so a duplicate request is normalized away instead of compounding.
+// It deliberately does NOT ask for compact density, calmer pacing, or reduced
+// steering pressure: those belong to other independently authorized signals.
+// There is no second, stronger, or additive direction, and no directive that
+// increases burden, length, complexity, options, or provider freedom.
+const HIM_DECISION_ATTENTION_DIRECTIVE_INSTRUCTIONS: Readonly<Partial<Record<HimDecisionAttentionGuidance['directive'], readonly string[]>>> = {
+  REDUCE_PRESENTATION_BURDEN: [
+    REDUCE_COGNITIVE_LOAD_INSTRUCTION,
+    SINGLE_CONVERSATIONAL_TRACK_INSTRUCTION,
+    ONE_STEP_AT_A_TIME_INSTRUCTION,
+  ],
+};
+
 export function composeServerGuidance(
-  request: Pick<ModelRouterRequest, 'behavioralGuidance' | 'safetyGuidance' | 'memoryContext' | 'himContext' | 'himInteractionAdaptation' | 'himSessionReflectionGuidance' | 'himSituationStressGuidance' | 'hypothesisContext' | 'recommendationContext'>,
+  request: Pick<ModelRouterRequest, 'behavioralGuidance' | 'safetyGuidance' | 'memoryContext' | 'himContext' | 'himInteractionAdaptation' | 'himSessionReflectionGuidance' | 'himSituationStressGuidance' | 'himDecisionAttentionGuidance' | 'hypothesisContext' | 'recommendationContext'>,
 ): string {
   let serverGuidance = request.safetyGuidance
     ? `${request.behavioralGuidance}\n\nSafety guidance for this turn:\n${request.safetyGuidance}`
@@ -133,6 +158,21 @@ export function composeServerGuidance(
     if (instructions.length) {
       for (const instruction of instructions) renderedReductionInstructions.add(instruction);
       serverGuidance += `\n\nSituation-bound interaction guidance follows as a server-owned behavioral instruction. It is subordinate to Safety guidance and the base Behavioral Policy: both remain higher-authority instructions that this guidance can never override, and it never reduces or cancels any other active burden reduction.${instructions.map((instruction) => `\n- ${instruction}`).join('')}\nThis guidance adapts the manner of interaction only. It is not a statement about the user, not a description of how the user feels, not a diagnosis, not a severity, urgency, risk, wellbeing, capacity, or readiness score, and not safety evidence. It authorizes no claim, no interpretation, and no invented detail about the user's circumstances, does not change what is recommended or concluded, does not authorize or block a recommendation, does not prove or strengthen a hypothesis, does not select or require a question, does not add reflection or follow-up prompting, does not change Safety authority or FAST/DEEP routing, does not authorize trend, freshness, or recency inference, and never permits naming or implying any internal signal, measurement, contract, or state to the user.`;
+    }
+  }
+  if (request.himDecisionAttentionGuidance?.guidanceState === 'ACTIVE') {
+    // Only the instructions no other server-owned channel already emitted are
+    // rendered. When an active HIM interaction adaptation - or the
+    // Situation-bound channel above - already asked for the same bounded
+    // reduction, the overlapping instruction is dropped here: matching signals
+    // are normalized to one, never compounded into a deeper reduction, and no
+    // signal can ever cancel an existing protective one. The union is
+    // monotonic and arithmetic-free.
+    const instructions = (HIM_DECISION_ATTENTION_DIRECTIVE_INSTRUCTIONS[request.himDecisionAttentionGuidance.directive] ?? [])
+      .filter((instruction) => !renderedReductionInstructions.has(instruction));
+    if (instructions.length) {
+      for (const instruction of instructions) renderedReductionInstructions.add(instruction);
+      serverGuidance += `\n\nDecision-bound presentation guidance follows as a server-owned behavioral instruction. It is subordinate to Safety guidance and the base Behavioral Policy: both remain higher-authority instructions that this guidance can never override, and it never reduces or cancels any other active burden reduction.${instructions.map((instruction) => `\n- ${instruction}`).join('')}\nThis guidance adapts the presentation of decision-related interaction only, never the decision itself. It is not a statement about the user, not a claim of distraction, inattention, cognitive overload, confusion, impairment, or inability to decide, not a diagnosis, and not a cognitive, executive-function, capacity, readiness, competence, decision-quality, or confidence assessment, and it is not safety evidence. It authorizes no claim, no interpretation, and no invented detail about the user or about any decision, does not indicate which choice is better, does not say a decision is good, bad, or risky, does not tell the user to make, delay, or avoid a decision, does not change what is recommended or concluded, does not authorize or block a recommendation, does not prove or strengthen a hypothesis, does not select or require a question, does not add reflection or follow-up prompting, does not change Safety authority or FAST/DEEP routing, does not authorize trend, freshness, or recency inference, and never permits naming or implying any internal signal, measurement, contract, or state to the user.`;
     }
   }
   if (request.memoryContext?.length) {

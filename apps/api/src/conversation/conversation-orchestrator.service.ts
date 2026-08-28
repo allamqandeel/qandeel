@@ -20,6 +20,8 @@ import { HimSessionReflectionConsumptionService } from '../human-model/him-sessi
 import type { HimSessionReflectionGuidance } from '../human-model/him-session-reflection-consumption.types';
 import { HimSituationStressConsumptionService } from '../human-model/him-situation-stress-consumption.service';
 import type { HimSituationStressGuidance } from '../human-model/him-situation-stress-consumption.types';
+import { HimDecisionAttentionConsumptionService } from '../human-model/him-decision-attention-consumption.service';
+import type { HimDecisionAttentionGuidance } from '../human-model/him-decision-attention-consumption.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -51,6 +53,7 @@ export class ConversationOrchestratorService {
     private readonly himContextualCurrentIntelligence: HimContextualCurrentIntelligenceService,
     private readonly himSessionReflectionConsumption: HimSessionReflectionConsumptionService,
     private readonly himSituationStressConsumption: HimSituationStressConsumptionService,
+    private readonly himDecisionAttentionConsumption: HimDecisionAttentionConsumptionService,
     private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
     private readonly recommendationGrounding: RecommendationGroundingService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
@@ -98,7 +101,7 @@ export class ConversationOrchestratorService {
         this.telemetry.recordTurnOutcome('blocked',selection.path);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
-      const {himContext,himInteractionAdaptation,himSessionReflectionGuidance,himSituationStressGuidance}=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
+      const {himContext,himInteractionAdaptation,himSessionReflectionGuidance,himSituationStressGuidance,himDecisionAttentionGuidance}=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
       // QHIA-005: the HSE Intelligence Snapshot read and the one-metric
       // hbs.reflection selective read (QHIA-004 boundary, exactly one batch
       // request) are LAUNCHED CONCURRENTLY for the same authoritative session
@@ -153,12 +156,46 @@ export class ConversationOrchestratorService {
         (value) => { if (!situationStressBarrierClosed) situationStressSettled = value; },
         () => undefined,
       );
+      // QHIA-008: the Decision-bound attention read is LAUNCHED HERE too, in
+      // the same synchronous step as the Snapshot, Reflection, and
+      // Situation-stress reads. It begins concurrently with all three and
+      // never after any of them finishes - in particular it neither waits for
+      // nor gates the QHIA-007 read, and QHIA-007 neither waits for nor gates
+      // it. It is exactly ONE external Data API request against the
+      // migration-0057 composition RPC - the application never reads the
+      // QHIA-006 binding first in order to ask QHIA-004 a second question.
+      //
+      // It carries ZERO INCREMENTAL FOREGROUND WAIT: no new timeout is
+      // introduced, the existing 300 ms QHIA-005 Reflection budget is neither
+      // reused nor extended, and the foreground never awaits this promise.
+      // The settlement handler below is attached IMMEDIATELY (so a rejection
+      // is always handled and can never become an unhandled rejection) and
+      // simply records the guidance if - and only if - the read settles
+      // successfully BEFORE the existing foreground barrier closes. Anything
+      // that settles later is discarded for good: it cannot delay dispatch,
+      // mutate an in-flight provider request, be consumed by this turn, or be
+      // carried into any other turn or session, and no cross-turn cache
+      // exists anywhere on this path.
+      let decisionAttentionSettled: HimDecisionAttentionGuidance | undefined;
+      let decisionAttentionBarrierClosed = false;
+      const decisionAttentionReadPromise = this.engine('him_decision_attention_context',selection.path,()=>this.himDecisionAttentionConsumption.read(
+        userId,
+        accessToken,
+        himSelection.contextId,
+      ));
+      decisionAttentionReadPromise.then(
+        (value) => { if (!decisionAttentionBarrierClosed) decisionAttentionSettled = value; },
+        () => undefined,
+      );
       const [himSnapshot, reflectionRead] = await Promise.all([himSnapshotPromise, reflectionReadPromise]);
       // The existing foreground barrier - and the ONLY one. Reading the
-      // recorded value here adds no await of any kind: an already-settled
-      // QHIA-007 read is usable, a still-pending one is simply absent.
+      // recorded values here adds no await of any kind: an already-settled
+      // QHIA-007 or QHIA-008 read is usable, a still-pending one is simply
+      // absent, and neither channel is a precondition of the other.
       situationStressBarrierClosed = true;
+      decisionAttentionBarrierClosed = true;
       const situationStressGuidance = situationStressSettled;
+      const decisionAttentionGuidance = decisionAttentionSettled;
       const himReasoningContext = this.himReasoningConsumption.transform(himSnapshot);
       // The adaptation derives from the reasoning context BEFORE the FAST/DEEP
       // density projection: it is path-independent and never selects the path.
@@ -170,7 +207,7 @@ export class ConversationOrchestratorService {
       if (reflectionRead.state === 'AVAILABLE') {
         try { reflectionGuidance = this.himSessionReflectionConsumption.consume(reflectionRead.value); } catch { reflectionGuidance = undefined; }
       }
-      return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation,himSessionReflectionGuidance:reflectionGuidance,himSituationStressGuidance:situationStressGuidance};});
+      return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation,himSessionReflectionGuidance:reflectionGuidance,himSituationStressGuidance:situationStressGuidance,himDecisionAttentionGuidance:decisionAttentionGuidance};});
       const memoryContext = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));
       let hypothesisResult;
       try {
@@ -194,6 +231,7 @@ export class ConversationOrchestratorService {
         ...(himInteractionAdaptation.adaptationState === 'ACTIVE' ? { himInteractionAdaptation } : {}),
         ...(himSessionReflectionGuidance?.guidanceState === 'ACTIVE' ? { himSessionReflectionGuidance } : {}),
         ...(himSituationStressGuidance?.guidanceState === 'ACTIVE' ? { himSituationStressGuidance } : {}),
+        ...(himDecisionAttentionGuidance?.guidanceState === 'ACTIVE' ? { himDecisionAttentionGuidance } : {}),
         ...(hypothesisResult.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesisResult.context } : {}),
         ...(recommendationGrounding.coverageState === 'AVAILABLE' ? { recommendationContext: recommendationGrounding.context } : {}),
         locale: 'und', modality: 'TEXT',

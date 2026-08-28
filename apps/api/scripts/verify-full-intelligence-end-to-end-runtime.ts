@@ -56,6 +56,8 @@ import { HimContextualCurrentIntelligenceService } from '../src/human-model/him-
 import { HimSessionReflectionConsumptionService } from '../src/human-model/him-session-reflection-consumption.service';
 import { HimSituationStressConsumptionService } from '../src/human-model/him-situation-stress-consumption.service';
 import { HimSituationStressRepository } from '../src/human-model/him-situation-stress.repository';
+import { HimDecisionAttentionConsumptionService } from '../src/human-model/him-decision-attention-consumption.service';
+import { HimDecisionAttentionRepository } from '../src/human-model/him-decision-attention.repository';
 import { HimRepository } from '../src/human-model/him.repository';
 import { HypothesisService } from '../src/hypothesis/hypothesis.service';
 import { HypothesisRepository } from '../src/hypothesis/hypothesis.repository';
@@ -238,6 +240,14 @@ async function main(): Promise<void> {
     // composition returns the deterministic NO_ACTIVE_SITUATION answer and the
     // derived guidance stays NONE (omitted from the provider request).
     const himSituationStressService = new HimSituationStressConsumptionService(new HimSituationStressRepository(memoryDataApi));
+    // QHIA-008: the REAL Decision-attention consumption boundary over the same
+    // authenticated transport adapter. It is launched concurrently with the
+    // HSE Snapshot, Reflection, and Situation-stress reads and adds no
+    // foreground wait. This smoke binds no Decision to the session, so the
+    // migration-0057 composition returns the deterministic NO_ACTIVE_DECISION
+    // answer and the derived guidance stays NONE (omitted from the provider
+    // request).
+    const himDecisionAttentionService = new HimDecisionAttentionConsumptionService(new HimDecisionAttentionRepository(memoryDataApi));
     const hypothesisService = new HypothesisService(
       new HypothesisRepository(memoryDataApi, unusedDependency<HypothesisServiceRoleApiService>('HYPOTHESIS_SERVICE_ROLE_API')),
       evidenceService);
@@ -247,7 +257,7 @@ async function main(): Promise<void> {
     const orchestrator = new ConversationOrchestratorService(
       conversationRepository, contextBuilder, new SafetyResponseGateService(), new BehavioralResponsePolicyService(),
       memoryRetriever, new HimTurnContextSelectionService(), himSnapshotService, new HimReasoningConsumptionService(),
-      new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), himContextualCurrentService, new HimSessionReflectionConsumptionService(), himSituationStressService,
+      new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), himContextualCurrentService, new HimSessionReflectionConsumptionService(), himSituationStressService, himDecisionAttentionService,
       hypothesisReasoningContext, new RecommendationGroundingService(),
       conversationalRouter, correlation, telemetry);
 
