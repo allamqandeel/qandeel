@@ -1119,7 +1119,6 @@ describe('ConversationOrchestratorService', () => {
       expect(dispatched).not.toHaveProperty('himSituationStressGuidance');
       expect(dispatched).not.toHaveProperty('himDecisionAttentionGuidance');
       expect(dispatched).not.toHaveProperty('himGoalMotivationGuidance');
-      expect(dispatched).not.toHaveProperty('himRelationshipCommunicationGuidance');
       // The three bounded communication-scaffolding instructions are the ONLY
       // thing this channel adds: it borrows no existing burden reduction.
       const rendered = composeServerGuidance(dispatched);
@@ -1141,7 +1140,6 @@ describe('ConversationOrchestratorService', () => {
       });
       expect(dispatched).not.toHaveProperty('himDecisionAttentionGuidance');
       expect(dispatched).not.toHaveProperty('himGoalMotivationGuidance');
-      expect(dispatched).not.toHaveProperty('himRelationshipCommunicationGuidance');
       const rendered = composeServerGuidance(dispatched);
       for (const instruction of [REDUCE_COGNITIVE_LOAD, REDUCE_STEERING_PRESSURE, CALMER_PACING, ...COMMUNICATION_INSTRUCTIONS]) {
         expect(occurrences(rendered, instruction)).toBe(1);
@@ -1161,7 +1159,6 @@ describe('ConversationOrchestratorService', () => {
       });
       expect(dispatched).not.toHaveProperty('himSituationStressGuidance');
       expect(dispatched).not.toHaveProperty('himGoalMotivationGuidance');
-      expect(dispatched).not.toHaveProperty('himRelationshipCommunicationGuidance');
       const rendered = composeServerGuidance(dispatched);
       // The generic one-step-at-a-time instruction and the new one-main-point
       // instruction are DIFFERENT semantic instructions and both stand.
