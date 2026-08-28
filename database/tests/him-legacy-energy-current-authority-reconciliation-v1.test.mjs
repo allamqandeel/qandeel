@@ -192,12 +192,42 @@ test('the Energy documentation states the final live authority',()=>{
   'exact to `hse.energy@1`',
   'does not enter this versionless legacy surface automatically',
   'never the latest-across-events authority',
+  // The documented security contract must be exactly the executable one: the
+  // intended authenticated read, a hard PUBLIC/anon exclusion, and - for
+  // service_role - baseline PRESERVATION rather than any categorical claim.
+  '`authenticated` retains its intended SELECT authority',
+  'PUBLIC and `anon` cannot read it',
+  'QHIM-012 grants or broadens no `service_role` authority',
+  'captures the `service_role` SELECT state that existed immediately before the rebuild',
+  'pre-migration state is preserved unchanged',
   'No Trend, Intelligence Snapshot, or Runtime Consumption eligibility changes',
  ])assert.ok(doc.includes(statement),`the Energy document states: ${statement}`);
  // The stale claim that made the legacy view sound like the canonical current
  // authority is gone, so the correction is proven to have happened rather than
  // merely appended alongside the old wording.
  assert.ok(!doc.includes('excluded from `him_current_energy_measurements`; between correction and calculation of the replacement, the canonical current read returns no Energy value for that event'),'the stale canonical-current claim about the legacy view is removed');
+ // 0053 proves the service_role privilege is UNCHANGED, never absent, and
+ // QHIM-012 is not authorized to retire an unrelated service_role privilege.
+ // The document may therefore state no categorical service_role read
+ // prohibition and no "authenticated is the only role that could ever SELECT"
+ // exclusivity claim - either would be stronger than the executable contract.
+ const OVERSTATED_SECURITY=[
+  [/never (?:be )?(?:read(?:able)? )?by[^.]*service_role/i,'a categorical "never by service_role" claim'],
+  [/service_role[^.]*(?:can|must|will|may) never (?:read|select)/i,'a categorical service_role read prohibition'],
+  [/readable by `?authenticated`? only/i,'an "authenticated is the only role that can SELECT" exclusivity claim'],
+ ];
+ for(const[pattern,label]of OVERSTATED_SECURITY)assert.doesNotMatch(doc,pattern,`the document states no ${label}`);
+ // Non-vacuity: the guard demonstrably rejects the pre-amendment wording, and
+ // the fixture proves the shipped sentence was actually replaced first.
+ const regressed=doc.replace('`authenticated` retains its intended SELECT authority, and PUBLIC and `anon` cannot read it.','readable by `authenticated` only, and never by PUBLIC, `anon`, or `service_role`.');
+ assert.notEqual(regressed,doc,'the stale-wording fixture actually replaced the shipped sentence');
+ assert.ok(OVERSTATED_SECURITY.some(([pattern])=>pattern.test(regressed)),'the guard rejects the stale categorical service_role wording');
+ // The documented claim is exactly the one migration 0053 executes: it proves
+ // preservation against a captured baseline and revokes nothing from
+ // service_role.
+ assert.match(executable,/current_setting\('qandeel\.qhim012_service_role_select',true\)/,'0053 proves the service_role state against a captured pre-migration baseline');
+ assert.doesNotMatch(executable,/REVOKE[^;]*service_role/,'0053 retires no service_role privilege');
+ assert.doesNotMatch(executable,/GRANT[^;]*service_role/,'0053 grants service_role nothing');
 });
 
 test('the 0053 verifier is wired after the 0050/0051/0052 verifiers and before the HIM consumption gates',()=>{
