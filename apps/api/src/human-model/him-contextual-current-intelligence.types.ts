@@ -7,11 +7,13 @@
 // provider/orchestrator work, derives no trend/freshness/valence/score, and
 // creates no new database authority.
 import type {
+  HimCalculationStatus,
   HimContextKind,
-  HimMetricSnapshot,
   HimOwner,
   HimSemanticMappingStatus,
   HimSemanticType,
+  HimValidityStatus,
+  HimValueState,
 } from './him.types';
 
 export type HimRuntimeCurrentIntelligenceContextKind = Extract<
@@ -83,13 +85,61 @@ export interface HimContextualCurrentIntelligence {
   metrics: HimContextualCurrentMetric[];
 }
 
-// Narrow source-row type around the SAME canonical latest read authority
-// (rpc/read_him_latest_measurement_v1, migration 0052). That RPC returns
-// SETOF public.him_metric_snapshots, whose physical rows carry the 0012
-// calculation-provenance columns that the domain HimMetricSnapshot type does
-// not expose. This adds typed access to the canonical binding identity only;
-// it is NOT a second latest-read authority and never widens into a raw
-// snapshot dump.
-export interface HimCanonicalLatestSourceRow extends HimMetricSnapshot {
+// QHIA-004: one batch source row per requested slot from the single
+// latency-bounded transport RPC (rpc/read_him_contextual_current_intelligence
+// _batch_v1, migration 0054). The database function DELEGATES every per-slot
+// current-value read to the canonical latest authority (migration 0052) and
+// every binding identity to the existing ACTIVE-binding resolver (migration
+// 0050), and reads the exact persisted definition rows only for the metadata
+// below - it is transport aggregation, never a second currentness authority.
+// slot_order is the 1-based input array ordinal. When no canonical current
+// row exists for a slot, has_canonical_current_value is false and every
+// source/current field is null while the requested/definition metadata stays
+// present.
+export interface HimContextualCurrentBatchSourceRow {
+  slot_order: number;
+  metric_key: string;
+  definition_version: number;
+  hif_owner: HimOwner;
+  semantic_mapping_status: HimSemanticMappingStatus;
+  semantic_type: HimSemanticType | null;
+  calculation_status: HimCalculationStatus;
+  valid_context_kinds: HimContextKind[];
+  context_kind: HimContextKind;
+  context_id: string;
+  has_canonical_current_value: boolean;
+  source_metric_key: string | null;
+  source_definition_version: number | null;
+  source_semantic_mapping_status: HimSemanticMappingStatus | null;
+  source_semantic_type: HimSemanticType | null;
+  source_context_kind: HimContextKind | null;
+  source_context_id: string | null;
+  value_state: HimValueState | null;
+  numeric_value: number | null;
+  validity_status: HimValidityStatus | null;
+  confidence_state: 'UNASSESSED' | null;
+  confidence_reference: string | null;
+  observed_at: string | null;
+  temporal_window_start: string | null;
+  temporal_window_end: string | null;
   canonical_binding_id: string | null;
+  active_binding_id: string | null;
+}
+
+// QHIA-004: the distinct typed result of a validated SELECTIVE subset read.
+// A subset deliberately does not reuse eligibleMetricCount - that field
+// belongs to the full-context contract above and always means the complete
+// frozen slot array for the context. requestedMetricCount counts exactly the
+// validated, canonically reordered subset this result answers for. The
+// metric-level contract is identical to the full-context one.
+export interface HimContextualCurrentSelection {
+  contractVersion: 1;
+  source: 'HIM_CANONICAL_LATEST_MEASUREMENT';
+  contextKind: HimRuntimeCurrentIntelligenceContextKind;
+  contextId: string;
+  coverageState: 'FULL' | 'PARTIAL' | 'EMPTY';
+  requestedMetricCount: number;
+  knownMetricCount: number;
+  unknownMetricCount: number;
+  metrics: HimContextualCurrentMetric[];
 }
