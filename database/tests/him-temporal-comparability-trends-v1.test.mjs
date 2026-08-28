@@ -186,3 +186,99 @@ test('QHIM-008 is documentation drift only: the executable Trend contract is unt
  for(const key of TREND_V1)assert.ok(sql.includes(key),`${key} is a Trend v1 source metric`);
  for(const key of CANONICAL_V1.filter(key=>!TREND_V1.includes(key)))assert.ok(!sql.includes(key),`${key} never enters the Trend v1 source resolver`);
 });
+
+// --- QHIM-011: documented semantic mappings must match executable truth -----
+//
+// The document used to close its HGS paragraph with ONE SHARED clause - "each
+// has an unresolved/null semantic mapping" - covering both
+// `hgs.purpose-alignment` and `hgs.habit-strength`. That is true of Habit
+// Strength and FALSE of Purpose Alignment, whose Foundation semantic mapping
+// has been RESOLVED to ALIGNMENT since the frozen 0010 seed and was never
+// downgraded. A shared claim over identities whose real statuses differ is the
+// exact drift QHIM-011 removes.
+//
+// Every fact below is DERIVED from that frozen seed - the persisted projection
+// of the canonical v1 catalog - never duplicated as a mutable list here. Both
+// rules are about the DOCUMENT's wording and iterate only the frozen canonical
+// v1 identities, so no later metric, later definition version, or later
+// calibration can trip them: an identity outside that frozen set is simply not
+// iterated, and no global count, size, or zero-state of a shared inventory is
+// taken. Neither rule grants, removes, or widens any Trend eligibility.
+const CANONICAL_V1_SEMANTICS=Object.fromEntries(CANONICAL_V1.map(key=>{
+ const row=migration('0010_initial_him_metrics_v1.sql').split('\n').find(line=>line.startsWith(`('${key}',1,`));
+ if(!row)throw new Error(`0010 declares no canonical v1 row for ${key}`);
+ const mapping=row.match(/,'(RESOLVED|UNRESOLVED)',(NULL|'[A-Z]+'),'UNCALIBRATED'/);
+ if(!mapping)throw new Error(`0010 declares no semantic mapping for ${key}`);
+ return[key,{status:mapping[1],type:mapping[2]==='NULL'?null:mapping[2].slice(1,-1)}];
+}));
+// The stretch of prose one backticked identity owns: from where it is named to
+// the next canonical identity, sentence end, or clause end - whichever comes
+// first. A metric key's own dots never end a clause because they are never
+// followed by whitespace.
+const ownedClause=(text,index)=>{const rest=text.slice(index+1),stop=rest.search(/[.;](?=\s|$)|`[a-z]{3}\.[a-z-]+(?:@\d+)?`/);
+ return stop<0?text.slice(index):text.slice(index,index+stop+2);};
+// Every place the document binds a semantic-mapping status to an EXACT
+// canonical v1 identity. Versioned and unversioned mentions both count, and a
+// later definition version is deliberately not one of them.
+const semanticMappingClaims=text=>[...text.matchAll(/`([a-z]{3}\.[a-z-]+)(?:@(\d+))?`/g)]
+ .filter(match=>match[2]===undefined||match[2]==='1')
+ .map(match=>({key:match[1],clause:ownedClause(text,match.index)}))
+ .filter(entry=>/semantic[- ]mapping/i.test(entry.clause)&&/\b(?:un)?resolved\b/i.test(entry.clause))
+ .map(entry=>({key:entry.key,clause:entry.clause,claimed:/\bunresolved\b/i.test(entry.clause)?'UNRESOLVED':'RESOLVED'}));
+// One semantic-mapping status asserted across several identities at once. That
+// is legal wherever the identities really do share it - the HRS and the
+// Self-Awareness/Resilience clauses genuinely do - so this rule is applied ONLY
+// to the closing HGS paragraph, where the frozen seed proves the two identities
+// do not, and therefore where no shared claim about them can ever be true.
+const sharedSemanticMappingClaim=text=>/\b(?:each|both|either|they)\b[^.]{0,140}?semantic[- ]mapping/i.test(text);
+const closingHgsParagraph=()=>{const start=doc.indexOf('`hgs.purpose-alignment`'),end=doc.indexOf('There is no controller',start);
+ assert.ok(start>=0&&end>start,'the closing HGS paragraph is present');
+ return doc.slice(start,end);};
+const RETIRED_CLOSING='Purpose Alignment is a GOAL-bound alignment appraisal, not an HSE STATE point, and Habit Strength is a target-bound cue-linked automaticity appraisal, not an HSE STATE point; each has an unresolved/null semantic mapping and no approved HGS temporal-comparability cadence or minimum-comparability policy, so no "alignment improving/worsening" reading and no habit-formation, streak, or growth-trajectory reading of any kind exists.';
+
+test('every documented canonical v1 semantic mapping matches the frozen executable truth',()=>{
+ assert.equal(Object.keys(CANONICAL_V1_SEMANTICS).length,CANONICAL_V1.length,'0010 declares one semantic mapping per canonical v1 identity');
+ assert.deepEqual(CANONICAL_V1_SEMANTICS['hgs.purpose-alignment'],{status:'RESOLVED',type:'ALIGNMENT'},'Purpose Alignment v1 is RESOLVED to ALIGNMENT in the frozen seed');
+ assert.deepEqual(CANONICAL_V1_SEMANTICS['hgs.habit-strength'],{status:'UNRESOLVED',type:null},'Habit Strength v1 keeps an UNRESOLVED null mapping in the frozen seed');
+ // Wherever the document binds a status to an exact identity, it must be the
+ // frozen one. Per identity, never a census of the document.
+ const claims=semanticMappingClaims(doc);
+ for(const claim of claims)assert.equal(claim.claimed,CANONICAL_V1_SEMANTICS[claim.key].status,`${claim.key} is documented with its frozen semantic mapping`);
+ // The rule is live, not vacuous: both closing HGS identities really are among
+ // the identity-bound claims it inspects.
+ for(const key of['hgs.purpose-alignment','hgs.habit-strength'])assert.ok(claims.some(claim=>claim.key===key),`${key} really is documented with an identity-bound semantic mapping`);
+ // And it really would catch a drifted statement, in either direction.
+ const drifted=doc.replace('`hgs.purpose-alignment@1` is semantic-mapping RESOLVED with the `ALIGNMENT` semantic type','`hgs.purpose-alignment@1` has an unresolved/null semantic mapping');
+ assert.notEqual(drifted,doc,'the drift fixture really rewrote the Purpose Alignment statement');
+ const driftedClaim=semanticMappingClaims(drifted).find(claim=>claim.key==='hgs.purpose-alignment');
+ assert.equal(driftedClaim.claimed,'UNRESOLVED');
+ assert.notEqual(driftedClaim.claimed,CANONICAL_V1_SEMANTICS['hgs.purpose-alignment'].status,'a re-grouped Purpose Alignment statement is caught');
+ const flipped=doc.replace('`hgs.habit-strength@1` keeps an UNRESOLVED semantic mapping','`hgs.habit-strength@1` keeps a RESOLVED semantic mapping');
+ assert.notEqual(flipped,doc,'the drift fixture really rewrote the Habit Strength statement');
+ const flippedClaim=semanticMappingClaims(flipped).find(claim=>claim.key==='hgs.habit-strength');
+ assert.notEqual(flippedClaim.claimed,CANONICAL_V1_SEMANTICS['hgs.habit-strength'].status,'a falsely resolved Habit Strength statement is caught');
+});
+
+test('the closing HGS semantic mappings are stated per identity and never as one shared status',()=>{
+ const alignment=CANONICAL_V1_SEMANTICS['hgs.purpose-alignment'],habit=CANONICAL_V1_SEMANTICS['hgs.habit-strength'];
+ assert.notEqual(alignment.status,habit.status,'the two closing HGS mappings genuinely differ, so no shared claim about them can be true');
+ const closing=closingHgsParagraph();
+ assert.match(closing,/`hgs\.purpose-alignment@1` is semantic-mapping RESOLVED with the `ALIGNMENT` semantic type/,'Purpose Alignment is stated exactly and per identity');
+ assert.match(closing,/`hgs\.habit-strength@1` keeps an UNRESOLVED semantic mapping with a null semantic type/,'Habit Strength is stated exactly and per identity');
+ assert.ok(!sharedSemanticMappingClaim(closing),'no shared semantic-mapping status covers both closing HGS identities');
+ // Anti-vacuity: the retired wording really is caught by this rule, and really
+ // did assert one shared unresolved mapping over both identities.
+ assert.ok(sharedSemanticMappingClaim(RETIRED_CLOSING),'the retired grouped wording is caught by this rule');
+ assert.match(RETIRED_CLOSING,/each has an unresolved\/null semantic mapping/,'the retired wording really asserted one shared unresolved mapping');
+ // The correction moves no eligibility boundary. Both stay outside Trend v1, a
+ // RESOLVED mapping is explicitly separated from Trend eligibility, and the
+ // frozen executable resolver still names neither identity.
+ assert.match(closing,/NOT eligible for Trend v1/,'both remain outside Trend v1');
+ assert.match(closing,/confers no Trend eligibility/,'calibration stays separated from Trend eligibility');
+ assert.match(closing,/confers no Trend v1 eligibility on Purpose Alignment/,'a RESOLVED semantic mapping is separated from Trend eligibility too');
+ assert.match(closing,/may admit them deliberately after separate review/,'future admission stays possible through a separately reviewed contract');
+ for(const key of['hgs.purpose-alignment','hgs.habit-strength']){
+  assert.ok(!TREND_V1.includes(key),`${key} is not a Trend v1 source metric`);
+  assert.ok(!sql.includes(key),`${key} never enters the Trend v1 source resolver`);
+ }
+});
