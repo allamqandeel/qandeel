@@ -34,6 +34,7 @@ jobs:
       - {name: Verify npm-only toolchain contract, run: npm run test:toolchain}
       - {name: Verify A2 E2E runtime smoke static contract, run: npm run test:a2-e2e-smoke-contract}
       - {name: Verify Full Intelligence E2E runtime static contract, run: npm run test:full-intelligence-e2e-runtime-contract}
+      - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}
       - name: Bootstrap fresh Supabase-compatible PostgreSQL roles

@@ -10,6 +10,7 @@
     "test:api": "npm run test --workspace @qandeel/api",
     "test:database": "node --test database/tests/*.test.mjs",
     "test:toolchain": "node --test tests/toolchain.test.mjs",
+    "test:him-generic-write-authority-retirement-contract": "node --test tests/him-generic-application-write-authority-retirement.test.mjs",
     "verify:integrations:diagnose": "node scripts/diagnose-integrations.mjs",
     "verify:database:integration": "node --env-file-if-exists=.env database/verify-migration-0002.mjs",
     "verify:memory:integration": "node --env-file-if-exists=.env database/verify-migration-0004.mjs",

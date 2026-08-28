@@ -1,13 +1,31 @@
 import { BadRequestException } from '@nestjs/common';
 import { HimService } from './him.service';
 const user='11111111-1111-4111-8111-111111111111',situation='test-situation';
-const base={metricKey:'hse.stress',definitionVersion:1,valueState:'UNASSESSED' as const,contextKind:'SITUATION' as const,contextId:situation,scope:'exact situation',validityStatus:'VALID' as const,descriptiveUpdateReason:'test observation'};
-const setup=(status:'UNCALIBRATED'|'CALIBRATED'='UNCALIBRATED')=>{const repository={getDefinition:jest.fn().mockResolvedValue({metricKey:'hse.stress',definitionVersion:1,semanticType:'STATE',calculationStatus:status,validContextKinds:['SITUATION']}),createObservation:jest.fn().mockImplementation(async(_:string,v:object)=>v),getLatest:jest.fn(),listForContext:jest.fn(),history:jest.fn()};return{service:new HimService(repository as never),repository};};
-describe('HimService calculation boundary',()=>{
-  it('keeps an uncalibrated registered metric UNASSESSED even with evidence',async()=>{const{service}=setup();await expect(service.observe(user,'token',{...base,supportingEvidenceIds:['memory:22222222-2222-4222-8222-222222222222']})).resolves.not.toHaveProperty('numericValue');});
-  it('rejects assessed zero and any assessed value for uncalibrated metrics',async()=>{const{service}=setup();await expect(service.observe(user,'token',{...base,valueState:'ASSESSED',numericValue:0})).rejects.toThrow('no approved calibrated');});
-  it('preserves structural zero only for a future calibrated definition',async()=>{const{service}=setup('CALIBRATED');await expect(service.observe(user,'token',{...base,valueState:'ASSESSED',numericValue:0})).resolves.toEqual(expect.objectContaining({numericValue:0}));});
-  it('does not forward caller-forged calculation or canonical metadata',async()=>{const{service,repository}=setup();await service.observe(user,'token',{...base,calculationStatus:'CALIBRATED',hifOwner:'ABS'} as never);expect(repository.createObservation.mock.calls[0][1]).not.toHaveProperty('calculationStatus');expect(repository.createObservation.mock.calls[0][1]).not.toHaveProperty('hifOwner');});
+// QHIM-013: the repository fixture models the final READ-ONLY repository
+// surface. The retired generic writer is deliberately absent from it, so no
+// test here can re-establish a mocked application write contract that the real
+// database rejects.
+const setup=(status:'UNCALIBRATED'|'CALIBRATED'='UNCALIBRATED')=>{const repository={getDefinition:jest.fn().mockResolvedValue({metricKey:'hse.stress',definitionVersion:1,semanticType:'STATE',calculationStatus:status,validContextKinds:['SITUATION']}),getLatest:jest.fn(),listForContext:jest.fn(),history:jest.fn()};return{service:new HimService(repository as never),repository};};
+describe('HimService generic write authority retirement',()=>{
+  // QHIM-013 regression proof of ABSENCE, not merely of non-use: migration 0051
+  // retired the generic snapshot writer to a fail-closed no-write tombstone, so
+  // the application must not advertise a generic canonical measurement-write
+  // method at all. Reflective access keeps this honest without asking
+  // TypeScript for a symbol that no longer exists.
+  const surface=()=>new HimService({} as never) as unknown as Record<string,unknown>;
+  it('exposes no generic observe writer on the service instance or its prototype',()=>{
+    const service=surface();
+    expect(service.observe).toBeUndefined();
+    expect(typeof service.observe).toBe('undefined');
+    expect('observe' in service).toBe(false);
+    expect(Object.getOwnPropertyNames(HimService.prototype)).not.toContain('observe');
+  });
+  it('exposes no other generic measurement-write method under any conventional name',()=>{
+    const methods=Object.getOwnPropertyNames(HimService.prototype);
+    for(const name of ['observe','observeMetric','createObservation','createMeasurement','createSnapshot','writeSnapshot','submitMeasurement'])expect(methods).not.toContain(name);
+    // The legitimate read surface is still present and is what remains.
+    for(const name of ['getLatest','listForContext','history'])expect(methods).toContain(name);
+  });
 });
 describe('HimService canonical latest read',()=>{
   // QHIM-005 / QHIM-007: canonical latest is definition-exact. The service

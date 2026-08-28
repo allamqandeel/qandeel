@@ -34,10 +34,12 @@ export interface HimMetricSnapshot {
   snapshot_version:number; descriptive_update_reason:string; descriptive_update_reference_ids:string[];
   canonical_provenance:typeof HIM_CANONICAL_PROVENANCE; created_at:string;
 }
-export interface CreateHimMetricObservation {
-  id:string; metricKey:string; definitionVersion:number; valueState:HimValueState; numericValue?:number;
-  supportingEvidenceIds?:string[]; contradictingEvidenceIds?:string[]; contextKind:HimContextKind;
-  contextId:string; scope:string; temporalWindowStart?:string; temporalWindowEnd?:string;
-  validityStatus:HimValidityStatus; descriptiveUpdateReason:string; descriptiveUpdateReferenceIds?:string[];
-}
+// QHIM-013: the generic HIM measurement-write DTO that this module used to
+// export was removed. It described the Foundation-era generic snapshot write
+// contract that migration 0051 retired to a fail-closed tombstone, so keeping
+// it would advertise a canonical write path the database rejects. Canonical
+// measurement input contracts are owned per metric by the database's
+// first-class structured measurement RPCs; the types above are read/domain
+// types only. A future application-level submission DTO is a separately
+// reviewed contract, not a reinstatement of this one.
 

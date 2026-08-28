@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { MemoryDataApiService } from '../memory/memory-data-api.service';
-import type { CreateHimMetricObservation,HimMetricDefinition,HimMetricSnapshot } from './him.types';
+import type { HimMetricDefinition,HimMetricSnapshot } from './him.types';
 import type { HimTrendRequest,HimTrendSource,HimTrendSourcePoint } from './him-trend.types';
 import type { HimIntelligenceSnapshotRequest,HimSnapshotSourceRow } from './him-intelligence-snapshot.types';
 @Injectable()
@@ -8,7 +8,14 @@ export class HimRepository {
   constructor(private readonly dataApi:MemoryDataApiService){}
   async getDefinition(token:string,key:string,version:number):Promise<HimMetricDefinition|undefined>{const rows=await this.dataApi.request<Record<string,unknown>[]>(token,'rpc/get_him_metric_definition',{method:'POST',body:JSON.stringify({p_metric_key:key,p_definition_version:version})});return rows[0]?this.definition(rows[0]):undefined;}
   async listDefinitions(token:string):Promise<HimMetricDefinition[]>{return(await this.dataApi.request<Record<string,unknown>[]>(token,'rpc/list_him_metric_definitions',{method:'POST',body:'{}'})).map(r=>this.definition(r));}
-  async createObservation(token:string,value:CreateHimMetricObservation):Promise<HimMetricSnapshot>{return(await this.dataApi.request<HimMetricSnapshot[]>(token,'rpc/create_him_metric_snapshot',{method:'POST',body:JSON.stringify({p_observation:value})}))[0];}
+  // QHIM-013: the Foundation-era generic writer createObservation(...), which
+  // posted to the legacy generic snapshot RPC, was retired here. Migration 0051
+  // turned that database function into a fail-closed no-write tombstone with
+  // EXECUTE revoked from PUBLIC, anon, authenticated, and service_role, so this
+  // repository holds no generic canonical measurement-write capability and no
+  // replacement for it. Everything below is a read: definition reads, the one
+  // canonical latest read authority, explicit history/audit reads, and the
+  // Trend and Intelligence Snapshot source reads.
   async getLatest(token:string,userId:string,key:string,definitionVersion:number,kind:string,id:string):Promise<HimMetricSnapshot|undefined>{const rows=await this.dataApi.request<HimMetricSnapshot[]>(token,'rpc/read_him_latest_measurement_v1',{method:'POST',body:JSON.stringify({p_user_id:userId,p_metric_key:key,p_definition_version:definitionVersion,p_context_kind:kind,p_context_id:id})});return rows?.[0];}
   listForContext(token:string,userId:string,kind:string,id:string){const q=new URLSearchParams({select:'*',user_id:`eq.${userId}`,context_kind:`eq.${kind}`,context_id:`eq.${id}`,order:'created_at.desc,id.asc',limit:'128'});return this.dataApi.request<HimMetricSnapshot[]>(token,`him_metric_snapshots?${q}`);}
   history(token:string,userId:string,key:string,kind:string,id:string){const q=new URLSearchParams({select:'*',user_id:`eq.${userId}`,metric_key:`eq.${key}`,context_kind:`eq.${kind}`,context_id:`eq.${id}`,order:'snapshot_version.asc',limit:'128'});return this.dataApi.request<HimMetricSnapshot[]>(token,`him_metric_snapshots?${q}`);}
