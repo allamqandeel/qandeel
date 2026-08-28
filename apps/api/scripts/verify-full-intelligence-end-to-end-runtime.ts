@@ -51,6 +51,7 @@ import { EvidenceService } from '../src/memory/evidence.service';
 import { HimTurnContextSelectionService } from '../src/human-model/him-turn-context-selection.service';
 import { HimIntelligenceSnapshotService } from '../src/human-model/him-intelligence-snapshot.service';
 import { HimFastDeepConsumptionService } from '../src/human-model/him-fast-deep-consumption.service';
+import { HimInteractionAdaptationService } from '../src/human-model/him-interaction-adaptation.service';
 import { HimRepository } from '../src/human-model/him.repository';
 import { HypothesisService } from '../src/hypothesis/hypothesis.service';
 import { HypothesisRepository } from '../src/hypothesis/hypothesis.repository';
@@ -228,7 +229,7 @@ async function main(): Promise<void> {
     const orchestrator = new ConversationOrchestratorService(
       conversationRepository, contextBuilder, new SafetyResponseGateService(), new BehavioralResponsePolicyService(),
       memoryRetriever, new HimTurnContextSelectionService(), himSnapshotService, new HimReasoningConsumptionService(),
-      new HimFastDeepConsumptionService(), hypothesisReasoningContext, new RecommendationGroundingService(),
+      new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), hypothesisReasoningContext, new RecommendationGroundingService(),
       conversationalRouter, correlation, telemetry);
 
     // Background provider doubles exist from the start so the foreground phase

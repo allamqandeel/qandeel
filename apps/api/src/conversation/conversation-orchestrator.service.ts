@@ -14,6 +14,7 @@ import { HimTurnContextSelectionService } from '../human-model/him-turn-context-
 import { HimIntelligenceSnapshotService } from '../human-model/him-intelligence-snapshot.service';
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
 import { HimFastDeepConsumptionService } from '../human-model/him-fast-deep-consumption.service';
+import { HimInteractionAdaptationService } from '../human-model/him-interaction-adaptation.service';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -34,6 +35,7 @@ export class ConversationOrchestratorService {
     private readonly himSnapshot: HimIntelligenceSnapshotService,
     private readonly himReasoningConsumption: HimReasoningConsumptionService,
     private readonly himFastDeepConsumption: HimFastDeepConsumptionService,
+    private readonly himInteractionAdaptation: HimInteractionAdaptationService,
     private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
     private readonly recommendationGrounding: RecommendationGroundingService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
@@ -81,14 +83,17 @@ export class ConversationOrchestratorService {
         this.telemetry.recordTurnOutcome('blocked',selection.path);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
-      const himContext=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
+      const {himContext,himInteractionAdaptation}=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
       const himSnapshot = await this.himSnapshot.getSnapshot(
         accessToken,
         himSelection.contextKind,
         himSelection.contextId,
       );
       const himReasoningContext = this.himReasoningConsumption.transform(himSnapshot);
-      return this.himFastDeepConsumption.project(selection.path, himReasoningContext);});
+      // The adaptation derives from the reasoning context BEFORE the FAST/DEEP
+      // density projection: it is path-independent and never selects the path.
+      const adaptation = this.himInteractionAdaptation.derive(himReasoningContext);
+      return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation};});
       const memoryContext = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));
       let hypothesisResult;
       try {
@@ -109,6 +114,7 @@ export class ConversationOrchestratorService {
         context: assembledContext.messages,
         ...(assembledContext.memoryContext ? { memoryContext: assembledContext.memoryContext } : {}),
         himContext,
+        ...(himInteractionAdaptation.adaptationState === 'ACTIVE' ? { himInteractionAdaptation } : {}),
         ...(hypothesisResult.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesisResult.context } : {}),
         ...(recommendationGrounding.coverageState === 'AVAILABLE' ? { recommendationContext: recommendationGrounding.context } : {}),
         locale: 'und', modality: 'TEXT',
