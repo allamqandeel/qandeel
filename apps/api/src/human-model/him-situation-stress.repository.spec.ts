@@ -76,14 +76,19 @@ describe('HimSituationStressRepository', () => {
     // Structural proof rather than a call census: a second external request
     // cannot be added to this file without failing here.
     expect([...source.matchAll(/this\.dataApi\.request/gu)]).toHaveLength(1);
-    expect([...source.matchAll(/rpc\//gu)]).toHaveLength(1);
     expect(source).toContain("'rpc/read_him_session_situation_stress_v1'");
+    // The negatives run on EXECUTABLE source only: the file's own prose may
+    // legitimately name the forbidden two-round-trip shape while documenting
+    // its absence, exactly as the database contracts do.
+    const executable = source.split('\n').filter((line) => !line.trim().startsWith('//')).join('\n');
+    expect([...executable.matchAll(/rpc\//gu)]).toHaveLength(1);
     for (const forbidden of [
       'rpc/read_him_session_context_bindings_v1',
       'rpc/read_him_contextual_current_intelligence_batch_v1',
       'rpc/read_him_latest_measurement_v1',
       'HimSessionContextBindingRepository',
       'HimRepository',
-    ]) expect(source).not.toContain(forbidden);
+      'him_session_context_bindings',
+    ]) expect(executable).not.toContain(forbidden);
   });
 });

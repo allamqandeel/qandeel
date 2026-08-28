@@ -2,6 +2,7 @@ import type { HimModelContext } from '../human-model/him-fast-deep-consumption.t
 import type { HimInteractionAdaptation } from '../human-model/him-interaction-adaptation.types';
 import type { HimSessionReflectionGuidance } from '../human-model/him-session-reflection-consumption.types';
 import type { HimSituationStressGuidance } from '../human-model/him-situation-stress-consumption.types';
+import { readFileSync } from 'node:fs';
 import { composeServerGuidance } from './model-router.types';
 import type { HypothesisReasoningContext } from '../hypothesis/hypothesis-reasoning-context.types';
 import type { RecommendationGroundingContext } from '../recommendation/recommendation-grounding.types';
@@ -476,6 +477,24 @@ describe('composeServerGuidance Situation-bound interaction boundary (QHIA-007)'
   it('stays provider-agnostic through the single common composition path', () => {
     const guidance = composeServerGuidance({ behavioralGuidance: 'behavior', himSituationStressGuidance: situationStress('ACTIVE') });
     expect(composeServerGuidance({ behavioralGuidance: 'behavior', himSituationStressGuidance: { ...situationStress('ACTIVE') } })).toBe(guidance);
+  });
+
+  it('leaves every provider adapter unchanged: no adapter reads, branches on, or renders the guidance itself', () => {
+    // Both adapters consume the common model request through
+    // composeServerGuidance and nothing else, so there is exactly one
+    // rendering path and no adapter can diverge, amplify, or reinterpret the
+    // signal - including by treating its absence as a favourable one.
+    for (const adapter of [
+      'providers/anthropic/claude-model-router.ts',
+      'providers/openai/openai-model-router.ts',
+      'fake-model-router.ts',
+    ]) {
+      const source = readFileSync(`${__dirname}/${adapter}`, 'utf8');
+      expect(source).not.toContain('himSituationStressGuidance');
+      expect(source).not.toContain('Situation');
+      expect(source).not.toContain('hse.stress');
+      expect(source).not.toContain('REDUCE_INTERACTION_BURDEN');
+    }
   });
 });
 

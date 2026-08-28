@@ -1194,7 +1194,7 @@ describe('ConversationOrchestratorService', () => {
     });
 
     it('performs no Situation-stress read at all when Safety BLOCKs the turn', async () => {
-      safetyGate.evaluate.mockReturnValue({ category: 'RISK', disposition: 'BLOCK', deterministicResponse: 'safe' });
+      safetyGate.evaluate.mockReturnValue({ category: 'SELF_HARM_OR_SUICIDE', disposition: 'BLOCK', deterministicResponse: 'safe deterministic response' });
       repository.claimTurn.mockResolvedValue(claimed);
       repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
       await orchestrator.orchestrate('token', 'user', userTurn);
