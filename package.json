@@ -44,6 +44,7 @@
     "verify:hgs-habit-strength:integration": "node --env-file-if-exists=.env database/verify-migration-0049.mjs",
     "verify:him-structured-current-binding-transition-safety:integration": "node --env-file-if-exists=.env database/verify-migration-0050.mjs",
     "verify:him-historical-verifier-forward-compatibility:integration": "node --env-file-if-exists=.env database/verify-him-historical-verifier-forward-compatibility-v1.mjs",
+    "verify:him-historical-binding-version-forward-compatibility:integration": "node --env-file-if-exists=.env database/verify-him-historical-binding-version-forward-compatibility-v1.mjs",
     "verify:him-legacy-snapshot-authority-energy-context-reconciliation:integration": "node --env-file-if-exists=.env database/verify-migration-0051.mjs",
     "verify:him-canonical-latest-measurement-read-semantics:integration": "node --env-file-if-exists=.env database/verify-migration-0052.mjs",
     "verify:him-trends:integration": "node --env-file-if-exists=.env database/verify-him-trends-v1.mjs",

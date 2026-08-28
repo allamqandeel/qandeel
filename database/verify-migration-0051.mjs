@@ -62,7 +62,7 @@ await client.connect();try{
  const energy=(await client.query("SELECT valid_context_kinds,calculation_status,semantic_mapping_status,semantic_type,scale_reference,required_input_contract,dependency_ids,consumers FROM public.him_metric_definitions WHERE definition_version=1 AND metric_key='hse.energy'")).rows[0];
  if(energy.valid_context_kinds.join()!=='CONVERSATION_SESSION')throw new Error('hse.energy v1 is not CONVERSATION_SESSION-only');
  if(energy.calculation_status!=='CALIBRATED'||energy.semantic_mapping_status!=='RESOLVED'||energy.semantic_type!=='STATE'||energy.scale_reference!=='hse.energy.ordinal-5.v1'||energy.required_input_contract!=='DIRECT_STRUCTURED_USER_REPORT_AR_EG_RIGHT_NOW_V1'||energy.dependency_ids.length!==0||energy.consumers.length!==0)throw new Error('The Energy reconciliation changed an attribute other than the context list');
- const bindings=(await client.query("SELECT context_kind FROM public.him_canonical_model_bindings WHERE metric_key='hse.energy' AND status='ACTIVE' ORDER BY context_kind")).rows.map(row=>row.context_kind);
+ const bindings=(await client.query("SELECT context_kind FROM public.him_canonical_model_bindings WHERE metric_key='hse.energy' AND definition_version=1 AND status='ACTIVE' ORDER BY context_kind")).rows.map(row=>row.context_kind);
  if(bindings.join()!=='CONVERSATION_SESSION')throw new Error('Energy ACTIVE binding authority is not CONVERSATION_SESSION-only');
  const model=(await client.query("SELECT supported_context_kinds FROM public.him_calculation_models WHERE model_id='hse.energy.direct-structured-user-report' AND model_version=1")).rows[0];
  if(model.supported_context_kinds.join()!=='CONVERSATION_SESSION')throw new Error('The calibrated Energy model is not CONVERSATION_SESSION-only');
@@ -103,7 +103,7 @@ await client.connect();try{
  await rejects("SELECT * FROM public.create_hse_energy_measurement($1,'HIGH',NULL)",[situationTarget.id]);
  await rejects("INSERT INTO public.him_measurement_observations(id,user_id,measurement_event_id,metric_key,definition_version,instrument_id,instrument_version,scale_contract_reference,scale_version,context_kind,context_id,response_code,reported_at,locale,source,canonical_provenance,created_at) VALUES($1,$2,$3,'hse.energy',1,'hse.energy.ar-eg.right-now',1,'hse.energy.ordinal-5.v1',1,'SITUATION',$4,'HIGH',now(),'ar-EG','DIRECT_STRUCTURED_USER_REPORT','QANDEEL_HSE_ENERGY_MEASUREMENT_V1',now())",[randomUUID(),one,created.measurement_event_id,situationTarget.id]);
  await client.query('RESET ROLE');
- const situationBinding=(await client.query("SELECT count(*)::int n FROM public.him_canonical_model_bindings WHERE metric_key='hse.energy' AND context_kind='SITUATION'")).rows[0].n;
+ const situationBinding=(await client.query("SELECT count(*)::int n FROM public.him_canonical_model_bindings WHERE metric_key='hse.energy' AND definition_version=1 AND context_kind='SITUATION'")).rows[0].n;
  if(situationBinding!==0)throw new Error('A SITUATION Energy binding exists');
  await client.query('ROLLBACK');
  // --- Existing history is unaffected ------------------------------------------

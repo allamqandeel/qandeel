@@ -80,7 +80,7 @@ await client.connect();try{
  const approval=await client.query('SELECT * FROM public.him_governance_approvals WHERE approval_id=$1',[ES.approval]);
  const basis=approval.rowCount===1?approval.rows[0].approval_basis:[];
  if(approval.rowCount!==1||approval.rows[0].external_validation_claimed||approval.rows[0].model_id!==ES.model||!Array.isArray(basis)||basis.length!==ES.basis.length||ES.basis.some(entry=>!basis.includes(entry)))throw new Error('hrs.emotional-safety exactly-ten-basis approval failed or claimed external validation');
- const bindings=await client.query("SELECT context_kind,model_id,instrument_id,scale_contract_reference FROM public.him_canonical_model_bindings WHERE metric_key=$1 AND status='ACTIVE' ORDER BY context_kind",[ES.key]);
+ const bindings=await client.query("SELECT context_kind,model_id,instrument_id,scale_contract_reference FROM public.him_canonical_model_bindings WHERE metric_key=$1 AND definition_version=1 AND status='ACTIVE' ORDER BY context_kind",[ES.key]);
  if(bindings.rows.map(x=>x.context_kind).join()!=='RELATIONSHIP'||bindings.rows.some(x=>x.model_id!==ES.model||x.instrument_id!==ES.instrument||x.scale_contract_reference!==ES.scale))throw new Error('Expected exactly the one hrs.emotional-safety RELATIONSHIP ACTIVE binding');
  // --- No safety verdict and no Safety Runtime surface in the 0045-owned path ---
  // The word "Safety" in the metric name grants no system Safety authority.

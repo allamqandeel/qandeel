@@ -68,7 +68,7 @@ await client.connect();try{
  const approval=await client.query('SELECT * FROM public.him_governance_approvals WHERE approval_id=$1',[APPROVAL]);
  const basis=approval.rowCount===1?approval.rows[0].approval_basis:[];
  if(approval.rowCount!==1||approval.rows[0].external_validation_claimed||approval.rows[0].model_id!==MODEL||!Array.isArray(basis)||basis.length!==EXPECTED_BASIS.length||EXPECTED_BASIS.some(entry=>!basis.includes(entry)))throw new Error('Relationship Trust exactly-ten-basis approval failed or claimed external validation');
- const bindings=await client.query("SELECT context_kind,model_id,instrument_id,scale_contract_reference FROM public.him_canonical_model_bindings WHERE metric_key='hrs.relationship-trust' AND status='ACTIVE' ORDER BY context_kind");
+ const bindings=await client.query("SELECT context_kind,model_id,instrument_id,scale_contract_reference FROM public.him_canonical_model_bindings WHERE metric_key='hrs.relationship-trust' AND definition_version=1 AND status='ACTIVE' ORDER BY context_kind");
  if(bindings.rows.map(x=>x.context_kind).join()!=='RELATIONSHIP'||bindings.rows.some(x=>x.model_id!==MODEL||x.instrument_id!==INSTRUMENT||x.scale_contract_reference!==SCALE))throw new Error('Expected exactly the one Relationship Trust RELATIONSHIP ACTIVE binding');
  await client.query('INSERT INTO auth.users(id) VALUES($1),($2) ON CONFLICT DO NOTHING',[one,two]);
  await client.query("INSERT INTO public.conversation_sessions(id,user_id,status,channel)VALUES($1,$2,'ACTIVE','TEXT')ON CONFLICT DO NOTHING",[sessionOne,one]);

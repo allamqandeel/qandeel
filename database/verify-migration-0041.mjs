@@ -64,7 +64,7 @@ await client.connect();try{
   if(model.rowCount!==1||model.rows[0].lifecycle!=='CALIBRATED'||model.rows[0].environment!=='PRODUCTION'||model.rows[0].scale_contract_reference!==m.scale||model.rows[0].supported_context_kinds.join()!=='GOAL,SITUATION'||model.rows[0].target_metric_key!==key)throw new Error(`${key} calibrated model failed`);
   const approval=await client.query('SELECT * FROM public.him_governance_approvals WHERE approval_id=$1',[m.approval]);
   if(approval.rowCount!==1||approval.rows[0].external_validation_claimed||approval.rows[0].model_id!==m.model)throw new Error(`${key} approval failed or claimed external validation`);
-  const bindings=await client.query("SELECT context_kind,model_id,instrument_id,scale_contract_reference FROM public.him_canonical_model_bindings WHERE metric_key=$1 AND status='ACTIVE' ORDER BY context_kind",[key]);
+  const bindings=await client.query("SELECT context_kind,model_id,instrument_id,scale_contract_reference FROM public.him_canonical_model_bindings WHERE metric_key=$1 AND definition_version=1 AND status='ACTIVE' ORDER BY context_kind",[key]);
   if(bindings.rows.map(x=>x.context_kind).join()!=='GOAL,SITUATION'||bindings.rows.some(x=>x.model_id!==m.model||x.instrument_id!==m.instrument||x.scale_contract_reference!==m.scale))throw new Error(`Expected exact ${key} GOAL/SITUATION bindings`);
  }
  await client.query('INSERT INTO auth.users(id) VALUES($1),($2) ON CONFLICT DO NOTHING',[one,two]);
