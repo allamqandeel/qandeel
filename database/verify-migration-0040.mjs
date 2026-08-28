@@ -46,7 +46,7 @@ await client.connect();try{
  if(model.rowCount!==1||model.rows[0].lifecycle!=='CALIBRATED'||model.rows[0].environment!=='PRODUCTION'||model.rows[0].scale_contract_reference!=='hbs.avoidance.frequency-5.v1'||model.rows[0].supported_context_kinds.join()!=='GOAL,SITUATION')throw new Error('Avoidance calibrated model failed');
  const approval=await client.query("SELECT * FROM public.him_governance_approvals WHERE approval_id='qandeel.him.avoidance.foundation-approval'");
  if(approval.rowCount!==1||approval.rows[0].external_validation_claimed)throw new Error('Avoidance approval failed or claimed external validation');
- const bindings=await client.query("SELECT context_kind FROM public.him_canonical_model_bindings WHERE metric_key='hbs.avoidance' AND status='ACTIVE' ORDER BY context_kind");
+ const bindings=await client.query("SELECT context_kind FROM public.him_canonical_model_bindings WHERE metric_key='hbs.avoidance' AND definition_version=1 AND status='ACTIVE' ORDER BY context_kind");
  if(bindings.rows.map(x=>x.context_kind).join()!=='GOAL,SITUATION')throw new Error('Expected exact Avoidance GOAL/SITUATION bindings');
  await client.query('INSERT INTO auth.users(id) VALUES($1),($2) ON CONFLICT DO NOTHING',[one,two]);
  await client.query('BEGIN');

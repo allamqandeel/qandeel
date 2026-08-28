@@ -43,7 +43,7 @@ await client.connect();try{
  const approval=await client.query('SELECT * FROM public.him_governance_approvals WHERE approval_id=$1',[RES.approval]);
  const basis=approval.rowCount===1?approval.rows[0].approval_basis:[];
  if(approval.rowCount!==1||approval.rows[0].external_validation_claimed||approval.rows[0].model_id!==RES.model||!Array.isArray(basis)||basis.length!==RES.basis.length||RES.basis.some(entry=>!basis.includes(entry)))throw new Error('hgs.resilience exactly-ten-basis approval failed or claimed external validation');
- const bindings=await client.query("SELECT context_kind,model_id,instrument_id,scale_contract_reference FROM public.him_canonical_model_bindings WHERE metric_key=$1 AND status='ACTIVE' ORDER BY context_kind",[RES.key]);
+ const bindings=await client.query("SELECT context_kind,model_id,instrument_id,scale_contract_reference FROM public.him_canonical_model_bindings WHERE metric_key=$1 AND definition_version=1 AND status='ACTIVE' ORDER BY context_kind",[RES.key]);
  if(bindings.rows.map(x=>x.context_kind).join()!=='GOAL,SITUATION'||bindings.rows.some(x=>x.model_id!==RES.model||x.instrument_id!==RES.instrument||x.scale_contract_reference!==RES.scale))throw new Error('Expected exactly the two hgs.resilience GOAL and SITUATION ACTIVE bindings');
  // --- Sibling isolation inside the owned functions ----------------------------
  // Historical scope: exactly the three functions INTRODUCED AND OWNED BY
