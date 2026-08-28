@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { INITIAL_HIM_METRICS } from './initial-him-metrics.catalog';
+import { HIM_METRIC_CATALOG } from './initial-him-metrics.catalog';
 import { HIM_CALCULATION_STATUSES, HIM_CONTEXT_KINDS, HIM_OWNERS, HIM_SEMANTIC_MAPPING_STATUSES, HIM_SEMANTIC_TYPES, MAX_HIM_DEPENDENCIES, type HimMetricDefinition } from './him.types';
 const KEY=/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
 const bounded=(v:unknown,max:number,f:string):string=>{if(typeof v!=='string'||v.trim()!==v||v.length===0||v.length>max)throw new BadRequestException(`Invalid ${f}.`);return v;};
@@ -7,7 +7,13 @@ const unique=(v:string[],max:number,f:string):void=>{if(!Array.isArray(v)||v.len
 @Injectable()
 export class HimDefinitionRegistry {
   private readonly definitions=new Map<string,HimMetricDefinition>();
-  constructor(){INITIAL_HIM_METRICS.forEach(definition=>this.register(definition));}
+  // The registry initializes from the EXTENSIBLE application catalog, never
+  // from the frozen canonical v1 foundation set: every catalog definition is
+  // registered under its exact `metricKey@definitionVersion` identity, so a
+  // later version of an existing metric and an entirely new reviewed metric are
+  // both ordinary catalog growth. Exact duplicate identity/version stays
+  // rejected; `get(k,v)` stays exact and never falls back to a latest version.
+  constructor(){HIM_METRIC_CATALOG.forEach(definition=>this.register(definition));}
   register(definition:HimMetricDefinition):void{this.validate(definition);const id=`${definition.metricKey}@${definition.definitionVersion}`;if(this.definitions.has(id))throw new BadRequestException('Duplicate HIM metric identity/version.');this.definitions.set(id,Object.freeze({...definition,validContextKinds:[...definition.validContextKinds],consumers:[...definition.consumers],sourceMetadata:[...definition.sourceMetadata],dependencyIds:[...definition.dependencyIds]}));try{this.validateDependencies();}catch(e){this.definitions.delete(id);throw e;}}
   get(k:string,v:number){return this.definitions.get(`${k}@${v}`);} list(){return [...this.definitions.values()];}
   private validate(d:HimMetricDefinition):void{

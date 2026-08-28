@@ -78,19 +78,35 @@ test('0051 deletes, backfills, and reinterprets no history and adds no consumpti
  assert.ok(readdirSync(new URL('.',new URL('tests/',root))).includes('him-historical-verifier-forward-compatibility-v1.test.mjs'),'the QHIM-002 forward-compatibility contract is preserved');
 });
 
+// QHIM-010. The application catalog is EXTENSIBLE: it may legitimately gain a
+// later version of a canonical metric (`hse.energy@2`) or an entirely new
+// reviewed metric, calibrated or uncalibrated. So every catalog claim below is
+// resolved by EXACT `metricKey@definitionVersion` identity and asserts only
+// canonical v1 coverage - never a complete-catalog size, and never an equality
+// between the whole parsed catalog and today's population.
+const canonicalIdentity=(metricKey,definitionVersion=1)=>`${metricKey}@${definitionVersion}`;
+const CANONICAL_V1_CONTEXTS=Object.freeze({'hse.stress@1':'SITUATION,CONVERSATION_SESSION','hse.energy@1':'CONVERSATION_SESSION','hse.motivation@1':'SITUATION,GOAL','hse.self-confidence@1':'SITUATION,DECISION','hse.attention@1':'SITUATION,CONVERSATION_SESSION,DECISION','hbs.avoidance@1':'SITUATION,GOAL','hbs.consistency@1':'SITUATION,GOAL','hbs.initiative@1':'SITUATION,GOAL','hbs.reflection@1':'SITUATION,CONVERSATION_SESSION','hrs.relationship-trust@1':'RELATIONSHIP','hrs.communication@1':'RELATIONSHIP','hrs.repair@1':'RELATIONSHIP','hrs.emotional-safety@1':'RELATIONSHIP','hgs.self-awareness@1':'GOAL,SITUATION','hgs.resilience@1':'GOAL,SITUATION','hgs.purpose-alignment@1':'GOAL','hgs.habit-strength@1':'GOAL,SITUATION'});
+
 test('the application catalog and the Energy model agree on CONVERSATION_SESSION only',()=>{
- const energy=catalog.split('\n').find(line=>line.includes("metric('hse.energy'"));
- assert.ok(energy,'the catalog registers hse.energy on one line');
+ // Version-exact: `hse.energy@1` is located by its own identity, so a future
+ // `hse.energy@2` line can never be mistaken for the reconciled v1 definition.
+ const energy=catalog.split('\n').find(line=>line.includes("metric('hse.energy',1,"));
+ assert.ok(energy,'the catalog registers hse.energy@1 on one line');
  assert.match(energy,/'STATE',\['CONVERSATION_SESSION'\]/,'the TypeScript Energy catalog is CONVERSATION_SESSION-only');
  assert.doesNotMatch(energy,/'SITUATION'/,'the contradictory SITUATION catalog entry is gone');
  assert.match(energy,/calculationStatus:'CALIBRATED'/,'the Energy calibration is preserved on one line for the preflight parser');
  assert.match(energy,/scaleReference:'hse\.energy\.ordinal-5\.v1'/,'the Energy scale is preserved');
  assert.match(energy,/requiredInputContract:'DIRECT_STRUCTURED_USER_REPORT_AR_EG_RIGHT_NOW_V1'/,'the Energy input contract is preserved');
  assert.match(model,/supportedContextKinds\s*:\s*\['CONVERSATION_SESSION'\]/,'the Energy model stays CONVERSATION_SESSION-only');
- // The other sixteen catalog context lists are unchanged.
- const contexts=Object.fromEntries(catalog.split('\n').map(line=>{const key=line.match(/metric\('([^']+)'/),list=line.match(/,\[((?:'[A-Z_]+',?)+)\],/);return key&&list?[key[1],list[1].replace(/'/g,'')]:null;}).filter(Boolean));
- assert.deepEqual(contexts,{'hse.stress':'SITUATION,CONVERSATION_SESSION','hse.energy':'CONVERSATION_SESSION','hse.motivation':'SITUATION,GOAL','hse.self-confidence':'SITUATION,DECISION','hse.attention':'SITUATION,CONVERSATION_SESSION,DECISION','hbs.avoidance':'SITUATION,GOAL','hbs.consistency':'SITUATION,GOAL','hbs.initiative':'SITUATION,GOAL','hbs.reflection':'SITUATION,CONVERSATION_SESSION','hrs.relationship-trust':'RELATIONSHIP','hrs.communication':'RELATIONSHIP','hrs.repair':'RELATIONSHIP','hrs.emotional-safety':'RELATIONSHIP','hgs.self-awareness':'GOAL,SITUATION','hgs.resilience':'GOAL,SITUATION','hgs.purpose-alignment':'GOAL','hgs.habit-strength':'GOAL,SITUATION'},'only the Energy context list changed');
- assert.equal(Object.keys(contexts).length,CANONICAL_V1.length,'the catalog still registers the seventeen canonical identities');
+ // The other sixteen canonical v1 context lists are unchanged. Parsed by exact
+ // identity and checked as COVERAGE of the frozen canonical v1 map, so a later
+ // definition added to the extensible catalog is simply invisible here instead
+ // of failing this historical contract.
+ const contexts=Object.fromEntries(catalog.split('\n').map(line=>{const key=line.match(/metric\('([^']+)',(\d+),/),list=line.match(/,\[((?:'[A-Z_]+',?)+)\],/);return key&&list?[canonicalIdentity(key[1],key[2]),list[1].replace(/'/g,'')]:null;}).filter(Boolean));
+ for(const[id,approved]of Object.entries(CANONICAL_V1_CONTEXTS))assert.equal(contexts[id],approved,`${id} keeps its canonical v1 context list, so only the Energy context list changed`);
+ // The frozen expectation itself covers every canonical v1 identity. This is a
+ // claim about the two frozen sets, never about the size of the catalog.
+ assert.deepEqual(Object.keys(CANONICAL_V1_CONTEXTS).sort(),CANONICAL_V1.map(key=>canonicalIdentity(key)).sort(),'every canonical v1 identity is covered');
 });
 
 test('the 0051 verifier proves the retirement, the routes, and the Energy exactness, and stays forward-safe',()=>{
