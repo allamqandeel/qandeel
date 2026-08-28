@@ -32,6 +32,33 @@ const postconditionStart=executable.lastIndexOf('DO $$DECLARE fn text');
 assert.ok(postconditionStart>0,'the migration carries its installed-definition postcondition');
 const authoritySlice=executable.slice(0,postconditionStart);
 
+// Amendment 1 (lifecycle chronology). The two mutation authorities must derive
+// every write-driving lifecycle timestamp AFTER the per-user/session/kind
+// advisory serialization lock. A timestamp frozen at function entry survives a
+// lost lock race and is then written as a retirement or creation instant that
+// precedes history the winner already committed - append-only authority
+// history that is version-correct but chronologically reversed. This is a
+// POSITIONAL property, not a pattern one, so it is checked by slicing each
+// function body out of the migration text and comparing the first advisory
+// lock against the first database clock read.
+const MUTATION_FUNCTIONS=['set_him_session_context_binding_v1','clear_him_session_context_binding_v1'];
+const functionBodyOf=(text,name)=>{
+ const start=text.indexOf(`CREATE FUNCTION public.${name}(`);
+ if(start<0)return undefined;
+ const end=text.indexOf('END$$;',start);
+ return end<0?undefined:text.slice(start,end+'END$$;'.length);
+};
+function assertSerializedLifecycleClock(text){
+ for(const name of MUTATION_FUNCTIONS){
+  const body=functionBodyOf(text,name);
+  if(body===undefined)throw new Error(`QHIA-006 binding authority contract violated: the mutation authority ${name} is missing`);
+  const lockAt=body.indexOf('pg_advisory_xact_lock'),clockAt=body.indexOf('clock_timestamp');
+  if(lockAt<0)throw new Error(`QHIA-006 binding authority contract violated: ${name} does not serialize under the advisory lock`);
+  if(clockAt<0)throw new Error(`QHIA-006 binding authority contract violated: ${name} derives no database lifecycle time`);
+  if(clockAt<lockAt)throw new Error(`QHIA-006 binding authority contract violated: ${name} captures a lifecycle timestamp before the serialization lock`);
+ }
+}
+
 // The single guard the anti-vacuity fixtures below drive. It receives one
 // comment-stripped migration text and throws on the first violated
 // architectural property, so "the guard catches drift X" is proven by running
@@ -44,6 +71,10 @@ const REQUIRED=[
  [/binding_source='EXPLICIT_AUTHENTICATED_CONTEXT_BINDING'/,'the explicit authenticated source constant is pinned'],
  [/canonical_provenance='QANDEEL_HIM_SESSION_CONTEXT_BINDING_V1'/,'the canonical provenance constant is pinned'],
  [/CHECK\(\(status='RETIRED'\)=\(retired_at IS NOT NULL\)\)/,'ACTIVE/RETIRED timestamp coherence is bound'],
+ [/CONSTRAINT him_session_context_binding_chronology_check CHECK\(retired_at IS NULL OR retired_at>=created_at\)/,'row-level lifecycle chronology is bound'],
+ [/transition_at:=GREATEST\(clock_timestamp\(\),latest_lifecycle_at\)/,'the lifecycle instant is derived from the database clock and the existing history endpoint'],
+ [/SET status='RETIRED',retired_at=transition_at/,'retirement writes the serialized lifecycle instant'],
+ [/'EXPLICIT_AUTHENTICATED_CONTEXT_BINDING',transition_at,NULL/,'a new version is created at the serialized lifecycle instant'],
  [/UNIQUE\(user_id,conversation_session_id,context_kind,binding_version\)/,'per-session/kind version history uniqueness is bound'],
  [/CREATE UNIQUE INDEX him_one_active_session_context_binding ON public\.him_session_context_bindings\(user_id,conversation_session_id,context_kind\) WHERE status='ACTIVE'/,'at most one ACTIVE binding per user/session/kind'],
  [/FOREIGN KEY\(conversation_session_id,user_id\) REFERENCES public\.conversation_sessions\(id,user_id\) ON DELETE RESTRICT/,'the composite RESTRICT FK to exact conversation session ownership'],
@@ -84,6 +115,7 @@ const FORBIDDEN=[
 function assertBindingAuthorityContract(text){
  for(const[pattern,property]of REQUIRED)if(!pattern.test(text))throw new Error(`QHIA-006 binding authority contract violated: ${property}`);
  for(const[pattern,property]of FORBIDDEN)if(pattern.test(text))throw new Error(`QHIA-006 binding authority contract violated: ${property}`);
+ assertSerializedLifecycleClock(text);
 }
 // The migration-identity rules, factored so forward-safety can be proven by
 // running the real rules over a listing that already contains future
@@ -120,11 +152,21 @@ test('S2 - hard authority rule: relevance comes only from the explicit authentic
  assert.match(executable,/WHERE t\.id=p_context_id AND t\.user_id=u AND t\.context_kind=p_context_kind/,'the target must exist exactly as (id, owner, kind)');
  assert.match(executable,/RAISE EXCEPTION 'Unknown, cross-user, or wrong-kind measurement target'/,'unknown, cross-user, and wrong-kind targets fail closed without substitution');
  // Idempotent same-target replay and monotonic replacement are both explicit.
- assert.match(executable,/IF FOUND AND existing\.context_id=p_context_id THEN RETURN NEXT existing;RETURN;END IF;/,'repeating the same exact target returns the existing ACTIVE row untouched');
+ assert.match(executable,/IF has_active AND existing\.context_id=p_context_id THEN RETURN NEXT existing;RETURN;END IF;/,'repeating the same exact target returns the existing ACTIVE row untouched');
+ // Amendment 1: the same-target idempotent path returns BEFORE any clock is
+ // read, so a repeated identical binding is provably timestamp-neutral rather
+ // than merely "not written".
+ const setBody=functionBodyOf(executable,'set_him_session_context_binding_v1');
+ assert.ok(setBody!==undefined,'the set authority body is extractable');
+ assert.ok(setBody.indexOf('RETURN NEXT existing')<setBody.indexOf('clock_timestamp'),'the idempotent same-target return happens before any lifecycle clock is read');
+ // The active-row test is captured into an explicit boolean, because the
+ // intervening aggregate SELECT INTO would otherwise reset plpgsql FOUND and
+ // make the retirement branch fire on a non-existent row.
+ assert.match(executable,/has_active:=FOUND;/,'the ACTIVE-row test is captured before any later SELECT INTO can reset FOUND');
  assert.match(executable,/coalesce\(max\(b\.binding_version\),0\)\+1/,'replacement assigns the next monotonic version');
  // Server-derived identity only: uuid, source, provenance, and created_at all
  // originate inside the command.
- assert.match(executable,/VALUES\(gen_random_uuid\(\),u,p_session_id,p_context_kind,p_context_id,next_version,'ACTIVE','EXPLICIT_AUTHENTICATED_CONTEXT_BINDING',canonical_now,NULL,'QANDEEL_HIM_SESSION_CONTEXT_BINDING_V1'\)/,'the inserted row is fully server-derived');
+ assert.match(executable,/VALUES\(gen_random_uuid\(\),u,p_session_id,p_context_kind,p_context_id,next_version,'ACTIVE','EXPLICIT_AUTHENTICATED_CONTEXT_BINDING',transition_at,NULL,'QANDEEL_HIM_SESSION_CONTEXT_BINDING_V1'\)/,'the inserted row is fully server-derived');
  // The clear command is idempotent and never deletes history.
  assert.match(executable,/IF NOT FOUND THEN RETURN;END IF;/,'clearing an already-clear kind writes nothing and returns zero rows');
  // The only session mutation authority in this migration is none: sessions
@@ -139,6 +181,51 @@ test('S2 - hard authority rule: relevance comes only from the explicit authentic
  assert.match(executable,/request\.jwt/,'the postcondition proves no JWT reconstruction on the installed definitions');
 });
 
+test('S2b - Amendment 1: lifecycle timestamps are derived after serialization, and the guard rejects a pre-lock capture',()=>{
+ // The shipped migration satisfies the positional rule in both mutation
+ // authorities.
+ assert.doesNotThrow(()=>assertSerializedLifecycleClock(executable),'both mutation authorities derive lifecycle time after the advisory lock');
+ for(const name of MUTATION_FUNCTIONS){
+  const body=functionBodyOf(executable,name);
+  assert.ok(body.indexOf('pg_advisory_xact_lock')<body.indexOf('clock_timestamp'),`${name} serializes before it reads the clock`);
+  // No write-driving timestamp survives in the DECLARE section.
+  const declareSection=body.slice(0,body.indexOf('BEGIN'));
+  assert.doesNotMatch(declareSection,/clock_timestamp|now\(\)|CURRENT_TIMESTAMP/i,`${name} freezes no lifecycle time at function entry`);
+  assert.match(body,/transition_at:=GREATEST\(clock_timestamp\(\),latest_lifecycle_at\)/,`${name} derives its instant from the clock and the existing history endpoint`);
+  assert.match(body,/max\(GREATEST\(b\.created_at,b\.retired_at\)\)/,`${name} resolves the latest prior lifecycle endpoint under the lock`);
+ }
+ // Client/application time is never an input to lifecycle chronology.
+ assert.doesNotMatch(executable,/p_now|p_created_at|p_retired_at|p_timestamp|p_client/i,'no caller-supplied time parameter exists');
+ // The migration proves the same positional property on the INSTALLED
+ // definitions, so a later CREATE OR REPLACE cannot silently regress it.
+ assert.match(executable,/strpos\(def,'clock_timestamp'\)<strpos\(def,'pg_advisory_xact_lock'\)/,'the migration postcondition proves lock-before-clock on the installed definitions');
+ assert.match(executable,/him_session_context_binding_chronology_check/,'the migration postcondition proves the chronology constraint exists');
+
+ // Anti-vacuity: reintroducing the exact QHIA-006 pre-amendment defect - a
+ // lifecycle timestamp captured in the DECLARE section, before the advisory
+ // lock - must be REJECTED by the real guard, in each mutation authority
+ // independently.
+ const preLockDrifts=[
+  ['set captures its lifecycle time at function entry (the original defect)',
+   executable.replace('next_version integer;latest_lifecycle_at timestamptz;transition_at timestamptz;','next_version integer;latest_lifecycle_at timestamptz;transition_at timestamptz:=clock_timestamp();')],
+  ['clear captures its lifecycle time at function entry (the original defect)',
+   executable.replace('retired public.him_session_context_bindings;latest_lifecycle_at timestamptz;transition_at timestamptz;','retired public.him_session_context_bindings;latest_lifecycle_at timestamptz;transition_at timestamptz:=clock_timestamp();')],
+ ];
+ for(const[label,mutated]of preLockDrifts){
+  assert.notEqual(mutated,executable,`the "${label}" mutation actually replaced its source text`);
+  assert.throws(()=>assertSerializedLifecycleClock(mutated),/captures a lifecycle timestamp before the serialization lock/,`the guard rejects: ${label}`);
+  assert.throws(()=>assertBindingAuthorityContract(mutated),/QHIA-006 binding authority contract violated/,`the full contract rejects: ${label}`);
+ }
+ // A mutation authority that drops serialization entirely, or stops deriving
+ // a database time at all, is also rejected.
+ const noLock=executable.replace("PERFORM pg_advisory_xact_lock(hashtextextended(u::text||':session-context-binding:'||p_session_id::text||':'||p_context_kind,0));",'');
+ assert.notEqual(noLock,executable,'the removed-lock mutation actually replaced its source text');
+ assert.throws(()=>assertSerializedLifecycleClock(noLock),/does not serialize under the advisory lock/,'the guard rejects a mutation authority that stops serializing');
+ const noClock=executable.replaceAll('transition_at:=GREATEST(clock_timestamp(),latest_lifecycle_at);','transition_at:=latest_lifecycle_at;');
+ assert.notEqual(noClock,executable,'the removed-clock mutation actually replaced its source text');
+ assert.throws(()=>assertSerializedLifecycleClock(noClock),/derives no database lifecycle time/,'the guard rejects a mutation authority that derives no database time');
+});
+
 test('S3 - anti-vacuity: the real guard rejects every named drift fixture',()=>{
  const drifts=[
   ['CONVERSATION_SESSION smuggled into the kind bound',executable.replace("ARRAY['GOAL','SITUATION','DECISION','RELATIONSHIP']))","ARRAY['GOAL','SITUATION','DECISION','RELATIONSHIP','CONVERSATION_SESSION']))")],
@@ -151,6 +238,8 @@ test('S3 - anti-vacuity: the real guard rejects every named drift fixture',()=>{
   ['a latest-target fallback appeared in the read',executable.replace("ORDER BY array_position(ARRAY['GOAL','SITUATION','DECISION','RELATIONSHIP'],b.context_kind)",'ORDER BY b.created_at DESC LIMIT 1')],
   ['the lifecycle guard stopped rejecting DELETE',executable.replace("IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Session context binding history is immutable' USING ERRCODE='55000';END IF;",'')],
   ['a target text read appeared in a command',executable.replace('WHERE t.id=p_context_id AND t.user_id=u AND t.context_kind=p_context_kind','WHERE t.id=p_context_id AND t.user_id=u AND t.context_kind=p_context_kind AND t.display_text IS NOT NULL')],
+  ['the row-level chronology CHECK was dropped',executable.replace(' CONSTRAINT him_session_context_binding_chronology_check CHECK(retired_at IS NULL OR retired_at>=created_at),','')],
+  ['retirement stopped writing the serialized lifecycle instant',executable.replaceAll("SET status='RETIRED',retired_at=transition_at","SET status='RETIRED',retired_at=clock_timestamp()")],
  ];
  for(const[label,mutated]of drifts){
   assert.notEqual(mutated,executable,`the ${label} mutation actually replaced its source text`);
@@ -181,6 +270,13 @@ test('S4 - the guard creates no future ceiling',()=>{
 
 test('the 0055 verifier proves the required live-schema scenarios on real independent connections and stays non-destructive',()=>{
  for(const proof of['to_regprocedure','pg_get_functiondef','has_function_privilege','has_table_privilege','relrowsecurity','pg_get_constraintdef','him_one_active_session_context_binding','create_him_motivation_measurement_target','create_him_relationship_measurement_target_v1','read_him_latest_measurement_v1','read_him_contextual_current_intelligence_batch_v1','qandeel.session_context_binding_transition','cleanupVerifierUsers'])assert.ok(verifier.includes(proof),`the verifier exercises ${proof}`);
+ // Amendment 1: the verifier must prove lifecycle chronology, not merely that
+ // retired_at is non-null.
+ for(const proof of['him_session_context_binding_chronology_check','assertChronology','waitForConflictingAdvisoryLock','pg_locks'])assert.ok(verifier.includes(proof),`the verifier proves lifecycle chronology through ${proof}`);
+ assert.match(verifier,/clockAt<lockAt/,'the verifier deterministically rejects a pre-lock lifecycle capture on the installed definitions');
+ assert.match(verifier,/version-correct but time-reversed history/,'the verifier explicitly rejects version-correct but time-reversed history');
+ assert.match(verifier,/at\(situationHistory\[1\]\.created_at\)<at\(situationHistory\[0\]\.retired_at\)/,'the real concurrent different-target race asserts forward chronology');
+ assert.match(verifier,/chronoHistory/,'the deterministic blocked-replacement race asserts forward chronology');
  assert.match(verifier,/SET LOCAL ROLE authenticated/,'authority evidence uses a real authenticated identity');
  assert.match(verifier,/SET LOCAL ROLE anon/,'anon exclusion is exercised');
  assert.match(verifier,/SET LOCAL ROLE service_role/,'service_role exclusion is exercised');

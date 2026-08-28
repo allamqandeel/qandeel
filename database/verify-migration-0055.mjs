@@ -15,10 +15,22 @@
 // different same-kind target retires-and-versions, four kinds coexist with
 // canonical fixed read order; clear is idempotent and kind-exact; real
 // independent connections prove race safety; and every fixture rolls back.
+//
+// Amendment 1 (lifecycle chronology): it additionally proves that append-only
+// binding history can never be version-correct but TIME-REVERSED. Every
+// mutation authority derives its lifecycle instant only AFTER the advisory
+// serialization point (asserted structurally on the installed definitions, so
+// the guarantee never depends on a scheduler reproducing a race), the
+// row-level chronology CHECK rejects a retirement earlier than its own
+// creation even on a direct privileged INSERT, and serial replacement,
+// re-bind-after-clear, both real concurrent races, and a DETERMINISTIC
+// blocked-replacement race - in which a second backend enters the set command
+// before the version it will replace even exists - all produce strictly
+// forward-running audit chronology.
 import pg from'pg';import{randomUUID}from'node:crypto';import{cleanupVerifierUsers}from'./verifier-fixture-cleanup.mjs';
 const{Client}=pg;const client=new Client({connectionString:process.env.DATABASE_URL});
 const one=randomUUID(),two=randomUUID();
-const sessionMain=randomUUID(),sessionEmpty=randomUUID(),sessionInactive=randomUUID(),sessionStale=randomUUID(),sessionTwo=randomUUID(),sessionRace=randomUUID();
+const sessionMain=randomUUID(),sessionEmpty=randomUUID(),sessionInactive=randomUUID(),sessionStale=randomUUID(),sessionTwo=randomUUID(),sessionRace=randomUUID(),sessionChrono=randomUUID();
 const KINDS=['GOAL','SITUATION','DECISION','RELATIONSHIP'];
 const SET_FN='public.set_him_session_context_binding_v1(uuid,uuid,text,uuid)';
 const CLEAR_FN='public.clear_him_session_context_binding_v1(uuid,uuid,text)';
@@ -32,11 +44,42 @@ const superuser=async()=>{await client.query('RESET ROLE');};
 const rejects=async(sql,params=[])=>{await client.query('SAVEPOINT expected_rejection');let failed=false;try{await client.query(sql,params);}catch{failed=true;await client.query('ROLLBACK TO SAVEPOINT expected_rejection');}await client.query('RELEASE SAVEPOINT expected_rejection');if(!failed)throw new Error(`Expected rejection: ${sql}`);};
 const rejectsWith=async(pattern,sql,params)=>{await client.query('SAVEPOINT expected_rejection');let message='';try{await client.query(sql,params);}catch(error){message=error?.message??'';await client.query('ROLLBACK TO SAVEPOINT expected_rejection');}await client.query('RELEASE SAVEPOINT expected_rejection');if(!pattern.test(message))throw new Error(`Expected rejection ${pattern}, got: ${message||'success'}`);return message;};
 const bindingRows=async(sessionId,kind)=>(await client.query('SELECT * FROM public.him_session_context_bindings WHERE conversation_session_id=$1 AND context_kind=$2 ORDER BY binding_version',[sessionId,kind])).rows;
+// Lifecycle chronology (QHIA-006 Amendment 1). Append-only binding history is
+// only coherent if its audit timestamps never contradict its version order:
+// a row may never be retired before it was created, and a later version may
+// never be created before the lifecycle endpoint of the version it follows.
+// A history that is version-correct but time-reversed is exactly the defect
+// pre-lock clock capture produced, so it must be REJECTED here.
+const at=value=>value===null||value===undefined?null:value.getTime();
+const lifecycleEndpoint=row=>row.retired_at===null?at(row.created_at):at(row.retired_at);
+const assertChronology=(rows,label)=>{
+ let previousEndpoint=null,previousVersion=null;
+ for(const row of rows){
+  if(row.status==='ACTIVE'&&row.retired_at!==null)throw new Error(`${label}: an ACTIVE row carries a retirement time`);
+  if(row.status==='RETIRED'){
+   if(row.retired_at===null)throw new Error(`${label}: a RETIRED row carries no retirement time`);
+   if(at(row.retired_at)<at(row.created_at))throw new Error(`${label}: version ${row.binding_version} was retired before it was created`);
+  }
+  if(previousEndpoint!==null&&at(row.created_at)<previousEndpoint)throw new Error(`${label}: version ${row.binding_version} was created before the lifecycle endpoint of version ${previousVersion} - version-correct but time-reversed history`);
+  previousEndpoint=lifecycleEndpoint(row);previousVersion=row.binding_version;
+ }
+};
+// Bounded wait proving a concurrent request is genuinely BLOCKED on the exact
+// advisory serialization lock another backend holds, so the chronology race
+// below is deterministic rather than timing-hopeful.
+const waitForConflictingAdvisoryLock=async()=>{
+ for(let attempt=0;attempt<200;attempt++){
+  const waiting=Number((await client.query("SELECT count(*)::int n FROM pg_locks l WHERE l.locktype='advisory' AND NOT l.granted AND EXISTS(SELECT 1 FROM pg_locks g WHERE g.locktype='advisory' AND g.granted AND g.classid=l.classid AND g.objid=l.objid AND g.pid<>l.pid)")).rows[0].n);
+  if(waiting>0)return;
+  await new Promise(resolve=>setTimeout(resolve,25));
+ }
+ throw new Error('The concurrent replacement never blocked on the advisory serialization lock, so the deterministic chronology race was not established');
+};
 const measurementState=async()=>(await client.query('SELECT (SELECT count(*)::int FROM public.him_metric_snapshots) snapshots,(SELECT count(*)::int FROM public.him_measurement_events) events,(SELECT count(*)::int FROM public.him_measurement_observations) observations,(SELECT count(*)::int FROM public.him_calculation_results) results,(SELECT count(*)::int FROM public.him_measurement_targets) targets')).rows[0];
 const foundationDigest=async()=>(await client.query("SELECT (SELECT count(*)::int FROM public.him_metric_definitions) defs,(SELECT coalesce(sum(hashtext(d::text)),0)::text FROM public.him_metric_definitions d) defs_digest,(SELECT count(*)::int FROM public.him_calculation_models) models,(SELECT coalesce(sum(hashtext(m::text)),0)::text FROM public.him_calculation_models m) models_digest,(SELECT count(*)::int FROM public.him_canonical_model_bindings) bindings,(SELECT coalesce(sum(hashtext(b::text)),0)::text FROM public.him_canonical_model_bindings b) bindings_digest")).rows[0];
 await client.connect();try{
  await client.query('INSERT INTO auth.users(id) VALUES($1),($2) ON CONFLICT DO NOTHING',[one,two]);
- await client.query("INSERT INTO public.conversation_sessions(id,user_id,status,channel) VALUES($1,$7,'ACTIVE','TEXT'),($2,$7,'ACTIVE','TEXT'),($3,$7,'CLOSED','TEXT'),($4,$7,'ACTIVE','TEXT'),($5,$8,'ACTIVE','TEXT'),($6,$7,'ACTIVE','TEXT') ON CONFLICT DO NOTHING",[sessionMain,sessionEmpty,sessionInactive,sessionStale,sessionTwo,sessionRace,one,two]);
+ await client.query("INSERT INTO public.conversation_sessions(id,user_id,status,channel) VALUES($1,$8,'ACTIVE','TEXT'),($2,$8,'ACTIVE','TEXT'),($3,$8,'CLOSED','TEXT'),($4,$8,'ACTIVE','TEXT'),($5,$9,'ACTIVE','TEXT'),($6,$8,'ACTIVE','TEXT'),($7,$8,'ACTIVE','TEXT') ON CONFLICT DO NOTHING",[sessionMain,sessionEmpty,sessionInactive,sessionStale,sessionTwo,sessionRace,sessionChrono,one,two]);
  await client.query('BEGIN');
  // --- 1..10: exact schema shape ---------------------------------------------
  if((await client.query("SELECT to_regclass('public.him_session_context_bindings') r")).rows[0].r===null)throw new Error('The session context binding substrate must exist');
@@ -55,6 +98,10 @@ await client.connect();try{
  if(!constraint('him_session_context_binding_source_check').def.includes("'EXPLICIT_AUTHENTICATED_CONTEXT_BINDING'"))throw new Error('binding_source must be pinned to the frozen constant');
  if(!constraint('him_session_context_binding_provenance_check').def.includes("'QANDEEL_HIM_SESSION_CONTEXT_BINDING_V1'"))throw new Error('canonical_provenance must be pinned to the frozen constant');
  if(!/status\s*=\s*'RETIRED'[^;]*retired_at IS NOT NULL/.test(constraint('him_session_context_binding_retirement_check').def))throw new Error('ACTIVE/RETIRED timestamp coherence must be bound');
+ // Amendment 1: row-level lifecycle chronology, defense-in-depth beneath the
+ // serialized command derivation.
+ const chronologyDef=constraint('him_session_context_binding_chronology_check').def;
+ if(!/retired_at IS NULL/.test(chronologyDef)||!/retired_at\s*>=\s*created_at/.test(chronologyDef))throw new Error(`Row-level lifecycle chronology (retired_at >= created_at) must be bound, got: ${chronologyDef}`);
  if(!constraint('him_session_context_binding_history_unique').def.includes('(user_id, conversation_session_id, context_kind, binding_version)'))throw new Error('Per-session/kind version uniqueness must be bound');
  const sessionFk=constraint('him_session_context_binding_owned_session_fk');
  if(!sessionFk.def.includes('(conversation_session_id, user_id)')||!sessionFk.def.includes('conversation_sessions(id, user_id)')||sessionFk.confdeltype!=='r')throw new Error('The composite RESTRICT FK to conversation session ownership is wrong');
@@ -79,6 +126,19 @@ await client.connect();try{
   if(/request\.jwt/.test(props.definition))throw new Error(`${fn} must not reconstruct a JWT`);
   if(/display_text/.test(props.definition))throw new Error(`${fn} must never read target display text`);
   if(/score|confidence|relevance_weight|embedding|similarity/i.test(props.definition))throw new Error(`${fn} must carry no relevance scoring semantics`);
+  // Amendment 1, deterministic guard: in a MUTATION authority the first
+  // database clock read must come AFTER the advisory serialization point. A
+  // timestamp frozen at function entry survives a lost lock race and is then
+  // written as a retirement or creation instant that precedes history already
+  // committed by the winner. The real concurrency scheduler may not reproduce
+  // that inversion on every run, so this structural property of the INSTALLED
+  // definition is asserted directly and never left to timing alone.
+  if(volatility==='v'){
+   const lockAt=props.definition.indexOf('pg_advisory_xact_lock'),clockAt=props.definition.indexOf('clock_timestamp');
+   if(lockAt<0)throw new Error(`${fn} must serialize under the per-user/session/kind advisory lock`);
+   if(clockAt<0)throw new Error(`${fn} must derive its lifecycle instant from the database clock`);
+   if(clockAt<lockAt)throw new Error(`${fn} captures a lifecycle timestamp BEFORE the advisory serialization lock, which permits chronologically reversed append-only history`);
+  }
   const acl=(await client.query("SELECT has_function_privilege('public',$1,'EXECUTE') pub,has_function_privilege('anon',$1,'EXECUTE') anon,has_function_privilege('authenticated',$1,'EXECUTE') authenticated,has_function_privilege('service_role',$1,'EXECUTE') service_role",[fn])).rows[0];
   if(acl.pub||acl.anon||acl.service_role||!acl.authenticated)throw new Error(`${fn} EXECUTE authority must be authenticated-only`);
  }
@@ -151,6 +211,11 @@ await client.connect();try{
  if(retiredOld.id!==goalBinding.id||retiredOld.status!=='RETIRED'||retiredOld.retired_at===null)throw new Error('Replacement must retire the old ACTIVE row through the protected lifecycle');
  for(const column of['user_id','conversation_session_id','context_kind','context_id','binding_version','binding_source','canonical_provenance'])if(String(retiredOld[column])!==String(goalBinding[column]))throw new Error(`Retirement must not change ${column}`);
  if(retiredOld.created_at.getTime()!==goalBinding.created_at.getTime())throw new Error('Retirement must not change created_at');
+ // Amendment 1 (serial replacement chronology): the retirement boundary must
+ // move forward, never backward, on both sides of the transition.
+ if(at(retiredOld.retired_at)<at(retiredOld.created_at))throw new Error('The retired version must never carry a retirement instant earlier than its own creation');
+ if(at(replaced.created_at)<at(retiredOld.retired_at))throw new Error('The replacement version must never be created before the retirement boundary of the version it replaced');
+ assertChronology(goalHistory,'Serial replacement history');
  // --- 15..18: direct mutation and lifecycle bypass all fail ------------------
  await identity(one);
  await rejects('SELECT * FROM public.him_session_context_bindings');
@@ -167,6 +232,15 @@ await client.connect();try{
  await rejects('UPDATE public.him_session_context_bindings SET status=$1 WHERE id=$2',['RETIRED',replaced.id]);
  await rejects('DELETE FROM public.him_session_context_bindings WHERE id=$1',[replaced.id]);
  await superuser();
+ // Amendment 1: the row-level chronology CHECK rejects reversed retirement
+ // even on a direct privileged INSERT, where no lifecycle trigger fires. The
+ // forward-chronology control proves the rejection is specifically about time
+ // ordering and not about the row shape in general.
+ await client.query('SAVEPOINT chronology_constraint');
+ const directInsert='INSERT INTO public.him_session_context_bindings(id,user_id,conversation_session_id,context_kind,context_id,binding_version,status,binding_source,created_at,retired_at,canonical_provenance) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)';
+ await rejects(directInsert,[randomUUID(),one,sessionMain,'GOAL',goalTargetA.id,901,'RETIRED','EXPLICIT_AUTHENTICATED_CONTEXT_BINDING','2026-08-28T00:00:10Z','2026-08-28T00:00:09Z','QANDEEL_HIM_SESSION_CONTEXT_BINDING_V1']);
+ await client.query(directInsert,[randomUUID(),one,sessionMain,'GOAL',goalTargetA.id,902,'RETIRED','EXPLICIT_AUTHENTICATED_CONTEXT_BINDING','2026-08-28T00:00:10Z','2026-08-28T00:00:11Z','QANDEEL_HIM_SESSION_CONTEXT_BINDING_V1']);
+ await client.query('ROLLBACK TO SAVEPOINT chronology_constraint');await client.query('RELEASE SAVEPOINT chronology_constraint');
  // Even a privileged connection cannot bypass the protected lifecycle.
  await rejects('UPDATE public.him_session_context_bindings SET context_id=$1 WHERE id=$2',[goalTargetA.id,replaced.id]);
  await rejects('UPDATE public.him_session_context_bindings SET binding_version=binding_version+10 WHERE id=$1',[replaced.id]);
@@ -184,6 +258,10 @@ await client.connect();try{
  await identity(one);
  const goalAgain=(await client.query(SET_SQL,[one,sessionMain,'GOAL',goalTargetB.id])).rows[0];
  if(goalAgain.binding_version!==3)throw new Error('Re-binding after retirement must continue the monotonic version sequence');
+ // Amendment 1 (re-bind-after-clear chronology): with no ACTIVE row present,
+ // the next version must still not precede the latest lifecycle endpoint
+ // already recorded in that exact user/session/kind history.
+ if(at(goalAgain.created_at)<at(authorizedRetire.retired_at))throw new Error('A re-bind after retirement must never move audit time backward');
  const situationBinding=(await client.query(SET_SQL,[one,sessionMain,'SITUATION',situationTarget.id])).rows[0];
  const decisionBinding=(await client.query(SET_SQL,[one,sessionMain,'DECISION',decisionTarget.id])).rows[0];
  const relationshipBinding=(await client.query(SET_SQL,[one,sessionMain,'RELATIONSHIP',relationshipTarget.id])).rows[0];
@@ -271,6 +349,8 @@ await client.connect();try{
  const committedSituationA=(await client.query("SELECT * FROM public.create_him_motivation_measurement_target('SITUATION','verifier race situation A')")).rows[0];
  const committedSituationB=(await client.query("SELECT * FROM public.create_him_motivation_measurement_target('SITUATION','verifier race situation B')")).rows[0];
  const committedRelationship=(await client.query("SELECT * FROM public.create_him_relationship_measurement_target_v1('verifier race relationship')")).rows[0];
+ const committedChronoA=(await client.query("SELECT * FROM public.create_him_motivation_measurement_target('GOAL','verifier chronology goal A')")).rows[0];
+ const committedChronoB=(await client.query("SELECT * FROM public.create_him_motivation_measurement_target('GOAL','verifier chronology goal B')")).rows[0];
  await client.query('COMMIT');
  const raceClient=async work=>{const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();try{await c.query('BEGIN');await c.query('SET LOCAL ROLE authenticated');await c.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:one,role:'authenticated'})]);const result=await work(c);await c.query('COMMIT');return result;}catch(error){try{await c.query('ROLLBACK');}catch{}return{error:String(error?.message??error)};}finally{await c.end();}};
  // 51: two concurrent identical set commands converge to one ACTIVE binding.
@@ -294,6 +374,13 @@ await client.connect();try{
  if(JSON.stringify(situationHistory.map(row=>row.binding_version))!==JSON.stringify([1,2]))throw new Error('Concurrent replacement must keep the version sequence monotonic');
  if(situationHistory[0].status!=='RETIRED'||situationHistory[0].retired_at===null||situationHistory[1].status!=='ACTIVE'||situationHistory[1].retired_at!==null)throw new Error('Concurrent replacement must leave exactly one ACTIVE row and one coherently RETIRED row');
  if(![committedSituationA.id,committedSituationB.id].includes(situationHistory[1].context_id)||situationHistory[0].context_id===situationHistory[1].context_id)throw new Error('Concurrent replacement must preserve both exact target identities across history');
+ // Amendment 1: a concurrent replacement that is version-correct but
+ // TIME-REVERSED is rejected. This is the exact history shape a pre-lock
+ // clock capture produced when the loser of the lock race wrote its stale
+ // instant after the winner had already committed.
+ if(at(situationHistory[0].retired_at)<at(situationHistory[0].created_at))throw new Error('Concurrent replacement retired version 1 before it was created');
+ if(at(situationHistory[1].created_at)<at(situationHistory[0].retired_at))throw new Error('Concurrent replacement created version 2 before the version 1 retirement boundary');
+ assertChronology(situationHistory,'Concurrent different-target replacement history');
  // 53: concurrent set and clear cannot create two ACTIVE rows or corrupt the
  // lifecycle.
  const seed=await raceClient(async c=>(await c.query(SET_SQL,[one,sessionRace,'RELATIONSHIP',committedRelationship.id])).rows[0]);
@@ -307,6 +394,41 @@ await client.connect();try{
  if(relationshipHistory.filter(row=>row.status==='ACTIVE').length>1)throw new Error('Set/clear concurrency must never create two ACTIVE rows');
  for(const row of relationshipHistory)if((row.status==='RETIRED')!==(row.retired_at!==null))throw new Error('Set/clear concurrency must never corrupt lifecycle coherence');
  if(JSON.stringify(relationshipHistory.map(row=>row.binding_version))!==JSON.stringify(relationshipHistory.map((_,index)=>index+1)))throw new Error('Set/clear concurrency must keep the version sequence coherent and monotonic');
+ // Amendment 1: every row the real set/clear race produced must also be
+ // chronologically coherent - no retirement before its own creation, and no
+ // version created before the previous version's lifecycle endpoint.
+ assertChronology(relationshipHistory,'Concurrent set/clear history');
+ // Amendment 1: deterministic pre-lock-capture reproduction. One backend
+ // holds the exact per-user/session/kind advisory lock while a second
+ // backend's replacement blocks INSIDE the set command; the holder then
+ // commits version 1 and releases. The blocked request therefore entered the
+ // function BEFORE version 1 existed, which is precisely the scheduling that
+ // made a function-entry timestamp write reversed history. Because the
+ // lifecycle instant is now derived after serialization, the resulting
+ // history must still run forward.
+ await superuser();
+ const holder=new Client({connectionString:process.env.DATABASE_URL});
+ await holder.connect();
+ let blockedReplacement,firstVersion;
+ try{
+  await holder.query('BEGIN');
+  await holder.query('SET LOCAL ROLE authenticated');
+  await holder.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:one,role:'authenticated'})]);
+  await holder.query("SELECT pg_advisory_xact_lock(hashtextextended($1::text||':session-context-binding:'||$2::text||':'||$3,0))",[one,sessionChrono,'GOAL']);
+  blockedReplacement=raceClient(async c=>(await c.query(SET_SQL,[one,sessionChrono,'GOAL',committedChronoB.id])).rows[0]);
+  await waitForConflictingAdvisoryLock();
+  firstVersion=(await holder.query(SET_SQL,[one,sessionChrono,'GOAL',committedChronoA.id])).rows[0];
+  if(firstVersion.binding_version!==1||firstVersion.status!=='ACTIVE')throw new Error('The lock holder must establish version 1 while the replacement is blocked');
+  await holder.query('COMMIT');
+ }finally{await holder.end();}
+ const secondVersion=await blockedReplacement;
+ if(secondVersion?.error)throw new Error(`The blocked replacement must succeed once serialization releases: ${secondVersion.error}`);
+ if(secondVersion.binding_version!==2||secondVersion.context_id!==committedChronoB.id)throw new Error('The blocked replacement must become exactly version 2 of the requested target');
+ const chronoHistory=await bindingRows(sessionChrono,'GOAL');
+ if(chronoHistory.length!==2||chronoHistory[0].status!=='RETIRED'||chronoHistory[1].status!=='ACTIVE')throw new Error('The deterministic race must leave exactly one retired and one ACTIVE version');
+ if(at(chronoHistory[0].retired_at)<at(chronoHistory[0].created_at))throw new Error('A request that entered before its predecessor existed must not stamp a retirement earlier than that creation');
+ if(at(chronoHistory[1].created_at)<at(chronoHistory[0].retired_at))throw new Error('A request that entered before its predecessor existed must not create the next version before the retirement boundary');
+ assertChronology(chronoHistory,'Deterministic blocked-replacement history');
  // --- 65: complete cleanup ---------------------------------------------------
  await client.query('BEGIN');
  await client.query("SET LOCAL session_replication_role='replica'");
@@ -314,4 +436,4 @@ await client.connect();try{
  await client.query('COMMIT');
  if(Number((await client.query('SELECT count(*)::int n FROM public.him_session_context_bindings WHERE user_id=ANY($1::uuid[])',[[one,two]])).rows[0].n)!==0)throw new Error('Binding fixture cleanup must be complete');
 }finally{try{await client.query('ROLLBACK');}catch{}try{await client.query("RESET ROLE");await client.query('BEGIN');await client.query("SET LOCAL session_replication_role='replica'");await client.query('DELETE FROM public.him_session_context_bindings WHERE user_id=ANY($1::uuid[])',[[one,two]]);await client.query('COMMIT');}catch{try{await client.query('ROLLBACK');}catch{}}await cleanupVerifierUsers(client,[one,two]);await client.end();}
-console.log('Verified HIM Session Context Binding Relevance v1 (QHIA-006): the session-to-cross-context binding substrate exists with the exact frozen column set and types, the four cross-context kinds only (CONVERSATION_SESSION and GLOBAL excluded), pinned source and provenance constants, positive versioning, ACTIVE/RETIRED timestamp coherence, per-session/kind version uniqueness, the max-one-ACTIVE partial unique index, and composite RESTRICT FKs to the exact conversation-session and measurement-target ownership identities; the table is RLS-enabled with zero direct SELECT/INSERT/UPDATE/DELETE for PUBLIC, anon, authenticated, and service_role, DELETE always fails, arbitrary and privileged UPDATE fails, RETIRED can never become ACTIVE again, and only the internally authorized ACTIVE-to-RETIRED transition with database-owned retirement time succeeds; the three RPCs exist with the exact intended signatures as postgres-owned SECURITY DEFINER commands with fixed safe search_path, no dynamic SQL, no JWT reconstruction, no target display-text read, no scoring semantics, STABLE read and VOLATILE mutations, and authenticated-only EXECUTE; unauthenticated, mismatched-owner, unknown-session, cross-user-session, inactive-session, invalid-kind, CONVERSATION_SESSION, GLOBAL, unknown-target, cross-user-target, and wrong-kind-target set commands all fail closed with indistinguishable sanitized errors and no side effects; binding an exact owned unmeasured target succeeds with no measurement event, observation, snapshot, or calculation state required or written; repeating the same exact target returns the identical ACTIVE row with no new history, replacing with a different same-kind target retires the old row immutably and increments the version by exactly one, and history is preserved; one GOAL, one SITUATION, one DECISION, and one RELATIONSHIP binding coexist and are returned by one read request in the canonical fixed kind order with exactly the binding columns and never more than one ACTIVE row per kind; clear retires exactly the named kind, leaves other kinds untouched, is idempotent, owner-exact, and works on an owned inactive session while set and read reject it; reads are owner-exact with unknown and cross-user sessions indistinguishable, return zero rows for zero bindings, and write no state; existing measurement target rows stay byte-identical, no metric definition, calculation model, or canonical model binding changes, and canonical latest-measurement and QHIA-004 batch semantics are unchanged by binding commands; real independent PostgreSQL connections prove concurrent identical sets converge to one ACTIVE version-1 binding with one history insertion, concurrent different-target sets serialize into a coherent monotonic two-version history with exactly one ACTIVE row, and set/clear concurrency never creates two ACTIVE rows or corrupts the lifecycle; and every fixture is removed completely.');
+console.log('Verified HIM Session Context Binding Relevance v1 (QHIA-006): the session-to-cross-context binding substrate exists with the exact frozen column set and types, the four cross-context kinds only (CONVERSATION_SESSION and GLOBAL excluded), pinned source and provenance constants, positive versioning, ACTIVE/RETIRED timestamp coherence, per-session/kind version uniqueness, the max-one-ACTIVE partial unique index, and composite RESTRICT FKs to the exact conversation-session and measurement-target ownership identities; the table is RLS-enabled with zero direct SELECT/INSERT/UPDATE/DELETE for PUBLIC, anon, authenticated, and service_role, DELETE always fails, arbitrary and privileged UPDATE fails, RETIRED can never become ACTIVE again, and only the internally authorized ACTIVE-to-RETIRED transition with database-owned retirement time succeeds; the three RPCs exist with the exact intended signatures as postgres-owned SECURITY DEFINER commands with fixed safe search_path, no dynamic SQL, no JWT reconstruction, no target display-text read, no scoring semantics, STABLE read and VOLATILE mutations, and authenticated-only EXECUTE; unauthenticated, mismatched-owner, unknown-session, cross-user-session, inactive-session, invalid-kind, CONVERSATION_SESSION, GLOBAL, unknown-target, cross-user-target, and wrong-kind-target set commands all fail closed with indistinguishable sanitized errors and no side effects; binding an exact owned unmeasured target succeeds with no measurement event, observation, snapshot, or calculation state required or written; repeating the same exact target returns the identical ACTIVE row with no new history, replacing with a different same-kind target retires the old row immutably and increments the version by exactly one, and history is preserved; one GOAL, one SITUATION, one DECISION, and one RELATIONSHIP binding coexist and are returned by one read request in the canonical fixed kind order with exactly the binding columns and never more than one ACTIVE row per kind; clear retires exactly the named kind, leaves other kinds untouched, is idempotent, owner-exact, and works on an owned inactive session while set and read reject it; reads are owner-exact with unknown and cross-user sessions indistinguishable, return zero rows for zero bindings, and write no state; existing measurement target rows stay byte-identical, no metric definition, calculation model, or canonical model binding changes, and canonical latest-measurement and QHIA-004 batch semantics are unchanged by binding commands; real independent PostgreSQL connections prove concurrent identical sets converge to one ACTIVE version-1 binding with one history insertion, concurrent different-target sets serialize into a coherent monotonic two-version history with exactly one ACTIVE row, and set/clear concurrency never creates two ACTIVE rows or corrupts the lifecycle; and every fixture is removed completely. Amendment 1 additionally proves lifecycle chronology: both mutation authorities derive their lifecycle instant only AFTER the advisory serialization lock (asserted structurally on the installed definitions rather than left to a scheduler), the row-level chronology CHECK binds retired_at >= created_at and rejects a reversed direct privileged INSERT while accepting the forward-chronology control, serial replacement keeps old.retired_at >= old.created_at and new.created_at >= old.retired_at, a re-bind after retirement never moves audit time backward, both real two-connection races (identical-target, different-target, and set/clear) produce strictly forward-running history rather than merely version-correct history, and a DETERMINISTIC blocked-replacement race - one backend holding the exact advisory lock and committing version 1 while a second backend is provably blocked inside the set command, having entered it before version 1 existed - still yields a retirement no earlier than its creation and a replacement no earlier than that retirement boundary.');

@@ -59,6 +59,7 @@ CREATE TABLE public.him_session_context_bindings(
  retired_at timestamptz,
  canonical_provenance text NOT NULL CONSTRAINT him_session_context_binding_provenance_check CHECK(canonical_provenance='QANDEEL_HIM_SESSION_CONTEXT_BINDING_V1'),
  CONSTRAINT him_session_context_binding_retirement_check CHECK((status='RETIRED')=(retired_at IS NOT NULL)),
+ CONSTRAINT him_session_context_binding_chronology_check CHECK(retired_at IS NULL OR retired_at>=created_at),
  CONSTRAINT him_session_context_binding_history_unique UNIQUE(user_id,conversation_session_id,context_kind,binding_version),
  CONSTRAINT him_session_context_binding_owned_session_fk FOREIGN KEY(conversation_session_id,user_id) REFERENCES public.conversation_sessions(id,user_id) ON DELETE RESTRICT,
  CONSTRAINT him_session_context_binding_owned_target_fk FOREIGN KEY(context_id,user_id,context_kind) REFERENCES public.him_measurement_targets(id,user_id,context_kind) ON DELETE RESTRICT
@@ -97,9 +98,25 @@ CREATE TRIGGER him_session_context_binding_guard BEFORE UPDATE OR DELETE ON publ
 --    target returns the existing ACTIVE row untouched, while a different
 --    target of the same kind retires the old row through the protected
 --    lifecycle and inserts the next monotonic version.
+--
+--    Lifecycle CHRONOLOGY is derived only AFTER serialization. No write-driving
+--    timestamp may be captured at function entry: a request that captured the
+--    clock before the advisory lock, then lost the lock race, would otherwise
+--    retire or create a newer version using an older instant and produce
+--    append-only history whose audit chronology runs backwards while its
+--    version/status lifecycle still looks valid. transition_at is therefore
+--    taken under the lock as GREATEST(clock_timestamp(), the latest lifecycle
+--    endpoint already present in that exact user/session/kind history), which
+--    guarantees old.retired_at >= old.created_at, new.created_at >=
+--    old.retired_at, and - for a re-bind after a prior clear - a new version
+--    that can never precede the retirement that came before it. Equality at a
+--    replacement boundary is intentional: one serialized instant IS the
+--    transition. The same-target idempotent path returns before any clock is
+--    read at all, so a repeated identical binding remains exactly
+--    timestamp-neutral.
 CREATE FUNCTION public.set_him_session_context_binding_v1(p_user_id uuid,p_session_id uuid,p_context_kind text,p_context_id uuid)
 RETURNS SETOF public.him_session_context_bindings LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
-DECLARE u uuid:=auth.uid();session_status text;existing public.him_session_context_bindings;created public.him_session_context_bindings;next_version integer;canonical_now timestamptz:=clock_timestamp();
+DECLARE u uuid:=auth.uid();session_status text;existing public.him_session_context_bindings;has_active boolean;created public.him_session_context_bindings;next_version integer;latest_lifecycle_at timestamptz;transition_at timestamptz;
 BEGIN
  IF u IS NULL THEN RAISE EXCEPTION 'Authentication required' USING ERRCODE='42501';END IF;
  IF p_user_id IS NULL OR p_user_id<>u THEN RAISE EXCEPTION 'Session context bindings are owner-exact' USING ERRCODE='42501';END IF;
@@ -110,15 +127,18 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM public.him_measurement_targets t WHERE t.id=p_context_id AND t.user_id=u AND t.context_kind=p_context_kind) THEN RAISE EXCEPTION 'Unknown, cross-user, or wrong-kind measurement target' USING ERRCODE='42501';END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended(u::text||':session-context-binding:'||p_session_id::text||':'||p_context_kind,0));
  SELECT b.* INTO existing FROM public.him_session_context_bindings b WHERE b.user_id=u AND b.conversation_session_id=p_session_id AND b.context_kind=p_context_kind AND b.status='ACTIVE';
- IF FOUND AND existing.context_id=p_context_id THEN RETURN NEXT existing;RETURN;END IF;
- IF FOUND THEN
+ has_active:=FOUND;
+ IF has_active AND existing.context_id=p_context_id THEN RETURN NEXT existing;RETURN;END IF;
+ SELECT max(GREATEST(b.created_at,b.retired_at)) INTO latest_lifecycle_at FROM public.him_session_context_bindings b WHERE b.user_id=u AND b.conversation_session_id=p_session_id AND b.context_kind=p_context_kind;
+ transition_at:=GREATEST(clock_timestamp(),latest_lifecycle_at);
+ IF has_active THEN
   PERFORM set_config('qandeel.session_context_binding_transition','authorized',true);
-  UPDATE public.him_session_context_bindings SET status='RETIRED',retired_at=canonical_now WHERE id=existing.id;
+  UPDATE public.him_session_context_bindings SET status='RETIRED',retired_at=transition_at WHERE id=existing.id;
   PERFORM set_config('qandeel.session_context_binding_transition','',true);
  END IF;
  SELECT coalesce(max(b.binding_version),0)+1 INTO next_version FROM public.him_session_context_bindings b WHERE b.user_id=u AND b.conversation_session_id=p_session_id AND b.context_kind=p_context_kind;
  INSERT INTO public.him_session_context_bindings(id,user_id,conversation_session_id,context_kind,context_id,binding_version,status,binding_source,created_at,retired_at,canonical_provenance)
- VALUES(gen_random_uuid(),u,p_session_id,p_context_kind,p_context_id,next_version,'ACTIVE','EXPLICIT_AUTHENTICATED_CONTEXT_BINDING',canonical_now,NULL,'QANDEEL_HIM_SESSION_CONTEXT_BINDING_V1') RETURNING * INTO created;
+ VALUES(gen_random_uuid(),u,p_session_id,p_context_kind,p_context_id,next_version,'ACTIVE','EXPLICIT_AUTHENTICATED_CONTEXT_BINDING',transition_at,NULL,'QANDEEL_HIM_SESSION_CONTEXT_BINDING_V1') RETURNING * INTO created;
  RETURN NEXT created;RETURN;
 END$$;
 
@@ -127,10 +147,13 @@ END$$;
 --    Clearing never deletes history - it retires the one ACTIVE row through
 --    the same protected lifecycle. An owned but no-longer-active session may
 --    still be cleared so stale relevance can be retired without reactivating
---    the session; ownership checks stay identical to set.
+--    the session; ownership checks stay identical to set. The retirement
+--    instant is likewise derived only after the same advisory lock, so a
+--    clear that lost a race can never stamp a retirement earlier than the
+--    creation of the row it retires.
 CREATE FUNCTION public.clear_him_session_context_binding_v1(p_user_id uuid,p_session_id uuid,p_context_kind text)
 RETURNS SETOF public.him_session_context_bindings LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
-DECLARE u uuid:=auth.uid();existing public.him_session_context_bindings;retired public.him_session_context_bindings;canonical_now timestamptz:=clock_timestamp();
+DECLARE u uuid:=auth.uid();existing public.him_session_context_bindings;retired public.him_session_context_bindings;latest_lifecycle_at timestamptz;transition_at timestamptz;
 BEGIN
  IF u IS NULL THEN RAISE EXCEPTION 'Authentication required' USING ERRCODE='42501';END IF;
  IF p_user_id IS NULL OR p_user_id<>u THEN RAISE EXCEPTION 'Session context bindings are owner-exact' USING ERRCODE='42501';END IF;
@@ -139,8 +162,10 @@ BEGIN
  PERFORM pg_advisory_xact_lock(hashtextextended(u::text||':session-context-binding:'||p_session_id::text||':'||p_context_kind,0));
  SELECT b.* INTO existing FROM public.him_session_context_bindings b WHERE b.user_id=u AND b.conversation_session_id=p_session_id AND b.context_kind=p_context_kind AND b.status='ACTIVE';
  IF NOT FOUND THEN RETURN;END IF;
+ SELECT max(GREATEST(b.created_at,b.retired_at)) INTO latest_lifecycle_at FROM public.him_session_context_bindings b WHERE b.user_id=u AND b.conversation_session_id=p_session_id AND b.context_kind=p_context_kind;
+ transition_at:=GREATEST(clock_timestamp(),latest_lifecycle_at);
  PERFORM set_config('qandeel.session_context_binding_transition','authorized',true);
- UPDATE public.him_session_context_bindings SET status='RETIRED',retired_at=canonical_now WHERE id=existing.id RETURNING * INTO retired;
+ UPDATE public.him_session_context_bindings SET status='RETIRED',retired_at=transition_at WHERE id=existing.id RETURNING * INTO retired;
  PERFORM set_config('qandeel.session_context_binding_transition','',true);
  RETURN NEXT retired;RETURN;
 END$$;
@@ -201,6 +226,17 @@ DO $$DECLARE fn text;def text;p record;acl record;forbidden text;guard_def text;
   END LOOP;
   IF position('request.jwt' in def)>0 THEN RAISE EXCEPTION 'JWT reconstruction is forbidden in %',fn;END IF;
   IF fn LIKE 'public.read_%' AND position('set_config' in def)>0 THEN RAISE EXCEPTION 'The binding read must write no configuration state';END IF;
+  -- Lifecycle chronology: in every MUTATION authority the first database
+  -- clock read must occur AFTER the advisory serialization point, so no
+  -- write-driving instant can be frozen before the lock race is decided.
+  -- This is a deterministic structural property of the installed definition,
+  -- not a timing-dependent observation.
+  IF fn NOT LIKE 'public.read_%' THEN
+   IF strpos(def,'pg_advisory_xact_lock')=0 THEN RAISE EXCEPTION 'The mutation authority % must serialize under the advisory lock',fn;END IF;
+   IF strpos(def,'clock_timestamp')=0 THEN RAISE EXCEPTION 'The mutation authority % must derive a database lifecycle time',fn;END IF;
+   IF strpos(def,'clock_timestamp')<strpos(def,'pg_advisory_xact_lock') THEN RAISE EXCEPTION 'The mutation authority % must derive every lifecycle timestamp after the serialization lock',fn;END IF;
+  END IF;
  END LOOP;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='public.him_session_context_bindings'::regclass AND conname='him_session_context_binding_chronology_check' AND pg_get_constraintdef(oid) LIKE '%retired_at%>=%created_at%') THEN RAISE EXCEPTION 'The row-level lifecycle chronology constraint is missing';END IF;
 END$$;
 COMMIT;
