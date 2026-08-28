@@ -1,5 +1,37 @@
 import { HimRepository } from './him.repository';
 
+describe('HimRepository generic write authority retirement',()=>{
+  // QHIM-013 regression proof of ABSENCE: migration 0051 retired the generic
+  // snapshot writer to a fail-closed no-write tombstone with EXECUTE revoked
+  // from every application role, so the repository must expose no generic
+  // canonical measurement-write method and no replacement for it. Reflective
+  // access proves the symbol is gone rather than merely uncalled.
+  it('exposes no generic createObservation writer on the instance or its prototype',()=>{
+    const repository=new HimRepository({request:jest.fn()} as never) as unknown as Record<string,unknown>;
+    expect(repository.createObservation).toBeUndefined();
+    expect('createObservation' in repository).toBe(false);
+    expect(Object.getOwnPropertyNames(HimRepository.prototype)).not.toContain('createObservation');
+  });
+  it('exposes no other generic measurement-write method and keeps its read surface',()=>{
+    const methods=Object.getOwnPropertyNames(HimRepository.prototype);
+    for(const name of ['createObservation','createSnapshot','writeSnapshot','submitMeasurement','createMeasurement','observe','observeMetric'])expect(methods).not.toContain(name);
+    for(const name of ['getDefinition','listDefinitions','getLatest','listForContext','history','readTrendSource','readIntelligenceSnapshot'])expect(methods).toContain(name);
+  });
+  it('issues no non-GET request against the snapshot table and calls no legacy generic write RPC',async()=>{
+    const dataApi={request:jest.fn().mockResolvedValue([])};
+    const repository=new HimRepository(dataApi as never);
+    await repository.getDefinition('token','hse.energy',1);
+    await repository.getLatest('token','user','hse.energy',1,'CONVERSATION_SESSION','00000000-0000-4000-8000-000000000015');
+    await repository.history('token','user','hse.energy','SITUATION','legacy-situation');
+    await repository.listForContext('token','user','SITUATION','legacy-situation');
+    for(const call of dataApi.request.mock.calls){
+      const path=call[1] as string,method=(call[2]as{method?:string}|undefined)?.method??'GET';
+      expect(path).not.toContain('create_him_metric_snapshot');
+      if(path.startsWith('him_metric_snapshots'))expect(method).toBe('GET');
+    }
+  });
+});
+
 describe('HimRepository canonical latest read',()=>{
   // QHIM-005 / QHIM-007 remediation contract: canonical latest is one
   // definition-exact, context-authorized database read. The repository never
