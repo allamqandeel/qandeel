@@ -11,6 +11,8 @@ import { HimFastDeepConsumptionService } from './him-fast-deep-consumption.servi
 import { HimInteractionAdaptationService } from './him-interaction-adaptation.service';
 import { HimContextualCurrentIntelligenceService } from './him-contextual-current-intelligence.service';
 import { HimSessionReflectionConsumptionService } from './him-session-reflection-consumption.service';
+import { HimSituationStressConsumptionService } from './him-situation-stress-consumption.service';
+import { HimSituationStressRepository } from './him-situation-stress.repository';
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 import type { HimSnapshotSourceRow } from './him-intelligence-snapshot.types';
 
@@ -91,7 +93,12 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   // batch transport, exercising the graceful-degradation contract (guidance
   // omitted, HSE foreground behavior unchanged) rather than mocking it away.
   const reflectionBatchRepository = { readContextualCurrentIntelligenceBatch: jest.fn().mockRejectedValue(new Error('foundation gate: reflection transport unavailable')) };
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), hypothesisContext as never, new RecommendationGroundingService(), router,correlation,new TelemetryService(correlation));
+  // QHIA-007: the REAL Situation-stress consumption service over a real
+  // repository whose Data API double rejects, so this gate exercises the
+  // zero-incremental-wait graceful-degradation contract (guidance omitted,
+  // HSE foreground behaviour unchanged) rather than mocking it away.
+  const situationStressDataApi = { request: jest.fn().mockRejectedValue(new Error('foundation gate: situation stress transport unavailable')) };
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimSituationStressConsumptionService(new HimSituationStressRepository(situationStressDataApi as never)), hypothesisContext as never, new RecommendationGroundingService(), router,correlation,new TelemetryService(correlation));
   return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy };
 }
 

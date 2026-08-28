@@ -21,6 +21,8 @@ import { HimContextualCurrentIntelligenceService } from '../human-model/him-cont
 import type { HimContextualCurrentSelection } from '../human-model/him-contextual-current-intelligence.types';
 import { HimSessionReflectionConsumptionService } from '../human-model/him-session-reflection-consumption.service';
 import type { HimSessionReflectionGuidance } from '../human-model/him-session-reflection-consumption.types';
+import { HimSituationStressConsumptionService } from '../human-model/him-situation-stress-consumption.service';
+import type { HimSituationStressGuidance } from '../human-model/him-situation-stress-consumption.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -50,6 +52,7 @@ describe('ConversationOrchestratorService', () => {
   let himAdaptation: jest.Mocked<HimInteractionAdaptationService>;
   let himContextualCurrent: jest.Mocked<HimContextualCurrentIntelligenceService>;
   let himReflectionConsumption: jest.Mocked<HimSessionReflectionConsumptionService>;
+  let himSituationStress: jest.Mocked<HimSituationStressConsumptionService>;
   let hypothesisContext: jest.Mocked<HypothesisReasoningContextService>;
   let recommendationGrounding: jest.Mocked<RecommendationGroundingService>;
   let hypothesisEligibility: jest.Mocked<HypothesisGenerationEligibilityService>;
@@ -113,6 +116,8 @@ describe('ConversationOrchestratorService', () => {
       confidenceState: 'UNASSESSED', confidenceReference: null,
     }],
   });
+  const noneSituationStressGuidance: HimSituationStressGuidance = { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' };
+  const activeSituationStressGuidance: HimSituationStressGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'REDUCE_INTERACTION_BURDEN' };
   const noneReflectionGuidance: HimSessionReflectionGuidance = { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' };
   const inviteReflectionGuidance: HimSessionReflectionGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'GENTLE_REFLECTION_INVITATION' };
   const avoidReflectionGuidance: HimSessionReflectionGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'AVOID_REDUNDANT_REFLECTION' };
@@ -140,6 +145,7 @@ describe('ConversationOrchestratorService', () => {
     himAdaptation = { derive: jest.fn().mockReturnValue(noneAdaptation) } as unknown as jest.Mocked<HimInteractionAdaptationService>;
     himContextualCurrent = { getCurrentSelection: jest.fn().mockResolvedValue(reflectionSelection(null)), getCurrentIntelligence: jest.fn() } as unknown as jest.Mocked<HimContextualCurrentIntelligenceService>;
     himReflectionConsumption = { consume: jest.fn().mockReturnValue(noneReflectionGuidance) } as unknown as jest.Mocked<HimSessionReflectionConsumptionService>;
+    himSituationStress = { read: jest.fn().mockResolvedValue(noneSituationStressGuidance) } as unknown as jest.Mocked<HimSituationStressConsumptionService>;
     hypothesisContext = { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as jest.Mocked<HypothesisReasoningContextService>;
     recommendationGrounding = { ground: jest.fn().mockReturnValue({ coverageState: 'EMPTY', reason: 'NO_ACTIVE_HYPOTHESES' }) } as unknown as jest.Mocked<RecommendationGroundingService>;
     hypothesisEligibility = { evaluateWithContext: jest.fn().mockResolvedValue({ eligibility: { status: 'NOT_ELIGIBLE', reason: 'NO_TRIGGER' } }) } as unknown as jest.Mocked<HypothesisGenerationEligibilityService>;
@@ -152,7 +158,7 @@ describe('ConversationOrchestratorService', () => {
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
     correlation=new CorrelationService();
     telemetry=new TelemetryService(correlation);
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, hypothesisContext, recommendationGrounding, router,correlation,telemetry);
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himSituationStress, hypothesisContext, recommendationGrounding, router,correlation,telemetry);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -942,6 +948,258 @@ describe('ConversationOrchestratorService', () => {
       expect(hypothesisExtraction.extract).not.toHaveBeenCalled();
       expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
       expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Situation-bound stress foreground consumption (QHIA-007)', () => {
+    const finalizeNormally = () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    };
+    const flush = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+    it('reads Situation-bound stress once, for the authoritative claimed session, through the dedicated one-request boundary', async () => {
+      const serverClaim = { ...claimed, id: 'claimed-turn', session_id: 'claimed-session' };
+      himSelector.select.mockReturnValue({
+        contractVersion: 1, selectionState: 'SELECTED', source: 'AUTHORITATIVE_CONVERSATION_TURN',
+        sourceTurnId: serverClaim.id, contextKind: 'CONVERSATION_SESSION', contextId: serverClaim.session_id,
+        selectionReason: 'AUTHORITATIVE_SESSION_BINDING',
+      });
+      repository.claimTurn.mockResolvedValue(serverClaim);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(himSelector.select).toHaveBeenCalledTimes(1);
+      expect(himSituationStress.read).toHaveBeenCalledTimes(1);
+      expect(himSituationStress.read).toHaveBeenCalledWith('user', 'token', 'claimed-session');
+      // The QHIA-006 application boundary is never used as a foreground
+      // fan-out, and QHIA-007 never becomes a second full contextual read.
+      expect(himContextualCurrent.getCurrentIntelligence).not.toHaveBeenCalled();
+      expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledTimes(1);
+      expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledWith(
+        'user', 'token', 'CONVERSATION_SESSION', 'claimed-session', ['hbs.reflection'],
+      );
+    });
+
+    it('LAUNCHES the Situation-stress read concurrently with the Snapshot and Reflection reads, never after either settles', async () => {
+      let releaseSnapshot!: (value: HimIntelligenceSnapshot) => void;
+      let releaseReflection!: (value: HimContextualCurrentSelection) => void;
+      himSnapshot.getSnapshot.mockReturnValue(new Promise((resolve) => { releaseSnapshot = resolve; }));
+      himContextualCurrent.getCurrentSelection.mockReturnValue(new Promise((resolve) => { releaseReflection = resolve; }));
+      himSituationStress.read.mockReturnValue(new Promise(() => undefined));
+      finalizeNormally();
+      const pending = orchestrator.orchestrate('token', 'user', userTurn);
+      await flush();
+      // All three foreground HIM reads are in flight simultaneously: the
+      // Situation-stress request was issued while the Snapshot and Reflection
+      // promises are both still unresolved, so `await snapshot; await stress`
+      // (or `await reflection; await stress`) is structurally impossible.
+      expect(himSnapshot.getSnapshot).toHaveBeenCalledTimes(1);
+      expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledTimes(1);
+      expect(himSituationStress.read).toHaveBeenCalledTimes(1);
+      expect(himBridge.transform).not.toHaveBeenCalled();
+      releaseSnapshot(snapshot);
+      releaseReflection(reflectionSelection(null));
+      await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+    });
+
+    it('makes the guidance available to provider construction when it settles before the existing barrier', async () => {
+      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
+        himSituationStressGuidance: activeSituationStressGuidance,
+      }));
+    });
+
+    it('omits the router field entirely for NONE guidance', async () => {
+      himSituationStress.read.mockResolvedValue(noneSituationStressGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
+    });
+
+    it('adds ZERO incremental foreground wait: a still-pending read never delays provider dispatch', async () => {
+      jest.useFakeTimers();
+      try {
+        let releaseStress!: (value: HimSituationStressGuidance) => void;
+        himSituationStress.read.mockReturnValue(new Promise((resolve) => { releaseStress = resolve; }));
+        himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(2));
+        himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
+        finalizeNormally();
+        // Snapshot and Reflection both complete quickly; Situation-stress is
+        // still pending. The turn completes with NO timer advance at all, so
+        // no additional wait of any duration was introduced.
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
+        // The optional Reflection enrichment still won its own existing
+        // budget: QHIA-007 changed no QHIA-005 semantics.
+        expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himSessionReflectionGuidance: inviteReflectionGuidance }));
+        // No QHIA-007 timer exists: the only foreground timer in the system is
+        // the pre-existing Reflection budget, and it was cleared by its own
+        // fast resolution.
+        expect(jest.getTimerCount()).toBe(0);
+        // A late completion after dispatch is ignored for this turn.
+        releaseStress(activeSituationStressGuidance);
+        await jest.advanceTimersByTimeAsync(0);
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('dispatches at the EXISTING 300 ms Reflection barrier and adds no further wait for a pending Situation-stress read', async () => {
+      jest.useFakeTimers();
+      try {
+        himContextualCurrent.getCurrentSelection.mockReturnValue(new Promise(() => undefined));
+        himSituationStress.read.mockReturnValue(new Promise(() => undefined));
+        finalizeNormally();
+        const pending = orchestrator.orchestrate('token', 'user', userTurn);
+        await jest.advanceTimersByTimeAsync(299);
+        expect(router.generate).not.toHaveBeenCalled();
+        // Crossing the pre-existing QHIA-005 budget releases the foreground,
+        // and the still-pending QHIA-007 read adds not one millisecond.
+        await jest.advanceTimersByTimeAsync(1);
+        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+        expect(repository.failTurn).not.toHaveBeenCalled();
+        expect(jest.getTimerCount()).toBe(0);
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('degrades a rejected Situation-stress read to omitted guidance while the turn generates normally', async () => {
+      himSituationStress.read.mockRejectedValue(new Error('private data api failure'));
+      finalizeNormally();
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
+      expect(repository.failTurn).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+    });
+
+    it('absorbs a LATE rejection after dispatch with no unhandled rejection and no behavioural effect', async () => {
+      jest.useFakeTimers();
+      try {
+        let rejectStress!: (error: Error) => void;
+        himSituationStress.read.mockReturnValue(new Promise((_resolve, reject) => { rejectStress = reject; }));
+        finalizeNormally();
+        const pending = orchestrator.orchestrate('token', 'user', userTurn);
+        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        rejectStress(new Error('late private transport failure'));
+        await jest.advanceTimersByTimeAsync(0);
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(repository.failTurn).not.toHaveBeenCalled();
+        expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('never reuses a late result on the NEXT turn: the second turn reads again and gets its own answer', async () => {
+      jest.useFakeTimers();
+      try {
+        let releaseFirst!: (value: HimSituationStressGuidance) => void;
+        himSituationStress.read.mockReturnValueOnce(new Promise((resolve) => { releaseFirst = resolve; }));
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
+        // The first turn's read settles ACTIVE only after that turn dispatched.
+        releaseFirst(activeSituationStressGuidance);
+        await jest.advanceTimersByTimeAsync(0);
+        // The next turn performs its own read; the stale ACTIVE result is not
+        // carried over, and no cross-turn cache exists.
+        himSituationStress.read.mockResolvedValue(noneSituationStressGuidance);
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(himSituationStress.read).toHaveBeenCalledTimes(2);
+        expect(router.generate).toHaveBeenCalledTimes(2);
+        expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himSituationStressGuidance');
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('records the enrichment outcome inside its own him_situation_stress_context engine span', async () => {
+      const withEngine = jest.spyOn(telemetry, 'withEngine');
+      himSituationStress.read.mockRejectedValue(new Error('private transport failure'));
+      finalizeNormally();
+      const pending = correlation.runRequest(() => orchestrator.orchestrate('token', 'user', userTurn));
+      await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      const stressEngineResults = withEngine.mock.calls
+        .map((call, index) => ({ engine: call[0], result: withEngine.mock.results[index] }))
+        .filter(({ engine }) => engine === 'him_situation_stress_context');
+      expect(stressEngineResults).toHaveLength(1);
+      await expect(stressEngineResults[0].result.value).rejects.toThrow('private transport failure');
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
+      expect(repository.failTurn).not.toHaveBeenCalled();
+    });
+
+    it('delivers an active HSE adaptation, active Reflection guidance, and active Situation-stress guidance together', async () => {
+      himAdaptation.derive.mockReturnValue(activeAdaptation);
+      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(4));
+      himReflectionConsumption.consume.mockReturnValue(avoidReflectionGuidance);
+      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
+        himInteractionAdaptation: activeAdaptation,
+        himSessionReflectionGuidance: avoidReflectionGuidance,
+        himSituationStressGuidance: activeSituationStressGuidance,
+      }));
+    });
+
+    it('gives FAST and DEEP identical guidance and never participates in path selection', async () => {
+      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
+      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+      repository.claimTurn.mockResolvedValue(deepClaim);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
+      await orchestrator.orchestrate('token', 'user', deepTurn);
+      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himSituationStressGuidance: activeSituationStressGuidance });
+      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himSituationStressGuidance: activeSituationStressGuidance });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+    });
+
+    it('keeps the HSE Snapshot -> Reasoning -> Adaptation chain and the Reflection channel exactly unchanged', async () => {
+      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
+      himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(2));
+      himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(himSnapshot.getSnapshot).toHaveBeenCalledWith('token', 'CONVERSATION_SESSION', 'session');
+      expect(himBridge.transform).toHaveBeenCalledTimes(1);
+      expect(himBridge.transform).toHaveBeenCalledWith(snapshot);
+      expect(himAdaptation.derive).toHaveBeenCalledTimes(1);
+      expect(himAdaptation.derive).toHaveBeenCalledWith(himReasoningContext);
+      expect(himConsumptionPolicy.project).toHaveBeenCalledWith('FAST', himReasoningContext);
+      expect(himReflectionConsumption.consume).toHaveBeenCalledTimes(1);
+      expect(himReflectionConsumption.consume).toHaveBeenCalledWith(reflectionSelection(2));
+    });
+
+    it('adds no Question, Recommendation, Hypothesis, Memory, or provider work beyond the guidance channel', async () => {
+      himSituationStress.read.mockResolvedValue(activeSituationStressGuidance);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(memoryRetriever.retrieve).toHaveBeenCalledTimes(1);
+      expect(hypothesisContext.build).toHaveBeenCalledTimes(1);
+      expect(recommendationGrounding.ground).toHaveBeenCalledTimes(1);
+      expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
+      expect(hypothesisExtraction.extract).not.toHaveBeenCalled();
+      expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
+      expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
+    });
+
+    it('performs no Situation-stress read at all when Safety BLOCKs the turn', async () => {
+      safetyGate.evaluate.mockReturnValue({ category: 'RISK', disposition: 'BLOCK', deterministicResponse: 'safe' });
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(himSituationStress.read).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
     });
   });
 

@@ -54,6 +54,8 @@ import { HimFastDeepConsumptionService } from '../src/human-model/him-fast-deep-
 import { HimInteractionAdaptationService } from '../src/human-model/him-interaction-adaptation.service';
 import { HimContextualCurrentIntelligenceService } from '../src/human-model/him-contextual-current-intelligence.service';
 import { HimSessionReflectionConsumptionService } from '../src/human-model/him-session-reflection-consumption.service';
+import { HimSituationStressConsumptionService } from '../src/human-model/him-situation-stress-consumption.service';
+import { HimSituationStressRepository } from '../src/human-model/him-situation-stress.repository';
 import { HimRepository } from '../src/human-model/him.repository';
 import { HypothesisService } from '../src/hypothesis/hypothesis.service';
 import { HypothesisRepository } from '../src/hypothesis/hypothesis.repository';
@@ -229,6 +231,13 @@ async function main(): Promise<void> {
     // Reflection fixture exists in this smoke, so the canonical batch read
     // resolves UNKNOWN and the derived guidance stays NONE (omitted).
     const himContextualCurrentService = new HimContextualCurrentIntelligenceService(himRepository);
+    // QHIA-007: the REAL Situation-stress consumption boundary over the same
+    // authenticated transport adapter. It is launched concurrently with the
+    // HSE Snapshot and Reflection reads and adds no foreground wait. This
+    // smoke binds no Situation to the session, so the migration-0056
+    // composition returns the deterministic NO_ACTIVE_SITUATION answer and the
+    // derived guidance stays NONE (omitted from the provider request).
+    const himSituationStressService = new HimSituationStressConsumptionService(new HimSituationStressRepository(memoryDataApi));
     const hypothesisService = new HypothesisService(
       new HypothesisRepository(memoryDataApi, unusedDependency<HypothesisServiceRoleApiService>('HYPOTHESIS_SERVICE_ROLE_API')),
       evidenceService);
@@ -238,7 +247,7 @@ async function main(): Promise<void> {
     const orchestrator = new ConversationOrchestratorService(
       conversationRepository, contextBuilder, new SafetyResponseGateService(), new BehavioralResponsePolicyService(),
       memoryRetriever, new HimTurnContextSelectionService(), himSnapshotService, new HimReasoningConsumptionService(),
-      new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), himContextualCurrentService, new HimSessionReflectionConsumptionService(),
+      new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), himContextualCurrentService, new HimSessionReflectionConsumptionService(), himSituationStressService,
       hypothesisReasoningContext, new RecommendationGroundingService(),
       conversationalRouter, correlation, telemetry);
 
