@@ -15,6 +15,9 @@ import { HimIntelligenceSnapshotService } from '../human-model/him-intelligence-
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
 import { HimFastDeepConsumptionService } from '../human-model/him-fast-deep-consumption.service';
 import { HimInteractionAdaptationService } from '../human-model/him-interaction-adaptation.service';
+import { HimContextualCurrentIntelligenceService } from '../human-model/him-contextual-current-intelligence.service';
+import { HimSessionReflectionConsumptionService } from '../human-model/him-session-reflection-consumption.service';
+import type { HimSessionReflectionGuidance } from '../human-model/him-session-reflection-consumption.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -22,6 +25,13 @@ import { HypothesisReasoningInvariantError } from '../hypothesis/hypothesis-reas
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 
 const DEEP_INPUT_LENGTH = 1000;
+// QHIA-005 amendment (PR #164): the maximum foreground orchestration time
+// spent waiting for the OPTIONAL Session Reflection enrichment. This is not a
+// database/provider SLA and does not change the shared Data API transport
+// timeout - it only stops a slow-but-not-failed Reflection read from holding
+// the foreground turn hostage. On expiry the foreground treats Reflection as
+// UNAVAILABLE and proceeds without guidance.
+const SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_MS = 300;
 
 @Injectable()
 export class ConversationOrchestratorService {
@@ -36,6 +46,8 @@ export class ConversationOrchestratorService {
     private readonly himReasoningConsumption: HimReasoningConsumptionService,
     private readonly himFastDeepConsumption: HimFastDeepConsumptionService,
     private readonly himInteractionAdaptation: HimInteractionAdaptationService,
+    private readonly himContextualCurrentIntelligence: HimContextualCurrentIntelligenceService,
+    private readonly himSessionReflectionConsumption: HimSessionReflectionConsumptionService,
     private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
     private readonly recommendationGrounding: RecommendationGroundingService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
@@ -83,17 +95,45 @@ export class ConversationOrchestratorService {
         this.telemetry.recordTurnOutcome('blocked',selection.path);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
-      const {himContext,himInteractionAdaptation}=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
-      const himSnapshot = await this.himSnapshot.getSnapshot(
+      const {himContext,himInteractionAdaptation,himSessionReflectionGuidance}=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
+      // QHIA-005: the HSE Intelligence Snapshot read and the one-metric
+      // hbs.reflection selective read (QHIA-004 boundary, exactly one batch
+      // request) are LAUNCHED CONCURRENTLY for the same authoritative session
+      // selection - Reflection is never a serial network stage after the
+      // Snapshot, and never a second full contextual read.
+      const himSnapshotPromise = this.himSnapshot.getSnapshot(
         accessToken,
         himSelection.contextKind,
         himSelection.contextId,
       );
+      // Reflection is optional enrichment: a failed read, or a read still
+      // pending when the foreground wait budget expires, stays visible as a
+      // rejection through its nested engine span but degrades to no guidance
+      // instead of failing the turn - fail-closed consumption, never invented
+      // fallback data.
+      const reflectionReadPromise = this.engine('him_reflection_context',selection.path,()=>this.withSessionReflectionForegroundBudget(()=>this.himContextualCurrentIntelligence.getCurrentSelection(
+        userId,
+        accessToken,
+        'CONVERSATION_SESSION',
+        himSelection.contextId,
+        ['hbs.reflection'],
+      ))).then(
+        (value) => ({ state: 'AVAILABLE' as const, value }),
+        () => ({ state: 'UNAVAILABLE' as const }),
+      );
+      const [himSnapshot, reflectionRead] = await Promise.all([himSnapshotPromise, reflectionReadPromise]);
       const himReasoningContext = this.himReasoningConsumption.transform(himSnapshot);
       // The adaptation derives from the reasoning context BEFORE the FAST/DEEP
       // density projection: it is path-independent and never selects the path.
       const adaptation = this.himInteractionAdaptation.derive(himReasoningContext);
-      return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation};});
+      // The pure Reflection consumption boundary fails closed on a malformed
+      // selection; on this optional enrichment path that failure also degrades
+      // to omitted guidance and never alters the HSE adaptation or the turn.
+      let reflectionGuidance: HimSessionReflectionGuidance | undefined;
+      if (reflectionRead.state === 'AVAILABLE') {
+        try { reflectionGuidance = this.himSessionReflectionConsumption.consume(reflectionRead.value); } catch { reflectionGuidance = undefined; }
+      }
+      return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation,himSessionReflectionGuidance:reflectionGuidance};});
       const memoryContext = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));
       let hypothesisResult;
       try {
@@ -115,6 +155,7 @@ export class ConversationOrchestratorService {
         ...(assembledContext.memoryContext ? { memoryContext: assembledContext.memoryContext } : {}),
         himContext,
         ...(himInteractionAdaptation.adaptationState === 'ACTIVE' ? { himInteractionAdaptation } : {}),
+        ...(himSessionReflectionGuidance?.guidanceState === 'ACTIVE' ? { himSessionReflectionGuidance } : {}),
         ...(hypothesisResult.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesisResult.context } : {}),
         ...(recommendationGrounding.coverageState === 'AVAILABLE' ? { recommendationContext: recommendationGrounding.context } : {}),
         locale: 'und', modality: 'TEXT',
@@ -138,6 +179,28 @@ export class ConversationOrchestratorService {
   }
 
   private engine<T>(name:string,path:ProcessingPath|undefined,work:()=>Promise<T>|T):Promise<T>{return this.correlation.current()?this.telemetry.withEngine(name,path,work):Promise.resolve().then(work);}
+
+  // QHIA-005 amendment: bounded foreground wait for the optional Reflection
+  // enrichment. Rejects INSIDE the him_reflection_context engine work when the
+  // budget expires, so telemetry records a failed enrichment rather than a
+  // false success. The timer is always cleared on the read's own settlement
+  // (no timer leak on a fast read), and the underlying Data API request keeps
+  // its handlers attached, so a late fulfillment or rejection after the budget
+  // settles into this already-settled promise as a no-op: no unhandled
+  // rejection, no late consumption, no second provider call, and no mutation
+  // of the completed turn. No transport cancellation is introduced here.
+  private withSessionReflectionForegroundBudget<T>(read: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error('SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_EXCEEDED')),
+        SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_MS,
+      );
+      Promise.resolve().then(read).then(
+        (value) => { clearTimeout(timer); resolve(value); },
+        (error) => { clearTimeout(timer); reject(error); },
+      );
+    });
+  }
 
   private async currentResult(accessToken: string, userId: string, turn: ConversationTurn): Promise<OrchestratedTurnResult> {
     const userTurn = await this.repository.findTurn(accessToken, turn.session_id, userId, turn.id) ?? turn;

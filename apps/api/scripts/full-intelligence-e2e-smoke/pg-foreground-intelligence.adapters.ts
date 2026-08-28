@@ -31,6 +31,9 @@ const AUTHENTICATED_RPC_ALLOWLIST = new Set([
   'create_conversation_session_v1',
   'create_user_conversation_turn',
   'read_him_intelligence_snapshot_v1',
+  // QHIA-005: the one-request QHIA-004 batch transport for the foreground
+  // hbs.reflection selective read (migration 0054, read-only).
+  'read_him_contextual_current_intelligence_batch_v1',
 ]);
 const SERVICE_ROLE_RPC_ALLOWLIST = new Set([
   'claim_conversation_turn',
