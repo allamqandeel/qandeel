@@ -55,6 +55,19 @@ export class HimSituationStressConsumptionService {
     if (typeof sessionId !== 'string' || !HIM_UUID.test(sessionId)) throw new Error('INVALID_SITUATION_STRESS_REQUEST');
 
     const rows = await this.repository.readSessionSituationStress(token, userId, sessionId);
+    return this.consumeSourceRows(rows);
+  }
+
+  // The PURE Situation-stress consumption boundary: raw migration-0056 rows in,
+  // bounded guidance out, no transport of any kind.
+  //
+  // This is an EXTRACTION, not a new rule. Every validation and every mapping
+  // below is the frozen QHIA-007 logic moved here verbatim so that the
+  // QHIA-009 aggregate, which receives the SAME nested row shape over one
+  // shared request instead of a dedicated one, reuses this exact semantic
+  // authority instead of growing a second, divergent copy. read(...) above is
+  // its only other caller and its behaviour is unchanged.
+  consumeSourceRows(rows: HimSituationStressSourceRow[]): HimSituationStressGuidance {
     // The composition always answers with exactly one row - unbound or bound.
     // Zero rows, several rows, or a non-array payload is an integrity breach,
     // never a silently repaired absence.

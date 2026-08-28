@@ -34,17 +34,21 @@ const AUTHENTICATED_RPC_ALLOWLIST = new Set([
   // QHIA-005: the one-request QHIA-004 batch transport for the foreground
   // hbs.reflection selective read (migration 0054, read-only).
   'read_him_contextual_current_intelligence_batch_v1',
-  // QHIA-007: the one-request Situation-stress composition for the foreground
-  // SITUATION + hse.stress@1 read (migration 0056, read-only). It composes the
-  // QHIA-006 relevance authority with the QHIA-004 batch authority server-side,
-  // so no separate binding-read request appears on this allowlist.
-  'read_him_session_situation_stress_v1',
-  // QHIA-008: the one-request Decision-attention composition for the
-  // foreground DECISION + hse.attention@1 read (migration 0057, read-only). It
-  // composes the QHIA-006 relevance authority with the QHIA-004 batch
-  // authority server-side, so no separate binding-read request appears on this
-  // allowlist - and no hse.self-confidence read appears anywhere.
-  'read_him_session_decision_attention_v1',
+  // QHIA-009: the ONE cross-context foreground aggregate transport (migration
+  // 0058, read-only). It wraps the already-proven migration-0056 Situation-
+  // stress and migration-0057 Decision-attention authorities server-side, which
+  // in turn compose the QHIA-006 relevance authority with the QHIA-004 batch
+  // authority - so no binding-read request, no separate per-channel request,
+  // and no hse.self-confidence read appears anywhere on this allowlist.
+  //
+  // The two direct per-channel RPCs are deliberately ABSENT. They remain
+  // canonical database authorities, independently verified by their own
+  // migrations and verifiers; this allowlist is smoke-only and describes the
+  // exact foreground transport the production Orchestrator is supposed to use.
+  // Keeping them here would let a regression back to the retired two-request
+  // shape pass unnoticed, and the transport census below would have nothing to
+  // catch.
+  'read_him_session_cross_context_foreground_v1',
 ]);
 const SERVICE_ROLE_RPC_ALLOWLIST = new Set([
   'claim_conversation_turn',
@@ -53,6 +57,45 @@ const SERVICE_ROLE_RPC_ALLOWLIST = new Set([
 ]);
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/u;
 const SELECT_LIST = /^[a-z_][a-z0-9_,]*$/u;
+
+/**
+ * Smoke-only authenticated RPC transport census.
+ *
+ * It records what the frozen PRODUCTION repositories actually ASKED this
+ * substitute for - before any allowlist decision - and, separately, what
+ * actually completed against real PostgreSQL. Both halves matter:
+ *
+ *   * recording the ATTEMPT before the allowlist check makes "zero direct
+ *     per-channel foreground attempts" a claim about production behaviour
+ *     rather than a restatement of what this allowlist happens to permit;
+ *   * recording COMPLETION separately is what distinguishes "the RPC really
+ *     ran and returned an authoritative answer" from "the RPC was rejected and
+ *     an optional foreground enrichment silently degraded" - two states that a
+ *     pass/fail smoke result alone cannot tell apart.
+ *
+ * This is verification instrumentation and lives entirely inside the
+ * verification-only PostgREST substitute: no production service, repository,
+ * or orchestrator is instrumented, and nothing here changes what production
+ * requests or how it behaves.
+ */
+export class SmokeAuthenticatedRpcCensus {
+  private readonly attempted = new Map<string, number>();
+  private readonly completed = new Map<string, number>();
+  private readonly failed = new Map<string, number>();
+
+  private static bump(counts: Map<string, number>, name: string): void {
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+
+  recordAttempt(name: string): void { SmokeAuthenticatedRpcCensus.bump(this.attempted, name); }
+  recordCompletion(name: string): void { SmokeAuthenticatedRpcCensus.bump(this.completed, name); }
+  recordFailure(name: string): void { SmokeAuthenticatedRpcCensus.bump(this.failed, name); }
+
+  attempts(name: string): number { return this.attempted.get(name) ?? 0; }
+  completions(name: string): number { return this.completed.get(name) ?? 0; }
+  failures(name: string): number { return this.failed.get(name) ?? 0; }
+  attemptedNames(): string[] { return [...this.attempted.keys()].sort(); }
+}
 
 function unsupported(detail: string): never {
   throw new Error(`FULL_INTELLIGENCE_E2E_UNSUPPORTED_DATA_API_REQUEST:${detail}`);
@@ -173,10 +216,14 @@ function rpcCall(name: string, body: Record<string, unknown>): TranslatedQuery {
  * is exactly what PostgREST derives the JWT into for auth.uid()/RLS.
  */
 export class PgAuthenticatedDataApiAdapter {
+  // Smoke-only observability of this substitute's own traffic. Production is
+  // unaware of it and unaffected by it.
+  readonly rpcCensus = new SmokeAuthenticatedRpcCensus();
+
   constructor(private readonly db: SmokeDbSession) {}
 
   async request<T>(_accessToken: string, path: string, init: RequestInit = {}): Promise<T> {
-    return executePostgrestRequest<T>(this.db, 'authenticated', AUTHENTICATED_RPC_ALLOWLIST, path, init);
+    return executePostgrestRequest<T>(this.db, 'authenticated', AUTHENTICATED_RPC_ALLOWLIST, path, init, this.rpcCensus);
   }
 }
 
@@ -201,14 +248,25 @@ async function executePostgrestRequest<T>(
   rpcAllowlist: ReadonlySet<string>,
   path: string,
   init: RequestInit,
+  census?: SmokeAuthenticatedRpcCensus,
 ): Promise<T> {
   if (path.startsWith('rpc/')) {
     const name = path.slice('rpc/'.length);
-    if (!rpcAllowlist.has(name)) unsupported(`rpc:${name}`);
-    if ((init.method ?? 'POST') !== 'POST' || typeof init.body !== 'string') unsupported('rpc-method');
-    const body = JSON.parse(init.body) as Record<string, unknown>;
-    const { text, values } = rpcCall(name, body);
-    return (await db.asRole(role, text, values)) as T;
+    // Recorded BEFORE the allowlist decision: this counts what production
+    // asked for, so a request this substitute refuses is still observable.
+    census?.recordAttempt(name);
+    try {
+      if (!rpcAllowlist.has(name)) unsupported(`rpc:${name}`);
+      if ((init.method ?? 'POST') !== 'POST' || typeof init.body !== 'string') unsupported('rpc-method');
+      const body = JSON.parse(init.body) as Record<string, unknown>;
+      const { text, values } = rpcCall(name, body);
+      const rows = (await db.asRole(role, text, values)) as T;
+      census?.recordCompletion(name);
+      return rows;
+    } catch (error) {
+      census?.recordFailure(name);
+      throw error;
+    }
   }
   if (init.method && init.method !== 'GET') unsupported('table-method');
   const queryIndex = path.indexOf('?');

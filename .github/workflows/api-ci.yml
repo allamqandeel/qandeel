@@ -94,6 +94,7 @@ jobs:
       - {name: Verify HIM session context binding relevance against real PostgreSQL, run: npm run verify:him-session-context-binding:integration}
       - {name: Verify HIM Situation-bound stress foreground consumption against real PostgreSQL, run: npm run verify:him-situation-stress-foreground-consumption:integration}
       - {name: Verify HIM Decision-bound attention foreground consumption against real PostgreSQL, run: npm run verify:him-decision-attention-foreground-consumption:integration}
+      - {name: Verify HIM cross-context foreground aggregation against real PostgreSQL, run: npm run verify:him-cross-context-foreground-aggregation:integration}
       - {name: Verify HIM temporal trend source against real PostgreSQL, run: npm run verify:him-trends:integration}
       - {name: Verify HIM Intelligence Snapshot against real PostgreSQL, run: npm run verify:him-snapshot:integration}
       - {name: Verify background HIM runtime consumption against real PostgreSQL, run: npm run verify:background-him-runtime-consumption:integration}

@@ -18,10 +18,8 @@ import { HimInteractionAdaptationService } from '../human-model/him-interaction-
 import { HimContextualCurrentIntelligenceService } from '../human-model/him-contextual-current-intelligence.service';
 import { HimSessionReflectionConsumptionService } from '../human-model/him-session-reflection-consumption.service';
 import type { HimSessionReflectionGuidance } from '../human-model/him-session-reflection-consumption.types';
-import { HimSituationStressConsumptionService } from '../human-model/him-situation-stress-consumption.service';
-import type { HimSituationStressGuidance } from '../human-model/him-situation-stress-consumption.types';
-import { HimDecisionAttentionConsumptionService } from '../human-model/him-decision-attention-consumption.service';
-import type { HimDecisionAttentionGuidance } from '../human-model/him-decision-attention-consumption.types';
+import { HimCrossContextForegroundAggregationService } from '../human-model/him-cross-context-foreground-aggregation.service';
+import type { HimCrossContextForegroundGuidance } from '../human-model/him-cross-context-foreground.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -52,8 +50,7 @@ export class ConversationOrchestratorService {
     private readonly himInteractionAdaptation: HimInteractionAdaptationService,
     private readonly himContextualCurrentIntelligence: HimContextualCurrentIntelligenceService,
     private readonly himSessionReflectionConsumption: HimSessionReflectionConsumptionService,
-    private readonly himSituationStressConsumption: HimSituationStressConsumptionService,
-    private readonly himDecisionAttentionConsumption: HimDecisionAttentionConsumptionService,
+    private readonly himCrossContextForeground: HimCrossContextForegroundAggregationService,
     private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
     private readonly recommendationGrounding: RecommendationGroundingService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
@@ -127,75 +124,49 @@ export class ConversationOrchestratorService {
         (value) => ({ state: 'AVAILABLE' as const, value }),
         () => ({ state: 'UNAVAILABLE' as const }),
       );
-      // QHIA-007: the Situation-bound stress read is LAUNCHED HERE, in the
-      // same synchronous step as the Snapshot and Reflection reads, so it
-      // begins concurrently with them and never after either one finishes. It
-      // is exactly ONE external Data API request against the migration-0056
-      // composition RPC - the application never reads the QHIA-006 binding
-      // first in order to ask QHIA-004 a second question.
+      // QHIA-009: the ONE cross-context foreground read is LAUNCHED HERE, in
+      // the same synchronous step as the Snapshot and Reflection reads, so it
+      // begins concurrently with them and never after either one finishes.
+      //
+      // It replaces the two independent QHIA-007 and QHIA-008 launches that
+      // preceded it. It is exactly ONE external Data API request against the
+      // migration-0058 aggregate RPC, which WRAPS the unchanged migration-0056
+      // and migration-0057 authorities: the orchestrator no longer calls
+      // either direct read, issues no backup request, and never races the
+      // aggregate against them. Both channels therefore share one external
+      // settlement - intentional in v1 - so a still-pending aggregate means
+      // neither channel is used for this turn rather than a fallback fan-out.
       //
       // It carries ZERO INCREMENTAL FOREGROUND WAIT: no new timeout is
       // introduced, the existing 300 ms QHIA-005 Reflection budget is neither
       // reused nor extended, and the foreground never awaits this promise.
       // The settlement handler below is attached IMMEDIATELY (so a rejection
       // is always handled and can never become an unhandled rejection) and
-      // simply records the guidance if - and only if - the read settles
-      // successfully BEFORE the existing foreground barrier closes. Anything
-      // that settles later is discarded for good: it cannot delay dispatch,
-      // mutate an in-flight provider request, be consumed by this turn, or be
-      // carried into any other turn or session, and no cross-turn cache
-      // exists anywhere on this path.
-      let situationStressSettled: HimSituationStressGuidance | undefined;
-      let situationStressBarrierClosed = false;
-      const situationStressReadPromise = this.engine('him_situation_stress_context',selection.path,()=>this.himSituationStressConsumption.read(
+      // simply records the decoded guidance if - and only if - the read
+      // settles successfully BEFORE the existing foreground barrier closes.
+      // Anything that settles later is discarded for good: it cannot delay
+      // dispatch, mutate an in-flight provider request, be consumed by this
+      // turn, or be carried into any other turn or session, and no cross-turn
+      // cache exists anywhere on this path.
+      let crossContextForegroundSettled: HimCrossContextForegroundGuidance | undefined;
+      let crossContextForegroundBarrierClosed = false;
+      const crossContextForegroundReadPromise = this.engine('him_cross_context_foreground',selection.path,()=>this.himCrossContextForeground.read(
         userId,
         accessToken,
         himSelection.contextId,
       ));
-      situationStressReadPromise.then(
-        (value) => { if (!situationStressBarrierClosed) situationStressSettled = value; },
-        () => undefined,
-      );
-      // QHIA-008: the Decision-bound attention read is LAUNCHED HERE too, in
-      // the same synchronous step as the Snapshot, Reflection, and
-      // Situation-stress reads. It begins concurrently with all three and
-      // never after any of them finishes - in particular it neither waits for
-      // nor gates the QHIA-007 read, and QHIA-007 neither waits for nor gates
-      // it. It is exactly ONE external Data API request against the
-      // migration-0057 composition RPC - the application never reads the
-      // QHIA-006 binding first in order to ask QHIA-004 a second question.
-      //
-      // It carries ZERO INCREMENTAL FOREGROUND WAIT: no new timeout is
-      // introduced, the existing 300 ms QHIA-005 Reflection budget is neither
-      // reused nor extended, and the foreground never awaits this promise.
-      // The settlement handler below is attached IMMEDIATELY (so a rejection
-      // is always handled and can never become an unhandled rejection) and
-      // simply records the guidance if - and only if - the read settles
-      // successfully BEFORE the existing foreground barrier closes. Anything
-      // that settles later is discarded for good: it cannot delay dispatch,
-      // mutate an in-flight provider request, be consumed by this turn, or be
-      // carried into any other turn or session, and no cross-turn cache
-      // exists anywhere on this path.
-      let decisionAttentionSettled: HimDecisionAttentionGuidance | undefined;
-      let decisionAttentionBarrierClosed = false;
-      const decisionAttentionReadPromise = this.engine('him_decision_attention_context',selection.path,()=>this.himDecisionAttentionConsumption.read(
-        userId,
-        accessToken,
-        himSelection.contextId,
-      ));
-      decisionAttentionReadPromise.then(
-        (value) => { if (!decisionAttentionBarrierClosed) decisionAttentionSettled = value; },
+      crossContextForegroundReadPromise.then(
+        (value) => { if (!crossContextForegroundBarrierClosed) crossContextForegroundSettled = value; },
         () => undefined,
       );
       const [himSnapshot, reflectionRead] = await Promise.all([himSnapshotPromise, reflectionReadPromise]);
       // The existing foreground barrier - and the ONLY one. Reading the
-      // recorded values here adds no await of any kind: an already-settled
-      // QHIA-007 or QHIA-008 read is usable, a still-pending one is simply
-      // absent, and neither channel is a precondition of the other.
-      situationStressBarrierClosed = true;
-      decisionAttentionBarrierClosed = true;
-      const situationStressGuidance = situationStressSettled;
-      const decisionAttentionGuidance = decisionAttentionSettled;
+      // recorded value here adds no await of any kind: an already-settled
+      // aggregate yields both existing guidance contracts, and a still-pending
+      // or rejected one is simply absent for this turn.
+      crossContextForegroundBarrierClosed = true;
+      const situationStressGuidance = crossContextForegroundSettled?.situationStress;
+      const decisionAttentionGuidance = crossContextForegroundSettled?.decisionAttention;
       const himReasoningContext = this.himReasoningConsumption.transform(himSnapshot);
       // The adaptation derives from the reasoning context BEFORE the FAST/DEEP
       // density projection: it is path-independent and never selects the path.
