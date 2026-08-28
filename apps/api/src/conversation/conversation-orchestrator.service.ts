@@ -25,6 +25,13 @@ import { HypothesisReasoningInvariantError } from '../hypothesis/hypothesis-reas
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 
 const DEEP_INPUT_LENGTH = 1000;
+// QHIA-005 amendment (PR #164): the maximum foreground orchestration time
+// spent waiting for the OPTIONAL Session Reflection enrichment. This is not a
+// database/provider SLA and does not change the shared Data API transport
+// timeout - it only stops a slow-but-not-failed Reflection read from holding
+// the foreground turn hostage. On expiry the foreground treats Reflection as
+// UNAVAILABLE and proceeds without guidance.
+const SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_MS = 300;
 
 @Injectable()
 export class ConversationOrchestratorService {
@@ -99,16 +106,18 @@ export class ConversationOrchestratorService {
         himSelection.contextKind,
         himSelection.contextId,
       );
-      // Reflection is optional enrichment: a failed read stays visible through
-      // its nested engine span but degrades to no guidance instead of failing
-      // the turn - fail-closed consumption, never invented fallback data.
-      const reflectionReadPromise = this.engine('him_reflection_context',selection.path,()=>this.himContextualCurrentIntelligence.getCurrentSelection(
+      // Reflection is optional enrichment: a failed read, or a read still
+      // pending when the foreground wait budget expires, stays visible as a
+      // rejection through its nested engine span but degrades to no guidance
+      // instead of failing the turn - fail-closed consumption, never invented
+      // fallback data.
+      const reflectionReadPromise = this.engine('him_reflection_context',selection.path,()=>this.withSessionReflectionForegroundBudget(()=>this.himContextualCurrentIntelligence.getCurrentSelection(
         userId,
         accessToken,
         'CONVERSATION_SESSION',
         himSelection.contextId,
         ['hbs.reflection'],
-      )).then(
+      ))).then(
         (value) => ({ state: 'AVAILABLE' as const, value }),
         () => ({ state: 'UNAVAILABLE' as const }),
       );
@@ -170,6 +179,28 @@ export class ConversationOrchestratorService {
   }
 
   private engine<T>(name:string,path:ProcessingPath|undefined,work:()=>Promise<T>|T):Promise<T>{return this.correlation.current()?this.telemetry.withEngine(name,path,work):Promise.resolve().then(work);}
+
+  // QHIA-005 amendment: bounded foreground wait for the optional Reflection
+  // enrichment. Rejects INSIDE the him_reflection_context engine work when the
+  // budget expires, so telemetry records a failed enrichment rather than a
+  // false success. The timer is always cleared on the read's own settlement
+  // (no timer leak on a fast read), and the underlying Data API request keeps
+  // its handlers attached, so a late fulfillment or rejection after the budget
+  // settles into this already-settled promise as a no-op: no unhandled
+  // rejection, no late consumption, no second provider call, and no mutation
+  // of the completed turn. No transport cancellation is introduced here.
+  private withSessionReflectionForegroundBudget<T>(read: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error('SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_EXCEEDED')),
+        SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_MS,
+      );
+      Promise.resolve().then(read).then(
+        (value) => { clearTimeout(timer); resolve(value); },
+        (error) => { clearTimeout(timer); reject(error); },
+      );
+    });
+  }
 
   private async currentResult(accessToken: string, userId: string, turn: ConversationTurn): Promise<OrchestratedTurnResult> {
     const userTurn = await this.repository.findTurn(accessToken, turn.session_id, userId, turn.id) ?? turn;

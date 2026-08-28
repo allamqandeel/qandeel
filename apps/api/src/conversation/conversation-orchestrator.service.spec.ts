@@ -58,6 +58,8 @@ describe('ConversationOrchestratorService', () => {
   let hypothesisGeneration: jest.Mocked<HypothesisGenerationService>;
   let confidence: jest.Mocked<ConfidenceService>;
   let hypothesisCandidateGenerator: jest.Mocked<HypothesisCandidateGenerator>;
+  let correlation: CorrelationService;
+  let telemetry: TelemetryService;
   let orchestrator: ConversationOrchestratorService;
   const userTurn: ConversationTurn = {
     id: 'user-turn', session_id: 'session', role: 'USER', status: 'RECEIVED', content: 'hello',
@@ -148,8 +150,9 @@ describe('ConversationOrchestratorService', () => {
     hypothesisCandidateGenerator = { generate: jest.fn().mockResolvedValue([]) };
     behavioralPolicy = { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') };
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
-    const correlation=new CorrelationService();
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, hypothesisContext, recommendationGrounding, router,correlation,new TelemetryService(correlation));
+    correlation=new CorrelationService();
+    telemetry=new TelemetryService(correlation);
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, hypothesisContext, recommendationGrounding, router,correlation,telemetry);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -826,6 +829,104 @@ describe('ConversationOrchestratorService', () => {
       // Reflection is consumed after the route is claimed and never selects it.
       expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
       expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+    });
+
+    it('lets a fast Reflection read win the 300 ms foreground budget, deliver guidance, and clear its timer (no leak)', async () => {
+      jest.useFakeTimers();
+      try {
+        himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(1));
+        himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himSessionReflectionGuidance: inviteReflectionGuidance }));
+        // The foreground budget timer was cleared on the read's own
+        // resolution: no pending QHIA-005 timer survives a fast read.
+        expect(jest.getTimerCount()).toBe(0);
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('bounds the foreground wait to exactly 300 ms: a slow pending Reflection degrades to no guidance, never turn failure', async () => {
+      jest.useFakeTimers();
+      try {
+        let releaseReflection!: (value: HimContextualCurrentSelection) => void;
+        himContextualCurrent.getCurrentSelection.mockReturnValue(new Promise((resolve) => { releaseReflection = resolve; }));
+        finalizeNormally();
+        const pending = orchestrator.orchestrate('token', 'user', userTurn);
+        // HSE Snapshot has resolved; Reflection is still pending. One tick
+        // before the budget the foreground is still (correctly) waiting.
+        await jest.advanceTimersByTimeAsync(299);
+        expect(himSnapshot.getSnapshot).toHaveBeenCalledTimes(1);
+        expect(router.generate).not.toHaveBeenCalled();
+        // Crossing the exact 300 ms budget releases the foreground.
+        await jest.advanceTimersByTimeAsync(1);
+        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+        expect(himReflectionConsumption.consume).not.toHaveBeenCalled();
+        expect(repository.failTurn).not.toHaveBeenCalled();
+        // Late fulfillment of the original read after the completed turn is
+        // ignored entirely: no consumption, no second provider call, no
+        // re-finalization.
+        releaseReflection(reflectionSelection(2));
+        await jest.advanceTimersByTimeAsync(0);
+        expect(himReflectionConsumption.consume).not.toHaveBeenCalled();
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('absorbs a late Reflection rejection after the budget with no unhandled rejection and no behavioral effect', async () => {
+      jest.useFakeTimers();
+      try {
+        let rejectReflection!: (error: Error) => void;
+        himContextualCurrent.getCurrentSelection.mockReturnValue(new Promise((_resolve, reject) => { rejectReflection = reject; }));
+        finalizeNormally();
+        const pending = orchestrator.orchestrate('token', 'user', userTurn);
+        await jest.advanceTimersByTimeAsync(300);
+        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        rejectReflection(new Error('late private transport failure'));
+        await jest.advanceTimersByTimeAsync(0);
+        expect(himReflectionConsumption.consume).not.toHaveBeenCalled();
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(repository.failTurn).not.toHaveBeenCalled();
+        expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('rejects the expired budget INSIDE the him_reflection_context engine work so telemetry records a failed enrichment', async () => {
+      const withEngine = jest.spyOn(telemetry, 'withEngine');
+      jest.useFakeTimers();
+      try {
+        himContextualCurrent.getCurrentSelection.mockReturnValue(new Promise(() => undefined));
+        finalizeNormally();
+        const pending = correlation.runRequest(() => orchestrator.orchestrate('token', 'user', userTurn));
+        await jest.advanceTimersByTimeAsync(300);
+        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        const reflectionEngineResults = withEngine.mock.calls
+          .map((call, index) => ({ engine: call[0], result: withEngine.mock.results[index] }))
+          .filter(({ engine }) => engine === 'him_reflection_context');
+        expect(reflectionEngineResults).toHaveLength(1);
+        // The engine-wrapped work itself rejected with the budget expiry: the
+        // span records a failure, never a false successful enrichment, and the
+        // degradation handler sits OUTSIDE the engine boundary.
+        await expect(reflectionEngineResults[0].result.value).rejects.toThrow('SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_EXCEEDED');
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+        expect(repository.failTurn).not.toHaveBeenCalled();
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('clears the foreground budget timer when the Reflection read rejects before the budget', async () => {
+      jest.useFakeTimers();
+      try {
+        himContextualCurrent.getCurrentSelection.mockRejectedValue(new Error('fast private failure'));
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(jest.getTimerCount()).toBe(0);
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+      } finally { jest.useRealTimers(); }
     });
 
     it('adds no Question, Recommendation, Hypothesis, or Memory work: Reflection changes only the router guidance channel', async () => {
