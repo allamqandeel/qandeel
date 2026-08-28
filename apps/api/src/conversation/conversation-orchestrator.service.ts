@@ -98,7 +98,7 @@ export class ConversationOrchestratorService {
         this.telemetry.recordTurnOutcome('blocked',selection.path);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
-      const {himContext,himInteractionAdaptation,himSessionReflectionGuidance,himSituationStressGuidance,himDecisionAttentionGuidance,himGoalMotivationGuidance}=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
+      const {himContext,himInteractionAdaptation,himSessionReflectionGuidance,himSituationStressGuidance,himDecisionAttentionGuidance,himGoalMotivationGuidance,himRelationshipCommunicationGuidance}=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
       // QHIA-005: the HSE Intelligence Snapshot read and the one-metric
       // hbs.reflection selective read (QHIA-004 boundary, exactly one batch
       // request) are LAUNCHED CONCURRENTLY for the same authoritative session
@@ -130,16 +130,17 @@ export class ConversationOrchestratorService {
       //
       // It replaces the two independent QHIA-007 and QHIA-008 launches that
       // preceded it. It is exactly ONE external Data API request against the
-      // migration-0059 aggregate-v2 RPC, which WRAPS the unchanged
-      // migration-0058 aggregate v1 - itself wrapping the unchanged
-      // migration-0056 and migration-0057 authorities - plus the unchanged
-      // migration-0059 Goal-motivation authority: the orchestrator calls no
-      // direct read, issues no backup request, keeps no aggregate-v1 fallback,
-      // and never races one transport against another. QHIA-010 therefore adds
-      // ZERO external foreground requests and ZERO incremental foreground wait.
-      // All three channels share one external settlement - intentional - so a
-      // still-pending aggregate means no channel is used for this turn rather
-      // than a fallback fan-out.
+      // migration-0060 aggregate-v3 RPC, which WRAPS the unchanged
+      // migration-0059 aggregate v2 - itself wrapping the unchanged
+      // migration-0058 aggregate v1 and the unchanged migration-0059
+      // Goal-motivation authority - plus the unchanged migration-0060
+      // Relationship-communication authority: the orchestrator calls no
+      // direct read, issues no backup request, keeps no aggregate-v1 or
+      // aggregate-v2 fallback, and never races one transport against another.
+      // QHIA-011 therefore adds ZERO external foreground requests and ZERO
+      // incremental foreground wait. All four channels share one external
+      // settlement - intentional - so a still-pending aggregate means no
+      // channel is used for this turn rather than a fallback fan-out.
       //
       // It carries ZERO INCREMENTAL FOREGROUND WAIT: no new timeout is
       // introduced, the existing 300 ms QHIA-005 Reflection budget is neither
@@ -166,12 +167,13 @@ export class ConversationOrchestratorService {
       const [himSnapshot, reflectionRead] = await Promise.all([himSnapshotPromise, reflectionReadPromise]);
       // The existing foreground barrier - and the ONLY one. Reading the
       // recorded value here adds no await of any kind: an already-settled
-      // aggregate yields all three existing guidance contracts, and a
+      // aggregate yields all four existing guidance contracts, and a
       // still-pending or rejected one is simply absent for this turn.
       crossContextForegroundBarrierClosed = true;
       const situationStressGuidance = crossContextForegroundSettled?.situationStress;
       const decisionAttentionGuidance = crossContextForegroundSettled?.decisionAttention;
       const goalMotivationGuidance = crossContextForegroundSettled?.goalMotivation;
+      const relationshipCommunicationGuidance = crossContextForegroundSettled?.relationshipCommunication;
       const himReasoningContext = this.himReasoningConsumption.transform(himSnapshot);
       // The adaptation derives from the reasoning context BEFORE the FAST/DEEP
       // density projection: it is path-independent and never selects the path.
@@ -183,7 +185,7 @@ export class ConversationOrchestratorService {
       if (reflectionRead.state === 'AVAILABLE') {
         try { reflectionGuidance = this.himSessionReflectionConsumption.consume(reflectionRead.value); } catch { reflectionGuidance = undefined; }
       }
-      return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation,himSessionReflectionGuidance:reflectionGuidance,himSituationStressGuidance:situationStressGuidance,himDecisionAttentionGuidance:decisionAttentionGuidance,himGoalMotivationGuidance:goalMotivationGuidance};});
+      return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation,himSessionReflectionGuidance:reflectionGuidance,himSituationStressGuidance:situationStressGuidance,himDecisionAttentionGuidance:decisionAttentionGuidance,himGoalMotivationGuidance:goalMotivationGuidance,himRelationshipCommunicationGuidance:relationshipCommunicationGuidance};});
       const memoryContext = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));
       let hypothesisResult;
       try {
@@ -209,6 +211,7 @@ export class ConversationOrchestratorService {
         ...(himSituationStressGuidance?.guidanceState === 'ACTIVE' ? { himSituationStressGuidance } : {}),
         ...(himDecisionAttentionGuidance?.guidanceState === 'ACTIVE' ? { himDecisionAttentionGuidance } : {}),
         ...(himGoalMotivationGuidance?.guidanceState === 'ACTIVE' ? { himGoalMotivationGuidance } : {}),
+        ...(himRelationshipCommunicationGuidance?.guidanceState === 'ACTIVE' ? { himRelationshipCommunicationGuidance } : {}),
         ...(hypothesisResult.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesisResult.context } : {}),
         ...(recommendationGrounding.coverageState === 'AVAILABLE' ? { recommendationContext: recommendationGrounding.context } : {}),
         locale: 'und', modality: 'TEXT',
