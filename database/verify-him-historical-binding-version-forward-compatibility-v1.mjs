@@ -206,11 +206,15 @@ const proveAntiVacuity=async(reference,stacks,label)=>{
   const rows=(await client.query(mutated,entry.sql.includes('$1')?[entry.key]:[])).rows;
   if(same(rows,entry.rows))throw new Error(`${label}: the unversioned form of ${entry.file}'s ${entry.kind} query for ${entry.key} still returns the historical result - the future fixture is irrelevant to the defect`);
   const stack=byMetric[entry.key];
-  if(entry.kind==='count'&&Number(rows[0].n)!==Number(entry.rows[0].n)+1)throw new Error(`${label}: the unversioned ${entry.file} count did not double-count the future ACTIVE binding`);
+  // Every broken-cardinality assertion below is RELATIVE, never exact: any
+  // number of additional legitimate future versions may exist (phase B
+  // establishes one deliberately), and this harness must not become its own
+  // ceiling on them.
+  if(entry.kind==='count'&&Number(rows[0].n)<=Number(entry.rows[0].n))throw new Error(`${label}: the unversioned ${entry.file} count did not over-count under future ACTIVE bindings`);
   if(entry.kind==='rows0'){
-   if(rows.length!==2)throw new Error(`${label}: the unversioned ${entry.file} rows[0] selector is not ambiguous under a future ACTIVE binding`);
-   const versions=rows.map(row=>row.definition_version).sort((a,b)=>a-b);
-   if(versions[0]!==1||versions[1]!==stack.version)throw new Error(`${label}: the ambiguous ${entry.file} selector does not span v1 and version ${stack.version}`);
+   if(rows.length<2)throw new Error(`${label}: the unversioned ${entry.file} rows[0] selector is not ambiguous under a future ACTIVE binding`);
+   const versions=rows.map(row=>row.definition_version);
+   if(!versions.includes(1)||!versions.includes(stack.version))throw new Error(`${label}: the ambiguous ${entry.file} selector does not span v1 and version ${stack.version}`);
   }
   if(entry.kind==='absence'&&Number(rows[0].n)<1)throw new Error(`${label}: the unversioned ${entry.file} absence assertion still counts zero - the future Energy SITUATION binding is missing`);
   if(entry.kind==='context-list'&&rows.length<=entry.rows.length)throw new Error(`${label}: the unversioned ${entry.file} context list did not duplicate under future ACTIVE bindings`);
