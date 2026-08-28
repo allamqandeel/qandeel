@@ -147,6 +147,20 @@ const GENERATED_CANDIDATE_ASSUMPTION = 'A fixed morning window stays available o
 const ACCESS_TOKEN = 'full-intelligence-e2e-smoke-transport-token';
 const INTENT_DOMAIN = 'DECISION' as const;
 
+// QHIA-009 foreground transport identities this smoke censuses by name.
+//
+// The aggregate is OPTIONAL foreground enrichment and the Orchestrator
+// deliberately degrades when it rejects, so a green smoke proves nothing about
+// migration 0058 unless the transport itself is counted: the aggregate must be
+// attempted AND completed once per eligible turn, and the two direct
+// per-channel authorities must never be attempted at all.
+const CROSS_CONTEXT_FOREGROUND_RPC = 'read_him_session_cross_context_foreground_v1';
+const DIRECT_FOREGROUND_RPCS = [
+  'read_him_session_situation_stress_v1',
+  'read_him_session_decision_attention_v1',
+] as const;
+const RELEVANCE_AUTHORITY_RPC = 'read_him_session_context_bindings_v1';
+
 let stage = 'BASELINE';
 
 /** Never-called dependencies of real services; fail fast if touched. */
@@ -252,13 +266,45 @@ async function main(): Promise<void> {
     // and migration-0057 authorities return their deterministic
     // NO_ACTIVE_SITUATION / NO_ACTIVE_DECISION answers and both derived
     // guidance contracts stay NONE (omitted from the provider request).
+    //
+    // Both per-channel repositories above stay REAL and fully reachable over
+    // this same authenticated adapter. They are never called: the transport
+    // census below proves zero direct attempts through a path that genuinely
+    // exists, which is a stronger claim than removing them would be.
+    const himCrossContextForegroundRepository = new HimCrossContextForegroundRepository(memoryDataApi);
     const himCrossContextForegroundService = new HimCrossContextForegroundAggregationService(
-      new HimCrossContextForegroundRepository(memoryDataApi), himSituationStressService, himDecisionAttentionService);
+      himCrossContextForegroundRepository, himSituationStressService, himDecisionAttentionService);
     const hypothesisService = new HypothesisService(
       new HypothesisRepository(memoryDataApi, unusedDependency<HypothesisServiceRoleApiService>('HYPOTHESIS_SERVICE_ROLE_API')),
       evidenceService);
     const hypothesisReasoningContext = new HypothesisReasoningContextService(
       hypothesisService, evidenceService, new ConfidenceRepository(memoryDataApi));
+    // QHIA-009 transport census gate. `expectedTurns` is the number of eligible
+    // foreground turns that should have driven the aggregate so far.
+    //
+    // Attempted AND completed must both equal that number: attempted-only would
+    // mean the request was issued and rejected, which the Orchestrator hides
+    // behind its graceful degradation, and that is exactly the false-green this
+    // gate exists to catch. Zero direct per-channel attempts proves there is no
+    // fallback, no backup, and no race against the retired two-request shape.
+    const assertCrossContextForegroundTransport = (expectedTurns: number, label: string): void => {
+      const census = authenticatedDataApi.rpcCensus;
+      assert.equal(census.attempts(CROSS_CONTEXT_FOREGROUND_RPC), expectedTurns,
+        `${label}: exactly ${expectedTurns} migration-0058 aggregate transport attempt(s)`);
+      assert.equal(census.completions(CROSS_CONTEXT_FOREGROUND_RPC), expectedTurns,
+        `${label}: every aggregate attempt COMPLETED against real PostgreSQL - a successful authoritative read, never graceful degradation`);
+      assert.equal(census.failures(CROSS_CONTEXT_FOREGROUND_RPC), 0,
+        `${label}: no aggregate transport failure occurred`);
+      for (const direct of DIRECT_FOREGROUND_RPCS) {
+        assert.equal(census.attempts(direct), 0, `${label}: zero direct foreground attempts for ${direct}`);
+      }
+      assert.equal(census.attempts(RELEVANCE_AUTHORITY_RPC), 0,
+        `${label}: the QHIA-006 relevance authority is never requested from the application`);
+      assert.deepEqual(
+        census.attemptedNames().filter((name) => /situation_stress|decision_attention|context_bindings/u.test(name)), [],
+        `${label}: no direct, fallback, or backup cross-context foreground request of any kind was issued`);
+    };
+
     const conversationalRouter = new DeterministicConversationalModelRouter(ASSISTANT_TURN_TEXT);
     const orchestrator = new ConversationOrchestratorService(
       conversationRepository, contextBuilder, new SafetyResponseGateService(), new BehavioralResponsePolicyService(),
@@ -303,6 +349,14 @@ async function main(): Promise<void> {
     assert.equal(seeded?.origin, 'SYSTEM_GENERATED');
     assert.equal((await db.observer('SELECT id FROM public.confidence_evaluations WHERE user_id = $1', [userId])).length, 0,
       'no current-version Confidence evaluation exists for the seeded Hypothesis');
+    // The fixture stage drives authenticated RPCs of its own, so the census
+    // starts from a proven-clean cross-context baseline before Turn #1.
+    assertCrossContextForegroundTransport(0, 'before any foreground turn');
+    // No relevance binding is created anywhere in this smoke, so both wrapped
+    // authorities must answer with their deterministic unbound results.
+    assert.equal((await db.observer(
+      'SELECT id FROM public.him_session_context_bindings WHERE user_id = $1', [userId])).length, 0,
+      'the smoke binds no Situation and no Decision to the session');
 
     // -----------------------------------------------------------------------
     stage = 'FOREGROUND_TURN_1';
@@ -353,6 +407,18 @@ async function main(): Promise<void> {
         { metricKey: 'hse.attention', knowledgeState: 'UNKNOWN', ordinalCategory: null },
       ],
     }, 'real PARTIAL session HIM context: stress KNOWN/HIGH, energy and attention UNKNOWN/null, FAST fields only, policies UNASSESSED');
+
+    // QHIA-009: the cross-context foreground aggregate really ran on this turn.
+    // Exactly one migration-0058 request was attempted AND completed through
+    // the authenticated PostgREST substitute against real PostgreSQL, and the
+    // two direct per-channel authorities were never requested.
+    assertCrossContextForegroundTransport(1, 'after foreground Turn #1');
+    // Provider contract unchanged: both wrapped authorities answered
+    // authoritatively UNBOUND, so the two existing guidance fields are omitted.
+    assert.equal(firstCall.request.himSituationStressGuidance, undefined,
+      'an authoritatively unbound Situation adds no Situation-stress guidance field');
+    assert.equal(firstCall.request.himDecisionAttentionGuidance, undefined,
+      'an authoritatively unbound Decision adds no Decision-attention guidance field');
 
     // Hypothesis reasoning: the seeded Hypothesis through the real context
     // service — v1, structural counts 0/0, assumption present, Confidence
@@ -695,6 +761,48 @@ async function main(): Promise<void> {
     // KNOWN/HIGH, unmeasured metrics UNKNOWN/null, no inference introduced.
     assert.deepEqual(secondCall.request.himContext, firstCall.request.himContext,
       'second request still consumes the real session HIM snapshot: stress KNOWN/HIGH, others UNKNOWN/null');
+
+    // QHIA-009: the second eligible turn drove its OWN aggregate request, which
+    // also completed. The counter advanced by exactly one - never zero (a
+    // cached or reused earlier result) and never two (a fallback or backup).
+    assertCrossContextForegroundTransport(2, 'after foreground Turn #2');
+    assert.equal(secondCall.request.himSituationStressGuidance, undefined,
+      'the second turn still adds no Situation-stress guidance field');
+    assert.equal(secondCall.request.himDecisionAttentionGuidance, undefined,
+      'the second turn still adds no Decision-attention guidance field');
+
+    // The transport census proves the aggregate SUCCEEDED; this block proves
+    // WHAT it succeeded with, so a legitimate unbound NONE answer can never be
+    // confused with a rejected request the Orchestrator silently degraded. The
+    // same real repository and the same real aggregation service are driven
+    // once more over the same authenticated substitute.
+    const aggregateRows = await himCrossContextForegroundRepository
+      .readSessionCrossContextForeground(ACCESS_TOKEN, userId, sessionId);
+    assert.equal(aggregateRows.length, 2, 'migration 0058 answers with exactly two transport rows');
+    assert.deepEqual(
+      aggregateRows.map((row) => [row.foreground_slot_order, row.foreground_slot, row.binding_state]),
+      [[1, 'SITUATION_STRESS', 'NO_ACTIVE_SITUATION'], [2, 'DECISION_ATTENTION', 'NO_ACTIVE_DECISION']],
+      'the frozen transport order and the deterministic unbound states of both wrapped authorities');
+    for (const row of aggregateRows) {
+      assert.equal(row.binding_context_id, null, 'an unbound slot resolved no context');
+      assert.equal(row.metric_key, null, 'an unbound slot read no metric');
+      assert.equal(row.numeric_value, null, 'an unbound slot carries no value');
+    }
+    const aggregateGuidance = await himCrossContextForegroundService.read(userId, ACCESS_TOKEN, sessionId);
+    assert.deepEqual(aggregateGuidance, {
+      contractVersion: 1,
+      situationStress: { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' },
+      decisionAttention: { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' },
+    }, 'the REAL QHIA-007 and QHIA-008 semantic consumers decoded the successful aggregate into bounded NONE guidance');
+    assertCrossContextForegroundTransport(4, 'after the direct aggregate transport proof');
+    const aggregateCensus = authenticatedDataApi.rpcCensus;
+    console.log('FULL_INTELLIGENCE_E2E_SMOKE QHIA-009 aggregate transport census: '
+      + `attempted=${aggregateCensus.attempts(CROSS_CONTEXT_FOREGROUND_RPC)} `
+      + `completed=${aggregateCensus.completions(CROSS_CONTEXT_FOREGROUND_RPC)} `
+      + `failed=${aggregateCensus.failures(CROSS_CONTEXT_FOREGROUND_RPC)} `
+      + `direct_qhia007=${aggregateCensus.attempts(DIRECT_FOREGROUND_RPCS[0])} `
+      + `direct_qhia008=${aggregateCensus.attempts(DIRECT_FOREGROUND_RPCS[1])} `
+      + `relevance_authority=${aggregateCensus.attempts(RELEVANCE_AUTHORITY_RPC)}`);
 
     // Hypothesis reasoning consumption: both post-background current
     // hypotheses by stable statement identity — never array position.

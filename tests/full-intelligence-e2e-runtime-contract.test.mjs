@@ -120,6 +120,84 @@ test('the foreground ModelRouter is a deterministic verifier double that records
     'no second Recommendation model call is simulated');
 });
 
+test('the QHIA-009 aggregate is the smoke foreground transport and its success is censused non-vacuously', () => {
+  // ROOT CAUSE this guard closes: the smoke PostgREST substitute must
+  // RECOGNISE the migration-0058 aggregate RPC. QHIA-009 is optional foreground
+  // enrichment and the Orchestrator degrades gracefully when it rejects, so an
+  // unrecognised RPC lets the whole smoke stay green while migration 0058 is
+  // never executed even once.
+  assert.match(foregroundAdapters, /'read_him_session_cross_context_foreground_v1'/u,
+    'the smoke authenticated RPC allowlist recognises the migration-0058 aggregate transport');
+  // The retired two-request shape must not be accepted as the orchestrator
+  // transport path here. Both remain canonical database authorities verified by
+  // their own migrations and verifiers; this is a smoke-only transport list.
+  for (const direct of ['read_him_session_situation_stress_v1', 'read_him_session_decision_attention_v1']) {
+    assert.ok(!new RegExp(`'${direct}'`, 'u').test(foregroundAdapters),
+      `${direct} is not accepted as the QHIA-009 orchestrator transport path in this smoke`);
+  }
+
+  // The census must separate ATTEMPTED from COMPLETED, or "green" still cannot
+  // distinguish a successful authoritative read from a rejected one.
+  assert.match(foregroundAdapters, /export class SmokeAuthenticatedRpcCensus/u, 'the smoke-only transport census exists');
+  for (const recorder of ['recordAttempt', 'recordCompletion', 'recordFailure']) {
+    assert.match(foregroundAdapters, new RegExp(`census\\?\\.${recorder}\\(`, 'u'),
+      `the substitute records ${recorder} for every authenticated RPC`);
+  }
+  const attemptIndex = foregroundAdapters.indexOf('census?.recordAttempt(name)');
+  const allowlistIndex = foregroundAdapters.indexOf('if (!rpcAllowlist.has(name))');
+  assert.ok(attemptIndex > 0 && allowlistIndex > 0 && attemptIndex < allowlistIndex,
+    'the attempt is recorded BEFORE the allowlist decision, so a refused direct request is still counted');
+  assert.match(foregroundAdapters, /readonly rpcCensus = new SmokeAuthenticatedRpcCensus\(\)/u,
+    'the authenticated substitute exposes its own census');
+  // Instrumentation stays verification-only.
+  assert.doesNotMatch(smokeScript, /jest\.|jest\b|spyOn|monkey|Object\.defineProperty\(\s*Him/u,
+    'no production service is instrumented by the smoke');
+
+  // The smoke composes the REAL aggregate boundary and the REAL semantic
+  // consumers, and reaches those consumers through the aggregate raw-row path.
+  for (const productionClass of [
+    'HimCrossContextForegroundAggregationService',
+    'HimCrossContextForegroundRepository',
+    'HimSituationStressConsumptionService',
+    'HimSituationStressRepository',
+    'HimDecisionAttentionConsumptionService',
+    'HimDecisionAttentionRepository',
+  ]) assert.match(smokeScript, new RegExp(`new ${productionClass}\\(`, 'u'), `real ${productionClass} is composed`);
+  const orchestratorStart = smokeScript.indexOf('new ConversationOrchestratorService(');
+  assert.ok(orchestratorStart > 0, 'the smoke constructs the real orchestrator');
+  const orchestratorArgs = smokeScript.slice(orchestratorStart, smokeScript.indexOf(');', orchestratorStart));
+  assert.ok(orchestratorArgs.includes('himCrossContextForegroundService'),
+    'the orchestrator receives the QHIA-009 aggregate service');
+  for (const retired of ['himSituationStressService', 'himDecisionAttentionService']) {
+    assert.ok(!orchestratorArgs.includes(retired),
+      `${retired} is no longer an Orchestrator dependency: it is reached only through the aggregate`);
+  }
+
+  // Runtime census assertions: attempted AND completed, per turn, with zero
+  // direct per-channel and zero relevance-authority requests.
+  assert.match(smokeScript, /const CROSS_CONTEXT_FOREGROUND_RPC = 'read_him_session_cross_context_foreground_v1'/u);
+  assert.match(smokeScript, /every aggregate attempt COMPLETED against real PostgreSQL/u,
+    'the smoke asserts completion, not merely attempt');
+  assert.match(smokeScript, /zero direct foreground attempts for/u);
+  assert.match(smokeScript, /the QHIA-006 relevance authority is never requested from the application/u);
+  assert.match(smokeScript, /no direct, fallback, or backup cross-context foreground request of any kind was issued/u);
+  for (const label of [
+    "assertCrossContextForegroundTransport(0, 'before any foreground turn')",
+    "assertCrossContextForegroundTransport(1, 'after foreground Turn #1')",
+    "assertCrossContextForegroundTransport(2, 'after foreground Turn #2')",
+  ]) assert.ok(smokeScript.includes(label), `the smoke censuses the aggregate transport: ${label}`);
+
+  // Success-with-legitimate-unbound is proven distinctly from degradation.
+  assert.match(smokeScript, /migration 0058 answers with exactly two transport rows/u);
+  assert.match(smokeScript, /the frozen transport order and the deterministic unbound states of both wrapped authorities/u);
+  assert.match(smokeScript, /decoded the successful aggregate into bounded NONE guidance/u,
+    'the REAL QHIA-007/QHIA-008 consumers are reached through the aggregate raw-row path');
+  assert.match(smokeScript, /the smoke binds no Situation and no Decision to the session/u,
+    'the unbound answer is proven to be the authoritative one, not an accident');
+  assert.match(smokeScript, /an authoritatively unbound Situation adds no Situation-stress guidance field/u);
+  assert.match(smokeScript, /an authoritatively unbound Decision adds no Decision-attention guidance field/u);
+});
+
 test('background providers remain the deterministic A2 doubles with an observable census', () => {
   for (const double of [
     'DeterministicAssociationProposalProvider',
