@@ -11,14 +11,26 @@ import test from'node:test';import assert from'node:assert/strict';import{readFi
 // the legacy generic snapshot RPC, so a caller of the advertised application
 // write path was guaranteed to hit a retired database authority.
 //
-// SCOPE AND FORWARD SAFETY. This guard states one closure-state fact: at this
-// Measurement Foundation closure state the retired legacy generic snapshot
-// writer has no live application boundary, and QHIM-013 introduces no
-// replacement generic writer. It asserts nothing about which migration is
-// last, whether a later migration may exist, how many metrics or metric
-// versions exist, or that no future application measurement-submission API may
-// ever be designed. Such an API is a separately reviewed runtime contract and
-// would intentionally update this guard.
+// WHAT THIS GUARD ASSERTS. Exactly one closure-state fact: at this Measurement
+// Foundation closure state the retired legacy generic snapshot writer has no
+// live application boundary, and QHIM-013 introduces no replacement GENERIC
+// writer - no dynamic RPC construction, no metric-identity switch, no
+// map/table from metric identities to write RPCs, no generic method that takes
+// a metric identity and routes to different metric-owned writers, and no
+// direct write to him_metric_snapshots.
+//
+// WHAT IT DELIBERATELY DOES NOT ASSERT. It is independent of migration
+// numbering: it reads no migration inventory to reach a verdict and asserts
+// nothing about which migration is last or whether a later one may exist. It
+// freezes no metric inventory and no metric version. And it does NOT forbid a
+// future, separately reviewed, EXACT metric-specific application adapter that
+// hardcodes its own single metric-owned RPC under its own reviewed contract -
+// exact metric ownership is the opposite of generic routing. The conventional
+// generic-method-name rules apply only to the two legacy surfaces QHIM-013
+// retires; every other HIM production file is judged by routing semantics, so
+// a future exact service is free to name its own submission method. A future
+// GENERIC application submission API would be a separately reviewed runtime
+// contract and would intentionally update this guard.
 const root=new URL('../',import.meta.url);
 const read=path=>readFileSync(new URL(path,root),'utf8');
 const APP_SRC='apps/api/src';
@@ -27,7 +39,18 @@ const SERVICE=`${HIM_DIR}/him.service.ts`;
 const REPOSITORY=`${HIM_DIR}/him.repository.ts`;
 const TYPES=`${HIM_DIR}/him.types.ts`;
 const LEGACY_RPC_PATH='rpc/create_him_metric_snapshot';
+// The two legacy generic application surfaces this task retires. Conventional
+// generic-write method names are forbidden here and only here.
+const RETIRED_GENERIC_SURFACES=[SERVICE,REPOSITORY];
 const GENERIC_WRITE_METHODS=['observe','observeMetric','createObservation','createMeasurement','createSnapshot','writeSnapshot','submitMeasurement'];
+const WRITE_RPC=/['"`](?:rpc\/)?(?:create|correct|calculate)_[a-z0-9_]+_measurement['"`]/gi;
+// A metric IDENTITY carried in application code (metricKey / metric_key as its
+// own word). p_metric_key inside an RPC payload is not one: it has no word
+// boundary before "metric" and is a parameter name, not a routing key.
+const METRIC_IDENTITY=/\bmetric_?[Kk]ey\b/;
+const MUTATING=`method\\s*:\\s*['"\`](?:POST|PUT|PATCH|DELETE)['"\`]`;
+const methodDefinition=name=>new RegExp(`(^|[;{}]|\\*/)\\s*(?:public |private |protected |static |readonly )*(?:async\\s+)?${name}\\s*\\(`,'m');
+const writeRpcsIn=code=>new Set([...code.matchAll(WRITE_RPC)].map(match=>match[0].replace(/['"`]/g,'').replace(/^rpc\//i,'').toLowerCase()));
 
 // --- production source collection -------------------------------------------
 // Production means tracked application source only: *.spec.ts is test source
@@ -45,35 +68,77 @@ const PRODUCTION=collectProduction(APP_SRC);
 const himProduction=sources=>new Map([...sources].filter(([path])=>path.startsWith(`${HIM_DIR}/`)));
 
 // --- the one real guard the anti-vacuity fixtures below drive ----------------
-// It takes a map of production {path: source} and returns every violation. The
-// generic-write-method and dispatcher rules are scoped to the HIM production
-// directory, which is where HIM measurement authority lives; the runtime-event
-// publisher's private telemetry observe(...) is not a HIM write surface and is
-// deliberately governed by no rule here.
+// A pure function of an application-source map: it consults no migration
+// listing, no database state, and no metric inventory to reach a verdict.
 function qhim013Violations(sources){
  const violations=[];
- const him=himProduction(sources);
  for(const[path,code]of sources){
+  // Whitespace- and newline-insensitive so a multiline request expression
+  // cannot slip past, bounded to a single statement so a legitimate GET audit
+  // read in a neighbouring statement is never blamed for someone else's POST.
+  const flat=code.replace(/\s+/g,' ');
   if(code.includes(LEGACY_RPC_PATH))violations.push(`${path}: calls the retired legacy generic snapshot RPC`);
   if(/\bCreateHimMetricObservation\b/.test(code))violations.push(`${path}: references the retired generic HIM write DTO`);
-  for(const line of code.split('\n')){
-   if(/him_metric_snapshots/.test(line)&&/method\s*:\s*['"`](POST|PUT|PATCH|DELETE)['"`]/i.test(line))violations.push(`${path}: issues a non-GET request against him_metric_snapshots`);
-   if(/INSERT\s+INTO\s+(public\.)?him_metric_snapshots/i.test(line))violations.push(`${path}: writes directly to him_metric_snapshots`);
-  }
- }
- for(const[path,code]of him){
-  for(const method of GENERIC_WRITE_METHODS){
-   // A method DEFINITION, not a mention: `name(` / `async name(` at a member
-   // position. Property access such as this.repository.getLatest( is not one.
-   if(new RegExp(`(^|[;{}]|\\*/)\\s*(?:public |private |protected |static |readonly )*(?:async\\s+)?${method}\\s*\\(`,'m').test(code))violations.push(`${path}: defines the generic measurement-write method ${method}(...)`);
-  }
+  if(new RegExp(`him_metric_snapshots[^;]{0,400}?${MUTATING}`,'i').test(flat)||new RegExp(`${MUTATING}[^;]{0,400}?him_metric_snapshots`,'i').test(flat))violations.push(`${path}: issues a non-GET request against him_metric_snapshots`);
+  if(/INSERT\s+INTO\s+(?:public\.)?him_metric_snapshots/i.test(flat))violations.push(`${path}: writes directly to him_metric_snapshots`);
+  if(!path.startsWith(`${HIM_DIR}/`))continue;
+  // --- GENERIC ROUTING, never exact metric ownership -------------------------
+  const writeRpcs=writeRpcsIn(code);
   if(/rpc\/[^'"`\n]*\$\{/.test(code)||/['"`]rpc\/['"`]\s*\+/.test(code))violations.push(`${path}: constructs an RPC path dynamically`);
-  if(/switch\s*\(\s*[A-Za-z_$][\w$.]*[Mm]etric[Kk]ey/.test(code))violations.push(`${path}: routes writes through a metricKey switch`);
-  if(/['"`](?:rpc\/)?(?:create|correct|calculate)_[a-z0-9_]+_measurement['"`]/i.test(code))violations.push(`${path}: names a metric-owned measurement write RPC from the application layer`);
+  if(/switch\s*\(\s*[A-Za-z_$][\w$.]*[Mm]etric_?[Kk]ey/.test(code))violations.push(`${path}: routes through a metric-identity switch`);
+  if(writeRpcs.size>1)violations.push(`${path}: names ${writeRpcs.size} metric-owned write RPCs in one unit (a generic routing table)`);
+  if(writeRpcs.size>0&&METRIC_IDENTITY.test(code))violations.push(`${path}: selects a metric-owned write RPC from a metric identity`);
+  // --- the two retired legacy generic surfaces -------------------------------
+  if(RETIRED_GENERIC_SURFACES.includes(path))for(const method of GENERIC_WRITE_METHODS){
+   if(methodDefinition(method).test(code))violations.push(`${path}: redefines the retired generic measurement-write method ${method}(...)`);
+  }
  }
  return violations;
 }
 const mutate=(sources,path,code)=>{const next=new Map(sources);next.set(path,code);return next;};
+// Exported so the exact same guard implementation - never a re-typed copy of
+// it - can be driven directly when reviewing a specific verdict.
+export{qhim013Violations,HIM_DIR};
+
+// --- synthetic, non-filesystem fixtures -------------------------------------
+// A future separately reviewed EXACT metric-specific adapter: one hardcoded
+// metric-owned RPC, no metric identity, no routing. Test-only - this PR adds
+// no such production writer.
+const EXACT_ENERGY_WRITER=`import { Injectable } from '@nestjs/common';
+@Injectable()
+export class HseEnergySubmissionService {
+  constructor(private readonly dataApi:{request:(t:string,p:string,i?:object)=>Promise<unknown>}){}
+  submitEnergyMeasurement(token:string,sessionId:string,responseCode:string){
+    return this.dataApi.request(token,'rpc/create_hse_energy_measurement',{method:'POST',body:JSON.stringify({p_context_id:sessionId,p_response_code:responseCode})});
+  }
+}
+`;
+const GENERIC_DISPATCH_TABLE=`export class GenericHimSubmissionService {
+  private static readonly WRITERS:Record<string,string>={'hse.energy':'rpc/create_hse_energy_measurement','hse.stress':'rpc/create_hse_stress_measurement'};
+  constructor(private readonly dataApi:{request:(t:string,p:string,i?:object)=>Promise<unknown>}){}
+  submit(token:string,metricKey:string,body:object){
+    return this.dataApi.request(token,GenericHimSubmissionService.WRITERS[metricKey],{method:'POST',body:JSON.stringify(body)});
+  }
+}
+`;
+const GENERIC_DISPATCH_SWITCH=`export class RoutedHimSubmissionService {
+  constructor(private readonly dataApi:{request:(t:string,p:string,i?:object)=>Promise<unknown>}){}
+  submit(token:string,metricKey:string,body:object){
+    switch(metricKey){
+      case 'hse.energy': return this.dataApi.request(token,'rpc/create_hse_energy_measurement',{method:'POST',body:JSON.stringify(body)});
+      default: return this.dataApi.request(token,'rpc/create_hse_stress_measurement',{method:'POST',body:JSON.stringify(body)});
+    }
+  }
+}
+`;
+const LEGITIMATE_READ=`export class SyntheticHimReader {
+  constructor(private readonly dataApi:{request:(t:string,p:string,i?:object)=>Promise<unknown>}){}
+  history(token:string,userId:string){
+    const q=new URLSearchParams({select:'*',user_id:\`eq.\${userId}\`,order:'snapshot_version.asc',limit:'128'});
+    return this.dataApi.request(token,\`him_metric_snapshots?\${q}\`);
+  }
+}
+`;
 
 test('S1 - the historical generic writer really existed in frozen migration 0009',()=>{
  // Historical evidence only. Migration 0009 is an immutable artifact and this
@@ -139,23 +204,34 @@ test('S5 - the generic write DTO is gone from the production HIM contract',()=>{
  for(const kept of ['HimMetricDefinition','HimMetricSnapshot','HimContextKind','HIM_CONTEXT_KINDS','MAX_HIM_CONTEXT_ID_LENGTH'])assert.ok(types.includes(kept),`the read/domain type ${kept} is preserved`);
 });
 
-test('S6 - no direct snapshot-table write was substituted, and reads stay legal',()=>{
+test('S6 - no direct snapshot-table write was substituted, and GET audit reads stay legal',()=>{
  assert.deepEqual(qhim013Violations(PRODUCTION),[],'the shipped production source performs no snapshot-table write');
  // Positive control: the legitimate raw history/audit GET reads must not be
- // rejected merely because they name the snapshot table.
+ // rejected merely because they name the snapshot table - including a
+ // synthetic one that is not the shipped repository.
  const repository=read(REPOSITORY);
  assert.match(repository,/him_metric_snapshots\?\$\{q\}/,'explicit history/context reads remain raw GET queries');
  assert.equal([...repository.matchAll(/him_metric_snapshots/g)].length,2,'exactly the two explicit audit reads name the snapshot table');
+ assert.deepEqual(qhim013Violations(mutate(PRODUCTION,`${HIM_DIR}/synthetic-reader.service.ts`,LEGITIMATE_READ)),[],'a GET audit read against the snapshot table is accepted');
 });
 
-test('S7 - no disguised generic metric dispatcher was introduced',()=>{
+test('S7 - generic routing is rejected while exact metric ownership stays legal',()=>{
+ // The shipped HIM production source contains no routing construct at all.
  const him=himProduction(PRODUCTION);
  assert.ok(him.size>0,'the HIM production set is non-empty');
  for(const[path,code]of him){
   assert.doesNotMatch(code,/rpc\/[^'"`\n]*\$\{/,`${path} builds no RPC path by interpolation`);
-  assert.doesNotMatch(code,/switch\s*\(\s*[A-Za-z_$][\w$.]*[Mm]etric[Kk]ey/,`${path} routes nothing through a metricKey switch`);
-  assert.doesNotMatch(code,/['"`](?:rpc\/)?(?:create|correct|calculate)_[a-z0-9_]+_measurement['"`]/i,`${path} names no metric-owned measurement write RPC`);
+  assert.doesNotMatch(code,/switch\s*\(\s*[A-Za-z_$][\w$.]*[Mm]etric_?[Kk]ey/,`${path} routes nothing through a metric-identity switch`);
+  assert.ok(writeRpcsIn(code).size<=1,`${path} names at most one metric-owned write RPC`);
  }
+ // FUTURE COMPATIBILITY: a separately reviewed EXACT metric-specific adapter
+ // that hardcodes its own single metric-owned RPC is ACCEPTED. QHIM-013 retires
+ // a generic write authority, not exact metric ownership, and it places no
+ // ceiling on a future reviewed exact submission service or its method name.
+ assert.deepEqual(qhim013Violations(mutate(PRODUCTION,`${HIM_DIR}/hse-energy-submission.service.ts`,EXACT_ENERGY_WRITER)),[],'an exact Energy-specific application writer is accepted');
+ // The same file placed at either retired legacy surface would still be
+ // rejected, because those two surfaces may never regain a write boundary.
+ assert.ok(qhim013Violations(mutate(PRODUCTION,REPOSITORY,`${read(REPOSITORY)}\n${EXACT_ENERGY_WRITER.replace('submitEnergyMeasurement','submitMeasurement')}`)).length>0,'the retired legacy surfaces may not regain a write boundary');
 });
 
 test('S8 - the legitimate read authority is intact',()=>{
@@ -178,6 +254,17 @@ test('anti-vacuity - the real guard rejects every pre-remediation defect fixture
  // Positive control first: the shipped read-only source is accepted.
  assert.deepEqual(qhim013Violations(PRODUCTION),[],'legitimate read code is accepted');
  const repository=read(REPOSITORY),service=read(SERVICE),types=read(TYPES);
+ const MULTILINE_DIRECT_WRITE=`  writeSnapshotRow(token:string,row:object){
+    return this.dataApi.request(
+      token,
+      'him_metric_snapshots',
+      {
+        method: 'POST',
+        body: JSON.stringify(row),
+      },
+    );
+  }
+`;
  const fixtures=[
   ['a repository createObservation calling the legacy generic snapshot RPC',REPOSITORY,repository,
    repository.replace('  async getLatest(',`  async createObservation(token:string,value:CreateHimMetricObservation):Promise<HimMetricSnapshot>{return(await this.dataApi.request<HimMetricSnapshot[]>(token,'${LEGACY_RPC_PATH}',{method:'POST',body:JSON.stringify({p_observation:value})}))[0];}\n  async getLatest(`)],
@@ -185,10 +272,18 @@ test('anti-vacuity - the real guard rejects every pre-remediation defect fixture
    service.replace('  async getLatest(','  async observe(userId:string,token:string,o:object){return this.repository.createObservation(token,o as never);}\n  async getLatest(')],
   ['a reintroduced generic write DTO',TYPES,types,
    `${types}\nexport interface CreateHimMetricObservation { id:string; metricKey:string; }\n`],
-  ['a direct write substituted against the snapshot table',REPOSITORY,repository,
+  ['a single-line direct write substituted against the snapshot table',REPOSITORY,repository,
    repository.replace('  async getLatest(',"  writeSnapshotRow(token:string,row:object){return this.dataApi.request(token,'him_metric_snapshots',{method:'POST',body:JSON.stringify(row)});}\n  async getLatest(")],
-  ['a generic metricKey-to-RPC dispatcher',REPOSITORY,repository,
+  ['a MULTILINE direct write substituted against the snapshot table',REPOSITORY,repository,
+   repository.replace('  async getLatest(',`${MULTILINE_DIRECT_WRITE}  async getLatest(`)],
+  ['a multiline direct PATCH against the snapshot table',REPOSITORY,repository,
+   repository.replace('  async getLatest(',`${MULTILINE_DIRECT_WRITE.replace("'POST'","'PATCH'").replace('writeSnapshotRow','patchSnapshotRow')}  async getLatest(`)],
+  ['a multiline direct DELETE against the snapshot table',REPOSITORY,repository,
+   repository.replace('  async getLatest(',`${MULTILINE_DIRECT_WRITE.replace("'POST'","'DELETE'").replace('writeSnapshotRow','deleteSnapshotRow')}  async getLatest(`)],
+  ['a generic metricKey-to-RPC dispatcher built by interpolation',REPOSITORY,repository,
    repository.replace('  async getLatest(','  submitMeasurement(token:string,metricKey:string,body:object){return this.dataApi.request(token,`rpc/create_${metricKey.split(\'.\')[1]}_measurement`,{method:\'POST\',body:JSON.stringify(body)});}\n  async getLatest(')],
+  ['a generic metric-identity-to-write-RPC routing table',`${HIM_DIR}/generic-submission.service.ts`,'',GENERIC_DISPATCH_TABLE],
+  ['a generic metric-identity switch selecting metric-owned writers',`${HIM_DIR}/routed-submission.service.ts`,'',GENERIC_DISPATCH_SWITCH],
  ];
  for(const[label,path,before,after]of fixtures){
   assert.notEqual(after,before,`the "${label}" mutation actually changed ${path}`);
@@ -202,29 +297,31 @@ test('anti-vacuity - the real guard rejects every pre-remediation defect fixture
  assert.deepEqual(qhim013Violations(mutate(PRODUCTION,REPOSITORY,reformatted)),[],'formatting alone never fails the guard');
 });
 
-test('the QHIM-013 guard states no future ceiling',()=>{
- // Proven behaviourally rather than by scanning this file for forbidden
- // phrases - a self-scan that spelled those phrases would trivially match
- // itself and prove nothing.
- //
- // 1. No migration-number ceiling. QHIM-013 is an application-layer
- //    reconciliation that adds no migration, and that is asserted relative to
- //    whatever the current listing is - never against a written number.
- const migrations=readdirSync(new URL('database/migrations/',root)).filter(name=>name.endsWith('.sql')).sort();
- const latest=migrations[migrations.length-1];
- const nextNumber=String(Number(latest.slice(0,4))+1).padStart(4,'0');
- assert.equal(migrations.filter(name=>name.startsWith(nextNumber)).length,0,'QHIM-013 adds no migration of its own');
+test('the QHIM-013 guard states no future ceiling and is independent of migration numbering',()=>{
+ // 1. INDEPENDENT OF MIGRATION NUMBERING. The guard is a pure function of an
+ //    application-source map: driven entirely by synthetic, non-filesystem
+ //    sources it still reaches the correct verdicts, so no migration
+ //    inventory, migration number, or future migration can influence it. This
+ //    replaces a former next-migration-number check that was vacuous by
+ //    construction - "the number after the highest present number is absent"
+ //    is true whether or not this task added a migration. That QHIM-013
+ //    changes zero migration files is a PR-diff fact, verified independently
+ //    of this runtime guard and deliberately not frozen into it.
+ const synthetic=new Map([[`${HIM_DIR}/synthetic-reader.service.ts`,LEGITIMATE_READ]]);
+ assert.deepEqual(qhim013Violations(synthetic),[],'a purely synthetic legitimate source set is accepted');
+ assert.ok(qhim013Violations(new Map([[`${HIM_DIR}/synthetic-writer.service.ts`,`export class X{ go(t:string){ return fetch('${LEGACY_RPC_PATH}',{method:'POST'}); } }`]])).length>0,'a purely synthetic defective source set is rejected');
+ assert.ok(qhim013Violations(new Map([[`${HIM_DIR}/generic.service.ts`,GENERIC_DISPATCH_TABLE]])).length>0,'generic routing is rejected without consulting anything on disk');
+ assert.deepEqual(qhim013Violations(new Map([[`${HIM_DIR}/exact.service.ts`,EXACT_ENERGY_WRITER]])),[],'exact metric ownership is accepted without consulting anything on disk');
  // 2. No metric-inventory or metric-version ceiling. A production source that
  //    introduces an eighteenth metric and a later definition version of an
- //    existing one is accepted by the real guard: nothing here is keyed to how
- //    many metrics exist or to definition version 1.
+ //    existing one is accepted by the real guard.
  const futureCatalog=`export const FUTURE={metricKey:'hse.energy',definitionVersion:2,validContextKinds:['CONVERSATION_SESSION']};\nexport const EIGHTEENTH={metricKey:'hse.future-construct',definitionVersion:1,validContextKinds:['SITUATION']};\n`;
  assert.deepEqual(qhim013Violations(mutate(PRODUCTION,`${HIM_DIR}/future-metric.catalog.ts`,futureCatalog)),[],'a later metric version and an additional metric stay legal');
  // 3. No ceiling on future READ surfaces either: a new read RPC is accepted.
  const futureRead=`export class FutureHimReader{constructor(private readonly dataApi:{request:(t:string,p:string,i?:object)=>Promise<unknown>}){}\n read(token:string){return this.dataApi.request(token,'rpc/read_him_future_projection_v2',{method:'POST',body:'{}'});}}\n`;
  assert.deepEqual(qhim013Violations(mutate(PRODUCTION,`${HIM_DIR}/future-read.service.ts`,futureRead)),[],'a future separately reviewed read authority stays legal');
  // 4. The one closure-state fact this guard does assert is named explicitly in
- //    its own header, together with the path a future submission API takes.
+ //    its own header, together with the path a future generic API takes.
  const self=read('tests/him-generic-application-write-authority-retirement.test.mjs');
  assert.ok(self.includes('would intentionally update this guard'),'the guard names the separately reviewed future-API path');
  assert.ok(self.includes('at this Measurement Foundation closure state'),'the guard scopes its claim to this closure state');
