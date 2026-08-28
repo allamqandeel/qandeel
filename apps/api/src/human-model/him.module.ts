@@ -10,6 +10,7 @@ import { HimReasoningConsumptionService } from './him-reasoning-consumption.serv
 import { HimTurnContextSelectionService } from './him-turn-context-selection.service';
 import { HimFastDeepConsumptionService } from './him-fast-deep-consumption.service';
 import { HimInteractionAdaptationService } from './him-interaction-adaptation.service';
+import { HimContextualCurrentIntelligenceService } from './him-contextual-current-intelligence.service';
 
-@Module({ imports: [MemoryModule], providers: [HimDefinitionRegistry, HimRepository, HimService, HimCalculationModelRegistry, HimCalculationService, HimIntelligenceSnapshotService, HimReasoningConsumptionService, HimTurnContextSelectionService, HimFastDeepConsumptionService, HimInteractionAdaptationService], exports: [HimDefinitionRegistry, HimRepository, HimService, HimCalculationModelRegistry, HimCalculationService, HimIntelligenceSnapshotService, HimReasoningConsumptionService, HimTurnContextSelectionService, HimFastDeepConsumptionService, HimInteractionAdaptationService] })
+@Module({ imports: [MemoryModule], providers: [HimDefinitionRegistry, HimRepository, HimService, HimCalculationModelRegistry, HimCalculationService, HimIntelligenceSnapshotService, HimReasoningConsumptionService, HimTurnContextSelectionService, HimFastDeepConsumptionService, HimInteractionAdaptationService, HimContextualCurrentIntelligenceService], exports: [HimDefinitionRegistry, HimRepository, HimService, HimCalculationModelRegistry, HimCalculationService, HimIntelligenceSnapshotService, HimReasoningConsumptionService, HimTurnContextSelectionService, HimFastDeepConsumptionService, HimInteractionAdaptationService, HimContextualCurrentIntelligenceService] })
 export class HimModule {}
