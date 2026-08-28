@@ -6,7 +6,10 @@ import {
   HIM_SITUATION_STRESS_BINDING_STATES,
   HIM_SITUATION_STRESS_CONTEXT_KIND,
   HIM_SITUATION_STRESS_DEFINITION_VERSION,
+  HIM_SITUATION_STRESS_HIF_OWNER,
   HIM_SITUATION_STRESS_METRIC_KEY,
+  HIM_SITUATION_STRESS_SEMANTIC_MAPPING_STATUS,
+  HIM_SITUATION_STRESS_SEMANTIC_TYPE,
   type HimSituationStressBindingState,
   type HimSituationStressDirective,
   type HimSituationStressGuidance,
@@ -84,7 +87,7 @@ export class HimSituationStressConsumptionService {
     if (typeof boundSituationId !== 'string' || !HIM_UUID.test(boundSituationId)) throw new Error('INTEGRITY_FAILURE');
     if (row.metric_key !== HIM_SITUATION_STRESS_METRIC_KEY) throw new Error('INTEGRITY_FAILURE');
     if (row.definition_version !== HIM_SITUATION_STRESS_DEFINITION_VERSION) throw new Error('INTEGRITY_FAILURE');
-    if (row.hif_owner !== 'HSE') throw new Error('INTEGRITY_FAILURE');
+    if (row.hif_owner !== HIM_SITUATION_STRESS_HIF_OWNER) throw new Error('INTEGRITY_FAILURE');
     const metric = projectHimContextualCurrentSlot(
       row,
       HIM_SITUATION_STRESS_METRIC_KEY,
@@ -94,6 +97,24 @@ export class HimSituationStressConsumptionService {
     );
     if (metric.metricKey !== HIM_SITUATION_STRESS_METRIC_KEY || metric.definitionVersion !== 1)
       throw new Error('INTEGRITY_FAILURE');
+    // The exact frozen SEMANTIC identity, enforced here and only here. The
+    // shared QHIA-004 projection is generic on purpose: for a RESOLVED
+    // definition it only requires semanticType to be non-null, because
+    // hgs.purpose-alignment is legitimately RESOLVED / ALIGNMENT and several
+    // HBS/HRS metrics are legitimately UNRESOLVED with a null type. That is
+    // correct for a projection which reports a value; it is NOT sufficient for
+    // a consumer which assigns behavioural meaning to that value's ordinal.
+    //
+    // A row that is internally coherent - matching definition and source
+    // semantic metadata, a valid ACTIVE canonical binding, a KNOWN 4 or 5 -
+    // but carries any semantic reading other than RESOLVED / STATE is a
+    // different quantity under the hse.stress@1 name. It fails closed rather
+    // than being mapped, so drift can never silently become interaction
+    // guidance.
+    if (
+      metric.semanticMappingStatus !== HIM_SITUATION_STRESS_SEMANTIC_MAPPING_STATUS ||
+      metric.semanticType !== HIM_SITUATION_STRESS_SEMANTIC_TYPE
+    ) throw new Error('INTEGRITY_FAILURE');
     return metric;
   }
 

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { HimSituationStressConsumptionService } from './him-situation-stress-consumption.service';
+import { projectHimContextualCurrentSlot } from './him-contextual-current-projection';
 import type { HimSituationStressSourceRow } from './him-situation-stress-consumption.types';
 
 const USER = '00000000-0000-4000-8000-000000000001';
@@ -138,6 +139,118 @@ describe('HimSituationStressConsumptionService (QHIA-007)', () => {
           expect(serialized).not.toContain(forbidden);
         }
       }
+    });
+  });
+
+  describe('exact frozen semantic identity (adversarial)', () => {
+    // The shared QHIA-004 projection is generic on purpose: for a RESOLVED
+    // definition it only requires a non-null semanticType, because
+    // hgs.purpose-alignment is legitimately RESOLVED / ALIGNMENT and several
+    // HBS/HRS metrics are legitimately UNRESOLVED / null. A row can therefore
+    // be INTERNALLY COHERENT - definition and source semantic metadata agree,
+    // the ACTIVE canonical binding is valid, the value is a KNOWN 4 or 5 - and
+    // still not be an hse.stress@1 reading at all. QHIA-007 assigns behavioural
+    // meaning to that ordinal, so it must reject such a row rather than map it.
+    const semanticallyDrifted = (semanticType: string, numericValue: number): HimSituationStressSourceRow => ({
+      ...boundRow(numericValue),
+      semantic_mapping_status: 'RESOLVED',
+      semantic_type: semanticType,
+      source_semantic_mapping_status: 'RESOLVED',
+      source_semantic_type: semanticType,
+    } as unknown as HimSituationStressSourceRow);
+
+    it.each([4, 5])(
+      'rejects a coherent RESOLVED / ALIGNMENT row carrying a KNOWN %i and never yields REDUCE_INTERACTION_BURDEN',
+      async (numericValue) => {
+        const row = semanticallyDrifted('ALIGNMENT', numericValue);
+        // The row really is internally coherent: definition and source
+        // semantic metadata agree, the binding identity is valid and ACTIVE,
+        // and the value is exactly the one that would otherwise map to the
+        // bounded reduction.
+        expect(row.semantic_mapping_status).toBe(row.source_semantic_mapping_status);
+        expect(row.semantic_type).toBe(row.source_semantic_type);
+        expect(row.canonical_binding_id).toBe(row.active_binding_id);
+        expect(row.numeric_value).toBe(numericValue);
+        const { repository, consumption } = service([row]);
+        await expect(consumption.read(USER, 'token', SESSION)).rejects.toThrow('INTEGRITY_FAILURE');
+        expect(repository.readSessionSituationStress).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it('never produces guidance for ANY resolved semantic reading other than STATE', async () => {
+      for (const semanticType of ['ALIGNMENT', 'TRAIT', 'CAPABILITY', 'READINESS', 'UNCERTAINTY', 'PROGRESS', 'LOAD']) {
+        for (const numericValue of [1, 2, 3, 4, 5]) {
+          const { consumption } = service([semanticallyDrifted(semanticType, numericValue)]);
+          // Fail-closed, not merely "no ACTIVE guidance": a drifted reading is
+          // never silently normalised into the harmless NONE result either.
+          await expect(consumption.read(USER, 'token', SESSION)).rejects.toThrow('INTEGRITY_FAILURE');
+        }
+      }
+    });
+
+    it('rejects a drifted semantic reading on the UNKNOWN routes too, never mapping it to a benign NONE', async () => {
+      const unknownRoutes = [
+        { ...semanticallyDrifted('ALIGNMENT', 5), validity_status: 'INVALIDATED' },
+        { ...semanticallyDrifted('ALIGNMENT', 4), value_state: 'UNASSESSED', numeric_value: null, canonical_binding_id: null },
+        { ...semanticallyDrifted('ALIGNMENT', 4), active_binding_id: OTHER_BINDING },
+      ];
+      for (const row of unknownRoutes) {
+        const { consumption } = service([row as unknown as HimSituationStressSourceRow]);
+        await expect(consumption.read(USER, 'token', SESSION)).rejects.toThrow('INTEGRITY_FAILURE');
+      }
+    });
+
+    it('preserves the positive RESOLVED / STATE behaviour exactly', async () => {
+      const known = boundRow(4);
+      expect(known.semantic_mapping_status).toBe('RESOLVED');
+      expect(known.semantic_type).toBe('STATE');
+      await expect(service([known]).consumption.read(USER, 'token', SESSION)).resolves.toEqual(REDUCE);
+      await expect(service([boundRow(5)]).consumption.read(USER, 'token', SESSION)).resolves.toEqual(REDUCE);
+      await expect(service([boundRow(3)]).consumption.read(USER, 'token', SESSION)).resolves.toEqual(NONE);
+      await expect(service([boundRow(null)]).consumption.read(USER, 'token', SESSION)).resolves.toEqual(NONE);
+    });
+
+    it('leaves the SHARED QHIA-004 projection generic: it still accepts the semantic readings it is designed for', () => {
+      // Anti-over-fix control. The guard above must live at the QHIA-007
+      // boundary ONLY. If it had been pushed down into the shared projection,
+      // these legitimate rows - a RESOLVED / ALIGNMENT GOAL metric and an
+      // UNRESOLVED / null HBS metric - would start failing, and every other
+      // HIM consumer with them.
+      const alignmentRow = {
+        ...boundRow(4),
+        metric_key: 'hgs.purpose-alignment', hif_owner: 'HGS',
+        semantic_mapping_status: 'RESOLVED', semantic_type: 'ALIGNMENT',
+        source_metric_key: 'hgs.purpose-alignment',
+        source_semantic_mapping_status: 'RESOLVED', source_semantic_type: 'ALIGNMENT',
+        valid_context_kinds: ['GOAL'], context_kind: 'GOAL', source_context_kind: 'GOAL',
+      } as unknown as HimSituationStressSourceRow;
+      expect(projectHimContextualCurrentSlot(alignmentRow, 'hgs.purpose-alignment', 1, 'GOAL', SITUATION))
+        .toMatchObject({
+          metricKey: 'hgs.purpose-alignment', hifOwner: 'HGS',
+          semanticMappingStatus: 'RESOLVED', semanticType: 'ALIGNMENT',
+          knowledgeState: 'KNOWN', numericValue: 4,
+        });
+
+      const unresolvedRow = {
+        ...boundRow(2),
+        metric_key: 'hbs.reflection', hif_owner: 'HBS',
+        semantic_mapping_status: 'UNRESOLVED', semantic_type: null,
+        source_metric_key: 'hbs.reflection',
+        source_semantic_mapping_status: 'UNRESOLVED', source_semantic_type: null,
+        valid_context_kinds: ['SITUATION'],
+      } as unknown as HimSituationStressSourceRow;
+      expect(projectHimContextualCurrentSlot(unresolvedRow, 'hbs.reflection', 1, 'SITUATION', SITUATION))
+        .toMatchObject({
+          metricKey: 'hbs.reflection', hifOwner: 'HBS',
+          semanticMappingStatus: 'UNRESOLVED', semanticType: null,
+          knowledgeState: 'KNOWN', numericValue: 2,
+        });
+
+      // And the same generic projection accepts the drifted hse.stress row the
+      // QHIA-007 boundary rejects - proving the rejection is the CONSUMER's
+      // bound, not a change to the shared contract.
+      expect(projectHimContextualCurrentSlot(semanticallyDrifted('ALIGNMENT', 5), 'hse.stress', 1, 'SITUATION', SITUATION))
+        .toMatchObject({ knowledgeState: 'KNOWN', numericValue: 5, semanticType: 'ALIGNMENT' });
     });
   });
 

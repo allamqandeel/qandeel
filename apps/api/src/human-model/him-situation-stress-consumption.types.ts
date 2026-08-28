@@ -20,6 +20,21 @@ import type { HimContextualCurrentBatchSourceRow } from './him-contextual-curren
 export const HIM_SITUATION_STRESS_CONTEXT_KIND = 'SITUATION' as const;
 export const HIM_SITUATION_STRESS_METRIC_KEY = 'hse.stress' as const;
 export const HIM_SITUATION_STRESS_DEFINITION_VERSION = 1 as const;
+export const HIM_SITUATION_STRESS_HIF_OWNER = 'HSE' as const;
+// The rest of the frozen semantic identity of hse.stress@1. QHIA-007 attaches
+// behavioural meaning to this metric's NUMERIC VALUE, so the value is only
+// interpretable while the persisted definition still says the number means a
+// RESOLVED / STATE reading. A row that is internally coherent but semantically
+// something else - a RESOLVED / ALIGNMENT, READINESS, LOAD, or TRAIT reading
+// carried under this metric key - is a different quantity wearing the same
+// name, and no ordinal mapping may be applied to it.
+//
+// This bound belongs HERE, at the narrow consumption boundary, and never in
+// the shared QHIA-004 projection: that projection is deliberately generic
+// across all 17 metrics, several of which are legitimately RESOLVED /
+// ALIGNMENT or legitimately UNRESOLVED with a null type.
+export const HIM_SITUATION_STRESS_SEMANTIC_MAPPING_STATUS = 'RESOLVED' as const;
+export const HIM_SITUATION_STRESS_SEMANTIC_TYPE = 'STATE' as const;
 
 // The two deterministic relevance states the composition RPC can report.
 // UNBOUND is a first-class authoritative answer, never an error and never a
