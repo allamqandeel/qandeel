@@ -34,21 +34,24 @@ const AUTHENTICATED_RPC_ALLOWLIST = new Set([
   // QHIA-005: the one-request QHIA-004 batch transport for the foreground
   // hbs.reflection selective read (migration 0054, read-only).
   'read_him_contextual_current_intelligence_batch_v1',
-  // QHIA-009: the ONE cross-context foreground aggregate transport (migration
-  // 0058, read-only). It wraps the already-proven migration-0056 Situation-
-  // stress and migration-0057 Decision-attention authorities server-side, which
-  // in turn compose the QHIA-006 relevance authority with the QHIA-004 batch
-  // authority - so no binding-read request, no separate per-channel request,
-  // and no hse.self-confidence read appears anywhere on this allowlist.
+  // QHIA-009/QHIA-010: the ONE cross-context foreground aggregate transport
+  // (migration 0059 aggregate v2, read-only). It wraps the already-proven
+  // migration-0058 aggregate v1 - itself wrapping the migration-0056
+  // Situation-stress and migration-0057 Decision-attention authorities - and the
+  // migration-0059 Goal-motivation authority server-side, all of which compose
+  // the QHIA-006 relevance authority with the QHIA-004 batch authority. So no
+  // binding-read request, no separate per-channel request, and no dormant
+  // hse.self-confidence or Situation-bound Motivation read appears anywhere on
+  // this allowlist.
   //
-  // The two direct per-channel RPCs are deliberately ABSENT. They remain
-  // canonical database authorities, independently verified by their own
-  // migrations and verifiers; this allowlist is smoke-only and describes the
-  // exact foreground transport the production Orchestrator is supposed to use.
-  // Keeping them here would let a regression back to the retired two-request
-  // shape pass unnoticed, and the transport census below would have nothing to
-  // catch.
-  'read_him_session_cross_context_foreground_v1',
+  // The retired aggregate-v1 endpoint and the three direct per-channel RPCs are
+  // deliberately ABSENT. They remain canonical database authorities,
+  // independently verified by their own migrations and verifiers; this allowlist
+  // is smoke-only and describes the exact foreground transport the production
+  // Orchestrator is supposed to use. Keeping any of them here would let a
+  // regression back to a retired request shape pass unnoticed, and the transport
+  // census below would have nothing to catch.
+  'read_him_session_cross_context_foreground_v2',
 ]);
 const SERVICE_ROLE_RPC_ALLOWLIST = new Set([
   'claim_conversation_turn',

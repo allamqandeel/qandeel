@@ -26,6 +26,8 @@ import { HimSituationStressConsumptionService } from '../human-model/him-situati
 import type { HimSituationStressGuidance } from '../human-model/him-situation-stress-consumption.types';
 import { HimDecisionAttentionConsumptionService } from '../human-model/him-decision-attention-consumption.service';
 import type { HimDecisionAttentionGuidance } from '../human-model/him-decision-attention-consumption.types';
+import { HimGoalMotivationConsumptionService } from '../human-model/him-goal-motivation-consumption.service';
+import type { HimGoalMotivationGuidance } from '../human-model/him-goal-motivation-consumption.types';
 import { HimCrossContextForegroundAggregationService } from '../human-model/him-cross-context-foreground-aggregation.service';
 import type { HimCrossContextForegroundGuidance } from '../human-model/him-cross-context-foreground.types';
 import { CorrelationService } from '../observability/correlation.service';
@@ -125,15 +127,18 @@ describe('ConversationOrchestratorService', () => {
   const activeSituationStressGuidance: HimSituationStressGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'REDUCE_INTERACTION_BURDEN' };
   const noneDecisionAttentionGuidance: HimDecisionAttentionGuidance = { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' };
   const activeDecisionAttentionGuidance: HimDecisionAttentionGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'REDUCE_PRESENTATION_BURDEN' };
-  // QHIA-009: the aggregate carries the two EXISTING guidance contracts side by
-  // side. It adds no field of its own to the provider request.
+  const noneGoalMotivationGuidance: HimGoalMotivationGuidance = { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' };
+  const activeGoalMotivationGuidance: HimGoalMotivationGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'REDUCE_GOAL_ACTION_BURDEN' };
+  // QHIA-009/QHIA-010: the aggregate carries the three EXISTING guidance
+  // contracts side by side. It adds no field of its own to the provider request.
   const crossContextGuidance = (
     situationStress: HimSituationStressGuidance,
     decisionAttention: HimDecisionAttentionGuidance,
-  ): HimCrossContextForegroundGuidance => ({ contractVersion: 1, situationStress, decisionAttention });
-  // Raw migration-0058 / 0056 / 0057 rows for the tests that drive the REAL
-  // aggregate over REAL child consumers. Both channels are deterministically
-  // unbound, so the decoded answer is bounded NONE on both sides.
+    goalMotivation: HimGoalMotivationGuidance = noneGoalMotivationGuidance,
+  ): HimCrossContextForegroundGuidance => ({ contractVersion: 2, situationStress, decisionAttention, goalMotivation });
+  // Raw migration-0059 / 0058 / 0056 / 0057 rows for the tests that drive the
+  // REAL aggregate over REAL child consumers. Every channel is deterministically
+  // unbound, so the decoded answer is bounded NONE on all three sides.
   const CANONICAL_USER = '00000000-0000-4000-8000-000000000001';
   const CANONICAL_SESSION = '00000000-0000-4000-8000-000000000002';
   const nullMetricColumns = {
@@ -148,9 +153,11 @@ describe('ConversationOrchestratorService', () => {
   };
   const unboundSituationRow = () => ({ binding_state: 'NO_ACTIVE_SITUATION', ...nullMetricColumns });
   const unboundDecisionRow = () => ({ binding_state: 'NO_ACTIVE_DECISION', ...nullMetricColumns });
+  const unboundGoalRow = () => ({ binding_state: 'NO_ACTIVE_GOAL', ...nullMetricColumns });
   const unboundEnvelope = () => [
     { foreground_slot_order: 1, foreground_slot: 'SITUATION_STRESS', ...unboundSituationRow() },
     { foreground_slot_order: 2, foreground_slot: 'DECISION_ATTENTION', ...unboundDecisionRow() },
+    { foreground_slot_order: 3, foreground_slot: 'GOAL_MOTIVATION', ...unboundGoalRow() },
   ];
   const noneReflectionGuidance: HimSessionReflectionGuidance = { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' };
   const inviteReflectionGuidance: HimSessionReflectionGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'GENTLE_REFLECTION_INVITATION' };
@@ -985,7 +992,7 @@ describe('ConversationOrchestratorService', () => {
     });
   });
 
-  describe('Cross-context foreground aggregation (QHIA-009)', () => {
+  describe('Cross-context foreground aggregation (QHIA-009 transport, QHIA-010 v2 envelope)', () => {
     const finalizeNormally = () => {
       repository.claimTurn.mockResolvedValue(claimed);
       repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
@@ -994,6 +1001,9 @@ describe('ConversationOrchestratorService', () => {
     const REDUCE_COGNITIVE_LOAD = 'Use simpler structure and avoid unnecessary detail or cognitive burden.';
     const SINGLE_TRACK = 'Stay on one main conversational track; avoid multiple parallel branches.';
     const ONE_AT_A_TIME = 'When guidance is otherwise appropriate, present one immediate step or unit at a time rather than a bundle.';
+    const REDUCE_STEERING_PRESSURE = 'Reduce steering pressure; do not push the user toward an action or conclusion.';
+    const CALMER_PACING = 'Use calmer, steadier delivery without claiming or naming the user\'s internal state.';
+    const SMALL_IMMEDIATE_ACTION = 'When goal-related action guidance is otherwise appropriate, keep the immediate action small and bounded rather than expanding it into a larger task bundle.';
     const occurrences = (haystack: string, needle: string): number => haystack.split(needle).length - 1;
 
     it('reads the cross-context foreground ONCE per eligible turn, for the authoritative claimed session, through the one aggregate boundary', async () => {
@@ -1043,39 +1053,100 @@ describe('ConversationOrchestratorService', () => {
       expect(router.generate).toHaveBeenCalledTimes(1);
     });
 
-    it('makes BOTH existing guidance fields available to provider construction when the aggregate settles before the existing barrier', async () => {
-      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
+    it('makes ALL THREE existing guidance fields available to provider construction when the aggregate settles before the existing barrier', async () => {
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance, activeGoalMotivationGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
       expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
         himSituationStressGuidance: activeSituationStressGuidance,
         himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
+        himGoalMotivationGuidance: activeGoalMotivationGuidance,
       }));
     });
 
-    it('carries ONLY the Situation field when Situation is ACTIVE and Decision is NONE', async () => {
-      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, noneDecisionAttentionGuidance));
+    it('carries ONLY the Situation field when Situation is ACTIVE and the other two are NONE', async () => {
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, noneDecisionAttentionGuidance, noneGoalMotivationGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate.mock.calls[0][0]).toMatchObject({ himSituationStressGuidance: activeSituationStressGuidance });
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
     });
 
-    it('carries ONLY the Decision field when Situation is NONE and Decision is ACTIVE', async () => {
-      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, activeDecisionAttentionGuidance));
+    it('carries ONLY the Decision field when Decision is ACTIVE and the other two are NONE', async () => {
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, activeDecisionAttentionGuidance, noneGoalMotivationGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate.mock.calls[0][0]).toMatchObject({ himDecisionAttentionGuidance: activeDecisionAttentionGuidance });
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
     });
 
-    it('omits BOTH router fields entirely when both channels are NONE', async () => {
-      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, noneDecisionAttentionGuidance));
+    it('carries ONLY the Goal field when Goal Motivation is ACTIVE and the other two are NONE', async () => {
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, noneDecisionAttentionGuidance, activeGoalMotivationGuidance));
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).toMatchObject({ himGoalMotivationGuidance: activeGoalMotivationGuidance });
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
+    });
+
+    it('carries EXACTLY the Situation and Goal fields when those two are ACTIVE, and renders shared reductions once', async () => {
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, noneDecisionAttentionGuidance, activeGoalMotivationGuidance));
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      const dispatched = router.generate.mock.calls[0][0] as ModelRouterRequest;
+      expect(dispatched).toMatchObject({
+        himSituationStressGuidance: activeSituationStressGuidance,
+        himGoalMotivationGuidance: activeGoalMotivationGuidance,
+      });
+      expect(dispatched).not.toHaveProperty('himDecisionAttentionGuidance');
+      // The shared reduced-steering-pressure instruction is contributed by BOTH
+      // channels and rendered exactly once; each channel's own unique
+      // instructions still appear.
+      const rendered = composeServerGuidance(dispatched);
+      expect(occurrences(rendered, REDUCE_STEERING_PRESSURE)).toBe(1);
+      expect(occurrences(rendered, REDUCE_COGNITIVE_LOAD)).toBe(1);
+      expect(occurrences(rendered, CALMER_PACING)).toBe(1);
+      expect(occurrences(rendered, SMALL_IMMEDIATE_ACTION)).toBe(1);
+      expect(occurrences(rendered, ONE_AT_A_TIME)).toBe(1);
+      expect(rendered).not.toContain(SINGLE_TRACK);
+      expect(composeServerGuidance(dispatched)).toBe(rendered);
+    });
+
+    it('carries EXACTLY the Decision and Goal fields when those two are ACTIVE, and renders shared reductions once', async () => {
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, activeDecisionAttentionGuidance, activeGoalMotivationGuidance));
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      const dispatched = router.generate.mock.calls[0][0] as ModelRouterRequest;
+      expect(dispatched).toMatchObject({
+        himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
+        himGoalMotivationGuidance: activeGoalMotivationGuidance,
+      });
+      expect(dispatched).not.toHaveProperty('himSituationStressGuidance');
+      // The shared one-step-at-a-time instruction is contributed by BOTH
+      // channels and rendered exactly once.
+      const rendered = composeServerGuidance(dispatched);
+      expect(occurrences(rendered, ONE_AT_A_TIME)).toBe(1);
+      expect(occurrences(rendered, REDUCE_COGNITIVE_LOAD)).toBe(1);
+      expect(occurrences(rendered, SINGLE_TRACK)).toBe(1);
+      expect(occurrences(rendered, SMALL_IMMEDIATE_ACTION)).toBe(1);
+      expect(occurrences(rendered, REDUCE_STEERING_PRESSURE)).toBe(1);
+      expect(rendered).not.toContain(CALMER_PACING);
+      expect(composeServerGuidance(dispatched)).toBe(rendered);
+    });
+
+    it('omits ALL THREE router fields entirely when every channel is NONE', async () => {
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, noneDecisionAttentionGuidance, noneGoalMotivationGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
     });
 
     it('adds ZERO incremental foreground wait: a still-pending aggregate never delays provider dispatch', async () => {
@@ -1093,15 +1164,17 @@ describe('ConversationOrchestratorService', () => {
         expect(router.generate).toHaveBeenCalledTimes(1);
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
         // The optional Reflection enrichment still won its own existing
-        // budget: QHIA-009 changed no QHIA-005 semantics.
+        // budget: QHIA-009 and QHIA-010 changed no QHIA-005 semantics.
         expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himSessionReflectionGuidance: inviteReflectionGuidance }));
-        // No QHIA-009 timer exists: the only foreground timer in the system is
-        // the pre-existing Reflection budget, and it was cleared by its own
-        // fast resolution.
+        // No cross-context timer exists: the only foreground timer in the
+        // system is the pre-existing Reflection budget, and it was cleared by
+        // its own fast resolution. Adding the third server-side slot introduced
+        // no new timeout, barrier, or await.
         expect(jest.getTimerCount()).toBe(0);
         // A late completion after dispatch is ignored for this turn.
-        releaseAggregate(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
+        releaseAggregate(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance, activeGoalMotivationGuidance));
         await jest.advanceTimersByTimeAsync(0);
         expect(router.generate).toHaveBeenCalledTimes(1);
         expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
@@ -1124,21 +1197,24 @@ describe('ConversationOrchestratorService', () => {
         expect(router.generate).toHaveBeenCalledTimes(1);
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
         expect(repository.failTurn).not.toHaveBeenCalled();
         expect(jest.getTimerCount()).toBe(0);
       } finally { jest.useRealTimers(); }
     });
 
-    it('degrades a rejected aggregate to BOTH fields omitted while the turn generates normally, with no fallback request', async () => {
+    it('degrades a rejected aggregate to ALL THREE fields omitted while the turn generates normally, with no fallback request', async () => {
       himCrossContextForeground.read.mockRejectedValue(new Error('private data api failure'));
       finalizeNormally();
       await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
       expect(router.generate).toHaveBeenCalledTimes(1);
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-      // No second request of any kind: the rejected aggregate is not retried
-      // and the retired direct reads are not fired as backups.
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
+      // No second request of any kind: the rejected aggregate is not retried,
+      // the retired aggregate-v1 endpoint is not used as a fallback, and the
+      // direct reads are not fired as backups.
       expect(himCrossContextForeground.read).toHaveBeenCalledTimes(1);
       expect(repository.failTurn).not.toHaveBeenCalled();
       expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
@@ -1170,11 +1246,12 @@ describe('ConversationOrchestratorService', () => {
         finalizeNormally();
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         const dispatchedSnapshot = JSON.stringify(router.generate.mock.calls[0][0]);
-        releaseAggregate(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
+        releaseAggregate(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance, activeGoalMotivationGuidance));
         await jest.advanceTimersByTimeAsync(0);
         expect(router.generate).toHaveBeenCalledTimes(1);
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
         expect(JSON.stringify(router.generate.mock.calls[0][0])).toBe(dispatchedSnapshot);
       } finally { jest.useRealTimers(); }
     });
@@ -1188,18 +1265,20 @@ describe('ConversationOrchestratorService', () => {
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
         expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-        // The first turn's aggregate settles ACTIVE/ACTIVE only after that turn
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
+        // The first turn's aggregate settles all-ACTIVE only after that turn
         // dispatched.
-        releaseFirst(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
+        releaseFirst(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance, activeGoalMotivationGuidance));
         await jest.advanceTimersByTimeAsync(0);
         // The next turn performs its own aggregate read; the stale ACTIVE
         // result is not carried over, and no cross-turn cache exists.
-        himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, noneDecisionAttentionGuidance));
+        himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, noneDecisionAttentionGuidance, noneGoalMotivationGuidance));
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(himCrossContextForeground.read).toHaveBeenCalledTimes(2);
         expect(router.generate).toHaveBeenCalledTimes(2);
         expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himSituationStressGuidance');
         expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himDecisionAttentionGuidance');
+        expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himGoalMotivationGuidance');
       } finally { jest.useRealTimers(); }
     });
 
@@ -1214,19 +1293,21 @@ describe('ConversationOrchestratorService', () => {
         .filter(({ engine }) => engine === 'him_cross_context_foreground');
       expect(engineResults).toHaveLength(1);
       await expect(engineResults[0].result.value).rejects.toThrow('private transport failure');
-      // The two retired per-channel spans no longer exist: one transport, one
+      // The three retired per-channel spans no longer exist: one transport, one
       // span.
       expect(withEngine.mock.calls.map((call) => call[0])).not.toContain('him_situation_stress_context');
       expect(withEngine.mock.calls.map((call) => call[0])).not.toContain('him_decision_attention_context');
+      expect(withEngine.mock.calls.map((call) => call[0])).not.toContain('him_goal_motivation_context');
       expect(router.generate).toHaveBeenCalledTimes(1);
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
       expect(repository.failTurn).not.toHaveBeenCalled();
     });
 
-    it('keeps provider rendering byte-compatible for both ACTIVE channels: dedup stays deterministic', async () => {
+    it('keeps provider rendering byte-compatible for ALL THREE ACTIVE channels: dedup stays deterministic', async () => {
       himAdaptation.derive.mockReturnValue(activeAdaptation);
-      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance, activeGoalMotivationGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
@@ -1234,22 +1315,24 @@ describe('ConversationOrchestratorService', () => {
       expect(dispatched).toMatchObject({
         himSituationStressGuidance: activeSituationStressGuidance,
         himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
+        himGoalMotivationGuidance: activeGoalMotivationGuidance,
       });
-      // The single common rendering path is untouched by QHIA-009: the same
-      // request renders byte-identical guidance every time, and no shared
-      // instruction is emitted twice.
+      // The single common rendering path is untouched by QHIA-010: the same
+      // request renders byte-identical guidance every time, and every distinct
+      // bounded reduction is emitted at most once even when four server-owned
+      // channels ask for overlapping ones.
       const rendered = composeServerGuidance(dispatched);
       expect(composeServerGuidance(dispatched)).toBe(rendered);
-      for (const instruction of [REDUCE_COGNITIVE_LOAD, SINGLE_TRACK, ONE_AT_A_TIME]) {
+      for (const instruction of [REDUCE_COGNITIVE_LOAD, SINGLE_TRACK, ONE_AT_A_TIME, REDUCE_STEERING_PRESSURE, CALMER_PACING, SMALL_IMMEDIATE_ACTION]) {
         expect(occurrences(rendered, instruction)).toBe(1);
       }
     });
 
-    it('delivers an active HSE adaptation, Reflection, Situation-stress, and Decision-attention guidance together', async () => {
+    it('delivers an active HSE adaptation, Reflection, Situation-stress, Decision-attention, and Goal-motivation guidance together', async () => {
       himAdaptation.derive.mockReturnValue(activeAdaptation);
       himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(4));
       himReflectionConsumption.consume.mockReturnValue(avoidReflectionGuidance);
-      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance, activeGoalMotivationGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
@@ -1258,11 +1341,12 @@ describe('ConversationOrchestratorService', () => {
         himSessionReflectionGuidance: avoidReflectionGuidance,
         himSituationStressGuidance: activeSituationStressGuidance,
         himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
+        himGoalMotivationGuidance: activeGoalMotivationGuidance,
       }));
     });
 
     it('gives FAST and DEEP identical guidance and never participates in path selection', async () => {
-      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance));
+      himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance, activeGoalMotivationGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
@@ -1270,8 +1354,8 @@ describe('ConversationOrchestratorService', () => {
       repository.claimTurn.mockResolvedValue(deepClaim);
       repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
       await orchestrator.orchestrate('token', 'user', deepTurn);
-      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himSituationStressGuidance: activeSituationStressGuidance, himDecisionAttentionGuidance: activeDecisionAttentionGuidance });
-      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himSituationStressGuidance: activeSituationStressGuidance, himDecisionAttentionGuidance: activeDecisionAttentionGuidance });
+      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himSituationStressGuidance: activeSituationStressGuidance, himDecisionAttentionGuidance: activeDecisionAttentionGuidance, himGoalMotivationGuidance: activeGoalMotivationGuidance });
+      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himSituationStressGuidance: activeSituationStressGuidance, himDecisionAttentionGuidance: activeDecisionAttentionGuidance, himGoalMotivationGuidance: activeGoalMotivationGuidance });
       expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
       expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
     });
@@ -1316,31 +1400,34 @@ describe('ConversationOrchestratorService', () => {
     });
 
     // The retired direct boundaries, proven at RUNTIME rather than by absence.
-    // The REAL QHIA-007 and QHIA-008 consumption services are wired into the
-    // orchestrator's dependency graph here - as the aggregate's own children,
-    // over their REAL direct repositories - so "the Orchestrator no longer
-    // calls read(...)" is a fact about a reachable object, not about an object
-    // that was simply removed from the test.
+    // The REAL QHIA-007, QHIA-008 and QHIA-010 consumption services are wired
+    // into the orchestrator's dependency graph here - as the aggregate's own
+    // children, over their REAL direct repositories - so "the Orchestrator no
+    // longer calls read(...)" is a fact about a reachable object, not about an
+    // object that was simply removed from the test.
     const realAggregateOrchestrator = () => {
       const crossContextRepository = { readSessionCrossContextForeground: jest.fn().mockResolvedValue(unboundEnvelope()) };
       const situationRepository = { readSessionSituationStress: jest.fn().mockResolvedValue([unboundSituationRow()]) };
       const decisionRepository = { readSessionDecisionAttention: jest.fn().mockResolvedValue([unboundDecisionRow()]) };
+      const goalRepository = { readSessionGoalMotivation: jest.fn().mockResolvedValue([unboundGoalRow()]) };
       const situationConsumption = new HimSituationStressConsumptionService(situationRepository as never);
       const decisionConsumption = new HimDecisionAttentionConsumptionService(decisionRepository as never);
+      const goalConsumption = new HimGoalMotivationConsumptionService(goalRepository as never);
       const situationDirectRead = jest.spyOn(situationConsumption, 'read');
       const decisionDirectRead = jest.spyOn(decisionConsumption, 'read');
+      const goalDirectRead = jest.spyOn(goalConsumption, 'read');
       const aggregation = new HimCrossContextForegroundAggregationService(
-        crossContextRepository as never, situationConsumption, decisionConsumption,
+        crossContextRepository as never, situationConsumption, decisionConsumption, goalConsumption,
       );
       const wired = new ConversationOrchestratorService(
         repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge,
         himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, aggregation,
         hypothesisContext, recommendationGrounding, router, correlation, telemetry,
       );
-      return { wired, crossContextRepository, situationRepository, decisionRepository, situationDirectRead, decisionDirectRead };
+      return { wired, crossContextRepository, situationRepository, decisionRepository, goalRepository, situationDirectRead, decisionDirectRead, goalDirectRead };
     };
 
-    it('never invokes the direct QHIA-007 or QHIA-008 read(...) methods, and issues exactly one aggregate transport request', async () => {
+    it('never invokes the direct QHIA-007, QHIA-008 or QHIA-010 read(...) methods, and issues exactly one aggregate transport request', async () => {
       const wiring = realAggregateOrchestrator();
       const canonicalClaim = { ...claimed, session_id: CANONICAL_SESSION };
       himSelector.select.mockReturnValue({
@@ -1358,27 +1445,34 @@ describe('ConversationOrchestratorService', () => {
       // read, no direct request, no fallback, and no race.
       expect(wiring.situationDirectRead).not.toHaveBeenCalled();
       expect(wiring.decisionDirectRead).not.toHaveBeenCalled();
+      expect(wiring.goalDirectRead).not.toHaveBeenCalled();
       expect(wiring.situationRepository.readSessionSituationStress).not.toHaveBeenCalled();
       expect(wiring.decisionRepository.readSessionDecisionAttention).not.toHaveBeenCalled();
+      expect(wiring.goalRepository.readSessionGoalMotivation).not.toHaveBeenCalled();
       // Provider dispatch happens at most once, with the deterministic
-      // unbound answer decoded by the two existing semantic consumers.
+      // unbound answer decoded by the three existing semantic consumers.
       expect(router.generate).toHaveBeenCalledTimes(1);
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
       expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
     });
 
-    it('keeps the direct QHIA-007 and QHIA-008 boundaries independently callable and correct after the refactor', async () => {
+    it('keeps the direct QHIA-007, QHIA-008 and QHIA-010 boundaries independently callable and correct after the refactor', async () => {
       const wiring = realAggregateOrchestrator();
       wiring.situationDirectRead.mockRestore();
       wiring.decisionDirectRead.mockRestore();
+      wiring.goalDirectRead.mockRestore();
       const situationConsumption = new HimSituationStressConsumptionService(wiring.situationRepository as never);
       const decisionConsumption = new HimDecisionAttentionConsumptionService(wiring.decisionRepository as never);
+      const goalConsumption = new HimGoalMotivationConsumptionService(wiring.goalRepository as never);
       // Called directly - outside any orchestrator - the retired-from-the-turn
-      // authorities still answer exactly as they did before QHIA-009.
+      // authorities still answer exactly as they did before the aggregate.
       await expect(situationConsumption.read(CANONICAL_USER, 'token', CANONICAL_SESSION)).resolves.toEqual(noneSituationStressGuidance);
       await expect(decisionConsumption.read(CANONICAL_USER, 'token', CANONICAL_SESSION)).resolves.toEqual(noneDecisionAttentionGuidance);
+      await expect(goalConsumption.read(CANONICAL_USER, 'token', CANONICAL_SESSION)).resolves.toEqual(noneGoalMotivationGuidance);
       expect(wiring.situationRepository.readSessionSituationStress).toHaveBeenCalledTimes(1);
       expect(wiring.decisionRepository.readSessionDecisionAttention).toHaveBeenCalledTimes(1);
+      expect(wiring.goalRepository.readSessionGoalMotivation).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -120,20 +120,27 @@ test('the foreground ModelRouter is a deterministic verifier double that records
     'no second Recommendation model call is simulated');
 });
 
-test('the QHIA-009 aggregate is the smoke foreground transport and its success is censused non-vacuously', () => {
+test('the QHIA-010 aggregate v2 is the smoke foreground transport and its success is censused non-vacuously', () => {
   // ROOT CAUSE this guard closes: the smoke PostgREST substitute must
-  // RECOGNISE the migration-0058 aggregate RPC. QHIA-009 is optional foreground
-  // enrichment and the Orchestrator degrades gracefully when it rejects, so an
-  // unrecognised RPC lets the whole smoke stay green while migration 0058 is
-  // never executed even once.
-  assert.match(foregroundAdapters, /'read_him_session_cross_context_foreground_v1'/u,
-    'the smoke authenticated RPC allowlist recognises the migration-0058 aggregate transport');
-  // The retired two-request shape must not be accepted as the orchestrator
-  // transport path here. Both remain canonical database authorities verified by
-  // their own migrations and verifiers; this is a smoke-only transport list.
-  for (const direct of ['read_him_session_situation_stress_v1', 'read_him_session_decision_attention_v1']) {
-    assert.ok(!new RegExp(`'${direct}'`, 'u').test(foregroundAdapters),
-      `${direct} is not accepted as the QHIA-009 orchestrator transport path in this smoke`);
+  // RECOGNISE the migration-0059 aggregate-v2 RPC. The aggregate is optional
+  // foreground enrichment and the Orchestrator degrades gracefully when it
+  // rejects, so an unrecognised RPC lets the whole smoke stay green while
+  // migration 0059 is never executed even once.
+  assert.match(foregroundAdapters, /'read_him_session_cross_context_foreground_v2'/u,
+    'the smoke authenticated RPC allowlist recognises the migration-0059 aggregate-v2 transport');
+  // Neither the retired aggregate-v1 endpoint nor any retired per-request shape
+  // may be accepted as the orchestrator transport path here. All of them remain
+  // canonical database authorities verified by their own migrations and
+  // verifiers; this is a smoke-only transport list.
+  for (const retired of [
+    'read_him_session_cross_context_foreground_v1',
+    'read_him_session_situation_stress_v1',
+    'read_him_session_decision_attention_v1',
+    'read_him_session_goal_motivation_v1',
+    'read_him_session_context_bindings_v1',
+  ]) {
+    assert.ok(!new RegExp(`'${retired}'`, 'u').test(foregroundAdapters),
+      `${retired} is not accepted as the cross-context orchestrator transport path in this smoke`);
   }
 
   // The census must separate ATTEMPTED from COMPLETED, or "green" still cannot
@@ -162,40 +169,66 @@ test('the QHIA-009 aggregate is the smoke foreground transport and its success i
     'HimSituationStressRepository',
     'HimDecisionAttentionConsumptionService',
     'HimDecisionAttentionRepository',
+    'HimGoalMotivationConsumptionService',
+    'HimGoalMotivationRepository',
   ]) assert.match(smokeScript, new RegExp(`new ${productionClass}\\(`, 'u'), `real ${productionClass} is composed`);
+  // The aggregate must be wired to the REAL Goal-motivation consumer, not to a
+  // stand-in: a fourth constructor argument that is not the real service would
+  // make the third slot's decode meaningless.
+  const aggregateStart = smokeScript.indexOf('new HimCrossContextForegroundAggregationService(');
+  assert.ok(aggregateStart > 0, 'the smoke constructs the real aggregation service');
+  const aggregateArgs = smokeScript.slice(aggregateStart, smokeScript.indexOf(');', aggregateStart));
+  for (const child of ['himCrossContextForegroundRepository', 'himSituationStressService', 'himDecisionAttentionService', 'himGoalMotivationService']) {
+    assert.ok(aggregateArgs.includes(child), `the aggregate is composed over the real ${child}`);
+  }
   const orchestratorStart = smokeScript.indexOf('new ConversationOrchestratorService(');
   assert.ok(orchestratorStart > 0, 'the smoke constructs the real orchestrator');
   const orchestratorArgs = smokeScript.slice(orchestratorStart, smokeScript.indexOf(');', orchestratorStart));
   assert.ok(orchestratorArgs.includes('himCrossContextForegroundService'),
-    'the orchestrator receives the QHIA-009 aggregate service');
-  for (const retired of ['himSituationStressService', 'himDecisionAttentionService']) {
+    'the orchestrator receives the aggregate service');
+  for (const retired of ['himSituationStressService', 'himDecisionAttentionService', 'himGoalMotivationService']) {
     assert.ok(!orchestratorArgs.includes(retired),
       `${retired} is no longer an Orchestrator dependency: it is reached only through the aggregate`);
   }
 
   // Runtime census assertions: attempted AND completed, per turn, with zero
-  // direct per-channel and zero relevance-authority requests.
-  assert.match(smokeScript, /const CROSS_CONTEXT_FOREGROUND_RPC = 'read_him_session_cross_context_foreground_v1'/u);
+  // aggregate-v1, zero direct per-channel, and zero relevance-authority
+  // requests.
+  assert.match(smokeScript, /const CROSS_CONTEXT_FOREGROUND_RPC = 'read_him_session_cross_context_foreground_v2'/u);
+  assert.match(smokeScript, /const RETIRED_AGGREGATE_TRANSPORT_RPC = 'read_him_session_cross_context_foreground_v1'/u);
+  assert.match(smokeScript, /'read_him_session_goal_motivation_v1',/u,
+    'the direct QHIA-010 authority is censused by name');
   assert.match(smokeScript, /every aggregate attempt COMPLETED against real PostgreSQL/u,
     'the smoke asserts completion, not merely attempt');
+  assert.match(smokeScript, /zero aggregate-v1 application attempts/u,
+    'the retired aggregate-v1 endpoint is proven unused by the application');
   assert.match(smokeScript, /zero direct foreground attempts for/u);
   assert.match(smokeScript, /the QHIA-006 relevance authority is never requested from the application/u);
   assert.match(smokeScript, /no direct, fallback, or backup cross-context foreground request of any kind was issued/u);
+  assert.match(smokeScript, /goal_motivation\|context_bindings\|cross_context_foreground_v1/u,
+    'the catch-all attempted-name census also covers the Goal authority and the retired aggregate-v1 endpoint');
   for (const label of [
     "assertCrossContextForegroundTransport(0, 'before any foreground turn')",
     "assertCrossContextForegroundTransport(1, 'after foreground Turn #1')",
     "assertCrossContextForegroundTransport(2, 'after foreground Turn #2')",
   ]) assert.ok(smokeScript.includes(label), `the smoke censuses the aggregate transport: ${label}`);
 
-  // Success-with-legitimate-unbound is proven distinctly from degradation.
-  assert.match(smokeScript, /migration 0058 answers with exactly two transport rows/u);
-  assert.match(smokeScript, /the frozen transport order and the deterministic unbound states of both wrapped authorities/u);
+  // Success-with-legitimate-unbound is proven distinctly from degradation, for
+  // all three slots.
+  assert.match(smokeScript, /migration 0059 answers with exactly three transport rows/u);
+  assert.match(smokeScript, /the frozen transport order and the deterministic unbound states of all three wrapped authorities/u);
+  assert.match(smokeScript, /\[3, 'GOAL_MOTIVATION', 'NO_ACTIVE_GOAL'\]/u,
+    'the third slot is proven to be an authoritative NO_ACTIVE_GOAL row, never a missing or degraded one');
   assert.match(smokeScript, /decoded the successful aggregate into bounded NONE guidance/u,
-    'the REAL QHIA-007/QHIA-008 consumers are reached through the aggregate raw-row path');
-  assert.match(smokeScript, /the smoke binds no Situation and no Decision to the session/u,
+    'the REAL QHIA-007/QHIA-008/QHIA-010 consumers are reached through the aggregate raw-row path');
+  assert.match(smokeScript, /goalMotivation: \{ contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' \}/u,
+    'the real Goal-motivation consumer decoded the successful raw row to NONE');
+  assert.match(smokeScript, /contractVersion: 2,/u, 'the application consumes the explicit v2 aggregate guidance contract');
+  assert.match(smokeScript, /the smoke binds no Situation, no Decision, and no Goal to the session/u,
     'the unbound answer is proven to be the authoritative one, not an accident');
   assert.match(smokeScript, /an authoritatively unbound Situation adds no Situation-stress guidance field/u);
   assert.match(smokeScript, /an authoritatively unbound Decision adds no Decision-attention guidance field/u);
+  assert.match(smokeScript, /an authoritatively unbound Goal adds no Goal-motivation guidance field/u);
 });
 
 test('background providers remain the deterministic A2 doubles with an observable census', () => {

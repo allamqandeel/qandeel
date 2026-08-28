@@ -58,6 +58,8 @@ import { HimSituationStressConsumptionService } from '../src/human-model/him-sit
 import { HimSituationStressRepository } from '../src/human-model/him-situation-stress.repository';
 import { HimDecisionAttentionConsumptionService } from '../src/human-model/him-decision-attention-consumption.service';
 import { HimDecisionAttentionRepository } from '../src/human-model/him-decision-attention.repository';
+import { HimGoalMotivationConsumptionService } from '../src/human-model/him-goal-motivation-consumption.service';
+import { HimGoalMotivationRepository } from '../src/human-model/him-goal-motivation.repository';
 import { HimCrossContextForegroundAggregationService } from '../src/human-model/him-cross-context-foreground-aggregation.service';
 import { HimCrossContextForegroundRepository } from '../src/human-model/him-cross-context-foreground.repository';
 import { HimRepository } from '../src/human-model/him.repository';
@@ -147,17 +149,20 @@ const GENERATED_CANDIDATE_ASSUMPTION = 'A fixed morning window stays available o
 const ACCESS_TOKEN = 'full-intelligence-e2e-smoke-transport-token';
 const INTENT_DOMAIN = 'DECISION' as const;
 
-// QHIA-009 foreground transport identities this smoke censuses by name.
+// QHIA-009/QHIA-010 foreground transport identities this smoke censuses by name.
 //
 // The aggregate is OPTIONAL foreground enrichment and the Orchestrator
 // deliberately degrades when it rejects, so a green smoke proves nothing about
-// migration 0058 unless the transport itself is counted: the aggregate must be
-// attempted AND completed once per eligible turn, and the two direct
-// per-channel authorities must never be attempted at all.
-const CROSS_CONTEXT_FOREGROUND_RPC = 'read_him_session_cross_context_foreground_v1';
+// migration 0059 unless the transport itself is counted: the aggregate-v2
+// endpoint must be attempted AND completed once per eligible turn, and the
+// retired aggregate-v1 endpoint and the three direct per-channel authorities
+// must never be attempted at all.
+const CROSS_CONTEXT_FOREGROUND_RPC = 'read_him_session_cross_context_foreground_v2';
+const RETIRED_AGGREGATE_TRANSPORT_RPC = 'read_him_session_cross_context_foreground_v1';
 const DIRECT_FOREGROUND_RPCS = [
   'read_him_session_situation_stress_v1',
   'read_him_session_decision_attention_v1',
+  'read_him_session_goal_motivation_v1',
 ] as const;
 const RELEVANCE_AUTHORITY_RPC = 'read_him_session_context_bindings_v1';
 
@@ -257,51 +262,62 @@ async function main(): Promise<void> {
     // QHIA-008: likewise the REAL Decision-attention semantic consumption
     // boundary, the only owner of Attention meaning.
     const himDecisionAttentionService = new HimDecisionAttentionConsumptionService(new HimDecisionAttentionRepository(memoryDataApi));
-    // QHIA-009: the REAL cross-context foreground aggregate over the same
-    // authenticated transport adapter. It is launched concurrently with the
-    // HSE Snapshot and Reflection reads and adds no foreground wait, and it is
-    // now the ONLY cross-context foreground request the turn issues - exactly
-    // one migration-0058 call carrying both channels. This smoke binds neither
-    // a Situation nor a Decision to the session, so the wrapped migration-0056
-    // and migration-0057 authorities return their deterministic
-    // NO_ACTIVE_SITUATION / NO_ACTIVE_DECISION answers and both derived
+    // QHIA-010: likewise the REAL Goal-motivation semantic consumption
+    // boundary, the only owner of Goal Motivation meaning.
+    const himGoalMotivationService = new HimGoalMotivationConsumptionService(new HimGoalMotivationRepository(memoryDataApi));
+    // QHIA-009/QHIA-010: the REAL cross-context foreground aggregate over the
+    // same authenticated transport adapter. It is launched concurrently with
+    // the HSE Snapshot and Reflection reads and adds no foreground wait, and it
+    // is still the ONLY cross-context foreground request the turn issues -
+    // exactly one migration-0059 aggregate-v2 call carrying all three channels.
+    // This smoke binds neither a Situation, a Decision, nor a Goal to the
+    // session, so the wrapped migration-0058 aggregate v1 (itself wrapping the
+    // migration-0056 and migration-0057 authorities) and the migration-0059
+    // Goal authority return their deterministic NO_ACTIVE_SITUATION /
+    // NO_ACTIVE_DECISION / NO_ACTIVE_GOAL answers and all three derived
     // guidance contracts stay NONE (omitted from the provider request).
     //
-    // Both per-channel repositories above stay REAL and fully reachable over
-    // this same authenticated adapter. They are never called: the transport
+    // All three per-channel repositories above stay REAL and fully reachable
+    // over this same authenticated adapter. They are never called: the transport
     // census below proves zero direct attempts through a path that genuinely
-    // exists, which is a stronger claim than removing them would be.
+    // exists, which is a stronger claim than removing them would be. The same
+    // holds for the retired aggregate-v1 endpoint, which remains a canonical
+    // database authority this smoke proves production never requests.
     const himCrossContextForegroundRepository = new HimCrossContextForegroundRepository(memoryDataApi);
     const himCrossContextForegroundService = new HimCrossContextForegroundAggregationService(
-      himCrossContextForegroundRepository, himSituationStressService, himDecisionAttentionService);
+      himCrossContextForegroundRepository, himSituationStressService, himDecisionAttentionService, himGoalMotivationService);
     const hypothesisService = new HypothesisService(
       new HypothesisRepository(memoryDataApi, unusedDependency<HypothesisServiceRoleApiService>('HYPOTHESIS_SERVICE_ROLE_API')),
       evidenceService);
     const hypothesisReasoningContext = new HypothesisReasoningContextService(
       hypothesisService, evidenceService, new ConfidenceRepository(memoryDataApi));
-    // QHIA-009 transport census gate. `expectedTurns` is the number of eligible
-    // foreground turns that should have driven the aggregate so far.
+    // QHIA-009/QHIA-010 transport census gate. `expectedTurns` is the number of
+    // eligible foreground turns that should have driven the aggregate so far.
     //
     // Attempted AND completed must both equal that number: attempted-only would
     // mean the request was issued and rejected, which the Orchestrator hides
     // behind its graceful degradation, and that is exactly the false-green this
-    // gate exists to catch. Zero direct per-channel attempts proves there is no
-    // fallback, no backup, and no race against the retired two-request shape.
+    // gate exists to catch. Zero aggregate-v1 attempts proves the application
+    // really moved to the v2 endpoint rather than keeping the old one as a
+    // fallback, and zero direct per-channel attempts proves there is no backup
+    // and no race against the retired per-request shapes.
     const assertCrossContextForegroundTransport = (expectedTurns: number, label: string): void => {
       const census = authenticatedDataApi.rpcCensus;
       assert.equal(census.attempts(CROSS_CONTEXT_FOREGROUND_RPC), expectedTurns,
-        `${label}: exactly ${expectedTurns} migration-0058 aggregate transport attempt(s)`);
+        `${label}: exactly ${expectedTurns} migration-0059 aggregate-v2 transport attempt(s)`);
       assert.equal(census.completions(CROSS_CONTEXT_FOREGROUND_RPC), expectedTurns,
         `${label}: every aggregate attempt COMPLETED against real PostgreSQL - a successful authoritative read, never graceful degradation`);
       assert.equal(census.failures(CROSS_CONTEXT_FOREGROUND_RPC), 0,
         `${label}: no aggregate transport failure occurred`);
+      assert.equal(census.attempts(RETIRED_AGGREGATE_TRANSPORT_RPC), 0,
+        `${label}: zero aggregate-v1 application attempts - the v2 endpoint is not shadowed by, raced against, or backed up by the retired transport`);
       for (const direct of DIRECT_FOREGROUND_RPCS) {
         assert.equal(census.attempts(direct), 0, `${label}: zero direct foreground attempts for ${direct}`);
       }
       assert.equal(census.attempts(RELEVANCE_AUTHORITY_RPC), 0,
         `${label}: the QHIA-006 relevance authority is never requested from the application`);
       assert.deepEqual(
-        census.attemptedNames().filter((name) => /situation_stress|decision_attention|context_bindings/u.test(name)), [],
+        census.attemptedNames().filter((name) => /situation_stress|decision_attention|goal_motivation|context_bindings|cross_context_foreground_v1/u.test(name)), [],
         `${label}: no direct, fallback, or backup cross-context foreground request of any kind was issued`);
     };
 
@@ -352,11 +368,11 @@ async function main(): Promise<void> {
     // The fixture stage drives authenticated RPCs of its own, so the census
     // starts from a proven-clean cross-context baseline before Turn #1.
     assertCrossContextForegroundTransport(0, 'before any foreground turn');
-    // No relevance binding is created anywhere in this smoke, so both wrapped
-    // authorities must answer with their deterministic unbound results.
+    // No relevance binding is created anywhere in this smoke, so all three
+    // wrapped authorities must answer with their deterministic unbound results.
     assert.equal((await db.observer(
       'SELECT id FROM public.him_session_context_bindings WHERE user_id = $1', [userId])).length, 0,
-      'the smoke binds no Situation and no Decision to the session');
+      'the smoke binds no Situation, no Decision, and no Goal to the session');
 
     // -----------------------------------------------------------------------
     stage = 'FOREGROUND_TURN_1';
@@ -408,17 +424,20 @@ async function main(): Promise<void> {
       ],
     }, 'real PARTIAL session HIM context: stress KNOWN/HIGH, energy and attention UNKNOWN/null, FAST fields only, policies UNASSESSED');
 
-    // QHIA-009: the cross-context foreground aggregate really ran on this turn.
-    // Exactly one migration-0058 request was attempted AND completed through
-    // the authenticated PostgREST substitute against real PostgreSQL, and the
-    // two direct per-channel authorities were never requested.
+    // QHIA-009/QHIA-010: the cross-context foreground aggregate really ran on
+    // this turn. Exactly one migration-0059 aggregate-v2 request was attempted
+    // AND completed through the authenticated PostgREST substitute against real
+    // PostgreSQL, and neither the retired aggregate-v1 endpoint nor any of the
+    // three direct per-channel authorities was ever requested.
     assertCrossContextForegroundTransport(1, 'after foreground Turn #1');
-    // Provider contract unchanged: both wrapped authorities answered
-    // authoritatively UNBOUND, so the two existing guidance fields are omitted.
+    // Provider contract unchanged: all three wrapped authorities answered
+    // authoritatively UNBOUND, so all three guidance fields are omitted.
     assert.equal(firstCall.request.himSituationStressGuidance, undefined,
       'an authoritatively unbound Situation adds no Situation-stress guidance field');
     assert.equal(firstCall.request.himDecisionAttentionGuidance, undefined,
       'an authoritatively unbound Decision adds no Decision-attention guidance field');
+    assert.equal(firstCall.request.himGoalMotivationGuidance, undefined,
+      'an authoritatively unbound Goal adds no Goal-motivation guidance field');
 
     // Hypothesis reasoning: the seeded Hypothesis through the real context
     // service — v1, structural counts 0/0, assumption present, Confidence
@@ -762,14 +781,17 @@ async function main(): Promise<void> {
     assert.deepEqual(secondCall.request.himContext, firstCall.request.himContext,
       'second request still consumes the real session HIM snapshot: stress KNOWN/HIGH, others UNKNOWN/null');
 
-    // QHIA-009: the second eligible turn drove its OWN aggregate request, which
-    // also completed. The counter advanced by exactly one - never zero (a
-    // cached or reused earlier result) and never two (a fallback or backup).
+    // QHIA-009/QHIA-010: the second eligible turn drove its OWN aggregate
+    // request, which also completed. The counter advanced by exactly one -
+    // never zero (a cached or reused earlier result) and never two (a fallback
+    // or backup).
     assertCrossContextForegroundTransport(2, 'after foreground Turn #2');
     assert.equal(secondCall.request.himSituationStressGuidance, undefined,
       'the second turn still adds no Situation-stress guidance field');
     assert.equal(secondCall.request.himDecisionAttentionGuidance, undefined,
       'the second turn still adds no Decision-attention guidance field');
+    assert.equal(secondCall.request.himGoalMotivationGuidance, undefined,
+      'the second turn still adds no Goal-motivation guidance field');
 
     // The transport census proves the aggregate SUCCEEDED; this block proves
     // WHAT it succeeded with, so a legitimate unbound NONE answer can never be
@@ -778,11 +800,11 @@ async function main(): Promise<void> {
     // once more over the same authenticated substitute.
     const aggregateRows = await himCrossContextForegroundRepository
       .readSessionCrossContextForeground(ACCESS_TOKEN, userId, sessionId);
-    assert.equal(aggregateRows.length, 2, 'migration 0058 answers with exactly two transport rows');
+    assert.equal(aggregateRows.length, 3, 'migration 0059 answers with exactly three transport rows');
     assert.deepEqual(
       aggregateRows.map((row) => [row.foreground_slot_order, row.foreground_slot, row.binding_state]),
-      [[1, 'SITUATION_STRESS', 'NO_ACTIVE_SITUATION'], [2, 'DECISION_ATTENTION', 'NO_ACTIVE_DECISION']],
-      'the frozen transport order and the deterministic unbound states of both wrapped authorities');
+      [[1, 'SITUATION_STRESS', 'NO_ACTIVE_SITUATION'], [2, 'DECISION_ATTENTION', 'NO_ACTIVE_DECISION'], [3, 'GOAL_MOTIVATION', 'NO_ACTIVE_GOAL']],
+      'the frozen transport order and the deterministic unbound states of all three wrapped authorities');
     for (const row of aggregateRows) {
       assert.equal(row.binding_context_id, null, 'an unbound slot resolved no context');
       assert.equal(row.metric_key, null, 'an unbound slot read no metric');
@@ -790,18 +812,21 @@ async function main(): Promise<void> {
     }
     const aggregateGuidance = await himCrossContextForegroundService.read(userId, ACCESS_TOKEN, sessionId);
     assert.deepEqual(aggregateGuidance, {
-      contractVersion: 1,
+      contractVersion: 2,
       situationStress: { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' },
       decisionAttention: { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' },
-    }, 'the REAL QHIA-007 and QHIA-008 semantic consumers decoded the successful aggregate into bounded NONE guidance');
+      goalMotivation: { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' },
+    }, 'the REAL QHIA-007, QHIA-008 and QHIA-010 semantic consumers decoded the successful aggregate into bounded NONE guidance');
     assertCrossContextForegroundTransport(4, 'after the direct aggregate transport proof');
     const aggregateCensus = authenticatedDataApi.rpcCensus;
-    console.log('FULL_INTELLIGENCE_E2E_SMOKE QHIA-009 aggregate transport census: '
+    console.log('FULL_INTELLIGENCE_E2E_SMOKE QHIA-010 aggregate-v2 transport census: '
       + `attempted=${aggregateCensus.attempts(CROSS_CONTEXT_FOREGROUND_RPC)} `
       + `completed=${aggregateCensus.completions(CROSS_CONTEXT_FOREGROUND_RPC)} `
       + `failed=${aggregateCensus.failures(CROSS_CONTEXT_FOREGROUND_RPC)} `
+      + `aggregate_v1=${aggregateCensus.attempts(RETIRED_AGGREGATE_TRANSPORT_RPC)} `
       + `direct_qhia007=${aggregateCensus.attempts(DIRECT_FOREGROUND_RPCS[0])} `
       + `direct_qhia008=${aggregateCensus.attempts(DIRECT_FOREGROUND_RPCS[1])} `
+      + `direct_qhia010=${aggregateCensus.attempts(DIRECT_FOREGROUND_RPCS[2])} `
       + `relevance_authority=${aggregateCensus.attempts(RELEVANCE_AUTHORITY_RPC)}`);
 
     // Hypothesis reasoning consumption: both post-background current
