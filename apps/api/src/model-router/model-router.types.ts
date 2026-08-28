@@ -3,6 +3,7 @@ import type { HimInteractionAdaptation } from '../human-model/him-interaction-ad
 import type { HimSessionReflectionGuidance } from '../human-model/him-session-reflection-consumption.types';
 import type { HimSituationStressGuidance } from '../human-model/him-situation-stress-consumption.types';
 import type { HimDecisionAttentionGuidance } from '../human-model/him-decision-attention-consumption.types';
+import type { HimGoalMotivationGuidance } from '../human-model/him-goal-motivation-consumption.types';
 import type { HypothesisReasoningContext } from '../hypothesis/hypothesis-reasoning-context.types';
 import type { RecommendationGroundingContext } from '../recommendation/recommendation-grounding.types';
 
@@ -32,6 +33,7 @@ export interface ModelRouterRequest {
   himSessionReflectionGuidance?: HimSessionReflectionGuidance;
   himSituationStressGuidance?: HimSituationStressGuidance;
   himDecisionAttentionGuidance?: HimDecisionAttentionGuidance;
+  himGoalMotivationGuidance?: HimGoalMotivationGuidance;
   hypothesisContext?: HypothesisReasoningContext;
   recommendationContext?: RecommendationGroundingContext;
   locale: 'ar' | 'en' | 'und';
@@ -66,6 +68,13 @@ const CALMER_DELIVERY_PACING_INSTRUCTION = 'Use calmer, steadier delivery withou
 // The strings are unchanged: no rendered guidance differs by one byte.
 const SINGLE_CONVERSATIONAL_TRACK_INSTRUCTION = 'Stay on one main conversational track; avoid multiple parallel branches.';
 const ONE_STEP_AT_A_TIME_INSTRUCTION = 'When guidance is otherwise appropriate, present one immediate step or unit at a time rather than a bundle.';
+// QHIA-010: the one NEW bounded reduction this task introduces. It is declared
+// beside the existing shared constants so that it, too, is emitted at most once
+// per turn through the same exact-match dedup set. It is deliberately about the
+// SIZE of an immediate action and nothing else - it does not ask for compact
+// density, reduced cognitive load, a single conversational track, or calmer
+// pacing, all of which remain independently authorized by other signals.
+const SMALL_IMMEDIATE_GOAL_ACTION_INSTRUCTION = 'When goal-related action guidance is otherwise appropriate, keep the immediate action small and bounded rather than expanding it into a larger task bundle.';
 
 // Fixed server-authored instruction text per non-DEFAULT directive value.
 // The adaptation renders only these constants: raw metric reasoning is never
@@ -123,8 +132,26 @@ const HIM_DECISION_ATTENTION_DIRECTIVE_INSTRUCTIONS: Readonly<Partial<Record<Him
   ],
 };
 
+// QHIA-010: the fixed server-authored instruction set for the ACTIVE Goal-bound
+// action-pacing directive. It asks for exactly three bounded reductions - a
+// small immediate action, less steering pressure, one step at a time - and
+// reuses the identical existing constants for the latter two so a duplicate
+// request is normalized away instead of compounding. It deliberately does NOT
+// ask for compact density, reduced cognitive load, a single conversational
+// track, or calmer pacing: those belong to other independently authorized
+// signals. There is no second, stronger, or additive direction, and no
+// directive that increases burden, task size, steps, complexity, options,
+// pressure, or provider freedom.
+const HIM_GOAL_MOTIVATION_DIRECTIVE_INSTRUCTIONS: Readonly<Partial<Record<HimGoalMotivationGuidance['directive'], readonly string[]>>> = {
+  REDUCE_GOAL_ACTION_BURDEN: [
+    SMALL_IMMEDIATE_GOAL_ACTION_INSTRUCTION,
+    REDUCE_STEERING_PRESSURE_INSTRUCTION,
+    ONE_STEP_AT_A_TIME_INSTRUCTION,
+  ],
+};
+
 export function composeServerGuidance(
-  request: Pick<ModelRouterRequest, 'behavioralGuidance' | 'safetyGuidance' | 'memoryContext' | 'himContext' | 'himInteractionAdaptation' | 'himSessionReflectionGuidance' | 'himSituationStressGuidance' | 'himDecisionAttentionGuidance' | 'hypothesisContext' | 'recommendationContext'>,
+  request: Pick<ModelRouterRequest, 'behavioralGuidance' | 'safetyGuidance' | 'memoryContext' | 'himContext' | 'himInteractionAdaptation' | 'himSessionReflectionGuidance' | 'himSituationStressGuidance' | 'himDecisionAttentionGuidance' | 'himGoalMotivationGuidance' | 'hypothesisContext' | 'recommendationContext'>,
 ): string {
   let serverGuidance = request.safetyGuidance
     ? `${request.behavioralGuidance}\n\nSafety guidance for this turn:\n${request.safetyGuidance}`
@@ -173,6 +200,22 @@ export function composeServerGuidance(
     if (instructions.length) {
       for (const instruction of instructions) renderedReductionInstructions.add(instruction);
       serverGuidance += `\n\nDecision-bound presentation guidance follows as a server-owned behavioral instruction. It is subordinate to Safety guidance and the base Behavioral Policy: both remain higher-authority instructions that this guidance can never override, and it never reduces or cancels any other active burden reduction.${instructions.map((instruction) => `\n- ${instruction}`).join('')}\nThis guidance adapts the presentation of decision-related interaction only, never the decision itself. It is not a statement about the user, not a claim of distraction, inattention, cognitive overload, confusion, impairment, or inability to decide, not a diagnosis, and not a cognitive, executive-function, capacity, readiness, competence, decision-quality, or confidence assessment, and it is not safety evidence. It authorizes no claim, no interpretation, and no invented detail about the user or about any decision, does not indicate which choice is better, does not say a decision is good, bad, or risky, does not tell the user to make, delay, or avoid a decision, does not change what is recommended or concluded, does not authorize or block a recommendation, does not prove or strengthen a hypothesis, does not select or require a question, does not add reflection or follow-up prompting, does not change Safety authority or FAST/DEEP routing, does not authorize trend, freshness, or recency inference, and never permits naming or implying any internal signal, measurement, contract, or state to the user.`;
+    }
+  }
+  if (request.himGoalMotivationGuidance?.guidanceState === 'ACTIVE') {
+    // Only the instructions no other server-owned channel already emitted are
+    // rendered. When an active HIM interaction adaptation - or either
+    // cross-context channel above - already asked for the same bounded
+    // reduction, the overlapping instruction is dropped here: matching signals
+    // are normalized to one, never compounded into a deeper reduction, and no
+    // signal can ever cancel an existing protective one. The union is monotonic
+    // and arithmetic-free, so two or more agreeing signals never produce a
+    // stronger interpretation than one.
+    const instructions = (HIM_GOAL_MOTIVATION_DIRECTIVE_INSTRUCTIONS[request.himGoalMotivationGuidance.directive] ?? [])
+      .filter((instruction) => !renderedReductionInstructions.has(instruction));
+    if (instructions.length) {
+      for (const instruction of instructions) renderedReductionInstructions.add(instruction);
+      serverGuidance += `\n\nGoal-bound action-pacing guidance follows as a server-owned behavioral instruction. It is subordinate to Safety guidance, the base Behavioral Policy, and Recommendation authority: all remain higher-authority instructions that this guidance can never override, and it never reduces or cancels any other active burden reduction.${instructions.map((instruction) => `\n- ${instruction}`).join('')}\nThis guidance changes the size and pressure of an action step only, and only when goal-related action guidance is already appropriate under the current conversational and recommendation policy: it never makes action guidance appropriate by itself. It is not a statement about the user, not a claim that the user's motivation is low, not a diagnosis, and not a readiness, ability, capability, capacity, availability, priority, importance, obligation, commitment, discipline, productivity, execution, energy, excitement, or mood assessment, and it is not safety evidence. It authorizes no claim, no interpretation, and no invented detail about the user or about any goal, does not change, evaluate, rank, or question the goal, does not say a goal is good, bad, important, or unimportant, does not tell the user to keep, abandon, delay, accelerate, or re-prioritise a goal, does not suggest the user needs motivation or should be pushed harder, does not change what is recommended or concluded, does not authorize or block a recommendation, does not prove or strengthen a hypothesis, does not select or require a question, does not add reflection or follow-up prompting, does not change Safety authority or FAST/DEEP routing, does not authorize trend, freshness, or recency inference, and never permits naming or implying any internal signal, measurement, contract, or state to the user.`;
     }
   }
   if (request.memoryContext?.length) {

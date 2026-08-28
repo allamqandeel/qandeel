@@ -15,6 +15,8 @@ import { HimSituationStressConsumptionService } from './him-situation-stress-con
 import { HimSituationStressRepository } from './him-situation-stress.repository';
 import { HimDecisionAttentionConsumptionService } from './him-decision-attention-consumption.service';
 import { HimDecisionAttentionRepository } from './him-decision-attention.repository';
+import { HimGoalMotivationConsumptionService } from './him-goal-motivation-consumption.service';
+import { HimGoalMotivationRepository } from './him-goal-motivation.repository';
 import { HimCrossContextForegroundAggregationService } from './him-cross-context-foreground-aggregation.service';
 import { HimCrossContextForegroundRepository } from './him-cross-context-foreground.repository';
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
@@ -98,22 +100,24 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   // batch transport, exercising the graceful-degradation contract (guidance
   // omitted, HSE foreground behavior unchanged) rather than mocking it away.
   const reflectionBatchRepository = { readContextualCurrentIntelligenceBatch: jest.fn().mockRejectedValue(new Error('foundation gate: reflection transport unavailable')) };
-  // QHIA-009: the REAL cross-context foreground aggregate over a real
+  // QHIA-009/QHIA-010: the REAL cross-context foreground aggregate over a real
   // repository whose Data API double rejects, so this gate exercises the
-  // zero-incremental-wait graceful-degradation contract (BOTH existing
+  // zero-incremental-wait graceful-degradation contract (ALL THREE existing
   // guidance fields omitted, HSE foreground behaviour unchanged) rather than
-  // mocking it away. Its two child consumers are the REAL QHIA-007 and
-  // QHIA-008 semantic boundaries over their REAL direct repositories, whose
-  // own Data API doubles are proven never to be called: after QHIA-009 the
-  // turn issues exactly one cross-context foreground request and no direct
-  // 007/008 fallback exists.
+  // mocking it away. Its three child consumers are the REAL QHIA-007, QHIA-008
+  // and QHIA-010 semantic boundaries over their REAL direct repositories, whose
+  // own Data API doubles are proven never to be called: the turn issues exactly
+  // one cross-context foreground request and no direct 007/008/010 fallback
+  // exists.
   const situationStressDataApi = { request: jest.fn().mockRejectedValue(new Error('foundation gate: situation stress transport unavailable')) };
   const decisionAttentionDataApi = { request: jest.fn().mockRejectedValue(new Error('foundation gate: decision attention transport unavailable')) };
+  const goalMotivationDataApi = { request: jest.fn().mockRejectedValue(new Error('foundation gate: goal motivation transport unavailable')) };
   const crossContextForegroundDataApi = { request: jest.fn().mockRejectedValue(new Error('foundation gate: cross-context foreground transport unavailable')) };
   const situationStressConsumption = new HimSituationStressConsumptionService(new HimSituationStressRepository(situationStressDataApi as never));
   const decisionAttentionConsumption = new HimDecisionAttentionConsumptionService(new HimDecisionAttentionRepository(decisionAttentionDataApi as never));
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption), hypothesisContext as never, new RecommendationGroundingService(), router,correlation,new TelemetryService(correlation));
-  return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy, situationStressDataApi, decisionAttentionDataApi, crossContextForegroundDataApi };
+  const goalMotivationConsumption = new HimGoalMotivationConsumptionService(new HimGoalMotivationRepository(goalMotivationDataApi as never));
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption, goalMotivationConsumption), hypothesisContext as never, new RecommendationGroundingService(), router,correlation,new TelemetryService(correlation));
+  return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy, situationStressDataApi, decisionAttentionDataApi, goalMotivationDataApi, crossContextForegroundDataApi };
 }
 
 describe('Foundation integration / regression gate v1', () => {
@@ -170,27 +174,30 @@ describe('Foundation integration / regression gate v1', () => {
     expect(s.repository.failTurn).toHaveBeenCalled(); expect(s.router.generate).not.toHaveBeenCalled();
   });
 
-  it('issues EXACTLY ONE cross-context foreground request through the real aggregate and no direct QHIA-007/QHIA-008 request', async () => {
+  it('issues EXACTLY ONE cross-context foreground request through the real aggregate and no direct QHIA-007/QHIA-008/QHIA-010 request', async () => {
     const s = setup(rows.FULL);
     // The one gate turn driven with a canonical authenticated identity, so the
     // real aggregate boundary passes its own fail-closed identity check and the
     // external transport is genuinely reached rather than short-circuited.
     await s.orchestrator.orchestrate('access-token', canonicalUser, userTurn());
-    // One aggregate request against the migration-0058 RPC, carrying only the
-    // authenticated user and the exact owned session.
+    // One aggregate request against the migration-0059 aggregate-v2 RPC,
+    // carrying only the authenticated user and the exact owned session. The
+    // retired aggregate-v1 endpoint is never requested.
     expect(s.crossContextForegroundDataApi.request).toHaveBeenCalledTimes(1);
-    expect(s.crossContextForegroundDataApi.request.mock.calls[0][1]).toBe('rpc/read_him_session_cross_context_foreground_v1');
-    // The REAL direct QHIA-007 and QHIA-008 boundaries are wired into this
-    // graph and reachable; the turn never touches their transports, so no
+    expect(s.crossContextForegroundDataApi.request.mock.calls[0][1]).toBe('rpc/read_him_session_cross_context_foreground_v2');
+    // The REAL direct QHIA-007, QHIA-008 and QHIA-010 boundaries are wired into
+    // this graph and reachable; the turn never touches their transports, so no
     // separate, fallback, or backup request exists on the foreground path.
     expect(s.situationStressDataApi.request).not.toHaveBeenCalled();
     expect(s.decisionAttentionDataApi.request).not.toHaveBeenCalled();
+    expect(s.goalMotivationDataApi.request).not.toHaveBeenCalled();
     // The rejecting aggregate degrades to omitted guidance: the turn still
-    // dispatches once, with neither existing guidance field and no extra wait.
+    // dispatches once, with none of the three guidance fields and no extra wait.
     expect(s.router.generate).toHaveBeenCalledTimes(1);
     const request = s.router.generate.mock.calls[0][0] as ModelRouterRequest;
     expect(request).not.toHaveProperty('himSituationStressGuidance');
     expect(request).not.toHaveProperty('himDecisionAttentionGuidance');
+    expect(request).not.toHaveProperty('himGoalMotivationGuidance');
     expect(s.repository.failTurn).not.toHaveBeenCalled();
   });
 });
