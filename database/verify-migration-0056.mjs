@@ -136,9 +136,15 @@ await client.connect();try{
  if(replaced.has_canonical_current_value!==false)throw new Error('An unmeasured bound Situation must report has_canonical_current_value=false');
  for(const column of ['source_metric_key','source_definition_version','source_semantic_mapping_status','source_semantic_type','source_context_kind','source_context_id','value_state','numeric_value','validity_status','confidence_state','confidence_reference','observed_at','temporal_window_start','temporal_window_end','canonical_binding_id'])if(replaced[column]!==null)throw new Error(`A bound-but-unmeasured Situation must carry null ${column}: bound and known are separate facts`);
  if(replaced.metric_key!=='hse.stress'||replaced.definition_version!==1||replaced.hif_owner===null)throw new Error('The requested definition metadata must remain present on an unmeasured bound Situation');
- // The retired version-1 binding is history, never a second candidate.
+ // The retired version-1 binding is history, never a second candidate. The
+ // binding substrate carries zero direct privileges for every request role -
+ // that posture is exactly what migration 0055 installs - so this
+ // history-shape assertion is the one place that must step out of the
+ // authenticated identity and read as the owner.
+ await client.query('RESET ROLE');
  const retiredCount=Number((await client.query("SELECT count(*)::int n FROM public.him_session_context_bindings WHERE conversation_session_id=$1 AND context_kind='SITUATION' AND status='RETIRED'",[sessionMain])).rows[0].n);
  if(retiredCount!==1)throw new Error('Fixture invariant: replacement must have retired exactly one prior Situation binding');
+ await identity(one);
  // --- 20: a retired binding can never be consumed ----------------------------
  await client.query(CLEAR_BINDING_SQL,[one,sessionMain,'SITUATION']);
  const cleared=await readOne(one,sessionMain);
