@@ -1,6 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { projectHimIntelligenceSnapshot } from '../human-model/him-intelligence-snapshot.projector';
+import { HIM_UUID, projectHimContextualCurrentSlot } from '../human-model/him-contextual-current-projection';
+import {
+  HIM_BRAIN_CONTEXT_MATERIALIZATION_SOURCE,
+  HIM_BRAIN_CONTEXT_MAX_SIGNALS,
+  himBrainContextRegistryEntry,
+  type HimBrainContextDurableSignal,
+  type HimBrainContextNumericValue,
+} from '../human-model/him-brain-context.types';
+import type { DurableHimBrainContextResult } from '../post-response-intelligence/durable-him-brain-context-result';
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
 import { projectHimHypothesisGenerationContext, type HimHypothesisGenerationContext } from '../hypothesis/him-hypothesis-generation-context';
 import { EVIDENCE_CANDIDATE_LIMIT, MAX_ELIGIBLE_EVIDENCE, projectEligibleEvidence } from '../memory/evidence.service';
@@ -39,6 +48,61 @@ export class BackgroundIntelligenceEnrichmentService {
   const rows=await this.data.readHimConversationSnapshot(context);
   const snapshot=projectHimIntelligenceSnapshot('CONVERSATION_SESSION',context.sessionId,rows);
   return projectHimHypothesisGenerationContext(this.himReasoning.transform(snapshot));
+ }
+
+ // QHIA-012 Brain Context materialization. The ONE background boundary that
+ // turns eight context-bound canonical current readings into the small typed
+ // durable result the NEXT foreground turn may consume.
+ //
+ // It reads the ONE execution-bound service-role source RPC (one request, all
+ // eight frozen slots, no per-slot fan-out), then passes every returned
+ // QHIA-004-compatible source row through the SAME shared
+ // projectHimContextualCurrentSlot(...) projection the foreground uses - never a
+ // second, divergent copy of current-intelligence validation.
+ //
+ // Only KNOWN canonical values become durable signals. UNKNOWN stays ABSENT: no
+ // older value, no zero, no midpoint, no sibling metric, no family average, no
+ // freshness inference, no confidence inference, no substitute of any kind. The
+ // signals are never averaged, ranked, weighted, correlated, or reduced to a
+ // composite, and no LLM, model router, provider, reranker, embedding or text
+ // interpretation is involved at any point.
+ //
+ // A transport or integrity failure THROWS rather than degrading to a false
+ // NO_HIM_BRAIN_CONTEXT: an authoritative "nothing to materialize" and a failed
+ // read are different facts and this boundary never collapses them.
+ async readHimBrainContextMaterialization(context:BackgroundIntelligenceExecutionContext,executionId:string):Promise<DurableHimBrainContextResult>{
+  this.assert(context);
+  if(typeof executionId!=='string'||!HIM_UUID.test(executionId))throw new Error('BACKGROUND_HIM_BRAIN_CONTEXT_EXECUTION_REQUIRED');
+  const rows=await this.data.readHimBrainContextSource(context,executionId);
+  if(!Array.isArray(rows)||rows.length>HIM_BRAIN_CONTEXT_MAX_SIGNALS)throw new Error('BACKGROUND_HIM_BRAIN_CONTEXT_INTEGRITY');
+  const signals:HimBrainContextDurableSignal[]=[];
+  let previousSlotOrder=0;
+  for(const row of rows){
+   if(row===null||typeof row!=='object')throw new Error('BACKGROUND_HIM_BRAIN_CONTEXT_INTEGRITY');
+   // Exact registry order and identity: strictly increasing frozen ordinals
+   // prove fixed order and the absence of a duplicate slot in one rule, and
+   // each slot must carry exactly its own frozen label and context kind.
+   if(typeof row.brain_slot_order!=='number'||row.brain_slot_order<=previousSlotOrder)throw new Error('BACKGROUND_HIM_BRAIN_CONTEXT_INTEGRITY');
+   previousSlotOrder=row.brain_slot_order;
+   const registry=himBrainContextRegistryEntry(row.brain_slot_order);
+   if(!registry||row.brain_slot!==registry.slot||row.context_kind!==registry.contextKind)throw new Error('BACKGROUND_HIM_BRAIN_CONTEXT_INTEGRITY');
+   if(typeof row.context_id!=='string'||!HIM_UUID.test(row.context_id))throw new Error('BACKGROUND_HIM_BRAIN_CONTEXT_INTEGRITY');
+   // The shared frozen QHIA-004 projection decides KNOWN vs UNKNOWN, exactly as
+   // it does for every existing foreground consumer.
+   const metric=projectHimContextualCurrentSlot(row,registry.metricKey,registry.slotOrder,registry.contextKind,row.context_id);
+   if(metric.knowledgeState!=='KNOWN')continue;
+   if(metric.numericValue===null||!Number.isSafeInteger(metric.numericValue))throw new Error('BACKGROUND_HIM_BRAIN_CONTEXT_INTEGRITY');
+   signals.push({
+    slotOrder:registry.slotOrder,slot:registry.slot,contextKind:registry.contextKind,contextId:row.context_id,
+    numericValue:metric.numericValue as HimBrainContextNumericValue,
+    semanticMappingStatus:metric.semanticMappingStatus,semanticType:metric.semanticType,
+    // Never derived here, and never derived anywhere downstream.
+    freshnessState:'UNASSESSED',confidenceState:'UNASSESSED',
+   });
+  }
+  return signals.length===0
+   ?{code:'NO_HIM_BRAIN_CONTEXT'}
+   :{code:'HIM_BRAIN_CONTEXT_MATERIALIZED',payload:{contractVersion:1,source:HIM_BRAIN_CONTEXT_MATERIALIZATION_SOURCE,sourceTurnId:context.sourceTurnId,signals}};
  }
 
  async readCanonicalSourceTurn(context:BackgroundIntelligenceExecutionContext):Promise<BackgroundCanonicalSourceTurn>{this.assert(context);const turn=await this.data.readCanonicalSourceTurn(context);if(!turn)throw new NotFoundException('Canonical source turn not found.');return turn;}

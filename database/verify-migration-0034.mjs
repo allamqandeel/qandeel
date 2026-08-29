@@ -71,7 +71,7 @@ const EFFECT = 'SELECT * FROM public.post_response_intelligence_effects WHERE ex
 const HYPOTHESIS = 'SELECT * FROM public.hypotheses WHERE id=$1';
 const AUDITS = 'SELECT * FROM public.hypothesis_updates WHERE id=ANY($1) ORDER BY after_version';
 const CONFIDENCE = 'SELECT * FROM public.confidence_evaluations WHERE id=ANY($1)';
-const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH'];
+const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH', 'HIM_BRAIN_CONTEXT_MATERIALIZATION'];
 
 const userId = randomUUID();
 const otherUserId = randomUUID();
@@ -135,7 +135,7 @@ async function verifySurfaceAndAcls() {
        AND conname LIKE 'post_response_intelligence_effects_%_result_check' ORDER BY conname`,
   )).map((row) => row.conname);
   assert.ok(constraints.includes('post_response_intelligence_effects_update_batch_result_check'), 'the managed result check exists');
-  assert.equal(constraints.length, 9, 'every earlier result check survives alongside the 0035 Confidence check');
+  assert.equal(constraints.length, 10, 'every earlier result check survives alongside the 0035 Confidence and 0061 Brain-Context checks');
 
   for (const [signature, expected] of [
     [EXECUTE_RPC, { service_role: true, authenticated: false, anon: false, public: false }],

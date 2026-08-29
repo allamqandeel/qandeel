@@ -1,10 +1,30 @@
-import{randomUUID}from'node:crypto';import{Inject,Injectable}from'@nestjs/common';import{BackgroundIntelligenceAuthorityService}from'../background-intelligence/background-intelligence-authority.service';import type{BackgroundIntelligenceExecutionContext}from'../background-intelligence/background-intelligence-authority.service';import{BackgroundIntelligenceEnrichmentService}from'../background-intelligence/background-intelligence-enrichment.service';import{HypothesisGenerationIntentExtractionService}from'../hypothesis/hypothesis-generation-intent-extraction.service';import type{AuthorizedHypothesisGenerationIntent}from'../hypothesis/hypothesis-generation-intent-authority.types';import{HypothesisGenerationRequestAssemblerService}from'../hypothesis/hypothesis-generation-request-assembler.service';import{HYPOTHESIS_CANDIDATE_GENERATOR,type BoundHypothesisCandidateGenerator}from'../hypothesis/hypothesis-candidate-generator-provider.types';import type{HimHypothesisGenerationContext}from'../hypothesis/him-hypothesis-generation-context';import type{HypothesisEvidenceAssociationSnapshot}from'../hypothesis/hypothesis-evidence-association.types';import{isValidRuntimeEventEnvelope,type RuntimeEventEnvelope}from'../runtime-events/runtime-event.types';import{recoverAssociationResult,toDurableAssociationResult}from'./durable-association-result';import type{AssociationRecovery,DurableAssociationResult}from'./durable-association-result';import{recoverConfidenceBatchResult}from'./durable-confidence-batch-result';import{recoverCandidateProviderResult,recoverHypothesisPersistenceResult}from'./durable-generation-result';import type{CandidateProviderRecovery,DurableCandidateProviderResult}from'./durable-generation-result';import{recoverHypothesisUpdateBatchResult}from'./durable-hypothesis-update-batch-result';import{recoverDurableIntentProviderResult}from'./durable-intent-provider-result';import{ModelAssistedHypothesisAssociationService}from'./model-assisted-hypothesis-association.service';import{PostResponseIntelligenceRepository}from'./post-response-intelligence.repository';import type{ConfidenceBatchCommandStatus,IntelligenceEffect,IntelligenceEffectState,IntelligenceExecution}from'./post-response-intelligence.types';
+import{randomUUID}from'node:crypto';import{Inject,Injectable}from'@nestjs/common';import{BackgroundIntelligenceAuthorityService}from'../background-intelligence/background-intelligence-authority.service';import type{BackgroundIntelligenceExecutionContext}from'../background-intelligence/background-intelligence-authority.service';import{BackgroundIntelligenceEnrichmentService}from'../background-intelligence/background-intelligence-enrichment.service';import{HypothesisGenerationIntentExtractionService}from'../hypothesis/hypothesis-generation-intent-extraction.service';import type{AuthorizedHypothesisGenerationIntent}from'../hypothesis/hypothesis-generation-intent-authority.types';import{HypothesisGenerationRequestAssemblerService}from'../hypothesis/hypothesis-generation-request-assembler.service';import{HYPOTHESIS_CANDIDATE_GENERATOR,type BoundHypothesisCandidateGenerator}from'../hypothesis/hypothesis-candidate-generator-provider.types';import type{HimHypothesisGenerationContext}from'../hypothesis/him-hypothesis-generation-context';import type{HypothesisEvidenceAssociationSnapshot}from'../hypothesis/hypothesis-evidence-association.types';import{isValidRuntimeEventEnvelope,type RuntimeEventEnvelope}from'../runtime-events/runtime-event.types';import{recoverAssociationResult,toDurableAssociationResult}from'./durable-association-result';import type{AssociationRecovery,DurableAssociationResult}from'./durable-association-result';import{recoverConfidenceBatchResult}from'./durable-confidence-batch-result';import{recoverCandidateProviderResult,recoverHypothesisPersistenceResult}from'./durable-generation-result';import type{CandidateProviderRecovery,DurableCandidateProviderResult}from'./durable-generation-result';import{recoverHimBrainContextResult}from'./durable-him-brain-context-result';import type{DurableHimBrainContextResult}from'./durable-him-brain-context-result';import{recoverHypothesisUpdateBatchResult}from'./durable-hypothesis-update-batch-result';import{recoverDurableIntentProviderResult}from'./durable-intent-provider-result';import{ModelAssistedHypothesisAssociationService}from'./model-assisted-hypothesis-association.service';import{PostResponseIntelligenceRepository}from'./post-response-intelligence.repository';import type{ConfidenceBatchCommandStatus,HimBrainContextCommandStatus,IntelligenceEffect,IntelligenceEffectState,IntelligenceExecution}from'./post-response-intelligence.types';
 
 @Injectable()
 export class PostResponseIntelligenceDispatcherService{
  constructor(private readonly ledger:PostResponseIntelligenceRepository,private readonly authority:BackgroundIntelligenceAuthorityService,private readonly enrichment:BackgroundIntelligenceEnrichmentService,private readonly extraction:HypothesisGenerationIntentExtractionService,private readonly assembler:HypothesisGenerationRequestAssemblerService,@Inject(HYPOTHESIS_CANDIDATE_GENERATOR)private readonly generator:BoundHypothesisCandidateGenerator,private readonly association:ModelAssistedHypothesisAssociationService){}
  async dispatch(raw:string):Promise<boolean>{let event:RuntimeEventEnvelope;try{event=JSON.parse(raw)as RuntimeEventEnvelope;}catch{return true;}if(!isValidRuntimeEventEnvelope(event))return true;if(event.event_type!=='ConversationTurnCompleted')return true;const v2=event.event_version==='2.0';const execution=await this.ledger.acquire({id:randomUUID(),eventId:event.event_id,userId:event.subject_user_id,sessionId:event.subject_session_id,sourceTurnId:event.subject_turn_id,eventVersion:event.event_version,processingPath:(event.payload.processing_path??null)as'FAST'|'DEEP'|null,safetyDisposition:v2?event.payload.safety_disposition as'ALLOW'|'GUIDED'|'BLOCK':null});if(execution.state!=='RUNNING')return true;const effects=await this.ledger.effects(execution.id);if(effects.some(effect=>effect.state==='CLAIMED'))return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','EFFECT_RECOVERY');if(execution.attempt_count>=5)return this.terminal(execution,'QUARANTINED','MAX_ATTEMPTS','DELIVERY');if(!v2)return this.terminal(execution,'SKIPPED','LEGACY_UNSUPPORTED','VALIDATION');const authorized=await this.authority.authorize(event);if(authorized.outcome!=='AUTHORIZED'||!authorized.context)return this.terminal(execution,'QUARANTINED',authorized.outcome==='NOT_AUTHORIZED_OWNER_MISMATCH'?'CANONICAL_MISMATCH':'AUTHORITY_REJECTED','AUTHORITY');if(execution.safety_disposition!=='ALLOW')return this.terminal(execution,'SKIPPED','SAFETY_SKIPPED','SAFETY');const context=authorized.context;const turn=await this.enrichment.readCanonicalSourceTurn(context);if(turn.processing_path!==execution.processing_path)return this.terminal(execution,'QUARANTINED','CANONICAL_MISMATCH','CANONICAL_REREAD');
   const completed=new Set(effects.filter(effect=>effect.state==='COMPLETED').map(effect=>effect.effect_key));
+  // QHIA-012 Brain Context materialization runs HERE - after event validation,
+  // execution acquisition, canonical execution authority, canonical source-turn
+  // verification and a confirmed ALLOW safety disposition, and BEFORE every
+  // piece of work that can legitimately end this execution early: the Memory
+  // write, Association, the automatic Hypothesis Update batch, the Information
+  // Gap sync, generation eligibility, the Intent and Candidate providers,
+  // persistence and the Confidence batch.
+  //
+  // The ordering is the whole point. Brain Context is a background human
+  // intelligence bridge for the NEXT turn, and it must not disappear merely
+  // because this turn's Hypothesis generation is not eligible, its Intent is not
+  // authorized, or its assembly is not ready - all of which are normal SKIPPED
+  // outcomes that would otherwise return long before any materialization
+  // happened. It also runs ahead of the post-persistence Confidence resume, so a
+  // redelivered execution that already persisted its generated Hypotheses still
+  // materializes the Brain Context it owes the next turn.
+  const brainContext=await this.materializeHimBrainContext(execution,effects,context);
+  if(brainContext==='FAILED')return false;
+  if(brainContext==='QUARANTINED')return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','HIM_BRAIN_CONTEXT_MATERIALIZATION');
+  if(brainContext==='MATERIALIZED')completed.add('HIM_BRAIN_CONTEXT_MATERIALIZATION');
   // QAN-AUD-06 post-persistence durable resume. Once generation persistence is
   // durably COMPLETED, the only work this execution can still owe is the
   // managed Confidence batch, so a redelivery rebuilds the generation result
@@ -113,6 +133,51 @@ export class PostResponseIntelligenceDispatcherService{
   else{if(!await this.ledger.claim(execution.id,'HYPOTHESIS_PERSISTENCE'))return true;try{if(!await this.ledger.persistHypothesisGeneration(execution.id))return true;}catch{return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','HYPOTHESIS_PERSISTENCE');}
    completed.add('HYPOTHESIS_PERSISTENCE');acceptedHypothesisIds=candidate.status==='VALIDATED_CANDIDATES'?candidate.candidates.map(item=>item.hypothesisId):[];}
   return this.confidenceBatch(execution,effects,acceptedHypothesisIds);}
+ // The managed QHIA-012 Brain Context materialization stage.
+ //
+ // There is no application-level claim and no generic completion: the
+ // application reads the ONE execution-bound source RPC, projects it through the
+ // SHARED QHIA-004 projection, and issues ONE atomic typed completion command
+ // that inserts the effect DIRECTLY as COMPLETED. Because nothing is ever
+ // claimed, a crash anywhere between the source read and the completion simply
+ // leaves no effect row - a fully recoverable state the next redelivery redoes -
+ // rather than an irrecoverable stranded CLAIMED materialization.
+ //
+ // An already-valid durable result is REUSED with zero HIM rereads and zero
+ // source requests, and is never overwritten: the first durable result is
+ // immutable. A malformed or impossible completed materialization fails closed
+ // as INDETERMINATE under the existing durable-effect integrity convention. A
+ // source-read failure returns non-terminal with no effect row written, so the
+ // existing bounded delivery-attempt policy retries and, when exhausted, the
+ // existing MAX_ATTEMPTS handling quarantines. An ambiguous completion response
+ // is reconciled from durable state - never fabricated from an HTTP outcome.
+ //
+ // No provider, model router, LLM, embedding or reranker is invoked here, and no
+ // user text is parsed: slot and context selection are entirely server-derived
+ // from the frozen registry and the exact ACTIVE QHIA-006 bindings.
+ private async materializeHimBrainContext(execution:IntelligenceExecution,effects:readonly IntelligenceEffectState[],context:BackgroundIntelligenceExecutionContext):Promise<'MATERIALIZED'|'QUARANTINED'|'FAILED'>{
+  const persisted=effects.find(effect=>effect.effect_key==='HIM_BRAIN_CONTEXT_MATERIALIZATION');
+  if(persisted){
+   // A CLAIMED Brain row is unrepresentable under the migration-0061 result
+   // domain and is already caught by the global fail-closed rule above; this
+   // branch is defence in depth, never a normal path.
+   if(persisted.state!=='COMPLETED')return'QUARANTINED';
+   return recoverHimBrainContextResult(persisted,execution.source_turn_id).status==='INDETERMINATE'?'QUARANTINED':'MATERIALIZED';
+  }
+  let result:DurableHimBrainContextResult;
+  try{result=await this.enrichment.readHimBrainContextMaterialization(context,execution.id);}catch{return'FAILED';}
+  let status:HimBrainContextCommandStatus;
+  try{status=await this.ledger.completeHimBrainContextMaterialization(execution.id,result);}catch{status='NO_OP';}
+  if(status==='COMPLETED'||status==='ALREADY_COMPLETED')return'MATERIALIZED';
+  if(status==='QUARANTINED')return'QUARANTINED';
+  // The managed command is atomic but HTTP transport is not: a lost response may
+  // follow a committed transaction. Reconcile from durable state before acting -
+  // never blindly replay, never blindly quarantine.
+  let reread:readonly IntelligenceEffectState[];try{reread=await this.ledger.effects(execution.id);}catch{return'FAILED';}
+  const durable=reread.find(effect=>effect.effect_key==='HIM_BRAIN_CONTEXT_MATERIALIZATION');
+  if(!durable)return'FAILED';
+  if(durable.state!=='COMPLETED')return'QUARANTINED';
+  return recoverHimBrainContextResult(durable,execution.source_turn_id).status==='INDETERMINATE'?'QUARANTINED':'MATERIALIZED';}
  // QAN-AUD-06 post-persistence resume. It rebuilds the exact generation result
  // from durable state ONLY, using the same pure recovery functions the fresh
  // path uses, and never touches a provider, a Hypothesis row or an upstream

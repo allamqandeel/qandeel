@@ -109,6 +109,11 @@ const EXPECTED_EFFECT_KEYS = [
   'ASSOCIATION_PROVIDER',
   'CANDIDATE_PROVIDER',
   'CONFIDENCE_BATCH',
+  // QHIA-012: every canonical v2 ALLOW execution now also owes the NEXT turn a
+  // Brain Context materialization. This smoke activates no QHIA-006 relevance
+  // binding at all, so the authoritative answer here is the payload-free
+  // NO_HIM_BRAIN_CONTEXT - which is exactly the fact asserted below.
+  'HIM_BRAIN_CONTEXT_MATERIALIZATION',
   'HYPOTHESIS_PERSISTENCE',
   'HYPOTHESIS_UPDATE_BATCH',
   'INTENT_PROVIDER',
@@ -662,6 +667,18 @@ async function main(): Promise<void> {
     assert.deepEqual(effects.map((row) => row.effect_key).sort(), [...EXPECTED_EFFECT_KEYS],
       'exact expected effect set with no stray effect');
     assert.ok(effects.every((row) => row.state === 'COMPLETED'), 'every effect is COMPLETED');
+    // QHIA-012: this smoke activates no QHIA-006 relevance binding, so the
+    // background Brain Context materialization is authoritatively EMPTY - the
+    // payload-free NO_HIM_BRAIN_CONTEXT, never a fabricated signal and never a
+    // silently skipped effect. It is a MANAGED effect, so its claim and
+    // completion instants are one and the same: no CLAIMED state ever existed.
+    const brainContextEffect = effect('HIM_BRAIN_CONTEXT_MATERIALIZATION');
+    assert.equal(brainContextEffect.result_code, 'NO_HIM_BRAIN_CONTEXT',
+      'an unbound session materializes no Brain Context, authoritatively');
+    assert.equal(brainContextEffect.result_reference, null);
+    assert.equal(brainContextEffect.result_payload, null, 'the payload-free result carries nothing at all');
+    assert.equal(String(brainContextEffect.claimed_at), String(brainContextEffect.completed_at),
+      'the managed Brain Context effect was inserted directly as COMPLETED: no CLAIMED window exists');
 
     // -----------------------------------------------------------------------
     stage = 'REDIS_ACK';

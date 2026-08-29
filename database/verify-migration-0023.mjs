@@ -1,11 +1,13 @@
 import pg from'pg';import{randomUUID}from'node:crypto';const{Client}=pg,db=new Client({connectionString:process.env.DATABASE_URL});
 // Migration 0034 added the managed HYPOTHESIS_UPDATE_BATCH effect to the
-// registry and migration 0035 made CONFIDENCE_BATCH managed too; each is
-// claimed only inside its own one-transaction execute command, so the ordinary
-// claim loop below covers every claimable key and both managed keys are proven
-// rejected instead. The registry itself is unchanged.
-const canonical=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_UPDATE_BATCH','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH'];
-const managed=['HYPOTHESIS_UPDATE_BATCH','CONFIDENCE_BATCH'];
+// registry, migration 0035 made CONFIDENCE_BATCH managed too, and migration 0061
+// added the managed HIM_BRAIN_CONTEXT_MATERIALIZATION - the strictest of the
+// three, since it is inserted directly as COMPLETED and can never hold a CLAIMED
+// state at all. Each is claimed only inside its own one-transaction command, so
+// the ordinary claim loop below covers every claimable key and all three managed
+// keys are proven claim-rejected instead.
+const canonical=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_UPDATE_BATCH','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH','HIM_BRAIN_CONTEXT_MATERIALIZATION'];
+const managed=['HYPOTHESIS_UPDATE_BATCH','CONFIDENCE_BATCH','HIM_BRAIN_CONTEXT_MATERIALIZATION'];
 const claimable=canonical.filter(key=>!managed.includes(key));
 const execution=randomUUID(),event=randomUUID(),user=randomUUID(),session=randomUUID(),turn=randomUUID();
 const signatures=['claim_post_response_intelligence_effect_v1(uuid,text)','complete_post_response_intelligence_effect_v1(uuid,text)','list_post_response_intelligence_effects_v1(uuid)'];
@@ -28,4 +30,4 @@ await db.connect();try{
  await rejected('SELECT public.claim_post_response_intelligence_effect_v1($1,$2)',[execution,'UNKNOWN_EFFECT']);await db.query('ROLLBACK');
  for(const role of['authenticated','anon']){await db.query('BEGIN');await db.query(`SET LOCAL ROLE ${role}`);await rejected('SELECT * FROM public.list_post_response_intelligence_effects_v1($1)',[execution]);await db.query('ROLLBACK');}
  const residue=await db.query('SELECT(SELECT count(*)FROM public.post_response_intelligence_executions WHERE id=$1)+(SELECT count(*)FROM public.post_response_intelligence_effects WHERE execution_id=$1) total',[execution]);if(Number(residue.rows[0].total)!==0)throw new Error('Migration 0023 verifier residue detected.');
-}finally{await db.end();}console.log('Verified migration 0023 effect-key registry (with the managed 0034 update-batch and 0035 Confidence-batch keys both claim-rejected), independent candidate/association idempotency, completion semantics, ACL/RLS preservation, unknown-key rejection, and zero fixture residue.');
+}finally{await db.end();}console.log('Verified migration 0023 effect-key registry (with the managed 0034 update-batch, 0035 Confidence-batch and 0061 Brain-Context keys all claim-rejected), independent candidate/association idempotency, completion semantics, ACL/RLS preservation, unknown-key rejection, and zero fixture residue.');

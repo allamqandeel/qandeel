@@ -21,6 +21,8 @@ import { HimRelationshipCommunicationConsumptionService } from './him-relationsh
 import { HimRelationshipCommunicationRepository } from './him-relationship-communication.repository';
 import { HimCrossContextForegroundAggregationService } from './him-cross-context-foreground-aggregation.service';
 import { HimCrossContextForegroundRepository } from './him-cross-context-foreground.repository';
+import { HimBrainContextService } from './him-brain-context.service';
+import { HimBrainContextRepository } from './him-brain-context.repository';
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 import type { HimSnapshotSourceRow } from './him-intelligence-snapshot.types';
 
@@ -116,12 +118,18 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   const goalMotivationDataApi = { request: jest.fn().mockRejectedValue(new Error('foundation gate: goal motivation transport unavailable')) };
   const relationshipCommunicationDataApi = { request: jest.fn().mockRejectedValue(new Error('foundation gate: relationship communication transport unavailable')) };
   const crossContextForegroundDataApi = { request: jest.fn().mockRejectedValue(new Error('foundation gate: cross-context foreground transport unavailable')) };
+  // QHIA-012: the REAL Brain Context boundary over a real repository whose Data
+  // API double rejects, so this gate exercises the same zero-incremental-wait
+  // graceful-degradation contract for the new advisory channel (the provider
+  // field omitted, HSE foreground behaviour unchanged) rather than mocking it
+  // away.
+  const brainContextDataApi = { request: jest.fn().mockRejectedValue(new Error('foundation gate: brain context transport unavailable')) };
   const situationStressConsumption = new HimSituationStressConsumptionService(new HimSituationStressRepository(situationStressDataApi as never));
   const decisionAttentionConsumption = new HimDecisionAttentionConsumptionService(new HimDecisionAttentionRepository(decisionAttentionDataApi as never));
   const goalMotivationConsumption = new HimGoalMotivationConsumptionService(new HimGoalMotivationRepository(goalMotivationDataApi as never));
   const relationshipCommunicationConsumption = new HimRelationshipCommunicationConsumptionService(new HimRelationshipCommunicationRepository(relationshipCommunicationDataApi as never));
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption, goalMotivationConsumption, relationshipCommunicationConsumption), hypothesisContext as never, new RecommendationGroundingService(), router,correlation,new TelemetryService(correlation));
-  return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy, situationStressDataApi, decisionAttentionDataApi, goalMotivationDataApi, relationshipCommunicationDataApi, crossContextForegroundDataApi };
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption, goalMotivationConsumption, relationshipCommunicationConsumption), new HimBrainContextService(new HimBrainContextRepository(brainContextDataApi as never)), hypothesisContext as never, new RecommendationGroundingService(), router,correlation,new TelemetryService(correlation));
+  return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy, situationStressDataApi, decisionAttentionDataApi, goalMotivationDataApi, relationshipCommunicationDataApi, crossContextForegroundDataApi, brainContextDataApi };
 }
 
 describe('Foundation integration / regression gate v1', () => {

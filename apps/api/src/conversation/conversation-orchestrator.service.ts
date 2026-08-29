@@ -20,6 +20,8 @@ import { HimSessionReflectionConsumptionService } from '../human-model/him-sessi
 import type { HimSessionReflectionGuidance } from '../human-model/him-session-reflection-consumption.types';
 import { HimCrossContextForegroundAggregationService } from '../human-model/him-cross-context-foreground-aggregation.service';
 import type { HimCrossContextForegroundGuidance } from '../human-model/him-cross-context-foreground.types';
+import { HimBrainContextService } from '../human-model/him-brain-context.service';
+import type { HimBrainContext } from '../human-model/him-brain-context.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -51,6 +53,7 @@ export class ConversationOrchestratorService {
     private readonly himContextualCurrentIntelligence: HimContextualCurrentIntelligenceService,
     private readonly himSessionReflectionConsumption: HimSessionReflectionConsumptionService,
     private readonly himCrossContextForeground: HimCrossContextForegroundAggregationService,
+    private readonly himBrainContext: HimBrainContextService,
     private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
     private readonly recommendationGrounding: RecommendationGroundingService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
@@ -98,7 +101,7 @@ export class ConversationOrchestratorService {
         this.telemetry.recordTurnOutcome('blocked',selection.path);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
-      const {himContext,himInteractionAdaptation,himSessionReflectionGuidance,himSituationStressGuidance,himDecisionAttentionGuidance,himGoalMotivationGuidance,himRelationshipCommunicationGuidance}=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
+      const {himContext,himInteractionAdaptation,himSessionReflectionGuidance,himSituationStressGuidance,himDecisionAttentionGuidance,himGoalMotivationGuidance,himRelationshipCommunicationGuidance,himBrainContext}=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
       // QHIA-005: the HSE Intelligence Snapshot read and the one-metric
       // hbs.reflection selective read (QHIA-004 boundary, exactly one batch
       // request) are LAUNCHED CONCURRENTLY for the same authoritative session
@@ -164,12 +167,51 @@ export class ConversationOrchestratorService {
         (value) => { if (!crossContextForegroundBarrierClosed) crossContextForegroundSettled = value; },
         () => undefined,
       );
+      // QHIA-012: the ONE optional Brain Context read is LAUNCHED HERE, in the
+      // same synchronous step as the Snapshot, Reflection and aggregate-v3
+      // reads, so it begins concurrently with them and never after any of them
+      // finishes.
+      //
+      // It is exactly ONE external Data API request against the migration-0061
+      // authenticated RPC, which resolves the immediately preceding canonical
+      // USER turn, that turn's durable typed Brain Context materialization, and
+      // the CURRENT QHIA-006 binding revalidation server-side, in one round
+      // trip. The heavy Human Intelligence work happened in the PREVIOUS turn's
+      // post-response background path; this turn only collects it.
+      //
+      // It carries ZERO INCREMENTAL FOREGROUND WAIT. No new timeout is
+      // introduced, the existing 300 ms QHIA-005 Reflection budget is neither
+      // reused nor extended, no sleep is added, no new barrier is created, and
+      // the foreground NEVER awaits this promise. The settlement handler below
+      // is attached IMMEDIATELY (so a rejection is always handled and can never
+      // become an unhandled rejection) and simply records the decoded context if
+      // - and only if - the read settles successfully BEFORE the existing
+      // foreground barrier closes. Anything that settles later is discarded for
+      // good: it cannot delay dispatch, mutate an in-flight provider request,
+      // trigger a second provider call, be consumed by this turn, or be carried
+      // into any other turn or session, and no cross-turn cache exists anywhere
+      // on this path.
+      let brainContextSettled: HimBrainContext | undefined;
+      let brainContextBarrierClosed = false;
+      const brainContextReadPromise = this.engine('him_brain_context',selection.path,()=>this.himBrainContext.read(
+        userId,
+        accessToken,
+        himSelection.contextId,
+        claimed.id,
+      ));
+      brainContextReadPromise.then(
+        (value) => { if (!brainContextBarrierClosed) brainContextSettled = value; },
+        () => undefined,
+      );
       const [himSnapshot, reflectionRead] = await Promise.all([himSnapshotPromise, reflectionReadPromise]);
       // The existing foreground barrier - and the ONLY one. Reading the
-      // recorded value here adds no await of any kind: an already-settled
-      // aggregate yields all four existing guidance contracts, and a
-      // still-pending or rejected one is simply absent for this turn.
+      // recorded values here adds no await of any kind: an already-settled
+      // aggregate yields all four existing guidance contracts, an
+      // already-settled Brain Context read yields this turn's advisory Brain
+      // Context, and a still-pending or rejected one of either is simply absent
+      // for this turn.
       crossContextForegroundBarrierClosed = true;
+      brainContextBarrierClosed = true;
       const situationStressGuidance = crossContextForegroundSettled?.situationStress;
       const decisionAttentionGuidance = crossContextForegroundSettled?.decisionAttention;
       const goalMotivationGuidance = crossContextForegroundSettled?.goalMotivation;
@@ -185,7 +227,7 @@ export class ConversationOrchestratorService {
       if (reflectionRead.state === 'AVAILABLE') {
         try { reflectionGuidance = this.himSessionReflectionConsumption.consume(reflectionRead.value); } catch { reflectionGuidance = undefined; }
       }
-      return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation,himSessionReflectionGuidance:reflectionGuidance,himSituationStressGuidance:situationStressGuidance,himDecisionAttentionGuidance:decisionAttentionGuidance,himGoalMotivationGuidance:goalMotivationGuidance,himRelationshipCommunicationGuidance:relationshipCommunicationGuidance};});
+      return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation,himSessionReflectionGuidance:reflectionGuidance,himSituationStressGuidance:situationStressGuidance,himDecisionAttentionGuidance:decisionAttentionGuidance,himGoalMotivationGuidance:goalMotivationGuidance,himRelationshipCommunicationGuidance:relationshipCommunicationGuidance,himBrainContext:brainContextSettled};});
       const memoryContext = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));
       let hypothesisResult;
       try {
@@ -212,6 +254,12 @@ export class ConversationOrchestratorService {
         ...(himDecisionAttentionGuidance?.guidanceState === 'ACTIVE' ? { himDecisionAttentionGuidance } : {}),
         ...(himGoalMotivationGuidance?.guidanceState === 'ACTIVE' ? { himGoalMotivationGuidance } : {}),
         ...(himRelationshipCommunicationGuidance?.guidanceState === 'ACTIVE' ? { himRelationshipCommunicationGuidance } : {}),
+        // QHIA-012: a SEPARATE advisory context channel, never merged into any
+        // existing HIM guidance field. It is passed only when the Brain Context
+        // read settled successfully before the barrier AND carried at least one
+        // surviving signal; a pending, failed, empty, or fully binding-invalid
+        // read simply omits the field rather than sending an empty block.
+        ...(himBrainContext ? { himBrainContext } : {}),
         ...(hypothesisResult.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesisResult.context } : {}),
         ...(recommendationGrounding.coverageState === 'AVAILABLE' ? { recommendationContext: recommendationGrounding.context } : {}),
         locale: 'und', modality: 'TEXT',

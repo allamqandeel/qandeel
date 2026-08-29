@@ -56,6 +56,7 @@
     "verify:him-cross-context-foreground-aggregation:integration": "node --env-file-if-exists=.env database/verify-migration-0058.mjs",
     "verify:him-goal-motivation-foreground-consumption:integration": "node --env-file-if-exists=.env database/verify-migration-0059.mjs",
     "verify:him-relationship-communication-foreground-consumption:integration": "node --env-file-if-exists=.env database/verify-migration-0060.mjs",
+    "verify:him-brain-context-bridge:integration": "node --env-file-if-exists=.env database/verify-migration-0061.mjs",
     "verify:him-trends:integration": "node --env-file-if-exists=.env database/verify-him-trends-v1.mjs",
     "verify:him-snapshot:integration": "node --env-file-if-exists=.env database/verify-him-intelligence-snapshot-v1.mjs",
     "verify:background-him-runtime-consumption:integration": "node --env-file-if-exists=.env database/verify-migration-0037.mjs",
@@ -87,6 +88,7 @@
     "test:full-intelligence-e2e-runtime-contract": "node --test tests/full-intelligence-e2e-runtime-contract.test.mjs",
     "test:cross-context-foreground-application-transport-contract": "node --test tests/him-cross-context-foreground-application-transport-contract.test.mjs",
     "test:explicit-session-context-activation-entry-contract": "node --test tests/explicit-session-context-activation-entry-contract.test.mjs",
+    "test:him-brain-context-bridge-contract": "node --test tests/him-brain-context-bridge-contract.test.mjs",
     "verify:explicit-session-context-activation:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/verify-explicit-session-context-activation-runtime.ts",
     "verify:him-measurement-preflight": "node --test tests/him-structured-measurement-preflight.test.mjs && npm run test:api && npm run test:database && node node_modules/typescript/bin/tsc -p apps/api/tsconfig.json --noEmit && node node_modules/typescript/bin/tsc -p apps/api/tsconfig.scripts.json --noEmit && npm run build:api",
     "verify:foundation-integration-gate": "npm run test --workspace @qandeel/api -- --runInBand --runTestsByPath src/human-model/him-foundation-integration-regression-gate.spec.ts && node --test tests/him-foundation-integration-regression-gate.test.mjs"

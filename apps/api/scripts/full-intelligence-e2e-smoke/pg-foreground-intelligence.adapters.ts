@@ -54,6 +54,17 @@ const AUTHENTICATED_RPC_ALLOWLIST = new Set([
   // would let a regression back to a retired request shape pass unnoticed, and
   // the transport census below would have nothing to catch.
   'read_him_session_cross_context_foreground_v3',
+  // QHIA-012: the ONE optional Brain Context foreground read (migration 0061,
+  // read-only). It resolves the immediately preceding canonical USER turn, that
+  // turn's durable typed materialization, and the CURRENT QHIA-006 binding
+  // revalidation server-side, in one request.
+  //
+  // The service-role background source and the managed durable completion are
+  // deliberately ABSENT from this authenticated allowlist: they are background
+  // authorities the foreground must never be able to reach, and leaving them off
+  // is what makes "the foreground materializes nothing and rereads no metric"
+  // checkable rather than assumed.
+  'read_him_brain_context_for_turn_v1',
   // QHIA-011A: the explicit session context activation command (migration
   // 0055 set), reached ONLY through the new authenticated product application
   // entry during smoke SETUP - never from a conversation turn.

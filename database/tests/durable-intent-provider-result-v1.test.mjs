@@ -169,8 +169,10 @@ test('the repository exposes a typed Intent completion and excludes typed effect
   // Only the post-authority canonical intent is sent: no raw provider output,
   // and no reason for a durable NOT_AUTHORIZED. (result.commands and
   // result.candidates are the Association and Candidate commands' own
-  // post-authority payloads, not raw output.)
-  assert.doesNotMatch(repositoryCode, /p_result_payload:result(?!\.intent|\.commands|\.candidates)/u);
+  // post-authority payloads, not raw output; result.payload is the QHIA-012
+  // Brain Context command's own bounded post-projection materialization, which
+  // is likewise a validated canonical result and involves no provider at all.)
+  assert.doesNotMatch(repositoryCode, /p_result_payload:result(?!\.intent|\.commands|\.candidates|\.payload)/u);
   assert.doesNotMatch(repositoryCode, /reason|providerOutput|raw/u);
 });
 

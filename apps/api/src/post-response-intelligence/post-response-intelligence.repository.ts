@@ -5,8 +5,9 @@ import type{DurableAssociationResult}from'./durable-association-result';
 import type{DurableCandidateProviderResult}from'./durable-generation-result';
 import{parseInformationGapSyncResult}from'./information-gap-sync-result';
 import type{InformationGapSyncResult}from'./information-gap-sync-result';
-import{CONFIDENCE_BATCH_COMMAND_STATUSES}from'./post-response-intelligence.types';
-import type{ClaimableIntelligenceEffect,ConfidenceBatchCommandStatus,IntelligenceEffectState,IntelligenceExecution}from'./post-response-intelligence.types';
+import type{DurableHimBrainContextResult}from'./durable-him-brain-context-result';
+import{CONFIDENCE_BATCH_COMMAND_STATUSES,HIM_BRAIN_CONTEXT_COMMAND_STATUSES}from'./post-response-intelligence.types';
+import type{ClaimableIntelligenceEffect,ConfidenceBatchCommandStatus,HimBrainContextCommandStatus,IntelligenceEffectState,IntelligenceExecution}from'./post-response-intelligence.types';
 
 @Injectable()
 export class PostResponseIntelligenceRepository{
@@ -27,6 +28,12 @@ export class PostResponseIntelligenceRepository{
  async executeHypothesisUpdateBatch(id:string,invocationIds:ReadonlyArray<{updateId:string;confidenceEvaluationId:string}>):Promise<boolean>{return this.booleanRpc('execute_post_response_hypothesis_update_batch_v1',{p_execution_id:id,p_invocation_ids:invocationIds});}
  /** Runs the ONE managed QAN-AUD-06 Confidence-batch command. The application supplies only the execution identity - never a userId, sessionId, target ID, target version, Evidence, Confidence payload, access token or user JWT: the database derives the owner from the execution, the exact targets from the durable HYPOTHESIS_PERSISTENCE result, the frozen target versions from the canonical Hypothesis rows at first initialization, and the stable evaluation identities itself, then evaluates only unfinished items and completes CONFIDENCE_BATCH only when every target has a valid result. */
  async executeConfidenceBatch(id:string):Promise<ConfidenceBatchCommandStatus>{const value=await this.request<string>('rpc/execute_post_response_confidence_batch_v1',{method:'POST',body:JSON.stringify({p_execution_id:id})});return(CONFIDENCE_BATCH_COMMAND_STATUSES as readonly string[]).includes(value)?value as ConfidenceBatchCommandStatus:'NO_OP';}
+ /** Runs the ONE managed QHIA-012 Brain Context materialization command (migration 0061). The application supplies only the execution identity and the typed durable result - never a userId, sessionId, source turn id, target, metric key, binding, access token or user JWT: the database derives the owner and the source turn from the execution itself, re-verifies that every signal context is an exact owned target of exactly the frozen kind, and inserts the typed effect DIRECTLY as COMPLETED in one transaction. There is no claim call and no CLAIMED state at any instant, and the first durable result is immutable. An unrecognised transport value is treated as NO_OP so a durable reread - never an HTTP outcome - decides what actually committed. */
+ async completeHimBrainContextMaterialization(id:string,result:DurableHimBrainContextResult):Promise<HimBrainContextCommandStatus>{
+  const value=await this.request<string>('rpc/complete_post_response_him_brain_context_materialization_v1',{method:'POST',body:JSON.stringify(result.code==='NO_HIM_BRAIN_CONTEXT'
+   ?{p_execution_id:id,p_result_code:'NO_HIM_BRAIN_CONTEXT',p_result_payload:null}
+   :{p_execution_id:id,p_result_code:'HIM_BRAIN_CONTEXT_MATERIALIZED',p_result_payload:result.payload})});
+  return(HIM_BRAIN_CONTEXT_COMMAND_STATUSES as readonly string[]).includes(value)?value as HimBrainContextCommandStatus:'NO_OP';}
  /** Runs the ONE idempotent service-role Information Gap synchronization command (migration 0038). The application supplies only the execution identity - never a userId, target Hypothesis, target version, Confidence identity, missing-information code, Question text, access token or user JWT: the database derives every source from the execution's durable typed HYPOTHESIS_UPDATE_BATCH / CONFIDENCE_BATCH effects, validates the entire source set, and materializes/reuses the exact canonical automatic gaps. The typed result is strictly parsed; an unparseable payload is a sanitized transport failure, never a fabricated success. */
  async syncInformationGaps(id:string):Promise<InformationGapSyncResult>{const value=await this.request<unknown>('rpc/sync_post_response_information_gaps_v1',{method:'POST',body:JSON.stringify({p_execution_id:id})});const parsed=parseInformationGapSyncResult(value);if(!parsed)throw new Error('POST_RESPONSE_DATABASE_UNAVAILABLE');return parsed;}
  async finish(id:string,state:'COMPLETED'|'SKIPPED'|'QUARANTINED'|'FAILED',outcome:string,stage:string):Promise<boolean>{return this.booleanRpc('finish_post_response_intelligence_execution_v1',{p_execution_id:id,p_state:state,p_outcome_code:outcome,p_stage:stage});}

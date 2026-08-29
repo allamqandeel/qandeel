@@ -24,7 +24,7 @@ describe('PostResponseIntelligenceDispatcherService',()=>{
  // enrichment boundary returns for the fresh generation path.
  const himContext=()=>({contractVersion:1 as const,source:'HIM_STRUCTURED_STATE' as const,contextKind:'CONVERSATION_SESSION' as const,metrics:[{metricKey:'hse.stress' as const,knowledgeState:'KNOWN' as const,ordinalCategory:'HIGH' as const},{metricKey:'hse.energy' as const,knowledgeState:'UNKNOWN' as const,ordinalCategory:null},{metricKey:'hse.attention' as const,knowledgeState:'UNKNOWN' as const,ordinalCategory:null}]});
  const emptyHimContext=()=>({...himContext(),metrics:himContext().metrics.map(metric=>({...metric,knowledgeState:'UNKNOWN' as const,ordinalCategory:null}))});
- const setup=(overrides:{effects?:unknown[];state?:string;confidence?:unknown}={})=>{const rows:unknown[]=[...(overrides.effects??[])];const durableConfidence='confidence'in overrides?overrides.confidence:noConfidenceTargets();const ledger={acquire:jest.fn().mockResolvedValue({id:id.execution,event_id:id.event,user_id:id.user,session_id:id.session,source_turn_id:id.turn,event_version:'2.0',processing_path:'FAST',safety_disposition:'ALLOW',state:overrides.state??'RUNNING',attempt_count:1}),effects:jest.fn().mockImplementation(async()=>[...rows]),claim:jest.fn().mockResolvedValue(true),completeMemory:jest.fn().mockResolvedValue(true),completeIntent:jest.fn().mockResolvedValue(true),completeAssociation:jest.fn().mockResolvedValue(true),completeCandidateProvider:jest.fn().mockResolvedValue(true),persistHypothesisGeneration:jest.fn().mockResolvedValue(true),executeHypothesisUpdateBatch:jest.fn().mockResolvedValue(true),executeConfidenceBatch:jest.fn().mockImplementation(async()=>{if(durableConfidence!==null)rows.push(durableConfidence);return'COMPLETED';}),syncInformationGaps:jest.fn().mockResolvedValue({status:'NO_INFORMATION_GAPS',gaps:[]}),finish:jest.fn().mockResolvedValue(true)}as unknown as jest.Mocked<PostResponseIntelligenceRepository>;const ownership={findSession:jest.fn().mockResolvedValue({id:id.session,status:'ACTIVE',channel:'TEXT'}),findSourceTurn:jest.fn().mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null}),findCompletedAssistant:jest.fn().mockResolvedValue({id:'assistant',session_id:id.session,role:'ASSISTANT',status:'COMPLETED',source_turn_id:id.turn})}as unknown as BackgroundIntelligenceDataApiService;const authority=new BackgroundIntelligenceAuthorityService(new BackgroundIntelligenceContextFactory(),ownership);const enrichment={readCanonicalSourceTurn:jest.fn().mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null,content:'Why do I repeat this pattern?',processing_path:'FAST',routing_reason:'FAST_DEFAULT'}),evaluateAndWriteMemory:jest.fn().mockResolvedValue({decision:'SKIP',reason:'NO_SUPPORTED_EXPLICIT_PATTERN'}),evaluateGenerationEligibility:jest.fn().mockResolvedValue({eligibility:{status:'NOT_ELIGIBLE',reason:'NO_TRIGGER'}}),readHimHypothesisGenerationContext:jest.fn().mockResolvedValue(himContext()),generateHypothesisCandidatePlan:jest.fn(),evaluateHypothesisConfidence:jest.fn(),applyAuthorizedHypothesisUpdate:jest.fn()}as unknown as jest.Mocked<BackgroundIntelligenceEnrichmentService>;const extraction={extract:jest.fn()}as unknown as jest.Mocked<HypothesisGenerationIntentExtractionService>;const assembler={assemble:jest.fn()}as unknown as jest.Mocked<HypothesisGenerationRequestAssemblerService>;const generator={generate:jest.fn()}as BoundHypothesisCandidateGenerator;const association={prepare:jest.fn(),proposeAndAuthorize:jest.fn()}as unknown as jest.Mocked<ModelAssistedHypothesisAssociationService>;return{ledger,enrichment,association,extraction,assembler,service:new PostResponseIntelligenceDispatcherService(ledger,authority,enrichment,extraction,assembler,generator,association)};};
+ const setup=(overrides:{effects?:unknown[];state?:string;confidence?:unknown}={})=>{const rows:unknown[]=[...(overrides.effects??[])];const durableConfidence='confidence'in overrides?overrides.confidence:noConfidenceTargets();const ledger={acquire:jest.fn().mockResolvedValue({id:id.execution,event_id:id.event,user_id:id.user,session_id:id.session,source_turn_id:id.turn,event_version:'2.0',processing_path:'FAST',safety_disposition:'ALLOW',state:overrides.state??'RUNNING',attempt_count:1}),effects:jest.fn().mockImplementation(async()=>[...rows]),claim:jest.fn().mockResolvedValue(true),completeMemory:jest.fn().mockResolvedValue(true),completeIntent:jest.fn().mockResolvedValue(true),completeAssociation:jest.fn().mockResolvedValue(true),completeCandidateProvider:jest.fn().mockResolvedValue(true),persistHypothesisGeneration:jest.fn().mockResolvedValue(true),executeHypothesisUpdateBatch:jest.fn().mockResolvedValue(true),executeConfidenceBatch:jest.fn().mockImplementation(async()=>{if(durableConfidence!==null)rows.push(durableConfidence);return'COMPLETED';}),completeHimBrainContextMaterialization:jest.fn().mockResolvedValue('COMPLETED'),syncInformationGaps:jest.fn().mockResolvedValue({status:'NO_INFORMATION_GAPS',gaps:[]}),finish:jest.fn().mockResolvedValue(true)}as unknown as jest.Mocked<PostResponseIntelligenceRepository>;const ownership={findSession:jest.fn().mockResolvedValue({id:id.session,status:'ACTIVE',channel:'TEXT'}),findSourceTurn:jest.fn().mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null}),findCompletedAssistant:jest.fn().mockResolvedValue({id:'assistant',session_id:id.session,role:'ASSISTANT',status:'COMPLETED',source_turn_id:id.turn})}as unknown as BackgroundIntelligenceDataApiService;const authority=new BackgroundIntelligenceAuthorityService(new BackgroundIntelligenceContextFactory(),ownership);const enrichment={readCanonicalSourceTurn:jest.fn().mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null,content:'Why do I repeat this pattern?',processing_path:'FAST',routing_reason:'FAST_DEFAULT'}),readHimBrainContextMaterialization:jest.fn().mockResolvedValue({code:'NO_HIM_BRAIN_CONTEXT'}),evaluateAndWriteMemory:jest.fn().mockResolvedValue({decision:'SKIP',reason:'NO_SUPPORTED_EXPLICIT_PATTERN'}),evaluateGenerationEligibility:jest.fn().mockResolvedValue({eligibility:{status:'NOT_ELIGIBLE',reason:'NO_TRIGGER'}}),readHimHypothesisGenerationContext:jest.fn().mockResolvedValue(himContext()),generateHypothesisCandidatePlan:jest.fn(),evaluateHypothesisConfidence:jest.fn(),applyAuthorizedHypothesisUpdate:jest.fn()}as unknown as jest.Mocked<BackgroundIntelligenceEnrichmentService>;const extraction={extract:jest.fn()}as unknown as jest.Mocked<HypothesisGenerationIntentExtractionService>;const assembler={assemble:jest.fn()}as unknown as jest.Mocked<HypothesisGenerationRequestAssemblerService>;const generator={generate:jest.fn()}as BoundHypothesisCandidateGenerator;const association={prepare:jest.fn(),proposeAndAuthorize:jest.fn()}as unknown as jest.Mocked<ModelAssistedHypothesisAssociationService>;return{ledger,enrichment,association,extraction,assembler,service:new PostResponseIntelligenceDispatcherService(ledger,authority,enrichment,extraction,assembler,generator,association)};};
  const intent=()=>({problem:{text:'Why do I repeat this pattern?',source:'CURRENT_USER_TURN' as const,sourceTurnId:id.turn},domain:'GENERAL' as const,scope:{kind:'CONVERSATION_SESSION' as const,sessionId:id.session,serialized:`CONVERSATION_SESSION:${id.session}`},evidenceIds:[`memory:${id.evidence}`]});
  const eligible=()=>({eligibility:{status:'ELIGIBLE',reason:'TRIGGER_AND_EVIDENCE_AVAILABLE'},triggerClassification:{status:'TRIGGERED',reason:'RECURRING_PATTERN'},eligibleEvidence:[{evidenceId:`memory:${id.evidence}`,originatingMemoryId:id.evidence}]});
  const eligibleRun=(s:ReturnType<typeof setup>)=>{s.enrichment.evaluateGenerationEligibility.mockResolvedValue(eligible() as never);s.assembler.assemble.mockReturnValue({status:'READY',request:{problem:intent().problem.text,domain:'GENERAL',scope:intent().scope.serialized,evidenceIds:intent().evidenceIds}} as never);s.enrichment.generateHypothesisCandidatePlan.mockResolvedValue({code:'NO_ACCEPTED_CANDIDATES'} as never);return s;};
@@ -430,5 +430,157 @@ describe('PostResponseIntelligenceDispatcherService',()=>{
   it('performs zero syncs on duplicate delivery of a terminal execution',async()=>{const s=setup({state:'COMPLETED',effects:[...resumed(),singleTargetConfidence()]});
    await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
    expect(s.ledger.syncInformationGaps).not.toHaveBeenCalled();expect(s.ledger.finish).not.toHaveBeenCalled();});
+ });
+
+ // QHIA-012 managed Brain Context materialization: ordering, recovery and
+ // idempotency. It is the FIRST piece of work after the safety gate, so it can
+ // never be lost to a later legitimate SKIP - and it is MANAGED, so it is never
+ // claimed and can never strand a CLAIMED effect.
+ describe('QHIA-012 Brain Context materialization',()=>{
+  const order=(mock:unknown)=>(mock as jest.Mock).mock.invocationCallOrder[0];
+  const resumed=()=>[intentEffect(),candidateEffect(),persistenceEffect()];
+  const brainSignal=()=>({slotOrder:5,slot:'GOAL_CONSISTENCY',contextKind:'GOAL',contextId:'10000000-0000-4000-8000-0000000000c1',numericValue:2,semanticMappingStatus:'UNRESOLVED',semanticType:null,freshnessState:'UNASSESSED',confidenceState:'UNASSESSED'});
+  const brainPayload=()=>({contractVersion:1,source:'QANDEEL_HIM_BRAIN_CONTEXT_MATERIALIZATION_V1',sourceTurnId:id.turn,signals:[brainSignal()]});
+  const brainEffect=(overrides:Record<string,unknown>={})=>({effect_key:'HIM_BRAIN_CONTEXT_MATERIALIZATION',state:'COMPLETED',result_code:'HIM_BRAIN_CONTEXT_MATERIALIZED',result_reference:null,result_payload:brainPayload(),...overrides});
+  const materialized=()=>({code:'HIM_BRAIN_CONTEXT_MATERIALIZED',payload:brainPayload()});
+
+  it('materializes BEFORE every piece of work that can legitimately end the execution early',async()=>{
+   const s=setup();
+   s.enrichment.readHimBrainContextMaterialization.mockResolvedValue(materialized() as never);
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   // The turn is NOT eligible for generation, so the execution terminates
+   // SKIPPED - and the Brain Context was still materialized first.
+   expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'SKIPPED','NOT_ELIGIBLE','ELIGIBILITY');
+   expect(s.enrichment.readHimBrainContextMaterialization).toHaveBeenCalledTimes(1);
+   expect(s.enrichment.readHimBrainContextMaterialization).toHaveBeenCalledWith(expect.anything(),id.execution);
+   expect(s.ledger.completeHimBrainContextMaterialization).toHaveBeenCalledTimes(1);
+   expect(s.ledger.completeHimBrainContextMaterialization).toHaveBeenCalledWith(id.execution,materialized());
+   expect(order(s.ledger.completeHimBrainContextMaterialization)).toBeLessThan(order(s.enrichment.evaluateAndWriteMemory));
+   expect(order(s.ledger.completeHimBrainContextMaterialization)).toBeLessThan(order(s.enrichment.evaluateGenerationEligibility));
+   // It is MANAGED: the ordinary claim path is never used for it.
+   expect((s.ledger.claim as jest.Mock).mock.calls.map(call=>call[1])).not.toContain('HIM_BRAIN_CONTEXT_MATERIALIZATION');
+  });
+
+  it('runs after event validation, execution authority, canonical source-turn verification and a confirmed ALLOW safety disposition',async()=>{
+   for(const [label,envelope] of [['legacy v1',event('1.0')],['GUIDED',event('2.0','GUIDED')],['BLOCK',event('2.0','BLOCK')]] as const){
+    const s=setup();
+    if(label!=='legacy v1')(s.ledger.acquire as jest.Mock).mockResolvedValue({id:id.execution,event_id:id.event,user_id:id.user,session_id:id.session,source_turn_id:id.turn,event_version:'2.0',processing_path:'FAST',safety_disposition:label,state:'RUNNING',attempt_count:1});
+    await expect(s.service.dispatch(JSON.stringify(envelope))).resolves.toBe(true);
+    expect(s.enrichment.readHimBrainContextMaterialization).not.toHaveBeenCalled();
+    expect(s.ledger.completeHimBrainContextMaterialization).not.toHaveBeenCalled();
+   }
+   // A canonical source-turn mismatch also stops before materialization.
+   const drifted=setup();
+   drifted.enrichment.readCanonicalSourceTurn.mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null,content:'x',processing_path:'DEEP',routing_reason:'FAST_DEFAULT'} as never);
+   await expect(drifted.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(drifted.enrichment.readHimBrainContextMaterialization).not.toHaveBeenCalled();
+  });
+
+  it('reuses an already-valid durable materialization with ZERO source rereads and never overwrites it',async()=>{
+   const s=setup({effects:[brainEffect()]});
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(s.enrichment.readHimBrainContextMaterialization).not.toHaveBeenCalled();
+   expect(s.ledger.completeHimBrainContextMaterialization).not.toHaveBeenCalled();
+   expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'SKIPPED','NOT_ELIGIBLE','ELIGIBILITY');
+  });
+
+  it('reuses an already-valid NO_HIM_BRAIN_CONTEXT result exactly as it reuses a materialized one',async()=>{
+   const s=setup({effects:[brainEffect({result_code:'NO_HIM_BRAIN_CONTEXT',result_payload:null})]});
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(s.enrichment.readHimBrainContextMaterialization).not.toHaveBeenCalled();
+   expect(s.ledger.completeHimBrainContextMaterialization).not.toHaveBeenCalled();
+  });
+
+  it('also materializes on the post-persistence Confidence resume path: a redelivery still owes the next turn its Brain Context',async()=>{
+   const s=setup({effects:[...resumed(),brainEffect()],confidence:singleTargetConfidence()});
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   // The already-completed materialization is reused, and the resume still runs.
+   expect(s.enrichment.readHimBrainContextMaterialization).not.toHaveBeenCalled();
+   expect(s.ledger.executeConfidenceBatch).toHaveBeenCalledTimes(1);
+   const fresh=setup({effects:resumed(),confidence:singleTargetConfidence()});
+   fresh.enrichment.readHimBrainContextMaterialization.mockResolvedValue(materialized() as never);
+   await expect(fresh.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(fresh.enrichment.readHimBrainContextMaterialization).toHaveBeenCalledTimes(1);
+   expect(order(fresh.ledger.completeHimBrainContextMaterialization)).toBeLessThan(order(fresh.ledger.executeConfidenceBatch));
+  });
+
+  it('quarantines a malformed completed materialization instead of guessing or repairing it',async()=>{
+   for(const malformed of [
+    brainEffect({result_payload:{...brainPayload(),sourceTurnId:'10000000-0000-4000-8000-0000000000ff'}}),
+    brainEffect({result_code:'HIM_BRAIN_CONTEXT_PARTIAL'}),
+    brainEffect({result_payload:null}),
+    brainEffect({result_code:'NO_HIM_BRAIN_CONTEXT'}),
+    brainEffect({result_code:null,result_payload:null}),
+   ]){
+    const s=setup({effects:[malformed]});
+    await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+    expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'QUARANTINED','INDETERMINATE_EFFECT','HIM_BRAIN_CONTEXT_MATERIALIZATION');
+    expect(s.enrichment.readHimBrainContextMaterialization).not.toHaveBeenCalled();
+   }
+  });
+
+  it('leaves NO effect row and stays retryable when the source read fails before completion',async()=>{
+   const s=setup();
+   s.enrichment.readHimBrainContextMaterialization.mockRejectedValue(new Error('BACKGROUND_INTELLIGENCE_DATABASE_UNAVAILABLE'));
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(false);
+   expect(s.ledger.completeHimBrainContextMaterialization).not.toHaveBeenCalled();
+   expect(s.ledger.finish).not.toHaveBeenCalled();
+   // Zero downstream work happened, so nothing is half-done for the retry.
+   expect(s.enrichment.evaluateAndWriteMemory).not.toHaveBeenCalled();
+   expect(s.ledger.claim).not.toHaveBeenCalled();
+  });
+
+  it('reconciles an AMBIGUOUS completion from durable state rather than fabricating success or failure',async()=>{
+   // Committed but the response was lost: the durable reread finds the valid
+   // typed result and the execution proceeds normally.
+   const committed=setup();
+   let effectReads=0;
+   (committed.ledger.completeHimBrainContextMaterialization as jest.Mock).mockRejectedValue(new Error('POST_RESPONSE_DATABASE_UNAVAILABLE'));
+   (committed.ledger.effects as jest.Mock).mockImplementation(async()=>{effectReads+=1;return effectReads===1?[]:[brainEffect()];});
+   committed.enrichment.readHimBrainContextMaterialization.mockResolvedValue(materialized() as never);
+   await expect(committed.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(committed.ledger.finish).toHaveBeenCalledWith(id.execution,'SKIPPED','NOT_ELIGIBLE','ELIGIBILITY');
+   // Nothing committed: no effect row exists, so the delivery stays pending for
+   // the existing bounded redelivery path.
+   const uncommitted=setup();
+   (uncommitted.ledger.completeHimBrainContextMaterialization as jest.Mock).mockResolvedValue('NO_OP');
+   uncommitted.enrichment.readHimBrainContextMaterialization.mockResolvedValue(materialized() as never);
+   await expect(uncommitted.service.dispatch(JSON.stringify(event()))).resolves.toBe(false);
+   expect(uncommitted.ledger.finish).not.toHaveBeenCalled();
+  });
+
+  it('quarantines a QUARANTINED command outcome and treats ALREADY_COMPLETED as materialized',async()=>{
+   const quarantined=setup();
+   (quarantined.ledger.completeHimBrainContextMaterialization as jest.Mock).mockResolvedValue('QUARANTINED');
+   quarantined.enrichment.readHimBrainContextMaterialization.mockResolvedValue(materialized() as never);
+   await expect(quarantined.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(quarantined.ledger.finish).toHaveBeenCalledWith(id.execution,'QUARANTINED','INDETERMINATE_EFFECT','HIM_BRAIN_CONTEXT_MATERIALIZATION');
+   const already=setup();
+   (already.ledger.completeHimBrainContextMaterialization as jest.Mock).mockResolvedValue('ALREADY_COMPLETED');
+   already.enrichment.readHimBrainContextMaterialization.mockResolvedValue(materialized() as never);
+   await expect(already.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(already.ledger.finish).toHaveBeenCalledWith(id.execution,'SKIPPED','NOT_ELIGIBLE','ELIGIBILITY');
+  });
+
+  it('invokes no provider and parses no user text while materializing',async()=>{
+   const s=setup();
+   s.enrichment.readHimBrainContextMaterialization.mockResolvedValue(materialized() as never);
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(s.association.proposeAndAuthorize).not.toHaveBeenCalled();
+   expect(s.extraction.extract).not.toHaveBeenCalled();
+   expect(s.enrichment.generateHypothesisCandidatePlan).not.toHaveBeenCalled();
+   expect(s.enrichment.readHimHypothesisGenerationContext).not.toHaveBeenCalled();
+   // The materializer receives ONLY the issued execution context and the
+   // execution identity: no turn content of any kind is passed to it.
+   expect((s.enrichment.readHimBrainContextMaterialization as jest.Mock).mock.calls[0]).toHaveLength(2);
+   expect((s.enrichment.readHimBrainContextMaterialization as jest.Mock).mock.calls[0][1]).toBe(id.execution);
+  });
+
+  it('a global CLAIMED effect still quarantines before any materialization work',async()=>{
+   const s=setup({effects:[{effect_key:'MEMORY_WRITE',state:'CLAIMED',result_code:null,result_reference:null,result_payload:null}]});
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'QUARANTINED','INDETERMINATE_EFFECT','EFFECT_RECOVERY');
+   expect(s.enrichment.readHimBrainContextMaterialization).not.toHaveBeenCalled();
+  });
  });
 });

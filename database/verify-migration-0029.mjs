@@ -71,7 +71,7 @@ const COMPLETE_GENERIC = 'SELECT public.complete_post_response_intelligence_effe
 const COMPLETE_MEMORY = 'SELECT public.complete_post_response_memory_write_effect_v1($1,$2,$3) ok';
 const VALID = 'SELECT public.post_response_authorized_intent_valid_v1($1::jsonb) valid';
 const EFFECT = "SELECT * FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key=$2";
-const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH'];
+const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH', 'HIM_BRAIN_CONTEXT_MATERIALIZATION'];
 
 const userId = randomUUID();
 
@@ -100,8 +100,9 @@ async function newExecution({ claim = 'INTENT_PROVIDER' } = {}) {
 // confidenceCheck is false only for the in-savepoint call below, where this
 // verifier has dropped result_payload (taking every result check with it) and
 // rebuilt the surface forward through migration 0034. Migration 0035's
-// Confidence check legitimately does not exist in that reconstructed state; it
-// is asserted exactly in every other state, and 0035's own verifier owns it.
+// Confidence check and migration 0061's Brain-Context check legitimately do
+// not exist in that reconstructed state; both are asserted exactly in every
+// other state, and their own verifiers own them.
 async function verifySurfaceAndAcls({ confidenceCheck = true } = {}) {
   stage = 'schema surface and ACLs';
   await identity('postgres');
@@ -120,6 +121,7 @@ async function verifySurfaceAndAcls({ confidenceCheck = true } = {}) {
   )).map((row) => row.conname);
   assert.deepEqual(constraints, [
     'post_response_intelligence_effects_association_result_check',
+    ...(confidenceCheck ? ['post_response_intelligence_effects_brain_context_result_check'] : []),
     'post_response_intelligence_effects_candidate_result_check',
     'post_response_intelligence_effects_claimed_result_check',
     ...(confidenceCheck ? ['post_response_intelligence_effects_confidence_result_check'] : []),
@@ -134,7 +136,14 @@ async function verifySurfaceAndAcls({ confidenceCheck = true } = {}) {
       WHERE conrelid='public.post_response_intelligence_effects'::regclass
         AND conname='post_response_intelligence_effects_effect_key_check'`,
   )).definition;
-  assert.deepEqual([...registry.matchAll(/'([A-Z_]+)'/gu)].map((m) => m[1]), EFFECT_KEYS, 'the effect registry is unchanged');
+  // The rebuilt-through-0034 state also carries 0034's historical seven-key
+  // registry: migration 0061's eighth managed key arrives only with 0061
+  // itself, which the reconstruction deliberately does not re-apply.
+  assert.deepEqual(
+    [...registry.matchAll(/'([A-Z_]+)'/gu)].map((m) => m[1]),
+    confidenceCheck ? EFFECT_KEYS : EFFECT_KEYS.filter((key) => key !== 'HIM_BRAIN_CONTEXT_MATERIALIZATION'),
+    'the effect registry is unchanged',
+  );
   assert.equal((await one("SELECT relrowsecurity rls FROM pg_class WHERE oid='public.post_response_intelligence_effects'::regclass")).rls, true);
 
   for (const [signature, expected] of [
@@ -594,7 +603,8 @@ async function verifyUpgradeFromPreCanonicalState() {
 
   // After the upgrade the same generic completion is prohibited, and the typed
   // command works on a fresh effect. The rebuild above stops at migration 0034,
-  // so migration 0035's Confidence result check is legitimately absent here.
+  // so migration 0035's Confidence result check and migration 0061's
+  // Brain-Context result check are legitimately absent here.
   await verifySurfaceAndAcls({ confidenceCheck: false });
   stage = 'pre-0029 reproduction and upgrade';
   const upgraded = await newExecution();
