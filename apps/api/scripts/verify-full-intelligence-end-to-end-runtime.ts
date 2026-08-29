@@ -1226,51 +1226,44 @@ async function main(): Promise<void> {
       'the real Relationship-communication consumer decodes the successful NO_ACTIVE_RELATIONSHIP row to NONE / DEFAULT');
     assertCrossContextForegroundTransport(4, 'after the direct aggregate transport proof');
 
-    // QHIA-012 deterministic non-vacuity, off the Orchestrator race. The same
-    // REAL repository and the same REAL consumption service are driven once
-    // more, so every structural claim below is its own fact rather than
-    // something only visible inside the turn result.
-    const brainRows = await himBrainContextRepository.readBrainContextForTurn(ACCESS_TOKEN, userId, sessionId, secondTurnId);
-    assert.equal(brainRows.length, 1, 'the foreground RPC returns exactly the surviving materialized signals');
-    const brainRow = brainRows[0];
-    // EXACT immediately-preceding-turn selection: the row is Turn #1's
-    // materialization, carrying the exact bound Goal it was materialized
-    // against, revalidated against the CURRENT ACTIVE binding.
-    assert.equal(brainRow.slot_order, BRAIN_CONTEXT_FIXTURE_SLOT_ORDER);
-    assert.equal(brainRow.slot, BRAIN_CONTEXT_FIXTURE_SLOT);
-    assert.equal(brainRow.context_kind, 'GOAL');
-    assert.equal(brainRow.context_id, goalTarget.id,
-      'the surviving signal carries exactly the Goal the product explicitly activated and the background materialized against');
-    assert.equal(brainRow.numeric_value, BRAIN_CONTEXT_FIXTURE_NUMERIC_VALUE);
-    assert.equal(brainRow.semantic_mapping_status, 'UNRESOLVED');
-    assert.equal(brainRow.semantic_type, null);
-    assert.equal(brainRow.freshness_state, 'UNASSESSED');
-    assert.equal(brainRow.confidence_state, 'UNASSESSED');
-    // The slot really is a member of the frozen eight-slot registry, at its
-    // frozen ordinal, pinned to its frozen context kind.
+    // QHIA-012 non-vacuity. The provider assertion above is already the strong
+    // one: that value travelled through the REAL repository, the REAL
+    // consumption service and the REAL Orchestrator, deterministically. What
+    // remains to prove is that it could ONLY have come from Turn #1's
+    // materialization - which is a fact about the durable ledger, not about
+    // another read.
+    //
+    // No second foreground read is issued here on purpose. The migration-0061
+    // read requires the current turn to be in the foreground GENERATING state,
+    // and Turn #2 is canonically COMPLETED by now: an off-race repeat would be
+    // asking the wrong question, and the census must stay at exactly one attempt
+    // per eligible turn.
+    assert.equal(HIM_BRAIN_CONTEXT_REGISTRY.length, 8, 'the Brain Context registry is frozen at exactly eight slots');
     assert.deepEqual(
       HIM_BRAIN_CONTEXT_REGISTRY.find((entry) => entry.slotOrder === BRAIN_CONTEXT_FIXTURE_SLOT_ORDER),
       { slotOrder: 5, slot: 'GOAL_CONSISTENCY', contextKind: 'GOAL', metricKey: 'hbs.consistency' },
-      'the consumed slot is exactly the frozen registry entry, and the registry itself is exactly eight slots');
-    assert.equal(HIM_BRAIN_CONTEXT_REGISTRY.length, 8, 'the Brain Context registry is frozen at exactly eight slots');
-    // The REAL consumption boundary decodes those rows into exactly the
-    // provider-facing contract the turn already received.
-    assert.deepEqual(
-      himBrainContextService.consumeSourceRows(brainRows), secondCall.request.himBrainContext,
-      'the real QHIA-012 consumer decodes the same authoritative rows into exactly the context the provider received');
+      'the consumed slot is exactly the frozen registry entry, at its frozen ordinal and its one frozen context kind');
     // The consumed materialization can ONLY have come from Turn #1's execution:
     // Turn #2 has no post-response execution at all, so there is no second
-    // materialization anywhere in this session to have been picked instead.
+    // materialization anywhere in this session to have been picked instead, and
+    // the one that exists is bound to Turn #1 by its own durable sourceTurnId.
     assert.equal((await db.observer(
       'SELECT id FROM public.post_response_intelligence_executions WHERE source_turn_id = $1', [secondTurnId])).length, 0,
       'Turn #2 has no post-response execution: the consumed materialization is necessarily Turn #1\'s');
     assert.deepEqual(
-      (await db.observer<{ effect_key: string; execution_id: string }>(
-        'SELECT effect_key, execution_id FROM public.post_response_intelligence_effects WHERE effect_key = $1', [BRAIN_CONTEXT_EFFECT_KEY]))
+      (await db.observer<{ execution_id: string }>(
+        'SELECT execution_id FROM public.post_response_intelligence_effects WHERE effect_key = $1', [BRAIN_CONTEXT_EFFECT_KEY]))
         .map((row) => row.execution_id),
       [executionId],
       'exactly one Brain Context materialization exists in the whole session, and it belongs to the Turn #1 execution');
-    assertBrainContextForegroundTransport(3, 'after the direct Brain Context transport proof');
+    // The exact bound Goal the background materialized against is still the
+    // CURRENT ACTIVE binding, which is why the signal survived revalidation.
+    assert.deepEqual(
+      await db.observer<{ context_kind: string; context_id: string }>(
+        "SELECT context_kind, context_id FROM public.him_session_context_bindings WHERE user_id = $1 AND status = 'ACTIVE'", [userId]),
+      [{ context_kind: 'GOAL', context_id: goalTarget.id }],
+      'the surviving signal was revalidated against exactly the still-ACTIVE Goal binding it was materialized against');
+    assertBrainContextForegroundTransport(2, 'after the Brain Context durable-provenance proof');
     const aggregateCensus = authenticatedDataApi.rpcCensus;
     console.log('FULL_INTELLIGENCE_E2E_SMOKE QHIA-012 Brain Context census: '
       + `foreground_attempted=${aggregateCensus.attempts(BRAIN_CONTEXT_FOREGROUND_RPC)} `
