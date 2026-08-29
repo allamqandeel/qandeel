@@ -101,6 +101,10 @@ const normalize=value=>{
 const properties=async fn=>(await client.query('SELECT p.prosecdef,p.provolatile,p.proconfig,p.pronargs,p.proowner::regrole::text owner,pg_get_functiondef(p.oid) definition FROM pg_proc p WHERE p.oid=$1::regprocedure',[fn])).rows[0];
 const acl=async fn=>(await client.query("SELECT has_function_privilege('public',$1,'EXECUTE') pub,has_function_privilege('anon',$1,'EXECUTE') anon,has_function_privilege('authenticated',$1,'EXECUTE') authenticated,has_function_privilege('service_role',$1,'EXECUTE') service_role",[fn])).rows[0];
 const measurementState=async()=>(await client.query("SELECT (SELECT count(*)::int FROM public.him_metric_snapshots) snapshots,(SELECT count(*)::int FROM public.him_measurement_events) events,(SELECT count(*)::int FROM public.him_measurement_observations) observations,(SELECT count(*)::int FROM public.him_calculation_results) results,(SELECT count(*)::int FROM public.him_measurement_targets) targets,(SELECT count(*)::int FROM public.him_session_context_bindings) bindings,(SELECT count(*)::int FROM public.post_response_intelligence_effects) effects")).rows[0];
+// Key-order-insensitive structural comparison. jsonb normalizes object key order
+// on storage, so a byte comparison against the submitted JSON would fail for a
+// perfectly preserved receipt; this compares the FACTS instead.
+const canonicalJson=value=>JSON.stringify(value,(_key,item)=>item&&typeof item==='object'&&!Array.isArray(item)?Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
 // The canonical durable payload the managed command accepts.
 const payload=(sourceTurnId,signals)=>JSON.stringify({contractVersion:1,source:'QANDEEL_HIM_BRAIN_CONTEXT_MATERIALIZATION_V1',sourceTurnId,signals});
 const signal=(slotOrder,contextId,overrides={})=>{
@@ -336,8 +340,11 @@ await client.connect();try{
  // TABLE OWNER, so no privilege or policy can be mistaken for the proof: the
  // migration-0061 result domain itself is the only thing that can reject it.
  await client.query('RESET ROLE');
- await rejectsWith("INSERT INTO public.post_response_intelligence_effects(execution_id,effect_key,state) VALUES($1,'HIM_BRAIN_CONTEXT_MATERIALIZATION','CLAIMED')",/him_brain_context_result_check/,[executionId],'a direct CLAIMED Brain Context row');
- await rejectsWith("INSERT INTO public.post_response_intelligence_effects(execution_id,effect_key,state,completed_at,result_code,result_payload) VALUES($1,'HIM_BRAIN_CONTEXT_MATERIALIZATION','COMPLETED',CURRENT_TIMESTAMP,'HIM_BRAIN_CONTEXT_MATERIALIZED','{}'::jsonb)",/him_brain_context_result_check/,[executionId],'a direct malformed COMPLETED Brain Context row');
+ await rejectsWith("INSERT INTO public.post_response_intelligence_effects(execution_id,effect_key,state) VALUES($1,'HIM_BRAIN_CONTEXT_MATERIALIZATION','CLAIMED')",/post_response_intelligence_effects_brain_context_result_check/,[executionId],'a direct CLAIMED Brain Context row');
+ await rejectsWith("INSERT INTO public.post_response_intelligence_effects(execution_id,effect_key,state,completed_at,result_code,result_payload) VALUES($1,'HIM_BRAIN_CONTEXT_MATERIALIZATION','COMPLETED',CURRENT_TIMESTAMP,'HIM_BRAIN_CONTEXT_MATERIALIZED','{}'::jsonb)",/post_response_intelligence_effects_brain_context_result_check/,[executionId],'a direct malformed COMPLETED Brain Context row');
+ // The constraint name is within PostgreSQL's 63-byte identifier limit, so the
+ // INSTALLED name is the written name - never a silently truncated prefix.
+ if((await client.query("SELECT conname FROM pg_constraint WHERE conrelid='public.post_response_intelligence_effects'::regclass AND conname='post_response_intelligence_effects_brain_context_result_check'")).rowCount!==1)throw new Error('The Brain Context result-domain constraint must be installed under its exact untruncated name');
  await asServiceRole();
  // The typed result domain rejects every malformed materialization.
  const materialized=[signal(1,decisionTarget.id,{numericValue:4,slotOrder:1}),signal(5,goalTargetA.id),signal(7,goalTargetA.id,{numericValue:5})];
@@ -384,7 +391,7 @@ await client.connect();try{
  if((await client.query(COMPLETE_SQL,[executionId,'NO_HIM_BRAIN_CONTEXT',null])).rows[0].status!=='ALREADY_COMPLETED')throw new Error('A replayed completion must report ALREADY_COMPLETED');
  if((await client.query(COMPLETE_SQL,[executionId,'HIM_BRAIN_CONTEXT_MATERIALIZED',payload(firstUserTurn,[signal(5,goalTargetB.id,{numericValue:5})])])).rows[0].status!=='ALREADY_COMPLETED')throw new Error('A replayed completion must never overwrite the first durable result');
  const durable=(await observe("SELECT result_code,result_payload FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key='HIM_BRAIN_CONTEXT_MATERIALIZATION'",[executionId])).rows[0];
- if(durable.result_code!=='HIM_BRAIN_CONTEXT_MATERIALIZED'||JSON.stringify(durable.result_payload.signals)!==JSON.stringify(materialized))throw new Error('The first durable Brain Context result must survive replay byte for byte');
+ if(durable.result_code!=='HIM_BRAIN_CONTEXT_MATERIALIZED'||canonicalJson(durable.result_payload.signals)!==canonicalJson(materialized))throw new Error('The first durable Brain Context result must survive replay fact for fact');
  // A terminal execution is a NO_OP, never a silent overwrite.
  await client.query("SELECT public.finish_post_response_intelligence_execution_v1($1,'COMPLETED','COMPLETED','DONE')",[noBrainExecution]);
  if((await client.query(COMPLETE_SQL,[noBrainExecution,'NO_HIM_BRAIN_CONTEXT',null])).rows[0].status!=='NO_OP')throw new Error('A terminal execution must answer NO_OP so the caller rereads durable state');

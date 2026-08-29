@@ -171,7 +171,7 @@ function assertBrainContextBridgeContract(sources) {
     violated('the generic claim path rejects the Brain effect');
   if (!migration.includes(`IF p_effect_key='${EFFECT_KEY}' THEN RAISE EXCEPTION 'HIM_BRAIN_CONTEXT_MATERIALIZATION_COMMAND_REQUIRED'`))
     violated('the generic result-less completion path rejects the Brain effect');
-  const resultDomain = slice(migration, 'ADD CONSTRAINT post_response_intelligence_effects_him_brain_context_result_check', 'CREATE OR REPLACE FUNCTION public.claim_post_response_intelligence_effect_v1');
+  const resultDomain = slice(migration, 'ADD CONSTRAINT post_response_intelligence_effects_brain_context_result_check', 'CREATE OR REPLACE FUNCTION public.claim_post_response_intelligence_effect_v1');
   if (/OR \(result_code IS NULL AND result_reference IS NULL AND result_payload IS NULL\)/u.test(resultDomain))
     violated('the Brain result domain has no all-null alternative: a CLAIMED Brain row must stay unrepresentable');
   const completionCommand = slice(migration, 'CREATE FUNCTION public.complete_post_response_him_brain_context_materialization_v1(', 'ALTER FUNCTION public.complete_post_response_him_brain_context_materialization_v1');

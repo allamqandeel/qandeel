@@ -188,7 +188,7 @@ test('the Brain Context effect is MANAGED: a CLAIMED row is structurally unrepre
   // row cannot be stored at all. This is the load-bearing rule of the whole
   // managed contract.
   const domain = executable.slice(
-    executable.indexOf('ADD CONSTRAINT post_response_intelligence_effects_him_brain_context_result_check'),
+    executable.indexOf('ADD CONSTRAINT post_response_intelligence_effects_brain_context_result_check'),
     executable.indexOf('-- 7.') > 0 ? executable.indexOf('CREATE OR REPLACE FUNCTION public.claim_post_response_intelligence_effect_v1') : executable.length,
   );
   assert.ok(domain.includes("state='COMPLETED' AND result_code='NO_HIM_BRAIN_CONTEXT'"), 'the payload-free result requires COMPLETED');

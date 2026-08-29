@@ -288,7 +288,7 @@ ALTER TABLE public.post_response_intelligence_effects
     effect_key IN ('MEMORY_WRITE','INTENT_PROVIDER','ASSOCIATION_PROVIDER','CANDIDATE_PROVIDER','HYPOTHESIS_PERSISTENCE','HYPOTHESIS_UPDATE_BATCH','CONFIDENCE_BATCH','HIM_BRAIN_CONTEXT_MATERIALIZATION')
     OR (result_code IS NULL AND result_reference IS NULL AND result_payload IS NULL)
   ),
-  ADD CONSTRAINT post_response_intelligence_effects_him_brain_context_result_check CHECK (
+  ADD CONSTRAINT post_response_intelligence_effects_brain_context_result_check CHECK (
     effect_key<>'HIM_BRAIN_CONTEXT_MATERIALIZATION'
     OR (state='COMPLETED' AND result_code='NO_HIM_BRAIN_CONTEXT' AND result_reference IS NULL AND result_payload IS NULL)
     OR (state='COMPLETED' AND result_code='HIM_BRAIN_CONTEXT_MATERIALIZED' AND result_reference IS NULL
@@ -717,8 +717,8 @@ DO $$DECLARE fn text:='public.complete_post_response_him_brain_context_materiali
  END LOOP;
  -- The durable result domain really is installed, and really has no all-null
  -- (claimed) Brain alternative.
- IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='public.post_response_intelligence_effects'::regclass AND conname='post_response_intelligence_effects_him_brain_context_result_check') THEN RAISE EXCEPTION 'The Brain Context durable result domain is missing';END IF;
- IF (SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid='public.post_response_intelligence_effects'::regclass AND conname='post_response_intelligence_effects_him_brain_context_result_check') NOT LIKE '%post_response_him_brain_context_result_valid_v1%' THEN RAISE EXCEPTION 'The Brain Context durable result domain must enforce the canonical payload validator';END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='public.post_response_intelligence_effects'::regclass AND conname='post_response_intelligence_effects_brain_context_result_check') THEN RAISE EXCEPTION 'The Brain Context durable result domain is missing';END IF;
+ IF (SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid='public.post_response_intelligence_effects'::regclass AND conname='post_response_intelligence_effects_brain_context_result_check') NOT LIKE '%post_response_him_brain_context_result_valid_v1%' THEN RAISE EXCEPTION 'The Brain Context durable result domain must enforce the canonical payload validator';END IF;
 END$$;
 
 -- 15. Migration-phase postcondition on the authenticated foreground Brain Context
