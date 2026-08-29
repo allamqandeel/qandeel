@@ -397,10 +397,14 @@ function assertBrainContextBridgeContract(sources) {
   if (!exe.smokeRuntime.includes('pgLedgerAdapter.himBrainContextCompletionCount, 1'))
     violated('the smoke proves exactly one managed typed durable completion');
 
-  // 14. This task owns exactly one migration.
+  // 14. This task owns exactly one migration. Forward-safe per the
+  //     QHIA-015 phase closure repair: ownership is by Brain Context identity,
+  //     never by the next migration number, so a later, separately reviewed
+  //     phase migration is legal.
   const migrations = readdirSync(new URL('database/migrations/', root)).filter((name) => name.endsWith('.sql'));
   if (!migrations.includes('0061_him_brain_context_bridge_v1.sql')) violated('migration 0061 exists');
-  if (migrations.some((name) => name.startsWith('0062'))) violated('this task adds no migration 0062');
+  if (migrations.filter((name) => /brain_context/iu.test(name)).length !== 1)
+    violated('QHIA-012 owns exactly one Brain Context migration');
 }
 
 test('B1 - the shipped sources satisfy the frozen QHIA-012 Brain Context bridge contract', () => {

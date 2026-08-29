@@ -74,9 +74,10 @@ test('0061 exists exactly once after 0060 and this task owns exactly one migrati
   const names = readdirSync(new URL('migrations/', root)).filter((name) => name.endsWith('.sql'));
   assertMigrationIdentity(names);
   // QHIA-012 owns 0061 and nothing else. This is a statement about THIS task,
-  // not a permanent ceiling: the forward-safety control below proves later
-  // migrations stay legal.
-  assert.equal(names.filter((name) => name.startsWith('0062')).length, 0, 'this task adds no migration 0062');
+  // not a permanent ceiling: ownership is by Brain Context identity rather
+  // than by the next migration number (QHIA-015 phase closure repair), and the
+  // forward-safety control below proves later migrations stay legal.
+  assert.equal(names.filter((name) => /brain_context/iu.test(name)).length, 1, 'QHIA-012 owns exactly one Brain Context migration');
 });
 
 test('the canonical latest authority is EXTRACTED, not rewritten', () => {
