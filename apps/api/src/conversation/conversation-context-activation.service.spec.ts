@@ -1,6 +1,11 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, HttpException } from '@nestjs/common';
 import { ConversationContextActivationService } from './conversation-context-activation.service';
+import {
+  CONVERSATION_CONTEXT_ACTIVATION_CONFLICT_MESSAGE,
+  CONVERSATION_CONTEXT_ACTIVATION_FORBIDDEN_MESSAGE,
+} from './conversation-context-activation.types';
 import { HimSessionContextBindingService } from '../human-model/him-session-context-binding.service';
+import { MemoryDataApiError } from '../memory/memory-data-api.service';
 import { HIM_CROSS_CONTEXT_KINDS, type HimCrossContextKind } from '../human-model/him-session-context-binding.types';
 
 // QHIA-011A facade contract.
@@ -260,6 +265,168 @@ describe('ConversationContextActivationService.readActiveContexts', () => {
     const bindings = bindingDouble();
     await expect(facade(bindings).readActiveContexts(USER, TOKEN, 'nope')).rejects.toBeInstanceOf(BadRequestException);
     expect(bindings.readActiveBindings).not.toHaveBeenCalled();
+  });
+});
+
+// QHIA-011A Fix 01: authority-rejection mapping.
+//
+// The migration-0055 authority is correct and unchanged; the application maps
+// its EXACT rejections. Matching is exact SQLSTATE + exact verbatim message,
+// never HTTP status alone - PostgREST reports 42501 as HTTP 403 but 55000 as
+// HTTP 500, so a status-based rule would be both wrong and dangerous.
+const OWNERSHIP_DENIAL_MESSAGES = [
+  'Session context bindings are owner-exact',
+  'Unknown or cross-user conversation session',
+  'Unknown, cross-user, or wrong-kind measurement target',
+] as const;
+const INACTIVE_SESSION_MESSAGE = 'Conversation session is not active';
+// Every failure that must KEEP its existing behaviour. Each one is a real
+// shape: an unrecognised SQLSTATE, a drifted message, a malformed upstream body
+// that left no structured identity, an integrity breach, and an ordinary error.
+const UNMAPPED_FAILURES: ReadonlyArray<readonly [string, unknown]> = [
+  ['HTTP 403 with an unrecognised code', new MemoryDataApiError(403, '42P01', 'relation does not exist')],
+  ['SQLSTATE 42501 with an unrecognised message', new MemoryDataApiError(403, '42501', 'permission denied for table him_session_context_bindings')],
+  ['SQLSTATE 42501 with a near-miss message', new MemoryDataApiError(403, '42501', 'Unknown or cross-user conversation session.')],
+  ['SQLSTATE 42501 with a differently-cased message', new MemoryDataApiError(403, '42501', 'unknown or cross-user conversation session')],
+  ['HTTP 500 with an unrecognised code', new MemoryDataApiError(500, 'PGRST202', 'Could not find the function')],
+  ['SQLSTATE 55000 with an unrecognised message', new MemoryDataApiError(500, '55000', 'object not in prerequisite state')],
+  ['an authentication failure past the authenticated boundary', new MemoryDataApiError(401, '42501', 'Authentication required')],
+  ['an unsupported-kind SQLSTATE reaching the database', new MemoryDataApiError(400, '22023', 'Unsupported session cross-context binding kind')],
+  ['HTTP 403 with no structured identity at all', new MemoryDataApiError(403)],
+  ['HTTP 500 with no structured identity at all', new MemoryDataApiError(500)],
+  ['a code with no message', new MemoryDataApiError(403, '42501')],
+  ['a message with no code', new MemoryDataApiError(403, undefined, 'Session context bindings are owner-exact')],
+  ['a fail-closed integrity breach', new Error('INTEGRITY_FAILURE')],
+  ['an ordinary application error', new Error('boom')],
+];
+
+const rejectionOf = async (work: () => Promise<unknown>): Promise<unknown> => {
+  let caught: unknown;
+  try { await work(); } catch (error) { caught = error; }
+  return caught;
+};
+
+describe('ConversationContextActivationService authority-rejection mapping', () => {
+  it.each(OWNERSHIP_DENIAL_MESSAGES)(
+    'maps the exact 42501 denial %p to ONE indistinguishable sanitized 403 on every command',
+    async (message) => {
+      for (const command of ['set', 'clear', 'read'] as const) {
+        const bindings = bindingDouble();
+        const denial = new MemoryDataApiError(403, '42501', message);
+        bindings.setBinding.mockRejectedValue(denial);
+        bindings.clearBinding.mockRejectedValue(denial);
+        bindings.readActiveBindings.mockRejectedValue(denial);
+        const service = facade(bindings);
+        const caught = await rejectionOf(() => (
+          command === 'set' ? service.activateContext(USER, TOKEN, SESSION, 'GOAL', { contextId: TARGETS.GOAL })
+            : command === 'clear' ? service.deactivateContext(USER, TOKEN, SESSION, 'GOAL')
+              : service.readActiveContexts(USER, TOKEN, SESSION)
+        ));
+        expect(caught).toBeInstanceOf(ForbiddenException);
+        expect((caught as ForbiddenException).getStatus()).toBe(403);
+        expect((caught as ForbiddenException).message).toBe(CONVERSATION_CONTEXT_ACTIVATION_FORBIDDEN_MESSAGE);
+      }
+    },
+  );
+
+  it('never lets the sanitized 403 disclose the SQLSTATE, the database message, or which resource failed', async () => {
+    const responses = new Set<string>();
+    for (const message of OWNERSHIP_DENIAL_MESSAGES) {
+      const bindings = bindingDouble();
+      bindings.setBinding.mockRejectedValue(new MemoryDataApiError(403, '42501', message));
+      const caught = await rejectionOf(() => facade(bindings).activateContext(USER, TOKEN, SESSION, 'GOAL', { contextId: TARGETS.GOAL }));
+      const serialized = JSON.stringify((caught as ForbiddenException).getResponse());
+      responses.add(serialized);
+      for (const leak of ['42501', 'owner-exact', 'cross-user', 'wrong-kind', 'him_session_context_bindings', 'SQLSTATE', message]) {
+        expect(serialized).not.toContain(leak);
+      }
+    }
+    // Unknown, foreign and wrong-kind are publicly INDISTINGUISHABLE.
+    expect(responses.size).toBe(1);
+  });
+
+  it.each(['set', 'read'] as const)('maps the exact inactive-session refusal to a sanitized 409 on %s', async (command) => {
+    const bindings = bindingDouble();
+    const refusal = new MemoryDataApiError(500, '55000', INACTIVE_SESSION_MESSAGE);
+    bindings.setBinding.mockRejectedValue(refusal);
+    bindings.readActiveBindings.mockRejectedValue(refusal);
+    const service = facade(bindings);
+    const caught = await rejectionOf(() => (
+      command === 'set' ? service.activateContext(USER, TOKEN, SESSION, 'GOAL', { contextId: TARGETS.GOAL })
+        : service.readActiveContexts(USER, TOKEN, SESSION)
+    ));
+    expect(caught).toBeInstanceOf(ConflictException);
+    expect((caught as ConflictException).getStatus()).toBe(409);
+    expect((caught as ConflictException).message).toBe(CONVERSATION_CONTEXT_ACTIVATION_CONFLICT_MESSAGE);
+    expect(JSON.stringify((caught as ConflictException).getResponse())).not.toContain('55000');
+  });
+
+  it('leaves the existing QHIA-006 clear-on-inactive-session behavior untouched', async () => {
+    // Migration 0055 deliberately lets CLEAR retire a binding on an owned
+    // session that is no longer ACTIVE, so clear returns normally and there is
+    // nothing to map.
+    const bindings = bindingDouble();
+    bindings.clearBinding.mockResolvedValue({
+      contractVersion: 1, source: 'EXPLICIT_AUTHENTICATED_CONTEXT_BINDING', sessionId: SESSION, cleared: true,
+      retiredBinding: { bindingId: '00000000-0000-4000-8000-0000000000f9', bindingVersion: 1, contextKind: 'GOAL', contextId: TARGETS.GOAL },
+    });
+    await expect(facade(bindings).deactivateContext(USER, TOKEN, SESSION, 'GOAL')).resolves.toEqual({
+      contractVersion: 1, source: SOURCE, sessionId: SESSION, contextKind: 'GOAL', cleared: true,
+    });
+  });
+
+  it.each(UNMAPPED_FAILURES)('re-throws %s unchanged, so it keeps its existing server-failure behavior', async (_label, failure) => {
+    for (const command of ['set', 'clear', 'read'] as const) {
+      const bindings = bindingDouble();
+      bindings.setBinding.mockRejectedValue(failure);
+      bindings.clearBinding.mockRejectedValue(failure);
+      bindings.readActiveBindings.mockRejectedValue(failure);
+      const service = facade(bindings);
+      const caught = await rejectionOf(() => (
+        command === 'set' ? service.activateContext(USER, TOKEN, SESSION, 'GOAL', { contextId: TARGETS.GOAL })
+          : command === 'clear' ? service.deactivateContext(USER, TOKEN, SESSION, 'GOAL')
+            : service.readActiveContexts(USER, TOKEN, SESSION)
+      ));
+      expect(caught).toBe(failure);
+      expect(caught).not.toBeInstanceOf(HttpException);
+    }
+  });
+
+  it('never maps by HTTP status alone: the same statuses are 403/409 only with the exact structured identity', async () => {
+    const mapped = new MemoryDataApiError(403, '42501', 'Session context bindings are owner-exact');
+    const unmapped = new MemoryDataApiError(403, '42501', 'permission denied for schema public');
+    const statusOnly = new MemoryDataApiError(403);
+    const results: unknown[] = [];
+    for (const failure of [mapped, unmapped, statusOnly]) {
+      const bindings = bindingDouble();
+      bindings.setBinding.mockRejectedValue(failure);
+      results.push(await rejectionOf(() => facade(bindings).activateContext(USER, TOKEN, SESSION, 'GOAL', { contextId: TARGETS.GOAL })));
+    }
+    expect(results[0]).toBeInstanceOf(ForbiddenException);
+    expect(results[1]).toBe(unmapped);
+    expect(results[2]).toBe(statusOnly);
+    // The identical HTTP 500 story: only the exact code+message becomes a 409.
+    const conflict = new MemoryDataApiError(500, '55000', INACTIVE_SESSION_MESSAGE);
+    const serverFailure = new MemoryDataApiError(500, '55000', 'object not in prerequisite state');
+    const conflictBindings = bindingDouble();
+    conflictBindings.setBinding.mockRejectedValue(conflict);
+    expect(await rejectionOf(() => facade(conflictBindings).activateContext(USER, TOKEN, SESSION, 'GOAL', { contextId: TARGETS.GOAL })))
+      .toBeInstanceOf(ConflictException);
+    const serverBindings = bindingDouble();
+    serverBindings.setBinding.mockRejectedValue(serverFailure);
+    expect(await rejectionOf(() => facade(serverBindings).activateContext(USER, TOKEN, SESSION, 'GOAL', { contextId: TARGETS.GOAL })))
+      .toBe(serverFailure);
+  });
+
+  it('maps nothing before transport: structural rejections stay 400 and never reach the authority', async () => {
+    const bindings = bindingDouble();
+    bindings.setBinding.mockRejectedValue(new MemoryDataApiError(403, '42501', 'Session context bindings are owner-exact'));
+    for (const [kind, body] of [['GLOBAL', { contextId: TARGETS.GOAL }], ['GOAL', { contextId: 'quit my job' }]] as ReadonlyArray<readonly [string, unknown]>) {
+      const caught = await rejectionOf(() => facade(bindings).activateContext(USER, TOKEN, SESSION, kind, body));
+      expect(caught).toBeInstanceOf(BadRequestException);
+      expect((caught as BadRequestException).getStatus()).toBe(400);
+    }
+    expect(bindings.setBinding).not.toHaveBeenCalled();
   });
 });
 

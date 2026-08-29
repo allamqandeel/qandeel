@@ -67,7 +67,48 @@ const FILES = Object.freeze({
   activationVerifier: 'apps/api/scripts/verify-explicit-session-context-activation-runtime.ts',
   smokeRuntime: 'apps/api/scripts/verify-full-intelligence-end-to-end-runtime.ts',
   smokeAdapters: 'apps/api/scripts/full-intelligence-e2e-smoke/pg-foreground-intelligence.adapters.ts',
+  // QHIA-011A Fix 01 surfaces.
+  memoryDataApi: 'apps/api/src/memory/memory-data-api.service.ts',
+  transportSpec: 'apps/api/src/memory/memory-data-api.service.spec.ts',
+  activationServiceSpec: 'apps/api/src/conversation/conversation-context-activation.service.spec.ts',
+  httpSpec: 'apps/api/src/conversation/conversation-context-activation.http.spec.ts',
 });
+
+// QHIA-011A Fix 01: the EXACT migration-0055 rejections the application is
+// allowed to translate into a product answer, and the two sanitized public
+// messages it answers with. Both halves are frozen here so a drifted allowlist,
+// a widened allowlist, a status-only rule, or a leaked database message fails
+// this contract rather than a reviewer's attention.
+const AUTHORITY_DENIAL_SQLSTATE = '42501';
+const AUTHORITY_INACTIVE_SQLSTATE = '55000';
+const AUTHORITY_DENIAL_MESSAGES = Object.freeze([
+  'Session context bindings are owner-exact',
+  'Unknown or cross-user conversation session',
+  'Unknown, cross-user, or wrong-kind measurement target',
+]);
+const AUTHORITY_INACTIVE_MESSAGE = 'Conversation session is not active';
+const SANITIZED_FORBIDDEN_MESSAGE = 'The requested session or context is not available for this operation.';
+const SANITIZED_CONFLICT_MESSAGE = 'The conversation session does not accept this context operation in its current state.';
+// A sanitized product message may never carry database identity of any kind.
+const PUBLIC_MESSAGE_LEAKS = Object.freeze([
+  AUTHORITY_DENIAL_SQLSTATE, AUTHORITY_INACTIVE_SQLSTATE, 'SQLSTATE', 'owner-exact', 'cross-user',
+  'wrong-kind', 'not active', 'binding', 'him_', 'PGRST', 'PostgREST', 'postgres',
+]);
+// Shapes that would make the mapping match on HTTP status, or match loosely.
+const FORBIDDEN_MAPPING_SHAPES = Object.freeze([
+  'error.status', '.status ===', 'status === 403', 'status === 409', 'status === 500',
+  'message.includes(', 'message.startsWith(', 'message.endsWith(', 'message.match(',
+  'message.toLowerCase(', 'message.indexOf(', 'code.startsWith(', 'code.includes(', 'RegExp',
+]);
+// Global error semantics must not change. These tokens may appear in EXACTLY
+// one production file - the pre-existing application root - and its
+// registration must stay byte-identical.
+const FORBIDDEN_GLOBAL_ERROR_HANDLING = Object.freeze([
+  'APP_FILTER', 'useGlobalFilters(', 'implements ExceptionFilter', '@Catch(',
+  'SentryGlobalFilter', 'BaseExceptionFilter',
+]);
+const GLOBAL_ERROR_FILTER_OWNER = 'apps/api/src/app.module.ts';
+const FROZEN_GLOBAL_ERROR_FILTER_WIRING = 'providers:[{provide:APP_FILTER,useClass:SentryGlobalFilter}],';
 
 // The migration-0055 transport paths. The single application owner of these
 // literals is the QHIA-006 repository; a second owner is a second direct
@@ -378,6 +419,132 @@ function assertExplicitSessionContextActivationContract(world) {
       violated(`the focused real-PostgreSQL proof still proves: ${claim}`);
   }
 
+  // ---------------------------------------------------------------------
+  // QHIA-011A Fix 01 - HTTP authority-rejection mapping.
+  // ---------------------------------------------------------------------
+
+  // 15. The authenticated transport preserves the structured upstream failure
+  //     identity - and preserves nothing else.
+  for (const required of [
+    'readonly upstreamCode?: string', 'readonly upstreamMessage?: string',
+    'new MemoryDataApiError(response.status, upstreamCode, upstreamMessage)',
+    'readUpstreamFailureIdentity(response)',
+    'return [upstreamIdentity(record.code), upstreamIdentity(record.message)];',
+  ]) {
+    if (!exe.memoryDataApi.includes(required))
+      violated(`the transport preserves the structured upstream failure identity: missing ${required}`);
+  }
+  if (!/catch \{\n\s+return \[undefined, undefined\];/u.test(exe.memoryDataApi))
+    violated('a malformed or non-JSON upstream error body never replaces the original transport failure');
+  const capturedFields = [...exe.memoryDataApi.matchAll(/record\.([a-zA-Z_]+)/gu)].map((match) => match[1]).sort();
+  if (JSON.stringify(capturedFields) !== JSON.stringify(['code', 'message']))
+    violated(`the transport captures exactly the upstream code and message; found [${capturedFields.join(', ')}]`);
+  for (const forbidden of ['details', 'hint', '.text()', 'response.headers', 'rawBody', 'bodyText']) {
+    if (exe.memoryDataApi.includes(forbidden))
+      violated(`the transport captures no upstream detail, hint, header, or raw body: found ${forbidden}`);
+  }
+  if (!exe.memoryDataApi.includes('super(`Memory Data API request failed with status ${status}.`);'))
+    violated('the generic transport Error message is unchanged, so nothing that logs it starts emitting database text');
+  for (const unchanged of ['if (response.status === 204) return undefined as T;', 'return response.json() as Promise<T>;']) {
+    if (!exe.memoryDataApi.includes(unchanged)) violated(`successful request behavior is unchanged: missing ${unchanged}`);
+  }
+
+  // 16. The mapping is exact code AND exact message, never HTTP status alone.
+  for (const required of [
+    `const AUTHORITY_OWNERSHIP_DENIAL_CODE = '${AUTHORITY_DENIAL_SQLSTATE}'`,
+    `const AUTHORITY_INACTIVE_SESSION_CODE = '${AUTHORITY_INACTIVE_SQLSTATE}'`,
+    `const AUTHORITY_INACTIVE_SESSION_MESSAGE = '${AUTHORITY_INACTIVE_MESSAGE}'`,
+    'AUTHORITY_OWNERSHIP_DENIAL_MESSAGES.has(message)',
+    'message === AUTHORITY_INACTIVE_SESSION_MESSAGE',
+    "typeof code !== 'string' || typeof message !== 'string'",
+    'error instanceof MemoryDataApiError',
+    'new ForbiddenException(CONVERSATION_CONTEXT_ACTIVATION_FORBIDDEN_MESSAGE)',
+    'new ConflictException(CONVERSATION_CONTEXT_ACTIVATION_CONFLICT_MESSAGE)',
+  ]) {
+    if (!exe.activationService.includes(required))
+      violated(`the authority-rejection mapping is exact: missing ${required}`);
+  }
+  const denialSetStart = exe.activationService.indexOf('const AUTHORITY_OWNERSHIP_DENIAL_MESSAGES');
+  if (denialSetStart < 0) violated('the exact ownership-denial message allowlist exists');
+  const denialSet = exe.activationService.slice(denialSetStart, exe.activationService.indexOf(']);', denialSetStart));
+  const denialMessages = [...denialSet.matchAll(/'([^']+)'/gu)].map((match) => match[1]);
+  if (denialMessages.length !== AUTHORITY_DENIAL_MESSAGES.length ||
+      AUTHORITY_DENIAL_MESSAGES.some((message) => !denialMessages.includes(message)))
+    violated(`the ownership-denial allowlist is exactly the three frozen authority messages; found [${denialMessages.join(' | ')}]`);
+  for (const forbidden of FORBIDDEN_MAPPING_SHAPES) {
+    if (exe.activationService.includes(forbidden))
+      violated(`the mapping never matches by HTTP status or loosely: found ${forbidden}`);
+  }
+  for (const leak of ['Exception(error.', 'Exception(message', 'Exception(code', 'Exception(error)']) {
+    if (exe.activationService.includes(leak))
+      violated(`the sanitized product failure never carries the upstream message: found ${leak}`);
+  }
+  const wrapped = (exe.activationService.match(/this\.delegate\(\(\) => this\.bindings\./gu) ?? []).length;
+  if (wrapped !== 3) violated('all three commands - and only they - run through the boundary-local mapping');
+  const fallThroughs = (exe.activationService.match(/return error;/gu) ?? []).length;
+  if (fallThroughs !== 3)
+    violated('an unrecognised failure is re-thrown untouched on every branch: expected three fall-throughs');
+
+  // 17. The sanitized public messages disclose nothing.
+  for (const [name, message] of [
+    ['CONVERSATION_CONTEXT_ACTIVATION_FORBIDDEN_MESSAGE', SANITIZED_FORBIDDEN_MESSAGE],
+    ['CONVERSATION_CONTEXT_ACTIVATION_CONFLICT_MESSAGE', SANITIZED_CONFLICT_MESSAGE],
+  ]) {
+    if (!exe.activationTypes.includes(`${name} =\n  '${message}' as const;`))
+      violated(`the sanitized public message ${name} is frozen`);
+    for (const leak of PUBLIC_MESSAGE_LEAKS) {
+      if (message.toLowerCase().includes(leak.toLowerCase()))
+        violated(`the sanitized public message ${name} discloses ${leak}`);
+    }
+  }
+
+  // 18. Global error semantics are untouched. The application's ONE global
+  //     filter registration stays exactly where it already was and exactly what
+  //     it already was: QHIA-011A Fix 01 maps failures at its own narrow
+  //     boundary and changes nothing globally.
+  const globalErrorOwners = world.production
+    .filter(({ source }) => FORBIDDEN_GLOBAL_ERROR_HANDLING.some((token) => executable(source).includes(token)))
+    .map(({ path }) => path);
+  if (globalErrorOwners.length !== 1 || globalErrorOwners[0] !== GLOBAL_ERROR_FILTER_OWNER)
+    violated(`the only global error-handling registration stays in ${GLOBAL_ERROR_FILTER_OWNER}; found [${globalErrorOwners.join(', ')}]`);
+  const appModule = world.production.find(({ path }) => path === GLOBAL_ERROR_FILTER_OWNER);
+  if (!appModule || !executable(appModule.source).includes(FROZEN_GLOBAL_ERROR_FILTER_WIRING))
+    violated('the existing global Sentry filter registration is unchanged');
+
+  // 19. The application allowlist tracks the REAL migration-0055 authority: the
+  //     application maps the authority, the authority is never rewritten to
+  //     suit the application.
+  const migration0055 = world.migrations.find(({ name }) => name === MIGRATION_0055);
+  if (!migration0055) violated('migration 0055 is present');
+  for (const literal of [...AUTHORITY_DENIAL_MESSAGES, AUTHORITY_INACTIVE_MESSAGE, AUTHORITY_DENIAL_SQLSTATE, AUTHORITY_INACTIVE_SQLSTATE]) {
+    if (!migration0055.source.includes(literal))
+      violated(`migration 0055 still raises the exact authority identity the application maps: missing ${literal}`);
+  }
+
+  // 20. Fix 01 keeps its own proofs.
+  for (const required of [
+    'upstreamCode', 'upstreamMessage', 'keeps the status but no structured identity',
+    'preserves only the usable half of', 'successful and unconfigured behavior is unchanged',
+  ]) {
+    if (!exe.transportSpec.includes(required)) violated(`the transport contract still proves: ${required}`);
+  }
+  for (const required of [
+    "from '@nestjs/core'", 'new BaseExceptionFilter(applicationRef).catch(error, host)',
+    'new ConversationContextActivationController(', 'new HimSessionContextBindingService(',
+    'new HimSessionContextBindingRepository(new MemoryDataApiService())',
+    'expect(outcome.status).toBe(403)', 'expect(outcome.status).toBe(409)', 'expect(outcome.status).toBe(500)',
+    'deactivateContext(request(), SESSION', 'readActiveContexts(request(), SESSION)',
+    'reproduces the original defect shape',
+  ]) {
+    if (!exe.httpSpec.includes(required)) violated(`the real HTTP outcome contract still proves: ${required}`);
+  }
+  for (const required of [
+    'UNMAPPED_FAILURES', 'never maps by HTTP status alone', 'authority-rejection mapping',
+    'never lets the sanitized 403 disclose', 'clear-on-inactive-session behavior untouched',
+  ]) {
+    if (!exe.activationServiceSpec.includes(required)) violated(`the facade mapping contract still proves: ${required}`);
+  }
+
   // 14. Both gates stay wired into package scripts and CI.
   const scripts = JSON.parse(world.packageJson).scripts;
   if (scripts['test:explicit-session-context-activation-entry-contract'] !==
@@ -398,6 +565,10 @@ function assertExplicitSessionContextActivationContract(world) {
 test('A1 - the shipped application sources satisfy the frozen QHIA-011A activation contract', () => {
   assert.doesNotThrow(() => assertExplicitSessionContextActivationContract(shipped));
 });
+
+// The exact production set delegation, so a drift fixture edits real text.
+const SET_DELEGATION =
+  '    const result = await this.delegate(() => this.bindings.setBinding(userId, accessToken, session, kind, contextId));';
 
 test('A2 - anti-vacuity: the real guard rejects every named regression', () => {
   const withFile = (key, source) => ({
@@ -430,14 +601,14 @@ test('A2 - anti-vacuity: the real guard rejects every named regression', () => {
       shipped.files.activationService.replace("import { HimSessionContextBindingService } from '../human-model/him-session-context-binding.service';",
         "import { HimSessionContextBindingRepository } from '../human-model/him-session-context-binding.repository';"))],
     ['the facade read before it wrote', withFile('activationService',
-      shipped.files.activationService.replace('    const result = await this.bindings.setBinding(userId, accessToken, session, kind, contextId);',
-        '    await this.bindings.readActiveBindings(userId, accessToken, session);\n    const result = await this.bindings.setBinding(userId, accessToken, session, kind, contextId);'))],
+      shipped.files.activationService.replace(SET_DELEGATION,
+        `    await this.bindings.readActiveBindings(userId, accessToken, session);\n${SET_DELEGATION}`))],
     ['replacement became clear then set', withFile('activationService',
-      shipped.files.activationService.replace('    const result = await this.bindings.setBinding(userId, accessToken, session, kind, contextId);',
-        '    await this.bindings.clearBinding(userId, accessToken, session, kind);\n    const result = await this.bindings.setBinding(userId, accessToken, session, kind, contextId);'))],
+      shipped.files.activationService.replace(SET_DELEGATION,
+        `    await this.bindings.clearBinding(userId, accessToken, session, kind);\n${SET_DELEGATION}`))],
     ['the facade issued a second set command', withFile('activationService',
-      shipped.files.activationService.replace('    const result = await this.bindings.setBinding(userId, accessToken, session, kind, contextId);',
-        '    await this.bindings.setBinding(userId, accessToken, session, kind, contextId);\n    const result = await this.bindings.setBinding(userId, accessToken, session, kind, contextId);'))],
+      shipped.files.activationService.replace(SET_DELEGATION,
+        `    await this.bindings.setBinding(userId, accessToken, session, kind, contextId);\n${SET_DELEGATION}`))],
     ['the request gained a free-text field', withFile('activationService',
       shipped.files.activationService.replace("const ACTIVATION_REQUEST_FIELDS = Object.freeze(['contextId']);",
         "const ACTIVATION_REQUEST_FIELDS = Object.freeze(['contextId', 'displayText']);"))],
@@ -536,6 +707,89 @@ test('A2 - anti-vacuity: the real guard rejects every named regression', () => {
     ['the focused proof direct-INSERTs a binding row', withFile('activationVerifier',
       shipped.files.activationVerifier.replace('    const activated = await activationController.activateContext(',
         "    await db.observer('INSERT INTO public.him_session_context_bindings(id) VALUES ($1)', [randomUUID()]);\n    const activated = await activationController.activateContext("))],
+    // ---- QHIA-011A Fix 01: HTTP authority-rejection mapping ----
+    ['the transport stopped preserving the upstream code', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace('    readonly upstreamCode?: string,\n', ''))],
+    ['the transport stopped preserving the upstream message', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace('    readonly upstreamMessage?: string,\n', ''))],
+    ['the transport reverted to status-only failures', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace(
+        '      const [upstreamCode, upstreamMessage] = await readUpstreamFailureIdentity(response);\n      throw new MemoryDataApiError(response.status, upstreamCode, upstreamMessage);',
+        '      throw new MemoryDataApiError(response.status);'))],
+    ['the transport started capturing the upstream details', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace(
+        'return [upstreamIdentity(record.code), upstreamIdentity(record.message)];',
+        'return [upstreamIdentity(record.code), upstreamIdentity(record.details)];'))],
+    ['a body-parsing failure can now escape and replace the transport failure', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace('  } catch {\n    return [undefined, undefined];\n  }\n', '  }\n'))],
+    ['the generic transport error message started carrying database text', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace(
+        'super(`Memory Data API request failed with status ${status}.`);',
+        'super(upstreamMessage ?? `Memory Data API request failed with status ${status}.`);'))],
+    ['successful 204 behavior changed', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace('    if (response.status === 204) return undefined as T;\n', ''))],
+    ['the mapping started matching by HTTP status alone', withFile('activationService',
+      shipped.files.activationService.replace(
+        "    if (code === AUTHORITY_OWNERSHIP_DENIAL_CODE && AUTHORITY_OWNERSHIP_DENIAL_MESSAGES.has(message)) {",
+        '    if (error.status === 403) {'))],
+    ['the mapping started matching the message loosely', withFile('activationService',
+      shipped.files.activationService.replace(
+        'AUTHORITY_OWNERSHIP_DENIAL_MESSAGES.has(message)',
+        "message.includes('cross-user')"))],
+    ['the mapping stopped requiring BOTH an exact code and an exact message', withFile('activationService',
+      shipped.files.activationService.replace(
+        "    if (typeof code !== 'string' || typeof message !== 'string') return error;\n", ''))],
+    ['the ownership-denial allowlist was widened', withFile('activationService',
+      shipped.files.activationService.replace(
+        "  'Unknown, cross-user, or wrong-kind measurement target',",
+        "  'Unknown, cross-user, or wrong-kind measurement target',\n  'permission denied for table him_session_context_bindings',"))],
+    ['an allowlisted message drifted away from the migration-0055 authority', withFile('activationService',
+      shipped.files.activationService.replace(
+        "  'Unknown or cross-user conversation session',",
+        "  'Unknown or cross user conversation session',"))],
+    ['the sanitized 403 started returning the raw upstream message', withFile('activationService',
+      shipped.files.activationService.replace(
+        'return new ForbiddenException(CONVERSATION_CONTEXT_ACTIVATION_FORBIDDEN_MESSAGE);',
+        'return new ForbiddenException(message);'))],
+    ['one command stopped going through the boundary-local mapping', withFile('activationService',
+      shipped.files.activationService.replace(
+        '    const result = await this.delegate(() => this.bindings.readActiveBindings(userId, accessToken, session));',
+        '    const result = await this.bindings.readActiveBindings(userId, accessToken, session);'))],
+    ['an unrecognised failure is no longer re-thrown untouched', withFile('activationService',
+      shipped.files.activationService.replace(
+        '    if (code === AUTHORITY_INACTIVE_SESSION_CODE && message === AUTHORITY_INACTIVE_SESSION_MESSAGE) {\n      return new ConflictException(CONVERSATION_CONTEXT_ACTIVATION_CONFLICT_MESSAGE);\n    }\n    return error;',
+        '    return new ConflictException(CONVERSATION_CONTEXT_ACTIVATION_CONFLICT_MESSAGE);'))],
+    ['the sanitized public message started disclosing the authority wording', withFile('activationTypes',
+      shipped.files.activationTypes.replace(
+        "  'The requested session or context is not available for this operation.' as const;",
+        "  'Unknown, cross-user, or wrong-kind measurement target.' as const;"))],
+    ['a global exception filter was introduced', {
+      ...shipped,
+      production: [...shipped.production, {
+        path: 'apps/api/src/observability/global-error.filter.ts',
+        source: "import { Catch } from '@nestjs/common';\n@Catch()\nexport class GlobalErrorFilter {}\n",
+      }],
+    }],
+    ['migration 0055 was rewritten to suit the application', {
+      ...shipped,
+      migrations: shipped.migrations.map((migration) => (migration.name === MIGRATION_0055
+        ? { ...migration, source: migration.source.replaceAll('Unknown or cross-user conversation session', 'Session not found') }
+        : migration)),
+    }],
+    ['the real HTTP contract stopped proving the sanitized 403', withFile('httpSpec',
+      shipped.files.httpSpec.replaceAll('expect(outcome.status).toBe(403);', 'expect(outcome.status).toBeGreaterThan(0);'))],
+    ['the real HTTP contract stopped proving unknown errors stay 500', withFile('httpSpec',
+      shipped.files.httpSpec.replaceAll('expect(outcome.status).toBe(500);', 'expect(outcome.status).toBeGreaterThan(0);'))],
+    ['the real HTTP contract stopped reproducing the original defect shape', withFile('httpSpec',
+      shipped.files.httpSpec.replace('reproduces the original defect shape', 'skipped'))],
+    ['the real HTTP contract stopped using the real Nest exception filter', withFile('httpSpec',
+      shipped.files.httpSpec.replace('new BaseExceptionFilter(applicationRef).catch(error, host)', 'replies.push({ status: 403, body: {} })'))],
+    ['the transport contract stopped proving malformed-body safety', withFile('transportSpec',
+      shipped.files.transportSpec.replace('keeps the status but no structured identity', 'skipped'))],
+    ['the facade contract stopped proving unknown errors stay unmapped', withFile('activationServiceSpec',
+      shipped.files.activationServiceSpec.replaceAll('UNMAPPED_FAILURES', 'SKIPPED_FAILURES'))],
+    ['the facade contract stopped proving there is no status-only mapping', withFile('activationServiceSpec',
+      shipped.files.activationServiceSpec.replace('never maps by HTTP status alone', 'skipped'))],
     ['the static contract was unwired from package scripts', {
       ...shipped,
       packageJson: shipped.packageJson.replace('"test:explicit-session-context-activation-entry-contract"', '"test:retired-contract"'),

@@ -1,6 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { HimSessionContextBindingService } from '../human-model/him-session-context-binding.service';
+import { MemoryDataApiError } from '../memory/memory-data-api.service';
 import {
+  CONVERSATION_CONTEXT_ACTIVATION_CONFLICT_MESSAGE,
+  CONVERSATION_CONTEXT_ACTIVATION_FORBIDDEN_MESSAGE,
   CONVERSATION_CONTEXT_ACTIVATION_SOURCE,
   HIM_CROSS_CONTEXT_KINDS,
   type ConversationActiveContext,
@@ -12,6 +15,26 @@ import {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ACTIVATION_REQUEST_FIELDS = Object.freeze(['contextId']);
+
+// QHIA-011A Fix 01: the EXACT migration-0055 rejections this boundary
+// recognises, by SQLSTATE and by verbatim authority message.
+//
+// The database authority is correct and is NOT rewritten to suit the
+// application; the application maps it. Matching is exact code AND exact
+// message - never HTTP status alone, never a prefix, substring, pattern, or
+// case-insensitive comparison - because PostgREST reports 42501 as HTTP 403
+// and 55000 as HTTP 500, and because an unrecognised authority failure, a
+// drifted message, a schema change, a PGRST transport error, or an outage must
+// never be able to become a benign product answer. Anything not on these two
+// exact lists is re-thrown untouched and keeps its existing behaviour.
+const AUTHORITY_OWNERSHIP_DENIAL_CODE = '42501';
+const AUTHORITY_OWNERSHIP_DENIAL_MESSAGES: ReadonlySet<string> = new Set([
+  'Session context bindings are owner-exact',
+  'Unknown or cross-user conversation session',
+  'Unknown, cross-user, or wrong-kind measurement target',
+]);
+const AUTHORITY_INACTIVE_SESSION_CODE = '55000';
+const AUTHORITY_INACTIVE_SESSION_MESSAGE = 'Conversation session is not active';
 
 // QHIA-011A: the narrow product-facing facade over the EXISTING QHIA-006
 // explicit relevance authority.
@@ -65,7 +88,7 @@ export class ConversationContextActivationService {
     const kind = this.requireContextKind(contextKind);
     const session = this.requireSessionId(sessionId);
     const contextId = this.requireActivationBody(body);
-    const result = await this.bindings.setBinding(userId, accessToken, session, kind, contextId);
+    const result = await this.delegate(() => this.bindings.setBinding(userId, accessToken, session, kind, contextId));
     return {
       contractVersion: 1,
       source: CONVERSATION_CONTEXT_ACTIVATION_SOURCE,
@@ -86,7 +109,7 @@ export class ConversationContextActivationService {
   ): Promise<ConversationContextActivationClearResult> {
     const kind = this.requireContextKind(contextKind);
     const session = this.requireSessionId(sessionId);
-    const result = await this.bindings.clearBinding(userId, accessToken, session, kind);
+    const result = await this.delegate(() => this.bindings.clearBinding(userId, accessToken, session, kind));
     // The retired binding identity the QHIA-006 result carries is deliberately
     // not projected: Product asked to clear a kind, and the answer is whether
     // an active context of that kind existed.
@@ -109,7 +132,7 @@ export class ConversationContextActivationService {
     sessionId: string,
   ): Promise<ConversationContextActivationReadResult> {
     const session = this.requireSessionId(sessionId);
-    const result = await this.bindings.readActiveBindings(userId, accessToken, session);
+    const result = await this.delegate(() => this.bindings.readActiveBindings(userId, accessToken, session));
     return {
       contractVersion: 1,
       source: CONVERSATION_CONTEXT_ACTIVATION_SOURCE,
@@ -125,6 +148,46 @@ export class ConversationContextActivationService {
   // retired_at - stops here and never reaches Product.
   private project(binding: ConversationActiveContext): ConversationActiveContext {
     return { contextKind: binding.contextKind, contextId: binding.contextId };
+  }
+
+  // QHIA-011A Fix 01: the ONE place a QHIA-006 authority rejection becomes a
+  // product answer. It wraps exactly the three delegations above and nothing
+  // else in QANDEEL: no global exception filter is added, the existing Sentry
+  // filter is untouched, MemoryDataApiError keeps its meaning everywhere else,
+  // and every other consumer of that transport is unaffected.
+  private async delegate<T>(command: () => Promise<T>): Promise<T> {
+    try {
+      return await command();
+    } catch (error) {
+      throw this.asProductFailure(error);
+    }
+  }
+
+  // Exact structured identity in, sanitized product failure out - or the
+  // original error, untouched.
+  //
+  // An expected ownership denial is one indistinguishable 403 whatever its
+  // cause: foreign session, unknown session, foreign target, unknown target and
+  // wrong-kind target are deliberately not separable by a caller, so this
+  // boundary discloses no resource existence, ownership, or kind. An expected
+  // inactive-session refusal is a 409. NOTHING else is translated: an
+  // unrecognised code, an unrecognised message, a failure with no structured
+  // identity at all (a malformed or non-JSON upstream body), an integrity
+  // failure, a schema drift, a PGRST transport error, a timeout, an outage, and
+  // any ordinary error all keep their existing behaviour and stay server
+  // failures. The raw upstream message and SQLSTATE are never returned.
+  private asProductFailure(error: unknown): unknown {
+    if (!(error instanceof MemoryDataApiError)) return error;
+    const code = error.upstreamCode;
+    const message = error.upstreamMessage;
+    if (typeof code !== 'string' || typeof message !== 'string') return error;
+    if (code === AUTHORITY_OWNERSHIP_DENIAL_CODE && AUTHORITY_OWNERSHIP_DENIAL_MESSAGES.has(message)) {
+      return new ForbiddenException(CONVERSATION_CONTEXT_ACTIVATION_FORBIDDEN_MESSAGE);
+    }
+    if (code === AUTHORITY_INACTIVE_SESSION_CODE && message === AUTHORITY_INACTIVE_SESSION_MESSAGE) {
+      return new ConflictException(CONVERSATION_CONTEXT_ACTIVATION_CONFLICT_MESSAGE);
+    }
+    return error;
   }
 
   private requireContextKind(contextKind: string): HimCrossContextKind {

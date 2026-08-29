@@ -37,6 +37,20 @@ export type { HimCrossContextKind };
 // automatic activation - because no such path may ever reach this boundary.
 export const CONVERSATION_CONTEXT_ACTIVATION_SOURCE = 'QANDEEL_EXPLICIT_SESSION_CONTEXT_ACTIVATION_V1' as const;
 
+// QHIA-011A Fix 01: the two sanitized public failure messages of this
+// boundary.
+//
+// A recognised migration-0055 ownership denial - foreign session, unknown
+// session, foreign target, unknown target, or wrong-kind target - always
+// produces the SAME 403 text, so the product answer never discloses which of
+// those it was, whether the resource exists, or who owns it. Neither message
+// carries a SQLSTATE, a database message, a function name, a PostgREST
+// structure, or any identifier.
+export const CONVERSATION_CONTEXT_ACTIVATION_FORBIDDEN_MESSAGE =
+  'The requested session or context is not available for this operation.' as const;
+export const CONVERSATION_CONTEXT_ACTIVATION_CONFLICT_MESSAGE =
+  'The conversation session does not accept this context operation in its current state.' as const;
+
 // The exact set/replace request body: one field, one exact target ID.
 export interface ConversationContextActivationRequest {
   contextId: string;
