@@ -145,10 +145,16 @@ describe('Foundation integration / regression gate v1', () => {
     await orchestrator.orchestrate('access-token', 'user', userTurn());
     expect(snapshotRepository.readIntelligenceSnapshot).toHaveBeenCalledWith('access-token', { contextKind: 'CONVERSATION_SESSION', contextId: claimedSession });
     const request = router.generate.mock.calls[0][0] as ModelRouterRequest;
-    expect(request).toMatchObject({ path: 'FAST', memoryContext: [{ type: 'GOAL', content: 'memory-only' }], himContext: { consumptionMode: 'FAST', contextId: claimedSession, eligibleMetricCount: 3 } });
+    // QHIA-013: the session reasoning data reaches the provider inside the ONE
+    // Human Intelligence envelope, with the internal session UUID stripped and
+    // every remaining FAST field - metricKey included - preserved exactly.
+    expect(request).toMatchObject({ path: 'FAST', memoryContext: [{ type: 'GOAL', content: 'memory-only' }], humanIntelligence: { sessionReasoningContext: { consumptionMode: 'FAST', eligibleMetricCount: 3 } } });
+    expect(request).not.toHaveProperty('himContext');
+    const sessionReasoningContext = request.humanIntelligence!.sessionReasoningContext!;
+    expect(sessionReasoningContext).not.toHaveProperty('contextId');
     expect(request.context).toEqual([{ role: 'USER', content: 'hello' }]);
-    expect(request.himContext!.metrics.map((metric) => Object.keys(metric))).toEqual(Array(3).fill(['metricKey', 'knowledgeState', 'ordinalCategory']));
-    expect(request.himContext!.metrics).toContainEqual({ metricKey: 'hse.energy', knowledgeState: 'UNKNOWN', ordinalCategory: null });
+    expect(sessionReasoningContext.metrics.map((metric) => Object.keys(metric))).toEqual(Array(3).fill(['metricKey', 'knowledgeState', 'ordinalCategory']));
+    expect(sessionReasoningContext.metrics).toContainEqual({ metricKey: 'hse.energy', knowledgeState: 'UNKNOWN', ordinalCategory: null });
     const guidance = composeServerGuidance(request);
     expect(guidance).toContain('<user_memory_context>'); expect(guidance).toContain('<him_reasoning_context>');
     expect(guidance).toContain('FAST intentionally omits timestamps');
@@ -158,10 +164,13 @@ describe('Foundation integration / regression gate v1', () => {
     const content = 'x'.repeat(1000); const { orchestrator, router } = setup(rows.PARTIAL, content);
     await orchestrator.orchestrate('access-token', 'user', userTurn(content));
     const request = router.generate.mock.calls[0][0] as ModelRouterRequest;
-    expect(request.path).toBe('DEEP'); expect(request.himContext).toMatchObject({ consumptionMode: 'DEEP', contextKind: 'CONVERSATION_SESSION', contextId: claimedSession });
-    const unknown = request.himContext!.metrics.find((metric) => metric.knowledgeState === 'UNKNOWN')!;
+    expect(request.path).toBe('DEEP');
+    const sessionReasoningContext = request.humanIntelligence!.sessionReasoningContext!;
+    expect(sessionReasoningContext).toMatchObject({ consumptionMode: 'DEEP', contextKind: 'CONVERSATION_SESSION' });
+    expect(sessionReasoningContext).not.toHaveProperty('contextId');
+    const unknown = sessionReasoningContext.metrics.find((metric) => metric.knowledgeState === 'UNKNOWN')!;
     expect(unknown).toMatchObject({ unknownReason: 'NO_MEASUREMENT', ordinalCategory: null, observationQualifier: null, observedAt: null, freshnessState: 'UNASSESSED', confidenceState: 'UNASSESSED', validityStatus: null });
-    for (const forbidden of ['measurementEventId','measurementObservationId','calculationResultId','canonicalBindingId','scaleReference','instrumentId','modelId','trend']) expect(JSON.stringify(request.himContext)).not.toContain(forbidden);
+    for (const forbidden of ['measurementEventId','measurementObservationId','calculationResultId','canonicalBindingId','scaleReference','instrumentId','modelId','trend',claimedSession]) expect(JSON.stringify(sessionReasoningContext)).not.toContain(forbidden);
     expect(composeServerGuidance(request)).toContain('does not authorize trend or decay inference');
   });
 

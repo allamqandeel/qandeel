@@ -37,6 +37,7 @@ jobs:
       - {name: Verify cross-context foreground application transport static contract, run: npm run test:cross-context-foreground-application-transport-contract}
       - {name: Verify explicit session context activation entry static contract, run: npm run test:explicit-session-context-activation-entry-contract}
       - {name: Verify HIM Brain Context bridge application static contract, run: npm run test:him-brain-context-bridge-contract}
+      - {name: Verify Human Intelligence provider semantics consolidation static contract, run: npm run test:human-intelligence-provider-semantics-consolidation-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}

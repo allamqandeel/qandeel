@@ -22,6 +22,7 @@ import { HimCrossContextForegroundAggregationService } from '../human-model/him-
 import type { HimCrossContextForegroundGuidance } from '../human-model/him-cross-context-foreground.types';
 import { HimBrainContextService } from '../human-model/him-brain-context.service';
 import type { HimBrainContext } from '../human-model/him-brain-context.types';
+import { buildHumanIntelligenceProviderSemantics } from '../model-router/human-intelligence-provider-semantics';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -228,6 +229,27 @@ export class ConversationOrchestratorService {
         try { reflectionGuidance = this.himSessionReflectionConsumption.consume(reflectionRead.value); } catch { reflectionGuidance = undefined; }
       }
       return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation,himSessionReflectionGuidance:reflectionGuidance,himSituationStressGuidance:situationStressGuidance,himDecisionAttentionGuidance:decisionAttentionGuidance,himGoalMotivationGuidance:goalMotivationGuidance,himRelationshipCommunicationGuidance:relationshipCommunicationGuidance,himBrainContext:brainContextSettled};});
+      // QHIA-013: the ONE Human Intelligence provider boundary conversion.
+      //
+      // Every value above already exists in memory at this point - this is pure
+      // synchronous CPU-only object normalization that runs ONCE per
+      // provider-generating turn. It issues no network request, no database
+      // request, no provider call and no LLM call; it awaits nothing, creates no
+      // Promise, no timer, no sleep, no retry, no barrier and no engine span;
+      // and it reads no metric, no binding and no numeric value to derive
+      // behavior. The zero-wait topology above - the Snapshot read, the 300 ms
+      // Reflection budget, the aggregate-v3 read, the Brain Context read, the
+      // one Promise.all and the single barrier-close point - is untouched.
+      const humanIntelligence = buildHumanIntelligenceProviderSemantics({
+        himContext,
+        ...(himInteractionAdaptation.adaptationState === 'ACTIVE' ? { himInteractionAdaptation } : {}),
+        ...(himSessionReflectionGuidance ? { himSessionReflectionGuidance } : {}),
+        ...(himSituationStressGuidance ? { himSituationStressGuidance } : {}),
+        ...(himDecisionAttentionGuidance ? { himDecisionAttentionGuidance } : {}),
+        ...(himGoalMotivationGuidance ? { himGoalMotivationGuidance } : {}),
+        ...(himRelationshipCommunicationGuidance ? { himRelationshipCommunicationGuidance } : {}),
+        ...(himBrainContext ? { himBrainContext } : {}),
+      });
       const memoryContext = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));
       let hypothesisResult;
       try {
@@ -247,19 +269,14 @@ export class ConversationOrchestratorService {
         behavioralGuidance, ...(safety.safetyGuidance ? { safetyGuidance: safety.safetyGuidance } : {}),
         context: assembledContext.messages,
         ...(assembledContext.memoryContext ? { memoryContext: assembledContext.memoryContext } : {}),
-        himContext,
-        ...(himInteractionAdaptation.adaptationState === 'ACTIVE' ? { himInteractionAdaptation } : {}),
-        ...(himSessionReflectionGuidance?.guidanceState === 'ACTIVE' ? { himSessionReflectionGuidance } : {}),
-        ...(himSituationStressGuidance?.guidanceState === 'ACTIVE' ? { himSituationStressGuidance } : {}),
-        ...(himDecisionAttentionGuidance?.guidanceState === 'ACTIVE' ? { himDecisionAttentionGuidance } : {}),
-        ...(himGoalMotivationGuidance?.guidanceState === 'ACTIVE' ? { himGoalMotivationGuidance } : {}),
-        ...(himRelationshipCommunicationGuidance?.guidanceState === 'ACTIVE' ? { himRelationshipCommunicationGuidance } : {}),
-        // QHIA-012: a SEPARATE advisory context channel, never merged into any
-        // existing HIM guidance field. It is passed only when the Brain Context
-        // read settled successfully before the barrier AND carried at least one
-        // surviving signal; a pending, failed, empty, or fully binding-invalid
-        // read simply omits the field rather than sending an empty block.
-        ...(himBrainContext ? { himBrainContext } : {}),
+        // QHIA-013: exactly ONE Human Intelligence provider field. The eight
+        // legacy Human Intelligence request fields are gone - not aliased, not
+        // duplicated, not kept for compatibility. Brain Context still travels as
+        // its own separate data lane INSIDE this envelope, never merged into the
+        // session reasoning lane, and is still present only when its read
+        // settled successfully before the existing barrier AND carried at least
+        // one surviving signal.
+        ...(humanIntelligence ? { humanIntelligence } : {}),
         ...(hypothesisResult.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesisResult.context } : {}),
         ...(recommendationGrounding.coverageState === 'AVAILABLE' ? { recommendationContext: recommendationGrounding.context } : {}),
         locale: 'und', modality: 'TEXT',

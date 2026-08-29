@@ -242,9 +242,16 @@ test('the QHIA-011 aggregate v3 is the smoke foreground transport and its succes
   assert.match(smokeScript, /contractVersion: 3,/u, 'the application consumes the explicit v3 aggregate guidance contract');
   assert.match(smokeScript, /exactly one ACTIVE GOAL binding exists and no Situation, Decision, or Relationship is bound to the session/u,
     'both the activated and the unbound answers are proven to be the authoritative ones, not accidents');
-  assert.match(smokeScript, /an authoritatively unbound Situation adds no Situation-stress guidance field/u);
-  assert.match(smokeScript, /an authoritatively unbound Decision adds no Decision-attention guidance field/u);
-  assert.match(smokeScript, /an authoritatively unbound Relationship adds no Relationship-communication guidance field/u);
+  // QHIA-013: the three authoritatively unbound channels no longer have their
+  // own provider request fields, so "they added nothing" is now proven where the
+  // provider actually sees it - the ONE envelope's instruction set is exactly
+  // the canonical-order union the bound channels authorize, and no more.
+  assert.match(smokeScript, /const assertHumanIntelligenceProviderEnvelope = /u,
+    'the smoke asserts the one consolidated Human Intelligence provider envelope');
+  assert.match(smokeScript, /the instruction set is the canonical-order union only/u,
+    'an authoritatively unbound channel contributes no behavioral instruction');
+  assert.match(smokeScript, /no legacy \$\{legacy\} request field reaches Model Router/u,
+    'none of the eight retired Human Intelligence provider request fields survives');
 });
 
 test('QHIA-011A - Full Intelligence covers ONE deliberate explicit activation through the production application entry', () => {
@@ -304,8 +311,13 @@ test('QHIA-011A - Full Intelligence covers ONE deliberate explicit activation th
   // No provider-race flakiness: the ACTIVE guidance is asserted deterministically
   // off the Orchestrator race, and the provider-side field assertion tolerates
   // absence while forbidding any value other than the frozen ACTIVE contract.
-  assert.match(smokeScript, /const assertGoalMotivationProviderField = /u);
-  assert.match(smokeScript, /a present Goal-motivation guidance field is exactly the frozen ACTIVE contract/u);
+  // QHIA-013 keeps the race-tolerant shape at the consolidated boundary: the
+  // instruction set is either the base set the always-active adaptation
+  // authorizes or exactly that set unioned with the Goal channel's own
+  // instructions - never a third possibility and never a duplicate.
+  assert.match(smokeScript, /const GOAL_ACTIVE_BEHAVIORAL_INSTRUCTION_IDS = /u);
+  assert.match(smokeScript, /the instruction set is the canonical-order union only/u);
+  assert.match(smokeScript, /no behavioral instruction ID repeats/u);
   assert.doesNotMatch(smokeScript, /setTimeout|sleep\(|new Promise\(\s*\(resolve\)\s*=>\s*setTimeout/u,
     'no arbitrary sleep or timer is introduced to win the optional-enrichment race');
 });

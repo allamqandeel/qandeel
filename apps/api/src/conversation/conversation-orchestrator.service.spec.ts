@@ -1,6 +1,7 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import type { ModelRouter, ModelRouterRequest } from '../model-router/model-router.types';
 import { composeServerGuidance } from '../model-router/model-router.types';
+import { buildHumanIntelligenceProviderSemantics } from '../model-router/human-intelligence-provider-semantics';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 import { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn } from './conversation.types';
@@ -136,6 +137,49 @@ describe('ConversationOrchestratorService', () => {
   const activeGoalMotivationGuidance: HimGoalMotivationGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'REDUCE_GOAL_ACTION_BURDEN' };
   const noneRelationshipCommunicationGuidance: HimRelationshipCommunicationGuidance = { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' };
   const activeRelationshipCommunicationGuidance: HimRelationshipCommunicationGuidance = { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'STRUCTURE_RELATIONSHIP_COMMUNICATION' };
+  // QHIA-013: the eight legacy Human Intelligence provider fields are gone. The
+  // Model Router receives exactly ONE envelope, so every expectation about "this
+  // guidance reached the provider" is now made against that one envelope.
+  //
+  // Comparing the WHOLE envelope proves presence and absence together: a channel
+  // that should not have reached the provider cannot hide inside a partial
+  // match, and a channel that did reach it must map to exactly the frozen
+  // instruction IDs the pure compiler produces for it.
+  const LEGACY_HUMAN_INTELLIGENCE_REQUEST_FIELDS = [
+    'himContext', 'himInteractionAdaptation', 'himSessionReflectionGuidance', 'himSituationStressGuidance',
+    'himDecisionAttentionGuidance', 'himGoalMotivationGuidance', 'himRelationshipCommunicationGuidance',
+    'himBrainContext',
+  ] as const;
+  const dispatchedRequest = (call = 0): ModelRouterRequest => router.generate.mock.calls[call][0] as ModelRouterRequest;
+  const dispatchedHumanIntelligence = (call = 0) => dispatchedRequest(call).humanIntelligence;
+  const dispatchedInstructionIds = (call = 0): string[] => [...(dispatchedHumanIntelligence(call)?.behavioralInstructionIds ?? [])];
+  const expectedEnvelope = (
+    channels: Parameters<typeof buildHumanIntelligenceProviderSemantics>[0] = {},
+    path: 'FAST' | 'DEEP' = 'FAST',
+  ) => buildHumanIntelligenceProviderSemantics({
+    himContext: { ...himContext, consumptionMode: path } as HimModelContext, ...channels,
+  });
+  const expectNoLegacyHumanIntelligenceFields = (call = 0): void => {
+    for (const legacy of LEGACY_HUMAN_INTELLIGENCE_REQUEST_FIELDS) {
+      expect(dispatchedRequest(call)).not.toHaveProperty(legacy);
+    }
+  };
+  // The provider-safe projection of the session-context fixture, written out in
+  // full rather than derived, so a silent change to the projection fails here:
+  // every runtime field survives and exactly the internal session UUID is gone.
+  const providerSessionReasoningContext = (path: 'FAST' | 'DEEP' = 'FAST') => ({
+    contractVersion: 1, source: 'HIM_REASONING_CONTEXT', sourceSnapshotContractVersion: 1,
+    contextKind: 'CONVERSATION_SESSION', coverageState: 'EMPTY',
+    eligibleMetricCount: 3, knownMetricCount: 0, unknownMetricCount: 3,
+    freshnessPolicy: 'UNASSESSED', confidencePolicy: 'UNASSESSED', consumptionMode: path, metrics: [],
+  });
+  const expectDispatchedHumanIntelligence = (
+    channels: Parameters<typeof buildHumanIntelligenceProviderSemantics>[0] = {},
+    { call = 0, path = 'FAST' as 'FAST' | 'DEEP' } = {},
+  ): void => {
+    expect(dispatchedHumanIntelligence(call)).toEqual(expectedEnvelope(channels, path));
+    expectNoLegacyHumanIntelligenceFields(call);
+  };
   // QHIA-009/QHIA-010/QHIA-011: the aggregate carries the four EXISTING guidance
   // contracts side by side. It adds no field of its own to the provider request.
   const crossContextGuidance = (
@@ -233,7 +277,7 @@ describe('ConversationOrchestratorService', () => {
     expect(hypothesisEligibility.evaluateWithContext).not.toHaveBeenCalled();
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
       modality: 'TEXT', path: 'FAST', behavioralGuidance: 'server-owned policy',
-      context: [{ role: 'USER', content: 'hello' }], himContext,
+      context: [{ role: 'USER', content: 'hello' }], humanIntelligence: expectedEnvelope(),
     }));
     expect(behavioralPolicy.buildTextGuidance).toHaveBeenCalledTimes(1);
     expect(repository.recoverExpiredGeneratingTurn).not.toHaveBeenCalled();
@@ -245,7 +289,7 @@ describe('ConversationOrchestratorService', () => {
     repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
     await orchestrator.orchestrate('token', 'user', userTurn);
     expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
-    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'FAST', himContext }));
+    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'FAST', humanIntelligence: expectedEnvelope() }));
   });
 
   it('calls extraction exactly once only after a fresh eligible turn is finalized and Memory completes', async () => {
@@ -437,7 +481,11 @@ describe('ConversationOrchestratorService', () => {
     repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
     await orchestrator.orchestrate('token', 'user', deepTurn);
     expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
-    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'DEEP', complexity: 'HIGH', himContext: expect.objectContaining({ consumptionMode: 'DEEP', contextId: 'session' }) }));
+    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'DEEP', complexity: 'HIGH', humanIntelligence: expect.objectContaining({ sessionReasoningContext: expect.objectContaining({ consumptionMode: 'DEEP' }) }) }));
+    // QHIA-013: the DEEP projection still reaches the provider, but the
+    // internal conversation-session UUID no longer travels with it.
+    expect(dispatchedHumanIntelligence()).toEqual(expectedEnvelope({}, 'DEEP'));
+    expect(dispatchedHumanIntelligence()!.sessionReasoningContext).not.toHaveProperty('contextId');
     expect(router.generate.mock.calls[0][0]).not.toHaveProperty('trend');
   });
 
@@ -511,7 +559,7 @@ describe('ConversationOrchestratorService', () => {
     expect(request.path).toBe('FAST');
     expect(request.context).toEqual([{ role: 'USER', content: 'hello' }]);
     expect(request.memoryContext).toEqual([{ type: 'GOAL', content: 'Leave my job', source: 'USER_STATED' }]);
-    expect(request.himContext).toEqual(himContext);
+    expect(request.humanIntelligence?.sessionReasoningContext).toEqual(providerSessionReasoningContext());
   });
 
   it('atomically finalizes BLOCK without behavioral policy or router calls', async () => {
@@ -606,7 +654,7 @@ describe('ConversationOrchestratorService', () => {
       expect.objectContaining({ content: 'server safety guidance' }),
     );
     expect(himConsumptionPolicy.project).toHaveBeenCalledWith('FAST', himReasoningContext);
-    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himContext }));
+    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ humanIntelligence: expectedEnvelope() }));
     expect(router.generate.mock.calls[0][0].safetyGuidance).toBe('server safety guidance');
   });
 
@@ -641,7 +689,7 @@ describe('ConversationOrchestratorService', () => {
     expect(himSnapshot.getSnapshot).toHaveBeenCalledWith('token', 'CONVERSATION_SESSION', 'claimed-session');
     expect(himBridge.transform).toHaveBeenCalledWith(snapshot);
     expect(himConsumptionPolicy.project).toHaveBeenCalledWith('FAST', himReasoningContext);
-    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himContext }));
+    expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ humanIntelligence: expectedEnvelope() }));
     expect(himSelector.select.mock.invocationCallOrder[0]).toBeLessThan(himSnapshot.getSnapshot.mock.invocationCallOrder[0]);
     expect(himSnapshot.getSnapshot.mock.invocationCallOrder[0]).toBeLessThan(himBridge.transform.mock.invocationCallOrder[0]);
     expect(himBridge.transform.mock.invocationCallOrder[0]).toBeLessThan(himConsumptionPolicy.project.mock.invocationCallOrder[0]);
@@ -679,7 +727,7 @@ describe('ConversationOrchestratorService', () => {
       repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himInteractionAdaptation: activeAdaptation, himContext }));
+      expectDispatchedHumanIntelligence({ himInteractionAdaptation: activeAdaptation });
     });
 
     it('omits the optional field entirely for a NONE adaptation, preserving the no-adaptation guidance path', async () => {
@@ -687,7 +735,7 @@ describe('ConversationOrchestratorService', () => {
       repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(himAdaptation.derive).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himInteractionAdaptation');
+      expectDispatchedHumanIntelligence();
     });
 
     it('derives the same adaptation from the same reasoning state on FAST and DEEP without influencing path selection', async () => {
@@ -703,8 +751,10 @@ describe('ConversationOrchestratorService', () => {
       expect(himAdaptation.derive).toHaveBeenCalledTimes(2);
       expect(himAdaptation.derive).toHaveBeenNthCalledWith(1, himReasoningContext);
       expect(himAdaptation.derive).toHaveBeenNthCalledWith(2, himReasoningContext);
-      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himInteractionAdaptation: activeAdaptation });
-      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himInteractionAdaptation: activeAdaptation });
+      expect(dispatchedRequest(0).path).toBe('FAST');
+      expect(dispatchedRequest(1).path).toBe('DEEP');
+      expectDispatchedHumanIntelligence({ himInteractionAdaptation: activeAdaptation }, { call: 0, path: 'FAST' });
+      expectDispatchedHumanIntelligence({ himInteractionAdaptation: activeAdaptation }, { call: 1, path: 'DEEP' });
       // Path selection stays owned by the deterministic input-length rule.
       expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
       expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
@@ -794,7 +844,7 @@ describe('ConversationOrchestratorService', () => {
       expect(himReflectionConsumption.consume).toHaveBeenCalledTimes(1);
       expect(himReflectionConsumption.consume).toHaveBeenCalledWith(reflectionSelection(1));
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himSessionReflectionGuidance: inviteReflectionGuidance, himContext }));
+      expectDispatchedHumanIntelligence({ himSessionReflectionGuidance: inviteReflectionGuidance });
     });
 
     it('passes ACTIVE high guidance to the router as the typed optional field', async () => {
@@ -802,7 +852,7 @@ describe('ConversationOrchestratorService', () => {
       himReflectionConsumption.consume.mockReturnValue(avoidReflectionGuidance);
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himSessionReflectionGuidance: avoidReflectionGuidance }));
+      expectDispatchedHumanIntelligence({ himSessionReflectionGuidance: avoidReflectionGuidance });
     });
 
     it('omits the router field entirely for MODERATE (NONE guidance)', async () => {
@@ -811,7 +861,7 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(himReflectionConsumption.consume).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+      expectDispatchedHumanIntelligence();
     });
 
     it('omits the router field entirely for UNKNOWN', async () => {
@@ -819,7 +869,7 @@ describe('ConversationOrchestratorService', () => {
       himReflectionConsumption.consume.mockReturnValue(noneReflectionGuidance);
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+      expectDispatchedHumanIntelligence();
     });
 
     it('degrades a rejected Reflection read to omitted guidance while the turn generates normally', async () => {
@@ -828,7 +878,7 @@ describe('ConversationOrchestratorService', () => {
       await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
       expect(himReflectionConsumption.consume).not.toHaveBeenCalled();
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+      expectDispatchedHumanIntelligence();
       expect(repository.failTurn).not.toHaveBeenCalled();
       expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
     });
@@ -840,8 +890,7 @@ describe('ConversationOrchestratorService', () => {
       await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
       expect(himReflectionConsumption.consume).toHaveBeenCalledTimes(1);
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
-      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himInteractionAdaptation: activeAdaptation }));
+      expectDispatchedHumanIntelligence({ himInteractionAdaptation: activeAdaptation });
       expect(repository.failTurn).not.toHaveBeenCalled();
     });
 
@@ -882,8 +931,10 @@ describe('ConversationOrchestratorService', () => {
       repository.claimTurn.mockResolvedValue(deepClaim);
       repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
       await orchestrator.orchestrate('token', 'user', deepTurn);
-      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himSessionReflectionGuidance: inviteReflectionGuidance });
-      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himSessionReflectionGuidance: inviteReflectionGuidance });
+      expect(dispatchedRequest(0).path).toBe('FAST');
+      expect(dispatchedRequest(1).path).toBe('DEEP');
+      expectDispatchedHumanIntelligence({ himSessionReflectionGuidance: inviteReflectionGuidance }, { call: 0, path: 'FAST' });
+      expectDispatchedHumanIntelligence({ himSessionReflectionGuidance: inviteReflectionGuidance }, { call: 1, path: 'DEEP' });
       // Path selection stays owned by the deterministic input-length rule:
       // Reflection is consumed after the route is claimed and never selects it.
       expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
@@ -898,7 +949,7 @@ describe('ConversationOrchestratorService', () => {
         finalizeNormally();
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himSessionReflectionGuidance: inviteReflectionGuidance }));
+        expectDispatchedHumanIntelligence({ himSessionReflectionGuidance: inviteReflectionGuidance });
         // The foreground budget timer was cleared on the read's own
         // resolution: no pending QHIA-005 timer survives a fast read.
         expect(jest.getTimerCount()).toBe(0);
@@ -921,7 +972,7 @@ describe('ConversationOrchestratorService', () => {
         await jest.advanceTimersByTimeAsync(1);
         await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+        expectDispatchedHumanIntelligence();
         expect(himReflectionConsumption.consume).not.toHaveBeenCalled();
         expect(repository.failTurn).not.toHaveBeenCalled();
         // Late fulfillment of the original read after the completed turn is
@@ -971,7 +1022,7 @@ describe('ConversationOrchestratorService', () => {
         // degradation handler sits OUTSIDE the engine boundary.
         await expect(reflectionEngineResults[0].result.value).rejects.toThrow('SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_EXCEEDED');
         expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+        expectDispatchedHumanIntelligence();
         expect(repository.failTurn).not.toHaveBeenCalled();
       } finally { jest.useRealTimers(); }
     });
@@ -984,7 +1035,7 @@ describe('ConversationOrchestratorService', () => {
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(jest.getTimerCount()).toBe(0);
         expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+        expectDispatchedHumanIntelligence();
       } finally { jest.useRealTimers(); }
     });
 
@@ -1074,32 +1125,26 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
+      expectDispatchedHumanIntelligence({
         himSituationStressGuidance: activeSituationStressGuidance,
         himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
         himGoalMotivationGuidance: activeGoalMotivationGuidance,
         himRelationshipCommunicationGuidance: activeRelationshipCommunicationGuidance,
-      }));
+      });
     });
 
     it('carries ONLY the Situation field when Situation is ACTIVE and the other three are NONE', async () => {
       himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(activeSituationStressGuidance, noneDecisionAttentionGuidance, noneGoalMotivationGuidance, noneRelationshipCommunicationGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(router.generate.mock.calls[0][0]).toMatchObject({ himSituationStressGuidance: activeSituationStressGuidance });
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himRelationshipCommunicationGuidance');
+      expectDispatchedHumanIntelligence({ himSituationStressGuidance: activeSituationStressGuidance });
     });
 
     it('carries ONLY the Decision field when Decision is ACTIVE and the other three are NONE', async () => {
       himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, activeDecisionAttentionGuidance, noneGoalMotivationGuidance, noneRelationshipCommunicationGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(router.generate.mock.calls[0][0]).toMatchObject({ himDecisionAttentionGuidance: activeDecisionAttentionGuidance });
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himRelationshipCommunicationGuidance');
+      expectDispatchedHumanIntelligence({ himDecisionAttentionGuidance: activeDecisionAttentionGuidance });
     });
 
     it('carries ONLY the Goal field when Goal Motivation is ACTIVE and the other three are NONE', async () => {
@@ -1107,10 +1152,7 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).toMatchObject({ himGoalMotivationGuidance: activeGoalMotivationGuidance });
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himRelationshipCommunicationGuidance');
+      expectDispatchedHumanIntelligence({ himGoalMotivationGuidance: activeGoalMotivationGuidance });
     });
 
     it('carries ONLY the Relationship field when Relationship Communication is ACTIVE and the other three are NONE', async () => {
@@ -1119,10 +1161,7 @@ describe('ConversationOrchestratorService', () => {
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
       const dispatched = router.generate.mock.calls[0][0] as ModelRouterRequest;
-      expect(dispatched).toMatchObject({ himRelationshipCommunicationGuidance: activeRelationshipCommunicationGuidance });
-      expect(dispatched).not.toHaveProperty('himSituationStressGuidance');
-      expect(dispatched).not.toHaveProperty('himDecisionAttentionGuidance');
-      expect(dispatched).not.toHaveProperty('himGoalMotivationGuidance');
+      expectDispatchedHumanIntelligence({ himRelationshipCommunicationGuidance: activeRelationshipCommunicationGuidance });
       // The three bounded communication-scaffolding instructions are the ONLY
       // thing this channel adds: it borrows no existing burden reduction.
       const rendered = composeServerGuidance(dispatched);
@@ -1138,12 +1177,10 @@ describe('ConversationOrchestratorService', () => {
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
       const dispatched = router.generate.mock.calls[0][0] as ModelRouterRequest;
-      expect(dispatched).toMatchObject({
+      expectDispatchedHumanIntelligence({
         himSituationStressGuidance: activeSituationStressGuidance,
         himRelationshipCommunicationGuidance: activeRelationshipCommunicationGuidance,
       });
-      expect(dispatched).not.toHaveProperty('himDecisionAttentionGuidance');
-      expect(dispatched).not.toHaveProperty('himGoalMotivationGuidance');
       const rendered = composeServerGuidance(dispatched);
       for (const instruction of [REDUCE_COGNITIVE_LOAD, REDUCE_STEERING_PRESSURE, CALMER_PACING, ...COMMUNICATION_INSTRUCTIONS]) {
         expect(occurrences(rendered, instruction)).toBe(1);
@@ -1157,12 +1194,10 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       const dispatched = router.generate.mock.calls[0][0] as ModelRouterRequest;
-      expect(dispatched).toMatchObject({
+      expectDispatchedHumanIntelligence({
         himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
         himRelationshipCommunicationGuidance: activeRelationshipCommunicationGuidance,
       });
-      expect(dispatched).not.toHaveProperty('himSituationStressGuidance');
-      expect(dispatched).not.toHaveProperty('himGoalMotivationGuidance');
       const rendered = composeServerGuidance(dispatched);
       // The generic one-step-at-a-time instruction and the new one-main-point
       // instruction are DIFFERENT semantic instructions and both stand.
@@ -1177,12 +1212,10 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       const dispatched = router.generate.mock.calls[0][0] as ModelRouterRequest;
-      expect(dispatched).toMatchObject({
+      expectDispatchedHumanIntelligence({
         himGoalMotivationGuidance: activeGoalMotivationGuidance,
         himRelationshipCommunicationGuidance: activeRelationshipCommunicationGuidance,
       });
-      expect(dispatched).not.toHaveProperty('himSituationStressGuidance');
-      expect(dispatched).not.toHaveProperty('himDecisionAttentionGuidance');
       const rendered = composeServerGuidance(dispatched);
       for (const instruction of [SMALL_IMMEDIATE_ACTION, REDUCE_STEERING_PRESSURE, ONE_AT_A_TIME, ...COMMUNICATION_INSTRUCTIONS]) {
         expect(occurrences(rendered, instruction)).toBe(1);
@@ -1196,11 +1229,10 @@ describe('ConversationOrchestratorService', () => {
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
       const dispatched = router.generate.mock.calls[0][0] as ModelRouterRequest;
-      expect(dispatched).toMatchObject({
+      expectDispatchedHumanIntelligence({
         himSituationStressGuidance: activeSituationStressGuidance,
         himGoalMotivationGuidance: activeGoalMotivationGuidance,
       });
-      expect(dispatched).not.toHaveProperty('himDecisionAttentionGuidance');
       // The shared reduced-steering-pressure instruction is contributed by BOTH
       // channels and rendered exactly once; each channel's own unique
       // instructions still appear.
@@ -1220,11 +1252,10 @@ describe('ConversationOrchestratorService', () => {
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
       const dispatched = router.generate.mock.calls[0][0] as ModelRouterRequest;
-      expect(dispatched).toMatchObject({
+      expectDispatchedHumanIntelligence({
         himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
         himGoalMotivationGuidance: activeGoalMotivationGuidance,
       });
-      expect(dispatched).not.toHaveProperty('himSituationStressGuidance');
       // The shared one-step-at-a-time instruction is contributed by BOTH
       // channels and rendered exactly once.
       const rendered = composeServerGuidance(dispatched);
@@ -1241,10 +1272,7 @@ describe('ConversationOrchestratorService', () => {
       himCrossContextForeground.read.mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, noneDecisionAttentionGuidance, noneGoalMotivationGuidance, noneRelationshipCommunicationGuidance));
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himRelationshipCommunicationGuidance');
+      expectDispatchedHumanIntelligence();
     });
 
     it('adds ZERO incremental foreground wait: a still-pending aggregate never delays provider dispatch', async () => {
@@ -1260,13 +1288,10 @@ describe('ConversationOrchestratorService', () => {
         // additional wait of any duration was introduced.
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himRelationshipCommunicationGuidance');
-        // The optional Reflection enrichment still won its own existing
-        // budget: QHIA-009 and QHIA-010 changed no QHIA-005 semantics.
-        expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ himSessionReflectionGuidance: inviteReflectionGuidance }));
+        // The still-pending aggregate contributed no instruction, while the
+        // optional Reflection enrichment still won its own existing budget:
+        // QHIA-013 changed no QHIA-005, QHIA-009 or QHIA-010 semantics.
+        expectDispatchedHumanIntelligence({ himSessionReflectionGuidance: inviteReflectionGuidance });
         // No cross-context timer exists: the only foreground timer in the
         // system is the pre-existing Reflection budget, and it was cleared by
         // its own fast resolution. Adding the third server-side slot introduced
@@ -1294,11 +1319,7 @@ describe('ConversationOrchestratorService', () => {
         await jest.advanceTimersByTimeAsync(1);
         await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himRelationshipCommunicationGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSessionReflectionGuidance');
+        expectDispatchedHumanIntelligence();
         expect(repository.failTurn).not.toHaveBeenCalled();
         expect(jest.getTimerCount()).toBe(0);
       } finally { jest.useRealTimers(); }
@@ -1309,10 +1330,7 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himRelationshipCommunicationGuidance');
+      expectDispatchedHumanIntelligence();
       // No second request of any kind: the rejected aggregate is not retried,
       // the retired aggregate-v1 endpoint is not used as a fallback, and the
       // direct reads are not fired as backups.
@@ -1350,10 +1368,7 @@ describe('ConversationOrchestratorService', () => {
         releaseAggregate(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance, activeGoalMotivationGuidance, activeRelationshipCommunicationGuidance));
         await jest.advanceTimersByTimeAsync(0);
         expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himRelationshipCommunicationGuidance');
+        expectDispatchedHumanIntelligence();
         expect(JSON.stringify(router.generate.mock.calls[0][0])).toBe(dispatchedSnapshot);
       } finally { jest.useRealTimers(); }
     });
@@ -1365,10 +1380,7 @@ describe('ConversationOrchestratorService', () => {
         himCrossContextForeground.read.mockReturnValueOnce(new Promise((resolve) => { releaseFirst = resolve; }));
         finalizeNormally();
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himRelationshipCommunicationGuidance');
+        expectDispatchedHumanIntelligence();
         // The first turn's aggregate settles all-ACTIVE only after that turn
         // dispatched.
         releaseFirst(crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance, activeGoalMotivationGuidance, activeRelationshipCommunicationGuidance));
@@ -1379,10 +1391,7 @@ describe('ConversationOrchestratorService', () => {
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(himCrossContextForeground.read).toHaveBeenCalledTimes(2);
         expect(router.generate).toHaveBeenCalledTimes(2);
-        expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himSituationStressGuidance');
-        expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-        expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himGoalMotivationGuidance');
-        expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himRelationshipCommunicationGuidance');
+        expectDispatchedHumanIntelligence({}, { call: 1 });
       } finally { jest.useRealTimers(); }
     });
 
@@ -1403,10 +1412,7 @@ describe('ConversationOrchestratorService', () => {
       expect(withEngine.mock.calls.map((call) => call[0])).not.toContain('him_decision_attention_context');
       expect(withEngine.mock.calls.map((call) => call[0])).not.toContain('him_goal_motivation_context');
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himRelationshipCommunicationGuidance');
+      expectDispatchedHumanIntelligence();
       expect(repository.failTurn).not.toHaveBeenCalled();
     });
 
@@ -1417,7 +1423,8 @@ describe('ConversationOrchestratorService', () => {
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
       const dispatched = router.generate.mock.calls[0][0] as ModelRouterRequest;
-      expect(dispatched).toMatchObject({
+      expectDispatchedHumanIntelligence({
+        himInteractionAdaptation: activeAdaptation,
         himSituationStressGuidance: activeSituationStressGuidance,
         himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
         himGoalMotivationGuidance: activeGoalMotivationGuidance,
@@ -1447,14 +1454,14 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
+      expectDispatchedHumanIntelligence({
         himInteractionAdaptation: activeAdaptation,
         himSessionReflectionGuidance: avoidReflectionGuidance,
         himSituationStressGuidance: activeSituationStressGuidance,
         himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
         himGoalMotivationGuidance: activeGoalMotivationGuidance,
         himRelationshipCommunicationGuidance: activeRelationshipCommunicationGuidance,
-      }));
+      });
     });
 
     it('gives FAST and DEEP identical guidance and never participates in path selection', async () => {
@@ -1466,8 +1473,20 @@ describe('ConversationOrchestratorService', () => {
       repository.claimTurn.mockResolvedValue(deepClaim);
       repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
       await orchestrator.orchestrate('token', 'user', deepTurn);
-      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himSituationStressGuidance: activeSituationStressGuidance, himDecisionAttentionGuidance: activeDecisionAttentionGuidance, himGoalMotivationGuidance: activeGoalMotivationGuidance, himRelationshipCommunicationGuidance: activeRelationshipCommunicationGuidance });
-      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himSituationStressGuidance: activeSituationStressGuidance, himDecisionAttentionGuidance: activeDecisionAttentionGuidance, himGoalMotivationGuidance: activeGoalMotivationGuidance, himRelationshipCommunicationGuidance: activeRelationshipCommunicationGuidance });
+      const allFourActive = {
+        himSituationStressGuidance: activeSituationStressGuidance,
+        himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
+        himGoalMotivationGuidance: activeGoalMotivationGuidance,
+        himRelationshipCommunicationGuidance: activeRelationshipCommunicationGuidance,
+      };
+      expect(dispatchedRequest(0).path).toBe('FAST');
+      expect(dispatchedRequest(1).path).toBe('DEEP');
+      expectDispatchedHumanIntelligence(allFourActive, { call: 0, path: 'FAST' });
+      expectDispatchedHumanIntelligence(allFourActive, { call: 1, path: 'DEEP' });
+      // FAST and DEEP receive IDENTICAL behavioral semantics: only the session
+      // reasoning density differs, and Human Intelligence never selects the path.
+      expect(dispatchedHumanIntelligence(0)!.behavioralInstructionIds)
+        .toEqual(dispatchedHumanIntelligence(1)!.behavioralInstructionIds);
       expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
       expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
     });
@@ -1569,10 +1588,7 @@ describe('ConversationOrchestratorService', () => {
       // Provider dispatch happens at most once, with the deterministic
       // unbound answer decoded by the four existing semantic consumers.
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himSituationStressGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himDecisionAttentionGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himGoalMotivationGuidance');
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himRelationshipCommunicationGuidance');
+      expectDispatchedHumanIntelligence();
     });
 
     it('keeps the direct QHIA-007, QHIA-008, QHIA-010 and QHIA-011 boundaries independently callable and correct after the refactor', async () => {
@@ -1675,7 +1691,7 @@ describe('ConversationOrchestratorService', () => {
       const request = router.generate.mock.calls[0][0];
       expect(request.recommendationContext).toBe(groundedContext);
       expect(request.hypothesisContext).toBe(availableHypothesisContext);
-      expect(request.himContext).toEqual(himContext);
+      expect(request.humanIntelligence?.sessionReasoningContext).toEqual(providerSessionReasoningContext());
       expect(request.memoryContext).toEqual([{ type: 'GOAL', content: 'Leave my job', source: 'USER_STATED' }]);
       expect(request.context).toEqual([{ role: 'USER', content: 'hello' }]);
       expect(request.recommendationContext).not.toBe(request.hypothesisContext);
@@ -1876,7 +1892,7 @@ describe('ConversationOrchestratorService', () => {
       releaseSnapshot(snapshot);
       await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).toMatchObject({ himBrainContext: settled });
+      expect(dispatchedHumanIntelligence()!.brainContext).toEqual(settled);
     });
 
     // Case B - Brain is STILL PENDING when the barrier closes: the provider
@@ -1891,7 +1907,7 @@ describe('ConversationOrchestratorService', () => {
         // of any duration was introduced for Brain Context.
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himBrainContext');
+        expect(dispatchedHumanIntelligence()?.brainContext).toBeUndefined();
         // The pre-existing QHIA-005 Reflection budget remains the ONLY foreground
         // timer, and it was cleared by its own fast resolution: QHIA-012 adds no
         // timeout, no sleep and no new barrier.
@@ -1921,7 +1937,7 @@ describe('ConversationOrchestratorService', () => {
         await jest.advanceTimersByTimeAsync(1);
         await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(router.generate).toHaveBeenCalledTimes(1);
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himBrainContext');
+        expect(dispatchedHumanIntelligence()?.brainContext).toBeUndefined();
         expect(repository.failTurn).not.toHaveBeenCalled();
         expect(jest.getTimerCount()).toBe(0);
       } finally { jest.useRealTimers(); }
@@ -1933,7 +1949,7 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himBrainContext');
+      expect(dispatchedHumanIntelligence()?.brainContext).toBeUndefined();
       expect(himBrainContext.read).toHaveBeenCalledTimes(1);
       expect(repository.failTurn).not.toHaveBeenCalled();
       expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
@@ -1963,7 +1979,7 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himBrainContext');
+      expect(dispatchedHumanIntelligence()?.brainContext).toBeUndefined();
     });
 
     it('never carries a late Brain Context into the NEXT turn: the second turn reads again and gets its own answer', async () => {
@@ -1973,14 +1989,14 @@ describe('ConversationOrchestratorService', () => {
         himBrainContext.read.mockReturnValueOnce(new Promise((resolve) => { releaseFirst = resolve; }));
         finalizeNormally();
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
-        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himBrainContext');
+        expect(dispatchedHumanIntelligence()?.brainContext).toBeUndefined();
         releaseFirst(brainContext());
         await jest.advanceTimersByTimeAsync(0);
         himBrainContext.read.mockResolvedValue(undefined);
         await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
         expect(himBrainContext.read).toHaveBeenCalledTimes(2);
         expect(router.generate).toHaveBeenCalledTimes(2);
-        expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himBrainContext');
+        expect(dispatchedHumanIntelligence(1)?.brainContext).toBeUndefined();
       } finally { jest.useRealTimers(); }
     });
 
@@ -1990,13 +2006,15 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       const dispatched = router.generate.mock.calls[0][0] as ModelRouterRequest;
-      expect(dispatched.himBrainContext).toBe(settled);
+      // A defensive provider-facing COPY, never a mutable alias of the runtime
+      // object, and still its own separate lane inside the one envelope.
+      expect(dispatched.humanIntelligence!.brainContext).toEqual(settled);
+      expect(dispatched.humanIntelligence!.brainContext as unknown).not.toBe(settled as unknown);
       // It is never merged into any existing HIM guidance field.
-      expect(dispatched.himContext).not.toHaveProperty('signals');
-      expect(dispatched).not.toHaveProperty('himSituationStressGuidance');
-      expect(dispatched).not.toHaveProperty('himDecisionAttentionGuidance');
-      expect(dispatched).not.toHaveProperty('himGoalMotivationGuidance');
-      expect(dispatched).not.toHaveProperty('himRelationshipCommunicationGuidance');
+      expect(dispatched.humanIntelligence!.sessionReasoningContext).not.toHaveProperty('signals');
+      expect(dispatched.humanIntelligence!.brainContext).not.toHaveProperty('metrics');
+      expect(dispatched.humanIntelligence!.behavioralInstructionIds).toEqual([]);
+      expectNoLegacyHumanIntelligenceFields();
       const rendered = composeServerGuidance(dispatched);
       expect(composeServerGuidance(dispatched)).toBe(rendered);
       expect(rendered).toContain('<him_brain_context>');
@@ -2028,8 +2046,10 @@ describe('ConversationOrchestratorService', () => {
       repository.claimTurn.mockResolvedValue(deepClaim);
       repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
       await orchestrator.orchestrate('token', 'user', deepTurn);
-      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himBrainContext: settled });
-      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himBrainContext: settled });
+      expect(dispatchedRequest(0).path).toBe('FAST');
+      expect(dispatchedRequest(1).path).toBe('DEEP');
+      expect(dispatchedHumanIntelligence(0)!.brainContext).toEqual(settled);
+      expect(dispatchedHumanIntelligence(1)!.brainContext).toEqual(settled);
       expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
       expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
     });
