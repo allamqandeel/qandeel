@@ -302,6 +302,16 @@ Recorded at closure; none is production-reachable and none blocks the phase:
   deliberate, charter-guarded (no freshness/decay inference is authorized).
 - Correlation `session_id`/`turn_id` UUIDs reach internal observability
   (tracing/Sentry tags) only; they never reach a model provider.
+- The Full Intelligence E2E smoke's second-turn assertion deliberately proves
+  the previous turn's Brain materialization CAN reach the provider request —
+  stronger than the race-neutral "absent or exact" production truth — behind a
+  deterministic Snapshot gate released via `setImmediate` after the Brain read
+  settles. That gate has intermittently lost its scheduling race on CI runners
+  (once on the PR #175 merge run, once during QHIA-015 closure; the identical
+  code passes on rerun and passed the canonical-main run 33271489931). This is
+  verification-harness scheduling debt, not production behavior: production
+  treats Brain Context as optional zero-wait with late settlement discarded.
+  Its remediation is deferred to its own reviewed verification task.
 
 ## Historical guard forward-compatibility repair
 
