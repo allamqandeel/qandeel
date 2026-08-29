@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseAuthService } from '../auth/supabase-auth.service';
 import { ConversationController } from './conversation.controller';
+import { ConversationContextActivationController } from './conversation-context-activation.controller';
+import { ConversationContextActivationService } from './conversation-context-activation.service';
 import { ConversationRepository } from './conversation.repository';
 import { ConversationService } from './conversation.service';
 import { SupabaseDataApiService } from './supabase-data-api.service';
@@ -22,7 +24,10 @@ import { RecommendationModule } from '../recommendation/recommendation.module';
 
 @Module({
   imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, RecommendationModule, ObservabilityModule],
-  controllers: [ConversationController],
+  // QHIA-011A: the explicit session context activation entry is its own
+  // authenticated controller. It is a separate product command surface, never
+  // part of create-turn input and never reached from a normal turn.
+  controllers: [ConversationController, ConversationContextActivationController],
   providers: [
     SupabaseAuthService,
     SupabaseAuthGuard,
@@ -37,6 +42,12 @@ import { RecommendationModule } from '../recommendation/recommendation.module';
     { provide: BEHAVIORAL_RESPONSE_POLICY, useExisting: BehavioralResponsePolicyService },
     ConversationOrchestratorService,
     ConversationService,
+    // QHIA-011A: the narrow facade over the EXISTING QHIA-006 relevance
+    // authority. HimModule already provides and exports
+    // HimSessionContextBindingService and its one repository, so no second
+    // binding repository, no second Data API boundary, and no new database
+    // authority is introduced.
+    ConversationContextActivationService,
   ],
 })
 export class ConversationModule {}

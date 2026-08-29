@@ -37,6 +37,9 @@ import { createClient, type RedisClientType } from 'redis';
 // Foreground production services (real intelligence semantics).
 import { ConversationOrchestratorService } from '../src/conversation/conversation-orchestrator.service';
 import { ConversationRepository } from '../src/conversation/conversation.repository';
+// QHIA-011A: the production explicit session context activation entry. It is
+// used ONCE, deliberately, during fixture setup - never from a turn.
+import { ConversationContextActivationService } from '../src/conversation/conversation-context-activation.service';
 import { ContextBuilderService } from '../src/conversation/context-builder.service';
 import { SafetyResponseGateService } from '../src/conversation/safety-response-gate.service';
 import { BehavioralResponsePolicyService } from '../src/conversation/behavioral-response-policy.service';
@@ -64,6 +67,8 @@ import { HimRelationshipCommunicationConsumptionService } from '../src/human-mod
 import { HimRelationshipCommunicationRepository } from '../src/human-model/him-relationship-communication.repository';
 import { HimCrossContextForegroundAggregationService } from '../src/human-model/him-cross-context-foreground-aggregation.service';
 import { HimCrossContextForegroundRepository } from '../src/human-model/him-cross-context-foreground.repository';
+import { HimSessionContextBindingRepository } from '../src/human-model/him-session-context-binding.repository';
+import { HimSessionContextBindingService } from '../src/human-model/him-session-context-binding.service';
 import { HimRepository } from '../src/human-model/him.repository';
 import { HypothesisService } from '../src/hypothesis/hypothesis.service';
 import { HypothesisRepository } from '../src/hypothesis/hypothesis.repository';
@@ -172,6 +177,27 @@ const DIRECT_FOREGROUND_RPCS = [
   'read_him_session_relationship_communication_v1',
 ] as const;
 const RELEVANCE_AUTHORITY_RPC = 'read_him_session_context_bindings_v1';
+
+// QHIA-011A explicit activation identities.
+//
+// The activation write is a SETUP command issued once through the new
+// authenticated product application entry, before any turn. Censusing it by
+// name is what makes two separate claims checkable at the same time:
+//
+//   * the deliberate explicit activation really executed against real
+//     PostgreSQL (attempted = completed = 1, failed = 0), so this smoke no
+//     longer covers only the all-unbound cross-context state; and
+//   * it never became a per-turn foreground call - the count stays 1 across
+//     both eligible turns, and the sibling clear and application binding-read
+//     commands are never issued at all.
+const EXPLICIT_ACTIVATION_SET_RPC = 'set_him_session_context_binding_v1';
+const EXPLICIT_ACTIVATION_CLEAR_RPC = 'clear_him_session_context_binding_v1';
+const EXPLICIT_ACTIVATION_SOURCE = 'QANDEEL_EXPLICIT_SESSION_CONTEXT_ACTIVATION_V1';
+// The already-frozen QHIA-010 answer for a bound Goal whose canonical current
+// hse.motivation@1 reading is LOW. This smoke invents none of it.
+const ACTIVE_GOAL_MOTIVATION_GUIDANCE = Object.freeze({
+  contractVersion: 1, guidanceState: 'ACTIVE', directive: 'REDUCE_GOAL_ACTION_BURDEN',
+});
 
 let stage = 'BASELINE';
 
@@ -282,15 +308,18 @@ async function main(): Promise<void> {
     // concurrently with the HSE Snapshot and Reflection reads and adds no
     // foreground wait, and it is still the ONLY cross-context foreground
     // request the turn issues - exactly one migration-0060 aggregate-v3 call
-    // carrying all four channels. This smoke binds no Situation, no Decision,
-    // no Goal, and no Relationship to the session, so the wrapped
-    // migration-0059 aggregate v2 (itself wrapping the migration-0058 aggregate
-    // v1 over the migration-0056 and migration-0057 authorities, plus the
-    // migration-0059 Goal authority) and the migration-0060 Relationship
-    // authority return their deterministic NO_ACTIVE_SITUATION /
-    // NO_ACTIVE_DECISION / NO_ACTIVE_GOAL / NO_ACTIVE_RELATIONSHIP answers and
-    // all four derived guidance contracts stay NONE (omitted from the provider
-    // request).
+    // carrying all four channels.
+    //
+    // Since QHIA-011A this smoke no longer covers only the all-unbound state:
+    // fixture setup performs ONE deliberate explicit product activation
+    // (GOAL -> an existing owned Goal carrying a canonical LOW hse.motivation@1
+    // reading) through the new authenticated application activation service. So
+    // the wrapped migration-0059 Goal authority answers ACTIVE_GOAL_BOUND and
+    // the real QHIA-010 consumer decodes it into its already-frozen ACTIVE
+    // guidance, while Situation, Decision and Relationship are never activated
+    // and their authorities still return the deterministic
+    // NO_ACTIVE_SITUATION / NO_ACTIVE_DECISION / NO_ACTIVE_RELATIONSHIP answers
+    // whose derived guidance stays NONE (omitted from the provider request).
     //
     // All four per-channel repositories above stay REAL and fully reachable
     // over this same authenticated adapter. They are never called: the transport
@@ -303,6 +332,15 @@ async function main(): Promise<void> {
     const himCrossContextForegroundService = new HimCrossContextForegroundAggregationService(
       himCrossContextForegroundRepository, himSituationStressService, himDecisionAttentionService, himGoalMotivationService,
       himRelationshipCommunicationService);
+    // QHIA-011A: the REAL production explicit session context activation entry,
+    // composed over the REAL existing QHIA-006 service and its ONE existing
+    // repository - no second binding repository and no direct RPC path exists.
+    // It is used exactly once, in fixture setup below, to make this smoke cover
+    // a genuinely ACTIVATED cross-context state instead of only the all-unbound
+    // one. It is deliberately NOT given to the Orchestrator, to any provider,
+    // or to any background service: nothing on a turn can reach it.
+    const contextActivationService = new ConversationContextActivationService(
+      new HimSessionContextBindingService(new HimSessionContextBindingRepository(memoryDataApi)));
     const hypothesisService = new HypothesisService(
       new HypothesisRepository(memoryDataApi, unusedDependency<HypothesisServiceRoleApiService>('HYPOTHESIS_SERVICE_ROLE_API')),
       evidenceService);
@@ -339,6 +377,37 @@ async function main(): Promise<void> {
       assert.deepEqual(
         census.attemptedNames().filter((name) => /situation_stress|decision_attention|goal_motivation|relationship_communication|context_bindings|cross_context_foreground_v1|cross_context_foreground_v2/u.test(name)), [],
         `${label}: no direct, fallback, or backup cross-context foreground request of any kind was issued`);
+      // QHIA-011A: the explicit activation census. The setup write happened
+      // exactly ONCE, before any turn, and no turn ever repeats it - so the
+      // explicit product command can never be misclassified as foreground
+      // transport, and the foreground can never silently activate a context.
+      assert.equal(census.attempts(EXPLICIT_ACTIVATION_SET_RPC), 1,
+        `${label}: exactly one explicit setup activation write exists for the whole smoke`);
+      assert.equal(census.completions(EXPLICIT_ACTIVATION_SET_RPC), 1,
+        `${label}: the explicit setup activation COMPLETED against real PostgreSQL - never refused and silently degraded`);
+      assert.equal(census.failures(EXPLICIT_ACTIVATION_SET_RPC), 0,
+        `${label}: no explicit activation transport failure occurred`);
+      assert.equal(census.attempts(EXPLICIT_ACTIVATION_CLEAR_RPC), 0,
+        `${label}: no clear command is issued anywhere - replacement is never clear plus set, and no turn deactivates a context`);
+    };
+
+    // QHIA-011A: the ACTIVATED Goal channel as the provider may see it.
+    //
+    // The aggregate is OPTIONAL no-wait foreground enrichment: the Orchestrator
+    // records it only if it settles before the existing foreground barrier, and
+    // whether it wins that real wall-clock race on any given turn is a timing
+    // fact, not an architectural one. Asserting that it must always win would
+    // be flaky, and asserting that it must never appear would be false. So the
+    // provider-side assertion is the exact, non-flaky one: this field is either
+    // absent or EXACTLY the already-frozen ACTIVE Goal guidance - never a
+    // different guidance state, never a different directive, and never an
+    // invented value. Whether the activated Goal is really consumable is proven
+    // deterministically further below, off the race, through the same real
+    // repository, the same real aggregate and the same real QHIA-010 consumer.
+    const assertGoalMotivationProviderField = (field: unknown, label: string): void => {
+      if (field === undefined) return;
+      assert.deepEqual(field, ACTIVE_GOAL_MOTIVATION_GUIDANCE,
+        `${label}: a present Goal-motivation guidance field is exactly the frozen ACTIVE contract`);
     };
 
     const conversationalRouter = new DeterministicConversationalModelRouter(ASSISTANT_TURN_TEXT);
@@ -385,14 +454,43 @@ async function main(): Promise<void> {
     assert.equal(seeded?.origin, 'SYSTEM_GENERATED');
     assert.equal((await db.observer('SELECT id FROM public.confidence_evaluations WHERE user_id = $1', [userId])).length, 0,
       'no current-version Confidence evaluation exists for the seeded Hypothesis');
+    // QHIA-011A explicit setup activation.
+    //
+    // ONE deliberate explicit product action, before any turn: the user selects
+    // an exact already-owned, already-measured Goal for this exact session. The
+    // Goal and its canonical LOW hse.motivation@1 reading come from the
+    // EXISTING structured measurement authorities; the binding itself is
+    // written ONLY through the new production application activation service,
+    // never by a direct row write and never by calling the QHIA-006 SQL here.
+    const [goalTarget] = await db.asRole<{ id: string; context_kind: string }>(
+      'authenticated', "SELECT * FROM public.create_him_motivation_measurement_target('GOAL', 'full intelligence smoke goal')");
+    assert.equal(goalTarget?.context_kind, 'GOAL');
+    const [motivationObservation] = await db.asRole<{ id: string; metric_key: string; response_code: string }>(
+      'authenticated', "SELECT * FROM public.create_hse_motivation_measurement($1, 'LOW', NULL)", [goalTarget.id]);
+    assert.equal(motivationObservation?.metric_key, 'hse.motivation');
+    assert.equal(motivationObservation?.response_code, 'LOW');
+    const [motivationSnapshot] = await db.asRole<{ value_state: string; numeric_value: number }>(
+      'authenticated', 'SELECT * FROM public.calculate_hse_motivation_measurement($1)', [motivationObservation.id]);
+    assert.equal(motivationSnapshot?.value_state, 'ASSESSED', 'canonical Motivation calculation produced the assessed Goal state');
+    assert.equal(motivationSnapshot?.numeric_value, 2, 'the canonical LOW ordinal is 2 on the frozen five-point scale');
+    const activation = await contextActivationService.activateContext(
+      userId, ACCESS_TOKEN, sessionId, 'GOAL', { contextId: goalTarget.id });
+    assert.deepEqual(activation, {
+      contractVersion: 1, source: EXPLICIT_ACTIVATION_SOURCE, sessionId,
+      activeBinding: { contextKind: 'GOAL', contextId: goalTarget.id },
+    }, 'the explicit product activation returns the minimal projection of exactly the selected Goal');
     // The fixture stage drives authenticated RPCs of its own, so the census
-    // starts from a proven-clean cross-context baseline before Turn #1.
+    // starts from a proven-clean cross-context baseline before Turn #1 - with
+    // the one explicit setup activation already counted.
     assertCrossContextForegroundTransport(0, 'before any foreground turn');
-    // No relevance binding is created anywhere in this smoke, so all four
-    // wrapped authorities must answer with their deterministic unbound results.
-    assert.equal((await db.observer(
-      'SELECT id FROM public.him_session_context_bindings WHERE user_id = $1', [userId])).length, 0,
-      'the smoke binds no Situation, no Decision, no Goal, and no Relationship to the session');
+    // Exactly ONE explicit relevance binding exists: the Goal the product
+    // activated. Situation, Decision and Relationship are never activated, so
+    // those three wrapped authorities must still answer with their
+    // deterministic unbound results.
+    const bindingRows = await db.observer<{ context_kind: string; context_id: string; status: string; binding_version: number }>(
+      'SELECT context_kind, context_id, status, binding_version FROM public.him_session_context_bindings WHERE user_id = $1', [userId]);
+    assert.deepEqual(bindingRows, [{ context_kind: 'GOAL', context_id: goalTarget.id, status: 'ACTIVE', binding_version: 1 }],
+      'exactly one ACTIVE GOAL binding exists and no Situation, Decision, or Relationship is bound to the session');
 
     // -----------------------------------------------------------------------
     stage = 'FOREGROUND_TURN_1';
@@ -451,14 +549,15 @@ async function main(): Promise<void> {
     // aggregate-v2 endpoints nor any of the four direct per-channel authorities
     // was ever requested.
     assertCrossContextForegroundTransport(1, 'after foreground Turn #1');
-    // Provider contract unchanged: all four wrapped authorities answered
-    // authoritatively UNBOUND, so all four guidance fields are omitted.
+    // Provider contract unchanged. Three of the four wrapped authorities
+    // answered authoritatively UNBOUND, so their guidance fields are
+    // structurally omitted; only the ONE explicitly activated Goal channel may
+    // legitimately appear, and only as its exact frozen ACTIVE contract.
     assert.equal(firstCall.request.himSituationStressGuidance, undefined,
       'an authoritatively unbound Situation adds no Situation-stress guidance field');
     assert.equal(firstCall.request.himDecisionAttentionGuidance, undefined,
       'an authoritatively unbound Decision adds no Decision-attention guidance field');
-    assert.equal(firstCall.request.himGoalMotivationGuidance, undefined,
-      'an authoritatively unbound Goal adds no Goal-motivation guidance field');
+    assertGoalMotivationProviderField(firstCall.request.himGoalMotivationGuidance, 'Turn #1');
     assert.equal(firstCall.request.himRelationshipCommunicationGuidance, undefined,
       'an authoritatively unbound Relationship adds no Relationship-communication guidance field');
 
@@ -813,8 +912,7 @@ async function main(): Promise<void> {
       'the second turn still adds no Situation-stress guidance field');
     assert.equal(secondCall.request.himDecisionAttentionGuidance, undefined,
       'the second turn still adds no Decision-attention guidance field');
-    assert.equal(secondCall.request.himGoalMotivationGuidance, undefined,
-      'the second turn still adds no Goal-motivation guidance field');
+    assertGoalMotivationProviderField(secondCall.request.himGoalMotivationGuidance, 'Turn #2');
     assert.equal(secondCall.request.himRelationshipCommunicationGuidance, undefined,
       'the second turn still adds no Relationship-communication guidance field');
 
@@ -823,26 +921,51 @@ async function main(): Promise<void> {
     // confused with a rejected request the Orchestrator silently degraded. The
     // same real repository and the same real aggregation service are driven
     // once more over the same authenticated substitute.
+    //
+    // Since QHIA-011A this block is also the DETERMINISTIC proof that the
+    // explicit product activation is really consumable end to end: it runs off
+    // the optional no-wait Orchestrator race, so it can assert the ACTIVE Goal
+    // answer unconditionally without depending on wall-clock scheduling.
     const aggregateRows = await himCrossContextForegroundRepository
       .readSessionCrossContextForeground(ACCESS_TOKEN, userId, sessionId);
     assert.equal(aggregateRows.length, 4, 'migration 0060 answers with exactly four transport rows');
     assert.deepEqual(
       aggregateRows.map((row) => [row.foreground_slot_order, row.foreground_slot, row.binding_state]),
-      [[1, 'SITUATION_STRESS', 'NO_ACTIVE_SITUATION'], [2, 'DECISION_ATTENTION', 'NO_ACTIVE_DECISION'], [3, 'GOAL_MOTIVATION', 'NO_ACTIVE_GOAL'], [4, 'RELATIONSHIP_COMMUNICATION', 'NO_ACTIVE_RELATIONSHIP']],
-      'the frozen transport order and the deterministic unbound states of all four wrapped authorities');
-    for (const row of aggregateRows) {
+      [[1, 'SITUATION_STRESS', 'NO_ACTIVE_SITUATION'], [2, 'DECISION_ATTENTION', 'NO_ACTIVE_DECISION'], [3, 'GOAL_MOTIVATION', 'ACTIVE_GOAL_BOUND'], [4, 'RELATIONSHIP_COMMUNICATION', 'NO_ACTIVE_RELATIONSHIP']],
+      'the frozen transport order, the explicitly activated Goal, and the deterministic unbound states of the three unactivated authorities');
+    for (const row of [aggregateRows[0], aggregateRows[1], aggregateRows[3]]) {
       assert.equal(row.binding_context_id, null, 'an unbound slot resolved no context');
       assert.equal(row.metric_key, null, 'an unbound slot read no metric');
       assert.equal(row.numeric_value, null, 'an unbound slot carries no value');
     }
+    // QHIA-011A non-vacuity, off the Orchestrator race: the aggregate Goal row
+    // is truly bound to the exact target the product activated, and carries the
+    // exact canonical LOW reading created through the existing measurement
+    // authority.
+    assert.equal(aggregateRows[2].binding_context_id, goalTarget.id,
+      'the aggregate Goal slot resolved exactly the explicitly activated Goal');
+    assert.equal(aggregateRows[2].metric_key, 'hse.motivation');
+    assert.equal(aggregateRows[2].definition_version, 1);
+    assert.equal(aggregateRows[2].context_kind, 'GOAL');
+    assert.equal(aggregateRows[2].context_id, goalTarget.id);
+    assert.equal(aggregateRows[2].has_canonical_current_value, true);
+    assert.equal(aggregateRows[2].value_state, 'ASSESSED');
+    assert.equal(aggregateRows[2].numeric_value, 2, 'the canonical current Goal Motivation reading is the LOW ordinal');
     const aggregateGuidance = await himCrossContextForegroundService.read(userId, ACCESS_TOKEN, sessionId);
     assert.deepEqual(aggregateGuidance, {
       contractVersion: 3,
       situationStress: { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' },
       decisionAttention: { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' },
-      goalMotivation: { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' },
+      goalMotivation: { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'REDUCE_GOAL_ACTION_BURDEN' },
       relationshipCommunication: { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' },
-    }, 'the REAL QHIA-007, QHIA-008, QHIA-010 and QHIA-011 semantic consumers decoded the successful aggregate into bounded NONE guidance');
+    }, 'the REAL QHIA-007, QHIA-008, QHIA-010 and QHIA-011 semantic consumers decoded the successful aggregate: ACTIVE for the explicitly activated Goal, bounded NONE for the three unactivated channels');
+    // The third slot decoded by the REAL QHIA-010 consumer alone, so
+    // "explicitly activated Goal + canonical LOW therefore ACTIVE /
+    // REDUCE_GOAL_ACTION_BURDEN" is proven as its own fact rather than only
+    // inside the aggregate result.
+    assert.deepEqual(
+      himGoalMotivationService.consumeSourceRows([aggregateRows[2]]), ACTIVE_GOAL_MOTIVATION_GUIDANCE,
+      'the real Goal-motivation consumer decodes the activated LOW reading to ACTIVE / REDUCE_GOAL_ACTION_BURDEN');
     // The fourth slot decoded by the REAL QHIA-011 consumer alone, so
     // "authoritative NO_ACTIVE_RELATIONSHIP therefore NONE / DEFAULT" is proven
     // as its own fact rather than only inside the aggregate result.
@@ -863,6 +986,12 @@ async function main(): Promise<void> {
       + `direct_qhia010=${aggregateCensus.attempts(DIRECT_FOREGROUND_RPCS[2])} `
       + `direct_qhia011=${aggregateCensus.attempts(DIRECT_FOREGROUND_RPCS[3])} `
       + `relevance_authority=${aggregateCensus.attempts(RELEVANCE_AUTHORITY_RPC)}`);
+    console.log('FULL_INTELLIGENCE_E2E_SMOKE QHIA-011A explicit activation census: '
+      + `set_attempted=${aggregateCensus.attempts(EXPLICIT_ACTIVATION_SET_RPC)} `
+      + `set_completed=${aggregateCensus.completions(EXPLICIT_ACTIVATION_SET_RPC)} `
+      + `set_failed=${aggregateCensus.failures(EXPLICIT_ACTIVATION_SET_RPC)} `
+      + `clear_attempted=${aggregateCensus.attempts(EXPLICIT_ACTIVATION_CLEAR_RPC)} `
+      + `foreground_binding_read=${aggregateCensus.attempts(RELEVANCE_AUTHORITY_RPC)}`);
 
     // Hypothesis reasoning consumption: both post-background current
     // hypotheses by stable statement identity — never array position.
