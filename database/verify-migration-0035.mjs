@@ -75,7 +75,7 @@ const VALID_RESULT = 'SELECT public.post_response_confidence_batch_result_valid_
 const EFFECT = 'SELECT * FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key=$2';
 const ITEMS = `SELECT * FROM ${ITEMS_TABLE} WHERE execution_id=$1 ORDER BY ordinal`;
 const HYPOTHESIS = 'SELECT * FROM public.hypotheses WHERE id=$1';
-const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH'];
+const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH', 'HIM_BRAIN_CONTEXT_MATERIALIZATION'];
 const FAULT_SETTING = 'qandeel.confidence_fault_target';
 
 const userId = randomUUID();

@@ -73,7 +73,7 @@ const VALID_CANDIDATES = 'SELECT public.post_response_generation_candidates_vali
 const VALID_IDS = 'SELECT public.post_response_persisted_hypothesis_ids_valid_v1($1::jsonb) valid';
 const EFFECT = 'SELECT * FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key=$2';
 const HYPOTHESIS = 'SELECT * FROM public.hypotheses WHERE id=$1';
-const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH'];
+const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH', 'HIM_BRAIN_CONTEXT_MATERIALIZATION'];
 
 const userId = randomUUID();
 const memories = { first: randomUUID(), second: randomUUID(), third: randomUUID() };
