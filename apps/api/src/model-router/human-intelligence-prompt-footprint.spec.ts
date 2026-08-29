@@ -19,6 +19,18 @@ import type { HimBrainContext } from '../human-model/him-brain-context.types';
 const CANONICAL_MAIN_ALL_ACTIVE_HUMAN_INTELLIGENCE_BYTES = 10885;
 const CANONICAL_MAIN_BEHAVIORAL_INSTRUCTION_BULLETS = 11;
 const CANONICAL_MAIN_HUMAN_INTELLIGENCE_BLOCK_COUNT = 6;
+// The EXACT measured post-consolidation footprint for the fixture below, frozen
+// so the number is a locked result rather than an open inequality.
+//
+// A bare "smaller than canonical" assertion cannot notice prompt text silently
+// appearing or disappearing - which is precisely how the QHIA-012 Brain
+// non-inference guardrails were lost in the first place. This constant makes any
+// change to the rendered Human Intelligence text fail loudly and force a
+// deliberate re-measure.
+//
+// History: 6274 at head 71f7460a, before QHIA-013 Fix 03 restored the Brain
+// comparison and frequency prohibitions (+153 bytes).
+const EXPECTED_QHIA_013_HUMAN_INTELLIGENCE_BYTES = 6427;
 
 const BASE = 'BASE_BEHAVIORAL_POLICY';
 const SESSION_CONTEXT_ID = '11111111-2222-4333-8444-555555555555';
@@ -117,7 +129,21 @@ describe('QHIA-013 all-active Human Intelligence prompt footprint', () => {
     expect(CANONICAL_MAIN_HUMAN_INTELLIGENCE_BLOCK_COUNT).toBe(6);
   });
 
+  it('renders the restored QHIA-012 Brain non-inference guardrails', () => {
+    // The two obligations QHIA-013 Fix 03 restored are part of this fixture's
+    // footprint, so they are asserted here too: a future "optimization" that
+    // shrinks the prompt by deleting them fails this spec, not just the Brain
+    // rendering spec.
+    expect(renderedWithHumanIntelligence).toContain('Do not compare these signals to each other or to any baseline, and do not infer a trend, improvement, worsening, decay, recency, or frequency from them.');
+  });
+
+  it('is EXACTLY the frozen measured footprint', () => {
+    expect(humanIntelligenceBytes).toBe(EXPECTED_QHIA_013_HUMAN_INTELLIGENCE_BYTES);
+  });
+
   it('is STRICTLY SMALLER than the canonical-main baseline for the equivalent fixture', () => {
     expect(humanIntelligenceBytes).toBeLessThan(CANONICAL_MAIN_ALL_ACTIVE_HUMAN_INTELLIGENCE_BYTES);
+    expect(EXPECTED_QHIA_013_HUMAN_INTELLIGENCE_BYTES)
+      .toBeLessThan(CANONICAL_MAIN_ALL_ACTIVE_HUMAN_INTELLIGENCE_BYTES);
   });
 });

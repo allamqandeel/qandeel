@@ -318,6 +318,29 @@ function assertBrainContextBridgeContract(sources) {
   ]) {
     if (!brainBlock.includes(required)) violated(`the rendered Brain guardrail states: ${required}`);
   }
+  // The two QHIA-012 NON-INFERENCE obligations, checked as three INDEPENDENT
+  // rules so that losing any one of them trips its own named failure.
+  //
+  // These are deliberately NOT delegated to the universal charter: the charter
+  // forbids comparison only as a route to a score/profile/composite (strictly
+  // weaker than an unconditional ban) and its inference list omits `frequency`
+  // entirely. QHIA-013 consolidation dropped both, which is exactly the
+  // regression QHIA-013 Fix 03 restored - so each is frozen separately here.
+  if (!/compare these signals to each other/u.test(brainBlock))
+    violated('the Brain block explicitly prohibits comparing signals TO EACH OTHER');
+  if (!/to any baseline/u.test(brainBlock))
+    violated('the Brain block explicitly prohibits comparing signals TO ANY BASELINE');
+  if (!/frequency/u.test(brainBlock))
+    violated('the Brain block explicitly prohibits inferring FREQUENCY from signals');
+  // The prohibition must be unconditional, never contingent on producing a score.
+  const brainComparisonSentence = brainBlock.slice(
+    brainBlock.indexOf('Do not compare these signals'),
+    brainBlock.indexOf('.', brainBlock.indexOf('Do not compare these signals')) + 1,
+  );
+  for (const scoreQualifier of ['score', 'profile', 'composite', 'index', 'stronger conclusion']) {
+    if (brainComparisonSentence.includes(scoreQualifier))
+      violated(`the Brain comparison prohibition is unconditional, never qualified by ${scoreQualifier}`);
+  }
   // ...and every universal obligation the retired Brain preamble used to restate
   // is stated ONCE, in the one Human Intelligence authority charter.
   const charterStart = exe.modelRouter.indexOf('Human Intelligence below is server-owned support');
@@ -615,6 +638,38 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
     }],
     ['the Brain preamble dropped the binding-revalidation statement', {
       modelRouter: shipped.modelRouter.replace(', and that binding was revalidated before this turn consumed them', ''),
+    }],
+    // The exact QHIA-013 Fix 03 regression, in three independently-reintroducible
+    // forms. Each must fail on its own named rule.
+    ['the Brain-to-Brain comparison prohibition was removed', {
+      modelRouter: shipped.modelRouter.replace(
+        'Do not compare these signals to each other or to any baseline,',
+        'Do not compare these signals to any baseline,',
+      ),
+    }],
+    ['the Brain-to-baseline comparison prohibition was removed', {
+      modelRouter: shipped.modelRouter.replace(
+        'Do not compare these signals to each other or to any baseline,',
+        'Do not compare these signals to each other,',
+      ),
+    }],
+    ['the frequency prohibition was removed while trend and recency remained', {
+      modelRouter: shipped.modelRouter.replace(
+        'a trend, improvement, worsening, decay, recency, or frequency from them',
+        'a trend, improvement, worsening, decay, or recency from them',
+      ),
+    }],
+    ['the whole Brain non-inference clause was dropped', {
+      modelRouter: shipped.modelRouter.replace(
+        ' Do not compare these signals to each other or to any baseline, and do not infer a trend, improvement, worsening, decay, recency, or frequency from them.',
+        '',
+      ),
+    }],
+    ['the Brain comparison prohibition was weakened to the charter score qualifier', {
+      modelRouter: shipped.modelRouter.replace(
+        'Do not compare these signals to each other or to any baseline, and do not infer',
+        'Do not compare these signals to each other or to any baseline into a score, profile, or composite, and do not infer',
+      ),
     }],
     ['a metric key leaked into the provider block', {
       modelRouter: shipped.modelRouter.replace('<him_brain_context>\\n${escapeStructuredData(humanIntelligence.brainContext)}', '<him_brain_context metric="hbs.consistency">\\n${escapeStructuredData(humanIntelligence.brainContext)}'),

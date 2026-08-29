@@ -266,6 +266,20 @@ function assertProviderSemanticsConsolidationContract(sources) {
   if (brainCopy.includes('metrics')) violated('session metrics never enter the Brain lane');
   if (!/signals: brainContext\.signals\.map\(/u.test(brainCopy))
     violated('the Brain lane is a defensive copy, never a mutable runtime alias');
+  // Consolidation must not silently DROP a lane-specific obligation. The two
+  // QHIA-012 Brain non-inference guardrails are the ones this consolidation
+  // actually lost once, so they are frozen here as three independent rules -
+  // the universal charter does not cover either of them (its comparison ban is
+  // score-qualified and its inference list omits `frequency`).
+  const brainRenderStart = exe.modelRouter.indexOf('if (humanIntelligence?.brainContext) {');
+  if (brainRenderStart < 0) violated('the Brain Context rendering branch exists');
+  const brainRender = exe.modelRouter.slice(brainRenderStart, exe.modelRouter.indexOf('\n  if (request.', brainRenderStart + 1));
+  if (!/compare these signals to each other/u.test(brainRender))
+    violated('the Brain block explicitly prohibits comparing signals TO EACH OTHER');
+  if (!/to any baseline/u.test(brainRender))
+    violated('the Brain block explicitly prohibits comparing signals TO ANY BASELINE');
+  if (!/frequency/u.test(brainRender))
+    violated('the Brain block explicitly prohibits inferring FREQUENCY from signals');
 
   // 8. ONE authority charter and ONE behavioral block; no source provenance.
   if ((exe.modelRouter.match(/HUMAN_INTELLIGENCE_AUTHORITY_CHARTER/gu) ?? []).length !== 2)
@@ -510,6 +524,24 @@ test('C2 - anti-vacuity: the real guard rejects every named regression', () => {
       modelRouter: shipped.modelRouter.replace(
         "HUMAN_INTELLIGENCE_BEHAVIORAL_PREAMBLE = 'The following",
         "HUMAN_INTELLIGENCE_BEHAVIORAL_PREAMBLE = 'Situation-bound interaction guidance follows. The following",
+      ),
+    }],
+    ['the Brain-to-Brain comparison prohibition was removed', {
+      modelRouter: shipped.modelRouter.replace(
+        'Do not compare these signals to each other or to any baseline,',
+        'Do not compare these signals to any baseline,',
+      ),
+    }],
+    ['the Brain-to-baseline comparison prohibition was removed', {
+      modelRouter: shipped.modelRouter.replace(
+        'Do not compare these signals to each other or to any baseline,',
+        'Do not compare these signals to each other,',
+      ),
+    }],
+    ['the frequency prohibition was removed while trend and recency remained', {
+      modelRouter: shipped.modelRouter.replace(
+        'a trend, improvement, worsening, decay, recency, or frequency from them',
+        'a trend, improvement, worsening, decay, or recency from them',
       ),
     }],
     ['the universal charter dropped an authority obligation', {

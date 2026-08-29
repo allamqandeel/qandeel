@@ -79,6 +79,66 @@ describe('QHIA-012 Brain Context provider rendering under the QHIA-013 envelope'
     ]) expect(block).toContain(required);
   });
 
+  // QHIA-012 non-inference guardrails, restored by QHIA-013 Fix 03.
+  //
+  // These two obligations were lost in the QHIA-013 prompt consolidation and are
+  // NOT implied by anything else the provider is told, so they are asserted
+  // here, separately, against a REAL non-empty rendered Brain Context - never
+  // against a hand-built string.
+  it('explicitly prohibits comparing Brain signals to each other or to any baseline', () => {
+    const rendered = composeServerGuidance(request(withBrainOnly([decisionSignal, goalSignal])));
+    const block = rendered.slice(
+      rendered.indexOf('Human Intelligence Brain Context follows'),
+      rendered.indexOf('<him_brain_context>'),
+    );
+    // The prohibition must name BOTH comparison targets, in the Brain block.
+    expect(block).toContain('Do not compare these signals to each other or to any baseline');
+    expect(block).toMatch(/compare these signals to each other/u);
+    expect(block).toMatch(/to any baseline/u);
+    // ...and it must be unconditional, never contingent on producing a score.
+    // The universal charter's comparison sentence only forbids comparison as a
+    // route to a score/profile/composite, which is a strictly weaker obligation.
+    const comparison = block.slice(block.indexOf('Do not compare these signals'));
+    const sentence = comparison.slice(0, comparison.indexOf('.') + 1);
+    for (const scoreQualifier of ['score', 'profile', 'composite', 'index', 'stronger conclusion']) {
+      expect(sentence).not.toContain(scoreQualifier);
+    }
+  });
+
+  it('explicitly prohibits inferring frequency from Brain signals', () => {
+    const rendered = composeServerGuidance(request(withBrainOnly([decisionSignal, goalSignal])));
+    const block = rendered.slice(
+      rendered.indexOf('Human Intelligence Brain Context follows'),
+      rendered.indexOf('<him_brain_context>'),
+    );
+    expect(block).toMatch(/do not infer a trend, improvement, worsening, decay, recency, or frequency from them/u);
+    // `frequency` specifically: a Brain reading is one latest-known value, never
+    // a count of how often something happens. The universal charter's inference
+    // list omits it, so its presence HERE is the only thing that carries it.
+    expect(block).toContain('frequency');
+  });
+
+  it('carries the two non-inference obligations that the universal charter does NOT cover', () => {
+    // Non-vacuity for the two assertions above: prove the charter really is
+    // insufficient, so removing the Brain-block wording genuinely loses the
+    // obligation rather than merely duplicating it.
+    const rendered = composeServerGuidance(request(withBrainOnly([decisionSignal])));
+    const charter = rendered.slice(
+      rendered.indexOf('Human Intelligence below is server-owned support'),
+      rendered.indexOf('Human Intelligence Brain Context follows'),
+    );
+    expect(charter).not.toContain('frequency');
+    expect(charter).not.toContain('to any baseline');
+    // The charter's only comparison sentence is the score-qualified one.
+    expect(charter).toContain('Never average, sum, weight, rank, vote, compare, or combine Human Intelligence signals into a score, profile, composite, or stronger conclusion.');
+  });
+
+  it('keeps both restored obligations byte-identical to the canonical QHIA-012 semantics', () => {
+    const rendered = composeServerGuidance(request(withBrainOnly([decisionSignal])));
+    // The exact canonical QHIA-012 clause, restored verbatim in substance.
+    expect(rendered).toContain('Do not compare these signals to each other or to any baseline, and do not infer a trend, improvement, worsening, decay, recency, or frequency from them.');
+  });
+
   it('does not repeat the universal authority charter inside the Brain preamble', () => {
     const rendered = composeServerGuidance(request(withBrainOnly([decisionSignal])));
     const block = rendered.slice(rendered.indexOf('Human Intelligence Brain Context follows'));
