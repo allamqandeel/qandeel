@@ -624,11 +624,26 @@ async function main(): Promise<void> {
     // Nothing about the production contract is faked: the Orchestrator still
     // never awaits the Brain promise, still adds no timeout, and still discards
     // a late result. This double only removes the wall clock from the proof.
+    //
+    // QHIA-014A: the REAL Snapshot read now starts immediately - concurrently
+    // with the real Brain read - and only its RESOLUTION is held behind the
+    // deferred. The ordering guarantee this barrier exists for is unchanged
+    // (the Snapshot promise still settles strictly after the Brain read has
+    // settled), but the wrapper no longer makes the two reads SERIAL, so the
+    // observed Snapshot hold is max(brain, snapshot) rather than their sum and
+    // stays comfortably inside the shared 300 ms Human Intelligence foreground
+    // budget this smoke is now subject to. Still no sleep, no timer, and no
+    // change to any production class.
     let releaseSnapshotGate: () => void = () => undefined;
     const deterministicSnapshotService = {
       getSnapshot: (accessToken: string, contextKind: 'CONVERSATION_SESSION', contextId: string) => {
         const gate = new Promise<void>((resolve) => { releaseSnapshotGate = resolve; });
-        return gate.then(() => himSnapshotService.getSnapshot(accessToken, contextKind, contextId));
+        const read = himSnapshotService.getSnapshot(accessToken, contextKind, contextId);
+        // The real read is already running; keep a handler attached so a
+        // failure before the gate opens can never become an unhandled
+        // rejection, and still surface it through the returned promise.
+        read.catch(() => undefined);
+        return gate.then(() => read);
       },
     } as unknown as HimIntelligenceSnapshotService;
     const deterministicBrainContextService = {
