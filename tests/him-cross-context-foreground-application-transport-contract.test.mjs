@@ -58,6 +58,10 @@ const SOURCES = Object.freeze({
   relationshipTypes: 'apps/api/src/human-model/him-relationship-communication-consumption.types.ts',
   orchestrator: 'apps/api/src/conversation/conversation-orchestrator.service.ts',
   modelRouter: 'apps/api/src/model-router/model-router.types.ts',
+  // QHIA-013 moved the source -> provider-instruction mapping here. The
+  // Relationship channel is still ACTIVE-gated, still bounded to exactly its own
+  // three instructions, and still rendered through the one shared composition.
+  providerSemantics: 'apps/api/src/model-router/human-intelligence-provider-semantics.ts',
   himModule: 'apps/api/src/human-model/him.module.ts',
   smokeAdapters: 'apps/api/scripts/full-intelligence-e2e-smoke/pg-foreground-intelligence.adapters.ts',
   smokeRuntime: 'apps/api/scripts/verify-full-intelligence-end-to-end-runtime.ts',
@@ -196,55 +200,63 @@ function assertCrossContextForegroundApplicationContract(sources) {
     violated('the existing barrier still awaits exactly the Snapshot and Reflection promises');
   if (/await\s+crossContextForegroundReadPromise/u.test(exe.orchestrator))
     violated('the cross-context aggregate is never awaited: zero incremental foreground wait');
-  // The provider field is passed ONLY when the decoded guidance is ACTIVE.
-  if (!/\.\.\.\(himRelationshipCommunicationGuidance\?\.guidanceState === 'ACTIVE' \? \{ himRelationshipCommunicationGuidance \} : \{\}\)/u.test(exe.orchestrator))
-    violated('the Relationship provider field is passed only when the decoded guidance is ACTIVE');
+  // The decoded Relationship guidance is handed to the ONE provider compiler and
+  // nowhere else: after QHIA-013 it is no longer its own provider request field.
+  if (!/\.\.\.\(himRelationshipCommunicationGuidance \? \{ himRelationshipCommunicationGuidance \} : \{\}\),/u.test(exe.orchestrator))
+    violated('the decoded Relationship guidance is compiled into the one provider envelope');
+  if (exe.orchestrator.includes('himRelationshipCommunicationGuidance,\n'))
+    violated('the Relationship guidance never reaches the Model Router as its own request field');
 
-  // 6. The provider contract: a separate optional field, ACTIVE-gated, rendered
-  //    through the one common boundary with exact-match dedup.
-  if (!/himRelationshipCommunicationGuidance\?: HimRelationshipCommunicationGuidance;/u.test(exe.modelRouter))
-    violated('the provider request carries a separate optional Relationship guidance field');
-  for (const [constant, text] of [
-    ['EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING_INSTRUCTION', EXPLICIT_WORDING_INSTRUCTION],
-    ['ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT_INSTRUCTION', ONE_MAIN_POINT_INSTRUCTION],
-    ['CLARITY_NOT_FORCED_AGREEMENT_INSTRUCTION', CLARITY_INSTRUCTION],
+  // 6. The provider contract: after QHIA-013 the Relationship channel is an
+  //    ACTIVE-gated source of bounded instruction IDs inside the ONE envelope,
+  //    still rendered through the one common boundary, still deduplicated - now
+  //    by semantic instruction ID rather than by matching instruction strings.
+  if (exe.modelRouter.includes('himRelationshipCommunicationGuidance?: HimRelationshipCommunicationGuidance;'))
+    violated('the retired per-channel Relationship provider request field is gone');
+  for (const [id, text] of [
+    ['EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING', EXPLICIT_WORDING_INSTRUCTION],
+    ['ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT', ONE_MAIN_POINT_INSTRUCTION],
+    ['CLARITY_NOT_FORCED_AGREEMENT', CLARITY_INSTRUCTION],
   ]) {
-    if ((exe.modelRouter.match(new RegExp(`const ${constant} = `, 'gu')) ?? []).length !== 1)
-      violated(`the bounded instruction ${constant} is declared exactly once`);
-    if (!exe.modelRouter.includes(text)) violated(`the exact frozen instruction text is preserved: ${constant}`);
+    if ((exe.providerSemantics.match(new RegExp(`  ${id}: '`, 'gu')) ?? []).length !== 1)
+      violated(`the bounded instruction ${id} carries exactly one frozen text`);
+    if (!exe.providerSemantics.includes(text)) violated(`the exact frozen instruction text is preserved: ${id}`);
   }
-  const relationshipInstructions = exe.modelRouter.slice(
-    exe.modelRouter.indexOf('STRUCTURE_RELATIONSHIP_COMMUNICATION: ['),
-    exe.modelRouter.indexOf('];', exe.modelRouter.indexOf('STRUCTURE_RELATIONSHIP_COMMUNICATION: [')),
+  const relationshipInstructions = exe.providerSemantics.slice(
+    exe.providerSemantics.indexOf('STRUCTURE_RELATIONSHIP_COMMUNICATION: Object.freeze(['),
+    exe.providerSemantics.indexOf('] as const)', exe.providerSemantics.indexOf('STRUCTURE_RELATIONSHIP_COMMUNICATION: Object.freeze([')),
   );
-  for (const required of ['EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING_INSTRUCTION', 'ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT_INSTRUCTION', 'CLARITY_NOT_FORCED_AGREEMENT_INSTRUCTION']) {
+  for (const required of ['EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING', 'ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT', 'CLARITY_NOT_FORCED_AGREEMENT']) {
     if (!relationshipInstructions.includes(required))
-      violated(`the ACTIVE Relationship directive renders the exact ${required}`);
+      violated(`the ACTIVE Relationship directive maps to the exact ${required}`);
   }
-  for (const forbidden of ['REDUCE_COGNITIVE_LOAD_INSTRUCTION', 'SINGLE_CONVERSATIONAL_TRACK_INSTRUCTION', 'CALMER_DELIVERY_PACING_INSTRUCTION', 'REDUCE_STEERING_PRESSURE_INSTRUCTION', 'ONE_STEP_AT_A_TIME_INSTRUCTION', 'SMALL_IMMEDIATE_GOAL_ACTION_INSTRUCTION', 'COMPACT']) {
+  for (const forbidden of ['REDUCE_COGNITIVE_LOAD', 'SINGLE_CONVERSATIONAL_TRACK', 'CALMER_DELIVERY', 'REDUCE_STEERING_PRESSURE', 'ONE_STEP_AT_A_TIME', 'SMALL_IMMEDIATE_GOAL_ACTION', 'COMPACT']) {
     if (relationshipInstructions.includes(forbidden))
       violated(`Relationship Communication alone never authorizes ${forbidden}`);
   }
-  if (!/if \(request\.himRelationshipCommunicationGuidance\?\.guidanceState === 'ACTIVE'\) \{/u.test(exe.modelRouter))
-    violated('the Relationship provider block renders only for an ACTIVE guidance state');
-  // Exactly the Relationship rendering branch: from its own guard to the start
-  // of the next server-owned channel, so the negatives below never run over
-  // another channel's legitimate prose.
-  const relationshipBlockStart = exe.modelRouter.indexOf("if (request.himRelationshipCommunicationGuidance?.guidanceState === 'ACTIVE') {");
-  const relationshipBlockEnd = exe.modelRouter.indexOf('\n  if (request.', relationshipBlockStart + 1);
-  if (relationshipBlockStart < 0 || relationshipBlockEnd < 0) violated('the Relationship rendering branch is a bounded block of the common composition');
-  const relationshipBlock = exe.modelRouter.slice(relationshipBlockStart, relationshipBlockEnd);
-  if (!/\.filter\(\(instruction\) => !renderedReductionInstructions\.has\(instruction\)\)/u.test(relationshipBlock))
-    violated('the Relationship block deduplicates against every instruction another channel already rendered');
-  if (!/Relationship-bound communication scaffolding guidance follows/u.test(relationshipBlock))
-    violated('the rendered block is framed as relationship-bound communication scaffolding guidance');
-  if (!relationshipBlock.includes('It is not safety evidence.'))
-    violated('the rendered block states it is not safety evidence');
-  if (!relationshipBlock.includes('it never makes communicating, contacting, replying, disclosing, explaining, apologizing, negotiating, persuading, reconciling, or confronting appropriate by itself'))
-    violated('the rendered block states it never creates a communication, contact, disclosure, or confrontation recommendation');
-  for (const forbidden of ['numericValue', 'numeric_value', 'binding_context_id', 'metric_key', 'hrs.communication', 'ordinalCategory', 'observedAt', 'display_text', 'target_label']) {
-    if (relationshipBlock.includes(forbidden))
-      violated(`the provider never receives raw measurement or relationship identity through this field: found ${forbidden}`);
+  // ACTIVE-gating now lives in the one shared compiler guard, so a NONE guidance
+  // is identical to an absent one for every cross-context channel at once.
+  if (!/if \(guidance\?\.guidanceState !== 'ACTIVE'\) return;/u.test(exe.providerSemantics))
+    violated('the compiler maps a cross-context directive only for an ACTIVE guidance state');
+  // Deduplication is by semantic instruction ID, never by comparing rendered
+  // instruction strings.
+  if (!/const authorized = new Set<HumanIntelligenceProviderInstructionId>\(\);/u.test(exe.providerSemantics))
+    violated('deduplication is a set union over semantic instruction IDs');
+  if (/renderedReductionInstructions|\.has\(instruction\)/u.test(exe.providerSemantics + exe.modelRouter))
+    violated('string-value matching is no longer the deduplication authority');
+  // The rendered behavioral block never names this channel or its directive.
+  const behavioralBlockStart = exe.modelRouter.indexOf('HUMAN_INTELLIGENCE_BEHAVIORAL_PREAMBLE = ');
+  if (behavioralBlockStart < 0) violated('the one behavioral scaffolding preamble exists');
+  const behavioralBlock = exe.modelRouter.slice(behavioralBlockStart, exe.modelRouter.indexOf('\n', behavioralBlockStart));
+  if (!behavioralBlock.includes('Multiple Human Intelligence sources authorizing the same instruction do not strengthen it'))
+    violated('the rendered block states that agreeing sources never strengthen an instruction');
+  for (const forbidden of [
+    'Relationship-bound communication scaffolding guidance', 'STRUCTURE_RELATIONSHIP_COMMUNICATION',
+    'numericValue', 'numeric_value', 'binding_context_id', 'metric_key', 'hrs.communication',
+    'ordinalCategory', 'observedAt', 'display_text', 'target_label',
+  ]) {
+    if (behavioralBlock.includes(forbidden))
+      violated(`the provider never receives source provenance or raw measurement identity: found ${forbidden}`);
   }
 
   // 7. Module wiring: both new boundaries are registered and exported.
@@ -402,55 +414,52 @@ test('A2 - anti-vacuity: the real guard rejects every named application regressi
         '      setTimeout(() => undefined, 50);\n      crossContextForegroundReadPromise.then(',
       ),
     }],
-    ['the provider field bypasses the ACTIVE-only gate', {
+    ['the decoded Relationship guidance stopped reaching the provider compiler', {
       orchestrator: shipped.orchestrator.replace(
-        "        ...(himRelationshipCommunicationGuidance?.guidanceState === 'ACTIVE' ? { himRelationshipCommunicationGuidance } : {}),",
-        '        ...(himRelationshipCommunicationGuidance ? { himRelationshipCommunicationGuidance } : {}),',
+        '        ...(himRelationshipCommunicationGuidance ? { himRelationshipCommunicationGuidance } : {}),\n',
+        '',
       ),
     }],
-    ['the provider block renders regardless of guidance state', {
-      modelRouter: shipped.modelRouter.replace(
-        "  if (request.himRelationshipCommunicationGuidance?.guidanceState === 'ACTIVE') {",
-        '  if (request.himRelationshipCommunicationGuidance) {',
+    ['the compiler maps a directive regardless of guidance state', {
+      providerSemantics: shipped.providerSemantics.replace(
+        "  if (guidance?.guidanceState !== 'ACTIVE') return;",
+        '  if (!guidance) return;',
       ),
     }],
-    ['the Relationship directive borrowed a reduction that is not its own', {
-      modelRouter: shipped.modelRouter.replace(
-        '  STRUCTURE_RELATIONSHIP_COMMUNICATION: [\n    EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING_INSTRUCTION,',
-        '  STRUCTURE_RELATIONSHIP_COMMUNICATION: [\n    REDUCE_COGNITIVE_LOAD_INSTRUCTION,\n    EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING_INSTRUCTION,',
+    ['the Relationship directive borrowed an instruction that is not its own', {
+      providerSemantics: shipped.providerSemantics.replace(
+        "  STRUCTURE_RELATIONSHIP_COMMUNICATION: Object.freeze([\n    'EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING',",
+        "  STRUCTURE_RELATIONSHIP_COMMUNICATION: Object.freeze([\n    'REDUCE_COGNITIVE_LOAD',\n    'EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING',",
       ),
     }],
     ['the Relationship directive dropped one of its three frozen instructions', {
-      modelRouter: shipped.modelRouter.replace(
-        '    ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT_INSTRUCTION,\n    CLARITY_NOT_FORCED_AGREEMENT_INSTRUCTION,',
-        '    ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT_INSTRUCTION,',
+      providerSemantics: shipped.providerSemantics.replace(
+        "    'ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT',\n    'CLARITY_NOT_FORCED_AGREEMENT',\n  ] as const),",
+        "    'ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT',\n  ] as const),",
       ),
     }],
     ['a frozen instruction text drifted', {
-      modelRouter: shipped.modelRouter.replace(
+      providerSemantics: shipped.providerSemantics.replace(
         'do not make immediate agreement, persuasion, or winning the exchange the goal.',
         'aim for agreement where possible.',
       ),
     }],
-    ['the provider dedup filter was removed from the Relationship block', {
-      modelRouter: shipped.modelRouter.replace(
-        "    const instructions = (HIM_RELATIONSHIP_COMMUNICATION_DIRECTIVE_INSTRUCTIONS[request.himRelationshipCommunicationGuidance.directive] ?? [])\n      .filter((instruction) => !renderedReductionInstructions.has(instruction));",
-        '    const instructions = HIM_RELATIONSHIP_COMMUNICATION_DIRECTIVE_INSTRUCTIONS[request.himRelationshipCommunicationGuidance.directive] ?? [];',
+    ['string matching became the deduplication authority again', {
+      providerSemantics: shipped.providerSemantics.replace(
+        '  const authorized = new Set<HumanIntelligenceProviderInstructionId>();',
+        '  const renderedReductionInstructions = new Set<string>();\n  const authorized = new Set<HumanIntelligenceProviderInstructionId>();',
       ),
     }],
-    ['the safety-evidence disclaimer was dropped from the provider block', {
-      modelRouter: shipped.modelRouter.replace('It is not safety evidence. It authorizes no claim', 'It authorizes no claim'),
-    }],
-    ['the never-creates-a-recommendation disclaimer was dropped', {
+    ['the agreeing-sources-never-strengthen statement was dropped', {
       modelRouter: shipped.modelRouter.replace(
-        'it never makes communicating, contacting, replying, disclosing, explaining, apologizing, negotiating, persuading, reconciling, or confronting appropriate by itself, and it never creates such a suggestion where none was already warranted. ',
+        'Multiple Human Intelligence sources authorizing the same instruction do not strengthen it. ',
         '',
       ),
     }],
-    ['raw relationship identity leaked into the provider block', {
+    ['a source label leaked into the rendered behavioral block', {
       modelRouter: shipped.modelRouter.replace(
-        'Relationship-bound communication scaffolding guidance follows',
-        'Relationship-bound communication scaffolding guidance for display_text follows',
+        "HUMAN_INTELLIGENCE_BEHAVIORAL_PREAMBLE = 'The following Human Intelligence behavioral instructions",
+        "HUMAN_INTELLIGENCE_BEHAVIORAL_PREAMBLE = 'The following Relationship-bound communication scaffolding guidance behavioral instructions",
       ),
     }],
     ['the Relationship boundaries were dropped from the HIM module', {

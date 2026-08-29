@@ -5,6 +5,7 @@ import test from 'node:test';
 const read = (path) => readFileSync(path, 'utf8');
 const orchestrator = read('apps/api/src/conversation/conversation-orchestrator.service.ts');
 const router = read('apps/api/src/model-router/model-router.types.ts');
+const providerSemanticsTypes = read('apps/api/src/model-router/human-intelligence-provider-semantics.types.ts');
 const policy = read('apps/api/src/human-model/him-fast-deep-consumption.service.ts');
 const modelTypes = read('apps/api/src/human-model/him-fast-deep-consumption.types.ts');
 const selector = read('apps/api/src/human-model/him-turn-context-selection.service.ts');
@@ -15,9 +16,13 @@ test('preserves Safety short-circuit and the ordered HIM pipeline before routing
 });
 
 test('keeps dedicated model-facing HIM and Memory containers with no provider divergence', () => {
-  assert.match(router, /himContext\?: HimModelContext/);
+  // QHIA-013: the session reasoning data still reaches the provider in its own
+  // dedicated container, now through the ONE Human Intelligence provider
+  // envelope rather than eight independent request fields.
+  assert.match(router, /humanIntelligence\?: HumanIntelligenceProviderSemantics/);
+  assert.match(providerSemanticsTypes, /sessionReasoningContext\?: HimProviderSessionReasoningContext/);
   assert.match(router, /<user_memory_context>/); assert.match(router, /<him_reasoning_context>/);
-  for (const path of ['apps/api/src/model-router/providers/openai/openai-model-router.ts','apps/api/src/model-router/providers/anthropic/claude-model-router.ts']) assert.doesNotMatch(read(path), /himContext|him_reasoning_context/);
+  for (const path of ['apps/api/src/model-router/providers/openai/openai-model-router.ts','apps/api/src/model-router/providers/anthropic/claude-model-router.ts']) assert.doesNotMatch(read(path), /himContext|humanIntelligence|him_reasoning_context/);
 });
 
 test('keeps projection free of trends/provenance and selector free of content inference', () => {

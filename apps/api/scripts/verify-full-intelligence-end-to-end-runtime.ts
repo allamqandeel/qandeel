@@ -102,6 +102,8 @@ import { RedisStreamsTransport } from '../src/runtime-events/redis-streams.trans
 import type { RuntimeEventAdminRepository } from '../src/runtime-events/runtime-event-admin.repository';
 import { RuntimeEventPublisher } from '../src/runtime-events/runtime-event.publisher';
 import { isCompletedRuntimeEventV2, type RuntimeEventEnvelope } from '../src/runtime-events/runtime-event.types';
+import type { ModelRouterRequest } from '../src/model-router/model-router.types';
+import { HUMAN_INTELLIGENCE_PROVIDER_INSTRUCTIONS } from '../src/model-router/human-intelligence-provider-semantics';
 // Reused frozen A2 verification helpers (transport plumbing + provider doubles).
 import {
   DeterministicAssociationProposalProvider,
@@ -473,10 +475,126 @@ async function main(): Promise<void> {
     // invented value. Whether the activated Goal is really consumable is proven
     // deterministically further below, off the race, through the same real
     // repository, the same real aggregate and the same real QHIA-010 consumer.
-    const assertGoalMotivationProviderField = (field: unknown, label: string): void => {
-      if (field === undefined) return;
-      assert.deepEqual(field, ACTIVE_GOAL_MOTIVATION_GUIDANCE,
-        `${label}: a present Goal-motivation guidance field is exactly the frozen ACTIVE contract`);
+    //
+    // QHIA-013: the Goal channel no longer reaches the provider as its own
+    // request field. It reaches the ONE consolidated envelope as bounded
+    // behavioral instruction IDs, so the same optional-race assertion is now
+    // made on the instruction set: it is either the base set the always-active
+    // QHIA-001 stress adaptation authorizes, or exactly that set unioned with
+    // the Goal channel's own instructions - never a third possibility, never a
+    // duplicate, and never a count, weight, or ordering that reveals how many
+    // sources agreed.
+    const BASE_BEHAVIORAL_INSTRUCTION_IDS = [
+      'REDUCE_COGNITIVE_LOAD', 'REDUCE_STEERING_PRESSURE', 'CALMER_DELIVERY',
+    ];
+    // Canonical registry order, not source order: ONE_STEP_AT_A_TIME (6) sorts
+    // before SMALL_IMMEDIATE_GOAL_ACTION (9), and the Goal channel's third
+    // instruction - REDUCE_STEERING_PRESSURE - deduplicates against the
+    // adaptation's instead of appearing twice or counting twice.
+    const GOAL_ACTIVE_BEHAVIORAL_INSTRUCTION_IDS = [
+      'REDUCE_COGNITIVE_LOAD', 'REDUCE_STEERING_PRESSURE', 'CALMER_DELIVERY',
+      'ONE_STEP_AT_A_TIME', 'SMALL_IMMEDIATE_GOAL_ACTION',
+    ];
+    // Exactly the Human-Intelligence-owned region of the rendered guidance: the
+    // one authority charter, the one behavioral block, and the two Human
+    // Intelligence data lanes.
+    //
+    // Memory, Hypothesis and Recommendation are SEPARATE authorities that
+    // legitimately carry their own identifiers - the Hypothesis channel, for
+    // example, carries the session-scoped hypothesis scope - so a
+    // whole-prompt negative would attribute another channel's content to this
+    // one. Every Human Intelligence privacy claim below is made on this region.
+    const humanIntelligenceGuidance = (serverGuidance: string): string => {
+      const start = serverGuidance.indexOf('Human Intelligence below is server-owned support');
+      if (start < 0) return '';
+      let end = serverGuidance.length;
+      for (const nextAuthority of [
+        '\n\nHypothesis reasoning context follows',
+        '\n\nRecommendation grounding context follows',
+      ]) {
+        const at = serverGuidance.indexOf(nextAuthority, start);
+        if (at >= 0 && at < end) end = at;
+      }
+      const region = serverGuidance.slice(start, end);
+      // Memory renders between the behavioral block and the Human Intelligence
+      // data lanes; its untrusted contents belong to the Memory authority.
+      const memoryStart = region.indexOf('\n\nUser memory context follows');
+      const memoryEnd = region.indexOf('</user_memory_context>');
+      return memoryStart >= 0 && memoryEnd > memoryStart
+        ? `${region.slice(0, memoryStart)}${region.slice(memoryEnd)}`
+        : region;
+    };
+    const assertHumanIntelligenceProviderEnvelope = (
+      request: ModelRouterRequest, serverGuidance: string, label: string,
+    ): void => {
+      const humanIntelligenceRegion = humanIntelligenceGuidance(serverGuidance);
+      assert.ok(humanIntelligenceRegion.length > 0,
+        `${label}: the rendered guidance carries a Human Intelligence region`);
+      const envelope = request.humanIntelligence;
+      assert.ok(envelope, `${label}: exactly one Human Intelligence provider envelope reaches Model Router`);
+      assert.equal(envelope.contractVersion, 1, `${label}: frozen envelope contract version`);
+      assert.equal(envelope.source, 'QANDEEL_HUMAN_INTELLIGENCE_PROVIDER_SEMANTICS_V1',
+        `${label}: frozen envelope source identity`);
+      // None of the eight legacy Human Intelligence request fields survives.
+      for (const legacy of [
+        'himContext', 'himInteractionAdaptation', 'himSessionReflectionGuidance', 'himSituationStressGuidance',
+        'himDecisionAttentionGuidance', 'himGoalMotivationGuidance', 'himRelationshipCommunicationGuidance',
+        'himBrainContext',
+      ]) assert.equal(Object.prototype.hasOwnProperty.call(request, legacy), false,
+        `${label}: no legacy ${legacy} request field reaches Model Router`);
+      // Non-vacuous: at least one behavioral instruction really is active, and
+      // the set is exactly one of the two legitimate outcomes of the optional
+      // Goal race.
+      assert.ok(envelope.behavioralInstructionIds.length > 0,
+        `${label}: at least one Human Intelligence behavioral instruction is active`);
+      const ids = [...envelope.behavioralInstructionIds];
+      assert.equal(new Set(ids).size, ids.length, `${label}: no behavioral instruction ID repeats`);
+      const goalActive = ids.length === GOAL_ACTIVE_BEHAVIORAL_INSTRUCTION_IDS.length;
+      assert.deepEqual(ids, goalActive ? GOAL_ACTIVE_BEHAVIORAL_INSTRUCTION_IDS : BASE_BEHAVIORAL_INSTRUCTION_IDS,
+        `${label}: the instruction set is the canonical-order union only`);
+      // The universal Human Intelligence authority charter is rendered exactly
+      // once, and no per-source behavioral mini-policy heading survives.
+      assert.equal(serverGuidance.split('Human Intelligence below is server-owned support').length - 1, 1,
+        `${label}: exactly one Human Intelligence authority charter is rendered`);
+      for (const retiredHeading of [
+        'HIM interaction adaptation follows', 'Session Reflection guidance follows',
+        'Situation-bound interaction guidance follows', 'Decision-bound presentation guidance follows',
+        'Goal-bound action-pacing guidance follows', 'Relationship-bound communication scaffolding guidance follows',
+      ]) assert.equal(serverGuidance.includes(retiredHeading), false,
+        `${label}: no source-specific behavioral mini-policy heading reaches the provider`);
+      // No internal provenance reaches the provider through this channel: not
+      // the source task names, not the raw directive enum names, not the
+      // internal instruction IDs, not guidanceState, and not the drivers. Also
+      // no internal identifier: the conversation-session UUID in particular is
+      // stripped from the provider projection by QHIA-013.
+      for (const forbidden of [
+        'QHIA-001', 'QHIA-005', 'QHIA-007', 'QHIA-008', 'QHIA-010', 'QHIA-011', 'QHIA-012', 'QHIA-013',
+        'REDUCE_INTERACTION_BURDEN', 'REDUCE_PRESENTATION_BURDEN', 'REDUCE_GOAL_ACTION_BURDEN',
+        'STRUCTURE_RELATIONSHIP_COMMUNICATION', 'STRESS_HIGH_OR_VERY_HIGH', 'ATTENTION_LOW_OR_VERY_LOW',
+        'ENERGY_LOW_OR_VERY_LOW', 'guidanceState', 'adaptationState', 'drivers',
+        'contextId', sessionId, userId,
+        ...ids,
+      ]) assert.equal(humanIntelligenceRegion.includes(forbidden), false,
+        `${label}: no ${forbidden} provenance reaches the provider through Human Intelligence`);
+      // Every rendered instruction appears exactly once, as text.
+      for (const instructionId of ids) {
+        const text = HUMAN_INTELLIGENCE_PROVIDER_INSTRUCTIONS[
+          instructionId as keyof typeof HUMAN_INTELLIGENCE_PROVIDER_INSTRUCTIONS];
+        assert.equal(humanIntelligenceRegion.split(text).length - 1, 1,
+          `${label}: the instruction text for ${instructionId} is rendered exactly once`);
+      }
+      // The serialized envelope itself carries no session identity either.
+      assert.equal(JSON.stringify(envelope).includes(sessionId), false,
+        `${label}: no conversation-session UUID travels inside the provider envelope`);
+      // Brain and session reasoning remain DISTINCT subchannels.
+      if (envelope.brainContext && envelope.sessionReasoningContext) {
+        assert.notEqual(envelope.brainContext as unknown, envelope.sessionReasoningContext as unknown,
+          `${label}: Brain Context and session reasoning are distinct objects`);
+        assert.equal(Object.prototype.hasOwnProperty.call(envelope.sessionReasoningContext, 'signals'), false,
+          `${label}: Brain signals are never merged into the session reasoning lane`);
+        assert.equal(Object.prototype.hasOwnProperty.call(envelope.brainContext, 'metrics'), false,
+          `${label}: session metrics are never merged into the Brain lane`);
+      }
     };
 
     // QHIA-012: the REAL Brain Context boundary over the same authenticated
@@ -667,10 +785,13 @@ async function main(): Promise<void> {
     assert.equal((await db.observer('SELECT id FROM public.memories WHERE user_id = $1', [userId])).length, 0,
       'no Memory from this source turn exists before post-response processing');
 
-    // HIM: the real DB-derived partial session snapshot in the FAST projection.
-    assert.deepEqual(firstCall.request.himContext, {
+    // HIM: the real DB-derived partial session snapshot in the FAST projection,
+    // now reaching the provider through the ONE consolidated envelope's session
+    // reasoning lane. QHIA-013 strips exactly one field - the internal session
+    // UUID - and preserves every remaining field, metricKey included.
+    assert.deepEqual(firstCall.request.humanIntelligence?.sessionReasoningContext, {
       contractVersion: 1, source: 'HIM_REASONING_CONTEXT', sourceSnapshotContractVersion: 1,
-      contextKind: 'CONVERSATION_SESSION', contextId: sessionId, coverageState: 'PARTIAL',
+      contextKind: 'CONVERSATION_SESSION', coverageState: 'PARTIAL',
       eligibleMetricCount: 3, knownMetricCount: 1, unknownMetricCount: 2,
       freshnessPolicy: 'UNASSESSED', confidencePolicy: 'UNASSESSED', consumptionMode: 'FAST',
       metrics: [
@@ -679,6 +800,18 @@ async function main(): Promise<void> {
         { metricKey: 'hse.attention', knowledgeState: 'UNKNOWN', ordinalCategory: null },
       ],
     }, 'real PARTIAL session HIM context: stress KNOWN/HIGH, energy and attention UNKNOWN/null, FAST fields only, policies UNASSESSED');
+    // The internal conversation-session UUID no longer reaches the provider
+    // through Human Intelligence, and the semantic metric identity remains.
+    assert.equal(Object.prototype.hasOwnProperty.call(
+      firstCall.request.humanIntelligence!.sessionReasoningContext!, 'contextId'), false,
+      'the session contextId is stripped from the provider projection');
+    // Scoped to the Human-Intelligence-owned region on purpose: Hypothesis is a
+    // SEPARATE authority whose scope legitimately carries the session identity,
+    // and attributing that to this channel would be a false negative.
+    assert.equal(humanIntelligenceGuidance(firstCall.serverGuidance).includes(sessionId), false,
+      'no conversation-session UUID reaches the provider through Human Intelligence');
+    assert.match(firstCall.serverGuidance, /"metricKey":"hse\.stress"/u,
+      'the session metricKey remains available to the provider');
 
     // QHIA-009/QHIA-010/QHIA-011: the cross-context foreground aggregate really
     // ran on this turn. Exactly one migration-0060 aggregate-v3 request was
@@ -693,21 +826,15 @@ async function main(): Promise<void> {
     // immediately preceding canonical USER turn to consume - and there is no
     // older fallback to reach for.
     assertBrainContextForegroundTransport(1, 'after foreground Turn #1');
-    assert.equal(firstCall.request.himBrainContext, undefined,
-      'the first turn of a session has no immediately preceding USER turn, so no Brain Context field is sent');
+    assert.equal(firstCall.request.humanIntelligence?.brainContext, undefined,
+      'the first turn of a session has no immediately preceding USER turn, so no Brain Context lane is sent');
     assert.doesNotMatch(firstCall.serverGuidance, /<him_brain_context>/u,
       'no Brain Context block is rendered when there is nothing to consume');
-    // Provider contract unchanged. Three of the four wrapped authorities
-    // answered authoritatively UNBOUND, so their guidance fields are
-    // structurally omitted; only the ONE explicitly activated Goal channel may
-    // legitimately appear, and only as its exact frozen ACTIVE contract.
-    assert.equal(firstCall.request.himSituationStressGuidance, undefined,
-      'an authoritatively unbound Situation adds no Situation-stress guidance field');
-    assert.equal(firstCall.request.himDecisionAttentionGuidance, undefined,
-      'an authoritatively unbound Decision adds no Decision-attention guidance field');
-    assertGoalMotivationProviderField(firstCall.request.himGoalMotivationGuidance, 'Turn #1');
-    assert.equal(firstCall.request.himRelationshipCommunicationGuidance, undefined,
-      'an authoritatively unbound Relationship adds no Relationship-communication guidance field');
+    // QHIA-013 provider contract. Three of the four wrapped authorities answered
+    // authoritatively UNBOUND, so they contribute no instruction at all; only the
+    // ONE explicitly activated Goal channel may legitimately add its bounded
+    // instructions, deduplicated by semantic ID against the active adaptation.
+    assertHumanIntelligenceProviderEnvelope(firstCall.request, firstCall.serverGuidance, 'Turn #1');
 
     // Hypothesis reasoning: the seeded Hypothesis through the real context
     // service — v1, structural counts 0/0, assumption present, Confidence
@@ -1110,7 +1237,9 @@ async function main(): Promise<void> {
 
     // HIM consumption: the same real session snapshot, still PARTIAL, stress
     // KNOWN/HIGH, unmeasured metrics UNKNOWN/null, no inference introduced.
-    assert.deepEqual(secondCall.request.himContext, firstCall.request.himContext,
+    assert.deepEqual(
+      secondCall.request.humanIntelligence?.sessionReasoningContext,
+      firstCall.request.humanIntelligence?.sessionReasoningContext,
       'second request still consumes the real session HIM snapshot: stress KNOWN/HIGH, others UNKNOWN/null');
 
     // QHIA-009/QHIA-010/QHIA-011: the second eligible turn drove its OWN
@@ -1128,7 +1257,7 @@ async function main(): Promise<void> {
     // from this proof, so the assertion is unconditional rather than
     // "absent or exact".
     assertBrainContextForegroundTransport(2, 'after foreground Turn #2');
-    assert.deepEqual(secondCall.request.himBrainContext, {
+    assert.deepEqual(secondCall.request.humanIntelligence?.brainContext, {
       contractVersion: 1,
       source: 'QANDEEL_HIM_BRAIN_CONTEXT_V1',
       availability: 'AVAILABLE',
@@ -1159,13 +1288,19 @@ async function main(): Promise<void> {
       'the provider receives the frozen provider-safe slot label');
     assert.ok(secondCall.request.context.every(({ content }) => !content.includes('him_brain_context')),
       'the Brain Context block stays out of USER/ASSISTANT history');
-    assert.equal(secondCall.request.himSituationStressGuidance, undefined,
-      'the second turn still adds no Situation-stress guidance field');
-    assert.equal(secondCall.request.himDecisionAttentionGuidance, undefined,
-      'the second turn still adds no Decision-attention guidance field');
-    assertGoalMotivationProviderField(secondCall.request.himGoalMotivationGuidance, 'Turn #2');
-    assert.equal(secondCall.request.himRelationshipCommunicationGuidance, undefined,
-      'the second turn still adds no Relationship-communication guidance field');
+    assertHumanIntelligenceProviderEnvelope(secondCall.request, secondCall.serverGuidance, 'Turn #2');
+    // The central QHIA-013 acceptance condition on a fully-loaded real turn:
+    // session reasoning context, an active behavioral instruction set, and the
+    // previous-turn Brain Context all arrive inside ONE envelope, in ONE
+    // provider request, with Brain and session reasoning still distinct lanes.
+    assert.ok(secondCall.request.humanIntelligence!.sessionReasoningContext,
+      'the one envelope carries the session reasoning lane');
+    assert.ok(secondCall.request.humanIntelligence!.brainContext,
+      'the one envelope carries the Brain Context lane');
+    assert.equal(
+      secondCall.serverGuidance.indexOf('<him_reasoning_context>') <
+      secondCall.serverGuidance.indexOf('<him_brain_context>'), true,
+      'the two Human Intelligence data lanes are rendered as separate ordered containers');
 
     // The transport census proves the aggregate SUCCEEDED; this block proves
     // WHAT it succeeded with, so a legitimate unbound NONE answer can never be
