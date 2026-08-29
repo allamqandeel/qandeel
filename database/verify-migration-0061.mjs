@@ -85,6 +85,11 @@ const SOURCE_COLUMNS=['brain_slot_order','brain_slot','slot_order','metric_key',
 const FOREGROUND_COLUMNS=['slot_order','slot','context_kind','context_id','numeric_value','semantic_mapping_status','semantic_type','freshness_state','confidence_state'];
 const identity=async id=>{await client.query('SET LOCAL ROLE authenticated');await client.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:id,role:'authenticated'})]);};
 const asServiceRole=async()=>{await client.query('RESET ROLE');await client.query("SELECT set_config('request.jwt.claims','',true)");await client.query('SET LOCAL ROLE service_role');};
+// Direct ledger observation. The durable effect ledger deliberately carries NO
+// direct table privilege for any request role - service_role included - so every
+// raw row inspection below runs as the table owner and hands the service role
+// back afterwards.
+const observe=async(sql,params=[])=>{await client.query('RESET ROLE');const result=await client.query(sql,params);await asServiceRole();return result;};
 const rejects=async(sql,params=[],label='')=>{await client.query('SAVEPOINT expected_rejection');let failed=false;try{await client.query(sql,params);}catch{failed=true;await client.query('ROLLBACK TO SAVEPOINT expected_rejection');}await client.query('RELEASE SAVEPOINT expected_rejection');if(!failed)throw new Error(`Expected rejection: ${label||sql}`);};
 const rejectsWith=async(sql,pattern,params,label)=>{await client.query('SAVEPOINT expected_rejection');let message='';try{await client.query(sql,params);}catch(error){message=error?.message??'';await client.query('ROLLBACK TO SAVEPOINT expected_rejection');}await client.query('RELEASE SAVEPOINT expected_rejection');if(!pattern.test(message))throw new Error(`Expected ${label} rejection ${pattern}, got: ${message||'success'}`);};
 const normalize=value=>{
@@ -209,7 +214,11 @@ await client.connect();try{
  await rejectsWith(LATEST_SQL,/Unknown exact HIM metric definition/,[one,'hse.self-confidence',9999,'DECISION',parityTarget.id],'unknown exact definition version');
  await rejectsWith(LATEST_SQL,/Unknown exact HIM metric definition/,[one,'not.a-canonical-metric',1,'DECISION',parityTarget.id],'unknown metric key');
  await rejectsWith(LATEST_SQL,/Unsupported context kind for the exact HIM metric definition/,[one,'hse.self-confidence',1,'GOAL',goalTargetA.id],'definition-unapproved context kind');
- await rejectsWith(LATEST_SQL,/Unsupported HIM context ownership authority/,[one,'hse.self-confidence',1,'GLOBAL','GLOBAL'],'unsupported ownership authority');
+ // GLOBAL is rejected by the exact-definition context authority BEFORE the
+ // ownership branch is ever reached - the exact migration-0052 order, and the
+ // exact message verify-migration-0052 already pins.
+ await rejectsWith(LATEST_SQL,/Unsupported context kind for the exact HIM metric definition/,[one,'hse.self-confidence',1,'GLOBAL','GLOBAL'],'GLOBAL context kind');
+ await rejectsWith(LATEST_SQL,/Unsupported context kind for the exact HIM metric definition/,[one,'hse.self-confidence',1,'TOTALLY_BOGUS_KIND',decisionTarget.id],'bogus context kind');
  await rejectsWith(LATEST_SQL,/Unknown or unowned HIM measurement context/,[one,'hse.self-confidence',1,'DECISION',randomUUID()],'unknown context');
  const canonicalLatest=(await client.query(LATEST_SQL,[one,'hse.self-confidence',1,'DECISION',parityTarget.id])).rows;
  if(canonicalLatest.length!==1||canonicalLatest[0].id!==parity.snapshot.id)throw new Error('The preserved authenticated wrapper must still return the exact canonical latest row');
@@ -358,7 +367,7 @@ await client.connect();try{
  await rejectsWith(COMPLETE_SQL,/INVALID_HIM_BRAIN_CONTEXT_RESULT/,[executionId,'HIM_BRAIN_CONTEXT_PARTIAL',payload(firstUserTurn,materialized)],'an unknown result code');
  await rejectsWith(COMPLETE_SQL,/INVALID_HIM_BRAIN_CONTEXT_RESULT/,[executionId,'NO_HIM_BRAIN_CONTEXT',payload(firstUserTurn,materialized)],'a payload-bearing NO_HIM_BRAIN_CONTEXT');
  await rejectsWith(COMPLETE_SQL,/INVALID_HIM_BRAIN_CONTEXT_RESULT/,[executionId,'HIM_BRAIN_CONTEXT_MATERIALIZED',null],'a payload-free materialization');
- if((await client.query('SELECT effect_key FROM public.post_response_intelligence_effects WHERE execution_id=$1',[executionId])).rowCount!==0)throw new Error('A rejected materialization must write no durable row of any kind');
+ if((await observe('SELECT effect_key FROM public.post_response_intelligence_effects WHERE execution_id=$1',[executionId])).rowCount!==0)throw new Error('A rejected materialization must write no durable row of any kind');
  // The payload-free authoritative result is valid on its own.
  const noBrainExecution=randomUUID();
  const noBrainTurn=await (async()=>{await client.query('RESET ROLE');const id=await turnAt(randomUUID(),sessionMain,one,'USER','COMPLETED',7);await asServiceRole();return id;})();
@@ -367,14 +376,14 @@ await client.connect();try{
  // The one typed managed completion: exactly one COMPLETED effect, no CLAIMED
  // row at any instant, and a first durable result that is immutable.
  if((await client.query(COMPLETE_SQL,[executionId,'HIM_BRAIN_CONTEXT_MATERIALIZED',payload(firstUserTurn,materialized)])).rows[0].status!=='COMPLETED')throw new Error('The managed command must durably write the typed materialization');
- const brainEffects=(await client.query("SELECT * FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key='HIM_BRAIN_CONTEXT_MATERIALIZATION'",[executionId])).rows;
+ const brainEffects=(await observe("SELECT * FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key='HIM_BRAIN_CONTEXT_MATERIALIZATION'",[executionId])).rows;
  if(brainEffects.length!==1||brainEffects[0].state!=='COMPLETED'||brainEffects[0].result_code!=='HIM_BRAIN_CONTEXT_MATERIALIZED'||brainEffects[0].result_reference!==null)throw new Error('Exactly one COMPLETED typed Brain Context effect must exist');
  if(normalize(brainEffects[0].claimed_at)!==normalize(brainEffects[0].completed_at))throw new Error('The Brain Context effect must be inserted directly as COMPLETED: no CLAIMED-then-COMPLETED window exists');
- if((await client.query("SELECT effect_key FROM public.post_response_intelligence_effects WHERE effect_key='HIM_BRAIN_CONTEXT_MATERIALIZATION' AND state='CLAIMED'")).rowCount!==0)throw new Error('No CLAIMED Brain Context row may exist anywhere');
+ if((await observe("SELECT effect_key FROM public.post_response_intelligence_effects WHERE effect_key='HIM_BRAIN_CONTEXT_MATERIALIZATION' AND state='CLAIMED'")).rowCount!==0)throw new Error('No CLAIMED Brain Context row may exist anywhere');
  // Replay never overwrites the first durable result.
  if((await client.query(COMPLETE_SQL,[executionId,'NO_HIM_BRAIN_CONTEXT',null])).rows[0].status!=='ALREADY_COMPLETED')throw new Error('A replayed completion must report ALREADY_COMPLETED');
  if((await client.query(COMPLETE_SQL,[executionId,'HIM_BRAIN_CONTEXT_MATERIALIZED',payload(firstUserTurn,[signal(5,goalTargetB.id,{numericValue:5})])])).rows[0].status!=='ALREADY_COMPLETED')throw new Error('A replayed completion must never overwrite the first durable result');
- const durable=(await client.query("SELECT result_code,result_payload FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key='HIM_BRAIN_CONTEXT_MATERIALIZATION'",[executionId])).rows[0];
+ const durable=(await observe("SELECT result_code,result_payload FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key='HIM_BRAIN_CONTEXT_MATERIALIZATION'",[executionId])).rows[0];
  if(durable.result_code!=='HIM_BRAIN_CONTEXT_MATERIALIZED'||JSON.stringify(durable.result_payload.signals)!==JSON.stringify(materialized))throw new Error('The first durable Brain Context result must survive replay byte for byte');
  // A terminal execution is a NO_OP, never a silent overwrite.
  await client.query("SELECT public.finish_post_response_intelligence_execution_v1($1,'COMPLETED','COMPLETED','DONE')",[noBrainExecution]);
