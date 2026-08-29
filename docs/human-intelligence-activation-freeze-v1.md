@@ -302,16 +302,23 @@ Recorded at closure; none is production-reachable and none blocks the phase:
   deliberate, charter-guarded (no freshness/decay inference is authorized).
 - Correlation `session_id`/`turn_id` UUIDs reach internal observability
   (tracing/Sentry tags) only; they never reach a model provider.
-- The Full Intelligence E2E smoke's second-turn assertion deliberately proves
-  the previous turn's Brain materialization CAN reach the provider request —
-  stronger than the race-neutral "absent or exact" production truth — behind a
-  deterministic Snapshot gate released via `setImmediate` after the Brain read
-  settles. That gate has intermittently lost its scheduling race on CI runners
-  (once on the PR #175 merge run, once during QHIA-015 closure; the identical
-  code passes on rerun and passed the canonical-main run 33271489931). This is
-  verification-harness scheduling debt, not production behavior: production
-  treats Brain Context as optional zero-wait with late settlement discarded.
-  Its remediation is deferred to its own reviewed verification task.
+- Resolved at closure (verification-only): the Full Intelligence E2E smoke's
+  second-turn Brain Context assertion failed nondeterministically (~50% of CI
+  attempts; first seen as the PR #175 merge-run "flake"). Root cause, proven
+  during QHIA-015: the smoke's whole database fixture lives inside one
+  `BEGIN..ROLLBACK` transaction, so every `CURRENT_TIMESTAMP` default is the
+  same frozen instant — the two fixture USER turns were byte-identical on
+  `created_at`, and the migration-0061 immediate-predecessor resolution's
+  deterministic `(created_at, id)` tiebreak fell through to a comparison of
+  two independent RANDOM fixture UUIDs: a per-run coin flip inside the
+  verifier, not production behavior (real turns commit in separate
+  transactions with distinct timestamps, and the production tiebreak is
+  deterministic). The QHIA-014 `setImmediate` barrier-gate remediation had
+  misattributed this to event-loop scheduling; a 1,200-iteration scheduling
+  replay of the real orchestrator exonerated the gate. Repair: the smoke's two
+  fixture turn ids are now sorted (canonical lowercase uuid string order is
+  PostgreSQL's bytewise uuid order), making fixture chronology deterministic —
+  no sleep, no timer, no weakened assertion, no production change.
 
 ## Historical guard forward-compatibility repair
 
