@@ -283,8 +283,23 @@ async function main(): Promise<void> {
     // -----------------------------------------------------------------------
     const userId = randomUUID();
     const sessionId = randomUUID();
-    const firstTurnId = randomUUID();
-    const secondTurnId = randomUUID();
+    // QHIA-015 root-cause repair (verification-only): the WHOLE database
+    // fixture lives inside ONE BEGIN..ROLLBACK transaction, so every
+    // CURRENT_TIMESTAMP column default in this smoke is the SAME frozen
+    // transaction instant. The two USER turns are therefore byte-identical on
+    // created_at, and every (created_at, id) chronology over them - including
+    // the migration-0061 immediate-predecessor resolution behind Turn #2's
+    // Brain Context read - falls through to the uuid tiebreak. With two
+    // independent random ids that tiebreak was a per-run COIN FLIP: when
+    // firstTurnId sorted after secondTurnId, Turn #1 was no longer Turn #2's
+    // predecessor, the read answered authoritative absence, and the
+    // FOREGROUND_TURN_2 Brain Context assertion failed nondeterministically.
+    // Sorting the two fixture ids (canonical lowercase uuid string order IS
+    // PostgreSQL's bytewise uuid order) restores the intended fixture
+    // chronology DETERMINISTICALLY: no sleep, no timer, no wall clock, no
+    // weakened assertion, and no production change - the production
+    // (created_at, id) tiebreak itself stays untouched and fully exercised.
+    const [firstTurnId, secondTurnId] = [randomUUID(), randomUUID()].sort() as [string, string];
     const seededHypothesisId = randomUUID();
     const sessionScope = `CONVERSATION_SESSION:${sessionId}`;
 

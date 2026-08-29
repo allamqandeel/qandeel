@@ -397,10 +397,15 @@ function assertBrainContextBridgeContract(sources) {
   if (!exe.smokeRuntime.includes('pgLedgerAdapter.himBrainContextCompletionCount, 1'))
     violated('the smoke proves exactly one managed typed durable completion');
 
-  // 14. This task owns exactly one migration.
+  // 14. This task owns exactly one migration - 0061 - a historical fact of
+  //     the frozen QHIA v1 baseline whose identity/order/content invariants
+  //     are protected by the QHIA-012 database static test and its verifier.
+  //     Per the QHIA-015 phase closure repair, corrected by Fix 01 to TRUE
+  //     forward-safety: the one durable migration fact asserted here is that
+  //     0061 EXISTS. No future migration number or filename/domain is banned,
+  //     so a later, separately reviewed Brain Context migration is legal.
   const migrations = readdirSync(new URL('database/migrations/', root)).filter((name) => name.endsWith('.sql'));
   if (!migrations.includes('0061_him_brain_context_bridge_v1.sql')) violated('migration 0061 exists');
-  if (migrations.some((name) => name.startsWith('0062'))) violated('this task adds no migration 0062');
 }
 
 test('B1 - the shipped sources satisfy the frozen QHIA-012 Brain Context bridge contract', () => {

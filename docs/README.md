@@ -23,6 +23,10 @@ The original Word documents remain the canonical archive. Markdown files record 
 1. [Foundation Freeze v1](foundation-freeze-v1.md) — **CLOSED / OPERATIONALLY RECONCILED**
 2. [Foundation Closure Reconciliation v1](foundation-closure-reconciliation-v1.md) — final documentation-only reconciliation after Operational Hardening
 
+## Human Intelligence Activation closure
+
+- [Human Intelligence Activation Freeze v1](human-intelligence-activation-freeze-v1.md) — **CLOSED / FROZEN** (QHIA-001 → QHIA-015; phase closure is not product completion)
+
 ## Operational Foundation hardening
 
 - [Correlation & Telemetry Foundation v1](correlation-telemetry-foundation-v1.md)

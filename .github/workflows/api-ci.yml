@@ -39,6 +39,7 @@ jobs:
       - {name: Verify HIM Brain Context bridge application static contract, run: npm run test:him-brain-context-bridge-contract}
       - {name: Verify Human Intelligence provider semantics consolidation static contract, run: npm run test:human-intelligence-provider-semantics-consolidation-contract}
       - {name: Verify HSE Snapshot foreground latency-safe degradation static contract, run: npm run test:him-snapshot-foreground-latency-safe-degradation-contract}
+      - {name: Verify Human Intelligence Activation phase closure contract, run: npm run test:human-intelligence-activation-phase-closure-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}

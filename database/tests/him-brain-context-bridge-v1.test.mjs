@@ -73,10 +73,14 @@ function assertMigrationIdentity(names) {
 test('0061 exists exactly once after 0060 and this task owns exactly one migration', () => {
   const names = readdirSync(new URL('migrations/', root)).filter((name) => name.endsWith('.sql'));
   assertMigrationIdentity(names);
-  // QHIA-012 owns 0061 and nothing else. This is a statement about THIS task,
-  // not a permanent ceiling: the forward-safety control below proves later
-  // migrations stay legal.
-  assert.equal(names.filter((name) => name.startsWith('0062')).length, 0, 'this task adds no migration 0062');
+  // QHIA-012 owns 0061 and nothing else - a historical fact of the frozen
+  // QHIA v1 baseline. assertMigrationIdentity above already freezes every
+  // durable part of it: 0061 exists exactly once, historical prefixes 0001..
+  // 0061 are unique, and 0061 orders after 0060. Per the
+  // QHIA-015 phase closure repair, corrected by Fix 01 to TRUE forward-safety,
+  // no future migration number or filename/domain is banned here - the
+  // forward-safety control below proves later migrations, same-domain ones
+  // included, stay legal.
 });
 
 test('the canonical latest authority is EXTRACTED, not rewritten', () => {
@@ -348,6 +352,19 @@ test('the guard states no future ceiling and is independent of migration numberi
   assert.doesNotThrow(
     () => assertMigrationIdentity([...listing, '0062_a_future_migration.sql', '0099_a_much_later_migration.sql']),
     'future migrations are legal',
+  );
+  // QHIA-015 Fix 01: a future migration is legal even when it revisits the
+  // SAME Human Intelligence domain under its own separately reviewed versioned
+  // contract - Brain Context included. Fixture listing entries only; no real
+  // migration exists or is created.
+  assert.doesNotThrow(
+    () => assertMigrationIdentity([...listing,
+      '0062_future_phase_change.sql',
+      '0062_him_brain_context_v2.sql',
+      '0063_human_intelligence_provider_semantics_v2.sql',
+      '0064_him_snapshot_latency_policy_v2.sql',
+    ]),
+    'future same-domain migrations are legal',
   );
   assert.throws(() => assertMigrationIdentity(listing.filter((name) => name !== MIGRATION)), /migration 0061 exists/u);
   assert.throws(() => assertMigrationIdentity([...listing, '0061_a_duplicate.sql']), /exactly one migration 0061/u);

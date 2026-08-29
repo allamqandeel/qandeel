@@ -420,11 +420,16 @@ function assertProviderSemanticsConsolidationContract(sources) {
   if (!exe.smokeRuntime.includes('humanIntelligence?.sessionReasoningContext'))
     violated('the Full Intelligence proof still proves session reasoning reaches the provider');
 
-  // 13. This task changes NO database file and adds NO migration.
+  // 13. This task changed NO database file and added NO migration - a
+  //     historical fact of the frozen QHIA v1 baseline, recorded in the phase
+  //     freeze document, and NOT provable by scanning the future, mutable
+  //     migration listing (QHIA-015 phase closure repair, corrected by Fix 01
+  //     to TRUE forward-safety). The one durable migration fact this guard
+  //     owns: the terminal Human Intelligence Activation phase migration 0061
+  //     EXISTS. No future migration number or filename/domain is banned - a
+  //     later, separately reviewed provider-semantics migration is legal.
   const migrations = readdirSync(new URL('database/migrations/', root)).filter((name) => name.endsWith('.sql'));
-  if (!migrations.includes('0061_him_brain_context_bridge_v1.sql')) violated('migration 0061 remains the latest migration');
-  if (migrations.some((name) => /^006[2-9]|^0[1-9]\d\d/u.test(name)))
-    violated('QHIA-013 adds no migration 0062 or later');
+  if (!migrations.includes('0061_him_brain_context_bridge_v1.sql')) violated('the terminal Human Intelligence Activation phase migration 0061 exists');
 }
 
 test('C1 - the shipped sources satisfy the frozen QHIA-013 consolidation contract', () => {
@@ -664,11 +669,15 @@ test('C4 - the contract is wired into package scripts and CI', () => {
 });
 
 test('C5 - QHIA-013 changes no database file', () => {
-  // Absolute: the expected database diff for this task is ZERO.
+  // Absolute: the expected database diff for this task is ZERO - a historical
+  // fact of the frozen QHIA v1 baseline recorded in the phase freeze document
+  // (QHIA-015 phase closure repair, corrected by Fix 01): the one durable
+  // migration fact asserted here is that the terminal phase migration 0061
+  // exists. Neither the live repository's future migration numbering nor any
+  // future filename/domain is frozen here - a later, separately reviewed
+  // provider-semantics migration is legal.
   const migrations = readdirSync(new URL('database/migrations/', root)).filter((name) => name.endsWith('.sql'));
-  const latest = [...migrations].sort().at(-1);
-  assert.equal(latest, '0061_him_brain_context_bridge_v1.sql', 'the latest migration remains 0061');
-  assert.ok(!migrations.some((name) => name.startsWith('0062')), 'no migration 0062 exists');
+  assert.ok(migrations.includes('0061_him_brain_context_bridge_v1.sql'), 'the terminal Human Intelligence Activation phase migration 0061 exists');
   // No production application file introduced by this task touches SQL, RLS,
   // ACLs, RPCs, bindings, the post-response ledger or currentness authority.
   for (const path of [SOURCES.providerSemantics, SOURCES.providerSemanticsTypes]) {
