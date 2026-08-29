@@ -126,16 +126,32 @@ const DEFERRED_STATEMENTS = Object.freeze([
 
 // The four repaired historical guards: each must prove the 0061 terminal
 // baseline EXISTS, carry the QHIA-015 repair marker, and carry NO numbering
-// ceiling. The ceiling needles are assembled at run time so this contract's
-// own source never contains the executable ceiling shapes it forbids.
+// ceiling AND no future filename/domain ban (Fix 01: a historical guard may
+// freeze only durable historical facts of the QHIA v1 baseline - it must not
+// infer historical task ownership by scanning future migration filenames).
+// The needles are assembled at run time so this contract's own source never
+// contains the executable shapes it forbids.
 const REPAIRED_GUARDS = Object.freeze(['latencyContract', 'providerContract', 'brainBridgeContract', 'brainBridgeDatabaseTest']);
 const CEILING_NEEDLES = Object.freeze([
   ['sort()', 'at(-1)'].join('.'),
   ["startsWith('006", '2'].join(''),
   ['^006', '[2-9]'].join(''),
 ]);
+// The exact broad domain-ban regex fragments Fix 01 removed - their
+// reappearance in a historical guard is a regression to filename-inferred
+// ownership.
+const DOMAIN_BAN_NEEDLES = Object.freeze([
+  ['snapshot', '.*', 'latenc'].join(''),
+  ['semantics', '_', 'consolidation'].join(''),
+  ['/brain', '_', 'context/iu'].join(''),
+]);
 
-const FUTURE_MIGRATION_FIXTURE = '0062_future_phase_change.sql';
+const FUTURE_MIGRATION_FIXTURES = Object.freeze([
+  '0062_future_phase_change.sql',
+  '0062_him_brain_context_v2.sql',
+  '0063_human_intelligence_provider_semantics_v2.sql',
+  '0064_him_snapshot_latency_policy_v2.sql',
+]);
 
 function violated(property) {
   throw new Error(`QHIA-015 Human Intelligence Activation phase closure contract violated: ${property}`);
@@ -246,26 +262,32 @@ function assertHumanIntelligenceActivationPhaseClosureContract(world) {
   if (!world.footprintSpec.includes('EXPECTED_QHIA_013_HUMAN_INTELLIGENCE_BYTES = 6427'))
     violated('the exact 6,427-byte footprint proof remains a locked result');
 
-  // 10. The historical migration guards are forward-safe. Each repaired guard
-  //     proves the 0061 terminal baseline EXISTS, carries the repair marker,
-  //     and carries no numbering ceiling; and the real migration listing
-  //     still contains the terminal phase migration.
+  // 10. The historical migration guards are TRULY forward-safe (Fix 01). Each
+  //     repaired guard proves the 0061 terminal baseline EXISTS, carries the
+  //     repair marker, and carries neither a numbering ceiling nor a broad
+  //     future filename/domain ban; the latency contract carries the explicit
+  //     future-migration acceptance fixtures (same-domain names included); and
+  //     the real migration listing still contains the terminal phase
+  //     migration. No future migration filename or number is banned here
+  //     either: "QHIA-015 adds no migration" is a historical fact of the
+  //     frozen baseline recorded in the freeze document, never inferred from
+  //     future filenames.
   for (const guard of REPAIRED_GUARDS) {
     if (!world[guard].includes(TERMINAL_MIGRATION))
       violated(`the historical guard ${guard} proves the 0061 terminal phase baseline exists`);
     if (!world[guard].includes('QHIA-015 phase closure repair'))
       violated(`the historical guard ${guard} carries the forward-compatibility repair`);
-    for (const needle of CEILING_NEEDLES) {
+    for (const needle of [...CEILING_NEEDLES, ...DOMAIN_BAN_NEEDLES]) {
       if (world[guard].includes(needle))
-        violated(`the historical guard ${guard} carries no migration-numbering ceiling: found ${needle}`);
+        violated(`the historical guard ${guard} carries no migration-numbering ceiling and no future filename/domain ban: found ${needle}`);
     }
   }
-  if (!world.latencyContract.includes(FUTURE_MIGRATION_FIXTURE))
-    violated('the latency contract proves a later phase migration is legal by number');
+  for (const fixture of FUTURE_MIGRATION_FIXTURES) {
+    if (!world.latencyContract.includes(fixture))
+      violated(`the latency contract proves the future migration ${fixture} stays legal`);
+  }
   if (!Array.isArray(world.migrations) || !world.migrations.includes(TERMINAL_MIGRATION))
     violated('the terminal Human Intelligence Activation phase migration 0061 exists in the real listing');
-  if (world.migrations.some((name) => /phase.closure|activation.freeze/iu.test(name)))
-    violated('QHIA-015 adds no migration: no migration claims the phase-closure identity');
 }
 
 test('P1 - the shipped repository satisfies the phase closure contract', () => {
@@ -344,8 +366,15 @@ test('P2 - anti-vacuity: the real guard rejects every named regression', () => {
     ['the terminal phase migration disappeared from the real listing', {
       migrations: Object.freeze(shipped.migrations.filter((name) => name !== TERMINAL_MIGRATION)),
     }],
-    ['a migration claiming the phase-closure identity was added', {
-      migrations: Object.freeze([...shipped.migrations, '0062_him_activation_freeze_phase_closure_v1.sql']),
+    ['a broad future filename/domain ban was reintroduced into a historical guard', {
+      brainBridgeContract: shipped.brainBridgeContract.replace(
+        "if (!migrations.includes('0061_him_brain_context_bridge_v1.sql')) violated('migration 0061 exists');",
+        "if (!migrations.includes('0061_him_brain_context_bridge_v1.sql')) violated('migration 0061 exists');\n"
+        + `  if (migrations.filter((name) => ${['/brain', '_', 'context/iu'].join('')}.test(name)).length !== 1) violated('owns the domain');`,
+      ),
+    }],
+    ['a future-migration acceptance fixture was deleted from the latency contract', {
+      latencyContract: shipped.latencyContract.replaceAll('0063_human_intelligence_provider_semantics_v2.sql', '0063_unrelated.sql'),
     }],
   ];
 
@@ -363,12 +392,19 @@ test('P2 - anti-vacuity: the real guard rejects every named regression', () => {
 });
 
 test('P3 - forward safety: a later, separately reviewed phase stays legal', () => {
-  // A hypothetical later phase migration is legal by number - the fixture is a
-  // listing entry only, and no real migration 0062 exists or is created.
+  // A hypothetical later migration is legal by number AND when it revisits the
+  // same Human Intelligence domain under its own versioned contract (Fix 01).
+  // Fixtures are listing entries only; no real migration exists or is created.
+  for (const fixture of FUTURE_MIGRATION_FIXTURES) {
+    assert.doesNotThrow(() => assertHumanIntelligenceActivationPhaseClosureContract({
+      ...shipped,
+      migrations: Object.freeze([...shipped.migrations, fixture]),
+    }), `a future ${fixture} stays legal for the closure contract`);
+  }
   assert.doesNotThrow(() => assertHumanIntelligenceActivationPhaseClosureContract({
     ...shipped,
-    migrations: Object.freeze([...shipped.migrations, FUTURE_MIGRATION_FIXTURE]),
-  }));
+    migrations: Object.freeze([...shipped.migrations, ...FUTURE_MIGRATION_FIXTURES]),
+  }), 'all four future migrations together stay legal for the closure contract');
   // A later, separately reviewed provider surface changes nothing here.
   assert.doesNotThrow(() => assertHumanIntelligenceActivationPhaseClosureContract({
     ...shipped,

@@ -297,24 +297,22 @@ function assertSnapshotLatencySafeDegradationContract(world) {
       violated(`the Snapshot service spec proves the classification: missing ${proof}`);
   }
 
-  // 10. QHIA-014A adds NO database file. Driven by the world's migration
-  //     listing so the D2 anti-vacuity suite can prove the guard rejects a
-  //     migration claiming this task's own identity.
+  // 10. The durable historical fact this rule freezes (QHIA-015 phase closure
+  //     repair, corrected by Fix 01 to TRUE forward-safety):
+  //     0061_him_brain_context_bridge_v1.sql EXISTS as the terminal migration
+  //     of the frozen Human Intelligence Activation v1 baseline.
   //
-  //     Forward-safe (QHIA-015 phase closure repair): what this rule freezes is
-  //     (a) 0061_him_brain_context_bridge_v1.sql EXISTS as the terminal
-  //     Human Intelligence Activation phase migration baseline, and (b) no
-  //     migration ever claims QHIA-014A's own Snapshot latency/degradation
-  //     identity - this task added no database file. It deliberately does NOT
-  //     require the live repository's latest migration to remain 0061 forever,
-  //     and a later, separately reviewed phase migration (0062 or beyond) is
-  //     legal by number - proven in D3.
+  //     "QHIA-014A added no database file" is a historical fact of that frozen
+  //     baseline, recorded in the phase freeze document - it is NOT provable
+  //     by scanning the future, mutable migration listing, so this guard bans
+  //     no future migration number and no future migration filename/domain.
+  //     A later, separately reviewed migration may legitimately revisit the
+  //     same Snapshot latency/degradation domain under its own versioned
+  //     change-control contract - proven in D3.
   if (!Array.isArray(world.migrations) || world.migrations.length === 0)
     violated('the world carries the database migration listing');
   if (!world.migrations.includes('0061_him_brain_context_bridge_v1.sql'))
     violated('the terminal Human Intelligence Activation phase migration 0061 exists');
-  if (world.migrations.some((name) => /snapshot.*latenc|latenc.*snapshot|snapshot.*degradation|degradation.*snapshot/iu.test(name)))
-    violated('no migration claims the QHIA-014A Snapshot latency/degradation identity: this task added no database file');
 }
 
 function slice(source, start, end) {
@@ -487,15 +485,10 @@ test('D2 - anti-vacuity: the real guard rejects every named regression', () => {
         + '      const finalized = await this.repository.finalizeTurn({',
       ),
     }],
-    // QHIA-014 proof closure (Codex MEDIUM debt #2B), re-anchored by the
-    // QHIA-015 forward-compatibility repair: a mutated world whose migration
-    // listing carries a migration claiming THIS task's own Snapshot
-    // latency/degradation identity must be rejected by this same guard - by
-    // identity, never by migration number. The fixture is a listing entry
-    // only: no real production migration file is ever created.
-    ['a migration claiming this task\'s own Snapshot latency identity was added', {
-      migrations: Object.freeze([...shipped.migrations, '0062_him_snapshot_latency_cache_v1.sql']),
-    }],
+    // QHIA-015 Fix 01: the one durable migration fact this guard owns is that
+    // the 0061 terminal phase baseline EXISTS. Its disappearance must be
+    // rejected; no future migration number or filename/domain is ever banned
+    // (that acceptance is proven in D3).
     ['the terminal phase migration 0061 disappeared from the listing', {
       migrations: Object.freeze(shipped.migrations.filter((name) => name !== '0061_him_brain_context_bridge_v1.sql')),
     }],
@@ -521,15 +514,34 @@ test('D3 - a later, separately reviewed Human Intelligence surface stays legal',
     ...shipped,
     providerSemantics: `${shipped.providerSemantics}\n// a later reviewed lane may be added here\n`,
   }));
-  // QHIA-015 phase closure repair: a hypothetical LATER phase migration does
-  // NOT fail this historical guard merely because of its number. The live
-  // repository is not frozen to 0061 forever; only the 0061 terminal baseline
-  // and this task's own zero-migration identity stay proven. The fixture is a
-  // listing entry only: no real migration 0062 exists or is ever created here.
+  // QHIA-015 phase closure repair, corrected by Fix 01 to TRUE forward-safety:
+  // a hypothetical LATER migration does NOT fail this historical guard because
+  // of its number, NOR because it revisits the same Human Intelligence domain
+  // - Brain Context, provider semantics, or this task's own Snapshot
+  // latency/degradation surface - under its own separately reviewed versioned
+  // contract. The live repository is not frozen to 0061 forever; only the 0061
+  // terminal baseline of the frozen QHIA v1 phase stays proven. The fixtures
+  // are listing entries only: no real migration is ever created here.
+  for (const futureMigration of [
+    '0062_future_phase_change.sql',
+    '0062_him_brain_context_v2.sql',
+    '0063_human_intelligence_provider_semantics_v2.sql',
+    '0064_him_snapshot_latency_policy_v2.sql',
+  ]) {
+    assert.doesNotThrow(() => assertSnapshotLatencySafeDegradationContract({
+      ...shipped,
+      migrations: Object.freeze([...shipped.migrations, futureMigration]),
+    }), `a future ${futureMigration} stays legal for this historical guard`);
+  }
   assert.doesNotThrow(() => assertSnapshotLatencySafeDegradationContract({
     ...shipped,
-    migrations: Object.freeze([...shipped.migrations, '0062_future_phase_change.sql']),
-  }));
+    migrations: Object.freeze([...shipped.migrations,
+      '0062_future_phase_change.sql',
+      '0062_him_brain_context_v2.sql',
+      '0063_human_intelligence_provider_semantics_v2.sql',
+      '0064_him_snapshot_latency_policy_v2.sql',
+    ]),
+  }), 'all four future migrations together stay legal for this historical guard');
 });
 
 test('D4 - the contract is wired into package scripts and CI', () => {
@@ -546,13 +558,13 @@ test('D4 - the contract is wired into package scripts and CI', () => {
 });
 
 test('D5 - QHIA-014A changes no database file', () => {
-  // Absolute: the expected database diff for this task is ZERO. The migration
-  // freeze itself (the 0061 terminal phase baseline exists; no migration claims
-  // this task's identity) lives inside the real guard as rule 10, runs over the
-  // shipped world in D1, and is anti-vacuity-proven against a task-identity
-  // listing in D2 - while D3 proves a later phase migration stays legal by
-  // number. Here, prove the listing the guard consumed IS the real migrations
-  // directory, read independently.
+  // Absolute: the expected database diff for this task is ZERO - a historical
+  // fact of the frozen QHIA v1 baseline, recorded in the phase freeze
+  // document. The migration fact the real guard owns (rule 10) is that the
+  // 0061 terminal phase baseline EXISTS: D2 proves its disappearance is
+  // rejected, and D3 proves future migrations - same-domain ones included -
+  // stay legal. Here, prove the listing the guard consumed IS the real
+  // migrations directory, read independently.
   assert.deepEqual(
     [...shipped.migrations],
     readdirSync(new URL('database/migrations/', root)).filter((name) => name.endsWith('.sql')),

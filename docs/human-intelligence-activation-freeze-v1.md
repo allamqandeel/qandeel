@@ -334,13 +334,24 @@ closure. QHIA-015 repaired all four as verification-only debt:
 - `tests/him-brain-context-bridge-contract.test.mjs` (QHIA-012)
 - `database/tests/him-brain-context-bridge-v1.test.mjs` (QHIA-012)
 
-Each guard now proves that `0061_him_brain_context_bridge_v1.sql` EXISTS as
-the terminal migration of the closed phase and that no migration ever claims
-the owning task's identity — and no guard requires the live repository's
-latest migration to remain 0061 or bans a future migration solely by number.
-A hypothetical later `0062_future_phase_change.sql` passes every historical
-QHIA guard (proven by anti-vacuity fixtures using listing entries only — no
-real migration 0062 exists or was created).
+Each guard now freezes only the durable historical facts of the QHIA v1
+baseline: `0061_him_brain_context_bridge_v1.sql` EXISTS as the terminal
+migration of the closed phase, and the original QHIA-012 migration
+identity/order/content invariants remain protected by their historical tests.
+No guard requires the live repository's latest migration to remain 0061, bans
+a future migration by number, or bans a future migration by filename/domain
+keywords — a historical verifier cannot prove that an old task "added no
+later migration" by scanning the future, mutable migration listing, so
+"database diff zero" for QHIA-013/QHIA-014A/QHIA-015 is recorded here as a
+fact of the frozen baseline rather than enforced against future filenames.
+Hypothetical later migrations — `0062_future_phase_change.sql`,
+`0062_him_brain_context_v2.sql`,
+`0063_human_intelligence_provider_semantics_v2.sql`, and
+`0064_him_snapshot_latency_policy_v2.sql` — pass every historical QHIA guard,
+proven by acceptance fixtures using listing entries only (no real migration
+exists or was created). Future work that revisits a frozen Human Intelligence
+surface still requires its own explicit versioned change-control contract;
+historical tests simply no longer reject it by name.
 
 ## Deferred beyond this phase
 
