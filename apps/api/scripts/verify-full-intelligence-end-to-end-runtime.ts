@@ -495,9 +495,41 @@ async function main(): Promise<void> {
       'REDUCE_COGNITIVE_LOAD', 'REDUCE_STEERING_PRESSURE', 'CALMER_DELIVERY',
       'ONE_STEP_AT_A_TIME', 'SMALL_IMMEDIATE_GOAL_ACTION',
     ];
+    // Exactly the Human-Intelligence-owned region of the rendered guidance: the
+    // one authority charter, the one behavioral block, and the two Human
+    // Intelligence data lanes.
+    //
+    // Memory, Hypothesis and Recommendation are SEPARATE authorities that
+    // legitimately carry their own identifiers - the Hypothesis channel, for
+    // example, carries the session-scoped hypothesis scope - so a
+    // whole-prompt negative would attribute another channel's content to this
+    // one. Every Human Intelligence privacy claim below is made on this region.
+    const humanIntelligenceGuidance = (serverGuidance: string): string => {
+      const start = serverGuidance.indexOf('Human Intelligence below is server-owned support');
+      if (start < 0) return '';
+      let end = serverGuidance.length;
+      for (const nextAuthority of [
+        '\n\nHypothesis reasoning context follows',
+        '\n\nRecommendation grounding context follows',
+      ]) {
+        const at = serverGuidance.indexOf(nextAuthority, start);
+        if (at >= 0 && at < end) end = at;
+      }
+      const region = serverGuidance.slice(start, end);
+      // Memory renders between the behavioral block and the Human Intelligence
+      // data lanes; its untrusted contents belong to the Memory authority.
+      const memoryStart = region.indexOf('\n\nUser memory context follows');
+      const memoryEnd = region.indexOf('</user_memory_context>');
+      return memoryStart >= 0 && memoryEnd > memoryStart
+        ? `${region.slice(0, memoryStart)}${region.slice(memoryEnd)}`
+        : region;
+    };
     const assertHumanIntelligenceProviderEnvelope = (
       request: ModelRouterRequest, serverGuidance: string, label: string,
     ): void => {
+      const humanIntelligenceRegion = humanIntelligenceGuidance(serverGuidance);
+      assert.ok(humanIntelligenceRegion.length > 0,
+        `${label}: the rendered guidance carries a Human Intelligence region`);
       const envelope = request.humanIntelligence;
       assert.ok(envelope, `${label}: exactly one Human Intelligence provider envelope reaches Model Router`);
       assert.equal(envelope.contractVersion, 1, `${label}: frozen envelope contract version`);
@@ -530,24 +562,30 @@ async function main(): Promise<void> {
         'Goal-bound action-pacing guidance follows', 'Relationship-bound communication scaffolding guidance follows',
       ]) assert.equal(serverGuidance.includes(retiredHeading), false,
         `${label}: no source-specific behavioral mini-policy heading reaches the provider`);
-      // No internal provenance reaches the provider: not the source task names,
-      // not the raw directive enum names, not the internal instruction IDs, not
-      // guidanceState, and not the drivers.
+      // No internal provenance reaches the provider through this channel: not
+      // the source task names, not the raw directive enum names, not the
+      // internal instruction IDs, not guidanceState, and not the drivers. Also
+      // no internal identifier: the conversation-session UUID in particular is
+      // stripped from the provider projection by QHIA-013.
       for (const forbidden of [
         'QHIA-001', 'QHIA-005', 'QHIA-007', 'QHIA-008', 'QHIA-010', 'QHIA-011', 'QHIA-012', 'QHIA-013',
         'REDUCE_INTERACTION_BURDEN', 'REDUCE_PRESENTATION_BURDEN', 'REDUCE_GOAL_ACTION_BURDEN',
         'STRUCTURE_RELATIONSHIP_COMMUNICATION', 'STRESS_HIGH_OR_VERY_HIGH', 'ATTENTION_LOW_OR_VERY_LOW',
         'ENERGY_LOW_OR_VERY_LOW', 'guidanceState', 'adaptationState', 'drivers',
+        'contextId', sessionId, userId,
         ...ids,
-      ]) assert.equal(serverGuidance.includes(forbidden), false,
-        `${label}: no ${forbidden} provenance reaches the provider`);
+      ]) assert.equal(humanIntelligenceRegion.includes(forbidden), false,
+        `${label}: no ${forbidden} provenance reaches the provider through Human Intelligence`);
       // Every rendered instruction appears exactly once, as text.
       for (const instructionId of ids) {
         const text = HUMAN_INTELLIGENCE_PROVIDER_INSTRUCTIONS[
           instructionId as keyof typeof HUMAN_INTELLIGENCE_PROVIDER_INSTRUCTIONS];
-        assert.equal(serverGuidance.split(text).length - 1, 1,
+        assert.equal(humanIntelligenceRegion.split(text).length - 1, 1,
           `${label}: the instruction text for ${instructionId} is rendered exactly once`);
       }
+      // The serialized envelope itself carries no session identity either.
+      assert.equal(JSON.stringify(envelope).includes(sessionId), false,
+        `${label}: no conversation-session UUID travels inside the provider envelope`);
       // Brain and session reasoning remain DISTINCT subchannels.
       if (envelope.brainContext && envelope.sessionReasoningContext) {
         assert.notEqual(envelope.brainContext as unknown, envelope.sessionReasoningContext as unknown,
@@ -767,7 +805,10 @@ async function main(): Promise<void> {
     assert.equal(Object.prototype.hasOwnProperty.call(
       firstCall.request.humanIntelligence!.sessionReasoningContext!, 'contextId'), false,
       'the session contextId is stripped from the provider projection');
-    assert.equal(firstCall.serverGuidance.includes(sessionId), false,
+    // Scoped to the Human-Intelligence-owned region on purpose: Hypothesis is a
+    // SEPARATE authority whose scope legitimately carries the session identity,
+    // and attributing that to this channel would be a false negative.
+    assert.equal(humanIntelligenceGuidance(firstCall.serverGuidance).includes(sessionId), false,
       'no conversation-session UUID reaches the provider through Human Intelligence');
     assert.match(firstCall.serverGuidance, /"metricKey":"hse\.stress"/u,
       'the session metricKey remains available to the provider');
