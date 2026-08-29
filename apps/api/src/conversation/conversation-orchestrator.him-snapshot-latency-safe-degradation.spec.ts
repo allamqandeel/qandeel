@@ -89,7 +89,6 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
   let orchestrator: ConversationOrchestratorService;
 
   const dispatched = (call = 0): ModelRouterRequest => router.generate.mock.calls[call][0] as ModelRouterRequest;
-  const flushMicrotasks = () => new Promise<void>((resolve) => setImmediate(resolve));
 
   beforeEach(() => {
     himRepository = { readIntelligenceSnapshot: jest.fn().mockResolvedValue(canonicalRows()) };
@@ -289,7 +288,10 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
     jest.useFakeTimers();
     try {
       const pending = orchestrator.orchestrate('token', 'user', userTurn);
-      await flushMicrotasks();
+      // Flush the microtask queue WITHOUT advancing the clock: Jest's modern
+      // fake timers also fake setImmediate, so a setImmediate flush would never
+      // resolve here.
+      await jest.advanceTimersByTimeAsync(0);
       // All four reads are in flight while the Snapshot is unresolved, so a
       // serialized `await snapshot; await reflection` is structurally impossible.
       expect(himRepository.readIntelligenceSnapshot).toHaveBeenCalledTimes(1);
