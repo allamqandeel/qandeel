@@ -2193,4 +2193,388 @@ describe('ConversationOrchestratorService', () => {
       expectDispatchedHumanIntelligence();
     });
   });
+
+  // QHIA-014A: the HSE Snapshot is no longer raw-awaited. It is bounded by the
+  // SAME 300 ms shared Human Intelligence foreground budget as Reflection, and
+  // a transport that could not answer degrades to OMISSION while an authority,
+  // integrity or unexpected failure still fails the turn closed.
+  //
+  // Everything here is proven with controlled promises and fake timers. No test
+  // in this block sleeps, and none proves a bound by wall clock.
+  describe('QHIA-014A HSE Snapshot foreground latency-safe degradation', () => {
+    const finalizeNormally = () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    };
+    const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
+    const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+    const finalizeDeepNormally = () => {
+      repository.claimTurn.mockResolvedValue(deepClaim);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
+    };
+    const deepResult = { userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } };
+    // The envelope a turn compiles when the Snapshot lane is ABSENT: the SAME
+    // pure QHIA-013 compiler, given no session reasoning and no QHIA-001
+    // adaptation, plus exactly the independent channels that really survived.
+    const envelopeWithoutSnapshot = (
+      channels: Parameters<typeof buildHumanIntelligenceProviderSemantics>[0] = {},
+    ) => buildHumanIntelligenceProviderSemantics({ ...channels });
+    // UNAVAILABLE is OMISSION, never a measurement answer: nothing downstream of
+    // the Snapshot ran at all, so no EMPTY snapshot, no UNKNOWN metric, no
+    // placeholder ordinal category and no fabricated generatedAt can exist.
+    const expectSnapshotLaneOmitted = (call = 0): void => {
+      expect(himBridge.transform).not.toHaveBeenCalled();
+      expect(himAdaptation.derive).not.toHaveBeenCalled();
+      expect(himConsumptionPolicy.project).not.toHaveBeenCalled();
+      expect(dispatchedHumanIntelligence(call)?.sessionReasoningContext).toBeUndefined();
+      expectNoLegacyHumanIntelligenceFields(call);
+    };
+    const transportUnavailable = () => new ServiceUnavailableException('Human Intelligence Snapshot is unavailable.');
+    const pendingForever = <T>() => new Promise<T>(() => undefined);
+
+    describe('19.1 - a Snapshot that wins the budget is consumed exactly as before', () => {
+      it('consumes an immediate Snapshot normally with one provider call and one of every HIM request', async () => {
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(himSnapshot.getSnapshot).toHaveBeenCalledTimes(1);
+        expect(himBridge.transform).toHaveBeenCalledWith(snapshot);
+        expect(himAdaptation.derive).toHaveBeenCalledWith(himReasoningContext);
+        expect(himConsumptionPolicy.project).toHaveBeenCalledWith('FAST', himReasoningContext);
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expectDispatchedHumanIntelligence();
+        expect(dispatchedHumanIntelligence()!.sessionReasoningContext).toEqual(providerSessionReasoningContext());
+      });
+
+      it('lets a 299 ms Snapshot win the shared budget, deliver its session reasoning, and clear its timer', async () => {
+        jest.useFakeTimers();
+        try {
+          let releaseSnapshot!: (value: HimIntelligenceSnapshot) => void;
+          himSnapshot.getSnapshot.mockReturnValue(new Promise((resolve) => { releaseSnapshot = resolve; }));
+          finalizeNormally();
+          const pending = orchestrator.orchestrate('token', 'user', userTurn);
+          await jest.advanceTimersByTimeAsync(299);
+          // One tick before the budget the foreground is still correctly waiting.
+          expect(router.generate).not.toHaveBeenCalled();
+          releaseSnapshot(snapshot);
+          await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+          expect(himBridge.transform).toHaveBeenCalledWith(snapshot);
+          expectDispatchedHumanIntelligence();
+          expect(dispatchedHumanIntelligence()!.sessionReasoningContext).toBeDefined();
+          // Both bounded budget timers were cleared on their own settlement.
+          expect(jest.getTimerCount()).toBe(0);
+        } finally { jest.useRealTimers(); }
+      });
+    });
+
+    describe('19.2 - the Snapshot can never hold the foreground past the shared 300 ms boundary', () => {
+      it('dispatches at the 300 ms boundary for a Snapshot that is still pending, omitting the Snapshot lane', async () => {
+        jest.useFakeTimers();
+        try {
+          himSnapshot.getSnapshot.mockReturnValue(pendingForever<HimIntelligenceSnapshot>());
+          finalizeNormally();
+          const pending = orchestrator.orchestrate('token', 'user', userTurn);
+          await jest.advanceTimersByTimeAsync(299);
+          expect(router.generate).not.toHaveBeenCalled();
+          await jest.advanceTimersByTimeAsync(1);
+          await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+          expect(router.generate).toHaveBeenCalledTimes(1);
+          expectSnapshotLaneOmitted();
+          // Every other channel is bounded NONE here, so the compiler correctly
+          // emits nothing at all rather than an empty envelope.
+          expect(dispatchedRequest()).not.toHaveProperty('humanIntelligence');
+          expect(repository.failTurn).not.toHaveBeenCalled();
+          expect(jest.getTimerCount()).toBe(0);
+        } finally { jest.useRealTimers(); }
+      });
+
+      it.each([301, 1000, 5000])('never waits for a %s ms Snapshot: it dispatches at 300 ms and discards the late success', async (settleAt) => {
+        jest.useFakeTimers();
+        try {
+          let releaseSnapshot!: (value: HimIntelligenceSnapshot) => void;
+          himSnapshot.getSnapshot.mockReturnValue(new Promise((resolve) => { releaseSnapshot = resolve; }));
+          finalizeNormally();
+          const pending = orchestrator.orchestrate('token', 'user', userTurn);
+          await jest.advanceTimersByTimeAsync(300);
+          await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+          expect(router.generate).toHaveBeenCalledTimes(1);
+          const dispatched = JSON.stringify(dispatchedRequest());
+          expectSnapshotLaneOmitted();
+          // The read finally answers well after the boundary. It is discarded
+          // for good: no consumption, no envelope mutation, no second dispatch,
+          // no second finalization, and nothing kept for any later turn.
+          await jest.advanceTimersByTimeAsync(settleAt - 300);
+          releaseSnapshot(snapshot);
+          await jest.advanceTimersByTimeAsync(0);
+          expect(himBridge.transform).not.toHaveBeenCalled();
+          expect(himAdaptation.derive).not.toHaveBeenCalled();
+          expect(router.generate).toHaveBeenCalledTimes(1);
+          expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+          expect(JSON.stringify(dispatchedRequest())).toBe(dispatched);
+        } finally { jest.useRealTimers(); }
+      });
+
+      it('absorbs a late Snapshot rejection after the boundary with no unhandled rejection and no behavioral effect', async () => {
+        jest.useFakeTimers();
+        try {
+          let rejectSnapshot!: (error: Error) => void;
+          himSnapshot.getSnapshot.mockReturnValue(new Promise((_resolve, reject) => { rejectSnapshot = reject; }));
+          finalizeNormally();
+          const pending = orchestrator.orchestrate('token', 'user', userTurn);
+          await jest.advanceTimersByTimeAsync(300);
+          await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+          // Even an AUTHORITY-class late rejection is inert once the boundary
+          // has passed: the turn is already finalized and cannot be failed.
+          rejectSnapshot(new Error('INTEGRITY_FAILURE'));
+          await jest.advanceTimersByTimeAsync(0);
+          expect(router.generate).toHaveBeenCalledTimes(1);
+          expect(repository.failTurn).not.toHaveBeenCalled();
+          expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+        } finally { jest.useRealTimers(); }
+      });
+    });
+
+    describe('19.3 - a transport that could not answer degrades immediately', () => {
+      it('omits the Snapshot on a ServiceUnavailableException without spending any of the 300 ms budget', async () => {
+        jest.useFakeTimers();
+        try {
+          himSnapshot.getSnapshot.mockRejectedValue(transportUnavailable());
+          finalizeNormally();
+          // No timer advance at all: the turn completes on the immediate
+          // classified transport answer.
+          await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+          expect(router.generate).toHaveBeenCalledTimes(1);
+          expect(himSnapshot.getSnapshot).toHaveBeenCalledTimes(1);
+          expectSnapshotLaneOmitted();
+          expect(repository.failTurn).not.toHaveBeenCalled();
+          expect(jest.getTimerCount()).toBe(0);
+        } finally { jest.useRealTimers(); }
+      });
+    });
+
+    describe('19.5 / 19.6 - authority, integrity and unknown failures stay fail-closed', () => {
+      it.each([
+        'UNSUPPORTED_CONTEXT', 'INVALID_OR_UNOWNED_CONTEXT', 'INTEGRITY_FAILURE', 'unrecognized upstream database failure',
+      ] as const)('fails the turn closed with no provider call when the Snapshot read rejects with %s', async (message) => {
+        repository.claimTurn.mockResolvedValue(claimed);
+        himSnapshot.getSnapshot.mockRejectedValue(new Error(message));
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
+        expect(router.generate).not.toHaveBeenCalled();
+        expect(repository.finalizeTurn).not.toHaveBeenCalled();
+        expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
+      });
+
+      it.each(['transform', 'derive', 'project'] as const)('keeps the HIM %s integrity boundary fail-closed on an AVAILABLE Snapshot', async (stage) => {
+        repository.claimTurn.mockResolvedValue(claimed);
+        if (stage === 'transform') himBridge.transform.mockImplementation(() => { throw new Error('INTEGRITY_FAILURE'); });
+        if (stage === 'derive') himAdaptation.derive.mockImplementation(() => { throw new Error('INTEGRITY_FAILURE'); });
+        if (stage === 'project') himConsumptionPolicy.project.mockImplementation(() => { throw new Error('INTEGRITY_FAILURE'); });
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
+        expect(router.generate).not.toHaveBeenCalled();
+        expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
+      });
+    });
+
+    describe('19.7 - combined worst case', () => {
+      it('dispatches at the 300 ms boundary - never 600 - with all four HIM reads pending forever', async () => {
+        jest.useFakeTimers();
+        try {
+          himSnapshot.getSnapshot.mockReturnValue(pendingForever<HimIntelligenceSnapshot>());
+          himContextualCurrent.getCurrentSelection.mockReturnValue(pendingForever<HimContextualCurrentSelection>());
+          himCrossContextForeground.read.mockReturnValue(pendingForever<HimCrossContextForegroundGuidance>());
+          himBrainContext.read.mockReturnValue(pendingForever<HimBrainContext>());
+          finalizeNormally();
+          const pending = orchestrator.orchestrate('token', 'user', userTurn);
+          await jest.advanceTimersByTimeAsync(299);
+          expect(router.generate).not.toHaveBeenCalled();
+          await jest.advanceTimersByTimeAsync(1);
+          await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+          // Dispatch happened at the 300 ms boundary: the Snapshot and Reflection
+          // budgets are the SAME budget, joined concurrently, never summed.
+          expect(router.generate).toHaveBeenCalledTimes(1);
+          expectSnapshotLaneOmitted();
+          expect(himReflectionConsumption.consume).not.toHaveBeenCalled();
+          expect(dispatchedRequest()).not.toHaveProperty('humanIntelligence');
+          expect(jest.getTimerCount()).toBe(0);
+          // Exactly one request per channel, and no retry, fallback, per-metric
+          // read or second provider call after the boundary.
+          expect(himSnapshot.getSnapshot).toHaveBeenCalledTimes(1);
+          expect(himContextualCurrent.getCurrentSelection).toHaveBeenCalledTimes(1);
+          expect(himContextualCurrent.getCurrentIntelligence).not.toHaveBeenCalled();
+          expect(himCrossContextForeground.read).toHaveBeenCalledTimes(1);
+          expect(himBrainContext.read).toHaveBeenCalledTimes(1);
+          await jest.advanceTimersByTimeAsync(10000);
+          expect(himSnapshot.getSnapshot).toHaveBeenCalledTimes(1);
+          expect(router.generate).toHaveBeenCalledTimes(1);
+          expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+        } finally { jest.useRealTimers(); }
+      });
+    });
+
+    describe('19.8 - independent Human Intelligence channels survive Snapshot unavailability', () => {
+      const degradedSnapshot = () => { himSnapshot.getSnapshot.mockRejectedValue(transportUnavailable()); };
+
+      it('A - Session Reflection guidance still reaches the provider, with no session reasoning and no QHIA-001 adaptation', async () => {
+        degradedSnapshot();
+        himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(1));
+        himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(dispatchedHumanIntelligence()).toEqual(envelopeWithoutSnapshot({ himSessionReflectionGuidance: inviteReflectionGuidance }));
+        expect(dispatchedInstructionIds()).toEqual(['GENTLE_REFLECTION_INVITATION']);
+        expectSnapshotLaneOmitted();
+      });
+
+      it('B - aggregate-v3 behavioral instructions still reach the provider', async () => {
+        degradedSnapshot();
+        himCrossContextForeground.read.mockResolvedValue(
+          crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance, activeGoalMotivationGuidance, activeRelationshipCommunicationGuidance),
+        );
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(dispatchedHumanIntelligence()).toEqual(envelopeWithoutSnapshot({
+          himSituationStressGuidance: activeSituationStressGuidance,
+          himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
+          himGoalMotivationGuidance: activeGoalMotivationGuidance,
+          himRelationshipCommunicationGuidance: activeRelationshipCommunicationGuidance,
+        }));
+        expect(dispatchedInstructionIds().length).toBeGreaterThan(0);
+        expectSnapshotLaneOmitted();
+      });
+
+      it('C - Brain Context still reaches the provider as its own separate data lane', async () => {
+        degradedSnapshot();
+        const brainContext = {
+          contractVersion: 1, source: 'QANDEEL_HIM_BRAIN_CONTEXT_V1', availability: 'AVAILABLE',
+          signals: [{ slot: 'GOAL_CONSISTENCY', numericValue: 2, semanticMappingStatus: 'UNRESOLVED', semanticType: null, freshnessState: 'UNASSESSED', confidenceState: 'UNASSESSED' }],
+        } as HimBrainContext;
+        himBrainContext.read.mockResolvedValue(brainContext);
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(dispatchedHumanIntelligence()).toEqual(envelopeWithoutSnapshot({ himBrainContext: brainContext }));
+        expect(dispatchedHumanIntelligence()!.brainContext).toBeDefined();
+        expectSnapshotLaneOmitted();
+      });
+
+      it('D - all three independent channels survive together and none becomes a second adaptation authority', async () => {
+        degradedSnapshot();
+        himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(5));
+        himReflectionConsumption.consume.mockReturnValue(avoidReflectionGuidance);
+        himCrossContextForeground.read.mockResolvedValue(
+          crossContextGuidance(activeSituationStressGuidance, activeDecisionAttentionGuidance, activeGoalMotivationGuidance, activeRelationshipCommunicationGuidance),
+        );
+        const brainContext = {
+          contractVersion: 1, source: 'QANDEEL_HIM_BRAIN_CONTEXT_V1', availability: 'AVAILABLE',
+          signals: [{ slot: 'SITUATION_AVOIDANCE_FREQUENCY', numericValue: 4, semanticMappingStatus: 'UNRESOLVED', semanticType: null, freshnessState: 'UNASSESSED', confidenceState: 'UNASSESSED' }],
+        } as HimBrainContext;
+        himBrainContext.read.mockResolvedValue(brainContext);
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(dispatchedHumanIntelligence()).toEqual(envelopeWithoutSnapshot({
+          himSessionReflectionGuidance: avoidReflectionGuidance,
+          himSituationStressGuidance: activeSituationStressGuidance,
+          himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
+          himGoalMotivationGuidance: activeGoalMotivationGuidance,
+          himRelationshipCommunicationGuidance: activeRelationshipCommunicationGuidance,
+          himBrainContext: brainContext,
+        }));
+        // The QHIA-001 adaptation is derived from the Snapshot reasoning context
+        // and from nothing else: no other channel, no previous turn, no Memory
+        // and no provider inference may stand in for it.
+        expectSnapshotLaneOmitted();
+        expect(router.generate).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('19.9 - FAST / DEEP parity', () => {
+      it('gives DEEP the same 300 ms boundary and the same discarded late Snapshot', async () => {
+        jest.useFakeTimers();
+        try {
+          let releaseSnapshot!: (value: HimIntelligenceSnapshot) => void;
+          himSnapshot.getSnapshot.mockReturnValue(new Promise((resolve) => { releaseSnapshot = resolve; }));
+          finalizeDeepNormally();
+          const pending = orchestrator.orchestrate('token', 'user', deepTurn);
+          await jest.advanceTimersByTimeAsync(299);
+          expect(router.generate).not.toHaveBeenCalled();
+          await jest.advanceTimersByTimeAsync(1);
+          await expect(pending).resolves.toEqual(deepResult);
+          expect(dispatchedRequest().path).toBe('DEEP');
+          expect(router.generate).toHaveBeenCalledTimes(1);
+          expectSnapshotLaneOmitted();
+          await jest.advanceTimersByTimeAsync(1);
+          releaseSnapshot(snapshot);
+          await jest.advanceTimersByTimeAsync(0);
+          expect(himBridge.transform).not.toHaveBeenCalled();
+          expect(router.generate).toHaveBeenCalledTimes(1);
+        } finally { jest.useRealTimers(); }
+      });
+
+      it('gives DEEP the same immediate transport degradation and the same surviving independent channels', async () => {
+        himSnapshot.getSnapshot.mockRejectedValue(transportUnavailable());
+        himContextualCurrent.getCurrentSelection.mockResolvedValue(reflectionSelection(1));
+        himReflectionConsumption.consume.mockReturnValue(inviteReflectionGuidance);
+        finalizeDeepNormally();
+        await expect(orchestrator.orchestrate('token', 'user', deepTurn)).resolves.toEqual(deepResult);
+        expect(dispatchedRequest().path).toBe('DEEP');
+        expect(dispatchedHumanIntelligence()).toEqual(envelopeWithoutSnapshot({ himSessionReflectionGuidance: inviteReflectionGuidance }));
+        expectSnapshotLaneOmitted();
+      });
+
+      it('gives DEEP the same combined worst case: one dispatch at the 300 ms boundary', async () => {
+        jest.useFakeTimers();
+        try {
+          himSnapshot.getSnapshot.mockReturnValue(pendingForever<HimIntelligenceSnapshot>());
+          himContextualCurrent.getCurrentSelection.mockReturnValue(pendingForever<HimContextualCurrentSelection>());
+          himCrossContextForeground.read.mockReturnValue(pendingForever<HimCrossContextForegroundGuidance>());
+          himBrainContext.read.mockReturnValue(pendingForever<HimBrainContext>());
+          finalizeDeepNormally();
+          const pending = orchestrator.orchestrate('token', 'user', deepTurn);
+          await jest.advanceTimersByTimeAsync(299);
+          expect(router.generate).not.toHaveBeenCalled();
+          await jest.advanceTimersByTimeAsync(1);
+          await expect(pending).resolves.toEqual(deepResult);
+          expect(router.generate).toHaveBeenCalledTimes(1);
+          expect(dispatchedRequest().path).toBe('DEEP');
+          expect(dispatchedRequest()).not.toHaveProperty('humanIntelligence');
+          expect(jest.getTimerCount()).toBe(0);
+        } finally { jest.useRealTimers(); }
+      });
+    });
+
+    describe('no fabricated, stale, or carried-over Snapshot', () => {
+      it('never reuses a previous turn\'s Snapshot when the current turn\'s read is unavailable', async () => {
+        // Turn #1 obtains a real canonical Snapshot and dispatches it.
+        finalizeNormally();
+        await orchestrator.orchestrate('token', 'user', userTurn);
+        expect(dispatchedHumanIntelligence(0)!.sessionReasoningContext).toEqual(providerSessionReasoningContext());
+        // Turn #2's own read is unavailable. Nothing from turn #1 is carried:
+        // there is no cross-turn cache anywhere on this path.
+        himSnapshot.getSnapshot.mockRejectedValue(transportUnavailable());
+        await orchestrator.orchestrate('token', 'user', userTurn);
+        expect(router.generate).toHaveBeenCalledTimes(2);
+        expect(dispatchedRequest(1)).not.toHaveProperty('humanIntelligence');
+        expect(dispatchedHumanIntelligence(1)).toBeUndefined();
+        // Turn #2 performed its OWN read rather than reusing anything.
+        expect(himSnapshot.getSnapshot).toHaveBeenCalledTimes(2);
+        expect(himBridge.transform).toHaveBeenCalledTimes(1);
+      });
+
+      it('never fabricates an EMPTY Snapshot, UNKNOWN metrics, or a placeholder ordinal category on omission', async () => {
+        himSnapshot.getSnapshot.mockRejectedValue(transportUnavailable());
+        himCrossContextForeground.read.mockResolvedValue(
+          crossContextGuidance(activeSituationStressGuidance, noneDecisionAttentionGuidance),
+        );
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        // The envelope exists (an independent channel survived) but carries NO
+        // session reasoning lane at all - not an empty one, not an unknown one.
+        const envelope = dispatchedHumanIntelligence()!;
+        expect(envelope.sessionReasoningContext).toBeUndefined();
+        expect(Object.prototype.hasOwnProperty.call(envelope, 'sessionReasoningContext')).toBe(false);
+        expect(JSON.stringify(envelope)).not.toContain('coverageState');
+        expect(JSON.stringify(envelope)).not.toContain('generatedAt');
+        expect(JSON.stringify(envelope)).not.toContain('UNKNOWN');
+        expectSnapshotLaneOmitted();
+      });
+    });
+  });
 });

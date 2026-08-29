@@ -252,14 +252,18 @@ function assertBrainContextBridgeContract(sources) {
     violated('the Orchestrator launches exactly one Brain Context read');
   if (/await\s+brainContextReadPromise/u.test(exe.orchestrator))
     violated('the Brain Context promise is never awaited: zero incremental foreground wait');
-  if (!/await Promise\.all\(\[himSnapshotPromise, reflectionReadPromise\]\)/u.test(exe.orchestrator))
-    violated('the existing barrier still awaits exactly the Snapshot and Reflection promises');
+  if (!/await Promise\.all\(\[snapshotReadPromise, reflectionReadPromise\]\)/u.test(exe.orchestrator))
+    violated('the existing barrier still awaits exactly the bounded Snapshot and Reflection promises');
   if ((exe.orchestrator.match(/Promise\.all\(/gu) ?? []).length !== 1)
     violated('no second foreground barrier exists: the existing Promise.all stays the only one');
-  if ((exe.orchestrator.match(/setTimeout\(/gu) ?? []).length !== 1)
-    violated('no second foreground timer exists: the pre-existing Reflection budget is the only one');
-  if (!/const SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_MS = 300;/u.test(exe.orchestrator))
-    violated('the existing QHIA-005 Reflection foreground wait budget stays exactly 300 ms');
+  // QHIA-014A: the foreground owns exactly TWO bounded Human Intelligence
+  // budget timers - the pre-existing QHIA-005 Reflection budget and the
+  // QHIA-014A Snapshot budget - both driven by the SAME shared constant. Brain
+  // Context still contributes NEITHER of them and still adds no timer at all.
+  if ((exe.orchestrator.match(/setTimeout\(/gu) ?? []).length !== 2)
+    violated('no third foreground timer exists: Brain Context adds none');
+  if (!/const HUMAN_INTELLIGENCE_FOREGROUND_WAIT_BUDGET_MS = 300;/u.test(exe.orchestrator))
+    violated('the ONE shared Human Intelligence foreground wait budget stays exactly 300 ms');
   if (/setInterval\(|sleep\(|delay\(/u.test(exe.orchestrator)) violated('no sleep or interval is added to the foreground');
   if ((exe.orchestrator.match(/this\.router\.generate\(/gu) ?? []).length !== 1)
     violated('exactly one Model Router invocation exists: Brain Context adds no second provider call');
@@ -591,10 +595,10 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
         '      setTimeout(() => undefined, 25);\n      brainContextReadPromise.then(',
       ),
     }],
-    ['the existing Reflection budget was changed', {
+    ['the shared Human Intelligence foreground budget was changed', {
       orchestrator: shipped.orchestrator.replace(
-        'const SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_MS = 300;',
-        'const SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_MS = 450;',
+        'const HUMAN_INTELLIGENCE_FOREGROUND_WAIT_BUDGET_MS = 300;',
+        'const HUMAN_INTELLIGENCE_FOREGROUND_WAIT_BUDGET_MS = 450;',
       ),
     }],
     ['the Orchestrator launched a second Brain Context read', {

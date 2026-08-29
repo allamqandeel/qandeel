@@ -393,16 +393,22 @@ function assertProviderSemanticsConsolidationContract(sources) {
   // Zero topology change: the pre-existing waits are the only ones.
   if ((exe.orchestrator.match(/Promise\.all\(/gu) ?? []).length !== 1)
     violated('no new foreground barrier exists: the existing Promise.all stays the only one');
-  if ((exe.orchestrator.match(/setTimeout\(/gu) ?? []).length !== 1)
-    violated('no new foreground timer exists: the pre-existing Reflection budget is the only one');
-  if (!/const SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_MS = 300;/u.test(exe.orchestrator))
-    violated('the existing QHIA-005 Reflection foreground wait budget stays exactly 300 ms');
+  // QHIA-014A amended exactly this line and the two below it: the foreground
+  // now owns TWO bounded Human Intelligence budget timers - the pre-existing
+  // QHIA-005 Reflection budget and the QHIA-014A Snapshot budget - both driven
+  // by the SAME shared 300 ms constant and both settled by the SAME single
+  // barrier. A third timer, or a budget that is no longer the shared constant,
+  // still fails here.
+  if ((exe.orchestrator.match(/setTimeout\(/gu) ?? []).length !== 2)
+    violated('exactly the two bounded Human Intelligence foreground budgets exist: no third foreground timer');
+  if (!/const HUMAN_INTELLIGENCE_FOREGROUND_WAIT_BUDGET_MS = 300;/u.test(exe.orchestrator))
+    violated('the ONE shared Human Intelligence foreground wait budget stays exactly 300 ms');
   if (/setInterval\(|sleep\(|delay\(|retry\(/u.test(exe.orchestrator))
     violated('no sleep, interval or retry is added to the foreground');
   if ((exe.orchestrator.match(/this\.router\.generate\(/gu) ?? []).length !== 1)
     violated('exactly one Model Router invocation exists: consolidation adds no second provider call');
-  if (!/await Promise\.all\(\[himSnapshotPromise, reflectionReadPromise\]\)/u.test(exe.orchestrator))
-    violated('the existing barrier still awaits exactly the Snapshot and Reflection promises');
+  if (!/await Promise\.all\(\[snapshotReadPromise, reflectionReadPromise\]\)/u.test(exe.orchestrator))
+    violated('the existing barrier still awaits exactly the bounded Snapshot and Reflection promises');
   if (/await\s+brainContextReadPromise|await\s+crossContextForegroundReadPromise/u.test(exe.orchestrator))
     violated('the existing zero-wait optional reads are still never awaited');
 

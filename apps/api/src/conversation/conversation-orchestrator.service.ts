@@ -12,9 +12,12 @@ import { SAFETY_RESPONSE_GATE, type SafetyResponseGate } from './safety-response
 import { MemoryRetrieverService } from '../memory/memory-retriever.service';
 import { HimTurnContextSelectionService } from '../human-model/him-turn-context-selection.service';
 import { HimIntelligenceSnapshotService } from '../human-model/him-intelligence-snapshot.service';
+import type { HimIntelligenceSnapshot } from '../human-model/him-intelligence-snapshot.types';
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
 import { HimFastDeepConsumptionService } from '../human-model/him-fast-deep-consumption.service';
+import type { HimModelContext } from '../human-model/him-fast-deep-consumption.types';
 import { HimInteractionAdaptationService } from '../human-model/him-interaction-adaptation.service';
+import type { HimInteractionAdaptation } from '../human-model/him-interaction-adaptation.types';
 import { HimContextualCurrentIntelligenceService } from '../human-model/him-contextual-current-intelligence.service';
 import { HimSessionReflectionConsumptionService } from '../human-model/him-session-reflection-consumption.service';
 import type { HimSessionReflectionGuidance } from '../human-model/him-session-reflection-consumption.types';
@@ -30,13 +33,46 @@ import { HypothesisReasoningInvariantError } from '../hypothesis/hypothesis-reas
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 
 const DEEP_INPUT_LENGTH = 1000;
-// QHIA-005 amendment (PR #164): the maximum foreground orchestration time
-// spent waiting for the OPTIONAL Session Reflection enrichment. This is not a
-// database/provider SLA and does not change the shared Data API transport
-// timeout - it only stops a slow-but-not-failed Reflection read from holding
-// the foreground turn hostage. On expiry the foreground treats Reflection as
-// UNAVAILABLE and proceeds without guidance.
-const SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_MS = 300;
+// QHIA-005 amendment (PR #164), generalized by QHIA-014A: the ONE shared
+// maximum foreground orchestration time spent waiting for OPTIONAL Human
+// Intelligence enrichment. This is not a database/provider SLA and does not
+// change the shared 5000 ms Data API transport timeout - it only stops a
+// slow-but-not-failed Human Intelligence read from holding the foreground turn
+// hostage. On expiry the foreground treats that channel as UNAVAILABLE and
+// proceeds without it.
+//
+// QHIA-014A: the HSE Snapshot budget and the QHIA-005 Session Reflection budget
+// are the SAME constant, deliberately. Both bounded reads are launched in the
+// same synchronous HIM launch step and joined by the same single barrier, so
+// the awaited Human Intelligence hold is
+//
+//   max(snapshot bounded hold, reflection bounded hold) <= 300 ms
+//
+// and never their 600 ms sum. There is no second stage, no serial Snapshot-then
+// -Reflection wait, and no 5-second fallback.
+const HUMAN_INTELLIGENCE_FOREGROUND_WAIT_BUDGET_MS = 300;
+
+// QHIA-014A: the Snapshot foreground outcome is a bounded two-state answer.
+//
+// UNAVAILABLE is OMISSION, never a measurement answer: it is not an EMPTY
+// snapshot, not UNKNOWN metrics, not zero/moderate metrics, not a placeholder
+// ordinal category, not a fabricated generatedAt, and never a stale or older
+// snapshot from any previous turn. There is no cross-turn cache on this path.
+type HimSnapshotForegroundRead =
+  | { state: 'AVAILABLE'; value: HimIntelligenceSnapshot }
+  | { state: 'UNAVAILABLE' };
+
+// QHIA-014A: the module-private, structurally typed Snapshot budget expiry.
+//
+// Budget expiry is classified by CONSTRUCTOR IDENTITY, never by substring
+// matching against an arbitrary upstream error message, so no upstream failure
+// can ever impersonate it and no expiry can ever be mistaken for an authority
+// answer. It is never exported, never thrown across a service boundary, and
+// never reaches the caller: the wrapper converts it into UNAVAILABLE at the one
+// place it is created.
+class HimSnapshotForegroundWaitBudgetExceededError extends Error {
+  constructor() { super('HIM_SNAPSHOT_FOREGROUND_WAIT_BUDGET_EXCEEDED'); }
+}
 
 @Injectable()
 export class ConversationOrchestratorService {
@@ -108,11 +144,19 @@ export class ConversationOrchestratorService {
       // request) are LAUNCHED CONCURRENTLY for the same authoritative session
       // selection - Reflection is never a serial network stage after the
       // Snapshot, and never a second full contextual read.
-      const himSnapshotPromise = this.himSnapshot.getSnapshot(
+      //
+      // QHIA-014A: the Snapshot read is STARTED here, synchronously and exactly
+      // once, and is then handed to its own foreground budget boundary. The
+      // foreground never awaits the raw read again: a slow, hung, or
+      // transport-unavailable Snapshot can no longer inherit the shared 5000 ms
+      // Data API timeout, hold the turn past the shared 300 ms Human
+      // Intelligence budget, or fail the turn on a transport that simply could
+      // not answer.
+      const snapshotReadPromise = this.withSnapshotForegroundBudget(this.himSnapshot.getSnapshot(
         accessToken,
         himSelection.contextKind,
         himSelection.contextId,
-      );
+      ));
       // Reflection is optional enrichment: a failed read, or a read still
       // pending when the foreground wait budget expires, stays visible as a
       // rejection through its nested engine span but degrades to no guidance
@@ -204,7 +248,7 @@ export class ConversationOrchestratorService {
         (value) => { if (!brainContextBarrierClosed) brainContextSettled = value; },
         () => undefined,
       );
-      const [himSnapshot, reflectionRead] = await Promise.all([himSnapshotPromise, reflectionReadPromise]);
+      const [snapshotRead, reflectionRead] = await Promise.all([snapshotReadPromise, reflectionReadPromise]);
       // The existing foreground barrier - and the ONLY one. Reading the
       // recorded values here adds no await of any kind: an already-settled
       // aggregate yields all four existing guidance contracts, an
@@ -217,10 +261,24 @@ export class ConversationOrchestratorService {
       const decisionAttentionGuidance = crossContextForegroundSettled?.decisionAttention;
       const goalMotivationGuidance = crossContextForegroundSettled?.goalMotivation;
       const relationshipCommunicationGuidance = crossContextForegroundSettled?.relationshipCommunication;
-      const himReasoningContext = this.himReasoningConsumption.transform(himSnapshot);
-      // The adaptation derives from the reasoning context BEFORE the FAST/DEEP
-      // density projection: it is path-independent and never selects the path.
-      const adaptation = this.himInteractionAdaptation.derive(himReasoningContext);
+      // QHIA-014A: the ENTIRE Snapshot-derived lane runs only on a real
+      // canonical Snapshot. When the Snapshot is UNAVAILABLE nothing here is
+      // called on a fabricated input: no reasoning transform, no QHIA-001
+      // adaptation, no FAST/DEEP projection. The lane is simply absent for this
+      // turn, and the next turn performs its own read.
+      //
+      // The chain itself is unchanged: transform -> derive -> project, with the
+      // adaptation derived from the reasoning context BEFORE the FAST/DEEP
+      // density projection, so it stays path-independent and never selects the
+      // path. Every integrity failure inside it still propagates and fails the
+      // turn closed before provider generation.
+      let snapshotModelContext: HimModelContext | undefined;
+      let adaptation: HimInteractionAdaptation | undefined;
+      if (snapshotRead.state === 'AVAILABLE') {
+        const himReasoningContext = this.himReasoningConsumption.transform(snapshotRead.value);
+        adaptation = this.himInteractionAdaptation.derive(himReasoningContext);
+        snapshotModelContext = this.himFastDeepConsumption.project(selection.path, himReasoningContext);
+      }
       // The pure Reflection consumption boundary fails closed on a malformed
       // selection; on this optional enrichment path that failure also degrades
       // to omitted guidance and never alters the HSE adaptation or the turn.
@@ -228,7 +286,7 @@ export class ConversationOrchestratorService {
       if (reflectionRead.state === 'AVAILABLE') {
         try { reflectionGuidance = this.himSessionReflectionConsumption.consume(reflectionRead.value); } catch { reflectionGuidance = undefined; }
       }
-      return {himContext:this.himFastDeepConsumption.project(selection.path, himReasoningContext),himInteractionAdaptation:adaptation,himSessionReflectionGuidance:reflectionGuidance,himSituationStressGuidance:situationStressGuidance,himDecisionAttentionGuidance:decisionAttentionGuidance,himGoalMotivationGuidance:goalMotivationGuidance,himRelationshipCommunicationGuidance:relationshipCommunicationGuidance,himBrainContext:brainContextSettled};});
+      return {himContext:snapshotModelContext,himInteractionAdaptation:adaptation,himSessionReflectionGuidance:reflectionGuidance,himSituationStressGuidance:situationStressGuidance,himDecisionAttentionGuidance:decisionAttentionGuidance,himGoalMotivationGuidance:goalMotivationGuidance,himRelationshipCommunicationGuidance:relationshipCommunicationGuidance,himBrainContext:brainContextSettled};});
       // QHIA-013: the ONE Human Intelligence provider boundary conversion.
       //
       // Every value above already exists in memory at this point - this is pure
@@ -240,9 +298,17 @@ export class ConversationOrchestratorService {
       // behavior. The zero-wait topology above - the Snapshot read, the 300 ms
       // Reflection budget, the aggregate-v3 read, the Brain Context read, the
       // one Promise.all and the single barrier-close point - is untouched.
+      //
+      // QHIA-014A: `humanIntelligence` is NOT all-or-nothing around the
+      // Snapshot. When the Snapshot lane is absent, the compiler simply
+      // receives no session reasoning and no QHIA-001 adaptation, and the
+      // independent Reflection, aggregate-v3 and Brain Context channels still
+      // compile into the same one envelope exactly as they always did. Only if
+      // every channel is absent does the compiler return undefined and the
+      // envelope stay off the request entirely.
       const humanIntelligence = buildHumanIntelligenceProviderSemantics({
-        himContext,
-        ...(himInteractionAdaptation.adaptationState === 'ACTIVE' ? { himInteractionAdaptation } : {}),
+        ...(himContext ? { himContext } : {}),
+        ...(himInteractionAdaptation?.adaptationState === 'ACTIVE' ? { himInteractionAdaptation } : {}),
         ...(himSessionReflectionGuidance ? { himSessionReflectionGuidance } : {}),
         ...(himSituationStressGuidance ? { himSituationStressGuidance } : {}),
         ...(himDecisionAttentionGuidance ? { himDecisionAttentionGuidance } : {}),
@@ -310,15 +376,70 @@ export class ConversationOrchestratorService {
   // settles into this already-settled promise as a no-op: no unhandled
   // rejection, no late consumption, no second provider call, and no mutation
   // of the completed turn. No transport cancellation is introduced here.
+  //
+  // QHIA-014A changes exactly one thing here: the numeric budget now comes from
+  // the ONE shared Human Intelligence constant. The exact budget-expiry error
+  // string, the engine placement, the degradation handler and every other
+  // Reflection semantic are unchanged.
   private withSessionReflectionForegroundBudget<T>(read: () => Promise<T>): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(
         () => reject(new Error('SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_EXCEEDED')),
-        SESSION_REFLECTION_FOREGROUND_WAIT_BUDGET_MS,
+        HUMAN_INTELLIGENCE_FOREGROUND_WAIT_BUDGET_MS,
       );
       Promise.resolve().then(read).then(
         (value) => { clearTimeout(timer); resolve(value); },
         (error) => { clearTimeout(timer); reject(error); },
+      );
+    });
+  }
+
+  // QHIA-014A: the bounded foreground boundary for the HSE Intelligence
+  // Snapshot, structurally mirroring the QHIA-005 Reflection budget above.
+  //
+  // The read is ALREADY RUNNING when it arrives here - it is started in the
+  // same synchronous HIM launch step as Reflection, aggregate-v3 and Brain
+  // Context - and this wrapper only bounds how long the foreground is willing
+  // to wait for it. Exactly ONE Snapshot request exists per turn: there is no
+  // retry, no fallback Snapshot, no per-metric read, no second call on expiry,
+  // and no transport cancellation.
+  //
+  // It resolves rather than rejects for exactly two classified outcomes, and
+  // rethrows everything else:
+  //
+  //   UNAVAILABLE  <- the shared 300 ms budget expired (typed, module-private
+  //                   identity - never a substring match);
+  //   UNAVAILABLE  <- the Snapshot service classified the failure as transport
+  //                   unavailable and sanitized it into ServiceUnavailableException
+  //                   (missing Data API configuration, fetch/network failure,
+  //                   AbortSignal transport timeout, or an explicitly frozen
+  //                   transient 408/429/502/503/504 infrastructure status);
+  //   RETHROW      <- everything else, unchanged: UNSUPPORTED_CONTEXT,
+  //                   INVALID_OR_UNOWNED_CONTEXT, INTEGRITY_FAILURE, an
+  //                   unrecognized upstream database error, and any ordinary
+  //                   unexpected Error. Unknown stays fail-closed and still
+  //                   fails the turn through the existing outer failure path
+  //                   before any provider generation.
+  //
+  // The timer is always cleared on the read's own settlement, and the
+  // underlying read keeps its handlers attached, so a LATE fulfillment or
+  // rejection after the budget settles into this already-settled promise as a
+  // no-op: no unhandled rejection, no late consumption, no mutation of the
+  // dispatched provider request, no second provider call, no second
+  // finalization, and nothing stored for any later turn.
+  private withSnapshotForegroundBudget(read: Promise<HimIntelligenceSnapshot>): Promise<HimSnapshotForegroundRead> {
+    return new Promise<HimSnapshotForegroundRead>((resolve, reject) => {
+      const settle = (error: unknown): void => {
+        if (error instanceof HimSnapshotForegroundWaitBudgetExceededError || error instanceof ServiceUnavailableException) resolve({ state: 'UNAVAILABLE' });
+        else reject(error);
+      };
+      const timer = setTimeout(
+        () => settle(new HimSnapshotForegroundWaitBudgetExceededError()),
+        HUMAN_INTELLIGENCE_FOREGROUND_WAIT_BUDGET_MS,
+      );
+      read.then(
+        (value) => { clearTimeout(timer); resolve({ state: 'AVAILABLE', value }); },
+        (error) => { clearTimeout(timer); settle(error); },
       );
     });
   }
