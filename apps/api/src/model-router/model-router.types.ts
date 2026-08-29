@@ -4,6 +4,7 @@ import type { HimSessionReflectionGuidance } from '../human-model/him-session-re
 import type { HimSituationStressGuidance } from '../human-model/him-situation-stress-consumption.types';
 import type { HimDecisionAttentionGuidance } from '../human-model/him-decision-attention-consumption.types';
 import type { HimGoalMotivationGuidance } from '../human-model/him-goal-motivation-consumption.types';
+import type { HimRelationshipCommunicationGuidance } from '../human-model/him-relationship-communication-consumption.types';
 import type { HypothesisReasoningContext } from '../hypothesis/hypothesis-reasoning-context.types';
 import type { RecommendationGroundingContext } from '../recommendation/recommendation-grounding.types';
 
@@ -34,6 +35,7 @@ export interface ModelRouterRequest {
   himSituationStressGuidance?: HimSituationStressGuidance;
   himDecisionAttentionGuidance?: HimDecisionAttentionGuidance;
   himGoalMotivationGuidance?: HimGoalMotivationGuidance;
+  himRelationshipCommunicationGuidance?: HimRelationshipCommunicationGuidance;
   hypothesisContext?: HypothesisReasoningContext;
   recommendationContext?: RecommendationGroundingContext;
   locale: 'ar' | 'en' | 'und';
@@ -75,6 +77,20 @@ const ONE_STEP_AT_A_TIME_INSTRUCTION = 'When guidance is otherwise appropriate, 
 // density, reduced cognitive load, a single conversational track, or calmer
 // pacing, all of which remain independently authorized by other signals.
 const SMALL_IMMEDIATE_GOAL_ACTION_INSTRUCTION = 'When goal-related action guidance is otherwise appropriate, keep the immediate action small and bounded rather than expanding it into a larger task bundle.';
+// QHIA-011: the three NEW bounded communication-scaffolding instructions this
+// task introduces. They are declared beside the existing shared constants so
+// they, too, are emitted at most once per turn through the same exact-match
+// dedup set - but they are DELIBERATELY NOT reuses of any existing constant.
+// They are a separate bounded semantic channel about the STRUCTURE of
+// interpersonal communication guidance that is already independently
+// appropriate: they are not compact density, not general cognitive-load
+// reduction, not a single conversational track, not calmer pacing, not generic
+// one-step-at-a-time behaviour, and not a smaller goal action, all of which
+// remain independently authorized by other signals and would mean something
+// else if borrowed here.
+const EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING_INSTRUCTION = 'When relationship-related communication guidance is otherwise appropriate, make any suggested wording explicit and concrete rather than relying on hints, implied meaning, or the other person inferring the main point.';
+const ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT_INSTRUCTION = 'Keep any suggested message or exchange focused on one main point or request at a time rather than bundling several issues together.';
+const CLARITY_NOT_FORCED_AGREEMENT_INSTRUCTION = 'Aim for clear expression and workable understanding; do not make immediate agreement, persuasion, or winning the exchange the goal.';
 
 // Fixed server-authored instruction text per non-DEFAULT directive value.
 // The adaptation renders only these constants: raw metric reasoning is never
@@ -150,8 +166,26 @@ const HIM_GOAL_MOTIVATION_DIRECTIVE_INSTRUCTIONS: Readonly<Partial<Record<HimGoa
   ],
 };
 
+// QHIA-011: the fixed server-authored instruction set for the ACTIVE
+// Relationship-bound communication-scaffolding directive. It asks for exactly
+// the three bounded structural changes - explicit rather than implied wording,
+// one main point or request at a time, clarity rather than forced agreement -
+// and it reuses NO existing constant: none of the existing shared reductions
+// means this, and borrowing one merely because the wording sounds similar would
+// silently widen an unrelated channel. There is no second, stronger, or
+// additive direction, and no directive that increases communication burden,
+// complexity, topics, disclosure, confrontation, persuasion, pressure, or
+// provider freedom.
+const HIM_RELATIONSHIP_COMMUNICATION_DIRECTIVE_INSTRUCTIONS: Readonly<Partial<Record<HimRelationshipCommunicationGuidance['directive'], readonly string[]>>> = {
+  STRUCTURE_RELATIONSHIP_COMMUNICATION: [
+    EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING_INSTRUCTION,
+    ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT_INSTRUCTION,
+    CLARITY_NOT_FORCED_AGREEMENT_INSTRUCTION,
+  ],
+};
+
 export function composeServerGuidance(
-  request: Pick<ModelRouterRequest, 'behavioralGuidance' | 'safetyGuidance' | 'memoryContext' | 'himContext' | 'himInteractionAdaptation' | 'himSessionReflectionGuidance' | 'himSituationStressGuidance' | 'himDecisionAttentionGuidance' | 'himGoalMotivationGuidance' | 'hypothesisContext' | 'recommendationContext'>,
+  request: Pick<ModelRouterRequest, 'behavioralGuidance' | 'safetyGuidance' | 'memoryContext' | 'himContext' | 'himInteractionAdaptation' | 'himSessionReflectionGuidance' | 'himSituationStressGuidance' | 'himDecisionAttentionGuidance' | 'himGoalMotivationGuidance' | 'himRelationshipCommunicationGuidance' | 'hypothesisContext' | 'recommendationContext'>,
 ): string {
   let serverGuidance = request.safetyGuidance
     ? `${request.behavioralGuidance}\n\nSafety guidance for this turn:\n${request.safetyGuidance}`
@@ -216,6 +250,22 @@ export function composeServerGuidance(
     if (instructions.length) {
       for (const instruction of instructions) renderedReductionInstructions.add(instruction);
       serverGuidance += `\n\nGoal-bound action-pacing guidance follows as a server-owned behavioral instruction. It is subordinate to Safety guidance, the base Behavioral Policy, and Recommendation authority: all remain higher-authority instructions that this guidance can never override, and it never reduces or cancels any other active burden reduction.${instructions.map((instruction) => `\n- ${instruction}`).join('')}\nThis guidance changes the size and pressure of an action step only, and only when goal-related action guidance is already appropriate under the current conversational and recommendation policy: it never makes action guidance appropriate by itself. It is not a statement about the user, not a claim that the user's motivation is low, not a diagnosis, and not a readiness, ability, capability, capacity, availability, priority, importance, obligation, commitment, discipline, productivity, execution, energy, excitement, or mood assessment, and it is not safety evidence. It authorizes no claim, no interpretation, and no invented detail about the user or about any goal, does not change, evaluate, rank, or question the goal, does not say a goal is good, bad, important, or unimportant, does not tell the user to keep, abandon, delay, accelerate, or re-prioritise a goal, does not suggest the user needs motivation or should be pushed harder, does not change what is recommended or concluded, does not authorize or block a recommendation, does not prove or strengthen a hypothesis, does not select or require a question, does not add reflection or follow-up prompting, does not change Safety authority or FAST/DEEP routing, does not authorize trend, freshness, or recency inference, and never permits naming or implying any internal signal, measurement, contract, or state to the user.`;
+    }
+  }
+  if (request.himRelationshipCommunicationGuidance?.guidanceState === 'ACTIVE') {
+    // Only the instructions no other server-owned channel already emitted are
+    // rendered. These three are new semantic instructions that no existing
+    // channel produces, so in practice the filter removes nothing here - it
+    // exists so that a future channel asking for the SAME bounded instruction
+    // is normalized to one rendering rather than compounded, and so that this
+    // block can never duplicate its own instructions. The union stays monotonic
+    // and arithmetic-free: two or more agreeing signals never produce a
+    // stronger interpretation than one.
+    const instructions = (HIM_RELATIONSHIP_COMMUNICATION_DIRECTIVE_INSTRUCTIONS[request.himRelationshipCommunicationGuidance.directive] ?? [])
+      .filter((instruction) => !renderedReductionInstructions.has(instruction));
+    if (instructions.length) {
+      for (const instruction of instructions) renderedReductionInstructions.add(instruction);
+      serverGuidance += `\n\nRelationship-bound communication scaffolding guidance follows as a server-owned behavioral instruction. It is subordinate to Safety guidance, the base Behavioral Policy, and Recommendation authority: all remain higher-authority instructions that this guidance can never override, and it never reduces or cancels any other active burden reduction.${instructions.map((instruction) => `\n- ${instruction}`).join('')}\nThis guidance changes only the structure of interpersonal communication guidance that is already independently appropriate under the current conversational, safety, and recommendation policy: it never makes communicating, contacting, replying, disclosing, explaining, apologizing, negotiating, persuading, reconciling, or confronting appropriate by itself, and it never creates such a suggestion where none was already warranted. If no relationship communication suggestion is otherwise appropriate, it changes nothing. It is not a statement about the user, about the other person, or about the relationship: it is not a claim that communication is poor or good, not a claim that either person communicates badly or well, not an assessment of anyone's communication skill, and not a judgement of how healthy, close, satisfying, compatible, honest, or conflicted the relationship is. It says nothing about trust, about repair after a rupture, about emotional safety, about how often disagreement happens, about who is at fault, or about whether anyone is safe or unsafe, and it is not evidence of abuse, manipulation, coercion, or danger. It is not safety evidence. It authorizes no claim, no interpretation, and no invented detail about the user, the other person, or the relationship, does not indicate whether the user should stay, leave, get in touch, avoid getting in touch, share more, hold back, confront, forgive, or reconcile, does not promise that an exchange will go well, does not change what is recommended or concluded, does not authorize or block a recommendation, does not prove or strengthen a hypothesis, does not select or require a question, does not add reflection or follow-up prompting, does not change Safety authority or FAST/DEEP routing, does not authorize trend, freshness, or recency inference, and never permits naming or implying any internal signal, measurement, contract, or state to the user.`;
     }
   }
   if (request.memoryContext?.length) {

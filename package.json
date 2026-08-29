@@ -55,6 +55,7 @@
     "verify:him-decision-attention-foreground-consumption:integration": "node --env-file-if-exists=.env database/verify-migration-0057.mjs",
     "verify:him-cross-context-foreground-aggregation:integration": "node --env-file-if-exists=.env database/verify-migration-0058.mjs",
     "verify:him-goal-motivation-foreground-consumption:integration": "node --env-file-if-exists=.env database/verify-migration-0059.mjs",
+    "verify:him-relationship-communication-foreground-consumption:integration": "node --env-file-if-exists=.env database/verify-migration-0060.mjs",
     "verify:him-trends:integration": "node --env-file-if-exists=.env database/verify-him-trends-v1.mjs",
     "verify:him-snapshot:integration": "node --env-file-if-exists=.env database/verify-him-intelligence-snapshot-v1.mjs",
     "verify:background-him-runtime-consumption:integration": "node --env-file-if-exists=.env database/verify-migration-0037.mjs",

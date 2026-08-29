@@ -2,35 +2,43 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-// QHIA-010 application static contract.
+// QHIA-011 application static contract.
 //
 // Freezes the APPLICATION side of the cross-context foreground architecture -
 // the half that no database verifier and no Jest spec can freeze on its own:
 //
 //   * the production repository issues EXACTLY ONE external request, against
-//     the migration-0059 aggregate-v2 endpoint and never the retired
-//     aggregate-v1 endpoint;
-//   * the application transport contract is an explicit THREE-slot v2 envelope
+//     the migration-0060 aggregate-v3 endpoint and never the retired
+//     aggregate-v1 or aggregate-v2 endpoints;
+//   * the application transport contract is an explicit FOUR-slot v3 envelope
 //     in the frozen order 1/SITUATION_STRESS 2/DECISION_ATTENTION
-//     3/GOAL_MOTIVATION;
+//     3/GOAL_MOTIVATION 4/RELATIONSHIP_COMMUNICATION, while the symbol named V2
+//     keeps meaning exactly the three-slot contract it always meant;
 //   * the aggregate service delegates every channel to its REAL existing
-//     semantic consumer - including the real QHIA-010 Goal consumer - and
-//     interprets nothing itself;
+//     semantic consumer - including the real QHIA-011 Relationship consumer -
+//     and interprets nothing itself;
 //   * the Conversation Orchestrator launches exactly one cross-context
-//     foreground read, never a direct Goal read, and adds no timeout, barrier,
-//     await, or Promise.all member of its own - the pre-existing 300 ms
+//     foreground read, never a direct Relationship read, and adds no timeout,
+//     barrier, await, or Promise.all member of its own - the pre-existing 300 ms
 //     QHIA-005 Reflection budget stays the only foreground wait;
-//   * the provider receives a SEPARATE optional Goal field, rendered only when
-//     that field is ACTIVE, through the one common composeServerGuidance
-//     boundary with exact-match dedup.
+//   * the provider receives a SEPARATE optional Relationship field, rendered
+//     only when that field is ACTIVE, through the one common
+//     composeServerGuidance boundary with exact-match dedup, and never borrows
+//     an unrelated burden-reduction constant;
+//   * the QHIA-011 consumer pins the EXPECTED canonical HRS / UNRESOLVED / null
+//     identity - accepting it rather than rejecting it - and the shared QHIA-004
+//     projection stays generic;
+//   * the Full Intelligence smoke transport allowlist and census really name the
+//     v3 endpoint, really separate ATTEMPT from COMPLETION, and really refuse
+//     every retired transport.
 //
 // Every rule below is executed by ONE guard function, and the anti-vacuity
 // fixtures drive that same real guard over deliberately drifted sources - so
 // "this contract would catch regression X" is proven, never assumed.
 //
 // Forward-safe: nothing here forbids a later slot, a later consumer, a later
-// aggregate version, or a later migration. It freezes this task's own wiring
-// only.
+// aggregate version, a later migration, or a later resolution of the HRS
+// Foundation semantic mapping. It freezes this task's own wiring only.
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
 // Negatives run on EXECUTABLE source only: every file's own prose legitimately
@@ -45,25 +53,30 @@ const SOURCES = Object.freeze({
   aggregateRepository: 'apps/api/src/human-model/him-cross-context-foreground.repository.ts',
   aggregateTypes: 'apps/api/src/human-model/him-cross-context-foreground.types.ts',
   aggregateService: 'apps/api/src/human-model/him-cross-context-foreground-aggregation.service.ts',
-  goalRepository: 'apps/api/src/human-model/him-goal-motivation.repository.ts',
-  goalService: 'apps/api/src/human-model/him-goal-motivation-consumption.service.ts',
-  goalTypes: 'apps/api/src/human-model/him-goal-motivation-consumption.types.ts',
+  relationshipRepository: 'apps/api/src/human-model/him-relationship-communication.repository.ts',
+  relationshipService: 'apps/api/src/human-model/him-relationship-communication-consumption.service.ts',
+  relationshipTypes: 'apps/api/src/human-model/him-relationship-communication-consumption.types.ts',
   orchestrator: 'apps/api/src/conversation/conversation-orchestrator.service.ts',
   modelRouter: 'apps/api/src/model-router/model-router.types.ts',
   himModule: 'apps/api/src/human-model/him.module.ts',
+  smokeAdapters: 'apps/api/scripts/full-intelligence-e2e-smoke/pg-foreground-intelligence.adapters.ts',
+  smokeRuntime: 'apps/api/scripts/verify-full-intelligence-end-to-end-runtime.ts',
 });
 
 const shipped = Object.freeze(Object.fromEntries(
   Object.entries(SOURCES).map(([key, path]) => [key, read(path)]),
 ));
 
+const AGGREGATE_V3_RPC = 'rpc/read_him_session_cross_context_foreground_v3';
 const AGGREGATE_V2_RPC = 'rpc/read_him_session_cross_context_foreground_v2';
 const AGGREGATE_V1_RPC = 'rpc/read_him_session_cross_context_foreground_v1';
-const GOAL_RPC = 'rpc/read_him_session_goal_motivation_v1';
-const SMALL_IMMEDIATE_ACTION_INSTRUCTION = 'When goal-related action guidance is otherwise appropriate, keep the immediate action small and bounded rather than expanding it into a larger task bundle.';
+const RELATIONSHIP_RPC = 'rpc/read_him_session_relationship_communication_v1';
+const EXPLICIT_WORDING_INSTRUCTION = 'When relationship-related communication guidance is otherwise appropriate, make any suggested wording explicit and concrete rather than relying on hints, implied meaning, or the other person inferring the main point.';
+const ONE_MAIN_POINT_INSTRUCTION = 'Keep any suggested message or exchange focused on one main point or request at a time rather than bundling several issues together.';
+const CLARITY_INSTRUCTION = 'Aim for clear expression and workable understanding; do not make immediate agreement, persuasion, or winning the exchange the goal.';
 
 function violated(property) {
-  throw new Error(`QHIA-010 application transport contract violated: ${property}`);
+  throw new Error(`QHIA-011 application transport contract violated: ${property}`);
 }
 
 /**
@@ -73,62 +86,102 @@ function violated(property) {
 function assertCrossContextForegroundApplicationContract(sources) {
   const exe = Object.fromEntries(Object.entries(sources).map(([key, source]) => [key, executable(source)]));
 
-  // 1. ONE external request, against the v2 endpoint, and never the retired v1.
+  // 1. ONE external request, against the v3 endpoint, and never a retired one.
   if ((exe.aggregateRepository.match(/this\.dataApi\.request/gu) ?? []).length !== 1)
     violated('the aggregate repository holds exactly one external Data API call site');
-  if (!exe.aggregateRepository.includes(`'${AGGREGATE_V2_RPC}'`))
-    violated('the production repository requests the migration-0059 aggregate-v2 endpoint');
-  if (exe.aggregateRepository.includes(AGGREGATE_V1_RPC))
-    violated('the retired aggregate-v1 endpoint is never requested by the application');
-  for (const retired of [GOAL_RPC, 'rpc/read_him_session_situation_stress_v1', 'rpc/read_him_session_decision_attention_v1', 'rpc/read_him_session_context_bindings_v1']) {
+  if (!exe.aggregateRepository.includes(`'${AGGREGATE_V3_RPC}'`))
+    violated('the production repository requests the migration-0060 aggregate-v3 endpoint');
+  for (const retired of [AGGREGATE_V2_RPC, AGGREGATE_V1_RPC]) {
     if (exe.aggregateRepository.includes(retired))
-      violated(`the aggregate repository issues no direct per-channel request: found ${retired}`);
+      violated(`the retired ${retired} endpoint is never requested by the application`);
   }
-  if ((exe.goalRepository.match(/this\.dataApi\.request/gu) ?? []).length !== 1)
-    violated('the direct Goal repository holds exactly one external Data API call site');
-  if (!exe.goalRepository.includes(`'${GOAL_RPC}'`))
-    violated('the direct Goal repository requests the migration-0059 Goal authority');
+  for (const perChannel of [RELATIONSHIP_RPC, 'rpc/read_him_session_goal_motivation_v1', 'rpc/read_him_session_situation_stress_v1', 'rpc/read_him_session_decision_attention_v1', 'rpc/read_him_session_context_bindings_v1']) {
+    if (exe.aggregateRepository.includes(perChannel))
+      violated(`the aggregate repository issues no direct per-channel request: found ${perChannel}`);
+  }
+  if ((exe.relationshipRepository.match(/this\.dataApi\.request/gu) ?? []).length !== 1)
+    violated('the direct Relationship repository holds exactly one external Data API call site');
+  if (!exe.relationshipRepository.includes(`'${RELATIONSHIP_RPC}'`))
+    violated('the direct Relationship repository requests the migration-0060 Relationship authority');
 
-  // 2. The frozen three-slot v2 application envelope, in transport order.
-  for (const [order, slot] of [[1, 'SITUATION_STRESS'], [2, 'DECISION_ATTENTION'], [3, 'GOAL_MOTIVATION']]) {
+  // 2. The frozen four-slot v3 application envelope, in transport order, and
+  //    the UNMUTATED three-slot meaning of the symbol named V2.
+  for (const [order, slot] of [[1, 'SITUATION_STRESS'], [2, 'DECISION_ATTENTION'], [3, 'GOAL_MOTIVATION'], [4, 'RELATIONSHIP_COMMUNICATION']]) {
     if (!new RegExp(`order:\\s*${order},\\s*slot:\\s*HIM_CROSS_CONTEXT_FOREGROUND_${slot}_SLOT`, 'u').test(exe.aggregateTypes))
-      violated(`the v2 envelope declares slot ${order}/${slot} in its frozen transport position`);
+      violated(`the v3 envelope declares slot ${order}/${slot} in its frozen transport position`);
   }
-  if (!/HIM_CROSS_CONTEXT_FOREGROUND_GOAL_MOTIVATION_SLOT = 'GOAL_MOTIVATION'/u.test(exe.aggregateTypes))
-    violated('the third frozen slot label is GOAL_MOTIVATION');
-  const slotTable = exe.aggregateTypes.slice(
-    exe.aggregateTypes.indexOf('HIM_CROSS_CONTEXT_FOREGROUND_V2_SLOTS'),
-    exe.aggregateTypes.indexOf('] as const);', exe.aggregateTypes.indexOf('HIM_CROSS_CONTEXT_FOREGROUND_V2_SLOTS')),
-  );
-  const declaredOrder = [...slotTable.matchAll(/HIM_CROSS_CONTEXT_FOREGROUND_([A-Z_]+)_SLOT\b/gu)].map((match) => match[1]);
-  if (declaredOrder.join(',') !== 'SITUATION_STRESS,DECISION_ATTENTION,GOAL_MOTIVATION')
-    violated('the v2 envelope is exactly three slots in exactly the frozen transport order');
-  if (!/contractVersion: 2;/u.test(exe.aggregateTypes))
-    violated('the application aggregate guidance contract is explicitly versioned to 2');
-  if (!/goalMotivation: HimGoalMotivationGuidance;/u.test(exe.aggregateTypes))
-    violated('the v2 guidance contract carries a separate Goal Motivation channel');
+  if (!/HIM_CROSS_CONTEXT_FOREGROUND_RELATIONSHIP_COMMUNICATION_SLOT = 'RELATIONSHIP_COMMUNICATION'/u.test(exe.aggregateTypes))
+    violated('the fourth frozen slot label is RELATIONSHIP_COMMUNICATION');
+  const slotTable = (symbol) => {
+    const start = exe.aggregateTypes.indexOf(`${symbol} = Object.freeze([`);
+    if (start < 0) violated(`the ${symbol} slot table exists`);
+    return exe.aggregateTypes.slice(start, exe.aggregateTypes.indexOf('] as const);', start));
+  };
+  const declaredOrder = (symbol) => [...slotTable(symbol).matchAll(/HIM_CROSS_CONTEXT_FOREGROUND_([A-Z_]+)_SLOT\b/gu)]
+    .map((match) => match[1]).join(',');
+  if (declaredOrder('HIM_CROSS_CONTEXT_FOREGROUND_V3_SLOTS') !== 'SITUATION_STRESS,DECISION_ATTENTION,GOAL_MOTIVATION,RELATIONSHIP_COMMUNICATION')
+    violated('the v3 envelope is exactly four slots in exactly the frozen transport order');
+  if (declaredOrder('HIM_CROSS_CONTEXT_FOREGROUND_V2_SLOTS') !== 'SITUATION_STRESS,DECISION_ATTENTION,GOAL_MOTIVATION')
+    violated('the symbol named V2 still means exactly the frozen three-slot contract: its meaning is never silently mutated');
+  if (!/contractVersion: 3;/u.test(exe.aggregateTypes))
+    violated('the application aggregate guidance contract is explicitly versioned to 3');
+  if (!/relationshipCommunication: HimRelationshipCommunicationGuidance;/u.test(exe.aggregateTypes))
+    violated('the v3 guidance contract carries a separate Relationship Communication channel');
 
   // 3. The aggregate delegates meaning to the REAL existing consumers only.
-  if (!exe.aggregateService.includes('HimGoalMotivationConsumptionService'))
-    violated('the aggregate service delegates the Goal slot to the real QHIA-010 consumer');
-  if ((exe.aggregateService.match(/consumeSourceRows/gu) ?? []).length !== 3)
-    violated('the aggregate service delegates exactly three channels to their existing pure consumers');
-  if (!/contractVersion: 2,/u.test(exe.aggregateService))
-    violated('the aggregate service returns the explicit v2 guidance contract');
-  if (!exe.aggregateService.includes('HIM_CROSS_CONTEXT_FOREGROUND_V2_SLOTS.length'))
-    violated('the aggregate service validates the envelope against the frozen v2 slot table');
-  for (const forbidden of ['numeric_value', 'semantic_type', 'guidanceState', 'directive', 'hse.', 'projectHimContextualCurrentSlot']) {
+  if (!exe.aggregateService.includes('HimRelationshipCommunicationConsumptionService'))
+    violated('the aggregate service delegates the Relationship slot to the real QHIA-011 consumer');
+  if ((exe.aggregateService.match(/consumeSourceRows/gu) ?? []).length !== 4)
+    violated('the aggregate service delegates exactly four channels to their existing pure consumers');
+  if (!/contractVersion: 3,/u.test(exe.aggregateService))
+    violated('the aggregate service returns the explicit v3 guidance contract');
+  if (!exe.aggregateService.includes('HIM_CROSS_CONTEXT_FOREGROUND_V3_SLOTS.length'))
+    violated('the aggregate service validates the envelope against the frozen v3 slot table');
+  for (const forbidden of ['numeric_value', 'semantic_type', 'guidanceState', 'directive', 'hrs.', 'hse.', 'projectHimContextualCurrentSlot']) {
     if (exe.aggregateService.includes(forbidden))
       violated(`the aggregate service interprets no channel content: found ${forbidden}`);
   }
 
-  // 4. The Orchestrator: one launch, no direct Goal read, no new wait.
+  // 4. The QHIA-011 consumer owns Communication meaning and pins the EXPECTED
+  //    canonical identity - accepting UNRESOLVED / null rather than rejecting it.
+  if (!exe.relationshipService.includes('projectHimContextualCurrentSlot'))
+    violated('the Relationship consumer reuses the shared QHIA-004 projection');
+  if (!/HIM_RELATIONSHIP_COMMUNICATION_SEMANTIC_MAPPING_STATUS = 'UNRESOLVED'/u.test(exe.relationshipTypes))
+    violated('the frozen Foundation semantic mapping status stays UNRESOLVED');
+  if (!/HIM_RELATIONSHIP_COMMUNICATION_SEMANTIC_TYPE = null/u.test(exe.relationshipTypes))
+    violated('the frozen Foundation semantic type stays null: no semantic type is invented');
+  if (!/HIM_RELATIONSHIP_COMMUNICATION_HIF_OWNER = 'HRS'/u.test(exe.relationshipTypes))
+    violated('the frozen HIF owner stays HRS');
+  if (!/HIM_RELATIONSHIP_COMMUNICATION_METRIC_KEY = 'hrs\.communication'/u.test(exe.relationshipTypes))
+    violated('the frozen metric identity stays hrs.communication');
+  if (!/HIM_RELATIONSHIP_COMMUNICATION_CONTEXT_KIND = 'RELATIONSHIP'/u.test(exe.relationshipTypes))
+    violated('the frozen context kind stays RELATIONSHIP');
+  if (!/HimRelationshipCommunicationDirective = 'DEFAULT' \| 'STRUCTURE_RELATIONSHIP_COMMUNICATION';/u.test(exe.relationshipTypes))
+    violated('exactly one non-default directive exists: there is no second, stronger, or opposite direction');
+  for (const forbidden of ['hrs.relationship-trust', 'hrs.repair', 'hrs.emotional-safety', "'STATE'", "'RESOLVED'", "'SITUATION'", "'DECISION'", "'GOAL'"]) {
+    if (exe.relationshipService.includes(forbidden) || exe.relationshipTypes.includes(forbidden))
+      violated(`the QHIA-011 boundary activates exactly RELATIONSHIP + hrs.communication@1: found ${forbidden}`);
+  }
+  const projection = executable(read('apps/api/src/human-model/him-contextual-current-projection.ts'));
+  for (const forbidden of ['hrs.communication', 'RelationshipCommunication', "'RELATIONSHIP'", 'STRUCTURE_RELATIONSHIP_COMMUNICATION', "'HRS'"]) {
+    if (projection.includes(forbidden)) violated(`the shared QHIA-004 projection stays generic: ${forbidden}`);
+  }
+  // Anti-over-fix control: the shared projection must keep BOTH generic
+  // semantic branches. A QHIA-011 boundary rule pushed down into it would break
+  // every other HIM consumer.
+  for (const generic of ["row.semantic_mapping_status === 'RESOLVED'", "row.semantic_mapping_status === 'UNRESOLVED'"]) {
+    if (!projection.includes(generic))
+      violated(`the shared QHIA-004 projection keeps its generic semantic branches: ${generic}`);
+  }
+
+  // 5. The Orchestrator: one launch, no direct Relationship read, no new wait.
   if ((exe.orchestrator.match(/this\.himCrossContextForeground\.read\(/gu) ?? []).length !== 1)
     violated('the Orchestrator launches exactly one cross-context foreground read');
   for (const forbidden of [
+    'HimRelationshipCommunicationConsumptionService', 'HimRelationshipCommunicationRepository',
     'HimGoalMotivationConsumptionService', 'HimGoalMotivationRepository',
     'HimSituationStressConsumptionService', 'HimDecisionAttentionConsumptionService',
-    GOAL_RPC, AGGREGATE_V1_RPC,
+    RELATIONSHIP_RPC, AGGREGATE_V2_RPC, AGGREGATE_V1_RPC,
   ]) {
     if (exe.orchestrator.includes(forbidden))
       violated(`the Orchestrator reaches every cross-context channel through the aggregate only: found ${forbidden}`);
@@ -144,86 +197,141 @@ function assertCrossContextForegroundApplicationContract(sources) {
   if (/await\s+crossContextForegroundReadPromise/u.test(exe.orchestrator))
     violated('the cross-context aggregate is never awaited: zero incremental foreground wait');
   // The provider field is passed ONLY when the decoded guidance is ACTIVE.
-  if (!/\.\.\.\(himGoalMotivationGuidance\?\.guidanceState === 'ACTIVE' \? \{ himGoalMotivationGuidance \} : \{\}\)/u.test(exe.orchestrator))
-    violated('the Goal provider field is passed only when the decoded guidance is ACTIVE');
+  if (!/\.\.\.\(himRelationshipCommunicationGuidance\?\.guidanceState === 'ACTIVE' \? \{ himRelationshipCommunicationGuidance \} : \{\}\)/u.test(exe.orchestrator))
+    violated('the Relationship provider field is passed only when the decoded guidance is ACTIVE');
 
-  // 5. The provider contract: a separate optional field, ACTIVE-gated, rendered
+  // 6. The provider contract: a separate optional field, ACTIVE-gated, rendered
   //    through the one common boundary with exact-match dedup.
-  if (!/himGoalMotivationGuidance\?: HimGoalMotivationGuidance;/u.test(exe.modelRouter))
-    violated('the provider request carries a separate optional Goal guidance field');
-  if ((exe.modelRouter.match(/const SMALL_IMMEDIATE_GOAL_ACTION_INSTRUCTION = /gu) ?? []).length !== 1)
-    violated('the one new bounded reduction instruction is declared exactly once');
-  if (!exe.modelRouter.includes(SMALL_IMMEDIATE_ACTION_INSTRUCTION))
-    violated('the exact frozen small-immediate-action instruction text is preserved');
-  const goalInstructions = exe.modelRouter.slice(
-    exe.modelRouter.indexOf('REDUCE_GOAL_ACTION_BURDEN: ['),
-    exe.modelRouter.indexOf('];', exe.modelRouter.indexOf('REDUCE_GOAL_ACTION_BURDEN: [')),
+  if (!/himRelationshipCommunicationGuidance\?: HimRelationshipCommunicationGuidance;/u.test(exe.modelRouter))
+    violated('the provider request carries a separate optional Relationship guidance field');
+  for (const [constant, text] of [
+    ['EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING_INSTRUCTION', EXPLICIT_WORDING_INSTRUCTION],
+    ['ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT_INSTRUCTION', ONE_MAIN_POINT_INSTRUCTION],
+    ['CLARITY_NOT_FORCED_AGREEMENT_INSTRUCTION', CLARITY_INSTRUCTION],
+  ]) {
+    if ((exe.modelRouter.match(new RegExp(`const ${constant} = `, 'gu')) ?? []).length !== 1)
+      violated(`the bounded instruction ${constant} is declared exactly once`);
+    if (!exe.modelRouter.includes(text)) violated(`the exact frozen instruction text is preserved: ${constant}`);
+  }
+  const relationshipInstructions = exe.modelRouter.slice(
+    exe.modelRouter.indexOf('STRUCTURE_RELATIONSHIP_COMMUNICATION: ['),
+    exe.modelRouter.indexOf('];', exe.modelRouter.indexOf('STRUCTURE_RELATIONSHIP_COMMUNICATION: [')),
   );
-  for (const required of ['SMALL_IMMEDIATE_GOAL_ACTION_INSTRUCTION', 'REDUCE_STEERING_PRESSURE_INSTRUCTION', 'ONE_STEP_AT_A_TIME_INSTRUCTION']) {
-    if (!goalInstructions.includes(required))
-      violated(`the ACTIVE Goal directive renders the exact ${required}`);
+  for (const required of ['EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING_INSTRUCTION', 'ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT_INSTRUCTION', 'CLARITY_NOT_FORCED_AGREEMENT_INSTRUCTION']) {
+    if (!relationshipInstructions.includes(required))
+      violated(`the ACTIVE Relationship directive renders the exact ${required}`);
   }
-  for (const forbidden of ['REDUCE_COGNITIVE_LOAD_INSTRUCTION', 'SINGLE_CONVERSATIONAL_TRACK_INSTRUCTION', 'CALMER_DELIVERY_PACING_INSTRUCTION', 'COMPACT']) {
-    if (goalInstructions.includes(forbidden))
-      violated(`Goal Motivation alone never authorizes ${forbidden}`);
+  for (const forbidden of ['REDUCE_COGNITIVE_LOAD_INSTRUCTION', 'SINGLE_CONVERSATIONAL_TRACK_INSTRUCTION', 'CALMER_DELIVERY_PACING_INSTRUCTION', 'REDUCE_STEERING_PRESSURE_INSTRUCTION', 'ONE_STEP_AT_A_TIME_INSTRUCTION', 'SMALL_IMMEDIATE_GOAL_ACTION_INSTRUCTION', 'COMPACT']) {
+    if (relationshipInstructions.includes(forbidden))
+      violated(`Relationship Communication alone never authorizes ${forbidden}`);
   }
-  if (!/if \(request\.himGoalMotivationGuidance\?\.guidanceState === 'ACTIVE'\) \{/u.test(exe.modelRouter))
-    violated('the Goal provider block renders only for an ACTIVE guidance state');
-  // Exactly the Goal rendering branch: from its own guard to the start of the
-  // next server-owned channel, so the negatives below never run over another
-  // channel's legitimate prose.
-  const goalBlockStart = exe.modelRouter.indexOf("if (request.himGoalMotivationGuidance?.guidanceState === 'ACTIVE') {");
-  const goalBlockEnd = exe.modelRouter.indexOf('\n  if (request.', goalBlockStart + 1);
-  if (goalBlockStart < 0 || goalBlockEnd < 0) violated('the Goal rendering branch is a bounded block of the common composition');
-  const goalBlock = exe.modelRouter.slice(goalBlockStart, goalBlockEnd);
-  if (!/\.filter\(\(instruction\) => !renderedReductionInstructions\.has\(instruction\)\)/u.test(goalBlock))
-    violated('the Goal block deduplicates against every instruction another channel already rendered');
-  if (!/Goal-bound action-pacing guidance follows/u.test(goalBlock))
-    violated('the rendered block is framed as goal-bound action-pacing guidance');
-  for (const forbidden of ['numericValue', 'numeric_value', 'binding_context_id', 'metric_key', 'hse.motivation', 'ordinalCategory', 'observedAt']) {
-    if (goalBlock.includes(forbidden))
-      violated(`the provider never receives raw measurement data through this field: found ${forbidden}`);
+  if (!/if \(request\.himRelationshipCommunicationGuidance\?\.guidanceState === 'ACTIVE'\) \{/u.test(exe.modelRouter))
+    violated('the Relationship provider block renders only for an ACTIVE guidance state');
+  // Exactly the Relationship rendering branch: from its own guard to the start
+  // of the next server-owned channel, so the negatives below never run over
+  // another channel's legitimate prose.
+  const relationshipBlockStart = exe.modelRouter.indexOf("if (request.himRelationshipCommunicationGuidance?.guidanceState === 'ACTIVE') {");
+  const relationshipBlockEnd = exe.modelRouter.indexOf('\n  if (request.', relationshipBlockStart + 1);
+  if (relationshipBlockStart < 0 || relationshipBlockEnd < 0) violated('the Relationship rendering branch is a bounded block of the common composition');
+  const relationshipBlock = exe.modelRouter.slice(relationshipBlockStart, relationshipBlockEnd);
+  if (!/\.filter\(\(instruction\) => !renderedReductionInstructions\.has\(instruction\)\)/u.test(relationshipBlock))
+    violated('the Relationship block deduplicates against every instruction another channel already rendered');
+  if (!/Relationship-bound communication scaffolding guidance follows/u.test(relationshipBlock))
+    violated('the rendered block is framed as relationship-bound communication scaffolding guidance');
+  if (!relationshipBlock.includes('It is not safety evidence.'))
+    violated('the rendered block states it is not safety evidence');
+  if (!relationshipBlock.includes('it never makes communicating, contacting, replying, disclosing, explaining, apologizing, negotiating, persuading, reconciling, or confronting appropriate by itself'))
+    violated('the rendered block states it never creates a communication, contact, disclosure, or confrontation recommendation');
+  for (const forbidden of ['numericValue', 'numeric_value', 'binding_context_id', 'metric_key', 'hrs.communication', 'ordinalCategory', 'observedAt', 'display_text', 'target_label']) {
+    if (relationshipBlock.includes(forbidden))
+      violated(`the provider never receives raw measurement or relationship identity through this field: found ${forbidden}`);
   }
 
-  // 6. Module wiring: both new boundaries are registered and exported.
-  for (const provider of ['HimGoalMotivationRepository', 'HimGoalMotivationConsumptionService']) {
+  // 7. Module wiring: both new boundaries are registered and exported.
+  for (const provider of ['HimRelationshipCommunicationRepository', 'HimRelationshipCommunicationConsumptionService']) {
     if ((exe.himModule.match(new RegExp(`\\b${provider}\\b`, 'gu')) ?? []).length < 3)
       violated(`${provider} is imported, provided, and exported by the HIM module`);
   }
+
+  // 8. The Full Intelligence smoke transport really points at v3, really
+  //    separates ATTEMPT from COMPLETION, and really refuses every retired
+  //    transport - so a green smoke cannot mean "degraded gracefully".
+  if (!exe.smokeAdapters.includes("'read_him_session_cross_context_foreground_v3'"))
+    violated('the smoke authenticated RPC allowlist recognises the aggregate-v3 transport');
+  for (const retired of [
+    'read_him_session_cross_context_foreground_v1', 'read_him_session_cross_context_foreground_v2',
+    'read_him_session_situation_stress_v1', 'read_him_session_decision_attention_v1',
+    'read_him_session_goal_motivation_v1', 'read_him_session_relationship_communication_v1',
+    'read_him_session_context_bindings_v1',
+  ]) {
+    if (exe.smokeAdapters.includes(`'${retired}'`))
+      violated(`${retired} is not accepted as the smoke cross-context orchestrator transport: found it on the allowlist`);
+  }
+  const attemptIndex = exe.smokeAdapters.indexOf('census?.recordAttempt(name)');
+  const allowlistIndex = exe.smokeAdapters.indexOf('if (!rpcAllowlist.has(name))');
+  if (attemptIndex < 0 || allowlistIndex < 0 || attemptIndex > allowlistIndex)
+    violated('the smoke records the ATTEMPT before the allowlist decision, so a refused direct request is still counted');
+  if (!exe.smokeAdapters.includes('census?.recordCompletion(name)'))
+    violated('the smoke records COMPLETION separately from attempt');
+  if (!exe.smokeRuntime.includes("const CROSS_CONTEXT_FOREGROUND_RPC = 'read_him_session_cross_context_foreground_v3'"))
+    violated('the smoke censuses the aggregate-v3 endpoint by name');
+  if (!/census\.completions\(CROSS_CONTEXT_FOREGROUND_RPC\), expectedTurns/u.test(exe.smokeRuntime))
+    violated('the smoke asserts one COMPLETION per eligible turn, not merely one attempt');
+  if (!/census\.attempts\(CROSS_CONTEXT_FOREGROUND_RPC\), expectedTurns/u.test(exe.smokeRuntime))
+    violated('the smoke asserts one attempt per eligible turn');
+  if (!/census\.failures\(CROSS_CONTEXT_FOREGROUND_RPC\), 0/u.test(exe.smokeRuntime))
+    violated('the smoke asserts zero aggregate transport failures: graceful degradation is never counted as success');
+  for (const censused of ['read_him_session_relationship_communication_v1', 'read_him_session_goal_motivation_v1', 'read_him_session_cross_context_foreground_v2', 'read_him_session_cross_context_foreground_v1', 'read_him_session_context_bindings_v1']) {
+    if (!exe.smokeRuntime.includes(`'${censused}'`))
+      violated(`the smoke censuses ${censused} by name and proves zero attempts`);
+  }
+  if (!exe.smokeRuntime.includes("[4, 'RELATIONSHIP_COMMUNICATION', 'NO_ACTIVE_RELATIONSHIP']"))
+    violated('the smoke proves the fourth slot is an authoritative NO_ACTIVE_RELATIONSHIP row');
+  if (!/himRelationshipCommunicationService\.consumeSourceRows\(\[aggregateRows\[3\]\]\)/u.test(exe.smokeRuntime))
+    violated('the smoke decodes the fourth raw row through the REAL QHIA-011 consumer');
 }
 
-test('A1 - the shipped application sources satisfy the frozen QHIA-010 transport contract', () => {
+test('A1 - the shipped application sources satisfy the frozen QHIA-011 transport contract', () => {
   assert.doesNotThrow(() => assertCrossContextForegroundApplicationContract(shipped));
 });
 
 test('A2 - anti-vacuity: the real guard rejects every named application regression', () => {
   const drifts = [
-    ['the repository still calls the aggregate-v1 endpoint', {
-      aggregateRepository: shipped.aggregateRepository.replace(AGGREGATE_V2_RPC, AGGREGATE_V1_RPC),
+    ['the repository still calls the aggregate-v2 endpoint', {
+      aggregateRepository: shipped.aggregateRepository.replace(AGGREGATE_V3_RPC, AGGREGATE_V2_RPC),
     }],
-    ['the repository added a second direct Goal request', {
+    ['the repository still calls the aggregate-v1 endpoint', {
+      aggregateRepository: shipped.aggregateRepository.replace(AGGREGATE_V3_RPC, AGGREGATE_V1_RPC),
+    }],
+    ['the repository added a second direct Relationship request', {
       aggregateRepository: shipped.aggregateRepository.replace(
         '    return rows ?? [];',
-        `    await this.dataApi.request(token, '${GOAL_RPC}', { method: 'POST', body: '{}' });\n    return rows ?? [];`,
+        `    await this.dataApi.request(token, '${RELATIONSHIP_RPC}', { method: 'POST', body: '{}' });\n    return rows ?? [];`,
       ),
     }],
-    ['the third slot is missing from the application envelope', {
+    ['the fourth slot is missing from the application envelope', {
       aggregateTypes: shipped.aggregateTypes.replace(
-        '  Object.freeze({ order: 3, slot: HIM_CROSS_CONTEXT_FOREGROUND_GOAL_MOTIVATION_SLOT }),\n', '',
+        '  Object.freeze({ order: 4, slot: HIM_CROSS_CONTEXT_FOREGROUND_RELATIONSHIP_COMMUNICATION_SLOT }),\n', '',
       ),
     }],
-    ['the third slot was reordered ahead of the frozen two', {
+    ['the fourth slot was reordered ahead of the frozen three', {
       aggregateTypes: shipped.aggregateTypes.replace(
-        '  Object.freeze({ order: 1, slot: HIM_CROSS_CONTEXT_FOREGROUND_SITUATION_STRESS_SLOT }),',
-        '  Object.freeze({ order: 1, slot: HIM_CROSS_CONTEXT_FOREGROUND_GOAL_MOTIVATION_SLOT }),',
+        '  Object.freeze({ order: 1, slot: HIM_CROSS_CONTEXT_FOREGROUND_SITUATION_STRESS_SLOT }),\n  Object.freeze({ order: 2, slot: HIM_CROSS_CONTEXT_FOREGROUND_DECISION_ATTENTION_SLOT }),\n  Object.freeze({ order: 3, slot: HIM_CROSS_CONTEXT_FOREGROUND_GOAL_MOTIVATION_SLOT }),\n  Object.freeze({ order: 4, slot: HIM_CROSS_CONTEXT_FOREGROUND_RELATIONSHIP_COMMUNICATION_SLOT }),',
+        '  Object.freeze({ order: 4, slot: HIM_CROSS_CONTEXT_FOREGROUND_RELATIONSHIP_COMMUNICATION_SLOT }),\n  Object.freeze({ order: 1, slot: HIM_CROSS_CONTEXT_FOREGROUND_SITUATION_STRESS_SLOT }),\n  Object.freeze({ order: 2, slot: HIM_CROSS_CONTEXT_FOREGROUND_DECISION_ATTENTION_SLOT }),\n  Object.freeze({ order: 3, slot: HIM_CROSS_CONTEXT_FOREGROUND_GOAL_MOTIVATION_SLOT }),',
       ),
     }],
-    ['the application contract silently stayed at version 1', {
-      aggregateTypes: shipped.aggregateTypes.replace('contractVersion: 2;', 'contractVersion: 1;'),
+    ['the symbol named V2 was silently mutated into the four-slot contract', {
+      aggregateTypes: shipped.aggregateTypes.replace(
+        'export const HIM_CROSS_CONTEXT_FOREGROUND_V2_SLOTS = Object.freeze([\n  Object.freeze({ order: 1, slot: HIM_CROSS_CONTEXT_FOREGROUND_SITUATION_STRESS_SLOT }),\n  Object.freeze({ order: 2, slot: HIM_CROSS_CONTEXT_FOREGROUND_DECISION_ATTENTION_SLOT }),\n  Object.freeze({ order: 3, slot: HIM_CROSS_CONTEXT_FOREGROUND_GOAL_MOTIVATION_SLOT }),',
+        'export const HIM_CROSS_CONTEXT_FOREGROUND_V2_SLOTS = Object.freeze([\n  Object.freeze({ order: 1, slot: HIM_CROSS_CONTEXT_FOREGROUND_SITUATION_STRESS_SLOT }),\n  Object.freeze({ order: 2, slot: HIM_CROSS_CONTEXT_FOREGROUND_DECISION_ATTENTION_SLOT }),\n  Object.freeze({ order: 3, slot: HIM_CROSS_CONTEXT_FOREGROUND_GOAL_MOTIVATION_SLOT }),\n  Object.freeze({ order: 4, slot: HIM_CROSS_CONTEXT_FOREGROUND_RELATIONSHIP_COMMUNICATION_SLOT }),',
+      ),
     }],
-    ['the aggregate service does not use the real Goal consumer', {
+    ['the application contract silently stayed at version 2', {
+      aggregateTypes: shipped.aggregateTypes.replace('contractVersion: 3;', 'contractVersion: 2;'),
+    }],
+    ['the aggregate service does not use the real Relationship consumer', {
       aggregateService: shipped.aggregateService
-        .replace("      goalMotivation: this.goalMotivation.consumeSourceRows([goalRow]),", "      goalMotivation: { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' },"),
+        .replace('      relationshipCommunication: this.relationshipCommunication.consumeSourceRows([relationshipRow]),', "      relationshipCommunication: { contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' },"),
     }],
     ['the aggregate service started interpreting channel content', {
       aggregateService: shipped.aggregateService.replace(
@@ -231,10 +339,37 @@ test('A2 - anti-vacuity: the real guard rejects every named application regressi
         '      const row = rows[index];\n      if (row.numeric_value === 1) throw new Error("INTEGRITY_FAILURE");',
       ),
     }],
-    ['the Orchestrator launches a direct Goal read', {
+    ['the aggregate service validates against the retired v2 slot table', {
+      aggregateService: shipped.aggregateService.replaceAll('HIM_CROSS_CONTEXT_FOREGROUND_V3_SLOTS', 'HIM_CROSS_CONTEXT_FOREGROUND_V2_SLOTS'),
+    }],
+    ['the QHIA-011 consumer expects a RESOLVED semantic mapping', {
+      relationshipTypes: shipped.relationshipTypes.replace(
+        "HIM_RELATIONSHIP_COMMUNICATION_SEMANTIC_MAPPING_STATUS = 'UNRESOLVED'",
+        "HIM_RELATIONSHIP_COMMUNICATION_SEMANTIC_MAPPING_STATUS = 'RESOLVED'",
+      ),
+    }],
+    ['the QHIA-011 consumer invented a semantic type', {
+      relationshipTypes: shipped.relationshipTypes.replace(
+        'HIM_RELATIONSHIP_COMMUNICATION_SEMANTIC_TYPE = null',
+        "HIM_RELATIONSHIP_COMMUNICATION_SEMANTIC_TYPE = 'STATE'",
+      ),
+    }],
+    ['a sibling HRS metric leaked into the QHIA-011 boundary', {
+      relationshipTypes: shipped.relationshipTypes.replace(
+        "export const HIM_RELATIONSHIP_COMMUNICATION_METRIC_KEY = 'hrs.communication' as const;",
+        "export const HIM_RELATIONSHIP_COMMUNICATION_METRIC_KEY = 'hrs.communication' as const;\nexport const SIBLING = 'hrs.relationship-trust' as const;",
+      ),
+    }],
+    ['a second, stronger directive was added', {
+      relationshipTypes: shipped.relationshipTypes.replace(
+        "export type HimRelationshipCommunicationDirective = 'DEFAULT' | 'STRUCTURE_RELATIONSHIP_COMMUNICATION';",
+        "export type HimRelationshipCommunicationDirective = 'DEFAULT' | 'STRUCTURE_RELATIONSHIP_COMMUNICATION' | 'STRUCTURE_RELATIONSHIP_COMMUNICATION_STRONGLY';",
+      ),
+    }],
+    ['the Orchestrator launches a direct Relationship read', {
       orchestrator: shipped.orchestrator.replace(
         '      let crossContextForegroundSettled: HimCrossContextForegroundGuidance | undefined;',
-        '      void HimGoalMotivationConsumptionService;\n      let crossContextForegroundSettled: HimCrossContextForegroundGuidance | undefined;',
+        '      void HimRelationshipCommunicationConsumptionService;\n      let crossContextForegroundSettled: HimCrossContextForegroundGuidance | undefined;',
       ),
     }],
     ['the Orchestrator races a second cross-context read', {
@@ -269,42 +404,98 @@ test('A2 - anti-vacuity: the real guard rejects every named application regressi
     }],
     ['the provider field bypasses the ACTIVE-only gate', {
       orchestrator: shipped.orchestrator.replace(
-        "        ...(himGoalMotivationGuidance?.guidanceState === 'ACTIVE' ? { himGoalMotivationGuidance } : {}),",
-        '        ...(himGoalMotivationGuidance ? { himGoalMotivationGuidance } : {}),',
+        "        ...(himRelationshipCommunicationGuidance?.guidanceState === 'ACTIVE' ? { himRelationshipCommunicationGuidance } : {}),",
+        '        ...(himRelationshipCommunicationGuidance ? { himRelationshipCommunicationGuidance } : {}),',
       ),
     }],
     ['the provider block renders regardless of guidance state', {
       modelRouter: shipped.modelRouter.replace(
-        "  if (request.himGoalMotivationGuidance?.guidanceState === 'ACTIVE') {",
-        '  if (request.himGoalMotivationGuidance) {',
+        "  if (request.himRelationshipCommunicationGuidance?.guidanceState === 'ACTIVE') {",
+        '  if (request.himRelationshipCommunicationGuidance) {',
       ),
     }],
-    ['the Goal directive borrowed a reduction that is not its own', {
+    ['the Relationship directive borrowed a reduction that is not its own', {
       modelRouter: shipped.modelRouter.replace(
-        '  REDUCE_GOAL_ACTION_BURDEN: [\n    SMALL_IMMEDIATE_GOAL_ACTION_INSTRUCTION,',
-        '  REDUCE_GOAL_ACTION_BURDEN: [\n    REDUCE_COGNITIVE_LOAD_INSTRUCTION,\n    SMALL_IMMEDIATE_GOAL_ACTION_INSTRUCTION,',
+        '  STRUCTURE_RELATIONSHIP_COMMUNICATION: [\n    EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING_INSTRUCTION,',
+        '  STRUCTURE_RELATIONSHIP_COMMUNICATION: [\n    REDUCE_COGNITIVE_LOAD_INSTRUCTION,\n    EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING_INSTRUCTION,',
       ),
     }],
-    ['the Goal directive dropped the shared reduced-steering-pressure instruction', {
+    ['the Relationship directive dropped one of its three frozen instructions', {
       modelRouter: shipped.modelRouter.replace(
-        '    SMALL_IMMEDIATE_GOAL_ACTION_INSTRUCTION,\n    REDUCE_STEERING_PRESSURE_INSTRUCTION,\n    ONE_STEP_AT_A_TIME_INSTRUCTION,',
-        '    SMALL_IMMEDIATE_GOAL_ACTION_INSTRUCTION,\n    ONE_STEP_AT_A_TIME_INSTRUCTION,',
+        '    ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT_INSTRUCTION,\n    CLARITY_NOT_FORCED_AGREEMENT_INSTRUCTION,',
+        '    ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT_INSTRUCTION,',
       ),
     }],
-    ['the provider dedup filter was removed from the Goal block', {
+    ['a frozen instruction text drifted', {
       modelRouter: shipped.modelRouter.replace(
-        "    const instructions = (HIM_GOAL_MOTIVATION_DIRECTIVE_INSTRUCTIONS[request.himGoalMotivationGuidance.directive] ?? [])\n      .filter((instruction) => !renderedReductionInstructions.has(instruction));",
-        '    const instructions = HIM_GOAL_MOTIVATION_DIRECTIVE_INSTRUCTIONS[request.himGoalMotivationGuidance.directive] ?? [];',
+        'do not make immediate agreement, persuasion, or winning the exchange the goal.',
+        'aim for agreement where possible.',
       ),
     }],
-    ['raw measurement data leaked into the provider block', {
+    ['the provider dedup filter was removed from the Relationship block', {
       modelRouter: shipped.modelRouter.replace(
-        'Goal-bound action-pacing guidance follows',
-        'Goal-bound action-pacing guidance for metric_key follows',
+        "    const instructions = (HIM_RELATIONSHIP_COMMUNICATION_DIRECTIVE_INSTRUCTIONS[request.himRelationshipCommunicationGuidance.directive] ?? [])\n      .filter((instruction) => !renderedReductionInstructions.has(instruction));",
+        '    const instructions = HIM_RELATIONSHIP_COMMUNICATION_DIRECTIVE_INSTRUCTIONS[request.himRelationshipCommunicationGuidance.directive] ?? [];',
       ),
     }],
-    ['the Goal boundaries were dropped from the HIM module', {
-      himModule: shipped.himModule.replaceAll('HimGoalMotivationConsumptionService', 'HimSituationStressConsumptionService'),
+    ['the safety-evidence disclaimer was dropped from the provider block', {
+      modelRouter: shipped.modelRouter.replace('It is not safety evidence. It authorizes no claim', 'It authorizes no claim'),
+    }],
+    ['the never-creates-a-recommendation disclaimer was dropped', {
+      modelRouter: shipped.modelRouter.replace(
+        'it never makes communicating, contacting, replying, disclosing, explaining, apologizing, negotiating, persuading, reconciling, or confronting appropriate by itself, and it never creates such a suggestion where none was already warranted. ',
+        '',
+      ),
+    }],
+    ['raw relationship identity leaked into the provider block', {
+      modelRouter: shipped.modelRouter.replace(
+        'Relationship-bound communication scaffolding guidance follows',
+        'Relationship-bound communication scaffolding guidance for display_text follows',
+      ),
+    }],
+    ['the Relationship boundaries were dropped from the HIM module', {
+      himModule: shipped.himModule.replaceAll('HimRelationshipCommunicationConsumptionService', 'HimGoalMotivationConsumptionService'),
+    }],
+    ['the smoke allowlist still names the retired aggregate-v2 endpoint', {
+      smokeAdapters: shipped.smokeAdapters.replace(
+        "  'read_him_session_cross_context_foreground_v3',",
+        "  'read_him_session_cross_context_foreground_v2',",
+      ),
+    }],
+    ['the smoke allowlist accepts the direct Relationship RPC as the orchestrator transport', {
+      smokeAdapters: shipped.smokeAdapters.replace(
+        "  'read_him_session_cross_context_foreground_v3',",
+        "  'read_him_session_cross_context_foreground_v3',\n  'read_him_session_relationship_communication_v1',",
+      ),
+    }],
+    ['the smoke records the attempt only after the allowlist decision', {
+      smokeAdapters: shipped.smokeAdapters
+        .replace('    census?.recordAttempt(name);\n', '')
+        .replace('      if (!rpcAllowlist.has(name)) unsupported(`rpc:${name}`);', '      if (!rpcAllowlist.has(name)) unsupported(`rpc:${name}`);\n      census?.recordAttempt(name);'),
+    }],
+    ['the smoke counts attempts but not completions', {
+      smokeRuntime: shipped.smokeRuntime.replace(
+        '      assert.equal(census.completions(CROSS_CONTEXT_FOREGROUND_RPC), expectedTurns,',
+        '      assert.equal(census.completions(CROSS_CONTEXT_FOREGROUND_RPC), census.completions(CROSS_CONTEXT_FOREGROUND_RPC),',
+      ),
+    }],
+    ['the smoke tolerates aggregate transport failures (graceful degradation counted as success)', {
+      smokeRuntime: shipped.smokeRuntime.replace(
+        '      assert.equal(census.failures(CROSS_CONTEXT_FOREGROUND_RPC), 0,',
+        '      assert.equal(census.failures(CROSS_CONTEXT_FOREGROUND_RPC), census.failures(CROSS_CONTEXT_FOREGROUND_RPC),',
+      ),
+    }],
+    ['the smoke stopped censusing the direct Relationship authority', {
+      smokeRuntime: shipped.smokeRuntime.replace("  'read_him_session_relationship_communication_v1',\n", ''),
+    }],
+    ['the smoke stopped proving the fourth slot is authoritatively unbound', {
+      smokeRuntime: shipped.smokeRuntime.replace(", [4, 'RELATIONSHIP_COMMUNICATION', 'NO_ACTIVE_RELATIONSHIP']", ''),
+    }],
+    ['the smoke stopped decoding the fourth row through the real QHIA-011 consumer', {
+      smokeRuntime: shipped.smokeRuntime.replace(
+        'himRelationshipCommunicationService.consumeSourceRows([aggregateRows[3]])',
+        "{ contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' }",
+      ),
     }],
   ];
 
@@ -315,7 +506,7 @@ test('A2 - anti-vacuity: the real guard rejects every named application regressi
     }
     assert.throws(
       () => assertCrossContextForegroundApplicationContract(mutated),
-      /QHIA-010 application transport contract violated/u,
+      /QHIA-011 application transport contract violated/u,
       `the guard rejects: ${label}`,
     );
   }
@@ -328,37 +519,34 @@ test('A2 - anti-vacuity: the real guard rejects every named application regressi
     'formatting alone never fails the guard');
 });
 
-test('A3 - the direct Goal authority stays independently callable and out of the Orchestrator path', () => {
-  // The direct repository EXISTS - QHIA-010 keeps it as the canonical
+test('A3 - the direct Relationship authority stays independently callable and out of the Orchestrator path', () => {
+  // The direct repository EXISTS - QHIA-011 keeps it as the canonical
   // independently callable authority - and is registered in the module, but is
   // reachable from no foreground turn.
-  assert.match(shipped.goalRepository, /export class HimGoalMotivationRepository/u);
-  assert.match(shipped.goalService, /export class HimGoalMotivationConsumptionService/u);
-  assert.match(shipped.himModule, /HimGoalMotivationRepository/u);
-  assert.ok(!executable(shipped.orchestrator).includes('HimGoalMotivationRepository'));
-  // The Goal consumer owns Motivation meaning: it pins the exact frozen
-  // identity locally, after the SHARED QHIA-004 projection, and never
+  assert.match(shipped.relationshipRepository, /export class HimRelationshipCommunicationRepository/u);
+  assert.match(shipped.relationshipService, /export class HimRelationshipCommunicationConsumptionService/u);
+  assert.match(shipped.himModule, /HimRelationshipCommunicationRepository/u);
+  assert.ok(!executable(shipped.orchestrator).includes('HimRelationshipCommunicationRepository'));
+  // The Relationship consumer owns Communication meaning: it pins the exact
+  // frozen identity locally, after the SHARED QHIA-004 projection, and never
   // specializes that projection.
-  const goalExecutable = executable(shipped.goalService);
-  assert.ok(goalExecutable.includes('projectHimContextualCurrentSlot'));
+  const relationshipExecutable = executable(shipped.relationshipService);
+  assert.ok(relationshipExecutable.includes('projectHimContextualCurrentSlot'));
   for (const required of [
-    "HIM_GOAL_MOTIVATION_METRIC_KEY", 'HIM_GOAL_MOTIVATION_DEFINITION_VERSION', 'HIM_GOAL_MOTIVATION_HIF_OWNER',
-    'HIM_GOAL_MOTIVATION_SEMANTIC_MAPPING_STATUS', 'HIM_GOAL_MOTIVATION_SEMANTIC_TYPE', 'HIM_GOAL_MOTIVATION_CONTEXT_KIND',
-  ]) assert.ok(goalExecutable.includes(required), `the Goal consumer enforces ${required}`);
-  const goalTypes = executable(shipped.goalTypes);
-  assert.match(goalTypes, /HIM_GOAL_MOTIVATION_CONTEXT_KIND = 'GOAL'/u);
-  assert.match(goalTypes, /HIM_GOAL_MOTIVATION_METRIC_KEY = 'hse\.motivation'/u);
-  assert.match(goalTypes, /HIM_GOAL_MOTIVATION_SEMANTIC_MAPPING_STATUS = 'RESOLVED'/u);
-  assert.match(goalTypes, /HIM_GOAL_MOTIVATION_SEMANTIC_TYPE = 'STATE'/u);
-  // Situation-bound Motivation stays dormant across the whole boundary.
-  for (const key of ['goalRepository', 'goalService', 'goalTypes']) {
-    assert.ok(!executable(shipped[key]).includes('SITUATION'), `${key} activates no SITUATION context`);
-  }
-  // The shared QHIA-004 projection gained no Goal-specific or Motivation-
-  // specific rule.
-  const projection = executable(read('apps/api/src/human-model/him-contextual-current-projection.ts'));
-  for (const forbidden of ['hse.motivation', 'GoalMotivation', "'STATE'", "'GOAL'"]) {
-    assert.ok(!projection.includes(forbidden), `the shared projection stays generic: ${forbidden}`);
+    'HIM_RELATIONSHIP_COMMUNICATION_METRIC_KEY', 'HIM_RELATIONSHIP_COMMUNICATION_DEFINITION_VERSION',
+    'HIM_RELATIONSHIP_COMMUNICATION_HIF_OWNER', 'HIM_RELATIONSHIP_COMMUNICATION_SEMANTIC_MAPPING_STATUS',
+    'HIM_RELATIONSHIP_COMMUNICATION_SEMANTIC_TYPE', 'HIM_RELATIONSHIP_COMMUNICATION_CONTEXT_KIND',
+  ]) assert.ok(relationshipExecutable.includes(required), `the Relationship consumer enforces ${required}`);
+  // The three prior per-channel boundaries are untouched by this task.
+  for (const [path, marker] of [
+    ['apps/api/src/human-model/him-situation-stress-consumption.service.ts', 'HIM_SITUATION_STRESS_METRIC_KEY'],
+    ['apps/api/src/human-model/him-decision-attention-consumption.service.ts', 'HIM_DECISION_ATTENTION_METRIC_KEY'],
+    ['apps/api/src/human-model/him-goal-motivation-consumption.service.ts', 'HIM_GOAL_MOTIVATION_METRIC_KEY'],
+  ]) {
+    const source = read(path);
+    assert.ok(source.includes(marker), `${path} keeps its own frozen identity`);
+    assert.ok(!source.includes('hrs.communication'), `${path} activates no HRS metric`);
+    assert.ok(!source.includes('RelationshipCommunication'), `${path} gains no Relationship coupling`);
   }
 });
 
