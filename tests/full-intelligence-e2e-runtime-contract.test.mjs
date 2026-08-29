@@ -220,30 +220,94 @@ test('the QHIA-011 aggregate v3 is the smoke foreground transport and its succes
     "assertCrossContextForegroundTransport(2, 'after foreground Turn #2')",
   ]) assert.ok(smokeScript.includes(label), `the smoke censuses the aggregate transport: ${label}`);
 
-  // Success-with-legitimate-unbound is proven distinctly from degradation, for
-  // all four slots.
+  // Success-with-legitimate-unbound is proven distinctly from degradation, and
+  // since QHIA-011A the ACTIVATED Goal slot is proven distinctly from both.
   assert.match(smokeScript, /migration 0060 answers with exactly four transport rows/u);
-  assert.match(smokeScript, /the frozen transport order and the deterministic unbound states of all four wrapped authorities/u);
-  assert.match(smokeScript, /\[3, 'GOAL_MOTIVATION', 'NO_ACTIVE_GOAL'\]/u,
-    'the third slot is proven to be an authoritative NO_ACTIVE_GOAL row, never a missing or degraded one');
+  assert.match(smokeScript, /the frozen transport order, the explicitly activated Goal, and the deterministic unbound states of the three unactivated authorities/u);
+  assert.match(smokeScript, /\[3, 'GOAL_MOTIVATION', 'ACTIVE_GOAL_BOUND'\]/u,
+    'the third slot is proven to be an authoritative ACTIVE_GOAL_BOUND row produced by the explicit product activation');
   assert.match(smokeScript, /\[4, 'RELATIONSHIP_COMMUNICATION', 'NO_ACTIVE_RELATIONSHIP'\]/u,
     'the fourth slot is proven to be an authoritative NO_ACTIVE_RELATIONSHIP row, never a missing or degraded one');
-  assert.match(smokeScript, /decoded the successful aggregate into bounded NONE guidance/u,
+  assert.match(smokeScript, /ACTIVE for the explicitly activated Goal, bounded NONE for the three unactivated channels/u,
     'the REAL QHIA-007/QHIA-008/QHIA-010/QHIA-011 consumers are reached through the aggregate raw-row path');
-  assert.match(smokeScript, /goalMotivation: \{ contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' \}/u,
-    'the real Goal-motivation consumer decoded the successful raw row to NONE');
+  assert.match(smokeScript, /goalMotivation: \{ contractVersion: 1, guidanceState: 'ACTIVE', directive: 'REDUCE_GOAL_ACTION_BURDEN' \}/u,
+    'the real Goal-motivation consumer decoded the activated raw row to its already-frozen ACTIVE guidance');
   assert.match(smokeScript, /relationshipCommunication: \{ contractVersion: 1, guidanceState: 'NONE', directive: 'DEFAULT' \}/u,
     'the real Relationship-communication consumer decoded the successful raw row to NONE');
   assert.match(smokeScript, /himRelationshipCommunicationService\.consumeSourceRows\(\[aggregateRows\[3\]\]\)/u,
     'the fourth raw row is decoded by the REAL QHIA-011 consumer on its own, not only inside the aggregate');
+  assert.match(smokeScript, /himGoalMotivationService\.consumeSourceRows\(\[aggregateRows\[2\]\]\)/u,
+    'the third raw row is decoded by the REAL QHIA-010 consumer on its own, not only inside the aggregate');
   assert.match(smokeScript, /decodes the successful NO_ACTIVE_RELATIONSHIP row to NONE \/ DEFAULT/u);
   assert.match(smokeScript, /contractVersion: 3,/u, 'the application consumes the explicit v3 aggregate guidance contract');
-  assert.match(smokeScript, /the smoke binds no Situation, no Decision, no Goal, and no Relationship to the session/u,
-    'the unbound answer is proven to be the authoritative one, not an accident');
+  assert.match(smokeScript, /exactly one ACTIVE GOAL binding exists and no Situation, Decision, or Relationship is bound to the session/u,
+    'both the activated and the unbound answers are proven to be the authoritative ones, not accidents');
   assert.match(smokeScript, /an authoritatively unbound Situation adds no Situation-stress guidance field/u);
   assert.match(smokeScript, /an authoritatively unbound Decision adds no Decision-attention guidance field/u);
-  assert.match(smokeScript, /an authoritatively unbound Goal adds no Goal-motivation guidance field/u);
   assert.match(smokeScript, /an authoritatively unbound Relationship adds no Relationship-communication guidance field/u);
+});
+
+test('QHIA-011A - Full Intelligence covers ONE deliberate explicit activation through the production application entry', () => {
+  // ROOT CAUSE this guard closes: before QHIA-011A the smoke exercised only the
+  // all-unbound cross-context state, so a completely missing product activation
+  // entry could not make it fail. If the deliberate setup activation is ever
+  // removed - or downgraded to a direct row write, a raw QHIA-006 SQL call, or
+  // a second application binding repository - this test fails.
+  assert.match(smokeScript, /ConversationContextActivationService/u,
+    'the smoke activates through the NEW production application activation service');
+  assert.match(smokeScript, /new ConversationContextActivationService\(\s*new HimSessionContextBindingService\(new HimSessionContextBindingRepository\(memoryDataApi\)\)\)/u,
+    'the activation service is composed over the EXISTING QHIA-006 service and its ONE existing repository');
+  assert.match(smokeScript, /contextActivationService\.activateContext\(/u,
+    'the binding is written by the production application entry, not by the smoke');
+  assert.doesNotMatch(smokeSources, /INSERT\s+INTO\s+(?:public\.)?him_session_context_bindings/iu,
+    'the smoke never direct-INSERTs a binding row');
+  assert.doesNotMatch(smokeSources, /(?:SELECT|FROM)[^\n]*public\.set_him_session_context_binding_v1/u,
+    'the smoke never calls the QHIA-006 set command as raw SQL');
+  assert.doesNotMatch(smokeSources, /(?:SELECT|FROM)[^\n]*public\.clear_him_session_context_binding_v1/u,
+    'the smoke never calls the QHIA-006 clear command as raw SQL');
+
+  // The fixture the activation makes meaningful comes from the EXISTING
+  // canonical structured measurement authorities, never from a new writer.
+  assert.match(smokeScript, /create_him_motivation_measurement_target\('GOAL'/u,
+    'the Goal comes from the existing canonical Motivation target authority');
+  assert.match(smokeScript, /create_hse_motivation_measurement\(\$1, 'LOW', NULL\)/u,
+    'the LOW reading comes from the existing canonical Motivation measurement authority');
+  assert.match(smokeScript, /calculate_hse_motivation_measurement/u,
+    'the reading is calculated by the existing canonical calculation authority');
+
+  // The transport substitute must RECOGNISE the activation write, or the smoke
+  // could stay green while the activation was silently refused.
+  assert.match(foregroundAdapters, /'set_him_session_context_binding_v1'/u,
+    'the smoke authenticated RPC allowlist recognises the explicit activation command');
+  for (const absent of ['clear_him_session_context_binding_v1', 'read_him_session_context_bindings_v1']) {
+    assert.ok(!new RegExp(`'${absent}'`, 'u').test(foregroundAdapters),
+      `${absent} is never accepted in this smoke: the activation entry is a one-shot setup command`);
+  }
+
+  // Census: exactly one attempted AND completed setup activation, zero
+  // failures, and it never becomes a per-turn foreground call.
+  assert.match(smokeScript, /const EXPLICIT_ACTIVATION_SET_RPC = 'set_him_session_context_binding_v1'/u);
+  assert.match(smokeScript, /census\.attempts\(EXPLICIT_ACTIVATION_SET_RPC\), 1/u,
+    'the smoke asserts exactly one explicit activation attempt for the whole run');
+  assert.match(smokeScript, /census\.completions\(EXPLICIT_ACTIVATION_SET_RPC\), 1/u,
+    'the smoke asserts the activation really COMPLETED, not merely that it was attempted');
+  assert.match(smokeScript, /census\.failures\(EXPLICIT_ACTIVATION_SET_RPC\), 0/u);
+  assert.match(smokeScript, /census\.attempts\(EXPLICIT_ACTIVATION_CLEAR_RPC\), 0/u,
+    'no clear command is issued anywhere: replacement is never clear plus set');
+  // The census helper runs before Turn #1 AND after both turns, so "exactly one
+  // for the whole smoke" is a statement about every turn, not only about setup.
+  for (const label of [
+    "assertCrossContextForegroundTransport(0, 'before any foreground turn')",
+    "assertCrossContextForegroundTransport(2, 'after foreground Turn #2')",
+  ]) assert.ok(smokeScript.includes(label), `the activation census is re-checked at: ${label}`);
+
+  // No provider-race flakiness: the ACTIVE guidance is asserted deterministically
+  // off the Orchestrator race, and the provider-side field assertion tolerates
+  // absence while forbidding any value other than the frozen ACTIVE contract.
+  assert.match(smokeScript, /const assertGoalMotivationProviderField = /u);
+  assert.match(smokeScript, /a present Goal-motivation guidance field is exactly the frozen ACTIVE contract/u);
+  assert.doesNotMatch(smokeScript, /setTimeout|sleep\(|new Promise\(\s*\(resolve\)\s*=>\s*setTimeout/u,
+    'no arbitrary sleep or timer is introduced to win the optional-enrichment race');
 });
 
 test('background providers remain the deterministic A2 doubles with an observable census', () => {

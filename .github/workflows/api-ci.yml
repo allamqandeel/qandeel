@@ -35,6 +35,7 @@ jobs:
       - {name: Verify A2 E2E runtime smoke static contract, run: npm run test:a2-e2e-smoke-contract}
       - {name: Verify Full Intelligence E2E runtime static contract, run: npm run test:full-intelligence-e2e-runtime-contract}
       - {name: Verify cross-context foreground application transport static contract, run: npm run test:cross-context-foreground-application-transport-contract}
+      - {name: Verify explicit session context activation entry static contract, run: npm run test:explicit-session-context-activation-entry-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}
@@ -98,6 +99,7 @@ jobs:
       - {name: Verify HIM cross-context foreground aggregation against real PostgreSQL, run: npm run verify:him-cross-context-foreground-aggregation:integration}
       - {name: Verify HIM Goal-bound motivation foreground consumption against real PostgreSQL, run: npm run verify:him-goal-motivation-foreground-consumption:integration}
       - {name: Verify HIM Relationship-bound communication foreground consumption against real PostgreSQL, run: npm run verify:him-relationship-communication-foreground-consumption:integration}
+      - {name: Verify explicit session context activation application entry against real PostgreSQL, run: npm run verify:explicit-session-context-activation:integration}
       - {name: Verify HIM temporal trend source against real PostgreSQL, run: npm run verify:him-trends:integration}
       - {name: Verify HIM Intelligence Snapshot against real PostgreSQL, run: npm run verify:him-snapshot:integration}
       - {name: Verify background HIM runtime consumption against real PostgreSQL, run: npm run verify:background-him-runtime-consumption:integration}

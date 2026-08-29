@@ -54,6 +54,17 @@ const AUTHENTICATED_RPC_ALLOWLIST = new Set([
   // would let a regression back to a retired request shape pass unnoticed, and
   // the transport census below would have nothing to catch.
   'read_him_session_cross_context_foreground_v3',
+  // QHIA-011A: the explicit session context activation command (migration
+  // 0055 set), reached ONLY through the new authenticated product application
+  // entry during smoke SETUP - never from a conversation turn.
+  //
+  // It is on this allowlist so the smoke can prove, by census, that the
+  // deliberate explicit activation really executed against real PostgreSQL
+  // exactly once, rather than being silently refused. Its sibling clear and
+  // read commands are deliberately ABSENT: this smoke performs neither, and
+  // leaving them off is what makes "the activation entry is a separate
+  // one-shot product command, not a per-turn foreground request" checkable.
+  'set_him_session_context_binding_v1',
 ]);
 const SERVICE_ROLE_RPC_ALLOWLIST = new Set([
   'claim_conversation_turn',
