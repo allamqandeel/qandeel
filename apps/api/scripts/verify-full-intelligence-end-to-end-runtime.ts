@@ -649,7 +649,21 @@ async function main(): Promise<void> {
     const deterministicBrainContextService = {
       read: (userIdentity: string, accessToken: string, session: string, currentTurnId: string) => {
         const pending = himBrainContextService.read(userIdentity, accessToken, session, currentTurnId);
-        pending.then(() => releaseSnapshotGate(), () => releaseSnapshotGate());
+        // QHIA-014 proof closure: open the gate only AFTER a macrotask
+        // boundary, not on the settlement microtask itself. The Orchestrator's
+        // own recording handler for this read sits at the end of a multi-hop
+        // microtask chain (through the real telemetry engine wrapper), and the
+        // barrier-close chain released by this gate is another multi-hop
+        // microtask chain; releasing on the same microtask left the two racing
+        // on engine-internal hop counts, which is exactly the nondeterminism
+        // that failed one CI run and passed the rerun of the identical tree.
+        // Node runs the microtask queue to exhaustion before any setImmediate
+        // callback, so deferring the release by one check-phase turn PROVES the
+        // recorded-value handler has already run before the Snapshot can
+        // resolve and close the barrier. setImmediate is scheduling, not a
+        // wall-clock wait: still no sleep, no timer, and no production change.
+        const releaseAfterSettlementChainsDrain = (): void => { setImmediate(() => releaseSnapshotGate()); };
+        pending.then(releaseAfterSettlementChainsDrain, releaseAfterSettlementChainsDrain);
         return pending;
       },
       consumeSourceRows: (rows: Parameters<HimBrainContextService['consumeSourceRows']>[0]) =>

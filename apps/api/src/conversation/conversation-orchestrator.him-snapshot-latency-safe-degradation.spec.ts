@@ -84,6 +84,9 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
   const deepClaim: ConversationTurn = { ...claimed, content: deepTurn.content, processing_path: 'DEEP', routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
 
   let himRepository: { readIntelligenceSnapshot: jest.Mock };
+  let reflectionRead: jest.Mock;
+  let aggregateRead: jest.Mock;
+  let brainRead: jest.Mock;
   let repository: jest.Mocked<ConversationRepository>;
   let router: jest.Mocked<ModelRouter>;
   let orchestrator: ConversationOrchestratorService;
@@ -92,6 +95,12 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
 
   beforeEach(() => {
     himRepository = { readIntelligenceSnapshot: jest.fn().mockResolvedValue(canonicalRows()) };
+    // The three independent Human Intelligence channels, held as spec-level
+    // handles so individual cases - the genuine all-four-pending worst case in
+    // particular - can replace their settlement behavior per test.
+    reflectionRead = jest.fn().mockRejectedValue(new Error('reflection unavailable'));
+    aggregateRead = jest.fn().mockRejectedValue(new Error('aggregate unavailable'));
+    brainRead = jest.fn().mockResolvedValue(undefined);
     repository = {
       claimTurn: jest.fn().mockResolvedValue(claimed),
       finalizeTurn: jest.fn().mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant }),
@@ -117,10 +126,10 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
       new HimReasoningConsumptionService(),
       new HimFastDeepConsumptionService(),
       new HimInteractionAdaptationService(),
-      { getCurrentSelection: jest.fn().mockRejectedValue(new Error('reflection unavailable')), getCurrentIntelligence: jest.fn() } as unknown as HimContextualCurrentIntelligenceService,
+      { getCurrentSelection: reflectionRead, getCurrentIntelligence: jest.fn() } as unknown as HimContextualCurrentIntelligenceService,
       new HimSessionReflectionConsumptionService(),
-      { read: jest.fn().mockRejectedValue(new Error('aggregate unavailable')) } as unknown as HimCrossContextForegroundAggregationService,
-      { read: jest.fn().mockResolvedValue(undefined), consumeSourceRows: jest.fn() } as unknown as HimBrainContextService,
+      { read: aggregateRead } as unknown as HimCrossContextForegroundAggregationService,
+      { read: brainRead, consumeSourceRows: jest.fn() } as unknown as HimBrainContextService,
       { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as HypothesisReasoningContextService,
       { ground: jest.fn().mockReturnValue({ coverageState: 'EMPTY', reason: 'NO_ACTIVE_HYPOTHESES' }) } as unknown as RecommendationGroundingService,
       router,
@@ -205,19 +214,69 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
   });
 
   it('BASELINE FAIL #5 - combined worst case: every Human Intelligence lane unresolved still dispatches once at 300 ms', async () => {
+    // QHIA-014 proof closure: the GENUINE all-four-pending worst case. Every
+    // one of the four foreground Human Intelligence reads - Snapshot,
+    // Reflection, aggregate-v3 AND Brain Context - is a controlled promise that
+    // stays pending forever. Reflection and aggregate do NOT reject
+    // immediately, and Brain does NOT resolve undefined: nothing settles until
+    // this test settles it, long after dispatch.
     jest.useFakeTimers();
     try {
-      himRepository.readIntelligenceSnapshot.mockReturnValue(new Promise(() => undefined));
+      let releaseSnapshot!: (rows: HimSnapshotSourceRow[]) => void;
+      let rejectReflection!: (error: Error) => void;
+      let resolveAggregate!: (value: unknown) => void;
+      let rejectBrain!: (error: Error) => void;
+      himRepository.readIntelligenceSnapshot.mockReturnValue(new Promise((resolve) => { releaseSnapshot = resolve; }));
+      reflectionRead.mockReturnValue(new Promise((_resolve, reject) => { rejectReflection = reject; }));
+      aggregateRead.mockReturnValue(new Promise((resolve) => { resolveAggregate = resolve; }));
+      brainRead.mockReturnValue(new Promise((_resolve, reject) => { rejectBrain = reject; }));
       const pending = orchestrator.orchestrate('token', 'user', userTurn);
+      // Flush microtasks WITHOUT advancing the clock, then prove all four read
+      // functions are ALREADY in flight, exactly once each, BEFORE any fake
+      // time advances: the four launches share one synchronous step, so no
+      // read can be a consequence of another read settling.
+      await jest.advanceTimersByTimeAsync(0);
+      expect(himRepository.readIntelligenceSnapshot).toHaveBeenCalledTimes(1);
+      expect(reflectionRead).toHaveBeenCalledTimes(1);
+      expect(aggregateRead).toHaveBeenCalledTimes(1);
+      expect(brainRead).toHaveBeenCalledTimes(1);
       await jest.advanceTimersByTimeAsync(299);
       expect(router.generate).not.toHaveBeenCalled();
       // 300, never 300 + 300.
       await jest.advanceTimersByTimeAsync(1);
       await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
       expect(router.generate).toHaveBeenCalledTimes(1);
+      // Every channel was still unresolved at dispatch, so none contributes:
+      // the one provider request carries no Human Intelligence envelope at all.
+      expect(dispatched()).not.toHaveProperty('humanIntelligence');
+      const sent = JSON.stringify(dispatched());
       await jest.advanceTimersByTimeAsync(600);
       expect(router.generate).toHaveBeenCalledTimes(1);
+      // Much later: still exactly one provider call and one finalization, and
+      // no read was ever relaunched as a retry or fallback.
+      await jest.advanceTimersByTimeAsync(59_100);
+      expect(router.generate).toHaveBeenCalledTimes(1);
       expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+      expect(repository.failTurn).not.toHaveBeenCalled();
+      expect(himRepository.readIntelligenceSnapshot).toHaveBeenCalledTimes(1);
+      expect(reflectionRead).toHaveBeenCalledTimes(1);
+      expect(aggregateRead).toHaveBeenCalledTimes(1);
+      expect(brainRead).toHaveBeenCalledTimes(1);
+      // Combined late-settlement isolation: settle the four old promises in a
+      // deliberately mixed success/rejection order. Nothing may mutate the
+      // dispatched request, trigger a second provider call, or re-finalize.
+      rejectReflection(new Error('late reflection rejection'));
+      await jest.advanceTimersByTimeAsync(0);
+      resolveAggregate({ situationStress: { contractVersion: 1, guidanceState: 'ACTIVE', directive: 'REDUCE_INTERACTION_BURDEN' } });
+      await jest.advanceTimersByTimeAsync(0);
+      releaseSnapshot(canonicalRows());
+      await jest.advanceTimersByTimeAsync(0);
+      rejectBrain(new Error('late brain rejection'));
+      await jest.advanceTimersByTimeAsync(0);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(dispatched())).toBe(sent);
+      expect(jest.getTimerCount()).toBe(0);
     } finally { jest.useRealTimers(); }
   });
 
@@ -284,7 +343,14 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
   });
 
   it('launches the Snapshot in the same synchronous step as Reflection, aggregate and Brain', async () => {
+    // QHIA-014 proof closure: the concurrent-launch proof covers ALL FOUR
+    // reads, not just the Snapshot. Every channel is a controlled pending
+    // promise, so nothing has settled when the call counts are asserted:
+    // launch cannot be a consequence of any settlement.
     himRepository.readIntelligenceSnapshot.mockReturnValue(new Promise(() => undefined));
+    reflectionRead.mockReturnValue(new Promise(() => undefined));
+    aggregateRead.mockReturnValue(new Promise(() => undefined));
+    brainRead.mockReturnValue(new Promise(() => undefined));
     jest.useFakeTimers();
     try {
       const pending = orchestrator.orchestrate('token', 'user', userTurn);
@@ -292,9 +358,15 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
       // fake timers also fake setImmediate, so a setImmediate flush would never
       // resolve here.
       await jest.advanceTimersByTimeAsync(0);
-      // All four reads are in flight while the Snapshot is unresolved, so a
-      // serialized `await snapshot; await reflection` is structurally impossible.
+      // All four reads are in flight - exactly once each - while every one of
+      // them is still unresolved, so a serialized `await snapshot; await
+      // reflection` (or any read launched by another read's settlement) is
+      // structurally impossible.
       expect(himRepository.readIntelligenceSnapshot).toHaveBeenCalledTimes(1);
+      expect(reflectionRead).toHaveBeenCalledTimes(1);
+      expect(aggregateRead).toHaveBeenCalledTimes(1);
+      expect(brainRead).toHaveBeenCalledTimes(1);
+      expect(router.generate).not.toHaveBeenCalled();
       await jest.advanceTimersByTimeAsync(300);
       await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
     } finally { jest.useRealTimers(); }
