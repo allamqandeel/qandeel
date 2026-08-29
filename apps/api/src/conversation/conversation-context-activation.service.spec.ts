@@ -284,18 +284,18 @@ const INACTIVE_SESSION_MESSAGE = 'Conversation session is not active';
 // shape: an unrecognised SQLSTATE, a drifted message, a malformed upstream body
 // that left no structured identity, an integrity breach, and an ordinary error.
 const UNMAPPED_FAILURES: ReadonlyArray<readonly [string, unknown]> = [
-  ['HTTP 403 with an unrecognised code', new MemoryDataApiError(403, '42P01', 'relation does not exist')],
-  ['SQLSTATE 42501 with an unrecognised message', new MemoryDataApiError(403, '42501', 'permission denied for table him_session_context_bindings')],
-  ['SQLSTATE 42501 with a near-miss message', new MemoryDataApiError(403, '42501', 'Unknown or cross-user conversation session.')],
-  ['SQLSTATE 42501 with a differently-cased message', new MemoryDataApiError(403, '42501', 'unknown or cross-user conversation session')],
-  ['HTTP 500 with an unrecognised code', new MemoryDataApiError(500, 'PGRST202', 'Could not find the function')],
-  ['SQLSTATE 55000 with an unrecognised message', new MemoryDataApiError(500, '55000', 'object not in prerequisite state')],
-  ['an authentication failure past the authenticated boundary', new MemoryDataApiError(401, '42501', 'Authentication required')],
-  ['an unsupported-kind SQLSTATE reaching the database', new MemoryDataApiError(400, '22023', 'Unsupported session cross-context binding kind')],
+  ['HTTP 403 with an unrecognised code', new MemoryDataApiError(403, { code: '42P01', message: 'relation does not exist' })],
+  ['SQLSTATE 42501 with an unrecognised message', new MemoryDataApiError(403, { code: '42501', message: 'permission denied for table him_session_context_bindings' })],
+  ['SQLSTATE 42501 with a near-miss message', new MemoryDataApiError(403, { code: '42501', message: 'Unknown or cross-user conversation session.' })],
+  ['SQLSTATE 42501 with a differently-cased message', new MemoryDataApiError(403, { code: '42501', message: 'unknown or cross-user conversation session' })],
+  ['HTTP 500 with an unrecognised code', new MemoryDataApiError(500, { code: 'PGRST202', message: 'Could not find the function' })],
+  ['SQLSTATE 55000 with an unrecognised message', new MemoryDataApiError(500, { code: '55000', message: 'object not in prerequisite state' })],
+  ['an authentication failure past the authenticated boundary', new MemoryDataApiError(401, { code: '42501', message: 'Authentication required' })],
+  ['an unsupported-kind SQLSTATE reaching the database', new MemoryDataApiError(400, { code: '22023', message: 'Unsupported session cross-context binding kind' })],
   ['HTTP 403 with no structured identity at all', new MemoryDataApiError(403)],
   ['HTTP 500 with no structured identity at all', new MemoryDataApiError(500)],
-  ['a code with no message', new MemoryDataApiError(403, '42501')],
-  ['a message with no code', new MemoryDataApiError(403, undefined, 'Session context bindings are owner-exact')],
+  ['a code with no message', new MemoryDataApiError(403, { code: '42501' })],
+  ['a message with no code', new MemoryDataApiError(403, { message: 'Session context bindings are owner-exact' })],
   ['a fail-closed integrity breach', new Error('INTEGRITY_FAILURE')],
   ['an ordinary application error', new Error('boom')],
 ];
@@ -312,7 +312,7 @@ describe('ConversationContextActivationService authority-rejection mapping', () 
     async (message) => {
       for (const command of ['set', 'clear', 'read'] as const) {
         const bindings = bindingDouble();
-        const denial = new MemoryDataApiError(403, '42501', message);
+        const denial = new MemoryDataApiError(403, { code: '42501', message });
         bindings.setBinding.mockRejectedValue(denial);
         bindings.clearBinding.mockRejectedValue(denial);
         bindings.readActiveBindings.mockRejectedValue(denial);
@@ -333,7 +333,7 @@ describe('ConversationContextActivationService authority-rejection mapping', () 
     const responses = new Set<string>();
     for (const message of OWNERSHIP_DENIAL_MESSAGES) {
       const bindings = bindingDouble();
-      bindings.setBinding.mockRejectedValue(new MemoryDataApiError(403, '42501', message));
+      bindings.setBinding.mockRejectedValue(new MemoryDataApiError(403, { code: '42501', message }));
       const caught = await rejectionOf(() => facade(bindings).activateContext(USER, TOKEN, SESSION, 'GOAL', { contextId: TARGETS.GOAL }));
       const serialized = JSON.stringify((caught as ForbiddenException).getResponse());
       responses.add(serialized);
@@ -347,7 +347,7 @@ describe('ConversationContextActivationService authority-rejection mapping', () 
 
   it.each(['set', 'read'] as const)('maps the exact inactive-session refusal to a sanitized 409 on %s', async (command) => {
     const bindings = bindingDouble();
-    const refusal = new MemoryDataApiError(500, '55000', INACTIVE_SESSION_MESSAGE);
+    const refusal = new MemoryDataApiError(500, { code: '55000', message: INACTIVE_SESSION_MESSAGE });
     bindings.setBinding.mockRejectedValue(refusal);
     bindings.readActiveBindings.mockRejectedValue(refusal);
     const service = facade(bindings);
@@ -393,8 +393,8 @@ describe('ConversationContextActivationService authority-rejection mapping', () 
   });
 
   it('never maps by HTTP status alone: the same statuses are 403/409 only with the exact structured identity', async () => {
-    const mapped = new MemoryDataApiError(403, '42501', 'Session context bindings are owner-exact');
-    const unmapped = new MemoryDataApiError(403, '42501', 'permission denied for schema public');
+    const mapped = new MemoryDataApiError(403, { code: '42501', message: 'Session context bindings are owner-exact' });
+    const unmapped = new MemoryDataApiError(403, { code: '42501', message: 'permission denied for schema public' });
     const statusOnly = new MemoryDataApiError(403);
     const results: unknown[] = [];
     for (const failure of [mapped, unmapped, statusOnly]) {
@@ -406,8 +406,8 @@ describe('ConversationContextActivationService authority-rejection mapping', () 
     expect(results[1]).toBe(unmapped);
     expect(results[2]).toBe(statusOnly);
     // The identical HTTP 500 story: only the exact code+message becomes a 409.
-    const conflict = new MemoryDataApiError(500, '55000', INACTIVE_SESSION_MESSAGE);
-    const serverFailure = new MemoryDataApiError(500, '55000', 'object not in prerequisite state');
+    const conflict = new MemoryDataApiError(500, { code: '55000', message: INACTIVE_SESSION_MESSAGE });
+    const serverFailure = new MemoryDataApiError(500, { code: '55000', message: 'object not in prerequisite state' });
     const conflictBindings = bindingDouble();
     conflictBindings.setBinding.mockRejectedValue(conflict);
     expect(await rejectionOf(() => facade(conflictBindings).activateContext(USER, TOKEN, SESSION, 'GOAL', { contextId: TARGETS.GOAL })))
@@ -420,7 +420,7 @@ describe('ConversationContextActivationService authority-rejection mapping', () 
 
   it('maps nothing before transport: structural rejections stay 400 and never reach the authority', async () => {
     const bindings = bindingDouble();
-    bindings.setBinding.mockRejectedValue(new MemoryDataApiError(403, '42501', 'Session context bindings are owner-exact'));
+    bindings.setBinding.mockRejectedValue(new MemoryDataApiError(403, { code: '42501', message: 'Session context bindings are owner-exact' }));
     for (const [kind, body] of [['GLOBAL', { contextId: TARGETS.GOAL }], ['GOAL', { contextId: 'quit my job' }]] as ReadonlyArray<readonly [string, unknown]>) {
       const caught = await rejectionOf(() => facade(bindings).activateContext(USER, TOKEN, SESSION, kind, body));
       expect(caught).toBeInstanceOf(BadRequestException);

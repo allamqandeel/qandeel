@@ -72,6 +72,10 @@ const FILES = Object.freeze({
   transportSpec: 'apps/api/src/memory/memory-data-api.service.spec.ts',
   activationServiceSpec: 'apps/api/src/conversation/conversation-context-activation.service.spec.ts',
   httpSpec: 'apps/api/src/conversation/conversation-context-activation.http.spec.ts',
+  // QHIA-011A Fix 02 surfaces.
+  identitySpec: 'apps/api/src/memory/memory-data-api-upstream-identity.spec.ts',
+  errorLifecycleSpec: 'apps/api/src/conversation/conversation-context-activation.error-lifecycle.spec.ts',
+  sentryOptions: 'apps/api/src/observability/sentry.ts',
 });
 
 // QHIA-011A Fix 01: the EXACT migration-0055 rejections the application is
@@ -424,18 +428,52 @@ function assertExplicitSessionContextActivationContract(world) {
   // ---------------------------------------------------------------------
 
   // 15. The authenticated transport preserves the structured upstream failure
-  //     identity - and preserves nothing else.
+  //     identity - OPAQUELY (Fix 02) - and preserves nothing else.
   for (const required of [
-    'readonly upstreamCode?: string', 'readonly upstreamMessage?: string',
-    'new MemoryDataApiError(response.status, upstreamCode, upstreamMessage)',
-    'readUpstreamFailureIdentity(response)',
-    'return [upstreamIdentity(record.code), upstreamIdentity(record.message)];',
+    'const upstreamFailureIdentity = new WeakMap<MemoryDataApiError, MemoryDataApiUpstreamIdentity>();',
+    'upstreamFailureIdentity.set(this, Object.freeze({',
+    'export function readMemoryDataApiUpstreamIdentity(error: MemoryDataApiError): MemoryDataApiUpstreamIdentity',
+    'return identity ? { ...identity } : {};',
+    'new MemoryDataApiError(response.status, await parseUpstreamFailureIdentity(response))',
+    'const code = boundedIdentityValue(record.code);',
+    'const message = boundedIdentityValue(record.message);',
   ]) {
     if (!exe.memoryDataApi.includes(required))
-      violated(`the transport preserves the structured upstream failure identity: missing ${required}`);
+      violated(`the transport holds the upstream identity in opaque storage: missing ${required}`);
   }
-  if (!/catch \{\n\s+return \[undefined, undefined\];/u.test(exe.memoryDataApi))
+  if (!/catch \{\n\s+return \{\};\n\s+\}/u.test(exe.memoryDataApi))
     violated('a malformed or non-JSON upstream error body never replaces the original transport failure');
+  // The raw identity must not be a property of the error - not a constructor
+  // parameter property, not a field, not an assignment - so no reflection,
+  // serialization, logger, or reporter can reach it.
+  for (const forbidden of [
+    'readonly upstreamCode', 'readonly upstreamMessage', 'this.upstreamCode', 'this.upstreamMessage',
+    'upstreamCode:', 'upstreamMessage:', 'defineProperty', 'enumerable',
+  ]) {
+    if (exe.memoryDataApi.includes(forbidden))
+      violated(`the raw upstream identity is never a property of the error: found ${forbidden}`);
+  }
+  // Opaque storage must stay module-private and hold no strong reference.
+  if (exe.memoryDataApi.includes('export const upstreamFailureIdentity'))
+    violated('the opaque identity store is module-private and is never exported');
+  for (const forbidden of ['new Map<MemoryDataApiError', 'new Set<MemoryDataApiError', 'WeakRef', 'FinalizationRegistry']) {
+    if (exe.memoryDataApi.includes(forbidden))
+      violated(`the opaque identity store retains no error registry: found ${forbidden}`);
+  }
+  // The accessor is read by EXACTLY the activation mapper in production; the
+  // transport that writes it is the only other production file that names it.
+  const accessorReaders = world.production
+    .filter(({ source }) => executable(source).includes('readMemoryDataApiUpstreamIdentity'))
+    .map(({ path }) => path)
+    .sort();
+  if (JSON.stringify(accessorReaders) !== JSON.stringify([FILES.activationService, FILES.memoryDataApi].sort()))
+    violated(`only the activation mapper reads the opaque identity in production; found [${accessorReaders.join(', ')}]`);
+  // ...and the activation mapper itself neither logs, tags, reports, nor
+  // returns it.
+  for (const forbidden of ['Logger', 'console.', 'Sentry', 'captureException', 'recordException', 'setTag', 'setExtra', 'telemetry', 'JSON.stringify']) {
+    if (exe.activationService.includes(forbidden))
+      violated(`the activation mapper never logs, reports, or serializes the identity: found ${forbidden}`);
+  }
   const capturedFields = [...exe.memoryDataApi.matchAll(/record\.([a-zA-Z_]+)/gu)].map((match) => match[1]).sort();
   if (JSON.stringify(capturedFields) !== JSON.stringify(['code', 'message']))
     violated(`the transport captures exactly the upstream code and message; found [${capturedFields.join(', ')}]`);
@@ -523,8 +561,9 @@ function assertExplicitSessionContextActivationContract(world) {
 
   // 20. Fix 01 keeps its own proofs.
   for (const required of [
-    'upstreamCode', 'upstreamMessage', 'keeps the status but no structured identity',
-    'preserves only the usable half of', 'successful and unconfigured behavior is unchanged',
+    'readMemoryDataApiUpstreamIdentity(error).code', 'readMemoryDataApiUpstreamIdentity(error).message',
+    'keeps the status but no structured identity', 'preserves only the usable half of',
+    'successful and unconfigured behavior is unchanged', "expect(Object.keys({ ...error })).toEqual(['status'])",
   ]) {
     if (!exe.transportSpec.includes(required)) violated(`the transport contract still proves: ${required}`);
   }
@@ -543,6 +582,53 @@ function assertExplicitSessionContextActivationContract(world) {
     'never lets the sanitized 403 disclose', 'clear-on-inactive-session behavior untouched',
   ]) {
     if (!exe.activationServiceSpec.includes(required)) violated(`the facade mapping contract still proves: ${required}`);
+  }
+
+  // 21. QHIA-011A Fix 02: the opaque-identity and error-lifecycle proofs exist,
+  //     are non-vacuous, and are not suppressed.
+  for (const required of [
+    'RAW_DB_SENTINEL_QHIA011A_FIX02', 'util.inspect(error, { showHidden: true, depth: 10 })',
+    'JSON.stringify({ error })', 'object spread', 'Object.assign({}, error)',
+    'the raw identity is not an own property at all', 'mutating it never changes what is stored',
+    'a spread clone inherits nothing', 'is still readable through the one narrow accessor',
+  ]) {
+    if (!exe.identitySpec.includes(required)) violated(`the opaque-identity contract still proves: ${required}`);
+  }
+  for (const required of [
+    'RAW_DB_SENTINEL_QHIA011A_FIX02', 'new BaseExceptionFilter(applicationRef).catch(failure, host)',
+    'process.stdout.write = capture', 'process.stderr.write = capture',
+    'expect(emitted.length).toBeGreaterThan(0)', 'new Sentry.NodeClient(', 'sanitizeSentryEvent(', 'sentryOptions',
+    'expect(envelopes.length).toBe(1)',
+  ]) {
+    if (!exe.errorLifecycleSpec.includes(required))
+      violated(`the error-lifecycle contract still proves: ${required}`);
+  }
+  // The leakage proof must never suppress the very channel it measures.
+  for (const suppression of [
+    "spyOn(Logger.prototype", "jest.mock('@nestjs/common')", 'jest.mock("@nestjs/common")',
+    'Logger.overrideLogger', 'jest.mock(\'@sentry/nestjs\')', 'mockImplementation(() => undefined)',
+  ]) {
+    if (exe.errorLifecycleSpec.includes(suppression))
+      violated(`the actual-logger and Sentry leakage proof is never mocked away: found ${suppression}`);
+  }
+  // The Sentry sanitizer itself is unchanged: this task proves it, never
+  // loosens it, and never adds identity to it.
+  for (const frozen of [
+    'delete event.user;delete event.extra;delete event.breadcrumbs;delete event.contexts;delete event.message;',
+    'beforeSend:sanitizeSentryEvent', 'beforeBreadcrumb:(_breadcrumb:any)=>null', 'sendDefaultPii:false',
+  ]) {
+    if (!exe.sentryOptions.includes(frozen)) violated(`the production Sentry sanitizer is unchanged: missing ${frozen}`);
+  }
+  for (const forbidden of ['upstreamCode', 'upstreamMessage', 'readMemoryDataApiUpstreamIdentity', 'MemoryDataApiError']) {
+    if (exe.sentryOptions.includes(forbidden))
+      violated(`the Sentry boundary never learns about the upstream identity: found ${forbidden}`);
+  }
+  // No global logger workaround anywhere in production.
+  for (const { path, source } of world.production) {
+    for (const forbidden of ['Logger.overrideLogger', 'useLogger(', 'setLogger(']) {
+      if (executable(source).includes(forbidden))
+        violated(`${path} changes global logger configuration: found ${forbidden}`);
+    }
   }
 
   // 14. Both gates stay wired into package scripts and CI.
@@ -708,20 +794,79 @@ test('A2 - anti-vacuity: the real guard rejects every named regression', () => {
       shipped.files.activationVerifier.replace('    const activated = await activationController.activateContext(',
         "    await db.observer('INSERT INTO public.him_session_context_bindings(id) VALUES ($1)', [randomUUID()]);\n    const activated = await activationController.activateContext("))],
     // ---- QHIA-011A Fix 01: HTTP authority-rejection mapping ----
-    ['the transport stopped preserving the upstream code', withFile('memoryDataApi',
-      shipped.files.memoryDataApi.replace('    readonly upstreamCode?: string,\n', ''))],
-    ['the transport stopped preserving the upstream message', withFile('memoryDataApi',
-      shipped.files.memoryDataApi.replace('    readonly upstreamMessage?: string,\n', ''))],
     ['the transport reverted to status-only failures', withFile('memoryDataApi',
       shipped.files.memoryDataApi.replace(
-        '      const [upstreamCode, upstreamMessage] = await readUpstreamFailureIdentity(response);\n      throw new MemoryDataApiError(response.status, upstreamCode, upstreamMessage);',
-        '      throw new MemoryDataApiError(response.status);'))],
+        'throw new MemoryDataApiError(response.status, await parseUpstreamFailureIdentity(response));',
+        'throw new MemoryDataApiError(response.status);'))],
     ['the transport started capturing the upstream details', withFile('memoryDataApi',
       shipped.files.memoryDataApi.replace(
-        'return [upstreamIdentity(record.code), upstreamIdentity(record.message)];',
-        'return [upstreamIdentity(record.code), upstreamIdentity(record.details)];'))],
+        'const message = boundedIdentityValue(record.message);',
+        'const message = boundedIdentityValue(record.details);'))],
     ['a body-parsing failure can now escape and replace the transport failure', withFile('memoryDataApi',
-      shipped.files.memoryDataApi.replace('  } catch {\n    return [undefined, undefined];\n  }\n', '  }\n'))],
+      shipped.files.memoryDataApi.replace('  } catch {\n    return {};\n  }\n', '  }\n'))],
+    // ---- QHIA-011A Fix 02: opaque upstream identity ----
+    ['the raw identity became a constructor parameter property again', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace(
+        'constructor(readonly status: number, identity?: MemoryDataApiUpstreamIdentity) {',
+        'constructor(readonly status: number, readonly upstreamCode?: string, readonly upstreamMessage?: string, identity?: MemoryDataApiUpstreamIdentity) {'))],
+    ['the raw identity became an assigned field on the error', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace(
+        '    upstreamFailureIdentity.set(this, Object.freeze({',
+        '    this.upstreamMessage = identity?.message;\n    upstreamFailureIdentity.set(this, Object.freeze({'))],
+    ['the raw identity became a defined own property instead of opaque storage', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace(
+        '    upstreamFailureIdentity.set(this, Object.freeze({',
+        "    Object.defineProperty(this, 'upstreamCode', { value: identity?.code, enumerable: false });\n    upstreamFailureIdentity.set(this, Object.freeze({"))],
+    ['the opaque identity store was exported', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace(
+        'const upstreamFailureIdentity = new WeakMap<MemoryDataApiError, MemoryDataApiUpstreamIdentity>();',
+        'export const upstreamFailureIdentity = new WeakMap<MemoryDataApiError, MemoryDataApiUpstreamIdentity>();'))],
+    ['the opaque store became a strong-reference registry', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace(
+        'const upstreamFailureIdentity = new WeakMap<MemoryDataApiError, MemoryDataApiUpstreamIdentity>();',
+        'const upstreamFailureIdentity = new Map<MemoryDataApiError, MemoryDataApiUpstreamIdentity>();'))],
+    ['the accessor started handing out the stored identity itself', withFile('memoryDataApi',
+      shipped.files.memoryDataApi.replace('return identity ? { ...identity } : {};', 'return identity ?? {};'))],
+    ['a second production module started reading the opaque identity', {
+      ...shipped,
+      production: [...shipped.production, {
+        path: 'apps/api/src/observability/error-enricher.service.ts',
+        source: "import { readMemoryDataApiUpstreamIdentity } from '../memory/memory-data-api.service';\nexport class Enricher { read(e: never) { return readMemoryDataApiUpstreamIdentity(e); } }\n",
+      }],
+    }],
+    ['the activation mapper started logging the identity', withFile('activationService',
+      shipped.files.activationService.replace(
+        '    const { code, message } = readMemoryDataApiUpstreamIdentity(error);',
+        '    const { code, message } = readMemoryDataApiUpstreamIdentity(error);\n    console.error(code, message);'))],
+    ['the Sentry sanitizer stopped stripping the enrichment channels', withFile('sentryOptions',
+      shipped.files.sentryOptions.replace(
+        'delete event.user;delete event.extra;delete event.breadcrumbs;delete event.contexts;delete event.message;',
+        'delete event.user;'))],
+    ['the Sentry boundary learned about the upstream identity', withFile('sentryOptions',
+      `${shipped.files.sentryOptions}\nexport const upstreamCode = 1;\n`)],
+    ['the actual-logger leakage proof was mocked away', withFile('errorLifecycleSpec',
+      shipped.files.errorLifecycleSpec.replace(
+        '    const emitted: string[] = [];',
+        "    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);\n    const emitted: string[] = [];"))],
+    ['the actual-logger leakage proof stopped capturing the real sink', withFile('errorLifecycleSpec',
+      shipped.files.errorLifecycleSpec.replaceAll('process.stdout.write = capture', 'const unusedStdout = capture'))],
+    ['the actual-logger leakage proof became vacuous', withFile('errorLifecycleSpec',
+      shipped.files.errorLifecycleSpec.replace('expect(emitted.length).toBeGreaterThan(0);', ''))],
+    ['the configured Sentry non-leakage proof disappeared', withFile('errorLifecycleSpec',
+      shipped.files.errorLifecycleSpec.replaceAll('new Sentry.NodeClient(', 'const skipped = ('))],
+    ['the serialization proof stopped inspecting hidden properties', withFile('identitySpec',
+      shipped.files.identitySpec.replaceAll('util.inspect(error, { showHidden: true, depth: 10 })', 'String(error)'))],
+    ['the serialization proof stopped proving the identity is not an own property', withFile('identitySpec',
+      shipped.files.identitySpec.replace('the raw identity is not an own property at all', 'skipped'))],
+    ['the accessor immutability proof disappeared', withFile('identitySpec',
+      shipped.files.identitySpec.replace('mutating it never changes what is stored', 'skipped'))],
+    ['a global logger override was introduced', {
+      ...shipped,
+      production: [...shipped.production, {
+        path: 'apps/api/src/observability/quiet-logger.ts',
+        source: "import { Logger } from '@nestjs/common';\nLogger.overrideLogger(false);\n",
+      }],
+    }],
     ['the generic transport error message started carrying database text', withFile('memoryDataApi',
       shipped.files.memoryDataApi.replace(
         'super(`Memory Data API request failed with status ${status}.`);',

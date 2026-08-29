@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { HimSessionContextBindingService } from '../human-model/him-session-context-binding.service';
-import { MemoryDataApiError } from '../memory/memory-data-api.service';
+import { MemoryDataApiError, readMemoryDataApiUpstreamIdentity } from '../memory/memory-data-api.service';
 import {
   CONVERSATION_CONTEXT_ACTIVATION_CONFLICT_MESSAGE,
   CONVERSATION_CONTEXT_ACTIVATION_FORBIDDEN_MESSAGE,
@@ -178,8 +178,12 @@ export class ConversationContextActivationService {
   // failures. The raw upstream message and SQLSTATE are never returned.
   private asProductFailure(error: unknown): unknown {
     if (!(error instanceof MemoryDataApiError)) return error;
-    const code = error.upstreamCode;
-    const message = error.upstreamMessage;
+    // QHIA-011A Fix 02: the identity is opaque - it is not a property of the
+    // error and is unreachable by reflection, serialization, or any logger.
+    // This is its ONE sanctioned production read, and it exists solely for the
+    // exact comparison below. The values are compared and then discarded: they
+    // are never logged, tagged, reported, re-thrown, or returned.
+    const { code, message } = readMemoryDataApiUpstreamIdentity(error);
     if (typeof code !== 'string' || typeof message !== 'string') return error;
     if (code === AUTHORITY_OWNERSHIP_DENIAL_CODE && AUTHORITY_OWNERSHIP_DENIAL_MESSAGES.has(message)) {
       return new ForbiddenException(CONVERSATION_CONTEXT_ACTIVATION_FORBIDDEN_MESSAGE);

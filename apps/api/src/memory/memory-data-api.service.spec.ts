@@ -1,7 +1,7 @@
 import { ServiceUnavailableException } from '@nestjs/common';
-import { MemoryDataApiError, MemoryDataApiService } from './memory-data-api.service';
+import { MemoryDataApiError, MemoryDataApiService, readMemoryDataApiUpstreamIdentity } from './memory-data-api.service';
 
-// QHIA-011A Fix 01 transport contract.
+// QHIA-011A Fix 01 + Fix 02 transport contract.
 //
 // The authenticated PostgREST transport preserves EXACTLY three facts about a
 // failed request - the HTTP status and the upstream `code` and `message` - so
@@ -10,6 +10,11 @@ import { MemoryDataApiError, MemoryDataApiService } from './memory-data-api.serv
 // preserves nothing else: no `details`, no `hint`, no raw body, no headers, no
 // token, no key. A malformed or non-JSON error body never replaces the original
 // transport failure, and successful requests are untouched.
+//
+// Since Fix 02 the code and message are OPAQUE - reachable only through
+// readMemoryDataApiUpstreamIdentity, never as properties of the error - which
+// is why every assertion below reads them through that accessor. The reflection
+// and serialization proofs live in memory-data-api-upstream-identity.spec.ts.
 const TOKEN = 'caller-access-token';
 const SECRET_KEY = 'publishable-key-that-must-never-be-captured';
 
@@ -56,16 +61,16 @@ describe('MemoryDataApiService structured upstream failure identity', () => {
     })));
     const error = await rejection();
     expect(error.status).toBe(403);
-    expect(error.upstreamCode).toBe('42501');
-    expect(error.upstreamMessage).toBe('Unknown, cross-user, or wrong-kind measurement target');
+    expect(readMemoryDataApiUpstreamIdentity(error).code).toBe('42501');
+    expect(readMemoryDataApiUpstreamIdentity(error).message).toBe('Unknown, cross-user, or wrong-kind measurement target');
   });
 
   it('preserves the exact code and message of an inactive-session refusal, which PostgREST reports as HTTP 500', async () => {
     respondWith(failing(500, async () => ({ code: '55000', message: 'Conversation session is not active' })));
     const error = await rejection();
     expect(error.status).toBe(500);
-    expect(error.upstreamCode).toBe('55000');
-    expect(error.upstreamMessage).toBe('Conversation session is not active');
+    expect(readMemoryDataApiUpstreamIdentity(error).code).toBe('55000');
+    expect(readMemoryDataApiUpstreamIdentity(error).message).toBe('Conversation session is not active');
     // The generic Error.message is unchanged, so nothing that already logs or
     // reports these errors starts emitting database text.
     expect(error.message).toBe('Memory Data API request failed with status 500.');
@@ -81,7 +86,13 @@ describe('MemoryDataApiService structured upstream failure identity', () => {
     for (const secret of ['sensitive-detail', 'sensitive-hint', TOKEN, SECRET_KEY, 'details', 'hint', 'apikey']) {
       expect(serialized).not.toContain(secret);
     }
-    expect(Object.keys({ ...error }).sort()).toEqual(['status', 'upstreamCode', 'upstreamMessage']);
+    // Fix 02: the identity is opaque, so the spread carries only the status -
+    // never the upstream code or message.
+    expect(Object.keys({ ...error })).toEqual(['status']);
+    expect(serialized).not.toContain('42501');
+    expect(serialized).not.toContain('owner-exact');
+    expect(readMemoryDataApiUpstreamIdentity(error)).toEqual({
+      code: '42501', message: 'Session context bindings are owner-exact' });
   });
 
   it.each([
@@ -98,8 +109,8 @@ describe('MemoryDataApiService structured upstream failure identity', () => {
       respondWith(failing(403, json));
       const error = await rejection();
       expect(error.status).toBe(403);
-      expect(error.upstreamCode).toBeUndefined();
-      expect(error.upstreamMessage).toBeUndefined();
+      expect(readMemoryDataApiUpstreamIdentity(error).code).toBeUndefined();
+      expect(readMemoryDataApiUpstreamIdentity(error).message).toBeUndefined();
     },
   );
 
@@ -117,8 +128,8 @@ describe('MemoryDataApiService structured upstream failure identity', () => {
       respondWith(failing(403, async () => body));
       const error = await rejection();
       expect(error.status).toBe(403);
-      expect(error.upstreamCode).toBe(expectedCode);
-      expect(error.upstreamMessage).toBe(expectedMessage);
+      expect(readMemoryDataApiUpstreamIdentity(error).code).toBe(expectedCode);
+      expect(readMemoryDataApiUpstreamIdentity(error).message).toBe(expectedMessage);
     },
   );
 
