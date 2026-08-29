@@ -31,6 +31,8 @@ import type { HimGoalMotivationGuidance } from '../human-model/him-goal-motivati
 import { HimRelationshipCommunicationConsumptionService } from '../human-model/him-relationship-communication-consumption.service';
 import type { HimRelationshipCommunicationGuidance } from '../human-model/him-relationship-communication-consumption.types';
 import { HimCrossContextForegroundAggregationService } from '../human-model/him-cross-context-foreground-aggregation.service';
+import { HimBrainContextService } from '../human-model/him-brain-context.service';
+import type { HimBrainContext } from '../human-model/him-brain-context.types';
 import type { HimCrossContextForegroundGuidance } from '../human-model/him-cross-context-foreground.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
@@ -62,6 +64,7 @@ describe('ConversationOrchestratorService', () => {
   let himContextualCurrent: jest.Mocked<HimContextualCurrentIntelligenceService>;
   let himReflectionConsumption: jest.Mocked<HimSessionReflectionConsumptionService>;
   let himCrossContextForeground: jest.Mocked<HimCrossContextForegroundAggregationService>;
+  let himBrainContext: jest.Mocked<HimBrainContextService>;
   let hypothesisContext: jest.Mocked<HypothesisReasoningContextService>;
   let recommendationGrounding: jest.Mocked<RecommendationGroundingService>;
   let hypothesisEligibility: jest.Mocked<HypothesisGenerationEligibilityService>;
@@ -195,6 +198,7 @@ describe('ConversationOrchestratorService', () => {
     himContextualCurrent = { getCurrentSelection: jest.fn().mockResolvedValue(reflectionSelection(null)), getCurrentIntelligence: jest.fn() } as unknown as jest.Mocked<HimContextualCurrentIntelligenceService>;
     himReflectionConsumption = { consume: jest.fn().mockReturnValue(noneReflectionGuidance) } as unknown as jest.Mocked<HimSessionReflectionConsumptionService>;
     himCrossContextForeground = { read: jest.fn().mockResolvedValue(crossContextGuidance(noneSituationStressGuidance, noneDecisionAttentionGuidance)) } as unknown as jest.Mocked<HimCrossContextForegroundAggregationService>;
+    himBrainContext = { read: jest.fn().mockResolvedValue(undefined), consumeSourceRows: jest.fn() } as unknown as jest.Mocked<HimBrainContextService>;
     hypothesisContext = { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as jest.Mocked<HypothesisReasoningContextService>;
     recommendationGrounding = { ground: jest.fn().mockReturnValue({ coverageState: 'EMPTY', reason: 'NO_ACTIVE_HYPOTHESES' }) } as unknown as jest.Mocked<RecommendationGroundingService>;
     hypothesisEligibility = { evaluateWithContext: jest.fn().mockResolvedValue({ eligibility: { status: 'NOT_ELIGIBLE', reason: 'NO_TRIGGER' } }) } as unknown as jest.Mocked<HypothesisGenerationEligibilityService>;
@@ -207,7 +211,7 @@ describe('ConversationOrchestratorService', () => {
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
     correlation=new CorrelationService();
     telemetry=new TelemetryService(correlation);
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, hypothesisContext, recommendationGrounding, router,correlation,telemetry);
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, himBrainContext, hypothesisContext, recommendationGrounding, router,correlation,telemetry);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -1532,7 +1536,7 @@ describe('ConversationOrchestratorService', () => {
       );
       const wired = new ConversationOrchestratorService(
         repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge,
-        himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, aggregation,
+        himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, aggregation, himBrainContext,
         hypothesisContext, recommendationGrounding, router, correlation, telemetry,
       );
       return { wired, crossContextRepository, situationRepository, decisionRepository, goalRepository, relationshipRepository, situationDirectRead, decisionDirectRead, goalDirectRead, relationshipDirectRead };
@@ -1815,6 +1819,247 @@ describe('ConversationOrchestratorService', () => {
       expect(router.generate).toHaveBeenCalledTimes(1);
       expect(repository.recoverExpiredGeneratingTurn).not.toHaveBeenCalled();
       expect(repository.findTurn).not.toHaveBeenCalled();
+    });
+  });
+
+  // QHIA-012: the zero-incremental-wait acceptance criterion, proven with
+  // CONTROLLED DEFERRED PROMISES rather than sleeps or wall-clock races. Every
+  // case below decides the ordering explicitly, so none of them can pass or fail
+  // because a real timer happened to win.
+  describe('QHIA-012 Brain Context bridge (zero incremental foreground wait)', () => {
+    const finalizeNormally = () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    };
+    const brainContext = (): HimBrainContext => ({
+      contractVersion: 1,
+      source: 'QANDEEL_HIM_BRAIN_CONTEXT_V1',
+      availability: 'AVAILABLE',
+      signals: [
+        { slot: 'DECISION_SELF_CONFIDENCE', numericValue: 2, semanticMappingStatus: 'RESOLVED', semanticType: 'STATE', freshnessState: 'UNASSESSED', confidenceState: 'UNASSESSED' },
+        { slot: 'GOAL_PURPOSE_ALIGNMENT', numericValue: 4, semanticMappingStatus: 'RESOLVED', semanticType: 'ALIGNMENT', freshnessState: 'UNASSESSED', confidenceState: 'UNASSESSED' },
+      ],
+    });
+
+    it('reads Brain Context exactly ONCE per eligible turn, for the authoritative claimed session and the exact current USER turn', async () => {
+      const serverClaim = { ...claimed, id: 'claimed-turn', session_id: 'claimed-session' };
+      himSelector.select.mockReturnValue({
+        contractVersion: 1, selectionState: 'SELECTED', source: 'AUTHORITATIVE_CONVERSATION_TURN',
+        sourceTurnId: serverClaim.id, contextKind: 'CONVERSATION_SESSION', contextId: serverClaim.session_id,
+        selectionReason: 'AUTHORITATIVE_SESSION_BINDING',
+      });
+      repository.claimTurn.mockResolvedValue(serverClaim);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: { ...serverClaim, status: 'COMPLETED' }, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(himBrainContext.read).toHaveBeenCalledTimes(1);
+      // The session identity is the AUTHORITATIVE claimed one, never the
+      // client-supplied turn's, and the current-turn identity is the exact
+      // claimed turn.
+      expect(himBrainContext.read).toHaveBeenCalledWith('user', 'token', 'claimed-session', 'claimed-turn');
+    });
+
+    // Case A - Brain resolves BEFORE the existing barrier: the provider receives
+    // the exact context.
+    it('A: a Brain Context read that settles before the existing barrier reaches the single provider request', async () => {
+      const settled = brainContext();
+      let releaseSnapshot!: (value: HimIntelligenceSnapshot) => void;
+      himSnapshot.getSnapshot.mockReturnValue(new Promise<HimIntelligenceSnapshot>((resolve) => { releaseSnapshot = resolve; }));
+      let releaseBrain!: (value: HimBrainContext) => void;
+      himBrainContext.read.mockReturnValue(new Promise((resolve) => { releaseBrain = resolve; }));
+      finalizeNormally();
+      const pending = orchestrator.orchestrate('token', 'user', userTurn);
+      // The Brain read wins first while the existing awaited dependency is still
+      // deliberately held open.
+      releaseBrain(settled);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(router.generate).not.toHaveBeenCalled();
+      releaseSnapshot(snapshot);
+      await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).toMatchObject({ himBrainContext: settled });
+    });
+
+    // Case B - Brain is STILL PENDING when the barrier closes: the provider
+    // starts without it and the foreground never waits.
+    it('B: a still-pending Brain Context read never delays provider dispatch and is discarded when it settles late', async () => {
+      jest.useFakeTimers();
+      try {
+        let releaseBrain!: (value: HimBrainContext) => void;
+        himBrainContext.read.mockReturnValue(new Promise((resolve) => { releaseBrain = resolve; }));
+        finalizeNormally();
+        // The turn completes with NO timer advance at all, so no additional wait
+        // of any duration was introduced for Brain Context.
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himBrainContext');
+        // The pre-existing QHIA-005 Reflection budget remains the ONLY foreground
+        // timer, and it was cleared by its own fast resolution: QHIA-012 adds no
+        // timeout, no sleep and no new barrier.
+        expect(jest.getTimerCount()).toBe(0);
+        const dispatchedSnapshot = JSON.stringify(router.generate.mock.calls[0][0]);
+        releaseBrain(brainContext());
+        await jest.advanceTimersByTimeAsync(0);
+        // A late result is discarded for this turn: no second provider call, no
+        // mutation of the in-flight request, no second finalization.
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(JSON.stringify(router.generate.mock.calls[0][0])).toBe(dispatchedSnapshot);
+        expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('B2: dispatch still happens at the EXISTING 300 ms Reflection barrier while Brain Context stays pending forever', async () => {
+      jest.useFakeTimers();
+      try {
+        himContextualCurrent.getCurrentSelection.mockReturnValue(new Promise(() => undefined));
+        himBrainContext.read.mockReturnValue(new Promise(() => undefined));
+        finalizeNormally();
+        const pending = orchestrator.orchestrate('token', 'user', userTurn);
+        await jest.advanceTimersByTimeAsync(299);
+        expect(router.generate).not.toHaveBeenCalled();
+        // Crossing the pre-existing budget releases the foreground, and the
+        // still-pending Brain Context read adds not one millisecond.
+        await jest.advanceTimersByTimeAsync(1);
+        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himBrainContext');
+        expect(repository.failTurn).not.toHaveBeenCalled();
+        expect(jest.getTimerCount()).toBe(0);
+      } finally { jest.useRealTimers(); }
+    });
+
+    // Case C - Brain REJECTS: the response continues normally.
+    it('C: a rejected Brain Context read omits the field, fails no turn, and triggers no fallback request', async () => {
+      himBrainContext.read.mockRejectedValue(new Error('brain context transport failure'));
+      finalizeNormally();
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himBrainContext');
+      expect(himBrainContext.read).toHaveBeenCalledTimes(1);
+      expect(repository.failTurn).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+    });
+
+    it('C2: absorbs a LATE rejection after dispatch with no unhandled rejection and no second dispatch', async () => {
+      jest.useFakeTimers();
+      try {
+        let rejectBrain!: (error: Error) => void;
+        himBrainContext.read.mockReturnValue(new Promise((_resolve, reject) => { rejectBrain = reject; }));
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        const dispatchedSnapshot = JSON.stringify(router.generate.mock.calls[0][0]);
+        rejectBrain(new Error('late brain context transport failure'));
+        await jest.advanceTimersByTimeAsync(0);
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(JSON.stringify(router.generate.mock.calls[0][0])).toBe(dispatchedSnapshot);
+        expect(repository.failTurn).not.toHaveBeenCalled();
+        expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+      } finally { jest.useRealTimers(); }
+    });
+
+    // Case D - an EMPTY / fully binding-invalid materialization: no provider
+    // field at all, rather than an empty block sent to prove the feature ran.
+    it('D: an empty or fully binding-invalid materialization omits the provider field entirely', async () => {
+      himBrainContext.read.mockResolvedValue(undefined);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himBrainContext');
+    });
+
+    it('never carries a late Brain Context into the NEXT turn: the second turn reads again and gets its own answer', async () => {
+      jest.useFakeTimers();
+      try {
+        let releaseFirst!: (value: HimBrainContext) => void;
+        himBrainContext.read.mockReturnValueOnce(new Promise((resolve) => { releaseFirst = resolve; }));
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('himBrainContext');
+        releaseFirst(brainContext());
+        await jest.advanceTimersByTimeAsync(0);
+        himBrainContext.read.mockResolvedValue(undefined);
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(himBrainContext.read).toHaveBeenCalledTimes(2);
+        expect(router.generate).toHaveBeenCalledTimes(2);
+        expect(router.generate.mock.calls[1][0]).not.toHaveProperty('himBrainContext');
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('keeps Brain Context a SEPARATE advisory channel and renders it through the one shared composition', async () => {
+      const settled = brainContext();
+      himBrainContext.read.mockResolvedValue(settled);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      const dispatched = router.generate.mock.calls[0][0] as ModelRouterRequest;
+      expect(dispatched.himBrainContext).toBe(settled);
+      // It is never merged into any existing HIM guidance field.
+      expect(dispatched.himContext).not.toHaveProperty('signals');
+      expect(dispatched).not.toHaveProperty('himSituationStressGuidance');
+      expect(dispatched).not.toHaveProperty('himDecisionAttentionGuidance');
+      expect(dispatched).not.toHaveProperty('himGoalMotivationGuidance');
+      expect(dispatched).not.toHaveProperty('himRelationshipCommunicationGuidance');
+      const rendered = composeServerGuidance(dispatched);
+      expect(composeServerGuidance(dispatched)).toBe(rendered);
+      expect(rendered).toContain('<him_brain_context>');
+      expect(rendered).toContain('DECISION_SELF_CONFIDENCE');
+      // Nothing that could identify a context, a turn, a metric, or a moment in
+      // time reaches the provider through this channel.
+      const block = rendered.slice(rendered.indexOf('Human Intelligence Brain Context follows'));
+      for (const forbidden of ['contextId', 'context_id', 'sourceTurnId', 'slotOrder', 'hse.self-confidence', 'hgs.purpose-alignment', 'observedAt', 'canonicalBindingId', 'activeBindingId']) {
+        expect(block).not.toContain(forbidden);
+      }
+    });
+
+    it('performs no Brain Context read at all when Safety BLOCKs the turn', async () => {
+      safetyGate.evaluate.mockReturnValue({ category: 'SELF_HARM_OR_SUICIDE', disposition: 'BLOCK', deterministicResponse: 'safe deterministic response' });
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(himBrainContext.read).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
+    });
+
+    it('gives FAST and DEEP identical Brain Context and never participates in path selection', async () => {
+      const settled = brainContext();
+      himBrainContext.read.mockResolvedValue(settled);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
+      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+      repository.claimTurn.mockResolvedValue(deepClaim);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
+      await orchestrator.orchestrate('token', 'user', deepTurn);
+      expect(router.generate.mock.calls[0][0]).toMatchObject({ path: 'FAST', himBrainContext: settled });
+      expect(router.generate.mock.calls[1][0]).toMatchObject({ path: 'DEEP', himBrainContext: settled });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+    });
+
+    it('records the Brain Context outcome inside its own him_brain_context engine span', async () => {
+      const withEngine = jest.spyOn(telemetry, 'withEngine');
+      himBrainContext.read.mockRejectedValue(new Error('brain context transport failure'));
+      finalizeNormally();
+      await expect(correlation.runRequest(() => orchestrator.orchestrate('token', 'user', userTurn)))
+        .resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      const engineResults = withEngine.mock.calls
+        .map((call, index) => ({ engine: call[0], result: withEngine.mock.results[index] }))
+        .filter(({ engine }) => engine === 'him_brain_context');
+      expect(engineResults).toHaveLength(1);
+      await expect(engineResults[0].result.value).rejects.toThrow('brain context transport failure');
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(repository.failTurn).not.toHaveBeenCalled();
+    });
+
+    it('adds no Memory, Hypothesis, Recommendation, or provider work beyond the one advisory channel', async () => {
+      himBrainContext.read.mockResolvedValue(brainContext());
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(memoryRetriever.retrieve).toHaveBeenCalledTimes(1);
+      expect(hypothesisContext.build).toHaveBeenCalledTimes(1);
+      expect(recommendationGrounding.ground).toHaveBeenCalledTimes(1);
+      expect(himCrossContextForeground.read).toHaveBeenCalledTimes(1);
+      expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
+      expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
     });
   });
 });

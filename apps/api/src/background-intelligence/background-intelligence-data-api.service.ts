@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { SessionStatus, TurnStatus } from '../conversation/conversation.types';
 import type { HimSnapshotSourceRow } from '../human-model/him-intelligence-snapshot.types';
+import type { HimBrainContextSourceRow } from '../human-model/him-brain-context.types';
 import type { MemoryRecord, MemorySource, MemoryStatus, MemoryType } from '../memory/memory.types';
 import type { HypothesisRecord, HypothesisType, HypothesisDomain, EvidenceRole } from '../hypothesis/hypothesis.types';
 import type { HypothesisMutationResult, HypothesisUpdateRequest } from '../hypothesis/hypothesis-update.types';
@@ -16,6 +17,9 @@ const TURN_FIELDS = 'id,session_id,role,status,source_turn_id';
 const SOURCE_TURN_FIELDS = `${TURN_FIELDS},content,processing_path,routing_reason`;
 const MEMORY_FIELDS = 'id,user_id,scope,type,content,source,confidence,importance,status,version,created_at,updated_at,expires_at,supersedes_memory_id';
 const HYPOTHESIS_FIELDS = 'id,user_id,statement,type,domain,scope,origin,status,version,supporting_evidence_ids,contradicting_evidence_ids,competing_hypothesis_ids,assumptions,disconfirming_conditions,created_at,updated_at';
+// The canonical UUID shape, used only to fail closed on a malformed execution
+// identity before it can reach the service-role transport.
+const BACKGROUND_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 export interface BackgroundConversationSessionState { readonly id: string; readonly status: SessionStatus; readonly channel: 'TEXT'; }
 export interface BackgroundConversationTurnState { readonly id: string; readonly session_id: string; readonly role: 'USER' | 'ASSISTANT'; readonly status: TurnStatus; readonly source_turn_id: string | null; }
@@ -134,6 +138,22 @@ export class BackgroundIntelligenceDataApiService {
   async readHimConversationSnapshot(context:BackgroundIntelligenceExecutionContext):Promise<HimSnapshotSourceRow[]>{
     this.assertExecutionContext(context);
     return this.request<HimSnapshotSourceRow[]>('rpc/background_read_him_conversation_snapshot_v1',{method:'POST',body:JSON.stringify({p_user_id:context.userId,p_session_id:context.sessionId})});
+  }
+
+  // QHIA-012 Brain Context materialization source: the ONE narrow
+  // execution-bound background HIM read. It calls only the service-role
+  // migration-0061 source RPC and supplies ONLY the post-response execution ID -
+  // no user, no session, no turn, no context kind, no context id, no target, no
+  // metric key, no metric list, no definition version, no slot list, no
+  // registry, no user credential and no request claims. The database derives
+  // owner/session/source-turn authority from the execution itself, resolves only
+  // exact ACTIVE QHIA-006 DECISION/SITUATION/GOAL bindings, and answers all
+  // eight frozen Brain slots in ONE request: there is no per-slot network fan-out
+  // and no generic cross-context HIM read authority anywhere on this path.
+  async readHimBrainContextSource(context:BackgroundIntelligenceExecutionContext,executionId:string):Promise<HimBrainContextSourceRow[]>{
+    this.assertExecutionContext(context);
+    if(typeof executionId!=='string'||!BACKGROUND_UUID.test(executionId))throw new Error('BACKGROUND_INTELLIGENCE_EXECUTION_IDENTITY_REQUIRED');
+    return this.request<HimBrainContextSourceRow[]>('rpc/background_read_him_brain_context_source_v1',{method:'POST',body:JSON.stringify({p_execution_id:executionId})});
   }
 
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {

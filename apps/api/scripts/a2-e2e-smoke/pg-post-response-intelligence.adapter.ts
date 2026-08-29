@@ -13,10 +13,12 @@ import type { DurableAssociationResult } from '../../src/post-response-intellige
 import type { DurableCandidateProviderResult } from '../../src/post-response-intelligence/durable-generation-result';
 import { parseInformationGapSyncResult } from '../../src/post-response-intelligence/information-gap-sync-result';
 import type { InformationGapSyncResult } from '../../src/post-response-intelligence/information-gap-sync-result';
-import { CONFIDENCE_BATCH_COMMAND_STATUSES } from '../../src/post-response-intelligence/post-response-intelligence.types';
+import type { DurableHimBrainContextResult } from '../../src/post-response-intelligence/durable-him-brain-context-result';
+import { CONFIDENCE_BATCH_COMMAND_STATUSES, HIM_BRAIN_CONTEXT_COMMAND_STATUSES } from '../../src/post-response-intelligence/post-response-intelligence.types';
 import type {
   ClaimableIntelligenceEffect,
   ConfidenceBatchCommandStatus,
+  HimBrainContextCommandStatus,
   IntelligenceEffectState,
   IntelligenceExecution,
 } from '../../src/post-response-intelligence/post-response-intelligence.types';
@@ -25,6 +27,8 @@ import type { SmokeDbSession } from './smoke-db';
 export class PgPostResponseIntelligenceRepositoryAdapter {
   /** Transport-only observability: how many times the canonical migration-0038 sync command was invoked. */
   informationGapSyncCount = 0;
+  /** Transport-only observability: how many times the managed migration-0061 Brain Context completion command was invoked. */
+  himBrainContextCompletionCount = 0;
 
   constructor(private readonly db: SmokeDbSession) {}
 
@@ -104,6 +108,23 @@ export class PgPostResponseIntelligenceRepositoryAdapter {
     );
     const value = rows[0]?.value ?? '';
     return (CONFIDENCE_BATCH_COMMAND_STATUSES as readonly string[]).includes(value) ? (value as ConfidenceBatchCommandStatus) : 'NO_OP';
+  }
+
+  // QHIA-012: the managed Brain Context materialization completion. Transport
+  // substitution only - the same canonical migration-0061 service-role command
+  // the production repository calls, with the same typed status vocabulary and
+  // the same unrecognised-value-is-NO_OP rule.
+  async completeHimBrainContextMaterialization(id: string, result: DurableHimBrainContextResult): Promise<HimBrainContextCommandStatus> {
+    this.himBrainContextCompletionCount += 1;
+    const rows = await this.db.asRole<{ value: string | null }>(
+      'service_role',
+      'SELECT public.complete_post_response_him_brain_context_materialization_v1($1, $2, $3::jsonb) AS value',
+      result.code === 'NO_HIM_BRAIN_CONTEXT'
+        ? [id, 'NO_HIM_BRAIN_CONTEXT', null]
+        : [id, 'HIM_BRAIN_CONTEXT_MATERIALIZED', JSON.stringify(result.payload)],
+    );
+    const value = rows[0]?.value ?? '';
+    return (HIM_BRAIN_CONTEXT_COMMAND_STATUSES as readonly string[]).includes(value) ? (value as HimBrainContextCommandStatus) : 'NO_OP';
   }
 
   async syncInformationGaps(id: string): Promise<InformationGapSyncResult> {

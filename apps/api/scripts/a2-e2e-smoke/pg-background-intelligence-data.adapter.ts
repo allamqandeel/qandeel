@@ -26,6 +26,7 @@ import type {
 } from '../../src/background-intelligence/background-intelligence-data-api.service';
 import type { ConfidenceEvaluationRecord } from '../../src/hypothesis/confidence.types';
 import type { HimSnapshotSourceRow } from '../../src/human-model/him-intelligence-snapshot.types';
+import type { HimBrainContextSourceRow } from '../../src/human-model/him-brain-context.types';
 import type { EvidenceRole, HypothesisRecord } from '../../src/hypothesis/hypothesis.types';
 import type { HypothesisMutationResult, HypothesisUpdateRequest } from '../../src/hypothesis/hypothesis-update.types';
 import type { MemoryRecord } from '../../src/memory/memory.types';
@@ -42,6 +43,8 @@ const HYPOTHESIS_FIELDS =
 export class PgBackgroundIntelligenceDataApiAdapter {
   /** HIM Runtime Consumption v1: exact background HIM read count, so the smoke can prove zero re-consumption after durable Candidate completion. */
   himSnapshotReadCount = 0;
+  /** QHIA-012: exact background Brain Context source read count, so the smoke can prove ONE execution-bound source request and zero recomputation on redelivery. */
+  himBrainContextSourceReadCount = 0;
 
   constructor(private readonly db: SmokeDbSession) {}
 
@@ -183,6 +186,22 @@ export class PgBackgroundIntelligenceDataApiAdapter {
       'service_role',
       'SELECT * FROM public.background_read_him_conversation_snapshot_v1($1, $2)',
       [context.userId, context.sessionId],
+    );
+  }
+
+  // QHIA-012: the production PostgREST call targets the SAME migration-0061
+  // execution-bound service-role Brain Context source RPC this adapter invokes
+  // directly - identical function, identical single execution-ID input, and
+  // therefore identical database-derived authority. Counting it here is what
+  // makes "exactly ONE background source request per execution, and none at all
+  // in the foreground" checkable rather than assumed.
+  async readHimBrainContextSource(context: BackgroundIntelligenceExecutionContext, executionId: string): Promise<HimBrainContextSourceRow[]> {
+    this.assertExecutionContext(context);
+    this.himBrainContextSourceReadCount += 1;
+    return this.db.asRole<HimBrainContextSourceRow>(
+      'service_role',
+      'SELECT * FROM public.background_read_him_brain_context_source_v1($1)',
+      [executionId],
     );
   }
 
