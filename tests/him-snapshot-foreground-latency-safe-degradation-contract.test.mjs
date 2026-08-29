@@ -68,7 +68,15 @@ const SOURCES = Object.freeze({
   orchestratorSpec: 'apps/api/src/conversation/conversation-orchestrator.service.spec.ts',
   remediationSpec: 'apps/api/src/conversation/conversation-orchestrator.him-snapshot-latency-safe-degradation.spec.ts',
 });
-const shipped = Object.freeze(Object.fromEntries(Object.entries(SOURCES).map(([key, path]) => [key, read(path)])));
+// The world the guard runs over: the shipped sources PLUS the real database
+// migration listing. Carrying the listing inside the world lets the D2
+// anti-vacuity suite drive the SAME shipped migration-freeze logic over a
+// deliberately mutated listing (an added 0062) without ever creating a real
+// production migration.
+const shipped = Object.freeze({
+  ...Object.fromEntries(Object.entries(SOURCES).map(([key, path]) => [key, read(path)])),
+  migrations: Object.freeze(readdirSync(new URL('database/migrations/', root)).filter((name) => name.endsWith('.sql'))),
+});
 
 // The ONE shared budget. Snapshot and Reflection are the same class of bounded
 // foreground wait, so they are the same constant - not two constants that
@@ -87,7 +95,9 @@ function violated(property) {
 }
 
 function assertSnapshotLatencySafeDegradationContract(world) {
-  const exe = Object.fromEntries(Object.entries(world).map(([key, source]) => [key, executable(source)]));
+  const exe = Object.fromEntries(Object.entries(world)
+    .filter(([, value]) => typeof value === 'string')
+    .map(([key, source]) => [key, executable(source)]));
 
   // 1. ONE shared Human Intelligence foreground budget, frozen at 300 ms.
   if (!exe.orchestrator.includes(SHARED_BUDGET_DECLARATION))
@@ -284,6 +294,17 @@ function assertSnapshotLatencySafeDegradationContract(world) {
     if (!world.snapshotServiceSpec.includes(proof))
       violated(`the Snapshot service spec proves the classification: missing ${proof}`);
   }
+
+  // 10. QHIA-014A adds NO database file. This is the same freeze test D5
+  //     asserted from the start - the latest migration is 0061 and no 0062
+  //     exists - now driven by the world's migration listing so the D2
+  //     anti-vacuity suite can prove the guard rejects an added 0062.
+  if (!Array.isArray(world.migrations) || world.migrations.length === 0)
+    violated('the world carries the database migration listing');
+  if ([...world.migrations].sort().at(-1) !== '0061_him_brain_context_bridge_v1.sql')
+    violated('the latest migration remains 0061: this task adds no database migration');
+  if (world.migrations.some((name) => name.startsWith('0062')))
+    violated('no migration 0062 exists');
 }
 
 function slice(source, start, end) {
@@ -440,6 +461,29 @@ test('D2 - anti-vacuity: the real guard rejects every named regression', () => {
     ['the remediation proof stopped exercising the real Snapshot service', {
       remediationSpec: shipped.remediationSpec.replace('new HimIntelligenceSnapshotService(himRepository', 'fakeSnapshotService((himRepository'),
     }],
+    // QHIA-014 proof closure (Codex MEDIUM debt #2A): a mutated world in which
+    // production dispatches a SECOND provider request - a real second
+    // `this.router.generate(...)` call site on the live turn path, not a
+    // comment and not a count constant - must be rejected by this same guard.
+    ['a second production-like provider invocation was introduced', {
+      orchestrator: shipped.orchestrator.replace(
+        '      const finalized = await this.repository.finalizeTurn({',
+        "      const secondCandidate = await this.engine('model_router',selection.path,()=>this.router.generate({\n"
+        + "        task: 'CONVERSATIONAL_RESPONSE', path: selection.path, complexity: 'LOW',\n"
+        + "        behavioralGuidance, context: assembledContext.messages,\n"
+        + "        locale: 'und', modality: 'TEXT', latencyBudgetMs: 3000, costBudget: 'LOW', safetyLevel: 'STANDARD',\n"
+        + '      }));\n'
+        + '      void secondCandidate;\n'
+        + '      const finalized = await this.repository.finalizeTurn({',
+      ),
+    }],
+    // QHIA-014 proof closure (Codex MEDIUM debt #2B): a mutated world whose
+    // migration listing carries an added migration 0062 must be rejected by
+    // this same guard's migration freeze. The fixture is a listing entry only:
+    // no real production migration file is ever created.
+    ['a production migration 0062 was added', {
+      migrations: Object.freeze([...shipped.migrations, '0062_him_snapshot_latency_cache_v1.sql']),
+    }],
   ];
 
   for (const [label, overrides] of drifts) {
@@ -478,11 +522,16 @@ test('D4 - the contract is wired into package scripts and CI', () => {
 });
 
 test('D5 - QHIA-014A changes no database file', () => {
-  // Absolute: the expected database diff for this task is ZERO.
-  const migrations = readdirSync(new URL('database/migrations/', root)).filter((name) => name.endsWith('.sql'));
-  const latest = [...migrations].sort().at(-1);
-  assert.equal(latest, '0061_him_brain_context_bridge_v1.sql', 'the latest migration remains 0061');
-  assert.ok(!migrations.some((name) => name.startsWith('0062')), 'no migration 0062 exists');
+  // Absolute: the expected database diff for this task is ZERO. The migration
+  // freeze itself (latest is 0061, no 0062) now lives inside the real guard as
+  // rule 10, runs over the shipped world in D1, and is anti-vacuity-proven
+  // against an added-0062 listing in D2. Here, prove the listing the guard
+  // consumed IS the real migrations directory, read independently.
+  assert.deepEqual(
+    [...shipped.migrations],
+    readdirSync(new URL('database/migrations/', root)).filter((name) => name.endsWith('.sql')),
+    'the world migration listing is exactly the real database/migrations directory',
+  );
   // The two production files this task owns perform no database work of their
   // own: the Snapshot service still reaches the database through the one
   // pre-existing repository call, and the Orchestrator through none.
