@@ -166,6 +166,7 @@ async function verifySurfaceAndAcls() {
   )).map((row) => row.conname);
   assert.deepEqual(constraints, [
     'post_response_intelligence_effects_association_result_check',
+    'post_response_intelligence_effects_brain_context_result_check',
     'post_response_intelligence_effects_candidate_result_check',
     'post_response_intelligence_effects_claimed_result_check',
     'post_response_intelligence_effects_confidence_result_check',
@@ -174,7 +175,7 @@ async function verifySurfaceAndAcls() {
     'post_response_intelligence_effects_persistence_result_check',
     'post_response_intelligence_effects_untyped_result_check',
     'post_response_intelligence_effects_update_batch_result_check',
-  ], 'every earlier result check survives and the Confidence check joins them');
+  ], 'every earlier result check survives and the Confidence and 0061 Brain-Context checks join them');
   // No column was added to the effect ledger: the child plan is its own table.
   assert.equal((await one(
     `SELECT count(*)::int total FROM information_schema.columns

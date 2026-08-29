@@ -135,7 +135,7 @@ async function verifySurfaceAndAcls() {
        AND conname LIKE 'post_response_intelligence_effects_%_result_check' ORDER BY conname`,
   )).map((row) => row.conname);
   assert.ok(constraints.includes('post_response_intelligence_effects_update_batch_result_check'), 'the managed result check exists');
-  assert.equal(constraints.length, 9, 'every earlier result check survives alongside the 0035 Confidence check');
+  assert.equal(constraints.length, 10, 'every earlier result check survives alongside the 0035 Confidence and 0061 Brain-Context checks');
 
   for (const [signature, expected] of [
     [EXECUTE_RPC, { service_role: true, authenticated: false, anon: false, public: false }],

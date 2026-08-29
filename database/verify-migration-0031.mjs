@@ -103,6 +103,7 @@ async function verifySurfaceAndAcls() {
   )).map((row) => row.conname);
   assert.deepEqual(constraints, [
     'post_response_intelligence_effects_association_result_check',
+    'post_response_intelligence_effects_brain_context_result_check',
     'post_response_intelligence_effects_candidate_result_check',
     'post_response_intelligence_effects_claimed_result_check',
     'post_response_intelligence_effects_confidence_result_check',
@@ -111,7 +112,7 @@ async function verifySurfaceAndAcls() {
     'post_response_intelligence_effects_persistence_result_check',
     'post_response_intelligence_effects_untyped_result_check',
     'post_response_intelligence_effects_update_batch_result_check',
-  ], 'the 0029 checks survive, Association states its own domain, and the 0033/0034 checks join them');
+  ], 'the 0029 checks survive, Association states its own domain, and the 0033/0034/0035/0061 checks join them');
   const registry = (await one(
     `SELECT pg_get_constraintdef(oid) definition FROM pg_constraint
       WHERE conrelid='public.post_response_intelligence_effects'::regclass
