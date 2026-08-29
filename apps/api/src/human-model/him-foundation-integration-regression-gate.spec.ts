@@ -216,13 +216,21 @@ describe('Foundation integration / regression gate v1', () => {
     expect(s.goalMotivationDataApi.request).not.toHaveBeenCalled();
     expect(s.relationshipCommunicationDataApi.request).not.toHaveBeenCalled();
     // The rejecting aggregate degrades to omitted guidance: the turn still
-    // dispatches once, with none of the four guidance fields and no extra wait.
+    // dispatches once, with no extra wait. After QHIA-013 the four channels are
+    // no longer separate provider fields, so "none of them was used" is proven
+    // where the provider actually sees it - the one envelope carries the session
+    // reasoning lane and NOT ONE behavioral instruction.
     expect(s.router.generate).toHaveBeenCalledTimes(1);
     const request = s.router.generate.mock.calls[0][0] as ModelRouterRequest;
-    expect(request).not.toHaveProperty('himSituationStressGuidance');
-    expect(request).not.toHaveProperty('himDecisionAttentionGuidance');
-    expect(request).not.toHaveProperty('himGoalMotivationGuidance');
-    expect(request).not.toHaveProperty('himRelationshipCommunicationGuidance');
+    expect(request.humanIntelligence).toBeDefined();
+    expect(request.humanIntelligence!.behavioralInstructionIds).toEqual([]);
+    expect(request.humanIntelligence!.sessionReasoningContext).toBeDefined();
+    expect(request.humanIntelligence!.brainContext).toBeUndefined();
+    for (const legacy of [
+      'himContext', 'himInteractionAdaptation', 'himSessionReflectionGuidance', 'himSituationStressGuidance',
+      'himDecisionAttentionGuidance', 'himGoalMotivationGuidance', 'himRelationshipCommunicationGuidance',
+      'himBrainContext',
+    ]) expect(request).not.toHaveProperty(legacy);
     expect(s.repository.failTurn).not.toHaveBeenCalled();
   });
 });

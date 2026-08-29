@@ -915,10 +915,10 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(router.generate).toHaveBeenCalledTimes(1);
-      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
+      expectDispatchedHumanIntelligence({
         himInteractionAdaptation: activeAdaptation,
         himSessionReflectionGuidance: avoidReflectionGuidance,
-      }));
+      });
     });
 
     it('gives FAST and DEEP the same Reflection guidance for identical Reflection input and never selects the path', async () => {
@@ -2080,6 +2080,117 @@ describe('ConversationOrchestratorService', () => {
       expect(himCrossContextForeground.read).toHaveBeenCalledTimes(1);
       expect(hypothesisGeneration.generate).not.toHaveBeenCalled();
       expect(confidence.evaluateHypothesis).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('QHIA-013 Human Intelligence provider boundary consolidation', () => {
+    const finalizeNormally = () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    };
+
+    it('sends exactly ONE Human Intelligence envelope and none of the eight legacy fields', async () => {
+      himAdaptation.derive.mockReturnValue(activeAdaptation);
+      himCrossContextForeground.read.mockResolvedValue(
+        crossContextGuidance(activeSituationStressGuidance, noneDecisionAttentionGuidance, activeGoalMotivationGuidance, noneRelationshipCommunicationGuidance),
+      );
+      himBrainContext.read.mockResolvedValue({
+        contractVersion: 1, source: 'QANDEEL_HIM_BRAIN_CONTEXT_V1', availability: 'AVAILABLE',
+        signals: [{ slot: 'GOAL_CONSISTENCY', numericValue: 2, semanticMappingStatus: 'UNRESOLVED', semanticType: null, freshnessState: 'UNASSESSED', confidenceState: 'UNASSESSED' }],
+      } as HimBrainContext);
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      const request = dispatchedRequest();
+      // Exactly one Human Intelligence key on the whole provider request.
+      expect(Object.keys(request).filter((key) => /^him|^humanIntelligence$/u.test(key))).toEqual(['humanIntelligence']);
+      expectNoLegacyHumanIntelligenceFields();
+      // The envelope is exactly what the pure compiler produces for the upstream
+      // values this turn really obtained - no more, no less.
+      expectDispatchedHumanIntelligence({
+        himInteractionAdaptation: activeAdaptation,
+        himSituationStressGuidance: activeSituationStressGuidance,
+        himGoalMotivationGuidance: activeGoalMotivationGuidance,
+        himBrainContext: await himBrainContext.read.mock.results[0]!.value,
+      });
+    });
+
+    it('renders one universal charter, one behavioral block, and no duplicate instruction', () => {
+      // Rendering is proven on the REAL composed guidance for the dispatched
+      // request, not on a hand-built fixture.
+      const envelope = expectedEnvelope({
+        himInteractionAdaptation: activeAdaptation,
+        himSituationStressGuidance: activeSituationStressGuidance,
+        himDecisionAttentionGuidance: activeDecisionAttentionGuidance,
+        himGoalMotivationGuidance: activeGoalMotivationGuidance,
+      })!;
+      const rendered = composeServerGuidance({ behavioralGuidance: 'behavior', humanIntelligence: envelope });
+      expect(rendered.split('Human Intelligence below is server-owned support')).toHaveLength(2);
+      expect(rendered.split('The following Human Intelligence behavioral instructions')).toHaveLength(2);
+      const bullets = rendered.split('\n').filter((line) => line.startsWith('- '));
+      expect(new Set(bullets).size).toBe(bullets.length);
+      for (const retired of [
+        'HIM interaction adaptation', 'Session Reflection guidance', 'Situation-bound interaction guidance',
+        'Decision-bound presentation guidance', 'Goal-bound action-pacing guidance',
+        'Relationship-bound communication scaffolding guidance',
+      ]) expect(rendered).not.toContain(retired);
+    });
+
+    it('adds ZERO incremental foreground wait: the compilation introduces no timer, await, or barrier', async () => {
+      jest.useFakeTimers();
+      try {
+        // Both optional no-wait reads stay pending forever. The turn still
+        // completes on the pre-existing 300 ms Reflection budget alone, and the
+        // envelope is still built and dispatched synchronously after it.
+        himContextualCurrent.getCurrentSelection.mockReturnValue(new Promise(() => undefined));
+        himCrossContextForeground.read.mockReturnValue(new Promise(() => undefined));
+        himBrainContext.read.mockReturnValue(new Promise(() => undefined));
+        finalizeNormally();
+        const pending = orchestrator.orchestrate('token', 'user', userTurn);
+        await jest.advanceTimersByTimeAsync(299);
+        expect(router.generate).not.toHaveBeenCalled();
+        await jest.advanceTimersByTimeAsync(1);
+        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        // No new timer of any duration was created by the consolidation.
+        expect(jest.getTimerCount()).toBe(0);
+        // The envelope still exists - the session reasoning lane never depends on
+        // an optional read - and carries neither pending lane.
+        expectDispatchedHumanIntelligence();
+        expect(dispatchedHumanIntelligence()!.sessionReasoningContext).toBeDefined();
+        expect(dispatchedHumanIntelligence()!.brainContext).toBeUndefined();
+        expect(dispatchedHumanIntelligence()!.behavioralInstructionIds).toEqual([]);
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('discards a late Brain resolution: the compiled envelope is never mutated after dispatch', async () => {
+      jest.useFakeTimers();
+      try {
+        let releaseBrain!: (value: HimBrainContext) => void;
+        himBrainContext.read.mockReturnValue(new Promise((resolve) => { releaseBrain = resolve; }));
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        const dispatchedSnapshot = JSON.stringify(dispatchedRequest());
+        releaseBrain({
+          contractVersion: 1, source: 'QANDEEL_HIM_BRAIN_CONTEXT_V1', availability: 'AVAILABLE',
+          signals: [{ slot: 'GOAL_CONSISTENCY', numericValue: 5, semanticMappingStatus: 'UNRESOLVED', semanticType: null, freshnessState: 'UNASSESSED', confidenceState: 'UNASSESSED' }],
+        } as HimBrainContext);
+        await jest.advanceTimersByTimeAsync(0);
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(JSON.stringify(dispatchedRequest())).toBe(dispatchedSnapshot);
+        expect(dispatchedHumanIntelligence()!.brainContext).toBeUndefined();
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('degrades a rejected optional read normally and still dispatches one envelope, one provider request', async () => {
+      himContextualCurrent.getCurrentSelection.mockRejectedValue(new Error('private data api failure'));
+      himCrossContextForeground.read.mockRejectedValue(new Error('aggregate transport failure'));
+      himBrainContext.read.mockRejectedValue(new Error('brain context transport failure'));
+      finalizeNormally();
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(repository.failTurn).not.toHaveBeenCalled();
+      expectDispatchedHumanIntelligence();
     });
   });
 });
