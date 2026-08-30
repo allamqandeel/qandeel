@@ -1559,10 +1559,7 @@ async function main(): Promise<void> {
     // list: QHIA-013 PRESERVES the session-metric identity through the separate,
     // already-approved session reasoning lane, which is not this scenario's
     // subject either.
-    const c8HumanIntelligencePath = `${JSON.stringify(c8HumanIntelligence)}\n${composeServerGuidance({
-      behavioralGuidance: c8Call.request.behavioralGuidance, humanIntelligence: c8HumanIntelligence,
-    })}`;
-    for (const internalIdentity of [
+    const c8CrossContextInternalIdentities = [
       crossContextUserId, crossContextSession, c8TurnId,
       situationTarget.id, decisionTarget.id, goalTarget.id, relationshipTarget.id,
       'hse.motivation', 'hrs.communication',
@@ -1571,9 +1568,31 @@ async function main(): Promise<void> {
       'STRUCTURE_RELATIONSHIP_COMMUNICATION',
       'ACTIVE_SITUATION_BOUND', 'ACTIVE_DECISION_BOUND', 'ACTIVE_GOAL_BOUND', 'ACTIVE_RELATIONSHIP_BOUND',
       'guidanceState', 'foreground_slot', 'binding_context_id',
-    ]) {
-      assert.equal(c8HumanIntelligencePath.includes(internalIdentity), false,
+    ];
+    // The EXACT rendered Human Intelligence contribution, isolated by the same
+    // incremental identity QIR-004 measures with: everything the provider reads
+    // because Human Intelligence existed, and nothing else.
+    const c8GuidanceWithoutHumanIntelligence = composeServerGuidance({
+      behavioralGuidance: c8Call.request.behavioralGuidance,
+    });
+    const c8RenderedHumanIntelligence = composeServerGuidance({
+      behavioralGuidance: c8Call.request.behavioralGuidance, humanIntelligence: c8HumanIntelligence,
+    }).slice(c8GuidanceWithoutHumanIntelligence.length);
+    assert.ok(c8RenderedHumanIntelligence.length > 0,
+      'C8 anti-vacuity: the Human Intelligence contribution really is rendered for the provider');
+    for (const internalIdentity of c8CrossContextInternalIdentities) {
+      assert.equal(c8RenderedHumanIntelligence.includes(internalIdentity), false,
         `C8: no internal context, binding, metric, slot or directive identity reaches the provider through the cross-context behavioral path (${internalIdentity})`);
+    }
+    // Nor does the compiled envelope carry one as a KEY or VALUE. It is checked
+    // for exact JSON tokens rather than by bare substring, because the frozen
+    // QHIA-013 instruction IDs legitimately live in the envelope - only their
+    // TEXT is ever rendered - and a bare scan would collide with
+    // EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING and its siblings.
+    const c8EnvelopeJson = JSON.stringify(c8HumanIntelligence);
+    for (const internalIdentity of c8CrossContextInternalIdentities) {
+      assert.equal(c8EnvelopeJson.includes(`"${internalIdentity}"`), false,
+        `C8: the compiled Human Intelligence envelope carries no internal identity as a key or value (${internalIdentity})`);
     }
     // The four EXPLICITLY BOUND context identities are stronger than that: they
     // reach the provider through no lane of the final request at all.
