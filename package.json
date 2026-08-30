@@ -102,6 +102,7 @@
     "test:post-response-intelligence-scheduler-provider-budget-v1-contract": "node --test tests/post-response-intelligence-scheduler-provider-budget-v1-contract.test.mjs",
     "test:question-information-gap-closed-loop-v1-contract": "node --test tests/question-information-gap-closed-loop-v1-contract.test.mjs",
     "verify:question-information-gap-closed-loop:integration": "node --env-file-if-exists=.env database/verify-migration-0063.mjs",
+    "test:integrated-intelligence-runtime-phase-closure-contract": "node --test tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs",
     "verify:explicit-session-context-activation:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/verify-explicit-session-context-activation-runtime.ts",
     "verify:him-measurement-preflight": "node --test tests/him-structured-measurement-preflight.test.mjs && npm run test:api && npm run test:database && node node_modules/typescript/bin/tsc -p apps/api/tsconfig.json --noEmit && node node_modules/typescript/bin/tsc -p apps/api/tsconfig.scripts.json --noEmit && npm run build:api",
     "verify:foundation-integration-gate": "npm run test --workspace @qandeel/api -- --runInBand --runTestsByPath src/human-model/him-foundation-integration-regression-gate.spec.ts && node --test tests/him-foundation-integration-regression-gate.test.mjs"

@@ -28,7 +28,13 @@ semantics**. It adds:
 - no runtime/product behaviour change;
 - no database schema change and **no migration 0064** — the terminal migration
   of this contract's baseline remains
-  `database/migrations/0063_question_information_gap_closed_loop_v1.sql`;
+  `database/migrations/0063_question_information_gap_closed_loop_v1.sql`. This
+  is a historical scope statement about QIR-007 itself, not a permanent ceiling
+  on the repository: QIR-008 phase closure repaired this contract's static
+  guard so it freezes only the durable historical fact that migration 0063
+  EXISTS and was the terminal migration of the CLOSED QIR v1 historical
+  baseline, and later separately reviewed migrations are legal by number and by
+  name;
 - no provider, no model, no provider/model selection;
 - no fourth background provider effect and no `QUESTION_PROVIDER`;
 - no retry, fallback, provider-racing or hidden-retry framework;

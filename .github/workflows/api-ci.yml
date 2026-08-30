@@ -47,6 +47,7 @@ jobs:
       - {name: Verify Post-Response Intelligence Scheduler & Provider Budget static contract, run: npm run test:post-response-intelligence-scheduler-provider-budget-v1-contract}
       - {name: Verify Question / Information-Gap Closed Loop static contract, run: npm run test:question-information-gap-closed-loop-v1-contract}
       - {name: Verify Integrated Brain E2E Hardening v2 static contract, run: npm run test:integrated-brain-e2e-hardening-v2-contract}
+      - {name: Verify Integrated Intelligence Runtime phase closure contract, run: npm run test:integrated-intelligence-runtime-phase-closure-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}
