@@ -27,6 +27,10 @@ The original Word documents remain the canonical archive. Markdown files record 
 
 - [Human Intelligence Activation Freeze v1](human-intelligence-activation-freeze-v1.md) — **CLOSED / FROZEN** (QHIA-001 → QHIA-015; phase closure is not product completion)
 
+## Integrated Intelligence Runtime & Hardening
+
+- [Integrated Intelligence Runtime Contract v1](integrated-intelligence-runtime-contract-v1.md) — **ACTIVE / NORMATIVE** phase entry contract (QIR-001; the integration constitution for the whole brain; Provider/LLM selection explicitly deferred)
+
 ## Operational Foundation hardening
 
 - [Correlation & Telemetry Foundation v1](correlation-telemetry-foundation-v1.md)
