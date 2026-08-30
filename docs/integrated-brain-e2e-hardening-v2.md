@@ -364,3 +364,193 @@ package.json
 
 Changes under `apps/api/src/**` and `database/migrations/**` are treated as
 suspicious. **No production semantic changes were made by QIR-007.**
+
+---
+
+## 11. Addendum A — Cross-Context Adversarial & Human Intelligence Capacity Proof v1
+
+**Status: ACTIVE / NORMATIVE — verification-only bounded addendum.**
+
+### 11.1 Why it exists
+
+Independent review of QIR-007 left exactly two open questions before the QIR-008
+freeze. Neither is a defect; both are missing evidence.
+
+1. **Integrated cross-context adversarial coverage.** The four QHIA cross-context
+   channels were already real production components inside the QIR-007
+   composition, and their own QHIA unit, static and database coverage is strong.
+   What was missing was integrated **Orchestrator-level** failure and
+   composition proof: scenario C gave the aggregate lane no adversarial fault
+   case of its own.
+2. **The true current Human Intelligence ceiling.** `6427` is the frozen
+   canonical **all-active QHIA-013 fixture** footprint. That fixture already
+   carries all four cross-context channels ACTIVE simultaneously, the full
+   `CONVERSATION_SESSION` reasoning lane and Brain Context — but its Brain
+   Context lane carries two of the eight frozen slots, so it is evidence about
+   one exact fixture and **it is NOT the maximum reachable envelope**.
+
+Addendum A closes both, and nothing else. It adds no production semantics, no
+migration, no new E2E gate, and no new runtime service. It extends scenario C
+rather than inventing a new top-level scenario.
+
+### 11.2 The frozen architecture being tested (not redesigned)
+
+The Conversation Orchestrator treats the cross-context aggregate as **exactly
+ONE aggregate-v3 foreground read**, launched concurrently with Snapshot,
+Reflection and Brain Context. It carries **ZERO incremental wait, no dedicated
+timeout, and it is never directly awaited**: it is accepted only if it settles
+successfully before the ONE existing Human Intelligence barrier closes, and a
+later settlement is discarded for good.
+
+**A rejected, late, or malformed aggregate is an OMISSION, never an
+authoritative all-four `NONE` answer.** **There is no direct per-channel
+fallback, no aggregate-v1/v2 fallback, and no cross-turn cache.**
+
+### 11.3 C5–C8
+
+All four cases run on ONE session in which the `SITUATION`, `DECISION`, `GOAL`
+and `RELATIONSHIP` contexts are genuinely bound — through the REAL production
+explicit activation entry over the REAL QHIA-006 authority — and genuinely
+measured at the exact canonical value each frozen consumer acts on. C5, C6 and
+C7 therefore prove the ABSENCE of exactly what C8 proves is genuinely present.
+
+**C5 — cross-context rejection isolation.** The canonical aggregate really runs
+against real PostgreSQL and its settlement is then lost, so the injected
+rejection provably hit the exact request that was genuinely attempted. The proof
+asserts: no direct Situation/Decision/Goal/Relationship read, no aggregate-v1/v2
+read, no re-read of the QHIA-006 relevance authority, no fabricated
+`DEFAULT`/`NONE` result, no stale result from an earlier turn, the cross-context
+contribution omitted, unrelated eligible Snapshot/Memory/Hypothesis/Question
+work continuing, exactly one conversational provider call, and canonical
+finalization.
+
+**C6 — cross-context late-settlement isolation.** No timeout is introduced,
+because the lane has none. A genuinely SUCCESSFUL settlement is held on a
+deterministic gate so it is still pending when the existing Human Intelligence
+barrier closes; the gate is released only after the turn has already finalized.
+The proof asserts: the read was genuinely attempted and really executed, it was
+still pending at the barrier, generation and finalization proceeded without it,
+the final request carries none of its guidance, exactly one provider call, and
+after release — no second provider call, no second finalization, no request
+mutation, no rendered-guidance mutation, and no assistant-response mutation. A
+later turn then performs its OWN current aggregate read and legitimately gets
+the full all-four composition back, which is what proves there is no cross-turn
+cache to inherit.
+
+**C7 — malformed aggregate isolation.** A SUCCESSFUL transport carries a
+structurally forbidden envelope built from the REAL four rows the canonical
+aggregate returned for this session: the `GOAL_MOTIVATION` row is duplicated
+into the fourth position, so the payload is simultaneously a duplicated slot, a
+missing `RELATIONSHIP_COMMUNICATION` slot, and a slot/order pairing outside the
+frozen v3 transport table. The REAL
+`HimCrossContextForegroundAggregationService` rejects it — proven directly and
+again through a real turn — with no sorting, padding, repair, or partial channel
+salvage, no fallback, no fabricated four-channel `NONE`, and exactly one
+provider call. This supplements the existing QHIA unit matrix; it does not
+duplicate it.
+
+**C8 — all four cross-context contexts ACTIVE together.** One aggregate-v3 read
+returns all four frozen slots, once each, in frozen transport order; all four
+REAL semantic consumers run and all four results are ACTIVE simultaneously. The
+Orchestrator compiles them into ONE `humanIntelligence` provider envelope — there
+is no separate per-channel ModelRouter field. Instruction IDs are a semantic
+set-union: an instruction several channels authorize is emitted and rendered
+exactly once, in the frozen canonical registry order, and agreement creates no
+vote, count, weight, confidence, strength or amplification field of any kind.
+Exactly one conversational provider call occurs, and no context id, binding id,
+cross-context metric key, slot label, binding state, directive name or internal
+instruction ID reaches the provider through this behavioral path.
+
+### 11.4 CURRENT_MAX_HUMAN_INTELLIGENCE
+
+The maximum current-contract provider-facing Human Intelligence envelope is
+built and measured through the REAL `buildHumanIntelligenceProviderSemantics`,
+the REAL `composeServerGuidance`, the REAL `IntegratedContextBudgetAssemblerService`
+and `Buffer.byteLength(..., 'utf8')`. No byte is estimated or hand-counted, and
+the measurement identity is exactly the one QIR-004 already uses:
+
+```text
+UTF8(composeServerGuidance(request WITH max HI))
+- UTF8(composeServerGuidance(same request WITHOUT HI))
+```
+
+Maximality is SEARCHED, never assumed. Every legal combination of the three
+`CONVERSATION_SESSION` metric shapes and both ACTIVE reflection directives is
+rendered and compared (2000 candidates), and every shape is pushed through the
+REAL `HimReasoningConsumptionService` and `HimFastDeepConsumptionService`, which
+reject an unreachable one. The eight-slot Brain Context lane is built by the REAL
+`HimBrainContextService` from legal migration-0061 rows using each slot's EXACT
+persisted semantic mapping — re-read from real PostgreSQL by the dynamic gate, so
+the pure CPU proof cannot inflate itself with a mapping the database does not
+carry.
+
+The winning fixture is: `CONVERSATION_SESSION` / `DEEP` with all three currently
+legal session metrics at their byte-maximal legal shape, every legal Interaction
+Adaptation contribution active, the larger ACTIVE Session Reflection directive,
+all four cross-context channels ACTIVE, and all eight frozen Brain Context slots.
+It authorizes 11 of the 12 frozen instruction IDs; the only unreachable one is
+the mutually exclusive reflection directive.
+
+```text
+QIR007_HI_CURRENT_MAX:
+incremental_bytes=7536
+slice_bytes=8192
+headroom_bytes=656
+verdict=PASS
+```
+
+```text
+canonical all-active QHIA-013 fixture bytes:            6427
+CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7536
+Human Intelligence slice bytes:                         8192
+headroom bytes:                                          656
+Brain Context slots in the maximum fixture:                8
+session reasoning metrics in the maximum fixture:          3
+cross-context ACTIVE channels in the maximum fixture:      4
+capacity verdict:                                       PASS
+```
+
+The REAL QIR-004 assembler then proves the PASS path: `HUMAN_INTELLIGENCE =
+INCLUDED_FULL`, retained bytes equal to offered bytes (zero truncation), the exact
+envelope object surviving assembly unmodified, an identical decision with the
+other optional slices absent (nothing borrowed), and a final normalized request
+inside the frozen 131072-byte global ceiling.
+
+### 11.5 Both figures survive
+
+`6427` is **not** deleted, re-measured, or renamed. It remains the frozen
+canonical all-active QHIA-013 fixture footprint, and its QIR-004 proof is
+preserved verbatim. Addendum A adds a second, different fact next to it:
+
+```text
+canonical all-active fixture = 6427 bytes
+current maximum legal envelope = 7536 bytes
+```
+
+The static contract fails if either figure is silently re-baselined, if the two
+are conflated, if the eight-slot maximum fixture shrinks, if the capacity proof
+stops using the real canonical renderer or stops deciding against
+`HUMAN_INTELLIGENCE_BUDGET_BYTES`, if any C5–C8 proof is removed, if a direct
+per-channel fallback appears in the integrated verifier, or if production wiring
+gains an aggregate timer or a direct await that would contradict the frozen
+zero-wait architecture.
+
+### 11.6 Scope
+
+Addendum A changed only:
+
+```text
+apps/api/scripts/verify-integrated-brain-end-to-end-hardening-v2.ts
+apps/api/scripts/integrated-brain-e2e-hardening-v2/hardening-harness.ts
+apps/api/scripts/integrated-brain-e2e-hardening-v2/human-intelligence-capacity.ts
+tests/integrated-brain-e2e-hardening-v2-contract.test.mjs
+docs/integrated-brain-e2e-hardening-v2.md
+```
+
+The harness change is the verification-only authenticated fault seam gaining the
+three kinds the aggregate lane needs (`REJECT_AFTER_CALL`, `GATE_AFTER_CALL`,
+`MALFORMED_SUCCESS`); the pre-existing `{ match, error }` arming is unchanged.
+No package script, workflow, migration or production source was touched, the
+runtime gate ordering is unchanged, and there is no fourth E2E.
+
+**No production semantic changes were made by QIR-007 Addendum A.**

@@ -37,6 +37,7 @@ const read = (path) => readFileSync(new URL(path, root), 'utf8');
 const CONTRACT_DOC = 'docs/integrated-brain-e2e-hardening-v2.md';
 const VERIFIER = 'apps/api/scripts/verify-integrated-brain-end-to-end-hardening-v2.ts';
 const HARNESS = 'apps/api/scripts/integrated-brain-e2e-hardening-v2/hardening-harness.ts';
+const CAPACITY = 'apps/api/scripts/integrated-brain-e2e-hardening-v2/human-intelligence-capacity.ts';
 const SOURCES = Object.freeze({
   contractDoc: CONTRACT_DOC,
   docsReadme: 'docs/README.md',
@@ -44,6 +45,7 @@ const SOURCES = Object.freeze({
   ci: '.github/workflows/api-ci.yml',
   verifier: VERIFIER,
   harness: HARNESS,
+  capacity: CAPACITY,
   providerBudget: 'apps/api/src/post-response-intelligence/post-response-provider-budget.ts',
   budgetContract: 'apps/api/src/intelligence-runtime/integrated-context-budget-contract.ts',
   questionSelectionTypes: 'apps/api/src/question/question-foreground-selection.types.ts',
@@ -51,6 +53,10 @@ const SOURCES = Object.freeze({
   orchestrator: 'apps/api/src/conversation/conversation-orchestrator.service.ts',
   questionSelectionService: 'apps/api/src/question/question-foreground-selection.service.ts',
   redisConsumer: 'apps/api/src/post-response-intelligence/redis-post-response-consumer.ts',
+  // QIR-007 Addendum A: the frozen Brain Context registry and the preserved
+  // QHIA-013 all-active footprint proof.
+  brainContextTypes: 'apps/api/src/human-model/him-brain-context.types.ts',
+  humanIntelligenceFootprintSpec: 'apps/api/src/model-router/human-intelligence-prompt-footprint.spec.ts',
 });
 const shipped = Object.freeze({
   ...Object.fromEntries(Object.entries(SOURCES).map(([key, path]) => [key, read(path)])),
@@ -119,6 +125,26 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   'QIR-007 Production Blocker',
   '**A production bug is never fixed opportunistically inside QIR-007.**',
   '**No production semantic changes were made by QIR-007.**',
+  // QIR-007 Addendum A - Cross-Context Adversarial & Human Intelligence
+  // Capacity Proof v1.
+  '## 11. Addendum A — Cross-Context Adversarial & Human Intelligence Capacity Proof v1',
+  '**C5 — cross-context rejection isolation.**',
+  '**C6 — cross-context late-settlement isolation.**',
+  '**C7 — malformed aggregate isolation.**',
+  '**C8 — all four cross-context contexts ACTIVE together.**',
+  'exactly ONE aggregate-v3 foreground read',
+  'ZERO incremental wait, no dedicated timeout, and it is never directly awaited',
+  'A rejected, late, or malformed aggregate is an OMISSION, never an authoritative all-four `NONE` answer.',
+  'There is no direct per-channel fallback, no aggregate-v1/v2 fallback, and no cross-turn cache.',
+  '`6427` is the frozen canonical **all-active QHIA-013 fixture** footprint',
+  'it is NOT the maximum reachable envelope',
+  'CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7536',
+  'headroom_bytes=656',
+  'verdict=PASS',
+  'Brain Context slots in the maximum fixture: 8',
+  'session reasoning metrics in the maximum fixture: 3',
+  'cross-context ACTIVE channels in the maximum fixture: 4',
+  '**No production semantic changes were made by QIR-007 Addendum A.**',
 ]);
 
 // Substantive per-scenario coverage markers. Each entry is a live assertion
@@ -127,7 +153,10 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
 const SCENARIO_MARKERS = Object.freeze({
   A: ["'A: ", "stage = 'A_TURN_1_LEARN'", "stage = 'A_TURN_2_ASK'", "stage = 'A_TURN_3_INFORMATION'", 'HYPOTHESIS_VERSION_ADVANCED'],
   B: ["'B: ", "'B anti-vacuity: ", "stage = 'B_DEEP_PARITY_AND_D_AUTHORITY'"],
-  C: ["'C1: ", "'C1b: ", "'C2: ", "'C3: ", "'C4/E3: ", "stage = 'C_FOREGROUND_FAILURE_ISOLATION'"],
+  C: ["'C1: ", "'C1b: ", "'C2: ", "'C3: ", "'C4/E3: ", "stage = 'C_FOREGROUND_FAILURE_ISOLATION'",
+    // QIR-007 Addendum A extends scenario C rather than inventing a scenario I.
+    "'C5: ", "'C6: ", "'C7: ", "'C8: ", "'C5 anti-vacuity: ", "'C6 anti-vacuity: ",
+    "'C7 anti-vacuity: ", "'C8 anti-vacuity: ", "stage = 'C_CROSS_CONTEXT_ADVERSARIAL_MATRIX'"],
   D: ["'D: ", "'D anti-vacuity: ", "stage = 'D_GLOBAL_CONTEXT_PRESSURE'"],
   E: ["'E1: ", "'E2: ", "'E4: ", "stage = 'E1_SAFETY_BLOCK'", "stage = 'E2_SAFETY_GUIDED'"],
   F: ["'F1: ", "'F2: ", "'F3: ", "'F4: ", "stage = 'F_RECOVERY_AND_E4'", 'await consumer.reclaim()'],
@@ -146,6 +175,67 @@ const REQUIRED_PRODUCTION_CLASSES = Object.freeze([
   'RuntimeEventPublisher', 'RedisStreamsTransport', 'RedisPostResponseConsumer',
   'PostResponseIntelligenceDispatcherService', 'BackgroundIntelligenceAuthorityService',
   'BackgroundIntelligenceEnrichmentService', 'CorrelationService', 'TelemetryService',
+  // QIR-007 Addendum A: the cross-context aggregate, its transport, the four
+  // real semantic consumers, the Brain Context lane, and the REAL explicit
+  // relevance-activation entry the all-four fixture is built through.
+  'HimCrossContextForegroundAggregationService', 'HimCrossContextForegroundRepository',
+  'HimSituationStressConsumptionService', 'HimDecisionAttentionConsumptionService',
+  'HimGoalMotivationConsumptionService', 'HimRelationshipCommunicationConsumptionService',
+  'HimBrainContextService', 'ConversationContextActivationService', 'HimSessionContextBindingService',
+]);
+
+// QIR-007 Addendum A. Each entry is a live assertion LABEL or a real
+// service/fault/census INVOCATION in the dynamic verifier - never a comment -
+// so deleting the proof, not merely renaming a heading, breaks this guard.
+const ADDENDUM_A_VERIFIER_PROOFS = Object.freeze([
+  // C5 - rejection isolation.
+  'the canonical aggregate really RAN against real PostgreSQL and the injected rejection hit THAT request',
+  'no direct per-channel fallback read was issued',
+  'no retired aggregate fallback was issued',
+  'REJECTED is omission, never an authoritative all-four NONE answer',
+  'the Snapshot-derived Human Intelligence lane continued unaffected',
+  // C6 - zero-incremental-wait late settlement isolation.
+  'the successful aggregate settlement was STILL PENDING when the existing Human Intelligence barrier closed',
+  'provider generation and canonical finalization proceeded WITHOUT the pending aggregate',
+  'releasing the late aggregate triggers NO second provider call and NO second finalization',
+  'the already-built provider request is not mutated by the late settlement',
+  'the finalized assistant response is untouched by the late settlement',
+  'the next turn performs its OWN current aggregate read - no cross-turn cache exists to inherit',
+  // C7 - malformed aggregate isolation.
+  'REJECTS the malformed successful envelope - it is never sorted, padded, repaired, or partially salvaged',
+  'the malformed successful payload really crossed the real aggregate boundary',
+  'NO partial channel salvage',
+  // C8 - all four ACTIVE together, compiled into ONE envelope.
+  'ALL FOUR context bindings are genuinely ACTIVE on the SAME session at the same time',
+  'all FOUR real semantic consumers ran and all FOUR results are ACTIVE simultaneously on the same session',
+  'the four channels compile into ONE humanIntelligence envelope - there is no separate per-channel ModelRouter field',
+  'agreement between sources creates no vote, count, weight, confidence, strength or amplification field of any kind',
+  'instruction order is the frozen canonical registry order',
+  'no internal context, binding, metric, slot or directive identity reaches the provider through the cross-context behavioral path',
+]);
+
+// The real fault/service invocations the addendum's proofs are built on.
+const ADDENDUM_A_VERIFIER_INVOCATIONS = Object.freeze([
+  "kind: 'REJECT_AFTER_CALL'",
+  "kind: 'GATE_AFTER_CALL'",
+  "kind: 'MALFORMED_SUCCESS', value: malformedAggregateRows",
+  'himCrossContextForegroundService.read(',
+  'contextActivationService.activateContext(',
+  'read_him_session_cross_context_foreground_v3',
+  'proveCurrentMaximumHumanIntelligenceCapacity(',
+  'formatCurrentMaximumHumanIntelligenceProof(',
+]);
+
+// The REAL canonical rendering identity the capacity proof must keep using.
+const ADDENDUM_A_CAPACITY_CANONICAL_SOURCES = Object.freeze([
+  "from '../../src/model-router/human-intelligence-provider-semantics'",
+  "from '../../src/model-router/model-router.types'",
+  "from '../../src/intelligence-runtime/integrated-context-budget-assembler.service'",
+  'buildHumanIntelligenceProviderSemantics(',
+  'composeServerGuidance(',
+  "Buffer.byteLength(value, 'utf8')",
+  'HUMAN_INTELLIGENCE_BUDGET_BYTES',
+  'GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES',
 ]);
 
 // The frozen A2 / Full Intelligence helpers QIR-007 REUSES instead of forking.
@@ -363,6 +453,108 @@ function assertIntegratedBrainHardeningContract(world) {
     if (/integrated-brain-e2e-hardening-v2|verify-integrated-brain-end-to-end-hardening-v2/u.test(source))
       violated('a production module references the QIR-007 verification harness');
   }
+
+  // -------------------------------------------------------------------------
+  // 13. QIR-007 ADDENDUM A - Cross-Context Adversarial & HI Capacity Proof v1.
+  // -------------------------------------------------------------------------
+  const exeCapacity = executable(world.capacity);
+  if (typeof world.capacity !== 'string' || world.capacity.length < 6000)
+    violated('the QIR-007 Addendum A capacity proof module exists and is substantive');
+
+  // 13a. C5-C8 keep SUBSTANTIVE executable proof, not comments or headings.
+  for (const proof of ADDENDUM_A_VERIFIER_PROOFS) {
+    if (!exeVerifier.includes(proof)) violated(`the Addendum A cross-context proof is substantive: missing "${proof}"`);
+  }
+  for (const invocation of ADDENDUM_A_VERIFIER_INVOCATIONS) {
+    if (!exeVerifier.includes(invocation))
+      violated(`the Addendum A proof really invokes the named service/fault/census seam: ${invocation}`);
+  }
+  // The three verification-side fault kinds the addendum needs exist at the
+  // ONE authenticated transport seam - and nowhere near production.
+  for (const kind of ['REJECT_AFTER_CALL', 'GATE_AFTER_CALL', 'MALFORMED_SUCCESS']) {
+    if (!exeHarness.includes(kind))
+      violated(`the verification-only authenticated fault seam still supports ${kind}`);
+  }
+
+  // 13b. The integrated verifier issues NO direct per-channel and NO retired
+  //      aggregate read of its own: the census names them, production never
+  //      calls them, and a fallback appearing here would be caught.
+  if (/public\.read_him_session_(?:situation_stress|decision_attention|goal_motivation|relationship_communication)_v1\(/u.test(exeVerifier))
+    violated('the integrated verifier issues no direct per-channel cross-context read of its own');
+  if (/public\.read_him_session_cross_context_foreground_v[12]\(/u.test(exeVerifier))
+    violated('the integrated verifier issues no retired aggregate-v1/v2 read');
+  for (const census of ['DIRECT_CROSS_CONTEXT_RPCS', 'RETIRED_CROSS_CONTEXT_AGGREGATE_RPCS', 'RELEVANCE_AUTHORITY_RPC']) {
+    if (!exeVerifier.includes(census))
+      violated(`the verifier censuses the forbidden cross-context transport by name: ${census}`);
+  }
+
+  // 13c. The FROZEN zero-incremental-wait aggregate architecture in production
+  //      wiring: launched concurrently, recorded through a non-blocking
+  //      settlement handler, never directly awaited, no dedicated timer, and
+  //      accepted only before the ONE existing Human Intelligence barrier.
+  if (!world.orchestrator.includes('crossContextForegroundReadPromise.then('))
+    violated('the cross-context aggregate is recorded through a non-blocking settlement handler');
+  if (/await\s+(?:this\.)?crossContextForegroundReadPromise/u.test(world.orchestrator))
+    violated('the cross-context aggregate lane is never directly awaited');
+  if (!world.orchestrator.includes('crossContextForegroundBarrierClosed = true'))
+    violated('the cross-context aggregate is accepted only before the existing Human Intelligence barrier closes');
+  if (/CROSS_CONTEXT[A-Z_]*(?:WAIT|TIMEOUT|DEADLINE|BUDGET)[A-Z_]*_MS|withCrossContext[A-Za-z]*(?:Budget|Timeout|Deadline)/u.test(world.orchestrator))
+    violated('the cross-context aggregate lane gains no dedicated timer, timeout, or incremental wait budget');
+
+  // 13d. CURRENT_MAX_HUMAN_INTELLIGENCE is measured through the REAL canonical
+  //      renderer and decided against the FROZEN production slice.
+  for (const canonical of ADDENDUM_A_CAPACITY_CANONICAL_SOURCES) {
+    if (!world.capacity.includes(canonical))
+      violated(`the current-maximum proof measures through the REAL canonical rendering identity: ${canonical}`);
+  }
+  if (!exeCapacity.includes('const sliceBytes = HUMAN_INTELLIGENCE_BUDGET_BYTES;'))
+    violated('the capacity verdict uses the frozen production Human Intelligence slice, never a restated literal');
+  if (!exeCapacity.includes('incrementalBytes <= sliceBytes'))
+    violated('the capacity verdict compares the measured bytes against HUMAN_INTELLIGENCE_BUDGET_BYTES');
+  if (!exeCapacity.includes("assert.equal(decision!.outcome, 'INCLUDED_FULL',"))
+    violated('the PASS path is proven through the REAL QIR-004 assembler as INCLUDED_FULL');
+  if (!world.budgetContract.includes('export const HUMAN_INTELLIGENCE_BUDGET_BYTES = 8192;'))
+    violated('the atomic Human Intelligence slice remains exactly 8192 bytes');
+  if (!world.capacity.includes('export const EXPECTED_CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7536;'))
+    violated('the measured current-maximum Human Intelligence footprint remains the exact locked result');
+
+  // 13e. The maximum fixture really is maximal: all eight frozen Brain Context
+  //      slots, all three currently legal session metrics, all four ACTIVE
+  //      cross-context channels, and an EXHAUSTIVE legal search rather than a
+  //      hand-picked shape.
+  if (!world.brainContextTypes.includes('export const HIM_BRAIN_CONTEXT_MAX_SIGNALS = 8 as const;'))
+    violated('the frozen Brain Context registry still allows exactly eight slots');
+  const brainMetricKeys = [...world.brainContextTypes.matchAll(/metricKey: '([a-z.-]+)'/gu)].map((match) => match[1]);
+  if (brainMetricKeys.length !== 8) violated('the frozen Brain Context registry still declares exactly eight slot metrics');
+  for (const metricKey of brainMetricKeys) {
+    if (!exeCapacity.includes(`'${metricKey}'`))
+      violated(`the eight-slot Brain Context maximum fixture still carries ${metricKey}`);
+  }
+  if (!exeCapacity.includes('HIM_BRAIN_CONTEXT_MAX_SIGNALS'))
+    violated('the maximum fixture is pinned to the frozen eight-slot Brain Context ceiling');
+  for (const metricKey of ['hse.stress', 'hse.energy', 'hse.attention']) {
+    if (!exeCapacity.includes(`'${metricKey}'`))
+      violated(`the maximum fixture carries the currently legal session reasoning metric ${metricKey}`);
+  }
+  for (const directive of [
+    'REDUCE_INTERACTION_BURDEN', 'REDUCE_PRESENTATION_BURDEN',
+    'REDUCE_GOAL_ACTION_BURDEN', 'STRUCTURE_RELATIONSHIP_COMMUNICATION',
+  ]) {
+    if (!exeCapacity.includes(directive))
+      violated(`the maximum fixture keeps the ACTIVE cross-context channel ${directive}`);
+  }
+  if (!exeCapacity.includes('the maximality search really enumerated the whole legal shape space'))
+    violated('the current maximum is SEARCHED over the legal shape space, never hand-picked');
+
+  // 13f. The frozen 6427 evidence is preserved and correctly classified: it
+  //      remains the canonical ALL-ACTIVE fixture footprint and is never
+  //      renamed as the maximum.
+  if (!world.humanIntelligenceFootprintSpec.includes('const EXPECTED_QHIA_013_HUMAN_INTELLIGENCE_BYTES = 6427;'))
+    violated('the frozen QHIA-013 all-active 6427-byte footprint proof is preserved, not deleted');
+  if (!world.capacity.includes('export const CANONICAL_ALL_ACTIVE_HUMAN_INTELLIGENCE_BYTES = 6427;'))
+    violated('the canonical all-active fixture footprint stays recorded as exactly 6427, beside the measured maximum');
+  if (!exeCapacity.includes('incrementalBytes > CANONICAL_ALL_ACTIVE_HUMAN_INTELLIGENCE_BYTES'))
+    violated('the two figures stay distinct: the measured maximum is proven strictly larger than the all-active fixture');
 }
 
 function listProductionSources() {
@@ -539,6 +731,149 @@ test('QIR7-2 - anti-vacuity: the real guard rejects every named regression', () 
     ['the F1/F2/F3 seam separation was withdrawn from the document', {
       contractDoc: shipped.contractDoc.replace('**F2 and F3 = real production Redis reclaim**', 'F2 and F3 also use duplicate delivery'),
     }],
+    // QIR-007 Addendum A regressions: the cross-context adversarial subsection
+    // and the current-maximum Human Intelligence capacity proof.
+    ['the Addendum A capacity proof module was hollowed out', { capacity: 'retired' }],
+    ['the C5 rejection-really-reached-the-request proof was gutted', {
+      verifier: shipped.verifier.replaceAll(
+        'the canonical aggregate really RAN against real PostgreSQL and the injected rejection hit THAT request', 'skipped'),
+    }],
+    ['the C5 no-fabricated-NONE proof was gutted', {
+      verifier: shipped.verifier.replaceAll('REJECTED is omission, never an authoritative all-four NONE answer', 'skipped'),
+    }],
+    ['the C6 still-pending-at-the-barrier proof was gutted', {
+      verifier: shipped.verifier.replaceAll(
+        'the successful aggregate settlement was STILL PENDING when the existing Human Intelligence barrier closed', 'skipped'),
+    }],
+    ['the C6 no-late-mutation proof was gutted', {
+      verifier: shipped.verifier.replaceAll('the already-built provider request is not mutated by the late settlement', 'skipped'),
+    }],
+    ['the C6 no-cross-turn-cache proof was gutted', {
+      verifier: shipped.verifier.replaceAll(
+        'the next turn performs its OWN current aggregate read - no cross-turn cache exists to inherit', 'skipped'),
+    }],
+    ['the C7 real-aggregate-rejection proof was gutted', {
+      verifier: shipped.verifier.replaceAll(
+        'REJECTS the malformed successful envelope - it is never sorted, padded, repaired, or partially salvaged', 'skipped'),
+    }],
+    ['the C7 no-partial-salvage proof was gutted', {
+      verifier: shipped.verifier.replaceAll('NO partial channel salvage', 'skipped'),
+    }],
+    ['the C8 all-four-bindings proof was gutted', {
+      verifier: shipped.verifier.replaceAll('ALL FOUR context bindings are genuinely ACTIVE on the SAME session at the same time', 'skipped'),
+    }],
+    ['the C8 four-real-consumers proof was gutted', {
+      verifier: shipped.verifier.replaceAll(
+        'all FOUR real semantic consumers ran and all FOUR results are ACTIVE simultaneously on the same session', 'skipped'),
+    }],
+    ['the C8 one-envelope proof was gutted', {
+      verifier: shipped.verifier.replaceAll(
+        'the four channels compile into ONE humanIntelligence envelope - there is no separate per-channel ModelRouter field', 'skipped'),
+    }],
+    ['the C8 no-voting/no-amplification proof was gutted', {
+      verifier: shipped.verifier.replaceAll(
+        'agreement between sources creates no vote, count, weight, confidence, strength or amplification field of any kind', 'skipped'),
+    }],
+    ['the real fault seam was replaced by an assertion about nothing', {
+      verifier: shipped.verifier.replaceAll("kind: 'REJECT_AFTER_CALL'", "kind: 'RETIRED'"),
+    }],
+    ['the deterministic late-settlement gate was removed from the aggregate lane', {
+      verifier: shipped.verifier.replaceAll("kind: 'GATE_AFTER_CALL'", "kind: 'RETIRED'"),
+    }],
+    ['the malformed-aggregate fixture stopped crossing the real boundary', {
+      verifier: shipped.verifier.replaceAll("kind: 'MALFORMED_SUCCESS', value: malformedAggregateRows", "kind: 'RETIRED'"),
+    }],
+    ['the verification-only authenticated aggregate fault seam was removed', {
+      harness: shipped.harness.replaceAll('MALFORMED_SUCCESS', 'RETIRED_SUCCESS'),
+    }],
+    ['the real aggregation service stopped being driven directly', {
+      verifier: shipped.verifier.replaceAll('himCrossContextForegroundService.read(', 'fakeAggregate.read('),
+    }],
+    ['the all-four fixture stopped using the real explicit activation authority', {
+      verifier: shipped.verifier.replaceAll('contextActivationService.activateContext(', 'directBindingWrite('),
+    }],
+    ['a direct per-channel fallback read appeared in the integrated verifier', {
+      verifier: `${shipped.verifier}\nconst drift = 'SELECT * FROM public.read_him_session_situation_stress_v1($1, $2)';\n`,
+    }],
+    ['a retired aggregate fallback read appeared in the integrated verifier', {
+      verifier: `${shipped.verifier}\nconst drift = 'SELECT * FROM public.read_him_session_cross_context_foreground_v2($1, $2)';\n`,
+    }],
+    ['the cross-context aggregate disappeared from the QIR-007 composition', {
+      verifier: shipped.verifier.replaceAll('HimCrossContextForegroundAggregationService', 'FakeAggregateStub'),
+    }],
+    ['a dedicated timer was introduced on the zero-wait aggregate lane', {
+      orchestrator: `${shipped.orchestrator}\nconst CROSS_CONTEXT_FOREGROUND_WAIT_BUDGET_MS = 300;\n`,
+    }],
+    ['the aggregate lane became directly awaited', {
+      orchestrator: shipped.orchestrator.replace(
+        'crossContextForegroundReadPromise.then(', 'await crossContextForegroundReadPromise;\n      crossContextForegroundReadPromise.then('),
+    }],
+    ['the non-blocking aggregate settlement handler disappeared', {
+      orchestrator: shipped.orchestrator.replaceAll('crossContextForegroundReadPromise.then(', 'crossContextForegroundReadPromise.finally('),
+    }],
+    ['the aggregate stopped being bounded by the existing Human Intelligence barrier', {
+      orchestrator: shipped.orchestrator.replaceAll('crossContextForegroundBarrierClosed = true', 'crossContextForegroundBarrierClosed = false'),
+    }],
+    ['the capacity proof stopped using the real canonical renderer', {
+      capacity: shipped.capacity.replaceAll('composeServerGuidance(', 'approximateServerGuidance('),
+    }],
+    ['the capacity proof stopped measuring in UTF-8 bytes', {
+      capacity: shipped.capacity.replace("Buffer.byteLength(value, 'utf8')", 'value.length'),
+    }],
+    ['the capacity verdict stopped comparing against the frozen Human Intelligence slice', {
+      capacity: shipped.capacity.replace('const sliceBytes = HUMAN_INTELLIGENCE_BUDGET_BYTES;', 'const sliceBytes = 16384;'),
+    }],
+    ['the PASS path stopped being proven through the real QIR-004 assembler', {
+      capacity: shipped.capacity.replace("assert.equal(decision!.outcome, 'INCLUDED_FULL',", "assert.ok(true, ("),
+    }],
+    ['the eight-slot Brain Context maximum fixture silently shrank', {
+      capacity: shipped.capacity.replaceAll("'hgs.habit-strength'", "'hgs.retired'"),
+    }],
+    ['a session reasoning metric was dropped from the maximum fixture', {
+      capacity: shipped.capacity.replaceAll("'hse.energy'", "'hse.retired'"),
+    }],
+    ['a cross-context channel was dropped from the maximum fixture', {
+      capacity: shipped.capacity.replaceAll('STRUCTURE_RELATIONSHIP_COMMUNICATION', 'RETIRED_DIRECTIVE'),
+    }],
+    ['the exhaustive legal maximality search was replaced by a hand-picked fixture', {
+      capacity: shipped.capacity.replaceAll('the maximality search really enumerated the whole legal shape space', 'skipped'),
+    }],
+    ['the measured current maximum was silently re-baselined', {
+      capacity: shipped.capacity.replace(
+        'export const EXPECTED_CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7536;',
+        'export const EXPECTED_CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 9999;'),
+    }],
+    ['the Human Intelligence slice was widened to make the maximum fit', {
+      budgetContract: shipped.budgetContract.replace(
+        'export const HUMAN_INTELLIGENCE_BUDGET_BYTES = 8192;', 'export const HUMAN_INTELLIGENCE_BUDGET_BYTES = 16384;'),
+    }],
+    ['the frozen 6427 all-active footprint proof was deleted', {
+      humanIntelligenceFootprintSpec: shipped.humanIntelligenceFootprintSpec.replace(
+        'const EXPECTED_QHIA_013_HUMAN_INTELLIGENCE_BYTES = 6427;', ''),
+    }],
+    ['the all-active fixture footprint was re-labelled as the maximum', {
+      capacity: shipped.capacity.replace(
+        'export const CANONICAL_ALL_ACTIVE_HUMAN_INTELLIGENCE_BYTES = 6427;',
+        'export const CURRENT_MAX_HUMAN_INTELLIGENCE_BYTES = 6427;'),
+    }],
+    ['the two footprint figures stopped being proven distinct', {
+      capacity: shipped.capacity.replaceAll('incrementalBytes > CANONICAL_ALL_ACTIVE_HUMAN_INTELLIGENCE_BYTES', 'true'),
+    }],
+    ['the frozen Brain Context registry ceiling moved', {
+      brainContextTypes: shipped.brainContextTypes.replace(
+        'export const HIM_BRAIN_CONTEXT_MAX_SIGNALS = 8 as const;', 'export const HIM_BRAIN_CONTEXT_MAX_SIGNALS = 9 as const;'),
+    }],
+    ['the Addendum A section was withdrawn from the document', {
+      contractDoc: shipped.contractDoc.replace(
+        '## 11. Addendum A — Cross-Context Adversarial & Human Intelligence Capacity Proof v1', '## 11. Retired'),
+    }],
+    ['the measured capacity result was withdrawn from the document', {
+      contractDoc: shipped.contractDoc.replace(
+        'CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7536', 'measurement pending'),
+    }],
+    ['the no-fallback rule was withdrawn from the document', {
+      contractDoc: shipped.contractDoc.replace('no aggregate-v1/v2 fallback', 'a per-channel fallback read is allowed'),
+    }],
     ...Object.entries(SCENARIO_MARKERS).map(([scenario, markers]) => [
       `scenario ${scenario} coverage was gutted`,
       { verifier: shipped.verifier.replaceAll(markers[0], `'RETIRED-${scenario}: `) },
@@ -628,7 +963,7 @@ test('QIR7-5 - the QIR-007 diff scope changed no production source or migration'
   // The dynamic verifier and its harness are the ONLY QIR-007 runtime code, and
   // they live entirely under apps/api/scripts. A production module that ever
   // needs them would be a new production runtime service by definition.
-  for (const path of [VERIFIER, HARNESS]) {
+  for (const path of [VERIFIER, HARNESS, CAPACITY]) {
     assert.ok(path.startsWith('apps/api/scripts/'), `${path} lives in the verification-only scripts tree`);
   }
   assert.ok(!readdirSync(new URL('database/migrations/', root)).includes('0064_integrated_brain_e2e_hardening_v2.sql'),
