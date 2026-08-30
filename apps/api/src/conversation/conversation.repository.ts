@@ -4,6 +4,7 @@ import type { ConversationExchange, ConversationSession, ConversationTurn } from
 import { SupabaseDataApiService } from './supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from './supabase-service-role-api.service';
 import { CorrelationService } from '../observability/correlation.service';
+import type { RuntimeRoutePair } from '../intelligence-runtime/fast-deep-routing-contract';
 
 const SESSION_FIELDS = 'id,status,channel,created_at,updated_at,last_activity_at,closed_at';
 const TURN_FIELDS = 'id,session_id,role,status,content,processing_path,routing_reason,source_turn_id,idempotency_key,created_at,updated_at,completed_at';
@@ -111,7 +112,10 @@ export class ConversationRepository {
   // Claim / finalize / fail are server authority. They run through the explicit
   // service-role channel — never a caller-supplied user token — and each definer
   // command still validates session/source ownership, role, and state.
-  async claimTurn(sessionId: string, userId: string, turnId: string, selection: { path: 'FAST' | 'DEEP'; reason: string }): Promise<ConversationTurn | undefined> {
+  // QIR-002: the claim boundary accepts only a legal CURRENT (v2) route pair.
+  // The retired reasons are unrepresentable here at compile time, and migration
+  // 0062 enforces the same rule as the server-authoritative claim gate.
+  async claimTurn(sessionId: string, userId: string, turnId: string, selection: RuntimeRoutePair): Promise<ConversationTurn | undefined> {
     const rows = await this.serviceApi.rpc<ConversationTurn[]>('claim_conversation_turn', {
       p_session_id: sessionId, p_user_id: userId, p_source_turn_id: turnId,
       p_processing_path: selection.path, p_routing_reason: selection.reason,

@@ -105,15 +105,16 @@ async function verifyLeaseClaim(owner, session) {
   stage = 'lease claim';
   const turn = await createOwnedTurn(owner, session, 'lease claim source', 'recovery-idem-1');
   await identity('service_role');
-  const claimed = await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, turn, 'FAST', 'FAST_DEFAULT']);
+  const claimed = await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, turn, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']);
   assert.equal(claimed.length, 1, 'exactly one valid owner/server claim succeeds');
   assert.equal(claimed[0].status, 'GENERATING');
   assert.equal(claimed[0].processing_path, 'FAST');
-  assert.equal(claimed[0].routing_reason, 'FAST_DEFAULT');
-  // Routing contract is unchanged: an invalid pairing is still rejected.
+  assert.equal(claimed[0].routing_reason, 'RUNTIME_ROUTING_V2_FAST_DEFAULT');
+  // Migration 0062 narrowed NEW claims to the five v2 pairs: an invalid
+  // pairing - and the retired legacy reason itself - is still rejected.
   await rejected(() => q('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, randomUUID(), 'FAST', 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT']), ['22023']);
   // One claimant wins: the same turn cannot be claimed twice.
-  const reclaimed = await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, turn, 'FAST', 'FAST_DEFAULT']);
+  const reclaimed = await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, turn, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']);
   assert.equal(reclaimed.length, 0, 'a second claim on the same turn returns no row');
   await identity('postgres');
   const [lease] = await rows(`SELECT generation_claimed_at IS NOT NULL claimed_set,
@@ -152,7 +153,7 @@ async function verifyExpiredGenerationTerminalizes(owner, session, turn) {
   assert.equal(result[0].content, 'lease claim source', 'the source turn content is untouched');
   assert.equal(result[0].idempotency_key, 'recovery-idem-1', 'the idempotency key is unchanged and stays bound to the failed turn');
   assert.equal(result[0].processing_path, 'FAST', 'the processing path is unchanged');
-  assert.equal(result[0].routing_reason, 'FAST_DEFAULT', 'the routing reason is unchanged');
+  assert.equal(result[0].routing_reason, 'RUNTIME_ROUTING_V2_FAST_DEFAULT', 'the routing reason is unchanged');
   assert.equal(result[0].completed_at, null, 'canonical fail semantics: completed_at stays null for FAILED');
   await identity('postgres');
   assert.equal(await assistantCount(turn), 0, 'no assistant exists after recovery');
@@ -169,7 +170,7 @@ async function verifyExpiredGenerationTerminalizes(owner, session, turn) {
   assert.deepEqual(Object.keys(event.payload).sort(), FAILED_PAYLOAD_KEYS, 'the exact canonical content-free payload vocabulary is reused');
   assert.deepEqual(
     { user: event.payload.user_id, session: event.payload.session_id, source: event.payload.source_turn_id, terminal: event.payload.terminal_status, path: event.payload.processing_path, reason: event.payload.routing_reason, orchestration: event.payload.orchestration_id },
-    { user: owner, session, source: turn, terminal: 'FAILED', path: 'FAST', reason: 'FAST_DEFAULT', orchestration: orchestrationId },
+    { user: owner, session, source: turn, terminal: 'FAILED', path: 'FAST', reason: 'RUNTIME_ROUTING_V2_FAST_DEFAULT', orchestration: orchestrationId },
     'the payload matches the canonical v1 failed-event schema');
   assert.doesNotMatch(JSON.stringify(event.payload), /lease claim source/u, 'the event stays content-free');
   return event;
@@ -210,7 +211,7 @@ async function verifyTerminalAndForeignNoOps(owner, other, session, otherSession
   // COMPLETED cannot be recovered as stale generation.
   const completed = await createOwnedTurn(owner, session, 'to complete');
   await identity('service_role');
-  await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, completed, 'FAST', 'FAST_DEFAULT']);
+  await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, completed, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']);
   const finalized = await rows('SELECT * FROM finalize_conversation_turn($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, owner, completed, randomUUID(), 'assistant reply', 'ALLOW', randomUUID(), null, null]);
   assert.equal(finalized.length, 1, 'fixture finalization succeeded');
   assert.equal((await recover(session, owner, completed)).length, 0, 'a COMPLETED turn cannot be recovered');
@@ -229,7 +230,7 @@ async function verifyTerminalAndForeignNoOps(owner, other, session, otherSession
   // user's/session's turn even through the privileged channel.
   const foreign = await createOwnedTurn(owner, session, 'foreign target');
   await identity('service_role');
-  await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, foreign, 'FAST', 'FAST_DEFAULT']);
+  await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, foreign, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']);
   await identity('postgres');
   await expireLease(foreign);
   await identity('service_role');
@@ -270,7 +271,7 @@ async function verifyRuntimeAcl(owner, session) {
   stage = 'runtime ACL';
   const target = await createOwnedTurn(owner, session, 'acl target');
   await identity('service_role');
-  await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, target, 'FAST', 'FAST_DEFAULT']);
+  await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, target, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']);
   await identity('postgres');
   await expireLease(target);
   await identity('authenticated', owner);

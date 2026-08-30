@@ -30,6 +30,7 @@ The original Word documents remain the canonical archive. Markdown files record 
 ## Integrated Intelligence Runtime & Hardening
 
 - [Integrated Intelligence Runtime Contract v1](integrated-intelligence-runtime-contract-v1.md) — **ACTIVE / NORMATIVE** phase entry contract (QIR-001; the integration constitution for the whole brain; Provider/LLM selection explicitly deferred)
+- [FAST / DEEP Runtime Decision Policy v2](fast-deep-runtime-decision-policy-v2.md) — **ACTIVE / NORMATIVE** deterministic, Unicode-aware, provider-neutral routing law (QIR-002; migration 0062; supersedes the input-length-only rule)
 
 ## Operational Foundation hardening
 

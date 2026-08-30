@@ -82,7 +82,7 @@ describe('ConversationOrchestratorService', () => {
     processing_path: null, routing_reason: null, source_turn_id: null, idempotency_key: 'request-1',
     created_at: 'now', updated_at: 'now', completed_at: null,
   };
-  const claimed: ConversationTurn = { ...userTurn, status: 'GENERATING', processing_path: 'FAST', routing_reason: 'FAST_DEFAULT' };
+  const claimed: ConversationTurn = { ...userTurn, status: 'GENERATING', processing_path: 'FAST', routing_reason: 'RUNTIME_ROUTING_V2_FAST_DEFAULT' };
   const completedUser: ConversationTurn = { ...claimed, status: 'COMPLETED', completed_at: 'now' };
   const assistant: ConversationTurn = {
     ...completedUser, id: 'assistant-turn', role: 'ASSISTANT', content: 'response', source_turn_id: userTurn.id, idempotency_key: null,
@@ -288,7 +288,7 @@ describe('ConversationOrchestratorService', () => {
     repository.claimTurn.mockResolvedValue(claimed);
     repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
     await orchestrator.orchestrate('token', 'user', userTurn);
-    expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
+    expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'FAST', reason: 'RUNTIME_ROUTING_V2_FAST_DEFAULT' });
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'FAST', humanIntelligence: expectedEnvelope() }));
   });
 
@@ -474,13 +474,13 @@ describe('ConversationOrchestratorService', () => {
     expect(repository.failTurn).not.toHaveBeenCalled();
   });
 
-  it('selects Deep only with the deterministic input-size reason', async () => {
+  it('selects Deep with the deterministic v2 input-scale reason', async () => {
     const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
-    const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+    const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' };
     repository.claimTurn.mockResolvedValue(deepClaim);
     repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
     await orchestrator.orchestrate('token', 'user', deepTurn);
-    expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+    expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'DEEP', reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' });
     expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'DEEP', complexity: 'HIGH', humanIntelligence: expect.objectContaining({ sessionReasoningContext: expect.objectContaining({ consumptionMode: 'DEEP' }) }) }));
     // QHIA-013: the DEEP projection still reaches the provider, but the
     // internal conversation-session UUID no longer travels with it.
@@ -744,7 +744,7 @@ describe('ConversationOrchestratorService', () => {
       repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
       await orchestrator.orchestrate('token', 'user', userTurn);
       const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
-      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' };
       repository.claimTurn.mockResolvedValue(deepClaim);
       repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
       await orchestrator.orchestrate('token', 'user', deepTurn);
@@ -756,8 +756,8 @@ describe('ConversationOrchestratorService', () => {
       expectDispatchedHumanIntelligence({ himInteractionAdaptation: activeAdaptation }, { call: 0, path: 'FAST' });
       expectDispatchedHumanIntelligence({ himInteractionAdaptation: activeAdaptation }, { call: 1, path: 'DEEP' });
       // Path selection stays owned by the deterministic input-length rule.
-      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
-      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'RUNTIME_ROUTING_V2_FAST_DEFAULT' });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' });
     });
 
     it('fails closed with no provider generation when adaptation integrity rejects the reasoning context', async () => {
@@ -927,7 +927,7 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
-      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' };
       repository.claimTurn.mockResolvedValue(deepClaim);
       repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
       await orchestrator.orchestrate('token', 'user', deepTurn);
@@ -937,8 +937,8 @@ describe('ConversationOrchestratorService', () => {
       expectDispatchedHumanIntelligence({ himSessionReflectionGuidance: inviteReflectionGuidance }, { call: 1, path: 'DEEP' });
       // Path selection stays owned by the deterministic input-length rule:
       // Reflection is consumed after the route is claimed and never selects it.
-      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
-      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'RUNTIME_ROUTING_V2_FAST_DEFAULT' });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' });
     });
 
     it('lets a fast Reflection read win the 300 ms foreground budget, deliver guidance, and clear its timer (no leak)', async () => {
@@ -1469,7 +1469,7 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
-      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' };
       repository.claimTurn.mockResolvedValue(deepClaim);
       repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
       await orchestrator.orchestrate('token', 'user', deepTurn);
@@ -1487,8 +1487,8 @@ describe('ConversationOrchestratorService', () => {
       // reasoning density differs, and Human Intelligence never selects the path.
       expect(dispatchedHumanIntelligence(0)!.behavioralInstructionIds)
         .toEqual(dispatchedHumanIntelligence(1)!.behavioralInstructionIds);
-      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
-      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'RUNTIME_ROUTING_V2_FAST_DEFAULT' });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' });
     });
 
     it('keeps the HSE Snapshot -> Reasoning -> Adaptation chain and the Reflection channel exactly unchanged', async () => {
@@ -1719,13 +1719,13 @@ describe('ConversationOrchestratorService', () => {
 
     it('applies identical grounding semantics on DEEP without changing routing or provider count', async () => {
       const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
-      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' };
       hypothesisContext.build.mockResolvedValue({ coverageState: 'AVAILABLE', context: availableHypothesisContext });
       recommendationGrounding.ground.mockReturnValue({ coverageState: 'AVAILABLE', context: groundedContext });
       repository.claimTurn.mockResolvedValue(deepClaim);
       repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
       await orchestrator.orchestrate('token', 'user', deepTurn);
-      expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+      expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'DEEP', reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' });
       expect(recommendationGrounding.ground).toHaveBeenCalledTimes(1);
       expect(router.generate).toHaveBeenCalledTimes(1);
       expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
@@ -2042,7 +2042,7 @@ describe('ConversationOrchestratorService', () => {
       finalizeNormally();
       await orchestrator.orchestrate('token', 'user', userTurn);
       const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
-      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' };
       repository.claimTurn.mockResolvedValue(deepClaim);
       repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
       await orchestrator.orchestrate('token', 'user', deepTurn);
@@ -2050,8 +2050,8 @@ describe('ConversationOrchestratorService', () => {
       expect(dispatchedRequest(1).path).toBe('DEEP');
       expect(dispatchedHumanIntelligence(0)!.brainContext).toEqual(settled);
       expect(dispatchedHumanIntelligence(1)!.brainContext).toEqual(settled);
-      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'FAST_DEFAULT' });
-      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(1, 'session', 'user', 'user-turn', { path: 'FAST', reason: 'RUNTIME_ROUTING_V2_FAST_DEFAULT' });
+      expect(repository.claimTurn).toHaveBeenNthCalledWith(2, 'session', 'user', 'user-turn', { path: 'DEEP', reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' });
     });
 
     it('records the Brain Context outcome inside its own him_brain_context engine span', async () => {
@@ -2207,7 +2207,7 @@ describe('ConversationOrchestratorService', () => {
       repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
     };
     const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
-    const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+    const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' };
     const finalizeDeepNormally = () => {
       repository.claimTurn.mockResolvedValue(deepClaim);
       repository.finalizeTurn.mockResolvedValue({ userTurn: { ...deepClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
@@ -2575,6 +2575,98 @@ describe('ConversationOrchestratorService', () => {
         expect(JSON.stringify(envelope)).not.toContain('UNKNOWN');
         expectSnapshotLaneOmitted();
       });
+    });
+  });
+
+  // QIR-002 - the deterministic FAST/DEEP Runtime Decision Policy v2 is the ONE
+  // routing authority, computed exactly once on the eligible RECEIVED path,
+  // before the canonical claim, with zero intelligence reads and zero extra
+  // provider calls.
+  describe('QIR-002 - FAST / DEEP Runtime Decision Policy v2', () => {
+    const multiPartTurn = { ...userTurn, content: `${'y'.repeat(45)}. `.repeat(7).trim() };
+    const multiPartClaim = { ...claimed, content: multiPartTurn.content, processing_path: 'DEEP' as const, routing_reason: 'RUNTIME_ROUTING_V2_DEEP_MULTI_PART' };
+
+    it('decides exactly once, before the canonical claim, with no intelligence, database or provider read', async () => {
+      const record = jest.spyOn(telemetry, 'recordRoutingDecision');
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+
+      expect(repository.claimTurn).toHaveBeenCalledTimes(1);
+      expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'FAST', reason: 'RUNTIME_ROUTING_V2_FAST_DEFAULT' });
+      // The claim boundary carries the durable route PAIR only: the signals and
+      // the score never reach persistence.
+      expect(Object.keys(repository.claimTurn.mock.calls[0][3]!).sort()).toEqual(['path', 'reason']);
+
+      // NOTHING that could give routing semantic authority runs before the
+      // decision is already durable.
+      const claimOrder = repository.claimTurn.mock.invocationCallOrder[0];
+      for (const [label, mock] of [
+        ['ContextBuilder', contextBuilder.build],
+        ['Safety', safetyGate.evaluate],
+        ['Memory', memoryRetriever.retrieve],
+        ['HIM snapshot', himSnapshot.getSnapshot],
+        ['HIM FAST/DEEP projection', himConsumptionPolicy.project],
+        ['Hypothesis', hypothesisContext.build],
+        ['provider', router.generate],
+      ] as const) {
+        expect(mock).toHaveBeenCalled();
+        expect({ [label]: mock.mock.invocationCallOrder[0] > claimOrder }).toEqual({ [label]: true });
+      }
+      // Exactly one conversational provider call, and exactly one canonical
+      // routing decision recorded by the claim winner.
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(record).toHaveBeenCalledTimes(1);
+      expect(record).toHaveBeenCalledWith({
+        policyVersion: 2, path: 'FAST', reason: 'RUNTIME_ROUTING_V2_FAST_DEFAULT', complexityScore: 0,
+        signals: { codePointCount: 5, questionCount: 0, logicalUnitCount: 1 },
+      });
+      expect(record.mock.invocationCallOrder[0]).toBeGreaterThan(claimOrder);
+    });
+
+    it('routes a short structurally complex turn to DEEP and projects it downstream', async () => {
+      repository.claimTurn.mockResolvedValue(multiPartClaim);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: { ...multiPartClaim, status: 'COMPLETED' }, assistantTurn: { ...assistant, processing_path: 'DEEP' } });
+      await orchestrator.orchestrate('token', 'user', multiPartTurn);
+      expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'DEEP', reason: 'RUNTIME_ROUTING_V2_DEEP_MULTI_PART' });
+      // The selected path keeps driving every existing downstream projection.
+      expect(himConsumptionPolicy.project).toHaveBeenCalledWith('DEEP', expect.anything());
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: 10000 }));
+      expect(router.generate).toHaveBeenCalledTimes(1);
+    });
+
+    it('counts code points, not UTF-16 units: a long emoji turn stays FAST', async () => {
+      const emojiTurn = { ...userTurn, content: '\u{1F600}'.repeat(500) };
+      expect(emojiTurn.content.length).toBe(1000);
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', emojiTurn);
+      expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'FAST', reason: 'RUNTIME_ROUTING_V2_FAST_DEFAULT' });
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'FAST', complexity: 'LOW', latencyBudgetMs: 3000 }));
+    });
+
+    it('never lets a lost claim create a competing route, provider call, or canonical decision metric', async () => {
+      const record = jest.spyOn(telemetry, 'recordRoutingDecision');
+      repository.claimTurn.mockResolvedValue(undefined);
+      repository.findTurn.mockResolvedValue(completedUser);
+      repository.findAssistantForSource.mockResolvedValue(assistant);
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(repository.claimTurn).toHaveBeenCalledTimes(1);
+      expect(record).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+    });
+
+    it('never routes, claims, or records a decision on a replayed turn', async () => {
+      const record = jest.spyOn(telemetry, 'recordRoutingDecision');
+      repository.findTurn.mockResolvedValue(completedUser);
+      repository.findAssistantForSource.mockResolvedValue(assistant);
+      repository.recoverExpiredGeneratingTurn.mockResolvedValue(undefined);
+      await orchestrator.orchestrate('token', 'user', completedUser);
+      await orchestrator.orchestrate('token', 'user', { ...userTurn, status: 'GENERATING' });
+      expect(repository.claimTurn).not.toHaveBeenCalled();
+      expect(record).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
     });
   });
 });

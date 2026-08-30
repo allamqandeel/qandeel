@@ -77,11 +77,11 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
     processing_path: null, routing_reason: null, source_turn_id: null, idempotency_key: 'request-1',
     created_at: 'now', updated_at: 'now', completed_at: null,
   };
-  const claimed: ConversationTurn = { ...userTurn, status: 'GENERATING', processing_path: 'FAST', routing_reason: 'FAST_DEFAULT' };
+  const claimed: ConversationTurn = { ...userTurn, status: 'GENERATING', processing_path: 'FAST', routing_reason: 'RUNTIME_ROUTING_V2_FAST_DEFAULT' };
   const completedUser: ConversationTurn = { ...claimed, status: 'COMPLETED', completed_at: 'now' };
   const assistant: ConversationTurn = { ...completedUser, id: '00000000-0000-4000-8000-000000000103', role: 'ASSISTANT', content: 'response', source_turn_id: TURN, idempotency_key: null };
   const deepTurn: ConversationTurn = { ...userTurn, content: 'x'.repeat(1000) };
-  const deepClaim: ConversationTurn = { ...claimed, content: deepTurn.content, processing_path: 'DEEP', routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' };
+  const deepClaim: ConversationTurn = { ...claimed, content: deepTurn.content, processing_path: 'DEEP', routing_reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' };
 
   let himRepository: { readIntelligenceSnapshot: jest.Mock };
   let reflectionRead: jest.Mock;

@@ -495,12 +495,12 @@ async function verifyTurnAuthorityIntact(owner, session) {
   await identity('authenticated', owner);
   const turnId = randomUUID();
   await rows('SELECT create_user_conversation_turn($1,$2,$3,$4)', [turnId, session, 'lifecycle regression', null]);
-  await rejected(() => q('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, turnId, 'FAST', 'FAST_DEFAULT']));
+  await rejected(() => q('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, turnId, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']));
   await rejected(() => q("INSERT INTO public.conversation_turns(id,session_id,user_id,role,status,content) VALUES($1,$2,$3,'ASSISTANT','COMPLETED','forged')", [randomUUID(), session, owner]));
   await rejected(() => q("UPDATE public.conversation_turns SET status='COMPLETED' WHERE id=$1", [turnId]));
   await rejected(() => q('DELETE FROM public.conversation_turns WHERE id=$1', [turnId]));
   await identity('service_role');
-  const claimed = await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, turnId, 'FAST', 'FAST_DEFAULT']);
+  const claimed = await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, turnId, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']);
   assert.equal(claimed.length, 1);
   assert.equal(claimed[0].status, 'GENERATING');
   const finalized = await rows('SELECT * FROM finalize_conversation_turn($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, owner, turnId, randomUUID(), 'server assistant', 'ALLOW', randomUUID(), null, null]);
