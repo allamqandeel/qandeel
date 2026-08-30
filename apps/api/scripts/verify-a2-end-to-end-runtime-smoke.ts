@@ -45,6 +45,8 @@ import { TelemetryService } from '../src/observability/telemetry.service';
 import { ModelAssistedHypothesisAssociationService } from '../src/post-response-intelligence/model-assisted-hypothesis-association.service';
 import { PostResponseIntelligenceDispatcherService } from '../src/post-response-intelligence/post-response-intelligence-dispatcher.service';
 import type { PostResponseIntelligenceRepository } from '../src/post-response-intelligence/post-response-intelligence.repository';
+import { POST_RESPONSE_PROVIDER_CALL_BUDGET_V1, POST_RESPONSE_PROVIDER_EFFECTS_V1, reconstructSpentProviderSlots } from '../src/post-response-intelligence/post-response-provider-budget';
+import { PostResponseProviderBudgetService } from '../src/post-response-intelligence/post-response-provider-budget.service';
 import { RedisPostResponseConsumer } from '../src/post-response-intelligence/redis-post-response-consumer';
 import { RedisStreamsTransport } from '../src/runtime-events/redis-streams.transport';
 import type { RuntimeEventAdminRepository } from '../src/runtime-events/runtime-event-admin.repository';
@@ -323,7 +325,8 @@ async function main(): Promise<void> {
     const association = new ModelAssistedHypothesisAssociationService(enrichment, associationAuthority, authority, associationProvider);
     const extraction = new HypothesisGenerationIntentExtractionService(intentProvider, new HypothesisGenerationIntentAuthorityService());
     const dispatcher = new PostResponseIntelligenceDispatcherService(
-      ledger, authority, enrichment, extraction, new HypothesisGenerationRequestAssemblerService(), candidateGenerator, association);
+      ledger, authority, enrichment, extraction, new HypothesisGenerationRequestAssemblerService(), candidateGenerator, association,
+      new PostResponseProviderBudgetService());
 
     await consumer.connect();
     const entries = await consumer.read();
@@ -353,6 +356,12 @@ async function main(): Promise<void> {
     const effectRows = async (): Promise<EffectRow[]> => db.observer<EffectRow>(
       'SELECT effect_key, state, result_code, result_reference, result_payload, claimed_at, completed_at FROM public.post_response_intelligence_effects WHERE execution_id = $1 ORDER BY effect_key', [executionId]);
     const effects = await effectRows();
+    // QIR-005: the durable provider-slot census, reconstructed by the SAME
+    // production function the dispatcher uses - never a parallel reimplementation.
+    const durableProviderSlots = (rows: readonly EffectRow[]): number => reconstructSpentProviderSlots(
+      rows.map((row) => ({ effect_key: row.effect_key, state: row.state })) as never).size;
+    const providerTransports = (): number =>
+      associationProvider.callCount + intentProvider.callCount + candidateGenerator.callCount;
     const effect = (key: string): EffectRow => {
       const found = effects.find((row) => row.effect_key === key);
       assert.ok(found, `effect ${key} exists`);
@@ -667,6 +676,17 @@ async function main(): Promise<void> {
     assert.deepEqual(effects.map((row) => row.effect_key).sort(), [...EXPECTED_EFFECT_KEYS],
       'exact expected effect set with no stray effect');
     assert.ok(effects.every((row) => row.state === 'COMPLETED'), 'every effect is COMPLETED');
+    // QIR-005: this maximal legitimate execution spent EXACTLY the hard provider
+    // budget. Exactly the three frozen provider-backed effects are durable, the
+    // durable ledger reconstructs three spent slots, and exactly three external
+    // provider transports happened in total - never a fourth.
+    assert.deepEqual(
+      effects.map((row) => row.effect_key).filter((key) => (POST_RESPONSE_PROVIDER_EFFECTS_V1 as readonly string[]).includes(key)).sort(),
+      [...POST_RESPONSE_PROVIDER_EFFECTS_V1].sort(), 'exactly the three frozen provider-backed effects are durable');
+    assert.equal(durableProviderSlots(effects), POST_RESPONSE_PROVIDER_CALL_BUDGET_V1,
+      'the durable effect ledger reconstructs exactly three spent provider slots');
+    assert.equal(providerTransports(), POST_RESPONSE_PROVIDER_CALL_BUDGET_V1,
+      'the maximal execution consumed exactly the hard provider budget and never a fourth transport');
     // QHIA-012: this smoke activates no QHIA-006 relevance binding, so the
     // background Brain Context materialization is authoritatively EMPTY - the
     // payload-free NO_HIM_BRAIN_CONTEXT, never a fabricated signal and never a
@@ -762,6 +782,13 @@ async function main(): Promise<void> {
     assert.equal(associationProvider.callCount, 1, 'no Association provider replay');
     assert.equal(intentProvider.callCount, 1, 'no Intent provider replay');
     assert.equal(candidateGenerator.callCount, 1, 'no Candidate generator replay');
+    // QIR-005: cumulative across the ENTIRE durable lifecycle - first delivery
+    // plus duplicate delivery - the budget never reset and never refunded. At
+    // most one transport per provider effect; three in total.
+    assert.equal(providerTransports(), POST_RESPONSE_PROVIDER_CALL_BUDGET_V1,
+      'cumulative provider transports across the whole durable lifecycle remain exactly the hard budget');
+    assert.equal(durableProviderSlots(await effectRows()), POST_RESPONSE_PROVIDER_CALL_BUDGET_V1,
+      'the duplicate delivery reconstructed the SAME three spent provider slots: no per-delivery reset');
     assert.equal(pgDataAdapter.himSnapshotReadCount, 1,
       'zero HIM re-consumption after durable Candidate completion: the duplicate delivery performed no snapshot reread');
 

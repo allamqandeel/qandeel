@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { metrics,SpanStatusCode,trace,type Attributes,type Span,type Tracer } from '@opentelemetry/api';
 import { CorrelationService } from './correlation.service';
 import{RUNTIME_ROUTING_MAX_COMPLEXITY_SCORE,RUNTIME_ROUTING_MIN_COMPLEXITY_SCORE,RUNTIME_ROUTING_POLICY_VERSION,isLegalCurrentRoutePair,isRuntimeRoutingPath,type RuntimeRoutingDecision}from'../intelligence-runtime/fast-deep-routing-contract';
+import{POST_RESPONSE_PROVIDER_BUDGET_DECISION_KEYS,POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION,POST_RESPONSE_PROVIDER_EFFECT_KEYS}from'../post-response-intelligence/post-response-provider-budget';
 
 type Usage={inputTokens:number;outputTokens:number};
 type Instrument={add?:(value:number,attributes?:Attributes)=>void;record?:(value:number,attributes?:Attributes)=>void};
@@ -52,6 +53,7 @@ export class TelemetryService{
  private readonly foregroundIntelligenceSourceOutcomes:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.foreground.intelligence.source'),{});
  private readonly contextBudgetSourceDecisions:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.context_budget.source_decisions'),{});
  private readonly contextBudgetBytes:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createHistogram('qandeel.context_budget.bytes',{unit:'By'}),{});
+ private readonly postResponseProviderBudgetDecisions:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.post_response.provider_budget'),{});
  private readonly tracer:Tracer;private readonly engineDuration:Instrument;private readonly providerDuration:Instrument;private readonly providerCalls:Instrument;private readonly providerErrors:Instrument;private readonly inputTokens:Instrument;private readonly outputTokens:Instrument;private readonly turnOutcomes:Instrument;private readonly publisherOperations:Instrument;private readonly hypothesisContextOutcomes:Instrument;private readonly hypothesisEligibilityOutcomes:Instrument;private readonly hypothesisIntentExtractionOutcomes:Instrument;private readonly hypothesisGenerationRequestAssemblyOutcomes:Instrument;private readonly controlledHypothesisGenerationOutcomes:Instrument;private readonly postGenerationConfidenceOutcomes:Instrument;
  constructor(private readonly correlation:CorrelationService){
   this.tracer=this.safe(()=>trace.getTracer('qandeel-api'),{startActiveSpan:(_name:string,_options:unknown,callback:(span:Span)=>unknown)=>callback(this.noopSpan())}as unknown as Tracer);
@@ -111,6 +113,23 @@ export class TelemetryService{
   if(!isRuntimeRoutingPath(path))return;
   if(!Number.isSafeInteger(bytes)||bytes<0)return;
   this.contextBudgetBytes.record?.(bytes,{component,measurement,processing_path:path,policy_version:CONTEXT_BUDGET_POLICY_VERSION});
+ });}
+ // QIR-005 post-response provider-budget decision. Four FINITE dimensions only
+ // - 3 provider-backed effects x 3 decisions x 2 paths x 1 policy version - and
+ // the effect and decision registries are the SAME frozen QIR-005 registries the
+ // production gate uses, so a fourth provider-backed effect or an invented
+ // decision cannot be emitted even by accident. No execution id, session id,
+ // turn id, user id, Evidence/Hypothesis id, effect result payload, user text,
+ // error text, provider/vendor/model name, token or secret can ever become a
+ // label here, and no numeric slot count is encoded as one. AUTHORIZED is
+ // emitted only after a slot was actually spent by a successful durable claim;
+ // EXHAUSTED is emitted before any provider transport. The whole call is
+ // fail-soft and can never alter a budget decision, a claim, or the execution.
+ recordPostResponseProviderBudget(effect:string,decision:string,path:string|null):void{this.safeVoid(()=>{
+  if(!POST_RESPONSE_PROVIDER_EFFECT_KEYS.has(effect))return;
+  if(!POST_RESPONSE_PROVIDER_BUDGET_DECISION_KEYS.has(decision))return;
+  if(typeof path!=='string'||!isRuntimeRoutingPath(path))return;
+  this.postResponseProviderBudgetDecisions.add?.(1,{effect,decision,processing_path:path,policy_version:POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION});
  });}
  recordHypothesisContext(outcome:'available'|'consumed'|'empty'|'rejected'|'failed',path:string,contractVersion=1,_candidateCount?:number,_includedCount?:number):void{this.safeVoid(()=>this.hypothesisContextOutcomes.add?.(1,{outcome,processing_path:path,contract_version:String(contractVersion)}));}
  recordHypothesisGenerationEligibility(outcome:'eligible'|'not_eligible'|'ambiguous'|'safety_ineligible'|'no_evidence'|'replay_skipped'|'failed',path?:string):void{this.safeVoid(()=>this.hypothesisEligibilityOutcomes.add?.(1,{outcome,...(path?{processing_path:path}:{}),contract_version:'1'}));}

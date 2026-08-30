@@ -99,6 +99,8 @@ import { TelemetryService } from '../src/observability/telemetry.service';
 import { ModelAssistedHypothesisAssociationService } from '../src/post-response-intelligence/model-assisted-hypothesis-association.service';
 import { PostResponseIntelligenceDispatcherService } from '../src/post-response-intelligence/post-response-intelligence-dispatcher.service';
 import type { PostResponseIntelligenceRepository } from '../src/post-response-intelligence/post-response-intelligence.repository';
+import { POST_RESPONSE_PROVIDER_CALL_BUDGET_V1, POST_RESPONSE_PROVIDER_EFFECTS_V1, reconstructSpentProviderSlots } from '../src/post-response-intelligence/post-response-provider-budget';
+import { PostResponseProviderBudgetService } from '../src/post-response-intelligence/post-response-provider-budget.service';
 import { RedisPostResponseConsumer } from '../src/post-response-intelligence/redis-post-response-consumer';
 import { RedisStreamsTransport } from '../src/runtime-events/redis-streams.transport';
 import type { RuntimeEventAdminRepository } from '../src/runtime-events/runtime-event-admin.repository';
@@ -998,7 +1000,8 @@ async function main(): Promise<void> {
     const association = new ModelAssistedHypothesisAssociationService(enrichment, associationAuthority, authority, associationProvider);
     const extraction = new HypothesisGenerationIntentExtractionService(intentProvider, new HypothesisGenerationIntentAuthorityService());
     const dispatcher = new PostResponseIntelligenceDispatcherService(
-      ledger, authority, enrichment, extraction, new HypothesisGenerationRequestAssemblerService(), candidateGenerator, association);
+      ledger, authority, enrichment, extraction, new HypothesisGenerationRequestAssemblerService(), candidateGenerator, association,
+      new PostResponseProviderBudgetService());
 
     await consumer.connect();
     const entries = await consumer.read();
@@ -1032,6 +1035,12 @@ async function main(): Promise<void> {
     const effectRows = async (): Promise<Array<Record<string, unknown>>> => db.observer<Record<string, unknown>>(
       'SELECT effect_key, state, result_code, result_reference, result_payload, claimed_at, completed_at FROM public.post_response_intelligence_effects WHERE execution_id = $1 ORDER BY effect_key', [executionId]);
     const effects = await effectRows();
+    // QIR-005: the durable provider-slot census, reconstructed by the SAME
+    // production function the dispatcher uses - never a parallel reimplementation.
+    const durableProviderSlots = (rows: ReadonlyArray<Record<string, unknown>>): number => reconstructSpentProviderSlots(
+      rows.map((row) => ({ effect_key: row.effect_key, state: row.state })) as never).size;
+    const providerTransports = (): number =>
+      associationProvider.callCount + intentProvider.callCount + candidateGenerator.callCount;
     const effect = (key: string): Record<string, unknown> => {
       const found = effects.find((row) => row.effect_key === key);
       assert.ok(found, `effect ${key} exists`);
@@ -1189,6 +1198,19 @@ async function main(): Promise<void> {
     assert.equal(associationProvider.callCount, 1, 'association provider called exactly once');
     assert.equal(intentProvider.callCount, 1, 'intent provider called exactly once');
     assert.equal(candidateGenerator.callCount, 1, 'candidate generator called exactly once');
+    // QIR-005: this maximal legitimate execution spent EXACTLY the hard provider
+    // budget. Exactly the three frozen provider-backed effects are durable, the
+    // durable ledger reconstructs three spent slots through the SAME production
+    // reconstruction the dispatcher uses, and exactly three external provider
+    // transports happened in total - never a fourth.
+    assert.deepEqual(
+      (await effectRows()).map((row) => row.effect_key as string)
+        .filter((key) => (POST_RESPONSE_PROVIDER_EFFECTS_V1 as readonly string[]).includes(key)).sort(),
+      [...POST_RESPONSE_PROVIDER_EFFECTS_V1].sort(), 'exactly the three frozen provider-backed effects are durable');
+    assert.equal(durableProviderSlots(await effectRows()), POST_RESPONSE_PROVIDER_CALL_BUDGET_V1,
+      'the durable effect ledger reconstructs exactly three spent provider slots');
+    assert.equal(providerTransports(), POST_RESPONSE_PROVIDER_CALL_BUDGET_V1,
+      'the maximal execution consumed exactly the hard provider budget and never a fourth transport');
 
     await consumer.ack(entries[0].id);
     assert.equal((await redisObserver.xPending(STREAM, GROUP)).pending, 0, 'primary Redis message ACKed');
@@ -1229,6 +1251,12 @@ async function main(): Promise<void> {
     assert.equal(associationProvider.callCount, 1, 'association provider count remains 1 after duplicate');
     assert.equal(intentProvider.callCount, 1, 'intent provider count remains 1 after duplicate');
     assert.equal(candidateGenerator.callCount, 1, 'candidate generator count remains 1 after duplicate');
+    // QIR-005: cumulative across the ENTIRE durable lifecycle - first delivery
+    // plus duplicate delivery - the budget never reset and never refunded.
+    assert.equal(providerTransports(), POST_RESPONSE_PROVIDER_CALL_BUDGET_V1,
+      'cumulative provider transports across the whole durable lifecycle remain exactly the hard budget');
+    assert.equal(durableProviderSlots(await effectRows()), POST_RESPONSE_PROVIDER_CALL_BUDGET_V1,
+      'the duplicate delivery reconstructed the SAME three spent provider slots: no per-delivery reset');
     assert.deepEqual(await domainCounts(), countsBefore,
       'no duplicate Memory, Hypothesis version advance, generated Hypothesis, Confidence, Information Gap or execution');
     assert.equal(JSON.stringify(await effectRows()), effectsBeforeDuplicate, 'durable receipts/results remain stable after duplicate');
@@ -1557,6 +1585,10 @@ async function main(): Promise<void> {
     assert.equal(associationProvider.callCount, 1, 'background providers untouched by Turn #2');
     assert.equal(intentProvider.callCount, 1, 'background providers untouched by Turn #2');
     assert.equal(candidateGenerator.callCount, 1, 'background providers untouched by Turn #2');
+    // QIR-005: the whole-run cumulative post-response provider census still
+    // equals the hard budget of one durable execution.
+    assert.equal(providerTransports(), POST_RESPONSE_PROVIDER_CALL_BUDGET_V1,
+      'whole-run cumulative post-response provider transports remain exactly the hard budget');
     console.log('FULL_INTELLIGENCE_E2E_SMOKE foreground turn #2 consumed the composed background intelligence.');
 
     // -----------------------------------------------------------------------

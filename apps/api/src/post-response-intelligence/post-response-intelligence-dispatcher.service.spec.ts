@@ -9,6 +9,9 @@ import type { RuntimeEventEnvelope } from '../runtime-events/runtime-event.types
 import { recoverDurableIntentProviderResult } from './durable-intent-provider-result';
 import type { ModelAssistedHypothesisAssociationService } from './model-assisted-hypothesis-association.service';
 import { PostResponseIntelligenceDispatcherService } from './post-response-intelligence-dispatcher.service';
+import type { TelemetryService } from '../observability/telemetry.service';
+import { POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_OUTCOME, POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_STAGE, POST_RESPONSE_PROVIDER_CALL_BUDGET_V1, POST_RESPONSE_PROVIDER_EFFECTS_V1, PostResponseProviderBudget, reconstructSpentProviderSlots } from './post-response-provider-budget';
+import { PostResponseProviderBudgetService } from './post-response-provider-budget.service';
 import type { PostResponseIntelligenceRepository } from './post-response-intelligence.repository';
 
 const id={event:'10000000-0000-4000-8000-000000000001',user:'10000000-0000-4000-8000-000000000002',session:'10000000-0000-4000-8000-000000000003',turn:'10000000-0000-4000-8000-000000000004',execution:'10000000-0000-4000-8000-000000000005',evidence:'10000000-0000-4000-8000-000000000006'};
@@ -24,7 +27,7 @@ describe('PostResponseIntelligenceDispatcherService',()=>{
  // enrichment boundary returns for the fresh generation path.
  const himContext=()=>({contractVersion:1 as const,source:'HIM_STRUCTURED_STATE' as const,contextKind:'CONVERSATION_SESSION' as const,metrics:[{metricKey:'hse.stress' as const,knowledgeState:'KNOWN' as const,ordinalCategory:'HIGH' as const},{metricKey:'hse.energy' as const,knowledgeState:'UNKNOWN' as const,ordinalCategory:null},{metricKey:'hse.attention' as const,knowledgeState:'UNKNOWN' as const,ordinalCategory:null}]});
  const emptyHimContext=()=>({...himContext(),metrics:himContext().metrics.map(metric=>({...metric,knowledgeState:'UNKNOWN' as const,ordinalCategory:null}))});
- const setup=(overrides:{effects?:unknown[];state?:string;confidence?:unknown}={})=>{const rows:unknown[]=[...(overrides.effects??[])];const durableConfidence='confidence'in overrides?overrides.confidence:noConfidenceTargets();const ledger={acquire:jest.fn().mockResolvedValue({id:id.execution,event_id:id.event,user_id:id.user,session_id:id.session,source_turn_id:id.turn,event_version:'2.0',processing_path:'FAST',safety_disposition:'ALLOW',state:overrides.state??'RUNNING',attempt_count:1}),effects:jest.fn().mockImplementation(async()=>[...rows]),claim:jest.fn().mockResolvedValue(true),completeMemory:jest.fn().mockResolvedValue(true),completeIntent:jest.fn().mockResolvedValue(true),completeAssociation:jest.fn().mockResolvedValue(true),completeCandidateProvider:jest.fn().mockResolvedValue(true),persistHypothesisGeneration:jest.fn().mockResolvedValue(true),executeHypothesisUpdateBatch:jest.fn().mockResolvedValue(true),executeConfidenceBatch:jest.fn().mockImplementation(async()=>{if(durableConfidence!==null)rows.push(durableConfidence);return'COMPLETED';}),completeHimBrainContextMaterialization:jest.fn().mockResolvedValue('COMPLETED'),syncInformationGaps:jest.fn().mockResolvedValue({status:'NO_INFORMATION_GAPS',gaps:[]}),finish:jest.fn().mockResolvedValue(true)}as unknown as jest.Mocked<PostResponseIntelligenceRepository>;const ownership={findSession:jest.fn().mockResolvedValue({id:id.session,status:'ACTIVE',channel:'TEXT'}),findSourceTurn:jest.fn().mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null}),findCompletedAssistant:jest.fn().mockResolvedValue({id:'assistant',session_id:id.session,role:'ASSISTANT',status:'COMPLETED',source_turn_id:id.turn})}as unknown as BackgroundIntelligenceDataApiService;const authority=new BackgroundIntelligenceAuthorityService(new BackgroundIntelligenceContextFactory(),ownership);const enrichment={readCanonicalSourceTurn:jest.fn().mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null,content:'Why do I repeat this pattern?',processing_path:'FAST',routing_reason:'FAST_DEFAULT'}),readHimBrainContextMaterialization:jest.fn().mockResolvedValue({code:'NO_HIM_BRAIN_CONTEXT'}),evaluateAndWriteMemory:jest.fn().mockResolvedValue({decision:'SKIP',reason:'NO_SUPPORTED_EXPLICIT_PATTERN'}),evaluateGenerationEligibility:jest.fn().mockResolvedValue({eligibility:{status:'NOT_ELIGIBLE',reason:'NO_TRIGGER'}}),readHimHypothesisGenerationContext:jest.fn().mockResolvedValue(himContext()),generateHypothesisCandidatePlan:jest.fn(),evaluateHypothesisConfidence:jest.fn(),applyAuthorizedHypothesisUpdate:jest.fn()}as unknown as jest.Mocked<BackgroundIntelligenceEnrichmentService>;const extraction={extract:jest.fn()}as unknown as jest.Mocked<HypothesisGenerationIntentExtractionService>;const assembler={assemble:jest.fn()}as unknown as jest.Mocked<HypothesisGenerationRequestAssemblerService>;const generator={generate:jest.fn()}as BoundHypothesisCandidateGenerator;const association={prepare:jest.fn(),proposeAndAuthorize:jest.fn()}as unknown as jest.Mocked<ModelAssistedHypothesisAssociationService>;return{ledger,enrichment,association,extraction,assembler,service:new PostResponseIntelligenceDispatcherService(ledger,authority,enrichment,extraction,assembler,generator,association)};};
+ const setup=(overrides:{effects?:unknown[];state?:string;confidence?:unknown}={})=>{const rows:unknown[]=[...(overrides.effects??[])];const durableConfidence='confidence'in overrides?overrides.confidence:noConfidenceTargets();const ledger={acquire:jest.fn().mockResolvedValue({id:id.execution,event_id:id.event,user_id:id.user,session_id:id.session,source_turn_id:id.turn,event_version:'2.0',processing_path:'FAST',safety_disposition:'ALLOW',state:overrides.state??'RUNNING',attempt_count:1}),effects:jest.fn().mockImplementation(async()=>[...rows]),claim:jest.fn().mockResolvedValue(true),completeMemory:jest.fn().mockResolvedValue(true),completeIntent:jest.fn().mockResolvedValue(true),completeAssociation:jest.fn().mockResolvedValue(true),completeCandidateProvider:jest.fn().mockResolvedValue(true),persistHypothesisGeneration:jest.fn().mockResolvedValue(true),executeHypothesisUpdateBatch:jest.fn().mockResolvedValue(true),executeConfidenceBatch:jest.fn().mockImplementation(async()=>{if(durableConfidence!==null)rows.push(durableConfidence);return'COMPLETED';}),completeHimBrainContextMaterialization:jest.fn().mockResolvedValue('COMPLETED'),syncInformationGaps:jest.fn().mockResolvedValue({status:'NO_INFORMATION_GAPS',gaps:[]}),finish:jest.fn().mockResolvedValue(true)}as unknown as jest.Mocked<PostResponseIntelligenceRepository>;const ownership={findSession:jest.fn().mockResolvedValue({id:id.session,status:'ACTIVE',channel:'TEXT'}),findSourceTurn:jest.fn().mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null}),findCompletedAssistant:jest.fn().mockResolvedValue({id:'assistant',session_id:id.session,role:'ASSISTANT',status:'COMPLETED',source_turn_id:id.turn})}as unknown as BackgroundIntelligenceDataApiService;const authority=new BackgroundIntelligenceAuthorityService(new BackgroundIntelligenceContextFactory(),ownership);const enrichment={readCanonicalSourceTurn:jest.fn().mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null,content:'Why do I repeat this pattern?',processing_path:'FAST',routing_reason:'FAST_DEFAULT'}),readHimBrainContextMaterialization:jest.fn().mockResolvedValue({code:'NO_HIM_BRAIN_CONTEXT'}),evaluateAndWriteMemory:jest.fn().mockResolvedValue({decision:'SKIP',reason:'NO_SUPPORTED_EXPLICIT_PATTERN'}),evaluateGenerationEligibility:jest.fn().mockResolvedValue({eligibility:{status:'NOT_ELIGIBLE',reason:'NO_TRIGGER'}}),readHimHypothesisGenerationContext:jest.fn().mockResolvedValue(himContext()),generateHypothesisCandidatePlan:jest.fn(),evaluateHypothesisConfidence:jest.fn(),applyAuthorizedHypothesisUpdate:jest.fn()}as unknown as jest.Mocked<BackgroundIntelligenceEnrichmentService>;const extraction={extract:jest.fn()}as unknown as jest.Mocked<HypothesisGenerationIntentExtractionService>;const assembler={assemble:jest.fn()}as unknown as jest.Mocked<HypothesisGenerationRequestAssemblerService>;const generator={generate:jest.fn()}as BoundHypothesisCandidateGenerator;const association={prepare:jest.fn(),proposeAndAuthorize:jest.fn()}as unknown as jest.Mocked<ModelAssistedHypothesisAssociationService>;const budgetTelemetry={recordPostResponseProviderBudget:jest.fn()}as unknown as jest.Mocked<TelemetryService>;const providerBudget=new PostResponseProviderBudgetService(budgetTelemetry);return{ledger,enrichment,association,extraction,assembler,budgetTelemetry,providerBudget,service:new PostResponseIntelligenceDispatcherService(ledger,authority,enrichment,extraction,assembler,generator,association,providerBudget)};};
  const intent=()=>({problem:{text:'Why do I repeat this pattern?',source:'CURRENT_USER_TURN' as const,sourceTurnId:id.turn},domain:'GENERAL' as const,scope:{kind:'CONVERSATION_SESSION' as const,sessionId:id.session,serialized:`CONVERSATION_SESSION:${id.session}`},evidenceIds:[`memory:${id.evidence}`]});
  const eligible=()=>({eligibility:{status:'ELIGIBLE',reason:'TRIGGER_AND_EVIDENCE_AVAILABLE'},triggerClassification:{status:'TRIGGERED',reason:'RECURRING_PATTERN'},eligibleEvidence:[{evidenceId:`memory:${id.evidence}`,originatingMemoryId:id.evidence}]});
  const eligibleRun=(s:ReturnType<typeof setup>)=>{s.enrichment.evaluateGenerationEligibility.mockResolvedValue(eligible() as never);s.assembler.assemble.mockReturnValue({status:'READY',request:{problem:intent().problem.text,domain:'GENERAL',scope:intent().scope.serialized,evidenceIds:intent().evidenceIds}} as never);s.enrichment.generateHypothesisCandidatePlan.mockResolvedValue({code:'NO_ACCEPTED_CANDIDATES'} as never);return s;};
@@ -582,5 +585,286 @@ describe('PostResponseIntelligenceDispatcherService',()=>{
    expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'QUARANTINED','INDETERMINATE_EFFECT','EFFECT_RECOVERY');
    expect(s.enrichment.readHimBrainContextMaterialization).not.toHaveBeenCalled();
   });
+ });
+
+ // QIR-005 Post-Response Intelligence Scheduler & Provider Budget v1.
+ //
+ // The hard lifecycle budget is THREE provider slots - one each for
+ // ASSOCIATION_PROVIDER, INTENT_PROVIDER and CANDIDATE_PROVIDER - reconstructed
+ // from the durable effect ledger, spent only after a successful durable claim,
+ // never refunded, never replayed from indeterminate state and never reset per
+ // delivery, reclaim, redispatch or process.
+ describe('QIR-005 provider budget',()=>{
+  const decisionsFor=(s:ReturnType<typeof setup>,decision:string)=>
+   (s.budgetTelemetry.recordPostResponseProviderBudget as jest.Mock).mock.calls
+    .filter(call=>call[1]===decision).map(call=>call[0]);
+  const claimsFor=(s:ReturnType<typeof setup>,key:string)=>
+   (s.ledger.claim as jest.Mock).mock.calls.filter(call=>call[1]===key).length;
+  const providerCalls=(s:ReturnType<typeof setup>)=>({
+   association:(s.association.proposeAndAuthorize as jest.Mock).mock.calls.length,
+   intent:(s.extraction.extract as jest.Mock).mock.calls.length,
+   candidate:(s.enrichment.generateHypothesisCandidatePlan as jest.Mock).mock.calls.length,
+  });
+  const durableGeneration=()=>[memoryWriteEffect(),associationEffect(),updateBatchEffect(),intentEffect(),candidateEffect()];
+  // The single maximal legitimate execution: fresh Evidence -> Association ->
+  // managed Update batch -> Information Gap sync -> eligibility -> Intent ->
+  // READY assembly -> HIM generation context -> Candidate -> persistence ->
+  // managed Confidence.
+  const maximalRun=(s:ReturnType<typeof setup>)=>{
+   s.enrichment.evaluateAndWriteMemory.mockResolvedValue({decision:'WRITE',type:'GOAL',memoryId:id.execution,evidenceId:`memory:${id.execution}`} as never);
+   s.association.prepare.mockResolvedValue({status:'PREPARED',snapshot:{}} as never);
+   s.association.proposeAndAuthorize.mockResolvedValue({status:'AUTHORIZED',commands:[updateCommand()]} as never);
+   s.enrichment.evaluateGenerationEligibility.mockResolvedValue(eligible() as never);
+   s.extraction.extract.mockResolvedValue({status:'AUTHORIZED',intent:intent()} as never);
+   s.assembler.assemble.mockReturnValue({status:'READY',request:{problem:intent().problem.text,domain:'GENERAL',scope:intent().scope.serialized,evidenceIds:intent().evidenceIds}} as never);
+   s.enrichment.generateHypothesisCandidatePlan.mockResolvedValue({code:'VALIDATED_CANDIDATES',candidates:[durableCandidate()]} as never);
+   return s;};
+  const exhaustAllSlots=(s:ReturnType<typeof setup>)=>{
+   // The deterministic synthetic case required by the contract: all three slots
+   // are already spent when fresh provider work is requested. No fourth
+   // production provider effect is invented to reach it.
+   jest.spyOn(s.providerBudget,'open').mockImplementation(()=>new PostResponseProviderBudget(
+    new Set(POST_RESPONSE_PROVIDER_EFFECTS_V1),
+    (effect,decision)=>s.budgetTelemetry.recordPostResponseProviderBudget(effect,decision,'FAST')));
+   return s;};
+
+  it('freezes exactly three provider-backed effects and a hard budget of three',()=>{
+   expect(POST_RESPONSE_PROVIDER_EFFECTS_V1).toEqual(['ASSOCIATION_PROVIDER','INTENT_PROVIDER','CANDIDATE_PROVIDER']);
+   expect(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1).toBe(3);
+   expect(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1).toBe(POST_RESPONSE_PROVIDER_EFFECTS_V1.length);
+   for(const effect of ['MEMORY_WRITE','HYPOTHESIS_UPDATE_BATCH','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH','HIM_BRAIN_CONTEXT_MATERIALIZATION'])
+    expect(POST_RESPONSE_PROVIDER_EFFECTS_V1 as readonly string[]).not.toContain(effect);});
+
+  it('15.1 - the maximal legitimate execution spends exactly three slots and never a fourth',async()=>{
+   const s=maximalRun(setup({confidence:singleTargetConfidence()}));
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'COMPLETED','COMPLETED','DONE');
+   expect(providerCalls(s)).toEqual({association:1,intent:1,candidate:1});
+   expect(decisionsFor(s,'AUTHORIZED')).toEqual(['ASSOCIATION_PROVIDER','INTENT_PROVIDER','CANDIDATE_PROVIDER']);
+   expect(decisionsFor(s,'AUTHORIZED')).toHaveLength(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1);
+   expect(decisionsFor(s,'EXHAUSTED')).toEqual([]);
+   for(const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1) expect(claimsFor(s,effect)).toBe(1);
+   // The non-provider effects consume no slot at all.
+   expect(claimsFor(s,'MEMORY_WRITE')).toBe(1);expect(claimsFor(s,'HYPOTHESIS_PERSISTENCE')).toBe(1);
+   expect(claimsFor(s,'HYPOTHESIS_UPDATE_BATCH')).toBe(0);expect(claimsFor(s,'CONFIDENCE_BATCH')).toBe(0);
+   expect(claimsFor(s,'HIM_BRAIN_CONTEXT_MATERIALIZATION')).toBe(0);});
+
+  it('15.8 - the maximal path preserves Association -> Intent -> Candidate -> Persistence -> Confidence ordering',async()=>{
+   const s=maximalRun(setup({confidence:singleTargetConfidence()}));
+   await s.service.dispatch(JSON.stringify(event()));
+   const order=(mock:jest.Mock)=>mock.mock.invocationCallOrder[0];
+   const association=order(s.association.proposeAndAuthorize as jest.Mock);
+   const intentProvider=order(s.extraction.extract as jest.Mock);
+   const candidate=order(s.enrichment.generateHypothesisCandidatePlan as jest.Mock);
+   const updateBatch=order(s.ledger.executeHypothesisUpdateBatch as jest.Mock);
+   const gapSync=order(s.ledger.syncInformationGaps as jest.Mock);
+   const eligibility=order(s.enrichment.evaluateGenerationEligibility as jest.Mock);
+   const assembly=order(s.assembler.assemble as jest.Mock);
+   const himRead=order(s.enrichment.readHimHypothesisGenerationContext as jest.Mock);
+   const persistence=order(s.ledger.persistHypothesisGeneration as jest.Mock);
+   const confidence=order(s.ledger.executeConfidenceBatch as jest.Mock);
+   expect(association).toBeLessThan(updateBatch);
+   expect(updateBatch).toBeLessThan(gapSync);
+   expect(gapSync).toBeLessThan(eligibility);
+   expect(eligibility).toBeLessThan(intentProvider);
+   expect(association).toBeLessThan(intentProvider);
+   expect(intentProvider).toBeLessThan(assembly);
+   expect(assembly).toBeLessThan(himRead);
+   expect(himRead).toBeLessThan(candidate);
+   expect(intentProvider).toBeLessThan(candidate);
+   expect(candidate).toBeLessThan(persistence);
+   expect(persistence).toBeLessThan(confidence);});
+
+  it.each([
+   ['0 - a Safety skip before any provider work',(s:ReturnType<typeof setup>)=>{
+    s.ledger.acquire.mockResolvedValueOnce({id:id.execution,event_id:id.event,user_id:id.user,session_id:id.session,source_turn_id:id.turn,event_version:'2.0',processing_path:'FAST',safety_disposition:'GUIDED',state:'RUNNING',attempt_count:1});return s;},0],
+   ['0 - a legitimate NOT_ELIGIBLE exit with no fresh Evidence',(s:ReturnType<typeof setup>)=>s,0],
+   ['1 - eligible generation whose durable Intent is NOT_AUTHORIZED',(s:ReturnType<typeof setup>)=>{
+    const run=eligibleRun(s);run.extraction.extract.mockResolvedValue({status:'NOT_AUTHORIZED',reason:'PROVIDER_TIMEOUT'} as never);return run;},1],
+   ['2 - Association plus Intent, stopped by a NOT_READY assembly',(s:ReturnType<typeof setup>)=>{
+    const run=maximalRun(s);run.assembler.assemble.mockReturnValue({status:'NOT_READY',reason:'MISSING_EVIDENCE'} as never);return run;},2],
+  ])('15.2 - a legal conditional path spends %s provider slots',async(_label,arrange,expected)=>{
+   const s=arrange(setup({confidence:singleTargetConfidence()}));
+   await s.service.dispatch(JSON.stringify(event()));
+   expect(decisionsFor(s,'AUTHORIZED')).toHaveLength(expected as number);
+   const calls=providerCalls(s);
+   expect(calls.association+calls.intent+calls.candidate).toBe(expected as number);
+   expect(decisionsFor(s,'EXHAUSTED')).toEqual([]);});
+
+  it('15.3 - duplicate delivery, redispatch and reclaim never replay a completed provider effect',async()=>{
+   const s=maximalRun(setup({confidence:singleTargetConfidence()}));
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(providerCalls(s)).toEqual({association:1,intent:1,candidate:1});
+   // The durable ledger now carries the whole completed chain. Every further
+   // delivery of the SAME execution - duplicate, redispatch, reclaim - re-reads
+   // it and must issue zero provider transport.
+   (s.ledger.effects as jest.Mock).mockImplementation(async()=>[...durableGeneration(),persistenceEffect(),singleTargetConfidence()]);
+   for(const _delivery of ['duplicate','redispatch','reclaim']){
+    await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+    expect(providerCalls(s)).toEqual({association:1,intent:1,candidate:1});
+   }
+   // Cumulative across the entire durable lifecycle: at most one transport per
+   // provider effect, and never a fourth authorization.
+   expect(decisionsFor(s,'AUTHORIZED')).toHaveLength(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1);
+   expect(decisionsFor(s,'EXHAUSTED')).toEqual([]);
+   for(const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1) expect(claimsFor(s,effect)).toBe(1);});
+
+  it('15.3 - a redelivery that recovers the full provider chain re-derives the same spent budget without resetting it',async()=>{
+   const s=eligibleRun(setup({effects:durableGeneration(),confidence:singleTargetConfidence()}));
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(providerCalls(s)).toEqual({association:0,intent:0,candidate:0});
+   expect(decisionsFor(s,'RECOVERED')).toEqual(['ASSOCIATION_PROVIDER','INTENT_PROVIDER','CANDIDATE_PROVIDER']);
+   expect(decisionsFor(s,'AUTHORIZED')).toEqual([]);
+   expect(decisionsFor(s,'EXHAUSTED')).toEqual([]);
+   expect(s.ledger.persistHypothesisGeneration).toHaveBeenCalledWith(id.execution);
+   expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'COMPLETED','COMPLETED','DONE');});
+
+  it('15.5 - a pre-existing CLAIMED provider effect quarantines with zero new provider work and no refund',async()=>{
+   for(const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1){
+    const s=maximalRun(setup({effects:[{effect_key:effect,state:'CLAIMED',result_code:null,result_reference:null,result_payload:null}]}));
+    await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+    expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'QUARANTINED','INDETERMINATE_EFFECT','EFFECT_RECOVERY');
+    expect(providerCalls(s)).toEqual({association:0,intent:0,candidate:0});
+    expect(s.ledger.claim).not.toHaveBeenCalled();
+    // The slot stays spent: it is neither refunded nor replayed.
+    expect(reconstructSpentProviderSlots([{effect_key:effect,state:'CLAIMED'}]).has(effect)).toBe(true);
+   }});
+
+  it.each(POST_RESPONSE_PROVIDER_EFFECTS_V1)('15.6 - a failed durable %s claim invokes no provider and consumes no slot',async effect=>{
+   const s=maximalRun(setup({confidence:singleTargetConfidence()}));
+   (s.ledger.claim as jest.Mock).mockImplementation(async(_execution:string,key:string)=>key!==effect);
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(claimsFor(s,effect)).toBe(1);
+   expect(decisionsFor(s,'AUTHORIZED')).not.toContain(effect);
+   expect(decisionsFor(s,'EXHAUSTED')).toEqual([]);
+   const calls=providerCalls(s);
+   const invoked={ASSOCIATION_PROVIDER:calls.association,INTENT_PROVIDER:calls.intent,CANDIDATE_PROVIDER:calls.candidate}[effect];
+   expect(invoked).toBe(0);
+   // The existing non-terminal claim-loss semantics are unchanged.
+   expect(s.ledger.finish).not.toHaveBeenCalled();});
+
+  // Each case arranges a legitimate execution whose NEXT step is fresh work for
+  // that provider effect, then meets a synthetically exhausted budget.
+  const exhaustionCases=Object.freeze({
+   ASSOCIATION_PROVIDER:{
+    arrange:()=>maximalRun(setup({confidence:singleTargetConfidence()})),
+    provider:(s:ReturnType<typeof setup>)=>s.association.proposeAndAuthorize},
+   INTENT_PROVIDER:{
+    arrange:()=>eligibleRun(setup({effects:[memorySkipEffect()],confidence:singleTargetConfidence()})),
+    provider:(s:ReturnType<typeof setup>)=>s.extraction.extract},
+   CANDIDATE_PROVIDER:{
+    arrange:()=>eligibleRun(setup({effects:[memorySkipEffect(),intentEffect()],confidence:singleTargetConfidence()})),
+    provider:(s:ReturnType<typeof setup>)=>s.enrichment.generateHypothesisCandidatePlan},
+  });
+  it.each(POST_RESPONSE_PROVIDER_EFFECTS_V1)('15.7 - an exhausted budget blocks fresh %s before any transport and quarantines',async effect=>{
+   const {arrange,provider}=exhaustionCases[effect];
+   const s=exhaustAllSlots(arrange());
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(decisionsFor(s,'EXHAUSTED')).toContain(effect);
+   expect(provider(s)).not.toHaveBeenCalled();
+   expect(claimsFor(s,effect)).toBe(0);
+   expect(decisionsFor(s,'AUTHORIZED')).toEqual([]);
+   expect(s.ledger.finish).toHaveBeenCalledWith(
+    id.execution,'QUARANTINED',POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_OUTCOME,POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_STAGE);
+   // No result is fabricated and no stale value is substituted for the refused work.
+   expect(s.ledger.completeAssociation).not.toHaveBeenCalled();
+   expect(s.ledger.completeIntent).not.toHaveBeenCalled();
+   expect(s.ledger.completeCandidateProvider).not.toHaveBeenCalled();});
+
+  it('15.9 - Candidate cannot run before an authorized Intent, a READY assembly and a successful HIM context read',async()=>{
+   const notAuthorized=eligibleRun(setup());
+   notAuthorized.extraction.extract.mockResolvedValue({status:'NOT_AUTHORIZED',reason:'PROVIDER_TIMEOUT'} as never);
+   await notAuthorized.service.dispatch(JSON.stringify(event()));
+   expect(providerCalls(notAuthorized).candidate).toBe(0);
+   expect(claimsFor(notAuthorized,'CANDIDATE_PROVIDER')).toBe(0);
+   expect(notAuthorized.enrichment.readHimHypothesisGenerationContext).not.toHaveBeenCalled();
+
+   const notReady=maximalRun(setup({confidence:singleTargetConfidence()}));
+   notReady.assembler.assemble.mockReturnValue({status:'NOT_READY',reason:'MISSING_EVIDENCE'} as never);
+   await notReady.service.dispatch(JSON.stringify(event()));
+   expect(providerCalls(notReady).candidate).toBe(0);
+   expect(claimsFor(notReady,'CANDIDATE_PROVIDER')).toBe(0);
+   expect(decisionsFor(notReady,'AUTHORIZED')).toEqual(['ASSOCIATION_PROVIDER','INTENT_PROVIDER']);
+
+   const himFailure=maximalRun(setup({confidence:singleTargetConfidence()}));
+   (himFailure.enrichment.readHimHypothesisGenerationContext as jest.Mock).mockRejectedValue(new Error('BACKGROUND_INTELLIGENCE_DATABASE_UNAVAILABLE'));
+   await expect(himFailure.service.dispatch(JSON.stringify(event()))).resolves.toBe(false);
+   expect(providerCalls(himFailure).candidate).toBe(0);
+   expect(claimsFor(himFailure,'CANDIDATE_PROVIDER')).toBe(0);
+   expect(decisionsFor(himFailure,'AUTHORIZED')).not.toContain('CANDIDATE_PROVIDER');
+   expect(decisionsFor(himFailure,'EXHAUSTED')).toEqual([]);
+   expect(himFailure.ledger.finish).not.toHaveBeenCalled();});
+
+  it('15.10 - a durable persistence redelivery resumes Confidence with zero upstream provider replay',async()=>{
+   const s=maximalRun(setup({effects:[...durableGeneration(),persistenceEffect()],confidence:singleTargetConfidence()}));
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(providerCalls(s)).toEqual({association:0,intent:0,candidate:0});
+   expect(s.enrichment.evaluateAndWriteMemory).not.toHaveBeenCalled();
+   expect(s.association.prepare).not.toHaveBeenCalled();
+   expect(s.ledger.persistHypothesisGeneration).not.toHaveBeenCalled();
+   expect(s.ledger.executeConfidenceBatch).toHaveBeenCalledWith(id.execution);
+   expect(decisionsFor(s,'AUTHORIZED')).toEqual([]);
+   expect(decisionsFor(s,'RECOVERED')).toEqual(['INTENT_PROVIDER','CANDIDATE_PROVIDER']);
+   expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'COMPLETED','COMPLETED','DONE');});
+
+  it('15.11 - a transient Information Gap sync failure blocks downstream provider work for that attempt',async()=>{
+   const s=maximalRun(setup({confidence:singleTargetConfidence()}));
+   (s.ledger.syncInformationGaps as jest.Mock).mockRejectedValue(new Error('POST_RESPONSE_DATABASE_UNAVAILABLE'));
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(false);
+   expect(providerCalls(s)).toEqual({association:1,intent:0,candidate:0});
+   expect(claimsFor(s,'INTENT_PROVIDER')).toBe(0);expect(claimsFor(s,'CANDIDATE_PROVIDER')).toBe(0);
+   expect(decisionsFor(s,'AUTHORIZED')).toEqual(['ASSOCIATION_PROVIDER']);
+   expect(s.ledger.finish).not.toHaveBeenCalled();
+   // The redelivery recovers the durable Association result with zero upstream
+   // replay and continues from the idempotent sync.
+   const redelivery=maximalRun(setup({effects:[memoryWriteEffect(),associationEffect(),updateBatchEffect()],confidence:singleTargetConfidence()}));
+   await expect(redelivery.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(providerCalls(redelivery)).toEqual({association:0,intent:1,candidate:1});
+   expect(decisionsFor(redelivery,'RECOVERED')).toEqual(['ASSOCIATION_PROVIDER']);
+   expect(decisionsFor(redelivery,'AUTHORIZED')).toEqual(['INTENT_PROVIDER','CANDIDATE_PROVIDER']);});
+
+  it('15.12 - each provider-backed effect performs at most one transport attempt for its claim',async()=>{
+   for(const [label,arrange] of [
+    ['provider failure',(s:ReturnType<typeof setup>)=>{s.association.proposeAndAuthorize.mockRejectedValue(new Error('provider timeout'));return s;}],
+    ['invalid provider output',(s:ReturnType<typeof setup>)=>{s.association.proposeAndAuthorize.mockResolvedValue({status:'NOT_AUTHORIZED',reason:'TARGET_OUT_OF_UNIVERSE'} as never);return s;}],
+   ] as const){
+    const s=arrange(maximalRun(setup({confidence:singleTargetConfidence()})));
+    await s.service.dispatch(JSON.stringify(event()));
+    expect(providerCalls(s).association).toBe(1);
+    expect(claimsFor(s,'ASSOCIATION_PROVIDER')).toBe(1);
+    // The failed slot is spent and NEVER refunded, so nothing retries it.
+    expect(decisionsFor(s,'AUTHORIZED')).toEqual(['ASSOCIATION_PROVIDER']);
+    expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'QUARANTINED','INDETERMINATE_EFFECT','ASSOCIATION_PROVIDER');
+    expect(label).toBeTruthy();
+   }
+   for(const [providerKey,arrange] of [
+    ['intent',(s:ReturnType<typeof setup>)=>{s.extraction.extract.mockRejectedValue(new Error('provider timeout'));return s;}],
+    ['candidate',(s:ReturnType<typeof setup>)=>{s.enrichment.generateHypothesisCandidatePlan.mockRejectedValue(new Error('provider timeout'));return s;}],
+   ] as const){
+    const s=arrange(maximalRun(setup({confidence:singleTargetConfidence()})));
+    await s.service.dispatch(JSON.stringify(event()));
+    expect(providerCalls(s)[providerKey]).toBe(1);
+   }});
+
+  it('telemetry stays bounded and fail-soft: a throwing recorder never changes the execution',async()=>{
+   const s=maximalRun(setup({confidence:singleTargetConfidence()}));
+   (s.budgetTelemetry.recordPostResponseProviderBudget as jest.Mock).mockImplementation(()=>{throw new Error('telemetry exporter down');});
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(providerCalls(s)).toEqual({association:1,intent:1,candidate:1});
+   expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'COMPLETED','COMPLETED','DONE');});
+
+  it('emits only bounded provider-budget dimensions and never an identifier or payload',async()=>{
+   const s=maximalRun(setup({confidence:singleTargetConfidence()}));
+   await s.service.dispatch(JSON.stringify(event()));
+   const calls=(s.budgetTelemetry.recordPostResponseProviderBudget as jest.Mock).mock.calls;
+   expect(calls.length).toBeGreaterThan(0);
+   const forbidden=[id.execution,id.user,id.session,id.turn,id.event,id.evidence,durableCandidate().statement,intent().problem.text];
+   for(const call of calls){
+    expect(POST_RESPONSE_PROVIDER_EFFECTS_V1 as readonly string[]).toContain(call[0]);
+    expect(['AUTHORIZED','RECOVERED','EXHAUSTED']).toContain(call[1]);
+    expect(['FAST','DEEP']).toContain(call[2]);
+    expect(call).toHaveLength(3);
+    for(const secret of forbidden) expect(JSON.stringify(call)).not.toContain(secret);
+   }});
  });
 });
