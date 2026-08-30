@@ -149,7 +149,10 @@ test('the dispatcher runs the managed batch only, with the mandatory post-persis
  assert.doesNotMatch(dispatcher,/GenericIntelligenceEffect|this\.ledger\.complete\(/u);
  assert.match(dispatcher,/if\(status==='RETRY_PENDING'\)return false;/u);
  assert.match(dispatcher,/if\(status==='QUARANTINED'\)return this\.terminal\(execution,'QUARANTINED','INDETERMINATE_EFFECT','CONFIDENCE_BATCH'\);/u);
- assert.match(dispatcher,/if\(completed\.has\('HYPOTHESIS_PERSISTENCE'\)\)return this\.resumeGenerationConfidence\(execution,effects\);/u);
+ // QIR-005 re-anchor: the post-persistence resume now also carries the durable
+ // provider budget so the recovered Intent/Candidate results are accounted as
+ // already-spent slots. The pin stays exact - only the frozen argument list grew.
+ assert.match(dispatcher,/if\(completed\.has\('HYPOTHESIS_PERSISTENCE'\)\)return this\.resumeGenerationConfidence\(execution,effects,budget\);/u);
  const resume=dispatcher.slice(dispatcher.indexOf('private async resumeGenerationConfidence'),dispatcher.indexOf('private async confidenceBatch'));
  // The resume path reads durable state only: no provider, no write, no
  // eligibility recomputation and no Hypothesis read.
