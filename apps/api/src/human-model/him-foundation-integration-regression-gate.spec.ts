@@ -1,6 +1,7 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConversationOrchestratorService } from '../conversation/conversation-orchestrator.service';
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
+import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import type { ConversationTurn } from '../conversation/conversation.types';
@@ -87,7 +88,10 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   const bridge = new HimReasoningConsumptionService();
   const policy = new HimFastDeepConsumptionService();
   const repository = { claimTurn: jest.fn().mockResolvedValue(claimed(content)), finalizeTurn: jest.fn().mockResolvedValue({ userTurn: { ...claimed(content), status: 'COMPLETED' }, assistantTurn: { ...claimed(content), id: '30000000-0000-4000-8000-000000000003', role: 'ASSISTANT', status: 'COMPLETED', content: 'response' } }), failTurn: jest.fn(), findTurn: jest.fn(), findAssistantForSource: jest.fn() };
-  const contextBuilder = { build: jest.fn().mockResolvedValue([{ role: 'USER', content }]), assemble: jest.fn((messages, memoryContext) => ({ messages, ...(memoryContext.length ? { memoryContext } : {}) })) };
+  // QIR-004 retired ContextBuilder.assemble; the builder owns canonical
+  // conversation construction only, and the final USER message must be exactly
+  // the canonical current user turn.
+  const contextBuilder = { build: jest.fn().mockResolvedValue([{ role: 'USER', content }]) };
   const safety = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
   const memoryRetriever = { retrieve: jest.fn().mockResolvedValue([{ type: 'GOAL', content: 'memory-only' }]) };
   const memoryWriter = { evaluateAndWrite: jest.fn().mockResolvedValue({ decision: 'SKIP' }) };
@@ -134,7 +138,7 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   // gate's Memory/Hypothesis doubles, so the gate drives the real concurrent
   // post-Safety launch topology and the real typed-outcome join.
   const foregroundGatherer = new BoundedForegroundIntelligenceGathererService(memoryRetriever as never, hypothesisContext as never, correlation, telemetry);
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption, goalMotivationConsumption, relationshipCommunicationConsumption), new HimBrainContextService(new HimBrainContextRepository(brainContextDataApi as never)), foregroundGatherer, new RecommendationGroundingService(), router,correlation,telemetry);
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption, goalMotivationConsumption, relationshipCommunicationConsumption), new HimBrainContextService(new HimBrainContextRepository(brainContextDataApi as never)), foregroundGatherer, new IntegratedContextBudgetAssemblerService(telemetry), new RecommendationGroundingService(), router,correlation,telemetry);
   return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy, situationStressDataApi, decisionAttentionDataApi, goalMotivationDataApi, relationshipCommunicationDataApi, crossContextForegroundDataApi, brainContextDataApi };
 }
 

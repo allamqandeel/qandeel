@@ -34,12 +34,14 @@ describe('ContextBuilderService', () => {
     );
   });
 
-  it('assembles durable memory separately and omits an empty memory channel', () => {
-    const messages = [{ role: 'USER' as const, content: 'current input' }];
-    expect(builder.assemble(messages, [])).toEqual({ messages });
-    expect(builder.assemble(messages, [{ type: 'GOAL', content: 'leave work' }])).toEqual({
-      messages, memoryContext: [{ type: 'GOAL', content: 'leave work' }],
-    });
+  // QIR-004 retired the competing final provider-context assembly authority:
+  // ContextBuilder now owns canonical conversation construction only. Memory
+  // channel selection, source budgeting and final normalized request assembly
+  // belong to the ONE QIR-004 Integrated Context Budget Assembler.
+  it('owns canonical conversation construction only and exposes no provider-assembly authority', () => {
+    expect((builder as unknown as Record<string, unknown>).assemble).toBeUndefined();
+    expect(Object.getOwnPropertyNames(ContextBuilderService.prototype).filter((name) => name !== 'constructor'))
+      .toEqual(['build']);
   });
 
   it('orders prior complete USER/ASSISTANT exchanges chronologically before the current turn', async () => {

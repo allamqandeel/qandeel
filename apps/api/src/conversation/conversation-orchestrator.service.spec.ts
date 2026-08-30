@@ -46,12 +46,17 @@ import { HypothesisGenerationService } from '../hypothesis/hypothesis-generation
 import type { HypothesisCandidateGenerator } from '../hypothesis/hypothesis-generation.types';
 import { HypothesisCandidateGeneratorError } from '../hypothesis/hypothesis-candidate-generator-provider.types';
 import { ConfidenceService } from '../hypothesis/confidence.service';
-import { HypothesisReasoningInvariantError } from '../hypothesis/hypothesis-reasoning-context.types';
+import { HypothesisReasoningInvariantError, MAX_HYPOTHESIS_CONTEXT_STRING_CHARS, MAX_MODEL_HYPOTHESES } from '../hypothesis/hypothesis-reasoning-context.types';
+// The CANONICAL Hypothesis-owned per-field caps, imported rather than copied,
+// so the QIR-004 Fix 01 oversized fixture is measured against the real limits.
+import { MAX_ASSUMPTIONS, MAX_DISCONFIRMING_CONDITIONS, MAX_SCOPE_LENGTH, MAX_STATEMENT_LENGTH, MAX_STRUCTURED_TEXT_LENGTH } from '../hypothesis/hypothesis.types';
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 import { RecommendationGroundingInvariantError, type RecommendationGroundingContext } from '../recommendation/recommendation-grounding.types';
 import { MemoryDataApiError } from '../memory/memory-data-api.service';
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
+import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 import { QIR_NON_HI_FOREGROUND_WAIT_BUDGET_MS } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.types';
+import { HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES } from '../intelligence-runtime/integrated-context-budget-contract';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -72,6 +77,7 @@ describe('ConversationOrchestratorService', () => {
   let himBrainContext: jest.Mocked<HimBrainContextService>;
   let hypothesisContext: jest.Mocked<HypothesisReasoningContextService>;
   let foregroundGatherer: BoundedForegroundIntelligenceGathererService;
+  let integratedContextBudget: IntegratedContextBudgetAssemblerService;
   let recommendationGrounding: jest.Mocked<RecommendationGroundingService>;
   let hypothesisEligibility: jest.Mocked<HypothesisGenerationEligibilityService>;
   let hypothesisExtraction: jest.Mocked<HypothesisGenerationIntentExtractionService>;
@@ -229,9 +235,20 @@ describe('ConversationOrchestratorService', () => {
       findAssistantForSource: jest.fn(), recoverExpiredGeneratingTurn: jest.fn(),
     } as unknown as jest.Mocked<ConversationRepository>;
     router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' }, usage: { inputTokens: 1, outputTokens: 1 } }) };
+    // QIR-004 retired ContextBuilder.assemble: the builder now owns canonical
+    // conversation construction only, and the ONE final normalized provider
+    // request is assembled by the real Integrated Context Budget Assembler.
+    // QIR-004 retired ContextBuilder.assemble: the builder now owns canonical
+    // conversation construction only, and the ONE final normalized provider
+    // request is assembled by the real Integrated Context Budget Assembler.
+    //
+    // The double mirrors production exactly - it appends the SOURCE turn's own
+    // content as the final USER message - because QIR-004 validates that the
+    // final message is exactly the canonical current user turn and fails the
+    // turn closed otherwise.
     contextBuilder = {
-      build: jest.fn().mockResolvedValue([{ role: 'USER', content: userTurn.content }]),
-      assemble: jest.fn((messages, memoryContext) => ({ messages, ...(memoryContext.length ? { memoryContext } : {}) })),
+      build: jest.fn().mockImplementation((_accessToken: string, _userId: string, sourceTurn: ConversationTurn) =>
+        Promise.resolve([{ role: 'USER', content: sourceTurn.content }])),
     };
     memoryRetriever = { retrieve: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<MemoryRetrieverService>;
     memoryWriter = { evaluateAndWrite: jest.fn().mockResolvedValue({ decision: 'SKIP', reason: 'NO_SUPPORTED_EXPLICIT_PATTERN' }) } as unknown as jest.Mocked<MemoryWriteService>;
@@ -265,7 +282,10 @@ describe('ConversationOrchestratorService', () => {
     // the real concurrent-launch / shared-deadline / typed-outcome production
     // path rather than a gatherer double.
     foregroundGatherer = new BoundedForegroundIntelligenceGathererService(memoryRetriever, hypothesisContext, correlation, telemetry);
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, himBrainContext, foregroundGatherer, recommendationGrounding, router,correlation,telemetry);
+    // QIR-004: the REAL assembler, so every orchestrator proof runs through the
+    // production single normalized provider-request assembly boundary.
+    integratedContextBudget = new IntegratedContextBudgetAssemblerService(telemetry);
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, himBrainContext, foregroundGatherer, integratedContextBudget, recommendationGrounding, router,correlation,telemetry);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -1566,7 +1586,7 @@ describe('ConversationOrchestratorService', () => {
       const wired = new ConversationOrchestratorService(
         repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge,
         himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, aggregation, himBrainContext,
-        foregroundGatherer, recommendationGrounding, router, correlation, telemetry,
+        foregroundGatherer, integratedContextBudget, recommendationGrounding, router, correlation, telemetry,
       );
       return { wired, crossContextRepository, situationRepository, decisionRepository, goalRepository, relationshipRepository, situationDirectRead, decisionDirectRead, goalDirectRead, relationshipDirectRead };
     };
@@ -2909,6 +2929,261 @@ describe('ConversationOrchestratorService', () => {
       expect(repository.claimTurn).not.toHaveBeenCalled();
       expect(record).not.toHaveBeenCalled();
       expect(router.generate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('QIR-004 - Integrated Context Budget final provider-request assembly', () => {
+    const finalizeNormally = () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    };
+
+    const groundingContext = {
+      contractVersion: 1 as const, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT' as const,
+      sourceContractVersion: 1 as const, currentVersionConfidenceCoverage: 'PARTIAL' as const,
+      actionableMissingInformationCodes: [], unverifiedAssumptionsPresent: false,
+      contradictingEvidencePresent: false, sourceTruncated: false,
+    };
+    const smallHypothesis = {
+      contractVersion: 1 as const, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT' as const,
+      coverageState: 'AVAILABLE' as const, candidateHypothesisCount: 1, includedHypothesisCount: 1,
+      truncated: false,
+      hypotheses: [{
+        statement: 'statement', type: 'CAUSAL' as const, domain: 'GENERAL' as const, scope: 'session',
+        origin: 'USER_PROPOSED' as const, status: 'ACTIVE' as const, hypothesisVersion: 1,
+        currentlyEligibleSupportingEvidenceCount: 0, currentlyEligibleContradictingEvidenceCount: 0,
+        assumptions: [], disconfirmingConditions: [],
+        confidence: { state: 'NOT_EVALUATED_FOR_CURRENT_VERSION' as const, targetVersion: 1 },
+      }],
+    };
+
+    // QIR-004 Fix 01 fixture: a Hypothesis context the CANONICAL Hypothesis
+    // Runtime could genuinely produce, whose rendered Hypothesis+Recommendation
+    // package nevertheless exceeds the atomic 24 KiB slice.
+    //
+    // Size comes only from LEGAL multi-byte UTF-8 content inside the canonical
+    // per-field caps - never from malformed values the builder could not emit.
+    // Arabic letters cost 2 UTF-8 bytes per code point, so two hypotheses that
+    // are individually canonical, and whose combined text stays inside the
+    // canonical 24 000 CODE POINT context cap, still render far past 24 576
+    // BYTES.
+    const arabicField = (codePoints: number, suffix: string): string =>
+      `${'ا'.repeat(codePoints - suffix.length)}${suffix}`;
+    const canonicalLargeHypothesisItem = (index: number) => ({
+      statement: arabicField(MAX_STATEMENT_LENGTH, `-s${index}`),
+      type: 'BEHAVIORAL' as const, domain: 'GENERAL' as const,
+      scope: arabicField(MAX_SCOPE_LENGTH, `-c${index}`),
+      origin: 'SYSTEM_GENERATED' as const, status: 'ACTIVE' as const, hypothesisVersion: 1,
+      currentlyEligibleSupportingEvidenceCount: 2, currentlyEligibleContradictingEvidenceCount: 1,
+      assumptions: Array.from({ length: MAX_ASSUMPTIONS }, (_, item) =>
+        arabicField(MAX_STRUCTURED_TEXT_LENGTH, `-a${index}${item}`)),
+      disconfirmingConditions: Array.from({ length: MAX_DISCONFIRMING_CONDITIONS }, (_, item) =>
+        arabicField(MAX_STRUCTURED_TEXT_LENGTH, `-d${index}${item}`)),
+      confidence: { state: 'NOT_EVALUATED_FOR_CURRENT_VERSION' as const, targetVersion: 1 },
+    });
+    const largeHypothesis = {
+      contractVersion: 1 as const, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT' as const,
+      coverageState: 'AVAILABLE' as const, candidateHypothesisCount: 2, includedHypothesisCount: 2,
+      truncated: false,
+      hypotheses: [canonicalLargeHypothesisItem(0), canonicalLargeHypothesisItem(1)],
+    };
+    // Mirrors the canonical HypothesisReasoningContextService character cap so
+    // the fixture is measured by the SAME rule the real builder applies.
+    const canonicalCharacterCount = (item: typeof largeHypothesis['hypotheses'][number]): number =>
+      [item.statement, item.type, item.domain, item.scope, item.origin, item.status,
+        ...item.assumptions, ...item.disconfirmingConditions, item.confidence.state]
+        .reduce((total, text) => total + [...text].length, 0);
+
+    it('uses a Hypothesis fixture the canonical Hypothesis Runtime could really produce', () => {
+      // Anti-collusion control. If this fixture drifted into a shape the
+      // canonical builder cannot emit, the regression below would be proving
+      // nothing - and the REAL QIR-003 gatherer in this suite would fail it
+      // closed rather than reach QIR-004 at all.
+      expect(largeHypothesis.hypotheses.length).toBeLessThanOrEqual(MAX_MODEL_HYPOTHESES);
+      for (const item of largeHypothesis.hypotheses) {
+        for (const [text, cap] of [[item.statement, MAX_STATEMENT_LENGTH], [item.scope, MAX_SCOPE_LENGTH]] as const) {
+          expect([...text].length).toBeLessThanOrEqual(cap);
+          expect(text.length).toBeGreaterThan(0);
+          expect(text.trim()).toBe(text);
+        }
+        for (const list of [item.assumptions, item.disconfirmingConditions]) {
+          expect(list.length).toBeLessThanOrEqual(MAX_ASSUMPTIONS);
+          expect(new Set(list).size).toBe(list.length);
+          for (const text of list) {
+            expect([...text].length).toBeLessThanOrEqual(MAX_STRUCTURED_TEXT_LENGTH);
+            expect(text.trim()).toBe(text);
+          }
+        }
+      }
+      expect(largeHypothesis.hypotheses.reduce((total, item) => total + canonicalCharacterCount(item), 0))
+        .toBeLessThanOrEqual(MAX_HYPOTHESIS_CONTEXT_STRING_CHARS);
+      // Canonical envelope invariants the QIR-003 boundary re-proves at runtime.
+      expect(largeHypothesis.includedHypothesisCount).toBe(largeHypothesis.hypotheses.length);
+      expect(largeHypothesis.candidateHypothesisCount).toBeGreaterThanOrEqual(largeHypothesis.includedHypothesisCount);
+      expect(largeHypothesis.truncated).toBe(largeHypothesis.hypotheses.length < largeHypothesis.candidateHypothesisCount);
+      // Non-vacuity: the package really does exceed the atomic 24 KiB slice.
+      expect(Buffer.byteLength(composeServerGuidance({
+        behavioralGuidance: 'server-owned policy',
+        hypothesisContext: largeHypothesis,
+        recommendationContext: groundingContext,
+      }), 'utf8') - Buffer.byteLength(composeServerGuidance({ behavioralGuidance: 'server-owned policy' }), 'utf8'))
+        .toBeGreaterThan(HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES);
+    });
+
+    it('records available but NEVER consumed when the QIR-004 package budget omits a legitimately AVAILABLE Hypothesis', async () => {
+      finalizeNormally();
+      const hypothesisOutcomes = jest.spyOn(telemetry, 'recordHypothesisContext');
+      const budgetDecisions = jest.spyOn(telemetry, 'recordContextBudgetSourceDecision');
+      hypothesisContext.build.mockResolvedValue({ coverageState: 'AVAILABLE', context: largeHypothesis } as never);
+      recommendationGrounding.ground.mockReturnValue({ coverageState: 'AVAILABLE', context: groundingContext });
+
+      await expect(orchestrator.orchestrate('token', 'user', userTurn))
+        .resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+
+      // Upstream availability is unchanged and still correct: the Hypothesis
+      // Runtime really did answer AVAILABLE.
+      const outcomes = hypothesisOutcomes.mock.calls.map(([outcome]) => outcome);
+      expect(outcomes).toContain('available');
+      // QIR-004 atomically omitted the package.
+      expect(budgetDecisions).toHaveBeenCalledWith('HYPOTHESIS_RECOMMENDATION', 'OMITTED_BUDGET', 'FAST');
+      // Exactly one conversational provider call, and the request it received
+      // carries NEITHER source: Recommendation never survives its Hypothesis.
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      const dispatched = router.generate.mock.calls[0][0];
+      expect(dispatched.hypothesisContext).toBeUndefined();
+      expect(dispatched.recommendationContext).toBeUndefined();
+      expect(composeServerGuidance(dispatched)).not.toContain('<hypothesis_reasoning_context>');
+      // The provider never consumed the Hypothesis, so `consumed` is absent.
+      expect(outcomes).not.toContain('consumed');
+      expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+    });
+
+    it('still records consumed exactly once when the package fits and provider generation succeeds', async () => {
+      finalizeNormally();
+      const hypothesisOutcomes = jest.spyOn(telemetry, 'recordHypothesisContext');
+      hypothesisContext.build.mockResolvedValue({ coverageState: 'AVAILABLE', context: smallHypothesis } as never);
+      recommendationGrounding.ground.mockReturnValue({ coverageState: 'AVAILABLE', context: groundingContext });
+
+      await orchestrator.orchestrate('token', 'user', userTurn);
+
+      const outcomes = hypothesisOutcomes.mock.calls.map(([outcome]) => outcome);
+      expect(outcomes.filter((outcome) => outcome === 'available')).toHaveLength(1);
+      expect(outcomes.filter((outcome) => outcome === 'consumed')).toHaveLength(1);
+      const dispatched = router.generate.mock.calls[0][0];
+      expect(dispatched.hypothesisContext).toBe(smallHypothesis);
+      expect(dispatched.recommendationContext).toBe(groundingContext);
+      // `consumed` stays AFTER the provider call and reports the FINAL request.
+      const consumedCall = hypothesisOutcomes.mock.calls.find(([outcome]) => outcome === 'consumed')!;
+      expect(consumedCall.slice(1)).toEqual(['FAST', 1, 1, 1]);
+      expect(hypothesisOutcomes.mock.invocationCallOrder.at(-1)!)
+        .toBeGreaterThan(router.generate.mock.invocationCallOrder[0]);
+    });
+
+    it('records no consumed outcome when provider generation fails', async () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      const hypothesisOutcomes = jest.spyOn(telemetry, 'recordHypothesisContext');
+      hypothesisContext.build.mockResolvedValue({ coverageState: 'AVAILABLE', context: smallHypothesis } as never);
+      recommendationGrounding.ground.mockReturnValue({ coverageState: 'AVAILABLE', context: groundingContext });
+      router.generate.mockRejectedValue(new Error('provider down'));
+
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toThrow(ServiceUnavailableException);
+
+      const outcomes = hypothesisOutcomes.mock.calls.map(([outcome]) => outcome);
+      expect(outcomes).toContain('available');
+      expect(outcomes).not.toContain('consumed');
+    });
+
+    it('passes the ONE QIR-004 assembled request straight to the provider, by identity', async () => {
+      finalizeNormally();
+      const assemble = jest.spyOn(integratedContextBudget, 'assemble');
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(assemble).toHaveBeenCalledTimes(1);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      // The provider receives EXACTLY the assembled request object - the
+      // Orchestrator never rebuilds, re-spreads, or wraps it afterwards.
+      expect(router.generate.mock.calls[0][0]).toBe(assemble.mock.results[0].value.request);
+      expect(assemble.mock.invocationCallOrder[0])
+        .toBeLessThan(router.generate.mock.invocationCallOrder[0]);
+    });
+
+    it('assembles only AFTER Safety authorizes the turn, and never on a Safety BLOCK', async () => {
+      const assemble = jest.spyOn(integratedContextBudget, 'assemble');
+      safetyGate.evaluate.mockReturnValue({ category: 'SELF_HARM_OR_SUICIDE', disposition: 'BLOCK', deterministicResponse: 'blocked' });
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: { ...assistant, content: 'blocked' } });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(safetyGate.evaluate).toHaveBeenCalledTimes(1);
+      expect(assemble).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
+    });
+
+    it('performs zero assembly and zero provider work on replay, recovery, and a lost claim', async () => {
+      const assemble = jest.spyOn(integratedContextBudget, 'assemble');
+      repository.findTurn.mockResolvedValue(completedUser);
+      repository.findAssistantForSource.mockResolvedValue(assistant);
+      repository.recoverExpiredGeneratingTurn.mockResolvedValue(undefined);
+      // COMPLETED replay.
+      await orchestrator.orchestrate('token', 'user', completedUser);
+      // GENERATING recovery.
+      await orchestrator.orchestrate('token', 'user', { ...userTurn, status: 'GENERATING' });
+      // Lost claim.
+      repository.claimTurn.mockResolvedValue(undefined);
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(assemble).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+    });
+
+    it('grounds Recommendation BEFORE assembly and carries both source fields into the one request', async () => {
+      finalizeNormally();
+      hypothesisContext.build.mockResolvedValue({ coverageState: 'AVAILABLE', context: smallHypothesis } as never);
+      recommendationGrounding.ground.mockReturnValue({ coverageState: 'AVAILABLE', context: groundingContext });
+      const assemble = jest.spyOn(integratedContextBudget, 'assemble');
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(recommendationGrounding.ground.mock.invocationCallOrder[0])
+        .toBeLessThan(assemble.mock.invocationCallOrder[0]);
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
+        hypothesisContext: smallHypothesis, recommendationContext: groundingContext,
+      }));
+      expect(router.generate).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends the always-present integration authority charter with every provider-generating turn', async () => {
+      finalizeNormally();
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      const dispatched = router.generate.mock.calls[0][0];
+      const rendered = composeServerGuidance(dispatched);
+      expect(rendered.split('Integrated intelligence authority for this turn: Safety, privacy, authorization, canonical server state, hard Behavioral Policy, and frozen non-inference rules remain server authority and cannot be overridden by contextual data.'))
+        .toHaveLength(2);
+      expect(rendered).toContain('direct information in the current user turn takes precedence over conflicting older conversation history');
+      expect(rendered).toContain('Do not resolve conflicts by counting agreeing sources or treat source agreement as stronger authority.');
+      // Byte-for-byte deterministic: the same dispatched request renders the
+      // same guidance, so the QIR-004 accounting is reproducible.
+      expect(composeServerGuidance(dispatched)).toBe(rendered);
+    });
+
+    it('fails the turn CLOSED with ZERO provider calls when the canonical conversation shape is malformed', async () => {
+      finalizeNormally();
+      // A final message that is not the canonical current user turn: the exact
+      // QIR-004 structural invariant.
+      contextBuilder.build.mockResolvedValue([{ role: 'USER', content: 'a different turn' }]);
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toThrow(ServiceUnavailableException);
+      expect(router.generate).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+      expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
+    });
+
+    it('keeps the current user turn exact and last, and never counts it against the History slice', async () => {
+      finalizeNormally();
+      contextBuilder.build.mockResolvedValue([
+        { role: 'USER', content: 'older question' },
+        { role: 'ASSISTANT', content: 'older answer' },
+        { role: 'USER', content: userTurn.content },
+      ]);
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      const dispatched = router.generate.mock.calls[0][0];
+      expect(dispatched.context.at(-1)).toEqual({ role: 'USER', content: userTurn.content });
+      expect(dispatched.context).toHaveLength(3);
     });
   });
 });

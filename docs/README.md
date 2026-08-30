@@ -32,6 +32,7 @@ The original Word documents remain the canonical archive. Markdown files record 
 - [Integrated Intelligence Runtime Contract v1](integrated-intelligence-runtime-contract-v1.md) — **ACTIVE / NORMATIVE** phase entry contract (QIR-001; the integration constitution for the whole brain; Provider/LLM selection explicitly deferred)
 - [FAST / DEEP Runtime Decision Policy v2](fast-deep-runtime-decision-policy-v2.md) — **ACTIVE / NORMATIVE** deterministic, Unicode-aware, provider-neutral routing law (QIR-002; migration 0062; supersedes the input-length-only rule)
 - [Bounded Foreground Intelligence Gatherer v1](bounded-foreground-intelligence-gatherer-v1.md) — **ACTIVE / NORMATIVE** post-Safety concurrent Memory + Hypothesis foreground acquisition under ONE shared 5000 ms non-HI ceiling, with typed non-interchangeable outcomes and a hard-fail-closed classifier (QIR-003; no migration; QHIA lane frozen and untouched)
+- [Integrated Context Budget & Conflict Resolution v1](integrated-context-budget-conflict-resolution-v1.md) — **ACTIVE / NORMATIVE** the ONE server-owned, provider-neutral final normalized provider-request assembly boundary: a 128 KiB UTF-8 model-input text ceiling partitioned into isolated 64/16/8/8/24/8 KiB slices with no borrowing, non-truncatable Mandatory Core, an always-present integrated intelligence authority charter, and exactly one conversational provider call (QIR-004; no migration; QIR-003 and QHIA topology untouched)
 
 ## Operational Foundation hardening
 

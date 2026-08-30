@@ -383,9 +383,19 @@ function assertProviderSemanticsConsolidationContract(sources) {
   if (!/\.\.\.\(humanIntelligence \? \{ humanIntelligence \} : \{\}\),/u.test(exe.orchestrator))
     violated('the one envelope is passed only when provider-ready Human Intelligence exists');
   // The compiled envelope is what the router receives - never a legacy field.
+  //
+  // QIR-004 moved the provider-request field enumeration out of the router-call
+  // literal and into the ONE Integrated Context Budget Assembler input, so the
+  // region in which a legacy Human Intelligence field could still reach the
+  // Model Router is exactly "assembler input through the router invocation".
+  // The rule is unchanged; only the region it is checked over follows the
+  // request-construction surface.
   const routerCallStart = exe.orchestrator.indexOf("this.engine('model_router'");
   if (routerCallStart < 0) violated('the Model Router invocation exists');
-  const routerCall = exe.orchestrator.slice(routerCallStart, exe.orchestrator.indexOf('}));', routerCallStart));
+  const requestAssemblyStart = exe.orchestrator.indexOf('this.integratedContextBudget.assemble({');
+  if (requestAssemblyStart < 0 || requestAssemblyStart > routerCallStart)
+    violated('the ONE normalized provider-request assembly precedes the Model Router invocation');
+  const routerCall = exe.orchestrator.slice(requestAssemblyStart, exe.orchestrator.indexOf('\n', routerCallStart));
   for (const [field] of RETIRED_PROVIDER_FIELDS) {
     if (routerCall.includes(field))
       violated(`no legacy Human Intelligence field reaches the Model Router: found ${field}`);

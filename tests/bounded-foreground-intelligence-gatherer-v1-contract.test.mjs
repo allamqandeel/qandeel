@@ -364,8 +364,15 @@ function assertBoundedForegroundIntelligenceGathererContract(world) {
     violated('the outcome registry is exactly the five frozen outcomes');
   if (!world.telemetry.includes("const FOREGROUND_INTELLIGENCE_POLICY_VERSION='1';"))
     violated('the QIR-003 telemetry policy version is exactly "1"');
+  // The three drop-gates are asserted INSIDE the QIR-003 recorder's own guard
+  // block, never merely somewhere in the telemetry file: later tasks add their
+  // own bounded recorders that legitimately reuse the same shared path
+  // validator, and a file-wide `includes` would let this recorder silently lose
+  // a gate while another recorder still mentioned it.
+  const foregroundSourceGates = slice(world.telemetry, ' recordForegroundIntelligenceSource(', 'this.foregroundIntelligenceSourceOutcomes.add');
+  if (!foregroundSourceGates) violated('the bounded foreground source recorder exists as a bounded block');
   for (const gate of ['FOREGROUND_INTELLIGENCE_SOURCES.has(source)', 'FOREGROUND_INTELLIGENCE_SOURCE_OUTCOMES.has(outcome)', 'isRuntimeRoutingPath(path)']) {
-    if (!world.telemetry.includes(gate))
+    if (!foregroundSourceGates.includes(gate))
       violated(`telemetry drops rather than emits anything outside the finite registries: missing ${gate}`);
   }
   if (!world.telemetry.includes('this.foregroundIntelligenceSourceOutcomes.add?.(1,{source,outcome,processing_path:path,policy_version:FOREGROUND_INTELLIGENCE_POLICY_VERSION});'))
@@ -572,8 +579,8 @@ test('G2 - anti-vacuity: the real guard rejects every named regression', () => {
     }],
     ['a serial Memory stage reappeared in the orchestrator', {
       orchestrator: shipped.orchestrator.replace(
-        'const assembledContext = this.contextBuilder.assemble(context, memoryContext);',
-        "const memoryContextAgain = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));\n      void memoryContextAgain;\n      const assembledContext = this.contextBuilder.assemble(context, memoryContext);",
+        'const assembled = this.integratedContextBudget.assemble({',
+        "const memoryContextAgain = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));\n      void memoryContextAgain;\n      const assembled = this.integratedContextBudget.assemble({",
       ),
     }],
     ['a second gather launch appeared', {
@@ -655,12 +662,13 @@ test('G2 - anti-vacuity: the real guard rejects every named regression', () => {
 });
 
 test('G3 - forward safety: every change a later QIR task is expected to make stays legal', () => {
-  // QIR-004: a global integrated context budget may wrap provider-context
-  // assembly without touching QIR-003 law.
-  const assembleLine = '      const assembledContext = this.contextBuilder.assemble(context, memoryContext);';
-  assert.ok(shipped.orchestrator.includes(assembleLine), 'the provider-context assembly exists at the baseline to wrap');
+  // QIR-004 already landed as the ONE final normalized provider-request
+  // assembly boundary; a later reviewed QIR task may reshape that surface again
+  // without touching QIR-003 law.
+  const assembleLine = '      const assembled = this.integratedContextBudget.assemble({';
+  assert.ok(shipped.orchestrator.includes(assembleLine), 'the provider-request assembly exists at the baseline to wrap');
   const budgeted = shipped.orchestrator.replace(assembleLine,
-    '      const assembledContext = this.globalContextBudget.fit(this.contextBuilder.assemble(context, memoryContext));');
+    '      const assembled = this.integratedContextBudgetV2.assemble({');
   assert.notDeepEqual(budgeted, shipped.orchestrator);
   assert.doesNotThrow(() => assertBoundedForegroundIntelligenceGathererContract({ ...shipped, orchestrator: budgeted }),
     'QIR-004 may add a global integrated context budget');

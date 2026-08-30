@@ -22,6 +22,7 @@ import { ObservabilityModule } from '../observability/observability.module';
 import { HypothesisModule } from '../hypothesis/hypothesis.module';
 import { RecommendationModule } from '../recommendation/recommendation.module';
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
+import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 
 @Module({
   imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, RecommendationModule, ObservabilityModule],
@@ -47,6 +48,11 @@ import { BoundedForegroundIntelligenceGathererService } from '../intelligence-ru
     // introduces no new repository, no new Data API boundary and no new
     // database authority.
     BoundedForegroundIntelligenceGathererService,
+    // QIR-004: the ONE final normalized provider-request assembly boundary. It
+    // depends only on the already-imported ObservabilityModule telemetry and
+    // the provider-neutral guidance renderer: no new repository, no new Data
+    // API boundary, no new database authority, and no migration.
+    IntegratedContextBudgetAssemblerService,
     ConversationOrchestratorService,
     ConversationService,
     // QHIA-011A: the narrow facade over the EXISTING QHIA-006 relevance
