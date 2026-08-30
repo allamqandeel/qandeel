@@ -123,9 +123,16 @@ export class ConversationRepository {
     return rows[0];
   }
 
-  async finalizeTurn(input: { sessionId: string; userId: string; sourceTurnId: string; assistantTurnId: string; content: string; safetyDisposition:'ALLOW'|'GUIDED'|'BLOCK' }): Promise<{ userTurn: ConversationTurn; assistantTurn: ConversationTurn } | undefined> {
-    const rows = await this.serviceApi.rpc<Array<{ user_turn: ConversationTurn; assistant_turn: ConversationTurn }>>('finalize_conversation_turn', {
-      p_session_id: input.sessionId, p_user_id: input.userId, p_source_turn_id: input.sourceTurnId, p_assistant_turn_id: input.assistantTurnId, p_content: input.content, p_safety_disposition: input.safetyDisposition, ...this.eventMetadata(),
+  // QIR-006: finalization runs through the versioned migration-0063 authority.
+  // When the sanitized QuestionContext actually survived final provider-request
+  // assembly, the SELECTED reservation identity travels here and is marked
+  // BOUND atomically with assistant insertion + user completion + outbox
+  // publication. Without it, no reservation can be BOUND, and the one
+  // database-owned terminal mechanism retires any reservation still SELECTED
+  // for the turn inside the same transaction.
+  async finalizeTurn(input: { sessionId: string; userId: string; sourceTurnId: string; assistantTurnId: string; content: string; safetyDisposition:'ALLOW'|'GUIDED'|'BLOCK'; questionBindingId?: string }): Promise<{ userTurn: ConversationTurn; assistantTurn: ConversationTurn } | undefined> {
+    const rows = await this.serviceApi.rpc<Array<{ user_turn: ConversationTurn; assistant_turn: ConversationTurn }>>('finalize_conversation_turn_v2', {
+      p_session_id: input.sessionId, p_user_id: input.userId, p_source_turn_id: input.sourceTurnId, p_assistant_turn_id: input.assistantTurnId, p_content: input.content, p_safety_disposition: input.safetyDisposition, p_question_binding_id: input.questionBindingId ?? null, ...this.eventMetadata(),
     });
     return rows[0] ? { userTurn: rows[0].user_turn, assistantTurn: rows[0].assistant_turn } : undefined;
   }

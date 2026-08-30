@@ -9,6 +9,7 @@ import {
 import type { HumanIntelligenceProviderSemantics } from '../model-router/human-intelligence-provider-semantics.types';
 import type { HypothesisReasoningContext } from '../hypothesis/hypothesis-reasoning-context.types';
 import type { RecommendationGroundingContext } from '../recommendation/recommendation-grounding.types';
+import type { QuestionContextV1 } from '../question/question-context.types';
 import { TelemetryService } from '../observability/telemetry.service';
 import {
   GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES,
@@ -18,6 +19,7 @@ import {
   IntegratedContextBudgetInvariantError,
   MANDATORY_CORE_BUDGET_BYTES,
   MEMORY_BUDGET_BYTES,
+  QUESTION_BUDGET_BYTES,
   type IntegratedContextAssemblyInput,
   type IntegratedContextAssemblyResult,
   type IntegratedContextBudgetOutcome,
@@ -37,7 +39,7 @@ function utf8Bytes(value: string): number {
 // source can be measured by its own incremental contribution.
 type GuidanceProjection = Pick<
   ModelRouterRequest,
-  'behavioralGuidance' | 'safetyGuidance' | 'memoryContext' | 'humanIntelligence' | 'hypothesisContext' | 'recommendationContext'
+  'behavioralGuidance' | 'safetyGuidance' | 'memoryContext' | 'humanIntelligence' | 'hypothesisContext' | 'recommendationContext' | 'questionContext'
 >;
 
 // Every byte count QIR-004 computes must be a non-negative safe integer.
@@ -203,6 +205,7 @@ export class IntegratedContextBudgetAssemblerService {
     const hypothesisRecommendation = this.retainAtomicHypothesisRecommendationPackage(
       guidanceBase, baseGuidanceBytes, input.hypothesisContext, input.recommendationContext,
     );
+    const question = this.retainAtomicQuestion(guidanceBase, baseGuidanceBytes, input.questionContext);
 
     // The ONE normalized provider request. Execution semantics decided
     // elsewhere - task, FAST/DEEP path, complexity mapping, provider latency
@@ -222,6 +225,7 @@ export class IntegratedContextBudgetAssemblerService {
         ? { hypothesisContext: hypothesisRecommendation.retained.hypothesisContext } : {}),
       ...(hypothesisRecommendation.retained?.recommendationContext
         ? { recommendationContext: hypothesisRecommendation.retained.recommendationContext } : {}),
+      ...(question.retained ? { questionContext: question.retained } : {}),
       locale: input.locale,
       modality: input.modality,
       latencyBudgetMs: input.latencyBudgetMs,
@@ -239,13 +243,15 @@ export class IntegratedContextBudgetAssemblerService {
     if (memory.retainedBytes > MEMORY_BUDGET_BYTES) throw new IntegratedContextBudgetInvariantError();
     if (humanIntelligence.retainedBytes > HUMAN_INTELLIGENCE_BUDGET_BYTES) throw new IntegratedContextBudgetInvariantError();
     if (hypothesisRecommendation.retainedBytes > HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES) throw new IntegratedContextBudgetInvariantError();
+    if (question.retainedBytes > QUESTION_BUDGET_BYTES) throw new IntegratedContextBudgetInvariantError();
     // The ACCOUNTING IDENTITY. Per-source contribution accounting must
     // reconcile EXACTLY to the final normalized rendered request. If guidance
     // rendering ever becomes cross-source or non-additive, this guard fails and
     // forces an explicit QIR contract review instead of silently drifting.
     const accountedBytes = mandatoryCoreBytes
       + history.retainedBytes + memory.retainedBytes
-      + humanIntelligence.retainedBytes + hypothesisRecommendation.retainedBytes;
+      + humanIntelligence.retainedBytes + hypothesisRecommendation.retainedBytes
+      + question.retainedBytes;
     if (finalTextBytes !== accountedBytes) throw new IntegratedContextBudgetInvariantError();
     // An impossible final overflow is NEVER repaired by trimming Mandatory Core
     // and never triggers a second assembly pass: it fails the turn closed.
@@ -256,6 +262,7 @@ export class IntegratedContextBudgetAssemblerService {
       { source: 'MEMORY', outcome: memory.outcome, offeredBytes: memory.offeredBytes, retainedBytes: memory.retainedBytes },
       { source: 'HUMAN_INTELLIGENCE', outcome: humanIntelligence.outcome, offeredBytes: humanIntelligence.offeredBytes, retainedBytes: humanIntelligence.retainedBytes },
       { source: 'HYPOTHESIS_RECOMMENDATION', outcome: hypothesisRecommendation.outcome, offeredBytes: hypothesisRecommendation.offeredBytes, retainedBytes: hypothesisRecommendation.retainedBytes },
+      { source: 'QUESTION', outcome: question.outcome, offeredBytes: question.offeredBytes, retainedBytes: question.retainedBytes },
     ];
     this.recordBudgetTelemetry(input.path, mandatoryCoreBytes, finalTextBytes, decisions);
     return { request, mandatoryCoreBytes, finalTextBytes, decisions };
@@ -358,6 +365,27 @@ export class IntegratedContextBudgetAssemblerService {
       offeredBytes,
       retainedBytes: offeredBytes,
     };
+  }
+
+  /**
+   * QIR-006: Question is ATOMIC. Its full actual incremental rendered
+   * contribution either fits the 8 KiB Question slice and the whole sanitized
+   * package is included, or the ENTIRE provider field is omitted for this
+   * turn. The information objective is never truncated, rewritten, or
+   * semantically altered to make it fit, and PARTIALLY_RETAINED is illegal
+   * for QUESTION. Omission is a budget decision only: releasing the durable
+   * SELECTED reservation is owned by the canonical finalization/terminal
+   * release authority, never by this assembler.
+   */
+  private retainAtomicQuestion(
+    guidanceBase: GuidanceProjection,
+    baseGuidanceBytes: number,
+    questionContext: QuestionContextV1 | undefined,
+  ): RetentionDecision<QuestionContextV1> {
+    if (!questionContext) return { outcome: 'NOT_PRESENT', retained: undefined, offeredBytes: 0, retainedBytes: 0 };
+    const offeredBytes = this.contributionBytes(guidanceBase, baseGuidanceBytes, { questionContext });
+    if (offeredBytes > QUESTION_BUDGET_BYTES) return { outcome: 'OMITTED_BUDGET', retained: undefined, offeredBytes, retainedBytes: 0 };
+    return { outcome: 'INCLUDED_FULL', retained: questionContext, offeredBytes, retainedBytes: offeredBytes };
   }
 
   // The ONE incremental contribution measurement: what this source ACTUALLY

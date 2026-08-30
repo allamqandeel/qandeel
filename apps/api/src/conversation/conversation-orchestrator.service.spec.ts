@@ -54,6 +54,7 @@ import { RecommendationGroundingService } from '../recommendation/recommendation
 import { RecommendationGroundingInvariantError, type RecommendationGroundingContext } from '../recommendation/recommendation-grounding.types';
 import { MemoryDataApiError } from '../memory/memory-data-api.service';
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
+import { QuestionForegroundSelectionService } from '../question/question-foreground-selection.service';
 import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 import { QIR_NON_HI_FOREGROUND_WAIT_BUDGET_MS } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.types';
 import { HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES } from '../intelligence-runtime/integrated-context-budget-contract';
@@ -77,6 +78,7 @@ describe('ConversationOrchestratorService', () => {
   let himBrainContext: jest.Mocked<HimBrainContextService>;
   let hypothesisContext: jest.Mocked<HypothesisReasoningContextService>;
   let foregroundGatherer: BoundedForegroundIntelligenceGathererService;
+  let questionForegroundSelection: jest.Mocked<QuestionForegroundSelectionService>;
   let integratedContextBudget: IntegratedContextBudgetAssemblerService;
   let recommendationGrounding: jest.Mocked<RecommendationGroundingService>;
   let hypothesisEligibility: jest.Mocked<HypothesisGenerationEligibilityService>;
@@ -282,10 +284,15 @@ describe('ConversationOrchestratorService', () => {
     // the real concurrent-launch / shared-deadline / typed-outcome production
     // path rather than a gatherer double.
     foregroundGatherer = new BoundedForegroundIntelligenceGathererService(memoryRetriever, hypothesisContext, correlation, telemetry);
+    // QIR-006: the formal Question foreground selection lane. Default double:
+    // a legitimately empty selection (no eligible automatic gap), so every
+    // pre-existing orchestrator proof runs with zero QuestionContext exactly
+    // as before; the focused QIR-006 tests override it per case.
+    questionForegroundSelection = { select: jest.fn().mockResolvedValue({ state: 'LEGITIMATE_EMPTY', reason: 'NO_ELIGIBLE_GAP' }) } as unknown as jest.Mocked<QuestionForegroundSelectionService>;
     // QIR-004: the REAL assembler, so every orchestrator proof runs through the
     // production single normalized provider-request assembly boundary.
     integratedContextBudget = new IntegratedContextBudgetAssemblerService(telemetry);
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, himBrainContext, foregroundGatherer, integratedContextBudget, recommendationGrounding, router,correlation,telemetry);
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, himBrainContext, foregroundGatherer, questionForegroundSelection, integratedContextBudget, recommendationGrounding, router,correlation,telemetry);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -1586,7 +1593,7 @@ describe('ConversationOrchestratorService', () => {
       const wired = new ConversationOrchestratorService(
         repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge,
         himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, aggregation, himBrainContext,
-        foregroundGatherer, integratedContextBudget, recommendationGrounding, router, correlation, telemetry,
+        foregroundGatherer, questionForegroundSelection, integratedContextBudget, recommendationGrounding, router, correlation, telemetry,
       );
       return { wired, crossContextRepository, situationRepository, decisionRepository, goalRepository, relationshipRepository, situationDirectRead, decisionDirectRead, goalDirectRead, relationshipDirectRead };
     };
@@ -3184,6 +3191,125 @@ describe('ConversationOrchestratorService', () => {
       const dispatched = router.generate.mock.calls[0][0];
       expect(dispatched.context.at(-1)).toEqual({ role: 'USER', content: userTurn.content });
       expect(dispatched.context).toHaveLength(3);
+    });
+  });
+
+  describe('QIR-006 - formal Question foreground selection lane', () => {
+    const QUESTION_BINDING_ID = '40000000-0000-4000-8000-000000000001';
+    const sanitizedQuestionContext = {
+      contractVersion: 1 as const, source: 'QANDEEL_QUESTION_ENGINE' as const,
+      questionType: 'VALIDATION' as const, answerFormat: 'FREE_TEXT' as const,
+      informationObjective: 'Ask the user to confirm, reject, or clarify one important unresolved assumption in the current topic.',
+    };
+    const selectedOutcome = (questionContext = sanitizedQuestionContext) =>
+      ({ state: 'SELECTED' as const, bindingId: QUESTION_BINDING_ID, questionContext });
+
+    beforeEach(() => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    });
+
+    it('launches Question selection concurrently in the post-Safety stage: the selection RPC is issued while Memory is still pending, and no lane waits behind it', async () => {
+      let releaseMemory: (value: never[]) => void = () => undefined;
+      memoryRetriever.retrieve.mockImplementation(() => new Promise<never[]>((resolve) => { releaseMemory = resolve; }));
+      const pending = orchestrator.orchestrate('token', 'user', userTurn);
+      await new Promise((resolve) => setImmediate(resolve));
+      // Question selection was already launched although the QIR-003 gather has
+      // not settled - it is a sibling lane, never a serial stage after Memory,
+      // Hypothesis, or the Human Intelligence barrier.
+      expect(questionForegroundSelection.select).toHaveBeenCalledTimes(1);
+      expect(questionForegroundSelection.select).toHaveBeenCalledWith({
+        userId: 'user', sessionId: userTurn.session_id, sourceTurnId: userTurn.id, path: 'FAST',
+      });
+      expect(router.generate).not.toHaveBeenCalled();
+      releaseMemory([]);
+      await pending;
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      // The independent lanes were all launched: none of them waited behind
+      // Question selection.
+      expect(himSnapshot.getSnapshot).toHaveBeenCalledTimes(1);
+      expect(memoryRetriever.retrieve).toHaveBeenCalledTimes(1);
+      expect(hypothesisContext.build).toHaveBeenCalledTimes(1);
+    });
+
+    it('performs ZERO formal Question selection on a Safety BLOCK: no selection RPC, no provider call', async () => {
+      safetyGate.evaluate.mockReturnValue({ category: 'SEVERE_ILLEGAL_ACTIONABLE_HARM', disposition: 'BLOCK', deterministicResponse: 'blocked' });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(questionForegroundSelection.select).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
+    });
+
+    it('performs ZERO formal Question selection on a Safety GUIDED turn while the ONE conversational provider call still happens', async () => {
+      safetyGate.evaluate.mockReturnValue({ category: 'SELF_HARM_OR_SUICIDE', disposition: 'GUIDED', safetyGuidance: 'guided safety text' });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(questionForegroundSelection.select).not.toHaveBeenCalled();
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0].questionContext).toBeUndefined();
+      expect(repository.finalizeTurn.mock.calls[0][0]).not.toHaveProperty('questionBindingId');
+    });
+
+    it('sends the sanitized QuestionContext inside the ONE final normalized provider request and binds the reservation at finalization when it survived assembly', async () => {
+      questionForegroundSelection.select.mockResolvedValue(selectedOutcome());
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      const dispatched = router.generate.mock.calls[0][0];
+      expect(dispatched.questionContext).toBe(sanitizedQuestionContext);
+      expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+      expect(repository.finalizeTurn.mock.calls[0][0]).toMatchObject({
+        sessionId: userTurn.session_id, userId: 'user', sourceTurnId: userTurn.id,
+        questionBindingId: QUESTION_BINDING_ID,
+      });
+    });
+
+    it('omits an oversized Question ATOMICALLY at the 8 KiB slice and finalizes WITHOUT a binding identity so the reservation is not consumed', async () => {
+      questionForegroundSelection.select.mockResolvedValue(selectedOutcome({
+        ...sanitizedQuestionContext, informationObjective: 'q'.repeat(9_000),
+      }));
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0].questionContext).toBeUndefined();
+      // The binding authority is the FINAL NORMALIZED REQUEST: no included
+      // QuestionContext means no binding identity travels to finalization, and
+      // the canonical terminal release inside the same finalization transaction
+      // is what keeps the unconsumed reservation from staying active.
+      expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+      expect(repository.finalizeTurn.mock.calls[0][0]).not.toHaveProperty('questionBindingId');
+    });
+
+    it.each([
+      ['LEGITIMATE_EMPTY / NO_ELIGIBLE_GAP', { state: 'LEGITIMATE_EMPTY' as const, reason: 'NO_ELIGIBLE_GAP' as const }],
+      ['LEGITIMATE_EMPTY / OUTSTANDING_OPEN_QUESTION', { state: 'LEGITIMATE_EMPTY' as const, reason: 'OUTSTANDING_OPEN_QUESTION' as const }],
+      ['OPTIONAL_AVAILABILITY_FAILURE', { state: 'OPTIONAL_AVAILABILITY_FAILURE' as const }],
+      ['FOREGROUND_BUDGET_EXPIRY', { state: 'FOREGROUND_BUDGET_EXPIRY' as const }],
+    ])('continues the turn with no QuestionContext and exactly ONE provider call on %s', async (_label, outcome) => {
+      questionForegroundSelection.select.mockResolvedValue(outcome);
+      const result = await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(result).toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate.mock.calls[0][0].questionContext).toBeUndefined();
+      expect(repository.finalizeTurn.mock.calls[0][0]).not.toHaveProperty('questionBindingId');
+      expect(repository.failTurn).not.toHaveBeenCalled();
+    });
+
+    it('fails the turn CLOSED with ZERO provider calls when Question selection hard-fails', async () => {
+      questionForegroundSelection.select.mockRejectedValue(new Error('QIR_QUESTION_FOREGROUND_MALFORMED_RESULT'));
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toThrow('Conversation generation failed.');
+      expect(router.generate).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+      expect(repository.failTurn).toHaveBeenCalledWith(userTurn.session_id, 'user', userTurn.id);
+    });
+
+    it('never selects on replay, recovery, or a lost claim: zero selection RPCs on every no-work path', async () => {
+      repository.findTurn.mockResolvedValue(completedUser);
+      repository.findAssistantForSource.mockResolvedValue(assistant);
+      await orchestrator.orchestrate('token', 'user', completedUser);
+      repository.recoverExpiredGeneratingTurn.mockResolvedValue(undefined);
+      await orchestrator.orchestrate('token', 'user', claimed);
+      repository.claimTurn.mockResolvedValue(undefined);
+      repository.findTurn.mockResolvedValue(completedUser);
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(questionForegroundSelection.select).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
     });
   });
 });

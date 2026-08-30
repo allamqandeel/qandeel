@@ -14,16 +14,17 @@ import { RUNTIME_ROUTING_V2_REASONS } from '../intelligence-runtime/fast-deep-ro
 import { POST_RESPONSE_PROVIDER_BUDGET_DECISIONS, POST_RESPONSE_PROVIDER_EFFECTS_V1 } from '../post-response-intelligence/post-response-provider-budget';
 
 const request:ModelRouterRequest={task:'CONVERSATIONAL_RESPONSE',path:'FAST',complexity:'LOW',behavioralGuidance:'secret prompt',context:[{role:'USER',content:'private message'}],locale:'und',modality:'TEXT',latencyBudgetMs:3000,costBudget:'LOW',safetyLevel:'STANDARD'};
-// QIR-004 Fix 01: the frozen LEGAL source/outcome relation, quoted here
-// independently of the implementation so a silent widening fails these specs.
-// 14 legal pairs: HISTORY 4 + MEMORY 4 + HUMAN_INTELLIGENCE 3 +
-// HYPOTHESIS_RECOMMENDATION 3. The two atomic sources have no
-// PARTIALLY_RETAINED pair because they are whole-source-or-nothing in v1.
+// QIR-004 Fix 01 / QIR-006: the frozen LEGAL source/outcome relation, quoted
+// here independently of the implementation so a silent widening fails these
+// specs. 17 legal pairs: HISTORY 4 + MEMORY 4 + HUMAN_INTELLIGENCE 3 +
+// HYPOTHESIS_RECOMMENDATION 3 + QUESTION 3. The three atomic sources have no
+// PARTIALLY_RETAINED pair because they are whole-source-or-nothing.
 const CONTEXT_BUDGET_LEGAL_PAIRS:ReadonlyArray<readonly [string,string]>=Object.freeze([
  ['HISTORY','NOT_PRESENT'],['HISTORY','INCLUDED_FULL'],['HISTORY','PARTIALLY_RETAINED'],['HISTORY','OMITTED_BUDGET'],
  ['MEMORY','NOT_PRESENT'],['MEMORY','INCLUDED_FULL'],['MEMORY','PARTIALLY_RETAINED'],['MEMORY','OMITTED_BUDGET'],
  ['HUMAN_INTELLIGENCE','NOT_PRESENT'],['HUMAN_INTELLIGENCE','INCLUDED_FULL'],['HUMAN_INTELLIGENCE','OMITTED_BUDGET'],
  ['HYPOTHESIS_RECOMMENDATION','NOT_PRESENT'],['HYPOTHESIS_RECOMMENDATION','INCLUDED_FULL'],['HYPOTHESIS_RECOMMENDATION','OMITTED_BUDGET'],
+ ['QUESTION','NOT_PRESENT'],['QUESTION','INCLUDED_FULL'],['QUESTION','OMITTED_BUDGET'],
 ] as const);
 describe('Correlation and telemetry foundation v1',()=>{
  it('generates a server request UUID, ignores inbound identity, and returns it',()=>{const c=new CorrelationService(),headers:Record<string,string>={};new RequestCorrelationMiddleware(c).use({headers:{'x-request-id':'attacker'}} as never,{setHeader:(k:string,v:string)=>headers[k]=v},()=>{expect(c.current()?.request_id).toMatch(/^[0-9a-f-]{36}$/);});expect(headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);expect(headers['x-request-id']).not.toBe('attacker');});
@@ -67,24 +68,24 @@ describe('Correlation and telemetry foundation v1',()=>{
  // independently of the implementation. History and Memory are prefix-
  // retainable; Human Intelligence and the Hypothesis+Recommendation package are
  // ATOMIC in v1, so PARTIALLY_RETAINED is impossible for them.
- it('records exactly the 14 legal QIR-004 source/outcome pairs per path and no content',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).contextBudgetSourceDecisions={add};
+ it('records exactly the 17 legal QIR-004 source/outcome pairs per path and no content',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).contextBudgetSourceDecisions={add};
   for(const [source,outcome] of CONTEXT_BUDGET_LEGAL_PAIRS)for(const path of['FAST','DEEP'])t.recordContextBudgetSourceDecision(source,outcome,path);
-  expect(CONTEXT_BUDGET_LEGAL_PAIRS).toHaveLength(14);
-  expect(add).toHaveBeenCalledTimes(28);
+  expect(CONTEXT_BUDGET_LEGAL_PAIRS).toHaveLength(17);
+  expect(add).toHaveBeenCalledTimes(34);
   for(const call of add.mock.calls){const labels=call[1] as Record<string,string>;expect(call[0]).toBe(1);expect(Object.keys(labels).sort()).toEqual(['outcome','policy_version','processing_path','source']);expect(CONTEXT_BUDGET_LEGAL_PAIRS.some(([source,outcome])=>source===labels.source&&outcome===labels.outcome)).toBe(true);expect(['FAST','DEEP']).toContain(labels.processing_path);expect(labels.policy_version).toBe('1');}
   expect(JSON.stringify(add.mock.calls)).not.toMatch(/hello|content|session|turn|user|bytes|\d{3,}|claude|gpt|anthropic|openai/i);});
- it('drops the two ILLEGAL atomic-source PARTIALLY_RETAINED pairs, whose labels are individually legal',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).contextBudgetSourceDecisions={add};
+ it('drops the three ILLEGAL atomic-source PARTIALLY_RETAINED pairs, whose labels are individually legal',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).contextBudgetSourceDecisions={add};
   // Non-vacuity: both labels belong to their own finite registry, so only a
   // TOTAL pair gate can reject these; independent per-dimension checks cannot.
-  for(const source of['HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION'])for(const path of['FAST','DEEP'])t.recordContextBudgetSourceDecision(source,'PARTIALLY_RETAINED',path);
+  for(const source of['HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION','QUESTION'])for(const path of['FAST','DEEP'])t.recordContextBudgetSourceDecision(source,'PARTIALLY_RETAINED',path);
   expect(add).not.toHaveBeenCalled();
   // Control: the SAME sources with a legal outcome, and the SAME outcome with a
   // prefix-retainable source, still emit - so the gate rejects the PAIR only.
-  for(const source of['HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION'])t.recordContextBudgetSourceDecision(source,'OMITTED_BUDGET','FAST');
+  for(const source of['HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION','QUESTION'])t.recordContextBudgetSourceDecision(source,'OMITTED_BUDGET','FAST');
   for(const source of['HISTORY','MEMORY'])t.recordContextBudgetSourceDecision(source,'PARTIALLY_RETAINED','FAST');
-  expect(add).toHaveBeenCalledTimes(4);});
+  expect(add).toHaveBeenCalledTimes(5);});
  it('drops any QIR-004 source decision outside the finite registries',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).contextBudgetSourceDecisions={add};
-  for(const [source,outcome,path] of [['QUESTION','INCLUDED_FULL','FAST'],['HISTORY','TRUNCATED','FAST'],['HISTORY','INCLUDED_FULL','TURBO'],['','',''],['HISTORY','INCLUDED_FULL','fast']] as const)t.recordContextBudgetSourceDecision(source,outcome,path);
+  for(const [source,outcome,path] of [['FUTURE_RESERVED','INCLUDED_FULL','FAST'],['HISTORY','TRUNCATED','FAST'],['HISTORY','INCLUDED_FULL','TURBO'],['','',''],['HISTORY','INCLUDED_FULL','fast']] as const)t.recordContextBudgetSourceDecision(source,outcome,path);
   expect(add).not.toHaveBeenCalled();});
  it('records QIR-004 byte counts as histogram VALUES and never as labels',()=>{const c=new CorrelationService(),t=new TelemetryService(c),record=jest.fn();(t as any).contextBudgetBytes={record};
   t.recordContextBudgetBytes('MANDATORY_CORE','RETAINED','FAST',65536);
@@ -93,7 +94,7 @@ describe('Correlation and telemetry foundation v1',()=>{
   expect(record).toHaveBeenNthCalledWith(2,131072,{component:'FINAL_TOTAL',measurement:'FINAL',processing_path:'DEEP',policy_version:'1'});
   for(const call of record.mock.calls){expect(typeof call[0]).toBe('number');expect(JSON.stringify(call[1])).not.toMatch(/\d{3,}/);}});
  it('drops any QIR-004 byte measurement outside the finite registries or with an impossible value',()=>{const c=new CorrelationService(),t=new TelemetryService(c),record=jest.fn();(t as any).contextBudgetBytes={record};
-  for(const [component,measurement,path,bytes] of [['QUESTION','RETAINED','FAST',1],['MANDATORY_CORE','ESTIMATED','FAST',1],['MANDATORY_CORE','RETAINED','TURBO',1],['MANDATORY_CORE','RETAINED','FAST',-1],['MANDATORY_CORE','RETAINED','FAST',1.5],['MANDATORY_CORE','RETAINED','FAST',Number.NaN],['MANDATORY_CORE','RETAINED','FAST',Number.POSITIVE_INFINITY]] as const)t.recordContextBudgetBytes(component,measurement,path,bytes);
+  for(const [component,measurement,path,bytes] of [['FUTURE_RESERVED','RETAINED','FAST',1],['MANDATORY_CORE','ESTIMATED','FAST',1],['MANDATORY_CORE','RETAINED','TURBO',1],['MANDATORY_CORE','RETAINED','FAST',-1],['MANDATORY_CORE','RETAINED','FAST',1.5],['MANDATORY_CORE','RETAINED','FAST',Number.NaN],['MANDATORY_CORE','RETAINED','FAST',Number.POSITIVE_INFINITY]] as const)t.recordContextBudgetBytes(component,measurement,path,bytes);
   expect(record).not.toHaveBeenCalled();});
  it('keeps both QIR-004 budget metrics fail-soft',()=>{const c=new CorrelationService(),t=new TelemetryService(c);
   (t as any).contextBudgetSourceDecisions={add:()=>{throw new Error('meter down');}};(t as any).contextBudgetBytes={record:()=>{throw new Error('meter down');}};
@@ -102,6 +103,32 @@ describe('Correlation and telemetry foundation v1',()=>{
   (t as any).contextBudgetSourceDecisions={};(t as any).contextBudgetBytes={};
   expect(()=>t.recordContextBudgetSourceDecision('MEMORY','INCLUDED_FULL','FAST')).not.toThrow();
   expect(()=>t.recordContextBudgetBytes('MEMORY','RETAINED','FAST',10)).not.toThrow();});
+ // QIR-006 foreground formal Question selection telemetry: finite outcomes, a
+ // bounded empty reason attached ONLY to the LEGITIMATE_EMPTY outcome, and
+ // fail-soft under any meter failure.
+ it('records exactly the bounded QIR-006 selection outcomes with the empty reason only on LEGITIMATE_EMPTY',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).questionForegroundSelections={add};
+  for(const outcome of['SELECTED','OPTIONAL_AVAILABILITY_FAILURE','FOREGROUND_BUDGET_EXPIRY','HARD_FAILURE'])for(const path of['FAST','DEEP'])t.recordQuestionForegroundSelection(outcome,path);
+  for(const reason of['NO_ELIGIBLE_GAP','OUTSTANDING_OPEN_QUESTION'])for(const path of['FAST','DEEP'])t.recordQuestionForegroundSelection('LEGITIMATE_EMPTY',path,reason);
+  expect(add).toHaveBeenCalledTimes(12);
+  for(const call of add.mock.calls){const labels=call[1] as Record<string,string>;expect(call[0]).toBe(1);
+   expect(['SELECTED','LEGITIMATE_EMPTY','OPTIONAL_AVAILABILITY_FAILURE','FOREGROUND_BUDGET_EXPIRY','HARD_FAILURE']).toContain(labels.outcome);
+   expect(['FAST','DEEP']).toContain(labels.processing_path);expect(labels.policy_version).toBe('1');
+   if(labels.outcome==='LEGITIMATE_EMPTY')expect(['NO_ELIGIBLE_GAP','OUTSTANDING_OPEN_QUESTION']).toContain(labels.empty_reason);
+   else expect(labels).not.toHaveProperty('empty_reason');}
+  expect(JSON.stringify(add.mock.calls)).not.toMatch(/hypothesis|confidence|informationObjective|Ask the user|session|turn|user_id|content|[0-9a-f]{8}-[0-9a-f]{4}|claude|gpt|anthropic|openai/i);});
+ it('drops any QIR-006 selection emission outside the finite registries or with an impossible reason combination',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).questionForegroundSelections={add};
+  t.recordQuestionForegroundSelection('ANSWERED','FAST');
+  t.recordQuestionForegroundSelection('SELECTED','TURBO');
+  t.recordQuestionForegroundSelection('LEGITIMATE_EMPTY','FAST');
+  t.recordQuestionForegroundSelection('LEGITIMATE_EMPTY','FAST','SOMETHING_ELSE');
+  t.recordQuestionForegroundSelection('SELECTED','FAST','NO_ELIGIBLE_GAP');
+  t.recordQuestionForegroundSelection('HARD_FAILURE','FAST','OUTSTANDING_OPEN_QUESTION');
+  expect(add).not.toHaveBeenCalled();});
+ it('keeps the QIR-006 selection metric fail-soft',()=>{const c=new CorrelationService(),t=new TelemetryService(c);
+  (t as any).questionForegroundSelections={add:()=>{throw new Error('meter down');}};
+  expect(()=>t.recordQuestionForegroundSelection('SELECTED','FAST')).not.toThrow();
+  (t as any).questionForegroundSelections={};
+  expect(()=>t.recordQuestionForegroundSelection('SELECTED','FAST')).not.toThrow();});
  // QIR-005 post-response provider-budget telemetry: the SAME frozen registries
  // the production gate uses, four finite dimensions, no identifier or payload,
  // and fail-soft under any meter failure.

@@ -243,7 +243,7 @@ async function main(): Promise<void> {
     // -----------------------------------------------------------------------
     const finalizeStart = performance.now();
     const [finalized] = await db.asRole<{ user_turn: Record<string, unknown>; assistant_turn: Record<string, unknown> }>(
-      'service_role', 'SELECT * FROM public.finalize_conversation_turn($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+      'service_role', 'SELECT * FROM public.finalize_conversation_turn_v2($1, $2, $3, $4, $5, $6, $7, $8, $9)',
       [sessionId, userId, sourceTurnId, assistantTurnId, ASSISTANT_TURN_TEXT, 'ALLOW', eventId, correlationId, orchestrationId]);
     timings.foreground_finalize_ms = performance.now() - finalizeStart;
     assert.ok(finalized, 'canonical finalization returns the finalized pair');

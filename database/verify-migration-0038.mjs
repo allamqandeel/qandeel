@@ -198,8 +198,19 @@ async function main() { await client.connect(); try {
 
   const xRetry = randomUUID();
   await insertExecution(alice, xRetry);
-  await insertEffect(xRetry, 'HYPOTHESIS_UPDATE_BATCH', 'UPDATES_APPLIED', [updateReceipt(hUpdate, randomUUID(), 4, 'PENDING_RETRY')]);
+  // The expected version is the one the canonical managed batch could really
+  // have mutated FROM (hUpdate is at version 2), so afterVersion is exactly the
+  // canonical current version. QIR-006 (migration 0063) makes every successful
+  // mutation receipt a reconciliation target and proves it against canonical
+  // current state, so a receipt claiming a version the Hypothesis never reached
+  // is now an integrity violation rather than an ignorable no-op - and this
+  // 0038 phase guarantee is proven against a state the runtime can actually
+  // produce. The guarantee itself is unchanged: a PENDING_RETRY receipt carries
+  // no successful exact evaluation and therefore materializes no gap.
+  await insertEffect(xRetry, 'HYPOTHESIS_UPDATE_BATCH', 'UPDATES_APPLIED', [updateReceipt(hUpdate, randomUUID(), 1, 'PENDING_RETRY')]);
   assert.deepEqual(await syncAsServiceRole(xRetry), NO_GAPS, 'a PENDING_RETRY receipt produces no Information Gap');
+  assert.equal((await client.query('SELECT status FROM public.information_gaps WHERE id=$1', [updateGapId])).rows[0].status, 'OPEN',
+    'and it neither closes nor reopens the existing exact-version gap: for its version the answer stays unknown');
 
   const beforeQuarantine = await counts(alice);
   for (const [label, hypothesisId, evaluationId, expectedVersion] of [
@@ -345,6 +356,12 @@ async function main() { await client.connect(); try {
     assert.deepEqual({ gaps: Number(raceRows[0].gap_count), sources: Number(raceRows[0].source_count) }, { gaps: 1, sources: 1 }, 'exactly one canonical gap/source pair survived the race: no orphan automatic gap');
   } finally {
     await clientA.end().catch(() => undefined); await clientB.end().catch(() => undefined);
+    // Committed-fixture cleanup runs with triggers disabled, exactly like the
+    // shared cleanupVerifierUsers helper: since migration 0063 the durable
+    // Information Gap lifecycle guard makes gap history immutable to every
+    // ordinary path, so verifier-owned committed fixtures are removed in
+    // replica mode rather than through a (correctly) forbidden direct DELETE.
+    await client.query("SET session_replication_role='replica'");
     await client.query('DELETE FROM public.information_gap_confidence_sources WHERE user_id=$1', [raceUser]);
     await client.query('DELETE FROM public.information_gap_hypotheses WHERE user_id=$1', [raceUser]);
     await client.query('DELETE FROM public.information_gaps WHERE user_id=$1', [raceUser]);
@@ -353,6 +370,7 @@ async function main() { await client.connect(); try {
     await client.query('DELETE FROM public.confidence_evaluations WHERE user_id=$1', [raceUser]);
     await client.query('DELETE FROM public.hypotheses WHERE user_id=$1', [raceUser]);
     await client.query('DELETE FROM public.users WHERE id=$1', [raceUser]);
+    await client.query("SET session_replication_role='origin'");
     const { rows: [{ count: residue }] } = await client.query('SELECT count(*) count FROM public.information_gap_confidence_sources');
     assert.equal(Number(residue), 0, 'the verifier left zero residue in the source table');
   }

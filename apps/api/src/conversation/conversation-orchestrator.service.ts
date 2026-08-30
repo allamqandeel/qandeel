@@ -32,6 +32,7 @@ import { RecommendationGroundingService } from '../recommendation/recommendation
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
 import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
+import { QuestionForegroundSelectionService } from '../question/question-foreground-selection.service';
 
 // QHIA-005 amendment (PR #164), generalized by QHIA-014A: the ONE shared
 // maximum foreground orchestration time spent waiting for OPTIONAL Human
@@ -91,6 +92,7 @@ export class ConversationOrchestratorService {
     private readonly himCrossContextForeground: HimCrossContextForegroundAggregationService,
     private readonly himBrainContext: HimBrainContextService,
     private readonly foregroundIntelligenceGatherer: BoundedForegroundIntelligenceGathererService,
+    private readonly questionForegroundSelection: QuestionForegroundSelectionService,
     private readonly integratedContextBudget: IntegratedContextBudgetAssemblerService,
     private readonly recommendationGrounding: RecommendationGroundingService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
@@ -334,6 +336,26 @@ export class ConversationOrchestratorService {
       // fails the turn closed through the existing outer failure path before
       // any provider generation.
       foregroundGatherPromise.catch(() => undefined);
+      // QIR-006: the bounded formal Question selection lane is LAUNCHED HERE,
+      // in the SAME synchronous post-Safety stage as the frozen Human
+      // Intelligence lane and the QIR-003 gather above and BEFORE any lane is
+      // awaited - so Question selection never waits behind Memory, Hypothesis
+      // or Human Intelligence, and none of them ever waits behind Question
+      // selection. It is launched ONLY on a Safety ALLOW disposition: a GUIDED
+      // turn (like the BLOCK short-circuit above) performs ZERO formal
+      // Question selection - no reservation, no selection RPC, no
+      // QuestionContext. The service owns its frozen 300 ms QIR-006 foreground
+      // wait ceiling internally (its own module, its own timer - this
+      // orchestrator gains no new timer and no new barrier), and its swallow
+      // handler is attached IMMEDIATELY so a hard selection failure that
+      // settles while an earlier lane is still being awaited can never become
+      // an unhandled rejection: the ORIGINAL rejection still propagates
+      // through the question join below and fails the turn closed before any
+      // provider generation.
+      const questionSelectionPromise = safety.disposition === 'ALLOW'
+        ? this.questionForegroundSelection.select({ userId, sessionId: userTurn.session_id, sourceTurnId: userTurn.id, path: selection.path })
+        : undefined;
+      questionSelectionPromise?.catch(() => undefined);
       // The join: both lanes are ALREADY RUNNING, so awaiting them in sequence
       // waits for the slower of the frozen Human Intelligence lane and the
       // shared Memory/Hypothesis gather deadline - never their serial sum -
@@ -376,6 +398,16 @@ export class ConversationOrchestratorService {
       // per-source outcome telemetry and, for a hard Hypothesis failure, the
       // pre-existing hypothesis-context rejected/failed outcome metric.
       const { memory: memoryForeground, hypothesis: hypothesisForeground } = await foregroundGatherPromise;
+      // QIR-006 question join: the selection lane was already running, so this
+      // sequential await keeps slower-of semantics with the joins above and
+      // introduces no new barrier. SELECTED carries the reservation identity
+      // plus the sanitized QuestionContext; LEGITIMATE_EMPTY, availability
+      // degradation and budget expiry all simply yield no Question for this
+      // turn (never a fabricated opportunity, never a stale reservation from
+      // another turn); a HARD selection failure rejects here with its ORIGINAL
+      // error and fails the turn closed through the existing outer failure
+      // path. A GUIDED turn never launched the lane at all.
+      const questionForeground = questionSelectionPromise ? await questionSelectionPromise : undefined;
       // Provider-envelope Memory semantics: AVAILABLE carries the actual
       // retrieved Memory context; LEGITIMATE_EMPTY, OPTIONAL_AVAILABILITY_FAILURE
       // and FOREGROUND_BUDGET_EXPIRY all OMIT the Memory field (assemble drops
@@ -438,6 +470,11 @@ export class ConversationOrchestratorService {
         ...(humanIntelligence ? { humanIntelligence } : {}),
         ...(hypothesisResult?.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesisResult.context } : {}),
         ...(recommendationGrounding?.coverageState === 'AVAILABLE' ? { recommendationContext: recommendationGrounding.context } : {}),
+        // QIR-006: the sanitized QuestionContext is OFFERED to the atomic
+        // 8 KiB Question slice only when a formal opportunity was actually
+        // SELECTED for this turn. The assembler includes it whole or omits it
+        // whole; an omitted or never-selected Question changes presence only.
+        ...(questionForeground?.state === 'SELECTED' ? { questionContext: questionForeground.questionContext } : {}),
         locale: 'und', modality: 'TEXT',
         latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
@@ -463,6 +500,15 @@ export class ConversationOrchestratorService {
       const finalized = await this.repository.finalizeTurn({
         sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
         assistantTurnId: randomUUID(), content: candidate.content, safetyDisposition: safety.disposition,
+        // QIR-006: the reservation is BOUND when and only when the sanitized
+        // QuestionContext actually survived final provider-request assembly -
+        // authorized by the FINAL NORMALIZED REQUEST the provider received,
+        // exactly like the QIR-004 Fix 01 `consumed` rule, never by the
+        // pre-budget selection outcome. A budget-omitted Question sends no
+        // binding identity, so the same atomic finalization RELEASES the
+        // unconsumed reservation instead.
+        ...(assembled.request.questionContext !== undefined && questionForeground?.state === 'SELECTED'
+          ? { questionBindingId: questionForeground.bindingId } : {}),
       });
       if (!finalized) return this.currentResult(accessToken, userId, claimed);
       this.telemetry.recordTurnOutcome('completed',selection.path);

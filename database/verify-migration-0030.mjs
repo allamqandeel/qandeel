@@ -46,7 +46,10 @@ async function rejected(operation, codes = ['42501']) {
 const CREATE_SESSION = 'public.create_conversation_session_v1(uuid)';
 const CREATE_TURN = 'public.create_user_conversation_turn(uuid,uuid,text,text)';
 const CLAIM = 'public.claim_conversation_turn(uuid,uuid,uuid,text,text)';
-const FINALIZE = 'public.finalize_conversation_turn(uuid,uuid,uuid,uuid,text,text,uuid,uuid,uuid)';
+// QIR-006 (migration 0063): the 0025 finalization signature is retired to a
+// revoked tombstone; the CURRENT finalization authority this verifier's
+// lifecycle proofs exercise is the versioned v2 command.
+const FINALIZE = 'public.finalize_conversation_turn_v2(uuid,uuid,uuid,uuid,text,text,uuid,uuid,uuid,uuid)';
 const FAIL = 'public.fail_conversation_turn(uuid,uuid,uuid,uuid,uuid,uuid)';
 const CANCEL = 'public.cancel_conversation_turn(uuid,uuid,uuid,uuid,uuid,uuid)';
 
@@ -503,7 +506,7 @@ async function verifyTurnAuthorityIntact(owner, session) {
   const claimed = await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, turnId, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']);
   assert.equal(claimed.length, 1);
   assert.equal(claimed[0].status, 'GENERATING');
-  const finalized = await rows('SELECT * FROM finalize_conversation_turn($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, owner, turnId, randomUUID(), 'server assistant', 'ALLOW', randomUUID(), null, null]);
+  const finalized = await rows('SELECT * FROM finalize_conversation_turn_v2($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, owner, turnId, randomUUID(), 'server assistant', 'ALLOW', randomUUID(), null, null]);
   assert.equal(finalized.length, 1, 'service_role finalize still works');
 }
 

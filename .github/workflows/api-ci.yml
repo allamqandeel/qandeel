@@ -45,6 +45,7 @@ jobs:
       - {name: Verify Bounded Foreground Intelligence Gatherer static contract, run: npm run test:bounded-foreground-intelligence-gatherer-v1-contract}
       - {name: Verify Integrated Context Budget & Conflict Resolution static contract, run: npm run test:integrated-context-budget-conflict-resolution-v1-contract}
       - {name: Verify Post-Response Intelligence Scheduler & Provider Budget static contract, run: npm run test:post-response-intelligence-scheduler-provider-budget-v1-contract}
+      - {name: Verify Question / Information-Gap Closed Loop static contract, run: npm run test:question-information-gap-closed-loop-v1-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}
@@ -129,6 +130,7 @@ jobs:
       - {name: Verify Confidence batch reliability, run: npm run verify:confidence-batch-reliability:integration}
       - {name: Verify Hypothesis lifecycle completion, run: npm run verify:hypothesis-lifecycle-completion:integration}
       - {name: Verify Information Gap / Question integration, run: npm run verify:information-gap-question-integration:integration}
+      - {name: Verify Question / Information-Gap closed loop, run: npm run verify:question-information-gap-closed-loop:integration}
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

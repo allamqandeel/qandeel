@@ -1,6 +1,7 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConversationOrchestratorService } from '../conversation/conversation-orchestrator.service';
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
+import { QuestionForegroundSelectionService } from '../question/question-foreground-selection.service';
 import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
@@ -138,7 +139,12 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   // gate's Memory/Hypothesis doubles, so the gate drives the real concurrent
   // post-Safety launch topology and the real typed-outcome join.
   const foregroundGatherer = new BoundedForegroundIntelligenceGathererService(memoryRetriever as never, hypothesisContext as never, correlation, telemetry);
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption, goalMotivationConsumption, relationshipCommunicationConsumption), new HimBrainContextService(new HimBrainContextRepository(brainContextDataApi as never)), foregroundGatherer, new IntegratedContextBudgetAssemblerService(telemetry), new RecommendationGroundingService(), router,correlation,telemetry);
+  // QIR-006: the REAL Question foreground selection service over a service-role
+  // transport double that answers with the canonical legitimate-empty row, so
+  // the gate drives the real total-result classification with zero selected
+  // formal Question and zero QuestionContext.
+  const questionSelection = new QuestionForegroundSelectionService({ rpc: jest.fn().mockResolvedValue([{ outcome: 'NO_ELIGIBLE_GAP', binding_id: null, question_type: null }]) } as never, correlation, telemetry);
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption, goalMotivationConsumption, relationshipCommunicationConsumption), new HimBrainContextService(new HimBrainContextRepository(brainContextDataApi as never)), foregroundGatherer, questionSelection, new IntegratedContextBudgetAssemblerService(telemetry), new RecommendationGroundingService(), router,correlation,telemetry);
   return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy, situationStressDataApi, decisionAttentionDataApi, goalMotivationDataApi, relationshipCommunicationDataApi, crossContextForegroundDataApi, brainContextDataApi };
 }
 

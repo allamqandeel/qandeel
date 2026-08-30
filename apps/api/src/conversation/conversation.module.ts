@@ -23,6 +23,7 @@ import { HypothesisModule } from '../hypothesis/hypothesis.module';
 import { RecommendationModule } from '../recommendation/recommendation.module';
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
 import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
+import { QuestionForegroundSelectionService } from '../question/question-foreground-selection.service';
 
 @Module({
   imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, RecommendationModule, ObservabilityModule],
@@ -48,6 +49,11 @@ import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime
     // introduces no new repository, no new Data API boundary and no new
     // database authority.
     BoundedForegroundIntelligenceGathererService,
+    // QIR-006: the narrow bounded formal Question foreground selection service
+    // over the EXISTING explicit service-role channel and telemetry - exactly
+    // one selection RPC per provider-generating ALLOW turn, no new repository,
+    // no new Data API boundary, and no provider call of any kind.
+    QuestionForegroundSelectionService,
     // QIR-004: the ONE final normalized provider-request assembly boundary. It
     // depends only on the already-imported ObservabilityModule telemetry and
     // the provider-neutral guidance renderer: no new repository, no new Data

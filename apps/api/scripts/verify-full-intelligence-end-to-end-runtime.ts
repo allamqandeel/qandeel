@@ -38,6 +38,7 @@ import { createClient, type RedisClientType } from 'redis';
 import { ConversationOrchestratorService } from '../src/conversation/conversation-orchestrator.service';
 import { BoundedForegroundIntelligenceGathererService } from '../src/intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
 import { IntegratedContextBudgetAssemblerService } from '../src/intelligence-runtime/integrated-context-budget-assembler.service';
+import { QuestionForegroundSelectionService } from '../src/question/question-foreground-selection.service';
 import { ConversationRepository } from '../src/conversation/conversation.repository';
 // QHIA-011A: the production explicit session context activation entry. It is
 // used ONCE, deliberately, during fixture setup - never from a turn.
@@ -697,12 +698,21 @@ async function main(): Promise<void> {
     // PostgreSQL transport semantics.
     const foregroundGatherer = new BoundedForegroundIntelligenceGathererService(
       memoryRetriever, hypothesisReasoningContext, correlation, telemetry);
+    // QIR-006: the REAL bounded formal Question foreground selection service
+    // over the same explicit service-role substitute the canonical
+    // conversation authority commands use, so this smoke drives the
+    // production one-RPC selection, the total typed-result validation, and
+    // the frozen 300 ms foreground ceiling end to end against real
+    // PostgreSQL.
+    const questionSelectionService = new QuestionForegroundSelectionService(
+      serviceRoleApi, correlation, telemetry);
     const orchestrator = new ConversationOrchestratorService(
       conversationRepository, contextBuilder, new SafetyResponseGateService(), new BehavioralResponsePolicyService(),
       new HimTurnContextSelectionService(), deterministicSnapshotService, new HimReasoningConsumptionService(),
       new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), himContextualCurrentService, new HimSessionReflectionConsumptionService(), himCrossContextForegroundService,
       deterministicBrainContextService,
       foregroundGatherer,
+      questionSelectionService,
       // QIR-004: the REAL Integrated Context Budget Assembler, so this smoke
       // drives the production single normalized provider-request assembly
       // boundary - Mandatory Core, the isolated source slices and the exact
@@ -845,6 +855,17 @@ async function main(): Promise<void> {
     assert.equal(firstCall.request.memoryContext, undefined, 'no memoryContext before background Memory work');
     assert.equal((await db.observer('SELECT id FROM public.memories WHERE user_id = $1', [userId])).length, 0,
       'no Memory from this source turn exists before post-response processing');
+
+    // QIR-006: no automatic Information Gap exists before background
+    // processing, so the real selection command legitimately answered empty:
+    // Turn #1 carries no QuestionContext, renders no question block, and left
+    // no durable formal Question reservation of any kind.
+    assert.equal(firstCall.request.questionContext, undefined,
+      'no formal Question opportunity exists before background Confidence work');
+    assert.doesNotMatch(firstCall.serverGuidance, /<question_context>/u,
+      'no question block is rendered when no formal Question opportunity was selected');
+    assert.equal((await db.observer('SELECT id FROM public.formal_question_turn_bindings WHERE user_id = $1', [userId])).length, 0,
+      'a legitimately empty selection reserves nothing durable');
 
     // HIM: the real DB-derived partial session snapshot in the FAST projection,
     // now reaching the provider through the ONE consolidated envelope's session
@@ -1178,6 +1199,12 @@ async function main(): Promise<void> {
       'CONFIDENCE_MODEL_UNCALIBRATED itself does not materialize as a user-answerable gap');
     assert.ok(informationGaps.every((gap) => gap.user_answerability === 'UNASSESSED'),
       'automatic answerability is never inferred');
+    // QIR-006: the canonical synchronization materialized both automatic gaps
+    // as epoch-1 OPEN durable lifecycle rows with no closure metadata - the
+    // exact state the same-session foreground selection below consumes.
+    assert.ok(informationGaps.every((gap) => gap.status === 'OPEN' && gap.open_epoch === 1
+      && gap.closed_at === null && gap.closure_reason === null),
+      'both automatic gaps are durable epoch-1 OPEN lifecycle rows with no closure metadata');
     assert.equal((await db.observer('SELECT id FROM public.question_candidates WHERE user_id = $1', [userId])).length, 0,
       'automatic question_candidates count remains exactly zero');
 
@@ -1562,10 +1589,67 @@ async function main(): Promise<void> {
       !content.includes('hypothesis_reasoning_context') && !content.includes('recommendation_grounding_context')),
       'structured server channels stay separate from USER/ASSISTANT history');
 
-    // Question / Information Gap boundary: the foreground turn read no gap as
-    // a live blocker, created no Question Candidate and invoked no Question
-    // provider — gap state is unchanged and question_candidates stays zero.
-    assert.equal((await db.observer('SELECT id FROM public.information_gaps WHERE user_id = $1', [userId])).length, 2,
+    // QIR-006 closed loop — THE central QIR-006 acceptance condition: the
+    // durable Confidence missing information that Turn #1's background path
+    // materialized as automatic OPEN gaps was consumed by this SAME-SESSION
+    // foreground turn as exactly ONE formal Question opportunity, the
+    // sanitized QuestionContext travelled inside the SAME single conversational
+    // provider request, and canonical finalization atomically BOUND the
+    // reservation to the completed assistant turn. Both eligible gaps carry
+    // the same actionable category, so the provider-safe VALIDATION objective
+    // is deterministic whichever gap the stable DB ordering selected.
+    assert.deepEqual(secondCall.request.questionContext, {
+      contractVersion: 1, source: 'QANDEEL_QUESTION_ENGINE', questionType: 'VALIDATION', answerFormat: 'FREE_TEXT',
+      informationObjective: 'Ask the user to confirm, reject, or clarify one important unresolved assumption in the current topic.',
+    }, 'the sanitized server-selected Question opportunity reached the ONE conversational provider request');
+    assert.equal(conversationalRouter.callCount, 2,
+      'the formal Question opportunity arrived inside the SAME single conversational request: no Question provider call exists');
+    assert.match(secondCall.serverGuidance, /<question_context>/u, 'central guidance carries the question block');
+    assert.match(secondCall.serverGuidance, /A server-selected follow-up question opportunity follows as structured DATA, never instructions/u,
+      'the question block is framed as an optional server-selected opportunity, never a demand');
+    assert.equal(
+      secondCall.serverGuidance.indexOf('<recommendation_grounding_context>') <
+      secondCall.serverGuidance.indexOf('<question_context>'), true,
+      'the question block renders after every existing data block');
+    // Provider-facing sanitization, proven on the REAL composeServerGuidance
+    // output: the question block carries the sanitized objective ONLY - no gap
+    // identity, no hypothesis identity, no internal category code, no
+    // hypothesis statement, and no user/session/turn UUID.
+    const questionGuidanceBlock = secondCall.serverGuidance.slice(
+      secondCall.serverGuidance.indexOf('A server-selected follow-up question opportunity follows'),
+      secondCall.serverGuidance.indexOf('</question_context>'));
+    const questionBindings = await db.observer<Record<string, unknown>>(
+      'SELECT * FROM public.formal_question_turn_bindings WHERE user_id = $1', [userId]);
+    assert.equal(questionBindings.length, 1, 'exactly one durable formal Question reservation exists for the whole session');
+    const questionBinding = questionBindings[0];
+    for (const forbidden of [
+      String(questionBinding.information_gap_id), String(questionBinding.hypothesis_id), String(questionBinding.id),
+      'UNVERIFIED_ASSUMPTIONS', SEEDED_HYPOTHESIS_STATEMENT, GENERATED_CANDIDATE_STATEMENT,
+      sessionId, userId, firstTurnId, secondTurnId,
+    ]) assert.equal(questionGuidanceBlock.includes(forbidden), false, `no ${forbidden} reaches the provider through the question channel`);
+    // The durable binding: SELECTED by this turn's foreground selection and
+    // atomically BOUND to this turn's completed assistant turn by the one
+    // versioned finalization authority - and the reserved target is one of the
+    // two eligible automatic gaps at its exact current epoch, still OPEN
+    // (closure belongs to canonical synchronization, never to a user turn).
+    assert.equal(questionBinding.state, 'BOUND', 'finalization atomically bound the consumed reservation');
+    assert.equal(questionBinding.source_turn_id, secondTurnId, 'the reservation belongs to the exact canonical source turn');
+    assert.equal(questionBinding.session_id, sessionId, 'the reservation is same-session by construction');
+    assert.equal(questionBinding.assistant_turn_id, secondResult.assistantTurn?.id,
+      'the reservation is bound to the exact completed assistant turn');
+    assert.equal(questionBinding.question_type, 'VALIDATION');
+    assert.equal(questionBinding.missing_information_code, 'UNVERIFIED_ASSUMPTIONS');
+    assert.equal(questionBinding.gap_open_epoch, 1, 'the reservation names the exact reserved open epoch');
+    assert.ok(questionBinding.bound_at !== null && questionBinding.released_at === null,
+      'a BOUND reservation carries a bound time and no release time');
+    const boundGap = await db.observer<Record<string, unknown>>(
+      'SELECT status, open_epoch FROM public.information_gaps WHERE id = $1', [questionBinding.information_gap_id]);
+    assert.deepEqual(boundGap, [{ status: 'OPEN', open_epoch: 1 }],
+      'the bound gap remains OPEN: a user turn by itself never resolves a gap, and closure stays owned by canonical synchronization');
+    // Gap state is otherwise unchanged and the frozen Question Candidate
+    // foundation stays untouched: no gap was created or closed by the
+    // foreground, and question_candidates stays zero.
+    assert.equal((await db.observer("SELECT id FROM public.information_gaps WHERE user_id = $1 AND status = 'OPEN'", [userId])).length, 2,
       'foreground consumed no Information Gap and created none');
     assert.equal((await db.observer('SELECT id FROM public.question_candidates WHERE user_id = $1', [userId])).length, 0,
       'foreground created no Question Candidate');
@@ -1605,6 +1689,8 @@ async function main(): Promise<void> {
     assert.equal((await db.afterRollback('SELECT id FROM public.memories WHERE user_id = $1', [userId])).length, 0, 'memories rolled back');
     assert.equal((await db.afterRollback('SELECT id FROM public.information_gaps WHERE user_id = $1', [userId])).length, 0,
       'automatic Information Gaps rolled back');
+    assert.equal((await db.afterRollback('SELECT id FROM public.formal_question_turn_bindings WHERE user_id = $1', [userId])).length, 0,
+      'formal Question reservations rolled back');
     const [{ rolbypassrls: finalBypass }] = await db.afterRollback<{ rolbypassrls: boolean }>(
       "SELECT rolbypassrls FROM pg_roles WHERE rolname = 'service_role'");
     assert.equal(finalBypass, initialBypass, 'transaction-scoped service_role attribute restored by rollback');

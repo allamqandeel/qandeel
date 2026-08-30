@@ -116,13 +116,33 @@ describe('ConversationRepository write authority', () => {
 
     expect(dataApi.request).not.toHaveBeenCalled();
     const [name, body] = serviceApi.rpc.mock.calls[0];
-    expect(name).toBe('finalize_conversation_turn');
+    // QIR-006: finalization runs through the versioned migration-0063
+    // authority; with no consumed formal Question the binding identity is an
+    // explicit null so the same atomic command retires any leftover
+    // reservation instead of binding one.
+    expect(name).toBe('finalize_conversation_turn_v2');
     expect(body).toMatchObject({
       p_session_id: 'session', p_user_id: 'user', p_source_turn_id: 'turn', p_assistant_turn_id: 'assistant',
-      p_content: 'reply', p_safety_disposition: 'ALLOW',
+      p_content: 'reply', p_safety_disposition: 'ALLOW', p_question_binding_id: null,
       p_event_id: expect.stringMatching(/^[0-9a-f-]{36}$/), p_correlation_id: expect.stringMatching(/^[0-9a-f-]{36}$/), p_orchestration_id: expect.stringMatching(/^[0-9a-f-]{36}$/),
     });
     expect(JSON.stringify(body)).not.toMatch(/token|idempotency/);
+  });
+
+  it('carries the consumed formal Question reservation identity through the ONE versioned finalization call', async () => {
+    const dataApi = { request: jest.fn() } as unknown as jest.Mocked<SupabaseDataApiService>;
+    const serviceApi = serviceApiMock();
+    const correlation = new CorrelationService();
+    const repository = new ConversationRepository(dataApi, serviceApi, correlation);
+
+    await correlation.runRequest(() => correlation.withOrchestration(() => repository.finalizeTurn({
+      sessionId: 'session', userId: 'user', sourceTurnId: 'turn', assistantTurnId: 'assistant', content: 'reply', safetyDisposition: 'ALLOW',
+      questionBindingId: '40000000-0000-4000-8000-000000000001',
+    })));
+
+    const [name, body] = serviceApi.rpc.mock.calls[0];
+    expect(name).toBe('finalize_conversation_turn_v2');
+    expect(body).toMatchObject({ p_question_binding_id: '40000000-0000-4000-8000-000000000001' });
   });
 
   it('fails a turn through the server authority channel with a fresh event id and no content or token', async () => {

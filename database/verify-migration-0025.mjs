@@ -37,6 +37,12 @@ async function rejected(operation, codes = ['42501']) {
 }
 
 const FINALIZE = 'public.finalize_conversation_turn(uuid,uuid,uuid,uuid,text,text,uuid,uuid,uuid)';
+// QIR-006 (migration 0063): the 0025 finalization signature above is retired to
+// a revoked writeless tombstone; the CURRENT finalization authority is the
+// versioned v2 command below. The 0025 phase guarantees - server-only
+// finalization, explicit ownership validation, atomic assistant insertion and
+// duplicate-finalization no-op - are proven against the current authority.
+const FINALIZE_V2 = 'public.finalize_conversation_turn_v2(uuid,uuid,uuid,uuid,text,text,uuid,uuid,uuid,uuid)';
 const CLAIM = 'public.claim_conversation_turn(uuid,uuid,uuid,text,text)';
 const FAIL = 'public.fail_conversation_turn(uuid,uuid,uuid,uuid,uuid,uuid)';
 const CREATE = 'public.create_user_conversation_turn(uuid,uuid,text,text)';
@@ -62,7 +68,11 @@ async function verifyEffectiveAcls() {
   const fn = [
     ['authenticated', CREATE, true], ['service_role', CREATE, false],
     ['authenticated', CLAIM, false], ['service_role', CLAIM, true],
-    ['authenticated', FINALIZE, false], ['service_role', FINALIZE, true], ['anon', FINALIZE, false],
+    // Migration 0063 retired the 0025 finalization signature: no application
+    // role may execute the tombstone, and the versioned v2 authority carries
+    // the exact server-only posture the 0025 signature held.
+    ['authenticated', FINALIZE, false], ['service_role', FINALIZE, false], ['anon', FINALIZE, false],
+    ['authenticated', FINALIZE_V2, false], ['service_role', FINALIZE_V2, true], ['anon', FINALIZE_V2, false],
     ['authenticated', FAIL, false], ['service_role', FAIL, true],
     ['authenticated', CANCEL, true], ['anon', CANCEL, false],
   ];
@@ -74,7 +84,7 @@ async function verifyEffectiveAcls() {
     "SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename='conversation_turns' ORDER BY policyname",
   )).map((r) => r.policyname);
   assert.deepEqual(policies, ['conversation_turns_select_own'], 'only the read policy survives on conversation_turns');
-  for (const signature of [CREATE, CLAIM, FINALIZE, FAIL]) {
+  for (const signature of [CREATE, CLAIM, FINALIZE, FINALIZE_V2, FAIL]) {
     const [{ owner, definer, config }] = await rows(
       "SELECT pg_get_userbyid(p.proowner) owner, p.prosecdef definer, p.proconfig config FROM pg_proc p WHERE p.oid=$1::regprocedure",
       [signature],
@@ -93,7 +103,7 @@ async function reproduceBaselineVulnerability(owner, session) {
   await q('GRANT INSERT, UPDATE ON public.conversation_turns TO authenticated');
   await q("CREATE POLICY conversation_turns_insert_own ON public.conversation_turns FOR INSERT TO authenticated WITH CHECK (user_id=(SELECT auth.uid()))");
   await q("CREATE POLICY conversation_turns_update_own ON public.conversation_turns FOR UPDATE TO authenticated USING (user_id=(SELECT auth.uid())) WITH CHECK (user_id=(SELECT auth.uid()))");
-  await q(`GRANT EXECUTE ON FUNCTION ${FINALIZE} TO authenticated`);
+  await q(`GRANT EXECUTE ON FUNCTION ${FINALIZE_V2} TO authenticated`);
 
   const forgeUser = randomUUID(), forgeAssistant = randomUUID(), forgeSystem = randomUUID(), forgeSource = randomUUID();
   // A GENERATING source turn the attacker will finalize with forged content.
@@ -114,7 +124,7 @@ async function reproduceBaselineVulnerability(owner, session) {
   );
   assert.equal(eligible.n, 1, 'baseline: forged pair satisfies the ContextBuilder authoritative predicate');
   // Exploit #5: caller-controlled finalize produces an ASSISTANT with forged content.
-  const forged = await rows(`SELECT * FROM ${'finalize_conversation_turn'}($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [session, owner, forgeSource, randomUUID(), 'attacker assistant', 'ALLOW', randomUUID(), null, null]);
+  const forged = await rows(`SELECT * FROM ${'finalize_conversation_turn_v2'}($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [session, owner, forgeSource, randomUUID(), 'attacker assistant', 'ALLOW', randomUUID(), null, null]);
   assert.equal(forged.length, 1, 'baseline: authenticated finalize forged an assistant');
   assert.equal(forged[0].assistant_turn.content, 'attacker assistant');
 
@@ -173,6 +183,7 @@ async function verifyServerOnlyLifecycle(owner, session) {
   // Authenticated cannot drive server lifecycle.
   await rejected(() => q(`SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)`, [session, owner, turnId, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']));
   await rejected(() => q(`SELECT * FROM finalize_conversation_turn($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [session, owner, turnId, randomUUID(), 'x', 'ALLOW', randomUUID(), null, null]));
+  await rejected(() => q(`SELECT * FROM finalize_conversation_turn_v2($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [session, owner, turnId, randomUUID(), 'x', 'ALLOW', randomUUID(), null, null]));
   await rejected(() => q(`SELECT * FROM fail_conversation_turn($1,$2,$3,$4,$5,$6)`, [session, owner, turnId, randomUUID(), null, null]));
 
   // Server authority can claim and finalize.
@@ -181,8 +192,8 @@ async function verifyServerOnlyLifecycle(owner, session) {
   assert.equal(claimed.length, 1);
   assert.equal(claimed[0].status, 'GENERATING');
   // Mismatched user/session fails closed even for the server role.
-  await rejected(() => q('SELECT * FROM finalize_conversation_turn($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, randomUUID(), turnId, randomUUID(), 'x', 'ALLOW', randomUUID(), null, null]));
-  const finalized = await rows('SELECT * FROM finalize_conversation_turn($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, owner, turnId, randomUUID(), 'server assistant', 'ALLOW', randomUUID(), null, null]);
+  await rejected(() => q('SELECT * FROM finalize_conversation_turn_v2($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, randomUUID(), turnId, randomUUID(), 'x', 'ALLOW', randomUUID(), null, null]));
+  const finalized = await rows('SELECT * FROM finalize_conversation_turn_v2($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, owner, turnId, randomUUID(), 'server assistant', 'ALLOW', randomUUID(), null, null]);
   assert.equal(finalized.length, 1);
   await identity('postgres');
   const assistants = await rows("SELECT id,content FROM public.conversation_turns WHERE source_turn_id=$1 AND role='ASSISTANT'", [turnId]);
@@ -190,7 +201,7 @@ async function verifyServerOnlyLifecycle(owner, session) {
   assert.equal(assistants[0].content, 'server assistant');
   // Duplicate finalization is a no-op and does not create a second assistant.
   await identity('service_role');
-  const duplicate = await rows('SELECT * FROM finalize_conversation_turn($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, owner, turnId, randomUUID(), 'second', 'ALLOW', randomUUID(), null, null]);
+  const duplicate = await rows('SELECT * FROM finalize_conversation_turn_v2($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, owner, turnId, randomUUID(), 'second', 'ALLOW', randomUUID(), null, null]);
   assert.equal(duplicate.length, 0);
   await identity('postgres');
   assert.equal((await rows("SELECT count(*)::int n FROM public.conversation_turns WHERE source_turn_id=$1 AND role='ASSISTANT'", [turnId]))[0].n, 1);

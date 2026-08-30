@@ -22,9 +22,9 @@ const FOREGROUND_INTELLIGENCE_POLICY_VERSION='1';
 // Hypothesis text, Recommendation data, Human Intelligence value, identifier,
 // exception text, provider/model identity, raw JSON or free-text source name
 // can ever become a label. Numeric byte counts are metric VALUES only.
-const CONTEXT_BUDGET_SOURCES:ReadonlySet<string>=new Set(['HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION']);
+const CONTEXT_BUDGET_SOURCES:ReadonlySet<string>=new Set(['HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION','QUESTION']);
 const CONTEXT_BUDGET_OUTCOMES:ReadonlySet<string>=new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET']);
-const CONTEXT_BUDGET_COMPONENTS:ReadonlySet<string>=new Set(['MANDATORY_CORE','HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION','FINAL_TOTAL']);
+const CONTEXT_BUDGET_COMPONENTS:ReadonlySet<string>=new Set(['MANDATORY_CORE','HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION','QUESTION','FINAL_TOTAL']);
 const CONTEXT_BUDGET_MEASUREMENTS:ReadonlySet<string>=new Set(['OFFERED','RETAINED','FINAL']);
 // QIR-004 Fix 01: the finite LEGAL SOURCE/OUTCOME RELATION.
 //
@@ -34,17 +34,28 @@ const CONTEXT_BUDGET_MEASUREMENTS:ReadonlySet<string>=new Set(['OFFERED','RETAIN
 // canonize a state QIR-004 v1 cannot produce.
 //
 // History and Memory are prefix-retainable, so PARTIALLY_RETAINED is legal for
-// them. Human Intelligence and the Hypothesis+Recommendation package are ATOMIC
-// in v1 - the whole source or none of it - so PARTIALLY_RETAINED is IMPOSSIBLE
-// for them and is DROPPED rather than emitted. Exactly 14 legal pairs exist per
-// processing path (4 + 4 + 3 + 3).
+// them. Human Intelligence, the Hypothesis+Recommendation package, and the
+// QIR-006 Question package are ATOMIC - the whole source or none of it - so
+// PARTIALLY_RETAINED is IMPOSSIBLE for them and is DROPPED rather than
+// emitted. Exactly 17 legal pairs exist per processing path (4 + 4 + 3 + 3 + 3).
 const CONTEXT_BUDGET_LEGAL_SOURCE_OUTCOMES:ReadonlyMap<string,ReadonlySet<string>>=new Map([
  ['HISTORY',new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET'])],
  ['MEMORY',new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET'])],
  ['HUMAN_INTELLIGENCE',new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])],
  ['HYPOTHESIS_RECOMMENDATION',new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])],
+ ['QUESTION',new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])],
 ]);
 const CONTEXT_BUDGET_POLICY_VERSION='1';
+
+// QIR-006: the finite label registries for the bounded foreground formal
+// Question selection metric. Anything outside these exact sets is DROPPED
+// rather than emitted, so cardinality is bounded by construction and no gap
+// id, hypothesis id, confidence id, missing-information code, question
+// objective, user content, database error string, or provider/model identity
+// can ever become a label.
+const QUESTION_FOREGROUND_OUTCOMES:ReadonlySet<string>=new Set(['SELECTED','LEGITIMATE_EMPTY','OPTIONAL_AVAILABILITY_FAILURE','FOREGROUND_BUDGET_EXPIRY','HARD_FAILURE']);
+const QUESTION_FOREGROUND_EMPTY_REASONS:ReadonlySet<string>=new Set(['NO_ELIGIBLE_GAP','OUTSTANDING_OPEN_QUESTION']);
+const QUESTION_FOREGROUND_POLICY_VERSION='1';
 
 @Injectable()
 export class TelemetryService{
@@ -52,6 +63,7 @@ export class TelemetryService{
  private readonly routingDecisions:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.routing.decisions'),{});
  private readonly foregroundIntelligenceSourceOutcomes:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.foreground.intelligence.source'),{});
  private readonly contextBudgetSourceDecisions:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.context_budget.source_decisions'),{});
+ private readonly questionForegroundSelections:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.question.foreground_selection'),{});
  private readonly contextBudgetBytes:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createHistogram('qandeel.context_budget.bytes',{unit:'By'}),{});
  private readonly postResponseProviderBudgetDecisions:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.post_response.provider_budget'),{});
  private readonly tracer:Tracer;private readonly engineDuration:Instrument;private readonly providerDuration:Instrument;private readonly providerCalls:Instrument;private readonly providerErrors:Instrument;private readonly inputTokens:Instrument;private readonly outputTokens:Instrument;private readonly turnOutcomes:Instrument;private readonly publisherOperations:Instrument;private readonly hypothesisContextOutcomes:Instrument;private readonly hypothesisEligibilityOutcomes:Instrument;private readonly hypothesisIntentExtractionOutcomes:Instrument;private readonly hypothesisGenerationRequestAssemblyOutcomes:Instrument;private readonly controlledHypothesisGenerationOutcomes:Instrument;private readonly postGenerationConfidenceOutcomes:Instrument;
@@ -113,6 +125,20 @@ export class TelemetryService{
   if(!isRuntimeRoutingPath(path))return;
   if(!Number.isSafeInteger(bytes)||bytes<0)return;
   this.contextBudgetBytes.record?.(bytes,{component,measurement,processing_path:path,policy_version:CONTEXT_BUDGET_POLICY_VERSION});
+ });}
+ // QIR-006 bounded foreground formal Question selection outcome. At most four
+ // FINITE dimensions - 5 outcomes x 2 paths x 1 policy version, plus a bounded
+ // empty reason attached ONLY to the LEGITIMATE_EMPTY outcome - so cardinality
+ // is bounded by construction: any value outside the exact frozen registries
+ // is DROPPED rather than emitted, and an empty reason supplied with any other
+ // outcome drops the whole emission as an impossible combination. The whole
+ // call is fail-soft and can never alter a selection outcome or the turn.
+ recordQuestionForegroundSelection(outcome:string,path:string,emptyReason?:string):void{this.safeVoid(()=>{
+  if(!QUESTION_FOREGROUND_OUTCOMES.has(outcome))return;
+  if(!isRuntimeRoutingPath(path))return;
+  if(emptyReason!==undefined&&(outcome!=='LEGITIMATE_EMPTY'||!QUESTION_FOREGROUND_EMPTY_REASONS.has(emptyReason)))return;
+  if(outcome==='LEGITIMATE_EMPTY'&&emptyReason===undefined)return;
+  this.questionForegroundSelections.add?.(1,{outcome,processing_path:path,policy_version:QUESTION_FOREGROUND_POLICY_VERSION,...(emptyReason!==undefined?{empty_reason:emptyReason}:{})});
  });}
  // QIR-005 post-response provider-budget decision. Four FINITE dimensions only
  // - 3 provider-backed effects x 3 decisions x 2 paths x 1 policy version - and
