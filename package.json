@@ -87,6 +87,8 @@
     "test:a2-e2e-smoke-contract": "node --test tests/a2-e2e-runtime-smoke-contract.test.mjs",
     "verify:full-intelligence-e2e-runtime": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/verify-full-intelligence-end-to-end-runtime.ts",
     "test:full-intelligence-e2e-runtime-contract": "node --test tests/full-intelligence-e2e-runtime-contract.test.mjs",
+    "verify:integrated-brain:e2e-hardening-v2": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/verify-integrated-brain-end-to-end-hardening-v2.ts",
+    "test:integrated-brain-e2e-hardening-v2-contract": "node --test tests/integrated-brain-e2e-hardening-v2-contract.test.mjs",
     "test:cross-context-foreground-application-transport-contract": "node --test tests/him-cross-context-foreground-application-transport-contract.test.mjs",
     "test:explicit-session-context-activation-entry-contract": "node --test tests/explicit-session-context-activation-entry-contract.test.mjs",
     "test:him-brain-context-bridge-contract": "node --test tests/him-brain-context-bridge-contract.test.mjs",
