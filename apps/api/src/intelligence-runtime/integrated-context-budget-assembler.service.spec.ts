@@ -1,6 +1,5 @@
 import { IntegratedContextBudgetAssemblerService } from './integrated-context-budget-assembler.service';
 import {
-  FUTURE_RESERVED_BUDGET_BYTES,
   GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES,
   HISTORY_BUDGET_BYTES,
   HUMAN_INTELLIGENCE_BUDGET_BYTES,
@@ -8,11 +7,13 @@ import {
   IntegratedContextBudgetInvariantError,
   MANDATORY_CORE_BUDGET_BYTES,
   MEMORY_BUDGET_BYTES,
+  QUESTION_BUDGET_BYTES,
   type IntegratedContextAssemblyInput,
   type IntegratedContextAssemblyResult,
   type IntegratedContextBudgetSource,
   type IntegratedContextSourceDecision,
 } from './integrated-context-budget-contract';
+import type { QuestionContextV1 } from '../question/question-context.types';
 import {
   composeServerGuidance,
   type ModelRouterContextMessage,
@@ -188,6 +189,20 @@ const oversizedHypothesisContext = hypothesisContext(
   Array.from({ length: 8 }, (_, index) => `${'h'.repeat(3_200)}-${index}`),
 );
 
+// ---------------------------------------------------------------------------
+// QIR-006 Question fixtures. The canonical sanitized package is tiny; the
+// oversized variant proves the ATOMIC budget bound is total over the type,
+// never merely over today's canonical objective text.
+// ---------------------------------------------------------------------------
+const questionContext: QuestionContextV1 = {
+  contractVersion: 1, source: 'QANDEEL_QUESTION_ENGINE', questionType: 'VALIDATION', answerFormat: 'FREE_TEXT',
+  informationObjective: 'Ask the user to confirm, reject, or clarify one important unresolved assumption in the current topic.',
+};
+const oversizedQuestionContext: QuestionContextV1 = {
+  ...questionContext,
+  informationObjective: 'q'.repeat(9_000),
+};
+
 describe('QIR-004 exact frozen provider-neutral budget partition', () => {
   it('freezes the exact v1 constants', () => {
     expect(GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES).toBe(131072);
@@ -196,16 +211,18 @@ describe('QIR-004 exact frozen provider-neutral budget partition', () => {
     expect(MEMORY_BUDGET_BYTES).toBe(8192);
     expect(HUMAN_INTELLIGENCE_BUDGET_BYTES).toBe(8192);
     expect(HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES).toBe(24576);
-    expect(FUTURE_RESERVED_BUDGET_BYTES).toBe(8192);
+    expect(QUESTION_BUDGET_BYTES).toBe(8192);
   });
 
-  it('partitions the global ceiling exactly, with the 8 KiB reserve unusable in v1', () => {
+  it('partitions the global ceiling exactly: the QIR-006 Question slice consumed the former reserve and the total is unchanged', () => {
     const allocated = MANDATORY_CORE_BUDGET_BYTES + HISTORY_BUDGET_BYTES + MEMORY_BUDGET_BYTES
-      + HUMAN_INTELLIGENCE_BUDGET_BYTES + HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES;
-    expect(allocated + FUTURE_RESERVED_BUDGET_BYTES).toBe(GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES);
-    // No v1 source owns the reserve, so a compliant request cannot intentionally
-    // consume more than 120 KiB.
-    expect(allocated).toBe(GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES - FUTURE_RESERVED_BUDGET_BYTES);
+      + HUMAN_INTELLIGENCE_BUDGET_BYTES + HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES + QUESTION_BUDGET_BYTES;
+    // The QIR-006 supersession moved no other slice by a single byte: the
+    // Question slice is exactly the former 8 KiB reserve, and the six
+    // partitions sum exactly to the frozen 131072-byte global ceiling.
+    expect(allocated).toBe(GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES);
+    expect(QUESTION_BUDGET_BYTES).toBe(GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES - (MANDATORY_CORE_BUDGET_BYTES
+      + HISTORY_BUDGET_BYTES + MEMORY_BUDGET_BYTES + HUMAN_INTELLIGENCE_BUDGET_BYTES + HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES));
   });
 });
 
@@ -692,7 +709,7 @@ describe('QIR-004 source isolation: budget slices are resource isolation, never 
     expect(tinyCore.request.memoryContext).toEqual(largeCore.request.memoryContext);
   });
 
-  it('leaves the 8 KiB future reserve unused: a maximally pressured turn stays under 120 KiB', () => {
+  it('spends the QIR-006 Question slice only on Question: a maximally pressured all-source turn stays inside the unchanged 128 KiB ceiling', () => {
     const result = assembler().assemble(input({
       ...conversation([
         ...exchange('o'.repeat(9_000), 'o'.repeat(9_000)),
@@ -703,12 +720,13 @@ describe('QIR-004 source isolation: budget slices are resource isolation, never 
       humanIntelligence: allActiveHumanIntelligence(),
       hypothesisContext: hypothesisContext(Array.from({ length: 8 }, (_, index) => `${'h'.repeat(2_000)}-${index}`)),
       recommendationContext,
+      questionContext,
     }));
     for (const decision of result.decisions) expect(decision.outcome).not.toBe('NOT_PRESENT');
     // Non-vacuity: this really is a heavily loaded turn, not an empty one.
     expect(result.finalTextBytes).toBeGreaterThan(60_000);
-    expect(result.finalTextBytes)
-      .toBeLessThanOrEqual(GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES - FUTURE_RESERVED_BUDGET_BYTES);
+    expect(decisionFor(result, 'QUESTION').retainedBytes).toBeLessThanOrEqual(QUESTION_BUDGET_BYTES);
+    expect(result.finalTextBytes).toBeLessThanOrEqual(GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES);
   });
 });
 
@@ -723,6 +741,7 @@ describe('QIR-004 global hard ceiling', () => {
       humanIntelligence: allActiveHumanIntelligence(),
       hypothesisContext: smallHypothesisContext,
       recommendationContext,
+      questionContext,
     }));
     expect(result.mandatoryCoreBytes).toBeLessThanOrEqual(MANDATORY_CORE_BUDGET_BYTES);
     expect(decisionFor(result, 'HISTORY').retainedBytes).toBeLessThanOrEqual(HISTORY_BUDGET_BYTES);
@@ -730,6 +749,7 @@ describe('QIR-004 global hard ceiling', () => {
     expect(decisionFor(result, 'HUMAN_INTELLIGENCE').retainedBytes).toBeLessThanOrEqual(HUMAN_INTELLIGENCE_BUDGET_BYTES);
     expect(decisionFor(result, 'HYPOTHESIS_RECOMMENDATION').retainedBytes)
       .toBeLessThanOrEqual(HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES);
+    expect(decisionFor(result, 'QUESTION').retainedBytes).toBeLessThanOrEqual(QUESTION_BUDGET_BYTES);
     expect(result.finalTextBytes).toBeLessThanOrEqual(GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES);
   });
 
@@ -769,9 +789,10 @@ describe('QIR-004 bounded fail-soft telemetry', () => {
       humanIntelligence: allActiveHumanIntelligence(),
       hypothesisContext: smallHypothesisContext,
       recommendationContext,
+      questionContext,
     }));
     expect(telemetry.recordContextBudgetSourceDecision.mock.calls.map(([source]) => source))
-      .toEqual(['HISTORY', 'MEMORY', 'HUMAN_INTELLIGENCE', 'HYPOTHESIS_RECOMMENDATION']);
+      .toEqual(['HISTORY', 'MEMORY', 'HUMAN_INTELLIGENCE', 'HYPOTHESIS_RECOMMENDATION', 'QUESTION']);
     for (const [, outcome, path] of telemetry.recordContextBudgetSourceDecision.mock.calls) {
       expect(['NOT_PRESENT', 'INCLUDED_FULL', 'PARTIALLY_RETAINED', 'OMITTED_BUDGET']).toContain(outcome);
       expect(path).toBe('FAST');
@@ -780,7 +801,7 @@ describe('QIR-004 bounded fail-soft telemetry', () => {
     expect(byteCalls[0]).toEqual(['MANDATORY_CORE', 'RETAINED', 'FAST', result.mandatoryCoreBytes]);
     expect(byteCalls.at(-1)).toEqual(['FINAL_TOTAL', 'FINAL', 'FAST', result.finalTextBytes]);
     for (const [component, measurement, path, bytes] of byteCalls) {
-      expect(['MANDATORY_CORE', 'HISTORY', 'MEMORY', 'HUMAN_INTELLIGENCE', 'HYPOTHESIS_RECOMMENDATION', 'FINAL_TOTAL'])
+      expect(['MANDATORY_CORE', 'HISTORY', 'MEMORY', 'HUMAN_INTELLIGENCE', 'HYPOTHESIS_RECOMMENDATION', 'QUESTION', 'FINAL_TOTAL'])
         .toContain(component);
       expect(['OFFERED', 'RETAINED', 'FINAL']).toContain(measurement);
       expect(path).toBe('FAST');
@@ -805,12 +826,15 @@ describe('QIR-004 bounded fail-soft telemetry', () => {
       { hypothesisContext: smallHypothesisContext, recommendationContext },
       { hypothesisContext: oversizedHypothesisContext, recommendationContext },
       { hypothesisContext: smallHypothesisContext },
+      { questionContext },
+      { questionContext: oversizedQuestionContext },
       {
         ...conversation([...exchange('o'.repeat(6_000), 'o'.repeat(6_000)), ...exchange('n'.repeat(6_000), 'n'.repeat(6_000))]),
         memoryContext: oversizedMemory,
         humanIntelligence: oversizedHumanIntelligence(),
         hypothesisContext: oversizedHypothesisContext,
         recommendationContext,
+        questionContext: oversizedQuestionContext,
       },
     ];
     const seen = new Set<string>();
@@ -818,7 +842,7 @@ describe('QIR-004 bounded fail-soft telemetry', () => {
       const result = assembler().assemble(input(overrides));
       for (const decision of result.decisions) {
         seen.add(`${decision.source}:${decision.outcome}`);
-        if (decision.source === 'HUMAN_INTELLIGENCE' || decision.source === 'HYPOTHESIS_RECOMMENDATION') {
+        if (decision.source === 'HUMAN_INTELLIGENCE' || decision.source === 'HYPOTHESIS_RECOMMENDATION' || decision.source === 'QUESTION') {
           expect(decision.outcome).not.toBe('PARTIALLY_RETAINED');
           expect(['NOT_PRESENT', 'INCLUDED_FULL', 'OMITTED_BUDGET']).toContain(decision.outcome);
         }
@@ -829,6 +853,7 @@ describe('QIR-004 bounded fail-soft telemetry', () => {
     for (const pair of [
       'HUMAN_INTELLIGENCE:NOT_PRESENT', 'HUMAN_INTELLIGENCE:INCLUDED_FULL', 'HUMAN_INTELLIGENCE:OMITTED_BUDGET',
       'HYPOTHESIS_RECOMMENDATION:NOT_PRESENT', 'HYPOTHESIS_RECOMMENDATION:INCLUDED_FULL', 'HYPOTHESIS_RECOMMENDATION:OMITTED_BUDGET',
+      'QUESTION:NOT_PRESENT', 'QUESTION:INCLUDED_FULL', 'QUESTION:OMITTED_BUDGET',
       'HISTORY:PARTIALLY_RETAINED', 'MEMORY:PARTIALLY_RETAINED',
     ]) expect(seen).toContain(pair);
   });
@@ -871,5 +896,88 @@ describe('QIR-004 carries execution semantics it does not own', () => {
       expect(result.request.locale).toBe('und');
       expect(result.request.modality).toBe('TEXT');
     }
+  });
+});
+
+describe('QIR-006 atomic Question slice', () => {
+  it('includes the whole sanitized Question package by identity when its rendered contribution fits the exact 8 KiB slice', () => {
+    const result = assembler().assemble(input({ questionContext }));
+    const decision = decisionFor(result, 'QUESTION');
+    expect(result.request.questionContext).toBe(questionContext);
+    expect(decision.outcome).toBe('INCLUDED_FULL');
+    expect(decision.offeredBytes).toBe(contributionBytes({ questionContext }));
+    expect(decision.retainedBytes).toBe(decision.offeredBytes);
+    expect(decision.retainedBytes).toBeLessThanOrEqual(QUESTION_BUDGET_BYTES);
+    expect(composeServerGuidance(result.request)).toContain('<question_context>');
+    // The accounting identity holds with the Question slice participating.
+    expect(result.finalTextBytes).toBe(result.mandatoryCoreBytes
+      + result.decisions.reduce((total, entry) => total + entry.retainedBytes, 0));
+  });
+
+  it('omits an oversized sanitized Question package ATOMICALLY: never truncated, never semantically altered', () => {
+    const result = assembler().assemble(input({ questionContext: oversizedQuestionContext }));
+    const decision = decisionFor(result, 'QUESTION');
+    expect(decision.outcome).toBe('OMITTED_BUDGET');
+    expect(decision.offeredBytes).toBeGreaterThan(QUESTION_BUDGET_BYTES);
+    expect(decision.retainedBytes).toBe(0);
+    expect(result.request.questionContext).toBeUndefined();
+    expect(composeServerGuidance(result.request)).not.toContain('<question_context>');
+    // The original package is never mutated to make it fit.
+    expect(oversizedQuestionContext.informationObjective).toBe('q'.repeat(9_000));
+  });
+
+  it('records NOT_PRESENT and renders nothing when no formal Question opportunity was selected', () => {
+    const result = assembler().assemble(input());
+    const decision = decisionFor(result, 'QUESTION');
+    expect(decision).toEqual({ source: 'QUESTION', outcome: 'NOT_PRESENT', offeredBytes: 0, retainedBytes: 0 });
+    expect(result.request.questionContext).toBeUndefined();
+    expect(composeServerGuidance(result.request)).not.toContain('<question_context>');
+  });
+
+  it('never lets Question borrow another slice and never lets another source reach the Question slice', () => {
+    // An oversized Question is omitted even when every other slice is empty:
+    // unused Memory/History/Hypothesis capacity never enlarges the Question
+    // slice.
+    const idleOthers = assembler().assemble(input({ questionContext: oversizedQuestionContext }));
+    expect(decisionFor(idleOthers, 'QUESTION').outcome).toBe('OMITTED_BUDGET');
+    // A fitting Question is included whole even under maximal pressure from
+    // every other source: no other source can consume the Question slice.
+    const pressured = assembler().assemble(input({
+      ...conversation([...exchange('o'.repeat(9_000), 'o'.repeat(9_000))], 'u'.repeat(30_000)),
+      memoryContext: [{ type: 'GOAL', content: 'g'.repeat(9_000) }],
+      humanIntelligence: oversizedHumanIntelligence(),
+      hypothesisContext: oversizedHypothesisContext,
+      questionContext,
+    }));
+    expect(decisionFor(pressured, 'QUESTION').outcome).toBe('INCLUDED_FULL');
+    expect(pressured.request.questionContext).toBe(questionContext);
+    // And an ABSENT Question donates its slice to nobody: the other decisions
+    // are byte-identical with and without a present Question.
+    const withoutQuestion = assembler().assemble(input({
+      memoryContext: [{ type: 'GOAL', content: 'g'.repeat(9_000) }],
+    }));
+    const withQuestion = assembler().assemble(input({
+      memoryContext: [{ type: 'GOAL', content: 'g'.repeat(9_000) }],
+      questionContext,
+    }));
+    expect(decisionFor(withoutQuestion, 'MEMORY').retainedBytes)
+      .toBe(decisionFor(withQuestion, 'MEMORY').retainedBytes);
+    expect(decisionFor(withoutQuestion, 'MEMORY').outcome).toBe('OMITTED_BUDGET');
+  });
+
+  it('accepts a Question package at EXACTLY the 8 KiB slice and omits it one byte over', () => {
+    // Grow the objective until the ACTUAL rendered incremental contribution
+    // lands exactly on the slice boundary, then push it one byte over.
+    const contributionFor = (objective: string): number =>
+      contributionBytes({ questionContext: { ...questionContext, informationObjective: objective } });
+    const overhead = contributionFor('');
+    const exactObjective = 'q'.repeat(QUESTION_BUDGET_BYTES - overhead);
+    expect(contributionFor(exactObjective)).toBe(QUESTION_BUDGET_BYTES);
+    const exact = assembler().assemble(input({ questionContext: { ...questionContext, informationObjective: exactObjective } }));
+    expect(decisionFor(exact, 'QUESTION').outcome).toBe('INCLUDED_FULL');
+    expect(decisionFor(exact, 'QUESTION').retainedBytes).toBe(QUESTION_BUDGET_BYTES);
+    const oneOver = assembler().assemble(input({ questionContext: { ...questionContext, informationObjective: `${exactObjective}q` } }));
+    expect(decisionFor(oneOver, 'QUESTION').outcome).toBe('OMITTED_BUDGET');
+    expect(oneOver.request.questionContext).toBeUndefined();
   });
 });

@@ -7,6 +7,7 @@ import type {
 import type { HumanIntelligenceProviderSemantics } from '../model-router/human-intelligence-provider-semantics.types';
 import type { HypothesisReasoningContext } from '../hypothesis/hypothesis-reasoning-context.types';
 import type { RecommendationGroundingContext } from '../recommendation/recommendation-grounding.types';
+import type { QuestionContextV1 } from '../question/question-context.types';
 
 // QIR-004 Integrated Context Budget & Conflict Resolution v1.
 //
@@ -30,29 +31,31 @@ import type { RecommendationGroundingContext } from '../recommendation/recommend
 // are 4 bytes, and both must be charged for what they actually cost.
 export const GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES = 131072;
 
-// The exact v1 partition. These are RESOURCE ISOLATION boundaries, never a
+// The exact partition. These are RESOURCE ISOLATION boundaries, never a
 // truth ranking and never a shared first-come pool:
 //
 //   64 + 16 + 8 + 8 + 24 + 8 = 128 KiB
 //
-// There is NO borrowing in v1. History cannot borrow unused Memory bytes,
+// There is NO borrowing. History cannot borrow unused Memory bytes,
 // Memory cannot borrow unused History bytes, Human Intelligence cannot borrow
 // unused Hypothesis bytes, the Hypothesis/Recommendation package cannot borrow
-// unused Mandatory Core space, no optional source may borrow the future
-// reserve, and an ABSENT source donates its slice to nobody. This is what stops
-// raw source SIZE from silently becoming source AUTHORITY.
+// unused Mandatory Core space, Question cannot borrow any other slice, and an
+// ABSENT source donates its slice to nobody. This is what stops raw source
+// SIZE from silently becoming source AUTHORITY.
 export const MANDATORY_CORE_BUDGET_BYTES = 65536;
 export const HISTORY_BUDGET_BYTES = 16384;
 export const MEMORY_BUDGET_BYTES = 8192;
 export const HUMAN_INTELLIGENCE_BUDGET_BYTES = 8192;
 export const HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES = 24576;
 
-// Deliberately UNUSABLE in QIR-004 v1. v1 allocates only 56 KiB of the 64 KiB
-// optional half, so a normally assembled request cannot intentionally consume
-// more than 120 KiB. The 128 KiB ceiling stays the hard whole-request
-// invariant, and this reserve may be assigned only by a separately reviewed,
-// versioned contract - it is not frozen as permanently unusable beyond v1.
-export const FUTURE_RESERVED_BUDGET_BYTES = 8192;
+// QIR-006: the reviewed, versioned supersession of the QIR-004 v1 future
+// reserve. The previously frozen 8 KiB reserve becomes the QIR-006 formal
+// Question slice - the global 131072-byte ceiling is UNCHANGED, no other
+// slice moved by a single byte, and the unused-future-reserve semantics are
+// retired. Question is ATOMIC: the whole sanitized Question package fits this
+// slice or the entire package is omitted for the turn; PARTIALLY_RETAINED is
+// illegal for QUESTION.
+export const QUESTION_BUDGET_BYTES = 8192;
 
 export const INTEGRATED_CONTEXT_BUDGET_POLICY_VERSION = '1';
 
@@ -62,15 +65,17 @@ export type IntegratedContextBudgetSource =
   | 'HISTORY'
   | 'MEMORY'
   | 'HUMAN_INTELLIGENCE'
-  | 'HYPOTHESIS_RECOMMENDATION';
+  | 'HYPOTHESIS_RECOMMENDATION'
+  | 'QUESTION';
 
 // NOT_PRESENT is presence bookkeeping ONLY. QIR-004 never reinterprets it as
 // "legitimately empty", "unavailable", or "expired": those distinctions belong
 // to QIR-003's typed source outcomes and stay separately observable through
 // QIR-003 telemetry.
 //
-// PARTIALLY_RETAINED is valid only for HISTORY and MEMORY in v1: Human
-// Intelligence and the Hypothesis/Recommendation package are ATOMIC.
+// PARTIALLY_RETAINED is valid only for HISTORY and MEMORY: Human
+// Intelligence, the Hypothesis/Recommendation package, and Question (QIR-006)
+// are ATOMIC.
 export type IntegratedContextBudgetOutcome =
   | 'NOT_PRESENT'
   | 'INCLUDED_FULL'
@@ -83,6 +88,7 @@ export type IntegratedContextBudgetComponent =
   | 'MEMORY'
   | 'HUMAN_INTELLIGENCE'
   | 'HYPOTHESIS_RECOMMENDATION'
+  | 'QUESTION'
   | 'FINAL_TOTAL';
 
 export type IntegratedContextBudgetMeasurement = 'OFFERED' | 'RETAINED' | 'FINAL';
@@ -131,6 +137,7 @@ export interface IntegratedContextAssemblyInput {
   readonly humanIntelligence?: HumanIntelligenceProviderSemantics;
   readonly hypothesisContext?: HypothesisReasoningContext;
   readonly recommendationContext?: RecommendationGroundingContext;
+  readonly questionContext?: QuestionContextV1;
   readonly locale: 'ar' | 'en' | 'und';
   readonly modality: 'TEXT';
   readonly latencyBudgetMs: number;

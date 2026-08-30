@@ -7,11 +7,15 @@ export const MAX_QUESTION_TEXT_LENGTH = 1000;
 export const MAX_QUESTION_TARGET_HYPOTHESES = 16;
 export const MAX_QUESTION_DEPENDENCIES = 16;
 
+// QIR-006: migration 0063 makes the durable automatic Information Gap
+// lifecycle total. Closure and reopen are owned exclusively by the canonical
+// post-response synchronization authority; the application only reads them.
+export type InformationGapStatus = 'OPEN' | 'RESOLVED' | 'SUPERSEDED';
 export interface InformationGapRecord {
   id: string; user_id: string; information_needed: string; why_it_matters: string;
   related_hypothesis_ids: string[]; confidence_evaluation_id: string | null;
   user_answerability: 'UNASSESSED' | 'USER_CAN_ANSWER' | 'USER_CANNOT_ANSWER';
-  preferred_question_type: QuestionType | null; status: 'OPEN'; version: 1;
+  preferred_question_type: QuestionType | null; status: InformationGapStatus; version: 1;
   provenance: 'QANDEEL_QUESTION_RUNTIME'; created_at: string; updated_at: string;
 }
 export interface CreateInformationGapInput {

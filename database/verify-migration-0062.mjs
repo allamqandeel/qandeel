@@ -285,7 +285,7 @@ async function verifyDurablePropagation(owner, session) {
   await identity('service_role');
   assert.equal((await claim(session, owner, turn, path, reason)).length, 1);
   const assistantId = randomUUID(), completedEvent = randomUUID();
-  const finalized = await rows('SELECT * FROM finalize_conversation_turn($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+  const finalized = await rows('SELECT * FROM finalize_conversation_turn_v2($1,$2,$3,$4,$5,$6,$7,$8,$9)',
     [session, owner, turn, assistantId, 'assistant text', 'ALLOW', completedEvent, null, null]);
   assert.equal(finalized.length, 1, 'the v2-routed turn finalizes normally');
 

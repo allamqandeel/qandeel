@@ -103,7 +103,7 @@ By design this structural measure excludes provider API JSON field-name
 overhead, provider-specific role/token encoding, HTTP header/protocol
 overhead, tokenizer-specific token counts, and output tokens.
 
-### 4.2 Exact v1 partition
+### 4.2 Exact partition
 
 ```text
 MANDATORY_CORE_BUDGET_BYTES            = 65536
@@ -111,16 +111,19 @@ HISTORY_BUDGET_BYTES                   = 16384
 MEMORY_BUDGET_BYTES                    =  8192
 HUMAN_INTELLIGENCE_BUDGET_BYTES        =  8192
 HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES = 24576
-FUTURE_RESERVED_BUDGET_BYTES           =  8192
+QUESTION_BUDGET_BYTES                  =  8192
 ```
 
 `64 + 16 + 8 + 8 + 24 + 8 = 128 KiB`
 
-QIR-004 v1 allocates only 56 KiB of the 64 KiB optional half. The final 8 KiB
-is deliberately **reserved and unusable in v1**, so a normally assembled
-request cannot intentionally consume more than 120 KiB. The 128 KiB ceiling
-remains the hard whole-request invariant, and the reserve may be assigned only
-by a separately reviewed, versioned contract.
+The original QIR-004 v1 contract allocated only 56 KiB of the 64 KiB optional
+half and froze the final 8 KiB as a future reserve assignable only by a
+separately reviewed, versioned contract. **QIR-006 is exactly that reviewed
+supersession** (Amendment A2 below): the previously frozen 8 KiB future
+reserve became the atomic QIR-006 Question slice, `QUESTION_BUDGET_BYTES =
+8192` replaced the retired `FUTURE_RESERVED_BUDGET_BYTES`, no other slice
+moved by a single byte, and the 128 KiB ceiling remains the hard whole-request
+invariant.
 
 ### 4.3 No borrowing
 
@@ -130,7 +133,8 @@ by a separately reviewed, versioned contract.
 - Memory cannot borrow unused History bytes.
 - Human Intelligence cannot borrow unused Hypothesis bytes.
 - Hypothesis/Recommendation cannot borrow unused Mandatory Core space.
-- No optional source may borrow from the 8 KiB future reserve.
+- Question cannot borrow any other slice, and no other source may reach the
+  Question slice.
 - An absent source does not donate its slice to another source.
 
 This is what prevents source size from becoming implicit authority.
@@ -414,17 +418,17 @@ QIR-004 telemetry is bounded, finite, and fail-soft.
 
 ```text
 qandeel.context_budget.source_decisions
-  source = HISTORY | MEMORY | HUMAN_INTELLIGENCE | HYPOTHESIS_RECOMMENDATION
+  source = HISTORY | MEMORY | HUMAN_INTELLIGENCE | HYPOTHESIS_RECOMMENDATION | QUESTION
   outcome = NOT_PRESENT | INCLUDED_FULL | PARTIALLY_RETAINED | OMITTED_BUDGET
   processing_path = FAST | DEEP
   policy_version = "1"
 ```
 
-`PARTIALLY_RETAINED` is valid only for History and Memory under QIR-004 v1.
+`PARTIALLY_RETAINED` is valid only for History and Memory.
 
 ```text
 qandeel.context_budget.bytes
-  component = MANDATORY_CORE | HISTORY | MEMORY | HUMAN_INTELLIGENCE | HYPOTHESIS_RECOMMENDATION | FINAL_TOTAL
+  component = MANDATORY_CORE | HISTORY | MEMORY | HUMAN_INTELLIGENCE | HYPOTHESIS_RECOMMENDATION | QUESTION | FINAL_TOTAL
   measurement = OFFERED | RETAINED | FINAL
   processing_path = FAST | DEEP
   policy_version = "1"
@@ -483,12 +487,12 @@ provider generation.
 
 This contract MUST NOT freeze:
 
-- the absence of a future Question foreground source (QIR-006 owns it);
+- the QIR-006 Question foreground source semantics beyond its 8 KiB atomic
+  slice (selection, lifecycle and binding are owned by the QIR-006 contract);
 - the final background provider-call cap (QIR-005 owns it);
 - provider/model identifiers — final Provider/LLM selection is deferred;
 - provider context-window / tokenizer selection;
 - the final provider capability-fit layer;
-- the 8 KiB reserve as permanently unusable beyond QIR-004 v1;
 - the current exact local Memory/Hypothesis caps as permanent global product decisions;
 - the absence of future, explicitly versioned, source-specific budget changes;
 - future migrations in any domain.
@@ -546,15 +550,46 @@ HISTORY                   = NOT_PRESENT | INCLUDED_FULL | PARTIALLY_RETAINED | O
 MEMORY                    = NOT_PRESENT | INCLUDED_FULL | PARTIALLY_RETAINED | OMITTED_BUDGET
 HUMAN_INTELLIGENCE        = NOT_PRESENT | INCLUDED_FULL | OMITTED_BUDGET
 HYPOTHESIS_RECOMMENDATION = NOT_PRESENT | INCLUDED_FULL | OMITTED_BUDGET
+QUESTION                  = NOT_PRESENT | INCLUDED_FULL | OMITTED_BUDGET
 ```
 
-**Exactly 14 legal source/outcome pairs exist per processing path in v1** (4 + 4
-+ 3 + 3), 28 across FAST and DEEP. The two ATOMIC sources have no
-`PARTIALLY_RETAINED` pair, because they are whole-source-or-nothing in v1, so
-`HUMAN_INTELLIGENCE + PARTIALLY_RETAINED` and
-`HYPOTHESIS_RECOMMENDATION + PARTIALLY_RETAINED` are **illegal and DROPPED**.
+**Exactly 17 legal source/outcome pairs exist per processing path** (4 + 4
++ 3 + 3 + 3), 34 across FAST and DEEP. The three ATOMIC sources have no
+`PARTIALLY_RETAINED` pair, because they are whole-source-or-nothing, so
+`HUMAN_INTELLIGENCE + PARTIALLY_RETAINED`,
+`HYPOTHESIS_RECOMMENDATION + PARTIALLY_RETAINED` and
+`QUESTION + PARTIALLY_RETAINED` are **illegal and DROPPED**.
 
 An unknown source, an unknown outcome, an illegal pair, or an unrecognized
 processing path is dropped rather than emitted. Telemetry never throws and
 remains fail-soft. No assembler outcome changed, no outcome was added, and no
 atomic source became partially retainable.
+
+## Amendment A2 — QIR-006: the future reserve becomes the atomic Question slice
+
+The QIR-004 v1 contract froze `FUTURE_RESERVED_BUDGET_BYTES = 8192` as
+deliberately unusable, assignable only through a separately reviewed, versioned
+contract. The QIR-006 Question / Information-Gap Closed Loop v1 contract is
+exactly that reviewed supersession, and this amendment records it:
+
+- `QUESTION_BUDGET_BYTES = 8192` replaces the retired
+  `FUTURE_RESERVED_BUDGET_BYTES`; the unused-future-reserve semantics are
+  retired for v1;
+- the global ceiling remains exactly `131072` UTF-8 bytes and no other slice
+  moved by a single byte;
+- `QUESTION` becomes a first-class budget source and byte component;
+- **Question is ATOMIC**: its legal outcomes are exactly `NOT_PRESENT`,
+  `INCLUDED_FULL` and `OMITTED_BUDGET`, and `PARTIALLY_RETAINED` is illegal
+  for `QUESTION` — the sanitized information objective is never truncated or
+  semantically altered to make it fit;
+- if the Question package cannot fit wholly inside its 8 KiB slice it is
+  omitted from the normalized request, and the durable SELECTED reservation is
+  not consumed: the QIR-006 finalization/terminal release authority releases
+  it, never this assembler;
+- the no-borrowing rule extends unchanged: Question borrows nothing and
+  donates nothing.
+
+Question selection, lifecycle, reservation, binding, and the provider-safe
+QuestionContext semantics are owned by the QIR-006 contract
+(`docs/question-information-gap-closed-loop-v1.md`); QIR-004 owns only the
+atomic 8 KiB structural slice recorded here.

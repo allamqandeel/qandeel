@@ -43,6 +43,11 @@ export class QuestionService {
     if (!UUID.test(gapId)) throw new BadRequestException('gapId is invalid.');
     const gap = await this.repository.findGap(token, userId, gapId);
     if (!gap) throw new NotFoundException('Information gap not found.');
+    // QIR-006 compatibility: a closed gap (RESOLVED or SUPERSEDED by the
+    // canonical migration-0063 lifecycle) is no longer a valid candidate
+    // generation target. Fail closed rather than generating against a stale
+    // information need.
+    if (gap.status !== 'OPEN') throw new BadRequestException('Information gap is not open.');
     const proposals = await generator.generate(Object.freeze({ ...gap, related_hypothesis_ids: Object.freeze([...gap.related_hypothesis_ids]) as unknown as string[] }));
     if (!Array.isArray(proposals) || proposals.length > 16) throw new BadRequestException('Generator result is invalid.');
     const seen = new Set<string>();

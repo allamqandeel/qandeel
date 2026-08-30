@@ -189,7 +189,7 @@ async function verifyIdempotentRecoveryAndLateTerminalSafety(owner, session, tur
 
   stage = 'late completion safety';
   await identity('service_role');
-  const lateFinalize = await rows('SELECT * FROM finalize_conversation_turn($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, owner, turn, randomUUID(), 'late provider text', 'ALLOW', randomUUID(), null, null]);
+  const lateFinalize = await rows('SELECT * FROM finalize_conversation_turn_v2($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, owner, turn, randomUUID(), 'late provider text', 'ALLOW', randomUUID(), null, null]);
   assert.equal(lateFinalize.length, 0, 'a late canonical finalization returns no completed pair');
   const lateFail = await rows('SELECT * FROM fail_conversation_turn($1,$2,$3,$4,$5,$6)', [session, owner, turn, randomUUID(), null, null]);
   assert.equal(lateFail.length, 0, 'a late canonical failure is a no-op on the recovered terminal turn');
@@ -212,7 +212,7 @@ async function verifyTerminalAndForeignNoOps(owner, other, session, otherSession
   const completed = await createOwnedTurn(owner, session, 'to complete');
   await identity('service_role');
   await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, completed, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']);
-  const finalized = await rows('SELECT * FROM finalize_conversation_turn($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, owner, completed, randomUUID(), 'assistant reply', 'ALLOW', randomUUID(), null, null]);
+  const finalized = await rows('SELECT * FROM finalize_conversation_turn_v2($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, owner, completed, randomUUID(), 'assistant reply', 'ALLOW', randomUUID(), null, null]);
   assert.equal(finalized.length, 1, 'fixture finalization succeeded');
   assert.equal((await recover(session, owner, completed)).length, 0, 'a COMPLETED turn cannot be recovered');
   await identity('postgres');
@@ -317,7 +317,7 @@ async function verifyConcurrentRecoveryConverges() {
     assert.equal(await assistantCount(raceTurn), 0, 'no assistant exists for the raced source turn');
     // A late finalization from a fresh connection cannot complete the
     // committed recovered turn.
-    const lateFinalize = await clientB.query('SELECT * FROM finalize_conversation_turn($1,$2,$3,$4,$5,$6,$7,$8,$9)', [raceSession, raceUser, raceTurn, randomUUID(), 'late text', 'ALLOW', randomUUID(), null, null]);
+    const lateFinalize = await clientB.query('SELECT * FROM finalize_conversation_turn_v2($1,$2,$3,$4,$5,$6,$7,$8,$9)', [raceSession, raceUser, raceTurn, randomUUID(), 'late text', 'ALLOW', randomUUID(), null, null]);
     assert.equal(lateFinalize.rows.length, 0, 'late finalization after committed recovery is a no-op');
   } finally {
     await clientA.end().catch(() => undefined); await clientB.end().catch(() => undefined);

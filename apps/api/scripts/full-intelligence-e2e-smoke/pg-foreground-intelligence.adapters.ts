@@ -79,8 +79,13 @@ const AUTHENTICATED_RPC_ALLOWLIST = new Set([
 ]);
 const SERVICE_ROLE_RPC_ALLOWLIST = new Set([
   'claim_conversation_turn',
-  'finalize_conversation_turn',
+  // QIR-006: canonical finalization runs through the versioned migration-0063
+  // authority (the retired pre-0063 finalization signature is deliberately
+  // absent - it is a revoked tombstone and must never be reachable), and the
+  // one formal Question selection command is the only other addition.
+  'finalize_conversation_turn_v2',
   'fail_conversation_turn',
+  'select_formal_question_opportunity_v1',
 ]);
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/u;
 const SELECT_LIST = /^[a-z_][a-z0-9_,]*$/u;

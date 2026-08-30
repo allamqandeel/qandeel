@@ -18,14 +18,15 @@ import { readFileSync, readdirSync } from 'node:fs';
 // QIR-004 baseline.
 //
 // FORWARD-SAFETY IS MANDATORY HERE. This guard must never freeze:
-//   * the current absence of a foreground Question channel (QIR-006 owns it);
+//   * QIR-006 Question selection/lifecycle/binding semantics (the QIR-006
+//     contract owns them; this guard owns only the atomic 8 KiB QUESTION
+//     budget slice that superseded the QIR-004 v1 future reserve);
 //   * the current background provider-call count (QIR-005 owns the cap; the
 //     guard reads no dispatcher source);
 //   * Provider/model identifiers (final Provider/LLM selection is deferred;
 //     the guard reads no model-profile or provider-adapter source);
 //   * provider context-window / tokenizer selection or the final provider
 //     capability-fit layer;
-//   * the 8 KiB reserve as permanently unusable beyond QIR-004 v1;
 //   * current local Memory/Hypothesis cap values (the guard reads no cap source);
 //   * future migrations (a later, separately reviewed migration in ANY domain
 //     stays legal; the guard bans no future migration number or filename).
@@ -91,9 +92,9 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   'MEMORY_BUDGET_BYTES = 8192',
   'HUMAN_INTELLIGENCE_BUDGET_BYTES = 8192',
   'HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES = 24576',
-  'FUTURE_RESERVED_BUDGET_BYTES = 8192',
+  'QUESTION_BUDGET_BYTES = 8192',
   '64 + 16 + 8 + 8 + 24 + 8 = 128 KiB',
-  'reserved and unusable in v1',
+  '**QIR-006 is exactly that reviewed supersession**',
   // What the ceiling is NOT.
   '**NOT** a provider context-window claim',
   '**NOT** a token budget',
@@ -146,10 +147,10 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   'exactly ONE conversational provider call',
   // Telemetry.
   'qandeel.context_budget.source_decisions',
-  'source = HISTORY | MEMORY | HUMAN_INTELLIGENCE | HYPOTHESIS_RECOMMENDATION',
+  'source = HISTORY | MEMORY | HUMAN_INTELLIGENCE | HYPOTHESIS_RECOMMENDATION | QUESTION',
   'outcome = NOT_PRESENT | INCLUDED_FULL | PARTIALLY_RETAINED | OMITTED_BUDGET',
   'qandeel.context_budget.bytes',
-  'component = MANDATORY_CORE | HISTORY | MEMORY | HUMAN_INTELLIGENCE | HYPOTHESIS_RECOMMENDATION | FINAL_TOTAL',
+  'component = MANDATORY_CORE | HISTORY | MEMORY | HUMAN_INTELLIGENCE | HYPOTHESIS_RECOMMENDATION | QUESTION | FINAL_TOTAL',
   'measurement = OFFERED | RETAINED | FINAL',
   '**Numeric byte counts are histogram VALUES and are never encoded as labels.**',
   '**Telemetry failure remains fail-soft and can never change assembly or the turn.**',
@@ -161,10 +162,9 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   'INTEGRATED_CONTEXT_BUDGET_INVARIANT',
   '**No user or source content ever appears in the error string.**',
   // Forward safety.
-  'the absence of a future Question foreground source (QIR-006 owns it)',
+  'the QIR-006 Question foreground source semantics beyond its 8 KiB atomic slice',
   'the final background provider-call cap (QIR-005 owns it)',
   'provider/model identifiers — final Provider/LLM selection is deferred',
-  'the 8 KiB reserve as permanently unusable beyond QIR-004 v1',
   'future migrations in any domain',
   // Acceptance.
   'exactly one conversational provider call remains the foreground invariant',
@@ -174,9 +174,15 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   'the upstream `available` outcome stays exactly where it was and stays correct',
   '`consumed` keeps its existing placement AFTER successful provider generation, so a failed provider call still records no `consumed`',
   'Source-decision validation is now **TOTAL over the source/outcome PAIR**',
-  '**Exactly 14 legal source/outcome pairs exist per processing path in v1**',
-  '`HUMAN_INTELLIGENCE + PARTIALLY_RETAINED` and `HYPOTHESIS_RECOMMENDATION + PARTIALLY_RETAINED` are **illegal and DROPPED**',
+  '**Exactly 17 legal source/outcome pairs exist per processing path**',
+  '`HUMAN_INTELLIGENCE + PARTIALLY_RETAINED`, `HYPOTHESIS_RECOMMENDATION + PARTIALLY_RETAINED` and `QUESTION + PARTIALLY_RETAINED` are **illegal and DROPPED**',
   'No assembler outcome changed, no outcome was added, and no atomic source became partially retainable.',
+  // Amendment A2 — QIR-006 Question-slice supersession.
+  '## Amendment A2 — QIR-006: the future reserve becomes the atomic Question slice',
+  '`QUESTION_BUDGET_BYTES = 8192` replaces the retired `FUTURE_RESERVED_BUDGET_BYTES`',
+  'the global ceiling remains exactly `131072` UTF-8 bytes and no other slice moved by a single byte',
+  '**Question is ATOMIC**: its legal outcomes are exactly `NOT_PRESENT`, `INCLUDED_FULL` and `OMITTED_BUDGET`, and `PARTIALLY_RETAINED` is illegal for `QUESTION`',
+  'the durable SELECTED reservation is not consumed: the QIR-006 finalization/terminal release authority releases it, never this assembler',
 ]);
 
 const executable = (source) => source.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^\s*\/\/.*$/gmu, '');
@@ -217,7 +223,9 @@ function assertIntegratedContextBudgetContract(world) {
     MEMORY_BUDGET_BYTES: 8192,
     HUMAN_INTELLIGENCE_BUDGET_BYTES: 8192,
     HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES: 24576,
-    FUTURE_RESERVED_BUDGET_BYTES: 8192,
+    // QIR-006 reviewed supersession: the former future reserve is now the
+    // atomic Question slice, at the same frozen 8192 bytes.
+    QUESTION_BUDGET_BYTES: 8192,
   });
   let allocated = 0;
   for (const [name, value] of Object.entries(BUDGETS)) {
@@ -331,6 +339,20 @@ function assertIntegratedContextBudgetContract(world) {
   if (/includedHypothesisCount|candidateHypothesisCount|truncated|hypotheses\.|assumptions/u.test(packageSlice))
     violated('the package internals - counts, truncation, hypotheses, assumptions - are never mutated');
 
+  // 10b. QIR-006: Question is ATOMIC - whole sanitized package or nothing,
+  //      measured by its ACTUAL rendered incremental contribution against its
+  //      own exact 8 KiB slice, and never truncated or rewritten to fit.
+  const questionSlice = slice(exe.assembler, 'private retainAtomicQuestion(', '\n  }');
+  if (!questionSlice) violated('the atomic Question retention algorithm exists as a bounded block');
+  if (!questionSlice.includes('const offeredBytes = this.contributionBytes(guidanceBase, baseGuidanceBytes, { questionContext });'))
+    violated('Question is budgeted by its ACTUAL rendered incremental guidance contribution');
+  if (!questionSlice.includes("if (offeredBytes > QUESTION_BUDGET_BYTES) return { outcome: 'OMITTED_BUDGET', retained: undefined, offeredBytes, retainedBytes: 0 };"))
+    violated('an oversized sanitized Question package is omitted ATOMICALLY');
+  if (/informationObjective|\.slice\(|substring|truncat/u.test(questionSlice))
+    violated('the sanitized Question package is never truncated or rewritten to fit');
+  if (questionSlice.includes("'PARTIALLY_RETAINED'"))
+    violated('PARTIALLY_RETAINED is illegal for the atomic QUESTION source');
+
   // 11. Exact global accounting: per-slice proofs, the accounting IDENTITY, and
   //     the hard ceiling - all fail-closed, none repaired by trimming core.
   for (const proof of [
@@ -338,6 +360,7 @@ function assertIntegratedContextBudgetContract(world) {
     'if (memory.retainedBytes > MEMORY_BUDGET_BYTES) throw new IntegratedContextBudgetInvariantError();',
     'if (humanIntelligence.retainedBytes > HUMAN_INTELLIGENCE_BUDGET_BYTES) throw new IntegratedContextBudgetInvariantError();',
     'if (hypothesisRecommendation.retainedBytes > HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES) throw new IntegratedContextBudgetInvariantError();',
+    'if (question.retainedBytes > QUESTION_BUDGET_BYTES) throw new IntegratedContextBudgetInvariantError();',
     'if (finalTextBytes !== accountedBytes) throw new IntegratedContextBudgetInvariantError();',
     'if (finalTextBytes > GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES) throw new IntegratedContextBudgetInvariantError();',
   ]) {
@@ -444,12 +467,12 @@ function assertIntegratedContextBudgetContract(world) {
     violated('the QIR-004 source-decision metric exists');
   if (!world.telemetry.includes("createHistogram('qandeel.context_budget.bytes'"))
     violated('the QIR-004 byte measurement is a histogram, so byte counts are VALUES');
-  if (!world.telemetry.includes("const CONTEXT_BUDGET_SOURCES:ReadonlySet<string>=new Set(['HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION']);"))
-    violated('the source registry is exactly the four frozen sources');
+  if (!world.telemetry.includes("const CONTEXT_BUDGET_SOURCES:ReadonlySet<string>=new Set(['HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION','QUESTION']);"))
+    violated('the source registry is exactly the five frozen sources');
   if (!world.telemetry.includes("const CONTEXT_BUDGET_OUTCOMES:ReadonlySet<string>=new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET']);"))
     violated('the outcome registry is exactly the four frozen outcomes');
-  if (!world.telemetry.includes("const CONTEXT_BUDGET_COMPONENTS:ReadonlySet<string>=new Set(['MANDATORY_CORE','HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION','FINAL_TOTAL']);"))
-    violated('the component registry is exactly the six frozen components');
+  if (!world.telemetry.includes("const CONTEXT_BUDGET_COMPONENTS:ReadonlySet<string>=new Set(['MANDATORY_CORE','HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION','QUESTION','FINAL_TOTAL']);"))
+    violated('the component registry is exactly the seven frozen components');
   if (!world.telemetry.includes("const CONTEXT_BUDGET_MEASUREMENTS:ReadonlySet<string>=new Set(['OFFERED','RETAINED','FINAL']);"))
     violated('the measurement registry is exactly the three frozen measurements');
   if (!world.telemetry.includes("const CONTEXT_BUDGET_POLICY_VERSION='1';"))
@@ -466,15 +489,16 @@ function assertIntegratedContextBudgetContract(world) {
     ['MEMORY', "new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET'])"],
     ['HUMAN_INTELLIGENCE', "new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])"],
     ['HYPOTHESIS_RECOMMENDATION', "new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])"],
+    ['QUESTION', "new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])"],
   ]) {
     if (!legalPairs.includes(`['${source}',${outcomes}]`))
       violated(`the frozen legal outcome set for ${source} is exact`);
   }
-  if ((legalPairs.match(/'(?:NOT_PRESENT|INCLUDED_FULL|PARTIALLY_RETAINED|OMITTED_BUDGET)'/gu) ?? []).length !== 14)
-    violated('exactly 14 legal source/outcome pairs exist per processing path in v1');
-  for (const atomic of ['HUMAN_INTELLIGENCE', 'HYPOTHESIS_RECOMMENDATION']) {
+  if ((legalPairs.match(/'(?:NOT_PRESENT|INCLUDED_FULL|PARTIALLY_RETAINED|OMITTED_BUDGET)'/gu) ?? []).length !== 17)
+    violated('exactly 17 legal source/outcome pairs exist per processing path');
+  for (const atomic of ['HUMAN_INTELLIGENCE', 'HYPOTHESIS_RECOMMENDATION', 'QUESTION']) {
     if (legalPairs.includes(`['${atomic}',new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED'`))
-      violated(`the atomic source ${atomic} is never partially retainable in v1`);
+      violated(`the atomic source ${atomic} is never partially retainable`);
   }
   const sourceDecisionGates = slice(world.telemetry, ' recordContextBudgetSourceDecision(', 'this.contextBudgetSourceDecisions.add');
   for (const gate of [
@@ -515,11 +539,16 @@ function assertIntegratedContextBudgetContract(world) {
     'an oversized History cannot consume the Memory slice',
     'an ABSENT Memory does not enlarge the Hypothesis/Recommendation budget',
     'unused Mandatory Core capacity does not expand any optional slice',
-    'leaves the 8 KiB future reserve unused',
+    'spends the QIR-006 Question slice only on Question',
     'fails CLOSED - never trimming Mandatory Core - when the guidance renderer stops being additive',
     'cannot alter the assembly when it throws',
     // QIR-004 Fix 01: the producer side of the legal source/outcome relation.
     'never produces PARTIALLY_RETAINED for an atomic source',
+    // QIR-006: the atomic Question slice proofs.
+    'includes the whole sanitized Question package by identity when its rendered contribution fits the exact 8 KiB slice',
+    'omits an oversized sanitized Question package ATOMICALLY: never truncated, never semantically altered',
+    'never lets Question borrow another slice and never lets another source reach the Question slice',
+    'accepts a Question package at EXACTLY the 8 KiB slice and omits it one byte over',
   ]) {
     if (!world.assemblerSpec.includes(proof))
       violated(`the focused assembler spec proves the bound deterministically: missing ${proof}`);
@@ -527,8 +556,8 @@ function assertIntegratedContextBudgetContract(world) {
   for (const proof of [
     // QIR-004 Fix 01: the consumer side - illegal pairs are dropped, and the
     // legal relation is exercised in full rather than as a Cartesian product.
-    'records exactly the 14 legal QIR-004 source/outcome pairs per path and no content',
-    'drops the two ILLEGAL atomic-source PARTIALLY_RETAINED pairs, whose labels are individually legal',
+    'records exactly the 17 legal QIR-004 source/outcome pairs per path and no content',
+    'drops the three ILLEGAL atomic-source PARTIALLY_RETAINED pairs, whose labels are individually legal',
     'drops any QIR-004 source decision outside the finite registries',
     'keeps both QIR-004 budget metrics fail-soft',
   ]) {
@@ -604,7 +633,7 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
       contractDoc: shipped.contractDoc.replace('and never by the pre-budget\n`hypothesisResult`.**', 'or by the pre-budget `hypothesisResult`.**'),
     }],
     ['the legal-pair relation was withdrawn from the document', {
-      contractDoc: shipped.contractDoc.replace('**Exactly 14 legal source/outcome pairs exist per processing path in v1**', 'Any source/outcome combination is emittable'),
+      contractDoc: shipped.contractDoc.replace('**Exactly 17 legal source/outcome pairs exist per processing path**', 'Any source/outcome combination is emittable'),
     }],
     ['the illegal atomic pairs were declared legal in the document', {
       contractDoc: shipped.contractDoc.replace('are **illegal and DROPPED**', 'are legal and emitted'),
@@ -621,8 +650,20 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
     ['the Memory slice was widened', {
       budgetContract: shipped.budgetContract.replace('export const MEMORY_BUDGET_BYTES = 8192;', 'export const MEMORY_BUDGET_BYTES = 16384;'),
     }],
-    ['the future reserve was silently spent', {
-      budgetContract: shipped.budgetContract.replace('export const FUTURE_RESERVED_BUDGET_BYTES = 8192;', 'export const FUTURE_RESERVED_BUDGET_BYTES = 0;'),
+    ['the QIR-006 Question slice was widened', {
+      budgetContract: shipped.budgetContract.replace('export const QUESTION_BUDGET_BYTES = 8192;', 'export const QUESTION_BUDGET_BYTES = 16384;'),
+    }],
+    ['the atomic Question omission regressed to truncation', {
+      assembler: shipped.assembler.replace(
+        "if (offeredBytes > QUESTION_BUDGET_BYTES) return { outcome: 'OMITTED_BUDGET', retained: undefined, offeredBytes, retainedBytes: 0 };",
+        "if (offeredBytes > QUESTION_BUDGET_BYTES) return { outcome: 'OMITTED_BUDGET', retained: { ...questionContext, informationObjective: questionContext.informationObjective.slice(0, 64) }, offeredBytes, retainedBytes: 0 };",
+      ),
+    }],
+    ['the QUESTION telemetry pair set became partially retainable', {
+      telemetry: shipped.telemetry.replace(
+        "['QUESTION',new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])]",
+        "['QUESTION',new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET'])]",
+      ),
     }],
     ['the sanitized invariant identity started carrying detail', {
       budgetContract: shipped.budgetContract.replace("super('INTEGRATED_CONTEXT_BUDGET_INVARIANT');", 'super(`INTEGRATED_CONTEXT_BUDGET_INVARIANT ${detail}`);'),
@@ -800,7 +841,7 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
       ),
     }],
     ['the illegal-pair drop proof was gutted from the telemetry spec', {
-      telemetrySpec: shipped.telemetrySpec.replaceAll('drops the two ILLEGAL atomic-source PARTIALLY_RETAINED pairs, whose labels are individually legal', 'skipped'),
+      telemetrySpec: shipped.telemetrySpec.replaceAll('drops the three ILLEGAL atomic-source PARTIALLY_RETAINED pairs, whose labels are individually legal', 'skipped'),
     }],
     ['the atomic-outcome producer proof was gutted from the assembler spec', {
       assemblerSpec: shipped.assemblerSpec.replaceAll('never produces PARTIALLY_RETAINED for an atomic source', 'skipped'),
@@ -884,19 +925,19 @@ test('B3 - forward safety: every change a later QIR task is expected to make sta
   assert.doesNotThrow(() => assertIntegratedContextBudgetContract({ ...shipped, orchestrator: questionChannel }),
     'QIR-006 may add a foreground Question opportunity channel');
 
-  // A later reviewed, explicitly versioned contract may add a NEW source slice
-  // out of the reserve. This guard freezes the v1 constants it owns; it must
-  // not ban an additional, separately reviewed constant.
-  const extended = `${shipped.budgetContract}\n// QIR-00x, separately reviewed.\nexport const QUESTION_BUDGET_BYTES = 4096;\n`;
+  // A later reviewed, explicitly versioned contract may add a NEW source slice.
+  // This guard freezes the constants it owns; it must not ban an additional,
+  // separately reviewed constant.
+  const extended = `${shipped.budgetContract}\n// QIR-00x, separately reviewed.\nexport const FUTURE_SOURCE_BUDGET_BYTES = 4096;\n`;
   assert.doesNotThrow(() => assertIntegratedContextBudgetContract({ ...shipped, budgetContract: extended }),
     'a later reviewed contract may add its own budget constant');
 
   // A later reviewed, explicitly versioned contract may declare its OWN legal
-  // source/outcome relation for its own sources. This guard freezes the QIR-004
-  // v1 relation it owns; it must not ban a separate future one.
+  // source/outcome relation for its own sources. This guard freezes the
+  // relation it owns; it must not ban a separate future one.
   const extendedRelation = shipped.telemetry.replace(
     'const CONTEXT_BUDGET_POLICY_VERSION=',
-    "const QUESTION_BUDGET_LEGAL_SOURCE_OUTCOMES:ReadonlyMap<string,ReadonlySet<string>>=new Map([\n ['QUESTION',new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])],\n]);\nconst CONTEXT_BUDGET_POLICY_VERSION=",
+    "const FUTURE_SOURCE_BUDGET_LEGAL_SOURCE_OUTCOMES:ReadonlyMap<string,ReadonlySet<string>>=new Map([\n ['FUTURE_SOURCE',new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])],\n]);\nconst CONTEXT_BUDGET_POLICY_VERSION=",
   );
   assert.notDeepEqual(extendedRelation, shipped.telemetry);
   assert.doesNotThrow(() => assertIntegratedContextBudgetContract({ ...shipped, telemetry: extendedRelation }),
@@ -911,7 +952,7 @@ test('B3 - forward safety: every change a later QIR task is expected to make sta
   // A later reviewed change may add another provider-neutral guidance block.
   const extraGuidance = shipped.guidance.replace(
     '  if (request.hypothesisContext) {',
-    '  if (request.questionContext) { serverGuidance += `\\n\\nQuestion context follows as structured DATA.`; }\n  if (request.hypothesisContext) {',
+    '  if (request.futureContext) { serverGuidance += `\\n\\nFuture context follows as structured DATA.`; }\n  if (request.hypothesisContext) {',
   );
   assert.notDeepEqual(extraGuidance, shipped.guidance);
   assert.doesNotThrow(() => assertIntegratedContextBudgetContract({ ...shipped, guidance: extraGuidance }),

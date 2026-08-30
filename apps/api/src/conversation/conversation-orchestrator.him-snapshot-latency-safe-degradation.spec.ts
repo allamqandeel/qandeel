@@ -15,6 +15,7 @@ import type { ModelRouter, ModelRouterRequest } from '../model-router/model-rout
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
+import type { QuestionForegroundSelectionService } from '../question/question-foreground-selection.service';
 import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 import type { ConversationRepository } from './conversation.repository';
@@ -145,6 +146,10 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
       { read: aggregateRead } as unknown as HimCrossContextForegroundAggregationService,
       { read: brainRead, consumeSourceRows: jest.fn() } as unknown as HimBrainContextService,
       foregroundGatherer,
+      // QIR-006: an instantly-empty Question selection double, so every timing
+      // proof below still measures ONLY the Human Intelligence lane and no
+      // extra timer ever enters the fake-timer accounting.
+      { select: jest.fn().mockResolvedValue({ state: 'LEGITIMATE_EMPTY', reason: 'NO_ELIGIBLE_GAP' }) } as unknown as QuestionForegroundSelectionService,
       // QIR-004: the REAL assembler, so this QHIA-014A remediation proof keeps
       // running against the production provider-request assembly boundary.
       new IntegratedContextBudgetAssemblerService(telemetry),

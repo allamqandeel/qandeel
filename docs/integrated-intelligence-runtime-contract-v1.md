@@ -676,7 +676,12 @@ implement — the following downstream ownership:
 5. **QIR-006 — Question / Information-Gap Closed Loop v1** — connect existing
    Question/Information Gap runtime to background/next-turn integration while
    preserving Question Engine as formal-question authority and adding zero
-   extra foreground LLM calls.
+   extra foreground LLM calls. This previously deferred requirement is now
+   satisfied by the reviewed QIR-006 contract
+   (`docs/question-information-gap-closed-loop-v1.md`, migration 0063): the
+   durable gap lifecycle is total, one same-session formal Question
+   opportunity rides the existing ONE conversational provider call, and
+   closure is owned by canonical Hypothesis/Confidence reconciliation.
 6. **QIR-007 — Integrated Brain E2E Hardening v2** — extend A2 + Full
    Intelligence E2E proofs for routing, budgets, conflicts, source outages,
    degradation, Question loop, duplicates, cross-turn consistency, and
