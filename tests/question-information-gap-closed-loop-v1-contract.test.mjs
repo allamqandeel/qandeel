@@ -116,6 +116,15 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   'qandeel.question.foreground_selection',
   // Deferred.
   '`generateValidated(...)` fails closed when the referenced Information Gap is no longer OPEN',
+  // QIR-006-F02 — the two authorities inside one update receipt.
+  '### 3.1 Two authorities inside one update receipt',
+  '**Both `EVALUATED` and `PENDING_RETRY` receipts therefore contribute their Hypothesis to the bounded reconciliation target set**',
+  '**No Confidence row is required**: a `PENDING_RETRY` attempt failed by definition, so none is guaranteed to exist.',
+  '**never authorizes RESOLVED, never authorizes a reopen, and never states presence or absence of any missing-information code**',
+  'no gap is ever materialized from a `PENDING_RETRY` receipt',
+  '### 5.1 "Outstanding" is decided against canonical current state',
+  '**This is defense in depth, not a second closure engine.**',
+  'closure remains owned exclusively by the synchronization authority',
 ]);
 
 const executable = (source) => source.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^\s*\/\/.*$/gmu, '');
@@ -353,6 +362,40 @@ function assertQuestionClosedLoopContract(world) {
     violated('the v1 synchronization entry point is a pure delegation: one closure implementation exists');
   if (!sql.includes('open_epoch=reconcile_gap.open_epoch+1'))
     violated('a legitimate recurrence increments the epoch exactly once');
+  // QIR-006-F02: the two receipt authorities are separated. EVERY successful
+  // mutation receipt reconciles (so a PENDING_RETRY version advance cannot
+  // leave a stale gap OPEN); only EVALUATED contributes a fresh Confidence
+  // source (so PENDING_RETRY can never fabricate RESOLVED, a reopen, or a new
+  // gap). The reconciliation-target step must come BEFORE the EVALUATED gate.
+  // Scoped to the synchronization function BODY: the migration's own
+  // postconditions quote these needles as data, so an unscoped scan would pass
+  // even if the live predicate were deleted.
+  const syncBody = slice(sql, 'CREATE FUNCTION public.sync_post_response_information_gaps_v2(p_execution_id uuid)', 'ALTER FUNCTION public.sync_post_response_information_gaps_v2');
+  if (!syncBody) violated('the versioned synchronization authority exists as a bounded block');
+  if (!syncBody.includes('reconcile_hypothesis_ids := array_append(reconcile_hypothesis_ids,mutated_hypothesis_id)'))
+    violated('every successful mutation receipt enters the reconciliation target set');
+  if (!syncBody.includes('mutation_row.version<mutated_after_version'))
+    violated('the reconciliation target authority proves the mutated version against canonical current state');
+  if (!syncBody.includes('cardinality(reconcile_hypothesis_ids)>9'))
+    violated('the reconciliation target set stays bounded and fails closed');
+  const reconcileAppendAt = syncBody.indexOf('reconcile_hypothesis_ids := array_append(reconcile_hypothesis_ids,mutated_hypothesis_id)');
+  const evaluatedGateAt = syncBody.indexOf("IF receipt->>'confidenceStatus'='EVALUATED' THEN");
+  if (evaluatedGateAt < 0 || !(reconcileAppendAt < evaluatedGateAt))
+    violated('the fresh Confidence authority stays EVALUATED-only and follows the reconciliation target step');
+  // The outstanding-question check is canonical-current-state authoritative:
+  // the same authority dimensions selection eligibility uses appear on BOTH
+  // the eligibility query and the outstanding query. Scoped to the selection
+  // function BODY for the same reason as above.
+  const selectionBody = slice(sql, 'CREATE FUNCTION public.select_formal_question_opportunity_v1(', 'ALTER FUNCTION public.select_formal_question_opportunity_v1');
+  if (!selectionBody) violated('the atomic selection command exists as a bounded block');
+  for (const [needle, property] of [
+    ['h.version=s.target_version', 'current Hypothesis version'],
+    ['public.question_eligible_hypothesis_lifecycle_v1(h.status)', 'questioning-eligible lifecycle'],
+    ["h.scope='CONVERSATION_SESSION:'||p_session_id::text", 'same-session scope'],
+  ]) {
+    if (count(selectionBody, needle) < 2)
+      violated(`the outstanding-question check is authority-based on the ${property}, exactly like selection eligibility`);
+  }
   if (!world.postResponseRepository.includes("'rpc/sync_post_response_information_gaps_v1'"))
     violated('the post-response repository still enters through the stable synchronization entry point');
   // Closure is canonical-state-owned: no answer heuristic anywhere on the
@@ -411,7 +454,19 @@ function assertQuestionClosedLoopContract(world) {
   // frozen-migration static test both exist and stay substantive.
   if (typeof world.migrationVerifier !== 'string' || world.migrationVerifier.length < 10000)
     violated('the migration-0063 verifier exists and is substantive');
-  for (const proof of ['OUTSTANDING_OPEN_QUESTION', 'reuses the same SELECTED reservation', 'released the unconsumed reservation', 'reopens with epoch+1', 'RETIRED_CONVERSATION_FINALIZATION_AUTHORITY', 'blocks on the serialization key']) {
+  for (const proof of [
+    'OUTSTANDING_OPEN_QUESTION', 'reuses the same SELECTED reservation', 'released the unconsumed reservation',
+    'reopens with epoch+1', 'RETIRED_CONVERSATION_FINALIZATION_AUTHORITY', 'blocks on the serialization key',
+    // QIR-006-F02 regression proof, driven through the REAL managed batch.
+    'execute_post_response_hypothesis_update_batch_v1',
+    'the mutation batch commits despite the failed Confidence attempt',
+    'a PENDING_RETRY version advance supersedes the old exact-version gap and never moves the epoch',
+    'no version-2 gap is fabricated',
+    'no RESOLVED closure is fabricated from a failed Confidence attempt',
+    'a superseded bound question no longer holds the session hostage',
+    'a receipt claiming a version canonical state never reached fails closed',
+    'a stale BOUND row cannot block the session on a lagging OPEN gap alone',
+  ]) {
     if (!world.migrationVerifier.includes(proof)) violated(`the migration verifier proves: ${proof}`);
   }
   if (typeof world.migrationStaticTest !== 'string' || !world.migrationStaticTest.includes('formal_question_one_active_reservation_per_gap_epoch'))
@@ -548,11 +603,51 @@ test('Q2 - anti-vacuity: the real guard rejects every named regression', () => {
     ['the binding lifecycle adopted a misleading name', {
       migration: shipped.migration.replace("CHECK(state IN ('SELECTED','BOUND','RELEASED'))", "CHECK(state IN ('SELECTED','ASKED','RELEASED'))"),
     }],
+    // replaceAll, not replace: since QIR-006-F02 the scope authority appears on
+    // BOTH the eligibility query and the outstanding-question query, so a
+    // first-occurrence mutation would silently leave the needle present.
     ['the session scope authority left the selection command', {
-      migration: shipped.migration.replace("h.scope='CONVERSATION_SESSION:'||p_session_id::text", 'TRUE'),
+      migration: shipped.migration.replaceAll("h.scope='CONVERSATION_SESSION:'||p_session_id::text", 'TRUE'),
     }],
     ['sync stopped owning reopen', {
       migration: shipped.migration.replace('open_epoch=reconcile_gap.open_epoch+1', 'open_epoch=reconcile_gap.open_epoch'),
+    }],
+    // QIR-006-F02 regressions: the exact defect and its neighbours.
+    ['the reconciliation target set regressed to EVALUATED receipts only (the QIR-006-F02 defect)', {
+      migration: shipped.migration.replace(
+        '   IF NOT mutated_hypothesis_id=ANY(reconcile_hypothesis_ids) THEN reconcile_hypothesis_ids := array_append(reconcile_hypothesis_ids,mutated_hypothesis_id); END IF;\n',
+        '',
+      ),
+    }],
+    ['the reconciliation target authority stopped proving the version against canonical state', {
+      migration: shipped.migration.replace('      OR mutation_row.version<mutated_after_version\n', ''),
+    }],
+    ['the reconciliation target set became unbounded', {
+      migration: shipped.migration.replace(' IF cardinality(reconcile_hypothesis_ids)>9 THEN RETURN quarantined; END IF;', ''),
+    }],
+    ['a PENDING_RETRY receipt was allowed to contribute a fresh Confidence source', {
+      migration: shipped.migration.replace(
+        "   IF receipt->>'confidenceStatus'='EVALUATED' THEN\n    sources := sources || jsonb_build_object(",
+        "   IF receipt->>'confidenceStatus' IS NOT NULL THEN\n    sources := sources || jsonb_build_object(",
+      ),
+    }],
+    ['the outstanding check stopped being current-version authoritative', {
+      migration: shipped.migration.replace(
+        "     AND h.version=s.target_version\n     AND public.question_eligible_hypothesis_lifecycle_v1(h.status)\n     AND h.scope='CONVERSATION_SESSION:'||p_session_id::text\n",
+        '',
+      ),
+    }],
+    ['the PENDING_RETRY regression proof was gutted from the migration verifier', {
+      migrationVerifier: shipped.migrationVerifier.replaceAll('a PENDING_RETRY version advance supersedes the old exact-version gap and never moves the epoch', 'skipped'),
+    }],
+    ['the lagging-gap defense-in-depth proof was gutted from the migration verifier', {
+      migrationVerifier: shipped.migrationVerifier.replaceAll('a stale BOUND row cannot block the session on a lagging OPEN gap alone', 'skipped'),
+    }],
+    ['the two-authority separation was withdrawn from the document', {
+      contractDoc: shipped.contractDoc.replace('### 3.1 Two authorities inside one update receipt', '### 3.1 Retired'),
+    }],
+    ['the no-fabrication rule was withdrawn from the document', {
+      contractDoc: shipped.contractDoc.replace('**never authorizes RESOLVED, never authorizes\na reopen,', 'authorizes RESOLVED, authorizes a reopen,'),
     }],
     ['an answer-detection heuristic entered the migration', {
       migration: shipped.migration.replace('PERFORM pg_catalog.set_config(\'qandeel.information_gap_lifecycle_transition\',\'authorized\',true);', "PERFORM pg_catalog.set_config('qandeel.information_gap_lifecycle_transition','authorized',true); -- x\n IF position('answered' in 'x')>0 THEN NULL; END IF;"),

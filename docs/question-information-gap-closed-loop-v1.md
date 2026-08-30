@@ -115,6 +115,44 @@ cross-execution races serialize deadlock-free. Transport uncertainty can
 fabricate nothing: a failed or quarantined synchronization writes no
 lifecycle state.
 
+### 3.1 Two authorities inside one update receipt
+
+A durable `HYPOTHESIS_UPDATE_BATCH` / `UPDATES_APPLIED` receipt carries two
+**different** authorities, and QIR-006 consumes them separately:
+
+**(A) Reconciliation target authority — every schema-valid receipt.** A
+receipt proves its Hypothesis was successfully mutated to `afterVersion` and
+that the mutation COMMITTED. Migration 0034 deliberately keeps that mutation
+committed even when the exact-version Confidence attempt then fails, recording
+`confidenceStatus = PENDING_RETRY`. **Both `EVALUATED` and `PENDING_RETRY`
+receipts therefore contribute their Hypothesis to the bounded reconciliation
+target set**, so a committed version advance always reconciles its old
+exact-version gaps. Consuming only `EVALUATED` receipts would leave a stale
+gap OPEN forever and keep a stale formal Question outstanding.
+
+Server-owned integrity is proven from canonical state before a receipt is used
+as reconciliation authority: the Hypothesis must exist and be owned by the
+execution owner, `afterVersion` must be a valid successful mutation version,
+and canonical current state must not be BEHIND it (a later batch may have
+advanced it further; it can never be older than a committed mutation). An
+impossible, foreign, or malformed relationship fails closed with the bounded
+`QUARANTINED` result. **No Confidence row is required**: a `PENDING_RETRY`
+attempt failed by definition, so none is guaranteed to exist.
+
+**(B) Fresh Confidence authority — `EVALUATED` receipts only.** Only an
+`EVALUATED` receipt carries a successful exact-version evaluation. A
+`PENDING_RETRY` receipt never enters the fresh source set, so it can never
+fabricate a Confidence identity, **never authorizes RESOLVED, never authorizes
+a reopen, and never states presence or absence of any missing-information
+code**. Consequences:
+
+- old gap whose exact target version is now behind canonical current →
+  `SUPERSEDED` / `HYPOTHESIS_VERSION_ADVANCED` (epoch unchanged);
+- gap already targeting the current `afterVersion` with no valid fresh
+  exact-version Confidence → **no closure decision at all**: not resolved, not
+  reopened, nothing fabricated. The answer stays UNKNOWN;
+- no gap is ever materialized from a `PENDING_RETRY` receipt.
+
 ## 4. Foreground topology and the 300 ms ceiling
 
 After Safety, on an ALLOW disposition only:
@@ -172,9 +210,9 @@ hold:
    **cross-session questioning is forbidden**, and session relevance is the
    canonical Hypothesis scope authority, never similarity, embeddings, or an
    LLM;
-6. no outstanding formal Question for the session: neither a BOUND reservation
-   whose gap is still OPEN at its exact bound epoch, nor a live SELECTED
-   reservation held by a concurrent turn;
+6. no outstanding formal Question for the session: neither a live BOUND
+   reservation (see below), nor a live SELECTED reservation held by a
+   concurrent turn;
 7. the gap's current `open_epoch` not already reserved or consumed (a
    RELEASED reservation never blocks a later legitimate selection);
 8. Safety disposition ALLOW (enforced at the orchestrator launch gate).
@@ -183,6 +221,26 @@ Ordering is deterministic and DB-owned: oldest eligible gap by the canonical
 creation ordinal (`created_at`), stable UUID tie-break. No utility ranking, no
 Expected Information Gain, no content heuristic, no source voting — all
 explicitly deferred.
+
+### 5.1 "Outstanding" is decided against canonical current state
+
+A BOUND reservation blocks the session only while it is still **live**: its gap
+is OPEN at its exact bound epoch AND the same authority dimensions selection
+eligibility uses still hold — exact automatic source, current Hypothesis
+version equal to the source target version, questioning-eligible lifecycle,
+and same-session scope.
+
+**This is defense in depth, not a second closure engine.** A gap row can
+legitimately lag canonical reality: synchronization only reconciles the
+Hypotheses one execution's durable receipts name, it can quarantine, and the
+authenticated Hypothesis lifecycle commands (`transition_hypothesis`,
+`attach_hypothesis_evidence`) advance a version with no post-response
+execution at all. Deciding "outstanding" from the gap row alone would let an
+obviously stale bound question hold a session hostage indefinitely. The
+outstanding check therefore reads current state to decide whether a bound
+question is still live; it writes nothing, closes nothing, and closure remains
+owned exclusively by the synchronization authority. No heuristic and no
+content matching participate.
 
 ## 6. Concurrency and idempotency
 

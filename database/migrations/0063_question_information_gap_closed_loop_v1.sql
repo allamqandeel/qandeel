@@ -281,11 +281,30 @@ BEGIN
  -- One outstanding formal Question per session: a BOUND reservation whose gap
  -- is still OPEN at the exact bound epoch, or a live SELECTED reservation held
  -- by a concurrent turn, legitimately yields no new selection.
+ --
+ -- QIR-006 Fix 02 defense in depth: "outstanding" is decided against CANONICAL
+ -- CURRENT state, not against the gap row alone. A gap row can legitimately lag
+ -- reality - post-response synchronization only reconciles the Hypotheses one
+ -- execution's durable receipts name, it can quarantine, and the authenticated
+ -- Hypothesis lifecycle commands (transition/attach Evidence) advance a version
+ -- with no post-response execution at all - so an obviously stale BOUND row
+ -- must not block the session merely because its lagging gap still says OPEN.
+ -- The added conditions are exactly the authority dimensions selection
+ -- eligibility already uses (exact automatic source, current Hypothesis
+ -- version, questioning-eligible lifecycle, same-session scope, bound gap
+ -- epoch). No heuristic, no content matching, and no second closure engine:
+ -- this decides only whether a bound question is still live, and closure itself
+ -- remains owned exclusively by the synchronization authority.
  IF EXISTS(
    SELECT 1 FROM public.formal_question_turn_bindings b
     JOIN public.information_gaps g ON g.id=b.information_gap_id
+    JOIN public.information_gap_confidence_sources s ON s.information_gap_id=g.id AND s.user_id=g.user_id
+    JOIN public.hypotheses h ON h.id=s.hypothesis_id AND h.user_id=g.user_id
    WHERE b.session_id=p_session_id AND b.user_id=p_user_id AND b.state='BOUND'
      AND g.status='OPEN' AND g.open_epoch=b.gap_open_epoch
+     AND h.version=s.target_version
+     AND public.question_eligible_hypothesis_lifecycle_v1(h.status)
+     AND h.scope='CONVERSATION_SESSION:'||p_session_id::text
  ) OR EXISTS(
    SELECT 1 FROM public.formal_question_turn_bindings b
    WHERE b.session_id=p_session_id AND b.user_id=p_user_id AND b.state='SELECTED'
@@ -440,6 +459,7 @@ DECLARE
  seen_tuple_keys text[] := '{}';
  seen_fresh_keys text[] := '{}';
  reconcile_hypothesis_ids uuid[] := '{}';
+ mutated_hypothesis_id uuid; mutated_after_version integer; mutation_row public.hypotheses;
  hypothesis_row public.hypotheses;
  reconcile_source public.information_gap_confidence_sources;
  reconcile_gap public.information_gaps;
@@ -453,7 +473,9 @@ BEGIN
  -- durable typed effects may be consumed; the row lock serializes re-syncs.
  SELECT * INTO execution_row FROM public.post_response_intelligence_executions WHERE id=p_execution_id AND state='RUNNING' FOR UPDATE;
  IF NOT FOUND THEN RETURN quarantined; END IF;
- -- Source A: the durable automatic Hypothesis Update batch (identical to v1).
+ -- Source A: the durable automatic Hypothesis Update batch. The batch-level
+ -- authority is identical to v1; QIR-006 Fix 02 separates the two DIFFERENT
+ -- authorities a single receipt carries.
  SELECT * INTO update_effect FROM public.post_response_intelligence_effects
    WHERE execution_id=p_execution_id AND effect_key='HYPOTHESIS_UPDATE_BATCH';
  IF FOUND THEN
@@ -464,6 +486,46 @@ BEGIN
      OR NOT public.post_response_hypothesis_update_batch_result_valid_v1(update_effect.result_payload)
   THEN RETURN quarantined; END IF;
   FOR receipt IN SELECT entry.value FROM jsonb_array_elements(update_effect.result_payload) AS entry(value) LOOP
+   -- (A) RECONCILIATION TARGET AUTHORITY.
+   --
+   -- Every schema-valid receipt of a COMPLETED UPDATES_APPLIED batch proves
+   -- that its Hypothesis was successfully mutated to afterVersion and that the
+   -- mutation COMMITTED. Migration 0034 deliberately keeps that mutation
+   -- committed even when the exact-version Confidence attempt then fails, in
+   -- which case the durable receipt records confidenceStatus=PENDING_RETRY.
+   -- The mutated Hypothesis must therefore participate in canonical
+   -- current-state reconciliation in BOTH cases: consuming only EVALUATED
+   -- receipts would let a committed version advance leave its old exact-version
+   -- gap OPEN forever, which both violates the SUPERSEDED rule and keeps a
+   -- stale formal Question outstanding for the session.
+   --
+   -- Server-owned integrity is proven FIRST, from canonical state rather than
+   -- from the payload: the receipt identity must be a Hypothesis owned by the
+   -- execution owner, afterVersion must be a valid successful mutation version,
+   -- and canonical current state must not be BEHIND it (a later batch may have
+   -- advanced the Hypothesis further, but it can never be older than a
+   -- committed mutation). An impossible, foreign or malformed relationship
+   -- fails closed exactly like every other source-integrity violation. No
+   -- Confidence row is required here: a PENDING_RETRY attempt failed by
+   -- definition, so no successful evaluation is guaranteed to exist.
+   mutated_hypothesis_id := (receipt->>'hypothesisId')::uuid;
+   mutated_after_version := (receipt->>'afterVersion')::integer;
+   mutation_row := NULL;
+   SELECT * INTO mutation_row FROM public.hypotheses WHERE id=mutated_hypothesis_id AND user_id=execution_row.user_id;
+   IF mutation_row.id IS NULL
+      OR mutated_after_version IS NULL
+      OR mutated_after_version<1
+      OR mutation_row.version<mutated_after_version
+   THEN RETURN quarantined; END IF;
+   IF NOT mutated_hypothesis_id=ANY(reconcile_hypothesis_ids) THEN reconcile_hypothesis_ids := array_append(reconcile_hypothesis_ids,mutated_hypothesis_id); END IF;
+   -- (B) FRESH CONFIDENCE AUTHORITY.
+   --
+   -- ONLY an EVALUATED receipt carries a successful exact-version Confidence
+   -- evaluation. A PENDING_RETRY receipt never enters the fresh source set, so
+   -- it can never fabricate a Confidence identity, never authorizes RESOLVED,
+   -- never authorizes a reopen, and never states presence or absence of any
+   -- missing-information code: for its version the answer stays UNKNOWN and no
+   -- closure decision is taken.
    IF receipt->>'confidenceStatus'='EVALUATED' THEN
     sources := sources || jsonb_build_object(
       'evaluationId',receipt->>'confidenceEvaluationId',
@@ -530,6 +592,11 @@ BEGIN
  END LOOP;
  -- The bounded result set implied by the current contracts (identical to v1).
  IF jsonb_array_length(tuples)>27 THEN RETURN quarantined; END IF;
+ -- QIR-006 Fix 02: the reconciliation target set is bounded by the same
+ -- contracts - at most 4 durable update receipts plus 5 generation receipts, so
+ -- at most 9 distinct Hypotheses. If upstream bounds ever widen inconsistently,
+ -- fail closed instead of silently reconciling an unbounded set.
+ IF cardinality(reconcile_hypothesis_ids)>9 THEN RETURN quarantined; END IF;
  -- Cross-execution race safety: ONE globally sorted advisory-lock set covering
  -- both the v1 per-tuple materialization keys and the v2 per-hypothesis
  -- reconciliation keys, acquired in sorted order (deadlock-free).
@@ -734,7 +801,29 @@ BEGIN
  guard_def := pg_get_functiondef('public.guard_formal_question_turn_binding_mutation()'::regprocedure);
  IF position('qandeel.formal_question_binding_transition' in guard_def)=0 THEN
   RAISE EXCEPTION 'The binding lifecycle guard must require the internal transition authorization';END IF;
- -- 12f. Every historical information gap survived as an epoch-1 OPEN row with
+ -- 12f. QIR-006 Fix 02, proven on the INSTALLED definitions: the two receipt
+ --      authorities are separated in the synchronization command, and the
+ --      outstanding-question check is canonical-current-state authoritative.
+ def := pg_get_functiondef('public.sync_post_response_information_gaps_v2(uuid)'::regprocedure);
+ IF position('reconcile_hypothesis_ids := array_append(reconcile_hypothesis_ids,mutated_hypothesis_id)' in def)=0 THEN
+  RAISE EXCEPTION 'Every successful mutation receipt must enter the reconciliation target set';END IF;
+ IF position('mutation_row.version<mutated_after_version' in def)=0 THEN
+  RAISE EXCEPTION 'The reconciliation target authority must prove the mutated version against canonical current state';END IF;
+ IF position('cardinality(reconcile_hypothesis_ids)>9' in def)=0 THEN
+  RAISE EXCEPTION 'The reconciliation target set must stay bounded';END IF;
+ -- The fresh-Confidence gate must remain the ONLY consumer of EVALUATED, and it
+ -- must sit AFTER the reconciliation-target step, so a PENDING_RETRY receipt
+ -- reconciles without ever contributing a source.
+ IF position('''EVALUATED''' in def)=0
+    OR position('reconcile_hypothesis_ids := array_append(reconcile_hypothesis_ids,mutated_hypothesis_id)' in def)
+       > position('IF receipt->>''confidenceStatus''=''EVALUATED'' THEN' in def) THEN
+  RAISE EXCEPTION 'The fresh Confidence authority must remain EVALUATED-only and follow the reconciliation target step';END IF;
+ def := pg_get_functiondef('public.select_formal_question_opportunity_v1(uuid,uuid,uuid)'::regprocedure);
+ IF (length(def)-length(replace(def,'h.version=s.target_version','')))/length('h.version=s.target_version') < 2 THEN
+  RAISE EXCEPTION 'The outstanding-question check must be current-Hypothesis-version authoritative, exactly like selection eligibility';END IF;
+ IF (length(def)-length(replace(def,'public.question_eligible_hypothesis_lifecycle_v1(h.status)','')))/length('public.question_eligible_hypothesis_lifecycle_v1(h.status)') < 2 THEN
+  RAISE EXCEPTION 'The outstanding-question check must require a questioning-eligible current lifecycle';END IF;
+ -- 12g. Every historical information gap survived as an epoch-1 OPEN row with
  --      no closure metadata fabricated.
  IF EXISTS(SELECT 1 FROM public.information_gaps WHERE open_epoch<>1 OR status<>'OPEN' OR closed_at IS NOT NULL OR closure_reason IS NOT NULL) THEN
   RAISE EXCEPTION 'Historical information gaps must be preserved as epoch-1 OPEN rows';END IF;

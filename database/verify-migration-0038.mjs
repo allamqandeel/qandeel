@@ -198,8 +198,19 @@ async function main() { await client.connect(); try {
 
   const xRetry = randomUUID();
   await insertExecution(alice, xRetry);
-  await insertEffect(xRetry, 'HYPOTHESIS_UPDATE_BATCH', 'UPDATES_APPLIED', [updateReceipt(hUpdate, randomUUID(), 4, 'PENDING_RETRY')]);
+  // The expected version is the one the canonical managed batch could really
+  // have mutated FROM (hUpdate is at version 2), so afterVersion is exactly the
+  // canonical current version. QIR-006 (migration 0063) makes every successful
+  // mutation receipt a reconciliation target and proves it against canonical
+  // current state, so a receipt claiming a version the Hypothesis never reached
+  // is now an integrity violation rather than an ignorable no-op - and this
+  // 0038 phase guarantee is proven against a state the runtime can actually
+  // produce. The guarantee itself is unchanged: a PENDING_RETRY receipt carries
+  // no successful exact evaluation and therefore materializes no gap.
+  await insertEffect(xRetry, 'HYPOTHESIS_UPDATE_BATCH', 'UPDATES_APPLIED', [updateReceipt(hUpdate, randomUUID(), 1, 'PENDING_RETRY')]);
   assert.deepEqual(await syncAsServiceRole(xRetry), NO_GAPS, 'a PENDING_RETRY receipt produces no Information Gap');
+  assert.equal((await client.query('SELECT status FROM public.information_gaps WHERE id=$1', [updateGapId])).rows[0].status, 'OPEN',
+    'and it neither closes nor reopens the existing exact-version gap: for its version the answer stays unknown');
 
   const beforeQuarantine = await counts(alice);
   for (const [label, hypothesisId, evaluationId, expectedVersion] of [

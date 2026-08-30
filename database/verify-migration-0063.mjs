@@ -59,9 +59,23 @@ async function insertEvaluation(userId, id, hypothesisId, targetVersion, codes) 
   await client.query("INSERT INTO public.confidence_evaluations(id,user_id,target_id,target_type,target_version,version,lifecycle_state,numeric_score,confidence_band,calibration_state,stability,supporting_evidence_ids,contradicting_evidence_ids,assumptions,alternative_hypothesis_ids,missing_information_codes,policy_version,provenance) VALUES($1,$2,$3,'HYPOTHESIS',$4,1,'EVALUATED',NULL,NULL,'UNCALIBRATED','UNASSESSED','{}','{}','{}','{}',$5,'confidence-foundation-v1','QANDEEL_CONFIDENCE_RUNTIME')",
     [id, userId, hypothesisId, targetVersion, codes]);
 }
-async function insertExecution(userId, id) {
+async function insertExecution(userId, id, sessionId = randomUUID()) {
   await client.query("INSERT INTO public.post_response_intelligence_executions(id,event_id,user_id,session_id,source_turn_id,event_version,processing_path,safety_disposition,state,current_stage,outcome_code,terminal_at) VALUES($1,$2,$3,$4,$5,'2.0','FAST','ALLOW','RUNNING','VERIFIER_0063',NULL,NULL)",
-    [id, randomUUID(), userId, randomUUID(), randomUUID()]);
+    [id, randomUUID(), userId, sessionId, randomUUID()]);
+}
+// QIR-006 Fix 02: the STRONGEST canonical managed-update path. The batch is
+// executed by the real migration-0034 command over a real durable
+// ASSOCIATION_PROVIDER/AUTHORIZED_COMMANDS result and this execution's real
+// durable fresh-Memory Evidence, so the PENDING_RETRY receipt below is produced
+// by production authority - never hand-written.
+async function insertUpdateBatchExecution(userId, id, sessionId, evidenceReference) {
+  await client.query('SELECT * FROM public.acquire_post_response_intelligence_execution_v1($1,$2,$3,$4,$5,$6,$7,$8)',
+    [id, randomUUID(), userId, sessionId, randomUUID(), '2.0', 'FAST', 'ALLOW']);
+  await asServiceRole(async () => {
+    await client.query('SELECT public.claim_post_response_intelligence_effect_v1($1,$2)', [id, 'MEMORY_WRITE']);
+    await client.query('SELECT public.complete_post_response_memory_write_effect_v1($1,$2,$3)', [id, 'FRESH_EVIDENCE_CREATED', evidenceReference]);
+    await client.query('SELECT public.claim_post_response_intelligence_effect_v1($1,$2)', [id, 'ASSOCIATION_PROVIDER']);
+  });
 }
 async function insertConfidenceEffect(executionId, receipts) {
   await client.query("INSERT INTO public.post_response_intelligence_effects(execution_id,effect_key,state,completed_at,result_code,result_payload) VALUES($1,'CONFIDENCE_BATCH','COMPLETED',CURRENT_TIMESTAMP,'CONFIDENCE_BATCH_EVALUATED',$2)",
@@ -81,6 +95,7 @@ async function gapFor(hypothesisId, targetVersion, code) {
   return one('SELECT g.* FROM public.information_gaps g JOIN public.information_gap_confidence_sources s ON s.information_gap_id=g.id WHERE s.hypothesis_id=$1 AND s.target_version=$2 AND s.missing_information_code=$3', [hypothesisId, targetVersion, code]);
 }
 
+const QUARANTINED = { status: 'QUARANTINED', reason: 'SOURCE_INTEGRITY_FAILURE' };
 const SELECT_RPC = 'public.select_formal_question_opportunity_v1(uuid,uuid,uuid)';
 const FINALIZE_V2 = 'public.finalize_conversation_turn_v2(uuid,uuid,uuid,uuid,text,text,uuid,uuid,uuid,uuid)';
 const RETIRED_FINALIZE = 'public.finalize_conversation_turn(uuid,uuid,uuid,uuid,text,text,uuid,uuid,uuid)';
@@ -403,6 +418,145 @@ async function main() { await client.connect(); try {
   const drained = await selectOpportunity(alice, sessionA, turnA4);
   assert.equal(drained.outcome, 'SELECTED');
   await asServiceRole(async () => { await client.query('SELECT * FROM public.fail_conversation_turn($1,$2,$3,$4,$5,$6)', [sessionA, alice, turnA4, randomUUID(), null, null]); });
+
+  // --- G. QIR-006-F02: a committed version advance whose exact-version
+  // Confidence attempt FAILED (durable PENDING_RETRY receipt, migration 0034)
+  // must still supersede the old exact-version gap - without fabricating any
+  // Confidence state for the new version. Driven end to end through the REAL
+  // managed update command, never a hand-written receipt. -------------------
+  const sessionC = randomUUID(), hPending = randomUUID(), hDecoy = randomUUID();
+  const pendingMemory = randomUUID(), pendingEvidence = `memory:${pendingMemory}`;
+  const hForeign = randomUUID();
+  await insertHypothesis(mallory, hForeign, 1, sessionM, 'CANDIDATE');
+  await insertSession(alice, sessionC);
+  await client.query("INSERT INTO public.memories(id,user_id,type,content,source,confidence,importance,status) VALUES($1,$2,'GOAL','pending-retry fixture evidence','USER_STATED',1,1,'ACTIVE')", [pendingMemory, alice]);
+  await insertHypothesis(alice, hPending, 1, sessionC, 'CANDIDATE');
+  await insertHypothesis(alice, hDecoy, 1, randomUUID(), 'CANDIDATE');
+  // 1. An automatic gap exists for version 1 and is OPEN.
+  const pendingStatement = await statedConfidence(alice, hPending, 1, ['UNVERIFIED_ASSUMPTIONS']);
+  await syncGaps(pendingStatement.executionId);
+  const pendingGap = await gapFor(hPending, 1, 'UNVERIFIED_ASSUMPTIONS');
+  assert.deepEqual({ status: pendingGap.status, epoch: pendingGap.open_epoch }, { status: 'OPEN', epoch: 1 },
+    'the version-1 automatic gap starts OPEN at epoch 1');
+  // 2. That gap/open_epoch carries a BOUND formal Question.
+  const turnC1 = randomUUID(); await insertGeneratingTurn(alice, sessionC, turnC1);
+  const pendingSelection = await selectOpportunity(alice, sessionC, turnC1);
+  assert.equal(pendingSelection.outcome, 'SELECTED');
+  await finalizeV2(sessionC, alice, turnC1, randomUUID(), pendingSelection.binding_id);
+  assert.equal((await one('SELECT state FROM public.formal_question_turn_bindings WHERE id=$1', [pendingSelection.binding_id])).state, 'BOUND');
+  // Control: while the bound target IS canonical current, the session is
+  // legitimately blocked - so the release proven below is a real change of
+  // canonical state, not a check that never fired.
+  const turnC2 = randomUUID(); await insertGeneratingTurn(alice, sessionC, turnC2);
+  assert.equal((await selectOpportunity(alice, sessionC, turnC2)).outcome, 'OUTSTANDING_OPEN_QUESTION',
+    'a BOUND question whose exact target is still canonical current legitimately blocks the session');
+  await asServiceRole(async () => { await client.query('SELECT * FROM public.fail_conversation_turn($1,$2,$3,$4,$5,$6)', [sessionC, alice, turnC2, randomUUID(), null, null]); });
+  // 3-4. The canonical managed batch moves hPending 1 -> 2 and its durable
+  // receipt records PENDING_RETRY, because the exact-version Confidence
+  // identity is already taken so ONLY that Confidence insert fails.
+  const pendingExecution = randomUUID();
+  const pendingInvocation = { updateId: randomUUID(), confidenceEvaluationId: randomUUID() };
+  await insertUpdateBatchExecution(alice, pendingExecution, sessionC, pendingEvidence);
+  await asServiceRole(async () => {
+    await client.query('SELECT public.complete_post_response_association_provider_effect_v1($1,$2,$3)',
+      [pendingExecution, 'AUTHORIZED_COMMANDS', JSON.stringify([{ hypothesisId: hPending, expectedVersion: 1, evidenceId: pendingEvidence, evidenceRole: 'SUPPORTING' }])]);
+    const decoyEvaluation = await one('SELECT * FROM public.background_create_confidence_evaluation_v1($1,$2,$3,$4)',
+      [alice, pendingInvocation.confidenceEvaluationId, hDecoy, 1]);
+    assert.equal(decoyEvaluation.id, pendingInvocation.confidenceEvaluationId, 'the Confidence identity is taken before the batch runs');
+    const executed = await one('SELECT public.execute_post_response_hypothesis_update_batch_v1($1,$2::jsonb) ok', [pendingExecution, JSON.stringify([pendingInvocation])]);
+    assert.equal(executed.ok, true, 'the mutation batch commits despite the failed Confidence attempt');
+  });
+  const pendingEffect = await one("SELECT result_code,result_payload FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key='HYPOTHESIS_UPDATE_BATCH'", [pendingExecution]);
+  assert.equal(pendingEffect.result_code, 'UPDATES_APPLIED');
+  assert.deepEqual(pendingEffect.result_payload.map((entry) => entry.confidenceStatus), ['PENDING_RETRY'],
+    'the durable receipt is exactly the canonical PENDING_RETRY shape');
+  assert.equal(pendingEffect.result_payload[0].afterVersion, 2);
+  assert.equal((await one('SELECT version FROM public.hypotheses WHERE id=$1', [hPending])).version, 2,
+    'the Hypothesis version advance is committed');
+  // 5. No successful fresh Confidence authorizes the version-2 state.
+  assert.equal((await one('SELECT count(*)::int n FROM public.confidence_evaluations WHERE target_id=$1 AND target_version=2', [hPending])).n, 0,
+    'no exact-version Confidence exists for the advanced version');
+  // 6-8. Synchronization supersedes the stale exact-version gap, with the epoch
+  // untouched.
+  const pendingSyncResult = await syncGaps(pendingExecution);
+  const supersededPendingGap = await one('SELECT status,closure_reason,open_epoch,closed_at FROM public.information_gaps WHERE id=$1', [pendingGap.id]);
+  assert.deepEqual({ status: supersededPendingGap.status, reason: supersededPendingGap.closure_reason, epoch: supersededPendingGap.open_epoch },
+    { status: 'SUPERSEDED', reason: 'HYPOTHESIS_VERSION_ADVANCED', epoch: 1 },
+    'a PENDING_RETRY version advance supersedes the old exact-version gap and never moves the epoch');
+  assert.ok(supersededPendingGap.closed_at !== null);
+  // 9-11. Nothing is fabricated from a PENDING_RETRY receipt: no version-2 gap,
+  // no RESOLVED, no reopen, and no Confidence identity invented.
+  assert.deepEqual(pendingSyncResult, { status: 'NO_INFORMATION_GAPS', gaps: [] },
+    'a PENDING_RETRY receipt materializes no gap of its own');
+  assert.equal(await gapFor(hPending, 2, 'UNVERIFIED_ASSUMPTIONS'), undefined, 'no version-2 gap is fabricated');
+  assert.equal((await one("SELECT count(*)::int n FROM public.information_gaps WHERE user_id=$1 AND status='RESOLVED'", [alice])).n, 0,
+    'no RESOLVED closure is fabricated from a failed Confidence attempt');
+  assert.equal((await one('SELECT count(*)::int n FROM public.information_gap_confidence_sources WHERE hypothesis_id=$1', [hPending])).n, 1,
+    'the automatic source set is unchanged: exactly the original version-1 tuple');
+  // Repeated synchronization is idempotent on every dimension.
+  const pendingRowsBefore = JSON.stringify(await rows('SELECT * FROM public.information_gaps WHERE user_id=$1 ORDER BY id', [alice]));
+  assert.deepEqual(await syncGaps(pendingExecution), pendingSyncResult, 'repeated PENDING_RETRY synchronization returns the identical result');
+  assert.equal(JSON.stringify(await rows('SELECT * FROM public.information_gaps WHERE user_id=$1 ORDER BY id', [alice])), pendingRowsBefore,
+    'repeated PENDING_RETRY synchronization leaves every durable gap row byte-identical');
+  // 12. The stale BOUND epoch no longer blocks a later same-session turn. The
+  // outcome is NO_ELIGIBLE_GAP, which is only reachable AFTER the outstanding
+  // check declined to fire (it is evaluated first).
+  const turnC3 = randomUUID(); await insertGeneratingTurn(alice, sessionC, turnC3);
+  assert.deepEqual(await selectOpportunity(alice, sessionC, turnC3), { outcome: 'NO_ELIGIBLE_GAP', binding_id: null, question_type: null },
+    'a superseded bound question no longer holds the session hostage');
+  await asServiceRole(async () => { await client.query('SELECT * FROM public.fail_conversation_turn($1,$2,$3,$4,$5,$6)', [sessionC, alice, turnC3, randomUUID(), null, null]); });
+  // An IMPOSSIBLE mutation receipt - one claiming a version canonical state
+  // never reached - fails closed, exactly like every other source-integrity
+  // violation. This state cannot be produced by the managed command, so it is
+  // constructed directly inside a rolled-back savepoint.
+  await client.query('SAVEPOINT impossible_receipt');
+  const impossibleExecution = randomUUID();
+  await insertExecution(alice, impossibleExecution, sessionC);
+  await client.query("INSERT INTO public.post_response_intelligence_effects(execution_id,effect_key,state,completed_at,result_code,result_payload) VALUES($1,'HYPOTHESIS_UPDATE_BATCH','COMPLETED',CURRENT_TIMESTAMP,'UPDATES_APPLIED',$2)",
+    [impossibleExecution, JSON.stringify([{ commandOrdinal: 1, updateId: randomUUID(), confidenceEvaluationId: randomUUID(), hypothesisId: hPending, expectedVersion: 8, evidenceId: pendingEvidence, evidenceRole: 'SUPPORTING', beforeVersion: 8, afterVersion: 9, confidenceStatus: 'PENDING_RETRY' }])]);
+  assert.deepEqual(await syncGaps(impossibleExecution), QUARANTINED,
+    'a receipt claiming a version canonical state never reached fails closed');
+  await client.query('ROLLBACK TO SAVEPOINT impossible_receipt'); await client.query('RELEASE SAVEPOINT impossible_receipt');
+  // A foreign mutation receipt fails closed the same way.
+  await client.query('SAVEPOINT foreign_receipt');
+  const foreignExecution = randomUUID();
+  await insertExecution(alice, foreignExecution, sessionC);
+  await client.query("INSERT INTO public.post_response_intelligence_effects(execution_id,effect_key,state,completed_at,result_code,result_payload) VALUES($1,'HYPOTHESIS_UPDATE_BATCH','COMPLETED',CURRENT_TIMESTAMP,'UPDATES_APPLIED',$2)",
+    [foreignExecution, JSON.stringify([{ commandOrdinal: 1, updateId: randomUUID(), confidenceEvaluationId: randomUUID(), hypothesisId: hForeign, expectedVersion: 1, evidenceId: pendingEvidence, evidenceRole: 'SUPPORTING', beforeVersion: 1, afterVersion: 2, confidenceStatus: 'PENDING_RETRY' }])]);
+  assert.deepEqual(await syncGaps(foreignExecution), QUARANTINED, 'a foreign mutation receipt fails closed');
+  await client.query('ROLLBACK TO SAVEPOINT foreign_receipt'); await client.query('RELEASE SAVEPOINT foreign_receipt');
+
+  // --- H. QIR-006-F02 defense in depth: the outstanding-question check is
+  // decided against CANONICAL CURRENT state, so a LAGGING gap row - one no
+  // synchronization has reconciled yet - cannot keep a stale BOUND question
+  // blocking the session. ---------------------------------------------------
+  const sessionD = randomUUID(), hLagging = randomUUID();
+  await insertSession(alice, sessionD);
+  await insertHypothesis(alice, hLagging, 1, sessionD, 'CANDIDATE');
+  const laggingStatement = await statedConfidence(alice, hLagging, 1, ['NO_ELIGIBLE_EVIDENCE']);
+  await syncGaps(laggingStatement.executionId);
+  const laggingGap = await gapFor(hLagging, 1, 'NO_ELIGIBLE_EVIDENCE');
+  const turnD1 = randomUUID(); await insertGeneratingTurn(alice, sessionD, turnD1);
+  const laggingSelection = await selectOpportunity(alice, sessionD, turnD1);
+  assert.equal(laggingSelection.outcome, 'SELECTED');
+  await finalizeV2(sessionD, alice, turnD1, randomUUID(), laggingSelection.binding_id);
+  const turnD2 = randomUUID(); await insertGeneratingTurn(alice, sessionD, turnD2);
+  assert.equal((await selectOpportunity(alice, sessionD, turnD2)).outcome, 'OUTSTANDING_OPEN_QUESTION',
+    'control: the bound question blocks while its exact target is canonical current');
+  await asServiceRole(async () => { await client.query('SELECT * FROM public.fail_conversation_turn($1,$2,$3,$4,$5,$6)', [sessionD, alice, turnD2, randomUUID(), null, null]); });
+  // The canonical authenticated lifecycle authority advances the version with
+  // NO post-response execution at all, so no synchronization can have run: the
+  // gap row is provably still OPEN while its exact target is provably stale.
+  await identity(alice);
+  await client.query("SELECT * FROM public.transition_hypothesis($1,'ACTIVE')", [hLagging]);
+  await resetRole();
+  assert.equal((await one('SELECT version FROM public.hypotheses WHERE id=$1', [hLagging])).version, 2);
+  assert.deepEqual(await one('SELECT status,open_epoch FROM public.information_gaps WHERE id=$1', [laggingGap.id]),
+    { status: 'OPEN', open_epoch: 1 }, 'the gap row is genuinely lagging: still OPEN at its original epoch');
+  const turnD3 = randomUUID(); await insertGeneratingTurn(alice, sessionD, turnD3);
+  assert.deepEqual(await selectOpportunity(alice, sessionD, turnD3), { outcome: 'NO_ELIGIBLE_GAP', binding_id: null, question_type: null },
+    'a stale BOUND row cannot block the session on a lagging OPEN gap alone');
+  await asServiceRole(async () => { await client.query('SELECT * FROM public.fail_conversation_turn($1,$2,$3,$4,$5,$6)', [sessionD, alice, turnD3, randomUUID(), null, null]); });
 
   await client.query('ROLLBACK');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
