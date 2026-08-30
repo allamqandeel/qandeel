@@ -6,6 +6,7 @@ import {
   POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_STAGE,
   POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION,
   POST_RESPONSE_PROVIDER_CALL_BUDGET_V1,
+  POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1,
   POST_RESPONSE_PROVIDER_EFFECTS_V1,
   PostResponseProviderBudget,
   isPostResponseProviderEffect,
@@ -161,5 +162,80 @@ describe('QIR-005 post-response provider budget contract', () => {
     expect(POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_STAGE).toBe('PROVIDER_BUDGET');
     // The stage survives the migration-0022 `left(p_stage,64)` truncation intact.
     expect(POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_STAGE.length).toBeLessThanOrEqual(64);
+  });
+});
+
+// QIR-005 Fix 01: the provider/non-provider classification is EXHAUSTIVE over
+// the CURRENT canonical effect union, so a future durable effect cannot enter
+// INTELLIGENCE_EFFECTS without an explicit provider-ownership decision.
+describe('QIR-005 Fix 01 exhaustive provider classification', () => {
+  const entries = Object.entries(POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1) as ReadonlyArray<[string, string]>;
+  const classifiedAs = (value: string) => entries.filter(([, classification]) => classification === value).map(([effect]) => effect);
+  const CANONICAL_NON_PROVIDER_EFFECTS = ['MEMORY_WRITE', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH', 'HIM_BRAIN_CONTEXT_MATERIALIZATION'];
+
+  it('1+4 - every current IntelligenceEffect has exactly one explicit classification and none is unclassified', () => {
+    const keys = entries.map(([effect]) => effect);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect([...keys].sort()).toEqual([...INTELLIGENCE_EFFECTS].sort());
+    expect(keys).toHaveLength(INTELLIGENCE_EFFECTS.length);
+    for (const effect of INTELLIGENCE_EFFECTS) {
+      const classification: string | undefined = POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1[effect];
+      expect(classification).toBeDefined();
+      expect(['PROVIDER', 'NON_PROVIDER']).toContain(classification);
+    }
+    // Totality holds in BOTH directions: nothing is classified that is not a
+    // canonical durable effect.
+    for (const key of keys) expect(INTELLIGENCE_EFFECTS as readonly string[]).toContain(key);
+  });
+
+  it('2 - the effects classified PROVIDER are exactly the frozen v1 provider-backed registry', () => {
+    expect(classifiedAs('PROVIDER').sort()).toEqual([...POST_RESPONSE_PROVIDER_EFFECTS_V1].sort());
+    expect(classifiedAs('PROVIDER')).toHaveLength(POST_RESPONSE_PROVIDER_EFFECTS_V1.length);
+    // Both directions, so neither set can drift past the other.
+    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1) expect(POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1[effect]).toBe('PROVIDER');
+    for (const effect of classifiedAs('PROVIDER')) expect(isPostResponseProviderEffect(effect)).toBe(true);
+  });
+
+  it('3 - the effects classified NON_PROVIDER contain the five canonical non-provider durable effects', () => {
+    const nonProvider = classifiedAs('NON_PROVIDER');
+    for (const effect of CANONICAL_NON_PROVIDER_EFFECTS) {
+      expect(nonProvider).toContain(effect);
+      expect(isPostResponseProviderEffect(effect)).toBe(false);
+    }
+    // Partition: PROVIDER and NON_PROVIDER are disjoint and together cover the union.
+    expect(nonProvider.filter((effect) => classifiedAs('PROVIDER').includes(effect))).toEqual([]);
+    expect(nonProvider.length + classifiedAs('PROVIDER').length).toBe(INTELLIGENCE_EFFECTS.length);
+  });
+
+  it('5 - classification is an exact keyed decision, never inferred from the effect name', () => {
+    const lookup = POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1 as Record<string, string | undefined>;
+    // A plausible provider-suffixed name that is not a canonical effect gets NO
+    // classification at all and NO registry membership: nothing is derived from
+    // the `_PROVIDER` suffix or any other string pattern.
+    for (const name of ['QUESTION_PROVIDER', 'RECOMMENDATION_PROVIDER', 'ASSOCIATION_PROVIDER_V2', 'association_provider', 'MEMORY_WRITE_PROVIDER', '']) {
+      expect(lookup[name]).toBeUndefined();
+      expect(isPostResponseProviderEffect(name)).toBe(false);
+    }
+    // And a canonical effect's classification is the recorded decision, not its
+    // spelling: HYPOTHESIS_UPDATE_BATCH runs a managed database command that
+    // calls no provider, and it is NON_PROVIDER because that is what is written.
+    expect(lookup.HYPOTHESIS_UPDATE_BATCH).toBe('NON_PROVIDER');
+    expect(lookup.HIM_BRAIN_CONTEXT_MATERIALIZATION).toBe('NON_PROVIDER');
+  });
+
+  it('6 - the runtime registry, cap and budget behaviour are unchanged by the classification', () => {
+    expect(POST_RESPONSE_PROVIDER_EFFECTS_V1).toEqual(['ASSOCIATION_PROVIDER', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER']);
+    expect(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1).toBe(3);
+    expect(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1).toBe(classifiedAs('PROVIDER').length);
+    // The classification plans no work and changes no decision: a fresh budget
+    // still authorizes exactly the three registered slots and nothing else.
+    const { budget } = open();
+    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1) {
+      expect(budget.authorize(effect)).toBe('AUTHORIZED');
+      budget.spend(effect);
+    }
+    expect(budget.spent).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1);
+    expect(budget.remaining).toBe(0);
+    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1) expect(budget.authorize(effect)).toBe('EXHAUSTED');
   });
 });

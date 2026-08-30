@@ -1,4 +1,4 @@
-import type { IntelligenceEffectState } from './post-response-intelligence.types';
+import type { IntelligenceEffect, IntelligenceEffectState } from './post-response-intelligence.types';
 
 /**
  * QIR-005 - the canonical v1 registry of PROVIDER-BACKED post-response effects.
@@ -22,6 +22,51 @@ export const POST_RESPONSE_PROVIDER_EFFECTS_V1 = [
 ] as const;
 
 export type PostResponseProviderEffect = typeof POST_RESPONSE_PROVIDER_EFFECTS_V1[number];
+
+export type PostResponseProviderClassification = 'PROVIDER' | 'NON_PROVIDER';
+
+/**
+ * QIR-005 Fix 01 - the EXHAUSTIVE provider/non-provider classification of every
+ * canonical `IntelligenceEffect`.
+ *
+ * The frozen registry above answers "which effects are provider-backed". This
+ * record answers the strictly stronger question "has EVERY canonical effect been
+ * deliberately classified at all", and the `satisfies Record<IntelligenceEffect,
+ * ...>` clause is what makes it TOTAL: adding a member to `INTELLIGENCE_EFFECTS`
+ * without adding its entry here is a COMPILE ERROR, and an entry that is not a
+ * canonical effect is a compile error too.
+ *
+ * That closes the silent-drift gap. Previously a new durable effect could enter
+ * `INTELLIGENCE_EFFECTS` without anyone deciding whether it crosses a provider
+ * boundary; now the decision is forced, in one server-owned place, and it is
+ * written down rather than inferred.
+ *
+ * Classification is a KEYED LOOKUP, never a name pattern: nothing here matches
+ * `_PROVIDER`, tests a substring, or derives provider authority from an effect
+ * name. `HYPOTHESIS_UPDATE_BATCH` is NON_PROVIDER because the managed A2.3c
+ * command calls no provider - not because of how it is spelled.
+ *
+ * The relation to the frozen v1 budget is deliberately NOT derived in either
+ * direction. The entries marked `PROVIDER` must equal
+ * `POST_RESPONSE_PROVIDER_EFFECTS_V1` exactly, and that equality is proven by
+ * the focused unit tests and by the QIR-005 static contract - so classifying a
+ * fourth effect `PROVIDER` FAILS the QIR-005 v1 contract instead of silently
+ * widening the cap. A future NON-provider effect, by contrast, is legitimate:
+ * classify it `NON_PROVIDER` and the budget of three is untouched.
+ *
+ * This is a classification relation, not a scheduler: it plans no work, orders
+ * no stage, and is never consulted to decide what the dispatcher runs.
+ */
+export const POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1 = {
+  MEMORY_WRITE: 'NON_PROVIDER',
+  INTENT_PROVIDER: 'PROVIDER',
+  CANDIDATE_PROVIDER: 'PROVIDER',
+  ASSOCIATION_PROVIDER: 'PROVIDER',
+  HYPOTHESIS_UPDATE_BATCH: 'NON_PROVIDER',
+  HYPOTHESIS_PERSISTENCE: 'NON_PROVIDER',
+  CONFIDENCE_BATCH: 'NON_PROVIDER',
+  HIM_BRAIN_CONTEXT_MATERIALIZATION: 'NON_PROVIDER',
+} as const satisfies Record<IntelligenceEffect, PostResponseProviderClassification>;
 
 /**
  * The HARD provider-call budget of ONE durable post-response execution.

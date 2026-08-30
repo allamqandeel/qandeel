@@ -69,6 +69,66 @@ is never derived from `INTELLIGENCE_EFFECTS`, never computed from an
 effect-name substring, and never widened by adding another `IntelligenceEffect`.
 Not every `IntelligenceEffect` is provider-backed.
 
+### 2.1 Exhaustive provider/non-provider classification
+
+The frozen registry answers *which* effects are provider-backed. A second,
+strictly stronger relation answers *whether every canonical effect has been
+classified at all*:
+
+```ts
+export type PostResponseProviderClassification = 'PROVIDER' | 'NON_PROVIDER';
+
+export const POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1 = {
+  MEMORY_WRITE: 'NON_PROVIDER',
+  INTENT_PROVIDER: 'PROVIDER',
+  CANDIDATE_PROVIDER: 'PROVIDER',
+  ASSOCIATION_PROVIDER: 'PROVIDER',
+  HYPOTHESIS_UPDATE_BATCH: 'NON_PROVIDER',
+  HYPOTHESIS_PERSISTENCE: 'NON_PROVIDER',
+  CONFIDENCE_BATCH: 'NON_PROVIDER',
+  HIM_BRAIN_CONTEXT_MATERIALIZATION: 'NON_PROVIDER',
+} as const satisfies Record<IntelligenceEffect, PostResponseProviderClassification>;
+```
+
+**The classification is EXHAUSTIVE over the current `IntelligenceEffect` union,
+and the `satisfies Record<IntelligenceEffect, PostResponseProviderClassification>`
+clause is what makes it total.** Adding a member to `INTELLIGENCE_EFFECTS`
+without adding its entry here is a COMPILE ERROR, and an entry that is not a
+canonical effect is a compile error too.
+
+That is what closes the silent-drift gap: a new durable effect can no longer
+enter the runtime without someone deciding whether it crosses a provider
+boundary, and the decision is written down rather than inferred.
+
+**Classification is a keyed lookup, never a name pattern.** Nothing matches
+`_PROVIDER`, tests a substring, or derives provider authority from an effect
+name. `HYPOTHESIS_UPDATE_BATCH` is `NON_PROVIDER` because its managed database
+command calls no provider — not because of how it is spelled.
+
+The two relations are deliberately **not derived from each other** in either
+direction. The frozen law is an equality that is proven, not computed:
+
+```text
+entries classified PROVIDER
+  == POST_RESPONSE_PROVIDER_EFFECTS_V1
+  == { ASSOCIATION_PROVIDER, INTENT_PROVIDER, CANDIDATE_PROVIDER }
+
+classification key set == the current INTELLIGENCE_EFFECTS set
+```
+
+**Classifying a fourth effect `PROVIDER` therefore FAILS the QIR-005 v1 contract**
+until a separately reviewed, versioned provider-budget contract updates the
+registry and the cap together.
+
+**A future NON-provider durable effect is legitimate and requires no QIR-005 v2.**
+Classify it `NON_PROVIDER` and the hard budget of three is untouched. This
+document and its static guard freeze no ceiling on the number of canonical
+durable effects.
+
+The classification is a classification relation, **not a runtime workflow
+planner**: it plans no work, orders no stage, and is never consulted to decide
+what the dispatcher runs.
+
 ## 3. The frozen provider-call budget v1
 
 ```text

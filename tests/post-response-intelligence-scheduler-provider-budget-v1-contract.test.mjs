@@ -121,6 +121,14 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   '**Provider-backed membership is explicit and centralized, never inferred.**',
   'never computed from an effect-name substring',
   '**A fourth provider-backed post-response effect cannot be introduced silently.**',
+  // QIR-005 Fix 01 - the exhaustive classification law.
+  '**The classification is EXHAUSTIVE over the current `IntelligenceEffect` union, and the `satisfies Record<IntelligenceEffect, PostResponseProviderClassification>` clause is what makes it total.**',
+  'Adding a member to `INTELLIGENCE_EFFECTS` without adding its entry here is a COMPILE ERROR',
+  '**Classification is a keyed lookup, never a name pattern.**',
+  'The two relations are deliberately **not derived from each other** in either direction.',
+  '**Classifying a fourth effect `PROVIDER` therefore FAILS the QIR-005 v1 contract**',
+  '**A future NON-provider durable effect is legitimate and requires no QIR-005 v2.**',
+  '**not a runtime workflow planner**',
   '**It is never configurable through an environment variable**',
   'never raised dynamically at runtime',
   // Lifecycle scope and no reset.
@@ -179,6 +187,7 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
 
 const executable = (source) => source.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^\s*\/\/.*$/gmu, '');
 const count = (source, needle) => source.split(needle).length - 1;
+const sorted = (values) => [...values].sort().join(',');
 const slice = (source, start, end) => {
   const from = source.indexOf(start);
   if (from < 0) return '';
@@ -241,6 +250,53 @@ function assertPostResponseProviderBudgetContract(world) {
     violated('provider-backed membership is an exact registry lookup');
   if (/INTELLIGENCE_EFFECTS/u.test(exe.budgetContract))
     violated('the provider registry is never derived from the full canonical effect list');
+
+  // 3b. QIR-005 Fix 01 - the provider/non-provider classification is EXHAUSTIVE
+  //     over the CURRENT canonical effect union, and its PROVIDER half is
+  //     exactly the frozen registry.
+  //
+  //     This is the rule that makes a silent fourth provider effect impossible
+  //     even when the drift happens in INTELLIGENCE_EFFECTS rather than in the
+  //     protected registry: a new canonical effect with no classification entry
+  //     fails here, and a new effect classified PROVIDER fails the equality
+  //     below. Both sets are read from the shipped literals, so the relation is
+  //     compared dynamically rather than restated.
+  const canonical = /export const INTELLIGENCE_EFFECTS\s*=\s*\[([\s\S]*?)\]\s*as const;/u.exec(world.effectTypes);
+  if (!canonical) violated('the canonical durable effect union is declared as one explicit literal');
+  const canonicalEffects = [...canonical[1].matchAll(/'([A-Z_]+)'/gu)].map((match) => match[1]);
+  if (canonicalEffects.length < PROVIDER_EFFECTS.length)
+    violated('the canonical durable effect union is substantive');
+  for (const effect of PROVIDER_EFFECTS) {
+    if (!canonicalEffects.includes(effect))
+      violated(`the frozen provider-backed effect is still a canonical durable effect: ${effect}`);
+  }
+  if (!world.budgetContract.includes("export type PostResponseProviderClassification = 'PROVIDER' | 'NON_PROVIDER';"))
+    violated('the classification domain is exactly PROVIDER | NON_PROVIDER');
+  const classificationBlock = /export const POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1 = \{([\s\S]*?)\} as const satisfies Record<IntelligenceEffect, PostResponseProviderClassification>;/u
+    .exec(world.budgetContract);
+  if (!classificationBlock)
+    violated('the exhaustive provider classification is declared with its compile-time totality clause');
+  const classified = [...classificationBlock[1].matchAll(/([A-Z_]+):\s*'(PROVIDER|NON_PROVIDER)'/gu)]
+    .map((match) => ({ effect: match[1], classification: match[2] }));
+  if (classificationBlock[1].replace(/[A-Z_]+:\s*'(?:NON_)?PROVIDER',?/gu, '').replace(/^\s*\/\/.*$/gmu, '').trim().length !== 0)
+    violated('the exhaustive classification carries nothing but its exact literal entries');
+  const classifiedKeys = classified.map((entry) => entry.effect);
+  if (new Set(classifiedKeys).size !== classifiedKeys.length)
+    violated('every canonical durable effect is classified exactly once');
+  if (sorted(classifiedKeys) !== sorted(canonicalEffects))
+    violated('the classification key set equals the CURRENT canonical INTELLIGENCE_EFFECTS set exactly');
+  const providerClassified = classified.filter((entry) => entry.classification === 'PROVIDER').map((entry) => entry.effect);
+  if (sorted(providerClassified) !== sorted(PROVIDER_EFFECTS))
+    violated('the effects classified PROVIDER are exactly the frozen three provider-backed effects');
+  if (sorted(providerClassified) !== sorted(members))
+    violated('the classification PROVIDER half and the frozen v1 registry literal agree exactly');
+  if (providerClassified.length !== PROVIDER_BUDGET)
+    violated('the number of effects classified PROVIDER equals the hard provider budget');
+  const nonProviderClassified = classified.filter((entry) => entry.classification === 'NON_PROVIDER').map((entry) => entry.effect);
+  for (const effect of NON_PROVIDER_EFFECTS) {
+    if (!nonProviderClassified.includes(effect))
+      violated(`the canonical non-provider durable effect is explicitly classified NON_PROVIDER: ${effect}`);
+  }
 
   // 4. Spent-slot reconstruction reads durable effect state ONLY, and counts
   //    BOTH CLAIMED and COMPLETED.
@@ -414,6 +470,19 @@ test('B1 - the shipped repository satisfies the QIR-005 contract', () => {
 // Rewrites one normative statement in the shipped document, wrap-insensitively,
 // and FAILS LOUDLY if the fixture ever goes stale - so a B2 drift can never
 // silently degrade into a no-op that proves nothing.
+// QIR-005 Fix 01 drift helpers. Both FAIL LOUDLY if their fixture goes stale, so
+// a classification drift can never degrade into a no-op that proves nothing.
+const addCanonicalEffect = (effect) => {
+  const anchor = "'HIM_BRAIN_CONTEXT_MATERIALIZATION']as const;";
+  if (!shipped.effectTypes.includes(anchor)) throw new Error('B2 canonical-effect fixture is stale');
+  return shipped.effectTypes.replace(anchor, `'HIM_BRAIN_CONTEXT_MATERIALIZATION','${effect}']as const;`);
+};
+const classifyEffect = (effect, classification) => {
+  const anchor = "  MEMORY_WRITE: 'NON_PROVIDER',";
+  if (!shipped.budgetContract.includes(anchor)) throw new Error('B2 classification fixture is stale');
+  return shipped.budgetContract.replace(anchor, `${anchor}\n  ${effect}: '${classification}',`);
+};
+
 const rewriteDoc = (find, replacement) => {
   const pattern = new RegExp(find.trim().split(/\s+/u)
     .map((part) => part.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')).join('\\s+'), 'u');
@@ -469,6 +538,51 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
     }],
     ['a fourth provider-backed effect was added silently', {
       budgetContract: shipped.budgetContract.replace("  'CANDIDATE_PROVIDER',\n] as const;", "  'CANDIDATE_PROVIDER',\n  'QUESTION_PROVIDER',\n] as const;"),
+    }],
+    // QIR-005 Fix 01 - the drift cases that live OUTSIDE the protected registry.
+    // A..E are the real silent-drift shapes: the previous matrix only edited the
+    // registry itself, which is the case a reviewer would already notice.
+    ['A - a new canonical effect entered INTELLIGENCE_EFFECTS with no classification entry', {
+      effectTypes: addCanonicalEffect('QUESTION_GAP_SYNC'),
+    }],
+    ['B - a new canonical effect was classified PROVIDER while the frozen v1 registry stayed at three', {
+      effectTypes: addCanonicalEffect('QUESTION_GAP_SYNC'),
+      budgetContract: classifyEffect('QUESTION_GAP_SYNC', 'PROVIDER'),
+    }],
+    ['C - an existing provider effect was reclassified NON_PROVIDER', {
+      budgetContract: shipped.budgetContract.replace("  INTENT_PROVIDER: 'PROVIDER',", "  INTENT_PROVIDER: 'NON_PROVIDER',"),
+    }],
+    ['C - a second existing provider effect was reclassified NON_PROVIDER', {
+      budgetContract: shipped.budgetContract.replace("  ASSOCIATION_PROVIDER: 'PROVIDER',", "  ASSOCIATION_PROVIDER: 'NON_PROVIDER',"),
+    }],
+    ['D - a current non-provider effect was reclassified PROVIDER', {
+      budgetContract: shipped.budgetContract.replace("  MEMORY_WRITE: 'NON_PROVIDER',", "  MEMORY_WRITE: 'PROVIDER',"),
+    }],
+    ['D - the managed Brain Context effect was reclassified PROVIDER', {
+      budgetContract: shipped.budgetContract.replace("  HIM_BRAIN_CONTEXT_MATERIALIZATION: 'NON_PROVIDER',", "  HIM_BRAIN_CONTEXT_MATERIALIZATION: 'PROVIDER',"),
+    }],
+    ['E - the provider registry was widened to a fourth member with a matching classification', {
+      effectTypes: addCanonicalEffect('QUESTION_GAP_SYNC'),
+      budgetContract: classifyEffect('QUESTION_GAP_SYNC', 'PROVIDER')
+        .replace("  'CANDIDATE_PROVIDER',\n] as const;", "  'CANDIDATE_PROVIDER',\n  'QUESTION_GAP_SYNC',\n] as const;"),
+    }],
+    ['F - the compile-time totality clause was removed from the classification', {
+      budgetContract: shipped.budgetContract.replace(
+        '} as const satisfies Record<IntelligenceEffect, PostResponseProviderClassification>;', '} as const;'),
+    }],
+    ['F - the classification was widened past its two-value domain', {
+      budgetContract: shipped.budgetContract.replace(
+        "export type PostResponseProviderClassification = 'PROVIDER' | 'NON_PROVIDER';",
+        "export type PostResponseProviderClassification = 'PROVIDER' | 'NON_PROVIDER' | 'UNKNOWN';"),
+    }],
+    ['G - classification became effect-name inference', {
+      budgetContract: shipped.budgetContract.replace("  MEMORY_WRITE: 'NON_PROVIDER',", "  MEMORY_WRITE: effect.endsWith('_PROVIDER') ? 'PROVIDER' : 'NON_PROVIDER',"),
+    }],
+    ['G - a classification entry was dropped, leaving a canonical effect unclassified', {
+      budgetContract: shipped.budgetContract.replace("  CONFIDENCE_BATCH: 'NON_PROVIDER',\n", ''),
+    }],
+    ['G - the canonical effect union literal was hidden from the guard', {
+      effectTypes: shipped.effectTypes.replace('export const INTELLIGENCE_EFFECTS=', 'export const INTELLIGENCE_EFFECTS:readonly string[]=derive();\nconst _unused='),
     }],
     ['a provider-backed effect was dropped from the registry', {
       budgetContract: shipped.budgetContract.replace("  'INTENT_PROVIDER',\n", ''),
@@ -619,6 +733,28 @@ test('B3 - forward safety: every change a later QIR task is expected to make sta
   assert.notDeepEqual(questionStage, shipped.dispatcher);
   assert.doesNotThrow(() => assertPostResponseProviderBudgetContract({ ...shipped, dispatcher: questionStage }),
     'a later reviewed non-provider post-response stage stays legal');
+
+  // QIR-005 Fix 01 forward safety. The exhaustive classification must NOT freeze
+  // the current NUMBER of canonical durable effects. A later reviewed task may
+  // add a new IntelligenceEffect and classify it NON_PROVIDER; the provider
+  // budget of three is untouched and no QIR-005 v2 is required.
+  for (const future of ['QUESTION_GAP_SYNC', 'RECOMMENDATION_MATERIALIZATION', 'FUTURE_MANAGED_EFFECT']) {
+    const futureEffectTypes = addCanonicalEffect(future);
+    const futureClassification = classifyEffect(future, 'NON_PROVIDER');
+    assert.notDeepEqual(futureEffectTypes, shipped.effectTypes);
+    assert.notDeepEqual(futureClassification, shipped.budgetContract);
+    assert.doesNotThrow(() => assertPostResponseProviderBudgetContract({
+      ...shipped, effectTypes: futureEffectTypes, budgetContract: futureClassification,
+    }), `a future reviewed NON-provider durable effect stays legal: ${future}`);
+  }
+  // Several at once stays legal too: the guard freezes the PROVIDER half only.
+  const manyEffects = shipped.effectTypes.replace("'HIM_BRAIN_CONTEXT_MATERIALIZATION']as const;",
+    "'HIM_BRAIN_CONTEXT_MATERIALIZATION','FUTURE_ONE','FUTURE_TWO']as const;");
+  const manyClassified = shipped.budgetContract.replace("  MEMORY_WRITE: 'NON_PROVIDER',",
+    "  MEMORY_WRITE: 'NON_PROVIDER',\n  FUTURE_ONE: 'NON_PROVIDER',\n  FUTURE_TWO: 'NON_PROVIDER',");
+  assert.doesNotThrow(() => assertPostResponseProviderBudgetContract({
+    ...shipped, effectTypes: manyEffects, budgetContract: manyClassified,
+  }), 'several future reviewed NON-provider durable effects stay legal at once');
 
   // A later reviewed, explicitly versioned contract may add its OWN separate
   // budget constant next to this one.
