@@ -389,7 +389,14 @@ async function main(): Promise<void> {
         new HypothesisGenerationIntentExtractionService(intent, new HypothesisGenerationIntentAuthorityService()),
         new HypothesisGenerationRequestAssemblerService(), candidate,
         new ModelAssistedHypothesisAssociationService(enrichment, associationAuthority, authority, association),
-        new PostResponseProviderBudgetService());
+        // The provider-budget telemetry dependency is @Optional() in production,
+        // so an under-composed verifier silently loses the entire QIR-005
+        // provider-budget metric while every functional assertion still passes.
+        // PostResponseIntelligenceModule imports ObservabilityModule, so the
+        // real application always has it injected: compose it here too, or the
+        // scenario-H telemetry census would be measuring the harness rather
+        // than production.
+        new PostResponseProviderBudgetService(telemetry));
       return { dispatcher, association, intent, candidate };
     };
 
