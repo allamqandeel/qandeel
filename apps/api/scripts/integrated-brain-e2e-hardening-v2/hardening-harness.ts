@@ -175,11 +175,21 @@ export class HardeningServiceRoleApiAdapter {
  * scenario names: the Memory retrieval read and the Evidence read reach the
  * same table through different canonical limits, and a scenario that could not
  * tell them apart would prove nothing about which source degraded.
+ *
+ * QIR-007 Addendum A adds the three kinds the cross-context aggregate lane
+ * needs, all of them at the SAME authenticated transport seam and none of them
+ * touching a production class. `THROW_BEFORE_CALL` stays the default, so every
+ * pre-existing `{ match, error }` arming keeps its exact meaning.
  */
-export interface AuthenticatedFault {
-  readonly match: (path: string) => boolean;
-  readonly error: unknown;
-}
+export type AuthenticatedFault =
+  /** The transport never reaches the real boundary - a lost/refused request. */
+  | { readonly match: (path: string) => boolean; readonly kind?: 'THROW_BEFORE_CALL'; readonly error: unknown }
+  /** The canonical read REALLY RUNS against real PostgreSQL; its settlement is then a rejection. */
+  | { readonly match: (path: string) => boolean; readonly kind: 'REJECT_AFTER_CALL'; readonly error: unknown }
+  /** The canonical read REALLY RUNS; its successful settlement is held until the gate opens. */
+  | { readonly match: (path: string) => boolean; readonly kind: 'GATE_AFTER_CALL'; readonly gate: DeterministicGate }
+  /** A SUCCESSFUL but structurally malformed boundary payload; the canonical read is not executed. */
+  | { readonly match: (path: string) => boolean; readonly kind: 'MALFORMED_SUCCESS'; readonly value: unknown };
 
 /**
  * Fault-injecting wrapper over the frozen authenticated transport substitute.
@@ -206,11 +216,26 @@ export class HardeningAuthenticatedDataApiAdapter {
   async request<T>(accessToken: string, path: string, init: RequestInit = {}): Promise<T> {
     this.attemptedPaths.push(path);
     const index = this.faults.findIndex((fault) => fault.match(path));
-    if (index >= 0) {
-      const [fault] = this.faults.splice(index, 1);
+    if (index < 0) return this.inner.request<T>(accessToken, path, init);
+    const [fault] = this.faults.splice(index, 1);
+    // A malformed SUCCESS deliberately does not execute the canonical read: the
+    // point is a well-formed transport carrying a payload the real application
+    // consumer must reject.
+    if (fault.kind === 'MALFORMED_SUCCESS') return fault.value as T;
+    // The two deferred kinds run the REAL canonical read FIRST, so the inner
+    // transport census records a genuine attempt AND a genuine completion:
+    // "the request was faulted" can never be confused with "the request was
+    // never made".
+    if (fault.kind === 'REJECT_AFTER_CALL') {
+      await this.inner.request<T>(accessToken, path, init);
       throw fault.error;
     }
-    return this.inner.request<T>(accessToken, path, init);
+    if (fault.kind === 'GATE_AFTER_CALL') {
+      const rows = await this.inner.request<T>(accessToken, path, init);
+      await fault.gate.promise;
+      return rows;
+    }
+    throw fault.error;
   }
 }
 

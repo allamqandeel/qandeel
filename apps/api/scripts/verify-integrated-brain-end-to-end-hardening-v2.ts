@@ -39,6 +39,7 @@ import { createClient, type RedisClientType } from 'redis';
 // Foreground production services (real intelligence semantics).
 import { ConversationOrchestratorService } from '../src/conversation/conversation-orchestrator.service';
 import { ConversationRepository } from '../src/conversation/conversation.repository';
+import { ConversationContextActivationService } from '../src/conversation/conversation-context-activation.service';
 import { ContextBuilderService } from '../src/conversation/context-builder.service';
 import { SafetyResponseGateService } from '../src/conversation/safety-response-gate.service';
 import { BehavioralResponsePolicyService } from '../src/conversation/behavioral-response-policy.service';
@@ -67,8 +68,15 @@ import { HimRelationshipCommunicationConsumptionService } from '../src/human-mod
 import { HimRelationshipCommunicationRepository } from '../src/human-model/him-relationship-communication.repository';
 import { HimCrossContextForegroundAggregationService } from '../src/human-model/him-cross-context-foreground-aggregation.service';
 import { HimCrossContextForegroundRepository } from '../src/human-model/him-cross-context-foreground.repository';
+import {
+  HIM_CROSS_CONTEXT_FOREGROUND_V3_SLOTS,
+  type HimCrossContextForegroundEnvelopeRow,
+} from '../src/human-model/him-cross-context-foreground.types';
+import { HimSessionContextBindingRepository } from '../src/human-model/him-session-context-binding.repository';
+import { HimSessionContextBindingService } from '../src/human-model/him-session-context-binding.service';
 import { HimBrainContextService } from '../src/human-model/him-brain-context.service';
 import { HimBrainContextRepository } from '../src/human-model/him-brain-context.repository';
+import { HIM_BRAIN_CONTEXT_REGISTRY } from '../src/human-model/him-brain-context.types';
 import { HimRepository } from '../src/human-model/him.repository';
 import { HimReasoningConsumptionService } from '../src/human-model/him-reasoning-consumption.service';
 import { HypothesisService } from '../src/hypothesis/hypothesis.service';
@@ -126,7 +134,10 @@ import { RuntimeEventPublisher } from '../src/runtime-events/runtime-event.publi
 import { isCompletedRuntimeEventV2, type RuntimeEventEnvelope } from '../src/runtime-events/runtime-event.types';
 import type { ModelRouterContextMessage, ModelRouterMemoryContext } from '../src/model-router/model-router.types';
 import { composeServerGuidance } from '../src/model-router/model-router.types';
-import type { HumanIntelligenceProviderSemantics } from '../src/model-router/human-intelligence-provider-semantics.types';
+import {
+  HUMAN_INTELLIGENCE_PROVIDER_INSTRUCTION_IDS,
+  type HumanIntelligenceProviderSemantics,
+} from '../src/model-router/human-intelligence-provider-semantics.types';
 // Reused frozen A2 / Full Intelligence verification helpers.
 import {
   DeterministicAssociationProposalProvider,
@@ -151,6 +162,14 @@ import {
   telemetryScalars,
   type RecordedTelemetryCall,
 } from './integrated-brain-e2e-hardening-v2/hardening-harness';
+// QIR-007 Addendum A - the CURRENT-MAXIMUM Human Intelligence capacity proof.
+import {
+  ALL_FOUR_ACTIVE_CROSS_CONTEXT_GUIDANCE,
+  CANONICAL_ALL_ACTIVE_HUMAN_INTELLIGENCE_BYTES,
+  CURRENT_BRAIN_CONTEXT_SEMANTIC_MAPPING,
+  formatCurrentMaximumHumanIntelligenceProof,
+  proveCurrentMaximumHumanIntelligenceCapacity,
+} from './integrated-brain-e2e-hardening-v2/human-intelligence-capacity';
 
 // ---------------------------------------------------------------------------
 // External network guard: accidental provider/model HTTP is impossible.
@@ -195,6 +214,58 @@ const INTENT_DOMAIN = 'DECISION' as const;
 const SELECTION_RPC = 'select_formal_question_opportunity_v1';
 const FINALIZATION_RPC = 'finalize_conversation_turn_v2';
 const RETIRED_FINALIZATION_RPC = 'finalize_conversation_turn';
+
+// QIR-007 Addendum A - the cross-context foreground transport names.
+//
+// Exactly ONE aggregate-v3 request carries all four already-approved channels.
+// The two RETIRED aggregate endpoints, the four DIRECT per-channel reads and
+// the QHIA-006 relevance authority are named here so "no fallback of any kind
+// was issued" is a census claim about production behaviour rather than a
+// restatement of what the verification transport happens to allow.
+const CROSS_CONTEXT_AGGREGATE_RPC = 'read_him_session_cross_context_foreground_v3';
+const RETIRED_CROSS_CONTEXT_AGGREGATE_RPCS = [
+  'read_him_session_cross_context_foreground_v1',
+  'read_him_session_cross_context_foreground_v2',
+] as const;
+const DIRECT_CROSS_CONTEXT_RPCS = [
+  'read_him_session_situation_stress_v1',
+  'read_him_session_decision_attention_v1',
+  'read_him_session_goal_motivation_v1',
+  'read_him_session_relationship_communication_v1',
+] as const;
+const RELEVANCE_AUTHORITY_RPC = 'read_him_session_context_bindings_v1';
+const CROSS_CONTEXT_AGGREGATE_READ = (path: string): boolean => path === `rpc/${CROSS_CONTEXT_AGGREGATE_RPC}`;
+
+// The four frozen QHIA-013 instruction IDs that NO non-cross-context Human
+// Intelligence source can authorize.
+//
+// The frozen registry has twelve IDs. QHIA-001 Interaction Adaptation owns six
+// of them, QHIA-005 Session Reflection owns two, and the remaining four are
+// reachable ONLY through the Goal-motivation and Relationship-communication
+// cross-context channels. So their presence proves the aggregate really
+// contributed, and their absence proves it really contributed nothing - on the
+// SAME session, in the SAME all-four-bound fixture. C8 establishes that they
+// are genuinely reachable here, which is what makes C5/C6/C7 anti-vacuous.
+const CROSS_CONTEXT_ONLY_INSTRUCTION_IDS = [
+  'SMALL_IMMEDIATE_GOAL_ACTION',
+  'EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING',
+  'ONE_MAIN_RELATIONSHIP_COMMUNICATION_POINT',
+  'CLARITY_NOT_FORCED_AGREEMENT',
+] as const;
+
+// The full set of frozen instruction IDs the four cross-context channels can
+// authorize - the deduplicated union of the QHIA-007, QHIA-008, QHIA-010 and
+// QHIA-011 registries. Nothing outside this set may change when the aggregate
+// is faulted, which is what makes "only the cross-context contribution
+// disappeared" a checkable claim rather than a hope.
+const CROSS_CONTEXT_AUTHORIZED_INSTRUCTION_IDS: ReadonlyArray<string> = Object.freeze([
+  'REDUCE_COGNITIVE_LOAD',
+  'SINGLE_CONVERSATIONAL_TRACK',
+  'REDUCE_STEERING_PRESSURE',
+  'CALMER_DELIVERY',
+  'ONE_STEP_AT_A_TIME',
+  ...CROSS_CONTEXT_ONLY_INSTRUCTION_IDS,
+]);
 
 // QIR-007 Fix 02 - the real Redis reclaim seam.
 //
@@ -304,6 +375,56 @@ async function main(): Promise<void> {
   console.log('INTEGRATED_BRAIN_E2E_HARDENING_V2 fixture precheck: '
     + `memory=${learnCandidate!.type} answer_memory=${answerCandidate!.type} deep_reason=${deepDecision.reason} safety=ALLOW/GUIDED/BLOCK`);
 
+  // -------------------------------------------------------------------------
+  // QIR-007 ADDENDUM A - CURRENT_MAX_HUMAN_INTELLIGENCE.
+  //
+  // The exact maximum CURRENT-CONTRACT provider-facing Human Intelligence
+  // footprint, measured through the REAL production compiler, the REAL
+  // production renderer and the REAL QIR-004 assembler, against the frozen
+  // 8192-byte Human Intelligence slice.
+  //
+  // It runs HERE, in the infrastructure-free precheck, because it is pure
+  // synchronous CPU work: it issues no request, touches no database, and reads
+  // no provider. A dedicated real TelemetryService instance is used so this
+  // pure measurement never enters the scenario-H telemetry census.
+  //
+  // 6427 is NOT re-measured or re-labelled here: it remains the frozen
+  // canonical ALL-ACTIVE QHIA-013 fixture footprint. This proof answers the
+  // separate question of how large the envelope can currently GET.
+  // -------------------------------------------------------------------------
+  const capacity = proveCurrentMaximumHumanIntelligenceCapacity(
+    new IntegratedContextBudgetAssemblerService(new TelemetryService(new CorrelationService())));
+  console.log(formatCurrentMaximumHumanIntelligenceProof(capacity));
+  assert.equal(capacity.sliceBytes, HUMAN_INTELLIGENCE_BUDGET_BYTES,
+    'CURRENT_MAX_HUMAN_INTELLIGENCE: the verdict is taken against the frozen production HUMAN_INTELLIGENCE_BUDGET_BYTES slice');
+  assert.equal(capacity.headroomBytes, HUMAN_INTELLIGENCE_BUDGET_BYTES - capacity.incrementalBytes,
+    'CURRENT_MAX_HUMAN_INTELLIGENCE: headroom is exactly slice minus measured incremental bytes');
+  assert.equal(capacity.brainContextSignals, HIM_BRAIN_CONTEXT_REGISTRY.length,
+    'CURRENT_MAX_HUMAN_INTELLIGENCE: the maximum fixture carries ALL EIGHT frozen Brain Context slots');
+  assert.equal(capacity.sessionReasoningMetrics, 3,
+    'CURRENT_MAX_HUMAN_INTELLIGENCE: the maximum fixture carries all three currently legal session reasoning metrics');
+  assert.equal(capacity.crossContextActiveChannels, HIM_CROSS_CONTEXT_FOREGROUND_V3_SLOTS.length,
+    'CURRENT_MAX_HUMAN_INTELLIGENCE: all four cross-context channels are ACTIVE simultaneously in the maximum fixture');
+  assert.ok(capacity.incrementalBytes > CANONICAL_ALL_ACTIVE_HUMAN_INTELLIGENCE_BYTES,
+    'CURRENT_MAX_HUMAN_INTELLIGENCE anti-vacuity: the current maximum is strictly larger than the canonical all-active fixture footprint');
+  assert.equal(capacity.verdict, 'PASS',
+    'CURRENT_MAX_HUMAN_INTELLIGENCE: the maximum current-contract Human Intelligence envelope fits the frozen 8192-byte slice');
+  assert.ok(capacity.finalTextBytes <= GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES,
+    'CURRENT_MAX_HUMAN_INTELLIGENCE: the final normalized request stays inside the frozen 131072-byte global ceiling');
+  // QIR-007 Addendum A Fix 04: the winning state is a REACHABLE one. The
+  // Interaction Adaptation reported here was DERIVED by the real QHIA-001
+  // service from the same reasoning context the DEEP projection came from, so
+  // an always-maximal adaptation can no longer be paired with an arbitrary
+  // session-metric shape.
+  assert.equal(capacity.adaptationState, 'ACTIVE',
+    'CURRENT_MAX_HUMAN_INTELLIGENCE anti-vacuity: the winning state really derives an ACTIVE Interaction Adaptation');
+  assert.ok(capacity.adaptationDrivers.length > 0,
+    'CURRENT_MAX_HUMAN_INTELLIGENCE anti-vacuity: the ACTIVE adaptation is backed by at least one genuinely derived driver');
+  assert.equal(
+    capacity.behavioralInstructionIds.includes('COMPACT_RESPONSE'),
+    capacity.adaptationDirectives.responseDensity === 'COMPACT',
+    'CURRENT_MAX_HUMAN_INTELLIGENCE: the Adaptation-exclusive instruction tracks the REAL derived directive, never a fixture');
+
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for the Integrated Brain E2E Hardening v2 verifier.');
   if (!process.env.REDIS_URL) throw new Error('REDIS_URL is required for the Integrated Brain E2E Hardening v2 verifier.');
 
@@ -348,6 +469,14 @@ async function main(): Promise<void> {
       new HimGoalMotivationConsumptionService(new HimGoalMotivationRepository(memoryDataApi)),
       new HimRelationshipCommunicationConsumptionService(new HimRelationshipCommunicationRepository(memoryDataApi)));
     const himBrainContextService = new HimBrainContextService(new HimBrainContextRepository(memoryDataApi));
+    // QHIA-011A: the REAL production explicit session context activation entry,
+    // composed over the REAL existing QHIA-006 service and its ONE existing
+    // repository. QIR-007 Addendum A uses it ONLY in scenario-C fixture setup,
+    // to establish a genuinely all-four-bound session. It is deliberately NOT
+    // given to the Orchestrator, to any provider, or to any background service:
+    // nothing on a turn can reach it, and no turn ever activates a context.
+    const contextActivationService = new ConversationContextActivationService(
+      new HimSessionContextBindingService(new HimSessionContextBindingRepository(memoryDataApi)));
     const hypothesisService = new HypothesisService(
       new HypothesisRepository(memoryDataApi, unusedDependency<HypothesisServiceRoleApiService>('HYPOTHESIS_SERVICE_ROLE_API')),
       evidenceService);
@@ -1192,6 +1321,482 @@ async function main(): Promise<void> {
       'H: a failed generation finalizes no assistant turn');
 
     // -----------------------------------------------------------------------
+    stage = 'C_CROSS_CONTEXT_ADVERSARIAL_MATRIX';
+    // -----------------------------------------------------------------------
+    // QIR-007 Addendum A. The four cross-context guidance channels were already
+    // real production components inside the QIR-007 composition, and their own
+    // QHIA unit / static / database coverage is strong - but the aggregate lane
+    // had no INTEGRATED adversarial case of its own through the real
+    // Conversation Orchestrator. C5-C8 close exactly that gap and nothing else.
+    //
+    // The FROZEN architecture under test is unchanged and is never redesigned
+    // here: exactly ONE aggregate-v3 foreground read, launched concurrently
+    // with Snapshot / Reflection / Brain Context, carrying ZERO incremental
+    // wait, with no dedicated timeout, never directly awaited, accepted only if
+    // it settles successfully BEFORE the existing Human Intelligence barrier
+    // closes, late settlement discarded, rejection swallowed as an optional
+    // omission, no cross-turn cache and no direct per-channel fallback.
+    //
+    // Every case runs on ONE session in which all four contexts are genuinely
+    // bound and genuinely measured at an acting value, so C5, C6 and C7 each
+    // prove the ABSENCE of exactly what C8 proves is genuinely present.
+    const crossContextUserId = await provisionUser();
+    const crossContextSession = randomUUID();
+    await db.setAuthenticatedClaims(crossContextUserId);
+    assert.equal((await conversationRepository.createSession(ACCESS_TOKEN, crossContextSession)).status, 'ACTIVE');
+    const crossContextHypothesisId = await seedSessionHypothesis(crossContextUserId, crossContextSession);
+    // A real CONVERSATION_SESSION Human Intelligence state, so the
+    // Snapshot-derived lane (session reasoning + QHIA-001 adaptation) is
+    // genuinely present and independent of the aggregate: it is the "unrelated
+    // eligible source" that must keep working while the aggregate fails.
+    const [crossSessionStress] = await db.asRole<{ id: string; metric_key: string }>(
+      'authenticated', "SELECT * FROM public.create_hse_stress_measurement('CONVERSATION_SESSION', $1, 'HIGH', NULL)",
+      [crossContextSession]);
+    assert.equal(crossSessionStress?.metric_key, 'hse.stress');
+    await db.asRole('authenticated', 'SELECT * FROM public.calculate_hse_stress_measurement($1)', [crossSessionStress.id]);
+
+    // The four canonical measurement targets and their canonical current
+    // readings, each driven to the exact value the FROZEN consumer acts on.
+    // Nothing provider-ready is fabricated here: only canonical authenticated
+    // measurement and calculation authorities are used, and the resulting
+    // ordinal is asserted so a mapping change fails the run.
+    const [situationTarget] = await db.asRole<{ id: string; context_kind: string }>(
+      'authenticated', "SELECT * FROM public.create_him_stress_measurement_context('qir-007 addendum a situation')");
+    assert.equal(situationTarget?.context_kind, 'SITUATION');
+    const [situationObservation] = await db.asRole<{ id: string; response_code: string }>(
+      'authenticated', "SELECT * FROM public.create_hse_stress_measurement('SITUATION', $1, 'HIGH', NULL)", [situationTarget.id]);
+    const [situationSnapshot] = await db.asRole<{ value_state: string; numeric_value: number }>(
+      'authenticated', 'SELECT * FROM public.calculate_hse_stress_measurement($1)', [situationObservation.id]);
+    assert.equal(situationSnapshot?.value_state, 'ASSESSED');
+    assert.equal(Number(situationSnapshot?.numeric_value), 4,
+      'C8 anti-vacuity: the canonical HIGH Situation-stress ordinal is 4 - one of the exact two values QHIA-007 acts on');
+
+    const [decisionTarget] = await db.asRole<{ id: string; context_kind: string }>(
+      'authenticated', "SELECT * FROM public.create_him_attention_measurement_context('DECISION', 'qir-007 addendum a decision')");
+    assert.equal(decisionTarget?.context_kind, 'DECISION');
+    const [decisionObservation] = await db.asRole<{ id: string }>(
+      'authenticated', "SELECT * FROM public.create_hse_attention_measurement('DECISION', $1, 'LOW', NULL)", [decisionTarget.id]);
+    const [decisionSnapshot] = await db.asRole<{ value_state: string; numeric_value: number }>(
+      'authenticated', 'SELECT * FROM public.calculate_hse_attention_measurement($1)', [decisionObservation.id]);
+    assert.equal(decisionSnapshot?.value_state, 'ASSESSED');
+    assert.equal(Number(decisionSnapshot?.numeric_value), 2,
+      'C8 anti-vacuity: the canonical LOW Decision-attention ordinal is 2 - one of the exact two values QHIA-008 acts on');
+
+    const [goalTarget] = await db.asRole<{ id: string; context_kind: string }>(
+      'authenticated', "SELECT * FROM public.create_him_motivation_measurement_target('GOAL', 'qir-007 addendum a goal')");
+    assert.equal(goalTarget?.context_kind, 'GOAL');
+    const [motivationObservation] = await db.asRole<{ id: string }>(
+      'authenticated', "SELECT * FROM public.create_hse_motivation_measurement($1, 'LOW', NULL)", [goalTarget.id]);
+    const [motivationSnapshot] = await db.asRole<{ value_state: string; numeric_value: number }>(
+      'authenticated', 'SELECT * FROM public.calculate_hse_motivation_measurement($1)', [motivationObservation.id]);
+    assert.equal(motivationSnapshot?.value_state, 'ASSESSED');
+    assert.equal(Number(motivationSnapshot?.numeric_value), 2,
+      'C8 anti-vacuity: the canonical LOW Goal-motivation ordinal is 2 - one of the exact two values QHIA-010 acts on');
+
+    const [relationshipTarget] = await db.asRole<{ id: string; context_kind: string }>(
+      'authenticated', "SELECT * FROM public.create_him_relationship_measurement_target_v1('qir-007 addendum a relationship')");
+    assert.equal(relationshipTarget?.context_kind, 'RELATIONSHIP');
+    const [communicationObservation] = await db.asRole<{ id: string }>(
+      'authenticated', "SELECT * FROM public.create_hrs_communication_measurement_v1($1, 'VERY_LOW', NULL)", [relationshipTarget.id]);
+    const [communicationSnapshot] = await db.asRole<{ value_state: string; numeric_value: number }>(
+      'authenticated', 'SELECT * FROM public.calculate_hrs_communication_measurement_v1($1)', [communicationObservation.id]);
+    assert.equal(communicationSnapshot?.value_state, 'ASSESSED');
+    assert.equal(Number(communicationSnapshot?.numeric_value), 1,
+      'C8 anti-vacuity: the canonical VERY_LOW Relationship-communication ordinal is 1 - one of the exact two values QHIA-011 acts on');
+
+    // All four bindings, activated through the REAL production explicit
+    // activation entry over the REAL QHIA-006 authority - never a direct row
+    // write, and never from a turn.
+    for (const [contextKind, contextId] of [
+      ['SITUATION', situationTarget.id], ['DECISION', decisionTarget.id],
+      ['GOAL', goalTarget.id], ['RELATIONSHIP', relationshipTarget.id],
+    ] as const) {
+      const activation = await contextActivationService.activateContext(
+        crossContextUserId, ACCESS_TOKEN, crossContextSession, contextKind, { contextId });
+      assert.deepEqual(activation.activeBinding, { contextKind, contextId },
+        `C8: the REAL production activation entry bound exactly the ${contextKind} context`);
+    }
+    assert.deepEqual(
+      await db.observer<{ context_kind: string; context_id: string; status: string }>(
+        "SELECT context_kind, context_id, status FROM public.him_session_context_bindings"
+        + " WHERE user_id = $1 AND status = 'ACTIVE' ORDER BY context_kind", [crossContextUserId]),
+      [
+        { context_kind: 'DECISION', context_id: decisionTarget.id, status: 'ACTIVE' },
+        { context_kind: 'GOAL', context_id: goalTarget.id, status: 'ACTIVE' },
+        { context_kind: 'RELATIONSHIP', context_id: relationshipTarget.id, status: 'ACTIVE' },
+        { context_kind: 'SITUATION', context_id: situationTarget.id, status: 'ACTIVE' },
+      ],
+      'C8: ALL FOUR context bindings are genuinely ACTIVE on the SAME session at the same time');
+
+    // CURRENT_MAX_HUMAN_INTELLIGENCE cross-check. The eight-slot maximum Brain
+    // Context fixture measured in the precheck uses the EXACT persisted
+    // semantic mapping of each frozen slot's metric, so the capacity proof
+    // cannot inflate itself with a mapping the database does not actually
+    // carry. This is the one place that pure CPU proof is anchored to real
+    // PostgreSQL.
+    const brainMetricKeys = HIM_BRAIN_CONTEXT_REGISTRY.map((entry) => entry.metricKey);
+    const brainMetricDefinitions = await db.observer<{ metric_key: string; semantic_mapping_status: string; semantic_type: string | null }>(
+      'SELECT metric_key, semantic_mapping_status, semantic_type FROM public.him_metric_definitions'
+      + ' WHERE definition_version = 1 AND metric_key = ANY($1::text[]) ORDER BY metric_key', [brainMetricKeys]);
+    assert.equal(brainMetricDefinitions.length, HIM_BRAIN_CONTEXT_REGISTRY.length,
+      'CURRENT_MAX_HUMAN_INTELLIGENCE: all eight frozen Brain Context metrics exist in the persisted definition authority');
+    for (const definition of brainMetricDefinitions) {
+      assert.deepEqual(
+        { semanticMappingStatus: definition.semantic_mapping_status, semanticType: definition.semantic_type },
+        CURRENT_BRAIN_CONTEXT_SEMANTIC_MAPPING[definition.metric_key],
+        `CURRENT_MAX_HUMAN_INTELLIGENCE: the maximum Brain Context fixture uses the EXACT persisted semantic mapping of ${definition.metric_key}`);
+    }
+
+    // A real seed turn plus its real background cycle, so Memory, Hypothesis
+    // and the independent Question lane are genuinely eligible on every case
+    // below. Without it, "unrelated intelligence continued" would be a claim
+    // about an empty fixture.
+    const crossContextSeedTurnId = randomUUID();
+    await runTurn(crossContextUserId, crossContextSession, crossContextSeedTurnId, LEARN_TEXT);
+    await db.clearAuthenticatedClaims();
+    const crossContextCycle = buildDispatcher(crossContextHypothesisId);
+    const crossContextDelivery = await deliverTo(crossContextSeedTurnId);
+    assert.equal(await crossContextCycle.dispatcher.dispatch(crossContextDelivery.envelope), true,
+      'C5-C8 anti-vacuity: the cross-context fixture background execution is terminal');
+    await consumer.ack(crossContextDelivery.id);
+    await db.setAuthenticatedClaims(crossContextUserId);
+    assert.ok((await db.observer('SELECT id FROM public.memories WHERE user_id = $1', [crossContextUserId])).length > 0,
+      'C5-C8 anti-vacuity: an unrelated eligible Memory really exists for this session');
+
+    // Deterministic counters. `paths` records what the PRODUCTION repository
+    // ASKED for, before any fault decision; the inner RPC census records what
+    // really RAN against PostgreSQL. Keeping both apart is what distinguishes
+    // "the request was faulted" from "the request was never made".
+    const aggregateRequests = (): number =>
+      authenticatedDataApi.paths.filter((path) => CROSS_CONTEXT_AGGREGATE_READ(path)).length;
+    const aggregateExecutions = (): number => authenticatedDataApi.rpcCensus.completions(CROSS_CONTEXT_AGGREGATE_RPC);
+    const instructionIdsOf = (call: { request: { humanIntelligence?: HumanIntelligenceProviderSemantics } }): string[] =>
+      [...(call.request.humanIntelligence?.behavioralInstructionIds ?? [])];
+    const assertNoCrossContextFallback = (label: string): void => {
+      for (const retired of RETIRED_CROSS_CONTEXT_AGGREGATE_RPCS) {
+        assert.equal(authenticatedDataApi.rpcCensus.attempts(retired), 0,
+          `${label}: no retired aggregate fallback was issued (${retired})`);
+      }
+      for (const direct of DIRECT_CROSS_CONTEXT_RPCS) {
+        assert.equal(authenticatedDataApi.rpcCensus.attempts(direct), 0,
+          `${label}: no direct per-channel fallback read was issued (${direct})`);
+      }
+      assert.equal(authenticatedDataApi.rpcCensus.attempts(RELEVANCE_AUTHORITY_RPC), 0,
+        `${label}: the QHIA-006 relevance authority is never re-requested from the application as a fallback`);
+      assert.deepEqual(
+        authenticatedDataApi.paths.filter((path) => /situation_stress|decision_attention|goal_motivation|relationship_communication|context_bindings|cross_context_foreground_v1|cross_context_foreground_v2/u.test(path)),
+        [], `${label}: no direct, retired, or backup cross-context request of any kind was ASKED FOR by production`);
+    };
+
+    // The exact four-slot envelope the canonical aggregate really returns for
+    // this session, read verification-side. C7's malformed fixture is derived
+    // from THESE rows, so the malformed payload is a genuine aggregate answer
+    // with exactly one frozen structural property broken.
+    const realAggregateRows = await db.asRole<HimCrossContextForegroundEnvelopeRow>(
+      'authenticated', 'SELECT * FROM public.read_him_session_cross_context_foreground_v3($1, $2)',
+      [crossContextUserId, crossContextSession]);
+    assert.deepEqual(
+      realAggregateRows.map((row) => [Number(row.foreground_slot_order), row.foreground_slot]),
+      HIM_CROSS_CONTEXT_FOREGROUND_V3_SLOTS.map(({ order, slot }) => [order, slot]),
+      'C8: ONE aggregate-v3 read returns exactly the four frozen slots, once each, in frozen transport order');
+
+    // C8 half one - the REAL aggregation service and the FOUR REAL semantic
+    // consumers, observed directly: one request in, four ACTIVE guidance
+    // contracts out.
+    const c8ObservationRequests = aggregateRequests();
+    const observedCrossContextGuidance = await himCrossContextForegroundService.read(
+      crossContextUserId, ACCESS_TOKEN, crossContextSession);
+    assert.equal(aggregateRequests() - c8ObservationRequests, 1,
+      'C8: the REAL HimCrossContextForegroundAggregationService issues EXACTLY ONE request for all four channels');
+    assert.equal(observedCrossContextGuidance.contractVersion, 3);
+    assert.deepEqual({
+      himSituationStressGuidance: observedCrossContextGuidance.situationStress,
+      himDecisionAttentionGuidance: observedCrossContextGuidance.decisionAttention,
+      himGoalMotivationGuidance: observedCrossContextGuidance.goalMotivation,
+      himRelationshipCommunicationGuidance: observedCrossContextGuidance.relationshipCommunication,
+    }, { ...ALL_FOUR_ACTIVE_CROSS_CONTEXT_GUIDANCE },
+      'C8: all FOUR real semantic consumers ran and all FOUR results are ACTIVE simultaneously on the same session');
+
+    // C8 half two - the integrated composition through the REAL Orchestrator.
+    const c8Requests = aggregateRequests();
+    const c8TurnId = randomUUID();
+    const c8Turn = await runTurn(crossContextUserId, crossContextSession, c8TurnId, RECALL_TEXT);
+    const c8Call = conversationalRouter.lastCall();
+    assert.equal(conversationalRouter.callCount - c8Turn.callsBefore, 1,
+      'C8: EXACTLY ONE conversational provider call carries the whole all-four composition');
+    assert.equal(aggregateRequests() - c8Requests, 1,
+      'C8: the turn issues EXACTLY ONE cross-context foreground request - never one per channel');
+    const c8HumanIntelligence = c8Call.request.humanIntelligence;
+    assert.ok(c8HumanIntelligence, 'C8: the turn compiled a Human Intelligence provider envelope');
+    assert.deepEqual(Object.keys(c8Call.request)
+      .filter((key) => /human|him|situation|decision|goal|relationship|crosscontext|brain|adaptation|reflection/iu.test(key)),
+      ['humanIntelligence'],
+      'C8: the four channels compile into ONE humanIntelligence envelope - there is no separate per-channel ModelRouter field');
+    // The envelope may legitimately omit an ABSENT optional lane, so this is a
+    // SUBSET check against the frozen QHIA-013 shape plus an explicit
+    // non-vacuity check on the two lanes this session really produces.
+    const c8EnvelopeKeys = Object.keys(c8HumanIntelligence!).sort();
+    assert.deepEqual(
+      c8EnvelopeKeys.filter((key) => !['behavioralInstructionIds', 'brainContext', 'contractVersion', 'sessionReasoningContext', 'source'].includes(key)),
+      [],
+      'C8: agreement between sources creates no vote, count, weight, confidence, strength or amplification field of any kind');
+    assert.ok(c8EnvelopeKeys.includes('behavioralInstructionIds') && c8EnvelopeKeys.includes('sessionReasoningContext'),
+      'C8 anti-vacuity: the ONE compiled envelope really carries both the behavioral lane and the session reasoning lane');
+    const c8InstructionIds = instructionIdsOf(c8Call);
+    for (const instructionId of CROSS_CONTEXT_ONLY_INSTRUCTION_IDS) {
+      assert.ok(c8InstructionIds.includes(instructionId),
+        `C8 anti-vacuity: the cross-context-only instruction ${instructionId} really reached the provider envelope`);
+    }
+    assert.equal(new Set(c8InstructionIds).size, c8InstructionIds.length,
+      'C8: instruction IDs are a semantic SET - four sources authorizing overlapping instructions produce each one exactly once');
+    assert.deepEqual([...c8InstructionIds],
+      HUMAN_INTELLIGENCE_PROVIDER_INSTRUCTION_IDS.filter((id) => c8InstructionIds.includes(id)),
+      'C8: instruction order is the frozen canonical registry order, never the order the sources happened to settle in');
+    const c8Bullets = c8Call.serverGuidance.split('\n').filter((line) => line.startsWith('- '));
+    assert.equal(c8Bullets.length, c8InstructionIds.length, 'C8: every authorized instruction renders exactly once');
+    assert.equal(new Set(c8Bullets).size, c8Bullets.length,
+      'C8: an instruction several channels authorized is rendered ONCE - agreement never duplicates or strengthens it');
+    // Privacy, scoped to the path this scenario is actually about: the
+    // cross-context BEHAVIORAL GUIDANCE path.
+    //
+    // The Human Intelligence contribution is rendered IN ISOLATION through the
+    // REAL production renderer - the same incremental identity QIR-004 uses -
+    // so this inspects what Human Intelligence itself hands the provider rather
+    // than what an unrelated already-frozen contract legitimately carries in
+    // the same request. That distinction is load-bearing: the QIR-002
+    // Hypothesis reasoning contract deliberately carries the canonical
+    // `CONVERSATION_SESSION:<id>` scope, and re-litigating that here would be
+    // asserting somebody else's contract.
+    //
+    // `hse.stress` and `hse.attention` are deliberately absent from the needle
+    // list: QHIA-013 PRESERVES the session-metric identity through the separate,
+    // already-approved session reasoning lane, which is not this scenario's
+    // subject either.
+    const c8CrossContextInternalIdentities = [
+      crossContextUserId, crossContextSession, c8TurnId,
+      situationTarget.id, decisionTarget.id, goalTarget.id, relationshipTarget.id,
+      'hse.motivation', 'hrs.communication',
+      'SITUATION_STRESS', 'DECISION_ATTENTION', 'GOAL_MOTIVATION', 'RELATIONSHIP_COMMUNICATION',
+      'REDUCE_INTERACTION_BURDEN', 'REDUCE_PRESENTATION_BURDEN', 'REDUCE_GOAL_ACTION_BURDEN',
+      'STRUCTURE_RELATIONSHIP_COMMUNICATION',
+      'ACTIVE_SITUATION_BOUND', 'ACTIVE_DECISION_BOUND', 'ACTIVE_GOAL_BOUND', 'ACTIVE_RELATIONSHIP_BOUND',
+      'guidanceState', 'foreground_slot', 'binding_context_id',
+    ];
+    // The EXACT rendered Human Intelligence contribution, isolated by the same
+    // incremental identity QIR-004 measures with: everything the provider reads
+    // because Human Intelligence existed, and nothing else.
+    const c8GuidanceWithoutHumanIntelligence = composeServerGuidance({
+      behavioralGuidance: c8Call.request.behavioralGuidance,
+    });
+    const c8RenderedHumanIntelligence = composeServerGuidance({
+      behavioralGuidance: c8Call.request.behavioralGuidance, humanIntelligence: c8HumanIntelligence,
+    }).slice(c8GuidanceWithoutHumanIntelligence.length);
+    assert.ok(c8RenderedHumanIntelligence.length > 0,
+      'C8 anti-vacuity: the Human Intelligence contribution really is rendered for the provider');
+    for (const internalIdentity of c8CrossContextInternalIdentities) {
+      assert.equal(c8RenderedHumanIntelligence.includes(internalIdentity), false,
+        `C8: no internal context, binding, metric, slot or directive identity reaches the provider through the cross-context behavioral path (${internalIdentity})`);
+    }
+    // Nor does the compiled envelope carry one as a KEY or VALUE. It is checked
+    // for exact JSON tokens rather than by bare substring, because the frozen
+    // QHIA-013 instruction IDs legitimately live in the envelope - only their
+    // TEXT is ever rendered - and a bare scan would collide with
+    // EXPLICIT_RELATIONSHIP_COMMUNICATION_WORDING and its siblings.
+    const c8EnvelopeJson = JSON.stringify(c8HumanIntelligence);
+    for (const internalIdentity of c8CrossContextInternalIdentities) {
+      assert.equal(c8EnvelopeJson.includes(`"${internalIdentity}"`), false,
+        `C8: the compiled Human Intelligence envelope carries no internal identity as a key or value (${internalIdentity})`);
+    }
+    // The four EXPLICITLY BOUND context identities are stronger than that: they
+    // reach the provider through no lane of the final request at all.
+    const c8Serialized = `${JSON.stringify(c8Call.request)}\n${c8Call.serverGuidance}`;
+    for (const contextIdentity of [situationTarget.id, decisionTarget.id, goalTarget.id, relationshipTarget.id]) {
+      assert.equal(c8Serialized.includes(contextIdentity), false,
+        'C8: an explicitly bound context identity reaches the provider through NO lane of the final request');
+    }
+    // Anti-vacuity for the needle list above: the session identity really IS
+    // findable in this exact request - the frozen Hypothesis scope contract
+    // carries it - so its absence from the Human Intelligence path is a genuine
+    // property of that path rather than an empty haystack.
+    assert.ok(JSON.stringify(c8Call.request.hypothesisContext ?? {}).includes(crossContextSession),
+      'C8 anti-vacuity: the session identity is genuinely present elsewhere in the same request through its own already-frozen contract');
+    for (const instructionId of c8InstructionIds) {
+      assert.equal(c8Call.serverGuidance.includes(instructionId), false,
+        'C8: the provider is given bounded instruction TEXT only - never an internal instruction ID');
+    }
+    assertNoCrossContextFallback('C8');
+
+    // ---- C5 - CROSS-CONTEXT REJECTION ISOLATION -----------------------------
+    // The fault runs the canonical aggregate for real and then loses its
+    // settlement, so the rejection provably reached the exact request that had
+    // genuinely been attempted.
+    const c5Requests = aggregateRequests();
+    const c5Executions = aggregateExecutions();
+    authenticatedDataApi.arm({
+      match: CROSS_CONTEXT_AGGREGATE_READ, kind: 'REJECT_AFTER_CALL', error: memoryDataApiFailure(503),
+    });
+    const c5TurnId = randomUUID();
+    const c5Turn = await runTurn(crossContextUserId, crossContextSession, c5TurnId, RECALL_TEXT);
+    const c5Call = conversationalRouter.lastCall();
+    assert.equal(authenticatedDataApi.armed(), 0,
+      'C5 anti-vacuity: the armed rejection really was consumed by a real aggregate-v3 request');
+    assert.equal(aggregateRequests() - c5Requests, 1,
+      'C5: the real aggregate-v3 request was genuinely ATTEMPTED - exactly once');
+    assert.equal(aggregateExecutions() - c5Executions, 1,
+      'C5 anti-vacuity: the canonical aggregate really RAN against real PostgreSQL and the injected rejection hit THAT request');
+    assertNoCrossContextFallback('C5');
+    const c5InstructionIds = instructionIdsOf(c5Call);
+    for (const instructionId of CROSS_CONTEXT_ONLY_INSTRUCTION_IDS) {
+      assert.equal(c5InstructionIds.includes(instructionId), false,
+        `C5: an UNAVAILABLE aggregate contributes nothing at all - ${instructionId} is absent`);
+    }
+    assert.deepEqual(c5InstructionIds.filter((id) => !c8InstructionIds.includes(id)), [],
+      'C5: no instruction is invented to stand in for the missing aggregate - REJECTED is omission, never an authoritative all-four NONE answer');
+    const c8MinusC5 = c8InstructionIds.filter((id) => !c5InstructionIds.includes(id));
+    assert.deepEqual(c8MinusC5.filter((id) => !CROSS_CONTEXT_AUTHORIZED_INSTRUCTION_IDS.includes(id)), [],
+      'C5: exactly the cross-context contribution disappeared - no unrelated Human Intelligence source was disturbed');
+    assert.ok(CROSS_CONTEXT_ONLY_INSTRUCTION_IDS.every((id) => c8MinusC5.includes(id)),
+      'C5 anti-vacuity: the whole cross-context contribution genuinely disappeared');
+    // The unrelated eligible sources kept working, and the turn is canonical.
+    assert.equal(conversationalRouter.callCount - c5Turn.callsBefore, 1,
+      'C5: EXACTLY ONE conversational provider call - no retry, no second pass, no fallback provider');
+    assert.ok(c5Call.request.humanIntelligence?.sessionReasoningContext,
+      'C5: the Snapshot-derived Human Intelligence lane continued unaffected');
+    assert.ok(c5Call.request.memoryContext && c5Call.request.memoryContext.length > 0,
+      'C5: unrelated eligible Memory continued unaffected');
+    assert.ok(c5Call.request.hypothesisContext, 'C5: unrelated eligible Hypothesis work continued unaffected');
+    assert.match(c5Call.serverGuidance, /<him_reasoning_context>/u,
+      'C5: only the cross-context contribution is omitted - the Human Intelligence envelope itself survives');
+    assert.equal(c5Turn.result.userTurn.status, 'COMPLETED',
+      'C5: an unavailable optional aggregate degrades the turn, it never fails it');
+    assert.equal(c5Turn.result.assistantTurn?.content, ASSISTANT_TEXT, 'C5: finalization remains canonical');
+
+    // ---- C6 - CROSS-CONTEXT LATE SETTLEMENT ISOLATION -----------------------
+    // The aggregate lane has ZERO incremental wait and NO timeout, so this case
+    // introduces neither. A genuinely SUCCESSFUL settlement is deterministically
+    // gated so it is still pending when the existing Human Intelligence barrier
+    // closes, and is released only after the turn has already finalized.
+    const c6Requests = aggregateRequests();
+    const c6Executions = aggregateExecutions();
+    const c6Gate = new DeterministicGate();
+    authenticatedDataApi.arm({ match: CROSS_CONTEXT_AGGREGATE_READ, kind: 'GATE_AFTER_CALL', gate: c6Gate });
+    const c6TurnId = randomUUID();
+    const c6Turn = await runTurn(crossContextUserId, crossContextSession, c6TurnId, RECALL_TEXT);
+    const c6Call = conversationalRouter.lastCall();
+    assert.equal(authenticatedDataApi.armed(), 0,
+      'C6 anti-vacuity: the armed deferral really was applied to a real aggregate-v3 request');
+    assert.equal(aggregateRequests() - c6Requests, 1, 'C6: the real aggregate read was genuinely attempted');
+    assert.equal(aggregateExecutions() - c6Executions, 1,
+      'C6 anti-vacuity: the canonical aggregate really RAN - this is a genuinely SUCCESSFUL settlement being deferred, not a failure');
+    assert.equal(c6Gate.opened, false,
+      'C6: the successful aggregate settlement was STILL PENDING when the existing Human Intelligence barrier closed');
+    assert.equal(c6Turn.result.userTurn.status, 'COMPLETED',
+      'C6: provider generation and canonical finalization proceeded WITHOUT the pending aggregate');
+    const c6InstructionIds = instructionIdsOf(c6Call);
+    for (const instructionId of CROSS_CONTEXT_ONLY_INSTRUCTION_IDS) {
+      assert.equal(c6InstructionIds.includes(instructionId), false,
+        `C6: the final request carries none of the late aggregate's guidance - ${instructionId} is absent`);
+    }
+    assert.deepEqual(c6InstructionIds, c5InstructionIds,
+      'C6: a still-pending aggregate omits exactly what an unavailable one omits - no partial early consumption exists');
+    assert.equal(conversationalRouter.callCount - c6Turn.callsBefore, 1, 'C6: EXACTLY ONE conversational provider call');
+    assertNoCrossContextFallback('C6');
+    // Release the successful settlement AFTER finalization and prove it changes
+    // nothing at all.
+    const c6CallsAfterFinalization = conversationalRouter.callCount;
+    const c6RequestSnapshot = JSON.stringify(c6Call.request);
+    const c6GuidanceSnapshot = c6Call.serverGuidance;
+    const c6AssistantBefore = (await conversationRepository.findAssistantForSource(
+      ACCESS_TOKEN, crossContextSession, crossContextUserId, c6TurnId))?.content;
+    assert.equal(c6AssistantBefore, ASSISTANT_TEXT, 'C6: the turn really finalized before the gate was released');
+    c6Gate.open();
+    await drainMicrotasks();
+    await drainMicrotasks();
+    assert.equal(conversationalRouter.callCount, c6CallsAfterFinalization,
+      'C6: releasing the late aggregate triggers NO second provider call and NO second finalization');
+    assert.equal(JSON.stringify(conversationalRouter.lastCall().request), c6RequestSnapshot,
+      'C6: the already-built provider request is not mutated by the late settlement');
+    assert.equal(conversationalRouter.lastCall().serverGuidance, c6GuidanceSnapshot,
+      'C6: the already-rendered server guidance is not mutated by the late settlement');
+    assert.equal((await conversationRepository.findAssistantForSource(
+      ACCESS_TOKEN, crossContextSession, crossContextUserId, c6TurnId))?.content, ASSISTANT_TEXT,
+      'C6: the finalized assistant response is untouched by the late settlement');
+    // No durable cross-turn cache: the NEXT turn must perform its OWN current
+    // aggregate read, and legitimately gets the full all-four composition back.
+    const c6NextRequests = aggregateRequests();
+    const c6NextTurnId = randomUUID();
+    const c6NextTurn = await runTurn(crossContextUserId, crossContextSession, c6NextTurnId, RECALL_TEXT);
+    const c6NextCall = conversationalRouter.lastCall();
+    assert.equal(aggregateRequests() - c6NextRequests, 1,
+      'C6: the next turn performs its OWN current aggregate read - no cross-turn cache exists to inherit');
+    assert.equal(conversationalRouter.callCount - c6NextTurn.callsBefore, 1, 'C6: the next turn still makes exactly one provider call');
+    assert.deepEqual(instructionIdsOf(c6NextCall), c8InstructionIds,
+      'C6: the later turn is served by its OWN current read, never by the released late result');
+
+    // ---- C7 - MALFORMED AGGREGATE ISOLATION ---------------------------------
+    // A SUCCESSFUL transport carrying a structurally forbidden envelope: the
+    // GOAL_MOTIVATION row is duplicated into the fourth position, so the payload
+    // is simultaneously a DUPLICATED slot, a MISSING
+    // RELATIONSHIP_COMMUNICATION slot, and a slot/order pairing that does not
+    // match the frozen v3 transport table. Every row is a genuine canonical
+    // aggregate row - only the frozen structure is broken.
+    const malformedAggregateRows = [
+      realAggregateRows[0], realAggregateRows[1], realAggregateRows[2], { ...realAggregateRows[2] },
+    ];
+    assert.equal(malformedAggregateRows.length, HIM_CROSS_CONTEXT_FOREGROUND_V3_SLOTS.length);
+    assert.equal(malformedAggregateRows[3].foreground_slot, malformedAggregateRows[2].foreground_slot,
+      'C7 anti-vacuity: the malformed fixture really carries a DUPLICATED frozen slot');
+    assert.equal(
+      malformedAggregateRows.some((row) => row.foreground_slot === HIM_CROSS_CONTEXT_FOREGROUND_V3_SLOTS[3].slot), false,
+      'C7 anti-vacuity: the malformed fixture really is MISSING a frozen slot');
+    const c7ServiceRequests = aggregateRequests();
+    authenticatedDataApi.arm({
+      match: CROSS_CONTEXT_AGGREGATE_READ, kind: 'MALFORMED_SUCCESS', value: malformedAggregateRows,
+    });
+    await assert.rejects(
+      () => himCrossContextForegroundService.read(crossContextUserId, ACCESS_TOKEN, crossContextSession),
+      /INTEGRITY_FAILURE/u,
+      'C7: the REAL HimCrossContextForegroundAggregationService REJECTS the malformed successful envelope - it is never sorted, padded, repaired, or partially salvaged');
+    assert.equal(authenticatedDataApi.armed(), 0,
+      'C7 anti-vacuity: the malformed successful payload really crossed the real aggregate boundary');
+    assert.equal(aggregateRequests() - c7ServiceRequests, 1,
+      'C7: the malformed payload was delivered through the ONE real aggregate request - never a second attempt');
+
+    const c7Requests = aggregateRequests();
+    authenticatedDataApi.arm({
+      match: CROSS_CONTEXT_AGGREGATE_READ, kind: 'MALFORMED_SUCCESS', value: malformedAggregateRows,
+    });
+    const c7TurnId = randomUUID();
+    const c7Turn = await runTurn(crossContextUserId, crossContextSession, c7TurnId, RECALL_TEXT);
+    const c7Call = conversationalRouter.lastCall();
+    assert.equal(authenticatedDataApi.armed(), 0,
+      'C7 anti-vacuity: the integrated turn really consumed the malformed successful payload');
+    assert.equal(aggregateRequests() - c7Requests, 1, 'C7: exactly one aggregate request - a rejected envelope triggers no retry');
+    assertNoCrossContextFallback('C7');
+    const c7InstructionIds = instructionIdsOf(c7Call);
+    for (const instructionId of CROSS_CONTEXT_ONLY_INSTRUCTION_IDS) {
+      assert.equal(c7InstructionIds.includes(instructionId), false,
+        `C7: the optional cross-context contribution is omitted for the turn - ${instructionId} is absent`);
+    }
+    assert.deepEqual(c7InstructionIds, c5InstructionIds,
+      'C7: NO partial channel salvage - a malformed envelope omits ALL FOUR channels, byte-identically to a fully unavailable aggregate');
+    assert.equal(conversationalRouter.callCount - c7Turn.callsBefore, 1, 'C7: EXACTLY ONE conversational provider call');
+    assert.ok(c7Call.request.humanIntelligence?.sessionReasoningContext,
+      'C7: unrelated eligible intelligence continued unaffected');
+    assert.ok(c7Call.request.memoryContext && c7Call.request.memoryContext.length > 0,
+      'C7: unrelated eligible Memory continued unaffected');
+    assert.equal(c7Turn.result.userTurn.status, 'COMPLETED',
+      'C7: a malformed OPTIONAL enrichment degrades by omission - it is never a fabricated safe-looking four-channel NONE answer');
+
+    console.log('INTEGRATED_BRAIN_E2E_HARDENING_V2 cross-context census: '
+      + `aggregate_requests=${aggregateRequests()} aggregate_executions=${aggregateExecutions()} `
+      + `aggregate_v1=${authenticatedDataApi.rpcCensus.attempts(RETIRED_CROSS_CONTEXT_AGGREGATE_RPCS[0])} `
+      + `aggregate_v2=${authenticatedDataApi.rpcCensus.attempts(RETIRED_CROSS_CONTEXT_AGGREGATE_RPCS[1])} `
+      + `direct_channel_reads=${DIRECT_CROSS_CONTEXT_RPCS.reduce((total, name) => total + authenticatedDataApi.rpcCensus.attempts(name), 0)} `
+      + `relevance_authority_reads=${authenticatedDataApi.rpcCensus.attempts(RELEVANCE_AUTHORITY_RPC)} `
+      + `c8_instructions=${c8InstructionIds.length} omitted_instructions=${c5InstructionIds.length}`);
+
+    // -----------------------------------------------------------------------
     stage = 'F_RECOVERY_AND_E4';
     // -----------------------------------------------------------------------
     const recoveryUserId = await provisionUser();
@@ -1315,6 +1920,8 @@ async function main(): Promise<void> {
     const providerGeneratingTurns = [
       turn1Id, turn2Id, sessionBTurnId, probeTurnId, turn3Id, turn4Id, guidedTurnId,
       failureSeedTurnId, c2TurnId, c3TurnId, c1TurnId, providerFailureTurnId, f2TurnId, f3TurnId,
+      // QIR-007 Addendum A - the cross-context adversarial subsection of C.
+      crossContextSeedTurnId, c8TurnId, c5TurnId, c6TurnId, c6NextTurnId, c7TurnId,
     ];
     const zeroCallTurns = [blockTurnId, c1bTurnId, c4TurnId];
     assert.equal(conversationalRouter.callCount, providerGeneratingTurns.length,
@@ -1349,7 +1956,8 @@ async function main(): Promise<void> {
     assert.ok(serviceRoleApi.census.completions(FINALIZATION_RPC) > 0,
       'H anti-vacuity: canonical finalization really ran through the versioned migration-0063 authority');
     // Turns whose background was deliberately not delivered have no execution.
-    for (const skipped of [turn2Id, turn4Id, blockTurnId, guidedTurnId, c1TurnId, c2TurnId, c3TurnId]) {
+    for (const skipped of [turn2Id, turn4Id, blockTurnId, guidedTurnId, c1TurnId, c2TurnId, c3TurnId,
+      c5TurnId, c6TurnId, c6NextTurnId, c7TurnId, c8TurnId]) {
       assert.equal(await executionFor(skipped), undefined,
         'H: a turn whose durable event was never dispatched acquires no post-response execution');
     }
@@ -1375,6 +1983,10 @@ async function main(): Promise<void> {
       sessionRecovery, turn1Id, turn2Id, turn3Id, turn4Id, boundGapId, boundHypothesisId, mainSeededHypothesisId,
       execution1Id, LEARN_TEXT, RECALL_TEXT, DEEP_CONFLICT_TEXT, ASSISTANT_TEXT, SEEDED_HYPOTHESIS_STATEMENT,
       GENERATED_CANDIDATE_STATEMENT,
+      // QIR-007 Addendum A - the cross-context identities must not become
+      // telemetry dimensions either.
+      crossContextUserId, crossContextSession, c8TurnId,
+      situationTarget.id, decisionTarget.id, goalTarget.id, relationshipTarget.id,
     ];
     for (const call of recorded) {
       const scalars = telemetryScalars(call);
@@ -1396,6 +2008,10 @@ async function main(): Promise<void> {
       + `question_provider_calls=0 registered_provider_effects=${POST_RESPONSE_PROVIDER_EFFECTS_V1.length} `
       + `provider_budget=${POST_RESPONSE_PROVIDER_CALL_BUDGET_V1} telemetry_records=${recorded.length} `
       + `real_redis_reclaim_recoveries=${realReclaimRecoveries} synthetic_duplicate_deliveries=1`);
+    // QIR-007 Addendum A - the measured capacity verdict is repeated in the
+    // final proof output, next to the frozen canonical all-active figure it
+    // deliberately does NOT replace.
+    console.log(formatCurrentMaximumHumanIntelligenceProof(capacity));
 
     // -----------------------------------------------------------------------
     stage = 'CLEANUP';
@@ -1408,6 +2024,9 @@ async function main(): Promise<void> {
       ['public.formal_question_turn_bindings', 'user_id', mainUserId],
       ['public.post_response_intelligence_executions', 'user_id', mainUserId],
       ['public.users', 'id', recoveryUserId], ['public.users', 'id', failureUserId], ['public.users', 'id', safetyUserId],
+      ['public.users', 'id', crossContextUserId],
+      ['public.him_session_context_bindings', 'user_id', crossContextUserId],
+      ['public.him_measurement_targets', 'user_id', crossContextUserId],
     ] as const) {
       assert.equal((await db.afterRollback(`SELECT 1 AS present FROM ${table} WHERE ${column} = $1`, [value])).length, 0,
         `CLEANUP: ${table} fixture rows rolled back`);
