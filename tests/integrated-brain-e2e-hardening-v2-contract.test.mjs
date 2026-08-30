@@ -14,7 +14,8 @@ import { join } from 'node:path';
 //   2. the package script exists and points at it;
 //   3. API CI runs it AFTER the A2 and Full Intelligence runtime gates;
 //   4. the existing A2 and Full Intelligence gates remain, unbloated;
-//   5. migration 0063 is still terminal and QIR-007 adds no 0064;
+//   5. migration 0063 EXISTS as the terminal migration of the CLOSED QIR v1
+//      historical baseline;
 //   6. the QIR-005 provider-effect registry stays exactly three and the cap 3;
 //   7. no Question provider exists in the registry or on the Question path;
 //   8. the frozen 300 / 5000 / 300 ms foreground ceilings remain;
@@ -27,10 +28,22 @@ import { join } from 'node:path';
 // identifiers (final Provider/LLM selection stays deferred; no provider adapter
 // or model-profile source enters this world), routing thresholds, local
 // Memory/Hypothesis caps, fixture wording, assertion prose, or any future
-// reviewed telemetry recorder, CI step, or documentation amendment. The
-// migration-terminal assertion is the one deliberate freeze QIR-007 inherits
-// from QIR-006: the next reviewed migration-adding task re-anchors BOTH guards
-// in the same reviewed change.
+// reviewed telemetry recorder, CI step, or documentation amendment.
+//
+// QIR-008 phase closure repair. This guard once required migration 0063 to be
+// the HIGHEST migration in the live repository, and separately banned one
+// future migration FILENAME. Both were correct while QIR-007 was proving its
+// own baseline, but after QIR v1 closed they would have meant "0063 is forever
+// the highest migration / 0064 may never exist". A historical verifier cannot
+// prove that an old task added no later migration by scanning the future,
+// mutable migration listing. This guard now freezes only the durable
+// historical fact: 0063 EXISTS and was the terminal migration of the CLOSED
+// QIR v1 historical baseline, while "QIR-007 added no migration" stays a
+// recorded fact of the frozen baseline (its normative document keeps the
+// no-migration-0064 scope statement, and the phase freeze document records the
+// database diff as zero). Later, separately reviewed migrations are legal by
+// number and by name. See
+// docs/integrated-intelligence-runtime-phase-freeze-v1.md.
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
 
@@ -70,6 +83,17 @@ const CONTRACT_COMMAND = 'node --test tests/integrated-brain-e2e-hardening-v2-co
 const A2_SCRIPT = 'verify:a2-e2e-runtime-smoke';
 const FULL_INTELLIGENCE_SCRIPT = 'verify:full-intelligence-e2e-runtime';
 const TERMINAL_MIGRATION = '0063_question_information_gap_closed_loop_v1.sql';
+
+// QIR-008 phase closure repair: hypothetical later migrations that must stay
+// legal for this historical guard - including one that revisits QIR-007's own
+// domain under its own versioned contract. Listing entries only; no real
+// migration exists or is ever created here, and 0063 is never modified.
+const FUTURE_MIGRATION_FIXTURES = Object.freeze([
+  '0064_future_product_phase.sql',
+  '0065_voice_runtime_v1.sql',
+  '0066_subscription_runtime_v1.sql',
+  '0064_integrated_brain_e2e_hardening_v3.sql',
+]);
 
 // Required statements of the normative document, checked against
 // whitespace-flattened text so markdown wrapping never splits a marker.
@@ -349,12 +373,12 @@ function assertIntegratedBrainHardeningContract(world) {
   if (!world.ci.includes('run: npm run test:full-intelligence-e2e-runtime-contract'))
     violated('the frozen Full Intelligence static contract remains wired');
 
-  // 5. Migration 0063 is still the terminal migration: QIR-007 adds no 0064.
+  // 5. Migration 0063 EXISTS. It was the terminal migration of the CLOSED QIR
+  //    v1 historical baseline - a durable historical fact recorded in the phase
+  //    freeze document, never a ceiling on the live repository's future
+  //    migration numbering (QIR-008 phase closure repair).
   if (!Array.isArray(world.migrations) || !world.migrations.includes(TERMINAL_MIGRATION))
     violated('migration 0063 exists');
-  const numbered = world.migrations.filter((name) => /^\d{4}_/u.test(name));
-  const highest = numbered.reduce((max, name) => (name > max ? name : max), numbered[0] ?? '');
-  if (highest !== TERMINAL_MIGRATION) violated('migration 0063 is still the terminal migration - QIR-007 adds no 0064');
 
   // 6./7. The QIR-005 provider registry and cap stay EXACT, and no Question
   //       provider exists in the registry, the Question path, or the harness.
@@ -667,8 +691,13 @@ test('QIR7-2 - anti-vacuity: the real guard rejects every named regression', () 
     ['the frozen Full Intelligence static contract was removed', {
       ci: shipped.ci.replace('run: npm run test:full-intelligence-e2e-runtime-contract', 'run: echo skipped'),
     }],
-    ['a later migration silently landed without re-anchoring the terminal baseline', {
-      migrations: Object.freeze([...shipped.migrations, '0064_unreviewed_future_change.sql']),
+    // QIR-008 phase closure repair anti-vacuity: 0063 stays REQUIRED even once
+    // later, separately reviewed migrations legitimately exist.
+    ['migration 0063 disappeared while later migrations existed', {
+      migrations: Object.freeze([
+        ...shipped.migrations.filter((name) => name !== TERMINAL_MIGRATION),
+        ...FUTURE_MIGRATION_FIXTURES,
+      ]),
     }],
     ['migration 0063 disappeared', {
       migrations: Object.freeze(shipped.migrations.filter((name) => name !== TERMINAL_MIGRATION)),
@@ -1007,6 +1036,24 @@ test('QIR7-2 - anti-vacuity: the real guard rejects every named regression', () 
 });
 
 test('QIR7-3 - forward safety: legitimate later evolution stays legal', () => {
+  // QIR-008 phase closure repair: a later, separately reviewed migration is
+  // legal by number AND by name, including one that revisits QIR-007's own
+  // domain. Fixtures are listing entries only; 0063 itself stays required.
+  for (const fixture of FUTURE_MIGRATION_FIXTURES) {
+    assert.doesNotThrow(() => assertIntegratedBrainHardeningContract({
+      ...shippedWorld, migrations: Object.freeze([...shipped.migrations, fixture]),
+    }), `a future ${fixture} stays legal for the QIR-007 historical guard`);
+  }
+  assert.doesNotThrow(() => assertIntegratedBrainHardeningContract({
+    ...shippedWorld, migrations: Object.freeze([...shipped.migrations, ...FUTURE_MIGRATION_FIXTURES]),
+  }), 'all future migration fixtures together stay legal for the QIR-007 historical guard');
+  assert.throws(() => assertIntegratedBrainHardeningContract({
+    ...shippedWorld,
+    migrations: Object.freeze([
+      ...shipped.migrations.filter((name) => name !== TERMINAL_MIGRATION), ...FUTURE_MIGRATION_FIXTURES,
+    ]),
+  }), /QIR-007 Integrated Brain E2E Hardening v2 contract violated/u,
+  'migration 0063 remains historically REQUIRED even when later migrations exist');
   // A later reviewed QIR-008 CI step may be appended after the QIR-007 gate.
   const gateLine = shipped.ci.match(/^.*verify:integrated-brain:e2e-hardening-v2.*$/mu)[0];
   assert.doesNotThrow(() => assertIntegratedBrainHardeningContract({
@@ -1075,8 +1122,16 @@ test('QIR7-5 - the QIR-007 diff scope changed no production source or migration'
   for (const path of [VERIFIER, HARNESS, CAPACITY]) {
     assert.ok(path.startsWith('apps/api/scripts/'), `${path} lives in the verification-only scripts tree`);
   }
-  assert.ok(!readdirSync(new URL('database/migrations/', root)).includes('0064_integrated_brain_e2e_hardening_v2.sql'),
-    'QIR-007 added no migration 0064');
+  // QIR-008 phase closure repair: "QIR-007 added no migration" is a durable
+  // historical fact of the frozen baseline, recorded in the QIR-007 normative
+  // document and in docs/integrated-intelligence-runtime-phase-freeze-v1.md -
+  // it is NOT inferred by scanning the future, mutable migration listing for a
+  // banned filename. What the listing must still prove is that the terminal
+  // migration of the closed QIR v1 baseline exists.
+  assert.ok(readdirSync(new URL('database/migrations/', root)).includes(TERMINAL_MIGRATION),
+    'the terminal migration of the closed QIR v1 historical baseline exists');
+  assert.ok(shipped.contractDoc.replace(/\s+/gu, ' ').includes('no database schema change and **no migration 0064**'),
+    'the QIR-007 document records its own zero-migration scope as a historical fact');
   const helperDirectory = readdirSync(new URL('apps/api/scripts/integrated-brain-e2e-hardening-v2/', root));
   assert.ok(helperDirectory.length > 0, 'the verification-only helper directory exists');
   assert.ok(helperDirectory.every((name) => name.endsWith('.ts')),

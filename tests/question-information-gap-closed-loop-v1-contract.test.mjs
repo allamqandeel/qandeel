@@ -18,11 +18,20 @@ import { readFileSync, readdirSync } from 'node:fs';
 // Question provider, and the QIR-003 gatherer staying Memory + Hypothesis
 // only.
 //
-// FORWARD-SAFETY NOTES. The migration-terminal assertion below is an explicit
-// QIR-006 contract requirement ("migration 0063 existence and terminal
-// position"): the next reviewed migration-adding task re-anchors it in the
-// same reviewed change, exactly as this task re-anchored the QIR-004 reserve.
-// Beyond that deliberate freeze, this guard must never freeze: provider/model
+// QIR-008 phase closure repair. This guard once required migration 0063 to be
+// the HIGHEST migration in the live repository. That was correct while QIR-006
+// was proving its own baseline, but after QIR v1 closed it would have meant
+// "0063 is forever the highest migration / 0064 may never exist". A historical
+// verifier cannot prove that an old task added no later migration by scanning
+// the future, mutable migration listing. It now freezes only the durable
+// historical fact: 0063 EXISTS and was the terminal migration of the CLOSED
+// QIR v1 historical baseline. Later, separately reviewed migrations are legal
+// by number and by name; they still need their own reviewed contract, but this
+// historical guard no longer rejects them. See
+// docs/integrated-intelligence-runtime-phase-freeze-v1.md.
+//
+// FORWARD-SAFETY NOTES. Beyond the historical facts above, this guard must
+// never freeze: provider/model
 // identifiers (final Provider/LLM selection stays deferred; no provider
 // adapter or model-profile source enters this world), Question utility
 // ranking or Expected Information Gain (deferred), routing thresholds, local
@@ -67,6 +76,16 @@ const VERIFIER_SCRIPT = 'verify:question-information-gap-closed-loop:integration
 const VERIFIER_COMMAND = 'node --env-file-if-exists=.env database/verify-migration-0063.mjs';
 const TERMINAL_MIGRATION = '0063_question_information_gap_closed_loop_v1.sql';
 
+// QIR-008 phase closure repair: hypothetical later migrations that must stay
+// legal for this historical guard. Listing entries only - no real migration
+// exists or is ever created here, and migration 0063 is never modified.
+const FUTURE_MIGRATION_FIXTURES = Object.freeze([
+  '0064_future_product_phase.sql',
+  '0065_voice_runtime_v1.sql',
+  '0066_subscription_runtime_v1.sql',
+  '0064_question_information_gap_closed_loop_v2.sql',
+]);
+
 // Required statements of the normative document, checked against
 // whitespace-flattened text so markdown line wrapping never splits a marker.
 const REQUIRED_DOC_STATEMENTS = Object.freeze([
@@ -77,7 +96,7 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   '125ae6522e7a67565679f9c27e1a4954462b66e0',
   '33314624686',
   '`database/migrations/0063_question_information_gap_closed_loop_v1.sql` — **migration 0063 is the new terminal migration of this contract\'s baseline.**',
-  'the reviewed change that adds it re-anchors the QIR-006 static contract\'s terminal assertion in the same change',
+  'A later, separately reviewed migration in any domain remains legal by number and by name: QIR-008 phase closure repaired this contract\'s static guard so it freezes only the durable historical fact that migration 0063 EXISTS and was the terminal migration of the CLOSED QIR v1 historical baseline.',
   // The implementation principle.
   '**QANDEEL may ask because canonical intelligence says one information need is still open; it may stop asking only because canonical intelligence says that need changed, resolved, or became obsolete — never merely because a user happened to send another message.**',
   // Lifecycle.
@@ -157,15 +176,12 @@ function assertQuestionClosedLoopContract(world) {
   if (!world.docsReadme.includes('question-information-gap-closed-loop-v1.md'))
     violated('docs/README.md links the QIR-006 normative document');
 
-  // 2. Migration 0063 exists and is the TERMINAL migration of this baseline.
-  //    (A deliberate QIR-006 freeze: the next reviewed migration-adding change
-  //    re-anchors this assertion in the same change.)
+  // 2. Migration 0063 EXISTS. It was the terminal migration of the CLOSED QIR
+  //    v1 historical baseline - a durable historical fact recorded in the
+  //    phase freeze document, never a ceiling on the live repository's future
+  //    migration numbering (QIR-008 phase closure repair).
   if (!Array.isArray(world.migrations) || !world.migrations.includes(TERMINAL_MIGRATION))
     violated('migration 0063 exists');
-  const numbered = world.migrations.filter((name) => /^\d{4}_/u.test(name));
-  const highest = numbered.reduce((max, name) => (name > max ? name : max), numbered[0] ?? '');
-  if (highest !== TERMINAL_MIGRATION)
-    violated('migration 0063 is the terminal migration of the QIR-006 baseline');
 
   // 3. The frozen 300 ms foreground ceiling lives in the Question module (the
   //    orchestrator gains no timer) and the policy version is exactly "1".
@@ -508,8 +524,10 @@ test('Q2 - anti-vacuity: the real guard rejects every named regression', () => {
     ['migration 0063 disappeared from the listing', {
       migrations: Object.freeze(shipped.migrations.filter((name) => name !== TERMINAL_MIGRATION)),
     }],
-    ['a later migration silently landed without re-anchoring the QIR-006 terminal baseline', {
-      migrations: Object.freeze([...shipped.migrations, '0064_unreviewed_future_change.sql']),
+    ['the QIR-008 forward-safety statement was withdrawn from the document', {
+      contractDoc: shipped.contractDoc.replace(
+        'A later, separately reviewed migration in any domain remains legal by number and by name',
+        'No later migration may ever land'),
     }],
     ['the 300 ms ceiling was raised', {
       selectionTypes: shipped.selectionTypes.replace('export const QUESTION_FOREGROUND_WAIT_BUDGET_MS = 300;', 'export const QUESTION_FOREGROUND_WAIT_BUDGET_MS = 5000;'),
@@ -693,6 +711,25 @@ test('Q2 - anti-vacuity: the real guard rejects every named regression', () => {
 });
 
 test('Q3 - forward safety: legitimate later evolution stays legal', () => {
+  // QIR-008 phase closure repair: a later, separately reviewed migration is
+  // legal by number AND when it revisits this same Question domain under its
+  // own versioned contract. Fixtures are listing entries only; migration 0063
+  // itself stays required.
+  for (const fixture of FUTURE_MIGRATION_FIXTURES) {
+    assert.doesNotThrow(() => assertQuestionClosedLoopContract({
+      ...shipped, migrations: Object.freeze([...shipped.migrations, fixture]),
+    }), `a future ${fixture} stays legal for the QIR-006 historical guard`);
+  }
+  assert.doesNotThrow(() => assertQuestionClosedLoopContract({
+    ...shipped, migrations: Object.freeze([...shipped.migrations, ...FUTURE_MIGRATION_FIXTURES]),
+  }), 'all future migration fixtures together stay legal for the QIR-006 historical guard');
+  assert.throws(() => assertQuestionClosedLoopContract({
+    ...shipped,
+    migrations: Object.freeze([
+      ...shipped.migrations.filter((name) => name !== TERMINAL_MIGRATION), ...FUTURE_MIGRATION_FIXTURES,
+    ]),
+  }), /QIR-006 Question closed-loop contract violated/u,
+  'migration 0063 remains historically REQUIRED even when later migrations exist');
   // A later reviewed telemetry recorder may be appended.
   assert.doesNotThrow(() => assertQuestionClosedLoopContract({
     ...shipped, telemetry: `${shipped.telemetry}\n// QIR-00x recorder, separately reviewed.\n`,

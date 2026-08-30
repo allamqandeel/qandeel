@@ -5,7 +5,7 @@
 **Phase:** QANDEEL — Integrated Intelligence Runtime & Hardening v1
 **Task:** QIR-006 — Question / Information-Gap Closed Loop v1
 **Canonical entry baseline:** commit `1f4413422e0781622b03b5b412ee6e81adad7a2e`, tree `125ae6522e7a67565679f9c27e1a4954462b66e0`, canonical-main CI run `33314624686` (success), migration baseline `0062_fast_deep_runtime_decision_policy_v2.sql`.
-**Migration:** `database/migrations/0063_question_information_gap_closed_loop_v1.sql` — **migration 0063 is the new terminal migration of this contract's baseline.** A later, separately reviewed migration in any domain remains legal; when one lands, the reviewed change that adds it re-anchors the QIR-006 static contract's terminal assertion in the same change.
+**Migration:** `database/migrations/0063_question_information_gap_closed_loop_v1.sql` — **migration 0063 is the new terminal migration of this contract's baseline.** A later, separately reviewed migration in any domain remains legal by number and by name: QIR-008 phase closure repaired this contract's static guard so it freezes only the durable historical fact that migration 0063 EXISTS and was the terminal migration of the CLOSED QIR v1 historical baseline.
 
 Any change to a semantic frozen here requires its own versioned, separately
 reviewed superseding contract.
