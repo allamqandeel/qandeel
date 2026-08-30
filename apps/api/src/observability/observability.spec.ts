@@ -49,4 +49,30 @@ describe('Correlation and telemetry foundation v1',()=>{
   // or an in-range integer score is DROPPED rather than emitted as a label.
   const before=add.mock.calls.length;for(const invalid of[{policyVersion:3,path:'FAST',reason:'RUNTIME_ROUTING_V2_FAST_DEFAULT',complexityScore:0,signals:{codePointCount:0,questionCount:0,logicalUnitCount:0}},{policyVersion:2,path:'FAST',reason:'FAST_DEFAULT',complexityScore:0,signals:{codePointCount:0,questionCount:0,logicalUnitCount:0}},{policyVersion:2,path:'FAST',reason:'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE',complexityScore:0,signals:{codePointCount:0,questionCount:0,logicalUnitCount:0}},{policyVersion:2,path:'FAST',reason:'RUNTIME_ROUTING_V2_FAST_DEFAULT',complexityScore:9,signals:{codePointCount:0,questionCount:0,logicalUnitCount:0}},{policyVersion:2,path:'FAST',reason:'RUNTIME_ROUTING_V2_FAST_DEFAULT',complexityScore:1.5,signals:{codePointCount:0,questionCount:0,logicalUnitCount:0}}])t.recordRoutingDecision(invalid as never);expect(add.mock.calls.length).toBe(before);});
  it('keeps the routing decision metric fail-soft',()=>{const c=new CorrelationService(),t=new TelemetryService(c);(t as any).routingDecisions={add:()=>{throw new Error('meter down');}};expect(()=>t.recordRoutingDecision(decideFastDeepRoute('hello'))).not.toThrow();(t as any).routingDecisions={};expect(()=>t.recordRoutingDecision(decideFastDeepRoute('hello'))).not.toThrow();});
+ // QIR-004 integrated context budget telemetry: finite labels only, byte counts
+ // as metric VALUES, and fail-soft under any meter failure.
+ it('records the QIR-004 source decision over four finite dimensions and no content',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).contextBudgetSourceDecisions={add};
+  for(const source of['HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION'])for(const outcome of['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET'])for(const path of['FAST','DEEP'])t.recordContextBudgetSourceDecision(source,outcome,path);
+  expect(add).toHaveBeenCalledTimes(32);
+  for(const call of add.mock.calls){const labels=call[1] as Record<string,string>;expect(call[0]).toBe(1);expect(Object.keys(labels).sort()).toEqual(['outcome','policy_version','processing_path','source']);expect(['HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION']).toContain(labels.source);expect(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET']).toContain(labels.outcome);expect(['FAST','DEEP']).toContain(labels.processing_path);expect(labels.policy_version).toBe('1');}
+  expect(JSON.stringify(add.mock.calls)).not.toMatch(/hello|content|session|turn|user|bytes|\d{3,}|claude|gpt|anthropic|openai/i);});
+ it('drops any QIR-004 source decision outside the finite registries',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).contextBudgetSourceDecisions={add};
+  for(const [source,outcome,path] of [['QUESTION','INCLUDED_FULL','FAST'],['HISTORY','TRUNCATED','FAST'],['HISTORY','INCLUDED_FULL','TURBO'],['','',''],['HISTORY','INCLUDED_FULL','fast']] as const)t.recordContextBudgetSourceDecision(source,outcome,path);
+  expect(add).not.toHaveBeenCalled();});
+ it('records QIR-004 byte counts as histogram VALUES and never as labels',()=>{const c=new CorrelationService(),t=new TelemetryService(c),record=jest.fn();(t as any).contextBudgetBytes={record};
+  t.recordContextBudgetBytes('MANDATORY_CORE','RETAINED','FAST',65536);
+  t.recordContextBudgetBytes('FINAL_TOTAL','FINAL','DEEP',131072);
+  expect(record).toHaveBeenNthCalledWith(1,65536,{component:'MANDATORY_CORE',measurement:'RETAINED',processing_path:'FAST',policy_version:'1'});
+  expect(record).toHaveBeenNthCalledWith(2,131072,{component:'FINAL_TOTAL',measurement:'FINAL',processing_path:'DEEP',policy_version:'1'});
+  for(const call of record.mock.calls){expect(typeof call[0]).toBe('number');expect(JSON.stringify(call[1])).not.toMatch(/\d{3,}/);}});
+ it('drops any QIR-004 byte measurement outside the finite registries or with an impossible value',()=>{const c=new CorrelationService(),t=new TelemetryService(c),record=jest.fn();(t as any).contextBudgetBytes={record};
+  for(const [component,measurement,path,bytes] of [['QUESTION','RETAINED','FAST',1],['MANDATORY_CORE','ESTIMATED','FAST',1],['MANDATORY_CORE','RETAINED','TURBO',1],['MANDATORY_CORE','RETAINED','FAST',-1],['MANDATORY_CORE','RETAINED','FAST',1.5],['MANDATORY_CORE','RETAINED','FAST',Number.NaN],['MANDATORY_CORE','RETAINED','FAST',Number.POSITIVE_INFINITY]] as const)t.recordContextBudgetBytes(component,measurement,path,bytes);
+  expect(record).not.toHaveBeenCalled();});
+ it('keeps both QIR-004 budget metrics fail-soft',()=>{const c=new CorrelationService(),t=new TelemetryService(c);
+  (t as any).contextBudgetSourceDecisions={add:()=>{throw new Error('meter down');}};(t as any).contextBudgetBytes={record:()=>{throw new Error('meter down');}};
+  expect(()=>t.recordContextBudgetSourceDecision('MEMORY','INCLUDED_FULL','FAST')).not.toThrow();
+  expect(()=>t.recordContextBudgetBytes('MEMORY','RETAINED','FAST',10)).not.toThrow();
+  (t as any).contextBudgetSourceDecisions={};(t as any).contextBudgetBytes={};
+  expect(()=>t.recordContextBudgetSourceDecision('MEMORY','INCLUDED_FULL','FAST')).not.toThrow();
+  expect(()=>t.recordContextBudgetBytes('MEMORY','RETAINED','FAST',10)).not.toThrow();});
 });

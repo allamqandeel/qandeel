@@ -15,6 +15,7 @@ import type { ModelRouter, ModelRouterRequest } from '../model-router/model-rout
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
+import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 import type { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn } from './conversation.types';
@@ -109,9 +110,12 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
       findTurn: jest.fn(), findAssistantForSource: jest.fn(), recoverExpiredGeneratingTurn: jest.fn(),
     } as unknown as jest.Mocked<ConversationRepository>;
     router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' }, usage: { inputTokens: 1, outputTokens: 1 } }) };
+    // QIR-004: the double mirrors production - it appends the SOURCE turn's own
+    // content as the final USER message - because the assembler validates the
+    // canonical conversation boundary and fails the turn closed on a mismatch.
     const contextBuilder = {
-      build: jest.fn().mockResolvedValue([{ role: 'USER', content: 'hello' }]),
-      assemble: jest.fn((messages: unknown, memoryContext: unknown[]) => ({ messages, ...(memoryContext.length ? { memoryContext } : {}) })),
+      build: jest.fn().mockImplementation((_accessToken: string, _userId: string, sourceTurn: { content: string }) =>
+        Promise.resolve([{ role: 'USER', content: sourceTurn.content }])),
     } as unknown as ContextBuilder;
     const correlation = new CorrelationService();
     const telemetry = new TelemetryService(correlation);
@@ -141,6 +145,9 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
       { read: aggregateRead } as unknown as HimCrossContextForegroundAggregationService,
       { read: brainRead, consumeSourceRows: jest.fn() } as unknown as HimBrainContextService,
       foregroundGatherer,
+      // QIR-004: the REAL assembler, so this QHIA-014A remediation proof keeps
+      // running against the production provider-request assembly boundary.
+      new IntegratedContextBudgetAssemblerService(telemetry),
       { ground: jest.fn().mockReturnValue({ coverageState: 'EMPTY', reason: 'NO_ACTIVE_HYPOTHESES' }) } as unknown as RecommendationGroundingService,
       router,
       correlation,

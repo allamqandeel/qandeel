@@ -15,11 +15,25 @@ const FOREGROUND_INTELLIGENCE_SOURCES:ReadonlySet<string>=new Set(['MEMORY','HYP
 const FOREGROUND_INTELLIGENCE_SOURCE_OUTCOMES:ReadonlySet<string>=new Set(['AVAILABLE','LEGITIMATE_EMPTY','OPTIONAL_AVAILABILITY_FAILURE','FOREGROUND_BUDGET_EXPIRY','HARD_FAILURE']);
 const FOREGROUND_INTELLIGENCE_POLICY_VERSION='1';
 
+// QIR-004: the finite label registries for the integrated context budget
+// metrics. Anything outside these exact sets is DROPPED rather than emitted, so
+// cardinality is bounded by construction and no user content, Memory content,
+// Hypothesis text, Recommendation data, Human Intelligence value, identifier,
+// exception text, provider/model identity, raw JSON or free-text source name
+// can ever become a label. Numeric byte counts are metric VALUES only.
+const CONTEXT_BUDGET_SOURCES:ReadonlySet<string>=new Set(['HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION']);
+const CONTEXT_BUDGET_OUTCOMES:ReadonlySet<string>=new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET']);
+const CONTEXT_BUDGET_COMPONENTS:ReadonlySet<string>=new Set(['MANDATORY_CORE','HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION','FINAL_TOTAL']);
+const CONTEXT_BUDGET_MEASUREMENTS:ReadonlySet<string>=new Set(['OFFERED','RETAINED','FINAL']);
+const CONTEXT_BUDGET_POLICY_VERSION='1';
+
 @Injectable()
 export class TelemetryService{
  private readonly postResponseDispatchOperations:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.post_response_dispatch.operations'),{});
  private readonly routingDecisions:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.routing.decisions'),{});
  private readonly foregroundIntelligenceSourceOutcomes:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.foreground.intelligence.source'),{});
+ private readonly contextBudgetSourceDecisions:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.context_budget.source_decisions'),{});
+ private readonly contextBudgetBytes:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createHistogram('qandeel.context_budget.bytes',{unit:'By'}),{});
  private readonly tracer:Tracer;private readonly engineDuration:Instrument;private readonly providerDuration:Instrument;private readonly providerCalls:Instrument;private readonly providerErrors:Instrument;private readonly inputTokens:Instrument;private readonly outputTokens:Instrument;private readonly turnOutcomes:Instrument;private readonly publisherOperations:Instrument;private readonly hypothesisContextOutcomes:Instrument;private readonly hypothesisEligibilityOutcomes:Instrument;private readonly hypothesisIntentExtractionOutcomes:Instrument;private readonly hypothesisGenerationRequestAssemblyOutcomes:Instrument;private readonly controlledHypothesisGenerationOutcomes:Instrument;private readonly postGenerationConfidenceOutcomes:Instrument;
  constructor(private readonly correlation:CorrelationService){
   this.tracer=this.safe(()=>trace.getTracer('qandeel-api'),{startActiveSpan:(_name:string,_options:unknown,callback:(span:Span)=>unknown)=>callback(this.noopSpan())}as unknown as Tracer);
@@ -54,6 +68,28 @@ export class TelemetryService{
   if(!FOREGROUND_INTELLIGENCE_SOURCE_OUTCOMES.has(outcome))return;
   if(!isRuntimeRoutingPath(path))return;
   this.foregroundIntelligenceSourceOutcomes.add?.(1,{source,outcome,processing_path:path,policy_version:FOREGROUND_INTELLIGENCE_POLICY_VERSION});
+ });}
+ // QIR-004 integrated context budget source decision. Four FINITE dimensions
+ // only - 4 sources x 4 outcomes x 2 paths x 1 policy version - so cardinality
+ // is bounded by construction: any value outside the exact frozen registries is
+ // DROPPED rather than emitted. The whole call is fail-soft and can never alter
+ // a budget decision, the assembled request, or the turn.
+ recordContextBudgetSourceDecision(source:string,outcome:string,path:string):void{this.safeVoid(()=>{
+  if(!CONTEXT_BUDGET_SOURCES.has(source))return;
+  if(!CONTEXT_BUDGET_OUTCOMES.has(outcome))return;
+  if(!isRuntimeRoutingPath(path))return;
+  this.contextBudgetSourceDecisions.add?.(1,{source,outcome,processing_path:path,policy_version:CONTEXT_BUDGET_POLICY_VERSION});
+ });}
+ // QIR-004 integrated context budget byte measurement. The numeric byte count
+ // is the histogram VALUE and is never encoded as a label; the four label
+ // dimensions are finite - 6 components x 3 measurements x 2 paths x 1 policy
+ // version. A non-finite, negative or non-integer measurement is DROPPED.
+ recordContextBudgetBytes(component:string,measurement:string,path:string,bytes:number):void{this.safeVoid(()=>{
+  if(!CONTEXT_BUDGET_COMPONENTS.has(component))return;
+  if(!CONTEXT_BUDGET_MEASUREMENTS.has(measurement))return;
+  if(!isRuntimeRoutingPath(path))return;
+  if(!Number.isSafeInteger(bytes)||bytes<0)return;
+  this.contextBudgetBytes.record?.(bytes,{component,measurement,processing_path:path,policy_version:CONTEXT_BUDGET_POLICY_VERSION});
  });}
  recordHypothesisContext(outcome:'available'|'consumed'|'empty'|'rejected'|'failed',path:string,contractVersion=1,_candidateCount?:number,_includedCount?:number):void{this.safeVoid(()=>this.hypothesisContextOutcomes.add?.(1,{outcome,processing_path:path,contract_version:String(contractVersion)}));}
  recordHypothesisGenerationEligibility(outcome:'eligible'|'not_eligible'|'ambiguous'|'safety_ineligible'|'no_evidence'|'replay_skipped'|'failed',path?:string):void{this.safeVoid(()=>this.hypothesisEligibilityOutcomes.add?.(1,{outcome,...(path?{processing_path:path}:{}),contract_version:'1'}));}

@@ -37,6 +37,7 @@ import { createClient, type RedisClientType } from 'redis';
 // Foreground production services (real intelligence semantics).
 import { ConversationOrchestratorService } from '../src/conversation/conversation-orchestrator.service';
 import { BoundedForegroundIntelligenceGathererService } from '../src/intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
+import { IntegratedContextBudgetAssemblerService } from '../src/intelligence-runtime/integrated-context-budget-assembler.service';
 import { ConversationRepository } from '../src/conversation/conversation.repository';
 // QHIA-011A: the production explicit session context activation entry. It is
 // used ONCE, deliberately, during fixture setup - never from a turn.
@@ -699,7 +700,13 @@ async function main(): Promise<void> {
       new HimTurnContextSelectionService(), deterministicSnapshotService, new HimReasoningConsumptionService(),
       new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), himContextualCurrentService, new HimSessionReflectionConsumptionService(), himCrossContextForegroundService,
       deterministicBrainContextService,
-      foregroundGatherer, new RecommendationGroundingService(),
+      foregroundGatherer,
+      // QIR-004: the REAL Integrated Context Budget Assembler, so this smoke
+      // drives the production single normalized provider-request assembly
+      // boundary - Mandatory Core, the isolated source slices and the exact
+      // UTF-8 accounting - end to end, with no test-only assembly shortcut.
+      new IntegratedContextBudgetAssemblerService(telemetry),
+      new RecommendationGroundingService(),
       conversationalRouter, correlation, telemetry);
 
     // Background provider doubles exist from the start so the foreground phase

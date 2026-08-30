@@ -31,6 +31,7 @@ import type { HypothesisReasoningContextResult } from '../hypothesis/hypothesis-
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
+import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 
 // QHIA-005 amendment (PR #164), generalized by QHIA-014A: the ONE shared
 // maximum foreground orchestration time spent waiting for OPTIONAL Human
@@ -90,6 +91,7 @@ export class ConversationOrchestratorService {
     private readonly himCrossContextForeground: HimCrossContextForegroundAggregationService,
     private readonly himBrainContext: HimBrainContextService,
     private readonly foregroundIntelligenceGatherer: BoundedForegroundIntelligenceGathererService,
+    private readonly integratedContextBudget: IntegratedContextBudgetAssemblerService,
     private readonly recommendationGrounding: RecommendationGroundingService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
     private readonly correlation:CorrelationService,
@@ -397,14 +399,35 @@ export class ConversationOrchestratorService {
       // fallback and no provider-generated replacement; a grounding invariant
       // failure still fails the turn closed before any provider generation.
       const recommendationGrounding = hypothesisResult ? this.recommendationGrounding.ground(hypothesisResult) : undefined;
-      const assembledContext = this.contextBuilder.assemble(context, memoryContext);
       const behavioralGuidance = this.behavioralPolicy.buildTextGuidance();
-      const candidate = await this.engine('model_router',selection.path,()=>this.router.generate({
+      // QIR-004: the ONE final normalized provider-request assembly boundary.
+      //
+      // Everything that may reach the provider passes through here exactly
+      // once. The assembler validates the canonical conversation shape, holds
+      // Mandatory Core (hard Behavioral Guidance, Safety Guidance when present,
+      // the always-present integration authority charter and the canonical
+      // CURRENT USER turn) non-truncatable, and gives History, Memory, Human
+      // Intelligence and the Hypothesis/Recommendation package ISOLATED
+      // deterministic UTF-8 byte slices with no borrowing - so one oversized
+      // optional subsystem can never evict another subsystem's independent
+      // slice, and source SIZE never becomes source AUTHORITY.
+      //
+      // The Orchestrator no longer builds a competing final request: it hands
+      // over these already-decided values and passes the ONE assembled request
+      // straight to the router. A QIR-004 structural/integrity failure rejects
+      // HERE, before the model_router engine span, and fails the turn closed
+      // through the existing outer failure path with zero provider generation.
+      //
+      // This is pure synchronous CPU work: no await, no timer, no barrier, no
+      // network, no database, no persistence, and no extra LLM or provider
+      // call. The QIR-003 gather topology and the frozen QHIA lane above are
+      // untouched - QIR-004 acts only AFTER their legitimate outcomes exist.
+      const assembled = this.integratedContextBudget.assemble({
         task: 'CONVERSATIONAL_RESPONSE', path: selection.path,
         complexity: selection.path === 'DEEP' ? 'HIGH' : 'LOW',
         behavioralGuidance, ...(safety.safetyGuidance ? { safetyGuidance: safety.safetyGuidance } : {}),
-        context: assembledContext.messages,
-        ...(assembledContext.memoryContext ? { memoryContext: assembledContext.memoryContext } : {}),
+        messages: context, currentUserContent: userTurn.content,
+        memoryContext,
         // QHIA-013: exactly ONE Human Intelligence provider field. The eight
         // legacy Human Intelligence request fields are gone - not aliased, not
         // duplicated, not kept for compatibility. Brain Context still travels as
@@ -418,7 +441,8 @@ export class ConversationOrchestratorService {
         locale: 'und', modality: 'TEXT',
         latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
-      }));
+      });
+      const candidate = await this.engine('model_router',selection.path,()=>this.router.generate(assembled.request));
       if (hypothesisResult?.coverageState === 'AVAILABLE') this.telemetry.recordHypothesisContext('consumed', selection.path, hypothesisResult.context.contractVersion, hypothesisResult.context.candidateHypothesisCount, hypothesisResult.context.includedHypothesisCount);
       const finalized = await this.repository.finalizeTurn({
         sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,

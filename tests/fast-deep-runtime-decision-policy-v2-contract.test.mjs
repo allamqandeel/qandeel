@@ -566,12 +566,19 @@ test('P3 - forward safety: every change a later QIR task is expected to make sta
   assert.doesNotThrow(() => assertFastDeepRuntimeDecisionPolicyV2Contract({ ...shipped, orchestrator: questionChannel }),
     'QIR-006 may add a foreground Question opportunity channel');
 
-  // QIR-004: a global context budget may be assembled before the provider call.
-  const budgeted = shipped.orchestrator.replace('      const assembledContext = this.contextBuilder.assemble(context, memoryContext);',
-    '      const assembledContext = this.globalContextBudget.fit(this.contextBuilder.assemble(context, memoryContext));');
+  // Final provider-request assembly: QIR-004 already exercised this freedom by
+  // retiring ContextBuilder.assemble(...) in favour of the ONE Integrated
+  // Context Budget Assembler, so the mutation fixture now points at the CURRENT
+  // assembly surface — a later reviewed revision may reshape it again, and this
+  // guard must stay indifferent. (The QIR-004 guard, not this one, owns the
+  // budget law.)
+  const assemblyLine = '      const assembled = this.integratedContextBudget.assemble({';
+  assert.ok(shipped.orchestrator.includes(assemblyLine), 'the final provider-request assembly exists at the baseline to mutate');
+  const budgeted = shipped.orchestrator.replace(assemblyLine,
+    '      const assembled = this.integratedContextBudgetV2.assemble({');
   assert.notDeepEqual(budgeted, shipped.orchestrator);
   assert.doesNotThrow(() => assertFastDeepRuntimeDecisionPolicyV2Contract({ ...shipped, orchestrator: budgeted }),
-    'QIR-004 may add a global integrated context budget');
+    'a later reviewed task may revise the integrated context budget assembly surface');
 
   // Provider latency budgets and the LOW/HIGH mapping stay QIR-002-neutral.
   const rebudgeted = shipped.orchestrator.replace('latencyBudgetMs: selection.path === \'DEEP\' ? 10000 : 3000,', 'latencyBudgetMs: selection.path === \'DEEP\' ? 12000 : 2500,');
