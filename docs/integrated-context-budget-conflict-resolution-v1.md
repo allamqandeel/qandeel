@@ -508,3 +508,53 @@ QIR-004 is complete only when QANDEEL proves:
 > direct current user facts remain higher factual authority than conflicting
 > older or advisory context; no source vote or extra reconciliation LLM is
 > introduced; and exactly one conversational provider call remains the foreground invariant.
+
+## Amendment A1 — QIR-004 Fix 01: post-budget telemetry semantics
+
+Two telemetry-semantic defects were found by independent review of the QIR-004
+head. Neither changes any budget constant, algorithm, charter, or assembly
+behavior; both correct observability that stopped being **total** once QIR-004
+could omit a legitimately available source.
+
+### A1.1 — Hypothesis `consumed` is FINAL-REQUEST authoritative
+
+Before QIR-004, every legitimately AVAILABLE Hypothesis reaching the
+post-provider point had been sent to the provider, so authorizing the
+`consumed` outcome from the pre-budget result was total. It is not total any
+more: the atomic 24 KiB Hypothesis+Recommendation package may omit a
+legitimately AVAILABLE Hypothesis.
+
+**The `consumed` Hypothesis outcome is authorized by
+`assembled.request.hypothesisContext !== undefined` — the FINAL normalized
+request the provider actually received — and never by the pre-budget
+`hypothesisResult`.**
+
+- the upstream `available` outcome stays exactly where it was and stays correct;
+- QIR-004 records `HYPOTHESIS_RECOMMENDATION = OMITTED_BUDGET`;
+- the provider never saw the Hypothesis, so **no `consumed` outcome is emitted**;
+- `consumed` keeps its existing placement AFTER successful provider generation, so a failed provider call still records no `consumed`;
+- no new Hypothesis outcome is introduced and the telemetry contract keeps its exact name and dimensions.
+
+### A1.2 — The legal source/outcome relation is enforced
+
+Validating source and outcome independently allowed impossible cross-products
+to be emitted. Source-decision validation is now **TOTAL over the
+source/outcome PAIR**, against a finite deterministic relation:
+
+```text
+HISTORY                   = NOT_PRESENT | INCLUDED_FULL | PARTIALLY_RETAINED | OMITTED_BUDGET
+MEMORY                    = NOT_PRESENT | INCLUDED_FULL | PARTIALLY_RETAINED | OMITTED_BUDGET
+HUMAN_INTELLIGENCE        = NOT_PRESENT | INCLUDED_FULL | OMITTED_BUDGET
+HYPOTHESIS_RECOMMENDATION = NOT_PRESENT | INCLUDED_FULL | OMITTED_BUDGET
+```
+
+**Exactly 14 legal source/outcome pairs exist per processing path in v1** (4 + 4
++ 3 + 3), 28 across FAST and DEEP. The two ATOMIC sources have no
+`PARTIALLY_RETAINED` pair, because they are whole-source-or-nothing in v1, so
+`HUMAN_INTELLIGENCE + PARTIALLY_RETAINED` and
+`HYPOTHESIS_RECOMMENDATION + PARTIALLY_RETAINED` are **illegal and DROPPED**.
+
+An unknown source, an unknown outcome, an illegal pair, or an unrecognized
+processing path is dropped rather than emitted. Telemetry never throws and
+remains fail-soft. No assembler outcome changed, no outcome was added, and no
+atomic source became partially retainable.

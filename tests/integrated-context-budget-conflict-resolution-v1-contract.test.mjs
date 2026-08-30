@@ -51,6 +51,7 @@ const SOURCES = Object.freeze({
   contextBuilder: 'apps/api/src/conversation/context-builder.service.ts',
   contextBuilderTypes: 'apps/api/src/conversation/context-builder.types.ts',
   telemetry: 'apps/api/src/observability/telemetry.service.ts',
+  telemetrySpec: 'apps/api/src/observability/observability.spec.ts',
   humanIntelligenceFootprintSpec: 'apps/api/src/model-router/human-intelligence-prompt-footprint.spec.ts',
 });
 const shipped = Object.freeze({
@@ -167,6 +168,15 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   'future migrations in any domain',
   // Acceptance.
   'exactly one conversational provider call remains the foreground invariant',
+  // Amendment A1 — QIR-004 Fix 01 post-budget telemetry semantics.
+  '## Amendment A1 — QIR-004 Fix 01: post-budget telemetry semantics',
+  '**The `consumed` Hypothesis outcome is authorized by `assembled.request.hypothesisContext !== undefined` — the FINAL normalized request the provider actually received — and never by the pre-budget `hypothesisResult`.**',
+  'the upstream `available` outcome stays exactly where it was and stays correct',
+  '`consumed` keeps its existing placement AFTER successful provider generation, so a failed provider call still records no `consumed`',
+  'Source-decision validation is now **TOTAL over the source/outcome PAIR**',
+  '**Exactly 14 legal source/outcome pairs exist per processing path in v1**',
+  '`HUMAN_INTELLIGENCE + PARTIALLY_RETAINED` and `HYPOTHESIS_RECOMMENDATION + PARTIALLY_RETAINED` are **illegal and DROPPED**',
+  'No assembler outcome changed, no outcome was added, and no atomic source became partially retainable.',
 ]);
 
 const executable = (source) => source.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^\s*\/\/.*$/gmu, '');
@@ -387,6 +397,20 @@ function assertIntegratedContextBudgetContract(world) {
     violated('exactly one conversational provider invocation exists on the turn path');
   if (!world.orchestrator.includes('messages: context, currentUserContent: userTurn.content,'))
     violated('the Orchestrator hands the canonical messages AND the canonical current user content to the assembler');
+  // QIR-004 Fix 01 (QIR-004-F01): post-budget consumption telemetry is
+  // FINAL-REQUEST authoritative. A legitimately AVAILABLE Hypothesis that the
+  // atomic package budget omitted was never seen by the provider, so it must
+  // not record `consumed`. Placement is unchanged: still AFTER the provider
+  // call, so a failed generation still records nothing.
+  if (!world.orchestrator.includes("if (assembled.request.hypothesisContext !== undefined) this.telemetry.recordHypothesisContext('consumed'"))
+    violated('the `consumed` Hypothesis outcome is authorized by the FINAL normalized request');
+  if (/coverageState === 'AVAILABLE'\) this\.telemetry\.recordHypothesisContext\('consumed'/u.test(world.orchestrator))
+    violated('the pre-budget `consumed` authority is gone: it is no longer total after QIR-004');
+  const consumedAt = world.orchestrator.indexOf("recordHypothesisContext('consumed'");
+  if (consumedAt < 0 || !(generateAt < consumedAt))
+    violated('`consumed` is still recorded AFTER successful provider generation');
+  if (!world.orchestrator.includes("this.telemetry.recordHypothesisContext('available', selection.path, hypothesisResult.context.contractVersion"))
+    violated('the upstream `available` Hypothesis outcome is untouched at its availability point');
   // The already-decided execution semantics are carried through, not re-owned.
   for (const carried of [
     "task: 'CONVERSATIONAL_RESPONSE', path: selection.path,",
@@ -430,10 +454,37 @@ function assertIntegratedContextBudgetContract(world) {
     violated('the measurement registry is exactly the three frozen measurements');
   if (!world.telemetry.includes("const CONTEXT_BUDGET_POLICY_VERSION='1';"))
     violated('the QIR-004 telemetry policy version is exactly "1"');
+  // QIR-004 Fix 01 (QIR-004-F01/F02): validation is TOTAL over the source/
+  // outcome PAIR, not merely over each dimension independently. History and
+  // Memory are prefix-retainable; the two ATOMIC sources have NO
+  // PARTIALLY_RETAINED pair in v1, so that combination is impossible and must
+  // be dropped rather than emitted.
+  const legalPairs = slice(world.telemetry, 'const CONTEXT_BUDGET_LEGAL_SOURCE_OUTCOMES', ']);');
+  if (!legalPairs) violated('the finite legal source/outcome relation exists');
+  for (const [source, outcomes] of [
+    ['HISTORY', "new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET'])"],
+    ['MEMORY', "new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET'])"],
+    ['HUMAN_INTELLIGENCE', "new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])"],
+    ['HYPOTHESIS_RECOMMENDATION', "new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])"],
+  ]) {
+    if (!legalPairs.includes(`['${source}',${outcomes}]`))
+      violated(`the frozen legal outcome set for ${source} is exact`);
+  }
+  if ((legalPairs.match(/'(?:NOT_PRESENT|INCLUDED_FULL|PARTIALLY_RETAINED|OMITTED_BUDGET)'/gu) ?? []).length !== 14)
+    violated('exactly 14 legal source/outcome pairs exist per processing path in v1');
+  for (const atomic of ['HUMAN_INTELLIGENCE', 'HYPOTHESIS_RECOMMENDATION']) {
+    if (legalPairs.includes(`['${atomic}',new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED'`))
+      violated(`the atomic source ${atomic} is never partially retainable in v1`);
+  }
   const sourceDecisionGates = slice(world.telemetry, ' recordContextBudgetSourceDecision(', 'this.contextBudgetSourceDecisions.add');
-  for (const gate of ['CONTEXT_BUDGET_SOURCES.has(source)', 'CONTEXT_BUDGET_OUTCOMES.has(outcome)', 'isRuntimeRoutingPath(path)']) {
+  for (const gate of [
+    'CONTEXT_BUDGET_SOURCES.has(source)',
+    'CONTEXT_BUDGET_OUTCOMES.has(outcome)',
+    'CONTEXT_BUDGET_LEGAL_SOURCE_OUTCOMES.get(source)?.has(outcome)',
+    'isRuntimeRoutingPath(path)',
+  ]) {
     if (!sourceDecisionGates.includes(gate))
-      violated(`the source-decision metric drops anything outside its finite registries: missing ${gate}`);
+      violated(`the source-decision metric drops anything outside its finite registries and legal relation: missing ${gate}`);
   }
   const byteGates = slice(world.telemetry, ' recordContextBudgetBytes(', 'this.contextBudgetBytes.record');
   for (const gate of ['CONTEXT_BUDGET_COMPONENTS.has(component)', 'CONTEXT_BUDGET_MEASUREMENTS.has(measurement)', 'isRuntimeRoutingPath(path)', 'Number.isSafeInteger(bytes)']) {
@@ -467,9 +518,22 @@ function assertIntegratedContextBudgetContract(world) {
     'leaves the 8 KiB future reserve unused',
     'fails CLOSED - never trimming Mandatory Core - when the guidance renderer stops being additive',
     'cannot alter the assembly when it throws',
+    // QIR-004 Fix 01: the producer side of the legal source/outcome relation.
+    'never produces PARTIALLY_RETAINED for an atomic source',
   ]) {
     if (!world.assemblerSpec.includes(proof))
       violated(`the focused assembler spec proves the bound deterministically: missing ${proof}`);
+  }
+  for (const proof of [
+    // QIR-004 Fix 01: the consumer side - illegal pairs are dropped, and the
+    // legal relation is exercised in full rather than as a Cartesian product.
+    'records exactly the 14 legal QIR-004 source/outcome pairs per path and no content',
+    'drops the two ILLEGAL atomic-source PARTIALLY_RETAINED pairs, whose labels are individually legal',
+    'drops any QIR-004 source decision outside the finite registries',
+    'keeps both QIR-004 budget metrics fail-soft',
+  ]) {
+    if (!world.telemetrySpec.includes(proof))
+      violated(`the telemetry spec proves the bounded budget metrics: missing ${proof}`);
   }
   for (const proof of [
     'QIR-004 - Integrated Context Budget final provider-request assembly',
@@ -479,6 +543,11 @@ function assertIntegratedContextBudgetContract(world) {
     'grounds Recommendation BEFORE assembly',
     'fails the turn CLOSED with ZERO provider calls when the canonical conversation shape is malformed',
     'sends the always-present integration authority charter with every provider-generating turn',
+    // QIR-004 Fix 01 regression matrix.
+    'uses a Hypothesis fixture the canonical Hypothesis Runtime could really produce',
+    'records available but NEVER consumed when the QIR-004 package budget omits a legitimately AVAILABLE Hypothesis',
+    'still records consumed exactly once when the package fits and provider generation succeeds',
+    'records no consumed outcome when provider generation fails',
   ]) {
     if (!world.orchestratorSpec.includes(proof))
       violated(`the orchestrator spec proves the QIR-004 turn topology: missing ${proof}`);
@@ -530,6 +599,15 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
     }],
     ['the frozen charter text was rewritten in the document', {
       contractDoc: shipped.contractDoc.replace('Do not resolve conflicts by counting agreeing sources', 'Resolve conflicts by counting agreeing sources'),
+    }],
+    ['the final-request `consumed` authority was withdrawn from the document', {
+      contractDoc: shipped.contractDoc.replace('and never by the pre-budget\n`hypothesisResult`.**', 'or by the pre-budget `hypothesisResult`.**'),
+    }],
+    ['the legal-pair relation was withdrawn from the document', {
+      contractDoc: shipped.contractDoc.replace('**Exactly 14 legal source/outcome pairs exist per processing path in v1**', 'Any source/outcome combination is emittable'),
+    }],
+    ['the illegal atomic pairs were declared legal in the document', {
+      contractDoc: shipped.contractDoc.replace('are **illegal and DROPPED**', 'are legal and emitted'),
     }],
     ['the docs index lost the document link', {
       docsReadme: shipped.docsReadme.replaceAll('integrated-context-budget-conflict-resolution-v1.md', 'missing.md'),
@@ -693,6 +771,65 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
     ['the byte metric stopped rejecting an impossible value', {
       telemetry: shipped.telemetry.replace('if(!Number.isSafeInteger(bytes)||bytes<0)return;', 'void bytes;'),
     }],
+    // QIR-004 Fix 01 (QIR-004-F02): the legal source/outcome PAIR relation.
+    // Needles for the telemetry sources stay strictly single-line: those files
+    // are CRLF in a Windows worktree but LF in the index/CI, so a needle that
+    // spans a line break would silently stop matching in one of the two.
+    ['the source/outcome pair gate was removed', {
+      telemetry: shipped.telemetry.replace('if(!CONTEXT_BUDGET_LEGAL_SOURCE_OUTCOMES.get(source)?.has(outcome))return;', ''),
+    }],
+    ['the legal source/outcome relation was deleted entirely', {
+      telemetry: shipped.telemetry.replace('const CONTEXT_BUDGET_LEGAL_SOURCE_OUTCOMES:ReadonlyMap<string,ReadonlySet<string>>=new Map([', 'const CONTEXT_BUDGET_RETIRED_RELATION=new Map(['),
+    }],
+    ['an atomic source became partially retainable', {
+      telemetry: shipped.telemetry.replace(
+        "['HUMAN_INTELLIGENCE',new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])]",
+        "['HUMAN_INTELLIGENCE',new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET'])]",
+      ),
+    }],
+    ['the atomic Hypothesis package became partially retainable', {
+      telemetry: shipped.telemetry.replace(
+        "['HYPOTHESIS_RECOMMENDATION',new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])]",
+        "['HYPOTHESIS_RECOMMENDATION',new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET'])]",
+      ),
+    }],
+    ['a prefix-retainable source lost its PARTIALLY_RETAINED pair', {
+      telemetry: shipped.telemetry.replace(
+        "['MEMORY',new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET'])]",
+        "['MEMORY',new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])]",
+      ),
+    }],
+    ['the illegal-pair drop proof was gutted from the telemetry spec', {
+      telemetrySpec: shipped.telemetrySpec.replaceAll('drops the two ILLEGAL atomic-source PARTIALLY_RETAINED pairs, whose labels are individually legal', 'skipped'),
+    }],
+    ['the atomic-outcome producer proof was gutted from the assembler spec', {
+      assemblerSpec: shipped.assemblerSpec.replaceAll('never produces PARTIALLY_RETAINED for an atomic source', 'skipped'),
+    }],
+    // QIR-004 Fix 01 (QIR-004-F01): final-request-authoritative consumption.
+    ['the `consumed` outcome regressed to the pre-budget Hypothesis result', {
+      orchestrator: shipped.orchestrator.replace(
+        "if (assembled.request.hypothesisContext !== undefined) this.telemetry.recordHypothesisContext('consumed', selection.path, assembled.request.hypothesisContext.contractVersion, assembled.request.hypothesisContext.candidateHypothesisCount, assembled.request.hypothesisContext.includedHypothesisCount);",
+        "if (hypothesisResult?.coverageState === 'AVAILABLE') this.telemetry.recordHypothesisContext('consumed', selection.path, hypothesisResult.context.contractVersion, hypothesisResult.context.candidateHypothesisCount, hypothesisResult.context.includedHypothesisCount);",
+      ),
+    }],
+    ['the `consumed` outcome moved before the provider call', {
+      orchestrator: shipped.orchestrator.replace(
+        "      const candidate = await this.engine('model_router',selection.path,()=>this.router.generate(assembled.request));",
+        "      if (assembled.request.hypothesisContext !== undefined) this.telemetry.recordHypothesisContext('consumed', selection.path, 1, 1, 1);\n      const candidate = await this.engine('model_router',selection.path,()=>this.router.generate(assembled.request));",
+      ),
+    }],
+    ['the upstream `available` Hypothesis outcome was dropped', {
+      orchestrator: shipped.orchestrator.replace(
+        "else if (hypothesisResult) this.telemetry.recordHypothesisContext('available', selection.path, hypothesisResult.context.contractVersion,",
+        "else if (hypothesisResult) void (0 && this.telemetry.recordHypothesisContext('consumed', selection.path, hypothesisResult.context.contractVersion,",
+      ),
+    }],
+    ['the budget-omitted-Hypothesis regression was gutted from the orchestrator spec', {
+      orchestratorSpec: shipped.orchestratorSpec.replaceAll('records available but NEVER consumed when the QIR-004 package budget omits a legitimately AVAILABLE Hypothesis', 'skipped'),
+    }],
+    ['the canonical-realizability control was gutted from the orchestrator spec', {
+      orchestratorSpec: shipped.orchestratorSpec.replaceAll('uses a Hypothesis fixture the canonical Hypothesis Runtime could really produce', 'skipped'),
+    }],
     ['the QIR-004 telemetry stopped being fail-soft', {
       assembler: shipped.assembler.replace('} catch { /* fail-soft: telemetry can never change assembly or the turn */ }', '}'),
     }],
@@ -753,6 +890,23 @@ test('B3 - forward safety: every change a later QIR task is expected to make sta
   const extended = `${shipped.budgetContract}\n// QIR-00x, separately reviewed.\nexport const QUESTION_BUDGET_BYTES = 4096;\n`;
   assert.doesNotThrow(() => assertIntegratedContextBudgetContract({ ...shipped, budgetContract: extended }),
     'a later reviewed contract may add its own budget constant');
+
+  // A later reviewed, explicitly versioned contract may declare its OWN legal
+  // source/outcome relation for its own sources. This guard freezes the QIR-004
+  // v1 relation it owns; it must not ban a separate future one.
+  const extendedRelation = shipped.telemetry.replace(
+    'const CONTEXT_BUDGET_POLICY_VERSION=',
+    "const QUESTION_BUDGET_LEGAL_SOURCE_OUTCOMES:ReadonlyMap<string,ReadonlySet<string>>=new Map([\n ['QUESTION',new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])],\n]);\nconst CONTEXT_BUDGET_POLICY_VERSION=",
+  );
+  assert.notDeepEqual(extendedRelation, shipped.telemetry);
+  assert.doesNotThrow(() => assertIntegratedContextBudgetContract({ ...shipped, telemetry: extendedRelation }),
+    'a later reviewed contract may declare its own legal source/outcome relation');
+
+  // A later reviewed contract may also add its own bounded recorder that reuses
+  // the shared processing-path validator.
+  const extraRecorder = `${shipped.telemetry}\n// QIR-00x recorder, separately reviewed.\n`;
+  assert.doesNotThrow(() => assertIntegratedContextBudgetContract({ ...shipped, telemetry: extraRecorder }),
+    'a later reviewed contract may append its own bounded recorder');
 
   // A later reviewed change may add another provider-neutral guidance block.
   const extraGuidance = shipped.guidance.replace(

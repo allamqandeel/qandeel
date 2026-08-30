@@ -25,6 +25,24 @@ const CONTEXT_BUDGET_SOURCES:ReadonlySet<string>=new Set(['HISTORY','MEMORY','HU
 const CONTEXT_BUDGET_OUTCOMES:ReadonlySet<string>=new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET']);
 const CONTEXT_BUDGET_COMPONENTS:ReadonlySet<string>=new Set(['MANDATORY_CORE','HISTORY','MEMORY','HUMAN_INTELLIGENCE','HYPOTHESIS_RECOMMENDATION','FINAL_TOTAL']);
 const CONTEXT_BUDGET_MEASUREMENTS:ReadonlySet<string>=new Set(['OFFERED','RETAINED','FINAL']);
+// QIR-004 Fix 01: the finite LEGAL SOURCE/OUTCOME RELATION.
+//
+// The two flat registries above bound the label VOCABULARY; this relation
+// bounds which COMBINATIONS can exist at all. Validating source and outcome
+// independently would let an impossible cross-product be emitted and thereby
+// canonize a state QIR-004 v1 cannot produce.
+//
+// History and Memory are prefix-retainable, so PARTIALLY_RETAINED is legal for
+// them. Human Intelligence and the Hypothesis+Recommendation package are ATOMIC
+// in v1 - the whole source or none of it - so PARTIALLY_RETAINED is IMPOSSIBLE
+// for them and is DROPPED rather than emitted. Exactly 14 legal pairs exist per
+// processing path (4 + 4 + 3 + 3).
+const CONTEXT_BUDGET_LEGAL_SOURCE_OUTCOMES:ReadonlyMap<string,ReadonlySet<string>>=new Map([
+ ['HISTORY',new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET'])],
+ ['MEMORY',new Set(['NOT_PRESENT','INCLUDED_FULL','PARTIALLY_RETAINED','OMITTED_BUDGET'])],
+ ['HUMAN_INTELLIGENCE',new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])],
+ ['HYPOTHESIS_RECOMMENDATION',new Set(['NOT_PRESENT','INCLUDED_FULL','OMITTED_BUDGET'])],
+]);
 const CONTEXT_BUDGET_POLICY_VERSION='1';
 
 @Injectable()
@@ -70,13 +88,16 @@ export class TelemetryService{
   this.foregroundIntelligenceSourceOutcomes.add?.(1,{source,outcome,processing_path:path,policy_version:FOREGROUND_INTELLIGENCE_POLICY_VERSION});
  });}
  // QIR-004 integrated context budget source decision. Four FINITE dimensions
- // only - 4 sources x 4 outcomes x 2 paths x 1 policy version - so cardinality
- // is bounded by construction: any value outside the exact frozen registries is
- // DROPPED rather than emitted. The whole call is fail-soft and can never alter
- // a budget decision, the assembled request, or the turn.
+ // only, and validation is TOTAL over the source/outcome PAIR - 14 legal pairs
+ // x 2 paths x 1 policy version - so cardinality is bounded by construction and
+ // no impossible combination can ever be emitted. An unknown source, an unknown
+ // outcome, an illegal source/outcome pair, or an unrecognized processing path
+ // is DROPPED rather than emitted. The whole call is fail-soft and can never
+ // alter a budget decision, the assembled request, or the turn.
  recordContextBudgetSourceDecision(source:string,outcome:string,path:string):void{this.safeVoid(()=>{
   if(!CONTEXT_BUDGET_SOURCES.has(source))return;
   if(!CONTEXT_BUDGET_OUTCOMES.has(outcome))return;
+  if(!CONTEXT_BUDGET_LEGAL_SOURCE_OUTCOMES.get(source)?.has(outcome))return;
   if(!isRuntimeRoutingPath(path))return;
   this.contextBudgetSourceDecisions.add?.(1,{source,outcome,processing_path:path,policy_version:CONTEXT_BUDGET_POLICY_VERSION});
  });}

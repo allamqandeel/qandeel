@@ -443,7 +443,23 @@ export class ConversationOrchestratorService {
         costBudget: 'LOW', safetyLevel: 'STANDARD',
       });
       const candidate = await this.engine('model_router',selection.path,()=>this.router.generate(assembled.request));
-      if (hypothesisResult?.coverageState === 'AVAILABLE') this.telemetry.recordHypothesisContext('consumed', selection.path, hypothesisResult.context.contractVersion, hypothesisResult.context.candidateHypothesisCount, hypothesisResult.context.includedHypothesisCount);
+      // QIR-004 Fix 01: `consumed` is authorized by the FINAL NORMALIZED
+      // REQUEST the provider actually received - never by the pre-budget
+      // upstream Hypothesis result.
+      //
+      // Before QIR-004 the two were the same thing: every legitimate AVAILABLE
+      // Hypothesis reaching this point was sent to the provider. That is no
+      // longer total. A legitimately AVAILABLE Hypothesis can now be omitted by
+      // the QIR-004 atomic 24 KiB Hypothesis+Recommendation package budget, in
+      // which case the upstream `available` outcome stays correct, QIR-004
+      // records HYPOTHESIS_RECOMMENDATION = OMITTED_BUDGET, and the provider
+      // never saw the Hypothesis - so no `consumed` outcome may be emitted.
+      //
+      // Placement is deliberately unchanged: still AFTER successful provider
+      // generation, so a failed provider call still records no `consumed`. No
+      // new outcome is introduced and the existing telemetry contract keeps its
+      // exact name and dimensions.
+      if (assembled.request.hypothesisContext !== undefined) this.telemetry.recordHypothesisContext('consumed', selection.path, assembled.request.hypothesisContext.contractVersion, assembled.request.hypothesisContext.candidateHypothesisCount, assembled.request.hypothesisContext.includedHypothesisCount);
       const finalized = await this.repository.finalizeTurn({
         sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
         assistantTurnId: randomUUID(), content: candidate.content, safetyDisposition: safety.disposition,

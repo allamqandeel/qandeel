@@ -789,6 +789,50 @@ describe('QIR-004 bounded fail-soft telemetry', () => {
     }
   });
 
+  // QIR-004 Fix 01: the ATOMIC sources are whole-source-or-nothing in v1, so
+  // the assembler can never produce a PARTIALLY_RETAINED decision for them.
+  // The telemetry pair gate rejects that combination; this proves the producer
+  // never even offers it, across every present/fitting/oversized state.
+  it('never produces PARTIALLY_RETAINED for an atomic source', () => {
+    const oversizedMemory: ModelRouterMemoryContext[] = [
+      { type: 'GOAL', content: 'a'.repeat(3_000) },
+      { type: 'GOAL', content: 'b'.repeat(6_000) },
+    ];
+    const cases: ReadonlyArray<Partial<IntegratedContextAssemblyInput>> = [
+      {},
+      { humanIntelligence: allActiveHumanIntelligence() },
+      { humanIntelligence: oversizedHumanIntelligence() },
+      { hypothesisContext: smallHypothesisContext, recommendationContext },
+      { hypothesisContext: oversizedHypothesisContext, recommendationContext },
+      { hypothesisContext: smallHypothesisContext },
+      {
+        ...conversation([...exchange('o'.repeat(6_000), 'o'.repeat(6_000)), ...exchange('n'.repeat(6_000), 'n'.repeat(6_000))]),
+        memoryContext: oversizedMemory,
+        humanIntelligence: oversizedHumanIntelligence(),
+        hypothesisContext: oversizedHypothesisContext,
+        recommendationContext,
+      },
+    ];
+    const seen = new Set<string>();
+    for (const overrides of cases) {
+      const result = assembler().assemble(input(overrides));
+      for (const decision of result.decisions) {
+        seen.add(`${decision.source}:${decision.outcome}`);
+        if (decision.source === 'HUMAN_INTELLIGENCE' || decision.source === 'HYPOTHESIS_RECOMMENDATION') {
+          expect(decision.outcome).not.toBe('PARTIALLY_RETAINED');
+          expect(['NOT_PRESENT', 'INCLUDED_FULL', 'OMITTED_BUDGET']).toContain(decision.outcome);
+        }
+      }
+    }
+    // Non-vacuity: the matrix really did exercise every atomic outcome, and the
+    // prefix-retainable sources really do reach PARTIALLY_RETAINED.
+    for (const pair of [
+      'HUMAN_INTELLIGENCE:NOT_PRESENT', 'HUMAN_INTELLIGENCE:INCLUDED_FULL', 'HUMAN_INTELLIGENCE:OMITTED_BUDGET',
+      'HYPOTHESIS_RECOMMENDATION:NOT_PRESENT', 'HYPOTHESIS_RECOMMENDATION:INCLUDED_FULL', 'HYPOTHESIS_RECOMMENDATION:OMITTED_BUDGET',
+      'HISTORY:PARTIALLY_RETAINED', 'MEMORY:PARTIALLY_RETAINED',
+    ]) expect(seen).toContain(pair);
+  });
+
   it('emits no content, identifier, or raw source data', () => {
     const telemetry = telemetryDouble();
     assembler(telemetry).assemble(input({
