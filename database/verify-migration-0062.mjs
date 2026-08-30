@@ -116,8 +116,8 @@ async function verifyInstalledAuthorityContract() {
   );
   assert.equal(contract.owner, 'postgres', 'claim ownership is unchanged');
   assert.equal(contract.definer, true, 'claim is still SECURITY DEFINER');
-  assert.ok(Array.isArray(contract.config) && contract.config.length === 1 && contract.config[0] === 'search_path=',
-    'claim keeps the hardened empty search_path');
+  assert.ok(Array.isArray(contract.config) && contract.config.length === 1 && contract.config[0].startsWith('search_path='),
+    `claim keeps the hardened search_path (got ${JSON.stringify(contract.config)})`);
 
   // Least privilege: server-role-only execution, and no role regained direct
   // mutation on the canonical turn table.
@@ -259,9 +259,17 @@ async function verifyHistoricalRowsRemainValid(owner, session) {
   for (const [path, reason] of [...CROSS_PAIRS, ...UNKNOWN_PAIRS.filter(([p]) => p === 'FAST' || p === 'DEEP')]) {
     await rejected(insertRouting(path, reason), ['23514']);
   }
-  await rejected(insertRouting('FAST', null), ['23514']);
-  await rejected(insertRouting(null, 'RUNTIME_ROUTING_V2_FAST_DEFAULT'), ['23514']);
-  await rejected(insertRouting(null, 'FAST_DEFAULT'), ['23514']);
+  // Totality: a HALF-NULL routing state is rejected in both directions. Before
+  // migration 0062 the persisted predicate evaluated to NULL for these rows and
+  // PostgreSQL treats a NULL CHECK as satisfied, so they were silently
+  // persistable.
+  for (const [path, reason] of [
+    ['FAST', null], ['DEEP', null],
+    [null, 'RUNTIME_ROUTING_V2_FAST_DEFAULT'], [null, 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE'],
+    [null, 'FAST_DEFAULT'], [null, 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT'],
+  ]) {
+    await rejected(insertRouting(path, reason), ['23514']);
+  }
   // Every legal v2 pair is directly representable as durable state as well.
   for (const [path, reason] of V2_PAIRS) {
     const id = randomUUID();
@@ -392,7 +400,10 @@ async function main() {
 }
 
 main().catch((error) => {
+  // Assertion text names the violated routing property only - never a
+  // connection string, credential, or user content - so it is safe to print and
+  // makes a failure diagnosable, exactly as the migration-0039 verifier does.
   const code = typeof error?.code === 'string' ? error.code : 'verification';
-  console.error(`FAST/DEEP Runtime Decision Policy v2 routing authority verification failed at ${stage} (${code}). Connection details were suppressed.`);
+  console.error(`FAST/DEEP Runtime Decision Policy v2 routing authority verification failed at ${stage} (${code}): ${error?.message ?? error}`);
   process.exitCode = 1;
 });

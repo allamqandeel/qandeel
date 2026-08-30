@@ -264,6 +264,17 @@ function assertFastDeepRuntimeDecisionPolicyV2Contract(world) {
       violated(`migration 0062 keeps historical ${reason} rows readable`);
     if (!world.verifier.includes(reason)) violated(`the 0062 verifier proves ${reason} compatibility`);
   }
+  // Both durable predicates are TOTAL: SQL's third truth value can no longer
+  // let a NULL claim through the gate or a half-null row through the CHECK.
+  if (!world.migration.includes('(processing_path IS NULL AND routing_reason IS NULL) OR'))
+    violated('the persisted check keeps the legitimate pre-routing state');
+  if (!world.migration.includes('(processing_path IS NOT NULL AND routing_reason IS NOT NULL AND ('))
+    violated('the persisted check is total: path-only and reason-only states are rejected');
+  // Prose that explains WHY `NOT VALID` is not used is not `NOT VALID`, so only
+  // executable SQL is scanned.
+  const migrationSql = world.migration.replace(/^\s*--.*$/gmu, '');
+  if (migrationSql.includes('NOT VALID'))
+    violated('the widened check is validated against existing rows rather than deferred');
   const claimBody = world.migration.slice(world.migration.indexOf('CREATE OR REPLACE FUNCTION public.claim_conversation_turn'));
   for (const reason of LEGACY_REASONS) {
     if (retiredLiteral(reason).test(claimBody)) violated(`new claims reject the retired reason ${reason}`);
@@ -407,6 +418,12 @@ test('P2 - anti-vacuity: the real guard rejects every named regression', () => {
     }],
     ['the routing gate lost its NULL guard and became three-valued again', {
       migration: shipped.migration.replace('  IF p_processing_path IS NULL OR p_routing_reason IS NULL\n    OR NOT(', '  IF NOT('),
+    }],
+    ['the persisted check lost its both-NOT-NULL guard and became three-valued again', {
+      migration: shipped.migration.replace('(processing_path IS NOT NULL AND routing_reason IS NOT NULL AND (', '((('),
+    }],
+    ['the widened check was deferred instead of validated', {
+      migration: shipped.migration.replace('ADD CONSTRAINT conversation_turns_routing_reason_check CHECK (', 'ADD CONSTRAINT conversation_turns_routing_reason_check NOT VALID CHECK ('),
     }],
     ['the claim row lock was dropped', { migration: shipped.migration.replace('    FOR UPDATE', '    ') }],
     ['the definer hardening was dropped', {

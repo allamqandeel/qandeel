@@ -49,25 +49,41 @@ BEGIN;
 --    outbox payloads that copied their route pair) valid; the constraint is
 --    added WITHOUT `NOT VALID` on purpose, so PostgreSQL revalidates every
 --    existing row here and the migration itself proves backward compatibility.
---    Cross pairs, unknown reasons, path-only and reason-only states stay
---    rejected exactly as before.
+--    Cross pairs and unknown reasons stay rejected exactly as before.
+--
+--    The constraint is also made TOTAL. The migration-0003 predicate was
+--    three-valued: for a HALF-NULL routing state (path set with a NULL reason,
+--    or the reverse) every disjunct evaluated to NULL or FALSE, the whole OR
+--    chain evaluated to NULL, and PostgreSQL treats a NULL CHECK as SATISFIED —
+--    so `path-only` and `reason-only` rows were silently persistable, and were
+--    actually reachable through the matching NULL hole in the claim gate closed
+--    in step 2. The explicit both-NOT-NULL guard below removes the third truth
+--    value, so the predicate is exactly TRUE or FALSE for every row.
+--
+--    DEPLOYMENT NOTE: because the constraint is added WITHOUT `NOT VALID`, a
+--    pre-existing half-null row would make this statement fail loudly rather
+--    than be carried forward. That is deliberate: a half-null routing state is
+--    corruption, and QIR-002 does not silently repair or delete canonical data.
 ALTER TABLE public.conversation_turns
   DROP CONSTRAINT conversation_turns_routing_reason_check;
 
 ALTER TABLE public.conversation_turns
   ADD CONSTRAINT conversation_turns_routing_reason_check CHECK (
+    -- The legitimate pre-routing state.
     (processing_path IS NULL AND routing_reason IS NULL) OR
-    -- Historical, read-only from QIR-002 onward. New claims can no longer
-    -- produce these; existing rows must never become unreadable.
-    (processing_path = 'FAST' AND routing_reason = 'FAST_DEFAULT') OR
-    (processing_path = 'DEEP' AND routing_reason = 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT') OR
-    -- Runtime Decision Policy v2.
-    (processing_path = 'FAST' AND routing_reason = 'RUNTIME_ROUTING_V2_FAST_DEFAULT') OR
-    (processing_path = 'DEEP' AND routing_reason IN (
-      'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE',
-      'RUNTIME_ROUTING_V2_DEEP_MULTI_QUESTION',
-      'RUNTIME_ROUTING_V2_DEEP_MULTI_PART',
-      'RUNTIME_ROUTING_V2_DEEP_COMPOSITE'))
+    (processing_path IS NOT NULL AND routing_reason IS NOT NULL AND (
+      -- Historical, read-only from QIR-002 onward. New claims can no longer
+      -- produce these; existing rows must never become unreadable.
+      (processing_path = 'FAST' AND routing_reason = 'FAST_DEFAULT') OR
+      (processing_path = 'DEEP' AND routing_reason = 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT') OR
+      -- Runtime Decision Policy v2.
+      (processing_path = 'FAST' AND routing_reason = 'RUNTIME_ROUTING_V2_FAST_DEFAULT') OR
+      (processing_path = 'DEEP' AND routing_reason IN (
+        'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE',
+        'RUNTIME_ROUTING_V2_DEEP_MULTI_QUESTION',
+        'RUNTIME_ROUTING_V2_DEEP_MULTI_PART',
+        'RUNTIME_ROUTING_V2_DEEP_COMPOSITE'))
+    ))
   );
 
 -- 2. Current claim authority. Same signature, same ownership/state/lock/lease

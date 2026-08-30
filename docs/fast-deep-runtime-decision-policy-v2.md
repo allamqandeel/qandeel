@@ -168,21 +168,32 @@ work are not the same authority:
 - The persisted `conversation_turns_routing_reason_check` is **widened** to
   `{null/null, both historical legacy pairs, all five v2 pairs}`, so every
   canonical row written before QIR-002 stays valid. Cross pairs, unknown
-  reasons, path-only and reason-only states stay rejected.
+  reasons, path-only and reason-only states are rejected.
 - `claim_conversation_turn` is **narrowed**: a NEW claim accepts only the five
   v2 pairs and rejects the retired `FAST_DEFAULT` and
   `INPUT_LENGTH_REQUIRES_DEEP_CONTEXT`, unknown reasons, cross pairs and
   null/partial routing arguments with `INVALID_ROUTING`.
 
-The gate is also made **total**. The migration-0025/0039 predicate was
-three-valued: a NULL path or NULL reason collapsed every disjunct to NULL,
-`NOT(NULL)` is NULL, and plpgsql treats a NULL `IF` condition as false — so the
-`RAISE` was skipped and a NULL/NULL claim could transition `RECEIVED →
-GENERATING` with no durable route at all (the table CHECK accepts null/null as
-the legitimate pre-routing state, so nothing downstream caught it). The explicit
-NULL guard closes that hole; it strengthens the gate and weakens nothing,
-because a NULL routing argument was never a legal claim under any policy
-version.
+**Both halves are also made total.** Each pre-QIR-002 predicate was
+three-valued, and SQL's third truth value was load-bearing in the wrong
+direction:
+
+- The migration-0025/0039 **claim gate**: a NULL path or NULL reason collapsed
+  every disjunct to NULL, `NOT(NULL)` is NULL, and plpgsql treats a NULL `IF`
+  condition as false — so the `RAISE` was skipped and a NULL claim could
+  transition `RECEIVED → GENERATING` with no durable route.
+- The migration-0003 **persisted CHECK**: for a half-null routing state the
+  whole `OR` chain evaluated to NULL, and PostgreSQL treats a NULL CHECK as
+  *satisfied* — so path-only and reason-only rows were silently persistable, and
+  were reachable exactly through the claim-gate hole above.
+
+An explicit NULL guard in the claim gate and an explicit both-NOT-NULL guard in
+the CHECK remove the third truth value from both. This strengthens the durable
+authority and weakens nothing: a NULL or half-null routing state was never a
+legal claim or a legal route under any policy version. Because the CHECK is
+added without `NOT VALID`, a pre-existing half-null row makes the migration fail
+loudly rather than be carried forward — deliberate, because that state is
+corruption and QIR-002 does not silently repair or delete canonical data.
 
 No historical migration is edited. The claim replacement preserves migration
 0025/0039 authority exactly: service-role-only execution, SECURITY DEFINER with
