@@ -1,15 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { metrics,SpanStatusCode,trace,type Attributes,type Span,type Tracer } from '@opentelemetry/api';
 import { CorrelationService } from './correlation.service';
-import{RUNTIME_ROUTING_MAX_COMPLEXITY_SCORE,RUNTIME_ROUTING_MIN_COMPLEXITY_SCORE,RUNTIME_ROUTING_POLICY_VERSION,isLegalCurrentRoutePair,type RuntimeRoutingDecision}from'../intelligence-runtime/fast-deep-routing-contract';
+import{RUNTIME_ROUTING_MAX_COMPLEXITY_SCORE,RUNTIME_ROUTING_MIN_COMPLEXITY_SCORE,RUNTIME_ROUTING_POLICY_VERSION,isLegalCurrentRoutePair,isRuntimeRoutingPath,type RuntimeRoutingDecision}from'../intelligence-runtime/fast-deep-routing-contract';
 
 type Usage={inputTokens:number;outputTokens:number};
 type Instrument={add?:(value:number,attributes?:Attributes)=>void;record?:(value:number,attributes?:Attributes)=>void};
+
+// QIR-003: the finite label registries for the bounded foreground intelligence
+// source-outcome metric. Anything outside these exact sets is DROPPED rather
+// than emitted, so cardinality is bounded by construction and no user content,
+// memory/hypothesis content, identifier, token, exception text, database
+// error identity, or vendor/model identity can ever become a label.
+const FOREGROUND_INTELLIGENCE_SOURCES:ReadonlySet<string>=new Set(['MEMORY','HYPOTHESIS']);
+const FOREGROUND_INTELLIGENCE_SOURCE_OUTCOMES:ReadonlySet<string>=new Set(['AVAILABLE','LEGITIMATE_EMPTY','OPTIONAL_AVAILABILITY_FAILURE','FOREGROUND_BUDGET_EXPIRY','HARD_FAILURE']);
+const FOREGROUND_INTELLIGENCE_POLICY_VERSION='1';
 
 @Injectable()
 export class TelemetryService{
  private readonly postResponseDispatchOperations:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.post_response_dispatch.operations'),{});
  private readonly routingDecisions:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.routing.decisions'),{});
+ private readonly foregroundIntelligenceSourceOutcomes:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.foreground.intelligence.source'),{});
  private readonly tracer:Tracer;private readonly engineDuration:Instrument;private readonly providerDuration:Instrument;private readonly providerCalls:Instrument;private readonly providerErrors:Instrument;private readonly inputTokens:Instrument;private readonly outputTokens:Instrument;private readonly turnOutcomes:Instrument;private readonly publisherOperations:Instrument;private readonly hypothesisContextOutcomes:Instrument;private readonly hypothesisEligibilityOutcomes:Instrument;private readonly hypothesisIntentExtractionOutcomes:Instrument;private readonly hypothesisGenerationRequestAssemblyOutcomes:Instrument;private readonly controlledHypothesisGenerationOutcomes:Instrument;private readonly postGenerationConfidenceOutcomes:Instrument;
  constructor(private readonly correlation:CorrelationService){
   this.tracer=this.safe(()=>trace.getTracer('qandeel-api'),{startActiveSpan:(_name:string,_options:unknown,callback:(span:Span)=>unknown)=>callback(this.noopSpan())}as unknown as Tracer);
@@ -33,6 +43,17 @@ export class TelemetryService{
   const score=decision.complexityScore;
   if(!Number.isInteger(score)||score<RUNTIME_ROUTING_MIN_COMPLEXITY_SCORE||score>RUNTIME_ROUTING_MAX_COMPLEXITY_SCORE)return;
   this.routingDecisions.add?.(1,{processing_path:decision.path,routing_reason:decision.reason,policy_version:String(RUNTIME_ROUTING_POLICY_VERSION),complexity_score:String(score)});
+ });}
+ // QIR-003 bounded foreground intelligence source outcome. Four FINITE
+ // dimensions only - 2 sources x 5 outcomes x 2 paths x 1 policy version - so
+ // cardinality is bounded by construction: any value outside the exact frozen
+ // registries is DROPPED rather than emitted. The whole call is fail-soft and
+ // can never alter a gather outcome or the turn.
+ recordForegroundIntelligenceSource(source:'MEMORY'|'HYPOTHESIS',outcome:string,path:string):void{this.safeVoid(()=>{
+  if(!FOREGROUND_INTELLIGENCE_SOURCES.has(source))return;
+  if(!FOREGROUND_INTELLIGENCE_SOURCE_OUTCOMES.has(outcome))return;
+  if(!isRuntimeRoutingPath(path))return;
+  this.foregroundIntelligenceSourceOutcomes.add?.(1,{source,outcome,processing_path:path,policy_version:FOREGROUND_INTELLIGENCE_POLICY_VERSION});
  });}
  recordHypothesisContext(outcome:'available'|'consumed'|'empty'|'rejected'|'failed',path:string,contractVersion=1,_candidateCount?:number,_includedCount?:number):void{this.safeVoid(()=>this.hypothesisContextOutcomes.add?.(1,{outcome,processing_path:path,contract_version:String(contractVersion)}));}
  recordHypothesisGenerationEligibility(outcome:'eligible'|'not_eligible'|'ambiguous'|'safety_ineligible'|'no_evidence'|'replay_skipped'|'failed',path?:string):void{this.safeVoid(()=>this.hypothesisEligibilityOutcomes.add?.(1,{outcome,...(path?{processing_path:path}:{}),contract_version:'1'}));}

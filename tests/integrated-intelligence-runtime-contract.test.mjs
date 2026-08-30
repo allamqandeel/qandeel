@@ -374,17 +374,22 @@ test('P3 - forward safety: every change a later QIR task is expected to make sta
       `no live source in the QIR-001 world carries a route-reason literal (${key})`);
   }
 
-  // QIR-003: Memory launched concurrently instead of as a serial await stage.
-  const memoryLine = "      const memoryContext = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));";
-  assert.ok(shipped.orchestrator.includes(memoryLine), 'the serial Memory stage exists at the baseline to mutate');
-  const parallelized = shipped.orchestrator.replace(memoryLine,
-    "      const [memoryContext] = await Promise.all([this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content))]);");
-  assert.notDeepEqual(parallelized, shipped.orchestrator);
-  assert.doesNotThrow(() => assertIntegratedIntelligenceRuntimeContract({ ...shipped, orchestrator: parallelized }),
-    'QIR-003 may remove the Memory-before-Hypothesis serial ordering');
+  // Foreground acquisition: QIR-003 already exercised this freedom by
+  // replacing the serial Memory-then-Hypothesis await stages with the bounded
+  // concurrent gatherer, so the mutation fixture now points at the CURRENT
+  // acquisition surface — a later reviewed revision may reshape it again, and
+  // this guard must stay indifferent. (The QIR-003 guard, not this one, owns
+  // the gatherer law.)
+  const gatherLaunchLine = '      const foregroundGatherPromise = this.foregroundIntelligenceGatherer.gather({';
+  assert.ok(shipped.orchestrator.includes(gatherLaunchLine), 'the bounded gather launch exists at the baseline to mutate');
+  const regathered = shipped.orchestrator.replace(gatherLaunchLine,
+    '      const foregroundGatherPromise = this.foregroundIntelligenceGathererV2.gather({');
+  assert.notDeepEqual(regathered, shipped.orchestrator);
+  assert.doesNotThrow(() => assertIntegratedIntelligenceRuntimeContract({ ...shipped, orchestrator: regathered }),
+    'a later reviewed task may revise the bounded foreground acquisition surface');
 
   // QIR-006: a foreground Question opportunity channel appears.
-  const recommendationLine = '      const recommendationGrounding = this.recommendationGrounding.ground(hypothesisResult);';
+  const recommendationLine = '      const recommendationGrounding = hypothesisResult ? this.recommendationGrounding.ground(hypothesisResult) : undefined;';
   assert.ok(shipped.orchestrator.includes(recommendationLine), 'the recommendation stage exists at the baseline to extend');
   const questionChannel = shipped.orchestrator.replace(recommendationLine,
     `${recommendationLine}\n      const questionOpportunity = await this.engine('question_opportunity',selection.path,()=>this.questionOpportunityChannel.read(userId, accessToken, claimed.session_id));`);
@@ -394,8 +399,8 @@ test('P3 - forward safety: every change a later QIR task is expected to make sta
 
   // All of the above together — a plausible later-phase orchestrator.
   const combined = rerouted
-    .replace(memoryLine,
-      "      const [memoryContext] = await Promise.all([this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content))]);")
+    .replace(gatherLaunchLine,
+      '      const foregroundGatherPromise = this.foregroundIntelligenceGathererV2.gather({')
     .replace(recommendationLine,
       `${recommendationLine}\n      const questionOpportunity = await this.engine('question_opportunity',selection.path,()=>this.questionOpportunityChannel.read(userId, accessToken, claimed.session_id));`);
   assert.doesNotThrow(() => assertIntegratedIntelligenceRuntimeContract({ ...shipped, orchestrator: combined }),

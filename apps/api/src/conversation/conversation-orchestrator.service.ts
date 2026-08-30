@@ -9,7 +9,6 @@ import {
   type BehavioralResponsePolicy,
 } from './behavioral-response-policy.types';
 import { SAFETY_RESPONSE_GATE, type SafetyResponseGate } from './safety-response-gate.types';
-import { MemoryRetrieverService } from '../memory/memory-retriever.service';
 import { HimTurnContextSelectionService } from '../human-model/him-turn-context-selection.service';
 import { HimIntelligenceSnapshotService } from '../human-model/him-intelligence-snapshot.service';
 import type { HimIntelligenceSnapshot } from '../human-model/him-intelligence-snapshot.types';
@@ -28,10 +27,10 @@ import type { HimBrainContext } from '../human-model/him-brain-context.types';
 import { buildHumanIntelligenceProviderSemantics } from '../model-router/human-intelligence-provider-semantics';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
-import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
-import { HypothesisReasoningInvariantError } from '../hypothesis/hypothesis-reasoning-context.types';
+import type { HypothesisReasoningContextResult } from '../hypothesis/hypothesis-reasoning-context.types';
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
+import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
 
 // QHIA-005 amendment (PR #164), generalized by QHIA-014A: the ONE shared
 // maximum foreground orchestration time spent waiting for OPTIONAL Human
@@ -81,7 +80,6 @@ export class ConversationOrchestratorService {
     @Inject(CONTEXT_BUILDER) private readonly contextBuilder: ContextBuilder,
     @Inject(SAFETY_RESPONSE_GATE) private readonly safetyGate: SafetyResponseGate,
     @Inject(BEHAVIORAL_RESPONSE_POLICY) private readonly behavioralPolicy: BehavioralResponsePolicy,
-    private readonly memoryRetriever: MemoryRetrieverService,
     private readonly himContextSelector: HimTurnContextSelectionService,
     private readonly himSnapshot: HimIntelligenceSnapshotService,
     private readonly himReasoningConsumption: HimReasoningConsumptionService,
@@ -91,7 +89,7 @@ export class ConversationOrchestratorService {
     private readonly himSessionReflectionConsumption: HimSessionReflectionConsumptionService,
     private readonly himCrossContextForeground: HimCrossContextForegroundAggregationService,
     private readonly himBrainContext: HimBrainContextService,
-    private readonly hypothesisReasoningContext: HypothesisReasoningContextService,
+    private readonly foregroundIntelligenceGatherer: BoundedForegroundIntelligenceGathererService,
     private readonly recommendationGrounding: RecommendationGroundingService,
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
     private readonly correlation:CorrelationService,
@@ -154,7 +152,13 @@ export class ConversationOrchestratorService {
         this.telemetry.recordTurnOutcome('blocked',selection.path);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
-      const {himContext,himInteractionAdaptation,himSessionReflectionGuidance,himSituationStressGuidance,himDecisionAttentionGuidance,himGoalMotivationGuidance,himRelationshipCommunicationGuidance,himBrainContext}=await this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
+      // QIR-003: the frozen Human Intelligence foreground lane is LAUNCHED
+      // HERE - byte-identical inside - and is no longer awaited inline. Its
+      // ONE barrier, its shared 300 ms wait class, its zero-required-wait
+      // optional channels, its relevance/non-inference/privacy rules and its
+      // fail-closed integrity behavior are exactly as QHIA froze them; the
+      // join below simply awaits this already-running lane.
+      const himForegroundLanePromise = this.engine('him_context',selection.path,async()=>{const himSelection = this.himContextSelector.select(claimed);
       // QHIA-005: the HSE Intelligence Snapshot read and the one-metric
       // hbs.reflection selective read (QHIA-004 boundary, exactly one batch
       // request) are LAUNCHED CONCURRENTLY for the same authoritative session
@@ -303,6 +307,37 @@ export class ConversationOrchestratorService {
         try { reflectionGuidance = this.himSessionReflectionConsumption.consume(reflectionRead.value); } catch { reflectionGuidance = undefined; }
       }
       return {himContext:snapshotModelContext,himInteractionAdaptation:adaptation,himSessionReflectionGuidance:reflectionGuidance,himSituationStressGuidance:situationStressGuidance,himDecisionAttentionGuidance:decisionAttentionGuidance,himGoalMotivationGuidance:goalMotivationGuidance,himRelationshipCommunicationGuidance:relationshipCommunicationGuidance,himBrainContext:brainContextSettled};});
+      // QIR-003: the bounded Memory + Hypothesis foreground gather is LAUNCHED
+      // HERE, in the SAME synchronous post-Safety stage as the frozen Human
+      // Intelligence lane above and BEFORE either lane is awaited. Memory and
+      // Hypothesis do not depend on Human Intelligence or on each other, so
+      // all three independent foreground lanes start together: Memory is never
+      // a serial stage after the Human Intelligence barrier, and Hypothesis is
+      // never a serial stage after Memory. Inside the gatherer both sources
+      // share ONE absolute 5000 ms non-HI foreground ceiling that starts at
+      // this launch - a structural safety ceiling derived from the canonical
+      // Data API transport boundary, NOT the QHIA 300 ms Human Intelligence
+      // budget (untouched, and never applied to these sources), NOT a
+      // whole-turn budget, and NOT a provider latency budget. Safety has
+      // already authorized this turn: the BLOCK short-circuit returns above
+      // before any of these launches, so a blocked turn performs zero Memory,
+      // Hypothesis, Recommendation and provider work.
+      const foregroundGatherPromise = this.foregroundIntelligenceGatherer.gather({
+        userId, accessToken, content: userTurn.content, path: selection.path,
+      });
+      // The swallow handler is attached IMMEDIATELY so a hard gather failure
+      // that settles while the Human Intelligence lane is still being awaited
+      // can never become an unhandled rejection. It changes nothing else: the
+      // ORIGINAL rejection still propagates through the gather join below and
+      // fails the turn closed through the existing outer failure path before
+      // any provider generation.
+      foregroundGatherPromise.catch(() => undefined);
+      // The join: both lanes are ALREADY RUNNING, so awaiting them in sequence
+      // waits for the slower of the frozen Human Intelligence lane and the
+      // shared Memory/Hypothesis gather deadline - never their serial sum -
+      // and introduces no new barrier construct and no new timer into this
+      // orchestrator.
+      const {himContext,himInteractionAdaptation,himSessionReflectionGuidance,himSituationStressGuidance,himDecisionAttentionGuidance,himGoalMotivationGuidance,himRelationshipCommunicationGuidance,himBrainContext}=await himForegroundLanePromise;
       // QHIA-013: the ONE Human Intelligence provider boundary conversion.
       //
       // Every value above already exists in memory at this point - this is pure
@@ -332,17 +367,36 @@ export class ConversationOrchestratorService {
         ...(himRelationshipCommunicationGuidance ? { himRelationshipCommunicationGuidance } : {}),
         ...(himBrainContext ? { himBrainContext } : {}),
       });
-      const memoryContext = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));
-      let hypothesisResult;
-      try {
-        hypothesisResult = await this.engine('hypothesis_context',selection.path,()=>this.hypothesisReasoningContext.build(userId, accessToken));
-      } catch (error) {
-        this.telemetry.recordHypothesisContext(error instanceof HypothesisReasoningInvariantError ? 'rejected' : 'failed', selection.path);
-        throw error;
-      }
-      if (hypothesisResult.coverageState === 'EMPTY') this.telemetry.recordHypothesisContext('empty', selection.path);
-      else this.telemetry.recordHypothesisContext('available', selection.path, hypothesisResult.context.contractVersion, hypothesisResult.context.candidateHypothesisCount, hypothesisResult.context.includedHypothesisCount);
-      const recommendationGrounding = this.recommendationGrounding.ground(hypothesisResult);
+      // QIR-003 gather join: a hard Memory or Hypothesis failure rejects here
+      // with its ORIGINAL error and fails the turn closed through the existing
+      // outer failure path; every approved degradation arrives as a typed
+      // outcome instead. The gatherer has already emitted the bounded
+      // per-source outcome telemetry and, for a hard Hypothesis failure, the
+      // pre-existing hypothesis-context rejected/failed outcome metric.
+      const { memory: memoryForeground, hypothesis: hypothesisForeground } = await foregroundGatherPromise;
+      // Provider-envelope Memory semantics: AVAILABLE carries the actual
+      // retrieved Memory context; LEGITIMATE_EMPTY, OPTIONAL_AVAILABILITY_FAILURE
+      // and FOREGROUND_BUDGET_EXPIRY all OMIT the Memory field (assemble drops
+      // an empty array) while remaining fully distinguished internally and in
+      // telemetry. Unavailable or expired Memory is OMISSION: never an
+      // empty-memory assertion, never a remembered older answer, and never
+      // fabricated content.
+      const memoryContext = memoryForeground.state === 'AVAILABLE' ? memoryForeground.value : [];
+      // Hypothesis is consumed ONLY from a legitimate typed outcome. An
+      // unavailable or expired Hypothesis is never converted into a fabricated
+      // canonical EMPTY result: it simply yields no Hypothesis field and no
+      // Recommendation for this turn.
+      let hypothesisResult: HypothesisReasoningContextResult | undefined;
+      if (hypothesisForeground.state === 'AVAILABLE' || hypothesisForeground.state === 'LEGITIMATE_EMPTY') hypothesisResult = hypothesisForeground.value;
+      if (hypothesisResult?.coverageState === 'EMPTY') this.telemetry.recordHypothesisContext('empty', selection.path);
+      else if (hypothesisResult) this.telemetry.recordHypothesisContext('available', selection.path, hypothesisResult.context.contractVersion, hypothesisResult.context.candidateHypothesisCount, hypothesisResult.context.includedHypothesisCount);
+      // Recommendation grounding stays deterministic, read-only and
+      // Hypothesis-owned: it runs on an AVAILABLE result, may run on the
+      // canonical legitimate EMPTY result, and is NEVER called for an
+      // unavailable or expired Hypothesis. There is no Recommendation
+      // fallback and no provider-generated replacement; a grounding invariant
+      // failure still fails the turn closed before any provider generation.
+      const recommendationGrounding = hypothesisResult ? this.recommendationGrounding.ground(hypothesisResult) : undefined;
       const assembledContext = this.contextBuilder.assemble(context, memoryContext);
       const behavioralGuidance = this.behavioralPolicy.buildTextGuidance();
       const candidate = await this.engine('model_router',selection.path,()=>this.router.generate({
@@ -359,13 +413,13 @@ export class ConversationOrchestratorService {
         // settled successfully before the existing barrier AND carried at least
         // one surviving signal.
         ...(humanIntelligence ? { humanIntelligence } : {}),
-        ...(hypothesisResult.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesisResult.context } : {}),
-        ...(recommendationGrounding.coverageState === 'AVAILABLE' ? { recommendationContext: recommendationGrounding.context } : {}),
+        ...(hypothesisResult?.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesisResult.context } : {}),
+        ...(recommendationGrounding?.coverageState === 'AVAILABLE' ? { recommendationContext: recommendationGrounding.context } : {}),
         locale: 'und', modality: 'TEXT',
         latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
       }));
-      if (hypothesisResult.coverageState === 'AVAILABLE') this.telemetry.recordHypothesisContext('consumed', selection.path, hypothesisResult.context.contractVersion, hypothesisResult.context.candidateHypothesisCount, hypothesisResult.context.includedHypothesisCount);
+      if (hypothesisResult?.coverageState === 'AVAILABLE') this.telemetry.recordHypothesisContext('consumed', selection.path, hypothesisResult.context.contractVersion, hypothesisResult.context.candidateHypothesisCount, hypothesisResult.context.includedHypothesisCount);
       const finalized = await this.repository.finalizeTurn({
         sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
         assistantTurnId: randomUUID(), content: candidate.content, safetyDisposition: safety.disposition,

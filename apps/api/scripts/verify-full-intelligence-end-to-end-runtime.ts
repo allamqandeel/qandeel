@@ -36,6 +36,7 @@ import { performance } from 'node:perf_hooks';
 import { createClient, type RedisClientType } from 'redis';
 // Foreground production services (real intelligence semantics).
 import { ConversationOrchestratorService } from '../src/conversation/conversation-orchestrator.service';
+import { BoundedForegroundIntelligenceGathererService } from '../src/intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
 import { ConversationRepository } from '../src/conversation/conversation.repository';
 // QHIA-011A: the production explicit session context activation entry. It is
 // used ONCE, deliberately, during fixture setup - never from a turn.
@@ -686,12 +687,19 @@ async function main(): Promise<void> {
     } as unknown as HimBrainContextService;
 
     const conversationalRouter = new DeterministicConversationalModelRouter(ASSISTANT_TURN_TEXT);
+    // QIR-003: the REAL bounded Memory + Hypothesis foreground gatherer over
+    // the REAL retriever and REAL reasoning-context services, so this smoke
+    // drives the production concurrent post-Safety launch, the shared 5000 ms
+    // non-HI ceiling, and the typed-outcome join end to end against real
+    // PostgreSQL transport semantics.
+    const foregroundGatherer = new BoundedForegroundIntelligenceGathererService(
+      memoryRetriever, hypothesisReasoningContext, correlation, telemetry);
     const orchestrator = new ConversationOrchestratorService(
       conversationRepository, contextBuilder, new SafetyResponseGateService(), new BehavioralResponsePolicyService(),
-      memoryRetriever, new HimTurnContextSelectionService(), deterministicSnapshotService, new HimReasoningConsumptionService(),
+      new HimTurnContextSelectionService(), deterministicSnapshotService, new HimReasoningConsumptionService(),
       new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), himContextualCurrentService, new HimSessionReflectionConsumptionService(), himCrossContextForegroundService,
       deterministicBrainContextService,
-      hypothesisReasoningContext, new RecommendationGroundingService(),
+      foregroundGatherer, new RecommendationGroundingService(),
       conversationalRouter, correlation, telemetry);
 
     // Background provider doubles exist from the start so the foreground phase

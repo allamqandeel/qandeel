@@ -587,8 +587,8 @@ test('C2 - anti-vacuity: the real guard rejects every named regression', () => {
     }],
     ['the Orchestrator gained a second foreground barrier', {
       orchestrator: shipped.orchestrator.replace(
-        '      const memoryContext = await this.engine(',
-        '      await Promise.all([brainContextReadPromise.catch(() => undefined)]);\n      const memoryContext = await this.engine(',
+        '      const { memory: memoryForeground, hypothesis: hypothesisForeground } = await foregroundGatherPromise;',
+        '      await Promise.all([brainContextReadPromise.catch(() => undefined)]);\n      const { memory: memoryForeground, hypothesis: hypothesisForeground } = await foregroundGatherPromise;',
       ),
     }],
     ['the Orchestrator gained a second foreground timer', {

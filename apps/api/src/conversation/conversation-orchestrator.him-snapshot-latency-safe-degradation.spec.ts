@@ -14,6 +14,7 @@ import type { HimRepository } from '../human-model/him.repository';
 import type { ModelRouter, ModelRouterRequest } from '../model-router/model-router.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
+import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 import type { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn } from './conversation.types';
@@ -113,12 +114,21 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
       assemble: jest.fn((messages: unknown, memoryContext: unknown[]) => ({ messages, ...(memoryContext.length ? { memoryContext } : {}) })),
     } as unknown as ContextBuilder;
     const correlation = new CorrelationService();
+    const telemetry = new TelemetryService(correlation);
+    // QIR-003: the REAL bounded Memory + Hypothesis gatherer over this spec's
+    // immediate doubles - the two sources settle instantly, so every timing
+    // proof below still measures ONLY the Human Intelligence lane.
+    const foregroundGatherer = new BoundedForegroundIntelligenceGathererService(
+      { retrieve: jest.fn().mockResolvedValue([]) } as unknown as MemoryRetrieverService,
+      { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as HypothesisReasoningContextService,
+      correlation,
+      telemetry,
+    );
     orchestrator = new ConversationOrchestratorService(
       repository,
       contextBuilder,
       { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) } as unknown as SafetyResponseGate,
       { buildTextGuidance: jest.fn().mockReturnValue('server-owned policy') } as unknown as BehavioralResponsePolicy,
-      { retrieve: jest.fn().mockResolvedValue([]) } as unknown as MemoryRetrieverService,
       new HimTurnContextSelectionService(),
       // The REAL Snapshot service over a controlled repository: the QHIA-014A
       // classification is proven, never mocked away.
@@ -130,11 +140,11 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
       new HimSessionReflectionConsumptionService(),
       { read: aggregateRead } as unknown as HimCrossContextForegroundAggregationService,
       { read: brainRead, consumeSourceRows: jest.fn() } as unknown as HimBrainContextService,
-      { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as HypothesisReasoningContextService,
+      foregroundGatherer,
       { ground: jest.fn().mockReturnValue({ coverageState: 'EMPTY', reason: 'NO_ACTIVE_HYPOTHESES' }) } as unknown as RecommendationGroundingService,
       router,
       correlation,
-      new TelemetryService(correlation),
+      telemetry,
     );
   });
 
