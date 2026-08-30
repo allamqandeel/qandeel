@@ -360,7 +360,16 @@ function reconciliationRows(freezeDoc) {
 /** Backticked tokens of one table cell. */
 const backticked = (cell) => [...cell.matchAll(/`([^`]+)`/gu)].map((match) => match[1]);
 
-function assertIntegratedIntelligenceRuntimePhaseClosureContract(world) {
+function assertIntegratedIntelligenceRuntimePhaseClosureContract(input) {
+  // Line endings are normalized to LF first. Git for Windows defaults to
+  // `core.autocrlf=true`, which materializes these LF-committed files as CRLF,
+  // and every `\n`-anchored section check and multi-line source snippet below
+  // would then fail on a perfectly legitimate clone. This guard asserts
+  // CONTENT, never a checkout's platform. Non-string world entries (the real
+  // migration listing, the `exists` probe) pass through untouched.
+  const world = Object.fromEntries(Object.entries(input).map(([key, value]) =>
+    [key, typeof value === 'string' ? value.replace(/\r\n/gu, '\n') : value]));
+
   // 1. The freeze document exists, is substantive, and is the closure statement.
   if (typeof world.freezeDoc !== 'string' || world.freezeDoc.length < 8000)
     violated('the freeze document exists and is substantive');
@@ -536,6 +545,15 @@ const shippedWorld = Object.freeze({
 
 test('C1 - the shipped repository satisfies the QIR-008 phase closure contract', () => {
   assert.doesNotThrow(() => assertIntegratedIntelligenceRuntimePhaseClosureContract(shippedWorld));
+  // The SAME repository checked out with CRLF line endings - what Git for
+  // Windows produces by default from these LF-committed files - satisfies it
+  // identically. Without this the closure guard would fail on a legitimate
+  // Windows clone while passing on the Linux CI runner.
+  const crlfWorld = Object.fromEntries(Object.entries(shippedWorld).map(([key, value]) =>
+    [key, typeof value === 'string' ? value.replace(/\n/gu, '\r\n') : value]));
+  assert.notEqual(crlfWorld.freezeDoc, shippedWorld.freezeDoc, 'the CRLF world really differs from the LF world');
+  assert.doesNotThrow(() => assertIntegratedIntelligenceRuntimePhaseClosureContract(crlfWorld),
+    'a CRLF checkout satisfies the closure contract identically');
 });
 
 test('C2 - anti-vacuity: the real guard rejects every named regression', () => {
