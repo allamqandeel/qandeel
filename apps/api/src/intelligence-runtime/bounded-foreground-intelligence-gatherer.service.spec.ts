@@ -4,7 +4,8 @@ import { QIR_NON_HI_FOREGROUND_WAIT_BUDGET_MS } from './bounded-foreground-intel
 import { MemoryRetrieverService } from '../memory/memory-retriever.service';
 import { MemoryDataApiError } from '../memory/memory-data-api.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
-import { HypothesisReasoningInvariantError, type HypothesisReasoningContextResult } from '../hypothesis/hypothesis-reasoning-context.types';
+import { HypothesisReasoningInvariantError, type HypothesisReasoningContext, type HypothesisReasoningContextResult, type HypothesisReasoningItem } from '../hypothesis/hypothesis-reasoning-context.types';
+import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 
@@ -21,12 +22,25 @@ describe('BoundedForegroundIntelligenceGathererService (QIR-003)', () => {
   };
   const memoryValue = [{ type: 'GOAL', content: 'Leave my job', source: 'USER_STATED' }] as const;
   const emptyHypothesis: HypothesisReasoningContextResult = { coverageState: 'EMPTY', candidateHypothesisCount: 0 };
+  // QIR-003 Fix 01: the positive AVAILABLE fixture is a GENUINELY canonical
+  // envelope - one included hypothesis and internally consistent counts - and
+  // a dedicated test below proves the canonical downstream Recommendation
+  // grounding validator accepts it, so this fixture can never silently drift
+  // back into a malformed shape that only the gatherer's own validator likes.
+  const availableHypothesisItem: HypothesisReasoningItem = {
+    statement: 'statement', type: 'CAUSAL', domain: 'GENERAL', scope: 'session',
+    origin: 'USER_PROPOSED', status: 'ACTIVE', hypothesisVersion: 1,
+    currentlyEligibleSupportingEvidenceCount: 0, currentlyEligibleContradictingEvidenceCount: 0,
+    assumptions: [], disconfirmingConditions: [],
+    confidence: { state: 'NOT_EVALUATED_FOR_CURRENT_VERSION', targetVersion: 1 },
+  };
+  const canonicalAvailableContext: HypothesisReasoningContext = {
+    contractVersion: 1, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT', coverageState: 'AVAILABLE',
+    candidateHypothesisCount: 1, includedHypothesisCount: 1, truncated: false, hypotheses: [availableHypothesisItem],
+  };
   const availableHypothesis: HypothesisReasoningContextResult = {
     coverageState: 'AVAILABLE',
-    context: {
-      contractVersion: 1, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT', coverageState: 'AVAILABLE',
-      candidateHypothesisCount: 1, includedHypothesisCount: 1, truncated: false, hypotheses: [],
-    },
+    context: canonicalAvailableContext,
   };
 
   let memoryRetriever: jest.Mocked<MemoryRetrieverService>;
@@ -129,10 +143,35 @@ describe('BoundedForegroundIntelligenceGathererService (QIR-003)', () => {
       await expect(gather()).rejects.toBe(error);
     });
 
-    it('fails CLOSED on a malformed non-array Memory result instead of degrading it', async () => {
-      memoryRetriever.retrieve.mockResolvedValue({ not: 'an array' } as never);
+    it('keeps a valid selection AVAILABLE when the optional source field is absent', async () => {
+      const withoutSource = [{ type: 'GOAL', content: 'Leave my job' }];
+      memoryRetriever.retrieve.mockResolvedValue(withoutSource as never);
+      const { memory } = await gather();
+      expect(memory.state).toBe('AVAILABLE');
+      expect(memory.state === 'AVAILABLE' && memory.value).toBe(withoutSource);
+    });
+
+    // QIR-003 Fix 01 regression matrix: the successful Memory boundary is
+    // TOTAL over runtime values. A malformed successful value can never be
+    // classified AVAILABLE and can never emit AVAILABLE telemetry - it fails
+    // closed exactly like an unexpected error, before provider-envelope
+    // assembly could observe it.
+    it.each([
+      ['a non-array result', { not: 'an array' }],
+      ['an array containing null', [null]],
+      ['an array containing a numeric primitive', [42]],
+      ['an array containing a string primitive', ['GOAL']],
+      ['an array containing a nested array item', [['GOAL', 'content']]],
+      ['an item missing every required field', [{}]],
+      ['an item with a non-string required type field', [{ type: 7, content: 'x' }]],
+      ['an item with a non-string required content field', [{ type: 'GOAL', content: null, source: 'USER_STATED' }]],
+      ['an item with a malformed optional source field', [{ type: 'GOAL', content: 'x', source: 7 }]],
+      ['a valid item followed by a malformed one', [{ type: 'GOAL', content: 'x', source: 'USER_STATED' }, { type: 'GOAL' }]],
+    ])('fails CLOSED on a malformed successful Memory value (%s) instead of classifying it AVAILABLE', async (_label, malformed) => {
+      memoryRetriever.retrieve.mockResolvedValue(malformed as never);
       await expect(gather()).rejects.toThrow('QIR_FOREGROUND_INTELLIGENCE_MALFORMED_RESULT');
       expect(recordSource).toHaveBeenCalledWith('MEMORY', 'HARD_FAILURE', 'FAST');
+      expect(recordSource).not.toHaveBeenCalledWith('MEMORY', 'AVAILABLE', 'FAST');
     });
   });
 
@@ -151,6 +190,14 @@ describe('BoundedForegroundIntelligenceGathererService (QIR-003)', () => {
       expect(hypothesis.state).toBe('AVAILABLE');
       expect(hypothesis.state === 'AVAILABLE' && hypothesis.value).toBe(availableHypothesis);
       expect(recordSource).toHaveBeenCalledWith('HYPOTHESIS', 'AVAILABLE', 'FAST');
+    });
+
+    it('uses a positive AVAILABLE fixture the canonical Recommendation grounding validator genuinely accepts', () => {
+      // Anti-collusion control for QIR-003 Fix 01: the fixture the boundary
+      // tests treat as valid must be canonical by the DOWNSTREAM authority's
+      // own deep validation, not merely by the gatherer's envelope validator.
+      const grounded = new RecommendationGroundingService().ground(availableHypothesis);
+      expect(grounded.coverageState).toBe('AVAILABLE');
     });
 
     it('classifies approved transport availability failures as OPTIONAL_AVAILABILITY_FAILURE', async () => {
@@ -184,6 +231,12 @@ describe('BoundedForegroundIntelligenceGathererService (QIR-003)', () => {
       await expect(gather()).rejects.toBe(error);
     });
 
+    // QIR-003 Fix 01 regression matrix: an AVAILABLE classification requires
+    // the full canonical envelope - identity AND cross-field consistency. A
+    // malformed successful value (including the exact shape the original
+    // review fixture had: AVAILABLE with an empty hypotheses list) can never
+    // be classified AVAILABLE, can never emit AVAILABLE telemetry, and is
+    // never converted into a fabricated EMPTY: it fails closed.
     it.each([
       ['a null result', null],
       ['a non-object result', 'EMPTY'],
@@ -191,10 +244,24 @@ describe('BoundedForegroundIntelligenceGathererService (QIR-003)', () => {
       ['EMPTY with a nonzero candidate count', { coverageState: 'EMPTY', candidateHypothesisCount: 2 }],
       ['AVAILABLE without a context object', { coverageState: 'AVAILABLE' }],
       ['AVAILABLE with mismatched inner coverage', { coverageState: 'AVAILABLE', context: { coverageState: 'EMPTY' } }],
-    ])('fails CLOSED on a malformed Hypothesis result (%s) - never a fabricated EMPTY', async (_label, malformed) => {
+      ['AVAILABLE with an empty hypotheses list', { coverageState: 'AVAILABLE', context: { ...canonicalAvailableContext, hypotheses: [], includedHypothesisCount: 0, candidateHypothesisCount: 0 } }],
+      ['AVAILABLE with an empty list still claiming an included count', { coverageState: 'AVAILABLE', context: { ...canonicalAvailableContext, hypotheses: [] } }],
+      ['AVAILABLE whose includedHypothesisCount does not match the list length', { coverageState: 'AVAILABLE', context: { ...canonicalAvailableContext, includedHypothesisCount: 2 } }],
+      ['AVAILABLE whose candidate count is below the included count', { coverageState: 'AVAILABLE', context: { ...canonicalAvailableContext, candidateHypothesisCount: 0 } }],
+      ['AVAILABLE claiming truncation while nothing was truncated', { coverageState: 'AVAILABLE', context: { ...canonicalAvailableContext, truncated: true } }],
+      ['AVAILABLE hiding truncation behind a larger candidate count', { coverageState: 'AVAILABLE', context: { ...canonicalAvailableContext, candidateHypothesisCount: 3 } }],
+      ['AVAILABLE with a non-integer candidate count', { coverageState: 'AVAILABLE', context: { ...canonicalAvailableContext, candidateHypothesisCount: 1.5 } }],
+      ['AVAILABLE with a foreign source identity', { coverageState: 'AVAILABLE', context: { ...canonicalAvailableContext, source: 'SOMEWHERE_ELSE' } }],
+      ['AVAILABLE with a wrong contract version', { coverageState: 'AVAILABLE', context: { ...canonicalAvailableContext, contractVersion: 2 } }],
+      ['AVAILABLE with a null hypothesis item', { coverageState: 'AVAILABLE', context: { ...canonicalAvailableContext, hypotheses: [null] } }],
+      ['AVAILABLE with a primitive hypothesis item', { coverageState: 'AVAILABLE', context: { ...canonicalAvailableContext, hypotheses: ['statement'] } }],
+      ['AVAILABLE with a non-boolean truncated flag', { coverageState: 'AVAILABLE', context: { ...canonicalAvailableContext, truncated: 'false' } }],
+    ])('fails CLOSED on a malformed Hypothesis result (%s) - never AVAILABLE, never a fabricated EMPTY', async (_label, malformed) => {
       hypothesisContext.build.mockResolvedValue(malformed as never);
       await expect(gather()).rejects.toThrow('QIR_FOREGROUND_INTELLIGENCE_MALFORMED_RESULT');
       expect(recordSource).toHaveBeenCalledWith('HYPOTHESIS', 'HARD_FAILURE', 'FAST');
+      expect(recordSource).not.toHaveBeenCalledWith('HYPOTHESIS', 'AVAILABLE', 'FAST');
+      expect(recordSource).not.toHaveBeenCalledWith('HYPOTHESIS', 'LEGITIMATE_EMPTY', 'FAST');
     });
   });
 

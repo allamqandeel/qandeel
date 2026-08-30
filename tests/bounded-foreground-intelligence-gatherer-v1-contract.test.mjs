@@ -99,6 +99,9 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   '**Internal typed states and telemetry never collapse unavailable or expired into legitimate empty.**',
   'never a valid empty-memory assertion',
   "never converted into a fabricated `{ coverageState: 'EMPTY' }` result",
+  // QIR-003 Fix 01: the total successful-result runtime boundary.
+  '**The successful-result boundary is total over runtime values.**',
+  'TypeScript erasure is never trusted at this boundary.',
   // Exact classifier.
   'Nest `ServiceUnavailableException` from the canonical read transport/configuration path',
   '`MemoryDataApiError` with HTTP status 408, 429, or 500–599.',
@@ -231,7 +234,14 @@ function assertBoundedForegroundIntelligenceGathererContract(world) {
     violated('no failure is ever classified by substring-matching an error message');
   if (exe.gathererService.includes('readMemoryDataApiUpstreamIdentity'))
     violated('the QHIA-011A opaque upstream database identity is never read for QIR-003 classification');
-  if (/coverageState:\s*'/u.test(exe.gathererService))
+  // The ONLY legal coverage-discriminant literals in the gatherer are the two
+  // TYPE-LEVEL Extract discriminators of the outcome predicates (Fix 01).
+  // After stripping exactly those, any remaining coverage literal would be a
+  // fabricated coverage VALUE - still banned.
+  const fabricationScan = exe.gathererService
+    .replaceAll("Extract<HypothesisReasoningContextResult, { coverageState: 'AVAILABLE' }>", '')
+    .replaceAll("Extract<HypothesisReasoningContextResult, { coverageState: 'EMPTY' }>", '');
+  if (/coverageState:\s*'/u.test(fabricationScan))
     violated('the gatherer never fabricates a coverage result: unavailable and expired stay omission');
   if (!exe.gathererService.includes("const OPTIONAL_AVAILABILITY_FAILURE_OUTCOME = Object.freeze({ state: 'OPTIONAL_AVAILABILITY_FAILURE' as const });"))
     violated('the availability-failure outcome is the frozen valueless singleton');
@@ -241,6 +251,46 @@ function assertBoundedForegroundIntelligenceGathererContract(world) {
     violated('a malformed source result fails closed by typed identity');
   if (/export class BoundedForegroundIntelligenceMalformedResultError/u.test(world.gathererService))
     violated('the malformed-result identity never escapes the module');
+
+  // 6b. QIR-003 Fix 01 (QIR-003-F01): successful source values are validated
+  //     TOTALLY over runtime `unknown` before AVAILABLE can be returned -
+  //     TypeScript erasure is never trusted, "Array.isArray is enough" and
+  //     "outer/inner AVAILABLE strings are enough" can never come back.
+  if (!exe.gathererService.includes('function classifyMemoryResult(value: unknown): MemoryForegroundOutcome {'))
+    violated('the successful Memory boundary is total over unknown runtime values');
+  if (!exe.gathererService.includes('function classifyHypothesisResult(value: unknown): HypothesisForegroundOutcome {'))
+    violated('the successful Hypothesis boundary is total over unknown runtime values');
+  if (!exe.gathererService.includes('if (!isCanonicalMemoryContextList(value)) throw new BoundedForegroundIntelligenceMalformedResultError();'))
+    violated('the Memory classifier actually consults the runtime list validator before classifying');
+  if (!exe.gathererService.includes('return Array.isArray(value) && value.every((item) => isCanonicalMemoryContextItem(item));'))
+    violated('AVAILABLE Memory requires EVERY item to pass the runtime item validator: Array.isArray alone is never enough');
+  const memoryItemGuard = slice(exe.gathererService, 'function isCanonicalMemoryContextItem', '\n}');
+  if (!memoryItemGuard) violated('the Memory item validator exists as a bounded block');
+  for (const proof of [
+    "typeof record.type === 'string'",
+    "typeof record.content === 'string'",
+    "(record.source === undefined || typeof record.source === 'string')",
+  ]) {
+    if (!memoryItemGuard.includes(proof))
+      violated(`every Memory item field is positively proven at runtime: missing ${proof}`);
+  }
+  if (!exe.gathererService.includes("return record.coverageState === 'AVAILABLE' && isCanonicalAvailableHypothesisContext(record.context);"))
+    violated('an AVAILABLE Hypothesis result actually consults the canonical envelope validator');
+  const hypothesisEnvelopeGuard = slice(exe.gathererService, 'function isCanonicalAvailableHypothesisContext', '\n}');
+  if (!hypothesisEnvelopeGuard) violated('the canonical AVAILABLE Hypothesis envelope validator exists as a bounded block');
+  for (const proof of [
+    'record.contractVersion === HYPOTHESIS_REASONING_CONTEXT_CONTRACT_VERSION',
+    "record.source === 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT'",
+    'hypotheses.length === 0 || hypotheses.length > MAX_MODEL_HYPOTHESES',
+    "typeof record.truncated === 'boolean'",
+    'record.includedHypothesisCount === hypotheses.length',
+    'Number.isSafeInteger(candidateCount)',
+    'candidateCount >= hypotheses.length',
+    'record.truncated === (hypotheses.length < candidateCount)',
+  ]) {
+    if (!hypothesisEnvelopeGuard.includes(proof))
+      violated(`AVAILABLE Hypothesis requires the canonical envelope invariant: missing ${proof}`);
+  }
 
   // 7. Hard failures reject with the ORIGINAL error and are telemetry-visible:
   //    HARD_FAILURE plus the pre-existing hypothesis-context classification.
@@ -335,6 +385,13 @@ function assertBoundedForegroundIntelligenceGathererContract(world) {
     'discards a late fulfillment',
     'absorbs a late rejection after expiry',
     'fails fast on a hard failure while the other source is still pending',
+    // QIR-003 Fix 01: the malformed-successful-value regression matrix and
+    // the anti-collusion canonical-fixture control must stay non-vacuous.
+    'fails CLOSED on a malformed successful Memory value',
+    'an array containing null',
+    'AVAILABLE with an empty hypotheses list',
+    'includedHypothesisCount does not match the list length',
+    'canonical Recommendation grounding validator genuinely accepts',
   ]) {
     if (!world.gathererSpec.includes(proof))
       violated(`the focused gatherer spec proves the bound deterministically: missing ${proof}`);
@@ -457,6 +514,39 @@ test('G2 - anti-vacuity: the real guard rejects every named regression', () => {
       gathererService: shipped.gathererService.replace(
         "const FOREGROUND_BUDGET_EXPIRY_OUTCOME = Object.freeze({ state: 'FOREGROUND_BUDGET_EXPIRY' as const });",
         "const FOREGROUND_BUDGET_EXPIRY_OUTCOME = Object.freeze({ state: 'LEGITIMATE_EMPTY' as const });",
+      ),
+    }],
+    ['Memory item validation regressed to Array.isArray alone (QIR-003-F01)', {
+      gathererService: shipped.gathererService.replace(
+        'return Array.isArray(value) && value.every((item) => isCanonicalMemoryContextItem(item));',
+        'return Array.isArray(value);',
+      ),
+    }],
+    ['a required Memory field proof was dropped', {
+      gathererService: shipped.gathererService.replace("    && typeof record.content === 'string'\n", ''),
+    }],
+    ['the optional Memory field proof was dropped', {
+      gathererService: shipped.gathererService.replace(
+        "    && (record.source === undefined || typeof record.source === 'string');",
+        '    ;',
+      ),
+    }],
+    ['the Hypothesis result guard bypassed the canonical envelope validator (QIR-003-F01)', {
+      gathererService: shipped.gathererService.replace(
+        "return record.coverageState === 'AVAILABLE' && isCanonicalAvailableHypothesisContext(record.context);",
+        "return record.coverageState === 'AVAILABLE' && record.context !== null && typeof record.context === 'object';",
+      ),
+    }],
+    ['the empty-hypotheses-list rejection was dropped', {
+      gathererService: shipped.gathererService.replace('hypotheses.length === 0 || ', ''),
+    }],
+    ['the included-count consistency invariant was dropped', {
+      gathererService: shipped.gathererService.replace('    && record.includedHypothesisCount === hypotheses.length\n', ''),
+    }],
+    ['the truncation consistency invariant was dropped', {
+      gathererService: shipped.gathererService.replace(
+        '    && record.truncated === (hypotheses.length < candidateCount);',
+        '    ;',
       ),
     }],
     ['a hard failure stopped rethrowing the original error', {
@@ -637,12 +727,17 @@ test('G5 - the guard is structurally independent of every mutable census gap', (
     'the guard world never includes a provider adapter source');
 
   // The guard function itself never names a mutable-gap literal: not a vendor
-  // model identifier, not a routing threshold, and not a background cap.
+  // model identifier, not a routing threshold, and not a cap VALUE. Fix 01
+  // deliberately requires the envelope validator to reference the canonical
+  // Hypothesis-owned MAX_MODEL_HYPOTHESES constant BY NAME - that reuse is
+  // cap-value-neutral, so what stays banned is any VALUE freeze of a cap
+  // (an `=`-assignment shape), never the canonical symbol reference.
   const guardSource = assertBoundedForegroundIntelligenceGathererContract.toString();
   for (const forbidden of [
     'DEEP_INPUT_LENGTH',
     'MAX_SELECTED_MEMORIES',
-    'MAX_MODEL_HYPOTHESES',
+    'MAX_MODEL_HYPOTHESES =',
+    'MAX_HYPOTHESIS_CONTEXT_STRING_CHARS',
     ['claude', '-'].join(''),
     ['gpt', '-'].join(''),
     ['gem', 'ini'].join(''),

@@ -3,7 +3,7 @@ import type { ModelRouterMemoryContext, ProcessingPath } from '../model-router/m
 import { MemoryRetrieverService } from '../memory/memory-retriever.service';
 import { MemoryDataApiError } from '../memory/memory-data-api.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
-import { HypothesisReasoningInvariantError, type HypothesisReasoningContextResult } from '../hypothesis/hypothesis-reasoning-context.types';
+import { HYPOTHESIS_REASONING_CONTEXT_CONTRACT_VERSION, HypothesisReasoningInvariantError, MAX_MODEL_HYPOTHESES, type HypothesisReasoningContext, type HypothesisReasoningContextResult } from '../hypothesis/hypothesis-reasoning-context.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import {
@@ -55,24 +55,81 @@ function classifyForegroundSourceFailure(error: unknown): typeof OPTIONAL_AVAILA
   throw error;
 }
 
-// Successful results are classified structurally at the boundary. Memory: a
-// deterministic cue-gated no-retrieval and a successful zero-memory selection
-// are BOTH the same legitimate empty answer (the retriever returns an empty
-// array for both); a successful non-empty selection is AVAILABLE; anything
-// that is not an array is malformed and fails closed. Hypothesis: exactly the
-// two canonical coverage shapes are accepted; anything else is malformed and
-// fails closed.
-function classifyMemoryResult(value: ReadonlyArray<ModelRouterMemoryContext>): MemoryForegroundOutcome {
-  if (!Array.isArray(value)) throw new BoundedForegroundIntelligenceMalformedResultError();
+// QIR-003 Fix 01: successful source results are classified by TOTAL runtime
+// validation over `unknown` - TypeScript erasure is never trusted at this
+// boundary. AVAILABLE is returned only after the value is POSITIVELY proven
+// to be the canonical runtime shape; anything else - a non-array Memory
+// result, a Memory item that is not an object or carries a wrong-typed
+// field, or a Hypothesis envelope whose canonical identity or cross-field
+// count/truncation/list invariants do not hold - is malformed and FAILS
+// CLOSED through the typed identity above, exactly like an unexpected error.
+//
+// Scope: this is structural/integrity validation of the canonical shapes
+// only. It invents no Memory ranking, relevance, authority, enum, freshness
+// or context-budget semantics, and it does not move Hypothesis item
+// semantics or Recommendation grounding authority into the gatherer: the
+// deeper per-item rules remain owned by the canonical
+// HypothesisReasoningContextService builder and the Recommendation grounding
+// validator, both unchanged. The envelope invariants proven here reuse the
+// canonical Hypothesis-owned contract constants.
+//
+// Memory: a deterministic cue-gated no-retrieval and a successful
+// zero-memory selection are BOTH the same legitimate empty answer (the
+// retriever returns an empty array for both); a valid non-empty selection is
+// AVAILABLE.
+function isCanonicalMemoryContextItem(item: unknown): item is ModelRouterMemoryContext {
+  if (item === null || typeof item !== 'object' || Array.isArray(item)) return false;
+  const record = item as Record<string, unknown>;
+  return typeof record.type === 'string'
+    && typeof record.content === 'string'
+    && (record.source === undefined || typeof record.source === 'string');
+}
+function isCanonicalMemoryContextList(value: unknown): value is ReadonlyArray<ModelRouterMemoryContext> {
+  return Array.isArray(value) && value.every((item) => isCanonicalMemoryContextItem(item));
+}
+function classifyMemoryResult(value: unknown): MemoryForegroundOutcome {
+  if (!isCanonicalMemoryContextList(value)) throw new BoundedForegroundIntelligenceMalformedResultError();
   if (value.length === 0) return { state: 'LEGITIMATE_EMPTY' };
   return { state: 'AVAILABLE', value };
 }
-function classifyHypothesisResult(value: HypothesisReasoningContextResult): HypothesisForegroundOutcome {
-  if (value !== null && typeof value === 'object') {
-    if (value.coverageState === 'AVAILABLE' && value.context !== null && typeof value.context === 'object'
-      && value.context.coverageState === 'AVAILABLE') return { state: 'AVAILABLE', value };
-    if (value.coverageState === 'EMPTY' && value.candidateHypothesisCount === 0) return { state: 'LEGITIMATE_EMPTY', value };
-  }
+// Hypothesis: exactly the two canonical coverage shapes are accepted, and the
+// AVAILABLE envelope must satisfy the canonical cross-field invariants the
+// builder guarantees - the exact contract/source/coverage identity, a
+// non-empty bounded hypotheses list of objects, includedHypothesisCount
+// equal to the list length, a candidate count that is a safe integer no
+// smaller than the included count, and a truncation flag consistent with
+// those counts. An envelope that fails any of these is never AVAILABLE and
+// never a fabricated EMPTY: it fails closed here, before any AVAILABLE
+// telemetry or provider-envelope assembly could observe it.
+function isCanonicalAvailableHypothesisContext(context: unknown): context is HypothesisReasoningContext {
+  if (context === null || typeof context !== 'object' || Array.isArray(context)) return false;
+  const record = context as Record<string, unknown>;
+  const hypotheses = record.hypotheses;
+  if (!Array.isArray(hypotheses) || hypotheses.length === 0 || hypotheses.length > MAX_MODEL_HYPOTHESES) return false;
+  if (!hypotheses.every((item) => item !== null && typeof item === 'object' && !Array.isArray(item))) return false;
+  const candidateCount = record.candidateHypothesisCount;
+  return record.contractVersion === HYPOTHESIS_REASONING_CONTEXT_CONTRACT_VERSION
+    && record.source === 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT'
+    && record.coverageState === 'AVAILABLE'
+    && typeof record.truncated === 'boolean'
+    && record.includedHypothesisCount === hypotheses.length
+    && typeof candidateCount === 'number' && Number.isSafeInteger(candidateCount)
+    && candidateCount >= hypotheses.length
+    && record.truncated === (hypotheses.length < candidateCount);
+}
+function isCanonicalAvailableHypothesisResult(value: unknown): value is Extract<HypothesisReasoningContextResult, { coverageState: 'AVAILABLE' }> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return record.coverageState === 'AVAILABLE' && isCanonicalAvailableHypothesisContext(record.context);
+}
+function isCanonicalEmptyHypothesisResult(value: unknown): value is Extract<HypothesisReasoningContextResult, { coverageState: 'EMPTY' }> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return record.coverageState === 'EMPTY' && record.candidateHypothesisCount === 0;
+}
+function classifyHypothesisResult(value: unknown): HypothesisForegroundOutcome {
+  if (isCanonicalAvailableHypothesisResult(value)) return { state: 'AVAILABLE', value };
+  if (isCanonicalEmptyHypothesisResult(value)) return { state: 'LEGITIMATE_EMPTY', value };
   throw new BoundedForegroundIntelligenceMalformedResultError();
 }
 

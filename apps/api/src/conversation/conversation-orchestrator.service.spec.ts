@@ -1642,7 +1642,10 @@ describe('ConversationOrchestratorService', () => {
   });
 
   it('passes AVAILABLE hypothesis data as an independent channel for ALLOW and calls the router once', async () => {
-    const context = { contractVersion: 1 as const, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT' as const, coverageState: 'AVAILABLE' as const, candidateHypothesisCount: 1, includedHypothesisCount: 1, truncated: false, hypotheses: [] };
+    // QIR-003 Fix 01: the AVAILABLE fixture is a genuinely canonical envelope
+    // (one included hypothesis, consistent counts) - the gatherer boundary now
+    // fails closed on a malformed one instead of forwarding it.
+    const context = { contractVersion: 1 as const, source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT' as const, coverageState: 'AVAILABLE' as const, candidateHypothesisCount: 1, includedHypothesisCount: 1, truncated: false, hypotheses: [{ statement: 'statement', type: 'CAUSAL' as const, domain: 'GENERAL' as const, scope: 'session', origin: 'USER_PROPOSED' as const, status: 'ACTIVE' as const, hypothesisVersion: 1, currentlyEligibleSupportingEvidenceCount: 0, currentlyEligibleContradictingEvidenceCount: 0, assumptions: [], disconfirmingConditions: [], confidence: { state: 'NOT_EVALUATED_FOR_CURRENT_VERSION' as const, targetVersion: 1 } }] };
     hypothesisContext.build.mockResolvedValue({ coverageState: 'AVAILABLE', context });
     repository.claimTurn.mockResolvedValue(claimed); repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
     await orchestrator.orchestrate('token', 'user', userTurn);

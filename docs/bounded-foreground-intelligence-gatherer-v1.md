@@ -143,6 +143,21 @@ valid empty-memory assertion, never a stale answer from a previous turn, and
 never fabricated Memory. Unavailable or expired Hypothesis is never converted
 into a fabricated `{ coverageState: 'EMPTY' }` result.
 
+**The successful-result boundary is total over runtime values.** AVAILABLE is
+returned only after positive runtime proof of the canonical shape: every
+Memory item must satisfy the actual `ModelRouterMemoryContext` runtime shape
+(required string fields proven to be strings; optional fields, when present,
+proven to carry the correct runtime type), and an AVAILABLE Hypothesis result
+must satisfy the canonical envelope invariants — the exact contract, source,
+and coverage identity plus the internally consistent count/truncation/list
+shape guaranteed by the canonical builder. TypeScript erasure is never
+trusted at this boundary. A malformed successful value fails closed exactly
+like an unexpected error, before any AVAILABLE telemetry or provider-envelope
+assembly can observe it; this is structural/integrity validation only and
+introduces no new Memory ranking, relevance, enum, freshness, or
+context-budget semantics, and no relocation of Hypothesis item or
+Recommendation grounding authority.
+
 Memory classification:
 
 - deterministic no-retrieval (cue gate off) → `LEGITIMATE_EMPTY`
