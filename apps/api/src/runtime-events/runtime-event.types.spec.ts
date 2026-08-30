@@ -48,6 +48,36 @@ describe('QIR-002 runtime-event route-pair compatibility',()=>{
    [undefined,undefined],
   ]as Array<[unknown,unknown]>)expect(isValidRuntimeEventEnvelope(routed(path,reason))).toBe(false);});
 
+ // QIR-002-F01 regression. The shared durable validator once compared a failed
+ // registry lookup (undefined) against an unvalidated path, so a malformed
+ // envelope whose `processing_path` KEY IS PRESENT but set to `undefined`,
+ // carrying a reason belonging to no registry, passed the routing gate. Each
+ // case below was accepted before the fix and must stay rejected.
+ it('rejects a malformed envelope whose present processing_path is undefined',()=>{
+  for(const reason of['INVENTED_REASON','RUNTIME_ROUTING_V3_FAST_DEFAULT','RUNTIME_ROUTING_V2_DEEP_UNKNOWN','']){
+   const value=routed(undefined,reason);
+   // The key must still be PRESENT, or this would pass as a missing-key
+   // rejection and prove nothing about the routing gate.
+   expect(Object.prototype.hasOwnProperty.call(value.payload,'processing_path')).toBe(true);
+   expect(Object.keys(value.payload).sort()).toEqual(['orchestration_id','processing_path','routing_reason','safety_disposition','session_id','source_turn_id','terminal_status','user_id']);
+   expect(isValidRuntimeEventEnvelope(value)).toBe(false);
+   expect(isCompletedRuntimeEventV2(value)).toBe(false);
+  }
+  // A RECOGNIZED reason with an undefined path is equally malformed.
+  for(const reason of['RUNTIME_ROUTING_V2_FAST_DEFAULT','RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE','FAST_DEFAULT','INPUT_LENGTH_REQUIRES_DEEP_CONTEXT']){
+   expect(isValidRuntimeEventEnvelope(routed(undefined,reason))).toBe(false);
+  }
+ });
+
+ it('is total over every primitive processing_path value',()=>{
+  const paths:unknown[]=[undefined,'','fast','deep','Fast','FAST ','TURBO',0,1,NaN,true,false,{},[],['FAST']];
+  const reasons:unknown[]=['INVENTED_REASON','RUNTIME_ROUTING_V3_FAST_DEFAULT','RUNTIME_ROUTING_V2_FAST_DEFAULT','FAST_DEFAULT',null,undefined,0,{}];
+  for(const path of paths)for(const reason of reasons)expect(isValidRuntimeEventEnvelope(routed(path,reason))).toBe(false);
+  // The one legitimate absent state still passes, and the legal pairs still do.
+  expect(isValidRuntimeEventEnvelope(routed(null,null))).toBe(true);
+  expect(isValidRuntimeEventEnvelope(routed('FAST','RUNTIME_ROUTING_V2_FAST_DEFAULT'))).toBe(true);
+ });
+
  it('keeps the payload shape, event version and schema ref unchanged for v2 routing',()=>{
   const value=routed('DEEP','RUNTIME_ROUTING_V2_DEEP_MULTI_PART');
   expect(Object.keys(value.payload).sort()).toEqual(['orchestration_id','processing_path','routing_reason','safety_disposition','session_id','source_turn_id','terminal_status','user_id']);

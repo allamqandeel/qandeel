@@ -95,9 +95,15 @@ function deepReason(codePointCount: number, questions: number, breadth: number):
 /**
  * The one FAST/DEEP decision function. Pure, synchronous, deterministic.
  *
- * DEEP when EITHER the raw input reaches 1000 code points (which preserves
- * every pre-QIR-002 DEEP case exactly) OR the bounded structural complexity
- * score reaches 3. Otherwise FAST.
+ * DEEP when EITHER the raw input reaches 1000 CODE POINTS OR the bounded
+ * structural complexity score reaches 3. Otherwise FAST.
+ *
+ * The retired policy thresholded JavaScript UTF-16 `content.length`, so it is
+ * SUPERSEDED, not reproduced: `'\u{1F600}'.repeat(500)` has `.length === 1000`
+ * and was routed DEEP by the old rule, while v2 correctly counts 500 code
+ * points and routes it by the v2 policy. That divergence on surrogate-pair
+ * input is the intended Unicode correction. The v2 invariant is only that every
+ * input with `codePointCount >= 1000` is unconditionally DEEP.
  */
 export function decideFastDeepRoute(content: string): RuntimeRoutingDecision {
   const signals = readSignals(normalizeForRouting(content));

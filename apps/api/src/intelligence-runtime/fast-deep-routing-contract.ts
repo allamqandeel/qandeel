@@ -21,6 +21,13 @@
 /** The canonical execution paths. Structurally identical to `ProcessingPath`. */
 export type RuntimeRoutingPath = 'FAST' | 'DEEP';
 
+/** The exact recognized paths. Both validators below prove membership here. */
+const ROUTING_PATHS: ReadonlySet<string> = new Set<string>(['FAST', 'DEEP']);
+
+export function isRuntimeRoutingPath(value: unknown): value is RuntimeRoutingPath {
+  return typeof value === 'string' && ROUTING_PATHS.has(value);
+}
+
 /** The Runtime Decision Policy version this contract describes. */
 export const RUNTIME_ROUTING_POLICY_VERSION = 2 as const;
 
@@ -104,9 +111,19 @@ export function isLegacyRoutingReason(value: unknown): value is LegacyRoutingRea
  * CURRENT authority: exactly the five legal v2 pairs. A legacy reason, an
  * unknown reason, a cross pair, a path-only state, and a reason-only state are
  * all illegal. This is the gate every NEW canonical claim passes.
+ *
+ * TOTALITY. Both validators take `unknown` and must fail closed on ANY input.
+ * They therefore prove a recognized path and a recognized reason BEFORE
+ * comparing them, and require the looked-up expected path to be defined. A
+ * failed `Map.get` returns `undefined`, so comparing that lookup directly
+ * against an unvalidated path made `(undefined, <any unknown reason>)` compare
+ * `undefined === undefined` and pass — a malformed value could satisfy the
+ * routing gate with a reason belonging to no registry at all.
  */
 export function isLegalCurrentRoutePair(path: unknown, reason: unknown): boolean {
-  return typeof reason === 'string' && CURRENT_PAIRS.get(reason) === path;
+  if (!isRuntimeRoutingPath(path) || typeof reason !== 'string') return false;
+  const expected = CURRENT_PAIRS.get(reason);
+  return expected !== undefined && expected === path;
 }
 
 /**
@@ -117,10 +134,13 @@ export function isLegalCurrentRoutePair(path: unknown, reason: unknown): boolean
  *
  * This is strictly wider than `isLegalCurrentRoutePair` on purpose: historical
  * rows and historical events must stay readable and recoverable, while nothing
- * new may be produced with a legacy reason.
+ * new may be produced with a legacy reason. It is wider ONLY by the two legacy
+ * pairs and the null/null state — it is equally TOTAL, and `null/null` is the
+ * only state in which either side may be absent.
  */
 export function isLegalDurableRoutePair(path: unknown, reason: unknown): boolean {
   if (path === null && reason === null) return true;
-  if (typeof reason !== 'string') return false;
-  return (CURRENT_PAIRS.get(reason) ?? LEGACY_PAIRS.get(reason)) === path;
+  if (!isRuntimeRoutingPath(path) || typeof reason !== 'string') return false;
+  const expected = CURRENT_PAIRS.get(reason) ?? LEGACY_PAIRS.get(reason);
+  return expected !== undefined && expected === path;
 }

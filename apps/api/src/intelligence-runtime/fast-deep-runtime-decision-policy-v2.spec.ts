@@ -149,7 +149,7 @@ describe('QIR-002 FAST/DEEP Runtime Decision Policy v2', () => {
       expect(decision.reason).toBe('RUNTIME_ROUTING_V2_FAST_DEFAULT');
     });
 
-    it('keeps every pre-QIR-002 DEEP case DEEP', () => {
+    it('routes every input of 1000 or more code points to DEEP unconditionally', () => {
       for (const content of [
         'x'.repeat(1000),
         'x'.repeat(4000),
@@ -204,7 +204,9 @@ describe('QIR-002 FAST/DEEP Runtime Decision Policy v2', () => {
       expect(emoji.length).toBe(1000);
       const decision = decideFastDeepRoute(emoji);
       expect(decision.signals.codePointCount).toBe(500);
-      // The retired input-length-only policy would have called this DEEP.
+      // INTENDED DIVERGENCE from the retired rule, not a preserved case: the
+      // pre-QIR-002 policy thresholded UTF-16 `.length` and called this DEEP.
+      // v2 supersedes that threshold and routes it by the v2 policy.
       expect(decision.path).toBe('FAST');
       expect(decideFastDeepRoute('😀'.repeat(1000)).signals.codePointCount).toBe(1000);
       expect(decideFastDeepRoute('😀'.repeat(1000)).path).toBe('DEEP');

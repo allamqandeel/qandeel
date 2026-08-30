@@ -6,6 +6,7 @@ import {
   isLegacyRoutingReason,
   isLegalCurrentRoutePair,
   isLegalDurableRoutePair,
+  isRuntimeRoutingPath,
   isRuntimeRoutingV2Reason,
 } from './fast-deep-routing-contract';
 
@@ -22,6 +23,89 @@ const LEGACY_PAIRS = [
 ] as const;
 
 describe('QIR-002 FAST/DEEP route-pair contract', () => {
+  // QIR-002-F01 regression. Both validators take `unknown` and MUST be total.
+  // The retired implementation compared a failed `Map.get` (undefined) directly
+  // against an unvalidated path, so `(undefined, <unknown reason>)` compared
+  // `undefined === undefined` and passed. Every case below returned true before
+  // the fix and must stay false forever.
+  describe('F01 - totality over unknown input', () => {
+    const NON_PATH_VALUES: unknown[] = [
+      undefined, null, '', 'fast', 'deep', 'Fast', 'FAST ', ' FAST', 'TURBO', 'PROCESSING_PATH',
+      0, 1, NaN, true, false, {}, [], ['FAST'], Symbol('FAST'), () => 'FAST', new String('FAST'),
+    ];
+    const UNRECOGNIZED_REASONS = [
+      'INVENTED_REASON',
+      'RUNTIME_ROUTING_V3_FAST_DEFAULT',
+      'RUNTIME_ROUTING_V2_DEEP_UNKNOWN',
+      'runtime_routing_v2_fast_default',
+      '',
+      'undefined',
+      'toString',
+      'constructor',
+      '__proto__',
+    ];
+
+    it.each([
+      ['INVENTED_REASON'],
+      ['RUNTIME_ROUTING_V3_FAST_DEFAULT'],
+    ])('refuses an undefined path with the unknown reason %s', (reason) => {
+      expect(isLegalCurrentRoutePair(undefined, reason)).toBe(false);
+      expect(isLegalDurableRoutePair(undefined, reason)).toBe(false);
+    });
+
+    it('refuses an undefined path against every unrecognized reason', () => {
+      for (const reason of UNRECOGNIZED_REASONS) {
+        expect(isLegalCurrentRoutePair(undefined, reason)).toBe(false);
+        expect(isLegalDurableRoutePair(undefined, reason)).toBe(false);
+      }
+    });
+
+    it('refuses an undefined path against every RECOGNIZED reason too', () => {
+      // The same defect also let CURRENT authority accept a LEGACY reason, and
+      // let either validator accept a real reason with no path at all.
+      for (const reason of [...RUNTIME_ROUTING_V2_REASONS, ...LEGACY_ROUTING_REASONS]) {
+        expect(isLegalCurrentRoutePair(undefined, reason)).toBe(false);
+        expect(isLegalDurableRoutePair(undefined, reason)).toBe(false);
+      }
+    });
+
+    it('refuses every non-path value against every reason, recognized or not', () => {
+      const reasons: unknown[] = [
+        ...RUNTIME_ROUTING_V2_REASONS, ...LEGACY_ROUTING_REASONS, ...UNRECOGNIZED_REASONS,
+        undefined, null, 0, {}, [],
+      ];
+      for (const path of NON_PATH_VALUES) {
+        for (const reason of reasons) {
+          // null/null is the ONE legitimate absent state, and only for durable.
+          if (path === null && reason === null) {
+            expect(isLegalDurableRoutePair(path, reason)).toBe(true);
+            expect(isLegalCurrentRoutePair(path, reason)).toBe(false);
+            continue;
+          }
+          expect(isLegalCurrentRoutePair(path, reason)).toBe(false);
+          expect(isLegalDurableRoutePair(path, reason)).toBe(false);
+        }
+      }
+    });
+
+    it('recognizes exactly the two canonical paths', () => {
+      expect(isRuntimeRoutingPath('FAST')).toBe(true);
+      expect(isRuntimeRoutingPath('DEEP')).toBe(true);
+      for (const value of NON_PATH_VALUES) expect(isRuntimeRoutingPath(value)).toBe(false);
+    });
+
+    it('still accepts every legal pair after the totality guard', () => {
+      for (const [path, reason] of LEGAL_V2_PAIRS) {
+        expect(isLegalCurrentRoutePair(path, reason)).toBe(true);
+        expect(isLegalDurableRoutePair(path, reason)).toBe(true);
+      }
+      for (const [path, reason] of LEGACY_PAIRS) {
+        expect(isLegalCurrentRoutePair(path, reason)).toBe(false);
+        expect(isLegalDurableRoutePair(path, reason)).toBe(true);
+      }
+      expect(isLegalDurableRoutePair(null, null)).toBe(true);
+    });
+  });
   it('freezes the exact v2 vocabulary', () => {
     expect(RUNTIME_ROUTING_POLICY_VERSION).toBe(2);
     expect(RUNTIME_ROUTING_MAX_COMPLEXITY_SCORE).toBe(7);
@@ -107,7 +191,7 @@ describe('QIR-002 FAST/DEEP route-pair contract', () => {
       for (const [path, reason] of illegal) expect(isLegalDurableRoutePair(path, reason)).toBe(false);
     });
 
-    it('is strictly wider than the current claim authority and never narrower', () => {
+    it('is strictly wider than the current claim authority ONLY by the legacy pairs and null/null', () => {
       for (const [path, reason] of LEGAL_V2_PAIRS) {
         expect(isLegalCurrentRoutePair(path, reason)).toBe(true);
         expect(isLegalDurableRoutePair(path, reason)).toBe(true);

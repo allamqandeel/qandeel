@@ -95,7 +95,13 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   '`complexityScore = inputScalePoints + questionPoints + logicalBreadthPoints`',
   'valid range `0..7`',
   'Return `DEEP` if either `codePointCount >= 1000` **or** `complexityScore >= 3`. Otherwise return `FAST`.',
-  'preserves every pre-QIR-002 `>=1000` DEEP case',
+  // The accurate invariant. v2 SUPERSEDES the retired UTF-16 `content.length`
+  // threshold rather than reproducing it, so surrogate-pair input intentionally
+  // diverges from the old rule. The document must never claim otherwise.
+  '**Every input with `codePointCount >= 1000` is unconditionally DEEP**',
+  '**The retired UTF-16 threshold is superseded, not reproduced.**',
+  'Surrogate-pair input therefore diverges from the retired rule *intentionally*',
+  'must not be "fixed" back to code-unit counting',
   // Reason precedence.
   '1. `codePointCount >= 1000` → `RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE`',
   '2. else `questionPoints >= 2` → `RUNTIME_ROUTING_V2_DEEP_MULTI_QUESTION`',
@@ -243,6 +249,37 @@ function assertFastDeepRuntimeDecisionPolicyV2Contract(world) {
     violated('a lost claim records no canonical routing decision');
 
   // 6. One shared route-pair contract, consumed instead of re-hard-coded.
+  //
+  // QIR-002-F01: both shared validators take `unknown` and MUST be total. A
+  // failed registry lookup returns `undefined`, so comparing that lookup
+  // directly against an unvalidated path made `(undefined, <unknown reason>)`
+  // compare `undefined === undefined` and PASS — an unknown reason satisfied
+  // the routing gate, and a malformed runtime-event envelope with a present
+  // `processing_path` set to `undefined` passed validation. Freeze the
+  // recognized-path + recognized-reason shape and ban the exact regression.
+  if (!world.routingContract.includes("const ROUTING_PATHS: ReadonlySet<string> = new Set<string>(['FAST', 'DEEP']);"))
+    violated('the routing contract owns the recognized-path registry');
+  if (!world.routingContract.includes('export function isRuntimeRoutingPath(value: unknown): value is RuntimeRoutingPath {'))
+    violated('the routing contract exports a total path recognizer');
+  for (const helper of ['isLegalCurrentRoutePair', 'isLegalDurableRoutePair']) {
+    const start = world.routingContract.indexOf(`export function ${helper}(path: unknown, reason: unknown): boolean {`);
+    if (start < 0) violated(`${helper} keeps its total unknown-input signature`);
+    const body = world.routingContract.slice(start, world.routingContract.indexOf('\n}', start));
+    if (!body.includes("if (!isRuntimeRoutingPath(path) || typeof reason !== 'string') return false;"))
+      violated(`${helper} proves a recognized path and a string reason before comparing them`);
+    if (!body.includes('return expected !== undefined && expected === path;'))
+      violated(`${helper} requires the looked-up expected path to be defined`);
+    if (/PAIRS\.get\(reason\)\s*(?:\?\?[^;]*)?===\s*path/u.test(body))
+      violated(`${helper} never compares a failed registry lookup directly against an unvalidated path`);
+  }
+  // null/null stays the ONE legitimate absent state, and only for durable reads.
+  if (!world.routingContract.includes('  if (path === null && reason === null) return true;'))
+    violated('durable authority keeps the pre-routing null/null state');
+  if (world.routingContract.slice(
+    world.routingContract.indexOf('export function isLegalCurrentRoutePair'),
+    world.routingContract.indexOf('\n}', world.routingContract.indexOf('export function isLegalCurrentRoutePair')),
+  ).includes('=== null')) violated('current claim authority never admits a null route state');
+
   if (!world.repository.includes('selection: RuntimeRoutePair'))
     violated('the claim boundary accepts only a legal current route pair');
   if (!world.runtimeEventTypes.includes('isLegalDurableRoutePair(payload.processing_path,payload.routing_reason)'))
@@ -397,6 +434,40 @@ test('P2 - anti-vacuity: the real guard rejects every named regression', () => {
     }],
     ['the claim boundary reopened to arbitrary reasons', {
       repository: shipped.repository.replace('selection: RuntimeRoutePair', 'selection: { path: string; reason: string }'),
+    }],
+    // QIR-002-F01 anti-vacuity: the exact historical regression, both halves.
+    ['the current route-pair validator lost its totality guard', {
+      routingContract: shipped.routingContract.replace(
+        "  if (!isRuntimeRoutingPath(path) || typeof reason !== 'string') return false;\n  const expected = CURRENT_PAIRS.get(reason);\n  return expected !== undefined && expected === path;",
+        "  return typeof reason === 'string' && CURRENT_PAIRS.get(reason) === path;"),
+    }],
+    ['the durable route-pair validator lost its totality guard', {
+      routingContract: shipped.routingContract.replace(
+        "  if (!isRuntimeRoutingPath(path) || typeof reason !== 'string') return false;\n  const expected = CURRENT_PAIRS.get(reason) ?? LEGACY_PAIRS.get(reason);\n  return expected !== undefined && expected === path;",
+        "  if (typeof reason !== 'string') return false;\n  return (CURRENT_PAIRS.get(reason) ?? LEGACY_PAIRS.get(reason)) === path;"),
+    }],
+    ['the total path recognizer was withdrawn', {
+      routingContract: shipped.routingContract.replace(
+        'export function isRuntimeRoutingPath(value: unknown): value is RuntimeRoutingPath {',
+        'function retiredRoutingPathCheck(value: unknown): boolean {'),
+    }],
+    ['the recognized-path registry was emptied', {
+      routingContract: shipped.routingContract.replace(
+        "const ROUTING_PATHS: ReadonlySet<string> = new Set<string>(['FAST', 'DEEP']);",
+        'const ROUTING_PATHS: ReadonlySet<string> = new Set<string>([]);'),
+    }],
+    ['durable authority dropped the pre-routing null/null state', {
+      routingContract: shipped.routingContract.replace('  if (path === null && reason === null) return true;\n', ''),
+    }],
+    ['the superseded-threshold correction was replaced by the old inaccurate claim', {
+      policyDoc: shipped.policyDoc.replace(
+        '**The retired UTF-16 threshold is superseded, not reproduced.**',
+        'This preserves every pre-QIR-002 `>=1000` DEEP case exactly.'),
+    }],
+    ['the unconditional-DEEP invariant was withdrawn from the document', {
+      policyDoc: shipped.policyDoc.replace(
+        '**Every input with `codePointCount >= 1000` is unconditionally DEEP**',
+        'Long inputs are usually DEEP'),
     }],
     ['runtime-event validation re-hard-coded a reason', {
       runtimeEventTypes: shipped.runtimeEventTypes.replace('if(!isLegalDurableRoutePair(payload.processing_path,payload.routing_reason))return false;', "if(payload.routing_reason!=='FAST_DEFAULT')return false;"),

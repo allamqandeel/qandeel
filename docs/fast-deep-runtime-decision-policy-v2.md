@@ -90,8 +90,17 @@ valid range `0..7`.
 **Path rule.** Return `DEEP` if either `codePointCount >= 1000` **or**
 `complexityScore >= 3`. Otherwise return `FAST`.
 
-This deliberately preserves every pre-QIR-002 `>=1000` DEEP case while adding
-bounded structural complexity for shorter multi-part turns.
+**Every input with `codePointCount >= 1000` is unconditionally DEEP**, and
+bounded structural complexity additionally reaches DEEP for shorter multi-part
+turns.
+
+**The retired UTF-16 threshold is superseded, not reproduced.** The pre-QIR-002
+rule thresholded JavaScript UTF-16 `content.length`; v2 counts Unicode code
+points. Surrogate-pair input therefore diverges from the retired rule
+*intentionally*: `'😀'.repeat(500)` has `.length === 1000` and was routed DEEP by
+the old rule, while v2 counts 500 code points and routes it by the v2 policy.
+That is the Unicode correction working as designed, and it must not be
+"fixed" back to code-unit counting.
 
 ## 7. Exact v2 reasons and legal pairs
 
