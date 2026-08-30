@@ -34,8 +34,10 @@ import {
   type HimBrainContextForegroundRow,
 } from '../../src/human-model/him-brain-context.types';
 import { HimFastDeepConsumptionService } from '../../src/human-model/him-fast-deep-consumption.service';
+import { HimInteractionAdaptationService } from '../../src/human-model/him-interaction-adaptation.service';
 import { HimReasoningConsumptionService } from '../../src/human-model/him-reasoning-consumption.service';
 import type { HimModelContext } from '../../src/human-model/him-fast-deep-consumption.types';
+import type { HimReasoningContext } from '../../src/human-model/him-reasoning-consumption.types';
 import type {
   HimIntelligenceSnapshot,
   HimIntelligenceSnapshotMetric,
@@ -78,11 +80,19 @@ export const CANONICAL_ALL_ACTIVE_HUMAN_INTELLIGENCE_BYTES = 6427;
 // deliberate re-measure, exactly as the frozen 6427 figure does for the
 // canonical all-active fixture.
 //
-// It is frozen only because the fixture below is PROVEN maximum under the
-// current contracts: the whole legal session-metric shape space and both ACTIVE
-// reflection directives are enumerated and rendered, and every other lane is
+// It is frozen only because the fixture below is PROVEN maximum over REACHABLE
+// coherent runtime states under the current contracts: the whole legal
+// session-metric shape space and both ACTIVE reflection directives are
+// enumerated, each candidate is derived from ONE canonical reasoning context
+// through the real production services, and every session-independent lane is
 // asserted to be at its structural maximum.
-export const EXPECTED_CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7536;
+//
+// History: 7536 before QIR-007 Addendum A Fix 04, when the search paired an
+// always-maximal hand-built Interaction Adaptation with every session-metric
+// shape. That combination is NOT reachable - an UNKNOWN hse.energy cannot
+// derive ENERGY_LOW_OR_VERY_LOW - so the old figure overstated the ceiling by
+// 18 bytes. The coherent pipeline is the authority.
+export const EXPECTED_CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7518;
 
 // The exactly three currently legal CONVERSATION_SESSION session metrics, in
 // their canonical snapshot order (migrations 0018 / 0037). There is no fourth,
@@ -134,20 +144,35 @@ export const ALL_FOUR_ACTIVE_CROSS_CONTEXT_GUIDANCE = Object.freeze({
   }) as HimRelationshipCommunicationGuidance,
 });
 
-// Every currently legal Interaction Adaptation provider contribution at once:
-// all six frozen directives at the exact value the QHIA-013 registry maps to an
-// instruction. No seventh directive exists, and a DEFAULT value contributes
-// nothing, so this IS the maximal Interaction Adaptation contribution.
-const MAXIMUM_INTERACTION_ADAPTATION: HimInteractionAdaptation = {
-  contractVersion: 1, source: 'HIM_REASONING_CONTEXT', sourceSnapshotContractVersion: 1,
-  contextKind: 'CONVERSATION_SESSION', contextId: '11111111-2222-4333-8444-555555555555',
-  adaptationState: 'ACTIVE',
-  directives: {
-    responseDensity: 'COMPACT', cognitiveLoad: 'REDUCED', branching: 'SINGLE_TRACK',
-    steeringPressure: 'REDUCED', deliveryPacing: 'CALMER', stepBatching: 'ONE_AT_A_TIME',
-  },
-  drivers: ['STRESS_HIGH_OR_VERY_HIGH', 'ENERGY_LOW_OR_VERY_LOW', 'ATTENTION_LOW_OR_VERY_LOW'],
-};
+// QIR-007 Addendum A Fix 04: Interaction Adaptation is NOT an independent
+// capacity dimension, and this proof must never treat it as one.
+//
+// Production derives it from the SAME canonical HimReasoningContext it then
+// projects into the FAST/DEEP provider lane:
+//
+//   HimIntelligenceSnapshot
+//     -> HimReasoningConsumptionService.transform(...)
+//          -> ONE HimReasoningContext
+//               -> HimInteractionAdaptationService.derive(...)
+//               -> HimFastDeepConsumptionService.project('DEEP', ...)
+//
+// So a candidate that pairs an always-maximal adaptation object with an
+// arbitrary session-metric shape is not a REACHABLE runtime state: an UNKNOWN
+// hse.energy cannot simultaneously produce ENERGY_LOW_OR_VERY_LOW. Measuring
+// such a pair overstates the ceiling. Every candidate below therefore derives
+// BOTH outputs from one shared reasoning context, through the REAL service.
+//
+// The three remaining lanes ARE genuinely independent of the session snapshot
+// under the frozen composition, and are held at their maximum throughout:
+//
+//   * Session Reflection comes from the separate one-metric hbs.reflection
+//     QHIA-004 selection, not from the CONVERSATION_SESSION snapshot;
+//   * the four cross-context channels come from the single aggregate-v3 read
+//     over SITUATION/DECISION/GOAL/RELATIONSHIP bindings - QIR-007 scenario C8
+//     proves all four ACTIVE simultaneously in one real session;
+//   * Brain Context comes from the previous turn's durable materialization and
+//     its frozen registry deliberately EXCLUDES every cross-context and session
+//     metric, so a full eight-slot lane conflicts with neither.
 
 // The two mutually exclusive ACTIVE Session Reflection directives. `directive`
 // is ONE field, so they can never be active together; the proof measures both
@@ -266,6 +291,9 @@ const SESSION_METRIC_SHAPES: ReadonlyArray<SessionMetricShape> = Object.freeze([
 
 const reasoningConsumption = new HimReasoningConsumptionService();
 const fastDeepConsumption = new HimFastDeepConsumptionService();
+// QIR-007 Addendum A Fix 04: the REAL QHIA-001 derivation authority. No
+// hard-coded adaptation object exists anywhere in this proof.
+const interactionAdaptation = new HimInteractionAdaptationService();
 const brainContextConsumption = new HimBrainContextService(
   // The transport dependency is deliberately unreachable: only the PURE
   // consumeSourceRows(...) boundary is used here, so this proof performs no
@@ -274,12 +302,16 @@ const brainContextConsumption = new HimBrainContextService(
 );
 
 /**
- * One legal DEEP CONVERSATION_SESSION reasoning projection, built by the REAL
- * production snapshot -> reasoning -> FAST/DEEP pipeline. `coverageState` and
- * the three counts are DERIVED here exactly as the canonical snapshot RPC
- * derives them, so an incoherent combination fails inside production code.
+ * ONE canonical source state per candidate.
+ *
+ * The snapshot is built, handed to the REAL HimReasoningConsumptionService, and
+ * the resulting HimReasoningContext is RETURNED - not consumed here - so the
+ * caller can drive BOTH production derivations from that exact same object.
+ * `coverageState` and the three counts are derived exactly as the canonical
+ * snapshot RPC derives them, so an incoherent combination fails inside
+ * production code rather than being measured.
  */
-function deepSessionReasoningContext(shapes: ReadonlyArray<SessionMetricShape>): HimModelContext {
+function candidateReasoningContext(shapes: ReadonlyArray<SessionMetricShape>): HimReasoningContext {
   const metrics = CURRENT_SESSION_REASONING_METRIC_KEYS.map((metricKey, index) => shapes[index].build(metricKey));
   const assessedMetricCount = shapes.filter((shape) => shape.knows).length;
   const snapshot: HimIntelligenceSnapshot = {
@@ -291,7 +323,7 @@ function deepSessionReasoningContext(shapes: ReadonlyArray<SessionMetricShape>):
     unassessedMetricCount: metrics.length - assessedMetricCount,
     metrics,
   };
-  return fastDeepConsumption.project('DEEP', reasoningConsumption.transform(snapshot));
+  return reasoningConsumption.transform(snapshot);
 }
 
 /**
@@ -335,24 +367,47 @@ function incrementalHumanIntelligenceBytes(humanIntelligence: HumanIntelligenceP
     - utf8(composeServerGuidance({ behavioralGuidance: BASE_BEHAVIORAL_GUIDANCE }));
 }
 
-/** One candidate maximum envelope: a session-metric shape triple plus one reflection directive. */
-function candidateEnvelope(
+interface CoherentCandidate {
+  readonly reasoningContext: HimReasoningContext;
+  readonly adaptation: HimInteractionAdaptation;
+  readonly modelContext: HimModelContext;
+  readonly reflectionGuidance: HimSessionReflectionGuidance;
+  readonly envelope: HumanIntelligenceProviderSemantics;
+}
+
+/**
+ * ONE reachable candidate runtime state.
+ *
+ * Both session-derived production outputs come from the SAME reasoning context,
+ * through the REAL services, in the same order production uses them. There is
+ * no way to pair a different or more favourable adaptation with a given
+ * session-metric shape: the adaptation is a FUNCTION of the shape here, exactly
+ * as it is in the Orchestrator.
+ *
+ * The `adaptationState === 'ACTIVE'` gate is production's own - the Orchestrator
+ * passes Interaction Adaptation to the compiler only when the derivation
+ * actually fired - so a NONE adaptation contributes nothing here either.
+ */
+function coherentCandidate(
   shapes: ReadonlyArray<SessionMetricShape>,
   reflectionDirective: (typeof ACTIVE_REFLECTION_DIRECTIVES)[number],
   brainContext: HimBrainContext,
-): HumanIntelligenceProviderSemantics {
-  const himSessionReflectionGuidance: HimSessionReflectionGuidance = {
+): CoherentCandidate {
+  const reasoningContext = candidateReasoningContext(shapes);
+  const adaptation = interactionAdaptation.derive(reasoningContext);
+  const modelContext = fastDeepConsumption.project('DEEP', reasoningContext);
+  const reflectionGuidance: HimSessionReflectionGuidance = {
     contractVersion: 1, guidanceState: 'ACTIVE', directive: reflectionDirective,
   };
   const envelope = buildHumanIntelligenceProviderSemantics({
-    himContext: deepSessionReasoningContext(shapes),
-    himInteractionAdaptation: MAXIMUM_INTERACTION_ADAPTATION,
-    himSessionReflectionGuidance,
+    himContext: modelContext,
+    ...(adaptation.adaptationState === 'ACTIVE' ? { himInteractionAdaptation: adaptation } : {}),
+    himSessionReflectionGuidance: reflectionGuidance,
     ...ALL_FOUR_ACTIVE_CROSS_CONTEXT_GUIDANCE,
     himBrainContext: brainContext,
   });
-  assert.ok(envelope, 'the candidate maximum Human Intelligence envelope really exists');
-  return envelope!;
+  assert.ok(envelope, 'the candidate Human Intelligence envelope really exists');
+  return { reasoningContext, adaptation, modelContext, reflectionGuidance, envelope: envelope! };
 }
 
 export interface CurrentMaximumHumanIntelligenceCapacity {
@@ -371,19 +426,29 @@ export interface CurrentMaximumHumanIntelligenceCapacity {
   readonly sessionMetricShapes: ReadonlyArray<string>;
   readonly candidatesMeasured: number;
   readonly envelope: HumanIntelligenceProviderSemantics;
+  /** The REAL HimInteractionAdaptationService output for the winning reasoning context. */
+  readonly adaptationState: 'NONE' | 'ACTIVE';
+  readonly adaptationDrivers: ReadonlyArray<string>;
+  readonly adaptationDirectives: Readonly<Record<string, string>>;
 }
 
 /**
  * Build, measure and prove the CURRENT MAXIMUM legal Human Intelligence
  * provider envelope.
  *
- * Maximality is SEARCHED, never assumed: every legal combination of the three
- * session-metric shapes and both ACTIVE reflection directives is rendered
- * through the real renderer and compared, so the reported figure is the largest
- * value the current contracts can reach rather than the largest one this file
- * happened to think of. The remaining lanes are maximal by construction and are
- * asserted to be so: all six Interaction Adaptation directives, all four
- * cross-context channels ACTIVE, and all eight frozen Brain Context slots.
+ * Maximality is SEARCHED over REACHABLE COHERENT RUNTIME STATES, never assumed
+ * and never assembled from independently valid but mutually incompatible parts.
+ * Every legal combination of the three session-metric shapes and both ACTIVE
+ * reflection directives is turned into ONE canonical reasoning context, from
+ * which the REAL HimInteractionAdaptationService and the REAL
+ * HimFastDeepConsumptionService both derive, and the result is rendered through
+ * the real renderer and compared. So the reported figure is the largest value a
+ * real turn can actually reach - not the largest arithmetic combination.
+ *
+ * The three lanes the frozen composition genuinely keeps independent of the
+ * session snapshot are held at their maximum throughout and asserted to be so:
+ * one ACTIVE Session Reflection directive, all four cross-context channels
+ * ACTIVE, and all eight frozen Brain Context slots.
  *
  * It performs NO I/O, NO provider call and NO database request.
  */
@@ -392,12 +457,12 @@ export function proveCurrentMaximumHumanIntelligenceCapacity(
 ): CurrentMaximumHumanIntelligenceCapacity {
   const brainContext = maximumBrainContext();
 
-  // ---- the exhaustive legal search -----------------------------------------
+  // ---- the exhaustive REACHABLE-state search --------------------------------
   let best: {
     bytes: number;
     shapes: ReadonlyArray<SessionMetricShape>;
     reflectionDirective: (typeof ACTIVE_REFLECTION_DIRECTIVES)[number];
-    envelope: HumanIntelligenceProviderSemantics;
+    candidate: CoherentCandidate;
   } | undefined;
   let candidatesMeasured = 0;
   for (const first of SESSION_METRIC_SHAPES) {
@@ -405,10 +470,10 @@ export function proveCurrentMaximumHumanIntelligenceCapacity(
       for (const third of SESSION_METRIC_SHAPES) {
         for (const reflectionDirective of ACTIVE_REFLECTION_DIRECTIVES) {
           const shapes = [first, second, third] as const;
-          const envelope = candidateEnvelope(shapes, reflectionDirective, brainContext);
-          const bytes = incrementalHumanIntelligenceBytes(envelope);
+          const candidate = coherentCandidate(shapes, reflectionDirective, brainContext);
+          const bytes = incrementalHumanIntelligenceBytes(candidate.envelope);
           candidatesMeasured += 1;
-          if (!best || bytes > best.bytes) best = { bytes, shapes, reflectionDirective, envelope };
+          if (!best || bytes > best.bytes) best = { bytes, shapes, reflectionDirective, candidate };
         }
       }
     }
@@ -417,8 +482,56 @@ export function proveCurrentMaximumHumanIntelligenceCapacity(
   assert.equal(candidatesMeasured, SESSION_METRIC_SHAPES.length ** 3 * ACTIVE_REFLECTION_DIRECTIVES.length,
     'QIR-007 Addendum A: the maximality search really enumerated the whole legal shape space');
   const maximum = best!;
-  const humanIntelligence = maximum.envelope;
+  const humanIntelligence = maximum.candidate.envelope;
   const incrementalBytes = maximum.bytes;
+
+  // ---- REACHABILITY COHERENCE (Fix 04) --------------------------------------
+  //
+  // The winning envelope must be exactly what the REAL production pipeline
+  // produces from ONE source state. Re-deriving here - rather than trusting the
+  // search - is what makes it impossible to have paired a different or more
+  // favourable adaptation with the winning session reasoning context.
+  const winningReasoningContext = maximum.candidate.reasoningContext;
+  const rederivedAdaptation = interactionAdaptation.derive(winningReasoningContext);
+  assert.deepEqual(rederivedAdaptation, maximum.candidate.adaptation,
+    'QIR-007 Addendum A: the winning Interaction Adaptation is EXACTLY what the real service derives from the winning reasoning context');
+  assert.deepEqual(fastDeepConsumption.project('DEEP', winningReasoningContext), maximum.candidate.modelContext,
+    'QIR-007 Addendum A: the winning DEEP projection comes from that SAME reasoning context');
+  // The whole envelope, recompiled from that one source state, must be
+  // byte-identical to the measured winner.
+  const recompiled = buildHumanIntelligenceProviderSemantics({
+    himContext: fastDeepConsumption.project('DEEP', winningReasoningContext),
+    ...(rederivedAdaptation.adaptationState === 'ACTIVE' ? { himInteractionAdaptation: rederivedAdaptation } : {}),
+    himSessionReflectionGuidance: maximum.candidate.reflectionGuidance,
+    ...ALL_FOUR_ACTIVE_CROSS_CONTEXT_GUIDANCE,
+    himBrainContext: brainContext,
+  });
+  assert.deepEqual(recompiled, humanIntelligence,
+    'QIR-007 Addendum A: the measured maximum is exactly the envelope one coherent runtime state compiles to');
+  // Every driver the derivation reports traces to a metric that really is KNOWN
+  // at an acting value in that same context - no driver can be asserted into
+  // existence.
+  const winningMetrics = new Map(winningReasoningContext.metrics.map((metric) => [metric.metricKey, metric]));
+  const DRIVER_METRIC_KEYS: Readonly<Record<string, string>> = Object.freeze({
+    STRESS_HIGH_OR_VERY_HIGH: 'hse.stress',
+    ENERGY_LOW_OR_VERY_LOW: 'hse.energy',
+    ATTENTION_LOW_OR_VERY_LOW: 'hse.attention',
+  });
+  for (const driver of rederivedAdaptation.drivers) {
+    const metricKey = DRIVER_METRIC_KEYS[driver];
+    assert.ok(metricKey, `QIR-007 Addendum A: the derived driver ${driver} is one of the frozen session drivers`);
+    assert.equal(winningMetrics.get(metricKey)?.knowledgeState, 'KNOWN',
+      `QIR-007 Addendum A: the ${driver} driver is backed by a genuinely KNOWN ${metricKey} in the same reasoning context`);
+  }
+  assert.equal(rederivedAdaptation.adaptationState, rederivedAdaptation.drivers.length ? 'ACTIVE' : 'NONE',
+    'QIR-007 Addendum A: adaptationState follows the derived drivers, never a fixture decision');
+  // The NEGATIVE CONTROL that retires the old synthetic fixture: an
+  // all-six-directives adaptation is reachable from the winning context ONLY if
+  // that context really derives every frozen driver. This is what the previous
+  // always-maximal object silently assumed.
+  const allDirectivesActive = Object.values(rederivedAdaptation.directives).every((value) => value !== 'DEFAULT');
+  assert.equal(allDirectivesActive, rederivedAdaptation.drivers.length === CURRENT_SESSION_REASONING_METRIC_KEYS.length,
+    'QIR-007 Addendum A: an always-maximal adaptation is reachable ONLY from a context that derives every frozen driver');
 
   // ---- non-vacuity: the winner really is the MAXIMUM composition ------------
   //
@@ -440,20 +553,35 @@ export function proveCurrentMaximumHumanIntelligenceCapacity(
     'QIR-007 Addendum A: all three - and only the three - currently legal session metrics are present');
   assert.equal(Object.prototype.hasOwnProperty.call(humanIntelligence.sessionReasoningContext!, 'contextId'), false,
     'QIR-007 Addendum A: the internal session identity never reaches the provider');
-  // The instruction space is maximal: 11 of the 12 frozen IDs. The single
-  // missing ID is the OTHER reflection directive's, which is structurally
-  // unreachable in the same turn because `directive` is one field.
+  // The instruction space is maximal FOR A REACHABLE STATE, which is a
+  // different claim from "11 of the 12 frozen IDs".
+  //
+  // The mutually exclusive reflection directive is always unreachable in the
+  // same turn, because `directive` is one field. Beyond that, an Interaction
+  // Adaptation instruction is present only when the derivation that owns it
+  // actually fired - and with all four cross-context channels ACTIVE, exactly
+  // one frozen ID (COMPACT_RESPONSE) has no other authorizing source, so its
+  // presence is a direct, checkable function of the derived directive.
   const missing = HUMAN_INTELLIGENCE_PROVIDER_INSTRUCTION_IDS
     .filter((instructionId) => !humanIntelligence.behavioralInstructionIds.includes(instructionId));
-  assert.equal(humanIntelligence.behavioralInstructionIds.length, HUMAN_INTELLIGENCE_PROVIDER_INSTRUCTION_IDS.length - 1,
-    'QIR-007 Addendum A: the maximum envelope authorizes 11 of the 12 frozen behavioral instructions');
-  assert.deepEqual(missing, [maximum.reflectionDirective === 'GENTLE_REFLECTION_INVITATION'
-    ? 'AVOID_REDUNDANT_REFLECTION' : 'GENTLE_REFLECTION_INVITATION'],
-    'QIR-007 Addendum A: the ONLY unreachable instruction is the mutually exclusive reflection directive');
+  assert.ok(missing.includes(maximum.reflectionDirective === 'GENTLE_REFLECTION_INVITATION'
+    ? 'AVOID_REDUNDANT_REFLECTION' : 'GENTLE_REFLECTION_INVITATION'),
+    'QIR-007 Addendum A: the mutually exclusive reflection directive is never co-authorized');
+  assert.ok(humanIntelligence.behavioralInstructionIds.includes(maximum.reflectionDirective),
+    'QIR-007 Addendum A: the selected ACTIVE reflection directive really contributed its instruction');
+  assert.equal(
+    humanIntelligence.behavioralInstructionIds.includes('COMPACT_RESPONSE'),
+    rederivedAdaptation.directives.responseDensity === 'COMPACT',
+    'QIR-007 Addendum A: the one Adaptation-exclusive instruction is present EXACTLY when the real derivation authorized it');
   assert.deepEqual(
     [...humanIntelligence.behavioralInstructionIds],
     HUMAN_INTELLIGENCE_PROVIDER_INSTRUCTION_IDS.filter((id) => !missing.includes(id)),
     'QIR-007 Addendum A: the instruction IDs are deduplicated and emitted in the frozen canonical order');
+  // The three session-independent lanes really are at their maximum.
+  for (const [channel, guidance] of Object.entries(ALL_FOUR_ACTIVE_CROSS_CONTEXT_GUIDANCE)) {
+    assert.equal(guidance.guidanceState, 'ACTIVE',
+      `QIR-007 Addendum A: the ${channel} cross-context channel is ACTIVE in the maximum fixture`);
+  }
   const rendered = composeServerGuidance({ behavioralGuidance: BASE_BEHAVIORAL_GUIDANCE, humanIntelligence });
   const bullets = rendered.split('\n').filter((line) => line.startsWith('- '));
   assert.equal(bullets.length, humanIntelligence.behavioralInstructionIds.length,
@@ -517,6 +645,9 @@ export function proveCurrentMaximumHumanIntelligenceCapacity(
     sessionMetricShapes: maximum.shapes.map((shape) => shape.label),
     candidatesMeasured,
     envelope: humanIntelligence,
+    adaptationState: rederivedAdaptation.adaptationState,
+    adaptationDrivers: [...rederivedAdaptation.drivers],
+    adaptationDirectives: { ...rederivedAdaptation.directives },
   };
 }
 
@@ -537,5 +668,13 @@ export function formatCurrentMaximumHumanIntelligenceProof(
     + ` reflection=${capacity.reflectionDirective}`
     + ` candidates_measured=${capacity.candidatesMeasured}`
     + ` final_text_bytes=${capacity.finalTextBytes}`
-    + ` global_budget_bytes=${capacity.globalBudgetBytes}`;
+    + ` global_budget_bytes=${capacity.globalBudgetBytes}`
+    // QIR-007 Addendum A Fix 04: the REACHABILITY evidence. The adaptation is
+    // reported as the real service DERIVED it from the winning reasoning
+    // context, never as a fixture decision.
+    + ` session_shapes=${capacity.sessionMetricShapes.join('|')}`
+    + ` adaptation_state=${capacity.adaptationState}`
+    + ` adaptation_drivers=${capacity.adaptationDrivers.join('|') || 'NONE'}`
+    + ` adaptation_directives=${Object.entries(capacity.adaptationDirectives)
+      .map(([directive, value]) => `${directive}:${value}`).join('|')}`;
 }

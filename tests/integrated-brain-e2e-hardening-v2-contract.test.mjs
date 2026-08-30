@@ -138,9 +138,15 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   'There is no direct per-channel fallback, no aggregate-v1/v2 fallback, and no cross-turn cache.',
   '`6427` is the frozen canonical **all-active QHIA-013 fixture** footprint',
   'it is NOT the maximum reachable envelope',
-  'CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7536',
-  'headroom_bytes=656',
+  'CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7518',
+  'headroom_bytes=674',
   'verdict=PASS',
+  // Fix 04: the measured ceiling is a REACHABLE coherent runtime state.
+  'Maximality is SEARCHED over **reachable coherent runtime states**',
+  '-> HimInteractionAdaptationService.derive(...)',
+  'There is no hard-coded adaptation object',
+  'derived drivers: ENERGY_LOW_OR_VERY_LOW',
+  'The superseded synthetic figure was `7536`',
   'Brain Context slots in the maximum fixture: 8',
   'session reasoning metrics in the maximum fixture: 3',
   'cross-context ACTIVE channels in the maximum fixture: 4',
@@ -236,6 +242,34 @@ const ADDENDUM_A_CAPACITY_CANONICAL_SOURCES = Object.freeze([
   "Buffer.byteLength(value, 'utf8')",
   'HUMAN_INTELLIGENCE_BUDGET_BYTES',
   'GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES',
+  // QIR-007 Addendum A Fix 04: Interaction Adaptation must come from the REAL
+  // derivation authority, never from a fixture.
+  "from '../../src/human-model/him-interaction-adaptation.service'",
+  "from '../../src/human-model/him-reasoning-consumption.service'",
+  "from '../../src/human-model/him-fast-deep-consumption.service'",
+  'new HimInteractionAdaptationService()',
+]);
+
+// QIR-007 Addendum A Fix 04. Each entry is an executable expression or a live
+// assertion label proving the capacity search measures only REACHABLE coherent
+// runtime states: one canonical reasoning context per candidate, feeding BOTH
+// production derivations.
+const ADDENDUM_A_REACHABILITY_PROOFS = Object.freeze([
+  // One shared source state, both derivations from it.
+  'const reasoningContext = candidateReasoningContext(shapes);',
+  'const adaptation = interactionAdaptation.derive(reasoningContext);',
+  "const modelContext = fastDeepConsumption.project('DEEP', reasoningContext);",
+  // The Orchestrator's own ACTIVE gate is mirrored, not bypassed.
+  "adaptation.adaptationState === 'ACTIVE' ? { himInteractionAdaptation: adaptation } : {}",
+  // The winner is re-derived and the whole envelope recompiled from one state.
+  'const rederivedAdaptation = interactionAdaptation.derive(winningReasoningContext);',
+  'the winning Interaction Adaptation is EXACTLY what the real service derives from the winning reasoning context',
+  'the winning DEEP projection comes from that SAME reasoning context',
+  'the measured maximum is exactly the envelope one coherent runtime state compiles to',
+  'driver is backed by a genuinely KNOWN',
+  'adaptationState follows the derived drivers, never a fixture decision',
+  'an always-maximal adaptation is reachable ONLY from a context that derives every frozen driver',
+  'the one Adaptation-exclusive instruction is present EXACTLY when the real derivation authorized it',
 ]);
 
 // The frozen A2 / Full Intelligence helpers QIR-007 REUSES instead of forking.
@@ -515,8 +549,25 @@ function assertIntegratedBrainHardeningContract(world) {
     violated('the PASS path is proven through the REAL QIR-004 assembler as INCLUDED_FULL');
   if (!world.budgetContract.includes('export const HUMAN_INTELLIGENCE_BUDGET_BYTES = 8192;'))
     violated('the atomic Human Intelligence slice remains exactly 8192 bytes');
-  if (!world.capacity.includes('export const EXPECTED_CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7536;'))
+  if (!world.capacity.includes('export const EXPECTED_CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7518;'))
     violated('the measured current-maximum Human Intelligence footprint remains the exact locked result');
+
+  // 13d-bis (Fix 04). The capacity search measures only REACHABLE coherent
+  // runtime states: ONE canonical reasoning context per candidate, feeding BOTH
+  // the real Interaction Adaptation derivation and the DEEP projection.
+  for (const proof of ADDENDUM_A_REACHABILITY_PROOFS) {
+    if (!exeCapacity.includes(proof))
+      violated(`the capacity proof measures only reachable coherent states: missing "${proof}"`);
+  }
+  // No hard-coded adaptation fixture may exist. A usable one needs a literal
+  // directives object or a literal drivers array, so forbidding both is what
+  // structurally prevents the unreachable always-maximal pairing Fix 04 removed.
+  // (`adaptationState` is deliberately NOT pattern-matched: it appears
+  // legitimately in the exported result TYPE.)
+  if (/\bdirectives:\s*\{/u.test(exeCapacity))
+    violated('the capacity proof declares no hard-coded Interaction Adaptation directives object');
+  if (/\bdrivers:\s*\[/u.test(exeCapacity))
+    violated('the capacity proof never pins an Interaction Adaptation driver list literal');
 
   // 13e. The maximum fixture really is maximal: all eight frozen Brain Context
   //      slots, all three currently legal session metrics, all four ACTIVE
@@ -840,8 +891,66 @@ test('QIR7-2 - anti-vacuity: the real guard rejects every named regression', () 
     }],
     ['the measured current maximum was silently re-baselined', {
       capacity: shipped.capacity.replace(
-        'export const EXPECTED_CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7536;',
+        'export const EXPECTED_CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7518;',
         'export const EXPECTED_CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 9999;'),
+    }],
+    // QIR-007 Addendum A Fix 04 regressions: reachability coherence.
+    ['the real adaptation derivation was replaced by a hard-coded object', {
+      capacity: shipped.capacity.replace(
+        'const adaptation = interactionAdaptation.derive(reasoningContext);',
+        "const adaptation = { contractVersion: 1, adaptationState: 'ACTIVE', directives: { responseDensity: 'COMPACT' }, drivers: ['STRESS_HIGH_OR_VERY_HIGH'] };"),
+    }],
+    ['the adaptation candidate was decoupled from the reasoning context used for the DEEP projection', {
+      capacity: shipped.capacity.replace(
+        'const adaptation = interactionAdaptation.derive(reasoningContext);',
+        'const adaptation = interactionAdaptation.derive(candidateReasoningContext(shapes));'),
+    }],
+    ['a synthetic all-directives-ACTIVE adaptation fixture returned', {
+      capacity: `${shipped.capacity}\nconst MAXIMUM_INTERACTION_ADAPTATION = { directives: { responseDensity: 'COMPACT', cognitiveLoad: 'REDUCED' } };\n`,
+    }],
+    ['a synthetic adaptation driver list was pinned back into the capacity fixture', {
+      capacity: `${shipped.capacity}\nconst PINNED = { drivers: ['STRESS_HIGH_OR_VERY_HIGH', 'ENERGY_LOW_OR_VERY_LOW'] };\n`,
+    }],
+    ['the real Interaction Adaptation service stopped being instantiated', {
+      capacity: shipped.capacity.replaceAll('new HimInteractionAdaptationService()', 'stubAdaptationDerivation()'),
+    }],
+    ['the real Interaction Adaptation service import was dropped', {
+      capacity: shipped.capacity.replace(
+        "from '../../src/human-model/him-interaction-adaptation.service'", "from './local-adaptation-stub'"),
+    }],
+    ["the Orchestrator's own ACTIVE adaptation gate was bypassed in the capacity proof", {
+      capacity: shipped.capacity.replace(
+        "adaptation.adaptationState === 'ACTIVE' ? { himInteractionAdaptation: adaptation } : {}",
+        'himInteractionAdaptation: adaptation'),
+    }],
+    ['the winning adaptation is no longer re-derived from its own reasoning context', {
+      capacity: shipped.capacity.replaceAll(
+        'the winning Interaction Adaptation is EXACTLY what the real service derives from the winning reasoning context', 'skipped'),
+    }],
+    ['the same-context DEEP projection proof was gutted', {
+      capacity: shipped.capacity.replaceAll('the winning DEEP projection comes from that SAME reasoning context', 'skipped'),
+    }],
+    ['the whole-envelope recompilation proof was gutted', {
+      capacity: shipped.capacity.replaceAll(
+        'the measured maximum is exactly the envelope one coherent runtime state compiles to', 'skipped'),
+    }],
+    ['the driver-backing proof was gutted', {
+      capacity: shipped.capacity.replaceAll('driver is backed by a genuinely KNOWN', 'skipped'),
+    }],
+    ['the always-maximal negative control was gutted', {
+      capacity: shipped.capacity.replaceAll(
+        'an always-maximal adaptation is reachable ONLY from a context that derives every frozen driver', 'skipped'),
+    }],
+    ['the Adaptation-exclusive instruction coherence proof was gutted', {
+      capacity: shipped.capacity.replaceAll(
+        'the one Adaptation-exclusive instruction is present EXACTLY when the real derivation authorized it', 'skipped'),
+    }],
+    ['the reachability correction was withdrawn from the document', {
+      contractDoc: shipped.contractDoc.replace(
+        'Maximality is SEARCHED over **reachable coherent runtime states**', 'Maximality is assumed'),
+    }],
+    ['the superseded synthetic figure was hidden from the document', {
+      contractDoc: shipped.contractDoc.replace('The superseded synthetic figure was `7536`', 'No prior figure existed'),
     }],
     ['the Human Intelligence slice was widened to make the maximum fit', {
       budgetContract: shipped.budgetContract.replace(
@@ -869,7 +978,7 @@ test('QIR7-2 - anti-vacuity: the real guard rejects every named regression', () 
     }],
     ['the measured capacity result was withdrawn from the document', {
       contractDoc: shipped.contractDoc.replace(
-        'CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7536', 'measurement pending'),
+        'CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7518', 'measurement pending'),
     }],
     ['the no-fallback rule was withdrawn from the document', {
       contractDoc: shipped.contractDoc.replace('no aggregate-v1/v2 fallback', 'a per-channel fallback read is allowed'),

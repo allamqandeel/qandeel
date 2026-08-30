@@ -474,41 +474,106 @@ UTF8(composeServerGuidance(request WITH max HI))
 - UTF8(composeServerGuidance(same request WITHOUT HI))
 ```
 
-Maximality is SEARCHED, never assumed. Every legal combination of the three
-`CONVERSATION_SESSION` metric shapes and both ACTIVE reflection directives is
-rendered and compared (2000 candidates), and every shape is pushed through the
-REAL `HimReasoningConsumptionService` and `HimFastDeepConsumptionService`, which
+Maximality is SEARCHED over **reachable coherent runtime states**, never assumed
+and never assembled from independently valid but mutually incompatible parts.
+
+This is the correction Fix 04 made. Production derives Interaction Adaptation
+from the SAME canonical reasoning context it then projects into the provider
+lane:
+
+```text
+HimIntelligenceSnapshot
+  -> HimReasoningConsumptionService.transform(...)
+       -> ONE HimReasoningContext
+            -> HimInteractionAdaptationService.derive(...)
+            -> HimFastDeepConsumptionService.project('DEEP', ...)
+```
+
+The first version of this proof pinned an always-maximal hand-built
+`HimInteractionAdaptation` and combined it with every independently searched
+session-metric shape. That is not a reachable state — an UNKNOWN `hse.energy`
+cannot derive `ENERGY_LOW_OR_VERY_LOW` — so it overstated the ceiling. The
+capacity proof now builds ONE canonical reasoning context per candidate and
+drives **both** production derivations from that exact object, through the REAL
+`HimInteractionAdaptationService`. There is no hard-coded adaptation object
+anywhere in it.
+
+Every legal combination of the three `CONVERSATION_SESSION` metric shapes and
+both ACTIVE reflection directives is rendered and compared (2000 candidates),
+and every shape is pushed through the REAL `HimReasoningConsumptionService`,
+`HimInteractionAdaptationService` and `HimFastDeepConsumptionService`, which
 reject an unreachable one. The eight-slot Brain Context lane is built by the REAL
 `HimBrainContextService` from legal migration-0061 rows using each slot's EXACT
 persisted semantic mapping — re-read from real PostgreSQL by the dynamic gate, so
 the pure CPU proof cannot inflate itself with a mapping the database does not
 carry.
 
-The winning fixture is: `CONVERSATION_SESSION` / `DEEP` with all three currently
-legal session metrics at their byte-maximal legal shape, every legal Interaction
-Adaptation contribution active, the larger ACTIVE Session Reflection directive,
-all four cross-context channels ACTIVE, and all eight frozen Brain Context slots.
-It authorizes 11 of the 12 frozen instruction IDs; the only unreachable one is
-the mutually exclusive reflection directive.
+Three lanes genuinely stay independent of the session snapshot under the frozen
+composition, and are held at their maximum throughout: Session Reflection comes
+from the separate one-metric `hbs.reflection` selection; the four cross-context
+channels come from the single aggregate-v3 read (C8 proves all four ACTIVE at
+once in one real session); and Brain Context comes from the previous turn's
+durable materialization, whose frozen registry deliberately EXCLUDES every
+cross-context and session metric.
+
+The winning **reachable** state is:
+
+```text
+hse.stress     UNKNOWN / LATEST_EVENT_INVALIDATED
+hse.energy     KNOWN   / VERY_LOW
+hse.attention  UNKNOWN / LATEST_EVENT_INVALIDATED
+
+derived adaptationState:  ACTIVE
+derived drivers:          ENERGY_LOW_OR_VERY_LOW
+derived directives:       responseDensity:COMPACT  stepBatching:ONE_AT_A_TIME
+                          cognitiveLoad:DEFAULT    branching:DEFAULT
+                          steeringPressure:DEFAULT deliveryPacing:DEFAULT
+reflection directive:     GENTLE_REFLECTION_INVITATION
+cross-context ACTIVE:     4
+Brain Context slots:      8
+```
+
+It still authorizes 11 of the 12 frozen instruction IDs — the only unreachable
+one is the mutually exclusive reflection directive — because with all four
+cross-context channels ACTIVE, exactly one frozen ID (`COMPACT_RESPONSE`) has no
+other authorizing source, and the winning state reaches it through a genuinely
+KNOWN `hse.energy` at `VERY_LOW`. The four Adaptation directives that stay
+`DEFAULT` cost nothing, because their instructions are independently authorized
+by the cross-context channels.
 
 ```text
 QIR007_HI_CURRENT_MAX:
-incremental_bytes=7536
+incremental_bytes=7518
 slice_bytes=8192
-headroom_bytes=656
+headroom_bytes=674
 verdict=PASS
 ```
 
 ```text
 canonical all-active QHIA-013 fixture bytes:            6427
-CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7536
+CURRENT_MAX_HUMAN_INTELLIGENCE_INCREMENTAL_BYTES = 7518
 Human Intelligence slice bytes:                         8192
-headroom bytes:                                          656
+headroom bytes:                                          674
 Brain Context slots in the maximum fixture:                8
 session reasoning metrics in the maximum fixture:          3
 cross-context ACTIVE channels in the maximum fixture:      4
 capacity verdict:                                       PASS
 ```
+
+The superseded synthetic figure was `7536`; the coherent reachable ceiling is
+**18 bytes smaller**, and headroom is correspondingly larger. The frozen slice
+stays exactly `8192` and the global budget exactly `131072` — neither was
+widened to make anything fit.
+
+The winner is additionally proven **coherent**: the adaptation is re-derived
+from the winning reasoning context and asserted identical, the whole envelope is
+recompiled from that one source state and asserted identical, every derived
+driver is asserted to be backed by a genuinely KNOWN metric in that same
+context, `COMPACT_RESPONSE` is asserted present exactly when the derived
+`responseDensity` is `COMPACT`, and an all-six-directives adaptation is asserted
+reachable only from a context that derives every frozen driver. The verifier is
+therefore structurally incapable of pairing a different or more favourable
+adaptation with the winning session reasoning context.
 
 The REAL QIR-004 assembler then proves the PASS path: `HUMAN_INTELLIGENCE =
 INCLUDED_FULL`, retained bytes equal to offered bytes (zero truncation), the exact
@@ -524,15 +589,18 @@ preserved verbatim. Addendum A adds a second, different fact next to it:
 
 ```text
 canonical all-active fixture = 6427 bytes
-current maximum legal envelope = 7536 bytes
+current maximum legal envelope = 7518 bytes
 ```
 
 The static contract fails if either figure is silently re-baselined, if the two
 are conflated, if the eight-slot maximum fixture shrinks, if the capacity proof
 stops using the real canonical renderer or stops deciding against
-`HUMAN_INTELLIGENCE_BUDGET_BYTES`, if any C5–C8 proof is removed, if a direct
-per-channel fallback appears in the integrated verifier, or if production wiring
-gains an aggregate timer or a direct await that would contradict the frozen
+`HUMAN_INTELLIGENCE_BUDGET_BYTES`, if the Interaction Adaptation candidate stops
+being derived by the real `HimInteractionAdaptationService` from the same
+reasoning context used for the DEEP projection, if a hard-coded or
+always-maximal adaptation fixture returns, if any C5–C8 proof is removed, if a
+direct per-channel fallback appears in the integrated verifier, or if production
+wiring gains an aggregate timer or a direct await that would contradict the frozen
 zero-wait architecture.
 
 ### 11.6 Scope

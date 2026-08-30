@@ -411,6 +411,19 @@ async function main(): Promise<void> {
     'CURRENT_MAX_HUMAN_INTELLIGENCE: the maximum current-contract Human Intelligence envelope fits the frozen 8192-byte slice');
   assert.ok(capacity.finalTextBytes <= GLOBAL_MODEL_INPUT_TEXT_BUDGET_BYTES,
     'CURRENT_MAX_HUMAN_INTELLIGENCE: the final normalized request stays inside the frozen 131072-byte global ceiling');
+  // QIR-007 Addendum A Fix 04: the winning state is a REACHABLE one. The
+  // Interaction Adaptation reported here was DERIVED by the real QHIA-001
+  // service from the same reasoning context the DEEP projection came from, so
+  // an always-maximal adaptation can no longer be paired with an arbitrary
+  // session-metric shape.
+  assert.equal(capacity.adaptationState, 'ACTIVE',
+    'CURRENT_MAX_HUMAN_INTELLIGENCE anti-vacuity: the winning state really derives an ACTIVE Interaction Adaptation');
+  assert.ok(capacity.adaptationDrivers.length > 0,
+    'CURRENT_MAX_HUMAN_INTELLIGENCE anti-vacuity: the ACTIVE adaptation is backed by at least one genuinely derived driver');
+  assert.equal(
+    capacity.behavioralInstructionIds.includes('COMPACT_RESPONSE'),
+    capacity.adaptationDirectives.responseDensity === 'COMPACT',
+    'CURRENT_MAX_HUMAN_INTELLIGENCE: the Adaptation-exclusive instruction tracks the REAL derived directive, never a fixture');
 
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for the Integrated Brain E2E Hardening v2 verifier.');
   if (!process.env.REDIS_URL) throw new Error('REDIS_URL is required for the Integrated Brain E2E Hardening v2 verifier.');
