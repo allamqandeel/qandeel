@@ -27,6 +27,17 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 // separately reviewed phase. The closed QIR-001..008 inventory is exact because
 // it is a closed HISTORICAL set, never a live census: this guard never scans
 // future task names to ban them globally.
+//
+// QIR-008 Fix 01 applied that same rule to this guard, which had introduced two
+// live ceilings of its own: an exact-inventory assertion that the repository
+// may contain only the three QIR v1 `e2e`/`end-to-end` verify scripts, and a
+// live check that no `0064_*` migration exists. Both were historical scope
+// facts about QIR-008's own diff dressed up as live assertions - the second was
+// literally the ceiling QIR-008 had just repaired in QIR-006 and QIR-007. They
+// are now recorded in the freeze document instead, what stays frozen about the
+// runtime tail is the three gate IDENTITIES / their registration / their
+// RELATIVE order, and test C7 scans this file's own source so neither shape can
+// return.
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
 
@@ -57,8 +68,9 @@ const shipped = Object.freeze({
 });
 
 const TERMINAL_MIGRATION = '0063_question_information_gap_closed_loop_v1.sql';
+const CLOSURE_GUARD = 'tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs';
 const CLOSURE_SCRIPT = 'test:integrated-intelligence-runtime-phase-closure-contract';
-const CLOSURE_COMMAND = 'node --test tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs';
+const CLOSURE_COMMAND = `node --test ${CLOSURE_GUARD}`;
 
 // The frozen phase component inventory. Exactness is legal on this side: it is
 // a closed historical set, never a live census.
@@ -118,8 +130,10 @@ const REGISTERED_SCRIPTS = Object.freeze({
   [CLOSURE_SCRIPT]: CLOSURE_COMMAND,
 });
 
-// The frozen runtime tail. Exactly these three runtime E2E gates exist, in this
-// order, and no fourth may appear.
+// The frozen QIR v1 runtime tail: these three gate IDENTITIES, their continued
+// package/CI registration, and their RELATIVE order. This is a closed
+// historical set, never a census of the repository's future E2E inventory
+// (QIR-008 Fix 01) - a later, separately reviewed product-phase gate is legal.
 const RUNTIME_E2E_GATES = Object.freeze([
   'verify:a2-e2e-runtime-smoke',
   'verify:full-intelligence-e2e-runtime',
@@ -138,6 +152,12 @@ const REQUIRED_FREEZE_STATEMENTS = Object.freeze([
   '33339907674',
   '**Terminal migration at QIR closure: `0063_question_information_gap_closed_loop_v1.sql`.**',
   'it is **not a live future repository ceiling**',
+  // QIR-008 Fix 01: the historical scope facts that replaced this guard's own
+  // two live ceilings. They are recorded here, not enforced against the future
+  // repository.
+  '**QIR-008 added no fourth QIR runtime E2E.**',
+  '**A later, separately reviewed product-phase runtime gate is legal and does not reopen QIR merely by existing.**',
+  '**QIR-008 created no migration and modified none: its `database/` diff is zero.**',
   // Closure is not product completion.
   '`Integrated Intelligence Runtime CLOSED` is **NOT** the statement `QANDEEL PRODUCT COMPLETE`.',
   '**QIR closure is NOT QANDEEL product completion.**',
@@ -296,8 +316,33 @@ const FORWARD_SAFETY_PROOF_MARKERS = Object.freeze([
   'migration 0063 remains historically REQUIRED even when later migrations exist',
 ]);
 
+// QIR-008 Fix 01. The same historical-vs-live rule, applied to THIS guard. Each
+// shape below would turn a closed historical fact into a live repository
+// ceiling: a latest/highest-migration check, an absence-of-0064/0065/0066
+// check, a future filename or prefix ban, or the exact-E2E-inventory census
+// that Fix 01 removed. Assembled at run time, like the needles above, so this
+// file never contains the shapes it forbids - otherwise the self-scan would
+// match its own source and could never pass.
+const SELF_CEILING_NEEDLES = Object.freeze([
+  ...CEILING_NEEDLES,
+  ...FILENAME_BAN_NEEDLES,
+  ["startsWith('006", '5'].join(''),
+  ["startsWith('006", '6'].join(''),
+  ['.some((name) => name.startsWith(', "'006"].join(''),
+  ['/e2e|', 'end-to-end/iu'].join(''),
+  ['[...RUNTIME_E2E_GATES]', '.sort()'].join(''),
+]);
+
 function violated(property) {
   throw new Error(`QIR-008 Integrated Intelligence Runtime phase closure contract violated: ${property}`);
+}
+
+/** QIR-008 Fix 01: the closure guard may freeze what QIR v1 WAS, never what the repository may BECOME. */
+function assertClosureGuardCarriesNoLiveCeiling(source) {
+  for (const needle of SELF_CEILING_NEEDLES) {
+    if (source.includes(needle))
+      violated(`the closure guard itself carries no live repository ceiling: found ${needle}`);
+  }
 }
 
 /** The freeze document's reconciliation rows, as [obligation, owner, proof, registration, verdict]. */
@@ -376,23 +421,29 @@ function assertIntegratedIntelligenceRuntimePhaseClosureContract(world) {
   if (!(closureAt > 0 && bootstrapAt > 0 && closureAt < bootstrapAt))
     violated('the closure contract runs in CI before the database bootstrap: a pure static guard needs no database');
 
-  // 5. The frozen runtime tail: A2 -> Full Intelligence -> Integrated Brain E2E
-  //    Hardening v2, in that order, and NO fourth runtime E2E gate exists.
+  // 5. The frozen QIR v1 runtime tail: A2 -> Full Intelligence -> Integrated
+  //    Brain E2E Hardening v2. What is frozen is the IDENTITY of those three
+  //    gates, their continued package and CI registration, and their RELATIVE
+  //    order.
+  //
+  //    QIR-008 Fix 01: this deliberately does NOT enumerate the repository's
+  //    E2E inventory. "QIR-008 added no fourth QIR runtime E2E" is a historical
+  //    scope fact about this task's own diff, recorded in the freeze document -
+  //    not a ban on future product verification infrastructure. A later,
+  //    separately reviewed gate (voice, subscriptions, ...) is legal without
+  //    editing this closed historical guard, and stays legal wherever in the CI
+  //    file it lands, because it cannot change the relative order of the three.
+  //    (The package-script check below is deliberately redundant with the exact
+  //    REGISTERED_SCRIPTS command check in 4: belt and braces on these three.)
   const gateAt = RUNTIME_E2E_GATES.map((script) => world.ci.indexOf(`run: npm run ${script}`));
-  if (gateAt.some((index) => index < 0)) violated('all three frozen runtime E2E gates remain wired in CI');
+  RUNTIME_E2E_GATES.forEach((script, index) => {
+    if (typeof packageJson.scripts?.[script] !== 'string')
+      violated(`the frozen QIR v1 runtime gate remains a registered package script: ${script}`);
+    if (gateAt[index] < 0)
+      violated(`the frozen QIR v1 runtime gate remains wired in CI: ${script}`);
+  });
   if (!(gateAt[0] < gateAt[1] && gateAt[1] < gateAt[2]))
-    violated('the frozen runtime tail order is A2 -> Full Intelligence -> Integrated Brain E2E Hardening v2');
-  const runtimeGatesInCi = [...new Set(
-    [...world.ci.matchAll(/run: npm run (verify:[\w:-]+)/gu)]
-      .map((match) => match[1])
-      .filter((script) => /e2e|end-to-end/iu.test(script)),
-  )].sort();
-  assert.deepEqual(runtimeGatesInCi, [...RUNTIME_E2E_GATES].sort(),
-    'exactly the three frozen runtime E2E gates exist in CI - there is no fourth');
-  const runtimeGatesInPackage = Object.keys(packageJson.scripts ?? {})
-    .filter((script) => script.startsWith('verify:') && /e2e|end-to-end/iu.test(script)).sort();
-  assert.deepEqual(runtimeGatesInPackage, [...RUNTIME_E2E_GATES].sort(),
-    'exactly the three frozen runtime E2E gates are registered as package scripts - there is no fourth');
+    violated('the frozen QIR v1 runtime tail order is A2 -> Full Intelligence -> Integrated Brain E2E Hardening v2');
 
   // 6. The compact live constitution is still coherent.
   for (const [source, required, property] of LIVE_CONSTITUTION) {
@@ -510,6 +561,21 @@ test('C2 - anti-vacuity: the real guard rejects every named regression', () => {
     ['the historical baseline was turned into a live repository ceiling', {
       freezeDoc: shipped.freezeDoc.replace('it is **not a live future repository ceiling**',
         'it is the permanent ceiling of the repository'),
+    }],
+    // QIR-008 Fix 01 regressions on the historical scope facts.
+    ['the no-fourth-QIR-E2E scope fact was withdrawn from the freeze document', {
+      freezeDoc: shipped.freezeDoc.replace('**QIR-008 added no fourth QIR runtime E2E.**',
+        'A fourth QIR runtime E2E was added.'),
+    }],
+    ['the freeze document started banning future product-phase runtime gates', {
+      freezeDoc: shipped.freezeDoc.replace(
+        '**A later, separately reviewed product-phase runtime gate is legal and does not reopen QIR merely by existing.**',
+        'No further runtime gate may ever be added to this repository.'),
+    }],
+    ['the historical zero-database-diff fact was withdrawn from the freeze document', {
+      freezeDoc: shipped.freezeDoc.replace(
+        '**QIR-008 created no migration and modified none: its `database/` diff is zero.**',
+        'The database diff was not recorded.'),
     }],
     ['the closed/complete distinction was erased', {
       freezeDoc: shipped.freezeDoc.replaceAll('**QIR closure is NOT QANDEEL product completion.**', 'the product is complete'),
@@ -638,11 +704,24 @@ test('C2 - anti-vacuity: the real guard rejects every named regression', () => {
         .replace('      - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}',
           '      - {name: Verify Integrated Brain end-to-end hardening v2, run: npm run verify:integrated-brain:e2e-hardening-v2}\n      - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}'),
     }],
-    ['a fourth runtime E2E gate was added', {
-      packageJson: shipped.packageJson.replace('"test:a2-e2e-smoke-contract":',
-        '"verify:qir-009-e2e-runtime": "node scripts/qir-009.mjs",\n    "test:a2-e2e-smoke-contract":'),
-      ci: shipped.ci.replace('      - {name: Verify Integrated Brain end-to-end hardening v2, run: npm run verify:integrated-brain:e2e-hardening-v2}',
-        '      - {name: Verify Integrated Brain end-to-end hardening v2, run: npm run verify:integrated-brain:e2e-hardening-v2}\n      - {name: Verify QIR-009 E2E, run: npm run verify:qir-009-e2e-runtime}'),
+    // QIR-008 Fix 01: the frozen facts are gate IDENTITY, package/CI
+    // registration and RELATIVE order - never the repository's future E2E
+    // inventory. These replace the retired "a fourth runtime E2E gate was
+    // added" fixture, which asserted a live ceiling rather than a QIR fact.
+    ['the A2 runtime gate was removed from CI', {
+      ci: shipped.ci.replaceAll('run: npm run verify:a2-e2e-runtime-smoke', 'run: echo skipped'),
+    }],
+    ['the Full Intelligence runtime gate was removed from CI', {
+      ci: shipped.ci.replaceAll('run: npm run verify:full-intelligence-e2e-runtime', 'run: echo skipped'),
+    }],
+    ['a frozen QIR v1 runtime gate lost its package registration', {
+      packageJson: shipped.packageJson.replace('"verify:a2-e2e-runtime-smoke":', '"verify:a2-e2e-runtime-smoke-retired":'),
+    }],
+    ['the Full Intelligence gate lost its package registration', {
+      packageJson: shipped.packageJson.replace('"verify:full-intelligence-e2e-runtime":', '"verify:full-intelligence-e2e-runtime-retired":'),
+    }],
+    ['the Integrated Brain hardening gate lost its package registration', {
+      packageJson: shipped.packageJson.replace('"verify:integrated-brain:e2e-hardening-v2":', '"verify:integrated-brain:e2e-hardening-v2-retired":'),
     }],
     ['a cross-context adversarial scenario was gutted from the QIR-007 gate', {
       hardeningVerifier: shipped.hardeningVerifier.replaceAll("'C7: ", "'RETIRED-C7: "),
@@ -716,6 +795,34 @@ test('C3 - forward safety: a later, separately reviewed phase stays legal', () =
   assert.doesNotThrow(() => assertIntegratedIntelligenceRuntimePhaseClosureContract({
     ...shippedWorld, migrations: Object.freeze([...shipped.migrations, ...FUTURE_MIGRATION_FIXTURES]),
   }), 'all future migrations together stay legal for the closure contract');
+
+  // QIR-008 Fix 01: a later, separately reviewed PRODUCT-PHASE runtime gate is
+  // legal. The closed QIR historical guard freezes the three QIR v1 gate
+  // identities, their registration and their relative order - it never
+  // enumerates the repository's future E2E inventory, so future verification
+  // infrastructure needs no edit to this file. Injected in memory only: no
+  // Voice verifier, package script or CI step is created anywhere.
+  const FUTURE_PRODUCT_GATE = 'verify:voice-e2e-runtime';
+  const withFutureGateScript = shipped.packageJson.replace(
+    '"verify:a2-e2e-runtime-smoke":',
+    `"${FUTURE_PRODUCT_GATE}": "node --env-file-if-exists=.env apps/api/scripts/verify-voice-end-to-end-runtime.ts",\n    "verify:a2-e2e-runtime-smoke":`);
+  const hardeningLine = shipped.ci.match(/^.*run: npm run verify:integrated-brain:e2e-hardening-v2.*$/mu)[0];
+  const a2Line = shipped.ci.match(/^.*run: npm run verify:a2-e2e-runtime-smoke.*$/mu)[0];
+  for (const [placement, ci] of [
+    // Appended after the whole QIR tail.
+    ['after the QIR v1 tail', shipped.ci.replace(hardeningLine,
+      `${hardeningLine}\n      - {name: Verify Voice end-to-end runtime, run: npm run ${FUTURE_PRODUCT_GATE}}`)],
+    // Interleaved BEFORE the QIR tail: it still cannot change the relative
+    // order of the three frozen gates, so it is equally legal.
+    ['before the QIR v1 tail', shipped.ci.replace(a2Line,
+      `      - {name: Verify Voice end-to-end runtime, run: npm run ${FUTURE_PRODUCT_GATE}}\n${a2Line}`)],
+  ]) {
+    assert.notEqual(ci, shipped.ci, `the future product gate fixture really landed ${placement}`);
+    assert.doesNotThrow(() => assertIntegratedIntelligenceRuntimePhaseClosureContract({
+      ...shippedWorld, packageJson: withFutureGateScript, ci,
+    }), `a later reviewed ${FUTURE_PRODUCT_GATE} stays legal ${placement}`);
+  }
+
   // A later reviewed static-contract CI step, package script, documentation
   // amendment or production service changes nothing here.
   const closureLine = shipped.ci.match(/^.*test:integrated-intelligence-runtime-phase-closure-contract.*$/mu)[0];
@@ -783,17 +890,50 @@ test('C5 - the guard is structurally independent of every mutable census gap', (
 });
 
 test('C6 - QIR-008 changes no production, database, or migration file', () => {
-  // The world listing the guard consumed IS the real migrations directory, and
-  // no migration 0064 was created.
+  // The world listing the guard consumed IS the real migrations directory.
   const realMigrations = readdirSync(new URL('database/migrations/', root)).filter((name) => name.endsWith('.sql'));
   assert.deepEqual([...shipped.migrations], realMigrations,
     'the world migration listing is exactly the real database/migrations directory');
   assert.ok(realMigrations.includes(TERMINAL_MIGRATION),
     'the terminal migration of the closed QIR v1 historical baseline exists');
-  assert.ok(!realMigrations.some((name) => name.startsWith('0064_')),
-    'QIR-008 created no migration 0064');
+  // QIR-008 Fix 01: "QIR-008 created no migration" is a HISTORICAL fact of this
+  // task's own diff. It is recorded in the freeze document, never proven by
+  // inspecting the future, mutable migration listing for an absent number or
+  // prefix - that would recreate the exact ceiling QIR-008 repaired in QIR-006
+  // and QIR-007, and would fail the moment a legitimate reviewed 0064 lands.
+  assert.ok(
+    shipped.freezeDoc.replace(/\s+/gu, ' ').includes(
+      '**QIR-008 created no migration and modified none: its `database/` diff is zero.**'),
+    'the historical zero-database-diff fact is recorded in the freeze document');
   // The freeze artifacts perform no database work and ship no runtime code.
   for (const forbidden of ['INSERT INTO', 'DROP TABLE', 'CREATE POLICY', 'GRANT ALL']) {
     assert.ok(!shipped.freezeDoc.includes(forbidden), `the freeze document performs no database work: found ${forbidden}`);
+  }
+});
+
+test('C7 - the closure guard itself carries no live repository ceiling', () => {
+  // QIR-008 Fix 01 anti-vacuity. The closure guard is now a CLOSED historical
+  // artifact: it may freeze what QIR v1 was, never what the repository may
+  // become. This scans its own source for the shapes that would reintroduce a
+  // live ceiling - latest/highest-migration checks, absence-of-0064/0065/0066
+  // checks, future filename or prefix bans, and the exact-E2E-inventory census
+  // Fix 01 removed.
+  const ownSource = read(CLOSURE_GUARD);
+  assert.ok(ownSource.length > 10000, 'the closure guard source was really read');
+  assert.doesNotThrow(() => assertClosureGuardCarriesNoLiveCeiling(ownSource),
+    'the shipped closure guard carries no live repository ceiling');
+  // Each forbidden shape is proven to be caught, so the scan can never pass
+  // vacuously.
+  for (const needle of SELF_CEILING_NEEDLES) {
+    assert.throws(
+      () => assertClosureGuardCarriesNoLiveCeiling(`${ownSource}\n// drift\n${needle}\n`),
+      (error) => error instanceof Error,
+      `the self-scan rejects the reintroduced ceiling shape: ${needle}`,
+    );
+  }
+  // The acceptance fixtures are NOT bans and must stay legal: they name future
+  // migrations in order to prove they are accepted.
+  for (const fixture of FUTURE_MIGRATION_FIXTURES) {
+    assert.ok(ownSource.includes(fixture), `the future-migration acceptance fixture survives: ${fixture}`);
   }
 });

@@ -330,13 +330,22 @@ guards:
 - The QIR-007 dynamic gate against **real PostgreSQL 17 and real Redis 7**,
   including Addendum A scenarios C5–C8 and the reachable Human Intelligence
   capacity proof.
-- The frozen runtime gate order, unchanged and with no fourth runtime E2E:
+- The QIR v1 runtime verification tail, unchanged, in this relative order:
 
 ```text
 verify:a2-e2e-runtime-smoke
 → verify:full-intelligence-e2e-runtime
 → verify:integrated-brain:e2e-hardening-v2
 ```
+
+**QIR-008 added no fourth QIR runtime E2E.**
+That is a historical scope fact about this task's own diff, not a permanent
+inventory ceiling on the repository. What stays frozen is the identity of those
+three QIR v1 gates, their continued package and CI registration, and their
+relative order.
+**A later, separately reviewed product-phase runtime gate is legal and does not reopen QIR merely by existing.**
+It would reopen QIR only by intentionally changing a frozen invariant of this
+document.
 
 - TypeScript app and scripts no-emit, Nest API build, npm-only toolchain
   contract, `git diff --check`, and a credential/security scan.
@@ -371,6 +380,15 @@ closure. QIR-008 repaired both as verification-only debt:
 - `tests/question-information-gap-closed-loop-v1-contract.test.mjs` (QIR-006)
 - `tests/integrated-brain-e2e-hardening-v2-contract.test.mjs` (QIR-007)
 
+QIR-008 Fix 01 applied the same rule to the closure guard itself
+(`tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs`), which
+had introduced two live ceilings of its own: an exact-inventory assertion that
+the repository may contain only the three QIR v1 `e2e`/`end-to-end` verify
+scripts, and a live check that no `0064_*` migration file exists. Both are now
+recorded as historical scope facts here instead of being enforced against the
+future, mutable repository, and the guard scans its own source so neither shape
+can return.
+
 Each guard now freezes only the durable historical facts of the QIR v1 baseline:
 `0063_question_information_gap_closed_loop_v1.sql` EXISTS and was the terminal
 migration of the CLOSED QIR v1 historical baseline, and every original QIR-006
@@ -385,10 +403,14 @@ frozen baseline rather than enforced against future filenames.
 Hypothetical later migrations — `0064_future_product_phase.sql`,
 `0065_voice_runtime_v1.sql` and `0066_subscription_runtime_v1.sql` — pass every
 historical QIR guard, proven by acceptance fixtures using listing entries only.
-**No real migration 0064 exists or was created, and migration 0063 was not
-modified.** Future work that revisits a frozen QIR surface still requires its
-own explicit versioned change-control contract; historical tests simply no
-longer reject it by number or name.
+
+**QIR-008 created no migration and modified none: its `database/` diff is zero.**
+That is a historical fact of this task's own diff, recorded here rather than
+enforced by inspecting the future migration listing — exactly the rule QIR-008
+applied to QIR-006 and QIR-007. A later, separately reviewed migration is legal
+by number and by name, including one numbered 0064. Future work that revisits a
+frozen QIR surface still requires its own explicit versioned change-control
+contract; historical tests simply no longer reject it by number or name.
 
 This follows the forward-safe QHIA closure precedent recorded in
 `docs/human-intelligence-activation-freeze-v1.md`.
