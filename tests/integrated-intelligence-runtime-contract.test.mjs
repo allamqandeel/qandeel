@@ -348,18 +348,31 @@ test('P2 - anti-vacuity: the real guard rejects every named regression', () => {
 });
 
 test('P3 - forward safety: every change a later QIR task is expected to make stays legal', () => {
-  // QIR-002: a different deterministic routing policy — new threshold value,
-  // new route reasons, or the threshold constant gone entirely.
-  const rethresholded = shipped.orchestrator.replace('const DEEP_INPUT_LENGTH = 1000;', 'const DEEP_INPUT_LENGTH = 4000;');
-  assert.notDeepEqual(rethresholded, shipped.orchestrator);
-  assert.doesNotThrow(() => assertIntegratedIntelligenceRuntimeContract({ ...shipped, orchestrator: rethresholded }),
-    'QIR-002 may change the DEEP input-length threshold value');
+  // Routing policy: QIR-002 already exercised this freedom by replacing the
+  // input-length-only rule with the deterministic Runtime Decision Policy v2,
+  // so the mutation fixture now points at the CURRENT routing surface — a
+  // later reviewed revision may swap the policy module and decision function
+  // again, and this guard must stay indifferent. (The QIR-002 guard, not this
+  // one, owns the v2 policy law.)
+  const routingImport = "import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';";
+  const routingCall = 'const selection = decideFastDeepRoute(userTurn.content);';
+  assert.ok(shipped.orchestrator.includes(routingImport), 'the current routing policy import exists at the baseline to mutate');
+  assert.ok(shipped.orchestrator.includes(routingCall), 'the current routing decision call exists at the baseline to mutate');
   const rerouted = shipped.orchestrator
-    .replaceAll("'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT'", "'DETERMINISTIC_MULTI_SIGNAL_DEEP_V2'")
-    .replaceAll("'FAST_DEFAULT'", "'ROUTING_POLICY_V2_FAST'");
+    .replace(routingImport, "import { decideFastDeepRouteV3 } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v3';")
+    .replace(routingCall, 'const selection = decideFastDeepRouteV3(userTurn.content);');
   assert.notDeepEqual(rerouted, shipped.orchestrator);
   assert.doesNotThrow(() => assertIntegratedIntelligenceRuntimeContract({ ...shipped, orchestrator: rerouted }),
-    'QIR-002 may replace the input-length-only route reasons');
+    'a later task may replace the deterministic routing policy entirely');
+
+  // Route REASONS are now structurally unfreezable by this guard: they live in
+  // the routing contract module, which is not in the QIR-001 world at all. The
+  // contract DOCUMENT still records the pre-QIR-002 reasons as historical
+  // census — that recording constrains no live source (P5).
+  for (const key of ['orchestrator', 'modelRouterTypes']) {
+    assert.ok(!/RUNTIME_ROUTING_V2_|INPUT_LENGTH_REQUIRES_DEEP_CONTEXT|FAST_DEFAULT/u.test(shipped[key]),
+      `no live source in the QIR-001 world carries a route-reason literal (${key})`);
+  }
 
   // QIR-003: Memory launched concurrently instead of as a serial await stage.
   const memoryLine = "      const memoryContext = await this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content));";
@@ -381,7 +394,6 @@ test('P3 - forward safety: every change a later QIR task is expected to make sta
 
   // All of the above together — a plausible later-phase orchestrator.
   const combined = rerouted
-    .replace('const DEEP_INPUT_LENGTH = 1000;', 'const DEEP_INPUT_LENGTH = 4000;')
     .replace(memoryLine,
       "      const [memoryContext] = await Promise.all([this.engine('memory_retrieval',selection.path,()=>this.memoryRetriever.retrieve(userId, accessToken, userTurn.content))]);")
     .replace(recommendationLine,

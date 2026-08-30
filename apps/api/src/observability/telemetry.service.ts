@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { metrics,SpanStatusCode,trace,type Attributes,type Span,type Tracer } from '@opentelemetry/api';
 import { CorrelationService } from './correlation.service';
+import{RUNTIME_ROUTING_MAX_COMPLEXITY_SCORE,RUNTIME_ROUTING_MIN_COMPLEXITY_SCORE,RUNTIME_ROUTING_POLICY_VERSION,isLegalCurrentRoutePair,type RuntimeRoutingDecision}from'../intelligence-runtime/fast-deep-routing-contract';
 
 type Usage={inputTokens:number;outputTokens:number};
 type Instrument={add?:(value:number,attributes?:Attributes)=>void;record?:(value:number,attributes?:Attributes)=>void};
@@ -8,6 +9,7 @@ type Instrument={add?:(value:number,attributes?:Attributes)=>void;record?:(value
 @Injectable()
 export class TelemetryService{
  private readonly postResponseDispatchOperations:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.post_response_dispatch.operations'),{});
+ private readonly routingDecisions:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.routing.decisions'),{});
  private readonly tracer:Tracer;private readonly engineDuration:Instrument;private readonly providerDuration:Instrument;private readonly providerCalls:Instrument;private readonly providerErrors:Instrument;private readonly inputTokens:Instrument;private readonly outputTokens:Instrument;private readonly turnOutcomes:Instrument;private readonly publisherOperations:Instrument;private readonly hypothesisContextOutcomes:Instrument;private readonly hypothesisEligibilityOutcomes:Instrument;private readonly hypothesisIntentExtractionOutcomes:Instrument;private readonly hypothesisGenerationRequestAssemblyOutcomes:Instrument;private readonly controlledHypothesisGenerationOutcomes:Instrument;private readonly postGenerationConfidenceOutcomes:Instrument;
  constructor(private readonly correlation:CorrelationService){
   this.tracer=this.safe(()=>trace.getTracer('qandeel-api'),{startActiveSpan:(_name:string,_options:unknown,callback:(span:Span)=>unknown)=>callback(this.noopSpan())}as unknown as Tracer);
@@ -18,6 +20,20 @@ export class TelemetryService{
  withEngine<T>(engine:string,path:string|undefined,work:()=>Promise<T>|T):Promise<T>{return this.scoped(()=>this.correlation.withEngine(()=>this.span('qandeel.engine',{engine,processing_path:path},work)),work);}
  withProvider<T>(provider:string,model:string,path:string,timeout:number,work:()=>Promise<T>,usage?:(value:T)=>Usage|undefined):Promise<T>{return this.scoped(()=>this.correlation.withProvider(()=>this.providerSpan(provider,model,path,timeout,work,usage)),work);}
  recordTurnOutcome(outcome:string,path?:string):void{this.safeVoid(()=>this.turnOutcomes.add?.(1,{outcome,...(path?{processing_path:path}:{})}));}
+ // QIR-002 routing decision. Four FINITE dimensions only - 2 paths x 5 reasons
+ // x 1 policy version x 8 score values - so cardinality is bounded by
+ // construction. No user content, normalized text, free text, identifier,
+ // vendor/model name or unbounded count may ever become a label here: anything
+ // that is not an exact legal current pair, the exact policy version, and an
+ // integer score inside the bounded range is DROPPED rather than emitted. The
+ // whole call is fail-soft and can never alter routing or the turn outcome.
+ recordRoutingDecision(decision:RuntimeRoutingDecision):void{this.safeVoid(()=>{
+  if(decision?.policyVersion!==RUNTIME_ROUTING_POLICY_VERSION)return;
+  if(!isLegalCurrentRoutePair(decision.path,decision.reason))return;
+  const score=decision.complexityScore;
+  if(!Number.isInteger(score)||score<RUNTIME_ROUTING_MIN_COMPLEXITY_SCORE||score>RUNTIME_ROUTING_MAX_COMPLEXITY_SCORE)return;
+  this.routingDecisions.add?.(1,{processing_path:decision.path,routing_reason:decision.reason,policy_version:String(RUNTIME_ROUTING_POLICY_VERSION),complexity_score:String(score)});
+ });}
  recordHypothesisContext(outcome:'available'|'consumed'|'empty'|'rejected'|'failed',path:string,contractVersion=1,_candidateCount?:number,_includedCount?:number):void{this.safeVoid(()=>this.hypothesisContextOutcomes.add?.(1,{outcome,processing_path:path,contract_version:String(contractVersion)}));}
  recordHypothesisGenerationEligibility(outcome:'eligible'|'not_eligible'|'ambiguous'|'safety_ineligible'|'no_evidence'|'replay_skipped'|'failed',path?:string):void{this.safeVoid(()=>this.hypothesisEligibilityOutcomes.add?.(1,{outcome,...(path?{processing_path:path}:{}),contract_version:'1'}));}
  recordHypothesisIntentExtraction(outcome:'authorized'|'authority_rejected'|'provider_unavailable'|'provider_timeout'|'invalid_provider_output'|'provider_failed'|'skipped_not_eligible'|'skipped_replay',path?:string):void{this.safeVoid(()=>this.hypothesisIntentExtractionOutcomes.add?.(1,{outcome,...(path?{processing_path:path}:{}),contract_version:'1'}));}

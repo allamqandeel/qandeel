@@ -1,3 +1,4 @@
+import{isLegalDurableRoutePair}from'../intelligence-runtime/fast-deep-routing-contract';
 export type RuntimeEventType='ConversationTurnCompleted'|'ConversationTurnFailed'|'ConversationTurnCancelled';
 export type OutboxStatus='PENDING'|'IN_FLIGHT'|'RETRY'|'PUBLISHED'|'QUARANTINED';
 export type OutboxErrorCode='TRANSPORT_UNAVAILABLE'|'TRANSPORT_TIMEOUT'|'INVALID_EVENT'|'MAX_ATTEMPTS_EXCEEDED'|'CLAIM_CONFLICT';
@@ -26,9 +27,15 @@ export function isValidRuntimeEventEnvelope(value:RuntimeEventEnvelope):boolean{
  const payload=value.payload;
  if(payload.user_id!==value.subject_user_id||payload.session_id!==value.subject_session_id||payload.source_turn_id!==value.subject_turn_id||payload.terminal_status!==contract.status)return false;
  if(!uuid(payload.user_id)||!uuid(payload.session_id)||!uuid(payload.source_turn_id)||!nullableUuid(payload.orchestration_id))return false;
- if(payload.processing_path!==null&&payload.processing_path!=='FAST'&&payload.processing_path!=='DEEP')return false;
- if(payload.routing_reason!==null&&payload.routing_reason!=='FAST_DEFAULT'&&payload.routing_reason!=='INPUT_LENGTH_REQUIRES_DEEP_CONTEXT')return false;
- if((payload.processing_path==='FAST'&&payload.routing_reason!=='FAST_DEFAULT')||(payload.processing_path==='DEEP'&&payload.routing_reason!=='INPUT_LENGTH_REQUIRES_DEEP_CONTEXT')||(payload.processing_path===null&&payload.routing_reason!==null))return false;
+ // QIR-002: the route pair is validated by the ONE shared server-owned
+ // contract instead of being hard-coded a second time here. DURABLE authority
+ // is deliberately wider than current claim authority: an event already emitted
+ // with a pre-QIR-002 reason stays valid and recoverable forever, while unknown
+ // reasons, cross pairs and half-null states stay rejected. Current claims can
+ // only produce v2 reasons, so no new event carries a legacy pair. The payload
+ // SHAPE and the event/schema versions are unchanged - only the reason
+ // vocabulary widened, which needs no envelope bump.
+ if(!isLegalDurableRoutePair(payload.processing_path,payload.routing_reason))return false;
  if(completedV2&&payload.safety_disposition!=='ALLOW'&&payload.safety_disposition!=='GUIDED'&&payload.safety_disposition!=='BLOCK')return false;
  return true;
 }

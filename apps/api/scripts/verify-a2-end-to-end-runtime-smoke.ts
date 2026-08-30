@@ -210,7 +210,7 @@ async function main(): Promise<void> {
     // Server claim: canonical FAST path.
     const [claimed] = await db.asRole<{ status: string; processing_path: string; routing_reason: string }>(
       'service_role', 'SELECT * FROM public.claim_conversation_turn($1, $2, $3, $4, $5)',
-      [sessionId, userId, sourceTurnId, 'FAST', 'FAST_DEFAULT']);
+      [sessionId, userId, sourceTurnId, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']);
     assert.equal(claimed?.status, 'GENERATING');
 
     // Seed exactly ONE existing session-scoped Hypothesis (version 1) through
@@ -271,7 +271,7 @@ async function main(): Promise<void> {
     assert.equal(outboxRow.subject_turn_id, sourceTurnId);
     const outboxPayload = outboxRow.payload as Record<string, unknown>;
     assert.equal(outboxPayload.processing_path, 'FAST');
-    assert.equal(outboxPayload.routing_reason, 'FAST_DEFAULT');
+    assert.equal(outboxPayload.routing_reason, 'RUNTIME_ROUTING_V2_FAST_DEFAULT');
     assert.equal(outboxPayload.safety_disposition, 'ALLOW');
     assert.equal(outboxPayload.terminal_status, 'COMPLETED');
 

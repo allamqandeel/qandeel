@@ -31,8 +31,8 @@ import { TelemetryService } from '../observability/telemetry.service';
 import { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
 import { HypothesisReasoningInvariantError } from '../hypothesis/hypothesis-reasoning-context.types';
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
+import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 
-const DEEP_INPUT_LENGTH = 1000;
 // QHIA-005 amendment (PR #164), generalized by QHIA-014A: the ONE shared
 // maximum foreground orchestration time spent waiting for OPTIONAL Human
 // Intelligence enrichment. This is not a database/provider SLA and does not
@@ -112,12 +112,25 @@ export class ConversationOrchestratorService {
       return this.currentResult(accessToken, userId, recovered ?? userTurn);
     }
 
-    const selection = this.selectPath(userTurn.content);
-    const claimed = await this.repository.claimTurn(userTurn.session_id, userId, userTurn.id, selection);
+    // QIR-002: the FAST/DEEP decision is taken EXACTLY ONCE here, by the pure
+    // deterministic v2 policy, on the eligible RECEIVED path and BEFORE the
+    // canonical claim. It is CPU-only: no database, network, provider, model
+    // registry, Memory, HIM, Hypothesis, Confidence, Recommendation, Question or
+    // Safety read participates in choosing the path, so routing adds zero
+    // intelligence-read latency and zero LLM calls. The claim boundary carries
+    // only the durable route PAIR; the signals and score stay in process as
+    // explanatory execution metadata and never reach persistence, the provider,
+    // or any semantic subsystem.
+    const selection = decideFastDeepRoute(userTurn.content);
+    const claimed = await this.repository.claimTurn(userTurn.session_id, userId, userTurn.id,
+      { path: selection.path, reason: selection.reason });
     if (!claimed) {
       // Claim lost: another request/process won RECEIVED -> GENERATING (or the
       // turn is already terminal). The loser applies the same bounded recovery
       // check on a canonical GENERATING reread and never starts provider work.
+      // It also records NO canonical routing decision: the winner alone owns
+      // the durable route, so the loser's identical computation stays local and
+      // never becomes a competing canonical route or a duplicate metric.
       const current = await this.repository.findTurn(accessToken, userTurn.session_id, userId, userTurn.id);
       if (current?.status === 'GENERATING') {
         const recovered = await this.repository.recoverExpiredGeneratingTurn(current.session_id, userId, current.id);
@@ -125,6 +138,9 @@ export class ConversationOrchestratorService {
       }
       return this.currentResult(accessToken, userId, current ?? userTurn);
     }
+    // Only the canonical claim WINNER records the routing decision, and the
+    // metric is fail-soft: telemetry can never alter routing or the outcome.
+    this.telemetry.recordRoutingDecision(selection);
 
     const execute=async()=>{try {
       const context = await this.engine('context_builder',selection.path,()=>this.contextBuilder.build(accessToken, userId, userTurn));
@@ -450,9 +466,4 @@ export class ConversationOrchestratorService {
     return { userTurn, ...(assistantTurn ? { assistantTurn } : {}) };
   }
 
-  private selectPath(content: string): { path: ProcessingPath; reason: string } {
-    return content.length >= DEEP_INPUT_LENGTH
-      ? { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' }
-      : { path: 'FAST', reason: 'FAST_DEFAULT' };
-  }
 }

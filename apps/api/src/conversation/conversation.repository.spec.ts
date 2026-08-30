@@ -95,12 +95,12 @@ describe('ConversationRepository write authority', () => {
     const serviceApi = serviceApiMock();
     const repository = new ConversationRepository(dataApi, serviceApi, new CorrelationService());
 
-    await repository.claimTurn('session', 'user', 'turn', { path: 'DEEP', reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT' });
+    await repository.claimTurn('session', 'user', 'turn', { path: 'DEEP', reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' });
 
     expect(dataApi.request).not.toHaveBeenCalled();
     expect(serviceApi.rpc).toHaveBeenCalledWith('claim_conversation_turn', {
       p_session_id: 'session', p_user_id: 'user', p_source_turn_id: 'turn',
-      p_processing_path: 'DEEP', p_routing_reason: 'INPUT_LENGTH_REQUIRES_DEEP_CONTEXT',
+      p_processing_path: 'DEEP', p_routing_reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE',
     });
   });
 

@@ -41,6 +41,7 @@ jobs:
       - {name: Verify HSE Snapshot foreground latency-safe degradation static contract, run: npm run test:him-snapshot-foreground-latency-safe-degradation-contract}
       - {name: Verify Human Intelligence Activation phase closure contract, run: npm run test:human-intelligence-activation-phase-closure-contract}
       - {name: Verify Integrated Intelligence Runtime contract, run: npm run test:integrated-intelligence-runtime-contract}
+      - {name: Verify FAST/DEEP Runtime Decision Policy v2 static contract, run: npm run test:fast-deep-runtime-decision-policy-v2-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}
@@ -65,6 +66,7 @@ jobs:
       - {name: Verify conversation authority hardening, run: npm run verify:conversation-authority:integration}
       - {name: Verify conversation session authority hardening, run: npm run verify:conversation-session-authority:integration}
       - {name: Verify foreground GENERATING turn recovery, run: npm run verify:foreground-generating-turn-recovery:integration}
+      - {name: Verify FAST/DEEP Runtime Decision Policy v2 routing authority, run: npm run verify:fast-deep-runtime-decision-policy-v2:integration}
       - {name: Verify Memory runtime, run: npm run verify:memory:integration}
       - {name: Verify Memory authority hardening, run: npm run verify:memory-authority:integration}
       - {name: Verify Hypothesis runtime, run: npm run verify:hypothesis:integration}

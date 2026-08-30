@@ -937,7 +937,7 @@ async function main(): Promise<void> {
     assert.equal(firstOutbox.subject_session_id, sessionId);
     const firstOutboxPayload = firstOutbox.payload as Record<string, unknown>;
     assert.equal(firstOutboxPayload.processing_path, 'FAST');
-    assert.equal(firstOutboxPayload.routing_reason, 'FAST_DEFAULT');
+    assert.equal(firstOutboxPayload.routing_reason, 'RUNTIME_ROUTING_V2_FAST_DEFAULT');
     assert.equal(firstOutboxPayload.safety_disposition, 'ALLOW', 'server-owned Safety disposition is ALLOW');
     assert.equal(firstOutboxPayload.terminal_status, 'COMPLETED');
     const firstEventId = firstOutbox.event_id as string;

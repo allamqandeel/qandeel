@@ -171,13 +171,13 @@ async function verifyServerOnlyLifecycle(owner, session) {
   await rows(`SELECT ${'create_user_conversation_turn'}($1,$2,$3,$4)`, [turnId, session, 'server lifecycle', null]);
 
   // Authenticated cannot drive server lifecycle.
-  await rejected(() => q(`SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)`, [session, owner, turnId, 'FAST', 'FAST_DEFAULT']));
+  await rejected(() => q(`SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)`, [session, owner, turnId, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']));
   await rejected(() => q(`SELECT * FROM finalize_conversation_turn($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [session, owner, turnId, randomUUID(), 'x', 'ALLOW', randomUUID(), null, null]));
   await rejected(() => q(`SELECT * FROM fail_conversation_turn($1,$2,$3,$4,$5,$6)`, [session, owner, turnId, randomUUID(), null, null]));
 
   // Server authority can claim and finalize.
   await identity('service_role');
-  const claimed = await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, turnId, 'FAST', 'FAST_DEFAULT']);
+  const claimed = await rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, owner, turnId, 'FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT']);
   assert.equal(claimed.length, 1);
   assert.equal(claimed[0].status, 'GENERATING');
   // Mismatched user/session fails closed even for the server role.
