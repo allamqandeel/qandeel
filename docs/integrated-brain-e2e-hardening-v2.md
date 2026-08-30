@@ -162,19 +162,59 @@ fail-closed Mandatory Core, and that no second semantic trimming pass exists.
 
 ### F — Crash / reclaim / recovery
 
-- **F1** duplicate delivery of a COMPLETED execution replays no completed
-  provider effect, RECONSTRUCTS the spent slots from the durable ledger, does
-  not reset the budget, and duplicates no domain mutation.
+Two DIFFERENT delivery seams are proven here, and the verifier keeps them
+strictly apart:
+
+**F1 = duplicate delivery.** Its contract is at-least-once idempotency, so the
+correct stimulus is a deliberate SECOND stream entry carrying the byte-identical
+envelope. F1 proves that redelivery of a COMPLETED execution replays no
+completed provider effect, RECONSTRUCTS the spent slots from the durable ledger,
+does not reset the budget, and duplicates no domain mutation. This is the ONLY
+place the verifier publishes a synthetic duplicate.
+
+**F2 and F3 = real production Redis reclaim** of the ORIGINAL pending entry.
+They never republish a copy. The original entry is already pending in the real
+consumer group because the real `read()` delivered it and the crash left it
+unACKed, and recovery re-enters through the frozen production seam:
+
+```text
+original Redis entry
+  -> pending entry in the real consumer group
+  -> stale pending ownership (abandoned consumer)
+  -> RedisPostResponseConsumer.reclaim()
+  -> XAUTOCLAIM
+  -> the SAME original Redis entry/envelope
+  -> PostResponseIntelligenceDispatcherService recovery
+  -> provider slots/effects reconstructed with no replay
+```
+
+The frozen 30,000 ms stale-idle threshold is production-owned and unchanged.
+The verifier never sleeps for it: it hands the already-pending entry to an
+abandoned consumer and ages it past the threshold with a raw `XCLAIM ... IDLE`.
+That is **verification-only Redis pending-entry setup** — it creates no stream
+entry, publishes nothing, and mutates no QANDEEL durable database authority.
+Each reclaim proves anti-vacuously that the entry really was pending, that the
+stale-idle threshold really was satisfied, that reclaim returned the ORIGINAL
+message id with a byte-identical envelope, that no new stream entry was created,
+and that `XAUTOCLAIM` really transferred ownership to the production consumer.
+
 - **F2** a pre-existing `CLAIMED` provider effect — produced by the canonical
-  crash window between the durable claim and the typed completion — recovers
-  through the existing `QUARANTINED / INDETERMINATE_EFFECT / EFFECT_RECOVERY`
-  fail-safe with **zero new provider calls** and a slot that is never refunded.
-- **F3** resume from the canonical post-provider/persistence durable
-  checkpoint: the outstanding Confidence/Gap work completes without replaying
-  Memory, Association, Intent, Candidate, or Hypothesis persistence/version
-  advance.
+  crash window between the durable claim and the typed completion — is
+  RECLAIMED through the real seam and recovers through the existing
+  `QUARANTINED / INDETERMINATE_EFFECT / EFFECT_RECOVERY` fail-safe with **zero
+  new provider calls** and a slot that is never refunded.
+- **F3** the canonical post-provider/persistence durable checkpoint is
+  RECLAIMED through the same real seam, and the outstanding Confidence/Gap work
+  completes without replaying Memory, Association, Intent, Candidate, or
+  Hypothesis persistence/version advance.
 - **F4** across original delivery plus reclaim/redelivery, each registered
   provider effect is spent at most once and the total stays at most three.
+
+The pre-existing `verify:post-response-dispatch:integration` verifier proves raw
+Redis `XAUTOCLAIM` directly; QIR-007 additionally proves the **production
+`RedisPostResponseConsumer.reclaim()` method composed with durable dispatcher,
+effect-ledger and provider-budget recovery**, which is the seam a defect could
+otherwise hide in.
 
 ### G — Integrated Question isolation
 

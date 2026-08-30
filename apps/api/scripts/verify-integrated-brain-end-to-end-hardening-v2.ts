@@ -196,6 +196,24 @@ const SELECTION_RPC = 'select_formal_question_opportunity_v1';
 const FINALIZATION_RPC = 'finalize_conversation_turn_v2';
 const RETIRED_FINALIZATION_RPC = 'finalize_conversation_turn';
 
+// QIR-007 Fix 02 - the real Redis reclaim seam.
+//
+// The frozen production `RedisPostResponseConsumer.reclaim()` claims pending
+// entries idle for at least 30,000 ms. That value is PRODUCTION-OWNED and is
+// not redefined here: the constant below is mirrored ONLY as the lower bound
+// the verification-side pending-entry setup must exceed, and the QIR-007 static
+// contract pins the exact production `xAutoClaim(...)` call shape so this
+// mirror can never drift away from it silently.
+//
+// The verifier never sleeps for the threshold. It hands the ALREADY-PENDING
+// original entry to an abandoned consumer and ages it past the threshold with a
+// raw XCLAIM IDLE - verification-only Redis pending-entry setup that creates no
+// stream entry and touches no QANDEEL durable database authority - and then
+// calls the REAL production reclaim.
+const PRODUCTION_RECLAIM_IDLE_THRESHOLD_MS = 30000;
+const VERIFICATION_STALE_IDLE_MS = 45000;
+const ABANDONED_CONSUMER = `qandeel-integrated-brain-e2e-hardening-v2-abandoned-${RUN_ID}`;
+
 let stage = 'BASELINE';
 
 /** Never-called dependencies of real services; fail fast if touched. */
@@ -425,6 +443,60 @@ async function main(): Promise<void> {
       throw new Error(`INTEGRATED_BRAIN_E2E_HARDENING_V2_NO_DELIVERY_FOR_TURN:${sourceTurnId}`);
     };
 
+    /**
+     * QIR-007 Fix 02 - drives ONE recovery through the REAL production
+     * `RedisPostResponseConsumer.reclaim()` seam.
+     *
+     * The ORIGINAL Redis entry is already pending in the real consumer group
+     * because the real `read()` delivered it and the crash left it unACKed.
+     * Nothing is re-published: the entry is handed to an abandoned consumer and
+     * aged past the frozen production threshold with a raw XCLAIM IDLE - the
+     * exact durable Redis state a crashed worker leaves behind - and the
+     * production reclaim then takes it over through XAUTOCLAIM.
+     *
+     * Every step is proven anti-vacuously: the entry really was pending, the
+     * stale-idle threshold really was satisfied, reclaim really returned the
+     * ORIGINAL message id and a byte-identical envelope, no new stream entry
+     * was created, and ownership really moved to the production consumer.
+     */
+    let realReclaimRecoveries = 0;
+    const reclaimOriginalPendingEntry = async (
+      label: string, original: { id: string; envelope: string },
+    ): Promise<{ id: string; envelope: string }> => {
+      const streamLengthBefore = Number(await redisObserver.xLen(STREAM));
+      const pendingBefore = await redisObserver.xPendingRange(STREAM, GROUP, '-', '+', 16);
+      assert.deepEqual(pendingBefore.map((entry) => String(entry.id)), [original.id],
+        `${label}: the ORIGINAL Redis entry is genuinely PENDING before reclaim, and nothing else is`);
+      // Verification-only Redis pending-entry setup. It creates no stream entry,
+      // publishes nothing, and mutates no QANDEEL durable database authority.
+      const handedOver = await redisObserver.xClaim(
+        STREAM, GROUP, ABANDONED_CONSUMER, 0, original.id, { IDLE: VERIFICATION_STALE_IDLE_MS });
+      assert.equal(handedOver.length, 1,
+        `${label} anti-vacuity: the abandoned-consumer handover really applied to the original pending entry`);
+      const pendingStale = await redisObserver.xPendingRange(STREAM, GROUP, '-', '+', 16);
+      assert.deepEqual(pendingStale.map((entry) => String(entry.id)), [original.id]);
+      assert.equal(String(pendingStale[0].consumer), ABANDONED_CONSUMER,
+        `${label}: the entry is owned by an ABANDONED consumer - the exact state a crashed worker leaves behind`);
+      assert.ok(Number(pendingStale[0].millisecondsSinceLastDelivery) > PRODUCTION_RECLAIM_IDLE_THRESHOLD_MS,
+        `${label} anti-vacuity: the stale-idle threshold the frozen production reclaim requires is genuinely satisfied`);
+      // THE REAL PRODUCTION RECLAIM SEAM - never a synthetic redelivery.
+      const reclaimed = await consumer.reclaim();
+      realReclaimRecoveries += 1;
+      assert.equal(reclaimed.length, 1,
+        `${label}: the REAL RedisPostResponseConsumer.reclaim() returned exactly the abandoned work`);
+      assert.equal(reclaimed[0].id, original.id,
+        `${label}: reclaim returned the ORIGINAL Redis message ID - never a duplicate`);
+      assert.equal(reclaimed[0].envelope, original.envelope,
+        `${label}: the reclaimed envelope is byte-identical to the original`);
+      assert.equal(Number(await redisObserver.xLen(STREAM)), streamLengthBefore,
+        `${label}: recovery created NO new stream entry - the original pending entry was reclaimed, not re-published`);
+      assert.equal(
+        String((await redisObserver.xPendingRange(STREAM, GROUP, '-', '+', 16))[0]?.consumer),
+        process.env.POST_RESPONSE_CONSUMER_NAME,
+        `${label}: XAUTOCLAIM transferred ownership to the production consumer - the real reclaim really executed`);
+      return { id: reclaimed[0].id, envelope: reclaimed[0].envelope };
+    };
+
     const effectRows = async (executionId: string): Promise<Array<Record<string, unknown>>> => db.observer<Record<string, unknown>>(
       'SELECT effect_key, state, result_code, result_reference, result_payload FROM public.post_response_intelligence_effects'
       + ' WHERE execution_id = $1 ORDER BY effect_key', [executionId]);
@@ -538,6 +610,13 @@ async function main(): Promise<void> {
     // -----------------------------------------------------------------------
     stage = 'F1_DUPLICATE_DELIVERY';
     // -----------------------------------------------------------------------
+    // F1 is DUPLICATE DELIVERY, and only duplicate delivery: its contract is
+    // at-least-once idempotency, so a deliberate second stream entry carrying
+    // the byte-identical envelope is exactly the right stimulus. This is the
+    // ONE place the verifier publishes a synthetic duplicate - F2 and F3
+    // recover through the REAL production reclaim of the ORIGINAL pending
+    // entry instead, and the static contract freezes that separation.
+    //
     // F1 goes beyond the frozen terminal no-op proof: it asserts the durable
     // SLOT RECONSTRUCTION, that no completed provider effect is replayed, and
     // that no domain mutation is duplicated.
@@ -1142,11 +1221,13 @@ async function main(): Promise<void> {
     assert.deepEqual([...durableProviderSlots(f2EffectsBefore)], ['ASSOCIATION_PROVIDER'],
       'F2: a CLAIMED provider effect permanently spends its slot - it is never refunded');
     const transportsBeforeF2Recovery = backgroundProviderTransports();
-    await redisObserver.xAdd(STREAM, '*', { event_id: f2Delivery.parsed.event_id, envelope: f2Delivery.envelope });
-    const f2Redelivery = await deliverTo(f2TurnId);
-    assert.equal(await f2Cycle.dispatcher.dispatch(f2Redelivery.envelope), true,
-      'F2: the canonical indeterminate-effect recovery resolves terminally');
-    await consumer.ack(f2Redelivery.id);
+    // The crashed delivery is still PENDING on the real consumer group. Recovery
+    // re-enters through the REAL production reclaim seam - XAUTOCLAIM over the
+    // ORIGINAL entry - never through a synthetic duplicate stream entry.
+    const f2Reclaimed = await reclaimOriginalPendingEntry('F2', f2Delivery);
+    assert.equal(await f2Cycle.dispatcher.dispatch(f2Reclaimed.envelope), true,
+      'F2: the canonical indeterminate-effect recovery resolves terminally on the RECLAIMED original entry');
+    await consumer.ack(f2Reclaimed.id);
     const f2Recovered = await executionFor(f2TurnId);
     assert.equal(f2Recovered?.state, 'QUARANTINED', 'F2: the existing fail-safe quarantine semantics are unchanged');
     assert.equal(f2Recovered?.outcome_code, 'INDETERMINATE_EFFECT');
@@ -1197,10 +1278,12 @@ async function main(): Promise<void> {
     const f3SyncsBefore = pgLedgerAdapter.informationGapSyncCount;
     const [f3SeededBefore] = await db.observer<{ version: number }>(
       'SELECT version FROM public.hypotheses WHERE id = $1', [recoverySeededHypothesisId]);
-    await redisObserver.xAdd(STREAM, '*', { event_id: f3Delivery.parsed.event_id, envelope: f3Delivery.envelope });
-    const f3Redelivery = await deliverTo(f3TurnId);
-    assert.equal(await f3Cycle.dispatcher.dispatch(f3Redelivery.envelope), true, 'F3: the resumed execution is terminal');
-    await consumer.ack(f3Redelivery.id);
+    // Same seam as F2: the checkpointed delivery is still PENDING, and the REAL
+    // production reclaim takes the ORIGINAL entry over. No duplicate is created.
+    const f3Reclaimed = await reclaimOriginalPendingEntry('F3', f3Delivery);
+    assert.equal(await f3Cycle.dispatcher.dispatch(f3Reclaimed.envelope), true,
+      'F3: the resumed execution is terminal on the RECLAIMED original entry');
+    await consumer.ack(f3Reclaimed.id);
     const f3Resumed = await executionFor(f3TurnId);
     assert.equal(f3Resumed?.state, 'COMPLETED', 'F3: the downstream Confidence/Gap work completed on resume');
     assert.equal(backgroundProviderTransports(), f3TransportsBefore,
@@ -1271,6 +1354,12 @@ async function main(): Promise<void> {
         'H: a turn whose durable event was never dispatched acquires no post-response execution');
     }
     assert.ok(droppedDeliveries.length > 0, 'H anti-vacuity: undispatched deliveries really were observed and acknowledged');
+    // The real production reclaim seam ran for BOTH canonical crash/checkpoint
+    // recoveries, and every delivery of the whole run is resolved.
+    assert.equal(realReclaimRecoveries, 2,
+      'H: both canonical F2 and F3 recoveries re-entered through the REAL RedisPostResponseConsumer.reclaim()');
+    assert.equal((await redisObserver.xPending(STREAM, GROUP)).pending, 0,
+      'H: no Redis delivery is left pending - every reclaimed and duplicate entry was resolved and ACKed');
 
     // Telemetry: representative production metrics were emitted, with bounded
     // labels only. Scanned on the ACTUAL recorded dimensions.
@@ -1305,7 +1394,8 @@ async function main(): Promise<void> {
       + `background_provider_transports=${backgroundProviderTransports()} `
       + `durable_executions=${allExecutions.length} `
       + `question_provider_calls=0 registered_provider_effects=${POST_RESPONSE_PROVIDER_EFFECTS_V1.length} `
-      + `provider_budget=${POST_RESPONSE_PROVIDER_CALL_BUDGET_V1} telemetry_records=${recorded.length}`);
+      + `provider_budget=${POST_RESPONSE_PROVIDER_CALL_BUDGET_V1} telemetry_records=${recorded.length} `
+      + `real_redis_reclaim_recoveries=${realReclaimRecoveries} synthetic_duplicate_deliveries=1`);
 
     // -----------------------------------------------------------------------
     stage = 'CLEANUP';

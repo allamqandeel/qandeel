@@ -50,6 +50,7 @@ const SOURCES = Object.freeze({
   gathererTypes: 'apps/api/src/intelligence-runtime/bounded-foreground-intelligence-gatherer.types.ts',
   orchestrator: 'apps/api/src/conversation/conversation-orchestrator.service.ts',
   questionSelectionService: 'apps/api/src/question/question-foreground-selection.service.ts',
+  redisConsumer: 'apps/api/src/post-response-intelligence/redis-post-response-consumer.ts',
 });
 const shipped = Object.freeze({
   ...Object.fromEntries(Object.entries(SOURCES).map(([key, path]) => [key, read(path)])),
@@ -91,6 +92,13 @@ const REQUIRED_DOC_STATEMENTS = Object.freeze([
   '### D — Authority conflict + global context pressure',
   '### E — Safety / fail-closed integration',
   '### F — Crash / reclaim / recovery',
+  '**F1 = duplicate delivery.**',
+  'This is the ONLY place the verifier publishes a synthetic duplicate.',
+  '**F2 and F3 = real production Redis reclaim** of the ORIGINAL pending entry.',
+  '-> RedisPostResponseConsumer.reclaim() -> XAUTOCLAIM',
+  'The frozen 30,000 ms stale-idle threshold is production-owned and unchanged.',
+  '**verification-only Redis pending-entry setup**',
+  '**production `RedisPostResponseConsumer.reclaim()` method composed with durable dispatcher, effect-ledger and provider-budget recovery**',
   '### G — Integrated Question isolation',
   '### H — Privacy + hidden-work census',
   'ASSOCIATION_PROVIDER <= 1',
@@ -122,7 +130,7 @@ const SCENARIO_MARKERS = Object.freeze({
   C: ["'C1: ", "'C1b: ", "'C2: ", "'C3: ", "'C4/E3: ", "stage = 'C_FOREGROUND_FAILURE_ISOLATION'"],
   D: ["'D: ", "'D anti-vacuity: ", "stage = 'D_GLOBAL_CONTEXT_PRESSURE'"],
   E: ["'E1: ", "'E2: ", "'E4: ", "stage = 'E1_SAFETY_BLOCK'", "stage = 'E2_SAFETY_GUIDED'"],
-  F: ["'F1: ", "'F2: ", "'F3: ", "'F4: ", "stage = 'F_RECOVERY_AND_E4'"],
+  F: ["'F1: ", "'F2: ", "'F3: ", "'F4: ", "stage = 'F_RECOVERY_AND_E4'", 'await consumer.reclaim()'],
   G: ["'G1: ", "'G2: ", "'G3: ", "'G4: ", "'G5: ", "stage = 'G3_QUESTION_BUDGET_OMISSION'"],
   H: ["'H: ", "'H anti-vacuity: ", "stage = 'H_CENSUS_AND_PRIVACY'"],
 });
@@ -292,6 +300,41 @@ function assertIntegratedBrainHardeningContract(world) {
     if (!world.harness.includes(helper))
       violated(`the frozen verification helper is reused, not duplicated: ${helper}`);
   }
+  // 11b. QIR-007 Fix 02 - Scenario F re-enters the canonical crash/checkpoint
+  //      recoveries through the REAL production Redis reclaim seam. F1 stays
+  //      duplicate delivery; F2/F3 must reclaim the ORIGINAL pending entry.
+  //
+  //      The exactly-one-synthetic-duplicate freeze is deliberate for QIR-007's
+  //      own contract: a later reviewed task that legitimately adds another
+  //      duplicate-delivery scenario re-anchors it in the same reviewed change,
+  //      exactly like the migration-terminal freeze above.
+  if (!world.redisConsumer.includes("this.client.xAutoClaim(this.stream,this.group,this.consumer,30000,'0-0',{COUNT:10})"))
+    violated('the production reclaim seam and its frozen 30,000 ms stale-idle threshold are unchanged');
+  if (!world.verifier.includes('const PRODUCTION_RECLAIM_IDLE_THRESHOLD_MS = 30000;'))
+    violated('the verifier mirrors the frozen production stale-idle threshold exactly, and never redefines it');
+  if (!exeVerifier.includes('await consumer.reclaim()'))
+    violated('Scenario F re-enters recovery through the REAL RedisPostResponseConsumer.reclaim()');
+  for (const invocation of ["reclaimOriginalPendingEntry('F2'", "reclaimOriginalPendingEntry('F3'"]) {
+    if (!exeVerifier.includes(invocation))
+      violated(`the canonical crash/checkpoint recovery re-enters through the real reclaim seam: ${invocation}`);
+  }
+  const syntheticDuplicates = (exeVerifier.match(/redisObserver\.xAdd\(/gu) ?? []).length;
+  if (syntheticDuplicates !== 1)
+    violated('exactly ONE synthetic duplicate delivery exists (F1); F2/F3 never republish a copy for recovery');
+  if (!exeVerifier.includes('redisObserver.xClaim(') || !exeVerifier.includes('redisObserver.xPendingRange('))
+    violated('the pending-entry staleness setup and its proof use verification-side Redis instrumentation only');
+  for (const proof of [
+    'the ORIGINAL Redis entry is genuinely PENDING before reclaim',
+    'the stale-idle threshold the frozen production reclaim requires is genuinely satisfied',
+    'reclaim returned the ORIGINAL Redis message ID - never a duplicate',
+    'the reclaimed envelope is byte-identical to the original',
+    'recovery created NO new stream entry - the original pending entry was reclaimed, not re-published',
+    'XAUTOCLAIM transferred ownership to the production consumer - the real reclaim really executed',
+    'both canonical F2 and F3 recoveries re-entered through the REAL RedisPostResponseConsumer.reclaim()',
+  ]) {
+    if (!exeVerifier.includes(proof)) violated(`the real-reclaim proof is substantive: missing "${proof}"`);
+  }
+
   // No paid provider call is possible and no provider key is read.
   if (!world.verifier.includes('INTEGRATED_BRAIN_E2E_HARDENING_V2_EXTERNAL_HTTP_FORBIDDEN') || !world.verifier.includes('globalThis.fetch'))
     violated('the verifier seals the external HTTP boundary explicitly');
@@ -449,6 +492,52 @@ test('QIR7-2 - anti-vacuity: the real guard rejects every named regression', () 
     }],
     ['the retired finalization census was deleted', {
       verifier: shipped.verifier.replace("const RETIRED_FINALIZATION_RPC = 'finalize_conversation_turn';", ''),
+    }],
+    // QIR-007 Fix 02 regressions: the real Redis reclaim seam and its neighbours.
+    ['the real reclaim invocation was replaced by an ordinary consumer read', {
+      verifier: shipped.verifier.replace('const reclaimed = await consumer.reclaim();', 'const reclaimed = await consumer.read();'),
+    }],
+    ['F2 stopped recovering through the real reclaim seam', {
+      verifier: shipped.verifier.replace("reclaimOriginalPendingEntry('F2'", "legacyDuplicateRecovery('F2'"),
+    }],
+    ['F3 stopped recovering through the real reclaim seam', {
+      verifier: shipped.verifier.replace("reclaimOriginalPendingEntry('F3'", "legacyDuplicateRecovery('F3'"),
+    }],
+    ['a synthetic duplicate stream entry was reintroduced for the reclaim recoveries', {
+      verifier: `${shipped.verifier}\nconst drift = async () => { await redisObserver.xAdd(STREAM, '*', { envelope: 'copy' }); };\n`,
+    }],
+    ['the production reclaim stale-idle threshold drifted', {
+      redisConsumer: shipped.redisConsumer.replace("30000,'0-0'", "5000,'0-0'"),
+    }],
+    ['the verifier stopped mirroring the frozen production stale-idle threshold', {
+      verifier: shipped.verifier.replace('const PRODUCTION_RECLAIM_IDLE_THRESHOLD_MS = 30000;', 'const PRODUCTION_RECLAIM_IDLE_THRESHOLD_MS = 1;'),
+    }],
+    ['the pending-before-reclaim proof was gutted', {
+      verifier: shipped.verifier.replaceAll('the ORIGINAL Redis entry is genuinely PENDING before reclaim', 'skipped'),
+    }],
+    ['the stale-idle-threshold proof was gutted', {
+      verifier: shipped.verifier.replaceAll('the stale-idle threshold the frozen production reclaim requires is genuinely satisfied', 'skipped'),
+    }],
+    ['the original-message-ID reclaim proof was gutted', {
+      verifier: shipped.verifier.replaceAll('reclaim returned the ORIGINAL Redis message ID - never a duplicate', 'skipped'),
+    }],
+    ['the byte-identical-envelope reclaim proof was gutted', {
+      verifier: shipped.verifier.replaceAll('the reclaimed envelope is byte-identical to the original', 'skipped'),
+    }],
+    ['the no-new-stream-entry proof was gutted', {
+      verifier: shipped.verifier.replaceAll('recovery created NO new stream entry - the original pending entry was reclaimed, not re-published', 'skipped'),
+    }],
+    ['the XAUTOCLAIM ownership-transfer proof was gutted', {
+      verifier: shipped.verifier.replaceAll('XAUTOCLAIM transferred ownership to the production consumer - the real reclaim really executed', 'skipped'),
+    }],
+    ['the both-recoveries reclaim census was gutted', {
+      verifier: shipped.verifier.replaceAll('both canonical F2 and F3 recoveries re-entered through the REAL RedisPostResponseConsumer.reclaim()', 'skipped'),
+    }],
+    ['the verification-side pending-entry instrumentation was removed', {
+      verifier: shipped.verifier.replaceAll('redisObserver.xPendingRange(', 'noopPendingRange('),
+    }],
+    ['the F1/F2/F3 seam separation was withdrawn from the document', {
+      contractDoc: shipped.contractDoc.replace('**F2 and F3 = real production Redis reclaim**', 'F2 and F3 also use duplicate delivery'),
     }],
     ...Object.entries(SCENARIO_MARKERS).map(([scenario, markers]) => [
       `scenario ${scenario} coverage was gutted`,
