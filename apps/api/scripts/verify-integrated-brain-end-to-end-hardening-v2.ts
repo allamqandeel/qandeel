@@ -1543,12 +1543,25 @@ async function main(): Promise<void> {
     assert.equal(c8Bullets.length, c8InstructionIds.length, 'C8: every authorized instruction renders exactly once');
     assert.equal(new Set(c8Bullets).size, c8Bullets.length,
       'C8: an instruction several channels authorized is rendered ONCE - agreement never duplicates or strengthens it');
-    // Privacy: the behavioral guidance path carries bounded instruction TEXT
-    // only. `hse.stress` and `hse.attention` are deliberately EXCLUDED from
-    // this list - QHIA-013 preserves the session-metric identity through the
-    // separate, already-approved session reasoning lane, and that lane is not
-    // what this scenario is about.
-    const c8Serialized = `${JSON.stringify(c8Call.request)}\n${c8Call.serverGuidance}`;
+    // Privacy, scoped to the path this scenario is actually about: the
+    // cross-context BEHAVIORAL GUIDANCE path.
+    //
+    // The Human Intelligence contribution is rendered IN ISOLATION through the
+    // REAL production renderer - the same incremental identity QIR-004 uses -
+    // so this inspects what Human Intelligence itself hands the provider rather
+    // than what an unrelated already-frozen contract legitimately carries in
+    // the same request. That distinction is load-bearing: the QIR-002
+    // Hypothesis reasoning contract deliberately carries the canonical
+    // `CONVERSATION_SESSION:<id>` scope, and re-litigating that here would be
+    // asserting somebody else's contract.
+    //
+    // `hse.stress` and `hse.attention` are deliberately absent from the needle
+    // list: QHIA-013 PRESERVES the session-metric identity through the separate,
+    // already-approved session reasoning lane, which is not this scenario's
+    // subject either.
+    const c8HumanIntelligencePath = `${JSON.stringify(c8HumanIntelligence)}\n${composeServerGuidance({
+      behavioralGuidance: c8Call.request.behavioralGuidance, humanIntelligence: c8HumanIntelligence,
+    })}`;
     for (const internalIdentity of [
       crossContextUserId, crossContextSession, c8TurnId,
       situationTarget.id, decisionTarget.id, goalTarget.id, relationshipTarget.id,
@@ -1559,9 +1572,22 @@ async function main(): Promise<void> {
       'ACTIVE_SITUATION_BOUND', 'ACTIVE_DECISION_BOUND', 'ACTIVE_GOAL_BOUND', 'ACTIVE_RELATIONSHIP_BOUND',
       'guidanceState', 'foreground_slot', 'binding_context_id',
     ]) {
-      assert.equal(c8Serialized.includes(internalIdentity), false,
+      assert.equal(c8HumanIntelligencePath.includes(internalIdentity), false,
         `C8: no internal context, binding, metric, slot or directive identity reaches the provider through the cross-context behavioral path (${internalIdentity})`);
     }
+    // The four EXPLICITLY BOUND context identities are stronger than that: they
+    // reach the provider through no lane of the final request at all.
+    const c8Serialized = `${JSON.stringify(c8Call.request)}\n${c8Call.serverGuidance}`;
+    for (const contextIdentity of [situationTarget.id, decisionTarget.id, goalTarget.id, relationshipTarget.id]) {
+      assert.equal(c8Serialized.includes(contextIdentity), false,
+        'C8: an explicitly bound context identity reaches the provider through NO lane of the final request');
+    }
+    // Anti-vacuity for the needle list above: the session identity really IS
+    // findable in this exact request - the frozen Hypothesis scope contract
+    // carries it - so its absence from the Human Intelligence path is a genuine
+    // property of that path rather than an empty haystack.
+    assert.ok(JSON.stringify(c8Call.request.hypothesisContext ?? {}).includes(crossContextSession),
+      'C8 anti-vacuity: the session identity is genuinely present elsewhere in the same request through its own already-frozen contract');
     for (const instructionId of c8InstructionIds) {
       assert.equal(c8Call.serverGuidance.includes(instructionId), false,
         'C8: the provider is given bounded instruction TEXT only - never an internal instruction ID');
