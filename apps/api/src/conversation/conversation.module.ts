@@ -21,6 +21,7 @@ import { HimModule } from '../human-model/him.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { HypothesisModule } from '../hypothesis/hypothesis.module';
 import { RecommendationModule } from '../recommendation/recommendation.module';
+import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
 
 @Module({
   imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, RecommendationModule, ObservabilityModule],
@@ -40,6 +41,12 @@ import { RecommendationModule } from '../recommendation/recommendation.module';
     { provide: SAFETY_RESPONSE_GATE, useExisting: SafetyResponseGateService },
     BehavioralResponsePolicyService,
     { provide: BEHAVIORAL_RESPONSE_POLICY, useExisting: BehavioralResponsePolicyService },
+    // QIR-003: the narrow bounded Memory + Hypothesis foreground gatherer over
+    // the EXISTING MemoryRetrieverService and HypothesisReasoningContextService
+    // (exported by the already-imported MemoryModule and HypothesisModule). It
+    // introduces no new repository, no new Data API boundary and no new
+    // database authority.
+    BoundedForegroundIntelligenceGathererService,
     ConversationOrchestratorService,
     ConversationService,
     // QHIA-011A: the narrow facade over the EXISTING QHIA-006 relevance

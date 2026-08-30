@@ -1,5 +1,6 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConversationOrchestratorService } from '../conversation/conversation-orchestrator.service';
+import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import type { ConversationTurn } from '../conversation/conversation.types';
@@ -128,7 +129,12 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   const decisionAttentionConsumption = new HimDecisionAttentionConsumptionService(new HimDecisionAttentionRepository(decisionAttentionDataApi as never));
   const goalMotivationConsumption = new HimGoalMotivationConsumptionService(new HimGoalMotivationRepository(goalMotivationDataApi as never));
   const relationshipCommunicationConsumption = new HimRelationshipCommunicationConsumptionService(new HimRelationshipCommunicationRepository(relationshipCommunicationDataApi as never));
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, memoryRetriever as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption, goalMotivationConsumption, relationshipCommunicationConsumption), new HimBrainContextService(new HimBrainContextRepository(brainContextDataApi as never)), hypothesisContext as never, new RecommendationGroundingService(), router,correlation,new TelemetryService(correlation));
+  const telemetry = new TelemetryService(correlation);
+  // QIR-003: the REAL bounded Memory + Hypothesis foreground gatherer over the
+  // gate's Memory/Hypothesis doubles, so the gate drives the real concurrent
+  // post-Safety launch topology and the real typed-outcome join.
+  const foregroundGatherer = new BoundedForegroundIntelligenceGathererService(memoryRetriever as never, hypothesisContext as never, correlation, telemetry);
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption, goalMotivationConsumption, relationshipCommunicationConsumption), new HimBrainContextService(new HimBrainContextRepository(brainContextDataApi as never)), foregroundGatherer, new RecommendationGroundingService(), router,correlation,telemetry);
   return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy, situationStressDataApi, decisionAttentionDataApi, goalMotivationDataApi, relationshipCommunicationDataApi, crossContextForegroundDataApi, brainContextDataApi };
 }
 

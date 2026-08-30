@@ -46,8 +46,12 @@ import { HypothesisGenerationService } from '../hypothesis/hypothesis-generation
 import type { HypothesisCandidateGenerator } from '../hypothesis/hypothesis-generation.types';
 import { HypothesisCandidateGeneratorError } from '../hypothesis/hypothesis-candidate-generator-provider.types';
 import { ConfidenceService } from '../hypothesis/confidence.service';
+import { HypothesisReasoningInvariantError } from '../hypothesis/hypothesis-reasoning-context.types';
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 import { RecommendationGroundingInvariantError, type RecommendationGroundingContext } from '../recommendation/recommendation-grounding.types';
+import { MemoryDataApiError } from '../memory/memory-data-api.service';
+import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
+import { QIR_NON_HI_FOREGROUND_WAIT_BUDGET_MS } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.types';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -67,6 +71,7 @@ describe('ConversationOrchestratorService', () => {
   let himCrossContextForeground: jest.Mocked<HimCrossContextForegroundAggregationService>;
   let himBrainContext: jest.Mocked<HimBrainContextService>;
   let hypothesisContext: jest.Mocked<HypothesisReasoningContextService>;
+  let foregroundGatherer: BoundedForegroundIntelligenceGathererService;
   let recommendationGrounding: jest.Mocked<RecommendationGroundingService>;
   let hypothesisEligibility: jest.Mocked<HypothesisGenerationEligibilityService>;
   let hypothesisExtraction: jest.Mocked<HypothesisGenerationIntentExtractionService>;
@@ -255,7 +260,12 @@ describe('ConversationOrchestratorService', () => {
     safetyGate = { evaluate: jest.fn().mockReturnValue({ category: 'NONE', disposition: 'ALLOW' }) };
     correlation=new CorrelationService();
     telemetry=new TelemetryService(correlation);
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, himBrainContext, hypothesisContext, recommendationGrounding, router,correlation,telemetry);
+    // QIR-003: the REAL bounded Memory + Hypothesis foreground gatherer over
+    // the same mocked source services, so every orchestrator proof exercises
+    // the real concurrent-launch / shared-deadline / typed-outcome production
+    // path rather than a gatherer double.
+    foregroundGatherer = new BoundedForegroundIntelligenceGathererService(memoryRetriever, hypothesisContext, correlation, telemetry);
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, himBrainContext, foregroundGatherer, recommendationGrounding, router,correlation,telemetry);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -1554,9 +1564,9 @@ describe('ConversationOrchestratorService', () => {
         crossContextRepository as never, situationConsumption, decisionConsumption, goalConsumption, relationshipConsumption,
       );
       const wired = new ConversationOrchestratorService(
-        repository, contextBuilder, safetyGate, behavioralPolicy, memoryRetriever, himSelector, himSnapshot, himBridge,
+        repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge,
         himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, aggregation, himBrainContext,
-        hypothesisContext, recommendationGrounding, router, correlation, telemetry,
+        foregroundGatherer, recommendationGrounding, router, correlation, telemetry,
       );
       return { wired, crossContextRepository, situationRepository, decisionRepository, goalRepository, relationshipRepository, situationDirectRead, decisionDirectRead, goalDirectRead, relationshipDirectRead };
     };
@@ -2582,6 +2592,235 @@ describe('ConversationOrchestratorService', () => {
   // routing authority, computed exactly once on the eligible RECEIVED path,
   // before the canonical claim, with zero intelligence reads and zero extra
   // provider calls.
+  describe('QIR-003 - Bounded Foreground Intelligence Gatherer orchestration', () => {
+    const deferred = <T,>() => {
+      let resolve!: (value: T) => void;
+      let reject!: (error: unknown) => void;
+      const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+      return { promise, resolve, reject };
+    };
+    const memoryValue = [{ type: 'GOAL', content: 'Leave my job', source: 'USER_STATED' }];
+    const emptyHypothesis = { coverageState: 'EMPTY' as const, candidateHypothesisCount: 0 as const };
+    const drainScheduledWork = () => new Promise((resolve) => { setImmediate(resolve); });
+    const finalizeNormally = () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+    };
+
+    it('launches the frozen Human Intelligence lane, Memory, and Hypothesis in the same post-Safety stage, before awaiting any of them', async () => {
+      const snapshotRead = deferred<HimIntelligenceSnapshot>();
+      const memoryRead = deferred<typeof memoryValue>();
+      const hypothesisRead = deferred<typeof emptyHypothesis>();
+      himSnapshot.getSnapshot.mockReturnValue(snapshotRead.promise);
+      memoryRetriever.retrieve.mockReturnValue(memoryRead.promise as never);
+      hypothesisContext.build.mockReturnValue(hypothesisRead.promise as never);
+      finalizeNormally();
+      const pending = orchestrator.orchestrate('token', 'user', userTurn);
+      await drainScheduledWork();
+      // Every controlled deferred is STILL PENDING, yet all three independent
+      // foreground lanes have already been started: QHIA before Memory or
+      // Hypothesis settles, Memory before QHIA settles, Hypothesis before QHIA
+      // settles, and Memory/Hypothesis before either is awaited. Hypothesis is
+      // therefore provably not a serial stage after Memory.
+      expect(himSnapshot.getSnapshot).toHaveBeenCalledTimes(1);
+      expect(memoryRetriever.retrieve).toHaveBeenCalledTimes(1);
+      expect(hypothesisContext.build).toHaveBeenCalledTimes(1);
+      expect(router.generate).not.toHaveBeenCalled();
+      snapshotRead.resolve(snapshot);
+      memoryRead.resolve(memoryValue);
+      hypothesisRead.resolve(emptyHypothesis);
+      await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ memoryContext: memoryValue }));
+    });
+
+    it('holds provider dispatch for the gather join when Memory outlives the Human Intelligence lane', async () => {
+      const memoryRead = deferred<typeof memoryValue>();
+      memoryRetriever.retrieve.mockReturnValue(memoryRead.promise as never);
+      finalizeNormally();
+      const pending = orchestrator.orchestrate('token', 'user', userTurn);
+      await drainScheduledWork();
+      // The frozen Human Intelligence lane has fully settled and been consumed;
+      // the still-pending Memory read is the only open lane, and dispatch waits
+      // for the join rather than racing past it.
+      expect(himBridge.transform).toHaveBeenCalledTimes(1);
+      expect(router.generate).not.toHaveBeenCalled();
+      memoryRead.resolve(memoryValue);
+      await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+    });
+
+    it('waits for the slower of the two lanes - never their sum - when the gather settles first', async () => {
+      jest.useFakeTimers();
+      try {
+        himSnapshot.getSnapshot.mockReturnValue(new Promise(() => undefined));
+        finalizeNormally();
+        const pending = orchestrator.orchestrate('token', 'user', userTurn);
+        await jest.advanceTimersByTimeAsync(0);
+        // Memory and Hypothesis settled immediately; the Human Intelligence
+        // lane is still holding its own frozen 300 ms Snapshot budget. The join
+        // dispatches at the 300 ms Human Intelligence boundary - the slower
+        // lane - and the settled gather adds zero further wait.
+        expect(memoryRetriever.retrieve).toHaveBeenCalledTimes(1);
+        expect(hypothesisContext.build).toHaveBeenCalledTimes(1);
+        expect(router.generate).not.toHaveBeenCalled();
+        await jest.advanceTimersByTimeAsync(300);
+        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate).toHaveBeenCalledTimes(1);
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('bounds the non-HI foreground wait to ONE shared 5000 ms deadline: a pending Hypothesis expires, Memory is delivered, Recommendation is not grounded', async () => {
+      jest.useFakeTimers();
+      try {
+        memoryRetriever.retrieve.mockResolvedValue(memoryValue as never);
+        hypothesisContext.build.mockReturnValue(new Promise(() => undefined));
+        finalizeNormally();
+        const pending = orchestrator.orchestrate('token', 'user', userTurn);
+        await jest.advanceTimersByTimeAsync(QIR_NON_HI_FOREGROUND_WAIT_BUDGET_MS - 1);
+        expect(router.generate).not.toHaveBeenCalled();
+        await jest.advanceTimersByTimeAsync(1);
+        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ memoryContext: memoryValue }));
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('hypothesisContext');
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('recommendationContext');
+        // An expired Hypothesis grounds NOTHING: no deterministic empty
+        // grounding, no fallback, and no fabricated canonical EMPTY result.
+        expect(recommendationGrounding.ground).not.toHaveBeenCalled();
+        expect(repository.failTurn).not.toHaveBeenCalled();
+        expect(jest.getTimerCount()).toBe(0);
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('lets Hypothesis succeed while Memory expires on the SAME deadline, omitting only the Memory field', async () => {
+      jest.useFakeTimers();
+      try {
+        memoryRetriever.retrieve.mockReturnValue(new Promise(() => undefined));
+        finalizeNormally();
+        const pending = orchestrator.orchestrate('token', 'user', userTurn);
+        await jest.advanceTimersByTimeAsync(QIR_NON_HI_FOREGROUND_WAIT_BUDGET_MS);
+        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('memoryContext');
+        // The legitimate EMPTY Hypothesis outcome still grounds normally.
+        expect(recommendationGrounding.ground).toHaveBeenCalledTimes(1);
+        expect(recommendationGrounding.ground).toHaveBeenCalledWith(emptyHypothesis);
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('expires BOTH sources together at one deadline - never an additive 5s + 5s wait - and discards every late settlement', async () => {
+      jest.useFakeTimers();
+      try {
+        const memoryRead = deferred<typeof memoryValue>();
+        const hypothesisRead = deferred<typeof emptyHypothesis>();
+        memoryRetriever.retrieve.mockReturnValue(memoryRead.promise as never);
+        hypothesisContext.build.mockReturnValue(hypothesisRead.promise as never);
+        finalizeNormally();
+        const pending = orchestrator.orchestrate('token', 'user', userTurn);
+        // Dispatch happens at exactly the ONE 5000 ms ceiling with both
+        // sources omitted - were the deadlines additive, nothing could
+        // dispatch before 10000 ms.
+        await jest.advanceTimersByTimeAsync(QIR_NON_HI_FOREGROUND_WAIT_BUDGET_MS);
+        await expect(pending).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('memoryContext');
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('hypothesisContext');
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('recommendationContext');
+        expect(recommendationGrounding.ground).not.toHaveBeenCalled();
+        const sent = JSON.stringify(router.generate.mock.calls[0][0]);
+        // Late fulfillment AND late rejection after the deadline: both are
+        // discarded for this turn with no unhandled rejection, no provider
+        // request mutation, no second provider call, and no re-finalization.
+        memoryRead.resolve(memoryValue);
+        hypothesisRead.reject(new Error('late private hypothesis failure'));
+        await jest.advanceTimersByTimeAsync(0);
+        expect(JSON.stringify(router.generate.mock.calls[0][0])).toBe(sent);
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+        expect(repository.failTurn).not.toHaveBeenCalled();
+        expect(recommendationGrounding.ground).not.toHaveBeenCalled();
+      } finally { jest.useRealTimers(); }
+    });
+
+    it('degrades an approved Memory availability failure to an omitted Memory field while the turn generates normally', async () => {
+      const record = jest.spyOn(telemetry, 'recordForegroundIntelligenceSource');
+      for (const failure of [new ServiceUnavailableException('Memory persistence is unavailable.'), new MemoryDataApiError(503), new MemoryDataApiError(408), new MemoryDataApiError(429)]) {
+        router.generate.mockClear(); record.mockClear();
+        memoryRetriever.retrieve.mockRejectedValue(failure);
+        finalizeNormally();
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+        expect(router.generate).toHaveBeenCalledTimes(1);
+        expect(router.generate.mock.calls[0][0]).not.toHaveProperty('memoryContext');
+        expect(record).toHaveBeenCalledWith('MEMORY', 'OPTIONAL_AVAILABILITY_FAILURE', 'FAST');
+        expect(repository.failTurn).not.toHaveBeenCalled();
+      }
+    });
+
+    it('fails CLOSED on a non-approved Memory failure: 4xx authority statuses and unexpected errors never degrade', async () => {
+      for (const failure of [new MemoryDataApiError(400), new MemoryDataApiError(401), new MemoryDataApiError(403), new MemoryDataApiError(404), new Error('private memory query failure')]) {
+        router.generate.mockClear(); repository.failTurn.mockClear();
+        memoryRetriever.retrieve.mockRejectedValue(failure);
+        repository.claimTurn.mockResolvedValue(claimed);
+        await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
+        expect(router.generate).not.toHaveBeenCalled();
+        expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
+      }
+    });
+
+    it('degrades an approved Hypothesis availability failure to omitted Hypothesis AND Recommendation, grounding nothing', async () => {
+      const record = jest.spyOn(telemetry, 'recordForegroundIntelligenceSource');
+      memoryRetriever.retrieve.mockResolvedValue(memoryValue as never);
+      hypothesisContext.build.mockRejectedValue(new MemoryDataApiError(503));
+      finalizeNormally();
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: assistant });
+      expect(router.generate).toHaveBeenCalledTimes(1);
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ memoryContext: memoryValue }));
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('hypothesisContext');
+      expect(router.generate.mock.calls[0][0]).not.toHaveProperty('recommendationContext');
+      expect(recommendationGrounding.ground).not.toHaveBeenCalled();
+      expect(record).toHaveBeenCalledWith('HYPOTHESIS', 'OPTIONAL_AVAILABILITY_FAILURE', 'FAST');
+      expect(record).toHaveBeenCalledWith('MEMORY', 'AVAILABLE', 'FAST');
+    });
+
+    it('fails CLOSED on a Hypothesis reasoning invariant violation and records the pre-existing rejected outcome', async () => {
+      const recordContext = jest.spyOn(telemetry, 'recordHypothesisContext');
+      hypothesisContext.build.mockRejectedValue(new HypothesisReasoningInvariantError());
+      repository.claimTurn.mockResolvedValue(claimed);
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(router.generate).not.toHaveBeenCalled();
+      expect(recommendationGrounding.ground).not.toHaveBeenCalled();
+      expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
+      expect(recordContext).toHaveBeenCalledWith('rejected', 'FAST');
+    });
+
+    it('emits the bounded per-source outcome telemetry on the normal turn path with the routed processing path', async () => {
+      const record = jest.spyOn(telemetry, 'recordForegroundIntelligenceSource');
+      const deepTurn = { ...userTurn, content: 'x'.repeat(1000) };
+      const deepClaim = { ...claimed, content: deepTurn.content, processing_path: 'DEEP' as const, routing_reason: 'RUNTIME_ROUTING_V2_DEEP_INPUT_SCALE' };
+      repository.claimTurn.mockResolvedValue(deepClaim);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', deepTurn);
+      expect(record).toHaveBeenCalledTimes(2);
+      expect(record).toHaveBeenCalledWith('MEMORY', 'LEGITIMATE_EMPTY', 'DEEP');
+      expect(record).toHaveBeenCalledWith('HYPOTHESIS', 'LEGITIMATE_EMPTY', 'DEEP');
+    });
+
+    it('starts no Memory or Hypothesis work for COMPLETED replay, GENERATING recovery, or a lost claim', async () => {
+      repository.findTurn.mockResolvedValue(completedUser);
+      repository.findAssistantForSource.mockResolvedValue(assistant);
+      await orchestrator.orchestrate('token', 'user', completedUser);
+      repository.recoverExpiredGeneratingTurn.mockResolvedValue(undefined);
+      await orchestrator.orchestrate('token', 'user', { ...userTurn, status: 'GENERATING' });
+      repository.claimTurn.mockResolvedValue(undefined);
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(memoryRetriever.retrieve).not.toHaveBeenCalled();
+      expect(hypothesisContext.build).not.toHaveBeenCalled();
+      expect(recommendationGrounding.ground).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
+    });
+  });
+
   describe('QIR-002 - FAST / DEEP Runtime Decision Policy v2', () => {
     const multiPartTurn = { ...userTurn, content: `${'y'.repeat(45)}. `.repeat(7).trim() };
     const multiPartClaim = { ...claimed, content: multiPartTurn.content, processing_path: 'DEEP' as const, routing_reason: 'RUNTIME_ROUTING_V2_DEEP_MULTI_PART' };

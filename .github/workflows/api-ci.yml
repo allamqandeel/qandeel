@@ -42,6 +42,7 @@ jobs:
       - {name: Verify Human Intelligence Activation phase closure contract, run: npm run test:human-intelligence-activation-phase-closure-contract}
       - {name: Verify Integrated Intelligence Runtime contract, run: npm run test:integrated-intelligence-runtime-contract}
       - {name: Verify FAST/DEEP Runtime Decision Policy v2 static contract, run: npm run test:fast-deep-runtime-decision-policy-v2-contract}
+      - {name: Verify Bounded Foreground Intelligence Gatherer static contract, run: npm run test:bounded-foreground-intelligence-gatherer-v1-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}
