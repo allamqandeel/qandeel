@@ -286,8 +286,9 @@ BEGIN
  -- CURRENT state, not against the gap row alone. A gap row can legitimately lag
  -- reality - post-response synchronization only reconciles the Hypotheses one
  -- execution's durable receipts name, it can quarantine, and the authenticated
- -- Hypothesis lifecycle commands (transition/attach Evidence) advance a version
- -- with no post-response execution at all - so an obviously stale BOUND row
+ -- Hypothesis lifecycle commands (transition_hypothesis_v2, the authenticated
+ -- Evidence update) advance a version with no post-response execution at all -
+ -- so an obviously stale BOUND row
  -- must not block the session merely because its lagging gap still says OPEN.
  -- The added conditions are exactly the authority dimensions selection
  -- eligibility already uses (exact automatic source, current Hypothesis

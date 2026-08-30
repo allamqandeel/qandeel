@@ -544,11 +544,13 @@ async function main() { await client.connect(); try {
   assert.equal((await selectOpportunity(alice, sessionD, turnD2)).outcome, 'OUTSTANDING_OPEN_QUESTION',
     'control: the bound question blocks while its exact target is canonical current');
   await asServiceRole(async () => { await client.query('SELECT * FROM public.fail_conversation_turn($1,$2,$3,$4,$5,$6)', [sessionD, alice, turnD2, randomUUID(), null, null]); });
-  // The canonical authenticated lifecycle authority advances the version with
-  // NO post-response execution at all, so no synchronization can have run: the
-  // gap row is provably still OPEN while its exact target is provably stale.
+  // The canonical authenticated lifecycle authority (migration 0036's
+  // transition_hypothesis_v2 - the retired 0005 signature holds zero EXECUTE)
+  // advances the version with NO post-response execution at all, so no
+  // synchronization can have run: the gap row is provably still OPEN while its
+  // exact target is provably stale.
   await identity(alice);
-  await client.query("SELECT * FROM public.transition_hypothesis($1,'ACTIVE')", [hLagging]);
+  await client.query("SELECT * FROM public.transition_hypothesis_v2($1,$2,'ACTIVE')", [hLagging, 1]);
   await resetRole();
   assert.equal((await one('SELECT version FROM public.hypotheses WHERE id=$1', [hLagging])).version, 2);
   assert.deepEqual(await one('SELECT status,open_epoch FROM public.information_gaps WHERE id=$1', [laggingGap.id]),

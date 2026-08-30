@@ -233,8 +233,8 @@ and same-session scope.
 **This is defense in depth, not a second closure engine.** A gap row can
 legitimately lag canonical reality: synchronization only reconciles the
 Hypotheses one execution's durable receipts name, it can quarantine, and the
-authenticated Hypothesis lifecycle commands (`transition_hypothesis`,
-`attach_hypothesis_evidence`) advance a version with no post-response
+authenticated Hypothesis lifecycle commands (`transition_hypothesis_v2`,
+`apply_hypothesis_evidence_update`) advance a version with no post-response
 execution at all. Deciding "outstanding" from the gap row alone would let an
 obviously stale bound question hold a session hostage indefinitely. The
 outstanding check therefore reads current state to decide whether a bound
