@@ -18,19 +18,41 @@ and what that answer costs.
 > surface. Compact excerpts may exist only as clearly secondary references/pointers when the
 > full statement is reachable under F-06 without commitment.**
 
-The statement is the only guaranteed, human-language, per-reading field the runtime carries.
-Everything else a reading has is either machine-side, shared across peers, or a claim the
-runtime never made.
+The full statement is the field VI-02 **validated** as the canonical human-facing identity source
+across the tested peer sets. It is not the only human-language material a record carries — it is
+the one proven to do this job.
 
-### 1.1 What the rule binds equally
+**Other existing fields are not a reliable replacement for that role:**
 
-The accessible name of a peer is bound exactly as strictly as its visible text. **No
-`aria-label` or `aria-labelledby` may stand in for a peer's statement.** A name computed from
-an excerpt is the same defect as a visible excerpt-as-identity — it is simply invisible to the
-people who can check it.
+| Field | Why it cannot carry identity on its own |
+|---|---|
+| `scope`, `type`, `domain` | Required and human-readable, but routinely **shared across peers** — in the hardest tested case all three were identical for both readings |
+| `assumptions`, `disconfirming_conditions` | Human-language, but **may be empty or non-distinguishing**; the tested late-divergence pair carried none |
+| `created_at` / record date | Shared across peers in the tested case; provenance, not identity |
+| `id` and other machine identifiers | **Not human-facing identity** at all |
+| `origin`, `status`, `version` | Enumerated state, not a discriminator between peers |
 
-The validated implementation derives the name from content: a visually-hidden action verb, the
-reading's **whole** statement, and its record date. No attribute intervenes.
+The conclusion is a validated product finding, not a claim about what the record contains.
+
+### 1.1 What the rule binds equally — FROZEN
+
+The accessible name of a peer is bound exactly as strictly as its visible text.
+
+> **An accessible name may not replace the full statement with a shorter or different identity.**
+
+A name computed from an excerpt is the same defect as a visible excerpt-as-identity — it is
+simply invisible to the people who can check it. Assistive technology must receive the full
+identity truth, never a lesser one.
+
+**This is a rule about *truth*, not about attributes.** `aria-labelledby` is **not forbidden**
+where it references the truthful full statement, or equivalent full identity. What is forbidden
+is any naming mechanism — attribute, hidden text, generated string — that substitutes a shorter
+or different identity for the statement.
+
+> **Prototype evidence — NOT FROZEN.** The validated prototype computed the name from content
+> using a visually-hidden action verb, the whole statement, and the record date, with no naming
+> attribute in play. That is one proven way to satisfy the rule above. It is not the required
+> implementation.
 
 ### 1.2 What is forbidden outright
 
@@ -58,19 +80,35 @@ the reading. It is never the discriminator a reader is expected to choose by.
 > to reach the whole statement **on that surface**, without foregrounding it, choosing it,
 > dismissing the choosing surface, or losing their place.
 
-**Inspecting a reading is not choosing it.** In the validated architecture this is enforced in
-the handler, not asserted in prose: revealing a statement changes one class and one attribute.
-It does not re-render, does not write the current-reading URL state, does not change the
-foreground, does not close a chooser, does not announce, and does not scroll.
+**Inspecting a reading is not choosing it.** Disclosure must not require commitment: it may not
+foreground a reading, choose it, dismiss the choosing surface, or cost the reader their place.
 
-**Structural requirements that carry forward with the rule:**
+### 2.1 Frozen requirements
 
-- the disclosure control is a **sibling** of the peer's own control, never nested interactive
-  content;
-- its state is exposed before and after use, and it names the element it governs;
-- it is offered **only where the presentation actually cuts the statement**, measured against
-  live layout and re-measured after any text-scaling change — never on a guessed character
-  threshold, and never on rows whose text is already whole.
+- **Disclosure must not require commitment** — inspecting is not choosing.
+- **No nested interactive content.** A control inside a control is invalid and behaves
+  unpredictably for assistive technology.
+- **Disclosure must be structurally associated with the reading it governs**, so that the
+  relationship is programmatically determinable and not merely visual.
+- **Its state must be exposed** before and after use, through the same truth visually and to
+  assistive technology.
+- **Disclosure is offered where the presentation actually abbreviates**, and not where the
+  statement is already whole — the reader is never asked to operate an affordance that reveals
+  nothing.
+
+### 2.2 Prototype evidence / implementation example — NOT FROZEN
+
+> The validated prototype placed the disclosure control as a **direct sibling** of the peer's own
+> control inside the shared list item, and decided when to offer it by **detecting visual
+> clipping from live layout**, re-measured after any text-scaling change. Its handler changed one
+> class and one attribute and nothing else.
+>
+> **Direct sibling DOM placement is not frozen** — the frozen requirement is valid structural
+> association plus no nested interactive content, which many structures can satisfy.
+> **Live-layout clipping detection is one validated method, not the only future method** — it was
+> chosen over a character threshold because where a presentation cuts depends on script, width and
+> the reader's text size, but any method that reliably identifies abbreviated readings satisfies
+> the rule.
 
 **The mechanism is not frozen.** A per-row control satisfies F-06 today. A node that opens in
 place, a preview that expands inside a spatial field, or a composition that never abbreviates
@@ -180,9 +218,9 @@ WCAG 2.2 AA is the floor, and the following are architectural rather than cosmet
 
 | Invariant | Requirement |
 |---|---|
-| **Label in Name (2.5.3)** | An accessible name may not rephrase a visible label. Supplementary text belongs in visually-hidden spans **around** the visible label, never in an attribute that replaces it |
+| **Label in Name (2.5.3)** | An accessible name may not rephrase away a visible label — the visible label must remain part of the name. *(The prototype satisfied this with visually-hidden text placed around the visible label; that is one proven technique, not the frozen one.)* |
 | **Name, Role, Value (4.1.2)** | Every control is a real control with a real name and live state |
-| **Info and Relationships (1.3.1)** | A peer and its disclosure control are grouped by structure; the control names what it governs |
+| **Info and Relationships (1.3.1)** | A peer and its disclosure are structurally associated, and the association is programmatically determinable rather than only visual |
 | **Keyboard (2.1.1)** | Every route is reachable by keyboard, in document order, with no trap; no route depends on a gesture |
 | **Focus Visible (2.4.7)** | Focus is visible, including after a foreground→return round trip |
 | **Use of Colour (1.4.1)** | No state is carried by colour alone |
@@ -194,9 +232,15 @@ WCAG 2.2 AA is the floor, and the following are architectural rather than cosmet
 back follow reading direction; Arabic line-height stays generous; no `letter-spacing` and no
 italics on Arabic.
 
-**Announcement carries no excerpt.** Arrival is announced after it happens, synchronously with
-the focus move. Identity on arrival comes from the focused element's own accessible name — the
-whole statement — and the live region confirms only the arrival.
+**Announcement carries no excerpt — FROZEN as a semantic requirement.** Arrival at a reading must
+be announced *after* it happens, and the identity a reader receives on arrival must be the full
+statement, never an excerpt of it.
+
+> **Prototype evidence / implementation example — NOT FROZEN.** The validated prototype met that
+> requirement by announcing synchronously with the focus move, taking identity from the focused
+> element's own accessible name and using a live region that confirmed only the arrival. **The
+> exact announcement mechanics, sequencing and timing are open to implementation and to VI-10
+> live screen-reader validation**; only the semantic truth requirement above is frozen.
 
 ---
 

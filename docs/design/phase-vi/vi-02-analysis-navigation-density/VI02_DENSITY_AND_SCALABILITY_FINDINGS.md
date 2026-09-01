@@ -13,6 +13,21 @@ provisional drawing costs. They say nothing about what a designed surface must c
 
 ---
 
+## 0. What `32` means in this document
+
+Stated once, and it governs every count below:
+
+> **`32` is the synthetic stress ceiling used by VI-02**, chosen from the runtime's **per-user**
+> `MAX_ACTIVE_HYPOTHESES = 32`. **No per-subject cap was found**, so double-digit peer sets are
+> plausible; **VI-02 does not claim that a single subject currently exposes 32 peers in
+> production.**
+
+So "stress-tested to 32 peers" is the accurate reading of everything that follows. The counts are
+a deliberately hostile ceiling the architecture was pushed against — not a description of
+production peer sets.
+
+---
+
 ## 1. The honest reassessment
 
 The exploration's first evaluation matrix scored scanability **strong** at 6, 12, 24 and 32
@@ -34,8 +49,9 @@ The re-score did not change the recommendation — F3 remains the behavioural re
 the runner-up, because both families move together and F3 moves less. It changed what a freeze
 is allowed to **claim**:
 
-> This architecture is proven **scalable and identity-safe** to 32 peers. It is **not proven
-> pleasant to scan** at 32, and no document may imply that it is.
+> This architecture is proven **scalable and identity-safe** when stress-tested to the 32-peer
+> ceiling. It is **not proven pleasant to scan** at that ceiling, and no document may imply that
+> it is.
 
 ---
 

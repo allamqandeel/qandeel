@@ -96,7 +96,12 @@ protect it: nothing visual, yet.**
 The strongest verdict in the gate, and it depends on no drawing at all. Every comparable product
 ranks, scores and summarises: a best answer, a confidence, a headline. QANDEEL's architecture
 **structurally refuses all three** — no system-selected winner, no rank, no ordinal, no score,
-the reader's own words as each reading's identity, and foreground only after a reader's act.
+**the reading's own human-facing statement as its identity**, and foreground only after a
+reader's act.
+
+*(A reading's statement is the record's own human-facing content. It is **not** necessarily the
+user's literal wording: a Hypothesis may be `SYSTEM_GENERATED`, and nothing here implies literal
+user quotation.)*
 
 That refusal is ownable, it is a *structure* rather than chrome, and it is the one legacy
 quality that **improved**: the benchmark carried percentages, graded relations and numbered
@@ -106,8 +111,9 @@ badges, all of which asserted authority the runtime never had.
 
 The legacy stated the rule; VI-02's revision enforced it three times: an emphasis that did not
 follow meaning was removed; a name that did not follow content was replaced by the content; and
-the one new affordance appears **only where meaning is actually being cut**, measured against
-live layout. Emphasis follows meaning and reader action. Nothing is emphasised decoratively.
+the one new affordance appears **only where meaning is actually being cut** (in the validated
+prototype, detected from live layout — one proven method, not a frozen one). Emphasis follows
+meaning and reader action. Nothing is emphasised decoratively.
 
 ---
 
@@ -138,7 +144,7 @@ are not**, because the runtime does not carry strength.
 
 ## 4. The finding that matters most for VI-03
 
-**The legacy's spatial density was bought with labels the runtime cannot honestly supply.**
+**The legacy's spatial density was bought with labels no existing runtime field supplies.**
 
 The legacy mobile map fits nine related nodes and their connections onto one 375px screen —
 genuinely more legible-at-a-glance than four peers per screen with five screenfuls of travel.
@@ -146,9 +152,14 @@ But it achieves that by reducing each node to **two words** drawn from a life-do
 **the product invented**, and by grading the connections between them. Neither the labels nor
 the grades exist in the runtime. **The compression is not craft; it is a claim.**
 
-QANDEEL's real records are long statements in the user's own frame, with no label, no title and
-no summary — and any label short enough to sit in a node was proven mechanically to collide on
-exactly the readings a subject actually produces.
+QANDEEL's real records are long human-facing statements, with no label, no title and no summary —
+and **excerpt-derived** labels short enough to sit in a node were proven mechanically to collide
+on the **tested late-divergence peers**, which are valid, plausible related peer readings rather
+than an artificial edge case. That is the scope of the finding: it is a result about excerpt
+derivation on realistic related peers, not a proof that no short label of any kind could ever
+work. See
+[`VI02_RUNTIME_DEPENDENCY_AND_EDGE_BOUNDARIES.md`](VI02_RUNTIME_DEPENDENCY_AND_EDGE_BOUNDARIES.md)
+§2.2.1.
 
 So the honest comparison is not "the legacy was denser, VI-02 regressed". It is:
 

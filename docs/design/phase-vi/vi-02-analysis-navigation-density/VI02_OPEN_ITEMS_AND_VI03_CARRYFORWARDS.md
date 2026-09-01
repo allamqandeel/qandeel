@@ -74,9 +74,12 @@ The identity model is proven **structurally and programmatically**, at a true 37
 and English. That is strong, and it is **not** a substitute for a live NVDA/JAWS session.
 
 VI-02 raises the stakes of that pass rather than lowering them: a peer's accessible name is now
-its **whole statement**, so real-world verbosity at 24–32 peers is exactly what a live session
-must judge. Presentational answers exist (heading-per-peer skimming, list semantics that expose
-the statement once per item) and are deliberately left open.
+its **whole statement**, so real-world verbosity at the stress-tested 24–32 peer range is exactly
+what a live session must judge. (`32` is VI-02's synthetic stress ceiling, taken from the
+per-user `MAX_ACTIVE_HYPOTHESES = 32`; no per-subject cap was found, and VI-02 does not claim a
+single subject currently exposes 32 peers in production.) Presentational answers exist
+(heading-per-peer skimming, list semantics that expose the statement once per item) and are
+deliberately left open.
 
 **Owner: VI-10.**
 

@@ -110,8 +110,14 @@ the behaviour:
 - transformation / recomposition animation.
 
 **The row is evidence. It is not the product.** The prototype's peers were drawn as full-width
-vertical rows to prove that thirty-two peers stay reachable, equal and identifiable at 375px —
-and for no other reason. **Every pixel of it is throwaway.**
+vertical rows to prove that peers stay reachable, equal and identifiable at 375px when
+stress-tested up to the 32-peer ceiling — and for no other reason. **Every pixel of it is
+throwaway.**
+
+> **What `32` means here.** `32` is the **synthetic stress ceiling used by VI-02**, chosen from
+> the runtime's **per-user** `MAX_ACTIVE_HYPOTHESES = 32`. **No per-subject cap was found**, so
+> double-digit peer sets are plausible; **VI-02 does not claim that a single subject currently
+> exposes 32 peers in production.**
 
 ### The governing visual-truth rule
 

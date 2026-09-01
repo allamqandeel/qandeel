@@ -38,7 +38,7 @@ repository, and no prototype, capture, ZIP or visual render from them enters thi
 | `QANDEEL_VI-02-REV-01_REVIEW.zip` | **Primary authoritative source** for the final behavioural truth |
 | `QANDEEL_VI-02-EXPLORE-01_REVIEW.zip` | The exploration under revision — family provenance, identity strategies, the original evaluation matrix (superseded where REV-01 corrects it) |
 | `QANDEEL_VI-02-VIS-01_REVIEW.zip` | **Visual research only — non-canonical.** Referenced solely to record that it lies *outside* the freeze boundary |
-| `QANDEEL_VI-02_LEGACY_QUALITY_BENCHMARK.zip` | **Quality benchmark only.** Read to judge preserved ambition and named liabilities; nothing copied |
+| `QANDEEL_VI-02_LEGACY_QUALITY_BENCHMARK.zip` | **Quality benchmark only — not present during this closure task.** See §2.1 |
 
 Within REV-01, the authoritative behavioural sources were `10_VI02_FREEZE_BOUNDARY.md`,
 `02_IDENTITY_A11Y_RESOLUTION.md`, `03_LATE_DIVERGENCE_EVIDENCE.md`,
@@ -48,6 +48,21 @@ Within REV-01, the authoritative behavioural sources were `10_VI02_FREEZE_BOUNDA
 
 **This archive synthesizes the final truth. It is not a copy of the review prose**, and the
 review packages remain the evidence of record for method, measurement and proof detail.
+
+### 2.1 Legacy benchmark — exact provenance
+
+Stated precisely, so no reader assumes evidence was inspected that was not:
+
+- **`QANDEEL_VI-02_LEGACY_QUALITY_BENCHMARK.zip` was not present in the working directory during
+  VI-02-FREEZE-01, and was therefore not read during this closure/archive execution.**
+- The canonical anti-regression synthesis carried into
+  [`VI02_LEGACY_ANTI_REGRESSION_GUARDRAIL.md`](VI02_LEGACY_ANTI_REGRESSION_GUARDRAIL.md) came from
+  the already-reviewed REV-01 document `09_LEGACY_ANTI_REGRESSION_GATE.md`.
+- The original legacy benchmark **had** been read earlier, in the independent review work that
+  produced that gate document. That is where the benchmark was judged.
+- **Nothing from the absent ZIP was newly interpreted, re-judged or re-derived by
+  VI-02-FREEZE-01.** This closure task carried forward an existing, reviewed verdict; it did not
+  form a new one.
 
 ---
 

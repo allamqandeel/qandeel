@@ -16,8 +16,14 @@ one exposure edge that must be investigated separately before it can ship.
 
 ## 1. The question
 
-Does solving analysis peer navigation at 1 → 32 peers require new runtime-supplied data —
-specifically a short reading identity label — or is current data sufficient?
+Does solving analysis peer navigation across the stress-tested range of 1 → 32 peers require new
+runtime-supplied data — specifically a short reading identity label — or is current data
+sufficient?
+
+> **`32` is the synthetic stress ceiling used by VI-02**, chosen from the runtime's **per-user**
+> `MAX_ACTIVE_HYPOTHESES = 32`. **No per-subject cap was found**, so double-digit peer sets are
+> plausible; **VI-02 does not claim that a single subject currently exposes 32 peers in
+> production.**
 
 ## 2. Verdict A — `NO NEW RUNTIME CONTRACT NEEDED` *(scoped — C3)*
 
@@ -28,10 +34,15 @@ specifically a short reading identity label — or is current data sufficient?
 
 ### 2.1 The evidence chain
 
-1. The only guaranteed, human-language, per-reading field is `statement`.
-2. Chip-scale derived labels **fail mechanically** on identical-opening peers in both
-   languages — proven at 40, 60, 80, 160 and 240 characters. They separate only at a length
-   that is no longer a label.
+1. The full statement is the field VI-02 **validated** as the canonical human-facing identity
+   source across the tested peer sets. It is not the record's only human-language field — but no
+   other existing field is a reliable replacement for that role: `scope`, `type` and `domain` may
+   be shared across peers; `assumptions` and `disconfirming_conditions` may be empty or
+   non-distinguishing; machine identifiers are not human-facing identity.
+2. **Excerpt / truncation-based** labels derived from the statement opening **fail mechanically**
+   on identical-opening peers in both languages — proven at 40, 60, 80, 160 and 240 characters.
+   They separate only at a length that is no longer a label. This is a result about *excerpt
+   derivation*, not about every conceivable short label.
 3. The validated architecture and its runner-up **never need a chip-scale label**: everywhere
    a reader answers "which reading is this?", the statement itself is present — whole, or
    abbreviated with the whole text reachable **without commitment** (F-06).
@@ -46,18 +57,33 @@ specifically a short reading identity label — or is current data sufficient?
 
 The late-divergence pair is the case that could have broken verdict A: two readings identical
 for 262 (AR) / 336 (EN) characters, with identical record date, type, domain and scope, no
-assumptions and no review conditions. **Every existing field either collides or is
-machine-only.**
+assumptions and no review conditions. **Every existing field on that pair either collided across
+the two records or was machine-side.**
 
 It resolved **without** a new field, because what the sighted reader lacked was space, not data
 — and F-06 supplies space on the choosing surface without committing anything.
 
-A short label would not have solved this case anyway. Two readings sharing 262 characters share
-their subject, their frame and their opening claim; any label short enough to *be* a label
-would be derived from that shared material and would collide too. The only label that separates
-the pair is one carrying the divergence — i.e. a set-relative label (structurally dishonest and
-rejected) or the whole statement (which is not a label). **The hardest case argues for the
-current data, not against it.**
+### 2.2.1 The precise evidence boundary
+
+State it exactly, because the temptation to over-read this experiment is real:
+
+- **excerpt / truncation-based labels at the tested lengths collide** on the late-divergence
+  fixtures, in both languages;
+- **no currently approved runtime short-label field exists**;
+- **no currently validated semantic-label derivation contract exists**;
+- **therefore the validated Overview ⇄ Focus architecture does not depend on one** — it was
+  proven to work without any of them;
+- a future runtime-supplied or explicitly contracted **semantic** short label remains
+  **`DEFERRED POSSIBILITY — NOT REQUESTED`**, and was **not tested and not disproved by
+  VI-02**.
+
+What the experiment did **not** establish: that every conceivable future semantic short-label
+contract, or an approved content-derived semantic transform, must fail. VI-02 tested mechanical
+excerpt derivation from the statement opening. That is the claim it earned, and the only one it
+may make.
+
+**The hardest case therefore argues that the current data is sufficient for this architecture —
+not that no label could ever work.**
 
 ### 2.3 The scope of the sufficiency claim
 
@@ -113,8 +139,12 @@ investigation **before** it ships. See
 
 The mechanical findings above stand as evidence that **if** a later phase deliberately chooses a
 persistent chip-scale reference surface — a rail, a dense cross-reference index, a voice or
-realtime shorthand, or a spatial composition whose nodes must be short — current data cannot
-make such references reliably distinguishing.
+realtime shorthand, or a spatial composition whose nodes must be short — then **no currently
+validated excerpt-based / compact-reference transform from the existing contract was proven
+reliable enough to serve as sole identity.** That surface would therefore need its own
+investigation before it could rely on one.
+
+This is a statement about what has been validated, not a prediction that nothing could work.
 
 In that event, VI-01's standing note applies unchanged: a short reading identity label remains a
 **`DEFERRED POSSIBILITY — NOT REQUESTED`**, to be investigated as its own task, with its own
