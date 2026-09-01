@@ -46,6 +46,12 @@ normative and frozen; each keeps its own registered executable guard.
 - [Integrated Brain End-to-End Hardening v2](integrated-brain-e2e-hardening-v2.md) — **FROZEN / NORMATIVE** the final adversarial integrated proof layer over QIR-001..QIR-006 on real PostgreSQL + real Redis: a three-turn cognitive loop closed only by canonical intelligence, FAST/DEEP parity, the foreground failure isolation matrix, authority conflict under exact global/per-slice context pressure, Safety BLOCK/GUIDED fail-closed integration, crash/reclaim/durable-checkpoint recovery with no replayed provider effect, integrated Question isolation and privacy, and the whole-run provider/hidden-work census (QIR-007; ZERO new production semantics; no migration)
   - **QIR-007 Addendum A — Cross-Context Adversarial & HI Capacity Proof v1** — merged closure evidence carried under QIR-007 (section 11 of the QIR-007 document): scenarios C5–C8 and the reachable Human Intelligence capacity proof (canonical all-active fixture 6427 bytes, current maximum reachable coherent footprint 7518 bytes, slice 8192 bytes, headroom 674 bytes, verdict PASS)
 
+## Experience / Structural Grammar closure
+
+**QANDEEL Phase V — Visual Language Discovery — CLOSED / FROZEN WITH EXPLICIT OPEN ITEMS.**
+
+- [Phase V — Visual Language Discovery](design/phase-v/README.md) — **CLOSED / FROZEN WITH EXPLICIT OPEN ITEMS** the canonical archive of the closed Phase V (V7 → V8 → V9 → V10 → V10-FIX-01): the frozen structural/semantic/interaction grammar, the closure record, the supporting reviews and the minimum non-production V9/V10 evidence. Documentation only; no production, runtime or database behaviour. Final graphic language, colour, typography, surfaces, iconography, motion and brand are explicitly **not** frozen and belong to Phase VI.
+
 ## Operational Foundation hardening
 
 - [Correlation & Telemetry Foundation v1](correlation-telemetry-foundation-v1.md)
