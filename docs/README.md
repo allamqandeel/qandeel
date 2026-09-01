@@ -58,7 +58,11 @@ normative and frozen; each keeps its own registered executable guard.
 
 - [VI-01 — Bilingual Product Language & UX Vocabulary Foundation](design/phase-vi/vi-01-bilingual-product-language/README.md) — **CLOSED / FROZEN AS LANGUAGE SYSTEM + SEMANTIC CONTRACTS** the canonical archive of the closed VI-01: native bilingual authorship/transcreation, one Arabic product language for v1, the Arabic register architecture, truth/semantic guardrails, naming-minimization, gender policy, peer-scaling language constraints, provenance/correction semantics, accessibility language invariants, the rejection-authority taxonomy and the exact core vocabulary marked `APPROVED`. `PROPOSED`, `OPEN`, `PROVISIONAL` entries and ordinary microcopy remain editable so long as the frozen semantic contract, runtime truth, accessibility contract and bilingual meaning hold. Documentation only; no production, runtime or database behaviour.
 
-Next task: **VI-02 — Analysis Navigation & Density Scalability**.
+- [VI-02 — Analysis Navigation & Density Scalability](design/phase-vi/vi-02-analysis-navigation-density/README.md) — **CLOSED / FROZEN AS BEHAVIORAL + NAVIGATION ARCHITECTURE** the canonical archive of the closed VI-02: the frozen clauses `F-01 … F-12` — the whole peer set precedes any reading, no system-selected winner, peers equal and unranked, every exposed peer reachable, the full statement as the canonical human-facing identity source, full identity reachable without commitment, reversible reader-chosen foreground, a permanent named route back to the set, orientation that is never currency, deep links only with that route intact, bilingual/keyboard/assistive parity, and no new runtime contract required for the validated architecture. `F3 — Overview ⇄ Focus` is the behavioural reference. Documentation only; no production, runtime or database behaviour.
+
+**VI-02 visual morphology — OPEN / carried into VI-03.** VI-02 froze *what is true for the reader*, never what the reader looks at. Vertical rows, paragraph-heavy presentation, cards, typography, colour, surfaces, iconography, brand expression, motion, generative graphics, density styling, search/filter/jump behaviour, visual anchors, spatial field, circles/grouping, relation threads and recomposition animation all remain explicitly **not** frozen. The governing rule for whatever is drawn later: *a visual relationship may be drawn only if it is true of the runtime.*
+
+Next task: **VI-03 — Visual North Star + Graphic Language**.
 
 ## Operational Foundation hardening
 
