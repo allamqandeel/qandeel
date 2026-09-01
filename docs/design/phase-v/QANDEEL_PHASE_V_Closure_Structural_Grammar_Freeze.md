@@ -90,8 +90,11 @@ raised, and changes nothing else about it.
 ## #1 HIGH-PRIORITY OPEN ITEM — Large / double-digit peer navigation
 
 The current mobile pager has a measured practical ceiling of **six controls** at 375px;
-at seven, labels wrap and clip. The runtime caps nothing and can expose peer counts far
-above that ceiling — into double digits.
+at seven, labels wrap and clip.
+The current runtime caps active hypotheses at **32 per user** (`MAX_ACTIVE_HYPOTHESES`);
+**no per-subject cap was found**, so a single subject can
+plausibly expose peer counts well beyond that six-control ceiling — into double digits. The
+runtime is bounded, not unlimited, and nothing here claims all 32 belong to one subject.
 
 The closure is explicit about what the solution may not do:
 

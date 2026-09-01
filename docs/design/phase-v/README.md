@@ -88,7 +88,10 @@ closure governs.
   counts grow.** All peers must remain reachable at any count.
 - The prototype's six-control mobile pager at 375px is **measured evidence of where the
   present form breaks — it is NOT a final solution.**
-- The runtime caps nothing and can expose peer counts into double digits.
+- The current runtime caps active hypotheses at **32 per user** (`MAX_ACTIVE_HYPOTHESES`).
+  **No per-subject cap was found**, so a single subject can plausibly expose peer counts
+  well beyond the current six-control mobile pager. The runtime is bounded, not unlimited,
+  and no claim is made that all 32 belong to one subject.
 - Not solved in Phase V, and deliberately so. The final visual and navigation answer
   belongs to Phase VI.
 

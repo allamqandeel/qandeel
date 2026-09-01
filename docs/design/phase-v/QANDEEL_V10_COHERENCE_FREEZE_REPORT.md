@@ -546,9 +546,10 @@ spacing, radius, motion curve or object form was changed.
 2. **The margin becomes texture at density.** The mark's distinguishing power is
    inversely related to how many records are on screen. A graphic language that survives
    ten consecutive records is a real requirement for the next phase.
-3. **The pager ceiling is six controls at 375px.** The runtime does not cap readings. The
-   frozen lock forbids dropping a peer, so the answer beyond six must be found, not
-   avoided.
+3. **The pager ceiling is six controls at 375px.** The runtime caps active hypotheses at
+   32 per user, with no per-subject cap found, so a single subject can plausibly exceed six
+   peers. The frozen lock forbids dropping a peer, so the answer beyond six must be found,
+   not avoided. *(Runtime figure corrected post-review — see `ARCHIVE-MANIFEST.md`.)*
 4. **Column and pane content volume is visible** and cannot be equalised truthfully.
 5. **The Live Context boundary statement sits below the fold at five items.**
 6. **The bar subtitle duplicates the anchor and truncates at 375px.**

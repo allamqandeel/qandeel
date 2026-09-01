@@ -35,7 +35,7 @@ V9. Each item carries the reason it survived, in one line.
 |---|---|---|
 | A1 | **The restraint gradient.** Conversation carries one spatial trace; the context field carries one device; Deep Analysis carries the full grammar. Depth of expression follows depth of surface | Held under density and at three peers; the conversation stayed a conversation with 11 records and three readings in the session |
 | A2 | **Peer readings are equal and unranked.** No winner, no primary, no main-and-secondary, no order that means merit | The only reason the V9 defects mattered. Now asserted geometrically at any peer count, not claimed in prose |
-| A3 | **No peer may be omitted, narrowed or truncated because there are many of them** | V9 dropped the third reading entirely (B1). The runtime does not cap readings, so the grammar must not |
+| A3 | **No peer may be omitted, narrowed or truncated because there are many of them** | V9 dropped the third reading entirely (B1). The runtime caps active hypotheses at 32 per user with no per-subject cap found, so a subject can carry far more peers than the prototype comfortably presents, and the grammar must not drop any peer the product actually exposes |
 | A4 | **A recorded item that stands in more than one reading is shown once**, with every reading it stands in named at the record, and the role it carries in each | Held with three shared records in one scene and with a record shared by two of three peers |
 | A5 | **Role membership is explicit and nominal** — supporting / contradicting, stated in words, never weighted, never counted as strength | Survived the full non-ordinal audit; no ranking vocabulary appears anywhere, not even in denial |
 | A6 | **Relationship semantics are nominal, never ordinal.** Kinds, not amounts | The whole point of the V9 direction, and the axis V7 found V6 weakest on. Asserted live in every state |
@@ -113,8 +113,10 @@ Nothing here constrains the Final Graphic Language work.*
 Named questions the next phase inherits, in priority order. Re-prioritised by `V10-FIX-01`.
 
 1. **#1 HIGH-PRIORITY OPEN ITEM — Large / double-digit peer navigation.** Six controls is
-   the measured ceiling of the current 375px pager; seven wrap and clip. The runtime caps
-   nothing, so it can expose peer counts far above that ceiling. **A3 forbids dropping a
+   the measured ceiling of the current 375px pager; seven wrap and clip. The current runtime
+   caps active hypotheses at **32 per user** (`MAX_ACTIVE_HYPOTHESES`) and **no per-subject
+   cap was found**, so a single subject can plausibly expose peer counts well beyond that
+   ceiling. The runtime is bounded, not unlimited. **A3 forbids dropping a
    peer, and no peer may be silently omitted, silently truncated away or made unreachable
    because the peer count grew — every peer must remain reachable at any count.** The
    current six-control pager is prototype evidence of where the present form breaks, not
@@ -168,8 +170,9 @@ frozen — it is a bug.
 
 **Backed by the runtime, and therefore expressible:** conversation and its timestamps;
 recorded material with a record date, a category and a status, extracted deterministically
-from the user's own words; readings held as unranked peers; **any number of readings**, not
-two; explicit stored role membership per reading; one record carrying a role in more than
+from the user's own words; readings held as unranked peers; **more than two readings**, not
+exactly two — bounded by an active-hypothesis cap of 32 per user with no per-subject cap
+found; explicit stored role membership per reading; one record carrying a role in more than
 one reading, including the same role in both, and including **some but not all** readings;
 assumptions and disconfirming conditions per reading; named unknowns with an
 OPEN / RESOLVED / SUPERSEDED lifecycle; explicit user context activation for the four
