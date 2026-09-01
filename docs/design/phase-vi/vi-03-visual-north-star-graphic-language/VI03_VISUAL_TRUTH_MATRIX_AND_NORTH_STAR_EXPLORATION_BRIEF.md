@@ -355,6 +355,11 @@ Global requirements for all nine scenes: Arabic and English versions of the syst
 *composed* (not mirrored); every scene must state which Section D items it simulates; no
 measured VI-02 number is a target.
 
+**No simulated item is ever implicit.** Each scene names its own dependencies in full, including
+`S-03` — every scene that shows readings, records, roles or unknowns to a client inherits it
+under Section D's own definition, and a scene-level declaration is required even where the
+dependency looks obvious.
+
 ---
 
 ### G-01 · Conversation → Analysis transition
@@ -382,6 +387,7 @@ measured VI-02 number is a target.
   hairline; equality is carried in words *and* not contradicted by the composition.
 - **Failure modes:** inertness; one peer visually first-among-equals; equality asserted only by
   symmetry; a composition that needs a third peer to make sense (`RB-12`).
+- **Simulated:** `S-03`.
 
 ### G-03 · Dense multi-peer overview
 
@@ -395,7 +401,7 @@ measured VI-02 number is a target.
 - **Failure modes:** solving density by hiding, summarising or truncating (`L-20`); a "+N more"
   that is not reachable; a jump/index mechanism that introduces an ordinal identity; treating
   32-per-subject as a production claim.
-- **Simulated:** `S-07`.
+- **Simulated:** `S-03`, `S-07`.
 
 ### G-04 · Focused reading
 
@@ -408,6 +414,7 @@ measured VI-02 number is a target.
 - **Failure modes:** immersive/full-bleed focus that swallows the return; motion implying
   recalculation; a lingering "current" marker on the returned overview (`L-09`); empty
   assumptions rendered as a deficiency.
+- **Simulated:** `S-03`.
 
 ### G-05 · Shared material / recorded relationship state
 
@@ -420,6 +427,7 @@ measured VI-02 number is a target.
 - **Failure modes:** thickness/size/proximity as strength (`L-16`); a line between two *readings*
   inferred from a shared record; the shared region reading as a verdict or centre; a connection
   drawn for composition rather than for a recorded membership (`L-17`).
+- **Simulated:** `S-03`.
 
 ### G-06 · Live Context
 
@@ -438,6 +446,9 @@ measured VI-02 number is a target.
   Analysis; the fixed canonical kind order read as priority (`RB-10`); English wording that
   implies computed relevance — note **`Live Context` English wording is `OPEN`** in VI-01
   (`S03`).
+- **Simulated:** `S-01`, `S-03`, `S-06`. (`S-06` because the scene requires reader activation /
+  removal and a recomposing field; the context **bindings** themselves are `RB-10` and
+  client-exposed today, but the recorded material shown in the field is not.)
 
 ### G-07 · Arabic mobile — 375px
 
@@ -450,6 +461,8 @@ measured VI-02 number is a target.
 - **Failure modes:** a mirrored LTR layout; directional metaphors that imply precedence; clipping
   that hides the divergent half of a statement; measuring at a wider viewport than the one
   claimed.
+- **Simulated:** `S-02`, `S-03`. (`S-02` because this scene renders a durable subject anchor as
+  an object — the long-subject stress case — not merely subject matter in prose.)
 
 ### G-08 · English / desktop counterpart
 
@@ -461,6 +474,7 @@ measured VI-02 number is a target.
 - **Failure modes:** English-first design with Arabic retrofitted; a desktop layout that
   introduces a hierarchy the mobile one does not have; enterprise-dashboard chrome arriving with
   the extra width.
+- **Simulated:** `S-02`, `S-03` — inherited from G-07, whose scenario this scene repeats.
 
 ### G-09 · Late-divergence identity stress case
 
@@ -475,6 +489,9 @@ measured VI-02 number is a target.
   ordinals, letters, UUIDs, rank or invented labels used to tell them apart (`L-12`); an
   abbreviation with no non-committing route to the whole statement; identity that changes when
   the peer set changes.
+- **Simulated:** `S-03`. (The late-divergence pair and the exact-duplicate pair are both states
+  the current runtime genuinely permits — `L-11`, `L-12` — so neither is a simulated semantic;
+  only the surface that shows them to a client is.)
 
 ---
 
