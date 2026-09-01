@@ -52,6 +52,14 @@ normative and frozen; each keeps its own registered executable guard.
 
 - [Phase V — Visual Language Discovery](design/phase-v/README.md) — **CLOSED / FROZEN WITH EXPLICIT OPEN ITEMS** the canonical archive of the closed Phase V (V7 → V8 → V9 → V10 → V10-FIX-01): the frozen structural/semantic/interaction grammar, the closure record, the supporting reviews and the minimum non-production V9/V10 evidence. Documentation only; no production, runtime or database behaviour. Final graphic language, colour, typography, surfaces, iconography, motion and brand are explicitly **not** frozen and belong to Phase VI.
 
+## Phase VI — Final Visual Design + Design Systemization
+
+**QANDEEL Phase VI — Final Visual Design + Design Systemization — IN PROGRESS.**
+
+- [VI-01 — Bilingual Product Language & UX Vocabulary Foundation](design/phase-vi/vi-01-bilingual-product-language/README.md) — **CLOSED / FROZEN AS LANGUAGE SYSTEM + SEMANTIC CONTRACTS** the canonical archive of the closed VI-01: native bilingual authorship/transcreation, one Arabic product language for v1, the Arabic register architecture, truth/semantic guardrails, naming-minimization, gender policy, peer-scaling language constraints, provenance/correction semantics, accessibility language invariants, the rejection-authority taxonomy and the exact core vocabulary marked `APPROVED`. `PROPOSED`, `OPEN`, `PROVISIONAL` entries and ordinary microcopy remain editable so long as the frozen semantic contract, runtime truth, accessibility contract and bilingual meaning hold. Documentation only; no production, runtime or database behaviour.
+
+Next task: **VI-02 — Analysis Navigation & Density Scalability**.
+
 ## Operational Foundation hardening
 
 - [Correlation & Telemetry Foundation v1](correlation-telemetry-foundation-v1.md)
