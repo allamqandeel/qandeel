@@ -1,0 +1,2162 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>QANDEEL — V10 · Cross-Screen Coherence Freeze — REVIEWER STRESS HARNESS — NON-CANONICAL</title>
+<meta name="robots" content="noindex">
+<style>
+/* ==================================================================
+   QANDEEL V10 — CROSS-SCREEN COHERENCE + STRUCTURAL GRAMMAR FREEZE
+   REVIEWER STRESS HARNESS. NON-CANONICAL. Phase V, task V10.
+   No build, no server, no dependency, no network request.
+
+   THIS IS NOT A REDESIGN OF V9 AND NOT A VISUAL DECISION.
+   Palette, type stack, spacing, radii, object forms, motion curves and
+   the exact margin artwork are carried over from V9 BYTE-FOR-BYTE and
+   remain TEMPORARY. Nothing here chooses QANDEEL's graphic language.
+
+   What this file adds to V9 is exactly four things:
+     1. reviewer-only STRESS FIXTURES (dense, three-peer, five-item
+        field, long Arabic) — declared simulated test density;
+     2. the minimum STRUCTURAL adaptation needed to make the grammar
+        survive them — an N-peer stage instead of a hardwired 2-peer
+        stage, and a shared-material region that can hold more than one
+        shared record;
+     3. a falsification self-check that asserts the properties the
+        freeze depends on;
+     4. reviewer chrome (evaluator strip + stress-state picker).
+
+   ------------------------------------------------------------------
+   THE THREE V9 DEFECTS THIS BUILD FIXES
+   ------------------------------------------------------------------
+   Each was reproduced in V9 by measurement, and none is reachable from
+   V9's own fixtures — V9 never holds more than two readings or more
+   than one shared record.
+
+   B1  3+ peers on the paged stage: V9 builds panes for readings[0],
+       the shared row and readings[1] only. A third reading is dropped
+       from the stage with no pane, no pager entry and no trace. The
+       runtime does not guarantee two hypotheses, so the grammar was
+       silently hiding a peer.
+       FIX: the stage is built from ALL readings.
+
+   B2  3+ peers in the desktop grid: `grid-template-columns:1fr 1fr`
+       with per-id column rules for `a` and `b` only. Measured at
+       1440px: columns came out 260 / 260 / 408px — the third peer 57%
+       wider than its equals, which is a size-encoded ranking — and the
+       third peer's role line in the shared row auto-placed into the
+       FIRST peer's column, asserting a relation that does not exist.
+       FIX: the grid is `repeat(N, minmax(0,1fr))` and every block and
+       role line is placed by its reading's index, so alignment stays
+       true for any N.
+
+   B3  2+ shared records on the desktop grid: every `.band` carried
+       `grid-row:3`, so all shared records were painted into the same
+       grid area, exactly on top of each other. Measured: two bands,
+       identical top and bottom. One shared record was invisible.
+       FIX: one `.bands` region occupies the row; the bands stack
+       inside it.
+
+   ------------------------------------------------------------------
+   THE ONE STRUCTURAL RULE ADDED
+   ------------------------------------------------------------------
+   Peers get equal columns for as long as every column still holds a
+   readable Arabic measure. When they cannot, ALL peers move to the
+   paged stage together — the same RTL paged stage the build already
+   uses at 375px. Never two columns and an orphan, never a main and a
+   secondary, never a narrower column for a later peer.
+
+   The floor is measured live, not guessed: 42 Arabic characters of
+   body text. Below it a peer column stops being a column and becomes
+   a sidebar, and a sidebar next to two columns is a rank.
+   ================================================================== */
+
+:root{
+  /* --- TEMPORARY palette, carried from V9 unchanged. Near-achromatic
+         on purpose: colour must never carry meaning, and grayscale
+         must be a non-event. --- */
+  --paper:#F2F2EF;
+  --ink:#181713;
+  --ink-2:#4A4944;
+  --ink-3:#67665F;      /* 5.14:1 on paper — the lowest text value in the build */
+  --rule:#8B8983;       /* 3.12:1 — the rules ARE the grammar, held above the 3:1 floor */
+  --rule-2:#C6C4BC;     /* grouping separators only — carries no meaning */
+  --edge:#DEDCD4;
+  --mark:#181713;
+
+  --ease-out:cubic-bezier(0.23,1,0.32,1);
+  --ease-drawer:cubic-bezier(0.32,0.72,0,1);
+
+  --gut:56px;          /* the one gutter between peer columns */
+  --barh:52px;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Segoe UI","Dubai","Geeza Pro","SF Arabic","Noto Naskh Arabic",
+              "Noto Sans Arabic",Tahoma,system-ui,sans-serif;
+  font-size:17px;
+  line-height:1.85;         /* Arabic body leading — never below 1.7 */
+  font-weight:400;          /* never below 400 for Arabic */
+  letter-spacing:normal;    /* letter-spacing is never applied to Arabic */
+  -webkit-font-smoothing:antialiased;
+}
+
+body.booting *{transition:none !important;animation:none !important}
+body.rm *,
+body.rm *::before,
+body.rm *::after{transition-duration:1ms !important;animation-duration:1ms !important;scroll-behavior:auto !important}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:1ms !important;animation-duration:1ms !important;scroll-behavior:auto !important}
+}
+body.gray .app{filter:grayscale(1)}
+
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+
+:focus-visible{outline:2px solid var(--mark);outline-offset:3px;border-radius:2px}
+:focus:not(:focus-visible){outline:none}
+
+/* ---------------- evaluator chrome (NOT product UI) ---------------- */
+.chrome{
+  font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;
+  font-size:11px;line-height:1.7;direction:ltr;
+  background:#1b1b1a;color:#d9d8d3;padding:8px 10px;
+  display:flex;flex-wrap:wrap;gap:5px;align-items:center;
+}
+.chrome .grp{display:flex;gap:4px;align-items:center;padding-inline-end:8px;margin-inline-end:4px;border-inline-end:1px solid #3a3a38}
+.chrome b{font-weight:600;color:#8d8c86;font-size:10px;text-transform:uppercase}
+.cbtn{font:inherit;background:#2b2b29;color:#d9d8d3;border:1px solid #3f3f3c;border-radius:3px;
+  padding:3px 7px;cursor:pointer;min-height:22px}
+.cbtn[aria-pressed="true"]{background:#d9d8d3;color:#1b1b1a;border-color:#d9d8d3}
+.cnote{width:100%;color:#8d8c86;font-size:10.5px;padding-top:3px}
+/* the stress declaration. Reviewer chrome, never product UI. */
+#cStress{width:100%;font-size:10.5px;padding:4px 6px;margin-top:4px;border-radius:3px;
+  background:#3a1c10;color:#f0c7b2;border:1px solid #7a3a1c}
+#cStress[hidden]{display:none}
+#cCheck{width:100%;white-space:pre-wrap;color:#c9c8c3;font-size:10.5px;max-height:250px;overflow:auto;
+  background:#131312;border:1px solid #3a3a38;border-radius:3px;padding:6px 8px;margin-top:4px}
+body.shot .chrome{display:none}
+body.sim [data-sim]{outline:1.5px dashed #8a2f16;outline-offset:2px}
+
+/* ---------------- app shell ---------------- */
+.app{max-width:none;margin:0;position:relative;min-height:100vh}
+/* Reviewer 375px clamp — behaves exactly like a 375px viewport because every
+   layout decision below is keyed on body[data-w] / body[data-stage], never on
+   a media query. Pinned to the start (right) edge: this is an RTL page. */
+body.narrow .app{max-width:375px;margin-inline-start:0;margin-inline-end:auto;
+  box-shadow:0 0 0 1px var(--edge)}
+/* Reviewer column-floor clamp: a wide viewport with a narrow content column,
+   used to reach the measured floor below which peers cannot stay columns. */
+body.w1000 .app{max-width:1000px;margin-inline-start:0;margin-inline-end:auto;
+  box-shadow:0 0 0 1px var(--edge)}
+/* Capture only. Headless Chrome refuses a layout viewport below ~504px, so a
+   375px screenshot is a crop of a wider layout; without this the clamped frame
+   would be sliced. Changes nothing INSIDE the frame. */
+body.shot.narrow .app{margin-inline-start:auto;margin-inline-end:0;box-shadow:none}
+body.shot.narrow .dock{width:375px;left:0;right:auto}
+body.shot.narrow[data-w="narrow"] .dock{left:0;right:auto;width:375px}
+
+.bar{
+  position:sticky;top:0;z-index:40;background:var(--paper);
+  min-height:var(--barh);display:flex;align-items:center;gap:10px;
+  padding:6px 20px;border-bottom:1px solid var(--rule-2);
+}
+.bar .brand{font-size:17px;font-weight:700;line-height:1.6;letter-spacing:normal}
+.bar .sub{font-size:13.5px;line-height:1.7;color:var(--ink-3);flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .acts{display:flex;gap:4px;align-items:center;flex:none}
+
+.btn{
+  font:inherit;font-size:15px;line-height:1.7;color:var(--ink);
+  background:none;border:0;border-radius:3px;
+  min-height:44px;padding:6px 10px;cursor:pointer;
+  transition:transform 120ms var(--ease-out), color 120ms ease;
+}
+.btn:active{transform:scale(0.98)}
+@media (hover:hover) and (pointer:fine){ .btn:hover{color:var(--ink-2)} }
+.btn--line{position:relative}
+.btn--line::after{content:"";position:absolute;inset-inline:10px;bottom:9px;height:1px;background:var(--rule)}
+.btn--strong{font-weight:600}
+.btn[aria-pressed="true"]{font-weight:600}
+
+/* ---------------- shared object grammar (V9, unchanged) ---------------- */
+.rec{
+  --rule-now:var(--rule);
+  position:relative;
+  padding-inline-start:20px;
+  padding-block:2px;
+  margin-block-end:24px;
+  background:transparent;                 /* ONE ground. Asserted live. */
+}
+.rec::before{
+  content:"";position:absolute;inset-block:4px;inset-inline-start:0;
+  width:1px;background:var(--rule-now);
+}
+.rec[data-rule="two"]{padding-inline-start:26px}
+.rec[data-rule="two"]::before{
+  width:6px;background:none;
+  background-image:repeating-linear-gradient(to right,var(--rule-now) 0 1px,transparent 1px 5px,var(--rule-now) 5px 6px);
+}
+.rec[data-rule="open"]::before{
+  background:linear-gradient(to bottom,var(--rule-now) 0 30%,transparent 30% 62%,var(--rule-now) 62% 100%);
+}
+.rec .tx{font-size:17px;line-height:1.85;color:var(--ink);margin:0}
+
+.rec[data-front="1"]{
+  margin-inline-start:-18px;margin-inline-end:-18px;
+  padding-inline-start:38px;padding-inline-end:18px;
+  padding-block:12px;
+  transition:padding 140ms var(--ease-out), margin 140ms var(--ease-out);
+}
+.rec[data-front="1"]::after{
+  content:"";position:absolute;inset-block-start:0;inset-inline-end:0;
+  width:14px;height:14px;border-block-start:2px solid var(--ink);border-inline-end:2px solid var(--ink);
+}
+.rec[data-front="1"] > .brk{
+  position:absolute;inset-block-end:0;inset-inline-start:0;
+  width:14px;height:14px;border-block-end:2px solid var(--ink);border-inline-start:2px solid var(--ink);
+}
+.receded .tx,.receded .meta,.receded .prov{color:var(--ink-3)}
+.receded .rec{--rule-now:var(--rule-2)}
+.receded .rec[data-front="1"]{--rule-now:var(--rule)}
+.receded .rec[data-front="1"] .tx{color:var(--ink)}
+.receded .rec[data-front="1"] .prov{color:var(--ink-2)}
+
+.prov{
+  display:inline-flex;align-items:center;gap:7px;
+  font:inherit;font-size:13.5px;line-height:1.7;color:var(--ink-3);
+  background:none;border:0;padding:11px 0;min-height:44px;cursor:pointer;text-align:start;
+  transition:color 120ms ease,transform 120ms var(--ease-out);
+}
+.prov:active{transform:scale(0.99)}
+@media (hover:hover) and (pointer:fine){ .prov:hover{color:var(--ink-2)} }
+.prov .car{width:7px;height:7px;border-inline-end:1px solid currentColor;border-block-end:1px solid currentColor;
+  transform:rotate(45deg);transition:transform 160ms var(--ease-out);flex:none;margin-block-start:-3px}
+.prov[aria-expanded="true"] .car{transform:rotate(-135deg);margin-block-start:2px}
+.prov .un{border-bottom:1px solid var(--rule);padding-bottom:1px}
+
+.acct{margin:2px 0 0;padding-inline-start:0}
+.acct p{margin:0 0 8px;font-size:14.5px;line-height:1.8;color:var(--ink-2)}
+.acct .facts{margin:0 0 10px;font-size:13.5px;line-height:1.8;color:var(--ink-3)}
+.reveal{animation:rv 180ms var(--ease-out) both}
+@keyframes rv{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.eyebrow{font-size:13px;line-height:1.7;color:var(--ink-3);margin:0 0 10px;font-weight:600}
+.note{font-size:14.5px;line-height:1.8;color:var(--ink-2);margin:0 0 18px;max-width:62ch}
+.pending{font-size:14px;line-height:1.8;color:var(--ink-2);margin:6px 0 0}
+.pending::before{content:"";display:inline-block;width:10px;height:1px;background:var(--rule);
+  vertical-align:middle;margin-inline-end:8px}
+
+/* ---------------- layout regions ---------------- */
+.stagearea{display:grid;grid-template-columns:minmax(0,1fr);position:relative}
+body[data-w="wide"] .stagearea.with-field{grid-template-columns:minmax(0,1fr) 384px}
+main{min-width:0;padding:0 20px 96px}
+body[data-w="wide"] main{padding-inline:32px}
+
+/* ---------------- HOME ---------------- */
+.home{max-width:60ch;margin:0;padding-block-start:72px}
+body[data-w="narrow"] .home{padding-block-start:40px}
+.home .kicker{font-size:13px;line-height:1.7;color:var(--ink-3);margin:0 0 8px;font-weight:600}
+.home h1{
+  margin:0 0 8px;font-size:clamp(28px,4.6vw,42px);
+  line-height:1.5;                 /* Arabic display leading is NEVER compressed */
+  font-weight:700;letter-spacing:normal;max-width:22ch;
+}
+.home .last{margin:38px 0 0;max-width:60ch;padding-block-start:20px;border-top:1px solid var(--rule-2)}
+.home .last .lab{font-size:13px;color:var(--ink-3);font-weight:600;margin:0 0 14px;line-height:1.7}
+.home .last .turn:last-child{margin-block-end:0}
+.home .acts{display:flex;flex-direction:column;align-items:flex-start;gap:0;margin-top:32px}
+.home .acts .big{font-size:19px;font-weight:600;line-height:1.7;min-height:48px}
+.home .acts .sub{font-size:14.5px;color:var(--ink-3);line-height:1.8;margin:8px 0 2px;padding-inline-start:10px}
+.home .none{font-size:15px;color:var(--ink-2);line-height:1.8;margin-top:28px;max-width:52ch}
+
+/* ---------------- CONVERSATION — the quietest surface ---------------- */
+.conv{max-width:64ch;margin:0;padding-block-start:26px}
+.turn{margin-block-end:26px}
+.turn .meta{font-size:13px;line-height:1.7;color:var(--ink-3);margin:0 0 3px;display:flex;gap:10px}
+.turn .body{font-size:17px;line-height:1.85;margin:0}
+.turn.q{position:relative;padding-inline-start:20px}
+.turn.q::before{content:"";position:absolute;inset-block:4px;inset-inline-start:0;width:1px;background:var(--rule)}
+.turn .fix{margin-top:2px}
+.turn .fix .btn{font-size:13.5px;color:var(--ink-3);padding-inline:0;min-height:44px}
+.turn .fix .btn::after{content:"";display:block;height:1px;background:var(--rule-2);margin-top:-12px}
+
+.presence{margin:30px 0 0;padding-block-start:18px;border-top:1px solid var(--rule-2);
+  display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;max-width:64ch}
+.presence p{margin:0;font-size:14.5px;line-height:1.8;color:var(--ink-2);flex:1 1 16ch;min-width:0}
+.composer{
+  max-width:64ch;margin-top:20px;display:flex;gap:6px;align-items:flex-end;
+  border:1px solid var(--rule-2);border-radius:6px;padding:6px 6px 6px 10px;background:var(--paper);
+}
+.composer textarea{
+  flex:1;min-width:0;font:inherit;font-size:16px;line-height:1.8;color:var(--ink);
+  background:transparent;border:0;resize:none;padding:9px 4px;min-height:46px;max-height:150px;
+}
+.composer textarea:focus{outline:none}
+.composer:focus-within{border-color:var(--rule)}
+
+/* ---------------- THE SCENE (Deep Analysis) ---------------- */
+.scene{margin:0 auto;padding-block-start:0}     /* max-width set per peer count */
+.anchor{
+  position:sticky;top:var(--barh);z-index:20;background:var(--paper);
+  padding-block:20px 14px;border-bottom:1px solid var(--rule-2);margin-block-end:26px;
+}
+.anchor .kicker{font-size:13px;line-height:1.7;color:var(--ink-3);font-weight:600;margin:0 0 6px}
+.anchor h2{
+  margin:0;font-size:clamp(27px,3.6vw,40px);
+  line-height:1.5;               /* no compressed Arabic display, at any size */
+  font-weight:700;letter-spacing:normal;max-width:24ch;
+}
+.parity{font-size:15px;line-height:1.8;color:var(--ink-2);margin:0 0 30px;max-width:60ch}
+
+/* Desktop: N EQUAL peer columns + one region that spans them.
+   V9 hardwired `1fr 1fr` and mapped columns by reading id, which produced
+   unequal columns and a mis-placed role line at three peers (B2). The count
+   is now a variable and placement is by index, so the alignment that carries
+   the shared-material relation stays true for any N. */
+.grid{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));
+  column-gap:var(--gut);align-items:start}
+.blk{min-width:0}
+/* ONE region, N shared records inside it (B3). The region carries the boundary
+   rule and the heading; the records inside it are separated from each other by
+   the same rule. Same values as V9's per-band treatment — the rule moved, it
+   did not change. */
+.bands{grid-column:1 / -1;grid-row:3;min-width:0;
+  border-top:1px solid var(--rule-2);padding-block-start:22px;margin-block-start:4px}
+
+.rname{font-size:13px;line-height:1.7;color:var(--ink-3);font-weight:600;margin:0 0 8px}
+.stmt{font-size:clamp(18px,1.55vw,20px);line-height:1.75;font-weight:600;margin:0 0 26px;color:var(--ink)}
+.disc{
+  font:inherit;font-size:14.5px;line-height:1.8;color:var(--ink-2);background:none;border:0;
+  padding:11px 0;min-height:44px;cursor:pointer;display:inline-flex;gap:7px;align-items:center;text-align:start;
+  transition:transform 120ms var(--ease-out),color 120ms ease;
+}
+.disc:active{transform:scale(0.99)}
+.disc .car{width:7px;height:7px;border-inline-end:1px solid currentColor;border-block-end:1px solid currentColor;
+  transform:rotate(45deg);transition:transform 160ms var(--ease-out);flex:none;margin-block-start:-3px}
+.disc[aria-expanded="true"] .car{transform:rotate(-135deg);margin-block-start:2px}
+.ground{margin:2px 0 22px}
+.ground h4{font-size:13px;line-height:1.7;color:var(--ink-3);font-weight:600;margin:0 0 6px}
+.ground ul{margin:0 0 16px;padding-inline-start:18px;list-style:none}
+.ground li{font-size:15.5px;line-height:1.8;color:var(--ink-2);margin-block-end:10px;position:relative}
+.ground li::before{content:"";position:absolute;inset-inline-start:-18px;inset-block-start:0.85em;
+  width:8px;height:1px;background:var(--rule)}
+
+/* The shared band — one row that CROSSES the peers, on the SAME ground as
+   everything else. Each role line drops back into its own reading's track and
+   picks up that reading's exact margin position. The alignment IS the relation:
+   no connector, no arrow, no thickness. */
+.bandhead{font-size:13px;line-height:1.7;color:var(--ink-3);font-weight:600;margin:0 0 10px}
+.band ~ .band{border-top:1px solid var(--rule-2);padding-block-start:22px;margin-block-start:18px}
+.band .rec{margin-block-end:6px}
+.band .rec .tx{max-width:56ch}
+.band .roles{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));
+  column-gap:var(--gut);margin-block-start:2px}
+.band .role{margin:0 0 18px;position:relative;padding-inline-start:20px;font-size:15.5px;line-height:1.8;color:var(--ink-2)}
+.band .role::before{content:"";position:absolute;inset-block:4px;inset-inline-start:0;width:1px;background:var(--rule)}
+
+.unk .st{font-size:13.5px;line-height:1.7;color:var(--ink-2);font-weight:600;margin:0 0 4px}
+.unk .why{font-size:14px;line-height:1.8;color:var(--ink-3);margin:6px 0 0}
+
+.focusnote{margin:0 0 22px;padding-block-start:14px;border-top:1px solid var(--rule-2)}
+.focusnote p{margin:0;font-size:14.5px;line-height:1.8;color:var(--ink-2);max-width:60ch}
+.restraint{margin:48px 0 0;padding-block-start:18px;border-top:1px solid var(--rule-2)}
+.restraint p{margin:0;font-size:14.5px;line-height:1.8;color:var(--ink-2);max-width:60ch}
+.acts-row{display:flex;flex-wrap:wrap;gap:2px 14px;align-items:center;margin-block-start:-4px}
+.acts-row .btn{font-size:13.5px;color:var(--ink-3);padding-inline:0}
+
+/* ---------------- THE PAGED STAGE ----------------
+   Keyed on body[data-stage="paged"], not on the breakpoint. It is the 375px
+   stage, and it is ALSO what a wide viewport gets when N peers can no longer
+   each hold a readable measure. Same device, same equality, no new geometry. */
+body[data-stage="paged"] .scene{max-width:none}
+body[data-stage="paged"] .grid{display:block}
+body[data-stage="paged"] .pager{
+  display:flex;gap:0;margin:0 0 24px;border-top:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2);
+}
+.pager{display:none}
+.pager button{
+  flex:1 1 0;min-width:0;font:inherit;font-size:14.5px;line-height:1.7;font-weight:400;
+  color:var(--ink);background:none;border:0;border-inline-start:1px solid var(--rule-2);
+  padding:12px 4px;min-height:48px;cursor:pointer;position:relative;
+  transition:transform 120ms var(--ease-out);
+}
+.pager button:first-child{border-inline-start:0}
+.pager button:active{transform:scale(0.98)}
+/* the mark says WHAT YOU ARE VIEWING — not what is better.
+   Type, weight, width and ground are identical on every peer control. */
+.pager button[aria-current="true"]::after{
+  content:"";position:absolute;inset-inline:10px;bottom:-1px;height:2px;background:var(--ink);
+}
+body[data-stage="paged"] .track{
+  display:flex;align-items:start;             /* never stretch: an empty pane is a lie */
+  gap:14px;overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x mandatory;position:relative;
+  scrollbar-width:none;-ms-overflow-style:none;
+  padding-block-end:4px;
+}
+body[data-stage="paged"] .track::-webkit-scrollbar{display:none}
+body[data-stage="paged"] .track > .pane{flex:0 0 100%;scroll-snap-align:start;min-width:0}
+/* The paged stage now also runs on WIDE viewports, where a full-width pane
+   would hand Arabic a 130-character measure. Removing the floor must not
+   introduce a ceiling: the pane's blocks take the same 62ch cap the build
+   already applies to its other prose. At 375px every block is already narrower
+   than this, so no narrow state changes. */
+body[data-stage="paged"] .pane > *{max-width:62ch}
+body[data-stage="paged"] .band .roles{grid-template-columns:minmax(0,1fr)}
+body[data-w="narrow"] .anchor h2{font-size:27px;max-width:none}
+body[data-w="narrow"] .stmt{font-size:18px}
+
+/* ---------------- LIVE CONTEXT ---------------- */
+.dock{display:contents}
+body[data-w="narrow"] .dock{display:block;position:fixed;inset:0;z-index:60;overflow:hidden;pointer-events:none}
+body.narrow[data-w="narrow"] .dock{left:auto;right:0;width:375px}
+body[data-w="narrow"] .dock > *{pointer-events:auto}
+
+.field{
+  min-width:0;background:var(--paper);
+  border-inline-start:1px solid var(--rule-2);
+}
+body[data-w="wide"] .field{position:sticky;top:var(--barh);align-self:start;
+  max-height:calc(100vh - var(--barh));overflow:auto;padding:24px 24px 60px}
+body[data-w="wide"] .field[hidden]{display:none}
+body[data-w="narrow"] .field{
+  position:absolute;inset-block:0;width:min(340px,88%);
+  left:0;right:auto;                     /* RTL: the field docks at the OUTWARD edge */
+  box-shadow:14px 0 40px -24px rgba(0,0,0,.34);
+  transform:translateX(-100%);
+  transition:transform 240ms var(--ease-drawer);
+  overflow:auto;padding:18px 18px 60px;
+}
+body[data-w="narrow"] .field.open{transform:translateX(0)}
+body[data-w="narrow"] .field:not(.open){pointer-events:none}
+#scrim{position:fixed;inset:0;z-index:55;background:rgba(24,23,19,.28);border:0;padding:0;margin:0;cursor:pointer}
+#scrim[hidden]{display:none}
+.field h2{font-size:19px;line-height:1.7;font-weight:700;margin:0 0 6px}
+.field .kinds{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 22px}
+.field .kinds .btn{font-size:14px;min-height:44px;padding:6px 12px;border:1px solid var(--rule-2);border-radius:999px}
+.field .kinds .btn[aria-pressed="true"]{border-color:var(--ink);font-weight:600}
+.field .kinds .btn[aria-pressed="true"]::before{content:"";display:inline-block;width:7px;height:7px;
+  background:var(--ink);border-radius:50%;margin-inline-end:7px;vertical-align:middle}
+.field .item{padding-block:2px 14px}
+.field .item ~ .item{border-top:1px solid var(--rule-2);padding-block-start:16px}
+.field .item .rec{margin-block-end:2px}
+.field .row{display:flex;flex-wrap:wrap;gap:0 16px;align-items:center;padding-inline-start:20px}
+.field .row .btn{font-size:13.5px;color:var(--ink-3);padding-inline:0;min-height:44px}
+.field .bnd{font-size:14px;line-height:1.8;color:var(--ink-3);margin:26px 0 0;padding-block-start:14px;
+  border-top:1px solid var(--rule-2)}
+
+/* ---------------- dialogs (native modal: real trap, real inert) ---------------- */
+dialog{
+  border:0;border-radius:8px;padding:0;max-width:min(560px,92vw);width:100%;
+  background:var(--paper);color:var(--ink);
+  box-shadow:0 26px 70px -28px rgba(24,23,19,.5);
+}
+dialog::backdrop{background:rgba(24,23,19,.34)}
+.dlg{padding:22px 22px 18px;direction:rtl;text-align:start}
+.dlg h2{margin:0 0 12px;font-size:19px;line-height:1.7;font-weight:700}
+.dlg p{margin:0 0 14px;font-size:15px;line-height:1.85;color:var(--ink-2)}
+.dlg textarea{width:100%;font:inherit;font-size:16px;line-height:1.8;color:var(--ink);
+  background:transparent;border:1px solid var(--rule-2);border-radius:6px;padding:10px;min-height:96px;resize:vertical}
+.dlg .foot{display:flex;gap:10px;justify-content:flex-start;margin-top:14px;flex-wrap:wrap}
+.dlg .warn{font-size:14.5px;line-height:1.85;color:var(--ink-2);border-inline-start:1px solid var(--rule);
+  padding-inline-start:14px;margin:0 0 16px}
+#manifest .dlg{max-height:78vh;overflow:auto}
+#manifest .dlg h3{font-size:14px;margin:18px 0 6px;line-height:1.7}
+#manifest .dlg li{font-size:14px;line-height:1.8;color:var(--ink-2);margin-block-end:6px}
+#manifest .dlg ul{padding-inline-start:18px;margin:0}
+
+/* ==================================================================
+   STRESS-STATE PICKER — reviewer harness chrome, NOT product UI and
+   NOT a design decision. Markup, styles and highlight behaviour are
+   the `prototype` skill's PICKER.md spec, verbatim. Two behavioural
+   deviations, both documented in README.md:
+     · it persists `?r=<route>` instead of `?v=<n>`, so a reload
+       reproduces the exact reviewer state the phase's deep links use;
+     · its ←/→ handler stands down while focus is inside the paged
+       stage, where those keys already page between peers.
+   ================================================================== */
+.proto-picker {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.82);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 8px 24px rgba(0, 0, 0, 0.24),
+    0 2px 6px rgba(0, 0, 0, 0.12);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.proto-picker-highlight {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  will-change: transform;
+}
+.proto-picker[data-ready] .proto-picker-highlight {
+  transition:
+    transform 250ms cubic-bezier(0.23, 1, 0.32, 1),
+    width 250ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@media (prefers-reduced-motion: reduce){
+  .proto-picker[data-ready] .proto-picker-highlight { transition: none; }
+}
+.proto-picker-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  cursor: pointer;
+  transition: color 150ms ease-out;
+}
+.proto-picker-item:hover { color: rgba(255, 255, 255, 0.85); }
+.proto-picker-item:active { transform: scale(0.97); }
+.proto-picker-item:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.4); outline-offset: 2px; }
+.proto-picker-item[data-active] { color: #fff; }
+.proto-picker-divider { width: 1px; height: 16px; margin: 0 4px; background: rgba(255, 255, 255, 0.12); }
+.proto-picker-replay { padding: 0 10px; font-size: 14px; }
+.proto-picker[data-position="top"] { bottom: auto; top: 24px; }
+body.shot .proto-picker{display:none}
+</style>
+</head>
+<body class="booting">
+
+<!-- ============ EVALUATOR CHROME — reviewer only, never product UI ============ -->
+<div class="chrome" id="chrome">
+  <div class="grp"><b>state</b><span id="cState"></span></div>
+  <div class="grp"><b>surface</b><span id="cSurface"></span></div>
+  <div class="grp"><b>view</b>
+    <button class="cbtn" id="tNarrow" aria-pressed="false">375px</button>
+    <button class="cbtn" id="tW1000" aria-pressed="false">1000px col-floor</button>
+    <button class="cbtn" id="tGray" aria-pressed="false">Grayscale</button>
+    <button class="cbtn" id="tRm" aria-pressed="false">Reduced motion</button>
+    <button class="cbtn" id="tSim" aria-pressed="false">Mark simulated</button>
+    <button class="cbtn" id="tLong" aria-pressed="false">Long Arabic</button>
+  </div>
+  <div class="grp"><b>docs</b>
+    <button class="cbtn" id="tMan">Truth manifest</button>
+    <button class="cbtn" id="tCheck">Truth + freeze self-check</button>
+  </div>
+  <div class="grp" style="flex-wrap:wrap"><b>routes</b><span id="cRoutes" style="display:flex;flex-wrap:wrap;gap:4px"></span></div>
+  <div class="cnote" id="cNote"></div>
+  <div id="cStress" hidden></div>
+  <pre id="cCheck" hidden></pre>
+</div>
+
+<div class="app" id="app">
+  <header class="bar">
+    <span class="brand">قنديل</span>
+    <span class="sub" id="barSub">الجلسة الحالية</span>
+    <span class="acts">
+      <button class="btn" id="backBtn" hidden data-fk="backBtn">رجوع</button>
+      <button class="btn" id="fieldBtn" aria-controls="field" aria-pressed="false" data-fk="fieldBtn">الشغّال دلوقتي</button>
+    </span>
+  </header>
+
+  <div class="stagearea" id="stagearea">
+    <main id="main">
+      <section id="vHome" aria-labelledby="hHome"><h1 class="sr-only" id="hHome">قنديل</h1><div id="homeBody"></div></section>
+
+      <section id="vConv" aria-labelledby="hConv" hidden>
+        <h2 class="sr-only" id="hConv">الكلام</h2>
+        <div class="conv">
+          <div id="turns"></div>
+          <div id="presence"></div>
+          <!-- STATIC DOM. Never rebuilt, so the draft, the caret and focus
+               survive every render and every breakpoint crossing by
+               construction, not by restoration. -->
+          <div class="composer">
+            <label class="sr-only" for="composerInput">اكتب لقنديل</label>
+            <textarea id="composerInput" rows="1" placeholder="اكتب…" data-draft="composer" data-fk="composer"></textarea>
+            <button class="btn btn--strong" id="composerSend" data-fk="send">ابعت</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="vScene" aria-labelledby="hScene" hidden>
+        <h2 class="sr-only" id="hScene">المشهد</h2>
+        <div id="sceneBody"></div>
+      </section>
+    </main>
+
+    <div class="dock">
+      <aside class="field" id="field" hidden aria-labelledby="hField">
+        <h2 id="hField">الشغّال دلوقتي</h2>
+        <div id="fieldBody"></div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<button id="scrim" hidden aria-label="اقفل الشغّال دلوقتي"></button>
+<div class="sr-only" id="live" role="status" aria-live="polite"></div>
+
+<dialog id="sheet" aria-labelledby="sheetTitle">
+  <form method="dialog" class="dlg" id="sheetForm">
+    <h2 id="sheetTitle">قول اللي مش مظبوط</h2>
+    <p id="sheetSubject"></p>
+    <p class="warn">اللي هتكتبه هيوصل ويفضل ظاهر في الكلام. الحاجة المسجّلة هتفضل زي ما هي، والقراءات والأدوار واللي لسه ناقص كمان.</p>
+    <label class="sr-only" for="fixText">اكتب التصحيح</label>
+    <textarea id="fixText" data-draft="correction" data-fk="fixText" placeholder="اكتب اللي مش مظبوط…"></textarea>
+    <div class="foot">
+      <button class="btn btn--strong btn--line" id="fixSend" value="send" type="submit">ابعت التصحيح</button>
+      <button class="btn" id="fixCancel" value="cancel" type="submit">إلغاء</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="manifest" aria-labelledby="manTitle">
+  <div class="dlg">
+    <h2 id="manTitle">دفتر الصدق — مُلخّص للمراجعة</h2>
+    <p>النسخة الكاملة في <code>TRUTH-MANIFEST.md</code>. ده مُلخّص داخل الصفحة.</p>
+    <h3>مدعوم من الرَنتايم</h3>
+    <ul>
+      <li>الكلام ومواعيده.</li>
+      <li>حاجات مسجّلة من كلام المستخدم، بتاريخ تسجيل ونوع وحالة.</li>
+      <li>قراءات مستديمة جنب بعض، من غير ما حاجة تتقدّم على حاجة.</li>
+      <li>دور مخزَّن لكل حاجة في كل قراءة: بتسند / بتشدّ ضد.</li>
+      <li>نفس الحاجة داخلة في أكتر من قراءة.</li>
+      <li>أكتر من قراءتين للموضوع الواحد — الرَنتايم مش بيمنع ده.</li>
+      <li>مفترضات وشروط مراجعة لكل قراءة.</li>
+      <li>حاجات ناقصة مسمّاة، وحالتها: لسه ناقصة / اتقفلت / اتغيّرت.</li>
+      <li>تفعيل وإلغاء تفعيل السياق من المستخدم نفسه.</li>
+    </ul>
+    <h3>مُحاكى لاختبار التجربة</h3>
+    <ul>
+      <li><strong>كثافة الاختبار نفسها: الحالات الكتيفة والقراءات التلاتة والخمس حاجات في الشغّال دلوقتي كلها بيانات اختبار، مش بيانات مستخدم.</strong></li>
+      <li>الموضوع اللي فوق مستوى القراءة («قرار الشغل الجديد»).</li>
+      <li>شكل الحالة على مستوى المنتج، وشاشة البداية.</li>
+      <li>اختيار اللي بيظهر في «الشغّال دلوقتي» وترتيبه.</li>
+      <li>الرفع قدّام والرجوع والاستبعاد وإعادة التكوين.</li>
+      <li>الاستمرارية بين الشاشات.</li>
+    </ul>
+    <h3>ممنوع الاستنتاج</h3>
+    <ul>
+      <li>نسبة ثقة أو درجة أو ترتيب أو قوة علاقة أو وزن دليل.</li>
+      <li>إن إجابة قفلت حاجة ناقصة.</li>
+      <li>إن التصحيح غيّر أي حاجة مخزَّنة.</li>
+      <li>الحاجة المسجّلة كنقل حرفي، أو ربطها بدور محدّد في الكلام.</li>
+      <li>ترتيب زمني للأحداث من تواريخ التسجيل.</li>
+    </ul>
+    <div class="foot"><button class="btn btn--strong btn--line" id="manClose">اقفل</button></div>
+  </div>
+</dialog>
+
+<nav class="proto-picker" aria-label="Reviewer stress states">
+  <span class="proto-picker-highlight" aria-hidden="true"></span>
+  <button class="proto-picker-item" data-active aria-current="true" data-route="dense-analysis-desktop">Dense</button>
+  <button class="proto-picker-item" data-route="three-peer-analysis-desktop">3 peers</button>
+  <button class="proto-picker-item" data-route="live-context-five-items-375">Live ×5</button>
+  <button class="proto-picker-item" data-route="long-arabic-analysis-375">Long AR</button>
+  <button class="proto-picker-item" data-route="v9-reference-analysis-two-peer-375">V9 ref</button>
+  <span class="proto-picker-divider" aria-hidden="true"></span>
+  <button class="proto-picker-item proto-picker-replay" aria-label="Replay state (R)">↻</button>
+</nav>
+
+<script>
+/* ==================================================================
+   V10 reviewer stress harness. Every object below is a LOCAL FIXTURE;
+   nothing is fetched.
+
+   s0–s5 are V9's fixtures, unchanged, so the reference states are the
+   same content V5B and V6 were judged on.
+
+   d1 / p3 are REVIEWER STRESS FIXTURES: simulated test density, built
+   to falsify the grammar, NOT runtime-derived user data. Every object
+   in them carries data-sim, the evaluator strip declares them, and
+   TRUTH-MANIFEST.md records the boundary.
+   ================================================================== */
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+
+/* ---------- recorded material ----------
+   m1–m6 are V9's, byte-identical. m7–m11 exist only for the dense and
+   three-peer stress fixtures. */
+const M = {
+  m1:{id:'m1',txt:'بقاله سنتين في شغله الحالي',date:'٢٠٢٦/٠٨/٠٤',cat:'واقعة شخصية',status:'سارية'},
+  m2:{id:'m2',txt:'أكتر حاجة مضايقاه في شغله الحالي إنه مش بيتعلّم حاجة جديدة',date:'٢٠٢٦/٠٨/٠٤',cat:'واقعة شخصية',status:'سارية'},
+  m3:{id:'m3',txt:'مرتاح مع الفريق اللي بيشتغل معاه وبيحب الناس دي',date:'٢٠٢٦/٠٨/١١',cat:'سياق علاقة',status:'سارية'},
+  m4:{id:'m4',txt:'قدّم على العرض الجديد من غير ما يقول لحد',date:'٢٠٢٦/٠٨/١٨',cat:'قرار',status:'سارية'},
+  m5:{id:'m5',txt:'الفترة اللي فاتت بينام متأخر وبيصحى تعبان',date:'٢٠٢٦/٠٨/١٦',cat:'حالة مؤقتة',status:'سارية'},
+  m6:{id:'m6',txt:'عايز يقفل الموضوع ده قبل آخر الشهر',date:'٢٠٢٦/٠٨/٢٠',cat:'قرار',status:'سارية'},
+  /* long Arabic, on purpose: the measure must survive real sentences */
+  m7:{id:'m7',txt:'قال إن المدير الحالي بيدّيله مساحة يشتغل بيها زي ما هو عايز، وإن دي حاجة مش هيلاقيها بسهولة في أي مكان تاني، خصوصاً إنه جرّب قبل كده يشتغل تحت حد بيراجع كل خطوة معاه.',date:'٢٠٢٦/٠٨/٠٦',cat:'سياق علاقة',status:'سارية'},
+  m8:{id:'m8',txt:'بيقول إن الفلوس في العرض الجديد أحسن شوية، بس مش الفرق ده اللي بيخلّيه يفكّر؛ لأنه لو كان الموضوع فلوس كان زمانه مشي من سنة.',date:'٢٠٢٦/٠٨/٠٩',cat:'واقعة شخصية',status:'سارية'},
+  m9:{id:'m9',txt:'الفترة اللي فاتت بقى بيأجّل قرارات صغيرة كتير، مش الموضوع ده بس.',date:'٢٠٢٦/٠٨/١٥',cat:'حالة مؤقتة',status:'سارية'},
+  m10:{id:'m10',txt:'اتكلم مع اتنين من اللي اشتغلوا في الشركة الجديدة، وكل واحد فيهم قال له حاجة مختلفة تماماً عن التاني عن طريقة الشغل هناك؛ واحد قال إن فيه تعلّم كتير، والتاني قال إن الشغل بيتكرّر.',date:'٢٠٢٦/٠٨/١٩',cat:'واقعة شخصية',status:'سارية'},
+  m11:{id:'m11',txt:'مراته قالت له إنها مش هتضغط عليه في القرار ده، بس هي حاسّة إنه تعبان الفترة دي.',date:'٢٠٢٦/٠٨/٢١',cat:'سياق علاقة',status:'سارية'}
+};
+
+const CONV_BASE = [
+  {who:'user',t:'بقالي أسبوعين مش عارف أقرر في موضوع العرض اللي جالي.',time:'٢:١٤ م'},
+  {who:'q',recites:true,t:'واضح إنك بتلفّ حوالين نفس النقطة من فترة. خليني أقول لك الأول اللي مسجّل عندي من كلامك، من غير ما أزوّد عليه: مسجّل إنك بقالك سنتين في شغلك، وإن أكتر حاجة مضايقاك إنك مش بتتعلّم جديد، وإنك في نفس الوقت مرتاح مع الفريق اللي معاك.',time:'٢:١٤ م'},
+  {who:'user',t:'آه بالظبط كده.',time:'٢:١٦ م'},
+  {who:'q',t:'عندي للموضوع ده قراءتين، ومش هرجّح واحدة على التانية — دي مش وظيفتي هنا. بس فيه حاجة واحدة لو عرفتها هتفرق معايا: العرض الجديد نفسه بيقدّم إيه بالظبط من ناحية التعلّم؟',time:'٢:١٦ م'}
+];
+const CONV_THIN = [
+  {who:'user',t:'أول مرة أكتب هنا. بقالي سنتين في شغلي وحاسس إني واقف مكاني.',time:'١١:٠٢ ص'},
+  {who:'q',recites:true,t:'مسجّل عندي الحاجتين دول من كلامك دلوقتي وبس. لسه بدري عليّا أقول لك إني فاهم الموضوع؛ لو حكيت لي أكتر عن اللي بيخلّيك حاسس إنك واقف، هيبقى عندي حاجة أشتغل عليها.',time:'١١:٠٢ ص'}
+];
+/* a longer session, for the dense fixture */
+const CONV_DENSE = CONV_BASE.concat([
+  {who:'user',t:'اتكلمت مع ناس اشتغلوا هناك، وكل واحد قال لي حاجة مختلفة خالص.',time:'٢:١٨ م'},
+  {who:'q',recites:true,t:'سجّلت الحاجة دي من كلامك. وعشان أكون واضح: أنا مسجّل كمان إنك قلت إن مديرك الحالي بيدّيك مساحة، وإن الفلوس مش هي اللي بتخلّيك تفكّر. الحاجتين دول داخلين في القراءتين بشكل مختلف، وهتلاقيهم في المشهد.',time:'٢:١٨ م'},
+  {who:'user',t:'وكمان مراتي حاسّة إني تعبان، بس مش بتضغط عليّا.',time:'٢:٢٠ م'}
+]);
+
+const R_A = {
+  id:'a', name:'قراءة أ',
+  stmt:'اللي بيشدّه ناحية العرض الجديد هو إنه عايز يتعلّم حاجة مختلفة، مش الفلوس ولا المسمّى الوظيفي.',
+  support:['m2','m3','m4'], contradict:[],
+  assumptions:[
+    'إن اللي قاله عن إنه مش بيتعلّم في شغله الحالي لسه صح لحد دلوقتي.',
+    'إن المكان الجديد فيه شغل مختلف فعلاً عن اللي هو فيه.'
+  ],
+  disconfirming:['لو طلع إن الشغل الجديد بنفس نوع المهام بالظبط، القراءة دي تبقى محتاجة مراجعة.'],
+  unknowns:[{txt:'مش معروف العرض الجديد بيقدّم إيه بالظبط من ناحية التعلّم.',status:'OPEN'}]
+};
+const R_B = {
+  id:'b', name:'قراءة ب',
+  stmt:'اللي بيحرّكه هو إرهاق من الوضع الحالي أكتر من انجذاب للعرض نفسه.',
+  support:['m1','m5'], contradict:['m3'],
+  assumptions:['إن التعب اللي اتقال عنه مرتبط بالشغل نفسه مش بحاجة تانية في نفس الفترة.'],
+  disconfirming:['لو قال إن التعب ده بقاله فترة طويلة قبل موضوع العرض ولأسباب تانية، القراءة دي تبقى محتاجة مراجعة.'],
+  unknowns:[{txt:'مش معروف إذا كان في حاجة تانية بره الشغل بتاخد من طاقته في نفس الفترة.',status:'OPEN'}]
+};
+const R_A2 = {
+  id:'a', name:'قراءة أ',
+  stmt:'اللي بيشدّه ناحية العرض الجديد إنه عايز يتعلّم حاجة مختلفة.',
+  support:['m2','m4'], contradict:[],
+  assumptions:['إن اللي قاله عن إنه مش بيتعلّم لسه صح لحد دلوقتي.'],
+  disconfirming:[], unknowns:[{txt:'مش معروف العرض بيقدّم إيه من ناحية التعلّم.',status:'OPEN'}]
+};
+const R_B2 = {
+  id:'b', name:'قراءة ب',
+  stmt:'الدافع عنده إنه عايز يشتغل في حاجة يتعلّم منها حاجة جديدة.',
+  support:['m2'], contradict:[],
+  assumptions:['إن الرغبة في التعلّم هي اللي ورا الحركة دي.'],
+  disconfirming:[], unknowns:[]
+};
+
+/* ---------- STRESS: dense readings (2 peers, 10 fragments in the scene) ---------- */
+const D_A = {
+  id:'a', name:'قراءة أ',
+  stmt:'اللي بيشدّه ناحية العرض الجديد هو إنه عايز يتعلّم حاجة مختلفة، مش الفلوس ولا المسمّى الوظيفي.',
+  support:['m2','m4','m8','m10'], contradict:['m7'],
+  assumptions:[
+    'إن اللي قاله عن إنه مش بيتعلّم في شغله الحالي لسه صح لحد دلوقتي.',
+    'إن المكان الجديد فيه شغل مختلف فعلاً عن اللي هو فيه، مش نفس المهام باسم تاني.',
+    'إن المساحة اللي بيقول عليها مع مديره الحالي مش كفاية لوحدها تخلّيه يفضل مكانه.'
+  ],
+  disconfirming:[
+    'لو طلع إن الشغل الجديد بنفس نوع المهام بالظبط، القراءة دي تبقى محتاجة مراجعة.',
+    'لو قال إن المساحة اللي عنده دلوقتي أهم عنده من التعلّم، القراءة دي تبقى محتاجة مراجعة.'
+  ],
+  unknowns:[
+    {txt:'مش معروف العرض الجديد بيقدّم إيه بالظبط من ناحية التعلّم.',status:'OPEN'},
+    {txt:'مش معروف الكلامين اللي سمعهم عن الشغل هناك أنهي واحد فيهم بيوصف الشغل اللي هيتعمله هو بنفسه.',status:'OPEN'}
+  ]
+};
+const D_B = {
+  id:'b', name:'قراءة ب',
+  stmt:'اللي بيحرّكه هو إرهاق من الوضع الحالي أكتر من انجذاب للعرض نفسه.',
+  /* m2 is supported by BOTH readings — same-role sharing, which the runtime
+     enforces disjointness only WITHIN a reading and so makes the common case.
+     m7 and m10 are dual-role. Three shared records in one scene is what
+     exposed V9's overlapping band region (B3). */
+  support:['m1','m2','m5','m9','m11','m7'], contradict:['m3','m10'],
+  assumptions:[
+    'إن التعب اللي اتقال عنه مرتبط بالشغل نفسه مش بحاجة تانية في نفس الفترة.',
+    'إن تأجيل القرارات الصغيرة في نفس الفترة راجع لنفس السبب.',
+    'إن كلام مراته عن إنه تعبان بيوصف الفترة دي هي بالذات.'
+  ],
+  disconfirming:[
+    'لو قال إن التعب ده بقاله فترة طويلة قبل موضوع العرض ولأسباب تانية، القراءة دي تبقى محتاجة مراجعة.',
+    'لو بان إن النوم المتأخر ده بسبب حاجة بره الشغل خالص، القراءة دي تبقى محتاجة مراجعة.'
+  ],
+  unknowns:[{txt:'مش معروف إذا كان في حاجة تانية بره الشغل بتاخد من طاقته في نفس الفترة.',status:'OPEN'}]
+};
+
+/* ---------- STRESS: three peer readings ----------
+   ج is a NEAR-DUPLICATE of أ — the runtime does not prevent it.
+   m2 carries a role in ALL THREE. m8 carries a role in أ and ج only, so the
+   middle column is legitimately empty at that row: the alignment has to be
+   able to say "not this one" as clearly as it says "this one". */
+const P_A = {
+  id:'a', name:'قراءة أ',
+  stmt:'اللي بيشدّه ناحية العرض الجديد هو إنه عايز يتعلّم حاجة مختلفة، مش الفلوس ولا المسمّى الوظيفي.',
+  support:['m2','m4','m8'], contradict:['m7'],
+  assumptions:['إن اللي قاله عن إنه مش بيتعلّم في شغله الحالي لسه صح لحد دلوقتي.',
+               'إن المكان الجديد فيه شغل مختلف فعلاً عن اللي هو فيه.'],
+  disconfirming:['لو طلع إن الشغل الجديد بنفس نوع المهام بالظبط، القراءة دي تبقى محتاجة مراجعة.'],
+  unknowns:[{txt:'مش معروف العرض الجديد بيقدّم إيه بالظبط من ناحية التعلّم.',status:'OPEN'}]
+};
+const P_B = {
+  id:'b', name:'قراءة ب',
+  stmt:'اللي بيحرّكه هو إرهاق من الوضع الحالي أكتر من انجذاب للعرض نفسه.',
+  support:['m1','m5'], contradict:['m3','m2'],
+  assumptions:['إن التعب اللي اتقال عنه مرتبط بالشغل نفسه مش بحاجة تانية في نفس الفترة.',
+               'إن تأجيل القرارات الصغيرة في نفس الفترة راجع لنفس السبب.'],
+  disconfirming:['لو قال إن التعب ده بقاله فترة طويلة قبل موضوع العرض ولأسباب تانية، القراءة دي تبقى محتاجة مراجعة.'],
+  unknowns:[{txt:'مش معروف إذا كان في حاجة تانية بره الشغل بتاخد من طاقته في نفس الفترة.',status:'OPEN'}]
+};
+const P_C = {
+  id:'c', name:'قراءة ج',
+  stmt:'الدافع عنده إنه عايز يشتغل في حاجة يتعلّم منها، والباقي تفاصيل بالنسبة له.',
+  support:['m2','m8'], contradict:[],
+  assumptions:['إن الرغبة في التعلّم هي اللي ورا الحركة دي.'],
+  disconfirming:[], unknowns:[]
+};
+
+const clone = o => JSON.parse(JSON.stringify(o));
+
+/* Counts are morphology, never a figure — a real count must never be able to
+   read as a score. Digits belong only to record dates and times. */
+const readingsAr = n => n===0?'مفيش قراءات':n===1?'قراءة واحدة':n===2?'قراءتين':'كذا قراءة';
+
+const FIXTURES = {
+  s0:{note:'s0 · zero readings · no relation · two recorded items',
+    subject:'قرار الشغل الجديد', conv:CONV_THIN, material:['m1','m2'], readings:[],
+    ctx:['m1','m2'], reserve:[], contexts:{DECISION:false,SITUATION:false,GOAL:false,RELATION:false}, corrections:{}},
+  s1:{note:'s1 · one reading · one relation · one open unknown',
+    subject:'قرار الشغل الجديد', conv:CONV_THIN, material:['m1','m2'],
+    readings:[{...clone(R_A),support:['m2'],assumptions:[R_A.assumptions[0]],disconfirming:[]}],
+    ctx:['m2','m1'], reserve:[], contexts:{DECISION:false,SITUATION:false,GOAL:false,RELATION:false}, corrections:{}},
+  s2:{note:'s2 · two peers · shared dual-role item · open unknowns  (V9 reference fixture)',
+    subject:'قرار الشغل الجديد', conv:CONV_BASE, material:['m1','m2','m3','m4','m5'],
+    readings:[clone(R_A),clone(R_B)],
+    ctx:['m3','m2','m5','m4'], reserve:['m1','m6'],
+    contexts:{DECISION:true,SITUATION:false,GOAL:false,RELATION:false}, corrections:{}},
+  s3:{note:'s3 · correction RECEIVED / PENDING only — nothing structural moved',
+    subject:'قرار الشغل الجديد',
+    conv:CONV_BASE.concat([
+      {who:'user',t:'حاجة واحدة مش مظبوطة: أنا مش مضايق إني مش بتعلّم، أنا مضايق إن اللي بتعلّمه مش بيتحسب.',time:'٢:٢١ م'},
+      {who:'q',t:'وصلني وكلامك ده موجود عندي هنا. بس أنا ما طبّقتوش على الحاجة المسجّلة — هي زي ما هي، ومحصلش أي تغيير تاني بسببه.',time:'٢:٢١ م'}
+    ]),
+    material:['m1','m2','m3','m4','m5'], readings:[clone(R_A),clone(R_B)],
+    ctx:['m3','m2','m5','m4'], reserve:['m1','m6'],
+    contexts:{DECISION:true,SITUATION:false,GOAL:false,RELATION:false},
+    corrections:{m2:{state:'RECEIVED',txt:'أنا مش مضايق إني مش بتعلّم، أنا مضايق إن اللي بتعلّمه مش بيتحسب.'}}},
+  s4:{note:'s4 · one RESOLVED + one SUPERSEDED unknown — no causal answer linkage',
+    subject:'قرار الشغل الجديد', conv:CONV_BASE, material:['m1','m2','m3','m4','m5','m6'],
+    readings:[
+      {...clone(R_A),unknowns:[{txt:'مش معروف العرض الجديد بيقدّم إيه بالظبط من ناحية التعلّم.',status:'RESOLVED'}]},
+      {...clone(R_B),unknowns:[
+        {txt:'مش معروف إذا كان في حاجة تانية بره الشغل بتاخد من طاقته في نفس الفترة.',status:'SUPERSEDED'},
+        {txt:'مش معروف التعب ده بدأ إمتى بالنسبة لموضوع العرض.',status:'OPEN'}
+      ]}
+    ],
+    ctx:['m3','m2','m5','m6'], reserve:['m1','m4'],
+    contexts:{DECISION:true,SITUATION:false,GOAL:false,RELATION:false}, corrections:{}},
+  s5:{note:'s5 · near-duplicate peers, SAME-role shared item — runtime does not prevent this',
+    subject:'قرار الشغل الجديد', conv:CONV_BASE, material:['m1','m2','m4'],
+    readings:[clone(R_A2),clone(R_B2)],
+    ctx:['m2','m4'], reserve:['m1'],
+    contexts:{DECISION:true,SITUATION:false,GOAL:false,RELATION:false}, corrections:{}},
+
+  /* ---------------- REVIEWER STRESS FIXTURES ---------------- */
+  d1:{stress:true,
+    note:'d1 · DENSE · 2 peers · 11 recorded items (10 in the scene) · 3 shared · 3 assumptions + 2 disconfirming per reading · 3 named unknowns · long Arabic',
+    subject:'قرار الشغل الجديد', conv:CONV_DENSE,
+    material:['m1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11'],
+    readings:[clone(D_A),clone(D_B)],
+    ctx:['m3','m2','m7','m5','m10'], reserve:['m11','m1','m6'],
+    contexts:{DECISION:true,SITUATION:true,GOAL:false,RELATION:false}, corrections:{}},
+  p3:{stress:true,
+    note:'p3 · THREE PEERS · ج is a near-duplicate of أ · m2 carries a role in all three · m8 in أ and ج only · one unknown on ب alone',
+    subject:'قرار الشغل الجديد', conv:CONV_BASE,
+    material:['m1','m2','m3','m4','m5','m7','m8'],
+    readings:[clone(P_A),clone(P_B),clone(P_C)],
+    ctx:['m2','m8','m7','m3'], reserve:['m1','m5'],
+    contexts:{DECISION:true,SITUATION:false,GOAL:false,RELATION:false}, corrections:{}}
+};
+
+const KINDS = [{k:'DECISION',ar:'قرار'},{k:'SITUATION',ar:'موقف'},{k:'GOAL',ar:'هدف'},{k:'RELATION',ar:'علاقة'}];
+
+/* ---------- long-Arabic stress mode ----------
+   V9's toggle swapped only the subject. §13 asks for a long subject anchor,
+   long peer statements AND long recorded material together, so the mode now
+   swaps all three. Arabic punctuation (؛ ، ؟) is in the strings on purpose. */
+const LONG_SUBJECT = 'قرار الشغل الجديد واللي وراه من كلام كتير اتقال على مدى شهرين من غير ما يوصل لحاجة';
+const LONG_STMT = {
+  a:'اللي بيشدّه ناحية العرض الجديد ده هو إنه عايز يتعلّم حاجة مختلفة عن اللي بيعمله كل يوم من سنتين، مش الفلوس ولا المسمّى الوظيفي ولا حتى إن المكان أكبر؛ الحكاية عنده إن الوقت بيعدّي وهو واقف في نفس النقطة.',
+  b:'اللي بيحرّكه في الفترة دي هو إرهاق متراكم من الوضع الحالي أكتر ما هو انجذاب للعرض الجديد نفسه، والدليل عنده إن نفس التأجيل ده بيحصل معاه في قرارات تانية صغيرة مالهاش علاقة بالشغل خالص.',
+  c:'الدافع عنده إنه عايز يشتغل في حاجة يتعلّم منها كل يوم حاجة، والباقي — الفلوس والمسمّى والمكان — تفاصيل بالنسبة له مش هي اللي بتحرّك القرار.'
+};
+const LONG_MAT = {
+  m3:'مرتاح مع الفريق اللي بيشتغل معاه وبيحب الناس دي، وقال إن دي أكتر حاجة بتخلّيه يفكّر تاني قبل ما يمشي من مكانه الحالي.',
+  m5:'الفترة اللي فاتت بينام متأخر وبيصحى تعبان، وقال إن ده بقى شبه كل يوم مش يوم ورا يوم زي الأول.',
+  m2:'أكتر حاجة مضايقاه في شغله الحالي إنه مش بيتعلّم حاجة جديدة، وإن اليوم بقى شبه اللي قبله من غير ما حاجة تتغيّر.'
+};
+
+/* ---------- state ---------- */
+let S=null, fixtureId='s2', view='home';
+let fieldOpen=false, frontId=null, focusId=null;
+let expanded=new Set(), groundOpen=new Set(), excluded=new Set();
+let reserveUsed=0, entering=null, activePane=0;
+let dialogReturn=null, sheetFor=null;
+let lastBreak=null;
+const drafts={composer:'',correction:''};
+
+/* ---------- derived ---------- */
+const roleOf=(r,id)=> r.support.includes(id)?'support' : (r.contradict.includes(id)?'contradict':null);
+/* Shared material = the SAME recorded item carrying a stored role in more than
+   one reading. Covers same-role sharing, which the runtime makes the common
+   case, and now covers "shared by some but not all" once N > 2. */
+function sharedItems(){
+  if(!S.readings || S.readings.length<2) return [];
+  return S.material.filter(id => S.readings.filter(r=>roleOf(r,id)).length>1);
+}
+const ownOf = r => S.material.filter(id => roleOf(r,id) && !sharedItems().includes(id));
+function contextItems(){
+  return S.ctx.filter(id=>!excluded.has(id))
+    .concat(S.reserve.slice(0,reserveUsed).filter(id=>!excluded.has(id)));
+}
+const roleWord = role => role==='support' ? 'بتسند' : 'بتشدّ ضد';
+const statusWord = st => st==='OPEN'?'لسه ناقصة' : st==='RESOLVED'?'اتقفلت':'اتغيّرت';
+const isNarrow = () => document.body.classList.contains('narrow') || window.innerWidth < 860;
+const isLong = () => document.body.classList.contains('longar');
+const smooth = () => (document.body.classList.contains('rm') ||
+  window.matchMedia('(prefers-reduced-motion:reduce)').matches) ? 'auto' : 'smooth';
+const subjectOf = () => isLong() ? LONG_SUBJECT : S.subject;
+const stmtOf = r => (isLong() && LONG_STMT[r.id]) ? LONG_STMT[r.id] : r.stmt;
+const matOf = id => (isLong() && LONG_MAT[id]) ? LONG_MAT[id] : M[id].txt;
+const isStress = () => !!FIXTURES[fixtureId].stress;
+function say(t){ $('#live').textContent=t; }
+
+/* ==================================================================
+   THE PEER-COLUMN MEASURE FLOOR
+   ------------------------------------------------------------------
+   Peers stay equal columns only while every column still holds a
+   readable Arabic measure. The floor is 42 Arabic characters of body
+   text, measured live from the rendered face rather than assumed, so
+   it survives a type change in the next phase.
+
+   Below the floor ALL peers move to the paged stage together. Never
+   two columns plus an orphan; never a narrower column for a later
+   peer. That is the whole adaptation: a navigation change, not a new
+   composition.
+   ================================================================== */
+const GUT = 56;
+const MIN_MEASURE_CH = 42;
+let CHPX = 7.65;                       /* re-measured at boot */
+function measureCh(){
+  const p=document.createElement('span');
+  p.style.cssText='position:absolute;visibility:hidden;white-space:nowrap;font-size:17px;line-height:1.85;font-weight:400';
+  p.textContent='مرتاح مع الفريق اللي بيشتغل معاه وبيحب الناس دي';
+  document.body.appendChild(p);
+  const w=p.getBoundingClientRect().width, n=p.textContent.length;
+  p.remove();
+  if(w>0) CHPX = w/n;
+  return CHPX;
+}
+const minColPx = () => MIN_MEASURE_CH*CHPX;
+/* The composition's outer measure grows with the number of equal columns
+   instead of squeezing them. 1040px is V9's cap and is kept for one and two
+   peers, byte-for-byte. */
+const sceneMaxFor = n => n<=2 ? 1040 : 1360;
+function availPx(){
+  const m=$('#main'); if(!m) return window.innerWidth;
+  const cs=getComputedStyle(m);
+  return m.clientWidth - parseFloat(cs.paddingInlineStart||cs.paddingRight) - parseFloat(cs.paddingInlineEnd||cs.paddingLeft);
+}
+function colWidthFor(n){
+  const w=Math.min(availPx(), sceneMaxFor(n));
+  return (w-(n-1)*GUT)/n;
+}
+function stageMode(){
+  if(isNarrow()) return 'paged';
+  const n=S.readings.length;
+  if(n<=1) return 'grid';
+  return colWidthFor(n) >= minColPx() ? 'grid' : 'paged';
+}
+
+/* ==================================================================
+   RENDER — with input + focus preservation (V9 mechanism, unchanged).
+   ================================================================== */
+function syncDrafts(){ $$('[data-draft]').forEach(t=>{ drafts[t.dataset.draft]=t.value; }); }
+function snapFocus(){
+  const el=document.activeElement;
+  if(!el || el===document.body) return null;
+  const host=el.closest('[data-fk]');
+  if(!host) return null;
+  const sel=('selectionStart' in el && el.selectionStart!=null)?[el.selectionStart,el.selectionEnd]:null;
+  return {fk:host.dataset.fk, sel, scroll:window.scrollY};
+}
+function restoreFocus(p){
+  if(!p) return;
+  const host=document.querySelector('[data-fk="'+CSS.escape(p.fk)+'"]');
+  if(!host) return;
+  const el=host.matches('input,textarea,button,a,[tabindex]')?host
+        : host.querySelector('input,textarea,button,a,[tabindex]');
+  if(!el) return;
+  el.focus({preventScroll:true});
+  if(p.sel && 'setSelectionRange' in el){ try{ el.setSelectionRange(p.sel[0],p.sel[1]); }catch(e){} }
+}
+function writeDrafts(){
+  $$('[data-draft]').forEach(t=>{ const v=drafts[t.dataset.draft]||''; if(t.value!==v) t.value=v; });
+}
+
+function loadFixture(id){
+  fixtureId=id; S=clone(FIXTURES[id]);
+  frontId=null; focusId=null; activePane=0; entering=null; reserveUsed=0;
+  expanded=new Set(); groundOpen=new Set(); excluded=new Set();
+  drafts.composer=''; drafts.correction='';
+  render();
+}
+
+function render(){
+  const p=snapFocus(); syncDrafts();
+  const narrow=isNarrow();
+  document.body.dataset.w = narrow?'narrow':'wide';
+  /* the stage decision has to exist before the CSS that depends on it */
+  document.body.dataset.stage = (S && S.readings) ? stageMode() : (narrow?'paged':'grid');
+
+  $('#vHome').hidden  = view!=='home';
+  $('#vConv').hidden  = view!=='conv';
+  $('#vScene').hidden = view!=='scene';
+  $('#backBtn').hidden = view==='home';
+  $('#fieldBtn').hidden = view==='home';
+
+  const sub=$('#barSub');
+  if(view==='scene'){ sub.textContent='المشهد · '+subjectOf(); sub.setAttribute('data-sim',''); }
+  else if(view==='conv'){ sub.textContent='الجلسة الحالية'; sub.removeAttribute('data-sim'); }
+  else { sub.textContent=''; sub.removeAttribute('data-sim'); }
+
+  $('#fieldBtn').setAttribute('aria-pressed',String(fieldOpen));
+  $('#stagearea').classList.toggle('with-field', fieldOpen && !narrow);
+
+  renderHome(); renderConv(); renderScene(); renderField(); syncFieldShell();
+  writeDrafts();
+
+  $('#cNote').textContent=FIXTURES[fixtureId].note;
+  const cs=$('#cStress');
+  cs.hidden=!isStress();
+  cs.textContent='REVIEWER STRESS FIXTURE — SIMULATED TEST DENSITY. Not runtime-derived user data. '+
+    'Every object in this state is a local fixture built to falsify the grammar. See TRUTH-MANIFEST.md.';
+  $$('#cState .cbtn').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.s===fixtureId)));
+  $$('#cSurface .cbtn').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===view)));
+
+  restoreFocus(p);
+  if(document.body.dataset.stage==='paged' && view==='scene') applyPane(false);
+}
+
+/* ---------------- HOME — the quiet front door ---------------- */
+function renderHome(){
+  if(view!=='home') return;
+  const n=S.readings.length;
+  const last=S.conv.slice(-2);
+  $('#homeBody').innerHTML=`
+    <div class="home">
+      <p class="kicker" data-sim>الكلام داير حوالين</p>
+      <h1 data-sim>${esc(subjectOf())}</h1>
+
+      <div class="last">
+        <p class="lab">آخر كلام في الجلسة دي</p>
+        ${last.map(t=>`
+          <div class="turn ${t.who==='user'?'user':'q'}">
+            <div class="meta"><span>${t.who==='user'?'انت':'قنديل'}</span><span>${esc(t.time)}</span></div>
+            <p class="body">${esc(t.t)}</p>
+          </div>`).join('')}
+      </div>
+
+      <div class="acts">
+        <button class="btn big btn--line" id="hGoConv" data-fk="hGoConv">كمّل الكلام</button>
+        ${ n>0 ? `
+        <p class="sub">وفيه ${esc(readingsAr(n))} للموضوع ده.</p>
+        <button class="btn big btn--line" id="hGoScene" data-fk="hGoScene">افتح المشهد</button>` : `
+        <p class="none">لسه مفيش قراءة اتكوّنت للموضوع ده. لما حاجة تتكوّن هتلاقيها هنا.</p>`}
+      </div>
+    </div>`;
+  const a=$('#hGoConv'); if(a) a.onclick=()=>{ view='conv'; render(); };
+  const b=$('#hGoScene'); if(b) b.onclick=()=>{ view='scene'; render(); };
+}
+
+/* ---------------- CONVERSATION — quietest surface ---------------- */
+function renderConv(){
+  if(view!=='conv') return;
+  const corrected=Object.keys(S.corrections);
+  $('#turns').innerHTML = S.conv.map((t,i)=>`
+    <div class="turn ${t.who==='user'?'user':'q'}">
+      <div class="meta"><span>${t.who==='user'?'انت':'قنديل'}</span><span>${esc(t.time)}</span></div>
+      <p class="body">${esc(t.t)}</p>
+      ${t.recites && corrected.length===0 ? `
+        <div class="fix"><button class="btn" data-fixturn="${i}" data-fk="fixturn-${i}">فيه حاجة مش مظبوطة؟</button></div>`:''}
+      ${t.recites && corrected.length && i===lastReciteIndex() ? `<p class="pending">التصحيح وصل ولسه ما اتطبّقش على الحاجة المسجّلة.</p>`:''}
+    </div>`).join('');
+
+  const n=S.readings.length;
+  $('#presence').innerHTML=`
+    <div class="presence">
+      <p data-sim>فيه حاجات من كلامك شغّالة مع الكلام ده دلوقتي.</p>
+      <button class="btn btn--line" id="cvField" aria-controls="field" data-fk="cvField">افتحها</button>
+      ${ n>0 ? `<button class="btn btn--line" id="cvScene" data-fk="cvScene">افتح المشهد</button>`:''}
+    </div>`;
+  const f=$('#cvField'); if(f) f.onclick=()=>toggleField(true,f);
+  const s=$('#cvScene'); if(s) s.onclick=()=>{ view='scene'; render(); };
+  $$('[data-fixturn]').forEach(b=>b.onclick=()=>openSheet(defaultFixTarget(),b));
+}
+/* A dense session recites more than once. V9's rule ("every reciting turn
+   carries the pending note") would print the same pending note three times in
+   the dense fixture, which reads as three corrections. The note belongs to the
+   most recent recitation — the one the correction was made against. */
+function lastReciteIndex(){
+  let idx=-1; S.conv.forEach((t,i)=>{ if(t.recites) idx=i; }); return idx;
+}
+function defaultFixTarget(){ return S.material.includes('m2')?'m2':S.material[0]; }
+
+/* ---------------- THE SCENE — Deep Analysis ---------------- */
+function recHTML(id,opts={}){
+  const m=M[id], c=S.corrections[id];
+  const front = frontId===id || focusId===id;
+  const rule = opts.rule || 'one';
+  const canRole = opts.role!==false && S.readings.some(r=>roleOf(r,id));
+  const sim = isStress() ? ' data-sim' : '';
+  return `
+  <div class="rec" data-rule="${rule}" data-ground data-id="${id}" data-front="${front?'1':'0'}" data-fk="rec-${opts.scope||'x'}-${id}"${sim}>
+    ${front?'<span class="brk" aria-hidden="true"></span>':''}
+    <p class="tx">${esc(matOf(id))}</p>
+    ${front?`<p class="sr-only">مرفوعة قدّام دلوقتي.</p>`:''}
+    <button class="prov" aria-expanded="${expanded.has(opts.scope+id)}" data-prov="${opts.scope||'x'}|${id}" data-fk="prov-${opts.scope||'x'}-${id}">
+      <span class="car" aria-hidden="true"></span><span class="un">مسجّل من كلامك · ${esc(m.date)}</span>
+    </button>
+    ${c?`<p class="pending">التصحيح وصل ولسه ما اتطبّقش على الحاجة دي.</p>`:''}
+    ${expanded.has(opts.scope+id)?`
+      <div class="acct reveal">
+        <p class="facts">${esc(m.cat)} · ${esc(m.status)} · اتسجّلت ${esc(m.date)}</p>
+        <p>التاريخ ده تاريخ تسجيل قنديل للحاجة دي، مش تاريخ حصولها. والكلام ده مأخوذ من كلامك انت، ومش نقل حرفي للي اتقال.</p>
+        <div class="acts-row">
+          <button class="btn" data-fix="${id}" data-fk="fix-${opts.scope}-${id}">مش مظبوط؟</button>
+          ${opts.canFront?`<button class="btn" data-front="${id}" data-fk="front-${opts.scope}-${id}">${front?'رجّعها مكانها':'هاتها قدّام'}</button>`:''}
+          ${opts.canGo && canRole?`<button class="btn" data-go="${id}" data-fk="go-${opts.scope}-${id}">شوف دورها في القراءات</button>`:''}
+        </div>
+      </div>`:''}
+  </div>`;
+}
+
+function readingHead(r){
+  return `<p class="rname">${esc(r.name)}</p><p class="stmt"${isStress()?' data-sim':''}>${esc(stmtOf(r))}</p>`;
+}
+function readingMat(r){
+  const own=ownOf(r);
+  if(!own.length){
+    /* stage-aware: on the paged stage the shared material is a sibling pane,
+       not something "below". Saying "below" there would be a false direction. */
+    const where = document.body.dataset.stage==='paged' ? 'في مساحة المشترك' : 'في الحتة المشتركة تحت';
+    return `<p class="eyebrow">من كلامك</p><p class="note">اللي القراءة دي واقفة عليه من كلامك موجود ${where}.</p>`;
+  }
+  return `<p class="eyebrow">من كلامك</p>`+own.map(id=>recHTML(id,{scope:'r'+r.id,canFront:true})).join('');
+}
+function readingTail(r){
+  const gOpen=groundOpen.has(r.id);
+  const hasGround=r.assumptions.length||r.disconfirming.length;
+  return `
+    ${hasGround?`
+    <button class="disc" aria-expanded="${gOpen}" data-ground-btn="${r.id}" data-fk="ground-${r.id}">
+      <span class="car" aria-hidden="true"></span>على إيه القراءة دي واقفة
+    </button>
+    ${gOpen?`<div class="ground reveal">
+      ${r.assumptions.length?`<h4>مفترضة إن</h4><ul>${r.assumptions.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`:''}
+      ${r.disconfirming.length?`<h4>اللي يخلّيها محتاجة مراجعة</h4><ul>${r.disconfirming.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`:''}
+    </div>`:''}`:''}
+    ${r.unknowns.map(u=>`
+      <div class="rec unk" data-rule="${u.status==='OPEN'?'open':'one'}" data-ground data-status="${u.status}"${isStress()?' data-sim':''}>
+        <p class="st">${esc(statusWord(u.status))}</p>
+        <p class="tx">${esc(u.txt)}</p>
+        ${u.status!=='OPEN'?`<p class="why">مفيش إجابة منك هي اللي غيّرت الحالة دي.</p>`:''}
+      </div>`).join('')}`;
+}
+/* ONE heading for the whole shared region, not one per record.
+   V9 printed «حاجة واحدة، داخلة في القراءتين» above every shared record. With a
+   single shared record that reads as a label; the dense fixture has three, and
+   the same sentence three times reads as boilerplate — and it is redundant,
+   because the role lines directly beneath each record already name every
+   reading the record stands in, and which role it carries there. An element
+   whose only job is to restate what sits directly beneath it is decoration.
+   Removing it also makes the "some but not all" case (three peers, a record in
+   two of them) MORE legible, not less: the reader gets the two named readings
+   instead of a head that says "two of these" and leaves them to find which. */
+const sharedHead = n => n===1 ? 'حاجة من كلامك داخلة في أكتر من قراءة'
+                              : 'حاجات من كلامك داخلة في أكتر من قراءة';
+function bandHTML(shared,gridMode){
+  if(!shared.length) return '';
+  const n=S.readings.length;
+  return shared.map(id=>{
+    return `
+    <div class="band" data-band data-id="${id}">
+      ${recHTML(id,{scope:'sh',rule:'two',canFront:true})}
+      <div class="roles" style="--n:${n}">
+        ${S.readings.map((r,i)=>{
+          const role=roleOf(r,id); if(!role) return '';
+          /* placement by INDEX, so the alignment that carries the relation
+             stays true for any N. V9 mapped by id and mis-placed the third. */
+          const col = gridMode ? ` style="grid-column:${i+1}"` : '';
+          return `<p class="role" data-peer="${r.id}" data-peer-index="${i}"${col}>${esc(roleWord(role))} ${esc(r.name)}</p>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderScene(){
+  if(view!=='scene') return;
+  const paged=document.body.dataset.stage==='paged';
+  const rs=S.readings, shared=sharedItems();
+  const n=rs.length;
+
+  const parity = n===0 ? 'لسه مفيش قراءة اتكوّنت.'
+               : n===1 ? 'قراءة واحدة لحد دلوقتي.'
+               : n===2 ? 'قراءتين، معروضين هنا بالتساوي.'
+               : 'كل القراءات دي معروضة هنا بالتساوي.';
+
+  let body='';
+  if(n===0){
+    body=`<div class="grid" style="--n:1">
+      <div class="blk" style="grid-column:1;grid-row:2">
+        <p class="eyebrow">اللي مسجّل من كلامك لحد دلوقتي</p>
+        ${S.material.map(id=>recHTML(id,{scope:'z',canFront:true})).join('')}
+      </div></div>`;
+  } else if(paged){
+    /* ---- the paged stage: EVERY peer gets a pane. ----
+       n === 2 keeps V9's order exactly (peer, shared, peer): the shared thing
+       is physically between the two it belongs to.
+       n  >  2 puts the shared region after the peers, because with three or
+       more it no longer sits "between" any particular pair — placing it after
+       peer 1 would make peer 1 the one the shared material is next to, which
+       is an adjacency the data does not contain. Reading order stays the one
+       the whole build uses: your own, then what is shared, then what is
+       missing. */
+    const panes=[], labels=[];
+    const peerPane = r => `<section class="pane" data-pane="${r.id}" aria-label="${esc(r.name)}" tabindex="-1" data-fk="pane-${r.id}">
+      ${readingHead(r)}${readingMat(r)}${readingTail(r)}</section>`;
+    const sharedPane = () => `<section class="pane" data-pane="sh" aria-label="${n===2?'اللي في القراءتين':'اللي مشترك بين القراءات'}" tabindex="-1" data-fk="pane-sh">
+      <p class="bandhead">${esc(sharedHead(shared.length))}</p>
+      ${bandHTML(shared,false)}</section>`;
+    if(n===2 && shared.length){
+      panes.push(peerPane(rs[0]), sharedPane(), peerPane(rs[1]));
+      labels.push(rs[0].name,'المشترك',rs[1].name);
+    } else {
+      rs.forEach(r=>{ panes.push(peerPane(r)); labels.push(r.name); });
+      if(shared.length){ panes.push(sharedPane()); labels.push('المشترك'); }
+    }
+    body=`
+      ${panes.length>1?`<div class="pager" role="tablist" aria-label="مساحات المشهد">
+        ${labels.map((l,i)=>`<button role="tab" aria-selected="${i===activePane}" aria-current="${i===activePane}"
+           data-pane-btn="${i}" data-fk="panebtn-${i}">${esc(l)}</button>`).join('')}
+      </div>`:''}
+      <div class="track" id="track">${panes.join('')}</div>`;
+  } else {
+    /* ---- the grid: N EQUAL columns + one region that spans them ---- */
+    body=`<div class="grid" data-peers="${n}" style="--n:${n}">
+      ${rs.map((r,i)=>`<div class="blk" data-peer="${r.id}" data-peer-index="${i}" data-row="head" style="grid-column:${i+1};grid-row:1">${readingHead(r)}</div>`).join('')}
+      ${rs.map((r,i)=>`<div class="blk" data-peer="${r.id}" data-peer-index="${i}" data-row="mat"  style="grid-column:${i+1};grid-row:2">${readingMat(r)}</div>`).join('')}
+      ${shared.length?`<div class="bands"><p class="bandhead">${esc(sharedHead(shared.length))}</p>${bandHTML(shared,true)}</div>`:''}
+      ${rs.map((r,i)=>`<div class="blk" data-peer="${r.id}" data-peer-index="${i}" data-row="tail" style="grid-column:${i+1};grid-row:4">${readingTail(r)}</div>`).join('')}
+    </div>`;
+  }
+
+  $('#sceneBody').innerHTML=`
+    <div class="scene" style="max-width:${paged?'none':sceneMaxFor(n)+'px'}">
+      <div class="anchor">
+        <p class="kicker">المشهد</p>
+        <h2 data-sim>${esc(subjectOf())}</h2>
+      </div>
+      <p class="parity">${esc(parity)}</p>
+      ${focusId?`<div class="focusnote"><p>انت اللي رفعت الحاجة دي قدّام. اللي اتغيّر هو اللي بتبصّ عليه، مش حاجة عند قنديل.</p></div>`:''}
+      <div class="${focusId?'receded':''}" id="sceneFlow">${body}</div>
+      <div class="restraint"><p>قنديل بيعرض اللي مسجّل عنده وبيحطّ القراءات جنب بعض. القرار مش عنده.</p></div>
+    </div>`;
+
+  if(focusId){
+    const el=$('#sceneFlow').querySelector('.rec[data-id="'+focusId+'"][data-front="1"]');
+    if(el) el.classList.add('lift');
+  }
+  wireScene();
+}
+function wireScene(){
+  $$('[data-pane-btn]').forEach(b=>b.onclick=()=>{ activePane=+b.dataset.paneBtn; applyPane(true); markPane(); });
+  $$('[data-ground-btn]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.groundBtn; groundOpen.has(id)?groundOpen.delete(id):groundOpen.add(id); render();
+  });
+  const t=$('#track');
+  if(t) t.addEventListener('scroll',onTrackScroll,{passive:true});
+}
+function markPane(){
+  $$('[data-pane-btn]').forEach(b=>{
+    const on=(+b.dataset.paneBtn)===activePane;
+    b.setAttribute('aria-selected',String(on)); b.setAttribute('aria-current',String(on));
+  });
+}
+/* RTL-correct paging: bring the pane's START edge — the RIGHT edge in RTL — to
+   the track's start edge, as a RELATIVE delta between two live rects. Engines
+   disagree about the RTL scrollLeft origin, so absolute arithmetic silently
+   clamps; a relative delta is correct under every model. */
+function applyPane(animate){
+  const t=$('#track'); if(!t) return;
+  const p=t.children[Math.min(activePane,t.children.length-1)]; if(!p) return;
+  progScroll=true;
+  t.style.scrollSnapType='none';
+  const delta=p.getBoundingClientRect().right - t.getBoundingClientRect().right;
+  if(Math.abs(delta)>0.5) t.scrollBy({left:delta, behavior: animate&&smooth()==='smooth'?'smooth':'auto'});
+  markPane(); fitTrack(true);
+  clearTimeout(progTimer);
+  progTimer=setTimeout(()=>{
+    progScroll=false; fitTrack(true); realign(); t.style.scrollSnapType='';
+  },400);
+}
+function realign(){
+  const t=$('#track'); if(!t) return;
+  const p=t.children[Math.min(activePane,t.children.length-1)]; if(!p) return;
+  const d=p.getBoundingClientRect().right - t.getBoundingClientRect().right;
+  if(Math.abs(d)>0.5) t.scrollBy({left:d,behavior:'auto'});
+}
+/* The stage is exactly as tall as the pane you are ON — a flex row is otherwise
+   as tall as its tallest child, which manufactures an empty ground whose size
+   is set by an unrelated reading. */
+function fitTrack(exact,align=true){
+  const t=$('#track'); if(!t) return;
+  const kids=[...t.children]; if(!kids.length) return;
+  const h = exact ? (kids[Math.min(activePane,kids.length-1)].scrollHeight)
+                  : Math.max(...kids.map(k=>k.scrollHeight));
+  if(!h) return;
+  const px=h+'px';
+  if(t.style.height===px) return;
+  t.style.height=px;
+  if(align){ realign(); requestAnimationFrame(realign); }
+}
+let trackTick=null, settleTimer=null, progTimer=null, progScroll=false;
+function onTrackScroll(){
+  clearTimeout(settleTimer);
+  settleTimer=setTimeout(()=>fitTrack(true),150);
+  if(progScroll) return;
+  fitTrack(false,false);
+  if(trackTick) cancelAnimationFrame(trackTick);
+  trackTick=requestAnimationFrame(()=>{
+    const t=$('#track'); if(!t) return;
+    const tr=t.getBoundingClientRect();
+    let best=0,bd=Infinity;
+    [...t.children].forEach((p,i)=>{
+      const d=Math.abs(p.getBoundingClientRect().right - tr.right);
+      if(d<bd){bd=d;best=i;}
+    });
+    if(best!==activePane){ activePane=best; markPane(); }
+  });
+}
+
+/* ---------------- LIVE CONTEXT ---------------- */
+function renderField(){
+  const items=contextItems();
+  $('#fieldBody').innerHTML=`
+    <p class="note">دي الحاجات المسجّلة اللي داخلة مع الكلام دلوقتي. القراءات والأدوار مكانهم المشهد.</p>
+
+    <p class="eyebrow">سياق انت فعّلته</p>
+    <div class="kinds">
+      ${KINDS.map(k=>`<button class="btn" aria-pressed="${!!S.contexts[k.k]}" data-kind="${k.k}" data-fk="kind-${k.k}">${esc(k.ar)}</button>`).join('')}
+    </div>
+
+    ${items.length?items.map(id=>`
+      <div class="item ${entering===id?'reveal':''}">
+        ${recHTML(id,{scope:'f',canFront:true,canGo:true})}
+        <div class="row">
+          <button class="btn" data-front="${id}" data-fk="ffront-${id}">${frontId===id?'رجّعها مكانها':'هاتها قدّام'}</button>
+          <button class="btn" data-drop="${id}" data-fk="fdrop-${id}">شيلها من الشغّال</button>
+        </div>
+      </div>`).join(''):`<p class="note">مفيش حاجة شغّالة مع الكلام دلوقتي.</p>`}
+
+    ${excluded.size?`<p class="bnd" data-sim>شيلت حاجة من الشغّال دلوقتي. ده في الجلسة دي بس، والحاجة نفسها زي ما هي.</p>`:''}
+    <p class="bnd">${esc(items.length? 'دي الحاجات اللي داخلة دلوقتي وبس، مش كل اللي مسجّل.' : 'لما حاجة تدخل مع الكلام هتلاقيها هنا.')}</p>
+    ${document.body.dataset.w==='narrow'?`<div class="row"><button class="btn btn--line" id="fBack" data-fk="fBack">ارجع للكلام</button></div>`:''}`;
+
+  $$('#fieldBody [data-kind]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.kind; S.contexts[k]=!S.contexts[k];
+    say(S.contexts[k]?'فعّلت السياق.':'لغيت تفعيل السياق.'); render();
+  });
+  $$('#fieldBody [data-drop]').forEach(b=>b.onclick=()=>dropItem(b.dataset.drop));
+  const fb=$('#fBack'); if(fb) fb.onclick=()=>toggleField(false);
+}
+function dropItem(id){
+  excluded.add(id);
+  if(frontId===id) frontId=null;
+  /* SIMULATED: an item entering after an exclusion is prototype logic only. */
+  if(reserveUsed < S.reserve.length){ entering=S.reserve[reserveUsed]; reserveUsed++; }
+  say('شيلتها من الشغّال دلوقتي.'+(entering?' ودخلت حاجة تانية مكانها.':''));
+  render();
+  setTimeout(()=>{entering=null;},400);
+}
+function syncFieldShell(){
+  const f=$('#field'), narrow=document.body.dataset.w==='narrow';
+  if(narrow){
+    f.hidden=false; f.classList.toggle('open',fieldOpen);
+    if(fieldOpen) f.removeAttribute('inert'); else f.setAttribute('inert','');
+  } else {
+    f.classList.remove('open'); f.hidden=!fieldOpen;
+    if(fieldOpen) f.removeAttribute('inert'); else f.setAttribute('inert','');
+  }
+  $('#scrim').hidden = !(fieldOpen && narrow);
+}
+let fieldReturn=null;
+function toggleField(open,from){
+  fieldOpen=open; if(open) fieldReturn=from||$('#fieldBtn');
+  render();
+  if(open){ const t=$('#fieldBody .btn'); if(t) t.focus({preventScroll:true}); }
+  else if(fieldReturn && document.contains(fieldReturn)) fieldReturn.focus({preventScroll:true});
+  say(open?'فتحت الشغّال دلوقتي.':'قفلت الشغّال دلوقتي.');
+}
+
+/* ---------------- foreground / focus ---------------- */
+function setFront(id,scope){
+  if(scope==='field'){ frontId = frontId===id?null:id; }
+  else { focusId = focusId===id?null:id; }
+  render();
+  say((scope==='field'?frontId:focusId) ? 'رفعت الحاجة دي قدّام.' : 'رجّعتها مكانها.');
+}
+
+/* ---------------- cross-surface move: land ON the target ---------------- */
+function goToRole(id){
+  view='scene'; fieldOpen=false;
+  render();
+  if(document.body.dataset.stage==='paged'){
+    const t=$('#track');
+    if(t){
+      let idx=-1;
+      [...t.children].forEach((p,i)=>{ if(p.querySelector('.rec[data-id="'+id+'"]')) idx=i; });
+      if(idx>=0){ activePane=idx; applyPane(false); }
+    }
+  }
+  /* Deliberately NOT inside requestAnimationFrame. `render()` writes the DOM
+     synchronously and `getBoundingClientRect()` flushes layout, so a frame buys
+     nothing — and rAF does not fire at all while the page is hidden, which
+     would drop the whole move silently. A correctness path must not depend on
+     an animation frame. Measured: with the tab hidden, rAF never fires and
+     V9's move does nothing while still announcing that it arrived. */
+  (()=>{
+    const el=document.querySelector('#sceneBody .rec[data-id="'+id+'"]');
+    if(!el){ say('ما لقيتش الحاجة دي في المشهد.'); return; }
+    el.setAttribute('tabindex','-1');
+    el.focus({preventScroll:true});
+    el.scrollIntoView({block:'center',inline:'nearest',behavior:smooth()});
+
+    /* The move must LAND whether or not the animation runs.
+       A smooth scroll is asynchronous and cancellable, and under the dense
+       fixture — a long scene, a raised item, a re-render on the same frame —
+       it can be dropped entirely, leaving focus on an element outside the
+       viewport while the live region has already announced arrival. Motion is
+       allowed to make the arrival legible; it is never allowed to BE the
+       arrival, and the announcement is never allowed to precede it. */
+    const inView=()=>{
+      const r=el.getBoundingClientRect();
+      return r.width>0 && r.bottom>0 && r.top<window.innerHeight
+          && r.right>0 && r.left<window.innerWidth;
+    };
+    const inBand=!!el.closest('.band');
+    /* the announcement names every reading the record actually stands in —
+       "the two readings" is not true once there are more than two. */
+    const names=S.readings.filter(r=>roleOf(r,id)).map(r=>r.name);
+    const where = inBand ? 'في الحتة اللي بتجمع '+(names.join(' و ')||'القراءات')
+      : 'في ' + (names[0] || 'القراءات');
+    const arrive=()=>say('روحنا للمشهد، والحاجة دي قدّامك '+where+'.');
+    let n=0;
+    (function settle(){
+      if(inView()){ arrive(); return; }
+      if(++n>12){ el.scrollIntoView({block:'center',inline:'nearest',behavior:'auto'}); arrive(); return; }
+      setTimeout(settle,50);
+    })();
+  })();
+}
+
+/* ---------------- correction (RECEIVED / PENDING only) ---------------- */
+function openSheet(id,from){
+  sheetFor=id; dialogReturn=from||document.activeElement;
+  $('#sheetSubject').textContent='الحاجة المسجّلة: «'+matOf(id)+'»';
+  $('#fixText').value=drafts.correction||'';
+  $('#sheet').showModal();
+  requestAnimationFrame(()=>$('#fixText').focus());
+}
+function applyCorrection(id,txt){
+  S.corrections[id]={state:'RECEIVED',txt};
+  S.conv=S.conv.concat([
+    {who:'user',t:txt,time:'٢:٢٢ م'},
+    {who:'q',t:'وصلني وكلامك ده موجود عندي هنا. بس أنا ما طبّقتوش على الحاجة المسجّلة — هي زي ما هي، ومحصلش أي تغيير تاني بسببه.',time:'٢:٢٢ م'}
+  ]);
+}
+function sendCorrection(){
+  const txt=$('#fixText').value.trim();
+  if(!txt || !sheetFor) return;
+  applyCorrection(sheetFor,txt);
+  drafts.correction=''; sheetFor=null;
+  render();
+  say('التصحيح وصل. لسه ما اتطبّقش على الحاجة المسجّلة.');
+}
+
+/* ---------------- delegated events ---------------- */
+document.addEventListener('click',e=>{
+  const prov=e.target.closest('[data-prov]');
+  if(prov){ const k=prov.dataset.prov.replace('|',''); expanded.has(k)?expanded.delete(k):expanded.add(k); render(); return; }
+  const fr=e.target.closest('[data-front]');
+  if(fr && fr.tagName==='BUTTON'){ setFront(fr.dataset.front, fr.closest('#field')?'field':'scene'); return; }
+  const go=e.target.closest('[data-go]');
+  if(go){ goToRole(go.dataset.go); return; }
+  const fx=e.target.closest('[data-fix]');
+  if(fx){ openSheet(fx.dataset.fix,fx); return; }
+});
+$('#fieldBtn').onclick=()=>toggleField(!fieldOpen,$('#fieldBtn'));
+$('#backBtn').onclick=()=>{ view = view==='scene'?'conv':'home'; render(); };
+$('#scrim').onclick=()=>toggleField(false);
+$('#composerSend').onclick=()=>{
+  say('البروتوتايب ده بيختبر الشكل والتجربة، فمفيش بعت فعلي هنا. اللي كتبته زي ما هو.'); };
+
+$('#sheetForm').addEventListener('submit',e=>{
+  if(e.submitter && e.submitter.value==='send'){ e.preventDefault(); $('#sheet').close('send'); sendCorrection(); }
+});
+/* Focus return is asserted, not hoped for. `close` is dispatched as a queued
+   task and the background's inertness lifts on its own schedule, so a single
+   focus() call from the handler can land while the target is still inert and
+   silently drop focus to <body> — measured, intermittently, under the dense
+   fixture. Re-assert once on the next task if it did not take. */
+function returnFocusTo(el){
+  if(!el || !document.contains(el)) return;
+  el.focus({preventScroll:true});
+  if(document.activeElement!==el) setTimeout(()=>{
+    if(document.contains(el) && document.activeElement!==el) el.focus({preventScroll:true});
+  },0);
+}
+$('#sheet').addEventListener('close',()=>{
+  drafts.correction=$('#fixText').value;
+  returnFocusTo(dialogReturn);
+});
+$('#manClose').onclick=()=>$('#manifest').close();
+$('#manifest').addEventListener('close',()=>{ returnFocusTo(dialogReturn); });
+
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  if($('#sheet').open || $('#manifest').open) return;
+  if(fieldOpen){ e.preventDefault(); toggleField(false); return; }
+  if(focusId){ e.preventDefault(); focusId=null; render(); say('رجّعت المشهد زي ما كان.'); }
+});
+/* Keyboard paging on the stage — arrows follow RTL reading direction. */
+document.addEventListener('keydown',e=>{
+  if(!$('#track')) return;
+  if(!e.target.closest('#track, .pager')) return;
+  const n=$('#track').children.length;
+  if(e.key==='ArrowLeft'){ e.preventDefault(); activePane=Math.min(n-1,activePane+1); applyPane(true); }
+  if(e.key==='ArrowRight'){ e.preventDefault(); activePane=Math.max(0,activePane-1); applyPane(true); }
+});
+
+/* Resize: layout is keyed on body[data-w] and body[data-stage], so a
+   re-render is needed when either changes — and that re-render preserves
+   draft, caret and focus. */
+let rTick=null, lastStage=null;
+window.addEventListener('resize',()=>{
+  if(rTick) cancelAnimationFrame(rTick);
+  rTick=requestAnimationFrame(()=>{
+    const b=isNarrow()?'narrow':'wide';
+    const st=S?stageMode():null;
+    if(b!==lastBreak || st!==lastStage){ lastBreak=b; lastStage=st; render(); }
+  });
+});
+
+/* ==================================================================
+   EVALUATOR CHROME + REVIEW ROUTES — reviewer only, not product UI
+   ================================================================== */
+const STAB_DRAFT='أنا لسه مش قرّرت، بس عايز أفهم الفرق';
+const ROUTES={
+  /* 1–4 · V9 reference states, on V9's own fixture, unchanged */
+  'v9-reference-home-375':               {state:'s2',view:'home', narrow:true},
+  'v9-reference-conversation-375':       {state:'s2',view:'conv', narrow:true},
+  'v9-reference-live-context-375':       {state:'s2',view:'conv', narrow:true, field:true},
+  'v9-reference-analysis-two-peer-375':  {state:'s2',view:'scene',narrow:true, pane:1},
+  /* 5–6 · dense */
+  'dense-analysis-desktop':              {state:'d1',view:'scene',narrow:false, ground:['a','b']},
+  'dense-analysis-375':                  {state:'d1',view:'scene',narrow:true,  pane:1},
+  /* 7–11 · three peers */
+  'three-peer-analysis-desktop':         {state:'p3',view:'scene',narrow:false},
+  'three-peer-analysis-375-peer-1':      {state:'p3',view:'scene',narrow:true,  pane:0},
+  'three-peer-analysis-375-peer-2':      {state:'p3',view:'scene',narrow:true,  pane:1},
+  'three-peer-analysis-375-peer-3':      {state:'p3',view:'scene',narrow:true,  pane:2},
+  'three-peer-shared-material-375':      {state:'p3',view:'scene',narrow:true,  pane:3},
+  /* 12 · Live Context at the maximum intended handful */
+  'live-context-five-items-375':         {state:'d1',view:'conv', narrow:true, field:true, recompose:true, front:'m2'},
+  /* 13 · long Arabic everywhere at once */
+  'long-arabic-analysis-375':            {state:'d1',view:'scene',narrow:true, long:true, pane:1},
+  /* 14 · the V7 correctness blockers, re-run under the dense fixture */
+  'correction-resize-stability-375':     {state:'d1',view:'conv', narrow:true, corr:true, crossings:true},
+  /* 15 · cross-surface move on the three-peer stage */
+  'shared-target-navigation-375':        {state:'p3',view:'conv', narrow:true, field:true, target:'m2'},
+  /* optional · the measured column floor: three peers on a WIDE viewport whose
+     content column is too narrow to hold three readable measures. Directly
+     useful to the freeze decision, because it is the state that proves the
+     adaptation rule does not invent a hierarchy. */
+  'three-peer-below-column-floor':       {state:'p3',view:'scene',narrow:false, w1000:true},
+  /* optional · dense with the reader's own foreground raised, for the
+     non-ordinal audit at density */
+  'dense-analysis-desktop-foreground':   {state:'d1',view:'scene',narrow:false, focus:'m7'}
+};
+function crossBreakpoints(){
+  /* wide → narrow → wide → narrow, with a live draft, a caret and focus */
+  const cross=(narrow)=>{ document.body.classList.toggle('narrow',narrow);
+    lastBreak=narrow?'narrow':'wide'; render(); };
+  cross(false); cross(true); cross(false); cross(true);
+}
+function applyRoute(name){
+  const r=ROUTES[name]; if(!r) return;
+  document.body.classList.toggle('narrow',!!r.narrow);
+  document.body.classList.toggle('w1000',!!r.w1000);
+  document.body.classList.toggle('longar',!!r.long);
+  $('#tNarrow').setAttribute('aria-pressed',String(!!r.narrow));
+  $('#tW1000').setAttribute('aria-pressed',String(!!r.w1000));
+  $('#tLong').setAttribute('aria-pressed',String(!!r.long));
+  loadFixture(r.state);
+  view=r.view; fieldOpen=!!r.field;
+  if(r.ground) [].concat(r.ground).forEach(g=>groundOpen.add(g));
+  if(r.corr) applyCorrection('m2','أنا مش مضايق إني مش بتعلّم، أنا مضايق إن اللي بتعلّمه مش بيتحسب.');
+  if(r.focus) focusId=r.focus;
+  render();
+  if(r.recompose){ dropItem(S.ctx[0]); }          /* one item leaves, one enters */
+  if(r.front){ frontId=r.front; render(); }
+  if(r.crossings){
+    drafts.composer=STAB_DRAFT; writeDrafts();
+    const ta=$('#composerInput'); ta.focus(); try{ ta.setSelectionRange(11,11); }catch(e){}
+    crossBreakpoints();
+  }
+  if(r.target){ goToRole(r.target); }
+  if(r.pane!=null){
+    const t=$('#track');
+    activePane = t ? Math.min(r.pane, t.children.length-1) : 0;
+    applyPane(false);
+  }
+  lastBreak=isNarrow()?'narrow':'wide'; lastStage=S?stageMode():null;
+}
+const cState=$('#cState');
+['s0','s1','s2','s3','s4','s5','d1','p3'].forEach(s=>{
+  const b=document.createElement('button'); b.className='cbtn'; b.textContent=s.toUpperCase(); b.dataset.s=s;
+  b.onclick=()=>{ loadFixture(s); }; cState.appendChild(b);
+});
+const cSurface=$('#cSurface');
+[['home','Home'],['conv','Conversation'],['scene','Deep Analysis']].forEach(([v,l])=>{
+  const b=document.createElement('button'); b.className='cbtn'; b.textContent=l; b.dataset.v=v;
+  b.onclick=()=>{ view=v; render(); }; cSurface.appendChild(b);
+});
+const cRoutes=$('#cRoutes');
+Object.keys(ROUTES).forEach((k,i)=>{
+  const b=document.createElement('button'); b.className='cbtn'; b.textContent=String(i+1); b.title=k;
+  b.onclick=()=>applyRoute(k); cRoutes.appendChild(b);
+});
+function toggle(id,cls,after){
+  const b=$('#'+id);
+  b.onclick=()=>{ const on=!document.body.classList.contains(cls);
+    document.body.classList.toggle(cls,on); b.setAttribute('aria-pressed',String(on)); if(after) after(); };
+}
+const reflow=()=>{ lastBreak=isNarrow()?'narrow':'wide'; render(); lastStage=S?stageMode():null; };
+toggle('tNarrow','narrow',reflow);
+toggle('tW1000','w1000',reflow);
+toggle('tGray','gray');
+toggle('tRm','rm');
+toggle('tSim','sim');
+toggle('tLong','longar',render);
+$('#tMan').onclick=()=>{ dialogReturn=$('#tMan'); $('#manifest').showModal(); };
+
+/* ==================================================================
+   TRUTH + FREEZE SELF-CHECK
+   Runs against the LIVE DOM in whatever state is on screen. It carries
+   every V9 assertion unchanged and adds the ones the V10 freeze
+   depends on — the ones that would have caught B1, B2 and B3.
+   ================================================================== */
+const FORBIDDEN=/(ثقة|(?<!بال)نسبة|مئوية|درجة|ترتيب|الأقوى|أقوى|أرجح|ترجيح|وزن|قوة العلاقة|score|confidence|rank|٪|%)/;
+function scanText(root){
+  const app=(root||$('#app')).cloneNode(true);
+  app.querySelectorAll('.sr-only').forEach(n=>n.remove());
+  return app.textContent.replace(/\s+/g,' ');
+}
+/* async: two of the assertions below are only true after the platform has had
+   its turn — `dialog`'s `close` event is queued, not synchronous, and a smooth
+   scroll is still in flight on the frame it is started. Reading either one
+   immediately measures the harness, not the build. */
+const tick=(ms=0)=>new Promise(r=>setTimeout(r,ms));
+async function runCheck(){
+  const out=[]; const ok=(n,c,d='')=>out.push((c?'PASS  ':'FAIL  ')+n+(d?'  — '+d:''));
+  const t=scanText();
+  const paged=document.body.dataset.stage==='paged';
+
+  /* ---------- carried from V9 ---------- */
+  ok('no Western digits in the product surface', !/[0-9]/.test(t),
+     (t.match(/[0-9]+/g)||[]).slice(0,3).join(','));
+  ok('no confidence / rank / weight vocabulary', !FORBIDDEN.test(t),
+     (t.match(FORBIDDEN)||[]).join(','));
+  ok('no page-level horizontal overflow',
+     document.documentElement.scrollWidth<=window.innerWidth+1,
+     document.documentElement.scrollWidth+' / '+window.innerWidth);
+
+  const grounds=$$('#sceneBody [data-ground]');
+  const bgs=new Set(grounds.map(g=>getComputedStyle(g).backgroundColor));
+  ok('all structural grounds share ONE background value', bgs.size<=1, [...bgs].join(' | '));
+  const sizes=new Set(grounds.map(g=>{const p=g.querySelector('.tx'); return p?getComputedStyle(p).fontSize+'/'+getComputedStyle(p).fontWeight:'-';}));
+  ok('all recorded material shares ONE type size + weight', sizes.size<=1, [...sizes].join(' | '));
+
+  if(view==='scene'){
+    const sh=sharedItems();
+    const dup=sh.map(id=>[id,$$('#sceneBody .rec[data-id="'+id+'"]').length]).filter(x=>x[1]!==1);
+    ok('shared material rendered exactly once in the scene', sh.length? dup.length===0 : true,
+       sh.length? sh.map(id=>id+'×'+$$('#sceneBody .rec[data-id="'+id+'"]').length).join(',') : 'no shared item in this state');
+  }
+
+  if(view==='scene' && sharedItems().length){
+    const sh=sharedItems()[0];
+    const other=S.material.find(id=>id!==sh && S.readings.some(r=>roleOf(r,id)) && !sharedItems().includes(id));
+    const keepFocus=focusId, keepFront=frontId;
+    if(other){
+      focusId=other; render();
+      const bandRec=$('#sceneBody .band .rec'), raised=$('#sceneBody .rec[data-front="1"]');
+      const ink=n=>n?getComputedStyle(n.querySelector('.tx')).color:'-';
+      ok('focusing an ordinary fragment recedes the shared material too',
+         !!bandRec && !!raised && ink(bandRec)!==ink(raised), ink(bandRec)+' vs '+ink(raised));
+    }
+    focusId=sh; render();
+    const nowRaised=$$('#sceneBody .rec[data-front="1"]');
+    ok('the shared material can itself be brought forward',
+       nowRaised.length===1 && !!nowRaised[0].closest('.band'), nowRaised.length+' raised');
+    focusId=keepFocus; frontId=keepFront; render();
+  }
+
+  /* ---------- V10: NO PEER MAY BE DROPPED (B1) ---------- */
+  if(view==='scene' && S.readings.length){
+    const n=S.readings.length;
+    const present = paged ? $$('#sceneBody .pane[data-pane]').filter(p=>p.dataset.pane!=='sh').length
+                          : $$('#sceneBody .blk[data-row="head"]').length;
+    ok('every peer reading is present on the stage', present===n, present+' of '+n+' readings on stage');
+    if(paged){
+      const btns=$$('.pager button').length, panes=$$('#sceneBody .pane').length;
+      ok('every pane has its own pager control', btns===panes || panes<=1, btns+' controls / '+panes+' panes');
+    }
+  }
+
+  /* ---------- V10: PEER EQUALITY IS GEOMETRIC, NOT ASSERTED (B2) ---------- */
+  if(view==='scene' && !paged && S.readings.length>1){
+    const heads=$$('#sceneBody .blk[data-row="head"]');
+    const w=heads.map(h=>Math.round(h.getBoundingClientRect().width));
+    ok('peer columns are equal in width', Math.max(...w)-Math.min(...w)<=1, w.join(' / ')+'px');
+    const minc=Math.round(minColPx());
+    ok('no peer column is below the Arabic measure floor', Math.min(...w)>=minc-1,
+       Math.min(...w)+'px vs floor '+minc+'px ('+MIN_MEASURE_CH+'ch)');
+    /* every role line in the shared row must sit in ITS OWN reading's column */
+    const roles=$$('#sceneBody .band .role');
+    const bad=roles.filter(r=>{
+      const i=+r.dataset.peerIndex, head=heads[i]; if(!head) return true;
+      const a=r.getBoundingClientRect(), b=head.getBoundingClientRect();
+      return Math.abs(a.right-b.right)>2;
+    });
+    ok('every shared role line sits in its own reading\'s column', bad.length===0,
+       bad.length? bad.map(r=>r.textContent.trim().slice(0,18)).join(' | ') : roles.length+' role line(s) aligned');
+  }
+  if(view==='scene' && S.readings.length>1){
+    const st=$$('#sceneBody .stmt');
+    if(st.length>1){
+      const f=new Set(st.map(n=>{const s=getComputedStyle(n);return s.fontSize+'/'+s.fontWeight+'/'+s.color;}));
+      const bg=new Set(st.map(n=>getComputedStyle(n.parentElement).backgroundColor));
+      ok('peer readings share identical type + ground', f.size===1 && bg.size===1, [...f].join(' | '));
+    }
+    const pb=$$('.pager button');
+    if(pb.length>1){
+      const w=pb.map(b=>Math.round(b.getBoundingClientRect().width));
+      const f=new Set(pb.map(b=>getComputedStyle(b).fontSize+'/'+getComputedStyle(b).fontWeight));
+      ok('peer controls are equal in width, size and weight',
+         Math.max(...w)-Math.min(...w)<=1 && f.size===1, w.join(',')+' · '+[...f].join('|'));
+      const clipped=pb.filter(b=>b.scrollWidth>b.clientWidth+1);
+      ok('no pager label is clipped', clipped.length===0,
+         clipped.length? clipped.map(b=>b.textContent).join(',') : pb.length+' controls');
+    }
+  }
+
+  /* ---------- V10: MORE THAN ONE SHARED RECORD MUST BE VISIBLE (B3) ---------- */
+  if(view==='scene'){
+    const bands=$$('#sceneBody .band');
+    if(bands.length>1){
+      let overlap=[];
+      for(let i=0;i<bands.length;i++) for(let j=i+1;j<bands.length;j++){
+        const a=bands[i].getBoundingClientRect(), b=bands[j].getBoundingClientRect();
+        if(a.top<b.bottom-1 && b.top<a.bottom-1) overlap.push(i+'×'+j);
+      }
+      ok('no two shared records occupy the same space', overlap.length===0, overlap.join(',')||bands.length+' bands stacked');
+      const zero=bands.filter(b=>b.getBoundingClientRect().height<8);
+      ok('every shared record has real height on screen', zero.length===0, bands.length+' bands');
+    }
+  }
+
+  /* the pane the pager MARKS must be the pane actually on screen */
+  const tk=$('#track');
+  if(tk && tk.children.length>1){
+    const tr=tk.getBoundingClientRect();
+    let best=0,bd=Infinity;
+    [...tk.children].forEach((p,i)=>{const d=Math.abs(p.getBoundingClientRect().right-tr.right); if(d<bd){bd=d;best=i;}});
+    const p=tk.children[activePane], r=p.getBoundingClientRect();
+    const vis=Math.max(0,Math.min(r.right,tr.right)-Math.max(r.left,tr.left));
+    ok('the marked pane is the pane on screen', best===activePane && vis>=r.width*0.9,
+       'marked '+activePane+', on screen '+best+', '+Math.round(vis)+'/'+Math.round(r.width)+'px');
+    const th=Math.round(tk.getBoundingClientRect().height);
+    const ah=Math.round(tk.children[Math.min(activePane,tk.children.length-1)].scrollHeight);
+    const tallest=Math.max(...[...tk.children].map(p=>Math.round(p.scrollHeight)));
+    ok('the stage is as tall as the pane you are on, not the tallest pane',
+       th-ah<=8, 'stage '+th+'px, this pane '+ah+'px, tallest '+tallest+'px');
+  }
+
+  /* the field costs nothing while closed and cannot be tabbed into */
+  const f=$('#field');
+  const dk=$('.dock').getBoundingClientRect(), fr=f.getBoundingClientRect();
+  const seen=Math.max(0,Math.min(dk.right,fr.right)-Math.max(dk.left,fr.left));
+  ok('closed context field is inert and shows nothing',
+     fieldOpen || (f.hasAttribute('inert') && (f.hidden || seen<=1)),
+     'inert='+f.hasAttribute('inert')+', visible '+Math.round(seen)+'px');
+
+  /* ---------- V10: LIVE CONTEXT IS FLAT AT REST ---------- */
+  if(fieldOpen){
+    const items=$$('#fieldBody .item');
+    if(items.length>1){
+      const sig=new Set(items.map(it=>{
+        const tx=it.querySelector('.tx'); if(!tx) return 'x';
+        const s=getComputedStyle(tx);
+        return s.fontSize+'/'+s.fontWeight+'/'+s.color;
+      }));
+      const marg=new Set(items.map(it=>{
+        const rec=it.querySelector('.rec'); return rec?getComputedStyle(rec).paddingInlineStart:'x';
+      }));
+      const raised=items.filter(it=>it.querySelector('.rec[data-front="1"]')).length;
+      ok('every item in the field is identical at rest',
+         sig.size<=(raised?2:1) && marg.size<=(raised?2:1),
+         items.length+' items · '+[...sig].join(' | '));
+      ok('nothing is brought forward unless the reader did it',
+         raised===(frontId?1:0), raised+' raised, frontId='+(frontId||'none'));
+    }
+  }
+
+  /* ---------- V10: NO ROLE SEMANTICS BEFORE DEEP ANALYSIS ---------- */
+  const beforeScene = (view==='conv'?scanText($('#vConv')):'') + ' ' + (fieldOpen?scanText($('#field')):'');
+  ok('no reading role is stated outside Deep Analysis',
+     !/بتسند|بتشدّ ضد/.test(beforeScene),
+     (beforeScene.match(/بتسند|بتشدّ ضد/g)||[]).join(','));
+
+  /* ---------- Arabic typography floors ---------- */
+  const texts=$$('#app p, #app h1, #app h2, #app h3, #app h4, #app li, #app .btn, #app .prov, #app .disc')
+    .filter(n=>n.textContent.trim() && /[؀-ۿ]/.test(n.textContent));
+  const ls=texts.filter(n=>{const v=getComputedStyle(n).letterSpacing; return v!=='normal'&&parseFloat(v)!==0;});
+  ok('no letter-spacing on Arabic', ls.length===0, ls.length+' node(s)');
+  const bad=texts.filter(n=>{
+    const s=getComputedStyle(n), fs=parseFloat(s.fontSize), lh=parseFloat(s.lineHeight)/fs;
+    return fs<=18 ? lh<1.7 : lh<1.5;
+  });
+  ok('Arabic leading never compressed (≥1.7 body, ≥1.5 display)', bad.length===0,
+     bad.slice(0,3).map(n=>Math.round(parseFloat(getComputedStyle(n).fontSize))+'px/'+
+       (parseFloat(getComputedStyle(n).lineHeight)/parseFloat(getComputedStyle(n).fontSize)).toFixed(2)).join(' '));
+  const lum=c=>{const [r,g,b]=c.match(/\d+(\.\d+)?/g).slice(0,3).map(Number)
+    .map(v=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);});
+    return 0.2126*r+0.7152*g+0.0722*b;};
+  const ratio=(a,b)=>{const l1=lum(a),l2=lum(b);return (Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05);};
+  const paper=getComputedStyle(document.body).backgroundColor;
+  const low=texts.map(n=>{
+    const s=getComputedStyle(n), fs=parseFloat(s.fontSize), bold=parseInt(s.fontWeight,10)>=700;
+    const need=(fs>=24||(fs>=18.66&&bold))?3:4.5;
+    const r=ratio(s.color,paper);
+    return r<need-0.01 ? Math.round(fs)+'px '+r.toFixed(2)+':1' : null;
+  }).filter(Boolean);
+  ok('every Arabic text run meets WCAG AA contrast', low.length===0, low.slice(0,3).join(' · '));
+  const rl=getComputedStyle(document.documentElement).getPropertyValue('--rule').trim();
+  const swatch=document.createElement('span'); swatch.style.color=rl; document.body.appendChild(swatch);
+  const rr=ratio(getComputedStyle(swatch).color,paper); swatch.remove();
+  ok('the structural rule meets non-text contrast (≥3:1)', rr>=3, rr.toFixed(2)+':1');
+  const tiny=texts.filter(n=>parseFloat(getComputedStyle(n).fontSize)<13);
+  ok('no Arabic text below 13px', tiny.length===0, tiny.length+' node(s)');
+  const it=texts.filter(n=>getComputedStyle(n).fontStyle!=='normal');
+  ok('no italics on Arabic', it.length===0);
+
+  /* ---------- V10: touch targets and focus order ---------- */
+  const press=$$('#app button').filter(b=>b.offsetParent!==null || b.getClientRects().length);
+  const small=press.filter(b=>b.getBoundingClientRect().height<44-0.5);
+  ok('every pressable target is at least 44px tall', small.length===0,
+     small.slice(0,3).map(b=>Math.round(b.getBoundingClientRect().height)+'px «'+b.textContent.trim().slice(0,14)+'»').join(' · '));
+  const positive=$$('#app [tabindex]').filter(n=>+n.getAttribute('tabindex')>0);
+  ok('focus order is DOM order (no positive tabindex)', positive.length===0, positive.length+' node(s)');
+
+  /* ---------- correction changes nothing structural ---------- */
+  const snapshot=JSON.stringify([clone(S.material),clone(S.readings)]);
+  const probe=clone(S); probe.corrections=Object.assign({},probe.corrections,{m2:{state:'RECEIVED',txt:'x'}});
+  ok('a correction leaves material, readings, roles and unknowns identical',
+     JSON.stringify([probe.material,probe.readings])===snapshot);
+
+  /* ---------- V10: state stability across a real breakpoint crossing ---------- */
+  {
+    const keepNarrow=document.body.classList.contains('narrow');
+    const keepPane=activePane, keepGround=new Set(groundOpen), keepFront=frontId;
+    const ta=$('#composerInput'); const keep=ta.value;
+    drafts.composer='مسودة اختبار للثبات'; writeDrafts();
+    ta.focus(); try{ ta.setSelectionRange(6,6); }catch(e){}
+    const wasFocused=document.activeElement===ta;
+    if(S.readings[0]) groundOpen.add(S.readings[0].id);
+    const cross=(nw)=>{ document.body.classList.toggle('narrow',nw); lastBreak=nw?'narrow':'wide'; render(); };
+    cross(!keepNarrow); cross(keepNarrow);
+    const ta2=$('#composerInput');
+    ok('composer draft survives a breakpoint crossing', ta2.value==='مسودة اختبار للثبات', ta2.value.slice(0,20));
+    ok('caret survives a breakpoint crossing', ta2.selectionStart===6, 'caret at '+ta2.selectionStart);
+    ok('focus survives a breakpoint crossing', wasFocused? document.activeElement===ta2 : true);
+    ok('the current peer survives a breakpoint crossing', activePane===keepPane, 'pane '+activePane+' vs '+keepPane);
+    ok('open disclosures survive a breakpoint crossing',
+       !S.readings[0] || groundOpen.has(S.readings[0].id), [...groundOpen].join(','));
+    groundOpen=keepGround; frontId=keepFront;
+    drafts.composer=keep; writeDrafts(); $('#composerInput').blur(); render();
+  }
+
+  /* ---------- V10: foreground survives benign recomposition ---------- */
+  if(fieldOpen && contextItems().length>1){
+    const items=contextItems();
+    const keepFront=frontId, keepExcl=new Set(excluded), keepUsed=reserveUsed;
+    frontId=items[1]; render();
+    dropItem(items[0]);                       /* a DIFFERENT item leaves */
+    ok('foreground survives a benign recomposition', frontId===items[1],
+       'front='+(frontId||'none'));
+    excluded=keepExcl; reserveUsed=keepUsed; frontId=keepFront; render();
+  }
+
+  /* ---------- V10: modal traps focus and returns it ---------- */
+  {
+    /* the trigger has to be a control that is actually on screen in THIS state
+       — on Home the context-field button is hidden, and focus cannot return to
+       something that cannot take focus. */
+    const trigger=$$('#app button').find(b=>!b.hidden && b.offsetParent) || $('#fieldBtn');
+    const id=S.material.includes('m2')?'m2':S.material[0];
+    trigger.focus();                     /* a press focuses its control first */
+    openSheet(id,trigger);
+    /* a human never opens and closes a sheet inside one animation frame; the
+       sheet's own initial-focus call is scheduled on the next one. */
+    await tick(40);
+    const dlg=$('#sheet');
+    ok('the correction sheet is a real modal (native top layer)',
+       dlg.open && dlg.matches(':modal'), 'open='+dlg.open);
+    ok('the correction sheet takes initial focus', dlg.contains(document.activeElement) || document.activeElement===$('#fixText'));
+    $('#fixText').value=''; drafts.correction='';
+    dlg.close();
+    /* `close` is dispatched as a queued task, so a single tick races it. Poll
+       for the return instead of assuming a scheduling order — the assertion is
+       "focus comes back", not "focus comes back inside one macrotask". */
+    for(let i=0;i<20 && document.activeElement!==trigger;i++) await tick(20);
+    ok('focus returns to the control that opened the sheet', document.activeElement===trigger,
+       'active='+((document.activeElement&&document.activeElement.id)||'body')+
+       ' trigger='+trigger.id+' hidden='+trigger.hidden+
+       ' ret='+((dialogReturn&&dialogReturn.id)||'none')+
+       ' inDoc='+document.contains(dialogReturn)+' dlgOpen='+dlg.open);
+  }
+
+  /* ---------- V10: reduced motion carries no state ---------- */
+  {
+    const was=document.body.classList.contains('rm');
+    const before=scanText();
+    document.body.classList.add('rm'); render();
+    const after=scanText();
+    document.body.classList.toggle('rm',was); render();
+    ok('reduced motion changes nothing that carries meaning', before===after,
+       before.length+' vs '+after.length+' chars');
+  }
+
+  /* ---------- cross-surface move lands on the target ---------- */
+  if(view==='scene' && sharedItems().length){
+    const id=sharedItems()[0];
+    goToRole(id);
+    /* Wait for the move to LAND, not for a fixed number of milliseconds: a
+       dense scene scrolls further than a short one, and a fixed wait would
+       measure the harness's patience instead of the move. The build guarantees
+       a landing within ~600ms even with no animation at all. */
+    const el0=()=>document.querySelector('#sceneBody .rec[data-id="'+id+'"]');
+    for(let i=0;i<40;i++){
+      const e=el0(); if(!e) break;
+      const r=e.getBoundingClientRect();
+      if(r.width>0 && r.bottom>0 && r.top<window.innerHeight) break;
+      await tick(50);
+    }
+    const el=el0();
+    let landed=false, visible=false;
+    if(el){
+      const pane=el.closest('.pane'), tkk=$('#track');
+      landed = !tkk || !pane ||
+        ([...tkk.children].indexOf(pane)===activePane &&
+         pane.getBoundingClientRect().right<=tkk.getBoundingClientRect().right+2 &&
+         pane.getBoundingClientRect().right>tkk.getBoundingClientRect().left);
+      const r=el.getBoundingClientRect();
+      visible = r.right>0 && r.left<window.innerWidth && r.top<window.innerHeight && r.bottom>0 && r.width>0;
+    }
+    ok('shared-material target navigation lands on the target', !!el && landed, 'pane='+activePane+' id='+id);
+    ok('the target stays inside the viewport', visible,
+       el? 'top '+Math.round(el.getBoundingClientRect().top)+' / vh '+window.innerHeight+
+           ' · scrollY '+Math.round(window.scrollY)+' · docH '+document.documentElement.scrollHeight : 'no element');
+  }
+
+  const pass=out.filter(l=>l.startsWith('PASS')).length;
+  const c=$('#cCheck'); c.hidden=false;
+  c.textContent='['+fixtureId+' · '+view+' · '+document.body.dataset.w+' · stage:'+document.body.dataset.stage+
+    ' · col floor '+Math.round(minColPx())+'px]  '+pass+'/'+out.length+' PASS\n'+out.join('\n');
+  return out;
+}
+$('#tCheck').onclick=runCheck;
+
+/* ==================================================================
+   STRESS-STATE PICKER wiring — the `prototype` skill's behaviour
+   contract, with the two documented deviations.
+   ================================================================== */
+(function(){
+  const picker=document.querySelector('.proto-picker');
+  const highlight=picker.querySelector('.proto-picker-highlight');
+  const items=[...picker.querySelectorAll('.proto-picker-item:not(.proto-picker-replay)')];
+  const replay=picker.querySelector('.proto-picker-replay');
+  let current=0;
+
+  function moveHighlight(){
+    const el=items[current];
+    highlight.style.width=el.offsetWidth+'px';
+    highlight.style.transform='translateX('+el.offsetLeft+'px)';
+  }
+  function mount(i){ applyRoute(items[i].dataset.route); }
+  function setActive(i){
+    if(i<0||i>=items.length) return;
+    current=i;
+    items.forEach((el,j)=>{
+      el.toggleAttribute('data-active', j===i);
+      if(j===i) el.setAttribute('aria-current','true'); else el.removeAttribute('aria-current');
+    });
+    moveHighlight();
+    const url=new URL(location);
+    url.searchParams.set('r', items[i].dataset.route);   /* deviation 1 */
+    history.replaceState(null,'',url);
+    mount(i);
+  }
+  items.forEach((el,i)=>el.addEventListener('click',()=>setActive(i)));
+  replay.addEventListener('click',()=>mount(current));
+  window.addEventListener('resize',moveHighlight);
+  document.addEventListener('keydown',e=>{
+    if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable) return;
+    if(e.metaKey||e.ctrlKey||e.altKey) return;
+    if($('#sheet').open||$('#manifest').open) return;
+    const num=parseInt(e.key,10);
+    if(num>=1&&num<=items.length){ setActive(num-1); return; }
+    /* deviation 2: the stage owns ←/→ while focus is inside it */
+    if(e.target.closest && e.target.closest('#track, .pager')) return;
+    if(e.key==='ArrowRight') setActive((current+1)%items.length);
+    else if(e.key==='ArrowLeft') setActive((current-1+items.length)%items.length);
+    else if(e.key==='r'||e.key==='R') mount(current);
+  });
+  window.__pickerSync=function(route){
+    const i=items.findIndex(el=>el.dataset.route===route);
+    if(i<0) return;
+    current=i;
+    items.forEach((el,j)=>{ el.toggleAttribute('data-active',j===i);
+      if(j===i) el.setAttribute('aria-current','true'); else el.removeAttribute('aria-current'); });
+    moveHighlight();
+  };
+  window.__pickerReady=function(){
+    moveHighlight();
+    requestAnimationFrame(()=>requestAnimationFrame(()=>picker.setAttribute('data-ready','')));
+  };
+})();
+
+/* ==================================================================
+   REVIEWER DEEP LINK — drives the same controls a reviewer would click.
+   Adds no product behaviour and is unreachable from any product control.
+   `;` is accepted instead of `&` so the link survives shells.
+     index.html?r=three-peer-analysis-375-peer-3;shot=1
+     index.html?state=p3;view=scene;narrow=1;pane=3;gray=1;rm=1
+   ================================================================== */
+function boot(){
+  measureCh();
+  const p=new URLSearchParams(location.search.replace(/;/g,'&'));
+  if(p.get('shot')==='1') document.body.classList.add('shot');
+  if(p.get('gray')==='1'){ document.body.classList.add('gray'); $('#tGray').setAttribute('aria-pressed','true'); }
+  if(p.get('rm')==='1'){ document.body.classList.add('rm'); $('#tRm').setAttribute('aria-pressed','true'); }
+  if(p.get('sim')==='1'){ document.body.classList.add('sim'); $('#tSim').setAttribute('aria-pressed','true'); }
+  if(p.get('long')==='1'){ document.body.classList.add('longar'); $('#tLong').setAttribute('aria-pressed','true'); }
+  if(p.get('w1000')==='1'){ document.body.classList.add('w1000'); $('#tW1000').setAttribute('aria-pressed','true'); }
+
+  if(p.get('r') && ROUTES[p.get('r')]){ applyRoute(p.get('r')); window.__pickerSync(p.get('r')); }
+  else{
+    if(p.get('narrow')==='1'){ document.body.classList.add('narrow'); $('#tNarrow').setAttribute('aria-pressed','true'); }
+    loadFixture(p.get('state')&&FIXTURES[p.get('state')]?p.get('state'):'s2');
+    if(p.get('view')) view=p.get('view');
+    if(p.get('field')==='1') fieldOpen=true;
+    render();
+    if(p.get('pane')!=null){ const t=$('#track'); if(t){ activePane=Math.min(+p.get('pane'),t.children.length-1); applyPane(false);} }
+  }
+  lastBreak=isNarrow()?'narrow':'wide'; lastStage=S?stageMode():null;
+  window.__pickerReady();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.classList.remove('booting')));
+
+  /* Reviewer probe: writes live geometry / self-check results into the title
+     and a small overlay, so a headless capture run can be verified without
+     reading a screenshot. */
+  if(p.get('probe')){
+    setTimeout(async ()=>{
+      const de=document.documentElement;
+      let out;
+      if(p.get('probe')==='check'){
+        const r=await runCheck(), fail=r.filter(l=>l.startsWith('FAIL'));
+        out=JSON.stringify({assertions:r.length,failed:fail.length,fail});
+      }else if(p.get('probe')==='geom'){
+        const heads=$$('#sceneBody .blk[data-row="head"]').map(h=>Math.round(h.getBoundingClientRect().width));
+        const panes=$$('#sceneBody .pane').map(p=>p.dataset.pane);
+        out=JSON.stringify({stage:document.body.dataset.stage, w:document.body.dataset.w,
+          peers:S.readings.length, cols:heads, panes, pager:$$('.pager button').map(b=>b.textContent),
+          activePane, floor:Math.round(minColPx()), ch:+CHPX.toFixed(2),
+          bands:$$('#sceneBody .band').map(b=>Math.round(b.getBoundingClientRect().height)),
+          doc:de.scrollWidth, cli:de.clientWidth,
+          /* the overlay this probe injects is not counted: the height a capture
+             needs is the height of the app frame plus the evaluator strip. */
+          docH:Math.ceil($('#app').getBoundingClientRect().height +
+               ($('#chrome').offsetHeight||0) + 8)});
+      }else{
+        const wide=[...document.querySelectorAll('body *')].map(el=>{
+          const b=el.getBoundingClientRect();
+          return (b.right>de.clientWidth+1||b.left<-1)&&getComputedStyle(el).position!=='fixed'
+            ? ((el.className||el.tagName).toString().slice(0,26)+':'+Math.round(b.left)+'→'+Math.round(b.right)) : null;
+        }).filter(Boolean).slice(0,10);
+        out=JSON.stringify({doc:de.scrollWidth,cli:de.clientWidth,
+          body:Math.round(document.body.getBoundingClientRect().width),
+          app:Math.round(document.querySelector('#app').getBoundingClientRect().left),
+          w:document.body.dataset.w, stage:document.body.dataset.stage, wide});
+      }
+      document.title='PROBE '+out;
+      const box=document.createElement('pre');
+      box.id='probeOut';
+      box.style.cssText='position:fixed;inset-inline:0;top:0;z-index:9999;background:#fff;color:#000;'+
+        'font:11px/1.35 monospace;direction:ltr;white-space:pre-wrap;margin:0;padding:6px;border-bottom:2px solid #000';
+      box.textContent=out;
+      document.body.appendChild(box);
+    },900);
+  }
+}
+boot();
+</script>
+</body>
+</html>
