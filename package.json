@@ -2,7 +2,7 @@
   "name": "qandeel",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": ["apps/api", "packages/*"],
   "scripts": {
     "preflight": "node scripts/preflight.mjs",
     "build:api": "npm run build --workspace @qandeel/api",

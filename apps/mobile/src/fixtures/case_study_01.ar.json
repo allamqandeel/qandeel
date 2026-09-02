@@ -1,0 +1,97 @@
+{
+  "schema_version": "0.1.0-working",
+  "conversation_id": "case_study_01",
+  "transcript": [
+    { "span_id": "s1", "text": "بس " },
+    { "span_id": "s2", "text": "حسيت إني مش واثق في نفسي" },
+    { "span_id": "s3", "text": " قدامهم النهاردة، مع إني قبل كده كنت بقول " },
+    { "span_id": "s4", "text": "إني مبقاش بخاف من الكلام قدام الناس" },
+    { "span_id": "s5", "text": "." }
+  ],
+
+  "events": [
+    { "event_id": "e1", "event_type": "UTTERANCE_CAPTURED", "analysis_level": "OBSERVED", "source_span_ids": ["s2"] },
+    { "event_id": "e2", "event_type": "DIALOGUE_ACT_CLASSIFIED", "analysis_level": "DERIVED", "source_span_ids": ["s2"] },
+    { "event_id": "e3", "event_type": "MEMORY_CUE_DETECTED", "analysis_level": "DERIVED", "source_span_ids": ["s3"] },
+    { "event_id": "e4", "event_type": "MEMORY_RECALLED", "analysis_level": "DERIVED", "source_span_ids": ["s4"] },
+    { "event_id": "e5", "event_type": "DISCOURSE_RELATION_CLASSIFIED", "analysis_level": "DERIVED", "source_span_ids": ["s2", "s4"] },
+    { "event_id": "e6", "event_type": "READING_CREATED", "analysis_level": "INFERRED", "source_span_ids": ["s2", "s4"] },
+    { "event_id": "e7", "event_type": "UNKNOWN_OPENED", "analysis_level": "INFERRED", "source_span_ids": ["s2"] }
+  ],
+
+  "beats": [
+    {
+      "beat_id": "b1",
+      "beat_kind": "CAPTURE",
+      "event_ids": ["e1", "e2"],
+      "primary_object_refs": ["s2"],
+      "analysis_levels_present": ["OBSERVED", "DERIVED"],
+      "user_meaning": { "must_show_in_words": true, "short_label": "لحظة صريحة عن فقدان الثقة" },
+      "render": {
+        "primitives": [
+          { "primitive": "ANCHOR", "object_ref": "s2", "role": "CURRENT" },
+          { "primitive": "SPINE", "object_ref": "s2" }
+        ],
+        "anchor_weight": "MEDIUM"
+      }
+    },
+    {
+      "beat_id": "b2",
+      "beat_kind": "RECALL",
+      "event_ids": ["e3", "e4"],
+      "primary_object_refs": ["s4"],
+      "supporting_object_refs": ["s2"],
+      "analysis_levels_present": ["DERIVED"],
+      "user_meaning": { "must_show_in_words": true, "short_label": "استدعاء تصريح سابق عن نفس الموضوع" },
+      "render": {
+        "primitives": [
+          { "primitive": "ANCHOR", "object_ref": "s4", "role": "PAST" },
+          { "primitive": "THREAD", "object_ref": "s2:s4" }
+        ],
+        "thread_style": "CONNECT"
+      }
+    },
+    {
+      "beat_id": "b3",
+      "beat_kind": "CONTRADICT",
+      "event_ids": ["e5"],
+      "primary_object_refs": ["s2", "s4"],
+      "analysis_levels_present": ["DERIVED"],
+      "user_meaning": { "must_show_in_words": true, "short_label": "تناقض مع كلام سابق عن الثقة" },
+      "render": {
+        "primitives": [
+          { "primitive": "THREAD", "object_ref": "s2:s4" },
+          { "primitive": "CARD", "object_ref": "s2" },
+          { "primitive": "METER", "object_ref": "confidence_trait" }
+        ],
+        "thread_style": "CONTRADICT",
+        "meter_binding": { "meter_key": "confidence_trait", "delta_hint": "DOWN", "cause_object_ref": "s2" }
+      }
+    },
+    {
+      "beat_id": "b4",
+      "beat_kind": "READING_EMERGENCE",
+      "event_ids": ["e6"],
+      "primary_object_refs": ["s2", "s4"],
+      "analysis_levels_present": ["INFERRED"],
+      "user_meaning": {
+        "must_show_in_words": true,
+        "short_label": "الثقة بتقل في المواقف الاجتماعية رغم إنها كانت اتحسنت قبل كده — ممكن رجوع مؤقت"
+      },
+      "render": {
+        "primitives": [ { "primitive": "EMERGING_FRAME", "object_ref": "reading_01" } ]
+      }
+    },
+    {
+      "beat_id": "b5",
+      "beat_kind": "UNKNOWN_OPENING",
+      "event_ids": ["e7"],
+      "primary_object_refs": ["s2"],
+      "analysis_levels_present": ["INFERRED"],
+      "user_meaning": { "must_show_in_words": true, "short_label": "مجهول: مين بالظبط اللي كان قدامهم؟" },
+      "render": {
+        "primitives": [ { "primitive": "OPEN_GAP", "object_ref": "unknown_01" } ]
+      }
+    }
+  ]
+}
