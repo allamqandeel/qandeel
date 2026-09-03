@@ -1,6 +1,10 @@
-// T-01 Continuous Native Generation gate (escape-hatch Level 2 policy):
-// `expo prebuild` must be idempotent, its generated `android/` and `ios/` output is
-// never canonical source, and running it must leave the repository state unchanged.
+// T-01 Continuous Native Generation gate (escape-hatch Level 2 policy). Two proofs:
+//  1. Idempotent re-application: running `expo prebuild --no-clean` over the generated
+//     project must leave every generated file byte-identical (config plugins never drift).
+//  2. Reproducible generation: two clean generations must be identical modulo the random
+//     Xcode object identifiers that the pbxproj generator assigns on every run.
+// Generated `android/` and `ios/` output is never canonical source, and the gate must
+// leave the repository state unchanged.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
@@ -47,10 +51,20 @@ function removeGeneratedDirectories() {
   }
 }
 
-function prebuild() {
+function prebuild({ clean }) {
   for (const platform of platforms) {
-    run(process.execPath, [expoCli, 'prebuild', '--platform', platform, '--no-install']);
+    const args = [expoCli, 'prebuild', '--platform', platform, '--no-install'];
+    if (!clean) args.push('--no-clean');
+    run(process.execPath, args);
   }
+}
+
+// The `xcode` project generator assigns random 24-hex object identifiers on every clean run;
+// they carry no configuration, so clean-generation comparisons neutralise them.
+const XCODE_ID_FILES = /\.(?:pbxproj|xcscheme)$/u;
+function normalizeXcodeIds(relativePath, bytes) {
+  if (!relativePath.startsWith('ios/') || !XCODE_ID_FILES.test(relativePath)) return bytes;
+  return Buffer.from(bytes.toString('utf8').replace(/\b[0-9A-F]{24}\b/gu, 'XCODE_OBJECT_ID'), 'utf8');
 }
 
 function walk(directory, files = []) {
@@ -63,16 +77,18 @@ function walk(directory, files = []) {
   return files;
 }
 
-function hashGeneratedDirectories() {
+function hashGeneratedDirectories({ normalize }) {
   const hash = createHash('sha256');
   let count = 0;
   for (const directory of generatedDirectories) {
     const root = join(projectDir, directory);
     if (!existsSync(root)) throw new Error(`expected generated directory is missing: ${directory}`);
     for (const file of walk(root)) {
-      hash.update(relative(projectDir, file).split(sep).join('/'));
+      const relativePath = relative(projectDir, file).split(sep).join('/');
+      const bytes = readFileSync(file);
+      hash.update(relativePath);
       hash.update('\0');
-      hash.update(readFileSync(file));
+      hash.update(normalize ? normalizeXcodeIds(relativePath, bytes) : bytes);
       hash.update('\0');
       count += 1;
     }
@@ -87,21 +103,33 @@ if (platforms.length !== nativeDirectories.length) {
 const statusBefore = capture('git', ['status', '--porcelain', '--untracked-files=all']);
 
 removeGeneratedDirectories();
-prebuild();
-const first = hashGeneratedDirectories();
+prebuild({ clean: true });
+const cleanFirst = hashGeneratedDirectories({ normalize: false });
+const cleanFirstNormalized = hashGeneratedDirectories({ normalize: true });
 
-prebuild();
-const second = hashGeneratedDirectories();
+prebuild({ clean: false });
+const reapplied = hashGeneratedDirectories({ normalize: false });
+
+removeGeneratedDirectories();
+prebuild({ clean: true });
+const cleanSecondNormalized = hashGeneratedDirectories({ normalize: true });
 
 removeGeneratedDirectories();
 const statusAfter = capture('git', ['status', '--porcelain', '--untracked-files=all']);
 
-console.log(`prebuild #1 (${platforms.join('+')}): ${first.count} generated files, sha256 ${first.digest}`);
-console.log(`prebuild #2 (${platforms.join('+')}): ${second.count} generated files, sha256 ${second.digest}`);
+const label = platforms.join('+');
+console.log(`clean generation #1 (${label}): ${cleanFirst.count} files, raw sha256 ${cleanFirst.digest}`);
+console.log(`re-application --no-clean (${label}): ${reapplied.count} files, raw sha256 ${reapplied.digest}`);
+console.log(`clean generation #1 normalized (${label}): sha256 ${cleanFirstNormalized.digest}`);
+console.log(`clean generation #2 normalized (${label}): sha256 ${cleanSecondNormalized.digest}`);
 
 let failed = false;
-if (first.digest !== second.digest || first.count !== second.count) {
-  console.error('FAIL: expo prebuild is not idempotent; generated output differs between two runs.');
+if (cleanFirst.digest !== reapplied.digest || cleanFirst.count !== reapplied.count) {
+  console.error('FAIL: re-applying expo prebuild over the generated project changed it (config plugins are not idempotent).');
+  failed = true;
+}
+if (cleanFirstNormalized.digest !== cleanSecondNormalized.digest) {
+  console.error('FAIL: two clean generations differ beyond Xcode object identifiers (generation is not reproducible).');
   failed = true;
 }
 if (statusBefore !== statusAfter) {
@@ -110,4 +138,4 @@ if (statusBefore !== statusAfter) {
   failed = true;
 }
 if (failed) process.exit(1);
-console.log('PASS: prebuild is idempotent, generated native directories were discarded, repository state unchanged.');
+console.log('PASS: re-application is byte-identical, clean generation is reproducible, generated native directories were discarded, repository state unchanged.');

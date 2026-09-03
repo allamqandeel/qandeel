@@ -72,9 +72,11 @@ the frozen hierarchy:
 4. direct manipulation of generated native files or dangerous mods: **not pre-authorized**;
    it requires a separate Engineering Architecture review.
 
-`npm run prebuild:verify` runs `expo prebuild` twice, hashes the generated output, requires
-identical hashes, discards the generated directories and requires an unchanged repository
-state.
+`npm run prebuild:verify` proves two properties and then discards the generated directories
+and requires an unchanged repository state: (1) re-running `expo prebuild --no-clean` over
+the generated project leaves every file byte-identical (idempotent re-application, the
+Level-2 property), and (2) two clean generations are identical modulo the random Xcode
+object identifiers that the project generator assigns on every run.
 
 ## Commands
 
