@@ -9,8 +9,11 @@ function status(kind, message) {
   console.log(`${kind}: ${message}`);
 }
 
-function commandVersion(label, command, args, { required = true } = {}) {
-  const result = spawnSync(command, args, { encoding: 'utf8', windowsHide: true });
+function commandVersion(label, command, args, { required = true, shell = false } = {}) {
+  // With a shell, pass one fixed command line and no separate args (avoids Node's DEP0190 warning).
+  const result = shell
+    ? spawnSync([command, ...args].join(' '), { encoding: 'utf8', windowsHide: true, shell: true })
+    : spawnSync(command, args, { encoding: 'utf8', windowsHide: true });
   if (result.error || result.status !== 0) {
     status(required ? 'MISSING' : 'OPTIONAL', `${label} is not available${required ? '.' : '; required only when publishing a PR.'}`);
     if (required) failed = true;
@@ -21,15 +24,23 @@ function commandVersion(label, command, args, { required = true } = {}) {
   return version;
 }
 
-const nodeMajor = Number.parseInt(process.versions.node.split('.')[0], 10);
-if (nodeMajor >= 20) status('OK', `Node v${process.versions.node}`);
+const minimumNode = { major: 22, minor: 13, patch: 0 };
+const [nodeMajor, nodeMinor, nodePatch] = process.versions.node
+  .split('.')
+  .map((part) => Number.parseInt(part, 10));
+const nodeSupported =
+  nodeMajor > minimumNode.major ||
+  (nodeMajor === minimumNode.major &&
+    (nodeMinor > minimumNode.minor ||
+      (nodeMinor === minimumNode.minor && nodePatch >= minimumNode.patch)));
+if (nodeSupported) status('OK', `Node v${process.versions.node}`);
 else {
-  status('UNSUPPORTED', `Node v${process.versions.node}; Node 20 or newer is required.`);
+  status('UNSUPPORTED', `Node v${process.versions.node}; Node 22.13.0 or newer is required.`);
   failed = true;
 }
 
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const npmVersion = commandVersion('npm', npmCommand, ['--version']);
+// Node 20.12+/22 refuse to spawn .cmd shims without a shell on Windows; the argument list is fixed.
+const npmVersion = commandVersion('npm', 'npm', ['--version'], { shell: process.platform === 'win32' });
 if (npmVersion && Number.parseInt(npmVersion.split('.')[0], 10) < 10) {
   status('UNSUPPORTED', `npm ${npmVersion}; npm 10 or newer is required.`);
   failed = true;

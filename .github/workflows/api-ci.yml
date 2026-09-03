@@ -29,7 +29,7 @@ jobs:
       - {name: Checkout, uses: actions/checkout@v4}
       - name: Setup Node.js
         uses: actions/setup-node@v4
-        with: {node-version: '20', cache: npm}
+        with: {node-version: '22', cache: npm}
       - {name: Install dependencies, run: npm ci}
       - {name: Verify npm-only toolchain contract, run: npm run test:toolchain}
       - {name: Verify A2 E2E runtime smoke static contract, run: npm run test:a2-e2e-smoke-contract}
