@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Qandeel",
+    "slug": "qandeel",
+    "version": "0.1.0",
+    "scheme": "qandeel",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "ios": {
+      "bundleIdentifier": "com.qandeel.mobile"
+    },
+    "android": {
+      "package": "com.qandeel.mobile"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

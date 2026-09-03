@@ -1,0 +1,10 @@
+# T-01 boot smoke only: the Release build launches and the technical shell is visible.
+# No gesture, accessibility or Product flows belong here.
+appId: com.qandeel.mobile
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "qandeel-foundation-shell"
+- assertVisible: "QANDEEL"
+- assertVisible: "T-01 foundation shell"

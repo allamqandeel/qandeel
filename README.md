@@ -17,7 +17,7 @@ Build, test, benchmark, observe, and change contracts only when evidence require
 
 ## Local development
 
-Install Node.js 20 or newer (including npm) and Git through your normal machine setup.
+Install Node.js 22.13 or newer (including npm 10 or newer) and Git through your normal machine setup.
 GitHub CLI is optional for local implementation and verification; it is needed only
 when publishing a pull request. Repository scripts never install or modify global
 software.
@@ -55,3 +55,24 @@ all five database and Supabase test variables documented in `database/README.md`
 If dependencies become corrupt, close running Node processes, remove only the local
 root `node_modules` directory manually, and rerun `npm ci`. Dependency deletion or
 renaming is deliberately not part of normal repository scripts.
+
+## Mobile client
+
+`apps/mobile` is the React Native (New Architecture) + Expo (Continuous Native
+Generation) + TypeScript workspace for iOS and Android. It is installed and locked by
+this root lockfile only; never create a nested lockfile there. Its secret-free gates:
+
+```sh
+npm run test:mobile-foundation-contract
+npm run typecheck:mobile
+npm run lint:mobile
+npm run test:mobile
+npm run deps:check:mobile
+npm run doctor:mobile
+npm run prebuild:mobile
+```
+
+Native builds and the device boot smoke run in `.github/workflows/mobile-ci.yml`
+(Android emulator and iOS simulator). Generated `apps/mobile/ios` and
+`apps/mobile/android` directories are never committed. See `apps/mobile/README.md` for
+the toolchain pins and the intentional TypeScript exception.
