@@ -107,6 +107,8 @@
     "test:session-semantic-clock-sp-lh-delivery-contract": "node --test tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs",
     "verify:session-semantic-clock-sp-lh-delivery:integration": "node --env-file-if-exists=.env database/verify-migration-0065.mjs",
     "test:reference-attention-focus-evaluator-contract": "node --test tests/reference-attention-focus-evaluator-contract.test.mjs",
+    "test:durable-reference-emerging-focus-sp-substrate-contract": "node --test tests/durable-reference-emerging-focus-sp-substrate-contract.test.mjs",
+    "verify:durable-reference-emerging-focus-sp-substrate:integration": "node --env-file-if-exists=.env database/verify-migration-0066.mjs",
     "test:integrated-intelligence-runtime-phase-closure-contract": "node --test tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs",
     "verify:explicit-session-context-activation:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/verify-explicit-session-context-activation-runtime.ts",
     "verify:him-measurement-preflight": "node --test tests/him-structured-measurement-preflight.test.mjs && npm run test:api && npm run test:database && node node_modules/typescript/bin/tsc -p apps/api/tsconfig.json --noEmit && node node_modules/typescript/bin/tsc -p apps/api/tsconfig.scripts.json --noEmit && npm run build:api",

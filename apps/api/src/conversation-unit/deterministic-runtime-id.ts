@@ -21,32 +21,21 @@
 // carries no security claim, and the canonical batch fingerprint that actually
 // protects commitment identity stays DB-derived SHA-256 (migration 0064).
 //
-// Node's built-in `crypto` is the only dependency.
+// The version-5 derivation itself lives in the neutral `runtime-identity`
+// helper since T-03B1b1, so the conversational-focus canonicalizer can share
+// the exact same algorithm without reaching into this directory. It is
+// re-exported here unchanged, and every identity vector this module produces
+// is byte for byte what T-03A2 shipped. Node's built-in `crypto` remains the
+// only dependency, through that helper.
 
-import { createHash } from 'node:crypto';
+import { uuidV5 } from '../runtime-identity/uuid-v5';
+
+export { uuidV5 };
 
 /** RFC 4122 appendix C URL namespace, used only to derive the two fixed domain namespaces below. */
 const URL_NAMESPACE = '6ba7b811-9dad-11d1-80b4-00c04fd430c8';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
-
-function uuidToBytes(value: string): Buffer {
-  return Buffer.from(value.replace(/-/gu, ''), 'hex');
-}
-
-function bytesToUuid(bytes: Buffer): string {
-  const hex = bytes.toString('hex');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
-}
-
-/** RFC 4122 §4.3 name-based UUID, version 5 (SHA-1). Deterministic for a given namespace and name. */
-export function uuidV5(namespace: string, name: string): string {
-  const digest = createHash('sha1').update(uuidToBytes(namespace)).update(Buffer.from(name, 'utf8')).digest();
-  const bytes = Buffer.from(digest.subarray(0, 16));
-  bytes[6] = (bytes[6] & 0x0f) | 0x50;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  return bytesToUuid(bytes);
-}
 
 /**
  * The fixed domain/version namespaces. They are derived, not magic literals, so

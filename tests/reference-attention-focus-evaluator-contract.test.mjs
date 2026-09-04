@@ -23,7 +23,8 @@ const readJson = async (path) => JSON.parse(await read(path));
 const stripComments = (text) => text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/\/\/.*$/gmu, '');
 
 const FOCUS_DIR = 'apps/api/src/conversational-focus';
-const PRODUCTION_FILES = [
+/** The T-03B1a evaluator slice. */
+const EVALUATOR_FILES = [
   'conversational-focus-evaluator.service.ts',
   'conversational-focus.types.ts',
   'fake-focus-resolution.provider.ts',
@@ -34,8 +35,12 @@ const PRODUCTION_FILES = [
   'index.ts',
   'openai-focus-resolution.provider.ts',
 ];
+/** The T-03B1b1 pure canonicalization boundary: prepared results -> the durable payload. */
+const CANONICALIZER_FILES = ['durable-focus-canonicalizer.ts', 'durable-focus-payload.types.ts'];
+const PRODUCTION_FILES = [...EVALUATOR_FILES, ...CANONICALIZER_FILES];
 const SPEC_FILES = [
   'conversational-focus-evaluator.service.spec.ts',
+  'durable-focus-canonicalizer.spec.ts',
   'focus-anchor-mapper.spec.ts',
   'focus-resolution-validator.spec.ts',
   'openai-focus-resolution.provider.spec.ts',
@@ -55,6 +60,8 @@ const relative = (file, base = rootPath) => file.slice(base.length).replace(/^[\
 const sources = Object.fromEntries(await Promise.all(PRODUCTION_FILES.map(async (name) => [name, await read(`${FOCUS_DIR}/${name}`)])));
 const code = Object.fromEntries(Object.entries(sources).map(([name, text]) => [name, stripComments(text)]));
 const allCode = Object.values(code).join('\n');
+/** The T-03B1a evaluator alone, which still allocates no durable identity of any kind. */
+const evaluatorCode = EVALUATOR_FILES.map((name) => code[name]).join('\n');
 const evaluator = code['conversational-focus-evaluator.service.ts'];
 const validator = code['focus-resolution-validator.ts'];
 const mapper = code['focus-anchor-mapper.ts'];
@@ -105,20 +112,31 @@ test('nothing outside the directory imports it: no ConversationModule, Conversat
   }
 });
 
-test('T-03B1a adds no SQL, no migration, no durable write, no durable identity', () => {
+test('the evaluator adds no SQL, no durable write, no durable identity; the durable substrate is migration 0066 alone', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0065_session_semantic_clock_sp_lh_delivery_v1.sql', 'the newest migration is still the T-03A2 activation');
-  for (const name of migrations) {
+  // T-03B1a shipped no migration; T-03B1b1 added exactly 0066 as the durable
+  // substrate, and nothing before it carries a T-03B1 token.
+  assert.equal(migrations.at(-1), '0066_durable_reference_emerging_focus_sp_substrate_v1.sql', 'the newest migration is the T-03B1b1 substrate');
+  for (const name of migrations.filter((candidate) => !candidate.startsWith('0066_'))) {
     assert.doesNotMatch(readFileSyncUtf8(`database/migrations/${name}`), /emerging_focus|reference_handle|conversational_focus|claim_attribution/iu, `${name} carries no T-03B1 substrate`);
   }
-  assert.ok(!existsSync(new URL('database/verify-migration-0066.mjs', root)));
+  assert.ok(existsSync(new URL('database/verify-migration-0066.mjs', root)), 'the 0066 real-PostgreSQL verifier exists');
   for (const forbidden of ['serviceApi', 'dataApi', 'SupabaseClient', '.rpc(', 'from \'pg\'', 'INSERT INTO', 'UPDATE ', 'CREATE TABLE', 'randomUUID', 'uuidv5', 'crypto', 'fs.', 'writeFile', 'readFile']) {
-    assert.equal(allCode.includes(forbidden), false, `the evaluator must not contain ${forbidden}`);
+    assert.equal(allCode.includes(forbidden), false, `the directory must not contain ${forbidden}`);
   }
-  // No durable identity is allocated: the only minted ids are prepared,
-  // batch-local, and visibly prefixed.
+  // The evaluator allocates no durable identity: the only ids it mints are
+  // prepared, batch-local, and visibly prefixed. Durable identity is derived
+  // ONLY by the T-03B1b1 canonicalizer, deterministically, from the prepared
+  // result - never by the evaluator, never by the provider.
   assert.match(evaluator, /export const PREPARED_ID_PREFIX = 'prepared:';/u);
-  assert.doesNotMatch(allCode, /emergingFocusId|emerging_focus_id|handleId: randomUUID|sessionPosition|session_position|live_head|liveHead/u);
+  assert.doesNotMatch(evaluatorCode, /emergingFocusId|emerging_focus_id|handleId: randomUUID|sessionPosition|session_position|live_head|liveHead|uuidV5/u);
+  const canonicalizer = code['durable-focus-canonicalizer.ts'];
+  assert.match(canonicalizer, /export function durableReferenceHandleId\(/u);
+  assert.match(canonicalizer, /export function durableEmergingFocusId\(/u);
+  assert.match(canonicalizer, /if \(JSON\.stringify\(units\)\.includes\(PREPARED_ID_PREFIX\)\) \{\s*throw new FocusCanonicalizationError\('PREPARED_IDENTITY_LEAKED'\);/u,
+    'no prepared identity survives into the durable payload');
+  assert.doesNotMatch(allCode, /session_position|sessionPosition|same_sp_event_sequence|live_head|liveHead/u,
+    'no file in the directory authors SP or the same-SP sequence: those are database allocation results');
 });
 
 test('the slice reaches nothing later: no Thread, Home, lifecycle, LF, mobile, Map, Timeline, K/V', () => {
@@ -135,8 +153,11 @@ test('the slice reaches nothing later: no Thread, Home, lifecycle, LF, mobile, M
     for (const match of text.matchAll(/from\s+'([^']+)'/gu)) {
       const specifier = match[1];
       if (specifier.startsWith('./')) continue;
-      assert.ok(specifier === 'openai' || specifier === '../conversation-unit/cu-anchor-mapper',
-        `${name} imports ${specifier}; only ./*, openai and ../conversation-unit/cu-anchor-mapper are allowed`);
+      assert.ok(specifier === 'openai' || specifier === '../conversation-unit/cu-anchor-mapper' || specifier === '../runtime-identity/uuid-v5',
+        `${name} imports ${specifier}; only ./*, openai, ../conversation-unit/cu-anchor-mapper and the neutral ../runtime-identity/uuid-v5 helper are allowed`);
+      if (specifier === '../runtime-identity/uuid-v5') {
+        assert.ok(CANONICALIZER_FILES.includes(name), `only the T-03B1b1 canonicalizer derives durable identity; ${name} may not`);
+      }
     }
     assert.doesNotMatch(text, /require\(/u, `${name} uses no require()`);
     assert.doesNotMatch(text, /\bimport\(/u, `${name} uses no dynamic import()`);
@@ -257,7 +278,11 @@ test('the gate is registered at the root and in API CI, and MOB-CI-01 is untouch
     'the contract runs after the T-03A2 static contract');
   assert.ok(apiCi.indexOf('test:reference-attention-focus-evaluator-contract') < apiCi.indexOf('Apply all migrations to fresh PostgreSQL'),
     'the static contract runs before the database bootstrap');
-  assert.doesNotMatch(apiCi, /verify:reference-attention|verify-migration-0066|focus.*:integration/u, 'no database verifier exists for this slice');
+  // The evaluator slice itself has no database verifier; the only focus
+  // verifier in CI is the T-03B1b1 substrate verifier for migration 0066.
+  assert.doesNotMatch(apiCi, /verify:reference-attention/u, 'no database verifier exists for the evaluator slice');
+  assert.equal((apiCi.match(/focus[^\n]*:integration/gu) ?? []).length, 1, 'exactly one focus verifier: the 0066 substrate');
+  assert.match(apiCi, /verify:durable-reference-emerging-focus-sp-substrate:integration/u);
   // Mobile CI is not edited: no new step, still the fast gate plus two conditional native jobs.
   assert.doesNotMatch(mobileCi, /reference-attention-focus/u);
   assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3);
