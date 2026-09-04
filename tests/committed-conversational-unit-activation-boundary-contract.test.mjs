@@ -99,6 +99,9 @@ test('nothing in the conversation-unit directory is a Nest provider (Gate B, pre
 test('the substrate is reachable ONLY through the named T-03A2 boundary', () => {
   const referencing = walk(API_SRC)
     .filter((file) => !file.url.includes('/conversation-unit/'))
+    // T-03B1a (conversational-focus) reuses the PURE code-point anchor helper
+    // of T-03A1 and nothing else; it is pinned separately just below.
+    .filter((file) => !file.url.includes('/conversational-focus/'))
     .filter((file) => /conversation-unit|commit_conversation_units_v1|ConversationUnitRepository|ConversationUnitCommitmentService|ConversationTemporalEstablishmentService|CuSegmentation/u.test(read(file.path)))
     .map((file) => file.name)
     .sort();
@@ -109,6 +112,18 @@ test('the substrate is reachable ONLY through the named T-03A2 boundary', () => 
     'conversation.service.spec.ts',
     'conversation.service.ts',
   ], 'only the authorized T-03A2 wiring may reach the committed-CU substrate');
+
+  // The T-03B1a evaluator may import ONLY `cu-anchor-mapper` (pure, no I/O)
+  // from this directory: never the repository, the producer RPC, the
+  // commitment service, the temporal boundary or a segmentation provider.
+  for (const file of walk(API_SRC).filter((entry) => entry.url.includes('/conversational-focus/'))) {
+    const source = read(file.path);
+    for (const match of source.matchAll(/from\s+'([^']*conversation-unit[^']*)'/gu)) {
+      assert.equal(match[1], '../conversation-unit/cu-anchor-mapper', `${file.name} may reuse only the pure anchor helper`);
+    }
+    assert.doesNotMatch(source, /commit_conversation_units_v1|ConversationUnitRepository|ConversationUnitCommitmentService|ConversationTemporalEstablishmentService|CuSegmentation/u,
+      `${file.name} does not reach the committed-CU substrate`);
+  }
 
   // AppModule, the orchestrator, the conversation repository and the
   // post-response dispatcher are untouched by the activation. The orchestrator

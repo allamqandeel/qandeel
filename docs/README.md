@@ -16,6 +16,8 @@
 
 ## Implementation phase
 
+- [Reference / Attention Resolution Evaluator + Prepared Focus Semantics v1](reference-attention-focus-evaluator-v1.md) — T-03B1a, the production-inert one-CU reference / attribution / conversational-function / independent-attention evaluator that T-03B1b will integrate into the SP-native transaction
+
 - [Session Semantic Clock + SP Allocation/Sealing + LH Establishment + Committed-CU Delivery v1](session-semantic-clock-sp-lh-delivery-v1.md) — T-03A2, the one activation act that makes committed-CU commitment and Session Position allocation executable together
 
 Implementation-facing Markdown specifications live here.
