@@ -95,6 +95,35 @@ and the existing-batch replay split:
 npm run verify:committed-conversational-unit-substrate:integration
 ```
 
+Migration 0065 performs the one activation act T-03A1 reserved. It adds
+`session_semantic_clocks` — exactly one server-owned row per Session, holding the
+Session Position head (`current_sp`, `NULL` until the first committed CU, never
+`0`) and an internal same-SP sequence — and a `NOT NULL session_position` on
+`conversation_units` with `UNIQUE(session_id, session_position)`, so the Session
+Position is born atomically with the CU and is immutable through the existing
+append-only trigger. `LH` is derived from `current_sp`; there is no second
+mutable head column and no sealed flag, because `SP(n)` is sealed exactly when
+`n < current_sp`. Every semantic write takes the Session clock lock **before**
+the source-turn lock (AF66-01). Committed-CU advancement is delivered through the
+dedicated append-only `conversation_unit_commit_events`, keyed on the batch so
+several valid batches per source turn stay representable;
+`runtime_event_outbox` is untouched and never reused. Only then is
+`commit_conversation_units_v1` granted to `service_role` — and to no other role —
+together with the atomic USER → ASSISTANT coordinator
+`commit_finalized_exchange_conversation_units_v1` and the service-role batch
+snapshot read. The two owner-scoped temporal reads
+(`get_session_temporal_state_v1`, `get_conversational_units_committed_events_v1`)
+derive the owner from `auth.uid()` and are the delivery/catch-up transport for
+LH, never a Timeline API. The internal same-SP sequencing seam
+`reserve_session_same_sp_event_v1` is executable by no application role. See
+`docs/session-semantic-clock-sp-lh-delivery-v1.md` for the complete contract. Its
+verifier proves allocation, sealing, replay, the atomic exchange, the delivery
+surface, the ACL matrix and the activation guard against live semantics:
+
+```sh
+npm run verify:session-semantic-clock-sp-lh-delivery:integration
+```
+
 ## Real Supabase Auth smoke test
 
 The explicit Auth smoke command signs a dedicated test user in through Supabase Auth

@@ -50,6 +50,10 @@ const expectedDependencies = {
 };
 
 const expectedDevDependencies = {
+  // T-03A2: the repository-owned, TYPE-ONLY shared wire contract. It ships no
+  // JavaScript and is imported only with `import type`, so it is a build-time
+  // contract rather than a shipped runtime dependency of the app bundle.
+  '@qandeel/runtime': '*',
   '@testing-library/react-native': '^14.0.1',
   '@types/jest': '^29.5.14',
   '@types/react': '~19.2.2',

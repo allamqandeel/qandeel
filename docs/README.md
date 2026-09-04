@@ -14,6 +14,10 @@
 - [Existing-Hypothesis Fresh-Evidence Association Authority Foundation v1](fresh-evidence-hypothesis-association-authority-foundation-v1.md)
 - [Background Intelligence Execution Authority v1](background-intelligence-execution-authority-v1.md)
 
+## Implementation phase
+
+- [Session Semantic Clock + SP Allocation/Sealing + LH Establishment + Committed-CU Delivery v1](session-semantic-clock-sp-lh-delivery-v1.md) — T-03A2, the one activation act that makes committed-CU commitment and Session Position allocation executable together
+
 Implementation-facing Markdown specifications live here.
 
 The original Word documents remain the canonical archive. Markdown files record implementation-facing contracts and reconciliations used by the repository.

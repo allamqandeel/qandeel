@@ -11,7 +11,7 @@ name: Mobile CI
 # install and boot-smoke contract.
 on:
   pull_request:
-    paths: ['apps/mobile/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'tests/mobile-native-impact-classifier.test.mjs', 'scripts/classify-mobile-native-impact.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml']
+    paths: ['apps/mobile/**', 'packages/runtime/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs', 'tests/mobile-native-impact-classifier.test.mjs', 'scripts/classify-mobile-native-impact.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml']
   push:
     branches: [main]
 concurrency:
@@ -75,6 +75,7 @@ jobs:
       - {name: Verify npm-only toolchain contract, run: npm run test:toolchain}
       - {name: Verify mobile foundation toolchain contract, run: npm run test:mobile-foundation-contract}
       - {name: Verify mobile canonical state contract (T-02), run: npm run test:mobile-canonical-state-contract}
+      - {name: Verify Session Semantic Clock / SP / LH delivery contract (T-03A2), run: npm run test:session-semantic-clock-sp-lh-delivery-contract}
       - {name: Verify the native-impact classifier, run: npm run test:mobile-native-impact-classifier}
       - {name: Type-check mobile (TypeScript 5.9 line), run: npm run typecheck:mobile}
       - {name: Lint mobile, run: npm run lint:mobile}

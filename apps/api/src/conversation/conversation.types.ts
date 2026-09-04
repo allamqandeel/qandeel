@@ -1,3 +1,5 @@
+import type { ConversationTemporalDelivery } from '@qandeel/runtime';
+
 export type SessionStatus = 'ACTIVE' | 'IDLE' | 'CLOSED' | 'EXPIRED';
 export type TurnStatus =
   | 'RECEIVED' | 'VALIDATED' | 'CONTEXT_BUILDING' | 'PROCESSING' | 'GENERATING'
@@ -31,6 +33,14 @@ export interface ConversationTurn {
 export interface OrchestratedTurnResult {
   userTurn: ConversationTurn;
   assistantTurn?: ConversationTurn;
+  /**
+   * T-03A2: the ADDITIVE temporal delivery of a completed exchange - the
+   * authoritative Live Head plus the committed-CU advancement events created or
+   * replayed for it. Absent while the exchange is not a completed USER +
+   * ASSISTANT pair; `userTurn` and `assistantTurn` are never removed or
+   * reinterpreted. It carries no Live Focus: T-03D owns LF.
+   */
+  temporal?: ConversationTemporalDelivery;
 }
 
 export interface ConversationExchange {

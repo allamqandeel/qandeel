@@ -1,14 +1,17 @@
-// T-03A1 - Committed Conversational Unit substrate types.
+// T-03A1 - Committed Conversational Unit substrate types, extended by T-03A2
+// with the Session Position that is now born atomically with every committed CU.
 //
 // Stage 1.2 (INPUT-01) defines a Conversational Unit as the smallest contiguous
 // span of committed conversational source material constituting one
 // independently addressable conversational contribution. Stage 6 freezes
 // `1 committed CU = 1 Moment` and `1 turn = 0..N committed CUs`.
 //
-// Nothing in this module is a Nest provider. The directory contains no module
-// file and registers nothing in AppModule, so the T-03A1 producer stays
-// production-inert until T-03A2 attaches the temporal establishment boundary.
-// No SP, LH, Moment addressability or temporary Product state appears here.
+// Nothing in this module is a Nest provider: no file in this directory carries
+// a Nest decorator, and the T-03A2 wiring registers these plain classes through
+// explicit factories in ConversationModule. There is still no temporary Product
+// state anywhere - no SP_PENDING, no PRE_MOMENT, no COMMITTED_WITHOUT_SP - and
+// after T-03A2 activation a committed CU without a Session Position is
+// unrepresentable.
 
 /** The canonical span coordinate system: 0-based, half-open, Unicode code points. */
 export interface SourceSpan {
@@ -46,7 +49,13 @@ export interface CommitConversationUnitsRequest extends CommitBatchProvenance {
   readonly units: readonly ProposedCommitUnit[];
 }
 
-/** A durable committed CU row, exactly as the database stores it. */
+/**
+ * A durable committed CU row, exactly as the database stores it.
+ *
+ * `session_position` is the canonical Session Position (SP) of this Moment. It
+ * is allocated by the database inside the same transaction that inserts the
+ * row, is immutable by the append-only trigger, and is never caller-supplied.
+ */
 export interface CommittedConversationUnit {
   readonly id: string;
   readonly user_id: string;
@@ -61,7 +70,57 @@ export interface CommittedConversationUnit {
   readonly source_span_end: number;
   readonly committed_text: string;
   readonly source_content_sha256: string;
+  readonly session_position: number;
   readonly created_at: string;
+}
+
+/** A durable committed-CU delivery event row, exactly as the database stores it. */
+export interface CommittedConversationUnitEventRow {
+  readonly commit_batch_id: string;
+  readonly user_id: string;
+  readonly session_id: string;
+  readonly source_turn_id: string;
+  readonly first_sp: number;
+  readonly last_sp: number;
+  readonly unit_count: number;
+  readonly created_at: string;
+}
+
+/** The exact payload the atomic finalized-exchange coordinator accepts. */
+export interface CommitFinalizedExchangeRequest extends CommitBatchProvenance {
+  readonly sessionId: string;
+  readonly userId: string;
+  readonly userSourceTurnId: string;
+  readonly userBatchId: string;
+  readonly userUnits: readonly ProposedCommitUnit[];
+  readonly assistantSourceTurnId: string;
+  readonly assistantBatchId: string;
+  readonly assistantUnits: readonly ProposedCommitUnit[];
+}
+
+/** The single row the atomic finalized-exchange coordinator returns. */
+export interface FinalizedExchangeCommitResult {
+  readonly live_head: number | null;
+  readonly user_units: readonly CommittedConversationUnit[];
+  readonly assistant_units: readonly CommittedConversationUnit[];
+  readonly user_event: CommittedConversationUnitEventRow | null;
+  readonly assistant_event: CommittedConversationUnitEventRow | null;
+}
+
+/**
+ * The narrow service-role snapshot of one automatic commitment batch plus the
+ * committed source frontier of its turn and the Session's derived Live Head.
+ *
+ * `source_frontier` is source-span ordering data: it is NOT SP and NOT LH.
+ * `live_head` is `null`, never `0`, when no committed CU exists yet.
+ */
+export interface CommitBatchSnapshot {
+  readonly batch_exists: boolean;
+  readonly committed_unit_count: number;
+  readonly units: readonly CommittedConversationUnit[];
+  readonly event: CommittedConversationUnitEventRow | null;
+  readonly source_frontier: number;
+  readonly live_head: number | null;
 }
 
 /** The canonical source material a commitment evaluation runs over. */
@@ -123,6 +182,36 @@ export class CommitmentRejectedError extends Error {
   ) {
     super(`Conversational unit commitment was rejected: ${reason}.`);
     this.name = 'CommitmentRejectedError';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * T-03A2 temporal-establishment integrity failures. Every one of them is
+ * fail-closed: the durable committed source is never repaired by guessing, and
+ * an already-committed batch is never overwritten or re-segmented.
+ */
+export type ConversationTemporalIntegrityReason =
+  /** Exactly one half of an atomic USER/ASSISTANT automatic pair exists. */
+  | 'PARTIAL_AUTOMATIC_EXCHANGE_COMMITMENT'
+  /** A non-zero committed batch carries no durable delivery event. */
+  | 'COMMITTED_WITHOUT_DELIVERY_EVENT'
+  /** A delivery event disagrees with its own stored Session Position range. */
+  | 'DELIVERY_RANGE_MISMATCH'
+  /** The two halves of one exchange carry different commitment provenance. */
+  | 'PROVENANCE_DISAGREEMENT'
+  /**
+   * The completed pair is not a finalized exchange: wrong roles, different
+   * Sessions, or an ASSISTANT turn that is not the response to that USER turn.
+   */
+  | 'INVALID_FINALIZED_EXCHANGE_RELATION'
+  /** Committed CUs exist for this exchange but the Session carries no Live Head. */
+  | 'LIVE_HEAD_NOT_ESTABLISHED';
+
+export class ConversationTemporalIntegrityError extends Error {
+  constructor(readonly reason: ConversationTemporalIntegrityReason) {
+    super(`Conversation temporal establishment integrity failed: ${reason}.`);
+    this.name = 'ConversationTemporalIntegrityError';
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }

@@ -40,7 +40,12 @@ import { validateNewBatchFrontier, validateUnitStructure } from './cu-span-valid
 export interface CommitmentEvaluationOptions {
   /** Stable identity for this batch. A retry MUST reuse the same value. */
   readonly batchId?: string;
-  readonly newUnitId?: () => string;
+  /**
+   * Identity for one proposed unit. T-03A2 passes the unit's index and its
+   * canonical source span so an automatic runtime batch can derive a stable
+   * identity for equivalent segmentation output; the default stays random.
+   */
+  readonly newUnitId?: (unit: { readonly index: number; readonly spanStart: number; readonly spanEnd: number }) => string;
 }
 
 export class ConversationUnitCommitmentService {
@@ -107,9 +112,9 @@ export class ConversationUnitCommitmentService {
     const mapped = mapAnchorsToSpans(source.content, proposal.units, source.sourceFrontier);
     if (mapped.outcome === 'REJECTED') throw new CommitmentRejectedError(mapped.reason, mapped.index);
 
-    const newUnitId = options.newUnitId ?? randomUUID;
-    const units: ProposedCommitUnit[] = mapped.spans.map((span) => ({
-      unitId: newUnitId(),
+    const newUnitId = options.newUnitId ?? (() => randomUUID());
+    const units: ProposedCommitUnit[] = mapped.spans.map((span, index) => ({
+      unitId: newUnitId({ index, spanStart: span.start, spanEnd: span.end }),
       spanStart: span.start,
       spanEnd: span.end,
     }));
@@ -123,7 +128,7 @@ export class ConversationUnitCommitmentService {
       sessionId: source.sessionId,
       userId: source.userId,
       sourceTurnId: source.turnId,
-      batchId: options.batchId ?? newUnitId(),
+      batchId: options.batchId ?? randomUUID(),
       units,
       evaluatorVersion: CU_BOUNDARY_EVALUATOR_VERSION,
       policyVersion: CU_COMMITMENT_POLICY_VERSION,

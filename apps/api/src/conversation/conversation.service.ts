@@ -4,11 +4,30 @@ import { ConversationRepository } from './conversation.repository';
 import type { ConversationSession, ConversationTurn, OrchestratedTurnResult } from './conversation.types';
 import { DataApiError } from './supabase-data-api.service';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
+import { ConversationTemporalEstablishmentService } from '../conversation-unit/conversation-temporal-establishment.service';
 import { CorrelationService } from '../observability/correlation.service';
+
+// T-03A2: turn handling is TWO distinct technical phases.
+//
+//   1. GENERATION / FINALIZATION - owned entirely by the orchestrator. Its
+//      failure path is the only one that may mark a turn FAILED, call
+//      `fail_conversation_turn` or record a generation-failure outcome.
+//   2. POST-FINALIZATION TEMPORAL ESTABLISHMENT - owned by
+//      ConversationTemporalEstablishmentService and reached only AFTER phase 1
+//      has already produced durable COMPLETED turns.
+//
+// The two phases are separated structurally rather than by convention: the
+// establishment call sits outside the orchestrator entirely, so a CU
+// temporal-establishment failure has NO code path through which it could
+// falsify the conversation lifecycle - it cannot mark an already-COMPLETED turn
+// FAILED, cannot record a false generation-failure outcome, and cannot
+// regenerate an assistant response. It surfaces as a retryable
+// service-unavailable response while the durable completed turns stay
+// completed, and an idempotent replay re-enters establishment.
 
 @Injectable()
 export class ConversationService {
-  constructor(private readonly repository: ConversationRepository, private readonly orchestrator: ConversationOrchestratorService,private readonly correlation:CorrelationService) {}
+  constructor(private readonly repository: ConversationRepository, private readonly orchestrator: ConversationOrchestratorService,private readonly correlation:CorrelationService,private readonly temporal: ConversationTemporalEstablishmentService) {}
 
   // userId stays in the signature for the authenticated controller contract,
   // but it is never serialized as mutation authority: the database derives the
@@ -35,7 +54,7 @@ export class ConversationService {
     // turn admission.
     if (input.idempotencyKey) {
       const existing = await this.repository.findTurnByIdempotencyKey(accessToken, sessionId, userId, input.idempotencyKey);
-      if (existing){this.correlation.bindCanonical(existing.session_id,existing.id);return this.orchestrator.orchestrate(accessToken, userId, existing);}
+      if (existing){this.correlation.bindCanonical(existing.session_id,existing.id);return this.establishTemporal(userId, await this.orchestrator.orchestrate(accessToken, userId, existing));}
     }
     // Only NEW turn creation requires an ACTIVE/TEXT parent. The database
     // definer command (migration 0030) is authoritative for this admission;
@@ -45,19 +64,35 @@ export class ConversationService {
     if (session.status !== 'ACTIVE' || session.channel !== 'TEXT') {
       throw new ConflictException('Conversation session does not accept new turns.');
     }
+    // Only the durable admission is guarded here: the unique-violation race
+    // path stays exactly as it was, and a later generation or temporal failure
+    // is never mistaken for a duplicate-key race.
+    let turn: ConversationTurn;
     try {
-      const turn = await this.repository.createTurn(accessToken, {
+      turn = await this.repository.createTurn(accessToken, {
         id: randomUUID(), sessionId, userId, content: input.content, idempotencyKey: input.idempotencyKey,
       });
-      this.correlation.bindCanonical(turn.session_id,turn.id);
-      return this.orchestrator.orchestrate(accessToken, userId, turn);
     } catch (error) {
       if (input.idempotencyKey && error instanceof DataApiError && error.status === 409) {
         const winner = await this.repository.findTurnByIdempotencyKey(accessToken, sessionId, userId, input.idempotencyKey);
-        if (winner){this.correlation.bindCanonical(winner.session_id,winner.id);return this.orchestrator.orchestrate(accessToken, userId, winner);}
+        if (winner){this.correlation.bindCanonical(winner.session_id,winner.id);return this.establishTemporal(userId, await this.orchestrator.orchestrate(accessToken, userId, winner));}
       }
       throw error;
     }
+    this.correlation.bindCanonical(turn.session_id,turn.id);
+    return this.establishTemporal(userId, await this.orchestrator.orchestrate(accessToken, userId, turn));
+  }
+
+  /**
+   * Phase 2. A completed exchange - new or idempotently replayed - re-enters
+   * temporal establishment, so a turn that finalized durably but never
+   * established Session time recovers on replay, and an exchange that already
+   * has its canonical batches returns the stored delivery with zero provider
+   * calls. Anything that is not a completed USER + ASSISTANT pair passes
+   * through untouched.
+   */
+  private establishTemporal(userId: string, result: OrchestratedTurnResult): Promise<OrchestratedTurnResult> {
+    return this.temporal.establish(userId, result);
   }
 
   async cancelTurn(userId: string, accessToken: string, sessionId: string, turnId: string): Promise<ConversationTurn> {
