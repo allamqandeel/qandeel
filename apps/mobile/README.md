@@ -57,10 +57,10 @@ suites under `src/state/__tests__/`.
 
 | Package | Pin |
 | --- | --- |
-| `expo` | `~57.0.19` |
+| `expo` | `~57.0.20` |
 | `react-native` | `0.86.3` (the New Architecture is the only architecture on this SDK line; there is no toggle) |
 | `react` / `@types/react` | `19.2.3` / `~19.2.2` |
-| `expo-router` with `react-native-screens ~4.26.0`, `react-native-safe-area-context ~5.7.0`, `expo-linking ~57.0.9`, `expo-constants ~57.0.17`, `expo-status-bar ~57.0.1` | `~57.0.18` |
+| `expo-router` with `react-native-screens ~4.26.0`, `react-native-safe-area-context ~5.7.0`, `expo-linking ~57.0.9`, `expo-constants ~57.0.17`, `expo-status-bar ~57.0.1` | `~57.0.19` |
 | `expo-dev-client` | `~57.0.18` |
 | `react-native-reanimated` / `react-native-worklets` / `react-native-gesture-handler` | `4.5.1` / `0.10.1` / `~2.32.0` (mechanically required: `expo-router` depends on `react-native-drawer-layout`, whose non-optional peers are Reanimated and Gesture Handler; pinned to the SDK 57 bundled versions, not used by the shell) |
 | `typescript` | `~5.9.3` (intentional exception, see below) |
