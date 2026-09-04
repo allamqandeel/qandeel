@@ -92,8 +92,24 @@ test('AC-B1B2-01: the B1 runtime is NOT live - not registered, not called, nothi
   // No file outside the directory reaches the runtime.
   const referencing = listFiles(join(rootPath, 'apps/api/src')).map(relative)
     .filter((file) => !file.startsWith(`${FOCUS_DIR}/`))
+    // T-03B2a (thread-establishment, production-inert) consumes ONLY the pure
+    // B1 TYPE authorities; it is pinned separately just below.
+    .filter((file) => !file.startsWith('apps/api/src/thread-establishment/'))
     .filter((file) => /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|conversational-focus|with_focus_v1|integrated_batch_snapshot|cutover_ready/u.test(stripComments(read(file))));
   assert.deepEqual(referencing, []);
+  // The T-03B2a evaluator never reaches the B1 runtime orchestration, its
+  // repository, the 0066/0067 RPCs or the lazy provider binding.
+  const threadFiles = listFiles(join(rootPath, 'apps/api/src/thread-establishment')).map(relative);
+  assert.ok(threadFiles.length > 0, 'the T-03B2a directory exists');
+  for (const file of threadFiles) {
+    const source = read(file);
+    for (const match of source.matchAll(/from\s+'([^']*conversational-focus[^']*)'/gu)) {
+      assert.ok(['../conversational-focus/conversational-focus.types', '../conversational-focus/durable-focus-payload.types'].includes(match[1]),
+        `${file} may import only the B1 type authorities; found ${match[1]}`);
+    }
+    assert.doesNotMatch(stripComments(source), /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|with_focus_v1|integrated_batch_snapshot|cutover_ready|focus-resolution-binding|conversation-focus-runtime|conversation-focus-establishment/u,
+      `${file} does not reach the T-03B1b2 runtime`);
+  }
   // Database: nothing granted, nothing revoked, no semantic write.
   assert.doesNotMatch(executable, /GRANT /u);
   for (const fn of ['commit_conversation_units_with_focus_v1', 'commit_finalized_exchange_with_focus_v1', 'get_conversation_focus_runtime_context_v1', 'get_conversation_integrated_batch_snapshot_v1']) {

@@ -115,8 +115,24 @@ test('the new writer, coordinator and context read are production-inert; the T-0
   const referencing = listFiles(join(rootPath, 'apps/api/src'))
     .map(relative)
     .filter((file) => !file.startsWith('apps/api/src/conversational-focus/'))
+    // T-03B2a (thread-establishment, production-inert) consumes ONLY the pure
+    // B1 payload/semantic TYPES; it is pinned separately just below.
+    .filter((file) => !file.startsWith('apps/api/src/thread-establishment/'))
     .filter((file) => /with_focus_v1|focus_runtime_context|durable-focus|canonicalizePreparedFocusSequence|conversational-focus/u.test(stripComments(read(file))));
   assert.deepEqual(referencing, [], 'no runtime path reaches the T-03B1b1 substrate or canonicalizer');
+  // The T-03B2a evaluator may import only the two pure type modules, never the
+  // canonicalizer, the durable identity derivation or the 0066 RPCs.
+  const threadFiles = listFiles(join(rootPath, 'apps/api/src/thread-establishment')).map(relative);
+  assert.ok(threadFiles.length > 0, 'the T-03B2a directory exists');
+  for (const file of threadFiles) {
+    const source = read(file);
+    for (const match of source.matchAll(/from\s+'([^']*(?:conversational-focus|durable-focus)[^']*)'/gu)) {
+      assert.ok(['../conversational-focus/conversational-focus.types', '../conversational-focus/durable-focus-payload.types'].includes(match[1]),
+        `${file} may import only the B1 type authorities; found ${match[1]}`);
+    }
+    assert.doesNotMatch(stripComments(source), /with_focus_v1|focus_runtime_context|durable-focus-canonicalizer|canonicalizePreparedFocusSequence|durableEmergingFocusId|durableReferenceHandleId|uuidV5|EMERGING_FOCUS_NAMESPACE/u,
+      `${file} does not reach the T-03B1b1 substrate, canonicalizer or identity derivation`);
+  }
   for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService],
     ['the T-03A2 establishment service', establishment], ['the T-03A2 unit repository', unitRepository]]) {
     assert.doesNotMatch(stripComments(text), /with_focus|focus|Focus|canonicaliz/u, `${name} is untouched by T-03B1b1`);
