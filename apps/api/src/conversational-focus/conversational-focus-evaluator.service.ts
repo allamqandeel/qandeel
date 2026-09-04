@@ -272,6 +272,17 @@ function assertCurrentCu(cu: CurrentCuInput): void {
  * The input boundary (§6): one committed CU, and a prior context that holds
  * nothing from this CU or after it. Later CUs of the same source turn are
  * detectable by ordinal and are refused as FUTURE_CONTEXT_FORBIDDEN.
+ *
+ * FIX-T03B1A-01 - prior-grounding CLOSURE. Every reference-handle grounding
+ * CU and every focus-candidate grounding CU must exist in the supplied
+ * `priorCus`: opaque grounding from outside the supplied prior-history cut
+ * cannot be smuggled into the provider request, and unknown grounding is
+ * never silently discarded. Responsibilities are exact:
+ *   T-03B1a forbids current/later-CU leakage within the supplied sequence and
+ *           requires every grounding to be closed over the supplied priorCus;
+ *   T-03B1b constructs that priorCus set from the authoritative SP-native
+ *           historical cut when the evaluator becomes production-active.
+ * T-03B1a alone does not prove global cross-turn chronology.
  */
 function assertEvaluationInput(input: ConversationalFocusEvaluationInput): void {
   if (!input || !isNonEmptyString(input.sessionId) || !input.priorContext) {
@@ -281,6 +292,7 @@ function assertEvaluationInput(input: ConversationalFocusEvaluationInput): void 
   assertCurrentCu(currentCu);
   const invalid = () => new FocusEvaluationRejectedError('INVALID_EVALUATION_INPUT');
   const future = () => new FocusEvaluationRejectedError('FUTURE_CONTEXT_FORBIDDEN');
+  const unavailable = () => new FocusEvaluationRejectedError('PRIOR_GROUNDING_NOT_AVAILABLE');
 
   if (!Array.isArray(priorContext.priorCus) || !Array.isArray(priorContext.referenceHandles) || !Array.isArray(priorContext.focusCandidates)) {
     throw invalid();
@@ -311,6 +323,7 @@ function assertEvaluationInput(input: ConversationalFocusEvaluationInput): void 
     for (const grounding of handle.grounding) {
       if (!grounding || !isNonEmptyString(grounding.cuId) || !isNonEmptyString(grounding.exactSurface)) throw invalid();
       if (grounding.cuId === currentCu.cuId) throw future();
+      if (!priorCuIds.has(grounding.cuId)) throw unavailable();
     }
     handleIds.add(handle.handleId);
   }
@@ -323,6 +336,7 @@ function assertEvaluationInput(input: ConversationalFocusEvaluationInput): void 
     for (const cuId of focus.priorGroundingCuIds) {
       if (!isNonEmptyString(cuId)) throw invalid();
       if (cuId === currentCu.cuId) throw future();
+      if (!priorCuIds.has(cuId)) throw unavailable();
     }
     focusIds.add(focus.focusCandidateId);
   }

@@ -33,11 +33,16 @@ const HISTORY: PriorContext = {
     { handleId: H_AHMED_TEAM, grounding: [{ cuId: 'cu-h2', exactSurface: 'أحمد' }] },
     { handleId: H_KHALED, grounding: [{ cuId: 'cu-h4', exactSurface: 'خالد' }] },
   ],
+  // Ahmed is a Mention/reference handle only: no focus candidate represents him yet.
   focusCandidates: [
     { focusCandidateId: F_MANAGER, groundingHandleIds: [H_MANAGER], priorGroundingCuIds: ['cu-h1', 'cu-h3'] },
-    { focusCandidateId: F_AHMED, groundingHandleIds: [H_AHMED_TEAM], priorGroundingCuIds: ['cu-h2'] },
   ],
   currentFocusCandidateId: F_MANAGER,
+};
+/** The same history once an Ahmed focus candidate already represents H_AHMED_TEAM. */
+const AHMED_FOCUSED: PriorContext = {
+  ...HISTORY,
+  focusCandidates: [...HISTORY.focusCandidates, { focusCandidateId: F_AHMED, groundingHandleIds: [H_AHMED_TEAM], priorGroundingCuIds: ['cu-h2'] }],
 };
 
 const cu = (cuId: string, committedText: string, sourceTurnId = 'turn-3', ordinalWithinTurn = 1, sourceRole: 'USER' | 'ASSISTANT' = 'USER'): CurrentCuInput => ({
@@ -104,13 +109,13 @@ describe('one-CU evaluation with PRIOR context only', () => {
 
   it('3. a RESOLVED pronoun continues the existing Ahmed focus', async () => {
     const provider = FakeFocusResolutionProvider.returning(proposal({ references: [resolvedTo('هو', H_AHMED_TEAM)], attention: attend(F_AHMED) }));
-    const result = await service(provider).evaluateOne(input(cu('cu-c', 'هو بقاله أسبوع بيتجنبني.'), { ...HISTORY, currentFocusCandidateId: F_AHMED }));
+    const result = await service(provider).evaluateOne(input(cu('cu-c', 'هو بقاله أسبوع بيتجنبني.'), { ...AHMED_FOCUSED, currentFocusCandidateId: F_AHMED }));
     expect(result.attention.existingFocusCandidateId).toBe(F_AHMED);
     expect(result.references[0]).toMatchObject({ anchor: { text: 'هو', occurrence: 1 }, resolvedHandleId: H_AHMED_TEAM, span: { start: 0, end: 2 } });
   });
 
   it('4. an AMBIGUOUS Ahmed/Khaled pronoun yields no identity-specific continuity', async () => {
-    const ctx = { ...HISTORY, currentFocusCandidateId: F_AHMED };
+    const ctx = { ...AHMED_FOCUSED, currentFocusCandidateId: F_AHMED };
     const text = cu('cu-d', 'هو بقاله أسبوع بيتجنبني.');
     const forced = FakeFocusResolutionProvider.returning(proposal({ references: [ambiguous('هو', [H_AHMED_TEAM, H_KHALED])], attention: attend(F_AHMED) }));
     expect(await rejection(service(forced).evaluateOne(input(text, ctx)))).toBe('UNGROUNDED_FOCUS_CONTINUITY');
@@ -272,6 +277,28 @@ describe('one-CU evaluation with PRIOR context only', () => {
     expect(Object.keys(provider.requests[0]).sort()).toEqual(['currentCu', 'currentFocusCandidateId', 'focusCandidates', 'priorCus', 'referenceHandles', 'schemaVersion']);
   });
 
+  it('FIX-T03B1A-01: every handle and focus grounding CU must exist in the supplied priorCus', async () => {
+    const provider = FakeFocusResolutionProvider.returning(BASE);
+    const current = cu('cu-g1', 'أحمد سكت.');
+    // 1. A reference handle grounded by a CU absent from priorCus: rejected before the provider.
+    const smuggledHandle: PriorContext = { ...HISTORY, referenceHandles: [...HISTORY.referenceHandles, { handleId: 'h-outside', grounding: [{ cuId: 'cu-outside-cut', exactSurface: 'سامي' }] }] };
+    expect(await rejection(service(provider).evaluateOne(input(current, smuggledHandle)))).toBe('PRIOR_GROUNDING_NOT_AVAILABLE');
+    // 2. A focus candidate grounded on a CU absent from priorCus: rejected.
+    const smuggledFocus: PriorContext = { ...HISTORY, focusCandidates: [...HISTORY.focusCandidates, { focusCandidateId: 'f-outside', groundingHandleIds: [H_KHALED], priorGroundingCuIds: ['cu-h4', 'cu-outside-cut'] }] };
+    expect(await rejection(service(provider).evaluateOne(input(current, smuggledFocus)))).toBe('PRIOR_GROUNDING_NOT_AVAILABLE');
+    // Unknown grounding is refused, never silently dropped: nothing reached the provider.
+    expect(provider.requests).toHaveLength(0);
+    // The current-CU rejection is preserved and takes precedence.
+    const currentGrounded: PriorContext = { ...HISTORY, referenceHandles: [...HISTORY.referenceHandles, { handleId: 'h-now', grounding: [{ cuId: 'cu-g1', exactSurface: 'أحمد' }] }] };
+    expect(await rejection(service(provider).evaluateOne(input(current, currentGrounded)))).toBe('FUTURE_CONTEXT_FORBIDDEN');
+    // 4. Malformed initial history through the sequential helper: zero provider requests.
+    expect(await rejection(service(provider).evaluateSequence('session-1', [current], smuggledHandle))).toBe('PRIOR_GROUNDING_NOT_AVAILABLE');
+    expect(provider.requests).toHaveLength(0);
+    // Every grounding in the legitimate history IS closed over priorCus, so it is accepted.
+    await service(provider).evaluateOne(input(current, HISTORY));
+    expect(provider.requests).toHaveLength(1);
+  });
+
   it('rejects a structurally invalid input before any provider call', async () => {
     const provider = FakeFocusResolutionProvider.returning(BASE);
     expect(await rejection(service(provider).evaluateOne(input(cu('cu-q', ''))))).toBe('INVALID_EVALUATION_INPUT');
@@ -306,7 +333,7 @@ describe('sequential evaluation with a PREPARED transient context (§16/§17)', 
     const second = provider.requests[1];
     expect(second.priorCus.map((c) => c.cuId)).toEqual([...HISTORY.priorCus.map((c) => c.cuId), 'cu-u1']);
     expect(second.priorCus.at(-1)).toMatchObject({ functions: ['INFORM_REPORT', 'FOCUS_SHIFT'], sequencePosition: 'UNMARKED', targetCuId: null });
-    expect(second.focusCandidates.map((f) => f.focusCandidateId)).toEqual([F_MANAGER, F_AHMED, `${PREPARED_ID_PREFIX}focus:cu-u1`]);
+    expect(second.focusCandidates.map((f) => f.focusCandidateId)).toEqual([F_MANAGER, `${PREPARED_ID_PREFIX}focus:cu-u1`]);
     expect(second.currentFocusCandidateId).toBe(`${PREPARED_ID_PREFIX}focus:cu-u1`);
     const third = provider.requests[2];
     expect(third.priorCus.map((c) => c.cuId)).toEqual([...HISTORY.priorCus.map((c) => c.cuId), 'cu-u1', 'cu-u2']);
@@ -347,6 +374,90 @@ describe('sequential evaluation with a PREPARED transient context (§16/§17)', 
     // The second CU selected the prepared handle from its allowlist with exact grounding.
     expect(provider.requests[1].referenceHandles.at(-1)).toEqual({ handleId: `${PREPARED_ID_PREFIX}reference:cu-r1:1`, grounding: [{ cuId: 'cu-r1', exactSurface: 'علاقتي بأحمد' }] });
     expect(evaluation.results[1].references[0].resolvedHandleId).toBe(`${PREPARED_ID_PREFIX}reference:cu-r1:1`);
+  });
+
+  it('FIX-T03B1A-01 (3): same-batch prepared grounding is accepted on the NEXT CU because its grounding CU was appended to priorCus first', async () => {
+    const provider = FakeFocusResolutionProvider.scripted([
+      proposal({ references: [newRef('سامي')] }),
+      proposal({ references: [resolvedTo('هو', `${PREPARED_ID_PREFIX}reference:cu-p1:0`)] }),
+    ]);
+    const evaluation = await service(provider).evaluateSequence('session-1', [cu('cu-p1', 'سامي اتصل بيا.', 'turn-7', 1), cu('cu-p2', 'هو عايز يقابلني.', 'turn-7', 2)], HISTORY);
+    const second = provider.requests[1];
+    // The grounding CU cu-p1 is in the second CU's priorCus, so the prepared
+    // handle grounded on it passes the closure and is selectable.
+    expect(second.priorCus.map((c) => c.cuId)).toContain('cu-p1');
+    expect(second.referenceHandles.at(-1)).toEqual({ handleId: `${PREPARED_ID_PREFIX}reference:cu-p1:0`, grounding: [{ cuId: 'cu-p1', exactSurface: 'سامي' }] });
+    expect(evaluation.results[1].references[0].resolvedHandleId).toBe(`${PREPARED_ID_PREFIX}reference:cu-p1:0`);
+  });
+
+  it('FIX-T03B1A-02 (5): the sequential helper cannot mint two prepared focus candidates for one represented handle', async () => {
+    const first = cu('cu-f1', 'أحمد نفسه بدأ يقلقني أكتر من المدير.', 'turn-8', 1);
+    const second = cu('cu-f2', 'أحمد بقى بيتجاهلني في الاجتماعات.', 'turn-8', 2);
+    const startAgain = FakeFocusResolutionProvider.scripted([
+      proposal({ references: [resolvedTo('أحمد', H_AHMED_TEAM)], attention: startNew('أحمد') }),
+      proposal({ references: [resolvedTo('أحمد', H_AHMED_TEAM)], attention: startNew('أحمد') }),
+    ]);
+    expect(await rejection(service(startAgain).evaluateSequence('session-1', [first, second], HISTORY))).toBe('EXISTING_FOCUS_CONTINUITY_REQUIRED');
+    expect(startAgain.requests).toHaveLength(2);
+    // The prepared focus from CU-1 was in CU-2's allowlist, so attending it is the legal continuation.
+    const attendIt = FakeFocusResolutionProvider.scripted([
+      proposal({ references: [resolvedTo('أحمد', H_AHMED_TEAM)], attention: startNew('أحمد') }),
+      proposal({ references: [resolvedTo('أحمد', H_AHMED_TEAM)], attention: attend(`${PREPARED_ID_PREFIX}focus:cu-f1`) }),
+    ]);
+    const evaluation = await service(attendIt).evaluateSequence('session-1', [first, second], HISTORY);
+    expect(evaluation.preparedFocusCandidates).toHaveLength(1);
+    expect(evaluation.preparedFocusCandidates[0].groundingHandleIds).toEqual([H_AHMED_TEAM]);
+    expect(evaluation.preparedContext.focusCandidates.filter((f) => f.groundingHandleIds.includes(H_AHMED_TEAM))).toHaveLength(1);
+    expect(evaluation.preparedContext.currentFocusCandidateId).toBe(`${PREPARED_ID_PREFIX}focus:cu-f1`);
+    // With an Ahmed focus already in HISTORY, even the FIRST CU may not mint one.
+    const alreadyRepresented = FakeFocusResolutionProvider.returning(proposal({ references: [resolvedTo('أحمد', H_AHMED_TEAM)], attention: startNew('أحمد') }));
+    expect(await rejection(service(alreadyRepresented).evaluateSequence('session-1', [first], AHMED_FOCUSED))).toBe('EXISTING_FOCUS_CONTINUITY_REQUIRED');
+  });
+
+  it('FIX-T03B1A-03: omitted subject and recoverable ellipsis resolve through the exact surface, never through synthesized words', async () => {
+    const ctx: PriorContext = { ...AHMED_FOCUSED, currentFocusCandidateId: F_AHMED };
+    // 1. Omitted subject with unique prior grounding: the inflected verb carries it.
+    const dropped = cu('cu-e1', 'بيتجنبني من ساعة الاجتماع.', 'turn-9', 1);
+    const one = await service(FakeFocusResolutionProvider.returning(proposal({ references: [resolvedTo('بيتجنبني', H_AHMED_TEAM)], attention: attend(F_AHMED) }))).evaluateOne(input(dropped, ctx));
+    expect(one.references[0]).toMatchObject({ anchor: { text: 'بيتجنبني', occurrence: 1 }, span: { start: 0, end: 8 }, state: 'RESOLVED', resolvedHandleId: H_AHMED_TEAM });
+    expect(one.attention.existingFocusCandidateId).toBe(F_AHMED);
+    // 1b. Recoverable ellipsis: QANDEEL asks "أحمد رد عليك؟", the user answers "لسه."
+    const asked: PriorContext = {
+      ...ctx,
+      priorCus: [...ctx.priorCus, { cuId: 'cu-h7', sourceTurnId: 'turn-8b', sourceRole: 'ASSISTANT', committedText: 'أحمد رد عليك؟', ordinalWithinTurn: 1, functions: ['ASK'], sequencePosition: 'RESPONSIVE', targetCuId: 'cu-h2' }],
+    };
+    const elliptical = cu('cu-e2', 'لسه.', 'turn-9', 2);
+    const two = await service(FakeFocusResolutionProvider.returning(proposal({
+      sequencePosition: 'RESPONSIVE',
+      targetCuId: 'cu-h7',
+      references: [resolvedTo('لسه', H_AHMED_TEAM)],
+      attention: attend(F_AHMED, 'LOCAL_CLARIFICATION_OR_CORRECTION'),
+    }))).evaluateOne(input(elliptical, asked));
+    expect(two.references[0]).toMatchObject({ anchor: { text: 'لسه', occurrence: 1 }, span: { start: 0, end: 3 }, resolvedHandleId: H_AHMED_TEAM });
+    expect(two.targetCuId).toBe('cu-h7');
+    // 3. No synthesized wording anywhere in the output: every anchor is a
+    //    substring of the committed CU, and the recovered subject's words
+    //    (هو / أحمد) appear nowhere in the prepared result.
+    for (const [result, source] of [[one, dropped], [two, elliptical]] as const) {
+      const serialized = JSON.stringify(result);
+      for (const reference of result.references) expect(source.committedText.includes(reference.anchor.text)).toBe(true);
+      expect(serialized).not.toMatch(/هو|أحمد|Ahmed/u);
+      expect(serialized).not.toContain('هو بيتجنبني');
+    }
+    // 2. Non-recoverable counterpart: two candidates were last mentioned together.
+    const crowded: PriorContext = {
+      ...ctx,
+      priorCus: [...ctx.priorCus, { cuId: 'cu-h8', sourceTurnId: 'turn-8c', sourceRole: 'USER', committedText: 'أحمد وخالد الاتنين كانوا في الاجتماع.', ordinalWithinTurn: 1, functions: null, sequencePosition: null, targetCuId: null }],
+    };
+    const forced = FakeFocusResolutionProvider.returning(proposal({ references: [ambiguous('بيتجنبني', [H_AHMED_TEAM, H_KHALED])], attention: attend(F_AHMED) }));
+    expect(await rejection(service(forced).evaluateOne(input(dropped, crowded)))).toBe('UNGROUNDED_FOCUS_CONTINUITY');
+    const truthful = FakeFocusResolutionProvider.returning(proposal({ references: [ambiguous('بيتجنبني', [H_AHMED_TEAM, H_KHALED])], attention: { ...BASE.attention, reason: 'UNRESOLVED_ATTENTION' } }));
+    const three = await service(truthful).evaluateOne(input(dropped, crowded));
+    expect(three.references[0]).toMatchObject({ state: 'AMBIGUOUS', resolvedHandleId: null, candidateHandleIds: [H_AHMED_TEAM, H_KHALED] });
+    expect(three.attention.kind).toBe('NO_INDEPENDENT_FOCUS');
+    // A provider that "restores" the dropped subject has nothing to anchor to.
+    const restored = FakeFocusResolutionProvider.returning(proposal({ references: [resolvedTo('هو', H_AHMED_TEAM)] }));
+    expect(await rejection(service(restored).evaluateOne(input(dropped, ctx)))).toBe('NON_EXTRACTIVE_REFERENCE');
   });
 
   it('a prepared id is never selectable before the CU that grounds it', async () => {

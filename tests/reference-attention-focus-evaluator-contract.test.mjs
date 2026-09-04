@@ -139,6 +139,7 @@ test('the slice reaches nothing later: no Thread, Home, lifecycle, LF, mobile, M
         `${name} imports ${specifier}; only ./*, openai and ../conversation-unit/cu-anchor-mapper are allowed`);
     }
     assert.doesNotMatch(text, /require\(/u, `${name} uses no require()`);
+    assert.doesNotMatch(text, /\bimport\(/u, `${name} uses no dynamic import()`);
   }
   assert.doesNotMatch(allCode, /ConversationUnitRepository|ConversationUnitCommitmentService|CuSegmentationProvider|OpenAiCuSegmentationProvider|conversation-unit\.repository|conversation-unit-commitment/u);
   // No mobile file knows this boundary.
@@ -205,6 +206,16 @@ test('the one-CU provider input holds no later CU (§6/§16)', () => {
   assert.match(evaluator, /if \(prior\.cuId === currentCu\.cuId\) throw future\(\);/u);
   assert.match(evaluator, /prior\.sourceTurnId === currentCu\.sourceTurnId && prior\.ordinalWithinTurn >= currentCu\.ordinalWithinTurn\) throw future\(\);/u);
   assert.match(evaluator, /'FUTURE_CONTEXT_FORBIDDEN'/u);
+  // FIX-T03B1A-01: prior-grounding CLOSURE. Every handle grounding CU and every
+  // focus grounding CU must be in the supplied priorCus, checked before the
+  // provider is invoked, and unknown grounding is rejected - never dropped.
+  assert.match(evaluator, /const unavailable = \(\) => new FocusEvaluationRejectedError\('PRIOR_GROUNDING_NOT_AVAILABLE'\);/u);
+  assert.match(evaluator, /if \(grounding\.cuId === currentCu\.cuId\) throw future\(\);\s*if \(!priorCuIds\.has\(grounding\.cuId\)\) throw unavailable\(\);/u,
+    'every reference-handle grounding CU is closed over priorCus');
+  assert.match(evaluator, /if \(cuId === currentCu\.cuId\) throw future\(\);\s*if \(!priorCuIds\.has\(cuId\)\) throw unavailable\(\);/u,
+    'every focus-candidate grounding CU is closed over priorCus');
+  assert.ok(evaluator.indexOf('assertEvaluationInput(input);') < evaluator.indexOf('await this.provider.propose('), 'the boundary gate precedes the provider call');
+  assert.doesNotMatch(evaluator, /\.filter\(\(grounding|grounding\.filter\(|priorGroundingCuIds\.filter\(/u, 'unknown grounding is never silently filtered away');
   // The sequential helper calls the one-CU evaluator per CU, in order, threading a transient context.
   assert.match(evaluator, /for \(const currentCu of sequence\) \{\s*const result = await this\.evaluateOne\(\{ sessionId, currentCu, priorContext: context \}\);/u);
   assert.match(evaluator, /export function orderFinalizedExchange\(/u);
@@ -223,8 +234,14 @@ test('no score, embedding, keyword, frequency or timer shortcut, and no failure-
   assert.match(evaluator, /error\.code === 'INVALID_STRUCTURED_OUTPUT' \? 'INVALID_PROVIDER_PAYLOAD' : 'FOCUS_PROVIDER_UNAVAILABLE'/u);
   assert.doesNotMatch(evaluator, /NO_INDEPENDENT_FOCUS|UNRESOLVED_ATTENTION/u, 'the evaluator invents no attention value');
   assert.doesNotMatch(validator, /kind: 'NO_INDEPENDENT_FOCUS'/u, 'the validator invents no attention value');
-  assert.match(types, /\| 'FOCUS_PROVIDER_UNAVAILABLE'\s*\| 'INVALID_PROVIDER_PAYLOAD'\s*\| 'NON_EXTRACTIVE_REFERENCE'\s*\| 'OCCURRENCE_OUT_OF_RANGE'\s*\| 'UNKNOWN_REFERENCE_HANDLE'\s*\| 'INVALID_REFERENCE_CARDINALITY'\s*\| 'UNKNOWN_FOCUS_CANDIDATE'\s*\| 'UNKNOWN_TARGET_CU'\s*\| 'INVALID_CLAIM_ATTRIBUTION'\s*\| 'FOCUS_GROUNDING_REQUIRED'\s*\| 'UNGROUNDED_FOCUS_CONTINUITY'/u,
+  assert.match(types, /\| 'PRIOR_GROUNDING_NOT_AVAILABLE'\s*\| 'FOCUS_PROVIDER_UNAVAILABLE'\s*\| 'INVALID_PROVIDER_PAYLOAD'\s*\| 'NON_EXTRACTIVE_REFERENCE'\s*\| 'OCCURRENCE_OUT_OF_RANGE'\s*\| 'UNKNOWN_REFERENCE_HANDLE'\s*\| 'INVALID_REFERENCE_CARDINALITY'\s*\| 'UNKNOWN_FOCUS_CANDIDATE'\s*\| 'UNKNOWN_TARGET_CU'\s*\| 'INVALID_CLAIM_ATTRIBUTION'\s*\| 'FOCUS_GROUNDING_REQUIRED'\s*\| 'UNGROUNDED_FOCUS_CONTINUITY'\s*\| 'EXISTING_FOCUS_CONTINUITY_REQUIRED'/u,
     'the fail-closed taxonomy is explicit');
+  // FIX-T03B1A-02: a RESOLVED grounding handle that already grounds a supplied
+  // focus candidate cannot start a second focus; a NEW current-CU reference
+  // (resolvedHandleId null) is exempt by construction.
+  assert.match(validator, /if \(groundedBy\.resolvedHandleId !== null\) \{\s*const represented = groundedBy\.resolvedHandleId;\s*if \(input\.priorContext\.focusCandidates\.some\(\(focus\) => focus\.groundingHandleIds\.includes\(represented\)\)\) \{\s*return reject\('EXISTING_FOCUS_CONTINUITY_REQUIRED'\);/u,
+    'START_NEW_FOCUS on an already represented identity is refused');
+  assert.doesNotMatch(validator, /referenceHandles\.some\(|handleIds\.has\(represented\)/u, 'handle existence alone is never equated with a focus');
   // The canonical speaker is copied from the committed CU, never from the proposal.
   assert.match(evaluator, /sourceRole: input\.currentCu\.sourceRole,/u);
   assert.doesNotMatch(providerTypes.slice(providerTypes.indexOf('export interface ReferenceResolutionProposal')), /sourceRole|speaker/u,

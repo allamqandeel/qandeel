@@ -235,6 +235,18 @@ export function validateFocusResolutionProposal(
     const anchor = grounding.anchor;
     const groundedBy = references.find((reference) => sameAnchor(reference.anchor, anchor));
     if (!groundedBy || groundedBy.state !== 'RESOLVED') return reject('FOCUS_GROUNDING_REQUIRED');
+    // FIX-T03B1A-02 - focus-continuity uniqueness. Continuity follows resolved
+    // identity: when the grounding handle ALREADY grounds a supplied focus
+    // candidate, that locus is represented and must be attended, never minted
+    // twice. A prior handle that exists only as a Mention (no focus candidate)
+    // may start a focus; a NEW current-CU reference (a relationship, a
+    // situation) is independently addressable and may start its own.
+    if (groundedBy.resolvedHandleId !== null) {
+      const represented = groundedBy.resolvedHandleId;
+      if (input.priorContext.focusCandidates.some((focus) => focus.groundingHandleIds.includes(represented))) {
+        return reject('EXISTING_FOCUS_CONTINUITY_REQUIRED');
+      }
+    }
   }
 
   return {

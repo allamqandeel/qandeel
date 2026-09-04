@@ -16,7 +16,7 @@ export const FOCUS_RESOLUTION_MAX_RETRIES = 0 as const;
  * The prompt identity recorded on every prepared result. It changes whenever
  * the instructions that shaped a resolution decision change.
  */
-export const FOCUS_RESOLUTION_PROMPT_VERSION = 'focus-resolution-anchored-v1';
+export const FOCUS_RESOLUTION_PROMPT_VERSION = 'focus-resolution-anchored-v2';
 
 export interface FocusResolutionOpenAIConfig {
   provider: 'OPENAI';

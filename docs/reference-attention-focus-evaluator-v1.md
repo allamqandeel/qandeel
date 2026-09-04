@@ -21,7 +21,7 @@ proves every one of those statements statically in API CI.
 | --- | --- |
 | CU-10 | every material reference is exactly one of `RESOLVED` / `AMBIGUOUS` / `UNRESOLVED`; cardinality is validated per state, never guessed |
 | CU-11 | identity is an opaque server-supplied handle, never a name; two handles may share `أحمد`, and no candidate is ever "picked" |
-| CU-12 | pronouns, omitted subjects and ellipsis resolve only through the supplied prior grounding; the committed wording is never rewritten |
+| CU-12 | pronouns, omitted subjects and ellipsis resolve only through the supplied prior grounding; an omitted subject or elliptical answer is anchored by the exact committed surface that carries it (`بيتجنبني`, `لسه`), and no omitted word is ever synthesized into the committed text |
 | CU-13 | `sourceRole` is copied from the committed CU and is absent from the provider schema; the claimant is a separate validated fact |
 | CU-14 | a claim carries a frame (`DIRECT_ASSERTION` / `REPORTED_SPEECH` / `DIRECT_QUOTATION`); an ambiguous quotation source stays `UNRESOLVED` |
 | CU-15 | code-switching is nothing: an English surface may resolve to an Arabic-grounded handle, and creates no focus by itself |
@@ -44,7 +44,24 @@ ConversationalFocusEvaluationInput
 `priorContext` may hold only material legitimate BEFORE the current CU. The evaluator
 refuses, before any provider call, a prior context that contains the current CU, a
 later CU of the same source turn, or any grounding that points at the current CU
-(`FUTURE_CONTEXT_FORBIDDEN`).
+(`FUTURE_CONTEXT_FORBIDDEN`), and any reference-handle or focus-candidate grounding CU
+that is not itself in the supplied `priorCus` (`PRIOR_GROUNDING_NOT_AVAILABLE`,
+FIX-T03B1A-01). Unknown grounding is rejected, never silently discarded.
+
+The two no-hindsight responsibilities are exactly:
+
+```text
+T-03B1a:
+  forbids current/later-CU leakage within the supplied sequence
+  and requires every reference/focus grounding to be closed over supplied priorCus.
+
+T-03B1b:
+  constructs that priorCus set from the authoritative SP-native historical cut
+  when the evaluator becomes production-active.
+```
+
+Production-inert T-03B1a alone does not prove global cross-turn chronology; that proof
+needs the T-03B1b authoritative context builder.
 
 ## The provider proposal
 
@@ -79,6 +96,8 @@ Unicode code-point coordinates. A paraphrase has no location.
 | claimant shape inconsistent with its kind, or a new-reference claimant not pointing at a `RESOLVED` new reference | `INVALID_CLAIM_ATTRIBUTION` |
 | focus id outside the allowlist | `UNKNOWN_FOCUS_CANDIDATE` |
 | `START_NEW_FOCUS` without grounding, or grounding that is not a `RESOLVED` reference of this CU | `FOCUS_GROUNDING_REQUIRED` |
+| `START_NEW_FOCUS` grounded on a prior handle that already grounds a supplied focus candidate (FIX-T03B1A-02); attend it instead. A prior handle with no focus candidate, or a NEW current-CU reference, may still start a focus | `EXISTING_FOCUS_CONTINUITY_REQUIRED` |
+| handle or focus grounding CU absent from the supplied `priorCus` (FIX-T03B1A-01) | `PRIOR_GROUNDING_NOT_AVAILABLE` |
 | `ATTEND_EXISTING_FOCUS` with no `RESOLVED` link to that focus and no reference-clean local continuation of the current focus | `UNGROUNDED_FOCUS_CONTINUITY` |
 | provider outage / timeout / transport error | `FOCUS_PROVIDER_UNAVAILABLE` |
 | malformed structured output | `INVALID_PROVIDER_PAYLOAD` |

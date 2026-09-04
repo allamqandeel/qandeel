@@ -121,6 +121,8 @@ test('the substrate is reachable ONLY through the named T-03A2 boundary', () => 
     for (const match of source.matchAll(/from\s+'([^']*conversation-unit[^']*)'/gu)) {
       assert.equal(match[1], '../conversation-unit/cu-anchor-mapper', `${file.name} may reuse only the pure anchor helper`);
     }
+    // No dynamic or CommonJS route around the static import allowlist either.
+    assert.doesNotMatch(source, /\bimport\(|require\(/u, `${file.name} must not load conversation-unit dynamically`);
     assert.doesNotMatch(source, /commit_conversation_units_v1|ConversationUnitRepository|ConversationUnitCommitmentService|ConversationTemporalEstablishmentService|CuSegmentation/u,
       `${file.name} does not reach the committed-CU substrate`);
   }

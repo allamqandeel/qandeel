@@ -267,6 +267,8 @@ export const FOCUS_POLICY_VERSION = 'stage-1.2-1.3-reference-attention-v1';
 export type FocusEvaluationRejectionReason =
   | 'INVALID_EVALUATION_INPUT'
   | 'FUTURE_CONTEXT_FORBIDDEN'
+  /** FIX-T03B1A-01: a handle or focus grounding CU is not in the supplied `priorCus`. */
+  | 'PRIOR_GROUNDING_NOT_AVAILABLE'
   | 'FOCUS_PROVIDER_UNAVAILABLE'
   | 'INVALID_PROVIDER_PAYLOAD'
   | 'NON_EXTRACTIVE_REFERENCE'
@@ -277,7 +279,9 @@ export type FocusEvaluationRejectionReason =
   | 'UNKNOWN_TARGET_CU'
   | 'INVALID_CLAIM_ATTRIBUTION'
   | 'FOCUS_GROUNDING_REQUIRED'
-  | 'UNGROUNDED_FOCUS_CONTINUITY';
+  | 'UNGROUNDED_FOCUS_CONTINUITY'
+  /** FIX-T03B1A-02: the RESOLVED grounding handle already grounds a supplied focus candidate. */
+  | 'EXISTING_FOCUS_CONTINUITY_REQUIRED';
 
 export class FocusEvaluationRejectedError extends Error {
   constructor(

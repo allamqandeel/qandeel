@@ -25,11 +25,17 @@ const HISTORY: PriorContext = {
     { handleId: H_KHALED, grounding: [{ cuId: 'cu-h4', exactSurface: 'خالد' }] },
     { handleId: H_AHMED_COUSIN, grounding: [{ cuId: 'cu-h5', exactSurface: 'أحمد' }] },
   ],
+  // Ahmed exists here as a Mention/reference handle ONLY: no focus candidate
+  // represents him yet (THR-01), so a direct Ahmed CU may START a focus.
   focusCandidates: [
     { focusCandidateId: F_MANAGER, groundingHandleIds: [H_MANAGER], priorGroundingCuIds: ['cu-h1', 'cu-h3'] },
-    { focusCandidateId: F_AHMED, groundingHandleIds: [H_AHMED_TEAM], priorGroundingCuIds: ['cu-h2'] },
   ],
   currentFocusCandidateId: F_MANAGER,
+};
+/** The same history once an Ahmed focus candidate already represents H_AHMED_TEAM. */
+const AHMED_FOCUSED: PriorContext = {
+  ...HISTORY,
+  focusCandidates: [...HISTORY.focusCandidates, { focusCandidateId: F_AHMED, groundingHandleIds: [H_AHMED_TEAM], priorGroundingCuIds: ['cu-h2'] }],
 };
 
 const input = (committedText: string, priorContext: PriorContext = HISTORY): ConversationalFocusEvaluationInput => ({
@@ -281,16 +287,16 @@ describe('independent attention (fixtures 1-4, 10, 16, 19, 28, 29)', () => {
 
   it('3. a RESOLVED pronoun continues the Ahmed focus; an ambiguous one cannot (4)', () => {
     const text = 'هو بقاله أسبوع بيتجنبني.';
-    const ctx: PriorContext = { ...HISTORY, currentFocusCandidateId: F_AHMED };
+    const ctx: PriorContext = { ...AHMED_FOCUSED, currentFocusCandidateId: F_AHMED };
     expect(valid(text, proposal({ references: [resolvedTo('هو', H_AHMED_TEAM)], attention: attend(F_AHMED) }), ctx).attention.existingFocusCandidateId).toBe(F_AHMED);
     // Identity-specific continuity through a resolved pronoun works even when
     // the Ahmed focus is NOT the current one.
-    expect(valid(text, proposal({ references: [resolvedTo('هو', H_AHMED_TEAM)], attention: attend(F_AHMED) })).attention.existingFocusCandidateId).toBe(F_AHMED);
+    expect(valid(text, proposal({ references: [resolvedTo('هو', H_AHMED_TEAM)], attention: attend(F_AHMED) }), AHMED_FOCUSED).attention.existingFocusCandidateId).toBe(F_AHMED);
     // 4. AMBIGUOUS {Ahmed, Khaled}: neither Ahmed-specific nor Khaled-specific
     //    continuity, whether or not that focus is current.
     const amb = [ambiguous('هو', [H_AHMED_TEAM, H_KHALED])];
     expect(rejection(text, proposal({ references: amb, attention: attend(F_AHMED) }), ctx)).toBe('UNGROUNDED_FOCUS_CONTINUITY@-1');
-    expect(rejection(text, proposal({ references: amb, attention: attend(F_AHMED) }))).toBe('UNGROUNDED_FOCUS_CONTINUITY@-1');
+    expect(rejection(text, proposal({ references: amb, attention: attend(F_AHMED) }), AHMED_FOCUSED)).toBe('UNGROUNDED_FOCUS_CONTINUITY@-1');
     expect(rejection(text, proposal({ references: amb, attention: attend(F_MANAGER) }))).toBe('UNGROUNDED_FOCUS_CONTINUITY@-1');
     // 5. UNRESOLVED cannot be promoted by convenience either.
     expect(rejection(text, proposal({ references: [unresolved('هو')], attention: attend(F_AHMED) }), ctx)).toBe('UNGROUNDED_FOCUS_CONTINUITY@-1');
@@ -372,9 +378,48 @@ describe('independent attention (fixtures 1-4, 10, 16, 19, 28, 29)', () => {
     const text = 'أيوه، بالظبط كده.';
     expect(valid(text, proposal({ functions: ['AGREE'], attention: attend(F_MANAGER, 'LOCAL_CLARIFICATION_OR_CORRECTION') })).attention.existingFocusCandidateId).toBe(F_MANAGER);
     // Not the current focus and no resolved link: ungrounded.
-    expect(rejection(text, proposal({ functions: ['AGREE'], attention: attend(F_AHMED) }))).toBe('UNGROUNDED_FOCUS_CONTINUITY@-1');
+    expect(rejection(text, proposal({ functions: ['AGREE'], attention: attend(F_AHMED) }), AHMED_FOCUSED)).toBe('UNGROUNDED_FOCUS_CONTINUITY@-1');
     // No current focus at all: nothing to continue locally.
     expect(rejection(text, proposal({ functions: ['AGREE'], attention: attend(F_MANAGER) }), { ...HISTORY, currentFocusCandidateId: null })).toBe('UNGROUNDED_FOCUS_CONTINUITY@-1');
+  });
+
+  it('FIX-T03B1A-02: an identity already represented by a focus candidate is attended, never minted twice', () => {
+    const text = 'أحمد نفسه بدأ يقلقني أكتر من المدير.';
+    const refs = [resolvedTo('أحمد', H_AHMED_TEAM), resolvedTo('المدير', H_MANAGER)];
+    // 1. H_AHMED_TEAM + F_AHMED + direct Ahmed CU + START_NEW_FOCUS -> reject.
+    expect(rejection(text, proposal({ references: refs, attention: startNew('أحمد') }), AHMED_FOCUSED)).toBe('EXISTING_FOCUS_CONTINUITY_REQUIRED@-1');
+    expect(rejection(text, proposal({ references: refs, attention: startNew('أحمد', 'EXPLICIT_FOCUS_SHIFT') }), { ...AHMED_FOCUSED, currentFocusCandidateId: null })).toBe('EXISTING_FOCUS_CONTINUITY_REQUIRED@-1');
+    // 2. The same CU attending F_AHMED -> accept (the resolved link grounds it).
+    expect(valid(text, proposal({ references: refs, attention: attend(F_AHMED, 'DIRECT_SUBJECT') }), AHMED_FOCUSED).attention.existingFocusCandidateId).toBe(F_AHMED);
+    // 3. H_AHMED_TEAM exists only as a Mention (no focus candidate) -> START_NEW_FOCUS accepts.
+    expect(valid(text, proposal({ references: refs, attention: startNew('أحمد') })).attention.kind).toBe('START_NEW_FOCUS');
+    // The manager, already represented by F_MANAGER, cannot be re-minted either.
+    expect(rejection(text, proposal({ references: refs, attention: startNew('المدير') }))).toBe('EXISTING_FOCUS_CONTINUITY_REQUIRED@-1');
+    // 4. A NEW current-CU reference (the relationship) is independently
+    //    addressable and may still start its own focus beside F_AHMED.
+    const reframed = valid('علاقتي بأحمد بقت مرهقة.', proposal({
+      references: [resolvedTo('أحمد', H_AHMED_TEAM), newRef('علاقتي بأحمد')],
+      attention: startNew('علاقتي بأحمد'),
+    }), AHMED_FOCUSED);
+    expect(reframed.attention.kind).toBe('START_NEW_FOCUS');
+    // Not every reference handle is a focus: the rule looks at focus grounding, not at handle existence.
+    expect(valid('خالد كمان بقى يقلقني.', proposal({ references: [resolvedTo('خالد', H_KHALED)], attention: startNew('خالد') }), AHMED_FOCUSED).attention.kind).toBe('START_NEW_FOCUS');
+  });
+
+  it('FIX-T03B1A-03: an omitted subject is anchored by the exact surface that carries it (CU-12)', () => {
+    // Egyptian Arabic drops the subject: the inflected verb بيتجنبني carries
+    // the recoverable third-person reference. No word is synthesized.
+    const text = 'بيتجنبني من ساعة الاجتماع.';
+    const ok = valid(text, proposal({ references: [resolvedTo('بيتجنبني', H_AHMED_TEAM)], attention: attend(F_AHMED) }), AHMED_FOCUSED);
+    expect(ok.references[0]).toMatchObject({ anchor: { text: 'بيتجنبني', occurrence: 1 }, span: { start: 0, end: 8 }, resolvedHandleId: H_AHMED_TEAM });
+    for (const reference of ok.references) expect(text.includes(reference.anchor.text)).toBe(true);
+    // A synthesized subject (هو / أحمد) is not in the committed CU: it has no location.
+    expect(rejection(text, proposal({ references: [resolvedTo('هو', H_AHMED_TEAM)] }), AHMED_FOCUSED)).toBe('NON_EXTRACTIVE_REFERENCE@0');
+    expect(rejection(text, proposal({ references: [resolvedTo('أحمد', H_AHMED_TEAM)] }), AHMED_FOCUSED)).toBe('NON_EXTRACTIVE_REFERENCE@0');
+    expect(rejection(text, proposal({ references: [resolvedTo('هو بيتجنبني', H_AHMED_TEAM)] }), AHMED_FOCUSED)).toBe('NON_EXTRACTIVE_REFERENCE@0');
+    // Non-recoverable: the same surface AMBIGUOUS between Ahmed and Khaled asserts no continuity.
+    expect(rejection(text, proposal({ references: [ambiguous('بيتجنبني', [H_AHMED_TEAM, H_KHALED])], attention: attend(F_AHMED) }), AHMED_FOCUSED)).toBe('UNGROUNDED_FOCUS_CONTINUITY@-1');
+    expect(valid(text, proposal({ references: [ambiguous('بيتجنبني', [H_AHMED_TEAM, H_KHALED])], attention: { ...BASE.attention, reason: 'UNRESOLVED_ATTENTION' } }), AHMED_FOCUSED).attention.kind).toBe('NO_INDEPENDENT_FOCUS');
   });
 
   it('the proposal shape itself is checked, not trusted', () => {
