@@ -1,7 +1,17 @@
 name: Mobile CI
+# MOB-CI-01. Root toolchain/script changes must still receive mobile contract
+# validation, so `package.json` deliberately stays in the trigger. What must not
+# follow from a backend-only or root-script-only change is a full Android
+# Release build + emulator smoke and a ~17-minute Xcode Release simulator build.
+#
+# Mobile CI is therefore split into a FAST MOBILE CONTRACT GATE that always runs
+# and CONDITIONAL NATIVE SMOKE GATES that run only for true native-impact
+# changes. The optimization is WHEN native smoke runs, never what it proves when
+# it runs: the Android and iOS jobs below keep their full Release build,
+# install and boot-smoke contract.
 on:
   pull_request:
-    paths: ['apps/mobile/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml']
+    paths: ['apps/mobile/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'tests/mobile-native-impact-classifier.test.mjs', 'scripts/classify-mobile-native-impact.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml']
   push:
     branches: [main]
 concurrency:
@@ -14,8 +24,68 @@ env:
   MAESTRO_VERSION: 2.10.0
   MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
 jobs:
+  verify-mobile-contracts:
+    name: Fast mobile contract gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      native_impact: ${{ steps.classify.outputs.native_impact }}
+    steps:
+      # Full history so the changed-file set can be derived deterministically
+      # from the real merge base; a shallow clone would force the fail-safe.
+      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      # No JDK is set up here on purpose: every gate in this job is Node-only.
+      # Gradle and the Maestro tooling path live in the native jobs below.
+      - name: Classify native impact
+        id: classify
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -uo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="${PR_BASE_SHA:-}"; head="${PR_HEAD_SHA:-}"
+          else
+            base="${PUSH_BEFORE_SHA:-}"; head="${PUSH_HEAD_SHA:-}"
+          fi
+          echo "event=$EVENT_NAME base=${base:-<none>} head=${head:-<none>}"
+          files=""
+          # Fail safe: an unestablished comparison base means native smoke runs.
+          if [ -n "$base" ] && [ -n "$head" ] &&
+             [ "$base" != "0000000000000000000000000000000000000000" ] &&
+             git cat-file -e "${base}^{commit}" 2>/dev/null &&
+             git cat-file -e "${head}^{commit}" 2>/dev/null; then
+            merge_base="$(git merge-base "$base" "$head" 2>/dev/null || true)"
+            [ -n "$merge_base" ] && base="$merge_base"
+            files="$(git diff --name-only "$base" "$head" 2>/dev/null || true)"
+          else
+            echo "the comparison base could not be established; failing safe to native_impact=true"
+          fi
+          native_impact="$(printf '%s\n' "$files" | node scripts/classify-mobile-native-impact.mjs)"
+          echo "native_impact=$native_impact" >> "$GITHUB_OUTPUT"
+          echo "### Mobile CI native impact: \`$native_impact\`" >> "$GITHUB_STEP_SUMMARY"
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - {name: Verify repository preflight (Node >=22.13.0), run: npm run preflight}
+      - {name: Verify npm-only toolchain contract, run: npm run test:toolchain}
+      - {name: Verify mobile foundation toolchain contract, run: npm run test:mobile-foundation-contract}
+      - {name: Verify mobile canonical state contract (T-02), run: npm run test:mobile-canonical-state-contract}
+      - {name: Verify the native-impact classifier, run: npm run test:mobile-native-impact-classifier}
+      - {name: Type-check mobile (TypeScript 5.9 line), run: npm run typecheck:mobile}
+      - {name: Lint mobile, run: npm run lint:mobile}
+      - {name: Unit and component tests (jest-expo), run: npm run test:mobile}
+      - {name: Expo dependency validation (intentional typescript exclusion), run: npm run deps:check:mobile}
+      - {name: Expo Doctor, run: npm run doctor:mobile}
+      - {name: Prebuild idempotency gate (CNG Level 2), run: npm run prebuild:mobile}
   verify-android:
     name: Android (API 36 emulator boot smoke)
+    needs: verify-mobile-contracts
+    if: needs.verify-mobile-contracts.outputs.native_impact == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -27,16 +97,9 @@ jobs:
         uses: actions/setup-java@v6
         with: {distribution: temurin, java-version: '17'}
       - {name: Install dependencies from the root lockfile, run: npm ci}
-      - {name: Verify repository preflight (Node >=22.13.0), run: npm run preflight}
-      - {name: Verify npm-only toolchain contract, run: npm run test:toolchain}
-      - {name: Verify mobile foundation toolchain contract, run: npm run test:mobile-foundation-contract}
-      - {name: Verify mobile canonical state contract (T-02), run: npm run test:mobile-canonical-state-contract}
-      - {name: Type-check mobile (TypeScript 5.9 line), run: npm run typecheck:mobile}
-      - {name: Lint mobile, run: npm run lint:mobile}
-      - {name: Unit and component tests (jest-expo), run: npm run test:mobile}
-      - {name: Expo dependency validation (intentional typescript exclusion), run: npm run deps:check:mobile}
-      - {name: Expo Doctor, run: npm run doctor:mobile}
-      - {name: Prebuild idempotency gate (CNG Level 2), run: npm run prebuild:mobile}
+      # The fast gate already proved contracts, typecheck, lint, Jest, Expo
+      # dependency validation, Expo Doctor and prebuild idempotency. This job
+      # exists to prove native generation, build, install and boot.
       - {name: Generate the Android project (CNG), run: npm run prebuild:android --workspace @qandeel/mobile}
       - name: Build the Release APK (x86_64 for the emulator)
         working-directory: apps/mobile/android
@@ -81,6 +144,8 @@ jobs:
           if-no-files-found: ignore
   verify-ios:
     name: iOS (iPhone 17 / iOS 26.5 simulator boot smoke)
+    needs: verify-mobile-contracts
+    if: needs.verify-mobile-contracts.outputs.native_impact == 'true'
     runs-on: macos-26
     timeout-minutes: 120
     env:

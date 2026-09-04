@@ -237,8 +237,18 @@ test('the T-02 gate is registered at the root and in Mobile CI without a new nat
   const mobileCi = await read('.github/workflows/mobile-ci.yml');
   assert.match(mobileCi, /run: npm run test:mobile-canonical-state-contract/u);
   assert.match(mobileCi, /'tests\/mobile-canonical-state-contract\.test\.mjs'/u);
-  assert.equal((mobileCi.match(/node-version: '\d+'/gu) ?? []).length, 2, 'no mobile job may be added or removed');
-  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 2, 'no new job');
+  // MOB-CI-01 split Mobile CI into a fast contract gate plus two CONDITIONAL
+  // native smoke jobs. The T-02 invariant is unchanged and still enforced: this
+  // gate adds NO native job, the native set is exactly Android + iOS, and both
+  // remain gated rather than removed.
+  assert.equal((mobileCi.match(/node-version: '\d+'/gu) ?? []).length, 3, 'exactly the fast gate and the two native jobs');
+  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3, 'no job beyond the fast gate and the two native jobs');
+  assert.equal((mobileCi.match(/runs-on: macos-26/gu) ?? []).length, 1, 'exactly one macOS native job');
+  assert.equal(
+    (mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
+    2,
+    'both native smoke jobs stay conditional and neither is removed',
+  );
   const readme = await read('apps/mobile/README.md');
   assert.match(readme, /Canonical state kernel \(T-02\)/u);
 });
