@@ -585,6 +585,16 @@ BEGIN
     END IF;
     SELECT COALESCE(array_agg((c.value #>> '{}')::uuid), ARRAY[]::uuid[]) INTO ref_candidates
       FROM jsonb_array_elements(entry -> 'candidate_handle_ids') AS c(value);
+    -- Every named candidate must be a same-Session handle BEFORE cardinality
+    -- is judged (exactly as the T-03B1a validator orders it), so an invented
+    -- or foreign identity is reported as such rather than as a count problem.
+    FOREACH candidate IN ARRAY ref_candidates LOOP
+      IF NOT EXISTS (SELECT 1 FROM public.conversation_reference_handles h
+                      WHERE h.id = candidate AND h.session_id = p_cu.session_id AND h.user_id = p_cu.user_id) THEN
+        RAISE EXCEPTION 'UNKNOWN_REFERENCE_HANDLE' USING ERRCODE='22023',
+          DETAIL='An ambiguity candidate must be an already-legitimate handle of this Session.';
+      END IF;
+    END LOOP;
 
     IF ref_state = 'RESOLVED' THEN
       IF ref_handle IS NULL OR cardinality(ref_candidates) <> 0 THEN
@@ -611,12 +621,6 @@ BEGIN
         RAISE EXCEPTION 'INVALID_REFERENCE_CARDINALITY' USING ERRCODE='22023',
           DETAIL='AMBIGUOUS asserts no identity and at least two distinct candidate handles.';
       END IF;
-      FOREACH candidate IN ARRAY ref_candidates LOOP
-        IF NOT EXISTS (SELECT 1 FROM public.conversation_reference_handles h
-                        WHERE h.id = candidate AND h.session_id = p_cu.session_id AND h.user_id = p_cu.user_id) THEN
-          RAISE EXCEPTION 'UNKNOWN_REFERENCE_HANDLE' USING ERRCODE='22023';
-        END IF;
-      END LOOP;
     ELSIF ref_handle IS NOT NULL OR ref_creates OR cardinality(ref_candidates) <> 0 THEN
       RAISE EXCEPTION 'INVALID_REFERENCE_CARDINALITY' USING ERRCODE='22023',
         DETAIL='UNRESOLVED asserts no identity at all.';
