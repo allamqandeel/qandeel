@@ -13,7 +13,7 @@
 // the pre-existing runtime event outbox contract survive untouched. Every
 // fixture is rolled back or explicitly removed.
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import process from 'node:process';
 import pg from 'pg';
@@ -127,7 +127,8 @@ async function verifyStaticAuthority() {
       [signature]);
     assert.equal(contract.owner, 'postgres', `${label} is postgres-owned`);
     assert.equal(contract.definer, true, `${label} is SECURITY DEFINER`);
-    assert.ok(Array.isArray(contract.config) && contract.config.includes('search_path='),
+    // PostgreSQL stores the fixed empty search path as `search_path=""`.
+    assert.ok(Array.isArray(contract.config) && contract.config.some((entry) => entry.startsWith('search_path=')),
       `${label} has a fixed empty search path`);
   }
 
@@ -256,6 +257,25 @@ async function verifyAllocation(owner) {
   assert.equal(one.length, 1);
   assert.equal(one[0].session_position, 1, 'the first committed CU is SP(1)');
   assert.equal((await clockOf(session)).current_sp, 1, 'LH is SP(1)');
+
+  // Case 42: the T-03A1 source semantics survive the rewrite untouched. Every
+  // canonical field is still DB-derived from the locked source row - the
+  // committed wording is sliced by the database, the digest is SHA-256 over the
+  // explicit UTF-8 bytes, role/speaker/modality are server-forced - and the
+  // commitment still produces no runtime outbox event of any kind.
+  assert.equal(one[0].committed_text, points(E1).slice(one[0].source_span_start, one[0].source_span_end).join(''),
+    'committed wording is still the canonical source slice at the stored span');
+  assert.equal(one[0].source_content_sha256.toString('hex'),
+    createHash('sha256').update(Buffer.from(E1, 'utf8')).digest('hex'),
+    'the stored digest is still the DB-computed SHA-256 of the UTF-8 source');
+  assert.deepEqual(
+    [one[0].source_role, one[0].speaker_state, one[0].source_modality, one[0].ordinal_within_turn],
+    ['USER', 'RESOLVED', 'TEXT', 0],
+    'role, speaker state, modality and the global source ordinal are still DB-derived');
+  const [{ count: outboxEvents }] = await rows(
+    'SELECT count(*) count FROM public.runtime_event_outbox WHERE subject_turn_id=$1 AND event_type<>$2',
+    [first.userTurn, 'ConversationTurnCompleted']);
+  assert.equal(Number(outboxEvents), 0, 'committed-CU delivery produces no runtime outbox event');
 
   // Case 3: a second batch on the same turn continues with contiguous SPs.
   const second = await commit(session, owner, first.userTurn, randomUUID(), [

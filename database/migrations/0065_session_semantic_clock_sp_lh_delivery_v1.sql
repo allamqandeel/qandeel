@@ -925,8 +925,11 @@ BEGIN
   -- Producer identity, security posture and search path.
   SELECT * INTO producer_row FROM pg_proc WHERE oid = to_regprocedure(producer);
   IF NOT FOUND THEN RAISE EXCEPTION 'the canonical commitment producer is missing'; END IF;
+  -- PostgreSQL stores the fixed empty search path as `search_path=""`, so the
+  -- entry is matched by prefix rather than by exact element equality.
   IF pg_get_userbyid(producer_row.proowner) <> 'postgres' OR NOT producer_row.prosecdef
-     OR NOT (producer_row.proconfig @> ARRAY['search_path=']) THEN
+     OR NOT EXISTS (SELECT 1 FROM unnest(producer_row.proconfig) AS entry(setting)
+                     WHERE entry.setting LIKE 'search_path=%') THEN
     RAISE EXCEPTION 'the canonical commitment producer must stay postgres-owned, SECURITY DEFINER and search_path-fixed';
   END IF;
 
@@ -969,15 +972,17 @@ BEGIN
 
   -- The pre-existing runtime event outbox contract is untouched: still exactly
   -- the three conversation event types and still one row per source turn.
-  IF (SELECT count(*) FROM pg_constraint k
-       WHERE k.conrelid='public.runtime_event_outbox'::regclass AND k.contype='u'
-         AND pg_get_constraintdef(k.oid) = 'UNIQUE (event_type, subject_turn_id)') <> 1 THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint k
+                  WHERE k.conrelid='public.runtime_event_outbox'::regclass AND k.contype='u'
+                    AND pg_get_constraintdef(k.oid) LIKE 'UNIQUE (event_type, subject_turn_id)%') THEN
     RAISE EXCEPTION 'the runtime_event_outbox one-row-per-turn contract must remain untouched';
   END IF;
-  IF (SELECT count(*) FROM pg_constraint k
-       WHERE k.conrelid='public.runtime_event_outbox'::regclass AND k.contype='c'
-         AND pg_get_constraintdef(k.oid) LIKE '%ConversationTurnCompleted%'
-         AND pg_get_constraintdef(k.oid) NOT LIKE '%ConversationalUnitsCommitted%') <> 1 THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint k
+                  WHERE k.conrelid='public.runtime_event_outbox'::regclass AND k.contype='c'
+                    AND pg_get_constraintdef(k.oid) LIKE '%ConversationTurnCompleted%')
+     OR EXISTS (SELECT 1 FROM pg_constraint k
+                 WHERE k.conrelid='public.runtime_event_outbox'::regclass AND k.contype='c'
+                   AND pg_get_constraintdef(k.oid) LIKE '%ConversationalUnitsCommitted%') THEN
     RAISE EXCEPTION 'the runtime_event_outbox event-type contract must remain untouched';
   END IF;
 END$$;
