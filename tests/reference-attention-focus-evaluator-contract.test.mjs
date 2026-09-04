@@ -37,11 +37,28 @@ const EVALUATOR_FILES = [
 ];
 /** The T-03B1b1 pure canonicalization boundary: prepared results -> the durable payload. */
 const CANONICALIZER_FILES = ['durable-focus-canonicalizer.ts', 'durable-focus-payload.types.ts'];
-const PRODUCTION_FILES = [...EVALUATOR_FILES, ...CANONICALIZER_FILES];
+/**
+ * The T-03B1b2 production-inert runtime orchestration (AC-B1B2-01): the only
+ * files in this directory that may reach the T-03A2 runtime pieces and the
+ * service-role RPC channel. They are pinned separately by the T-03B1b2
+ * contract; here they are exempted ONLY from the evaluator-specific scans.
+ */
+const RUNTIME_FILES = [
+  'conversation-focus-establishment.service.ts',
+  'conversation-focus-runtime-mapper.ts',
+  'conversation-focus-runtime.repository.ts',
+  'conversation-focus-runtime.types.ts',
+  'focus-resolution-binding.ts',
+];
+const PRODUCTION_FILES = [...EVALUATOR_FILES, ...CANONICALIZER_FILES, ...RUNTIME_FILES];
 const SPEC_FILES = [
+  'conversation-focus-establishment.service.spec.ts',
+  'conversation-focus-runtime-mapper.spec.ts',
+  'conversation-focus-runtime.repository.spec.ts',
   'conversational-focus-evaluator.service.spec.ts',
   'durable-focus-canonicalizer.spec.ts',
   'focus-anchor-mapper.spec.ts',
+  'focus-resolution-binding.spec.ts',
   'focus-resolution-validator.spec.ts',
   'openai-focus-resolution.provider.spec.ts',
 ];
@@ -62,6 +79,9 @@ const code = Object.fromEntries(Object.entries(sources).map(([name, text]) => [n
 const allCode = Object.values(code).join('\n');
 /** The T-03B1a evaluator alone, which still allocates no durable identity of any kind. */
 const evaluatorCode = EVALUATOR_FILES.map((name) => code[name]).join('\n');
+/** The evaluator plus the canonicalizer: pure semantics, no transport, no allocation result. */
+const semanticCode = [...EVALUATOR_FILES, ...CANONICALIZER_FILES].map((name) => code[name]).join('\n');
+const runtimeCode = RUNTIME_FILES.map((name) => code[name]).join('\n');
 const evaluator = code['conversational-focus-evaluator.service.ts'];
 const validator = code['focus-resolution-validator.ts'];
 const mapper = code['focus-anchor-mapper.ts'];
@@ -89,7 +109,10 @@ test('the T-03B1a boundary exists, exactly, and is framework-agnostic', () => {
   assert.equal(existsSync(new URL(`${FOCUS_DIR}/`, root)), true);
   const files = listFiles(join(rootPath, FOCUS_DIR)).map((file) => relative(file, join(rootPath, FOCUS_DIR))).sort();
   assert.deepEqual(files, [...PRODUCTION_FILES, ...SPEC_FILES].sort(), 'the directory holds exactly the T-03B1a production files and their suites');
-  assert.ok(!files.some((name) => /module|controller|repository|migration|\.sql$/u.test(name)), 'no module, controller, repository or migration file exists here');
+  assert.ok(!files.some((name) => /\.module\.|controller|migration|\.sql$/u.test(name)), 'no module, controller or migration file exists here');
+  // The one repository here is the T-03B1b2 RPC seam over the service-role
+  // channel: a plain class, not a Nest provider, registered nowhere.
+  assert.deepEqual(files.filter((name) => /repository/u.test(name)), ['conversation-focus-runtime.repository.spec.ts', 'conversation-focus-runtime.repository.ts']);
   for (const [name, text] of Object.entries(code)) {
     assert.doesNotMatch(text, /@Injectable\(|@Module\(|@Controller\(|@Inject\(|@Global\(|@Get\(|@Post\(|@UseGuards\(/u, `${name} carries no Nest decorator`);
     assert.doesNotMatch(text, /from '@nestjs\//u, `${name} imports nothing from Nest`);
@@ -116,14 +139,25 @@ test('the evaluator adds no SQL, no durable write, no durable identity; the dura
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
   // T-03B1a shipped no migration; T-03B1b1 added exactly 0066 as the durable
   // substrate, and nothing before it carries a T-03B1 token.
-  assert.equal(migrations.at(-1), '0066_durable_reference_emerging_focus_sp_substrate_v1.sql', 'the newest migration is the T-03B1b1 substrate');
-  for (const name of migrations.filter((candidate) => !candidate.startsWith('0066_'))) {
+  // (T-03B1b2 added 0067, a read/audit substrate with no cutover; it is pinned by its own contract.)
+  assert.ok(migrations.includes('0066_durable_reference_emerging_focus_sp_substrate_v1.sql'), 'the T-03B1b1 substrate migration exists');
+  assert.ok(migrations.indexOf('0066_durable_reference_emerging_focus_sp_substrate_v1.sql') > migrations.indexOf('0065_session_semantic_clock_sp_lh_delivery_v1.sql'));
+  for (const name of migrations.filter((candidate) => !candidate.startsWith('0066_') && !candidate.startsWith('0067_'))) {
     assert.doesNotMatch(readFileSyncUtf8(`database/migrations/${name}`), /emerging_focus|reference_handle|conversational_focus|claim_attribution/iu, `${name} carries no T-03B1 substrate`);
   }
   assert.ok(existsSync(new URL('database/verify-migration-0066.mjs', root)), 'the 0066 real-PostgreSQL verifier exists');
   for (const forbidden of ['serviceApi', 'dataApi', 'SupabaseClient', '.rpc(', 'from \'pg\'', 'INSERT INTO', 'UPDATE ', 'CREATE TABLE', 'randomUUID', 'uuidv5', 'crypto', 'fs.', 'writeFile', 'readFile']) {
-    assert.equal(allCode.includes(forbidden), false, `the directory must not contain ${forbidden}`);
+    assert.equal(semanticCode.includes(forbidden), false, `the evaluator and canonicalizer must not contain ${forbidden}`);
   }
+  // The T-03B1b2 runtime repository is the ONLY file that reaches the
+  // service-role RPC channel, and it calls exactly the three integrated RPCs.
+  for (const forbidden of ['SupabaseClient', 'from \'pg\'', 'INSERT INTO', 'UPDATE ', 'CREATE TABLE', 'randomUUID', 'uuidv5', 'crypto', 'fs.', 'writeFile', 'readFile', 'accessToken', 'dataApi']) {
+    assert.equal(runtimeCode.includes(forbidden), false, `the runtime must not contain ${forbidden}`);
+  }
+  const rpcCallers = PRODUCTION_FILES.filter((name) => /\.rpc[<(]/u.test(code[name]));
+  assert.deepEqual(rpcCallers, ['conversation-focus-runtime.repository.ts']);
+  assert.deepEqual([...code['conversation-focus-runtime.repository.ts'].matchAll(/\.rpc<[^>]*>\('([a-z_0-9]+)'/gu)].map((m) => m[1]),
+    ['get_conversation_integrated_batch_snapshot_v1', 'get_conversation_focus_runtime_context_v1', 'commit_finalized_exchange_with_focus_v1']);
   // The evaluator allocates no durable identity: the only ids it mints are
   // prepared, batch-local, and visibly prefixed. Durable identity is derived
   // ONLY by the T-03B1b1 canonicalizer, deterministically, from the prepared
@@ -135,8 +169,12 @@ test('the evaluator adds no SQL, no durable write, no durable identity; the dura
   assert.match(canonicalizer, /export function durableEmergingFocusId\(/u);
   assert.match(canonicalizer, /if \(JSON\.stringify\(units\)\.includes\(PREPARED_ID_PREFIX\)\) \{\s*throw new FocusCanonicalizationError\('PREPARED_IDENTITY_LEAKED'\);/u,
     'no prepared identity survives into the durable payload');
-  assert.doesNotMatch(allCode, /session_position|sessionPosition|same_sp_event_sequence|live_head|liveHead/u,
-    'no file in the directory authors SP or the same-SP sequence: those are database allocation results');
+  assert.doesNotMatch(semanticCode, /session_position|sessionPosition|same_sp_event_sequence|live_head|liveHead/u,
+    'no semantic file authors SP or the same-SP sequence: those are database allocation results');
+  // The runtime READS allocation results from the authoritative snapshots and
+  // sends an EXPECTED token only; it never sends an SP or a sequence as authority.
+  assert.doesNotMatch(runtimeCode, /p_session_position|p_same_sp_event_sequence\b|p_sp\b|p_live_head|p_fingerprint/u);
+  assert.match(runtimeCode, /p_expected_current_sp: request\.expectedCurrentSp,\s*p_expected_same_sp_event_sequence: request\.expectedSameSpEventSequence,/u);
 });
 
 test('the slice reaches nothing later: no Thread, Home, lifecycle, LF, mobile, Map, Timeline, K/V', () => {
@@ -144,7 +182,15 @@ test('the slice reaches nothing later: no Thread, Home, lifecycle, LF, mobile, M
     'LIVE_FOCUS', 'liveFocus', 'LiveFocus', 'LIVE_FOCUS_TRANSITION', 'effectiveLF', 'apps/mobile', 'react-native', 'expo-router', '@qandeel/runtime',
     'WORLD_ANCHOR', 'worldAnchor', 'SCALE_INTENT', 'camera', 'MapState', 'timeline', 'Timeline', 'knowledgeFrontier', 'projection', 'sameSpEventSequence',
     'WebSocket', 'EventSource', 'Sse', 'Reading', 'TE-01', 'TE01']) {
-    assert.equal(allCode.includes(forbidden), false, `the T-03B1a boundary must not contain ${forbidden}`);
+    assert.equal(semanticCode.includes(forbidden), false, `the T-03B1a boundary must not contain ${forbidden}`);
+  }
+  // The T-03B1b2 runtime legitimately types its delivery against the frozen
+  // wire contract and carries the same-SP token; it still reaches nothing later.
+  for (const forbidden of ['ThreadEstablished', 'THREAD_ESTABLISHED', 'threadId', 'Thread(', 'ThreadHome', 'homeSp', 'HOME_SP', 'lifecycle',
+    'LIVE_FOCUS', 'liveFocus', 'LiveFocus', 'LIVE_FOCUS_TRANSITION', 'effectiveLF', 'apps/mobile', 'react-native', 'expo-router',
+    'WORLD_ANCHOR', 'worldAnchor', 'SCALE_INTENT', 'camera', 'MapState', 'timeline', 'Timeline', 'knowledgeFrontier', 'projection',
+    'WebSocket', 'EventSource', 'Sse', 'Reading', 'TE-01', 'TE01']) {
+    assert.equal(runtimeCode.includes(forbidden), false, `the T-03B1b2 runtime must not contain ${forbidden}`);
   }
   // Its only non-relative import is the already-installed OpenAI SDK, and its
   // only cross-directory import is the T-03A1 code-point/anchor helper - the
@@ -153,8 +199,19 @@ test('the slice reaches nothing later: no Thread, Home, lifecycle, LF, mobile, M
     for (const match of text.matchAll(/from\s+'([^']+)'/gu)) {
       const specifier = match[1];
       if (specifier.startsWith('./')) continue;
-      assert.ok(specifier === 'openai' || specifier === '../conversation-unit/cu-anchor-mapper' || specifier === '../runtime-identity/uuid-v5',
-        `${name} imports ${specifier}; only ./*, openai, ../conversation-unit/cu-anchor-mapper and the neutral ../runtime-identity/uuid-v5 helper are allowed`);
+      const runtimeAllowed = RUNTIME_FILES.includes(name) && [
+        '@qandeel/runtime',
+        '../conversation/conversation.types',
+        '../conversation/supabase-data-api.service',
+        '../conversation/supabase-service-role-api.service',
+        '../conversation-unit/conversation-unit-commitment.service',
+        '../conversation-unit/conversation-temporal-establishment.service',
+        '../conversation-unit/conversation-unit.types',
+        '../conversation-unit/deterministic-runtime-id',
+        '../conversation-unit/temporal-delivery.repository',
+      ].includes(specifier);
+      assert.ok(specifier === 'openai' || specifier === '../conversation-unit/cu-anchor-mapper' || specifier === '../runtime-identity/uuid-v5' || runtimeAllowed,
+        `${name} imports ${specifier}; only ./*, openai, ../conversation-unit/cu-anchor-mapper, the neutral ../runtime-identity/uuid-v5 helper, and (runtime files only) the T-03A2 runtime pieces are allowed`);
       if (specifier === '../runtime-identity/uuid-v5') {
         assert.ok(CANONICALIZER_FILES.includes(name), `only the T-03B1b1 canonicalizer derives durable identity; ${name} may not`);
       }
@@ -162,7 +219,13 @@ test('the slice reaches nothing later: no Thread, Home, lifecycle, LF, mobile, M
     assert.doesNotMatch(text, /require\(/u, `${name} uses no require()`);
     assert.doesNotMatch(text, /\bimport\(/u, `${name} uses no dynamic import()`);
   }
-  assert.doesNotMatch(allCode, /ConversationUnitRepository|ConversationUnitCommitmentService|CuSegmentationProvider|OpenAiCuSegmentationProvider|conversation-unit\.repository|conversation-unit-commitment/u);
+  assert.doesNotMatch(semanticCode, /ConversationUnitRepository|ConversationUnitCommitmentService|CuSegmentationProvider|OpenAiCuSegmentationProvider|conversation-unit\.repository|conversation-unit-commitment/u);
+  // The runtime orchestration reuses the T-03A2 segmentation evaluator and
+  // identity derivation exactly, but never the durable unit repository, the
+  // legacy producer RPC, or the live T-03A2 establishment service itself.
+  assert.doesNotMatch(runtimeCode, /ConversationUnitRepository|conversation-unit\.repository|commit_conversation_units_v1|commit_finalized_exchange_conversation_units_v1|new ConversationTemporalEstablishmentService|OpenAiCuSegmentationProvider/u);
+  assert.match(code['conversation-focus-establishment.service.ts'], /import type \{ CuSegmentationBinding, CuSegmentationBindingFactory \} from '\.\.\/conversation-unit\/conversation-temporal-establishment\.service';/u,
+    'only the binding TYPES of the T-03A2 establishment module are consumed');
   // No mobile file knows this boundary.
   for (const file of listFiles(join(rootPath, 'apps/mobile/src')).map((f) => relative(f))) {
     assert.doesNotMatch(readFileSyncUtf8(file), /conversational-focus|FocusResolution/u, `${file} must not reach the evaluator`);
@@ -213,7 +276,11 @@ test('the provider schema is strict, closed and structurally incapable of an off
   // reads the credential, and only `fromEnvironment()` calls the loader.
   const outsideLoader = Object.entries(code).filter(([name]) => name !== 'focus-resolution-provider.config.ts').map(([, text]) => text).join('\n');
   assert.doesNotMatch(outsideLoader, /process\.env\.|OPENAI_API_KEY/u, 'no ambient credential read outside the explicit environment loader');
-  assert.equal((allCode.match(/loadFocusResolutionOpenAIConfig\(/gu) ?? []).length, 2, 'declared once, called once (fromEnvironment)');
+  assert.equal((semanticCode.match(/loadFocusResolutionOpenAIConfig\(/gu) ?? []).length, 2, 'declared once, called once (fromEnvironment)');
+  // The T-03B1b2 lazy binding factory is the only other caller, and it calls
+  // the loader inside the deferred closure, never at module or construction time.
+  assert.equal((runtimeCode.match(/loadFocusResolutionOpenAIConfig\(/gu) ?? []).length, 1, 'called once more, lazily, by the runtime binding factory');
+  assert.match(code['focus-resolution-binding.ts'], /return \(\) => \{\s*const config = loadFocusResolutionOpenAIConfig\(environment\);/u);
 });
 
 test('the one-CU provider input holds no later CU (§6/§16)', () => {
@@ -281,8 +348,9 @@ test('the gate is registered at the root and in API CI, and MOB-CI-01 is untouch
   // The evaluator slice itself has no database verifier; the only focus
   // verifier in CI is the T-03B1b1 substrate verifier for migration 0066.
   assert.doesNotMatch(apiCi, /verify:reference-attention/u, 'no database verifier exists for the evaluator slice');
-  assert.equal((apiCi.match(/focus[^\n]*:integration/gu) ?? []).length, 1, 'exactly one focus verifier: the 0066 substrate');
-  assert.match(apiCi, /verify:durable-reference-emerging-focus-sp-substrate:integration/u);
+  assert.deepEqual([...apiCi.matchAll(/verify:([a-z0-9-]*focus[a-z0-9-]*):integration/gu)].map((m) => m[1]),
+    ['durable-reference-emerging-focus-sp-substrate', 'conversation-focus-runtime-integration-readiness'],
+    'exactly the 0066 substrate verifier and the 0067 readiness verifier');
   // Mobile CI is not edited: no new step, still the fast gate plus two conditional native jobs.
   assert.doesNotMatch(mobileCi, /reference-attention-focus/u);
   assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3);

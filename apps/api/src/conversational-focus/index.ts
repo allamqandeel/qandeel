@@ -10,3 +10,12 @@ export * from './focus-resolution-validator';
 export * from './fake-focus-resolution.provider';
 export * from './openai-focus-resolution.provider';
 export * from './conversational-focus-evaluator.service';
+// T-03B1b1 - durable canonicalization (pure, inert).
+export * from './durable-focus-payload.types';
+export * from './durable-focus-canonicalizer';
+// T-03B1b2 - runtime orchestration + activation readiness (production-inert, AC-B1B2-01).
+export * from './conversation-focus-runtime.types';
+export * from './conversation-focus-runtime-mapper';
+export * from './conversation-focus-runtime.repository';
+export * from './focus-resolution-binding';
+export * from './conversation-focus-establishment.service';

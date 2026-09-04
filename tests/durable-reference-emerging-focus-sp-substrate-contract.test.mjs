@@ -68,7 +68,9 @@ function vocabulary(name) {
 
 test('migration 0066 exists, is the newest, and 0064 / 0065 are byte-identical', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0066_durable_reference_emerging_focus_sp_substrate_v1.sql');
+  // (T-03B1b2 added 0067, a read/audit-only migration pinned by its own contract.)
+  assert.ok(migrations.includes('0066_durable_reference_emerging_focus_sp_substrate_v1.sql'));
+  assert.ok(migrations.indexOf('0066_durable_reference_emerging_focus_sp_substrate_v1.sql') > migrations.indexOf('0065_session_semantic_clock_sp_lh_delivery_v1.sql'));
   assert.equal(gitBlobId(read('database/migrations/0064_committed_conversational_unit_substrate_v1.sql')), '0a2ee63980e59072b3e9f52a643efa8220e95b08');
   assert.equal(gitBlobId(read('database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql')), '3dc061c71bcb237cec648abb2d1fa02f450cd57f');
   assert.equal(gitBlobId(read('database/verify-migration-0065.mjs')), '132841c718ba1e2368ecc639b49dadff82b79ddb');

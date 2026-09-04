@@ -41,7 +41,7 @@ function gitBlobId(content) {
 
 test('0066 is the ordered forward substrate migration and rewrites nothing historical', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0066_durable_reference_emerging_focus_sp_substrate_v1.sql', '0066 is the newest migration');
+  assert.ok(migrations.includes('0066_durable_reference_emerging_focus_sp_substrate_v1.sql'), 'migration 0066 exists');
   assert.ok(migrations.indexOf('0066_durable_reference_emerging_focus_sp_substrate_v1.sql')
     > migrations.indexOf('0065_session_semantic_clock_sp_lh_delivery_v1.sql'), '0066 orders after 0065');
   assert.match(migration, /^BEGIN;/mu);

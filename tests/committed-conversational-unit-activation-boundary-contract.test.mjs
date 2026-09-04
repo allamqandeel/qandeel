@@ -116,15 +116,50 @@ test('the substrate is reachable ONLY through the named T-03A2 boundary', () => 
   // The T-03B1a evaluator may import ONLY `cu-anchor-mapper` (pure, no I/O)
   // from this directory: never the repository, the producer RPC, the
   // commitment service, the temporal boundary or a segmentation provider.
+  //
+  // T-03B1b2 (AC-B1B2-01) adds a PRODUCTION-INERT runtime orchestration that
+  // must reuse the T-03A2 segmentation evaluator, binding types, identity
+  // derivation and wire-event mapper EXACTLY rather than re-implement them.
+  // Those files, and only those, may import the listed T-03A2 modules; none
+  // of them may touch the durable unit repository, the legacy producer RPCs,
+  // or construct the live T-03A2 establishment service.
+  const RUNTIME_ALLOWED_IMPORTS = new Set([
+    '../conversation-unit/cu-anchor-mapper',
+    '../conversation-unit/conversation-unit-commitment.service',
+    '../conversation-unit/conversation-temporal-establishment.service',
+    '../conversation-unit/conversation-unit.types',
+    '../conversation-unit/deterministic-runtime-id',
+    '../conversation-unit/temporal-delivery.repository',
+    '../conversation-unit/cu-segmentation-provider.types',
+  ]);
+  const RUNTIME_FILES = new Set([
+    'conversation-focus-establishment.service.ts',
+    'conversation-focus-establishment.service.spec.ts',
+    'conversation-focus-runtime-mapper.ts',
+    'conversation-focus-runtime.types.ts',
+  ]);
   for (const file of walk(API_SRC).filter((entry) => entry.url.includes('/conversational-focus/'))) {
     const source = read(file.path);
+    const runtime = RUNTIME_FILES.has(file.name);
     for (const match of source.matchAll(/from\s+'([^']*conversation-unit[^']*)'/gu)) {
-      assert.equal(match[1], '../conversation-unit/cu-anchor-mapper', `${file.name} may reuse only the pure anchor helper`);
+      if (runtime) assert.ok(RUNTIME_ALLOWED_IMPORTS.has(match[1]), `${file.name} may import only the listed T-03A2 runtime pieces; found ${match[1]}`);
+      else assert.equal(match[1], '../conversation-unit/cu-anchor-mapper', `${file.name} may reuse only the pure anchor helper`);
     }
     // No dynamic or CommonJS route around the static import allowlist either.
     assert.doesNotMatch(source, /\bimport\(|require\(/u, `${file.name} must not load conversation-unit dynamically`);
-    assert.doesNotMatch(source, /commit_conversation_units_v1|ConversationUnitRepository|ConversationUnitCommitmentService|ConversationTemporalEstablishmentService|CuSegmentation/u,
-      `${file.name} does not reach the committed-CU substrate`);
+    assert.doesNotMatch(source, /commit_conversation_units_v1|commit_finalized_exchange_conversation_units_v1|ConversationUnitRepository|conversation-unit\.repository|new ConversationTemporalEstablishmentService/u,
+      `${file.name} does not reach the committed-CU substrate or the live T-03A2 writer`);
+    if (!runtime) {
+      assert.doesNotMatch(source, /ConversationUnitCommitmentService|ConversationTemporalEstablishmentService|CuSegmentation/u,
+        `${file.name} does not reach the T-03A2 runtime`);
+    } else {
+      if (source.includes('conversation-temporal-establishment.service')) {
+        assert.match(source, /import type \{[^}]*\} from '\.\.\/conversation-unit\/conversation-temporal-establishment\.service';/u,
+          `${file.name} may consume only the binding TYPES of the live T-03A2 establishment module`);
+      }
+      assert.doesNotMatch(source.replace(/import type \{[^}]*\} from '\.\.\/conversation-unit\/conversation-temporal-establishment\.service';/u, ''),
+        /ConversationTemporalEstablishmentService/u, `${file.name} never references the live T-03A2 establishment service itself`);
+    }
   }
 
   // AppModule, the orchestrator, the conversation repository and the
