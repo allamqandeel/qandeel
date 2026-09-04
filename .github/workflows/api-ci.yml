@@ -50,6 +50,7 @@ jobs:
       - {name: Verify Integrated Intelligence Runtime phase closure contract, run: npm run test:integrated-intelligence-runtime-phase-closure-contract}
       - {name: Verify Committed Conversational Unit activation boundary static contract, run: npm run test:committed-conversational-unit-activation-boundary-contract}
       - {name: Verify Session Semantic Clock / SP / LH delivery static contract, run: npm run test:session-semantic-clock-sp-lh-delivery-contract}
+      - {name: Verify Reference / Attention focus evaluator static contract (T-03B1a), run: npm run test:reference-attention-focus-evaluator-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}
