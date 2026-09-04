@@ -323,6 +323,10 @@ async function verifyConcurrentRecoveryConverges() {
     await clientA.end().catch(() => undefined); await clientB.end().catch(() => undefined);
     await q('DELETE FROM public.runtime_event_outbox WHERE subject_turn_id=$1', [raceTurn]);
     await q('DELETE FROM public.conversation_turns WHERE user_id=$1', [raceUser]);
+    // T-03A2: a Session carries a Session Semantic Clock row, and the FK is
+    // ON DELETE RESTRICT like every other conversation relationship - fixture
+    // teardown removes it explicitly rather than cascading.
+    await q('DELETE FROM public.session_semantic_clocks WHERE session_id=$1', [raceSession]);
     await q('DELETE FROM public.conversation_sessions WHERE id=$1', [raceSession]);
     await q('DELETE FROM public.users WHERE id=$1', [raceUser]);
     await q('DELETE FROM auth.users WHERE id=$1', [raceUser]);

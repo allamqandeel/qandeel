@@ -250,6 +250,12 @@ async function cleanupRows() {
     await database.query('DELETE FROM public.conversation_turns WHERE id = ANY($1::uuid[])', [
       [ownTurnId, otherTurnId],
     ]);
+    // T-03A2: a Session carries a Session Semantic Clock row, and the FK is
+    // ON DELETE RESTRICT like every other conversation relationship - smoke
+    // teardown removes it explicitly rather than cascading.
+    await database.query('DELETE FROM public.session_semantic_clocks WHERE session_id = ANY($1::uuid[])', [
+      [ownSessionId, otherSessionId],
+    ]);
     await database.query('DELETE FROM public.conversation_sessions WHERE id = ANY($1::uuid[])', [
       [ownSessionId, otherSessionId],
     ]);
