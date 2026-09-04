@@ -54,6 +54,7 @@ jobs:
       - {name: Verify durable reference / Emerging Focus SP substrate static contract (T-03B1b1), run: npm run test:durable-reference-emerging-focus-sp-substrate-contract}
       - {name: Verify focus runtime integration readiness static contract (T-03B1b2), run: npm run test:conversation-focus-runtime-integration-readiness-contract}
       - {name: Verify Thread establishment evaluator static contract (T-03B2a), run: npm run test:thread-establishment-evaluator-contract}
+      - {name: Verify canonical Home placement engine static contract + golden / 10k append replay (T-03B2b1), run: npm run test:canonical-home-placement-engine-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}

@@ -88,8 +88,16 @@ function vocabulary(name) {
 
 test('the T-03B2a directory exists, exactly, separate from T-03B1, and is framework-agnostic', () => {
   assert.equal(existsSync(new URL(`${THREAD_DIR}/`, root)), true);
-  const files = listFiles(join(rootPath, THREAD_DIR)).map((file) => relative(file, join(rootPath, THREAD_DIR))).sort();
+  // T-03B2b1 nests the pure Canonical Home Placement Engine in its own
+  // subdirectory, guarded by tests/canonical-home-placement-engine-contract.test.mjs.
+  // The T-03B2a files themselves stay exactly these, and this index still
+  // exports none of the nested slice.
+  const entries = readdirSync(join(rootPath, THREAD_DIR), { withFileTypes: true });
+  const files = entries.filter((entry) => entry.isFile()).map((entry) => entry.name).sort();
+  const directories = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
   assert.deepEqual(files, [...PRODUCTION_FILES, ...SPEC_FILES].sort(), 'the directory holds exactly the T-03B2a production files and their suites');
+  assert.deepEqual(directories, ['home-placement'], 'the only nested slice is T-03B2b1 (canonical Home placement), pinned by its own static contract');
+  assert.doesNotMatch(code['index.ts'], /home-placement/u, 'the T-03B2a index does not re-export the nested slice');
   assert.ok(!files.some((name) => /\.module\.|controller|repository|migration|binding|\.sql$/u.test(name)), 'no module, controller, repository, binding or migration file exists here');
   for (const [name, text] of Object.entries(code)) {
     assert.doesNotMatch(text, /@Injectable\(|@Module\(|@Controller\(|@Inject\(|@Global\(|@Get\(|@Post\(|@UseGuards\(/u, `${name} carries no Nest decorator`);
