@@ -51,6 +51,7 @@ jobs:
       - {name: Verify Committed Conversational Unit activation boundary static contract, run: npm run test:committed-conversational-unit-activation-boundary-contract}
       - {name: Verify Session Semantic Clock / SP / LH delivery static contract, run: npm run test:session-semantic-clock-sp-lh-delivery-contract}
       - {name: Verify Reference / Attention focus evaluator static contract (T-03B1a), run: npm run test:reference-attention-focus-evaluator-contract}
+      - {name: Verify durable reference / Emerging Focus SP substrate static contract (T-03B1b1), run: npm run test:durable-reference-emerging-focus-sp-substrate-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}
@@ -138,6 +139,7 @@ jobs:
       - {name: Verify Question / Information-Gap closed loop, run: npm run verify:question-information-gap-closed-loop:integration}
       - {name: Verify Committed Conversational Unit substrate, run: npm run verify:committed-conversational-unit-substrate:integration}
       - {name: Verify Session Semantic Clock / SP allocation / LH delivery, run: npm run verify:session-semantic-clock-sp-lh-delivery:integration}
+      - {name: Verify durable reference / Emerging Focus SP substrate + per-Moment writer, run: npm run verify:durable-reference-emerging-focus-sp-substrate:integration}
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

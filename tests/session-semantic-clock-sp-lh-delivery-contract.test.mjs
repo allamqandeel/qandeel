@@ -305,10 +305,19 @@ test('no new third-party dependency is introduced anywhere', async () => {
     assert.equal(declared.includes(name), false, `${name} must not be introduced`);
   }
   assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg'], 'the root toolchain gains no dependency');
-  // The runtime derives identities from Node's built-in crypto alone.
+  // The runtime derives identities from Node's built-in crypto alone. Since
+  // T-03B1b1 the version-5 derivation lives in the neutral runtime-identity
+  // helper (so the focus canonicalizer shares the exact algorithm without
+  // reaching into conversation-unit); that helper imports nothing but
+  // node:crypto, and the T-03A2 module imports nothing but that helper.
   const identity = stripComments(await read('apps/api/src/conversation-unit/deterministic-runtime-id.ts'));
   const imports = [...identity.matchAll(/from\s+'([^']+)'/gu)].map((match) => match[1]);
-  assert.deepEqual(imports, ['node:crypto']);
+  assert.deepEqual(imports, ['../runtime-identity/uuid-v5']);
+  const helper = stripComments(await read('apps/api/src/runtime-identity/uuid-v5.ts'));
+  assert.deepEqual([...helper.matchAll(/from\s+'([^']+)'/gu)].map((match) => match[1]), ['node:crypto']);
+  assert.match(helper, /createHash\('sha1'\)\.update\(uuidToBytes\(namespace\)\)\.update\(Buffer\.from\(name, 'utf8'\)\)\.digest\(\)/u,
+    'the extracted helper is the same RFC 4122 version-5 derivation');
+  assert.match(helper, /bytes\[6\] = \(bytes\[6\] & 0x0f\) \| 0x50;\s*bytes\[8\] = \(bytes\[8\] & 0x3f\) \| 0x80;/u);
 });
 
 test('the T-03A2 gates are registered at the root and in both CI workflows', () => {
