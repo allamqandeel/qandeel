@@ -296,11 +296,18 @@ test('TE-02 needs multiple committed CUs bound to the same focus, TE-03 needs pr
   assert.doesNotMatch(te02 + te03 + recurrence, /\.text\b|occurrence/u, 'TE-02 / TE-03 consult no anchor text at all');
   // TE-02 / TE-03 need a USER CU among the evidence (THR-06/THR-13).
   assert.equal((validator.match(/if \(!hasUserEvidence\(input, orderedEvidence\)\) return reject\('USER_EVIDENCE_REQUIRED'\);/gu) ?? []).length, 2);
-  // TE-03: recurrence = earlier same-focus CU + a later departure + not a local clarification.
+  // TE-03: recurrence = the LATEST prior same-focus CU (over the FULL supplied
+  // history, never the earliest cited evidence) + a departure strictly after it
+  // + a current CU that is not a local clarification (FIX-T03B2A-02).
   assert.match(validator, /if \(input\.currentFocusSemantics\.attention\.reason === 'LOCAL_CLARIFICATION_OR_CORRECTION'\) return reject\('RECURRENCE_NOT_PROVEN'\);/u);
-  assert.match(validator, /if \(!hasInterveningCommittedMaterial\(priorEvidence, priorPosition, historyByCu, target\)\) return reject\('RECURRENCE_NOT_PROVEN'\);/u);
-  assert.match(validator, /if \(position <= earliest\) continue;\s*const entry = historyByCu\.get\(cuId\);\s*if \(entry === undefined \|\| entry\.emergingFocusId === target\) continue;\s*if \(entry\.attentionReason === 'LOCAL_CLARIFICATION_OR_CORRECTION'\) continue;\s*return true;/u,
+  assert.match(validator, /const latest = latestTargetAttention\(priorPosition, historyByCu, target\);\s*if \(latest === null\) return reject\('RECURRENCE_NOT_PROVEN'\);\s*if \(!priorEvidence\.includes\(latest\.cuId\)\) return reject\('RECURRENCE_NOT_PROVEN'\);\s*if \(!hasInterveningCommittedMaterial\(latest\.position, priorPosition, historyByCu, target\)\) return reject\('RECURRENCE_NOT_PROVEN'\);/u,
+    'the latest prior target-focus CU must exist, be cited, and be followed by a departure');
+  assert.match(validator, /if \(entry === undefined \|\| !isMember\(FOCUS_BEARING_ATTENTION_KINDS, entry\.attentionKind\) \|\| entry\.emergingFocusId !== target\) continue;\s*if \(latest === null \|\| position > latest\.position\) latest = \{ cuId, position \};/u,
+    'the boundary is the maximum position over the full history of same-focus attention');
+  assert.match(validator, /if \(position <= afterPosition\) continue;\s*const entry = historyByCu\.get\(cuId\);\s*if \(entry === undefined \|\| entry\.emergingFocusId === target\) continue;\s*if \(entry\.attentionReason === 'LOCAL_CLARIFICATION_OR_CORRECTION'\) continue;\s*return true;/u,
     'intervening material is a later committed CU whose KNOWN attention lay elsewhere and was not a local clarification');
+  assert.doesNotMatch(validator, /Math\.min\(|Math\.max\(|earliest/u, 'FIX-T03B2A-02: the earliest cited evidence is never recurrence authority');
+  assert.doesNotMatch(validator, /hasInterveningCommittedMaterial\(priorEvidence/u, 'the departure search never starts from provider-cited evidence');
   // TE-02 anchors are refused; TE-01 anchors are required.
   assert.equal((validator.match(/if \(anchor !== null\) return reject\('INVALID_PROMOTION_PATH'\);/gu) ?? []).length, 2);
   // NO_ESTABLISHMENT is exactly empty.
@@ -322,7 +329,11 @@ test('the one-CU gates run before the provider; NO_INDEPENDENT_FOCUS and ALREADY
   // The input gates (task §10 items 1-7).
   assert.match(evaluator, /if \(semantics\.unit_id !== currentCu\.cuId\) throw new ThreadEstablishmentRejectedError\('FOCUS_SEMANTICS_MISMATCH'\);/u);
   assert.match(evaluator, /if \(prior\.cuId === currentCu\.cuId\) throw future\(\);/u);
-  assert.match(evaluator, /prior\.sourceTurnId === currentCu\.sourceTurnId && prior\.ordinalWithinTurn >= currentCu\.ordinalWithinTurn\) throw future\(\);/u);
+  // FIX-T03B2A-01/03: within the current source turn an EARLIER committed CU is
+  // legitimate; the current ordinal or a later one is hindsight; a different
+  // source role in the same turn is malformed source truth.
+  assert.match(evaluator, /if \(prior\.sourceTurnId === currentCu\.sourceTurnId\) \{\s*if \(prior\.ordinalWithinTurn >= currentCu\.ordinalWithinTurn\) throw future\(\);\s*if \(prior\.sourceRole !== currentCu\.sourceRole\) throw invalid\(\);\s*\}/u);
+  assert.match(evaluator, /currentTurnRole = prior\.sourceRole;\s*lastOrdinal = -1;\s*\} else if \(prior\.sourceRole !== currentTurnRole\) \{\s*throw invalid\(\);\s*\}/u, 'one prior source turn, one canonical source role');
   assert.match(evaluator, /if \(entry\.cuId === currentCu\.cuId\) throw future\(\);\s*if \(!priorCuIds\.has\(entry\.cuId\)\) throw unavailable\(\);/u, 'every history CU is closed over priorCus');
   assert.match(evaluator, /const unavailable = \(\) => new ThreadEstablishmentRejectedError\('PRIOR_EVIDENCE_NOT_AVAILABLE'\);/u);
   assert.match(evaluator, /if \(prior\.ordinalWithinTurn <= lastOrdinal\) throw invalid\(\);/u, 'prior CUs are ordered');
@@ -348,7 +359,17 @@ test('the sequential helper is no-hindsight: prior context grows only AFTER each
   assert.match(evaluator, /if \(result\.decision === 'ESTABLISH_THREAD' && result\.emergingFocusId !== null\) \{\s*establishedInSequence\.push\(result\.emergingFocusId\);\s*establishedFocusIds = \[\.\.\.establishedFocusIds, result\.emergingFocusId\];/u,
     'an establishing CU adds its focus to the in-memory set so later same-focus CUs short-circuit');
   assert.match(evaluator, /if \(cu\.sourceRole === 'ASSISTANT'\) assistantSeen = true;\s*else if \(assistantSeen\) throw new ThreadEstablishmentRejectedError\('FUTURE_CONTEXT_FORBIDDEN'\);/u, 'no assistant CU precedes a USER CU');
-  assert.match(evaluator, /if \(cuIds\.has\(prior\.cuId\) \|\| turnIds\.has\(prior\.sourceTurnId\)\) throw new ThreadEstablishmentRejectedError\('FUTURE_CONTEXT_FORBIDDEN'\);/u, 'history may not already hold a sequence CU or turn');
+  // FIX-T03B2A-03: one sequence source turn, one canonical source role.
+  assert.match(evaluator, /currentTurnRole = cu\.sourceRole;\s*lastOrdinal = -1;\s*\} else if \(cu\.sourceRole !== currentTurnRole\) \{/u, 'a mixed-role sequence turn is refused');
+  // FIX-T03B2A-01: ordinal-aware same-turn history. An earlier committed CU of
+  // a sequence turn is legitimate prior context; the first sequence ordinal or
+  // a later one is hindsight; a same-turn role mismatch is malformed; and no
+  // blanket same-turn rejection exists any more.
+  assert.doesNotMatch(evaluator, /turnIds\.has\(/u, 'no blanket rejection of every prior CU sharing a sequence turn');
+  assert.match(evaluator, /turnBoundaries\.set\(cu\.sourceTurnId, \{ firstOrdinal: cu\.ordinalWithinTurn, sourceRole: cu\.sourceRole \}\);/u);
+  assert.match(evaluator, /if \(cuIds\.has\(prior\.cuId\)\) throw new ThreadEstablishmentRejectedError\('FUTURE_CONTEXT_FORBIDDEN'\);\s*const boundary = turnBoundaries\.get\(prior\.sourceTurnId\);\s*if \(boundary === undefined\) continue;\s*if \(prior\.ordinalWithinTurn >= boundary\.firstOrdinal\) throw new ThreadEstablishmentRejectedError\('FUTURE_CONTEXT_FORBIDDEN'\);\s*if \(prior\.sourceRole !== boundary\.sourceRole\) throw new ThreadEstablishmentRejectedError\('INVALID_EVALUATION_INPUT'\);/u,
+    'same-turn prior CUs are judged by ordinal and role; different turns are left to the T-03B2b SP-native order');
+  assert.doesNotMatch(evaluator, /sessionPosition|session_position|\bsp\b/u, 'no SP was added to the boundary to fake global chronology');
   assert.doesNotMatch(evaluator, /Promise\.all/u, 'CUs of one sequence are never evaluated concurrently');
   assert.doesNotMatch(evaluator, /sequence\[[^\]]*\+\s*1\]|sequence\.slice\(/u, 'no look-ahead into later CUs');
   // The fixtures exercise the frozen example and the short-circuit with the fake provider.
@@ -358,6 +379,8 @@ test('the sequential helper is no-hindsight: prior context grows only AFTER each
   assert.match(evaluatorSpec, /USER_EVIDENCE_REQUIRED/u);
   assert.match(evaluatorSpec, /RECURRENCE_NOT_PROVEN/u);
   assert.match(evaluatorSpec, /expect\(provider\.requests\)\.toHaveLength\(0\)/u, 'zero-provider short-circuits are proven from what the provider saw');
+  assert.match(evaluatorSpec, /FIX-01 \(1\/2\/7\)[\s\S]*FIX-01 \(3\/4\/5\)[\s\S]*FIX-01 \(6\)[\s\S]*FIX-02: TE-03 recurrence[\s\S]*FIX-03: one source turn/u, 'the Targeted Fix R1 proofs exist');
+  assert.match(doc, /T-03B2b\s+MUST construct:/u, 'the global-chronology handoff is documented exactly');
   assert.doesNotMatch(evaluatorSpec, /OPENAI_API_KEY|fromEnvironment\(|new OpenAI/u, 'no live provider in the evaluator suite');
 });
 

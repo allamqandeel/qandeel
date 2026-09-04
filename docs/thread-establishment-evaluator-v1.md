@@ -55,10 +55,15 @@ and no analytical-object count; every entry's CU must be in `priorCus`.
 
 Deterministic gates run before any provider call (task §10): identities and source role;
 `unit_id == cuId` (`FOCUS_SEMANTICS_MISMATCH`); no current or later same-turn material as
-"prior" (`FUTURE_CONTEXT_FORBIDDEN`); every history CU closed over `priorCus`
-(`PRIOR_EVIDENCE_NOT_AVAILABLE`); ordered, unique prior CUs; the exact frozen B1 attention
-vocabulary and stable (never `prepared:`) focus ids (`INVALID_ATTENTION_HISTORY`). A
-malformed context is never treated as truthful non-establishment. Then:
+"prior" (`FUTURE_CONTEXT_FORBIDDEN`) — an EARLIER committed CU of the current source turn is
+legitimate prior context, because the frozen committed-CU contract allows forward progress
+within one turn (FIX-T03B2A-01); every history CU closed over `priorCus`
+(`PRIOR_EVIDENCE_NOT_AVAILABLE`); ordered, unique prior CUs; one canonical source role per
+source turn, in prior context, in the sequence and across the same-turn boundary — a
+mixed-role turn is refused, never re-labelled (FIX-T03B2A-03, `INVALID_EVALUATION_INPUT`);
+the exact frozen B1 attention vocabulary and stable (never `prepared:`) focus ids
+(`INVALID_ATTENTION_HISTORY`). A malformed context is never treated as truthful
+non-establishment. Then:
 
 ```text
 B1 attention NO_INDEPENDENT_FOCUS          -> NO_ESTABLISHMENT / NO_INDEPENDENT_FOCUS   zero provider
@@ -105,7 +110,7 @@ the provider never authors an offset.
 | named repetition does not exist | `OCCURRENCE_OUT_OF_RANGE` |
 | anchor wholly inside a `REPORTED_SPEECH` / `DIRECT_QUOTATION` span of the current CU | `ATTRIBUTED_SELECTION_FORBIDDEN` |
 | TE-02 with fewer than two distinct committed CUs, or no prior same-focus CU | `INSUFFICIENT_SUSTAINED_EVIDENCE` |
-| TE-03 without an earlier same-focus CU, without a later committed CU whose known attention lay elsewhere (and was not a local clarification), or with a current CU that is itself a `LOCAL_CLARIFICATION_OR_CORRECTION` | `RECURRENCE_NOT_PROVEN` |
+| TE-03 without a prior same-focus CU; not citing the LATEST prior same-focus CU (derived from the full supplied history, never from the cited evidence — FIX-T03B2A-02); without a committed CU strictly after that latest CU whose known attention lay elsewhere (and was not a local clarification); or with a current CU that is itself a `LOCAL_CLARIFICATION_OR_CORRECTION` | `RECURRENCE_NOT_PROVEN` |
 | provider outage / timeout / transport error | `THREAD_PROVIDER_UNAVAILABLE` |
 | malformed structured output | `INVALID_PROVIDER_PAYLOAD` |
 
@@ -113,11 +118,14 @@ A rejection is a rejection. It is never reported as `NO_ESTABLISHMENT`, because 
 technical failure is not truthful non-establishment.
 
 The structural minima are the semantic minima and nothing above them: TE-02 is "multiple"
-(two distinct committed CUs including the current one, at least one prior), TE-03 is one
-earlier same-focus CU plus intervening committed material. There is no fixed count above
-that, no elapsed time and no token frequency. Whether a sequence is substantively sustained,
-or a return is genuinely independent, is the provider's semantic proposal within those
-bounds.
+(two distinct committed CUs including the current one, at least one prior), TE-03 is the
+latest prior same-focus CU plus committed material after it whose attention lay elsewhere.
+Attention that already returned to the focus after an earlier departure moves that boundary
+forward, so a later same-focus CU is a continuation of that return, not a new recurrence:
+`Ahmed → Manager → Ahmed → CURRENT Ahmed` cannot be promoted by citing only the old Ahmed CU.
+There is no fixed count above that, no elapsed time and no token frequency. Whether a
+sequence is substantively sustained, or a return is genuinely independent, is the provider's
+semantic proposal within those bounds.
 
 ## Prepared result
 
@@ -146,6 +154,36 @@ so later same-focus CUs short-circuit as `ALREADY_ESTABLISHED` with zero provide
 No request contains a later CU, and no assistant CU can help establish an earlier USER CU.
 The in-memory set is technical sequence state only: it allocates no Thread id and creates
 no canonical truth.
+
+The history a sequence starts from is judged per source turn. A prior CU whose id is in the
+sequence is hindsight. A prior CU of a turn the sequence continues is legitimate only when
+its ordinal is below the first sequence ordinal of that turn and its source role is that
+turn's role; the first sequence ordinal or any later one is overlapping / current / future
+material (`FUTURE_CONTEXT_FORBIDDEN`), and a different role is malformed
+(`INVALID_EVALUATION_INPUT`). Global `ordinalWithinTurn` values supplied by B1 / T-03A are
+preserved, never renumbered.
+
+## Global chronology handoff
+
+T-03B2a carries no SP in its provider boundary and does not invent cross-turn chronology
+from opaque `sourceTurnId` values. The responsibilities are exactly:
+
+```text
+T-03B2a
+  validates:
+    - unique/order-consistent CUs inside each source turn;
+    - same-turn past/current/future boundary;
+    - provider evidence against the supplied ordered prior cut.
+
+T-03B2b
+  MUST construct:
+    - global priorCus order
+    - focusAttentionHistory order
+  from authoritative SP-native canonical history.
+```
+
+Production-inert T-03B2a alone does not prove arbitrary cross-turn global chronology; that
+proof needs the T-03B2b authoritative context builder.
 
 ## Configuration
 

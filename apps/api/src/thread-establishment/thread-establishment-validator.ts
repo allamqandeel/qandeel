@@ -224,12 +224,17 @@ function validateSustainedEngagement(
 }
 
 /**
- * TE-03 (task §11.5): the focus returns independently. Structurally: at least
- * one earlier same-focus evidence CU, committed material between it and the
- * current CU whose canonical attention demonstrably lay elsewhere, and a
- * current CU that is an independent return rather than a brief local
- * clarification. At least one USER CU must carry the evidence (THR-06/THR-13).
- * No timer and no minimum elapsed duration exist.
+ * TE-03 (task §11.5): the focus returns independently. Structurally: the
+ * LATEST prior CU whose canonical B1 attention is on the target focus must
+ * exist and be cited, committed material AFTER it must show attention lying
+ * elsewhere, and the current CU must be an independent return rather than a
+ * brief local clarification. At least one USER CU must carry the evidence
+ * (THR-06/THR-13). No timer, no minimum elapsed duration and no fixed number
+ * of intervening CUs exist.
+ *
+ * FIX-T03B2A-02 - the return boundary is derived from the FULL supplied
+ * history, never from the evidence the provider chose to cite: omitting a more
+ * recent same-focus CU cannot manufacture a recurrence out of a continuation.
  */
 function validateRecurrentAttention(
   input: ThreadEstablishmentEvaluationInput,
@@ -246,7 +251,10 @@ function validateRecurrentAttention(
   // A brief local clarification anchored to the current subject continues the
   // focus (frozen B1 reason vocabulary); it is not an independent return.
   if (input.currentFocusSemantics.attention.reason === 'LOCAL_CLARIFICATION_OR_CORRECTION') return reject('RECURRENCE_NOT_PROVEN');
-  if (!hasInterveningCommittedMaterial(priorEvidence, priorPosition, historyByCu, target)) return reject('RECURRENCE_NOT_PROVEN');
+  const latest = latestTargetAttention(priorPosition, historyByCu, target);
+  if (latest === null) return reject('RECURRENCE_NOT_PROVEN');
+  if (!priorEvidence.includes(latest.cuId)) return reject('RECURRENCE_NOT_PROVEN');
+  if (!hasInterveningCommittedMaterial(latest.position, priorPosition, historyByCu, target)) return reject('RECURRENCE_NOT_PROVEN');
   return {
     outcome: 'VALID',
     establishment: { decision: 'ESTABLISH_THREAD', path: 'TE-03', noEstablishmentReason: null, evidenceCuIds: orderedEvidence, explicitSelectionGrounding: null },
@@ -260,8 +268,35 @@ function hasUserEvidence(input: ThreadEstablishmentEvaluationInput, evidence: re
   return evidence.some((id) => roleByCu.get(id) === 'USER');
 }
 
+/** The most recent prior CU whose canonical B1 attention is on the target focus. */
+interface LatestTargetAttention {
+  readonly cuId: string;
+  readonly position: number;
+}
+
 /**
- * Recurrence needs a departure. After the earliest cited same-focus evidence
+ * FIX-T03B2A-02 - the recurrence boundary. Over the FULL supplied prior cut,
+ * the latest prior CU whose B1 attention is START_NEW_FOCUS or
+ * ATTEND_EXISTING_FOCUS of the target focus. Attention that already returned
+ * to the focus after an earlier departure moves this boundary forward, so a
+ * later same-focus CU is a continuation of that return, not a new recurrence.
+ */
+function latestTargetAttention(
+  priorPosition: ReadonlyMap<string, number>,
+  historyByCu: ReadonlyMap<string, FocusAttentionHistoryEntry>,
+  target: string,
+): LatestTargetAttention | null {
+  let latest: LatestTargetAttention | null = null;
+  for (const [cuId, position] of priorPosition) {
+    const entry = historyByCu.get(cuId);
+    if (entry === undefined || !isMember(FOCUS_BEARING_ATTENTION_KINDS, entry.attentionKind) || entry.emergingFocusId !== target) continue;
+    if (latest === null || position > latest.position) latest = { cuId, position };
+  }
+  return latest;
+}
+
+/**
+ * Recurrence needs a departure. STRICTLY AFTER the latest prior target-focus
  * CU there must be at least one committed prior CU whose canonical B1
  * attention is KNOWN and NOT tied to the target focus - another focus, or no
  * independent focus - and which is not itself a local clarification of the
@@ -269,14 +304,13 @@ function hasUserEvidence(input: ThreadEstablishmentEvaluationInput, evidence: re
  * attention lay and is never counted by convenience.
  */
 function hasInterveningCommittedMaterial(
-  priorEvidence: readonly string[],
+  afterPosition: number,
   priorPosition: ReadonlyMap<string, number>,
   historyByCu: ReadonlyMap<string, FocusAttentionHistoryEntry>,
   target: string,
 ): boolean {
-  const earliest = Math.min(...priorEvidence.map((id) => priorPosition.get(id) ?? Number.MAX_SAFE_INTEGER));
   for (const [cuId, position] of priorPosition) {
-    if (position <= earliest) continue;
+    if (position <= afterPosition) continue;
     const entry = historyByCu.get(cuId);
     if (entry === undefined || entry.emergingFocusId === target) continue;
     if (entry.attentionReason === 'LOCAL_CLARIFICATION_OR_CORRECTION') continue;

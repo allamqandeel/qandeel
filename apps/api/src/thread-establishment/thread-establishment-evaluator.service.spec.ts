@@ -297,15 +297,18 @@ describe('core promotion (fixtures 1-16)', () => {
 
   it('13. old focus evidence + intervening committed material + independent return establishes by TE-03', async () => {
     const current = cu('cu-r5', 'وبالنسبة لأحمد، أنا قررت أواجهه.', 'turn-7', 1);
-    const result = await service(FakeThreadEstablishmentProvider.returning(te03(['cu-r1', 'cu-r5']))).evaluateOne(input(current, semantics('cu-r5', ATTEND(F_AHMED, 'DIRECT_SUBJECT')), RECURRENCE));
-    expect(result).toMatchObject({ decision: 'ESTABLISH_THREAD', path: 'TE-03', emergingFocusId: F_AHMED, evidenceCuIds: ['cu-r1', 'cu-r5'], explicitSelectionGrounding: null });
+    const result = await service(FakeThreadEstablishmentProvider.returning(te03(['cu-r1', 'cu-r2', 'cu-r5']))).evaluateOne(input(current, semantics('cu-r5', ATTEND(F_AHMED, 'DIRECT_SUBJECT')), RECURRENCE));
+    expect(result).toMatchObject({ decision: 'ESTABLISH_THREAD', path: 'TE-03', emergingFocusId: F_AHMED, evidenceCuIds: ['cu-r1', 'cu-r2', 'cu-r5'], explicitSelectionGrounding: null });
+    // FIX-T03B2A-02: the LATEST prior Ahmed CU (QANDEEL's question cu-r2) is the
+    // return boundary and must be cited; omitting it hides where attention last lay.
+    expect(await rejection(service(FakeThreadEstablishmentProvider.returning(te03(['cu-r1', 'cu-r5']))).evaluateOne(input(current, semantics('cu-r5', ATTEND(F_AHMED, 'DIRECT_SUBJECT')), RECURRENCE)))).toBe('RECURRENCE_NOT_PROVEN');
   });
 
   it('14. recurrence through a resolved pronoun with no repeated name (THR-10)', async () => {
     const current = cu('cu-r6', 'هو رجع يتجنبني تاني من الصبح.', 'turn-7', 1);
     expect(current.committedText).not.toContain('أحمد');
-    const result = await service(FakeThreadEstablishmentProvider.returning(te03(['cu-r1', 'cu-r6']))).evaluateOne(input(current, semantics('cu-r6', ATTEND(F_AHMED, 'DIRECT_SUBJECT')), RECURRENCE));
-    expect(result).toMatchObject({ decision: 'ESTABLISH_THREAD', path: 'TE-03', evidenceCuIds: ['cu-r1', 'cu-r6'] });
+    const result = await service(FakeThreadEstablishmentProvider.returning(te03(['cu-r2', 'cu-r6']))).evaluateOne(input(current, semantics('cu-r6', ATTEND(F_AHMED, 'DIRECT_SUBJECT')), RECURRENCE));
+    expect(result).toMatchObject({ decision: 'ESTABLISH_THREAD', path: 'TE-03', evidenceCuIds: ['cu-r2', 'cu-r6'] });
   });
 
   it('15. ambiguous or unresolved identity is never upgraded by lexical convenience (THR-11)', async () => {
@@ -330,6 +333,7 @@ describe('core promotion (fixtures 1-16)', () => {
       [prior('cu-c2', 'turn-4', 'ASSISTANT', 'ده بيأثر على شغلك؟', 1), attended('cu-c2', 'ATTEND_EXISTING_FOCUS', 'DIRECT_REQUEST_OR_QUESTION', F_AHMED)],
     ]);
     expect(await rejection(service(FakeThreadEstablishmentProvider.returning(te03(['cu-c1', 'cu-c3']))).evaluateOne(input(cu('cu-c3', 'أيوه، بيأثر جامد.', 'turn-5', 1), semantics('cu-c3', ATTEND(F_AHMED)), continuity)))).toBe('RECURRENCE_NOT_PROVEN');
+    expect(await rejection(service(FakeThreadEstablishmentProvider.returning(te03(['cu-c1', 'cu-c2', 'cu-c3']))).evaluateOne(input(cu('cu-c3', 'أيوه، بيأثر جامد.', 'turn-5', 1), semantics('cu-c3', ATTEND(F_AHMED)), continuity)))).toBe('RECURRENCE_NOT_PROVEN');
   });
 });
 
@@ -543,10 +547,12 @@ describe('temporal / sequential restraint (fixtures 31-39)', () => {
     expect(await rejection(service(FakeThreadEstablishmentProvider.returning(te02(['cu-e3', 'cu-e2', 'cu-e3']))).evaluateOne(input(current, semantics('cu-e3', ATTEND(F_AHMED)), ENGAGED)))).toBe('DUPLICATE_EVIDENCE_CU');
   });
 
-  it('the sequence refuses history that already contains a sequence CU or turn, and semantics of another CU', async () => {
+  it('the sequence refuses history that already contains a sequence CU or overlapping same-turn material, and semantics of another CU', async () => {
     const provider = FakeThreadEstablishmentProvider.returning(NO);
-    const leaked = extend(HISTORY, [[prior('cu-u1', 'turn-3', 'USER', U1.committedText, 1), attended('cu-u1', 'START_NEW_FOCUS', 'DIRECT_SUBJECT', F_AHMED)]]);
+    const leaked = extend(HISTORY, [[prior('cu-u2', 'turn-3', 'USER', U2.committedText, 2), attended('cu-u2', 'ATTEND_EXISTING_FOCUS', 'SUBSTANTIVE_ELABORATION', F_AHMED)]]);
     expect(await rejection(service(provider).evaluateSequence('session-1', [S(U2, ATTEND(F_AHMED))], leaked))).toBe('FUTURE_CONTEXT_FORBIDDEN');
+    const overlapping = extend(HISTORY, [[prior('cu-z3', 'turn-3', 'USER', 'وامبارح سابني في الاجتماع.', 3), attended('cu-z3', 'NO_INDEPENDENT_FOCUS', 'INCIDENTAL_OR_SUBORDINATE', null)]]);
+    expect(await rejection(service(provider).evaluateSequence('session-1', [S(U2, ATTEND(F_AHMED))], overlapping))).toBe('FUTURE_CONTEXT_FORBIDDEN');
     expect(await rejection(service(provider).evaluateSequence('session-1', [step(U1, semantics('cu-other', START(F_AHMED)))], HISTORY))).toBe('FOCUS_SEMANTICS_MISMATCH');
     expect(await rejection(service(provider).evaluateOne(input(U1, semantics('cu-other', START(F_AHMED)))))).toBe('FOCUS_SEMANTICS_MISMATCH');
     expect(provider.requests).toHaveLength(0);
@@ -629,5 +635,112 @@ describe('fail closed (fixtures 40-46) and input gates', () => {
     expect(THREAD_ESTABLISHMENT_POLICY_VERSION).toBe('stage-1.3-thread-establishment-v1');
     expect(THREAD_ESTABLISHMENT_PROMPT_VERSION).toBe('thread-establishment-evidence-path-v1');
     expect(JSON.stringify(result)).not.toMatch(/threadId|thread_id|homeAnchor|home_anchor|spatial|sessionPosition|session_position|liveFocus|createdAt|timestamp|\d{4}-\d{2}-\d{2}T/u);
+  });
+});
+
+describe('Targeted Fix R1: same-turn forward history (FIX-T03B2A-01), latest-focus TE-03 boundary (FIX-T03B2A-02), one role per source turn (FIX-T03B2A-03)', () => {
+  const S = (c: CurrentCuInput, attention: Partial<CanonicalAttention>) => step(c, semantics(c.cuId, attention));
+  /** turn-3 already holds one committed USER CU (ordinal 1) before the sequence (ordinals 2/3) arrives. */
+  const FORWARD = extend(HISTORY, [[prior('cu-u1', 'turn-3', 'USER', 'أحمد نفسه بدأ يقلقني أكتر من المدير.', 1), attended('cu-u1', 'START_NEW_FOCUS', 'DIRECT_SUBJECT', F_AHMED)]]);
+  const U2 = cu('cu-u2', 'هو بقاله أسبوع بيتجنبني.', 'turn-3', 2);
+  const U3 = cu('cu-u3', 'وامبارح سابني في الاجتماع من غير كلمة.', 'turn-3', 3);
+  type Pair = [PriorCuContext, FocusAttentionHistoryEntry];
+  const ahmed = (cuId: string, turn: string, text = 'أحمد بقى بيتجنبني في الشغل.'): Pair => [prior(cuId, turn, 'USER', text, 1), attended(cuId, 'ATTEND_EXISTING_FOCUS', 'SUBSTANTIVE_ELABORATION', F_AHMED)];
+  const manager = (cuId: string, turn: string): Pair => [prior(cuId, turn, 'USER', 'المهم، المدير طلب مني أقدم التقرير بكرة.', 1), attended(cuId, 'ATTEND_EXISTING_FOCUS', 'EXPLICIT_FOCUS_SHIFT', F_MANAGER)];
+
+  it('FIX-01 (1/2/7): an earlier committed CU of the same source turn is legitimate prior context, each request sees only what precedes it, and ordinals are never renumbered', async () => {
+    const provider = FakeThreadEstablishmentProvider.returning(NO);
+    const evaluation = await service(provider).evaluateSequence('session-1', [S(U2, ATTEND(F_AHMED)), S(U3, ATTEND(F_AHMED))], FORWARD);
+    expect(evaluation.results.map((r) => r.cuId)).toEqual(['cu-u2', 'cu-u3']);
+    expect(provider.requests).toHaveLength(2);
+    const first = provider.requests[0];
+    expect(first.currentCu.ordinalWithinTurn).toBe(2);
+    expect(first.priorCus.filter((c) => c.sourceTurnId === 'turn-3').map((c) => [c.cuId, c.ordinalWithinTurn])).toEqual([['cu-u1', 1]]);
+    expect(first.focusAttentionHistory.at(-1)).toEqual(attended('cu-u1', 'START_NEW_FOCUS', 'DIRECT_SUBJECT', F_AHMED));
+    expect(JSON.stringify(first)).not.toContain('cu-u3');
+    expect(JSON.stringify(first)).not.toContain(U3.committedText);
+    const second = provider.requests[1];
+    expect(second.currentCu.ordinalWithinTurn).toBe(3);
+    expect(second.priorCus.filter((c) => c.sourceTurnId === 'turn-3').map((c) => [c.cuId, c.ordinalWithinTurn])).toEqual([['cu-u1', 1], ['cu-u2', 2]]);
+    // The global ordinals supplied by B1 / T-03A survive into the prepared context.
+    expect(evaluation.preparedContext.priorCus.slice(-3).map((c) => [c.cuId, c.ordinalWithinTurn])).toEqual([['cu-u1', 1], ['cu-u2', 2], ['cu-u3', 3]]);
+  });
+
+  it('FIX-01 (3/4/5): the first sequence ordinal, any later ordinal, or the sequence CU id itself in "prior" context is hindsight, refused before the provider', async () => {
+    const provider = FakeThreadEstablishmentProvider.returning(NO);
+    const sameTurn = (cuId: string, ordinal: number) => extend(HISTORY, [[prior(cuId, 'turn-3', 'USER', 'وبعدين خالد اتكلم.', ordinal), attended(cuId, 'NO_INDEPENDENT_FOCUS', 'INCIDENTAL_OR_SUBORDINATE', null)]]);
+    expect(await rejection(service(provider).evaluateSequence('session-1', [S(U2, ATTEND(F_AHMED)), S(U3, ATTEND(F_AHMED))], sameTurn('cu-x2', 2)))).toBe('FUTURE_CONTEXT_FORBIDDEN');
+    expect(await rejection(service(provider).evaluateSequence('session-1', [S(U2, ATTEND(F_AHMED))], sameTurn('cu-x3', 3)))).toBe('FUTURE_CONTEXT_FORBIDDEN');
+    expect(await rejection(service(provider).evaluateSequence('session-1', [S(U2, ATTEND(F_AHMED))], sameTurn('cu-u2', 2)))).toBe('FUTURE_CONTEXT_FORBIDDEN');
+    expect(await rejection(service(provider).evaluateSequence('session-1', [S(U2, ATTEND(F_AHMED))], sameTurn('cu-u2', 1)))).toBe('FUTURE_CONTEXT_FORBIDDEN');
+    expect(provider.requests).toHaveLength(0);
+  });
+
+  it('FIX-01 (6): a same-turn earlier CU is TE-02 / TE-03 evidence when B1 attention binds it to the target focus', async () => {
+    const sustained = await service(FakeThreadEstablishmentProvider.returning(te02(['cu-u1', 'cu-u2']))).evaluateSequence('session-1', [S(U2, ATTEND(F_AHMED))], FORWARD);
+    expect(sustained.results[0]).toMatchObject({ decision: 'ESTABLISH_THREAD', path: 'TE-02', evidenceCuIds: ['cu-u1', 'cu-u2'] });
+    // Within one turn: Ahmed (ordinal 1) -> Manager departure (ordinal 2) -> current Ahmed return (ordinal 3).
+    const withinTurn = extend(HISTORY, [
+      [prior('cu-w1', 'turn-9', 'USER', 'أحمد بقى بيتجنبني في الشغل.', 1), attended('cu-w1', 'START_NEW_FOCUS', 'DIRECT_SUBJECT', F_AHMED)],
+      [prior('cu-w2', 'turn-9', 'USER', 'المهم، المدير طلب مني أقدم التقرير بكرة.', 2), attended('cu-w2', 'ATTEND_EXISTING_FOCUS', 'EXPLICIT_FOCUS_SHIFT', F_MANAGER)],
+    ]);
+    const recurrent = await service(FakeThreadEstablishmentProvider.returning(te03(['cu-w1', 'cu-w3']))).evaluateSequence('session-1', [S(cu('cu-w3', 'وبالنسبة لأحمد، أنا قررت أواجهه.', 'turn-9', 3), ATTEND(F_AHMED, 'DIRECT_SUBJECT'))], withinTurn);
+    expect(recurrent.results[0]).toMatchObject({ decision: 'ESTABLISH_THREAD', path: 'TE-03', evidenceCuIds: ['cu-w1', 'cu-w3'] });
+  });
+
+  it('FIX-02: TE-03 recurrence is measured from the LATEST prior target-focus attention over the full history, never from the earliest cited evidence', async () => {
+    const current = cu('cu-now', 'وبالنسبة لأحمد، أنا قررت أواجهه.', 'turn-20', 1);
+    const now = semantics('cu-now', ATTEND(F_AHMED, 'DIRECT_SUBJECT'));
+    // True recurrence: Ahmed -> Manager -> CURRENT Ahmed.
+    const trueReturn = extend(HISTORY, [ahmed('cu-t1', 'turn-10'), manager('cu-t2', 'turn-11')]);
+    expect((await service(FakeThreadEstablishmentProvider.returning(te03(['cu-t1', 'cu-now']))).evaluateOne(input(current, now, trueReturn))).path).toBe('TE-03');
+    // False recurrence: Ahmed -> Manager -> Ahmed -> CURRENT Ahmed. Citing the OLD Ahmed CU hides the return that already happened.
+    const alreadyReturned = extend(HISTORY, [ahmed('cu-f1', 'turn-10'), manager('cu-f2', 'turn-11'), ahmed('cu-f3', 'turn-12', 'وأحمد كمان بطل يرد.')]);
+    expect(await rejection(service(FakeThreadEstablishmentProvider.returning(te03(['cu-f1', 'cu-now']))).evaluateOne(input(current, now, alreadyReturned)))).toBe('RECURRENCE_NOT_PROVEN');
+    // Citing the latest Ahmed CU as well does not help: nothing lies between it and the current CU - a continuation, not a recurrence.
+    expect(await rejection(service(FakeThreadEstablishmentProvider.returning(te03(['cu-f1', 'cu-f3', 'cu-now']))).evaluateOne(input(current, now, alreadyReturned)))).toBe('RECURRENCE_NOT_PROVEN');
+    // Ahmed1 -> Ahmed2 -> Manager -> CURRENT Ahmed: the boundary is Ahmed2.
+    const twoThenAway = extend(HISTORY, [ahmed('cu-g1', 'turn-10'), ahmed('cu-g2', 'turn-11', 'وأحمد كمان بطل يرد.'), manager('cu-g3', 'turn-12')]);
+    expect(await rejection(service(FakeThreadEstablishmentProvider.returning(te03(['cu-g1', 'cu-now']))).evaluateOne(input(current, now, twoThenAway)))).toBe('RECURRENCE_NOT_PROVEN');
+    expect((await service(FakeThreadEstablishmentProvider.returning(te03(['cu-g2', 'cu-now']))).evaluateOne(input(current, now, twoThenAway))).evidenceCuIds).toEqual(['cu-g2', 'cu-now']);
+    expect((await service(FakeThreadEstablishmentProvider.returning(te03(['cu-g1', 'cu-g2', 'cu-now']))).evaluateOne(input(current, now, twoThenAway))).evidenceCuIds).toEqual(['cu-g1', 'cu-g2', 'cu-now']);
+    // Manager -> Ahmed -> CURRENT Ahmed: no departure after the latest Ahmed CU.
+    const noDeparture = extend(HISTORY, [manager('cu-n1', 'turn-10'), ahmed('cu-n2', 'turn-11')]);
+    expect(await rejection(service(FakeThreadEstablishmentProvider.returning(te03(['cu-n2', 'cu-now']))).evaluateOne(input(current, now, noDeparture)))).toBe('RECURRENCE_NOT_PROVEN');
+    // Ahmed -> local clarification -> CURRENT Ahmed: a clarification is not a departure.
+    const clarified = extend(HISTORY, [ahmed('cu-l1', 'turn-10'), [prior('cu-l2', 'turn-11', 'ASSISTANT', 'ده حصل إمتى؟', 1), attended('cu-l2', 'NO_INDEPENDENT_FOCUS', 'LOCAL_CLARIFICATION_OR_CORRECTION', null)]]);
+    expect(await rejection(service(FakeThreadEstablishmentProvider.returning(te03(['cu-l1', 'cu-now']))).evaluateOne(input(current, now, clarified)))).toBe('RECURRENCE_NOT_PROVEN');
+    // Pronoun-based recurrence stays valid: identity is the stable emergingFocusId, not the repeated name.
+    const pronoun = cu('cu-now', 'هو رجع يتجنبني تاني من الصبح.', 'turn-20', 1);
+    expect(pronoun.committedText).not.toContain('أحمد');
+    expect((await service(FakeThreadEstablishmentProvider.returning(te03(['cu-t1', 'cu-now']))).evaluateOne(input(pronoun, now, trueReturn))).path).toBe('TE-03');
+  });
+
+  it('FIX-03: one source turn carries exactly one canonical source role - in prior context, in the sequence, and across the same-turn boundary', async () => {
+    const provider = FakeThreadEstablishmentProvider.returning(NO);
+    // (1) prior same-turn USER + later sequence USER: accepted.
+    await service(provider).evaluateSequence('session-1', [S(U2, ATTEND(F_AHMED))], FORWARD);
+    expect(provider.requests).toHaveLength(1);
+    // (2) prior same-turn USER + later sequence ASSISTANT: refused before the provider, never re-labelled.
+    expect(await rejection(service(provider).evaluateSequence('session-1', [S(cu('cu-a9', 'تقصد إن أحمد بيتجنبك؟', 'turn-3', 2, 'ASSISTANT'), ATTEND(F_AHMED, 'DIRECT_REQUEST_OR_QUESTION'))], FORWARD))).toBe('INVALID_EVALUATION_INPUT');
+    expect(await rejection(service(provider).evaluateOne(input(cu('cu-a9', 'تقصد إن أحمد بيتجنبك؟', 'turn-3', 2, 'ASSISTANT'), semantics('cu-a9', ATTEND(F_AHMED, 'DIRECT_REQUEST_OR_QUESTION')), FORWARD)))).toBe('INVALID_EVALUATION_INPUT');
+    // (3) one sequence turn with USER ordinal 1 and ASSISTANT ordinal 2: refused.
+    expect(await rejection(service(provider).evaluateSequence('session-1', [S(cu('cu-s1', 'أحمد زعلان.', 'turn-7', 1, 'USER'), START(F_AHMED)), S(cu('cu-s2', 'تقصد إن أحمد زعلان منك؟', 'turn-7', 2, 'ASSISTANT'), ATTEND(F_AHMED, 'DIRECT_REQUEST_OR_QUESTION'))], HISTORY))).toBe('INVALID_EVALUATION_INPUT');
+    // (4) prior context holding a mixed-role turn: refused at the one-CU boundary.
+    const mixed = extend(HISTORY, [
+      [prior('cu-x1', 'turn-5', 'USER', 'أحمد زعلان.', 1), attended('cu-x1', 'START_NEW_FOCUS', 'DIRECT_SUBJECT', F_AHMED)],
+      [prior('cu-x2', 'turn-5', 'ASSISTANT', 'تقصد إن أحمد زعلان منك؟', 2), attended('cu-x2', 'ATTEND_EXISTING_FOCUS', 'DIRECT_REQUEST_OR_QUESTION', F_AHMED)],
+    ]);
+    expect(await rejection(service(provider).evaluateOne(input(cu('cu-x3', 'أيوه.', 'turn-6', 1), semantics('cu-x3', ATTEND(F_AHMED)), mixed)))).toBe('INVALID_EVALUATION_INPUT');
+    expect(await rejection(service(provider).evaluateSequence('session-1', [S(cu('cu-x3', 'أيوه.', 'turn-6', 1), ATTEND(F_AHMED))], mixed))).toBe('INVALID_EVALUATION_INPUT');
+    expect(provider.requests).toHaveLength(1);
+    // (5) separate USER and ASSISTANT source turns in finalized-exchange order remain accepted.
+    const exchange = await service(provider).evaluateSequence('session-1', [
+      S(cu('cu-e1', 'أحمد زعلان.', 'turn-30', 1), START(F_AHMED)),
+      S(cu('cu-e2', 'وبطل يرد.', 'turn-30', 2), ATTEND(F_AHMED)),
+      S(cu('cu-e3', 'تقصد إن أحمد بيتجنبك؟', 'turn-31', 1, 'ASSISTANT'), ATTEND(F_AHMED, 'DIRECT_REQUEST_OR_QUESTION')),
+    ], HISTORY);
+    expect(exchange.results.map((r) => r.cuId)).toEqual(['cu-e1', 'cu-e2', 'cu-e3']);
+    expect(provider.requests.slice(1).map((r) => [r.currentCu.sourceTurnId, r.currentCu.sourceRole])).toEqual([['turn-30', 'USER'], ['turn-30', 'USER'], ['turn-31', 'ASSISTANT']]);
   });
 });

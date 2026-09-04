@@ -312,10 +312,14 @@ function assertEvaluationInput(input: ThreadEstablishmentEvaluationInput): void 
   const establishedFocusIds: readonly string[] = priorContext.establishedFocusIds;
 
   // Gates 3 and 5: ordered, unique prior CUs; the current CU or a later CU of
-  // its turn is hindsight.
+  // its turn is hindsight. Within one source turn the frozen committed-CU
+  // contract allows forward progress, so an EARLIER committed CU of the current
+  // turn is legitimate prior context (FIX-T03B2A-01), and one source turn has
+  // exactly one canonical source role (FIX-T03B2A-03).
   const priorCuIds = new Set<string>();
   const seenTurns = new Set<string>();
   let currentTurn: string | null = null;
+  let currentTurnRole: 'USER' | 'ASSISTANT' | null = null;
   let lastOrdinal = -1;
   for (const prior of priorCus) {
     if (
@@ -330,13 +334,19 @@ function assertEvaluationInput(input: ThreadEstablishmentEvaluationInput): void 
       throw invalid();
     }
     if (prior.cuId === currentCu.cuId) throw future();
-    if (prior.sourceTurnId === currentCu.sourceTurnId && prior.ordinalWithinTurn >= currentCu.ordinalWithinTurn) throw future();
+    if (prior.sourceTurnId === currentCu.sourceTurnId) {
+      if (prior.ordinalWithinTurn >= currentCu.ordinalWithinTurn) throw future();
+      if (prior.sourceRole !== currentCu.sourceRole) throw invalid();
+    }
     if (prior.sourceTurnId !== currentTurn) {
       // A turn, once left, never resumes; within a turn ordinals ascend.
       if (seenTurns.has(prior.sourceTurnId)) throw invalid();
       seenTurns.add(prior.sourceTurnId);
       currentTurn = prior.sourceTurnId;
+      currentTurnRole = prior.sourceRole;
       lastOrdinal = -1;
+    } else if (prior.sourceRole !== currentTurnRole) {
+      throw invalid();
     }
     if (prior.ordinalWithinTurn <= lastOrdinal) throw invalid();
     lastOrdinal = prior.ordinalWithinTurn;
@@ -374,6 +384,7 @@ function assertCanonicalSequence(sequence: readonly SequencedCuFocusSemantics[])
   const seenTurns = new Set<string>();
   const seenCus = new Set<string>();
   let currentTurn: string | null = null;
+  let currentTurnRole: 'USER' | 'ASSISTANT' | null = null;
   let lastOrdinal = -1;
   let assistantSeen = false;
   for (const item of sequence) {
@@ -391,21 +402,59 @@ function assertCanonicalSequence(sequence: readonly SequencedCuFocusSemantics[])
       if (seenTurns.has(cu.sourceTurnId)) throw new ThreadEstablishmentRejectedError('FUTURE_CONTEXT_FORBIDDEN');
       seenTurns.add(cu.sourceTurnId);
       currentTurn = cu.sourceTurnId;
+      currentTurnRole = cu.sourceRole;
       lastOrdinal = -1;
+    } else if (cu.sourceRole !== currentTurnRole) {
+      // FIX-T03B2A-03: one source turn carries exactly one canonical source
+      // role; a mixed-role turn cannot represent T-03A source truth.
+      throw new ThreadEstablishmentRejectedError('INVALID_EVALUATION_INPUT');
     }
     if (cu.ordinalWithinTurn <= lastOrdinal) throw new ThreadEstablishmentRejectedError('FUTURE_CONTEXT_FORBIDDEN');
     lastOrdinal = cu.ordinalWithinTurn;
   }
 }
 
+/** The per-turn boundary of one sequence: its first ordinal and its one canonical source role. */
+interface SequenceTurnBoundary {
+  readonly firstOrdinal: number;
+  readonly sourceRole: 'USER' | 'ASSISTANT';
+}
+
+/**
+ * The history boundary of one sequence (task §12, FIX-T03B2A-01/03).
+ *
+ * A CU id shared with the sequence is hindsight. Within one SOURCE TURN the
+ * frozen committed-CU contract allows forward progress: an earlier committed CU
+ * of the same turn - ordinal below the first sequence ordinal of that turn,
+ * same canonical source role - is legitimate prior context, while the first
+ * sequence ordinal or any later ordinal is overlapping / current / future
+ * material and is refused. A same-turn prior CU with a different source role
+ * is malformed source truth and is refused rather than re-labelled.
+ *
+ * Across DIFFERENT source turns this slice invents no global chronology from
+ * opaque turn ids: T-03B2a carries no SP in its boundary. T-03B2b constructs
+ * the global `priorCus` and `focusAttentionHistory` order from the
+ * authoritative SP-native canonical history; T-03B2a validates the supplied
+ * ordered cut and the same-turn past / current / future boundary.
+ */
 function assertHistoryPrecedesSequence(history: ThreadEstablishmentPriorContext, sequence: readonly SequencedCuFocusSemantics[]): void {
   if (!history || !Array.isArray(history.priorCus) || !Array.isArray(history.focusAttentionHistory)) {
     throw new ThreadEstablishmentRejectedError('INVALID_EVALUATION_INPUT');
   }
   const cuIds = new Set(sequence.map(({ cu }) => cu.cuId));
-  const turnIds = new Set(sequence.map(({ cu }) => cu.sourceTurnId));
+  const turnBoundaries = new Map<string, SequenceTurnBoundary>();
+  for (const { cu } of sequence) {
+    const boundary = turnBoundaries.get(cu.sourceTurnId);
+    if (boundary === undefined || cu.ordinalWithinTurn < boundary.firstOrdinal) {
+      turnBoundaries.set(cu.sourceTurnId, { firstOrdinal: cu.ordinalWithinTurn, sourceRole: cu.sourceRole });
+    }
+  }
   for (const prior of history.priorCus) {
-    if (cuIds.has(prior.cuId) || turnIds.has(prior.sourceTurnId)) throw new ThreadEstablishmentRejectedError('FUTURE_CONTEXT_FORBIDDEN');
+    if (cuIds.has(prior.cuId)) throw new ThreadEstablishmentRejectedError('FUTURE_CONTEXT_FORBIDDEN');
+    const boundary = turnBoundaries.get(prior.sourceTurnId);
+    if (boundary === undefined) continue;
+    if (prior.ordinalWithinTurn >= boundary.firstOrdinal) throw new ThreadEstablishmentRejectedError('FUTURE_CONTEXT_FORBIDDEN');
+    if (prior.sourceRole !== boundary.sourceRole) throw new ThreadEstablishmentRejectedError('INVALID_EVALUATION_INPUT');
   }
   for (const entry of history.focusAttentionHistory) {
     if (cuIds.has(entry.cuId)) throw new ThreadEstablishmentRejectedError('FUTURE_CONTEXT_FORBIDDEN');

@@ -145,13 +145,27 @@ describe('proposal validation', () => {
     expect(validated.outcome === 'VALID' && validated.establishment.evidenceCuIds).toEqual(['cu-1', 'cu-2', 'cu-now']);
   });
 
-  it('TE-03: an earlier same-focus CU, a later departure, and a current CU that is not a local clarification', () => {
-    expect(outcome(te('TE-03', ['cu-1', 'cu-now']))).toBe('VALID:TE-03');
+  it('TE-03: the latest same-focus CU cited, a departure after it, and a current CU that is not a local clarification', () => {
+    // FIX-T03B2A-02: the return boundary is the LATEST prior Ahmed CU (cu-2), derived from the full history.
     expect(outcome(te('TE-03', ['cu-2', 'cu-now']))).toBe('VALID:TE-03');
+    expect(outcome(te('TE-03', ['cu-1', 'cu-2', 'cu-now']))).toBe('VALID:TE-03');
+    expect(outcome(te('TE-03', ['cu-1', 'cu-now']))).toBe('RECURRENCE_NOT_PROVEN');
     expect(outcome(te('TE-03', ['cu-now']))).toBe('RECURRENCE_NOT_PROVEN');
+    // Ahmed -> Manager -> Ahmed -> CURRENT Ahmed: citing the old Ahmed CU cannot manufacture a recurrence, and the latest one has no departure after it.
+    const returned: ThreadEstablishmentEvaluationInput = {
+      ...input(),
+      priorContext: {
+        priorCus: [HISTORY_CUS[0], HISTORY_CUS[2], prior('cu-5', 'turn-5', 'USER', 'وأحمد كمان بطل يرد.', 1)],
+        focusAttentionHistory: [HISTORY[0], HISTORY[2], { cuId: 'cu-5', attentionKind: 'ATTEND_EXISTING_FOCUS', attentionReason: 'SUBSTANTIVE_ELABORATION', emergingFocusId: F_AHMED }],
+        establishedFocusIds: [],
+      },
+    };
+    expect(outcome(te('TE-03', ['cu-1', 'cu-now']), returned)).toBe('RECURRENCE_NOT_PROVEN');
+    expect(outcome(te('TE-03', ['cu-5', 'cu-now']), returned)).toBe('RECURRENCE_NOT_PROVEN');
+    expect(outcome(te('TE-03', ['cu-1', 'cu-5', 'cu-now']), returned)).toBe('RECURRENCE_NOT_PROVEN');
     expect(outcome(te('TE-03', ['cu-1', 'cu-now']), input({ ...ATTEND_AHMED, reason: 'LOCAL_CLARIFICATION_OR_CORRECTION' }))).toBe('RECURRENCE_NOT_PROVEN');
     expect(outcome(te('TE-03', ['cu-1', 'cu-now'], { text: 'أحمد', occurrence: 1 }))).toBe('INVALID_PROMOTION_PATH');
-    // No departure after the cited CU: the Manager CUs come before an Ahmed CU cited last.
+    // No departure after the latest Ahmed CU: the Manager CUs come before the Ahmed CUs.
     const reordered: ThreadEstablishmentEvaluationInput = {
       ...input(),
       priorContext: {
@@ -161,6 +175,8 @@ describe('proposal validation', () => {
       },
     };
     expect(outcome(te('TE-03', ['cu-1', 'cu-now']), reordered)).toBe('RECURRENCE_NOT_PROVEN');
+    expect(outcome(te('TE-03', ['cu-2', 'cu-now']), reordered)).toBe('RECURRENCE_NOT_PROVEN');
+    expect(outcome(te('TE-03', ['cu-1', 'cu-2', 'cu-now']), reordered)).toBe('RECURRENCE_NOT_PROVEN');
     // A departure that is itself a local clarification does not count.
     const clarified: ThreadEstablishmentEvaluationInput = {
       ...input(),
