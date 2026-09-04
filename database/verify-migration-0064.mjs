@@ -104,7 +104,7 @@ async function verifyEnvironmentContract() {
   assert.equal(encoding, 'UTF8', 'the frozen coordinate and digest contract requires a UTF8 server encoding');
 
   for (const sample of [E1, CODE_SWITCH, SELF_CORRECTION, REPEATED, EMOJI, COMBINING]) {
-    const [row] = await rows('SELECT length($1::text) len, sha256(convert_to($1::text,$2)) digest', [sample, 'UTF8']);
+    const [row] = await rows('SELECT length($1::text) len, sha256(convert_to($1::text,$2::name)) digest', [sample, 'UTF8']);
     assert.equal(Number(row.len), cpLength(sample),
       'PostgreSQL length(text) must count characters exactly as JavaScript counts code points');
     assert.equal(row.digest.toString('hex'), createHash('sha256').update(Buffer.from(sample, 'utf8')).digest('hex'),
@@ -121,20 +121,28 @@ async function verifyEnvironmentContract() {
     [COMBINING, 'ثُمَّ سَافَرَ خَالِد.', 1], [REPEATED, 'أحمد كلمني امبارح.', 2],
   ]) {
     const { start, end } = spanOf(content, excerpt, occurrence);
-    const [{ sliced }] = await rows('SELECT substring($1::text from $2 for $3) sliced', [content, start + 1, end - start]);
+    // The integer arguments are cast explicitly: with untyped parameters
+    // PostgreSQL resolves substring(text FROM ... FOR ...) to the SQL-regex
+    // overload, where the third argument is an escape string.
+    const [{ sliced }] = await rows('SELECT substring($1::text from $2::integer for $3::integer) sliced',
+      [content, start + 1, end - start]);
     assert.equal(sliced, excerpt, 'PostgreSQL character slicing must equal the JavaScript code-point slice');
   }
 }
 
 async function verifyStaticAuthority() {
   stage = 'static authority (cases 25, 28, 29, 35, 36, 41, 42)';
+  const [presence] = await rows('SELECT to_regprocedure($1) IS NOT NULL present', [PRODUCER]);
+  assert.equal(presence.present, true, 'the producer exists with the exact ten-parameter signature');
   const [contract] = await rows(
-    'SELECT to_regprocedure($1) IS NOT NULL present, pg_get_functiondef(to_regprocedure($1)) definition, pg_get_userbyid(p.proowner) owner, p.prosecdef definer, p.proconfig config, p.proargnames argnames FROM pg_proc p WHERE p.oid=$1::regprocedure',
+    'SELECT pg_get_functiondef(p.oid) definition, pg_get_userbyid(p.proowner) owner, p.prosecdef definer, p.proconfig config, p.proargnames argnames FROM pg_proc p WHERE p.oid = to_regprocedure($1)',
     [PRODUCER]);
-  assert.equal(contract.present, true, 'the producer exists with the exact ten-parameter signature');
+  assert.ok(contract, 'the producer definition was read');
   assert.equal(contract.owner, 'postgres');
   assert.equal(contract.definer, true, 'the producer is SECURITY DEFINER');
-  assert.deepEqual(contract.config, ['search_path='], 'the producer search path is fixed empty');
+  assert.match(contract.definition, /search_path TO ''/u, 'the producer search path is fixed empty');
+  assert.ok(Array.isArray(contract.config) && contract.config.some((entry) => entry.startsWith('search_path=')),
+    'the empty search path is recorded on the function');
 
   // Case 35/36: no caller-authoritative parameter exists at all.
   for (const forbidden of ['fingerprint', 'committed_text', 'text', 'source_role', 'role', 'speaker', 'modality', 'digest', 'sha', 'ordinal', 'sp', 'session_position', 'live_head']) {
@@ -156,16 +164,16 @@ async function verifyStaticAuthority() {
   // Case 25/28: the activation gate. The producer is granted to NO role and
   // neither table is reachable by any application role.
   for (const role of ['anon', 'authenticated', 'service_role']) {
-    const [{ allowed }] = await rows("SELECT has_function_privilege($1,$2,'EXECUTE') allowed", [role, PRODUCER]);
+    const [{ allowed }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') allowed", [role, PRODUCER]);
     assert.equal(allowed, false, `${role} must not hold EXECUTE on the commitment producer`);
     for (const table of ['public.conversation_units', 'public.conversation_unit_commit_batches']) {
       for (const privilege of ['SELECT', 'INSERT', 'UPDATE', 'DELETE']) {
-        const [{ granted }] = await rows('SELECT has_table_privilege($1,$2,$3) granted', [role, table, privilege]);
+        const [{ granted }] = await rows('SELECT has_table_privilege($1::name,$2::text,$3::text) granted', [role, table, privilege]);
         assert.equal(granted, false, `${role} must not hold ${privilege} on ${table}`);
       }
     }
   }
-  const [{ allowed: publicExecute }] = await rows("SELECT has_function_privilege('public',$1,'EXECUTE') allowed", [PRODUCER]);
+  const [{ allowed: publicExecute }] = await rows("SELECT has_function_privilege('public'::name,$1::text,'EXECUTE') allowed", [PRODUCER]);
   assert.equal(publicExecute, false, 'PUBLIC must not hold EXECUTE on the commitment producer');
 
   // RLS, ownership, immutability triggers and the required structural constraint.
