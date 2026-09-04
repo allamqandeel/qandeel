@@ -5,6 +5,8 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
+import { classifyMobileNativeImpact } from '../scripts/classify-mobile-native-impact.mjs';
+
 // T-01 — Mobile Client Foundation + Canonical Toolchain Baseline: executable contract.
 // Guards the approved foundation (Pre-Flight Report v2 + Execution Authorization v1).
 
@@ -26,11 +28,13 @@ const mobileCi = await read('.github/workflows/mobile-ci.yml');
 const bootSmoke = await read('apps/mobile/.maestro/boot-smoke.yaml');
 
 const expectedDependencies = {
-  expo: '~57.0.19',
+  // MOB-CI-01: Expo SDK 57 patch baseline refreshed to what `expo install --check`
+  // now requires. Only these two patch pins moved; the SDK minor is unchanged.
+  expo: '~57.0.20',
   'expo-constants': '~57.0.17',
   'expo-dev-client': '~57.0.18',
   'expo-linking': '~57.0.9',
-  'expo-router': '~57.0.18',
+  'expo-router': '~57.0.19',
   'expo-status-bar': '~57.0.1',
   react: '19.2.3',
   'react-native': '0.86.3',
@@ -172,6 +176,7 @@ test('repository scripts stay npm-only and the mobile gates are registered at th
     'doctor:mobile',
     'prebuild:mobile',
     'test:mobile-foundation-contract',
+    'test:mobile-native-impact-classifier',
   ]) assert.equal(typeof rootPackage.scripts[name], 'string', `missing root script ${name}`);
   for (const name of ['start', 'typecheck', 'lint', 'test', 'deps:check', 'doctor', 'prebuild', 'prebuild:android', 'prebuild:ios', 'prebuild:verify']) {
     assert.equal(typeof mobilePackage.scripts[name], 'string', `missing mobile script ${name}`);
@@ -187,7 +192,7 @@ test('CI baselines: API CI on Node 22; mobile CI pins runner, Xcode, JDK, emulat
   assert.match(apiCi, /run: npm run test:toolchain/u);
 
   const nodeVersions = mobileCi.match(/node-version: '\d+'/gu) ?? [];
-  assert.equal(nodeVersions.length, 2, 'both mobile jobs must set up Node explicitly');
+  assert.equal(nodeVersions.length, 3, 'the fast gate and both native jobs must set up Node explicitly');
   for (const entry of nodeVersions) assert.equal(entry, "node-version: '22'");
   assert.match(mobileCi, /runs-on: ubuntu-latest/u);
   assert.match(mobileCi, /runs-on: macos-26/u);
@@ -218,4 +223,104 @@ test('CI baselines: API CI on Node 22; mobile CI pins runner, Xcode, JDK, emulat
     'doctor:mobile',
     'prebuild:mobile',
   ]) assert.match(mobileCi, new RegExp(`run: npm run ${command}`, 'u'), `mobile CI must run ${command}`);
+});
+
+// MOB-CI-01 - Mobile CI is a FAST MOBILE CONTRACT GATE that always runs plus
+// CONDITIONAL NATIVE SMOKE GATES. The optimization is WHEN native smoke runs,
+// never what it proves when it runs.
+const jobSlice = (name, next) => {
+  const start = mobileCi.indexOf(`\n  ${name}:`);
+  assert.notEqual(start, -1, `job ${name} must exist`);
+  const end = next === undefined ? mobileCi.length : mobileCi.indexOf(`\n  ${next}:`);
+  return mobileCi.slice(start, end === -1 ? mobileCi.length : end);
+};
+
+test('mobile CI keeps root package.json in the trigger so root changes still get contract validation', () => {
+  const trigger = mobileCi.slice(mobileCi.indexOf('paths:'), mobileCi.indexOf('push:'));
+  for (const path of ['apps/mobile/**', 'package.json', 'package-lock.json', '.github/workflows/mobile-ci.yml']) {
+    assert.ok(trigger.includes(`'${path}'`), `mobile CI must still trigger on ${path}`);
+  }
+});
+
+test('the fast mobile contract gate always runs and owns every Node-only gate', () => {
+  const fast = jobSlice('verify-mobile-contracts', 'verify-android');
+  assert.match(fast, /runs-on: ubuntu-latest/u);
+  assert.doesNotMatch(fast, /^\s{4}if:/mu, 'the fast gate is never conditional');
+  assert.doesNotMatch(fast, /^\s{4}needs:/mu, 'the fast gate depends on nothing');
+  // Full history, so the changed-file set comes from the real merge base rather
+  // than the fail-safe.
+  assert.match(fast, /fetch-depth: 0/u);
+  assert.match(fast, /native_impact: \$\{\{ steps\.classify\.outputs\.native_impact \}\}/u);
+  assert.match(fast, /node scripts\/classify-mobile-native-impact\.mjs/u);
+  // Fail-safe classification when the comparison base cannot be established.
+  assert.match(fast, /failing safe to native_impact=true/u);
+  assert.match(fast, /git merge-base/u);
+  for (const command of [
+    'preflight',
+    'test:toolchain',
+    'test:mobile-foundation-contract',
+    'test:mobile-canonical-state-contract',
+    'test:mobile-native-impact-classifier',
+    'typecheck:mobile',
+    'lint:mobile',
+    'test:mobile',
+    'deps:check:mobile',
+    'doctor:mobile',
+    'prebuild:mobile',
+  ]) assert.match(fast, new RegExp(`run: npm run ${command}\\b`, 'u'), `the fast gate must run ${command}`);
+  // Expo dependency drift is never hidden. (The classifier's own `|| true`
+  // guards are the deliberate fail-safe, not a soft-failed gate.)
+  assert.doesNotMatch(fast, /continue-on-error/u);
+  assert.doesNotMatch(fast, /run: npm run [^\n]*\|\|/u, 'no mobile gate may be soft-failed');
+});
+
+test('both native smoke jobs are gated by native_impact and keep their full contract', () => {
+  const android = jobSlice('verify-android', 'verify-ios');
+  const ios = jobSlice('verify-ios');
+  for (const [name, job] of [['android', android], ['ios', ios]]) {
+    assert.match(job, /needs: verify-mobile-contracts/u, `${name} must depend on the fast gate`);
+    assert.match(
+      job,
+      /if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/u,
+      `${name} must run only for true native-impact changes`,
+    );
+    assert.match(job, /uses: actions\/setup-java@v6/u, `${name} keeps JDK 17`);
+    assert.match(job, /boot-smoke\.yaml/u, `${name} keeps boot smoke`);
+    assert.match(job, /MAESTRO_VERSION\}/u, `${name} keeps the pinned Maestro guard`);
+    assert.doesNotMatch(job, /continue-on-error/u, `${name} never soft-fails`);
+  }
+  // Android: Ubuntu, CNG, Release APK on x86_64, API 36 google_apis emulator.
+  assert.match(android, /runs-on: ubuntu-latest/u);
+  assert.match(android, /run: npm run prebuild:android --workspace @qandeel\/mobile/u);
+  assert.match(android, /assembleRelease -PreactNativeArchitectures=x86_64/u);
+  assert.match(android, /api-level: 36/u);
+  assert.match(android, /arch: x86_64/u);
+  assert.match(android, /target: google_apis/u);
+  assert.match(android, /sha256sum --check --strict/u);
+  // iOS: macos-26, Xcode 26.6, CNG, CocoaPods, Release simulator build.
+  assert.match(ios, /runs-on: macos-26/u);
+  assert.match(ios, /Xcode_26\.6\.app/u);
+  assert.match(ios, /run: npm run prebuild:ios --workspace @qandeel\/mobile/u);
+  assert.match(ios, /run: pod install/u);
+  assert.match(ios, /-configuration Release -sdk iphonesimulator/u);
+  assert.match(ios, /simctl install/u);
+  assert.match(ios, /shasum -a 256 --check --strict/u);
+});
+
+test('the native-impact classification is executable, not a YAML regex', () => {
+  assert.equal(existsSync(new URL('scripts/classify-mobile-native-impact.mjs', root)), true);
+  // A root-package.json-only change is non-native; the three native-impact
+  // paths each force native smoke on their own.
+  assert.equal(classifyMobileNativeImpact(['package.json']), false);
+  assert.equal(classifyMobileNativeImpact(['apps/mobile/package.json']), true);
+  assert.equal(classifyMobileNativeImpact(['apps/mobile/src/app/index.tsx']), true);
+  assert.equal(classifyMobileNativeImpact(['package-lock.json']), true);
+  assert.equal(classifyMobileNativeImpact(['.github/workflows/mobile-ci.yml']), true);
+  // A backend/root-script-only set never triggers native smoke...
+  assert.equal(
+    classifyMobileNativeImpact(['package.json', 'scripts/preflight.mjs', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'apps/api/src/main.ts', 'database/README.md']),
+    false,
+  );
+  // ...and one native path inside it still does.
+  assert.equal(classifyMobileNativeImpact(['package.json', 'apps/mobile/app.json']), true);
 });
