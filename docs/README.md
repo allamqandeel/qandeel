@@ -16,6 +16,7 @@
 
 ## Implementation phase
 
+- [Focus Runtime Orchestration + Activation Readiness v1](conversation-focus-runtime-integration-readiness-v1.md) — T-03B1b2, migration 0067: the production-inert post-finalization B1 orchestration (strict context mapping, integrated replay snapshot, bounded stale-context retry, lazy focus binding) and the cutover-readiness audit; AC-B1B2-01 defers the live authority cutover to T-03D after T-03B2 extends the same per-Moment chain
 - [Durable Reference / Emerging Focus SP-Native Substrate + Per-Moment Integrated DB Writer v1](durable-reference-emerging-focus-sp-substrate-v1.md) — T-03B1b1, migration 0066: the production-inert durable substrate, deterministic canonicalization, the per-Moment integrated writer under the AF66-01 clock lock, stale-context protection and the authoritative focus-context snapshot that T-03B1b2 will activate
 - [Reference / Attention Resolution Evaluator + Prepared Focus Semantics v1](reference-attention-focus-evaluator-v1.md) — T-03B1a, the production-inert one-CU reference / attribution / conversational-function / independent-attention evaluator that T-03B1b will integrate into the SP-native transaction
 

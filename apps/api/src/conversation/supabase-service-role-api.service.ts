@@ -1,5 +1,5 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { DataApiError } from './supabase-data-api.service';
+import { DataApiError, parseDataApiUpstreamIdentity } from './supabase-data-api.service';
 
 // Explicit, server-only privileged channel for conversation authority commands
 // (claim / finalize / fail). It uses SUPABASE_SERVICE_ROLE_KEY and NEVER accepts
@@ -29,7 +29,10 @@ export class SupabaseServiceRoleApiService {
     } catch {
       throw new ServiceUnavailableException('Server conversation authority is unavailable.');
     }
-    if (!response.ok) throw new DataApiError(response.status);
+    // The bounded opaque database identity rides along so a server-internal
+    // caller can recognise ONE exact typed database condition; the status
+    // alone stays the public surface.
+    if (!response.ok) throw new DataApiError(response.status, await parseDataApiUpstreamIdentity(response));
     if (response.status === 204) return undefined as T;
     return response.json() as Promise<T>;
   }
