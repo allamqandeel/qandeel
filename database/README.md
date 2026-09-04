@@ -75,6 +75,26 @@ This command is an explicit integration gate and is not run by ordinary CI becau
 CI does not receive a development database secret. The secret-free structural test
 remains available through `npm run test:database`.
 
+Migration 0064 adds the committed Conversational Unit substrate:
+`conversation_unit_commit_batches` and `conversation_units`, both owner-held,
+RLS-enabled, append-only through an immutability trigger, and unreachable by
+every application role. The single write path,
+`commit_conversation_units_v1`, is `SECURITY DEFINER` and is granted to **no**
+role, so merging T-03A1 alone cannot create a committed CU in production; T-03A2
+owns the one migration that attaches SP allocation and grants EXECUTE. Canonical
+source values (`user_id`, `session_id`, `source_role`, `speaker_state`,
+`source_modality`, `source_content_sha256`, `committed_text`) are derived from
+the locked source turn, never supplied by the caller. Spans are Unicode
+code points, half-open, over `conversation_turns.content` exactly as stored, and
+the source digest is `sha256(convert_to(content,'UTF8'))`. See
+`docs/committed-conversational-unit-substrate-v1.md` for the complete contract.
+Its verifier proves live semantics, including the forward-only source frontier
+and the existing-batch replay split:
+
+```sh
+npm run verify:committed-conversational-unit-substrate:integration
+```
+
 ## Real Supabase Auth smoke test
 
 The explicit Auth smoke command signs a dedicated test user in through Supabase Auth
