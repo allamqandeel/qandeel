@@ -60,6 +60,19 @@ describe('ConversationFocusRuntimeRepository', () => {
       new DataApiError(500, { databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
       new DataApiError(500),
       new Error('STALE_CONVERSATIONAL_FOCUS_CONTEXT 40001'),
+      // FIX-T03B1B2-01: the message must EQUAL the token. Containment would
+      // read a negation, a longer token, a wrapped relay or a trailing DETAIL
+      // as the one semantic stale condition and spend the bounded retry.
+      new DataApiError(500, { databaseCode: '40001', databaseMessage: 'NOT_STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
+      new DataApiError(500, { databaseCode: '40001', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT_BUT_DIFFERENT_CONDITION' }),
+      new DataApiError(500, { databaseCode: '40001', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT_OTHER' }),
+      new DataApiError(500, { databaseCode: '40001', databaseMessage: 'wrapped: STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
+      new DataApiError(500, { databaseCode: '40001', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT: expected (3,1)' }),
+      // No case folding, no trimming, no normalization either.
+      new DataApiError(500, { databaseCode: '40001', databaseMessage: 'stale_conversational_focus_context' }),
+      new DataApiError(500, { databaseCode: '40001', databaseMessage: ' STALE_CONVERSATIONAL_FOCUS_CONTEXT ' }),
+      new DataApiError(500, { databaseCode: '40001', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT\n' }),
+      new DataApiError(500, { databaseCode: ' 40001', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
     ]) {
       expect(isStaleConversationalFocusContext(notStale)).toBe(false);
       await expect(new ConversationFocusRuntimeRepository(api(jest.fn().mockRejectedValue(notStale))).commitFinalizedExchangeWithFocus(REQUEST)).rejects.toBe(notStale);

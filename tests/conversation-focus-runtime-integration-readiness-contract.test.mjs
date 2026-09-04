@@ -152,10 +152,51 @@ test('stale retry is bounded to one, segmentation is reused, and only the exact 
   assert.ok(service.indexOf('const winner = this.canonicalDelivery(', loop) < service.indexOf('if (!(error instanceof StaleConversationalFocusContextError)) throw error;', loop));
   assert.doesNotMatch(service.slice(loop), /this\.segment\(/u, 'no segmentation inside the retry loop');
   assert.match(service, /SEGMENTATION_FRONTIER_MOVED/u, 'a moved frontier refuses segmentation reuse');
-  // The repository maps ONLY 40001 + the exact token.
-  assert.match(repository, /databaseCode === STALE_CONVERSATIONAL_FOCUS_CONTEXT_SQLSTATE\s*&& typeof databaseMessage === 'string'\s*&& databaseMessage\.includes\(STALE_CONVERSATIONAL_FOCUS_CONTEXT_TOKEN\)/u);
+  // FIX-T03B1B2-01: the repository maps ONLY 40001 whose message EQUALS the
+  // token. Containment, regex, case folding or normalization would read a
+  // negation, a longer token or a wrapped relay as the stale condition.
+  assert.match(repository, /return databaseCode === STALE_CONVERSATIONAL_FOCUS_CONTEXT_SQLSTATE\s*&& databaseMessage === STALE_CONVERSATIONAL_FOCUS_CONTEXT_TOKEN;/u);
   assert.match(repository, /export const STALE_CONVERSATIONAL_FOCUS_CONTEXT_SQLSTATE = '40001';/u);
   assert.match(repository, /export const STALE_CONVERSATIONAL_FOCUS_CONTEXT_TOKEN = 'STALE_CONVERSATIONAL_FOCUS_CONTEXT';/u);
+  assert.doesNotMatch(repository, /databaseMessage\.(?:includes|startsWith|endsWith|match|indexOf|search|toLowerCase|toUpperCase|trim|normalize)\(/u,
+    'the stale message is compared by equality alone, never by containment or normalization');
+  assert.doesNotMatch(repository, /new RegExp|\/STALE_CONVERSATIONAL_FOCUS_CONTEXT\//u, 'no regex matching of the stale token');
+  // The proof enumerates the near-miss messages that must NOT be stale.
+  const repositorySpec = read(`${FOCUS_DIR}/conversation-focus-runtime.repository.spec.ts`);
+  for (const nearMiss of ['NOT_STALE_CONVERSATIONAL_FOCUS_CONTEXT', 'STALE_CONVERSATIONAL_FOCUS_CONTEXT_BUT_DIFFERENT_CONDITION',
+    'STALE_CONVERSATIONAL_FOCUS_CONTEXT_OTHER', 'wrapped: STALE_CONVERSATIONAL_FOCUS_CONTEXT', 'stale_conversational_focus_context',
+    'could not serialize access due to concurrent update']) {
+    assert.ok(repositorySpec.includes(nearMiss), `the stale proof covers: ${nearMiss}`);
+  }
+});
+
+test('FIX-T03B1B2-02: claimed snapshot completeness is proven from the row, never trusted', () => {
+  // An absent commitment batch carries no coordinates and no B1 half at all.
+  assert.match(mapper, /if \(!row\.batch_exists && \(row\.committed_unit_count !== 0 \|\| row\.commit_event !== null\s*\n?\s*\|\| row\.focus_batch_exists \|\| row\.focus_semantic_count !== 0 \|\| row\.focus_attention_count !== 0 \|\| row\.focus_complete\)\) return reject\(\);/u);
+  // Without a focus batch there is nothing to count and nothing to complete.
+  assert.match(mapper, /if \(!row\.focus_batch_exists && \(row\.focus_semantic_count !== 0 \|\| row\.focus_attention_count !== 0 \|\| row\.focus_complete\)\) return reject\(\);/u);
+  // The RPC counts only AGREEING rows, so a count above the committed count is malformed transport.
+  assert.match(mapper, /if \(row\.focus_semantic_count > row\.committed_unit_count \|\| row\.focus_attention_count > row\.committed_unit_count\) return reject\(\);/u);
+  // A claimed completeness must be provable from the counts in the same row.
+  assert.match(mapper, /if \(row\.focus_complete && !\(row\.batch_exists && row\.focus_batch_exists\s*\n\s*&& row\.focus_semantic_count === row\.committed_unit_count\s*\n\s*&& row\.focus_attention_count === row\.committed_unit_count\)\) return reject\(\);/u);
+  // An honest incomplete row stays representable: never repaired, never made absent.
+  assert.doesNotMatch(mapper, /focus_complete: (?:true|false)\b|focus_complete = |focus_semantic_count = |focus_attention_count = /u,
+    'the mapper never rewrites completeness or the counts');
+  assert.match(mapper, /focus_complete: row\.focus_complete,/u, 'the transported flag is returned as given once it is proven');
+  const mapperSpec = read(`${FOCUS_DIR}/conversation-focus-runtime-mapper.spec.ts`);
+  for (const proof of ['accepts a complete non-zero snapshot and a complete ZERO-CU snapshot',
+    'rejects every claimed completeness the counts in the same row do not support',
+    'keeps an honest incomplete snapshot representable', 'no focus batch but a non-zero semantic count',
+    'no focus batch but claimed complete', 'semantic count above the committed count', 'attention count above the committed count',
+    'claimed complete with a semantic shortfall', 'claimed complete with an attention shortfall',
+    'the review finding verbatim: two CUs, zero B1 rows, claimed complete']) {
+    assert.ok(mapperSpec.includes(proof), `the snapshot-coherence proof covers: ${proof}`);
+  }
+  // And the service-level proof: an incoherent claimed-complete row cannot become replay.
+  const serviceSpec = read(`${FOCUS_DIR}/conversation-focus-establishment.service.spec.ts`);
+  assert.match(serviceSpec, /36\. an incoherent claimed-complete row is rejected at the boundary: no replay, no delivery, no provider/u);
+  assert.match(serviceSpec, /new ConversationFocusRuntimeRepository\(\{ rpc \} as unknown as SupabaseServiceRoleApiService\)/u,
+    'the replay proof runs through the REAL repository and mapper, not a fake boundary');
 });
 
 test('the typed database error transport is additive, bounded, opaque, and source-compatible', () => {

@@ -157,7 +157,18 @@ export function mapConversationFocusRuntimeContext(
   };
 }
 
-/** Strictly validates the integrated batch snapshot row. */
+/**
+ * Strictly validates the integrated batch snapshot row.
+ *
+ * FIX-T03B1B2-01/02: field types are not enough. `focus_complete` decides
+ * whether the establishment service treats the exchange as canonical replay
+ * and returns stored temporal delivery WITHOUT calling a semantic provider,
+ * so this boundary re-derives completeness from the counts instead of
+ * trusting the transported flag. A row whose flag disagrees with its own
+ * counts is malformed transport and is rejected; it is never repaired, and
+ * an honest `focus_complete=false` (legacy T-03A2-only or partial B1
+ * history) stays exactly that.
+ */
 export function mapIntegratedBatchSnapshot(row: unknown): IntegratedBatchSnapshot {
   const reject = (): never => { throw new ConversationFocusIntegrityError('INVALID_INTEGRATED_SNAPSHOT'); };
   if (!isRecord(row)) return reject();
@@ -169,8 +180,28 @@ export function mapIntegratedBatchSnapshot(row: unknown): IntegratedBatchSnapsho
   if (row.live_head !== null && !isSp(row.live_head)) return reject();
   if (!Array.isArray(row.units) || row.units.length !== row.committed_unit_count) return reject();
   if (row.commit_event !== null && !isRecord(row.commit_event)) return reject();
-  if (!row.batch_exists && (row.committed_unit_count !== 0 || row.focus_batch_exists || row.focus_complete || row.commit_event !== null)) return reject();
-  if (row.focus_complete && !row.focus_batch_exists) return reject();
+  // An absent commitment batch has no coordinates, no units, no delivery
+  // event and no B1 half at all: nothing about it may be non-empty.
+  if (!row.batch_exists && (row.committed_unit_count !== 0 || row.commit_event !== null
+    || row.focus_batch_exists || row.focus_semantic_count !== 0 || row.focus_attention_count !== 0 || row.focus_complete)) return reject();
+  // Without a focus batch there is no B1 row to count and nothing to complete.
+  if (!row.focus_batch_exists && (row.focus_semantic_count !== 0 || row.focus_attention_count !== 0 || row.focus_complete)) return reject();
+  // The RPC counts only rows that AGREE with a committed CU, so a count above
+  // the committed count cannot be produced by the database: it is malformed
+  // transport, not an incomplete state.
+  if (row.focus_semantic_count > row.committed_unit_count || row.focus_attention_count > row.committed_unit_count) return reject();
+  // A CLAIMED completeness must be independently provable from the counts in
+  // the same row. This accepts the valid zero-CU case (0 === 0) exactly as the
+  // database computes it, and rejects any claim the counts do not support.
+  //
+  // The implication is deliberately one-way. `focus_complete=false` alongside
+  // equal counts is a legitimate database output: the RPC also requires the
+  // focus batch's own declared unit count to agree, and that value is not part
+  // of this snapshot. Refusing completeness is always safe - it forces
+  // evaluation - so an honest false is preserved, never repaired into true.
+  if (row.focus_complete && !(row.batch_exists && row.focus_batch_exists
+    && row.focus_semantic_count === row.committed_unit_count
+    && row.focus_attention_count === row.committed_unit_count)) return reject();
   for (const unit of row.units) {
     if (!isRecord(unit) || !isUuid(unit.id) || !isSp(unit.session_position)) return reject();
   }

@@ -1,5 +1,6 @@
 import type { ConversationTurn, OrchestratedTurnResult } from '../conversation/conversation.types';
 import { DataApiError } from '../conversation/supabase-data-api.service';
+import type { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
 import type { CuSegmentationBinding } from '../conversation-unit/conversation-temporal-establishment.service';
 import type { CommittedConversationUnit } from '../conversation-unit/conversation-unit.types';
 import type { SourceAnchor } from '../conversation-unit/cu-anchor-mapper';
@@ -7,7 +8,7 @@ import { CuSegmentationProviderError, type CuSegmentationProvider, type CuSegmen
 import { automaticCommitBatchId, automaticCommitUnitId } from '../conversation-unit/deterministic-runtime-id';
 import { buildPreparedFocusInputs, ConversationFocusEstablishmentService } from './conversation-focus-establishment.service';
 import { mapConversationFocusRuntimeContext } from './conversation-focus-runtime-mapper';
-import type { ConversationFocusRuntimeBoundary } from './conversation-focus-runtime.repository';
+import { ConversationFocusRuntimeRepository, type ConversationFocusRuntimeBoundary } from './conversation-focus-runtime.repository';
 import {
   ConversationFocusEstablishmentUnavailableError,
   ConversationFocusIntegrityError,
@@ -271,6 +272,34 @@ describe('relation gate and replay (cases 1-6, 29, 34)', () => {
       expect(h.commitFinalizedExchangeWithFocus).not.toHaveBeenCalled();
       expect(focusFactory).not.toHaveBeenCalled();
     }
+  });
+
+  // FIX-T03B1B2-02, through the REAL repository and mapper rather than a fake
+  // boundary: transport that claims completeness its own counts do not support
+  // must never reach the replay path. Were the mapper to pass the row through,
+  // the service would return stored temporal delivery as canonical replay and
+  // silently skip both semantic providers for an exchange that has no B1 truth.
+  it('36. an incoherent claimed-complete row is rejected at the boundary: no replay, no delivery, no provider', async () => {
+    const claimedComplete = {
+      batch_exists: true, committed_unit_count: 2,
+      units: [{ id: U1_ID, session_position: 1 }, { id: U2_ID, session_position: 2 }],
+      commit_event: { commit_batch_id: USER_BATCH, first_sp: 1, last_sp: 2, unit_count: 2 },
+      source_frontier: 20, live_head: 4,
+      focus_batch_exists: true, focus_semantic_count: 0, focus_attention_count: 0, focus_complete: true,
+    };
+    const rpc = jest.fn().mockResolvedValue([claimedComplete]);
+    const repository = new ConversationFocusRuntimeRepository({ rpc } as unknown as SupabaseServiceRoleApiService);
+    const focusFactory = jest.fn(() => { throw new Error('focus binding must not be created'); });
+    const segmentationFactory = jest.fn(() => { throw new Error('segmentation binding must not be created'); });
+    const service = new ConversationFocusEstablishmentService(repository, segmentationFactory, focusFactory);
+    const failure = await service.establish(USER, exchange).then(() => 'RETURNED', (error: unknown) => error);
+    expect(failure).toBeInstanceOf(ConversationFocusIntegrityError);
+    expect((failure as ConversationFocusIntegrityError).reason).toBe('INVALID_INTEGRATED_SNAPSHOT');
+    // Both halves are read concurrently, so two snapshot calls fire; neither
+    // the context read nor the writer is ever reached.
+    expect(new Set(rpc.mock.calls.map((call) => call[0]))).toEqual(new Set(['get_conversation_integrated_batch_snapshot_v1']));
+    expect(focusFactory).not.toHaveBeenCalled();
+    expect(segmentationFactory).not.toHaveBeenCalled();
   });
 });
 

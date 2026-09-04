@@ -6,8 +6,14 @@
 // canonical semantic payload, provenance and the expected clock token, and
 // maps ONE exact database condition to a typed domain error:
 //
-//   SQLSTATE 40001 + message naming STALE_CONVERSATIONAL_FOCUS_CONTEXT
+//   SQLSTATE 40001 + message EXACTLY 'STALE_CONVERSATIONAL_FOCUS_CONTEXT'
 //   -> StaleConversationalFocusContextError
+//
+// Exact equality, never containment (FIX-T03B1B2-01). Migration 0066 emits
+// this stable token as the message itself and carries every variable part in
+// DETAIL, so a message that merely CONTAINS the token is a different
+// condition - a negation, a longer token, or a wrapped/relayed error - and
+// must never earn the one bounded stale retry.
 //
 // Any other serialization failure, any other status, and any status-only
 // transport error stay what they are. NOT registered in Nest (AC-B1B2-01):
@@ -39,13 +45,16 @@ function wireUnits(units: readonly ProposedFocusUnit[]) {
   return units.map((unit) => ({ unit_id: unit.unitId, span_start: unit.spanStart, span_end: unit.spanEnd }));
 }
 
-/** True only for the exact typed database condition, never for a generic 40001. */
+/**
+ * True only for the exact typed database condition, never for a generic 40001
+ * and never for a message that merely contains the token. No regex, no
+ * prefix/suffix acceptance, no case folding, no trimming or normalization.
+ */
 export function isStaleConversationalFocusContext(error: unknown): boolean {
   if (!(error instanceof DataApiError)) return false;
   const { databaseCode, databaseMessage } = readDataApiUpstreamIdentity(error);
   return databaseCode === STALE_CONVERSATIONAL_FOCUS_CONTEXT_SQLSTATE
-    && typeof databaseMessage === 'string'
-    && databaseMessage.includes(STALE_CONVERSATIONAL_FOCUS_CONTEXT_TOKEN);
+    && databaseMessage === STALE_CONVERSATIONAL_FOCUS_CONTEXT_TOKEN;
 }
 
 export class ConversationFocusRuntimeRepository implements ConversationFocusRuntimeBoundary {

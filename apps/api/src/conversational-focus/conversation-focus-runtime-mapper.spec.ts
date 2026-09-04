@@ -135,4 +135,70 @@ describe('the strict integrated-snapshot mapper', () => {
       expect(snapshotReason(value)).toBe('INVALID_INTEGRATED_SNAPSHOT');
     }
   });
+
+  // FIX-T03B1B2-02: `focus_complete` decides canonical replay, so the boundary
+  // proves it from the counts in the same row instead of trusting the flag.
+  it('accepts a complete non-zero snapshot and a complete ZERO-CU snapshot', () => {
+    const two = mapIntegratedBatchSnapshot(snapshot({
+      committed_unit_count: 2, units: [{ id: CU1, session_position: 1 }, { id: CU2, session_position: 2 }],
+      focus_semantic_count: 2, focus_attention_count: 2, focus_complete: true,
+    }));
+    expect(two).toMatchObject({ committed_unit_count: 2, focus_semantic_count: 2, focus_attention_count: 2, focus_complete: true });
+    // A committed batch may hold zero CUs; its zero-unit focus batch completes it.
+    const zero = mapIntegratedBatchSnapshot(snapshot({
+      committed_unit_count: 0, units: [], focus_batch_exists: true, focus_semantic_count: 0, focus_attention_count: 0, focus_complete: true,
+    }));
+    expect(zero).toMatchObject({ batch_exists: true, committed_unit_count: 0, focus_batch_exists: true, focus_complete: true });
+  });
+
+  it('rejects every claimed completeness the counts in the same row do not support', () => {
+    const incoherent = {
+      'no focus batch but a non-zero semantic count': snapshot({ focus_batch_exists: false, focus_semantic_count: 1, focus_attention_count: 0, focus_complete: false }),
+      'no focus batch but a non-zero attention count': snapshot({ focus_batch_exists: false, focus_semantic_count: 0, focus_attention_count: 1, focus_complete: false }),
+      'no focus batch but claimed complete': snapshot({ focus_batch_exists: false, focus_semantic_count: 0, focus_attention_count: 0, focus_complete: true }),
+      'semantic count above the committed count': snapshot({ committed_unit_count: 1, focus_semantic_count: 2, focus_attention_count: 1, focus_complete: false }),
+      'attention count above the committed count': snapshot({ committed_unit_count: 1, focus_semantic_count: 1, focus_attention_count: 2, focus_complete: false }),
+      'claimed complete with a semantic shortfall': snapshot({
+        committed_unit_count: 2, units: [{ id: CU1, session_position: 1 }, { id: CU2, session_position: 2 }],
+        focus_semantic_count: 0, focus_attention_count: 2, focus_complete: true,
+      }),
+      'claimed complete with an attention shortfall': snapshot({
+        committed_unit_count: 2, units: [{ id: CU1, session_position: 1 }, { id: CU2, session_position: 2 }],
+        focus_semantic_count: 2, focus_attention_count: 0, focus_complete: true,
+      }),
+      'the review finding verbatim: two CUs, zero B1 rows, claimed complete': snapshot({
+        committed_unit_count: 2, units: [{ id: CU1, session_position: 1 }, { id: CU2, session_position: 2 }],
+        focus_semantic_count: 0, focus_attention_count: 0, focus_complete: true,
+      }),
+      'an absent batch carrying B1 counts': snapshot({
+        batch_exists: false, committed_unit_count: 0, units: [], commit_event: null, live_head: null,
+        focus_batch_exists: false, focus_semantic_count: 1, focus_attention_count: 0, focus_complete: false,
+      }),
+      'an absent batch claiming a focus batch': snapshot({
+        batch_exists: false, committed_unit_count: 0, units: [], commit_event: null, live_head: null,
+        focus_batch_exists: true, focus_semantic_count: 0, focus_attention_count: 0, focus_complete: false,
+      }),
+    };
+    for (const [name, value] of Object.entries(incoherent)) {
+      expect([name, snapshotReason(value)]).toEqual([name, 'INVALID_INTEGRATED_SNAPSHOT']);
+    }
+  });
+
+  it('keeps an honest incomplete snapshot representable: legacy and partial history is never repaired', () => {
+    // Legacy T-03A2-only: committed CUs, no focus batch at all.
+    expect(mapIntegratedBatchSnapshot(snapshot({
+      committed_unit_count: 2, units: [{ id: CU1, session_position: 1 }, { id: CU2, session_position: 2 }],
+      focus_batch_exists: false, focus_semantic_count: 0, focus_attention_count: 0, focus_complete: false,
+    }))).toMatchObject({ batch_exists: true, focus_batch_exists: false, focus_semantic_count: 0, focus_complete: false });
+    // Partial B1: a focus batch with fewer rows than committed CUs.
+    expect(mapIntegratedBatchSnapshot(snapshot({
+      committed_unit_count: 2, units: [{ id: CU1, session_position: 1 }, { id: CU2, session_position: 2 }],
+      focus_semantic_count: 1, focus_attention_count: 1, focus_complete: false,
+    }))).toMatchObject({ focus_semantic_count: 1, focus_attention_count: 1, focus_complete: false });
+    // The implication is one-way: the RPC also requires the focus batch's own
+    // declared unit count to agree, and that value is not in this snapshot, so
+    // equal counts with an honest `false` is a legitimate database output.
+    // Refusing completeness only forces evaluation; it can never fake replay.
+    expect(mapIntegratedBatchSnapshot(snapshot({ focus_complete: false }))).toMatchObject({ focus_semantic_count: 1, focus_complete: false });
+  });
 });
