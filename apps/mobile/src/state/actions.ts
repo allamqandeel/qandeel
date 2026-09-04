@@ -14,6 +14,10 @@
  *
  * No generic `navigate()`, no `MAP_FOCUS_OBJECT`, no generic world-truth / invalidate / refresh
  * event exists. The event catalog is closed to the two ingestion seams.
+ *
+ * The authority policy is runtime-immutable (FIX-T02-01): every authority is a frozen readonly
+ * array, every entry is frozen and the catalog container is frozen, so no public reference can
+ * widen an identity's authority after module initialization.
  */
 import type {
   ClassAField,
@@ -52,7 +56,7 @@ export type KernelAction =
   | { readonly type: 'COMMIT_LIVE_EDGE' };
 
 export type KernelActionType = KernelAction['type'];
-export const KERNEL_ACTION_TYPES = ['PAN', 'ZOOM_SEMANTIC', 'COMMIT_MOMENT', 'COMMIT_LIVE_EDGE'] as const;
+export const KERNEL_ACTION_TYPES = Object.freeze(['PAN', 'ZOOM_SEMANTIC', 'COMMIT_MOMENT', 'COMMIT_LIVE_EDGE'] as const);
 
 // ------------------------------------------------------------------------------------------
 // Authoritative events (passive, server-originated; closed catalog)
@@ -63,13 +67,13 @@ export type AuthoritativeEvent =
   | { readonly type: 'LIVE_FOCUS_TRANSITION'; readonly value: LiveFocus; readonly atSp: SessionPosition };
 
 export type AuthoritativeEventType = AuthoritativeEvent['type'];
-export const AUTHORITATIVE_EVENT_TYPES = ['LIVE_HEAD_ADVANCED', 'LIVE_FOCUS_TRANSITION'] as const;
+export const AUTHORITATIVE_EVENT_TYPES = Object.freeze(['LIVE_HEAD_ADVANCED', 'LIVE_FOCUS_TRANSITION'] as const);
 
 // ------------------------------------------------------------------------------------------
 // Later-owner identities (metadata only) and non-store identities (Class C / D)
 // ------------------------------------------------------------------------------------------
 
-export const METADATA_ONLY_ACTION_TYPES = [
+export const METADATA_ONLY_ACTION_TYPES = Object.freeze([
   'COMMIT_MOMENT_AND_LOCATE',
   'CHOOSE_LOCUS',
   'RETURN_LIVE_HEAD',
@@ -81,10 +85,10 @@ export const METADATA_ONLY_ACTION_TYPES = [
   'INSPECT_OBJECT',
   'SWITCH_CONTEXT',
   'DIRECT_JUMP',
-] as const;
+] as const);
 export type MetadataOnlyActionType = (typeof METADATA_ONLY_ACTION_TYPES)[number];
 
-export const NON_STORE_IDENTITY_TYPES = [
+export const NON_STORE_IDENTITY_TYPES = Object.freeze([
   'PREVIEW_TEMPORAL_TARGET',
   'CANCEL_PREVIEW',
   'RELATIVE_FORWARD_CONTINUATION',
@@ -95,13 +99,26 @@ export const NON_STORE_IDENTITY_TYPES = [
   'PRESENTATION_POSITION_WIDEN',
   'RESPONSIVE_RECOMPOSITION',
   'REDUCED_MOTION_PREFERENCE',
-] as const;
+] as const);
 export type NonStoreIdentityType = (typeof NON_STORE_IDENTITY_TYPES)[number];
 
+/** Every registered identity, of every level and class. */
 export type ProductActId = KernelActionType | AuthoritativeEventType | MetadataOnlyActionType | NonStoreIdentityType;
 
+/**
+ * RH-eligible identities (FIX-T02-03): explicit Class-A Product acts only. Authoritative
+ * events and Class C / D identities are unrepresentable as an RH act. Later-owner acts are
+ * eligible in type because their RH behaviour is frozen and owned later; T-02 never appends them.
+ */
+export type RhActionId = KernelActionType | MetadataOnlyActionType;
+export const RH_ACTION_IDS: readonly RhActionId[] = Object.freeze([...KERNEL_ACTION_TYPES, ...METADATA_ONLY_ACTION_TYPES]);
+
+export function isRhActionId(value: unknown): value is RhActionId {
+  return typeof value === 'string' && (RH_ACTION_IDS as readonly string[]).includes(value);
+}
+
 export type TaskId = 'T-02' | 'T-03A2' | 'T-03D' | 'T-04' | 'T-05' | 'T-06' | 'T-07' | 'T-10' | 'T-11';
-export const FROZEN_TASK_IDS: readonly TaskId[] = ['T-02', 'T-03A2', 'T-03D', 'T-04', 'T-05', 'T-06', 'T-07', 'T-10', 'T-11'];
+export const FROZEN_TASK_IDS: readonly TaskId[] = Object.freeze(['T-02', 'T-03A2', 'T-03D', 'T-04', 'T-05', 'T-06', 'T-07', 'T-10', 'T-11']);
 
 export type CatalogClass = 'A' | 'C' | 'D' | 'EVENT';
 export type CatalogLevel = 'KERNEL' | 'METADATA_ONLY' | 'NOT_STORE_ACTION';
@@ -121,19 +138,24 @@ export interface CatalogEntry {
   readonly owner: TaskId;
   /** Task that owns the substrate or mechanics around a kernel transition, if any. */
   readonly substrateOwner: TaskId | null;
-  /** Permitted Class-A authority. Empty for Class C / D identities and never contains what an owner has not been granted. */
-  readonly authority: ReadonlySet<ClassAField>;
+  /** Permitted Class-A authority: a frozen readonly array, never a mutable collection. */
+  readonly authority: readonly ClassAField[];
   readonly transactional: TransactionalCategory;
   readonly frozenSource: string;
 }
 
-function fields(...names: readonly ClassAField[]): ReadonlySet<ClassAField> {
-  return new Set(names);
+function fields(...names: readonly ClassAField[]): readonly ClassAField[] {
+  return Object.freeze([...names]);
 }
 
 const SPATIAL = ['MC.anchor', 'MC.orientation', 'MC.scale', 'MC.destination'] as const;
 
-export const ACTION_CATALOG: Readonly<Record<ProductActId, CatalogEntry>> = Object.freeze({
+function freezeCatalog<T extends Record<string, CatalogEntry>>(catalog: T): Readonly<T> {
+  for (const key of Object.keys(catalog)) Object.freeze(catalog[key]);
+  return Object.freeze(catalog);
+}
+
+export const ACTION_CATALOG: Readonly<Record<ProductActId, CatalogEntry>> = freezeCatalog({
   // --- KERNEL: executable Product acts -----------------------------------------------------
   PAN: {
     id: 'PAN',

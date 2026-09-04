@@ -3,13 +3,21 @@
  *
  * Frozen authority: S5-RH-02 (`Φ_eff = ⟨TM, TC, IF_ref, MC.region, MC.depth⟩`; mode counts),
  * S5-RH-03 (`C_RH` payload), S5-RH-04 (true no-op → no RH), S5-RH-05 (passive events never
- * write RH), Execution Authorization §8. `Φ_eff` compares canonical navigation intent only:
- * no device geometry, footprint, animation state, `PTC`, presentation window or focus proxy.
+ * write RH), S5-RH-01 (`RestoreTemporal(entry) := PINNED(entry.capturedTC)`), Execution
+ * Authorization §8, Targeted Fix R1 FIX-T02-03/04. `Φ_eff` compares canonical navigation
+ * intent only: no device geometry, footprint, animation state, `PTC`, presentation window or
+ * focus proxy.
+ *
+ * Only an RH-eligible explicit Product act may be recorded, and only when the pre-act
+ * effective `TC` is an addressable Session Position: an effective act over the technical
+ * absence sentinel (`LH = null`) fails closed here, at the common boundary, so no checkpoint
+ * that frozen restoration could not honour can ever exist.
  *
  * Consumption of RH (Back One Step, Exact Return, the return acts) is T-07's; nothing here
  * unwinds an entry.
  */
-import type { ProductActId } from './actions';
+import type { RhActionId } from './actions';
+import { PreconditionFailed } from './authority';
 import {
   cameraIntentEquals,
   inspectionRefEquals,
@@ -48,13 +56,23 @@ export function isEffectiveChange(before: CanonicalState, after: CanonicalState)
   return !phiEffEquals(phiEff(before), phiEff(after));
 }
 
-/** Exact pre-act checkpoint (`C_RH`). `tmProvenance` is provenance only; restoration is T-07's. */
-export function captureCheckpoint(preActState: CanonicalState, act: ProductActId): RhEntry {
+/**
+ * Exact pre-act checkpoint (`C_RH`). `tmProvenance` is provenance only; restoration is T-07's.
+ * Fails closed when the pre-act effective `TC` is the technical absence sentinel (FIX-T02-04).
+ */
+export function captureCheckpoint(preActState: CanonicalState, act: RhActionId): RhEntry {
+  const tc = effectiveTC(preActState);
+  if (tc === null) {
+    throw new PreconditionFailed(
+      act,
+      'no authoritative committed Session Position has been mirrored (LH = null); an effective act cannot be recorded in RH before SP(1)',
+    );
+  }
   return {
     act,
     captured: {
       tmProvenance: preActState.temporal,
-      tc: effectiveTC(preActState),
+      tc,
       ifRef: preActState.inspection,
       camera: preActState.camera,
     },
@@ -66,8 +84,11 @@ export interface AppendResult {
   readonly entry: RhEntry | null;
 }
 
-/** One RH append for one effective explicit Product transaction; nothing for a true no-op. */
-export function appendIfEffective(before: CanonicalState, after: CanonicalState, act: ProductActId): AppendResult {
+/**
+ * One RH append for one effective explicit Product transaction; nothing for a true no-op.
+ * A true no-op stays a no-op even before SP(1); an effective act before SP(1) fails closed.
+ */
+export function appendIfEffective(before: CanonicalState, after: CanonicalState, act: RhActionId): AppendResult {
   if (!isEffectiveChange(before, after)) return { history: before.history, entry: null };
   const entry = captureCheckpoint(before, act);
   return { history: [...before.history, entry], entry };

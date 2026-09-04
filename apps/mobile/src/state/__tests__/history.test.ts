@@ -1,6 +1,18 @@
-import { opaqueRef, opaqueValueEquals, sessionPosition } from '../classes';
+import { CanonicalStateError, type CanonicalStateErrorCode } from '../authority';
+import { opaqueRef, opaqueValueEquals, sessionPosition, type RhEntry } from '../classes';
 import { appendIfEffective, captureCheckpoint, isEffectiveChange, phiEff, phiEffEquals } from '../history';
 import { createCanonicalStore, type CanonicalStateInit } from '../store';
+
+function expectRejection(fn: () => unknown, code: CanonicalStateErrorCode): CanonicalStateError {
+  try {
+    fn();
+  } catch (error) {
+    expect(error).toBeInstanceOf(CanonicalStateError);
+    expect((error as CanonicalStateError).code).toBe(code);
+    return error as CanonicalStateError;
+  }
+  throw new Error(`expected rejection ${code}`);
+}
 
 const SP = sessionPosition;
 const anchor = (v: string | Record<string, string | number>) => opaqueRef('WORLD_ANCHOR', v);
@@ -87,6 +99,64 @@ describe('RH append boundary', () => {
     const state = createCanonicalStore(init()).getState();
     expect(Object.keys(phiEff(state)).sort()).toEqual(['camera', 'ifRef', 'tc', 'tm']);
     expect(Object.keys(phiEff(state).camera).sort()).toEqual(['anchor', 'depth', 'scale']);
+  });
+
+  it('no RH checkpoint can capture the technical absence sentinel: effective acts before SP(1) fail closed (FIX-T02-04)', () => {
+    const absent = () => init({ live: { LH: null, LF: { value: { kind: 'NONE' }, atSp: null } } });
+    const store = createCanonicalStore(absent());
+    const before = store.getState();
+
+    expectRejection(() => store.dispatch({ type: 'PAN', to: { anchor: anchor('a1') } }), 'PRECONDITION_FAILED');
+    expect(store.getState()).toBe(before);
+    expectRejection(() => store.dispatch({ type: 'ZOOM_SEMANTIC', depth: 'THREAD' }), 'PRECONDITION_FAILED');
+    expect(store.getState()).toBe(before);
+    expect(store.getState().history).toHaveLength(0);
+
+    expect(store.dispatch({ type: 'PAN', to: { anchor: anchor({ x: 1, y: 2 }) } }).outcome).toBe('NO_OP');
+    expect(store.dispatch({ type: 'ZOOM_SEMANTIC', depth: 'WORLD' }).outcome).toBe('NO_OP');
+    expect(store.getState()).toBe(before);
+    expect(store.getState().history).toHaveLength(0);
+
+    expect(store.ingest({ type: 'LIVE_HEAD_ADVANCED', toSp: SP(1) }).outcome).toBe('APPLIED');
+    const panResult = store.dispatch({ type: 'PAN', to: { anchor: anchor('a1') } });
+    expect(panResult.outcome).toBe('APPLIED');
+    expect(store.dispatch({ type: 'ZOOM_SEMANTIC', depth: 'THREAD' }).outcome).toBe('APPLIED');
+    expect(store.getState().history).toHaveLength(2);
+    for (const entry of store.getState().history) {
+      expect(entry.captured.tc).toBe(SP(1));
+      expect(entry.captured.tmProvenance).toEqual({ kind: 'FOLLOW_LIVE' });
+    }
+
+    expectRejection(() => captureCheckpoint(before, 'PAN'), 'PRECONDITION_FAILED');
+    const invalidEntry = { act: 'PAN', captured: { tmProvenance: { kind: 'FOLLOW_LIVE' }, tc: null, ifRef: null, camera: init().camera } } as unknown as RhEntry;
+    expectRejection(() => createCanonicalStore(init({ history: [invalidEntry] })), 'INVALID_INITIAL_STATE');
+  });
+
+  it('initial history is validated structurally: only RH-eligible acts with exact checkpoints are accepted (FIX-T02-03)', () => {
+    const checkpoint = { tmProvenance: { kind: 'FOLLOW_LIVE' } as const, tc: SP(3), ifRef: null, camera: init().camera };
+    const valid: RhEntry = { act: 'BACK_ONE_STEP', captured: checkpoint };
+    expect(createCanonicalStore(init({ history: [valid, { act: 'PAN', captured: checkpoint }] })).getState().history).toHaveLength(2);
+
+    for (const act of ['LIVE_HEAD_ADVANCED', 'LIVE_FOCUS_TRANSITION', 'PREVIEW_TEMPORAL_TARGET', 'PRESENTATION_WINDOW_MOVE', 'RESPONSIVE_RECOMPOSITION', 'NAVIGATE', 'MAP_FOCUS_OBJECT', undefined]) {
+      const rejection = expectRejection(() => createCanonicalStore(init({ history: [{ act, captured: checkpoint } as unknown as RhEntry] })), 'INVALID_INITIAL_STATE');
+      expect(rejection.message).toMatch(/history\[0\]\.act/);
+    }
+    for (const malformed of [
+      { act: 'PAN', captured: { ...checkpoint, extra: 1 } },
+      { act: 'PAN', captured: { tmProvenance: checkpoint.tmProvenance, tc: SP(3), ifRef: null } },
+      { act: 'PAN', captured: { ...checkpoint, tmProvenance: { kind: 'SETTLING' } } },
+      { act: 'PAN', captured: { ...checkpoint, tmProvenance: { kind: 'PINNED' } } },
+      { act: 'PAN', captured: { ...checkpoint, tc: 0 } },
+      { act: 'PAN', captured: { ...checkpoint, ifRef: { canonicalIdentity: opaqueRef('CANONICAL_IDENTITY', 'x'), depth: 'WORLD' } } },
+      { act: 'PAN', captured: { ...checkpoint, camera: { ...checkpoint.camera, width: 375 } } },
+      { act: 'PAN', captured: checkpoint, note: 'extra' },
+      { act: 'PAN' },
+      'PAN',
+      null,
+    ]) {
+      expectRejection(() => createCanonicalStore(init({ history: [malformed as unknown as RhEntry] })), 'INVALID_INITIAL_STATE');
+    }
+    expectRejection(() => createCanonicalStore(init({ history: 'none' as unknown as RhEntry[] })), 'INVALID_INITIAL_STATE');
   });
 
   it('appendIfEffective and captureCheckpoint are pure over the states they are given', () => {

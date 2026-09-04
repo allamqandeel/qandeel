@@ -152,12 +152,36 @@ describe('separate authority paths', () => {
       },
     });
     const smugglingBefore = smuggling.getState();
-    expect(smuggling.ingest({ type: 'LIVE_HEAD_ADVANCED', toSp: SP(9) }).outcome).toBe('APPLIED');
-    const after = smuggling.getState();
-    expect(after.live.LH).toBe(SP(9));
-    expect(after.temporal).toBe(smugglingBefore.temporal);
-    expect(after.camera).toBe(smugglingBefore.camera);
-    expect(after.inspection).toBe(smugglingBefore.inspection);
-    expect(after.history).toBe(smugglingBefore.history);
+    expectRejection(() => smuggling.ingest({ type: 'LIVE_HEAD_ADVANCED', toSp: SP(9) }), 'INVALID_CANONICAL_SHAPE');
+    expect(smuggling.getState()).toBe(smugglingBefore);
+    expect(smuggling.getState().live.LH).toBe(SP(5));
+  });
+
+  it('an event returning a valid LH plus an unknown key inside live is rejected (FIX-T02-02)', () => {
+    const store = createCanonicalStore(init(), {
+      eventTransitions: {
+        LIVE_HEAD_ADVANCED: ((state: CanonicalState) => ({ LH: SP(9), LF: state.live.LF, projection: 'stale' })) as never,
+      },
+    });
+    const before = store.getState();
+    const rejection = expectRejection(() => store.ingest({ type: 'LIVE_HEAD_ADVANCED', toSp: SP(9) }), 'INVALID_CANONICAL_SHAPE');
+    expect(rejection.message).toMatch(/state\.live: unknown key projection/);
+    expect(store.getState()).toBe(before);
+
+    const focusExtra = createCanonicalStore(init(), {
+      eventTransitions: {
+        LIVE_FOCUS_TRANSITION: ((state: CanonicalState) => ({ LH: state.live.LH, LF: { value: { kind: 'NONE', importance: 1 }, atSp: SP(6) } })) as never,
+      },
+    });
+    const focusBefore = focusExtra.getState();
+    expectRejection(() => focusExtra.ingest({ type: 'LIVE_FOCUS_TRANSITION', value: { kind: 'NONE' }, atSp: SP(6) }), 'INVALID_CANONICAL_SHAPE');
+    expect(focusExtra.getState()).toBe(focusBefore);
+  });
+
+  it('an event payload value with extra keys never enters the mirror', () => {
+    const store = createCanonicalStore(init());
+    const before = store.getState();
+    expectRejection(() => store.ingest({ type: 'LIVE_FOCUS_TRANSITION', value: { kind: 'ESTABLISHED_THREAD', threadId: 't-1', rank: 3 } as never, atSp: SP(6) }), 'PRECONDITION_FAILED');
+    expect(store.getState()).toBe(before);
   });
 });

@@ -45,7 +45,7 @@ describe('per-field Class-A writer guard (unit)', () => {
   const before = store.getState();
 
   it('reports no change for identical states', () => {
-    expect(assertAuthorizedClassAWrites(before, before, new Set(), 'PAN')).toEqual([]);
+    expect(assertAuthorizedClassAWrites(before, before, [], 'PAN')).toEqual([]);
   });
 
   it('rejects an LF change under any Product action authority', () => {
@@ -189,6 +189,88 @@ describe('injected violating transitions are caught at the store boundary (TypeS
     expect(store.dispatch(pan).outcome).toBe('APPLIED');
     expect(store.getState().camera.anchor).toEqual(anchor('a1'));
     expect(store.getState().camera.scale).toEqual(scale('s0'));
+  });
+});
+
+describe('exact canonical shape at the trust boundary (FIX-T02-02)', () => {
+  const pan = { type: 'PAN', to: { anchor: anchor('a1') } } as const;
+  const zoom = { type: 'ZOOM_SEMANTIC', depth: 'THREAD' } as const;
+
+  function rogueStore(table: Partial<ActionTransitionTable>) {
+    return createCanonicalStore(init(), { actionTransitions: table });
+  }
+
+  it('PAN with an authorized anchor change plus a smuggled camera.width is rejected, state object-identical', () => {
+    const store = rogueStore({
+      PAN: ((s: CanonicalState) => ({ temporal: s.temporal, inspection: s.inspection, camera: { ...s.camera, anchor: anchor('a1'), width: 375 } })) as never,
+    });
+    const before = store.getState();
+    const rejection = expectRejection(() => store.dispatch(pan), 'INVALID_CANONICAL_SHAPE');
+    expect(rejection.message).toMatch(/state\.camera: unknown key width/);
+    expect(store.getState()).toBe(before);
+    expect(store.getState().history).toBe(before.history);
+  });
+
+  it('PAN smuggling an arbitrary unknown camera key is rejected (allowlist, not blacklist)', () => {
+    const store = rogueStore({
+      PAN: ((s: CanonicalState) => ({ temporal: s.temporal, inspection: s.inspection, camera: { ...s.camera, anchor: anchor('a1'), somethingNew: { any: 'shape' } } })) as never,
+    });
+    const before = store.getState();
+    expectRejection(() => store.dispatch(pan), 'INVALID_CANONICAL_SHAPE');
+    expect(store.getState()).toBe(before);
+  });
+
+  it('PAN changing anchor plus session.id is rejected as an immutable-context violation', () => {
+    const store = rogueStore({
+      PAN: ((s: CanonicalState) => ({ ...s, session: { id: 'another-session' }, camera: { ...s.camera, anchor: anchor('a1') } })) as never,
+    });
+    const before = store.getState();
+    expectRejection(() => store.dispatch(pan), 'IMMUTABLE_CONTEXT_VIOLATION');
+    expect(store.getState()).toBe(before);
+    expect(store.getState().session.id).toBe('session-1');
+  });
+
+  it('a session object with an extra key is rejected even when the id is unchanged', () => {
+    const store = rogueStore({
+      PAN: ((s: CanonicalState) => ({ ...s, session: { id: s.session.id, tenant: 'x' }, camera: { ...s.camera, anchor: anchor('a1') } })) as never,
+    });
+    const before = store.getState();
+    expectRejection(() => store.dispatch(pan), 'INVALID_CANONICAL_SHAPE');
+    expect(store.getState()).toBe(before);
+  });
+
+  it('ZOOM_SEMANTIC changing depth plus a smuggled presentation envelope is rejected', () => {
+    for (const smuggle of [{ viewport: { width: 375, height: 812 } }, { footprint: [0, 0, 1, 1] }, { aspect: 0.46 }, { clipping: true }, { layout: 'narrow' }, { animation: 0.5 }]) {
+      const store = rogueStore({
+        ZOOM_SEMANTIC: ((s: CanonicalState) => ({ temporal: s.temporal, inspection: s.inspection, camera: { ...s.camera, depth: 'THREAD', ...smuggle } })) as never,
+      });
+      const before = store.getState();
+      expectRejection(() => store.dispatch(zoom), 'INVALID_CANONICAL_SHAPE');
+      expect(store.getState()).toBe(before);
+    }
+  });
+
+  it('a transition cannot add a top-level state key (PTC, K, V, ifRender) or replace nested shapes', () => {
+    for (const extra of [{ PTC: SP(4) }, { K: {} }, { V: {} }, { ifRender: null }, { window: 0.2 }]) {
+      const store = rogueStore({ PAN: ((s: CanonicalState) => ({ temporal: s.temporal, inspection: s.inspection, camera: { ...s.camera, anchor: anchor('a1') }, ...extra })) as never });
+      const before = store.getState();
+      expectRejection(() => store.dispatch(pan), 'INVALID_CANONICAL_SHAPE');
+      expect(store.getState()).toBe(before);
+    }
+    const malformedTemporal = rogueStore({ PAN: ((s: CanonicalState) => ({ temporal: { kind: 'FOLLOW_LIVE', at: SP(2) }, inspection: s.inspection, camera: { ...s.camera, anchor: anchor('a1') } })) as never });
+    expectRejection(() => malformedTemporal.dispatch(pan), 'INVALID_CANONICAL_SHAPE');
+    const malformedRef = rogueStore({ PAN: ((s: CanonicalState) => ({ temporal: s.temporal, inspection: s.inspection, camera: { ...s.camera, anchor: { kind: 'WORLD_ANCHOR', value: 'a1', extra: 1 } } })) as never });
+    expectRejection(() => malformedRef.dispatch(pan), 'INVALID_CANONICAL_SHAPE');
+  });
+
+  it('honest kernel results keep passing the exact-shape rule', () => {
+    const store = createCanonicalStore(init());
+    expect(store.dispatch({ type: 'PAN', to: { anchor: anchor('a1'), destination: destination('d1') } }).outcome).toBe('APPLIED');
+    expect(store.dispatch({ type: 'ZOOM_SEMANTIC', depth: 'SESSION', to: { scale: scale('s1'), anchor: anchor('a2') } }).outcome).toBe('APPLIED');
+    expect(store.dispatch({ type: 'COMMIT_MOMENT', moment: SP(2) }).outcome).toBe('APPLIED');
+    expect(store.dispatch({ type: 'COMMIT_LIVE_EDGE' }).outcome).toBe('APPLIED');
+    expect(store.getState().history).toHaveLength(4);
+    expect(Object.keys(store.getState().camera).sort()).toEqual(['anchor', 'depth', 'destination', 'scale']);
   });
 });
 

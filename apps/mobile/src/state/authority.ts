@@ -5,7 +5,8 @@
  * transition runs, every Class-A field that changed must be inside the acting identity's
  * declared authority, otherwise the write is rejected and the published state stays untouched.
  * It runs on every result, including transitions injected through the store dependencies, so
- * a TypeScript bypass cannot bypass the boundary.
+ * a TypeScript bypass cannot bypass the boundary. The authority it consumes is a frozen
+ * readonly array from the immutable registry (FIX-T02-01).
  */
 import { CLASS_A_FIELDS, classAFieldEquals, type CanonicalState, type ClassAField } from './classes';
 
@@ -18,7 +19,9 @@ export type CanonicalStateErrorCode =
   | 'PRECONDITION_FAILED'
   | 'RETRACTION_REJECTED'
   | 'OUT_OF_ORDER_TRANSITION'
-  | 'INVALID_INITIAL_STATE';
+  | 'INVALID_INITIAL_STATE'
+  | 'INVALID_CANONICAL_SHAPE'
+  | 'IMMUTABLE_CONTEXT_VIOLATION';
 
 export class CanonicalStateError extends Error {
   readonly code: CanonicalStateErrorCode;
@@ -123,6 +126,25 @@ export class InvalidInitialState extends CanonicalStateError {
   }
 }
 
+/** A candidate state is not exact-shaped: an unknown or smuggled key, or a malformed nested value (FIX-T02-02). */
+export class InvalidCanonicalShape extends CanonicalStateError {
+  readonly path: string;
+
+  constructor(issue: string) {
+    super('INVALID_CANONICAL_SHAPE', `canonical shape violation: ${issue}`);
+    this.name = 'InvalidCanonicalShape';
+    this.path = issue;
+  }
+}
+
+/** A transition or event attempted to change immutable store context such as `session.id` (FIX-T02-02). */
+export class ImmutableContextViolation extends CanonicalStateError {
+  constructor(message: string) {
+    super('IMMUTABLE_CONTEXT_VIOLATION', message);
+    this.name = 'ImmutableContextViolation';
+  }
+}
+
 /**
  * Returns the Class-A fields that differ between `before` and `after`; throws
  * `UnauthorizedClassAWrite` for the first changed field outside `authority`.
@@ -130,13 +152,13 @@ export class InvalidInitialState extends CanonicalStateError {
 export function assertAuthorizedClassAWrites(
   before: CanonicalState,
   after: CanonicalState,
-  authority: ReadonlySet<ClassAField>,
+  authority: readonly ClassAField[],
   actId: string,
 ): readonly ClassAField[] {
   const changed: ClassAField[] = [];
   for (const field of CLASS_A_FIELDS) {
     if (classAFieldEquals(field, before, after)) continue;
-    if (!authority.has(field)) throw new UnauthorizedClassAWrite(field, actId);
+    if (!authority.includes(field)) throw new UnauthorizedClassAWrite(field, actId);
     changed.push(field);
   }
   return changed;

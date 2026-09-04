@@ -3,7 +3,8 @@
  * hold: `npm run typecheck:mobile` rejects an unused directive (TS2578). The runtime expectations
  * prove the same boundary holds when TypeScript is bypassed.
  */
-import { opaqueRef, sessionPosition, type CameraIntent, type CanonicalState, type LiveTruth } from '../classes';
+import type { CatalogEntry } from '../actions';
+import { opaqueRef, sessionPosition, type CameraIntent, type CanonicalState, type LiveTruth, type RhCheckpoint, type RhEntry } from '../classes';
 import type { CommittedNavigationIntent, TemporalOrientation } from '../selectors';
 import { createCanonicalStore, type CanonicalStateInit } from '../store';
 import type { ClientWritable } from '../transitions';
@@ -79,6 +80,26 @@ describe('type-level boundaries', () => {
     // @ts-expect-error an event transition returns LiveTruth only; `temporal` is unreachable
     const rogueEvent = (state: CanonicalState): LiveTruth => ({ LH: state.live.LH, LF: state.live.LF, temporal: state.temporal });
     expect([rogueLive, rogueHistory, rogueEvent].every((fn) => typeof fn === 'function')).toBe(true);
+
+    // RH can only record an explicit Class-A Product act (FIX-T02-03) over an addressable TC (FIX-T02-04).
+    const checkpoint: RhCheckpoint = { tmProvenance: { kind: 'FOLLOW_LIVE' }, tc: SP(5), ifRef: null, camera: init().camera };
+    // @ts-expect-error an authoritative event is never an RH act
+    const rhEvent: RhEntry = { act: 'LIVE_HEAD_ADVANCED', captured: checkpoint };
+    // @ts-expect-error an authoritative LF transition is never an RH act
+    const rhFocus: RhEntry = { act: 'LIVE_FOCUS_TRANSITION', captured: checkpoint };
+    // @ts-expect-error a Class C Preview identity is never an RH act
+    const rhPreview: RhEntry = { act: 'PREVIEW_TEMPORAL_TARGET', captured: checkpoint };
+    // @ts-expect-error a Class D presentation identity is never an RH act
+    const rhWindow: RhEntry = { act: 'PRESENTATION_WINDOW_MOVE', captured: checkpoint };
+    // @ts-expect-error a checkpoint can never capture TC = null
+    const rhNullTc: RhCheckpoint = { tmProvenance: { kind: 'FOLLOW_LIVE' }, tc: null, ifRef: null, camera: init().camera };
+    const rhKernel: RhEntry = { act: 'PAN', captured: checkpoint };
+    const rhLater: RhEntry = { act: 'BACK_ONE_STEP', captured: checkpoint };
+    expect([rhEvent, rhFocus, rhPreview, rhWindow, rhNullTc, rhKernel, rhLater].length).toBe(7);
+
+    // The authority policy is a readonly array, never a mutable Set (FIX-T02-01).
+    const authorityIsArray: CatalogEntry['authority'] extends readonly unknown[] ? true : false = true;
+    expect(authorityIsArray).toBe(true);
 
     // Positive type assertions: these constants only compile because the keys are absent.
     expect(

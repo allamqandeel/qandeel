@@ -116,9 +116,30 @@ test('no generic navigation identity, focus-traversal action or generic authorit
   }
 });
 
+test('the authority policy is a frozen readonly array, never a mutable Set, and RH acts are a distinct identity type', () => {
+  const actions = productionCode['actions.ts'];
+  const authority = productionCode['authority.ts'];
+  for (const [name, text] of [
+    ['actions.ts', actions],
+    ['authority.ts', authority],
+    ['history.ts', productionCode['history.ts']],
+    ['store.ts', productionCode['store.ts']],
+  ]) {
+    assert.equal(text.includes('new Set('), false, `${name} must not build a mutable Set authority policy`);
+    assert.equal(text.includes('ReadonlySet'), false, `${name} must not type authority as a compile-time-only ReadonlySet`);
+  }
+  assert.match(actions, /readonly authority: readonly ClassAField\[\];/u);
+  assert.match(actions, /return Object\.freeze\(\[\.\.\.names\]\);/u);
+  assert.match(actions, /Object\.freeze\(catalog\[key\]\)/u);
+  assert.match(actions, /export type RhActionId = KernelActionType \| MetadataOnlyActionType;/u);
+  assert.match(productionCode['classes.ts'], /readonly act: RhActionId;/u);
+  assert.match(productionCode['classes.ts'], /readonly tc: SessionPosition;/u);
+  assert.match(productionCode['history.ts'], /act: RhActionId\)/u);
+});
+
 test('the closed event catalog and the per-identity authority follow the Execution Authorization', () => {
   const actions = productionSources['actions.ts'];
-  const eventTypes = actions.match(/AUTHORITATIVE_EVENT_TYPES = \[([^\]]*)\]/u);
+  const eventTypes = actions.match(/AUTHORITATIVE_EVENT_TYPES = (?:Object\.freeze\()?\[([^\]]*)\]/u);
   assert.ok(eventTypes, 'AUTHORITATIVE_EVENT_TYPES must be a literal array');
   assert.deepEqual(
     [...eventTypes[1].matchAll(/'([A-Z_]+)'/gu)].map((match) => match[1]),
@@ -147,7 +168,7 @@ test('the closed event catalog and the per-identity authority follow the Executi
 
 test('the semantic depth rungs are the frozen five and no envelope geometry enters Class A', () => {
   const classes = productionCode['classes.ts'];
-  assert.match(classes, /SEMANTIC_DEPTHS = \['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE'\]/u);
+  assert.match(classes, /SEMANTIC_DEPTHS = (?:Object\.freeze\()?\['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE'\]/u);
   for (const forbidden of ['width', 'height', 'aspect', 'footprint', 'viewport', 'clipping', 'READING', 'MATERIAL', 'UNKNOWN']) {
     const pattern = new RegExp(`(^|[^A-Za-z_])${forbidden}(?![A-Za-z_])`, 'u');
     assert.doesNotMatch(classes, pattern, `classes.ts must not encode ${forbidden} in Class A`);

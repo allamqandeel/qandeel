@@ -17,13 +17,13 @@ function init(overrides: Partial<CanonicalStateInit> = {}): CanonicalStateInit {
   };
 }
 
-function expectRejection(fn: () => unknown, code: CanonicalStateErrorCode) {
+function expectRejection(fn: () => unknown, code: CanonicalStateErrorCode): CanonicalStateError {
   try {
     fn();
   } catch (error) {
     expect(error).toBeInstanceOf(CanonicalStateError);
     expect((error as CanonicalStateError).code).toBe(code);
-    return;
+    return error as CanonicalStateError;
   }
   throw new Error(`expected rejection ${code}`);
 }
@@ -86,6 +86,27 @@ describe('four-class separation', () => {
     for (const key of ['LH', 'LF', 'live', ...FORBIDDEN_STATE_KEYS]) expect(key in intent).toBe(false);
     expect(intent.temporal).toEqual({ kind: 'PINNED', at: SP(2) });
     expect(intent.effectiveTC).toBe(SP(2));
+  });
+
+  it('an initial snapshot with extra Class-D camera geometry is rejected (FIX-T02-02)', () => {
+    for (const extra of [{ width: 375 }, { height: 812 }, { aspect: 0.46 }, { viewport: {} }, { footprint: [] }, { clipping: 'none' }]) {
+      const rejection = expectRejection(() => createCanonicalStore(init({ camera: { ...init().camera, ...extra } as never })), 'INVALID_INITIAL_STATE');
+      expect(rejection.message).toMatch(/state\.camera: unknown key/);
+    }
+  });
+
+  it('an initial snapshot with an unknown top-level or nested canonical key is rejected (FIX-T02-02)', () => {
+    expectRejection(() => createCanonicalStore({ ...init(), PTC: SP(2) } as never), 'INVALID_INITIAL_STATE');
+    expectRejection(() => createCanonicalStore({ ...init(), K: {} } as never), 'INVALID_INITIAL_STATE');
+    expectRejection(() => createCanonicalStore({ ...init(), animation: 0.5 } as never), 'INVALID_INITIAL_STATE');
+    expectRejection(() => createCanonicalStore(init({ session: { id: 'session-1', tenant: 'x' } as never })), 'INVALID_INITIAL_STATE');
+    expectRejection(() => createCanonicalStore(init({ live: { LH: SP(5), LF: { value: { kind: 'NONE' }, atSp: null }, projection: 'x' } as never })), 'INVALID_INITIAL_STATE');
+    expectRejection(() => createCanonicalStore(init({ live: { LH: SP(5), LF: { value: { kind: 'NONE', weight: 2 }, atSp: null } } as never })), 'INVALID_INITIAL_STATE');
+    expectRejection(() => createCanonicalStore(init({ temporal: { kind: 'FOLLOW_LIVE', ptc: SP(2) } as never })), 'INVALID_INITIAL_STATE');
+    expectRejection(() => createCanonicalStore(init({ temporal: { kind: 'HISTORICAL_LIVE' } as never })), 'INVALID_INITIAL_STATE');
+    expectRejection(() => createCanonicalStore(init({ inspection: { canonicalIdentity: opaqueRef('CANONICAL_IDENTITY', 'x'), depth: 'WORLD', lineage: opaqueRef('LINEAGE', 'l'), ifRender: {} } as never })), 'INVALID_INITIAL_STATE');
+    expectRejection(() => createCanonicalStore(init({ camera: { ...init().camera, anchor: { kind: 'WORLD_ANCHOR', value: 'a0', x: 1 } } as never })), 'INVALID_INITIAL_STATE');
+    expectRejection(() => createCanonicalStore(init({ session: { id: '' } })), 'INVALID_INITIAL_STATE');
   });
 
   it('no derived value can be dispatched as state (row 8)', () => {

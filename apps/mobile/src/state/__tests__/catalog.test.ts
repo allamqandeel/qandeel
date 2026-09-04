@@ -6,10 +6,12 @@ import {
   METADATA_ONLY_ACTION_TYPES,
   NON_STORE_IDENTITY_TYPES,
   PRODUCT_ACT_IDS,
+  RH_ACTION_IDS,
   catalogEntry,
+  isRhActionId,
 } from '../actions';
-import { CanonicalStateError, OwnedByLaterTask, UnauthorizedActionClass, type CanonicalStateErrorCode } from '../authority';
-import { opaqueRef, sessionPosition } from '../classes';
+import { CanonicalStateError, OwnedByLaterTask, UnauthorizedActionClass, UnauthorizedClassAWrite, type CanonicalStateErrorCode } from '../authority';
+import { opaqueRef, sessionPosition, type CanonicalState } from '../classes';
 import { createCanonicalStore, type CanonicalStateInit } from '../store';
 
 const SP = sessionPosition;
@@ -58,9 +60,17 @@ describe('action registry invariants', () => {
     for (const id of PRODUCT_ACT_IDS) {
       const entry = ACTION_CATALOG[id];
       if (entry.cls === 'EVENT') continue;
-      expect(entry.authority.has('LH')).toBe(false);
-      expect(entry.authority.has('LF')).toBe(false);
+      expect(entry.authority.includes('LH')).toBe(false);
+      expect(entry.authority.includes('LF')).toBe(false);
     }
+  });
+
+  it('RH-eligible identities are exactly the Class-A Product acts; events and Class C / D are excluded (FIX-T02-03)', () => {
+    expect([...RH_ACTION_IDS].sort()).toEqual([...KERNEL_ACTION_TYPES, ...METADATA_ONLY_ACTION_TYPES].sort());
+    for (const id of RH_ACTION_IDS) expect(ACTION_CATALOG[id].cls).toBe('A');
+    for (const id of [...AUTHORITATIVE_EVENT_TYPES, ...NON_STORE_IDENTITY_TYPES]) expect(isRhActionId(id)).toBe(false);
+    expect(isRhActionId('NAVIGATE')).toBe(false);
+    expect(isRhActionId(undefined)).toBe(false);
   });
 
   it('camera kernel authority is the EX02-03 minimum', () => {
@@ -75,7 +85,7 @@ describe('action registry invariants', () => {
       const entry = ACTION_CATALOG[id];
       expect(entry.level).toBe('NOT_STORE_ACTION');
       expect(['C', 'D']).toContain(entry.cls);
-      expect(entry.authority.size).toBe(0);
+      expect(entry.authority.length).toBe(0);
       expect(entry.transactional).toBe('NEVER');
     }
   });
@@ -93,6 +103,84 @@ describe('action registry invariants', () => {
     expect(catalogEntry(42)).toBeUndefined();
     expect(catalogEntry('constructor')).toBeUndefined();
     expect(catalogEntry('__proto__')).toBeUndefined();
+  });
+});
+
+describe('authority policy is runtime-immutable (FIX-T02-01)', () => {
+  const snapshot = () => Object.fromEntries(PRODUCT_ACT_IDS.map((id) => [id, [...ACTION_CATALOG[id].authority]]));
+  const attempt = (fn: () => void) => {
+    try {
+      fn();
+    } catch {
+      // a frozen target may throw; throwing is an acceptable outcome, silent no-effect is the other
+    }
+  };
+
+  it('the registry, every entry and every authority array are frozen, and no authority is a Set', () => {
+    expect(Object.isFrozen(ACTION_CATALOG)).toBe(true);
+    for (const id of PRODUCT_ACT_IDS) {
+      const entry = ACTION_CATALOG[id];
+      expect(Object.isFrozen(entry)).toBe(true);
+      expect(Array.isArray(entry.authority)).toBe(true);
+      expect(Object.isFrozen(entry.authority)).toBe(true);
+      expect(entry.authority instanceof Set).toBe(false);
+      expect('add' in (entry.authority as object)).toBe(false);
+    }
+    expect(Object.isFrozen(PRODUCT_ACT_IDS)).toBe(true);
+    expect(Object.isFrozen(RH_ACTION_IDS)).toBe(true);
+    expect(Object.isFrozen(KERNEL_ACTION_TYPES)).toBe(true);
+    expect(Object.isFrozen(FROZEN_TASK_IDS)).toBe(true);
+  });
+
+  it('mutation attempts through runtime casts fail or have no effect; the policy is identical afterwards', () => {
+    const before = snapshot();
+    const panEntry = ACTION_CATALOG.PAN;
+    const panAuthority = ACTION_CATALOG.PAN.authority;
+    attempt(() => (ACTION_CATALOG.PAN.authority as unknown as string[]).push('LF'));
+    attempt(() => (ACTION_CATALOG.PAN.authority as unknown as string[]).unshift('LF'));
+    attempt(() => {
+      (ACTION_CATALOG.ZOOM_SEMANTIC.authority as unknown as string[])[0] = 'LH';
+    });
+    attempt(() => {
+      (ACTION_CATALOG.ZOOM_SEMANTIC.authority as unknown as string[]).length = 0;
+    });
+    attempt(() => (ACTION_CATALOG.ZOOM_SEMANTIC.authority as unknown as string[]).splice(0, 1, 'LH'));
+    attempt(() => {
+      (ACTION_CATALOG.PAN as unknown as { authority: string[] }).authority = ['LF', 'LH'];
+    });
+    attempt(() => {
+      (ACTION_CATALOG as unknown as Record<string, unknown>).PAN = { ...ACTION_CATALOG.PAN, authority: ['LF'] };
+    });
+    attempt(() => Object.defineProperty(ACTION_CATALOG, 'PAN', { value: { ...ACTION_CATALOG.PAN, authority: ['LF'] } }));
+    attempt(() => Object.defineProperty(ACTION_CATALOG.PAN, 'authority', { value: ['LF'] }));
+    attempt(() => {
+      delete (ACTION_CATALOG as unknown as Record<string, unknown>).PAN;
+    });
+    attempt(() => Object.setPrototypeOf(ACTION_CATALOG.PAN.authority, { includes: () => true }));
+    expect(snapshot()).toEqual(before);
+    expect(ACTION_CATALOG.PAN).toBe(panEntry);
+    expect(ACTION_CATALOG.PAN.authority).toBe(panAuthority);
+    expect([...ACTION_CATALOG.PAN.authority].sort()).toEqual(['MC.anchor', 'MC.destination']);
+    expect([...ACTION_CATALOG.ZOOM_SEMANTIC.authority].sort()).toEqual(['MC.anchor', 'MC.depth', 'MC.scale']);
+    expect(catalogEntry('PAN')).toBe(panEntry);
+  });
+
+  it('after the mutation attempts PAN still cannot write LF and ZOOM_SEMANTIC still cannot write LH', () => {
+    const panStore = createCanonicalStore(init(), {
+      actionTransitions: { PAN: ((s: CanonicalState) => ({ ...s, live: { ...s.live, LF: { value: { kind: 'EMERGING_FOCUS', emergingFocusId: 'ef-9' }, atSp: SP(5) } } })) as never },
+    });
+    const panBefore = panStore.getState();
+    const lf = expectRejection(() => panStore.dispatch({ type: 'PAN', to: { anchor: opaqueRef('WORLD_ANCHOR', 'a1') } }), 'UNAUTHORIZED_CLASS_A_WRITE') as UnauthorizedClassAWrite;
+    expect(lf.field).toBe('LF');
+    expect(panStore.getState()).toBe(panBefore);
+
+    const zoomStore = createCanonicalStore(init(), {
+      actionTransitions: { ZOOM_SEMANTIC: ((s: CanonicalState) => ({ ...s, live: { ...s.live, LH: SP(9) }, camera: { ...s.camera, depth: 'THREAD' } })) as never },
+    });
+    const zoomBefore = zoomStore.getState();
+    const lh = expectRejection(() => zoomStore.dispatch({ type: 'ZOOM_SEMANTIC', depth: 'THREAD' }), 'UNAUTHORIZED_CLASS_A_WRITE') as UnauthorizedClassAWrite;
+    expect(lh.field).toBe('LH');
+    expect(zoomStore.getState()).toBe(zoomBefore);
   });
 });
 

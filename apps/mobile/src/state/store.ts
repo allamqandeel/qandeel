@@ -2,19 +2,24 @@
  * T-02 — Canonical state kernel: the store boundary.
  *
  * Two entry points with separate authority paths:
- * - `dispatch(action)`: explicit Product acts (kernel only). Runs the transition, the per-field
- *   writer guard, `Φ_eff` no-op detection and the RH append. Never accepts an event, a Class
- *   C / D identity or a later-owner identity.
- * - `ingest(event)`: passive authoritative events (closed catalog). Runs the event transition
- *   and the guard restricted to the event's single authoritative field. Never appends RH and
- *   never borrows transaction authority.
+ * - `dispatch(action)`: explicit Product acts (kernel only). Runs the transition, the exact
+ *   canonical-shape validator, the immutable-context guard, the per-field writer guard,
+ *   `Φ_eff` no-op detection and the RH append. Never accepts an event, a Class C / D identity
+ *   or a later-owner identity.
+ * - `ingest(event)`: passive authoritative events (closed catalog). Runs the event transition,
+ *   the exact shape validator and the guard restricted to the event's single authoritative
+ *   field. Never appends RH and never borrows transaction authority.
  *
- * The store is constructed only from an explicit authoritative snapshot. It performs no
- * persistence, no restart behaviour and no entry-state behaviour. No UI or control exposes
- * the kernel actions in T-02.
+ * Trust boundary (FIX-T02-02): every candidate, and the initial snapshot, must match the exact
+ * canonical shape (allowlisted keys at every level); `session.id` is immutable store context
+ * that no transition or event may change. The store is constructed only from an explicit
+ * authoritative snapshot. It performs no persistence, no restart behaviour and no entry-state
+ * behaviour. No UI or control exposes the kernel actions in T-02.
  */
-import { catalogEntry, type AuthoritativeEvent, type KernelAction } from './actions';
+import { catalogEntry, isRhActionId, type AuthoritativeEvent, type KernelAction } from './actions';
 import {
+  ImmutableContextViolation,
+  InvalidCanonicalShape,
   InvalidInitialState,
   OwnedByLaterTask,
   UnauthorizedActionClass,
@@ -23,11 +28,10 @@ import {
   assertAuthorizedClassAWrites,
 } from './authority';
 import {
+  canonicalStateShapeIssue,
   deepFreeze,
-  isCameraIntent,
-  isInspectionRef,
-  isLiveFocus,
-  isSessionPosition,
+  exactShapeIssue,
+  isPlainRecord,
   type CameraIntent,
   type CanonicalState,
   type InspectionRef,
@@ -52,7 +56,7 @@ export interface CanonicalStateInit {
   readonly history?: readonly RhEntry[];
 }
 
-/** Test seam: injected tables never widen authority; the guard runs on every result regardless. */
+/** Test seam: injected tables never widen authority; the shape validator and guard run on every result regardless. */
 export interface StoreDependencies {
   readonly actionTransitions?: Partial<ActionTransitionTable>;
   readonly eventTransitions?: Partial<EventTransitionTable>;
@@ -68,64 +72,36 @@ export interface CanonicalStore {
   ingest(event: AuthoritativeEvent): IngestResult;
 }
 
-function validateInit(init: CanonicalStateInit): void {
-  if (!init || typeof init !== 'object') throw new InvalidInitialState('snapshot must be an object');
-  if (typeof init.session?.id !== 'string' || init.session.id.length === 0) {
-    throw new InvalidInitialState('session.id must be a non-empty string');
-  }
-  const live = init.live;
-  if (!live || (live.LH !== null && !isSessionPosition(live.LH))) {
-    throw new InvalidInitialState('live.LH must be null (technical absence sentinel) or a Session Position >= 1');
-  }
-  if (!live.LF || !isLiveFocus(live.LF.value) || (live.LF.atSp !== null && !isSessionPosition(live.LF.atSp))) {
-    throw new InvalidInitialState('live.LF must be a three-valued Live Focus mirror anchored at null or a Session Position');
-  }
-  const temporal = init.temporal;
-  if (!temporal || (temporal.kind !== 'FOLLOW_LIVE' && temporal.kind !== 'PINNED')) {
-    throw new InvalidInitialState('temporal must be FOLLOW_LIVE or PINNED(t)');
-  }
-  if (temporal.kind === 'PINNED') {
-    if (live.LH === null) throw new InvalidInitialState('PINNED(t) requires a mirrored LH; LH = null is never a pinnable position');
-    if (!isSessionPosition(temporal.at) || temporal.at > live.LH) {
-      throw new InvalidInitialState('PINNED(t) requires 1 <= t <= LH');
-    }
-  }
-  if (init.inspection !== null && !isInspectionRef(init.inspection)) {
-    throw new InvalidInitialState('inspection must be null or an exact InspectionRef');
-  }
-  if (!isCameraIntent(init.camera)) throw new InvalidInitialState('camera must be an abstract CameraIntent');
+const INIT_KEYS = ['session', 'live', 'temporal', 'inspection', 'camera'] as const;
+
+function buildInitialState(init: CanonicalStateInit): CanonicalState {
+  const initIssue = exactShapeIssue(init, 'snapshot', INIT_KEYS, ['history']);
+  if (initIssue) throw new InvalidInitialState(initIssue);
   if (init.history !== undefined && !Array.isArray(init.history)) {
-    throw new InvalidInitialState('history must be an array of RH entries');
+    throw new InvalidInitialState('snapshot.history: must be an array of RH entries');
   }
-}
-
-const STATE_KEYS: readonly (keyof CanonicalState)[] = ['session', 'live', 'temporal', 'inspection', 'camera', 'history'];
-
-/**
- * Overlays whatever a transition returned onto the state, restricted to real state keys, so
- * the guard sees any attempted write, including keys the TypeScript return type excludes.
- */
-function overlay(state: CanonicalState, result: object): CanonicalState {
-  const candidate: Record<string, unknown> = { ...state };
-  for (const key of STATE_KEYS) {
-    if (Object.prototype.hasOwnProperty.call(result, key)) candidate[key] = (result as Record<string, unknown>)[key];
-  }
-  return candidate as unknown as CanonicalState;
-}
-
-export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDependencies = {}): CanonicalStore {
-  validateInit(init);
-  const actionTransitions: ActionTransitionTable = { ...KERNEL_ACTION_TRANSITIONS, ...deps.actionTransitions };
-  const eventTransitions: EventTransitionTable = { ...KERNEL_EVENT_TRANSITIONS, ...deps.eventTransitions };
-
-  let state: CanonicalState = deepFreeze({
-    session: { id: init.session.id },
-    live: { LH: init.live.LH, LF: { value: init.live.LF.value, atSp: init.live.LF.atSp } },
+  const state: CanonicalState = {
+    session: init.session,
+    live: init.live,
     temporal: init.temporal,
     inspection: init.inspection,
     camera: init.camera,
     history: [...(init.history ?? [])],
-  });
+  };
+  const issue = canonicalStateShapeIssue(state, isRhActionId);
+  if (issue) throw new InvalidInitialState(issue);
+  if (state.temporal.kind === 'PINNED') {
+    if (state.live.LH === null) throw new InvalidInitialState('PINNED(t) requires a mirrored LH; LH = null is never a pinnable position');
+    if (state.temporal.at > state.live.LH) throw new InvalidInitialState('PINNED(t) requires 1 <= t <= LH');
+  }
+  return state;
+}
+
+export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDependencies = {}): CanonicalStore {
+  const actionTransitions: ActionTransitionTable = { ...KERNEL_ACTION_TRANSITIONS, ...deps.actionTransitions };
+  const eventTransitions: EventTransitionTable = { ...KERNEL_EVENT_TRANSITIONS, ...deps.eventTransitions };
+
+  let state: CanonicalState = deepFreeze(buildInitialState(init));
   const listeners = new Set<() => void>();
 
   function publish(next: CanonicalState): void {
@@ -133,8 +109,17 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     for (const listener of Array.from(listeners)) listener();
   }
 
+  /** Exact-shape and immutable-context checks shared by both entry points. */
+  function admit(before: CanonicalState, candidate: CanonicalState, actId: string): void {
+    const issue = canonicalStateShapeIssue(candidate, isRhActionId);
+    if (issue) throw new InvalidCanonicalShape(`${actId}: ${issue}`);
+    if (candidate.session.id !== before.session.id) {
+      throw new ImmutableContextViolation(`${actId} attempted to change session identity from ${before.session.id} to ${candidate.session.id}`);
+    }
+  }
+
   function dispatch(action: KernelAction): DispatchResult {
-    const id = action && typeof action === 'object' ? (action as { type?: unknown }).type : undefined;
+    const id = isPlainRecord(action) ? action.type : undefined;
     const entry = catalogEntry(id);
     if (!entry) throw new UnknownAction(String(id));
     if (entry.cls === 'EVENT') {
@@ -146,20 +131,24 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     if (entry.level === 'METADATA_ONLY') throw new OwnedByLaterTask(entry.id, entry.owner);
 
     const before = state;
-    const transition = actionTransitions[entry.id as KernelAction['type']] as (s: CanonicalState, a: KernelAction) => object;
+    const transition = actionTransitions[action.type] as (s: CanonicalState, a: KernelAction) => unknown;
     const result = transition(before, action);
-    const candidate = overlay(before, result);
+    if (!isPlainRecord(result)) throw new InvalidCanonicalShape(`${entry.id}: transition result must be a plain object`);
+    // Every returned key is overlaid so the validator and the guard see any attempted write, including keys the
+    // TypeScript return type excludes; nothing is silently dropped.
+    const candidate = { ...before, ...result } as CanonicalState;
+    admit(before, candidate, entry.id);
     const changed = assertAuthorizedClassAWrites(before, candidate, entry.authority, entry.id);
     if (changed.length === 0) return { outcome: 'NO_OP' };
 
-    const appended = appendIfEffective(before, candidate, entry.id);
+    const appended = appendIfEffective(before, candidate, action.type);
     if (appended.entry === null) return { outcome: 'NO_OP' };
-    publish({ ...candidate, history: appended.history });
+    publish({ ...candidate, session: before.session, history: appended.history });
     return { outcome: 'APPLIED', entry: appended.entry };
   }
 
   function ingest(event: AuthoritativeEvent): IngestResult {
-    const id = event && typeof event === 'object' ? (event as { type?: unknown }).type : undefined;
+    const id = isPlainRecord(event) ? event.type : undefined;
     const entry = catalogEntry(id);
     if (!entry || entry.cls !== 'EVENT') {
       if (entry) {
@@ -169,10 +158,11 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     }
 
     const before = state;
-    const transition = eventTransitions[entry.id as AuthoritativeEvent['type']] as (s: CanonicalState, e: AuthoritativeEvent) => LiveTruth;
+    const transition = eventTransitions[event.type] as (s: CanonicalState, e: AuthoritativeEvent) => LiveTruth;
     const live = transition(before, event);
     if (live === before.live) return { outcome: 'IDEMPOTENT' };
     const candidate: CanonicalState = { ...before, live };
+    admit(before, candidate, entry.id);
     const changed = assertAuthorizedClassAWrites(before, candidate, entry.authority, entry.id);
     if (changed.length === 0) return { outcome: 'IDEMPOTENT' };
     publish(candidate);
