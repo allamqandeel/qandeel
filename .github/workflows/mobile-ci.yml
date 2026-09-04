@@ -1,7 +1,7 @@
 name: Mobile CI
 on:
   pull_request:
-    paths: ['apps/mobile/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml']
+    paths: ['apps/mobile/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml']
   push:
     branches: [main]
 concurrency:
@@ -30,6 +30,7 @@ jobs:
       - {name: Verify repository preflight (Node >=22.13.0), run: npm run preflight}
       - {name: Verify npm-only toolchain contract, run: npm run test:toolchain}
       - {name: Verify mobile foundation toolchain contract, run: npm run test:mobile-foundation-contract}
+      - {name: Verify mobile canonical state contract (T-02), run: npm run test:mobile-canonical-state-contract}
       - {name: Type-check mobile (TypeScript 5.9 line), run: npm run typecheck:mobile}
       - {name: Lint mobile, run: npm run lint:mobile}
       - {name: Unit and component tests (jest-expo), run: npm run test:mobile}

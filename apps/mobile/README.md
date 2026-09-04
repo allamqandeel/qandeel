@@ -13,12 +13,45 @@ Do not implement product screens before the core text runtime path and its contr
   another package manager or a package runner.
 - A minimal technical shell: `src/app/_layout.tsx` (one Expo Router stack),
   `src/app/index.tsx` (the only route) and `src/shell/FoundationShell.tsx`. It proves the
-  committed toolchain boots. It carries no Product copy, no visual language, no semantic
-  state, no navigation model and no action catalog. QANDEEL navigation is not a route
-  stack; those semantics arrive with later tasks as canonical state actions.
+  committed toolchain boots. It carries no Product copy, no visual language, no Product
+  screen and no navigation UI. QANDEEL navigation is not a route stack: the canonical
+  state / action foundation lives in `src/state/` (T-02, below) and is not mounted in the
+  shell.
 - Not a Product identity. `Qandeel`, `qandeel`, `com.qandeel.mobile` and the `qandeel`
   URL scheme are provisional technical identifiers needed to generate and boot the shell.
   No store registration and no production build credentials exist for them.
+
+## Canonical state kernel (T-02)
+
+`src/state/` is the canonical client state and action foundation (implementation task
+T-02). It is a pure TypeScript kernel with a React binding through the built-in
+`useSyncExternalStore`; it adds no dependency, persists nothing and is not mounted in the
+technical shell.
+
+- **Class A** is the only stored class: `LH` and `LF` (server-authoritative mirrors), `TM`
+  (the pinned target lives inside it; effective `TC` is derived and never stored), `IF_ref`
+  (an exact compound of opaque references), `MC` intent (abstract navigation intent as opaque
+  references, never device geometry) and `RH`. `K(TC)`, `V`, `IF_render`, `PTC`, the
+  presentation window, layout, envelope and animation state have no key in the state.
+- **Executable kernel**: `PAN`, `ZOOM_SEMANTIC`, `COMMIT_MOMENT` and `COMMIT_LIVE_EDGE`
+  through `dispatch()`, and the authoritative mirror ingestions `LIVE_HEAD_ADVANCED` and
+  `LIVE_FOCUS_TRANSITION` through `ingest()`. No client action can write `LH` or `LF`; no
+  passive event can write `TM`, `IF_ref`, `MC` or `RH`. The event catalog is closed.
+- **Per-field writer authority** is enforced at runtime on every transition result,
+  including test-injected transitions, and at compile time by the transition return types.
+- **RH**: one append per effective explicit transaction (`Φ_eff` over canonical intent
+  only); a true no-op, a passive event and every Class C / D identity write nothing.
+  Restoration and the return acts belong to T-07.
+- Every other frozen act (`COMMIT_MOMENT_AND_LOCATE`, `CHOOSE_LOCUS`, the six return acts
+  and the inspection acts) is registered as metadata only and fails closed
+  (`OwnedByLaterTask`) until its owning task lands. Class C / D identities never reach the
+  store.
+- `LH = null` is a technical absence sentinel only (no authoritative committed Session
+  Position mirrored yet): not SP(0), not a Moment, not a temporal mode, never addressable,
+  never persistable. `COMMIT_MOMENT` and `COMMIT_LIVE_EDGE` require a real Live Head.
+
+Contract: `npm run test:mobile-canonical-state-contract` (repository root) plus the Jest
+suites under `src/state/__tests__/`.
 
 ## Toolchain pins (Expo SDK 57)
 
