@@ -1027,7 +1027,15 @@ test('A4 - the activation surface carries no privileged transport, raw SQL, or s
   assert.equal(repositoryCalls, 3, 'the QHIA-006 repository still holds exactly one call site per command');
   // The activation entry is registered in the Conversation module and reuses
   // the HIM module's exported QHIA-006 service - no second provider is created.
-  assert.match(shipped.files.conversationModule, /controllers: \[ConversationController, ConversationContextActivationController\]/u);
+  // The frozen QHIA-011A fact is that the activation entry is its OWN
+  // authenticated controller, registered alongside the turn controller and
+  // never folded into it. A later, separately reviewed controller may join the
+  // module (T-03A2 added the temporal read surface), so the anchor asserts the
+  // two QHIA-011A controllers and their order rather than banning every future
+  // one.
+  assert.match(shipped.files.conversationModule, /controllers: \[ConversationController, ConversationContextActivationController[,\]]/u);
+  assert.equal((shipped.files.conversationModule.match(/ConversationContextActivationController/gu) ?? []).length, 2,
+    'the activation controller is imported and registered exactly once');
   assert.match(shipped.files.conversationModule, /ConversationContextActivationService,/u);
   assert.ok(!executable(shipped.files.conversationModule).includes('HimSessionContextBindingRepository'),
     'the Conversation module creates no second binding repository provider');

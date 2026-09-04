@@ -53,6 +53,39 @@ technical shell.
 Contract: `npm run test:mobile-canonical-state-contract` (repository root) plus the Jest
 suites under `src/state/__tests__/`.
 
+## Temporal boundary (T-03A2)
+
+`src/temporal/` is the non-UI boundary between the server's committed-CU delivery and the
+canonical state kernel. It renders nothing, navigates nothing, persists nothing and stores
+no credential, and it is deliberately **not mounted** in the technical shell.
+
+- **Runtime wire validation** (`temporal-wire.ts`): delivered JSON is untrusted, so every
+  payload is checked against its exact shape and bounds before it can influence canonical
+  state — exact keys, the frozen `CONVERSATIONAL_UNITS_COMMITTED` type and version 1,
+  safe-integer Session Positions, `firstSp >= 1`, `lastSp >= firstSp`, and
+  `unitCount === lastSp - firstSp + 1`. `liveHead` accepts `null` and rejects `0`.
+- **The one mirror seam** (`live-head-sync.ts`): the server domain event
+  `CONVERSATIONAL_UNITS_COMMITTED` maps to the client mirror event `LIVE_HEAD_ADVANCED`
+  through the T-02 `ingest()` seam. The two names are intentionally different layers and
+  neither is renamed. A block `firstSp=20, lastSp=23` mirrors once as `toSp=23`; the
+  Moments stay addressable by their own Session Positions on the server. Nothing here
+  writes `LH` directly, dispatches a Product act, or appends RH. A cross-Session delivery
+  is refused, a redelivered head is idempotent, and a stale lower-SP delivery is
+  classified as stale — the mirrored head is never retracted.
+- **Transport** (`temporal-api.ts`): the base URL, access token and `fetch` are injected by
+  the caller. Explicit authenticated HTTP only — a Session temporal snapshot and a bounded
+  committed-CU catch-up page. There is no WebSocket and no SSE. Every failure is
+  fail-closed.
+- T-03A2 delivers authoritative `LH` only. `LF` stays with T-03D, and no `LF = null`
+  conclusion is invented because T-03D has not landed yet; the T-02 meaning of
+  `live = { LH, LF }` is unchanged.
+
+Types come from the repository-owned, type-only `@qandeel/runtime` workspace package,
+imported with `import type`, so it ships no JavaScript into the bundle.
+
+Contract: `npm run test:session-semantic-clock-sp-lh-delivery-contract` (repository root)
+plus the Jest suites under `src/temporal/__tests__/`.
+
 ## Toolchain pins (Expo SDK 57)
 
 | Package | Pin |

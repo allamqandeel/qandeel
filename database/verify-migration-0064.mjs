@@ -161,11 +161,20 @@ async function verifyStaticAuthority() {
   assert.doesNotMatch(contract.definition, /'UNRESOLVED'/u, 'no producer path can write an unresolved speaker state');
   assert.match(contract.definition, /derived_speaker constant text := 'RESOLVED'/u, 'speaker state is derived, never asserted');
 
-  // Case 25/28: the activation gate. The producer is granted to NO role and
-  // neither table is reachable by any application role.
-  for (const role of ['anon', 'authenticated', 'service_role']) {
+  // Case 25/28: the T-03A1 activation gate, re-anchored to the post-activation
+  // world. T-03A2 (migration 0065) performed the ONE authorized activation act:
+  // it granted EXECUTE on the producer to `service_role` and to no other role,
+  // in the same migration that made SP allocation part of commitment. What
+  // T-03A1 froze and what still binds here is unchanged: `anon` and
+  // `authenticated` may never execute the producer, PUBLIC may never execute
+  // it, and NO application role - service_role included - may write either CU
+  // table directly. The complete post-activation ACL matrix, including the
+  // service_role grant itself, is proven by verify-migration-0065.mjs.
+  for (const role of ['anon', 'authenticated']) {
     const [{ allowed }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') allowed", [role, PRODUCER]);
     assert.equal(allowed, false, `${role} must not hold EXECUTE on the commitment producer`);
+  }
+  for (const role of ['anon', 'authenticated', 'service_role']) {
     for (const table of ['public.conversation_units', 'public.conversation_unit_commit_batches']) {
       for (const privilege of ['SELECT', 'INSERT', 'UPDATE', 'DELETE']) {
         const [{ granted }] = await rows('SELECT has_table_privilege($1::name,$2::text,$3::text) granted', [role, table, privilege]);
@@ -195,15 +204,26 @@ async function verifyStaticAuthority() {
   const [{ count: gist }] = await rows("SELECT count(*) count FROM pg_extension WHERE extname IN ('btree_gist','btree_gin')");
   assert.equal(Number(gist), 0, 'T-03A1 introduces no PostgreSQL extension');
 
-  // Case 29/10: no SP/LH/status/function/normalized/updated_at column, and
-  // exactly one span pair, so a non-contiguous CU is unrepresentable.
+  // Case 29/10: no LH/status/function/normalized/updated_at column, and exactly
+  // one span pair, so a non-contiguous CU is unrepresentable.
+  //
+  // `session_position` is the ONE column T-03A2 (migration 0065) added, and it
+  // is the authorized activation itself: the Session Position is born
+  // atomically with the CU under the Session Semantic Clock lock. Every other
+  // Moment-adjacent shape T-03A1 excluded is still excluded, and there is still
+  // no second head authority, no status column and no lifecycle field.
   const columns = (await rows(
     "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema='public' AND table_name IN ('conversation_units','conversation_unit_commit_batches')"))
     .map((row) => `${row.table_name}.${row.column_name}`);
   for (const column of columns) {
+    if (column === 'conversation_units.session_position') continue;
     assert.doesNotMatch(column, /session_position|live_head|(^|[._])lh([._]|$)|(^|[._])sp([._]|$)|moment|updated_at|[._]status$|normalized|function|dialogue|act$/iu,
       `${column} must not exist in the T-03A1 substrate`);
   }
+  const [spColumn] = await rows(
+    "SELECT is_nullable FROM information_schema.columns WHERE table_schema='public' AND table_name='conversation_units' AND column_name='session_position'");
+  assert.deepEqual(spColumn, { is_nullable: 'NO' },
+    'after T-03A2 activation a committed CU without a Session Position is unrepresentable');
   assert.deepEqual(columns.filter((c) => c.includes('span')).sort(),
     ['conversation_units.source_span_end', 'conversation_units.source_span_start'],
     'exactly one contiguous span pair exists per committed unit');
@@ -568,12 +588,20 @@ async function verifyRuntimeAcl(owner, session) {
   stage = 'runtime ACL (cases 25, 28)';
   const { userTurn } = await completedTurns(owner, session, E1);
   const proposed = [unit(E1, 'أنا سبت الشغل امبارح.')];
-  for (const role of ['authenticated', 'service_role', 'anon']) {
+  // `anon` and `authenticated` remain unable to reach the substrate at all, and
+  // NO application role - service_role included - may read or write either CU
+  // table directly. `service_role` may execute only the canonical producer,
+  // granted by the T-03A2 activation migration; that grant and its complete
+  // post-activation matrix are proven by verify-migration-0065.mjs.
+  for (const role of ['authenticated', 'anon']) {
     await identity(role, role === 'authenticated' ? owner : null);
     await rejected(() => commit(session, owner, userTurn, randomUUID(), proposed), 'permission denied', ['42501']);
+  }
+  for (const role of ['authenticated', 'service_role', 'anon']) {
+    await identity(role, role === 'authenticated' ? owner : null);
     await rejected(() => q('SELECT count(*) FROM public.conversation_units'), 'permission denied', ['42501']);
     await rejected(() => q('SELECT count(*) FROM public.conversation_unit_commit_batches'), 'permission denied', ['42501']);
-    await rejected(() => q("INSERT INTO public.conversation_units(id,user_id,session_id,source_turn_id,commit_batch_id,source_role,speaker_state,source_modality,ordinal_within_turn,source_span_start,source_span_end,committed_text,source_content_sha256) VALUES($1,$2,$3,$4,$5,'USER','RESOLVED','TEXT',0,0,3,'أنا',sha256(convert_to('x','UTF8')))",
+    await rejected(() => q("INSERT INTO public.conversation_units(id,user_id,session_id,source_turn_id,commit_batch_id,source_role,speaker_state,source_modality,ordinal_within_turn,source_span_start,source_span_end,committed_text,source_content_sha256,session_position) VALUES($1,$2,$3,$4,$5,'USER','RESOLVED','TEXT',0,0,3,'أنا',sha256(convert_to('x','UTF8')),1)",
       [randomUUID(), owner, session, userTurn, randomUUID()]), 'permission denied', ['42501']);
   }
   await identity('postgres');
@@ -646,8 +674,12 @@ async function verifyConcurrency() {
     // Cleanup must bypass the append-only trigger. session_replication_role is
     // superuser-only, session-scoped, and changes no schema.
     await q("SET session_replication_role = 'replica'").catch(() => undefined);
+    // The T-03A2 delivery events and the Session Semantic Clock row are removed
+    // with the rest of the fixture, so the proof still leaves zero residue.
+    await q('DELETE FROM public.conversation_unit_commit_events WHERE session_id=$1', [raceSession]).catch(() => undefined);
     await q('DELETE FROM public.conversation_units WHERE source_turn_id=$1', [raceTurn]).catch(() => undefined);
     await q('DELETE FROM public.conversation_unit_commit_batches WHERE source_turn_id=$1', [raceTurn]).catch(() => undefined);
+    await q('DELETE FROM public.session_semantic_clocks WHERE session_id=$1', [raceSession]).catch(() => undefined);
     await q('DELETE FROM public.conversation_turns WHERE id=$1', [raceTurn]).catch(() => undefined);
     await q('DELETE FROM public.conversation_sessions WHERE id=$1', [raceSession]).catch(() => undefined);
     await q('DELETE FROM public.users WHERE id=$1', [raceUser]).catch(() => undefined);
@@ -684,7 +716,7 @@ async function main() {
       await identity('postgres');
     } finally { await q('ROLLBACK'); }
     await verifyConcurrency();
-    console.log('Verified migration 0064: UTF-8/code-point/SHA-256 contract with JS parity, DB-derived canonical source authority with no caller forgery channel, forward-only committed source frontier making ordinal_within_turn global source order, REV03A1-06 replay/new-batch separation, DB-derived batch identity with tuple-by-tuple comparison, append-only protection, production-inert activation gate, zero SP/LH/outbox artefacts, and zero fixture residue.');
+    console.log('Verified migration 0064: UTF-8/code-point/SHA-256 contract with JS parity, DB-derived canonical source authority with no caller forgery channel, forward-only committed source frontier making ordinal_within_turn global source order, REV03A1-06 replay/new-batch separation, DB-derived batch identity with tuple-by-tuple comparison, append-only protection, an activation gate that still bars anon/authenticated/PUBLIC and every direct table write, a NOT NULL session_position, zero outbox artefacts, and zero fixture residue.');
   } finally {
     await client.end();
   }

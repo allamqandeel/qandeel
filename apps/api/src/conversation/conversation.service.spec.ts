@@ -1,8 +1,9 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConversationRepository } from './conversation.repository';
 import { ConversationService } from './conversation.service';
-import type { ConversationSession, ConversationTurn } from './conversation.types';
+import type { ConversationSession, ConversationTurn, OrchestratedTurnResult } from './conversation.types';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
+import { ConversationTemporalEstablishmentService } from '../conversation-unit/conversation-temporal-establishment.service';
 import { CorrelationService } from '../observability/correlation.service';
 import { DataApiError } from './supabase-data-api.service';
 
@@ -10,6 +11,7 @@ describe('ConversationService', () => {
   let repository: jest.Mocked<ConversationRepository>;
   let service: ConversationService;
   let orchestrator: jest.Mocked<ConversationOrchestratorService>;
+  let temporal: jest.Mocked<ConversationTemporalEstablishmentService>;
   const session: ConversationSession = {
     id: 'session-a', status: 'ACTIVE', channel: 'TEXT', created_at: 'now', updated_at: 'now',
     last_activity_at: 'now', closed_at: null,
@@ -23,9 +25,17 @@ describe('ConversationService', () => {
     repository = {
       createSession: jest.fn(), findSession: jest.fn(), createTurn: jest.fn(),
       findTurnByIdempotencyKey: jest.fn(), cancelTurn: jest.fn(),
+      // T-03A2: present so a post-finalization temporal failure can be PROVEN
+      // never to reach the generation-failure lifecycle command.
+      failTurn: jest.fn(), finalizeTurn: jest.fn(), claimTurn: jest.fn(),
     } as unknown as jest.Mocked<ConversationRepository>;
     orchestrator = { orchestrate: jest.fn().mockResolvedValue({ userTurn: turn }) } as unknown as jest.Mocked<ConversationOrchestratorService>;
-    service = new ConversationService(repository, orchestrator,new CorrelationService());
+    // Phase 2 is a real, separately owned collaborator: the default fake is the
+    // pass-through an incomplete exchange actually produces.
+    temporal = {
+      establish: jest.fn(async (_userId: string, result: OrchestratedTurnResult) => result),
+    } as unknown as jest.Mocked<ConversationTemporalEstablishmentService>;
+    service = new ConversationService(repository, orchestrator,new CorrelationService(), temporal);
   });
 
   it('creates a session with only the caller token and a generated UUID — identity stays with the database', async () => {
@@ -37,7 +47,7 @@ describe('ConversationService', () => {
   });
 
   it('binds the repository-returned canonical session ID to the active request scope',async()=>{
-    const correlation=new CorrelationService();service=new ConversationService(repository,orchestrator,correlation);repository.createSession.mockResolvedValue(session);
+    const correlation=new CorrelationService();service=new ConversationService(repository,orchestrator,correlation,temporal);repository.createSession.mockResolvedValue(session);
     await correlation.runRequest(async()=>{await service.createSession('user-a','token-a');expect(correlation.current()?.session_id).toBe(session.id);});
   });
 
@@ -155,5 +165,88 @@ describe('ConversationService', () => {
     repository.findSession.mockResolvedValue(session);
     repository.cancelTurn.mockResolvedValue(undefined);
     await expect(service.cancelTurn('user-a', 'token-a', session.id, 'turn-a')).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  // T-03A2 §24: generation/finalization and post-finalization temporal
+  // establishment are DISTINCT technical phases. The second phase runs strictly
+  // after the first has produced durable COMPLETED turns, and it holds no path
+  // back into the conversation lifecycle.
+  describe('post-finalization temporal establishment', () => {
+    const completedUser: ConversationTurn = { ...turn, status: 'COMPLETED', completed_at: 'now' };
+    const assistant: ConversationTurn = {
+      ...turn, id: 'turn-b', role: 'ASSISTANT', status: 'COMPLETED', content: 'reply',
+      source_turn_id: turn.id, idempotency_key: null, completed_at: 'now',
+    };
+    const finalized: OrchestratedTurnResult = { userTurn: completedUser, assistantTurn: assistant };
+
+    beforeEach(() => {
+      repository.findSession.mockResolvedValue(session);
+      repository.findTurnByIdempotencyKey.mockResolvedValue(undefined);
+      repository.createTurn.mockResolvedValue(turn);
+      orchestrator.orchestrate.mockResolvedValue(finalized);
+    });
+
+    it('runs establishment on the finalized exchange and returns the additive temporal delivery', async () => {
+      const delivered: OrchestratedTurnResult = {
+        ...finalized,
+        temporal: {
+          liveHead: 5,
+          committedEvents: [{
+            type: 'CONVERSATIONAL_UNITS_COMMITTED', version: 1, sessionId: session.id,
+            batchId: 'batch-1', sourceTurnId: turn.id, firstSp: 1, lastSp: 5, unitCount: 5,
+          }],
+        },
+      };
+      temporal.establish.mockResolvedValue(delivered);
+      await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello' })).resolves.toBe(delivered);
+      expect(temporal.establish).toHaveBeenCalledWith('user-a', finalized);
+      // The existing result fields are untouched.
+      expect(delivered.userTurn).toBe(completedUser);
+      expect(delivered.assistantTurn).toBe(assistant);
+    });
+
+    it('never marks a COMPLETED turn FAILED, never regenerates, and surfaces a retryable failure', async () => {
+      temporal.establish.mockRejectedValue(new ServiceUnavailableException('Conversation temporal establishment is unavailable.'));
+
+      await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello' }))
+        .rejects.toBeInstanceOf(ServiceUnavailableException);
+
+      // The generation phase ran exactly once and the durable turns stay COMPLETED.
+      expect(orchestrator.orchestrate).toHaveBeenCalledTimes(1);
+      expect(repository.failTurn).not.toHaveBeenCalled();
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+      expect(finalized.userTurn.status).toBe('COMPLETED');
+      expect(finalized.assistantTurn?.status).toBe('COMPLETED');
+    });
+
+    it('re-enters establishment on an idempotent replay of the completed turn', async () => {
+      repository.findTurnByIdempotencyKey.mockResolvedValue(completedUser);
+      temporal.establish.mockResolvedValue(finalized);
+
+      await service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' });
+
+      expect(repository.createTurn).not.toHaveBeenCalled();
+      expect(temporal.establish).toHaveBeenCalledTimes(1);
+      expect(temporal.establish).toHaveBeenCalledWith('user-a', finalized);
+    });
+
+    it('re-enters establishment on the unique-violation replay path too', async () => {
+      repository.findTurnByIdempotencyKey.mockResolvedValueOnce(undefined).mockResolvedValueOnce(completedUser);
+      repository.createTurn.mockRejectedValue(new DataApiError(409));
+      temporal.establish.mockResolvedValue(finalized);
+
+      await service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' });
+
+      expect(temporal.establish).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not mistake a later temporal failure for a duplicate-key race', async () => {
+      temporal.establish.mockRejectedValue(new DataApiError(409));
+      await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' }))
+        .rejects.toBeInstanceOf(DataApiError);
+      // The idempotency winner lookup guards durable admission only.
+      expect(repository.findTurnByIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(orchestrator.orchestrate).toHaveBeenCalledTimes(1);
+    });
   });
 });
