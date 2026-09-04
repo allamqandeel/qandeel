@@ -102,6 +102,9 @@ test('the substrate is reachable ONLY through the named T-03A2 boundary', () => 
     // T-03B1a (conversational-focus) reuses the PURE code-point anchor helper
     // of T-03A1 and nothing else; it is pinned separately just below.
     .filter((file) => !file.url.includes('/conversational-focus/'))
+    // T-03B2a (thread-establishment) likewise reuses ONLY the pure anchor
+    // helper; it is pinned separately just below.
+    .filter((file) => !file.url.includes('/thread-establishment/'))
     .filter((file) => /conversation-unit|commit_conversation_units_v1|ConversationUnitRepository|ConversationUnitCommitmentService|ConversationTemporalEstablishmentService|CuSegmentation/u.test(read(file.path)))
     .map((file) => file.name)
     .sort();
@@ -160,6 +163,22 @@ test('the substrate is reachable ONLY through the named T-03A2 boundary', () => 
       assert.doesNotMatch(source.replace(/import type \{[^}]*\} from '\.\.\/conversation-unit\/conversation-temporal-establishment\.service';/u, ''),
         /ConversationTemporalEstablishmentService/u, `${file.name} never references the live T-03A2 establishment service itself`);
     }
+  }
+
+  // The T-03B2a Thread-establishment evaluator (production-inert) may import
+  // ONLY `cu-anchor-mapper` from this directory, statically, and reaches no
+  // substrate, producer RPC, commitment service, temporal boundary, identity
+  // derivation or segmentation provider.
+  const threadFiles = walk(API_SRC).filter((entry) => entry.url.includes('/thread-establishment/'));
+  assert.ok(threadFiles.length > 0, 'the T-03B2a directory exists');
+  for (const file of threadFiles) {
+    const source = read(file.path);
+    for (const match of source.matchAll(/from\s+'([^']*conversation-unit[^']*)'/gu)) {
+      assert.equal(match[1], '../conversation-unit/cu-anchor-mapper', `${file.name} may reuse only the pure anchor helper; found ${match[1]}`);
+    }
+    assert.doesNotMatch(source, /\bimport\(|require\(/u, `${file.name} must not load conversation-unit dynamically`);
+    assert.doesNotMatch(source, /commit_conversation_units_v1|commit_finalized_exchange_conversation_units_v1|ConversationUnitRepository|conversation-unit\.repository|ConversationUnitCommitmentService|ConversationTemporalEstablishmentService|CuSegmentation|temporal-delivery|deterministic-runtime-id/u,
+      `${file.name} does not reach the committed-CU substrate or the T-03A2 runtime`);
   }
 
   // AppModule, the orchestrator, the conversation repository and the

@@ -23,6 +23,8 @@ const readJson = async (path) => JSON.parse(await read(path));
 const stripComments = (text) => text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/\/\/.*$/gmu, '');
 
 const FOCUS_DIR = 'apps/api/src/conversational-focus';
+/** The T-03B2a Thread-establishment slice: a separate directory so B1 stays frozen (pinned by its own contract). */
+const THREAD_DIR = 'apps/api/src/thread-establishment';
 /** The T-03B1a evaluator slice. */
 const EVALUATOR_FILES = [
   'conversational-focus-evaluator.service.ts',
@@ -123,8 +125,25 @@ test('nothing outside the directory imports it: no ConversationModule, Conversat
   const referencing = listFiles(join(rootPath, 'apps/api/src'))
     .map((file) => relative(file))
     .filter((file) => !file.startsWith(`${FOCUS_DIR}/`))
+    // T-03B2a (thread-establishment, production-inert) consumes ONLY the frozen
+    // B1 TYPE authorities of this directory; it is pinned separately just below.
+    .filter((file) => !file.startsWith(`${THREAD_DIR}/`))
     .filter((file) => /conversational-focus|ConversationalFocusEvaluatorService|FocusResolutionProvider|OpenAiFocusResolutionProvider|validateFocusResolutionProposal/u.test(stripComments(readFileSyncUtf8(file))));
   assert.deepEqual(referencing, [], 'T-03B1a is production-inert: no runtime path reaches it');
+  // The T-03B2a evaluator may import only the two pure type modules of this
+  // directory - never the evaluator service, a provider, the validator, the
+  // anchor mapper, the canonicalizer or the T-03B1b2 runtime.
+  const threadFiles = listFiles(join(rootPath, THREAD_DIR)).map((file) => relative(file));
+  assert.ok(threadFiles.length > 0, 'the T-03B2a directory exists');
+  for (const file of threadFiles) {
+    const source = readFileSyncUtf8(file);
+    for (const match of source.matchAll(/from\s+'([^']*conversational-focus[^']*)'/gu)) {
+      assert.ok(['../conversational-focus/conversational-focus.types', '../conversational-focus/durable-focus-payload.types'].includes(match[1]),
+        `${file} may import only the B1 type authorities; found ${match[1]}`);
+    }
+    assert.doesNotMatch(stripComments(source), /ConversationalFocusEvaluatorService|FocusResolutionProvider|OpenAiFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor|canonicalizePreparedFocusSequence|ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|openAiFocusResolutionBinding/u,
+      `${file} does not reach the B1 evaluator, providers, validator, canonicalizer or runtime`);
+  }
   for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService], ['AppModule', appModule], ['the T-03A2 establishment service', establishment]]) {
     assert.doesNotMatch(stripComments(text), /conversational-focus|Focus|focus/u, `${name} is untouched by T-03B1a`);
   }
