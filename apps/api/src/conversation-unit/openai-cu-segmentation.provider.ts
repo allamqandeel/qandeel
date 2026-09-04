@@ -99,6 +99,26 @@ const INSTRUCTIONS = [
   'Never return character offsets, positions, indexes into the text, or any field other than text and occurrence.',
 ].join(' ');
 
+/**
+ * The structural upper bound on an anchor's occurrence index.
+ *
+ * `occurrence` selects WHICH exact repetition of one excerpt in the canonical
+ * source is meant, so its domain is the source, not the batch. It is entirely
+ * independent of `maxUnits`, which bounds how many CU anchors one proposal may
+ * carry: a single-unit proposal may legitimately name the 65th, 100th or later
+ * repetition inside a valid source. A source of N code points cannot contain
+ * more than N occurrences of any non-empty excerpt, so N is the tightest sound
+ * structural bound, and the source is already capped at
+ * MAX_COMMITTABLE_SOURCE_CHARS, keeping the strict schema finite.
+ *
+ * This is a structural bound only. The deterministic mapper remains the final
+ * semantic check and fails closed with OCCURRENCE_OUT_OF_RANGE when the named
+ * repetition does not actually exist; nothing is ever clamped or substituted.
+ */
+function maxOccurrenceFor(request: CuSegmentationRequest): number {
+  return codePointLength(request.sourceText);
+}
+
 function structuredFormat(request: CuSegmentationRequest): object {
   return {
     type: 'json_schema',
@@ -118,7 +138,7 @@ function structuredFormat(request: CuSegmentationRequest): object {
             required: ['text', 'occurrence'],
             properties: {
               text: { type: 'string', minLength: 1, maxLength: request.maxExcerptChars },
-              occurrence: { type: 'integer', minimum: 1, maximum: request.maxUnits },
+              occurrence: { type: 'integer', minimum: 1, maximum: maxOccurrenceFor(request) },
             },
           },
         },
@@ -158,6 +178,9 @@ function parseProposal(value: unknown, request: CuSegmentationRequest): CuSegmen
     ) {
       throw new Error();
     }
+    // The parser holds the SAME source-relative occurrence domain as the
+    // schema: batch cardinality never bounds an occurrence index.
+    const maxOccurrence = maxOccurrenceFor(request);
     const units: SourceAnchor[] = parsed.units.map((entry) => {
       if (
         !entry ||
@@ -177,7 +200,8 @@ function parseProposal(value: unknown, request: CuSegmentationRequest): CuSegmen
         codePointLength(anchor.text) > request.maxExcerptChars ||
         typeof anchor.occurrence !== 'number' ||
         !Number.isSafeInteger(anchor.occurrence) ||
-        anchor.occurrence < 1
+        anchor.occurrence < 1 ||
+        anchor.occurrence > maxOccurrence
       ) {
         throw new Error();
       }

@@ -100,6 +100,34 @@ describe('committed CU constitution', () => {
   });
 });
 
+// FIX-T03A1-01 end to end: a later forward batch whose single unit names a
+// repetition beyond the batch cardinality is a legitimate commitment candidate.
+describe('high occurrence indexes survive the whole evaluator (FIX-T03A1-01)', () => {
+  const PHRASE = 'أحمد كلمني.';
+  const SEVENTY = Array.from({ length: 70 }, () => PHRASE).join(' ');
+  const stride = codePointLength(PHRASE) + 1;
+  const startOfOccurrence = (n: number) => (n - 1) * stride;
+
+  it('evaluates a single-unit batch at occurrence 65 after a frontier past the 64th', async () => {
+    const frontier = startOfOccurrence(64) + codePointLength(PHRASE);
+    const provider = FakeCuSegmentationProvider.withAnchors([{ text: PHRASE, occurrence: 65 }]);
+    const batch = await service(provider).evaluate({ ...SOURCE, content: SEVENTY, sourceFrontier: frontier });
+
+    expect(batch.units).toHaveLength(1);
+    expect(batch.units[0].spanStart).toBe(startOfOccurrence(65));
+    expect(batch.units[0].spanStart).toBeGreaterThanOrEqual(frontier);
+    expect(sliceByCodePoints(SEVENTY, { start: batch.units[0].spanStart, end: batch.units[0].spanEnd })).toBe(PHRASE);
+    // The provider was asked for at most 64 UNITS; that never bounded the
+    // occurrence it was allowed to name.
+    expect(provider.requests[0].maxUnits).toBe(64);
+  });
+
+  it('still rejects an occurrence the source cannot support', async () => {
+    const provider = FakeCuSegmentationProvider.withAnchors([{ text: PHRASE, occurrence: 71 }]);
+    expect(await rejection(service(provider).evaluate({ ...SOURCE, content: SEVENTY }))).toBe('OCCURRENCE_OUT_OF_RANGE');
+  });
+});
+
 describe('eligibility gate (the four INPUT-01 conditions, fail-fast)', () => {
   it('refuses provisional, cancelled, failed and superseded source', async () => {
     const provider = FakeCuSegmentationProvider.withAnchors([{ text: E1, occurrence: 1 }]);

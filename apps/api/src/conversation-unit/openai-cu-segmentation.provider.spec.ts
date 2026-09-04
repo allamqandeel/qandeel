@@ -1,4 +1,5 @@
 import { MAX_SOURCE_EXCERPT_CHARS, MAX_UNITS_PER_COMMIT_BATCH } from './conversation-unit.types';
+import { codePointLength } from './cu-anchor-mapper';
 import { CU_SEGMENTATION_PROMPT_VERSION, type CuSegmentationOpenAIConfig } from './cu-segmentation-provider.config';
 import {
   CU_SEGMENTATION_SCHEMA_VERSION,
@@ -113,6 +114,72 @@ describe('output parsing is fail-closed', () => {
         await code(new OpenAiCuSegmentationProvider(CONFIG, clientReturning(payload).client).propose(REQUEST)),
       ).toBe('INVALID_STRUCTURED_OUTPUT');
     }
+  });
+});
+
+// FIX-T03A1-01. `occurrence` selects WHICH exact repetition of one excerpt in
+// the canonical source is meant; `maxUnits` bounds how many anchors a proposal
+// may carry. The two domains are independent, so a single-unit proposal may
+// legitimately name the 65th repetition. A source repeating one phrase 70 times
+// makes that concrete.
+const REPEATED_PHRASE = 'أحمد كلمني.';
+const SEVENTY_REPETITIONS = Array.from({ length: 70 }, () => REPEATED_PHRASE).join(' ');
+const HIGH_OCCURRENCE_REQUEST: CuSegmentationRequest = { ...REQUEST, sourceText: SEVENTY_REPETITIONS };
+const schemaOf = (create: jest.Mock) =>
+  ((create.mock.calls[0][0] as { text: { format: { schema: Record<string, any> } } }).text.format.schema);
+
+describe('occurrence domain is source-relative, not batch cardinality (FIX-T03A1-01)', () => {
+  it('A. keeps batch cardinality at 64 on units.maxItems only', async () => {
+    const { create, client } = clientReturning('{"units":[]}');
+    await new OpenAiCuSegmentationProvider(CONFIG, client).propose(HIGH_OCCURRENCE_REQUEST);
+    const schema = schemaOf(create);
+    expect(MAX_UNITS_PER_COMMIT_BATCH).toBe(64);
+    expect(HIGH_OCCURRENCE_REQUEST.maxUnits).toBe(64);
+    expect(schema.properties.units.maxItems).toBe(64);
+  });
+
+  it('B. bounds occurrence by the source code-point length, never by maxUnits', async () => {
+    const { create, client } = clientReturning('{"units":[]}');
+    await new OpenAiCuSegmentationProvider(CONFIG, client).propose(HIGH_OCCURRENCE_REQUEST);
+    const occurrence = schemaOf(create).properties.units.items.properties.occurrence;
+    const sourceLength = codePointLength(SEVENTY_REPETITIONS);
+
+    expect(occurrence).toEqual({ type: 'integer', minimum: 1, maximum: sourceLength });
+    // The defect this proves absent: the bound must NOT be the batch cardinality.
+    expect(occurrence.maximum).not.toBe(HIGH_OCCURRENCE_REQUEST.maxUnits);
+    expect(occurrence.maximum).not.toBe(MAX_UNITS_PER_COMMIT_BATCH);
+    expect(occurrence.maximum).toBeGreaterThanOrEqual(65);
+    // A short source still gets a tight, finite bound.
+    const short = clientReturning('{"units":[]}');
+    await new OpenAiCuSegmentationProvider(CONFIG, short.client).propose(REQUEST);
+    expect(schemaOf(short.create).properties.units.items.properties.occurrence.maximum)
+      .toBe(codePointLength(REQUEST.sourceText));
+  });
+
+  it('C. parses a single-unit proposal naming the 65th occurrence', async () => {
+    const payload = JSON.stringify({ units: [{ text: REPEATED_PHRASE, occurrence: 65 }] });
+    const proposal = await new OpenAiCuSegmentationProvider(CONFIG, clientReturning(payload).client)
+      .propose(HIGH_OCCURRENCE_REQUEST);
+    expect(proposal).toEqual({ units: [{ text: REPEATED_PHRASE, occurrence: 65 }] });
+    // One unit, occurrence far beyond the batch cardinality: both are legal.
+    expect(proposal.units).toHaveLength(1);
+    expect(proposal.units[0].occurrence).toBeGreaterThan(MAX_UNITS_PER_COMMIT_BATCH);
+  });
+
+  it('G. rejects an occurrence beyond the canonical source code-point length', async () => {
+    const beyond = codePointLength(SEVENTY_REPETITIONS) + 1;
+    const payload = JSON.stringify({ units: [{ text: REPEATED_PHRASE, occurrence: beyond }] });
+    expect(
+      await code(new OpenAiCuSegmentationProvider(CONFIG, clientReturning(payload).client).propose(HIGH_OCCURRENCE_REQUEST)),
+    ).toBe('INVALID_STRUCTURED_OUTPUT');
+    // The short-source request keeps its own tighter bound.
+    const tooHighForShort = codePointLength(REQUEST.sourceText) + 1;
+    expect(
+      await code(new OpenAiCuSegmentationProvider(
+        CONFIG,
+        clientReturning(JSON.stringify({ units: [{ text: 'أنا', occurrence: tooHighForShort }] })).client,
+      ).propose(REQUEST)),
+    ).toBe('INVALID_STRUCTURED_OUTPUT');
   });
 });
 

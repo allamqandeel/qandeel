@@ -125,6 +125,44 @@ describe('duplicate-substring disambiguation (REV03A1-04)', () => {
   });
 });
 
+// FIX-T03A1-01. The occurrence index addresses the canonical source, so it is
+// independent of how many CUs a batch may carry. These prove the deterministic
+// mapper genuinely supports repetitions beyond the batch cardinality, and that
+// an unsupported one still fails closed.
+const PHRASE = 'أحمد كلمني.';
+const SEVENTY = Array.from({ length: 70 }, () => PHRASE).join(' ');
+const stride = codePointLength(PHRASE) + 1; // the single-space separator
+const startOfOccurrence = (n: number) => (n - 1) * stride;
+
+describe('high occurrence indexes (FIX-T03A1-01)', () => {
+  it('D. selects the exact 65th source occurrence, not another one', () => {
+    const spans = mapped(mapAnchorsToSpans(SEVENTY, [anchor(PHRASE, 65)], 0));
+    expect(spans).toHaveLength(1);
+    expect(spans[0]).toEqual({ start: startOfOccurrence(65), end: startOfOccurrence(65) + codePointLength(PHRASE) });
+    expect(sliceByCodePoints(SEVENTY, spans[0])).toBe(PHRASE);
+    // It is genuinely a different region from the 64th and the 66th.
+    expect(spans[0].start).not.toBe(startOfOccurrence(64));
+    expect(spans[0].start).not.toBe(startOfOccurrence(66));
+  });
+
+  it('E. maps occurrence 65 after a committed source frontier past the 64th', () => {
+    const frontier = startOfOccurrence(64) + codePointLength(PHRASE);
+    const spans = mapped(mapAnchorsToSpans(SEVENTY, [anchor(PHRASE, 65)], frontier));
+    expect(spans[0].start).toBeGreaterThanOrEqual(frontier);
+    expect(sliceByCodePoints(SEVENTY, spans[0])).toBe(PHRASE);
+    // The same anchor before that frontier is still refused, so the forward-only
+    // law is untouched by the wider occurrence domain.
+    expect(rejected(mapAnchorsToSpans(SEVENTY, [anchor(PHRASE, 64)], frontier)).reason).toBe('ANCHOR_BEFORE_CURSOR');
+  });
+
+  it('F. still fails closed when the named repetition does not exist', () => {
+    // REPEATED holds exactly two occurrences: 65 is unsupported, never clamped.
+    const result = rejected(mapAnchorsToSpans(REPEATED, [anchor('أحمد كلمني امبارح.', 65)], 0));
+    expect(result.reason).toBe('OCCURRENCE_OUT_OF_RANGE');
+    expect(rejected(mapAnchorsToSpans(SEVENTY, [anchor(PHRASE, 71)], 0)).reason).toBe('OCCURRENCE_OUT_OF_RANGE');
+  });
+});
+
 describe('fail-closed anchor rejection', () => {
   it('rejects a paraphrase: invented wording has no location in canonical source', () => {
     expect(rejected(mapAnchorsToSpans(E1, [anchor('the user left work yesterday')], 0)).reason).toBe(
