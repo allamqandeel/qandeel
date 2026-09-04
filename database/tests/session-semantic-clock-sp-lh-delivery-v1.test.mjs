@@ -120,14 +120,50 @@ test('AF66-01: the producer takes the Session clock before the source turn', () 
   assert.ok(clockLock < turnLock, 'the Session Semantic Clock is acquired FIRST');
   assert.ok(producerBody.indexOf('FOR UPDATE', clockLock) < turnLock, 'the clock lock is FOR UPDATE and precedes the turn lock');
   const coordinator = section('CREATE FUNCTION public.commit_finalized_exchange_conversation_units_v1', '-- 7. Narrow service-role');
+  const coordinatorClock = coordinator.indexOf('FROM public.session_semantic_clocks c');
   assert.ok(
-    coordinator.indexOf('FROM public.session_semantic_clocks c') < coordinator.indexOf('public.commit_conversation_units_v1'),
+    coordinatorClock > 0 && coordinatorClock < coordinator.indexOf('public.commit_conversation_units_v1'),
     'the exchange coordinator takes the one Session clock before either block');
-  assert.equal((coordinator.match(/FOR UPDATE/gu) ?? []).length, 1, 'exactly one Session clock per semantic transaction');
+  assert.equal((coordinator.match(/FROM public\.session_semantic_clocks c\s+WHERE[^;]*FOR UPDATE/gu) ?? []).length, 1,
+    'exactly one Session clock per semantic transaction');
+  // FIX-T03A2-01: both source rows are locked AFTER the clock, in the same
+  // deterministic USER-then-ASSISTANT order the exchange itself uses, so the
+  // relation gate introduces no second lock order.
+  const userLock = coordinator.indexOf('INTO user_turn_row');
+  const assistantLock = coordinator.indexOf('INTO assistant_turn_row');
+  assert.ok(coordinatorClock < userLock && userLock < assistantLock, 'clock, then USER row, then ASSISTANT row');
+  assert.equal((coordinator.match(/FROM public\.conversation_turns t\s+WHERE[^;]*FOR UPDATE/gu) ?? []).length, 2,
+    'both authoritative source rows are locked');
   assert.match(coordinator, /p_user_source_turn_id[\s\S]*p_assistant_source_turn_id/u, 'USER identity precedes ASSISTANT identity');
   const userCall = coordinator.indexOf('p_user_source_turn_id, p_user_batch_id');
   const assistantCall = coordinator.indexOf('p_assistant_source_turn_id, p_assistant_batch_id');
   assert.ok(userCall > 0 && assistantCall > userCall, 'the USER block is committed before the ASSISTANT block');
+});
+
+test('FIX-T03A2-01: the finalized-exchange relation is derived from the locked rows', () => {
+  const coordinator = section('CREATE FUNCTION public.commit_finalized_exchange_conversation_units_v1', '-- 7. Narrow service-role');
+  // The relation is proven BEFORE either commitment block runs, so a rejected
+  // exchange can never have allocated a Session Position.
+  const gate = coordinator.indexOf('INVALID_FINALIZED_EXCHANGE_RELATION');
+  assert.ok(gate > 0 && gate < coordinator.indexOf('public.commit_conversation_units_v1'),
+    'the relation gate precedes the first commitment block');
+  for (const clause of [
+    "user_turn_row.role <> 'USER'",
+    "user_turn_row.status <> 'COMPLETED'",
+    'user_turn_row.source_turn_id IS NOT NULL',
+    "assistant_turn_row.role <> 'ASSISTANT'",
+    "assistant_turn_row.status <> 'COMPLETED'",
+    'assistant_turn_row.source_turn_id IS DISTINCT FROM user_turn_row.id',
+  ]) {
+    assert.ok(coordinator.includes(clause), `the relation gate requires: ${clause}`);
+  }
+  // Ownership stays owner-scoped and non-leaking, exactly like the producer.
+  assert.equal((coordinator.match(/t\.session_id = p_session_id AND t\.user_id = p_user_id/gu) ?? []).length, 2,
+    'both source lookups are owner- and Session-scoped');
+  // The nested canonical producer remains authoritative for everything else:
+  // the coordinator re-derives no wording, span, digest, ordinal or SP.
+  assert.doesNotMatch(coordinator, /substring\(|sha256\(|ordinal_within_turn =|session_position =/u,
+    'the coordinator duplicates no canonical producer check');
 });
 
 test('the rewritten producer preserves the entire 0064 rejection and idempotency contract', () => {
@@ -295,6 +331,7 @@ test('the 0065 verifier proves live semantics and is wired into the toolchain an
     'has_function_privilege', 'has_table_privilege', 'BLOCKED', 'zero fixture residue',
     'refuses to activate over pre-existing committed conversational units',
     'reserve_session_same_sp_event_v1', 'commit_finalized_exchange_conversation_units_v1',
+    'INVALID_FINALIZED_EXCHANGE_RELATION', 'swapped halves', 'unrelated assistant', 'cross-Session assistant',
     'get_session_temporal_state_v1', 'get_conversational_units_committed_events_v1',
     'get_conversation_unit_commit_batch_snapshot_v1',
   ]) {

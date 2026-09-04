@@ -596,6 +596,25 @@ END;$$;
 --    interleave between them; either block failing rolls the whole exchange
 --    back; and an exact replay returns the stored canonical pair with zero
 --    mutation.
+--
+--    FIX-T03A2-01. The PARAMETER NAMES ARE NOT AUTHORITY. The canonical producer
+--    proves that each source turn is one of USER|ASSISTANT and derives the role
+--    stored on every CU from the locked row, but it cannot prove that the FIRST
+--    argument names the USER source, that the SECOND names the ASSISTANT
+--    source, or that the two are one finalized exchange. Without that proof a
+--    privileged caller could hand in a swapped pair, or two unrelated completed
+--    turns of the same Session, and this coordinator would allocate Session
+--    Positions in a false exchange order and present unrelated source as one
+--    atomic finalized exchange.
+--
+--    So the RELATION is derived from the locked source rows below, before any
+--    commitment block runs. `conversation_turns.source_turn_id` is UNIQUE
+--    (migration 0003, `conversation_turns_one_assistant_per_source`), so
+--    `assistant.source_turn_id = user.id` identifies exactly one finalized
+--    response; and the canonical USER-turn creator
+--    (`create_user_conversation_turn`, migration 0030) always writes
+--    `source_turn_id = NULL`, so requiring it asserts the existing contract
+--    rather than inventing a broader one.
 CREATE FUNCTION public.commit_finalized_exchange_conversation_units_v1(
   p_session_id uuid,
   p_user_id uuid,
@@ -619,6 +638,8 @@ CREATE FUNCTION public.commit_finalized_exchange_conversation_units_v1(
 ) LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE
   clock_row public.session_semantic_clocks;
+  user_turn_row public.conversation_turns;
+  assistant_turn_row public.conversation_turns;
 BEGIN
   IF p_session_id IS NULL OR p_user_id IS NULL
      OR p_user_source_turn_id IS NULL OR p_assistant_source_turn_id IS NULL
@@ -637,6 +658,31 @@ BEGIN
     WHERE c.session_id = p_session_id AND c.user_id = p_user_id
     FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE='42501'; END IF;
+
+  -- FIX-T03A2-01: the finalized-exchange RELATION, derived from the locked
+  -- source rows and never from the parameter names. Both rows are locked after
+  -- the clock and in the deterministic USER-then-ASSISTANT order the exchange
+  -- itself uses, so this adds no second lock order. An owner-scoped miss fails
+  -- closed as FORBIDDEN without leaking whether the turn exists elsewhere,
+  -- exactly as the canonical producer does.
+  SELECT * INTO user_turn_row FROM public.conversation_turns t
+    WHERE t.id = p_user_source_turn_id AND t.session_id = p_session_id AND t.user_id = p_user_id
+    FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE='42501'; END IF;
+  SELECT * INTO assistant_turn_row FROM public.conversation_turns t
+    WHERE t.id = p_assistant_source_turn_id AND t.session_id = p_session_id AND t.user_id = p_user_id
+    FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE='42501'; END IF;
+
+  IF user_turn_row.role <> 'USER'
+     OR user_turn_row.status <> 'COMPLETED'
+     OR user_turn_row.source_turn_id IS NOT NULL
+     OR assistant_turn_row.role <> 'ASSISTANT'
+     OR assistant_turn_row.status <> 'COMPLETED'
+     OR assistant_turn_row.source_turn_id IS DISTINCT FROM user_turn_row.id THEN
+    RAISE EXCEPTION 'INVALID_FINALIZED_EXCHANGE_RELATION' USING ERRCODE='22023',
+      DETAIL='A finalized exchange is one COMPLETED USER source turn and the COMPLETED ASSISTANT turn finalized as its response, in that order.';
+  END IF;
 
   -- USER block first, ASSISTANT block second: canonical conversational order.
   SELECT COALESCE(jsonb_agg(to_jsonb(u) ORDER BY u.ordinal_within_turn), '[]'::jsonb)

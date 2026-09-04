@@ -153,6 +153,20 @@ test('the API temporal boundary exists and holds no conversation-lifecycle autho
   assert.match(code, /userEvaluation[\s\S]*assistantEvaluation[\s\S]*Promise\.all\(\[userEvaluation, assistantEvaluation\]\)/u);
   assert.match(code, /commitFinalizedExchange\(\{[\s\S]*userSourceTurnId[\s\S]*assistantSourceTurnId/u);
   assert.equal((code.match(/commitFinalizedExchange\(/gu) ?? []).length, 1, 'exactly one atomic commit call site');
+  // FIX-T03A2-01: the finalized-exchange relation is proven BEFORE the run, so
+  // a structurally invalid completed pair costs zero provider calls and zero
+  // database commitment - and is never mistaken for "nothing to establish".
+  const gate = code.indexOf('assertFinalizedExchangeRelation(userTurn, assistantTurn)');
+  assert.ok(gate > 0 && gate < code.indexOf('return await this.run('), 'the relation gate precedes establishment');
+  for (const clause of [
+    "userTurn.role !== 'USER'",
+    "assistantTurn.role !== 'ASSISTANT'",
+    'userTurn.session_id !== assistantTurn.session_id',
+    'assistantTurn.source_turn_id !== userTurn.id',
+  ]) {
+    assert.ok(code.includes(clause), `the relation gate requires: ${clause}`);
+  }
+  assert.match(code, /throw new ConversationTemporalIntegrityError\('INVALID_FINALIZED_EXCHANGE_RELATION'\)/u);
   // The provider is created lazily, never at bootstrap.
   assert.match(code, /this\.binding \?\?= this\.createBinding\(\);/u);
   assert.doesNotMatch(code, /OPENAI_API_KEY/u, 'no provider credential is read here');
@@ -217,6 +231,22 @@ test('the mobile temporal boundary is exactly the authorized non-UI surface', ()
   }
   // The transport owns nothing ambient: base URL, token and fetch are injected.
   assert.match(mobileCode['temporal-api.ts'], /readonly baseUrl: string;[\s\S]*readonly accessToken: string;[\s\S]*readonly fetch: FetchLike;/u);
+});
+
+test('FIX-T03A2-02: the transport binds every decoded response to the requested Session', () => {
+  const api = mobileCode['temporal-api.ts'];
+  // Both routes bind, and they bind BEFORE returning a value.
+  assert.equal((api.match(/assertRequestedSession\(sessionId, /gu) ?? []).length, 2,
+    'the snapshot route and the catch-up route each bind the requested Session');
+  assert.match(api, /assertRequestedSession\(sessionId, decoded\.value\.sessionId, 'snapshot'\);\s*\n\s*return decoded\.value;/u);
+  assert.match(api, /assertRequestedSession\(sessionId, decoded\.value\.sessionId, 'response'\);\s*\n\s*return decoded\.value\.events;/u);
+  assert.match(api, /reason: 'INVALID_IDENTITY'/u, 'a foreign-Session payload is an identity rejection');
+  assert.match(api, /throw new TemporalTransportError\(\{/u, 'and it fails closed rather than returning a value');
+  // The envelope Session identity survives decoding, so an EMPTY catch-up page
+  // carrying a foreign envelope cannot pass: there is no event to disagree.
+  const wire = mobileCode['temporal-wire.ts'];
+  assert.match(wire, /export interface CommittedUnitsResponse \{\s*\n\s*readonly sessionId: string;/u);
+  assert.match(wire, /return \{ ok: true, value: \{ sessionId, events: page\.value \} \};/u);
 });
 
 test('the client mirror is written only through the T-02 authoritative event seam', () => {

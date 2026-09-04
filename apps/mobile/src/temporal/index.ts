@@ -15,7 +15,7 @@ export type {
   SessionTemporalSnapshot,
 } from '@qandeel/runtime';
 
-export type { WireDecode, WireRejectionReason } from './temporal-wire';
+export type { CommittedUnitsResponse, WireDecode, WireRejectionReason } from './temporal-wire';
 export {
   CONVERSATIONAL_UNITS_COMMITTED,
   CONVERSATIONAL_UNITS_COMMITTED_VERSION,

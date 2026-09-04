@@ -131,4 +131,14 @@ describe('committed-CU catch-up page validation', () => {
     expect(decodeCommittedUnitsResponse({ sessionId: 'session-1', events: {} }))
       .toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
   });
+
+  // FIX-T03A2-02: the envelope's Session identity SURVIVES decoding, so the
+  // transport can bind it to the Session the caller actually requested. An
+  // empty page carries no event whose Session could disagree with it.
+  it('returns the envelope Session identity alongside the decoded events', () => {
+    const decoded = decodeCommittedUnitsResponse({ sessionId: 'session-1', events: [first, second] });
+    expect(decoded).toEqual({ ok: true, value: { sessionId: 'session-1', events: [first, second] } });
+    const empty = decodeCommittedUnitsResponse({ sessionId: 'session-9', events: [] });
+    expect(empty).toEqual({ ok: true, value: { sessionId: 'session-9', events: [] } });
+  });
 });

@@ -67,16 +67,20 @@ export class ConversationTemporalEstablishmentService {
    * with the additive `temporal` block. Existing `userTurn` / `assistantTurn`
    * are never removed or reinterpreted.
    *
-   * An exchange that is not a completed USER/ASSISTANT pair - a still
-   * generating turn, a cancelled or failed turn, a replay with no assistant
-   * turn yet - is returned untouched: there is nothing committed to establish,
-   * and nothing is invented.
+   * An exchange that is NOT YET a completed pair - a still generating turn, a
+   * cancelled or failed turn, a replay with no assistant turn yet - is returned
+   * untouched: there is nothing committed to establish, and nothing is
+   * invented.
+   *
+   * A pair that IS both present and completed, but is structurally not a
+   * finalized exchange, is a different thing entirely and fails closed
+   * (FIX-T03A2-01). Silently returning "nothing to establish" there would let a
+   * broken upstream drop a real Moment on the floor without anyone noticing.
    */
   async establish(userId: string, result: OrchestratedTurnResult): Promise<OrchestratedTurnResult> {
     const { userTurn, assistantTurn } = result;
     if (!assistantTurn) return result;
     if (userTurn.status !== 'COMPLETED' || assistantTurn.status !== 'COMPLETED') return result;
-    if (assistantTurn.source_turn_id !== userTurn.id) return result;
     return { ...result, temporal: await this.establishExchange(userId, userTurn, assistantTurn) };
   }
 
@@ -86,6 +90,9 @@ export class ConversationTemporalEstablishmentService {
     assistantTurn: ConversationTurn,
   ): Promise<ConversationTemporalDelivery> {
     try {
+      // Before ANY provider call and before any database write: the durable
+      // pair must actually be one finalized exchange.
+      assertFinalizedExchangeRelation(userTurn, assistantTurn);
       return await this.run(userId, userTurn, assistantTurn);
     } catch (error) {
       if (error instanceof ConversationTemporalIntegrityError) {
@@ -237,6 +244,28 @@ export class ConversationTemporalEstablishmentService {
       },
       { batchId, newUnitId: (unit) => automaticCommitUnitId(batchId, unit) },
     );
+  }
+}
+
+/**
+ * FIX-T03A2-01: the application-side fail-fast on the finalized-exchange
+ * relation. The database coordinator re-establishes this authoritatively from
+ * the locked source rows; this check exists so a structurally invalid completed
+ * pair costs zero provider calls and zero database commitment, and surfaces as
+ * a retryable temporal-establishment failure instead of being mistaken for
+ * "nothing to establish".
+ *
+ * It never marks a turn FAILED and never regenerates an assistant response:
+ * both durable turns stay COMPLETED exactly as the orchestrator left them.
+ */
+function assertFinalizedExchangeRelation(userTurn: ConversationTurn, assistantTurn: ConversationTurn): void {
+  if (
+    userTurn.role !== 'USER'
+    || assistantTurn.role !== 'ASSISTANT'
+    || userTurn.session_id !== assistantTurn.session_id
+    || assistantTurn.source_turn_id !== userTurn.id
+  ) {
+    throw new ConversationTemporalIntegrityError('INVALID_FINALIZED_EXCHANGE_RELATION');
   }
 }
 

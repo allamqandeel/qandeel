@@ -200,6 +200,11 @@ export type ConversationTemporalIntegrityReason =
   | 'DELIVERY_RANGE_MISMATCH'
   /** The two halves of one exchange carry different commitment provenance. */
   | 'PROVENANCE_DISAGREEMENT'
+  /**
+   * The completed pair is not a finalized exchange: wrong roles, different
+   * Sessions, or an ASSISTANT turn that is not the response to that USER turn.
+   */
+  | 'INVALID_FINALIZED_EXCHANGE_RELATION'
   /** Committed CUs exist for this exchange but the Session carries no Live Head. */
   | 'LIVE_HEAD_NOT_ESTABLISHED';
 

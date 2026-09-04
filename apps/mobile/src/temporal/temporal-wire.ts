@@ -132,21 +132,36 @@ export function decodeCommittedUnitsPage(raw: unknown): WireDecode<readonly Conv
   return { ok: true, value: decoded };
 }
 
-/** The transport envelope of the catch-up route: `{ sessionId, events }`. */
-export function decodeCommittedUnitsResponse(raw: unknown): WireDecode<readonly ConversationalUnitsCommittedWireEvent[]> {
+/** The decoded catch-up envelope. The Session identity SURVIVES decoding. */
+export interface CommittedUnitsResponse {
+  readonly sessionId: string;
+  readonly events: readonly ConversationalUnitsCommittedWireEvent[];
+}
+
+/**
+ * The transport envelope of the catch-up route: `{ sessionId, events }`.
+ *
+ * FIX-T03A2-02: the envelope's own Session identity is RETURNED rather than
+ * discarded, so the transport can bind it to the Session the caller actually
+ * requested. Without that, an empty page carries no event whose Session could
+ * disagree with the envelope, and a foreign-Session envelope would decode
+ * cleanly.
+ */
+export function decodeCommittedUnitsResponse(raw: unknown): WireDecode<CommittedUnitsResponse> {
   const issue = exactShapeIssue(raw, 'response', ['sessionId', 'events']);
   if (issue) return reject('MALFORMED_SHAPE', issue);
   const candidate = raw as { sessionId: unknown; events: unknown };
-  if (!isIdentity(candidate.sessionId)) {
+  const { sessionId } = candidate;
+  if (!isIdentity(sessionId)) {
     return reject('INVALID_IDENTITY', 'response.sessionId: must be a non-empty identity string');
   }
   const page = decodeCommittedUnitsPage(candidate.events);
   if (!page.ok) return page;
-  const foreign = page.value.find((event) => event.sessionId !== candidate.sessionId);
+  const foreign = page.value.find((event) => event.sessionId !== sessionId);
   if (foreign) {
     return reject('INVALID_IDENTITY', `response.events: event ${foreign.batchId} belongs to another Session`);
   }
-  return page;
+  return { ok: true, value: { sessionId, events: page.value } };
 }
 
 /** Narrow guard for callers that only need to know whether a payload is an object. */

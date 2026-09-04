@@ -150,6 +150,20 @@ async function verifyStaticAuthority() {
     'the exchange coordinator takes the one Session clock before either commitment block');
   assert.equal((coordinatorBody.match(/FROM public\.session_semantic_clocks c\s+WHERE c\.session_id = p_session_id AND c\.user_id = p_user_id\s+FOR UPDATE/gu) ?? []).length, 1,
     'exactly one Session clock is acquired by one semantic transaction in v1');
+  // FIX-T03A2-01: the two source rows are locked AFTER the clock, in the same
+  // deterministic USER-then-ASSISTANT order the exchange commits them, and the
+  // relation gate runs before either commitment block.
+  const coordinatorClock = coordinatorBody.indexOf('FROM public.session_semantic_clocks c');
+  const coordinatorUserLock = coordinatorBody.indexOf('INTO user_turn_row');
+  const coordinatorAssistantLock = coordinatorBody.indexOf('INTO assistant_turn_row');
+  const coordinatorGate = coordinatorBody.indexOf('INVALID_FINALIZED_EXCHANGE_RELATION');
+  assert.ok(coordinatorClock > 0 && coordinatorClock < coordinatorUserLock,
+    'the exchange coordinator locks the Session clock before the USER source row');
+  assert.ok(coordinatorUserLock < coordinatorAssistantLock,
+    'the USER source row is locked before the ASSISTANT source row');
+  assert.ok(coordinatorGate > coordinatorAssistantLock
+    && coordinatorGate < coordinatorBody.indexOf('commit_conversation_units_v1'),
+    'the finalized-exchange relation is proven from the locked rows before any commitment block');
   // No timestamp participates in a Session Position decision.
   assert.doesNotMatch(definition.slice(definition.indexOf('next_sp :=')), /CURRENT_TIMESTAMP|now\(\)|clock_timestamp/u,
     'SP allocation reads no wall-clock time');
@@ -490,6 +504,79 @@ async function verifyExchangeCoordinator(owner) {
   return session;
 }
 
+// ------------------------------------- FIX-T03A2-01: the exchange relation
+async function verifyFinalizedExchangeRelation(owner) {
+  stage = 'finalized-exchange relation (cases 53, 54, 55, 56, 57)';
+  // The coordinator's PARAMETER NAMES are not authority. These cases prove the
+  // relation is derived from the locked source rows, so a privileged caller
+  // cannot allocate Session Positions in a false exchange order or present
+  // unrelated source as one atomic finalized exchange.
+  const session = await newSession(owner);
+  const first = await completedTurns(owner, session);
+  const second = await completedTurns(owner, session);
+  const [{ content: assistantContent }] = await rows('SELECT content FROM public.conversation_turns WHERE id=$1', [first.assistantTurn]);
+  const userUnits = [unit(E1, 'أنا سبت الشغل امبارح.')];
+  const assistantUnits = [unit(assistantContent, 'رد المساعد على الموضوع.')];
+
+  const untouched = async (label) => {
+    assert.equal((await clockOf(session)).current_sp, null, `${label}: no Session Position was allocated`);
+    assert.deepEqual(await spsOfSession(session), [], `${label}: no committed CU exists`);
+    assert.equal((await eventsOfSession(session)).length, 0, `${label}: no delivery event exists`);
+    const [{ count: batches }] = await rows('SELECT count(*) count FROM public.conversation_unit_commit_batches WHERE session_id=$1', [session]);
+    assert.equal(Number(batches), 0, `${label}: no commitment batch exists`);
+  };
+  await untouched('precondition');
+
+  // Case 53: swapped halves - the ASSISTANT turn supplied as the USER half and
+  // the USER turn supplied as the ASSISTANT half.
+  await rejected(() => exchange(session, owner, first.assistantTurn, randomUUID(), assistantUnits,
+    first.userTurn, randomUUID(), userUnits), 'INVALID_FINALIZED_EXCHANGE_RELATION');
+  await untouched('swapped halves');
+
+  // Case 54: an unrelated completed ASSISTANT turn of the SAME Session, whose
+  // source_turn_id names a different USER turn.
+  await rejected(() => exchange(session, owner, first.userTurn, randomUUID(), userUnits,
+    second.assistantTurn, randomUUID(), assistantUnits), 'INVALID_FINALIZED_EXCHANGE_RELATION');
+  await untouched('unrelated assistant');
+  // ... and the mirror: a USER half that is not the source of that ASSISTANT.
+  await rejected(() => exchange(session, owner, second.userTurn, randomUUID(), userUnits,
+    first.assistantTurn, randomUUID(), assistantUnits), 'INVALID_FINALIZED_EXCHANGE_RELATION');
+  await untouched('unrelated user');
+
+  // Case 55: a cross-Session pair. The owner-scoped lookup fails closed as
+  // FORBIDDEN without leaking whether the turn exists in another Session -
+  // exactly the behaviour the canonical producer already has.
+  const otherSession = await newSession(owner);
+  const otherTurns = await completedTurns(owner, otherSession);
+  await rejected(() => exchange(session, owner, first.userTurn, randomUUID(), userUnits,
+    otherTurns.assistantTurn, randomUUID(), assistantUnits), 'FORBIDDEN', ['42501']);
+  await untouched('cross-Session assistant');
+  await rejected(() => exchange(otherSession, owner, first.userTurn, randomUUID(), userUnits,
+    otherTurns.assistantTurn, randomUUID(), assistantUnits), 'FORBIDDEN', ['42501']);
+  assert.equal((await clockOf(otherSession)).current_sp, null, 'the other Session allocated nothing either');
+
+  // Case 56: a still-provisional pair is refused even when the relation itself
+  // is correct, so the coordinator can never commit uncommittable source.
+  await identity('authenticated', owner);
+  const provisionalTurn = randomUUID();
+  await rows('SELECT * FROM create_user_conversation_turn($1,$2,$3,$4)', [provisionalTurn, session, E1, null]);
+  await identity('postgres');
+  await rejected(() => exchange(session, owner, provisionalTurn, randomUUID(), userUnits,
+    first.assistantTurn, randomUUID(), assistantUnits), 'INVALID_FINALIZED_EXCHANGE_RELATION');
+  await untouched('provisional USER half');
+
+  // Case 57: the genuine finalized pair still commits, in the exact same order
+  // and with the exact same Session Positions as before the relation gate.
+  const [valid] = await exchange(session, owner, first.userTurn, randomUUID(), userUnits,
+    first.assistantTurn, randomUUID(), assistantUnits);
+  assert.equal(valid.live_head, 2, 'the valid finalized exchange advanced LH to SP(2)');
+  assert.deepEqual(valid.user_units.map((row) => row.session_position), [1], 'the USER block still takes SP(1)');
+  assert.deepEqual(valid.assistant_units.map((row) => row.session_position), [2], 'the ASSISTANT block still follows at SP(2)');
+  assert.deepEqual(valid.user_units.map((row) => row.source_role), ['USER']);
+  assert.deepEqual(valid.assistant_units.map((row) => row.source_role), ['ASSISTANT']);
+  assert.deepEqual(await spsOfSession(session), [1, 2], 'the Session sequence is exactly the finalized exchange');
+}
+
 // ------------------------------------------------------------- LH and reads
 async function verifyLiveHeadAndReads(owner, other, populatedSession) {
   stage = 'LH derivation and owner-scoped reads (cases 29, 30, 32, 35, 36, 37, 38, 39, 40, 50)';
@@ -795,6 +882,7 @@ async function main() {
       await verifySealingAndReplay(owner, session, sourceTurn, oneBatch);
       await verifySameSpSeam(owner);
       const exchangeSession = await verifyExchangeCoordinator(owner);
+      await verifyFinalizedExchangeRelation(owner);
       await verifyLiveHeadAndReads(owner, other, exchangeSession);
       await verifyDeliveryAppendOnly(owner, exchangeSession);
       await verifySpConstraints(owner);
@@ -804,7 +892,7 @@ async function main() {
       await identity('postgres');
     } finally { await q('ROLLBACK'); }
     await verifyConcurrency();
-    console.log('Verified migration 0065: gapless per-Session SP allocation under the AF66-01 clock lock, derived sealing with no second mutable authority, LH = current_sp and never 0, the atomic USER -> ASSISTANT exchange with no interleaving SP, the dedicated append-only ConversationalUnitsCommitted delivery surface with exact one-event-per-non-zero-batch idempotency, the internal same-SP seam failing closed before SP(1) and executable by no application role, the service_role-only activation grant, owner-scoped temporal reads that cannot cross users, an intact T-03A1 substrate and runtime_event_outbox contract, and zero fixture residue.');
+    console.log('Verified migration 0065: gapless per-Session SP allocation under the AF66-01 clock lock, derived sealing with no second mutable authority, LH = current_sp and never 0, the atomic USER -> ASSISTANT exchange with no interleaving SP and a finalized-exchange relation derived from the locked source rows rather than the parameter names, the dedicated append-only ConversationalUnitsCommitted delivery surface with exact one-event-per-non-zero-batch idempotency, the internal same-SP seam failing closed before SP(1) and executable by no application role, the service_role-only activation grant, owner-scoped temporal reads that cannot cross users, an intact T-03A1 substrate and runtime_event_outbox contract, and zero fixture residue.');
   } finally {
     await client.end();
   }

@@ -58,6 +58,25 @@ export interface CommittedEventsPageRequest {
   readonly limit?: number;
 }
 
+/**
+ * FIX-T03A2-02: the requested Session is part of the trust boundary.
+ *
+ * A response body is untrusted input, so a well-shaped payload that names a
+ * DIFFERENT Session than the one in the request URL must never be returned as a
+ * successful result. This is the transport's own guard: the canonical store's
+ * later `SESSION_MISMATCH` check is a second line, not the first, and an empty
+ * catch-up page has no event whose Session could disagree with the envelope.
+ */
+function assertRequestedSession(requested: string, received: string, where: string): void {
+  if (received !== requested) {
+    throw new TemporalTransportError({
+      kind: 'INVALID_PAYLOAD',
+      reason: 'INVALID_IDENTITY',
+      detail: `${where}.sessionId: requested Session ${requested}, received ${received}`,
+    });
+  }
+}
+
 export class TemporalApiClient {
   constructor(private readonly config: TemporalApiConfig) {}
 
@@ -66,6 +85,7 @@ export class TemporalApiClient {
     const body = await this.get(`${this.base(sessionId)}/temporal`);
     const decoded = decodeSessionTemporalSnapshot(body);
     if (!decoded.ok) throw new TemporalTransportError({ kind: 'INVALID_PAYLOAD', reason: decoded.reason, detail: decoded.detail });
+    assertRequestedSession(sessionId, decoded.value.sessionId, 'snapshot');
     return decoded.value;
   }
 
@@ -91,7 +111,8 @@ export class TemporalApiClient {
     const body = await this.get(`${this.base(sessionId)}/temporal/events${suffix}`);
     const decoded = decodeCommittedUnitsResponse(body);
     if (!decoded.ok) throw new TemporalTransportError({ kind: 'INVALID_PAYLOAD', reason: decoded.reason, detail: decoded.detail });
-    return decoded.value;
+    assertRequestedSession(sessionId, decoded.value.sessionId, 'response');
+    return decoded.value.events;
   }
 
   private base(sessionId: string): string {

@@ -114,3 +114,50 @@ describe('committed-CU catch-up transport', () => {
     expect((failure as TemporalTransportError).failure).toEqual({ kind: 'HTTP', status: 500 });
   });
 });
+
+// FIX-T03A2-02: the requested Session is part of the trust boundary. A
+// well-shaped response that names a DIFFERENT Session than the request URL must
+// never be returned as a successful result, and the transport - not the later
+// canonical-store guard - is what refuses it.
+describe('requested-Session binding at the transport boundary', () => {
+  const rejection = async (call: Promise<unknown>) => {
+    const failure = await call.catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(TemporalTransportError);
+    return (failure as TemporalTransportError).failure;
+  };
+
+  it('rejects a snapshot that names another Session', async () => {
+    const { api } = client({ sessionId: 'session-2', liveHead: 12 });
+    expect(await rejection(api.fetchSessionTemporalState('session-1')))
+      .toMatchObject({ kind: 'INVALID_PAYLOAD', reason: 'INVALID_IDENTITY' });
+  });
+
+  it('rejects an EMPTY catch-up page whose envelope names another Session', async () => {
+    // There is no event here whose Session could disagree with the envelope, so
+    // this is exactly the payload that used to decode cleanly.
+    const { api } = client({ sessionId: 'session-2', events: [] });
+    expect(await rejection(api.fetchCommittedEvents('session-1')))
+      .toMatchObject({ kind: 'INVALID_PAYLOAD', reason: 'INVALID_IDENTITY' });
+  });
+
+  it('rejects a foreign envelope even when its events agree with it', async () => {
+    const { api } = client({ sessionId: 'session-2', events: [event({ sessionId: 'session-2' })] });
+    expect(await rejection(api.fetchCommittedEvents('session-1')))
+      .toMatchObject({ kind: 'INVALID_PAYLOAD', reason: 'INVALID_IDENTITY' });
+  });
+
+  it('keeps rejecting an own-Session envelope carrying a foreign event', async () => {
+    const { api } = client({ sessionId: 'session-1', events: [event({ sessionId: 'session-2' })] });
+    expect(await rejection(api.fetchCommittedEvents('session-1')))
+      .toMatchObject({ kind: 'INVALID_PAYLOAD', reason: 'INVALID_IDENTITY' });
+  });
+
+  it('accepts a same-Session snapshot and a same-Session page, empty or not', async () => {
+    await expect(client({ sessionId: 'session-1', liveHead: 4 }).api.fetchSessionTemporalState('session-1'))
+      .resolves.toEqual({ sessionId: 'session-1', liveHead: 4 });
+    await expect(client({ sessionId: 'session-1', events: [] }).api.fetchCommittedEvents('session-1'))
+      .resolves.toEqual([]);
+    const page = await client({ sessionId: 'session-1', events: [event()] }).api.fetchCommittedEvents('session-1');
+    expect(page.map((entry) => entry.sessionId)).toEqual(['session-1']);
+  });
+});

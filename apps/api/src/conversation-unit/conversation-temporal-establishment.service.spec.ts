@@ -378,6 +378,64 @@ describe('ConversationTemporalEstablishmentService', () => {
     expect(provider.requests).toHaveLength(0);
   });
 
+  // FIX-T03A2-01: a pair that is present and COMPLETED but structurally not a
+  // finalized exchange is NOT "nothing to establish" - it fails closed before
+  // any provider call and before any database commitment.
+  it.each([
+    ['the halves are swapped', { userTurn: assistantTurn, assistantTurn: userTurn }],
+    ['the USER half is not a USER turn', {
+      userTurn: turn({ id: ASSISTANT_TURN, role: 'ASSISTANT', source_turn_id: null }),
+      assistantTurn,
+    }],
+    ['the ASSISTANT half is not an ASSISTANT turn', {
+      userTurn,
+      assistantTurn: turn({ id: ASSISTANT_TURN, role: 'USER', source_turn_id: USER_TURN }),
+    }],
+    ['the ASSISTANT is not the response to that USER turn', {
+      userTurn,
+      assistantTurn: turn({ id: ASSISTANT_TURN, role: 'ASSISTANT', source_turn_id: '99999999-9999-4999-8999-999999999999' }),
+    }],
+    ['the ASSISTANT has no source turn at all', {
+      userTurn,
+      assistantTurn: turn({ id: ASSISTANT_TURN, role: 'ASSISTANT', source_turn_id: null }),
+    }],
+    ['the two halves belong to different Sessions', {
+      userTurn,
+      assistantTurn: turn({
+        id: ASSISTANT_TURN, role: 'ASSISTANT', source_turn_id: USER_TURN,
+        session_id: '77777777-7777-4777-8777-777777777777',
+      }),
+    }],
+  ])('fails closed when %s', async (_label, invalid) => {
+    const provider = new RoleScriptedProvider(DEFAULT_SCRIPT);
+    const { repo, readBatchSnapshot, commitFinalizedExchange } = repository();
+    const service = new ConversationTemporalEstablishmentService(repo, () => binding(provider));
+
+    await expect(service.establish(USER, invalid as OrchestratedTurnResult))
+      .rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    expect(provider.requests).toHaveLength(0);
+    expect(commitFinalizedExchange).not.toHaveBeenCalled();
+    expect(readBatchSnapshot).not.toHaveBeenCalled();
+    // Both durable turns stay exactly as the orchestrator left them.
+    expect(invalid.userTurn.status).toBe('COMPLETED');
+    expect(invalid.assistantTurn?.status).toBe('COMPLETED');
+  });
+
+  it('still establishes the genuine finalized pair unchanged', async () => {
+    const provider = new RoleScriptedProvider(DEFAULT_SCRIPT);
+    const { repo, commitFinalizedExchange } = repository();
+    const service = new ConversationTemporalEstablishmentService(repo, () => binding(provider));
+
+    const result = await service.establish(USER, exchange);
+
+    expect(commitFinalizedExchange).toHaveBeenCalledTimes(1);
+    const committed = commitFinalizedExchange.mock.calls[0][0] as CommitFinalizedExchangeRequest;
+    expect(committed.userSourceTurnId).toBe(USER_TURN);
+    expect(committed.assistantSourceTurnId).toBe(ASSISTANT_TURN);
+    expect(result.temporal?.committedEvents.map((event) => event.firstSp)).toEqual([1, 3]);
+  });
+
   it('creates the provider lazily: constructing the service performs no provider work', async () => {
     const factory = jest.fn(() => binding(new RoleScriptedProvider(DEFAULT_SCRIPT)));
     const { repo } = repository();
