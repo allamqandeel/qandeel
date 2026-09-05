@@ -86,5 +86,15 @@ describe('the Layer-A row becomes typed knowledge (cases 1-9)', () => {
     const reading = (projectionRow().readings as Record<string, unknown>[])[0];
     rejects(projectionRow({ readings: [{ ...reading, lineage: [] }] }), 'HISTORICAL_PROJECTION_INCOHERENT', /creation step/u);
     rejects(projectionRow({ readings: [{ ...reading, versionAtTc: 2 }] }), 'HISTORICAL_PROJECTION_INCOHERENT', /lineage beyond the then-current version/u);
+    // T-03C R2: subject groundings are their own family - anchored at their own
+    // SP, naming a focus known at TC, never defaulted and never duplicated.
+    expect(mapHistoricalProjectionRow(projectionRow()).readings[0].subjectGroundings).toEqual([{ emergingFocusId: FOCUS, groundedAtSp: 2 }]);
+    expect(mapHistoricalProjectionRow(projectionRow({ readings: [{ ...reading, subjectGroundings: [] }] })).readings[0].subjectGroundings).toEqual([]);
+    rejects(projectionRow({ readings: [{ ...reading, subjectGroundings: [{ emergingFocusId: FOCUS, groundedAtSp: 3 }] }] }), 'HISTORICAL_PROJECTION_INCOHERENT', /grounded beyond TC/u);
+    rejects(projectionRow({ readings: [{ ...reading, subjectGroundings: [{ emergingFocusId: 'focus-unknown', groundedAtSp: 2 }] }] }), 'HISTORICAL_PROJECTION_INCOHERENT', /Emerging Focus that is not known at TC/u);
+    rejects(projectionRow({ readings: [{ ...reading, subjectGroundings: [{ emergingFocusId: FOCUS, groundedAtSp: 1 }, { emergingFocusId: FOCUS, groundedAtSp: 2 }] }] }), 'HISTORICAL_PROJECTION_INCOHERENT', /subject grounding appears twice/u);
+    const { subjectGroundings: _dropped, ...ungrounded } = reading;
+    rejects(projectionRow({ readings: [ungrounded] }), 'HISTORICAL_PROJECTION_ROW_MALFORMED', /readings\[0\]/u);
+    rejects(projectionRow({ readings: [{ ...reading, subjectGroundings: [{ emergingFocusId: FOCUS, groundedAtSp: 2, threadId: 'x' }] }] }), 'HISTORICAL_PROJECTION_ROW_MALFORMED', /subjectGroundings\[0\]/u);
   });
 });

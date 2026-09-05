@@ -90,23 +90,26 @@ test('migration 0072 is the ONE migration after 0071, 0001 - 0071 are byte-ident
   assert.doesNotMatch(delivered, /T-03C[a-z]\b|T-03C-[0-9]|\bC[ab]\b task|split task|sub-task|subtask/iu, 'T-03C is one task');
 });
 
-test('the Stage 6.6 v3 matrix reconciles to 30 FULL AFTER BUILD / 4 NOT EXPOSED / 1 BLOCKER (A-1: the canonical Reading subject-grounding authority is missing), and every release condition R-C1 .. R-C5 is documented and proven', () => {
+test('the Stage 6.6 v3 matrix reconciles to 31 FULL AFTER BUILD / 4 NOT EXPOSED / 0 BLOCKER (A-1 restored by the R2 canonical Reading subject-grounding authority), and every release condition R-C1 .. R-C5 is documented and proven', () => {
   const rows = [...doc.matchAll(/^\| (C[1-3]|E[1-4]|T[1-3]|A-[134]|L[1-2]|R[1-8]|M[1-4]|U[1-2]|Q1|F1|H[1-2]|N[1-2]) \|/gmu)].map((m) => m[1]);
   assert.equal(rows.length, 35, 'thirty-five matrix rows');
-  assert.equal((doc.match(/\| FULL AFTER BUILD \|/gu) ?? []).length, 30);
+  assert.equal((doc.match(/\| FULL AFTER BUILD \|/gu) ?? []).length, 31);
   assert.equal((doc.match(/\| NOT EXPOSED \|/gu) ?? []).length, 4);
-  assert.equal((doc.match(/\| BLOCKER \|/gu) ?? []).length, 1);
-  assert.match(doc, /30 FULL AFTER BUILD \/ 4 NOT EXPOSED \/ 1 BLOCKER/u);
-  // R1-02: A-1 is never silently FULL. The substrate and the projection exist; the
-  // production writer does not, because the repository carries no server-owned
-  // canonical Reading subject-grounding authority - and none is invented.
-  assert.match(doc, /^\| A-1 \|[^\n]*\| BLOCKER \|$/mu, 'the ONE BLOCKER row is A-1 (Thread <-> Reading appearance)');
-  assert.ok(doc.includes('R1-02 BLOCKED — CANONICAL READING SUBJECT-GROUNDING AUTHORITY MISSING'), 'the document states the exact blocker');
+  assert.equal((doc.match(/\| BLOCKER \|/gu) ?? []).length, 0);
+  assert.match(doc, /31 FULL AFTER BUILD \/ 4 NOT EXPOSED \/ 0 BLOCKER/u);
+  // R1-02 -> R2: A-1 is FULL only because a truthful canonical subject-grounding
+  // authority now exists (D-14) and the appearance is DERIVED from it inside the
+  // database - never silently, never by a heuristic, never by a caller.
+  assert.match(doc, /^\| A-1 \|[^\n]*derived in production from the canonical subject grounding \(D-14\)[^\n]*\| FULL AFTER BUILD \|$/mu, 'A-1 (Thread <-> Reading appearance) is FULL AFTER BUILD through the production path');
+  assert.ok(doc.includes('R1-02 RESOLVED (R2) — CANONICAL READING SUBJECT-GROUNDING AUTHORITY'), 'the document states the resolution');
+  assert.doesNotMatch(doc, /R1-02 BLOCKED|AUTHORITY MISSING|waits for that authority|unpopulated in production/u, 'no stale blocker statement survives');
+  assert.match(doc, /\*\*D-14 — The canonical Reading subject-grounding authority \(R2\)/u, 'the authority is a recorded architecture decision');
+  assert.ok(doc.includes('Stage 1.9 freezes Reading ↔ Hypothesis as PARTIAL'), 'the ontology is the frozen PARTIAL one: analytical identity, subject grounding, Thread appearance and Evidence participation kept apart');
   assert.doesNotMatch(doc, /evaluator that decides binding is a later task|is a later task/u, 'the binding authority is not deferred to a later task (R1-04)');
   assert.ok(doc.includes('Binding from a label, string similarity, an embedding, Evidence or peer co-occurrence, the current LF at creation time, or geometry is forbidden by the frozen rule, so none is invented'),
-    'the document records that no heuristic stands in for the missing authority');
+    'the document records that no heuristic stands in for the authority');
   assert.doesNotMatch(migration.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n'), /similar|embedding|ILIKE|~\*/u, 'the migration carries no similarity authority that could bind a Reading');
-  assert.doesNotMatch(productionCode, /bind_reading_to_thread_v1|unbind_reading_from_thread_v1/u, 'no server code reaches the binding writers: there is no production path');
+  assert.doesNotMatch(productionCode, /bind_reading_to_thread_v1|unbind_reading_from_thread_v1|record_thread_reading_appearance_v1|persist_authorized_subject_groundings_v1/u, 'the projection runtime never writes an appearance or a grounding');
   // R1-01: the runtime of a LEGACY UNCOVERED SESSION continues; only its historical projection is disabled.
   assert.match(doc, /Conversation Runtime continues normally/u, 'the document states that a LEGACY UNCOVERED SESSION keeps its Conversation Runtime');
   assert.doesNotMatch(doc, /no Session Position can ever be committed into it|never enters committed-CU commitment|the CU gate/u, 'no stale statement about a gated runtime survives (R1-04)');
@@ -259,6 +262,62 @@ test('the client seam is passive and typed: decode, fetch, hold; NOT_FETCHED / D
   assert.equal(isNativeImpactPath(`${MOBILE_DIR}/historical-projection-wire.ts`), true, 'the Android / iOS smoke gates run for T-03C');
   assert.equal(gitBlobId(mobileCi), '8efe44a2d2e95688c7612a2429b8f3ab106ecb8c', 'mobile-ci.yml is byte-identical (MOB-CI-01 preserved)');
   assert.equal(gitBlobId(read('apps/mobile/package.json')), 'a259368e87baeca24d7374dd922d866bbe6a6f88', 'the mobile package declaration is byte-identical');
+});
+
+test('R2: the production A-1 path is the canonical subject-grounding authority end to end - server-built universe, opaque handles, server authorization, atomic persistence, derived appearance - and nothing else writes an appearance or a grounding', () => {
+  const apiSrc = join(rootPath, 'apps/api/src');
+  const production = listFiles(apiSrc).filter((file) => /\.ts$/u.test(file) && !/\.spec\.ts$/u.test(file) && !file.includes('__tests__')).map((file) => [relative(file), stripComments(read(relative(file)))]);
+  assert.ok(production.length > 50, 'the API source tree was walked');
+  for (const [file, text] of production) {
+    assert.doesNotMatch(text, /bind_reading_to_thread_v1|unbind_reading_from_thread_v1|record_thread_reading_appearance_v1|persist_authorized_subject_groundings_v1|thread_reading_bindings|hypothesis_subject_groundings\b/u,
+      `${file} reaches no appearance or grounding writer: the database derives both from the canonical grounding`);
+  }
+  const rpcOwners = production.filter(([, text]) => /build_hypothesis_subject_grounding_universe_v1|complete_post_response_grounded_candidates_v1/u.test(text)).map(([file]) => file);
+  assert.deepEqual(rpcOwners, ['apps/api/src/post-response-intelligence/post-response-intelligence.repository.ts'], 'exactly ONE repository reaches the two service_role authority entries');
+  const ledger = stripComments(read('apps/api/src/post-response-intelligence/post-response-intelligence.repository.ts'));
+  assert.match(ledger, /this\.request<unknown>\('rpc\/build_hypothesis_subject_grounding_universe_v1',\{method:'POST',body:JSON\.stringify\(\{p_execution_id:id\}\)\}\)/u, 'the universe is built from the execution identity alone');
+  assert.match(ledger, /this\.booleanRpc\('complete_post_response_grounded_candidates_v1',\{p_execution_id:id,p_result_code:'VALIDATED_CANDIDATES',p_result_payload:result\.candidates,p_subject_grounding:result\.subjectGroundings\}\)/u, 'the durable VALIDATED result carries the selections the server authorized, through the grounded completion');
+  assert.match(ledger, /this\.booleanRpc\('complete_post_response_candidate_provider_effect_v1',\{p_execution_id:id,p_result_code:'NO_ACCEPTED_CANDIDATES',p_result_payload:null\}\)/u, 'NO_ACCEPTED_CANDIDATES is the frozen completion');
+  assert.match(ledger, /parseSubjectGroundingUniverse\(/u, 'the universe is parsed exactly; corruption is a database failure, never an empty universe');
+  const dispatcher = stripComments(read('apps/api/src/post-response-intelligence/post-response-intelligence-dispatcher.service.ts'));
+  const universeAt = dispatcher.indexOf('await this.ledger.buildSubjectGroundingUniverse(execution.id)');
+  const claimAt = dispatcher.indexOf("await this.ledger.claim(execution.id,'CANDIDATE_PROVIDER')");
+  assert.ok(universeAt > 0 && claimAt > universeAt, 'the universe is built from the durable execution BEFORE the CANDIDATE_PROVIDER claim, never from a caller');
+  assert.match(dispatcher, /generateHypothesisCandidatePlan\(context,assembled\.request,[^;]*himContext,subjectGroundingUniverse\)/u, 'the one provider call receives the server universe');
+  const policy = stripComments(read('apps/api/src/hypothesis/hypothesis-generation.policy.ts'));
+  assert.match(policy, /authorizeSubjectGroundingHandles\(value\.subjectGroundingHandles,request\.eligibleSubjectGroundings\)/u, 'every proposal is authorized against the universe of ITS request');
+  const enrichment = stripComments(read('apps/api/src/background-intelligence/background-intelligence-enrichment.service.ts'));
+  assert.match(enrichment, /authorizeSubjectGroundingHandles\(proposal\.subjectGroundingHandles,request\.eligibleSubjectGroundings\)/u, 'and again where the durable selection is assembled');
+  assert.match(enrichment, /eligibleSubjectGroundings/u);
+  const authority = stripComments(read('apps/api/src/hypothesis/hypothesis-subject-grounding.authority.ts'));
+  const types = stripComments(read('apps/api/src/hypothesis/hypothesis-subject-grounding.types.ts'));
+  const generator = stripComments(read('apps/api/src/hypothesis/gemini-hypothesis-candidate.generator.ts'));
+  for (const [name, text] of [['the authority', authority], ['the types', types]]) {
+    assert.doesNotMatch(text, /emergingFocusId|threadId|focusId|emerging_focus|thread_id|sessionId/u, `${name} never sees or accepts a focus, Thread or Session identity: handles only`);
+  }
+  for (const [name, text] of [['the authority', authority], ['the types', types], ['the generator', generator]]) {
+    assert.doesNotMatch(text, /similar|embedding|levenshtein|cosine|normalize\(|localeCompare|placement/iu, `${name} carries no similarity, embedding, Evidence-overlap or geometry grounding`);
+  }
+  const authorization = authority.slice(authority.indexOf('export function authorizeSubjectGroundingHandles'));
+  assert.ok(authorization.length > 0);
+  assert.doesNotMatch(authorization, /subjectText|statement|startedSp|lastAttentionSp/u, 'authorization never reads wording, statements or Session Positions: only the handle set');
+  assert.doesNotMatch(authority, /\.subjectText\.(?:includes|indexOf|match|search|startsWith|localeCompare)|subjectText\s*===\s*[a-z]/u, 'the universe parser validates the wording\'s shape and never compares it');
+  assert.match(authority, /const allowed = new Set\(\(universe \?\? \[\]\)\.map\(\(entry\) => entry\.handle\)\);/u, 'authorization is set membership over the handles the server issued');
+  assert.match(types, /export const MAX_SUBJECT_GROUNDING_CANDIDATES = 32;/u);
+  assert.match(types, /export const MAX_SUBJECT_GROUNDINGS_PER_CANDIDATE = 8;/u);
+  assert.match(generator, /eligibleSubjectGroundings: request\.eligibleSubjectGroundings\.map\(\(\{ handle, subjectText, startedSp, lastAttentionSp \}\) =>/u, 'the provider sees exactly the handle, the wording and the Session Positions');
+  assert.match(generator, /items: \{ type: 'string', enum: \[\.\.\.handles\] \}/u, 'the provider schema enumerates exactly the issued handles');
+  assert.match(generator, /grounded \? `\$\{INSTRUCTIONS\} \$\{SUBJECT_GROUNDING_INSTRUCTIONS\}` : INSTRUCTIONS/u, 'a request without a universe is the frozen request, byte for byte');
+  // The wire and both decoders carry the grounding as a closed shape; the T-02 kernel (blob-pinned above) has no key for it.
+  assert.match(runtimeIndex, /^\s*DisclosedSubjectGrounding,$/mu);
+  assert.match(stripComments(runtimeHistorical), /export interface DisclosedSubjectGrounding \{\s*readonly emergingFocusId: string;\s*readonly groundedAtSp: number;\s*\}/u);
+  assert.match(stripComments(runtimeHistorical), /readonly subjectGroundings: readonly DisclosedSubjectGrounding\[\];/u);
+  assert.match(mapper, /const SUBJECT_GROUNDING_KEYS = \['emergingFocusId', 'groundedAtSp'\] as const;/u);
+  assert.match(mapper, /grounded beyond TC/u);
+  assert.match(mapper, /an Emerging Focus that is not known at TC/u);
+  assert.match(mobileWire, /const SUBJECT_GROUNDING_KEYS = \['emergingFocusId', 'groundedAtSp'\] as const;/u);
+  assert.match(read('apps/mobile/README.md'), /`subjectGroundings`/u);
+  assert.doesNotMatch(stripComments(read('apps/mobile/src/state/actions.ts')), /grounding/iu, 'no Product action grounds anything');
 });
 
 test('deterministic identities: RFC 4122 v5 over the documented URIs, pinned in SQL and re-derived by the verifier; the migration and the verifier are wired into CI', () => {

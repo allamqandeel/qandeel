@@ -37,6 +37,7 @@ import type {
   DisclosedReadingRelation,
   DisclosedSessionRung,
   DisclosedSourceProvenanceRung,
+  DisclosedSubjectGrounding,
   DisclosedThread,
   DisclosedThreadReadingAppearance,
   DisclosedThreadRung,
@@ -76,8 +77,9 @@ const MOMENT_KEYS = ['id', 'sp', 'sourceRole', 'sourceTurnId', 'ordinalWithinTur
 const FOCUS_KEYS = ['id', 'startedSp', 'lastAttentionSp', 'promotedThreadId', 'state'] as const;
 const QUESTION_APPEARANCE_KEYS = ['bindingId', 'gapId', 'gapOpenEpoch', 'readingId', 'readingVersion', 'questionType', 'sourceTurnId', 'assistantTurnId', 'appearedAtSp'] as const;
 const ANALYTICAL_RUNG_KEYS = ['readings', 'readingRelations', 'materials', 'gaps', 'questions', 'confidences'] as const;
-const READING_KEYS = ['id', 'statement', 'type', 'domain', 'scope', 'origin', 'assumptions', 'disconfirmingConditions', 'statusAtTc', 'versionAtTc', 'lineage'] as const;
+const READING_KEYS = ['id', 'statement', 'type', 'domain', 'scope', 'origin', 'assumptions', 'disconfirmingConditions', 'statusAtTc', 'versionAtTc', 'lineage', 'subjectGroundings'] as const;
 const LINEAGE_KEYS = ['kind', 'fromStatus', 'toStatus', 'fromVersion', 'toVersion'] as const;
+const SUBJECT_GROUNDING_KEYS = ['emergingFocusId', 'groundedAtSp'] as const;
 const RELATION_KEYS = ['a', 'b'] as const;
 const MATERIAL_KEYS = ['id', 'type', 'content', 'source', 'confidence', 'importance', 'version', 'supersedesMaterialId', 'supersededByMaterialId', 'statusAtTc', 'expiry'] as const;
 const EXPIRY_KEYS = ['mapping', 'sp'] as const;
@@ -274,6 +276,14 @@ function decodeAnalyticalRung(raw: unknown, tc: number): DisclosedAnalyticalObje
       };
     });
     if (lineage.length === 0 || versionAtTc < 1 || lineage.some((step) => step.toVersion > versionAtTc)) return reject('INCOHERENT_FAMILY', `${path}: lineage must exist and never exceed the then-current version`);
+    // T-03C R2: the Reading's canonical subject groundings known at TC, each at
+    // its own Session Position - a separate family from Evidence and from the
+    // Thread appearance; an empty list is an ungrounded Hypothesis-backed Reading.
+    const subjectGroundings = list(reading.subjectGroundings, `${path}.subjectGroundings`, (groundingRaw, groundingPath): DisclosedSubjectGrounding => {
+      const grounding = shape(groundingRaw, groundingPath, SUBJECT_GROUNDING_KEYS);
+      return { emergingFocusId: identity(grounding.emergingFocusId, `${groundingPath}.emergingFocusId`), groundedAtSp: sp(grounding.groundedAtSp, `${groundingPath}.groundedAtSp`, tc) };
+    });
+    if (new Set(subjectGroundings.map((grounding) => grounding.emergingFocusId)).size !== subjectGroundings.length) return reject('INCOHERENT_FAMILY', `${path}: a subject grounding appears twice`);
     return {
       id: identity(reading.id, `${path}.id`),
       statement: text(reading.statement, `${path}.statement`),
@@ -286,6 +296,7 @@ function decodeAnalyticalRung(raw: unknown, tc: number): DisclosedAnalyticalObje
       statusAtTc: text(reading.statusAtTc, `${path}.statusAtTc`),
       versionAtTc,
       lineage,
+      subjectGroundings,
     };
   });
   const readingIds = new Set(readings.map((reading) => reading.id));

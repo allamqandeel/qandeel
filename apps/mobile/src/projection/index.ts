@@ -30,6 +30,7 @@ export type {
   DisclosedReadingRelation,
   DisclosedSessionRung,
   DisclosedSourceProvenanceRung,
+  DisclosedSubjectGrounding,
   DisclosedThread,
   DisclosedThreadReadingAppearance,
   DisclosedThreadRung,

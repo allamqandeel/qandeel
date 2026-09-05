@@ -138,7 +138,8 @@ the rungs its requested semantic depth discloses.
   (Threads with their ONE Home as exact integer text and their Session-local state, the
   Live Focus at TC) + four rungs that are each `DISCLOSED { value }` or `DEPTH_WITHHELD`
   (Thread ↔ Reading appearances; Moments, Emerging Focuses, Formal Question ↔ Turn
-  appearances; Readings with then-current status / version and lineage, peer relations,
+  appearances; Readings with then-current status / version, lineage and `subjectGroundings`
+  (the canonical Emerging Focuses each Reading is grounded to, each at its own SP), peer relations,
   Materials with their R-C5 expiry mapping, Information Gaps, Question candidates,
   Confidence resolved CURRENT / SUPERSEDED / PREVALID; Evidence participations) + the
   optional inspection resolution along three orthogonal axes (knowledge, context,

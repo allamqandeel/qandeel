@@ -22,6 +22,7 @@ import type {
   DisclosedReading,
   DisclosedReadingLineageStep,
   DisclosedReadingRelation,
+  DisclosedSubjectGrounding,
   DisclosedThread,
   DisclosedThreadReadingAppearance,
   HistoricalExpiryMapping,
@@ -92,8 +93,9 @@ const FOCUS_KEYS = ['id', 'startedSp', 'lastAttentionSp', 'promotedThreadId'] as
 const LIVE_FOCUS_KEYS = ['kind', 'ref', 'atSp', 'reasonCode'] as const;
 const THREAD_KEYS = ['id', 'establishmentPath', 'establishedInSession', 'establishedSp', 'groundingEmergingFocusId', 'home', 'sessionLifecycle'] as const;
 const THREAD_APPEARANCE_KEYS = ['bindingId', 'threadId', 'hypothesisId', 'boundSp', 'current'] as const;
-const READING_KEYS = ['id', 'statement', 'type', 'domain', 'scope', 'origin', 'assumptions', 'disconfirmingConditions', 'statusAtTc', 'versionAtTc', 'lineage'] as const;
+const READING_KEYS = ['id', 'statement', 'type', 'domain', 'scope', 'origin', 'assumptions', 'disconfirmingConditions', 'statusAtTc', 'versionAtTc', 'lineage', 'subjectGroundings'] as const;
 const LINEAGE_KEYS = ['kind', 'fromStatus', 'toStatus', 'fromVersion', 'toVersion'] as const;
+const SUBJECT_GROUNDING_KEYS = ['emergingFocusId', 'groundedAtSp'] as const;
 const RELATION_KEYS = ['a', 'b'] as const;
 const PARTICIPATION_KEYS = ['hypothesisId', 'evidenceId', 'memoryId', 'role'] as const;
 const MATERIAL_KEYS = ['id', 'type', 'content', 'source', 'confidence', 'importance', 'version', 'supersedesMemoryId', 'supersededByMemoryId', 'statusAtTc', 'expiry'] as const;
@@ -149,9 +151,22 @@ function mapThread(raw: unknown, index: number, tc: number): DisclosedThread {
   };
 }
 
-function mapReading(raw: unknown, index: number): DisclosedReading {
+function mapReading(raw: unknown, index: number, tc: number, emergingFocusIds: ReadonlySet<string>): DisclosedReading {
   const path = `readings[${index}]`;
   const row = record(raw, path, READING_KEYS);
+  // T-03C R2: the canonical subject groundings known at TC - each anchored at
+  // its own Session Position and naming an Emerging Focus this Session knows
+  // at TC. Never inferred here from statement, scope, Evidence or appearance.
+  const subjectGroundings: DisclosedSubjectGrounding[] = list(row.subjectGroundings, `${path}.subjectGroundings`).map((entry, groundingIndex) => {
+    const groundingPath = `${path}.subjectGroundings[${groundingIndex}]`;
+    const grounding = record(entry, groundingPath, SUBJECT_GROUNDING_KEYS);
+    const groundedAtSp = sessionPosition(grounding.groundedAtSp, `${groundingPath}.groundedAtSp`);
+    const emergingFocusId = text(grounding.emergingFocusId, `${groundingPath}.emergingFocusId`);
+    if (groundedAtSp > tc) return incoherent(`${groundingPath}: grounded beyond TC`);
+    if (!emergingFocusIds.has(emergingFocusId)) return incoherent(`${groundingPath}: an Emerging Focus that is not known at TC`);
+    return { emergingFocusId, groundedAtSp };
+  });
+  if (new Set(subjectGroundings.map((grounding) => grounding.emergingFocusId)).size !== subjectGroundings.length) return incoherent(`${path}: a subject grounding appears twice`);
   const lineage: DisclosedReadingLineageStep[] = list(row.lineage, `${path}.lineage`).map((step, stepIndex) => {
     const stepPath = `${path}.lineage[${stepIndex}]`;
     const entry = record(step, stepPath, LINEAGE_KEYS);
@@ -178,6 +193,7 @@ function mapReading(raw: unknown, index: number): DisclosedReading {
     statusAtTc: text(row.statusAtTc, `${path}.statusAtTc`),
     versionAtTc,
     lineage,
+    subjectGroundings,
   };
 }
 
@@ -263,7 +279,8 @@ export function mapHistoricalProjectionRow(raw: unknown): HistoricalKnowledge {
     return incoherent('live_focus: an Emerging Focus that is not known at TC');
   }
 
-  const readings = list(row.readings, 'readings').map((entry, index) => mapReading(entry, index));
+  const emergingFocusIds = new Set(emergingFocuses.map((focus) => focus.id));
+  const readings = list(row.readings, 'readings').map((entry, index) => mapReading(entry, index, tc, emergingFocusIds));
   const readingIds = new Set(readings.map((reading) => reading.id));
   if (readingIds.size !== readings.length) return incoherent('readings: a Reading appears twice');
   const versionOf = new Map(readings.map((reading) => [reading.id, reading.versionAtTc]));

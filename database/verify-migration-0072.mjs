@@ -150,6 +150,15 @@ const RECORD_PARTICIPATION = 'public.record_historical_evidence_participation_v1
 const RECORD_RELATION = 'public.record_historical_reading_relation_v1(uuid,uuid,uuid,text,uuid,integer,bigint,bigint)';
 const BIND = 'public.bind_reading_to_thread_v1(uuid,uuid,uuid,uuid)';
 const UNBIND = 'public.unbind_reading_from_thread_v1(uuid,uuid,uuid)';
+// R2: the subject-grounding authority surface.
+const RECORD_APPEARANCE = 'public.record_thread_reading_appearance_v1(uuid,uuid,uuid,uuid,integer,bigint,bigint)';
+const GROUNDING_IDENTITY = 'public.hypothesis_subject_grounding_identity_v1(uuid,uuid)';
+const GROUNDING_HANDLE = 'public.hypothesis_subject_grounding_handle_v1(uuid,uuid)';
+const UNIVERSE_PRESENTATION = 'public.hypothesis_subject_grounding_universe_presentation_v1(public.hypothesis_subject_grounding_universes)';
+const BUILD_UNIVERSE = 'public.build_hypothesis_subject_grounding_universe_v1(uuid)';
+const GROUNDED_COMPLETION = 'public.complete_post_response_grounded_candidates_v1(uuid,text,jsonb,jsonb)';
+const PERSIST_GROUNDINGS = 'public.persist_authorized_subject_groundings_v1(uuid)';
+const GROUNDING_TRIGGERS = ['public.derive_thread_reading_appearances_for_grounding_v1()', 'public.derive_thread_reading_appearances_for_focus_binding_v1()'];
 const MEMORY_FOR_EXECUTION = 'public.server_create_memory_for_execution_v1(uuid,uuid,text,text,text,double precision,double precision,text,timestamptz)';
 const PERSIST = 'public.persist_post_response_hypothesis_generation_v1(uuid)';
 const UPDATE_BATCH = 'public.execute_post_response_hypothesis_update_batch_v1(uuid,jsonb)';
@@ -165,7 +174,8 @@ const HOOKS = ['public.capture_historical_reading_change_v1()', 'public.capture_
   'public.provision_session_historical_coverage_v1()'];
 const HISTORY_TABLES = ['historical_world_semantic_clocks', 'session_historical_coverage', 'session_historical_baselines', 'historical_thread_availability',
   'historical_reading_events', 'historical_evidence_participation_events', 'historical_reading_relation_events', 'historical_material_events',
-  'historical_gap_events', 'historical_question_events', 'historical_confidence_events', 'historical_question_appearance_events', 'thread_reading_bindings'];
+  'historical_gap_events', 'historical_question_events', 'historical_confidence_events', 'historical_question_appearance_events', 'thread_reading_bindings',
+  'hypothesis_subject_groundings', 'hypothesis_subject_grounding_universes', 'hypothesis_subject_grounding_proposals'];
 const CANONICAL_HOOKED = [['hypotheses', 'hypotheses_historical_capture', 'hypotheses_historical_preservation'], ['memories', 'memories_historical_capture', 'memories_historical_preservation'],
   ['question_candidates', 'question_candidates_historical_capture', 'question_candidates_historical_preservation'],
   ['confidence_evaluations', 'confidence_evaluations_historical_capture', 'confidence_evaluations_historical_preservation']];
@@ -188,6 +198,8 @@ function uuidV5(namespace, name) {
 }
 const EVENT_NAMESPACE = uuidV5(RFC4122_URL_NAMESPACE, 'https://qandeel.app/runtime/historical-availability-event/v1');
 const READING_BINDING_NAMESPACE = uuidV5(RFC4122_URL_NAMESPACE, 'https://qandeel.app/runtime/thread-reading-binding/v1');
+const SUBJECT_GROUNDING_NAMESPACE = uuidV5(RFC4122_URL_NAMESPACE, 'https://qandeel.app/runtime/hypothesis-subject-grounding/v1');
+const SUBJECT_GROUNDING_HANDLE_NAMESPACE = uuidV5(RFC4122_URL_NAMESPACE, 'https://qandeel.app/runtime/subject-grounding-handle/v1');
 const THREAD_NAMESPACE = uuidV5(RFC4122_URL_NAMESPACE, 'https://qandeel.app/world/thread/v1');
 const HOME_ANCHOR_NAMESPACE = uuidV5(RFC4122_URL_NAMESPACE, 'https://qandeel.app/world/home-anchor/v1');
 const THREAD_EVENT_NAMESPACE = uuidV5(RFC4122_URL_NAMESPACE, 'https://qandeel.app/runtime/thread-established/v1');
@@ -296,7 +308,11 @@ const establishNew = (session, unitId, focusId, threadId, evidence, transitions 
 const attendExisting = (unitId, focusId, threadId, transitions = []) => lifecycle(unitId, {
   outcome: 'ATTEND_EXISTING', emerging_focus_id: focusId, thread_id: threadId, lifecycle_transitions: transitions,
 });
-const noAction = (unitId) => lifecycle(unitId, {});
+const noAction = (unitId, focusId = null, transitions = []) => lifecycle(unitId, { emerging_focus_id: focusId, lifecycle_transitions: transitions });
+const reopenExisting = (session, unitId, focusId, threadId, others = []) => lifecycle(unitId, {
+  outcome: 'REOPEN_EXISTING', emerging_focus_id: focusId, thread_id: threadId,
+  lifecycle_transitions: [transition(session, unitId, threadId, 'REOPENED', 'GENUINE_RETURN'), ...others],
+});
 const lfChange = (session, unitId, kind, ref, reason) => ({
   unit_id: unitId, effective_kind: kind, effective_ref: ref, transition: true, reason_code: reason,
   transition_event_id: lfEventIdOf(session, unitId, kind, ref),
@@ -584,26 +600,30 @@ async function verifyDeploymentSpan() {
 async function verifyStaticAuthority() {
   stage = 'A. schema / privilege / posture / declarations';
   const definer = async (signature) => one('SELECT pg_get_userbyid(p.proowner) owner, p.prosecdef definer, p.proconfig config, p.provolatile volatility FROM pg_proc p WHERE p.oid = to_regprocedure($1)', [signature]);
+  const R2_SURFACE = [RECORD_APPEARANCE, GROUNDING_IDENTITY, GROUNDING_HANDLE, UNIVERSE_PRESENTATION, BUILD_UNIVERSE, GROUNDED_COMPLETION, PERSIST_GROUNDINGS, ...GROUNDING_TRIGGERS];
   for (const signature of [PROJECTION, EXPIRY, WALL_TIME, IDENTITY, CAPTURE_BEGIN, CAPTURE_CONTEXT, CAPTURE_EXECUTION, IDENTITY_CONFLICT, RECORD_PARTICIPATION, RECORD_RELATION,
-    BIND, UNBIND, MEMORY_FOR_EXECUTION, PERSIST, UPDATE_BATCH, CONFIDENCE_BATCH, SYNC_V1, PERSIST_CORE, UPDATE_BATCH_CORE, CONFIDENCE_BATCH_CORE, ...HOOKS]) {
+    BIND, UNBIND, MEMORY_FOR_EXECUTION, PERSIST, UPDATE_BATCH, CONFIDENCE_BATCH, SYNC_V1, PERSIST_CORE, UPDATE_BATCH_CORE, CONFIDENCE_BATCH_CORE, ...HOOKS, ...R2_SURFACE]) {
     const contract = await definer(signature);
     ok(contract, `${signature} exists with its exact signature`);
     strict(contract.owner, 'postgres', `${signature} is postgres-owned`);
     ok(Array.isArray(contract.config) && contract.config.some((entry) => entry.startsWith('search_path=')), `${signature} has a fixed search path`);
     // The four pure row guards read NEW / OLD only and need no definer rights;
+    // the pure identity derivations and the pure presentation read nothing;
     // everything that reads or writes a history table runs as its owner.
     const pureGuard = ['public.guard_historical_canonical_row_preservation_v1()', 'public.guard_historical_world_semantic_clock_v1()',
-      'public.guard_thread_reading_binding_mutation_v1()', 'public.reject_historical_projection_mutation_v1()', IDENTITY].includes(signature);
+      'public.guard_thread_reading_binding_mutation_v1()', 'public.reject_historical_projection_mutation_v1()', IDENTITY,
+      GROUNDING_IDENTITY, GROUNDING_HANDLE, UNIVERSE_PRESENTATION].includes(signature);
     strict(contract.definer, !pureGuard, `${signature} ${pureGuard ? 'is a pure guard: no definer rights' : 'is SECURITY DEFINER'}`);
   }
   for (const signature of [PROJECTION, EXPIRY, WALL_TIME]) strict((await definer(signature)).volatility, 's', `${signature} is STABLE: the database refuses any write from inside it`);
   strict((await definer(IDENTITY)).volatility, 'i', 'the event identity derivation is IMMUTABLE');
+  for (const signature of [GROUNDING_IDENTITY, GROUNDING_HANDLE, UNIVERSE_PRESENTATION]) strict((await definer(signature)).volatility, 'i', `${signature} is IMMUTABLE: a pure derivation`);
   // THE AUTHORITY POSTURE.
   const authenticatedExecutable = [PROJECTION];
-  const serviceExecutable = [PERSIST, UPDATE_BATCH, CONFIDENCE_BATCH, SYNC_V1, MEMORY_FOR_EXECUTION];
+  const serviceExecutable = [PERSIST, UPDATE_BATCH, CONFIDENCE_BATCH, SYNC_V1, MEMORY_FOR_EXECUTION, BUILD_UNIVERSE, GROUNDED_COMPLETION];
   for (const role of ['anon', 'authenticated', 'service_role']) {
     for (const signature of [PROJECTION, EXPIRY, WALL_TIME, IDENTITY, CAPTURE_BEGIN, CAPTURE_CONTEXT, CAPTURE_EXECUTION, IDENTITY_CONFLICT, RECORD_PARTICIPATION, RECORD_RELATION,
-      BIND, UNBIND, MEMORY_FOR_EXECUTION, PERSIST, UPDATE_BATCH, CONFIDENCE_BATCH, SYNC_V1, PERSIST_CORE, UPDATE_BATCH_CORE, CONFIDENCE_BATCH_CORE, ...HOOKS]) {
+      BIND, UNBIND, MEMORY_FOR_EXECUTION, PERSIST, UPDATE_BATCH, CONFIDENCE_BATCH, SYNC_V1, PERSIST_CORE, UPDATE_BATCH_CORE, CONFIDENCE_BATCH_CORE, ...HOOKS, ...R2_SURFACE]) {
       const { granted } = await one("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') granted", [role, signature]);
       const expected = (role === 'authenticated' && authenticatedExecutable.includes(signature)) || (role === 'service_role' && serviceExecutable.includes(signature));
       strict(granted, expected, `${role} ${expected ? 'executes' : 'must not execute'} ${signature}`);
@@ -623,6 +643,13 @@ async function verifyStaticAuthority() {
     const { n } = await one('SELECT count(*)::int n FROM pg_trigger t WHERE t.tgrelid = $1::regclass AND NOT t.tgisinternal AND t.tgfoid = $2::regproc', [`public.${table}`, guard]);
     strict(n, 1, `${table} is guarded by exactly ONE mutation trigger`);
   }
+  // R2: the A-1 appearance is derived by exactly the two production triggers.
+  for (const [table, fn] of [['hypothesis_subject_groundings', 'public.derive_thread_reading_appearances_for_grounding_v1'], ['conversation_thread_focus_bindings', 'public.derive_thread_reading_appearances_for_focus_binding_v1']]) {
+    const { n } = await one("SELECT count(*)::int n FROM pg_trigger t WHERE t.tgrelid = $1::regclass AND NOT t.tgisinternal AND t.tgfoid = $2::regproc AND t.tgenabled = 'O' AND (t.tgtype & 2) = 0 AND (t.tgtype & 4) = 4", [`public.${table}`, fn]);
+    strict(n, 1, `${table} derives Thread <-> Reading appearances through exactly ONE AFTER INSERT trigger`);
+  }
+  strict((await one("SELECT count(*)::int n FROM pg_trigger t WHERE t.tgrelid = 'public.conversation_thread_focus_bindings'::regclass AND NOT t.tgisinternal AND t.tgname LIKE '%appearance%'")).n, 1,
+    'the frozen 0070 focus-binding table carries exactly the ONE 0072 appearance trigger');
   for (const [table, capture, preservation] of CANONICAL_HOOKED) {
     const names = (await rows('SELECT tgname FROM pg_trigger WHERE tgrelid = $1::regclass AND NOT tgisinternal AND tgname LIKE $2 ORDER BY tgname', [`public.${table}`, '%historical%'])).map((r) => r.tgname);
     eq(names, [capture, preservation].sort(byText), `${table} carries exactly its capture hook and its preservation guard`);
@@ -653,9 +680,20 @@ async function verifyStaticAuthority() {
   for (const [wrapper, core] of [[PERSIST, 'persist_post_response_hypothesis_generation_v1_core'], [UPDATE_BATCH, 'execute_post_response_hypothesis_update_batch_v1_core'], [CONFIDENCE_BATCH, 'execute_post_response_confidence_batch_v1_core']]) {
     const body = await bodyOf(wrapper);
     ok(body.includes('PERFORM public.historical_capture_begin_for_execution_v1(p_execution_id);'), `${wrapper} enters the capture boundary first`);
-    ok(body.includes(`RETURN public.${core}(`), `${wrapper} then runs exactly its frozen core`);
+    ok(body.includes(`public.${core}(`), `${wrapper} then runs exactly its frozen core`);
     ok(!/INSERT INTO|UPDATE public\.|DELETE FROM/u.test(body), `${wrapper} carries no DML of its own`);
   }
+  // R2: the persist wrapper records the authorized groundings in the SAME transaction as the frozen core, after it, and only when it persisted.
+  const persistBody = await bodyOf(PERSIST);
+  ok(persistBody.includes('persisted := public.persist_post_response_hypothesis_generation_v1_core(p_execution_id);') && persistBody.includes('IF persisted THEN')
+    && persistBody.includes('PERFORM public.persist_authorized_subject_groundings_v1(p_execution_id);') && persistBody.indexOf('_core(') < persistBody.indexOf('persist_authorized_subject_groundings_v1'),
+    'the persist wrapper runs the frozen core and then records the authorized subject groundings atomically');
+  const groundedCompletion = await bodyOf(GROUNDED_COMPLETION);
+  ok(groundedCompletion.includes('public.complete_post_response_candidate_provider_effect_v1(p_execution_id, p_result_code, p_result_payload)'), 'the grounded completion delegates to the frozen 0033 completion in the same transaction');
+  ok(/SUBJECT_GROUNDING_HANDLE_OUTSIDE_UNIVERSE/u.test(groundedCompletion) && /SUBJECT_GROUNDING_TARGET_NOT_CANDIDATE/u.test(groundedCompletion), 'and judges the proposal against the exact stored universe and candidate plan');
+  const universeBuilder = await bodyOf(BUILD_UNIVERSE);
+  ok(!/similar|ILIKE|~\*|embedding|score|rank/u.test(universeBuilder) && universeBuilder.includes('FROM public.conversation_emerging_focuses f') && universeBuilder.includes('FROM public.conversation_thread_focus_bindings b'),
+    'the universe is built from the frozen B1 focus rows and the B2 / B3 focus -> Thread bindings, never from text similarity');
   for (const core of [PERSIST_CORE, UPDATE_BATCH_CORE, CONFIDENCE_BATCH_CORE]) ok(!/historical_/u.test(await bodyOf(core)), `${core} is the frozen body: it knows nothing of history`);
   const sync = await bodyOf(SYNC_V1);
   ok(sync.includes('historical_capture_begin_for_execution_v1') && sync.includes('sync_post_response_information_gaps_v2'), 'the v1 synchronization entry enters the boundary and delegates to the v2 authority');
@@ -670,6 +708,15 @@ async function verifyStaticAuthority() {
   strict(EVENT_NAMESPACE, '79466f6b-04fd-5150-aa23-59682098057c', 'the event namespace re-derives in TypeScript');
   strict(READING_BINDING_NAMESPACE, '11be3a36-745a-54fd-a938-3f14eaedee14', 'the Thread <-> Reading binding namespace re-derives in TypeScript');
   ok(migrationSql.includes("'79466f6b-04fd-5150-aa23-59682098057c'") && migrationSql.includes("'11be3a36-745a-54fd-a938-3f14eaedee14'"), 'both namespaces are pinned in SQL');
+  // R2: the subject-grounding identity and handle namespaces re-derive in both languages, with their pinned vectors.
+  strict(SUBJECT_GROUNDING_NAMESPACE, '1592a69d-781e-57ce-bb2c-6744a6ac3ceb', 'the subject-grounding namespace re-derives in TypeScript');
+  strict(SUBJECT_GROUNDING_HANDLE_NAMESPACE, '8feaee1d-fe51-5e9e-8594-52499b414e64', 'the subject-grounding handle namespace re-derives in TypeScript');
+  ok(migrationSql.includes("'1592a69d-781e-57ce-bb2c-6744a6ac3ceb'") && migrationSql.includes("'8feaee1d-fe51-5e9e-8594-52499b414e64'"), 'both R2 namespaces are pinned in SQL');
+  const groundingVector = await one("SELECT public.hypothesis_subject_grounding_identity_v1('11111111-2222-4333-8444-555555555555','4ef8538d-ddda-5e11-b7d9-052be85de59a') g, public.hypothesis_subject_grounding_handle_v1('10000000-0000-4000-8000-000000000005','4ef8538d-ddda-5e11-b7d9-052be85de59a') h");
+  strict(groundingVector.g, uuidV5(SUBJECT_GROUNDING_NAMESPACE, '11111111-2222-4333-8444-555555555555:4ef8538d-ddda-5e11-b7d9-052be85de59a'), 'the database and TypeScript derive the same grounding identity');
+  strict(groundingVector.g, 'a89b9e67-501f-5c0d-bede-122763231f6e', 'the pinned grounding vector reproduces');
+  strict(groundingVector.h, uuidV5(SUBJECT_GROUNDING_HANDLE_NAMESPACE, '10000000-0000-4000-8000-000000000005:4ef8538d-ddda-5e11-b7d9-052be85de59a'), 'the database and TypeScript derive the same opaque handle');
+  strict(groundingVector.h, '22d3c5d1-02cc-55e5-97c8-7b5563e5332f', 'the pinned handle vector reproduces');
   const { v } = await one("SELECT public.historical_event_identity_v1('reading-created:11111111-2222-4333-8444-555555555555') v");
   strict(v, uuidV5(EVENT_NAMESPACE, 'reading-created:11111111-2222-4333-8444-555555555555'), 'the database and TypeScript derive the same event identity');
   strict(v, '91dc104c-e42b-54ff-8638-6dd7776f318c', 'the pinned identity vector reproduces');
@@ -1151,6 +1198,332 @@ async function verifyManagedCommands(owner, legacy, worldState) {
   return { generated, M8 };
 }
 
+// ----------------------------------------- SG. canonical subject grounding (R2)
+// The provider proposes opaque handles; the server authorizes them against the
+// exact stored universe; the database persists the grounding atomically with
+// the Hypothesis it grounds; the A-1 appearance is DERIVED from the grounding
+// and the frozen focus -> Thread truth at its own availability. Every fact
+// below is written through the production authorities - the FINAL coordinator
+// for Moments / focuses / Threads, the durable generation commands for
+// Readings and groundings - never by a verifier helper.
+const AMBIGUOUS_TEXT = 'هو قال إنه مش هيجي.';
+const AMBIGUOUS_REPLY = 'مين تقصد؟';
+const SPORT_TEXT = 'الرياضة بقت جزء من يومي.';
+const SPORT_REPLY = 'حلو.';
+const SPORT_MORE_TEXT = 'الرياضة فعلاً بقت مهمة ليا.';
+const SPORT_MORE_REPLY = 'واضح.';
+const RETURN_TEXT = 'نرجع لموضوع أحمد.';
+const RETURN_REPLY = 'تمام.';
+const HANDLE_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+/** ONE user CU with caller-supplied semantics plus ONE assistant ACKNOWLEDGE CU, through the FINAL coordinator. */
+async function semanticExchange(owner, world, text, reply, user, assistantLf, assistantLifecycle = (a) => noAction(a)) {
+  stage = `${stage.split(' [')[0]} [exchange: ${text}]`;
+  const turns = await completedTurns(owner, world.session, text, reply);
+  const ids = { u: randomUUID(), a: randomUUID() };
+  const token = { ...(await clockOf(world.session)), version: await identityVersionOf(owner) };
+  await identity('postgres');
+  const [result] = await exchange(world.session, owner, turns.userTurn, randomUUID(),
+    [unit(text, text, 1, ids.u)], [user.bundle(ids.u)], [user.thread(ids.u)], [user.lifecycle(ids.u)], [user.lf(ids.u)],
+    turns.assistantTurn, randomUUID(),
+    [unit(reply, reply, 1, ids.a)],
+    [bundle(ids.a, { functions: ['ACKNOWLEDGE'], sequence_position: 'RESPONSIVE', target_cu_id: ids.u, references: [], attention: NO_FOCUS })],
+    [noEstablishment(ids.a, 'NO_INDEPENDENT_FOCUS')], [assistantLifecycle(ids.a)], [assistantLf(ids.a)],
+    { sp: token.current_sp, seq: Number(token.seq), version: token.version });
+  return { turns, ids, liveHead: result.live_head };
+}
+/** ONE durable generation of `owner` in `session`, up to the CANDIDATE_PROVIDER claim: Intent authorized, universe built by the server. */
+async function beginGeneration(owner, session, legacy, { buildUniverse = true } = {}) {
+  const execution = { id: randomUUID(), turn: randomUUID() };
+  await identity('postgres');
+  await q('SELECT * FROM public.acquire_post_response_intelligence_execution_v1($1,$2,$3,$4,$5,$6,$7,$8)', [execution.id, randomUUID(), owner, session, execution.turn, '2.0', 'FAST', 'ALLOW']);
+  await identity('service_role');
+  strict((await one('SELECT public.claim_post_response_intelligence_effect_v1($1,$2) ok', [execution.id, 'INTENT_PROVIDER'])).ok, true);
+  const intent = { problem: { text: 'What is going on with the people around me?', source: 'CURRENT_USER_TURN', sourceTurnId: execution.turn }, domain: 'GENERAL',
+    scope: { kind: 'CONVERSATION_SESSION', sessionId: session, serialized: `CONVERSATION_SESSION:${session}` }, evidenceIds: [`memory:${legacy.M9}`, `memory:${legacy.M10}`] };
+  strict((await one('SELECT public.complete_post_response_intent_provider_effect_v1($1,$2,$3) ok', [execution.id, 'INTENT_AUTHORIZED', JSON.stringify(intent)])).ok, true);
+  const universe = buildUniverse ? (await one('SELECT public.build_hypothesis_subject_grounding_universe_v1($1) u', [execution.id])).u : undefined;
+  strict((await one('SELECT public.claim_post_response_intelligence_effect_v1($1,$2) ok', [execution.id, 'CANDIDATE_PROVIDER'])).ok, true);
+  const handleOf = (subjectText) => {
+    const entry = (universe?.entries ?? []).find((candidate) => candidate.subjectText === subjectText);
+    if (!entry) throw new Error(`the universe carries no subject ${subjectText}`);
+    return entry.handle;
+  };
+  const candidatesOf = (list) => list.map((candidate) => ({ hypothesisId: candidate.id, statement: candidate.statement, type: 'CAUSAL', domain: 'GENERAL', scope: `CONVERSATION_SESSION:${session}`,
+    supportingEvidenceIds: candidate.evidence ?? [`memory:${legacy.M9}`], contradictingEvidenceIds: [], assumptions: [], disconfirmingConditions: [] }));
+  const selectionsOf = (list) => list.map((candidate) => ({ hypothesisId: candidate.id, handles: candidate.handles ?? [] }));
+  return { id: execution.id, turn: execution.turn, session, universe, handleOf, candidatesOf, selectionsOf };
+}
+/** The grounded Candidate completion and the ONE atomic persistence of a begun generation. */
+async function completeAndPersist(generation, candidates) {
+  generation.plan = generation.candidatesOf(candidates);
+  generation.selections = generation.selectionsOf(candidates);
+  await identity('service_role');
+  strict((await one('SELECT public.complete_post_response_grounded_candidates_v1($1,$2,$3::jsonb,$4::jsonb) ok', [generation.id, 'VALIDATED_CANDIDATES', JSON.stringify(generation.plan), JSON.stringify(generation.selections)])).ok, true, 'the grounded Candidate completion');
+  strict((await one('SELECT public.claim_post_response_intelligence_effect_v1($1,$2) ok', [generation.id, 'HYPOTHESIS_PERSISTENCE'])).ok, true);
+  strict((await one('SELECT public.persist_post_response_hypothesis_generation_v1($1) ok', [generation.id])).ok, true, 'the ONE atomic persistence (Hypotheses + groundings + derived appearances)');
+  await newLogicalTransaction();
+}
+const groundingsOf = (hypothesis) => rows('SELECT grounding_id, emerging_focus_id, session_id, session_position, universe_frontier_sp, same_sp_event_sequence::text seq, world_version::text wv, execution_id FROM public.hypothesis_subject_groundings WHERE hypothesis_id=$1 ORDER BY session_position, grounding_id', [hypothesis]);
+const appearancesOf = (hypothesis) => rows('SELECT binding_id, thread_id, bound_sp, bound_event_sequence::text seq, world_version::text wv, unbound_sp FROM public.thread_reading_bindings WHERE hypothesis_id=$1 ORDER BY bound_sp, binding_id', [hypothesis]);
+const lifecycleOf = async (thread, session, beforeSp) => (await one('SELECT public.conversation_thread_session_lifecycle_state_v1($1,$2,$3) s', [thread, session, beforeSp])).s;
+const homeOf = (thread) => one('SELECT placement_x::text x, placement_y::text y FROM public.conversation_thread_homes WHERE thread_id=$1', [thread]);
+
+async function verifySubjectGrounding(owner, other, legacy) {
+  stage = 'SG. R2 canonical Reading subject grounding: server-built universe, opaque handles, server authorization, atomic persistence, derived A-1 appearances (SG-01 .. SG-18, P66-D)';
+  // A fresh covered Session of the owner: SP1..SP5, the manager (Thread at SP1)
+  // and Ahmed (Thread at SP3), LF = THREAD Ahmed.
+  const world = await sessionOne(owner);
+  await newLogicalTransaction();
+  const S = world.session;
+
+  // --- The universe: server-built from committed B1 / B2 truth, stored once,
+  //     presented as opaque handles only (SG-17).
+  const g0 = await beginGeneration(owner, S, legacy);
+  eq(g0.universe.frontierSp, 5, 'the universe frontier is the Live Head at build time');
+  eq(g0.universe.entries.map((entry) => [entry.subjectText, entry.startedSp, entry.lastAttentionSp]), [['المدير', 1, 1], ['أحمد', 3, 5]], 'exactly the committed focuses of the Session, each with its first committed wording and its Session Positions');
+  for (const entry of g0.universe.entries) {
+    eq(Object.keys(entry).sort(), ['handle', 'lastAttentionSp', 'startedSp', 'subjectText'], 'a provider sees a handle, the wording and Session Positions - never a focus, Thread or Session identity');
+    ok(HANDLE_SHAPE.test(entry.handle) && ![world.focuses.manager, world.focuses.ahmed, world.threads.manager, world.threads.ahmed].includes(entry.handle), 'SG-17: the handle is an opaque v5 identity, never the raw focus or Thread UUID');
+  }
+  strict(g0.handleOf('أحمد'), uuidV5(SUBJECT_GROUNDING_HANDLE_NAMESPACE, `${g0.id}:${world.focuses.ahmed}`), 'a handle re-derives in TypeScript: uuidV5(handle namespace, execution:focus)');
+  await identity('postgres');
+  const storedUniverse = await one('SELECT user_id, session_id, source_turn_id, frontier_sp, entries FROM public.hypothesis_subject_grounding_universes WHERE execution_id=$1', [g0.id]);
+  eq([storedUniverse.user_id, storedUniverse.session_id, storedUniverse.source_turn_id, storedUniverse.frontier_sp], [owner, S, g0.turn, 5], 'the universe is stored per execution with its server-owned provenance');
+  const ahmedEntry = storedUniverse.entries.find((entry) => entry.emergingFocusId === world.focuses.ahmed);
+  eq([ahmedEntry.groundingHandleId, ahmedEntry.startedCuId, ahmedEntry.threadId, ahmedEntry.threadBoundSp], [world.handles.ahmed, world.ids.u3, world.threads.ahmed, 3], 'each entry carries its committed provenance: the grounding reference handle, the starting CU and the Thread the focus already resolves to');
+  await identity('service_role');
+  eq((await one('SELECT public.build_hypothesis_subject_grounding_universe_v1($1) u', [g0.id])).u, g0.universe, 'building again returns the SAME universe: the first build is the universe of the execution for good');
+
+  // --- SG-01 / SG-03 / SG-06 / SG-07 / SG-08: one generation, three fates.
+  const HA = randomUUID();
+  const HM2 = randomUUID();
+  const HN = randomUUID();
+  await completeAndPersist(g0, [
+    { id: HA, statement: 'reading grounded to Ahmed', handles: [g0.handleOf('أحمد')] },
+    { id: HM2, statement: 'reading grounded to the manager and to Ahmed', handles: [g0.handleOf('المدير'), g0.handleOf('أحمد')] },
+    { id: HN, statement: 'أحمد بيتجنبني عشان الشغل - a statement that names Ahmed, shares his Evidence and is written while Ahmed is the Live Focus, yet grounds nothing', handles: [], evidence: [`memory:${legacy.M9}`] },
+  ]);
+  const groundingA = await groundingsOf(HA);
+  eq(groundingA.map((g) => [g.emerging_focus_id, g.session_id, g.session_position, g.universe_frontier_sp, g.execution_id]), [[world.focuses.ahmed, S, 5, 5, g0.id]], 'SG-01: one canonical grounding, anchored at the execution association (SP5) with the universe frontier it was judged against');
+  strict(groundingA[0].grounding_id, uuidV5(SUBJECT_GROUNDING_NAMESPACE, `${HA}:${world.focuses.ahmed}`), 'the grounding identity is derived, never random');
+  const appearanceA = await appearancesOf(HA);
+  eq(appearanceA.map((b) => [b.thread_id, b.bound_sp, b.seq, b.wv, b.unbound_sp]), [[world.threads.ahmed, 5, groundingA[0].seq, groundingA[0].wv, null]], 'SG-01: the focus already resolves to a Thread -> ONE A-1 appearance, production-authored in the same transaction, at the grounding\'s own anchor');
+  strict(appearanceA[0].binding_id, uuidV5(READING_BINDING_NAMESPACE, `${S}:${world.threads.ahmed}:${HA}:5`), 'the appearance identity is the frozen derivation');
+  eq((await appearancesOf(HM2)).map((b) => b.thread_id).sort(byText), [world.threads.manager, world.threads.ahmed].sort(byText), 'SG-03: two legitimate grounded focuses -> two appearances of ONE analytical identity');
+  strict((await one('SELECT count(*)::int n FROM public.hypotheses WHERE id = ANY($1)', [[HA, HM2, HN]])).n, 3, 'exactly one Hypothesis row each: an appearance never duplicates identity or creates ownership');
+  eq(await groundingsOf(HN), [], 'SG-06 / SG-07 / SG-08: shared Evidence, a statement that names the subject and the current LF ground nothing');
+  eq(await appearancesOf(HN), [], 'and derive no appearance');
+  strict((await one("SELECT count(*)::int n FROM public.historical_evidence_participation_events WHERE hypothesis_id=$1 AND event_kind='ATTACHED'", [HN])).n, 1, 'the ungrounded Reading\'s Evidence participation is recorded as Evidence - a different family, never membership');
+  const k5 = await project(owner, S, 5);
+  eq(k5.readings.find((r) => r.id === HA).subjectGroundings, [{ emergingFocusId: world.focuses.ahmed, groundedAtSp: 5 }], 'the projection carries the grounding at its own SP');
+  eq(k5.readings.find((r) => r.id === HN).subjectGroundings, [], 'and an empty list for the ungrounded Reading');
+  eq(k5.thread_reading_appearances.filter((a) => a.hypothesisId === HA).map((a) => [a.threadId, a.boundSp, a.current]), [[world.threads.ahmed, 5, true]]);
+  eq(k5.thread_reading_appearances.filter((a) => a.hypothesisId === HN), []);
+  eq((await project(owner, S, 4)).thread_reading_appearances, [], 'P66-A for the appearance: unknown before the grounding');
+
+  // --- SG-10: the durable retry persists nothing twice; a repeated grounded
+  //     completion of a completed effect is a bounded no-op.
+  const countsBefore = { groundings: (await one('SELECT count(*)::int n FROM public.hypothesis_subject_groundings WHERE execution_id=$1', [g0.id])).n, appearances: (await one('SELECT count(*)::int n FROM public.thread_reading_bindings WHERE hypothesis_id = ANY($1)', [[HA, HM2]])).n };
+  await identity('service_role');
+  strict(typeof (await one('SELECT public.persist_post_response_hypothesis_generation_v1($1) ok', [g0.id])).ok, 'boolean', 'a durable persistence retry is answered by the frozen core');
+  strict((await one('SELECT public.complete_post_response_grounded_candidates_v1($1,$2,$3::jsonb,$4::jsonb) ok', [g0.id, 'VALIDATED_CANDIDATES', JSON.stringify(g0.plan), JSON.stringify(g0.selections)])).ok, false, 'a repeated grounded completion of a completed effect changes nothing');
+  await newLogicalTransaction();
+  eq({ groundings: (await one('SELECT count(*)::int n FROM public.hypothesis_subject_groundings WHERE execution_id=$1', [g0.id])).n, appearances: (await one('SELECT count(*)::int n FROM public.thread_reading_bindings WHERE hypothesis_id = ANY($1)', [[HA, HM2]])).n }, countsBefore, 'SG-10: no duplicate grounding and no duplicate appearance');
+
+  // --- SG-05 / SG-16 / SG-17: the grounded completion refuses every handle the
+  //     server did not issue for THIS execution, and every malformed proposal,
+  //     rolling the completion back with it.
+  const otherWorld = await sessionOne(other);
+  await newLogicalTransaction();
+  const foreign = await beginGeneration(other, otherWorld.session, legacy);
+  const gNeg = await beginGeneration(owner, S, legacy);
+  const HX = randomUUID();
+  const attempt = (selections, code = 'VALIDATED_CANDIDATES', plan = gNeg.candidatesOf([{ id: HX, statement: 'a candidate under attack' }])) =>
+    q('SELECT public.complete_post_response_grounded_candidates_v1($1,$2,$3::jsonb,$4::jsonb)', [gNeg.id, code, plan === null ? null : JSON.stringify(plan), selections === null ? null : JSON.stringify(selections)]);
+  await identity('service_role');
+  for (const [label, handles, token] of [
+    ['SG-05: a handle the server never issued', ['not-a-handle'], 'SUBJECT_GROUNDING_HANDLE_OUTSIDE_UNIVERSE'],
+    ['SG-17: the raw focus UUID', [world.focuses.ahmed], 'SUBJECT_GROUNDING_HANDLE_OUTSIDE_UNIVERSE'],
+    ['SG-17: the raw Thread UUID', [world.threads.ahmed], 'SUBJECT_GROUNDING_HANDLE_OUTSIDE_UNIVERSE'],
+    ['SG-16: a handle of another user\'s universe', [foreign.handleOf('أحمد')], 'SUBJECT_GROUNDING_HANDLE_OUTSIDE_UNIVERSE'],
+    ['a handle of another execution of the same user', [g0.handleOf('أحمد')], 'SUBJECT_GROUNDING_HANDLE_OUTSIDE_UNIVERSE'],
+    ['a duplicate handle', [gNeg.handleOf('أحمد'), gNeg.handleOf('أحمد')], 'SUBJECT_GROUNDING_DUPLICATE_HANDLE'],
+    ['more handles than the bound', Array.from({ length: 9 }, () => gNeg.handleOf('أحمد')), 'SUBJECT_GROUNDING_LIMIT_EXCEEDED'],
+    ['a non-string handle', [7], 'INVALID_SUBJECT_GROUNDING_PROPOSAL'],
+  ]) {
+    const error = await rejected(() => attempt([{ hypothesisId: HX, handles }]), token);
+    ok(error, label);
+  }
+  await rejected(() => attempt([{ hypothesisId: randomUUID(), handles: [] }]), 'SUBJECT_GROUNDING_TARGET_NOT_CANDIDATE');
+  await rejected(() => attempt([]), 'INVALID_SUBJECT_GROUNDING_PROPOSAL');
+  await rejected(() => attempt([{ hypothesisId: HX, handles: [], extra: true }]), 'INVALID_SUBJECT_GROUNDING_PROPOSAL');
+  await rejected(() => attempt(null), 'INVALID_SUBJECT_GROUNDING_PROPOSAL');
+  await rejected(() => attempt([], 'NO_ACCEPTED_CANDIDATES', null), 'INVALID_SUBJECT_GROUNDING_PROPOSAL');
+  await identity('postgres');
+  eq(await one("SELECT state, result_code FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key='CANDIDATE_PROVIDER'", [gNeg.id]), { state: 'CLAIMED', result_code: null }, 'a refused proposal never completes the effect: no partial grounding, no silent fallback');
+  strict((await one('SELECT count(*)::int n FROM public.hypothesis_subject_grounding_proposals WHERE execution_id=$1', [gNeg.id])).n, 0, 'and stores no proposal');
+  await newLogicalTransaction();
+
+  // --- No universe, no grounded result: a generation whose universe the server
+  //     never built cannot complete a VALIDATED Candidate result at all - the
+  //     frozen completion rolls back with the refusal, so no Hypothesis can ever
+  //     be persisted without the universe it was judged against.
+  const unbuilt = await beginGeneration(owner, S, legacy, { buildUniverse: false });
+  const HU = randomUUID();
+  await identity('service_role');
+  await rejected(() => q('SELECT public.complete_post_response_grounded_candidates_v1($1,$2,$3::jsonb,$4::jsonb)',
+    [unbuilt.id, 'VALIDATED_CANDIDATES', JSON.stringify(unbuilt.candidatesOf([{ id: HU, statement: 'a candidate without a universe' }])), JSON.stringify([{ hypothesisId: HU, handles: [] }])]),
+  'SUBJECT_GROUNDING_UNIVERSE_MISSING', ['55000']);
+  await identity('postgres');
+  eq(await one("SELECT state, result_code FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key='CANDIDATE_PROVIDER'", [unbuilt.id]), { state: 'CLAIMED', result_code: null }, 'the frozen completion is not left behind: the refusal rolled the whole grounded completion back');
+  strict((await one('SELECT count(*)::int n FROM public.hypothesis_subject_grounding_universes WHERE execution_id=$1', [unbuilt.id])).n, 0, 'and no universe was fabricated on the way');
+  await newLogicalTransaction();
+
+  // --- SG-04: an AMBIGUOUS reference never becomes a focus, so the universe
+  //     cannot name it and no definite grounding can ever target it.
+  const ambiguousExchange = await semanticExchange(owner, world, AMBIGUOUS_TEXT, AMBIGUOUS_REPLY, {
+    bundle: (u) => bundle(u, { sequence_position: 'FOLLOW_UP',
+      references: [{ ...anchor(AMBIGUOUS_TEXT, 'هو'), state: 'AMBIGUOUS', resolved_handle_id: null, creates_handle: false, candidate_handle_ids: [world.handles.manager, world.handles.ahmed].sort(byText) }],
+      attention: { kind: 'NO_INDEPENDENT_FOCUS', reason: 'UNRESOLVED_ATTENTION', emerging_focus_id: null, creates_focus: false, grounding_reference_index: null } }),
+    thread: (u) => noEstablishment(u, 'NO_INDEPENDENT_FOCUS'), lifecycle: (u) => noAction(u), lf: (u) => lfSame(u, 'THREAD', world.threads.ahmed),
+  }, (a) => lfSame(a, 'THREAD', world.threads.ahmed));
+  eq(ambiguousExchange.liveHead, 7, 'the ambiguous exchange committed SP6 and SP7');
+  const g4 = await beginGeneration(owner, S, legacy);
+  eq(g4.universe.entries.map((entry) => entry.subjectText), ['المدير', 'أحمد'], 'SG-04: the ambiguous "هو" is no focus and therefore no candidate subject - no definite grounding can target it');
+  await newLogicalTransaction();
+
+  // --- SG-02 (Case B) + SG-18: a focus grounded while still Emerging; the
+  //     appearance is born only when the focus later becomes a Thread, at THAT
+  //     Moment; the grounding itself anchors where it became canonical.
+  const sport = { handle: randomUUID(), focus: randomUUID() };
+  sport.thread = threadIdOf(owner, sport.focus);
+  const sportStart = await semanticExchange(owner, world, SPORT_TEXT, SPORT_REPLY, {
+    bundle: (u) => bundle(u, { functions: ['INFORM_REPORT', 'FOCUS_SHIFT'], references: [resolved(SPORT_TEXT, 'الرياضة', sport.handle, true)], attention: startFocus(sport.focus, 0, 'EXPLICIT_FOCUS_SHIFT') }),
+    thread: (u) => noEstablishment(u, 'NO_PROMOTION_PATH_PROVEN', sport.focus),
+    lifecycle: (u) => noAction(u, sport.focus, [transition(S, u, world.threads.ahmed, 'DORMANT', 'EXPLICIT_FOCUS_SHIFT')]),
+    lf: (u) => lfChange(S, u, 'EMERGING', sport.focus, 'FOCUS_REPLACEMENT'),
+  }, (a) => lfSame(a, 'EMERGING', sport.focus));
+  eq(sportStart.liveHead, 9, 'the sport focus started at SP8 and is Emerging');
+  strict(await lifecycleOf(world.threads.ahmed, S, 10), 'DORMANT', 'Ahmed went DORMANT at the explicit focus shift');
+  const g1 = await beginGeneration(owner, S, legacy);
+  eq(g1.universe.entries.map((entry) => [entry.subjectText, entry.startedSp, entry.lastAttentionSp]), [['المدير', 1, 1], ['أحمد', 3, 5], ['الرياضة', 8, 8]], 'an Emerging focus is a legitimate subject: the universe names it before any Thread exists');
+  const HS = randomUUID();
+  await completeAndPersist(g1, [{ id: HS, statement: 'reading grounded to a focus that is still Emerging', handles: [g1.handleOf('الرياضة')] }]);
+  eq((await groundingsOf(HS)).map((g) => [g.emerging_focus_id, g.session_position, g.universe_frontier_sp]), [[sport.focus, 9, 9]], 'SG-18: the grounding is anchored where it actually became canonical (SP9, the Live Head at persistence) - not at the focus start (SP8), not at the causal source turn');
+  eq(await appearancesOf(HS), [], 'SG-02: no Thread exists for the focus yet -> no appearance, nothing backdated');
+  const k9 = await project(owner, S, 9);
+  eq(k9.readings.find((r) => r.id === HS).subjectGroundings, [{ emergingFocusId: sport.focus, groundedAtSp: 9 }], 'the Reading is known at SP9 with its grounding to the Emerging focus');
+  eq(k9.thread_reading_appearances.filter((a) => a.hypothesisId === HS), [], 'and without any appearance');
+  ok(!idsOf((await project(owner, S, 8)).readings).includes(HS), 'SG-18: a sealed earlier Session Position never learns of a later grounding');
+  const promotion = await semanticExchange(owner, world, SPORT_MORE_TEXT, SPORT_MORE_REPLY, {
+    bundle: (u) => bundle(u, { functions: ['INFORM_REPORT', 'ELABORATE'], sequence_position: 'FOLLOW_UP', references: [resolved(SPORT_MORE_TEXT, 'الرياضة', sport.handle, false)], attention: attendFocus(sport.focus, 0, 'SUBSTANTIVE_ELABORATION') }),
+    thread: (u) => establish(owner, u, sport.focus, 'TE-02', [sportStart.ids.u, u]),
+    lifecycle: (u) => establishNew(S, u, sport.focus, sport.thread, [{ cu_id: sportStart.ids.u, reference_index: 0 }, { cu_id: u, reference_index: 0 }]),
+    lf: (u) => lfChange(S, u, 'THREAD', sport.thread, 'THREAD_PROMOTION'),
+  }, (a) => lfSame(a, 'THREAD', sport.thread));
+  eq(promotion.liveHead, 11, 'the sport focus was promoted to a Thread at SP10 (TE-02) through the frozen FINAL chain');
+  const appearanceS = await appearancesOf(HS);
+  eq(appearanceS.map((b) => [b.thread_id, b.bound_sp, b.seq, b.unbound_sp]), [[sport.thread, 10, '2', null]], 'SG-02: the appearance is born in the establishing transaction, at the focus binding\'s own Session Position and Thread-layer same-SP sequence - production-authored, never a verifier helper');
+  strict(appearanceS[0].binding_id, uuidV5(READING_BINDING_NAMESPACE, `${S}:${sport.thread}:${HS}:10`));
+  eq((await project(owner, S, 9)).thread_reading_appearances.filter((a) => a.hypothesisId === HS), [], 'SG-12 / P66-D: absent at TC = 9 although the Reading and its grounding are known');
+  eq((await project(owner, S, 10)).thread_reading_appearances.filter((a) => a.hypothesisId === HS).map((a) => [a.threadId, a.boundSp, a.current]), [[sport.thread, 10, true]], 'SG-12 / P66-D: present exactly from its own bind SP');
+  // A later grounding to the now-established focus appears at once (Case A after Case B), and the universe reports the Thread.
+  const g2 = await beginGeneration(owner, S, legacy);
+  eq(g2.universe.entries.map((entry) => entry.subjectText), ['المدير', 'أحمد', 'الرياضة']);
+  await identity('postgres');
+  eq((await one('SELECT entries FROM public.hypothesis_subject_grounding_universes WHERE execution_id=$1', [g2.id])).entries.find((entry) => entry.emergingFocusId === sport.focus).threadId, sport.thread, 'the stored universe now records the Thread the focus resolves to');
+  const HS2 = randomUUID();
+  await completeAndPersist(g2, [{ id: HS2, statement: 'reading grounded to the sport focus after its promotion', handles: [g2.handleOf('الرياضة')] }]);
+  eq((await appearancesOf(HS2)).map((b) => [b.thread_id, b.bound_sp]), [[sport.thread, 11]], 'Case A after Case B: the appearance is born with the grounding, at the grounding\'s anchor');
+
+  // --- SG-13: Dormant / Reopened change no appearance and no Home.
+  const homeBefore = await homeOf(world.threads.ahmed);
+  const ahmedAppearance = (await appearancesOf(HA))[0];
+  const back = await semanticExchange(owner, world, RETURN_TEXT, RETURN_REPLY, {
+    bundle: (u) => bundle(u, { functions: ['REQUEST', 'FOCUS_SHIFT'], sequence_position: 'INITIATING', references: [resolved(RETURN_TEXT, 'أحمد', world.handles.ahmed, false)], attention: attendFocus(world.focuses.ahmed, 0, 'EXPLICIT_FOCUS_SHIFT') }),
+    thread: (u) => noEstablishment(u, 'ALREADY_ESTABLISHED', world.focuses.ahmed),
+    lifecycle: (u) => reopenExisting(S, u, world.focuses.ahmed, world.threads.ahmed, [transition(S, u, sport.thread, 'DORMANT', 'EXPLICIT_FOCUS_SHIFT')]),
+    lf: (u) => lfChange(S, u, 'THREAD', world.threads.ahmed, 'RETURN_TO_THREAD'),
+  }, (a) => lfSame(a, 'THREAD', world.threads.ahmed),
+  // The assistant's acknowledgement targets the returning CU, which the frozen
+  // B3 reducer reads as continued anchoring: REOPENED -> ACTIVE at SP13.
+  (a) => noAction(a, null, [transition(S, a, world.threads.ahmed, 'ACTIVE', 'CONTINUED_ANCHORING')]));
+  eq(back.liveHead, 13, 'the user returned to Ahmed at SP12');
+  strict(await lifecycleOf(world.threads.ahmed, S, 13), 'REOPENED', 'Ahmed was REOPENED by the genuine return at SP12');
+  strict(await lifecycleOf(world.threads.ahmed, S, 14), 'ACTIVE', 'and ACTIVE again once the assistant anchored on it at SP13');
+  eq((await appearancesOf(HA))[0], ahmedAppearance, 'SG-13: ACTIVE -> DORMANT -> REOPENED -> ACTIVE left the SAME appearance current: dormancy and return are neither unbinding nor rebinding');
+  eq(await homeOf(world.threads.ahmed), homeBefore, 'and the SAME permanent Home');
+  const k12 = await project(owner, S, 12);
+  eq(k12.threads.find((t) => t.id === world.threads.ahmed).sessionLifecycle, 'REOPENED');
+  ok(k12.thread_reading_appearances.some((a) => a.hypothesisId === HA && a.threadId === world.threads.ahmed && a.current), 'the reopened Thread still shows its Reading');
+  const k13 = await project(owner, S, 13);
+  eq(k13.threads.find((t) => t.id === world.threads.ahmed).sessionLifecycle, 'ACTIVE');
+  ok(k13.thread_reading_appearances.some((a) => a.hypothesisId === HA && a.threadId === world.threads.ahmed && a.current), 'and so does the re-activated one');
+  eq(k13.readings.find((r) => r.id === HM2).subjectGroundings.map((g) => g.emergingFocusId).sort(byText), [world.focuses.manager, world.focuses.ahmed].sort(byText), 'SG-03 on the wire: both groundings of the one Reading');
+
+  // --- SG-14: an Evidence-only update never rebinds or unbinds.
+  await identity('service_role');
+  await rows("SELECT * FROM public.background_attach_hypothesis_evidence_v1($1,$2,$3,'SUPPORTING')", [owner, HA, `memory:${legacy.M10}`]);
+  await newLogicalTransaction();
+  eq((await appearancesOf(HA))[0], ahmedAppearance, 'SG-14: an Evidence attach changes no appearance');
+  eq((await groundingsOf(HA)).map((g) => g.emerging_focus_id), [world.focuses.ahmed], 'and no grounding');
+
+  // --- SG-15: legacy Hypotheses carry no grounding and no appearance, ever.
+  eq(await groundingsOf(legacy.H0), [], 'SG-15: a legacy Hypothesis receives no guessed grounding');
+  eq(await appearancesOf(legacy.H0), [], 'and no appearance');
+  eq(k13.readings.find((r) => r.id === legacy.H0).subjectGroundings, [], 'the legacy Reading known through the baseline carries no subject grounding in the projection');
+  ok(!k13.thread_reading_appearances.some((a) => a.hypothesisId === legacy.H0));
+
+  // --- SG-09: no application role can author a grounding or an appearance.
+  for (const role of ['authenticated', 'service_role']) {
+    await identity(role, role === 'authenticated' ? owner : null);
+    await rejected(() => q('SELECT * FROM public.record_thread_reading_appearance_v1($1,$2,$3,$4,13,2,1)', [owner, S, world.threads.ahmed, HN]), 'permission denied', ['42501']);
+    await rejected(() => q('SELECT public.persist_authorized_subject_groundings_v1($1)', [g0.id]), 'permission denied', ['42501']);
+    await rejected(() => q('SELECT * FROM public.bind_reading_to_thread_v1($1,$2,$3,$4)', [owner, S, world.threads.ahmed, HN]), 'permission denied', ['42501']);
+    await rejected(() => q('SELECT * FROM public.unbind_reading_from_thread_v1($1,$2,$3)', [owner, S, ahmedAppearance.binding_id]), 'permission denied', ['42501']);
+    for (const table of ['hypothesis_subject_groundings', 'hypothesis_subject_grounding_universes', 'hypothesis_subject_grounding_proposals']) {
+      await rejected(() => q(`SELECT * FROM public.${table}`), 'permission denied', ['42501']);
+      await rejected(() => q(`DELETE FROM public.${table}`), 'permission denied', ['42501']);
+    }
+  }
+  await identity('authenticated', owner);
+  await rejected(() => q('SELECT public.build_hypothesis_subject_grounding_universe_v1($1)', [g0.id]), 'permission denied', ['42501']);
+  await rejected(() => q('SELECT public.complete_post_response_grounded_candidates_v1($1,$2,$3::jsonb,$4::jsonb)', [g0.id, 'NO_ACCEPTED_CANDIDATES', null, null]), 'permission denied', ['42501']);
+  await identity('postgres');
+  await rejected(() => q('UPDATE public.hypothesis_subject_groundings SET emerging_focus_id=$2 WHERE hypothesis_id=$1', [HA, world.focuses.manager]), 'CANONICAL_HISTORICAL_ROW_IS_IMMUTABLE', ['55000']);
+  await rejected(() => q('DELETE FROM public.hypothesis_subject_groundings WHERE hypothesis_id=$1', [HA]), 'CANONICAL_HISTORICAL_ROW_IS_IMMUTABLE', ['55000']);
+  await rejected(() => q('UPDATE public.hypothesis_subject_grounding_universes SET entries=$2::jsonb WHERE execution_id=$1', [g0.id, '[]']), 'CANONICAL_HISTORICAL_ROW_IS_IMMUTABLE', ['55000']);
+  await rejected(() => q('UPDATE public.hypothesis_subject_grounding_proposals SET selections=$2::jsonb WHERE execution_id=$1', [g0.id, '[]']), 'CANONICAL_HISTORICAL_ROW_IS_IMMUTABLE', ['55000']);
+
+  // --- SG-16 (pairs): a Thread of another user is FORBIDDEN even for the
+  //     fixture owner; a durable proposal that names another user's Hypothesis
+  //     is refused by the persistence writer.
+  await rejected(() => q('SELECT * FROM public.record_thread_reading_appearance_v1($1,$2,$3,$4,13,2,1)', [owner, S, otherWorld.threads.ahmed, HA]), 'FORBIDDEN', ['42501']);
+  await q('SAVEPOINT foreign_target');
+  await identity('service_role');
+  const HO = randomUUID();
+  await rows('SELECT * FROM public.server_create_hypothesis_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)', [other, HO, 'a reading of the other user', 'CAUSAL', 'GENERAL', 'other scope', 'HUMAN_REVIEWED', [], []]);
+  await asReplica(() => q('UPDATE public.hypothesis_subject_grounding_proposals SET selections=$2::jsonb WHERE execution_id=$1', [g0.id, JSON.stringify([{ hypothesisId: HO, handles: [g0.handleOf('أحمد')] }])]));
+  await identity('postgres');
+  await beginCapture(owner, S, true);
+  await rejected(() => q('SELECT public.persist_authorized_subject_groundings_v1($1)', [g0.id]), 'SUBJECT_GROUNDING_TARGET_MISSING', ['55000']);
+  await q('ROLLBACK TO SAVEPOINT foreign_target'); await q('RELEASE SAVEPOINT foreign_target');
+
+  // --- SG-11: the same grounding identity with a different semantic payload
+  //     fails closed; an identical replay writes nothing.
+  await q('SAVEPOINT identity_conflict');
+  await asReplica(() => q('UPDATE public.hypothesis_subject_groundings SET source_turn_id=$2 WHERE hypothesis_id=$1', [HA, randomUUID()]));
+  await identity('postgres');
+  await beginCapture(owner, S, true);
+  await rejected(() => q('SELECT public.persist_authorized_subject_groundings_v1($1)', [g0.id]), 'SUBJECT_GROUNDING_IDENTITY_CONFLICT');
+  await q('ROLLBACK TO SAVEPOINT identity_conflict'); await q('RELEASE SAVEPOINT identity_conflict');
+  await identity('postgres');
+  await beginCapture(owner, S, true);
+  strict((await one('SELECT public.persist_authorized_subject_groundings_v1($1) n', [g0.id])).n, 0, 'SG-11: an identical replay of the authorized groundings writes nothing');
+  await newLogicalTransaction();
+  return { session: S, HA, HM2, HN, HS, sport };
+}
+
 // ------------------------------------------------- I. R-C2 / R-C3 / identity
 async function verifyPreservationAndTracking(owner, other, legacy, worldState, readings) {
   stage = 'I. R-C2 preservation, R-C3 tracked legacy attach paths, identity conflict, spoofing, immutability of history';
@@ -1173,7 +1546,8 @@ async function verifyPreservationAndTracking(owner, other, legacy, worldState, r
   await newLogicalTransaction();
   for (const table of HISTORY_TABLES.filter((t) => !['historical_world_semantic_clocks', 'thread_reading_bindings'].includes(t))) {
     const column = table === 'session_historical_coverage' ? "coverage_state='COVERED'" : table === 'session_historical_baselines' ? 'baseline_world_version=0'
-      : table === 'historical_thread_availability' ? 'world_version=0' : 'world_version=0';
+      : table === 'hypothesis_subject_grounding_universes' ? "entries='[]'::jsonb" : table === 'hypothesis_subject_grounding_proposals' ? "selections='[]'::jsonb"
+      : 'world_version=0';
     await rejected(() => q(`UPDATE public.${table} SET ${column} WHERE user_id=$1`, [owner]), 'CANONICAL_HISTORICAL_ROW_IS_IMMUTABLE', ['55000']);
     await rejected(() => q(`DELETE FROM public.${table} WHERE user_id=$1`, [owner]), 'CANONICAL_HISTORICAL_ROW_IS_IMMUTABLE', ['55000']);
   }
@@ -1318,7 +1692,7 @@ async function verifySealing(owner, worldState, sealedBefore) {
   eq(Object.keys(now).sort(), ['confidences', 'emerging_focuses', 'evidence_participations', 'gaps', 'live_focus', 'live_head', 'materials', 'moments', 'question_appearances', 'questions', 'reading_relations', 'readings', 'revision', 'sealed', 'session_id', 'thread_reading_appearances', 'threads', 'tc'].sort(byText),
     'the typed family transport is closed: no generic world-truth blob, no score, no label');
   eq(Object.keys(now.revision).sort(), ['liveHead', 'pendingExpiries', 'sameSpEventSequence', 'worldVersion']);
-  for (const reading of now.readings) eq(Object.keys(reading).sort(), ['assumptions', 'disconfirmingConditions', 'domain', 'id', 'lineage', 'origin', 'scope', 'statement', 'statusAtTc', 'type', 'versionAtTc']);
+  for (const reading of now.readings) eq(Object.keys(reading).sort(), ['assumptions', 'disconfirmingConditions', 'domain', 'id', 'lineage', 'origin', 'scope', 'statement', 'statusAtTc', 'subjectGroundings', 'type', 'versionAtTc']);
   for (const material of now.materials) eq(Object.keys(material).sort(), ['confidence', 'content', 'expiry', 'id', 'importance', 'source', 'statusAtTc', 'supersededByMemoryId', 'supersedesMemoryId', 'type', 'version']);
   for (const thread of now.threads) eq(Object.keys(thread).sort(), ['establishedInSession', 'establishedSp', 'establishmentPath', 'groundingEmergingFocusId', 'home', 'id', 'sessionLifecycle']);
 }
@@ -1404,6 +1778,7 @@ async function main() {
       await verifyGapsQuestionsAndAppearance(owner, worldState, readings);
       await verifyExpiry(owner, legacy, worldState);
       await verifyManagedCommands(owner, legacy, worldState);
+      await verifySubjectGrounding(owner, other, legacy);
       await verifyPreservationAndTracking(owner, other, legacy, worldState, readings);
       await verifyAuthSmokeTeardownCompatibility(owner);
       await verifySealing(owner, worldState, sealed);

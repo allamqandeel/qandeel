@@ -3,6 +3,7 @@ import type { HypothesisDomain, HypothesisType } from '../hypothesis/hypothesis.
 import { hypothesisCollisionKey } from '../hypothesis/hypothesis-generation.policy';
 import { MAX_GENERATED_HYPOTHESIS_CANDIDATES, MAX_GENERATION_EVIDENCE_ITEMS } from '../hypothesis/hypothesis-generation.types';
 import type { AuthorizedHypothesisGenerationIntent } from '../hypothesis/hypothesis-generation-intent-authority.types';
+import type { DurableSubjectGroundingSelection } from '../hypothesis/hypothesis-subject-grounding.types';
 
 // Durable successful-generation result vocabularies. Both live on the same
 // effect ledger result fields the typed MEMORY_WRITE (0024), INTENT_PROVIDER
@@ -31,9 +32,16 @@ export interface DurableGenerationCandidate {
   disconfirmingConditions: string[];
 }
 
+/**
+ * T-03C R2: a validated plan also carries the server-authorized subject
+ * grounding selection of every accepted candidate (a subset of the opaque
+ * handles of the execution's stored universe, possibly empty). It travels to
+ * the database beside the frozen candidate payload - never inside it, so the
+ * frozen 0033 candidate shape stays exact - and is judged again there.
+ */
 export type DurableCandidateProviderResult =
   | { code: 'NO_ACCEPTED_CANDIDATES' }
-  | { code: 'VALIDATED_CANDIDATES'; candidates: DurableGenerationCandidate[] };
+  | { code: 'VALIDATED_CANDIDATES'; candidates: DurableGenerationCandidate[]; subjectGroundings: DurableSubjectGroundingSelection[] };
 
 // Recovery of an already-COMPLETED CANDIDATE_PROVIDER effect. INDETERMINATE
 // means the durable result is legacy/null/malformed/foreign and the effect

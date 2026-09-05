@@ -139,7 +139,28 @@ export interface DisclosedReadingLineageStep {
   readonly toVersion: number;
 }
 
-/** A Reading (Stage 6.5 v3 SDM-03: Reading is the canonical Hypothesis) with its then-current status and version. */
+/**
+ * A Reading's canonical subject grounding: the Reading is substantively about
+ * this Emerging Focus (the frozen B1 stable focus identity), on inspectable
+ * committed conversational grounding, known from its own Session Position.
+ * Subject grounding is neither Evidence participation (which bears on the
+ * claim) nor the Thread contextual appearance (which the server derives from
+ * the grounding and the canonical focus -> Thread truth); a Reading with none
+ * is an ungrounded Hypothesis-backed Reading and never appears in a Thread.
+ */
+export interface DisclosedSubjectGrounding {
+  readonly emergingFocusId: string;
+  readonly groundedAtSp: number;
+}
+
+/**
+ * The v1 Hypothesis-backed Reading projection bridge, with its then-current
+ * status and version. Stage 1.9 freezes Reading <-> Hypothesis as PARTIAL:
+ * the analytical fields are the canonical Hypothesis's own, and the subject
+ * grounding is the separate canonical relation from which the Thread
+ * appearance derives - a row here never claims a fully mapped Stage-1
+ * Reading merely because it exists.
+ */
 export interface DisclosedReading {
   readonly id: string;
   readonly statement: string;
@@ -153,6 +174,8 @@ export interface DisclosedReading {
   readonly versionAtTc: number;
   /** Known lineage up to TC, in order; never mistaken for current. */
   readonly lineage: readonly DisclosedReadingLineageStep[];
+  /** The canonical subject groundings of this Session known at TC, in Session Position order; empty for an ungrounded Reading. */
+  readonly subjectGroundings: readonly DisclosedSubjectGrounding[];
 }
 
 export interface DisclosedReadingRelation {

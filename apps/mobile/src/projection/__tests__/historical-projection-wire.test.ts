@@ -26,7 +26,8 @@ export function disclosure(overrides: Record<string, unknown> = {}): Record<stri
     } },
     analyticalObject: { status: 'DISCLOSED', value: {
       readings: [{ id: READING, statement: 'the manager avoids direct feedback', type: 'CAUSAL', domain: 'GENERAL', scope: `CONVERSATION_SESSION:${SESSION}`, origin: 'SYSTEM_GENERATED', assumptions: [], disconfirmingConditions: [],
-        statusAtTc: 'ACTIVE', versionAtTc: 3, lineage: [{ kind: 'CREATED', fromStatus: null, toStatus: 'CANDIDATE', fromVersion: null, toVersion: 1 }, { kind: 'STATUS_TRANSITION', fromStatus: 'CANDIDATE', toStatus: 'ACTIVE', fromVersion: 2, toVersion: 3 }] }],
+        statusAtTc: 'ACTIVE', versionAtTc: 3, lineage: [{ kind: 'CREATED', fromStatus: null, toStatus: 'CANDIDATE', fromVersion: null, toVersion: 1 }, { kind: 'STATUS_TRANSITION', fromStatus: 'CANDIDATE', toStatus: 'ACTIVE', fromVersion: 2, toVersion: 3 }],
+        subjectGroundings: [{ emergingFocusId: 'focus-manager', groundedAtSp: 2 }] }],
       readingRelations: [],
       materials: [{ id: MATERIAL, type: 'GOAL', content: 'wants a calmer team', source: 'USER_STATED', confidence: 1, importance: 0.8, version: 1, supersedesMaterialId: null, supersededByMaterialId: null, statusAtTc: 'ACTIVE', expiry: { mapping: 'PENDING', sp: null } }],
       gaps: [{ id: GAP, informationNeeded: 'the timeframe', whyItMatters: null, userAnswerability: null, preferredQuestionType: 'FACT_FINDING', readingIds: [READING], statusAtTc: 'OPEN', openEpochAtTc: 1, closureReasonAtTc: null }],
@@ -97,6 +98,23 @@ describe('historical disclosure wire validation', () => {
     expect(decodeHistoricalDisclosure(disclosure({ analyticalObject: { status: 'DISCLOSED', value: { ...analytical, materials: [{ ...material, expiry: { mapping: 'SP', sp: 1 } }] } } }))).toMatchObject({ ok: false, reason: 'INCOHERENT_FAMILY' });
     const world = disclosure().world as { threads: unknown[]; liveFocus: unknown };
     expect(decodeHistoricalDisclosure(disclosure({ world: { ...world, liveFocus: { value: { kind: 'THREAD', threadId: 'unknown-thread' }, atSp: 1 } } }))).toMatchObject({ ok: false, reason: 'INCOHERENT_FAMILY' });
+  });
+
+  // T-03C R2: a Reading's canonical subject groundings are their own family -
+  // exact shape, own Session Position <= TC, no duplicate, never defaulted.
+  it('decodes subject groundings exactly and refuses one beyond TC, a duplicate, an extra key or a missing list', () => {
+    const analytical = (disclosure().analyticalObject as { value: Record<string, unknown> }).value;
+    const reading = (analytical.readings as Record<string, unknown>[])[0];
+    const withReadings = (readings: unknown[]) => disclosure({ analyticalObject: { status: 'DISCLOSED', value: { ...analytical, readings } } });
+    const decoded = decodeHistoricalDisclosure(disclosure());
+    if (!decoded.ok || decoded.value.analyticalObject.status !== 'DISCLOSED') throw new Error('expected a disclosed analytical rung');
+    expect(decoded.value.analyticalObject.value.readings[0].subjectGroundings).toEqual([{ emergingFocusId: 'focus-manager', groundedAtSp: 2 }]);
+    expect(decodeHistoricalDisclosure(withReadings([{ ...reading, subjectGroundings: [] }]))).toMatchObject({ ok: true });
+    expect(decodeHistoricalDisclosure(withReadings([{ ...reading, subjectGroundings: [{ emergingFocusId: 'focus-manager', groundedAtSp: 3 }] }]))).toMatchObject({ ok: false, reason: 'INCOHERENT_FAMILY' });
+    expect(decodeHistoricalDisclosure(withReadings([{ ...reading, subjectGroundings: [{ emergingFocusId: 'focus-manager', groundedAtSp: 1 }, { emergingFocusId: 'focus-manager', groundedAtSp: 2 }] }]))).toMatchObject({ ok: false, reason: 'INCOHERENT_FAMILY' });
+    expect(decodeHistoricalDisclosure(withReadings([{ ...reading, subjectGroundings: [{ emergingFocusId: 'focus-manager', groundedAtSp: 2, threadId: THREAD }] }]))).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
+    const { subjectGroundings: _dropped, ...ungrounded } = reading;
+    expect(decodeHistoricalDisclosure(withReadings([ungrounded]))).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
   });
 
   it('refuses a vocabulary outside the closed sets and a Home that is not exact integer text', () => {

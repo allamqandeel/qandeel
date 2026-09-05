@@ -11,7 +11,12 @@ import { readFileSync, readdirSync } from 'node:fs';
 // world-clock lock, enters the durable post-response execution as the ONE
 // server-owned Session association, preserves every canonical row (R-C2),
 // tracks every legacy attach path (R-C3), maps expiry into SP space (R-C5),
-// and opens exactly ONE owner-scoped Layer-A projection read.
+// and opens exactly ONE owner-scoped Layer-A projection read. Targeted
+// revision R2 adds the canonical Reading subject-grounding authority
+// (sections 5A / 11A / 12A): a server-built universe of opaque handles, server
+// authorization, atomic persistence with the Hypotheses, and the DERIVED A-1
+// Thread <-> Reading appearance - the production path the matrix row A-1
+// needed, invented from nothing.
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
 const migration = read('../migrations/0072_historical_coverage_projection_disclosure_v1.sql');
@@ -33,11 +38,14 @@ const section = (from, to) => {
   return stripSql(migration.slice(start, end));
 };
 const tables = section('-- 1. The World Semantic Clock', '-- 7. Identity, and the historical capture boundary');
+const grounding = section('-- 5A. The canonical Reading subject grounding', '-- 6. Append-only enforcement');
 const boundary = section('CREATE FUNCTION public.historical_capture_begin_v1', 'CREATE FUNCTION public.historical_event_identity_conflict_v1');
 const hooks = section('CREATE FUNCTION public.historical_event_identity_conflict_v1', '-- 9. The LEGACY BASELINE');
 const seeding = section('-- 9. The LEGACY BASELINE', '-- 10. Installing the hooks');
-const wrappers = section('-- 11. The live writers enter the historical boundary', '-- 12. The Thread <-> Reading appearance writers');
-const bindings = section('-- 12. The Thread <-> Reading appearance writers', '-- 13. R-C5');
+const wrappers = section('-- 11. The live writers enter the historical boundary', '-- 11A. The subject-grounding authority');
+const authority = section('-- 11A. The subject-grounding authority', '-- 12. The Thread <-> Reading appearance writers');
+const bindings = section('-- 12. The Thread <-> Reading appearance writers', '-- 12A. THE A-1 PRODUCTION AUTHORITY');
+const derivation = section('-- 12A. THE A-1 PRODUCTION AUTHORITY', '-- 13. R-C5');
 const expiry = section('-- 13. R-C5', '-- 14. Layer A');
 const projection = section('CREATE FUNCTION public.get_session_historical_projection_v1', '-- 15. Ownership, search_path hardening');
 const posture = section('-- 15. Ownership, search_path hardening', SELF_ASSERTION_MARKER);
@@ -72,10 +80,11 @@ test('0072 is the newest migration, 0064 - 0071 are byte-identical, and every fr
   }
 });
 
-test('0072 adds exactly the thirteen history tables: SP-native anchors, typed per family, append-only, no label / score / camera', () => {
+test('0072 adds exactly the sixteen history tables: SP-native anchors, typed per family, append-only, no label / score / camera', () => {
   assert.deepEqual([...migration.matchAll(/CREATE TABLE public\.(\w+)/gu)].map((m) => m[1]).sort(), [
     'historical_confidence_events', 'historical_evidence_participation_events', 'historical_gap_events', 'historical_material_events', 'historical_question_appearance_events',
     'historical_question_events', 'historical_reading_events', 'historical_reading_relation_events', 'historical_thread_availability', 'historical_world_semantic_clocks',
+    'hypothesis_subject_grounding_proposals', 'hypothesis_subject_grounding_universes', 'hypothesis_subject_groundings',
     'session_historical_baselines', 'session_historical_coverage', 'thread_reading_bindings']);
   assert.doesNotMatch(executableSql, /DROP |CREATE EXTENSION|CREATE SEQUENCE|CREATE TYPE|CREATE POLICY|ADD COLUMN|TRUNCATE/u, 'no destructive DDL, no column added to a frozen table');
   assert.doesNotMatch(executableBody, /ALTER TABLE public\.(?:conversation_units|conversation_threads|conversation_thread_homes|conversation_emerging_focuses|session_semantic_clocks|hypotheses|memories|information_gaps|question_candidates|confidence_evaluations|formal_question_turn_bindings)\b/u,
@@ -102,7 +111,8 @@ test('0072 adds exactly the thirteen history tables: SP-native anchors, typed pe
   assert.match(migration, /binding_id uuid NOT NULL UNIQUE/u, 'one appearance per Formal Question binding');
   assert.match(migration, /WHERE unbound_sp IS NULL/u, 'one current Thread <-> Reading appearance per (Session, Thread, Reading)');
   assert.match(migration, /unbound_sp IS NULL OR unbound_sp >= bound_sp/u);
-  for (const table of ['session_historical_coverage', 'session_historical_baselines', 'historical_thread_availability', ...anchorTables, 'historical_question_appearance_events']) {
+  for (const table of ['session_historical_coverage', 'session_historical_baselines', 'historical_thread_availability', ...anchorTables, 'historical_question_appearance_events',
+    'hypothesis_subject_groundings', 'hypothesis_subject_grounding_universes', 'hypothesis_subject_grounding_proposals']) {
     assert.match(migration, new RegExp(`BEFORE UPDATE OR DELETE ON public\\.${table}\\s*\\n\\s*FOR EACH ROW EXECUTE FUNCTION public\\.reject_historical_projection_mutation_v1\\(\\)`, 'u'), `${table} is append-only`);
   }
   assert.match(migration, /BEFORE UPDATE OR DELETE ON public\.historical_world_semantic_clocks\s*\n\s*FOR EACH ROW EXECUTE FUNCTION public\.guard_historical_world_semantic_clock_v1\(\)/u);
@@ -211,7 +221,15 @@ test('the wrappers keep the frozen names, signatures and grants; the cores are r
   for (const [name, args] of [['persist_post_response_hypothesis_generation_v1', 'uuid'], ['execute_post_response_hypothesis_update_batch_v1', 'uuid,jsonb'], ['execute_post_response_confidence_batch_v1', 'uuid']]) {
     assert.match(wrappers, new RegExp(`ALTER FUNCTION public\\.${name}\\(${args}\\)\\s*\\n\\s*RENAME TO ${name}_core;`, 'u'), `${name} keeps its frozen body under _core`);
     assert.match(wrappers, new RegExp(`CREATE FUNCTION public\\.${name}\\(`, 'u'), `${name} is re-created under its public name`);
-    assert.match(wrappers, new RegExp(`RETURN public\\.${name}_core\\(`, 'u'), `${name} runs exactly its frozen core`);
+    if (name === 'persist_post_response_hypothesis_generation_v1') {
+      // R2: the persist wrapper runs its frozen core and then records the
+      // authorized subject groundings in the SAME transaction - a Hypothesis
+      // never commits without the grounding it was authorized with.
+      assert.match(wrappers, /persisted := public\.persist_post_response_hypothesis_generation_v1_core\(p_execution_id\);[\s\S]{0,600}IF persisted THEN\s*\n\s*PERFORM public\.persist_authorized_subject_groundings_v1\(p_execution_id\);\s*\n\s*END IF;\s*\n\s*RETURN persisted;/u,
+        `${name} runs exactly its frozen core, then the grounding persistence, atomically`);
+    } else {
+      assert.match(wrappers, new RegExp(`RETURN public\\.${name}_core\\(`, 'u'), `${name} runs exactly its frozen core`);
+    }
     assert.match(posture, new RegExp(`REVOKE ALL ON FUNCTION public\\.${name}_core\\(${args}\\) FROM PUBLIC, anon, authenticated;`, 'u'));
     assert.match(posture, new RegExp(`REVOKE ALL ON FUNCTION public\\.${name}_core\\(${args}\\) FROM service_role`, 'u'), `${name}_core is unreachable by service_role`);
     assert.match(posture, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${name}\\(${args}\\) TO service_role`, 'u'), `${name} keeps its service_role grant`);
@@ -227,15 +245,26 @@ test('the wrappers keep the frozen names, signatures and grants; the cores are r
   assert.doesNotMatch(executableSql, /UPDATE public\.hypotheses SET status|INSERT INTO public\.hypothesis_lifecycle_transitions/u, 'no second Reading status writer, no second lifecycle audit writer');
 });
 
-test('the Thread <-> Reading appearance writers are clock-first, Session-bound, identity-derived, idempotent and granted to nobody', () => {
+test('the Thread <-> Reading appearance writers are clock-first, Session-bound, identity-derived, idempotent and granted to nobody; the ONE recorder is anchored only by the production authority that derives the appearance', () => {
+  // R2: ONE recorder, anchored by the authority that derives the appearance (a
+  // grounding's own anchor, or a focus binding's Session Position), executable
+  // by no application role.
+  assert.match(bindings, /CREATE FUNCTION public\.record_thread_reading_appearance_v1\(\s*\n\s*p_user_id uuid, p_session_id uuid, p_thread_id uuid, p_hypothesis_id uuid,\s*\n\s*p_session_position integer, p_event_sequence bigint, p_world_version bigint\)/u);
+  assert.match(bindings, /p_session_id::text \|\| ':' \|\| p_thread_id::text \|\| ':' \|\| p_hypothesis_id::text \|\| ':' \|\| p_session_position::text/u, 'the exact v5 name');
+  assert.match(bindings, /THREAD_READING_BINDING_IDENTITY_CONFLICT/u, 'one life of an appearance per Session Position');
+  assert.match(bindings, /WHERE b\.session_id = p_session_id AND b\.thread_id = p_thread_id AND b\.hypothesis_id = p_hypothesis_id AND b\.unbound_sp IS NULL;\s*\n\s*IF FOUND THEN/u, 'idempotent: a current appearance is returned, never duplicated');
+  assert.match(posture, /REVOKE ALL ON FUNCTION public\.record_thread_reading_appearance_v1\(uuid,uuid,uuid,uuid,integer,bigint,bigint\) FROM service_role/u, 'the recorder is executable by no application role');
+  // The boundary-anchored writers keep their frozen signatures and delegate to the recorder at the context anchor.
   assert.match(bindings, /CREATE FUNCTION public\.bind_reading_to_thread_v1\(p_user_id uuid, p_session_id uuid, p_thread_id uuid, p_hypothesis_id uuid\)/u);
   assert.match(bindings, /CREATE FUNCTION public\.unbind_reading_from_thread_v1\(p_user_id uuid, p_session_id uuid, p_binding_id uuid\)/u);
   assert.match(bindings, /public\.historical_capture_begin_v1\(p_user_id, p_session_id, true\)/u, 'clock-first through the ONE boundary, association required');
   assert.match(bindings, /SESSION_POSITION_NOT_ESTABLISHED/u, 'an appearance needs an addressable Session Position');
-  assert.match(bindings, /THREAD_READING_BINDING_IDENTITY_CONFLICT/u, 'one life of an appearance per Session Position');
-  assert.match(bindings, /p_session_id::text \|\| ':' \|\| p_thread_id::text \|\| ':' \|\| p_hypothesis_id::text \|\| ':' \|\| ctx\.session_position::text/u, 'the exact v5 name');
-  assert.doesNotMatch(bindings, /p_bound_sp|p_session_position|p_sequence|p_world_version/u, 'no caller supplies the anchor');
-  assert.doesNotMatch(posture, /GRANT EXECUTE ON FUNCTION public\.(?:bind_reading_to_thread_v1|unbind_reading_from_thread_v1)/u, 'granted to NO application role: the Product evaluator that decides WHEN is owned by no merged task');
+  assert.match(bindings, /RETURN QUERY SELECT \* FROM public\.record_thread_reading_appearance_v1\(\s*\n\s*p_user_id, p_session_id, p_thread_id, p_hypothesis_id, ctx\.session_position, ctx\.same_sp_event_sequence, ctx\.world_version\);/u, 'bind delegates to the recorder at the context anchor');
+  for (const signature of bindings.match(/CREATE FUNCTION public\.(?:bind_reading_to_thread_v1|unbind_reading_from_thread_v1)\([^)]*\)/gu) ?? []) {
+    assert.doesNotMatch(signature, /p_bound_sp|p_session_position|p_sequence|p_world_version/u, 'no caller supplies the anchor');
+  }
+  assert.doesNotMatch(posture, /GRANT EXECUTE ON FUNCTION public\.(?:bind_reading_to_thread_v1|unbind_reading_from_thread_v1|record_thread_reading_appearance_v1)/u, 'granted to NO application role: WHEN a Reading appears in a Thread is decided by the canonical subject grounding (R2), never by a caller');
+  assert.equal((migration.match(/record_thread_reading_appearance_v1\(/gu) ?? []).length >= 4, true, 'the recorder is reached only by bind and by the two derivation triggers');
 });
 
 test('R-C5: expiry is mapped from the wall-clock domain into SP space by ONE STABLE mapping and never compared to TC', () => {
@@ -279,13 +308,15 @@ test('Layer A: the ONE owner-scoped projection is STABLE, coverage-gated, TC-val
   assert.match(projection, /'pendingExpiries', pending_expiries/u);
 });
 
-test('THE AUTHORITY POSTURE: authenticated executes exactly the projection; service_role exactly the wrappers, the synchronization entry and the Memory command; every history table unreachable; no cutover of frozen writers', () => {
+test('THE AUTHORITY POSTURE: authenticated executes exactly the projection; service_role exactly the wrappers, the synchronization entry, the Memory command, the universe builder and the grounded completion; every history table unreachable; no cutover of frozen writers', () => {
   assert.match(posture, /^GRANT EXECUTE ON FUNCTION public\.get_session_historical_projection_v1\(uuid,integer\) TO authenticated;$/mu);
   assert.equal((posture.match(/GRANT EXECUTE ON FUNCTION [^;]* TO authenticated/gu) ?? []).length, 1, 'exactly ONE authenticated grant');
-  assert.equal((posture.match(/GRANT EXECUTE ON FUNCTION [^;]* TO service_role/gu) ?? []).length, 5, 'exactly five service_role grants: three wrappers, the synchronization entry, the Memory command');
+  assert.equal((posture.match(/GRANT EXECUTE ON FUNCTION [^;]* TO service_role/gu) ?? []).length, 7, 'exactly seven service_role grants: three wrappers, the synchronization entry, the Memory command, the universe builder, the grounded completion (R2)');
+  assert.ok(posture.includes("GRANT EXECUTE ON FUNCTION public.build_hypothesis_subject_grounding_universe_v1(uuid) TO service_role"));
+  assert.ok(posture.includes("GRANT EXECUTE ON FUNCTION public.complete_post_response_grounded_candidates_v1(uuid,text,jsonb,jsonb) TO service_role"));
   assert.doesNotMatch(posture, /GRANT [^;]*TO anon|GRANT [^;]*TO PUBLIC|GRANT [^;]*ON TABLE/u);
   assert.match(posture, /ENABLE ROW LEVEL SECURITY/u);
-  assert.match(posture, /REVOKE ALL ON TABLE public\.historical_world_semantic_clocks, public\.session_historical_coverage, public\.session_historical_baselines,[\s\S]{0,600}public\.thread_reading_bindings\s*\n\s*FROM PUBLIC, anon, authenticated;/u);
+  assert.match(posture, /REVOKE ALL ON TABLE public\.historical_world_semantic_clocks, public\.session_historical_coverage, public\.session_historical_baselines,[\s\S]{0,700}public\.thread_reading_bindings, public\.hypothesis_subject_groundings, public\.hypothesis_subject_grounding_universes,\s*\n\s*public\.hypothesis_subject_grounding_proposals\s*\n\s*FROM PUBLIC, anon, authenticated;/u);
   assert.match(posture, /REVOKE ALL ON FUNCTION public\.historical_capture_begin_v1\(uuid,uuid,boolean\) FROM service_role/u, 'the boundary is executable by no application role');
   assert.doesNotMatch(posture, /REVOKE [^;]*(?:commit_conversation_units|commit_finalized_exchange|get_session_live_state_v1|get_live_focus_transition_events_v1|get_session_temporal_state_v1|attach_hypothesis_evidence|apply_hypothesis_evidence_update|transition_hypothesis)/u,
     'no frozen writer or read is cut over: R-C3 is enforced by capture, not by breaking live callers');
@@ -296,19 +327,106 @@ test('THE AUTHORITY POSTURE: authenticated executes exactly the projection; serv
     'the migration seeds legacy baseline events only',
     'the historical event namespace drifted',
     'the Thread <-> Reading binding namespace drifted',
+    'the subject-grounding namespace drifted',
+    'the subject-grounding handle namespace drifted',
+    'the pinned subject-grounding vectors do not reproduce',
     'the pinned event identity vector does not reproduce',
     'must be STABLE SECURITY DEFINER',
     'a history table is reachable by an application role',
     'the authority posture is wrong',
     'the service_role posture is wrong',
+    'the Thread <-> Reading appearance is derived by exactly the two production triggers',
+    'the persist wrapper records the authorized subject groundings atomically with the Hypotheses',
     'the Reading capture hook is not the one enabled AFTER INSERT OR UPDATE trigger',
     'the Session Semantic Clock changed shape',
   ]) {
     assert.ok(migration.includes(assertion), `the migration self-asserts: ${assertion}`);
   }
-  for (const vector of ['79466f6b-04fd-5150-aa23-59682098057c', '11be3a36-745a-54fd-a938-3f14eaedee14', '91dc104c-e42b-54ff-8638-6dd7776f318c']) {
+  for (const vector of ['79466f6b-04fd-5150-aa23-59682098057c', '11be3a36-745a-54fd-a938-3f14eaedee14', '91dc104c-e42b-54ff-8638-6dd7776f318c',
+    '1592a69d-781e-57ce-bb2c-6744a6ac3ceb', '8feaee1d-fe51-5e9e-8594-52499b414e64', 'a89b9e67-501f-5c0d-bede-122763231f6e', '22d3c5d1-02cc-55e5-97c8-7b5563e5332f']) {
     assert.ok(migration.includes(vector) && verifier.includes(vector), `the identity vector ${vector} is pinned in SQL and replayed by the verifier`);
   }
+});
+
+test('R2: the canonical Reading subject-grounding authority - a server-built bounded universe of opaque handles, server authorization, atomic persistence with the Hypotheses, and the DERIVED A-1 Thread <-> Reading appearance', () => {
+  // 5A: subject grounding is its own layer of the PARTIAL Reading <-> Hypothesis ontology - it targets the frozen B1 focus identity and names no Thread.
+  const groundingDdl = grounding.slice(grounding.indexOf('CREATE TABLE public.hypothesis_subject_groundings ('), grounding.indexOf(');', grounding.indexOf('CREATE TABLE public.hypothesis_subject_groundings (')));
+  assert.match(groundingDdl, /grounding_id uuid PRIMARY KEY/u);
+  assert.match(groundingDdl, /REFERENCES public\.conversation_emerging_focuses/u, 'a grounding targets exactly a canonical 0066 Emerging Focus - the identity Threads are constituted from; no new focus identity, no new Thread constitution');
+  assert.match(groundingDdl, /REFERENCES public\.hypotheses/u, 'and exactly a canonical Hypothesis: analytical identity is untouched');
+  assert.match(groundingDdl, /UNIQUE \(hypothesis_id, emerging_focus_id\)/u, 'one grounding per (Reading, focus)');
+  assert.match(groundingDdl, /universe_frontier_sp integer NOT NULL/u, 'the frontier it was judged against is part of the record');
+  assert.match(groundingDdl, /session_position integer NOT NULL/u);
+  assert.match(groundingDdl, /world_version bigint NOT NULL/u);
+  assert.doesNotMatch(groundingDdl, /thread_id|label|similar|score|confidence/u, 'a grounding names no Thread: the appearance is derived from the 0070 focus binding, never stored as a second authority');
+  assert.match(grounding, /CREATE TABLE public\.hypothesis_subject_grounding_universes \(\s*\n\s*execution_id uuid PRIMARY KEY/u, 'ONE universe per durable execution');
+  assert.match(grounding, /CREATE TABLE public\.hypothesis_subject_grounding_proposals \(\s*\n\s*execution_id uuid PRIMARY KEY/u, 'ONE proposal per durable execution');
+  assert.match(grounding, /REFERENCES public\.hypothesis_subject_grounding_universes \(execution_id\)/u, 'a proposal exists only against a stored universe');
+  assert.match(grounding, /frontier_sp IS NULL OR frontier_sp >= 1/u);
+  // 11A: the SERVER builds the universe from committed B1 / B2 truth only - bounded, once, opaque.
+  assert.match(authority, /CREATE FUNCTION public\.build_hypothesis_subject_grounding_universe_v1\(p_execution_id uuid\)/u);
+  assert.match(authority, /IF execution_row\.state <> 'RUNNING' THEN/u, 'only a RUNNING durable execution builds its universe');
+  assert.match(authority, /SELECT c\.current_sp INTO frontier FROM public\.session_semantic_clocks c/u, 'the frontier is the Session Semantic Clock, never a caller value');
+  assert.match(authority, /FROM public\.conversation_emerging_focuses f\s*\n\s*WHERE f\.session_id = execution_row\.session_id AND f\.user_id = execution_row\.user_id/u, 'candidates are the execution\'s own Session\'s committed Emerging Focuses');
+  assert.match(authority, /FROM public\.conversation_reference_resolutions r/u, 'the wording is the first committed RESOLVED reference of the focus\'s grounding handle');
+  assert.match(authority, /FROM public\.conversation_thread_focus_bindings b/u, 'with the Thread each focus already resolves to (0070)');
+  assert.match(authority, /LIMIT 32\)/u, 'bounded');
+  assert.match(authority, /ON CONFLICT \(execution_id\) DO NOTHING;\s*\n\s*SELECT \* INTO stored FROM public\.hypothesis_subject_grounding_universes/u, 'stored once; a rebuild returns the SAME universe');
+  assert.match(authority, /'handle', public\.hypothesis_subject_grounding_handle_v1\(p_execution_id, b\.id\)/u, 'the handle is an execution-scoped v5 identity');
+  const presentation = authority.slice(authority.indexOf('CREATE FUNCTION public.hypothesis_subject_grounding_universe_presentation_v1'), authority.indexOf('CREATE FUNCTION public.build_hypothesis_subject_grounding_universe_v1'));
+  assert.match(presentation, /jsonb_build_object\(\s*\n\s*'handle', e\.value ->> 'handle', 'subjectText', e\.value ->> 'subjectText',\s*\n\s*'startedSp', \(e\.value ->> 'startedSp'\)::integer, 'lastAttentionSp', \(e\.value ->> 'lastAttentionSp'\)::integer\)/u,
+    'a presented entry is exactly handle + wording + Session Positions');
+  assert.doesNotMatch(presentation, /'(?:emergingFocusId|threadId|threadBoundSp|sessionId|startedCuId|groundingHandleId)',/u, 'the provider presentation carries no focus, Thread, Session or CU identity');
+  // 11A: the grounded completion reuses the frozen 0033 completion FIRST, then judges the proposal against the STORED universe.
+  const completion = authority.slice(authority.indexOf('CREATE FUNCTION public.complete_post_response_grounded_candidates_v1'), authority.indexOf('CREATE FUNCTION public.persist_authorized_subject_groundings_v1'));
+  assert.match(completion, /p_execution_id uuid, p_result_code text, p_result_payload jsonb, p_subject_grounding jsonb\)/u, 'the frozen completion arguments plus the grounding selections - no focus id, no Thread id');
+  const frozenCall = completion.indexOf('completed := public.complete_post_response_candidate_provider_effect_v1(p_execution_id, p_result_code, p_result_payload);');
+  assert.ok(frozenCall > 0, 'the frozen 0033 completion is reused, never re-implemented');
+  assert.ok(frozenCall < completion.indexOf("RAISE EXCEPTION 'SUBJECT_GROUNDING_UNIVERSE_MISSING'"), 'frozen completion first; a refused proposal rolls the completion back with it');
+  assert.match(completion, /RETURN public\.complete_post_response_candidate_provider_effect_v1\(p_execution_id, p_result_code, p_result_payload\);/u, 'NO_ACCEPTED_CANDIDATES is exactly the frozen completion');
+  for (const token of ['SUBJECT_GROUNDING_UNIVERSE_MISSING', 'SUBJECT_GROUNDING_TARGET_NOT_CANDIDATE', 'SUBJECT_GROUNDING_LIMIT_EXCEEDED', 'SUBJECT_GROUNDING_DUPLICATE_HANDLE', 'SUBJECT_GROUNDING_HANDLE_OUTSIDE_UNIVERSE', 'SUBJECT_GROUNDING_PROPOSAL_CONFLICT', 'INVALID_SUBJECT_GROUNDING_PROPOSAL']) {
+    assert.ok(completion.includes(token), `the grounded completion refuses ${token}`);
+  }
+  assert.match(completion, /IS DISTINCT FROM ARRAY\['handles', 'hypothesisId'\]/u, 'a selection is exactly a candidate identity and its handles');
+  assert.match(completion, /jsonb_array_length\(selection -> 'handles'\) > 8 THEN/u, 'at most eight handles per candidate');
+  assert.match(completion, /IF NOT \(\(handle #>> '\{\}'\) = ANY \(universe_handles\)\) THEN/u, 'every handle must be one the server issued for THIS execution');
+  // 11A: persistence re-judges against the STORED universe, anchors at the capture context and derives identity.
+  const persist = authority.slice(authority.indexOf('CREATE FUNCTION public.persist_authorized_subject_groundings_v1'));
+  assert.match(persist, /SELECT \* INTO ctx FROM public\.historical_capture_context_v1\(execution_row\.user_id\);/u, 'anchored at the capture context of the persisting transaction: actual availability, never the source turn, never the focus start');
+  assert.match(persist, /ctx\.session_id IS DISTINCT FROM execution_row\.session_id OR ctx\.session_position IS NULL/u, 'the anchor is the execution\'s own Session at an addressable Session Position');
+  assert.match(persist, /grounding := public\.hypothesis_subject_grounding_identity_v1\(target, focus\.id\);/u, 'identity is derived (v5), never random');
+  assert.match(persist, /ON CONFLICT \(grounding_id\) DO NOTHING/u, 'an identical retry duplicates nothing');
+  for (const token of ['SUBJECT_GROUNDING_TARGET_MISSING', 'SUBJECT_GROUNDING_ANCHOR_UNAVAILABLE', 'SUBJECT_GROUNDING_FOCUS_NOT_CANONICAL', 'SUBJECT_GROUNDING_IDENTITY_CONFLICT', 'SUBJECT_GROUNDING_HANDLE_OUTSIDE_UNIVERSE']) {
+    assert.ok(persist.includes(token), `persistence refuses ${token}`);
+  }
+  assert.doesNotMatch(authority, /similar|embedding|ILIKE|~\*|levenshtein|tsvector|to_tsquery|<->/u, 'no similarity, no text matching, no embedding anywhere in the authority');
+  assert.doesNotMatch(authority, /FROM public\.memories|supporting_evidence_ids|contradicting_evidence_ids|live_focus|placement_x|placement_y|competing_hypothesis_ids/u, 'no Evidence-overlap, LF or geometry grounding');
+  assert.doesNotMatch(authority, /p_emerging_focus_id uuid, p_thread_id|p_thread_id uuid|p_focus_id/u, 'no callable entry accepts a focus or Thread identity');
+  // 12A: the appearance is DERIVED by exactly the two production triggers, never authored.
+  assert.match(derivation, /CREATE TRIGGER hypothesis_subject_groundings_thread_appearance\s*\n\s*AFTER INSERT ON public\.hypothesis_subject_groundings/u, 'Case A: a grounding to a focus already bound to a Thread appears at once, at the grounding\'s own anchor');
+  assert.match(derivation, /CREATE TRIGGER conversation_thread_focus_bindings_thread_appearance\s*\n\s*AFTER INSERT ON public\.conversation_thread_focus_bindings/u, 'Case B: a focus grounded while Emerging appears when it becomes a Thread, at the binding\'s own Session Position');
+  assert.match(derivation, /AND b\.bound_sp <= NEW\.session_position/u, 'Case A binds only to a Thread established at or before the grounding\'s SP');
+  assert.match(derivation, /AND g\.session_position <= NEW\.bound_sp/u, 'Case B binds only groundings already canonical at the binding\'s SP - nothing is backdated');
+  assert.match(derivation, /NEW\.session_position, NEW\.same_sp_event_sequence, NEW\.world_version\);/u, 'Case A anchors at the grounding\'s own anchor');
+  assert.match(derivation, /NEW\.bound_sp, NEW\.same_sp_event_sequence, ctx\.world_version\);/u, 'Case B anchors at the focus binding\'s own Session Position and Thread-layer same-SP sequence');
+  assert.equal((derivation.match(/PERFORM public\.record_thread_reading_appearance_v1\(/gu) ?? []).length, 2, 'both derive through the ONE recorder');
+  assert.doesNotMatch(derivation, /INSERT INTO public\.thread_reading_bindings|unbind_reading_from_thread_v1|UPDATE public\./u, 'the triggers never write the table directly and never unbind: dormancy and return are not unbinding');
+  assert.equal((executableBody.match(/AFTER INSERT ON public\.conversation_thread_focus_bindings/gu) ?? []).length, 1, 'exactly ONE 0072 trigger on the frozen 0070 binding table, and it attaches without ALTER TABLE');
+  // 14: the projection discloses the grounding under the ONE availability law.
+  assert.match(projection, /'subjectGroundings', COALESCE\(\(SELECT jsonb_agg\(jsonb_build_object\('emergingFocusId', sg\.emerging_focus_id, 'groundedAtSp', sg\.session_position\)/u);
+  assert.match(projection, /AND sg\.session_position <= p_tc\), '\[\]'::jsonb\)/u, 'a grounding is known at TC iff its own anchor is <= TC');
+  // 15: posture - the two service_role entries, everything else unreachable.
+  for (const revoked of ['record_thread_reading_appearance_v1(uuid,uuid,uuid,uuid,integer,bigint,bigint)', 'persist_authorized_subject_groundings_v1(uuid)', 'hypothesis_subject_grounding_identity_v1(uuid,uuid)',
+    'hypothesis_subject_grounding_handle_v1(uuid,uuid)', 'hypothesis_subject_grounding_universe_presentation_v1(public.hypothesis_subject_grounding_universes)']) {
+    assert.ok(posture.includes(`REVOKE ALL ON FUNCTION public.${revoked} FROM service_role`), `${revoked} is executable by no application role`);
+    assert.ok(posture.includes(`REVOKE ALL ON FUNCTION public.${revoked} FROM PUBLIC, anon, authenticated;`));
+  }
+  assert.match(migration, /'1592a69d-781e-57ce-bb2c-6744a6ac3ceb'/u, 'the grounding namespace is pinned in SQL');
+  assert.match(migration, /'8feaee1d-fe51-5e9e-8594-52499b414e64'/u, 'the handle namespace is pinned in SQL');
+  assert.match(migration, /https:\/\/qandeel\.app\/runtime\/hypothesis-subject-grounding\/v1/u);
+  assert.match(migration, /https:\/\/qandeel\.app\/runtime\/subject-grounding-handle\/v1/u);
+  assert.match(verifier, /uuidV5\(RFC4122_URL_NAMESPACE, 'https:\/\/qandeel\.app\/runtime\/hypothesis-subject-grounding\/v1'\)/u);
+  assert.match(verifier, /uuidV5\(RFC4122_URL_NAMESPACE, 'https:\/\/qandeel\.app\/runtime\/subject-grounding-handle\/v1'\)/u);
 });
 
 test('every identifier 0072 introduces fits the PostgreSQL 63-byte limit', () => {
@@ -333,14 +451,24 @@ test('the 0072 verifier proves live semantics, the fixture cleanup knows the new
     'get_session_live_state_v1', 'get_session_temporal_state_v1', 'coverage stays LEGACY_UNCOVERED through every post-deploy commit and capture', 'no baseline was fabricated by the post-deploy Moments',
     'keeps committing Session Positions through the frozen runtime authority', 'the committed-CU coverage gate does not exist', 'REV66-06 section 4.5',
     // R1-03: the smoke teardown replayed from its source.
-    'cleanupRows', 'verify-supabase-auth.mjs', "session_replication_role = 'replica'"]) {
+    'cleanupRows', 'verify-supabase-auth.mjs', "session_replication_role = 'replica'",
+    // R2: the canonical subject-grounding authority and the derived A-1 appearance, SG-01 .. SG-18.
+    'SG-01', 'SG-02', 'SG-03', 'SG-04', 'SG-05', 'SG-06', 'SG-07', 'SG-08', 'SG-09', 'SG-10', 'SG-11', 'SG-12', 'SG-13', 'SG-14', 'SG-15', 'SG-16', 'SG-17', 'SG-18',
+    'build_hypothesis_subject_grounding_universe_v1', 'complete_post_response_grounded_candidates_v1', 'persist_authorized_subject_groundings_v1', 'record_thread_reading_appearance_v1',
+    'SUBJECT_GROUNDING_HANDLE_OUTSIDE_UNIVERSE', 'SUBJECT_GROUNDING_DUPLICATE_HANDLE', 'SUBJECT_GROUNDING_LIMIT_EXCEEDED', 'SUBJECT_GROUNDING_TARGET_NOT_CANDIDATE', 'SUBJECT_GROUNDING_TARGET_MISSING',
+    'SUBJECT_GROUNDING_IDENTITY_CONFLICT', 'SUBJECT_GROUNDING_UNIVERSE_MISSING', 'INVALID_SUBJECT_GROUNDING_PROPOSAL', 'subjectGroundings', 'buildUniverse: false',
+    'the raw focus UUID', 'the raw Thread UUID', 'a handle of another user', 'a handle of another execution of the same user', 'grounds nothing', 'no appearance, nothing backdated',
+    'CONTINUED_ANCHORING', 'dormancy and return are neither unbinding nor rebinding', 'a legacy Hypothesis receives no guessed grounding']) {
     assert.ok(verifier.includes(proof), `verifier is missing ${proof}`);
   }
   assert.doesNotMatch(verifier, /P66-C \(a later Session inherits/u, 'later-Session baseline inheritance is not called P66-C (R1-04)');
   assert.ok(verifier.indexOf('await verifyDeploymentSpan();') < verifier.indexOf("await q('BEGIN');", verifier.indexOf('async function main()')), 'the deployment-spanning proof runs outside the main transaction (CREATE DATABASE cannot run inside one)');
-  for (const table of ['thread_reading_bindings', 'historical_reading_events', 'session_historical_baselines', 'session_historical_coverage', 'historical_world_semantic_clocks']) {
+  for (const table of ['thread_reading_bindings', 'historical_reading_events', 'session_historical_baselines', 'session_historical_coverage', 'historical_world_semantic_clocks',
+    'hypothesis_subject_groundings', 'hypothesis_subject_grounding_proposals', 'hypothesis_subject_grounding_universes']) {
     assert.ok(cleanup.includes(`'${table}'`), `the fixture cleanup removes ${table}`);
   }
+  assert.ok(cleanup.indexOf("'hypothesis_subject_groundings'") < cleanup.indexOf("'hypothesis_subject_grounding_proposals'") && cleanup.indexOf("'hypothesis_subject_grounding_proposals'") < cleanup.indexOf("'hypothesis_subject_grounding_universes'")
+    && cleanup.indexOf("'hypothesis_subject_grounding_universes'") < cleanup.indexOf("'thread_reading_bindings'"), 'groundings, then proposals, then universes, before the appearances (foreign-key order)');
   assert.match(packageJson, /"verify:historical-projection:integration": "node --env-file-if-exists=\.env database\/verify-migration-0072\.mjs"/u);
   assert.match(workflow, /run: npm run verify:historical-projection:integration/u);
   assert.ok(workflow.indexOf('run: npm run verify:historical-projection:integration') > workflow.indexOf('run: npm run verify:effective-live-focus-final-semantic-chain-cutover:integration'), 'the 0072 verifier runs after the 0071 verifier');

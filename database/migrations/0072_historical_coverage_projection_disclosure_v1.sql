@@ -49,17 +49,24 @@
 --      substitutes for a child's anchor;
 --   5. the Thread <-> Reading contextual appearance substrate
 --      (thread_reading_bindings, validity-aware: bound_sp .. unbound_sp) and
---      its clock-first writers, granted to NO application role: T-03C owns the
+--      its writers, executable by NO application role: T-03C owns the
 --      historical truth of this appearance and its projection. The frozen rule
 --      binds a Reading to a Thread only when the Reading's canonical subject
---      grounding resolves to that Thread; the repository carries no
---      server-owned canonical Reading subject-grounding authority (a Reading
---      is statement / type / domain / scope / origin and its lifecycle arrays,
---      nothing that names a reference handle, an Emerging Focus or a Thread),
---      so no production writer exists and none is invented from a label,
---      similarity, co-occurrence, the current LF or geometry. Until that
---      authority exists the substrate stays unpopulated in production and the
---      matrix row A-1 is a BLOCKER, never silently FULL;
+--      grounding legitimately resolves to that Thread, so R2 adds the
+--      CANONICAL READING SUBJECT-GROUNDING AUTHORITY (sections 5A, 11A, 12A):
+--      a typed relation from a Hypothesis-backed Reading to the frozen B1
+--      stable focus identity (emerging_focus_id), born only inside the durable
+--      post-response generation - the SERVER builds a bounded universe of the
+--      committed focuses of the execution's Session as opaque handles, the
+--      provider proposes a subset of those handles and nothing else, the
+--      server authorizes the proposal against the exact stored universe, and
+--      the grounding becomes canonical atomically with the Hypothesis it
+--      grounds. The A-1 appearance is DERIVED from that grounding and the
+--      canonical focus -> Thread truth of 0068 / 0070 by two triggers, at its
+--      own availability boundary. Nothing is inferred from a label, string
+--      similarity, an embedding, Evidence or peer co-occurrence, the current
+--      LF, geometry or a caller-supplied identity; legacy Hypotheses receive
+--      no grounding and no appearance;
 --   6. R-C2 preservation guards on the canonical legacy rows historical V
 --      reads (physical DELETE refused; the historical fields of hypotheses,
 --      memories, question_candidates and confidence_evaluations immutable;
@@ -573,6 +580,120 @@ CREATE TRIGGER thread_reading_bindings_guard
   FOR EACH ROW EXECUTE FUNCTION public.guard_thread_reading_binding_mutation_v1();
 
 -- ===========================================================================
+-- 5A. The canonical Reading subject grounding (R2). Stage 1.9 freezes
+--     Reading <-> Hypothesis as PARTIAL: the Hypothesis keeps its analytical
+--     identity, statement, type / domain / scope / origin, lifecycle and
+--     version, Evidence semantics, assumptions / disconfirming conditions,
+--     Confidence integration and update loop untouched, and subject grounding
+--     is ADDITIONAL canonical truth, never a replacement. Four things stay
+--     apart, in types, persistence, proofs and docs:
+--
+--       A. analytical identity          public.hypotheses (frozen)
+--       B. subject grounding            public.hypothesis_subject_groundings:
+--                                       "this analytical object is
+--                                       substantively about this canonical
+--                                       conversational focus, on inspectable
+--                                       committed conversational grounding"
+--       C. Thread contextual appearance public.thread_reading_bindings (A-1),
+--                                       DERIVED from B plus the canonical
+--                                       focus -> Thread truth of 0068 / 0070
+--       D. Evidence participation       the supporting / contradicting
+--                                       Evidence ids: inferential bearing on
+--                                       the claim, never Thread membership
+--
+--     The grounding target is the frozen B1 stable focus identity
+--     (conversation_emerging_focuses.id, the emerging_focus_id): the SAME
+--     handle Thread establishment (0068, grounding_emerging_focus_id) and
+--     cross-Session continuity (0070, conversation_thread_focus_bindings)
+--     resolve. No second focus ontology exists, and a grounding may exist
+--     while its focus is still Emerging: SubjectGrounding <> ThreadBinding.
+--
+--     A grounding is born ONLY inside the durable post-response generation
+--     (section 11A): the universe of legitimately groundable focuses is built
+--     by the server from committed truth and stored per execution (5A.2), the
+--     provider's selection is validated against that exact universe and
+--     stored per execution (5A.3), and the grounding row (5A.1) is written by
+--     the persistence command atomically with the Hypothesis it grounds,
+--     anchored at actual canonical availability through the execution's
+--     Session association (SP, same-SP sequence, world version) - never at
+--     the causal source turn. Every row is append-only; no application role
+--     reaches any of the three tables.
+-- ===========================================================================
+CREATE TABLE public.hypothesis_subject_groundings (
+  grounding_id uuid PRIMARY KEY,
+  user_id uuid NOT NULL,
+  hypothesis_id uuid NOT NULL,
+  session_id uuid NOT NULL,
+  emerging_focus_id uuid NOT NULL,
+  execution_id uuid NOT NULL,
+  source_turn_id uuid NOT NULL,
+  universe_frontier_sp integer NOT NULL,
+  session_position integer NOT NULL,
+  same_sp_event_sequence bigint NOT NULL,
+  world_version bigint NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT hypothesis_subject_groundings_owner_fk
+    FOREIGN KEY (hypothesis_id, user_id) REFERENCES public.hypotheses (id, user_id) ON DELETE RESTRICT,
+  CONSTRAINT hypothesis_subject_groundings_session_user_fk
+    FOREIGN KEY (session_id, user_id) REFERENCES public.conversation_sessions (id, user_id) ON DELETE RESTRICT,
+  CONSTRAINT hypothesis_subject_groundings_focus_fk
+    FOREIGN KEY (emerging_focus_id) REFERENCES public.conversation_emerging_focuses (id) ON DELETE RESTRICT,
+  CONSTRAINT hypothesis_subject_groundings_execution_fk
+    FOREIGN KEY (execution_id) REFERENCES public.post_response_intelligence_executions (id) ON DELETE RESTRICT,
+  CONSTRAINT hypothesis_subject_groundings_anchor_fk
+    FOREIGN KEY (session_id, session_position) REFERENCES public.conversation_units (session_id, session_position) ON DELETE RESTRICT,
+  CONSTRAINT hypothesis_subject_groundings_one_per_focus UNIQUE (hypothesis_id, emerging_focus_id),
+  CONSTRAINT hypothesis_subject_groundings_anchor_check CHECK (
+    universe_frontier_sp >= 1 AND session_position >= universe_frontier_sp
+    AND same_sp_event_sequence >= 1 AND world_version >= 1)
+);
+CREATE INDEX hypothesis_subject_groundings_focus_idx
+  ON public.hypothesis_subject_groundings (emerging_focus_id, session_id);
+CREATE INDEX hypothesis_subject_groundings_reading_idx
+  ON public.hypothesis_subject_groundings (hypothesis_id, session_id, session_position);
+
+-- 5A.2 The authorized grounding universe of ONE durable generation: the
+--      committed Emerging Focuses of the execution's Session up to the Live
+--      Head at build time (the frontier), each with its server-issued opaque
+--      handle and its committed provenance. Stored once, never rewritten, so
+--      "the exact supplied universe" is a durable fact the proposal is judged
+--      against. frontier_sp NULL = no committed Moment yet = empty universe.
+CREATE TABLE public.hypothesis_subject_grounding_universes (
+  execution_id uuid PRIMARY KEY,
+  user_id uuid NOT NULL,
+  session_id uuid NOT NULL,
+  source_turn_id uuid NOT NULL,
+  frontier_sp integer,
+  entries jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT hypothesis_subject_grounding_universes_execution_fk
+    FOREIGN KEY (execution_id) REFERENCES public.post_response_intelligence_executions (id) ON DELETE RESTRICT,
+  CONSTRAINT hypothesis_subject_grounding_universes_session_user_fk
+    FOREIGN KEY (session_id, user_id) REFERENCES public.conversation_sessions (id, user_id) ON DELETE RESTRICT,
+  CONSTRAINT hypothesis_subject_grounding_universes_frontier_check CHECK (frontier_sp IS NULL OR frontier_sp >= 1),
+  CONSTRAINT hypothesis_subject_grounding_universes_entries_check CHECK (
+    jsonb_typeof(entries) = 'array' AND jsonb_array_length(entries) <= 32
+    AND (frontier_sp IS NOT NULL OR jsonb_array_length(entries) = 0))
+);
+
+-- 5A.3 The authorized proposal of ONE durable generation: exactly one
+--      selection per accepted candidate, each a subset (possibly empty) of the
+--      handles of the stored universe. Written by the grounded Candidate
+--      completion in the SAME transaction as the frozen 0033 completion.
+CREATE TABLE public.hypothesis_subject_grounding_proposals (
+  execution_id uuid PRIMARY KEY,
+  user_id uuid NOT NULL,
+  selections jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT hypothesis_subject_grounding_proposals_universe_fk
+    FOREIGN KEY (execution_id) REFERENCES public.hypothesis_subject_grounding_universes (execution_id) ON DELETE RESTRICT,
+  CONSTRAINT hypothesis_subject_grounding_proposals_user_fk
+    FOREIGN KEY (user_id) REFERENCES public.users (id) ON DELETE RESTRICT,
+  CONSTRAINT hypothesis_subject_grounding_proposals_selections_check CHECK (
+    jsonb_typeof(selections) = 'array' AND jsonb_array_length(selections) <= 5)
+);
+
+-- ===========================================================================
 -- 6. Append-only enforcement of every T-03C history row. Availability is
 --    recorded once; no role, the owner included, can rewrite, renumber,
 --    reanchor or physically remove an event, a coverage decision, a baseline
@@ -617,6 +738,15 @@ CREATE TRIGGER historical_confidence_events_immutable
   FOR EACH ROW EXECUTE FUNCTION public.reject_historical_projection_mutation_v1();
 CREATE TRIGGER historical_question_appearance_events_immutable
   BEFORE UPDATE OR DELETE ON public.historical_question_appearance_events
+  FOR EACH ROW EXECUTE FUNCTION public.reject_historical_projection_mutation_v1();
+CREATE TRIGGER hypothesis_subject_groundings_immutable
+  BEFORE UPDATE OR DELETE ON public.hypothesis_subject_groundings
+  FOR EACH ROW EXECUTE FUNCTION public.reject_historical_projection_mutation_v1();
+CREATE TRIGGER hypothesis_subject_grounding_universes_immutable
+  BEFORE UPDATE OR DELETE ON public.hypothesis_subject_grounding_universes
+  FOR EACH ROW EXECUTE FUNCTION public.reject_historical_projection_mutation_v1();
+CREATE TRIGGER hypothesis_subject_grounding_proposals_immutable
+  BEFORE UPDATE OR DELETE ON public.hypothesis_subject_grounding_proposals
   FOR EACH ROW EXECUTE FUNCTION public.reject_historical_projection_mutation_v1();
 
 -- ===========================================================================
@@ -1315,9 +1445,20 @@ ALTER FUNCTION public.execute_post_response_confidence_batch_v1(uuid)
 
 CREATE FUNCTION public.persist_post_response_hypothesis_generation_v1(p_execution_id uuid)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  persisted boolean;
 BEGIN
   PERFORM public.historical_capture_begin_for_execution_v1(p_execution_id);
-  RETURN public.persist_post_response_hypothesis_generation_v1_core(p_execution_id);
+  persisted := public.persist_post_response_hypothesis_generation_v1_core(p_execution_id);
+  -- R2: the authorized subject groundings of this generation become canonical
+  -- in the SAME transaction as the Hypotheses they ground (sections 5A / 11A),
+  -- under the same execution association - a Hypothesis can never commit
+  -- without the grounding it was authorized with, and a retry the frozen core
+  -- answers as a bounded no-op persists nothing twice.
+  IF persisted THEN
+    PERFORM public.persist_authorized_subject_groundings_v1(p_execution_id);
+  END IF;
+  RETURN persisted;
 END;$$;
 
 CREATE FUNCTION public.execute_post_response_hypothesis_update_batch_v1(p_execution_id uuid, p_invocation_ids jsonb)
@@ -1374,30 +1515,335 @@ BEGIN
 END;$$;
 
 -- ===========================================================================
--- 12. The Thread <-> Reading appearance writers: clock-first, Session-bound,
---     identity derived, idempotent, granted to NO application role (see the
---     header: the Product evaluator that decides WHEN a Reading is bound is
---     owned by no merged task; T-03C owns the truthful history of the
---     appearance and its projection). The binding namespace
+-- 11A. The subject-grounding authority (R2): the SERVER builds the universe,
+--      the provider proposes opaque handles, the server authorizes, the
+--      database persists canonical truth. Identity namespaces:
+--
+--        grounding  1592a69d-781e-57ce-bb2c-6744a6ac3ceb
+--          = uuidV5(RFC 4122 URL namespace,
+--                   'https://qandeel.app/runtime/hypothesis-subject-grounding/v1')
+--          name = <hypothesis_id>:<emerging_focus_id>
+--        handle     8feaee1d-fe51-5e9e-8594-52499b414e64
+--          = uuidV5(RFC 4122 URL namespace,
+--                   'https://qandeel.app/runtime/subject-grounding-handle/v1')
+--          name = <execution_id>:<emerging_focus_id>
+--
+--      A handle is opaque to the provider: it is issued per execution, it
+--      names no focus, no Thread and no Session, and a raw focus or Thread
+--      UUID is never a handle. Section 16 refuses to deploy unless both
+--      namespaces re-derive.
+-- ===========================================================================
+CREATE FUNCTION public.hypothesis_subject_grounding_identity_v1(p_hypothesis_id uuid, p_emerging_focus_id uuid)
+RETURNS uuid LANGUAGE plpgsql IMMUTABLE SET search_path='' AS $$
+BEGIN
+  IF p_hypothesis_id IS NULL OR p_emerging_focus_id IS NULL THEN
+    RAISE EXCEPTION 'INVALID_SUBJECT_GROUNDING_IDENTITY' USING ERRCODE='22023';
+  END IF;
+  RETURN public.canonical_uuid_v5_v1('1592a69d-781e-57ce-bb2c-6744a6ac3ceb'::uuid, p_hypothesis_id::text || ':' || p_emerging_focus_id::text);
+END;$$;
+
+CREATE FUNCTION public.hypothesis_subject_grounding_handle_v1(p_execution_id uuid, p_emerging_focus_id uuid)
+RETURNS text LANGUAGE plpgsql IMMUTABLE SET search_path='' AS $$
+BEGIN
+  IF p_execution_id IS NULL OR p_emerging_focus_id IS NULL THEN
+    RAISE EXCEPTION 'INVALID_SUBJECT_GROUNDING_IDENTITY' USING ERRCODE='22023';
+  END IF;
+  RETURN public.canonical_uuid_v5_v1('8feaee1d-fe51-5e9e-8594-52499b414e64'::uuid, p_execution_id::text || ':' || p_emerging_focus_id::text)::text;
+END;$$;
+
+-- The provider-facing presentation of a stored universe: opaque handle, the
+-- exact committed wording that first grounded the focus, and its Session
+-- Positions. No focus id, no Thread id, no Session id crosses to a provider.
+CREATE FUNCTION public.hypothesis_subject_grounding_universe_presentation_v1(p_universe public.hypothesis_subject_grounding_universes)
+RETURNS jsonb LANGUAGE sql IMMUTABLE SET search_path='' AS $$
+  SELECT jsonb_build_object(
+    'executionId', p_universe.execution_id,
+    'frontierSp', p_universe.frontier_sp,
+    'entries', COALESCE((SELECT jsonb_agg(jsonb_build_object(
+        'handle', e.value ->> 'handle', 'subjectText', e.value ->> 'subjectText',
+        'startedSp', (e.value ->> 'startedSp')::integer, 'lastAttentionSp', (e.value ->> 'lastAttentionSp')::integer)
+        ORDER BY (e.value ->> 'startedSp')::integer, e.value ->> 'emergingFocusId')
+      FROM jsonb_array_elements(p_universe.entries) AS e(value)), '[]'::jsonb))
+$$;
+
+-- 11A.1 The universe. Built from committed B1 / B2 / B3 truth of the
+--       execution's Session ONLY (server-owned association, 0022): every
+--       Emerging Focus committed at or before the Live Head at build time,
+--       bounded to the 32 most recently attended, each carrying its own
+--       committed provenance - the stable focus identity, the grounding
+--       reference handle, the starting CU and SP, the latest attention SP,
+--       the first committed wording of the reference, and the Thread the
+--       focus already resolves to in this Session (0068 establishment or
+--       0070 continuity), if any. A focus that never became canonical - an
+--       AMBIGUOUS or UNRESOLVED reference, an incidental mention - has no
+--       row here, so no definite grounding can ever name it. Idempotent: the
+--       first build is the universe of the execution for good.
+CREATE FUNCTION public.build_hypothesis_subject_grounding_universe_v1(p_execution_id uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  execution_row public.post_response_intelligence_executions;
+  stored public.hypothesis_subject_grounding_universes;
+  frontier integer;
+  built jsonb;
+BEGIN
+  IF p_execution_id IS NULL THEN
+    RAISE EXCEPTION 'INVALID_SUBJECT_GROUNDING_IDENTITY' USING ERRCODE='22023';
+  END IF;
+  SELECT * INTO execution_row FROM public.post_response_intelligence_executions e WHERE e.id = p_execution_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE='42501';
+  END IF;
+  SELECT * INTO stored FROM public.hypothesis_subject_grounding_universes u WHERE u.execution_id = p_execution_id;
+  IF FOUND THEN
+    RETURN public.hypothesis_subject_grounding_universe_presentation_v1(stored);
+  END IF;
+  IF execution_row.state <> 'RUNNING' THEN
+    RAISE EXCEPTION 'SUBJECT_GROUNDING_EXECUTION_NOT_RUNNING' USING ERRCODE='42501',
+      DETAIL='A grounding universe is built only for a RUNNING durable generation.';
+  END IF;
+  SELECT c.current_sp INTO frontier FROM public.session_semantic_clocks c
+   WHERE c.session_id = execution_row.session_id AND c.user_id = execution_row.user_id;
+  WITH focuses AS (
+    SELECT f.id, f.grounding_handle_id, f.started_cu_id, f.started_sp,
+           (SELECT max(a.session_position) FROM public.conversation_emerging_focus_attention_events a
+             WHERE a.emerging_focus_id = f.id AND a.session_id = f.session_id AND a.session_position <= frontier) AS last_attention_sp,
+           (SELECT r.anchor_text FROM public.conversation_reference_resolutions r
+             WHERE r.resolved_handle_id = f.grounding_handle_id AND r.session_id = f.session_id
+             ORDER BY r.session_position, r.same_sp_event_sequence, r.reference_index LIMIT 1) AS subject_text,
+           (SELECT b.thread_id FROM public.conversation_thread_focus_bindings b
+             WHERE b.emerging_focus_id = f.id AND b.session_id = f.session_id AND b.bound_sp <= frontier) AS thread_id,
+           (SELECT b.bound_sp FROM public.conversation_thread_focus_bindings b
+             WHERE b.emerging_focus_id = f.id AND b.session_id = f.session_id AND b.bound_sp <= frontier) AS thread_bound_sp
+      FROM public.conversation_emerging_focuses f
+     WHERE f.session_id = execution_row.session_id AND f.user_id = execution_row.user_id
+       AND frontier IS NOT NULL AND f.started_sp <= frontier),
+  bounded AS (
+    SELECT * FROM focuses ORDER BY last_attention_sp DESC NULLS LAST, started_sp DESC, id LIMIT 32)
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'handle', public.hypothesis_subject_grounding_handle_v1(p_execution_id, b.id),
+      'emergingFocusId', b.id, 'groundingHandleId', b.grounding_handle_id, 'startedCuId', b.started_cu_id,
+      'startedSp', b.started_sp, 'lastAttentionSp', b.last_attention_sp, 'subjectText', b.subject_text,
+      'threadId', b.thread_id, 'threadBoundSp', b.thread_bound_sp) ORDER BY b.started_sp, b.id), '[]'::jsonb)
+    INTO built
+    FROM bounded b;
+  INSERT INTO public.hypothesis_subject_grounding_universes (execution_id, user_id, session_id, source_turn_id, frontier_sp, entries)
+  VALUES (p_execution_id, execution_row.user_id, execution_row.session_id, execution_row.source_turn_id, frontier, built)
+  ON CONFLICT (execution_id) DO NOTHING;
+  SELECT * INTO stored FROM public.hypothesis_subject_grounding_universes u WHERE u.execution_id = p_execution_id;
+  RETURN public.hypothesis_subject_grounding_universe_presentation_v1(stored);
+END;$$;
+
+-- 11A.2 The grounded Candidate completion: the frozen 0033 completion
+--       (unchanged text, unchanged grant) FIRST - it validates the candidate
+--       plan against the durable authorized Intent and completes the effect -
+--       then, in the SAME transaction, the proposal is judged against the
+--       exact stored universe of this execution: exactly one selection per
+--       accepted candidate, handles that are strings the server issued for
+--       THIS execution, no duplicate, at most eight per candidate. Anything
+--       else fails closed and rolls the completion back with it: no silent
+--       fallback, no partial grounding. A NO_ACCEPTED_CANDIDATES result
+--       grounds nothing and carries no proposal.
+CREATE FUNCTION public.complete_post_response_grounded_candidates_v1(
+  p_execution_id uuid, p_result_code text, p_result_payload jsonb, p_subject_grounding jsonb)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  completed boolean;
+  execution_row public.post_response_intelligence_executions;
+  universe public.hypothesis_subject_grounding_universes;
+  stored public.hypothesis_subject_grounding_proposals;
+  candidate_ids text[];
+  selected_ids text[] := '{}';
+  universe_handles text[];
+  selection jsonb;
+  handle jsonb;
+  handles text[];
+BEGIN
+  IF p_result_code = 'NO_ACCEPTED_CANDIDATES' THEN
+    IF p_subject_grounding IS NOT NULL THEN
+      RAISE EXCEPTION 'INVALID_SUBJECT_GROUNDING_PROPOSAL' USING ERRCODE='22023',
+        DETAIL='A generation that accepted no candidate grounds nothing.';
+    END IF;
+    RETURN public.complete_post_response_candidate_provider_effect_v1(p_execution_id, p_result_code, p_result_payload);
+  END IF;
+  IF p_result_code IS DISTINCT FROM 'VALIDATED_CANDIDATES' OR p_subject_grounding IS NULL OR jsonb_typeof(p_subject_grounding) <> 'array' THEN
+    RAISE EXCEPTION 'INVALID_SUBJECT_GROUNDING_PROPOSAL' USING ERRCODE='22023',
+      DETAIL='A validated candidate plan carries exactly one grounding selection per accepted candidate.';
+  END IF;
+  completed := public.complete_post_response_candidate_provider_effect_v1(p_execution_id, p_result_code, p_result_payload);
+  IF NOT completed THEN
+    RETURN false;
+  END IF;
+  SELECT * INTO execution_row FROM public.post_response_intelligence_executions e WHERE e.id = p_execution_id;
+  SELECT * INTO universe FROM public.hypothesis_subject_grounding_universes u WHERE u.execution_id = p_execution_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'SUBJECT_GROUNDING_UNIVERSE_MISSING' USING ERRCODE='55000',
+      DETAIL='The server builds the authorized grounding universe of a generation BEFORE its provider is invoked; a proposal without one is not judgeable.';
+  END IF;
+  SELECT COALESCE(array_agg(lower(c.value ->> 'hypothesisId')), '{}') INTO candidate_ids
+    FROM jsonb_array_elements(p_result_payload) AS c(value);
+  SELECT COALESCE(array_agg(e.value ->> 'handle'), '{}') INTO universe_handles
+    FROM jsonb_array_elements(universe.entries) AS e(value);
+  IF jsonb_array_length(p_subject_grounding) <> cardinality(candidate_ids) THEN
+    RAISE EXCEPTION 'INVALID_SUBJECT_GROUNDING_PROPOSAL' USING ERRCODE='22023',
+      DETAIL='Exactly one grounding selection per accepted candidate; zero handles is the explicit statement that the candidate grounds nothing.';
+  END IF;
+  FOR selection IN SELECT s.value FROM jsonb_array_elements(p_subject_grounding) AS s(value) LOOP
+    IF jsonb_typeof(selection) <> 'object'
+       OR (SELECT array_agg(k ORDER BY k COLLATE "C") FROM jsonb_object_keys(selection) k) IS DISTINCT FROM ARRAY['handles', 'hypothesisId']
+       OR jsonb_typeof(selection -> 'hypothesisId') <> 'string'
+       OR jsonb_typeof(selection -> 'handles') <> 'array' THEN
+      RAISE EXCEPTION 'INVALID_SUBJECT_GROUNDING_PROPOSAL' USING ERRCODE='22023',
+        DETAIL='A selection is exactly a candidate Hypothesis identity and its list of handles.';
+    END IF;
+    IF NOT (lower(selection ->> 'hypothesisId') = ANY (candidate_ids)) THEN
+      RAISE EXCEPTION 'SUBJECT_GROUNDING_TARGET_NOT_CANDIDATE' USING ERRCODE='22023',
+        DETAIL='A grounding selection names an accepted candidate of this exact plan and nothing else.';
+    END IF;
+    IF lower(selection ->> 'hypothesisId') = ANY (selected_ids) THEN
+      RAISE EXCEPTION 'INVALID_SUBJECT_GROUNDING_PROPOSAL' USING ERRCODE='22023', DETAIL='A candidate is selected for at most once.';
+    END IF;
+    selected_ids := array_append(selected_ids, lower(selection ->> 'hypothesisId'));
+    IF jsonb_array_length(selection -> 'handles') > 8 THEN
+      RAISE EXCEPTION 'SUBJECT_GROUNDING_LIMIT_EXCEEDED' USING ERRCODE='22023';
+    END IF;
+    handles := '{}';
+    FOR handle IN SELECT h.value FROM jsonb_array_elements(selection -> 'handles') AS h(value) LOOP
+      IF jsonb_typeof(handle) <> 'string' THEN
+        RAISE EXCEPTION 'INVALID_SUBJECT_GROUNDING_PROPOSAL' USING ERRCODE='22023', DETAIL='A handle is an opaque string.';
+      END IF;
+      IF (handle #>> '{}') = ANY (handles) THEN
+        RAISE EXCEPTION 'SUBJECT_GROUNDING_DUPLICATE_HANDLE' USING ERRCODE='22023';
+      END IF;
+      IF NOT ((handle #>> '{}') = ANY (universe_handles)) THEN
+        RAISE EXCEPTION 'SUBJECT_GROUNDING_HANDLE_OUTSIDE_UNIVERSE' USING ERRCODE='22023',
+          DETAIL='Only an opaque handle the server issued for this execution can ground a candidate; no raw focus or Thread identity and no handle of another execution is admissible.';
+      END IF;
+      handles := array_append(handles, handle #>> '{}');
+    END LOOP;
+  END LOOP;
+  INSERT INTO public.hypothesis_subject_grounding_proposals (execution_id, user_id, selections)
+  VALUES (p_execution_id, execution_row.user_id, p_subject_grounding)
+  ON CONFLICT (execution_id) DO NOTHING;
+  IF NOT FOUND THEN
+    SELECT * INTO stored FROM public.hypothesis_subject_grounding_proposals p WHERE p.execution_id = p_execution_id;
+    IF stored.selections <> p_subject_grounding THEN
+      RAISE EXCEPTION 'SUBJECT_GROUNDING_PROPOSAL_CONFLICT' USING ERRCODE='22023',
+        DETAIL='The first durable proposal of a generation is immutable; a different proposal is refused, not merged.';
+    END IF;
+  END IF;
+  RETURN true;
+END;$$;
+
+-- 11A.3 Persisting the authorized groundings of a generation, called by the
+--       persist wrapper (section 11) in the SAME transaction as the frozen
+--       core that created the Hypotheses. Every handle is re-resolved against
+--       the stored universe and re-verified against canonical truth: the
+--       focus exists, belongs to the execution's owner and Session and was
+--       committed at or before the universe frontier; the Hypothesis exists
+--       for the owner; the anchor is the execution association's own
+--       committed Session Position (never the source turn, never the focus's
+--       started SP - a late generation anchors where it actually became
+--       canonical). Identity is derived; an identical replay writes nothing;
+--       the same identity with a different semantic payload fails closed.
+CREATE FUNCTION public.persist_authorized_subject_groundings_v1(p_execution_id uuid)
+RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  execution_row public.post_response_intelligence_executions;
+  universe public.hypothesis_subject_grounding_universes;
+  proposal public.hypothesis_subject_grounding_proposals;
+  ctx record;
+  selection jsonb;
+  handle text;
+  entry jsonb;
+  target uuid;
+  focus public.conversation_emerging_focuses;
+  grounding uuid;
+  expected jsonb;
+  stored jsonb;
+  inserted integer := 0;
+BEGIN
+  SELECT * INTO proposal FROM public.hypothesis_subject_grounding_proposals p WHERE p.execution_id = p_execution_id;
+  IF NOT FOUND THEN
+    RETURN 0;
+  END IF;
+  SELECT * INTO execution_row FROM public.post_response_intelligence_executions e WHERE e.id = p_execution_id;
+  SELECT * INTO universe FROM public.hypothesis_subject_grounding_universes u WHERE u.execution_id = p_execution_id;
+  IF NOT FOUND OR universe.user_id <> execution_row.user_id OR universe.session_id <> execution_row.session_id THEN
+    RAISE EXCEPTION 'SUBJECT_GROUNDING_UNIVERSE_MISSING' USING ERRCODE='55000';
+  END IF;
+  SELECT * INTO ctx FROM public.historical_capture_context_v1(execution_row.user_id);
+  FOR selection IN SELECT s.value FROM jsonb_array_elements(proposal.selections) AS s(value) LOOP
+    IF jsonb_array_length(selection -> 'handles') = 0 THEN
+      CONTINUE;
+    END IF;
+    target := (selection ->> 'hypothesisId')::uuid;
+    IF NOT EXISTS (SELECT 1 FROM public.hypotheses h WHERE h.id = target AND h.user_id = execution_row.user_id) THEN
+      RAISE EXCEPTION 'SUBJECT_GROUNDING_TARGET_MISSING' USING ERRCODE='55000',
+        DETAIL='A grounding is recorded only for a Hypothesis this generation actually persisted for its owner.';
+    END IF;
+    IF ctx.session_id IS DISTINCT FROM execution_row.session_id OR ctx.session_position IS NULL THEN
+      RAISE EXCEPTION 'SUBJECT_GROUNDING_ANCHOR_UNAVAILABLE' USING ERRCODE='55000',
+        DETAIL='A subject grounding is anchored through the execution association at an addressable committed Session Position of its Session.';
+    END IF;
+    FOR handle IN SELECT h.value FROM jsonb_array_elements_text(selection -> 'handles') AS h(value) LOOP
+      SELECT e.value INTO entry FROM jsonb_array_elements(universe.entries) AS e(value) WHERE e.value ->> 'handle' = handle;
+      IF entry IS NULL THEN
+        RAISE EXCEPTION 'SUBJECT_GROUNDING_HANDLE_OUTSIDE_UNIVERSE' USING ERRCODE='55000';
+      END IF;
+      SELECT * INTO focus FROM public.conversation_emerging_focuses f WHERE f.id = (entry ->> 'emergingFocusId')::uuid;
+      IF NOT FOUND OR focus.session_id <> execution_row.session_id OR focus.user_id <> execution_row.user_id
+         OR universe.frontier_sp IS NULL OR focus.started_sp > universe.frontier_sp THEN
+        RAISE EXCEPTION 'SUBJECT_GROUNDING_FOCUS_NOT_CANONICAL' USING ERRCODE='55000',
+          DETAIL='A grounding names a committed Emerging Focus of the execution''s own Session and owner, at or before the universe frontier.';
+      END IF;
+      grounding := public.hypothesis_subject_grounding_identity_v1(target, focus.id);
+      expected := jsonb_build_object('grounding_id', grounding, 'user_id', execution_row.user_id, 'hypothesis_id', target,
+        'session_id', execution_row.session_id, 'emerging_focus_id', focus.id, 'execution_id', p_execution_id, 'source_turn_id', execution_row.source_turn_id);
+      INSERT INTO public.hypothesis_subject_groundings (
+        grounding_id, user_id, hypothesis_id, session_id, emerging_focus_id, execution_id, source_turn_id,
+        universe_frontier_sp, session_position, same_sp_event_sequence, world_version)
+      VALUES (grounding, execution_row.user_id, target, execution_row.session_id, focus.id, p_execution_id, execution_row.source_turn_id,
+        universe.frontier_sp, ctx.session_position, ctx.same_sp_event_sequence, ctx.world_version)
+      ON CONFLICT (grounding_id) DO NOTHING;
+      IF FOUND THEN
+        inserted := inserted + 1;
+      ELSE
+        SELECT to_jsonb(g) - 'created_at' - 'universe_frontier_sp' - 'session_position' - 'same_sp_event_sequence' - 'world_version' INTO stored
+          FROM public.hypothesis_subject_groundings g WHERE g.grounding_id = grounding;
+        IF stored IS DISTINCT FROM expected THEN
+          RAISE EXCEPTION 'SUBJECT_GROUNDING_IDENTITY_CONFLICT' USING ERRCODE='22023',
+            DETAIL='The same stable grounding identity was reused with a different semantic payload; nothing is replaced.';
+        END IF;
+      END IF;
+    END LOOP;
+  END LOOP;
+  RETURN inserted;
+END;$$;
+
+-- ===========================================================================
+-- 12. The Thread <-> Reading appearance writers: Session-bound, identity
+--     derived, idempotent, executable by NO application role. The ONE
+--     recording core takes its anchor from the canonical row that derives the
+--     appearance (section 12A: a subject grounding, or a focus -> Thread
+--     binding), and the boundary-anchored helper reserves its own same-SP
+--     position through the capture boundary. No caller ever supplies a
+--     Thread / Reading pair from outside the server. The binding namespace
 --       11be3a36-745a-54fd-a938-3f14eaedee14
 --     = uuidV5(RFC 4122 URL namespace,
 --              'https://qandeel.app/runtime/thread-reading-binding/v1').
 -- ===========================================================================
-CREATE FUNCTION public.bind_reading_to_thread_v1(p_user_id uuid, p_session_id uuid, p_thread_id uuid, p_hypothesis_id uuid)
+CREATE FUNCTION public.record_thread_reading_appearance_v1(
+  p_user_id uuid, p_session_id uuid, p_thread_id uuid, p_hypothesis_id uuid,
+  p_session_position integer, p_event_sequence bigint, p_world_version bigint)
 RETURNS TABLE(binding_id uuid, bound_sp integer, unbound_sp integer)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE
-  ctx record;
   existing public.thread_reading_bindings;
   derived uuid;
 BEGIN
-  IF p_user_id IS NULL OR p_session_id IS NULL OR p_thread_id IS NULL OR p_hypothesis_id IS NULL THEN
+  IF p_user_id IS NULL OR p_session_id IS NULL OR p_thread_id IS NULL OR p_hypothesis_id IS NULL
+     OR p_session_position IS NULL OR p_event_sequence IS NULL OR p_world_version IS NULL THEN
     RAISE EXCEPTION 'INVALID_THREAD_READING_BINDING_IDENTITY' USING ERRCODE='22023';
-  END IF;
-  SELECT * INTO ctx FROM public.historical_capture_begin_v1(p_user_id, p_session_id, true);
-  IF ctx.session_position IS NULL THEN
-    RAISE EXCEPTION 'SESSION_POSITION_NOT_ESTABLISHED' USING ERRCODE='55000',
-      DETAIL='A contextual appearance needs an addressable committed Session Position to be bound at.';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM public.conversation_threads t WHERE t.id = p_thread_id AND t.user_id = p_user_id)
      OR NOT EXISTS (SELECT 1 FROM public.hypotheses h WHERE h.id = p_hypothesis_id AND h.user_id = p_user_id) THEN
@@ -1410,16 +1856,34 @@ BEGIN
     RETURN NEXT; RETURN;
   END IF;
   derived := public.canonical_uuid_v5_v1('11be3a36-745a-54fd-a938-3f14eaedee14'::uuid,
-    p_session_id::text || ':' || p_thread_id::text || ':' || p_hypothesis_id::text || ':' || ctx.session_position::text);
+    p_session_id::text || ':' || p_thread_id::text || ':' || p_hypothesis_id::text || ':' || p_session_position::text);
   IF EXISTS (SELECT 1 FROM public.thread_reading_bindings b WHERE b.binding_id = derived) THEN
     RAISE EXCEPTION 'THREAD_READING_BINDING_IDENTITY_CONFLICT' USING ERRCODE='22023',
       DETAIL='The same appearance identity already exists with a different validity; a Session Position never carries two lives of one appearance.';
   END IF;
   INSERT INTO public.thread_reading_bindings (
     binding_id, user_id, session_id, thread_id, hypothesis_id, bound_sp, bound_event_sequence, world_version)
-  VALUES (derived, p_user_id, p_session_id, p_thread_id, p_hypothesis_id, ctx.session_position, ctx.same_sp_event_sequence, ctx.world_version);
-  binding_id := derived; bound_sp := ctx.session_position; unbound_sp := NULL;
+  VALUES (derived, p_user_id, p_session_id, p_thread_id, p_hypothesis_id, p_session_position, p_event_sequence, p_world_version);
+  binding_id := derived; bound_sp := p_session_position; unbound_sp := NULL;
   RETURN NEXT;
+END;$$;
+
+CREATE FUNCTION public.bind_reading_to_thread_v1(p_user_id uuid, p_session_id uuid, p_thread_id uuid, p_hypothesis_id uuid)
+RETURNS TABLE(binding_id uuid, bound_sp integer, unbound_sp integer)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  ctx record;
+BEGIN
+  IF p_user_id IS NULL OR p_session_id IS NULL OR p_thread_id IS NULL OR p_hypothesis_id IS NULL THEN
+    RAISE EXCEPTION 'INVALID_THREAD_READING_BINDING_IDENTITY' USING ERRCODE='22023';
+  END IF;
+  SELECT * INTO ctx FROM public.historical_capture_begin_v1(p_user_id, p_session_id, true);
+  IF ctx.session_position IS NULL THEN
+    RAISE EXCEPTION 'SESSION_POSITION_NOT_ESTABLISHED' USING ERRCODE='55000',
+      DETAIL='A contextual appearance needs an addressable committed Session Position to be bound at.';
+  END IF;
+  RETURN QUERY SELECT * FROM public.record_thread_reading_appearance_v1(
+    p_user_id, p_session_id, p_thread_id, p_hypothesis_id, ctx.session_position, ctx.same_sp_event_sequence, ctx.world_version);
 END;$$;
 
 CREATE FUNCTION public.unbind_reading_from_thread_v1(p_user_id uuid, p_session_id uuid, p_binding_id uuid)
@@ -1449,6 +1913,89 @@ BEGIN
   binding_id := existing.binding_id; bound_sp := existing.bound_sp; unbound_sp := existing.unbound_sp;
   RETURN NEXT;
 END;$$;
+
+-- ===========================================================================
+-- 12A. THE A-1 PRODUCTION AUTHORITY (R2). The appearance is DERIVED, never
+--      authored: a Reading appears in a Thread exactly when a canonical
+--      subject grounding of the Reading names a focus that the canonical
+--      B2 / B3 truth of the SAME Session resolves to that Thread. Two
+--      triggers cover the two orders in which those facts can become
+--      canonical, each anchoring the appearance at ITS OWN actual
+--      availability - never at the Reading's creation, never at the causal
+--      source turn, never backdated into a sealed Session Position:
+--
+--        Case A  the focus is already bound to a Thread in this Session when
+--                the grounding becomes canonical -> the appearance is born in
+--                the grounding's transaction, at the grounding's own anchor
+--                (the execution association's SP / same-SP sequence / world
+--                version);
+--        Case B  the grounding exists while the focus is still Emerging ->
+--                no appearance; when the focus later resolves to a Thread
+--                (0068 establishment or 0070 continuity, both written by the
+--                frozen FINAL chain as a conversation_thread_focus_bindings
+--                row) the appearance is born in THAT transaction, at the
+--                focus binding's own Session Position and Thread-layer
+--                same-SP sequence, with the world version of that
+--                transaction's capture context;
+--        Case C  several groundings -> several appearances of ONE analytical
+--                identity; a grounding to a focus that never resolves, an
+--                Evidence overlap, a peer relation, a statement that names a
+--                subject, the current LF and geometry derive nothing.
+--
+--      v1 validity is open-ended after bind: no current Hypothesis Runtime
+--      operation changes a Hypothesis's subject (statement / type / domain /
+--      scope / origin are immutable in place under the R-C2 guard, and an
+--      Evidence attach, a status transition, a Confidence evaluation or a
+--      Thread lifecycle change never touches a grounding), so nothing can
+--      leave a binding stale; the unbind substrate stays reserved and
+--      unreachable by any application role.
+-- ===========================================================================
+CREATE FUNCTION public.derive_thread_reading_appearances_for_grounding_v1()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  binding public.conversation_thread_focus_bindings;
+BEGIN
+  FOR binding IN
+    SELECT b.* FROM public.conversation_thread_focus_bindings b
+     WHERE b.emerging_focus_id = NEW.emerging_focus_id AND b.session_id = NEW.session_id AND b.user_id = NEW.user_id
+       AND b.bound_sp <= NEW.session_position
+     ORDER BY b.thread_id
+  LOOP
+    PERFORM public.record_thread_reading_appearance_v1(NEW.user_id, NEW.session_id, binding.thread_id, NEW.hypothesis_id,
+      NEW.session_position, NEW.same_sp_event_sequence, NEW.world_version);
+  END LOOP;
+  RETURN NULL;
+END;$$;
+
+CREATE FUNCTION public.derive_thread_reading_appearances_for_focus_binding_v1()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  ctx record;
+  anchored boolean := false;
+  grounding public.hypothesis_subject_groundings;
+BEGIN
+  FOR grounding IN
+    SELECT g.* FROM public.hypothesis_subject_groundings g
+     WHERE g.emerging_focus_id = NEW.emerging_focus_id AND g.session_id = NEW.session_id AND g.user_id = NEW.user_id
+       AND g.session_position <= NEW.bound_sp
+     ORDER BY g.grounding_id
+  LOOP
+    IF NOT anchored THEN
+      SELECT * INTO ctx FROM public.historical_capture_context_v1(NEW.user_id);
+      anchored := true;
+    END IF;
+    PERFORM public.record_thread_reading_appearance_v1(NEW.user_id, NEW.session_id, NEW.thread_id, grounding.hypothesis_id,
+      NEW.bound_sp, NEW.same_sp_event_sequence, ctx.world_version);
+  END LOOP;
+  RETURN NULL;
+END;$$;
+
+CREATE TRIGGER hypothesis_subject_groundings_thread_appearance
+  AFTER INSERT ON public.hypothesis_subject_groundings
+  FOR EACH ROW EXECUTE FUNCTION public.derive_thread_reading_appearances_for_grounding_v1();
+CREATE TRIGGER conversation_thread_focus_bindings_thread_appearance
+  AFTER INSERT ON public.conversation_thread_focus_bindings
+  FOR EACH ROW EXECUTE FUNCTION public.derive_thread_reading_appearances_for_focus_binding_v1();
 
 -- ===========================================================================
 -- 13. R-C5 - wall-clock domain separation. A Material's expires_at is a
@@ -1670,6 +2217,12 @@ BEGIN
   -- Readings (R1-R5, R8): identity by creation event; then-current status and
   -- version from the latest known event; immutable fields reused under the
   -- preservation guard; a known Reading never shows an unknown later version.
+  -- The v1 Hypothesis-backed Reading projection bridge (Stage 1.9: Reading <->
+  -- Hypothesis is PARTIAL) carries the Reading's canonical subject groundings
+  -- of THIS Session known at TC (own anchor <= TC), so a consumer can tell an
+  -- ungrounded legacy Hypothesis from a grounded Reading whose focus is still
+  -- Emerging from one that also appears in a Thread; grounding is never
+  -- inferred from statement, scope, Evidence or the Thread appearance itself.
   WITH known AS (
     SELECT e.* FROM public.historical_reading_events e
      WHERE e.user_id = caller
@@ -1685,7 +2238,12 @@ BEGIN
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
       'id', h.id, 'statement', h.statement, 'type', h.type, 'domain', h.domain, 'scope', h.scope, 'origin', h.origin,
       'assumptions', to_jsonb(h.assumptions), 'disconfirmingConditions', to_jsonb(h.disconfirming_conditions),
-      'statusAtTc', l.to_status, 'versionAtTc', l.to_version, 'lineage', g.steps) ORDER BY h.id), '[]'::jsonb)
+      'statusAtTc', l.to_status, 'versionAtTc', l.to_version, 'lineage', g.steps,
+      'subjectGroundings', COALESCE((SELECT jsonb_agg(jsonb_build_object('emergingFocusId', sg.emerging_focus_id, 'groundedAtSp', sg.session_position)
+                                              ORDER BY sg.session_position, sg.grounding_id)
+                                       FROM public.hypothesis_subject_groundings sg
+                                      WHERE sg.hypothesis_id = h.id AND sg.user_id = caller AND sg.session_id = p_session_id
+                                        AND sg.session_position <= p_tc), '[]'::jsonb)) ORDER BY h.id), '[]'::jsonb)
     INTO readings
     FROM created c
     JOIN public.hypotheses h ON h.id = c.hypothesis_id AND h.user_id = caller
@@ -1917,15 +2475,20 @@ END;$$;
 --       GRANT  service_role  -> the three managed commands (their unchanged
 --                               public names), the synchronization entry
 --                               (unchanged name), the execution-associated
---                               Memory creation command
+--                               Memory creation command, and (R2) the two
+--                               server-only subject-grounding entries: the
+--                               universe build and the grounded Candidate
+--                               completion
 --       REVOKE service_role  -> the three renamed frozen cores
 --
 --     R-C3 keeps the live legacy Evidence-attach entrypoints (0005 / 0008 /
 --     0021 / 0028) and their grants untouched: every write they make passes
 --     the capture hook, which is what defangs the old untracked bypass.
 --     Nothing else is granted: the capture boundary, every capture hook, the
---     Thread <-> Reading writers, the expiry mapping and every history table
---     stay executable / reachable by NO application role.
+--     Thread <-> Reading writers and the appearance-deriving triggers, the
+--     grounding persistence and identity functions, the expiry mapping and
+--     every history table (the three subject-grounding tables included) stay
+--     executable / reachable by NO application role.
 -- ===========================================================================
 ALTER TABLE public.historical_world_semantic_clocks OWNER TO postgres;
 ALTER TABLE public.session_historical_coverage OWNER TO postgres;
@@ -1940,6 +2503,9 @@ ALTER TABLE public.historical_question_events OWNER TO postgres;
 ALTER TABLE public.historical_confidence_events OWNER TO postgres;
 ALTER TABLE public.historical_question_appearance_events OWNER TO postgres;
 ALTER TABLE public.thread_reading_bindings OWNER TO postgres;
+ALTER TABLE public.hypothesis_subject_groundings OWNER TO postgres;
+ALTER TABLE public.hypothesis_subject_grounding_universes OWNER TO postgres;
+ALTER TABLE public.hypothesis_subject_grounding_proposals OWNER TO postgres;
 
 ALTER TABLE public.historical_world_semantic_clocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.session_historical_coverage ENABLE ROW LEVEL SECURITY;
@@ -1954,12 +2520,16 @@ ALTER TABLE public.historical_question_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.historical_confidence_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.historical_question_appearance_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.thread_reading_bindings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.hypothesis_subject_groundings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.hypothesis_subject_grounding_universes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.hypothesis_subject_grounding_proposals ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON TABLE public.historical_world_semantic_clocks, public.session_historical_coverage, public.session_historical_baselines,
   public.historical_thread_availability, public.historical_reading_events, public.historical_evidence_participation_events,
   public.historical_reading_relation_events, public.historical_material_events, public.historical_gap_events,
   public.historical_question_events, public.historical_confidence_events, public.historical_question_appearance_events,
-  public.thread_reading_bindings
+  public.thread_reading_bindings, public.hypothesis_subject_groundings, public.hypothesis_subject_grounding_universes,
+  public.hypothesis_subject_grounding_proposals
   FROM PUBLIC, anon, authenticated;
 
 ALTER FUNCTION public.guard_historical_world_semantic_clock_v1() OWNER TO postgres;
@@ -1988,6 +2558,15 @@ ALTER FUNCTION public.sync_post_response_information_gaps_v1(uuid) OWNER TO post
 ALTER FUNCTION public.server_create_memory_for_execution_v1(uuid,uuid,text,text,text,double precision,double precision,text,timestamptz) OWNER TO postgres;
 ALTER FUNCTION public.bind_reading_to_thread_v1(uuid,uuid,uuid,uuid) OWNER TO postgres;
 ALTER FUNCTION public.unbind_reading_from_thread_v1(uuid,uuid,uuid) OWNER TO postgres;
+ALTER FUNCTION public.record_thread_reading_appearance_v1(uuid,uuid,uuid,uuid,integer,bigint,bigint) OWNER TO postgres;
+ALTER FUNCTION public.derive_thread_reading_appearances_for_grounding_v1() OWNER TO postgres;
+ALTER FUNCTION public.derive_thread_reading_appearances_for_focus_binding_v1() OWNER TO postgres;
+ALTER FUNCTION public.hypothesis_subject_grounding_identity_v1(uuid,uuid) OWNER TO postgres;
+ALTER FUNCTION public.hypothesis_subject_grounding_handle_v1(uuid,uuid) OWNER TO postgres;
+ALTER FUNCTION public.hypothesis_subject_grounding_universe_presentation_v1(public.hypothesis_subject_grounding_universes) OWNER TO postgres;
+ALTER FUNCTION public.build_hypothesis_subject_grounding_universe_v1(uuid) OWNER TO postgres;
+ALTER FUNCTION public.complete_post_response_grounded_candidates_v1(uuid,text,jsonb,jsonb) OWNER TO postgres;
+ALTER FUNCTION public.persist_authorized_subject_groundings_v1(uuid) OWNER TO postgres;
 ALTER FUNCTION public.historical_session_position_wall_time_v1(uuid,integer) OWNER TO postgres;
 ALTER FUNCTION public.historical_memory_expiry_at_sp_v1(uuid,timestamptz) OWNER TO postgres;
 ALTER FUNCTION public.get_session_historical_projection_v1(uuid,integer) OWNER TO postgres;
@@ -2018,6 +2597,15 @@ REVOKE ALL ON FUNCTION public.sync_post_response_information_gaps_v1(uuid) FROM 
 REVOKE ALL ON FUNCTION public.server_create_memory_for_execution_v1(uuid,uuid,text,text,text,double precision,double precision,text,timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.bind_reading_to_thread_v1(uuid,uuid,uuid,uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.unbind_reading_from_thread_v1(uuid,uuid,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.record_thread_reading_appearance_v1(uuid,uuid,uuid,uuid,integer,bigint,bigint) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.derive_thread_reading_appearances_for_grounding_v1() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.derive_thread_reading_appearances_for_focus_binding_v1() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.hypothesis_subject_grounding_identity_v1(uuid,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.hypothesis_subject_grounding_handle_v1(uuid,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.hypothesis_subject_grounding_universe_presentation_v1(public.hypothesis_subject_grounding_universes) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.build_hypothesis_subject_grounding_universe_v1(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.complete_post_response_grounded_candidates_v1(uuid,text,jsonb,jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.persist_authorized_subject_groundings_v1(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.historical_session_position_wall_time_v1(uuid,integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.historical_memory_expiry_at_sp_v1(uuid,timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.get_session_historical_projection_v1(uuid,integer) FROM PUBLIC, anon, authenticated;
@@ -2045,7 +2633,15 @@ DO $$BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN
        || 'public.historical_thread_availability, public.historical_reading_events, public.historical_evidence_participation_events, '
        || 'public.historical_reading_relation_events, public.historical_material_events, public.historical_gap_events, '
        || 'public.historical_question_events, public.historical_confidence_events, public.historical_question_appearance_events, '
-       || 'public.thread_reading_bindings FROM service_role';
+       || 'public.thread_reading_bindings, public.hypothesis_subject_groundings, public.hypothesis_subject_grounding_universes, '
+       || 'public.hypothesis_subject_grounding_proposals FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.record_thread_reading_appearance_v1(uuid,uuid,uuid,uuid,integer,bigint,bigint) FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.hypothesis_subject_grounding_identity_v1(uuid,uuid) FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.hypothesis_subject_grounding_handle_v1(uuid,uuid) FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.hypothesis_subject_grounding_universe_presentation_v1(public.hypothesis_subject_grounding_universes) FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.persist_authorized_subject_groundings_v1(uuid) FROM service_role';
+  EXECUTE 'GRANT EXECUTE ON FUNCTION public.build_hypothesis_subject_grounding_universe_v1(uuid) TO service_role';
+  EXECUTE 'GRANT EXECUTE ON FUNCTION public.complete_post_response_grounded_candidates_v1(uuid,text,jsonb,jsonb) TO service_role';
   EXECUTE 'REVOKE ALL ON FUNCTION public.historical_capture_begin_v1(uuid,uuid,boolean) FROM service_role';
   EXECUTE 'REVOKE ALL ON FUNCTION public.historical_capture_context_v1(uuid) FROM service_role';
   EXECUTE 'REVOKE ALL ON FUNCTION public.historical_capture_begin_for_execution_v1(uuid) FROM service_role';
@@ -2129,6 +2725,20 @@ BEGIN
   IF vector <> '11be3a36-745a-54fd-a938-3f14eaedee14'::uuid THEN
     RAISE EXCEPTION 'T-03C self-assertion: the Thread <-> Reading binding namespace drifted (%)', vector USING ERRCODE='55000';
   END IF;
+  vector := public.canonical_uuid_v5_v1('6ba7b811-9dad-11d1-80b4-00c04fd430c8'::uuid, 'https://qandeel.app/runtime/hypothesis-subject-grounding/v1');
+  IF vector <> '1592a69d-781e-57ce-bb2c-6744a6ac3ceb'::uuid THEN
+    RAISE EXCEPTION 'T-03C self-assertion: the subject-grounding namespace drifted (%)', vector USING ERRCODE='55000';
+  END IF;
+  vector := public.canonical_uuid_v5_v1('6ba7b811-9dad-11d1-80b4-00c04fd430c8'::uuid, 'https://qandeel.app/runtime/subject-grounding-handle/v1');
+  IF vector <> '8feaee1d-fe51-5e9e-8594-52499b414e64'::uuid THEN
+    RAISE EXCEPTION 'T-03C self-assertion: the subject-grounding handle namespace drifted (%)', vector USING ERRCODE='55000';
+  END IF;
+  IF public.hypothesis_subject_grounding_identity_v1('11111111-2222-4333-8444-555555555555'::uuid, '4ef8538d-ddda-5e11-b7d9-052be85de59a'::uuid)
+       <> 'a89b9e67-501f-5c0d-bede-122763231f6e'::uuid
+     OR public.hypothesis_subject_grounding_handle_v1('10000000-0000-4000-8000-000000000005'::uuid, '4ef8538d-ddda-5e11-b7d9-052be85de59a'::uuid)
+       <> '22d3c5d1-02cc-55e5-97c8-7b5563e5332f' THEN
+    RAISE EXCEPTION 'T-03C self-assertion: the pinned subject-grounding vectors do not reproduce' USING ERRCODE='55000';
+  END IF;
   IF public.historical_event_identity_v1('reading-created:11111111-2222-4333-8444-555555555555') <> '91dc104c-e42b-54ff-8638-6dd7776f318c'::uuid THEN
     RAISE EXCEPTION 'T-03C self-assertion: the pinned event identity vector does not reproduce' USING ERRCODE='55000';
   END IF;
@@ -2147,7 +2757,8 @@ BEGIN
       ('historical_thread_availability'), ('historical_reading_events'), ('historical_evidence_participation_events'),
       ('historical_reading_relation_events'), ('historical_material_events'), ('historical_gap_events'),
       ('historical_question_events'), ('historical_confidence_events'), ('historical_question_appearance_events'),
-      ('thread_reading_bindings')) AS t(table_name)
+      ('thread_reading_bindings'), ('hypothesis_subject_groundings'), ('hypothesis_subject_grounding_universes'),
+      ('hypothesis_subject_grounding_proposals')) AS t(table_name)
     WHERE EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r.role_name)
       AND (has_table_privilege(r.role_name, 'public.' || t.table_name, 'SELECT')
         OR has_table_privilege(r.role_name, 'public.' || t.table_name, 'INSERT')
@@ -2160,6 +2771,10 @@ BEGIN
   IF NOT has_function_privilege('authenticated', 'public.get_session_historical_projection_v1(uuid,integer)', 'EXECUTE')
      OR has_function_privilege('anon', 'public.get_session_historical_projection_v1(uuid,integer)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.bind_reading_to_thread_v1(uuid,uuid,uuid,uuid)', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.record_thread_reading_appearance_v1(uuid,uuid,uuid,uuid,integer,bigint,bigint)', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.build_hypothesis_subject_grounding_universe_v1(uuid)', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.complete_post_response_grounded_candidates_v1(uuid,text,jsonb,jsonb)', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.persist_authorized_subject_groundings_v1(uuid)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.historical_capture_begin_v1(uuid,uuid,boolean)', 'EXECUTE') THEN
     RAISE EXCEPTION 'T-03C self-assertion: the authority posture is wrong' USING ERRCODE='55000';
   END IF;
@@ -2168,14 +2783,30 @@ BEGIN
        OR has_function_privilege('service_role', 'public.execute_post_response_hypothesis_update_batch_v1_core(uuid,jsonb)', 'EXECUTE')
        OR has_function_privilege('service_role', 'public.execute_post_response_confidence_batch_v1_core(uuid)', 'EXECUTE')
        OR has_function_privilege('service_role', 'public.bind_reading_to_thread_v1(uuid,uuid,uuid,uuid)', 'EXECUTE')
+       OR has_function_privilege('service_role', 'public.unbind_reading_from_thread_v1(uuid,uuid,uuid)', 'EXECUTE')
+       OR has_function_privilege('service_role', 'public.record_thread_reading_appearance_v1(uuid,uuid,uuid,uuid,integer,bigint,bigint)', 'EXECUTE')
+       OR has_function_privilege('service_role', 'public.persist_authorized_subject_groundings_v1(uuid)', 'EXECUTE')
        OR has_function_privilege('service_role', 'public.get_session_historical_projection_v1(uuid,integer)', 'EXECUTE')
        OR NOT has_function_privilege('service_role', 'public.persist_post_response_hypothesis_generation_v1(uuid)', 'EXECUTE')
        OR NOT has_function_privilege('service_role', 'public.execute_post_response_hypothesis_update_batch_v1(uuid,jsonb)', 'EXECUTE')
        OR NOT has_function_privilege('service_role', 'public.execute_post_response_confidence_batch_v1(uuid)', 'EXECUTE')
        OR NOT has_function_privilege('service_role', 'public.sync_post_response_information_gaps_v1(uuid)', 'EXECUTE')
-       OR NOT has_function_privilege('service_role', 'public.server_create_memory_for_execution_v1(uuid,uuid,text,text,text,double precision,double precision,text,timestamptz)', 'EXECUTE') THEN
+       OR NOT has_function_privilege('service_role', 'public.server_create_memory_for_execution_v1(uuid,uuid,text,text,text,double precision,double precision,text,timestamptz)', 'EXECUTE')
+       OR NOT has_function_privilege('service_role', 'public.build_hypothesis_subject_grounding_universe_v1(uuid)', 'EXECUTE')
+       OR NOT has_function_privilege('service_role', 'public.complete_post_response_grounded_candidates_v1(uuid,text,jsonb,jsonb)', 'EXECUTE') THEN
       RAISE EXCEPTION 'T-03C self-assertion: the service_role posture is wrong' USING ERRCODE='55000';
     END IF;
+  END IF;
+  -- R2: the A-1 appearance is derived by exactly the two triggers, and the
+  -- grounding persistence has exactly one caller path (the persist wrapper).
+  IF (SELECT count(*) FROM pg_trigger t WHERE t.tgrelid = 'public.hypothesis_subject_groundings'::regclass AND NOT t.tgisinternal
+        AND t.tgfoid = 'public.derive_thread_reading_appearances_for_grounding_v1'::regproc AND t.tgenabled = 'O') <> 1
+     OR (SELECT count(*) FROM pg_trigger t WHERE t.tgrelid = 'public.conversation_thread_focus_bindings'::regclass AND NOT t.tgisinternal
+           AND t.tgfoid = 'public.derive_thread_reading_appearances_for_focus_binding_v1'::regproc AND t.tgenabled = 'O') <> 1 THEN
+    RAISE EXCEPTION 'T-03C self-assertion: the Thread <-> Reading appearance is derived by exactly the two production triggers' USING ERRCODE='55000';
+  END IF;
+  IF position('persist_authorized_subject_groundings_v1' in pg_get_functiondef(to_regprocedure('public.persist_post_response_hypothesis_generation_v1(uuid)'))) = 0 THEN
+    RAISE EXCEPTION 'T-03C self-assertion: the persist wrapper records the authorized subject groundings atomically with the Hypotheses' USING ERRCODE='55000';
   END IF;
   -- R-C3: every path into public.hypotheses passes the ONE capture hook.
   IF (SELECT count(*) FROM pg_trigger t WHERE t.tgrelid = 'public.hypotheses'::regclass AND NOT t.tgisinternal
