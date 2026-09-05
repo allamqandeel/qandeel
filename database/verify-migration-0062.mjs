@@ -365,10 +365,22 @@ async function verifyConcurrentClaimConverges() {
     // T-03A2: a Session carries a Session Semantic Clock row, and the FK is
     // ON DELETE RESTRICT like every other conversation relationship - fixture
     // teardown removes it explicitly rather than cascading.
-    await q('DELETE FROM public.session_semantic_clocks WHERE session_id=$1', [raceSession]);
-    await q('DELETE FROM public.conversation_sessions WHERE id=$1', [raceSession]);
-    await q('DELETE FROM public.users WHERE id=$1', [raceUser]);
-    await q('DELETE FROM auth.users WHERE id=$1', [raceUser]);
+    // T-03C: a Session also carries its historical coverage decision and a user
+    // its World Semantic Clock; both are append-only canonical history, so the
+    // fixture owner removes them in replica mode (as the fixture cleanup helper
+    // and the 0064 / 0065 teardowns do) before the Session and the user go.
+    await q("SET session_replication_role = 'replica'");
+    try {
+      await q('DELETE FROM public.session_historical_baselines WHERE session_id=$1', [raceSession]);
+      await q('DELETE FROM public.session_historical_coverage WHERE session_id=$1', [raceSession]);
+      await q('DELETE FROM public.historical_world_semantic_clocks WHERE user_id=$1', [raceUser]);
+      await q('DELETE FROM public.session_semantic_clocks WHERE session_id=$1', [raceSession]);
+      await q('DELETE FROM public.conversation_sessions WHERE id=$1', [raceSession]);
+      await q('DELETE FROM public.users WHERE id=$1', [raceUser]);
+      await q('DELETE FROM auth.users WHERE id=$1', [raceUser]);
+    } finally {
+      await q("SET session_replication_role = 'origin'");
+    }
     const [{ count: residue }] = (await q('SELECT count(*) count FROM public.conversation_turns WHERE user_id=$1', [raceUser])).rows;
     assert.equal(Number(residue), 0, 'the concurrency proof left zero fixture residue');
   }
