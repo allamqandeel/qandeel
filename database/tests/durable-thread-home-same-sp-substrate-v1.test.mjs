@@ -43,11 +43,19 @@ function gitBlobId(content) {
   return createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
 }
 
-test('0068 is the newest migration, orders after 0067, and 0064-0067 are byte-identical', () => {
+test('0068 exists, orders after 0067, and 0064-0067 are byte-identical', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0068_durable_thread_home_same_sp_substrate_v1.sql');
+  // (T-03B2b3 added 0069, a READ / AUDIT-only migration that creates no table
+  // and reuses this migration's `conversation_thread_batch_state_v1` as the
+  // single structural B2 completeness authority; it is pinned by
+  // database/tests/thread-runtime-integration-readiness-v1.test.mjs. 0068
+  // stays the newest DURABLE Thread substrate migration.)
+  assert.ok(migrations.includes('0068_durable_thread_home_same_sp_substrate_v1.sql'));
   assert.ok(migrations.indexOf('0068_durable_thread_home_same_sp_substrate_v1.sql')
     > migrations.indexOf('0067_conversation_focus_runtime_integration_readiness_v1.sql'));
+  for (const later of migrations.slice(migrations.indexOf('0068_durable_thread_home_same_sp_substrate_v1.sql') + 1)) {
+    assert.doesNotMatch(read(`../migrations/${later}`), /CREATE TABLE/u, `${later} creates no second Thread or Home substrate`);
+  }
   assert.match(migration, /^BEGIN;/mu);
   assert.match(migration, /COMMIT;\s*$/u);
   assert.equal(gitBlobId(read('../migrations/0064_committed_conversational_unit_substrate_v1.sql')), '0a2ee63980e59072b3e9f52a643efa8220e95b08', '0064 byte-identical');

@@ -130,19 +130,54 @@ test('nothing outside the directory imports it: no ConversationModule, Conversat
     .filter((file) => !file.startsWith(`${THREAD_DIR}/`))
     .filter((file) => /conversational-focus|ConversationalFocusEvaluatorService|FocusResolutionProvider|OpenAiFocusResolutionProvider|validateFocusResolutionProposal/u.test(stripComments(readFileSyncUtf8(file))));
   assert.deepEqual(referencing, [], 'T-03B1a is production-inert: no runtime path reaches it');
-  // The T-03B2a evaluator may import only the two pure type modules of this
-  // directory - never the evaluator service, a provider, the validator, the
-  // anchor mapper, the canonicalizer or the T-03B1b2 runtime.
+  // The T-03B2a / T-03B2b1 / T-03B2b2 SEMANTIC files may import only the two
+  // pure type modules of this directory - never the evaluator service, a
+  // provider, the validator, the anchor mapper, the canonicalizer or the
+  // T-03B1b2 runtime.
+  //
+  // T-03B2b3's production-inert runtime orchestration is the ONE consumer that
+  // must RUN the frozen B1 chain (evaluate -> canonicalize) before its own B2
+  // chain, so it may additionally import the listed B1 runtime pieces. It may
+  // still never reach the B1 ORCHESTRATION service or its repository: the two
+  // slices stay separate runtimes, and only T-03D wires either one.
+  const B2B3_RUNTIME_FILES = new Set([
+    'conversation-thread-runtime.types.ts', 'conversation-thread-runtime.repository.ts',
+    'conversation-thread-runtime-mapper.ts', 'conversation-thread-establishment.service.ts',
+    'thread-establishment-binding.ts', 'conversational-origin-mapper.ts',
+    'conversation-thread-runtime.repository.spec.ts', 'conversation-thread-runtime-mapper.spec.ts',
+    'conversation-thread-establishment.service.spec.ts', 'conversational-origin-mapper.spec.ts',
+  ]);
+  const B2B3_ALLOWED_FOCUS_IMPORTS = new Set([
+    '../conversational-focus/conversational-focus.types',
+    '../conversational-focus/durable-focus-payload.types',
+    '../conversational-focus/conversational-focus-evaluator.service',
+    '../conversational-focus/durable-focus-canonicalizer',
+    '../conversational-focus/focus-resolution-binding',
+    '../conversational-focus/focus-resolution-provider.config',
+    '../conversational-focus/focus-resolution-provider.types',
+    '../conversational-focus/conversation-focus-runtime.types',
+    '../conversational-focus/conversation-focus-runtime.repository',
+  ]);
   const threadFiles = listFiles(join(rootPath, THREAD_DIR)).map((file) => relative(file));
   assert.ok(threadFiles.length > 0, 'the T-03B2a directory exists');
   for (const file of threadFiles) {
     const source = readFileSyncUtf8(file);
+    const runtime = B2B3_RUNTIME_FILES.has(file.slice(file.lastIndexOf('/') + 1));
     for (const match of source.matchAll(/from\s+'([^']*conversational-focus[^']*)'/gu)) {
-      assert.ok(['../conversational-focus/conversational-focus.types', '../conversational-focus/durable-focus-payload.types'].includes(match[1]),
-        `${file} may import only the B1 type authorities; found ${match[1]}`);
+      if (runtime) assert.ok(B2B3_ALLOWED_FOCUS_IMPORTS.has(match[1]), `${file} may import only the listed B1 pieces; found ${match[1]}`);
+      else {
+        assert.ok(['../conversational-focus/conversational-focus.types', '../conversational-focus/durable-focus-payload.types'].includes(match[1]),
+          `${file} may import only the B1 type authorities; found ${match[1]}`);
+      }
     }
-    assert.doesNotMatch(stripComments(source), /ConversationalFocusEvaluatorService|FocusResolutionProvider|OpenAiFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor|canonicalizePreparedFocusSequence|ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|openAiFocusResolutionBinding/u,
-      `${file} does not reach the B1 evaluator, providers, validator, canonicalizer or runtime`);
+    assert.doesNotMatch(stripComments(source), /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|OpenAiFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor/u,
+      `${file} does not reach the B1 orchestration service, its repository, the provider adapter, the validator or the anchor mapper`);
+    if (!runtime) {
+      assert.doesNotMatch(stripComments(source), /ConversationalFocusEvaluatorService|FocusResolutionProvider|canonicalizePreparedFocusSequence|openAiFocusResolutionBinding/u,
+        `${file} does not reach the B1 evaluator, providers or canonicalizer`);
+    } else if (!file.endsWith('.spec.ts')) {
+      assert.doesNotMatch(stripComments(source), /openAiFocusResolutionBinding/u, `${file} constructs no production B1 binding of its own`);
+    }
   }
   for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService], ['AppModule', appModule], ['the T-03A2 establishment service', establishment]]) {
     assert.doesNotMatch(stripComments(text), /conversational-focus|Focus|focus/u, `${name} is untouched by T-03B1a`);
@@ -165,12 +200,21 @@ test('the evaluator adds no SQL, no durable write, no durable identity; the dura
   // the canonical attention events and claim attributions to re-prove the
   // Thread-establishment gates - without creating a second one; it is pinned by
   // tests/durable-thread-home-same-sp-substrate-contract.test.mjs.)
-  for (const name of migrations.filter((candidate) => !/^006[678]_/u.test(candidate))) {
+  // (T-03B2b3 added 0069, a READ / AUDIT-only migration that READS the frozen
+  // T-03B1 substrate to rebuild one canonical B1 bundle per prior committed CU
+  // for the T-03B2a evaluator, and creates nothing; it is pinned by
+  // tests/thread-runtime-integration-readiness-contract.test.mjs.)
+  for (const name of migrations.filter((candidate) => !/^006[6789]_/u.test(candidate))) {
     assert.doesNotMatch(readFileSyncUtf8(`database/migrations/${name}`), /emerging_focus|reference_handle|conversational_focus|claim_attribution/iu, `${name} carries no T-03B1 substrate`);
   }
-  assert.doesNotMatch(readFileSyncUtf8('database/migrations/0068_durable_thread_home_same_sp_substrate_v1.sql'),
-    /CREATE TABLE public\.conversation_(?:emerging_focus|reference_|unit_focus_|claim_)/u,
-    '0068 creates no second reference / Emerging Focus substrate');
+  for (const name of ['0068_durable_thread_home_same_sp_substrate_v1.sql', '0069_thread_runtime_integration_readiness_v1.sql']) {
+    assert.doesNotMatch(readFileSyncUtf8(`database/migrations/${name}`),
+      /CREATE TABLE public\.conversation_(?:emerging_focus|reference_|unit_focus_|claim_)/u,
+      `${name} creates no second reference / Emerging Focus substrate`);
+  }
+  assert.doesNotMatch(readFileSyncUtf8('database/migrations/0069_thread_runtime_integration_readiness_v1.sql'),
+    /INSERT INTO public\.conversation_(?:emerging_focus|reference_|unit_focus_|claim_)|UPDATE public\.conversation_(?:emerging_focus|reference_|unit_focus_|claim_)|DELETE FROM public\.conversation_(?:emerging_focus|reference_|unit_focus_|claim_)/u,
+    '0069 reads the T-03B1 substrate and writes none of it');
   assert.ok(existsSync(new URL('database/verify-migration-0066.mjs', root)), 'the 0066 real-PostgreSQL verifier exists');
   for (const forbidden of ['serviceApi', 'dataApi', 'SupabaseClient', '.rpc(', 'from \'pg\'', 'INSERT INTO', 'UPDATE ', 'CREATE TABLE', 'randomUUID', 'uuidv5', 'crypto', 'fs.', 'writeFile', 'readFile']) {
     assert.equal(semanticCode.includes(forbidden), false, `the evaluator and canonicalizer must not contain ${forbidden}`);

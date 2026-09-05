@@ -132,14 +132,45 @@ test('the new writer, coordinator and context read are production-inert; the T-0
     'apps/api/src/thread-establishment/durable-thread-canonicalizer.ts',
     'apps/api/src/thread-establishment/durable-thread-canonicalizer.spec.ts',
   ]);
+  // T-03B2b3's production-inert runtime orchestration is the ONE consumer that
+  // must RUN the frozen B1 chain before its own B2 chain, so it may import the
+  // B1 evaluator, canonicalizer, binding and runtime types and name their
+  // exported helpers. It still never calls a 0066 RPC itself: its only write is
+  // the existing 0068 coordinator, and its only reads are the 0069 ones.
+  const B2B3_RUNTIME_FILES = new Set([
+    'conversation-thread-runtime.types.ts', 'conversation-thread-runtime.repository.ts',
+    'conversation-thread-runtime-mapper.ts', 'conversation-thread-establishment.service.ts',
+    'thread-establishment-binding.ts', 'conversational-origin-mapper.ts',
+    'conversation-thread-runtime.repository.spec.ts', 'conversation-thread-runtime-mapper.spec.ts',
+    'conversation-thread-establishment.service.spec.ts', 'conversational-origin-mapper.spec.ts',
+  ]);
+  const B2B3_ALLOWED_FOCUS_IMPORTS = new Set([
+    '../conversational-focus/conversational-focus.types',
+    '../conversational-focus/durable-focus-payload.types',
+    '../conversational-focus/conversational-focus-evaluator.service',
+    '../conversational-focus/durable-focus-canonicalizer',
+    '../conversational-focus/focus-resolution-binding',
+    '../conversational-focus/focus-resolution-provider.config',
+    '../conversational-focus/focus-resolution-provider.types',
+    '../conversational-focus/conversation-focus-runtime.types',
+    '../conversational-focus/conversation-focus-runtime.repository',
+  ]);
   for (const file of threadFiles) {
     const source = read(file);
+    const runtime = B2B3_RUNTIME_FILES.has(file.slice(file.lastIndexOf('/') + 1));
     for (const match of source.matchAll(/from\s+'([^']*(?:conversational-focus|durable-focus)[^']*)'/gu)) {
-      assert.ok(['../conversational-focus/conversational-focus.types', '../conversational-focus/durable-focus-payload.types'].includes(match[1]),
-        `${file} may import only the B1 type authorities; found ${match[1]}`);
+      if (runtime) assert.ok(B2B3_ALLOWED_FOCUS_IMPORTS.has(match[1]), `${file} may import only the listed B1 pieces; found ${match[1]}`);
+      else {
+        assert.ok(['../conversational-focus/conversational-focus.types', '../conversational-focus/durable-focus-payload.types'].includes(match[1]),
+          `${file} may import only the B1 type authorities; found ${match[1]}`);
+      }
     }
-    assert.doesNotMatch(stripComments(source), /with_focus_v1|focus_runtime_context|durable-focus-canonicalizer|canonicalizePreparedFocusSequence|durableEmergingFocusId|durableReferenceHandleId|EMERGING_FOCUS_NAMESPACE|REFERENCE_HANDLE_NAMESPACE/u,
-      `${file} does not reach the T-03B1b1 substrate, canonicalizer or identity derivation`);
+    assert.doesNotMatch(stripComments(source), /with_focus_v1\b|focus_runtime_context|EMERGING_FOCUS_NAMESPACE|REFERENCE_HANDLE_NAMESPACE/u,
+      `${file} never calls a 0066 RPC and derives no T-03B1 identity namespace of its own`);
+    if (!runtime) {
+      assert.doesNotMatch(stripComments(source), /durable-focus-canonicalizer|canonicalizePreparedFocusSequence|durableEmergingFocusId|durableReferenceHandleId/u,
+        `${file} does not reach the T-03B1b1 canonicalizer or identity derivation`);
+    }
     if (!B2B2_IDENTITY_FILES.has(file)) {
       assert.doesNotMatch(stripComments(source), /uuidV5/u, `${file} derives no durable identity of its own`);
     } else {
