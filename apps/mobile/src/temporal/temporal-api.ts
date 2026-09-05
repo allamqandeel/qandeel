@@ -1,22 +1,23 @@
 /**
- * T-03A2 — the narrow temporal transport.
+ * T-03A2 — the narrow temporal transport, extended additively by T-03D with
+ * the Live Focus catch-up route.
  *
- * Explicit authenticated HTTP only: a Session temporal snapshot and a
- * committed-CU catch-up page. There is no WebSocket and no SSE in T-03A2.
+ * Explicit authenticated HTTP only: a Session live snapshot (LH + LF), a
+ * committed-CU catch-up page and an LF transition catch-up page. There is no
+ * WebSocket and no SSE.
  *
  * Everything ambient is INJECTED — base URL, access token and the `fetch`
  * implementation — so this module owns no configuration, no credential storage,
  * no persistence, no Router and no UI. It is not mounted anywhere in the app
- * shell: T-03D owns completing live truth (`LF`), and mounting the canonical
- * provider merely to demonstrate wiring would fabricate a live snapshot this
- * task cannot produce.
+ * shell: T-03D delivers authoritative LF truth only, and no visual UI exists
+ * here.
  *
  * Every failure is fail-closed: a non-2xx status, an unreadable body, or a
  * payload that fails runtime validation throws instead of returning a partial
  * or invented value.
  */
-import type { ConversationalUnitsCommittedWireEvent, SessionTemporalSnapshot } from '@qandeel/runtime';
-import { decodeCommittedUnitsResponse, decodeSessionTemporalSnapshot, type WireRejectionReason } from './temporal-wire';
+import type { ConversationalUnitsCommittedWireEvent, LiveFocusTransitionWireEvent, SessionTemporalSnapshot } from '@qandeel/runtime';
+import { decodeCommittedUnitsResponse, decodeLiveFocusEventsResponse, decodeSessionTemporalSnapshot, type WireRejectionReason } from './temporal-wire';
 
 /** The maximum catch-up page the server accepts. */
 export const MAX_TEMPORAL_EVENT_PAGE = 256;
@@ -77,10 +78,27 @@ function assertRequestedSession(requested: string, received: string, where: stri
   }
 }
 
+function pageQuery(page: CommittedEventsPageRequest): string {
+  const query: string[] = [];
+  if (page.afterSp !== undefined) {
+    if (!Number.isSafeInteger(page.afterSp) || page.afterSp < 1) {
+      throw new RangeError('afterSp must be an addressable Session Position >= 1; SP(0) is not a cursor.');
+    }
+    query.push(`afterSp=${page.afterSp}`);
+  }
+  if (page.limit !== undefined) {
+    if (!Number.isSafeInteger(page.limit) || page.limit < 1 || page.limit > MAX_TEMPORAL_EVENT_PAGE) {
+      throw new RangeError(`limit must be between 1 and ${MAX_TEMPORAL_EVENT_PAGE}.`);
+    }
+    query.push(`limit=${page.limit}`);
+  }
+  return query.length > 0 ? `?${query.join('&')}` : '';
+}
+
 export class TemporalApiClient {
   constructor(private readonly config: TemporalApiConfig) {}
 
-  /** `GET /conversation/sessions/:sessionId/temporal`. */
+  /** `GET /conversation/sessions/:sessionId/temporal`: the authoritative LH + LF snapshot. */
   async fetchSessionTemporalState(sessionId: string): Promise<SessionTemporalSnapshot> {
     const body = await this.get(`${this.base(sessionId)}/temporal`);
     const decoded = decodeSessionTemporalSnapshot(body);
@@ -94,22 +112,20 @@ export class TemporalApiClient {
     sessionId: string,
     page: CommittedEventsPageRequest = {},
   ): Promise<readonly ConversationalUnitsCommittedWireEvent[]> {
-    const query: string[] = [];
-    if (page.afterSp !== undefined) {
-      if (!Number.isSafeInteger(page.afterSp) || page.afterSp < 1) {
-        throw new RangeError('afterSp must be an addressable Session Position >= 1; SP(0) is not a cursor.');
-      }
-      query.push(`afterSp=${page.afterSp}`);
-    }
-    if (page.limit !== undefined) {
-      if (!Number.isSafeInteger(page.limit) || page.limit < 1 || page.limit > MAX_TEMPORAL_EVENT_PAGE) {
-        throw new RangeError(`limit must be between 1 and ${MAX_TEMPORAL_EVENT_PAGE}.`);
-      }
-      query.push(`limit=${page.limit}`);
-    }
-    const suffix = query.length > 0 ? `?${query.join('&')}` : '';
-    const body = await this.get(`${this.base(sessionId)}/temporal/events${suffix}`);
+    const body = await this.get(`${this.base(sessionId)}/temporal/events${pageQuery(page)}`);
     const decoded = decodeCommittedUnitsResponse(body);
+    if (!decoded.ok) throw new TemporalTransportError({ kind: 'INVALID_PAYLOAD', reason: decoded.reason, detail: decoded.detail });
+    assertRequestedSession(sessionId, decoded.value.sessionId, 'response');
+    return decoded.value.events;
+  }
+
+  /** `GET /conversation/sessions/:sessionId/temporal/live-focus-events`: LF transition catch-up, recovery / continuity only. */
+  async fetchLiveFocusEvents(
+    sessionId: string,
+    page: CommittedEventsPageRequest = {},
+  ): Promise<readonly LiveFocusTransitionWireEvent[]> {
+    const body = await this.get(`${this.base(sessionId)}/temporal/live-focus-events${pageQuery(page)}`);
+    const decoded = decodeLiveFocusEventsResponse(body);
     if (!decoded.ok) throw new TemporalTransportError({ kind: 'INVALID_PAYLOAD', reason: decoded.reason, detail: decoded.detail });
     assertRequestedSession(sessionId, decoded.value.sessionId, 'response');
     return decoded.value.events;

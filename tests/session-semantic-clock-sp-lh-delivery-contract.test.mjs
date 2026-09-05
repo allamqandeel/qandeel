@@ -24,7 +24,9 @@ const readJson = async (path) => JSON.parse(await read(path));
 const stripComments = (text) => text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^\s*\/\/.*$/gmu, '');
 
 const MOBILE_TEMPORAL_DIR = 'apps/mobile/src/temporal';
-const MOBILE_TEMPORAL_FILES = ['temporal-wire.ts', 'temporal-api.ts', 'live-head-sync.ts', 'index.ts'];
+// (T-03D added live-focus-sync.ts: the ONE seam from the authoritative
+// LIVE_FOCUS_TRANSITION wire event to the T-02 LF mirror; pinned by the T-03D contract.)
+const MOBILE_TEMPORAL_FILES = ['temporal-wire.ts', 'temporal-api.ts', 'live-head-sync.ts', 'live-focus-sync.ts', 'index.ts'];
 const API_BOUNDARY_FILES = [
   'apps/api/src/conversation-unit/conversation-temporal-establishment.service.ts',
   'apps/api/src/conversation-unit/deterministic-runtime-id.ts',
@@ -80,8 +82,9 @@ test('@qandeel/runtime is a TYPE-ONLY workspace package that ships no JavaScript
   assert.deepEqual(runtimePackage.exports, { '.': { types: './src/index.d.ts' } });
 
   const files = listFiles(join(rootPath, 'packages/runtime')).map((file) => relative(file)).sort();
+  // (T-03D added src/live-focus.d.ts: the authoritative LF wire value and transition event.)
   assert.deepEqual(files, ['packages/runtime/README.md', 'packages/runtime/package.json',
-    'packages/runtime/src/index.d.ts', 'packages/runtime/src/temporal.d.ts']);
+    'packages/runtime/src/index.d.ts', 'packages/runtime/src/live-focus.d.ts', 'packages/runtime/src/temporal.d.ts']);
 
   // It joins the existing root workspace and the ONE root lockfile.
   assert.deepEqual(rootPackage.workspaces, ['apps/*', 'packages/*']);
@@ -132,11 +135,16 @@ test('the shared wire contract carries the frozen fields and nothing analytical'
   assert.match(temporalTypes, /readonly liveHead: number \| null;/u, 'LH is null, never a zero sentinel');
   // The two names are deliberately different layers and neither is renamed.
   assert.doesNotMatch(temporalTypes, /LIVE_HEAD_ADVANCED|WORLD_TRUTH_UPDATED/u);
+  // T-03D extended the wire ADDITIVELY with the authoritative Live Focus: the
+  // closed reference identity (NONE / EMERGING / THREAD) and the SP it became
+  // effective at - never a label, Home, confidence, sequence or content.
   const code = stripComments(`${temporalTypes}\n${runtimeIndex}`);
-  for (const forbidden of ['committedText', 'text', 'analysis', 'reading', 'thread', 'liveFocus', 'LiveFocus',
-    'evidence', 'confidence', 'knowledge', 'timestamp', 'createdAt', 'sameSp', 'eventSequence']) {
+  for (const forbidden of ['committedText', 'text', 'analysis', 'reading', 'evidence', 'confidence', 'knowledge',
+    'timestamp', 'createdAt', 'sameSp', 'eventSequence', 'label', 'home', 'Home', 'importance', 'direction']) {
     assert.ok(!code.includes(forbidden), `the wire contract must not carry ${forbidden}`);
   }
+  assert.match(temporalTypes, /readonly liveFocus: LiveFocusWireValue;\s*\n\s*readonly liveFocusAtSp: number \| null;/u, 'the snapshot carries LF and its effective SP beside LH');
+  assert.match(temporalTypes, /readonly liveHead: number \| null;\s*\n\s*readonly committedEvents: readonly ConversationalUnitsCommittedWireEvent\[\];\s*\n\}/u, 'the T-03A2 temporal delivery keeps exactly its two frozen fields');
 });
 
 test('the API temporal boundary exists and holds no conversation-lifecycle authority', async () => {
@@ -178,10 +186,14 @@ test('the API temporal boundary exists and holds no conversation-lifecycle autho
 test('turn handling is two distinct technical phases', () => {
   // Phase 2 is invoked from the composition layer, strictly after the
   // orchestrator has produced durable COMPLETED turns.
-  assert.match(conversationService, /private readonly temporal: ConversationTemporalEstablishmentService/u);
-  assert.match(conversationService, /return this\.establishTemporal\(userId, await this\.orchestrator\.orchestrate\(/u);
-  assert.equal((stripComments(conversationService).match(/this\.establishTemporal\(/gu) ?? []).length, 3,
+  // (T-03D: phase 2 is the FINAL semantic chain - Session time PLUS B1, the
+  // Thread layer and the effective Live Focus in ONE transaction - and the
+  // temporal-only service is retired with no fallback.)
+  assert.match(conversationService, /private readonly semantic: ConversationSemanticEstablishmentService/u);
+  assert.match(conversationService, /return this\.establishSemanticChain\(userId, await this\.orchestrator\.orchestrate\(/u);
+  assert.equal((stripComments(conversationService).match(/this\.establishSemanticChain\(/gu) ?? []).length, 3,
     'every orchestrated path - new turn, idempotency replay and the unique-violation replay - re-enters establishment');
+  assert.doesNotMatch(stripComments(conversationService), /ConversationTemporalEstablishmentService|establishTemporal\(/u, 'no temporal-only fallback path exists');
   assert.equal((stripComments(conversationService).match(/this\.orchestrator\.orchestrate\(/gu) ?? []).length, 3,
     'and every one of those three paths goes through the generation phase exactly once');
   // Phase 1 is untouched and remains the ONLY owner of generation failure.
@@ -195,8 +207,10 @@ test('the temporal HTTP surface is delivery and catch-up only', () => {
   const code = stripComments(temporalController);
   assert.match(code, /@Get\('sessions\/:sessionId\/temporal'\)/u);
   assert.match(code, /@Get\('sessions\/:sessionId\/temporal\/events'\)/u);
-  assert.equal((code.match(/@Get\(|@Post\(|@Patch\(|@Put\(|@Delete\(/gu) ?? []).length, 2, 'exactly two read routes');
-  assert.match(code, /@UseGuards\(SupabaseAuthGuard\)/u, 'both routes are authenticated');
+  // (T-03D added the LF transition catch-up read beside the two T-03A2 reads.)
+  assert.match(code, /@Get\('sessions\/:sessionId\/temporal\/live-focus-events'\)/u);
+  assert.equal((code.match(/@Get\(|@Post\(|@Patch\(|@Put\(|@Delete\(/gu) ?? []).length, 3, 'exactly three read routes');
+  assert.match(code, /@UseGuards\(SupabaseAuthGuard\)/u, 'all routes are authenticated');
   for (const forbidden of ['/timeline', '/history', '/projection', 'WebSocket', 'Sse', '@Sse', 'EventEmitter', 'observable']) {
     assert.ok(!code.includes(forbidden), `the temporal surface must not expose ${forbidden}`);
   }
@@ -213,7 +227,7 @@ test('the mobile temporal boundary is exactly the authorized non-UI surface', ()
     .sort();
   assert.deepEqual(production, [...MOBILE_TEMPORAL_FILES].sort());
   const suites = readdirSync(join(dir, '__tests__')).filter((file) => /\.test\.tsx?$/u.test(file)).sort();
-  assert.deepEqual(suites, ['live-head-sync.test.ts', 'temporal-api.test.ts', 'temporal-wire.test.ts']);
+  assert.deepEqual(suites, ['live-focus-sync.test.ts', 'live-head-sync.test.ts', 'temporal-api.test.ts', 'temporal-wire.test.ts']);
 
   // Its only non-relative imports are the shared type contract.
   for (const [name, text] of Object.entries(mobileCode)) {
@@ -236,10 +250,11 @@ test('the mobile temporal boundary is exactly the authorized non-UI surface', ()
 test('FIX-T03A2-02: the transport binds every decoded response to the requested Session', () => {
   const api = mobileCode['temporal-api.ts'];
   // Both routes bind, and they bind BEFORE returning a value.
-  assert.equal((api.match(/assertRequestedSession\(sessionId, /gu) ?? []).length, 2,
-    'the snapshot route and the catch-up route each bind the requested Session');
+  // (T-03D added the LF catch-up route under the same binding rule.)
+  assert.equal((api.match(/assertRequestedSession\(sessionId, /gu) ?? []).length, 3,
+    'the snapshot route and both catch-up routes each bind the requested Session');
   assert.match(api, /assertRequestedSession\(sessionId, decoded\.value\.sessionId, 'snapshot'\);\s*\n\s*return decoded\.value;/u);
-  assert.match(api, /assertRequestedSession\(sessionId, decoded\.value\.sessionId, 'response'\);\s*\n\s*return decoded\.value\.events;/u);
+  assert.equal((api.match(/assertRequestedSession\(sessionId, decoded\.value\.sessionId, 'response'\);\s*\n\s*return decoded\.value\.events;/gu) ?? []).length, 2);
   assert.match(api, /reason: 'INVALID_IDENTITY'/u, 'a foreign-Session payload is an identity rejection');
   assert.match(api, /throw new TemporalTransportError\(\{/u, 'and it fails closed rather than returning a value');
   // The envelope Session identity survives decoding, so an EMPTY catch-up page
@@ -262,9 +277,17 @@ test('the client mirror is written only through the T-02 authoritative event sea
   for (const forbidden of ['live.LH =', 'LH:', 'history.push', 'RhEntry', 'captureCheckpoint', 'LF', 'liveFocus']) {
     assert.equal(sync.includes(forbidden), false, `the mirror seam must not touch ${forbidden}`);
   }
-  // T-03A2 delivers LH only: LF stays with T-03D and is never fabricated.
-  assert.equal(mobileText.includes('LIVE_FOCUS_TRANSITION'), false, 'LF ingestion is not wired here');
-  assert.equal(mobileText.includes("kind: 'NONE'"), false, 'no LF value is invented');
+  // T-03A2 delivers LH only through this seam. T-03D wires LF ingestion in its
+  // OWN seam (live-focus-sync.ts) through the same T-02 authoritative-event
+  // path; the LH seam never learned about LF, and no LF value is invented here.
+  assert.equal(sync.includes('LIVE_FOCUS_TRANSITION'), false, 'LF ingestion is not wired in the LH seam');
+  assert.equal(sync.includes("kind: 'NONE'"), false, 'no LF value is invented in the LH seam');
+  const lfSync = mobileCode['live-focus-sync.ts'];
+  assert.equal((lfSync.match(/store\.ingest\(\{ type: 'LIVE_FOCUS_TRANSITION'/gu) ?? []).length, 1, 'exactly one LF ingestion call site, through the same seam');
+  assert.equal((lfSync.match(/\.dispatch\(/gu) ?? []).length, 0, 'the LF seam dispatches no Product action either');
+  for (const forbidden of ['live.LF =', 'live.LH =', 'LIVE_HEAD_ADVANCED', 'history.push', 'captureCheckpoint']) {
+    assert.equal(lfSync.includes(forbidden), false, `the LF seam must not touch ${forbidden}`);
+  }
 });
 
 test('the T-02 canonical state kernel is unchanged and is still not mounted', async () => {

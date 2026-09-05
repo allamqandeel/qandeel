@@ -2,6 +2,10 @@ import {
   decodeCommittedUnitsEvent,
   decodeCommittedUnitsPage,
   decodeCommittedUnitsResponse,
+  decodeLiveFocusEventsPage,
+  decodeLiveFocusEventsResponse,
+  decodeLiveFocusTransitionEvent,
+  decodeLiveFocusWireValue,
   decodeSessionTemporalSnapshot,
 } from '../temporal-wire';
 
@@ -73,26 +77,98 @@ describe('committed-CU wire validation', () => {
   });
 });
 
-describe('Session temporal snapshot validation', () => {
-  it('accepts an established Live Head and the technical absence sentinel', () => {
-    expect(decodeSessionTemporalSnapshot({ sessionId: 'session-1', liveHead: 12 }))
-      .toEqual({ ok: true, value: { sessionId: 'session-1', liveHead: 12 } });
-    expect(decodeSessionTemporalSnapshot({ sessionId: 'session-1', liveHead: null }))
-      .toEqual({ ok: true, value: { sessionId: 'session-1', liveHead: null } });
+const NONE = { kind: 'NONE' };
+const EMERGING = { kind: 'EMERGING', emergingFocusId: '4ef8538d-ddda-5e11-b7d9-052be85de59a' };
+const THREAD = { kind: 'THREAD', threadId: 'afc4fd81-fe54-5738-9545-e1053044d919' };
+const snapshot = (overrides: Record<string, unknown> = {}) => ({ sessionId: 'session-1', liveHead: 12, liveFocus: NONE, liveFocusAtSp: null, ...overrides });
+
+describe('Session live snapshot validation (LH + LF)', () => {
+  it('accepts an established Live Head with each LF kind, and the technical absence sentinel with NONE', () => {
+    expect(decodeSessionTemporalSnapshot(snapshot())).toEqual({ ok: true, value: snapshot() });
+    expect(decodeSessionTemporalSnapshot(snapshot({ liveFocus: EMERGING, liveFocusAtSp: 12 }))).toEqual({ ok: true, value: snapshot({ liveFocus: EMERGING, liveFocusAtSp: 12 }) });
+    expect(decodeSessionTemporalSnapshot(snapshot({ liveFocus: THREAD, liveFocusAtSp: 3 }))).toEqual({ ok: true, value: snapshot({ liveFocus: THREAD, liveFocusAtSp: 3 }) });
+    // A departure to NONE is itself anchored at the SP where it became effective.
+    expect(decodeSessionTemporalSnapshot(snapshot({ liveFocusAtSp: 5 }))).toEqual({ ok: true, value: snapshot({ liveFocusAtSp: 5 }) });
+    expect(decodeSessionTemporalSnapshot(snapshot({ liveHead: null }))).toEqual({ ok: true, value: snapshot({ liveHead: null }) });
   });
 
   it('rejects zero, negative and non-integer Live Head values', () => {
     for (const liveHead of [0, -1, 0.5, '12', undefined, Number.NaN]) {
-      expect(decodeSessionTemporalSnapshot({ sessionId: 'session-1', liveHead }))
-        .toMatchObject({ ok: false, reason: 'INVALID_LIVE_HEAD' });
+      expect(decodeSessionTemporalSnapshot(snapshot({ liveHead }))).toMatchObject({ ok: false, reason: 'INVALID_LIVE_HEAD' });
     }
   });
 
-  it('rejects an unknown key and a missing identity', () => {
-    expect(decodeSessionTemporalSnapshot({ sessionId: 'session-1', liveHead: 3, liveFocus: null }))
-      .toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
+  it('rejects an unknown key, a missing LF key and a missing identity', () => {
+    expect(decodeSessionTemporalSnapshot(snapshot({ liveFocusLabel: 'Ahmed' }))).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
+    const { liveFocus: _dropped, ...withoutFocus } = snapshot();
+    expect(decodeSessionTemporalSnapshot(withoutFocus)).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
     expect(decodeSessionTemporalSnapshot({ liveHead: 3 })).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
-    expect(decodeSessionTemporalSnapshot({ sessionId: '', liveHead: 3 })).toMatchObject({ ok: false, reason: 'INVALID_IDENTITY' });
+    expect(decodeSessionTemporalSnapshot(snapshot({ sessionId: '' }))).toMatchObject({ ok: false, reason: 'INVALID_IDENTITY' });
+  });
+
+  it('no LF before the first SP, no LF beyond the Live Head, no non-NONE LF without its SP', () => {
+    expect(decodeSessionTemporalSnapshot(snapshot({ liveHead: null, liveFocus: EMERGING, liveFocusAtSp: null }))).toMatchObject({ ok: false, reason: 'INVALID_LIVE_FOCUS' });
+    expect(decodeSessionTemporalSnapshot(snapshot({ liveHead: null, liveFocusAtSp: 1 }))).toMatchObject({ ok: false, reason: 'INVALID_LIVE_FOCUS' });
+    expect(decodeSessionTemporalSnapshot(snapshot({ liveFocus: THREAD, liveFocusAtSp: 13 }))).toMatchObject({ ok: false, reason: 'INVALID_LIVE_FOCUS' });
+    expect(decodeSessionTemporalSnapshot(snapshot({ liveFocus: THREAD, liveFocusAtSp: null }))).toMatchObject({ ok: false, reason: 'INVALID_LIVE_FOCUS' });
+    for (const liveFocusAtSp of [0, -1, 1.5, '3']) {
+      expect(decodeSessionTemporalSnapshot(snapshot({ liveFocus: THREAD, liveFocusAtSp }))).toMatchObject({ ok: false, reason: 'INVALID_SESSION_POSITION' });
+    }
+  });
+});
+
+describe('Live Focus wire value validation', () => {
+  it('accepts exactly the three closed kinds with exactly their own keys', () => {
+    expect(decodeLiveFocusWireValue(NONE)).toEqual({ ok: true, value: NONE });
+    expect(decodeLiveFocusWireValue(EMERGING)).toEqual({ ok: true, value: EMERGING });
+    expect(decodeLiveFocusWireValue(THREAD)).toEqual({ ok: true, value: THREAD });
+  });
+
+  it('rejects a fourth kind, the kernel vocabulary, a label, a Home, a confidence and a missing reference', () => {
+    for (const value of [{ kind: 'READING', readingId: 'r' }, { kind: 'EMERGING_FOCUS', emergingFocusId: 'f' }, { kind: 'ESTABLISHED_THREAD', threadId: 't' }, { kind: 1 }, null, 'NONE']) {
+      expect(decodeLiveFocusWireValue(value)).toMatchObject({ ok: false, reason: 'INVALID_LIVE_FOCUS' });
+    }
+    for (const value of [{ ...NONE, label: 'x' }, { ...THREAD, home: { x: 0, y: 0 } }, { ...THREAD, confidence: 0.9 }, { ...EMERGING, threadId: 't' }, { kind: 'THREAD' }]) {
+      expect(decodeLiveFocusWireValue(value)).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
+    }
+    for (const value of [{ kind: 'THREAD', threadId: '' }, { kind: 'EMERGING', emergingFocusId: 7 }]) {
+      expect(decodeLiveFocusWireValue(value)).toMatchObject({ ok: false, reason: 'INVALID_IDENTITY' });
+    }
+  });
+});
+
+describe('LIVE_FOCUS_TRANSITION wire validation', () => {
+  const transition = (overrides: Record<string, unknown> = {}) => ({ type: 'LIVE_FOCUS_TRANSITION', version: 1, sessionId: 'session-1', atSp: 4, value: THREAD, ...overrides });
+
+  it('decodes a valid transition for each kind', () => {
+    expect(decodeLiveFocusTransitionEvent(transition())).toEqual({ ok: true, value: transition() });
+    expect(decodeLiveFocusTransitionEvent(transition({ value: NONE })).ok).toBe(true);
+    expect(decodeLiveFocusTransitionEvent(transition({ value: EMERGING })).ok).toBe(true);
+  });
+
+  it('rejects an unknown key, a foreign type, an unsupported version, a bad SP and a bad value', () => {
+    expect(decodeLiveFocusTransitionEvent(transition({ sameSpEventSequence: 3 }))).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
+    expect(decodeLiveFocusTransitionEvent(transition({ type: 'CONVERSATIONAL_UNITS_COMMITTED' }))).toMatchObject({ ok: false, reason: 'UNKNOWN_TYPE' });
+    expect(decodeLiveFocusTransitionEvent(transition({ version: 2 }))).toMatchObject({ ok: false, reason: 'UNSUPPORTED_VERSION' });
+    for (const atSp of [0, -1, 1.5, '4', null]) {
+      expect(decodeLiveFocusTransitionEvent(transition({ atSp }))).toMatchObject({ ok: false, reason: 'INVALID_SESSION_POSITION' });
+    }
+    expect(decodeLiveFocusTransitionEvent(transition({ value: { ...THREAD, label: 'Ahmed' } }))).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
+    expect(decodeLiveFocusTransitionEvent(transition({ sessionId: '' }))).toMatchObject({ ok: false, reason: 'INVALID_IDENTITY' });
+  });
+
+  it('decodes an ascending page, refuses two transitions at one SP or a descending page, and binds the envelope Session', () => {
+    const first = transition({ atSp: 1, value: EMERGING });
+    const second = transition({ atSp: 2, value: THREAD });
+    expect(decodeLiveFocusEventsPage([first, second])).toEqual({ ok: true, value: [first, second] });
+    expect(decodeLiveFocusEventsPage([])).toEqual({ ok: true, value: [] });
+    expect(decodeLiveFocusEventsPage([second, first])).toMatchObject({ ok: false, reason: 'INVALID_RANGE' });
+    expect(decodeLiveFocusEventsPage([first, transition({ atSp: 1, value: NONE })])).toMatchObject({ ok: false, reason: 'INVALID_RANGE' });
+    expect(decodeLiveFocusEventsPage([first, transition({ atSp: 2, version: 0 })])).toMatchObject({ ok: false, reason: 'UNSUPPORTED_VERSION' });
+    expect(decodeLiveFocusEventsResponse({ sessionId: 'session-1', events: [first, second] })).toEqual({ ok: true, value: { sessionId: 'session-1', events: [first, second] } });
+    expect(decodeLiveFocusEventsResponse({ sessionId: 'session-9', events: [] })).toEqual({ ok: true, value: { sessionId: 'session-9', events: [] } });
+    expect(decodeLiveFocusEventsResponse({ sessionId: 'session-2', events: [first] })).toMatchObject({ ok: false, reason: 'INVALID_IDENTITY' });
+    expect(decodeLiveFocusEventsResponse({ sessionId: 'session-1', events: [first], liveFocus: NONE })).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
   });
 });
 

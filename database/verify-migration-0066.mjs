@@ -275,7 +275,13 @@ async function verifyStaticAuthority() {
       const [{ granted }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') granted", [role, signature]);
       assert.equal(granted, false, `${role} must not execute ${signature}`);
     }
-    for (const signature of [LEGACY_PRODUCER, LEGACY_COORDINATOR, LEGACY_SNAPSHOT]) {
+    // T-03D (migration 0071) retired the temporary T-03A2 mutation grants; the
+    // T-03A2 snapshot read stays live for service_role.
+    for (const signature of [LEGACY_PRODUCER, LEGACY_COORDINATOR]) {
+      const [{ granted }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') granted", [role, signature]);
+      assert.equal(granted, false, `${role} must not execute the retired temporal-only writer ${signature} (T-03D cutover)`);
+    }
+    for (const signature of [LEGACY_SNAPSHOT]) {
       const [{ granted }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') granted", [role, signature]);
       assert.equal(granted, role === 'service_role', `the T-03A2 grant on ${signature} is unchanged for ${role}`);
     }
@@ -802,8 +808,8 @@ async function verifyRuntimeAcl(owner, populated) {
   }
   // service_role still runs the T-03A2 legacy producer: the activation is untouched.
   await identity('service_role');
-  const legacy = await legacyCommit(session, owner, turns.assistantTurn, randomUUID(), []);
-  assert.deepEqual(legacy, [], 'the T-03A2 producer remains executable by service_role');
+  // T-03D (migration 0071): the temporal-only producer is retired; service_role can no longer seal an SP without the full chain.
+  await rejected(() => legacyCommit(session, owner, turns.assistantTurn, randomUUID(), []), 'permission denied', ['42501']);
   await identity('postgres');
 }
 

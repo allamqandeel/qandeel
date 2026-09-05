@@ -403,12 +403,23 @@ async function verifyStaticAuthority() {
   }
   for (const role of ['anon', 'authenticated', 'service_role']) {
     for (const signature of [WRITER, COORDINATOR, VALIDATOR, PERSIST, REDUCER, RELATION, STATE, ESTABLISHMENT_EVIDENCE, BINDING_ID, EVENT_ID,
-      SEMANTIC_STATE, DOSSIER_PAGE, LIFECYCLE_CONTEXT, LIFECYCLE_SNAPSHOT, READINESS_AUDIT,
+      SEMANTIC_STATE, LIFECYCLE_CONTEXT, LIFECYCLE_SNAPSHOT, READINESS_AUDIT,
       THREAD_WRITER, THREAD_COORDINATOR, THREAD_SNAPSHOT, THREAD_CONTEXT, THREAD_AUDIT, BATCH_STATE, FOCUS_WRITER, FOCUS_COORDINATOR, SAME_SP_HELPER]) {
       const [{ granted }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') granted", [role, signature]);
       strict(granted, false, `${role} must not execute ${signature}: T-03B3 performs no cutover`);
     }
-    for (const signature of [LEGACY_PRODUCER, LEGACY_COORDINATOR, LEGACY_SNAPSHOT]) {
+    // T-03D (migration 0071) is the cutover: the FINAL runtime screens the
+    // 0070 dossier page, so service_role alone executes it; the temporary
+    // T-03A2 mutation grants are retired, and the T-03A2 snapshot read stays.
+    {
+      const [{ granted }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') granted", [role, DOSSIER_PAGE]);
+      strict(granted, role === 'service_role', `${role} executes the dossier page exactly when it is service_role (T-03D cutover)`);
+    }
+    for (const signature of [LEGACY_PRODUCER, LEGACY_COORDINATOR]) {
+      const [{ granted }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') granted", [role, signature]);
+      strict(granted, false, `${role} must not execute the retired temporal-only writer ${signature} (T-03D cutover)`);
+    }
+    for (const signature of [LEGACY_SNAPSHOT]) {
       const [{ granted }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') granted", [role, signature]);
       strict(granted, role === 'service_role', `the live T-03A2 grant on ${signature} is unchanged for ${role}`);
     }
@@ -1035,7 +1046,12 @@ async function verifyImmutability(owner, world) {
     await identity(role, role === 'authenticated' ? owner : null);
     await rejected(() => snapshot(session, owner, world.turns.userTurn, world.userBatch), 'permission denied', ['42501']);
     await rejected(() => runtimeContext(session, owner), 'permission denied', ['42501']);
-    await rejected(() => dossierPage(owner, 0, null, 32), 'permission denied', ['42501']);
+    // T-03D (migration 0071): the FINAL runtime screens the dossier page as service_role; no other application role reaches it.
+    if (role === 'service_role') {
+      await rejected(() => dossierPage(owner, 0, null, 32), 'STALE_THREAD_IDENTITY_CONTEXT', ['40001']);
+    } else {
+      await rejected(() => dossierPage(owner, 0, null, 32), 'permission denied', ['42501']);
+    }
     await rejected(audit, 'permission denied', ['42501']);
     await rejected(() => semanticState(session, owner, world.turns.userTurn, world.userBatch), 'permission denied', ['42501']);
   }

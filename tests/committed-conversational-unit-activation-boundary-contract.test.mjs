@@ -109,16 +109,32 @@ test('the substrate is reachable ONLY through the named T-03A2 boundary', () => 
     // same pure anchor helper in its semantic files and the same T-03A2 runtime
     // pieces in its runtime files; it is pinned separately just below.
     .filter((file) => !file.url.includes('/thread-lifecycle/'))
+    // T-03D (live-focus) - the FINAL, LIVE chain - reuses the same T-03A2
+    // runtime pieces (the commitment evaluator, the deterministic identities,
+    // the wire mapper) inside the ONE 0071 coordinator; it is pinned separately
+    // just below and by its own contract.
+    .filter((file) => !file.url.includes('/live-focus/'))
     .filter((file) => /conversation-unit|commit_conversation_units_v1|ConversationUnitRepository|ConversationUnitCommitmentService|ConversationTemporalEstablishmentService|CuSegmentation/u.test(read(file.path)))
     .map((file) => file.name)
     .sort();
+  // After the T-03D cutover, ConversationService calls the FINAL chain and no
+  // longer names the temporal-only service; the temporal controller and the
+  // module keep the T-03A2 delivery pieces (extended additively with LF).
   assert.deepEqual(referencing, [
     'conversation-temporal.controller.spec.ts',
     'conversation-temporal.controller.ts',
     'conversation.module.ts',
-    'conversation.service.spec.ts',
-    'conversation.service.ts',
-  ], 'only the authorized T-03A2 wiring may reach the committed-CU substrate');
+  ], 'only the authorized wiring may reach the committed-CU substrate');
+  const LIVE_FOCUS_RUNTIME_FILES = walk(new URL('../apps/api/src/live-focus/', import.meta.url))
+    .filter((file) => /conversation-unit|commit_conversation_units_v1|ConversationUnitRepository|ConversationUnitCommitmentService|ConversationTemporalEstablishmentService|CuSegmentation/u.test(read(file.path)))
+    .map((file) => file.name)
+    .sort();
+  assert.deepEqual(LIVE_FOCUS_RUNTIME_FILES, ['conversation-semantic-establishment.service.spec.ts', 'conversation-semantic-establishment.service.ts'],
+    'exactly the FINAL establishment service (and its spec) reuses the T-03A2 runtime pieces');
+  for (const name of LIVE_FOCUS_RUNTIME_FILES) {
+    assert.doesNotMatch(stripComments(read(`../apps/api/src/live-focus/${name}`)), /ConversationUnitRepository|commit_conversation_units_v1|commit_finalized_exchange_conversation_units_v1|new ConversationTemporalEstablishmentService/u,
+      `${name} never reaches the retired temporal-only writer path`);
+  }
 
   // The T-03B1a evaluator may import ONLY `cu-anchor-mapper` (pure, no I/O)
   // from this directory: never the repository, the producer RPC, the
@@ -253,7 +269,11 @@ test('the substrate is reachable ONLY through the named T-03A2 boundary', () => 
       `${name} is not part of the temporal establishment boundary`);
   }
   assert.match(orchestrator, /await this\.repository\.failTurn\(/u, 'the orchestrator still owns generation-failure lifecycle');
-  assert.match(conversationModule, /ConversationTemporalEstablishmentService/u, 'the boundary is wired exactly once, in ConversationModule');
+  // T-03D: the post-finalization boundary is the FINAL semantic chain, wired
+  // exactly once in ConversationModule; the temporal-only service is retired
+  // (never registered) and there is no fallback writer.
+  assert.match(conversationModule, /ConversationSemanticEstablishmentService/u, 'the boundary is wired exactly once, in ConversationModule');
+  assert.doesNotMatch(stripComments(conversationModule), /ConversationTemporalEstablishmentService,|provide: ConversationTemporalEstablishmentService|ConversationUnitRepository,/u, 'no temporal-only fallback is registered');
 });
 
 test('T-03A1 itself still produces no SP, LH, Moment, Timeline or delivery artefact', () => {
@@ -286,9 +306,16 @@ test('the T-03A2 crossing is exactly the authorized one: LH, and nothing later',
   // realtime push infrastructure is pulled forward.
   const boundary = T03A2_FILES.map((name) => stripComments(read(`../apps/api/src/conversation-unit/${name}`))).join('\n');
   assert.match(boundary, /session_position|liveHead|live_head/u, 'the boundary does establish Session time');
-  for (const forbidden of ['LIVE_FOCUS', 'liveFocus', 'EmergingFocus', 'emergingFocusId', 'threadId', 'Thread(',
+  for (const forbidden of ['EmergingFocus', 'emergingFocusId', 'threadId', 'Thread(',
     'knowledgeFrontier', 'timeline', 'projection', 'WebSocket', 'EventSource', 'same_sp_event_sequence']) {
     assert.ok(!boundary.includes(forbidden), `the T-03A2 boundary must not contain ${forbidden}`);
+  }
+  // T-03D extended the delivery repository ADDITIVELY with the authoritative
+  // Live Focus read (reference identity only); the establishment service and
+  // the deterministic identities stay LF-free.
+  for (const name of T03A2_FILES.filter((file) => file !== 'temporal-delivery.repository.ts')) {
+    const source = stripComments(read(`../apps/api/src/conversation-unit/${name}`));
+    for (const forbidden of ['LIVE_FOCUS', 'liveFocus']) assert.ok(!source.includes(forbidden), `${name} must not contain ${forbidden}`);
   }
 });
 

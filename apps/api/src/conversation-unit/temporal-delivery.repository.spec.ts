@@ -1,4 +1,5 @@
 import type { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
+import { ConversationSemanticIntegrityError } from '../live-focus/conversation-semantic-runtime.types';
 import { DEFAULT_TEMPORAL_EVENT_PAGE, TemporalDeliveryRepository, toCommittedWireEvent } from './temporal-delivery.repository';
 
 function dataApi(rows: unknown) {
@@ -14,23 +15,36 @@ const ROW = {
   last_sp: 23,
   unit_count: 4,
 };
+const FOCUS = '4ef8538d-ddda-5e11-b7d9-052be85de59a';
+const THREAD = 'afc4fd81-fe54-5738-9545-e1053044d919';
 
 describe('the authenticated temporal read seam', () => {
-  it('reads the Session temporal state through the owner-scoped definer command', async () => {
-    const { request, api } = dataApi([{ session_id: 'session-1', live_head: 12 }]);
+  it('reads the Session live state (LH + LF) through the owner-scoped definer command', async () => {
+    const { request, api } = dataApi([{ session_id: 'session-1', live_head: 12, live_focus_kind: 'THREAD', live_focus_ref: THREAD, live_focus_sp: 9 }]);
     await expect(new TemporalDeliveryRepository(api).getSessionTemporalState('token-a', 'session-1'))
-      .resolves.toEqual({ sessionId: 'session-1', liveHead: 12 });
+      .resolves.toEqual({ sessionId: 'session-1', liveHead: 12, liveFocus: { kind: 'THREAD', threadId: THREAD }, liveFocusAtSp: 9 });
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0][0]).toBe('token-a');
-    expect(request.mock.calls[0][1]).toBe('rpc/get_session_temporal_state_v1');
+    expect(request.mock.calls[0][1]).toBe('rpc/get_session_live_state_v1');
     // The caller supplies no user id: the database derives the owner from auth.uid().
     expect(JSON.parse(request.mock.calls[0][2].body as string)).toEqual({ p_session_id: 'session-1' });
   });
 
-  it('returns the technical absence sentinel, never a zero Live Head', async () => {
-    const { api } = dataApi([{ session_id: 'session-1', live_head: null }]);
+  it('returns the technical absence sentinel with LF NONE, never a zero Live Head', async () => {
+    const { api } = dataApi([{ session_id: 'session-1', live_head: null, live_focus_kind: 'NONE', live_focus_ref: null, live_focus_sp: null }]);
     await expect(new TemporalDeliveryRepository(api).getSessionTemporalState('token-a', 'session-1'))
-      .resolves.toEqual({ sessionId: 'session-1', liveHead: null });
+      .resolves.toEqual({ sessionId: 'session-1', liveHead: null, liveFocus: { kind: 'NONE' }, liveFocusAtSp: null });
+  });
+
+  it('fails closed on an LF before the first SP or outside the closed domain', async () => {
+    for (const row of [
+      { session_id: 'session-1', live_head: null, live_focus_kind: 'EMERGING', live_focus_ref: FOCUS, live_focus_sp: 1 },
+      { session_id: 'session-1', live_head: 3, live_focus_kind: 'READING', live_focus_ref: FOCUS, live_focus_sp: 1 },
+      { session_id: 'session-1', live_head: 3, live_focus_kind: 'THREAD', live_focus_ref: null, live_focus_sp: 1 },
+      { session_id: 'session-1', live_head: 3, live_focus_kind: 'NONE', live_focus_ref: null, live_focus_sp: 0 },
+    ]) {
+      await expect(new TemporalDeliveryRepository(dataApi([row]).api).getSessionTemporalState('token-a', 'session-1')).rejects.toBeInstanceOf(ConversationSemanticIntegrityError);
+    }
   });
 
   it('reports an invisible Session as absent rather than inventing one', async () => {
@@ -83,8 +97,35 @@ describe('the authenticated temporal read seam', () => {
     expect(events.map((event) => event.batchId)).toEqual(['a', 'b']);
   });
 
-  it('never reaches the service-role channel: temporal reads are owner-scoped', () => {
-    const source = `${TemporalDeliveryRepository.prototype.getSessionTemporalState.toString()}\n${TemporalDeliveryRepository.prototype.getCommittedEvents.toString()}`;
+  it('requests the LF transition catch-up page through the owner-scoped definer command and maps it onto the frozen wire event', async () => {
+    const { request, api } = dataApi([
+      { session_id: 'session-1', session_position: 2, to_kind: 'EMERGING', to_ref: FOCUS },
+      { session_id: 'session-1', session_position: 5, to_kind: 'THREAD', to_ref: THREAD },
+      { session_id: 'session-1', session_position: 8, to_kind: 'NONE', to_ref: null },
+    ]);
+    const events = await new TemporalDeliveryRepository(api).getLiveFocusEvents('token-a', 'session-1', { afterSp: 1, limit: 16 });
+    expect(request.mock.calls[0][1]).toBe('rpc/get_live_focus_transition_events_v1');
+    expect(JSON.parse(request.mock.calls[0][2].body as string)).toEqual({ p_session_id: 'session-1', p_after_sp: 1, p_limit: 16 });
+    expect(events).toEqual([
+      { type: 'LIVE_FOCUS_TRANSITION', version: 1, sessionId: 'session-1', atSp: 2, value: { kind: 'EMERGING', emergingFocusId: FOCUS } },
+      { type: 'LIVE_FOCUS_TRANSITION', version: 1, sessionId: 'session-1', atSp: 5, value: { kind: 'THREAD', threadId: THREAD } },
+      { type: 'LIVE_FOCUS_TRANSITION', version: 1, sessionId: 'session-1', atSp: 8, value: { kind: 'NONE' } },
+    ]);
+    expect(JSON.stringify(events)).not.toMatch(/same_sp|sequence|label|name|home|reason|from/u);
+  });
+
+  it('fails closed on a foreign-Session LF row, an out-of-order page or a value outside the domain', async () => {
+    for (const rows of [
+      [{ session_id: 'session-2', session_position: 2, to_kind: 'NONE', to_ref: null }],
+      [{ session_id: 'session-1', session_position: 5, to_kind: 'NONE', to_ref: null }, { session_id: 'session-1', session_position: 2, to_kind: 'NONE', to_ref: null }],
+      [{ session_id: 'session-1', session_position: 2, to_kind: 'ESTABLISHED_THREAD', to_ref: THREAD }],
+    ]) {
+      await expect(new TemporalDeliveryRepository(dataApi(rows).api).getLiveFocusEvents('token-a', 'session-1')).rejects.toBeInstanceOf(ConversationSemanticIntegrityError);
+    }
+  });
+
+  it('never reaches the service-role channel: every live read is owner-scoped', () => {
+    const source = `${TemporalDeliveryRepository.prototype.getSessionTemporalState.toString()}\n${TemporalDeliveryRepository.prototype.getCommittedEvents.toString()}\n${TemporalDeliveryRepository.prototype.getLiveFocusEvents.toString()}`;
     expect(source).not.toMatch(/serviceApi|SERVICE_ROLE/u);
     expect(source).toMatch(/dataApi\.request/u);
   });

@@ -104,10 +104,13 @@ const apiPackage = readJson('apps/api/package.json');
 const apiCi = read('.github/workflows/api-ci.yml');
 const mobileCi = read('.github/workflows/mobile-ci.yml');
 
-test('migration 0070 is the newest, 0064 - 0069 keep their exact pins, and no split-task marker or extra migration exists', () => {
+test('migration 0070 is the FINAL Thread-layer migration, 0071 (T-03D) orders directly after it, 0064 - 0069 keep their exact pins, and no split-task marker exists', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), MIGRATION);
-  assert.deepEqual(migrations.filter((name) => /007\d_/u.test(name)), [MIGRATION], 'T-03B3 ships exactly ONE migration');
+  // (T-03D added 0071, the effective-LF + FINAL semantic-chain cutover, pinned
+  // by tests/effective-live-focus-final-semantic-chain-cutover-contract.test.mjs.)
+  const B3D_MIGRATION = '0071_effective_live_focus_final_semantic_chain_cutover_v1.sql';
+  assert.equal(migrations.indexOf(B3D_MIGRATION), migrations.indexOf(MIGRATION) + 1, '0071 orders directly after 0070');
+  assert.deepEqual(migrations.filter((name) => /007\d_/u.test(name)), [MIGRATION, B3D_MIGRATION], 'T-03B3 ships exactly ONE migration; T-03D exactly one more');
   for (const [file, blob] of [
     ['database/migrations/0064_committed_conversational_unit_substrate_v1.sql', '0a2ee63980e59072b3e9f52a643efa8220e95b08'],
     ['database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql', '3dc061c71bcb237cec648abb2d1fa02f450cd57f'],
@@ -153,23 +156,33 @@ test('the B3 runtime exists as plain classes and pure modules, and is NOT a Nest
   assert.match(reducer, /export function reduceThreadLifecycle\(input: ThreadLifecycleReductionInput\): readonly PreparedThreadLifecycleTransition\[\]/u);
 });
 
-test('AC-B3-01: the B1+B2+B3 runtime is NOT live - not registered, not called, nothing granted, nothing revoked, T-03A2 wiring unchanged', () => {
-  assert.doesNotMatch(stripComments(conversationModule), /thread-lifecycle|thread-establishment|ConversationThreadLifecycle|ConversationThreadEstablishment|Lifecycle|Thread/u);
-  assert.doesNotMatch(stripComments(conversationService), /thread-lifecycle|thread-establishment|ConversationThreadLifecycle|Lifecycle|Thread/u);
-  assert.match(conversationService, /private readonly temporal: ConversationTemporalEstablishmentService/u);
-  assert.match(conversationService, /return this\.establishTemporal\(userId, await this\.orchestrator\.orchestrate\(/u);
-  assert.match(conversationModule, /ConversationTemporalEstablishmentService/u);
+test('AC-B3-01 resolved by T-03D: the B3-ONLY runtime is still never registered or called; the live path is the FINAL semantic chain', () => {
+  // T-03D (the ONE authorized cutover) wires the FINAL B1 + B2 + B3 + LF chain
+  // (apps/api/src/live-focus) in ConversationModule and calls it from
+  // ConversationService. This slice's own runtime service and repository are
+  // superseded: never registered, never constructed, never called. The FINAL
+  // chain REUSES the frozen Thread-layer walk of this directory and the lazy
+  // continuity binding factory; both are pinned by the T-03D contract.
+  assert.doesNotMatch(stripComments(conversationModule), /ConversationThreadLifecycleEstablishmentService|ConversationThreadLifecycleRuntimeRepository|conversation-thread-lifecycle-establishment|conversation-thread-lifecycle-runtime|with_focus_thread_lifecycle_v1/u);
+  assert.doesNotMatch(stripComments(conversationService), /thread-lifecycle|thread-establishment|ConversationThreadLifecycle|ConversationThreadEstablishment|with_focus_thread_lifecycle_v1/u);
+  assert.match(conversationService, /private readonly semantic: ConversationSemanticEstablishmentService/u);
+  assert.match(conversationService, /return this\.establishSemanticChain\(userId, await this\.orchestrator\.orchestrate\(/u);
+  assert.match(conversationModule, /ConversationSemanticEstablishmentService/u);
+  assert.doesNotMatch(conversationModule, /ConversationTemporalEstablishmentService,|provide: ConversationTemporalEstablishmentService/u, 'no temporal-only fallback service is registered');
   assert.doesNotMatch(stripComments(establishment), /with_focus|with_thread|thread-lifecycle|thread-establishment|Lifecycle|Thread/u);
-  assert.match(unitRepository, /'commit_finalized_exchange_conversation_units_v1'/u, 'the live runtime still commits through the T-03A2 coordinator');
-  assert.equal(gitBlobId(conversationService), '6aa0761c269dc5d18fccdb4aa50c555525978759', 'ConversationService is byte-identical to the baseline');
-  assert.equal(gitBlobId(conversationModule), '4e394b11d0dbe1e2b32d88bd4d9ca17afc8552f5', 'ConversationModule is byte-identical to the baseline');
+  assert.match(unitRepository, /'commit_finalized_exchange_conversation_units_v1'/u, 'the retired T-03A2 repository still names the retired coordinator; it is no longer registered');
   assert.equal(gitBlobId(read('apps/api/src/app.module.ts')), 'fc3ce9c12b67552fb54214d0b6b4931b89601da6', 'AppModule is byte-identical to the baseline');
-  assert.equal(gitBlobId(establishment), '6ddcaf4fcfdaa0c1c437cdad374a134e198b922e', 'the live T-03A2 establishment service is byte-identical to the baseline');
-  // No file outside the production-inert semantic directories reaches the runtime.
+  assert.equal(gitBlobId(establishment), '6ddcaf4fcfdaa0c1c437cdad374a134e198b922e', 'the retired T-03A2 establishment service is byte-identical to the baseline');
+  // No file outside the production-inert semantic directories reaches the B3-only
+  // runtime; the FINAL chain (live-focus) and the module's lazy binding FACTORY
+  // registration are the two authorized consumers.
   const referencing = listFiles(join(rootPath, 'apps/api/src')).map(relative)
     .filter((file) => !file.startsWith(`${LIFECYCLE_DIR}/`))
+    .filter((file) => !file.startsWith('apps/api/src/live-focus/'))
     .filter((file) => /thread-lifecycle|ConversationThreadLifecycle|ThreadContinuity|thread_lifecycle|with_focus_thread_lifecycle_v1|thread_identity_dossier|thread_lifecycle_runtime_context|thread_lifecycle_integrated_batch_snapshot|thread_lifecycle_cutover_ready/u.test(stripComments(read(file))));
-  assert.deepEqual(referencing, [], 'T-03B3 is production-inert: no runtime path reaches it');
+  assert.deepEqual(referencing, ['apps/api/src/conversation/conversation.module.ts'], 'only the FINAL-chain wiring in ConversationModule references the directory');
+  assert.doesNotMatch(stripComments(conversationModule), /thread_lifecycle|with_focus_thread_lifecycle_v1|thread_identity_dossier|thread_lifecycle_runtime_context|thread_lifecycle_integrated_batch_snapshot|thread_lifecycle_cutover_ready/u,
+    'ConversationModule registers the continuity binding factory, never a 0070 RPC');
   // Database: nothing granted, nothing revoked, no semantic write.
   assert.doesNotMatch(executable, /GRANT /u, 'no grant of any kind: the B3 layer is executable by NO application role');
   assert.doesNotMatch(executable, /GRANT[^;]*service_role|TO service_role/u, 'no service_role grant on any B3 writer, coordinator, read, page or audit');
@@ -426,15 +439,24 @@ test('the continuity provider is lazy and strict, and no Thread, Home, binding o
   assert.ok(deliveryMethod.length > 0);
   assert.doesNotMatch(deliveryMethod.replace(/ConversationThreadLifecycleIntegrityError/gu, ''), /thread|origin|home|emerging_focus|lifecycle|binding|dormant|reopen/iu,
     'the external delivery is built from LH and the frozen committed events alone');
+  // (T-03D extended the shared wire contract ADDITIVELY with the authoritative
+  // Live Focus; the frozen T-03A2 fields are unchanged and pinned by the T-03D contract.)
   for (const [file, blob] of [
-    ['packages/runtime/src/index.d.ts', 'ab7281703923934e7d00fcd016cfa15a956c85d8'],
-    ['packages/runtime/src/temporal.d.ts', '412aa269409575116d08064435f9230083a45796'],
+    ['packages/runtime/src/index.d.ts', '8fa505014a936cc73d9fd61f23e67162b4507c54'],
+    ['packages/runtime/src/temporal.d.ts', '9d945e6f2d65bdefbc334b0bc5ac884789f21a89'],
     ['packages/runtime/package.json', '932b837629f23b5cb765eda196fb659418d07916'],
   ]) {
     assert.equal(gitBlobId(read(file)), blob, `${file} is byte-identical`);
   }
+  // (T-03D added packages/runtime/src/live-focus.d.ts: the authoritative LF wire
+  // value carries the closed reference identity - a Thread id or an Emerging
+  // Focus id - and nothing spatial, graded, lifecycle-bound or historical; it
+  // is pinned by the T-03D contract.)
   for (const file of listFiles(join(rootPath, 'packages/runtime')).map(relative).filter((file) => file.endsWith('.ts'))) {
-    assert.doesNotMatch(stripComments(read(file)), /threadId|thread_id|homeAnchor|home_anchor|lifecycle|dormant|reopened|binding_id|emergingFocus|emerging_focus/iu, `${file} declares no Thread, Home or lifecycle payload`);
+    assert.doesNotMatch(stripComments(read(file)), /homeAnchor|home_anchor|lifecycle|dormant|reopened|binding_id/iu, `${file} declares no Home or lifecycle payload`);
+    if (file !== 'packages/runtime/src/live-focus.d.ts') {
+      assert.doesNotMatch(stripComments(read(file)), /threadId|thread_id|emergingFocus|emerging_focus/iu, `${file} declares no Thread or Emerging Focus payload`);
+    }
   }
   assert.doesNotMatch(mobileCi, /0070|thread-lifecycle/u);
   for (const file of listFiles(join(rootPath, 'apps/mobile/src')).map(relative)) {

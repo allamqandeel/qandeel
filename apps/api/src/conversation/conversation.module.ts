@@ -25,17 +25,18 @@ import { BoundedForegroundIntelligenceGathererService } from '../intelligence-ru
 import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 import { QuestionForegroundSelectionService } from '../question/question-foreground-selection.service';
 import { ConversationTemporalController } from './conversation-temporal.controller';
-import {
-  ConversationTemporalEstablishmentService,
-  type CuSegmentationBinding,
-} from '../conversation-unit/conversation-temporal-establishment.service';
-import { ConversationUnitRepository } from '../conversation-unit/conversation-unit.repository';
+import type { CuSegmentationBinding, CuSegmentationBindingFactory } from '../conversation-unit/conversation-temporal-establishment.service';
 import { TemporalDeliveryRepository } from '../conversation-unit/temporal-delivery.repository';
 import {
   createOpenAiSegmentationClient,
   OpenAiCuSegmentationProvider,
 } from '../conversation-unit/openai-cu-segmentation.provider';
 import { loadCuSegmentationOpenAIConfig } from '../conversation-unit/cu-segmentation-provider.config';
+import { openAiFocusResolutionBinding, type FocusResolutionBindingFactory } from '../conversational-focus/focus-resolution-binding';
+import { openAiThreadEstablishmentBinding, type ThreadEstablishmentBindingFactory } from '../thread-establishment/thread-establishment-binding';
+import { openAiThreadContinuityBinding, type ThreadContinuityBindingFactory } from '../thread-lifecycle/thread-continuity-binding';
+import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
+import { ConversationSemanticRuntimeRepository } from '../live-focus/conversation-semantic-runtime.repository';
 
 /**
  * T-03A2: the LAZY CU segmentation binding.
@@ -57,13 +58,26 @@ function openAiSegmentationBinding(): CuSegmentationBinding {
   };
 }
 
+/**
+ * T-03D: the three semantic provider bindings the FINAL chain reuses - B1
+ * focus resolution (T-03B1b2), B2 Thread establishment (T-03B2b3) and B3
+ * Thread continuity (T-03B3). Each registered value is a FACTORY: creating it
+ * reads nothing; calling it happens only inside an actual establishment run,
+ * after the replay / partial gate. Effective Live Focus has NO provider
+ * factory: it is a deterministic reduction (D-01).
+ */
+export const FOCUS_RESOLUTION_BINDING_FACTORY = Symbol('FOCUS_RESOLUTION_BINDING_FACTORY');
+export const THREAD_ESTABLISHMENT_BINDING_FACTORY = Symbol('THREAD_ESTABLISHMENT_BINDING_FACTORY');
+export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDING_FACTORY');
+
 @Module({
   imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, RecommendationModule, ObservabilityModule],
   // QHIA-011A: the explicit session context activation entry is its own
   // authenticated controller. It is a separate product command surface, never
   // part of create-turn input and never reached from a normal turn.
-  // T-03A2: the authenticated temporal read surface is its own controller. It
-  // is delivery/catch-up transport only, never a Timeline or history API.
+  // T-03A2 / T-03D: the authenticated temporal + Live Focus read surface is its
+  // own controller. It is delivery/catch-up transport only, never a Timeline
+  // or history API.
   controllers: [ConversationController, ConversationContextActivationController, ConversationTemporalController],
   providers: [
     SupabaseAuthService,
@@ -94,28 +108,46 @@ function openAiSegmentationBinding(): CuSegmentationBinding {
     // API boundary, no new database authority, and no migration.
     IntegratedContextBudgetAssemblerService,
     ConversationOrchestratorService,
-    // T-03A2: the committed-CU / Session-clock boundary. The classes under
-    // `conversation-unit/` carry no Nest decorator by design - that directory
-    // stays framework-agnostic - so they are registered here through explicit
-    // factories with their exact authority channel: the canonical producer and
-    // the atomic exchange coordinator through the SERVICE-ROLE channel, and the
-    // owner-scoped temporal reads through the AUTHENTICATED channel.
-    {
-      provide: ConversationUnitRepository,
-      useFactory: (serviceApi: SupabaseServiceRoleApiService) => new ConversationUnitRepository(serviceApi),
-      inject: [SupabaseServiceRoleApiService],
-    },
+    // T-03A2 / T-03D: the committed-CU / Session-clock / semantic-chain
+    // boundary. The classes under `conversation-unit/` and `live-focus/` carry
+    // no Nest decorator by design - those directories stay framework-agnostic -
+    // so they are registered here through explicit factories with their exact
+    // authority channel: the ONE final semantic coordinator through the
+    // SERVICE-ROLE channel, and the owner-scoped live reads (LH + LF) through
+    // the AUTHENTICATED channel. The temporary T-03A2-only temporal
+    // establishment service and its unit repository are NOT registered any
+    // more: after the T-03D cutover exactly one application path writes
+    // Session Positions, and it always carries B1, the Thread layer and LF.
     {
       provide: TemporalDeliveryRepository,
       useFactory: (dataApi: SupabaseDataApiService) => new TemporalDeliveryRepository(dataApi),
       inject: [SupabaseDataApiService],
     },
     { provide: CU_SEGMENTATION_BINDING_FACTORY, useValue: openAiSegmentationBinding },
+    { provide: FOCUS_RESOLUTION_BINDING_FACTORY, useValue: openAiFocusResolutionBinding() },
+    { provide: THREAD_ESTABLISHMENT_BINDING_FACTORY, useValue: openAiThreadEstablishmentBinding() },
+    { provide: THREAD_CONTINUITY_BINDING_FACTORY, useValue: openAiThreadContinuityBinding() },
     {
-      provide: ConversationTemporalEstablishmentService,
-      useFactory: (units: ConversationUnitRepository, binding: () => CuSegmentationBinding) =>
-        new ConversationTemporalEstablishmentService(units, binding),
-      inject: [ConversationUnitRepository, CU_SEGMENTATION_BINDING_FACTORY],
+      provide: ConversationSemanticRuntimeRepository,
+      useFactory: (serviceApi: SupabaseServiceRoleApiService) => new ConversationSemanticRuntimeRepository(serviceApi),
+      inject: [SupabaseServiceRoleApiService],
+    },
+    {
+      provide: ConversationSemanticEstablishmentService,
+      useFactory: (
+        repository: ConversationSemanticRuntimeRepository,
+        segmentation: CuSegmentationBindingFactory,
+        focus: FocusResolutionBindingFactory,
+        thread: ThreadEstablishmentBindingFactory,
+        continuity: ThreadContinuityBindingFactory,
+      ) => new ConversationSemanticEstablishmentService(repository, segmentation, focus, thread, continuity),
+      inject: [
+        ConversationSemanticRuntimeRepository,
+        CU_SEGMENTATION_BINDING_FACTORY,
+        FOCUS_RESOLUTION_BINDING_FACTORY,
+        THREAD_ESTABLISHMENT_BINDING_FACTORY,
+        THREAD_CONTINUITY_BINDING_FACTORY,
+      ],
     },
     ConversationService,
     // QHIA-011A: the narrow facade over the EXISTING QHIA-006 relevance

@@ -114,8 +114,9 @@ test('migration 0068 is the newest DURABLE substrate, and 0064 / 0065 / 0066 / 0
   assert.equal(gitBlobId(read('database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql')), '3dc061c71bcb237cec648abb2d1fa02f450cd57f');
   assert.equal(gitBlobId(read('database/migrations/0066_durable_reference_emerging_focus_sp_substrate_v1.sql')), '9f0588d5ca46329a8721ee30302f49d227a357ae');
   assert.equal(gitBlobId(read('database/migrations/0067_conversation_focus_runtime_integration_readiness_v1.sql')), 'd12a3f552e80709ee1d20887f55f1c84e84f9208');
-  assert.equal(gitBlobId(read('database/verify-migration-0066.mjs')), '39559c2ca81dd216968e694e6c93c8a160fec4a4');
-  assert.equal(gitBlobId(read('database/verify-migration-0067.mjs')), 'aaec5bf020143b111d265f0726bdc08d0c5922df');
+  // (T-03D re-anchored the 0066 / 0067 verifiers' T-03A2 grant posture to the cutover: the temporal-only producer is retired.)
+  assert.equal(gitBlobId(read('database/verify-migration-0066.mjs')), '13ccb087e415a316609b1121f937ca3699c59ba4');
+  assert.equal(gitBlobId(read('database/verify-migration-0067.mjs')), '0e496a95da7a0ee596c416e0c599f703c121b991');
   assert.ok(existsSync(new URL('database/verify-migration-0068.mjs', root)));
   assert.ok(existsSync(new URL('database/tests/durable-thread-home-same-sp-substrate-v1.test.mjs', root)));
   assert.doesNotMatch(executable, /CREATE OR REPLACE|DROP /u, '0068 replaces and drops nothing');
@@ -408,8 +409,12 @@ test('the whole slice is production-inert: no grant, no wiring, no runtime reade
     // T-03B3 (thread-lifecycle, production-inert) reuses this canonicalizer and
     // payload boundary exactly as T-03B2b3 does; it is pinned separately just below.
     .filter((file) => !file.startsWith('apps/api/src/thread-lifecycle/'))
+    // T-03D (live-focus) is the FINAL, LIVE chain: it canonicalizes B2 through
+    // this boundary inside the ONE 0071 coordinator and never calls the 0068
+    // writer or the placement engine; it is pinned by the T-03D contract.
+    .filter((file) => !file.startsWith('apps/api/src/live-focus/'))
     .filter((file) => /with_focus_and_thread_v1|durable-thread|canonicalizePreparedThreadSequence|durableThreadId|conversation_threads|compute_canonical_home_placement/u.test(stripComments(read(file))));
-  assert.deepEqual(referencing, [], 'T-03B2b2 is production-inert: no runtime path reaches it');
+  assert.deepEqual(referencing, [], 'no runtime path reaches the T-03B2b2 writer, canonicalizer or placement mirror except the FINAL chain');
   // T-03B3's FINAL Thread-layer runtime (thread-lifecycle) canonicalizes B2
   // through this boundary and never carries a placement of its own: the
   // database is still the only placement authority, and a reused Thread
@@ -420,11 +425,16 @@ test('the whole slice is production-inert: no grant, no wiring, no runtime reade
     assert.doesNotMatch(stripComments(read(file)), /compute_canonical_home_placement|osdap|conversation_thread_homes|placeCanonicalHome|resolveThreadHome/iu,
       `${file} carries no permanent placement: the database is the only placement authority`);
   }
-  for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService],
-    ['AppModule', appModule], ['the T-03B1b2 focus establishment service', focusEstablishment]]) {
+  // T-03D wires the FINAL chain (which carries the Thread layer) in
+  // ConversationModule / ConversationService; neither reaches the 0068 writer,
+  // the canonicalizer or the placement engine directly.
+  for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService]]) {
+    assert.doesNotMatch(stripComments(text), /durable-thread|with_focus_and_thread|canonicalizePreparedThreadSequence|compute_canonical_home_placement|conversation_threads/u, `${name} never reaches the T-03B2b2 writer or engine`);
+  }
+  for (const [name, text] of [['AppModule', appModule], ['the T-03B1b2 focus establishment service', focusEstablishment]]) {
     assert.doesNotMatch(stripComments(text), /thread|Thread|durable-thread|with_focus_and_thread/u, `${name} is untouched by T-03B2b2`);
   }
-  assert.match(unitRepository, /'commit_finalized_exchange_conversation_units_v1'/u, 'the live runtime still commits through the T-03A2 coordinator');
+  assert.match(unitRepository, /'commit_finalized_exchange_conversation_units_v1'/u, 'the retired T-03A2 repository still names the retired coordinator');
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src'))].map(relative)) {
     assert.doesNotMatch(read(file), /with_focus_and_thread|durable-thread|conversation_threads|thread_home/u, `${file} does not reach the substrate`);
   }

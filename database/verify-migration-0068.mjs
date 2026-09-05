@@ -313,7 +313,13 @@ async function verifyStaticAuthority() {
       const [{ granted }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') granted", [role, signature]);
       strict(granted, false, `${role} must not execute ${signature}`);
     }
-    for (const signature of [LEGACY_PRODUCER, LEGACY_COORDINATOR, LEGACY_SNAPSHOT]) {
+    // T-03D (migration 0071) retired the temporary T-03A2 mutation grants; the
+    // T-03A2 snapshot read stays live for service_role.
+    for (const signature of [LEGACY_PRODUCER, LEGACY_COORDINATOR]) {
+      const [{ granted }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') granted", [role, signature]);
+      strict(granted, false, `${role} must not execute the retired temporal-only writer ${signature} (T-03D cutover)`);
+    }
+    for (const signature of [LEGACY_SNAPSHOT]) {
       const [{ granted }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') granted", [role, signature]);
       strict(granted, role === 'service_role', `the T-03A2 grant on ${signature} is unchanged for ${role}`);
     }

@@ -73,7 +73,8 @@ test('migration 0066 exists, is the newest, and 0064 / 0065 are byte-identical',
   assert.ok(migrations.indexOf('0066_durable_reference_emerging_focus_sp_substrate_v1.sql') > migrations.indexOf('0065_session_semantic_clock_sp_lh_delivery_v1.sql'));
   assert.equal(gitBlobId(read('database/migrations/0064_committed_conversational_unit_substrate_v1.sql')), '0a2ee63980e59072b3e9f52a643efa8220e95b08');
   assert.equal(gitBlobId(read('database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql')), '3dc061c71bcb237cec648abb2d1fa02f450cd57f');
-  assert.equal(gitBlobId(read('database/verify-migration-0065.mjs')), '132841c718ba1e2368ecc639b49dadff82b79ddb');
+  // (T-03D re-anchored the 0065 verifier's activation-grant proof to the cutover: the temporal-only producer is retired.)
+  assert.equal(gitBlobId(read('database/verify-migration-0065.mjs')), 'a262a5a6f9102717bd0d9985d08fdf2c07a13b7d');
   assert.ok(existsSync(new URL('database/verify-migration-0066.mjs', root)));
   assert.ok(existsSync(new URL('database/tests/durable-reference-emerging-focus-sp-substrate-v1.test.mjs', root)));
   assert.doesNotMatch(executable, /CREATE OR REPLACE|DROP /u, '0066 replaces and drops nothing');
@@ -121,8 +122,14 @@ test('the new writer, coordinator and context read are production-inert; the T-0
     // T-03B3 (thread-lifecycle, production-inert) RUNS the frozen B1 chain
     // exactly as T-03B2b3's runtime does; it is pinned separately just below.
     .filter((file) => !file.startsWith('apps/api/src/thread-lifecycle/'))
+    // T-03D (live-focus) is the FINAL, LIVE chain: it canonicalizes B1 through
+    // this boundary inside the ONE 0071 coordinator and never calls the 0066
+    // writer; ConversationModule registers its lazy focus binding FACTORY.
+    // Both are pinned by the T-03D contract.
+    .filter((file) => !file.startsWith('apps/api/src/live-focus/'))
     .filter((file) => /with_focus_v1|focus_runtime_context|durable-focus|canonicalizePreparedFocusSequence|conversational-focus/u.test(stripComments(read(file))));
-  assert.deepEqual(referencing, [], 'no runtime path reaches the T-03B1b1 substrate or canonicalizer');
+  assert.deepEqual(referencing, ['apps/api/src/conversation/conversation.module.ts'], 'no runtime path reaches the T-03B1b1 writer or canonicalizer except the FINAL chain wiring');
+  assert.doesNotMatch(stripComments(conversationModule), /with_focus_v1|focus_runtime_context|durable-focus|canonicalizePreparedFocusSequence/u, 'ConversationModule registers a binding factory, never the 0066 writer or the canonicalizer');
   // The T-03B2a evaluator may import only the two pure type modules, never the
   // canonicalizer, the durable identity derivation or the 0066 RPCs.
   const threadFiles = listFiles(join(rootPath, 'apps/api/src/thread-establishment')).map(relative);
@@ -204,11 +211,15 @@ test('the new writer, coordinator and context read are production-inert; the T-0
       assert.match(source, /from '\.\.\/runtime-identity\/uuid-v5'/u, `${file} uses the ONE neutral v5 helper, never a second algorithm`);
     }
   }
-  for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService],
-    ['the T-03A2 establishment service', establishment], ['the T-03A2 unit repository', unitRepository]]) {
+  // T-03D wires the FINAL chain in ConversationModule / ConversationService;
+  // neither reaches the 0066 writer, the context read or the canonicalizer.
+  for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService]]) {
+    assert.doesNotMatch(stripComments(text), /with_focus_v1|focus_runtime_context|durable-focus|canonicaliz/u, `${name} never reaches the T-03B1b1 writer or canonicalizer`);
+  }
+  for (const [name, text] of [['the T-03A2 establishment service', establishment], ['the T-03A2 unit repository', unitRepository]]) {
     assert.doesNotMatch(stripComments(text), /with_focus|focus|Focus|canonicaliz/u, `${name} is untouched by T-03B1b1`);
   }
-  assert.match(unitRepository, /commit_finalized_exchange_conversation_units_v1|commit_conversation_units_v1/u, 'the T-03A2 runtime still calls the legacy producer path');
+  assert.match(unitRepository, /commit_finalized_exchange_conversation_units_v1|commit_conversation_units_v1/u, 'the retired T-03A2 repository still names the retired producer path');
   // No scripts entry point, no mobile reference.
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src'))].map(relative)) {
     assert.doesNotMatch(read(file), /with_focus_v1|focus_runtime_context|durable-focus|emerging_focus/u, `${file} does not reach the substrate`);
