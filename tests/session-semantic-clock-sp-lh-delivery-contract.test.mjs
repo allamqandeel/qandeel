@@ -82,9 +82,10 @@ test('@qandeel/runtime is a TYPE-ONLY workspace package that ships no JavaScript
   assert.deepEqual(runtimePackage.exports, { '.': { types: './src/index.d.ts' } });
 
   const files = listFiles(join(rootPath, 'packages/runtime')).map((file) => relative(file)).sort();
-  // (T-03D added src/live-focus.d.ts: the authoritative LF wire value and transition event.)
+  // (T-03D added src/live-focus.d.ts: the authoritative LF wire value and transition event.
+  // T-03C added src/historical-projection.d.ts: the historical disclosure wire, V.)
   assert.deepEqual(files, ['packages/runtime/README.md', 'packages/runtime/package.json',
-    'packages/runtime/src/index.d.ts', 'packages/runtime/src/live-focus.d.ts', 'packages/runtime/src/temporal.d.ts']);
+    'packages/runtime/src/historical-projection.d.ts', 'packages/runtime/src/index.d.ts', 'packages/runtime/src/live-focus.d.ts', 'packages/runtime/src/temporal.d.ts']);
 
   // It joins the existing root workspace and the ONE root lockfile.
   assert.deepEqual(rootPackage.workspaces, ['apps/*', 'packages/*']);
@@ -138,7 +139,11 @@ test('the shared wire contract carries the frozen fields and nothing analytical'
   // T-03D extended the wire ADDITIVELY with the authoritative Live Focus: the
   // closed reference identity (NONE / EMERGING / THREAD) and the SP it became
   // effective at - never a label, Home, confidence, sequence or content.
-  const code = stripComments(`${temporalTypes}\n${runtimeIndex}`);
+  // (T-03C re-exports its historical disclosure wire from the index ADDITIVELY; that
+  // block is pinned by the T-03C contract and excluded here by its module specifier,
+  // never by weakening the list: the LH wire itself still carries none of these.)
+  const lhIndex = runtimeIndex.replace(/export type \{[^}]*\} from '\.\/historical-projection';/u, '');
+  const code = stripComments(`${temporalTypes}\n${lhIndex}`);
   for (const forbidden of ['committedText', 'text', 'analysis', 'reading', 'evidence', 'confidence', 'knowledge',
     'timestamp', 'createdAt', 'sameSp', 'eventSequence', 'label', 'home', 'Home', 'importance', 'direction']) {
     assert.ok(!code.includes(forbidden), `the wire contract must not carry ${forbidden}`);
@@ -216,7 +221,8 @@ test('the temporal HTTP surface is delivery and catch-up only', () => {
   }
   assert.match(code, /MAX_TEMPORAL_EVENT_PAGE/u, 'the catch-up page is bounded');
   assert.match(code, /afterSp[\s\S]*?parseBoundedInteger\(afterSp, 'afterSp', 1,/u, 'SP(0) is not a cursor');
-  assert.match(conversationModule, /controllers: \[ConversationController, ConversationContextActivationController, ConversationTemporalController\]/u);
+  // (T-03C added its own authenticated historical disclosure controller beside the temporal one.)
+  assert.match(conversationModule, /controllers: \[ConversationController, ConversationContextActivationController, ConversationTemporalController, ConversationHistoricalProjectionController\]/u);
 });
 
 test('the mobile temporal boundary is exactly the authorized non-UI surface', () => {

@@ -173,8 +173,10 @@ test('no B3 lifecycle, no LF, no T-03C, no Reading / Neighborhood / merge, no mo
   // (T-03D extended the shared wire contract ADDITIVELY with the authoritative
   // Live Focus: the frozen T-03A2 fields are unchanged and pinned by the T-03D
   // contract; no Thread, Home or Origin field reached the wire.)
+  // (T-03C re-exported its historical disclosure types from the index ADDITIVELY;
+  // the T-03A2 / T-03D exports are unchanged and the index is re-pinned at its T-03C shape.)
   for (const [file, blob] of [
-    ['packages/runtime/src/index.d.ts', '8fa505014a936cc73d9fd61f23e67162b4507c54'],
+    ['packages/runtime/src/index.d.ts', 'aaeb83cdf266c54d36008894fb64bb08e205546c'],
     ['packages/runtime/src/temporal.d.ts', '9d945e6f2d65bdefbc334b0bc5ac884789f21a89'],
     ['packages/runtime/package.json', '932b837629f23b5cb765eda196fb659418d07916'],
   ]) {
@@ -184,11 +186,20 @@ test('no B3 lifecycle, no LF, no T-03C, no Reading / Neighborhood / merge, no mo
   // value carries the closed reference identity - a Thread id or an Emerging
   // Focus id - and nothing spatial, graded or historical; it is pinned by the
   // T-03D contract. No Home or Origin payload exists on the wire anywhere.)
-  for (const file of listFiles(join(rootPath, 'packages/runtime')).map(relative).filter((file) => file.endsWith('.ts'))) {
-    assert.doesNotMatch(stripComments(read(file)), /homeAnchor|home_anchor|originThread|origin_state|placement|lifecycle|dormant|reopened/iu,
+  // (T-03C added packages/runtime/src/historical-projection.d.ts: the historical
+  // disclosure wire, V = Disclose(K(TC), depth, inspection), which by the frozen
+  // Stage 6 constitution DOES carry a Thread's ONE Home as exact integer text, its
+  // Session-local state at TC and Thread / Emerging Focus / Reading identities; it is
+  // pinned by the T-03C contract and excluded here by name, never by weakening the rule.
+  // The index re-exports its types by name; those names are its own.)
+  const HISTORICAL_WIRE = 'packages/runtime/src/historical-projection.d.ts';
+  const withoutHistoricalReexport = (text) => text.replace(/export type \{[^}]*\} from '\.\/historical-projection';/u, '');
+  for (const file of listFiles(join(rootPath, 'packages/runtime')).map(relative).filter((file) => file.endsWith('.ts') && file !== HISTORICAL_WIRE)) {
+    const source = withoutHistoricalReexport(stripComments(read(file)));
+    assert.doesNotMatch(source, /homeAnchor|home_anchor|originThread|origin_state|placement|lifecycle|dormant|reopened/iu,
       `${file} declares no Home, Origin or lifecycle payload`);
     if (file !== 'packages/runtime/src/live-focus.d.ts') {
-      assert.doesNotMatch(stripComments(read(file)), /threadId|thread_id|emergingFocus|emerging_focus/u, `${file} declares no Thread or Emerging Focus payload`);
+      assert.doesNotMatch(source, /threadId|thread_id|emergingFocus|emerging_focus/u, `${file} declares no Thread or Emerging Focus payload`);
     }
   }
   assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg']);

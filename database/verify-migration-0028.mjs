@@ -281,7 +281,13 @@ async function verifyCandidateWindow() {
   }
   assert.deepEqual(await canonicalIds(consumed), [],
     'ineligible rows occupy candidate slots: LIMIT 64 precedes source filtering');
+  // Reshaping a verifier-owned window is fixture surgery, not canonical
+  // behaviour: since T-03C (migration 0072) a canonical Memory row is preserved
+  // and its history rows reference it, so the fixture owner removes the rows in
+  // replica mode exactly as the fixture cleanup helper does.
+  await q("SET LOCAL session_replication_role = 'replica'");
   await q('DELETE FROM public.memories WHERE user_id=$1 AND id<>$2', [consumed, wanted]);
+  await q("SET LOCAL session_replication_role = 'origin'");
   assert.deepEqual(await canonicalIds(consumed), [wanted], 'with the window free the eligible row returns');
 }
 

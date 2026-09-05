@@ -125,6 +125,47 @@ what the Map shows.
 Contract: `npm run test:effective-live-focus-final-semantic-chain-cutover-contract`
 (repository root) plus `src/temporal/__tests__/live-focus-sync.test.ts`.
 
+## Historical disclosure seam (T-03C)
+
+T-03C completed the SP-native history of every v1 exposed family on the server and
+delivers it to the client as `V = Disclose(K(TC), semanticDepth, inspectionContext)`.
+`K(TC)` (Layer A) is projected by the database for ONE covered Session at ONE
+addressable Session Position and never leaves the server; the client receives exactly
+the rungs its requested semantic depth discloses.
+
+- **Wire** (`@qandeel/runtime`, `historical-projection.d.ts`): `HistoricalDisclosure` =
+  header (`sessionId`, `liveHead`, `tc`, `sealed`, `depth`, `revision`) + the WORLD floor
+  (Threads with their ONE Home as exact integer text and their Session-local state, the
+  Live Focus at TC) + four rungs that are each `DISCLOSED { value }` or `DEPTH_WITHHELD`
+  (Thread ↔ Reading appearances; Moments, Emerging Focuses, Formal Question ↔ Turn
+  appearances; Readings with then-current status / version and lineage, peer relations,
+  Materials with their R-C5 expiry mapping, Information Gaps, Question candidates,
+  Confidence resolved CURRENT / SUPERSEDED / PREVALID; Evidence participations) + the
+  optional inspection resolution along three orthogonal axes (knowledge, context,
+  disclosure). No timestamp, no same-SP sequence, no score, no label, no camera.
+- **Runtime wire validation** (`src/projection/historical-projection-wire.ts`):
+  `decodeHistoricalDisclosure` rejects an extra key, a rung that disagrees with the
+  declared depth, an SP beyond TC, an incoherent header, an endpoint not known at TC, a
+  vocabulary outside the closed sets and a Home that is not exact integer text;
+  `decodeUnavailableBody` accepts exactly the five typed refusal codes.
+- **Transport** (`historical-projection-api.ts`): `HistoricalProjectionApiClient.fetchDisclosure`
+  is the ONE route (`/historical-projection?tc=&depth=[&inspect…]`) under the injected-fetch,
+  fail-closed and requested-Session / TC / depth binding rules. The server's typed refusals
+  (a LEGACY UNCOVERED SESSION, no Live Head yet, a missing baseline, an unaddressable TC, a
+  Session not visible) arrive as `UNAVAILABLE` with their exact code — never as an empty
+  disclosure, never as `UNKNOWN_AT_TC`.
+- **Class-B holder** (`historical-projection-cache.ts`): `HistoricalDisclosureCache` keeps
+  `NOT_FETCHED`, `FETCHED` (with `UNKNOWN_AT_TC` and `DEPTH_WITHHELD` inside the value) and
+  `UNAVAILABLE` apart; a sealed disclosure is never invalidated, an open-head disclosure is
+  dropped when a newer revision of the Session is observed. It writes nothing into the T-02
+  kernel: `K(TC)`, `V`, `IF_render`, divergence and the footprint have no key in
+  `CanonicalState` by design, and no Product action or `RH` entry is ever produced.
+- Not here, by design: Map geometry, Timeline windows, Return-to-Live-Focus and Go Live +
+  Locate (T-04 / T-07 / T-08), and any visual UI. Nothing under `src/projection/` is mounted.
+
+Contract: `npm run test:historical-projection-contract` (repository root) plus the Jest
+suites under `src/projection/__tests__/`.
+
 ## Toolchain pins (Expo SDK 57)
 
 | Package | Pin |

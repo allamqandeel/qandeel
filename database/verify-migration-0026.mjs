@@ -187,6 +187,11 @@ async function restorePreHardeningAuthority() {
   await q('CREATE POLICY memories_update_own ON public.memories FOR UPDATE TO authenticated USING (user_id=(SELECT auth.uid())) WITH CHECK (user_id=(SELECT auth.uid()))');
   await q(`GRANT EXECUTE ON FUNCTION ${LEGACY} TO authenticated, service_role`);
   await q('GRANT INSERT, UPDATE, DELETE ON public.memories TO service_role');
+  // T-03C (migration 0072) preserves every canonical Memory row and refuses an
+  // in-place rewrite of its identity / provenance columns. The pre-hardening
+  // world had no such guard, so the reconstruction stands it aside - inside the
+  // caller's savepoint only, which rolls it back with the rest of the exploit.
+  await q('ALTER TABLE public.memories DISABLE TRIGGER memories_historical_preservation');
 }
 
 async function legacyExecutable(role) {

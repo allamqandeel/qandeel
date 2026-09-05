@@ -121,8 +121,14 @@ async function verifyRecordSemantics(userA, userB, oldId, otherId) {
   assert.equal(successor.version, 2);
   assert.equal(successor.supersedes_memory_id, oldId);
   assert.equal((await rows('SELECT status FROM public.memories WHERE id=$1', [oldId]))[0].status, 'SUPERSEDED');
-  // Self-supersession and a second successor stay impossible.
-  await expectRejected(() => client.query('UPDATE public.memories SET supersedes_memory_id=id WHERE id=$1', [successorId]), ['23514']);
+  // Self-supersession and a second successor stay impossible. The lineage CHECK
+  // is exercised on INSERT: since T-03C (migration 0072) a canonical Memory's
+  // lineage column can no longer be rewritten in place at all - that rewrite is
+  // refused earlier, by the historical preservation guard (55000), and is
+  // asserted as such right after.
+  await expectRejected(() => client.query(`INSERT INTO public.memories (id,user_id,type,content,source,confidence,importance,status,version,supersedes_memory_id)
+    VALUES ($1,$2,'PERSONAL_FACT','self lineage','USER_CONFIRMED',1,0.8,'ACTIVE',2,$1)`, [randomUUID(), userA]), ['23514']);
+  await expectRejected(() => client.query('UPDATE public.memories SET supersedes_memory_id=id WHERE id=$1', [successorId]), ['55000']);
   await expectRejected(() => client.query(`INSERT INTO public.memories (id,user_id,type,content,source,confidence,importance,status,version,supersedes_memory_id)
     VALUES ($1,$2,'PERSONAL_FACT','second successor','USER_CONFIRMED',1,0.8,'ACTIVE',2,$3)`, [randomUUID(), userA, oldId]), ['23505']);
 
