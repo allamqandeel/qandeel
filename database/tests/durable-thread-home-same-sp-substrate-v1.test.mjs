@@ -53,8 +53,12 @@ test('0068 exists, orders after 0067, and 0064-0067 are byte-identical', () => {
   assert.ok(migrations.includes('0068_durable_thread_home_same_sp_substrate_v1.sql'));
   assert.ok(migrations.indexOf('0068_durable_thread_home_same_sp_substrate_v1.sql')
     > migrations.indexOf('0067_conversation_focus_runtime_integration_readiness_v1.sql'));
+  // (T-03B3 added 0070, which creates its OWN lifecycle / continuity tables and
+  // never a second Thread, Home, event, evidence, origin or B2 capture table.)
   for (const later of migrations.slice(migrations.indexOf('0068_durable_thread_home_same_sp_substrate_v1.sql') + 1)) {
-    assert.doesNotMatch(read(`../migrations/${later}`), /CREATE TABLE/u, `${later} creates no second Thread or Home substrate`);
+    assert.doesNotMatch(read(`../migrations/${later}`),
+      /CREATE TABLE public\.(?:conversation_world_spatial_authorities|conversation_threads|conversation_thread_homes|conversation_thread_establishment_events|conversation_thread_establishment_evidence|conversation_thread_origin_members|conversation_thread_commit_batches)\b/u,
+      `${later} creates no second Thread or Home substrate`);
   }
   assert.match(migration, /^BEGIN;/mu);
   assert.match(migration, /COMMIT;\s*$/u);

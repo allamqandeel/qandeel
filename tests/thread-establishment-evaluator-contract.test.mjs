@@ -225,8 +225,38 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
   const referencing = listFiles(join(rootPath, 'apps/api/src'))
     .map((file) => relative(file))
     .filter((file) => !file.startsWith(`${THREAD_DIR}/`))
+    // T-03B3 (thread-lifecycle, production-inert) RUNS this frozen evaluator
+    // exactly as T-03B2b3's runtime does; it is pinned separately just below.
+    .filter((file) => !file.startsWith('apps/api/src/thread-lifecycle/'))
     .filter((file) => /thread-establishment|ThreadEstablishment|validateThreadEstablishmentProposal|THREAD_ESTABLISHMENT/u.test(stripComments(read(file))));
   assert.deepEqual(referencing, [], 'T-03B2a is production-inert: no runtime path reaches it');
+  // T-03B3's production-inert FINAL Thread-layer runtime (thread-lifecycle)
+  // RUNS this frozen evaluator through the same seams T-03B2b3 uses. It may
+  // import the listed T-03B2a / T-03B2b2 / T-03B2b3 pieces and nothing else:
+  // never the validator, never a provider adapter, never a production binding.
+  const B3_ALLOWED_THREAD_IMPORTS = new Set([
+    '../thread-establishment/thread-establishment.types',
+    '../thread-establishment/thread-establishment-provider.types',
+    '../thread-establishment/thread-establishment-provider.config',
+    '../thread-establishment/thread-establishment-binding',
+    '../thread-establishment/thread-establishment-evaluator.service',
+    '../thread-establishment/durable-thread-payload.types',
+    '../thread-establishment/durable-thread-canonicalizer',
+    '../thread-establishment/conversation-thread-establishment.service',
+    '../thread-establishment/conversation-thread-runtime.types',
+    '../thread-establishment/conversation-thread-runtime-mapper',
+    '../thread-establishment/conversational-origin-mapper',
+  ]);
+  const lifecycleFiles = listFiles(join(rootPath, 'apps/api/src/thread-lifecycle')).map((file) => relative(file));
+  assert.ok(lifecycleFiles.length > 0, 'the T-03B3 directory exists');
+  for (const file of lifecycleFiles) {
+    const source = read(file);
+    for (const match of source.matchAll(/from\s+'([^']*thread-establishment[^']*)'/gu)) {
+      assert.ok(B3_ALLOWED_THREAD_IMPORTS.has(match[1]), `${file} may import only the listed T-03B2 pieces; found ${match[1]}`);
+    }
+    assert.doesNotMatch(stripComments(source), /validateThreadEstablishmentProposal|OpenAiThreadEstablishmentProvider|FakeThreadEstablishmentProvider/u, `${file} never reaches the T-03B2a validator or provider adapters`);
+    if (!file.endsWith('.spec.ts')) assert.doesNotMatch(stripComments(source), /openAiThreadEstablishmentBinding/u, `${file} constructs no production T-03B2a binding of its own`);
+  }
   for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService], ['AppModule', appModule],
     ['the T-03A2 establishment service', establishment], ['the T-03B1b2 focus establishment service', focusEstablishment]]) {
     assert.doesNotMatch(stripComments(text), /thread-establishment|ThreadEstablishment|THREAD_ESTABLISHMENT|TE-0[1-3]/u, `${name} is untouched by T-03B2a`);
@@ -245,6 +275,11 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     'database/migrations/0069_thread_runtime_integration_readiness_v1.sql',
     'database/verify-migration-0069.mjs',
     'database/tests/thread-runtime-integration-readiness-v1.test.mjs',
+    // T-03B3 owns the FINAL Thread layer: migration 0070, its verifier and its
+    // database contract CALL the frozen 0068 gates and never import this evaluator.
+    'database/migrations/0070_thread_lifecycle_cross_session_continuity_v1.sql',
+    'database/verify-migration-0070.mjs',
+    'database/tests/thread-lifecycle-cross-session-continuity-v1.test.mjs',
   ];
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src')), ...listFiles(join(rootPath, 'database'))].map((f) => relative(f))) {
     if (B2B2_DATABASE_FILES.includes(file)) {
@@ -260,11 +295,16 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
   const B2B2_MIGRATION = '0068_durable_thread_home_same_sp_substrate_v1.sql';
   const B2B3_MIGRATION = '0069_thread_runtime_integration_readiness_v1.sql';
-  assert.deepEqual(migrations.filter((name) => /thread|home|te0|establishment/iu.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION],
-    'exactly one Thread / Home SUBSTRATE migration exists (T-03B2b2) plus the T-03B2b3 READ / AUDIT migration, each pinned by its own contract');
+  // (T-03B3 added 0070, the FINAL Thread-layer substrate - Session-local
+  // lifecycle and cross-Session continuity over the SAME canonical Thread -
+  // which CALLS the frozen 0068 gates; it is pinned by
+  // tests/thread-lifecycle-cross-session-continuity-contract.test.mjs.)
+  const B3_MIGRATION = '0070_thread_lifecycle_cross_session_continuity_v1.sql';
+  assert.deepEqual(migrations.filter((name) => /thread|home|te0|establishment/iu.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
+    'exactly one Thread / Home SUBSTRATE migration exists (T-03B2b2), plus the T-03B2b3 READ / AUDIT migration and the T-03B3 lifecycle / continuity migration, each pinned by its own contract');
   assert.deepEqual([...read(`database/migrations/${B2B3_MIGRATION}`).matchAll(/CREATE TABLE/gu)], [],
     'the T-03B2b3 migration creates no Thread, Home or capture table of its own');
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION)) {
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION)) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu, `${name} carries no Thread / Home substrate`);
   }
   assert.ok(!existsSync(new URL('database/verify-thread-establishment.mjs', root)));
@@ -272,11 +312,11 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
   // in CI are the T-03B2b2 durable-substrate one and the T-03B2b3 read/audit
   // one, in that order.
   assert.deepEqual([...apiCi.matchAll(/npm run (verify:[\w:-]*thread[\w:-]*)/gu)].map((m) => m[1]),
-    ['verify:durable-thread-home-same-sp-substrate:integration', 'verify:thread-runtime-integration-readiness:integration']);
+    ['verify:durable-thread-home-same-sp-substrate:integration', 'verify:thread-runtime-integration-readiness:integration', 'verify:thread-lifecycle-cross-session-continuity:integration']);
   assert.doesNotMatch(rootPackage.scripts['verify:foundation-integration-gate'] ?? '', /thread/u);
   assert.deepEqual(Object.keys(rootPackage.scripts).filter((name) => /verify:.*thread/u.test(name)),
-    ['verify:durable-thread-home-same-sp-substrate:integration', 'verify:thread-runtime-integration-readiness:integration'],
-    'the only Thread verifier scripts are the T-03B2b2 substrate one and the T-03B2b3 read/audit one');
+    ['verify:durable-thread-home-same-sp-substrate:integration', 'verify:thread-runtime-integration-readiness:integration', 'verify:thread-lifecycle-cross-session-continuity:integration'],
+    'the only Thread verifier scripts are the T-03B2b2 substrate one, the T-03B2b3 read/audit one and the T-03B3 lifecycle / continuity one');
 });
 
 test('the provider request is the one-CU input and nothing wider: no analytical object, count, rank, similarity, Thread, Home, SP or LF channel (task §7)', () => {

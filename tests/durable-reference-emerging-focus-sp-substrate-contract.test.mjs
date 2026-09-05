@@ -118,6 +118,9 @@ test('the new writer, coordinator and context read are production-inert; the T-0
     // T-03B2a (thread-establishment, production-inert) consumes ONLY the pure
     // B1 payload/semantic TYPES; it is pinned separately just below.
     .filter((file) => !file.startsWith('apps/api/src/thread-establishment/'))
+    // T-03B3 (thread-lifecycle, production-inert) RUNS the frozen B1 chain
+    // exactly as T-03B2b3's runtime does; it is pinned separately just below.
+    .filter((file) => !file.startsWith('apps/api/src/thread-lifecycle/'))
     .filter((file) => /with_focus_v1|focus_runtime_context|durable-focus|canonicalizePreparedFocusSequence|conversational-focus/u.test(stripComments(read(file))));
   assert.deepEqual(referencing, [], 'no runtime path reaches the T-03B1b1 substrate or canonicalizer');
   // The T-03B2a evaluator may import only the two pure type modules, never the
@@ -172,6 +175,30 @@ test('the new writer, coordinator and context read are production-inert; the T-0
         `${file} does not reach the T-03B1b1 canonicalizer or identity derivation`);
     }
     if (!B2B2_IDENTITY_FILES.has(file)) {
+      assert.doesNotMatch(stripComments(source), /uuidV5/u, `${file} derives no durable identity of its own`);
+    } else {
+      assert.match(source, /from '\.\.\/runtime-identity\/uuid-v5'/u, `${file} uses the ONE neutral v5 helper, never a second algorithm`);
+    }
+  }
+  // T-03B3's production-inert FINAL Thread-layer runtime (thread-lifecycle)
+  // RUNS the frozen B1 chain exactly as T-03B2b3's does: the same listed B1
+  // pieces, never a 0066 RPC, never a T-03B1 namespace, and its OWN identity
+  // derivation (binding / lifecycle-event ids) only in its canonicalizer
+  // through the ONE neutral v5 helper.
+  const B3_IDENTITY_FILES = new Set([
+    'apps/api/src/thread-lifecycle/durable-thread-lifecycle-canonicalizer.ts',
+    'apps/api/src/thread-lifecycle/durable-thread-lifecycle-canonicalizer.spec.ts',
+  ]);
+  const lifecycleFiles = listFiles(join(rootPath, 'apps/api/src/thread-lifecycle')).map(relative);
+  assert.ok(lifecycleFiles.length > 0, 'the T-03B3 directory exists');
+  for (const file of lifecycleFiles) {
+    const source = read(file);
+    for (const match of source.matchAll(/from\s+'([^']*(?:conversational-focus|durable-focus)[^']*)'/gu)) {
+      assert.ok(B2B3_ALLOWED_FOCUS_IMPORTS.has(match[1]), `${file} may import only the listed B1 pieces; found ${match[1]}`);
+    }
+    assert.doesNotMatch(stripComments(source), /with_focus_v1\b|focus_runtime_context|EMERGING_FOCUS_NAMESPACE|REFERENCE_HANDLE_NAMESPACE/u,
+      `${file} never calls a 0066 RPC and derives no T-03B1 identity namespace of its own`);
+    if (!B3_IDENTITY_FILES.has(file)) {
       assert.doesNotMatch(stripComments(source), /uuidV5/u, `${file} derives no durable identity of its own`);
     } else {
       assert.match(source, /from '\.\.\/runtime-identity\/uuid-v5'/u, `${file} uses the ONE neutral v5 helper, never a second algorithm`);
