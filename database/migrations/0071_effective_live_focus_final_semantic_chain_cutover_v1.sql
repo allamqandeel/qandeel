@@ -293,10 +293,12 @@ END;$$;
 --      NO_INDEPENDENT_FOCUS CU                        -> prior LF, except the
 --        conservative LF-04 departure: prior LF is not NONE, the canonical B1
 --        functions include FOCUS_SHIFT, the attention reason is not
---        LOCAL_CLARIFICATION_OR_CORRECTION, and the canonical target_cu_id (if
+--        LOCAL_CLARIFICATION_OR_CORRECTION, the canonical target_cu_id (if
 --        any) does NOT anchor the CU back to the prior LF (an EMERGING prior
 --        is anchored by a target CU attending that focus; a THREAD prior by a
---        target CU attending a focus bound to that Thread)  -> NONE
+--        target CU attending a focus bound to that Thread), AND (R1-01) a
+--        THREAD prior's frozen Session lifecycle state after this CU is
+--        DORMANT - an ACTIVE / REOPENED Thread keeps the LF   -> NONE
 --
 --    Reason of a change: to NONE -> STABLE_DEPARTURE_NO_REPLACEMENT; from NONE
 --    -> NEW_INDEPENDENT_FOCUS; to THREAD from EMERGING(the CU's own focus) ->
@@ -316,6 +318,7 @@ DECLARE
   result_row public.conversation_thread_semantic_unit_results;
   target_att public.conversation_emerging_focus_attention_events;
   anchored boolean;
+  departure_stable boolean;
 BEGIN
   SELECT * INTO att FROM public.conversation_emerging_focus_attention_events e WHERE e.cu_id = p_cu.id;
   SELECT * INTO sem FROM public.conversation_unit_focus_semantics s WHERE s.cu_id = p_cu.id;
@@ -364,7 +367,16 @@ BEGIN
           END IF;
         END IF;
       END IF;
-      IF NOT anchored THEN
+      -- R1-01 (B3 -> D same-Moment closure): a departure is only as stable
+      -- as the frozen Thread lifecycle says. A prior THREAD LF may depart to
+      -- NONE only when that Thread's Session lifecycle state AFTER this CU's
+      -- FINAL Thread-layer truth is DORMANT; an ACTIVE or REOPENED Thread
+      -- keeps the LF. The chain can therefore never say "stably departed
+      -- Thread T" and "Thread T remains ACTIVE" for the same Moment. An
+      -- EMERGING prior has no lifecycle and departs as before.
+      departure_stable := prior_kind <> 'THREAD'
+        OR public.conversation_thread_session_lifecycle_state_v1(prior_ref, p_cu.session_id, p_cu.session_position + 1) = 'DORMANT';
+      IF NOT anchored AND departure_stable THEN
         effective_kind := 'NONE';
         effective_ref := NULL;
       END IF;
@@ -1772,6 +1784,16 @@ BEGIN
     chain_kind := transition.to_kind;
     chain_ref := transition.to_ref;
   END LOOP;
+  -- R1-01: no stored departure from a Thread may coexist with that Thread
+  -- staying ACTIVE / REOPENED at the same Moment under the frozen lifecycle.
+  SELECT t.event_id INTO offending FROM public.conversation_live_focus_transitions t
+   WHERE t.from_kind = 'THREAD' AND t.to_kind = 'NONE'
+     AND public.conversation_thread_session_lifecycle_state_v1(t.from_ref, t.session_id, t.session_position + 1) IS DISTINCT FROM 'DORMANT'
+   ORDER BY t.event_id LIMIT 1;
+  IF offending IS NOT NULL THEN
+    RAISE EXCEPTION 'FULL_SEMANTIC_CHAIN_CUTOVER_NOT_READY' USING ERRCODE='55000',
+      DETAIL=format('LIVE_FOCUS_DEPARTURE_LIFECYCLE_CONTRADICTION: %s', offending);
+  END IF;
 END;$$;
 
 -- ===========================================================================

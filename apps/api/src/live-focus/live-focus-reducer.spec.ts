@@ -63,6 +63,8 @@ function input(overrides: Partial<LiveFocusReductionInput> = {}): LiveFocusReduc
     priorLiveFocus: LIVE_FOCUS_NONE,
     semanticsByCuId: history,
     focusThreadBindings: new Map(),
+    // The lifecycle state of the prior LF's Thread after this CU (null when the prior is not a Thread).
+    priorThreadLifecycleState: overrides.priorLiveFocus?.kind === 'THREAD' ? 'ACTIVE' : null,
     ...overrides,
   };
 }
@@ -87,9 +89,9 @@ describe('the frozen LF domain (cases 1-2)', () => {
     expect(liveFocusEquals(LIVE_FOCUS_NONE, { kind: 'NONE' })).toBe(true);
   });
 
-  it('2. the reducer reads no timer, Map, camera, inspection, confidence or importance: the input is exactly five keys', () => {
+  it('2. the reducer reads no timer, Map, camera, inspection, confidence or importance: the input is exactly six keys', () => {
     const keys = Object.keys(input()).sort();
-    expect(keys).toEqual(['currentFocusSemantics', 'currentThreadLayer', 'focusThreadBindings', 'priorLiveFocus', 'semanticsByCuId']);
+    expect(keys).toEqual(['currentFocusSemantics', 'currentThreadLayer', 'focusThreadBindings', 'priorLiveFocus', 'priorThreadLifecycleState', 'semanticsByCuId']);
     for (const forbidden of ['timestamp', 'elapsedMs', 'turnCount', 'mapState', 'camera', 'inspection', 'confidence', 'importance', 'similarity', 'home']) {
       expect(keys.includes(forbidden)).toBe(false);
     }
@@ -200,11 +202,11 @@ describe('LF-01 / LF-02 / LF-03: focus-bearing and quiet CUs (cases 3-16)', () =
 });
 
 describe('LF-04: the conservative departure (cases 17-22)', () => {
-  it('17. an explicit FOCUS_SHIFT with no replacement focus and no anchor clears LF to NONE', () => {
-    for (const prior of [EMERGING(F_A), THREAD(T_A)]) {
-      const reduction = reduceLiveFocus(input({ currentFocusSemantics: bundle(CU_NOW, { functions: ['FOCUS_SHIFT'] }), priorLiveFocus: prior, focusThreadBindings: new Map([[F_A, T_A]]) }));
-      expect(reduction.transition).toEqual({ from: prior, to: { kind: 'NONE' }, reasonCode: 'STABLE_DEPARTURE_NO_REPLACEMENT' });
-    }
+  it('17. an explicit FOCUS_SHIFT with no replacement focus and no anchor clears an Emerging LF, and a Thread LF only when its frozen lifecycle is already DORMANT', () => {
+    const emerging = reduceLiveFocus(input({ currentFocusSemantics: bundle(CU_NOW, { functions: ['FOCUS_SHIFT'] }), priorLiveFocus: EMERGING(F_A) }));
+    expect(emerging.transition).toEqual({ from: EMERGING(F_A), to: { kind: 'NONE' }, reasonCode: 'STABLE_DEPARTURE_NO_REPLACEMENT' });
+    const dormant = reduceLiveFocus(input({ currentFocusSemantics: bundle(CU_NOW, { functions: ['FOCUS_SHIFT'] }), priorLiveFocus: THREAD(T_A), focusThreadBindings: new Map([[F_A, T_A]]), priorThreadLifecycleState: 'DORMANT' }));
+    expect(dormant.transition).toEqual({ from: THREAD(T_A), to: { kind: 'NONE' }, reasonCode: 'STABLE_DEPARTURE_NO_REPLACEMENT' });
   });
 
   it('18. a FOCUS_SHIFT whose canonical target anchors back to the prior LF does NOT clear it', () => {
@@ -242,5 +244,36 @@ describe('LF-04: the conservative departure (cases 17-22)', () => {
     expectRejected(() => reduceLiveFocus(input({ semanticsByCuId: {} as never })), 'INVALID_LIVE_FOCUS_INPUT');
     expectRejected(() => reduceLiveFocus(input({ currentFocusSemantics: { unit_id: CU_NOW } as never })), 'INVALID_LIVE_FOCUS_INPUT');
     expectRejected(() => reduceLiveFocus(null as never), 'INVALID_LIVE_FOCUS_INPUT');
+    expectRejected(() => reduceLiveFocus(input({ priorLiveFocus: THREAD(T_A), priorThreadLifecycleState: 'CLOSED' as never })), 'INVALID_LIVE_FOCUS_INPUT');
+  });
+});
+
+describe('R1-01: the B3 -> D same-Moment lifecycle / Live-Focus closure (cases 23-25)', () => {
+  const departure = bundle(CU_NOW, { functions: ['INFORM_REPORT', 'FOCUS_SHIFT'] });
+
+  it('23. a NO_INDEPENDENT_FOCUS + FOCUS_SHIFT CU never departs a Thread the frozen lifecycle leaves ACTIVE or REOPENED: LF stays, no transition', () => {
+    for (const state of ['ACTIVE', 'REOPENED'] as const) {
+      const reduction = reduceLiveFocus(input({ currentFocusSemantics: departure, priorLiveFocus: THREAD(T_A), focusThreadBindings: new Map([[F_A, T_A]]), priorThreadLifecycleState: state }));
+      expect(reduction).toEqual({ effective: THREAD(T_A), transition: null });
+    }
+    // The contradictory pair "LF = NONE with reason STABLE_DEPARTURE_NO_REPLACEMENT" + "Thread T ACTIVE" is unrepresentable through the reducer.
+    const contradiction = reduceLiveFocus(input({ currentFocusSemantics: departure, priorLiveFocus: THREAD(T_A), focusThreadBindings: new Map([[F_A, T_A]]), priorThreadLifecycleState: 'ACTIVE' }));
+    expect(contradiction.transition?.reasonCode).toBeUndefined();
+  });
+
+  it('24. the departure is exactly as stable as the frozen lifecycle: DORMANT after this Moment departs; an Emerging prior (no lifecycle) departs', () => {
+    expect(reduceLiveFocus(input({ currentFocusSemantics: departure, priorLiveFocus: THREAD(T_A), focusThreadBindings: new Map([[F_A, T_A]]), priorThreadLifecycleState: 'DORMANT' })).effective).toEqual({ kind: 'NONE' });
+    expect(reduceLiveFocus(input({ currentFocusSemantics: departure, priorLiveFocus: EMERGING(F_A), priorThreadLifecycleState: null })).effective).toEqual({ kind: 'NONE' });
+    // The neighbouring rules are untouched by the closure: quiet, anchored, clarification, replacement, return, promotion.
+    expect(reduceLiveFocus(input({ currentFocusSemantics: bundle(CU_NOW), priorLiveFocus: THREAD(T_A), priorThreadLifecycleState: 'ACTIVE' }))).toEqual({ effective: THREAD(T_A), transition: null });
+    expect(reduceLiveFocus(input({ currentFocusSemantics: bundle(CU_NOW, { functions: ['FOCUS_SHIFT'], target: CU_PRIOR_A }), priorLiveFocus: THREAD(T_A), focusThreadBindings: new Map([[F_A, T_A]]), priorThreadLifecycleState: 'DORMANT' }))).toEqual({ effective: THREAD(T_A), transition: null });
+    expect(reduceLiveFocus(input({ currentFocusSemantics: bundle(CU_NOW, { reason: 'LOCAL_CLARIFICATION_OR_CORRECTION', functions: ['CLARIFY', 'FOCUS_SHIFT'] }), priorLiveFocus: THREAD(T_A), priorThreadLifecycleState: 'DORMANT' }))).toEqual({ effective: THREAD(T_A), transition: null });
+    expect(reduceLiveFocus(input({ currentFocusSemantics: bundle(CU_NOW, { kind: 'START_NEW_FOCUS', focus: F_B }), currentThreadLayer: layer('ESTABLISH_NEW', F_B, T_B), priorLiveFocus: THREAD(T_A), focusThreadBindings: new Map([[F_A, T_A], [F_B, T_B]]), priorThreadLifecycleState: 'DORMANT' })).transition?.reasonCode).toBe('FOCUS_REPLACEMENT');
+    expect(reduceLiveFocus(input({ currentFocusSemantics: bundle(CU_NOW, { kind: 'ATTEND_EXISTING_FOCUS' }), currentThreadLayer: layer('REOPEN_EXISTING', F_A, T_A), priorLiveFocus: THREAD(T_B), focusThreadBindings: new Map([[F_A, T_A], [F_B, T_B]]), priorThreadLifecycleState: 'DORMANT' })).transition?.reasonCode).toBe('RETURN_TO_THREAD');
+    expect(reduceLiveFocus(input({ currentFocusSemantics: bundle(CU_NOW, { kind: 'ATTEND_EXISTING_FOCUS' }), currentThreadLayer: layer('ESTABLISH_NEW', F_A, T_A), priorLiveFocus: EMERGING(F_A), focusThreadBindings: new Map([[F_A, T_A]]) })).transition?.reasonCode).toBe('THREAD_PROMOTION');
+  });
+
+  it('25. a Thread LF whose lifecycle state is unknown fails closed instead of departing', () => {
+    expectRejected(() => reduceLiveFocus(input({ currentFocusSemantics: departure, priorLiveFocus: THREAD(T_A), focusThreadBindings: new Map([[F_A, T_A]]), priorThreadLifecycleState: null })), 'LIVE_FOCUS_CONTEXT_NOT_CLOSED');
   });
 });

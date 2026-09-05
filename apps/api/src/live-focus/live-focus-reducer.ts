@@ -38,7 +38,12 @@
 //     the attention reason is not LOCAL_CLARIFICATION_OR_CORRECTION; and the
 //     canonical target_cu_id, if present, does NOT anchor the CU back to the
 //     prior LF (a target CU attending the prior Emerging Focus, or attending
-//     a focus bound to the prior Thread, anchors it)      -> NONE
+//     a focus bound to the prior Thread, anchors it); AND (R1-01, the B3 -> D
+//     same-Moment closure) a THREAD prior's frozen Session lifecycle state
+//     after this CU's FINAL Thread-layer truth is DORMANT - a departure is
+//     only as stable as the frozen lifecycle says, so the chain can never
+//     state "stably departed Thread T" and "Thread T remains ACTIVE" for the
+//     same Moment; an EMERGING prior has no lifecycle and departs -> NONE
 //
 // Migration 0071 mirrors this reducer in SQL
 // (`derive_conversation_effective_live_focus_v1`) and refuses any payload
@@ -68,7 +73,7 @@ const isFocusBearing = (bundle: CanonicalCuFocusSemanticPayload): boolean =>
  */
 export function reduceLiveFocus(input: LiveFocusReductionInput): LiveFocusReduction {
   assertInput(input);
-  const { currentFocusSemantics: current, currentThreadLayer: layer, priorLiveFocus: prior, semanticsByCuId, focusThreadBindings } = input;
+  const { currentFocusSemantics: current, currentThreadLayer: layer, priorLiveFocus: prior, semanticsByCuId, focusThreadBindings, priorThreadLifecycleState } = input;
 
   let effective: EffectiveLiveFocus;
   if (isFocusBearing(current)) {
@@ -87,6 +92,7 @@ export function reduceLiveFocus(input: LiveFocusReductionInput): LiveFocusReduct
       && current.functions.includes('FOCUS_SHIFT')
       && current.attention.reason !== 'LOCAL_CLARIFICATION_OR_CORRECTION'
       && !anchoredToPrior(current, prior, semanticsByCuId, focusThreadBindings)
+      && departureIsStable(prior, priorThreadLifecycleState)
     ) {
       effective = LIVE_FOCUS_NONE;
     }
@@ -114,6 +120,18 @@ function anchoredToPrior(
   return false;
 }
 
+/**
+ * R1-01: a departure from a Thread is admissible only when the frozen B3
+ * lifecycle already says that Thread is DORMANT after this same Moment. The
+ * lifecycle state of a Thread the LF names is always known (it is bound in
+ * this Session); an unknown state fails closed rather than departing.
+ */
+function departureIsStable(prior: EffectiveLiveFocus, priorThreadLifecycleState: LiveFocusReductionInput['priorThreadLifecycleState']): boolean {
+  if (prior.kind !== 'THREAD') return true;
+  if (priorThreadLifecycleState === null) throw new LiveFocusRejectedError('LIVE_FOCUS_CONTEXT_NOT_CLOSED');
+  return priorThreadLifecycleState === 'DORMANT';
+}
+
 function reasonOf(
   prior: EffectiveLiveFocus,
   effective: EffectiveLiveFocus,
@@ -133,8 +151,9 @@ function reasonOf(
 function assertInput(input: LiveFocusReductionInput): void {
   const invalid = () => new LiveFocusRejectedError('INVALID_LIVE_FOCUS_INPUT');
   if (!input || typeof input !== 'object') throw invalid();
-  const { currentFocusSemantics, currentThreadLayer, priorLiveFocus, semanticsByCuId, focusThreadBindings } = input;
+  const { currentFocusSemantics, currentThreadLayer, priorLiveFocus, semanticsByCuId, focusThreadBindings, priorThreadLifecycleState } = input;
   if (!currentFocusSemantics || typeof currentFocusSemantics !== 'object' || !currentFocusSemantics.attention || !Array.isArray(currentFocusSemantics.functions)) throw invalid();
+  if (priorThreadLifecycleState !== null && !(['ACTIVE', 'DORMANT', 'REOPENED'] as readonly string[]).includes(priorThreadLifecycleState as string)) throw invalid();
   if (!currentThreadLayer || typeof currentThreadLayer !== 'object' || typeof currentThreadLayer.outcome !== 'string') throw invalid();
   if (!priorLiveFocus || typeof priorLiveFocus !== 'object' || !(LIVE_FOCUS_KINDS as readonly string[]).includes(priorLiveFocus.kind)) throw invalid();
   if (priorLiveFocus.kind === 'EMERGING' && (typeof priorLiveFocus.emergingFocusId !== 'string' || priorLiveFocus.emergingFocusId.length === 0)) throw invalid();

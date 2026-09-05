@@ -311,6 +311,8 @@ const fullState = async (session, user, turn, batch) =>
   (await rows('SELECT public.conversation_full_semantic_batch_state_v1($1,$2,$3,$4) state', [session, user, turn, batch]))[0].state;
 const lfBefore = async (session, before) =>
   (await rows('SELECT live_focus_kind kind, live_focus_ref ref, live_focus_sp sp FROM public.conversation_session_live_focus_before_v1($1,$2)', [session, before]))[0];
+const lifecycleState = async (thread, session, before = null) =>
+  (await rows('SELECT public.conversation_thread_session_lifecycle_state_v1($1,$2,$3) state', [thread, session, before]))[0].state;
 const lfCurrent = async (session, user) =>
   (await rows('SELECT live_focus_kind kind, live_focus_ref ref, live_focus_sp sp FROM public.conversation_session_current_live_focus_v1($1,$2)', [session, user]))[0];
 const derive = async (cu) =>
@@ -499,9 +501,12 @@ async function verifyStaticAuthority() {
   const reducerBody = await bodyOf(LF_REDUCER);
   ok(!/reading|hypothes|analysis|background|camera|viewport|inspection|placement_|thread_homes|home_anchor|interval|EXTRACT\(|age\(/iu.test(reducerBody), 'the LF reducer reads no analytical, spatial, camera or temporal input');
   for (const rule of ["'FOCUS_SHIFT' = ANY (sem.functions)", "att.attention_reason <> 'LOCAL_CLARIFICATION_OR_CORRECTION'", 'conversation_session_live_focus_before_v1(p_cu.session_id, p_cu.session_position)',
-    "'THREAD_PROMOTION'", "'RETURN_TO_THREAD'", "'FOCUS_REPLACEMENT'", "'STABLE_DEPARTURE_NO_REPLACEMENT'", "'NEW_INDEPENDENT_FOCUS'", 'b.bound_sp <= p_cu.session_position']) {
+    "'THREAD_PROMOTION'", "'RETURN_TO_THREAD'", "'FOCUS_REPLACEMENT'", "'STABLE_DEPARTURE_NO_REPLACEMENT'", "'NEW_INDEPENDENT_FOCUS'", 'b.bound_sp <= p_cu.session_position',
+    // R1-01: a departure from a Thread is only as stable as the frozen lifecycle says.
+    "departure_stable := prior_kind <> 'THREAD'", "conversation_thread_session_lifecycle_state_v1(prior_ref, p_cu.session_id, p_cu.session_position + 1) = 'DORMANT'", 'IF NOT anchored AND departure_stable THEN']) {
     ok(reducerBody.includes(rule), `the deployed reducer carries: ${rule}`);
   }
+  ok((await bodyOf(READINESS_AUDIT)).includes('LIVE_FOCUS_DEPARTURE_LIFECYCLE_CONTRADICTION'), 'the deployed audit refuses a stored Thread departure the frozen lifecycle contradicts');
   const writerBody = await bodyOf(FINAL_WRITER);
   const clock = writerBody.indexOf('FROM public.session_semantic_clocks c');
   const turn = writerBody.indexOf('FROM public.conversation_turns t');
@@ -833,10 +838,14 @@ async function verifyDepartureAndEmerging() {
     [8, '3', 'THREAD', work.thread, 'THREAD', threads.ahmed, 'RETURN_TO_THREAD'],
   ], 'SP6 replaces (establishment); SP7 elaborates work while Ahmed goes DORMANT with NO LF change; SP8 returns to Ahmed (RETURN_TO_THREAD, seq 3 after the REOPENED seq 2); SP9 and SP10 keep it');
   eq((await resultsOf(userBatch)).map((r) => [r.outcome, r.seq]), [['ESTABLISH_NEW', '2'], ['ATTEND_EXISTING', '2'], ['REOPEN_EXISTING', '2'], ['ATTEND_EXISTING', '2']]);
-  // Exchange 3 (SP11..SP14): the conservative departure. A FOCUS_SHIFT that
-  // still targets the LF's own CU is anchored (unchanged); a FOCUS_SHIFT
-  // inside a local clarification never clears (unchanged); a committed
-  // FOCUS_SHIFT with no replacement and no anchoring target clears to NONE.
+  // Exchange 3 (SP11..SP14): the conservative departure against an ACTIVE
+  // Thread. A FOCUS_SHIFT that still targets the LF's own CU is anchored
+  // (unchanged); a FOCUS_SHIFT inside a local clarification never clears
+  // (unchanged); and - R1-01, the B3 -> D same-Moment closure - a committed
+  // FOCUS_SHIFT with no replacement and no anchoring target does NOT clear a
+  // Thread LF either, because the frozen B3 lifecycle leaves Ahmed ACTIVE at
+  // that Moment (one NO_INDEPENDENT_FOCUS CU is never "away"): the chain can
+  // never state "stably departed Ahmed" and "Ahmed remains ACTIVE" together.
   const DEPART_TEXT = 'خلاص فهمت. طيب سؤال صغير عن الوقت. مش عايز أكمل في ده دلوقتي.';
   const D1 = 'خلاص فهمت.';
   const D2 = 'طيب سؤال صغير عن الوقت.';
@@ -852,54 +861,70 @@ async function verifyDepartureAndEmerging() {
   ];
   const departThreads = [noEstablishment(d.d1, 'NO_INDEPENDENT_FOCUS'), noEstablishment(d.d2, 'NO_INDEPENDENT_FOCUS'), noEstablishment(d.d3, 'NO_INDEPENDENT_FOCUS')];
   const departLifecycle = [noAction(d.d1), noAction(d.d2), noAction(d.d3)];
-  const departLiveFocus = [lfSame(d.d1, 'THREAD', threads.ahmed), lfSame(d.d2, 'THREAD', threads.ahmed), lfChange(session, d.d3, 'NONE', null, 'STABLE_DEPARTURE_NO_REPLACEMENT')];
+  const departLiveFocus = [lfSame(d.d1, 'THREAD', threads.ahmed), lfSame(d.d2, 'THREAD', threads.ahmed), lfSame(d.d3, 'THREAD', threads.ahmed)];
   const departReply = [unit(REPLY3, REPLY3, 1, d.r)];
   const departReplyBundles = [bundle(d.r, { functions: ['ACKNOWLEDGE'], sequence_position: 'RESPONSIVE', target_cu_id: d.d3, attention: NO_FOCUS })];
   const departToken = { sp: 10, seq: 1, version: await versionOf(user) };
-  const departArgs = (lf = departLiveFocus) => [session, user, turns3.userTurn, randomUUID(), departUnits, departBundles, departThreads, departLifecycle, lf,
-    turns3.assistantTurn, randomUUID(), departReply, departReplyBundles, [noEstablishment(d.r, 'NO_INDEPENDENT_FOCUS')], [noAction(d.r)], [lfNone(d.r)], departToken];
+  const departArgs = (lf = departLiveFocus, reply = [lfSame(d.r, 'THREAD', threads.ahmed)]) => [session, user, turns3.userTurn, randomUUID(), departUnits, departBundles, departThreads, departLifecycle, lf,
+    turns3.assistantTurn, randomUUID(), departReply, departReplyBundles, [noEstablishment(d.r, 'NO_INDEPENDENT_FOCUS')], [noAction(d.r)], reply, departToken];
   // Each conservative rule is enforced by the database, not merely by the client.
-  await rejected(() => exchange(...departArgs([lfChange(session, d.d1, 'NONE', null, 'STABLE_DEPARTURE_NO_REPLACEMENT'), lfNone(d.d2), lfNone(d.d3)])), 'LIVE_FOCUS_NOT_CANONICAL');
-  await rejected(() => exchange(...departArgs([lfSame(d.d1, 'THREAD', threads.ahmed), lfChange(session, d.d2, 'NONE', null, 'STABLE_DEPARTURE_NO_REPLACEMENT'), lfNone(d.d3)])), 'LIVE_FOCUS_NOT_CANONICAL');
-  await rejected(() => exchange(...departArgs([lfSame(d.d1, 'THREAD', threads.ahmed), lfSame(d.d2, 'THREAD', threads.ahmed), lfSame(d.d3, 'THREAD', threads.ahmed)])), 'LIVE_FOCUS_NOT_CANONICAL');
+  await rejected(() => exchange(...departArgs([lfChange(session, d.d1, 'NONE', null, 'STABLE_DEPARTURE_NO_REPLACEMENT'), lfNone(d.d2), lfNone(d.d3)], [lfNone(d.r)])), 'LIVE_FOCUS_NOT_CANONICAL');
+  await rejected(() => exchange(...departArgs([lfSame(d.d1, 'THREAD', threads.ahmed), lfChange(session, d.d2, 'NONE', null, 'STABLE_DEPARTURE_NO_REPLACEMENT'), lfNone(d.d3)], [lfNone(d.r)])), 'LIVE_FOCUS_NOT_CANONICAL');
+  // R1-01, the exact adversarial case: a canonical payload claiming
+  // "THREAD(ahmed) -> NONE, STABLE_DEPARTURE_NO_REPLACEMENT" at D3 while the
+  // frozen B3 lifecycle (its own payload: no transition) keeps Ahmed ACTIVE at
+  // the same Moment is refused by the database as not canonical, and nothing
+  // is written: the contradictory canonical state is unrepresentable.
+  strict(await lifecycleState(threads.ahmed, session), 'ACTIVE', 'Ahmed is ACTIVE before the departure exchange');
+  await rejected(() => exchange(...departArgs([lfSame(d.d1, 'THREAD', threads.ahmed), lfSame(d.d2, 'THREAD', threads.ahmed), lfChange(session, d.d3, 'NONE', null, 'STABLE_DEPARTURE_NO_REPLACEMENT')], [lfNone(d.r)])), 'LIVE_FOCUS_NOT_CANONICAL');
+  eq(await lfCurrent(session, user), { kind: 'THREAD', ref: threads.ahmed, sp: 8 }, 'the refused departure wrote nothing');
   const [departed] = await exchange(...departArgs());
-  eq([departed.live_head, lfOf(departed)], [14, { kind: 'NONE', ref: null, sp: 13 }], 'the departure is effective at SP13 and the assistant\'s acknowledgement keeps NONE');
-  eq(lfTransitionsOf(departed), [[13, 'NONE', null]]);
-  const departure = (await transitionsOf(session)).at(-1);
-  eq([departure.sp, departure.seq, departure.from_kind, departure.from_ref, departure.to_kind, departure.to_ref, departure.reason_code], [13, '2', 'THREAD', threads.ahmed, 'NONE', null, 'STABLE_DEPARTURE_NO_REPLACEMENT'],
-    'a departure with no Thread-layer event is seq 2; an anchored shift (SP11) and a clarification (SP12) never cleared it');
-  eq(await lfCurrent(session, user), { kind: 'NONE', ref: null, sp: 13 });
-  // Exchange 4 (SP15..SP17): Emerging-only LF. A new focus with no promotion
-  // path is the LF itself; a second one replaces it; both at seq 2.
-  const SPORT_TEXT = 'الرياضة بقت جزء من يومي. والقراية كمان رجعت لها.';
+  eq([departed.live_head, lfOf(departed), lfTransitionsOf(departed)], [14, { kind: 'THREAD', ref: threads.ahmed, sp: 8 }, []],
+    'an anchored shift (SP11), a clarification (SP12) and a bare FOCUS_SHIFT against an ACTIVE Thread (SP13) all keep LF = THREAD(ahmed): no departure row, no reservation');
+  eq([await lifecycleState(threads.ahmed, session), await lfCurrent(session, user)], ['ACTIVE', { kind: 'THREAD', ref: threads.ahmed, sp: 8 }], 'B3 and LF agree at the same Moment: Ahmed ACTIVE and Ahmed the LF');
+  eq((await transitionsOf(session)).at(-1).sp, 8, 'the last LF transition is still the SP8 return');
+  eq(await clockOf(session), { current_sp: 14, same_sp_event_sequence: '1' });
+  // Exchange 4 (SP15..SP18): Emerging-only LF. A new focus with no promotion
+  // path is the LF itself; a second one replaces it; a bare FOCUS_SHIFT then
+  // departs the Emerging LF (no lifecycle exists for an Emerging Focus) at seq 2.
+  const SPORT_TEXT = 'الرياضة بقت جزء من يومي. والقراية كمان رجعت لها. خلاص، كفاية كده دلوقتي.';
   const E1 = 'الرياضة بقت جزء من يومي.';
   const E2 = 'والقراية كمان رجعت لها.';
+  const E3 = 'خلاص، كفاية كده دلوقتي.';
   const REPLY4 = 'حلو.';
   const turns4 = await completedTurns(user, session, SPORT_TEXT, REPLY4);
-  const e = { e1: randomUUID(), e2: randomUUID(), r: randomUUID(), h1: randomUUID(), h2: randomUUID(), f1: randomUUID(), f2: randomUUID() };
-  const [emerging] = await exchange(session, user, turns4.userTurn, randomUUID(), [unit(SPORT_TEXT, E1, 1, e.e1), unit(SPORT_TEXT, E2, 1, e.e2)],
+  const e = { e1: randomUUID(), e2: randomUUID(), e3: randomUUID(), r: randomUUID(), h1: randomUUID(), h2: randomUUID(), f1: randomUUID(), f2: randomUUID() };
+  const sportVersion = await versionOf(user);
+  const sportArgs = (lf) => [session, user, turns4.userTurn, randomUUID(), [unit(SPORT_TEXT, E1, 1, e.e1), unit(SPORT_TEXT, E2, 1, e.e2), unit(SPORT_TEXT, E3, 1, e.e3)],
     [bundle(e.e1, { references: [resolved(E1, 'الرياضة', e.h1, true)], attention: startFocus(e.f1, 0) }),
-      bundle(e.e2, { references: [resolved(E2, 'القراية', e.h2, true)], attention: startFocus(e.f2, 0) })],
-    [noEstablishment(e.e1, 'NO_PROMOTION_PATH_PROVEN', e.f1), noEstablishment(e.e2, 'NO_PROMOTION_PATH_PROVEN', e.f2)],
+      bundle(e.e2, { references: [resolved(E2, 'القراية', e.h2, true)], attention: startFocus(e.f2, 0) }),
+      bundle(e.e3, { functions: ['INFORM_REPORT', 'FOCUS_SHIFT'], sequence_position: 'FOLLOW_UP', target_cu_id: null, attention: NO_FOCUS })],
+    [noEstablishment(e.e1, 'NO_PROMOTION_PATH_PROVEN', e.f1), noEstablishment(e.e2, 'NO_PROMOTION_PATH_PROVEN', e.f2), noEstablishment(e.e3, 'NO_INDEPENDENT_FOCUS')],
     // E2 is the second consecutive CU away from the ACTIVE Ahmed Thread: the
     // frozen 0070 reducer makes Ahmed DORMANT there (a Thread-layer seq 2), so
-    // E2's Emerging LF transition takes seq 3 while E1's takes seq 2.
-    [noAction(e.e1, e.f1), noAction(e.e2, e.f2, [transition(session, e.e2, threads.ahmed, 'DORMANT', 'SUSTAINED_DEPARTURE')])],
-    [lfChange(session, e.e1, 'EMERGING', e.f1, 'NEW_INDEPENDENT_FOCUS'), lfChange(session, e.e2, 'EMERGING', e.f2, 'FOCUS_REPLACEMENT')],
-    turns4.assistantTurn, randomUUID(), [unit(REPLY4, REPLY4, 1, e.r)], [bundle(e.r, { functions: ['ACKNOWLEDGE'], sequence_position: 'RESPONSIVE', target_cu_id: e.e2, attention: NO_FOCUS })],
-    [noEstablishment(e.r, 'NO_INDEPENDENT_FOCUS')], [noAction(e.r)], [lfSame(e.r, 'EMERGING', e.f2)], { sp: 14, seq: 1, version: await versionOf(user) });
-  eq([emerging.live_head, lfOf(emerging)], [17, { kind: 'EMERGING', ref: e.f2, sp: 16 }]);
-  eq((await transitionsOf(session)).slice(-2).map((t) => [t.sp, t.seq, t.from_kind, t.from_ref, t.to_kind, t.to_ref, t.reason_code]), [
-    [15, '2', 'NONE', null, 'EMERGING', e.f1, 'NEW_INDEPENDENT_FOCUS'],
+    // E2's Emerging LF transition takes seq 3 while E1's and E3's take seq 2.
+    [noAction(e.e1, e.f1), noAction(e.e2, e.f2, [transition(session, e.e2, threads.ahmed, 'DORMANT', 'SUSTAINED_DEPARTURE')]), noAction(e.e3)],
+    lf,
+    turns4.assistantTurn, randomUUID(), [unit(REPLY4, REPLY4, 1, e.r)], [bundle(e.r, { functions: ['ACKNOWLEDGE'], sequence_position: 'RESPONSIVE', target_cu_id: e.e3, attention: NO_FOCUS })],
+    [noEstablishment(e.r, 'NO_INDEPENDENT_FOCUS')], [noAction(e.r)], [lfNone(e.r)], { sp: 14, seq: 1, version: sportVersion }];
+  const sportLf = [lfChange(session, e.e1, 'EMERGING', e.f1, 'FOCUS_REPLACEMENT'), lfChange(session, e.e2, 'EMERGING', e.f2, 'FOCUS_REPLACEMENT'), lfChange(session, e.e3, 'NONE', null, 'STABLE_DEPARTURE_NO_REPLACEMENT')];
+  // The Emerging departure is DB-derived too: hiding it is not canonical.
+  await rejected(() => exchange(...sportArgs([sportLf[0], sportLf[1], lfSame(e.e3, 'EMERGING', e.f2)])), 'LIVE_FOCUS_NOT_CANONICAL');
+  const [emerging] = await exchange(...sportArgs(sportLf));
+  eq([emerging.live_head, lfOf(emerging)], [18, { kind: 'NONE', ref: null, sp: 17 }]);
+  eq((await transitionsOf(session)).slice(-3).map((t) => [t.sp, t.seq, t.from_kind, t.from_ref, t.to_kind, t.to_ref, t.reason_code]), [
+    [15, '2', 'THREAD', threads.ahmed, 'EMERGING', e.f1, 'FOCUS_REPLACEMENT'],
     [16, '3', 'EMERGING', e.f1, 'EMERGING', e.f2, 'FOCUS_REPLACEMENT'],
-  ], 'an Emerging Focus is a direct LF value (seq 2 with no Thread-layer event); a later independent start replaces it (seq 3 beside the sustained-departure seq 2)');
-  eq(await clockOf(session), { current_sp: 17, same_sp_event_sequence: '1' });
+    [17, '2', 'EMERGING', e.f2, 'NONE', null, 'STABLE_DEPARTURE_NO_REPLACEMENT'],
+  ], 'an Emerging Focus is a direct LF value (seq 2 with no Thread-layer event); a later independent start replaces it (seq 3 beside the sustained-departure seq 2); a bare FOCUS_SHIFT departs an Emerging LF (seq 2)');
+  eq(await clockOf(session), { current_sp: 18, same_sp_event_sequence: '1' });
+  eq(await lfCurrent(session, user), { kind: 'NONE', ref: null, sp: 17 });
   // A later internal reservation on the last Moment becomes seq 2 (rolled back):
-  // an unchanged LF reserved nothing on SP17.
+  // an unchanged LF reserved nothing on SP18.
   const probe = await isolated(async () => (await rows('SELECT * FROM reserve_session_same_sp_event_v1($1,$2)', [session, user]))[0]);
-  eq([probe.value.session_position, String(probe.value.event_sequence)], [17, '2'], 'an unchanged LF reserves no same-SP sequence');
+  eq([probe.value.session_position, String(probe.value.event_sequence)], [18, '2'], 'an unchanged LF reserves no same-SP sequence');
   // The SQL reducer re-derives every stored decision of this Session.
-  for (const cu of [ids.u1, ids.u2, ids.u3, ids.a1, ids.a2, w.w1, w.w2, w.w3, w.w4, w.r, d.d1, d.d2, d.d3, d.r, e.e1, e.e2, e.r]) {
+  for (const cu of [ids.u1, ids.u2, ids.u3, ids.a1, ids.a2, w.w1, w.w2, w.w3, w.w4, w.r, d.d1, d.d2, d.d3, d.r, e.e1, e.e2, e.e3, e.r]) {
     const derived = await derive(cu);
     const [stored] = await rows('SELECT from_kind, from_ref, to_kind, to_ref, reason_code FROM public.conversation_live_focus_transitions WHERE cu_id=$1', [cu]);
     if (stored) {
@@ -911,7 +936,14 @@ async function verifyDepartureAndEmerging() {
   await audit();
   assertions += 1;
   const context = await runtimeContext(session, user);
-  eq([context.base_current_sp, context.current_live_focus_kind, context.current_live_focus_ref, context.current_live_focus_sp], [17, 'EMERGING', e.f2, 16]);
+  eq([context.base_current_sp, context.current_live_focus_kind, context.current_live_focus_ref, context.current_live_focus_sp], [18, 'NONE', null, 17]);
+  // R1-01 cross-layer invariant over EVERY stored transition of every Session
+  // in this verification world: a departure from a Thread coexists only with
+  // that Thread being DORMANT at the same Moment under the frozen lifecycle.
+  const [{ contradictions, departures }] = await rows(`SELECT count(*) FILTER (WHERE public.conversation_thread_session_lifecycle_state_v1(t.from_ref, t.session_id, t.session_position + 1) IS DISTINCT FROM 'DORMANT')::int contradictions,
+    count(*)::int departures FROM public.conversation_live_focus_transitions t WHERE t.from_kind = 'THREAD' AND t.to_kind = 'NONE'`);
+  eq(contradictions, 0, 'no stored Thread departure contradicts the frozen lifecycle');
+  strict(departures, 0, 'under the frozen B3 reducer a NO_INDEPENDENT_FOCUS CU is never "away", so no Thread has stably departed anywhere: every departure so far left an Emerging Focus');
   return { user, world, work, session };
 }
 
@@ -995,6 +1027,9 @@ async function verifyReplayAndCorruption(owner, world) {
     ['an extra transition where the LF did not change', [["INSERT INTO public.conversation_live_focus_transitions(event_id, user_id, session_id, cu_id, commit_batch_id, session_position, same_sp_event_sequence, from_kind, from_ref, to_kind, to_ref, reason_code) VALUES ($1,$2,$3,$4,$5,2,2,'THREAD',$6,'EMERGING',$7,'FOCUS_REPLACEMENT')",
       [lfEventIdOf(session, ids.u2, 'EMERGING', focuses.ahmed), owner, session, ids.u2, userBatch, threads.manager, focuses.ahmed]]]],
     ['a transition re-attributed to another batch', [['UPDATE public.conversation_live_focus_transitions SET commit_batch_id = $2 WHERE cu_id = $1', [ids.u3, assistantBatch]]]],
+    // R1-01: a stored "THREAD(manager) -> NONE" departure at SP2 while the frozen lifecycle keeps the manager ACTIVE there.
+    ['a Thread departure the frozen lifecycle contradicts (R1-01)', [["INSERT INTO public.conversation_live_focus_transitions(event_id, user_id, session_id, cu_id, commit_batch_id, session_position, same_sp_event_sequence, from_kind, from_ref, to_kind, to_ref, reason_code) VALUES ($1,$2,$3,$4,$5,2,2,'THREAD',$6,'NONE',NULL,'STABLE_DEPARTURE_NO_REPLACEMENT')",
+      [lfEventIdOf(session, ids.u2, 'NONE', null), owner, session, ids.u2, userBatch, threads.manager]]]],
     ['a deleted Thread-layer unit result (the reused 0070 authority)', [['DELETE FROM public.conversation_thread_semantic_unit_results WHERE cu_id = $1', [ids.u2]]]],
     ['a deleted permanent Home (the reused 0068 authority)', [['DELETE FROM public.conversation_thread_homes WHERE thread_id = $1', [threads.manager]]]],
   ];
@@ -1007,6 +1042,11 @@ async function verifyReplayAndCorruption(owner, world) {
     strict(state.full_semantic_capture_state, 'PARTIAL', `${label} makes the batch PARTIAL, never COMPLETE`);
     const failure = await rejected(audit, 'FULL_SEMANTIC_CHAIN_CUTOVER_NOT_READY', ['55000']);
     assert.match(String(failure.detail ?? ''), /COMMIT_BATCH_NOT_FULL_SEMANTIC_CHAIN_COMPLETE/u);
+    if (label.includes('R1-01')) {
+      strict(await lifecycleState(threads.manager, session, 3), 'ACTIVE', 'the frozen lifecycle keeps the manager ACTIVE at that Moment, so the stored departure is a contradiction and the batch is PARTIAL');
+      const [{ n }] = await rows("SELECT count(*)::int n FROM public.conversation_live_focus_transitions t WHERE t.from_kind = 'THREAD' AND t.to_kind = 'NONE' AND public.conversation_thread_session_lifecycle_state_v1(t.from_ref, t.session_id, t.session_position + 1) IS DISTINCT FROM 'DORMANT'");
+      strict(n, 1, 'the audit\'s R1-01 invariant query names exactly the seeded contradiction');
+    }
     // A corruption of the reused 0070 / 0068 layers fails the delegated read first; an LF corruption fails at the FINAL layer.
     await rejected(() => runtimeContext(session, owner), label.includes('reused') ? 'INCOMPLETE_PRIOR_THREAD_HISTORY' : 'INCOMPLETE_PRIOR_SEMANTIC_HISTORY', ['55000']);
     await rejected(() => exchange(...replayArgs(world, FRESH())), 'FULL_SEMANTIC_BATCH_INTEGRITY', ['55000']);
@@ -1222,7 +1262,7 @@ async function main() {
       await verifyImmutabilityAndAcl(owner, world, other);
       await identity('postgres');
     } finally { await q('ROLLBACK'); }
-    console.log(`Verified migration 0071 (${assertions} assertions): the FINAL coordinator is the ONE committing function executable by service_role and the temporary T-03A2 producer / coordinator are retired with no temporal-only fallback; the LF domain is exactly NONE / EMERGING / THREAD with no label, Home, content or score column; the deterministic reducer (new independent focus, unchanged through a Mention, attention and a brief clarification, explicit replacement, return, same-Moment Emerging -> Thread promotion, conservative departure only under exact committed FOCUS_SHIFT evidence, Emerging-only LF) is re-derived by the database for every CU and refuses every forced value, invented / hidden transition, authored reason or identity; B1 keeps seq 1, the Thread layer at most one seq 2, an LF transition takes seq 2 without a Thread-layer event and seq 3 after one, an unchanged LF reserves nothing; AF66-01 holds in the deployed body; both exact typed stale tokens fail 40001 through the FINAL coordinator with no third authority; exact replay mutates nothing; legacy / B1 / B2 / B3-only and corrupt shapes are PARTIAL, block readiness and the FINAL context, and are never upgraded; every injected failure rolls back atomically without reopening a sealed SP; LF truth is append-only and CHECK-shaped; and the owner-scoped LF snapshot / catch-up delivery exposes reference identity only.`);
+    console.log(`Verified migration 0071 (${assertions} assertions): the FINAL coordinator is the ONE committing function executable by service_role and the temporary T-03A2 producer / coordinator are retired with no temporal-only fallback; the LF domain is exactly NONE / EMERGING / THREAD with no label, Home, content or score column; the deterministic reducer (new independent focus, unchanged through a Mention, attention and a brief clarification, explicit replacement, return, same-Moment Emerging -> Thread promotion, conservative departure only under exact committed FOCUS_SHIFT evidence and - R1-01 - only as stable as the frozen B3 lifecycle says, so a Thread the lifecycle leaves ACTIVE is never departed, Emerging-only LF) is re-derived by the database for every CU and refuses every forced value, invented / hidden transition, authored reason or identity; B1 keeps seq 1, the Thread layer at most one seq 2, an LF transition takes seq 2 without a Thread-layer event and seq 3 after one, an unchanged LF reserves nothing; AF66-01 holds in the deployed body; both exact typed stale tokens fail 40001 through the FINAL coordinator with no third authority; exact replay mutates nothing; legacy / B1 / B2 / B3-only and corrupt shapes are PARTIAL, block readiness and the FINAL context, and are never upgraded; every injected failure rolls back atomically without reopening a sealed SP; LF truth is append-only and CHECK-shaped; and the owner-scoped LF snapshot / catch-up delivery exposes reference identity only.`);
   } finally {
     await client.end();
   }

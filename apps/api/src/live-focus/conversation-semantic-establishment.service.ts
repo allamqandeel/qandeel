@@ -84,6 +84,7 @@ import {
   type PreparedThreadEstablishmentResult,
 } from '../thread-establishment/thread-establishment.types';
 import { assertContinuityProvenanceAgreement, ThreadLayerWalk } from '../thread-lifecycle/conversation-thread-lifecycle-establishment.service';
+import { sessionThreadStates } from '../thread-lifecycle/conversation-thread-lifecycle-runtime-mapper';
 import {
   ConversationThreadLifecycleIntegrityError,
   StaleThreadIdentityContextError,
@@ -453,6 +454,11 @@ export class ConversationSemanticEstablishmentService {
     const originsByCuId = new Map<string, PreparedConversationalOrigin>();
     const semanticsByCuId = new Map<string, CanonicalCuFocusSemanticPayload>(context.priorFocusSemantics.map((bundle) => [bundle.unit_id, bundle]));
     const focusThreadBindings = new Map<string, string>(context.sessionFocusThreadBindings.map((binding) => [binding.emergingFocusId, binding.threadId]));
+    // R1-01: the frozen B3 Session lifecycle states (ACTIVE baseline through
+    // the binding, then the durable history), advanced by each CU's own
+    // FINAL Thread-layer transitions BEFORE that CU's LF is reduced, so a
+    // departure can only be as stable as the lifecycle of the same Moment says.
+    const threadStates = sessionThreadStates(context);
     let liveFocus: EffectiveLiveFocus = context.currentLiveFocus;
     for (const [index, cu] of sequence.entries()) {
       const bundle = canonicalFocus.units[index];
@@ -465,13 +471,16 @@ export class ConversationSemanticEstablishmentService {
       if ((step.decision.outcome === 'ESTABLISH_NEW' || step.decision.outcome === 'ACTIVATE_EXISTING_IN_SESSION')
         && step.decision.emergingFocusId !== null && step.decision.threadId !== null) {
         focusThreadBindings.set(step.decision.emergingFocusId, step.decision.threadId);
+        threadStates.set(step.decision.threadId, 'ACTIVE');
       }
+      for (const transition of step.decision.transitions) threadStates.set(transition.threadId, transition.toState);
       const reduction = reduceLiveFocus({
         currentFocusSemantics: bundle,
         currentThreadLayer: { outcome: step.decision.outcome, emergingFocusId: step.decision.emergingFocusId, threadId: step.decision.threadId },
         priorLiveFocus: liveFocus,
         semanticsByCuId,
         focusThreadBindings,
+        priorThreadLifecycleState: liveFocus.kind === 'THREAD' ? threadStates.get(liveFocus.threadId) ?? null : null,
       });
       liveFocusDecisions.push({ cuId: cu.cuId, reduction });
       liveFocus = reduction.effective;

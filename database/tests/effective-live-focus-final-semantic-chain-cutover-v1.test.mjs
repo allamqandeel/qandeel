@@ -117,7 +117,9 @@ test('0071 adds exactly the two LF tables: reference identity at (SP, sequence),
 test('the LF reducer is deterministic and DB-re-derived (D-01): no provider, no timer, no Map / camera / analysis input, LF-01 .. LF-04 exactly', () => {
   for (const rule of ["att.attention_kind IN ('START_NEW_FOCUS', 'ATTEND_EXISTING_FOCUS')", "result_row.outcome IN ('ESTABLISH_NEW', 'ATTEND_EXISTING', 'ACTIVATE_EXISTING_IN_SESSION', 'REOPEN_EXISTING')",
     "effective_kind := 'THREAD'", "effective_kind := 'EMERGING'", "'FOCUS_SHIFT' = ANY (sem.functions)", "att.attention_reason <> 'LOCAL_CLARIFICATION_OR_CORRECTION'",
-    'anchored := target_att.emerging_focus_id = prior_ref', 'b.thread_id = prior_ref AND b.bound_sp <= p_cu.session_position', 'IF NOT anchored THEN',
+    'anchored := target_att.emerging_focus_id = prior_ref', 'b.thread_id = prior_ref AND b.bound_sp <= p_cu.session_position',
+    // R1-01 (B3 -> D same-Moment closure): a departure is only as stable as the frozen lifecycle says.
+    "departure_stable := prior_kind <> 'THREAD'", "public.conversation_thread_session_lifecycle_state_v1(prior_ref, p_cu.session_id, p_cu.session_position + 1) = 'DORMANT'", 'IF NOT anchored AND departure_stable THEN',
     'conversation_session_live_focus_before_v1(p_cu.session_id, p_cu.session_position)',
     "reason_code := 'STABLE_DEPARTURE_NO_REPLACEMENT'", "reason_code := 'NEW_INDEPENDENT_FOCUS'", "prior_kind = 'EMERGING' AND prior_ref = att.emerging_focus_id", "reason_code := 'THREAD_PROMOTION'",
     "result_row.outcome = 'ESTABLISH_NEW'", "reason_code := 'RETURN_TO_THREAD'", "reason_code := 'FOCUS_REPLACEMENT'"]) {
@@ -126,7 +128,11 @@ test('the LF reducer is deterministic and DB-re-derived (D-01): no provider, no 
   assert.match(reducer, /LIVE_FOCUS_INPUT_NOT_DURABLE/u, 'effective LF is derivable only for a CU whose B1 bundle and FINAL Thread-layer result are durable');
   assert.doesNotMatch(reducer, /created_at|CURRENT_TIMESTAMP|interval|EXTRACT\(|age\(|similar|embedding|score|confidence|importance|reading|hypothes|camera|viewport|inspection|placement_|thread_homes|home_anchor|turn_count|quiet/iu,
     'the reducer reads no timestamp, duration, similarity, importance, spatial, camera or analytical input');
-  assert.doesNotMatch(reducer, /session_position \+ 1|session_position > p_cu\.session_position/u, 'no future CU participates');
+  // No future CU participates: the ONLY `+ 1` is the exclusive upper bound of the
+  // R1-01 lifecycle-state read (rows strictly before SP + 1 = up to and including THIS CU).
+  assert.doesNotMatch(reducer, /session_position > p_cu\.session_position|session_position >= p_cu\.session_position \+ 1/u, 'no future CU participates');
+  assert.equal((reducer.match(/session_position \+ 1/gu) ?? []).length, 1);
+  assert.match(reducer, /conversation_thread_session_lifecycle_state_v1\(prior_ref, p_cu\.session_id, p_cu\.session_position \+ 1\)/u);
   assert.match(validator, /derived FROM public\.derive_conversation_effective_live_focus_v1\(p_cu\);/u, 'the validator re-derives every CU');
   assert.match(validator, /LIVE_FOCUS_NOT_CANONICAL/u, 'a payload may neither force a value, invent or hide a transition, nor author a reason');
   assert.match(validator, /INVALID_LIVE_FOCUS_IDENTITY/u, 'the transition identity is derived, never authored');
@@ -236,8 +242,10 @@ test('the FINAL reads delegate to 0070 and fail closed on legacy history; the au
   assert.match(delivery, /ORDER BY t\.session_position\s*\n\s*LIMIT effective_limit;/u);
   assert.doesNotMatch(delivery, /same_sp_event_sequence|reason_code|label|home|committed_text|created_at|projection|knowledge/u);
   assert.match(audit, /RETURNS void\s*\nLANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''/u);
-  assert.equal((audit.match(/RAISE EXCEPTION 'FULL_SEMANTIC_CHAIN_CUTOVER_NOT_READY' USING ERRCODE='55000'/gu) ?? []).length, 3, 'one stable technical error, three detail kinds');
-  for (const detail of ['COMMIT_BATCH_NOT_FULL_SEMANTIC_CHAIN_COMPLETE', 'ORPHAN_LIVE_FOCUS_TRANSITION', 'INVALID_LIVE_FOCUS_CHAIN']) {
+  assert.equal((audit.match(/RAISE EXCEPTION 'FULL_SEMANTIC_CHAIN_CUTOVER_NOT_READY' USING ERRCODE='55000'/gu) ?? []).length, 4, 'one stable technical error, four detail kinds');
+  assert.match(audit, /t\.from_kind = 'THREAD' AND t\.to_kind = 'NONE'\s*\n\s*AND public\.conversation_thread_session_lifecycle_state_v1\(t\.from_ref, t\.session_id, t\.session_position \+ 1\) IS DISTINCT FROM 'DORMANT'/u,
+    'R1-01: the audit refuses any stored Thread departure the frozen lifecycle contradicts');
+  for (const detail of ['COMMIT_BATCH_NOT_FULL_SEMANTIC_CHAIN_COMPLETE', 'ORPHAN_LIVE_FOCUS_TRANSITION', 'INVALID_LIVE_FOCUS_CHAIN', 'LIVE_FOCUS_DEPARTURE_LIFECYCLE_CONTRADICTION']) {
     assert.ok(audit.includes(detail), `the audit names ${detail}`);
   }
   assert.doesNotMatch(audit, /INSERT|UPDATE|DELETE|created_at|historical|PRE_FIRST_SP|thread_enabled|analysis_enabled|semantic_version|lf_enabled/u);
@@ -304,6 +312,7 @@ test('the 0071 verifier proves live semantics and is wired into the toolchain an
     'a legacy T-03A2-only batch', 'a B1-only batch', 'a B2-only', 'a B3-only', 'no repair, no backfill', 'never upgrades',
     'a deleted LF transition', 'a deleted technical LF capture row', 'a transition at the wrong same-SP sequence claim', 'a transition to a value the reducer never derived', 'an authored reason',
     'a broken chain', 'an extra transition where the LF did not change', 'a transition re-attributed to another batch',
+    'a Thread departure the frozen lifecycle contradicts (R1-01)', 'LIVE_FOCUS_DEPARTURE_LIFECYCLE_CONTRADICTION', 'no stored Thread departure contradicts the frozen lifecycle', 'B3 and LF agree at the same Moment',
     'every row rolled back', 'no sealed SP was reopened', 'mutates zero rows and zero clock coordinates',
     'an unchanged LF reserves no same-SP sequence', 'seq 3 after the Thread-layer seq 2', 'anchored shift', 'a clarification', 'permission denied',
     "same_sp_event_sequence: '1'", 'the SQL reducer re-derives', 'LF is Session-local', 'reference identity only', 'the cursor is exclusive', 'another user sees no live state']) {

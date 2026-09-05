@@ -22,6 +22,7 @@
 
 import type { CanonicalCuFocusSemanticPayload } from '../conversational-focus/durable-focus-payload.types';
 import type { ThreadLayerOutcome } from '../thread-lifecycle/durable-thread-lifecycle-payload.types';
+import type { ThreadLifecycleState } from '../thread-lifecycle/thread-lifecycle.types';
 
 /** The closed LF value domain. Exactly three kinds; nothing else is representable. */
 export const LIVE_FOCUS_KINDS = Object.freeze(['NONE', 'EMERGING', 'THREAD'] as const);
@@ -99,6 +100,14 @@ export interface LiveFocusReductionInput {
   readonly semanticsByCuId: ReadonlyMap<string, CanonicalCuFocusSemanticPayload>;
   /** stable emerging_focus_id -> canonical thread_id for every Session binding visible to this CU. */
   readonly focusThreadBindings: ReadonlyMap<string, string>;
+  /**
+   * R1-01 (B3 -> D same-Moment closure): the frozen Session lifecycle state of
+   * the prior LF's Thread AFTER this CU's FINAL Thread-layer result (its own
+   * lifecycle transitions applied), or `null` when the prior LF is not a
+   * Thread. A departure to NONE from a THREAD prior is admissible only when
+   * this state is DORMANT; an ACTIVE / REOPENED Thread keeps the LF.
+   */
+  readonly priorThreadLifecycleState: ThreadLifecycleState | null;
 }
 
 /** One prepared (in-memory) LF transition of ONE CU. */

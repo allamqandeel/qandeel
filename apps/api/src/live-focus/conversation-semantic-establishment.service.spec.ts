@@ -514,13 +514,24 @@ describe('the finalized-exchange FINAL chain with effective LF (cases 59-71)', (
     expect(lfOf(b.h.commitRequests[0])[0]).toEqual([U1_ID, 'EMERGING', F_AHMED, true, 'NEW_INDEPENDENT_FOCUS']);
   });
 
-  it('63. LF-04: a committed FOCUS_SHIFT with no replacement and no anchoring target clears LF to NONE at that CU and nowhere earlier', async () => {
+  it('63. LF-04 + R1-01: a committed FOCUS_SHIFT with no replacement clears an Emerging LF; it never departs a Thread the frozen B3 lifecycle leaves ACTIVE at that same Moment', async () => {
+    // Emerging prior (no Thread layer): the departure lands at A2 and nowhere earlier.
+    const emerging = build(harness(), new RoleScriptedSegmentation(SEGMENTS), new RecordingFocusProvider(DEPARTURE_SCENARIO), new RecordingThreadProvider(NO_THREAD));
+    const departed = await emerging.service.establish(USER, exchange);
+    expect(lfOf(emerging.h.commitRequests[0])[3]).toEqual([A2_ID, 'NONE', null, true, 'STABLE_DEPARTURE_NO_REPLACEMENT']);
+    expect(lfOf(emerging.h.commitRequests[0]).slice(0, 3).map((u) => u[1])).toEqual(['EMERGING', 'EMERGING', 'EMERGING']);
+    expect(live(departed).liveFocus).toEqual({ kind: 'NONE' });
+    expect(live(departed).liveFocusTransitions.at(-1)).toEqual(expect.objectContaining({ atSp: 4, value: { kind: 'NONE' } }));
+    // Thread prior: the same CU is not "away" for the frozen B3 reducer (no lifecycle transition, Ahmed stays ACTIVE),
+    // so the canonical chain keeps LF = THREAD(ahmed). The contradictory pair is never authored.
     const b = build(harness(), new RoleScriptedSegmentation(SEGMENTS), new RecordingFocusProvider(DEPARTURE_SCENARIO));
     const result = await b.service.establish(USER, exchange);
-    expect(lfOf(b.h.commitRequests[0])[3]).toEqual([A2_ID, 'NONE', null, true, 'STABLE_DEPARTURE_NO_REPLACEMENT']);
-    expect(lfOf(b.h.commitRequests[0]).slice(0, 3).map((u) => u[1])).toEqual(['THREAD', 'THREAD', 'THREAD']);
-    expect(live(result).liveFocus).toEqual({ kind: 'NONE' });
-    expect(live(result).liveFocusTransitions.at(-1)).toEqual(expect.objectContaining({ atSp: 4, value: { kind: 'NONE' } }));
+    const [request] = b.h.commitRequests;
+    expect(request.assistantLifecycleUnits[1]).toMatchObject({ unit_id: A2_ID, outcome: 'NO_THREAD_ACTION', lifecycle_transitions: [] });
+    expect(lfOf(request)[3]).toEqual([A2_ID, 'THREAD', T_AHMED, false, null]);
+    expect(live(result).liveFocus).toEqual({ kind: 'THREAD', threadId: T_AHMED });
+    expect(live(result).liveFocusTransitions).toHaveLength(3);
+    expect(JSON.stringify(request.assistantLiveFocusUnits).includes('STABLE_DEPARTURE_NO_REPLACEMENT')).toBe(false);
   });
 
   it('64. LF-04 is conservative: a shift anchored to the prior LF, or a local clarification, never clears LF', async () => {
@@ -568,13 +579,14 @@ describe('the finalized-exchange FINAL chain with effective LF (cases 59-71)', (
   });
 
   it('66. a later CU never alters an earlier LF: the reduction is sequential and the payloads are fixed before the commit', async () => {
-    const b = build(harness(), new RoleScriptedSegmentation(SEGMENTS), new RecordingFocusProvider(DEPARTURE_SCENARIO));
+    const b = build(harness(), new RoleScriptedSegmentation(SEGMENTS), new RecordingFocusProvider(DEPARTURE_SCENARIO), new RecordingThreadProvider(NO_THREAD));
     await b.service.establish(USER, exchange);
     const [request] = b.h.commitRequests;
-    const b2 = build();
+    const b2 = build(harness(), new RoleScriptedSegmentation(SEGMENTS), new RecordingFocusProvider(FOCUS_SCENARIO), new RecordingThreadProvider(NO_THREAD));
     await b2.service.establish(USER, exchange);
     // The first three LF payloads are identical whether or not the fourth CU departs.
     expect(lfOf(request).slice(0, 3)).toEqual(lfOf(b2.h.commitRequests[0]).slice(0, 3));
+    expect(lfOf(request)[3][1]).toBe('NONE');
   });
 
   it('67. the whole exchange is canonicalized ONCE per layer and split by the exact USER / ASSISTANT counts; no prepared id, Home, label or sequence reaches the commit or the wire', async () => {

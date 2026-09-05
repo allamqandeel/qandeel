@@ -169,6 +169,8 @@ test('the FINAL runtime exists as plain classes and pure modules; LF has NO prov
   assert.match(migration, /lf_reducer_version/u, 'the reducer version is captured as provenance');
   // LF-01 .. LF-04 in the TypeScript mirror.
   for (const rule of ["current.functions.includes('FOCUS_SHIFT')", "current.attention.reason !== 'LOCAL_CLARIFICATION_OR_CORRECTION'", '!anchoredToPrior(current, prior, semanticsByCuId, focusThreadBindings)',
+    // R1-01 (B3 -> D same-Moment closure): a departure from a Thread is only as stable as the frozen lifecycle says.
+    'departureIsStable(prior, priorThreadLifecycleState)', "return priorThreadLifecycleState === 'DORMANT';", "if (priorThreadLifecycleState === null) throw new LiveFocusRejectedError('LIVE_FOCUS_CONTEXT_NOT_CLOSED');",
     "const FOCUS_BEARING = Object.freeze(['START_NEW_FOCUS', 'ATTEND_EXISTING_FOCUS'] as const);", "const BOUND_OUTCOMES = Object.freeze(['ESTABLISH_NEW', 'ATTEND_EXISTING', 'ACTIVATE_EXISTING_IN_SESSION', 'REOPEN_EXISTING'] as const);",
     "if (effective.kind === 'NONE') return 'STABLE_DEPARTURE_NO_REPLACEMENT';", "if (prior.kind === 'NONE') return 'NEW_INDEPENDENT_FOCUS';",
     "if (prior.kind === 'EMERGING' && prior.emergingFocusId === current.attention.emerging_focus_id) return 'THREAD_PROMOTION';", "if (outcome === 'ESTABLISH_NEW') return 'FOCUS_REPLACEMENT';", "return 'RETURN_TO_THREAD';"]) {
@@ -207,6 +209,14 @@ test('the frozen same-SP rule: B1 seq 1, the Thread layer at most one seq 2, an 
     'per CU: the frozen Thread-layer walk -> this CU\'s binding visible -> the LF reduction -> the LF of CU i becomes the prior LF of CU i+1 -> only then does this CU\'s bundle join the history');
   assert.match(service, /priorLiveFocus: liveFocus,/u);
   assert.match(service, /let liveFocus: EffectiveLiveFocus = context\.currentLiveFocus;/u, 'the prior LF of the first CU is the context\'s current LF');
+  // R1-01: the frozen B3 lifecycle states, advanced by THIS CU's own transitions before its LF is reduced, feed the departure gate.
+  assert.match(service, /const threadStates = sessionThreadStates\(context\);/u);
+  const states = service.indexOf('for (const transition of step.decision.transitions) threadStates.set(transition.threadId, transition.toState);', loop);
+  assert.ok(states > walk && states < reduce, 'this CU\'s Thread-layer transitions are applied to the lifecycle states before its LF reduction');
+  assert.match(service, /priorThreadLifecycleState: liveFocus\.kind === 'THREAD' \? threadStates\.get\(liveFocus\.threadId\) \?\? null : null,/u);
+  assert.match(migration, /departure_stable := prior_kind <> 'THREAD'\s*\n\s*OR public\.conversation_thread_session_lifecycle_state_v1\(prior_ref, p_cu\.session_id, p_cu\.session_position \+ 1\) = 'DORMANT';/u,
+    'the SQL mirror gates the departure on the same frozen lifecycle state after the same Moment');
+  assert.match(migration, /LIVE_FOCUS_DEPARTURE_LIFECYCLE_CONTRADICTION/u);
   assert.doesNotMatch(service.slice(loop), /sequence\[index \+ 1\]|sequence\.slice\(index \+ 1\)/u, 'no later CU alters an earlier LF');
 });
 
