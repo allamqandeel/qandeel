@@ -73,6 +73,22 @@ earlier Emerging Focus history is never rewritten, and cross-session sameness is
 NOT decided here — a later slice may bind a later Session focus to an existing
 Thread, but must reuse the same Home.
 
+**The database derives the same three identities itself.** "UUID-shaped and
+mutually distinct" is not canonical identity: a privileged internal caller that
+could substitute another well-formed UUID would also be choosing the permanent
+placement entropy, because OSDAP consumes `thread_id`. Migration 0068 therefore
+carries its own exact RFC 4122 / RFC 9562 version-5 derivation in pure PL/pgSQL
+(`canonical_sha1_v1` → `canonical_uuid_v5_v1` → `canonical_thread_identities_v1`
+— no extension, no new dependency, no caller-authored namespace, no
+application-role EXECUTE), derives the expected triple from the DB-derived owner
+and the already-validated Emerging Focus, and requires exact equality before the
+world lock, the placement, the same-SP reservation and any durable row. A
+mismatch is `INVALID_THREAD_IDENTITY`; nothing is silently replaced. The
+placement and the durable rows then use the *derived* identity, so the payload
+is out of the identity path entirely. The migration refuses to deploy unless the
+SQL derivation reproduces the three frozen namespaces from their documented
+URIs, the RFC 4122 reference vector and the pinned Thread vector.
+
 ---
 
 ## 3. Exactly one permanent Home per Thread
@@ -183,15 +199,56 @@ race: the loser waits, then computes its placement against the
 winner-inclusive world. No duplicate Home, no stale pre-lock world, no
 committed Home moves.
 
+**One completeness authority.** `conversation_thread_batch_state_v1` is the
+single read-only, timestamp-free classifier over all three layers of a
+committed-CU batch — commitment, B1 capture, B2 capture — returning `ABSENT`,
+`COMPLETE` or `PARTIAL`. Counting Threads, Homes and events against
+`establishment_count` is not enough, so COMPLETE additionally requires: capture
+identity agreement across the three batch rows; exactly `establishment_count`
+establishments with no missing and no *extra* durable Thread or Home; per
+establishment, one Thread, one Home and one event agreeing on identity, owner,
+Session, establishing CU, SP, same-SP sequence 2, focus and path, with the
+establishing CU inside this batch at that SP and its identities equal to the
+derived canonical ones; evidence that is non-empty, contiguous from ordinal 0,
+carries exactly one `ESTABLISHING_CU` as its final row and whose every prior CU
+is an earlier same-Session CU B1-bound to the same focus; and Conversational
+Origin membership matching the recorded state's cardinality, in canonical
+textual order, every member an already-canonical Thread of this world that
+already holds a Home. A nonzero batch that established nothing, and a zero-CU
+batch, are COMPLETE — not absent.
+
+The **same** authority serves the per-batch writer's replay gate and the
+finalized-exchange half-state gate, so the two can never disagree.
+
 **Replay / partial state:**
 
-| stored state | outcome |
+| classified state | outcome |
 | --- | --- |
-| no commit batch, no focus batch, no Thread capture | new integrated batch, all layers atomically |
-| all three present, identical payload | stored canonical state, zero mutation, zero sequence consumed |
-| all three present, changed B2 payload or provenance | `THREAD_BATCH_PAYLOAD_CONFLICT` |
-| CU (+ B1) present without the Thread capture | `THREAD_CAPTURE_BATCH_INTEGRITY` — never backfilled |
+| `ABSENT` | new integrated batch, all layers atomically |
+| `COMPLETE` + identical payload | stored canonical state, zero mutation, zero sequence consumed |
+| `COMPLETE` + changed B2 payload or provenance | `THREAD_BATCH_PAYLOAD_CONFLICT` |
+| `PARTIAL` (missing layer, corrupted evidence, origin or coherence) | `THREAD_CAPTURE_BATCH_INTEGRITY` — never repaired |
 | zero-CU batch | capture row with `unit_count = 0`, `establishment_count = 0`; no SP, no sequence, no Thread |
+
+Beyond the fingerprint, an exact replay also compares the stored evidence CU
+ids and the stored origin members to the canonical payload, in order, so a
+substituted or reordered provenance row can never pass as a replay.
+
+**Finalized-exchange half states.** Before the stale-token logic and before
+*either* writer is invoked, the coordinator classifies BOTH halves. Only two
+combinations are legitimate:
+
+```text
+ABSENT   + ABSENT     a NEW exchange; the expected token must match
+COMPLETE + COMPLETE   an exact replay; the token is irrelevant, each writer
+                      still proves its own payload fingerprint
+```
+
+Everything else — one half canonical while the other is absent or structurally
+partial — fails `THREAD_CAPTURE_BATCH_INTEGRITY` before any mutation. A
+stale-token failure is not a substitute for this gate: with a *current* token an
+asymmetric exchange would otherwise replay the stored half and create the
+missing one, which the frozen contract forbids.
 
 Every failure rolls the whole transaction back: no orphan Thread, no orphan
 Home, no consumed same-SP sequence 2 and no half-finished finalized exchange.
@@ -201,7 +258,8 @@ Home, no consumed same-SP sequence 2 and no half-finished finalized exchange.
 ## 8. Security / activation posture
 
 At the end of migration 0068 the new writer, the new coordinator, the decision
-validator, the persistence helper and every internal OSDAP helper are executable
+validator, the persistence helper, the identity authority, the completeness
+authority and every internal OSDAP and digest helper are executable
 by NO application role, and every new table is unreachable by `anon`,
 `authenticated` and `service_role`. The T-03A2 producer / coordinator / snapshot
 grants and the ungranted T-03B1b1 writer and coordinator are left exactly as

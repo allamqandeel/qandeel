@@ -27,14 +27,16 @@ const section = (from, to) => {
   assert.ok(start >= 0 && (to === undefined || end > start), `section ${from} was located`);
   return stripSql(migration.slice(start, end));
 };
-const SELF_ASSERTION_MARKER = '-- 15. Terminal self-assertions.';
+const SELF_ASSERTION_MARKER = '-- 17. Terminal self-assertions.';
 const executableBody = stripSql(migration.slice(0, migration.indexOf(SELF_ASSERTION_MARKER)));
-const writer = section('CREATE FUNCTION public.commit_conversation_units_with_focus_and_thread_v1', '-- 13. The atomic finalized-exchange coordinator');
-const coordinator = section('CREATE FUNCTION public.commit_finalized_exchange_with_focus_and_thread_v1', '-- 14. Ownership, search_path hardening');
-const validator = section('CREATE FUNCTION public.validate_conversation_thread_decision_v1', '-- 11. Persisting ONE establishment');
-const persist = section('CREATE FUNCTION public.persist_conversation_thread_establishment_v1', '-- 12. The integrated per-Moment writer');
-const placement = section('CREATE FUNCTION public.compute_canonical_home_placement_v1', '-- ===========================================================================\n-- 10.');
-const search = section('CREATE FUNCTION public.osdap_search_admissible_placement_v1', '-- 9.9 The canonical placement');
+const writer = section('CREATE FUNCTION public.commit_conversation_units_with_focus_and_thread_v1', '-- 15. The atomic finalized-exchange coordinator');
+const coordinator = section('CREATE FUNCTION public.commit_finalized_exchange_with_focus_and_thread_v1', '-- 16. Ownership, search_path hardening');
+const validator = section('CREATE FUNCTION public.validate_conversation_thread_decision_v1', '-- 12. Persisting ONE establishment');
+const persist = section('CREATE FUNCTION public.persist_conversation_thread_establishment_v1', '-- 14. The integrated per-Moment writer');
+const placement = section('CREATE FUNCTION public.compute_canonical_home_placement_v1', '-- ===========================================================================\n-- 11.');
+const search = section('CREATE FUNCTION public.osdap_search_admissible_placement_v1', '-- 10.9 The canonical placement');
+const identity = section('-- 9. Canonical identity authority', '-- ===========================================================================\n-- 10.');
+const batchState = section('CREATE FUNCTION public.conversation_thread_batch_state_v1', '-- ===========================================================================\n-- 14.');
 
 function gitBlobId(content) {
   const bytes = Buffer.from(content, 'utf8');
@@ -68,8 +70,10 @@ test('0068 creates exactly the seven durable tables and nothing else', () => {
     'conversation_world_spatial_authorities',
   ]);
   assert.deepEqual([...migration.matchAll(/CREATE (?:OR REPLACE )?FUNCTION public\.(\w+)/gu)].map((m) => m[1]).sort(), [
+    'canonical_sha1_v1', 'canonical_thread_identities_v1', 'canonical_uuid_v5_v1',
     'commit_conversation_units_with_focus_and_thread_v1', 'commit_finalized_exchange_with_focus_and_thread_v1',
-    'compute_canonical_home_placement_v1', 'osdap_attempt_digest_v1', 'osdap_candidate_offset_v1',
+    'compute_canonical_home_placement_v1', 'conversation_thread_batch_state_v1',
+    'osdap_attempt_digest_v1', 'osdap_candidate_offset_v1',
     'osdap_floor_div_v1', 'osdap_origin_fingerprint_v1', 'osdap_search_admissible_placement_v1',
     'osdap_serialize_homes_v1', 'osdap_unsigned_v1', 'osdap_world_fingerprint_v1',
     'persist_conversation_thread_establishment_v1', 'reject_conversation_thread_mutation_v1',
@@ -177,6 +181,117 @@ test('QANDEEL_OSDAP_V1 is mirrored with its exact frozen constants and exact int
   assert.doesNotMatch(placement, /similarity|score|confidence|keyword|embedding|viewport|zoom/u);
 });
 
+test('the database owns the canonical identity derivation: UUID-shaped is never sufficient', () => {
+  // The derivation exists in SQL, uses SHA-1 as RFC 4122 version 5 prescribes,
+  // needs no extension and no caller-authored namespace.
+  assert.match(identity, /CREATE FUNCTION public\.canonical_sha1_v1\(p_message bytea\)/u);
+  assert.match(identity, /CREATE FUNCTION public\.canonical_uuid_v5_v1\(p_namespace uuid, p_name text\)/u);
+  assert.match(identity, /CREATE FUNCTION public\.canonical_thread_identities_v1\(/u);
+  assert.doesNotMatch(executableSql, /CREATE EXTENSION|pgcrypto|digest\(/u, 'no extension and no external digest dependency is introduced');
+  assert.match(identity, /set_byte\(head, 6, \(get_byte\(head, 6\) & 15\) \| 80\)/u, 'the version nibble is stamped to 5');
+  assert.match(identity, /set_byte\(head, 8, \(get_byte\(head, 8\) & 63\) \| 128\)/u, 'the RFC variant bits are stamped');
+  assert.match(identity, /decode\(replace\(p_namespace::text, '-', ''\), 'hex'\) \|\| convert_to\(p_name, 'UTF8'\)/u,
+    'the digest is over the namespace bytes followed by the UTF-8 name');
+  // The frozen namespaces, and the three derivations, exactly as the
+  // TypeScript canonicalizer defines them.
+  assert.match(identity, /thread_namespace constant uuid := '973d2e95-15d7-593c-953d-84ee94be343c';/u);
+  assert.match(identity, /home_namespace constant uuid := 'ca3acc01-e866-5d84-a15a-5be440c1919e';/u);
+  assert.match(identity, /event_namespace constant uuid := '47cd6b25-dbf8-5fd3-941f-eff9d2386990';/u);
+  assert.match(identity, /thread_id := public\.canonical_uuid_v5_v1\(thread_namespace, p_user_id::text \|\| ':' \|\| p_emerging_focus_id::text\);/u);
+  assert.match(identity, /home_anchor_id := public\.canonical_uuid_v5_v1\(home_namespace, thread_id::text\);/u);
+  assert.match(identity, /event_id := public\.canonical_uuid_v5_v1\(event_namespace, thread_id::text\);/u);
+  assert.doesNotMatch(identity, /p_namespace_uri|p_thread_id|p_home_anchor_id|p_event_id/u, 'no caller supplies a namespace or an identity');
+  // The migration refuses to deploy unless the derivation reproduces the frozen
+  // namespaces, the RFC reference vector and the pinned Thread vector.
+  for (const frozen of ['973d2e95-15d7-593c-953d-84ee94be343c', 'ca3acc01-e866-5d84-a15a-5be440c1919e',
+    '47cd6b25-dbf8-5fd3-941f-eff9d2386990', '74738ff5-5367-5958-9aee-98fffdcd1876',
+    'a9993e364706816aba3e25717850c26c9cd0d89d', 'afc4fd81-fe54-5738-9545-e1053044d919']) {
+    assert.ok(migration.includes(frozen), `the terminal self-assertion pins ${frozen}`);
+  }
+  assert.match(migration, /T-03B2b2 requires the exact RFC 4122 version-5 derivation and its frozen namespaces/u);
+  assert.match(migration, /T-03B2b2 requires the frozen canonical Thread identity vector/u);
+  // The validator DERIVES and requires exact equality; shape alone is refused.
+  assert.match(validator, /SELECT c\.thread_id, c\.home_anchor_id, c\.event_id\s*\n\s*INTO expected_thread_id, expected_home_anchor_id, expected_event_id\s*\n\s*FROM public\.canonical_thread_identities_v1\(p_cu\.user_id, focus_id\) c;/u,
+    'the expected identities are derived from the DB-derived owner and the validated focus');
+  assert.match(validator, /IF thread_id <> expected_thread_id\s*\n\s*OR home_anchor_id <> expected_home_anchor_id\s*\n\s*OR event_id <> expected_event_id THEN\s*\n\s*RAISE EXCEPTION 'INVALID_THREAD_IDENTITY'/u,
+    'any mismatch is INVALID_THREAD_IDENTITY');
+  assert.doesNotMatch(validator, /IF thread_id = home_anchor_id OR thread_id = event_id/u,
+    'mutual distinctness is no longer accepted as canonical identity proof');
+  // The identity check precedes the placement, the reservation and persistence.
+  const derive = validator.indexOf('canonical_thread_identities_v1(p_cu.user_id, focus_id)');
+  assert.ok(derive > 0 && derive < validator.indexOf("path = 'TE-01'"), 'identity is proven before any path-specific work');
+  const gate = writer.indexOf('validate_conversation_thread_decision_v1(');
+  assert.ok(gate > 0 && gate < writer.indexOf('FROM public.conversation_world_spatial_authorities w')
+    && gate < writer.indexOf('compute_canonical_home_placement_v1(')
+    && gate < writer.indexOf('reserve_session_same_sp_event_v1(p_session_id, p_user_id) r', gate),
+    'the identity gate runs before the world lock, the placement and the same-SP reservation');
+  // OSDAP and the durable rows consume the DERIVED identity, never the payload.
+  assert.match(writer, /SELECT c\.thread_id INTO canonical_thread_id\s*\n\s*FROM public\.canonical_thread_identities_v1\(turn_row\.user_id, \(decision ->> 'emerging_focus_id'\)::uuid\) c;/u);
+  assert.match(writer, /turn_row\.user_id::text, canonical_thread_id::text, \(decision ->> 'origin_state'\)/u,
+    'the placement entropy is the derived canonical Thread identity');
+  assert.doesNotMatch(writer, /\(decision ->> 'thread_id'\)/u, 'the writer never passes a payload identity anywhere');
+  assert.match(persist, /SELECT c\.thread_id, c\.home_anchor_id, c\.event_id INTO thread_id, home_anchor_id, event_id\s*\n\s*FROM public\.canonical_thread_identities_v1\(p_cu\.user_id, focus_id\) c;/u,
+    'the durable rows carry the derived identities');
+  assert.doesNotMatch(persist, /\(p_decision ->> 'thread_id'\)|\(p_decision ->> 'home_anchor_id'\)|\(p_decision ->> 'thread_established_event_id'\)/u);
+});
+
+test('ONE completeness authority classifies every batch, and the finalized exchange gates on both halves', () => {
+  assert.match(batchState, /RETURNS text\s*\nLANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''/u,
+    'the completeness authority is read-only, postgres-owned and search-path hardened');
+  assert.doesNotMatch(batchState, /INSERT INTO|UPDATE public|DELETE FROM|created_at|CURRENT_TIMESTAMP|now\(\)/u,
+    'it mutates nothing and orders by no timestamp');
+  for (const state of ["RETURN 'ABSENT';", "RETURN 'PARTIAL';", "RETURN 'COMPLETE';"]) {
+    assert.ok(batchState.includes(state), `the closed vocabulary carries ${state}`);
+  }
+  // Capture identity, then each layer.
+  assert.match(batchState, /commit_row\.user_id <> p_user_id OR commit_row\.session_id <> p_session_id OR commit_row\.source_turn_id <> p_source_turn_id/u);
+  assert.match(batchState, /focus_row\.unit_count <> commit_row\.unit_count OR thread_row\.unit_count <> commit_row\.unit_count/u);
+  assert.match(batchState, /committed_units <> commit_row\.unit_count/u);
+  assert.match(batchState, /focus_semantics <> commit_row\.unit_count OR focus_attention <> commit_row\.unit_count/u);
+  assert.match(batchState, /durable_events <> thread_row\.establishment_count\s*\n\s*OR durable_threads <> thread_row\.establishment_count\s*\n\s*OR durable_homes <> thread_row\.establishment_count/u,
+    'no missing establishment and no EXTRA durable establishment');
+  // Per-establishment coherence.
+  for (const rule of ['h.home_anchor_id = event_row.home_anchor_id', 't.established_cu_id = event_row.cu_id',
+    't.established_sp = event_row.session_position', 't.established_event_sequence = 2',
+    't.grounding_emerging_focus_id = event_row.emerging_focus_id', 't.establishment_path = event_row.establishment_path',
+    'cu.commit_batch_id = p_batch_id', 'cu.session_position = event_row.session_position']) {
+    assert.ok(batchState.includes(rule), `per-establishment coherence requires: ${rule}`);
+  }
+  assert.match(batchState, /FROM public\.canonical_thread_identities_v1\(p_user_id, event_row\.emerging_focus_id\) c;/u,
+    'the stored identities must be the derived canonical ones');
+  // Evidence.
+  assert.match(batchState, /IF evidence_total < 1 THEN RETURN 'PARTIAL'; END IF;/u);
+  assert.match(batchState, /evidence_ordinal\) FROM public\.conversation_thread_establishment_evidence ev2[\s\S]{0,120}<> 0/u, 'ordinals are contiguous from 0');
+  assert.match(batchState, /ev2\.evidence_role = 'ESTABLISHING_CU'\) <> 1/u, 'exactly one establishing evidence row');
+  assert.match(batchState, /ev2\.evidence_ordinal = evidence_total - 1/u, 'the establishing CU is the final evidence row');
+  assert.match(batchState, /cu2\.session_position >= event_row\.session_position/u, 'prior evidence is strictly earlier');
+  assert.match(batchState, /a\.attention_kind IN \('START_NEW_FOCUS', 'ATTEND_EXISTING_FOCUS'\)\s*\n\s*AND a\.emerging_focus_id = event_row\.emerging_focus_id/u,
+    'prior evidence is B1-attention-bound to the same Emerging Focus');
+  // Origin provenance.
+  assert.match(batchState, /event_row\.origin_state = 'NONE' AND origin_total <> 0/u);
+  assert.match(batchState, /event_row\.origin_state = 'RESOLVED' AND origin_total <> 1/u);
+  assert.match(batchState, /event_row\.origin_state IN \('MULTIPLE', 'AMBIGUOUS'\) AND origin_total < 2/u);
+  assert.match(batchState, /row_number\(\) OVER \(ORDER BY m\.origin_thread_id::text COLLATE "C"\) - 1 AS canonical/u,
+    'stored member order must be canonical textual order');
+  assert.doesNotMatch(batchState, /parent|primary_origin|edge_direction/u);
+  // Exact replay compares stored provenance to the canonical payload.
+  assert.match(writer, /FROM public\.conversation_thread_establishment_evidence ev WHERE ev\.thread_id = replay_thread_id\)\s*\n\s*IS DISTINCT FROM/u);
+  assert.match(writer, /FROM public\.conversation_thread_origin_members m WHERE m\.thread_id = replay_thread_id\)\s*\n\s*IS DISTINCT FROM/u);
+  // The finalized-exchange half-state gate, before the token and both writers.
+  assert.match(coordinator, /user_state := public\.conversation_thread_batch_state_v1\(p_session_id, p_user_id, p_user_source_turn_id, p_user_batch_id\);/u);
+  assert.match(coordinator, /assistant_state := public\.conversation_thread_batch_state_v1\(p_session_id, p_user_id, p_assistant_source_turn_id, p_assistant_batch_id\);/u);
+  assert.match(coordinator, /IF NOT \(\(user_state = 'ABSENT' AND assistant_state = 'ABSENT'\)\s*\n\s*OR \(user_state = 'COMPLETE' AND assistant_state = 'COMPLETE'\)\) THEN\s*\n\s*RAISE EXCEPTION 'THREAD_CAPTURE_BATCH_INTEGRITY'/u,
+    'only both-absent and both-complete are legitimate finalized-exchange states');
+  const gate = coordinator.indexOf('user_state := public.conversation_thread_batch_state_v1');
+  const relation = coordinator.indexOf('INVALID_FINALIZED_EXCHANGE_RELATION');
+  const stale = coordinator.indexOf("RAISE EXCEPTION 'STALE_CONVERSATIONAL_FOCUS_CONTEXT'");
+  const write = coordinator.indexOf('public.commit_conversation_units_with_focus_and_thread_v1(');
+  assert.ok(relation < gate && gate < stale && stale < write, 'the half-state gate precedes the token check and BOTH writer calls');
+  assert.match(coordinator, /both_exist := user_state = 'COMPLETE';/u, 'replay eligibility is the classifier, not "the commitment batch exists"');
+  assert.doesNotMatch(coordinator, /EXISTS \(SELECT 1 FROM public\.conversation_unit_commit_batches b WHERE b\.id = p_user_batch_id\)/u,
+    'the old commitment-only replay test is gone');
+});
+
 test('the per-CU integrated order and AF66-01 are structurally present in the writer', () => {
   const clock = writer.indexOf('FROM public.session_semantic_clocks c');
   const turn = writer.indexOf('FROM public.conversation_turns t');
@@ -272,10 +387,11 @@ test('the database re-proves every deterministic T-03B2a gate and every NO_ESTAB
 });
 
 test('replay, conflict and partial state are exact, and the zero-CU batch is complete', () => {
-  assert.match(writer, /IF NOT commit_batch_exists AND NOT focus_batch_exists AND NOT thread_batch_exists THEN/u,
-    'a new integrated batch is allowed only when NO layer exists yet');
-  assert.match(writer, /IF NOT \(commit_batch_exists AND focus_batch_exists AND thread_batch_exists\) THEN[\s\S]*?THREAD_CAPTURE_BATCH_INTEGRITY/u,
-    'existing CU or B1 truth without a B2 capture fails closed instead of being upgraded');
+  assert.match(writer, /batch_state := public\.conversation_thread_batch_state_v1\(p_session_id, p_user_id, p_source_turn_id, p_batch_id\);/u,
+    'the writer asks the ONE completeness authority which path this batch is eligible for');
+  assert.match(writer, /IF batch_state = 'ABSENT' THEN/u, 'a new integrated batch is allowed only when NO layer exists yet');
+  assert.match(writer, /IF batch_state <> 'COMPLETE' THEN[\s\S]*?THREAD_CAPTURE_BATCH_INTEGRITY/u,
+    'anything short of structurally complete fails closed instead of being replayed or upgraded');
   assert.match(writer, /THREAD_BATCH_PAYLOAD_CONFLICT/u);
   assert.match(writer, /thread_batch_row\.canonical_fingerprint IS DISTINCT FROM thread_fingerprint/u);
   assert.match(writer, /IF unit_count = 0 THEN\s*\n\s*RETURN;/u, 'a zero-CU batch allocates no SP and no sequence');

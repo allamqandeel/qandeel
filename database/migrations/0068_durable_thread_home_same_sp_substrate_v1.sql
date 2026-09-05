@@ -366,7 +366,144 @@ CREATE TRIGGER conversation_thread_commit_batches_immutable
   FOR EACH ROW EXECUTE FUNCTION public.reject_conversation_thread_mutation_v1();
 
 -- ===========================================================================
--- 9. QANDEEL_OSDAP_V1 - the internal PostgreSQL parity implementation of the
+-- 9. Canonical identity authority: the exact RFC 4122 / RFC 9562 version-5
+--    derivation, mirrored in PL/pgSQL (FIX-T03B2B2-01).
+--
+--    A canonical Thread, its permanent Home Anchor and its establishment event
+--    are DETERMINISTIC functions of the owner and the establishing Emerging
+--    Focus. "UUID-shaped and mutually distinct" is NOT canonical identity: a
+--    privileged internal caller that could substitute another well-formed UUID
+--    would also be choosing the permanent placement entropy, because OSDAP
+--    consumes `thread_id`. So the database derives the three identities itself
+--    and requires exact equality before any world lock, any placement, any
+--    same-SP reservation and any durable row.
+--
+--    The derivation is byte for byte the one
+--    `apps/api/src/runtime-identity/uuid-v5.ts` ships: SHA-1 over the namespace
+--    UUID's 16 bytes followed by the UTF-8 name, with the version and variant
+--    bits stamped as the RFC prescribes. SHA-1 is used strictly as the RFC's
+--    identifier-derivation function over non-secret identifiers; it carries no
+--    security claim. It is implemented in pure PL/pgSQL: no extension, no new
+--    dependency, no caller-authored namespace, and no application-role EXECUTE.
+-- ===========================================================================
+
+-- 9.1 SHA-1 (FIPS 180-4) over exact 32-bit arithmetic. Every intermediate is a
+--     non-negative `bigint` masked back to 32 bits, so no value is ever
+--     represented as a negative two's-complement integer and no overflow is
+--     possible: the widest intermediate is (2^32 - 1) << 31 < 2^63.
+CREATE FUNCTION public.canonical_sha1_v1(p_message bytea)
+RETURNS bytea LANGUAGE plpgsql IMMUTABLE SET search_path='' AS $$
+DECLARE
+  mask constant bigint := 4294967295;
+  padded bytea;
+  zeros integer;
+  w bigint[];
+  h0 bigint := 1732584193;
+  h1 bigint := 4023233417;
+  h2 bigint := 2562383102;
+  h3 bigint := 271733878;
+  h4 bigint := 3285377520;
+  a bigint; b bigint; c bigint; d bigint; e bigint;
+  f bigint; k bigint; temp bigint;
+  chunk integer; i integer; base integer;
+BEGIN
+  IF p_message IS NULL THEN
+    RAISE EXCEPTION 'INVALID_THREAD_IDENTITY' USING ERRCODE='22023',
+      DETAIL='An identity derivation has no null input.';
+  END IF;
+  -- Padding: 0x80, then zeros to 56 mod 64, then the big-endian bit length.
+  zeros := (56 - ((length(p_message) + 1) % 64) + 64) % 64;
+  padded := p_message || '\x80'::bytea;
+  IF zeros > 0 THEN padded := padded || decode(repeat('00', zeros), 'hex'); END IF;
+  padded := padded || decode(lpad(to_hex(length(p_message)::bigint * 8), 16, '0'), 'hex');
+
+  FOR chunk IN 0 .. length(padded) / 64 - 1 LOOP
+    base := chunk * 64;
+    w := ARRAY[]::bigint[];
+    FOR i IN 0 .. 15 LOOP
+      w := array_append(w,
+        (get_byte(padded, base + i * 4)::bigint << 24) | (get_byte(padded, base + i * 4 + 1)::bigint << 16)
+        | (get_byte(padded, base + i * 4 + 2)::bigint << 8) | get_byte(padded, base + i * 4 + 3)::bigint);
+    END LOOP;
+    FOR i IN 16 .. 79 LOOP
+      temp := w[i - 2] # w[i - 7] # w[i - 13] # w[i - 15];
+      w := array_append(w, ((temp << 1) | (temp >> 31)) & mask);
+    END LOOP;
+    a := h0; b := h1; c := h2; d := h3; e := h4;
+    FOR i IN 0 .. 79 LOOP
+      IF i < 20 THEN
+        f := (b & c) | ((mask - b) & d); k := 1518500249;
+      ELSIF i < 40 THEN
+        f := b # c # d; k := 1859775393;
+      ELSIF i < 60 THEN
+        f := (b & c) | (b & d) | (c & d); k := 2400959708;
+      ELSE
+        f := b # c # d; k := 3395469782;
+      END IF;
+      temp := ((((a << 5) | (a >> 27)) & mask) + f + e + k + w[i + 1]) & mask;
+      e := d; d := c; c := ((b << 30) | (b >> 2)) & mask; b := a; a := temp;
+    END LOOP;
+    h0 := (h0 + a) & mask; h1 := (h1 + b) & mask; h2 := (h2 + c) & mask;
+    h3 := (h3 + d) & mask; h4 := (h4 + e) & mask;
+  END LOOP;
+
+  RETURN decode(lpad(to_hex(h0), 8, '0') || lpad(to_hex(h1), 8, '0') || lpad(to_hex(h2), 8, '0')
+             || lpad(to_hex(h3), 8, '0') || lpad(to_hex(h4), 8, '0'), 'hex');
+END;$$;
+
+-- 9.2 RFC 4122 section 4.3 name-based UUID, version 5, canonical lowercase.
+CREATE FUNCTION public.canonical_uuid_v5_v1(p_namespace uuid, p_name text)
+RETURNS uuid LANGUAGE plpgsql IMMUTABLE SET search_path='' AS $$
+DECLARE
+  head bytea;
+  hex text;
+BEGIN
+  IF p_namespace IS NULL OR p_name IS NULL THEN
+    RAISE EXCEPTION 'INVALID_THREAD_IDENTITY' USING ERRCODE='22023',
+      DETAIL='An identity derivation has no null namespace and no null name.';
+  END IF;
+  head := substring(public.canonical_sha1_v1(
+            decode(replace(p_namespace::text, '-', ''), 'hex') || convert_to(p_name, 'UTF8')) from 1 for 16);
+  head := set_byte(head, 6, (get_byte(head, 6) & 15) | 80);
+  head := set_byte(head, 8, (get_byte(head, 8) & 63) | 128);
+  hex := encode(head, 'hex');
+  RETURN (substr(hex, 1, 8) || '-' || substr(hex, 9, 4) || '-' || substr(hex, 13, 4) || '-'
+       || substr(hex, 17, 4) || '-' || substr(hex, 21, 12))::uuid;
+END;$$;
+
+-- 9.3 The three canonical identities of ONE promotion. The namespaces are the
+--     frozen ones; section 17 refuses to deploy unless each of them re-derives
+--     exactly from its documented URI under the RFC 4122 URL namespace, so the
+--     literals below can never drift from the derivation the runtime uses.
+--
+--       thread_id                   = uuidV5(THREAD_NAMESPACE,       userId + ':' + emergingFocusId)
+--       home_anchor_id              = uuidV5(HOME_ANCHOR_NAMESPACE,  threadId)
+--       thread_established_event_id = uuidV5(THREAD_EVENT_NAMESPACE, threadId)
+--
+--     The owner is DB-derived (the committed CU's owner), never caller-named,
+--     so Thread identity is scoped to the user's persistent Conversation World.
+CREATE FUNCTION public.canonical_thread_identities_v1(
+  p_user_id uuid,
+  p_emerging_focus_id uuid,
+  OUT thread_id uuid,
+  OUT home_anchor_id uuid,
+  OUT event_id uuid
+) LANGUAGE plpgsql IMMUTABLE SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  thread_namespace constant uuid := '973d2e95-15d7-593c-953d-84ee94be343c';
+  home_namespace constant uuid := 'ca3acc01-e866-5d84-a15a-5be440c1919e';
+  event_namespace constant uuid := '47cd6b25-dbf8-5fd3-941f-eff9d2386990';
+BEGIN
+  IF p_user_id IS NULL OR p_emerging_focus_id IS NULL THEN
+    RAISE EXCEPTION 'INVALID_THREAD_IDENTITY' USING ERRCODE='22023',
+      DETAIL='A canonical Thread identity is derived from an owner and a stable Emerging Focus.';
+  END IF;
+  thread_id := public.canonical_uuid_v5_v1(thread_namespace, p_user_id::text || ':' || p_emerging_focus_id::text);
+  home_anchor_id := public.canonical_uuid_v5_v1(home_namespace, thread_id::text);
+  event_id := public.canonical_uuid_v5_v1(event_namespace, thread_id::text);
+END;$$;
+-- ===========================================================================
+-- 10. QANDEEL_OSDAP_V1 - the internal PostgreSQL parity implementation of the
 --    frozen T-03B2b1 engine.
 --
 --    The database must never accept a caller-authored permanent coordinate,
@@ -392,7 +529,7 @@ CREATE TRIGGER conversation_thread_commit_batches_immutable
 --      MAX_ATTEMPTS           8192
 -- ===========================================================================
 
--- 9.1 Mathematical floor division: the quotient rounded toward negative
+-- 10.1 Mathematical floor division: the quotient rounded toward negative
 --     infinity, in exact numeric arithmetic. `div()` truncates toward zero and
 --     `mod()` carries the sign of the dividend, so one correction suffices.
 CREATE FUNCTION public.osdap_floor_div_v1(p_dividend numeric, p_divisor numeric)
@@ -411,7 +548,7 @@ BEGIN
   RETURN quotient;
 END;$$;
 
--- 9.2 The unsigned big-endian integer carried by digest bytes [p_from, p_to).
+-- 10.2 The unsigned big-endian integer carried by digest bytes [p_from, p_to).
 --     The first 16 bytes give uX, the last 16 give uY. No floating point.
 CREATE FUNCTION public.osdap_unsigned_v1(p_digest bytea, p_from integer, p_to integer)
 RETURNS numeric LANGUAGE plpgsql IMMUTABLE SET search_path='' AS $$
@@ -429,7 +566,7 @@ BEGIN
   RETURN value;
 END;$$;
 
--- 9.3 The canonical serialization of a set of Homes: `threadId \t x \t y \n`
+-- 10.3 The canonical serialization of a set of Homes: `threadId \t x \t y \n`
 --     per Home, ordered by Thread id in byte (C) order so the input order is
 --     irrelevant, exactly like the engine's UTF-16 code-unit comparison over
 --     the closed ASCII identity charset.
@@ -445,19 +582,19 @@ BEGIN
   RETURN serialized;
 END;$$;
 
--- 9.4 sha256 over `scheme + ordered (threadId, x, y)`: the then-existing world.
+-- 10.4 sha256 over `scheme + ordered (threadId, x, y)`: the then-existing world.
 CREATE FUNCTION public.osdap_world_fingerprint_v1(p_thread_ids text[], p_x numeric[], p_y numeric[])
 RETURNS bytea LANGUAGE sql IMMUTABLE SET search_path='' AS $$
   SELECT sha256(convert_to('QANDEEL_OSDAP_V1' || E'\n' || public.osdap_serialize_homes_v1(p_thread_ids, p_x, p_y), 'UTF8'));
 $$;
 
--- 9.5 sha256 over `origin state + ordered origin (threadId, x, y)`.
+-- 10.5 sha256 over `origin state + ordered origin (threadId, x, y)`.
 CREATE FUNCTION public.osdap_origin_fingerprint_v1(p_state text, p_thread_ids text[], p_x numeric[], p_y numeric[])
 RETURNS bytea LANGUAGE sql IMMUTABLE SET search_path='' AS $$
   SELECT sha256(convert_to(p_state || E'\n' || public.osdap_serialize_homes_v1(p_thread_ids, p_x, p_y), 'UTF8'));
 $$;
 
--- 9.6 The per-attempt digest:
+-- 10.6 The per-attempt digest:
 --     `domain|userWorldId|newThreadId|originFingerprintHex|worldFingerprintHex|attempt`.
 CREATE FUNCTION public.osdap_attempt_digest_v1(
   p_user_world_id text,
@@ -472,7 +609,7 @@ CREATE FUNCTION public.osdap_attempt_digest_v1(
     'UTF8'));
 $$;
 
--- 9.7 One candidate offset: the two 128-bit digest halves mapped into the
+-- 10.7 One candidate offset: the two 128-bit digest halves mapped into the
 --     square [-radius, +radius]^2 by exact modulus, then projected onto the
 --     OUTER half of the shell when the offset falls in the inner half. The
 --     dominant component (larger absolute value; x on an exact tie) is
@@ -508,7 +645,7 @@ BEGIN
   END IF;
 END;$$;
 
--- 9.8 The search: the FIRST admissible candidate in attempt order.
+-- 10.8 The search: the FIRST admissible candidate in attempt order.
 --     shell = 1 + floor(attempt / 32), radius = HOME_STEP * shell. A candidate
 --     outside the technical coordinate bound is SKIPPED - never clamped and
 --     never wrapped. A candidate whose exact Chebyshev distance to ANY
@@ -572,7 +709,7 @@ BEGIN
     DETAIL='No admissible canonical placement exists within the frozen attempt budget; nothing is clamped, wrapped or relocated.';
 END;$$;
 
--- 9.9 The canonical placement of ONE new Thread against the then-existing
+-- 10.9 The canonical placement of ONE new Thread against the then-existing
 --     committed world. Validates the closed world exactly as the frozen
 --     engine does, derives the origin-seeded base (NONE -> the world datum
 --     (0,0), RESOLVED -> the one origin Home, MULTIPLE / AMBIGUOUS -> the
@@ -695,7 +832,7 @@ BEGIN
 END;$$;
 
 -- ===========================================================================
--- 10. The deterministic DB-side validation of ONE canonical B2 decision.
+-- 11. The deterministic DB-side validation of ONE canonical B2 decision.
 --
 --     The privileged caller must not be able to fabricate an impossible
 --     Thread establishment, so every T-03B2a gate is re-proved here against
@@ -741,6 +878,9 @@ DECLARE
   boundary_sp integer;
   origin_member uuid;
   identity_key text;
+  expected_thread_id uuid;
+  expected_home_anchor_id uuid;
+  expected_event_id uuid;
 BEGIN
   IF jsonb_typeof(p_decision) <> 'object' THEN
     RAISE EXCEPTION 'INVALID_THREAD_PAYLOAD' USING ERRCODE='22023';
@@ -862,9 +1002,21 @@ BEGIN
   thread_id := (p_decision ->> 'thread_id')::uuid;
   home_anchor_id := (p_decision ->> 'home_anchor_id')::uuid;
   event_id := (p_decision ->> 'thread_established_event_id')::uuid;
-  IF thread_id = home_anchor_id OR thread_id = event_id OR home_anchor_id = event_id THEN
+  -- FIX-T03B2B2-01: being UUID-shaped and mutually distinct is NOT canonical
+  -- identity. The database derives all three itself from the DB-derived owner
+  -- and the already-validated Emerging Focus and requires EXACT equality, here,
+  -- BEFORE the user-world lock, the placement, the same-SP reservation and any
+  -- durable row. A privileged caller can therefore never substitute another
+  -- well-formed UUID - which would also be choosing the permanent placement
+  -- entropy, because OSDAP consumes `thread_id`. Nothing is silently replaced.
+  SELECT c.thread_id, c.home_anchor_id, c.event_id
+    INTO expected_thread_id, expected_home_anchor_id, expected_event_id
+    FROM public.canonical_thread_identities_v1(p_cu.user_id, focus_id) c;
+  IF thread_id <> expected_thread_id
+     OR home_anchor_id <> expected_home_anchor_id
+     OR event_id <> expected_event_id THEN
     RAISE EXCEPTION 'INVALID_THREAD_IDENTITY' USING ERRCODE='22023',
-      DETAIL='The Thread, its permanent Home Anchor and its establishment event are three distinct identities.';
+      DETAIL='Thread, Home Anchor and event identities are the deterministic RFC 4122 version-5 derivations of this owner and this Emerging Focus; no other valid UUID is admissible.';
   END IF;
 
   -- Evidence: contiguous ordinals, the current CU exactly once and last, and
@@ -1052,7 +1204,7 @@ BEGIN
 END;$$;
 
 -- ===========================================================================
--- 11. Persisting ONE establishment at its reserved (SP, same-SP sequence)
+-- 12. Persisting ONE establishment at its reserved (SP, same-SP sequence)
 --     together with its already-computed canonical placement. Called by the
 --     integrated writer only, after the decision was validated, the user
 --     world was locked and the placement was computed against that locked
@@ -1074,9 +1226,9 @@ CREATE FUNCTION public.persist_conversation_thread_establishment_v1(
 ) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE
-  thread_id uuid := (p_decision ->> 'thread_id')::uuid;
-  home_anchor_id uuid := (p_decision ->> 'home_anchor_id')::uuid;
-  event_id uuid := (p_decision ->> 'thread_established_event_id')::uuid;
+  thread_id uuid;
+  home_anchor_id uuid;
+  event_id uuid;
   focus_id uuid := (p_decision ->> 'emerging_focus_id')::uuid;
   path text := p_decision ->> 'path';
 BEGIN
@@ -1084,6 +1236,12 @@ BEGIN
     RAISE EXCEPTION 'SAME_SP_SEQUENCE_INTEGRITY' USING ERRCODE='55000',
       DETAIL='Thread establishment is the SECOND Stage-6 semantic layer of its Moment: B1 is sequence 1 and the whole B2 event is sequence 2.';
   END IF;
+  -- FIX-T03B2B2-01: the durable rows carry the DERIVED canonical identities,
+  -- never the caller's. The validator already proved the payload equals these,
+  -- so deriving again cannot change the outcome - it removes the payload from
+  -- the identity path entirely.
+  SELECT c.thread_id, c.home_anchor_id, c.event_id INTO thread_id, home_anchor_id, event_id
+    FROM public.canonical_thread_identities_v1(p_cu.user_id, focus_id) c;
 
   INSERT INTO public.conversation_threads (
     id, user_id, grounding_emerging_focus_id, established_session_id, established_cu_id,
@@ -1125,7 +1283,239 @@ BEGIN
 END;$$;
 
 -- ===========================================================================
--- 12. The integrated per-Moment writer. Production-inert: granted to no
+-- 13. The ONE structural completeness authority (FIX-T03B2B2-02 / -03).
+--
+--     Counting Threads, Homes and events against `establishment_count` is
+--     necessary but not sufficient: a batch is still structurally partial if an
+--     evidence row is missing, an origin member is missing, or an event, Thread
+--     and Home disagree about identity, owner, Session, establishing CU, SP,
+--     same-SP sequence, focus or path. Such state must NEVER be accepted as
+--     exact replay, and it must never be "finished".
+--
+--     This is a read-only, zero-mutation, timestamp-free classifier over ALL
+--     THREE layers of one committed-CU batch:
+--
+--       ABSENT    every layer absent - the only state a NEW batch may start from
+--       COMPLETE  commitment + B1 capture + B2 capture structurally whole
+--       PARTIAL   anything else, including layer identity mismatch
+--
+--     The SAME function is the authority for the per-batch writer's replay gate
+--     and for the finalized-exchange half-state gate, so the two can never
+--     disagree about what "complete" means.
+--
+--     Legitimately COMPLETE and worth stating: a nonzero batch whose
+--     `establishment_count` is 0 (B2 evaluated and established nothing) carries
+--     zero Thread, Home, event, evidence and origin rows; and a zero-CU batch
+--     carries no SP, no same-SP sequence and no B2 row at all.
+-- ===========================================================================
+CREATE FUNCTION public.conversation_thread_batch_state_v1(
+  p_session_id uuid,
+  p_user_id uuid,
+  p_source_turn_id uuid,
+  p_batch_id uuid
+) RETURNS text
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  commit_row public.conversation_unit_commit_batches;
+  focus_row public.conversation_focus_commit_batches;
+  thread_row public.conversation_thread_commit_batches;
+  event_row public.conversation_thread_establishment_events;
+  expected_thread uuid;
+  expected_home uuid;
+  expected_event uuid;
+  committed_units integer;
+  focus_semantics integer;
+  focus_attention integer;
+  durable_events integer;
+  durable_threads integer;
+  durable_homes integer;
+  evidence_total integer;
+  origin_total integer;
+BEGIN
+  IF p_session_id IS NULL OR p_user_id IS NULL OR p_source_turn_id IS NULL OR p_batch_id IS NULL THEN
+    RAISE EXCEPTION 'INVALID_COMMIT_IDENTITY' USING ERRCODE='22023';
+  END IF;
+  SELECT * INTO commit_row FROM public.conversation_unit_commit_batches b WHERE b.id = p_batch_id;
+  SELECT * INTO focus_row FROM public.conversation_focus_commit_batches f WHERE f.commit_batch_id = p_batch_id;
+  SELECT * INTO thread_row FROM public.conversation_thread_commit_batches t WHERE t.commit_batch_id = p_batch_id;
+
+  IF commit_row.id IS NULL AND focus_row.commit_batch_id IS NULL AND thread_row.commit_batch_id IS NULL THEN
+    RETURN 'ABSENT';
+  END IF;
+  IF commit_row.id IS NULL OR focus_row.commit_batch_id IS NULL OR thread_row.commit_batch_id IS NULL THEN
+    RETURN 'PARTIAL';
+  END IF;
+
+  -- Capture identity: all three rows describe THIS Session, owner and source.
+  IF commit_row.user_id <> p_user_id OR commit_row.session_id <> p_session_id OR commit_row.source_turn_id <> p_source_turn_id
+     OR focus_row.user_id <> p_user_id OR focus_row.session_id <> p_session_id OR focus_row.source_turn_id <> p_source_turn_id
+     OR thread_row.user_id <> p_user_id OR thread_row.session_id <> p_session_id OR thread_row.source_turn_id <> p_source_turn_id
+     OR focus_row.unit_count <> commit_row.unit_count OR thread_row.unit_count <> commit_row.unit_count
+     OR thread_row.establishment_count < 0 OR thread_row.establishment_count > commit_row.unit_count THEN
+    RETURN 'PARTIAL';
+  END IF;
+
+  -- Commitment layer.
+  SELECT count(*) INTO committed_units FROM public.conversation_units cu WHERE cu.commit_batch_id = p_batch_id;
+  IF committed_units <> commit_row.unit_count THEN RETURN 'PARTIAL'; END IF;
+
+  -- B1 layer: one semantic bundle and one attention event per CU, each
+  -- agreeing with its own committed CU.
+  SELECT count(*) INTO focus_semantics
+    FROM public.conversation_unit_focus_semantics s
+    JOIN public.conversation_units cu ON cu.id = s.cu_id
+   WHERE s.focus_commit_batch_id = p_batch_id AND cu.commit_batch_id = p_batch_id
+     AND s.session_position = cu.session_position AND s.session_id = cu.session_id AND s.user_id = cu.user_id;
+  SELECT count(*) INTO focus_attention
+    FROM public.conversation_emerging_focus_attention_events e
+    JOIN public.conversation_units cu ON cu.id = e.cu_id
+   WHERE cu.commit_batch_id = p_batch_id AND e.session_position = cu.session_position;
+  IF focus_semantics <> commit_row.unit_count OR focus_attention <> commit_row.unit_count THEN
+    RETURN 'PARTIAL';
+  END IF;
+
+  -- B2 layer: exactly `establishment_count` events, Threads and Homes belong to
+  -- this batch - no missing establishment and no EXTRA durable establishment.
+  SELECT count(*) INTO durable_events
+    FROM public.conversation_thread_establishment_events ev WHERE ev.commit_batch_id = p_batch_id;
+  SELECT count(*) INTO durable_threads
+    FROM public.conversation_threads t
+    JOIN public.conversation_units cu ON cu.id = t.established_cu_id
+   WHERE cu.commit_batch_id = p_batch_id;
+  SELECT count(*) INTO durable_homes
+    FROM public.conversation_thread_homes h
+    JOIN public.conversation_units cu ON cu.id = h.established_cu_id
+   WHERE cu.commit_batch_id = p_batch_id;
+  IF durable_events <> thread_row.establishment_count
+     OR durable_threads <> thread_row.establishment_count
+     OR durable_homes <> thread_row.establishment_count THEN
+    RETURN 'PARTIAL';
+  END IF;
+
+  FOR event_row IN
+    SELECT ev.* FROM public.conversation_thread_establishment_events ev
+     WHERE ev.commit_batch_id = p_batch_id ORDER BY ev.session_position
+  LOOP
+    -- One Thread, one Home and one event, coherent in every canonical column,
+    -- with the establishing CU inside this batch at the same SP.
+    IF NOT EXISTS (
+      SELECT 1
+        FROM public.conversation_threads t
+        JOIN public.conversation_thread_homes h ON h.thread_id = t.id
+        JOIN public.conversation_units cu ON cu.id = t.established_cu_id
+       WHERE t.id = event_row.thread_id
+         AND h.home_anchor_id = event_row.home_anchor_id
+         AND t.user_id = p_user_id AND h.user_id = p_user_id AND event_row.user_id = p_user_id
+         AND t.established_session_id = p_session_id AND h.established_session_id = p_session_id
+         AND event_row.session_id = p_session_id
+         AND t.established_cu_id = event_row.cu_id AND h.established_cu_id = event_row.cu_id
+         AND t.established_sp = event_row.session_position AND h.established_sp = event_row.session_position
+         AND t.established_event_sequence = 2 AND h.established_event_sequence = 2
+         AND event_row.same_sp_event_sequence = 2
+         AND t.grounding_emerging_focus_id = event_row.emerging_focus_id
+         AND t.establishment_path = event_row.establishment_path
+         AND h.address_scheme = 'QANDEEL_OSDAP_V1'
+         AND h.placement_engine_version = 'canonical-home-placement-engine-v1'
+         AND cu.commit_batch_id = p_batch_id
+         AND cu.session_position = event_row.session_position
+         AND cu.session_id = p_session_id AND cu.user_id = p_user_id) THEN
+      RETURN 'PARTIAL';
+    END IF;
+
+    -- The stored identities are the DERIVED canonical ones, not merely valid UUIDs.
+    SELECT c.thread_id, c.home_anchor_id, c.event_id INTO expected_thread, expected_home, expected_event
+      FROM public.canonical_thread_identities_v1(p_user_id, event_row.emerging_focus_id) c;
+    IF event_row.thread_id <> expected_thread
+       OR event_row.home_anchor_id <> expected_home
+       OR event_row.event_id <> expected_event THEN
+      RETURN 'PARTIAL';
+    END IF;
+
+    -- Evidence: at least one row, contiguous ordinals from 0, exactly one
+    -- ESTABLISHING_CU and it is the final row and the establishing CU itself.
+    SELECT count(*) INTO evidence_total
+      FROM public.conversation_thread_establishment_evidence ev2 WHERE ev2.thread_id = event_row.thread_id;
+    IF evidence_total < 1 THEN RETURN 'PARTIAL'; END IF;
+    IF (SELECT min(ev2.evidence_ordinal) FROM public.conversation_thread_establishment_evidence ev2
+         WHERE ev2.thread_id = event_row.thread_id) <> 0
+       OR (SELECT max(ev2.evidence_ordinal) FROM public.conversation_thread_establishment_evidence ev2
+            WHERE ev2.thread_id = event_row.thread_id) <> evidence_total - 1 THEN
+      RETURN 'PARTIAL';
+    END IF;
+    IF (SELECT count(*) FROM public.conversation_thread_establishment_evidence ev2
+         WHERE ev2.thread_id = event_row.thread_id AND ev2.evidence_role = 'ESTABLISHING_CU') <> 1 THEN
+      RETURN 'PARTIAL';
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM public.conversation_thread_establishment_evidence ev2
+       WHERE ev2.thread_id = event_row.thread_id AND ev2.evidence_role = 'ESTABLISHING_CU'
+         AND ev2.evidence_ordinal = evidence_total - 1
+         AND ev2.cu_id = event_row.cu_id AND ev2.cu_sp = event_row.session_position
+         AND ev2.session_id = p_session_id AND ev2.user_id = p_user_id) THEN
+      RETURN 'PARTIAL';
+    END IF;
+    -- Every prior evidence CU is an earlier committed CU of the SAME Session
+    -- and owner whose own canonical B1 attention is bound to the SAME focus.
+    IF EXISTS (
+      SELECT 1 FROM public.conversation_thread_establishment_evidence ev2
+        LEFT JOIN public.conversation_units cu2 ON cu2.id = ev2.cu_id
+       WHERE ev2.thread_id = event_row.thread_id AND ev2.evidence_role = 'PRIOR_EVIDENCE'
+         AND (cu2.id IS NULL
+              OR cu2.session_id <> p_session_id OR cu2.user_id <> p_user_id
+              OR ev2.session_id <> p_session_id OR ev2.user_id <> p_user_id
+              OR ev2.cu_sp <> cu2.session_position
+              OR cu2.session_position >= event_row.session_position
+              OR NOT EXISTS (
+                   SELECT 1 FROM public.conversation_emerging_focus_attention_events a
+                    WHERE a.cu_id = ev2.cu_id
+                      AND a.attention_kind IN ('START_NEW_FOCUS', 'ATTEND_EXISTING_FOCUS')
+                      AND a.emerging_focus_id = event_row.emerging_focus_id))) THEN
+      RETURN 'PARTIAL';
+    END IF;
+
+    -- Conversational Origin provenance: the frozen cardinality of the recorded
+    -- state, contiguous ordinals, canonical textual order, and every member an
+    -- already-canonical Thread of the SAME user world that already holds a Home.
+    SELECT count(*) INTO origin_total
+      FROM public.conversation_thread_origin_members m WHERE m.thread_id = event_row.thread_id;
+    IF (event_row.origin_state = 'NONE' AND origin_total <> 0)
+       OR (event_row.origin_state = 'RESOLVED' AND origin_total <> 1)
+       OR (event_row.origin_state IN ('MULTIPLE', 'AMBIGUOUS') AND origin_total < 2) THEN
+      RETURN 'PARTIAL';
+    END IF;
+    IF origin_total > 0 THEN
+      IF (SELECT min(m.origin_member_ordinal) FROM public.conversation_thread_origin_members m
+           WHERE m.thread_id = event_row.thread_id) <> 0
+         OR (SELECT max(m.origin_member_ordinal) FROM public.conversation_thread_origin_members m
+              WHERE m.thread_id = event_row.thread_id) <> origin_total - 1 THEN
+        RETURN 'PARTIAL';
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM public.conversation_thread_origin_members m
+         WHERE m.thread_id = event_row.thread_id
+           AND (m.origin_thread_id = event_row.thread_id
+                OR NOT EXISTS (
+                     SELECT 1 FROM public.conversation_threads ot
+                       JOIN public.conversation_thread_homes oh ON oh.thread_id = ot.id
+                      WHERE ot.id = m.origin_thread_id AND ot.user_id = p_user_id))) THEN
+        RETURN 'PARTIAL';
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM (
+          SELECT m.origin_member_ordinal AS stored,
+                 row_number() OVER (ORDER BY m.origin_thread_id::text COLLATE "C") - 1 AS canonical
+            FROM public.conversation_thread_origin_members m
+           WHERE m.thread_id = event_row.thread_id) ranked
+         WHERE ranked.stored <> ranked.canonical) THEN
+        RETURN 'PARTIAL';
+      END IF;
+    END IF;
+  END LOOP;
+
+  RETURN 'COMPLETE';
+END;$$;
+-- ===========================================================================
+-- 14. The integrated per-Moment writer. Production-inert: granted to no
 --     application role. It preserves the ENTIRE 0064 / 0065 commitment
 --     contract and the ENTIRE 0066 semantic contract, and adds, INSIDE the
 --     same clock-locked transaction, the optional B2 layer at the SAME SP.
@@ -1225,17 +1615,14 @@ DECLARE
   focus_fingerprint bytea;
   thread_canonical jsonb;
   thread_fingerprint bytea;
-  commit_batch_exists boolean;
-  focus_batch_exists boolean;
-  thread_batch_exists boolean;
+  batch_state text;
+  canonical_thread_id uuid;
+  replay_thread_id uuid;
   world_thread_ids text[];
   world_x numeric[];
   world_y numeric[];
   origin_ids text[];
   placement record;
-  stored_threads integer;
-  stored_homes integer;
-  stored_events integer;
 BEGIN
   ---------------------------------------------------------------------------
   -- COMMON SETUP. Identical structure and identical rejections to 0066, plus
@@ -1450,16 +1837,20 @@ BEGIN
     'thread_units', p_thread_units);
   thread_fingerprint := sha256(convert_to(thread_canonical::text, 'UTF8'));
 
-  SELECT EXISTS (SELECT 1 FROM public.conversation_unit_commit_batches b WHERE b.id = p_batch_id) INTO commit_batch_exists;
-  SELECT EXISTS (SELECT 1 FROM public.conversation_focus_commit_batches f WHERE f.commit_batch_id = p_batch_id) INTO focus_batch_exists;
-  SELECT EXISTS (SELECT 1 FROM public.conversation_thread_commit_batches t WHERE t.commit_batch_id = p_batch_id) INTO thread_batch_exists;
+  -- FIX-T03B2B2-02 / -03: the ONE structural completeness authority decides
+  -- which path this batch is eligible for. ABSENT is the only state a new
+  -- batch may start from and COMPLETE the only state a replay may rest on;
+  -- everything else - including a structurally partial B2 capture whose
+  -- evidence, origin provenance or Thread/Home/event coherence is broken - is
+  -- integrity failure, never repaired and never "finished".
+  batch_state := public.conversation_thread_batch_state_v1(p_session_id, p_user_id, p_source_turn_id, p_batch_id);
 
   ---------------------------------------------------------------------------
   -- PATH B - NEW INTEGRATED BATCH. Allowed only when NO layer of this batch
   -- exists yet: partial or legacy state is never completed from today's
   -- inference, because its SP may already be sealed.
   ---------------------------------------------------------------------------
-  IF NOT commit_batch_exists AND NOT focus_batch_exists AND NOT thread_batch_exists THEN
+  IF batch_state = 'ABSENT' THEN
     SELECT COALESCE(MAX(cu.source_span_end), 0), COALESCE(MAX(cu.ordinal_within_turn) + 1, 0)
       INTO frontier, next_ordinal
       FROM public.conversation_units cu WHERE cu.source_turn_id = turn_row.id;
@@ -1574,11 +1965,15 @@ BEGIN
           FROM jsonb_array_elements(decision -> 'origin_thread_ids') WITH ORDINALITY AS m(value, ordinality);
 
         -- The database is the ONLY permanent-placement authority: the caller
-        -- supplies no coordinate, and the placement is recomputed here.
+        -- supplies no coordinate, and the placement is recomputed here. The
+        -- placement entropy is the DERIVED canonical Thread identity, never a
+        -- payload string, so no caller can steer geography (FIX-T03B2B2-01).
+        SELECT c.thread_id INTO canonical_thread_id
+          FROM public.canonical_thread_identities_v1(turn_row.user_id, (decision ->> 'emerging_focus_id')::uuid) c;
         SELECT p.placement_x, p.placement_y, p.placement_attempt, p.base_x, p.base_y, p.world_fingerprint, p.origin_fingerprint
           INTO placement
           FROM public.compute_canonical_home_placement_v1(
-                 turn_row.user_id::text, (decision ->> 'thread_id'), (decision ->> 'origin_state'),
+                 turn_row.user_id::text, canonical_thread_id::text, (decision ->> 'origin_state'),
                  origin_ids, world_thread_ids, world_x, world_y) p;
 
         -- The ONE same-SP sequence authority, at the SP this CU was born at.
@@ -1611,9 +2006,9 @@ BEGIN
   -- B1 truth but no B2 capture is PARTIAL / LEGACY state whose SP may already
   -- be sealed, and it is never upgraded, backfilled or completed here.
   ---------------------------------------------------------------------------
-  IF NOT (commit_batch_exists AND focus_batch_exists AND thread_batch_exists) THEN
+  IF batch_state <> 'COMPLETE' THEN
     RAISE EXCEPTION 'THREAD_CAPTURE_BATCH_INTEGRITY' USING ERRCODE='55000',
-      DETAIL='This commitment batch exists without its complete semantic capture; partial or legacy state is never repaired, upgraded or backfilled from today''s inference.';
+      DETAIL='This commitment batch is structurally partial at the commitment, B1 or B2 layer; partial, corrupted or legacy state is never repaired, upgraded, replayed or backfilled from today''s inference.';
   END IF;
 
   -- The frozen T-03B1b1 writer verifies the CU and B1 layers tuple by tuple
@@ -1643,21 +2038,34 @@ BEGIN
       DETAIL='A Thread capture batch identity is immutable: the same batch id can never be replayed with a different decision, path, evidence, grounding, identity, origin or provenance.';
   END IF;
 
-  SELECT count(*) INTO stored_events
-    FROM public.conversation_thread_establishment_events e
-   WHERE e.commit_batch_id = p_batch_id;
-  SELECT count(*) INTO stored_threads
-    FROM public.conversation_threads t
-    JOIN public.conversation_thread_establishment_events e ON e.thread_id = t.id
-   WHERE e.commit_batch_id = p_batch_id;
-  SELECT count(*) INTO stored_homes
-    FROM public.conversation_thread_homes h
-    JOIN public.conversation_thread_establishment_events e ON e.thread_id = h.thread_id
-   WHERE e.commit_batch_id = p_batch_id;
-  IF stored_events <> establishment_count OR stored_threads <> establishment_count OR stored_homes <> establishment_count THEN
-    RAISE EXCEPTION 'THREAD_CAPTURE_BATCH_INTEGRITY' USING ERRCODE='55000',
-      DETAIL='The stored Thread establishments of this batch are incomplete or disagree with their capture row; a Thread without its Home is not repairable state.';
-  END IF;
+  -- The structural completeness of every layer was already proved above by the
+  -- ONE authority. What remains is payload-level replay identity beyond the
+  -- fingerprint: the stored evidence rows and Conversational Origin members
+  -- must be exactly the ones this canonical payload names, in the same order,
+  -- so a corrupted, substituted or reordered provenance row can never pass as
+  -- an exact replay (FIX-T03B2B2-03).
+  FOR idx IN 1 .. unit_count LOOP
+    decision := p_thread_units -> (idx - 1);
+    IF (decision ->> 'decision') <> 'ESTABLISH_THREAD' THEN CONTINUE; END IF;
+    SELECT c.thread_id INTO replay_thread_id
+      FROM public.canonical_thread_identities_v1(turn_row.user_id, (decision ->> 'emerging_focus_id')::uuid) c;
+    IF (SELECT COALESCE(array_agg(ev.cu_id ORDER BY ev.evidence_ordinal), ARRAY[]::uuid[])
+          FROM public.conversation_thread_establishment_evidence ev WHERE ev.thread_id = replay_thread_id)
+       IS DISTINCT FROM
+       (SELECT COALESCE(array_agg((e.value ->> 'cu_id')::uuid ORDER BY (e.value ->> 'evidence_ordinal')::integer), ARRAY[]::uuid[])
+          FROM jsonb_array_elements(decision -> 'evidence') AS e(value)) THEN
+      RAISE EXCEPTION 'THREAD_CAPTURE_BATCH_INTEGRITY' USING ERRCODE='55000',
+        DETAIL='The stored establishment evidence of this batch is not the evidence this canonical payload names; a missing, extra, substituted or reordered evidence row never replays.';
+    END IF;
+    IF (SELECT COALESCE(array_agg(m.origin_thread_id ORDER BY m.origin_member_ordinal), ARRAY[]::uuid[])
+          FROM public.conversation_thread_origin_members m WHERE m.thread_id = replay_thread_id)
+       IS DISTINCT FROM
+       (SELECT COALESCE(array_agg((o.value #>> '{}')::uuid ORDER BY o.ordinality), ARRAY[]::uuid[])
+          FROM jsonb_array_elements(decision -> 'origin_thread_ids') WITH ORDINALITY AS o(value, ordinality)) THEN
+      RAISE EXCEPTION 'THREAD_CAPTURE_BATCH_INTEGRITY' USING ERRCODE='55000',
+        DETAIL='The stored Conversational Origin provenance of this batch is not the membership this canonical payload names; no member may be missing, extra or reordered.';
+    END IF;
+  END LOOP;
 
   RETURN QUERY SELECT cu.* FROM public.conversation_units cu
     WHERE cu.commit_batch_id = p_batch_id ORDER BY cu.ordinal_within_turn;
@@ -1665,7 +2073,7 @@ BEGIN
 END;$$;
 
 -- ===========================================================================
--- 13. The atomic finalized-exchange coordinator. Production-inert: granted to
+-- 15. The atomic finalized-exchange coordinator. Production-inert: granted to
 --     no application role.
 --
 --     Exactly the 0066 shape, extended by the B2 payloads and provenance:
@@ -1721,6 +2129,8 @@ DECLARE
   clock_row public.session_semantic_clocks;
   user_turn_row public.conversation_turns;
   assistant_turn_row public.conversation_turns;
+  user_state text;
+  assistant_state text;
   both_exist boolean;
 BEGIN
   IF p_session_id IS NULL OR p_user_id IS NULL
@@ -1764,10 +2174,31 @@ BEGIN
       DETAIL='A finalized exchange is one COMPLETED USER source turn and the COMPLETED ASSISTANT turn finalized as its response, in that order.';
   END IF;
 
-  -- Stale-context protection: after the clock lock, before any canonical
-  -- mutation. An exact replay of an already-committed pair needs no token.
-  both_exist := EXISTS (SELECT 1 FROM public.conversation_unit_commit_batches b WHERE b.id = p_user_batch_id)
-            AND EXISTS (SELECT 1 FROM public.conversation_unit_commit_batches b WHERE b.id = p_assistant_batch_id);
+  -- FIX-T03B2B2-02: classify BOTH halves at all three layers - commitment, B1
+  -- capture, B2 capture - through the ONE completeness authority, BEFORE the
+  -- stale-token logic and BEFORE either writer is invoked. Exactly two
+  -- finalized-exchange states are legitimate:
+  --
+  --   ABSENT   + ABSENT    a NEW exchange; the expected token must match
+  --   COMPLETE + COMPLETE  an exact replay candidate; the token is irrelevant
+  --                        and each writer still proves its own payload
+  --
+  -- Every other combination - one half canonical and the other absent or
+  -- structurally partial - fails closed here. A stale-token failure is NOT a
+  -- substitute for this gate: with a CURRENT token an asymmetric exchange
+  -- would otherwise replay the stored half and CREATE the missing one, which
+  -- the frozen contract forbids ("never finish the second half").
+  user_state := public.conversation_thread_batch_state_v1(p_session_id, p_user_id, p_user_source_turn_id, p_user_batch_id);
+  assistant_state := public.conversation_thread_batch_state_v1(p_session_id, p_user_id, p_assistant_source_turn_id, p_assistant_batch_id);
+  IF NOT ((user_state = 'ABSENT' AND assistant_state = 'ABSENT')
+          OR (user_state = 'COMPLETE' AND assistant_state = 'COMPLETE')) THEN
+    RAISE EXCEPTION 'THREAD_CAPTURE_BATCH_INTEGRITY' USING ERRCODE='55000',
+      DETAIL='A finalized exchange is committed as a whole or not at all: one half canonical while the other is absent or structurally partial is never completed, replayed or repaired.';
+  END IF;
+
+  -- Stale-context protection: after the clock lock and the half-state gate,
+  -- before any canonical mutation. An exact replay needs no token.
+  both_exist := user_state = 'COMPLETE';
   IF NOT both_exist
      AND (clock_row.current_sp IS DISTINCT FROM p_expected_current_sp
           OR clock_row.same_sp_event_sequence IS DISTINCT FROM p_expected_same_sp_event_sequence) THEN
@@ -1808,7 +2239,7 @@ BEGIN
 END;$$;
 
 -- ===========================================================================
--- 14. Ownership, search_path hardening and the PRODUCTION-INERT posture. The
+-- 16. Ownership, search_path hardening and the PRODUCTION-INERT posture. The
 --     new tables are unreachable by every application role; the new writer,
 --     coordinator and every internal helper are executable by NO application
 --     role; the T-03A2 same-SP seam stays internal; and the existing T-03A2
@@ -1838,6 +2269,10 @@ REVOKE ALL ON TABLE
   FROM PUBLIC, anon, authenticated;
 
 ALTER FUNCTION public.reject_conversation_thread_mutation_v1() OWNER TO postgres;
+ALTER FUNCTION public.canonical_sha1_v1(bytea) OWNER TO postgres;
+ALTER FUNCTION public.canonical_uuid_v5_v1(uuid,text) OWNER TO postgres;
+ALTER FUNCTION public.canonical_thread_identities_v1(uuid,uuid) OWNER TO postgres;
+ALTER FUNCTION public.conversation_thread_batch_state_v1(uuid,uuid,uuid,uuid) OWNER TO postgres;
 ALTER FUNCTION public.osdap_floor_div_v1(numeric,numeric) OWNER TO postgres;
 ALTER FUNCTION public.osdap_unsigned_v1(bytea,integer,integer) OWNER TO postgres;
 ALTER FUNCTION public.osdap_serialize_homes_v1(text[],numeric[],numeric[]) OWNER TO postgres;
@@ -1856,6 +2291,10 @@ ALTER FUNCTION public.commit_finalized_exchange_with_focus_and_thread_v1(uuid,uu
   OWNER TO postgres;
 
 REVOKE ALL ON FUNCTION public.reject_conversation_thread_mutation_v1() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.canonical_sha1_v1(bytea) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.canonical_uuid_v5_v1(uuid,text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.canonical_thread_identities_v1(uuid,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.conversation_thread_batch_state_v1(uuid,uuid,uuid,uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.osdap_floor_div_v1(numeric,numeric) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.osdap_unsigned_v1(bytea,integer,integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.osdap_serialize_homes_v1(text[],numeric[],numeric[]) FROM PUBLIC, anon, authenticated;
@@ -1879,6 +2318,10 @@ DO $$BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN
        || 'public.conversation_thread_establishment_evidence, public.conversation_thread_origin_members, '
        || 'public.conversation_thread_commit_batches FROM service_role';
   EXECUTE 'REVOKE ALL ON FUNCTION public.reject_conversation_thread_mutation_v1() FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.canonical_sha1_v1(bytea) FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.canonical_uuid_v5_v1(uuid,text) FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.canonical_thread_identities_v1(uuid,uuid) FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.conversation_thread_batch_state_v1(uuid,uuid,uuid,uuid) FROM service_role';
   EXECUTE 'REVOKE ALL ON FUNCTION public.osdap_floor_div_v1(numeric,numeric) FROM service_role';
   EXECUTE 'REVOKE ALL ON FUNCTION public.osdap_unsigned_v1(bytea,integer,integer) FROM service_role';
   EXECUTE 'REVOKE ALL ON FUNCTION public.osdap_serialize_homes_v1(text[],numeric[],numeric[]) FROM service_role';
@@ -1898,7 +2341,7 @@ DO $$BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN
 END IF;END$$;
 
 -- ===========================================================================
--- 15. Terminal self-assertions. The migration refuses to deploy a substrate
+-- 17. Terminal self-assertions. The migration refuses to deploy a substrate
 --     that is production-reachable, that disturbed the T-03A2 activation or
 --     the T-03B1b1 posture, that backfilled anything, or that carries a
 --     lifecycle, LF, score, label, merge or parent column.
@@ -1911,6 +2354,11 @@ DECLARE
   thread_persist constant text := 'public.persist_conversation_thread_establishment_v1(public.conversation_units,uuid,jsonb,bigint,numeric,numeric,integer,numeric,numeric,bytea,bytea)';
   placement_engine constant text := 'public.compute_canonical_home_placement_v1(text,text,text,text[],text[],numeric[],numeric[])';
   placement_search constant text := 'public.osdap_search_admissible_placement_v1(text,text,bytea,bytea,numeric,numeric,numeric[],numeric[])';
+  identity_authority constant text := 'public.canonical_thread_identities_v1(uuid,uuid)';
+  batch_state constant text := 'public.conversation_thread_batch_state_v1(uuid,uuid,uuid,uuid)';
+  uuid_v5 constant text := 'public.canonical_uuid_v5_v1(uuid,text)';
+  sha1 constant text := 'public.canonical_sha1_v1(bytea)';
+  rfc4122_url_namespace constant uuid := '6ba7b811-9dad-11d1-80b4-00c04fd430c8';
   focus_writer constant text := 'public.commit_conversation_units_with_focus_v1(uuid,uuid,uuid,uuid,jsonb,text,text,text,text,text,jsonb,text,text,text,text,text,integer)';
   focus_coordinator constant text := 'public.commit_finalized_exchange_with_focus_v1(uuid,uuid,uuid,uuid,jsonb,jsonb,uuid,uuid,jsonb,jsonb,text,text,text,text,text,text,text,text,text,text,integer,integer,bigint)';
   legacy_producer constant text := 'public.commit_conversation_units_v1(uuid,uuid,uuid,uuid,jsonb,text,text,text,text,text)';
@@ -1922,7 +2370,9 @@ DECLARE
     'public.conversation_thread_homes', 'public.conversation_thread_establishment_events',
     'public.conversation_thread_establishment_evidence', 'public.conversation_thread_origin_members',
     'public.conversation_thread_commit_batches'];
-  thread_functions constant text[] := ARRAY[thread_writer, thread_coordinator, thread_validator, thread_persist, placement_engine, placement_search];
+  thread_functions constant text[] := ARRAY[thread_writer, thread_coordinator, thread_validator, thread_persist,
+    placement_engine, placement_search, identity_authority, batch_state];
+  internal_helpers constant text[] := ARRAY[uuid_v5, sha1];
   target_role text;
   target_table text;
   target_privilege text;
@@ -1991,7 +2441,7 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles r WHERE r.rolname = target_role) THEN
       -- PRODUCTION-INERT: no application role executes anything new, and the
       -- T-03B1b1 writer / coordinator and the T-03A2 seam stay ungranted.
-      FOREACH target_function IN ARRAY thread_functions || ARRAY[focus_writer, focus_coordinator, same_sp_helper] LOOP
+      FOREACH target_function IN ARRAY thread_functions || internal_helpers || ARRAY[focus_writer, focus_coordinator, same_sp_helper] LOOP
         IF has_function_privilege(target_role, target_function, 'EXECUTE') THEN
           RAISE EXCEPTION 'T-03B2b2 is production-inert: % must not execute %', target_role, target_function;
         END IF;
@@ -2017,6 +2467,29 @@ BEGIN
       END LOOP;
     END IF;
   END LOOP;
+
+  -- FIX-T03B2B2-01: the frozen namespace literals the identity authority
+  -- carries must be exactly what the deployed derivation produces from their
+  -- documented URIs, and the derivation itself must reproduce the canonical
+  -- RFC 4122 appendix vector. A drifting namespace would silently re-address
+  -- every future Thread, Home and event.
+  IF public.canonical_uuid_v5_v1(rfc4122_url_namespace, 'https://qandeel.app/world/thread/v1')
+       <> '973d2e95-15d7-593c-953d-84ee94be343c'::uuid
+     OR public.canonical_uuid_v5_v1(rfc4122_url_namespace, 'https://qandeel.app/world/home-anchor/v1')
+       <> 'ca3acc01-e866-5d84-a15a-5be440c1919e'::uuid
+     OR public.canonical_uuid_v5_v1(rfc4122_url_namespace, 'https://qandeel.app/runtime/thread-established/v1')
+       <> '47cd6b25-dbf8-5fd3-941f-eff9d2386990'::uuid
+     OR public.canonical_uuid_v5_v1('6ba7b810-9dad-11d1-80b4-00c04fd430c8'::uuid, 'www.example.org')
+       <> '74738ff5-5367-5958-9aee-98fffdcd1876'::uuid
+     OR encode(public.canonical_sha1_v1(convert_to('abc', 'UTF8')), 'hex')
+       <> 'a9993e364706816aba3e25717850c26c9cd0d89d' THEN
+    RAISE EXCEPTION 'T-03B2b2 requires the exact RFC 4122 version-5 derivation and its frozen namespaces';
+  END IF;
+  IF (SELECT c.thread_id FROM public.canonical_thread_identities_v1(
+        '11111111-2222-4333-8444-555555555555'::uuid, '4ef8538d-ddda-5e11-b7d9-052be85de59a'::uuid) c)
+     <> 'afc4fd81-fe54-5738-9545-e1053044d919'::uuid THEN
+    RAISE EXCEPTION 'T-03B2b2 requires the frozen canonical Thread identity vector';
+  END IF;
 
   -- The clock itself is unchanged: still exactly SP and the internal sequence.
   IF (SELECT array_agg(c.column_name::text ORDER BY c.column_name) FROM information_schema.columns c

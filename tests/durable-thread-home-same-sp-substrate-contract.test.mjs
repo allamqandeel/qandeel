@@ -50,7 +50,7 @@ const HOME_DIR = `${THREAD_DIR}/home-placement`;
 const MIGRATION = 'database/migrations/0068_durable_thread_home_same_sp_substrate_v1.sql';
 const migration = read(MIGRATION);
 const executable = stripSql(migration);
-const body = stripSql(migration.slice(0, migration.indexOf('-- 15. Terminal self-assertions.')));
+const body = stripSql(migration.slice(0, migration.indexOf('-- 17. Terminal self-assertions.')));
 const verifier = read('database/verify-migration-0068.mjs');
 const payloadTypes = stripComments(read(`${THREAD_DIR}/durable-thread-payload.types.ts`));
 const rawCanonicalizer = read(`${THREAD_DIR}/durable-thread-canonicalizer.ts`);
@@ -221,14 +221,14 @@ test('QANDEEL_OSDAP_V1 is mirrored in SQL with its exact frozen constants, and t
     'the pinned attempt of every golden vector is replayed, including the dense shell escalation');
   // No caller-authored geography anywhere: not in a signature, not in a payload.
   const writer = migration.slice(migration.indexOf('CREATE FUNCTION public.commit_conversation_units_with_focus_and_thread_v1'),
-    migration.indexOf('-- 13. The atomic finalized-exchange coordinator'));
+    migration.indexOf('-- 15. The atomic finalized-exchange coordinator'));
   const coordinator = migration.slice(migration.indexOf('CREATE FUNCTION public.commit_finalized_exchange_with_focus_and_thread_v1'),
-    migration.indexOf('-- 14. Ownership, search_path hardening'));
+    migration.indexOf('-- 16. Ownership, search_path hardening'));
   for (const [label, signature] of [['writer', writer.slice(0, writer.indexOf(') RETURNS'))], ['coordinator', coordinator.slice(0, coordinator.indexOf(') RETURNS'))]]) {
     assert.doesNotMatch(signature, /placement|coordinate|fingerprint|attempt|_x |_y |scheme/u, `the ${label} accepts no caller-authored placement`);
     assert.doesNotMatch(signature, /p_same_sp_event_sequence\b|p_session_position\b|p_sp\b|p_live_head/u, `the ${label} accepts no caller-authored SP or sequence`);
   }
-  assert.match(writer, /public\.compute_canonical_home_placement_v1\(\s*turn_row\.user_id::text, \(decision ->> 'thread_id'\), \(decision ->> 'origin_state'\),\s*origin_ids, world_thread_ids, world_x, world_y\)/u,
+  assert.match(writer, /public\.compute_canonical_home_placement_v1\(\s*turn_row\.user_id::text, canonical_thread_id::text, \(decision ->> 'origin_state'\),\s*origin_ids, world_thread_ids, world_x, world_y\)/u,
     'the placement is computed by the database from the world it actually holds');
   assert.match(writer, /FROM public\.conversation_thread_homes h\s*\n\s*WHERE h\.user_id = turn_row\.user_id AND h\.address_scheme = authority_row\.address_scheme/u,
     'the world is read under the lock, from the canonical Home table');
@@ -238,7 +238,7 @@ test('QANDEEL_OSDAP_V1 is mirrored in SQL with its exact frozen constants, and t
 
 test('AF66-01 holds with exactly one user-world lock, and B1 sequence 1 precedes an optional B2 sequence 2', () => {
   const writer = migration.slice(migration.indexOf('CREATE FUNCTION public.commit_conversation_units_with_focus_and_thread_v1'),
-    migration.indexOf('-- 13. The atomic finalized-exchange coordinator'));
+    migration.indexOf('-- 15. The atomic finalized-exchange coordinator'));
   const clock = writer.indexOf('FROM public.session_semantic_clocks c');
   const turn = writer.indexOf('FROM public.conversation_turns t');
   const focusPersist = writer.indexOf('persist_conversation_unit_focus_semantics_v1(');
@@ -265,9 +265,96 @@ test('AF66-01 holds with exactly one user-world lock, and B1 sequence 1 precedes
   assert.doesNotMatch(stripProse(body), /live_focus|LIVE_FOCUS|liveFocus|effective_lf|live_focus_transitions/u, 'no Live Focus exists in this slice');
 });
 
+test('the database is the canonical identity authority: UUID-shaped is never accepted as sufficient', () => {
+  // The derivation lives in SQL, with no extension and no new dependency, and
+  // reproduces the TypeScript canonicalizer exactly.
+  assert.match(migration, /CREATE FUNCTION public\.canonical_sha1_v1\(p_message bytea\)/u);
+  assert.match(migration, /CREATE FUNCTION public\.canonical_uuid_v5_v1\(p_namespace uuid, p_name text\)/u);
+  assert.match(migration, /CREATE FUNCTION public\.canonical_thread_identities_v1\(/u);
+  assert.doesNotMatch(executable, /CREATE EXTENSION|pgcrypto/u, 'no extension is introduced for the derivation');
+  assert.match(migration, /thread_namespace constant uuid := '973d2e95-15d7-593c-953d-84ee94be343c';/u);
+  assert.match(migration, /home_namespace constant uuid := 'ca3acc01-e866-5d84-a15a-5be440c1919e';/u);
+  assert.match(migration, /event_namespace constant uuid := '47cd6b25-dbf8-5fd3-941f-eff9d2386990';/u);
+  assert.match(migration, /public\.canonical_uuid_v5_v1\(thread_namespace, p_user_id::text \|\| ':' \|\| p_emerging_focus_id::text\)/u,
+    'the SQL Thread derivation is the TypeScript one: uuidV5(namespace, userId + ":" + emergingFocusId)');
+  assert.match(canonicalizer, /uuidV5\(THREAD_NAMESPACE, `\$\{userId\}:\$\{emergingFocusId\}`\)/u, 'and the TypeScript side is unchanged');
+  // The migration refuses to deploy unless SQL reproduces the frozen values.
+  for (const frozen of ['973d2e95-15d7-593c-953d-84ee94be343c', 'ca3acc01-e866-5d84-a15a-5be440c1919e',
+    '47cd6b25-dbf8-5fd3-941f-eff9d2386990', '74738ff5-5367-5958-9aee-98fffdcd1876',
+    'a9993e364706816aba3e25717850c26c9cd0d89d', 'afc4fd81-fe54-5738-9545-e1053044d919']) {
+    assert.ok(migration.includes(frozen), `the migration self-assertion pins ${frozen}`);
+    assert.ok(verifier.includes(frozen) || frozen === 'a9993e364706816aba3e25717850c26c9cd0d89d',
+      'the verifier replays the same frozen values against real PostgreSQL');
+  }
+  // Shape alone is explicitly no longer sufficient.
+  const validator = migration.slice(migration.indexOf('CREATE FUNCTION public.validate_conversation_thread_decision_v1'),
+    migration.indexOf('-- 12. Persisting ONE establishment'));
+  assert.match(validator, /FROM public\.canonical_thread_identities_v1\(p_cu\.user_id, focus_id\) c;/u);
+  assert.match(validator, /IF thread_id <> expected_thread_id[\s\S]{0,200}RAISE EXCEPTION 'INVALID_THREAD_IDENTITY'/u);
+  assert.doesNotMatch(validator, /IF thread_id = home_anchor_id OR thread_id = event_id/u,
+    'mutual distinctness is not canonical identity proof');
+  // The verifier proves every valid-but-wrong substitution is refused BEFORE
+  // the world lock, and that OSDAP consumed the derived identity.
+  for (const proof of ['INVALID_THREAD_IDENTITY', 'no spatial authority row was created',
+    'OSDAP received the validated canonical Thread identity as its placement entropy',
+    'the RFC 4122 version-5 reference vector is reproduced']) {
+    assert.ok(verifier.includes(proof), `the verifier proves: ${proof}`);
+  }
+});
+
+test('the finalized exchange classifies BOTH halves through the ONE completeness authority before any writer', () => {
+  assert.match(migration, /CREATE FUNCTION public\.conversation_thread_batch_state_v1\(/u);
+  assert.match(migration, /RETURNS text\s*\nLANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''/u,
+    'the completeness authority is read-only and hardened');
+  const writer = migration.slice(migration.indexOf('CREATE FUNCTION public.commit_conversation_units_with_focus_and_thread_v1'),
+    migration.indexOf('-- 15. The atomic finalized-exchange coordinator'));
+  const coordinator = migration.slice(migration.indexOf('CREATE FUNCTION public.commit_finalized_exchange_with_focus_and_thread_v1'),
+    migration.indexOf('-- 16. Ownership, search_path hardening'));
+  // The SAME authority serves the per-batch writer and the exchange gate.
+  assert.equal((migration.match(/public\.conversation_thread_batch_state_v1\(p_session_id/gu) ?? []).length, 3,
+    'the same authority is called once by the writer and once per finalized-exchange half');
+  assert.match(writer, /batch_state := public\.conversation_thread_batch_state_v1\(p_session_id, p_user_id, p_source_turn_id, p_batch_id\);/u);
+  assert.match(writer, /IF batch_state = 'ABSENT' THEN/u);
+  assert.match(writer, /IF batch_state <> 'COMPLETE' THEN[\s\S]{0,400}THREAD_CAPTURE_BATCH_INTEGRITY/u);
+  assert.match(coordinator, /IF NOT \(\(user_state = 'ABSENT' AND assistant_state = 'ABSENT'\)[\s\S]{0,200}THREAD_CAPTURE_BATCH_INTEGRITY/u);
+  const relation = coordinator.indexOf('INVALID_FINALIZED_EXCHANGE_RELATION');
+  const gate = coordinator.indexOf('user_state := public.conversation_thread_batch_state_v1');
+  const stale = coordinator.indexOf("RAISE EXCEPTION 'STALE_CONVERSATIONAL_FOCUS_CONTEXT'");
+  const write = coordinator.indexOf('public.commit_conversation_units_with_focus_and_thread_v1(');
+  assert.ok(relation < gate && gate < stale && stale < write,
+    'relation gate -> half-state gate -> token check -> BOTH writer calls');
+  assert.doesNotMatch(coordinator, /EXISTS \(SELECT 1 FROM public\.conversation_unit_commit_batches b WHERE b\.id = p_user_batch_id\)/u,
+    'replay eligibility is no longer "the commitment batch exists"');
+  // Full B2 completeness covers evidence, origin provenance and coherence.
+  const state = migration.slice(migration.indexOf('CREATE FUNCTION public.conversation_thread_batch_state_v1'),
+    migration.indexOf('-- 14. The integrated per-Moment writer'));
+  for (const rule of ['durable_events <> thread_row.establishment_count', 'evidence_total < 1',
+    "ev2.evidence_role = 'ESTABLISHING_CU') <> 1", 'ev2.evidence_ordinal = evidence_total - 1',
+    'cu2.session_position >= event_row.session_position', "event_row.origin_state = 'RESOLVED' AND origin_total <> 1",
+    "event_row.origin_state IN ('MULTIPLE', 'AMBIGUOUS') AND origin_total < 2",
+    'canonical_thread_identities_v1(p_user_id, event_row.emerging_focus_id)',
+    'h.home_anchor_id = event_row.home_anchor_id', 't.established_event_sequence = 2']) {
+    assert.ok(state.includes(rule), `structural completeness requires: ${rule}`);
+  }
+  assert.match(writer, /FROM public\.conversation_thread_establishment_evidence ev WHERE ev\.thread_id = replay_thread_id\)/u,
+    'exact replay compares stored evidence to the canonical payload');
+  assert.match(writer, /FROM public\.conversation_thread_origin_members m WHERE m\.thread_id = replay_thread_id\)/u,
+    'exact replay compares stored origin provenance to the canonical payload');
+  // The verifier proves the half-states and every corruption fixture.
+  for (const proof of ["'ABSENT', 'an untouched half classifies as ABSENT'", 'USER complete + ASSISTANT absent',
+    'ASSISTANT complete + USER absent', 'USER commitment+B1 without B2 + ASSISTANT absent',
+    'missing Home', 'missing ThreadEstablished event', 'missing evidence row', 'missing ESTABLISHING_CU evidence role',
+    'evidence naming the wrong CU', 'evidence in the wrong order', 'missing RESOLVED origin member',
+    'MULTIPLE with only one stored member is PARTIAL', 'event Home Anchor mismatch', 'event SP mismatch',
+    'event focus mismatch', 'event path mismatch', 'extra durable establishment beyond establishment_count',
+    'a nonzero batch that established nothing is COMPLETE', 'a zero-CU capture batch is COMPLETE']) {
+    assert.ok(verifier.includes(proof), `the verifier proves: ${proof}`);
+  }
+});
+
 test('there is no Thread without its Home, no relocation API, no parent origin and no merge', () => {
   const persist = migration.slice(migration.indexOf('CREATE FUNCTION public.persist_conversation_thread_establishment_v1'),
-    migration.indexOf('-- 12. The integrated per-Moment writer'));
+    migration.indexOf('-- 14. The integrated per-Moment writer'));
   assert.match(persist, /INSERT INTO public\.conversation_threads[\s\S]*INSERT INTO public\.conversation_thread_homes[\s\S]*INSERT INTO public\.conversation_thread_establishment_events/u,
     'Thread, Home and the establishment event are written together, in one helper, in one transaction');
   assert.equal((executable.match(/INSERT INTO public\.conversation_threads\b/gu) ?? []).length, 1);

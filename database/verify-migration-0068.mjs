@@ -480,6 +480,65 @@ async function verifyOsdapParity() {
   await rejected(() => placeCanonical(GOLDEN_USER_WORLD, 'thread-x', 'PARENT', [], []), 'INVALID_PLACEMENT_INPUT');
 }
 
+// ================================ B2. canonical identity authority (FIX-01)
+const sha1Hex = (value) => createHash('sha1').update(Buffer.from(value, 'utf8')).digest('hex');
+
+async function verifyIdentityAuthority() {
+  stage = 'B2. canonical RFC 4122 version-5 identity authority';
+  // The deployed SHA-1 is the real one, across empty, sub-block, exact-block,
+  // multi-block and non-ASCII inputs - not a lookalike that happens to agree
+  // on one vector.
+  for (const message of ['', 'abc', 'The quick brown fox jumps over the lazy dog', 'a'.repeat(55),
+    'a'.repeat(56), 'a'.repeat(64), 'a'.repeat(119), 'a'.repeat(200), 'المدير أحمد']) {
+    const [row] = await rows("SELECT encode(public.canonical_sha1_v1(convert_to($1,'UTF8')),'hex') digest", [message]);
+    strict(row.digest, sha1Hex(message), `the deployed SHA-1 matches the frozen one for a ${message.length}-character input`);
+  }
+  // The three frozen namespaces are re-derived from their documented URIs,
+  // and the derivation reproduces the RFC 4122 appendix vector.
+  for (const [uri, expected] of [
+    ['https://qandeel.app/world/thread/v1', THREAD_NAMESPACE],
+    ['https://qandeel.app/world/home-anchor/v1', HOME_ANCHOR_NAMESPACE],
+    ['https://qandeel.app/runtime/thread-established/v1', THREAD_EVENT_NAMESPACE]]) {
+    const [row] = await rows('SELECT public.canonical_uuid_v5_v1($1::uuid,$2)::text derived', [RFC4122_URL_NAMESPACE, uri]);
+    strict(row.derived, expected, `the namespace of ${uri} is re-derived, not asserted`);
+    strict(row.derived, uuidV5(RFC4122_URL_NAMESPACE, uri), 'the SQL derivation equals the TypeScript canonicalizer derivation');
+  }
+  strict(THREAD_NAMESPACE, '973d2e95-15d7-593c-953d-84ee94be343c', 'the frozen Thread namespace is unchanged');
+  strict(HOME_ANCHOR_NAMESPACE, 'ca3acc01-e866-5d84-a15a-5be440c1919e', 'the frozen Home Anchor namespace is unchanged');
+  strict(THREAD_EVENT_NAMESPACE, '47cd6b25-dbf8-5fd3-941f-eff9d2386990', 'the frozen event namespace is unchanged');
+  const [appendix] = await rows("SELECT public.canonical_uuid_v5_v1('6ba7b810-9dad-11d1-80b4-00c04fd430c8'::uuid,'www.example.org')::text v");
+  strict(appendix.v, '74738ff5-5367-5958-9aee-98fffdcd1876', 'the RFC 4122 version-5 reference vector is reproduced');
+
+  // The full triple, for the pinned vector and for arbitrary owners/focuses.
+  const pinnedUser = '11111111-2222-4333-8444-555555555555';
+  const pinnedFocus = '4ef8538d-ddda-5e11-b7d9-052be85de59a';
+  const [pinned] = await rows('SELECT c.thread_id::text t, c.home_anchor_id::text h, c.event_id::text e FROM public.canonical_thread_identities_v1($1,$2) c', [pinnedUser, pinnedFocus]);
+  eq([pinned.t, pinned.h, pinned.e], ['afc4fd81-fe54-5738-9545-e1053044d919', '61cbba23-76ef-5aea-a453-50aed3a8006b', '76cb9266-87d0-53ac-8fae-f6242f9583ea'],
+    'the SQL identity authority reproduces the exact frozen TypeScript vectors');
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const user = randomUUID();
+    const focus = randomUUID();
+    const [derived] = await rows('SELECT c.thread_id::text t, c.home_anchor_id::text h, c.event_id::text e FROM public.canonical_thread_identities_v1($1,$2) c', [user, focus]);
+    const threadId = threadIdOf(user, focus);
+    eq([derived.t, derived.h, derived.e], [threadId, homeAnchorIdOf(threadId), eventIdOf(threadId)],
+      'SQL and TypeScript agree on every derived identity, for arbitrary owners and focuses');
+  }
+  // Owner-scoped and focus-scoped: changing either changes the Thread.
+  const focus = randomUUID();
+  const ownerA = randomUUID();
+  const ownerB = randomUUID();
+  const [a] = await rows('SELECT c.thread_id::text t FROM public.canonical_thread_identities_v1($1,$2) c', [ownerA, focus]);
+  const [b] = await rows('SELECT c.thread_id::text t FROM public.canonical_thread_identities_v1($1,$2) c', [ownerB, focus]);
+  const [c2] = await rows('SELECT c.thread_id::text t FROM public.canonical_thread_identities_v1($1,$2) c', [ownerA, randomUUID()]);
+  ok(a.t !== b.t, 'the same Emerging Focus under another owner derives a different Thread identity');
+  ok(a.t !== c2.t, 'a different Emerging Focus under the same owner derives a different Thread identity');
+  // Home and event follow the THREAD, not the focus.
+  const [chain] = await rows('SELECT public.canonical_uuid_v5_v1($1::uuid,$2)::text h, public.canonical_uuid_v5_v1($3::uuid,$2)::text e',
+    [HOME_ANCHOR_NAMESPACE, a.t, THREAD_EVENT_NAMESPACE]);
+  const [full] = await rows('SELECT c.home_anchor_id::text h, c.event_id::text e FROM public.canonical_thread_identities_v1($1,$2) c', [ownerA, focus]);
+  eq([full.h, full.e], [chain.h, chain.e], 'the Home Anchor and the event are derived from the Thread identity itself');
+}
+
 // ============================================ C. the integrated per-Moment run
 async function verifyIntegratedMoment(owner) {
   stage = 'C. per-Moment integration: B1 seq1 -> optional B2 seq2';
@@ -930,6 +989,407 @@ async function verifyOriginProvenance(owner, populated) {
   ok(bx !== byId[members[0]].x || by !== byId[members[0]].y, 'no origin member is elected as the seed');
 }
 
+// ======================= G2. the DB refuses a valid-but-wrong identity (FIX-01)
+async function verifyIdentityEnforcement() {
+  stage = 'G2. valid-but-wrong canonical identities are refused before placement';
+  // A FRESH owner: nothing of this world exists yet, so if any rejected attempt
+  // had reached the user-world lock it would have left the authority row behind.
+  const owner = randomUUID();
+  await q('INSERT INTO auth.users(id) VALUES($1)', [owner]);
+  const session = await newSession(owner);
+  const turns = await completedTurns(owner, session);
+  const cu = randomUUID();
+  const cuA = randomUUID();
+  const handle = randomUUID();
+  const focus = randomUUID();
+  const thread = threadIdOf(owner, focus);
+  const start = bundle(cu, { sequence_position: 'INITIATING', references: [resolved(U1, 'المدير', handle, true)], attention: startFocus(focus, 0) });
+  const idle = bundle(cuA, { functions: ['ASK'], sequence_position: 'RESPONSIVE', target_cu_id: cu, references: [], attention: NO_FOCUS });
+  const decision = (overrides) => ({
+    ...establish(owner, cu, focus, 'TE-01', [cu], { explicit_selection_grounding: anchor(U1, 'المدير') }),
+    ...overrides,
+  });
+  const run = (threads) => exchange(session, owner, turns.userTurn, randomUUID(), [unit(USER_TEXT, U1, 1, cu)], [start], [threads],
+    turns.assistantTurn, randomUUID(), [unit(ASSISTANT_TEXT, A1, 1, cuA)], [idle], [noEstablishment(cuA, 'NO_INDEPENDENT_FOCUS')], FRESH_TOKEN);
+
+  // Every rejected shape below is a perfectly well-formed, mutually distinct
+  // RFC 4122 UUID: only the exact derivation is admissible.
+  const wrongThread = threadIdOf(owner, randomUUID());
+  const wrongHome = homeAnchorIdOf(wrongThread);
+  const wrongEvent = eventIdOf(wrongThread);
+  await rejected(() => run(decision({ thread_id: wrongThread })), 'INVALID_THREAD_IDENTITY');
+  await rejected(() => run(decision({ home_anchor_id: wrongHome })), 'INVALID_THREAD_IDENTITY');
+  await rejected(() => run(decision({ thread_established_event_id: wrongEvent })), 'INVALID_THREAD_IDENTITY');
+  await rejected(() => run(decision({ thread_id: wrongThread, home_anchor_id: wrongHome, thread_established_event_id: wrongEvent })),
+    'INVALID_THREAD_IDENTITY');
+  // Even a Home derived from the CORRECT Thread but under the wrong namespace
+  // (here: the event namespace) is refused.
+  await rejected(() => run(decision({ home_anchor_id: eventIdOf(thread) })), 'INVALID_THREAD_IDENTITY');
+  await rejected(() => run(decision({ thread_established_event_id: homeAnchorIdOf(thread) })), 'INVALID_THREAD_IDENTITY');
+  const [{ total: authorities }] = await rows('SELECT count(*)::int total FROM public.conversation_world_spatial_authorities WHERE user_id=$1', [owner]);
+  strict(authorities, 0, 'a wrong identity is refused BEFORE the user-world lock: no spatial authority row was created');
+  const [{ total: placed }] = await rows('SELECT count(*)::int total FROM public.conversation_thread_homes WHERE user_id=$1', [owner]);
+  strict(placed, 0, 'a wrong identity is refused BEFORE any placement or durable row');
+  const rejectedClock = await clockOf(session);
+  eq([rejectedClock.current_sp, Number(rejectedClock.same_sp_event_sequence)], [null, 0], 'a wrong identity consumes no SP and no same-SP sequence');
+
+  // The exact canonical triple is accepted, and the stored rows carry exactly it.
+  await run(decision({}));
+  const [stored] = await rows('SELECT t.id::text t, h.home_anchor_id::text h, e.event_id::text e FROM public.conversation_threads t JOIN public.conversation_thread_homes h ON h.thread_id=t.id JOIN public.conversation_thread_establishment_events e ON e.thread_id=t.id WHERE t.user_id=$1', [owner]);
+  eq([stored.t, stored.h, stored.e], [thread, homeAnchorIdOf(thread), eventIdOf(thread)], 'the accepted establishment stored exactly the derived canonical identities');
+  // OSDAP consumed the derived Thread identity: the committed placement equals
+  // what the engine computes for THAT id against the empty world.
+  const [expected] = await placeCanonical(owner, thread, 'NONE', [], []);
+  const [home] = await rows('SELECT placement_x x, placement_y y FROM public.conversation_thread_homes WHERE thread_id=$1', [thread]);
+  eq([home.x, home.y], [expected.placement_x, expected.placement_y], 'OSDAP received the validated canonical Thread identity as its placement entropy');
+  const [other] = await placeCanonical(owner, wrongThread, 'NONE', [], []);
+  ok(other.placement_x !== expected.placement_x || other.placement_y !== expected.placement_y,
+    'a substituted Thread identity would have produced a different permanent Home, which is why identity is enforced');
+  return { owner, session, focus, thread, cu };
+}
+
+// ==================== G3. finalized-exchange half-state gate (FIX-02)
+async function verifyExchangeHalfStates() {
+  stage = 'G3. finalized-exchange half-state classification before any writer';
+  const owner = randomUUID();
+  await q('INSERT INTO auth.users(id) VALUES($1)', [owner]);
+  const state = async (session, turn, batch) =>
+    (await rows('SELECT public.conversation_thread_batch_state_v1($1,$2,$3,$4) s', [session, owner, turn, batch]))[0].s;
+
+  /** One finalized-exchange fixture: two committed turns and both payloads. */
+  const fixture = async () => {
+    const session = await newSession(owner);
+    const turns = await completedTurns(owner, session);
+    const cu = randomUUID();
+    const cuA = randomUUID();
+    const handle = randomUUID();
+    const focus = randomUUID();
+    return {
+      session,
+      ...turns,
+      userBatch: randomUUID(),
+      assistantBatch: randomUUID(),
+      cu,
+      cuA,
+      focus,
+      userUnits: [unit(USER_TEXT, U1, 1, cu)],
+      userBundles: [bundle(cu, { sequence_position: 'INITIATING', references: [resolved(U1, 'المدير', handle, true)], attention: startFocus(focus, 0) })],
+      userThreads: [establish(owner, cu, focus, 'TE-01', [cu], { explicit_selection_grounding: anchor(U1, 'المدير') })],
+      assistantUnits: [unit(ASSISTANT_TEXT, A1, 1, cuA)],
+      assistantBundles: [bundle(cuA, { functions: ['ASK'], sequence_position: 'RESPONSIVE', target_cu_id: cu, references: [], attention: NO_FOCUS })],
+      assistantThreads: [noEstablishment(cuA, 'NO_INDEPENDENT_FOCUS')],
+    };
+  };
+  const runExchange = (f, token, overrides = {}) => exchange(f.session, owner, f.userTurn, f.userBatch,
+    overrides.userUnits ?? f.userUnits, overrides.userBundles ?? f.userBundles, overrides.userThreads ?? f.userThreads,
+    f.assistantTurn, f.assistantBatch, f.assistantUnits, f.assistantBundles, f.assistantThreads, token);
+  const tokenOf = async (session) => {
+    const clock = await clockOf(session);
+    return { sp: clock.current_sp, seq: Number(clock.same_sp_event_sequence) };
+  };
+
+  // (5) BOTH ABSENT + a valid token: the normal new exchange.
+  const fresh = await fixture();
+  strict(await state(fresh.session, fresh.userTurn, fresh.userBatch), 'ABSENT', 'an untouched half classifies as ABSENT');
+  strict(await state(fresh.session, fresh.assistantTurn, fresh.assistantBatch), 'ABSENT');
+  const [committed] = await runExchange(fresh, FRESH_TOKEN);
+  strict(committed.live_head, 2, 'both-absent with a valid token commits the whole exchange');
+  strict(await state(fresh.session, fresh.userTurn, fresh.userBatch), 'COMPLETE', 'a whole exchange half classifies as COMPLETE');
+  strict(await state(fresh.session, fresh.assistantTurn, fresh.assistantBatch), 'COMPLETE');
+
+  // (7) BOTH COMPLETE + exact payload replays with zero mutation EVEN with a
+  //     deliberately stale token: the token is irrelevant to an exact replay.
+  const beforeReplay = await worldSnapshot(owner);
+  const clockBefore = await clockOf(fresh.session);
+  const [replayed] = await runExchange(fresh, { sp: 999, seq: 7 });
+  strict(replayed.live_head, 2, 'both-complete replays the stored canonical state');
+  eq(await worldSnapshot(owner), beforeReplay, 'the replay mutated nothing');
+  const clockAfter = await clockOf(fresh.session);
+  eq([clockAfter.current_sp, Number(clockAfter.same_sp_event_sequence)],
+    [clockBefore.current_sp, Number(clockBefore.same_sp_event_sequence)], 'the replay consumed no same-SP sequence');
+
+  // (8) BOTH COMPLETE + a changed payload is a conflict, not a repair.
+  await rejected(() => runExchange(fresh, FRESH_TOKEN, { userThreads: [noEstablishment(fresh.cu, 'NO_PROMOTION_PATH_PROVEN', fresh.focus)] }),
+    'THREAD_BATCH_PAYLOAD_CONFLICT');
+  eq(await worldSnapshot(owner), beforeReplay, 'the conflicting replay mutated nothing');
+
+  // (6) BOTH ABSENT + a stale token is a typed stale failure with zero mutation.
+  const stale = await fixture();
+  await rejected(() => runExchange(stale, { sp: 41, seq: 3 }), 'STALE_CONVERSATIONAL_FOCUS_CONTEXT', ['40001']);
+  const [{ total: staleUnits }] = await rows('SELECT count(*)::int total FROM public.conversation_units WHERE session_id=$1', [stale.session]);
+  strict(staleUnits, 0, 'the stale-token exchange wrote nothing');
+
+  /** Asserts an asymmetric exchange fails closed and created NOTHING new. */
+  const assertAsymmetric = async (f, token, label) => {
+    const before = await worldSnapshot(owner);
+    const clock = await clockOf(f.session);
+    const units = (await rows('SELECT count(*)::int total FROM public.conversation_units WHERE session_id=$1', [f.session]))[0].total;
+    const events = (await rows('SELECT count(*)::int total FROM public.conversation_unit_commit_events WHERE session_id=$1', [f.session]))[0].total;
+    const focusBatches = (await rows('SELECT count(*)::int total FROM public.conversation_focus_commit_batches WHERE session_id=$1', [f.session]))[0].total;
+    const threadBatches = (await rows('SELECT count(*)::int total FROM public.conversation_thread_commit_batches WHERE session_id=$1', [f.session]))[0].total;
+    await rejected(() => runExchange(f, token), 'THREAD_CAPTURE_BATCH_INTEGRITY', ['55000']);
+    eq(await worldSnapshot(owner), before, `${label}: no Thread, Home, event, evidence or origin row appeared`);
+    const after = await clockOf(f.session);
+    eq([after.current_sp, Number(after.same_sp_event_sequence)], [clock.current_sp, Number(clock.same_sp_event_sequence)],
+      `${label}: no SP and no same-SP sequence was consumed`);
+    strict((await rows('SELECT count(*)::int total FROM public.conversation_units WHERE session_id=$1', [f.session]))[0].total, units,
+      `${label}: the missing half's committed CUs were never created`);
+    strict((await rows('SELECT count(*)::int total FROM public.conversation_unit_commit_events WHERE session_id=$1', [f.session]))[0].total, events,
+      `${label}: the missing half's commit event was never created`);
+    strict((await rows('SELECT count(*)::int total FROM public.conversation_focus_commit_batches WHERE session_id=$1', [f.session]))[0].total, focusBatches,
+      `${label}: no B1 capture batch was created`);
+    strict((await rows('SELECT count(*)::int total FROM public.conversation_thread_commit_batches WHERE session_id=$1', [f.session]))[0].total, threadBatches,
+      `${label}: no B2 capture batch was created`);
+  };
+
+  // (1) USER COMPLETE + ASSISTANT ABSENT, with the IDENTICAL user payload and a
+  //     CURRENT valid token - the case a payload conflict would have masked.
+  const halfUser = await fixture();
+  await commit(halfUser.session, owner, halfUser.userTurn, halfUser.userBatch, halfUser.userUnits, halfUser.userBundles, halfUser.userThreads);
+  strict(await state(halfUser.session, halfUser.userTurn, halfUser.userBatch), 'COMPLETE');
+  strict(await state(halfUser.session, halfUser.assistantTurn, halfUser.assistantBatch), 'ABSENT');
+  await assertAsymmetric(halfUser, await tokenOf(halfUser.session), 'USER complete + ASSISTANT absent');
+
+  // (2) The rule does not change when the missing half would carry zero CUs.
+  const halfZero = await fixture();
+  halfZero.assistantUnits = [];
+  halfZero.assistantBundles = [];
+  halfZero.assistantThreads = [];
+  await commit(halfZero.session, owner, halfZero.userTurn, halfZero.userBatch, halfZero.userUnits, halfZero.userBundles, halfZero.userThreads);
+  await assertAsymmetric(halfZero, await tokenOf(halfZero.session), 'USER complete + ASSISTANT absent with zero assistant CUs');
+
+  // (3) ASSISTANT COMPLETE + USER ABSENT.
+  const halfAssistant = await fixture();
+  // The ASSISTANT half is committed FIRST here, so its bundle can name no
+  // prior-CU target: the USER CU it would point at does not exist yet.
+  halfAssistant.assistantBundles = [bundle(halfAssistant.cuA, { functions: ['ASK'], sequence_position: 'RESPONSIVE', references: [], attention: NO_FOCUS })];
+  await commit(halfAssistant.session, owner, halfAssistant.assistantTurn, halfAssistant.assistantBatch,
+    halfAssistant.assistantUnits, halfAssistant.assistantBundles, halfAssistant.assistantThreads);
+  strict(await state(halfAssistant.session, halfAssistant.userTurn, halfAssistant.userBatch), 'ABSENT');
+  strict(await state(halfAssistant.session, halfAssistant.assistantTurn, halfAssistant.assistantBatch), 'COMPLETE');
+  await assertAsymmetric(halfAssistant, await tokenOf(halfAssistant.session), 'ASSISTANT complete + USER absent');
+
+  // (4) USER commitment + B1 but NO B2 capture, ASSISTANT absent.
+  const halfLegacy = await fixture();
+  await rows('SELECT * FROM commit_conversation_units_with_focus_v1($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11::jsonb,$12,$13,$14,$15,$16,$17)',
+    [halfLegacy.session, owner, halfLegacy.userTurn, halfLegacy.userBatch, JSON.stringify(halfLegacy.userUnits), ...PROVENANCE,
+      JSON.stringify(halfLegacy.userBundles), ...FOCUS_PROVENANCE]);
+  strict(await state(halfLegacy.session, halfLegacy.userTurn, halfLegacy.userBatch), 'PARTIAL', 'commitment + B1 without a B2 capture is PARTIAL');
+  await assertAsymmetric(halfLegacy, await tokenOf(halfLegacy.session), 'USER commitment+B1 without B2 + ASSISTANT absent');
+
+  // A half whose capture row names another Session / turn is PARTIAL too.
+  strict(await state(halfUser.session, halfUser.assistantTurn, halfUser.userBatch), 'PARTIAL',
+    'a capture batch that does not belong to the named source turn is PARTIAL');
+  return owner;
+}
+
+// ================= G4. structural completeness and corruption (FIX-03)
+async function verifyStructuralCompleteness() {
+  stage = 'G4. full structural completeness: evidence, origin and coherence';
+  const owner = randomUUID();
+  await q('INSERT INTO auth.users(id) VALUES($1)', [owner]);
+  const session = await newSession(owner);
+  const handle = randomUUID();
+  const focus = randomUUID();
+  const decoyFocus = randomUUID();
+  const decoyHandle = randomUUID();
+
+  // Exchange 1: a decoy establishment (its own batch) - a valid-but-foreign
+  // Thread, Home and event to substitute with, plus an origin member.
+  const first = await completedTurns(owner, session);
+  const decoyCu = randomUUID();
+  const decoyA = randomUUID();
+  const decoyThread = threadIdOf(owner, decoyFocus);
+  await exchange(session, owner, first.userTurn, randomUUID(), [unit(USER_TEXT, U1, 1, decoyCu)],
+    [bundle(decoyCu, { sequence_position: 'INITIATING', references: [resolved(U1, 'المدير', decoyHandle, true)], attention: startFocus(decoyFocus, 0) })],
+    [establish(owner, decoyCu, decoyFocus, 'TE-01', [decoyCu], { explicit_selection_grounding: anchor(U1, 'المدير') })],
+    first.assistantTurn, randomUUID(), [unit(ASSISTANT_TEXT, A1, 1, decoyA)],
+    [bundle(decoyA, { functions: ['ASK'], sequence_position: 'RESPONSIVE', target_cu_id: decoyCu, references: [], attention: NO_FOCUS })],
+    [noEstablishment(decoyA, 'NO_INDEPENDENT_FOCUS')], FRESH_TOKEN);
+
+  // Exchange 2: SP3 starts the target focus; nothing is promoted yet.
+  const second = await completedTurns(owner, session);
+  const priorCu = randomUUID();
+  const priorA = randomUUID();
+  const t2 = await tokenFor(session);
+  await exchange(session, owner, second.userTurn, randomUUID(), [unit(USER_TEXT, U1, 1, priorCu)],
+    [bundle(priorCu, { sequence_position: 'INITIATING', references: [resolved(U1, 'المدير', handle, true)], attention: startFocus(focus, 0) })],
+    [noEstablishment(priorCu, 'NO_PROMOTION_PATH_PROVEN', focus)],
+    second.assistantTurn, randomUUID(), [unit(ASSISTANT_TEXT, A1, 1, priorA)],
+    [bundle(priorA, { functions: ['ASK'], sequence_position: 'RESPONSIVE', target_cu_id: priorCu, references: [], attention: NO_FOCUS })],
+    [noEstablishment(priorA, 'NO_INDEPENDENT_FOCUS')], t2);
+
+  // Exchange 3: TE-02 promotion with TWO evidence rows and a RESOLVED origin.
+  const third = await completedTurns(owner, session);
+  const cu = randomUUID();
+  const cuA = randomUUID();
+  const batch = randomUUID();
+  const thread = threadIdOf(owner, focus);
+  const units = [unit(USER_TEXT, U1, 1, cu)];
+  const bundles = [bundle(cu, { sequence_position: 'FOLLOW_UP', target_cu_id: priorCu, references: [resolved(U1, 'المدير', handle, false)], attention: attendFocus(focus, 0) })];
+  const threads = [establish(owner, cu, focus, 'TE-02', [priorCu, cu], { origin_state: 'RESOLVED', origin_thread_ids: [decoyThread] })];
+  const t3 = await tokenFor(session);
+  await exchange(session, owner, third.userTurn, batch, units, bundles, threads,
+    third.assistantTurn, randomUUID(), [unit(ASSISTANT_TEXT, A1, 1, cuA)],
+    [bundle(cuA, { functions: ['ASK'], sequence_position: 'RESPONSIVE', target_cu_id: cu, references: [], attention: NO_FOCUS })],
+    [noEstablishment(cuA, 'NO_INDEPENDENT_FOCUS')], t3);
+
+  const batchState = async () =>
+    (await rows('SELECT public.conversation_thread_batch_state_v1($1,$2,$3,$4) s', [session, owner, third.userTurn, batch]))[0].s;
+  strict(await batchState(), 'COMPLETE', 'a whole TE-02 establishment with evidence and origin provenance is COMPLETE');
+
+  const replay = () => commit(session, owner, third.userTurn, batch, units, bundles, threads);
+  await replay();
+  ok(true, 'the uncorrupted batch replays');
+
+  const driftFocus = randomUUID();
+  const [priorSp] = await rows('SELECT session_position sp FROM public.conversation_units WHERE id=$1', [priorCu]);
+
+  /**
+   * Applies a technical corruption with the append-only triggers and the
+   * referential triggers suspended, proves the ONE completeness authority
+   * classifies the batch PARTIAL, proves replay fails closed, proves the
+   * finalized-exchange gate refuses the same half, then rolls it all back.
+   */
+  async function corrupted(label, statements) {
+    assertions += 1;
+    await q('SAVEPOINT corruption');
+    try {
+      await q("SET session_replication_role = 'replica'");
+      for (const [text, values] of statements) await q(text, values);
+      await q("SET session_replication_role = 'origin'");
+      assert.equal(await batchState(), 'PARTIAL', `${label}: the completeness authority classifies the batch PARTIAL`);
+      // Each failing attempt aborts the transaction, so each runs inside its
+      // own nested savepoint.
+      let replayError;
+      await q('SAVEPOINT attempt');
+      try { await replay(); } catch (caught) { replayError = caught; }
+      await q('ROLLBACK TO SAVEPOINT attempt');
+      await q('RELEASE SAVEPOINT attempt');
+      assert.ok(replayError, `${label}: a corrupted batch must never replay`);
+      assert.equal(replayError.code, '55000', `${label}: unexpected SQLSTATE ${replayError.code}`);
+      assert.match(String(replayError.message), /THREAD_CAPTURE_BATCH_INTEGRITY/u, `${label}: ${replayError.message}`);
+      let exchangeError;
+      const assistantCu = randomUUID();
+      await q('SAVEPOINT attempt');
+      try {
+        await exchange(session, owner, third.userTurn, batch, units, bundles, threads,
+          third.assistantTurn, randomUUID(), [unit(ASSISTANT_TEXT, A1, 1, assistantCu)],
+          [bundle(assistantCu, { functions: ['ASK'], sequence_position: 'RESPONSIVE', references: [], attention: NO_FOCUS })],
+          [noEstablishment(assistantCu, 'NO_INDEPENDENT_FOCUS')], FRESH_TOKEN);
+      } catch (caught) { exchangeError = caught; }
+      await q('ROLLBACK TO SAVEPOINT attempt');
+      await q('RELEASE SAVEPOINT attempt');
+      assert.ok(exchangeError && String(exchangeError.message).includes('THREAD_CAPTURE_BATCH_INTEGRITY'),
+        `${label}: the finalized-exchange gate must refuse the same corrupted half; got ${exchangeError?.code ?? 'success'} ${exchangeError?.message ?? ''}`);
+    } finally {
+      await q("SET session_replication_role = 'origin'").catch(() => undefined);
+      await q('ROLLBACK TO SAVEPOINT corruption');
+      await q('RELEASE SAVEPOINT corruption');
+    }
+    assert.equal(await batchState(), 'COMPLETE', `${label}: the corruption fixture left zero residue`);
+  }
+
+  await corrupted('missing Home', [['DELETE FROM public.conversation_thread_homes WHERE thread_id=$1', [thread]]]);
+  await corrupted('missing ThreadEstablished event', [['DELETE FROM public.conversation_thread_establishment_events WHERE thread_id=$1', [thread]]]);
+  await corrupted('missing evidence row', [['DELETE FROM public.conversation_thread_establishment_evidence WHERE thread_id=$1 AND evidence_ordinal=0', [thread]]]);
+  await corrupted('missing ESTABLISHING_CU evidence role', [["UPDATE public.conversation_thread_establishment_evidence SET evidence_role='PRIOR_EVIDENCE' WHERE thread_id=$1 AND evidence_role='ESTABLISHING_CU'", [thread]]]);
+  await corrupted('evidence naming the wrong CU', [['UPDATE public.conversation_thread_establishment_evidence SET cu_id=$2, cu_sp=$3 WHERE thread_id=$1 AND evidence_ordinal=0', [thread, decoyCu, 1]]]);
+  await corrupted('evidence in the wrong order', [
+    ["UPDATE public.conversation_thread_establishment_evidence SET evidence_role='PRIOR_EVIDENCE' WHERE thread_id=$1 AND evidence_ordinal=1", [thread]],
+    ["UPDATE public.conversation_thread_establishment_evidence SET evidence_role='ESTABLISHING_CU' WHERE thread_id=$1 AND evidence_ordinal=0", [thread]]]);
+  await corrupted('missing RESOLVED origin member', [['DELETE FROM public.conversation_thread_origin_members WHERE thread_id=$1', [thread]]]);
+  await corrupted('event Home Anchor mismatch', [['UPDATE public.conversation_thread_establishment_events SET home_anchor_id=$2 WHERE thread_id=$1', [thread, homeAnchorIdOf(randomUUID())]]]);
+  await corrupted('event SP mismatch', [['UPDATE public.conversation_thread_establishment_events SET session_position=$2 WHERE thread_id=$1', [thread, priorSp.sp]]]);
+  // A same-SP sequence other than 2 is not merely classified PARTIAL: it is
+  // structurally unrepresentable on all three canonical tables, even with the
+  // append-only and referential triggers suspended.
+  for (const [table, column, key] of [
+    ['conversation_thread_establishment_events', 'same_sp_event_sequence', 'thread_id'],
+    ['conversation_threads', 'established_event_sequence', 'id'],
+    ['conversation_thread_homes', 'established_event_sequence', 'thread_id']]) {
+    await q('SAVEPOINT seq');
+    await q("SET session_replication_role = 'replica'");
+    await rejected(() => q(`UPDATE public.${table} SET ${column}=3 WHERE ${key}=$1`, [thread]),
+      'violates check constraint', ['23514']);
+    await q("SET session_replication_role = 'origin'");
+    await q('ROLLBACK TO SAVEPOINT seq');
+    await q('RELEASE SAVEPOINT seq');
+  }
+  await corrupted('event focus mismatch', [['UPDATE public.conversation_thread_establishment_events SET emerging_focus_id=$2 WHERE thread_id=$1', [thread, decoyFocus]]]);
+  await corrupted('event path mismatch', [["UPDATE public.conversation_thread_establishment_events SET establishment_path='TE-03' WHERE thread_id=$1", [thread]]]);
+  await corrupted('Thread lineage rewritten to another focus (identity no longer derivable)', [
+    ['UPDATE public.conversation_threads SET grounding_emerging_focus_id=$2 WHERE id=$1', [thread, driftFocus]],
+    ['UPDATE public.conversation_thread_establishment_events SET emerging_focus_id=$2 WHERE thread_id=$1', [thread, driftFocus]]]);
+  await corrupted('extra durable establishment beyond establishment_count', [
+    ['UPDATE public.conversation_threads SET established_cu_id=$2 WHERE id=$1', [decoyThread, cu]],
+    ['UPDATE public.conversation_thread_homes SET established_cu_id=$2 WHERE thread_id=$1', [decoyThread, cu]]]);
+
+  // MULTIPLE stored with only one member: a second establishment, then a member removed.
+  const fourth = await completedTurns(owner, session);
+  const multiCu = randomUUID();
+  const multiA = randomUUID();
+  const multiFocus = randomUUID();
+  const multiHandle = randomUUID();
+  const multiBatch = randomUUID();
+  const multiThread = threadIdOf(owner, multiFocus);
+  const members = [decoyThread, thread].sort();
+  const multiUnits = [unit(USER_TEXT, U1, 1, multiCu)];
+  const multiBundles = [bundle(multiCu, { sequence_position: 'INITIATING', references: [resolved(U1, 'المدير', multiHandle, true)], attention: startFocus(multiFocus, 0) })];
+  const multiThreads = [establish(owner, multiCu, multiFocus, 'TE-01', [multiCu],
+    { explicit_selection_grounding: anchor(U1, 'المدير'), origin_state: 'MULTIPLE', origin_thread_ids: members })];
+  const t4 = await tokenFor(session);
+  await exchange(session, owner, fourth.userTurn, multiBatch, multiUnits, multiBundles, multiThreads,
+    fourth.assistantTurn, randomUUID(), [unit(ASSISTANT_TEXT, A1, 1, multiA)],
+    [bundle(multiA, { functions: ['ASK'], sequence_position: 'RESPONSIVE', target_cu_id: multiCu, references: [], attention: NO_FOCUS })],
+    [noEstablishment(multiA, 'NO_INDEPENDENT_FOCUS')], t4);
+  const multiState = async () =>
+    (await rows('SELECT public.conversation_thread_batch_state_v1($1,$2,$3,$4) s', [session, owner, fourth.userTurn, multiBatch]))[0].s;
+  strict(await multiState(), 'COMPLETE', 'a MULTIPLE-origin establishment with both members is COMPLETE');
+  await q('SAVEPOINT multi');
+  await q("SET session_replication_role = 'replica'");
+  await q('DELETE FROM public.conversation_thread_origin_members WHERE thread_id=$1 AND origin_member_ordinal=1', [multiThread]);
+  await q("SET session_replication_role = 'origin'");
+  strict(await multiState(), 'PARTIAL', 'MULTIPLE with only one stored member is PARTIAL');
+  await rejected(() => commit(session, owner, fourth.userTurn, multiBatch, multiUnits, multiBundles, multiThreads),
+    'THREAD_CAPTURE_BATCH_INTEGRITY', ['55000']);
+  await q('ROLLBACK TO SAVEPOINT multi');
+  await q('RELEASE SAVEPOINT multi');
+  strict(await multiState(), 'COMPLETE', 'the MULTIPLE corruption fixture left zero residue');
+
+  // Stored evidence / origin that no longer match the canonical payload cannot
+  // pass as an exact replay even when every structural rule still holds.
+  await q('SAVEPOINT swapped');
+  await q("SET session_replication_role = 'replica'");
+  await q('UPDATE public.conversation_thread_origin_members SET origin_thread_id=$2 WHERE thread_id=$1 AND origin_member_ordinal=0', [thread, multiThread]);
+  await q("SET session_replication_role = 'origin'");
+  await rejected(() => replay(), 'THREAD_CAPTURE_BATCH_INTEGRITY', ['55000']);
+  await q('ROLLBACK TO SAVEPOINT swapped');
+  await q('RELEASE SAVEPOINT swapped');
+
+  // A NO-establishment batch and a zero-CU batch are COMPLETE, not absent.
+  const fifth = await completedTurns(owner, session);
+  const noneCu = randomUUID();
+  const noneBatch = randomUUID();
+  await commit(session, owner, fifth.userTurn, noneBatch, [unit(USER_TEXT, U1, 1, noneCu)],
+    [bundle(noneCu, { sequence_position: 'INITIATING', references: [], attention: NO_FOCUS })],
+    [noEstablishment(noneCu, 'NO_INDEPENDENT_FOCUS')]);
+  strict((await rows('SELECT public.conversation_thread_batch_state_v1($1,$2,$3,$4) s', [session, owner, fifth.userTurn, noneBatch]))[0].s,
+    'COMPLETE', 'a nonzero batch that established nothing is COMPLETE, not absent');
+  const zeroBatch = randomUUID();
+  await commit(session, owner, fifth.assistantTurn, zeroBatch, [], [], []);
+  strict((await rows('SELECT public.conversation_thread_batch_state_v1($1,$2,$3,$4) s', [session, owner, fifth.assistantTurn, zeroBatch]))[0].s,
+    'COMPLETE', 'a zero-CU capture batch is COMPLETE and carries no SP or B2 row');
+  strict((await rows('SELECT public.conversation_thread_batch_state_v1($1,$2,$3,$4) s', [session, owner, fifth.assistantTurn, randomUUID()]))[0].s,
+    'ABSENT', 'an unknown batch is ABSENT');
+}
+
+/** The current optimistic clock token of a Session. */
+async function tokenFor(session) {
+  const clock = await clockOf(session);
+  return { sp: clock.current_sp, seq: Number(clock.same_sp_event_sequence) };
+}
+
 // ============================== H. replay / conflict / partial state / zero-CU
 async function verifyReplayAndAtomicity(owner) {
   stage = 'H. replay, conflict, partial state, zero-CU and atomic rollback';
@@ -987,16 +1447,51 @@ async function verifyReplayAndAtomicity(owner) {
   const focus2 = randomUUID();
   const start2 = bundle(cu2, { sequence_position: 'INITIATING', references: [resolved(U1, 'المدير', handle2, true)], attention: startFocus(focus2, 0) });
   const idle2 = bundle(cuA2, { functions: ['ASK'], sequence_position: 'RESPONSIVE', target_cu_id: cu2, references: [], attention: NO_FOCUS });
-  const injected = (overrides) => exchange(secondSession, owner, secondTurns.userTurn, randomUUID(), [unit(USER_TEXT, U1, 1, cu2)], [start2],
+  const thread2 = threadIdOf(owner, focus2);
+  const runInjected = (overrides = {}) => exchange(secondSession, owner, secondTurns.userTurn, randomUUID(), [unit(USER_TEXT, U1, 1, cu2)], [start2],
     [establish(owner, cu2, focus2, 'TE-01', [cu2], { explicit_selection_grounding: anchor(U1, 'المدير'), ...overrides })],
     secondTurns.assistantTurn, randomUUID(), [unit(ASSISTANT_TEXT, A1, 1, cuA2)], [idle2], [noEstablishment(cuA2, 'NO_INDEPENDENT_FOCUS')], FRESH_TOKEN);
-  // ... under the world lock, inside the placement itself: a Thread that
-  //     already holds a committed Home is never placed a second time;
-  await rejected(() => injected({ thread_id: thread }), 'THREAD_ALREADY_PLACED', ['22023']);
+  /**
+   * Since FIX-T03B2B2-01 the identities are DERIVED, so a failure can no longer
+   * be injected by handing the writer a wrong id. Instead the collision is
+   * seeded in advance, with the append-only and referential triggers suspended,
+   * so the real establishment fails at exactly one stage of the persistence.
+   */
+  async function injectedAt(label, statements, token, codes, overrides = {}) {
+    assertions += 1;
+    await q('SAVEPOINT injected');
+    let error;
+    try {
+      await q("SET session_replication_role = 'replica'");
+      for (const [text, values] of statements) await q(text, values);
+      await q("SET session_replication_role = 'origin'");
+      try { await runInjected(overrides); } catch (caught) { error = caught; }
+    } finally {
+      await q("SET session_replication_role = 'origin'").catch(() => undefined);
+      await q('ROLLBACK TO SAVEPOINT injected');
+      await q('RELEASE SAVEPOINT injected');
+    }
+    assert.ok(error, `${label}: the injected failure did not fire`);
+    assert.ok(codes.includes(error.code), `${label}: unexpected SQLSTATE ${error.code}: ${error.message}`);
+    assert.ok(String(error.message).includes(token), `${label}: expected ${token}, got ${error.message}`);
+  }
+  // ... under the world lock, inside the placement itself: a Thread already
+  //     present in the committed world is never placed a second time;
+  await injectedAt('after the world lock, inside the placement',
+    [['UPDATE public.conversation_thread_homes SET thread_id=$2 WHERE thread_id=$1', [thread, thread2]]],
+    'THREAD_ALREADY_PLACED', ['22023']);
   // ... after the Thread insert, at the Home insert;
-  await rejected(() => injected({ home_anchor_id: homeAnchorIdOf(thread) }), 'duplicate key', ['23505']);
-  // ... after the Thread and Home inserts, at the establishment event.
-  await rejected(() => injected({ thread_established_event_id: eventIdOf(thread) }), 'duplicate key', ['23505']);
+  await injectedAt('after the Thread insert, at the Home insert',
+    [['UPDATE public.conversation_thread_homes SET home_anchor_id=$2 WHERE thread_id=$1', [thread, homeAnchorIdOf(thread2)]]],
+    'duplicate key', ['23505']);
+  // ... after the Thread and Home inserts, at the establishment event;
+  await injectedAt('after the Thread and Home inserts, at the event',
+    [['UPDATE public.conversation_thread_establishment_events SET event_id=$2 WHERE thread_id=$1', [thread, eventIdOf(thread2)]]],
+    'duplicate key', ['23505']);
+  // ... and after the evidence insert, at the Conversational Origin provenance.
+  await injectedAt('after the evidence insert, at the origin provenance',
+    [['INSERT INTO public.conversation_thread_origin_members (thread_id, origin_member_ordinal, origin_thread_id) VALUES ($1, 0, $2)', [thread2, thread]]],
+    'duplicate key', ['23505'], { origin_state: 'RESOLVED', origin_thread_ids: [thread] });
   eq(await worldSnapshot(owner), beforeConflict, 'every injected failure rolled back the whole B2 layer, leaving the committed world untouched');
   const [{ total: strandedCus }] = await rows('SELECT count(*)::int total FROM public.conversation_units WHERE session_id=$1', [secondSession]);
   strict(strandedCus, 0, 'no orphan CU, Thread or Home survives a failed establishment');
@@ -1064,7 +1559,10 @@ async function verifyReplayAndAtomicity(owner) {
   const [{ total: zeroThreads }] = await rows('SELECT count(*)::int total FROM public.conversation_thread_establishment_events WHERE commit_batch_id=$1', [zeroBatch]);
   strict(zeroThreads, 0, 'a zero-CU batch establishes nothing');
 
-  // --- one exchange half complete and the other absent fails closed.
+  // --- one exchange half complete and the other absent fails closed at the
+  //     half-state gate, BEFORE either writer and regardless of the payload.
+  //     The identical-payload / current-token form of this case is proven in
+  //     full by the finalized-exchange half-state stage above.
   const halfSession = await newSession(owner);
   const halfTurns = await completedTurns(owner, halfSession);
   const halfUserBatch = randomUUID();
@@ -1079,7 +1577,7 @@ async function verifyReplayAndAtomicity(owner) {
     halfTurns.assistantTurn, randomUUID(), [unit(ASSISTANT_TEXT, A1, 1, halfA)],
     [bundle(halfA, { functions: ['ASK'], sequence_position: 'RESPONSIVE', references: [], attention: NO_FOCUS })],
     [noEstablishment(halfA, 'NO_INDEPENDENT_FOCUS')], halfToken),
-    'THREAD_BATCH_PAYLOAD_CONFLICT');
+    'THREAD_CAPTURE_BATCH_INTEGRITY', ['55000']);
   const [{ total: halfAssistant }] = await rows('SELECT count(*)::int total FROM public.conversation_units WHERE source_turn_id=$1', [halfTurns.assistantTurn]);
   strict(halfAssistant, 0, 'the second half is never finished from a conflicting first half');
 }
@@ -1182,16 +1680,20 @@ async function main() {
       const owner = randomUUID();
       await q('INSERT INTO auth.users(id) VALUES($1)', [owner]);
       await verifyOsdapParity();
+      await verifyIdentityAuthority();
       const populated = await verifyIntegratedMoment(owner);
       await verifyPermanence(owner, populated);
       await verifyEstablishmentGates(owner);
       await verifyRecurrenceAndSelection(owner);
       await verifyOriginProvenance(owner, populated);
+      await verifyIdentityEnforcement();
+      await verifyExchangeHalfStates();
+      await verifyStructuralCompleteness();
       await verifyReplayAndAtomicity(owner);
       await identity('postgres');
     } finally { await q('ROLLBACK'); }
     await verifyConcurrency();
-    console.log(`Verified migration 0068 (${assertions} assertions): the per-Moment integrated writer allocates each SP, opens it as the head, persists T-03B1 at same-SP sequence 1 and, only for a proven establishment, locks this user's world, recomputes the canonical QANDEEL_OSDAP_V1 Home against the world as it actually stands, reserves sequence 2 through the one T-03A2 seam and inserts the Thread, its permanent one-to-one Home, the explicit ThreadEstablished event, its evidence and its symmetric Conversational Origin provenance atomically; SQL/TypeScript placement parity on all seven frozen golden vectors plus negative floor division, projection, dense escalation, exact separation, bound skip and capacity exhaustion; AF66-01 with the world lock strictly after the Session clock; user/world-scoped Thread identity with an immutable EmergingFocus lineage and no relocation path; the deterministic TE-01/02/03 gates and the three NO_ESTABLISHMENT states re-proved by the database; exact replay, payload conflict, partial and legacy state failing closed, the zero-CU batch, atomic rollback with no consumed sequence; per-user-world serialization of concurrent placement; and the production-inert posture with untouched T-03A2 authority and zero fixture residue.`);
+    console.log(`Verified migration 0068 (${assertions} assertions): the per-Moment integrated writer allocates each SP, opens it as the head, persists T-03B1 at same-SP sequence 1 and, only for a proven establishment, locks this user's world, recomputes the canonical QANDEEL_OSDAP_V1 Home against the world as it actually stands, reserves sequence 2 through the one T-03A2 seam and inserts the Thread, its permanent one-to-one Home, the explicit ThreadEstablished event, its evidence and its symmetric Conversational Origin provenance atomically; SQL/TypeScript placement parity on all seven frozen golden vectors plus negative floor division, projection, dense escalation, exact separation, bound skip and capacity exhaustion; the database's OWN RFC 4122 version-5 identity authority reproducing the frozen SHA-1, namespaces and vectors, refusing every valid-but-wrong Thread, Home or event identity before the world lock, and feeding OSDAP only the derived Thread; AF66-01 with the world lock strictly after the Session clock; user/world-scoped Thread identity with an immutable EmergingFocus lineage and no relocation path; the deterministic TE-01/02/03 gates and the three NO_ESTABLISHMENT states re-proved by the database; the finalized-exchange half-state gate classifying BOTH halves ABSENT / COMPLETE / PARTIAL before either writer so an asymmetric exchange can never be finished; full structural completeness over evidence, Conversational Origin provenance and Thread/Home/event coherence, with every corruption fixture failing replay closed and classifying the half PARTIAL; exact replay, payload conflict, legacy state failing closed, the zero-CU batch, atomic rollback with no consumed sequence; per-user-world serialization of concurrent placement; and the production-inert posture with untouched T-03A2 authority and zero fixture residue.`);
   } finally {
     await client.end();
   }
