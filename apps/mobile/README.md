@@ -76,15 +76,54 @@ no credential, and it is deliberately **not mounted** in the technical shell.
   the caller. Explicit authenticated HTTP only — a Session temporal snapshot and a bounded
   committed-CU catch-up page. There is no WebSocket and no SSE. Every failure is
   fail-closed.
-- T-03A2 delivers authoritative `LH` only. `LF` stays with T-03D, and no `LF = null`
-  conclusion is invented because T-03D has not landed yet; the T-02 meaning of
-  `live = { LH, LF }` is unchanged.
+- T-03A2 delivers authoritative `LH` only through this seam; T-03D (below) delivers
+  authoritative `LF` through its own seam. The T-02 meaning of `live = { LH, LF }` is
+  unchanged, and no LF value is ever invented on the client.
 
 Types come from the repository-owned, type-only `@qandeel/runtime` workspace package,
 imported with `import type`, so it ships no JavaScript into the bundle.
 
 Contract: `npm run test:session-semantic-clock-sp-lh-delivery-contract` (repository root)
 plus the Jest suites under `src/temporal/__tests__/`.
+
+## Live Focus ingestion (T-03D)
+
+T-03D activated the FINAL server semantic chain and, with it, the authoritative Live
+Focus. `LF` is the Session's **current live conversational attention only** —
+`NONE | EMERGING(emergingFocusId) | THREAD(threadId)` — derived by the server from
+committed conversation, never by the client, never from elapsed time, and never from
+what the Map shows.
+
+- **Wire** (`@qandeel/runtime`): the Session snapshot now carries `liveFocus` and
+  `liveFocusAtSp` beside `liveHead`, and the passive domain event
+  `LIVE_FOCUS_TRANSITION { sessionId, atSp, value }` is delivered beside
+  `CONVERSATIONAL_UNITS_COMMITTED`. The value is the closed reference identity and
+  nothing else: no label, no Home coordinate, no direction, no relation count, no
+  confidence, no same-SP sequence, no content, no history.
+- **Runtime wire validation** (`temporal-wire.ts`): `decodeLiveFocusWireValue`,
+  `decodeLiveFocusTransitionEvent`, `decodeLiveFocusEventsPage` and
+  `decodeLiveFocusEventsResponse` reject an extra key, a fourth kind, the kernel
+  vocabulary on the wire, a non-safe SP, a descending page, two transitions at one SP,
+  and a foreign-Session envelope; the snapshot decoder refuses an LF before the first SP
+  or beyond the Live Head. New rejection reason: `INVALID_LIVE_FOCUS`.
+- **The one LF mirror seam** (`live-focus-sync.ts`): the wire `LIVE_FOCUS_TRANSITION`
+  becomes the T-02 mirror event `LIVE_FOCUS_TRANSITION` through the same `ingest()`
+  path, mapping `EMERGING → EMERGING_FOCUS` and `THREAD → ESTABLISHED_THREAD`. The two
+  vocabularies are different layers and neither is renamed; the kernel is not redesigned.
+  Outcomes: `APPLIED`, `IDEMPOTENT` (a redelivery), `OUT_OF_ORDER` (a lower or
+  conflicting SP is classified, never applied backward), `REJECTED`. Nothing here writes
+  `LF` directly, dispatches a Product action, appends `RH`, moves the camera, or creates a
+  persistent focus-follow, and `LH`, `TM`, `TC`, `IF_ref` and `MC` are untouched — also
+  while the client is historically pinned. `liveTruthFromSnapshot` builds the startup
+  `live = { LH, LF }` so no replay is needed to know the current LF.
+- **Transport** (`temporal-api.ts`): `fetchLiveFocusEvents` is the bounded LF catch-up
+  route (`/temporal/live-focus-events`) under the same injected-fetch, fail-closed and
+  requested-Session-binding rules as the two T-03A2 routes.
+- Not here, by design: Return-to-Live-Focus and Go Live + Locate (T-07), any T-03C
+  historical projection, and any visual UI. Nothing under `src/temporal/` is mounted.
+
+Contract: `npm run test:effective-live-focus-final-semantic-chain-cutover-contract`
+(repository root) plus `src/temporal/__tests__/live-focus-sync.test.ts`.
 
 ## Toolchain pins (Expo SDK 57)
 

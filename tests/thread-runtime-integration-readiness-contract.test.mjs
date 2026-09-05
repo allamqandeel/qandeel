@@ -110,21 +110,28 @@ test('the B2b3 runtime exists as plain classes and is NOT a Nest provider', () =
   for (const name of B2B3_FILES) assert.ok(!index.includes(name.replace(/\.ts$/u, '')), `index.ts does not re-export ${name}`);
 });
 
-test('AC-B2B3-01: the B1+B2 runtime is NOT live - not registered, not called, nothing granted, nothing revoked', () => {
-  assert.doesNotMatch(stripComments(conversationModule), /thread-establishment|ConversationThreadEstablishmentService|ConversationThreadRuntimeRepository|Thread/u);
-  assert.doesNotMatch(stripComments(conversationService), /thread-establishment|ConversationThreadEstablishmentService|Thread/u);
-  assert.match(conversationService, /private readonly temporal: ConversationTemporalEstablishmentService/u);
-  assert.match(conversationService, /return this\.establishTemporal\(userId, await this\.orchestrator\.orchestrate\(/u);
-  assert.match(conversationModule, /ConversationTemporalEstablishmentService/u);
+test('AC-B2B3-01 resolved by T-03D: the B1+B2-ONLY runtime is still never registered or called; the live path is the FINAL semantic chain', () => {
+  // T-03D (the ONE authorized cutover) wires the FINAL B1 + B2 + B3 + LF chain
+  // in ConversationModule and calls it from ConversationService. The B1+B2
+  // runtime of this slice is superseded and stays unregistered and uncalled.
+  assert.doesNotMatch(stripComments(conversationModule), /ConversationThreadEstablishmentService|ConversationThreadRuntimeRepository|conversation-thread-establishment|conversation-thread-runtime|with_focus_and_thread_v1/u);
+  assert.doesNotMatch(stripComments(conversationService), /thread-establishment|ConversationThreadEstablishmentService|ConversationThreadRuntimeRepository|with_focus_and_thread_v1/u);
+  assert.match(conversationService, /private readonly semantic: ConversationSemanticEstablishmentService/u);
+  assert.match(conversationService, /return this\.establishSemanticChain\(userId, await this\.orchestrator\.orchestrate\(/u);
+  assert.match(conversationModule, /ConversationSemanticEstablishmentService/u);
+  assert.doesNotMatch(conversationModule, /ConversationTemporalEstablishmentService,|provide: ConversationTemporalEstablishmentService/u, 'no temporal-only fallback service is registered');
   assert.doesNotMatch(stripComments(establishment), /with_focus|with_thread|thread-establishment|Thread/u);
-  assert.match(unitRepository, /'commit_finalized_exchange_conversation_units_v1'/u, 'the live runtime still commits through the T-03A2 coordinator');
-  // No file outside the two production-inert semantic directories reaches the runtime.
+  assert.match(unitRepository, /'commit_finalized_exchange_conversation_units_v1'/u, 'the retired T-03A2 repository still names the retired coordinator; it is no longer registered');
+  // No file outside the production-inert semantic directories reaches this
+  // runtime. The FINAL chain (live-focus) reuses its mappers, types, helpers
+  // and Origin mapper exactly as T-03B3 does; it is pinned by the T-03D contract.
   const referencing = listFiles(join(rootPath, 'apps/api/src')).map(relative)
     .filter((file) => !file.startsWith(`${THREAD_DIR}/`))
     // T-03B3 (thread-lifecycle, production-inert) SUPERSEDES this runtime for
     // B3-enabled batches and reuses its mappers, types, helpers and Origin
     // mapper; it is pinned separately just below.
     .filter((file) => !file.startsWith('apps/api/src/thread-lifecycle/'))
+    .filter((file) => !file.startsWith('apps/api/src/live-focus/'))
     .filter((file) => /ConversationThreadEstablishmentService|ConversationThreadRuntimeRepository|conversation-thread-runtime|conversational-origin-mapper|with_focus_and_thread_v1|focus_thread_integrated_batch_snapshot|focus_thread_runtime_context|thread_capture_cutover_ready/u.test(stripComments(read(file))));
   assert.deepEqual(referencing, []);
   const lifecycleFiles = listFiles(join(rootPath, 'apps/api/src/thread-lifecycle')).map(relative);
@@ -163,16 +170,26 @@ test('no B3 lifecycle, no LF, no T-03C, no Reading / Neighborhood / merge, no mo
   }
   // The shared client wire contract is byte-identical: no Thread, Home or
   // Origin field can have reached it, and no client schema changed.
+  // (T-03D extended the shared wire contract ADDITIVELY with the authoritative
+  // Live Focus: the frozen T-03A2 fields are unchanged and pinned by the T-03D
+  // contract; no Thread, Home or Origin field reached the wire.)
   for (const [file, blob] of [
-    ['packages/runtime/src/index.d.ts', 'ab7281703923934e7d00fcd016cfa15a956c85d8'],
-    ['packages/runtime/src/temporal.d.ts', '412aa269409575116d08064435f9230083a45796'],
+    ['packages/runtime/src/index.d.ts', '8fa505014a936cc73d9fd61f23e67162b4507c54'],
+    ['packages/runtime/src/temporal.d.ts', '9d945e6f2d65bdefbc334b0bc5ac884789f21a89'],
     ['packages/runtime/package.json', '932b837629f23b5cb765eda196fb659418d07916'],
   ]) {
     assert.equal(gitBlobId(read(file)), blob, `${file} is byte-identical`);
   }
+  // (T-03D added packages/runtime/src/live-focus.d.ts: the authoritative LF wire
+  // value carries the closed reference identity - a Thread id or an Emerging
+  // Focus id - and nothing spatial, graded or historical; it is pinned by the
+  // T-03D contract. No Home or Origin payload exists on the wire anywhere.)
   for (const file of listFiles(join(rootPath, 'packages/runtime')).map(relative).filter((file) => file.endsWith('.ts'))) {
-    assert.doesNotMatch(stripComments(read(file)), /threadId|thread_id|homeAnchor|home_anchor|originThread|origin_state|emergingFocus|emerging_focus/u,
-      `${file} declares no Thread, Home or Origin payload`);
+    assert.doesNotMatch(stripComments(read(file)), /homeAnchor|home_anchor|originThread|origin_state|placement|lifecycle|dormant|reopened/iu,
+      `${file} declares no Home, Origin or lifecycle payload`);
+    if (file !== 'packages/runtime/src/live-focus.d.ts') {
+      assert.doesNotMatch(stripComments(read(file)), /threadId|thread_id|emergingFocus|emerging_focus/u, `${file} declares no Thread or Emerging Focus payload`);
+    }
   }
   assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg']);
   for (const name of ['uuid', 'zod', 'p-retry', 'async-retry', 'retry', 'bottleneck']) {

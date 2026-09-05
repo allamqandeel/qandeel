@@ -41,9 +41,13 @@ function gitBlobId(content) {
   return createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
 }
 
-test('0070 is the newest migration, and 0064 - 0069 are byte-identical', () => {
+test('0070 is the FINAL Thread-layer migration, 0071 (T-03D) orders directly after it, and 0064 - 0069 are byte-identical', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0070_thread_lifecycle_cross_session_continuity_v1.sql');
+  // (T-03D added 0071, the effective-LF + FINAL semantic-chain cutover, pinned
+  // by database/tests/effective-live-focus-final-semantic-chain-cutover-v1.test.mjs.)
+  assert.ok(migrations.includes('0070_thread_lifecycle_cross_session_continuity_v1.sql'));
+  assert.equal(migrations.indexOf('0071_effective_live_focus_final_semantic_chain_cutover_v1.sql'), migrations.indexOf('0070_thread_lifecycle_cross_session_continuity_v1.sql') + 1,
+    '0071 orders directly after 0070');
   assert.equal(migrations.filter((name) => name.startsWith('0070_')).length, 1, 'exactly one 0070 migration exists');
   assert.match(migration, /^BEGIN;/mu);
   assert.match(migration, /COMMIT;\s*$/u);
@@ -57,8 +61,9 @@ test('0070 is the newest migration, and 0064 - 0069 are byte-identical', () => {
   ]) {
     assert.equal(gitBlobId(read(`../migrations/${name}`)), blob, `${name} is byte-identical`);
   }
-  assert.equal(gitBlobId(read('../verify-migration-0068.mjs')), 'f20eeff7a9b13756867448c22f222f1a93cd847f', 'the 0068 verifier is byte-identical');
-  assert.equal(gitBlobId(read('../verify-migration-0069.mjs')), '306948f90adeeba1eb9a9ace64078ee727f03586', 'the 0069 verifier is byte-identical');
+  // (T-03D re-anchored the 0068 / 0069 verifiers' T-03A2 grant posture to the cutover: the temporal-only producer is retired.)
+  assert.equal(gitBlobId(read('../verify-migration-0068.mjs')), '4f5984ac54c4ba03662c9336eea66578adc80b23', 'the 0068 verifier is byte-identical');
+  assert.equal(gitBlobId(read('../verify-migration-0069.mjs')), 'ff46e09409b6db850a16cc3f7c6ea0029f2f37a4', 'the 0069 verifier is byte-identical');
   assert.match(migration, /current_setting\('server_encoding'\) <> 'UTF8'/u);
   for (const precondition of ['public.conversation_thread_batch_state_v1(uuid,uuid,uuid,uuid)', 'public.validate_conversation_thread_decision_v1(public.conversation_units,jsonb)',
     'public.persist_conversation_thread_establishment_v1(', 'public.compute_canonical_home_placement_v1(', 'public.get_conversation_focus_thread_runtime_context_v1(uuid,uuid)',

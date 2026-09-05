@@ -58,6 +58,7 @@ jobs:
       - {name: Verify durable Thread / permanent Home same-SP substrate static contract (T-03B2b2), run: npm run test:durable-thread-home-same-sp-substrate-contract}
       - {name: Verify Thread runtime integration readiness static contract (T-03B2b3), run: npm run test:thread-runtime-integration-readiness-contract}
       - {name: Verify Thread lifecycle + cross-Session continuity static contract (T-03B3), run: npm run test:thread-lifecycle-cross-session-continuity-contract}
+      - {name: Verify effective Live Focus + FINAL semantic-chain cutover static contract (T-03D), run: npm run test:effective-live-focus-final-semantic-chain-cutover-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}
@@ -150,6 +151,7 @@ jobs:
       - {name: Verify durable Thread / permanent Home / same-SP substrate + QANDEEL OSDAP v1 SQL parity, run: npm run verify:durable-thread-home-same-sp-substrate:integration}
       - {name: Verify Thread runtime integration readiness (integrated B1+B2 snapshot + combined context + cutover-readiness audit), run: npm run verify:thread-runtime-integration-readiness:integration}
       - {name: Verify Thread lifecycle + cross-Session continuity (0070 same-SP Thread layer + identity clock + dossier page + integrated B3 snapshot + context + cutover-readiness audit), run: npm run verify:thread-lifecycle-cross-session-continuity:integration}
+      - {name: Verify effective Live Focus + FINAL semantic chain + production authority cutover (0071 LF transitions at same-SP sequence 2/3 + SQL reducer parity + single committing authority + authenticated live state / LF catch-up + cutover audit), run: npm run verify:effective-live-focus-final-semantic-chain-cutover:integration}
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

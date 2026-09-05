@@ -49,7 +49,8 @@ test('0066 is the ordered forward substrate migration and rewrites nothing histo
   // 0064 and 0065 are frozen implementation inputs: byte-identical.
   assert.equal(gitBlobId(substrate), '0a2ee63980e59072b3e9f52a643efa8220e95b08', 'migration 0064 is byte-identical');
   assert.equal(gitBlobId(activation), '3dc061c71bcb237cec648abb2d1fa02f450cd57f', 'migration 0065 is byte-identical');
-  assert.equal(gitBlobId(activationVerifier), '132841c718ba1e2368ecc639b49dadff82b79ddb', 'the 0065 verifier is byte-identical');
+  // (T-03D re-anchored the 0065 verifier's activation-grant proof to the cutover: the temporal-only producer is retired.)
+  assert.equal(gitBlobId(activationVerifier), 'a262a5a6f9102717bd0d9985d08fdf2c07a13b7d', 'the 0065 verifier is byte-identical');
   assert.doesNotMatch(executableSql, /DROP (?:TABLE|FUNCTION|TRIGGER|CONSTRAINT|POLICY|COLUMN)|CREATE OR REPLACE FUNCTION/iu, 'nothing existing is dropped or replaced');
   assert.doesNotMatch(executableSql, /ALTER TABLE public\.(?:conversation_units|conversation_unit_commit_batches|session_semantic_clocks|conversation_unit_commit_events|conversation_turns|conversation_sessions|users)\b/u,
     'no T-03A1/A2 or conversation table is altered');

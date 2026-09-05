@@ -228,8 +228,18 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     // T-03B3 (thread-lifecycle, production-inert) RUNS this frozen evaluator
     // exactly as T-03B2b3's runtime does; it is pinned separately just below.
     .filter((file) => !file.startsWith('apps/api/src/thread-lifecycle/'))
+    // T-03D (live-focus) is the FINAL, LIVE chain: it RUNS this frozen evaluator
+    // through the same seams T-03B3's runtime uses, and ConversationModule
+    // registers the lazy Thread binding FACTORY for it (never a provider, never
+    // the evaluator, never the validator). Both are pinned by the T-03D contract.
+    .filter((file) => !file.startsWith('apps/api/src/live-focus/'))
     .filter((file) => /thread-establishment|ThreadEstablishment|validateThreadEstablishmentProposal|THREAD_ESTABLISHMENT/u.test(stripComments(read(file))));
-  assert.deepEqual(referencing, [], 'T-03B2a is production-inert: no runtime path reaches it');
+  assert.deepEqual(referencing, ['apps/api/src/conversation/conversation-temporal.controller.spec.ts', 'apps/api/src/conversation/conversation.module.ts'],
+    'only the FINAL-chain wiring in ConversationModule (and the bootstrap spec that proves its factory symbols) references the directory');
+  assert.doesNotMatch(stripComments(read('apps/api/src/conversation/conversation-temporal.controller.spec.ts')), /thread-establishment|ThreadEstablishmentEvaluatorService|validateThreadEstablishmentProposal/u,
+    'the bootstrap spec names the factory symbol only, never the evaluator');
+  assert.doesNotMatch(stripComments(read('apps/api/src/conversation/conversation.module.ts')), /ThreadEstablishmentEvaluatorService|validateThreadEstablishmentProposal|OpenAiThreadEstablishmentProvider|thread-establishment-evaluator|thread-establishment-validator/u,
+    'ConversationModule registers a binding factory, never the evaluator, a provider adapter or the validator');
   // T-03B3's production-inert FINAL Thread-layer runtime (thread-lifecycle)
   // RUNS this frozen evaluator through the same seams T-03B2b3 uses. It may
   // import the listed T-03B2a / T-03B2b2 / T-03B2b3 pieces and nothing else:
@@ -257,8 +267,14 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     assert.doesNotMatch(stripComments(source), /validateThreadEstablishmentProposal|OpenAiThreadEstablishmentProvider|FakeThreadEstablishmentProvider/u, `${file} never reaches the T-03B2a validator or provider adapters`);
     if (!file.endsWith('.spec.ts')) assert.doesNotMatch(stripComments(source), /openAiThreadEstablishmentBinding/u, `${file} constructs no production T-03B2a binding of its own`);
   }
-  for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService], ['AppModule', appModule],
-    ['the T-03A2 establishment service', establishment], ['the T-03B1b2 focus establishment service', focusEstablishment]]) {
+  // T-03D wires the FINAL chain in ConversationModule (the lazy Thread binding
+  // FACTORY only) and calls it from ConversationService; neither reaches the
+  // evaluator, the validator, a provider adapter or a promotion path itself.
+  for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService]]) {
+    assert.doesNotMatch(stripComments(text), /ThreadEstablishmentEvaluatorService|validateThreadEstablishmentProposal|OpenAiThreadEstablishmentProvider|thread-establishment-evaluator|thread-establishment-validator|TE-0[1-3]/u, `${name} never reaches the T-03B2a evaluator directly`);
+  }
+  assert.doesNotMatch(stripComments(conversationService), /thread-establishment|ThreadEstablishment|THREAD_ESTABLISHMENT/u, 'ConversationService is untouched by T-03B2a');
+  for (const [name, text] of [['AppModule', appModule], ['the T-03A2 establishment service', establishment], ['the T-03B1b2 focus establishment service', focusEstablishment]]) {
     assert.doesNotMatch(stripComments(text), /thread-establishment|ThreadEstablishment|THREAD_ESTABLISHMENT|TE-0[1-3]/u, `${name} is untouched by T-03B2a`);
   }
   // T-03B2b2 owns the DURABLE side of T-03B2: migration 0068, its verifier and
@@ -280,6 +296,11 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     'database/migrations/0070_thread_lifecycle_cross_session_continuity_v1.sql',
     'database/verify-migration-0070.mjs',
     'database/tests/thread-lifecycle-cross-session-continuity-v1.test.mjs',
+    // T-03D owns the FINAL chain + cutover: migration 0071, its verifier and its
+    // database contract CALL the frozen 0068 / 0070 gates and never import this evaluator.
+    'database/migrations/0071_effective_live_focus_final_semantic_chain_cutover_v1.sql',
+    'database/verify-migration-0071.mjs',
+    'database/tests/effective-live-focus-final-semantic-chain-cutover-v1.test.mjs',
   ];
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src')), ...listFiles(join(rootPath, 'database'))].map((f) => relative(f))) {
     if (B2B2_DATABASE_FILES.includes(file)) {
@@ -300,11 +321,18 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
   // which CALLS the frozen 0068 gates; it is pinned by
   // tests/thread-lifecycle-cross-session-continuity-contract.test.mjs.)
   const B3_MIGRATION = '0070_thread_lifecycle_cross_session_continuity_v1.sql';
+  // (T-03D added 0071, the effective-LF + FINAL semantic-chain cutover, whose
+  // per-Moment writer CALLS the frozen 0068 / 0070 gates for the Thread layer
+  // and creates only the LF substrate; it is pinned by
+  // tests/effective-live-focus-final-semantic-chain-cutover-contract.test.mjs.)
+  const B3D_MIGRATION = '0071_effective_live_focus_final_semantic_chain_cutover_v1.sql';
   assert.deepEqual(migrations.filter((name) => /thread|home|te0|establishment/iu.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
     'exactly one Thread / Home SUBSTRATE migration exists (T-03B2b2), plus the T-03B2b3 READ / AUDIT migration and the T-03B3 lifecycle / continuity migration, each pinned by its own contract');
   assert.deepEqual([...read(`database/migrations/${B2B3_MIGRATION}`).matchAll(/CREATE TABLE/gu)], [],
     'the T-03B2b3 migration creates no Thread, Home or capture table of its own');
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION)) {
+  assert.doesNotMatch(read(`database/migrations/${B3D_MIGRATION}`), /CREATE TABLE public\.(?:conversation_threads|conversation_thread_homes|conversation_thread_establishment|conversation_thread_commit_batches)\b/u,
+    'the T-03D migration creates no second Thread / Home substrate');
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION)) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu, `${name} carries no Thread / Home substrate`);
   }
   assert.ok(!existsSync(new URL('database/verify-thread-establishment.mjs', root)));

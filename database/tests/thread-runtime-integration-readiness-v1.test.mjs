@@ -54,10 +54,11 @@ test('0069 is the newest migration, and 0064 - 0068 are byte-identical', () => {
   ]) {
     assert.equal(gitBlobId(read(`../migrations/${name}`)), blob, `${name} is byte-identical`);
   }
+  // (T-03D re-anchored the 0066 / 0067 / 0068 verifiers' T-03A2 grant posture to the cutover: the temporal-only producer is retired.)
   for (const [name, blob] of [
-    ['verify-migration-0066.mjs', '39559c2ca81dd216968e694e6c93c8a160fec4a4'],
-    ['verify-migration-0067.mjs', 'aaec5bf020143b111d265f0726bdc08d0c5922df'],
-    ['verify-migration-0068.mjs', 'f20eeff7a9b13756867448c22f222f1a93cd847f'],
+    ['verify-migration-0066.mjs', '13ccb087e415a316609b1121f937ca3699c59ba4'],
+    ['verify-migration-0067.mjs', '0e496a95da7a0ee596c416e0c599f703c121b991'],
+    ['verify-migration-0068.mjs', '4f5984ac54c4ba03662c9336eea66578adc80b23'],
   ]) {
     assert.equal(gitBlobId(read(`../${name}`)), blob, `the ${name} verifier is byte-identical`);
   }

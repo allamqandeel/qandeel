@@ -1,19 +1,22 @@
-// T-03A2 - the authenticated temporal read surface.
+// T-03A2 - the authenticated temporal read surface, extended ADDITIVELY by
+// T-03D with the authoritative current Live Focus and the LF catch-up route.
 //
-//   GET /conversation/sessions/:sessionId/temporal          -> { sessionId, liveHead }
-//   GET /conversation/sessions/:sessionId/temporal/events   -> committed-CU catch-up
+//   GET /conversation/sessions/:sessionId/temporal                    -> { sessionId, liveHead, liveFocus, liveFocusAtSp }
+//   GET /conversation/sessions/:sessionId/temporal/events             -> committed-CU catch-up
+//   GET /conversation/sessions/:sessionId/temporal/live-focus-events  -> LF transition catch-up
 //
 // This is explicit authenticated HTTP delivery and catch-up. There is no
-// WebSocket and no SSE in T-03A2: realtime push infrastructure would be a
-// separate, separately owned decision.
+// WebSocket and no SSE: realtime push infrastructure would be a separate,
+// separately owned decision.
 //
-// The event route is a DELIVERY/RECOVERY transport for LH, not a Timeline API.
-// It exposes no committed text, no analysis, no Reading, no Thread, no Live
-// Focus, no K/V and no historical projection - T-03C owns history - and it
-// never exposes the server-internal same-SP event sequence.
+// Every route is a DELIVERY/RECOVERY transport for LH and LF, not a Timeline
+// API. It exposes no committed text, no analysis, no Reading, no Thread name,
+// no Home, no K/V and no historical projection - T-03C owns history - and it
+// never exposes the server-internal same-SP event sequence. LF crosses as
+// reference identity only.
 
 import { BadRequestException, Controller, Get, NotFoundException, Param, Query, Req, UseGuards } from '@nestjs/common';
-import type { ConversationalUnitsCommittedWireEvent, SessionTemporalSnapshot } from '@qandeel/runtime';
+import type { ConversationalUnitsCommittedWireEvent, LiveFocusTransitionWireEvent, SessionTemporalSnapshot } from '@qandeel/runtime';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
@@ -27,8 +30,10 @@ export class ConversationTemporalController {
   constructor(private readonly delivery: TemporalDeliveryRepository) {}
 
   /**
-   * Current Session temporal truth. `liveHead` is `null` when no
-   * user-addressable committed CU exists yet; zero is never returned.
+   * Current Session live truth. `liveHead` is `null` when no user-addressable
+   * committed CU exists yet, and then `liveFocus` is `NONE`; zero is never
+   * returned. The snapshot carries the authoritative current LF so a client
+   * never has to replay every transition merely to know current Live state.
    */
   @Get('sessions/:sessionId/temporal')
   async sessionTemporalState(
@@ -56,12 +61,33 @@ export class ConversationTemporalController {
     @Query('limit') limit?: string,
   ): Promise<{ sessionId: string; events: ConversationalUnitsCommittedWireEvent[] }> {
     const { accessToken } = request.authenticatedUser;
-    const events = await this.delivery.getCommittedEvents(accessToken, sessionId, {
-      ...(afterSp === undefined ? {} : { afterSp: parseBoundedInteger(afterSp, 'afterSp', 1, Number.MAX_SAFE_INTEGER) }),
-      ...(limit === undefined ? {} : { limit: parseBoundedInteger(limit, 'limit', 1, MAX_TEMPORAL_EVENT_PAGE) }),
-    });
+    const events = await this.delivery.getCommittedEvents(accessToken, sessionId, pageOf(afterSp, limit));
     return { sessionId, events };
   }
+
+  /**
+   * LF transition delivery catch-up, ascending by `atSp`, current Session
+   * only. Recovery / event continuity only: the snapshot route already carries
+   * the authoritative current LF.
+   */
+  @Get('sessions/:sessionId/temporal/live-focus-events')
+  async liveFocusEvents(
+    @Req() request: AuthenticatedRequest,
+    @Param('sessionId') sessionId: string,
+    @Query('afterSp') afterSp?: string,
+    @Query('limit') limit?: string,
+  ): Promise<{ sessionId: string; events: LiveFocusTransitionWireEvent[] }> {
+    const { accessToken } = request.authenticatedUser;
+    const events = await this.delivery.getLiveFocusEvents(accessToken, sessionId, pageOf(afterSp, limit));
+    return { sessionId, events };
+  }
+}
+
+function pageOf(afterSp: string | undefined, limit: string | undefined): { afterSp?: number; limit?: number } {
+  return {
+    ...(afterSp === undefined ? {} : { afterSp: parseBoundedInteger(afterSp, 'afterSp', 1, Number.MAX_SAFE_INTEGER) }),
+    ...(limit === undefined ? {} : { limit: parseBoundedInteger(limit, 'limit', 1, MAX_TEMPORAL_EVENT_PAGE) }),
+  };
 }
 
 function parseBoundedInteger(raw: string, name: string, min: number, max: number): number {

@@ -175,13 +175,12 @@ async function verifyStaticAuthority() {
     const [{ coordinator }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') coordinator", [role, COORDINATOR]);
     const [{ helper }] = await rows("SELECT has_function_privilege($1::name,$2::text,'EXECUTE') helper", [role, SAME_SP_HELPER]);
     assert.equal(helper, false, `${role} must not execute the internal same-SP sequencing seam`);
-    if (role === 'service_role') {
-      assert.equal(producer, true, 'service_role holds the T-03A2 activation grant on the producer');
-      assert.equal(coordinator, true, 'service_role holds the activation grant on the exchange coordinator');
-    } else {
-      assert.equal(producer, false, `${role} must never execute the canonical producer`);
-      assert.equal(coordinator, false, `${role} must never execute the exchange coordinator`);
-    }
+    // T-03D (migration 0071) retired the temporary T-03A2 activation grants:
+    // the temporal-only producer and exchange coordinator are executable by NO
+    // application role any more, and the FINAL semantic-chain coordinator is
+    // the ONE committing authority of service_role.
+    assert.equal(producer, false, `${role} must never execute the retired temporal-only producer (T-03D cutover)`);
+    assert.equal(coordinator, false, `${role} must never execute the retired temporal-only exchange coordinator (T-03D cutover)`);
     // Cases 18/19/20: no direct table write is granted anywhere.
     for (const table of ['public.conversation_units', 'public.conversation_unit_commit_batches',
       'public.session_semantic_clocks', 'public.conversation_unit_commit_events']) {
@@ -698,14 +697,14 @@ async function verifyRuntimeAcl(owner, populatedSession) {
     [randomUUID(), owner, populatedSession, turns.userTurn, randomUUID()]), 'permission denied', ['42501']);
   await identity('postgres');
   const beforeCount = (await spsOfSession(populatedSession)).length;
+  // T-03D (migration 0071) retired the temporary T-03A2 activation grant: the
+  // temporal-only producer can no longer seal a Session Position for
+  // service_role; the FINAL semantic-chain coordinator is the ONE authority.
   await identity('service_role');
-  const committed = await commit(populatedSession, owner, turns.userTurn, randomUUID(), [unit(E1, 'أنا سبت الشغل امبارح.')]);
-  assert.equal(committed.length, 1, 'service_role is the authorized caller of the canonical producer');
-  assert.equal(committed[0].session_position, beforeCount + 1,
-    'the service-role commit allocated exactly the next Session Position');
+  await rejected(() => commit(populatedSession, owner, turns.userTurn, randomUUID(), [unit(E1, 'أنا سبت الشغل امبارح.')]), 'permission denied', ['42501']);
   await identity('postgres');
-  assert.equal((await spsOfSession(populatedSession)).length, beforeCount + 1,
-    'exactly one further committed CU exists');
+  assert.equal((await spsOfSession(populatedSession)).length, beforeCount,
+    'the retired temporal-only producer allocated nothing for service_role');
 }
 
 // ------------------------------------------------ SP column structural gates

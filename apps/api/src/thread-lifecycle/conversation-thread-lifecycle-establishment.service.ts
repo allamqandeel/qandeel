@@ -448,7 +448,7 @@ export class ConversationThreadLifecycleEstablishmentService {
 }
 
 /** One evaluated CU of the walk. */
-interface ThreadLayerStep {
+export interface ThreadLayerStep {
   readonly threadResult: PreparedThreadEstablishmentResult;
   readonly decision: PreparedThreadLayerDecision;
   readonly origin: PreparedConversationalOrigin | null;
@@ -459,8 +459,13 @@ interface ThreadLayerStep {
  * CU in exact evaluation order, so a decision can never see a later CU, a
  * later ASSISTANT CU, or a later same-exchange binding; a Thread bound,
  * established or reopened EARLIER in the same exchange is known to a later CU.
+ *
+ * T-03D supersedes this production-inert orchestration with the FINAL chain:
+ * the walk is exported so the final service runs exactly this Thread-layer
+ * evaluation and reduces effective LF after each CU's final Thread-layer
+ * result. The walk needs only the dossier page of the boundary.
  */
-class ThreadLayerWalk {
+export class ThreadLayerWalk {
   readonly continuityResults: PreparedThreadContinuityResult[] = [];
   /** The visible canonical B1 material: the authoritative prior history first, then the evaluated prefix. */
   private readonly semanticsByCuId = new Map<string, CanonicalCuFocusSemanticPayload>();
@@ -490,7 +495,7 @@ class ThreadLayerWalk {
     private readonly context: ConversationThreadLifecycleRuntimeContext,
     private readonly thread: ThreadEstablishmentBinding,
     private readonly continuity: ThreadContinuityBinding,
-    private readonly repository: ConversationThreadLifecycleRuntimeBoundary,
+    private readonly repository: Pick<ConversationThreadLifecycleRuntimeBoundary, 'readIdentityDossierPage'>,
   ) {
     for (const [index, cu] of context.priorContext.priorCus.entries()) {
       this.positionByCuId.set(cu.cuId, index);

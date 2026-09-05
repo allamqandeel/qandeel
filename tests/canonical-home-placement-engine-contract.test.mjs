@@ -328,10 +328,17 @@ test('no database, Supabase, Nest, runtime, mobile, provider or B1 / B2a import;
   // establishment and computes no placement of its own; its verifier and its
   // database contract read the stored Home only to prove a reused Thread keeps
   // it byte-for-byte. None of the three defines, mirrors or calls an engine.
+  // T-03D's migration 0071 (the FINAL chain + cutover) likewise CALLS the frozen
+  // 0068 persist path for a NEW establishment inside its own per-Moment writer
+  // and computes no placement of its own; its verifier and database contract
+  // read nothing spatial beyond proving a reused Thread keeps its Home.
   const B3_DATABASE_FILES = [
     'database/migrations/0070_thread_lifecycle_cross_session_continuity_v1.sql',
     'database/verify-migration-0070.mjs',
     'database/tests/thread-lifecycle-cross-session-continuity-v1.test.mjs',
+    'database/migrations/0071_effective_live_focus_final_semantic_chain_cutover_v1.sql',
+    'database/verify-migration-0071.mjs',
+    'database/tests/effective-live-focus-final-semantic-chain-cutover-v1.test.mjs',
   ];
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src')), ...listFiles(join(rootPath, 'database'))].map((f) => relative(f))) {
     if (B2B2_DATABASE_FILES.includes(file)) {
@@ -370,13 +377,20 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
   // substrate; it CALLS compute_canonical_home_placement_v1 for a NEW Thread and
   // never recomputes, moves or exposes a Home; pinned by its own contract.)
   const B3_MIGRATION = '0070_thread_lifecycle_cross_session_continuity_v1.sql';
+  // (T-03D added 0071, the effective-LF + FINAL semantic-chain cutover; its
+  // per-Moment writer CALLS the frozen 0068 persist path for a NEW Thread
+  // exactly as 0070 does, defines no engine and moves no Home; pinned by
+  // tests/effective-live-focus-final-semantic-chain-cutover-contract.test.mjs.)
+  const B3D_MIGRATION = '0071_effective_live_focus_final_semantic_chain_cutover_v1.sql';
   assert.deepEqual(migrations.filter((name) => /home|placement|osdap|spatial|thread/iu.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
     'exactly one Home / Thread SUBSTRATE migration exists (T-03B2b2), plus the T-03B2b3 READ / AUDIT migration and the T-03B3 lifecycle migration');
-  assert.doesNotMatch(read(`database/migrations/${B3_MIGRATION}`), /CREATE FUNCTION public\.(?:osdap_|compute_canonical_home_placement)|UPDATE public\.conversation_thread_homes|placement_x\s*=|placement_y\s*=/u,
-    'the T-03B3 migration defines no placement engine of its own and moves no Home');
+  for (const name of [B3_MIGRATION, B3D_MIGRATION]) {
+    assert.doesNotMatch(read(`database/migrations/${name}`), /CREATE FUNCTION public\.(?:osdap_|compute_canonical_home_placement)|UPDATE public\.conversation_thread_homes|placement_x\s*=|placement_y\s*=/u,
+      `${name} defines no placement engine of its own and moves no Home`);
+  }
   assert.doesNotMatch(read(`database/migrations/${B2B3_MIGRATION}`), /osdap|placement_x|placement_y|home_placement|compute_canonical_home_placement/iu,
     'the T-03B2b3 read/audit migration computes no placement of its own');
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION)) {
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION)) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu, `${name} carries no Home substrate`);
   }
   assert.deepEqual(readdirSync(join(rootPath, 'database')).filter((name) => /home|placement|osdap|thread/iu.test(name)), [],

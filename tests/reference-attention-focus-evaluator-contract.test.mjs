@@ -131,8 +131,15 @@ test('nothing outside the directory imports it: no ConversationModule, Conversat
     // T-03B3 (thread-lifecycle, production-inert) RUNS the frozen B1 chain
     // exactly as T-03B2b3's runtime does; it is pinned separately just below.
     .filter((file) => !file.startsWith('apps/api/src/thread-lifecycle/'))
+    // T-03D (live-focus) is the FINAL, LIVE chain: it RUNS this frozen evaluator
+    // through the same seams T-03B3's runtime uses, and ConversationModule
+    // registers the lazy focus binding FACTORY for it (never a provider, never
+    // the evaluator itself). Both are pinned by the T-03D contract.
+    .filter((file) => !file.startsWith('apps/api/src/live-focus/'))
     .filter((file) => /conversational-focus|ConversationalFocusEvaluatorService|FocusResolutionProvider|OpenAiFocusResolutionProvider|validateFocusResolutionProposal/u.test(stripComments(readFileSyncUtf8(file))));
-  assert.deepEqual(referencing, [], 'T-03B1a is production-inert: no runtime path reaches it');
+  assert.deepEqual(referencing, ['apps/api/src/conversation/conversation.module.ts'], 'only the FINAL-chain wiring in ConversationModule references the directory');
+  assert.doesNotMatch(stripComments(readFileSyncUtf8('apps/api/src/conversation/conversation.module.ts')), /ConversationalFocusEvaluatorService|OpenAiFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor/u,
+    'ConversationModule registers a binding factory, never the evaluator, a provider adapter or the validator');
   // The T-03B2a / T-03B2b1 / T-03B2b2 SEMANTIC files may import only the two
   // pure type modules of this directory - never the evaluator service, a
   // provider, the validator, the anchor mapper, the canonicalizer or the
@@ -196,7 +203,12 @@ test('nothing outside the directory imports it: no ConversationModule, Conversat
       `${file} does not reach the B1 orchestration service, its repository, the provider adapter, the validator or the anchor mapper`);
     if (!file.endsWith('.spec.ts')) assert.doesNotMatch(stripComments(source), /openAiFocusResolutionBinding/u, `${file} constructs no production B1 binding of its own`);
   }
-  for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService], ['AppModule', appModule], ['the T-03A2 establishment service', establishment]]) {
+  // T-03D wires the FINAL chain in ConversationModule / ConversationService;
+  // neither reaches the evaluator, a provider adapter or the validator directly.
+  for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService]]) {
+    assert.doesNotMatch(stripComments(text), /ConversationalFocusEvaluatorService|OpenAiFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor|conversational-focus-evaluator/u, `${name} never reaches the T-03B1a evaluator directly`);
+  }
+  for (const [name, text] of [['AppModule', appModule], ['the T-03A2 establishment service', establishment]]) {
     assert.doesNotMatch(stripComments(text), /conversational-focus|Focus|focus/u, `${name} is untouched by T-03B1a`);
   }
   // No scripts entry point either.
@@ -225,7 +237,11 @@ test('the evaluator adds no SQL, no durable write, no durable identity; the dura
   // Emerging Focus to an existing Thread and READS 0066's RESOLVED references
   // as identity evidence, creating no B1 substrate of its own; it is pinned by
   // tests/thread-lifecycle-cross-session-continuity-contract.test.mjs.)
-  for (const name of migrations.filter((candidate) => !/^00(?:6[6789]|70)_/u.test(candidate))) {
+  // (T-03D added 0071, the effective-LF + FINAL semantic-chain cutover: it READS
+  // the frozen T-03B1 substrate to derive the effective Live Focus and creates
+  // no B1 substrate of its own; it is pinned by
+  // tests/effective-live-focus-final-semantic-chain-cutover-contract.test.mjs.)
+  for (const name of migrations.filter((candidate) => !/^00(?:6[6789]|7[01])_/u.test(candidate))) {
     assert.doesNotMatch(readFileSyncUtf8(`database/migrations/${name}`), /emerging_focus|reference_handle|conversational_focus|claim_attribution/iu, `${name} carries no T-03B1 substrate`);
   }
   assert.doesNotMatch(readFileSyncUtf8('database/migrations/0070_thread_lifecycle_cross_session_continuity_v1.sql'),
@@ -443,8 +459,8 @@ test('the gate is registered at the root and in API CI, and MOB-CI-01 is untouch
   // verifier in CI is the T-03B1b1 substrate verifier for migration 0066.
   assert.doesNotMatch(apiCi, /verify:reference-attention/u, 'no database verifier exists for the evaluator slice');
   assert.deepEqual([...apiCi.matchAll(/verify:([a-z0-9-]*focus[a-z0-9-]*):integration/gu)].map((m) => m[1]),
-    ['durable-reference-emerging-focus-sp-substrate', 'conversation-focus-runtime-integration-readiness'],
-    'exactly the 0066 substrate verifier and the 0067 readiness verifier');
+    ['durable-reference-emerging-focus-sp-substrate', 'conversation-focus-runtime-integration-readiness', 'effective-live-focus-final-semantic-chain-cutover'],
+    'exactly the 0066 substrate verifier, the 0067 readiness verifier and the T-03D 0071 cutover verifier');
   // Mobile CI is not edited: no new step, still the fast gate plus two conditional native jobs.
   assert.doesNotMatch(mobileCi, /reference-attention-focus/u);
   assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3);

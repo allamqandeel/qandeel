@@ -83,17 +83,23 @@ test('the runtime orchestration service, repository, mapper and lazy binding exi
   assert.match(service, /return \{ liveHead, committedEvents: ordered \};/u, 'the same external temporal delivery shape');
 });
 
-test('AC-B1B2-01: the B1 runtime is NOT live - not registered, not called, nothing granted, nothing revoked', () => {
-  // Not imported or registered by ConversationModule; ConversationService still calls the canonical T-03A2 temporal service.
-  assert.doesNotMatch(stripComments(conversationModule), /conversational-focus|ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|focus|Focus/u);
-  assert.doesNotMatch(stripComments(conversationService), /conversational-focus|ConversationFocusEstablishmentService|focus|Focus/u);
-  assert.match(conversationService, /private readonly temporal: ConversationTemporalEstablishmentService/u);
-  assert.match(conversationService, /return this\.establishTemporal\(userId, await this\.orchestrator\.orchestrate\(/u);
-  assert.match(conversationModule, /ConversationTemporalEstablishmentService/u);
+test('AC-B1B2-01 resolved by T-03D: the B1-ONLY runtime is still never registered or called; the live path is the FINAL semantic chain', () => {
+  // T-03D (the ONE authorized cutover) wires the FINAL B1 + B2 + B3 + LF chain
+  // in ConversationModule and calls it from ConversationService. The B1-only
+  // runtime of this slice is superseded and stays unregistered and uncalled.
+  assert.doesNotMatch(stripComments(conversationModule), /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|with_focus_v1|focus_runtime_context|conversation-focus-establishment|conversation-focus-runtime/u);
+  assert.doesNotMatch(stripComments(conversationService), /conversational-focus|ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|with_focus_v1/u);
+  assert.match(conversationService, /private readonly semantic: ConversationSemanticEstablishmentService/u);
+  assert.match(conversationService, /return this\.establishSemanticChain\(userId, await this\.orchestrator\.orchestrate\(/u);
+  assert.match(conversationModule, /ConversationSemanticEstablishmentService/u);
+  assert.doesNotMatch(conversationModule, /ConversationTemporalEstablishmentService,|provide: ConversationTemporalEstablishmentService/u, 'no temporal-only fallback service is registered');
   // The T-03A2 establishment service and unit repository are untouched by this slice.
   assert.doesNotMatch(stripComments(establishment), /with_focus|conversational-focus|Focus/u);
-  assert.match(unitRepository, /'commit_finalized_exchange_conversation_units_v1'/u, 'the live runtime still commits through the T-03A2 coordinator');
-  // No file outside the directory reaches the runtime.
+  assert.match(unitRepository, /'commit_finalized_exchange_conversation_units_v1'/u, 'the retired T-03A2 repository still names the retired coordinator; it is no longer registered');
+  // No file outside the directory reaches the B1-only runtime. The FINAL chain
+  // (live-focus) RUNS the frozen B1 evaluator and reuses this slice's exact
+  // stale-context identity; ConversationModule registers the lazy focus binding
+  // FACTORY for it. Both are pinned by the T-03D contract.
   const referencing = listFiles(join(rootPath, 'apps/api/src')).map(relative)
     .filter((file) => !file.startsWith(`${FOCUS_DIR}/`))
     // T-03B2a (thread-establishment, production-inert) consumes ONLY the pure
@@ -102,8 +108,10 @@ test('AC-B1B2-01: the B1 runtime is NOT live - not registered, not called, nothi
     // T-03B3 (thread-lifecycle, production-inert) RUNS the frozen B1 chain
     // exactly as T-03B2b3's runtime does; it is pinned separately just below.
     .filter((file) => !file.startsWith('apps/api/src/thread-lifecycle/'))
+    .filter((file) => !file.startsWith('apps/api/src/live-focus/'))
     .filter((file) => /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|conversational-focus|with_focus_v1|integrated_batch_snapshot|cutover_ready/u.test(stripComments(read(file))));
-  assert.deepEqual(referencing, []);
+  assert.deepEqual(referencing, ['apps/api/src/conversation/conversation.module.ts'], 'only ConversationModule (the lazy binding factory of the FINAL chain) references the directory');
+  assert.doesNotMatch(stripComments(conversationModule), /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|with_focus_v1/u, 'and it registers the FINAL chain, never the B1-only runtime');
   // The T-03B2a / T-03B2b1 / T-03B2b2 SEMANTIC files never reach the B1 runtime
   // orchestration, its repository, the 0066/0067 RPCs or the lazy binding.
   //

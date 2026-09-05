@@ -12,6 +12,17 @@ const event = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const THREAD = { kind: 'THREAD', threadId: 'afc4fd81-fe54-5738-9545-e1053044d919' };
+const transition = (overrides: Record<string, unknown> = {}) => ({
+  type: 'LIVE_FOCUS_TRANSITION',
+  version: 1,
+  sessionId: 'session-1',
+  atSp: 2,
+  value: THREAD,
+  ...overrides,
+});
+const snapshot = (overrides: Record<string, unknown> = {}) => ({ sessionId: 'session-1', liveHead: 12, liveFocus: { kind: 'NONE' }, liveFocusAtSp: null, ...overrides });
+
 interface Call {
   url: string;
   headers: Record<string, string>;
@@ -38,18 +49,22 @@ function client(body: unknown, options: { ok?: boolean; status?: number; throws?
 }
 
 describe('temporal snapshot transport', () => {
-  it('requests the owner-scoped route with the injected token and decodes the snapshot', async () => {
-    const { api, calls } = client({ sessionId: 'session-1', liveHead: 12 });
-    await expect(api.fetchSessionTemporalState('session-1')).resolves.toEqual({ sessionId: 'session-1', liveHead: 12 });
+  it('requests the owner-scoped route with the injected token and decodes the LH + LF snapshot', async () => {
+    const { api, calls } = client(snapshot({ liveFocus: THREAD, liveFocusAtSp: 11 }));
+    await expect(api.fetchSessionTemporalState('session-1')).resolves.toEqual(snapshot({ liveFocus: THREAD, liveFocusAtSp: 11 }));
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url).toBe('https://api.example/v1/conversation/sessions/session-1/temporal');
     expect(calls[0]?.headers.Authorization).toBe('Bearer token-abc');
   });
 
-  it('accepts liveHead null and rejects a zero sentinel', async () => {
-    await expect(client({ sessionId: 'session-1', liveHead: null }).api.fetchSessionTemporalState('session-1'))
-      .resolves.toEqual({ sessionId: 'session-1', liveHead: null });
-    await expect(client({ sessionId: 'session-1', liveHead: 0 }).api.fetchSessionTemporalState('session-1'))
+  it('accepts liveHead null and rejects a zero sentinel, a missing LF and an LF beyond the Live Head', async () => {
+    await expect(client(snapshot({ liveHead: null })).api.fetchSessionTemporalState('session-1'))
+      .resolves.toEqual(snapshot({ liveHead: null }));
+    await expect(client(snapshot({ liveHead: 0 })).api.fetchSessionTemporalState('session-1'))
+      .rejects.toBeInstanceOf(TemporalTransportError);
+    await expect(client({ sessionId: 'session-1', liveHead: 12 }).api.fetchSessionTemporalState('session-1'))
+      .rejects.toBeInstanceOf(TemporalTransportError);
+    await expect(client(snapshot({ liveFocus: THREAD, liveFocusAtSp: 13 })).api.fetchSessionTemporalState('session-1'))
       .rejects.toBeInstanceOf(TemporalTransportError);
   });
 
@@ -59,7 +74,7 @@ describe('temporal snapshot transport', () => {
       [{ throws: true }, 'NETWORK'],
       [{ malformed: true }, 'MALFORMED_BODY'],
     ] as const) {
-      const { api } = client({ sessionId: 'session-1', liveHead: 1 }, options);
+      const { api } = client(snapshot({ liveHead: 1 }), options);
       const failure = await api.fetchSessionTemporalState('session-1').catch((error: unknown) => error);
       expect(failure).toBeInstanceOf(TemporalTransportError);
       expect((failure as TemporalTransportError).failure.kind).toBe(kind);
@@ -115,6 +130,33 @@ describe('committed-CU catch-up transport', () => {
   });
 });
 
+describe('Live Focus transition catch-up transport (T-03D)', () => {
+  it('requests the owner-scoped LF route with the same paging grammar and returns the ascending page', async () => {
+    const { api, calls } = client({ sessionId: 'session-1', events: [transition({ atSp: 1, value: { kind: 'EMERGING', emergingFocusId: '4ef8538d-ddda-5e11-b7d9-052be85de59a' } }), transition({ atSp: 2 })] });
+    const events = await api.fetchLiveFocusEvents('session-1', { afterSp: 0 + 1, limit: 8 });
+    expect(events.map((entry) => [entry.atSp, entry.value.kind])).toEqual([[1, 'EMERGING'], [2, 'THREAD']]);
+    expect(calls[0]?.url).toBe('https://api.example/v1/conversation/sessions/session-1/temporal/live-focus-events?afterSp=1&limit=8');
+    expect(calls[0]?.headers.Authorization).toBe('Bearer token-abc');
+    const plain = client({ sessionId: 'session-1', events: [] });
+    await expect(plain.api.fetchLiveFocusEvents('session-1')).resolves.toEqual([]);
+    expect(plain.calls[0]?.url).toBe('https://api.example/v1/conversation/sessions/session-1/temporal/live-focus-events');
+  });
+
+  it('refuses SP(0) as a cursor before any request and fails closed on a bad page, a foreign envelope and an HTTP error', async () => {
+    const { api, calls } = client({ sessionId: 'session-1', events: [] });
+    await expect(api.fetchLiveFocusEvents('session-1', { afterSp: 0 })).rejects.toBeInstanceOf(RangeError);
+    expect(calls).toHaveLength(0);
+    await expect(client({ sessionId: 'session-1', events: [transition({ atSp: 2 }), transition({ atSp: 1 })] }).api.fetchLiveFocusEvents('session-1'))
+      .rejects.toBeInstanceOf(TemporalTransportError);
+    await expect(client({ sessionId: 'session-1', events: [transition({ value: { ...THREAD, label: 'Ahmed' } })] }).api.fetchLiveFocusEvents('session-1'))
+      .rejects.toBeInstanceOf(TemporalTransportError);
+    await expect(client({ sessionId: 'session-2', events: [] }).api.fetchLiveFocusEvents('session-1'))
+      .rejects.toBeInstanceOf(TemporalTransportError);
+    const failure = await client({ sessionId: 'session-1', events: [] }, { ok: false, status: 401 }).api.fetchLiveFocusEvents('session-1').catch((error: unknown) => error);
+    expect((failure as TemporalTransportError).failure).toEqual({ kind: 'HTTP', status: 401 });
+  });
+});
+
 // FIX-T03A2-02: the requested Session is part of the trust boundary. A
 // well-shaped response that names a DIFFERENT Session than the request URL must
 // never be returned as a successful result, and the transport - not the later
@@ -127,16 +169,18 @@ describe('requested-Session binding at the transport boundary', () => {
   };
 
   it('rejects a snapshot that names another Session', async () => {
-    const { api } = client({ sessionId: 'session-2', liveHead: 12 });
+    const { api } = client(snapshot({ sessionId: 'session-2' }));
     expect(await rejection(api.fetchSessionTemporalState('session-1')))
       .toMatchObject({ kind: 'INVALID_PAYLOAD', reason: 'INVALID_IDENTITY' });
   });
 
-  it('rejects an EMPTY catch-up page whose envelope names another Session', async () => {
+  it('rejects an EMPTY catch-up page whose envelope names another Session, on both catch-up routes', async () => {
     // There is no event here whose Session could disagree with the envelope, so
     // this is exactly the payload that used to decode cleanly.
     const { api } = client({ sessionId: 'session-2', events: [] });
     expect(await rejection(api.fetchCommittedEvents('session-1')))
+      .toMatchObject({ kind: 'INVALID_PAYLOAD', reason: 'INVALID_IDENTITY' });
+    expect(await rejection(api.fetchLiveFocusEvents('session-1')))
       .toMatchObject({ kind: 'INVALID_PAYLOAD', reason: 'INVALID_IDENTITY' });
   });
 
@@ -144,17 +188,23 @@ describe('requested-Session binding at the transport boundary', () => {
     const { api } = client({ sessionId: 'session-2', events: [event({ sessionId: 'session-2' })] });
     expect(await rejection(api.fetchCommittedEvents('session-1')))
       .toMatchObject({ kind: 'INVALID_PAYLOAD', reason: 'INVALID_IDENTITY' });
+    const lf = client({ sessionId: 'session-2', events: [transition({ sessionId: 'session-2' })] });
+    expect(await rejection(lf.api.fetchLiveFocusEvents('session-1')))
+      .toMatchObject({ kind: 'INVALID_PAYLOAD', reason: 'INVALID_IDENTITY' });
   });
 
   it('keeps rejecting an own-Session envelope carrying a foreign event', async () => {
     const { api } = client({ sessionId: 'session-1', events: [event({ sessionId: 'session-2' })] });
     expect(await rejection(api.fetchCommittedEvents('session-1')))
       .toMatchObject({ kind: 'INVALID_PAYLOAD', reason: 'INVALID_IDENTITY' });
+    const lf = client({ sessionId: 'session-1', events: [transition({ sessionId: 'session-2' })] });
+    expect(await rejection(lf.api.fetchLiveFocusEvents('session-1')))
+      .toMatchObject({ kind: 'INVALID_PAYLOAD', reason: 'INVALID_IDENTITY' });
   });
 
   it('accepts a same-Session snapshot and a same-Session page, empty or not', async () => {
-    await expect(client({ sessionId: 'session-1', liveHead: 4 }).api.fetchSessionTemporalState('session-1'))
-      .resolves.toEqual({ sessionId: 'session-1', liveHead: 4 });
+    await expect(client(snapshot({ liveHead: 4 })).api.fetchSessionTemporalState('session-1'))
+      .resolves.toEqual(snapshot({ liveHead: 4 }));
     await expect(client({ sessionId: 'session-1', events: [] }).api.fetchCommittedEvents('session-1'))
       .resolves.toEqual([]);
     const page = await client({ sessionId: 'session-1', events: [event()] }).api.fetchCommittedEvents('session-1');

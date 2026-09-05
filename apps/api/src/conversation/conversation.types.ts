@@ -38,7 +38,9 @@ export interface OrchestratedTurnResult {
    * authoritative Live Head plus the committed-CU advancement events created or
    * replayed for it. Absent while the exchange is not a completed USER +
    * ASSISTANT pair; `userTurn` and `assistantTurn` are never removed or
-   * reinterpreted. It carries no Live Focus: T-03D owns LF.
+   * reinterpreted. Since T-03D the production path delivers the additive
+   * `ConversationLiveDelivery` subtype here (current Live Focus + the LF
+   * transitions of the exchange); the frozen LH fields are unchanged.
    */
   temporal?: ConversationTemporalDelivery;
 }

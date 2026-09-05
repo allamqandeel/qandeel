@@ -66,8 +66,9 @@ test('0068 exists, orders after 0067, and 0064-0067 are byte-identical', () => {
   assert.equal(gitBlobId(read('../migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql')), '3dc061c71bcb237cec648abb2d1fa02f450cd57f', '0065 byte-identical');
   assert.equal(gitBlobId(read('../migrations/0066_durable_reference_emerging_focus_sp_substrate_v1.sql')), '9f0588d5ca46329a8721ee30302f49d227a357ae', '0066 byte-identical');
   assert.equal(gitBlobId(read('../migrations/0067_conversation_focus_runtime_integration_readiness_v1.sql')), 'd12a3f552e80709ee1d20887f55f1c84e84f9208', '0067 byte-identical');
-  assert.equal(gitBlobId(read('../verify-migration-0066.mjs')), '39559c2ca81dd216968e694e6c93c8a160fec4a4', 'the 0066 verifier is byte-identical');
-  assert.equal(gitBlobId(read('../verify-migration-0067.mjs')), 'aaec5bf020143b111d265f0726bdc08d0c5922df', 'the 0067 verifier is byte-identical');
+  // (T-03D re-anchored the 0066 / 0067 verifiers' T-03A2 grant posture to the cutover: the temporal-only producer is retired.)
+  assert.equal(gitBlobId(read('../verify-migration-0066.mjs')), '13ccb087e415a316609b1121f937ca3699c59ba4', 'the 0066 verifier is byte-identical');
+  assert.equal(gitBlobId(read('../verify-migration-0067.mjs')), '0e496a95da7a0ee596c416e0c599f703c121b991', 'the 0067 verifier is byte-identical');
   assert.match(migration, /current_setting\('server_encoding'\) <> 'UTF8'/u);
   assert.match(migration, /to_regclass\('public\.conversation_emerging_focuses'\) IS NULL/u, 'the T-03B1b1 substrate is a precondition');
   assert.doesNotMatch(executableSql, /CREATE OR REPLACE|DROP |ALTER TABLE public\.conversation_units|ALTER TABLE public\.session_semantic_clocks/u,
