@@ -76,7 +76,11 @@ const mobileCi = read('.github/workflows/mobile-ci.yml');
 
 test('migration 0069 is the newest, and 0064 - 0068 keep their exact pins', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0069_thread_runtime_integration_readiness_v1.sql');
+  // (T-03B3 added 0070, the FINAL Thread-layer substrate that SUPERSEDES this
+  // read/audit slice for B3-enabled batches; it is pinned by its own contract.
+  // 0069 stays the newest READ / AUDIT-only migration of T-03B2.)
+  assert.ok(migrations.includes('0069_thread_runtime_integration_readiness_v1.sql'));
+  assert.ok(migrations.indexOf('0069_thread_runtime_integration_readiness_v1.sql') > migrations.indexOf('0068_durable_thread_home_same_sp_substrate_v1.sql'));
   assert.equal(gitBlobId(read('database/migrations/0064_committed_conversational_unit_substrate_v1.sql')), '0a2ee63980e59072b3e9f52a643efa8220e95b08');
   assert.equal(gitBlobId(read('database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql')), '3dc061c71bcb237cec648abb2d1fa02f450cd57f');
   assert.equal(gitBlobId(read('database/migrations/0066_durable_reference_emerging_focus_sp_substrate_v1.sql')), '9f0588d5ca46329a8721ee30302f49d227a357ae');
@@ -117,8 +121,18 @@ test('AC-B2B3-01: the B1+B2 runtime is NOT live - not registered, not called, no
   // No file outside the two production-inert semantic directories reaches the runtime.
   const referencing = listFiles(join(rootPath, 'apps/api/src')).map(relative)
     .filter((file) => !file.startsWith(`${THREAD_DIR}/`))
+    // T-03B3 (thread-lifecycle, production-inert) SUPERSEDES this runtime for
+    // B3-enabled batches and reuses its mappers, types, helpers and Origin
+    // mapper; it is pinned separately just below.
+    .filter((file) => !file.startsWith('apps/api/src/thread-lifecycle/'))
     .filter((file) => /ConversationThreadEstablishmentService|ConversationThreadRuntimeRepository|conversation-thread-runtime|conversational-origin-mapper|with_focus_and_thread_v1|focus_thread_integrated_batch_snapshot|focus_thread_runtime_context|thread_capture_cutover_ready/u.test(stripComments(read(file))));
   assert.deepEqual(referencing, []);
+  const lifecycleFiles = listFiles(join(rootPath, 'apps/api/src/thread-lifecycle')).map(relative);
+  assert.ok(lifecycleFiles.length > 0, 'the T-03B3 directory exists');
+  for (const file of lifecycleFiles) {
+    assert.doesNotMatch(stripComments(read(file)), /new ConversationThreadEstablishmentService|new ConversationThreadRuntimeRepository|'commit_finalized_exchange_with_focus_and_thread_v1'|'get_conversation_focus_thread_integrated_batch_snapshot_v1'|'get_conversation_focus_thread_runtime_context_v1'|thread_capture_cutover_ready/u,
+      `${file} supersedes the B2b3 runtime: it never constructs it and never calls a 0069 read or the 0068 coordinator itself`);
+  }
   // Database: nothing granted, nothing revoked, no semantic write.
   assert.doesNotMatch(executable, /GRANT /u);
   for (const fn of ['commit_conversation_units_with_focus_and_thread_v1', 'commit_finalized_exchange_with_focus_and_thread_v1',

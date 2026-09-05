@@ -37,7 +37,11 @@ function gitBlobId(content) {
 
 test('0069 is the newest migration, and 0064 - 0068 are byte-identical', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0069_thread_runtime_integration_readiness_v1.sql');
+  // (T-03B3 added 0070, the FINAL Thread-layer substrate, pinned by
+  // database/tests/thread-lifecycle-cross-session-continuity-v1.test.mjs; 0069
+  // stays the newest READ / AUDIT-only migration of T-03B2.)
+  assert.ok(migrations.includes('0069_thread_runtime_integration_readiness_v1.sql'));
+  assert.ok(migrations.indexOf('0069_thread_runtime_integration_readiness_v1.sql') > migrations.indexOf('0068_durable_thread_home_same_sp_substrate_v1.sql'));
   assert.equal(migrations.filter((name) => name.startsWith('0069_')).length, 1, 'exactly one 0069 migration exists');
   assert.match(migration, /^BEGIN;/mu);
   assert.match(migration, /COMMIT;\s*$/u);

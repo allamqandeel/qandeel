@@ -102,8 +102,13 @@ test('migration 0068 is the newest DURABLE substrate, and 0064 / 0065 / 0066 / 0
   // tests/thread-runtime-integration-readiness-contract.test.mjs.)
   assert.ok(migrations.includes('0068_durable_thread_home_same_sp_substrate_v1.sql'));
   assert.equal(migrations.filter((name) => name.startsWith('0068_')).length, 1, 'exactly one 0068 migration exists');
+  // (T-03B3 added 0070, which creates its OWN Session-local lifecycle /
+  // continuity tables and never a second Thread, Home, event, evidence, origin
+  // or B2 capture table; it is pinned by its own contract.)
   for (const later of migrations.slice(migrations.indexOf('0068_durable_thread_home_same_sp_substrate_v1.sql') + 1)) {
-    assert.doesNotMatch(read(`database/migrations/${later}`), /CREATE TABLE/u, `${later} creates no second Thread or Home substrate`);
+    assert.doesNotMatch(read(`database/migrations/${later}`),
+      /CREATE TABLE public\.(?:conversation_world_spatial_authorities|conversation_threads|conversation_thread_homes|conversation_thread_establishment_events|conversation_thread_establishment_evidence|conversation_thread_origin_members|conversation_thread_commit_batches)\b/u,
+      `${later} creates no second Thread or Home substrate`);
   }
   assert.equal(gitBlobId(read('database/migrations/0064_committed_conversational_unit_substrate_v1.sql')), '0a2ee63980e59072b3e9f52a643efa8220e95b08');
   assert.equal(gitBlobId(read('database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql')), '3dc061c71bcb237cec648abb2d1fa02f450cd57f');
@@ -400,8 +405,21 @@ test('the whole slice is production-inert: no grant, no wiring, no runtime reade
   const referencing = listFiles(join(rootPath, 'apps/api/src'))
     .map(relative)
     .filter((file) => !file.startsWith(`${THREAD_DIR}/`))
+    // T-03B3 (thread-lifecycle, production-inert) reuses this canonicalizer and
+    // payload boundary exactly as T-03B2b3 does; it is pinned separately just below.
+    .filter((file) => !file.startsWith('apps/api/src/thread-lifecycle/'))
     .filter((file) => /with_focus_and_thread_v1|durable-thread|canonicalizePreparedThreadSequence|durableThreadId|conversation_threads|compute_canonical_home_placement/u.test(stripComments(read(file))));
   assert.deepEqual(referencing, [], 'T-03B2b2 is production-inert: no runtime path reaches it');
+  // T-03B3's FINAL Thread-layer runtime (thread-lifecycle) canonicalizes B2
+  // through this boundary and never carries a placement of its own: the
+  // database is still the only placement authority, and a reused Thread
+  // keeps its Home untouched.
+  const lifecycleFiles = listFiles(join(rootPath, 'apps/api/src/thread-lifecycle')).map(relative);
+  assert.ok(lifecycleFiles.length > 0, 'the T-03B3 directory exists');
+  for (const file of lifecycleFiles) {
+    assert.doesNotMatch(stripComments(read(file)), /compute_canonical_home_placement|osdap|conversation_thread_homes|placeCanonicalHome|resolveThreadHome/iu,
+      `${file} carries no permanent placement: the database is the only placement authority`);
+  }
   for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService],
     ['AppModule', appModule], ['the T-03B1b2 focus establishment service', focusEstablishment]]) {
     assert.doesNotMatch(stripComments(text), /thread|Thread|durable-thread|with_focus_and_thread/u, `${name} is untouched by T-03B2b2`);

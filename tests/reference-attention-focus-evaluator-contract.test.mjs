@@ -128,6 +128,9 @@ test('nothing outside the directory imports it: no ConversationModule, Conversat
     // T-03B2a (thread-establishment, production-inert) consumes ONLY the frozen
     // B1 TYPE authorities of this directory; it is pinned separately just below.
     .filter((file) => !file.startsWith(`${THREAD_DIR}/`))
+    // T-03B3 (thread-lifecycle, production-inert) RUNS the frozen B1 chain
+    // exactly as T-03B2b3's runtime does; it is pinned separately just below.
+    .filter((file) => !file.startsWith('apps/api/src/thread-lifecycle/'))
     .filter((file) => /conversational-focus|ConversationalFocusEvaluatorService|FocusResolutionProvider|OpenAiFocusResolutionProvider|validateFocusResolutionProposal/u.test(stripComments(readFileSyncUtf8(file))));
   assert.deepEqual(referencing, [], 'T-03B1a is production-inert: no runtime path reaches it');
   // The T-03B2a / T-03B2b1 / T-03B2b2 SEMANTIC files may import only the two
@@ -179,6 +182,20 @@ test('nothing outside the directory imports it: no ConversationModule, Conversat
       assert.doesNotMatch(stripComments(source), /openAiFocusResolutionBinding/u, `${file} constructs no production B1 binding of its own`);
     }
   }
+  // T-03B3's production-inert FINAL Thread-layer runtime (thread-lifecycle)
+  // RUNS the frozen B1 chain exactly as T-03B2b3's runtime does, so every file
+  // of it may import the same listed B1 pieces - and nothing else here.
+  const lifecycleFiles = listFiles(join(rootPath, 'apps/api/src/thread-lifecycle')).map((file) => relative(file));
+  assert.ok(lifecycleFiles.length > 0, 'the T-03B3 directory exists');
+  for (const file of lifecycleFiles) {
+    const source = readFileSyncUtf8(file);
+    for (const match of source.matchAll(/from\s+'([^']*conversational-focus[^']*)'/gu)) {
+      assert.ok(B2B3_ALLOWED_FOCUS_IMPORTS.has(match[1]), `${file} may import only the listed B1 pieces; found ${match[1]}`);
+    }
+    assert.doesNotMatch(stripComments(source), /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|OpenAiFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor/u,
+      `${file} does not reach the B1 orchestration service, its repository, the provider adapter, the validator or the anchor mapper`);
+    if (!file.endsWith('.spec.ts')) assert.doesNotMatch(stripComments(source), /openAiFocusResolutionBinding/u, `${file} constructs no production B1 binding of its own`);
+  }
   for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService], ['AppModule', appModule], ['the T-03A2 establishment service', establishment]]) {
     assert.doesNotMatch(stripComments(text), /conversational-focus|Focus|focus/u, `${name} is untouched by T-03B1a`);
   }
@@ -204,9 +221,16 @@ test('the evaluator adds no SQL, no durable write, no durable identity; the dura
   // T-03B1 substrate to rebuild one canonical B1 bundle per prior committed CU
   // for the T-03B2a evaluator, and creates nothing; it is pinned by
   // tests/thread-runtime-integration-readiness-contract.test.mjs.)
-  for (const name of migrations.filter((candidate) => !/^006[6789]_/u.test(candidate))) {
+  // (T-03B3 added 0070, the FINAL Thread-layer substrate: it binds a Session
+  // Emerging Focus to an existing Thread and READS 0066's RESOLVED references
+  // as identity evidence, creating no B1 substrate of its own; it is pinned by
+  // tests/thread-lifecycle-cross-session-continuity-contract.test.mjs.)
+  for (const name of migrations.filter((candidate) => !/^00(?:6[6789]|70)_/u.test(candidate))) {
     assert.doesNotMatch(readFileSyncUtf8(`database/migrations/${name}`), /emerging_focus|reference_handle|conversational_focus|claim_attribution/iu, `${name} carries no T-03B1 substrate`);
   }
+  assert.doesNotMatch(readFileSyncUtf8('database/migrations/0070_thread_lifecycle_cross_session_continuity_v1.sql'),
+    /CREATE TABLE public\.conversation_(?:emerging_focuses|reference_handles|reference_resolutions|unit_focus_semantics|claim_attributions)\b|claim_attribution/iu,
+    '0070 creates no second T-03B1 substrate');
   for (const name of ['0068_durable_thread_home_same_sp_substrate_v1.sql', '0069_thread_runtime_integration_readiness_v1.sql']) {
     assert.doesNotMatch(readFileSyncUtf8(`database/migrations/${name}`),
       /CREATE TABLE public\.conversation_(?:emerging_focus|reference_|unit_focus_|claim_)/u,

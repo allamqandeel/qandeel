@@ -324,10 +324,24 @@ test('no database, Supabase, Nest, runtime, mobile, provider or B1 / B2a import;
     'database/verify-migration-0068.mjs',
     'database/tests/durable-thread-home-same-sp-substrate-v1.test.mjs',
   ];
+  // T-03B3's migration 0070 CALLS the frozen 0068 persist path for a NEW
+  // establishment and computes no placement of its own; its verifier and its
+  // database contract read the stored Home only to prove a reused Thread keeps
+  // it byte-for-byte. None of the three defines, mirrors or calls an engine.
+  const B3_DATABASE_FILES = [
+    'database/migrations/0070_thread_lifecycle_cross_session_continuity_v1.sql',
+    'database/verify-migration-0070.mjs',
+    'database/tests/thread-lifecycle-cross-session-continuity-v1.test.mjs',
+  ];
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src')), ...listFiles(join(rootPath, 'database'))].map((f) => relative(f))) {
     if (B2B2_DATABASE_FILES.includes(file)) {
       assert.doesNotMatch(read(file), /placeCanonicalHome|resolveThreadHome|HomePlacementRequest|CanonicalHomePlacement/u,
         `${file} mirrors the frozen scheme in SQL and never calls the TypeScript engine`);
+      continue;
+    }
+    if (B3_DATABASE_FILES.includes(file)) {
+      assert.doesNotMatch(read(file), /home-placement|placeCanonicalHome|resolveThreadHome|HomePlacementRequest|CanonicalHomePlacement|CREATE (?:OR REPLACE )?FUNCTION public\.(?:osdap_|compute_canonical_home_placement)/u,
+        `${file} reuses the stored Home and never defines, mirrors or calls an engine`);
       continue;
     }
     assert.doesNotMatch(read(file), /home-placement|placeCanonicalHome|OSDAP|HomePlacementRequest/u, `${file} does not reach the engine`);
@@ -352,18 +366,24 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
   // (T-03B2b3 added 0069, a READ / AUDIT-only migration that creates no table
   // and computes no placement; it is pinned by its own contract.)
   const B2B3_MIGRATION = '0069_thread_runtime_integration_readiness_v1.sql';
-  assert.deepEqual(migrations.filter((name) => /home|placement|osdap|spatial|thread/iu.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION],
-    'exactly one Home / Thread SUBSTRATE migration exists (T-03B2b2), plus the T-03B2b3 READ / AUDIT migration');
+  // (T-03B3 added 0070, the Session-local lifecycle / cross-Session continuity
+  // substrate; it CALLS compute_canonical_home_placement_v1 for a NEW Thread and
+  // never recomputes, moves or exposes a Home; pinned by its own contract.)
+  const B3_MIGRATION = '0070_thread_lifecycle_cross_session_continuity_v1.sql';
+  assert.deepEqual(migrations.filter((name) => /home|placement|osdap|spatial|thread/iu.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
+    'exactly one Home / Thread SUBSTRATE migration exists (T-03B2b2), plus the T-03B2b3 READ / AUDIT migration and the T-03B3 lifecycle migration');
+  assert.doesNotMatch(read(`database/migrations/${B3_MIGRATION}`), /CREATE FUNCTION public\.(?:osdap_|compute_canonical_home_placement)|UPDATE public\.conversation_thread_homes|placement_x\s*=|placement_y\s*=/u,
+    'the T-03B3 migration defines no placement engine of its own and moves no Home');
   assert.doesNotMatch(read(`database/migrations/${B2B3_MIGRATION}`), /osdap|placement_x|placement_y|home_placement|compute_canonical_home_placement/iu,
     'the T-03B2b3 read/audit migration computes no placement of its own');
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION)) {
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION)) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu, `${name} carries no Home substrate`);
   }
   assert.deepEqual(readdirSync(join(rootPath, 'database')).filter((name) => /home|placement|osdap|thread/iu.test(name)), [],
     'no Home / placement verifier is named after the engine');
   assert.deepEqual(Object.keys(rootPackage.scripts).filter((name) => /verify:.*(?:home|placement|osdap|thread)/u.test(name)),
-    ['verify:durable-thread-home-same-sp-substrate:integration', 'verify:thread-runtime-integration-readiness:integration'],
-    'the only Home-related verifier script is the T-03B2b2 one; the T-03B2b3 one verifies reads, never a placement');
+    ['verify:durable-thread-home-same-sp-substrate:integration', 'verify:thread-runtime-integration-readiness:integration', 'verify:thread-lifecycle-cross-session-continuity:integration'],
+    'the only Home-related verifier script is the T-03B2b2 one; the T-03B2b3 and T-03B3 ones verify reads / reuse, never a placement');
   assert.deepEqual([...apiCi.matchAll(/npm run (verify:[\w:-]*(?:home|placement|osdap)[\w:-]*)/gu)].map((m) => m[1]),
     ['verify:durable-thread-home-same-sp-substrate:integration']);
 });

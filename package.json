@@ -117,6 +117,8 @@
     "verify:durable-thread-home-same-sp-substrate:integration": "node --env-file-if-exists=.env database/verify-migration-0068.mjs",
     "test:thread-runtime-integration-readiness-contract": "node --test tests/thread-runtime-integration-readiness-contract.test.mjs",
     "verify:thread-runtime-integration-readiness:integration": "node --env-file-if-exists=.env database/verify-migration-0069.mjs",
+    "test:thread-lifecycle-cross-session-continuity-contract": "node --test tests/thread-lifecycle-cross-session-continuity-contract.test.mjs",
+    "verify:thread-lifecycle-cross-session-continuity:integration": "node --env-file-if-exists=.env database/verify-migration-0070.mjs",
     "test:integrated-intelligence-runtime-phase-closure-contract": "node --test tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs",
     "verify:explicit-session-context-activation:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/verify-explicit-session-context-activation-runtime.ts",
     "verify:him-measurement-preflight": "node --test tests/him-structured-measurement-preflight.test.mjs && npm run test:api && npm run test:database && node node_modules/typescript/bin/tsc -p apps/api/tsconfig.json --noEmit && node node_modules/typescript/bin/tsc -p apps/api/tsconfig.scripts.json --noEmit && npm run build:api",

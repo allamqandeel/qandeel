@@ -99,6 +99,9 @@ test('AC-B1B2-01: the B1 runtime is NOT live - not registered, not called, nothi
     // T-03B2a (thread-establishment, production-inert) consumes ONLY the pure
     // B1 TYPE authorities; it is pinned separately just below.
     .filter((file) => !file.startsWith('apps/api/src/thread-establishment/'))
+    // T-03B3 (thread-lifecycle, production-inert) RUNS the frozen B1 chain
+    // exactly as T-03B2b3's runtime does; it is pinned separately just below.
+    .filter((file) => !file.startsWith('apps/api/src/thread-lifecycle/'))
     .filter((file) => /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|conversational-focus|with_focus_v1|integrated_batch_snapshot|cutover_ready/u.test(stripComments(read(file))));
   assert.deepEqual(referencing, []);
   // The T-03B2a / T-03B2b1 / T-03B2b2 SEMANTIC files never reach the B1 runtime
@@ -146,6 +149,19 @@ test('AC-B1B2-01: the B1 runtime is NOT live - not registered, not called, nothi
       assert.doesNotMatch(stripComments(source), /focus-resolution-binding|conversation-focus-runtime|integrated_batch_snapshot|cutover_ready/u,
         `${file} does not reach the T-03B1b2 runtime`);
     }
+  }
+  // T-03B3's production-inert FINAL Thread-layer runtime (thread-lifecycle)
+  // RUNS the frozen B1 chain exactly as T-03B2b3's does: the same listed B1
+  // pieces, never this orchestration service, its repository or a 0067 read.
+  const lifecycleFiles = listFiles(join(rootPath, 'apps/api/src/thread-lifecycle')).map(relative);
+  assert.ok(lifecycleFiles.length > 0, 'the T-03B3 directory exists');
+  for (const file of lifecycleFiles) {
+    const source = read(file);
+    for (const match of source.matchAll(/from\s+'([^']*conversational-focus[^']*)'/gu)) {
+      assert.ok(B2B3_ALLOWED_FOCUS_IMPORTS.has(match[1]), `${file} may import only the listed B1 pieces; found ${match[1]}`);
+    }
+    assert.doesNotMatch(stripComments(source), /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|with_focus_v1\b|get_conversation_integrated_batch_snapshot_v1|assert_conversation_focus_capture_cutover_ready_v1|conversation-focus-establishment/u,
+      `${file} does not reach the T-03B1b2 orchestration service, its repository or its 0067 reads`);
   }
   // Database: nothing granted, nothing revoked, no semantic write.
   assert.doesNotMatch(executable, /GRANT /u);
@@ -266,7 +282,9 @@ test('the typed database error transport is additive, bounded, opaque, and sourc
   const readers = listFiles(join(rootPath, 'apps/api/src')).map(relative)
     .filter((file) => !file.endsWith('.spec.ts') && stripComments(read(file)).includes('readDataApiUpstreamIdentity('))
     .filter((file) => !file.endsWith('supabase-data-api.service.ts'));
-  assert.deepEqual(readers, [`${FOCUS_DIR}/conversation-focus-runtime.repository.ts`]);
+  // (T-03B3's runtime repository reads the SAME opaque identity for its own
+  // second exact stale token, STALE_THREAD_IDENTITY_CONTEXT, under the same rule.)
+  assert.deepEqual(readers, [`${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
 });
 
 test('whole-exchange focus evaluation is sequential, no-hindsight and canonicalized once; no focus result reaches the wire', () => {

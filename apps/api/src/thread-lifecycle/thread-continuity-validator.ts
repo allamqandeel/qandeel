@@ -1,0 +1,130 @@
+// T-03B3 - the deterministic validation of Thread Continuity proposals.
+//
+// The provider proposes; this module decides whether the proposal is even
+// representable. Every rule is structural and closed over the SUPPLIED
+// material: a nominated or resolved Thread must be one of the supplied
+// dossiers; BIND_EXISTING must cite at least one current RESOLVED reference
+// whose handle grounds the current focus AND at least one existing dossier
+// item of exactly that Thread; AMBIGUOUS_EXISTING must name at least two
+// distinct supplied Threads; DISTINCT_NEW carries nothing. The same name
+// alone is structurally not continuity proof: the grounding-handle rule
+// requires the current CU to have RESOLVED the reference to the current
+// focus's own handle, and the prior evidence must exist in the dossier.
+//
+// No score, no similarity, no rank, no wall-clock and no Home is readable.
+
+import type { CanonicalCuFocusSemanticPayload } from '../conversational-focus/durable-focus-payload.types';
+import type { ThreadContinuityResolutionProposal, ThreadContinuityScreeningProposal } from './thread-continuity-provider.types';
+import {
+  compareThreadIdText,
+  ThreadContinuityRejectedError,
+  type CurrentFocusGrounding,
+  type PriorIdentityEvidenceRef,
+  type ThreadContinuityDecision,
+  type ThreadContinuityRejectionReason,
+  type ThreadIdentityDossier,
+} from './thread-continuity.types';
+
+export type ValidatedThreadContinuity =
+  | { readonly outcome: 'REJECTED'; readonly reason: ThreadContinuityRejectionReason; readonly index: number }
+  | {
+      readonly outcome: 'ACCEPTED';
+      readonly decision: ThreadContinuityDecision;
+      readonly threadId: string | null;
+      readonly candidateThreadIds: readonly string[];
+      readonly currentEvidenceReferenceIndexes: readonly number[];
+      readonly priorEvidenceRefs: readonly PriorIdentityEvidenceRef[];
+    };
+
+const reject = (reason: ThreadContinuityRejectionReason, index = -1): ValidatedThreadContinuity => ({ outcome: 'REJECTED', reason, index });
+
+/**
+ * Validates ONE screening proposal against ONE supplied chunk: every nominated
+ * id must be in the chunk, without duplicates. Returns the nominated ids in
+ * canonical textual order.
+ */
+export function validateThreadContinuityScreening(
+  proposal: ThreadContinuityScreeningProposal,
+  chunk: readonly ThreadIdentityDossier[],
+): { readonly outcome: 'ACCEPTED'; readonly nominated: readonly string[] } | { readonly outcome: 'REJECTED'; readonly reason: ThreadContinuityRejectionReason; readonly index: number } {
+  if (!proposal || !Array.isArray(proposal.possibleSameThreadIds)) return { outcome: 'REJECTED', reason: 'INVALID_PROVIDER_PAYLOAD', index: -1 };
+  const supplied = new Set(chunk.map((dossier) => dossier.threadId));
+  const seen = new Set<string>();
+  for (const [index, threadId] of proposal.possibleSameThreadIds.entries()) {
+    if (typeof threadId !== 'string' || !supplied.has(threadId)) return { outcome: 'REJECTED', reason: 'UNKNOWN_CANDIDATE_THREAD', index };
+    if (seen.has(threadId)) return { outcome: 'REJECTED', reason: 'DUPLICATE_CANDIDATE_THREAD', index };
+    seen.add(threadId);
+  }
+  return { outcome: 'ACCEPTED', nominated: Object.freeze([...seen].sort(compareThreadIdText)) };
+}
+
+/**
+ * Validates ONE final resolution proposal against the nominated dossiers, the
+ * current canonical B1 bundle and the current focus grounding.
+ */
+export function validateThreadContinuityResolution(
+  proposal: ThreadContinuityResolutionProposal,
+  input: {
+    readonly currentFocusSemantics: CanonicalCuFocusSemanticPayload;
+    readonly currentFocusGrounding: CurrentFocusGrounding;
+    /** The handle(s) that canonically ground the current focus; a current evidence reference must RESOLVE to one of them. */
+    readonly groundingHandleIds: readonly string[];
+    readonly candidates: readonly ThreadIdentityDossier[];
+  },
+): ValidatedThreadContinuity {
+  if (!proposal || typeof proposal !== 'object') return reject('INVALID_PROVIDER_PAYLOAD');
+  const { decision, threadId, candidateThreadIds, currentEvidenceReferenceIndexes, priorEvidenceRefs } = proposal;
+  if (!Array.isArray(candidateThreadIds) || !Array.isArray(currentEvidenceReferenceIndexes) || !Array.isArray(priorEvidenceRefs)) return reject('INVALID_PROVIDER_PAYLOAD');
+  const dossiersById = new Map(input.candidates.map((dossier) => [dossier.threadId, dossier]));
+
+  if (decision === 'DISTINCT_NEW') {
+    if (threadId !== null || candidateThreadIds.length !== 0 || currentEvidenceReferenceIndexes.length !== 0 || priorEvidenceRefs.length !== 0) return reject('INVALID_DECISION_SHAPE');
+    return { outcome: 'ACCEPTED', decision, threadId: null, candidateThreadIds: [], currentEvidenceReferenceIndexes: [], priorEvidenceRefs: [] };
+  }
+
+  if (decision === 'AMBIGUOUS_EXISTING') {
+    if (threadId !== null || currentEvidenceReferenceIndexes.length !== 0 || priorEvidenceRefs.length !== 0) return reject('INVALID_DECISION_SHAPE');
+    const seen = new Set<string>();
+    for (const [index, candidate] of candidateThreadIds.entries()) {
+      if (typeof candidate !== 'string' || !dossiersById.has(candidate)) return reject('UNKNOWN_CANDIDATE_THREAD', index);
+      if (seen.has(candidate)) return reject('DUPLICATE_CANDIDATE_THREAD', index);
+      seen.add(candidate);
+    }
+    if (seen.size < 2) return reject('INSUFFICIENT_AMBIGUITY_CANDIDATES');
+    return { outcome: 'ACCEPTED', decision, threadId: null, candidateThreadIds: Object.freeze([...seen].sort(compareThreadIdText)), currentEvidenceReferenceIndexes: [], priorEvidenceRefs: [] };
+  }
+
+  if (decision !== 'BIND_EXISTING') return reject('INVALID_PROVIDER_PAYLOAD');
+  if (typeof threadId !== 'string' || candidateThreadIds.length !== 0) return reject('INVALID_DECISION_SHAPE');
+  const dossier = dossiersById.get(threadId);
+  if (dossier === undefined) return reject('UNKNOWN_CANDIDATE_THREAD');
+  if (currentEvidenceReferenceIndexes.length === 0) return reject('CURRENT_EVIDENCE_REQUIRED');
+  const references = input.currentFocusSemantics.references;
+  const grounding = new Set(input.groundingHandleIds);
+  const seenIndexes = new Set<number>();
+  for (const [index, referenceIndex] of currentEvidenceReferenceIndexes.entries()) {
+    if (typeof referenceIndex !== 'number' || !Number.isSafeInteger(referenceIndex) || referenceIndex < 0 || referenceIndex >= references.length) return reject('CURRENT_EVIDENCE_NOT_GROUNDED', index);
+    if (seenIndexes.has(referenceIndex)) return reject('CURRENT_EVIDENCE_NOT_GROUNDED', index);
+    const reference = references[referenceIndex];
+    if (reference.state !== 'RESOLVED' || reference.resolved_handle_id === null || !grounding.has(reference.resolved_handle_id)) return reject('CURRENT_EVIDENCE_NOT_GROUNDED', index);
+    seenIndexes.add(referenceIndex);
+  }
+  if (priorEvidenceRefs.length === 0) return reject('PRIOR_EVIDENCE_REQUIRED');
+  const seenRefs = new Set<string>();
+  for (const [index, ref] of priorEvidenceRefs.entries()) {
+    if (!ref || typeof ref.cuId !== 'string' || typeof ref.exactSurface !== 'string') return reject('INVALID_PROVIDER_PAYLOAD', index);
+    const key = `${ref.cuId}\u0000${ref.exactSurface}`;
+    if (seenRefs.has(key)) return reject('PRIOR_EVIDENCE_NOT_IN_DOSSIER', index);
+    // Exact equality only: never containment, normalization or case folding.
+    if (!dossier.identityEvidence.some((item) => item.cuId === ref.cuId && item.exactSurface === ref.exactSurface)) return reject('PRIOR_EVIDENCE_NOT_IN_DOSSIER', index);
+    seenRefs.add(key);
+  }
+  return {
+    outcome: 'ACCEPTED',
+    decision,
+    threadId,
+    candidateThreadIds: [],
+    currentEvidenceReferenceIndexes: Object.freeze([...seenIndexes].sort((a, b) => a - b)),
+    priorEvidenceRefs: Object.freeze(priorEvidenceRefs.map((ref) => Object.freeze({ cuId: ref.cuId, exactSurface: ref.exactSurface }))),
+  };
+}
