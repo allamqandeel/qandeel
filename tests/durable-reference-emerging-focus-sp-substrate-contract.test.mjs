@@ -124,14 +124,27 @@ test('the new writer, coordinator and context read are production-inert; the T-0
   // canonicalizer, the durable identity derivation or the 0066 RPCs.
   const threadFiles = listFiles(join(rootPath, 'apps/api/src/thread-establishment')).map(relative);
   assert.ok(threadFiles.length > 0, 'the T-03B2a directory exists');
+  // T-03B2b2 derives its OWN Thread / Home / event identities from the neutral
+  // `runtime-identity/uuid-v5` helper under its own frozen namespace URIs. It
+  // may therefore name `uuidV5`, but never this slice's canonicalizer, its
+  // derivation functions, its namespaces or the 0066 RPCs.
+  const B2B2_IDENTITY_FILES = new Set([
+    'apps/api/src/thread-establishment/durable-thread-canonicalizer.ts',
+    'apps/api/src/thread-establishment/durable-thread-canonicalizer.spec.ts',
+  ]);
   for (const file of threadFiles) {
     const source = read(file);
     for (const match of source.matchAll(/from\s+'([^']*(?:conversational-focus|durable-focus)[^']*)'/gu)) {
       assert.ok(['../conversational-focus/conversational-focus.types', '../conversational-focus/durable-focus-payload.types'].includes(match[1]),
         `${file} may import only the B1 type authorities; found ${match[1]}`);
     }
-    assert.doesNotMatch(stripComments(source), /with_focus_v1|focus_runtime_context|durable-focus-canonicalizer|canonicalizePreparedFocusSequence|durableEmergingFocusId|durableReferenceHandleId|uuidV5|EMERGING_FOCUS_NAMESPACE/u,
+    assert.doesNotMatch(stripComments(source), /with_focus_v1|focus_runtime_context|durable-focus-canonicalizer|canonicalizePreparedFocusSequence|durableEmergingFocusId|durableReferenceHandleId|EMERGING_FOCUS_NAMESPACE|REFERENCE_HANDLE_NAMESPACE/u,
       `${file} does not reach the T-03B1b1 substrate, canonicalizer or identity derivation`);
+    if (!B2B2_IDENTITY_FILES.has(file)) {
+      assert.doesNotMatch(stripComments(source), /uuidV5/u, `${file} derives no durable identity of its own`);
+    } else {
+      assert.match(source, /from '\.\.\/runtime-identity\/uuid-v5'/u, `${file} uses the ONE neutral v5 helper, never a second algorithm`);
+    }
   }
   for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService],
     ['the T-03A2 establishment service', establishment], ['the T-03A2 unit repository', unitRepository]]) {

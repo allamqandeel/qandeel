@@ -161,9 +161,16 @@ test('the evaluator adds no SQL, no durable write, no durable identity; the dura
   // (T-03B1b2 added 0067, a read/audit substrate with no cutover; it is pinned by its own contract.)
   assert.ok(migrations.includes('0066_durable_reference_emerging_focus_sp_substrate_v1.sql'), 'the T-03B1b1 substrate migration exists');
   assert.ok(migrations.indexOf('0066_durable_reference_emerging_focus_sp_substrate_v1.sql') > migrations.indexOf('0065_session_semantic_clock_sp_lh_delivery_v1.sql'));
-  for (const name of migrations.filter((candidate) => !candidate.startsWith('0066_') && !candidate.startsWith('0067_'))) {
+  // (T-03B2b2 added 0068, which CONSUMES the frozen T-03B1 substrate - it reads
+  // the canonical attention events and claim attributions to re-prove the
+  // Thread-establishment gates - without creating a second one; it is pinned by
+  // tests/durable-thread-home-same-sp-substrate-contract.test.mjs.)
+  for (const name of migrations.filter((candidate) => !/^006[678]_/u.test(candidate))) {
     assert.doesNotMatch(readFileSyncUtf8(`database/migrations/${name}`), /emerging_focus|reference_handle|conversational_focus|claim_attribution/iu, `${name} carries no T-03B1 substrate`);
   }
+  assert.doesNotMatch(readFileSyncUtf8('database/migrations/0068_durable_thread_home_same_sp_substrate_v1.sql'),
+    /CREATE TABLE public\.conversation_(?:emerging_focus|reference_|unit_focus_|claim_)/u,
+    '0068 creates no second reference / Emerging Focus substrate');
   assert.ok(existsSync(new URL('database/verify-migration-0066.mjs', root)), 'the 0066 real-PostgreSQL verifier exists');
   for (const forbidden of ['serviceApi', 'dataApi', 'SupabaseClient', '.rpc(', 'from \'pg\'', 'INSERT INTO', 'UPDATE ', 'CREATE TABLE', 'randomUUID', 'uuidv5', 'crypto', 'fs.', 'writeFile', 'readFile']) {
     assert.equal(semanticCode.includes(forbidden), false, `the evaluator and canonicalizer must not contain ${forbidden}`);
