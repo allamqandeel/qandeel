@@ -32,9 +32,12 @@ function gitBlobId(content) {
   return createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
 }
 
-test('0067 is the newest migration, orders after 0066, and 0064 / 0065 / 0066 are byte-identical', () => {
+test('0067 orders after 0066, and 0064 / 0065 / 0066 are byte-identical', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0067_conversation_focus_runtime_integration_readiness_v1.sql');
+  // (T-03B2b2 added 0068, the durable Thread / Home substrate, pinned by
+  // database/tests/durable-thread-home-same-sp-substrate-v1.test.mjs; 0067
+  // stays the newest READ / AUDIT migration of T-03B1.)
+  assert.ok(migrations.includes('0067_conversation_focus_runtime_integration_readiness_v1.sql'));
   assert.ok(migrations.indexOf('0067_conversation_focus_runtime_integration_readiness_v1.sql') > migrations.indexOf('0066_durable_reference_emerging_focus_sp_substrate_v1.sql'));
   assert.match(migration, /^BEGIN;/mu);
   assert.match(migration, /COMMIT;\s*$/u);

@@ -56,9 +56,13 @@ const apiPackage = readJson('apps/api/package.json');
 const apiCi = read('.github/workflows/api-ci.yml');
 const mobileCi = read('.github/workflows/mobile-ci.yml');
 
-test('migration 0067 exists, is the newest, and 0064 / 0065 / 0066 keep their exact pins', () => {
+test('migration 0067 exists, orders after 0066, and 0064 / 0065 / 0066 keep their exact pins', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0067_conversation_focus_runtime_integration_readiness_v1.sql');
+  // (T-03B2b2 added 0068, the durable Thread / Home substrate, pinned by its
+  // own contract; 0067 stays the newest READ / AUDIT migration of T-03B1.)
+  assert.ok(migrations.includes('0067_conversation_focus_runtime_integration_readiness_v1.sql'));
+  assert.ok(migrations.indexOf('0067_conversation_focus_runtime_integration_readiness_v1.sql')
+    > migrations.indexOf('0066_durable_reference_emerging_focus_sp_substrate_v1.sql'));
   assert.equal(gitBlobId(read('database/migrations/0064_committed_conversational_unit_substrate_v1.sql')), '0a2ee63980e59072b3e9f52a643efa8220e95b08');
   assert.equal(gitBlobId(read('database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql')), '3dc061c71bcb237cec648abb2d1fa02f450cd57f');
   assert.equal(gitBlobId(read('database/migrations/0066_durable_reference_emerging_focus_sp_substrate_v1.sql')), '9f0588d5ca46329a8721ee30302f49d227a357ae');

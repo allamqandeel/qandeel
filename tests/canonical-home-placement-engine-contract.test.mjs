@@ -131,7 +131,18 @@ test('the T-03B2b1 directory exists exactly, nested under T-03B2a, pure and fram
     assert.equal(blobId(`${THREAD_DIR}/${name}`), expected, `${name} is byte-identical to T-03B2a as merged`);
   }
   const b2aTopLevel = readdirSync(join(rootPath, THREAD_DIR), { withFileTypes: true });
-  assert.deepEqual(b2aTopLevel.filter((entry) => entry.isFile()).map((entry) => entry.name).sort(), Object.keys(T03B2A_BLOBS).sort(), 'no T-03B2a file was added or removed');
+  // T-03B2b2 adds exactly the durable payload types, the Thread canonicalizer
+  // and its suite beside the frozen T-03B2a files; that trio is pinned by
+  // tests/durable-thread-home-same-sp-substrate-contract.test.mjs. No T-03B2a
+  // file may be added or removed, and none of the three may reach this engine.
+  const B2B2_FILES = ['durable-thread-canonicalizer.spec.ts', 'durable-thread-canonicalizer.ts', 'durable-thread-payload.types.ts'];
+  assert.deepEqual(b2aTopLevel.filter((entry) => entry.isFile()).map((entry) => entry.name).sort(),
+    [...Object.keys(T03B2A_BLOBS), ...B2B2_FILES].sort(), 'no T-03B2a file was added or removed');
+  for (const name of B2B2_FILES) {
+    assert.doesNotMatch(stripComments(read(`${THREAD_DIR}/${name}`)),
+      /home-placement|placeCanonicalHome|resolveThreadHome|CanonicalHomePlacement|QANDEEL_OSDAP|OSDAP|HomePlacementRequest/u,
+      `${name} carries no permanent placement: the database is the only placement authority`);
+  }
   assert.deepEqual(b2aTopLevel.filter((entry) => entry.isDirectory()).map((entry) => entry.name), ['home-placement']);
   assert.match(b2aContract, /assert\.deepEqual\(directories, \['home-placement'\]/u, 'the T-03B2a contract pins this directory as the only nested slice');
   assert.match(b2aContract, /assert\.doesNotMatch\(code\['index\.ts'\], \/home-placement\/u/u, 'the T-03B2a contract pins its index as not re-exporting the engine');
@@ -292,8 +303,25 @@ test('no database, Supabase, Nest, runtime, mobile, provider or B1 / B2a import;
   for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService], ['AppModule', appModule]]) {
     assert.doesNotMatch(stripComments(text), /home-placement|HomePlacement|OSDAP|Home Anchor|homeAnchor|home_anchor/u, `${name} is untouched by T-03B2b1`);
   }
+  // T-03B2b2 owns the DURABLE side: migration 0068 mirrors QANDEEL_OSDAP_V1 in
+  // PostgreSQL, and its verifier and database contract replay the golden
+  // vectors against it. Those three files are the only ones under database/
+  // that may name the scheme, and they never import this TypeScript engine.
+  const B2B2_DATABASE_FILES = [
+    'database/migrations/0068_durable_thread_home_same_sp_substrate_v1.sql',
+    'database/verify-migration-0068.mjs',
+    'database/tests/durable-thread-home-same-sp-substrate-v1.test.mjs',
+  ];
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src')), ...listFiles(join(rootPath, 'database'))].map((f) => relative(f))) {
+    if (B2B2_DATABASE_FILES.includes(file)) {
+      assert.doesNotMatch(read(file), /placeCanonicalHome|resolveThreadHome|HomePlacementRequest|CanonicalHomePlacement/u,
+        `${file} mirrors the frozen scheme in SQL and never calls the TypeScript engine`);
+      continue;
+    }
     assert.doesNotMatch(read(file), /home-placement|placeCanonicalHome|OSDAP|HomePlacementRequest/u, `${file} does not reach the engine`);
+  }
+  for (const file of B2B2_DATABASE_FILES) {
+    assert.ok(read(file).includes('QANDEEL_OSDAP_V1'), `${file} carries the frozen scheme id`);
   }
 });
 
@@ -304,14 +332,22 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
     assert.equal(allCode.includes(forbidden), false, `the T-03B2b1 boundary must not contain ${forbidden}`);
   }
   assert.doesNotMatch(engineCode, /newThreadId\s*=|threadId\s*=\s*[^=]/u, 'no Thread identity is minted');
+  // T-03B2b1 itself shipped NO migration and NO verifier. The durable Home
+  // substrate arrived with T-03B2b2 as exactly ONE migration, 0068, pinned by
+  // its own contract; nothing older may carry a Home, Thread or scheme token.
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  assert.ok(!migrations.some((name) => /home|placement|osdap|spatial|thread/iu.test(name)), 'no Home / placement / Thread migration exists');
-  for (const name of migrations) {
+  const B2B2_MIGRATION = '0068_durable_thread_home_same_sp_substrate_v1.sql';
+  assert.deepEqual(migrations.filter((name) => /home|placement|osdap|spatial|thread/iu.test(name)), [B2B2_MIGRATION],
+    'exactly one Home / Thread migration exists, and it is the T-03B2b2 substrate');
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION)) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu, `${name} carries no Home substrate`);
   }
-  assert.ok(!readdirSync(join(rootPath, 'database')).some((name) => /home|placement|osdap|thread/iu.test(name)), 'no Home / placement verifier exists');
-  assert.ok(!Object.keys(rootPackage.scripts).some((name) => /verify:.*(?:home|placement|osdap|thread)/u.test(name)), 'no Home / placement verifier script');
-  assert.doesNotMatch(apiCi, /verify:.*(?:home|placement|osdap)/u);
+  assert.deepEqual(readdirSync(join(rootPath, 'database')).filter((name) => /home|placement|osdap|thread/iu.test(name)), [],
+    'no Home / placement verifier is named after the engine');
+  assert.deepEqual(Object.keys(rootPackage.scripts).filter((name) => /verify:.*(?:home|placement|osdap|thread)/u.test(name)),
+    ['verify:durable-thread-home-same-sp-substrate:integration'], 'the only Home-related verifier script is the T-03B2b2 one');
+  assert.deepEqual([...apiCi.matchAll(/npm run (verify:[\w:-]*(?:home|placement|osdap)[\w:-]*)/gu)].map((m) => m[1]),
+    ['verify:durable-thread-home-same-sp-substrate:integration']);
 });
 
 test('the gate is registered at the root and in API CI after T-03B2a and before the database bootstrap; no new dependency; MOB-CI-01 untouched; docs indexed (task sections 15, 18)', () => {

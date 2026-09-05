@@ -95,7 +95,14 @@ test('the T-03B2a directory exists, exactly, separate from T-03B1, and is framew
   const entries = readdirSync(join(rootPath, THREAD_DIR), { withFileTypes: true });
   const files = entries.filter((entry) => entry.isFile()).map((entry) => entry.name).sort();
   const directories = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
-  assert.deepEqual(files, [...PRODUCTION_FILES, ...SPEC_FILES].sort(), 'the directory holds exactly the T-03B2a production files and their suites');
+  // T-03B2b2 adds exactly the durable payload types, the Thread canonicalizer
+  // and its suite; that trio is pinned by
+  // tests/durable-thread-home-same-sp-substrate-contract.test.mjs, and the
+  // T-03B2a files themselves stay exactly these.
+  const B2B2_FILES = ['durable-thread-canonicalizer.spec.ts', 'durable-thread-canonicalizer.ts', 'durable-thread-payload.types.ts'];
+  assert.deepEqual(files, [...PRODUCTION_FILES, ...SPEC_FILES, ...B2B2_FILES].sort(), 'the directory holds exactly the T-03B2a production files, their suites and the T-03B2b2 durable boundary');
+  for (const name of B2B2_FILES) assert.ok(existsSync(new URL(`${THREAD_DIR}/${name}`, root)));
+  assert.doesNotMatch(code['index.ts'], /durable-thread/u, 'the T-03B2a index does not re-export the T-03B2b2 boundary either');
   assert.deepEqual(directories, ['home-placement'], 'the only nested slice is T-03B2b1 (canonical Home placement), pinned by its own static contract');
   assert.doesNotMatch(code['index.ts'], /home-placement/u, 'the T-03B2a index does not re-export the nested slice');
   assert.ok(!files.some((name) => /\.module\.|controller|repository|migration|binding|\.sql$/u.test(name)), 'no module, controller, repository, binding or migration file exists here');
@@ -200,21 +207,40 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     ['the T-03A2 establishment service', establishment], ['the T-03B1b2 focus establishment service', focusEstablishment]]) {
     assert.doesNotMatch(stripComments(text), /thread-establishment|ThreadEstablishment|THREAD_ESTABLISHMENT|TE-0[1-3]/u, `${name} is untouched by T-03B2a`);
   }
+  // T-03B2b2 owns the DURABLE side of T-03B2: migration 0068, its verifier and
+  // its database contract. They are the only files under database/ that may
+  // name a Thread establishment, and they never import this evaluator.
+  const B2B2_DATABASE_FILES = [
+    'database/migrations/0068_durable_thread_home_same_sp_substrate_v1.sql',
+    'database/verify-migration-0068.mjs',
+    'database/tests/durable-thread-home-same-sp-substrate-v1.test.mjs',
+  ];
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src')), ...listFiles(join(rootPath, 'database'))].map((f) => relative(f))) {
+    if (B2B2_DATABASE_FILES.includes(file)) {
+      assert.doesNotMatch(read(file), /ThreadEstablishmentEvaluatorService|validateThreadEstablishmentProposal|PreparedThreadEstablishmentResult|ThreadEstablishmentRejectedError/u,
+        `${file} re-proves the frozen gates in SQL and never imports the evaluator`);
+      continue;
+    }
     assert.doesNotMatch(read(file), /thread-establishment|ThreadEstablishment|THREAD_ESTABLISHMENT/u, `${file} does not reach the evaluator`);
   }
 });
 
-test('no migration, no Thread row, no service_role grant, no verifier: the durable substrate is untouched by this slice', () => {
+test('T-03B2a itself shipped no migration, no Thread row, no service_role grant and no verifier; the durable substrate is T-03B2b2 alone', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  assert.ok(!migrations.some((name) => /thread|home|te0|establishment/iu.test(name)), 'no Thread / Home / establishment migration exists');
-  for (const name of migrations) {
+  const B2B2_MIGRATION = '0068_durable_thread_home_same_sp_substrate_v1.sql';
+  assert.deepEqual(migrations.filter((name) => /thread|home|te0|establishment/iu.test(name)), [B2B2_MIGRATION],
+    'exactly one Thread / Home migration exists, and it is the T-03B2b2 substrate pinned by its own contract');
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION)) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu, `${name} carries no Thread / Home substrate`);
   }
   assert.ok(!existsSync(new URL('database/verify-thread-establishment.mjs', root)));
-  assert.doesNotMatch(apiCi, /verify:thread|thread.*:integration/u, 'no database verifier step exists for the evaluator slice');
+  // The evaluator slice still owns no verifier step: the only Thread verifier
+  // in CI is the T-03B2b2 durable-substrate one.
+  assert.deepEqual([...apiCi.matchAll(/npm run (verify:[\w:-]*thread[\w:-]*)/gu)].map((m) => m[1]),
+    ['verify:durable-thread-home-same-sp-substrate:integration']);
   assert.doesNotMatch(rootPackage.scripts['verify:foundation-integration-gate'] ?? '', /thread/u);
-  assert.ok(!Object.keys(rootPackage.scripts).some((name) => /verify:.*thread/u.test(name)), 'no Thread verifier script');
+  assert.deepEqual(Object.keys(rootPackage.scripts).filter((name) => /verify:.*thread/u.test(name)),
+    ['verify:durable-thread-home-same-sp-substrate:integration'], 'the only Thread verifier script is the T-03B2b2 one');
 });
 
 test('the provider request is the one-CU input and nothing wider: no analytical object, count, rank, similarity, Thread, Home, SP or LF channel (task §7)', () => {
