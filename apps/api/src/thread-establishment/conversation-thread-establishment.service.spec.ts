@@ -296,6 +296,65 @@ describe('relation gate, replay and capture-state gate (cases 46-50)', () => {
     expect(await service.establish(USER, pending)).toBe(pending);
   });
 
+  // FIX-T03B2B3-01. `establishExchange(...)` is a separately exposed direct
+  // runtime boundary, so it may not lean on the `establish(...)` wrapper's
+  // pending check: a GENERATING or FAILED turn handed straight to it must be
+  // refused by the ONE relation gate, before any read, any binding and any
+  // mutation - and as an INTEGRITY failure, never as unavailability.
+  it('74. a direct establishExchange call with any non-COMPLETED turn is refused before every read, provider and write', async () => {
+    const NON_COMPLETED: ConversationTurn['status'][] = ['GENERATING', 'FAILED'];
+    const pairs: [ConversationTurn['status'], ConversationTurn['status']][] = [
+      ['GENERATING', 'COMPLETED'],
+      ['COMPLETED', 'GENERATING'],
+      ['FAILED', 'COMPLETED'],
+      ['COMPLETED', 'FAILED'],
+      ['GENERATING', 'FAILED'],
+      ['FAILED', 'GENERATING'],
+    ];
+    for (const [userStatus, assistantStatus] of pairs) {
+      const { service, h, segmentation, focus, thread, segmentationFactory, focusFactory, threadFactory } = build();
+      const badUser = turn({ status: userStatus });
+      const badAssistant = turn({ id: ASSISTANT_TURN, role: 'ASSISTANT', content: ASSISTANT_CONTENT, source_turn_id: USER_TURN, status: assistantStatus });
+      const before = JSON.stringify([badUser, badAssistant]);
+      expect(await integrity(service.establishExchange(USER, badUser, badAssistant))).toBe('INVALID_FINALIZED_EXCHANGE_RELATION');
+      // Zero reads, zero bindings, zero provider requests, zero coordinator calls.
+      expect(h.calls).toEqual([]);
+      expect(h.readIntegratedBatchSnapshot).not.toHaveBeenCalled();
+      expect(h.readRuntimeContext).not.toHaveBeenCalled();
+      expect(h.commitFinalizedExchangeWithFocusAndThread).not.toHaveBeenCalled();
+      expect([segmentationFactory, focusFactory, threadFactory].map((f) => f.mock.calls.length)).toEqual([0, 0, 0]);
+      expect([segmentation.requests, focus.requests, thread.requests].map((r) => r.length)).toEqual([0, 0, 0]);
+      // No turn-state mutation, no failTurn, no regeneration: the inputs are
+      // returned to the caller exactly as they were handed in.
+      expect(JSON.stringify([badUser, badAssistant])).toBe(before);
+      expect([badUser.status, badAssistant.status]).toEqual([userStatus, assistantStatus]);
+      // And it is an INTEGRITY failure, never provider / transport unavailability.
+      const error = await rejection(service.establishExchange(USER, badUser, badAssistant));
+      expect(error).not.toBeInstanceOf(ConversationThreadEstablishmentUnavailableError);
+    }
+    // The status gate is independent of the role / Session / source relation:
+    // a structurally perfect pair is still refused while either turn is pending.
+    for (const status of NON_COMPLETED) {
+      const { service } = build();
+      expect(await integrity(service.establishExchange(USER, turn({ status }), assistantTurn))).toBe('INVALID_FINALIZED_EXCHANGE_RELATION');
+    }
+    // A valid COMPLETED pair still proceeds through the whole chain, and the
+    // wrapper still returns a not-yet-complete pair UNCHANGED rather than
+    // raising - that behaviour is deliberately not changed by this fix.
+    const valid = build();
+    expect((await valid.service.establishExchange(USER, userTurn, assistantTurn)).committedEvents).toHaveLength(2);
+    expect(valid.h.commitFinalizedExchangeWithFocusAndThread).toHaveBeenCalledTimes(1);
+    for (const status of NON_COMPLETED) {
+      const wrapper = build();
+      const pending = { userTurn: turn({ status }), assistantTurn };
+      expect(await wrapper.service.establish(USER, pending)).toBe(pending);
+      expect(wrapper.h.calls).toEqual([]);
+      const pendingAssistant = { userTurn, assistantTurn: turn({ id: ASSISTANT_TURN, role: 'ASSISTANT' as const, content: ASSISTANT_CONTENT, source_turn_id: USER_TURN, status }) };
+      expect(await wrapper.service.establish(USER, pendingAssistant)).toBe(pendingAssistant);
+      expect(wrapper.h.calls).toEqual([]);
+    }
+  });
+
   it('47. COMPLETE + COMPLETE is canonical replay: stored delivery, zero segmentation, zero focus, zero Thread', async () => {
     const { service, h, segmentation, focus, thread, segmentationFactory, focusFactory, threadFactory } = build(harness({
       snapshots: (batchId) => batchId === USER_BATCH ? complete(USER_BATCH, 'USER', 1, 2, 4, { thread_establishment_count: 1 }) : complete(ASSISTANT_BATCH, 'ASSISTANT', 3, 2, 4),

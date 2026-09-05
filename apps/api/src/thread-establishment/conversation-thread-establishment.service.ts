@@ -130,7 +130,10 @@ export class ConversationThreadEstablishmentService {
   }
 
   async establishExchange(userId: string, userTurn: ConversationTurn, assistantTurn: ConversationTurn): Promise<ConversationTemporalDelivery> {
-    // A. The relation gate: before any provider call and any database write.
+    // A. The relation gate, INCLUDING both COMPLETED statuses (FIX-T03B2B3-01):
+    // before any snapshot read, any context read, any binding construction,
+    // any provider call and any database write. It throws outside the try, so
+    // an invalid pair can never be reported as unavailability.
     assertFinalizedExchangeRelation(userTurn, assistantTurn);
     try {
       return await this.run(userId, userTurn, assistantTurn);
@@ -473,11 +476,29 @@ export function buildPreparedThreadCuInputs(
   }));
 }
 
-/** FIX-T03A2-01 application-side gate, unchanged in meaning; never marks a turn FAILED. */
+/**
+ * FIX-T03A2-01 application-side gate, unchanged in meaning; never marks a turn
+ * FAILED.
+ *
+ * FIX-T03B2B3-01: the gate proves the WHOLE finalized-exchange relation,
+ * including that BOTH turns are already COMPLETED. `establishExchange(...)` is
+ * a separately exposed direct runtime boundary, so it must be safe on its own
+ * rather than trusting the `establish(...)` wrapper's pending check: a
+ * GENERATING or FAILED turn handed straight to it would otherwise reach the
+ * snapshot reads, the context read, the provider bindings and possibly the
+ * integrated coordinator, which is exactly what a POST-FINALIZATION phase may
+ * never do. This is the ONE gate - nothing later re-checks it - and it runs
+ * before any read, any binding construction and any mutation. It mutates no
+ * turn state, never calls `failTurn`, regenerates nothing, and stays an
+ * integrity failure: it is never converted into provider or transport
+ * unavailability.
+ */
 function assertFinalizedExchangeRelation(userTurn: ConversationTurn, assistantTurn: ConversationTurn): void {
   if (
     userTurn.role !== 'USER'
     || assistantTurn.role !== 'ASSISTANT'
+    || userTurn.status !== 'COMPLETED'
+    || assistantTurn.status !== 'COMPLETED'
     || userTurn.session_id !== assistantTurn.session_id
     || assistantTurn.source_turn_id !== userTurn.id
   ) {

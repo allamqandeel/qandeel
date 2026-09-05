@@ -211,6 +211,31 @@ test('ED-B2B3-02: Conversational Origin is deterministic, provider-free and grou
   }
 });
 
+test('FIX-T03B2B3-01: the direct runtime boundary proves the WHOLE finalized-exchange relation, both COMPLETED statuses included', () => {
+  // ONE gate, in ONE place: role, both COMPLETED statuses, same Session and the
+  // source relation. Nothing later re-checks it, and nothing may reach a read,
+  // a binding or a mutation without passing it.
+  assert.match(service, /function assertFinalizedExchangeRelation\(userTurn: ConversationTurn, assistantTurn: ConversationTurn\): void \{\s*if \(\s*userTurn\.role !== 'USER'\s*\|\| assistantTurn\.role !== 'ASSISTANT'\s*\|\| userTurn\.status !== 'COMPLETED'\s*\|\| assistantTurn\.status !== 'COMPLETED'\s*\|\| userTurn\.session_id !== assistantTurn\.session_id\s*\|\| assistantTurn\.source_turn_id !== userTurn\.id\s*\) \{\s*throw new ConversationThreadIntegrityError\('INVALID_FINALIZED_EXCHANGE_RELATION'\);/u);
+  assert.equal((service.match(/assertFinalizedExchangeRelation\(/gu) ?? []).length, 2, 'exactly one declaration and one call site');
+  // The call site is the FIRST statement of the direct boundary and sits
+  // OUTSIDE the try, so an invalid pair can never be converted into provider or
+  // transport unavailability.
+  const boundary = service.slice(service.indexOf('async establishExchange('));
+  assert.match(boundary, /async establishExchange\(userId: string, userTurn: ConversationTurn, assistantTurn: ConversationTurn\): Promise<ConversationTemporalDelivery> \{\s*assertFinalizedExchangeRelation\(userTurn, assistantTurn\);\s*try \{/u);
+  assert.ok(boundary.indexOf('assertFinalizedExchangeRelation(userTurn, assistantTurn);') < boundary.indexOf('try {'));
+  assert.ok(service.indexOf('assertFinalizedExchangeRelation(userTurn, assistantTurn);') < service.indexOf('private async run('),
+    'the gate precedes every snapshot read, context read, binding construction and mutation');
+  // The wrapper keeps returning a not-yet-complete pair unchanged.
+  assert.match(service, /if \(userTurn\.status !== 'COMPLETED' \|\| assistantTurn\.status !== 'COMPLETED'\) return result;/u);
+  const serviceSpec = read(`${THREAD_DIR}/conversation-thread-establishment.service.spec.ts`);
+  assert.ok(serviceSpec.includes('74. a direct establishExchange call with any non-COMPLETED turn is refused before every read, provider and write'),
+    'the adversarial direct-call proof exists');
+  for (const proof of ["['GENERATING', 'COMPLETED']", "['COMPLETED', 'GENERATING']", "['FAILED', 'COMPLETED']",
+    "['COMPLETED', 'FAILED']", "['GENERATING', 'FAILED']", "['FAILED', 'GENERATING']"]) {
+    assert.ok(serviceSpec.includes(proof), `the direct-call proof covers ${proof}`);
+  }
+});
+
 test('the orchestration order is fixed: B1 sequential, one B1 canonicalization, then B2 sequential, then one Thread canonicalization', () => {
   const focusEval = service.indexOf('await evaluator.evaluateSequence(sessionId, sequence, context.priorContext)');
   const focusCanon = service.indexOf('canonicalizePreparedFocusSequence(');
