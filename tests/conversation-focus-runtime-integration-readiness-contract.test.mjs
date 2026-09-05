@@ -101,18 +101,51 @@ test('AC-B1B2-01: the B1 runtime is NOT live - not registered, not called, nothi
     .filter((file) => !file.startsWith('apps/api/src/thread-establishment/'))
     .filter((file) => /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|conversational-focus|with_focus_v1|integrated_batch_snapshot|cutover_ready/u.test(stripComments(read(file))));
   assert.deepEqual(referencing, []);
-  // The T-03B2a evaluator never reaches the B1 runtime orchestration, its
-  // repository, the 0066/0067 RPCs or the lazy provider binding.
+  // The T-03B2a / T-03B2b1 / T-03B2b2 SEMANTIC files never reach the B1 runtime
+  // orchestration, its repository, the 0066/0067 RPCs or the lazy binding.
+  //
+  // T-03B2b3's production-inert runtime (AC-B2B3-01) is the ONE consumer that
+  // must RUN the frozen B1 chain and REUSE this slice's exact stale-context
+  // identity rather than restate it. It may therefore import the B1 runtime
+  // TYPES and the stale predicate, and the lazy focus binding - but never the
+  // B1 ORCHESTRATION service or its repository class, and never a 0067 RPC:
+  // it reads its own 0069 pair and writes only the existing 0068 coordinator.
+  const B2B3_RUNTIME_FILES = new Set([
+    'conversation-thread-runtime.types.ts', 'conversation-thread-runtime.repository.ts',
+    'conversation-thread-runtime-mapper.ts', 'conversation-thread-establishment.service.ts',
+    'thread-establishment-binding.ts', 'conversational-origin-mapper.ts',
+    'conversation-thread-runtime.repository.spec.ts', 'conversation-thread-runtime-mapper.spec.ts',
+    'conversation-thread-establishment.service.spec.ts', 'conversational-origin-mapper.spec.ts',
+  ]);
+  const B2B3_ALLOWED_FOCUS_IMPORTS = new Set([
+    '../conversational-focus/conversational-focus.types',
+    '../conversational-focus/durable-focus-payload.types',
+    '../conversational-focus/conversational-focus-evaluator.service',
+    '../conversational-focus/durable-focus-canonicalizer',
+    '../conversational-focus/focus-resolution-binding',
+    '../conversational-focus/focus-resolution-provider.config',
+    '../conversational-focus/focus-resolution-provider.types',
+    '../conversational-focus/conversation-focus-runtime.types',
+    '../conversational-focus/conversation-focus-runtime.repository',
+  ]);
   const threadFiles = listFiles(join(rootPath, 'apps/api/src/thread-establishment')).map(relative);
   assert.ok(threadFiles.length > 0, 'the T-03B2a directory exists');
   for (const file of threadFiles) {
     const source = read(file);
+    const runtime = B2B3_RUNTIME_FILES.has(file.slice(file.lastIndexOf('/') + 1));
     for (const match of source.matchAll(/from\s+'([^']*conversational-focus[^']*)'/gu)) {
-      assert.ok(['../conversational-focus/conversational-focus.types', '../conversational-focus/durable-focus-payload.types'].includes(match[1]),
-        `${file} may import only the B1 type authorities; found ${match[1]}`);
+      if (runtime) assert.ok(B2B3_ALLOWED_FOCUS_IMPORTS.has(match[1]), `${file} may import only the listed B1 pieces; found ${match[1]}`);
+      else {
+        assert.ok(['../conversational-focus/conversational-focus.types', '../conversational-focus/durable-focus-payload.types'].includes(match[1]),
+          `${file} may import only the B1 type authorities; found ${match[1]}`);
+      }
     }
-    assert.doesNotMatch(stripComments(source), /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|with_focus_v1|integrated_batch_snapshot|cutover_ready|focus-resolution-binding|conversation-focus-runtime|conversation-focus-establishment/u,
-      `${file} does not reach the T-03B1b2 runtime`);
+    assert.doesNotMatch(stripComments(source), /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|with_focus_v1\b|get_conversation_integrated_batch_snapshot_v1|assert_conversation_focus_capture_cutover_ready_v1|conversation-focus-establishment/u,
+      `${file} does not reach the T-03B1b2 orchestration service, its repository or its 0067 reads`);
+    if (!runtime) {
+      assert.doesNotMatch(stripComments(source), /focus-resolution-binding|conversation-focus-runtime|integrated_batch_snapshot|cutover_ready/u,
+        `${file} does not reach the T-03B1b2 runtime`);
+    }
   }
   // Database: nothing granted, nothing revoked, no semantic write.
   assert.doesNotMatch(executable, /GRANT /u);

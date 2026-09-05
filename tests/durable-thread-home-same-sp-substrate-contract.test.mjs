@@ -94,10 +94,17 @@ const FROZEN_BLOBS = {
   'apps/api/src/runtime-identity/uuid-v5.ts': '90d8f820a13f2b75f416448f881ebdbc8de12590',
 };
 
-test('migration 0068 is the newest, and 0064 / 0065 / 0066 / 0067 are byte-identical', () => {
+test('migration 0068 is the newest DURABLE substrate, and 0064 / 0065 / 0066 / 0067 are byte-identical', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0068_durable_thread_home_same_sp_substrate_v1.sql');
+  // (T-03B2b3 added 0069, a READ / AUDIT-only migration that creates no table
+  // and reuses this migration's `conversation_thread_batch_state_v1` as the
+  // single structural B2 completeness authority; it is pinned by
+  // tests/thread-runtime-integration-readiness-contract.test.mjs.)
+  assert.ok(migrations.includes('0068_durable_thread_home_same_sp_substrate_v1.sql'));
   assert.equal(migrations.filter((name) => name.startsWith('0068_')).length, 1, 'exactly one 0068 migration exists');
+  for (const later of migrations.slice(migrations.indexOf('0068_durable_thread_home_same_sp_substrate_v1.sql') + 1)) {
+    assert.doesNotMatch(read(`database/migrations/${later}`), /CREATE TABLE/u, `${later} creates no second Thread or Home substrate`);
+  }
   assert.equal(gitBlobId(read('database/migrations/0064_committed_conversational_unit_substrate_v1.sql')), '0a2ee63980e59072b3e9f52a643efa8220e95b08');
   assert.equal(gitBlobId(read('database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql')), '3dc061c71bcb237cec648abb2d1fa02f450cd57f');
   assert.equal(gitBlobId(read('database/migrations/0066_durable_reference_emerging_focus_sp_substrate_v1.sql')), '9f0588d5ca46329a8721ee30302f49d227a357ae');
@@ -115,14 +122,21 @@ test('the frozen T-03B2a evaluator and T-03B2b1 placement engine are byte-identi
   }
   const entries = readdirSync(join(rootPath, THREAD_DIR), { withFileTypes: true });
   const files = entries.filter((entry) => entry.isFile()).map((entry) => entry.name).sort();
+  // (T-03B2b3 adds exactly the ten runtime / Origin files listed last; they are
+  // pinned by tests/thread-runtime-integration-readiness-contract.test.mjs.)
   assert.deepEqual(files, [
+    'conversation-thread-establishment.service.spec.ts', 'conversation-thread-establishment.service.ts',
+    'conversation-thread-runtime-mapper.spec.ts', 'conversation-thread-runtime-mapper.ts',
+    'conversation-thread-runtime.repository.spec.ts', 'conversation-thread-runtime.repository.ts',
+    'conversation-thread-runtime.types.ts', 'conversational-origin-mapper.spec.ts', 'conversational-origin-mapper.ts',
     'durable-thread-canonicalizer.spec.ts', 'durable-thread-canonicalizer.ts', 'durable-thread-payload.types.ts',
     'fake-thread-establishment.provider.ts', 'index.ts', 'openai-thread-establishment.provider.spec.ts',
-    'openai-thread-establishment.provider.ts', 'thread-establishment-evaluator.service.spec.ts',
+    'openai-thread-establishment.provider.ts', 'thread-establishment-binding.ts',
+    'thread-establishment-evaluator.service.spec.ts',
     'thread-establishment-evaluator.service.ts', 'thread-establishment-provider.config.ts',
     'thread-establishment-provider.types.ts', 'thread-establishment-validator.spec.ts',
     'thread-establishment-validator.ts', 'thread-establishment.types.ts',
-  ], 'T-03B2b2 adds exactly the payload types, the canonicalizer and its suite');
+  ], 'T-03B2b2 adds exactly the payload types, the canonicalizer and its suite; T-03B2b3 adds exactly the runtime chain');
   assert.deepEqual(entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort(), ['home-placement']);
   // The new boundary is pure: no Nest, no I/O, no database, no clock, no randomness.
   for (const [name, text] of [['payload types', payloadTypes], ['canonicalizer', canonicalizer]]) {
