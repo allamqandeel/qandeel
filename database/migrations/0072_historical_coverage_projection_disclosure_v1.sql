@@ -28,8 +28,11 @@
 --      truth - the race-free SessionHistoricalBaseline REV66-07 requires;
 --   2. SESSION HISTORICAL COVERAGE (R-C1): evaluated ONCE at Session creation.
 --      Every Session that exists before this migration is a LEGACY UNCOVERED
---      SESSION: it never enters committed-CU commitment again, so a partial
---      Timeline is unrepresentable rather than merely prohibited;
+--      SESSION: the Conversation Runtime continues normally in it (committed
+--      CUs, Session Positions, LH, the frozen T-03B / T-03D chain), but it
+--      stays historical-disabled through closure - no baseline is ever cut
+--      for it and the projection fails closed - so no partial Timeline is
+--      ever addressable. Coverage gates historical projection, never runtime;
 --   3. SESSION HISTORICAL BASELINES: the world-clock cut taken inside the very
 --      transaction that assigns SP(1), before it commits. A fact whose world
 --      version is <= the baseline is PRE_FIRST_SP for that Session: available
@@ -47,15 +50,25 @@
 --   5. the Thread <-> Reading contextual appearance substrate
 --      (thread_reading_bindings, validity-aware: bound_sp .. unbound_sp) and
 --      its clock-first writers, granted to NO application role: T-03C owns the
---      historical truth of this appearance; the Product evaluator that decides
---      WHEN a Reading's subject grounding resolves to a Thread is owned by no
---      merged task and is not invented here;
+--      historical truth of this appearance and its projection. The frozen rule
+--      binds a Reading to a Thread only when the Reading's canonical subject
+--      grounding resolves to that Thread; the repository carries no
+--      server-owned canonical Reading subject-grounding authority (a Reading
+--      is statement / type / domain / scope / origin and its lifecycle arrays,
+--      nothing that names a reference handle, an Emerging Focus or a Thread),
+--      so no production writer exists and none is invented from a label,
+--      similarity, co-occurrence, the current LF or geometry. Until that
+--      authority exists the substrate stays unpopulated in production and the
+--      matrix row A-1 is a BLOCKER, never silently FULL;
 --   6. R-C2 preservation guards on the canonical legacy rows historical V
 --      reads (physical DELETE refused; the historical fields of hypotheses,
 --      memories, question_candidates and confidence_evaluations immutable;
 --      information_gaps keep the 0063 byte-identity guard and gain the DELETE
---      refusal), plus R-C3: the unaudited legacy Evidence-attach paths of
---      migrations 0005 / 0021 / 0028 lose EXECUTE for every application role;
+--      refusal), plus R-C3: the legacy Evidence-attach paths of migrations
+--      0005 / 0008 / 0021 / 0028 keep their live entrypoints and grants, and
+--      every write they make to public.hypotheses passes the ONE capture hook
+--      (tracked; world-only when unassociated) - no untracked participation
+--      can be authored any more;
 --   7. the live post-response writers enter the historical boundary without a
 --      single caller change: the three managed commands keep their exact
 --      public name, signature and grant, their frozen bodies survive
@@ -176,17 +189,26 @@ CREATE TRIGGER historical_world_semantic_clocks_guard
 -- ===========================================================================
 -- 2. R-C1 - Session historical coverage and the Session historical baseline.
 --
---    Coverage is technical release/runtime safety metadata, decided ONCE at
---    Session creation and never changed: a Session created after this
---    migration is COVERED (Path A - it began after every capture authority
---    was active); every Session that already existed is a LEGACY UNCOVERED
---    SESSION and stays historical-disabled through closure. Coverage is not
---    KF, not a Product state, not a temporal mode and never exposed in V.
+--    Coverage is technical release safety metadata, decided ONCE at Session
+--    creation and never changed: a Session created after this migration is
+--    COVERED (Path A - it began after every capture authority was active);
+--    every Session that already existed is a LEGACY UNCOVERED SESSION and
+--    stays historical-disabled through closure. Coverage is not KF, not a
+--    Product state, not a temporal mode and never exposed in V.
 --
---    The baseline is written by the committed-CU hook (section 8) inside the
---    transaction that assigns SP(1), under the Session Semantic Clock that
---    transaction already holds and under the World Semantic Clock it takes
---    there: no race gap exists between the baseline and SP(1).
+--    Coverage decides HISTORICAL PROJECTION eligibility only. Committed-CU
+--    runtime eligibility is a different thing: a LEGACY UNCOVERED SESSION
+--    keeps committing CUs and Session Positions through the frozen runtime
+--    authority (LH advances, the T-03B / T-03D semantic chain runs), it simply
+--    never receives a baseline (section 8) and is refused by the projection
+--    (section 14) - so no PINNED historical semantics and no partial Timeline
+--    ever become addressable for it, while the user continues the Session.
+--
+--    The baseline is written by the committed-CU hook (section 8), for a
+--    COVERED Session only, inside the transaction that assigns SP(1), under
+--    the Session Semantic Clock that transaction already holds and under the
+--    World Semantic Clock it takes there: no race gap exists between the
+--    baseline and SP(1).
 -- ===========================================================================
 CREATE TABLE public.session_historical_coverage (
   session_id uuid PRIMARY KEY,
@@ -1066,40 +1088,37 @@ BEGIN
   RETURN NULL;
 END;$$;
 
--- R-C1: a LEGACY UNCOVERED SESSION never enters committed-CU commitment. A
--- Session with no coverage decision at all is equally refused: coverage is
--- decided once at creation and never inferred here.
-CREATE FUNCTION public.guard_session_historical_coverage_v1()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
-DECLARE
-  state text;
-BEGIN
-  SELECT c.coverage_state INTO state FROM public.session_historical_coverage c
-    WHERE c.session_id = NEW.session_id AND c.user_id = NEW.user_id;
-  IF NOT FOUND OR state <> 'COVERED' THEN
-    RAISE EXCEPTION 'HISTORICAL_COVERAGE_UNAVAILABLE' USING ERRCODE='55000',
-      DETAIL='A LEGACY UNCOVERED SESSION stays historical-disabled through closure and receives no committed Session Position: a partial Timeline is unrepresentable.';
-  END IF;
-  RETURN NEW;
-END;$$;
-
--- The SP(1) baseline cut, and the Formal Question <-> Turn appearance anchor,
--- both born inside the committing transaction of the Moment.
+-- R-C1: committed-CU insertion is NOT gated by coverage. A LEGACY UNCOVERED
+-- SESSION (and a Session that carries no coverage decision at all) keeps
+-- committing Session Positions through the frozen runtime authority; what it
+-- never receives is a baseline, so the projection (section 14) stays
+-- fail-closed for it through closure and no partial Timeline is addressable.
+-- Coverage is decided once at creation and never inferred here.
+--
+-- The SP(1) baseline cut (COVERED Sessions only), and the Formal Question <->
+-- Turn appearance anchor, both born inside the committing transaction of the
+-- Moment. The appearance anchor is technical SP-native history recorded for
+-- every Session; whether it is ever projected is decided by coverage.
 CREATE FUNCTION public.capture_session_historical_baseline_v1()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE
   cut bigint;
+  coverage text;
   binding public.formal_question_turn_bindings;
   ctx record;
 BEGIN
   IF NEW.session_position = 1 THEN
-    INSERT INTO public.historical_world_semantic_clocks (user_id) VALUES (NEW.user_id)
-    ON CONFLICT (user_id) DO NOTHING;
-    SELECT w.current_version INTO cut FROM public.historical_world_semantic_clocks w
-      WHERE w.user_id = NEW.user_id
-      FOR UPDATE;
-    INSERT INTO public.session_historical_baselines (session_id, user_id, baseline_world_version)
-    VALUES (NEW.session_id, NEW.user_id, cut);
+    SELECT c.coverage_state INTO coverage FROM public.session_historical_coverage c
+      WHERE c.session_id = NEW.session_id AND c.user_id = NEW.user_id;
+    IF FOUND AND coverage = 'COVERED' THEN
+      INSERT INTO public.historical_world_semantic_clocks (user_id) VALUES (NEW.user_id)
+      ON CONFLICT (user_id) DO NOTHING;
+      SELECT w.current_version INTO cut FROM public.historical_world_semantic_clocks w
+        WHERE w.user_id = NEW.user_id
+        FOR UPDATE;
+      INSERT INTO public.session_historical_baselines (session_id, user_id, baseline_world_version)
+      VALUES (NEW.session_id, NEW.user_id, cut);
+    END IF;
   END IF;
   FOR binding IN
     SELECT b.* FROM public.formal_question_turn_bindings b
@@ -1227,9 +1246,10 @@ SELECT t.id, t.user_id, 0
 
 -- ===========================================================================
 -- 10. Installing the hooks and the preservation guards. From this point every
---     canonical write of the legacy families is captured, no committed CU can
---     be born in an uncovered Session, and no historical row can be deleted
---     or rewritten in place.
+--     canonical write of the legacy families is captured, a COVERED Session's
+--     first Moment cuts its baseline (committed-CU insertion itself is never
+--     gated by coverage), and no historical row can be deleted or rewritten
+--     in place.
 -- ===========================================================================
 CREATE TRIGGER hypotheses_historical_capture
   AFTER INSERT OR UPDATE ON public.hypotheses
@@ -1249,9 +1269,6 @@ CREATE TRIGGER confidence_evaluations_historical_capture
 CREATE TRIGGER conversation_threads_historical_availability
   AFTER INSERT ON public.conversation_threads
   FOR EACH ROW EXECUTE FUNCTION public.capture_historical_thread_availability_v1();
-CREATE TRIGGER conversation_units_historical_coverage_gate
-  BEFORE INSERT ON public.conversation_units
-  FOR EACH ROW EXECUTE FUNCTION public.guard_session_historical_coverage_v1();
 CREATE TRIGGER conversation_units_historical_baseline
   AFTER INSERT ON public.conversation_units
   FOR EACH ROW EXECUTE FUNCTION public.capture_session_historical_baseline_v1();
@@ -1901,10 +1918,11 @@ END;$$;
 --                               public names), the synchronization entry
 --                               (unchanged name), the execution-associated
 --                               Memory creation command
---       REVOKE service_role  -> the three renamed frozen cores, and (R-C3)
---                               background_attach_hypothesis_evidence_v1
---       REVOKE authenticated -> (R-C3) attach_hypothesis_evidence
+--       REVOKE service_role  -> the three renamed frozen cores
 --
+--     R-C3 keeps the live legacy Evidence-attach entrypoints (0005 / 0008 /
+--     0021 / 0028) and their grants untouched: every write they make passes
+--     the capture hook, which is what defangs the old untracked bypass.
 --     Nothing else is granted: the capture boundary, every capture hook, the
 --     Thread <-> Reading writers, the expiry mapping and every history table
 --     stay executable / reachable by NO application role.
@@ -1961,7 +1979,6 @@ ALTER FUNCTION public.capture_historical_gap_change_v1() OWNER TO postgres;
 ALTER FUNCTION public.capture_historical_question_creation_v1() OWNER TO postgres;
 ALTER FUNCTION public.capture_historical_confidence_creation_v1() OWNER TO postgres;
 ALTER FUNCTION public.capture_historical_thread_availability_v1() OWNER TO postgres;
-ALTER FUNCTION public.guard_session_historical_coverage_v1() OWNER TO postgres;
 ALTER FUNCTION public.capture_session_historical_baseline_v1() OWNER TO postgres;
 ALTER FUNCTION public.guard_historical_canonical_row_preservation_v1() OWNER TO postgres;
 ALTER FUNCTION public.persist_post_response_hypothesis_generation_v1(uuid) OWNER TO postgres;
@@ -1992,7 +2009,6 @@ REVOKE ALL ON FUNCTION public.capture_historical_gap_change_v1() FROM PUBLIC, an
 REVOKE ALL ON FUNCTION public.capture_historical_question_creation_v1() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.capture_historical_confidence_creation_v1() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.capture_historical_thread_availability_v1() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.guard_session_historical_coverage_v1() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.capture_session_historical_baseline_v1() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.guard_historical_canonical_row_preservation_v1() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.persist_post_response_hypothesis_generation_v1(uuid) FROM PUBLIC, anon, authenticated;
@@ -2057,9 +2073,11 @@ END IF;END$$;
 --     that left a legacy Session covered, a Session without a coverage
 --     decision, a legacy analytical row without its baseline event, a
 --     history table reachable by an application role, a frozen core still
---     executable, a Reading write path outside the capture hook, a drifted identity
---     namespace, a projection that is not read-only by declaration, or a
---     Session Semantic Clock that changed shape.
+--     executable, a Reading write path outside the capture hook, a coverage
+--     gate on committed-CU insertion (coverage gates the projection, never
+--     the Conversation Runtime), a drifted identity namespace, a projection
+--     that is not read-only by declaration, or a Session Semantic Clock that
+--     changed shape.
 -- ===========================================================================
 DO $$
 DECLARE
@@ -2163,6 +2181,16 @@ BEGIN
   IF (SELECT count(*) FROM pg_trigger t WHERE t.tgrelid = 'public.hypotheses'::regclass AND NOT t.tgisinternal
         AND t.tgfoid = 'public.capture_historical_reading_change_v1'::regproc AND t.tgenabled = 'O') <> 1 THEN
     RAISE EXCEPTION 'T-03C self-assertion: the Reading capture hook is not the one enabled AFTER INSERT OR UPDATE trigger' USING ERRCODE='55000';
+  END IF;
+  -- R-C1: coverage gates historical projection, never committed-CU runtime.
+  -- The ONE 0072 trigger on conversation_units is the AFTER INSERT baseline
+  -- hook; no BEFORE INSERT coverage gate exists.
+  IF EXISTS (SELECT 1 FROM pg_trigger t WHERE t.tgrelid = 'public.conversation_units'::regclass AND NOT t.tgisinternal
+               AND t.tgfoid IN ('public.capture_session_historical_baseline_v1'::regproc) AND (t.tgtype & 2) = 2)
+     OR (SELECT count(*) FROM pg_trigger t WHERE t.tgrelid = 'public.conversation_units'::regclass AND NOT t.tgisinternal
+           AND t.tgfoid = 'public.capture_session_historical_baseline_v1'::regproc AND t.tgenabled = 'O') <> 1
+     OR to_regprocedure('public.guard_session_historical_coverage_v1()') IS NOT NULL THEN
+    RAISE EXCEPTION 'T-03C self-assertion: coverage must gate historical projection, never committed-CU runtime' USING ERRCODE='55000';
   END IF;
   -- The Session Semantic Clock is untouched.
   IF (SELECT string_agg(column_name, ',' ORDER BY ordinal_position) FROM information_schema.columns

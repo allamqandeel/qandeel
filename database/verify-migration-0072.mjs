@@ -13,11 +13,19 @@
 //     the expiry mapping are granted to nobody; the projection and the mapping
 //     are STABLE SECURITY DEFINER; the identity namespaces re-derive in
 //     TypeScript AND in SQL; the Session Semantic Clock is untouched;
-//   * R-C1: every pre-existing Session is a LEGACY UNCOVERED SESSION - no
-//     Session Position can ever be committed into it, no baseline, no anchored
-//     event, and the projection fails closed (HISTORICAL_COVERAGE_UNAVAILABLE,
-//     never UNKNOWN_AT_TC); a Session without a coverage decision fails the
-//     same way; a new Session is COVERED at creation;
+//   * R-C1: every pre-existing Session is a LEGACY UNCOVERED SESSION - its
+//     Conversation Runtime continues normally (committed CUs / Session
+//     Positions / LH through the frozen FINAL authority, the T-03B / T-03D
+//     chain, the T-03A2 / T-03D live reads) while it stays historical-disabled
+//     through closure: no baseline is ever cut for it, post-deploy capture
+//     retained internally upgrades nothing, and the projection fails closed at
+//     EVERY Session Position (HISTORICAL_COVERAGE_UNAVAILABLE, never
+//     UNKNOWN_AT_TC) so no partial Timeline and no PINNED semantics become
+//     addressable. Proven ACROSS THE DEPLOYMENT BOUNDARY (P66-C) on a fresh
+//     database: 0001 - 0071, the legacy Session with its pre-coverage Moments,
+//     then 0072 exactly as CI applies it, then the continuation. A Session
+//     without a coverage decision is projection-refused the same way; a new
+//     Session is COVERED at creation;
 //   * the baseline: cut at SP(1) under the world-clock row lock, so a world
 //     version <= baseline is known at every TC and a world version > baseline
 //     never enters this Session (it enters a LATER Session through ITS
@@ -33,8 +41,9 @@
 //     Emerging Focus, Live Focus, Formal Question <-> Turn appearance,
 //     Thread <-> Reading appearance): UNKNOWN before its own anchor, KNOWN
 //     from it on; P66-B then-current validity (status / version / epoch at TC,
-//     lineage never mistaken for current); P66-C (a later Session inherits
-//     through its baseline); P66-D (an appearance anchored at the exchange's
+//     lineage never mistaken for current); REV66-06 section 4.5 baseline
+//     inheritance (a later Session inherits an unassociated fact through its
+//     own baseline - this is NOT P66-C); P66-D (an appearance anchored at the exchange's
 //     first committed Moment, never before); P66-F (a sealed TC is stable under
 //     every later write); open-head evolution (TC = LH changes with an
 //     associated write while LH does not move); Z66-03 (an identity created
@@ -52,8 +61,15 @@
 //     0008 / 0021 / 0028) authors exactly one TRACKED participation event and
 //     no untracked one; deterministic identities; an identity reused with a
 //     different payload is refused; a retry duplicates nothing;
-//   * the Thread <-> Reading appearance writers: clock-first, Session-bound,
-//     derived identity, idempotent, unbound by ordinal, one life per SP;
+//   * the Thread <-> Reading appearance writers (substrate only - no production
+//     path exists because the repository carries no canonical Reading
+//     subject-grounding authority; the verifier drives them as the fixture
+//     owner): clock-first, Session-bound, derived identity, idempotent,
+//     unbound by ordinal, one life per SP;
+//   * the verify:auth:smoke fixture teardown replayed from its own source
+//     against an identical fixture: compatible with the 0072 coverage
+//     decision, zero residue, and the plain Session delete it replaces is
+//     exactly the RESTRICT regression;
 //   * ONE Home per Thread at every TC; lifecycle at TC from the durable 0070
 //     history; LF at TC from the durable 0071 history;
 //   * P66-E (last, real PostgreSQL only): concurrent associated writes in one
@@ -64,15 +80,19 @@
 // its own bounded fixture and removes it. No paid provider is ever invoked.
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import process from 'node:process';
 import pg from 'pg';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is required in the ignored local .env file.');
-const migrationSql = await readFile(new URL('./migrations/0072_historical_coverage_projection_disclosure_v1.sql', import.meta.url), 'utf8');
-const client = new Client({ connectionString: databaseUrl });
+const MIGRATIONS = new URL('./migrations/', import.meta.url);
+const T03C_MIGRATION = '0072_historical_coverage_projection_disclosure_v1.sql';
+const migrationSql = await readFile(new URL(T03C_MIGRATION, MIGRATIONS), 'utf8');
+// The ONE connection every helper below writes through. The deployment-spanning
+// stage swaps it for a connection to a fresh database and swaps it back.
+let client = new Client({ connectionString: databaseUrl });
 let stage = 'connect';
 let assertions = 0;
 const check = (fn) => { assertions += 1; return fn(); };
@@ -140,7 +160,7 @@ const UPDATE_BATCH_CORE = 'public.execute_post_response_hypothesis_update_batch_
 const CONFIDENCE_BATCH_CORE = 'public.execute_post_response_confidence_batch_v1_core(uuid)';
 const HOOKS = ['public.capture_historical_reading_change_v1()', 'public.capture_historical_material_change_v1()', 'public.capture_historical_gap_change_v1()',
   'public.capture_historical_question_creation_v1()', 'public.capture_historical_confidence_creation_v1()', 'public.capture_historical_thread_availability_v1()',
-  'public.guard_session_historical_coverage_v1()', 'public.capture_session_historical_baseline_v1()', 'public.guard_historical_canonical_row_preservation_v1()',
+  'public.capture_session_historical_baseline_v1()', 'public.guard_historical_canonical_row_preservation_v1()',
   'public.reject_historical_projection_mutation_v1()', 'public.guard_historical_world_semantic_clock_v1()', 'public.guard_thread_reading_binding_mutation_v1()',
   'public.provision_session_historical_coverage_v1()'];
 const HISTORY_TABLES = ['historical_world_semantic_clocks', 'session_historical_coverage', 'session_historical_baselines', 'historical_thread_availability',
@@ -411,6 +431,155 @@ async function beginCapture(owner, session, require = true) {
 }
 const eventsOf = (table, where, values) => rows(`SELECT event_kind, session_id, session_position, same_sp_event_sequence::text seq, world_version::text wv FROM public.${table} WHERE ${where} ORDER BY world_version, same_sp_event_sequence NULLS FIRST`, values);
 
+/** A post-deploy focus shift in an existing Session: a new reference handle, a new Emerging Focus, TE-01 establishment, the displaced Thread DORMANT, LF replaced - the frozen T-03B / T-03D chain end to end. */
+const SHIFT_TEXT = 'الشغل بقى ضاغط عليا الأيام دي.';
+const SHIFT_REPLY = 'فاهم، الضغط ده جديد.';
+async function establishingExchange(owner, world) {
+  const turns = await completedTurns(owner, world.session, SHIFT_TEXT, SHIFT_REPLY);
+  const ids = { u: randomUUID(), a: randomUUID() };
+  const handle = randomUUID();
+  const focus = randomUUID();
+  const thread = threadIdOf(owner, focus);
+  const token = { ...(await clockOf(world.session)), version: await identityVersionOf(owner) };
+  await identity('postgres');
+  const [result] = await exchange(world.session, owner, turns.userTurn, randomUUID(),
+    [unit(SHIFT_TEXT, SHIFT_TEXT, 1, ids.u)],
+    [bundle(ids.u, { functions: ['INFORM_REPORT', 'FOCUS_SHIFT'], references: [resolved(SHIFT_TEXT, 'الشغل', handle, true)], attention: startFocus(focus, 0, 'EXPLICIT_FOCUS_SHIFT') })],
+    [establish(owner, ids.u, focus, 'TE-01', [ids.u], { explicit_selection_grounding: anchor(SHIFT_TEXT, 'الشغل') })],
+    [establishNew(world.session, ids.u, focus, thread, [{ cu_id: ids.u, reference_index: 0 }], [transition(world.session, ids.u, world.threads.ahmed, 'DORMANT', 'EXPLICIT_FOCUS_SHIFT')])],
+    [lfChange(world.session, ids.u, 'THREAD', thread, 'FOCUS_REPLACEMENT')],
+    turns.assistantTurn, randomUUID(),
+    [unit(SHIFT_REPLY, SHIFT_REPLY, 1, ids.a)],
+    [bundle(ids.a, { functions: ['ACKNOWLEDGE'], sequence_position: 'RESPONSIVE', target_cu_id: ids.u, references: [], attention: NO_FOCUS })],
+    [noEstablishment(ids.a, 'NO_INDEPENDENT_FOCUS')], [noAction(ids.a)], [lfSame(ids.a, 'THREAD', thread)],
+    { sp: token.current_sp, seq: Number(token.seq), version: token.version });
+  return { turns, ids, thread, focus, liveHead: result.live_head };
+}
+
+// ------------------------------------------- B0. P66-C across the deployment
+// The frozen P66-C fixture spans deployment: a Session exists and has committed
+// Moments BEFORE T-03C capture is active, 0072 deploys, and the user continues
+// that Session. PASS means the Session stays historical-disabled through
+// closure while the normal Conversation Runtime continues - never that the
+// runtime is disabled. Proven on a FRESH database: 0001 - 0071 applied, the
+// legacy Session and its pre-coverage Moments written through the frozen FINAL
+// authority, then 0072 applied exactly as CI applies it (the whole file), then
+// the continuation. Runs outside the main transaction because CREATE DATABASE
+// cannot run inside one; the database is dropped afterwards.
+const SPAN_BOOTSTRAP = `
+DO $$BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN; END IF;
+END$$;
+CREATE SCHEMA auth;
+CREATE TABLE auth.users (id uuid PRIMARY KEY);
+CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
+  SELECT (nullif(current_setting('request.jwt.claims', true), '')::jsonb->>'sub')::uuid
+$$;
+ALTER FUNCTION auth.uid() OWNER TO postgres;
+GRANT USAGE ON SCHEMA auth TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated;
+`;
+async function verifyDeploymentSpan() {
+  stage = 'B0. R-C1 / P66-C across the deployment boundary: fresh database, 0001-0071, a legacy Session with pre-coverage Moments, then 0072, then the Session continues';
+  const files = (await readdir(MIGRATIONS)).filter((name) => name.endsWith('.sql')).sort();
+  const preCoverage = files.filter((name) => name < '0072_');
+  ok(files.includes(T03C_MIGRATION), 'the T-03C migration exists');
+  strict(preCoverage.at(-1), '0071_effective_live_focus_final_semantic_chain_cutover_v1.sql', 'the deployment boundary is 0071 -> 0072');
+  const spanName = `qandeel_t03c_span_${randomUUID().replace(/-/gu, '').slice(0, 12)}`;
+  const spanUrl = new URL(databaseUrl);
+  spanUrl.pathname = `/${spanName}`;
+  await q(`CREATE DATABASE ${spanName}`);
+  const mainClient = client;
+  const spanClient = new Client({ connectionString: spanUrl.toString() });
+  try {
+    await spanClient.connect();
+    client = spanClient;
+    await q(SPAN_BOOTSTRAP);
+    for (const name of preCoverage) await q(await readFile(new URL(name, MIGRATIONS), 'utf8'));
+    strict((await one("SELECT to_regclass('public.session_historical_coverage') IS NULL absent")).absent, true, 'before 0072 no coverage decision exists anywhere: the Session below predates T-03C capture');
+    // 1 + 2. The Session and its pre-coverage conversational state: SP1..SP5
+    // through the frozen FINAL coordinator (two Threads, LF), plus a legacy
+    // analytical fact - all of it written before any capture hook exists.
+    const owner = randomUUID();
+    await q('BEGIN');
+    await q('INSERT INTO auth.users(id) VALUES($1)', [owner]);
+    const world = await sessionOne(owner);
+    await identity('service_role');
+    const H0 = randomUUID();
+    await rows('SELECT * FROM public.server_create_hypothesis_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)', [owner, H0, 'pre-coverage reading', 'CAUSAL', 'GENERAL', 'legacy scope', 'HUMAN_REVIEWED', [], []]);
+    await identity('postgres');
+    await q('COMMIT');
+    eq((await clockOf(world.session)).current_sp, 5, 'pre-coverage: SP1..SP5 committed with no history captured anywhere');
+    // 3. T-03C deploys: the real 0072 text, exactly as CI applies it.
+    await q(migrationSql);
+    await q('BEGIN');
+    eq(await one('SELECT coverage_state FROM public.session_historical_coverage WHERE session_id=$1', [world.session]), { coverage_state: 'LEGACY_UNCOVERED' }, 'the deployment decides the pre-existing Session LEGACY_UNCOVERED');
+    strict((await one('SELECT count(*)::int n FROM public.session_historical_baselines WHERE session_id=$1', [world.session])).n, 0, 'no baseline exists for it');
+    eq((await eventsOf('historical_reading_events', 'hypothesis_id=$1', [H0])).map((e) => [e.event_kind, e.session_id, e.wv]), [['LEGACY_BASELINE', null, '0']], 'the pre-coverage Reading carries its legacy baseline event');
+    eq((await rows('SELECT world_version::text wv FROM public.historical_thread_availability WHERE thread_id = ANY($1)', [[world.threads.manager, world.threads.ahmed]])).map((r) => r.wv), ['0', '0'], 'the pre-coverage Threads are legacy world identities');
+    // 4 + 5. The user continues the Session through the normal current authority:
+    // two quiet exchanges (SP6..SP9) and a focus shift that establishes a new
+    // Thread (SP10..SP11) - committed CUs, SPs, LH, B1 / B2 / B3 / LF continue.
+    const first = await quietExchange(owner, world);
+    eq(first.liveHead, 7, 'post-deploy exchange 1 committed SP6 and SP7 through the FINAL authority');
+    const second = await quietExchange(owner, world);
+    eq(second.liveHead, 9, 'post-deploy exchange 2 committed SP8 and SP9');
+    const shift = await establishingExchange(owner, world);
+    eq(shift.liveHead, 11, 'post-deploy exchange 3 committed SP10 and SP11 and established a new Thread through the frozen T-03B / T-03D chain');
+    eq((await clockOf(world.session)).current_sp, 11, 'LH advanced normally for runtime');
+    ok(Number((await one('SELECT world_version::text wv FROM public.historical_thread_availability WHERE thread_id=$1', [shift.thread])).wv) > 0, 'the post-deploy Thread is captured with a world version (a world identity, never a Session anchor)');
+    eq((await one('SELECT count(*)::int n FROM public.conversation_thread_homes WHERE thread_id=$1', [shift.thread])).n, 1, 'and its ONE Home');
+    await identity('authenticated', owner);
+    const live = await one('SELECT * FROM public.get_session_live_state_v1($1)', [world.session]);
+    eq([live.live_head, live.live_focus_kind, live.live_focus_ref, live.live_focus_sp], [11, 'THREAD', shift.thread, 10], 'the T-03D live read serves the legacy Session normally: LH and LF continue');
+    eq(await one('SELECT live_head FROM public.get_session_temporal_state_v1($1)', [world.session]), { live_head: 11 }, 'the T-03A2 temporal delivery serves it normally');
+    await identity('postgres');
+    // A post-deploy analytical write associated with the legacy Session is
+    // captured with its truthful anchor (technical history, retained internally) ...
+    const ctx = await beginCapture(owner, world.session, true);
+    eq([ctx.session_id, ctx.session_position], [world.session, 11], 'the association anchors at the legacy Session\'s current Session Position');
+    await identity('service_role');
+    const H1 = randomUUID();
+    await rows('SELECT * FROM public.server_create_hypothesis_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)', [owner, H1, 'post-deploy reading in the legacy Session', 'CAUSAL', 'GENERAL', `CONVERSATION_SESSION:${world.session}`, 'SYSTEM_GENERATED', [], []]);
+    await newLogicalTransaction();
+    eq((await eventsOf('historical_reading_events', 'hypothesis_id=$1', [H1])).map((e) => [e.event_kind, e.session_id, e.session_position]), [['CREATED', world.session, 11]], 'retained internally with its truthful anchor');
+    // 6 + 7. ... and upgrades nothing: coverage unchanged, no baseline fabricated.
+    eq(await one('SELECT coverage_state FROM public.session_historical_coverage WHERE session_id=$1', [world.session]), { coverage_state: 'LEGACY_UNCOVERED' }, 'coverage stays LEGACY_UNCOVERED through every post-deploy commit and capture');
+    strict((await one('SELECT count(*)::int n FROM public.session_historical_baselines WHERE session_id=$1', [world.session])).n, 0, 'no baseline was fabricated by the post-deploy Moments');
+    // 8 + 9. Historical projection fails closed at EVERY Session Position the
+    // Session now has - and outside them - with HISTORICAL_COVERAGE_UNAVAILABLE:
+    // no TC is addressable, no PINNED semantics exist, no partial Timeline.
+    await identity('authenticated', owner);
+    for (const tc of [0, 1, 5, 6, 9, 10, 11, 12]) {
+      await rejected(() => q('SELECT * FROM public.get_session_historical_projection_v1($1,$2)', [world.session, tc]), 'HISTORICAL_COVERAGE_UNAVAILABLE', ['55000']);
+    }
+    await identity('postgres');
+    // The same deployment serves a Session created after it normally: COVERED
+    // at creation, baseline at SP(1), projection open. The legacy Session's
+    // facts enter it only through its baseline (REV66-06 section 4.5), never
+    // through the legacy Session's own anchors.
+    const fresh = await newSession(owner);
+    eq(await one('SELECT coverage_state FROM public.session_historical_coverage WHERE session_id=$1', [fresh]), { coverage_state: 'COVERED' }, 'a Session created after the deployment is COVERED');
+    const freshTurns = await completedTurns(owner, fresh);
+    await identity('postgres');
+    await legacyCommit(fresh, owner, freshTurns.userTurn, randomUUID(), [unit(USER_TEXT, U1)]);
+    await newLogicalTransaction();
+    strict((await one('SELECT count(*)::int n FROM public.session_historical_baselines WHERE session_id=$1', [fresh])).n, 1, 'a COVERED Session cuts its baseline at SP(1)');
+    const k = await project(owner, fresh, 1);
+    eq([k.live_head, k.tc, k.moments.length], [1, 1, 1]);
+    ok(idsOf(k.readings).includes(H0) && idsOf(k.readings).includes(H1), 'the legacy-baseline Reading and the legacy Session\'s post-deploy Reading are both PRE_FIRST_SP knowledge of the covered Session (world version <= its baseline)');
+    ok([world.threads.manager, world.threads.ahmed, shift.thread].every((id) => idsOf(k.threads).includes(id)), 'the legacy Session\'s Threads are inherited through world availability');
+    eq(k.threads.filter((t) => [world.threads.manager, world.threads.ahmed, shift.thread].includes(t.id)).map((t) => t.sessionLifecycle), [null, null, null], 'with no Session-local lifecycle in the covered Session');
+    await q('ROLLBACK');
+  } finally {
+    client = mainClient;
+    await spanClient.end().catch(() => undefined);
+    await q(`DROP DATABASE IF EXISTS ${spanName} WITH (FORCE)`);
+  }
+}
+
 // ---------------------------------------------------------------- A. static
 async function verifyStaticAuthority() {
   stage = 'A. schema / privilege / posture / declarations';
@@ -459,10 +628,18 @@ async function verifyStaticAuthority() {
     eq(names, [capture, preservation].sort(byText), `${table} carries exactly its capture hook and its preservation guard`);
   }
   for (const [table, trigger] of [['information_gaps', 'information_gaps_historical_capture'], ['conversation_threads', 'conversation_threads_historical_availability'],
-    ['conversation_units', 'conversation_units_historical_coverage_gate'], ['conversation_units', 'conversation_units_historical_baseline'], ['conversation_sessions', 'conversation_sessions_provision_historical_coverage']]) {
+    ['conversation_units', 'conversation_units_historical_baseline'], ['conversation_sessions', 'conversation_sessions_provision_historical_coverage']]) {
     const { n } = await one('SELECT count(*)::int n FROM pg_trigger WHERE tgrelid = $1::regclass AND tgname = $2 AND tgenabled = $3', [`public.${table}`, trigger, 'O']);
     strict(n, 1, `${table}.${trigger} is present and enabled`);
   }
+  // R-C1 (R1-01): coverage gates historical projection, never the Conversation
+  // Runtime. The ONE 0072 trigger on conversation_units is the AFTER INSERT
+  // baseline hook; no committed-CU coverage gate exists.
+  strict((await one("SELECT count(*)::int n FROM pg_trigger WHERE tgrelid = 'public.conversation_units'::regclass AND NOT tgisinternal AND tgname LIKE '%historical%'")).n, 1,
+    'exactly ONE 0072 trigger on conversation_units: the AFTER INSERT baseline hook');
+  strict((await one("SELECT count(*)::int n FROM pg_trigger WHERE tgrelid = 'public.conversation_units'::regclass AND NOT tgisinternal AND tgname LIKE '%historical%' AND (tgtype & 2) = 2")).n, 0,
+    'no BEFORE trigger of 0072 stands between the runtime and a committed CU');
+  strict((await one("SELECT to_regprocedure('public.guard_session_historical_coverage_v1()') IS NULL absent")).absent, true, 'the committed-CU coverage gate does not exist');
   // Deployed bodies: the projection and the mapping write nothing; the wrappers
   // enter the boundary and then run exactly their frozen core; the cores know
   // nothing of history; the synchronization entry still delegates to v2 with
@@ -483,7 +660,10 @@ async function verifyStaticAuthority() {
   const sync = await bodyOf(SYNC_V1);
   ok(sync.includes('historical_capture_begin_for_execution_v1') && sync.includes('sync_post_response_information_gaps_v2'), 'the v1 synchronization entry enters the boundary and delegates to the v2 authority');
   ok(!/INSERT\s+INTO|UPDATE\s+public|DELETE\s+FROM/u.test(sync), 'the v1 synchronization entry carries no DML');
-  ok((await bodyOf('public.capture_session_historical_baseline_v1()')).includes('FOR UPDATE'), 'the baseline is cut under the world-clock row lock: no race gap with SP(1)');
+  const baselineHook = await bodyOf('public.capture_session_historical_baseline_v1()');
+  ok(baselineHook.includes('FOR UPDATE'), 'the baseline is cut under the world-clock row lock: no race gap with SP(1)');
+  ok(baselineHook.includes("coverage = 'COVERED'") && baselineHook.indexOf("coverage = 'COVERED'") < baselineHook.indexOf('INSERT INTO public.session_historical_baselines'),
+    'the baseline is cut for a COVERED Session only: a LEGACY UNCOVERED SESSION that commits a Moment gets none');
   const clockColumns = (await rows("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='session_semantic_clocks' ORDER BY ordinal_position")).map((c) => c.column_name);
   eq(clockColumns, ['session_id', 'user_id', 'current_sp', 'same_sp_event_sequence'], 'T-03C must not alter the Session Semantic Clock');
   // Identities: TypeScript and SQL derive the same namespaces and vectors.
@@ -497,9 +677,15 @@ async function verifyStaticAuthority() {
 }
 
 // ------------------------------------------------------------ B. coverage
-async function verifyCoverage(owner) {
-  stage = 'B. R-C1 coverage: LEGACY UNCOVERED SESSION never partially historical; new Session COVERED';
-  // A pre-0072 Session: the row exists, the migration decided LEGACY_UNCOVERED.
+async function verifyCoverage(owner, legacyOwner) {
+  stage = 'B. R-C1 coverage in the migrated database: a LEGACY UNCOVERED SESSION keeps its Conversation Runtime and stays historical-disabled; a Session without a decision is projection-refused; a new Session is COVERED';
+  // A pre-0072 Session as the migration left it: the row, its clock and the
+  // LEGACY_UNCOVERED decision (fixture surgery stands in for the deployment
+  // boundary that stage B0 crosses for real). It belongs to the second fixture
+  // user so that the Reading captured in it below stays out of the first
+  // user's world (whose baselines the later stages pin exactly).
+  const owner1 = owner;
+  owner = legacyOwner;
   const legacy = randomUUID();
   await asReplica(async () => {
     await q("INSERT INTO public.conversation_sessions(id,user_id,status,channel) VALUES($1,$2,'ACTIVE','TEXT')", [legacy, owner]);
@@ -509,12 +695,29 @@ async function verifyCoverage(owner) {
   await identity('postgres');
   const turns = await completedTurns(owner, legacy);
   await identity('postgres');
-  await rejected(() => legacyCommit(legacy, owner, turns.userTurn, randomUUID(), [unit(USER_TEXT, U1)]), 'HISTORICAL_COVERAGE_UNAVAILABLE', ['55000']);
-  strict((await one('SELECT count(*)::int n FROM public.conversation_units WHERE session_id=$1', [legacy])).n, 0, 'no Session Position was committed into the legacy Session');
-  strict((await one('SELECT count(*)::int n FROM public.session_historical_baselines WHERE session_id=$1', [legacy])).n, 0, 'a legacy Session never gets a baseline');
+  // The Conversation Runtime is not gated by coverage: the committed CU lands,
+  // the Session Position is allocated, LH advances - and no baseline appears.
+  const [committed] = await legacyCommit(legacy, owner, turns.userTurn, randomUUID(), [unit(USER_TEXT, U1)]);
+  strict(committed.session_position, 1, 'a LEGACY UNCOVERED SESSION keeps committing Session Positions through the frozen runtime authority');
+  strict((await one('SELECT count(*)::int n FROM public.conversation_units WHERE session_id=$1', [legacy])).n, 1, 'the committed CU exists');
+  eq((await clockOf(legacy)).current_sp, 1, 'LH advances normally for runtime');
+  strict((await one('SELECT count(*)::int n FROM public.session_historical_baselines WHERE session_id=$1', [legacy])).n, 0, 'a LEGACY UNCOVERED SESSION never gets a baseline - not even at its first post-deploy Moment');
+  // Post-deploy capture associated with the legacy Session is retained
+  // internally with its truthful anchor and upgrades nothing.
+  const ctx = await beginCapture(owner, legacy, true);
+  eq([ctx.session_id, ctx.session_position], [legacy, 1], 'the association anchors at the legacy Session\'s Session Position');
+  await identity('service_role');
+  const captured = randomUUID();
+  await rows('SELECT * FROM public.server_create_hypothesis_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)', [owner, captured, 'post-deploy reading in a legacy Session', 'CAUSAL', 'GENERAL', `CONVERSATION_SESSION:${legacy}`, 'SYSTEM_GENERATED', [], []]);
+  await newLogicalTransaction();
+  eq((await eventsOf('historical_reading_events', 'hypothesis_id=$1', [captured])).map((e) => [e.event_kind, e.session_id, e.session_position]), [['CREATED', legacy, 1]]);
+  eq(await one('SELECT coverage_state FROM public.session_historical_coverage WHERE session_id=$1', [legacy]), { coverage_state: 'LEGACY_UNCOVERED' }, 'post-deploy capture never upgrades coverage');
+  strict((await one('SELECT count(*)::int n FROM public.session_historical_baselines WHERE session_id=$1', [legacy])).n, 0, 'and never fabricates a baseline');
   await identity('authenticated', owner);
+  eq(await one('SELECT live_head FROM public.get_session_temporal_state_v1($1)', [legacy]), { live_head: 1 }, 'the frozen T-03A2 delivery serves the legacy Session');
   await rejected(() => q('SELECT * FROM public.get_session_historical_projection_v1($1,$2)', [legacy, 1]), 'HISTORICAL_COVERAGE_UNAVAILABLE', ['55000']);
-  // A Session with NO coverage decision at all fails the same way.
+  // A Session with NO coverage decision at all: the runtime is equally
+  // ungated, no baseline can be cut, and the projection refuses the same way.
   const undecided = randomUUID();
   await asReplica(async () => {
     await q("INSERT INTO public.conversation_sessions(id,user_id,status,channel) VALUES($1,$2,'ACTIVE','TEXT')", [undecided, owner]);
@@ -523,9 +726,12 @@ async function verifyCoverage(owner) {
   await identity('postgres');
   const undecidedTurns = await completedTurns(owner, undecided);
   await identity('postgres');
-  await rejected(() => legacyCommit(undecided, owner, undecidedTurns.userTurn, randomUUID(), [unit(USER_TEXT, U1)]), 'HISTORICAL_COVERAGE_UNAVAILABLE', ['55000']);
+  const [undecidedCommit] = await legacyCommit(undecided, owner, undecidedTurns.userTurn, randomUUID(), [unit(USER_TEXT, U1)]);
+  strict(undecidedCommit.session_position, 1, 'a Session without a coverage decision still commits Session Positions');
+  strict((await one('SELECT count(*)::int n FROM public.session_historical_baselines WHERE session_id=$1', [undecided])).n, 0, 'no baseline without a COVERED decision');
   await identity('authenticated', owner);
   await rejected(() => q('SELECT * FROM public.get_session_historical_projection_v1($1,$2)', [undecided, 1]), 'HISTORICAL_COVERAGE_UNAVAILABLE', ['55000']);
+  owner = owner1;
   // A new Session is COVERED at creation and, before its first Moment, has no
   // addressable TC (technical absence, never UNKNOWN_AT_TC).
   const fresh = await newSession(owner);
@@ -628,7 +834,9 @@ async function verifyBaselineAndFamilies(owner, other, legacy) {
   eq(k5.threads.map((t) => t.home), k3.threads.map((t) => t.home), 'ONE Home per Thread at every TC');
 
   // A world-only write AFTER the baseline never enters Session 1 (any TC), and
-  // enters a LATER Session through ITS baseline (REV66-06 section 4.5, P66-C).
+  // enters a LATER Session through ITS baseline (REV66-06 section 4.5: baseline
+  // inheritance across Sessions - a useful proof, but NOT the deployment-spanning
+  // P66-C, which stage B0 proves on a fresh database).
   await identity('service_role');
   const H1 = randomUUID();
   await rows('SELECT * FROM public.server_create_hypothesis_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)', [owner, H1, 'reading written without a Session association after the baseline', 'CAUSAL', 'GENERAL', 'later scope', 'HUMAN_REVIEWED', [], []]);
@@ -639,7 +847,7 @@ async function verifyBaselineAndFamilies(owner, other, legacy) {
   await identity('postgres');
   await legacyCommit(laterSession, owner, laterTurns.userTurn, randomUUID(), [unit(USER_TEXT, U1)]);
   await newLogicalTransaction();
-  ok(idsOf((await project(owner, laterSession, 1)).readings).includes(H1), 'the later Session inherits it through its own baseline at SP(1)');
+  ok(idsOf((await project(owner, laterSession, 1)).readings).includes(H1), 'REV66-06 section 4.5: the later Session inherits it through its own baseline at SP(1)');
   ok(idsOf((await project(owner, laterSession, 1)).threads).includes(world.threads.ahmed), 'and inherits the Threads of Session 1 through the world availability');
   eq((await project(owner, laterSession, 1)).threads.find((t) => t.id === world.threads.ahmed).sessionLifecycle, null, 'a Thread never bound in this Session has no Session-local lifecycle here');
   return { world, H1, laterSession };
@@ -1026,6 +1234,76 @@ async function verifyPreservationAndTracking(owner, other, legacy, worldState, r
   await newLogicalTransaction();
 }
 
+// -------------------------------------------- I2. Auth smoke teardown parity
+// database/verify-supabase-auth.mjs used to remove its two fixture Sessions
+// with plain DELETE statements; 0072 attaches a coverage decision to every
+// Session behind an ON DELETE RESTRICT FK, so the smoke's teardown now removes
+// the fixture's T-03C technical rows first, in the same controlled postgres /
+// replica-mode pattern the historical verifiers' fixture cleanup uses. The
+// live smoke needs real Supabase credentials; this stage replays the smoke's
+// ACTUAL teardown statements (extracted from its source, never retyped)
+// against an identical fixture and proves they leave no residue - and that the
+// plain Session delete they replace is exactly the RESTRICT regression.
+async function verifyAuthSmokeTeardownCompatibility(owner) {
+  stage = 'I2. verify:auth:smoke fixture teardown stays compatible with the 0072 coverage decision (replayed from the smoke source)';
+  const smoke = await readFile(new URL('./verify-supabase-auth.mjs', import.meta.url), 'utf8');
+  const start = smoke.indexOf('async function cleanupRows()');
+  const end = smoke.indexOf('\nasync function main()', start);
+  ok(start > 0 && end > start, 'the smoke defines cleanupRows() before main()');
+  const statements = [...smoke.slice(start, end).matchAll(/database\.query\(\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|`([^`]*)`)/gu)]
+    .map((m) => (m[1] ?? m[2] ?? m[3]).replace(/\s+/gu, ' ').trim())
+    .filter((sql) => !/^(?:BEGIN|COMMIT|ROLLBACK)$/u.test(sql));
+  ok(statements.length >= 7, `the teardown carries its statements (${statements.length})`);
+  const at = (pattern) => statements.findIndex((sql) => pattern.test(sql));
+  strict(at(/^SET LOCAL session_replication_role = 'replica'$/u), 0, 'the teardown enters replica mode first: triggers and RESTRICT FKs stand aside for the fixture owner only');
+  const order = [/DELETE FROM public\.conversation_turns/u, /DELETE FROM public\.session_historical_baselines/u, /DELETE FROM public\.session_historical_coverage/u, /DELETE FROM public\.session_semantic_clocks/u,
+    /DELETE FROM public\.conversation_sessions/u, /DELETE FROM public\.users/u, /^SELECT .*AS total$/u].map(at);
+  ok(order.every((index, i) => index > 0 && (i === 0 || index > order[i - 1])), `turns, then the T-03C decisions, the clock, the Sessions, the user, then the residue postcondition (${order.join(',')})`);
+  // The smoke's exact fixture shape: the signed-in user's own Session + turn,
+  // a cross-user user + Session + turn.
+  const own = { session: randomUUID(), turn: randomUUID() };
+  const other = { user: randomUUID(), session: randomUUID(), turn: randomUUID() };
+  await identity('postgres');
+  await q('INSERT INTO public.users (id, auth_subject) VALUES ($1::uuid, $1::text)', [other.user]);
+  for (const [session, user] of [[own.session, owner], [other.session, other.user]]) {
+    await q("INSERT INTO public.conversation_sessions (id, user_id, status, channel) VALUES ($1, $2, 'ACTIVE', 'TEXT')", [session, user]);
+  }
+  for (const [turn, session, user] of [[own.turn, own.session, owner], [other.turn, other.session, other.user]]) {
+    await q("INSERT INTO public.conversation_turns (id, session_id, user_id, role, status, content) VALUES ($1, $2, $3, 'USER', 'RECEIVED', 'auth-smoke-fixture')", [turn, session, user]);
+  }
+  strict((await one('SELECT count(*)::int n FROM public.session_historical_coverage WHERE session_id = ANY($1::uuid[])', [[own.session, other.session]])).n, 2, 'both fixture Sessions received a coverage decision at creation');
+  // The regression the review named: the pre-R1 teardown removed the turns and
+  // the clocks, then deleted the Sessions directly - which the coverage
+  // decision's ON DELETE RESTRICT relationship refuses.
+  await rejected(async () => {
+    await q('DELETE FROM public.conversation_turns WHERE id = ANY($1::uuid[])', [[own.turn, other.turn]]);
+    await q('DELETE FROM public.session_semantic_clocks WHERE session_id = ANY($1::uuid[])', [[own.session, other.session]]);
+    await q('DELETE FROM public.conversation_sessions WHERE id = ANY($1::uuid[])', [[own.session, other.session]]);
+  }, 'session_historical_coverage', ['23001', '23503']);
+  // The corrected teardown, replayed verbatim with the smoke's own parameter shapes.
+  const bind = (sql) => {
+    if (!sql.includes('$1')) return [];
+    if (sql.includes('$3')) return [[own.session, other.session], [own.turn, other.turn], other.user];
+    if (/conversation_turns/u.test(sql)) return [[own.turn, other.turn]];
+    if (/public\.users/u.test(sql)) return [other.user];
+    return [[own.session, other.session]];
+  };
+  let residue = null;
+  for (const sql of statements) {
+    const result = await q(sql, bind(sql));
+    if (/^SELECT/u.test(sql)) residue = result.rows[0];
+  }
+  await q("SET LOCAL session_replication_role = 'origin'");
+  ok(residue !== null && Number(residue.total) === 0, 'the smoke\'s own residue postcondition reports zero');
+  strict(Number((await one(`SELECT (SELECT count(*) FROM public.conversation_sessions WHERE id = ANY($1::uuid[]))
+    + (SELECT count(*) FROM public.session_historical_coverage WHERE session_id = ANY($1::uuid[]))
+    + (SELECT count(*) FROM public.session_semantic_clocks WHERE session_id = ANY($1::uuid[]))
+    + (SELECT count(*) FROM public.conversation_turns WHERE id = ANY($2::uuid[]))
+    + (SELECT count(*) FROM public.users WHERE id = $3::uuid) AS total`, [[own.session, other.session], [own.turn, other.turn], other.user])).total), 0,
+  'the fixture is gone: Sessions, their coverage decisions, their clocks, the turns and the cross-user user');
+  strict((await one('SELECT count(*)::int n FROM public.conversation_sessions WHERE user_id=$1', [owner])).n > 0, true, 'and nothing beyond the fixture was touched');
+}
+
 // -------------------------------------------------------- J. sealing / stability
 async function verifySealing(owner, worldState, sealedBefore) {
   stage = 'J. P66-F: a sealed TC is stable under every later write; disclosure inputs are typed and family-aware';
@@ -1110,6 +1388,7 @@ async function verifyConcurrency() {
 async function main() {
   try {
     await client.connect();
+    await verifyDeploymentSpan();
     await q('BEGIN');
     try {
       await identity('postgres');
@@ -1117,7 +1396,7 @@ async function main() {
       const owner = randomUUID();
       const other = randomUUID();
       await q('INSERT INTO auth.users(id) VALUES($1),($2)', [owner, other]);
-      await verifyCoverage(owner);
+      await verifyCoverage(owner, other);
       const legacy = await legacyWorld(owner);
       const worldState = await verifyBaselineAndFamilies(owner, other, legacy);
       const sealed = await project(owner, worldState.world.session, 3);
@@ -1126,11 +1405,12 @@ async function main() {
       await verifyExpiry(owner, legacy, worldState);
       await verifyManagedCommands(owner, legacy, worldState);
       await verifyPreservationAndTracking(owner, other, legacy, worldState, readings);
+      await verifyAuthSmokeTeardownCompatibility(owner);
       await verifySealing(owner, worldState, sealed);
       await identity('postgres');
     } finally { await q('ROLLBACK'); }
     await verifyConcurrency();
-    console.log(`Verified migration 0072 (${assertions} assertions): every pre-existing Session is a LEGACY UNCOVERED SESSION that can never become partially historical and every new Session is COVERED at creation; the baseline is cut at SP(1) under the world-clock lock so world versions <= baseline are known at every TC and later unassociated facts enter only a later Session through its own baseline; the durable execution is the ONE server-owned Session association (the caller supplies no session id, no SP, no sequence, no version), an authenticated / caller-scoped write is captured unassociated, a foreign Session is refused; each exposed family is UNKNOWN before its own anchor and KNOWN from it on with then-current status / version / epoch and known lineage never mistaken for current; a Formal Question appearance anchors at the first committed Moment of its exchange; Thread <-> Reading appearances are clock-first, derived, idempotent and one life per SP; expiry is mapped from the wall clock into SP space (PRE_FIRST_SP / SP(n) half-open with an exact tie EXPIRED / open head / PENDING / NOT_IN_SESSION) and a Material known ACTIVE at TC = n-1 is EXPIRED from TC = n with identity and lineage intact; the three managed commands and the synchronization entry keep their names and grants while their frozen cores are executable by no application role; no canonical row can be deleted or rewritten, no history row updated or deleted, the world clock never regresses; every legacy attach path authors exactly one tracked participation; a sealed TC is byte-stable under every later write while the open head evolves without moving LH; and associated writes serialize on the Session Semantic Clock.`);
+    console.log(`Verified migration 0072 (${assertions} assertions): every pre-existing Session is a LEGACY UNCOVERED SESSION whose Conversation Runtime continues normally while it can never become partially historical (proven across the deployment boundary on a fresh database, P66-C) and every new Session is COVERED at creation; the baseline is cut at SP(1) for COVERED Sessions only, under the world-clock lock, so world versions <= baseline are known at every TC and later unassociated facts enter only a later Session through its own baseline; the verify:auth:smoke teardown replayed from its source leaves no residue under 0072; the durable execution is the ONE server-owned Session association (the caller supplies no session id, no SP, no sequence, no version), an authenticated / caller-scoped write is captured unassociated, a foreign Session is refused; each exposed family is UNKNOWN before its own anchor and KNOWN from it on with then-current status / version / epoch and known lineage never mistaken for current; a Formal Question appearance anchors at the first committed Moment of its exchange; Thread <-> Reading appearances are clock-first, derived, idempotent and one life per SP; expiry is mapped from the wall clock into SP space (PRE_FIRST_SP / SP(n) half-open with an exact tie EXPIRED / open head / PENDING / NOT_IN_SESSION) and a Material known ACTIVE at TC = n-1 is EXPIRED from TC = n with identity and lineage intact; the three managed commands and the synchronization entry keep their names and grants while their frozen cores are executable by no application role; no canonical row can be deleted or rewritten, no history row updated or deleted, the world clock never regresses; every legacy attach path authors exactly one tracked participation; a sealed TC is byte-stable under every later write while the open head evolves without moving LH; and associated writes serialize on the Session Semantic Clock.`);
   } finally {
     await client.end();
   }

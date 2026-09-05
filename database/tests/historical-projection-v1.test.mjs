@@ -115,19 +115,51 @@ test('0072 adds exactly the thirteen history tables: SP-native anchors, typed pe
   assert.doesNotMatch(hooks, /ORDER BY [^;]*created_at|created_at\s*[<>=]/u, 'no hook orders or compares by time');
 });
 
-test('R-C1 coverage: LEGACY UNCOVERED SESSION never partially historical; COVERED at creation; the CU gate and the SP(1) baseline under the world-clock lock', () => {
+test('R-C1 coverage: a LEGACY UNCOVERED SESSION keeps its Conversation Runtime and stays historical-disabled; COVERED at creation; the SP(1) baseline is cut for COVERED Sessions only, under the world-clock lock; committed-CU insertion is never gated by coverage', () => {
   assert.match(seedingOrTables(), /INSERT INTO public\.session_historical_coverage \(session_id, user_id, coverage_state\)\s*\nSELECT s\.id, s\.user_id, 'LEGACY_UNCOVERED'/u, 'every pre-existing Session is decided LEGACY_UNCOVERED');
   assert.match(migration, /AFTER INSERT ON public\.conversation_sessions\s*\n\s*FOR EACH ROW EXECUTE FUNCTION public\.provision_session_historical_coverage_v1\(\)/u, 'a new Session is decided at creation');
-  assert.match(migration, /BEFORE INSERT ON public\.conversation_units\s*\n\s*FOR EACH ROW EXECUTE FUNCTION public\.guard_session_historical_coverage_v1\(\)/u, 'no Session Position enters an uncovered Session');
-  assert.match(hooks, /HISTORICAL_COVERAGE_UNAVAILABLE/u);
-  assert.match(migration, /AFTER INSERT ON public\.conversation_units\s*\n\s*FOR EACH ROW EXECUTE FUNCTION public\.capture_session_historical_baseline_v1\(\)/u);
+  // R1-01: committed-CU runtime eligibility != historical projection eligibility.
+  // A LEGACY UNCOVERED SESSION keeps committing CUs / Session Positions through
+  // the frozen runtime authority; coverage is consulted by the baseline hook
+  // (COVERED only) and by the projection (fail-closed), never by a gate on
+  // conversation_units.
+  // (executableBody: the migration before its terminal self-assertions, which
+  // legitimately name the retired gate as a tombstone they refuse to find.)
+  assert.doesNotMatch(executableBody, /BEFORE INSERT ON public\.conversation_units/u, 'no coverage gate stands between the runtime and a committed CU');
+  assert.doesNotMatch(executableBody, /guard_session_historical_coverage_v1|coverage_gate/u, 'the committed-CU coverage gate does not exist');
+  assert.match(migration.slice(migration.indexOf(SELF_ASSERTION_MARKER)), /to_regprocedure\('public\.guard_session_historical_coverage_v1\(\)'\) IS NOT NULL/u, 'the self-assertions refuse to deploy with the gate present');
+  assert.doesNotMatch(hooks, /HISTORICAL_COVERAGE_UNAVAILABLE/u, 'no capture hook refuses a canonical write for coverage');
+  assert.match(projection, /HISTORICAL_COVERAGE_UNAVAILABLE/u, 'the projection is where coverage fails closed');
+  assert.equal((executableBody.match(/CREATE TRIGGER \w+\s*\n\s*(?:AFTER|BEFORE) [A-Z ]+ ON public\.conversation_units/gu) ?? []).length, 1, 'exactly ONE 0072 trigger on conversation_units');
+  assert.match(migration, /AFTER INSERT ON public\.conversation_units\s*\n\s*FOR EACH ROW EXECUTE FUNCTION public\.capture_session_historical_baseline_v1\(\)/u, 'and it is the AFTER INSERT baseline hook');
   const baselineHook = hooks.slice(hooks.indexOf('CREATE FUNCTION public.capture_session_historical_baseline_v1'), hooks.indexOf('CREATE FUNCTION public.guard_historical_canonical_row_preservation_v1'));
   assert.match(baselineHook, /IF NEW\.session_position = 1 THEN/u, 'the baseline is cut at SP(1)');
+  assert.match(baselineHook, /IF FOUND AND coverage = 'COVERED' THEN/u, 'a baseline belongs to a COVERED Session only - never fabricated for a LEGACY UNCOVERED SESSION (or an undecided one) that later commits a Moment');
+  assert.ok(baselineHook.indexOf("coverage = 'COVERED'") < baselineHook.indexOf('INSERT INTO public.session_historical_baselines'), 'the coverage check precedes the cut');
+  assert.doesNotMatch(baselineHook, /RAISE EXCEPTION/u, 'the baseline hook never refuses the committed CU');
   assert.match(baselineHook, /FOR UPDATE/u, 'under the world-clock row lock: no race gap with SP(1)');
   assert.match(baselineHook, /INSERT INTO public\.session_historical_baselines/u);
   assert.match(baselineHook, /question-appearance:/u, 'the Formal Question <-> Turn appearance anchors at the exchange\'s first committed Moment');
   assert.match(baselineHook, /b\.state = 'BOUND'/u);
   assert.doesNotMatch(baselineHook, /now\(\)|CURRENT_TIMESTAMP|clock_timestamp/u);
+  assert.ok(migration.includes('coverage must gate historical projection, never committed-CU runtime'), 'the migration self-asserts the ungated runtime');
+  assert.doesNotMatch(migration, /never enters committed-CU commitment|receives no committed Session Position|lose EXECUTE/u, 'no stale statement about a gated runtime or a revoked attach path survives (R1-04)');
+});
+
+test('verify:auth:smoke tears its fixture down under 0072: replica mode as the fixture owner, the T-03C decisions before the Sessions, a residue postcondition; no production guard weakened', () => {
+  const smoke = read('../verify-supabase-auth.mjs');
+  const body = smoke.slice(smoke.indexOf('async function cleanupRows()'), smoke.indexOf('\nasync function main()'));
+  assert.ok(body.length > 0, 'cleanupRows() precedes main()');
+  const order = ["SET LOCAL session_replication_role = 'replica'", 'DELETE FROM public.conversation_turns', 'DELETE FROM public.session_historical_baselines', 'DELETE FROM public.session_historical_coverage',
+    'DELETE FROM public.session_semantic_clocks', 'DELETE FROM public.conversation_sessions', 'DELETE FROM public.users', 'AS total'].map((needle) => body.indexOf(needle));
+  assert.ok(order.every((index, i) => index > 0 && (i === 0 || index > order[i - 1])), `replica mode first, then turns, the T-03C decisions, the clock, the Sessions, the user, then the residue postcondition (${order.join(',')})`);
+  assert.match(body, /Auth smoke fixture cleanup left residue/u, 'the teardown proves its own completeness (replica mode relaxes FK enforcement)');
+  assert.doesNotMatch(body, /ALTER TABLE|DISABLE TRIGGER|DROP /u, 'no DDL, no trigger disabled');
+  assert.doesNotMatch(migration, /ON DELETE CASCADE/u, 'no production cascade merely for tests');
+  assert.doesNotMatch(posture, /GRANT [^;]*(?:DELETE|ON TABLE)/u, 'no application DELETE grant, no table grant');
+  assert.match(packageJson, /"verify:auth:smoke": "node --env-file=\.env database\/verify-supabase-auth\.mjs"/u, 'the smoke command is unchanged');
+  assert.match(verifier, /verify-supabase-auth\.mjs/u, 'the 0072 verifier replays the smoke teardown from its source against real PostgreSQL');
+  assert.match(verifier, /'session_historical_coverage', \['23001', '23503'\]/u, 'and proves the plain Session delete it replaces is the RESTRICT regression');
 });
 
 function seedingOrTables() { return `${tables}\n${seeding}`; }
@@ -294,9 +326,18 @@ test('the 0072 verifier proves live semantics, the fixture cleanup knows the new
     'PREVALID', 'SUPERSEDED', 'CURRENT', 'VERSION_ADVANCED', 'attach_hypothesis_evidence', 'background_attach_hypothesis_evidence_v1', 'apply_hypothesis_evidence_update',
     'persist_post_response_hypothesis_generation_v1', 'sync_post_response_information_gaps_v1', 'server_create_memory_for_execution_v1', 'bind_reading_to_thread_v1', 'unbind_reading_from_thread_v1',
     'select_formal_question_opportunity_v1', 'finalize_conversation_turn_v2', 'commit_finalized_exchange_with_full_semantic_chain_v1', 'BLOCKED', 'sessionLifecycle', 'has no Session-local lifecycle here',
-    'a LEGACY UNCOVERED SESSION', 'no fabricated anchor', 'one life per SP', 'identical to its earlier projection', 'evolved with the associated write while LH did not move']) {
+    'a LEGACY UNCOVERED SESSION', 'no fabricated anchor', 'one life per SP', 'identical to its earlier projection', 'evolved with the associated write while LH did not move',
+    // R1-01: the deployment-spanning P66-C proof and the ungated runtime.
+    'B0. R-C1 / P66-C across the deployment boundary', 'CREATE DATABASE', 'DROP DATABASE IF EXISTS', 'before 0072 no coverage decision exists anywhere', 'await q(migrationSql)',
+    'the deployment decides the pre-existing Session LEGACY_UNCOVERED', 'post-deploy exchange 1 committed SP6 and SP7', 'post-deploy exchange 3 committed SP10 and SP11',
+    'get_session_live_state_v1', 'get_session_temporal_state_v1', 'coverage stays LEGACY_UNCOVERED through every post-deploy commit and capture', 'no baseline was fabricated by the post-deploy Moments',
+    'keeps committing Session Positions through the frozen runtime authority', 'the committed-CU coverage gate does not exist', 'REV66-06 section 4.5',
+    // R1-03: the smoke teardown replayed from its source.
+    'cleanupRows', 'verify-supabase-auth.mjs', "session_replication_role = 'replica'"]) {
     assert.ok(verifier.includes(proof), `verifier is missing ${proof}`);
   }
+  assert.doesNotMatch(verifier, /P66-C \(a later Session inherits/u, 'later-Session baseline inheritance is not called P66-C (R1-04)');
+  assert.ok(verifier.indexOf('await verifyDeploymentSpan();') < verifier.indexOf("await q('BEGIN');", verifier.indexOf('async function main()')), 'the deployment-spanning proof runs outside the main transaction (CREATE DATABASE cannot run inside one)');
   for (const table of ['thread_reading_bindings', 'historical_reading_events', 'session_historical_baselines', 'session_historical_coverage', 'historical_world_semantic_clocks']) {
     assert.ok(cleanup.includes(`'${table}'`), `the fixture cleanup removes ${table}`);
   }

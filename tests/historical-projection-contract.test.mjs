@@ -90,13 +90,29 @@ test('migration 0072 is the ONE migration after 0071, 0001 - 0071 are byte-ident
   assert.doesNotMatch(delivered, /T-03C[a-z]\b|T-03C-[0-9]|\bC[ab]\b task|split task|sub-task|subtask/iu, 'T-03C is one task');
 });
 
-test('the Stage 6.6 v3 matrix reconciles to 31 FULL AFTER BUILD / 4 NOT EXPOSED / 0 BLOCKER, and every release condition R-C1 .. R-C5 is documented and proven', () => {
+test('the Stage 6.6 v3 matrix reconciles to 30 FULL AFTER BUILD / 4 NOT EXPOSED / 1 BLOCKER (A-1: the canonical Reading subject-grounding authority is missing), and every release condition R-C1 .. R-C5 is documented and proven', () => {
   const rows = [...doc.matchAll(/^\| (C[1-3]|E[1-4]|T[1-3]|A-[134]|L[1-2]|R[1-8]|M[1-4]|U[1-2]|Q1|F1|H[1-2]|N[1-2]) \|/gmu)].map((m) => m[1]);
   assert.equal(rows.length, 35, 'thirty-five matrix rows');
-  assert.equal((doc.match(/\| FULL AFTER BUILD \|/gu) ?? []).length, 31);
+  assert.equal((doc.match(/\| FULL AFTER BUILD \|/gu) ?? []).length, 30);
   assert.equal((doc.match(/\| NOT EXPOSED \|/gu) ?? []).length, 4);
-  assert.equal((doc.match(/\| BLOCKER \|/gu) ?? []).length, 0);
-  assert.match(doc, /31 FULL AFTER BUILD \/ 4 NOT EXPOSED \/ 0 BLOCKER/u);
+  assert.equal((doc.match(/\| BLOCKER \|/gu) ?? []).length, 1);
+  assert.match(doc, /30 FULL AFTER BUILD \/ 4 NOT EXPOSED \/ 1 BLOCKER/u);
+  // R1-02: A-1 is never silently FULL. The substrate and the projection exist; the
+  // production writer does not, because the repository carries no server-owned
+  // canonical Reading subject-grounding authority - and none is invented.
+  assert.match(doc, /^\| A-1 \|[^\n]*\| BLOCKER \|$/mu, 'the ONE BLOCKER row is A-1 (Thread <-> Reading appearance)');
+  assert.ok(doc.includes('R1-02 BLOCKED — CANONICAL READING SUBJECT-GROUNDING AUTHORITY MISSING'), 'the document states the exact blocker');
+  assert.doesNotMatch(doc, /evaluator that decides binding is a later task|is a later task/u, 'the binding authority is not deferred to a later task (R1-04)');
+  assert.ok(doc.includes('Binding from a label, string similarity, an embedding, Evidence or peer co-occurrence, the current LF at creation time, or geometry is forbidden by the frozen rule, so none is invented'),
+    'the document records that no heuristic stands in for the missing authority');
+  assert.doesNotMatch(migration.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n'), /similar|embedding|ILIKE|~\*/u, 'the migration carries no similarity authority that could bind a Reading');
+  assert.doesNotMatch(productionCode, /bind_reading_to_thread_v1|unbind_reading_from_thread_v1/u, 'no server code reaches the binding writers: there is no production path');
+  // R1-01: the runtime of a LEGACY UNCOVERED SESSION continues; only its historical projection is disabled.
+  assert.match(doc, /Conversation Runtime continues normally/u, 'the document states that a LEGACY UNCOVERED SESSION keeps its Conversation Runtime');
+  assert.doesNotMatch(doc, /no Session Position can ever be committed into it|never enters committed-CU commitment|the CU gate/u, 'no stale statement about a gated runtime survives (R1-04)');
+  assert.match(doc, /P66-C \| B0 \|/u, 'P66-C is the deployment-spanning proof (stage B0)');
+  assert.doesNotMatch(doc, /P66-C \| D \|/u, 'later-Session baseline inheritance is not called P66-C');
+  assert.doesNotMatch(doc, /lose EXECUTE/u, 'R-C3 is described as capture, not as a revoked attach path (R1-04)');
   for (const condition of ['R-C1', 'R-C2', 'R-C3', 'R-C4', 'R-C5']) assert.ok(doc.includes(`**${condition}`), `${condition} is documented`);
   for (const proof of ['P66-A', 'P66-B', 'P66-C', 'P66-D', 'P66-E', 'P66-F', 'P66-G', 'P66-H', 'Z66-03', 'Z66-04', 'Z66-05']) assert.ok(doc.includes(proof), `${proof} is documented`);
   for (const token of ['UNKNOWN_AT_TC', 'KNOWN_AND_CURRENT_AT_TC', 'KNOWN_NONCURRENT_AT_TC', 'PREVALID', 'SUPERSEDED', 'CONTEXT_UNAVAILABLE_AT_TC', 'AVAILABLE_BUT_DEPTH_WITHHELD', 'AVAILABLE_AND_RENDERABLE',

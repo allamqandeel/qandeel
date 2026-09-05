@@ -247,8 +247,25 @@ async function signOut() {
 async function cleanupRows() {
   await database.query('BEGIN');
   try {
+    // Fixture teardown runs as the postgres fixture owner in replica mode - the
+    // same controlled pattern the historical verifiers' fixture cleanup uses -
+    // so the append-only guards and ON DELETE RESTRICT relationships of the
+    // T-03C historical substrate (0072) stand aside for exactly these fixture
+    // rows and this transaction. Production guards are untouched: no role
+    // gains DELETE, no cascade exists, and every row removed is named here.
+    await database.query("SET LOCAL session_replication_role = 'replica'");
     await database.query('DELETE FROM public.conversation_turns WHERE id = ANY($1::uuid[])', [
       [ownTurnId, otherTurnId],
+    ]);
+    // T-03C: every Session carries a coverage decision (and a covered Session
+    // with a first Moment a baseline) behind ON DELETE RESTRICT. The smoke's
+    // Sessions never commit a Moment, so only their decisions exist - remove
+    // the T-03C technical rows explicitly, before the Sessions.
+    await database.query('DELETE FROM public.session_historical_baselines WHERE session_id = ANY($1::uuid[])', [
+      [ownSessionId, otherSessionId],
+    ]);
+    await database.query('DELETE FROM public.session_historical_coverage WHERE session_id = ANY($1::uuid[])', [
+      [ownSessionId, otherSessionId],
     ]);
     // T-03A2: a Session carries a Session Semantic Clock row, and the FK is
     // ON DELETE RESTRICT like every other conversation relationship - smoke
@@ -260,6 +277,21 @@ async function cleanupRows() {
       [ownSessionId, otherSessionId],
     ]);
     await database.query('DELETE FROM public.users WHERE id = $1', [otherUserId]);
+    // Replica mode also relaxes foreign-key enforcement, so the teardown proves
+    // its own completeness instead of relying on a violation to surface a
+    // forgotten row.
+    const residue = await database.query(
+      `SELECT (SELECT count(*) FROM public.conversation_sessions WHERE id = ANY($1::uuid[]))
+            + (SELECT count(*) FROM public.session_historical_coverage WHERE session_id = ANY($1::uuid[]))
+            + (SELECT count(*) FROM public.session_historical_baselines WHERE session_id = ANY($1::uuid[]))
+            + (SELECT count(*) FROM public.session_semantic_clocks WHERE session_id = ANY($1::uuid[]))
+            + (SELECT count(*) FROM public.conversation_turns WHERE id = ANY($2::uuid[]))
+            + (SELECT count(*) FROM public.users WHERE id = $3::uuid) AS total`,
+      [[ownSessionId, otherSessionId], [ownTurnId, otherTurnId], otherUserId],
+    );
+    if (Number(residue.rows[0].total) !== 0) {
+      throw new Error('Auth smoke fixture cleanup left residue. Sensitive details were suppressed.');
+    }
     await database.query('COMMIT');
   } catch (error) {
     await database.query('ROLLBACK');
