@@ -117,10 +117,27 @@ export function temporalMotionPlan(input: TemporalMotionInput): TemporalMotionPl
     previewPresent: input.previewSp !== null,
     temporalStance: input.mode === 'FOLLOW_LIVE' ? 'FOLLOWING_LIVE' : 'PINNED_TO_MOMENT',
     cursorMs: reduced || tracking ? 0 : TEMPORAL_MOTION_DURATIONS.cursorMs,
-    presenceMs: reduced ? 0 : TEMPORAL_MOTION_DURATIONS.presenceMs,
+    // Reduced motion means fewer and GENTLER, not none. Everything that MOVES goes to zero; the
+    // preview marker's opacity does not, because a preview appearing and leaving is a state change
+    // that still needs a bridge, and an opacity change is not movement. Removing it would make the
+    // preview blink in and out — a harsher transition, not a calmer one.
+    presenceMs: TEMPORAL_MOTION_DURATIONS.presenceMs,
     cancelMs: reduced ? 0 : TEMPORAL_MOTION_DURATIONS.cancelMs,
     commitSettleMs: reduced ? 0 : TEMPORAL_MOTION_DURATIONS.commitSettleMs,
   });
+}
+
+/**
+ * The centre of a disclosed Session Position in the TRACK's own coordinate space, in layout points.
+ *
+ * Deliberately independent of the presentation window (R1-MOTION-01). Where a Moment sits on the
+ * Track changes only when the Moment changes; where the window sits changes on every scroll frame,
+ * and scrolling is a hundreds-of-times-a-day action that must not animate at all. Keeping the two
+ * apart lets the marker EASE when its Moment changes and track the scroll instantly.
+ */
+export function trackOffsetFor(sp: number | null, stepWidth: number): number | null {
+  if (sp === null || !Number.isFinite(sp) || !Number.isFinite(stepWidth)) return null;
+  return (sp - 1) * stepWidth + stepWidth / 2;
 }
 
 export interface TemporalMotionGeometry {
@@ -138,6 +155,7 @@ export interface TemporalMotionGeometry {
  * coordinate into a temporal position except the disclosed-target hit test, which asks T-05.
  */
 export function cursorOffsetFor(sp: number | null, geometry: TemporalMotionGeometry): number | null {
-  if (sp === null || !Number.isFinite(sp) || !Number.isFinite(geometry.stepWidth) || !Number.isFinite(geometry.windowOffset)) return null;
-  return (sp - 1) * geometry.stepWidth - geometry.windowOffset + geometry.stepWidth / 2;
+  const track = trackOffsetFor(sp, geometry.stepWidth);
+  if (track === null || !Number.isFinite(geometry.windowOffset)) return null;
+  return track - geometry.windowOffset;
 }

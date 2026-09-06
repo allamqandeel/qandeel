@@ -461,6 +461,41 @@ test('no temporal act can be reached from a camera act, an animation or a presen
   // Reduced motion and finger tracking are the only two things that zero a duration.
   assert.match(code['motion/temporal-motion.ts'], /cursorMs: reduced \|\| tracking \? 0 : TEMPORAL_MOTION_DURATIONS\.cursorMs,/u);
   assert.match(code['motion/temporal-motion.ts'], /temporalStance: input\.mode === 'FOLLOW_LIVE' \? 'FOLLOWING_LIVE' : 'PINNED_TO_MOMENT',/u);
+
+  // R1-MOTION-04 — reduced motion drops MOVEMENT and keeps the opacity bridge. Every duration that
+  // moves something is zeroed; the preview's presence fade is not, because it is not movement.
+  for (const moving of ['cursorMs', 'cancelMs', 'commitSettleMs']) {
+    assert.match(code['motion/temporal-motion.ts'], new RegExp(`${moving}: reduced[^\\n]*\\? 0 :`, 'u'), `${moving} is zeroed under reduced motion`);
+  }
+  assert.match(code['motion/temporal-motion.ts'], /presenceMs: TEMPORAL_MOTION_DURATIONS\.presenceMs,/u);
+
+  // R1-MOTION-01 — the presentation window offset is never animated. Scrolling is a
+  // hundreds-of-times-a-day action, and easing the markers against it would both animate that action
+  // and blur presentation movement into temporal traversal.
+  const binding = code['motion/useTemporalMotion.ts'];
+  assert.match(binding, /const windowOffset = useSharedValue\(geometry\.windowOffset\);/u);
+  assert.match(binding, /windowOffset\.set\(geometry\.windowOffset\);/u);
+  assert.doesNotMatch(binding, /with(?:Timing|Spring)\([^)]*windowOffset/u, 'the window offset must never be animated');
+  assert.equal((binding.match(/- windowOffset\.get\(\)/gu) ?? []).length, 2, 'both markers subtract the offset outside the animated value');
+  // Positions animate in TRACK space, which the window cannot move.
+  const motion = code['motion/temporal-motion.ts'];
+  assert.match(motion, /export function trackOffsetFor\(sp: number \| null, stepWidth: number\): number \| null \{/u);
+  const trackOffsetBody = motion.slice(motion.indexOf('export function trackOffsetFor'), motion.indexOf('export interface TemporalMotionGeometry'));
+  assert.ok(trackOffsetBody.length > 0, 'track space is defined before the window geometry');
+  assert.equal(trackOffsetBody.includes('windowOffset'), false, 'track space must not know about the presentation window');
+
+  // R1-MOTION-02 — the first real position is SET, never animated to, so nothing slides in from the
+  // Track origin on mount or on the first mirrored Moment.
+  assert.match(binding, /const placed = useRef\(false\);/u);
+  assert.match(binding, /placed\.current = true;\s*\n\s*committedTrack\.set\(committedTarget\);\s*\n\s*cursorTrack\.set\(cursorTo\);\s*\n\s*return;/u);
+
+  // R1-MOTION-03 — the commit acknowledgement rides the committed marker itself; there is no
+  // separate element that could animate while painting nothing.
+  assert.match(binding, /\{ translateX: committedTrack\.get\(\) - windowOffset\.get\(\) \},\s*\n[\s\S]*?\{ scaleY: 1 \+ settle\.get\(\) \* COMMIT_SETTLE_SCALE \},/u);
+  assert.equal(binding.includes('settleStyle'), false, 'the dead acknowledgement overlay is gone');
+  assert.equal(code['timeline-integration/TemporalTargetLayer.tsx'].includes('settleStyle'), false);
+  // Reduced motion never depends on a spring's zero-duration behaviour.
+  assert.match(binding, /\} else if \(cancelMs === 0\) \{\s*\n\s*cursorTrack\.set\(withTiming\(committedTarget, \{ duration: 0 \}\)\);/u);
   // The commit acknowledgement is called with the store's answer already in hand.
   assert.match(code['timeline-integration/scrub.ts'], /const outcome = commitPreviewedTarget\(deps\.store, deps\.preview, targeting\(\)\);\s*\n\s*deps\.onOutcome\?\.\(outcome\);/u);
   // Per-frame work never crosses to the RN runtime: only a threshold crossing and the ending do.

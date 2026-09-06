@@ -297,12 +297,36 @@ Rules the numbers encode:
 
 - while a finger is down the cursor tracks it **1:1 with no easing**. Easing a direct manipulation is
   lag, and lag on a scrub reads as the interface disagreeing with the hand;
-- reduced motion sets every duration to zero: same targets, same preview, same commit, same
-  cancellation, same Map truth, same Live/Pinned distinction — only the transition changes;
+- reduced motion sets every **movement** duration to zero and keeps the preview's opacity bridge:
+  same targets, same preview, same commit, same cancellation, same Map truth, same Live/Pinned
+  distinction — only the transition changes;
 - the commit settle is **skipped** under reduced motion rather than compressed into a flash, and
   nothing depends on it having played;
 - `temporalStance` — the Live/Pinned statement — is derived from the temporal mode alone, so it
   survives reduced motion, a frozen animation and the accessible tree.
+
+### What the mandatory animation review changed
+
+The `review-animations` gate ran against the revised implementation and produced four material
+findings plus one robustness point. All are fixed on this branch, and each is pinned by the static
+gate so it cannot silently return.
+
+| # | Finding | Fix |
+| --- | --- | --- |
+| R1-MOTION-01 | Both markers eased against the presentation scroll. `cursorOffsetFor` folded the window offset into the animated value, so scrolling the Timeline — a hundreds-of-times-a-day action that must not animate at all — dragged 140 ms of easing behind the content, and blurred presentation movement into temporal traversal. | Positions animate in the Track's own space (`trackOffsetFor`); the window offset lives in its own **never-animated** shared value and is subtracted in the style. A scroll now moves the markers instantly; only a change of Moment eases. |
+| R1-MOTION-02 | Both markers animated in from `translateX: 0` on mount, and again on the first mirrored Moment — a "comes from nowhere" entrance nobody asked for. | The shared values are seeded with the correct first position, and a `placed` guard **sets** the first real target instead of animating to it. |
+| R1-MOTION-03 | The commit acknowledgement animated a full-width overlay with no background, border or content — it was invisible. The code comment already claimed it grew "from the marker's own size". | The acknowledgement now rides the committed marker itself as a `scaleY` pulse composed after its `translateX`, and the dead overlay is deleted. |
+| R1-MOTION-04 | Reduced motion zeroed the preview's opacity transition too. The standard is *fewer and gentler*, not none — keep opacity, drop movement — and zeroing it made the preview blink in and out, a harsher transition rather than a calmer one. | `presenceMs` survives reduced motion; every duration that moves something still goes to zero. |
+| R1-MOTION-05 | The cancel return relied on `withSpring` behaving correctly at `duration: 0` under reduced motion. | At zero duration a `withTiming` is used instead, so reduced motion never depends on a spring's zero-duration case. |
+
+Cleared without change: no `ease-in` anywhere; no `scale(0)` entrance; only `transform` and `opacity`
+animate; every duration is under 300 ms; all motion is `withTiming`/`withSpring` on shared values and
+therefore retargets rather than restarting; the locus chooser has no motion at all, which is correct
+for a surface whose job is to present a choice without implying one.
+
+Two things still need a real device and cannot be judged from code: how the scrub feels when
+interrupted mid-flight and reversed, and whether the 140 ms cursor retarget reads as continuous at a
+held continuation's cadence on a slow Android device.
 
 ### Threading
 

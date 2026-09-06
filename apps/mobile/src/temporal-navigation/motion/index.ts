@@ -10,6 +10,7 @@ export {
   TEMPORAL_MOTION_DURATIONS,
   cursorOffsetFor,
   temporalMotionPlan,
+  trackOffsetFor,
 } from './temporal-motion';
 
 export type { TemporalMotionBinding } from './useTemporalMotion';

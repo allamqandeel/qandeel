@@ -168,7 +168,6 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
             pointerEvents="none"
             style={[styles.marker, styles.previewMarker, motion.cursorStyle]}
           />
-          <Animated.View testID={`${TEMPORAL_TARGET_STRIP_TEST_ID}:settle`} pointerEvents="none" style={[styles.settle, motion.settleStyle]} />
         </View>
       </GestureDetector>
 
@@ -190,6 +189,5 @@ const styles = StyleSheet.create({
   marker: { position: 'absolute', top: 0, width: MARKER_WIDTH, height: STRIP_HEIGHT },
   committedMarker: { borderLeftWidth: MARKER_WIDTH },
   previewMarker: { borderLeftWidth: MARKER_WIDTH, borderStyle: 'dashed' },
-  settle: { position: 'absolute', left: 0, right: 0, top: 0, height: STRIP_HEIGHT },
   liveEdge: { minHeight: 44, justifyContent: 'center' },
 });

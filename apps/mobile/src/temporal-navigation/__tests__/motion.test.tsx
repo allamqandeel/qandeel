@@ -16,12 +16,14 @@ import {
   TEMPORAL_MOTION_DURATIONS,
   cursorOffsetFor,
   temporalMotionPlan,
+  trackOffsetFor,
 } from '../motion';
 import { createTemporalPreviewController } from '../preview';
 import { createScrubHandlers } from '../timeline-integration/scrub';
 import {
   TEMPORAL_COMMITTED_MARKER_TEST_ID,
   TEMPORAL_PREVIEW_MARKER_TEST_ID,
+  TEMPORAL_TARGET_STRIP_TEST_ID,
   TemporalTargetLayer,
 } from '../timeline-integration';
 import { commitMoment } from '../targeting';
@@ -105,6 +107,85 @@ describe('TN06-17 — motion authority separation', () => {
     expect(cursorOffsetFor(3, geometry)).toBe(2 * TIMELINE_STEP - 96 + TIMELINE_STEP / 2);
     expect(cursorOffsetFor(null, geometry)).toBeNull();
     expect(cursorOffsetFor(Number.NaN, geometry)).toBeNull();
+    // Track space is independent of the window: the same Moment sits in the same place on the Track
+    // however far the presentation has been scrolled.
+    expect(trackOffsetFor(3, TIMELINE_STEP)).toBe(2 * TIMELINE_STEP + TIMELINE_STEP / 2);
+    expect(trackOffsetFor(3, TIMELINE_STEP)).toBe(cursorOffsetFor(3, { stepWidth: TIMELINE_STEP, windowOffset: 0 }));
+    expect(trackOffsetFor(null, TIMELINE_STEP)).toBeNull();
+  });
+});
+
+describe('R1-MOTION — the animation review findings', () => {
+  const markerX = async (offset: number) => {
+    const store = temporalTestStore({ liveHead: 8 });
+    const preview = createTemporalPreviewController();
+    const presentation = createPresentationController(trackOf('session-1', 8), 240);
+    presentation.move({ type: 'PRESENTATION_WINDOW_MOVE', offset });
+    const view = await render(<TemporalTargetLayer store={store} preview={preview} presentation={presentation} />);
+    const committed = translateX(view.getByTestId(TEMPORAL_COMMITTED_MARKER_TEST_ID).props.style);
+    await act(async () => {
+      view.unmount();
+    });
+    return committed;
+  };
+
+  it('R1-MOTION-01 — the markers track the presentation scroll rather than easing behind it', async () => {
+    // Scrolling is a hundreds-of-times-a-day action and must not animate. The window offset is
+    // subtracted OUTSIDE the animated value, so moving the window moves the marker by exactly the
+    // same amount, with no duration involved.
+    const atOrigin = await markerX(0);
+    const scrolled = await markerX(96);
+    expect(atOrigin).toBe(trackOffsetFor(8, TIMELINE_STEP));
+    expect(scrolled).toBe((atOrigin ?? 0) - 96);
+  });
+
+  it('R1-MOTION-02 — nothing slides in from the Track origin on mount', async () => {
+    const store = temporalTestStore({ liveHead: 8 });
+    const preview = createTemporalPreviewController();
+    const presentation = createPresentationController(trackOf('session-1', 8), 240);
+    const view = await render(<TemporalTargetLayer store={store} preview={preview} presentation={presentation} />);
+
+    // The very first painted position is already the right one, not zero eased towards it.
+    expect(translateX(view.getByTestId(TEMPORAL_COMMITTED_MARKER_TEST_ID).props.style)).toBe(trackOffsetFor(8, TIMELINE_STEP));
+    expect(translateX(view.getByTestId(TEMPORAL_PREVIEW_MARKER_TEST_ID).props.style)).toBe(trackOffsetFor(8, TIMELINE_STEP));
+
+    await act(async () => {
+      view.unmount();
+    });
+  });
+
+  it('R1-MOTION-03 — the commit acknowledgement rides the committed marker, not a dead overlay', async () => {
+    const store = temporalTestStore({ liveHead: 8 });
+    const preview = createTemporalPreviewController();
+    const presentation = createPresentationController(trackOf('session-1', 8), 240);
+    const view = await render(<TemporalTargetLayer store={store} preview={preview} presentation={presentation} />);
+
+    // There is no separate acknowledgement element to be invisible any more.
+    expect(view.queryByTestId(`${TEMPORAL_TARGET_STRIP_TEST_ID}:settle`)).toBeNull();
+    // The committed marker carries both its position and the acknowledgement scale.
+    const transform = (view.getByTestId(TEMPORAL_COMMITTED_MARKER_TEST_ID).props.style as readonly Record<string, unknown>[])
+      .filter((entry) => entry !== null && typeof entry === 'object')
+      .flatMap((entry) => (entry.transform as readonly Record<string, number>[] | undefined) ?? []);
+    expect(transform.some((entry) => 'translateX' in entry)).toBe(true);
+    expect(transform.some((entry) => 'scaleY' in entry)).toBe(true);
+    // Translate before scale, so the acknowledgement never multiplies the position.
+    expect(Object.keys(transform[0])).toEqual(['translateX']);
+
+    await act(async () => {
+      view.unmount();
+    });
+  });
+
+  it('R1-MOTION-04 — reduced motion drops movement and keeps the preview opacity bridge', () => {
+    const reduced = temporalMotionPlan({ committedSp: 2, previewSp: 5, mode: 'PINNED', dragging: false, reducedMotion: true });
+    // Everything that MOVES is zero...
+    expect(reduced.cursorMs).toBe(0);
+    expect(reduced.cancelMs).toBe(0);
+    expect(reduced.commitSettleMs).toBe(0);
+    // ...and the opacity bridge survives, because an opacity change is not movement and removing it
+    // would make the preview blink rather than transition.
+    expect(reduced.presenceMs).toBe(TEMPORAL_MOTION_DURATIONS.presenceMs);
+    expect(reduced.presenceMs).toBeGreaterThan(0);
   });
 });
 
@@ -184,10 +265,13 @@ describe('TN06-19 — reduced-motion parity', () => {
     expect(reduced.committedSp).toBe(full.committedSp);
     expect(reduced.previewPresent).toBe(full.previewPresent);
     expect(reduced.temporalStance).toBe(full.temporalStance);
-    for (const key of ['cursorMs', 'presenceMs', 'cancelMs', 'commitSettleMs'] as const) {
+    // Every MOVEMENT collapses to zero. The opacity bridge is kept deliberately: reduced motion
+    // means fewer and gentler, not none, and an opacity change is not movement (R1-MOTION-04).
+    for (const key of ['cursorMs', 'cancelMs', 'commitSettleMs'] as const) {
       expect(full[key]).toBeGreaterThan(0);
       expect(reduced[key]).toBe(0);
     }
+    expect(reduced.presenceMs).toBe(full.presenceMs);
   });
 
   it('reaches the same Product result and draws the markers at the same places', async () => {
