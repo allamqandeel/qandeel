@@ -2,7 +2,8 @@
  * T-02 — Canonical Client State + Action Foundation: public surface.
  *
  * Executable kernel: `PAN`, `ZOOM_SEMANTIC`, `COMMIT_MOMENT`, `COMMIT_LIVE_EDGE`, plus the two
- * authoritative mirror ingestions `LIVE_HEAD_ADVANCED` and `LIVE_FOCUS_TRANSITION`. Every
+ * authoritative mirror ingestions `LIVE_HEAD_ADVANCED` and `LIVE_FOCUS_TRANSITION`. T-04 added
+ * the three promoted Map acts `INSPECT_OBJECT`, `SWITCH_CONTEXT` and `DIRECT_JUMP`. Every
  * other frozen act is metadata only and fails closed until its owning task lands.
  */
 export type {
@@ -74,13 +75,18 @@ export type {
   CatalogClass,
   CatalogEntry,
   CatalogLevel,
+  DirectJumpLanding,
   KernelAction,
   KernelActionType,
+  MapAction,
+  MapActionType,
   MetadataOnlyActionType,
   NonStoreIdentityType,
   PanIntent,
   ProductActId,
   RhActionId,
+  StoreAction,
+  StoreActionType,
   TaskId,
   TransactionalCategory,
   ZoomIntent,
@@ -88,8 +94,10 @@ export type {
 export {
   ACTION_CATALOG,
   AUTHORITATIVE_EVENT_TYPES,
+  EXECUTABLE_CATALOG_LEVELS,
   FROZEN_TASK_IDS,
   KERNEL_ACTION_TYPES,
+  MAP_ACTION_TYPES,
   METADATA_ONLY_ACTION_TYPES,
   NON_STORE_IDENTITY_TYPES,
   PRODUCT_ACT_IDS,
@@ -110,13 +118,22 @@ export {
   RetractionRejected,
   UnauthorizedActionClass,
   UnauthorizedClassAWrite,
+  UnauthorizedMapAction,
   UnknownAction,
   UnknownEvent,
   assertAuthorizedClassAWrites,
 } from './authority';
 
-export type { ActionTransition, ActionTransitionTable, ClientWritable, EventTransition, EventTransitionTable } from './transitions';
-export { KERNEL_ACTION_TRANSITIONS, KERNEL_EVENT_TRANSITIONS } from './transitions';
+export type {
+  ActionTransition,
+  ActionTransitionTable,
+  ClientWritable,
+  EventTransition,
+  EventTransitionTable,
+  KernelActionTransitionTable,
+  MapActionTransitionTable,
+} from './transitions';
+export { KERNEL_ACTION_TRANSITIONS, KERNEL_EVENT_TRANSITIONS, MAP_ACTION_TRANSITIONS, STORE_ACTION_TRANSITIONS } from './transitions';
 
 export type { AppendResult, PhiEff } from './history';
 export { appendIfEffective, captureCheckpoint, isEffectiveChange, phiEff, phiEffEquals } from './history';
@@ -124,7 +141,7 @@ export { appendIfEffective, captureCheckpoint, isEffectiveChange, phiEff, phiEff
 export type { CommittedNavigationIntent, TemporalOrientation } from './selectors';
 export { committedNavigationIntent, effectiveTC, isAddressableMoment, temporalOrientation } from './selectors';
 
-export type { CanonicalStateInit, CanonicalStore, DispatchResult, IngestResult, StoreDependencies } from './store';
+export type { CanonicalStateInit, CanonicalStore, DispatchResult, IngestResult, MapActionAuthority, StoreDependencies } from './store';
 export { createCanonicalStore } from './store';
 
 export type { CanonicalStateProviderProps } from './CanonicalStateProvider';

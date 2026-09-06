@@ -297,20 +297,35 @@ test('the client mirror is written only through the T-02 authoritative event sea
 });
 
 test('the T-02 canonical state kernel is unchanged and is still not mounted', async () => {
+  // The class model, the RH transaction boundary, the Class-B selectors and the React binding are
+  // byte-identical to what T-02 froze. They carry the state semantics, and no later task has
+  // touched one.
   const frozen = {
     'classes.ts': 'f0d17c675c148e26c523291e07769c3ed764f263',
-    'actions.ts': '0fa63f31ebeb47575244e827d7ffd2090eec090c',
-    'authority.ts': '1920ec550ad7b3b8eca02fb690f790654ce4609a',
-    'transitions.ts': 'a078c6bc025b8c6ea9bdd321d2f03c1fcbe5c0ef',
     'history.ts': 'e12caa557ab719611d11e43392723a1bb2389c62',
     'selectors.ts': '72c156c298c5914a578fd41f3243c7bb596756ae',
-    'store.ts': '8933e3ef05c10bd28a748cc4896871c8e50e658e',
     'CanonicalStateProvider.tsx': 'b7ea8b6e775f74f7d331843e4783dc7291b11b49',
-    'index.ts': 'a70c2d61d112f62dfa11cc7209b35d0466eb4141',
+  };
+  // T-04 re-anchor, by exact name and for exactly five files: promoting `INSPECT_OBJECT`,
+  // `SWITCH_CONTEXT` and `DIRECT_JUMP` to executable acts required the registry, their three
+  // transitions, the dispatch surface and the public surface; R1-01 then added the typed
+  // `UnauthorizedMapAction` refusal and split the raw dispatch from the authorized Map seam. The
+  // per-field writer guard itself (`assertAuthorizedClassAWrites`) is unchanged. The pins are not
+  // weakened: these ids are exact, so any further change to the kernel still trips this gate.
+  const promotedByT04 = {
+    'actions.ts': 'b41b59158dd56e914af51a55338551ead4ddfd0f',
+    'transitions.ts': '9e3725cc3c48ffb3d36fccbbeff4746ec2345b0f',
+    'authority.ts': 'fafabe883ccfe1900ea5f533c952ae6d41f83a97',
+    'store.ts': 'ac0144b8a925db64fc032f9ddd8b51361f101f78',
+    'index.ts': '2bd50cce348cbc0e616b007b66300c2b5832fb3d',
   };
   for (const [name, blob] of Object.entries(frozen)) {
     assert.equal(gitBlobId(await read(`apps/mobile/src/state/${name}`)), blob,
       `T-03A2 redesigns no T-02 state: ${name} is byte-identical`);
+  }
+  for (const [name, blob] of Object.entries(promotedByT04)) {
+    assert.equal(gitBlobId(await read(`apps/mobile/src/state/${name}`)), blob,
+      `only T-04's promotion of the three named Map acts may change ${name}`);
   }
   // The shell still mounts nothing: T-03D owns the complete live snapshot.
   for (const file of ['apps/mobile/src/app/_layout.tsx', 'apps/mobile/src/app/index.tsx', 'apps/mobile/src/shell/FoundationShell.tsx']) {

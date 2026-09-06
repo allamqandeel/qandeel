@@ -438,14 +438,20 @@ test('the whole slice is production-inert: no grant, no wiring, no runtime reade
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src'))].map(relative)) {
     assert.doesNotMatch(read(file), /with_focus_and_thread|durable-thread|conversation_threads|thread_home/u, `${file} does not reach the substrate`);
   }
-  // No new dependency; the lockfile is byte-identical; MOB-CI-01 is untouched.
-  assert.equal(gitBlobId(read('package-lock.json')), 'da9e64f217db91c4e72da27073c578a108a99bad', 'package-lock.json is byte-identical');
+  // No new dependency from T-03B2b2; MOB-CI-01 is untouched. T-04 re-anchor: the lockfile moved
+  // exactly once since, for the authorized Map renderer, and the pin stays exact.
+  assert.equal(gitBlobId(read('package-lock.json')), 'c5b6e12cc45d32bd782b3a690179fedabde7169d', 'the lockfile carries only the authorized T-04 renderer beyond the T-03B2b2 baseline');
   assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg']);
   for (const name of ['uuid', 'nanoid', 'zod', 'knex', 'prisma', 'pg-promise', 'postgres', 'kysely', 'drizzle-orm']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}) || name in (mobilePackage.dependencies ?? {}), false, `${name} must not be introduced`);
   }
-  assert.equal(gitBlobId(read('.github/workflows/mobile-ci.yml')), '8efe44a2d2e95688c7612a2429b8f3ab106ecb8c', 'Mobile CI is byte-identical');
-  assert.equal(gitBlobId(read('apps/mobile/package.json')), 'a259368e87baeca24d7374dd922d866bbe6a6f88', 'the mobile package is byte-identical');
+  // T-04 re-anchor: the workflow gained exactly one Node-only gate step and one trigger path for
+  // the T-04 static contract. MOB-CI-01's structure is unchanged and is asserted structurally by
+  // the T-01, T-02 and T-04 contracts: one fast gate plus two conditional native jobs.
+  assert.equal(gitBlobId(read('.github/workflows/mobile-ci.yml')), '6c7a0928456eb34eb5e264fb9dbd1509038d04f7', 'Mobile CI carries only the authorized T-04 gate step beyond this baseline');
+  // T-04 re-anchor: the mobile package gained exactly the authorized Skia pin and the Jest setup
+  // for it. The pin stays exact, so a further dependency change still trips this gate.
+  assert.equal(gitBlobId(read('apps/mobile/package.json')), 'd10b3a577d6ee26c0af2e045f4bc39496181b2e7', 'the mobile package carries only the authorized T-04 renderer pin beyond this baseline');
 });
 
 test('the gates are registered at the root and in API CI, and the slice is documented', () => {

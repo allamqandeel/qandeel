@@ -13,6 +13,7 @@ import { CLASS_A_FIELDS, classAFieldEquals, type CanonicalState, type ClassAFiel
 export type CanonicalStateErrorCode =
   | 'UNAUTHORIZED_CLASS_A_WRITE'
   | 'UNAUTHORIZED_ACTION_CLASS'
+  | 'UNAUTHORIZED_MAP_ACTION'
   | 'OWNED_BY_LATER_TASK'
   | 'UNKNOWN_ACTION'
   | 'UNKNOWN_EVENT'
@@ -57,6 +58,23 @@ export class UnauthorizedActionClass extends CanonicalStateError {
     this.name = 'UnauthorizedActionClass';
     this.id = id;
     this.cls = cls;
+  }
+}
+
+/**
+ * A promoted Map act reached the store without a runtime authorization from the store's own Map
+ * authority (R1-01). Raised for a raw dispatch of a Map act, for a Map act on a store that has no
+ * authority at all, and for an act whose authorization the authority refuses or has already
+ * consumed. The store never learns WHY the authority refused — it only learns that it did — so no
+ * entitlement rule is duplicated here.
+ */
+export class UnauthorizedMapAction extends CanonicalStateError {
+  readonly id: string;
+
+  constructor(id: string, reason: string) {
+    super('UNAUTHORIZED_MAP_ACTION', `${id} carries no runtime authorization from this store's Map authority: ${reason}`);
+    this.name = 'UnauthorizedMapAction';
+    this.id = id;
   }
 }
 
