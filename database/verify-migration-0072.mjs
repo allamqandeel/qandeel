@@ -155,6 +155,7 @@ const RECORD_APPEARANCE = 'public.record_thread_reading_appearance_v1(uuid,uuid,
 const GROUNDING_IDENTITY = 'public.hypothesis_subject_grounding_identity_v1(uuid,uuid)';
 const GROUNDING_HANDLE = 'public.hypothesis_subject_grounding_handle_v1(uuid,uuid)';
 const UNIVERSE_PRESENTATION = 'public.hypothesis_subject_grounding_universe_presentation_v1(public.hypothesis_subject_grounding_universes)';
+const CAUSAL_FRONTIER = 'public.post_response_source_causal_frontier_v1(uuid)';
 const BUILD_UNIVERSE = 'public.build_hypothesis_subject_grounding_universe_v1(uuid)';
 const GROUNDED_COMPLETION = 'public.complete_post_response_grounded_candidates_v1(uuid,text,jsonb,jsonb)';
 const PERSIST_GROUNDINGS = 'public.persist_authorized_subject_groundings_v1(uuid)';
@@ -600,7 +601,7 @@ async function verifyDeploymentSpan() {
 async function verifyStaticAuthority() {
   stage = 'A. schema / privilege / posture / declarations';
   const definer = async (signature) => one('SELECT pg_get_userbyid(p.proowner) owner, p.prosecdef definer, p.proconfig config, p.provolatile volatility FROM pg_proc p WHERE p.oid = to_regprocedure($1)', [signature]);
-  const R2_SURFACE = [RECORD_APPEARANCE, GROUNDING_IDENTITY, GROUNDING_HANDLE, UNIVERSE_PRESENTATION, BUILD_UNIVERSE, GROUNDED_COMPLETION, PERSIST_GROUNDINGS, ...GROUNDING_TRIGGERS];
+  const R2_SURFACE = [RECORD_APPEARANCE, GROUNDING_IDENTITY, GROUNDING_HANDLE, UNIVERSE_PRESENTATION, CAUSAL_FRONTIER, BUILD_UNIVERSE, GROUNDED_COMPLETION, PERSIST_GROUNDINGS, ...GROUNDING_TRIGGERS];
   for (const signature of [PROJECTION, EXPIRY, WALL_TIME, IDENTITY, CAPTURE_BEGIN, CAPTURE_CONTEXT, CAPTURE_EXECUTION, IDENTITY_CONFLICT, RECORD_PARTICIPATION, RECORD_RELATION,
     BIND, UNBIND, MEMORY_FOR_EXECUTION, PERSIST, UPDATE_BATCH, CONFIDENCE_BATCH, SYNC_V1, PERSIST_CORE, UPDATE_BATCH_CORE, CONFIDENCE_BATCH_CORE, ...HOOKS, ...R2_SURFACE]) {
     const contract = await definer(signature);
@@ -618,6 +619,10 @@ async function verifyStaticAuthority() {
   for (const signature of [PROJECTION, EXPIRY, WALL_TIME]) strict((await definer(signature)).volatility, 's', `${signature} is STABLE: the database refuses any write from inside it`);
   strict((await definer(IDENTITY)).volatility, 'i', 'the event identity derivation is IMMUTABLE');
   for (const signature of [GROUNDING_IDENTITY, GROUNDING_HANDLE, UNIVERSE_PRESENTATION]) strict((await definer(signature)).volatility, 'i', `${signature} is IMMUTABLE: a pure derivation`);
+  // R3: the causal semantic frontier is a READ of frozen append-only history -
+  // the database refuses any write from inside it, and it belongs to no
+  // application role at all (only the definer-owned universe builder calls it).
+  strict((await definer(CAUSAL_FRONTIER)).volatility, 's', `${CAUSAL_FRONTIER} is STABLE: the immutable causal frontier is derived, never written`);
   // THE AUTHORITY POSTURE.
   const authenticatedExecutable = [PROJECTION];
   const serviceExecutable = [PERSIST, UPDATE_BATCH, CONFIDENCE_BATCH, SYNC_V1, MEMORY_FOR_EXECUTION, BUILD_UNIVERSE, GROUNDED_COMPLETION];
@@ -1216,9 +1221,9 @@ const RETURN_TEXT = 'نرجع لموضوع أحمد.';
 const RETURN_REPLY = 'تمام.';
 const HANDLE_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 /** ONE user CU with caller-supplied semantics plus ONE assistant ACKNOWLEDGE CU, through the FINAL coordinator. */
-async function semanticExchange(owner, world, text, reply, user, assistantLf, assistantLifecycle = (a) => noAction(a)) {
+async function semanticExchange(owner, world, text, reply, user, assistantLf, assistantLifecycle = (a) => noAction(a), existingTurns = null) {
   stage = `${stage.split(' [')[0]} [exchange: ${text}]`;
-  const turns = await completedTurns(owner, world.session, text, reply);
+  const turns = existingTurns ?? await completedTurns(owner, world.session, text, reply);
   const ids = { u: randomUUID(), a: randomUUID() };
   const token = { ...(await clockOf(world.session)), version: await identityVersionOf(owner) };
   await identity('postgres');
@@ -1231,9 +1236,18 @@ async function semanticExchange(owner, world, text, reply, user, assistantLf, as
     { sp: token.current_sp, seq: Number(token.seq), version: token.version });
   return { turns, ids, liveHead: result.live_head };
 }
-/** ONE durable generation of `owner` in `session`, up to the CANDIDATE_PROVIDER claim: Intent authorized, universe built by the server. */
-async function beginGeneration(owner, session, legacy, { buildUniverse = true } = {}) {
-  const execution = { id: randomUUID(), turn: randomUUID() };
+/**
+ * ONE durable generation of `owner` in `session`, up to the CANDIDATE_PROVIDER
+ * claim: Intent authorized, universe built by the server.
+ *
+ * R3: a durable execution belongs to exactly ONE finalized exchange, and the
+ * grounding universe is cut at that exchange's immutable causal semantic
+ * frontier - so `sourceTurn` is the COMPLETED USER turn of a real established
+ * exchange. A generation that deliberately never builds a universe may keep a
+ * synthetic source turn: nothing reads it.
+ */
+async function beginGeneration(owner, session, legacy, { buildUniverse = true, sourceTurn = null, claimCandidate = true } = {}) {
+  const execution = { id: randomUUID(), turn: sourceTurn ?? randomUUID() };
   await identity('postgres');
   await q('SELECT * FROM public.acquire_post_response_intelligence_execution_v1($1,$2,$3,$4,$5,$6,$7,$8)', [execution.id, randomUUID(), owner, session, execution.turn, '2.0', 'FAST', 'ALLOW']);
   await identity('service_role');
@@ -1242,7 +1256,7 @@ async function beginGeneration(owner, session, legacy, { buildUniverse = true } 
     scope: { kind: 'CONVERSATION_SESSION', sessionId: session, serialized: `CONVERSATION_SESSION:${session}` }, evidenceIds: [`memory:${legacy.M9}`, `memory:${legacy.M10}`] };
   strict((await one('SELECT public.complete_post_response_intent_provider_effect_v1($1,$2,$3) ok', [execution.id, 'INTENT_AUTHORIZED', JSON.stringify(intent)])).ok, true);
   const universe = buildUniverse ? (await one('SELECT public.build_hypothesis_subject_grounding_universe_v1($1) u', [execution.id])).u : undefined;
-  strict((await one('SELECT public.claim_post_response_intelligence_effect_v1($1,$2) ok', [execution.id, 'CANDIDATE_PROVIDER'])).ok, true);
+  if (claimCandidate) strict((await one('SELECT public.claim_post_response_intelligence_effect_v1($1,$2) ok', [execution.id, 'CANDIDATE_PROVIDER'])).ok, true);
   const handleOf = (subjectText) => {
     const entry = (universe?.entries ?? []).find((candidate) => candidate.subjectText === subjectText);
     if (!entry) throw new Error(`the universe carries no subject ${subjectText}`);
@@ -1278,8 +1292,8 @@ async function verifySubjectGrounding(owner, other, legacy) {
 
   // --- The universe: server-built from committed B1 / B2 truth, stored once,
   //     presented as opaque handles only (SG-17).
-  const g0 = await beginGeneration(owner, S, legacy);
-  eq(g0.universe.frontierSp, 5, 'the universe frontier is the Live Head at build time');
+  const g0 = await beginGeneration(owner, S, legacy, { sourceTurn: world.turns.userTurn });
+  eq(g0.universe.frontierSp, 5, 'R3: the universe frontier is the immutable causal semantic frontier of the execution\'s own source finalized exchange (SP5)');
   eq(g0.universe.entries.map((entry) => [entry.subjectText, entry.startedSp, entry.lastAttentionSp]), [['المدير', 1, 1], ['أحمد', 3, 5]], 'exactly the committed focuses of the Session, each with its first committed wording and its Session Positions');
   for (const entry of g0.universe.entries) {
     eq(Object.keys(entry).sort(), ['handle', 'lastAttentionSp', 'startedSp', 'subjectText'], 'a provider sees a handle, the wording and Session Positions - never a focus, Thread or Session identity');
@@ -1330,13 +1344,28 @@ async function verifySubjectGrounding(owner, other, legacy) {
   await newLogicalTransaction();
   eq({ groundings: (await one('SELECT count(*)::int n FROM public.hypothesis_subject_groundings WHERE execution_id=$1', [g0.id])).n, appearances: (await one('SELECT count(*)::int n FROM public.thread_reading_bindings WHERE hypothesis_id = ANY($1)', [[HA, HM2]])).n }, countsBefore, 'SG-10: no duplicate grounding and no duplicate appearance');
 
+  // --- SG-04: an AMBIGUOUS reference never becomes a focus, so the universe
+  //     cannot name it and no definite grounding can ever target it. R3: this
+  //     exchange is also the source exchange of the generation the negative
+  //     cases below attack - one durable execution per finalized exchange.
+  const ambiguousExchange = await semanticExchange(owner, world, AMBIGUOUS_TEXT, AMBIGUOUS_REPLY, {
+    bundle: (u) => bundle(u, { sequence_position: 'FOLLOW_UP',
+      references: [{ ...anchor(AMBIGUOUS_TEXT, 'هو'), state: 'AMBIGUOUS', resolved_handle_id: null, creates_handle: false, candidate_handle_ids: [world.handles.manager, world.handles.ahmed].sort(byText) }],
+      attention: { kind: 'NO_INDEPENDENT_FOCUS', reason: 'UNRESOLVED_ATTENTION', emerging_focus_id: null, creates_focus: false, grounding_reference_index: null } }),
+    thread: (u) => noEstablishment(u, 'NO_INDEPENDENT_FOCUS'), lifecycle: (u) => noAction(u), lf: (u) => lfSame(u, 'THREAD', world.threads.ahmed),
+  }, (a) => lfSame(a, 'THREAD', world.threads.ahmed));
+  eq(ambiguousExchange.liveHead, 7, 'the ambiguous exchange committed SP6 and SP7');
+  const gNeg = await beginGeneration(owner, S, legacy, { sourceTurn: ambiguousExchange.turns.userTurn });
+  eq(gNeg.universe.frontierSp, 7, 'its causal frontier is its own exchange (SP7)');
+  eq(gNeg.universe.entries.map((entry) => entry.subjectText), ['المدير', 'أحمد'], 'SG-04: the ambiguous "هو" is no focus and therefore no candidate subject - no definite grounding can target it');
+  await newLogicalTransaction();
+
   // --- SG-05 / SG-16 / SG-17: the grounded completion refuses every handle the
   //     server did not issue for THIS execution, and every malformed proposal,
   //     rolling the completion back with it.
   const otherWorld = await sessionOne(other);
   await newLogicalTransaction();
-  const foreign = await beginGeneration(other, otherWorld.session, legacy);
-  const gNeg = await beginGeneration(owner, S, legacy);
+  const foreign = await beginGeneration(other, otherWorld.session, legacy, { sourceTurn: otherWorld.turns.userTurn });
   const HX = randomUUID();
   const attempt = (selections, code = 'VALIDATED_CANDIDATES', plan = gNeg.candidatesOf([{ id: HX, statement: 'a candidate under attack' }])) =>
     q('SELECT public.complete_post_response_grounded_candidates_v1($1,$2,$3::jsonb,$4::jsonb)', [gNeg.id, code, plan === null ? null : JSON.stringify(plan), selections === null ? null : JSON.stringify(selections)]);
@@ -1379,19 +1408,6 @@ async function verifySubjectGrounding(owner, other, legacy) {
   strict((await one('SELECT count(*)::int n FROM public.hypothesis_subject_grounding_universes WHERE execution_id=$1', [unbuilt.id])).n, 0, 'and no universe was fabricated on the way');
   await newLogicalTransaction();
 
-  // --- SG-04: an AMBIGUOUS reference never becomes a focus, so the universe
-  //     cannot name it and no definite grounding can ever target it.
-  const ambiguousExchange = await semanticExchange(owner, world, AMBIGUOUS_TEXT, AMBIGUOUS_REPLY, {
-    bundle: (u) => bundle(u, { sequence_position: 'FOLLOW_UP',
-      references: [{ ...anchor(AMBIGUOUS_TEXT, 'هو'), state: 'AMBIGUOUS', resolved_handle_id: null, creates_handle: false, candidate_handle_ids: [world.handles.manager, world.handles.ahmed].sort(byText) }],
-      attention: { kind: 'NO_INDEPENDENT_FOCUS', reason: 'UNRESOLVED_ATTENTION', emerging_focus_id: null, creates_focus: false, grounding_reference_index: null } }),
-    thread: (u) => noEstablishment(u, 'NO_INDEPENDENT_FOCUS'), lifecycle: (u) => noAction(u), lf: (u) => lfSame(u, 'THREAD', world.threads.ahmed),
-  }, (a) => lfSame(a, 'THREAD', world.threads.ahmed));
-  eq(ambiguousExchange.liveHead, 7, 'the ambiguous exchange committed SP6 and SP7');
-  const g4 = await beginGeneration(owner, S, legacy);
-  eq(g4.universe.entries.map((entry) => entry.subjectText), ['المدير', 'أحمد'], 'SG-04: the ambiguous "هو" is no focus and therefore no candidate subject - no definite grounding can target it');
-  await newLogicalTransaction();
-
   // --- SG-02 (Case B) + SG-18: a focus grounded while still Emerging; the
   //     appearance is born only when the focus later becomes a Thread, at THAT
   //     Moment; the grounding itself anchors where it became canonical.
@@ -1405,7 +1421,7 @@ async function verifySubjectGrounding(owner, other, legacy) {
   }, (a) => lfSame(a, 'EMERGING', sport.focus));
   eq(sportStart.liveHead, 9, 'the sport focus started at SP8 and is Emerging');
   strict(await lifecycleOf(world.threads.ahmed, S, 10), 'DORMANT', 'Ahmed went DORMANT at the explicit focus shift');
-  const g1 = await beginGeneration(owner, S, legacy);
+  const g1 = await beginGeneration(owner, S, legacy, { sourceTurn: sportStart.turns.userTurn });
   eq(g1.universe.entries.map((entry) => [entry.subjectText, entry.startedSp, entry.lastAttentionSp]), [['المدير', 1, 1], ['أحمد', 3, 5], ['الرياضة', 8, 8]], 'an Emerging focus is a legitimate subject: the universe names it before any Thread exists');
   const HS = randomUUID();
   await completeAndPersist(g1, [{ id: HS, statement: 'reading grounded to a focus that is still Emerging', handles: [g1.handleOf('الرياضة')] }]);
@@ -1428,7 +1444,7 @@ async function verifySubjectGrounding(owner, other, legacy) {
   eq((await project(owner, S, 9)).thread_reading_appearances.filter((a) => a.hypothesisId === HS), [], 'SG-12 / P66-D: absent at TC = 9 although the Reading and its grounding are known');
   eq((await project(owner, S, 10)).thread_reading_appearances.filter((a) => a.hypothesisId === HS).map((a) => [a.threadId, a.boundSp, a.current]), [[sport.thread, 10, true]], 'SG-12 / P66-D: present exactly from its own bind SP');
   // A later grounding to the now-established focus appears at once (Case A after Case B), and the universe reports the Thread.
-  const g2 = await beginGeneration(owner, S, legacy);
+  const g2 = await beginGeneration(owner, S, legacy, { sourceTurn: promotion.turns.userTurn });
   eq(g2.universe.entries.map((entry) => entry.subjectText), ['المدير', 'أحمد', 'الرياضة']);
   await identity('postgres');
   eq((await one('SELECT entries FROM public.hypothesis_subject_grounding_universes WHERE execution_id=$1', [g2.id])).entries.find((entry) => entry.emergingFocusId === sport.focus).threadId, sport.thread, 'the stored universe now records the Thread the focus resolves to');
@@ -1468,17 +1484,25 @@ async function verifySubjectGrounding(owner, other, legacy) {
   eq((await appearancesOf(HA))[0], ahmedAppearance, 'SG-14: an Evidence attach changes no appearance');
   eq((await groundingsOf(HA)).map((g) => g.emerging_focus_id), [world.focuses.ahmed], 'and no grounding');
 
-  // --- PRE_FIRST_SP: a Session without a committed Moment has no addressable
-  //     frontier. The universe is EMPTY - never fabricated - the generation
-  //     still completes and persists through the frozen core, and nothing is
-  //     grounded or bound. (This is exactly the shape the A2 runtime smoke
-  //     drives: finalized turns, no committed CU yet.)
+  // --- CF-05: a source exchange whose FINAL semantic establishment is proven
+  //     COMPLETE but whose committed semantics truthfully contains no
+  //     groundable canonical Focus. The universe is EMPTY - never fabricated -
+  //     the generation still completes and persists through the frozen core,
+  //     and nothing is grounded or bound. This is NOT the same fact as a
+  //     source exchange that is not established yet (CF-01, stage CF): that one
+  //     stores no universe at all.
   const bare = await newSession(owner);
   await newLogicalTransaction();
-  const gBare = await beginGeneration(owner, bare, legacy);
-  eq(gBare.universe, { executionId: gBare.id, frontierSp: null, entries: [] }, 'no committed Moment -> no frontier -> an empty universe, never a fabricated one');
+  const bareExchange = await semanticExchange(owner, { session: bare }, QUIET_TEXT, QUIET_REPLY, {
+    bundle: (u) => bundle(u, { sequence_position: 'INITIATING', references: [], attention: NO_FOCUS }),
+    thread: (u) => noEstablishment(u, 'NO_INDEPENDENT_FOCUS'), lifecycle: (u) => noAction(u), lf: (u) => lfSame(u, 'NONE', null),
+  }, (a) => lfSame(a, 'NONE', null));
+  eq(bareExchange.liveHead, 2, 'the zero-focus exchange committed SP1 and SP2');
+  await newLogicalTransaction();
+  const gBare = await beginGeneration(owner, bare, legacy, { sourceTurn: bareExchange.turns.userTurn });
+  eq(gBare.universe, { executionId: gBare.id, frontierSp: 2, entries: [] }, 'CF-05: an established causal frontier with no groundable Focus -> a valid EMPTY universe, never a fabricated one');
   await identity('postgres');
-  eq((await one('SELECT frontier_sp, entries FROM public.hypothesis_subject_grounding_universes WHERE execution_id=$1', [gBare.id])), { frontier_sp: null, entries: [] }, 'and it is stored as such');
+  eq((await one('SELECT frontier_sp, entries FROM public.hypothesis_subject_grounding_universes WHERE execution_id=$1', [gBare.id])), { frontier_sp: 2, entries: [] }, 'and it is durably stored as such');
   const HB = randomUUID();
   await completeAndPersist(gBare, [{ id: HB, statement: 'a reading generated before the first Moment', handles: [] }]);
   strict((await one('SELECT count(*)::int n FROM public.hypotheses WHERE id=$1', [HB])).n, 1, 'the generation persisted through the frozen core');
@@ -1538,7 +1562,150 @@ async function verifySubjectGrounding(owner, other, legacy) {
   await beginCapture(owner, S, true);
   strict((await one('SELECT public.persist_authorized_subject_groundings_v1($1) n', [g0.id])).n, 0, 'SG-11: an identical replay of the authorized groundings writes nothing');
   await newLogicalTransaction();
+  await verifyCausalGroundingFrontier(owner, legacy);
   return { session: S, HA, HM2, HN, HS, sport };
+}
+
+const STUDY_TEXT = 'الدراسة بقت شاغلاني الفترة دي.';
+const STUDY_REPLY = 'مفهوم.';
+
+/**
+ * CF. R3 - the deterministic causal grounding frontier.
+ *
+ * The durable post-response execution belongs to ONE finalized exchange, and
+ * the foreground runtime publishes ConversationTurnCompleted BEFORE that
+ * exchange's FINAL semantic establishment. This stage drives the three
+ * schedules the reviewer named - early, normal and delayed - against the SAME
+ * source execution and proves they cannot produce three different
+ * subject-grounding truths.
+ */
+async function verifyCausalGroundingFrontier(owner, legacy) {
+  stage = 'CF. R3 deterministic causal grounding frontier: an immutable, source-exchange-bound cut (CF-01 .. CF-08)';
+  const world = await sessionOne(owner);
+  const S = world.session;
+  await newLogicalTransaction();
+  const sport = { handle: randomUUID(), focus: randomUUID() };
+  sport.thread = threadIdOf(owner, sport.focus);
+  const study = { handle: randomUUID(), focus: randomUUID() };
+
+  // --- CF-01 (early dispatch): the durable execution exists and its source
+  //     exchange is finalized, but the FINAL semantic establishment has NOT
+  //     run. There is no causal frontier, so the server refuses with the ONE
+  //     stable technical condition: no universe row, no Candidate claim, no
+  //     provider work - and never a stale/empty universe.
+  const turns = await completedTurns(owner, S, SPORT_TEXT, SPORT_REPLY);
+  const execution = await beginGeneration(owner, S, legacy, { sourceTurn: turns.userTurn, buildUniverse: false, claimCandidate: false });
+  await identity('service_role');
+  eq((await one('SELECT public.build_hypothesis_subject_grounding_universe_v1($1) u', [execution.id])).u,
+    { status: 'SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED' },
+    'CF-01: a worker that arrives before its source exchange completed FINAL semantic establishment gets the stable retryable condition, never an empty universe');
+  await identity('postgres');
+  strict((await one('SELECT count(*)::int n FROM public.hypothesis_subject_grounding_universes WHERE execution_id=$1', [execution.id])).n, 0, 'CF-01: and nothing is persisted');
+  strict((await one("SELECT count(*)::int n FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key='CANDIDATE_PROVIDER'", [execution.id])).n, 0, 'CF-01: no Candidate provider effect is claimed, so zero provider calls are possible');
+
+  // The FINAL semantic establishment of exactly that exchange: SP6 starts the
+  // sport focus (still Emerging), SP7 is the assistant Moment.
+  const sportStart = await semanticExchange(owner, world, SPORT_TEXT, SPORT_REPLY, {
+    bundle: (u) => bundle(u, { functions: ['INFORM_REPORT', 'FOCUS_SHIFT'], references: [resolved(SPORT_TEXT, 'الرياضة', sport.handle, true)], attention: startFocus(sport.focus, 0, 'EXPLICIT_FOCUS_SHIFT') }),
+    thread: (u) => noEstablishment(u, 'NO_PROMOTION_PATH_PROVEN', sport.focus),
+    lifecycle: (u) => noAction(u, sport.focus, [transition(S, u, world.threads.ahmed, 'DORMANT', 'EXPLICIT_FOCUS_SHIFT')]),
+    lf: (u) => lfChange(S, u, 'EMERGING', sport.focus, 'FOCUS_REPLACEMENT'),
+  }, (a) => lfSame(a, 'EMERGING', sport.focus), (a) => noAction(a), turns);
+  eq(sportStart.liveHead, 7, 'the source exchange committed SP6 and SP7');
+  await newLogicalTransaction();
+
+  // --- CF-01 (normal dispatch) + CF-04 (first schedule): the same execution,
+  //     dispatched immediately after its source semantics. The universe builds
+  //     from the exact source frontier and the provider may proceed ONCE. The
+  //     schedule is then rolled back so the SAME execution can be dispatched
+  //     late instead, against a Session that has moved on.
+  await q('SAVEPOINT cf_schedule');
+  await identity('service_role');
+  const immediate = (await one('SELECT public.build_hypothesis_subject_grounding_universe_v1($1) u', [execution.id])).u;
+  eq(immediate.frontierSp, 7, 'CF-01: once FINAL semantics are established the universe builds from the exact source causal frontier (SP7)');
+  strict((await one('SELECT public.claim_post_response_intelligence_effect_v1($1,$2) ok', [execution.id, 'CANDIDATE_PROVIDER'])).ok, true, 'CF-01: the provider may proceed exactly once');
+  strict((await one('SELECT public.claim_post_response_intelligence_effect_v1($1,$2) ok', [execution.id, 'CANDIDATE_PROVIDER'])).ok, false, 'CF-01: and a redelivery duplicates no execution or provider work');
+  await identity('postgres');
+  await q('ROLLBACK TO SAVEPOINT cf_schedule'); await q('RELEASE SAVEPOINT cf_schedule');
+  await newLogicalTransaction();
+  strict((await one('SELECT count(*)::int n FROM public.hypothesis_subject_grounding_universes WHERE execution_id=$1', [execution.id])).n, 0, 'the immediate schedule was rolled back: the SAME execution is now dispatched late');
+
+  // The Session moves on while the worker is away: SP8 promotes the sport focus
+  // to a Thread, SP10 returns attention to Ahmed, SP12 starts a brand-new focus.
+  const promotion = await semanticExchange(owner, world, SPORT_MORE_TEXT, SPORT_MORE_REPLY, {
+    bundle: (u) => bundle(u, { functions: ['INFORM_REPORT', 'ELABORATE'], sequence_position: 'FOLLOW_UP', references: [resolved(SPORT_MORE_TEXT, 'الرياضة', sport.handle, false)], attention: attendFocus(sport.focus, 0, 'SUBSTANTIVE_ELABORATION') }),
+    thread: (u) => establish(owner, u, sport.focus, 'TE-02', [sportStart.ids.u, u]),
+    lifecycle: (u) => establishNew(S, u, sport.focus, sport.thread, [{ cu_id: sportStart.ids.u, reference_index: 0 }, { cu_id: u, reference_index: 0 }]),
+    lf: (u) => lfChange(S, u, 'THREAD', sport.thread, 'THREAD_PROMOTION'),
+  }, (a) => lfSame(a, 'THREAD', sport.thread));
+  eq(promotion.liveHead, 9, 'the sport focus became a Thread at SP8, after the causal frontier');
+  const back = await semanticExchange(owner, world, RETURN_TEXT, RETURN_REPLY, {
+    bundle: (u) => bundle(u, { functions: ['REQUEST', 'FOCUS_SHIFT'], sequence_position: 'INITIATING', references: [resolved(RETURN_TEXT, 'أحمد', world.handles.ahmed, false)], attention: attendFocus(world.focuses.ahmed, 0, 'EXPLICIT_FOCUS_SHIFT') }),
+    thread: (u) => noEstablishment(u, 'ALREADY_ESTABLISHED', world.focuses.ahmed),
+    lifecycle: (u) => reopenExisting(S, u, world.focuses.ahmed, world.threads.ahmed, [transition(S, u, sport.thread, 'DORMANT', 'EXPLICIT_FOCUS_SHIFT')]),
+    lf: (u) => lfChange(S, u, 'THREAD', world.threads.ahmed, 'RETURN_TO_THREAD'),
+  }, (a) => lfSame(a, 'THREAD', world.threads.ahmed),
+  (a) => noAction(a, null, [transition(S, a, world.threads.ahmed, 'ACTIVE', 'CONTINUED_ANCHORING')]));
+  eq(back.liveHead, 11, 'Ahmed received later attention at SP10, after the causal frontier');
+  const studyStart = await semanticExchange(owner, world, STUDY_TEXT, STUDY_REPLY, {
+    bundle: (u) => bundle(u, { functions: ['INFORM_REPORT', 'FOCUS_SHIFT'], references: [resolved(STUDY_TEXT, 'الدراسة', study.handle, true)], attention: startFocus(study.focus, 0, 'EXPLICIT_FOCUS_SHIFT') }),
+    thread: (u) => noEstablishment(u, 'NO_PROMOTION_PATH_PROVEN', study.focus),
+    lifecycle: (u) => noAction(u, study.focus, [transition(S, u, world.threads.ahmed, 'DORMANT', 'EXPLICIT_FOCUS_SHIFT')]),
+    lf: (u) => lfChange(S, u, 'EMERGING', study.focus, 'FOCUS_REPLACEMENT'),
+  }, (a) => lfSame(a, 'EMERGING', study.focus));
+  eq(studyStart.liveHead, 13, 'a brand-new focus was born at SP12, long after the causal frontier');
+  await newLogicalTransaction();
+
+  // --- CF-02 / CF-03 / CF-04 / CF-07: the delayed dispatch of the SAME source
+  //     execution, with the Live Head now at SP13.
+  await identity('service_role');
+  const delayed = (await one('SELECT public.build_hypothesis_subject_grounding_universe_v1($1) u', [execution.id])).u;
+  eq(delayed, immediate, 'CF-04: two schedules of one source execution produce the SAME causal frontier, the same ordered entries, the same opaque handles and the same subject wording');
+  eq(delayed.frontierSp, 7, 'CF-02: the frontier is the source exchange (SP7), never the Live Head at build time (SP13)');
+  eq(delayed.entries.map((entry) => [entry.subjectText, entry.startedSp, entry.lastAttentionSp]),
+    [['المدير', 1, 1], ['أحمد', 3, 5], ['الرياضة', 6, 6]],
+    'CF-02 / CF-03: the focus born at SP12 is absent, and Ahmed\'s later attention at SP10 cannot reorder or change this execution\'s universe');
+  ok(!delayed.entries.some((entry) => entry.subjectText === 'الدراسة'), 'CF-02: a provider cannot select a focus that did not exist in the causal cut');
+  ok(delayed.entries.every((entry) => entry.lastAttentionSp === null || entry.lastAttentionSp <= delayed.frontierSp), 'CF-03: lastAttentionSp <= causal frontier');
+  await identity('postgres');
+  const storedUniverse = await one('SELECT frontier_sp, entries FROM public.hypothesis_subject_grounding_universes WHERE execution_id=$1', [execution.id]);
+  strict(storedUniverse.frontier_sp, 7);
+  const sportEntry = storedUniverse.entries.find((entry) => entry.emergingFocusId === sport.focus);
+  eq([sportEntry.threadId, sportEntry.threadBoundSp], [null, null], 'CF-07: the Thread established at SP8 did not exist at the causal frontier, so it is not in the universe at all - the provider can never see it');
+
+  // --- CF-08: the universe is durable. The Session changes again; a retry
+  //     returns the exact stored universe, unchanged.
+  const quiet = await semanticExchange(owner, world, QUIET_TEXT, QUIET_REPLY, {
+    bundle: (u) => bundle(u, { sequence_position: 'FOLLOW_UP', references: [], attention: NO_FOCUS }),
+    thread: (u) => noEstablishment(u, 'NO_INDEPENDENT_FOCUS'), lifecycle: (u) => noAction(u), lf: (u) => lfSame(u, 'EMERGING', study.focus),
+  }, (a) => lfSame(a, 'EMERGING', study.focus));
+  eq(quiet.liveHead, 15, 'the Session moved on again while the generation was still running');
+  await newLogicalTransaction();
+  await identity('service_role');
+  eq((await one('SELECT public.build_hypothesis_subject_grounding_universe_v1($1) u', [execution.id])).u, delayed, 'CF-08: a retry returns the exact stored universe - the first build is the universe of the execution for good');
+
+  // --- CF-06 / CF-07: the grounding itself becomes canonical where it actually
+  //     persists (SP15), never backdated to the causal frontier (SP7) and never
+  //     to the Thread establishment (SP8).
+  const HCF = randomUUID();
+  const handle = delayed.entries.find((entry) => entry.subjectText === 'الرياضة').handle;
+  const plan = [{ hypothesisId: HCF, statement: 'a reading grounded by a late worker to a focus of its own causal cut', type: 'CAUSAL', domain: 'GENERAL',
+    scope: `CONVERSATION_SESSION:${S}`, supportingEvidenceIds: [`memory:${legacy.M9}`], contradictingEvidenceIds: [], assumptions: [], disconfirmingConditions: [] }];
+  strict((await one('SELECT public.claim_post_response_intelligence_effect_v1($1,$2) ok', [execution.id, 'CANDIDATE_PROVIDER'])).ok, true);
+  strict((await one('SELECT public.complete_post_response_grounded_candidates_v1($1,$2,$3::jsonb,$4::jsonb) ok',
+    [execution.id, 'VALIDATED_CANDIDATES', JSON.stringify(plan), JSON.stringify([{ hypothesisId: HCF, handles: [handle] }])])).ok, true);
+  strict((await one('SELECT public.claim_post_response_intelligence_effect_v1($1,$2) ok', [execution.id, 'HYPOTHESIS_PERSISTENCE'])).ok, true);
+  strict((await one('SELECT public.persist_post_response_hypothesis_generation_v1($1) ok', [execution.id])).ok, true, 'the late generation persists through the frozen core');
+  await newLogicalTransaction();
+  eq((await groundingsOf(HCF)).map((g) => [g.emerging_focus_id, g.session_position, g.universe_frontier_sp]), [[sport.focus, 15, 7]],
+    'CF-06: the eligibility cut is the source causal frontier (SP7) while the historical grounding KF is the SP it actually became canonical at (SP15) - a causal source may be earlier, canonical availability later');
+  eq((await appearancesOf(HCF)).map((b) => [b.thread_id, b.bound_sp, b.unbound_sp]), [[sport.thread, 15, null]],
+    'CF-07: the A-1 appearance is created when the grounding is persisted and the Thread is legitimately available (SP15) - never at the causal frontier and never backdated to the Thread establishment (SP8)');
+  ok(!idsOf((await project(owner, S, 7)).readings).includes(HCF), 'CF-06: the causal frontier itself never learns of the Reading its own generation produced later');
+  eq((await project(owner, S, 8)).thread_reading_appearances.filter((a) => a.hypothesisId === HCF), [], 'CF-07: and the Thread\'s own establishment Moment shows no appearance');
+  eq((await project(owner, S, 15)).readings.find((r) => r.id === HCF).subjectGroundings, [{ emergingFocusId: sport.focus, groundedAtSp: 15 }], 'CF-06: known exactly from its actual persistence SP');
+  eq((await project(owner, S, 15)).thread_reading_appearances.filter((a) => a.hypothesisId === HCF).map((a) => [a.threadId, a.boundSp, a.current]), [[sport.thread, 15, true]]);
+  await newLogicalTransaction();
 }
 
 // ------------------------------------------------- I. R-C2 / R-C3 / identity
@@ -1802,7 +1969,7 @@ async function main() {
       await identity('postgres');
     } finally { await q('ROLLBACK'); }
     await verifyConcurrency();
-    console.log(`Verified migration 0072 (${assertions} assertions): every pre-existing Session is a LEGACY UNCOVERED SESSION whose Conversation Runtime continues normally while it can never become partially historical (proven across the deployment boundary on a fresh database, P66-C) and every new Session is COVERED at creation; the baseline is cut at SP(1) for COVERED Sessions only, under the world-clock lock, so world versions <= baseline are known at every TC and later unassociated facts enter only a later Session through its own baseline; the verify:auth:smoke teardown replayed from its source leaves no residue under 0072; the durable execution is the ONE server-owned Session association (the caller supplies no session id, no SP, no sequence, no version), an authenticated / caller-scoped write is captured unassociated, a foreign Session is refused; each exposed family is UNKNOWN before its own anchor and KNOWN from it on with then-current status / version / epoch and known lineage never mistaken for current; a Formal Question appearance anchors at the first committed Moment of its exchange; Thread <-> Reading appearances are clock-first, derived, idempotent and one life per SP; expiry is mapped from the wall clock into SP space (PRE_FIRST_SP / SP(n) half-open with an exact tie EXPIRED / open head / PENDING / NOT_IN_SESSION) and a Material known ACTIVE at TC = n-1 is EXPIRED from TC = n with identity and lineage intact; the three managed commands and the synchronization entry keep their names and grants while their frozen cores are executable by no application role; no canonical row can be deleted or rewritten, no history row updated or deleted, the world clock never regresses; every legacy attach path authors exactly one tracked participation; a sealed TC is byte-stable under every later write while the open head evolves without moving LH; and associated writes serialize on the Session Semantic Clock.`);
+    console.log(`Verified migration 0072 (${assertions} assertions): every pre-existing Session is a LEGACY UNCOVERED SESSION whose Conversation Runtime continues normally while it can never become partially historical (proven across the deployment boundary on a fresh database, P66-C) and every new Session is COVERED at creation; the baseline is cut at SP(1) for COVERED Sessions only, under the world-clock lock, so world versions <= baseline are known at every TC and later unassociated facts enter only a later Session through its own baseline; the verify:auth:smoke teardown replayed from its source leaves no residue under 0072; the durable execution is the ONE server-owned Session association (the caller supplies no session id, no SP, no sequence, no version), an authenticated / caller-scoped write is captured unassociated, a foreign Session is refused; each exposed family is UNKNOWN before its own anchor and KNOWN from it on with then-current status / version / epoch and known lineage never mistaken for current; a Formal Question appearance anchors at the first committed Moment of its exchange; Thread <-> Reading appearances are clock-first, derived, idempotent and one life per SP; expiry is mapped from the wall clock into SP space (PRE_FIRST_SP / SP(n) half-open with an exact tie EXPIRED / open head / PENDING / NOT_IN_SESSION) and a Material known ACTIVE at TC = n-1 is EXPIRED from TC = n with identity and lineage intact; the three managed commands and the synchronization entry keep their names and grants while their frozen cores are executable by no application role; no canonical row can be deleted or rewritten, no history row updated or deleted, the world clock never regresses; every legacy attach path authors exactly one tracked participation; a sealed TC is byte-stable under every later write while the open head evolves without moving LH; the subject-grounding universe of a generation is cut at the IMMUTABLE causal semantic frontier of its own source finalized exchange, so an early worker refuses instead of storing a stale universe, a delayed worker sees no later focus and no later attention, and two schedules of one execution produce the identical universe while the grounding still becomes canonical only where it actually persists; and associated writes serialize on the Session Semantic Clock.`);
   } finally {
     await client.end();
   }

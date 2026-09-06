@@ -653,11 +653,15 @@ CREATE INDEX hypothesis_subject_groundings_reading_idx
   ON public.hypothesis_subject_groundings (hypothesis_id, session_id, session_position);
 
 -- 5A.2 The authorized grounding universe of ONE durable generation: the
---      committed Emerging Focuses of the execution's Session up to the Live
---      Head at build time (the frontier), each with its server-issued opaque
---      handle and its committed provenance. Stored once, never rewritten, so
---      "the exact supplied universe" is a durable fact the proposal is judged
---      against. frontier_sp NULL = no committed Moment yet = empty universe.
+--      committed Emerging Focuses of the execution's Session up to the
+--      immutable causal semantic frontier of its own source finalized
+--      exchange (11A.0), each with its server-issued opaque handle and its
+--      committed provenance. Stored once, never rewritten, so "the exact
+--      supplied universe" is a durable fact the proposal is judged against.
+--      frontier_sp NULL = the source exchange committed no Moment of its own
+--      = empty universe. A universe row exists ONLY for a source exchange
+--      whose FINAL semantic establishment is already complete: a generation
+--      that arrived before it stores nothing at all.
 CREATE TABLE public.hypothesis_subject_grounding_universes (
   execution_id uuid PRIMARY KEY,
   user_id uuid NOT NULL,
@@ -1515,9 +1519,11 @@ BEGIN
 END;$$;
 
 -- ===========================================================================
--- 11A. The subject-grounding authority (R2): the SERVER builds the universe,
---      the provider proposes opaque handles, the server authorizes, the
---      database persists canonical truth. Identity namespaces:
+-- 11A. The subject-grounding authority (R2, R3): the SERVER builds the
+--      universe at the immutable causal semantic frontier of the execution's
+--      own source finalized exchange, the provider proposes opaque handles,
+--      the server authorizes, the database persists canonical truth.
+--      Identity namespaces:
 --
 --        grounding  1592a69d-781e-57ce-bb2c-6744a6ac3ceb
 --          = uuidV5(RFC 4122 URL namespace,
@@ -1566,23 +1572,117 @@ RETURNS jsonb LANGUAGE sql IMMUTABLE SET search_path='' AS $$
       FROM jsonb_array_elements(p_universe.entries) AS e(value)), '[]'::jsonb))
 $$;
 
+-- 11A.0 The IMMUTABLE causal semantic frontier of ONE durable generation
+--       (R3). A durable post-response execution belongs to exactly ONE
+--       finalized exchange: the COMPLETED USER source turn the
+--       ConversationTurnCompleted event named (0019), and the COMPLETED
+--       ASSISTANT turn finalized as its response. The foreground runtime
+--       publishes that event BEFORE the FINAL semantic establishment of the
+--       exchange (B1 + B2 + B3 + effective Live Focus) has run, and the
+--       background dispatcher consumes it independently, so the wall-clock
+--       moment a worker happens to run says NOTHING about which committed
+--       truth legally belongs to its generation. The Live Head of the Session
+--       is a MUTABLE authority - behind the exchange before establishment
+--       completes, ahead of it once later exchanges commit - and is therefore
+--       never the universe frontier: three schedules of one execution would
+--       otherwise produce three different subject-grounding truths.
+--
+--       The causal frontier is derived from the durable FINAL chain instead.
+--       Establishment is complete for a source turn exactly when the LAST
+--       layer of that chain - the effective Live Focus commitment batch of
+--       migration 0071 - is durably recorded for a commitment batch of that
+--       turn; the frontier is then the greatest Session Position the exchange
+--       ITSELF committed, read from the committed-CU delivery events of
+--       migration 0065. Both are append-only historical facts of exactly this
+--       exchange: they can never move, so two workers on different schedules
+--       read the same cut, and no CU, focus or attention born after the
+--       exchange can enter it.
+--
+--       established = false while the source exchange has not finished FINAL
+--       semantic establishment. That is a technical, retryable condition and
+--       is NOT an empty universe. established = true with a NULL frontier is
+--       the degenerate established exchange that committed no Conversational
+--       Unit at all: it allocated no Session Position, so this execution has
+--       no causal Session Position of its own and grounds nothing. That is
+--       deliberately conservative - it can only ever under-ground, never
+--       expose truth from outside the causal cut.
+CREATE FUNCTION public.post_response_source_causal_frontier_v1(p_execution_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  execution_row public.post_response_intelligence_executions;
+  user_turn public.conversation_turns;
+  exchange_turns uuid[];
+  frontier integer;
+BEGIN
+  IF p_execution_id IS NULL THEN
+    RAISE EXCEPTION 'INVALID_SUBJECT_GROUNDING_IDENTITY' USING ERRCODE='22023';
+  END IF;
+  SELECT * INTO execution_row FROM public.post_response_intelligence_executions e WHERE e.id = p_execution_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE='42501';
+  END IF;
+  -- The finalized exchange relation, exactly as the FINAL chain locks it.
+  SELECT * INTO user_turn FROM public.conversation_turns t
+   WHERE t.id = execution_row.source_turn_id AND t.session_id = execution_row.session_id
+     AND t.user_id = execution_row.user_id AND t.role = 'USER' AND t.status = 'COMPLETED'
+     AND t.source_turn_id IS NULL;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('established', false, 'frontierSp', NULL::integer);
+  END IF;
+  SELECT array_agg(t.id) INTO exchange_turns FROM public.conversation_turns t
+   WHERE t.source_turn_id = user_turn.id AND t.session_id = user_turn.session_id
+     AND t.user_id = user_turn.user_id AND t.role = 'ASSISTANT' AND t.status = 'COMPLETED';
+  IF exchange_turns IS NULL THEN
+    RETURN jsonb_build_object('established', false, 'frontierSp', NULL::integer);
+  END IF;
+  exchange_turns := exchange_turns || user_turn.id;
+  -- Every turn of the exchange must carry the FINAL layer; a half-established
+  -- exchange is not established.
+  IF EXISTS (
+    SELECT 1 FROM unnest(exchange_turns) AS source(id)
+     WHERE NOT EXISTS (SELECT 1 FROM public.conversation_live_focus_commit_batches b
+                        WHERE b.source_turn_id = source.id AND b.session_id = execution_row.session_id
+                          AND b.user_id = execution_row.user_id)) THEN
+    RETURN jsonb_build_object('established', false, 'frontierSp', NULL::integer);
+  END IF;
+  SELECT max(e.last_sp) INTO frontier
+    FROM public.conversation_unit_commit_events e
+    JOIN public.conversation_live_focus_commit_batches b ON b.commit_batch_id = e.commit_batch_id
+   WHERE e.session_id = execution_row.session_id AND e.user_id = execution_row.user_id
+     AND e.source_turn_id = ANY (exchange_turns);
+  RETURN jsonb_build_object('established', true, 'frontierSp', frontier);
+END;$$;
+
 -- 11A.1 The universe. Built from committed B1 / B2 / B3 truth of the
---       execution's Session ONLY (server-owned association, 0022): every
---       Emerging Focus committed at or before the Live Head at build time,
---       bounded to the 32 most recently attended, each carrying its own
---       committed provenance - the stable focus identity, the grounding
---       reference handle, the starting CU and SP, the latest attention SP,
---       the first committed wording of the reference, and the Thread the
---       focus already resolves to in this Session (0068 establishment or
+--       execution's Session ONLY (server-owned association, 0022), cut at the
+--       IMMUTABLE causal semantic frontier of the execution's own source
+--       finalized exchange (11A.0) and never at the Live Head the dispatcher
+--       happens to find: every Emerging Focus committed at or before that
+--       causal frontier, bounded to the 32 most recently attended, each
+--       carrying its own committed provenance - the stable focus identity,
+--       the grounding reference handle, the starting CU and SP, the latest
+--       attention SP at or before the frontier, the first committed wording
+--       of the reference at or before the frontier, and the Thread the focus
+--       already resolved to in this Session by then (0068 establishment or
 --       0070 continuity), if any. A focus that never became canonical - an
---       AMBIGUOUS or UNRESOLVED reference, an incidental mention - has no
---       row here, so no definite grounding can ever name it. Idempotent: the
---       first build is the universe of the execution for good.
+--       AMBIGUOUS or UNRESOLVED reference, an incidental mention - has no row
+--       here, so no definite grounding can ever name it, and a focus,
+--       attention or wording born after the frontier is invisible to this
+--       generation however late the worker runs. Idempotent: the first build
+--       is the universe of the execution for good.
+--
+--       A source exchange whose FINAL semantic establishment has not
+--       completed yet builds NOTHING and stores NOTHING: it answers with the
+--       stable technical condition SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED,
+--       which the dispatcher retries through the existing bounded delivery
+--       semantics without claiming or calling the Candidate provider. It is
+--       never collapsed into an empty universe.
 CREATE FUNCTION public.build_hypothesis_subject_grounding_universe_v1(p_execution_id uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE
   execution_row public.post_response_intelligence_executions;
   stored public.hypothesis_subject_grounding_universes;
+  causal jsonb;
   frontier integer;
   built jsonb;
 BEGIN
@@ -1601,14 +1701,18 @@ BEGIN
     RAISE EXCEPTION 'SUBJECT_GROUNDING_EXECUTION_NOT_RUNNING' USING ERRCODE='42501',
       DETAIL='A grounding universe is built only for a RUNNING durable generation.';
   END IF;
-  SELECT c.current_sp INTO frontier FROM public.session_semantic_clocks c
-   WHERE c.session_id = execution_row.session_id AND c.user_id = execution_row.user_id;
+  causal := public.post_response_source_causal_frontier_v1(p_execution_id);
+  IF NOT (causal ->> 'established')::boolean THEN
+    RETURN jsonb_build_object('status', 'SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED');
+  END IF;
+  frontier := (causal ->> 'frontierSp')::integer;
   WITH focuses AS (
     SELECT f.id, f.grounding_handle_id, f.started_cu_id, f.started_sp,
            (SELECT max(a.session_position) FROM public.conversation_emerging_focus_attention_events a
              WHERE a.emerging_focus_id = f.id AND a.session_id = f.session_id AND a.session_position <= frontier) AS last_attention_sp,
            (SELECT r.anchor_text FROM public.conversation_reference_resolutions r
              WHERE r.resolved_handle_id = f.grounding_handle_id AND r.session_id = f.session_id
+               AND r.session_position <= frontier
              ORDER BY r.session_position, r.same_sp_event_sequence, r.reference_index LIMIT 1) AS subject_text,
            (SELECT b.thread_id FROM public.conversation_thread_focus_bindings b
              WHERE b.emerging_focus_id = f.id AND b.session_id = f.session_id AND b.bound_sp <= frontier) AS thread_id,
@@ -1618,7 +1722,8 @@ BEGIN
      WHERE f.session_id = execution_row.session_id AND f.user_id = execution_row.user_id
        AND frontier IS NOT NULL AND f.started_sp <= frontier),
   bounded AS (
-    SELECT * FROM focuses ORDER BY last_attention_sp DESC NULLS LAST, started_sp DESC, id LIMIT 32)
+    SELECT * FROM focuses WHERE subject_text IS NOT NULL AND btrim(subject_text) <> ''
+     ORDER BY last_attention_sp DESC NULLS LAST, started_sp DESC, id LIMIT 32)
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
       'handle', public.hypothesis_subject_grounding_handle_v1(p_execution_id, b.id),
       'emergingFocusId', b.id, 'groundingHandleId', b.grounding_handle_id, 'startedCuId', b.started_cu_id,
@@ -2564,6 +2669,7 @@ ALTER FUNCTION public.derive_thread_reading_appearances_for_focus_binding_v1() O
 ALTER FUNCTION public.hypothesis_subject_grounding_identity_v1(uuid,uuid) OWNER TO postgres;
 ALTER FUNCTION public.hypothesis_subject_grounding_handle_v1(uuid,uuid) OWNER TO postgres;
 ALTER FUNCTION public.hypothesis_subject_grounding_universe_presentation_v1(public.hypothesis_subject_grounding_universes) OWNER TO postgres;
+ALTER FUNCTION public.post_response_source_causal_frontier_v1(uuid) OWNER TO postgres;
 ALTER FUNCTION public.build_hypothesis_subject_grounding_universe_v1(uuid) OWNER TO postgres;
 ALTER FUNCTION public.complete_post_response_grounded_candidates_v1(uuid,text,jsonb,jsonb) OWNER TO postgres;
 ALTER FUNCTION public.persist_authorized_subject_groundings_v1(uuid) OWNER TO postgres;
@@ -2603,6 +2709,7 @@ REVOKE ALL ON FUNCTION public.derive_thread_reading_appearances_for_focus_bindin
 REVOKE ALL ON FUNCTION public.hypothesis_subject_grounding_identity_v1(uuid,uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.hypothesis_subject_grounding_handle_v1(uuid,uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.hypothesis_subject_grounding_universe_presentation_v1(public.hypothesis_subject_grounding_universes) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.post_response_source_causal_frontier_v1(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.build_hypothesis_subject_grounding_universe_v1(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.complete_post_response_grounded_candidates_v1(uuid,text,jsonb,jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.persist_authorized_subject_groundings_v1(uuid) FROM PUBLIC, anon, authenticated;
@@ -2639,6 +2746,7 @@ DO $$BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN
   EXECUTE 'REVOKE ALL ON FUNCTION public.hypothesis_subject_grounding_identity_v1(uuid,uuid) FROM service_role';
   EXECUTE 'REVOKE ALL ON FUNCTION public.hypothesis_subject_grounding_handle_v1(uuid,uuid) FROM service_role';
   EXECUTE 'REVOKE ALL ON FUNCTION public.hypothesis_subject_grounding_universe_presentation_v1(public.hypothesis_subject_grounding_universes) FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.post_response_source_causal_frontier_v1(uuid) FROM service_role';
   EXECUTE 'REVOKE ALL ON FUNCTION public.persist_authorized_subject_groundings_v1(uuid) FROM service_role';
   EXECUTE 'GRANT EXECUTE ON FUNCTION public.build_hypothesis_subject_grounding_universe_v1(uuid) TO service_role';
   EXECUTE 'GRANT EXECUTE ON FUNCTION public.complete_post_response_grounded_candidates_v1(uuid,text,jsonb,jsonb) TO service_role';
@@ -2773,6 +2881,7 @@ BEGIN
      OR has_function_privilege('authenticated', 'public.bind_reading_to_thread_v1(uuid,uuid,uuid,uuid)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.record_thread_reading_appearance_v1(uuid,uuid,uuid,uuid,integer,bigint,bigint)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.build_hypothesis_subject_grounding_universe_v1(uuid)', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.post_response_source_causal_frontier_v1(uuid)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.complete_post_response_grounded_candidates_v1(uuid,text,jsonb,jsonb)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.persist_authorized_subject_groundings_v1(uuid)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.historical_capture_begin_v1(uuid,uuid,boolean)', 'EXECUTE') THEN
@@ -2786,6 +2895,7 @@ BEGIN
        OR has_function_privilege('service_role', 'public.unbind_reading_from_thread_v1(uuid,uuid,uuid)', 'EXECUTE')
        OR has_function_privilege('service_role', 'public.record_thread_reading_appearance_v1(uuid,uuid,uuid,uuid,integer,bigint,bigint)', 'EXECUTE')
        OR has_function_privilege('service_role', 'public.persist_authorized_subject_groundings_v1(uuid)', 'EXECUTE')
+       OR has_function_privilege('service_role', 'public.post_response_source_causal_frontier_v1(uuid)', 'EXECUTE')
        OR has_function_privilege('service_role', 'public.get_session_historical_projection_v1(uuid,integer)', 'EXECUTE')
        OR NOT has_function_privilege('service_role', 'public.persist_post_response_hypothesis_generation_v1(uuid)', 'EXECUTE')
        OR NOT has_function_privilege('service_role', 'public.execute_post_response_hypothesis_update_batch_v1(uuid,jsonb)', 'EXECUTE')
@@ -2807,6 +2917,19 @@ BEGIN
   END IF;
   IF position('persist_authorized_subject_groundings_v1' in pg_get_functiondef(to_regprocedure('public.persist_post_response_hypothesis_generation_v1(uuid)'))) = 0 THEN
     RAISE EXCEPTION 'T-03C self-assertion: the persist wrapper records the authorized subject groundings atomically with the Hypotheses' USING ERRCODE='55000';
+  END IF;
+  -- R3: the subject-grounding universe is cut at the IMMUTABLE causal semantic
+  -- frontier of the execution's own source finalized exchange. The mutable
+  -- Session clock (the Live Head at worker execution time) is structurally
+  -- absent from BOTH the causal authority and the builder, and the causal
+  -- authority reads exactly the durable FINAL chain of migrations 0065 / 0071.
+  IF position('session_semantic_clocks' in pg_get_functiondef(to_regprocedure('public.build_hypothesis_subject_grounding_universe_v1(uuid)'))) <> 0
+     OR position('post_response_source_causal_frontier_v1' in pg_get_functiondef(to_regprocedure('public.build_hypothesis_subject_grounding_universe_v1(uuid)'))) = 0
+     OR position('SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED' in pg_get_functiondef(to_regprocedure('public.build_hypothesis_subject_grounding_universe_v1(uuid)'))) = 0
+     OR position('session_semantic_clocks' in pg_get_functiondef(to_regprocedure('public.post_response_source_causal_frontier_v1(uuid)'))) <> 0
+     OR position('conversation_live_focus_commit_batches' in pg_get_functiondef(to_regprocedure('public.post_response_source_causal_frontier_v1(uuid)'))) = 0
+     OR position('conversation_unit_commit_events' in pg_get_functiondef(to_regprocedure('public.post_response_source_causal_frontier_v1(uuid)'))) = 0 THEN
+    RAISE EXCEPTION 'T-03C self-assertion: the grounding universe must be cut at the immutable causal frontier of its source exchange, never at the mutable Live Head' USING ERRCODE='55000';
   END IF;
   -- R-C3: every path into public.hypotheses passes the ONE capture hook.
   IF (SELECT count(*) FROM pg_trigger t WHERE t.tgrelid = 'public.hypotheses'::regclass AND NOT t.tgisinternal

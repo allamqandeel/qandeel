@@ -366,14 +366,30 @@ test('R2: the canonical Reading subject-grounding authority - a server-built bou
   // 11A: the SERVER builds the universe from committed B1 / B2 truth only - bounded, once, opaque.
   assert.match(authority, /CREATE FUNCTION public\.build_hypothesis_subject_grounding_universe_v1\(p_execution_id uuid\)/u);
   assert.match(authority, /IF execution_row\.state <> 'RUNNING' THEN/u, 'only a RUNNING durable execution builds its universe');
-  assert.match(authority, /SELECT c\.current_sp INTO frontier FROM public\.session_semantic_clocks c/u, 'the frontier is the Session Semantic Clock, never a caller value');
+  // R3: the frontier is the IMMUTABLE causal semantic frontier of the execution's own
+  // source finalized exchange - derived from the durable FINAL chain of 0065 / 0071 -
+  // and never the mutable Live Head the background dispatcher happens to find.
+  const causal = authority.slice(authority.indexOf('CREATE FUNCTION public.post_response_source_causal_frontier_v1'), authority.indexOf('CREATE FUNCTION public.build_hypothesis_subject_grounding_universe_v1'));
+  const builder = authority.slice(authority.indexOf('CREATE FUNCTION public.build_hypothesis_subject_grounding_universe_v1'), authority.indexOf('CREATE FUNCTION public.complete_post_response_grounded_candidates_v1'));
+  assert.doesNotMatch(builder, /session_semantic_clocks/u, 'R3: the mutable Live Head is structurally absent from the universe builder');
+  assert.doesNotMatch(causal, /session_semantic_clocks|CURRENT_TIMESTAMP|now\(\)|clock_timestamp/u, 'R3: the causal frontier reads neither the mutable Live Head nor any wall clock');
+  assert.match(builder, /causal := public\.post_response_source_causal_frontier_v1\(p_execution_id\);/u, 'R3: the frontier comes from the causal authority');
+  assert.match(builder, /IF NOT \(causal ->> 'established'\)::boolean THEN\s*\n\s*RETURN jsonb_build_object\('status', 'SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED'\);/u,
+    'R3: a source exchange that has not completed FINAL semantic establishment builds nothing and stores nothing - it is never collapsed into an empty universe');
+  assert.match(causal, /t\.role = 'USER' AND t\.status = 'COMPLETED'\s*\n\s*AND t\.source_turn_id IS NULL/u, 'R3: the source exchange is the execution\'s own COMPLETED USER turn');
+  assert.match(causal, /t\.source_turn_id = user_turn\.id AND t\.session_id = user_turn\.session_id\s*\n\s*AND t\.user_id = user_turn\.user_id AND t\.role = 'ASSISTANT' AND t\.status = 'COMPLETED'/u, 'and the COMPLETED ASSISTANT turn finalized as its response');
+  assert.match(causal, /FROM public\.conversation_live_focus_commit_batches b/u, 'R3: FINAL semantic establishment is proven by the LAST layer of the frozen chain (0071), never by a NULL clock');
+  assert.match(causal, /SELECT max\(e\.last_sp\) INTO frontier\s*\n\s*FROM public\.conversation_unit_commit_events e/u, 'R3: the frontier is the greatest Session Position the source exchange itself committed (0065)');
+  for (const capped of [/a\.session_position <= frontier/u, /r\.session_position <= frontier/u, /b\.bound_sp <= frontier/u, /f\.started_sp <= frontier/u]) {
+    assert.match(builder, capped, 'R3: attention, committed wording, focus->Thread resolution and focus birth are all capped at the causal frontier');
+  }
   assert.match(authority, /FROM public\.conversation_emerging_focuses f\s*\n\s*WHERE f\.session_id = execution_row\.session_id AND f\.user_id = execution_row\.user_id/u, 'candidates are the execution\'s own Session\'s committed Emerging Focuses');
   assert.match(authority, /FROM public\.conversation_reference_resolutions r/u, 'the wording is the first committed RESOLVED reference of the focus\'s grounding handle');
   assert.match(authority, /FROM public\.conversation_thread_focus_bindings b/u, 'with the Thread each focus already resolves to (0070)');
   assert.match(authority, /LIMIT 32\)/u, 'bounded');
   assert.match(authority, /ON CONFLICT \(execution_id\) DO NOTHING;\s*\n\s*SELECT \* INTO stored FROM public\.hypothesis_subject_grounding_universes/u, 'stored once; a rebuild returns the SAME universe');
   assert.match(authority, /'handle', public\.hypothesis_subject_grounding_handle_v1\(p_execution_id, b\.id\)/u, 'the handle is an execution-scoped v5 identity');
-  const presentation = authority.slice(authority.indexOf('CREATE FUNCTION public.hypothesis_subject_grounding_universe_presentation_v1'), authority.indexOf('CREATE FUNCTION public.build_hypothesis_subject_grounding_universe_v1'));
+  const presentation = authority.slice(authority.indexOf('CREATE FUNCTION public.hypothesis_subject_grounding_universe_presentation_v1'), authority.indexOf('CREATE FUNCTION public.post_response_source_causal_frontier_v1'));
   assert.match(presentation, /jsonb_build_object\(\s*\n\s*'handle', e\.value ->> 'handle', 'subjectText', e\.value ->> 'subjectText',\s*\n\s*'startedSp', \(e\.value ->> 'startedSp'\)::integer, 'lastAttentionSp', \(e\.value ->> 'lastAttentionSp'\)::integer\)/u,
     'a presented entry is exactly handle + wording + Session Positions');
   assert.doesNotMatch(presentation, /'(?:emergingFocusId|threadId|threadBoundSp|sessionId|startedCuId|groundingHandleId)',/u, 'the provider presentation carries no focus, Thread, Session or CU identity');
@@ -400,7 +416,11 @@ test('R2: the canonical Reading subject-grounding authority - a server-built bou
     assert.ok(persist.includes(token), `persistence refuses ${token}`);
   }
   assert.doesNotMatch(authority, /similar|embedding|ILIKE|~\*|levenshtein|tsvector|to_tsquery|<->/u, 'no similarity, no text matching, no embedding anywhere in the authority');
-  assert.doesNotMatch(authority, /FROM public\.memories|supporting_evidence_ids|contradicting_evidence_ids|live_focus|placement_x|placement_y|competing_hypothesis_ids/u, 'no Evidence-overlap, LF or geometry grounding');
+  // No Evidence-overlap, LF or geometry grounding. R3 reads the FINAL chain's
+  // Live Focus COMMITMENT BATCH as proof that semantic establishment completed;
+  // the effective Live Focus itself - its transitions, its current value and
+  // its reference - never touches the universe.
+  assert.doesNotMatch(authority, /FROM public\.memories|supporting_evidence_ids|contradicting_evidence_ids|conversation_live_focus_transitions|conversation_session_current_live_focus_v1|conversation_session_live_focus_before_v1|live_focus_kind|live_focus_ref|placement_x|placement_y|competing_hypothesis_ids/u, 'no Evidence-overlap, LF or geometry grounding');
   assert.doesNotMatch(authority, /p_emerging_focus_id uuid, p_thread_id|p_thread_id uuid|p_focus_id/u, 'no callable entry accepts a focus or Thread identity');
   // 12A: the appearance is DERIVED by exactly the two production triggers, never authored.
   assert.match(derivation, /CREATE TRIGGER hypothesis_subject_groundings_thread_appearance\s*\n\s*AFTER INSERT ON public\.hypothesis_subject_groundings/u, 'Case A: a grounding to a focus already bound to a Thread appears at once, at the grounding\'s own anchor');
@@ -417,7 +437,8 @@ test('R2: the canonical Reading subject-grounding authority - a server-built bou
   assert.match(projection, /AND sg\.session_position <= p_tc\), '\[\]'::jsonb\)/u, 'a grounding is known at TC iff its own anchor is <= TC');
   // 15: posture - the two service_role entries, everything else unreachable.
   for (const revoked of ['record_thread_reading_appearance_v1(uuid,uuid,uuid,uuid,integer,bigint,bigint)', 'persist_authorized_subject_groundings_v1(uuid)', 'hypothesis_subject_grounding_identity_v1(uuid,uuid)',
-    'hypothesis_subject_grounding_handle_v1(uuid,uuid)', 'hypothesis_subject_grounding_universe_presentation_v1(public.hypothesis_subject_grounding_universes)']) {
+    'hypothesis_subject_grounding_handle_v1(uuid,uuid)', 'hypothesis_subject_grounding_universe_presentation_v1(public.hypothesis_subject_grounding_universes)',
+    'post_response_source_causal_frontier_v1(uuid)']) {
     assert.ok(posture.includes(`REVOKE ALL ON FUNCTION public.${revoked} FROM service_role`), `${revoked} is executable by no application role`);
     assert.ok(posture.includes(`REVOKE ALL ON FUNCTION public.${revoked} FROM PUBLIC, anon, authenticated;`));
   }
@@ -458,7 +479,16 @@ test('the 0072 verifier proves live semantics, the fixture cleanup knows the new
     'SUBJECT_GROUNDING_HANDLE_OUTSIDE_UNIVERSE', 'SUBJECT_GROUNDING_DUPLICATE_HANDLE', 'SUBJECT_GROUNDING_LIMIT_EXCEEDED', 'SUBJECT_GROUNDING_TARGET_NOT_CANDIDATE', 'SUBJECT_GROUNDING_TARGET_MISSING',
     'SUBJECT_GROUNDING_IDENTITY_CONFLICT', 'SUBJECT_GROUNDING_UNIVERSE_MISSING', 'INVALID_SUBJECT_GROUNDING_PROPOSAL', 'subjectGroundings', 'buildUniverse: false',
     'the raw focus UUID', 'the raw Thread UUID', 'a handle of another user', 'a handle of another execution of the same user', 'grounds nothing', 'no appearance, nothing backdated',
-    'CONTINUED_ANCHORING', 'dormancy and return are neither unbinding nor rebinding', 'a legacy Hypothesis receives no guessed grounding']) {
+    'CONTINUED_ANCHORING', 'dormancy and return are neither unbinding nor rebinding', 'a legacy Hypothesis receives no guessed grounding',
+    // R3: the deterministic causal grounding frontier, CF-01 .. CF-08.
+    'CF-01', 'CF-02', 'CF-03', 'CF-04', 'CF-05', 'CF-06', 'CF-07', 'CF-08',
+    'SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED', 'post_response_source_causal_frontier_v1',
+    'no Candidate provider effect is claimed, so zero provider calls are possible',
+    'the immediate schedule was rolled back: the SAME execution is now dispatched late',
+    'the same ordered entries, the same opaque handles and the same subject wording',
+    'a provider cannot select a focus that did not exist in the causal cut',
+    'lastAttentionSp <= causal frontier',
+    'a causal source may be earlier, canonical availability later']) {
     assert.ok(verifier.includes(proof), `verifier is missing ${proof}`);
   }
   assert.doesNotMatch(verifier, /P66-C \(a later Session inherits/u, 'later-Session baseline inheritance is not called P66-C (R1-04)');

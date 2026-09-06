@@ -1,5 +1,5 @@
-import { authorizeSubjectGroundingHandles, parseSubjectGroundingUniverse } from './hypothesis-subject-grounding.authority';
-import { MAX_SUBJECT_GROUNDING_CANDIDATES, MAX_SUBJECT_GROUNDINGS_PER_CANDIDATE } from './hypothesis-subject-grounding.types';
+import { authorizeSubjectGroundingHandles, parseSubjectGroundingUniverse, parseSubjectGroundingUniverseResolution } from './hypothesis-subject-grounding.authority';
+import { MAX_SUBJECT_GROUNDING_CANDIDATES, MAX_SUBJECT_GROUNDINGS_PER_CANDIDATE, SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED } from './hypothesis-subject-grounding.types';
 
 const EXECUTION = '10000000-0000-4000-8000-000000000005';
 const HANDLE_A = '22d3c5d1-02cc-55e5-97c8-7b5563e5332f';
@@ -50,5 +50,24 @@ describe('the subject-grounding authority (T-03C R2)', () => {
     // A request without a universe admits no grounding at all: the HTTP generation path can never ground.
     expect(authorizeSubjectGroundingHandles([HANDLE_A], undefined)).toEqual({ status: 'REJECTED', reason: 'SUBJECT_GROUNDING_OUTSIDE_UNIVERSE' });
     expect(authorizeSubjectGroundingHandles([HANDLE_A], [])).toEqual({ status: 'REJECTED', reason: 'SUBJECT_GROUNDING_OUTSIDE_UNIVERSE' });
+  });
+
+  // T-03C R3: the not-yet-established causal frontier is a first-class,
+  // distinct answer. It is never an empty universe, and an empty universe is
+  // never a not-yet-established frontier.
+  it('R3: distinguishes a not-yet-established causal frontier from an established but empty universe', () => {
+    expect(parseSubjectGroundingUniverseResolution({ status: SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED }))
+      .toEqual({ status: SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED });
+    expect(parseSubjectGroundingUniverseResolution({ executionId: EXECUTION, frontierSp: null, entries: [] }))
+      .toEqual({ status: 'ESTABLISHED', universe: { executionId: EXECUTION, frontierSp: null, entries: [] } });
+    expect(parseSubjectGroundingUniverseResolution(universe())).toEqual({ status: 'ESTABLISHED', universe: universe() });
+    for (const malformed of [
+      null, [], 'not established',
+      { status: 'SOMETHING_ELSE' },
+      { status: SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED, executionId: EXECUTION },
+      universe({ executionId: 'not-a-uuid' }),
+    ]) {
+      expect(parseSubjectGroundingUniverseResolution(malformed)).toBeUndefined();
+    }
   });
 });

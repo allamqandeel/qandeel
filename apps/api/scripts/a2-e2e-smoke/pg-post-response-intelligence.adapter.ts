@@ -11,8 +11,8 @@ import type { HypothesisGenerationIntentExtractionResult } from '../../src/hypot
 import type { MemoryWriteResult } from '../../src/memory/memory-write.service';
 import type { DurableAssociationResult } from '../../src/post-response-intelligence/durable-association-result';
 import type { DurableCandidateProviderResult } from '../../src/post-response-intelligence/durable-generation-result';
-import { parseSubjectGroundingUniverse } from '../../src/hypothesis/hypothesis-subject-grounding.authority';
-import type { AuthorizedSubjectGroundingUniverse } from '../../src/hypothesis/hypothesis-subject-grounding.types';
+import { parseSubjectGroundingUniverseResolution } from '../../src/hypothesis/hypothesis-subject-grounding.authority';
+import type { SubjectGroundingUniverseResolution } from '../../src/hypothesis/hypothesis-subject-grounding.types';
 import { parseInformationGapSyncResult } from '../../src/post-response-intelligence/information-gap-sync-result';
 import type { InformationGapSyncResult } from '../../src/post-response-intelligence/information-gap-sync-result';
 import type { DurableHimBrainContextResult } from '../../src/post-response-intelligence/durable-him-brain-context-result';
@@ -82,18 +82,23 @@ export class PgPostResponseIntelligenceRepositoryAdapter {
       : this.booleanRpc('SELECT public.complete_post_response_association_provider_effect_v1($1, $2, $3::jsonb) AS value', [id, 'AUTHORIZED_COMMANDS', JSON.stringify(result.commands)]);
   }
 
-  // T-03C R2: the SAME server-built subject-grounding universe the production
-  // repository reads (migration 0072, 11A), parsed by the SAME production
-  // parser - transport substitution only.
-  async buildSubjectGroundingUniverse(id: string): Promise<AuthorizedSubjectGroundingUniverse> {
+  // T-03C R2 / R3: the SAME server-built subject-grounding universe the
+  // production repository reads (migration 0072, 11A), cut at the immutable
+  // causal semantic frontier of the execution's source finalized exchange and
+  // parsed by the SAME production parser - transport substitution only. The
+  // not-yet-established condition is surfaced exactly as the repository
+  // surfaces it, never rewritten into an empty universe.
+  async buildSubjectGroundingUniverse(id: string): Promise<SubjectGroundingUniverseResolution> {
     const rows = await this.db.asRole<{ value: unknown }>(
       'service_role',
       'SELECT public.build_hypothesis_subject_grounding_universe_v1($1) AS value',
       [id],
     );
-    const universe = parseSubjectGroundingUniverse(rows[0]?.value);
-    if (!universe || universe.executionId !== id) throw new Error('POST_RESPONSE_DATABASE_UNAVAILABLE');
-    return universe;
+    const resolved = parseSubjectGroundingUniverseResolution(rows[0]?.value);
+    if (!resolved || (resolved.status === 'ESTABLISHED' && resolved.universe.executionId !== id)) {
+      throw new Error('POST_RESPONSE_DATABASE_UNAVAILABLE');
+    }
+    return resolved;
   }
 
   async completeCandidateProvider(id: string, result: DurableCandidateProviderResult): Promise<boolean> {

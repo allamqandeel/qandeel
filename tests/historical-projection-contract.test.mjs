@@ -104,6 +104,13 @@ test('the Stage 6.6 v3 matrix reconciles to 31 FULL AFTER BUILD / 4 NOT EXPOSED 
   assert.ok(doc.includes('R1-02 RESOLVED (R2) — CANONICAL READING SUBJECT-GROUNDING AUTHORITY'), 'the document states the resolution');
   assert.doesNotMatch(doc, /R1-02 BLOCKED|AUTHORITY MISSING|waits for that authority|unpopulated in production/u, 'no stale blocker statement survives');
   assert.match(doc, /\*\*D-14 — The canonical Reading subject-grounding authority \(R2\)/u, 'the authority is a recorded architecture decision');
+  // R3: the universe frontier is documented as the immutable causal cut of the
+  // source exchange, and no statement survives that the scheduler-dependent
+  // Live Head is the universe authority.
+  assert.match(doc, /\*\*D-15 — The deterministic causal grounding frontier \(R3\)\.\*\*/u, 'the causal frontier is a recorded architecture decision');
+  assert.ok(doc.includes('causal_frontier_sp'), 'the causal input frontier is named separately from the actual availability anchor');
+  assert.ok(doc.includes('SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED'), 'the retryable not-established condition is documented');
+  assert.doesNotMatch(doc, /frontier = the Session's Live Head at build time|up to the Live Head\/current_sp at build time|frontier = `LH`/u, 'no stale statement survives that the scheduler-dependent Live Head is the causal universe authority');
   assert.ok(doc.includes('Stage 1.9 freezes Reading ↔ Hypothesis as PARTIAL'), 'the ontology is the frozen PARTIAL one: analytical identity, subject grounding, Thread appearance and Evidence participation kept apart');
   assert.doesNotMatch(doc, /evaluator that decides binding is a later task|is a later task/u, 'the binding authority is not deferred to a later task (R1-04)');
   assert.ok(doc.includes('Binding from a label, string similarity, an embedding, Evidence or peer co-occurrence, the current LF at creation time, or geometry is forbidden by the frozen rule, so none is invented'),
@@ -278,11 +285,20 @@ test('R2: the production A-1 path is the canonical subject-grounding authority e
   assert.match(ledger, /this\.request<unknown>\('rpc\/build_hypothesis_subject_grounding_universe_v1',\{method:'POST',body:JSON\.stringify\(\{p_execution_id:id\}\)\}\)/u, 'the universe is built from the execution identity alone');
   assert.match(ledger, /this\.booleanRpc\('complete_post_response_grounded_candidates_v1',\{p_execution_id:id,p_result_code:'VALIDATED_CANDIDATES',p_result_payload:result\.candidates,p_subject_grounding:result\.subjectGroundings\}\)/u, 'the durable VALIDATED result carries the selections the server authorized, through the grounded completion');
   assert.match(ledger, /this\.booleanRpc\('complete_post_response_candidate_provider_effect_v1',\{p_execution_id:id,p_result_code:'NO_ACCEPTED_CANDIDATES',p_result_payload:null\}\)/u, 'NO_ACCEPTED_CANDIDATES is the frozen completion');
-  assert.match(ledger, /parseSubjectGroundingUniverse\(/u, 'the universe is parsed exactly; corruption is a database failure, never an empty universe');
+  assert.match(ledger, /parseSubjectGroundingUniverseResolution\(/u, 'the universe is parsed exactly; corruption is a database failure, never an empty universe');
+  // R3: the not-yet-established causal frontier is surfaced as its own stable
+  // condition - never rewritten into an empty universe, never into an
+  // arbitrary database failure.
+  assert.match(ledger, /if\(!resolved\|\|\(resolved\.status==='ESTABLISHED'&&resolved\.universe\.executionId!==id\)\)throw new Error\('POST_RESPONSE_DATABASE_UNAVAILABLE'\);return resolved;/u,
+    'R3: only corruption is a database failure; the readiness condition is returned as itself');
   const dispatcher = stripComments(read('apps/api/src/post-response-intelligence/post-response-intelligence-dispatcher.service.ts'));
   const universeAt = dispatcher.indexOf('await this.ledger.buildSubjectGroundingUniverse(execution.id)');
   const claimAt = dispatcher.indexOf("await this.ledger.claim(execution.id,'CANDIDATE_PROVIDER')");
   assert.ok(universeAt > 0 && claimAt > universeAt, 'the universe is built from the durable execution BEFORE the CANDIDATE_PROVIDER claim, never from a caller');
+  const notEstablishedAt = dispatcher.indexOf("if(resolved.status===SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED)return false;");
+  assert.ok(notEstablishedAt > universeAt && notEstablishedAt < claimAt,
+    'R3: a not-yet-established causal frontier returns non-terminal BEFORE the budget gate and the Candidate claim - no provider budget slot is spent and no provider is called');
+  assert.ok(dispatcher.indexOf("budget.authorize('CANDIDATE_PROVIDER')") > notEstablishedAt, 'R3: the provider-budget invariant holds - the budget is consulted only once the causal universe is ready');
   assert.match(dispatcher, /generateHypothesisCandidatePlan\(context,assembled\.request,[^;]*himContext,subjectGroundingUniverse\)/u, 'the one provider call receives the server universe');
   const policy = stripComments(read('apps/api/src/hypothesis/hypothesis-generation.policy.ts'));
   assert.match(policy, /authorizeSubjectGroundingHandles\(value\.subjectGroundingHandles,request\.eligibleSubjectGroundings\)/u, 'every proposal is authorized against the universe of ITS request');

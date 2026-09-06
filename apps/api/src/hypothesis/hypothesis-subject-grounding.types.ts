@@ -40,12 +40,28 @@ export interface AuthorizedSubjectGroundingCandidate {
   readonly lastAttentionSp: number | null;
 }
 
-/** The server-built, durably stored universe of ONE durable generation (`frontierSp` = the Live Head it was built at; null = no committed Moment yet, therefore empty). */
+/** The server-built, durably stored universe of ONE durable generation (`frontierSp` = the immutable causal semantic frontier of the execution's own source finalized exchange; null = that exchange committed no Moment of its own, therefore empty). */
 export interface AuthorizedSubjectGroundingUniverse {
   readonly executionId: string;
   readonly frontierSp: number | null;
   readonly entries: readonly AuthorizedSubjectGroundingCandidate[];
 }
+
+/**
+ * T-03C R3 - the stable technical condition the server answers with while the
+ * execution's source finalized exchange has NOT completed its FINAL semantic
+ * establishment (B1 + B2 + B3 + effective Live Focus). It has no causal
+ * frontier yet, so there is nothing to cut a universe at. It is NOT an empty
+ * universe and NOT a database failure: nothing is stored, no Candidate
+ * provider budget slot is spent, no provider is called, and the execution
+ * retries through the existing bounded delivery/recovery semantics.
+ */
+export const SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED = 'SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED';
+
+/** What the server answers when a generation asks for its grounding universe: the durable universe, or the not-yet-established causal frontier. */
+export type SubjectGroundingUniverseResolution =
+  | { readonly status: 'ESTABLISHED'; readonly universe: AuthorizedSubjectGroundingUniverse }
+  | { readonly status: typeof SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED };
 
 /** The durable, server-authorized grounding selection of ONE accepted candidate: exactly the handles it is grounded to (possibly none). */
 export interface DurableSubjectGroundingSelection {

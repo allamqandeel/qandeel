@@ -10,10 +10,12 @@ import {
   MAX_SUBJECT_GROUNDING_CANDIDATES,
   MAX_SUBJECT_GROUNDINGS_PER_CANDIDATE,
   MAX_SUBJECT_TEXT_LENGTH,
+  SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED,
   SUBJECT_GROUNDING_HANDLE,
   type AuthorizedSubjectGroundingCandidate,
   type AuthorizedSubjectGroundingUniverse,
   type SubjectGroundingRejectionReason,
+  type SubjectGroundingUniverseResolution,
 } from './hypothesis-subject-grounding.types';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -58,6 +60,23 @@ export function parseSubjectGroundingUniverse(value: unknown): AuthorizedSubject
     entries.push({ handle: raw.handle, subjectText: raw.subjectText, startedSp: raw.startedSp, lastAttentionSp: raw.lastAttentionSp });
   }
   return { executionId: value.executionId, frontierSp, entries };
+}
+
+/**
+ * T-03C R3 - parses the server's answer to a universe request. The database
+ * either returns the durable universe presentation or the single stable
+ * technical condition SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED, which says
+ * the execution's source finalized exchange has not finished FINAL semantic
+ * establishment. The two are never collapsed: a not-yet-established causal
+ * frontier is retryable and grounds nothing, an established one may still be
+ * legitimately empty. Anything else is transport corruption (undefined).
+ */
+export function parseSubjectGroundingUniverseResolution(value: unknown): SubjectGroundingUniverseResolution | undefined {
+  if (exactKeys(value, ['status']) && value.status === SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED) {
+    return { status: SOURCE_SEMANTIC_FRONTIER_NOT_ESTABLISHED };
+  }
+  const universe = parseSubjectGroundingUniverse(value);
+  return universe ? { status: 'ESTABLISHED', universe } : undefined;
 }
 
 /**
