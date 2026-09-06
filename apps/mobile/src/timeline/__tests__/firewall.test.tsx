@@ -6,6 +6,10 @@ import { fixture } from '../testing/fixtures';
 import { createPresentationController } from '../window/controller';
 import { OUTBOARD_LIVE_EXTENT, TimelinePresentation } from '../virtualization/TimelinePresentation';
 
+// First render in this suite pays cold RN module init, which exceeds Jest's 5s
+// default on a CI runner. This raises only the time budget; nothing is relaxed.
+jest.setTimeout(60_000);
+
 test('TL05-14 / Stage 6.2 sections 8–9: outboard Live seam consumes no ordinal distance', async () => {
   const c = createPresentationController(fixture(20), 240);
   await render(<TimelinePresentation controller={c} outboardLivePresentation={<Text>Live presentation supplied by owner</Text>} />);

@@ -7,6 +7,9 @@ import { fixture } from '../testing/fixtures';
 
 // Real RN FlatList/VirtualizedList and window algorithm, not a replacement list.
 // Native layout/scroll events are supplied by the harness because Jest has no native host.
+// 10k/100k fixtures plus real RN windowing exceed Jest's 5s default on a cold CI
+// runner. This raises only the harness time budget; no assertion is relaxed.
+jest.setTimeout(60_000);
 describe.each([10_000, 100_000])('T-05 observable large-history harness: %i disclosed', size => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
