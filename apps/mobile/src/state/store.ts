@@ -1,22 +1,27 @@
 /**
  * T-02 — Canonical state kernel: the store boundary.
  *
- * Three entry points with separate authority paths:
+ * Four entry points with separate authority paths:
  * - `dispatch(action)`: the T-02 kernel Product acts, and ONLY those. Runs the transition, the
  *   exact canonical-shape validator, the immutable-context guard, the per-field writer guard,
  *   `Φ_eff` no-op detection and the RH append. Never accepts an event, a Class C / D identity, a
- *   later-owner identity, or a promoted Map act.
+ *   later-owner identity, or any promoted act.
  * - `dispatchMap(action)`: the ONE seam a promoted Map act can reach canonical state through
  *   (R1-01). It runs exactly the same admission, guard, `Φ_eff` and RH path, and it runs it only
  *   after the store's own `MapActionAuthority` has consumed a runtime authorization for that
  *   exact action object. The store never inspects `V`, never learns an entitlement rule and
  *   never mints an authorization: it only asks whether its authority vouches for this act.
+ * - `dispatchTemporal(action)`: the same seam for the two promoted temporal acts, with a SEPARATE
+ *   `TemporalActionAuthority`. The two promoted families never share an authority, so an act
+ *   minted by one owner is refused by the other's seam by construction, not by convention; and
+ *   each seam admits only identities of its own family, so a promoted act cannot be smuggled
+ *   sideways through the neighbouring door either.
  * - `ingest(event)`: passive authoritative events (closed catalog). Runs the event transition,
  *   the exact shape validator and the guard restricted to the event's single authoritative
  *   field. Never appends RH and never borrows transaction authority.
  *
- * Fail-closed by default: a store constructed WITHOUT a Map authority executes no Map act at all,
- * so forgetting to wire the authority cannot silently open the boundary.
+ * Fail-closed by default: a store constructed WITHOUT an authority for a family executes no act of
+ * that family at all, so forgetting to wire one cannot silently open the boundary.
  *
  * Trust boundary (FIX-T02-02): every candidate, and the initial snapshot, must match the exact
  * canonical shape (allowlisted keys at every level); `session.id` is immutable store context
@@ -24,7 +29,18 @@
  * authoritative snapshot. It performs no persistence, no restart behaviour and no entry-state
  * behaviour. No UI or control exposes the kernel actions in T-02.
  */
-import { catalogEntry, isRhActionId, type AuthoritativeEvent, type CatalogEntry, type KernelAction, type MapAction, type StoreAction } from './actions';
+import {
+  MAP_ACTION_TYPES,
+  TEMPORAL_ACTION_TYPES,
+  catalogEntry,
+  isRhActionId,
+  type AuthoritativeEvent,
+  type CatalogEntry,
+  type KernelAction,
+  type MapAction,
+  type StoreAction,
+  type TemporalAction,
+} from './actions';
 import {
   ImmutableContextViolation,
   InvalidCanonicalShape,
@@ -32,6 +48,7 @@ import {
   OwnedByLaterTask,
   UnauthorizedActionClass,
   UnauthorizedMapAction,
+  UnauthorizedTemporalAction,
   UnknownAction,
   UnknownEvent,
   assertAuthorizedClassAWrites,
@@ -81,14 +98,30 @@ export interface MapActionAuthority {
 }
 
 /**
+ * The runtime authority that vouches for a promoted temporal act (T-06).
+ *
+ * Identical in kind to `MapActionAuthority` and deliberately a DIFFERENT object: the two promoted
+ * families are authorized by different owners against different rules, so sharing one verifier
+ * would let either owner's mint satisfy the other's seam. It answers ONE question — did this
+ * authority itself authorize this exact action object, and is that authorization unused — and it
+ * can never mint one, so nothing a caller can construct satisfies it.
+ */
+export interface TemporalActionAuthority {
+  /** True exactly once per authorization this authority minted for this action object. */
+  consume(action: TemporalAction): boolean;
+}
+
+/**
  * Store construction seam. The injected transition tables are a test seam and never widen
- * authority — the shape validator and the per-field guard run on every result regardless. The Map
- * authority is a production wiring input: a store built without one runs no Map act at all.
+ * authority — the shape validator and the per-field guard run on every result regardless. The two
+ * promoted-act authorities are production wiring inputs: a store built without one runs no act of
+ * that family at all.
  */
 export interface StoreDependencies {
   readonly actionTransitions?: Partial<ActionTransitionTable>;
   readonly eventTransitions?: Partial<EventTransitionTable>;
   readonly mapActionAuthority?: MapActionAuthority;
+  readonly temporalActionAuthority?: TemporalActionAuthority;
 }
 
 export type DispatchResult = { readonly outcome: 'APPLIED'; readonly entry: RhEntry | null } | { readonly outcome: 'NO_OP' };
@@ -97,12 +130,17 @@ export type IngestResult = { readonly outcome: 'APPLIED' } | { readonly outcome:
 export interface CanonicalStore {
   getState(): CanonicalState;
   subscribe(listener: () => void): () => void;
-  /** T-02 kernel Product acts only. A promoted Map act dispatched here fails closed (R1-01). */
+  /** T-02 kernel Product acts only. Any promoted act dispatched here fails closed (R1-01). */
   dispatch(action: KernelAction): DispatchResult;
   /** The authorized Map seam. Fails closed unless this store's Map authority consumes the act. */
   dispatchMap(action: MapAction): DispatchResult;
+  /** The authorized temporal seam. Fails closed unless this store's Temporal authority consumes the act. */
+  dispatchTemporal(action: TemporalAction): DispatchResult;
   ingest(event: AuthoritativeEvent): IngestResult;
 }
+
+const isMapActionType = (id: string): boolean => (MAP_ACTION_TYPES as readonly string[]).includes(id);
+const isTemporalActionType = (id: string): boolean => (TEMPORAL_ACTION_TYPES as readonly string[]).includes(id);
 
 const INIT_KEYS = ['session', 'live', 'temporal', 'inspection', 'camera'] as const;
 
@@ -133,6 +171,7 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
   const actionTransitions: ActionTransitionTable = { ...STORE_ACTION_TRANSITIONS, ...deps.actionTransitions };
   const eventTransitions: EventTransitionTable = { ...KERNEL_EVENT_TRANSITIONS, ...deps.eventTransitions };
   const mapActionAuthority = deps.mapActionAuthority;
+  const temporalActionAuthority = deps.temporalActionAuthority;
 
   let state: CanonicalState = deepFreeze(buildInitialState(init));
   const listeners = new Set<() => void>();
@@ -191,9 +230,13 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
 
   function dispatch(action: KernelAction): DispatchResult {
     const entry = admitIdentity(action);
-    // R1-01: a promoted Map act never runs on this path, whatever it carries. The raw public
-    // dispatch surface therefore cannot reach `IF_ref`, the camera or RH for a Map act at all.
+    // R1-01, extended by T-06: NO promoted act ever runs on this path, whatever it carries. The
+    // raw public dispatch surface therefore cannot reach `IF_ref`, `TM`, the camera or RH for a
+    // promoted act at all, and the refusal names the boundary that was crossed.
     if (entry.level === 'EXECUTABLE') {
+      if (isTemporalActionType(entry.id)) {
+        throw new UnauthorizedTemporalAction(entry.id, 'a temporal act reaches canonical state only through the authorized temporal seam');
+      }
       throw new UnauthorizedMapAction(entry.id, 'a Map act reaches canonical state only through the authorized Map seam');
     }
     return runTransaction(action, entry);
@@ -201,7 +244,10 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
 
   function dispatchMap(action: MapAction): DispatchResult {
     const entry = admitIdentity(action);
-    if (entry.level !== 'EXECUTABLE') {
+    // Family admission, not merely level admission: a promoted TEMPORAL act is also EXECUTABLE, so
+    // without this the neighbouring family would reach the Map authority and depend on a WeakSet
+    // miss to be refused. Here it is refused by identity, before any authority is consulted.
+    if (!isMapActionType(entry.id)) {
       throw new UnauthorizedActionClass(entry.id, entry.cls, `${entry.id} is not a promoted Map act; the Map seam runs only those`);
     }
     if (mapActionAuthority === undefined) {
@@ -212,6 +258,22 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     // the transition runs, so a refusal writes nothing and appends nothing.
     if (mapActionAuthority.consume(action) !== true) {
       throw new UnauthorizedMapAction(entry.id, 'the authority did not mint an unused authorization for this exact act');
+    }
+    return runTransaction(action, entry);
+  }
+
+  function dispatchTemporal(action: TemporalAction): DispatchResult {
+    const entry = admitIdentity(action);
+    if (!isTemporalActionType(entry.id)) {
+      throw new UnauthorizedActionClass(entry.id, entry.cls, `${entry.id} is not a promoted temporal act; the temporal seam runs only those`);
+    }
+    if (temporalActionAuthority === undefined) {
+      throw new UnauthorizedTemporalAction(entry.id, 'this store was constructed without a Temporal authority');
+    }
+    // Identical rule, separate authority: an act the Map owner minted is not in this set, and a
+    // replay of an already-consumed temporal act is not either. A refusal writes nothing.
+    if (temporalActionAuthority.consume(action) !== true) {
+      throw new UnauthorizedTemporalAction(entry.id, 'the authority did not mint an unused authorization for this exact act');
     }
     return runTransaction(action, entry);
   }
@@ -248,6 +310,7 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     },
     dispatch,
     dispatchMap,
+    dispatchTemporal,
     ingest,
   };
 }

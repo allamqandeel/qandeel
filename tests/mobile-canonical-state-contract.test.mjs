@@ -132,10 +132,14 @@ test('the authority policy is a frozen readonly array, never a mutable Set, and 
   assert.match(actions, /return Object\.freeze\(\[\.\.\.names\]\);/u);
   assert.match(actions, /Object\.freeze\(catalog\[key\]\)/u);
   // T-04 re-anchor, by exact name: `INSPECT_OBJECT`, `SWITCH_CONTEXT` and `DIRECT_JUMP` were
-  // promoted out of the later-owner set into `MapActionType`. Their frozen RH_CHECKPOINT
-  // behaviour is unchanged, and every other later-owner act still fails closed.
-  assert.match(actions, /export type RhActionId = KernelActionType \| MapActionType \| MetadataOnlyActionType;/u);
+  // promoted out of the later-owner set into `MapActionType`. T-06 re-anchor, by exact name:
+  // `COMMIT_MOMENT_AND_LOCATE` and `CHOOSE_LOCUS` were promoted into `TemporalActionType`. Every
+  // promoted identity keeps its frozen transactional behaviour, and the six remaining later-owner
+  // acts still fail closed.
+  assert.match(actions, /export type RhActionId = KernelActionType \| MapActionType \| TemporalActionType \| MetadataOnlyActionType;/u);
   assert.match(actions, /MAP_ACTION_TYPES = Object\.freeze\(\['INSPECT_OBJECT', 'SWITCH_CONTEXT', 'DIRECT_JUMP'\] as const\);/u);
+  assert.match(actions, /TEMPORAL_ACTION_TYPES = Object\.freeze\(\['COMMIT_MOMENT_AND_LOCATE', 'CHOOSE_LOCUS'\] as const\);/u);
+  assert.match(actions, /export type StoreAction = KernelAction \| MapAction \| TemporalAction;/u);
   assert.match(productionCode['classes.ts'], /readonly act: RhActionId;/u);
   assert.match(productionCode['classes.ts'], /readonly tc: SessionPosition;/u);
   assert.match(productionCode['history.ts'], /act: RhActionId\)/u);

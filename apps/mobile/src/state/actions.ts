@@ -8,8 +8,10 @@
  *   `LIVE_FOCUS_TRANSITION`.
  * - EXECUTABLE: a frozen act whose owning task has landed its substrate and has promoted it to
  *   a typed transition through this same boundary. T-04 promotes exactly three by name —
- *   `INSPECT_OBJECT`, `SWITCH_CONTEXT`, `DIRECT_JUMP` — keeping their frozen identities, field
- *   authorities and RH behaviour. Nothing else moves out of METADATA_ONLY.
+ *   `INSPECT_OBJECT`, `SWITCH_CONTEXT`, `DIRECT_JUMP` — and T-06 exactly two more —
+ *   `COMMIT_MOMENT_AND_LOCATE`, `CHOOSE_LOCUS` — each keeping its frozen identity, field
+ *   authority, transactional category and RH behaviour. Nothing else moves out of METADATA_ONLY,
+ *   and every remaining later-owner act (all six of them T-07's) still fails closed.
  * - METADATA_ONLY: frozen later-owner acts recorded as identity, owner, class, permitted
  *   Class-A authority and frozen transactional category. They carry no payload type and fail
  *   closed at the store (`OwnedByLaterTask`).
@@ -90,8 +92,36 @@ export type MapAction =
 export type MapActionType = MapAction['type'];
 export const MAP_ACTION_TYPES = Object.freeze(['INSPECT_OBJECT', 'SWITCH_CONTEXT', 'DIRECT_JUMP'] as const);
 
-/** Every Product act the store can execute: the T-02 kernel plus the three T-04 Map acts. */
-export type StoreAction = KernelAction | MapAction;
+// ------------------------------------------------------------------------------------------
+// Temporal acts promoted to executable by T-06 (exactly two, by name)
+// ------------------------------------------------------------------------------------------
+
+/**
+ * The authorized landing of a composite temporal + locate act, or of a contextual-locus choice.
+ * The kernel resolves no locus: T-06 derives every reference here from the disclosed projection of
+ * the position the act commits to — through T-04's locatability substrate — before the act is
+ * built. `destination` is mandatory because both acts land in exactly ONE identified locus.
+ *
+ * There is deliberately no `depth`: neither frozen identity holds `MC.depth` authority, so a
+ * composite locate can never become a semantic-zoom move, and the landing must therefore have been
+ * resolved at the semantic depth the camera already discloses.
+ */
+export interface LocateLanding {
+  readonly anchor: WorldAnchorRef;
+  readonly destination: SpatialDestinationRef;
+  readonly scale?: ScaleIntentRef;
+  readonly orientation?: WorldOrientationRef;
+}
+
+export type TemporalAction =
+  | { readonly type: 'COMMIT_MOMENT_AND_LOCATE'; readonly moment: SessionPosition; readonly to: LocateLanding }
+  | { readonly type: 'CHOOSE_LOCUS'; readonly to: LocateLanding };
+
+export type TemporalActionType = TemporalAction['type'];
+export const TEMPORAL_ACTION_TYPES = Object.freeze(['COMMIT_MOMENT_AND_LOCATE', 'CHOOSE_LOCUS'] as const);
+
+/** Every Product act the store can execute: the T-02 kernel, the three T-04 Map acts, the two T-06 temporal acts. */
+export type StoreAction = KernelAction | MapAction | TemporalAction;
 export type StoreActionType = StoreAction['type'];
 
 // ------------------------------------------------------------------------------------------
@@ -110,8 +140,6 @@ export const AUTHORITATIVE_EVENT_TYPES = Object.freeze(['LIVE_HEAD_ADVANCED', 'L
 // ------------------------------------------------------------------------------------------
 
 export const METADATA_ONLY_ACTION_TYPES = Object.freeze([
-  'COMMIT_MOMENT_AND_LOCATE',
-  'CHOOSE_LOCUS',
   'RETURN_LIVE_HEAD',
   'RETURN_LIVE_FOCUS',
   'GO_LIVE_AND_LOCATE',
@@ -136,17 +164,29 @@ export const NON_STORE_IDENTITY_TYPES = Object.freeze([
 export type NonStoreIdentityType = (typeof NON_STORE_IDENTITY_TYPES)[number];
 
 /** Every registered identity, of every level and class. */
-export type ProductActId = KernelActionType | MapActionType | AuthoritativeEventType | MetadataOnlyActionType | NonStoreIdentityType;
+export type ProductActId =
+  | KernelActionType
+  | MapActionType
+  | TemporalActionType
+  | AuthoritativeEventType
+  | MetadataOnlyActionType
+  | NonStoreIdentityType;
 
 /**
  * RH-eligible identities (FIX-T02-03): explicit Class-A Product acts only. Authoritative
  * events and Class C / D identities are unrepresentable as an RH act. Later-owner acts are
  * eligible in type because their RH behaviour is frozen and owned later; T-02 never appends
- * them. The three T-04 Map acts are RH-eligible for the same frozen reason and, unlike the
- * later-owner set, T-04 does append them at the existing `RH_CHECKPOINT` boundary.
+ * them. The three T-04 Map acts and the two T-06 temporal acts are RH-eligible for the same
+ * frozen reason and, unlike the later-owner set, their owners do append them at the existing
+ * effective-transaction boundary — exactly one entry per effective act, composite included.
  */
-export type RhActionId = KernelActionType | MapActionType | MetadataOnlyActionType;
-export const RH_ACTION_IDS: readonly RhActionId[] = Object.freeze([...KERNEL_ACTION_TYPES, ...MAP_ACTION_TYPES, ...METADATA_ONLY_ACTION_TYPES]);
+export type RhActionId = KernelActionType | MapActionType | TemporalActionType | MetadataOnlyActionType;
+export const RH_ACTION_IDS: readonly RhActionId[] = Object.freeze([
+  ...KERNEL_ACTION_TYPES,
+  ...MAP_ACTION_TYPES,
+  ...TEMPORAL_ACTION_TYPES,
+  ...METADATA_ONLY_ACTION_TYPES,
+]);
 
 export function isRhActionId(value: unknown): value is RhActionId {
   return typeof value === 'string' && (RH_ACTION_IDS as readonly string[]).includes(value);
@@ -295,12 +335,12 @@ export const ACTION_CATALOG: Readonly<Record<ProductActId, CatalogEntry>> = free
     transactional: 'RH_CHECKPOINT',
     frozenSource: 'Stage 4.1/4.3; Stage 5.2 §2.7 checkpoint',
   },
-  // --- METADATA_ONLY: frozen later-owner acts (no payload types; fail closed) --------------
+  // --- EXECUTABLE: the two temporal acts T-06 promoted (frozen identities unchanged) --------
   COMMIT_MOMENT_AND_LOCATE: {
     id: 'COMMIT_MOMENT_AND_LOCATE',
     frozenName: 'P3a Temporal + Locate',
     cls: 'A',
-    level: 'METADATA_ONLY',
+    level: 'EXECUTABLE',
     owner: 'T-06',
     substrateOwner: 'T-04',
     authority: fields('TM', ...SPATIAL),
@@ -311,13 +351,14 @@ export const ACTION_CATALOG: Readonly<Record<ProductActId, CatalogEntry>> = free
     id: 'CHOOSE_LOCUS',
     frozenName: 'Contextual-locus choice (D4)',
     cls: 'A',
-    level: 'METADATA_ONLY',
+    level: 'EXECUTABLE',
     owner: 'T-06',
     substrateOwner: 'T-04',
     authority: fields(...SPATIAL),
     transactional: 'EFFECTIVE_TRANSACTION',
     frozenSource: 'S5-RET-07; Stage 5.5 D4; CLAR-03',
   },
+  // --- METADATA_ONLY: frozen later-owner acts (no payload types; fail closed) --------------
   RETURN_LIVE_HEAD: {
     id: 'RETURN_LIVE_HEAD',
     frozenName: 'P4 Return to Live Head',

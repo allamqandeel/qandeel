@@ -167,6 +167,59 @@ the rungs its requested semantic depth discloses.
 Contract: `npm run test:historical-projection-contract` (repository root) plus the Jest
 suites under `src/projection/__tests__/`.
 
+## Temporal navigation layer (T-06)
+
+T-06 owns the interaction and substrate around the frozen temporal primitives. It adds no
+canonical field, no second temporal cursor and no dependency: `COMMIT_MOMENT` and
+`COMMIT_LIVE_EDGE` remain T-02's, and this layer decides only WHEN to call them, from an
+explicit user act.
+
+- **Addressability** (`src/temporal-navigation/targeting/addressability.ts`): the single gate.
+  A temporal target is an integer Session Position in `[1, LH]` — never a timestamp, a wall
+  clock, a pixel offset, a percentage, a window position, a scroll offset, an animation frame,
+  a gesture velocity or a duration. `LH = null` means nothing is addressable yet, which is a
+  correct answer rather than an error. `TemporalTargetIntent` has two shapes, `MOMENT(sp)` and
+  `LIVE_EDGE`, and no code path converts one into the other.
+- **Preview** (`preview/`): `PTC` is Class C. While a preview exists `TM`, effective `TC`,
+  `IF_ref`, `MC` and `RH` are all unchanged, and the controller holds no store, no dispatch and
+  no transport, so it could not write Product truth even by mistake. A preview is never made by
+  moving `TM` and moving it back. `preview-projection.ts` shows a historical target only through
+  the disclosure of THAT position, and runs the addressability gate before any lookup — so no
+  future-history request exists in this layer, and none can be constructed through it.
+- **Continuation** (`continuation/forward.ts`): repeated forward targeting that stops at the
+  authoritative Live Head, holds there, and never becomes Live intent. Its cadence is injected,
+  never frozen, because no cadence changes the semantics.
+- **Commit boundary** (`targeting/commit.ts`): one completed, explicit act → one canonical
+  commit. Committing `Moment(LH)` produces `PINNED(LH)`, which stays a different state from
+  `FOLLOW_LIVE` and diverges from it as soon as `LH` advances.
+- **Promoted acts** (`targeting/temporal-actions.ts`): `COMMIT_MOMENT_AND_LOCATE` and
+  `CHOOSE_LOCUS` are executable through a THIRD store seam with their own runtime authority — a
+  `WeakSet` consumed on use, whose minting side is module-local and exported nowhere. The
+  composite act's landing is resolved against the projection of the position it commits to, and
+  is authorized by T-04's ONE shared freshness rule applied to the post-act viewpoint. Zero loci
+  invents no geography; several loci elect nothing.
+- **Timeline integration** (`timeline-integration/`): one way only. T-05 identifies a disclosed
+  target and gains no store, no dispatch, no selected Moment and no Live commit; scrolling,
+  refining and widening the presentation change no temporal state. Temporal targeting lives on
+  its own strip below the Track, so presentation movement and temporal traversal are told apart
+  by where they are touched as well as by what they announce.
+- **Motion** (`motion/`): decided in plain arithmetic first, then bound to Reanimated. Motion
+  explains Product truth and never carries it — the pure contract imports nothing at all, the
+  binding holds no store, and the commit acknowledgement is called with the store's answer
+  already in hand. Four transitions, all under 300 ms; reduced motion collapses every one of them
+  to zero while changing no target, capability or stance.
+- **Accessibility** (`accessibility/`): exact targeting, preview, commit, cancel, forward
+  continuation and the Live target each have a route needing neither a drag nor a precision
+  pointer. A preview is announced as a preview, committed truth keeps its own sentence, and
+  nothing announces presentation movement as temporal movement.
+- Not here, by design: the T-07 return acts (still later-owner metadata, still failing closed),
+  the Map's own projection handoff, final chrome and art direction, and the general input and
+  responsive substrate (T-11). Nothing under `src/temporal-navigation/` is mounted in the shell.
+
+Contract: `npm run test:temporal-navigation-layer-contract` (repository root) plus the Jest
+suites under `src/temporal-navigation/__tests__/`. Design notes:
+`docs/temporal-navigation-layer-v1.md`.
+
 ## Toolchain pins (Expo SDK 57)
 
 | Package | Pin |

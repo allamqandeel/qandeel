@@ -100,12 +100,17 @@ test('exactly three frozen acts were promoted to executable, by name, and nothin
   assert.match(actionsCode, /MAP_ACTION_TYPES = Object\.freeze\(\['INSPECT_OBJECT', 'SWITCH_CONTEXT', 'DIRECT_JUMP'\] as const\);/u);
   assert.match(actionsCode, /export type CatalogLevel = 'KERNEL' \| 'EXECUTABLE' \| 'METADATA_ONLY' \| 'NOT_STORE_ACTION';/u);
 
+  // T-06 re-anchor: `COMMIT_MOMENT_AND_LOCATE` and `CHOOSE_LOCUS` left the later-owner set when
+  // T-06 landed their substrate and promoted them behind their OWN runtime authority. The T-04
+  // guarantee is unweakened and is now also stated positively below: the remaining six are exactly
+  // T-07's, they all still fail closed, and no T-07 identity was promoted by anyone.
   const metadataOnly = actionsCode.match(/METADATA_ONLY_ACTION_TYPES = Object\.freeze\(\[([\s\S]*?)\] as const\)/u);
   assert.ok(metadataOnly, 'METADATA_ONLY_ACTION_TYPES must be a literal array');
   assert.deepEqual(
     [...metadataOnly[1].matchAll(/'([A-Z_]+)'/gu)].map((match) => match[1]).sort(),
-    ['BACK_ONE_STEP', 'CHOOSE_LOCUS', 'COMMIT_MOMENT_AND_LOCATE', 'EXACT_RETURN', 'GO_LIVE_AND_LOCATE', 'RETURN_LIVE_FOCUS', 'RETURN_LIVE_HEAD', 'RETURN_WORLD'],
+    ['BACK_ONE_STEP', 'EXACT_RETURN', 'GO_LIVE_AND_LOCATE', 'RETURN_LIVE_FOCUS', 'RETURN_LIVE_HEAD', 'RETURN_WORLD'],
   );
+  assert.match(actionsCode, /TEMPORAL_ACTION_TYPES = Object\.freeze\(\['COMMIT_MOMENT_AND_LOCATE', 'CHOOSE_LOCUS'\] as const\);/u);
 
   // The store still fails closed for every remaining later-owner act, and the general rule is
   // stated once, over the level, rather than per identity.
@@ -123,8 +128,11 @@ test('exactly three frozen acts were promoted to executable, by name, and nothin
   assert.equal(entries.DIRECT_JUMP.authority, "'IF_ref', 'MC.depth', ...SPATIAL");
   assert.match(actionsCode, /const SPATIAL = \['MC\.anchor', 'MC\.orientation', 'MC\.scale', 'MC\.destination'\] as const;/u);
   for (const id of ['PAN', 'ZOOM_SEMANTIC', 'COMMIT_MOMENT', 'COMMIT_LIVE_EDGE']) assert.equal(entries[id].level, 'KERNEL');
-  for (const id of ['COMMIT_MOMENT_AND_LOCATE', 'CHOOSE_LOCUS', 'RETURN_LIVE_HEAD', 'RETURN_WORLD', 'EXACT_RETURN', 'BACK_ONE_STEP']) {
+  // T-06 re-anchor: exactly the six T-07 identities remain later-owner metadata, and each is still
+  // owned by T-07 — a strictly stronger statement than the level alone.
+  for (const id of ['RETURN_LIVE_HEAD', 'RETURN_LIVE_FOCUS', 'GO_LIVE_AND_LOCATE', 'RETURN_WORLD', 'EXACT_RETURN', 'BACK_ONE_STEP']) {
     assert.equal(entries[id].level, 'METADATA_ONLY', `${id} is still owned by a later task`);
+    assert.match(actionsSource, new RegExp(`id: '${id}',[\\s\\S]*?owner: 'T-07',`, 'u'), `${id} is still owned by T-07`);
   }
 });
 
@@ -184,12 +192,26 @@ test('R1-01 — a promoted Map act reaches canonical state only through an autho
   // The kernel splits the two entry points and refuses a Map act on the raw one.
   assert.match(storeCode, /dispatch\(action: KernelAction\): DispatchResult;/u);
   assert.match(storeCode, /dispatchMap\(action: MapAction\): DispatchResult;/u);
-  assert.match(storeCode, /if \(entry\.level === 'EXECUTABLE'\) \{\s*\n\s*throw new UnauthorizedMapAction\(/u);
+  // T-06 re-anchor: the EXECUTABLE branch of the raw dispatch surface still ALWAYS throws, and it
+  // now names which boundary was crossed. Both refusals are pinned, and the branch is proven to
+  // contain nothing but refusals, so no promoted act of any family can fall through it.
+  const executableBranch = storeCode.slice(
+    storeCode.indexOf("if (entry.level === 'EXECUTABLE') {"),
+    storeCode.indexOf('return runTransaction(action, entry);\n  }\n\n  function dispatchMap'),
+  );
+  assert.ok(executableBranch.length > 0, 'the raw dispatch surface refuses every promoted act');
+  assert.match(executableBranch, /throw new UnauthorizedMapAction\(entry\.id, 'a Map act reaches canonical state only through the authorized Map seam'\)/u);
+  assert.match(executableBranch, /throw new UnauthorizedTemporalAction\(/u);
+  assert.equal((executableBranch.match(/\bthrow new\b/gu) ?? []).length, 2, 'the EXECUTABLE branch does nothing but refuse');
+  assert.doesNotMatch(executableBranch, /runTransaction/u, 'no promoted act ever runs on the raw dispatch surface');
   // The Map seam consults an authority it cannot mint from, and fails closed without one.
   assert.match(storeCode, /if \(mapActionAuthority === undefined\) \{\s*\n\s*throw new UnauthorizedMapAction\(/u);
   assert.match(storeCode, /if \(mapActionAuthority\.consume\(action\) !== true\) \{\s*\n\s*throw new UnauthorizedMapAction\(/u);
+  // T-06 re-anchor: the Map seam now admits by FAMILY, not merely by level, so the neighbouring
+  // promoted family is refused by identity before any authority is consulted.
+  assert.match(storeCode, /if \(!isMapActionType\(entry\.id\)\) \{\s*\n\s*throw new UnauthorizedActionClass\(/u);
   // The kernel neither reads `V` nor re-implements an entitlement rule.
-  const authorityInterface = storeCode.slice(storeCode.indexOf('export interface MapActionAuthority'), storeCode.indexOf('export interface StoreDependencies'));
+  const authorityInterface = storeCode.slice(storeCode.indexOf('export interface MapActionAuthority'), storeCode.indexOf('export interface TemporalActionAuthority'));
   assert.ok(authorityInterface.length > 0, 'the MapActionAuthority interface exists');
   assert.match(authorityInterface, /consume\(action: MapAction\): boolean;/u);
   assert.equal((authorityInterface.match(/^\s{2}\w+\(/gmu) ?? []).length, 1, 'the authority exposes exactly one member: it can answer, never mint');
