@@ -9,11 +9,8 @@
 import { sessionPosition } from '../../state';
 import { panByTranslation } from '../../map';
 import { createTemporalPreviewController } from '../../temporal-navigation';
-import { returnLiveHead } from '../live-head';
-import { returnLiveFocus } from '../live-focus';
-import { returnWorld } from '../return-world';
-import { goLiveAndLocate } from '../go-live-and-locate';
-import { backOneStep, exactReturn, latestReturnCheckpoint, type ReturnCheckpointTarget } from '../history-restoration';
+import { backOneStep, exactReturn, goLiveAndLocate, returnLiveFocus, returnLiveHead, returnWorld } from '../return-actions';
+import { latestReturnCheckpoint, type ReturnCheckpointTarget } from '../checkpoint-target';
 import { contextAt, openPreview, providing, returnTestStore, world } from '../__fixtures__/return';
 
 const SP = sessionPosition;

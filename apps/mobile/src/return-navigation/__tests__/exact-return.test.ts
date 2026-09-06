@@ -11,8 +11,8 @@
  */
 import { sessionPosition, type RhCheckpoint } from '../../state';
 import { initialCameraIntent, panByTranslation, zoomSemanticStep } from '../../map';
-import { exactReturn, isReturnCheckpointTarget, latestReturnCheckpoint, returnCheckpoints, type ReturnCheckpointTarget } from '../history-restoration';
-import { backOneStep } from '../history-restoration';
+import { backOneStep, exactReturn } from '../return-actions';
+import { isReturnCheckpointTarget, latestReturnCheckpoint, returnCheckpoints, type ReturnCheckpointTarget } from '../checkpoint-target';
 import { permissiveReturnStore, returnSurface, returnTestStore, unavailableInspectionRef, viewpoint } from '../__fixtures__/return';
 import type { CanonicalStore } from '../../state';
 

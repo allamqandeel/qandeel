@@ -24,7 +24,6 @@ import {
   type CanonicalStateErrorCode,
   type CanonicalStore,
   type DispatchResult,
-  type ReturnAction,
   type RhEntry,
 } from '../state';
 
@@ -106,7 +105,13 @@ export function withNoOpReason(outcome: ReturnOutcome, reason: ReturnNoOpReason)
   return outcome.outcome === 'NO_OP' ? { outcome: 'NO_OP', reason, locate: outcome.locate } : outcome;
 }
 
-function report(store: CanonicalStore, run: () => DispatchResult): ReturnOutcome {
+/**
+ * Turns ONE canonical dispatch attempt into this layer's vocabulary. It performs no dispatch of its
+ * own and holds no action: the caller supplies the thunk, so this module cannot reach the canonical
+ * return seam at all and cannot become a second route to it. `consumed` is measured from the store's
+ * own history length rather than asserted, so a claim that history was unwound is a reading.
+ */
+export function reportReturnDispatch(store: CanonicalStore, run: () => DispatchResult): ReturnOutcome {
   const before = store.getState().history.length;
   try {
     const result = run();
@@ -117,13 +122,4 @@ function report(store: CanonicalStore, run: () => DispatchResult): ReturnOutcome
     if (error instanceof CanonicalStateError) return returnRejected(error.code, error.message);
     throw error;
   }
-}
-
-/**
- * Runs ONE authorized return act. The action must already carry a runtime authorization from the
- * store's Return authority — minted in `authority.ts` and nowhere else — so this function cannot be
- * used to smuggle an unauthorized act: the store refuses it.
- */
-export function dispatchAuthorizedReturnAction(store: CanonicalStore, action: ReturnAction): ReturnOutcome {
-  return report(store, () => store.dispatchReturn(action));
 }

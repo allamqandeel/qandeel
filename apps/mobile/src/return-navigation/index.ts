@@ -20,9 +20,14 @@
  *
  * Cross-cutting, and true of all six: a Preview is cancelled before the act is resolved; the act is
  * authorized by this layer's own runtime authority and by no other; every restoration is
- * `PINNED(capturedTC)`; no act writes `LH`, `LF` or the Session; no act appends and consumes;
- * no camera landing is authorized by a projection that is not the arriving viewpoint's; and no
- * result names a target, a place, a direction or a count.
+ * `PINNED(capturedTC)`; no act writes `LH`, `LF` or the Session; a projection is proven to be the
+ * arriving viewpoint's BEFORE any semantic answer is derived from it and AGAIN before anything is
+ * written; and no result names a target, a place, a direction or a count.
+ *
+ * This barrel is the layer's whole public surface. The authorization set, the plan types, the action
+ * constructor and the mint are not exported from any module of the layer, so no consumer — through
+ * this barrel or through a deep import — can build, authorize or dispatch a return act except by
+ * calling one of the six executors and accepting their frozen semantics.
  *
  * What this layer does NOT do: it stores no canonical field, adds no temporal mode, keeps no
  * `RETURNING` or `SETTLING` state, holds no return cursor or stack, persists nothing, fetches
@@ -40,26 +45,25 @@ export { returnNoOp, returnRejected } from './outcomes';
 
 export type { ReturnSurface } from './surface';
 
-export type { AuthorizedLanding, ReturnPlan } from './authority';
-// Only the verifier crosses this boundary. `runReturnPlan` — the one place a return action is built,
-// minted and dispatched — stays inside the layer on purpose: minting is not a public capability.
-export { RETURN_ACTION_AUTHORITY } from './authority';
-
 export type { FocusLanding, ReturnFocusTarget, ReturnMapContext } from './focus-target';
 export { focusMapTarget, resolveFocusLanding, returnMapContext } from './focus-target';
 
-export { returnLiveHead } from './live-head';
+export type { ReturnCheckpointTarget } from './checkpoint-target';
+export { isReturnCheckpointTarget, latestReturnCheckpoint, returnCheckpoints } from './checkpoint-target';
 
-export type { ReturnLiveFocusRequest } from './live-focus';
-export { returnLiveFocus } from './live-focus';
-
-export type { GoLiveAndLocateRequest } from './go-live-and-locate';
-export { goLiveAndLocate } from './go-live-and-locate';
-
-export { returnWorld } from './return-world';
-
-export type { ReturnCheckpointTarget } from './history-restoration';
-export { backOneStep, exactReturn, isReturnCheckpointTarget, latestReturnCheckpoint, returnCheckpoints } from './history-restoration';
+// The six executors, the verifier the store is constructed with, and the one capability question
+// that can only be answered against a proven projection. The mint crosses no boundary at all.
+export type { GoLiveAndLocateRequest, ReturnLiveFocusAvailability, ReturnLiveFocusRequest } from './return-actions';
+export {
+  RETURN_ACTION_AUTHORITY,
+  backOneStep,
+  exactReturn,
+  goLiveAndLocate,
+  liveFocusReturnAvailability,
+  returnLiveFocus,
+  returnLiveHead,
+  returnWorld,
+} from './return-actions';
 
 export type { ReturnAvailability } from './availability';
 export { RETURN_ACT_IDS, returnAvailability } from './availability';

@@ -10,16 +10,23 @@
  *   - no count of loci, and no accessibility set-size or child count;
  *   - no "go there" hint, and no contextual label borrowed from a position the reader is not at.
  *
- * `liveFocusReturnAvailable` says only that live attention exists somewhere — the generic "Live
- * continued" statement already permitted upstream — and never what or where it is. From a historical
- * position that distinction is the whole point: the reader may learn that Live is elsewhere and that
- * a return to it is available, and may not learn where it went.
+ * ## Why there is no Live-Focus capability bit here
  *
- * There is no copy, no icon, no colour and no layout here, and no component: final return and
- * orientation chrome is a later task's, and every act below is already reachable as a plain function
- * call, without a drag, a precision pointer or a coordinate, through the same authority the pointer
- * route would use. There is exactly one executor per act and no generic Home/Back/Live route that
- * could collapse the six identities into fewer.
+ * A model derived from Class A alone can honestly say that Live exists and that a route back to Live
+ * is available — the generic Live meta a historical reader is permitted. It cannot honestly say
+ * whether a Return to Live Focus has anywhere to go, and it must not try, for two separate reasons:
+ *
+ *   - `LF != NONE` is LIVE truth. From a historical position that is future-relative: a bit derived
+ *     from it can reveal that a Thread exists which `K(TC)` does not disclose, which is exactly the
+ *     future-state information the historical firewall exists to keep out;
+ *   - it would also overstate the capability. A live Thread with no legitimate place at the reader's
+ *     current viewpoint is not a landing, so `LF != NONE` proves nothing about whether the act can
+ *     do anything at all.
+ *
+ * That question is answerable only against a disclosed projection that is proven to be this
+ * viewpoint's, and so it lives with the act — `liveFocusReturnAvailability` in `return-actions.ts` —
+ * where the same freshness rule and the same locatability substrate the act uses can answer it. No
+ * second projection source exists in this layer, and none is created here.
  */
 import { cameraIntentEquals, effectiveTC, type CanonicalState } from '../state';
 import { initialCameraIntent } from '../map';
@@ -29,12 +36,10 @@ import { RETURN_ACTION_TYPES } from '../state';
 export const RETURN_ACT_IDS = RETURN_ACTION_TYPES;
 
 export interface ReturnAvailability {
-  /** An authoritative Live Head exists, so a return to Live is a meaningful act. */
+  /** An authoritative Live Head exists, so a route back to Live is a meaningful act. */
   readonly liveReturnAvailable: boolean;
-  /** The committed stance is `PINNED`: Live is elsewhere. Nothing here says where. */
+  /** The committed stance is `PINNED` behind the Live Head: Live is elsewhere. Nothing says where. */
   readonly historical: boolean;
-  /** Live attention exists somewhere. Generic by construction: no identity, no place, no count. */
-  readonly liveFocusReturnAvailable: boolean;
   /** The camera is not already at the canonical World / Z0 viewpoint. */
   readonly worldReturnAvailable: boolean;
   /** At least one recorded checkpoint can be reversed. */
@@ -48,7 +53,6 @@ export function returnAvailability(state: CanonicalState): ReturnAvailability {
   return Object.freeze({
     liveReturnAvailable: liveHead !== null,
     historical: state.temporal.kind === 'PINNED' && liveHead !== null && effectiveTC(state) !== liveHead,
-    liveFocusReturnAvailable: liveHead !== null && state.live.LF.value.kind !== 'NONE',
     worldReturnAvailable: !cameraIntentEquals(state.camera, initialCameraIntent()),
     backAvailable: state.history.length > 0,
     checkpointCount: state.history.length,

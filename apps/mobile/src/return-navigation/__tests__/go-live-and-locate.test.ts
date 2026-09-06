@@ -7,8 +7,7 @@
  */
 import { CANONICAL_STATE_KEYS, sessionPosition } from '../../state';
 import { decodeWorldAnchorRef, panByTranslation } from '../../map';
-import { goLiveAndLocate } from '../go-live-and-locate';
-import { backOneStep } from '../history-restoration';
+import { backOneStep, goLiveAndLocate } from '../return-actions';
 import {
   contextAt,
   countingStore,
@@ -183,6 +182,55 @@ describe('RN07-H — Go Live + Locate (P5)', () => {
     expect(counting.counts.returns).toBe(1);
     expect(inner.getState().temporal).toEqual({ kind: 'FOLLOW_LIVE' });
     expect(inner.getState().history).toHaveLength(1);
+  });
+
+  // R1-01 — a live projection that is not the live viewpoint's may never become a semantic claim
+  // about the bound referent. The temporal Live return still stands, as one act.
+  it('R1-01 — a stale live context whose scene lacks the referent is STALE, never NOT_ENTITLED', () => {
+    const inner = returnTestStore({ liveHead: 9, temporal: { kind: 'PINNED', at: SP(3) }, liveFocus: { kind: 'ESTABLISHED_THREAD', threadId: 'thread-a' } });
+    const counting = countingStore(inner);
+    const camera = inner.getState().camera;
+    // A scene for a DIFFERENT position that does not contain Thread A at all.
+    const stale = contextAt(world({ depth: 'SESSION', tc: 4, liveHead: 9, threads: [THREAD_B] }));
+
+    const outcome = goLiveAndLocate(returnSurface(counting.store), { liveContext: providing(stale) });
+    expect(outcome.outcome === 'APPLIED' && outcome.locate).toBe('STALE_PROJECTION');
+    expect(JSON.stringify(outcome)).not.toMatch(/NOT_ENTITLED|NOT_LOCATABLE/u);
+    // One canonical dispatch, one Product transaction, camera untouched, no intermediate RH.
+    expect(counting.counts.returns).toBe(1);
+    expect(counting.counts.publishes).toBe(1);
+    expect(inner.getState().temporal).toEqual({ kind: 'FOLLOW_LIVE' });
+    expect(inner.getState().camera).toBe(camera);
+    expect(inner.getState().history).toHaveLength(1);
+  });
+
+  it('R1-01 — a stale live context with a zero-locus referent is STALE, never NOT_LOCATABLE', () => {
+    const inner = returnTestStore({ liveHead: 9, temporal: { kind: 'PINNED', at: SP(3) }, liveFocus: { kind: 'EMERGING_FOCUS', emergingFocusId: 'focus-1' } });
+    const counting = countingStore(inner);
+    const camera = inner.getState().camera;
+    // Wrong depth: the Session rung is withheld, so the Emerging Focus resolves to nothing — which
+    // would read as a semantic answer if freshness were only checked afterwards.
+    const stale = contextAt(world({ depth: 'THREAD', tc: 9, liveHead: 9, threads: [THREAD_A] }));
+
+    const outcome = goLiveAndLocate(returnSurface(counting.store), { liveContext: providing(stale) });
+    expect(outcome.outcome === 'APPLIED' && outcome.locate).toBe('STALE_PROJECTION');
+    expect(JSON.stringify(outcome)).not.toMatch(/NOT_ENTITLED|NOT_LOCATABLE/u);
+    expect(counting.counts.returns).toBe(1);
+    expect(counting.counts.publishes).toBe(1);
+    expect(inner.getState().camera).toBe(camera);
+    expect(inner.getState().history).toHaveLength(1);
+  });
+
+  it('R1-01 anti-over-fix — a CURRENT live context still yields the truthful semantic answer', () => {
+    // Absent at the live viewpoint...
+    const absent = returnTestStore({ liveHead: 9, temporal: { kind: 'PINNED', at: SP(3) }, liveFocus: { kind: 'ESTABLISHED_THREAD', threadId: 'thread-later' } });
+    const first = goLiveAndLocate(returnSurface(absent), { liveContext: providing(contextAt(liveWorld(9))) });
+    expect(first.outcome === 'APPLIED' && first.locate).toBe('NOT_ENTITLED');
+
+    // ...and disclosed but legitimately ungeographic.
+    const ungeographic = returnTestStore({ liveHead: 9, temporal: { kind: 'PINNED', at: SP(3) }, liveFocus: { kind: 'EMERGING_FOCUS', emergingFocusId: 'focus-1' } });
+    const second = goLiveAndLocate(returnSurface(ungeographic), { liveContext: providing(contextAt(liveWorld(9))) });
+    expect(second.outcome === 'APPLIED' && second.locate).toBe('NOT_LOCATABLE');
   });
 
   it('H73 — the bound referent never appears in CanonicalState or in RH', () => {

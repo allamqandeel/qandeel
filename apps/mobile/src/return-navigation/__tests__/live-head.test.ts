@@ -6,8 +6,7 @@
  */
 import { sessionPosition } from '../../state';
 import { zoomSemanticStep } from '../../map';
-import { returnLiveHead } from '../live-head';
-import { backOneStep } from '../history-restoration';
+import { backOneStep, returnLiveHead } from '../return-actions';
 import { countingStore, interposingPreview, permissiveReturnStore, returnSurface, returnTestStore, viewpoint } from '../__fixtures__/return';
 
 const SP = sessionPosition;

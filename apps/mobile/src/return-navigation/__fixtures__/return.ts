@@ -43,7 +43,7 @@ import {
   type TemporalTargeting,
 } from '../../temporal-navigation';
 import { disclosedTrack, type DisclosedTrack } from '../../timeline';
-import { RETURN_ACTION_AUTHORITY } from '../authority';
+import { RETURN_ACTION_AUTHORITY } from '../return-actions';
 import type { ReturnSurface } from '../surface';
 import type { ReturnMapContext } from '../focus-target';
 
@@ -180,6 +180,37 @@ export function mutatingDispatchStore(inner: CanonicalStore, during: () => void)
     },
     ingest: (event) => inner.ingest(event),
   };
+}
+
+export interface ReadCountingStore {
+  readonly store: CanonicalStore;
+  readonly reads: () => number;
+}
+
+/**
+ * A store that delivers `during` immediately AFTER the `afterRead`-th read of canonical state, and
+ * counts the reads. It is the seam a passive event occupies when it lands between two proofs an act
+ * makes about the same fact — here, between the pre-semantic freshness proof and the
+ * authorization-time one. The read count is exposed so a test can prove a read happened after the
+ * mutation, rather than assuming which proof refused.
+ */
+export function mutatingReadStore(inner: CanonicalStore, afterRead: number, during: () => void): ReadCountingStore {
+  let reads = 0;
+  const store: CanonicalStore = {
+    getState: () => {
+      const state = inner.getState();
+      reads += 1;
+      if (reads === afterRead) during();
+      return state;
+    },
+    subscribe: (listener) => inner.subscribe(listener),
+    dispatch: (action) => inner.dispatch(action),
+    dispatchMap: (action) => inner.dispatchMap(action),
+    dispatchTemporal: (action) => inner.dispatchTemporal(action),
+    dispatchReturn: (action) => inner.dispatchReturn(action),
+    ingest: (event) => inner.ingest(event),
+  };
+  return { store, reads: () => reads };
 }
 
 export const world = (fixture: DisclosureFixture): HistoricalDisclosure => disclosureFixture(fixture);

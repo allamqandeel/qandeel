@@ -9,7 +9,19 @@ return and the consumption of reversible history.
 
 Source: `apps/mobile/src/return-navigation/`. Static contract:
 `tests/return-navigation-layer-contract.test.mjs` (`npm run test:return-navigation-layer-contract`).
-Behaviour: the nine Jest suites `RN07-A…RN07-I` under `apps/mobile/src/return-navigation/__tests__/`.
+Behaviour: the ten Jest suites `RN07-A…RN07-J` under `apps/mobile/src/return-navigation/__tests__/`.
+
+Seven modules, and the boundary each one exists to hold:
+
+| Module | What it owns |
+| --- | --- |
+| `return-actions.ts` | the authorization set, the plan, the action constructor, the mint, the six executors, and the one capability question that needs a proven projection. Nothing but the verifier, the executors and that query is exported. |
+| `checkpoint-target.ts` | provenance-bound handles for recorded checkpoints. It can resolve one; it can neither mint nor dispatch. |
+| `focus-target.ts` | the one Live Focus → Map target mapping, the landing resolution, and the technical reading of what the client actually holds. |
+| `surface.ts` | the entry gate every committed act passes: T-06's Preview cancellation, first. |
+| `outcomes.ts` | the outcome vocabulary, and the mapping of one dispatch attempt into it. It cannot dispatch. |
+| `availability.ts` | the state-only, Class-A generic availability model. |
+| `index.ts` | the whole public surface. |
 
 ---
 
@@ -43,9 +55,15 @@ anywhere, persistent or otherwise.
 The store holds only a **verifier**: it can answer whether it authorized this exact action object and
 whether that authorization is unused, and it can never mint one.
 
-`authority.ts` is the whole executable seam of the layer. It is the only place a return action is
-constructed, the only `authorized.add`, and the only call of `store.dispatchReturn` — and because the
-dispatch happens there too, a granted action object never leaves the module. Consequently:
+`return-actions.ts` is the whole executable seam of the layer, and it is deliberately shaped like
+T-04's `map-actions.ts` and T-06's `temporal-actions.ts`: the authorization set, the plan types, the
+action constructor, the mint and all six executors live in ONE module, and none of the first four is
+exported. `runReturnPlan` is a module-local function declaration, so there is no deep import, no
+re-export and no future consumer that can reach the mint — the seam is private by construction, not
+merely absent from the barrel. It is the only place a return action is constructed, the only
+`authorized.add`, and the only call of `store.dispatchReturn`, so a granted action object never
+leaves the module. (The outcome module cannot dispatch either: `reportReturnDispatch` maps a thunk
+the caller supplies, and never names the canonical seam.) Consequently:
 
 - raw `store.dispatch(...)` refuses every return act by identity, naming the boundary crossed;
 - `dispatchMap(...)` and `dispatchTemporal(...)` refuse them by family, before any authority is asked;
@@ -59,6 +77,14 @@ dispatch happens there too, a granted action object never leaves the module. Con
 
 TypeScript branding is not the mechanism. The check is object identity in a `WeakSet`, consumed on
 use, so a `true` flag, a string token or a brand buys nothing.
+
+A static architecture guard walks every production mobile source file outside the layer and refuses
+a deep import of any of its modules — only the barrel is a surface — and any mention of
+`runReturnPlan`, `ReturnPlan`, `AuthorizedLanding`, `buildAction`, `requireCurrentContext`,
+`resolveCheckpointTarget` or `reportReturnDispatch`. `.dispatchReturn(` is refused there too,
+everywhere but the kernel that declares it. So a later consumer cannot acquire the seam, and cannot
+bypass Preview precedence, the D1 or P5 binding, Exact Return's target resolution or the canonical
+World target by reaching past the six executors.
 
 ## 3. RH: append **or** consume, and nowhere else
 
@@ -202,17 +228,33 @@ what happens to be visible and nothing is recentred on an "important" object. `I
 World rung may make its render depth-withheld, which is a derived presentation result, not an erasure
 of what the reader asked for. Already exactly there is a true no-op.
 
-## 9. Projection freshness
+## 9. Projection freshness, and why it comes before meaning
 
-Spatial entitlement remains T-04's. The layer calls `mapContextFreshness` in exactly one place — the
-mint — against the viewpoint the act **arrives** at (`postActState`), which differs from the current
-one in `TM` alone and only for P5. `mapProjectionRequest` is derived exactly once, for the hypothetical
-post-live viewpoint. There is no second locatability algorithm, no second Map disclosure or cache, no
-second Live Focus resolver and no transport of any kind.
+Spatial entitlement remains T-04's. The layer calls `mapContextFreshness` in exactly one place, and
+always against the viewpoint the act **arrives** at (`postActState`), which differs from the current
+one in `TM` alone and only for P5. `mapProjectionRequest` is derived exactly once, for the
+hypothetical post-live viewpoint. There is no second locatability algorithm, no second Map disclosure
+or cache, no second Live Focus resolver and no transport of any kind.
+
+That one rule is consulted at **two** moments, and both are necessary:
+
+- **before meaning.** `requireCurrentContext` proves the supplied context IS this act's viewpoint
+  before any entitlement or locatability question is asked of it. Without that, a stale,
+  foreign-Session, wrong-position or wrong-depth scene that simply does not happen to contain the
+  bound referent would escape as a semantic `NOT_ENTITLED` or `NOT_LOCATABLE` — a statement about the
+  world derived from a projection of somewhere else. Staleness is a fact about the client; it is
+  never evidence about the world. Structurally, in every function that asks a projection a semantic
+  question, the proof precedes the question, and the static contract asserts that ordering.
+- **at authorization.** The mint proves it again, because the viewpoint can move between the two: a
+  Live Head advance under `FOLLOW_LIVE`, or a committed temporal change, retires the scene the
+  landing was resolved from. A landing may only be dispatched from a projection that is still the
+  arriving viewpoint's.
 
 `NOT_FETCHED`, `UNAVAILABLE` and an incoherent held disclosure are reported as one **technical**
-outcome (`PROJECTION_NOT_AVAILABLE`) and never as `NOT_LOCATABLE`: they are facts about the client,
-not facts about the world.
+outcome (`PROJECTION_NOT_AVAILABLE`) and never as `NOT_LOCATABLE` or `NOT_ENTITLED`: they are facts
+about the client, not facts about the world. For P5 every one of these technical answers leaves the
+temporal Live return standing alone — still one canonical dispatch, still one Product transaction,
+camera untouched and no intermediate checkpoint.
 
 ## 10. No hindsight in any result
 
@@ -221,10 +263,27 @@ Focus identity, a display label, a Home, a direction, a distance, a coordinate, 
 accessibility set size or a "go there" hint. `locate` says only what happened to the spatial part of
 the act — landed, already there, or one of the truthful reasons nothing moved.
 
-`returnAvailability(state)` is the minimal non-pointer substrate: five booleans and a count of the
-reader's **own** recorded checkpoints. `liveFocusReturnAvailable` states only that live attention
-exists somewhere — the generic "Live continued" statement already permitted upstream — and never what
-or where it is.
+`returnAvailability(state)` is the minimal non-pointer substrate, derived from Class A alone: four
+booleans about the reader's own committed viewpoint and a count of the reader's **own** recorded
+checkpoints. It says that Live exists and that a route back to Live is available — the generic Live
+meta a historical reader is permitted — and nothing else.
+
+It deliberately carries **no Live-Focus capability bit**. `LF != NONE` is live truth, and from a
+historical position that is future-relative: a bit derived from it can reveal that a Thread exists
+which `K(TC)` does not disclose, which is exactly the future-state information the historical
+firewall exists to keep out. It would also overstate the act, because a live Thread with no
+legitimate place at the reader's viewpoint is not a landing.
+
+That question is therefore answered only by `liveFocusReturnAvailability(store, context)`, which
+proves the projection is this viewpoint's first and then asks the same locatability substrate the act
+itself uses. `UNPROVEN` is not a weaker `UNAVAILABLE`: it means the question was never asked, so an
+unproven projection leaks nothing either — not even whether a Live Focus exists. It holds no token,
+no cache and no capability that could outlive its justification, and it names nothing.
+
+The differential this preserves: two historical states with the same committed viewpoint, camera,
+inspection, `RH` and Live advancement, differing only in that one has `LF = NONE` and the other a
+future Thread unavailable at `TC`, produce an identical generic model **and** an identical
+projection-bound answer.
 
 ## 11. Accessibility, RTL and motion
 

@@ -8,9 +8,9 @@
  */
 import { sessionPosition } from '../../state';
 import { decodeWorldAnchorRef, panByTranslation } from '../../map';
-import { returnLiveFocus } from '../live-focus';
+import { returnLiveFocus } from '../return-actions';
 import { focusMapTarget, returnMapContext } from '../focus-target';
-import { contextAt, interposingPreview, mutatingDispatchStore, returnSurface, returnTestStore, world } from '../__fixtures__/return';
+import { contextAt, interposingPreview, mutatingDispatchStore, mutatingReadStore, returnSurface, returnTestStore, world } from '../__fixtures__/return';
 
 const SP = sessionPosition;
 
@@ -170,6 +170,87 @@ describe('RN07-F — Return to Live Focus (D1)', () => {
       if (object.family === 'THREAD') expect(object.loci).toHaveLength(1);
       if (object.family === 'EMERGING_FOCUS') expect(object.loci).toHaveLength(0);
     }
+  });
+
+  // R1-01 — freshness must be established BEFORE any semantic entitlement or locatability answer can
+  // escape. A stale scene that simply does not contain the bound referent is a fact about the client;
+  // reporting it as "not disclosed here" or "has no place here" would be a false statement about the
+  // world, made from a projection of somewhere else.
+  it('R1-01 — a wrong-position context whose scene lacks the referent is STALE, never NOT_ENTITLED', () => {
+    const store = returnTestStore({ liveHead: 20, temporal: { kind: 'PINNED', at: SP(6) }, liveFocus: { kind: 'ESTABLISHED_THREAD', threadId: 'thread-a' } });
+    // A scene for a DIFFERENT position that happens not to contain Thread A at all.
+    const elsewhere = contextAt(world({ depth: 'SESSION', tc: 12, liveHead: 20, threads: [THREAD_B] }));
+    const before = store.getState();
+
+    const outcome = returnLiveFocus(returnSurface(store), { context: elsewhere });
+    expect(outcome.outcome).toBe('REJECTED');
+    expect(outcome.outcome === 'REJECTED' && outcome.code).toBe('STALE_PROJECTION');
+    expect(JSON.stringify(outcome)).not.toMatch(/NOT_ENTITLED|NOT_LOCATABLE/u);
+    expect(store.getState()).toBe(before);
+    expect(store.getState().history).toHaveLength(0);
+  });
+
+  it('R1-01 — a wrong-depth context with an ungeographic referent is STALE, never NOT_LOCATABLE', () => {
+    const store = returnTestStore({ liveHead: 20, temporal: { kind: 'PINNED', at: SP(6) }, liveFocus: { kind: 'EMERGING_FOCUS', emergingFocusId: 'focus-1' } });
+    // At the THREAD rung the Session rung is withheld, so an Emerging Focus resolves to nothing —
+    // which would read as a semantic answer if freshness were checked afterwards.
+    const wrongDepth = contextAt(here(6, 20, 'THREAD'));
+    const before = store.getState();
+
+    const outcome = returnLiveFocus(returnSurface(store), { context: wrongDepth });
+    expect(outcome.outcome === 'REJECTED' && outcome.code).toBe('STALE_PROJECTION');
+    expect(JSON.stringify(outcome)).not.toMatch(/NOT_ENTITLED|NOT_LOCATABLE/u);
+    expect(store.getState()).toBe(before);
+  });
+
+  it('R1-01 — a foreign-Session context with no landing is a technical refusal, never semantic', () => {
+    const store = returnTestStore({ liveHead: 20, temporal: { kind: 'PINNED', at: SP(6) }, liveFocus: { kind: 'ESTABLISHED_THREAD', threadId: 'thread-a' } });
+    const foreign = contextAt(world({ depth: 'SESSION', sessionId: 'session-other', tc: 6, liveHead: 20, threads: [] }));
+    const before = store.getState();
+
+    const outcome = returnLiveFocus(returnSurface(store), { context: foreign });
+    expect(outcome.outcome === 'REJECTED' && outcome.code).toBe('STALE_PROJECTION');
+    expect(JSON.stringify(outcome)).not.toMatch(/NOT_ENTITLED|NOT_LOCATABLE/u);
+    expect(store.getState()).toBe(before);
+  });
+
+  it('R1-01 anti-over-fix — a CURRENT context with a legitimately absent referent is still NOT_ENTITLED', () => {
+    const store = returnTestStore({ liveHead: 20, temporal: { kind: 'PINNED', at: SP(6) }, liveFocus: { kind: 'ESTABLISHED_THREAD', threadId: 'thread-later' } });
+    // The projection IS this viewpoint's; the Thread genuinely is not part of K(TC).
+    const outcome = returnLiveFocus(returnSurface(store), { context: contextAt(here(6, 20)) });
+    expect(outcome).toEqual({ outcome: 'NO_OP', reason: 'NO_LEGITIMATE_LANDING', locate: 'NOT_ENTITLED' });
+  });
+
+  it('R1-01 anti-over-fix — a CURRENT context with a legitimately ungeographic referent is still NOT_LOCATABLE', () => {
+    const store = returnTestStore({ liveHead: 20, temporal: { kind: 'PINNED', at: SP(6) }, liveFocus: { kind: 'EMERGING_FOCUS', emergingFocusId: 'focus-1' } });
+    const outcome = returnLiveFocus(returnSurface(store), { context: contextAt(here(6, 20)) });
+    expect(outcome).toEqual({ outcome: 'NO_OP', reason: 'NO_LEGITIMATE_LANDING', locate: 'NOT_LOCATABLE' });
+  });
+
+  it('R1-01 — the authorization-time recheck survives: a viewpoint that moves AFTER the preflight cannot land', () => {
+    const context = contextAt(here(6, 20));
+    const focus = { kind: 'ESTABLISHED_THREAD', threadId: 'thread-a' } as const;
+
+    // Control: with nothing interposed, this exact call lands. So if the act refuses below, the
+    // refusal came from a check that ran after the interposed move — not from the preflight.
+    const control = returnTestStore({ liveHead: 20, temporal: { kind: 'PINNED', at: SP(6) }, liveFocus: focus });
+    expect(returnLiveFocus(returnSurface(control), { context }).outcome).toBe('APPLIED');
+
+    // Now the reader's committed position moves immediately after the PREFLIGHT's own read of
+    // canonical state, retiring the scene the landing was resolved from.
+    const inner = returnTestStore({ liveHead: 20, temporal: { kind: 'PINNED', at: SP(6) }, liveFocus: focus });
+    const counting = mutatingReadStore(inner, 2, () => {
+      expect(inner.dispatch({ type: 'COMMIT_MOMENT', moment: SP(5) }).outcome).toBe('APPLIED');
+    });
+    const camera = inner.getState().camera;
+
+    const outcome = returnLiveFocus(returnSurface(counting.store), { context });
+    expect(outcome.outcome === 'REJECTED' && outcome.code).toBe('STALE_PROJECTION');
+    // A read happened after the move, so a second freshness proof genuinely ran and refused.
+    expect(counting.reads()).toBeGreaterThan(2);
+    expect(inner.getState().camera).toBe(camera);
+    // The only checkpoint is the interposed move's own; the refused return act recorded nothing.
+    expect(inner.getState().history.map((entry) => entry.act)).toEqual(['COMMIT_MOMENT']);
   });
 
   it('the act never writes the temporal mode, even when it lands', () => {

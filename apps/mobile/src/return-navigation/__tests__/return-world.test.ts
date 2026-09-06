@@ -7,8 +7,7 @@
  */
 import { cameraIntentEquals, sessionPosition } from '../../state';
 import { DEFAULT_MAP_SCALE, WORLD_ORIGIN, initialCameraIntent, panByTranslation, scaleIntentRef, worldAnchorRef, zoomSemanticStep } from '../../map';
-import { returnWorld } from '../return-world';
-import { backOneStep } from '../history-restoration';
+import { backOneStep, returnWorld } from '../return-actions';
 import { returnSurface, returnTestStore, unavailableInspectionRef } from '../__fixtures__/return';
 
 const SP = sessionPosition;

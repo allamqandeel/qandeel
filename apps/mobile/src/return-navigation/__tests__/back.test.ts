@@ -7,8 +7,7 @@
  */
 import { RETURN_ACTION_TYPES, opaqueRef, sessionPosition, type CanonicalStore } from '../../state';
 import { panByTranslation, zoomSemanticStep } from '../../map';
-import { backOneStep } from '../history-restoration';
-import { returnLiveHead } from '../live-head';
+import { backOneStep, returnLiveHead } from '../return-actions';
 import { returnSurface, returnTestStore, unavailableInspectionRef, viewpoint } from '../__fixtures__/return';
 
 const SP = sessionPosition;

@@ -7,10 +7,8 @@
 import { CANONICAL_STATE_KEYS, RETURN_ACTION_TYPES, sessionPosition } from '../../state';
 import { panByTranslation, zoomSemanticStep } from '../../map';
 import { commitMoment } from '../../temporal-navigation';
-import { returnLiveHead } from '../live-head';
-import { returnWorld } from '../return-world';
-import { returnLiveFocus } from '../live-focus';
-import { backOneStep, exactReturn, returnCheckpoints } from '../history-restoration';
+import { backOneStep, exactReturn, returnLiveFocus, returnLiveHead, returnWorld } from '../return-actions';
+import { returnCheckpoints } from '../checkpoint-target';
 import { RETURN_ACT_IDS, returnAvailability } from '../availability';
 import { contextAt, returnSurface, returnTestStore, spatialViewpoint, viewpoint, world } from '../__fixtures__/return';
 
@@ -145,7 +143,6 @@ describe('RN07-I — mixed chains and layer boundaries', () => {
     expect(availability).toEqual({
       liveReturnAvailable: true,
       historical: true,
-      liveFocusReturnAvailable: true,
       worldReturnAvailable: true,
       backAvailable: true,
       checkpointCount: 1,

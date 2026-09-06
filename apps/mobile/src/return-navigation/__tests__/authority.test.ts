@@ -19,10 +19,7 @@ import {
   type ReturnActionAuthority,
 } from '../../state';
 import { WORLD_ORIGIN, canonicalWorldAddress, initialCameraIntent, mapDestination, panByTranslation, spatialDestinationRef, worldAnchorRef } from '../../map';
-import { RETURN_ACTION_AUTHORITY } from '../authority';
-import { returnLiveHead } from '../live-head';
-import { returnWorld } from '../return-world';
-import { backOneStep } from '../history-restoration';
+import { RETURN_ACTION_AUTHORITY, backOneStep, returnLiveHead, returnWorld } from '../return-actions';
 import { returnSurface, returnTestStore } from '../__fixtures__/return';
 
 /** A canonical world address that is not the origin, so an injected camera write is a real change. */
