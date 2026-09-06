@@ -1468,6 +1468,23 @@ async function verifySubjectGrounding(owner, other, legacy) {
   eq((await appearancesOf(HA))[0], ahmedAppearance, 'SG-14: an Evidence attach changes no appearance');
   eq((await groundingsOf(HA)).map((g) => g.emerging_focus_id), [world.focuses.ahmed], 'and no grounding');
 
+  // --- PRE_FIRST_SP: a Session without a committed Moment has no addressable
+  //     frontier. The universe is EMPTY - never fabricated - the generation
+  //     still completes and persists through the frozen core, and nothing is
+  //     grounded or bound. (This is exactly the shape the A2 runtime smoke
+  //     drives: finalized turns, no committed CU yet.)
+  const bare = await newSession(owner);
+  await newLogicalTransaction();
+  const gBare = await beginGeneration(owner, bare, legacy);
+  eq(gBare.universe, { executionId: gBare.id, frontierSp: null, entries: [] }, 'no committed Moment -> no frontier -> an empty universe, never a fabricated one');
+  await identity('postgres');
+  eq((await one('SELECT frontier_sp, entries FROM public.hypothesis_subject_grounding_universes WHERE execution_id=$1', [gBare.id])), { frontier_sp: null, entries: [] }, 'and it is stored as such');
+  const HB = randomUUID();
+  await completeAndPersist(gBare, [{ id: HB, statement: 'a reading generated before the first Moment', handles: [] }]);
+  strict((await one('SELECT count(*)::int n FROM public.hypotheses WHERE id=$1', [HB])).n, 1, 'the generation persisted through the frozen core');
+  eq(await groundingsOf(HB), [], 'grounded nothing');
+  eq(await appearancesOf(HB), [], 'and appears nowhere');
+
   // --- SG-15: legacy Hypotheses carry no grounding and no appearance, ever.
   eq(await groundingsOf(legacy.H0), [], 'SG-15: a legacy Hypothesis receives no guessed grounding');
   eq(await appearancesOf(legacy.H0), [], 'and no appearance');
