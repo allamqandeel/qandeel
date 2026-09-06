@@ -24,8 +24,11 @@ import {
   TEMPORAL_PREVIEW_MARKER_TEST_ID,
   TemporalTargetLayer,
 } from '../timeline-integration';
-import { commitMoment, temporalBounds } from '../targeting';
-import { temporalTestStore, trackOf } from '../__fixtures__/temporal';
+import { commitMoment } from '../targeting';
+import { fullyDisclosedTargeting, temporalTestStore, trackOf } from '../__fixtures__/temporal';
+
+/** One gesture's interaction epoch, in the order the two runtimes would actually deliver it. */
+const GESTURE = 1;
 
 const flatten = (style: unknown): Record<string, unknown> =>
   Object.assign({}, ...(Array.isArray(style) ? style : [style]).filter((entry) => entry !== null && typeof entry === 'object'));
@@ -113,13 +116,13 @@ describe('TN06-18 — interrupted motion', () => {
     const handlers = createScrubHandlers({ store, preview, snapshot: presentation.getSnapshot });
     const before = store.getState();
 
-    handlers.targetIndex(1);
-    handlers.targetIndex(2);
-    handlers.targetIndex(5);
+    handlers.targetIndex(GESTURE, 1);
+    handlers.targetIndex(GESTURE, 2);
+    handlers.targetIndex(GESTURE, 5);
     expect(preview.getSnapshot()).toMatchObject({ status: 'PREVIEWING', ptc: 6 });
 
     // Cancellation, failure, interruption and a competing recognizer all arrive as `false`.
-    handlers.settle(false);
+    handlers.settle(GESTURE, false);
 
     expect(preview.getSnapshot()).toEqual({ status: 'IDLE' });
     expect(store.getState()).toBe(before);
@@ -138,8 +141,8 @@ describe('TN06-18 — interrupted motion', () => {
       onOutcome: (outcome) => outcomes.push(outcome.outcome),
     });
 
-    for (const index of [0, 1, 2, 3, 4, 3, 2]) handlers.targetIndex(index);
-    handlers.settle(true);
+    for (const index of [0, 1, 2, 3, 4, 3, 2]) handlers.targetIndex(GESTURE, index);
+    handlers.settle(GESTURE, true);
 
     expect(outcomes).toEqual(['APPLIED']);
     expect(store.getState().temporal).toEqual({ kind: 'PINNED', at: 3 });
@@ -147,7 +150,7 @@ describe('TN06-18 — interrupted motion', () => {
     expect(preview.getSnapshot()).toEqual({ status: 'IDLE' });
   });
 
-  it('a settle after a cancellation commits nothing, because there is nothing previewed', () => {
+  it('a settle after a cancellation commits nothing, and neither does a settle owning no target', () => {
     const store = temporalTestStore({ liveHead: 8 });
     const preview = createTemporalPreviewController();
     const presentation = createPresentationController(trackOf('session-1', 8), 240);
@@ -159,9 +162,13 @@ describe('TN06-18 — interrupted motion', () => {
       onOutcome: (outcome) => outcomes.push(`${outcome.outcome}`),
     });
 
-    handlers.targetIndex(3);
-    handlers.settle(false);
-    handlers.settle(true);
+    handlers.targetIndex(GESTURE, 3);
+    handlers.settle(GESTURE, false);
+    // The same gesture cannot settle twice: it is already closed, so this changes nothing at all.
+    handlers.settle(GESTURE, true);
+    // A LATER gesture that never established a target of its own fails closed rather than
+    // committing whatever preview happens to be lying around.
+    handlers.settle(GESTURE + 1, true);
 
     expect(outcomes).toEqual(['REJECTED']);
     expect(store.getState().history).toHaveLength(0);
@@ -192,7 +199,7 @@ describe('TN06-19 — reduced-motion parity', () => {
       const preview = createTemporalPreviewController();
       const presentation = createPresentationController(trackOf('session-1', 8), 240);
 
-      preview.preview(temporalBounds(store.getState()), sessionPosition(5), 'EXACT_ENTRY');
+      preview.preview(fullyDisclosedTargeting(store), sessionPosition(5), 'EXACT_ENTRY');
       const view = await render(<TemporalTargetLayer store={store} preview={preview} presentation={presentation} />);
 
       const cursor = translateX(view.getByTestId(TEMPORAL_PREVIEW_MARKER_TEST_ID).props.style);

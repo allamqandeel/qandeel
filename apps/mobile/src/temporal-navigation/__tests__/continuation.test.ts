@@ -8,8 +8,8 @@
 import { sessionPosition } from '../../state';
 import { createForwardContinuation } from '../continuation';
 import { createTemporalPreviewController } from '../preview';
-import { commitPreviewedTarget, nextForwardTarget, temporalBounds } from '../targeting';
-import { temporalTestStore } from '../__fixtures__/temporal';
+import { commitPreviewedTarget, disclosedTargetAuthority, nextDisclosedTarget, nextForwardTarget, temporalTargeting } from '../targeting';
+import { fullyDisclosedTargeting, temporalTestStore, trackOf } from '../__fixtures__/temporal';
 
 describe('TN06-11 — relative forward continuation', () => {
   it('advances the ephemeral target one addressable Session Position at a time', () => {
@@ -18,10 +18,10 @@ describe('TN06-11 — relative forward continuation', () => {
     const continuation = createForwardContinuation(preview);
     const before = store.getState();
 
-    expect(continuation.step(temporalBounds(store.getState())).outcome).toBe('PREVIEWING');
+    expect(continuation.step(fullyDisclosedTargeting(store)).outcome).toBe('PREVIEWING');
     expect(preview.getSnapshot()).toMatchObject({ ptc: 3, source: 'RELATIVE_FORWARD' });
-    continuation.step(temporalBounds(store.getState()));
-    continuation.step(temporalBounds(store.getState()));
+    continuation.step(fullyDisclosedTargeting(store));
+    continuation.step(fullyDisclosedTargeting(store));
     expect(preview.getSnapshot()).toMatchObject({ ptc: 5 });
 
     expect(store.getState()).toBe(before);
@@ -32,7 +32,7 @@ describe('TN06-11 — relative forward continuation', () => {
     const store = temporalTestStore({ liveHead: 4, temporal: { kind: 'PINNED', at: sessionPosition(3) } });
     const preview = createTemporalPreviewController();
     const continuation = createForwardContinuation(preview);
-    const bounds = temporalBounds(store.getState());
+    const bounds = fullyDisclosedTargeting(store);
 
     expect(continuation.step(bounds)).toMatchObject({ outcome: 'PREVIEWING' });
     expect(preview.getSnapshot()).toMatchObject({ ptc: 4 });
@@ -44,10 +44,10 @@ describe('TN06-11 — relative forward continuation', () => {
     const store = temporalTestStore({ liveHead: 4, temporal: { kind: 'PINNED', at: sessionPosition(3) } });
     const preview = createTemporalPreviewController();
     const continuation = createForwardContinuation(preview);
-    continuation.step(temporalBounds(store.getState()));
-    continuation.step(temporalBounds(store.getState()));
+    continuation.step(fullyDisclosedTargeting(store));
+    continuation.step(fullyDisclosedTargeting(store));
 
-    expect(commitPreviewedTarget(store, preview).outcome).toBe('APPLIED');
+    expect(commitPreviewedTarget(store, preview, fullyDisclosedTargeting(store)).outcome).toBe('APPLIED');
     expect(store.getState().temporal).toEqual({ kind: 'PINNED', at: 4 });
   });
 
@@ -56,12 +56,12 @@ describe('TN06-11 — relative forward continuation', () => {
     const preview = createTemporalPreviewController();
     const continuation = createForwardContinuation(preview);
 
-    continuation.step(temporalBounds(store.getState()));
+    continuation.step(fullyDisclosedTargeting(store));
     expect(preview.getSnapshot()).toMatchObject({ ptc: 3 });
-    expect(continuation.step(temporalBounds(store.getState()))).toEqual({ outcome: 'UNCHANGED' });
+    expect(continuation.step(fullyDisclosedTargeting(store))).toEqual({ outcome: 'UNCHANGED' });
 
     store.ingest({ type: 'LIVE_HEAD_ADVANCED', toSp: sessionPosition(5) });
-    expect(continuation.step(temporalBounds(store.getState()))).toMatchObject({ outcome: 'PREVIEWING' });
+    expect(continuation.step(fullyDisclosedTargeting(store))).toMatchObject({ outcome: 'PREVIEWING' });
     expect(preview.getSnapshot()).toMatchObject({ ptc: 4 });
     // Still ephemeral: the advancing Live Head committed nothing on the continuation's behalf.
     expect(store.getState().temporal).toEqual({ kind: 'PINNED', at: 2 });
@@ -73,9 +73,12 @@ describe('TN06-11 — relative forward continuation', () => {
     const preview = createTemporalPreviewController();
     const continuation = createForwardContinuation(preview);
     // FOLLOW_LIVE at LH = 6: there is nothing later, so a first step changes nothing.
-    expect(continuation.step(temporalBounds(store.getState()))).toEqual({ outcome: 'UNCHANGED' });
+    expect(continuation.step(fullyDisclosedTargeting(store))).toEqual({ outcome: 'UNCHANGED' });
 
-    const empty = { sessionId: 'session-1', liveHead: null, mode: 'FOLLOW_LIVE' as const, committedTc: null };
+    const empty = {
+      bounds: { sessionId: 'session-1', liveHead: null, mode: 'FOLLOW_LIVE' as const, committedTc: null },
+      disclosed: disclosedTargetAuthority(trackOf('session-1', 0)),
+    };
     expect(continuation.step(empty)).toMatchObject({ outcome: 'REJECTED', code: 'NO_ADDRESSABLE_POSITION' });
   });
 
@@ -86,7 +89,7 @@ describe('TN06-11 — relative forward continuation', () => {
       const preview = createTemporalPreviewController();
       const continuation = createForwardContinuation(preview, { intervalMs: 50 });
 
-      expect(continuation.begin(() => temporalBounds(store.getState())).outcome).toBe('PREVIEWING');
+      expect(continuation.begin(() => fullyDisclosedTargeting(store)).outcome).toBe('PREVIEWING');
       expect(preview.getSnapshot()).toMatchObject({ ptc: 2 });
       expect(continuation.running).toBe(true);
 
@@ -110,6 +113,19 @@ describe('TN06-11 — relative forward continuation', () => {
     expect(nextForwardTarget(bounds, 3)).toEqual({ outcome: 'STEP', sp: 4 });
     expect(nextForwardTarget(bounds, 5)).toMatchObject({ outcome: 'REJECTED', code: 'BEYOND_LIVE_HEAD' });
   });
+
+  it('R1-01 — keeps the canonical bound and the disclosure horizon as two distinguishable answers', () => {
+    const store = temporalTestStore({ liveHead: 100, temporal: { kind: 'PINNED', at: sessionPosition(79) } });
+    const partial = temporalTargeting(store.getState(), trackOf('session-1', 80));
+    const complete = temporalTargeting(store.getState(), trackOf('session-1', 100));
+
+    expect(nextDisclosedTarget(partial, 79)).toEqual({ outcome: 'STEP', sp: 80 });
+    expect(nextDisclosedTarget(partial, 80)).toEqual({ outcome: 'AT_DISCLOSURE_HORIZON', sp: 80 });
+    expect(nextDisclosedTarget(complete, 80)).toEqual({ outcome: 'STEP', sp: 81 });
+    expect(nextDisclosedTarget(complete, 100)).toEqual({ outcome: 'AT_LIVE_HEAD', sp: 100 });
+    // A position outside disclosure cannot even be a starting point for a step.
+    expect(nextDisclosedTarget(partial, 90)).toMatchObject({ outcome: 'REJECTED', code: 'NOT_DISCLOSED' });
+  });
 });
 
 describe('TN06-12 — cancellation under continuation', () => {
@@ -121,7 +137,7 @@ describe('TN06-12 — cancellation under continuation', () => {
       const continuation = createForwardContinuation(preview, { intervalMs: 50 });
       const before = store.getState();
 
-      continuation.begin(() => temporalBounds(store.getState()));
+      continuation.begin(() => fullyDisclosedTargeting(store));
       jest.advanceTimersByTime(200);
       expect(preview.getSnapshot().status).toBe('PREVIEWING');
 
@@ -146,7 +162,10 @@ describe('TN06-12 — cancellation under continuation', () => {
     try {
       const preview = createTemporalPreviewController();
       const continuation = createForwardContinuation(preview, { intervalMs: 10 });
-      const empty = { sessionId: 'session-1', liveHead: null, mode: 'FOLLOW_LIVE' as const, committedTc: null };
+      const empty = {
+      bounds: { sessionId: 'session-1', liveHead: null, mode: 'FOLLOW_LIVE' as const, committedTc: null },
+      disclosed: disclosedTargetAuthority(trackOf('session-1', 0)),
+    };
 
       expect(continuation.begin(() => empty)).toMatchObject({ outcome: 'REJECTED' });
       expect(continuation.running).toBe(false);

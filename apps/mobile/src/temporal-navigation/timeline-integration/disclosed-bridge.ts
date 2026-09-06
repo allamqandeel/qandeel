@@ -21,7 +21,8 @@
  * Session Position and the coordinate is discarded.
  */
 import { hitTest, type DisclosedMomentTarget, type DisclosedTrack, type PresentationSnapshot } from '../../timeline';
-import { resolveTemporalTarget, type TargetResolution, type TemporalBounds } from '../targeting/addressability';
+import type { TargetResolution } from '../targeting/addressability';
+import { resolveDisclosedTarget, type TemporalTargeting } from '../targeting/disclosed-availability';
 
 /**
  * Sub-point correction for the right-to-left mirror. A logical coordinate is a half-open `[0, w)`
@@ -59,17 +60,26 @@ export function disclosedTargetAt(snapshot: PresentationSnapshot, x: number, rtl
 /**
  * Turns an EXPLICITLY activated disclosed target into a temporal target, or refuses it.
  *
- * The Track's Session is checked against the canonical mirror's Session first: a presentation built
- * for another Session is a defect, never a merge, and its ordinals mean nothing here. After that the
- * one addressability gate decides, so a disclosed target enjoys no privilege over any other route —
- * being visible on a Timeline is not an entitlement.
+ * The Track this target came from is checked against the targeting authority's own Track first: a
+ * presentation built for another Session, or a row handed in from a Track that is not the one
+ * currently authorizing interaction, is a defect and never a merge. After that the ONE interaction
+ * gate decides — canonical validity, then disclosed membership — so the pointer route enjoys no
+ * privilege and gains no second rule: being visible on a Timeline is not, by itself, authority.
  */
-export function temporalTargetFromDisclosed(bounds: TemporalBounds, track: DisclosedTrack, target: DisclosedMomentTarget): TargetResolution {
-  if (track.sessionId !== bounds.sessionId) {
-    return { ok: false, code: 'SESSION_MISMATCH', detail: `the disclosed Track covers Session ${track.sessionId}; the mirrored Session is ${bounds.sessionId}` };
+export function temporalTargetFromDisclosed(
+  targeting: TemporalTargeting,
+  track: DisclosedTrack,
+  target: DisclosedMomentTarget,
+): TargetResolution {
+  if (track.sessionId !== targeting.bounds.sessionId || track.sessionId !== targeting.disclosed.sessionId) {
+    return {
+      ok: false,
+      code: 'SESSION_MISMATCH',
+      detail: `the disclosed Track covers Session ${track.sessionId}; the mirrored Session is ${targeting.bounds.sessionId}`,
+    };
   }
   if (target === null || typeof target !== 'object') {
     return { ok: false, code: 'INVALID_INPUT', detail: 'a disclosed Moment target is required' };
   }
-  return resolveTemporalTarget(bounds, target.sessionPosition);
+  return resolveDisclosedTarget(targeting, target.sessionPosition);
 }

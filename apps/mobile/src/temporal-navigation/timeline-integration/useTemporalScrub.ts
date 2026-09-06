@@ -12,7 +12,12 @@
  *     48-point step of travel — and once more when the gesture ends;
  *   - every Product decision lives in `createScrubHandlers`, on the RN runtime, where it is
  *     ordinary testable code. Nothing in a worklet decides what is addressable, what is previewed,
- *     what is committed or what is cancelled.
+ *     what is committed or what is cancelled;
+ *   - every scheduled callback carries the EPOCH of the gesture that produced it (R1-02). The epoch
+ *     is a monotonic counter incremented once per gesture on the UI runtime, and the RN-runtime
+ *     handlers own the state machine over it, so a callback that arrives after its gesture has
+ *     settled, cancelled, failed or been superseded changes nothing — whatever order the two
+ *     runtimes deliver in. Correctness does not depend on scheduling luck.
  *
  * The gesture activates at zero distance, so a tap and a drag are one interaction: a tap previews
  * its target and commits it on release, a drag previews each step it crosses and commits the last
@@ -65,6 +70,9 @@ export function useTemporalScrub(options: TemporalScrubOptions): TemporalScrubBi
   const viewport = useSharedValue(geometry.viewport);
   const windowOffset = useSharedValue(geometry.windowOffset);
   const rtl = useSharedValue(geometry.rtl ? 1 : 0);
+  // The interaction epoch. Incremented once per gesture on the UI runtime and carried by every
+  // callback this hook schedules, so the RN-runtime handlers can tell which gesture is speaking.
+  const epoch = useSharedValue(0);
   useEffect(() => {
     viewport.set(geometry.viewport);
     windowOffset.set(geometry.windowOffset);
@@ -80,7 +88,7 @@ export function useTemporalScrub(options: TemporalScrubOptions): TemporalScrubBi
     },
     (index, previous) => {
       // The threshold, not the frame: the RN runtime hears about a crossing, never about a pixel.
-      if (index !== previous && index !== NO_STEP) scheduleOnRN(handlers.targetIndex, index);
+      if (index !== previous && index !== NO_STEP) scheduleOnRN(handlers.targetIndex, epoch.get(), index);
     },
   );
 
@@ -90,6 +98,9 @@ export function useTemporalScrub(options: TemporalScrubOptions): TemporalScrubBi
         .minDistance(0)
         .enabled(enabled)
         .onBegin((event) => {
+          // One increment per gesture, before anything can be scheduled for it. Every later
+          // callback of this gesture carries this number, and no other gesture can reuse it.
+          epoch.set(epoch.get() + 1);
           fingerX.set(event.x);
           tracking.set(1);
         })
@@ -98,15 +109,16 @@ export function useTemporalScrub(options: TemporalScrubOptions): TemporalScrubBi
         })
         .onEnd((_event, success) => {
           tracking.set(0);
-          scheduleOnRN(handlers.settle, success === true);
+          scheduleOnRN(handlers.settle, epoch.get(), success === true);
         })
         // Cancellation, failure and interruption all arrive here without ever having committed. A
-        // successful end has already settled above, so this only closes the unsuccessful endings.
+        // successful end has already settled above, so this only closes the unsuccessful endings —
+        // and if the end already closed this epoch, the handlers ignore this one.
         .onFinalize((_event, success) => {
           tracking.set(0);
-          if (success !== true) scheduleOnRN(handlers.settle, false);
+          if (success !== true) scheduleOnRN(handlers.settle, epoch.get(), false);
         }),
-    [enabled, fingerX, tracking, handlers],
+    [enabled, fingerX, tracking, epoch, handlers],
   );
 
   return { gesture, handlers };

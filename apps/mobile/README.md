@@ -174,21 +174,27 @@ canonical field, no second temporal cursor and no dependency: `COMMIT_MOMENT` an
 `COMMIT_LIVE_EDGE` remain T-02's, and this layer decides only WHEN to call them, from an
 explicit user act.
 
-- **Addressability** (`src/temporal-navigation/targeting/addressability.ts`): the single gate.
-  A temporal target is an integer Session Position in `[1, LH]` — never a timestamp, a wall
-  clock, a pixel offset, a percentage, a window position, a scroll offset, an animation frame,
-  a gesture velocity or a duration. `LH = null` means nothing is addressable yet, which is a
-  correct answer rather than an error. `TemporalTargetIntent` has two shapes, `MOMENT(sp)` and
-  `LIVE_EDGE`, and no code path converts one into the other.
+- **Addressability** (`targeting/addressability.ts`): canonical Moment validity, `1 <= sp <= LH`,
+  T-02's frozen precondition unchanged. A temporal target is an integer Session Position — never a
+  timestamp, a wall clock, a pixel offset, a percentage, a window position, a scroll offset, an
+  animation frame, a gesture velocity or a duration. `LH = null` means nothing is addressable yet,
+  which is a correct answer rather than an error. `TemporalTargetIntent` has two shapes, `MOMENT(sp)`
+  and `LIVE_EDGE`, and no code path converts one into the other.
+- **Disclosed availability** (`targeting/disclosed-availability.ts`): the narrower, T-06-owned
+  interaction gate. A Moment that `LH` makes valid but nothing has disclosed is not a target — with
+  `LH = 100` and a prefix through `SP(80)`, `SP(95)` is a legitimate Moment and not an interaction
+  target. Exact entry, forward continuation and the pointer scrub all ask this one rule; membership
+  is read from the Track's own row, never inferred from `LH` or from any presentation quantity;
+  disclosure grows and never rewrites; a replaced Session invalidates the authority outright.
 - **Preview** (`preview/`): `PTC` is Class C. While a preview exists `TM`, effective `TC`,
   `IF_ref`, `MC` and `RH` are all unchanged, and the controller holds no store, no dispatch and
   no transport, so it could not write Product truth even by mistake. A preview is never made by
   moving `TM` and moving it back. `preview-projection.ts` shows a historical target only through
   the disclosure of THAT position, and runs the addressability gate before any lookup — so no
   future-history request exists in this layer, and none can be constructed through it.
-- **Continuation** (`continuation/forward.ts`): repeated forward targeting that stops at the
-  authoritative Live Head, holds there, and never becomes Live intent. Its cadence is injected,
-  never frozen, because no cadence changes the semantics.
+- **Continuation** (`continuation/forward.ts`): repeated forward targeting that holds at BOTH the
+  authoritative Live Head and the disclosure horizon, and becomes Live intent at neither. Its cadence
+  is injected, never frozen, because no cadence changes the semantics.
 - **Commit boundary** (`targeting/commit.ts`): one completed, explicit act → one canonical
   commit. Committing `Moment(LH)` produces `PINNED(LH)`, which stays a different state from
   `FOLLOW_LIVE` and diverges from it as soon as `LH` advances.
@@ -197,12 +203,19 @@ explicit user act.
   `WeakSet` consumed on use, whose minting side is module-local and exported nowhere. The
   composite act's landing is resolved against the projection of the position it commits to, and
   is authorized by T-04's ONE shared freshness rule applied to the post-act viewpoint. Zero loci
-  invents no geography; several loci elect nothing.
+  invents no geography; several loci elect nothing; and `CHOOSE_LOCUS` is applicable ONLY to a
+  genuine multiple-locus ambiguity — a unique locus is a landing, not a choice, and is refused.
+- **Locus choice** (`locus-choice/`): the pending contextual-locus choice and its user-facing route.
+  Every legitimate locus is offered exactly once, unranked and unpreselected, with a pointer route
+  and a non-pointer accessibility action per option; both converge on one executor. Backing out
+  performs no act; a stale Session or depth fails the choice closed.
 - **Timeline integration** (`timeline-integration/`): one way only. T-05 identifies a disclosed
   target and gains no store, no dispatch, no selected Moment and no Live commit; scrolling,
   refining and widening the presentation change no temporal state. Temporal targeting lives on
   its own strip below the Track, so presentation movement and temporal traversal are told apart
-  by where they are touched as well as by what they announce.
+  by where they are touched as well as by what they announce. Every scheduled scrub callback carries
+  its gesture's interaction epoch, so a callback from a settled, cancelled or superseded gesture is
+  inert whatever order the two runtimes deliver in.
 - **Motion** (`motion/`): decided in plain arithmetic first, then bound to Reanimated. Motion
   explains Product truth and never carries it — the pure contract imports nothing at all, the
   binding holds no store, and the commit acknowledgement is called with the store's answer

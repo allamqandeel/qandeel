@@ -29,6 +29,9 @@ const PRODUCTION_FILES = [
   'continuation/forward.ts',
   'continuation/index.ts',
   'index.ts',
+  'locus-choice/LocusChoiceSurface.tsx',
+  'locus-choice/index.ts',
+  'locus-choice/pending-locus-choice.ts',
   'motion/index.ts',
   'motion/temporal-motion.ts',
   'motion/useTemporalMotion.ts',
@@ -38,6 +41,7 @@ const PRODUCTION_FILES = [
   'preview/preview-state.ts',
   'targeting/addressability.ts',
   'targeting/commit.ts',
+  'targeting/disclosed-availability.ts',
   'targeting/index.ts',
   'targeting/locate.ts',
   'targeting/temporal-actions.ts',
@@ -84,7 +88,160 @@ test('the authorized T-06 file surface is the only production surface of the tem
     .sort();
   assert.deepEqual(production, [...PRODUCTION_FILES].sort());
   const suites = readdirSync(join(dir, '__tests__')).filter((file) => /\.test\.tsx?$/u.test(file));
-  assert.ok(suites.length >= 8, `expected the T-06 adversarial suites, found ${suites.length}`);
+  assert.ok(suites.length >= 11, `expected the T-06 adversarial suites, found ${suites.length}`);
+  // R1 added two adversarial suites by name; neither may be dropped while the code they guard stays.
+  for (const suite of ['interaction-race.test.ts', 'locus-choice.test.tsx']) {
+    assert.ok(suites.includes(suite), `the R1 suite ${suite} must exist`);
+  }
+});
+
+// R1-01 — canonical Moment addressability and disclosed interaction availability are two different
+// questions, and the interaction routes must ask the second one.
+test('R1-01 — disclosed interaction availability is a separate, narrower gate that every route asks', () => {
+  const disclosed = code['targeting/disclosed-availability.ts'];
+  const canonical = code['targeting/addressability.ts'];
+
+  // The canonical rule is unchanged and still knows nothing about presentation or disclosure.
+  assert.match(canonical, /export function resolveTemporalTarget\(bounds: TemporalBounds, candidate: unknown\): TargetResolution \{/u);
+  for (const forbidden of ['DisclosedTrack', 'disclosed', 'track', 'horizon', 'PresentationSnapshot']) {
+    assert.equal(canonical.includes(forbidden), false, `the canonical gate must not become presentation-aware (${forbidden})`);
+  }
+
+  // The interaction gate composes the canonical one rather than restating it, and asks it FIRST so
+  // the two refusals stay distinguishable.
+  assert.match(disclosed, /export function resolveDisclosedTarget\(targeting: TemporalTargeting, candidate: unknown\): TargetResolution \{/u);
+  assert.match(disclosed, /const canonical = resolveTemporalTarget\(bounds, candidate\);\s*\n\s*if \(!canonical\.ok\) return canonical;/u);
+  assert.match(disclosed, /if \(!disclosed\.has\(canonical\.sp\)\) \{/u);
+  assert.match(disclosed, /refuse\(\s*\n?\s*'NOT_DISCLOSED',/u);
+  // Session-scoped: a Track from another Session authorizes nothing.
+  assert.match(disclosed, /if \(disclosed\.sessionId !== bounds\.sessionId\) \{/u);
+  // Membership is verified against the Track's own row, never inferred from its length alone.
+  assert.match(disclosed, /return targets\[candidate - 1\]\?\.sessionPosition === candidate;/u);
+  // Forward continuation composes the canonical bound and then the horizon, and reports which.
+  assert.match(disclosed, /const canonical = nextForwardTarget\(targeting\.bounds, current\.sp\);/u);
+  assert.match(disclosed, /outcome: 'AT_DISCLOSURE_HORIZON'/u);
+  // The horizon is never derived from the Live Head, and never from presentation geometry.
+  for (const forbidden of ['liveHead + 1', 'bounds.liveHead ??', 'viewport', 'offset', 'pixel', 'percent', 'PresentationSnapshot']) {
+    assert.equal(disclosed.includes(forbidden), false, `the disclosed gate must not derive membership from ${forbidden}`);
+  }
+
+  // Every interaction route asks the disclosed gate, and none of them reaches past it to the
+  // canonical one — which is what stops exact entry or forward continuation regressing to LH-only.
+  const previewState = code['preview/preview-state.ts'];
+  assert.equal(previewState.includes('resolveTemporalTarget('), false, 'the preview controller must not use the canonical gate directly');
+  assert.equal(previewState.includes('nextForwardTarget('), false, 'forward continuation must not use the canonical step directly');
+  assert.equal((previewState.match(/resolveDisclosedTarget\(/gu) ?? []).length, 2, 'preview and reconcile both ask the disclosed gate');
+  assert.match(previewState, /const step = nextDisclosedTarget\(targeting, from\);/u);
+  assert.match(previewState, /preview\(targeting: TemporalTargeting, candidate: unknown, source: PreviewSource\): PreviewResult;/u);
+  assert.match(previewState, /stepForward\(targeting: TemporalTargeting\): PreviewResult;/u);
+  // The pointer bridge asks the same rule, so it gains no second one of its own.
+  assert.match(code['timeline-integration/disclosed-bridge.ts'], /return resolveDisclosedTarget\(targeting, target\.sessionPosition\);/u);
+  // The commit boundary re-checks disclosure, and the CANONICAL commit keeps T-02's bound alone.
+  assert.match(code['targeting/commit.ts'], /const disclosed = resolveDisclosedTarget\(targeting, snapshot\.ptc\);/u);
+  assert.match(code['targeting/commit.ts'], /export function commitMoment\(store: CanonicalStore, candidate: unknown\): TemporalOutcome \{\s*\n\s*const resolved = resolveTemporalTarget\(/u);
+  // The accessible route is bounded by the horizon, not by the Live Head.
+  assert.match(code['accessibility/temporal-accessibility.ts'], /exactTargetMaximum: targeting\.disclosed\.horizon,/u);
+  assert.match(code['accessibility/temporal-accessibility.ts'], /const forwardAvailable = nextDisclosedTarget\(targeting, cursor\)\.outcome === 'STEP';/u);
+  assert.equal(code['accessibility/temporal-accessibility.ts'].includes('exactTargetMaximum: bounds.liveHead'), false);
+});
+
+// R1-02 — a scheduled callback from a closed or superseded gesture changes nothing.
+test('R1-02 — every scheduled scrub callback carries its interaction, and a closed one is inert', () => {
+  const scrub = code['timeline-integration/scrub.ts'];
+  const hook = code['timeline-integration/useTemporalScrub.ts'];
+
+  // The epoch is minted once per gesture on the UI runtime and carried by every callback.
+  assert.match(hook, /const epoch = useSharedValue\(0\);/u);
+  assert.match(hook, /epoch\.set\(epoch\.get\(\) \+ 1\);/u);
+  assert.equal((hook.match(/epoch\.set\(/gu) ?? []).length, 1, 'exactly one place increments the interaction epoch');
+  assert.match(hook, /scheduleOnRN\(handlers\.targetIndex, epoch\.get\(\), index\)/u);
+  assert.equal((hook.match(/scheduleOnRN\(handlers\.settle, epoch\.get\(\),/gu) ?? []).length, 2, 'both endings carry the epoch');
+  assert.equal((hook.match(/scheduleOnRN\([^)]*\)/gu) ?? []).length, 3, 'still exactly three cross-runtime hops');
+
+  // The handlers own the state machine, and admission is order-independent.
+  assert.match(scrub, /readonly targetIndex: \(epoch: number, index: number\) => PreviewResult;/u);
+  assert.match(scrub, /readonly settle: \(epoch: number, committed: boolean\) => void;/u);
+  assert.match(scrub, /function admit\(candidate: number\): 'CURRENT' \| 'IGNORED' \{/u);
+  assert.match(scrub, /if \(candidate < epoch\) return 'IGNORED';/u);
+  assert.match(scrub, /return open \? 'CURRENT' : 'IGNORED';/u);
+  // Both entry points admit first and do nothing at all when the interaction is not current.
+  assert.match(scrub, /if \(admit\(candidateEpoch\) === 'IGNORED'\) \{/u);
+  assert.match(scrub, /if \(admit\(candidateEpoch\) === 'IGNORED'\) return;/u);
+  // A settle closes its interaction BEFORE acting, so its own in-flight callbacks are already inert.
+  assert.match(scrub, /open = false;\s*\n\s*const owned = generation;/u);
+  // An interaction acts only on the preview it established.
+  assert.match(scrub, /const ownsLivePreview = owned !== null && deps\.preview\.isCurrent\(owned\);/u);
+  assert.match(scrub, /if \(ownsLivePreview\) deps\.preview\.cancel\(\);/u);
+  assert.match(scrub, /if \(!ownsLivePreview\) \{/u);
+  // Correctness never rests on timing.
+  for (const forbidden of ['setTimeout', 'setInterval', 'Date.now', 'performance.now', 'requestAnimationFrame', 'queueMicrotask', 'Promise.resolve']) {
+    assert.equal(scrub.includes(forbidden), false, `interaction ownership must not rest on ${forbidden}`);
+  }
+});
+
+// R1-03 — `CHOOSE_LOCUS` resolves a genuine ambiguity and is not a generic spatial locate.
+test('R1-03 — CHOOSE_LOCUS is applicable only to a genuine multiple-locus ambiguity', () => {
+  const locate = code['targeting/locate.ts'];
+  const executors = code['targeting/temporal-actions.ts'];
+
+  assert.match(locate, /export function resolveLocusChoice\(/u);
+  // The loci are counted BEFORE the offered handle is looked at.
+  assert.match(
+    locate,
+    /const locatability = resolveLocatability\(context\.scene, target\.family, target\.id\);\s*\n\s*if \(locatability\.outcome === 'NO_LEGITIMATE_LOCUS'\) \{[\s\S]*?if \(locatability\.outcome === 'UNIQUE_LOCUS'\) \{\s*\n\s*return refuse\(\s*\n?\s*'NOT_A_LOCUS_CHOICE',/u,
+  );
+  // Membership is still checked, and the runtime brand still required.
+  assert.match(locate, /if \(!isEntitledLocus\(chosen\)\) return refuse\('INVALID_INPUT'/u);
+  assert.match(locate, /const match = locatability\.loci\.find\(\(candidate\) => candidate\.key === chosen\.key\);/u);
+  // The act uses the choice resolver, never the general landing resolver.
+  assert.match(executors, /const located = resolveLocusChoice\(request\.context, request\.target, request\.locus\);/u);
+  assert.equal((executors.match(/resolveLocusChoice\(/gu) ?? []).length, 1);
+  const chooseLocusBody = executors.slice(executors.indexOf('export function chooseLocus('));
+  assert.equal(chooseLocusBody.includes('resolveLocateAtTarget('), false, 'CHOOSE_LOCUS must not use the general landing resolver');
+  // The composite act keeps the general resolver, so a unique locus still lands without a chooser.
+  assert.match(executors, /const located = resolveLocateAtTarget\(request\.context, request\.target, request\.locus\);/u);
+  // Nothing elects, ranks or prefers anywhere in the layer.
+  for (const forbidden of ['primaryContext', 'preferredLocus', 'nearestLocus', 'lastUsedLocus', 'defaultLocus', 'rankLoci', 'sortByImportance']) {
+    assert.equal(layerText.includes(forbidden), false, `no locus may be elected by ${forbidden}`);
+  }
+});
+
+// R1-04 — a Product state that says a choice is required comes with a route that makes it.
+test('R1-04 — the pending contextual-locus choice has a pointer route and a non-pointer route', () => {
+  const pending = code['locus-choice/pending-locus-choice.ts'];
+  const surface = code['locus-choice/LocusChoiceSurface.tsx'];
+
+  // A chooser can be built only from a genuine ambiguity.
+  assert.match(pending, /if \(outcome\.outcome !== 'LOCUS_SELECTION_REQUIRED'\) return null;/u);
+  assert.match(pending, /return loci\.length >= 2 \? Object\.freeze\(\{ kind: 'SPATIAL'/u);
+  // Only an offered choice may be submitted, and it goes through the existing executors.
+  assert.match(pending, /if \(!pending\.loci\.some\(\(candidate\) => candidate === locus\)\) \{/u);
+  assert.match(pending, /\? commitMomentAndLocate\(store, \{ moment: pending\.moment, context: pending\.context, target: pending\.target, locus \}\)/u);
+  assert.match(pending, /: chooseLocus\(store, \{ context: pending\.context, target: pending\.target, locus \}\);/u);
+  // Every legitimate option is offered, exactly once, with no preselection and no ranking.
+  assert.match(pending, /const options = pending\.loci\.map\(\(locus\) =>/u);
+  assert.match(pending, /orderingNote: CONTEXT_ORDER_NOTE,/u);
+  assert.match(pending, /The order is not a ranking\./u);
+  for (const forbidden of ['slice(0, 1)', 'sort(', 'filter(', 'reverse(', 'preselect', 'defaultOption']) {
+    assert.equal(pending.includes(forbidden), false, `the chooser must not ${forbidden} the legitimate options`);
+  }
+
+  // Both routes exist and converge on ONE resolver.
+  assert.equal((surface.match(/resolvePendingLocusChoice\(/gu) ?? []).length, 1, 'both routes reach exactly one executor');
+  assert.match(surface, /accessibilityActions=\{\[\s*\n\s*\.\.\.model\.options\.map\(\(option\) => \(\{ name: option\.key, label: option\.label \}\)\),/u);
+  assert.match(surface, /accessibilityRole="button"/u);
+  assert.match(surface, /accessibilityState=\{\{ selected: false \}\}/u);
+  assert.match(surface, /onPress=\{\(\) => choose\(option\.key\)\}/u);
+  // Backing out performs no act at all: on either route it calls the observer and nothing else.
+  assert.match(surface, /if \(action === LOCUS_CHOICE_CANCEL_ACTION\) \{\s*\n\s*onCancel\?\.\(\);\s*\n\s*return;/u);
+  assert.match(surface, /testID=\{LOCUS_CHOICE_CANCEL_TEST_ID\}[\s\S]*?onPress=\{\(\) => onCancel\?\.\(\)\}/u);
+  // The ONLY route to the executor is `choose`, and `choose` is reached only from an offered option.
+  assert.equal((surface.match(/\bchoose\(/gu) ?? []).length, 2, 'choose is called from exactly the two option routes and nowhere else');
+  for (const forbidden of ['commitMomentAndLocate', 'chooseLocus(', 'dispatch', 'store.']) {
+    assert.equal(surface.includes(forbidden), false, `the chooser surface must not reach ${forbidden} directly`);
+  }
+  // A submission the chooser does not offer cannot reach the executor at all.
+  assert.match(surface, /const option = model\.options\.find\(\(candidate\) => candidate\.key === key\);\s*\n\s*if \(option === undefined\) return;/u);
 });
 
 test('the T-01 technical shell stays byte-identical: the temporal layer is not mounted in the app container', async () => {
@@ -305,17 +462,21 @@ test('no temporal act can be reached from a camera act, an animation or a presen
   assert.match(code['motion/temporal-motion.ts'], /cursorMs: reduced \|\| tracking \? 0 : TEMPORAL_MOTION_DURATIONS\.cursorMs,/u);
   assert.match(code['motion/temporal-motion.ts'], /temporalStance: input\.mode === 'FOLLOW_LIVE' \? 'FOLLOWING_LIVE' : 'PINNED_TO_MOMENT',/u);
   // The commit acknowledgement is called with the store's answer already in hand.
-  assert.match(code['timeline-integration/scrub.ts'], /const outcome = commitPreviewedTarget\(deps\.store, deps\.preview\);\s*\n\s*deps\.onOutcome\?\.\(outcome\);/u);
+  assert.match(code['timeline-integration/scrub.ts'], /const outcome = commitPreviewedTarget\(deps\.store, deps\.preview, targeting\(\)\);\s*\n\s*deps\.onOutcome\?\.\(outcome\);/u);
   // Per-frame work never crosses to the RN runtime: only a threshold crossing and the ending do.
   const scrubHook = code['timeline-integration/useTemporalScrub.ts'];
   assert.equal((scrubHook.match(/scheduleOnRN\(/gu) ?? []).length, 3, 'exactly one reaction crossing and the two gesture endings');
-  // The two per-frame callbacks write shared values and nothing else: no runtime crossing per frame.
-  const perFrame = scrubHook.slice(scrubHook.indexOf('.onBegin('), scrubHook.indexOf('.onEnd('));
-  assert.ok(perFrame.length > 0, 'the gesture has a per-frame path to check');
-  assert.equal(perFrame.includes('scheduleOnRN'), false, 'scheduleOnRN is never called per frame');
-  assert.equal(perFrame.includes('handlers.'), false, 'no Product handler is reached per frame');
-  // The only per-frame writes are the two presentation shared values.
-  assert.deepEqual([...perFrame.matchAll(/(\w+)\.set\(/gu)].map((match) => match[1]).sort(), ['fingerX', 'fingerX', 'tracking']);
+  // The two gesture-phase callbacks write shared values and nothing else: no runtime crossing while
+  // the finger is moving, and no Product handler reachable from a frame.
+  const beforeEnd = scrubHook.slice(scrubHook.indexOf('.onBegin('), scrubHook.indexOf('.onEnd('));
+  assert.ok(beforeEnd.length > 0, 'the gesture has a per-frame path to check');
+  assert.equal(beforeEnd.includes('scheduleOnRN'), false, 'scheduleOnRN is never called per frame');
+  assert.equal(beforeEnd.includes('handlers.'), false, 'no Product handler is reached per frame');
+  // `onBegin` mints the interaction epoch once; `onUpdate` — the actual per-frame callback — writes
+  // exactly one shared value and nothing else at all.
+  assert.deepEqual([...beforeEnd.matchAll(/(\w+)\.set\(/gu)].map((match) => match[1]).sort(), ['epoch', 'fingerX', 'fingerX', 'tracking']);
+  const perFrame = scrubHook.slice(scrubHook.indexOf('.onUpdate('), scrubHook.indexOf('.onEnd('));
+  assert.deepEqual([...perFrame.matchAll(/(\w+)\.set\(/gu)].map((match) => match[1]), ['fingerX']);
   // Shared values are read and written through `get`/`set`: the React Compiler cannot see through
   // direct `.value` access, and the repository lints with its rules as errors.
   for (const name of ['motion/useTemporalMotion.ts', 'timeline-integration/useTemporalScrub.ts']) {
@@ -348,8 +509,9 @@ test('T-05 stays presentation-only: every T-05 file is byte-identical and gains 
     assert.equal(bridge.includes(forbidden), false, `the bridge must not drive the presentation controller (${forbidden})`);
   }
   assert.equal(layerText.includes('controller.move('), false, 'the temporal layer never moves the presentation window');
-  // The Track's Session is checked before any target is admitted.
-  assert.match(bridge, /if \(track\.sessionId !== bounds\.sessionId\) \{/u);
+  // The Track's Session is checked before any target is admitted, against BOTH authorities: the
+  // mirrored Session and the Track that is currently authorizing interaction.
+  assert.match(bridge, /if \(track\.sessionId !== targeting\.bounds\.sessionId \|\| track\.sessionId !== targeting\.disclosed\.sessionId\) \{/u);
 });
 
 test('the temporal layer adds no dependency, and no state, persistence or navigation library', async () => {

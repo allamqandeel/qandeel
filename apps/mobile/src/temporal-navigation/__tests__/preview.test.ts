@@ -9,8 +9,8 @@
 import { canonicalStateShapeIssue, createCanonicalStore, isRhActionId, sessionPosition } from '../../state';
 import { WORLD_ORIGIN, initialCameraIntent } from '../../map';
 import { createTemporalPreviewController } from '../preview';
-import { temporalBounds } from '../targeting';
-import { temporalTestStore } from '../__fixtures__/temporal';
+import { temporalTargeting } from '../targeting';
+import { fullyDisclosedTargeting, temporalTestStore, trackOf } from '../__fixtures__/temporal';
 
 describe('TN06-01 — preview isolation', () => {
   it('changes no CanonicalState field and appends no RH, however many times it retargets', () => {
@@ -19,7 +19,7 @@ describe('TN06-01 — preview isolation', () => {
     const before = store.getState();
 
     for (const sp of [1, 4, 2, 6, 3]) {
-      const result = preview.preview(temporalBounds(store.getState()), sp, 'EXACT_ENTRY');
+      const result = preview.preview(fullyDisclosedTargeting(store), sp, 'EXACT_ENTRY');
       expect(result.outcome).toBe('PREVIEWING');
     }
 
@@ -34,7 +34,7 @@ describe('TN06-01 — preview isolation', () => {
   it('keeps the committed origin as evidence and never writes it back', () => {
     const store = temporalTestStore({ liveHead: 6, temporal: { kind: 'PINNED', at: sessionPosition(5) } });
     const preview = createTemporalPreviewController();
-    preview.preview(temporalBounds(store.getState()), 2, 'DISCLOSED_TARGET');
+    preview.preview(fullyDisclosedTargeting(store), 2, 'DISCLOSED_TARGET');
     const snapshot = preview.getSnapshot();
     expect(snapshot.status).toBe('PREVIEWING');
     if (snapshot.status !== 'PREVIEWING') throw new Error('unreachable');
@@ -46,7 +46,7 @@ describe('TN06-01 — preview isolation', () => {
   it('re-asking for the target already previewed publishes nothing and invalidates no in-flight work', () => {
     const preview = createTemporalPreviewController();
     const store = temporalTestStore({ liveHead: 6 });
-    const bounds = temporalBounds(store.getState());
+    const bounds = fullyDisclosedTargeting(store);
     let notifications = 0;
     preview.subscribe(() => {
       notifications += 1;
@@ -69,7 +69,7 @@ describe('TN06-02 — cancel preview', () => {
     const store = temporalTestStore({ liveHead: 6, temporal: { kind: 'PINNED', at: sessionPosition(4) } });
     const preview = createTemporalPreviewController();
     const committed = store.getState();
-    preview.preview(temporalBounds(committed), 2, 'DISCLOSED_TARGET');
+    preview.preview(fullyDisclosedTargeting(store), 2, 'DISCLOSED_TARGET');
 
     expect(preview.cancel()).toEqual({ outcome: 'CLEARED' });
 
@@ -88,14 +88,14 @@ describe('TN06-02 — cancel preview', () => {
   it('invalidates every in-flight generation, so work started for a cancelled preview is discarded', () => {
     const store = temporalTestStore({ liveHead: 6 });
     const preview = createTemporalPreviewController();
-    const started = preview.preview(temporalBounds(store.getState()), 3, 'DISCLOSED_TARGET');
+    const started = preview.preview(fullyDisclosedTargeting(store), 3, 'DISCLOSED_TARGET');
     if (started.outcome !== 'PREVIEWING') throw new Error('unreachable');
 
     preview.cancel();
     expect(preview.isCurrent(started.preview.generation)).toBe(false);
 
     // A later preview never reuses a generation, so late work cannot be mistaken for current work.
-    const again = preview.preview(temporalBounds(store.getState()), 3, 'DISCLOSED_TARGET');
+    const again = preview.preview(fullyDisclosedTargeting(store), 3, 'DISCLOSED_TARGET');
     if (again.outcome !== 'PREVIEWING') throw new Error('unreachable');
     expect(again.preview.generation).toBeGreaterThan(started.preview.generation);
     expect(preview.isCurrent(started.preview.generation)).toBe(false);
@@ -105,7 +105,7 @@ describe('TN06-02 — cancel preview', () => {
 describe('TN06-08 — addressability fails closed', () => {
   const store = temporalTestStore({ liveHead: 4 });
   const preview = createTemporalPreviewController();
-  const bounds = temporalBounds(store.getState());
+  const bounds = fullyDisclosedTargeting(store);
 
   it.each([
     [0, 'NOT_ADDRESSABLE'],
@@ -126,12 +126,132 @@ describe('TN06-08 — addressability fails closed', () => {
   });
 
   it('refuses everything before the first mirrored Moment', () => {
-    const empty = temporalBounds({ ...store.getState(), live: { LH: null, LF: { value: { kind: 'NONE' }, atSp: null } } });
+    const empty = temporalTargeting(
+      { ...store.getState(), live: { LH: null, LF: { value: { kind: 'NONE' }, atSp: null } } },
+      trackOf('session-1', 0),
+    );
     expect(preview.preview(empty, 1, 'EXACT_ENTRY')).toEqual({
       outcome: 'REJECTED',
       code: 'NO_ADDRESSABLE_POSITION',
       detail: expect.any(String),
     });
+  });
+});
+
+describe('R1-01 — disclosed interaction availability is not canonical addressability', () => {
+  // The reviewed shape: the mirror knows about 100 Moments and only 80 of them are disclosed.
+  const store = () => temporalTestStore({ liveHead: 100 });
+  const disclosedThrough = (target: ReturnType<typeof store>, count: number) => temporalTargeting(target.getState(), trackOf('session-1', count));
+
+  it('refuses an exact entry that LH allows but nothing has disclosed, with zero mutation and zero RH', () => {
+    const canonical = store();
+    const preview = createTemporalPreviewController();
+    const before = canonical.getState();
+
+    const result = preview.preview(disclosedThrough(canonical, 80), 81, 'EXACT_ENTRY');
+    expect(result).toEqual({ outcome: 'REJECTED', code: 'NOT_DISCLOSED', detail: expect.any(String) });
+    expect(preview.getSnapshot()).toEqual({ status: 'IDLE' });
+    expect(canonical.getState()).toBe(before);
+    expect(canonical.getState().history).toHaveLength(0);
+    // SP(95) is a perfectly valid Moment and still not an interaction target.
+    expect(preview.preview(disclosedThrough(canonical, 80), 95, 'EXACT_ENTRY')).toMatchObject({ code: 'NOT_DISCLOSED' });
+  });
+
+  it('allows an exact entry at the disclosure horizon itself', () => {
+    const canonical = store();
+    const preview = createTemporalPreviewController();
+    expect(preview.preview(disclosedThrough(canonical, 80), 80, 'EXACT_ENTRY').outcome).toBe('PREVIEWING');
+    expect(preview.getSnapshot()).toMatchObject({ status: 'PREVIEWING', ptc: 80 });
+  });
+
+  it('keeps the two refusals distinguishable rather than collapsing them into one', () => {
+    const canonical = store();
+    const preview = createTemporalPreviewController();
+    const targeting = disclosedThrough(canonical, 80);
+    // Beyond the Live Head: not a Moment at all.
+    expect(preview.preview(targeting, 101, 'EXACT_ENTRY')).toMatchObject({ code: 'BEYOND_LIVE_HEAD' });
+    // Within the Live Head, outside disclosure: a Moment, but not an interaction target.
+    expect(preview.preview(targeting, 81, 'EXACT_ENTRY')).toMatchObject({ code: 'NOT_DISCLOSED' });
+  });
+
+  it('lets disclosure growth make a later target available, without rewriting anything earlier', () => {
+    const canonical = store();
+    const preview = createTemporalPreviewController();
+
+    expect(preview.preview(disclosedThrough(canonical, 80), 81, 'EXACT_ENTRY')).toMatchObject({ code: 'NOT_DISCLOSED' });
+    // The Track grows. The same deliberate action now reaches further; nothing about the earlier
+    // refusal, the committed position or RH is rewritten by that.
+    expect(preview.preview(disclosedThrough(canonical, 81), 81, 'EXACT_ENTRY').outcome).toBe('PREVIEWING');
+    expect(preview.getSnapshot()).toMatchObject({ ptc: 81 });
+    expect(canonical.getState().temporal).toEqual({ kind: 'FOLLOW_LIVE' });
+    expect(canonical.getState().history).toHaveLength(0);
+  });
+
+  it('never infers disclosed membership from the numeric value of the Live Head', () => {
+    const canonical = store();
+    const preview = createTemporalPreviewController();
+    // An empty Track discloses nothing at all, however large `LH` is.
+    const nothing = disclosedThrough(canonical, 0);
+    expect(nothing.disclosed.horizon).toBeNull();
+    for (const candidate of [1, 50, 80, 100]) {
+      expect(preview.preview(nothing, candidate, 'EXACT_ENTRY')).toMatchObject({ code: 'NOT_DISCLOSED' });
+    }
+  });
+
+  it('drops disclosed authority when the Session is replaced', () => {
+    const canonical = store();
+    const preview = createTemporalPreviewController();
+    const foreign = temporalTargeting(canonical.getState(), trackOf('session-2', 100));
+    expect(preview.preview(foreign, 5, 'EXACT_ENTRY')).toMatchObject({ code: 'SESSION_MISMATCH' });
+    expect(preview.getSnapshot()).toEqual({ status: 'IDLE' });
+  });
+
+  it('drops an open preview whose target stops being disclosed', () => {
+    const canonical = store();
+    const preview = createTemporalPreviewController();
+    preview.preview(disclosedThrough(canonical, 80), 80, 'EXACT_ENTRY');
+    expect(preview.getSnapshot().status).toBe('PREVIEWING');
+
+    expect(preview.reconcile(disclosedThrough(canonical, 80))).toEqual({ outcome: 'UNCHANGED' });
+    expect(preview.reconcile(disclosedThrough(canonical, 40))).toEqual({ outcome: 'CLEARED' });
+    expect(canonical.getState().history).toHaveLength(0);
+  });
+});
+
+describe('R1-01 — relative forward continuation stops at the disclosure horizon', () => {
+  it('may reach the horizon and must then hold, without reaching past it', () => {
+    const store = temporalTestStore({ liveHead: 100, temporal: { kind: 'PINNED', at: sessionPosition(79) } });
+    const preview = createTemporalPreviewController();
+    const targeting = temporalTargeting(store.getState(), trackOf('session-1', 80));
+
+    expect(preview.stepForward(targeting).outcome).toBe('PREVIEWING');
+    expect(preview.getSnapshot()).toMatchObject({ ptc: 80, source: 'RELATIVE_FORWARD' });
+
+    for (let i = 0; i < 10; i += 1) expect(preview.stepForward(targeting)).toEqual({ outcome: 'UNCHANGED' });
+    // It held at 80 and never manufactured 81, even though the Live Head is 100.
+    expect(preview.getSnapshot()).toMatchObject({ ptc: 80 });
+    expect(store.getState().temporal).toEqual({ kind: 'PINNED', at: 79 });
+    expect(store.getState().history).toHaveLength(0);
+  });
+
+  it('reaches further once disclosure grows, on a later deliberate step', () => {
+    const store = temporalTestStore({ liveHead: 100, temporal: { kind: 'PINNED', at: sessionPosition(79) } });
+    const preview = createTemporalPreviewController();
+    preview.stepForward(temporalTargeting(store.getState(), trackOf('session-1', 80)));
+    expect(preview.getSnapshot()).toMatchObject({ ptc: 80 });
+
+    expect(preview.stepForward(temporalTargeting(store.getState(), trackOf('session-1', 82))).outcome).toBe('PREVIEWING');
+    expect(preview.getSnapshot()).toMatchObject({ ptc: 81 });
+  });
+
+  it('holds at the Live Head when disclosure reaches it, and still never means Live intent', () => {
+    const store = temporalTestStore({ liveHead: 4, temporal: { kind: 'PINNED', at: sessionPosition(3) } });
+    const preview = createTemporalPreviewController();
+    const targeting = fullyDisclosedTargeting(store);
+    expect(preview.stepForward(targeting).outcome).toBe('PREVIEWING');
+    expect(preview.stepForward(targeting)).toEqual({ outcome: 'UNCHANGED' });
+    expect(preview.getSnapshot()).toMatchObject({ ptc: 4 });
+    expect(store.getState().temporal).toEqual({ kind: 'PINNED', at: 3 });
   });
 });
 
@@ -171,11 +291,11 @@ describe('TN06-24 — session replacement', () => {
   it('drops a preview that belongs to a replaced Session and invents no navigation in its place', () => {
     const first = temporalTestStore({ sessionId: 'session-1', liveHead: 6 });
     const preview = createTemporalPreviewController();
-    preview.preview(temporalBounds(first.getState()), 3, 'DISCLOSED_TARGET');
+    preview.preview(fullyDisclosedTargeting(first), 3, 'DISCLOSED_TARGET');
     expect(preview.getSnapshot().status).toBe('PREVIEWING');
 
     const replacement = temporalTestStore({ sessionId: 'session-2', liveHead: 2 });
-    expect(preview.reconcile(temporalBounds(replacement.getState()))).toEqual({ outcome: 'CLEARED' });
+    expect(preview.reconcile(fullyDisclosedTargeting(replacement))).toEqual({ outcome: 'CLEARED' });
     expect(preview.getSnapshot()).toEqual({ status: 'IDLE' });
     // Nothing was targeted, previewed or committed in the new Session on the preview's behalf.
     expect(replacement.getState().temporal).toEqual({ kind: 'FOLLOW_LIVE' });
@@ -185,10 +305,10 @@ describe('TN06-24 — session replacement', () => {
   it('leaves a preview of the same Session alone when the Live Head advances', () => {
     const store = temporalTestStore({ liveHead: 4 });
     const preview = createTemporalPreviewController();
-    preview.preview(temporalBounds(store.getState()), 2, 'DISCLOSED_TARGET');
+    preview.preview(fullyDisclosedTargeting(store), 2, 'DISCLOSED_TARGET');
 
     store.ingest({ type: 'LIVE_HEAD_ADVANCED', toSp: sessionPosition(9) });
-    expect(preview.reconcile(temporalBounds(store.getState()))).toEqual({ outcome: 'UNCHANGED' });
+    expect(preview.reconcile(fullyDisclosedTargeting(store))).toEqual({ outcome: 'UNCHANGED' });
 
     const snapshot = preview.getSnapshot();
     expect(snapshot.status).toBe('PREVIEWING');

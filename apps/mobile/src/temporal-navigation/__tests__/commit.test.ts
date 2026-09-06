@@ -9,7 +9,7 @@
 import { sessionPosition } from '../../state';
 import { createTemporalPreviewController } from '../preview';
 import { LIVE_EDGE_INTENT, commitLiveEdge, commitLiveEdgeIntent, commitMoment, commitPreviewedTarget, commitTemporalIntent, temporalBounds } from '../targeting';
-import { temporalTestStore } from '../__fixtures__/temporal';
+import { fullyDisclosedTargeting, temporalTestStore } from '../__fixtures__/temporal';
 
 describe('TN06-03 — exact Moment commit', () => {
   it('commits a valid disclosed Session Position through the frozen COMMIT_MOMENT primitive', () => {
@@ -25,9 +25,9 @@ describe('TN06-03 — exact Moment commit', () => {
   it('commits whatever the preview targets, and the preview stops being a preview', () => {
     const store = temporalTestStore({ liveHead: 6 });
     const preview = createTemporalPreviewController();
-    preview.preview(temporalBounds(store.getState()), 2, 'DISCLOSED_TARGET');
+    preview.preview(fullyDisclosedTargeting(store), 2, 'DISCLOSED_TARGET');
 
-    expect(commitPreviewedTarget(store, preview).outcome).toBe('APPLIED');
+    expect(commitPreviewedTarget(store, preview, fullyDisclosedTargeting(store)).outcome).toBe('APPLIED');
     expect(store.getState().temporal).toEqual({ kind: 'PINNED', at: 2 });
     expect(preview.getSnapshot()).toEqual({ status: 'IDLE' });
   });
@@ -35,7 +35,7 @@ describe('TN06-03 — exact Moment commit', () => {
   it('refuses to commit when there is no preview, and changes nothing', () => {
     const store = temporalTestStore({ liveHead: 6 });
     const before = store.getState();
-    expect(commitPreviewedTarget(store, createTemporalPreviewController())).toEqual({
+    expect(commitPreviewedTarget(store, createTemporalPreviewController(), fullyDisclosedTargeting(store))).toEqual({
       outcome: 'REJECTED',
       code: 'NO_PREVIEW',
       detail: expect.any(String),
@@ -53,10 +53,10 @@ describe('TN06-03 — exact Moment commit', () => {
   it('leaves the preview alone when a commit is refused, so the reader can retarget or cancel', () => {
     const store = temporalTestStore({ liveHead: 4 });
     const preview = createTemporalPreviewController();
-    preview.preview(temporalBounds(store.getState()), 3, 'DISCLOSED_TARGET');
+    preview.preview(fullyDisclosedTargeting(store), 3, 'DISCLOSED_TARGET');
     // A Session replacement under an open preview: the target belongs to a Session this store is not on.
     const foreign = temporalTestStore({ sessionId: 'session-2', liveHead: 1 });
-    expect(commitPreviewedTarget(foreign, preview).outcome).toBe('REJECTED');
+    expect(commitPreviewedTarget(foreign, preview, fullyDisclosedTargeting(foreign)).outcome).toBe('REJECTED');
     expect(preview.getSnapshot().status).toBe('PREVIEWING');
     expect(foreign.getState().history).toHaveLength(0);
   });
@@ -90,8 +90,8 @@ describe('TN06-04 — PINNED(LH) is not FOLLOW_LIVE', () => {
   it('never infers Live intent from a preview that reached the Live Head', () => {
     const store = temporalTestStore({ liveHead: 4 });
     const preview = createTemporalPreviewController();
-    preview.preview(temporalBounds(store.getState()), 4, 'RELATIVE_FORWARD');
-    expect(commitPreviewedTarget(store, preview).outcome).toBe('APPLIED');
+    preview.preview(fullyDisclosedTargeting(store), 4, 'RELATIVE_FORWARD');
+    expect(commitPreviewedTarget(store, preview, fullyDisclosedTargeting(store)).outcome).toBe('APPLIED');
     expect(store.getState().temporal).toEqual({ kind: 'PINNED', at: 4 });
   });
 });
@@ -106,7 +106,7 @@ describe('TN06-05 — explicit Live target', () => {
   it('discards an open preview and then goes live', () => {
     const store = temporalTestStore({ liveHead: 6, temporal: { kind: 'PINNED', at: sessionPosition(2) } });
     const preview = createTemporalPreviewController();
-    preview.preview(temporalBounds(store.getState()), 5, 'DISCLOSED_TARGET');
+    preview.preview(fullyDisclosedTargeting(store), 5, 'DISCLOSED_TARGET');
 
     expect(commitLiveEdgeIntent(store, preview).outcome).toBe('APPLIED');
     expect(preview.getSnapshot()).toEqual({ status: 'IDLE' });
@@ -135,9 +135,9 @@ describe('TN06-21 — RH integrity', () => {
   it('records nothing for previews, retargets, cancellations or repeated preview ticks', () => {
     const store = temporalTestStore({ liveHead: 8 });
     const preview = createTemporalPreviewController();
-    for (const sp of [1, 2, 3, 4, 5, 6, 7, 8, 7, 6]) preview.preview(temporalBounds(store.getState()), sp, 'RELATIVE_FORWARD');
+    for (const sp of [1, 2, 3, 4, 5, 6, 7, 8, 7, 6]) preview.preview(fullyDisclosedTargeting(store), sp, 'RELATIVE_FORWARD');
     preview.cancel();
-    for (const sp of [2, 3, 4]) preview.preview(temporalBounds(store.getState()), sp, 'DISCLOSED_TARGET');
+    for (const sp of [2, 3, 4]) preview.preview(fullyDisclosedTargeting(store), sp, 'DISCLOSED_TARGET');
     preview.cancel();
 
     expect(store.getState().history).toHaveLength(0);

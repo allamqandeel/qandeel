@@ -24,11 +24,17 @@ import { type CanonicalStore, type SessionPosition } from '../../state';
 import { dispatchKernelCommit, temporalRejected, type TemporalOutcome } from '../outcome';
 import type { TemporalPreviewController } from '../preview/preview-state';
 import { resolveTemporalTarget, temporalBounds, type TemporalTargetIntent } from './addressability';
+import { resolveDisclosedTarget, type TemporalTargeting } from './disclosed-availability';
 
 /**
- * `COMMIT_MOMENT(m)` → `TM := PINNED(m)`. The addressability gate runs first so a refusal is typed
- * and local; the kernel then re-checks the same frozen bound itself, because a client-side gate is
- * a convenience and never the authority.
+ * `COMMIT_MOMENT(m)` → `TM := PINNED(m)`. This is the CANONICAL commit and it carries T-02's frozen
+ * precondition and no other: `1 <= m <= LH`. It is deliberately not disclosure-aware, because
+ * disclosed interaction availability is a T-06 interaction question and redefining the canonical
+ * precondition in its terms would collapse two concepts that must stay separable (R1-01). Every
+ * T-06 INTERACTION route reaches this only after the disclosed gate has already spoken.
+ *
+ * The kernel re-checks the same frozen bound itself, because a client-side gate is a convenience and
+ * never the authority.
  */
 export function commitMoment(store: CanonicalStore, candidate: unknown): TemporalOutcome {
   const resolved = resolveTemporalTarget(temporalBounds(store.getState()), candidate);
@@ -62,12 +68,17 @@ export function commitTemporalIntent(store: CanonicalStore, intent: TemporalTarg
  * commit and a no-op commit both mean the preview is no longer a preview of anything. A refusal
  * changes nothing at all, including the preview, so the reader can retarget or cancel.
  */
-export function commitPreviewedTarget(store: CanonicalStore, preview: TemporalPreviewController): TemporalOutcome {
+export function commitPreviewedTarget(store: CanonicalStore, preview: TemporalPreviewController, targeting: TemporalTargeting): TemporalOutcome {
   const snapshot = preview.getSnapshot();
   if (snapshot.status === 'IDLE') {
     return temporalRejected('NO_PREVIEW', 'there is no previewed temporal target to commit');
   }
-  const outcome = commitMoment(store, snapshot.ptc);
+  // Disclosure is re-checked at the commit boundary, not merely when the preview was established:
+  // between the two the Session may have been replaced, and a target that is no longer disclosed is
+  // no longer a legitimate interaction target however valid the Moment itself remains (R1-01).
+  const disclosed = resolveDisclosedTarget(targeting, snapshot.ptc);
+  if (!disclosed.ok) return temporalRejected(disclosed.code, disclosed.detail);
+  const outcome = commitMoment(store, disclosed.sp);
   if (outcome.outcome !== 'REJECTED') preview.cancel();
   return outcome;
 }

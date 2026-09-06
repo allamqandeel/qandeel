@@ -11,7 +11,7 @@ import type { HistoricalDisclosure } from '@qandeel/runtime';
 import { createCanonicalStore, sessionPosition, type CanonicalStore, type SemanticDepth, type TemporalMode } from '../../state';
 import { MAP_ACTION_AUTHORITY, initialCameraIntent, mapInspectionContext, WORLD_ORIGIN, type MapInspectionContext } from '../../map';
 import { disclosedTrack, type DisclosedTrack } from '../../timeline';
-import { TEMPORAL_ACTION_AUTHORITY } from '../targeting';
+import { TEMPORAL_ACTION_AUTHORITY, temporalTargeting, type TemporalTargeting } from '../targeting';
 
 export interface TemporalTestStoreOptions {
   readonly sessionId?: string;
@@ -57,4 +57,19 @@ export function trackOf(sessionId: string, count: number): DisclosedTrack {
     sessionId,
     Array.from({ length: count }, (_unused, index) => ({ sessionPosition: sessionPosition(index + 1) })),
   );
+}
+
+/**
+ * The two authorities a T-06 interaction needs. `disclosedCount` is deliberately independent of the
+ * store's Live Head, because the whole point of R1-01 is that they are different numbers: a Live Head
+ * of 100 with a disclosed prefix through 80 is an ordinary, expected state.
+ */
+export function targetingOf(store: CanonicalStore, disclosedCount: number, sessionId = 'session-1'): TemporalTargeting {
+  return temporalTargeting(store.getState(), trackOf(sessionId, disclosedCount));
+}
+
+/** The targeting authority whose disclosed prefix reaches exactly the current Live Head. */
+export function fullyDisclosedTargeting(store: CanonicalStore): TemporalTargeting {
+  const state = store.getState();
+  return temporalTargeting(state, trackOf(state.session.id, state.live.LH ?? 0));
 }

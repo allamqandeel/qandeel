@@ -35,7 +35,7 @@ import { TemporalNavigator } from '../accessibility';
 import { useTemporalMotion } from '../motion';
 import type { TemporalOutcome } from '../outcome';
 import type { TemporalPreviewController } from '../preview/preview-state';
-import { temporalBounds } from '../targeting/addressability';
+import { temporalTargeting } from '../targeting/disclosed-availability';
 import { commitLiveEdgeIntent } from '../targeting/commit';
 import { useTemporalScrub } from './useTemporalScrub';
 
@@ -98,13 +98,17 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
   const previewState = useSyncExternalStore(preview.subscribe, preview.getSnapshot);
   const window = useSyncExternalStore(presentation.subscribe, presentation.getSnapshot);
 
-  const bounds = useMemo(() => temporalBounds(state), [state]);
+  // Canonical bounds and disclosed availability together: the layer never hands a route one
+  // without the other, so no surface here can target a Moment nothing has disclosed.
+  const targeting = useMemo(() => temporalTargeting(state, window.track), [state, window.track]);
+  const bounds = targeting.bounds;
 
-  // A replaced Session takes its preview with it. Nothing is carried across and no Product
-  // navigation is invented in its place; the reconciliation writes no canonical field.
+  // A replaced Session takes its preview with it, and so does a target that is no longer disclosed.
+  // Nothing is carried across and no Product navigation is invented in its place; the
+  // reconciliation writes no canonical field.
   useEffect(() => {
-    preview.reconcile(bounds);
-  }, [preview, bounds]);
+    preview.reconcile(targeting);
+  }, [preview, targeting]);
 
   const motion = useTemporalMotion(
     {
@@ -171,6 +175,7 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
       <TemporalNavigator
         store={store}
         preview={preview}
+        track={window.track}
         onOutcome={onOutcome}
         onCommitted={motion.acknowledgeCommit}
         onCancelled={motion.acknowledgeCancel}

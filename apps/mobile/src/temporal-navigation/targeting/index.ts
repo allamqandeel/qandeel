@@ -5,6 +5,9 @@
 export type { ForwardStep, TargetResolution, TemporalBounds, TemporalTargetIntent } from './addressability';
 export { LIVE_EDGE_INTENT, isAddressableTarget, nextForwardTarget, resolveTemporalTarget, targetRefusal, temporalBounds } from './addressability';
 
+export type { DisclosedForwardStep, DisclosedTargetAuthority, TemporalTargeting } from './disclosed-availability';
+export { disclosedTargetAuthority, nextDisclosedTarget, resolveDisclosedTarget, temporalTargeting } from './disclosed-availability';
+
 export {
   commitLiveEdge,
   commitLiveEdgeIntent,
@@ -15,7 +18,7 @@ export {
 } from './commit';
 
 export type { LocateResolution, TemporalLocateTarget } from './locate';
-export { legitimateLoci, resolveLocateAtTarget } from './locate';
+export { legitimateLoci, resolveLocateAtTarget, resolveLocusChoice } from './locate';
 
 export type { ChooseLocusRequest, CommitMomentAndLocateOutcome, CommitMomentAndLocateRequest } from './temporal-actions';
 export { TEMPORAL_ACTION_AUTHORITY, chooseLocus, commitMomentAndLocate, projectionMoment } from './temporal-actions';

@@ -21,8 +21,8 @@ import {
   temporalAnnouncement,
 } from '../accessibility';
 import { createTemporalPreviewController } from '../preview';
-import { commitMoment, temporalBounds } from '../targeting';
-import { temporalTestStore } from '../__fixtures__/temporal';
+import { commitMoment, temporalTargeting } from '../targeting';
+import { fullyDisclosedTargeting, temporalTestStore, trackOf } from '../__fixtures__/temporal';
 
 const fireAction = async (node: unknown, actionName: string) => {
   await act(async () => {
@@ -34,7 +34,7 @@ describe('the accessible temporal model', () => {
   it('never announces a preview as committed truth', () => {
     const store = temporalTestStore({ liveHead: 8, temporal: { kind: 'PINNED', at: sessionPosition(2) } });
     const preview = createTemporalPreviewController();
-    const bounds = temporalBounds(store.getState());
+    const bounds = fullyDisclosedTargeting(store);
     preview.preview(bounds, 6, 'EXACT_ENTRY');
 
     const model = temporalAccessibilityModel(bounds, preview.getSnapshot());
@@ -46,10 +46,10 @@ describe('the accessible temporal model', () => {
   });
 
   it('keeps PINNED(LH) and FOLLOW_LIVE distinguishable at the same Session Position', () => {
-    const following = temporalAccessibilityModel(temporalBounds(temporalTestStore({ liveHead: 4 }).getState()), { status: 'IDLE' });
+    const following = temporalAccessibilityModel(fullyDisclosedTargeting(temporalTestStore({ liveHead: 4 })), { status: 'IDLE' });
     const pinnedStore = temporalTestStore({ liveHead: 4 });
     commitMoment(pinnedStore, 4);
-    const pinned = temporalAccessibilityModel(temporalBounds(pinnedStore.getState()), { status: 'IDLE' });
+    const pinned = temporalAccessibilityModel(fullyDisclosedTargeting(pinnedStore), { status: 'IDLE' });
 
     expect(following.stance).toBe('FOLLOWING_LIVE');
     expect(pinned.stance).toBe('PINNED_TO_MOMENT');
@@ -59,8 +59,8 @@ describe('the accessible temporal model', () => {
   it('states no projection truth and no presentation quantity', () => {
     const store = temporalTestStore({ liveHead: 8 });
     const preview = createTemporalPreviewController();
-    preview.preview(temporalBounds(store.getState()), 3, 'DISCLOSED_TARGET');
-    const model = temporalAccessibilityModel(temporalBounds(store.getState()), preview.getSnapshot());
+    preview.preview(fullyDisclosedTargeting(store), 3, 'DISCLOSED_TARGET');
+    const model = temporalAccessibilityModel(fullyDisclosedTargeting(store), preview.getSnapshot());
     const spoken = [model.surfaceLabel, model.stanceLabel, model.previewLabel ?? '', ...model.actions.map((action) => action.label)].join(' ');
 
     for (const forbidden of ['%', 'percent', 'window', 'scroll', 'presentation', 'depth', 'Thread', 'Reading', 'disclosed']) {
@@ -70,7 +70,7 @@ describe('the accessible temporal model', () => {
 
   it('offers no forward step at the Live Head, and no commit or cancel without a preview', () => {
     const store = temporalTestStore({ liveHead: 4 });
-    const idle = temporalAccessibilityModel(temporalBounds(store.getState()), { status: 'IDLE' });
+    const idle = temporalAccessibilityModel(fullyDisclosedTargeting(store), { status: 'IDLE' });
     expect(idle.forwardAvailable).toBe(false);
     expect(idle.commitAvailable).toBe(false);
     expect(idle.cancelAvailable).toBe(false);
@@ -78,8 +78,29 @@ describe('the accessible temporal model', () => {
     expect(idle.actions.map((action) => action.name)).toEqual(['commit-live-edge']);
 
     const pinned = temporalTestStore({ liveHead: 4, temporal: { kind: 'PINNED', at: sessionPosition(1) } });
-    const earlier = temporalAccessibilityModel(temporalBounds(pinned.getState()), { status: 'IDLE' });
+    const earlier = temporalAccessibilityModel(fullyDisclosedTargeting(pinned), { status: 'IDLE' });
     expect(earlier.forwardAvailable).toBe(true);
+  });
+
+  it('R1-01 — bounds the exact route by the disclosure horizon, not by the Live Head', () => {
+    const store = temporalTestStore({ liveHead: 100, temporal: { kind: 'PINNED', at: sessionPosition(10) } });
+    const partial = temporalAccessibilityModel(temporalTargeting(store.getState(), trackOf('session-1', 80)), { status: 'IDLE' });
+    expect(partial.exactTargetMaximum).toBe(80);
+    expect(partial.forwardAvailable).toBe(true);
+
+    // Standing on the horizon, there is no forward step to offer even though `LH` is 100.
+    const atHorizon = temporalAccessibilityModel(temporalTargeting(store.getState(), trackOf('session-1', 80)), {
+      status: 'PREVIEWING',
+      ptc: sessionPosition(80),
+      source: 'EXACT_ENTRY',
+      origin: { sessionId: 'session-1', mode: 'PINNED', tc: sessionPosition(10) },
+      generation: 1,
+    });
+    expect(atHorizon.forwardAvailable).toBe(false);
+    expect(atHorizon.actions.map((action) => action.name)).not.toContain('preview-later-moment');
+
+    // Nothing disclosed at all: no exact maximum to offer.
+    expect(temporalAccessibilityModel(temporalTargeting(store.getState(), trackOf('session-1', 0)), { status: 'IDLE' }).exactTargetMaximum).toBeNull();
   });
 
   it('accepts an exact Moment number and refuses presentation commands', () => {
@@ -103,7 +124,7 @@ describe('TN06-20 — accessibility parity', () => {
   it('reaches exact targeting, preview, commit, cancel, forward continuation and Live without a drag', async () => {
     const store = temporalTestStore({ liveHead: 8, temporal: { kind: 'PINNED', at: sessionPosition(2) } });
     const preview = createTemporalPreviewController();
-    const view = await render(<TemporalNavigator store={store} preview={preview} />);
+    const view = await render(<TemporalNavigator store={store} preview={preview} track={trackOf('session-1', store.getState().live.LH ?? 0)} />);
 
     // Exact targeting: typed as a Session Position, never as a coordinate or a percentage.
     await act(async () => {
@@ -153,7 +174,7 @@ describe('TN06-20 — accessibility parity', () => {
   it('refuses an exact entry beyond the Live Head and says so without committing anything', async () => {
     const store = temporalTestStore({ liveHead: 3 });
     const preview = createTemporalPreviewController();
-    const view = await render(<TemporalNavigator store={store} preview={preview} />);
+    const view = await render(<TemporalNavigator store={store} preview={preview} track={trackOf('session-1', store.getState().live.LH ?? 0)} />);
     const before = store.getState();
 
     await act(async () => {
@@ -175,7 +196,7 @@ describe('TN06-20 — accessibility parity', () => {
   it('states the committed stance and the preview as two separate sentences on the surface', async () => {
     const store = temporalTestStore({ liveHead: 8, temporal: { kind: 'PINNED', at: sessionPosition(2) } });
     const preview = createTemporalPreviewController();
-    const view = await render(<TemporalNavigator store={store} preview={preview} />);
+    const view = await render(<TemporalNavigator store={store} preview={preview} track={trackOf('session-1', store.getState().live.LH ?? 0)} />);
 
     expect(view.getByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`).props.children).toBe('Pinned to Moment 2');
     expect(view.queryByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:preview`)).toBeNull();

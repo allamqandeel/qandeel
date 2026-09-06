@@ -28,20 +28,41 @@ A preview is deliberately **not** implemented by moving `TM` and moving it back.
 two false Product transitions, two RH checkpoints, and an interval during which committed truth
 claimed something that never happened.
 
-## 2. The one addressability gate
+## 2. Two gates, deliberately separate (R1-01)
 
-`targeting/addressability.ts` is the single place a candidate becomes a temporal target. The only
-Product temporal addressing unit is the Session Position: an integer in `[1, LH]`. Nothing in the
-judging path reads a timestamp, a wall clock, a pixel offset, a normalized percentage, a window
-position, a scroll offset, an animation frame, a gesture velocity, a duration, or a server
-knowledge or validity time — and the static gate asserts their absence by name.
+Two different questions stay two different questions.
 
-`LH = null` is the technical absence sentinel: before the first mirrored committed Session Position
-**nothing** is addressable, which is a correct answer rather than an error.
+**Canonical Moment addressability** — `targeting/addressability.ts`. Is this a legitimate Moment at
+all? `1 <= sp <= LH`, T-02's frozen precondition, unchanged. `commitMoment` carries this and nothing
+else, because redefining the canonical precondition in interaction terms would collapse the two
+concepts. `LH = null` is the technical absence sentinel: before the first mirrored committed Session
+Position **nothing** is addressable, which is a correct answer rather than an error.
+
+**Disclosed interaction availability** — `targeting/disclosed-availability.ts`. May T-06 interaction
+target it *right now*? Only if it is a member of the currently disclosed Track for this Session.
+
+The second is strictly narrower and is T-06's own. With `LH = 100` and a disclosed prefix through
+`SP(80)`, `SP(95)` is a perfectly valid Moment and is **not** an interaction target: nothing has
+disclosed it, and the numeric value of `LH` is not a disclosure. Exact entry, relative forward
+continuation and the pointer scrub all ask `resolveDisclosedTarget`, which asks the canonical rule
+first and disclosed membership second — so the two refusals stay distinguishable (`BEYOND_LIVE_HEAD`
+versus `NOT_DISCLOSED`) instead of collapsing into "out of range".
+
+Properties the gate holds:
+
+- membership is checked against the Track's own row (`targets[sp-1].sessionPosition === sp`), never
+  inferred from its length and never from `LH`;
+- it is Session-scoped, so a replaced Session invalidates the old authority outright;
+- disclosure **grows and never rewrites**: a target that becomes disclosed later becomes targetable
+  later, and nothing about earlier Product truth changes when it does;
+- it is never derived from a pixel, percentage, window offset, viewport bound or scroll position.
 
 Presentation coordinates help a reader *find* a disclosed target. The Timeline bridge turns one into
 a disclosed target and then discards it; by the time temporal intent exists, the target is an
 integer and the coordinate is gone.
+
+The accessible route is bounded by the same horizon: `exactTargetMaximum` is the disclosure horizon,
+not the Live Head, and a forward step is offered only where one really exists.
 
 ## 3. `Moment(LH)` is not the Live Edge
 
@@ -101,9 +122,14 @@ injected lookup whose shape is exactly `HistoricalDisclosureCache.lookup`.
 
 ## 5. Relative forward continuation
 
-`continuation/forward.ts` moves the ephemeral preview target and never canonical state. It stops at
-the authoritative Live Head and holds there: it does not wrap, does not widen the disclosure horizon
-and does not become Live intent.
+`continuation/forward.ts` moves the ephemeral preview target and never canonical state. It holds at
+**both** bounds — the authoritative Live Head and the disclosure horizon — and becomes Live intent at
+neither. `nextDisclosedTarget` reports which bound was reached (`AT_LIVE_HEAD` versus
+`AT_DISCLOSURE_HORIZON`), so a caller can tell them apart; the preview treats both as "hold".
+
+With `LH = 100` and disclosure through `SP(80)`, a continuation from `SP(79)` may reach `SP(80)` and
+must then hold. It never manufactures `SP(81)`. When disclosure later grows, a subsequent deliberate
+step reaches further.
 
 Ending one is three different things, none implicit:
 
@@ -186,12 +212,50 @@ separate pan. It writes no `MC.depth` (a locate is not a semantic-zoom move) and
 - **Several loci** → `LOCUS_SELECTION_REQUIRED`, carrying the loci. Nothing is written and nothing is
   recorded: no primary context, no Live Focus heuristic, no nearest geometry, no first row, no last
   used. Once the choice exists, the composite act is re-issued with it — still one transaction.
-- **`CHOOSE_LOCUS`** resolves a choice at the current position. It writes the spatial landing only,
-  changes no canonical identity, ranks no appearance, and cannot become a temporal move.
 
 Every locus is verified twice: the runtime brand proves it came from a disclosed scene at all, and
 membership proves it is a locus of *this* identity in *this* projection — so a handle minted from
 another position, identity or depth is refused rather than trusted for looking well-formed.
+
+### `CHOOSE_LOCUS` resolves an ambiguity, not a landing (R1-03)
+
+`CHOOSE_LOCUS` is the frozen act for an actual contextual ambiguity, and `resolveLocusChoice` counts
+the loci **before** it looks at the offered handle:
+
+| Loci at this position | Answer |
+| --- | --- |
+| zero | `NOT_LOCATABLE` — no geography is invented, and none is chosen |
+| exactly one | `NOT_A_LOCUS_CHOICE` — there is no choice to make, and letting the act run would widen it into a generic spatial locate |
+| several | an explicit choice is required, and the handle must be a member of this identity's loci in this projection |
+
+The composite act keeps the general landing resolver, so a unique-locus `COMMIT_MOMENT_AND_LOCATE`
+still proceeds without manufacturing a chooser. `CHOOSE_LOCUS` itself remains spatial-only: it
+preserves `TM` and `IF_ref`, and repeating the already-current landing stays a true no-op.
+
+### The pending choice has a route (R1-04)
+
+A Product state that says "a choice is required" comes with a usable way to make it.
+`locus-choice/` is the narrowest truthful substrate for that — not chrome, not art direction:
+
+- `pendingCompositeChoice` can only be built from a genuine `LOCUS_SELECTION_REQUIRED` result, and
+  `pendingSpatialChoice` only from two or more loci, so a chooser cannot be manufactured;
+- `locusChoiceModel` offers every legitimate locus exactly once, in the disclosed scene's own
+  deterministic order, and says out loud that the order is not a ranking. Nothing is preselected,
+  defaulted or described as preferable;
+- `LocusChoiceSurface` gives each option a `Pressable` (pointer) **and** a container accessibility
+  action keyed by the locus rather than by an index (non-pointer, no precision input). Both routes
+  call one `choose`, which reaches one `resolvePendingLocusChoice`, which reaches the existing
+  executors and the existing runtime authority;
+- a submission the chooser does not offer never reaches the executor;
+- backing out calls the observer and performs no act at all — there is nothing to undo, because the
+  temporal half has not happened;
+- a pending choice fails closed when the projection stops being the one the act would commit to: a
+  Session replacement or a semantic-depth move refuses it through the shared freshness rule.
+
+One case that deliberately does **not** fail closed: the reader moving elsewhere in time while the
+choice is pending. A composite act commits to its own Moment and its landing came from the projection
+*of that Moment*, so the pairing is still coherent — the act was always going to move them. Only the
+Session, the depth, or the disclosure-and-scene coherence can make it stale.
 
 ## 8. Map coupling and the stale-projection firewall
 
@@ -258,6 +322,39 @@ A scrub is a completed act with an unambiguous boundary, exactly like the Map's 
 is down nothing canonical happens. A successful end dispatches exactly one commit. Cancellation,
 failure, interruption and a competing recognizer winning all land in one path that dispatches nothing
 at all — no partial commit, no half transaction, no RH entry.
+
+### Interaction ownership over reordered callbacks (R1-02)
+
+Target crossings and endings are scheduled onto the RN runtime separately, so a callback can arrive
+after the gesture that produced it has settled, cancelled, failed or been superseded. Correctness
+must not depend on delivery order, so it does not.
+
+Every scheduled callback carries the **epoch** of its gesture — a monotonic counter incremented once
+per gesture in `onBegin` — and `createScrubHandlers` keeps a small state machine over it:
+
+| Epoch | Meaning | Effect |
+| --- | --- | --- |
+| `< current` | an older, superseded interaction | ignored |
+| `> current` | the first callback of a newer interaction | adopted, opened |
+| `== current`, open | the live interaction | acted on |
+| `== current`, closed | already settled or cancelled | ignored |
+
+Adoption on first sight is what makes it order-independent: no separate "open" message can arrive
+late or out of turn. A settle closes its interaction *before* acting, so its own in-flight callbacks
+are already inert. And an interaction acts only on the preview **it** established — it holds that
+preview's generation and re-checks it is still live — so:
+
+- a late target after cancel or after commit reopens nothing;
+- an older gesture cannot retarget a newer gesture's preview;
+- an older settle or finalize cannot commit or cancel a newer gesture;
+- a successful settle owning no target of its own fails closed and commits nothing;
+- an unsuccessful ending cannot discard a preview created by the accessible route.
+
+`interaction-race.test.ts` proves this with a deterministic scheduler seam that captures exactly what
+`scheduleOnRN` would deliver and flushes it in arbitrary orders — including six interleavings of two
+gestures, each with its exact expected outcome sequence and RH length. Two complete gestures
+committing twice is correct; a settle that arrives before its own target must fail closed. Nothing in
+this file uses a timer, a clock or a microtask as a correctness guarantee.
 
 ## 10. Accessibility
 

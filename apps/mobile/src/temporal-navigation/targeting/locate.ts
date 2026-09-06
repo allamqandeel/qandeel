@@ -99,3 +99,56 @@ export function resolveLocateAtTarget(
 export function legitimateLoci(context: MapInspectionContext, target: TemporalLocateTarget): readonly EntitledLocus[] {
   return entitledLoci(context.scene, target.family, target.id);
 }
+
+/**
+ * Resolves a CONTEXTUAL-LOCUS CHOICE, which is a narrower thing than a landing (R1-03).
+ *
+ * `CHOOSE_LOCUS` is the frozen act that resolves an actual ambiguity. It is applicable only when the
+ * target genuinely has SEVERAL legitimate loci at this position; anywhere else there is no choice to
+ * make, and letting it run would quietly turn the frozen contextual-locus choice into a generic
+ * spatial locate — a broader act than its identity.
+ *
+ * So the loci are counted BEFORE the offered handle is looked at:
+ *
+ *   zero legitimate loci   → `NOT_LOCATABLE`. No geography is invented, and none is chosen.
+ *   exactly one            → `NOT_A_LOCUS_CHOICE`. The act does not apply; the composite landing
+ *                            path handles a unique locus without manufacturing a chooser.
+ *   several                → an explicit choice is required, and the handle must be a member of
+ *                            THIS identity's loci in THIS projection.
+ *
+ * Nothing here ranks, prefers, defaults or elects: the count decides applicability, and the caller
+ * decides which locus.
+ */
+export function resolveLocusChoice(
+  context: MapInspectionContext,
+  target: TemporalLocateTarget,
+  chosen: EntitledLocus | undefined,
+): LocateResolution {
+  if (target === null || typeof target !== 'object') return refuse('INVALID_INPUT', 'a locate target is required');
+  if (typeof target.id !== 'string' || target.id.length === 0) return refuse('INVALID_INPUT', 'a non-empty canonical identity is required');
+
+  const entitlement = resolveEntitledInspection(context.disclosure, {
+    family: target.family,
+    id: target.id,
+    ...(target.version === undefined ? {} : { version: target.version }),
+  });
+  if (!entitlement.ok) return refuse('NOT_ENTITLED', `${entitlement.reason}: ${entitlement.detail}`);
+
+  const locatability = resolveLocatability(context.scene, target.family, target.id);
+  if (locatability.outcome === 'NO_LEGITIMATE_LOCUS') {
+    return refuse('NOT_LOCATABLE', `${target.family} ${target.id} has no legitimate locus on the Map at Session Position ${context.scene.tc}`);
+  }
+  if (locatability.outcome === 'UNIQUE_LOCUS') {
+    return refuse(
+      'NOT_A_LOCUS_CHOICE',
+      `${target.family} ${target.id} has exactly one legitimate locus at Session Position ${context.scene.tc}; a contextual-locus choice does not apply`,
+    );
+  }
+  if (chosen === undefined) return { outcome: 'LOCUS_SELECTION_REQUIRED', loci: locatability.loci };
+  if (!isEntitledLocus(chosen)) return refuse('INVALID_INPUT', 'the chosen locus was not derived from a disclosed scene');
+  const match = locatability.loci.find((candidate) => candidate.key === chosen.key);
+  if (match === undefined) {
+    return refuse('INVALID_INPUT', `the chosen locus is not a legitimate locus of ${target.family} ${target.id} at Session Position ${context.scene.tc}`);
+  }
+  return { outcome: 'UNIQUE_LOCUS', locus: match };
+}

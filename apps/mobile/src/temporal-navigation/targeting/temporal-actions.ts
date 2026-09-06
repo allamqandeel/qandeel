@@ -55,7 +55,7 @@ import {
 } from '../../map';
 import { dispatchAuthorizedTemporalAction, temporalRejected, type TemporalOutcome } from '../outcome';
 import { resolveTemporalTarget, temporalBounds } from './addressability';
-import { resolveLocateAtTarget, type TemporalLocateTarget } from './locate';
+import { resolveLocateAtTarget, resolveLocusChoice, type TemporalLocateTarget } from './locate';
 
 const authorized = new WeakSet<TemporalAction>();
 
@@ -186,12 +186,17 @@ export interface ChooseLocusRequest {
  * no canonical identity, invents no preferred Thread, ranks no contextual appearance, creates no
  * geometry from proximity, and — because the frozen authority of this act excludes `TM` and the
  * transition carries the temporal mode through unchanged — it cannot become a temporal move.
+ *
+ * It is applicable ONLY where there is a genuine ambiguity to resolve (R1-03): a target with several
+ * legitimate loci at this position. Zero loci is refused as unlocatable, a unique locus is refused as
+ * not a choice at all, and only the multiple-loci case proceeds — and then only with an explicit
+ * member of that exact target's loci in that exact projection.
  */
 export function chooseLocus(store: CanonicalStore, request: ChooseLocusRequest): TemporalOutcome {
   if (request === null || typeof request !== 'object' || request.locus === undefined) {
     return temporalRejected('INVALID_INPUT', 'a contextual-locus choice names the locus it chooses');
   }
-  const located = resolveLocateAtTarget(request.context, request.target, request.locus);
+  const located = resolveLocusChoice(request.context, request.target, request.locus);
   if (located.outcome === 'REJECTED') return temporalRejected(located.code, located.detail);
   if (located.outcome === 'LOCUS_SELECTION_REQUIRED') {
     return temporalRejected('INVALID_INPUT', 'a contextual-locus choice names the locus it chooses');

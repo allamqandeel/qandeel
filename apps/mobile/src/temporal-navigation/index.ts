@@ -12,11 +12,15 @@
  * Layer order, and the reason each boundary exists:
  *
  *   `outcome`               one typed answer per act, so a surface never catches an exception;
- *   `targeting`             the single addressability gate, the single commit boundary, and the two
- *                           promoted acts behind their own runtime authority;
+ *   `targeting`             canonical addressability AND the narrower disclosed interaction gate,
+ *                           the single commit boundary, and the two promoted acts behind their own
+ *                           runtime authority;
  *   `preview`               `PTC` as Class C, and the explicitly bounded projection it may present;
- *   `continuation`          repeated forward targeting that stops at `LH` and commits nothing;
- *   `timeline-integration`  disclosed target → temporal intent, one way only;
+ *   `continuation`          repeated forward targeting that holds at the disclosure horizon and at
+ *                           `LH` alike, and commits nothing;
+ *   `locus-choice`          the pending contextual-locus choice and its user-facing route;
+ *   `timeline-integration`  disclosed target → temporal intent, one way only, with per-gesture
+ *                           interaction ownership over reordered cross-runtime callbacks;
  *   `motion`                the motion contract in plain arithmetic, then its Reanimated binding;
  *   `accessibility`         the same capabilities without a drag or a precision pointer.
  *
@@ -31,6 +35,7 @@ export { dispatchAuthorizedTemporalAction, dispatchKernelCommit, temporalRejecte
 export * from './targeting';
 export * from './preview';
 export * from './continuation';
+export * from './locus-choice';
 export * from './motion';
 export * from './accessibility';
 export * from './timeline-integration';

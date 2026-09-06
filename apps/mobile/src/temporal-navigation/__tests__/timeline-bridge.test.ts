@@ -7,10 +7,10 @@
  */
 import { createPresentationController } from '../../timeline';
 import { createTemporalPreviewController } from '../preview';
-import { temporalBounds } from '../targeting';
+import { temporalTargeting } from '../targeting';
 import { disclosedTargetAt, presentationX, temporalTargetFromDisclosed } from '../timeline-integration';
 import { createScrubHandlers } from '../timeline-integration/scrub';
-import { temporalTestStore, trackOf } from '../__fixtures__/temporal';
+import { fullyDisclosedTargeting, temporalTestStore, trackOf } from '../__fixtures__/temporal';
 
 describe('TN06-06 — presentation separation', () => {
   it('never alters temporal canonical state through window, position, refine or widen', () => {
@@ -48,22 +48,25 @@ describe('TN06-07 — an explicitly activated disclosed target enters T-06 targe
   const track = trackOf('session-1', 12);
 
   it('converts a disclosed target into a temporal target through the one addressability gate', () => {
-    const resolved = temporalTargetFromDisclosed(temporalBounds(store.getState()), track, track.targets[4]);
+    const resolved = temporalTargetFromDisclosed(fullyDisclosedTargeting(store), track, track.targets[4]);
     expect(resolved).toEqual({ ok: true, sp: 5 });
   });
 
   it('refuses a Track built for another Session rather than merging it', () => {
     const foreign = trackOf('session-2', 12);
-    expect(temporalTargetFromDisclosed(temporalBounds(store.getState()), foreign, foreign.targets[0])).toEqual({
+    expect(temporalTargetFromDisclosed(fullyDisclosedTargeting(store), foreign, foreign.targets[0])).toEqual({
       ok: false,
       code: 'SESSION_MISMATCH',
       detail: expect.any(String),
     });
+    // Nor may a foreign Track become the authority itself.
+    const foreignAuthority = temporalTargeting(store.getState(), foreign);
+    expect(temporalTargetFromDisclosed(foreignAuthority, foreign, foreign.targets[0])).toMatchObject({ code: 'SESSION_MISMATCH' });
   });
 
   it('refuses a disclosed target beyond the Live Head, even though the presentation shows it', () => {
     const short = temporalTestStore({ liveHead: 3 });
-    expect(temporalTargetFromDisclosed(temporalBounds(short.getState()), track, track.targets[9])).toEqual({
+    expect(temporalTargetFromDisclosed(fullyDisclosedTargeting(short), track, track.targets[9])).toEqual({
       ok: false,
       code: 'BEYOND_LIVE_HEAD',
       detail: expect.any(String),
@@ -103,7 +106,7 @@ describe('TN06-07 — an explicitly activated disclosed target enters T-06 targe
     const handlers = createScrubHandlers({ store: scrubStore, preview, snapshot: controller.getSnapshot });
     const before = scrubStore.getState();
 
-    expect(handlers.targetIndex(6).outcome).toBe('PREVIEWING');
+    expect(handlers.targetIndex(1, 6).outcome).toBe('PREVIEWING');
     expect(preview.getSnapshot()).toMatchObject({ status: 'PREVIEWING', ptc: 7 });
     // Activation previews; it does not commit, and the presentation controller learned nothing.
     expect(scrubStore.getState()).toBe(before);
@@ -117,8 +120,21 @@ describe('TN06-07 — an explicitly activated disclosed target enters T-06 targe
     const handlers = createScrubHandlers({ store: scrubStore, preview, snapshot: controller.getSnapshot });
 
     for (const index of [-1, 12, 999, 1.5, Number.NaN]) {
-      expect(handlers.targetIndex(index)).toMatchObject({ outcome: 'REJECTED', code: 'NOT_ADDRESSABLE' });
+      expect(handlers.targetIndex(1, index)).toMatchObject({ outcome: 'REJECTED', code: 'NOT_DISCLOSED' });
     }
     expect(preview.getSnapshot()).toEqual({ status: 'IDLE' });
+  });
+
+  it('R1-01 — the pointer route asks the same disclosed rule and gains no second one', () => {
+    // The presentation is showing a Track of 12 rows while the mirror knows only 3 Moments. The
+    // pointer route must refuse row 10 for the same reason every other route would.
+    const shortStore = temporalTestStore({ liveHead: 3 });
+    const controller = createPresentationController(track, 240);
+    const preview = createTemporalPreviewController();
+    const handlers = createScrubHandlers({ store: shortStore, preview, snapshot: controller.getSnapshot });
+
+    expect(handlers.targetIndex(1, 9)).toMatchObject({ outcome: 'REJECTED', code: 'BEYOND_LIVE_HEAD' });
+    expect(handlers.targetIndex(1, 2).outcome).toBe('PREVIEWING');
+    expect(preview.getSnapshot()).toMatchObject({ ptc: 3 });
   });
 });

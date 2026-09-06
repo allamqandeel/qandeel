@@ -29,7 +29,8 @@
  * later chrome and responsive tasks; nothing here states an analytical fact about anything.
  */
 import type { SessionPosition } from '../../state';
-import { nextForwardTarget, type TemporalBounds } from '../targeting/addressability';
+import type { TemporalBounds } from '../targeting/addressability';
+import { nextDisclosedTarget, type TemporalTargeting } from '../targeting/disclosed-availability';
 import type { TemporalPreview } from '../preview/preview-state';
 
 export const TEMPORAL_ACCESSIBILITY_ACTIONS = Object.freeze([
@@ -60,7 +61,11 @@ export interface TemporalAccessibilityModel {
   readonly cancelAvailable: boolean;
   readonly forwardAvailable: boolean;
   readonly liveAvailable: boolean;
-  /** The highest Session Position that may be entered by the exact route right now. */
+  /**
+   * The highest Session Position the exact route may target right now: the DISCLOSURE HORIZON, not
+   * the Live Head (R1-01). A later Moment may exist and simply not be disclosed yet, and the exact
+   * route must not offer what it would then refuse.
+   */
   readonly exactTargetMaximum: SessionPosition | null;
 }
 
@@ -77,11 +82,14 @@ function stanceLabelFor(bounds: TemporalBounds): { readonly stance: TemporalStan
     : { stance: 'PINNED_TO_MOMENT', label: `Pinned to Moment ${bounds.committedTc}` };
 }
 
-export function temporalAccessibilityModel(bounds: TemporalBounds, preview: TemporalPreview): TemporalAccessibilityModel {
+export function temporalAccessibilityModel(targeting: TemporalTargeting, preview: TemporalPreview): TemporalAccessibilityModel {
+  const bounds: TemporalBounds = targeting.bounds;
   const { stance, label } = stanceLabelFor(bounds);
   const previewing = preview.status === 'PREVIEWING';
   const cursor = previewing ? preview.ptc : bounds.committedTc;
-  const forwardAvailable = nextForwardTarget(bounds, cursor).outcome === 'STEP';
+  // Forward availability is asked of the DISCLOSED sequence, so the accessible route offers a step
+  // exactly when one exists — never one that the interaction gate would then refuse.
+  const forwardAvailable = nextDisclosedTarget(targeting, cursor).outcome === 'STEP';
   const liveAvailable = bounds.liveHead !== null;
 
   const actions: TemporalAccessibilityAction[] = [];
@@ -105,7 +113,7 @@ export function temporalAccessibilityModel(bounds: TemporalBounds, preview: Temp
     cancelAvailable: previewing,
     forwardAvailable,
     liveAvailable,
-    exactTargetMaximum: bounds.liveHead,
+    exactTargetMaximum: targeting.disclosed.horizon,
   });
 }
 

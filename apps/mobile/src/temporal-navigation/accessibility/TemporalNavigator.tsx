@@ -19,9 +19,10 @@ import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type AccessibilityActionEvent } from 'react-native';
 
 import type { CanonicalStore } from '../../state';
+import type { DisclosedTrack } from '../../timeline';
 import type { TemporalOutcome } from '../outcome';
 import type { TemporalPreviewController } from '../preview/preview-state';
-import { temporalBounds } from '../targeting/addressability';
+import { temporalTargeting } from '../targeting/disclosed-availability';
 import { commitLiveEdgeIntent, commitPreviewedTarget } from '../targeting/commit';
 import {
   parseExactMomentEntry,
@@ -38,20 +39,26 @@ export const TEMPORAL_LIVE_TEST_ID = 'qandeel-temporal-live';
 export interface TemporalNavigatorProps {
   readonly store: CanonicalStore;
   readonly preview: TemporalPreviewController;
+  /**
+   * The currently disclosed Track. It is what authorizes interaction targeting, so the accessible
+   * routes are bounded by disclosure exactly as the pointer route is (R1-01) — the exact-entry hint
+   * names the disclosure horizon, and a forward step is offered only where one really exists.
+   */
+  readonly track: DisclosedTrack;
   /** Presentation acknowledgement, invoked only after the store has answered. */
   readonly onCommitted?: () => void;
   readonly onCancelled?: () => void;
   readonly onOutcome?: (outcome: TemporalOutcome) => void;
 }
 
-export function TemporalNavigator({ store, preview, onCommitted, onCancelled, onOutcome }: TemporalNavigatorProps) {
+export function TemporalNavigator({ store, preview, track, onCommitted, onCancelled, onOutcome }: TemporalNavigatorProps) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const previewState = useSyncExternalStore(preview.subscribe, preview.getSnapshot);
   const [entry, setEntry] = useState('');
   const [entryRefused, setEntryRefused] = useState(false);
 
-  const bounds = useMemo(() => temporalBounds(state), [state]);
-  const model = useMemo(() => temporalAccessibilityModel(bounds, previewState), [bounds, previewState]);
+  const targeting = useMemo(() => temporalTargeting(state, track), [state, track]);
+  const model = useMemo(() => temporalAccessibilityModel(targeting, previewState), [targeting, previewState]);
 
   // The act runs first and the observers are notified afterwards: an optional call would not
   // evaluate its argument when no observer is attached, which would silently disable the route.
@@ -68,16 +75,16 @@ export function TemporalNavigator({ store, preview, onCommitted, onCancelled, on
     (action: TemporalAccessibilityActionName | string) => {
       switch (action) {
         case 'preview-later-moment':
-          // Relative forward continuation, one deliberate step. Ephemeral: nothing canonical moves,
-          // and reaching the Live Head holds there rather than becoming Live intent.
-          preview.stepForward(bounds);
+          // Relative forward continuation, one deliberate step over DISCLOSED targets. Ephemeral:
+          // nothing canonical moves, and holding at either bound never becomes Live intent.
+          preview.stepForward(targeting);
           return;
         case 'cancel-preview':
           preview.cancel();
           onCancelled?.();
           return;
         case 'commit-previewed-moment':
-          report(commitPreviewedTarget(store, preview));
+          report(commitPreviewedTarget(store, preview, targeting));
           return;
         case 'commit-live-edge':
           report(commitLiveEdgeIntent(store, preview));
@@ -86,14 +93,16 @@ export function TemporalNavigator({ store, preview, onCommitted, onCancelled, on
           return;
       }
     },
-    [preview, bounds, store, report, onCancelled],
+    [preview, targeting, store, report, onCancelled],
   );
 
   const submitExact = useCallback(() => {
     const parsed = parseExactMomentEntry(entry);
-    const result = parsed === null ? null : preview.preview(bounds, parsed, 'EXACT_ENTRY');
+    // The disclosed gate decides, so an exact entry that `LH` would allow but nothing has disclosed
+    // is refused here exactly as it would be on every other route.
+    const result = parsed === null ? null : preview.preview(targeting, parsed, 'EXACT_ENTRY');
     setEntryRefused(result === null || result.outcome === 'REJECTED');
-  }, [entry, preview, bounds]);
+  }, [entry, preview, targeting]);
 
   return (
     <View
@@ -117,7 +126,7 @@ export function TemporalNavigator({ store, preview, onCommitted, onCancelled, on
         accessibilityLabel="Exact Moment number"
         accessibilityHint={
           model.exactTargetMaximum === null
-            ? 'No conversational position is addressable yet.'
+            ? 'No conversational position is available yet.'
             : `Enter a Moment number from 1 to ${model.exactTargetMaximum}. This previews the Moment; it does not go to it.`
         }
         value={entry}

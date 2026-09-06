@@ -33,8 +33,20 @@ export type TemporalRejectionCode =
   | 'NOT_ADDRESSABLE'
   /** The candidate is later than the authoritative Live Head; nothing later than `LH` exists. */
   | 'BEYOND_LIVE_HEAD'
+  /**
+   * The candidate is canonically addressable — an integer in `[1, LH]` — but is NOT a member of the
+   * currently disclosed Track, so T-06 interaction may not target it. Canonical Moment validity and
+   * disclosed interaction availability are different questions and this code is the second one.
+   */
+  | 'NOT_DISCLOSED'
   /** The target was identified in a different Session than the one this store mirrors. */
   | 'SESSION_MISMATCH'
+  /**
+   * A scheduled callback arrived for an interaction that has already settled, cancelled, failed or
+   * been superseded. It changes nothing: a closed interaction can neither open nor retarget a
+   * preview, and it can neither commit nor cancel a newer one.
+   */
+  | 'INTERACTION_CLOSED'
   /** A commit or cancellation was asked for while no preview target existed. */
   | 'NO_PREVIEW'
   /** The supplied projection is not the projection of the position this act commits to. */
@@ -45,6 +57,12 @@ export type TemporalRejectionCode =
   | 'NOT_ENTITLED'
   /** The target legitimately has no locus at the target position; no geography is invented. */
   | 'NOT_LOCATABLE'
+  /**
+   * `CHOOSE_LOCUS` was asked for where there is no ambiguity to resolve. The frozen contextual-locus
+   * choice applies only to a target with SEVERAL legitimate loci; a unique locus is a landing, not a
+   * choice, and letting the act run there would widen it into a generic spatial locate.
+   */
+  | 'NOT_A_LOCUS_CHOICE'
   | 'INVALID_INPUT';
 
 export type TemporalOutcome =

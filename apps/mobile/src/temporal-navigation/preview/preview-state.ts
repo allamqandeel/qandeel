@@ -10,9 +10,10 @@
  *
  * This controller therefore has no store, no dispatch, no transport, no persistence and no
  * canonical writer of any kind. It cannot mutate Product truth even by mistake, because it holds
- * nothing that could. Every judgement it makes about what may be previewed is delegated to the one
- * addressability gate, over `TemporalBounds` supplied by the caller — so it cannot drift from the
- * canonical rule, and it cannot read canonical state behind the caller's back either.
+ * nothing that could. Every judgement it makes about what may be previewed is delegated to the ONE
+ * interaction targeting gate, over a `TemporalTargeting` supplied by the caller — so it cannot drift
+ * from the canonical rule, cannot read canonical state behind the caller's back, and cannot target a
+ * Moment that `LH` makes valid but nothing has disclosed (R1-01).
  *
  * A preview is deliberately NOT implemented by moving `TM` and moving it back. That would create
  * two false Product transitions, two RH checkpoints and a moment in which committed truth said
@@ -26,7 +27,7 @@
  */
 import type { SessionPosition } from '../../state';
 import type { TemporalRejectionCode } from '../outcome';
-import { nextForwardTarget, resolveTemporalTarget, type TemporalBounds } from '../targeting/addressability';
+import { nextDisclosedTarget, resolveDisclosedTarget, type TemporalTargeting } from '../targeting/disclosed-availability';
 
 /** Which legitimate route established this preview. Classification only; it grants nothing. */
 export type PreviewSource = 'DISCLOSED_TARGET' | 'RELATIVE_FORWARD' | 'EXACT_ENTRY';
@@ -70,13 +71,16 @@ export interface TemporalPreviewController {
   getSnapshot(): TemporalPreview;
   subscribe(listener: () => void): () => void;
   /** `PREVIEW_TEMPORAL_TARGET`: express an ephemeral temporal target. Never a commit. */
-  preview(bounds: TemporalBounds, candidate: unknown, source: PreviewSource): PreviewResult;
-  /** `RELATIVE_FORWARD_CONTINUATION`: one step forward over addressable targets, bounded by `LH`. */
-  stepForward(bounds: TemporalBounds): PreviewResult;
+  preview(targeting: TemporalTargeting, candidate: unknown, source: PreviewSource): PreviewResult;
+  /**
+   * `RELATIVE_FORWARD_CONTINUATION`: one step forward over DISCLOSED targets. It holds at the
+   * disclosure horizon and at the Live Head alike, and becomes Live intent at neither.
+   */
+  stepForward(targeting: TemporalTargeting): PreviewResult;
   /** `CANCEL_PREVIEW`: discard ephemeral intent. Lossless, non-transactional, always safe. */
   cancel(): PreviewResult;
-  /** Drops a preview that belongs to a replaced Session. Invents no navigation of any kind. */
-  reconcile(bounds: TemporalBounds): PreviewResult;
+  /** Drops a preview whose Session was replaced or whose target is no longer disclosed. */
+  reconcile(targeting: TemporalTargeting): PreviewResult;
   /** The interruption guard: is this generation still the live preview intent? */
   isCurrent(generation: number): boolean;
 }
@@ -93,7 +97,8 @@ export function createTemporalPreviewController(): TemporalPreviewController {
     for (const listener of Array.from(listeners)) listener();
   }
 
-  function begin(bounds: TemporalBounds, sp: SessionPosition, source: PreviewSource): PreviewResult {
+  function begin(targeting: TemporalTargeting, sp: SessionPosition, source: PreviewSource): PreviewResult {
+    const bounds = targeting.bounds;
     const committedTc = bounds.committedTc;
     if (committedTc === null) {
       return { outcome: 'REJECTED', code: 'NO_ADDRESSABLE_POSITION', detail: 'no committed temporal position exists to preview away from' };
@@ -106,31 +111,36 @@ export function createTemporalPreviewController(): TemporalPreviewController {
     return { outcome: 'PREVIEWING', preview };
   }
 
-  function preview(bounds: TemporalBounds, candidate: unknown, source: PreviewSource): PreviewResult {
-    const resolved = resolveTemporalTarget(bounds, candidate);
+  function preview(targeting: TemporalTargeting, candidate: unknown, source: PreviewSource): PreviewResult {
+    // ONE gate for every route (R1-01): canonical validity, then disclosed membership. The
+    // canonical rule is never consulted alone here, so no route can target a Moment that `LH` makes
+    // valid but nothing has disclosed.
+    const resolved = resolveDisclosedTarget(targeting, candidate);
     if (!resolved.ok) return { outcome: 'REJECTED', code: resolved.code, detail: resolved.detail };
     // Re-asking for the target already previewed is not a new intent: it publishes nothing, bumps
     // no generation and invalidates no in-flight work. A scrub that stays inside one disclosed step
     // therefore costs nothing at all.
-    if (state.status === 'PREVIEWING' && state.ptc === resolved.sp && state.origin.sessionId === bounds.sessionId) {
+    if (state.status === 'PREVIEWING' && state.ptc === resolved.sp && state.origin.sessionId === targeting.bounds.sessionId) {
       return { outcome: 'UNCHANGED' };
     }
-    if (state.status === 'PREVIEWING' && state.origin.sessionId !== bounds.sessionId) cancel();
-    return begin(bounds, resolved.sp, source);
+    if (state.status === 'PREVIEWING' && state.origin.sessionId !== targeting.bounds.sessionId) cancel();
+    return begin(targeting, resolved.sp, source);
   }
 
-  function stepForward(bounds: TemporalBounds): PreviewResult {
-    const from = state.status === 'PREVIEWING' ? state.ptc : bounds.committedTc;
-    const step = nextForwardTarget(bounds, from);
+  function stepForward(targeting: TemporalTargeting): PreviewResult {
+    const from = state.status === 'PREVIEWING' ? state.ptc : targeting.bounds.committedTc;
+    const step = nextDisclosedTarget(targeting, from);
     switch (step.outcome) {
       case 'REJECTED':
         return { outcome: 'REJECTED', code: step.code, detail: step.detail };
       case 'AT_LIVE_HEAD':
-        // The continuation holds at the Live Head. It does not wrap, does not widen the horizon and
-        // — above all — does not become Live intent: only an explicit Live act produces FOLLOW_LIVE.
+      case 'AT_DISCLOSURE_HORIZON':
+        // The continuation holds at whichever bound it reached. It does not wrap, does not widen
+        // the disclosure horizon, does not read `LH` as a disclosure — and above all does not
+        // become Live intent: only an explicit Live act produces FOLLOW_LIVE.
         return { outcome: 'UNCHANGED' };
       case 'STEP':
-        return begin(bounds, step.sp, 'RELATIVE_FORWARD');
+        return begin(targeting, step.sp, 'RELATIVE_FORWARD');
       default: {
         const exhaustive: never = step;
         return exhaustive;
@@ -145,14 +155,15 @@ export function createTemporalPreviewController(): TemporalPreviewController {
     return { outcome: 'CLEARED' };
   }
 
-  function reconcile(bounds: TemporalBounds): PreviewResult {
+  function reconcile(targeting: TemporalTargeting): PreviewResult {
     if (state.status === 'IDLE') return { outcome: 'UNCHANGED' };
     // A replaced Session takes its preview with it. Nothing is carried across, nothing is
     // re-targeted into the new Session, and no Product navigation is invented in its place.
-    if (state.origin.sessionId !== bounds.sessionId) return cancel();
-    // `LH` is monotonic, so a target legitimate when it was previewed stays legitimate; anything
-    // else is a defect, and the preview is discarded rather than clamped to a different Moment.
-    return resolveTemporalTarget(bounds, state.ptc).ok ? { outcome: 'UNCHANGED' } : cancel();
+    if (state.origin.sessionId !== targeting.bounds.sessionId) return cancel();
+    // `LH` is monotonic and disclosure only grows, so a target legitimate when it was previewed
+    // stays legitimate; anything else is a defect, and the preview is discarded rather than clamped
+    // to a different Moment.
+    return resolveDisclosedTarget(targeting, state.ptc).ok ? { outcome: 'UNCHANGED' } : cancel();
   }
 
   return {
