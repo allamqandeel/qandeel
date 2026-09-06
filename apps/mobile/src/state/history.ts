@@ -13,8 +13,10 @@
  * absence sentinel (`LH = null`) fails closed here, at the common boundary, so no checkpoint
  * that frozen restoration could not honour can ever exist.
  *
- * Consumption of RH (Back One Step, Exact Return, the return acts) is T-07's; nothing here
- * unwinds an entry.
+ * Consumption of RH is T-07's and lives on a SEPARATE guarded transaction path in `store.ts`:
+ * nothing in this file unwinds an entry, and `Back One Step` / `Exact Return` deliberately never
+ * reach `appendIfEffective` — running a restoration through the append path would record the state
+ * being left and turn the next Back into a step forward again.
  */
 import type { RhActionId } from './actions';
 import { PreconditionFailed } from './authority';
@@ -57,7 +59,9 @@ export function isEffectiveChange(before: CanonicalState, after: CanonicalState)
 }
 
 /**
- * Exact pre-act checkpoint (`C_RH`). `tmProvenance` is provenance only; restoration is T-07's.
+ * Exact pre-act checkpoint (`C_RH`). `tmProvenance` is provenance only: T-07's restoration is
+ * always `PINNED(entry.captured.tc)` and never reads it, so a checkpoint taken while `FOLLOW_LIVE`
+ * can never reattach a restored viewpoint to the moving Live Head.
  * Fails closed when the pre-act effective `TC` is the technical absence sentinel (FIX-T02-04).
  */
 export function captureCheckpoint(preActState: CanonicalState, act: RhActionId): RhEntry {

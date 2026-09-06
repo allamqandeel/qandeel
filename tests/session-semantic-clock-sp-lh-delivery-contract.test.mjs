@@ -301,27 +301,39 @@ test('the T-02 canonical state kernel is unchanged and is still not mounted', as
   // byte-identical to what T-02 froze. They carry the state semantics, and no later task has
   // touched one.
   const frozen = {
-    'classes.ts': 'f0d17c675c148e26c523291e07769c3ed764f263',
-    'history.ts': 'e12caa557ab719611d11e43392723a1bb2389c62',
     'selectors.ts': '72c156c298c5914a578fd41f3243c7bb596756ae',
     'CanonicalStateProvider.tsx': 'b7ea8b6e775f74f7d331843e4783dc7291b11b49',
   };
-  // T-04 re-anchor, extended by T-06, by exact name and for exactly five files: promoting
-  // `INSPECT_OBJECT`, `SWITCH_CONTEXT` and `DIRECT_JUMP` (T-04) and then `COMMIT_MOMENT_AND_LOCATE`
-  // and `CHOOSE_LOCUS` (T-06) to executable acts required the registry, their transitions, the
-  // dispatch surface, the typed refusals and the public surface. The per-field writer guard itself
-  // (`assertAuthorizedClassAWrites`) is unchanged, and so are the four files above. The pins are not
-  // weakened: these ids are exact, so any further change to the kernel still trips this gate.
+  // T-07 re-anchor, STRENGTHENED rather than relaxed: `classes.ts` and `history.ts` gained prose —
+  // RH stopped being globally append-only when T-07 landed the consumption path, and the two files
+  // that describe RH had to say so. Their EXECUTABLE CODE is pinned to the exact bytes T-02 froze,
+  // with comments stripped, so a semantic change to either still trips this gate; the full-file id
+  // is pinned too, so even a further comment edit is visible.
+  const frozenCode = {
+    'classes.ts': ['919c3a93b008edc6277fad5996c8c27a198653ae', '1927aa0ec79f711bfcd2fae67a3ef051e5a4767a'],
+    'history.ts': ['1d08ed468b15770b56669b66edcc0414d5b671e3', '74f742f9eba29fd849087fb4d2142a13373ebe97'],
+  };
+  // T-04 re-anchor, extended by T-06 and T-07, by exact name and for exactly five files: promoting
+  // `INSPECT_OBJECT`, `SWITCH_CONTEXT` and `DIRECT_JUMP` (T-04), then `COMMIT_MOMENT_AND_LOCATE` and
+  // `CHOOSE_LOCUS` (T-06), then the six frozen return acts (T-07) required the registry, their
+  // transitions, the dispatch surface, the typed refusals and the public surface. The per-field
+  // writer guard itself (`assertAuthorizedClassAWrites`) is unchanged. The pins are not weakened:
+  // these ids are exact, so any further change to the kernel still trips this gate.
   const promotedByOwners = {
-    'actions.ts': '4e20dd4346dec252fb1b754fd510d31b710dd42e',
-    'transitions.ts': 'a78931bf1efc1b4a05cfa0bc7c4557da041cdaca',
-    'authority.ts': 'b9d4a5b1cd354bfc529175341c59f6bc5bbd9ad8',
-    'store.ts': '2054b500369ca23813c7ad90ee9c717b8f35a7e3',
-    'index.ts': '4e74f2e4ce2bcc83f702a5b4f9d85fd298bc93d7',
+    'actions.ts': '3d2f52351424d70b093dc4dbf3079a5262f4209a',
+    'transitions.ts': '14577b58af5aba0d2e95a1b4e2f969d094bc2c38',
+    'authority.ts': 'c632e6be2c0bd2d86078be570f8e306f016402f6',
+    'store.ts': '5d52ed4dab69de862a6381244bf44e32018609fa',
+    'index.ts': '58ed04c9f62dea71bda71097f4161f0422fb538a',
   };
   for (const [name, blob] of Object.entries(frozen)) {
     assert.equal(gitBlobId(await read(`apps/mobile/src/state/${name}`)), blob,
       `T-03A2 redesigns no T-02 state: ${name} is byte-identical`);
+  }
+  for (const [name, [codeBlob, fileBlob]] of Object.entries(frozenCode)) {
+    const text = await read(`apps/mobile/src/state/${name}`);
+    assert.equal(gitBlobId(stripComments(text)), codeBlob, `${name} carries the exact T-02 executable code; only its prose moved`);
+    assert.equal(gitBlobId(text), fileBlob, `${name} carries exactly the authorized prose`);
   }
   for (const [name, blob] of Object.entries(promotedByOwners)) {
     assert.equal(gitBlobId(await read(`apps/mobile/src/state/${name}`)), blob,

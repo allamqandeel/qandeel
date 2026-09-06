@@ -4,11 +4,12 @@
  * Promoting an act to executable is the moment a boundary can quietly open. The guarantees proven
  * here are the ones a passing feature test would not notice: a forged act is refused, a granted act
  * cannot be replayed, neither promoted family can enter the other's seam, the raw dispatch surface
- * reaches neither, and every T-07 identity still fails closed on all three.
+ * reaches neither, and no T-07 identity can be reached through either of their seams.
  */
 import {
   ACTION_CATALOG,
   METADATA_ONLY_ACTION_TYPES,
+  RETURN_ACTION_TYPES,
   TEMPORAL_ACTION_TYPES,
   UnauthorizedActionClass,
   UnauthorizedMapAction,
@@ -39,23 +40,37 @@ const forgedLanding = () => ({
 });
 
 describe('TN06-22 — the T-07 firewall', () => {
-  it('keeps exactly the six T-07 identities as later-owner metadata', () => {
-    expect([...METADATA_ONLY_ACTION_TYPES].sort()).toEqual([...T07_ACTS].sort());
+  it('keeps exactly the six T-07 identities in their own family, owned by T-07', () => {
+    // T-07 re-anchor: the six were promoted behind their OWN runtime authority when T-07 landed.
+    // What TN06-22 guards is unweakened and now stated positively: the six are exactly the return
+    // family, they are still six, they are still T-07's, and the later-owner set they left is empty.
+    expect([...RETURN_ACTION_TYPES].sort()).toEqual([...T07_ACTS].sort());
+    expect([...METADATA_ONLY_ACTION_TYPES]).toEqual([]);
     for (const id of T07_ACTS) {
-      expect(ACTION_CATALOG[id].level).toBe('METADATA_ONLY');
+      expect(ACTION_CATALOG[id].level).toBe('EXECUTABLE');
       expect(ACTION_CATALOG[id].owner).toBe('T-07');
     }
   });
 
-  it('leaves every T-07 identity failing closed on all three Product entry points', () => {
+  it('leaves every T-07 identity unreachable from the raw surface and from both neighbouring seams', () => {
     const store = temporalTestStore({ liveHead: 6 });
     const before = store.getState();
     for (const id of T07_ACTS) {
-      expect(() => store.dispatch({ type: id } as never)).toThrow(/is owned by T-07/u);
-      expect(() => store.dispatchMap({ type: id } as never)).toThrow(/is owned by T-07/u);
-      expect(() => store.dispatchTemporal({ type: id } as never)).toThrow(/is owned by T-07/u);
+      expect(() => store.dispatch({ type: id } as never)).toThrow(/authorized return seam/u);
+      expect(() => store.dispatchMap({ type: id } as never)).toThrow(/is not a promoted Map act/u);
+      expect(() => store.dispatchTemporal({ type: id } as never)).toThrow(/is not a promoted temporal act/u);
+      // ...and this T-06 store, built without a Return authority, runs no return act at all.
+      expect(() => store.dispatchReturn({ type: id } as never)).toThrow(/without a Return authority/u);
     }
     expect(store.getState()).toBe(before);
+    expect(store.getState().history).toHaveLength(0);
+  });
+
+  it('refuses every neighbouring identity on the return seam: no family can enter the third one', () => {
+    const store = temporalTestStore({ liveHead: 6 });
+    for (const id of [...TEMPORAL_ACTION_TYPES, 'PAN', 'COMMIT_MOMENT', 'INSPECT_OBJECT'] as const) {
+      expect(() => store.dispatchReturn({ type: id } as never)).toThrow(/is not a promoted return act/u);
+    }
   });
 
   it('promotes exactly the two frozen temporal identities and nothing else', () => {

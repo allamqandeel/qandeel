@@ -33,8 +33,8 @@
  * exists only as an action, and none that exists only as a control.
  *
  * The T-07 return acts are deliberately absent even though a final accessibility architecture will
- * want them: they remain later-owner metadata, and offering an action this task cannot honour would
- * be a promise rather than a route.
+ * want them: they belong to T-07's own return surface, and offering an action this task cannot honour
+ * would be a promise rather than a route.
  *
  * This component subscribes to canonical state and to the preview controller separately, because
  * they are separate kinds of truth and must be able to disagree — a preview open over unchanged

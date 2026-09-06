@@ -402,19 +402,21 @@ test('the client ingests LF passively into the frozen T-02 kernel through the ON
     }
   }
   // The T-02 kernel, the shell and the router root are byte-identical; nothing is mounted.
-  // T-04 re-anchor: the five kernel files it touched to promote `INSPECT_OBJECT`,
-  // `SWITCH_CONTEXT` and `DIRECT_JUMP`, and then to gate them behind the R1-01 authorized Map
-  // seam, carry their post-promotion ids. The pins stay exact, so any further kernel change still
-  // trips this gate, and T-03D itself changed none of them.
+  // T-04 re-anchor, extended by T-06 and T-07: the kernel files each owning task touched to
+  // promote its own named frozen acts behind its own authorized seam carry their post-promotion
+  // ids. T-07 additionally added the RH-consumption transaction path and its typed refusal, and
+  // moved the RH prose in `classes.ts` / `history.ts` that said RH was globally append-only. The
+  // pins stay exact, so any further kernel change still trips this gate, and T-03D itself changed
+  // none of them.
   for (const [file, blob] of [
-    ['apps/mobile/src/state/actions.ts', '4e20dd4346dec252fb1b754fd510d31b710dd42e'],
-    ['apps/mobile/src/state/authority.ts', 'b9d4a5b1cd354bfc529175341c59f6bc5bbd9ad8'],
-    ['apps/mobile/src/state/classes.ts', 'f0d17c675c148e26c523291e07769c3ed764f263'],
-    ['apps/mobile/src/state/history.ts', 'e12caa557ab719611d11e43392723a1bb2389c62'],
-    ['apps/mobile/src/state/index.ts', '4e74f2e4ce2bcc83f702a5b4f9d85fd298bc93d7'],
+    ['apps/mobile/src/state/actions.ts', '3d2f52351424d70b093dc4dbf3079a5262f4209a'],
+    ['apps/mobile/src/state/authority.ts', 'c632e6be2c0bd2d86078be570f8e306f016402f6'],
+    ['apps/mobile/src/state/classes.ts', '1927aa0ec79f711bfcd2fae67a3ef051e5a4767a'],
+    ['apps/mobile/src/state/history.ts', '74f742f9eba29fd849087fb4d2142a13373ebe97'],
+    ['apps/mobile/src/state/index.ts', '58ed04c9f62dea71bda71097f4161f0422fb538a'],
     ['apps/mobile/src/state/selectors.ts', '72c156c298c5914a578fd41f3243c7bb596756ae'],
-    ['apps/mobile/src/state/store.ts', '2054b500369ca23813c7ad90ee9c717b8f35a7e3'],
-    ['apps/mobile/src/state/transitions.ts', 'a78931bf1efc1b4a05cfa0bc7c4557da041cdaca'],
+    ['apps/mobile/src/state/store.ts', '5d52ed4dab69de862a6381244bf44e32018609fa'],
+    ['apps/mobile/src/state/transitions.ts', '14577b58af5aba0d2e95a1b4e2f969d094bc2c38'],
     ['apps/mobile/src/state/CanonicalStateProvider.tsx', 'b7ea8b6e775f74f7d331843e4783dc7291b11b49'],
     ['apps/mobile/src/shell/FoundationShell.tsx', 'e2286ba1a35c2e40def475af5deed2d8ba8120d3'],
     ['apps/mobile/src/app/_layout.tsx', '90179f6d13026e9b0e2345e0418012214b9c9aab'],
@@ -427,10 +429,11 @@ test('the client ingests LF passively into the frozen T-02 kernel through the ON
   }
   // Native CI RUNS for this change: the mobile source change is a native-impact path by the frozen MOB-CI-01 classifier.
   assert.equal(isNativeImpactPath(`${MOBILE_TEMPORAL_DIR}/live-focus-sync.ts`), true, 'the Android / iOS smoke gates run for T-03D');
-  // T-04 re-anchor: the workflow gained exactly one Node-only gate step and one trigger path for
-  // the T-04 static contract. MOB-CI-01's structure is unchanged and is asserted structurally by
-  // the T-01, T-02 and T-04 contracts: one fast gate plus two conditional native jobs.
-  assert.equal(gitBlobId(mobileCi), '74ce57541a37de659fc0105d2195a61f4360143e', 'mobile-ci.yml carries only the authorized T-04 and T-06 gate steps (MOB-CI-01 preserved)');
+  // T-04 re-anchor, extended by T-06 and T-07: the workflow gained exactly one Node-only gate step
+  // and one trigger path per owning task's static contract. MOB-CI-01's structure is unchanged and
+  // is asserted structurally by the T-01, T-02, T-04, T-06 and T-07 contracts: one fast gate plus
+  // two conditional native jobs.
+  assert.equal(gitBlobId(mobileCi), '31bed2b0cba0015c4ed98799d5cd440f31a2ee3b', 'mobile-ci.yml carries only the authorized T-04, T-06 and T-07 gate steps (MOB-CI-01 preserved)');
   // T-04 re-anchor: the mobile package gained exactly the authorized Skia pin and the Jest setup
   // for it. The pin stays exact, so a further dependency change still trips this gate.
   assert.equal(gitBlobId(read('apps/mobile/package.json')), 'd10b3a577d6ee26c0af2e045f4bc39496181b2e7', 'the mobile package declaration carries only the authorized T-04 renderer pin beyond this baseline');

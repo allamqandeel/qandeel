@@ -163,8 +163,9 @@ different world, Home or object.
 
 T-04 promoted exactly three frozen acts to executable, by name, keeping their identities, their
 per-field authority and their RH behaviour. A fourth catalog level, `EXECUTABLE`, records that the
-owning task has landed the substrate; every other later-owner act stays `METADATA_ONLY` and still
-fails closed with `OwnedByLaterTask`.
+owning task has landed the substrate; an act whose owner has not landed stays `METADATA_ONLY` and
+fails closed with `OwnedByLaterTask`. (T-06 and T-07 later promoted their own frozen acts the same
+way, which emptied that set; the level and its fail-closed rule remain for the next one.)
 
 | Act | Authority | Behaviour |
 | --- | --- | --- |

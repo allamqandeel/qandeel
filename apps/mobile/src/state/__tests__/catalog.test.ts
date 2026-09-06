@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import {
   ACTION_CATALOG,
   AUTHORITATIVE_EVENT_TYPES,
@@ -7,6 +10,7 @@ import {
   METADATA_ONLY_ACTION_TYPES,
   NON_STORE_IDENTITY_TYPES,
   PRODUCT_ACT_IDS,
+  RETURN_ACTION_TYPES,
   RH_ACTION_IDS,
   TEMPORAL_ACTION_TYPES,
   catalogEntry,
@@ -43,13 +47,15 @@ const SIX_RETURN_ACTS = ['RETURN_LIVE_HEAD', 'RETURN_LIVE_FOCUS', 'GO_LIVE_AND_L
 
 describe('action registry invariants', () => {
   it('every identity is registered once, keyed by its own id, with a frozen owner', () => {
-    // T-04 re-anchor, extended by T-06: the registry is unchanged in size; the three named Map acts
-    // and the two named temporal acts moved out of the later-owner set into the executable level.
-    // No other identity moved, and the total is still every registered identity exactly once.
+    // T-04 re-anchor, extended by T-06 and T-07: the registry is unchanged in size; the three named
+    // Map acts, the two named temporal acts and the six named return acts moved out of the
+    // later-owner set into the executable level. No other identity moved, no identity was added or
+    // removed, and the total is still every registered identity exactly once.
     expect(PRODUCT_ACT_IDS).toHaveLength(
       KERNEL_ACTION_TYPES.length +
         MAP_ACTION_TYPES.length +
         TEMPORAL_ACTION_TYPES.length +
+        RETURN_ACTION_TYPES.length +
         AUTHORITATIVE_EVENT_TYPES.length +
         METADATA_ONLY_ACTION_TYPES.length +
         NON_STORE_IDENTITY_TYPES.length,
@@ -79,12 +85,12 @@ describe('action registry invariants', () => {
   });
 
   it('RH-eligible identities are exactly the Class-A Product acts; events and Class C / D are excluded (FIX-T02-03)', () => {
-    // T-04 re-anchor, extended by T-06: `INSPECT_OBJECT`, `SWITCH_CONTEXT` and `DIRECT_JUMP` keep
-    // their frozen RH_CHECKPOINT behaviour and `COMMIT_MOMENT_AND_LOCATE` and `CHOOSE_LOCUS` keep
-    // their frozen COMPOSITE_TRANSACTION and EFFECTIVE_TRANSACTION behaviour; all five are now
-    // RH-eligible through their own promoted type instead of through the later-owner set.
+    // T-04 re-anchor, extended by T-06 and T-07: every promoted act keeps its frozen transactional
+    // category, and all eleven are now RH-eligible through their own promoted type instead of
+    // through the later-owner set. The two `CONSUMES_RH` identities stay RH-eligible in TYPE — a
+    // persisted history may legitimately record either — and are never appended by anyone.
     expect([...RH_ACTION_IDS].sort()).toEqual(
-      [...KERNEL_ACTION_TYPES, ...MAP_ACTION_TYPES, ...TEMPORAL_ACTION_TYPES, ...METADATA_ONLY_ACTION_TYPES].sort(),
+      [...KERNEL_ACTION_TYPES, ...MAP_ACTION_TYPES, ...TEMPORAL_ACTION_TYPES, ...RETURN_ACTION_TYPES, ...METADATA_ONLY_ACTION_TYPES].sort(),
     );
     for (const id of RH_ACTION_IDS) expect(ACTION_CATALOG[id].cls).toBe('A');
     for (const id of [...AUTHORITATIVE_EVENT_TYPES, ...NON_STORE_IDENTITY_TYPES]) expect(isRhActionId(id)).toBe(false);
@@ -110,9 +116,26 @@ describe('action registry invariants', () => {
   });
 
   it('the six return acts stay distinct and owned by T-07; no generic identity exists (rows 12, 13)', () => {
+    // T-07 re-anchor: the six were promoted to EXECUTABLE behind their own runtime authority. Their
+    // frozen names, owner, Class-A authority and transactional categories are unchanged, and they
+    // are still SIX separate identities — the guarantee this test exists for.
+    expect([...RETURN_ACTION_TYPES].sort()).toEqual([...SIX_RETURN_ACTS].sort());
     for (const id of SIX_RETURN_ACTS) {
-      expect(ACTION_CATALOG[id].level).toBe('METADATA_ONLY');
+      expect(ACTION_CATALOG[id].level).toBe('EXECUTABLE');
       expect(ACTION_CATALOG[id].owner).toBe('T-07');
+      expect(ACTION_CATALOG[id].cls).toBe('A');
+    }
+    expect(ACTION_CATALOG.RETURN_LIVE_HEAD.transactional).toBe('EFFECTIVE_TRANSACTION');
+    expect(ACTION_CATALOG.RETURN_LIVE_FOCUS.transactional).toBe('EFFECTIVE_TRANSACTION');
+    expect(ACTION_CATALOG.GO_LIVE_AND_LOCATE.transactional).toBe('COMPOSITE_TRANSACTION');
+    expect(ACTION_CATALOG.RETURN_WORLD.transactional).toBe('EFFECTIVE_TRANSACTION');
+    expect(ACTION_CATALOG.EXACT_RETURN.transactional).toBe('CONSUMES_RH');
+    expect(ACTION_CATALOG.BACK_ONE_STEP.transactional).toBe('CONSUMES_RH');
+    expect([...ACTION_CATALOG.RETURN_LIVE_HEAD.authority]).toEqual(['TM']);
+    expect([...ACTION_CATALOG.RETURN_LIVE_FOCUS.authority].sort()).toEqual(['MC.anchor', 'MC.destination', 'MC.orientation', 'MC.scale']);
+    expect([...ACTION_CATALOG.RETURN_WORLD.authority].sort()).toEqual(['MC.anchor', 'MC.depth', 'MC.destination', 'MC.orientation', 'MC.scale']);
+    for (const id of ['EXACT_RETURN', 'BACK_ONE_STEP'] as const) {
+      expect([...ACTION_CATALOG[id].authority].sort()).toEqual(['IF_ref', 'MC.anchor', 'MC.depth', 'MC.destination', 'MC.orientation', 'MC.scale', 'TM']);
     }
     expect(new Set(SIX_RETURN_ACTS).size).toBe(6);
     for (const generic of ['NAVIGATE', 'RESET', 'HOME', 'GO_LIVE', 'BACK', 'MAP_FOCUS_OBJECT', 'WORLD_TRUTH_UPDATED', 'INVALIDATE', 'REFRESH', 'SYNC_ALL', 'RESET_FROM_SERVER']) {
@@ -204,22 +227,28 @@ describe('authority policy is runtime-immutable (FIX-T02-01)', () => {
 });
 
 describe('store boundary for non-kernel identities', () => {
-  it('a later-owner act fails closed with OwnedByLaterTask, state and RH untouched (row 16)', () => {
-    const store = createCanonicalStore(init());
-    const before = store.getState();
-    for (const id of METADATA_ONLY_ACTION_TYPES) {
-      const rejection = expectRejection(() => store.dispatch({ type: id } as never), 'OWNED_BY_LATER_TASK') as OwnedByLaterTask;
-      expect(rejection.id).toBe(id);
-      expect(rejection.owner).toBe(ACTION_CATALOG[id].owner);
-    }
-    expect(store.getState()).toBe(before);
-    expect(store.getState().history).toHaveLength(0);
+  it('the later-owner set is empty and its fail-closed rule is still the one the store runs (row 16)', () => {
+    // T-07 re-anchor: the six return identities were the last members of this set. The rule is
+    // unweakened — it is stated over the LEVEL, so the next frozen later-owner act registered at it
+    // fails closed the moment it exists — and it is proven here against the kernel's own source
+    // rather than against a set that currently has nothing in it.
+    expect([...METADATA_ONLY_ACTION_TYPES]).toEqual([]);
+    for (const id of PRODUCT_ACT_IDS) expect(ACTION_CATALOG[id].level).not.toBe('METADATA_ONLY');
+    const storeSource = readFileSync(join(__dirname, '..', 'store.ts'), 'utf8');
+    expect(storeSource).toContain("if (entry.level === 'METADATA_ONLY') throw new OwnedByLaterTask(entry.id, entry.owner);");
+    expect(new OwnedByLaterTask('SOME_FUTURE_ACT', 'T-99').code).toBe('OWNED_BY_LATER_TASK');
   });
 
   it('router back is not Back One Step: BACK_ONE_STEP is a T-07 Product act, never a route event (row 13)', () => {
+    // T-07 re-anchor: it is now executable, and the raw dispatch surface still cannot run it — it
+    // reaches canonical state only through the authorized return seam, never through a route stack.
     const store = createCanonicalStore(init());
-    const rejection = expectRejection(() => store.dispatch({ type: 'BACK_ONE_STEP' } as never), 'OWNED_BY_LATER_TASK') as OwnedByLaterTask;
-    expect(rejection.owner).toBe('T-07');
+    const before = store.getState();
+    const rejection = expectRejection(() => store.dispatch({ type: 'BACK_ONE_STEP' } as never), 'UNAUTHORIZED_RETURN_ACTION');
+    expect(rejection.message).toMatch(/authorized return seam/u);
+    expect(ACTION_CATALOG.BACK_ONE_STEP.owner).toBe('T-07');
+    expect(store.getState()).toBe(before);
+    expect(store.getState().history).toHaveLength(0);
   });
 
   it('Class C / D identities fail through the non-store boundary without touching temporal state, camera or RH (rows 3, 4, 14)', () => {

@@ -1,7 +1,7 @@
 /**
  * T-02 — Canonical state kernel: the store boundary.
  *
- * Four entry points with separate authority paths:
+ * Five entry points with separate authority paths:
  * - `dispatch(action)`: the T-02 kernel Product acts, and ONLY those. Runs the transition, the
  *   exact canonical-shape validator, the immutable-context guard, the per-field writer guard,
  *   `Φ_eff` no-op detection and the RH append. Never accepts an event, a Class C / D identity, a
@@ -16,6 +16,12 @@
  *   minted by one owner is refused by the other's seam by construction, not by convention; and
  *   each seam admits only identities of its own family, so a promoted act cannot be smuggled
  *   sideways through the neighbouring door either.
+ * - `dispatchReturn(action)`: the same seam for the six promoted return acts, with a THIRD separate
+ *   `ReturnActionAuthority`. It is also the only door behind which RH can be REDUCED: an act whose
+ *   frozen transactional category is `CONSUMES_RH` runs the consumption transaction instead of the
+ *   append one, so `Back One Step` and `Exact Return` unwind history and append nothing, while
+ *   every other identity in the store — kernel, Map, temporal and the four appending return acts —
+ *   can only ever append.
  * - `ingest(event)`: passive authoritative events (closed catalog). Runs the event transition,
  *   the exact shape validator and the guard restricted to the event's single authoritative
  *   field. Never appends RH and never borrows transaction authority.
@@ -31,6 +37,7 @@
  */
 import {
   MAP_ACTION_TYPES,
+  RETURN_ACTION_TYPES,
   TEMPORAL_ACTION_TYPES,
   catalogEntry,
   isRhActionId,
@@ -38,6 +45,7 @@ import {
   type CatalogEntry,
   type KernelAction,
   type MapAction,
+  type ReturnAction,
   type StoreAction,
   type TemporalAction,
 } from './actions';
@@ -46,8 +54,10 @@ import {
   InvalidCanonicalShape,
   InvalidInitialState,
   OwnedByLaterTask,
+  PreconditionFailed,
   UnauthorizedActionClass,
   UnauthorizedMapAction,
+  UnauthorizedReturnAction,
   UnauthorizedTemporalAction,
   UnknownAction,
   UnknownEvent,
@@ -112,8 +122,23 @@ export interface TemporalActionAuthority {
 }
 
 /**
+ * The runtime authority that vouches for a promoted return act (T-07).
+ *
+ * A THIRD authority, deliberately distinct from the other two: the return family is authorized by
+ * its own owner against its own rules — a referent bound once, a landing proven against the
+ * projection of the viewpoint the act ARRIVES at, a checkpoint that is provably present in this
+ * store's own history — so sharing a verifier with either neighbour would let one owner's mint open
+ * the other's door. It answers ONE question, did this authority itself authorize this exact action
+ * object and is that authorization unused, and it can never mint one.
+ */
+export interface ReturnActionAuthority {
+  /** True exactly once per authorization this authority minted for this action object. */
+  consume(action: ReturnAction): boolean;
+}
+
+/**
  * Store construction seam. The injected transition tables are a test seam and never widen
- * authority — the shape validator and the per-field guard run on every result regardless. The two
+ * authority — the shape validator and the per-field guard run on every result regardless. The three
  * promoted-act authorities are production wiring inputs: a store built without one runs no act of
  * that family at all.
  */
@@ -122,6 +147,7 @@ export interface StoreDependencies {
   readonly eventTransitions?: Partial<EventTransitionTable>;
   readonly mapActionAuthority?: MapActionAuthority;
   readonly temporalActionAuthority?: TemporalActionAuthority;
+  readonly returnActionAuthority?: ReturnActionAuthority;
 }
 
 export type DispatchResult = { readonly outcome: 'APPLIED'; readonly entry: RhEntry | null } | { readonly outcome: 'NO_OP' };
@@ -136,11 +162,14 @@ export interface CanonicalStore {
   dispatchMap(action: MapAction): DispatchResult;
   /** The authorized temporal seam. Fails closed unless this store's Temporal authority consumes the act. */
   dispatchTemporal(action: TemporalAction): DispatchResult;
+  /** The authorized return seam. Fails closed unless this store's Return authority consumes the act. */
+  dispatchReturn(action: ReturnAction): DispatchResult;
   ingest(event: AuthoritativeEvent): IngestResult;
 }
 
 const isMapActionType = (id: string): boolean => (MAP_ACTION_TYPES as readonly string[]).includes(id);
 const isTemporalActionType = (id: string): boolean => (TEMPORAL_ACTION_TYPES as readonly string[]).includes(id);
+const isReturnActionType = (id: string): boolean => (RETURN_ACTION_TYPES as readonly string[]).includes(id);
 
 const INIT_KEYS = ['session', 'live', 'temporal', 'inspection', 'camera'] as const;
 
@@ -172,6 +201,7 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
   const eventTransitions: EventTransitionTable = { ...KERNEL_EVENT_TRANSITIONS, ...deps.eventTransitions };
   const mapActionAuthority = deps.mapActionAuthority;
   const temporalActionAuthority = deps.temporalActionAuthority;
+  const returnActionAuthority = deps.returnActionAuthority;
 
   let state: CanonicalState = deepFreeze(buildInitialState(init));
   const listeners = new Set<() => void>();
@@ -213,6 +243,53 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     return { outcome: 'APPLIED', entry: appended.entry };
   }
 
+  /** The RH entry a consumption act targets, taken from the action itself and never from a caller. */
+  function consumptionTarget(action: StoreAction): unknown {
+    return action.type === 'BACK_ONE_STEP' || action.type === 'EXACT_RETURN' ? action.target : undefined;
+  }
+
+  /**
+   * The SECOND transaction body: RH consumption, and the only path that may reduce `history`.
+   *
+   * It exists because the ordinary path appends a pre-act checkpoint whenever `Φ_eff` changes.
+   * Restoring through that path would record the state being LEFT, so the next Back would step
+   * forward again and the two would oscillate forever. Here nothing is appended at all: the
+   * reduction of RH through the target IS the transaction.
+   *
+   * The target is located by IDENTITY in this store's own current history, before anything is
+   * written. That is the whole of the authority: a structurally perfect forgery, a copy, a
+   * JSON round trip, a handle from another store and an already-consumed target are all simply
+   * absent from this array, so each one is refused with nothing mutated and nothing consumed.
+   *
+   * Everything the append path proves is proved here too: the exact canonical shape, the immutable
+   * session context and the per-field writer authority, run on a candidate whose RH is still
+   * untouched — because RH mutation is the transaction boundary's own privilege on both paths, and
+   * on this one it is granted only to the two frozen `CONSUMES_RH` identities.
+   */
+  function runConsumptionTransaction(action: StoreAction, entry: CatalogEntry): DispatchResult {
+    const before = state;
+    const target = consumptionTarget(action);
+    const index = before.history.findIndex((candidate) => candidate === target);
+    if (index < 0) {
+      throw new PreconditionFailed(entry.id, 'the target checkpoint is not present in the current reversible history');
+    }
+    if (entry.id === 'BACK_ONE_STEP' && index !== before.history.length - 1) {
+      throw new PreconditionFailed(entry.id, 'Back reverses the LATEST recorded transaction; this target is no longer the latest');
+    }
+    const transition = actionTransitions[action.type] as (s: CanonicalState, a: StoreAction) => unknown;
+    const result = transition(before, action);
+    if (!isPlainRecord(result)) throw new InvalidCanonicalShape(`${entry.id}: transition result must be a plain object`);
+    const restored = { ...before, ...result } as CanonicalState;
+    admit(before, restored, entry.id);
+    assertAuthorizedClassAWrites(before, restored, entry.authority, entry.id);
+    // A restoration that lands on an identical viewpoint is deliberately NOT treated as a no-op:
+    // consuming the checkpoint is the effect, and suppressing it would leave Back unable to move.
+    const next: CanonicalState = { ...restored, session: before.session, history: before.history.slice(0, index) };
+    admit(before, next, entry.id);
+    publish(next);
+    return { outcome: 'APPLIED', entry: null };
+  }
+
   /** Shared identity admission. Returns the registry entry, or throws the exact typed refusal. */
   function admitIdentity(action: unknown): CatalogEntry {
     const id = isPlainRecord(action) ? action.type : undefined;
@@ -236,6 +313,9 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     if (entry.level === 'EXECUTABLE') {
       if (isTemporalActionType(entry.id)) {
         throw new UnauthorizedTemporalAction(entry.id, 'a temporal act reaches canonical state only through the authorized temporal seam');
+      }
+      if (isReturnActionType(entry.id)) {
+        throw new UnauthorizedReturnAction(entry.id, 'a return act reaches canonical state only through the authorized return seam');
       }
       throw new UnauthorizedMapAction(entry.id, 'a Map act reaches canonical state only through the authorized Map seam');
     }
@@ -278,6 +358,25 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     return runTransaction(action, entry);
   }
 
+  function dispatchReturn(action: ReturnAction): DispatchResult {
+    const entry = admitIdentity(action);
+    if (!isReturnActionType(entry.id)) {
+      throw new UnauthorizedActionClass(entry.id, entry.cls, `${entry.id} is not a promoted return act; the return seam runs only those`);
+    }
+    if (returnActionAuthority === undefined) {
+      throw new UnauthorizedReturnAction(entry.id, 'this store was constructed without a Return authority');
+    }
+    // Identical rule, a third separate authority: an act either neighbour minted is not in this set,
+    // and a replay of an already-consumed return act is not either. A refusal writes nothing,
+    // appends nothing and — this is the one that matters here — consumes nothing.
+    if (returnActionAuthority.consume(action) !== true) {
+      throw new UnauthorizedReturnAction(entry.id, 'the authority did not mint an unused authorization for this exact act');
+    }
+    // The frozen transactional category, and nothing else, decides which transaction body runs:
+    // only `CONSUMES_RH` reaches the consumption path, and it is the only path that reduces RH.
+    return entry.transactional === 'CONSUMES_RH' ? runConsumptionTransaction(action, entry) : runTransaction(action, entry);
+  }
+
   function ingest(event: AuthoritativeEvent): IngestResult {
     const id = isPlainRecord(event) ? event.type : undefined;
     const entry = catalogEntry(id);
@@ -311,6 +410,7 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     dispatch,
     dispatchMap,
     dispatchTemporal,
+    dispatchReturn,
     ingest,
   };
 }

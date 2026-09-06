@@ -6,8 +6,8 @@
  * one, or many — over `MapScene`, which was derived from the disclosed projection `V` alone. It
  * does not execute `COMMIT_MOMENT_AND_LOCATE`, `CHOOSE_LOCUS`, `RETURN_LIVE_FOCUS`,
  * `GO_LIVE_AND_LOCATE`, `RETURN_WORLD`, `EXACT_RETURN` or `BACK_ONE_STEP`: those are T-06's and
- * T-07's acts, they remain later-owner metadata in the registry, and this module exists so that
- * their owners inherit the mechanics rather than reinvent them.
+ * T-07's acts, each executed behind its owner's own runtime authority, and this module exists so
+ * that their owners inherit the mechanics rather than reinvent them.
  *
  * Zero loci is a truthful answer about a legitimately ungeographic identity — a pregeographic
  * Emerging Focus, an ungrounded Reading, an analytical object the Map does not place — and it is

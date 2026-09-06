@@ -15,6 +15,7 @@ export type CanonicalStateErrorCode =
   | 'UNAUTHORIZED_ACTION_CLASS'
   | 'UNAUTHORIZED_MAP_ACTION'
   | 'UNAUTHORIZED_TEMPORAL_ACTION'
+  | 'UNAUTHORIZED_RETURN_ACTION'
   | 'OWNED_BY_LATER_TASK'
   | 'UNKNOWN_ACTION'
   | 'UNKNOWN_EVENT'
@@ -94,6 +95,26 @@ export class UnauthorizedTemporalAction extends CanonicalStateError {
   constructor(id: string, reason: string) {
     super('UNAUTHORIZED_TEMPORAL_ACTION', `${id} carries no runtime authorization from this store's Temporal authority: ${reason}`);
     this.name = 'UnauthorizedTemporalAction';
+    this.id = id;
+  }
+}
+
+/**
+ * A promoted return act reached the store without a runtime authorization from the store's own
+ * Return authority (T-07). Raised for a raw dispatch of a return act, for a return act on a store
+ * that has no such authority at all, and for an act whose authorization the authority refuses or has
+ * already consumed. It is a THIRD, separate refusal on purpose: the return family has its own
+ * authority, so neither the Map owner's nor the temporal owner's mint can satisfy this seam, a
+ * return mint cannot satisfy theirs, and a refusal names which boundary was crossed. The store never
+ * learns WHY the authority refused — only that it did — so no locatability, disclosure or history
+ * rule is duplicated here.
+ */
+export class UnauthorizedReturnAction extends CanonicalStateError {
+  readonly id: string;
+
+  constructor(id: string, reason: string) {
+    super('UNAUTHORIZED_RETURN_ACTION', `${id} carries no runtime authorization from this store's Return authority: ${reason}`);
+    this.name = 'UnauthorizedReturnAction';
     this.id = id;
   }
 }
