@@ -10,15 +10,19 @@ export interface DisclosedTrack {
   readonly targets: readonly DisclosedMomentTarget[];
 }
 
-/** Entitlement is upstream. Accept only an already-disclosed contiguous current-session
- * region; never accept LH, timestamps, history queries or a full-session item count.
+/** Entitlement is upstream. Accept only the COMPLETE already-disclosed current-session
+ * prefix SP1..SP(H); never accept LH, timestamps, history queries or a full-session
+ * item count. A suffix such as [SP50, SP51] is refused: index 0 is the Track origin,
+ * so admitting a suffix would move the origin and silently redefine the geometry,
+ * position scale and "first" of the same Moments. Windowing over this prefix is
+ * T-05's own work and reduces simultaneity only. The empty Track stays valid.
  * Copy only SP so caller metadata/mutation cannot affect geometry or accessibility. */
 export function disclosedTrack(sessionId: string, targets: readonly DisclosedMomentTarget[]): DisclosedTrack {
   if (!sessionId) throw new TypeError('A current session identity is required');
   const copy = targets.map((target, index) => {
     const sp = target.sessionPosition;
-    if (!Number.isSafeInteger(sp) || sp < 1 || (index > 0 && sp !== targets[index - 1].sessionPosition + 1)) {
-      throw new RangeError('Disclosed SPs must be safe, positive, contiguous and ascending');
+    if (!Number.isSafeInteger(sp) || sp < 1 || (index === 0 ? sp !== 1 : sp !== targets[index - 1].sessionPosition + 1)) {
+      throw new RangeError('A disclosed Track must be the complete SP1-anchored contiguous ascending prefix');
     }
     return Object.freeze({ sessionPosition: sp });
   });

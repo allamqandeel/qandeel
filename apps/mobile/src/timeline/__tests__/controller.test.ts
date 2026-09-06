@@ -73,6 +73,33 @@ describe('T-05 frozen presentation contract', () => {
     c.replaceDisclosed(fixture(40, 'another-session'));
     expect(c.getSnapshot().offset).toBe(0);
   });
+  test('R1-01 a disclosed Track is the complete SP1-anchored prefix; every suffix is refused', () => {
+    const track = (...sps: number[]) => disclosedTrack('current-session', sps.map(sp => ({ sessionPosition: sessionPosition(sp) })));
+    // Index 0 is the Track origin, so a suffix would move the origin of the same Moments.
+    for (const suffix of [[2, 3], [50, 51, 52], [500, 501], [2], [100_000]]) {
+      expect(() => track(...suffix)).toThrow(RangeError);
+    }
+    // The complete prefix SP1..SP(H) is accepted and keeps origin-anchored geometry.
+    for (const horizon of [1, 2, 20, 10_000]) {
+      const prefix = track(...Array.from({ length: horizon }, (_, index) => index + 1));
+      expect(prefix.targets[0]).toEqual({ sessionPosition: 1 });
+      expect(prefix.targets.at(-1)).toEqual({ sessionPosition: horizon });
+      expect(itemLayout(prefix.targets, 0).offset).toBe(0);
+      expect(itemLayout(prefix.targets, horizon - 1).offset).toBe((horizon - 1) * TIMELINE_STEP);
+    }
+    expect(disclosedTrack('current-session', []).targets).toEqual([]);
+    // A suffix cannot enter through replaceDisclosed either: the factory is the only
+    // producer of a DisclosedTrack, it fails closed, and window state is untouched.
+    const controller = createPresentationController(fixture(20), 240);
+    runPresentationCommand(controller, 'last');
+    const before = controller.getSnapshot();
+    expect(() => controller.replaceDisclosed(track(21, 22, 23))).toThrow(RangeError);
+    expect(() => controller.replaceDisclosed(track(2, 3))).toThrow(RangeError);
+    expect(controller.getSnapshot()).toBe(before);
+    controller.replaceDisclosed(fixture(40));
+    expect(controller.getSnapshot().track.targets[0]).toEqual({ sessionPosition: 1 });
+    expect(controller.getSnapshot().offset).toBe(before.offset);
+  });
   test('TL05-08/14 100k SP identities, no aggregates or fictitious Live coordinate', () => {
     const track = fixture(100_000);
     expect(track.targets).toHaveLength(100_000);

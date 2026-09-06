@@ -39,11 +39,22 @@ implementation authorization is the user's T-05 brief.
 ## Boundary and integration
 
 `apps/mobile/src/timeline/index.ts` exports a presentation component and controller.
-The parent supplies a **contiguous, ascending, already-disclosed current-session SP
-region** through `disclosedTrack(sessionId, targets)`. That factory copies and freezes
-SP only. It rejects duplicates, gaps, unsafe ordinals and reversed input. Entitlement
-remains upstream: never give it full history while pinned. There is no LH parameter,
-history fetcher, canonical store handle, dispatch, selected Moment or temporal action.
+The parent supplies the **complete already-disclosed current-session prefix**
+`SP1 ... SP(H)` through `disclosedTrack(sessionId, targets)`. That factory copies and
+freezes SP only. It rejects duplicates, gaps, unsafe ordinals, reversed input, and any
+non-empty input whose first Session Position is not `SP1`. The empty Track stays valid.
+Entitlement remains upstream: never give it full history while pinned. There is no LH
+parameter, history fetcher, canonical store handle, dispatch, selected Moment or
+temporal action.
+
+**T-05 performs viewport/window virtualization over that prefix itself.** A caller must
+never hand it an arbitrary already-disclosed suffix such as `[SP50, SP51, SP52]` in
+order to show a later part of the Timeline. Array index 0 is the Track origin, so a
+suffix would move the origin: the same Moments would take different offsets, the
+position scale would normalize over a partial slice, and `0%` / `first` would name
+something other than the beginning of the disclosed Timeline. Windowing reduces
+simultaneity only; it does not redefine ordinal geometry, target meaning, Track origin
+or presentation truth. To move the visible region, move the window — not the input.
 
 ```tsx
 // Build once per supplied entitlement snapshot, not on every scroll.
@@ -139,6 +150,7 @@ Trusted-environment Android/iOS smokes and independent Architecture review remai
 | TL05-14 | No invented coordinate or merging of Live and Moment intent |
 | TL05-15 | Ephemeral restart reset, canonical identity, persistence source guard |
 | TL05-16 | No Map/Skia/store imports or dependency; T-04 not consumed |
+| R1-01 | Suffix input refused at the factory and through `replaceDisclosed`; the complete SP1-anchored prefix accepted with origin-anchored offsets |
 
 Focused command (from `apps/mobile`):
 
