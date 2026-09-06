@@ -301,6 +301,14 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     'database/migrations/0071_effective_live_focus_final_semantic_chain_cutover_v1.sql',
     'database/verify-migration-0071.mjs',
     'database/tests/effective-live-focus-final-semantic-chain-cutover-v1.test.mjs',
+    // T-03C owns the historical coverage / projection / disclosure: migration 0072
+    // READS the frozen Thread substrate (established_sp, the ONE Home, the 0070
+    // lifecycle) to project it at TC, its verifier drives the FINAL 0071 coordinator
+    // with the frozen TE-01 provenance exactly as the 0071 verifier does, and none
+    // of them imports this evaluator.
+    'database/migrations/0072_historical_coverage_projection_disclosure_v1.sql',
+    'database/verify-migration-0072.mjs',
+    'database/tests/historical-projection-v1.test.mjs',
   ];
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src')), ...listFiles(join(rootPath, 'database'))].map((f) => relative(f))) {
     if (B2B2_DATABASE_FILES.includes(file)) {
@@ -332,7 +340,14 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
     'the T-03B2b3 migration creates no Thread, Home or capture table of its own');
   assert.doesNotMatch(read(`database/migrations/${B3D_MIGRATION}`), /CREATE TABLE public\.(?:conversation_threads|conversation_thread_homes|conversation_thread_establishment|conversation_thread_commit_batches)\b/u,
     'the T-03D migration creates no second Thread / Home substrate');
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION)) {
+  // (T-03C added 0072: its Layer-A projection READS conversation_threads and the ONE
+  // Home of a known Thread and its history tables reference thread_id; it creates no
+  // second Thread / Home substrate and never establishes a Thread; pinned by
+  // tests/historical-projection-contract.test.mjs.)
+  const C_MIGRATION = '0072_historical_coverage_projection_disclosure_v1.sql';
+  assert.doesNotMatch(read(`database/migrations/${C_MIGRATION}`), /CREATE TABLE public\.(?:conversation_threads|conversation_thread_homes|conversation_thread_establishment|conversation_thread_commit_batches)\b|INSERT INTO public\.conversation_threads|INSERT INTO public\.conversation_thread_homes|thread_establish/u,
+    'the T-03C migration creates no second Thread / Home substrate and establishes no Thread');
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION)) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu, `${name} carries no Thread / Home substrate`);
   }
   assert.ok(!existsSync(new URL('database/verify-thread-establishment.mjs', root)));

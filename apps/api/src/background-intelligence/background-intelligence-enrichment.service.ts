@@ -22,6 +22,8 @@ import type { HypothesisGenerationEligibilityAssessment } from '../hypothesis/hy
 import { MAX_ACTIVE_HYPOTHESES, type HypothesisRecord } from '../hypothesis/hypothesis.types';
 import { MAX_GENERATED_HYPOTHESIS_CANDIDATES, type HypothesisCandidateGenerator, type HypothesisGenerationInput, type HypothesisGenerationRequest } from '../hypothesis/hypothesis-generation.types';
 import { hypothesisCollisionKey, normalizeGenerationInput, validateGenerationEvidenceIds, validateHypothesisCandidate } from '../hypothesis/hypothesis-generation.policy';
+import { authorizeSubjectGroundingHandles } from '../hypothesis/hypothesis-subject-grounding.authority';
+import type { AuthorizedSubjectGroundingUniverse, DurableSubjectGroundingSelection } from '../hypothesis/hypothesis-subject-grounding.types';
 import type { DurableCandidateProviderResult, DurableGenerationCandidate } from '../post-response-intelligence/durable-generation-result';
 import type { ConfidenceEvaluationRecord } from '../hypothesis/confidence.types';
 import { isCanonicalHypothesisUpdateMutation, validateHypothesisUpdateRequest } from '../hypothesis/hypothesis-update.policy';
@@ -136,14 +138,23 @@ export class BackgroundIntelligenceEnrichmentService {
  // structured state attached to the SAME single provider request - it adds no
  // provider call, no Evidence identity, no persistence field, and no change to
  // input normalization, Evidence eligibility, or the validation policy.
- async generateHypothesisCandidatePlan(context:BackgroundIntelligenceExecutionContext,input:HypothesisGenerationInput,generator:HypothesisCandidateGenerator,himContext?:HimHypothesisGenerationContext):Promise<DurableCandidateProviderResult>{
+ // T-03C R2: the optional server-built subject-grounding universe is attached
+ // to the SAME single provider request as opaque handles; every accepted
+ // candidate's proposed handles are authorized against that exact universe
+ // (a handle outside it, a duplicate or a malformed list rejects the
+ // candidate - never a silent un-grounding) and the authorized selection
+ // travels in the durable plan beside the frozen candidate shape. Without a
+ // universe no grounding is admissible at all.
+ async generateHypothesisCandidatePlan(context:BackgroundIntelligenceExecutionContext,input:HypothesisGenerationInput,generator:HypothesisCandidateGenerator,himContext?:HimHypothesisGenerationContext,subjectGroundingUniverse?:AuthorizedSubjectGroundingUniverse):Promise<DurableCandidateProviderResult>{
   this.assert(context);const {problem,domain,scope}=normalizeGenerationInput(input);validateGenerationEvidenceIds(input.evidenceIds);const eligible=await this.listEligibleEvidence(context),eligibleById=new Map(eligible.map(item=>[item.evidenceId,item])),requested=input.evidenceIds.map(id=>eligibleById.get(id));if(requested.some(item=>!item))throw new BadRequestException('Generation evidence is not currently eligible.');
-  const request:HypothesisGenerationRequest={userId:context.userId,problem,domain,scope,eligibleEvidence:requested as EvidenceItem[],existingActiveHypotheses:await this.data.listActiveHypotheses(context,MAX_ACTIVE_HYPOTHESES),maxCandidateCount:MAX_GENERATED_HYPOTHESIS_CANDIDATES,...(himContext?{himContext}:{})};const proposals=await generator.generate(request);if(!Array.isArray(proposals))throw new BadRequestException('Generator returned an invalid candidate batch.');
-  const accepted:DurableGenerationCandidate[]=[],seen=new Set<string>(),active=new Set(request.existingActiveHypotheses.map(item=>hypothesisCollisionKey(item.statement,item.scope)));
+  const request:HypothesisGenerationRequest={userId:context.userId,problem,domain,scope,eligibleEvidence:requested as EvidenceItem[],existingActiveHypotheses:await this.data.listActiveHypotheses(context,MAX_ACTIVE_HYPOTHESES),maxCandidateCount:MAX_GENERATED_HYPOTHESIS_CANDIDATES,...(himContext?{himContext}:{}),...(subjectGroundingUniverse?{eligibleSubjectGroundings:subjectGroundingUniverse.entries}:{})};const proposals=await generator.generate(request);if(!Array.isArray(proposals))throw new BadRequestException('Generator returned an invalid candidate batch.');
+  const accepted:DurableGenerationCandidate[]=[],subjectGroundings:DurableSubjectGroundingSelection[]=[],seen=new Set<string>(),active=new Set(request.existingActiveHypotheses.map(item=>hypothesisCollisionKey(item.statement,item.scope)));
   for(let index=0;index<proposals.length;index++){if(index>=request.maxCandidateCount)continue;const reason=validateHypothesisCandidate(proposals[index],request,seen,active);if(reason)continue;const proposal=proposals[index];
+   const grounding=authorizeSubjectGroundingHandles(proposal.subjectGroundingHandles,request.eligibleSubjectGroundings);if(grounding.status!=='AUTHORIZED')continue;
    accepted.push({hypothesisId:randomUUID(),statement:proposal.statement,type:proposal.type,domain:proposal.domain,scope:proposal.scope,supportingEvidenceIds:[...proposal.supportingEvidenceIds],contradictingEvidenceIds:[...proposal.contradictingEvidenceIds],assumptions:[...proposal.assumptions],disconfirmingConditions:[...proposal.disconfirmingConditions]});
+   subjectGroundings.push({hypothesisId:accepted[accepted.length-1].hypothesisId,handles:[...grounding.handles]});
    active.add(hypothesisCollisionKey(proposal.statement,proposal.scope));}
-  return accepted.length===0?{code:'NO_ACCEPTED_CANDIDATES'}:{code:'VALIDATED_CANDIDATES',candidates:accepted};
+  return accepted.length===0?{code:'NO_ACCEPTED_CANDIDATES'}:{code:'VALIDATED_CANDIDATES',candidates:accepted,subjectGroundings};
  }
 
  async evaluateHypothesisConfidence(context:BackgroundIntelligenceExecutionContext,hypothesisId:string):Promise<ConfidenceEvaluationRecord>{this.assert(context);const hypothesis=await this.data.findHypothesis(context,hypothesisId);if(!hypothesis)throw new NotFoundException('Hypothesis not found.');return this.data.createConfidenceEvaluation(context,randomUUID(),hypothesis.id,hypothesis.version);}

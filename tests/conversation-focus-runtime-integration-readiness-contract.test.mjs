@@ -291,8 +291,12 @@ test('the typed database error transport is additive, bounded, opaque, and sourc
     .filter((file) => !file.endsWith('.spec.ts') && stripComments(read(file)).includes('readDataApiUpstreamIdentity('))
     .filter((file) => !file.endsWith('supabase-data-api.service.ts'));
   // (T-03B3's runtime repository reads the SAME opaque identity for its own
-  // second exact stale token, STALE_THREAD_IDENTITY_CONTEXT, under the same rule.)
-  assert.deepEqual(readers, [`${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
+  // second exact stale token, STALE_THREAD_IDENTITY_CONTEXT, under the same rule.
+  // T-03C's projection repository reads it to classify the database's typed
+  // fail-closed refusals - HISTORICAL_COVERAGE_UNAVAILABLE, LIVE_HEAD_NOT_ESTABLISHED,
+  // HISTORICAL_BASELINE_MISSING, SESSION_POSITION_NOT_ADDRESSABLE, FORBIDDEN - into
+  // typed unavailability, under the same rule: the raw detail never leaves the server.)
+  assert.deepEqual(readers, [`${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
 });
 
 test('whole-exchange focus evaluation is sequential, no-hindsight and canonicalized once; no focus result reaches the wire', () => {

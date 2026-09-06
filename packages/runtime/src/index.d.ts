@@ -7,7 +7,8 @@
  * it with `import type`, so nothing here can become a bundled module.
  *
  * T-03A2 owns the temporal (LH) contract; T-03D adds the effective Live Focus
- * (LF) contract additively.
+ * (LF) contract additively; T-03C adds the historical disclosure (`V`)
+ * contract additively.
  */
 export type {
   ConversationLiveDelivery,
@@ -21,3 +22,41 @@ export type {
   LiveFocusTransitionWireEvent,
   LiveFocusWireValue,
 } from './live-focus';
+export type {
+  ConfidenceResolutionAtTc,
+  DisclosedAnalyticalObjectRung,
+  DisclosedConfidence,
+  DisclosedEmergingFocus,
+  DisclosedEvidenceParticipation,
+  DisclosedGap,
+  DisclosedHome,
+  DisclosedLiveFocusAtTc,
+  DisclosedMaterial,
+  DisclosedMaterialExpiry,
+  DisclosedMoment,
+  DisclosedQuestion,
+  DisclosedQuestionAppearance,
+  DisclosedReading,
+  DisclosedReadingLineageStep,
+  DisclosedReadingRelation,
+  DisclosedSessionRung,
+  DisclosedSourceProvenanceRung,
+  DisclosedSubjectGrounding,
+  DisclosedThread,
+  DisclosedThreadReadingAppearance,
+  DisclosedThreadRung,
+  DisclosedWorldRung,
+  HistoricalAppearanceKind,
+  HistoricalDisclosure,
+  HistoricalExpiryMapping,
+  HistoricalFamily,
+  HistoricalInspectionRequest,
+  HistoricalInspectionResolution,
+  HistoricalProjectionUnavailableBody,
+  HistoricalProjectionUnavailableCode,
+  HistoricalRevision,
+  HistoricalRung,
+  HistoricalSemanticDepth,
+  ReadingLineageStepKind,
+  ThreadStateAtTc,
+} from './historical-projection';

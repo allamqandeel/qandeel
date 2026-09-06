@@ -47,7 +47,9 @@ function gitBlobId(content) {
 
 test('0071 is the newest migration, and 0064 - 0070 are byte-identical', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0071_effective_live_focus_final_semantic_chain_cutover_v1.sql');
+  // 0071 closed the T-03D chain; T-03C's 0072 is the ONE migration that follows it.
+  assert.ok(migrations.includes('0071_effective_live_focus_final_semantic_chain_cutover_v1.sql'), 'migration 0071 is deployed');
+  assert.deepEqual(migrations.filter((name) => name > '0071_effective_live_focus_final_semantic_chain_cutover_v1.sql'), ['0072_historical_coverage_projection_disclosure_v1.sql'], 'nothing beyond T-03C follows 0071');
   assert.equal(migrations.filter((name) => name.startsWith('0071_')).length, 1, 'exactly one 0071 migration exists');
   assert.match(migration, /^BEGIN;/mu);
   assert.match(migration, /COMMIT;\s*$/u);

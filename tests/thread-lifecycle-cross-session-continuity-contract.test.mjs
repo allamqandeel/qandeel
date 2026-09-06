@@ -110,7 +110,9 @@ test('migration 0070 is the FINAL Thread-layer migration, 0071 (T-03D) orders di
   // by tests/effective-live-focus-final-semantic-chain-cutover-contract.test.mjs.)
   const B3D_MIGRATION = '0071_effective_live_focus_final_semantic_chain_cutover_v1.sql';
   assert.equal(migrations.indexOf(B3D_MIGRATION), migrations.indexOf(MIGRATION) + 1, '0071 orders directly after 0070');
-  assert.deepEqual(migrations.filter((name) => /007\d_/u.test(name)), [MIGRATION, B3D_MIGRATION], 'T-03B3 ships exactly ONE migration; T-03D exactly one more');
+  // (T-03C added 0072, the historical coverage / projection / disclosure migration,
+  // pinned by tests/historical-projection-contract.test.mjs.)
+  assert.deepEqual(migrations.filter((name) => /007\d_/u.test(name)), [MIGRATION, B3D_MIGRATION, '0072_historical_coverage_projection_disclosure_v1.sql'], 'T-03B3 ships exactly ONE migration; T-03D exactly one more; T-03C exactly one more');
   for (const [file, blob] of [
     ['database/migrations/0064_committed_conversational_unit_substrate_v1.sql', '0a2ee63980e59072b3e9f52a643efa8220e95b08'],
     ['database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql', '3dc061c71bcb237cec648abb2d1fa02f450cd57f'],
@@ -441,8 +443,10 @@ test('the continuity provider is lazy and strict, and no Thread, Home, binding o
     'the external delivery is built from LH and the frozen committed events alone');
   // (T-03D extended the shared wire contract ADDITIVELY with the authoritative
   // Live Focus; the frozen T-03A2 fields are unchanged and pinned by the T-03D contract.)
+  // (T-03C re-exported its historical disclosure types from the index ADDITIVELY;
+  // the T-03A2 / T-03D exports are unchanged and the index is re-pinned at its T-03C shape.)
   for (const [file, blob] of [
-    ['packages/runtime/src/index.d.ts', '8fa505014a936cc73d9fd61f23e67162b4507c54'],
+    ['packages/runtime/src/index.d.ts', 'b6bd6c3b0b7df94445db64a6af501ae8213324ef'],
     ['packages/runtime/src/temporal.d.ts', '9d945e6f2d65bdefbc334b0bc5ac884789f21a89'],
     ['packages/runtime/package.json', '932b837629f23b5cb765eda196fb659418d07916'],
   ]) {
@@ -452,14 +456,24 @@ test('the continuity provider is lazy and strict, and no Thread, Home, binding o
   // value carries the closed reference identity - a Thread id or an Emerging
   // Focus id - and nothing spatial, graded, lifecycle-bound or historical; it
   // is pinned by the T-03D contract.)
-  for (const file of listFiles(join(rootPath, 'packages/runtime')).map(relative).filter((file) => file.endsWith('.ts'))) {
-    assert.doesNotMatch(stripComments(read(file)), /homeAnchor|home_anchor|lifecycle|dormant|reopened|binding_id/iu, `${file} declares no Home or lifecycle payload`);
+  // (T-03C added packages/runtime/src/historical-projection.d.ts and the passive client
+  // seam under apps/mobile/src/projection/: the historical disclosure V, which by the
+  // frozen Stage 6 constitution DOES carry a Thread's ONE Home as exact integer text and
+  // its Session-local state at TC (ESTABLISHED_ACTIVE / DORMANT / REOPENED) beside
+  // Thread / Emerging Focus / Reading identities and appearance binding ids. Both are
+  // pinned by the T-03C contract and excluded here by name, never by weakening the rule.)
+  const HISTORICAL_WIRE = 'packages/runtime/src/historical-projection.d.ts';
+  const HISTORICAL_SEAM = 'apps/mobile/src/projection/';
+  const withoutHistoricalReexport = (text) => text.replace(/export type \{[^}]*\} from '\.\/historical-projection';/u, '');
+  for (const file of listFiles(join(rootPath, 'packages/runtime')).map(relative).filter((file) => file.endsWith('.ts') && file !== HISTORICAL_WIRE)) {
+    const source = withoutHistoricalReexport(stripComments(read(file)));
+    assert.doesNotMatch(source, /homeAnchor|home_anchor|lifecycle|dormant|reopened|binding_id/iu, `${file} declares no Home or lifecycle payload`);
     if (file !== 'packages/runtime/src/live-focus.d.ts') {
-      assert.doesNotMatch(stripComments(read(file)), /threadId|thread_id|emergingFocus|emerging_focus/iu, `${file} declares no Thread or Emerging Focus payload`);
+      assert.doesNotMatch(source, /threadId|thread_id|emergingFocus|emerging_focus/iu, `${file} declares no Thread or Emerging Focus payload`);
     }
   }
   assert.doesNotMatch(mobileCi, /0070|thread-lifecycle/u);
-  for (const file of listFiles(join(rootPath, 'apps/mobile/src')).map(relative)) {
+  for (const file of listFiles(join(rootPath, 'apps/mobile/src')).map(relative).filter((file) => !file.startsWith(HISTORICAL_SEAM))) {
     assert.doesNotMatch(read(file), /thread_lifecycle|ThreadLifecycle|Dormant|DORMANT|Reopened|REOPENED|focus_binding|identity_dossier/u, `${file} untouched`);
   }
 });

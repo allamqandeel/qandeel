@@ -63,6 +63,53 @@ describe('GeminiHypothesisCandidateGenerator', () => {
     expect(JSON.stringify(body)).not.toContain('private-user');
   });
 
+  // T-03C R2: the subject-grounding universe crosses as opaque handles; the
+  // schema admits only those handles; a proposal may only select from them.
+  it('offers the server-issued subject-grounding handles as a strict enum and accepts only a subset of them back', async () => {
+    const HANDLE_A = '22d3c5d1-02cc-55e5-97c8-7b5563e5332f';
+    const HANDLE_B = '5f2c1e6a-1b2c-5d4e-8f9a-0b1c2d3e4f5a';
+    const grounded: HypothesisGenerationRequest = {
+      ...request,
+      eligibleSubjectGroundings: [
+        { handle: HANDLE_A, subjectText: 'أحمد', startedSp: 3, lastAttentionSp: 5 },
+        { handle: HANDLE_B, subjectText: 'المدير <tag>', startedSp: 1, lastAttentionSp: 1 },
+      ],
+    };
+    const groundedProposal = { ...proposal, subjectGroundingHandles: [HANDLE_B] };
+    const http = jest.fn().mockResolvedValue(response(generated([groundedProposal])));
+    await expect(new GeminiHypothesisCandidateGenerator(config, http).generate(grounded)).resolves.toEqual([groundedProposal]);
+    const body = JSON.parse(http.mock.calls[0][1].body);
+    expect(body.generationConfig.responseJsonSchema.items.required).toEqual([
+      'statement', 'type', 'domain', 'scope', 'supportingEvidenceIds', 'contradictingEvidenceIds', 'assumptions', 'disconfirmingConditions', 'subjectGroundingHandles',
+    ]);
+    expect(body.generationConfig.responseJsonSchema.items.properties.subjectGroundingHandles).toEqual({
+      type: 'array', minItems: 0, maxItems: 8, items: { type: 'string', enum: [HANDLE_A, HANDLE_B] },
+    });
+    const text = body.contents[0].parts[0].text as string;
+    const data = JSON.parse(text.slice('<hypothesis_generation_data>'.length, -'</hypothesis_generation_data>'.length));
+    expect(data.eligibleSubjectGroundings).toEqual(grounded.eligibleSubjectGroundings);
+    expect(text).not.toContain('<tag>');
+    expect(body.systemInstruction.parts[0].text).toContain('opaque handle');
+    expect(JSON.stringify(body)).not.toMatch(/emergingFocusId|threadId|sessionId|focus_id|tools|search|stream/u);
+    expect(body).not.toHaveProperty('tools');
+    for (const [output, label] of [
+      [[{ ...proposal }], 'a grounded request needs the field'],
+      [[{ ...proposal, subjectGroundingHandles: ['4ef8538d-ddda-5e11-b7d9-052be85de59a'] }], 'a raw focus UUID is not a handle'],
+      [[{ ...proposal, subjectGroundingHandles: [HANDLE_A, HANDLE_A] }], 'duplicates'],
+      [[{ ...proposal, subjectGroundingHandles: 'handle' }], 'a non-list'],
+    ] as const) {
+      const rejectingHttp = jest.fn().mockResolvedValue(response(generated(output)));
+      await expect(new GeminiHypothesisCandidateGenerator(config, rejectingHttp).generate(grounded))
+        .rejects.toEqual(new HypothesisCandidateGeneratorError('INVALID_STRUCTURED_OUTPUT'));
+      expect(label).toBeDefined();
+    }
+    // Without a universe the schema is the frozen eight-field shape and a proposed handle is invalid output.
+    const bare = jest.fn().mockResolvedValue(response(generated([{ ...proposal, subjectGroundingHandles: [HANDLE_A] }])));
+    await expect(new GeminiHypothesisCandidateGenerator(config, bare).generate(request))
+      .rejects.toEqual(new HypothesisCandidateGeneratorError('INVALID_STRUCTURED_OUTPUT'));
+    expect(JSON.parse(bare.mock.calls[0][1].body).generationConfig.responseJsonSchema.items.properties).not.toHaveProperty('subjectGroundingHandles');
+  });
+
   it('serializes instruction-like text as escaped untrusted data without exposing extra Evidence metadata', async () => {
     const http = jest.fn().mockResolvedValue(response(generated([])));
     await new GeminiHypothesisCandidateGenerator(config, http).generate(request);

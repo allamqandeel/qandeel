@@ -551,12 +551,17 @@ async function verifyAuthorityGuards() {
   // 0036 a generated target carries its immutable activation audit row, whose
   // composite owner FK correctly blocks re-owning the Hypothesis; the fixture
   // removes that audit row first, as the postgres fixture owner, purely to
-  // construct this simulated foreign-target state. The behavioural expectation
+  // construct this simulated foreign-target state. Since T-03C (migration 0072)
+  // the Hypothesis row is also preserved by the historical guard and referenced
+  // by its owner-keyed history rows, so the same fixture surgery runs in replica
+  // mode (as the fixture cleanup helper does). The behavioural expectation
   // asserted below is unchanged.
   const foreign = await newGeneration(1);
   await identity('postgres');
+  await q("SET LOCAL session_replication_role = 'replica'");
   await q('DELETE FROM public.hypothesis_lifecycle_transitions WHERE hypothesis_id=$1', [foreign.hypothesisIds[0]]);
   await q('UPDATE public.hypotheses SET user_id=$2 WHERE id=$1', [foreign.hypothesisIds[0], otherUserId]);
+  await q("SET LOCAL session_replication_role = 'origin'");
   assert.equal(await run(foreign.execution.id), 'QUARANTINED', 'a foreign target quarantines before any plan is written');
   await identity('postgres');
   assert.equal((await rows(ITEMS, [foreign.execution.id])).length, 0);
@@ -569,8 +574,10 @@ async function verifyAuthorityGuards() {
   assert.equal(await run(vanished.execution.id), 'RETRY_PENDING');
   await armFault(null);
   await identity('postgres');
+  await q("SET LOCAL session_replication_role = 'replica'");
   await q('DELETE FROM public.hypothesis_lifecycle_transitions WHERE hypothesis_id=$1', [vanished.hypothesisIds[0]]);
   await q('UPDATE public.hypotheses SET user_id=$2 WHERE id=$1', [vanished.hypothesisIds[0], otherUserId]);
+  await q("SET LOCAL session_replication_role = 'origin'");
   assert.equal(await run(vanished.execution.id), 'QUARANTINED');
   await identity('postgres');
   const [item] = await rows(ITEMS, [vanished.execution.id]);

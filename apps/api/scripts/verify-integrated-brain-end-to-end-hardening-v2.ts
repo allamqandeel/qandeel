@@ -147,6 +147,7 @@ import {
 import { PgBackgroundIntelligenceDataApiAdapter } from './a2-e2e-smoke/pg-background-intelligence-data.adapter';
 import { PgPostResponseIntelligenceRepositoryAdapter } from './a2-e2e-smoke/pg-post-response-intelligence.adapter';
 import { PgRuntimeEventAdminRepositoryAdapter } from './a2-e2e-smoke/pg-runtime-event-admin.adapter';
+import { establishFinalSemanticChain } from './a2-e2e-smoke/final-semantic-chain-fixture';
 import { SmokeDbSession } from './a2-e2e-smoke/smoke-db';
 // QIR-007 verification-only harness.
 import {
@@ -643,6 +644,19 @@ async function main(): Promise<void> {
       assert.equal(turn?.status, 'RECEIVED', 'the canonical USER turn was created through the authenticated authority');
       const callsBefore = conversationalRouter.callCount;
       const result = await correlation.runRequest(() => orchestrator.orchestrate(ACCESS_TOKEN, userId, turn));
+      // T-03C R3: production runs the FINAL semantic establishment phase on the
+      // completed exchange AFTER the durable ConversationTurnCompleted
+      // publication and BEFORE any background worker may read its committed
+      // truth. The background executions below are cut at the immutable causal
+      // semantic frontier of exactly this exchange, so the smoke establishes it
+      // through the same production coordinator.
+      if (result.assistantTurn) {
+        await establishFinalSemanticChain(db, {
+          sessionId, userId,
+          userTurnId: turnId, userText: result.userTurn.content,
+          assistantTurnId: result.assistantTurn.id, assistantText: result.assistantTurn.content,
+        });
+      }
       return { result, callsBefore };
     };
     const runFailingTurn = async (

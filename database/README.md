@@ -169,3 +169,13 @@ mapping, exercises permitted own-session and own-turn operations, proves a commi
 cross-user fixture is hidden and cannot be mutated, signs out, and removes all smoke
 rows. Its output intentionally contains no email, UUID, key, password, JWT, refresh
 token, response body, or connection detail.
+
+Fixture teardown runs as the `DATABASE_URL` fixture owner in replica mode (the same
+controlled pattern the historical verifiers' fixture cleanup uses) and removes, in
+order, the smoke turns, the T-03C coverage decisions and baselines of the two smoke
+Sessions (migration 0072 attaches them behind `ON DELETE RESTRICT`), the Session
+Semantic Clock rows, the Sessions and the cross-user user, then asserts zero residue.
+No production guard is weakened and no role gains `DELETE`. The 0072 verifier
+(`npm run verify:historical-projection:integration`) replays these exact teardown
+statements from this file's source against real PostgreSQL, so the smoke's teardown
+compatibility is proven in CI even when the live Supabase smoke cannot run.

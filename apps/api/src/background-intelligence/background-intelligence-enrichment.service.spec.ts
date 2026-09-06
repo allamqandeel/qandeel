@@ -50,6 +50,27 @@ describe('BackgroundIntelligenceEnrichmentService',()=>{const setup=(overrides:R
    await withoutHim.service.generateHypothesisCandidatePlan(valid,generationInput(),{generate:generateWithout});
    expect('himContext'in generateWithout.mock.calls[0][0]).toBe(false);
   });
+  // T-03C R2: the server-built universe crosses to the ONE provider request as
+  // opaque handles; the authorized selection travels beside the frozen candidate
+  // shape; a handle outside the universe rejects the candidate; without a
+  // universe no grounding is admissible.
+  it('attaches the subject-grounding universe as opaque handles and returns the authorized selection beside the frozen candidate shape',async()=>{
+   const valid=await context(),{service}=planSetup();
+   const HANDLE_A='22d3c5d1-02cc-55e5-97c8-7b5563e5332f',HANDLE_B='5f2c1e6a-1b2c-5d4e-8f9a-0b1c2d3e4f5a';
+   const universe={executionId:'10000000-0000-4000-8000-000000000005',frontierSp:7,entries:[{handle:HANDLE_A,subjectText:'أحمد',startedSp:3,lastAttentionSp:5},{handle:HANDLE_B,subjectText:'المدير',startedSp:1,lastAttentionSp:1}]};
+   const generate=jest.fn().mockResolvedValue([proposal({subjectGroundingHandles:[HANDLE_B,HANDLE_A]}),proposal({statement:'I recover focus after small wins.',subjectGroundingHandles:[]}),proposal({statement:'A candidate grounded outside the universe.',subjectGroundingHandles:['4ef8538d-ddda-5e11-b7d9-052be85de59a']})]);
+   const plan=await service.generateHypothesisCandidatePlan(valid,generationInput(),{generate},undefined,universe);
+   expect(generate.mock.calls[0][0].eligibleSubjectGroundings).toEqual(universe.entries);
+   if(plan.code!=='VALIDATED_CANDIDATES')throw new Error('expected a validated plan');
+   expect(plan.candidates).toHaveLength(2);
+   for(const candidate of plan.candidates)expect('subjectGroundingHandles'in candidate).toBe(false);
+   expect(plan.subjectGroundings).toEqual([{hypothesisId:plan.candidates[0].hypothesisId,handles:[HANDLE_B,HANDLE_A]},{hypothesisId:plan.candidates[1].hypothesisId,handles:[]}]);
+   // Without a universe, a proposed handle is outside every universe and the candidate is rejected - nothing is silently un-grounded.
+   const ungrounded=await service.generateHypothesisCandidatePlan(valid,generationInput(),{generate:jest.fn().mockResolvedValue([proposal({subjectGroundingHandles:[HANDLE_A]}),proposal({statement:'I recover focus after small wins.'})])});
+   if(ungrounded.code!=='VALIDATED_CANDIDATES')throw new Error('expected a validated plan');
+   expect(ungrounded.candidates.map(candidate=>candidate.statement)).toEqual(['I recover focus after small wins.']);
+   expect(ungrounded.subjectGroundings).toEqual([{hypothesisId:ungrounded.candidates[0].hypothesisId,handles:[]}]);
+  });
  });
 
  describe('readHimHypothesisGenerationContext (HIM Runtime Consumption v1)',()=>{

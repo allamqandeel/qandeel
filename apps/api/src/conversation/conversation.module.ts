@@ -37,6 +37,8 @@ import { openAiThreadEstablishmentBinding, type ThreadEstablishmentBindingFactor
 import { openAiThreadContinuityBinding, type ThreadContinuityBindingFactory } from '../thread-lifecycle/thread-continuity-binding';
 import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
 import { ConversationSemanticRuntimeRepository } from '../live-focus/conversation-semantic-runtime.repository';
+import { ConversationHistoricalProjectionController } from './conversation-historical-projection.controller';
+import { HistoricalProjectionRepository } from '../historical-projection/historical-projection.repository';
 
 /**
  * T-03A2: the LAZY CU segmentation binding.
@@ -78,7 +80,10 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
   // T-03A2 / T-03D: the authenticated temporal + Live Focus read surface is its
   // own controller. It is delivery/catch-up transport only, never a Timeline
   // or history API.
-  controllers: [ConversationController, ConversationContextActivationController, ConversationTemporalController],
+  // T-03C: the authenticated historical disclosure read (V = Disclose(K(TC),
+  // depth, inspection)) is its own controller too: an owner-scoped read of ONE
+  // covered Session at ONE addressable Session Position, never a write.
+  controllers: [ConversationController, ConversationContextActivationController, ConversationTemporalController, ConversationHistoricalProjectionController],
   providers: [
     SupabaseAuthService,
     SupabaseAuthGuard,
@@ -121,6 +126,14 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
     {
       provide: TemporalDeliveryRepository,
       useFactory: (dataApi: SupabaseDataApiService) => new TemporalDeliveryRepository(dataApi),
+      inject: [SupabaseDataApiService],
+    },
+    // T-03C: the owner-scoped Layer-A projection read (K(TC)) through the
+    // AUTHENTICATED channel; `historical-projection/` is framework-agnostic and
+    // carries no Nest decorator, so it is registered through an explicit factory.
+    {
+      provide: HistoricalProjectionRepository,
+      useFactory: (dataApi: SupabaseDataApiService) => new HistoricalProjectionRepository(dataApi),
       inject: [SupabaseDataApiService],
     },
     { provide: CU_SEGMENTATION_BINDING_FACTORY, useValue: openAiSegmentationBinding },

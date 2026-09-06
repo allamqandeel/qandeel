@@ -382,15 +382,22 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
   // exactly as 0070 does, defines no engine and moves no Home; pinned by
   // tests/effective-live-focus-final-semantic-chain-cutover-contract.test.mjs.)
   const B3D_MIGRATION = '0071_effective_live_focus_final_semantic_chain_cutover_v1.sql';
+  // (T-03C added 0072, the historical coverage / projection / disclosure
+  // migration; its Layer-A projection READS the ONE Home of a known Thread from
+  // conversation_thread_homes as exact integer text, defines no engine, computes
+  // and moves no Home; pinned by tests/historical-projection-contract.test.mjs.)
+  const C_MIGRATION = '0072_historical_coverage_projection_disclosure_v1.sql';
   assert.deepEqual(migrations.filter((name) => /home|placement|osdap|spatial|thread/iu.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
     'exactly one Home / Thread SUBSTRATE migration exists (T-03B2b2), plus the T-03B2b3 READ / AUDIT migration and the T-03B3 lifecycle migration');
-  for (const name of [B3_MIGRATION, B3D_MIGRATION]) {
+  for (const name of [B3_MIGRATION, B3D_MIGRATION, C_MIGRATION]) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /CREATE FUNCTION public\.(?:osdap_|compute_canonical_home_placement)|UPDATE public\.conversation_thread_homes|placement_x\s*=|placement_y\s*=/u,
       `${name} defines no placement engine of its own and moves no Home`);
   }
   assert.doesNotMatch(read(`database/migrations/${B2B3_MIGRATION}`), /osdap|placement_x|placement_y|home_placement|compute_canonical_home_placement/iu,
     'the T-03B2b3 read/audit migration computes no placement of its own');
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION)) {
+  assert.doesNotMatch(read(`database/migrations/${C_MIGRATION}`), /osdap|home_placement|compute_canonical_home_placement|INSERT INTO public\.conversation_thread_homes/iu,
+    'the T-03C migration computes no placement and writes no Home: it reads the ONE Home of a known Thread');
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION)) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu, `${name} carries no Home substrate`);
   }
   assert.deepEqual(readdirSync(join(rootPath, 'database')).filter((name) => /home|placement|osdap|thread/iu.test(name)), [],

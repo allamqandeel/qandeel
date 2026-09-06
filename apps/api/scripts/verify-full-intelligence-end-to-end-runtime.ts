@@ -118,6 +118,7 @@ import {
 import { PgBackgroundIntelligenceDataApiAdapter } from './a2-e2e-smoke/pg-background-intelligence-data.adapter';
 import { PgPostResponseIntelligenceRepositoryAdapter } from './a2-e2e-smoke/pg-post-response-intelligence.adapter';
 import { PgRuntimeEventAdminRepositoryAdapter } from './a2-e2e-smoke/pg-runtime-event-admin.adapter';
+import { establishFinalSemanticChain } from './a2-e2e-smoke/final-semantic-chain-fixture';
 import { SmokeDbSession } from './a2-e2e-smoke/smoke-db';
 // New verifier-only doubles/adapters for the foreground transport boundaries.
 import { DeterministicConversationalModelRouter } from './full-intelligence-e2e-smoke/deterministic-conversational-router';
@@ -979,6 +980,16 @@ async function main(): Promise<void> {
     assert.equal(firstOutboxPayload.safety_disposition, 'ALLOW', 'server-owned Safety disposition is ALLOW');
     assert.equal(firstOutboxPayload.terminal_status, 'COMPLETED');
     const firstEventId = firstOutbox.event_id as string;
+
+    // T-03C R3: the FINAL semantic establishment phase runs after the durable
+    // publication and before any background worker may read the exchange, so
+    // this execution's subject-grounding universe has an immutable causal
+    // semantic frontier of its own source exchange to be cut at.
+    await establishFinalSemanticChain(db, {
+      sessionId, userId,
+      userTurnId: firstTurnId, userText: firstResult.userTurn.content,
+      assistantTurnId: firstResult.assistantTurn!.id, assistantText: firstResult.assistantTurn!.content,
+    });
 
     // Foreground isolation: nothing background has run and no provider double
     // was touched by the foreground turn.

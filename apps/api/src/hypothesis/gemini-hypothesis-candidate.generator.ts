@@ -15,6 +15,9 @@ import {
   HYPOTHESIS_CANDIDATE_GENERATION_SCHEMA_VERSION,
   HypothesisCandidateGeneratorError,
 } from './hypothesis-candidate-generator-provider.types';
+import {
+  MAX_SUBJECT_GROUNDING_CANDIDATES, MAX_SUBJECT_GROUNDINGS_PER_CANDIDATE, MAX_SUBJECT_TEXT_LENGTH, SUBJECT_GROUNDING_HANDLE,
+} from './hypothesis-subject-grounding.types';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const MAX_RESPONSE_CHARACTERS = 1_000_000;
@@ -85,9 +88,18 @@ const INSTRUCTIONS = [
   'himContext may help form or distinguish plausible hypotheses but cannot bypass server validation or the Evidence-based support rules, and must not be used to rank or select a winner.',
 ].join(' ');
 
+// T-03C R2: the subject-grounding guidance joins the instruction ONLY when the
+// server supplied a non-empty universe, so a request without one is byte-for-
+// byte the frozen instruction.
+const SUBJECT_GROUNDING_INSTRUCTIONS = [
+  'eligibleSubjectGroundings lists the ONLY conversational subjects a proposal may be grounded to, each as an opaque handle with the exact committed wording that named it; set subjectGroundingHandles to the handles of the subject(s) the hypothesis is substantively about, or to an empty array when none applies.',
+  'Never invent, alter or reuse a handle from elsewhere, never ground a hypothesis to a subject merely because it shares Evidence or wording, and never treat a handle as Evidence; the server validates every handle.',
+].join(' ');
+
 function requestBody(request: HypothesisGenerationRequest, config: HypothesisCandidateGenerationGeminiConfig) {
+  const grounded = subjectGroundingHandles(request).length > 0;
   return {
-    systemInstruction: { parts: [{ text: INSTRUCTIONS }] },
+    systemInstruction: { parts: [{ text: grounded ? `${INSTRUCTIONS} ${SUBJECT_GROUNDING_INSTRUCTIONS}` : INSTRUCTIONS }] },
     contents: [{
       role: 'user',
       parts: [{ text: `<hypothesis_generation_data>${escapeData(providerData(request))}</hypothesis_generation_data>` }],
@@ -122,6 +134,14 @@ function providerData(request: HypothesisGenerationRequest) {
     } : {}),
     eligibleEvidence: request.eligibleEvidence.map(({ evidenceId, evidenceKind, statement }) =>
       ({ evidenceId, evidenceKind, statement })),
+    // T-03C R2: the server-built subject-grounding universe crosses as opaque
+    // handles plus committed wording and Session Positions only - re-picked
+    // here so no focus, Thread or Session identity can ever leak through a
+    // widened upstream object.
+    ...(request.eligibleSubjectGroundings ? {
+      eligibleSubjectGroundings: request.eligibleSubjectGroundings.map(({ handle, subjectText, startedSp, lastAttentionSp }) =>
+        ({ handle, subjectText, startedSp, lastAttentionSp })),
+    } : {}),
     existingActiveHypotheses: request.existingActiveHypotheses.map((item) => ({
       statement: item.statement, type: item.type, domain: item.domain, scope: item.scope,
       supportingEvidenceIds: item.supporting_evidence_ids,
@@ -134,8 +154,14 @@ function providerData(request: HypothesisGenerationRequest) {
   };
 }
 
+/** The opaque handles the provider may ground to; the field exists in the schema only when the server supplied a non-empty universe. */
+function subjectGroundingHandles(request: HypothesisGenerationRequest): readonly string[] {
+  return (request.eligibleSubjectGroundings ?? []).map((entry) => entry.handle);
+}
+
 function proposalSchema(request: HypothesisGenerationRequest) {
   const evidenceIds = request.eligibleEvidence.map((item) => item.evidenceId);
+  const handles = subjectGroundingHandles(request);
   const textList = (maxItems: number) => ({ type: 'array', minItems: 0, maxItems, items: { type: 'string' } });
   const evidenceList = {
     type: 'array', minItems: 0, maxItems: MAX_GENERATION_EVIDENCE_ITEMS,
@@ -148,6 +174,7 @@ function proposalSchema(request: HypothesisGenerationRequest) {
       required: [
         'statement', 'type', 'domain', 'scope', 'supportingEvidenceIds',
         'contradictingEvidenceIds', 'assumptions', 'disconfirmingConditions',
+        ...(handles.length > 0 ? ['subjectGroundingHandles'] : []),
       ],
       properties: {
         statement: { type: 'string' },
@@ -158,6 +185,14 @@ function proposalSchema(request: HypothesisGenerationRequest) {
         contradictingEvidenceIds: evidenceList,
         assumptions: textList(MAX_ASSUMPTIONS),
         disconfirmingConditions: textList(MAX_DISCONFIRMING_CONDITIONS),
+        // T-03C R2: a strict enum over the server-issued handles - the provider
+        // can only ever select, never author, a subject grounding.
+        ...(handles.length > 0 ? {
+          subjectGroundingHandles: {
+            type: 'array', minItems: 0, maxItems: MAX_SUBJECT_GROUNDINGS_PER_CANDIDATE,
+            items: { type: 'string', enum: [...handles] },
+          },
+        } : {}),
       },
     },
   };
@@ -192,7 +227,19 @@ function validRequest(request: HypothesisGenerationRequest): boolean {
     request.existingActiveHypotheses.every(validActiveHypothesis) &&
     Number.isSafeInteger(request.maxCandidateCount) && request.maxCandidateCount >= 1 &&
     request.maxCandidateCount <= MAX_GENERATED_HYPOTHESIS_CANDIDATES &&
-    (request.himContext === undefined || validHimContext(request.himContext));
+    (request.himContext === undefined || validHimContext(request.himContext)) &&
+    (request.eligibleSubjectGroundings === undefined || validSubjectGroundingUniverse(request.eligibleSubjectGroundings));
+}
+
+// T-03C R2: the exact bounded universe presentation - opaque v5 handles, unique,
+// each with committed wording and coherent Session Positions - nothing else.
+function validSubjectGroundingUniverse(entries: NonNullable<HypothesisGenerationRequest['eligibleSubjectGroundings']>): boolean {
+  return Array.isArray(entries) && entries.length <= MAX_SUBJECT_GROUNDING_CANDIDATES &&
+    new Set(entries.map((entry) => entry?.handle)).size === entries.length &&
+    entries.every((entry) => !!entry && typeof entry.handle === 'string' && SUBJECT_GROUNDING_HANDLE.test(entry.handle) &&
+      validText(entry.subjectText, MAX_SUBJECT_TEXT_LENGTH) &&
+      Number.isSafeInteger(entry.startedSp) && entry.startedSp >= 1 &&
+      (entry.lastAttentionSp === null || (Number.isSafeInteger(entry.lastAttentionSp) && entry.lastAttentionSp >= entry.startedSp)));
 }
 
 // The exact bounded HIM Runtime Consumption v1 contract: three canonical
@@ -226,14 +273,25 @@ function validProposal(value: unknown, request: HypothesisGenerationRequest): bo
     'statement', 'type', 'domain', 'scope', 'supportingEvidenceIds',
     'contradictingEvidenceIds', 'assumptions', 'disconfirmingConditions',
   ];
-  if (Object.keys(item).length !== fields.length || fields.some((field) => !(field in item)) ||
+  // T-03C R2: subjectGroundingHandles is required exactly when the server
+  // supplied a non-empty universe; without one it may only be absent or empty.
+  const handles = subjectGroundingHandles(request);
+  const grounded = 'subjectGroundingHandles' in item;
+  const expected = handles.length > 0 ? [...fields, 'subjectGroundingHandles'] : grounded ? [...fields, 'subjectGroundingHandles'] : fields;
+  if (Object.keys(item).length !== expected.length || expected.some((field) => !(field in item)) ||
     !validText(item.statement, MAX_STATEMENT_LENGTH) || !HYPOTHESIS_TYPES.includes(item.type as never) ||
     item.domain !== request.domain || item.scope !== request.scope ||
     !validTextList(item.assumptions, MAX_ASSUMPTIONS) ||
     !validTextList(item.disconfirmingConditions, MAX_DISCONFIRMING_CONDITIONS)) return false;
+  if (grounded && !validHandleList(item.subjectGroundingHandles, new Set(handles))) return false;
   const allowed = new Set(request.eligibleEvidence.map((evidence) => evidence.evidenceId));
   return validEvidenceList(item.supportingEvidenceIds, allowed) &&
     validEvidenceList(item.contradictingEvidenceIds, allowed);
+}
+
+function validHandleList(value: unknown, allowed: ReadonlySet<string>): boolean {
+  return Array.isArray(value) && value.length <= MAX_SUBJECT_GROUNDINGS_PER_CANDIDATE &&
+    new Set(value).size === value.length && value.every((handle) => typeof handle === 'string' && allowed.has(handle));
 }
 
 function validText(value: unknown, maximum: number): boolean {

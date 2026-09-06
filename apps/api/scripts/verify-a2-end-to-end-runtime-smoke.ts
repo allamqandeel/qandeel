@@ -59,6 +59,7 @@ import {
   DeterministicCandidateGenerator,
   DeterministicIntentExtractionProvider,
 } from './a2-e2e-smoke/deterministic-providers';
+import { establishFinalSemanticChain } from './a2-e2e-smoke/final-semantic-chain-fixture';
 import { PgBackgroundIntelligenceDataApiAdapter } from './a2-e2e-smoke/pg-background-intelligence-data.adapter';
 import { PgPostResponseIntelligenceRepositoryAdapter } from './a2-e2e-smoke/pg-post-response-intelligence.adapter';
 import { PgRuntimeEventAdminRepositoryAdapter } from './a2-e2e-smoke/pg-runtime-event-admin.adapter';
@@ -252,6 +253,19 @@ async function main(): Promise<void> {
     assert.equal(finalized.assistant_turn.source_turn_id, sourceTurnId);
     // Background work never sees a user JWT: drop the foreground claims now.
     await db.clearAuthenticatedClaims();
+
+    // T-03C R3: the FINAL semantic establishment phase of the foreground
+    // runtime runs AFTER the durable ConversationTurnCompleted publication and
+    // BEFORE any background worker may legally read the exchange's committed
+    // truth. The smoke drives it through the same production coordinator, so
+    // the source exchange of the execution below has the immutable causal
+    // semantic frontier its subject-grounding universe is cut at.
+    const established = await establishFinalSemanticChain(db, {
+      sessionId, userId,
+      userTurnId: sourceTurnId, userText: SOURCE_TURN_TEXT,
+      assistantTurnId, assistantText: ASSISTANT_TURN_TEXT,
+    });
+    assert.equal(established.liveHead, 2, 'the finalized exchange committed exactly two Moments (SP1, SP2)');
 
     // -----------------------------------------------------------------------
     stage = 'FOREGROUND_ISOLATION';

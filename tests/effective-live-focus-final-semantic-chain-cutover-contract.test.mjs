@@ -102,7 +102,9 @@ const mobileCi = read('.github/workflows/mobile-ci.yml');
 
 test('migration 0071 is the newest, 0064 - 0070 keep their exact pins, the delivered surface exists, and no split-task marker exists', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), MIGRATION);
+  // 0071 closed the T-03D chain; T-03C's 0072 is the ONE migration that follows it.
+  assert.ok(migrations.includes(MIGRATION), 'migration 0071 is deployed');
+  assert.deepEqual(migrations.filter((name) => name > MIGRATION), ['0072_historical_coverage_projection_disclosure_v1.sql'], 'nothing beyond T-03C follows 0071');
   assert.deepEqual(migrations.filter((name) => /0071_/u.test(name)), [MIGRATION], 'T-03D ships exactly ONE migration');
   for (const [file, blob] of [
     ['database/migrations/0064_committed_conversational_unit_substrate_v1.sql', '0a2ee63980e59072b3e9f52a643efa8220e95b08'],
@@ -241,7 +243,8 @@ test('THE CUTOVER: ONLY the FINAL chain is wired, the temporary T-03A2-only writ
     'no superseded runtime and no temporal-only fallback is registered');
   assert.doesNotMatch(moduleCode, /OpenAiFocusResolutionProvider|OpenAiThreadEstablishmentProvider|OpenAiThreadContinuityProvider|loadFocusResolutionOpenAIConfig|loadThreadEstablishmentOpenAIConfig|loadThreadContinuityOpenAIConfig/u,
     'no provider adapter and no credential is constructed at bootstrap');
-  assert.match(conversationModule, /controllers: \[ConversationController, ConversationContextActivationController, ConversationTemporalController\]/u);
+  // (T-03C added its own authenticated historical disclosure controller beside the temporal one; the temporal controller itself is unchanged.)
+  assert.match(conversationModule, /controllers: \[ConversationController, ConversationContextActivationController, ConversationTemporalController, ConversationHistoricalProjectionController\]/u);
   // The FINAL repository: exactly the two 0071 reads, the 0070 dossier page and the ONE 0071 coordinator.
   for (const rpc of ["'get_conversation_full_semantic_integrated_batch_snapshot_v1'", "'get_conversation_full_semantic_runtime_context_v1'", "'get_conversation_thread_identity_dossier_page_v1'", "'commit_finalized_exchange_with_full_semantic_chain_v1'"]) {
     assert.ok(repository.includes(rpc), `the repository calls ${rpc}`);
@@ -323,14 +326,20 @@ test('bounded recovery: ONE shared semantic retry over BOTH exact stale tokens, 
 
 test('the wire is additive and closed: the LF reference identity and its effective SP, the frozen T-03A2 fields untouched, no label / Home / sequence / content', () => {
   const files = listFiles(join(rootPath, 'packages/runtime')).map(relative).sort();
-  assert.deepEqual(files, ['packages/runtime/README.md', 'packages/runtime/package.json', 'packages/runtime/src/index.d.ts', 'packages/runtime/src/live-focus.d.ts', 'packages/runtime/src/temporal.d.ts']);
+  // (T-03C added src/historical-projection.d.ts: the historical disclosure wire, V. It is pinned by the T-03C contract.)
+  assert.deepEqual(files, ['packages/runtime/README.md', 'packages/runtime/package.json', 'packages/runtime/src/historical-projection.d.ts', 'packages/runtime/src/index.d.ts', 'packages/runtime/src/live-focus.d.ts', 'packages/runtime/src/temporal.d.ts']);
   assert.equal(gitBlobId(read('packages/runtime/package.json')), '932b837629f23b5cb765eda196fb659418d07916', 'the type-only package declaration is byte-identical');
   const lf = stripComments(runtimeLiveFocus);
   assert.match(lf, /export type LiveFocusTransitionType = 'LIVE_FOCUS_TRANSITION';/u);
   assert.match(lf, /export type LiveFocusWireValue =\s*\|\s*\{ readonly kind: 'NONE' \}\s*\|\s*\{ readonly kind: 'EMERGING'; readonly emergingFocusId: string \}\s*\|\s*\{ readonly kind: 'THREAD'; readonly threadId: string \};/u,
     'exactly three LF values, each with exactly its reference identity');
   assert.match(lf, /export interface LiveFocusTransitionWireEvent \{\s*readonly type: LiveFocusTransitionType;\s*readonly version: 1;\s*readonly sessionId: string;\s*readonly atSp: number;\s*readonly value: LiveFocusWireValue;\s*\}/u);
-  const wireCode = stripComments(`${runtimeTemporal}\n${runtimeIndex}\n${runtimeLiveFocus}`);
+  // The LF / LH wire (temporal.d.ts, live-focus.d.ts and the index lines that re-export
+  // them) carries none of these. T-03C's own re-export block in the index (the historical
+  // disclosure wire, pinned by the T-03C contract) is the ONE additive exception and is
+  // excluded here by its module specifier, not by weakening the list.
+  const lfIndex = runtimeIndex.replace(/export type \{[^}]*\} from '\.\/historical-projection';/u, '');
+  const wireCode = stripComments(`${runtimeTemporal}\n${lfIndex}\n${runtimeLiveFocus}`);
   for (const forbidden of ['label', 'name:', 'title', 'home', 'Home', 'direction', 'relationCount', 'confidence', 'importance', 'score', 'rank', 'content', 'committedText', 'text:', 'sameSp', 'eventSequence', 'sequence',
     'reason', 'projection', 'knowledge', 'PRE_FIRST_SP', 'timestamp', 'createdAt', 'locat', 'lifecycle', 'dormant', 'binding', 'origin', 'EMERGING_FOCUS', 'ESTABLISHED_THREAD']) {
     assert.equal(wireCode.includes(forbidden), false, `the wire must not carry ${forbidden}`);

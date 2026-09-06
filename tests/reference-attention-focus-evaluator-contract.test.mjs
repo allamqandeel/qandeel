@@ -241,7 +241,12 @@ test('the evaluator adds no SQL, no durable write, no durable identity; the dura
   // the frozen T-03B1 substrate to derive the effective Live Focus and creates
   // no B1 substrate of its own; it is pinned by
   // tests/effective-live-focus-final-semantic-chain-cutover-contract.test.mjs.)
-  for (const name of migrations.filter((candidate) => !/^00(?:6[6789]|7[01])_/u.test(candidate))) {
+  // (T-03C added 0072, the historical coverage / projection / disclosure
+  // migration: its Layer-A projection READS the frozen T-03B1 Emerging Focus
+  // substrate (identity, started_sp, attention events) to project it at TC and
+  // creates no B1 substrate of its own; it is pinned by
+  // tests/historical-projection-contract.test.mjs.)
+  for (const name of migrations.filter((candidate) => !/^00(?:6[6789]|7[012])_/u.test(candidate))) {
     assert.doesNotMatch(readFileSyncUtf8(`database/migrations/${name}`), /emerging_focus|reference_handle|conversational_focus|claim_attribution/iu, `${name} carries no T-03B1 substrate`);
   }
   assert.doesNotMatch(readFileSyncUtf8('database/migrations/0070_thread_lifecycle_cross_session_continuity_v1.sql'),

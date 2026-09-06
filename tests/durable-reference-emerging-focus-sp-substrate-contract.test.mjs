@@ -221,7 +221,19 @@ test('the new writer, coordinator and context read are production-inert; the T-0
   }
   assert.match(unitRepository, /commit_finalized_exchange_conversation_units_v1|commit_conversation_units_v1/u, 'the retired T-03A2 repository still names the retired producer path');
   // No scripts entry point, no mobile reference.
+  // T-03C R3 adds ONE named smoke fixture that stands in for the foreground
+  // FINAL semantic establishment phase the runtime smokes never ran. It reaches
+  // the production coordinator of 0071 ONLY - it carries the canonical decision
+  // payload (whose frozen key set names the stable focus identity) but touches
+  // no 0066 writer, no runtime context read and no canonicalizer, and it is a
+  // scripts-only fixture, never production code.
+  const SEMANTIC_CHAIN_FIXTURE = 'apps/api/scripts/a2-e2e-smoke/final-semantic-chain-fixture.ts';
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src'))].map(relative)) {
+    if (file === SEMANTIC_CHAIN_FIXTURE) {
+      assert.doesNotMatch(read(file), /with_focus_v1|focus_runtime_context|durable-focus|canonicaliz/u, `${file} reaches no T-03B1b1 writer, context read or canonicalizer`);
+      assert.match(read(file), /commit_finalized_exchange_with_full_semantic_chain_v1/u, `${file} establishes the exchange through the ONE production coordinator`);
+      continue;
+    }
     assert.doesNotMatch(read(file), /with_focus_v1|focus_runtime_context|durable-focus|emerging_focus/u, `${file} does not reach the substrate`);
   }
   // Mobile CI is not touched (MOB-CI-01 preserved).
