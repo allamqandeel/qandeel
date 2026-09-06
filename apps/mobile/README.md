@@ -292,6 +292,8 @@ identity would make unstatable.
   arriving viewpoint's before any entitlement or locatability question is asked of it, and proven
   again before it may authorize a landing. A stale, foreign-Session, wrong-position or wrong-depth
   scene is a technical fact and can never escape as a semantic "not disclosed" or "no place here".
+  The semantic resolver itself is layer-internal: the public barrel is a pinned allowlist that keeps
+  only the technical `returnMapContext` half, so the gate cannot be walked around by a legal import.
 - **Preview precedence** (`surface.ts`): every committed act cancels T-06's preview first, then
   resolves from committed state. The layer holds no preview state and cannot read `PTC` at all.
 - **Availability** (`availability.ts`): the minimal non-pointer substrate, from Class A alone —

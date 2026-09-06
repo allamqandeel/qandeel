@@ -264,6 +264,72 @@ test('R1-03 — the authorization set, the plan, the constructor and the mint ar
   assert.match(code['index.ts'], /RETURN_ACTION_AUTHORITY,/u);
 });
 
+// R2-01 — the public barrel is an ALLOWLIST, and the semantic focus resolver is not on it.
+test('R2-01 — the public surface is exactly the safe set, and exports no raw semantic resolver', () => {
+  const blocks = [...code['index.ts'].matchAll(/export (type )?\{([\s\S]*?)\} from '([^']+)';/gu)];
+  assert.ok(blocks.length > 0, 'the barrel re-exports through named blocks');
+  const types = [];
+  const values = [];
+  for (const [, isType, names] of blocks) {
+    for (const raw of names.split(',')) {
+      const name = raw.trim();
+      if (name.length === 0) continue;
+      (isType === undefined ? values : types).push(name);
+    }
+  }
+  // Exactly what a later owner legitimately needs: the six Product executors, the verifier, the safe
+  // outcome vocabulary, the return surface type, the opaque checkpoint APIs, the generic state-only
+  // availability, the projection-bound Live-Focus capability, and the TECHNICAL projection helper the
+  // P5 provider seam is built from.
+  assert.deepEqual(values.sort(), [
+    'RETURN_ACTION_AUTHORITY',
+    'RETURN_ACT_IDS',
+    'backOneStep',
+    'exactReturn',
+    'goLiveAndLocate',
+    'isReturnCheckpointTarget',
+    'latestReturnCheckpoint',
+    'liveFocusReturnAvailability',
+    'returnAvailability',
+    'returnCheckpoints',
+    'returnLiveFocus',
+    'returnLiveHead',
+    'returnMapContext',
+    'returnNoOp',
+    'returnRejected',
+    'returnWorld',
+  ]);
+  assert.deepEqual(types.sort(), [
+    'GoLiveAndLocateRequest',
+    'ReturnAvailability',
+    'ReturnCheckpointTarget',
+    'ReturnLiveFocusAvailability',
+    'ReturnLiveFocusRequest',
+    'ReturnLocateStatus',
+    'ReturnMapContext',
+    'ReturnNoOpReason',
+    'ReturnOutcome',
+    'ReturnRejectionCode',
+    'ReturnSurface',
+  ]);
+  // The six Product executors are the only public routes that can execute return semantics.
+  for (const executor of ['returnLiveHead', 'returnLiveFocus', 'goLiveAndLocate', 'returnWorld', 'exactReturn', 'backOneStep']) {
+    assert.ok(values.includes(executor), `${executor} stays public`);
+  }
+  assert.ok(values.includes('liveFocusReturnAvailability'), 'the safe projection-bound capability stays public');
+  assert.ok(values.includes('RETURN_ACTION_AUTHORITY'), 'the verifier stays public');
+  // The semantic resolver and its internal types are not on the surface, and are not even named.
+  for (const internal of ['focusMapTarget', 'resolveFocusLanding', 'FocusLanding', 'ReturnFocusTarget']) {
+    assert.equal(values.includes(internal), false, `${internal} must not be exported`);
+    assert.equal(types.includes(internal), false, `${internal} must not be exported as a type`);
+    assert.equal(code['index.ts'].includes(internal), false, `the barrel must not mention ${internal}`);
+  }
+  // The barrel re-exports by name only: a wildcard would let a module widen the surface silently.
+  assert.doesNotMatch(code['index.ts'], /export \* from/u, 'the public surface is an allowlist, never a wildcard');
+  // The technical helper it does keep can produce no semantic claim (asserted again in R1-01 below).
+  assert.ok(values.includes('returnMapContext') && types.includes('ReturnMapContext'), 'the P5 provider seam stays constructible');
+});
+
 // R1-03 — and no production file outside the layer can reach any of it, by deep import or by name.
 test('R1-03 — no production file outside the return layer deep-imports it or names its internals', () => {
   assert.ok(productionOutside.length > 40, `the mobile source tree was walked, found ${productionOutside.length}`);
@@ -276,7 +342,21 @@ test('R1-03 — no production file outside the return layer deep-imports it or n
       if (!specifier.includes('return-navigation')) continue;
       assert.match(specifier, /return-navigation$/u, `${file} may import the return layer only through its barrel, got ${specifier}`);
     }
-    for (const identifier of ['runReturnPlan', 'buildAction', 'ReturnPlan', 'AuthorizedLanding', 'requireCurrentContext', 'resolveCheckpointTarget', 'reportReturnDispatch']) {
+    // The mint and its plan (R1-03), and the semantic focus resolver the freshness gate protects
+    // (R2-01). Neither is reachable by a deep import, and neither is on the barrel to be imported.
+    for (const identifier of [
+      'runReturnPlan',
+      'buildAction',
+      'ReturnPlan',
+      'AuthorizedLanding',
+      'requireCurrentContext',
+      'resolveCheckpointTarget',
+      'reportReturnDispatch',
+      'focusMapTarget',
+      'resolveFocusLanding',
+      'FocusLanding',
+      'ReturnFocusTarget',
+    ]) {
       assert.equal(new RegExp(`\\b${identifier}\\b`, 'u').test(text), false, `${file} must not name the return layer internal ${identifier}`);
     }
     // The canonical return seam is called from the return layer alone; the kernel only declares it.
@@ -425,11 +505,14 @@ test('R1-01 — a projection is proven current before meaning is derived from it
   );
   assert.match(actModule, /const admitted = requireCurrentContext\(store, plan\.act as ReturnLocatingAct, landing\.context\);/u, 'the mint proves it again before authorizing');
 
-  // ...and in every place that asks a projection a SEMANTIC question, the proof comes first.
+  // ...and in every place that asks a projection a SEMANTIC question, the proof comes first. The
+  // resolver is defined in one module, used in one other, and reachable from nowhere else at all:
+  // not from another module of the layer, and not from the public barrel (R2-01).
   assert.equal((layerText.match(/resolveFocusLanding\(/gu) ?? []).length, 4, 'one definition and exactly three uses');
   for (const [name, text] of Object.entries(code)) {
     if (name === 'return-actions.ts' || name === 'focus-target.ts') continue;
     assert.equal(text.includes('resolveFocusLanding('), false, `${name} must not ask a projection a semantic question`);
+    assert.equal(text.includes('focusMapTarget('), false, `${name} must not map a referent onto the Map`);
   }
   for (const name of ['returnLiveFocus', 'goLiveAndLocate', 'liveFocusReturnAvailability']) {
     const body = exportedBodies[name];

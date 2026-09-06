@@ -24,10 +24,22 @@
  * arriving viewpoint's BEFORE any semantic answer is derived from it and AGAIN before anything is
  * written; and no result names a target, a place, a direction or a count.
  *
- * This barrel is the layer's whole public surface. The authorization set, the plan types, the action
- * constructor and the mint are not exported from any module of the layer, so no consumer — through
- * this barrel or through a deep import — can build, authorize or dispatch a return act except by
- * calling one of the six executors and accepting their frozen semantics.
+ * This barrel is the layer's whole public surface, and it is an allowlist: the static contract pins
+ * the exact set of names below, so nothing can drift back into it by accident.
+ *
+ * Two kinds of machinery are deliberately absent from it.
+ *
+ *   The authorization set, the plan types, the action constructor and the mint are not exported from
+ *   any module of the layer, so no consumer — through this barrel or through a deep import — can
+ *   build, authorize or dispatch a return act except by calling one of the six executors and
+ *   accepting their frozen semantics.
+ *
+ *   The SEMANTIC focus resolver is not exported either. Turning a `MapInspectionContext` into
+ *   entitlement and locatability meaning is only truthful once that context has been proven to be
+ *   the viewpoint's, and that proof belongs to the acts. Exporting the resolver would let a later
+ *   consumer hand it a stale, foreign-Session, wrong-position or wrong-depth context and read a
+ *   semantic `NOT_ENTITLED` or `NOT_LOCATABLE` out of it — the freshness-before-meaning defect,
+ *   recreated outside the six executors and around the safe capability query below.
  *
  * What this layer does NOT do: it stores no canonical field, adds no temporal mode, keeps no
  * `RETURNING` or `SETTLING` state, holds no return cursor or stack, persists nothing, fetches
@@ -45,8 +57,15 @@ export { returnNoOp, returnRejected } from './outcomes';
 
 export type { ReturnSurface } from './surface';
 
-export type { FocusLanding, ReturnFocusTarget, ReturnMapContext } from './focus-target';
-export { focusMapTarget, resolveFocusLanding, returnMapContext } from './focus-target';
+// Only the TECHNICAL half of the projection seam is public. `returnMapContext` reads what the
+// client already holds and answers with a usable context or a technical refusal; it can produce no
+// semantic claim about the world at all. The semantic half — the Live Focus → Map target mapping and
+// the landing resolution — stays internal, because it turns a context into entitlement and
+// locatability MEANING, and doing that to a context nobody has proven current is exactly the defect
+// the freshness gate exists to prevent. It is reachable only through the six executors and the one
+// projection-bound capability query, each of which proves the context first.
+export type { ReturnMapContext } from './focus-target';
+export { returnMapContext } from './focus-target';
 
 export type { ReturnCheckpointTarget } from './checkpoint-target';
 export { isReturnCheckpointTarget, latestReturnCheckpoint, returnCheckpoints } from './checkpoint-target';

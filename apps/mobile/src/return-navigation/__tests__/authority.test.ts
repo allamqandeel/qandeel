@@ -20,6 +20,7 @@ import {
 } from '../../state';
 import { WORLD_ORIGIN, canonicalWorldAddress, initialCameraIntent, mapDestination, panByTranslation, spatialDestinationRef, worldAnchorRef } from '../../map';
 import { RETURN_ACTION_AUTHORITY, backOneStep, returnLiveHead, returnWorld } from '../return-actions';
+import * as publicSurface from '../index';
 import { returnSurface, returnTestStore } from '../__fixtures__/return';
 
 /** A canonical world address that is not the origin, so an injected camera write is a real change. */
@@ -168,6 +169,40 @@ describe('RN07-A — the return-family authority boundary', () => {
     expect(() => store.dispatchReturn(action)).toThrow(/attempted to write Class-A field MC\.anchor without authority/u);
     expect(store.getState()).toBe(before);
     expect(store.getState().history).toHaveLength(0);
+  });
+
+  it('R2-01 — the public barrel exposes the six executors and no semantic resolver, at runtime', () => {
+    // The static contract pins the barrel's source; this pins the module OBJECT, so a re-export that
+    // a regex could miss is caught too.
+    const surface = Object.keys(publicSurface).sort();
+    expect(surface).toEqual([
+      'RETURN_ACTION_AUTHORITY',
+      'RETURN_ACT_IDS',
+      'backOneStep',
+      'exactReturn',
+      'goLiveAndLocate',
+      'isReturnCheckpointTarget',
+      'latestReturnCheckpoint',
+      'liveFocusReturnAvailability',
+      'returnAvailability',
+      'returnCheckpoints',
+      'returnLiveFocus',
+      'returnLiveHead',
+      'returnMapContext',
+      'returnNoOp',
+      'returnRejected',
+      'returnWorld',
+    ]);
+    // The six Product executors are the only public routes that execute return semantics...
+    for (const executor of ['returnLiveHead', 'returnLiveFocus', 'goLiveAndLocate', 'returnWorld', 'exactReturn', 'backOneStep']) {
+      expect(typeof (publicSurface as Record<string, unknown>)[executor]).toBe('function');
+    }
+    // ...and the raw semantic resolver is not reachable through the official surface at all, so a
+    // later consumer cannot hand it an unproven context and read entitlement or locatability out.
+    for (const internal of ['focusMapTarget', 'resolveFocusLanding', 'runReturnPlan', 'buildAction', 'requireCurrentContext', 'resolveCheckpointTarget', 'reportReturnDispatch']) {
+      expect(surface.includes(internal)).toBe(false);
+      expect((publicSurface as Record<string, unknown>)[internal]).toBeUndefined();
+    }
   });
 
   it('the verifier can answer but never mint, and the six keep their frozen owner', () => {

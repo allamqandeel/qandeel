@@ -5,6 +5,14 @@
  * Both acts that carry a Live Focus referent — Return to Live Focus (D1) and Go Live + Locate (P5) —
  * use exactly this module, so there is one focus-to-geography mapping in the layer and not two.
  *
+ * `focusMapTarget` and `resolveFocusLanding` are LAYER-INTERNAL and are deliberately absent from the
+ * public barrel. They turn a `MapInspectionContext` into entitlement and locatability MEANING, and
+ * that is only truthful once the context has been proven to be the viewpoint's — a proof that
+ * belongs to the acts, not here. Exporting them would let a consumer hand a stale, foreign-Session,
+ * wrong-position or wrong-depth context straight to the resolver and read a semantic `NOT_ENTITLED`
+ * or `NOT_LOCATABLE` out of it, recreating the freshness-before-meaning defect around the executors.
+ * `returnMapContext` below is the only public half, and it can produce no semantic claim at all.
+ *
  * The mapping itself uses only frozen identities and invents nothing:
  *
  *   NONE                     → no target at all;

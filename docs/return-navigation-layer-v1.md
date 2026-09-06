@@ -17,7 +17,7 @@ Seven modules, and the boundary each one exists to hold:
 | --- | --- |
 | `return-actions.ts` | the authorization set, the plan, the action constructor, the mint, the six executors, and the one capability question that needs a proven projection. Nothing but the verifier, the executors and that query is exported. |
 | `checkpoint-target.ts` | provenance-bound handles for recorded checkpoints. It can resolve one; it can neither mint nor dispatch. |
-| `focus-target.ts` | the one Live Focus → Map target mapping, the landing resolution, and the technical reading of what the client actually holds. |
+| `focus-target.ts` | the one Live Focus → Map target mapping and the landing resolution — both layer-internal — plus `returnMapContext`, the technical reading of what the client actually holds, which is the only half on the public surface. |
 | `surface.ts` | the entry gate every committed act passes: T-06's Preview cancellation, first. |
 | `outcomes.ts` | the outcome vocabulary, and the mapping of one dispatch attempt into it. It cannot dispatch. |
 | `availability.ts` | the state-only, Class-A generic availability model. |
@@ -81,10 +81,32 @@ use, so a `true` flag, a string token or a brand buys nothing.
 A static architecture guard walks every production mobile source file outside the layer and refuses
 a deep import of any of its modules — only the barrel is a surface — and any mention of
 `runReturnPlan`, `ReturnPlan`, `AuthorizedLanding`, `buildAction`, `requireCurrentContext`,
-`resolveCheckpointTarget` or `reportReturnDispatch`. `.dispatchReturn(` is refused there too,
-everywhere but the kernel that declares it. So a later consumer cannot acquire the seam, and cannot
-bypass Preview precedence, the D1 or P5 binding, Exact Return's target resolution or the canonical
-World target by reaching past the six executors.
+`resolveCheckpointTarget`, `reportReturnDispatch`, `focusMapTarget`, `resolveFocusLanding`,
+`FocusLanding` or `ReturnFocusTarget`. `.dispatchReturn(` is refused there too, everywhere but the
+kernel that declares it. So a later consumer cannot acquire the seam, and cannot bypass Preview
+precedence, the D1 or P5 binding, Exact Return's target resolution or the canonical World target by
+reaching past the six executors.
+
+## 2a. The public surface is an allowlist
+
+Closing the deep-import route is not enough on its own: a name on the barrel is reachable by a legal
+import. The barrel is therefore pinned as an exact allowlist — sixteen values and eleven types,
+asserted by name in the static contract and again at runtime against the module object — and it
+re-exports by name only, never with a wildcard.
+
+What is on it: the six Product executors, the `RETURN_ACTION_AUTHORITY` verifier, the outcome
+vocabulary and its two constructors, the `ReturnSurface` type, the opaque checkpoint-target APIs, the
+generic state-only availability, the projection-bound Live-Focus capability, and `returnMapContext` /
+`ReturnMapContext` — the technical helper the P5 provider seam is constructed from.
+
+What is deliberately not: the **semantic** focus resolver. `focusMapTarget` and `resolveFocusLanding`
+turn a `MapInspectionContext` into entitlement and locatability meaning, which is only truthful once
+that context has been proven to be the viewpoint's. Exported, they would let a later consumer hand a
+stale, foreign-Session, wrong-position or wrong-depth context straight to the resolver and read a
+semantic `NOT_ENTITLED` or `NOT_LOCATABLE` out of it — the same defect §9 closes inside the acts,
+recreated outside them, and a route around the safe capability query as well. They stay internal, so
+the only ways to obtain that meaning are the six executors and `liveFocusReturnAvailability`, each of
+which proves the context first.
 
 ## 3. RH: append **or** consume, and nowhere else
 
