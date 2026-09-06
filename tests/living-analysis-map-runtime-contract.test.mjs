@@ -171,9 +171,53 @@ test('no second navigation store, no generic navigate, no router-as-Product-trut
     assert.equal(mapText.includes(forbidden), false, `the Map layer must not contain ${forbidden}`);
   }
   assert.doesNotMatch(mapText, /export (?:function|const) navigate\b/u);
-  // Exactly one dispatch site: the shared outcome helper. Every act goes through it.
+  // Exactly one place reaches each canonical entry point, and both are the shared outcome helper.
   assert.equal((mapText.match(/store\.dispatch\(/gu) ?? []).length, 1);
-  assert.match(mapCode['outcome.ts'], /const result = store\.dispatch\(action\);/u);
+  assert.equal((mapText.match(/store\.dispatchMap\(/gu) ?? []).length, 1);
+  assert.match(mapCode['outcome.ts'], /export function dispatchKernelAction\(store: CanonicalStore, action: KernelAction\)/u);
+  assert.match(mapCode['outcome.ts'], /export function dispatchAuthorizedMapAction\(/u);
+});
+
+// R1-01 — the Map act entitlement authority. The public raw dispatch surface must not be able to
+// reach a Map transition, and the minting side of the authority must not be reachable at all.
+test('R1-01 — a promoted Map act reaches canonical state only through an authorized seam', () => {
+  // The kernel splits the two entry points and refuses a Map act on the raw one.
+  assert.match(storeCode, /dispatch\(action: KernelAction\): DispatchResult;/u);
+  assert.match(storeCode, /dispatchMap\(action: MapAction\): DispatchResult;/u);
+  assert.match(storeCode, /if \(entry\.level === 'EXECUTABLE'\) \{\s*\n\s*throw new UnauthorizedMapAction\(/u);
+  // The Map seam consults an authority it cannot mint from, and fails closed without one.
+  assert.match(storeCode, /if \(mapActionAuthority === undefined\) \{\s*\n\s*throw new UnauthorizedMapAction\(/u);
+  assert.match(storeCode, /if \(mapActionAuthority\.consume\(action\) !== true\) \{\s*\n\s*throw new UnauthorizedMapAction\(/u);
+  // The kernel neither reads `V` nor re-implements an entitlement rule.
+  const authorityInterface = storeCode.slice(storeCode.indexOf('export interface MapActionAuthority'), storeCode.indexOf('export interface StoreDependencies'));
+  assert.ok(authorityInterface.length > 0, 'the MapActionAuthority interface exists');
+  assert.match(authorityInterface, /consume\(action: MapAction\): boolean;/u);
+  assert.equal((authorityInterface.match(/^\s{2}\w+\(/gmu) ?? []).length, 1, 'the authority exposes exactly one member: it can answer, never mint');
+  for (const forbidden of ['Disclosed', 'HistoricalDisclosure', 'entitle', 'Entitle', 'MapScene', 'resolveEntitled']) {
+    assert.equal(storeCode.includes(forbidden), false, `the kernel must not learn ${forbidden}`);
+  }
+
+  // The minting side is module-local to the executors: declared once, exported nowhere.
+  const executors = mapCode['inspection/map-actions.ts'];
+  assert.match(executors, /const authorized = new WeakSet<MapAction>\(\);/u);
+  assert.match(executors, /^function grant<A extends MapAction>\(action: A\): A \{/mu, 'grant is a module-local function declaration');
+  assert.doesNotMatch(executors, /export (?:function|const) grant\b/u);
+  assert.doesNotMatch(executors, /export \{[^}]*\bgrant\b/u);
+  assert.equal((executors.match(/authorized\.add\(/gu) ?? []).length, 1, 'exactly one place adds an authorization');
+  assert.equal((executors.match(/\bgrant\(/gu) ?? []).length, 3, 'exactly the three promoted acts are minted, and nothing else');
+  // The authorization is consumed on use, so a granted act cannot be replayed.
+  assert.match(executors, /authorized\.delete\(action\);/u);
+  // `grant` is never re-exported from the Map layer, so no caller outside this module can mint.
+  for (const [name, text] of Object.entries(mapCode)) {
+    if (name === 'inspection/map-actions.ts') continue;
+    assert.equal(/\bgrant\b/u.test(text), false, `${name} must not reference the minting function`);
+  }
+  assert.match(mapCode['inspection/index.ts'], /MAP_ACTION_AUTHORITY/u, 'only the verifier crosses the module boundary');
+
+  // The authority is object identity in a WeakSet, never a flag, a string token or a type brand.
+  for (const forbidden of ['authorized: true', 'as MapActionAuthority', 'unique symbol']) {
+    assert.equal(executors.includes(forbidden), false, `the authority must not rest on ${forbidden}`);
+  }
 });
 
 test('no later-task act, no Timeline, no Preview and no temporal write exists in the Map layer', () => {

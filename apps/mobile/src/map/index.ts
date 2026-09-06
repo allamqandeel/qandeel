@@ -29,4 +29,4 @@ export * from './inspection';
 export * from './accessibility';
 export * from './renderer';
 export type { MapActionOutcome, MapActionRejectionCode } from './outcome';
-export { dispatchMapAction } from './outcome';
+export { dispatchAuthorizedMapAction, dispatchKernelAction } from './outcome';

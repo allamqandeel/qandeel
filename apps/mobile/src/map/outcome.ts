@@ -11,10 +11,11 @@
  * writes no state and appends no RH, and an effective act appends exactly one checkpoint.
  * `REJECTED` carries the store's own error code, so nothing is flattened into a generic failure.
  */
-import { CanonicalStateError, type CanonicalStateErrorCode, type CanonicalStore, type RhEntry, type StoreAction } from '../state';
+import { CanonicalStateError, type CanonicalStateErrorCode, type CanonicalStore, type DispatchResult, type KernelAction, type RhEntry } from '../state';
 
 export type MapActionRejectionCode =
   | CanonicalStateErrorCode
+  | 'NOT_AUTHORIZED'
   | 'CAMERA_NOT_DECODABLE'
   | 'PROJECTION_NOT_AVAILABLE'
   | 'NOT_ENTITLED'
@@ -30,13 +31,26 @@ export type MapActionOutcome =
 
 export const rejected = (code: MapActionRejectionCode, detail: string): MapActionOutcome => ({ outcome: 'REJECTED', code, detail });
 
-/** Runs one canonical dispatch and reports its own answer; nothing here decides authority. */
-export function dispatchMapAction(store: CanonicalStore, action: StoreAction): MapActionOutcome {
+function report(run: () => DispatchResult): MapActionOutcome {
   try {
-    const result = store.dispatch(action);
+    const result = run();
     return result.outcome === 'NO_OP' ? { outcome: 'NO_OP' } : { outcome: 'APPLIED', entry: result.entry };
   } catch (error) {
     if (error instanceof CanonicalStateError) return rejected(error.code, error.message);
     throw error;
   }
+}
+
+/** Runs one canonical kernel dispatch and reports its own answer; nothing here decides authority. */
+export function dispatchKernelAction(store: CanonicalStore, action: KernelAction): MapActionOutcome {
+  return report(() => store.dispatch(action));
+}
+
+/**
+ * Runs one authorized Map act. The action must already carry a runtime authorization from the
+ * store's Map authority — minted in `inspection/map-actions.ts` and nowhere else — so this
+ * function cannot be used to smuggle an unauthorized act: the store refuses it.
+ */
+export function dispatchAuthorizedMapAction(store: CanonicalStore, action: Parameters<CanonicalStore['dispatchMap']>[0]): MapActionOutcome {
+  return report(() => store.dispatchMap(action));
 }

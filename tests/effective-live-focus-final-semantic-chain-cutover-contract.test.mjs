@@ -402,17 +402,18 @@ test('the client ingests LF passively into the frozen T-02 kernel through the ON
     }
   }
   // The T-02 kernel, the shell and the router root are byte-identical; nothing is mounted.
-  // T-04 re-anchor: the four kernel files it touched to promote `INSPECT_OBJECT`,
-  // `SWITCH_CONTEXT` and `DIRECT_JUMP` carry their post-promotion ids. The pins stay exact, so
-  // any further kernel change still trips this gate, and T-03D itself changed none of them.
+  // T-04 re-anchor: the five kernel files it touched to promote `INSPECT_OBJECT`,
+  // `SWITCH_CONTEXT` and `DIRECT_JUMP`, and then to gate them behind the R1-01 authorized Map
+  // seam, carry their post-promotion ids. The pins stay exact, so any further kernel change still
+  // trips this gate, and T-03D itself changed none of them.
   for (const [file, blob] of [
     ['apps/mobile/src/state/actions.ts', 'b41b59158dd56e914af51a55338551ead4ddfd0f'],
-    ['apps/mobile/src/state/authority.ts', '1920ec550ad7b3b8eca02fb690f790654ce4609a'],
+    ['apps/mobile/src/state/authority.ts', 'fafabe883ccfe1900ea5f533c952ae6d41f83a97'],
     ['apps/mobile/src/state/classes.ts', 'f0d17c675c148e26c523291e07769c3ed764f263'],
     ['apps/mobile/src/state/history.ts', 'e12caa557ab719611d11e43392723a1bb2389c62'],
-    ['apps/mobile/src/state/index.ts', '88436ef00ad9977c9ba883edcfeb70269e152597'],
+    ['apps/mobile/src/state/index.ts', '2bd50cce348cbc0e616b007b66300c2b5832fb3d'],
     ['apps/mobile/src/state/selectors.ts', '72c156c298c5914a578fd41f3243c7bb596756ae'],
-    ['apps/mobile/src/state/store.ts', 'df522a529e5dab9d1de2701131788bd633b895dd'],
+    ['apps/mobile/src/state/store.ts', 'ac0144b8a925db64fc032f9ddd8b51361f101f78'],
     ['apps/mobile/src/state/transitions.ts', '9e3725cc3c48ffb3d36fccbbeff4746ec2345b0f'],
     ['apps/mobile/src/state/CanonicalStateProvider.tsx', 'b7ea8b6e775f74f7d331843e4783dc7291b11b49'],
     ['apps/mobile/src/shell/FoundationShell.tsx', 'e2286ba1a35c2e40def475af5deed2d8ba8120d3'],

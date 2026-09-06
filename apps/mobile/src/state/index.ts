@@ -118,6 +118,7 @@ export {
   RetractionRejected,
   UnauthorizedActionClass,
   UnauthorizedClassAWrite,
+  UnauthorizedMapAction,
   UnknownAction,
   UnknownEvent,
   assertAuthorizedClassAWrites,
@@ -140,7 +141,7 @@ export { appendIfEffective, captureCheckpoint, isEffectiveChange, phiEff, phiEff
 export type { CommittedNavigationIntent, TemporalOrientation } from './selectors';
 export { committedNavigationIntent, effectiveTC, isAddressableMoment, temporalOrientation } from './selectors';
 
-export type { CanonicalStateInit, CanonicalStore, DispatchResult, IngestResult, StoreDependencies } from './store';
+export type { CanonicalStateInit, CanonicalStore, DispatchResult, IngestResult, MapActionAuthority, StoreDependencies } from './store';
 export { createCanonicalStore } from './store';
 
 export type { CanonicalStateProviderProps } from './CanonicalStateProvider';

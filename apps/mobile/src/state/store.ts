@@ -1,14 +1,22 @@
 /**
  * T-02 — Canonical state kernel: the store boundary.
  *
- * Two entry points with separate authority paths:
- * - `dispatch(action)`: explicit Product acts — the T-02 kernel plus the three Map acts T-04
- *   promoted to `EXECUTABLE`. Runs the transition, the exact canonical-shape validator, the
- *   immutable-context guard, the per-field writer guard, `Φ_eff` no-op detection and the RH
- *   append. Never accepts an event, a Class C / D identity or a later-owner identity.
+ * Three entry points with separate authority paths:
+ * - `dispatch(action)`: the T-02 kernel Product acts, and ONLY those. Runs the transition, the
+ *   exact canonical-shape validator, the immutable-context guard, the per-field writer guard,
+ *   `Φ_eff` no-op detection and the RH append. Never accepts an event, a Class C / D identity, a
+ *   later-owner identity, or a promoted Map act.
+ * - `dispatchMap(action)`: the ONE seam a promoted Map act can reach canonical state through
+ *   (R1-01). It runs exactly the same admission, guard, `Φ_eff` and RH path, and it runs it only
+ *   after the store's own `MapActionAuthority` has consumed a runtime authorization for that
+ *   exact action object. The store never inspects `V`, never learns an entitlement rule and
+ *   never mints an authorization: it only asks whether its authority vouches for this act.
  * - `ingest(event)`: passive authoritative events (closed catalog). Runs the event transition,
  *   the exact shape validator and the guard restricted to the event's single authoritative
  *   field. Never appends RH and never borrows transaction authority.
+ *
+ * Fail-closed by default: a store constructed WITHOUT a Map authority executes no Map act at all,
+ * so forgetting to wire the authority cannot silently open the boundary.
  *
  * Trust boundary (FIX-T02-02): every candidate, and the initial snapshot, must match the exact
  * canonical shape (allowlisted keys at every level); `session.id` is immutable store context
@@ -16,13 +24,14 @@
  * authoritative snapshot. It performs no persistence, no restart behaviour and no entry-state
  * behaviour. No UI or control exposes the kernel actions in T-02.
  */
-import { catalogEntry, isRhActionId, type AuthoritativeEvent, type StoreAction } from './actions';
+import { catalogEntry, isRhActionId, type AuthoritativeEvent, type CatalogEntry, type KernelAction, type MapAction, type StoreAction } from './actions';
 import {
   ImmutableContextViolation,
   InvalidCanonicalShape,
   InvalidInitialState,
   OwnedByLaterTask,
   UnauthorizedActionClass,
+  UnauthorizedMapAction,
   UnknownAction,
   UnknownEvent,
   assertAuthorizedClassAWrites,
@@ -56,10 +65,30 @@ export interface CanonicalStateInit {
   readonly history?: readonly RhEntry[];
 }
 
-/** Test seam: injected tables never widen authority; the shape validator and guard run on every result regardless. */
+/**
+ * The runtime authority that vouches for a promoted Map act (R1-01).
+ *
+ * `consume` answers ONE question: did this authority itself authorize this exact action object,
+ * and has that authorization not been used yet? It is a runtime property of the object's
+ * identity, not a claim carried inside the action, so nothing a caller can construct — a
+ * structurally perfect `InspectionRef`, a `true` flag, a copied token, a replayed action — can
+ * satisfy it. The owning task holds the minting side privately; the store holds only this
+ * verifier and can therefore neither mint an authorization nor learn an entitlement rule.
+ */
+export interface MapActionAuthority {
+  /** True exactly once per authorization this authority minted for this action object. */
+  consume(action: MapAction): boolean;
+}
+
+/**
+ * Store construction seam. The injected transition tables are a test seam and never widen
+ * authority — the shape validator and the per-field guard run on every result regardless. The Map
+ * authority is a production wiring input: a store built without one runs no Map act at all.
+ */
 export interface StoreDependencies {
   readonly actionTransitions?: Partial<ActionTransitionTable>;
   readonly eventTransitions?: Partial<EventTransitionTable>;
+  readonly mapActionAuthority?: MapActionAuthority;
 }
 
 export type DispatchResult = { readonly outcome: 'APPLIED'; readonly entry: RhEntry | null } | { readonly outcome: 'NO_OP' };
@@ -68,7 +97,10 @@ export type IngestResult = { readonly outcome: 'APPLIED' } | { readonly outcome:
 export interface CanonicalStore {
   getState(): CanonicalState;
   subscribe(listener: () => void): () => void;
-  dispatch(action: StoreAction): DispatchResult;
+  /** T-02 kernel Product acts only. A promoted Map act dispatched here fails closed (R1-01). */
+  dispatch(action: KernelAction): DispatchResult;
+  /** The authorized Map seam. Fails closed unless this store's Map authority consumes the act. */
+  dispatchMap(action: MapAction): DispatchResult;
   ingest(event: AuthoritativeEvent): IngestResult;
 }
 
@@ -100,6 +132,7 @@ function buildInitialState(init: CanonicalStateInit): CanonicalState {
 export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDependencies = {}): CanonicalStore {
   const actionTransitions: ActionTransitionTable = { ...STORE_ACTION_TRANSITIONS, ...deps.actionTransitions };
   const eventTransitions: EventTransitionTable = { ...KERNEL_EVENT_TRANSITIONS, ...deps.eventTransitions };
+  const mapActionAuthority = deps.mapActionAuthority;
 
   let state: CanonicalState = deepFreeze(buildInitialState(init));
   const listeners = new Set<() => void>();
@@ -118,18 +151,12 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     }
   }
 
-  function dispatch(action: StoreAction): DispatchResult {
-    const id = isPlainRecord(action) ? action.type : undefined;
-    const entry = catalogEntry(id);
-    if (!entry) throw new UnknownAction(String(id));
-    if (entry.cls === 'EVENT') {
-      throw new UnauthorizedActionClass(entry.id, entry.cls, `${entry.id} is an authoritative event; it cannot be dispatched as a Product action`);
-    }
-    if (entry.level === 'NOT_STORE_ACTION') {
-      throw new UnauthorizedActionClass(entry.id, entry.cls, `${entry.id} is a Class ${entry.cls} identity; it never reaches the canonical store`);
-    }
-    if (entry.level === 'METADATA_ONLY') throw new OwnedByLaterTask(entry.id, entry.owner);
-
+  /**
+   * The one transaction body. It is reached only after the caller-facing entry point has decided
+   * that this identity may run at all, so admission, the per-field guard, `Φ_eff` and the RH
+   * append are literally the same code for a kernel act and for an authorized Map act.
+   */
+  function runTransaction(action: StoreAction, entry: CatalogEntry): DispatchResult {
     const before = state;
     const transition = actionTransitions[action.type] as (s: CanonicalState, a: StoreAction) => unknown;
     const result = transition(before, action);
@@ -145,6 +172,48 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     if (appended.entry === null) return { outcome: 'NO_OP' };
     publish({ ...candidate, session: before.session, history: appended.history });
     return { outcome: 'APPLIED', entry: appended.entry };
+  }
+
+  /** Shared identity admission. Returns the registry entry, or throws the exact typed refusal. */
+  function admitIdentity(action: unknown): CatalogEntry {
+    const id = isPlainRecord(action) ? action.type : undefined;
+    const entry = catalogEntry(id);
+    if (!entry) throw new UnknownAction(String(id));
+    if (entry.cls === 'EVENT') {
+      throw new UnauthorizedActionClass(entry.id, entry.cls, `${entry.id} is an authoritative event; it cannot be dispatched as a Product action`);
+    }
+    if (entry.level === 'NOT_STORE_ACTION') {
+      throw new UnauthorizedActionClass(entry.id, entry.cls, `${entry.id} is a Class ${entry.cls} identity; it never reaches the canonical store`);
+    }
+    if (entry.level === 'METADATA_ONLY') throw new OwnedByLaterTask(entry.id, entry.owner);
+    return entry;
+  }
+
+  function dispatch(action: KernelAction): DispatchResult {
+    const entry = admitIdentity(action);
+    // R1-01: a promoted Map act never runs on this path, whatever it carries. The raw public
+    // dispatch surface therefore cannot reach `IF_ref`, the camera or RH for a Map act at all.
+    if (entry.level === 'EXECUTABLE') {
+      throw new UnauthorizedMapAction(entry.id, 'a Map act reaches canonical state only through the authorized Map seam');
+    }
+    return runTransaction(action, entry);
+  }
+
+  function dispatchMap(action: MapAction): DispatchResult {
+    const entry = admitIdentity(action);
+    if (entry.level !== 'EXECUTABLE') {
+      throw new UnauthorizedActionClass(entry.id, entry.cls, `${entry.id} is not a promoted Map act; the Map seam runs only those`);
+    }
+    if (mapActionAuthority === undefined) {
+      throw new UnauthorizedMapAction(entry.id, 'this store was constructed without a Map authority');
+    }
+    // The authority answers about THIS action object. A structurally identical copy, a replay of
+    // an already-consumed act, or anything the authority did not mint is refused here — before
+    // the transition runs, so a refusal writes nothing and appends nothing.
+    if (mapActionAuthority.consume(action) !== true) {
+      throw new UnauthorizedMapAction(entry.id, 'the authority did not mint an unused authorization for this exact act');
+    }
+    return runTransaction(action, entry);
   }
 
   function ingest(event: AuthoritativeEvent): IngestResult {
@@ -178,6 +247,7 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
       };
     },
     dispatch,
+    dispatchMap,
     ingest,
   };
 }

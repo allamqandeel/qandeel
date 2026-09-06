@@ -297,25 +297,27 @@ test('the client mirror is written only through the T-02 authoritative event sea
 });
 
 test('the T-02 canonical state kernel is unchanged and is still not mounted', async () => {
-  // The class model, the per-field authority guard, the RH transaction boundary, the Class-B
-  // selectors and the React binding are byte-identical to what T-02 froze. They are the files
-  // that carry the state semantics, and no later task has touched one.
+  // The class model, the RH transaction boundary, the Class-B selectors and the React binding are
+  // byte-identical to what T-02 froze. They carry the state semantics, and no later task has
+  // touched one.
   const frozen = {
     'classes.ts': 'f0d17c675c148e26c523291e07769c3ed764f263',
-    'authority.ts': '1920ec550ad7b3b8eca02fb690f790654ce4609a',
     'history.ts': 'e12caa557ab719611d11e43392723a1bb2389c62',
     'selectors.ts': '72c156c298c5914a578fd41f3243c7bb596756ae',
     'CanonicalStateProvider.tsx': 'b7ea8b6e775f74f7d331843e4783dc7291b11b49',
   };
-  // T-04 re-anchor, by exact name and for exactly four files: promoting `INSPECT_OBJECT`,
+  // T-04 re-anchor, by exact name and for exactly five files: promoting `INSPECT_OBJECT`,
   // `SWITCH_CONTEXT` and `DIRECT_JUMP` to executable acts required the registry, their three
-  // transitions, the dispatch level check and the public surface — and nothing else. The pin is
-  // not weakened: these ids are exact, so any further change to the kernel still trips this gate.
+  // transitions, the dispatch surface and the public surface; R1-01 then added the typed
+  // `UnauthorizedMapAction` refusal and split the raw dispatch from the authorized Map seam. The
+  // per-field writer guard itself (`assertAuthorizedClassAWrites`) is unchanged. The pins are not
+  // weakened: these ids are exact, so any further change to the kernel still trips this gate.
   const promotedByT04 = {
     'actions.ts': 'b41b59158dd56e914af51a55338551ead4ddfd0f',
     'transitions.ts': '9e3725cc3c48ffb3d36fccbbeff4746ec2345b0f',
-    'store.ts': 'df522a529e5dab9d1de2701131788bd633b895dd',
-    'index.ts': '88436ef00ad9977c9ba883edcfeb70269e152597',
+    'authority.ts': 'fafabe883ccfe1900ea5f533c952ae6d41f83a97',
+    'store.ts': 'ac0144b8a925db64fc032f9ddd8b51361f101f78',
+    'index.ts': '2bd50cce348cbc0e616b007b66300c2b5832fb3d',
   };
   for (const [name, blob] of Object.entries(frozen)) {
     assert.equal(gitBlobId(await read(`apps/mobile/src/state/${name}`)), blob,

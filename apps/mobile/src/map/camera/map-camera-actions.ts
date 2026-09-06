@@ -11,7 +11,7 @@
  * that tried anything else would be rejected by T-02's guard, not by a convention here.
  */
 import type { CanonicalStore } from '../../state';
-import { dispatchMapAction, rejected, type MapActionOutcome } from '../outcome';
+import { dispatchKernelAction, rejected, type MapActionOutcome } from '../outcome';
 import { decodeCameraIntent, type MapCamera } from './camera';
 import { panFromExplorationStep, panFromTranslation, type PanResolution, type ViewportExplorationDirection } from './pan';
 import type { ViewportEnvelope } from './viewport';
@@ -25,7 +25,7 @@ export function currentCamera(store: CanonicalStore): { readonly ok: true; reado
 function applyPan(store: CanonicalStore, resolution: PanResolution): MapActionOutcome {
   switch (resolution.outcome) {
     case 'INTENT':
-      return dispatchMapAction(store, { type: 'PAN', to: resolution.intent });
+      return dispatchKernelAction(store, { type: 'PAN', to: resolution.intent });
     case 'NO_MOVEMENT':
       return { outcome: 'NO_OP' };
     case 'BEYOND_CANONICAL_BOUND':
@@ -72,5 +72,5 @@ export function zoomSemanticStep(store: CanonicalStore, direction: SemanticZoomD
   if (resolution.outcome === 'AT_RUNG_BOUNDARY') {
     return rejected('AT_RUNG_BOUNDARY', `the ${camera.camera.depth} rung is the ${direction === 'IN' ? 'deepest' : 'shallowest'} disclosure of the frozen lineage`);
   }
-  return dispatchMapAction(store, { type: 'ZOOM_SEMANTIC', depth: resolution.depth, to: resolution.to });
+  return dispatchKernelAction(store, { type: 'ZOOM_SEMANTIC', depth: resolution.depth, to: resolution.to });
 }

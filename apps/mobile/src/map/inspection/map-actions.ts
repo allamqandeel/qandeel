@@ -1,11 +1,24 @@
 /**
- * T-04 — the executors of the three promoted Map acts.
+ * T-04 — the executors of the three promoted Map acts, and the runtime authority that lets them
+ * reach canonical state at all (R1-01).
  *
  * Each one resolves entitlement against the disclosed projection `V` first and dispatches
  * through the existing canonical store second. There is no third path: no direct write, no
  * parallel navigation store, no generic `navigate()`, and nothing that could reach `TM`, `TC` or
  * `LF` — the frozen per-field authority of these acts is `IF_ref` for inspection and context
  * switching, and `IF_ref` plus the camera fields for a direct jump.
+ *
+ * The authority below closes the raw-dispatch bypass. `grant` is a module-local function: it is
+ * declared here, used only by the three executors here, and exported nowhere, so the ONLY way an
+ * action object can enter the authorization set is by being built a few lines below — after
+ * `resolveEntitledInspection` admitted it against the current disclosed `V`. What crosses the
+ * module boundary is `MAP_ACTION_AUTHORITY`, which can only ANSWER about an action, never mint
+ * one. The store holds that verifier and nothing else: it cannot mint an authorization, and it
+ * never learns an entitlement rule, so no part of `V` is duplicated inside the kernel.
+ *
+ * The check is object identity in a `WeakSet`, consumed on use. A structurally perfect copy is a
+ * different object and is refused; a leaked granted action cannot be replayed; a `true` flag, a
+ * string token or a TypeScript brand buys nothing, because none of them is in the set.
  *
  *   INSPECT_OBJECT  `IF_ref := the exact requested reference`. No temporal movement, no camera
  *                   movement at all: an ordinary inspection never smuggles a locate.
@@ -20,7 +33,7 @@
  */
 import type { HistoricalDisclosure } from '@qandeel/runtime';
 
-import type { CanonicalStore, SemanticDepth } from '../../state';
+import type { CanonicalStore, MapAction, MapActionAuthority, SemanticDepth } from '../../state';
 import type { HistoricalDisclosureEntry } from '../../projection';
 import { worldAnchorRef, spatialDestinationRef } from '../world';
 import {
@@ -30,7 +43,7 @@ import {
   type MapScene,
   type MapSceneDerivation,
 } from '../projection';
-import { dispatchMapAction, rejected, type MapActionOutcome } from '../outcome';
+import { dispatchAuthorizedMapAction, rejected, type MapActionOutcome } from '../outcome';
 import {
   isEntitledInspection,
   resolveEntitledInspection,
@@ -59,6 +72,36 @@ export function mapInspectionContext(entry: HistoricalDisclosureEntry, request: 
   return { ok: true, context: { disclosure: entry.value, scene: derivation.scene } };
 }
 
+// ------------------------------------------------------------------------------------------
+// The runtime authorization boundary (R1-01)
+// ------------------------------------------------------------------------------------------
+
+const authorized = new WeakSet<MapAction>();
+
+/**
+ * Authorizes ONE act, once. Module-local by construction: nothing outside this file can call it,
+ * so nothing outside this file can put an action into the authorization set. Every call site is
+ * a few lines below, downstream of `resolveEntitledInspection`.
+ */
+function grant<A extends MapAction>(action: A): A {
+  Object.freeze(action);
+  authorized.add(action);
+  return action;
+}
+
+/**
+ * The verifier the canonical store is constructed with. It can answer about an act and consume
+ * its authorization; it cannot create one.
+ */
+export const MAP_ACTION_AUTHORITY: MapActionAuthority = Object.freeze({
+  consume(action: MapAction): boolean {
+    if (action === null || typeof action !== 'object') return false;
+    if (!authorized.has(action)) return false;
+    authorized.delete(action);
+    return true;
+  },
+});
+
 /** The Map families that carry geography. Every other disclosed family is inspectable, not placed. */
 const MAP_FAMILY: Partial<Record<string, MapObjectFamily>> = { THREAD: 'THREAD', READING: 'READING', EMERGING_FOCUS: 'EMERGING_FOCUS' };
 
@@ -75,7 +118,7 @@ export function inspectEntitled(store: CanonicalStore, entitled: EntitledInspect
   if (!isEntitledInspection(entitled)) {
     return rejected('NOT_ENTITLED', 'the inspection target was not resolved against a disclosed projection');
   }
-  return dispatchMapAction(store, { type: 'INSPECT_OBJECT', ref: entitled.ref });
+  return dispatchAuthorizedMapAction(store, grant({ type: 'INSPECT_OBJECT', ref: entitled.ref }));
 }
 
 export function inspectObject(store: CanonicalStore, context: MapInspectionContext, request: InspectionRequest): MapActionOutcome {
@@ -95,7 +138,7 @@ export function switchContextEntitled(store: CanonicalStore, entitled: EntitledI
   if (entitled.appearance === null) {
     return rejected('INVALID_INPUT', 'a context switch names the contextual appearance it switches to');
   }
-  return dispatchMapAction(store, { type: 'SWITCH_CONTEXT', ref: entitled.ref });
+  return dispatchAuthorizedMapAction(store, grant({ type: 'SWITCH_CONTEXT', ref: entitled.ref }));
 }
 
 /**
@@ -215,15 +258,18 @@ export function directJump(store: CanonicalStore, context: MapInspectionContext,
         if (!contextual.ok) return rejected('NOT_ENTITLED', `${contextual.reason}: ${contextual.detail}`);
         landing = contextual.entitled;
       }
-      return dispatchMapAction(store, {
-        type: 'DIRECT_JUMP',
-        ref: landing.ref,
-        to: {
-          depth,
-          anchor: worldAnchorRef(located.locus.anchor),
-          destination: spatialDestinationRef(located.locus.destination),
-        },
-      });
+      return dispatchAuthorizedMapAction(
+        store,
+        grant({
+          type: 'DIRECT_JUMP',
+          ref: landing.ref,
+          to: Object.freeze({
+            depth,
+            anchor: worldAnchorRef(located.locus.anchor),
+            destination: spatialDestinationRef(located.locus.destination),
+          }),
+        }),
+      );
     }
     default: {
       const exhaustive: never = located;

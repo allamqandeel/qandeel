@@ -10,7 +10,7 @@ import { createCanonicalStore, sessionPosition, type CanonicalStore, type Semant
 import type { HistoricalDisclosureEntry } from '../../projection';
 import { initialCameraIntent, viewportEnvelope, WORLD_ORIGIN, type ViewportEnvelope } from '../camera';
 import { deriveMapScene, mapProjectionRequest, type MapScene } from '../projection';
-import type { MapInspectionContext } from '../inspection';
+import { MAP_ACTION_AUTHORITY, type MapInspectionContext } from '../inspection';
 import { canonicalWorldAddress, type CanonicalWorldAddress } from '../world';
 
 export function address(x: bigint, y: bigint): CanonicalWorldAddress {
@@ -24,16 +24,25 @@ export interface TestStoreOptions {
   readonly liveHead?: number;
   readonly depth?: SemanticDepth;
   readonly anchor?: CanonicalWorldAddress;
+  /**
+   * Wire the production Map authority (the default). `false` builds a store with NO Map
+   * authority at all, which is how a caller that forgot to wire it would behave: every Map act
+   * fails closed.
+   */
+  readonly mapAuthority?: boolean;
 }
 
 export function testStore(options: TestStoreOptions = {}): CanonicalStore {
-  return createCanonicalStore({
-    session: { id: options.sessionId ?? 'session-1' },
-    live: { LH: sessionPosition(options.liveHead ?? 4), LF: { value: { kind: 'NONE' }, atSp: null } },
-    temporal: { kind: 'FOLLOW_LIVE' },
-    inspection: null,
-    camera: initialCameraIntent(options.anchor ?? WORLD_ORIGIN, undefined, options.depth ?? 'WORLD'),
-  });
+  return createCanonicalStore(
+    {
+      session: { id: options.sessionId ?? 'session-1' },
+      live: { LH: sessionPosition(options.liveHead ?? 4), LF: { value: { kind: 'NONE' }, atSp: null } },
+      temporal: { kind: 'FOLLOW_LIVE' },
+      inspection: null,
+      camera: initialCameraIntent(options.anchor ?? WORLD_ORIGIN, undefined, options.depth ?? 'WORLD'),
+    },
+    options.mapAuthority === false ? {} : { mapActionAuthority: MAP_ACTION_AUTHORITY },
+  );
 }
 
 export function fetchedEntry(disclosure: HistoricalDisclosure): HistoricalDisclosureEntry {

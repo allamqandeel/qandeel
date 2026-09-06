@@ -18,6 +18,7 @@ export { entitledLoci, isEntitledLocus, locusForBinding, resolveLocatability } f
 
 export type { DirectJumpOutcome, DirectJumpRequest, MapContextResolution, MapInspectionContext } from './map-actions';
 export {
+  MAP_ACTION_AUTHORITY,
   directJump,
   disclosedAppearances,
   inspectEntitled,

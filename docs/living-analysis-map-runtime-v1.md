@@ -175,6 +175,52 @@ fails closed with `OwnedByLaterTask`.
 An effective act appends exactly one RH checkpoint; a true no-op appends none. Both answers come
 from the store's own `Φ_eff` rule, not from a local approximation.
 
+### The authorization boundary (R1-01)
+
+Entitlement is only half the guarantee. The other half is that a caller cannot skip it.
+
+The canonical store therefore has two Product entry points instead of one:
+
+- `dispatch(action: KernelAction)` — the T-02 kernel acts, and only those. A promoted Map act
+  dispatched here is refused with `UnauthorizedMapAction` **before any transition runs**, so the
+  raw public dispatch surface cannot reach `IF_ref`, the camera or RH for a Map act at all.
+- `dispatchMap(action: MapAction)` — the one seam a Map act can reach canonical state through. It
+  runs exactly the same admission, per-field guard, `Φ_eff` and RH path, and it runs it only after
+  the store's own `MapActionAuthority` has **consumed** an authorization for that exact action
+  object.
+
+The authority is a runtime property of object identity, not a claim carried inside the action:
+
+```text
+V → resolveEntitledInspection → EntitledInspection (WeakSet-branded)
+  → grant(action)              ← module-local to inspection/map-actions.ts, exported nowhere
+  → store.dispatchMap(action)
+  → MAP_ACTION_AUTHORITY.consume(action)   ← WeakSet membership, deleted on use
+  → the existing canonical transaction
+```
+
+`grant` is a module-local function declaration in `inspection/map-actions.ts`. It is used at
+exactly three call sites — the three executors, each downstream of `resolveEntitledInspection` —
+and it is exported nowhere, so nothing outside that file can put an action into the set. What
+crosses the module boundary is `MAP_ACTION_AUTHORITY`, whose single member `consume` can *answer*
+about an act and can never create one. The store holds that verifier and nothing else: it cannot
+mint an authorization, it never reads `V`, and it never learns an entitlement rule, so no part of
+the disclosure algorithm is duplicated inside the kernel.
+
+What this refuses, at runtime:
+
+- a structurally perfect `InspectionRef`, `WORLD_ANCHOR` or `SPATIAL_DESTINATION` built with the
+  public `opaqueRef` — a different object, not in the set;
+- a structurally identical **copy** of a legitimately authorized act — likewise a different object;
+- a **replay** of a granted act — the authorization is consumed on first use;
+- a `true` flag, a token string or a TypeScript brand — none of them is membership in the set;
+- a Map act on a store that was never given an authority — the boundary defaults to shut, so
+  forgetting to wire it cannot silently open it.
+
+A caller can of course build *their own* store with a permissive authority; that is a different
+store, not a bypass of the canonical one, and the canonical store is constructed once with
+`MAP_ACTION_AUTHORITY`. Proven by `AUTH-01 … AUTH-05` in `map/__tests__/authority.test.ts`.
+
 ### Entitlement
 
 `inspection/entitlement.ts` is the ONLY place an inspection reference can be minted, and it can
@@ -267,11 +313,12 @@ be added: a tuning value with a semantic consequence is not a tuning value.
 
 ## 13. State authority
 
-There is no second navigation store. The Map layer has exactly ONE dispatch site — the shared
-outcome helper — and every act goes through the existing per-field authority guard, `Φ_eff` no-op
-detection and RH boundary. The only client-side state the Map owns is presentation progress: the
-live drag translation, the viewport envelope and the derived placement, all Class C/D and incapable
-of becoming canonical authority.
+There is no second navigation store. The Map layer reaches each canonical entry point from exactly
+one place — the shared outcome helper: `dispatchKernelAction` for `PAN` and `ZOOM_SEMANTIC`,
+`dispatchAuthorizedMapAction` for the three promoted acts — and every act goes through the existing
+per-field authority guard, `Φ_eff` no-op detection and RH boundary. The only client-side state the
+Map owns is presentation progress: the live drag translation, the viewport envelope and the derived
+placement, all Class C/D and incapable of becoming canonical authority.
 
 ## 14. Anti-scope
 
@@ -302,6 +349,11 @@ graphic-language styling.
 | M04-13 | Accessibility parity | `accessibility.test.ts` |
 | M04-14 | LF firewall | `firewall.test.ts` |
 | M04-15 | Registry and scope firewall | `firewall.test.ts`, `tests/living-analysis-map-runtime-contract.test.mjs` |
+| AUTH-01 | Forged inspect cannot reach canonical mutation | `authority.test.ts` |
+| AUTH-02 | Forged context switch cannot reach canonical mutation | `authority.test.ts` |
+| AUTH-03 | Forged direct jump cannot reach canonical mutation | `authority.test.ts` |
+| AUTH-04 | Legitimate V-resolved paths unchanged | `authority.test.ts` |
+| AUTH-05 | Knowing an identifier is not entitlement | `authority.test.ts` |
 
 ## 16. Verification
 
