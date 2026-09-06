@@ -167,6 +167,96 @@ the rungs its requested semantic depth discloses.
 Contract: `npm run test:historical-projection-contract` (repository root) plus the Jest
 suites under `src/projection/__tests__/`.
 
+## Temporal navigation layer (T-06)
+
+T-06 owns the interaction and substrate around the frozen temporal primitives. It adds no
+canonical field, no second temporal cursor and no dependency: `COMMIT_MOMENT` and
+`COMMIT_LIVE_EDGE` remain T-02's, and this layer decides only WHEN to call them, from an
+explicit user act.
+
+- **Addressability** (`targeting/addressability.ts`): canonical Moment validity, `1 <= sp <= LH`,
+  T-02's frozen precondition unchanged. A temporal target is an integer Session Position — never a
+  timestamp, a wall clock, a pixel offset, a percentage, a window position, a scroll offset, an
+  animation frame, a gesture velocity or a duration. `LH = null` means nothing is addressable yet,
+  which is a correct answer rather than an error. `TemporalTargetIntent` has two shapes, `MOMENT(sp)`
+  and `LIVE_EDGE`, and no code path converts one into the other.
+- **Disclosed availability** (`targeting/disclosed-availability.ts`): the narrower, T-06-owned
+  interaction gate. A Moment that `LH` makes valid but nothing has disclosed is not a target — with
+  `LH = 100` and a prefix through `SP(80)`, `SP(95)` is a legitimate Moment and not an interaction
+  target. Exact entry, forward continuation and the pointer scrub all ask this one rule; membership
+  is read from the Track's own row, never inferred from `LH` or from any presentation quantity;
+  disclosure grows and never rewrites; a replaced Session invalidates the authority outright.
+- **Preview** (`preview/`): `PTC` is Class C. While a preview exists `TM`, effective `TC`,
+  `IF_ref`, `MC` and `RH` are all unchanged, and the controller holds no store, no dispatch and
+  no transport, so it could not write Product truth even by mistake. A preview is never made by
+  moving `TM` and moving it back. `preview-projection.ts` shows a historical target only through
+  the disclosure of THAT position, and runs BOTH gates — canonical validity and disclosed
+  availability — before any lookup. A cached projection for an undisclosed Moment is therefore
+  unreachable: the cache is evidence about what was fetched, never authority about what may be shown.
+  Each half of the gate comes from where it is true: canonical bounds are re-derived from the state
+  under judgement and the caller's `bounds` snapshot is never read, so a stale or foreign one can only
+  narrow what is reachable, never widen it. Authorization is a fact about that call, not a capability
+  — no token, brand or projector is exported, and no state survives a call, so there is nothing old
+  enough to go stale. No future-history request exists in this layer, and none can be constructed
+  through it.
+- **Continuation** (`continuation/forward.ts`): repeated forward targeting that holds at BOTH the
+  authoritative Live Head and the disclosure horizon, and becomes Live intent at neither. Its cadence
+  is injected, never frozen, because no cadence changes the semantics.
+- **Commit boundary** (`targeting/commit.ts`): one completed, explicit act → one canonical
+  commit. Committing `Moment(LH)` produces `PINNED(LH)`, which stays a different state from
+  `FOLLOW_LIVE` and diverges from it as soon as `LH` advances.
+- **Promoted acts** (`targeting/temporal-actions.ts`): `COMMIT_MOMENT_AND_LOCATE` and
+  `CHOOSE_LOCUS` are executable through a THIRD store seam with their own runtime authority — a
+  `WeakSet` consumed on use, whose minting side is module-local and exported nowhere. The
+  composite act's landing is resolved against the projection of the position it commits to, and
+  is authorized by T-04's ONE shared freshness rule applied to the post-act viewpoint. Zero loci
+  invents no geography; several loci elect nothing; and `CHOOSE_LOCUS` is applicable ONLY to a
+  genuine multiple-locus ambiguity — a unique locus is a landing, not a choice, and is refused.
+- **Locus choice** (`locus-choice/`): the pending contextual-locus choice and its user-facing route.
+  Construction is provenance-bound — neither factory accepts a locus list; both derive the complete
+  legitimate set from the resolver, and the composite one binds the executor's answer to that
+  derivation by position and by exact locus-key set. The result is opaque to the type system and
+  branded at runtime, and the brand is checked where the surface is BUILT: a pending choice the module
+  did not mint yields no model, so it renders no option and publishes no accessibility action rather
+  than displaying a list of contexts the Product cannot vouch for. Every legitimate locus is offered
+  exactly once, unranked and unpreselected, with a pointer route and a non-pointer accessibility
+  action per option; both converge on one executor. Backing out performs no act and stays reachable
+  even when nothing can be offered; a stale Session or depth fails the choice closed.
+- **Timeline integration** (`timeline-integration/`): one way only. T-05 identifies a disclosed
+  target and gains no store, no dispatch, no selected Moment and no Live commit; scrolling,
+  refining and widening the presentation change no temporal state. Temporal targeting lives on
+  its own strip below the Track, so presentation movement and temporal traversal are told apart
+  by where they are touched as well as by what they announce. Every scheduled scrub callback carries
+  its gesture's interaction epoch, so a callback from a settled, cancelled or superseded gesture is
+  inert whatever order the two runtimes deliver in — and ownership belongs to ONE coordinator per
+  mounted surface, bound to the store and preview controller and reading its observers at call
+  time, so a rerender with new callback identities, a replaced controller or an unmount can never
+  split it; a retired surface's callbacks are inert. The strip is sized to T-05's own viewport at
+  the row's start edge, and `presentation-geometry.ts` is the ONE logical↔physical rule shared by
+  the pointer side and the motion side, so under right-to-left the markers rest where T-05 draws
+  the same Moments and the outboard Live slot is never Moment-targeting space.
+- **Motion** (`motion/`): decided in plain arithmetic first, then bound to Reanimated. Motion
+  explains Product truth and never carries it — the pure contract imports nothing at all, the
+  binding holds no store, and the commit acknowledgement is called with the store's answer
+  already in hand. Four transitions, all under 300 ms; reduced motion collapses every movement to
+  zero (keeping the preview's opacity bridge) while changing no target, capability or stance.
+  Positions animate in Track space and become physical only in the style, through the shared
+  geometry, with the window offset, viewport and direction in never-animated shared values.
+- **Accessibility** (`accessibility/`): exact targeting, preview, commit, cancel, forward
+  continuation and the Live target each have a route needing neither a drag nor a precision
+  pointer. A preview is announced as a preview, committed truth keeps its own sentence, and
+  nothing announces presentation movement as temporal movement. The container is a plain layout
+  View; the stance and preview live on a dedicated leaf summary element that also carries the named
+  actions, and the exact-entry input and the four controls are individually focusable siblings — no
+  accessibility element in the layer owns an interactive descendant.
+- Not here, by design: the T-07 return acts (still later-owner metadata, still failing closed),
+  the Map's own projection handoff, final chrome and art direction, and the general input and
+  responsive substrate (T-11). Nothing under `src/temporal-navigation/` is mounted in the shell.
+
+Contract: `npm run test:temporal-navigation-layer-contract` (repository root) plus the Jest
+suites under `src/temporal-navigation/__tests__/`. Design notes:
+`docs/temporal-navigation-layer-v1.md`.
+
 ## Toolchain pins (Expo SDK 57)
 
 | Package | Pin |

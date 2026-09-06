@@ -407,14 +407,14 @@ test('the client ingests LF passively into the frozen T-02 kernel through the ON
   // seam, carry their post-promotion ids. The pins stay exact, so any further kernel change still
   // trips this gate, and T-03D itself changed none of them.
   for (const [file, blob] of [
-    ['apps/mobile/src/state/actions.ts', 'b41b59158dd56e914af51a55338551ead4ddfd0f'],
-    ['apps/mobile/src/state/authority.ts', 'fafabe883ccfe1900ea5f533c952ae6d41f83a97'],
+    ['apps/mobile/src/state/actions.ts', '4e20dd4346dec252fb1b754fd510d31b710dd42e'],
+    ['apps/mobile/src/state/authority.ts', 'b9d4a5b1cd354bfc529175341c59f6bc5bbd9ad8'],
     ['apps/mobile/src/state/classes.ts', 'f0d17c675c148e26c523291e07769c3ed764f263'],
     ['apps/mobile/src/state/history.ts', 'e12caa557ab719611d11e43392723a1bb2389c62'],
-    ['apps/mobile/src/state/index.ts', '2bd50cce348cbc0e616b007b66300c2b5832fb3d'],
+    ['apps/mobile/src/state/index.ts', '4e74f2e4ce2bcc83f702a5b4f9d85fd298bc93d7'],
     ['apps/mobile/src/state/selectors.ts', '72c156c298c5914a578fd41f3243c7bb596756ae'],
-    ['apps/mobile/src/state/store.ts', 'ac0144b8a925db64fc032f9ddd8b51361f101f78'],
-    ['apps/mobile/src/state/transitions.ts', '9e3725cc3c48ffb3d36fccbbeff4746ec2345b0f'],
+    ['apps/mobile/src/state/store.ts', '2054b500369ca23813c7ad90ee9c717b8f35a7e3'],
+    ['apps/mobile/src/state/transitions.ts', 'a78931bf1efc1b4a05cfa0bc7c4557da041cdaca'],
     ['apps/mobile/src/state/CanonicalStateProvider.tsx', 'b7ea8b6e775f74f7d331843e4783dc7291b11b49'],
     ['apps/mobile/src/shell/FoundationShell.tsx', 'e2286ba1a35c2e40def475af5deed2d8ba8120d3'],
     ['apps/mobile/src/app/_layout.tsx', '90179f6d13026e9b0e2345e0418012214b9c9aab'],
@@ -430,7 +430,7 @@ test('the client ingests LF passively into the frozen T-02 kernel through the ON
   // T-04 re-anchor: the workflow gained exactly one Node-only gate step and one trigger path for
   // the T-04 static contract. MOB-CI-01's structure is unchanged and is asserted structurally by
   // the T-01, T-02 and T-04 contracts: one fast gate plus two conditional native jobs.
-  assert.equal(gitBlobId(mobileCi), '6c7a0928456eb34eb5e264fb9dbd1509038d04f7', 'mobile-ci.yml carries only the authorized T-04 gate step (MOB-CI-01 preserved)');
+  assert.equal(gitBlobId(mobileCi), '74ce57541a37de659fc0105d2195a61f4360143e', 'mobile-ci.yml carries only the authorized T-04 and T-06 gate steps (MOB-CI-01 preserved)');
   // T-04 re-anchor: the mobile package gained exactly the authorized Skia pin and the Jest setup
   // for it. The pin stays exact, so a further dependency change still trips this gate.
   assert.equal(gitBlobId(read('apps/mobile/package.json')), 'd10b3a577d6ee26c0af2e045f4bc39496181b2e7', 'the mobile package declaration carries only the authorized T-04 renderer pin beyond this baseline');

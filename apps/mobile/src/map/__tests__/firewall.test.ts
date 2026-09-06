@@ -119,16 +119,23 @@ describe('M04-15 — the registry and scope firewall', () => {
   it('every other later-owner act still fails closed; the general rule is not weakened', () => {
     const store = testStore();
     const before = store.getState();
+    // T-06 re-anchor: `COMMIT_MOMENT_AND_LOCATE` and `CHOOSE_LOCUS` left this set when T-06 landed
+    // their substrate and promoted them behind their OWN runtime authority. The rule this test
+    // guards is unweakened — every remaining later-owner act still fails closed on the raw dispatch
+    // — and it is now stated over the six T-07 identities that genuinely have no owner yet.
     expect([...METADATA_ONLY_ACTION_TYPES].sort()).toEqual([
       'BACK_ONE_STEP',
-      'CHOOSE_LOCUS',
-      'COMMIT_MOMENT_AND_LOCATE',
       'EXACT_RETURN',
       'GO_LIVE_AND_LOCATE',
       'RETURN_LIVE_FOCUS',
       'RETURN_LIVE_HEAD',
       'RETURN_WORLD',
     ]);
+    for (const id of METADATA_ONLY_ACTION_TYPES) expect(ACTION_CATALOG[id].owner).toBe('T-07');
+    // The two promoted temporal acts are still unreachable from the Map's own seam.
+    for (const id of ['COMMIT_MOMENT_AND_LOCATE', 'CHOOSE_LOCUS'] as const) {
+      expect(() => store.dispatchMap({ type: id } as never)).toThrow(/is not a promoted Map act/u);
+    }
     for (const id of METADATA_ONLY_ACTION_TYPES) {
       expect(() => store.dispatch({ type: id } as never)).toThrow(OwnedByLaterTask);
       expect(ACTION_CATALOG[id].level).toBe('METADATA_ONLY');

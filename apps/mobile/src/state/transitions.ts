@@ -1,5 +1,6 @@
 /**
- * T-02 — Executable kernel transitions, extended by T-04 with the three promoted Map acts.
+ * T-02 — Executable kernel transitions, extended by T-04 with the three promoted Map acts and by
+ * T-06 with the two promoted temporal acts.
  *
  * Action transitions return `ClientWritable` only: `live` (LH, LF) and `history` (RH) are
  * unreachable from a Product action at compile time. Event transitions return `LiveTruth`
@@ -12,8 +13,24 @@
  * projection `V` is resolved before the act exists, in `src/map/inspection`, and never here —
  * the kernel receives an already-entitled `InspectionRef` the way `PAN` receives an already
  * authorized `WORLD_ANCHOR`. Not one of the three writes `TM` or `LF`.
+ *
+ * The two T-06 transitions are structural in the same sense again: the kernel receives an already
+ * authorized landing and re-checks only its shape and the frozen temporal bound. No preview state
+ * exists here — a preview is Class C and never reaches this file — and no transition here can be
+ * reached by an animation, a gesture frame or a presentation movement.
  */
-import type { AuthoritativeEvent, KernelAction, KernelActionType, MapAction, MapActionType, StoreAction, StoreActionType } from './actions';
+import type {
+  AuthoritativeEvent,
+  KernelAction,
+  KernelActionType,
+  LocateLanding,
+  MapAction,
+  MapActionType,
+  StoreAction,
+  StoreActionType,
+  TemporalAction,
+  TemporalActionType,
+} from './actions';
 import { OutOfOrderTransition, PreconditionFailed, RetractionRejected } from './authority';
 import {
   inspectionRefShapeIssue,
@@ -38,6 +55,7 @@ export type ActionTransitionTable = {
 };
 export type KernelActionTransitionTable = Pick<ActionTransitionTable, KernelActionType>;
 export type MapActionTransitionTable = Pick<ActionTransitionTable, MapActionType>;
+export type TemporalActionTransitionTable = Pick<ActionTransitionTable, TemporalActionType>;
 export type EventTransitionTable = {
   readonly [K in AuthoritativeEvent['type']]: EventTransition<Extract<AuthoritativeEvent, { type: K }>>;
 };
@@ -201,10 +219,79 @@ export const MAP_ACTION_TRANSITIONS: MapActionTransitionTable = Object.freeze({
   DIRECT_JUMP: directJump,
 });
 
-/** Every Product transition the store can run: the T-02 kernel plus the three T-04 Map acts. */
+// ------------------------------------------------------------------------------------------
+// T-06 — the two promoted temporal acts
+// ------------------------------------------------------------------------------------------
+
+/**
+ * Structural validation of an authorized landing. WHETHER the locus is legitimate at the position
+ * this act commits to was decided in `src/temporal-navigation`, against the disclosed projection of
+ * that position — never here, and never against the projection of the position being left.
+ */
+function assertLocateLanding(actId: TemporalActionType, to: unknown): void {
+  if (to === null || typeof to !== 'object') throw new PreconditionFailed(actId, 'requires an authorized landing');
+  const landing = to as Partial<LocateLanding>;
+  if (!isOpaqueRefOfKind(landing.anchor, 'WORLD_ANCHOR')) throw new PreconditionFailed(actId, 'the landing requires a WORLD_ANCHOR reference');
+  if (!isOpaqueRefOfKind(landing.destination, 'SPATIAL_DESTINATION')) {
+    throw new PreconditionFailed(actId, 'the landing requires an authorized SPATIAL_DESTINATION locus');
+  }
+  if (landing.scale !== undefined && !isOpaqueRefOfKind(landing.scale, 'SCALE_INTENT')) {
+    throw new PreconditionFailed(actId, 'scale must be a SCALE_INTENT reference');
+  }
+  if (landing.orientation !== undefined && !isOpaqueRefOfKind(landing.orientation, 'WORLD_ORIENTATION')) {
+    throw new PreconditionFailed(actId, 'orientation must be a WORLD_ORIENTATION reference');
+  }
+}
+
+/** The authorized camera intent of a landing. `MC.depth` is never written: neither act holds it. */
+function locatedCamera(state: CanonicalState, to: LocateLanding): CameraIntent {
+  const base: CameraIntent = { ...state.camera, anchor: to.anchor, destination: to.destination, scale: to.scale ?? state.camera.scale };
+  return to.orientation === undefined ? base : { ...base, orientation: to.orientation };
+}
+
+/**
+ * `COMMIT_MOMENT_AND_LOCATE(m)`: ONE composite transaction that sets `TM := PINNED(m)` and the
+ * authorized spatial landing together, therefore ONE effective transaction and ONE checkpoint —
+ * never a temporal commit followed later by a separate pan. The temporal precondition is exactly
+ * `COMMIT_MOMENT`'s (`LH != null`, `1 <= m <= LH`), because this act is that commit plus a locate,
+ * not a second temporal rule. `IF_ref` is untouched: locating is not inspecting.
+ */
+const commitMomentAndLocate: ActionTransition<Extract<TemporalAction, { type: 'COMMIT_MOMENT_AND_LOCATE' }>> = (state, action) => {
+  const lh = state.live.LH;
+  if (lh === null) {
+    throw new PreconditionFailed('COMMIT_MOMENT_AND_LOCATE', 'no authoritative committed Session Position has been mirrored (LH = null)');
+  }
+  if (!isSessionPosition(action.moment)) {
+    throw new PreconditionFailed('COMMIT_MOMENT_AND_LOCATE', `moment must be a Session Position >= 1, got ${String(action.moment)}`);
+  }
+  if (action.moment > lh) {
+    throw new PreconditionFailed('COMMIT_MOMENT_AND_LOCATE', `moment ${action.moment} is beyond LH ${lh}; nothing later than LH exists`);
+  }
+  assertLocateLanding('COMMIT_MOMENT_AND_LOCATE', action.to);
+  return { temporal: { kind: 'PINNED', at: action.moment }, inspection: state.inspection, camera: locatedCamera(state, action.to) };
+};
+
+/**
+ * `CHOOSE_LOCUS`: resolves an already-legitimate contextual-location choice. It writes the spatial
+ * landing and nothing else — `TM` is carried through unchanged, so a locus choice can never become
+ * a temporal move, and `IF_ref` is carried through unchanged, so it can never become an inspection
+ * or a change of canonical identity.
+ */
+const chooseLocus: ActionTransition<Extract<TemporalAction, { type: 'CHOOSE_LOCUS' }>> = (state, action) => {
+  assertLocateLanding('CHOOSE_LOCUS', action.to);
+  return { temporal: state.temporal, inspection: state.inspection, camera: locatedCamera(state, action.to) };
+};
+
+export const TEMPORAL_ACTION_TRANSITIONS: TemporalActionTransitionTable = Object.freeze({
+  COMMIT_MOMENT_AND_LOCATE: commitMomentAndLocate,
+  CHOOSE_LOCUS: chooseLocus,
+});
+
+/** Every Product transition the store can run: the T-02 kernel, the T-04 Map acts, the T-06 temporal acts. */
 export const STORE_ACTION_TRANSITIONS: ActionTransitionTable = Object.freeze({
   ...KERNEL_ACTION_TRANSITIONS,
   ...MAP_ACTION_TRANSITIONS,
+  ...TEMPORAL_ACTION_TRANSITIONS,
 });
 
 /** `LIVE_HEAD_ADVANCED`: monotonic `LH` mirror; retraction rejected; redelivery idempotent. */

@@ -14,6 +14,7 @@ export type CanonicalStateErrorCode =
   | 'UNAUTHORIZED_CLASS_A_WRITE'
   | 'UNAUTHORIZED_ACTION_CLASS'
   | 'UNAUTHORIZED_MAP_ACTION'
+  | 'UNAUTHORIZED_TEMPORAL_ACTION'
   | 'OWNED_BY_LATER_TASK'
   | 'UNKNOWN_ACTION'
   | 'UNKNOWN_EVENT'
@@ -74,6 +75,25 @@ export class UnauthorizedMapAction extends CanonicalStateError {
   constructor(id: string, reason: string) {
     super('UNAUTHORIZED_MAP_ACTION', `${id} carries no runtime authorization from this store's Map authority: ${reason}`);
     this.name = 'UnauthorizedMapAction';
+    this.id = id;
+  }
+}
+
+/**
+ * A promoted temporal act reached the store without a runtime authorization from the store's own
+ * Temporal authority (T-06). Raised for a raw dispatch of a temporal act, for a temporal act on a
+ * store that has no such authority at all, and for an act whose authorization the authority refuses
+ * or has already consumed. It is deliberately a SEPARATE refusal from the Map one: the two promoted
+ * families have separate authorities, so an act minted for one seam can never satisfy the other,
+ * and a refusal names which boundary was crossed. The store never learns WHY the authority refused
+ * — only that it did — so no locatability or disclosure rule is duplicated here.
+ */
+export class UnauthorizedTemporalAction extends CanonicalStateError {
+  readonly id: string;
+
+  constructor(id: string, reason: string) {
+    super('UNAUTHORIZED_TEMPORAL_ACTION', `${id} carries no runtime authorization from this store's Temporal authority: ${reason}`);
+    this.name = 'UnauthorizedTemporalAction';
     this.id = id;
   }
 }
