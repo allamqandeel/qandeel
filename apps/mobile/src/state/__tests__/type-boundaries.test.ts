@@ -52,7 +52,7 @@ describe('type-level boundaries', () => {
       store.dispatch({ type: 'LIVE_HEAD_ADVANCED', toSp: SP(9) });
     }).toThrow();
     expect(() => {
-      // @ts-expect-error a later-owner identity has no executable payload type (row 16)
+      // @ts-expect-error a promoted return identity is not a kernel action (row 16)
       store.dispatch({ type: 'BACK_ONE_STEP' });
     }).toThrow();
     expect(() => {

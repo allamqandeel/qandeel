@@ -293,8 +293,8 @@ describe('the authority is a runtime property, not a type claim or a flag', () =
     const before = store.getState();
     // A kernel act cannot borrow the Map seam...
     expect(() => (store as unknown as { dispatchMap: (a: unknown) => unknown }).dispatchMap({ type: 'COMMIT_LIVE_EDGE' })).toThrow(UnauthorizedActionClass);
-    // ...and a later-owner act reaches neither entry point.
-    expect(() => (store as unknown as { dispatchMap: (a: unknown) => unknown }).dispatchMap({ type: 'BACK_ONE_STEP' })).toThrow();
+    // ...and an act of another promoted family reaches neither entry point.
+    expect(() => (store as unknown as { dispatchMap: (a: unknown) => unknown }).dispatchMap({ type: 'BACK_ONE_STEP' })).toThrow(UnauthorizedActionClass);
     expect(store.getState()).toBe(before);
     expect(store.getState().history).toHaveLength(0);
     for (const id of ['INSPECT_OBJECT', 'SWITCH_CONTEXT', 'DIRECT_JUMP'] as const) {

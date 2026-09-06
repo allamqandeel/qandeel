@@ -625,7 +625,7 @@ motion; and animation interruption.
 | --- | --- | --- |
 | `COMMIT_MOMENT_AND_LOCATE` | `METADATA_ONLY` | `EXECUTABLE` (owner T-06, authority `TM` + spatial, `COMPOSITE_TRANSACTION`) |
 | `CHOOSE_LOCUS` | `METADATA_ONLY` | `EXECUTABLE` (owner T-06, authority spatial, `EFFECTIVE_TRANSACTION`) |
-| The six T-07 return identities | `METADATA_ONLY` | unchanged — still failing closed |
+| The six T-07 return identities | `METADATA_ONLY` | unchanged by T-06; promoted later by T-07, behind their own authority |
 | `PREVIEW_TEMPORAL_TARGET`, `CANCEL_PREVIEW`, `RELATIVE_FORWARD_CONTINUATION`, `INPUT_CANCELLATION` | `NOT_STORE_ACTION` | unchanged — non-store identities |
 
 Kernel files touched: `actions.ts`, `authority.ts`, `transitions.ts`, `store.ts`, `index.ts`.

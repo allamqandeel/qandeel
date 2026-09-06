@@ -1,6 +1,6 @@
 /**
- * T-02 — Executable kernel transitions, extended by T-04 with the three promoted Map acts and by
- * T-06 with the two promoted temporal acts.
+ * T-02 — Executable kernel transitions, extended by T-04 with the three promoted Map acts, by
+ * T-06 with the two promoted temporal acts and by T-07 with the six promoted return acts.
  *
  * Action transitions return `ClientWritable` only: `live` (LH, LF) and `history` (RH) are
  * unreachable from a Product action at compile time. Event transitions return `LiveTruth`
@@ -18,6 +18,12 @@
  * authorized landing and re-checks only its shape and the frozen temporal bound. No preview state
  * exists here — a preview is Class C and never reaches this file — and no transition here can be
  * reached by an animation, a gesture frame or a presentation movement.
+ *
+ * The six T-07 return transitions are structural in the same sense a third time. They resolve no
+ * Live Focus, no locus and no history: the return layer binds the referent, proves the landing
+ * against the disclosed projection of the viewpoint the act arrives at, and decides WHICH recorded
+ * checkpoint is targeted; the kernel restores what a checkpoint says, always as `PINNED(captured
+ * tc)`, and the REDUCTION of RH is the store transaction boundary's own move, never a transition's.
  */
 import type {
   AuthoritativeEvent,
@@ -26,13 +32,18 @@ import type {
   LocateLanding,
   MapAction,
   MapActionType,
+  ReturnAction,
+  ReturnActionType,
+  RhConsumingActionType,
   StoreAction,
   StoreActionType,
   TemporalAction,
   TemporalActionType,
 } from './actions';
+import { isRhActionId } from './actions';
 import { OutOfOrderTransition, PreconditionFailed, RetractionRejected } from './authority';
 import {
+  cameraIntentShapeIssue,
   inspectionRefShapeIssue,
   isLiveFocus,
   isOpaqueRefOfKind,
@@ -40,9 +51,11 @@ import {
   isSessionPosition,
   liveFocusEquals,
   opaqueRefEquals,
+  rhEntryShapeIssue,
   type CameraIntent,
   type CanonicalState,
   type LiveTruth,
+  type RhEntry,
 } from './classes';
 
 export type ClientWritable = Pick<CanonicalState, 'temporal' | 'inspection' | 'camera'>;
@@ -56,6 +69,9 @@ export type ActionTransitionTable = {
 export type KernelActionTransitionTable = Pick<ActionTransitionTable, KernelActionType>;
 export type MapActionTransitionTable = Pick<ActionTransitionTable, MapActionType>;
 export type TemporalActionTransitionTable = Pick<ActionTransitionTable, TemporalActionType>;
+export type ReturnActionTransitionTable = Pick<ActionTransitionTable, ReturnActionType>;
+/** The identities whose landing is an already-authorized locus: the T-06 pair and the two T-07 locating acts. */
+type LocatingActionType = TemporalActionType | ReturnActionType;
 export type EventTransitionTable = {
   readonly [K in AuthoritativeEvent['type']]: EventTransition<Extract<AuthoritativeEvent, { type: K }>>;
 };
@@ -228,7 +244,7 @@ export const MAP_ACTION_TRANSITIONS: MapActionTransitionTable = Object.freeze({
  * this act commits to was decided in `src/temporal-navigation`, against the disclosed projection of
  * that position — never here, and never against the projection of the position being left.
  */
-function assertLocateLanding(actId: TemporalActionType, to: unknown): void {
+function assertLocateLanding(actId: LocatingActionType, to: unknown): void {
   if (to === null || typeof to !== 'object') throw new PreconditionFailed(actId, 'requires an authorized landing');
   const landing = to as Partial<LocateLanding>;
   if (!isOpaqueRefOfKind(landing.anchor, 'WORLD_ANCHOR')) throw new PreconditionFailed(actId, 'the landing requires a WORLD_ANCHOR reference');
@@ -287,11 +303,120 @@ export const TEMPORAL_ACTION_TRANSITIONS: TemporalActionTransitionTable = Object
   CHOOSE_LOCUS: chooseLocus,
 });
 
-/** Every Product transition the store can run: the T-02 kernel, the T-04 Map acts, the T-06 temporal acts. */
+// ------------------------------------------------------------------------------------------
+// T-07 — the six promoted return acts
+// ------------------------------------------------------------------------------------------
+
+/**
+ * `RETURN_LIVE_HEAD` (P4): TEMPORAL ONLY. `TM := FOLLOW_LIVE`, so the effective `TC` becomes the
+ * authoritative current Live Head by derivation — this act never writes `LH` and never writes a
+ * position. `IF_ref` and `MC` are carried through untouched, which is why its frozen authority is
+ * `TM` alone: returning to Live is not a camera move and never an inspection.
+ */
+const returnLiveHead: ActionTransition<Extract<ReturnAction, { type: 'RETURN_LIVE_HEAD' }>> = (state) => {
+  if (state.live.LH === null) {
+    throw new PreconditionFailed('RETURN_LIVE_HEAD', 'no authoritative committed Session Position has been mirrored (LH = null); there is no Live Head to return to');
+  }
+  return { temporal: { kind: 'FOLLOW_LIVE' }, inspection: state.inspection, camera: state.camera };
+};
+
+/**
+ * `RETURN_LIVE_FOCUS` (D1): SPATIAL ONLY. `TM` is carried through unchanged — the act holds no `TM`
+ * authority, so returning to where Live attention is can never move the reader in time — and so is
+ * `IF_ref`, because locating is not inspecting. WHICH referent this lands on was bound once, at
+ * explicit activation, in the return layer; the kernel receives an already-authorized landing.
+ */
+const returnLiveFocus: ActionTransition<Extract<ReturnAction, { type: 'RETURN_LIVE_FOCUS' }>> = (state, action) => {
+  assertLocateLanding('RETURN_LIVE_FOCUS', action.to);
+  return { temporal: state.temporal, inspection: state.inspection, camera: locatedCamera(state, action.to) };
+};
+
+/**
+ * `GO_LIVE_AND_LOCATE` (P5): ONE composite transaction that establishes `FOLLOW_LIVE` and applies
+ * the one-shot post-live landing together — therefore one effective transaction and one checkpoint,
+ * never a Live commit followed later by a separate camera act. The landing is OPTIONAL because a
+ * bound referent that legitimately cannot be placed leaves the temporal part standing alone, still
+ * as one act. `IF_ref` is untouched.
+ */
+const goLiveAndLocate: ActionTransition<Extract<ReturnAction, { type: 'GO_LIVE_AND_LOCATE' }>> = (state, action) => {
+  if (state.live.LH === null) {
+    throw new PreconditionFailed('GO_LIVE_AND_LOCATE', 'no authoritative committed Session Position has been mirrored (LH = null); there is no Live Head to return to');
+  }
+  if (action.to !== undefined) assertLocateLanding('GO_LIVE_AND_LOCATE', action.to);
+  return {
+    temporal: { kind: 'FOLLOW_LIVE' },
+    inspection: state.inspection,
+    camera: action.to === undefined ? state.camera : locatedCamera(state, action.to),
+  };
+};
+
+/**
+ * `RETURN_WORLD`: SPATIAL AND DEPTH ONLY. `TM` and `IF_ref` are carried through unchanged, so the
+ * reader stays exactly where they are in time and keeps the exact inspection they asked for even
+ * when the World rung makes its render depth-withheld. The camera it writes is the canonical
+ * World/Z0 target the Map layer already owns; the kernel only re-checks its shape, so no second
+ * World camera can be invented here and nothing is fitted to what happens to be visible.
+ */
+const returnWorld: ActionTransition<Extract<ReturnAction, { type: 'RETURN_WORLD' }>> = (state, action) => {
+  const issue = cameraIntentShapeIssue(action.to, 'RETURN_WORLD.to');
+  if (issue !== null) throw new PreconditionFailed('RETURN_WORLD', issue);
+  return { temporal: state.temporal, inspection: state.inspection, camera: action.to };
+};
+
+/**
+ * The ONE restoration rule, shared by both consumption acts (S5-RH-01):
+ *
+ *     RestoreTemporal(entry) := PINNED(entry.captured.tc)
+ *
+ * ALWAYS `PINNED`. `tmProvenance` is provenance and nothing else — it is not read here at all — so
+ * a checkpoint captured while `FOLLOW_LIVE` restores to the Session Position that was effective
+ * THEN and can never reattach the restored viewpoint to the Live Head that has moved since.
+ *
+ * The inspection reference, the camera anchor, orientation, scale, destination presence/absence and
+ * semantic depth are restored EXACTLY as captured. Nothing is recomputed, substituted, repaired or
+ * recentred: whether the restored reference can be rendered at that position is historical
+ * projection's answer, given afterwards, and an unavailable object is simply not shown.
+ */
+function restoreCheckpoint(actId: RhConsumingActionType, state: CanonicalState, target: unknown): ClientWritable {
+  const issue = rhEntryShapeIssue(target, `${actId}.target`, isRhActionId);
+  if (issue !== null) throw new PreconditionFailed(actId, issue);
+  const captured = (target as RhEntry).captured;
+  const lh = state.live.LH;
+  if (lh === null) {
+    throw new PreconditionFailed(actId, 'no authoritative committed Session Position has been mirrored (LH = null); no checkpoint is restorable');
+  }
+  if (captured.tc > lh) {
+    throw new PreconditionFailed(actId, `the captured Session Position ${captured.tc} is beyond the Live Head ${lh}; nothing later than LH exists`);
+  }
+  return { temporal: { kind: 'PINNED', at: captured.tc }, inspection: captured.ifRef, camera: captured.camera };
+}
+
+/** `BACK_ONE_STEP` (P8): restores the latest recorded checkpoint. The store consumes exactly it. */
+const backOneStep: ActionTransition<Extract<ReturnAction, { type: 'BACK_ONE_STEP' }>> = (state, action) =>
+  restoreCheckpoint('BACK_ONE_STEP', state, action.target);
+
+/** `EXACT_RETURN` (P7): restores one named checkpoint. The store consumes it and every newer entry. */
+const exactReturn: ActionTransition<Extract<ReturnAction, { type: 'EXACT_RETURN' }>> = (state, action) =>
+  restoreCheckpoint('EXACT_RETURN', state, action.target);
+
+export const RETURN_ACTION_TRANSITIONS: ReturnActionTransitionTable = Object.freeze({
+  RETURN_LIVE_HEAD: returnLiveHead,
+  RETURN_LIVE_FOCUS: returnLiveFocus,
+  GO_LIVE_AND_LOCATE: goLiveAndLocate,
+  RETURN_WORLD: returnWorld,
+  EXACT_RETURN: exactReturn,
+  BACK_ONE_STEP: backOneStep,
+});
+
+/**
+ * Every Product transition the store can run: the T-02 kernel, the T-04 Map acts, the T-06 temporal
+ * acts, the T-07 return acts.
+ */
 export const STORE_ACTION_TRANSITIONS: ActionTransitionTable = Object.freeze({
   ...KERNEL_ACTION_TRANSITIONS,
   ...MAP_ACTION_TRANSITIONS,
   ...TEMPORAL_ACTION_TRANSITIONS,
+  ...RETURN_ACTION_TRANSITIONS,
 });
 
 /** `LIVE_HEAD_ADVANCED`: monotonic `LH` mirror; retraction rejected; redelivery idempotent. */

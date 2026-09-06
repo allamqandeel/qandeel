@@ -445,10 +445,11 @@ test('the whole slice is production-inert: no grant, no wiring, no runtime reade
   for (const name of ['uuid', 'nanoid', 'zod', 'knex', 'prisma', 'pg-promise', 'postgres', 'kysely', 'drizzle-orm']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}) || name in (mobilePackage.dependencies ?? {}), false, `${name} must not be introduced`);
   }
-  // T-04 re-anchor: the workflow gained exactly one Node-only gate step and one trigger path for
-  // the T-04 static contract. MOB-CI-01's structure is unchanged and is asserted structurally by
-  // the T-01, T-02 and T-04 contracts: one fast gate plus two conditional native jobs.
-  assert.equal(gitBlobId(read('.github/workflows/mobile-ci.yml')), '74ce57541a37de659fc0105d2195a61f4360143e', 'Mobile CI carries only the authorized T-04 and T-06 gate steps beyond this baseline');
+  // T-04 re-anchor, extended by T-06 and T-07: the workflow gained exactly one Node-only gate step
+  // and one trigger path per owning task's static contract. MOB-CI-01's structure is unchanged and
+  // is asserted structurally by the T-01, T-02, T-04, T-06 and T-07 contracts: one fast gate plus
+  // two conditional native jobs.
+  assert.equal(gitBlobId(read('.github/workflows/mobile-ci.yml')), '31bed2b0cba0015c4ed98799d5cd440f31a2ee3b', 'Mobile CI carries only the authorized T-04, T-06 and T-07 gate steps beyond this baseline');
   // T-04 re-anchor: the mobile package gained exactly the authorized Skia pin and the Jest setup
   // for it. The pin stays exact, so a further dependency change still trips this gate.
   assert.equal(gitBlobId(read('apps/mobile/package.json')), 'd10b3a577d6ee26c0af2e045f4bc39496181b2e7', 'the mobile package carries only the authorized T-04 renderer pin beyond this baseline');

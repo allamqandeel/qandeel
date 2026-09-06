@@ -4,9 +4,11 @@
  * Executable kernel: `PAN`, `ZOOM_SEMANTIC`, `COMMIT_MOMENT`, `COMMIT_LIVE_EDGE`, plus the two
  * authoritative mirror ingestions `LIVE_HEAD_ADVANCED` and `LIVE_FOCUS_TRANSITION`. T-04 added
  * the three promoted Map acts `INSPECT_OBJECT`, `SWITCH_CONTEXT` and `DIRECT_JUMP`; T-06 added
- * the two promoted temporal acts `COMMIT_MOMENT_AND_LOCATE` and `CHOOSE_LOCUS`. Every other
- * frozen act — the six T-07 return identities — is metadata only and fails closed until T-07
- * lands, and the Class C / D identities never reach the store at all.
+ * the two promoted temporal acts `COMMIT_MOMENT_AND_LOCATE` and `CHOOSE_LOCUS`; T-07 added the
+ * six promoted return acts `RETURN_LIVE_HEAD`, `RETURN_LIVE_FOCUS`, `GO_LIVE_AND_LOCATE`,
+ * `RETURN_WORLD`, `EXACT_RETURN` and `BACK_ONE_STEP`, each behind its own runtime authority and
+ * each keeping its frozen identity. The later-owner set is now empty, its fail-closed rule remains
+ * for the next frozen act, and the Class C / D identities never reach the store at all.
  */
 export type {
   CameraIntent,
@@ -87,7 +89,10 @@ export type {
   NonStoreIdentityType,
   PanIntent,
   ProductActId,
+  ReturnAction,
+  ReturnActionType,
   RhActionId,
+  RhConsumingActionType,
   StoreAction,
   StoreActionType,
   TaskId,
@@ -106,7 +111,9 @@ export {
   METADATA_ONLY_ACTION_TYPES,
   NON_STORE_IDENTITY_TYPES,
   PRODUCT_ACT_IDS,
+  RETURN_ACTION_TYPES,
   RH_ACTION_IDS,
+  RH_CONSUMING_ACTION_TYPES,
   TEMPORAL_ACTION_TYPES,
   catalogEntry,
   isRhActionId,
@@ -125,6 +132,7 @@ export {
   UnauthorizedActionClass,
   UnauthorizedClassAWrite,
   UnauthorizedMapAction,
+  UnauthorizedReturnAction,
   UnauthorizedTemporalAction,
   UnknownAction,
   UnknownEvent,
@@ -139,12 +147,14 @@ export type {
   EventTransitionTable,
   KernelActionTransitionTable,
   MapActionTransitionTable,
+  ReturnActionTransitionTable,
   TemporalActionTransitionTable,
 } from './transitions';
 export {
   KERNEL_ACTION_TRANSITIONS,
   KERNEL_EVENT_TRANSITIONS,
   MAP_ACTION_TRANSITIONS,
+  RETURN_ACTION_TRANSITIONS,
   STORE_ACTION_TRANSITIONS,
   TEMPORAL_ACTION_TRANSITIONS,
 } from './transitions';
@@ -161,6 +171,7 @@ export type {
   DispatchResult,
   IngestResult,
   MapActionAuthority,
+  ReturnActionAuthority,
   StoreDependencies,
   TemporalActionAuthority,
 } from './store';

@@ -6,7 +6,7 @@
  * offered that the visual route could not reach.
  *
  * The T-07 return acts are deliberately absent even though a final accessibility architecture
- * will want them: they remain later-owner metadata, and offering an action this task cannot
+ * will want them: they belong to T-07's own return surface, and offering an action this task cannot
  * honour would be a promise, not a route.
  *
  * It also enforces the ONE context-freshness rule itself rather than trusting its parent, so a

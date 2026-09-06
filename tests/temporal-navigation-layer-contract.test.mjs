@@ -562,13 +562,19 @@ test('the T-01 technical shell stays byte-identical: the temporal layer is not m
 
 test('exactly two frozen acts were promoted to executable, by name, and no T-07 act moved', () => {
   assert.match(actionsCode, /TEMPORAL_ACTION_TYPES = Object\.freeze\(\['COMMIT_MOMENT_AND_LOCATE', 'CHOOSE_LOCUS'\] as const\);/u);
-  assert.match(actionsCode, /export type StoreAction = KernelAction \| MapAction \| TemporalAction;/u);
-  assert.match(actionsCode, /export type RhActionId = KernelActionType \| MapActionType \| TemporalActionType \| MetadataOnlyActionType;/u);
+  // T-07 re-anchor: the return family joined the executable union and the RH-eligible identity type.
+  // T-06's guarantee is unweakened — the temporal family is still exactly its two acts, and no T-07
+  // identity is in it — and the union is pinned in full so a fourth family cannot appear unnoticed.
+  assert.match(actionsCode, /export type StoreAction = KernelAction \| MapAction \| TemporalAction \| ReturnAction;/u);
+  assert.match(actionsCode, /export type RhActionId = KernelActionType \| MapActionType \| TemporalActionType \| ReturnActionType \| MetadataOnlyActionType;/u);
 
   const metadataOnly = actionsCode.match(/METADATA_ONLY_ACTION_TYPES = Object\.freeze\(\[([\s\S]*?)\] as const\)/u);
   assert.ok(metadataOnly, 'METADATA_ONLY_ACTION_TYPES must be a literal array');
+  assert.deepEqual([...metadataOnly[1].matchAll(/'([A-Z_]+)'/gu)].map((match) => match[1]), [], 'the later-owner set is empty');
+  const returnTypes = actionsCode.match(/RETURN_ACTION_TYPES = Object\.freeze\(\[([\s\S]*?)\] as const\)/u);
+  assert.ok(returnTypes, 'RETURN_ACTION_TYPES must be a literal array');
   assert.deepEqual(
-    [...metadataOnly[1].matchAll(/'([A-Z_]+)'/gu)].map((match) => match[1]).sort(),
+    [...returnTypes[1].matchAll(/'([A-Z_]+)'/gu)].map((match) => match[1]).sort(),
     ['BACK_ONE_STEP', 'EXACT_RETURN', 'GO_LIVE_AND_LOCATE', 'RETURN_LIVE_FOCUS', 'RETURN_LIVE_HEAD', 'RETURN_WORLD'],
   );
 
@@ -597,11 +603,14 @@ test('exactly two frozen acts were promoted to executable, by name, and no T-07 
       assert.equal(entries[id].authority.includes(`'${forbidden}'`), false, `${id} must not hold ${forbidden} authority`);
     }
   }
-  // Every T-07 identity is still later-owner metadata, owned by T-07, and none was promoted.
+  // T-07 re-anchor: every T-07 identity is owned by T-07 and lives in the RETURN family, not this
+  // one — a strictly stronger statement than the level alone, and the guarantee this gate protects.
   for (const id of ['RETURN_LIVE_HEAD', 'RETURN_LIVE_FOCUS', 'GO_LIVE_AND_LOCATE', 'RETURN_WORLD', 'EXACT_RETURN', 'BACK_ONE_STEP']) {
-    assert.equal(entries[id].level, 'METADATA_ONLY', `${id} is still owned by a later task`);
     assert.equal(entries[id].owner, 'T-07');
+    assert.equal(layerText.includes(id), false, `${id} must not be reachable from the temporal layer`);
   }
+  assert.match(storeCode, /if \(!isTemporalActionType\(entry\.id\)\) \{\s*\n\s*throw new UnauthorizedActionClass\(/u);
+  assert.match(storeCode, /if \(isReturnActionType\(entry\.id\)\) \{\s*\n\s*throw new UnauthorizedReturnAction\(/u);
   // The Class C temporal identities stay non-store identities: preview, cancellation and relative
   // forward continuation never become Product acts.
   for (const id of ['PREVIEW_TEMPORAL_TARGET', 'CANCEL_PREVIEW', 'RELATIVE_FORWARD_CONTINUATION', 'INPUT_CANCELLATION']) {
@@ -636,16 +645,20 @@ test('the temporal act reaches canonical state only through its own authorized s
   assert.match(storeCode, /if \(!isMapActionType\(entry\.id\)\) \{\s*\n\s*throw new UnauthorizedActionClass\(/u);
   assert.match(storeCode, /if \(temporalActionAuthority === undefined\) \{\s*\n\s*throw new UnauthorizedTemporalAction\(/u);
   assert.match(storeCode, /if \(temporalActionAuthority\.consume\(action\) !== true\) \{\s*\n\s*throw new UnauthorizedTemporalAction\(/u);
+  // T-07 re-anchor: the slice now ends at the THIRD authority interface rather than at
+  // `StoreDependencies`. The assertion is unchanged and unweakened — this interface still exposes
+  // exactly one member — and the T-07 gate makes the same statement about the return authority.
   const authorityInterface = storeCode.slice(
     storeCode.indexOf('export interface TemporalActionAuthority'),
-    storeCode.indexOf('export interface StoreDependencies'),
+    storeCode.indexOf('export interface ReturnActionAuthority'),
   );
   assert.ok(authorityInterface.length > 0, 'the TemporalActionAuthority interface exists');
   assert.match(authorityInterface, /consume\(action: TemporalAction\): boolean;/u);
   assert.equal((authorityInterface.match(/^\s{2}\w+\(/gmu) ?? []).length, 1, 'the authority exposes exactly one member: it can answer, never mint');
-  // The two promoted families never share an authority.
+  // The three promoted families never share an authority.
   assert.equal((storeCode.match(/mapActionAuthority = deps\.mapActionAuthority/gu) ?? []).length, 1);
   assert.equal((storeCode.match(/temporalActionAuthority = deps\.temporalActionAuthority/gu) ?? []).length, 1);
+  assert.equal((storeCode.match(/returnActionAuthority = deps\.returnActionAuthority/gu) ?? []).length, 1);
 
   // The minting side is module-local to the executors: declared once, exported nowhere.
   const executors = code['targeting/temporal-actions.ts'];

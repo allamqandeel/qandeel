@@ -40,11 +40,14 @@ technical shell.
 - **Per-field writer authority** is enforced at runtime on every transition result,
   including test-injected transitions, and at compile time by the transition return types.
 - **RH**: one append per effective explicit transaction (`Φ_eff` over canonical intent
-  only); a true no-op, a passive event and every Class C / D identity write nothing.
-  Restoration and the return acts belong to T-07.
-- Every other frozen act (`COMMIT_MOMENT_AND_LOCATE`, `CHOOSE_LOCUS`, the six return acts
-  and the inspection acts) is registered as metadata only and fails closed
-  (`OwnedByLaterTask`) until its owning task lands. Class C / D identities never reach the
+  only); a true no-op, a passive event and every Class C / D identity write nothing. The
+  transaction boundary is the only writer and has exactly two moves — append one pre-act
+  checkpoint, or (for the two frozen `CONSUMES_RH` identities T-07 owns) consume through a
+  target checkpoint. No transition can reach `history` at all.
+- Every frozen Class-A act now has a landed owner and its own authorized seam: the three
+  inspection acts (T-04), `COMMIT_MOMENT_AND_LOCATE` and `CHOOSE_LOCUS` (T-06), and the six
+  return acts (T-07). The later-owner level and its fail-closed rule (`OwnedByLaterTask`)
+  remain for the next frozen act registered at it. Class C / D identities never reach the
   store.
 - `LH = null` is a technical absence sentinel only (no authoritative committed Session
   Position mirrored yet): not SP(0), not a Moment, not a temporal mode, never addressable,
@@ -249,13 +252,63 @@ explicit user act.
   View; the stance and preview live on a dedicated leaf summary element that also carries the named
   actions, and the exact-entry input and the four controls are individually focusable siblings — no
   accessibility element in the layer owns an interactive descendant.
-- Not here, by design: the T-07 return acts (still later-owner metadata, still failing closed),
-  the Map's own projection handoff, final chrome and art direction, and the general input and
+- Not here, by design: the T-07 return acts (their own layer, behind their own authority), the
+  Map's own projection handoff, final chrome and art direction, and the general input and
   responsive substrate (T-11). Nothing under `src/temporal-navigation/` is mounted in the shell.
 
 Contract: `npm run test:temporal-navigation-layer-contract` (repository root) plus the Jest
 suites under `src/temporal-navigation/__tests__/`. Design notes:
 `docs/temporal-navigation-layer-v1.md`.
+
+## Return navigation layer (T-07)
+
+`src/return-navigation/` turns the six frozen return identities into executable Product behaviour.
+They stay six different acts: there is no `navigate()`, `goHome()`, `reset()`, `goLive()`,
+`restore()` or `backOrHome()`, because every difference between them is frozen truth a generic
+identity would make unstatable.
+
+- **Authority and the six acts** (`return-actions.ts`): a THIRD store seam (`dispatchReturn`) with its
+  own runtime authority. Shaped like T-04's `map-actions.ts` and T-06's `temporal-actions.ts`, the
+  authorization set, the plan, the action constructor, the mint and all six executors live in ONE
+  module and none of the first four is exported — so the seam is private by construction, not merely
+  absent from the barrel, and a static guard refuses any deep import or mention of it from production
+  source outside the layer. Raw dispatch refuses every return act by identity; the Map and temporal
+  seams refuse them by family; a forged, copied, round-tripped or replayed act fails before the
+  transition runs; and a store built without a Return authority runs none of them at all.
+  - Return to Live Head is temporal only; Return to Live Focus binds its referent once at activation
+    and never chases a newer one; Go Live + Locate binds once at the post-live boundary and is ONE
+    composite transaction, with no intermediate publish, checkpoint or Back stop; Return to World
+    uses the existing canonical World/Z0 camera target, called from the Map layer's one helper, and
+    `IF_ref` survives — only its render may become depth-withheld.
+  - `Back One Step` restores the latest checkpoint and removes exactly it; `Exact Return` restores a
+    named one and consumes it with every newer entry, on a separate guarded consumption transaction.
+    Neither appends, so a Back chain walks strictly backwards and can never oscillate forward. Every
+    restoration is `PINNED(capturedTC)` — `tmProvenance` is provenance only and is never read — and
+    the exact inspection, camera and depth come back unrepaired.
+- **Checkpoint targets** (`checkpoint-target.ts`): the Exact Return target is an opaque,
+  provenance-bound handle, re-proven against current history by both the layer and the store.
+  Resolving one grants nothing: it can neither mint nor dispatch.
+- **Freshness before meaning** (`focus-target.ts` + the act module): a projection is proven to BE the
+  arriving viewpoint's before any entitlement or locatability question is asked of it, and proven
+  again before it may authorize a landing. A stale, foreign-Session, wrong-position or wrong-depth
+  scene is a technical fact and can never escape as a semantic "not disclosed" or "no place here".
+  The semantic resolver itself is layer-internal: the public barrel is a pinned allowlist that keeps
+  only the technical `returnMapContext` half, so the gate cannot be walked around by a legal import.
+- **Preview precedence** (`surface.ts`): every committed act cancels T-06's preview first, then
+  resolves from committed state. The layer holds no preview state and cannot read `PTC` at all.
+- **Availability** (`availability.ts`): the minimal non-pointer substrate, from Class A alone —
+  booleans about the reader's own committed viewpoint and a count of their own checkpoints. It
+  carries no Live-Focus capability bit: `LF != NONE` is future-relative from a historical position
+  and would overstate the act besides, so that question is answered only against a projection proven
+  to be this viewpoint's, by `liveFocusReturnAvailability`. No identity, label, Home, direction,
+  distance, coordinate or locus count is exposed anywhere.
+- Not here, by design: final return and orientation chrome (T-08), the motion system (T-10),
+  responsive recomposition (T-11), restart and persistence (T-13). The layer is pure TypeScript with
+  no component, no hook, no geometry and no motion, it adds no dependency at all, and nothing under
+  `src/return-navigation/` is mounted in the shell.
+
+Contract: `npm run test:return-navigation-layer-contract` (repository root) plus the Jest suites
+under `src/return-navigation/__tests__/`. Design notes: `docs/return-navigation-layer-v1.md`.
 
 ## Toolchain pins (Expo SDK 57)
 

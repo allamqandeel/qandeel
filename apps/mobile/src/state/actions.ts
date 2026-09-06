@@ -8,13 +8,16 @@
  *   `LIVE_FOCUS_TRANSITION`.
  * - EXECUTABLE: a frozen act whose owning task has landed its substrate and has promoted it to
  *   a typed transition through this same boundary. T-04 promotes exactly three by name —
- *   `INSPECT_OBJECT`, `SWITCH_CONTEXT`, `DIRECT_JUMP` — and T-06 exactly two more —
- *   `COMMIT_MOMENT_AND_LOCATE`, `CHOOSE_LOCUS` — each keeping its frozen identity, field
- *   authority, transactional category and RH behaviour. Nothing else moves out of METADATA_ONLY,
- *   and every remaining later-owner act (all six of them T-07's) still fails closed.
+ *   `INSPECT_OBJECT`, `SWITCH_CONTEXT`, `DIRECT_JUMP` — T-06 exactly two more —
+ *   `COMMIT_MOMENT_AND_LOCATE`, `CHOOSE_LOCUS` — and T-07 exactly the six frozen return acts —
+ *   `RETURN_LIVE_HEAD`, `RETURN_LIVE_FOCUS`, `GO_LIVE_AND_LOCATE`, `RETURN_WORLD`,
+ *   `EXACT_RETURN`, `BACK_ONE_STEP` — each keeping its frozen identity, field authority,
+ *   transactional category and RH behaviour. The six stay SIX different Product acts: they are
+ *   never collapsed into a generic navigate / home / reset / go-live identity.
  * - METADATA_ONLY: frozen later-owner acts recorded as identity, owner, class, permitted
  *   Class-A authority and frozen transactional category. They carry no payload type and fail
- *   closed at the store (`OwnedByLaterTask`).
+ *   closed at the store (`OwnedByLaterTask`). The set is currently EMPTY — every frozen act now
+ *   has a landed owner — and the level, with its fail-closed rule, remains for the next one.
  * - NOT_STORE_ACTION: Class C / D identities registered for classification only. They never
  *   reach the store (`UnauthorizedActionClass`).
  *
@@ -26,9 +29,11 @@
  * widen an identity's authority after module initialization.
  */
 import type {
+  CameraIntent,
   ClassAField,
   InspectionRef,
   LiveFocus,
+  RhEntry,
   ScaleIntentRef,
   SemanticDepth,
   SessionPosition,
@@ -120,8 +125,54 @@ export type TemporalAction =
 export type TemporalActionType = TemporalAction['type'];
 export const TEMPORAL_ACTION_TYPES = Object.freeze(['COMMIT_MOMENT_AND_LOCATE', 'CHOOSE_LOCUS'] as const);
 
-/** Every Product act the store can execute: the T-02 kernel, the three T-04 Map acts, the two T-06 temporal acts. */
-export type StoreAction = KernelAction | MapAction | TemporalAction;
+// ------------------------------------------------------------------------------------------
+// Return acts promoted to executable by T-07 (exactly six, by name)
+// ------------------------------------------------------------------------------------------
+
+/**
+ * The six frozen return identities, and only these six. They are deliberately SIX payload shapes,
+ * not one: each carries exactly what its own frozen authority may write and nothing more, so no
+ * shared shape can widen one act into another.
+ *
+ * - `RETURN_LIVE_HEAD` carries nothing at all: it is temporal-only, and a payload would be a way
+ *   to smuggle a camera move into it.
+ * - `RETURN_LIVE_FOCUS` carries a `LocateLanding` — no depth, because it does not hold `MC.depth`.
+ * - `GO_LIVE_AND_LOCATE` carries an OPTIONAL landing, because a legitimate P5 whose spatial part
+ *   cannot move is still ONE composite act with its temporal part intact.
+ * - `RETURN_WORLD` carries the canonical World/Z0 camera intent T-04 already owns; it is resolved
+ *   by the return layer from that one existing helper and never invented here.
+ * - `EXACT_RETURN` and `BACK_ONE_STEP` carry the RH ENTRY they restore FROM — the object itself,
+ *   not a caller-built checkpoint payload. The store locates it by identity in its OWN current
+ *   history, so a structurally perfect forgery, a copy, a round-trip and an already-consumed
+ *   target all fail before any state is written.
+ */
+export type ReturnAction =
+  | { readonly type: 'RETURN_LIVE_HEAD' }
+  | { readonly type: 'RETURN_LIVE_FOCUS'; readonly to: LocateLanding }
+  | { readonly type: 'GO_LIVE_AND_LOCATE'; readonly to?: LocateLanding }
+  | { readonly type: 'RETURN_WORLD'; readonly to: CameraIntent }
+  | { readonly type: 'EXACT_RETURN'; readonly target: RhEntry }
+  | { readonly type: 'BACK_ONE_STEP'; readonly target: RhEntry };
+
+export type ReturnActionType = ReturnAction['type'];
+export const RETURN_ACTION_TYPES = Object.freeze([
+  'RETURN_LIVE_HEAD',
+  'RETURN_LIVE_FOCUS',
+  'GO_LIVE_AND_LOCATE',
+  'RETURN_WORLD',
+  'EXACT_RETURN',
+  'BACK_ONE_STEP',
+] as const);
+
+/** The two identities whose frozen transactional category is `CONSUMES_RH`; nothing else may reduce RH. */
+export const RH_CONSUMING_ACTION_TYPES = Object.freeze(['EXACT_RETURN', 'BACK_ONE_STEP'] as const);
+export type RhConsumingActionType = (typeof RH_CONSUMING_ACTION_TYPES)[number];
+
+/**
+ * Every Product act the store can execute: the T-02 kernel, the three T-04 Map acts, the two T-06
+ * temporal acts, the six T-07 return acts.
+ */
+export type StoreAction = KernelAction | MapAction | TemporalAction | ReturnAction;
 export type StoreActionType = StoreAction['type'];
 
 // ------------------------------------------------------------------------------------------
@@ -139,14 +190,13 @@ export const AUTHORITATIVE_EVENT_TYPES = Object.freeze(['LIVE_HEAD_ADVANCED', 'L
 // Later-owner identities (metadata only) and non-store identities (Class C / D)
 // ------------------------------------------------------------------------------------------
 
-export const METADATA_ONLY_ACTION_TYPES = Object.freeze([
-  'RETURN_LIVE_HEAD',
-  'RETURN_LIVE_FOCUS',
-  'GO_LIVE_AND_LOCATE',
-  'RETURN_WORLD',
-  'EXACT_RETURN',
-  'BACK_ONE_STEP',
-] as const);
+/**
+ * Frozen acts whose owning task has not landed yet. T-07 promoted the last six members of this
+ * set into the executable return family, so it is currently EMPTY — deliberately kept, with the
+ * store's `OwnedByLaterTask` rule stated over the LEVEL rather than per identity, so the next
+ * frozen later-owner act fails closed the moment it is registered.
+ */
+export const METADATA_ONLY_ACTION_TYPES = Object.freeze([] as const);
 export type MetadataOnlyActionType = (typeof METADATA_ONLY_ACTION_TYPES)[number];
 
 export const NON_STORE_IDENTITY_TYPES = Object.freeze([
@@ -168,23 +218,27 @@ export type ProductActId =
   | KernelActionType
   | MapActionType
   | TemporalActionType
+  | ReturnActionType
   | AuthoritativeEventType
   | MetadataOnlyActionType
   | NonStoreIdentityType;
 
 /**
  * RH-eligible identities (FIX-T02-03): explicit Class-A Product acts only. Authoritative
- * events and Class C / D identities are unrepresentable as an RH act. Later-owner acts are
- * eligible in type because their RH behaviour is frozen and owned later; T-02 never appends
- * them. The three T-04 Map acts and the two T-06 temporal acts are RH-eligible for the same
- * frozen reason and, unlike the later-owner set, their owners do append them at the existing
+ * events and Class C / D identities are unrepresentable as an RH act. The three T-04 Map acts,
+ * the two T-06 temporal acts and the four APPENDING T-07 return acts append at the existing
  * effective-transaction boundary — exactly one entry per effective act, composite included.
+ *
+ * `EXACT_RETURN` and `BACK_ONE_STEP` stay RH-eligible in TYPE, because a persisted history from
+ * an earlier release may legitimately record either identity, but neither is ever appended: their
+ * frozen transactional category is `CONSUMES_RH`, and the consumption path appends nothing.
  */
-export type RhActionId = KernelActionType | MapActionType | TemporalActionType | MetadataOnlyActionType;
+export type RhActionId = KernelActionType | MapActionType | TemporalActionType | ReturnActionType | MetadataOnlyActionType;
 export const RH_ACTION_IDS: readonly RhActionId[] = Object.freeze([
   ...KERNEL_ACTION_TYPES,
   ...MAP_ACTION_TYPES,
   ...TEMPORAL_ACTION_TYPES,
+  ...RETURN_ACTION_TYPES,
   ...METADATA_ONLY_ACTION_TYPES,
 ]);
 
@@ -358,12 +412,12 @@ export const ACTION_CATALOG: Readonly<Record<ProductActId, CatalogEntry>> = free
     transactional: 'EFFECTIVE_TRANSACTION',
     frozenSource: 'S5-RET-07; Stage 5.5 D4; CLAR-03',
   },
-  // --- METADATA_ONLY: frozen later-owner acts (no payload types; fail closed) --------------
+  // --- EXECUTABLE: the six return acts T-07 promoted (frozen identities unchanged) ---------
   RETURN_LIVE_HEAD: {
     id: 'RETURN_LIVE_HEAD',
     frozenName: 'P4 Return to Live Head',
     cls: 'A',
-    level: 'METADATA_ONLY',
+    level: 'EXECUTABLE',
     owner: 'T-07',
     substrateOwner: null,
     authority: fields('TM'),
@@ -374,7 +428,7 @@ export const ACTION_CATALOG: Readonly<Record<ProductActId, CatalogEntry>> = free
     id: 'RETURN_LIVE_FOCUS',
     frozenName: 'Return to Live Focus (D1)',
     cls: 'A',
-    level: 'METADATA_ONLY',
+    level: 'EXECUTABLE',
     owner: 'T-07',
     substrateOwner: 'T-03D',
     authority: fields(...SPATIAL),
@@ -385,7 +439,7 @@ export const ACTION_CATALOG: Readonly<Record<ProductActId, CatalogEntry>> = free
     id: 'GO_LIVE_AND_LOCATE',
     frozenName: 'P5 Go Live + Locate',
     cls: 'A',
-    level: 'METADATA_ONLY',
+    level: 'EXECUTABLE',
     owner: 'T-07',
     substrateOwner: 'T-03D',
     authority: fields('TM', ...SPATIAL),
@@ -396,7 +450,7 @@ export const ACTION_CATALOG: Readonly<Record<ProductActId, CatalogEntry>> = free
     id: 'RETURN_WORLD',
     frozenName: 'Return to World',
     cls: 'A',
-    level: 'METADATA_ONLY',
+    level: 'EXECUTABLE',
     owner: 'T-07',
     substrateOwner: null,
     authority: fields('MC.depth', ...SPATIAL),
@@ -407,7 +461,7 @@ export const ACTION_CATALOG: Readonly<Record<ProductActId, CatalogEntry>> = free
     id: 'EXACT_RETURN',
     frozenName: 'P7 Exact Return / Original Inspection',
     cls: 'A',
-    level: 'METADATA_ONLY',
+    level: 'EXECUTABLE',
     owner: 'T-07',
     substrateOwner: null,
     authority: fields('TM', 'IF_ref', 'MC.depth', ...SPATIAL),
@@ -418,7 +472,7 @@ export const ACTION_CATALOG: Readonly<Record<ProductActId, CatalogEntry>> = free
     id: 'BACK_ONE_STEP',
     frozenName: 'P8 Back One Step',
     cls: 'A',
-    level: 'METADATA_ONLY',
+    level: 'EXECUTABLE',
     owner: 'T-07',
     substrateOwner: null,
     authority: fields('TM', 'IF_ref', 'MC.depth', ...SPATIAL),

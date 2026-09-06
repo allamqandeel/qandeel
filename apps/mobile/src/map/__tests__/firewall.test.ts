@@ -7,6 +7,7 @@ import {
   MAP_ACTION_TYPES,
   METADATA_ONLY_ACTION_TYPES,
   PRODUCT_ACT_IDS,
+  RETURN_ACTION_TYPES,
   RH_ACTION_IDS,
   catalogEntry,
   effectiveTC,
@@ -35,6 +36,9 @@ const stripComments = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//g
 const productionCode = productionFiles(MAP_DIR)
   .map((file) => stripComments(readFileSync(file, 'utf8')))
   .join('\n');
+
+/** The kernel's own source: the fail-closed rule over the later-owner LEVEL is asserted, not assumed. */
+const productionState = stripComments(readFileSync(join(MAP_DIR, '..', 'state', 'store.ts'), 'utf8'));
 
 const DISCLOSURE = () =>
   disclosureFixture({
@@ -116,29 +120,26 @@ describe('M04-15 — the registry and scope firewall', () => {
     ]);
   });
 
-  it('every other later-owner act still fails closed; the general rule is not weakened', () => {
+  it('no act of a neighbouring promoted family reaches the Map seam; the general rule is not weakened', () => {
     const store = testStore();
     const before = store.getState();
-    // T-06 re-anchor: `COMMIT_MOMENT_AND_LOCATE` and `CHOOSE_LOCUS` left this set when T-06 landed
-    // their substrate and promoted them behind their OWN runtime authority. The rule this test
-    // guards is unweakened — every remaining later-owner act still fails closed on the raw dispatch
-    // — and it is now stated over the six T-07 identities that genuinely have no owner yet.
-    expect([...METADATA_ONLY_ACTION_TYPES].sort()).toEqual([
-      'BACK_ONE_STEP',
-      'EXACT_RETURN',
-      'GO_LIVE_AND_LOCATE',
-      'RETURN_LIVE_FOCUS',
-      'RETURN_LIVE_HEAD',
-      'RETURN_WORLD',
-    ]);
-    for (const id of METADATA_ONLY_ACTION_TYPES) expect(ACTION_CATALOG[id].owner).toBe('T-07');
-    // The two promoted temporal acts are still unreachable from the Map's own seam.
-    for (const id of ['COMMIT_MOMENT_AND_LOCATE', 'CHOOSE_LOCUS'] as const) {
+    // T-06 re-anchor: `COMMIT_MOMENT_AND_LOCATE` and `CHOOSE_LOCUS` left the later-owner set when
+    // T-06 landed their substrate. T-07 re-anchor: the six return identities left it too, behind
+    // their OWN runtime authority, so the set is now empty. The rule this test guards is unweakened
+    // and is now stated in both directions: the fail-closed rule over the LEVEL still exists and
+    // still refuses anything registered at it, and every promoted act of a neighbouring family is
+    // refused BY IDENTITY at the Map seam, before any authority is consulted.
+    expect([...METADATA_ONLY_ACTION_TYPES]).toEqual([]);
+    expect(productionState.includes("if (entry.level === 'METADATA_ONLY') throw new OwnedByLaterTask(entry.id, entry.owner);")).toBe(true);
+    expect(OwnedByLaterTask).toBeDefined();
+    for (const id of ['COMMIT_MOMENT_AND_LOCATE', 'CHOOSE_LOCUS', ...RETURN_ACTION_TYPES] as const) {
       expect(() => store.dispatchMap({ type: id } as never)).toThrow(/is not a promoted Map act/u);
+      expect(ACTION_CATALOG[id].level).toBe('EXECUTABLE');
     }
-    for (const id of METADATA_ONLY_ACTION_TYPES) {
-      expect(() => store.dispatch({ type: id } as never)).toThrow(OwnedByLaterTask);
-      expect(ACTION_CATALOG[id].level).toBe('METADATA_ONLY');
+    // ...and the raw dispatch surface reaches none of them either.
+    for (const id of RETURN_ACTION_TYPES) {
+      expect(() => store.dispatch({ type: id } as never)).toThrow(/authorized return seam/u);
+      expect(ACTION_CATALOG[id].owner).toBe('T-07');
     }
     expect(store.getState()).toBe(before);
     expect(store.getState().history).toHaveLength(0);

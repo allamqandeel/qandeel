@@ -378,7 +378,12 @@ export interface RhCheckpoint {
   readonly camera: CameraIntent;
 }
 
-/** An RH entry records an effective explicit Product transaction only (FIX-T02-03). */
+/**
+ * An RH entry records an effective explicit Product transaction only (FIX-T02-03). An entry is
+ * created by the append boundary and is thereafter IDENTITY: the T-07 consumption path locates the
+ * exact object it restores from inside this store's own `history`, which is what makes a forged or
+ * copied checkpoint unusable as authority.
+ */
 export interface RhEntry {
   readonly act: RhActionId;
   readonly captured: RhCheckpoint;
@@ -415,7 +420,13 @@ export interface CanonicalState {
   readonly inspection: InspectionRef | null;
   /** `MC` intent. */
   readonly camera: CameraIntent;
-  /** `RH`, append-only; written only by the transaction boundary in `store.ts`. */
+  /**
+   * `RH`. Written only by the transaction boundary in `store.ts`, which is the ONLY writer and has
+   * exactly two moves: APPEND one pre-act checkpoint for an effective explicit transaction, and —
+   * for the two frozen `CONSUMES_RH` identities T-07 owns — CONSUME the target checkpoint and every
+   * newer entry. No transition can reach it, no event can reach it, and nothing reorders, replaces
+   * or edits an entry in place.
+   */
   readonly history: readonly RhEntry[];
 }
 

@@ -133,13 +133,25 @@ test('the authority policy is a frozen readonly array, never a mutable Set, and 
   assert.match(actions, /Object\.freeze\(catalog\[key\]\)/u);
   // T-04 re-anchor, by exact name: `INSPECT_OBJECT`, `SWITCH_CONTEXT` and `DIRECT_JUMP` were
   // promoted out of the later-owner set into `MapActionType`. T-06 re-anchor, by exact name:
-  // `COMMIT_MOMENT_AND_LOCATE` and `CHOOSE_LOCUS` were promoted into `TemporalActionType`. Every
-  // promoted identity keeps its frozen transactional behaviour, and the six remaining later-owner
-  // acts still fail closed.
-  assert.match(actions, /export type RhActionId = KernelActionType \| MapActionType \| TemporalActionType \| MetadataOnlyActionType;/u);
+  // `COMMIT_MOMENT_AND_LOCATE` and `CHOOSE_LOCUS` were promoted into `TemporalActionType`. T-07
+  // re-anchor, by exact name: the six return acts were promoted into `ReturnActionType`, which
+  // emptied the later-owner set. Every promoted identity keeps its frozen transactional behaviour,
+  // each family reaches canonical state only through its own seam, and the later-owner LEVEL and its
+  // fail-closed rule remain for the next frozen act registered at it.
+  assert.match(actions, /export type RhActionId = KernelActionType \| MapActionType \| TemporalActionType \| ReturnActionType \| MetadataOnlyActionType;/u);
   assert.match(actions, /MAP_ACTION_TYPES = Object\.freeze\(\['INSPECT_OBJECT', 'SWITCH_CONTEXT', 'DIRECT_JUMP'\] as const\);/u);
   assert.match(actions, /TEMPORAL_ACTION_TYPES = Object\.freeze\(\['COMMIT_MOMENT_AND_LOCATE', 'CHOOSE_LOCUS'\] as const\);/u);
-  assert.match(actions, /export type StoreAction = KernelAction \| MapAction \| TemporalAction;/u);
+  assert.match(actions, /METADATA_ONLY_ACTION_TYPES = Object\.freeze\(\[\] as const\);/u);
+  assert.match(actions, /RH_CONSUMING_ACTION_TYPES = Object\.freeze\(\['EXACT_RETURN', 'BACK_ONE_STEP'\] as const\);/u);
+  assert.match(actions, /export type StoreAction = KernelAction \| MapAction \| TemporalAction \| ReturnAction;/u);
+  assert.match(productionCode['store.ts'], /if \(entry\.level === 'METADATA_ONLY'\) throw new OwnedByLaterTask\(entry\.id, entry\.owner\);/u);
+  // RH is still written in exactly one place, and now has exactly two moves: append, or consume
+  // through a target checkpoint for the two frozen `CONSUMES_RH` identities. No transition can reach
+  // `history` at all, so a restoration cannot be run through the append path.
+  assert.match(productionCode['store.ts'], /return entry\.transactional === 'CONSUMES_RH' \? runConsumptionTransaction\(action, entry\) : runTransaction\(action, entry\);/u);
+  assert.equal((productionCode['store.ts'].match(/appendIfEffective\(/gu) ?? []).length, 1);
+  assert.match(productionCode['transitions.ts'], /export type ClientWritable = Pick<CanonicalState, 'temporal' \| 'inspection' \| 'camera'>;/u);
+  assert.equal(/(^|[^A-Za-z_.])history\b/u.test(productionCode['transitions.ts']), false, 'no transition mentions history');
   assert.match(productionCode['classes.ts'], /readonly act: RhActionId;/u);
   assert.match(productionCode['classes.ts'], /readonly tc: SessionPosition;/u);
   assert.match(productionCode['history.ts'], /act: RhActionId\)/u);
