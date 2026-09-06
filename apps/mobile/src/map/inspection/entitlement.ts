@@ -29,6 +29,7 @@ import type {
 } from '@qandeel/runtime';
 
 import { opaqueRef, type InspectionRef, type SemanticDepth } from '../../state';
+import type { DisclosedProjectionTuple } from '../projection';
 
 export const INSPECTABLE_FAMILIES: readonly HistoricalFamily[] = Object.freeze([
   'THREAD',
@@ -63,6 +64,13 @@ export interface EntitledInspection {
   readonly disclosedAtDepth: SemanticDepth;
   /** The exact contextual route to this target; never a guess and never a default. */
   readonly lineage: string;
+  /**
+   * The canonical projection tuple this entitlement was minted from (R2-01). An entitlement is
+   * authority for exactly that `(Session, TC, depth)` and for no other, so any route that holds
+   * one — including a shortcut that never sees the context — can be checked against the store's
+   * current tuple by the one shared freshness rule.
+   */
+  readonly projection: DisclosedProjectionTuple;
   readonly ref: InspectionRef;
 }
 
@@ -272,6 +280,8 @@ export function resolveEntitledInspection(disclosure: HistoricalDisclosure, requ
     appearance: request.appearance === undefined ? null : Object.freeze({ ...request.appearance }),
     disclosedAtDepth: resolved.disclosedAtDepth,
     lineage,
+    // Recorded from the disclosure that admitted this target, never from the store.
+    projection: Object.freeze({ sessionId: disclosure.sessionId, tc: disclosure.tc, depth: disclosure.depth }),
     ref: buildInspectionRef(request.family, request.id, version, request.appearance ?? null, resolved.disclosedAtDepth, lineage),
   });
   minted.add(entitled);

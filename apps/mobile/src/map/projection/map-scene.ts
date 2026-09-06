@@ -300,6 +300,95 @@ export function deriveMapScene(entry: HistoricalDisclosureEntry, request: MapPro
   }
 }
 
+// ------------------------------------------------------------------------------------------
+// Context freshness — the ONE rule (R2-01)
+// ------------------------------------------------------------------------------------------
+
+/**
+ * The canonical projection tuple a disclosure was made for. Every derived Map value carries one,
+ * so any surface or act can be checked against the store's CURRENT tuple with the same rule.
+ */
+export interface DisclosedProjectionTuple {
+  readonly sessionId: string;
+  readonly tc: number;
+  readonly depth: SemanticDepth;
+}
+
+/** A disclosed projection and the scene derived from it, travelling together. */
+export interface DisclosedProjectionContext {
+  readonly disclosure: HistoricalDisclosure;
+  readonly scene: MapScene;
+}
+
+export const MAP_PROJECTION_STALE_REASONS = Object.freeze([
+  'NO_ADDRESSABLE_POSITION',
+  'SESSION_CHANGED',
+  'TEMPORAL_POSITION_CHANGED',
+  'SEMANTIC_DEPTH_CHANGED',
+  'CONTEXT_INCOHERENT',
+] as const);
+export type MapProjectionStaleReason = (typeof MAP_PROJECTION_STALE_REASONS)[number];
+
+export type MapProjectionFreshness =
+  | { readonly fresh: true }
+  | { readonly fresh: false; readonly reason: MapProjectionStaleReason; readonly detail: string };
+
+const FRESH: MapProjectionFreshness = Object.freeze({ fresh: true });
+const stale = (reason: MapProjectionStaleReason, detail: string): MapProjectionFreshness => ({ fresh: false, reason, detail });
+
+/**
+ * THE freshness rule (R2-01). A disclosed projection is authority for exactly the canonical tuple
+ * it was disclosed for, and for no other. Every render, hit test, accessible tree and promoted act
+ * in T-04 answers this one question, so none of them can drift away from another.
+ *
+ * Semantic Zoom is disclosure, not magnification: when `MC.depth` moves, the scene disclosed at
+ * the old rung stops being this Map. `FOLLOW_LIVE` advancing `LH`, a `PINNED` move to an earlier
+ * Moment and a Session change are the same fact through a different door — the effective `TC` or
+ * the Session no longer matches what was disclosed.
+ *
+ * A mismatch is a transient projection-availability state, not a new Product truth state: nothing
+ * here infers a replacement, falls back to a shallower or deeper disclosure, or keeps the old
+ * scene alive in any form. It fails closed until a matching `V` arrives.
+ */
+export function projectionTupleFreshness(state: CanonicalState, tuple: DisclosedProjectionTuple): MapProjectionFreshness {
+  const request = mapProjectionRequest(state);
+  if (request === null) {
+    return stale('NO_ADDRESSABLE_POSITION', 'no authoritative committed Session Position has been mirrored; nothing is addressable');
+  }
+  if (tuple.sessionId !== request.sessionId) {
+    return stale('SESSION_CHANGED', `disclosed for Session ${tuple.sessionId}; the store is on ${request.sessionId}`);
+  }
+  if (tuple.tc !== request.tc) {
+    return stale('TEMPORAL_POSITION_CHANGED', `disclosed at TC ${tuple.tc}; the effective TC is now ${request.tc}`);
+  }
+  if (tuple.depth !== request.depth) {
+    return stale('SEMANTIC_DEPTH_CHANGED', `disclosed at depth ${tuple.depth}; the camera now discloses ${request.depth}`);
+  }
+  return FRESH;
+}
+
+/**
+ * The same rule over a context, plus the one check a tuple alone cannot make: that the disclosure
+ * and the scene in this context are the same projection. A derivation guarantees that pairing,
+ * but a hand-assembled context could pair a current scene with a foreign disclosure and use the
+ * second as entitlement authority.
+ */
+export function mapContextFreshness(state: CanonicalState, context: DisclosedProjectionContext): MapProjectionFreshness {
+  const { disclosure, scene } = context;
+  if (disclosure.sessionId !== scene.sessionId || disclosure.tc !== scene.tc || asSemanticDepth(disclosure.depth) !== scene.depth) {
+    return stale(
+      'CONTEXT_INCOHERENT',
+      `the disclosure (${disclosure.sessionId}, TC ${disclosure.tc}, ${disclosure.depth}) is not the projection this scene was derived from`,
+    );
+  }
+  return projectionTupleFreshness(state, { sessionId: scene.sessionId, tc: scene.tc, depth: scene.depth });
+}
+
+/** The tuple a scene represents. */
+export function sceneProjectionTuple(scene: MapScene): DisclosedProjectionTuple {
+  return { sessionId: scene.sessionId, tc: scene.tc, depth: scene.depth };
+}
+
 export function mapSceneObject(scene: MapScene, family: MapObjectFamily, id: string): MapSceneObject | null {
   return scene.objects.find((object) => object.family === family && object.id === id) ?? null;
 }

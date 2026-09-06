@@ -16,6 +16,8 @@ import { CanonicalStateError, type CanonicalStateErrorCode, type CanonicalStore,
 export type MapActionRejectionCode =
   | CanonicalStateErrorCode
   | 'NOT_AUTHORIZED'
+  /** The supplied projection is no longer the store's current one (R2-01). */
+  | 'STALE_PROJECTION'
   | 'CAMERA_NOT_DECODABLE'
   | 'PROJECTION_NOT_AVAILABLE'
   | 'NOT_ENTITLED'

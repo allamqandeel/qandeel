@@ -6,6 +6,14 @@
  * hits exactly what is painted, and the accessible tree names exactly what is entitled. A future,
  * off-depth or unavailable identity is in none of them.
  *
+ * They also cannot disagree with the store. The surface subscribes to canonical state — not to
+ * the camera alone — and asks the ONE freshness rule whether the supplied context still is this
+ * Map's `(Session, effective TC, MC.depth)`. When it is not, nothing of the old projection
+ * survives: no paint, no placement, no hit testing, no object accessibility, no act. That is a
+ * transient projection-availability state during the handoff to a fresh `V`, not a Product state,
+ * so the surface stays structurally empty rather than showing anything about it — final chrome,
+ * including anything that would explain the wait, is T-08's.
+ *
  * This component is a truthful mechanics substrate. It is deliberately not mounted in the app
  * shell: the technical container is T-01's and stays byte-identical, and where the Map appears in
  * the Product is a later task's decision.
@@ -18,6 +26,7 @@ import type { CanonicalStore } from '../../state';
 import { decodeCameraIntent, useMapPanGesture, type ViewportEnvelope } from '../camera';
 import { MapAccessibilityLayer } from '../accessibility';
 import { inspectObject, type DirectJumpOutcome, type MapInspectionContext } from '../inspection';
+import { mapContextFreshness } from '../projection';
 import type { MapActionOutcome } from '../outcome';
 import { MapCanvas } from './MapCanvas';
 import { hitTest, placeScene } from './map-geometry';
@@ -35,17 +44,20 @@ export interface MapSurfaceProps {
 }
 
 export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_STYLE, onOutcome }: MapSurfaceProps) {
-  // The camera is READ from canonical state, never held beside it: an act dispatched from this
-  // surface re-renders both the canvas and the accessible layer from the same new `MC`, so the
-  // two can never disagree about where the camera is.
-  const intent = useSyncExternalStore(store.subscribe, () => store.getState().camera);
-  const decoded = useMemo(() => decodeCameraIntent(intent), [intent]);
+  // Canonical state is READ, never held beside the store: the whole state, because the projection
+  // tuple is Session + effective TC + `MC.depth`, and the camera alone cannot tell us whether the
+  // supplied projection is still this Map.
+  const state = useSyncExternalStore(store.subscribe, store.getState);
+  const decoded = useMemo(() => decodeCameraIntent(state.camera), [state.camera]);
   const camera = decoded.ok ? decoded.camera : null;
+  // The one shared rule, over the state this component subscribed to.
+  const freshness = useMemo(() => mapContextFreshness(state, context), [state, context]);
+  const usable = camera !== null && freshness.fresh;
   const placed = useMemo(
-    () => (camera === null ? null : placeScene(context.scene, camera, envelope)),
-    [context.scene, camera, envelope],
+    () => (usable && camera !== null ? placeScene(context.scene, camera, envelope) : null),
+    [usable, context.scene, camera, envelope],
   );
-  const { gesture, progress } = useMapPanGesture(store, { enabled: camera !== null, onSettled: onOutcome });
+  const { gesture, progress } = useMapPanGesture(store, { enabled: usable, onSettled: onOutcome });
 
   // The act runs first and the observer is notified afterwards: an optional call would not
   // evaluate its argument when no observer is attached, silently disabling the pointer route.
@@ -61,8 +73,19 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
     [placed, store, context, onOutcome],
   );
 
-  // An undecodable camera renders an empty surface rather than a plausible wrong Map.
-  if (camera === null || placed === null) return <View testID={MAP_SURFACE_TEST_ID} style={styles.surface} />;
+  // An undecodable camera, or a projection that is no longer this Map's, renders an empty surface
+  // rather than a plausible wrong Map. The accessible layer is still mounted when a camera exists:
+  // it enforces the same freshness rule itself, so it exposes no object of the old scene, while
+  // the viewport routes that could bring the camera back to a matching depth stay reachable.
+  if (camera === null || placed === null) {
+    return (
+      <View testID={MAP_SURFACE_TEST_ID} style={styles.surface}>
+        {camera === null ? null : (
+          <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={envelope} onOutcome={onOutcome} />
+        )}
+      </View>
+    );
+  }
 
   return (
     <View testID={MAP_SURFACE_TEST_ID} style={styles.surface}>

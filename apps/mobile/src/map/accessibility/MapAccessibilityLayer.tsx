@@ -8,18 +8,26 @@
  * The T-07 return acts are deliberately absent even though a final accessibility architecture
  * will want them: they remain later-owner metadata, and offering an action this task cannot
  * honour would be a promise, not a route.
+ *
+ * It also enforces the ONE context-freshness rule itself rather than trusting its parent, so a
+ * stale projection cannot survive here after it has left the pixels. When the supplied context is
+ * no longer the store's `(Session, effective TC, MC.depth)`, the object set is empty — not
+ * hidden, not dimmed, not retained without actions — exactly as the sighted scene is. The
+ * viewport routes stay, because they act on the camera rather than on the disclosed world, and
+ * they are how a reader brings the camera back to a rung the held projection matches.
  */
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
 
 import { type CanonicalStore } from '../../state';
 import { exploreViewport, zoomSemanticStep, type MapCamera, type ViewportEnvelope } from '../camera';
-import type { MapObjectFamily } from '../projection';
+import { mapContextFreshness, type MapObjectFamily } from '../projection';
 import {
   decodeInspectionRef,
   directJump,
   entitledLoci,
   inspectObject,
+  isCurrentMapContext,
   switchContext,
   type DirectJumpOutcome,
   type MapInspectionContext,
@@ -41,11 +49,15 @@ export interface MapAccessibilityLayerProps {
 const historicalFamilyOf = (family: MapObjectFamily): 'THREAD' | 'READING' | 'EMERGING_FOCUS' => family;
 
 export function MapAccessibilityLayer({ store, context, camera, envelope, onOutcome }: MapAccessibilityLayerProps) {
-  // Subscribed, not sampled: the offered actions depend on the current `IF_ref`, so a tree built
-  // from a snapshot taken once at mount would keep offering — or keep withholding — a context
-  // switch after the inspection moved. Reading through `useSyncExternalStore` is the T-02 kernel's
-  // own subscription seam, and it makes this layer correct independently of its parent.
-  const inspection = useSyncExternalStore(store.subscribe, () => store.getState().inspection);
+  // Subscribed, not sampled: the offered actions depend on the current `IF_ref` and the whole
+  // projection tuple, so a tree built from a snapshot taken once at mount would keep offering — or
+  // keep withholding — a context switch after the inspection moved, and would keep naming objects
+  // of a projection the store has already left. Reading through `useSyncExternalStore` is the T-02
+  // kernel's own subscription seam, and it makes this layer correct independently of its parent.
+  const state = useSyncExternalStore(store.subscribe, store.getState);
+  const inspection = state.inspection;
+  // The one shared rule, over the state this component subscribed to.
+  const freshness = useMemo(() => mapContextFreshness(state, context), [state, context]);
 
   const focus: MapAccessibilityFocus | null = useMemo(() => {
     const decoded = decodeInspectionRef(inspection);
@@ -68,6 +80,9 @@ export function MapAccessibilityLayer({ store, context, camera, envelope, onOutc
   // whole accessible route a no-op.
   const runNodeAction = useCallback(
     (node: MapAccessibilityNode, action: string) => {
+      // Belt and braces: a stale context exposes no node at all, and were one to reach here it
+      // would still change nothing — the executors ask the same rule again.
+      if (!isCurrentMapContext(store, context).fresh) return;
       const family = historicalFamilyOf(node.family);
       if (action === 'inspect') {
         const outcome = inspectObject(store, context, { family, id: node.id });
@@ -125,7 +140,7 @@ export function MapAccessibilityLayer({ store, context, camera, envelope, onOutc
       accessibilityActions={[...tree.viewportActions]}
       onAccessibilityAction={(event: AccessibilityActionEvent) => runViewportAction(event.nativeEvent.actionName)}
     >
-      {tree.nodes.map((node) => (
+      {(freshness.fresh ? tree.nodes : []).map((node) => (
         <View
           key={node.key}
           testID={`${MAP_ACCESSIBILITY_TEST_ID}:${node.key}`}

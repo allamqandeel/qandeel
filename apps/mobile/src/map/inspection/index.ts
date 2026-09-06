@@ -20,6 +20,7 @@ export type { DirectJumpOutcome, DirectJumpRequest, MapContextResolution, MapIns
 export {
   MAP_ACTION_AUTHORITY,
   directJump,
+  isCurrentMapContext,
   disclosedAppearances,
   inspectEntitled,
   inspectObject,

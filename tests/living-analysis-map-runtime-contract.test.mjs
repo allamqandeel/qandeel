@@ -200,23 +200,88 @@ test('R1-01 — a promoted Map act reaches canonical state only through an autho
   // The minting side is module-local to the executors: declared once, exported nowhere.
   const executors = mapCode['inspection/map-actions.ts'];
   assert.match(executors, /const authorized = new WeakSet<MapAction>\(\);/u);
-  assert.match(executors, /^function grant<A extends MapAction>\(action: A\): A \{/mu, 'grant is a module-local function declaration');
-  assert.doesNotMatch(executors, /export (?:function|const) grant\b/u);
-  assert.doesNotMatch(executors, /export \{[^}]*\bgrant\b/u);
+  assert.match(
+    executors,
+    /^function authorizeIfProjectionCurrent<A extends MapAction>\(/mu,
+    'the mint is a module-local function declaration',
+  );
+  assert.doesNotMatch(executors, /export (?:function|const) authorizeIfProjectionCurrent\b/u);
+  assert.doesNotMatch(executors, /export \{[^}]*\bauthorizeIfProjectionCurrent\b/u);
   assert.equal((executors.match(/authorized\.add\(/gu) ?? []).length, 1, 'exactly one place adds an authorization');
-  assert.equal((executors.match(/\bgrant\(/gu) ?? []).length, 3, 'exactly the three promoted acts are minted, and nothing else');
+  assert.equal(
+    (executors.match(/\bauthorizeIfProjectionCurrent\(/gu) ?? []).length,
+    3,
+    'exactly the three promoted acts are minted, and nothing else',
+  );
   // The authorization is consumed on use, so a granted act cannot be replayed.
   assert.match(executors, /authorized\.delete\(action\);/u);
-  // `grant` is never re-exported from the Map layer, so no caller outside this module can mint.
+  // The mint is never re-exported, so no caller outside this module can authorize an act.
   for (const [name, text] of Object.entries(mapCode)) {
     if (name === 'inspection/map-actions.ts') continue;
-    assert.equal(/\bgrant\b/u.test(text), false, `${name} must not reference the minting function`);
+    assert.equal(/\bauthorizeIfProjectionCurrent\b/u.test(text), false, `${name} must not reference the minting function`);
   }
   assert.match(mapCode['inspection/index.ts'], /MAP_ACTION_AUTHORITY/u, 'only the verifier crosses the module boundary');
 
   // The authority is object identity in a WeakSet, never a flag, a string token or a type brand.
   for (const forbidden of ['authorized: true', 'as MapActionAuthority', 'unique symbol']) {
     assert.equal(executors.includes(forbidden), false, `the authority must not rest on ${forbidden}`);
+  }
+});
+
+// R2-01 — the stale-`V` firewall. A disclosed projection is authority for exactly the canonical
+// tuple it was disclosed for, and the rule that says so exists exactly once.
+test('R2-01 — one shared freshness rule guards every render, hit, accessibility and act boundary', () => {
+  const scene = mapCode['projection/map-scene.ts'];
+
+  // THE rule: exactly one place compares a tuple against the store's current projection request.
+  assert.match(scene, /export function projectionTupleFreshness\(state: CanonicalState, tuple: DisclosedProjectionTuple\): MapProjectionFreshness \{/u);
+  assert.match(scene, /export function mapContextFreshness\(state: CanonicalState, context: DisclosedProjectionContext\): MapProjectionFreshness \{/u);
+  assert.equal(
+    (scene.match(/mapProjectionRequest\(state\)/gu) ?? []).length,
+    1,
+    'the current projection request is read in exactly one place: the shared rule',
+  );
+  for (const field of ['sessionId', 'tc', 'depth']) {
+    assert.match(scene, new RegExp(`tuple\\.${field} !== request\\.${field}`, 'u'), `the rule compares ${field}`);
+  }
+  // The context form adds the one check a tuple cannot make, and then delegates to the same rule.
+  assert.match(scene, /return projectionTupleFreshness\(state, \{ sessionId: scene\.sessionId, tc: scene\.tc, depth: scene\.depth \}\);/u);
+  assert.match(scene, /CONTEXT_INCOHERENT/u);
+
+  // Nobody re-implements it. Every consumer calls the shared rule (directly or through the one
+  // context adapter), and no second comparison against the current request exists anywhere.
+  for (const [name, text] of Object.entries(mapCode)) {
+    if (name === 'projection/map-scene.ts') continue;
+    assert.equal(text.includes('mapProjectionRequest(store.getState())'), false, `${name} must not re-derive the current request`);
+    assert.doesNotMatch(text, /scene\.depth !== \w+\.depth|scene\.tc !== \w+\.tc/u, `${name} must not re-implement the freshness comparison`);
+  }
+  assert.match(mapCode['inspection/map-actions.ts'], /export function isCurrentMapContext\(store: CanonicalStore, context: MapInspectionContext\)/u);
+  assert.match(mapCode['inspection/map-actions.ts'], /return mapContextFreshness\(store\.getState\(\), context\);/u);
+
+  // Action side: every promoted act proves freshness, and the mint itself cannot run without it.
+  const executors = mapCode['inspection/map-actions.ts'];
+  assert.match(executors, /const freshness = projectionTupleFreshness\(store\.getState\(\), tuple\);\s*\n\s*if \(!freshness\.fresh\) \{/u);
+  assert.equal((executors.match(/staleOutcome\(store, context\)/gu) ?? []).length, 3, 'inspect, switch and direct jump each check the context');
+  // The entitlement carries the tuple it was minted from, so a context-free shortcut is covered.
+  assert.match(mapCode['inspection/entitlement.ts'], /readonly projection: DisclosedProjectionTuple;/u);
+  assert.match(mapCode['inspection/entitlement.ts'], /projection: Object\.freeze\(\{ sessionId: disclosure\.sessionId, tc: disclosure\.tc, depth: disclosure\.depth \}\)/u);
+
+  // Surface side: both store-aware surfaces subscribe to canonical state, not the camera alone.
+  for (const file of ['renderer/MapSurface.tsx', 'accessibility/MapAccessibilityLayer.tsx']) {
+    assert.match(mapCode[file], /useSyncExternalStore\(store\.subscribe, store\.getState\)/u, `${file} subscribes to canonical state`);
+    assert.match(mapCode[file], /mapContextFreshness\(state, context\)/u, `${file} asks the shared rule`);
+  }
+  // A stale scene is never placed, never hit-tested and never announced.
+  assert.match(mapCode['renderer/MapSurface.tsx'], /const usable = camera !== null && freshness\.fresh;/u);
+  assert.match(mapCode['renderer/MapSurface.tsx'], /usable && camera !== null \? placeScene\(/u);
+  assert.match(mapCode['accessibility/MapAccessibilityLayer.tsx'], /\(freshness\.fresh \? tree\.nodes : \[\]\)\.map\(/u);
+  // No stale fallback of any kind.
+  for (const forbidden of ['opacity: 0', 'fallbackScene', 'previousScene', 'lastScene', 'cachedScene']) {
+    assert.equal(mapText.includes(forbidden), false, `a stale projection must not survive as ${forbidden}`);
+  }
+  // The canonical store learns nothing about projections: no V, no MapScene, no third cursor.
+  for (const forbidden of ['MapScene', 'Disclosed', 'freshness', 'projectionTuple']) {
+    assert.equal(storeCode.includes(forbidden), false, `the kernel must not learn ${forbidden}`);
   }
 });
 

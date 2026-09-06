@@ -221,6 +221,56 @@ A caller can of course build *their own* store with a permissive authority; that
 store, not a bypass of the canonical one, and the canonical store is constructed once with
 `MAP_ACTION_AUTHORITY`. Proven by `AUTH-01 … AUTH-05` in `map/__tests__/authority.test.ts`.
 
+### The freshness firewall (R2-01)
+
+Entitlement says *this target was disclosed*. Authorization says *this act came from the
+executors*. Neither says *the disclosure they used is still this Map*. That third question has one
+answer, in one place, and every boundary asks it:
+
+```text
+currentRequest = mapProjectionRequest(state)      // (sessionId, effectiveTC, MC.depth)
+
+fresh  ⟺  currentRequest ≠ null
+       ∧  tuple.sessionId === currentRequest.sessionId
+       ∧  tuple.tc        === currentRequest.tc
+       ∧  tuple.depth     === currentRequest.depth
+```
+
+`projectionTupleFreshness` is that rule; `mapContextFreshness` is the same rule over a context,
+after checking the one thing a tuple cannot — that the context's disclosure and its scene are the
+same projection, since a hand-assembled context could pair a current scene with a foreign
+disclosure and use the second as entitlement authority. `mapProjectionRequest(state)` is read in
+exactly one place in the whole layer, and a static gate proves nobody re-implements the comparison.
+
+Four ways a context stops being this Map, all one fact through different doors: `MC.depth` moved
+(Semantic Zoom is disclosure, so the old rung's scene is no longer this Map), `TM` moved to an
+earlier Moment, `FOLLOW_LIVE` advanced `LH` and with it the effective `TC`, or the Session changed.
+
+Where it is enforced:
+
+- **Action side.** Each of `inspectObject`, `switchContext` and `directJump` checks the context
+  before resolving anything. More fundamentally, the R1 mint itself is now
+  `authorizeIfProjectionCurrent`: the only `authorized.add` in the codebase sits behind the
+  freshness check, so no promoted act can be authorized from a stale projection *by construction*.
+  An `EntitledInspection` records the tuple it was minted from, so the context-free `…Entitled`
+  shortcuts are covered by the same rule.
+- **Surface side.** `MapSurface` subscribes to canonical state — not the camera alone, because the
+  tuple is Session + effective `TC` + depth. When the context is not current it computes no
+  placement, so there is nothing to paint and nothing to hit-test.
+- **Accessibility side.** `MapAccessibilityLayer` enforces the same rule itself rather than
+  trusting its parent, so the object set disappears exactly when the pixels do. There is no
+  accessibility-only retention, no dimming, no zero-opacity node.
+
+A mismatch is a transient projection-availability state, not a Product truth state. Nothing infers
+a replacement disclosure, falls back to a shallower or deeper one, or treats an
+`ANALYTICAL_OBJECT` scene as a `THREAD` scene. The surface is structurally empty during the handoff
+and says nothing about the wait — chrome is T-08's. The viewport routes (semantic zoom, four-way
+exploration) stay reachable, because they act on the camera rather than on the disclosed world, and
+they are how a reader brings the camera back to a rung the held projection matches.
+
+Proven by `STALE-01 … STALE-05` in `map/__tests__/stale-projection.test.tsx`. The canonical store
+learns nothing from any of this: no `V`, no `MapScene`, no third temporal cursor.
+
 ### Entitlement
 
 `inspection/entitlement.ts` is the ONLY place an inspection reference can be minted, and it can
@@ -354,6 +404,11 @@ graphic-language styling.
 | AUTH-03 | Forged direct jump cannot reach canonical mutation | `authority.test.ts` |
 | AUTH-04 | Legitimate V-resolved paths unchanged | `authority.test.ts` |
 | AUTH-05 | Knowing an identifier is not entitlement | `authority.test.ts` |
+| STALE-01 | Depth drift hides the old deeper scene | `stale-projection.test.tsx` |
+| STALE-02 | A later-TC context cannot authorize at an earlier pinned TC | `stale-projection.test.tsx` |
+| STALE-03 | A `FOLLOW_LIVE` head advance invalidates the old head context | `stale-projection.test.tsx` |
+| STALE-04 | Session mismatch, and an incoherent context, fail closed | `stale-projection.test.tsx` |
+| STALE-05 | A fresh replacement restores the accepted behaviour | `stale-projection.test.tsx` |
 
 ## 16. Verification
 

@@ -38,6 +38,10 @@ import type { HistoricalDisclosureEntry } from '../../projection';
 import { worldAnchorRef, spatialDestinationRef } from '../world';
 import {
   deriveMapScene,
+  mapContextFreshness,
+  projectionTupleFreshness,
+  type DisclosedProjectionContext,
+  type DisclosedProjectionTuple,
   type MapObjectFamily,
   type MapProjectionRequest,
   type MapScene,
@@ -57,9 +61,23 @@ import { entitledLoci, isEntitledLocus, locusForBinding, resolveLocatability, ty
  * geography of the Map. Both come from the SAME `V`, so the visual Map, hit testing, the
  * accessible tree and every act agree about what exists by construction.
  */
-export interface MapInspectionContext {
+export interface MapInspectionContext extends DisclosedProjectionContext {
   readonly disclosure: HistoricalDisclosure;
   readonly scene: MapScene;
+}
+
+/**
+ * Whether this context still represents the store's current `(Session, effective TC, MC.depth)`.
+ * It is the one shared rule (`mapContextFreshness`) and nothing else: every surface and every act
+ * in T-04 asks exactly this, so they cannot disagree about whether the Map is current.
+ */
+export function isCurrentMapContext(store: CanonicalStore, context: MapInspectionContext) {
+  return mapContextFreshness(store.getState(), context);
+}
+
+function staleOutcome(store: CanonicalStore, context: MapInspectionContext): MapActionOutcome | null {
+  const freshness = isCurrentMapContext(store, context);
+  return freshness.fresh ? null : rejected('STALE_PROJECTION', `${freshness.reason}: ${freshness.detail}`);
 }
 
 export type MapContextResolution =
@@ -78,15 +96,32 @@ export function mapInspectionContext(entry: HistoricalDisclosureEntry, request: 
 
 const authorized = new WeakSet<MapAction>();
 
+export type GrantRefusal = { readonly ok: false; readonly outcome: MapActionOutcome };
+export type Granted<A extends MapAction> = { readonly ok: true; readonly action: A };
+
 /**
- * Authorizes ONE act, once. Module-local by construction: nothing outside this file can call it,
- * so nothing outside this file can put an action into the authorization set. Every call site is
- * a few lines below, downstream of `resolveEntitledInspection`.
+ * Authorizes ONE act, once — and only while the projection it was resolved from is still the
+ * store's current one (R2-01). Module-local by construction: nothing outside this file can call
+ * it, so nothing outside this file can put an action into the authorization set, and the ONLY
+ * `authorized.add` in the codebase sits behind this freshness check. Every call site is a few
+ * lines below, downstream of `resolveEntitledInspection`.
+ *
+ * The two conditions are deliberately fused: R1 proves the act came from the T-04 executors, and
+ * R2 proves the `V` those executors used is still the `V` for this canonical state. Neither alone
+ * is authority.
  */
-function grant<A extends MapAction>(action: A): A {
+function authorizeIfProjectionCurrent<A extends MapAction>(
+  store: CanonicalStore,
+  tuple: DisclosedProjectionTuple,
+  action: A,
+): Granted<A> | GrantRefusal {
+  const freshness = projectionTupleFreshness(store.getState(), tuple);
+  if (!freshness.fresh) {
+    return { ok: false, outcome: rejected('STALE_PROJECTION', `${freshness.reason}: ${freshness.detail}`) };
+  }
   Object.freeze(action);
   authorized.add(action);
-  return action;
+  return { ok: true, action };
 }
 
 /**
@@ -113,15 +148,23 @@ function mapFamilyOf(entitled: EntitledInspection): MapObjectFamily | null {
 // INSPECT_OBJECT
 // ------------------------------------------------------------------------------------------
 
-/** Inspects an already-entitled target. The brand makes a forged entitlement unusable. */
+/**
+ * Inspects an already-entitled target. The brand makes a forged entitlement unusable, and the
+ * entitlement's own projection tuple makes a stale one unusable — including on this shortcut,
+ * which never sees a context.
+ */
 export function inspectEntitled(store: CanonicalStore, entitled: EntitledInspection): MapActionOutcome {
   if (!isEntitledInspection(entitled)) {
     return rejected('NOT_ENTITLED', 'the inspection target was not resolved against a disclosed projection');
   }
-  return dispatchAuthorizedMapAction(store, grant({ type: 'INSPECT_OBJECT', ref: entitled.ref }));
+  const granted = authorizeIfProjectionCurrent(store, entitled.projection, { type: 'INSPECT_OBJECT', ref: entitled.ref });
+  if (!granted.ok) return granted.outcome;
+  return dispatchAuthorizedMapAction(store, granted.action);
 }
 
 export function inspectObject(store: CanonicalStore, context: MapInspectionContext, request: InspectionRequest): MapActionOutcome {
+  const stale = staleOutcome(store, context);
+  if (stale !== null) return stale;
   const resolution = resolveEntitledInspection(context.disclosure, request);
   if (!resolution.ok) return rejected('NOT_ENTITLED', `${resolution.reason}: ${resolution.detail}`);
   return inspectEntitled(store, resolution.entitled);
@@ -138,7 +181,9 @@ export function switchContextEntitled(store: CanonicalStore, entitled: EntitledI
   if (entitled.appearance === null) {
     return rejected('INVALID_INPUT', 'a context switch names the contextual appearance it switches to');
   }
-  return dispatchAuthorizedMapAction(store, grant({ type: 'SWITCH_CONTEXT', ref: entitled.ref }));
+  const granted = authorizeIfProjectionCurrent(store, entitled.projection, { type: 'SWITCH_CONTEXT', ref: entitled.ref });
+  if (!granted.ok) return granted.outcome;
+  return dispatchAuthorizedMapAction(store, granted.action);
 }
 
 /**
@@ -147,6 +192,8 @@ export function switchContextEntitled(store: CanonicalStore, entitled: EntitledI
  * inspection, so a "switch" can never become a second object.
  */
 export function switchContext(store: CanonicalStore, context: MapInspectionContext, request: InspectionRequest): MapActionOutcome {
+  const stale = staleOutcome(store, context);
+  if (stale !== null) return stale;
   if (request?.appearance === undefined) {
     return rejected('INVALID_INPUT', 'a context switch names the contextual appearance it switches to');
   }
@@ -223,6 +270,8 @@ function resolveJumpLocus(
  * route rather than as an isolated floating object.
  */
 export function directJump(store: CanonicalStore, context: MapInspectionContext, request: DirectJumpRequest): DirectJumpOutcome {
+  const stale = staleOutcome(store, context);
+  if (stale !== null) return stale;
   const resolution = resolveEntitledInspection(context.disclosure, request);
   if (!resolution.ok) return rejected('NOT_ENTITLED', `${resolution.reason}: ${resolution.detail}`);
   const entitled = resolution.entitled;
@@ -258,18 +307,17 @@ export function directJump(store: CanonicalStore, context: MapInspectionContext,
         if (!contextual.ok) return rejected('NOT_ENTITLED', `${contextual.reason}: ${contextual.detail}`);
         landing = contextual.entitled;
       }
-      return dispatchAuthorizedMapAction(
-        store,
-        grant({
-          type: 'DIRECT_JUMP',
-          ref: landing.ref,
-          to: Object.freeze({
-            depth,
-            anchor: worldAnchorRef(located.locus.anchor),
-            destination: spatialDestinationRef(located.locus.destination),
-          }),
+      const granted = authorizeIfProjectionCurrent(store, landing.projection, {
+        type: 'DIRECT_JUMP',
+        ref: landing.ref,
+        to: Object.freeze({
+          depth,
+          anchor: worldAnchorRef(located.locus.anchor),
+          destination: spatialDestinationRef(located.locus.destination),
         }),
-      );
+      });
+      if (!granted.ok) return granted.outcome;
+      return dispatchAuthorizedMapAction(store, granted.action);
     }
     default: {
       const exhaustive: never = located;
