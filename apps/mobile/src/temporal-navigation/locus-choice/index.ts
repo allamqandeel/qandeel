@@ -4,7 +4,13 @@
  * route, through the same executor and the same runtime authority.
  */
 export type { LocusChoiceModel, LocusChoiceOption, PendingLocusChoice } from './pending-locus-choice';
-export { locusChoiceModel, pendingCompositeChoice, pendingSpatialChoice, resolvePendingLocusChoice } from './pending-locus-choice';
+export {
+  isPendingLocusChoice,
+  locusChoiceModel,
+  pendingCompositeChoice,
+  pendingSpatialChoice,
+  resolvePendingLocusChoice,
+} from './pending-locus-choice';
 
 export type { LocusChoiceSurfaceProps } from './LocusChoiceSurface';
 export { LOCUS_CHOICE_CANCEL_ACTION, LOCUS_CHOICE_CANCEL_TEST_ID, LOCUS_CHOICE_TEST_ID, LocusChoiceSurface } from './LocusChoiceSurface';

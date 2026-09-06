@@ -21,6 +21,25 @@
  *   - it fails closed when the projection it is pending against stops being the one the act would
  *     commit to — the executors ask the shared freshness rule again, so a stale pending choice
  *     cannot land.
+ *
+ * ## Provenance, not shape (R2-02)
+ *
+ * The executors fail closed on submission, which protects canonical state. That is not enough for
+ * the Product contract the chooser itself carries: a surface that says "choose one of these" must
+ * not be able to say it about a false, foreign, incomplete, mixed or duplicated set. Being told a
+ * list of loci is not evidence that they are THE legitimate loci of THIS target in THIS projection.
+ *
+ * So neither factory accepts a locus list at all. Both DERIVE the set from `resolveLocusChoice`
+ * against the supplied context and target, and construct only from a genuine
+ * `LOCUS_SELECTION_REQUIRED` — which by R1-03 exists only where there really are several legitimate
+ * loci. The composite factory additionally binds the executor's own answer to that derivation: same
+ * position, same ambiguity, same complete locus-key set. An outcome from one target paired with
+ * another, or from one projection paired with another, produces no chooser.
+ *
+ * The loci a pending choice carries are the RE-RESOLVED ones, so what the surface offers is what the
+ * resolver says exists, not what a caller passed in. The result is branded at runtime, and
+ * `resolvePendingLocusChoice` re-checks that brand, so a hand-assembled pending object cannot act
+ * even if it reaches a surface.
  */
 import type { SessionPosition } from '../../state';
 import type { EntitledLocus, MapInspectionContext } from '../../map';
@@ -30,6 +49,7 @@ import { temporalRejected } from '../outcome';
 import {
   chooseLocus,
   commitMomentAndLocate,
+  resolveLocusChoice,
   type CommitMomentAndLocateOutcome,
   type TemporalLocateTarget,
 } from '../targeting';
@@ -56,27 +76,77 @@ export type PendingLocusChoice =
       readonly loci: readonly EntitledLocus[];
     };
 
+const minted = new WeakSet<object>();
+
+/** True only for a pending choice these factories produced from a real, re-derived ambiguity. */
+export function isPendingLocusChoice(value: unknown): value is PendingLocusChoice {
+  return typeof value === 'object' && value !== null && minted.has(value as object);
+}
+
 /**
- * Builds a pending composite choice from the executor's own answer. It is deliberately the ONLY way
- * to construct one from a composite act: a chooser can never be manufactured for a target that did
- * not actually stop on a genuine ambiguity.
+ * The complete legitimate locus set of this target in this projection, or `null` when there is no
+ * genuine ambiguity. This is the ONLY source of a chooser's options: it is derived, never accepted.
+ */
+function ambiguityOf(context: MapInspectionContext, target: TemporalLocateTarget): readonly EntitledLocus[] | null {
+  if (context === null || typeof context !== 'object' || target === null || typeof target !== 'object') return null;
+  const resolution = resolveLocusChoice(context, target, undefined);
+  return resolution.outcome === 'LOCUS_SELECTION_REQUIRED' ? resolution.loci : null;
+}
+
+/**
+ * Whether two locus lists are the SAME set: same members and same count. Compared element-wise on
+ * sorted keys rather than through a joined string, so there is no separator to collide with and a
+ * duplicated entry changes the length and is refused rather than silently absorbed.
+ */
+function sameLocusSet(a: readonly EntitledLocus[], b: readonly EntitledLocus[]): boolean {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  const left = [...a].map((locus) => locus.key).sort();
+  const right = [...b].map((locus) => locus.key).sort();
+  return left.every((key, index) => key === right[index]);
+}
+
+/**
+ * Builds a pending composite choice, bound to the ambiguity that actually produced the outcome.
+ *
+ * Four things must agree before a chooser exists (R2-02): the outcome must be a genuine selection
+ * requirement; the supplied projection must describe the position that outcome commits to; that
+ * projection and target must STILL resolve to an ambiguity; and its complete locus-key set must be
+ * exactly the outcome's. An outcome from one target paired with another, or from one projection
+ * paired with another, or one whose set has since changed, produces nothing.
  */
 export function pendingCompositeChoice(
   outcome: CommitMomentAndLocateOutcome,
   context: MapInspectionContext,
   target: TemporalLocateTarget,
 ): Extract<PendingLocusChoice, { kind: 'COMPOSITE' }> | null {
-  if (outcome.outcome !== 'LOCUS_SELECTION_REQUIRED') return null;
-  return Object.freeze({ kind: 'COMPOSITE', moment: outcome.moment, context, target, loci: outcome.loci });
+  if (outcome === null || typeof outcome !== 'object' || outcome.outcome !== 'LOCUS_SELECTION_REQUIRED') return null;
+  if (context === null || typeof context !== 'object' || context.scene.tc !== outcome.moment) return null;
+  const loci = ambiguityOf(context, target);
+  if (loci === null) return null;
+  // The outcome's own set and the re-derived set must be the same set — same members, same count, so
+  // a subset, a superset and a duplicated entry are all refused.
+  if (!sameLocusSet(loci, outcome.loci)) return null;
+  // The RE-DERIVED loci are what the chooser offers: what the resolver says exists, never what a
+  // caller supplied alongside it.
+  const pending = Object.freeze({ kind: 'COMPOSITE', moment: outcome.moment, context, target, loci: Object.freeze([...loci]) } as const);
+  minted.add(pending);
+  return pending;
 }
 
-/** Builds a pending spatial choice. Only a genuine multiple-locus ambiguity produces one. */
+/**
+ * Builds a pending spatial choice by DERIVING the ambiguity, not by being told one. There is no
+ * loci parameter: zero and unique loci produce nothing, and a caller cannot substitute a different
+ * set, mix two targets, trim one or pad it with a foreign locus.
+ */
 export function pendingSpatialChoice(
   context: MapInspectionContext,
   target: TemporalLocateTarget,
-  loci: readonly EntitledLocus[],
 ): Extract<PendingLocusChoice, { kind: 'SPATIAL' }> | null {
-  return loci.length >= 2 ? Object.freeze({ kind: 'SPATIAL', context, target, loci }) : null;
+  const loci = ambiguityOf(context, target);
+  if (loci === null) return null;
+  const pending = Object.freeze({ kind: 'SPATIAL', context, target, loci: Object.freeze([...loci]) } as const);
+  minted.add(pending);
+  return pending;
 }
 
 export interface LocusChoiceOption {
@@ -143,8 +213,13 @@ export function resolvePendingLocusChoice(
   pending: PendingLocusChoice,
   locus: EntitledLocus,
 ): TemporalOutcome | CommitMomentAndLocateOutcome {
-  if (pending === null || typeof pending !== 'object' || locus === undefined || locus === null) {
+  if (locus === undefined || locus === null) {
     return temporalRejected('INVALID_INPUT', 'a pending contextual-locus choice names the locus it chooses');
+  }
+  // Defence in depth: even a pending object that reached a surface some other way cannot act, because
+  // only a factory-derived one carries the brand.
+  if (!isPendingLocusChoice(pending)) {
+    return temporalRejected('INVALID_INPUT', 'the pending contextual-locus choice was not derived from a genuine ambiguity');
   }
   if (!pending.loci.some((candidate) => candidate === locus)) {
     return temporalRejected('INVALID_INPUT', 'the chosen locus is not one of the legitimate choices this pending selection offers');

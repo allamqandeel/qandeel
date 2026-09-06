@@ -12,5 +12,11 @@ export type {
 } from './preview-state';
 export { IDLE_PREVIEW, createTemporalPreviewController } from './preview-state';
 
-export type { PreviewDisclosureLookup, PreviewProjection } from './preview-projection';
-export { previewProjection, previewProjectionRequest } from './preview-projection';
+export type { AuthorizedPreviewTarget, PreviewDisclosureLookup, PreviewProjection, PreviewTargetAuthorization } from './preview-projection';
+export {
+  authorizePreviewTarget,
+  isAuthorizedPreviewTarget,
+  previewProjection,
+  previewProjectionRequest,
+  projectAuthorizedPreviewTarget,
+} from './preview-projection';

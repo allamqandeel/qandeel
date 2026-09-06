@@ -1,20 +1,32 @@
 /**
- * T-06 — TN06-09, the preview half.
+ * T-06 — TN06-09 (the preview half) and R2-01.
  *
  * A preview may show a legitimate historical target, and only through the disclosure of THAT
- * position. The gate runs before the lookup, so an illegitimate position is never even asked about —
- * which is how "no future-history fetch path is introduced" is proven rather than asserted.
+ * position. Both gates — canonical Moment validity and current disclosed interaction availability —
+ * run before the lookup, so an illegitimate position is never even asked about, whatever the cache
+ * happens to be holding for it.
  */
 import type { HistoricalSemanticDepth } from '@qandeel/runtime';
 
 import { sessionPosition } from '../../state';
 import { disclosureFixture } from '../../map/__fixtures__/disclosure';
 import type { HistoricalDisclosureEntry } from '../../projection';
-import { previewProjection, previewProjectionRequest, type PreviewDisclosureLookup } from '../preview';
-import { temporalTestStore } from '../__fixtures__/temporal';
+import {
+  authorizePreviewTarget,
+  isAuthorizedPreviewTarget,
+  previewProjection,
+  previewProjectionRequest,
+  projectAuthorizedPreviewTarget,
+  type PreviewDisclosureLookup,
+} from '../preview';
+import { temporalTargeting } from '../targeting';
+import { fullyDisclosedTargeting, temporalTestStore, trackOf } from '../__fixtures__/temporal';
 
 const world = (tc: number, threads: readonly { id: string; x: string; y: string }[]) =>
   disclosureFixture({ depth: 'SESSION', tc, liveHead: 6, threads });
+
+const bigWorld = (tc: number, threads: readonly { id: string; x: string; y: string }[]) =>
+  disclosureFixture({ depth: 'SESSION', tc, liveHead: 100, threads });
 
 function recordingLookup(entries: Readonly<Record<number, HistoricalDisclosureEntry>>) {
   const asked: { sessionId: string; tc: number; depth: HistoricalSemanticDepth }[] = [];
@@ -32,7 +44,7 @@ describe('the bounded preview projection', () => {
       2: { status: 'FETCHED', value: world(2, [{ id: 'thread-1', x: '10', y: '10' }]), sealed: true },
     });
 
-    const resolved = previewProjection(store.getState(), 2, lookup);
+    const resolved = previewProjection(store.getState(), fullyDisclosedTargeting(store), 2, lookup);
     expect(resolved.status).toBe('PROJECTION');
     if (resolved.status !== 'PROJECTION') throw new Error('unreachable');
     expect(resolved.target).toBe(2);
@@ -42,6 +54,7 @@ describe('the bounded preview projection', () => {
 
   it('contains only what was known at the previewed position — nothing later is there to hide', () => {
     const store = temporalTestStore({ liveHead: 6 });
+    const targeting = fullyDisclosedTargeting(store);
     const { lookup } = recordingLookup({
       2: { status: 'FETCHED', value: world(2, [{ id: 'thread-1', x: '10', y: '10' }]), sealed: true },
       6: {
@@ -54,8 +67,8 @@ describe('the bounded preview projection', () => {
       },
     });
 
-    const earlier = previewProjection(store.getState(), 2, lookup);
-    const later = previewProjection(store.getState(), 6, lookup);
+    const earlier = previewProjection(store.getState(), targeting, 2, lookup);
+    const later = previewProjection(store.getState(), targeting, 6, lookup);
     if (earlier.status !== 'PROJECTION' || later.status !== 'PROJECTION') throw new Error('unreachable');
 
     expect([...earlier.context.scene.keys]).toEqual(['THREAD:thread-1']);
@@ -64,29 +77,33 @@ describe('the bounded preview projection', () => {
 
   it('performs no lookup at all for a position that may not be previewed', () => {
     const store = temporalTestStore({ liveHead: 4 });
+    const targeting = fullyDisclosedTargeting(store);
     const { asked, lookup } = recordingLookup({});
 
     for (const candidate of [5, 99, 0, -1, 1.5, Number.NaN, 'x', null]) {
-      const resolved = previewProjection(store.getState(), candidate, lookup);
-      expect(resolved.status).toBe('NOT_ADDRESSABLE');
+      expect(previewProjection(store.getState(), targeting, candidate, lookup).status).toBe('NOT_ADDRESSABLE');
     }
     // The decisive assertion: nothing beyond the Live Head was ever requested.
     expect(asked).toEqual([]);
-    expect(previewProjectionRequest(store.getState(), 5)).toBeNull();
-    expect(previewProjectionRequest(store.getState(), 4)).toEqual({ sessionId: 'session-1', tc: 4, depth: 'SESSION' });
+    expect(previewProjectionRequest(store.getState(), targeting, 5)).toBeNull();
+    expect(previewProjectionRequest(store.getState(), targeting, 4)).toEqual({ sessionId: 'session-1', tc: 4, depth: 'SESSION' });
   });
 
   it('keeps not-fetched, unavailable and disclosed-and-empty as three different answers', () => {
     const store = temporalTestStore({ liveHead: 6 });
+    const targeting = fullyDisclosedTargeting(store);
     const { lookup } = recordingLookup({
       1: { status: 'UNAVAILABLE', code: 'HISTORICAL_COVERAGE_UNAVAILABLE' },
       3: { status: 'FETCHED', value: world(3, []), sealed: true },
     });
 
-    expect(previewProjection(store.getState(), 2, lookup)).toMatchObject({ status: 'NOT_FETCHED', target: 2 });
-    expect(previewProjection(store.getState(), 1, lookup)).toMatchObject({ status: 'UNAVAILABLE', code: 'HISTORICAL_COVERAGE_UNAVAILABLE' });
+    expect(previewProjection(store.getState(), targeting, 2, lookup)).toMatchObject({ status: 'NOT_FETCHED', target: 2 });
+    expect(previewProjection(store.getState(), targeting, 1, lookup)).toMatchObject({
+      status: 'UNAVAILABLE',
+      code: 'HISTORICAL_COVERAGE_UNAVAILABLE',
+    });
 
-    const empty = previewProjection(store.getState(), 3, lookup);
+    const empty = previewProjection(store.getState(), targeting, 3, lookup);
     expect(empty.status).toBe('PROJECTION');
     if (empty.status !== 'PROJECTION') throw new Error('unreachable');
     // A sparse or empty historical view is a CORRECT view; nothing is borrowed to fill it.
@@ -98,9 +115,113 @@ describe('the bounded preview projection', () => {
     const { lookup } = recordingLookup({
       2: { status: 'FETCHED', value: world(5, [{ id: 'thread-1', x: '10', y: '10' }]), sealed: true },
     });
-    expect(previewProjection(store.getState(), sessionPosition(2), lookup)).toMatchObject({
+    expect(previewProjection(store.getState(), fullyDisclosedTargeting(store), sessionPosition(2), lookup)).toMatchObject({
       status: 'MALFORMED',
       reason: 'PROJECTION_TC_MISMATCH',
     });
+  });
+});
+
+describe('R2-01 — the preview projection consumes the disclosed interaction authority', () => {
+  const store = () => temporalTestStore({ liveHead: 100, depth: 'SESSION' });
+  const disclosedThrough = (target: ReturnType<typeof store>, count: number) => temporalTargeting(target.getState(), trackOf('session-1', count));
+
+  /** The reviewed shape: LH = 100, disclosed through SP(80), and the cache HOLDS SP(95). */
+  const cacheWithNinetyFive = () =>
+    recordingLookup({
+      80: { status: 'FETCHED', value: bigWorld(80, [{ id: 'thread-1', x: '10', y: '10' }]), sealed: true },
+      95: { status: 'FETCHED', value: bigWorld(95, [{ id: 'thread-1', x: '10', y: '10' }]), sealed: true },
+    });
+
+  it('cannot show a cached projection for a canonically valid but undisclosed Moment', () => {
+    const canonical = store();
+    const { asked, lookup } = cacheWithNinetyFive();
+
+    const refused = previewProjection(canonical.getState(), disclosedThrough(canonical, 80), 95, lookup);
+    expect(refused).toEqual({ status: 'NOT_ADDRESSABLE', code: 'NOT_DISCLOSED', detail: expect.any(String) });
+    // The decisive assertion: the cache was never consulted, so its contents could not have decided.
+    expect(asked).toHaveLength(0);
+    expect(previewProjectionRequest(canonical.getState(), disclosedThrough(canonical, 80), 95)).toBeNull();
+    expect(asked).toHaveLength(0);
+  });
+
+  it('proceeds for a disclosed position, asking exactly once for exactly that position', () => {
+    const canonical = store();
+    const { asked, lookup } = cacheWithNinetyFive();
+
+    const resolved = previewProjection(canonical.getState(), disclosedThrough(canonical, 80), 80, lookup);
+    expect(resolved.status).toBe('PROJECTION');
+    if (resolved.status !== 'PROJECTION') throw new Error('unreachable');
+    expect(resolved.context.scene.tc).toBe(80);
+    expect(asked).toEqual([{ sessionId: 'session-1', tc: 80, depth: 'SESSION' }]);
+  });
+
+  it('keeps the two refusals distinct rather than collapsing them into one', () => {
+    const canonical = store();
+    const { asked, lookup } = cacheWithNinetyFive();
+    const targeting = disclosedThrough(canonical, 80);
+
+    expect(previewProjection(canonical.getState(), targeting, 101, lookup)).toMatchObject({ code: 'BEYOND_LIVE_HEAD' });
+    expect(previewProjection(canonical.getState(), targeting, 95, lookup)).toMatchObject({ code: 'NOT_DISCLOSED' });
+    expect(previewProjection(canonical.getState(), targeting, 0, lookup)).toMatchObject({ code: 'NOT_ADDRESSABLE' });
+    expect(asked).toHaveLength(0);
+  });
+
+  it('fails a foreign Session before the lookup', () => {
+    const canonical = store();
+    const { asked, lookup } = cacheWithNinetyFive();
+    const foreignTrack = temporalTargeting(canonical.getState(), trackOf('session-2', 100));
+
+    expect(previewProjection(canonical.getState(), foreignTrack, 80, lookup)).toMatchObject({ code: 'SESSION_MISMATCH' });
+
+    // And a targeting authority built for another store proves nothing about this one.
+    const otherStore = temporalTestStore({ sessionId: 'session-2', liveHead: 100 });
+    const otherTargeting = temporalTargeting(otherStore.getState(), trackOf('session-2', 100));
+    expect(previewProjection(canonical.getState(), otherTargeting, 80, lookup)).toMatchObject({ code: 'SESSION_MISMATCH' });
+    expect(asked).toHaveLength(0);
+  });
+
+  it('lets disclosure growth make the previously undisclosed position available', () => {
+    const canonical = store();
+    const { asked, lookup } = cacheWithNinetyFive();
+
+    expect(previewProjection(canonical.getState(), disclosedThrough(canonical, 80), 95, lookup)).toMatchObject({ code: 'NOT_DISCLOSED' });
+    expect(asked).toHaveLength(0);
+
+    // The Track grows to include SP(95). The same deliberate request now reaches it.
+    const grown = previewProjection(canonical.getState(), disclosedThrough(canonical, 95), 95, lookup);
+    expect(grown.status).toBe('PROJECTION');
+    expect(asked).toEqual([{ sessionId: 'session-1', tc: 95, depth: 'SESSION' }]);
+  });
+
+  it('mints an authorization only through the gates, and refuses a forged one', () => {
+    const canonical = store();
+    const { asked, lookup } = cacheWithNinetyFive();
+
+    const refused = authorizePreviewTarget(canonical.getState(), disclosedThrough(canonical, 80), 95);
+    expect(refused).toMatchObject({ ok: false, code: 'NOT_DISCLOSED' });
+
+    const granted = authorizePreviewTarget(canonical.getState(), disclosedThrough(canonical, 80), 80);
+    expect(granted.ok).toBe(true);
+    if (!granted.ok) throw new Error('unreachable');
+    expect(isAuthorizedPreviewTarget(granted.target)).toBe(true);
+    expect(granted.target).toEqual({ sessionId: 'session-1', tc: 80, depth: 'SESSION' });
+
+    // A structurally perfect copy is not an authorization, and cannot reach the lookup.
+    const forged = { ...granted.target, tc: sessionPosition(95) };
+    expect(isAuthorizedPreviewTarget(forged)).toBe(false);
+    expect(projectAuthorizedPreviewTarget(forged, lookup)).toMatchObject({ status: 'NOT_ADDRESSABLE', code: 'INVALID_INPUT' });
+    expect(asked).toHaveLength(0);
+
+    // The genuine token projects exactly its own position.
+    expect(projectAuthorizedPreviewTarget(granted.target, lookup).status).toBe('PROJECTION');
+    expect(asked).toEqual([{ sessionId: 'session-1', tc: 80, depth: 'SESSION' }]);
+  });
+
+  it('never lets the camera depth come from the caller', () => {
+    const canonical = temporalTestStore({ liveHead: 100, depth: 'WORLD' });
+    const { asked, lookup } = recordingLookup({});
+    previewProjection(canonical.getState(), disclosedThrough(canonical, 80), 80, lookup);
+    expect(asked).toEqual([{ sessionId: 'session-1', tc: 80, depth: 'WORLD' }]);
   });
 });

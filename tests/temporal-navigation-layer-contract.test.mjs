@@ -212,8 +212,7 @@ test('R1-04 — the pending contextual-locus choice has a pointer route and a no
   const surface = code['locus-choice/LocusChoiceSurface.tsx'];
 
   // A chooser can be built only from a genuine ambiguity.
-  assert.match(pending, /if \(outcome\.outcome !== 'LOCUS_SELECTION_REQUIRED'\) return null;/u);
-  assert.match(pending, /return loci\.length >= 2 \? Object\.freeze\(\{ kind: 'SPATIAL'/u);
+  assert.match(pending, /outcome\.outcome !== 'LOCUS_SELECTION_REQUIRED'\) return null;/u);
   // Only an offered choice may be submitted, and it goes through the existing executors.
   assert.match(pending, /if \(!pending\.loci\.some\(\(candidate\) => candidate === locus\)\) \{/u);
   assert.match(pending, /\? commitMomentAndLocate\(store, \{ moment: pending\.moment, context: pending\.context, target: pending\.target, locus \}\)/u);
@@ -222,8 +221,12 @@ test('R1-04 — the pending contextual-locus choice has a pointer route and a no
   assert.match(pending, /const options = pending\.loci\.map\(\(locus\) =>/u);
   assert.match(pending, /orderingNote: CONTEXT_ORDER_NOTE,/u);
   assert.match(pending, /The order is not a ranking\./u);
-  for (const forbidden of ['slice(0, 1)', 'sort(', 'filter(', 'reverse(', 'preselect', 'defaultOption']) {
-    assert.equal(pending.includes(forbidden), false, `the chooser must not ${forbidden} the legitimate options`);
+  // The options are built by mapping the pending set one-to-one: nothing is trimmed, reordered,
+  // padded, preselected or elected on the way to the surface.
+  const modelBody = pending.slice(pending.indexOf('export function locusChoiceModel'), pending.indexOf('export function resolvePendingLocusChoice'));
+  assert.ok(modelBody.length > 0, 'the presentable model is built in one place');
+  for (const forbidden of ['slice(', 'sort(', 'filter(', 'reverse(', 'preselect', 'defaultOption', 'shift(', 'pop(']) {
+    assert.equal(modelBody.includes(forbidden), false, `the chooser must not ${forbidden} the legitimate options`);
   }
 
   // Both routes exist and converge on ONE resolver.
@@ -242,6 +245,45 @@ test('R1-04 — the pending contextual-locus choice has a pointer route and a no
   }
   // A submission the chooser does not offer cannot reach the executor at all.
   assert.match(surface, /const option = model\.options\.find\(\(candidate\) => candidate\.key === key\);\s*\n\s*if \(option === undefined\) return;/u);
+});
+
+// R2-02 — a chooser cannot be constructed from a list somebody supplied. Both factories DERIVE the
+// legitimate set, and the composite one binds the executor's answer to that derivation.
+test('R2-02 — pending-choice construction is provenance-bound, not shape-bound', () => {
+  const pending = code['locus-choice/pending-locus-choice.ts'];
+
+  // Neither factory takes a locus list at all, and the spatial one takes exactly two parameters.
+  assert.match(pending, /export function pendingSpatialChoice\(\s*\n\s*context: MapInspectionContext,\s*\n\s*target: TemporalLocateTarget,\s*\n\s*\): Extract<PendingLocusChoice, \{ kind: 'SPATIAL' \}> \| null \{/u);
+  assert.doesNotMatch(pending, /pendingSpatialChoice\([^)]*loci/u, 'the spatial factory must not accept a caller-supplied locus list');
+  assert.equal(pending.includes('loci.length >= 2'), false, 'a length check is not provenance');
+
+  // The set is DERIVED, once, from the resolver — which by R1-03 answers only for a real ambiguity.
+  assert.match(pending, /function ambiguityOf\(context: MapInspectionContext, target: TemporalLocateTarget\): readonly EntitledLocus\[\] \| null \{/u);
+  assert.match(pending, /const resolution = resolveLocusChoice\(context, target, undefined\);\s*\n\s*return resolution\.outcome === 'LOCUS_SELECTION_REQUIRED' \? resolution\.loci : null;/u);
+  assert.equal((pending.match(/resolveLocusChoice\(/gu) ?? []).length, 1, 'the ambiguity is derived in exactly one place');
+  assert.equal((pending.match(/ambiguityOf\(context, target\)/gu) ?? []).length, 2, 'both factories derive their own set');
+
+  // The composite factory binds the outcome to that derivation: same position, same complete set.
+  assert.match(pending, /context\.scene\.tc !== outcome\.moment\) return null;/u);
+  assert.match(pending, /if \(!sameLocusSet\(loci, outcome\.loci\)\) return null;/u);
+  // Same members AND same count, so a subset, a superset and a duplicate are each refused.
+  assert.match(pending, /if \(!Array\.isArray\(a\) \|\| !Array\.isArray\(b\) \|\| a\.length !== b\.length\) return false;/u);
+  assert.match(pending, /return left\.every\(\(key, index\) => key === right\[index\]\);/u);
+
+  // What the chooser offers is the RE-DERIVED set, never a caller's array.
+  assert.equal((pending.match(/loci: Object\.freeze\(\[\.\.\.loci\]\)/gu) ?? []).length, 2, 'both factories carry the derived set');
+  assert.equal(pending.includes('loci: outcome.loci'), false, 'the outcome list is evidence, never the offered set');
+
+  // The result is branded, and execution re-checks the brand as defence in depth.
+  assert.match(pending, /const minted = new WeakSet<object>\(\);/u);
+  assert.equal((pending.match(/minted\.add\(/gu) ?? []).length, 2, 'exactly the two factories mint a pending choice');
+  assert.match(pending, /export function isPendingLocusChoice\(value: unknown\): value is PendingLocusChoice \{/u);
+  assert.match(pending, /if \(!isPendingLocusChoice\(pending\)\) \{/u);
+  // Nothing outside this module can mint one.
+  for (const [name, text] of Object.entries(code)) {
+    if (name === 'locus-choice/pending-locus-choice.ts') continue;
+    assert.equal(text.includes('minted.add('), false, `${name} must not mint a pending choice`);
+  }
 });
 
 test('the T-01 technical shell stays byte-identical: the temporal layer is not mounted in the app container', async () => {
@@ -419,11 +461,53 @@ test('no future-history fetch path, no transport and no persistence exists in th
     assert.equal(layerText.includes(forbidden), false, `the temporal layer must not contain ${forbidden}`);
   }
   // The preview projection reads what the projection boundary already holds, through an injected
-  // lookup, and it runs the addressability gate BEFORE that lookup.
+  // lookup, and it runs BOTH gates before that lookup (R2-01).
   const projection = code['preview/preview-projection.ts'];
   assert.match(projection, /export type PreviewDisclosureLookup = \(sessionId: string, tc: number, depth: SemanticDepth\) => HistoricalDisclosureEntry;/u);
-  assert.match(projection, /const resolved = resolveTemporalTarget\(temporalBounds\(state\), candidate\);\s*\n\s*if \(!resolved\.ok\) return \{ status: 'NOT_ADDRESSABLE'/u);
-  assert.equal((projection.match(/lookup\(/gu) ?? []).length, 1, 'exactly one lookup, and it is downstream of the gate');
+  assert.equal((projection.match(/lookup\(/gu) ?? []).length, 1, 'exactly one lookup, and it is downstream of the gates');
+});
+
+// R2-01 — the preview projection consumes the same disclosed interaction authority as targeting, so
+// a canonically valid but undisclosed Moment cannot be looked up however the cache is populated.
+test('R2-01 — no preview projection lookup can happen without the disclosed authority', () => {
+  const projection = code['preview/preview-projection.ts'];
+
+  // The canonical gate is never the only thing consulted here any more.
+  assert.equal(projection.includes('resolveTemporalTarget('), false, 'the preview projection must not use the canonical gate directly');
+  assert.equal(projection.includes('temporalBounds('), false, 'the preview projection must not build its own canonical bounds');
+  // Both public entry points require the disclosed targeting authority.
+  assert.match(projection, /export function previewProjectionRequest\(state: CanonicalState, targeting: TemporalTargeting, candidate: unknown\): MapProjectionRequest \| null \{/u);
+  assert.match(
+    projection,
+    /export function previewProjection\(\s*\n\s*state: CanonicalState,\s*\n\s*targeting: TemporalTargeting,\s*\n\s*candidate: unknown,\s*\n\s*lookup: PreviewDisclosureLookup,\s*\n\s*\): PreviewProjection \{/u,
+  );
+  // Authorization is the one gate, it delegates to the shared disclosed rule, and it is the only
+  // thing either entry point consults before projecting.
+  assert.match(projection, /export function authorizePreviewTarget\(\s*\n\s*state: CanonicalState,\s*\n\s*targeting: TemporalTargeting,\s*\n\s*candidate: unknown,\s*\n\s*\): PreviewTargetAuthorization \{/u);
+  assert.match(projection, /const resolved = resolveDisclosedTarget\(targeting, candidate\);\s*\n\s*if \(!resolved\.ok\) return \{ ok: false, code: resolved\.code, detail: resolved\.detail \};/u);
+  assert.equal((projection.match(/resolveDisclosedTarget\(/gu) ?? []).length, 1, 'the disclosed rule is consulted in exactly one place');
+  assert.equal((projection.match(/authorizePreviewTarget\(state, targeting, candidate\)/gu) ?? []).length, 2, 'both entry points authorize the same way');
+  // The Session must agree between the state and the authority it is judged against.
+  assert.match(projection, /if \(targeting\.bounds\.sessionId !== state\.session\.id\) \{/u);
+  // The depth is read from canonical state, never taken from the caller.
+  assert.match(projection, /depth: state\.camera\.depth,/u);
+
+  // The lookup is reachable only through a runtime-branded token, so it cannot be reached by
+  // handing the projector a plausible-looking object.
+  assert.match(projection, /const authorized = new WeakSet<object>\(\);/u);
+  assert.equal((projection.match(/authorized\.add\(/gu) ?? []).length, 1, 'exactly one place mints a preview authorization');
+  assert.match(projection, /export function projectAuthorizedPreviewTarget\(target: AuthorizedPreviewTarget, lookup: PreviewDisclosureLookup\): PreviewProjection \{\s*\n\s*if \(!isAuthorizedPreviewTarget\(target\)\) \{/u);
+  // The cache is never an authorization source. Authorization is decided entirely before the lookup
+  // exists: the authorizing function neither takes nor mentions one.
+  const authorizeBody = projection.slice(projection.indexOf('export function authorizePreviewTarget'), projection.indexOf('export type PreviewProjection'));
+  assert.ok(authorizeBody.length > 0, 'the authorizing function is defined before the projection answers');
+  for (const forbidden of ['lookup', 'entry', 'cache', 'liveHead']) {
+    assert.equal(authorizeBody.includes(forbidden), false, `authorization must not consult ${forbidden}`);
+  }
+  // Every refusal stays distinct rather than collapsing into one.
+  for (const status of ['PROJECTION', 'NOT_FETCHED', 'UNAVAILABLE', 'MALFORMED', 'NOT_ADDRESSABLE']) {
+    assert.ok(projection.includes(`status: '${status}'`), `${status} remains a distinct answer`);
+  }
 });
 
 test('no temporal act can be reached from a camera act, an animation or a presentation movement', () => {
@@ -599,6 +683,18 @@ test('no timestamp, wall clock or presentation quantity is ever temporal authori
     /case 'MOMENT':\s*\n\s*return commitMoment\(store, intent\.sp\);\s*\n\s*case 'LIVE_EDGE':\s*\n\s*return commitLiveEdge\(store\);/u,
   );
   assert.equal((code['targeting/commit.ts'].match(/commitLiveEdge\(store\)/gu) ?? []).length, 2, 'the Live Edge is committed from exactly the two explicit Live routes');
+});
+
+test('every T-06 source file is real text: no control byte can make git treat it as binary', () => {
+  // A stray NUL renders a file binary to git, so it stops being diffable and reviewable — and it is
+  // invisible in every editor. It is worth one assertion to keep the layer readable.
+  for (const [name, text] of Object.entries(sources)) {
+    const control = [...text].findIndex((character) => {
+      const code = character.codePointAt(0) ?? 0;
+      return code < 0x20 && character !== '\n' && character !== '\t';
+    });
+    assert.equal(control, -1, `${name} contains a control character at index ${control}`);
+  }
 });
 
 test('no credential or public runtime secret in the temporal layer', () => {

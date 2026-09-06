@@ -16,6 +16,7 @@ import {
   LOCUS_CHOICE_CANCEL_TEST_ID,
   LOCUS_CHOICE_TEST_ID,
   LocusChoiceSurface,
+  isPendingLocusChoice,
   locusChoiceModel,
   pendingCompositeChoice,
   pendingSpatialChoice,
@@ -173,14 +174,14 @@ describe('R1-04 — the pending contextual-locus choice model', () => {
     });
     expect(pendingCompositeChoice(applied, context, READING)).toBeNull();
     // And a zero- or one-locus spatial state produces no chooser either.
-    expect(pendingSpatialChoice(context, FOCUS, [])).toBeNull();
-    expect(pendingSpatialChoice(context, READING, entitledLoci(contextAt(unambiguous()).scene, 'READING', 'reading-1'))).toBeNull();
+    expect(pendingSpatialChoice(context, FOCUS)).toBeNull();
+    expect(pendingSpatialChoice(contextAt(unambiguous()), READING)).toBeNull();
   });
 
   it('presents every legitimate choice, exactly once, with no ranking or preselection', () => {
     const context = contextAt(ambiguous());
     const loci = entitledLoci(context.scene, 'READING', 'reading-1');
-    const pending = pendingSpatialChoice(context, READING, loci);
+    const pending = pendingSpatialChoice(context, READING);
     if (pending === null) throw new Error('unreachable');
 
     const model = locusChoiceModel(pending);
@@ -199,12 +200,11 @@ describe('R1-04 — the pending contextual-locus choice model', () => {
   it('refuses a submission that is not one of the offered choices', () => {
     const store = temporalTestStore({ liveHead: 6 });
     const context = contextAt(ambiguous());
-    const loci = entitledLoci(context.scene, 'READING', 'reading-1');
-    const pending = pendingSpatialChoice(context, READING, loci);
+    const pending = pendingSpatialChoice(context, READING);
     if (pending === null) throw new Error('unreachable');
     const before = store.getState();
 
-    expect(resolvePendingLocusChoice(store, pending, { ...loci[0] })).toMatchObject({ outcome: 'REJECTED', code: 'INVALID_INPUT' });
+    expect(resolvePendingLocusChoice(store, pending, { ...pending.loci[0] })).toMatchObject({ outcome: 'REJECTED', code: 'INVALID_INPUT' });
     expect(resolvePendingLocusChoice(store, pending, entitledLoci(context.scene, 'THREAD', 'thread-1')[0])).toMatchObject({
       outcome: 'REJECTED',
       code: 'INVALID_INPUT',
@@ -232,15 +232,211 @@ describe('R1-04 — the pending contextual-locus choice model', () => {
   it('fails closed when the pending projection stops being the one the act would commit to', () => {
     const store = temporalTestStore({ liveHead: 6 });
     const context = contextAt(ambiguous());
-    const loci = entitledLoci(context.scene, 'READING', 'reading-1');
-    const pending = pendingSpatialChoice(context, READING, loci);
+    const pending = pendingSpatialChoice(context, READING);
     if (pending === null) throw new Error('unreachable');
 
     expect(commitMoment(store, 3).outcome).toBe('APPLIED');
     const after = store.getState();
 
-    expect(resolvePendingLocusChoice(store, pending, loci[0])).toMatchObject({ outcome: 'REJECTED', code: 'STALE_PROJECTION' });
+    expect(resolvePendingLocusChoice(store, pending, pending.loci[0])).toMatchObject({ outcome: 'REJECTED', code: 'STALE_PROJECTION' });
     expect(store.getState()).toBe(after);
+  });
+});
+
+describe('R2-02 — pending-choice construction is provenance-bound', () => {
+  /** A third context where the SAME Reading has THREE legitimate loci. */
+  const threeLoci = () =>
+    disclosureFixture({
+      depth: 'SESSION',
+      tc: 6,
+      liveHead: 6,
+      threads: [THREAD_ONE, THREAD_TWO, { id: 'thread-3', x: '150', y: '150' }],
+      appearances: [
+        { bindingId: 'binding-a', threadId: 'thread-1', readingId: 'reading-1', boundSp: 2 },
+        { bindingId: 'binding-b', threadId: 'thread-2', readingId: 'reading-1', boundSp: 5 },
+        { bindingId: 'binding-c', threadId: 'thread-3', readingId: 'reading-1', boundSp: 6 },
+      ],
+    });
+
+  /** A second Reading, also with two loci, so a "foreign but legitimate" locus exists. */
+  const twoReadings = () =>
+    disclosureFixture({
+      depth: 'SESSION',
+      tc: 6,
+      liveHead: 6,
+      threads: [THREAD_ONE, THREAD_TWO],
+      appearances: [
+        { bindingId: 'binding-a', threadId: 'thread-1', readingId: 'reading-1', boundSp: 2 },
+        { bindingId: 'binding-b', threadId: 'thread-2', readingId: 'reading-1', boundSp: 5 },
+        { bindingId: 'binding-c', threadId: 'thread-1', readingId: 'reading-2', boundSp: 3 },
+        { bindingId: 'binding-d', threadId: 'thread-2', readingId: 'reading-2', boundSp: 4 },
+      ],
+      readings: [{ id: 'reading-1' }, { id: 'reading-2' }],
+    });
+
+  const OTHER_READING = { family: 'READING', id: 'reading-2' } as const;
+
+  describe('the spatial factory', () => {
+    it('derives the complete legitimate set itself, and takes no loci from the caller', () => {
+      const context = contextAt(ambiguous());
+      const pending = pendingSpatialChoice(context, READING);
+      if (pending === null) throw new Error('unreachable');
+
+      expect(pending.loci.map((locus) => locus.key).sort()).toEqual(
+        entitledLoci(context.scene, 'READING', 'reading-1')
+          .map((locus) => locus.key)
+          .sort(),
+      );
+      // The signature itself is the guarantee: there is no parameter through which a different set
+      // could be supplied.
+      expect(pendingSpatialChoice).toHaveLength(2);
+    });
+
+    it('produces nothing for zero or one legitimate locus', () => {
+      expect(pendingSpatialChoice(contextAt(unambiguous()), FOCUS)).toBeNull();
+      expect(pendingSpatialChoice(contextAt(unambiguous()), READING)).toBeNull();
+    });
+
+    it('offers the complete set of a three-locus ambiguity, never a subset', () => {
+      const pending = pendingSpatialChoice(contextAt(threeLoci()), READING);
+      if (pending === null) throw new Error('unreachable');
+      expect(pending.loci).toHaveLength(3);
+      expect(new Set(pending.loci.map((locus) => locus.key)).size).toBe(3);
+    });
+
+    it('cannot be made to mix two targets, because each target derives its own set', () => {
+      const context = contextAt(twoReadings());
+      const first = pendingSpatialChoice(context, READING);
+      const second = pendingSpatialChoice(context, OTHER_READING);
+      if (first === null || second === null) throw new Error('unreachable');
+
+      const firstKeys = new Set(first.loci.map((locus) => locus.key));
+      for (const locus of second.loci) expect(firstKeys.has(locus.key)).toBe(false);
+      expect(first.loci).toHaveLength(2);
+      expect(second.loci).toHaveLength(2);
+    });
+  });
+
+  describe('the composite factory', () => {
+    const outcomeFor = (context: ReturnType<typeof contextAt>, target: typeof READING) =>
+      commitMomentAndLocate(temporalTestStore({ liveHead: 6 }), { moment: sessionPosition(6), context, target });
+
+    it('binds a genuine outcome to the matching context and target', () => {
+      const context = contextAt(ambiguous());
+      const pending = pendingCompositeChoice(outcomeFor(context, READING), context, READING);
+      expect(pending).not.toBeNull();
+      expect(pending?.loci).toHaveLength(2);
+    });
+
+    it('refuses the same outcome paired with a different target', () => {
+      const context = contextAt(twoReadings());
+      const outcome = outcomeFor(context, READING);
+      // `reading-2` genuinely has two loci here, so this is not refused for lack of ambiguity — it is
+      // refused because the outcome's set is not this target's set.
+      expect(pendingSpatialChoice(context, OTHER_READING)).not.toBeNull();
+      expect(pendingCompositeChoice(outcome, context, OTHER_READING)).toBeNull();
+    });
+
+    it('refuses the same outcome paired with a different projection', () => {
+      const outcome = outcomeFor(contextAt(ambiguous()), READING);
+      // Same position, same target, different world: a third locus exists there, so the key sets
+      // differ and the binding fails.
+      expect(pendingCompositeChoice(outcome, contextAt(threeLoci()), READING)).toBeNull();
+    });
+
+    it('refuses an outcome whose position is not the one the projection describes', () => {
+      const earlier = contextAt(
+        disclosureFixture({
+          depth: 'SESSION',
+          tc: 3,
+          liveHead: 6,
+          threads: [THREAD_ONE, THREAD_TWO],
+          appearances: [
+            { bindingId: 'binding-a', threadId: 'thread-1', readingId: 'reading-1', boundSp: 2 },
+            { bindingId: 'binding-b', threadId: 'thread-2', readingId: 'reading-1', boundSp: 3 },
+          ],
+        }),
+      );
+      // The outcome commits to Moment 6; this projection describes Moment 3.
+      expect(pendingCompositeChoice(outcomeFor(contextAt(ambiguous()), READING), earlier, READING)).toBeNull();
+    });
+
+    it('refuses an applied unique-locus outcome and a rejected one', () => {
+      const context = contextAt(ambiguous());
+      const applied = commitMomentAndLocate(temporalTestStore({ liveHead: 6 }), {
+        moment: sessionPosition(6),
+        context: contextAt(unambiguous()),
+        target: READING,
+      });
+      expect(applied.outcome).toBe('APPLIED');
+      expect(pendingCompositeChoice(applied, context, READING)).toBeNull();
+
+      const rejected = commitMomentAndLocate(temporalTestStore({ liveHead: 6 }), {
+        moment: sessionPosition(6),
+        context,
+        target: FOCUS,
+      });
+      expect(rejected.outcome).toBe('REJECTED');
+      expect(pendingCompositeChoice(rejected, context, FOCUS)).toBeNull();
+    });
+
+    it('refuses a hand-assembled outcome carrying a subset, a superset or duplicates', () => {
+      const context = contextAt(threeLoci());
+      const genuine = outcomeFor(context, READING);
+      if (genuine.outcome !== 'LOCUS_SELECTION_REQUIRED') throw new Error('unreachable');
+      expect(genuine.loci).toHaveLength(3);
+
+      const subset = { outcome: 'LOCUS_SELECTION_REQUIRED', moment: genuine.moment, loci: genuine.loci.slice(0, 2) } as const;
+      const duplicated = { outcome: 'LOCUS_SELECTION_REQUIRED', moment: genuine.moment, loci: [genuine.loci[0], genuine.loci[0], genuine.loci[1]] } as const;
+      const foreign = entitledLoci(contextAt(twoReadings()).scene, 'READING', 'reading-2')[0];
+      const superset = { outcome: 'LOCUS_SELECTION_REQUIRED', moment: genuine.moment, loci: [...genuine.loci, foreign] } as const;
+
+      expect(pendingCompositeChoice(subset, context, READING)).toBeNull();
+      expect(pendingCompositeChoice(duplicated, context, READING)).toBeNull();
+      expect(pendingCompositeChoice(superset, context, READING)).toBeNull();
+      // The genuine one still works, so these refusals are about provenance, not about the shape.
+      expect(pendingCompositeChoice(genuine, context, READING)).not.toBeNull();
+    });
+  });
+
+  describe('the brand', () => {
+    it('refuses a hand-assembled pending choice at execution time', () => {
+      const store = temporalTestStore({ liveHead: 6 });
+      const context = contextAt(ambiguous());
+      const genuine = pendingSpatialChoice(context, READING);
+      if (genuine === null) throw new Error('unreachable');
+      const before = store.getState();
+
+      expect(isPendingLocusChoice(genuine)).toBe(true);
+      const forged = { ...genuine };
+      expect(isPendingLocusChoice(forged)).toBe(false);
+      expect(resolvePendingLocusChoice(store, forged, genuine.loci[0])).toMatchObject({ outcome: 'REJECTED', code: 'INVALID_INPUT' });
+      expect(store.getState()).toBe(before);
+    });
+  });
+
+  describe('surface truth', () => {
+    it('renders exactly the provenance-valid options, with no foreign or missing choice', async () => {
+      const store = temporalTestStore({ liveHead: 6 });
+      const context = contextAt(threeLoci());
+      const pending = pendingSpatialChoice(context, READING);
+      if (pending === null) throw new Error('unreachable');
+
+      const view = await render(<LocusChoiceSurface store={store} pending={pending} />);
+      const surface = view.getByTestId(LOCUS_CHOICE_TEST_ID);
+      const actionNames = (surface.props.accessibilityActions as { name: string }[]).map((action) => action.name);
+      const expected = entitledLoci(context.scene, 'READING', 'reading-1').map((locus) => locus.key);
+
+      // Exactly the legitimate set, on both routes: nothing missing and nothing foreign.
+      expect(actionNames.filter((name) => name !== LOCUS_CHOICE_CANCEL_ACTION).sort()).toEqual([...expected].sort());
+      for (const key of expected) expect(view.getByTestId(`${LOCUS_CHOICE_TEST_ID}:option:${key}`)).toBeTruthy();
+      const foreign = entitledLoci(contextAt(twoReadings()).scene, 'READING', 'reading-2')[0];
+      expect(view.queryByTestId(`${LOCUS_CHOICE_TEST_ID}:option:${foreign.key}`)).toBeNull();
+
+      await act(async () => {
+        view.unmount();
+      });
+    });
   });
 });
 

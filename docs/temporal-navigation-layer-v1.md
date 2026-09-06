@@ -110,15 +110,36 @@ target, and it makes no-hindsight structural rather than aspirational:
 
 - it asks for `(Session, PTC, MC.depth)`. `K(PTC)` is what was known at `PTC`, so a later object is
   simply not in it — there is nothing to dim, ghost, grey out or "keep for stability";
-- `PTC` passes the addressability gate **before** any lookup, so a position beyond `LH` is never
-  asked about. No future-history request exists in the layer and none can be constructed through it
-  (TN06-09 asserts the lookup was never called);
+- `PTC` passes **both** gates before any lookup — canonical validity *and* disclosed interaction
+  availability (R2-01). A position beyond `LH` is never asked about, and neither is one that `LH`
+  makes valid but nothing has disclosed. No future-history request exists in the layer and none can
+  be constructed through it (the tests assert the lookup was never called);
 - the depth is the rung the camera already discloses. A preview never opens a rung not earned;
 - `NOT_FETCHED`, `UNAVAILABLE` and disclosed-and-empty stay three different answers. A sparse or
   empty historical view is a correct view, and nothing is borrowed from another position to fill it.
 
 T-06 introduces no transport. It reads what the projection boundary already holds, through an
 injected lookup whose shape is exactly `HistoricalDisclosureCache.lookup`.
+
+### The cache is evidence, not authority (R2-01)
+
+The disclosure cache legitimately holds projections the reader is not currently entitled to interact
+with — one fetched while the Track was longer, or held for a position the current prefix has not
+reached. Presence in it is therefore evidence about what was once fetched, never about what may be
+shown now.
+
+So `authorizePreviewTarget(state, targeting, candidate)` is the only route to a lookup. It checks
+that the targeting authority belongs to the same Session as the state it is judged against, then
+delegates to the shared disclosed rule, then mints an `AuthorizedPreviewTarget` carrying the Session,
+the position and the camera's own depth. The token is branded at runtime, and
+`projectAuthorizedPreviewTarget` re-checks the brand, so the lookup cannot be reached by handing the
+projector a plausible-looking object. `previewProjectionRequest` and `previewProjection` both go
+through the same authorization: neither can be driven from `CanonicalState` plus a bare candidate.
+
+The consequence the reviewed shape asked for: with `LH = 100`, a Track disclosed through `SP(80)`,
+and a cached projection sitting at `SP(95)`, asking for `SP(95)` returns `NOT_DISCLOSED` and the
+lookup spy is called **zero** times. Canonically invalid, beyond-Live-Head, not-disclosed,
+not-fetched, unavailable, malformed and disclosed-and-empty all remain distinct answers.
 
 ## 5. Relative forward continuation
 
@@ -237,11 +258,20 @@ preserves `TM` and `IF_ref`, and repeating the already-current landing stays a t
 A Product state that says "a choice is required" comes with a usable way to make it.
 `locus-choice/` is the narrowest truthful substrate for that — not chrome, not art direction:
 
-- `pendingCompositeChoice` can only be built from a genuine `LOCUS_SELECTION_REQUIRED` result, and
-  `pendingSpatialChoice` only from two or more loci, so a chooser cannot be manufactured;
+- **construction is provenance-bound, not shape-bound (R2-02).** Neither factory accepts a locus list
+  at all. Both DERIVE the complete legitimate set from `resolveLocusChoice(context, target)`, which by
+  R1-03 answers only where a real ambiguity exists, and the chooser offers that re-derived set — so a
+  caller cannot substitute a different list, mix two targets, trim one, pad it with a foreign locus,
+  or duplicate an entry. `pendingCompositeChoice` additionally binds the executor's own answer to that
+  derivation: the outcome must be a genuine selection requirement, the projection must describe the
+  position the outcome commits to, that projection and target must *still* resolve to an ambiguity,
+  and the complete locus-key set must match — same members, same count. The result is branded at
+  runtime and `resolvePendingLocusChoice` re-checks the brand, so a hand-assembled pending object
+  cannot act even if it reaches a surface;
 - `locusChoiceModel` offers every legitimate locus exactly once, in the disclosed scene's own
   deterministic order, and says out loud that the order is not a ranking. Nothing is preselected,
-  defaulted or described as preferable;
+  defaulted or described as preferable, and the options are a one-to-one map of the pending set —
+  never sliced, sorted, filtered or padded on the way to the surface;
 - `LocusChoiceSurface` gives each option a `Pressable` (pointer) **and** a container accessibility
   action keyed by the locus rather than by an index (non-pointer, no precision input). Both routes
   call one `choose`, which reaches one `resolvePendingLocusChoice`, which reaches the existing
