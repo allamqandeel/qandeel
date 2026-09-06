@@ -15,6 +15,7 @@ import {
   LOCUS_CHOICE_CANCEL_ACTION,
   LOCUS_CHOICE_CANCEL_TEST_ID,
   LOCUS_CHOICE_TEST_ID,
+  LOCUS_CHOICE_UNAVAILABLE_LABEL,
   LocusChoiceSurface,
   isPendingLocusChoice,
   locusChoiceModel,
@@ -185,6 +186,7 @@ describe('R1-04 — the pending contextual-locus choice model', () => {
     if (pending === null) throw new Error('unreachable');
 
     const model = locusChoiceModel(pending);
+    if (model === null) throw new Error('unreachable');
     expect(model.options).toHaveLength(2);
     expect(model.options.map((option) => option.key).sort()).toEqual([...loci].map((locus) => locus.key).sort());
     expect(new Set(model.options.map((option) => option.key)).size).toBe(2);
@@ -412,6 +414,93 @@ describe('R2-02 — pending-choice construction is provenance-bound', () => {
       expect(isPendingLocusChoice(forged)).toBe(false);
       expect(resolvePendingLocusChoice(store, forged, genuine.loci[0])).toMatchObject({ outcome: 'REJECTED', code: 'INVALID_INPUT' });
       expect(store.getState()).toBe(before);
+    });
+  });
+
+  describe('R3-03 — a forged pending choice cannot be rendered as Product truth', () => {
+    /** A structurally perfect object with genuine loci taken from TWO different targets. */
+    const forgedMixed = () => {
+      const context = contextAt(twoReadings());
+      const first = entitledLoci(context.scene, 'READING', 'reading-1')[0];
+      const foreign = entitledLoci(context.scene, 'READING', 'reading-2')[0];
+      return { kind: 'SPATIAL', context, target: READING, loci: [first, foreign] } as unknown as Parameters<typeof locusChoiceModel>[0];
+    };
+
+    it('produces no Product model from an unbranded pending choice', () => {
+      expect(locusChoiceModel(forgedMixed())).toBeNull();
+
+      // A copy of a genuine one loses its provenance too.
+      const genuine = pendingSpatialChoice(contextAt(ambiguous()), READING);
+      if (genuine === null) throw new Error('unreachable');
+      expect(locusChoiceModel(genuine)).not.toBeNull();
+      expect(locusChoiceModel({ ...genuine })).toBeNull();
+    });
+
+    it('renders no option and publishes no locus action for a forged pending choice', async () => {
+      const store = temporalTestStore({ liveHead: 6 });
+      const outcomes: string[] = [];
+      const forged = forgedMixed();
+      const before = store.getState();
+
+      const view = await render(<LocusChoiceSurface store={store} pending={forged} onOutcome={(outcome) => outcomes.push(outcome.outcome)} />);
+      const surface = view.getByTestId(LOCUS_CHOICE_TEST_ID);
+
+      // Nothing about the forged set reaches the reader, on either route.
+      expect(surface.props.accessibilityActions).toBeUndefined();
+      expect(surface.props.accessibilityLabel).toBe(LOCUS_CHOICE_UNAVAILABLE_LABEL);
+      expect(view.getByTestId(`${LOCUS_CHOICE_TEST_ID}:unavailable`)).toBeTruthy();
+      for (const locus of (forged as unknown as { loci: readonly { key: string }[] }).loci) {
+        expect(view.queryByTestId(`${LOCUS_CHOICE_TEST_ID}:option:${locus.key}`)).toBeNull();
+      }
+      // And no executor is reachable from it.
+      expect(outcomes).toEqual([]);
+      expect(store.getState()).toBe(before);
+
+      await act(async () => {
+        view.unmount();
+      });
+    });
+
+    it('lets the reader leave a fail-closed surface without performing any act', async () => {
+      const store = temporalTestStore({ liveHead: 6 });
+      let cancelled = 0;
+      const before = store.getState();
+      const view = await render(<LocusChoiceSurface store={store} pending={forgedMixed()} onCancel={() => (cancelled += 1)} />);
+
+      await act(async () => {
+        fireEvent.press(view.getByTestId(LOCUS_CHOICE_CANCEL_TEST_ID));
+      });
+
+      expect(cancelled).toBe(1);
+      expect(store.getState()).toBe(before);
+      expect(store.getState().history).toHaveLength(0);
+
+      await act(async () => {
+        view.unmount();
+      });
+    });
+
+    it('still renders a genuine pending choice in full, on both routes', async () => {
+      const store = temporalTestStore({ liveHead: 6 });
+      const context = contextAt(ambiguous());
+      const pending = pendingSpatialChoice(context, READING);
+      if (pending === null) throw new Error('unreachable');
+
+      const view = await render(<LocusChoiceSurface store={store} pending={pending} />);
+      const surface = view.getByTestId(LOCUS_CHOICE_TEST_ID);
+      const actionNames = (surface.props.accessibilityActions as { name: string }[]).map((action) => action.name);
+
+      expect(view.queryByTestId(`${LOCUS_CHOICE_TEST_ID}:unavailable`)).toBeNull();
+      for (const locus of pending.loci) {
+        expect(view.getByTestId(`${LOCUS_CHOICE_TEST_ID}:option:${locus.key}`)).toBeTruthy();
+        expect(actionNames).toContain(locus.key);
+      }
+      // Pointer and accessibility routes stay equivalent: one action per option, plus cancel.
+      expect(actionNames).toHaveLength(pending.loci.length + 1);
+
+      await act(async () => {
+        view.unmount();
+      });
     });
   });
 

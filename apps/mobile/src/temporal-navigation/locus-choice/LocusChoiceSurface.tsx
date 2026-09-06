@@ -31,6 +31,13 @@ export const LOCUS_CHOICE_CANCEL_TEST_ID = 'qandeel-locus-choice-cancel';
 /** The accessibility action that backs out of the choice. Option actions are keyed by locus. */
 export const LOCUS_CHOICE_CANCEL_ACTION = 'cancel-locus-choice';
 
+/**
+ * What the surface says when it is handed a choice with no provenance (R3-03). It names nothing,
+ * offers nothing and claims nothing: a chooser that cannot prove where its options came from has no
+ * options to show.
+ */
+export const LOCUS_CHOICE_UNAVAILABLE_LABEL = 'No contextual choice is available';
+
 export interface LocusChoiceSurfaceProps {
   readonly store: CanonicalStore;
   readonly pending: PendingLocusChoice;
@@ -47,13 +54,34 @@ export function LocusChoiceSurface({ store, pending, onOutcome, onCancel }: Locu
   // its argument when no observer is attached, which would silently disable the whole route.
   const choose = useCallback(
     (key: string) => {
-      const option = model.options.find((candidate) => candidate.key === key);
+      const option = model?.options.find((candidate) => candidate.key === key);
       if (option === undefined) return;
       const outcome = resolvePendingLocusChoice(store, pending, option.locus);
       onOutcome?.(outcome);
     },
     [model, store, pending, onOutcome],
   );
+
+  // No provenance, no model, nothing to render (R3-03). The reader is not shown a list of contexts
+  // the Product cannot vouch for, and there is no route from here to an executor: `choose` finds no
+  // option because there are none, and no locus action is published to assistive technology either.
+  // Backing out stays reachable so the reader is never stuck on a surface that offers nothing.
+  if (model === null) {
+    return (
+      <View testID={LOCUS_CHOICE_TEST_ID} style={styles.surface} accessibilityRole="none" accessibilityLabel={LOCUS_CHOICE_UNAVAILABLE_LABEL}>
+        <Text testID={`${LOCUS_CHOICE_TEST_ID}:unavailable`}>{LOCUS_CHOICE_UNAVAILABLE_LABEL}</Text>
+        <Pressable
+          testID={LOCUS_CHOICE_CANCEL_TEST_ID}
+          style={styles.option}
+          accessibilityRole="button"
+          accessibilityLabel="Leave without choosing"
+          onPress={() => onCancel?.()}
+        >
+          <Text>Leave without choosing</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View

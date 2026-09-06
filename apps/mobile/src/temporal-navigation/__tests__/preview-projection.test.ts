@@ -11,14 +11,9 @@ import type { HistoricalSemanticDepth } from '@qandeel/runtime';
 import { sessionPosition } from '../../state';
 import { disclosureFixture } from '../../map/__fixtures__/disclosure';
 import type { HistoricalDisclosureEntry } from '../../projection';
-import {
-  authorizePreviewTarget,
-  isAuthorizedPreviewTarget,
-  previewProjection,
-  previewProjectionRequest,
-  projectAuthorizedPreviewTarget,
-  type PreviewDisclosureLookup,
-} from '../preview';
+import * as previewModule from '../preview';
+import { previewProjection, previewProjectionRequest, type PreviewDisclosureLookup } from '../preview';
+import { zoomSemanticStep } from '../../map';
 import { temporalTargeting } from '../targeting';
 import { fullyDisclosedTargeting, temporalTestStore, trackOf } from '../__fixtures__/temporal';
 
@@ -194,34 +189,138 @@ describe('R2-01 — the preview projection consumes the disclosed interaction au
     expect(asked).toEqual([{ sessionId: 'session-1', tc: 95, depth: 'SESSION' }]);
   });
 
-  it('mints an authorization only through the gates, and refuses a forged one', () => {
-    const canonical = store();
-    const { asked, lookup } = cacheWithNinetyFive();
-
-    const refused = authorizePreviewTarget(canonical.getState(), disclosedThrough(canonical, 80), 95);
-    expect(refused).toMatchObject({ ok: false, code: 'NOT_DISCLOSED' });
-
-    const granted = authorizePreviewTarget(canonical.getState(), disclosedThrough(canonical, 80), 80);
-    expect(granted.ok).toBe(true);
-    if (!granted.ok) throw new Error('unreachable');
-    expect(isAuthorizedPreviewTarget(granted.target)).toBe(true);
-    expect(granted.target).toEqual({ sessionId: 'session-1', tc: 80, depth: 'SESSION' });
-
-    // A structurally perfect copy is not an authorization, and cannot reach the lookup.
-    const forged = { ...granted.target, tc: sessionPosition(95) };
-    expect(isAuthorizedPreviewTarget(forged)).toBe(false);
-    expect(projectAuthorizedPreviewTarget(forged, lookup)).toMatchObject({ status: 'NOT_ADDRESSABLE', code: 'INVALID_INPUT' });
-    expect(asked).toHaveLength(0);
-
-    // The genuine token projects exactly its own position.
-    expect(projectAuthorizedPreviewTarget(granted.target, lookup).status).toBe('PROJECTION');
-    expect(asked).toEqual([{ sessionId: 'session-1', tc: 80, depth: 'SESSION' }]);
-  });
-
   it('never lets the camera depth come from the caller', () => {
     const canonical = temporalTestStore({ liveHead: 100, depth: 'WORLD' });
     const { asked, lookup } = recordingLookup({});
     previewProjection(canonical.getState(), disclosedThrough(canonical, 80), 80, lookup);
     expect(asked).toEqual([{ sessionId: 'session-1', tc: 80, depth: 'WORLD' }]);
+  });
+});
+
+describe('R3-01 — canonical validity is judged from the state being projected, never from the caller', () => {
+  it('refuses a target that a foreign LATER Live Head would allow but this state does not', () => {
+    // The state being presented knows about 80 Moments.
+    const current = temporalTestStore({ liveHead: 80, depth: 'SESSION' });
+    // A targeting authority built from ANOTHER store for the SAME Session, further ahead: LH = 100
+    // and a Track that genuinely reaches SP(95) there.
+    const ahead = temporalTestStore({ liveHead: 100, depth: 'SESSION' });
+    const foreign = temporalTargeting(ahead.getState(), trackOf('session-1', 95));
+    expect(foreign.bounds.liveHead).toBe(100);
+    expect(foreign.disclosed.horizon).toBe(95);
+
+    const { asked, lookup } = recordingLookup({
+      95: { status: 'FETCHED', value: bigWorld(95, [{ id: 'thread-1', x: '10', y: '10' }]), sealed: true },
+    });
+
+    // The Session ids match, so only re-deriving canonical bounds from THIS state can refuse it.
+    const refused = previewProjection(current.getState(), foreign, 95, lookup);
+    expect(refused).toEqual({ status: 'NOT_ADDRESSABLE', code: 'BEYOND_LIVE_HEAD', detail: expect.any(String) });
+    expect(asked).toHaveLength(0);
+    expect(previewProjectionRequest(current.getState(), foreign, 95)).toBeNull();
+    expect(asked).toHaveLength(0);
+  });
+
+  it('still admits what the current state genuinely allows through that same foreign authority', () => {
+    const current = temporalTestStore({ liveHead: 80, depth: 'SESSION' });
+    const ahead = temporalTestStore({ liveHead: 100, depth: 'SESSION' });
+    const foreign = temporalTargeting(ahead.getState(), trackOf('session-1', 95));
+    const { asked, lookup } = recordingLookup({
+      80: { status: 'FETCHED', value: disclosureFixture({ depth: 'SESSION', tc: 80, liveHead: 80, threads: [] }), sealed: false },
+    });
+
+    // SP(80) is within this state's Live Head and is disclosed, so it proceeds — the fix narrows
+    // authority, it does not simply refuse anything carrying a foreign bounds snapshot.
+    expect(previewProjection(current.getState(), foreign, 80, lookup).status).toBe('PROJECTION');
+    expect(asked).toEqual([{ sessionId: 'session-1', tc: 80, depth: 'SESSION' }]);
+  });
+
+  it('is not widened by a stale EARLIER authority either: disclosure can only narrow', () => {
+    // Current state has advanced to 100; the targeting was built earlier, at LH = 80 with a Track
+    // through 80.
+    const current = temporalTestStore({ liveHead: 100, depth: 'SESSION' });
+    const earlier = temporalTestStore({ liveHead: 80, depth: 'SESSION' });
+    const stale = temporalTargeting(earlier.getState(), trackOf('session-1', 80));
+    const { asked, lookup } = recordingLookup({
+      80: { status: 'FETCHED', value: bigWorld(80, [{ id: 'thread-1', x: '10', y: '10' }]), sealed: true },
+      95: { status: 'FETCHED', value: bigWorld(95, [{ id: 'thread-1', x: '10', y: '10' }]), sealed: true },
+    });
+
+    // SP(80) remains valid.
+    expect(previewProjection(current.getState(), stale, 80, lookup).status).toBe('PROJECTION');
+    // The current, larger Live Head does NOT widen disclosed membership: SP(95) is still not in that
+    // Track, so it is refused as undisclosed rather than admitted because LH now reaches it.
+    expect(previewProjection(current.getState(), stale, 95, lookup)).toMatchObject({ code: 'NOT_DISCLOSED' });
+    expect(asked).toEqual([{ sessionId: 'session-1', tc: 80, depth: 'SESSION' }]);
+  });
+
+  it('keeps a different Session failing closed before the lookup', () => {
+    const current = temporalTestStore({ liveHead: 100 });
+    const other = temporalTestStore({ sessionId: 'session-2', liveHead: 100 });
+    const otherTargeting = temporalTargeting(other.getState(), trackOf('session-2', 100));
+    const { asked, lookup } = recordingLookup({});
+
+    expect(previewProjection(current.getState(), otherTargeting, 80, lookup)).toMatchObject({ code: 'SESSION_MISMATCH' });
+    expect(asked).toHaveLength(0);
+  });
+
+  it('refuses a malformed targeting authority outright', () => {
+    const current = temporalTestStore({ liveHead: 100 });
+    const { asked, lookup } = recordingLookup({});
+    for (const malformed of [null, undefined, {}, 'targeting']) {
+      expect(previewProjection(current.getState(), malformed as never, 80, lookup)).toMatchObject({
+        status: 'NOT_ADDRESSABLE',
+        code: 'INVALID_INPUT',
+      });
+    }
+    expect(asked).toHaveLength(0);
+  });
+});
+
+describe('R3-02 — no reusable preview-projection capability exists', () => {
+  it('exports no authorization token, projector or capability check at all', () => {
+    for (const forbidden of ['authorizePreviewTarget', 'isAuthorizedPreviewTarget', 'projectAuthorizedPreviewTarget', 'AuthorizedPreviewTarget']) {
+      expect(Object.keys(previewModule)).not.toContain(forbidden);
+    }
+    // Exactly the two atomic entry points, each of which authorizes against current state and
+    // projects in the same call.
+    expect(typeof previewModule.previewProjection).toBe('function');
+    expect(typeof previewModule.previewProjectionRequest).toBe('function');
+  });
+
+  it('uses the CURRENT camera depth on every call, so a depth change cannot be outrun', () => {
+    const canonical = temporalTestStore({ liveHead: 100, depth: 'SESSION' });
+    const targeting = temporalTargeting(canonical.getState(), trackOf('session-1', 100));
+    const { asked, lookup } = recordingLookup({});
+
+    expect(previewProjectionRequest(canonical.getState(), targeting, 80)).toEqual({ sessionId: 'session-1', tc: 80, depth: 'SESSION' });
+    previewProjection(canonical.getState(), targeting, 80, lookup);
+    expect(asked).toEqual([{ sessionId: 'session-1', tc: 80, depth: 'SESSION' }]);
+
+    // The camera moves to another rung through T-04's own executor.
+    expect(zoomSemanticStep(canonical, 'IN').outcome).toBe('APPLIED');
+    expect(canonical.getState().camera.depth).toBe('ANALYTICAL_OBJECT');
+
+    // There is no earlier authorization to replay, and the next call reads the new depth. Nothing a
+    // caller held from before can still ask for SESSION.
+    expect(previewProjectionRequest(canonical.getState(), targeting, 80)).toEqual({
+      sessionId: 'session-1',
+      tc: 80,
+      depth: 'ANALYTICAL_OBJECT',
+    });
+    previewProjection(canonical.getState(), targeting, 80, lookup);
+    expect(asked[1]).toEqual({ sessionId: 'session-1', tc: 80, depth: 'ANALYTICAL_OBJECT' });
+    expect(asked).toHaveLength(2);
+  });
+
+  it('cannot project for a Session the current state has left', () => {
+    const first = temporalTestStore({ liveHead: 100 });
+    const targeting = temporalTargeting(first.getState(), trackOf('session-1', 100));
+    const { asked, lookup } = recordingLookup({});
+
+    // The same targeting that worked a moment ago is powerless once the state is another Session.
+    expect(previewProjection(first.getState(), targeting, 80, lookup).status).not.toBe('NOT_ADDRESSABLE');
+    const replacement = temporalTestStore({ sessionId: 'session-2', liveHead: 100 });
+    expect(previewProjection(replacement.getState(), targeting, 80, lookup)).toMatchObject({ code: 'SESSION_MISMATCH' });
+    expect(asked).toHaveLength(1);
   });
 });

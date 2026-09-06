@@ -128,18 +128,50 @@ with — one fetched while the Track was longer, or held for a position the curr
 reached. Presence in it is therefore evidence about what was once fetched, never about what may be
 shown now.
 
-So `authorizePreviewTarget(state, targeting, candidate)` is the only route to a lookup. It checks
-that the targeting authority belongs to the same Session as the state it is judged against, then
-delegates to the shared disclosed rule, then mints an `AuthorizedPreviewTarget` carrying the Session,
-the position and the camera's own depth. The token is branded at runtime, and
-`projectAuthorizedPreviewTarget` re-checks the brand, so the lookup cannot be reached by handing the
-projector a plausible-looking object. `previewProjectionRequest` and `previewProjection` both go
-through the same authorization: neither can be driven from `CanonicalState` plus a bare candidate.
+So `authorizePreviewTarget(state, targeting, candidate)` is the only route to a lookup, and both
+public entry points — `previewProjectionRequest` and `previewProjection` — run it on every call.
+Neither can be driven from `CanonicalState` plus a bare candidate.
 
 The consequence the reviewed shape asked for: with `LH = 100`, a Track disclosed through `SP(80)`,
 and a cached projection sitting at `SP(95)`, asking for `SP(95)` returns `NOT_DISCLOSED` and the
 lookup spy is called **zero** times. Canonically invalid, beyond-Live-Head, not-disclosed,
 not-fetched, unavailable, malformed and disclosed-and-empty all remain distinct answers.
+
+### Each half of the gate comes from where it is true (R3-01)
+
+A `TemporalTargeting` carries two halves, and they do not have the same trustworthiness. Disclosure
+is a fact about what a *presentation* has been told; canonical validity is a fact about the *state*
+being projected. A caller that hands over both can therefore hand over a stale or foreign canonical
+half — a `TemporalBounds` snapshot taken when `LH` was larger, or one belonging to a Session that has
+since been replaced — and widen the gate it was supposed to pass through.
+
+So authorization takes only what the caller can legitimately narrow. It re-derives the canonical
+half from the state under judgement, `temporalBounds(state)`, and composes it with the caller's
+`targeting.disclosed` and nothing else:
+
+```ts
+const current: TemporalTargeting = { bounds: temporalBounds(state), disclosed: targeting.disclosed };
+```
+
+`targeting.bounds` is never read anywhere in the module. A stale snapshot can now only ever *narrow*
+what is reachable, which is the safe direction: disclosure that has fallen behind shows less, never
+more. A `targeting` whose `disclosed` half is missing is refused outright as `INVALID_INPUT` rather
+than partially trusted, so a half-built authority is not a quietly permissive one.
+
+### Authorization is a fact, not a capability (R3-02)
+
+The R2 shape minted an `AuthorizedPreviewTarget` and branded it, so that a projector could re-check
+the brand. That made authorization into an object with a lifetime — and an object with a lifetime can
+outlive the state that justified it. A token minted while the camera was at one depth, or while a
+Session was current, stays brand-valid after the camera moves and after the Session is replaced.
+
+T-06 keeps no such object. The token type, its authorization result and the low-level projector are
+all module-private; the barrel exports exactly `previewProjection` and `previewProjectionRequest`.
+There is no `WeakSet`, no module-level `Map` or `Set`, and nothing that survives a call: each entry
+point authorizes against the state handed to *that* call, and the Session, the position and the depth
+in the authorized target are read from that state (`state.session.id`, the resolved `SP`,
+`state.camera.depth`) rather than accepted from the caller. Freshness is therefore not something the
+layer has to remember to check — there is nothing old enough to be stale.
 
 ## 5. Relative forward continuation
 
@@ -265,9 +297,9 @@ A Product state that says "a choice is required" comes with a usable way to make
   or duplicate an entry. `pendingCompositeChoice` additionally binds the executor's own answer to that
   derivation: the outcome must be a genuine selection requirement, the projection must describe the
   position the outcome commits to, that projection and target must *still* resolve to an ambiguity,
-  and the complete locus-key set must match — same members, same count. The result is branded at
-  runtime and `resolvePendingLocusChoice` re-checks the brand, so a hand-assembled pending object
-  cannot act even if it reaches a surface;
+  and the complete locus-key set must match — same members, same count. The result is opaque to the
+  type system and branded at runtime; `resolvePendingLocusChoice` re-checks the brand and, by R3-03,
+  so does the surface, so a hand-assembled pending object can neither act nor be displayed;
 - `locusChoiceModel` offers every legitimate locus exactly once, in the disclosed scene's own
   deterministic order, and says out loud that the order is not a ranking. Nothing is preselected,
   defaulted or described as preferable, and the options are a one-to-one map of the pending set —
@@ -286,6 +318,28 @@ One case that deliberately does **not** fail closed: the reader moving elsewhere
 choice is pending. A composite act commits to its own Moment and its landing came from the projection
 *of that Moment*, so the pairing is still coherent — the act was always going to move them. Only the
 Session, the depth, or the disclosure-and-scene coherence can make it stale.
+
+### The reader is never shown an unprovable choice (R3-03)
+
+Re-checking the brand at the executor stopped an unbranded object from *acting*. It did not stop one
+from being *displayed*: a hand-assembled object with the right shape still produced a titled list of
+named contexts, and every entry silently did nothing when pressed. That is a worse failure than a
+refusal — the Product asserts a set of legitimate contexts it cannot vouch for, and the reader has no
+way to tell an unresponsive option from an empty one.
+
+So the brand is now checked where the surface is built, and it exists at two levels:
+
+- **at the type level**, `PendingLocusChoice` is opaque. It carries a `unique symbol` provenance
+  member that no code outside `pending-locus-choice.ts` can name, so a structurally identical literal
+  does not typecheck where a pending choice is required. The two factories are the only way in;
+- **at runtime**, `locusChoiceModel(pending)` returns `null` for anything the module did not mint —
+  which is what a cast, a JSON round-trip or an untyped boundary would produce.
+
+`LocusChoiceSurface` treats a `null` model as fail-closed: it publishes no `accessibilityActions`,
+renders no option, and says `No contextual choice is available`. Backing out stays reachable, so the
+reader is never stranded on a surface that offers nothing, and backing out still performs no act.
+`choose` finds no option because there are none — the executor is unreachable by construction rather
+than by a second check downstream of a rendered list.
 
 ## 8. Map coupling and the stale-projection firewall
 

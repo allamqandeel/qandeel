@@ -61,20 +61,35 @@ import {
  * temporal half has NOT happened, and completing the choice runs the whole act as one transaction.
  * `SPATIAL` is a `CHOOSE_LOCUS` at the position the reader is already standing on.
  */
-export type PendingLocusChoice =
-  | {
-      readonly kind: 'COMPOSITE';
-      readonly moment: SessionPosition;
-      readonly context: MapInspectionContext;
-      readonly target: TemporalLocateTarget;
-      readonly loci: readonly EntitledLocus[];
-    }
-  | {
-      readonly kind: 'SPATIAL';
-      readonly context: MapInspectionContext;
-      readonly target: TemporalLocateTarget;
-      readonly loci: readonly EntitledLocus[];
-    };
+declare const PENDING_PROVENANCE: unique symbol;
+
+/**
+ * The type-level half of provenance (R3-03). A hand-assembled object cannot satisfy it without an
+ * explicit cast, so the ordinary way to obtain a pending choice is to derive one — and the runtime
+ * brand below catches the cast.
+ */
+interface PendingProvenance {
+  readonly [PENDING_PROVENANCE]: true;
+}
+
+interface CompositeChoice {
+  readonly kind: 'COMPOSITE';
+  readonly moment: SessionPosition;
+  readonly context: MapInspectionContext;
+  readonly target: TemporalLocateTarget;
+  readonly loci: readonly EntitledLocus[];
+}
+
+interface SpatialChoice {
+  readonly kind: 'SPATIAL';
+  readonly context: MapInspectionContext;
+  readonly target: TemporalLocateTarget;
+  readonly loci: readonly EntitledLocus[];
+}
+
+export type PendingCompositeLocusChoice = CompositeChoice & PendingProvenance;
+export type PendingSpatialLocusChoice = SpatialChoice & PendingProvenance;
+export type PendingLocusChoice = PendingCompositeLocusChoice | PendingSpatialLocusChoice;
 
 const minted = new WeakSet<object>();
 
@@ -118,7 +133,7 @@ export function pendingCompositeChoice(
   outcome: CommitMomentAndLocateOutcome,
   context: MapInspectionContext,
   target: TemporalLocateTarget,
-): Extract<PendingLocusChoice, { kind: 'COMPOSITE' }> | null {
+): PendingCompositeLocusChoice | null {
   if (outcome === null || typeof outcome !== 'object' || outcome.outcome !== 'LOCUS_SELECTION_REQUIRED') return null;
   if (context === null || typeof context !== 'object' || context.scene.tc !== outcome.moment) return null;
   const loci = ambiguityOf(context, target);
@@ -128,7 +143,7 @@ export function pendingCompositeChoice(
   if (!sameLocusSet(loci, outcome.loci)) return null;
   // The RE-DERIVED loci are what the chooser offers: what the resolver says exists, never what a
   // caller supplied alongside it.
-  const pending = Object.freeze({ kind: 'COMPOSITE', moment: outcome.moment, context, target, loci: Object.freeze([...loci]) } as const);
+  const pending = Object.freeze({ kind: 'COMPOSITE', moment: outcome.moment, context, target, loci: Object.freeze([...loci]) }) as PendingCompositeLocusChoice;
   minted.add(pending);
   return pending;
 }
@@ -138,13 +153,10 @@ export function pendingCompositeChoice(
  * loci parameter: zero and unique loci produce nothing, and a caller cannot substitute a different
  * set, mix two targets, trim one or pad it with a foreign locus.
  */
-export function pendingSpatialChoice(
-  context: MapInspectionContext,
-  target: TemporalLocateTarget,
-): Extract<PendingLocusChoice, { kind: 'SPATIAL' }> | null {
+export function pendingSpatialChoice(context: MapInspectionContext, target: TemporalLocateTarget): PendingSpatialLocusChoice | null {
   const loci = ambiguityOf(context, target);
   if (loci === null) return null;
-  const pending = Object.freeze({ kind: 'SPATIAL', context, target, loci: Object.freeze([...loci]) } as const);
+  const pending = Object.freeze({ kind: 'SPATIAL', context, target, loci: Object.freeze([...loci]) }) as PendingSpatialLocusChoice;
   minted.add(pending);
   return pending;
 }
@@ -179,11 +191,20 @@ function labelFor(locus: EntitledLocus, target: TemporalLocateTarget): string {
 }
 
 /**
- * The presentable form of a pending choice. Every legitimate locus appears exactly once, none is
- * marked, defaulted, preselected or described as preferable, and the copy is a structural
- * placeholder — final wording, tone and localization belong to the later chrome task.
+ * The presentable form of a pending choice, or `null` when there is no provenance behind it.
+ *
+ * The brand is checked HERE, at the presentation boundary, not only at execution (R3-03). Rejecting
+ * a forged choice when the reader presses it is too late: by then they have already been shown a
+ * list of contexts that may be false, foreign, incomplete or mixed, and shown it with the full
+ * authority of the Product. A chooser that cannot prove where its options came from must produce no
+ * model at all, so there is nothing to render.
+ *
+ * Every legitimate locus appears exactly once, none is marked, defaulted, preselected or described
+ * as preferable, and the copy is a structural placeholder — final wording, tone and localization
+ * belong to the later chrome task.
  */
-export function locusChoiceModel(pending: PendingLocusChoice): LocusChoiceModel {
+export function locusChoiceModel(pending: PendingLocusChoice): LocusChoiceModel | null {
+  if (!isPendingLocusChoice(pending)) return null;
   const options = pending.loci.map((locus) =>
     Object.freeze({ locus, key: locus.key, label: labelFor(locus, pending.target) }),
   );

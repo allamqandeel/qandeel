@@ -15,25 +15,43 @@
  *     beyond `LH` is never asked about, and neither is a position that `LH` makes valid but nothing
  *     has disclosed. No future-history request exists in this layer, and none can be constructed
  *     through it;
- *   - the semantic depth is the one the camera already discloses. A preview never opens a rung the
- *     reader has not earned;
+ *   - the semantic depth is the one the camera CURRENTLY discloses. A preview never opens a rung the
+ *     reader has not earned, and never one the reader has since left;
  *   - the answer keeps `NOT_FETCHED`, `UNAVAILABLE` and `disclosed-and-empty` apart, exactly as
  *     T-03C keeps them apart. A sparse or empty historical view is a CORRECT view, and this module
  *     never substitutes a fuller one from another position to make it look better.
  *
- * ## Why the cache is not an authority (R2-01)
+ * ## Where each authority comes from (R3-01)
  *
- * The disclosure cache legitimately holds projections the reader is not currently entitled to
- * interact with — a projection fetched while the Track was longer, or one held for a position the
- * current disclosed prefix has not reached. Presence in the cache is therefore evidence about what
- * was once fetched, never about what may be shown now, and the lookup is not consulted until the
- * target has already been authorized. `authorizePreviewTarget` is the only way to reach it, and the
- * token it mints is branded at runtime, so a caller cannot hand-assemble one.
+ * A `TemporalTargeting` carries two things: canonical `bounds` and a `disclosed` membership
+ * authority. Only the second is taken from the caller. Canonical validity is ALWAYS re-derived from
+ * the `CanonicalState` actually being projected, because a targeting value can be built from another
+ * store, or from an older or newer snapshot of the same Session, and a caller-supplied `LH` must
+ * never be able to widen what the current state permits. Matching Session ids are not evidence of a
+ * matching Live Head.
+ *
+ * So the two are composed here: current bounds from the state, disclosed membership from the
+ * authority, and the ONE shared rule decides. Disclosure can only ever narrow the answer — it is
+ * asked second and it holds no `LH` of its own — so a stale, shorter Track refuses more, never less.
+ *
+ * ## Why there is no reusable authorization object (R3-02)
+ *
+ * Authorization is a fact about a moment in time: this Session, this position, this camera depth.
+ * An object that recorded it and outlived it would be a replayable capability — still projecting at
+ * a depth the camera has left, or for a Session that has been replaced — and a runtime brand would
+ * only prove where it came from, never that it is still true.
+ *
+ * So the token and the low-level projector are module-private and the public surface is exactly two
+ * functions, each of which authorizes against the CURRENT state synchronously and projects in the
+ * same breath. There is nothing to hold, nothing to replay, and nothing whose freshness has to be
+ * remembered by a caller.
  *
  * T-06 introduces no transport of its own. It reads what the projection boundary already holds,
  * through an injected lookup whose shape is exactly `HistoricalDisclosureCache.lookup`. This layer
  * therefore cannot fetch anything, cannot widen a disclosure horizon and cannot cache a second copy
- * of history.
+ * of history. The cache legitimately holds projections the reader is not currently entitled to
+ * interact with, so presence in it is evidence about what was once fetched and never authority about
+ * what may be shown now.
  */
 import type { HistoricalProjectionUnavailableCode } from '@qandeel/runtime';
 
@@ -45,6 +63,7 @@ import {
   type MapProjectionRequest,
   type MapSceneRejectionReason,
 } from '../../map';
+import { temporalBounds } from '../targeting/addressability';
 import { resolveDisclosedTarget, type TemporalTargeting } from '../targeting/disclosed-availability';
 import type { TemporalRejectionCode } from '../outcome';
 
@@ -52,61 +71,42 @@ import type { TemporalRejectionCode } from '../outcome';
 export type PreviewDisclosureLookup = (sessionId: string, tc: number, depth: SemanticDepth) => HistoricalDisclosureEntry;
 
 /**
- * A position a preview is allowed to look up. It exists only as the output of the two gates, and it
- * is branded at runtime, so possessing one IS the proof that both were passed.
+ * A position a preview may look up, together with the exact projection it may ask for.
+ *
+ * Deliberately NOT exported: it is the momentary output of the gates, not a capability. It exists
+ * only between authorization and the lookup that follows it in the same call.
  */
-export interface AuthorizedPreviewTarget {
+interface AuthorizedPreviewTarget {
   readonly sessionId: string;
   readonly tc: SessionPosition;
   readonly depth: SemanticDepth;
 }
 
-export type PreviewTargetAuthorization =
+type PreviewTargetAuthorization =
   | { readonly ok: true; readonly target: AuthorizedPreviewTarget }
   | { readonly ok: false; readonly code: TemporalRejectionCode; readonly detail: string };
 
-const authorized = new WeakSet<object>();
-
-/** True only for a token this module minted. A structural look-alike is not an authorization. */
-export function isAuthorizedPreviewTarget(value: unknown): value is AuthorizedPreviewTarget {
-  return typeof value === 'object' && value !== null && authorized.has(value as object);
-}
-
 /**
- * The ONE way a preview position becomes lookup-able.
+ * The ONE gate a preview position passes to become lookup-able, evaluated against the state being
+ * projected right now.
  *
- * The targeting authority must belong to the same Session as the canonical state it is judged
- * against — a targeting built for another store proves nothing about this one — and then the shared
- * interaction gate decides. The depth is read from canonical state rather than from the caller, so
- * a preview can never ask for a rung the camera does not currently disclose.
+ * Canonical bounds are derived here from that state and the caller's own `bounds` is discarded
+ * (R3-01), so a targeting value carrying a later Live Head — from another store, or a newer snapshot
+ * of the same Session — cannot widen what this state permits. The disclosed membership authority is
+ * the only thing taken from the caller, and the shared rule checks its Session against the state's
+ * own before admitting anything. The depth is read from canonical state, never from the caller.
  */
-export function authorizePreviewTarget(
-  state: CanonicalState,
-  targeting: TemporalTargeting,
-  candidate: unknown,
-): PreviewTargetAuthorization {
-  if (targeting === null || typeof targeting !== 'object') {
+function authorizePreviewTarget(state: CanonicalState, targeting: TemporalTargeting, candidate: unknown): PreviewTargetAuthorization {
+  if (targeting === null || typeof targeting !== 'object' || targeting.disclosed === undefined) {
     return { ok: false, code: 'INVALID_INPUT', detail: 'a disclosed targeting authority is required to preview a projection' };
   }
-  if (targeting.bounds.sessionId !== state.session.id) {
-    return {
-      ok: false,
-      code: 'SESSION_MISMATCH',
-      detail: `the targeting authority covers Session ${targeting.bounds.sessionId}; this state mirrors ${state.session.id}`,
-    };
-  }
-  // Canonical validity, then disclosed membership — the same rule, in the same order, as every other
-  // route. A canonically valid but undisclosed position is refused here, before any lookup exists.
-  const resolved = resolveDisclosedTarget(targeting, candidate);
+  // Current canonical bounds + the supplied disclosed membership. Disclosure can only narrow: it is
+  // asked second and carries no Live Head of its own.
+  const current: TemporalTargeting = { bounds: temporalBounds(state), disclosed: targeting.disclosed };
+  const resolved = resolveDisclosedTarget(current, candidate);
   if (!resolved.ok) return { ok: false, code: resolved.code, detail: resolved.detail };
 
-  const target: AuthorizedPreviewTarget = Object.freeze({
-    sessionId: state.session.id,
-    tc: resolved.sp,
-    depth: state.camera.depth,
-  });
-  authorized.add(target);
-  return { ok: true, target };
+  return { ok: true, target: { sessionId: state.session.id, tc: resolved.sp, depth: state.camera.depth } };
 }
 
 export type PreviewProjection =
@@ -120,27 +120,12 @@ export type PreviewProjection =
   /** The position may not be previewed at all. No lookup was performed. */
   | { readonly status: 'NOT_ADDRESSABLE'; readonly code: TemporalRejectionCode; readonly detail: string };
 
-/**
- * The projection request an authorized preview target is entitled to make. It cannot be derived from
- * canonical state and a candidate alone (R2-01): without the disclosed authority there is no request.
- */
-export function previewProjectionRequest(state: CanonicalState, targeting: TemporalTargeting, candidate: unknown): MapProjectionRequest | null {
-  const authorization = authorizePreviewTarget(state, targeting, candidate);
-  return authorization.ok ? requestFor(authorization.target) : null;
-}
-
 function requestFor(target: AuthorizedPreviewTarget): MapProjectionRequest {
   return { sessionId: target.sessionId, tc: target.tc, depth: target.depth };
 }
 
-/**
- * Projects an ALREADY authorized target. The brand is re-checked here, so this cannot be used to
- * skip the gates by handing it a plausible-looking object.
- */
-export function projectAuthorizedPreviewTarget(target: AuthorizedPreviewTarget, lookup: PreviewDisclosureLookup): PreviewProjection {
-  if (!isAuthorizedPreviewTarget(target)) {
-    return { status: 'NOT_ADDRESSABLE', code: 'INVALID_INPUT', detail: 'the preview target was not authorized against the disclosed Track' };
-  }
+/** Projects a target the caller has just authorized, in the same call. Module-private by design. */
+function projectAuthorized(target: AuthorizedPreviewTarget, lookup: PreviewDisclosureLookup): PreviewProjection {
   const request = requestFor(target);
   const entry = lookup(request.sessionId, request.tc, request.depth);
   const resolution = mapInspectionContext(entry, request);
@@ -162,9 +147,20 @@ export function projectAuthorizedPreviewTarget(target: AuthorizedPreviewTarget, 
 }
 
 /**
- * Resolves the bounded preview projection for one previewed position. Both gates run FIRST, so an
- * illegitimate position — canonically invalid, beyond the Live Head, or simply not disclosed — never
- * reaches the lookup at all, whatever the cache happens to be holding for it.
+ * The projection request a preview of `candidate` is entitled to make against THIS state, or `null`.
+ * It cannot be derived from canonical state and a bare candidate, and it cannot be held: it is
+ * recomputed from current state every time it is asked for.
+ */
+export function previewProjectionRequest(state: CanonicalState, targeting: TemporalTargeting, candidate: unknown): MapProjectionRequest | null {
+  const authorization = authorizePreviewTarget(state, targeting, candidate);
+  return authorization.ok ? requestFor(authorization.target) : null;
+}
+
+/**
+ * Resolves the bounded preview projection for one previewed position. Both gates run FIRST, against
+ * the state supplied to this very call, so an illegitimate position — canonically invalid, beyond
+ * the current Live Head, or simply not disclosed — never reaches the lookup at all, whatever the
+ * cache happens to be holding for it and whatever a caller's bounds snapshot happens to claim.
  */
 export function previewProjection(
   state: CanonicalState,
@@ -174,5 +170,5 @@ export function previewProjection(
 ): PreviewProjection {
   const authorization = authorizePreviewTarget(state, targeting, candidate);
   if (!authorization.ok) return { status: 'NOT_ADDRESSABLE', code: authorization.code, detail: authorization.detail };
-  return projectAuthorizedPreviewTarget(authorization.target, lookup);
+  return projectAuthorized(authorization.target, lookup);
 }

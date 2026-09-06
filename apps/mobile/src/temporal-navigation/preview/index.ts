@@ -12,11 +12,9 @@ export type {
 } from './preview-state';
 export { IDLE_PREVIEW, createTemporalPreviewController } from './preview-state';
 
-export type { AuthorizedPreviewTarget, PreviewDisclosureLookup, PreviewProjection, PreviewTargetAuthorization } from './preview-projection';
-export {
-  authorizePreviewTarget,
-  isAuthorizedPreviewTarget,
-  previewProjection,
-  previewProjectionRequest,
-  projectAuthorizedPreviewTarget,
-} from './preview-projection';
+// R3-02: the authorization token and the low-level projector are module-private on purpose. The
+// public surface is exactly these two functions, each of which authorizes against the CURRENT
+// canonical state and projects in the same call, so no reusable — and therefore staleable —
+// projection capability exists to be held or replayed.
+export type { PreviewDisclosureLookup, PreviewProjection } from './preview-projection';
+export { previewProjection, previewProjectionRequest } from './preview-projection';

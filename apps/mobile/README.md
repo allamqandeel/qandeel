@@ -191,10 +191,14 @@ explicit user act.
   no transport, so it could not write Product truth even by mistake. A preview is never made by
   moving `TM` and moving it back. `preview-projection.ts` shows a historical target only through
   the disclosure of THAT position, and runs BOTH gates — canonical validity and disclosed
-  availability — before any lookup, behind a runtime-branded authorization. A cached projection for
-  an undisclosed Moment is therefore unreachable: the cache is evidence about what was fetched, never
-  authority about what may be shown. No future-history request exists in this layer, and none can be
-  constructed through it.
+  availability — before any lookup. A cached projection for an undisclosed Moment is therefore
+  unreachable: the cache is evidence about what was fetched, never authority about what may be shown.
+  Each half of the gate comes from where it is true: canonical bounds are re-derived from the state
+  under judgement and the caller's `bounds` snapshot is never read, so a stale or foreign one can only
+  narrow what is reachable, never widen it. Authorization is a fact about that call, not a capability
+  — no token, brand or projector is exported, and no state survives a call, so there is nothing old
+  enough to go stale. No future-history request exists in this layer, and none can be constructed
+  through it.
 - **Continuation** (`continuation/forward.ts`): repeated forward targeting that holds at BOTH the
   authoritative Live Head and the disclosure horizon, and becomes Live intent at neither. Its cadence
   is injected, never frozen, because no cadence changes the semantics.
@@ -211,10 +215,13 @@ explicit user act.
 - **Locus choice** (`locus-choice/`): the pending contextual-locus choice and its user-facing route.
   Construction is provenance-bound — neither factory accepts a locus list; both derive the complete
   legitimate set from the resolver, and the composite one binds the executor's answer to that
-  derivation by position and by exact locus-key set. Every legitimate locus is offered exactly once,
-  unranked and unpreselected, with a pointer route and a non-pointer accessibility action per option;
-  both converge on one executor. Backing out performs no act; a stale Session or depth fails the
-  choice closed.
+  derivation by position and by exact locus-key set. The result is opaque to the type system and
+  branded at runtime, and the brand is checked where the surface is BUILT: a pending choice the module
+  did not mint yields no model, so it renders no option and publishes no accessibility action rather
+  than displaying a list of contexts the Product cannot vouch for. Every legitimate locus is offered
+  exactly once, unranked and unpreselected, with a pointer route and a non-pointer accessibility
+  action per option; both converge on one executor. Backing out performs no act and stays reachable
+  even when nothing can be offered; a stale Session or depth fails the choice closed.
 - **Timeline integration** (`timeline-integration/`): one way only. T-05 identifies a disclosed
   target and gains no store, no dispatch, no selected Moment and no Live commit; scrolling,
   refining and widening the presentation change no temporal state. Temporal targeting lives on
