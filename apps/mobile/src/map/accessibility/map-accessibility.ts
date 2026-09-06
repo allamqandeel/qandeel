@@ -132,6 +132,36 @@ const VIEWPORT_ACTIONS: readonly MapAccessibilityAction[] = Object.freeze([
   { name: 'explore-down', label: 'Explore down' },
 ]);
 
+/**
+ * The neutral name of the surface. It names the Map itself and nothing about a disclosure: no
+ * depth, no rung, no count, no temporal position.
+ */
+export const MAP_CONTAINER_NEUTRAL_LABEL = 'Living Analysis Map';
+
+/**
+ * The accessible Map while no current projection is available (R2-FIX-01).
+ *
+ * Suppressing the object nodes of a stale scene is not enough: a container role and a container
+ * label derived from that scene are disclosure semantics too. A collection role would still
+ * publish a set size, and a label naming the rung the old scene was disclosed at would still tell
+ * a reader that the Map currently discloses that rung — after the camera has already moved to
+ * another one. So nothing is derived from the stale scene at all; this tree is built without
+ * looking at one.
+ *
+ * The viewport routes remain, because they act on the camera rather than on the disclosed world,
+ * and they are how a reader brings the camera back to a rung the held projection matches. Nothing
+ * here explains the wait: that is chrome, and chrome is T-08's.
+ */
+export function mapAccessibilityWithoutProjection(): MapAccessibilityTree {
+  return Object.freeze({
+    containerRole: 'none',
+    containerLabel: MAP_CONTAINER_NEUTRAL_LABEL,
+    viewportActions: VIEWPORT_ACTIONS,
+    nodes: Object.freeze([]),
+    keys: new Set<string>(),
+  });
+}
+
 export function buildMapAccessibilityTree(
   scene: MapScene,
   camera: MapCamera,

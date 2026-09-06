@@ -274,7 +274,25 @@ test('R2-01 — one shared freshness rule guards every render, hit, accessibilit
   // A stale scene is never placed, never hit-tested and never announced.
   assert.match(mapCode['renderer/MapSurface.tsx'], /const usable = camera !== null && freshness\.fresh;/u);
   assert.match(mapCode['renderer/MapSurface.tsx'], /usable && camera !== null \? placeScene\(/u);
-  assert.match(mapCode['accessibility/MapAccessibilityLayer.tsx'], /\(freshness\.fresh \? tree\.nodes : \[\]\)\.map\(/u);
+  // R2-FIX-01 — a stale projection produces no scene-derived tree at all, so the container's role
+  // and label cannot leak disclosure semantics either. `buildMapAccessibilityTree` is the only
+  // scene-reading builder, and it is reachable only on the fresh branch.
+  const layer = mapCode['accessibility/MapAccessibilityLayer.tsx'];
+  assert.match(layer, /freshness\.fresh \? buildMapAccessibilityTree\(context\.scene, camera, envelope, focus\) : mapAccessibilityWithoutProjection\(\)/u);
+  assert.equal((layer.match(/buildMapAccessibilityTree\(/gu) ?? []).length, 1, 'the scene-reading builder is called in exactly one place');
+  assert.doesNotMatch(layer, /context\.scene\./u, 'the layer never reads the scene outside the fresh branch');
+  const neutral = mapCode['accessibility/map-accessibility.ts'].slice(
+    mapCode['accessibility/map-accessibility.ts'].indexOf('export function mapAccessibilityWithoutProjection'),
+    mapCode['accessibility/map-accessibility.ts'].indexOf('export function buildMapAccessibilityTree'),
+  );
+  assert.ok(neutral.length > 0, 'the no-projection tree exists');
+  assert.match(neutral, /containerRole: 'none'/u);
+  assert.match(neutral, /containerLabel: MAP_CONTAINER_NEUTRAL_LABEL/u);
+  assert.match(neutral, /nodes: Object\.freeze\(\[\]\)/u);
+  for (const forbidden of ['scene', 'depth', 'MapScene', 'disclosed']) {
+    assert.equal(neutral.includes(forbidden), false, `the no-projection tree must not derive ${forbidden}`);
+  }
+  assert.match(mapCode['accessibility/map-accessibility.ts'], /MAP_CONTAINER_NEUTRAL_LABEL = 'Living Analysis Map';/u);
   // No stale fallback of any kind.
   for (const forbidden of ['opacity: 0', 'fallbackScene', 'previousScene', 'lastScene', 'cachedScene']) {
     assert.equal(mapText.includes(forbidden), false, `a stale projection must not survive as ${forbidden}`);

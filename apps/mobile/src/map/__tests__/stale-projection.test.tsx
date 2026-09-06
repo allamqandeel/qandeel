@@ -1,9 +1,15 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
 
-import { sessionPosition, type CanonicalStore } from '../../state';
+import { SEMANTIC_DEPTHS, sessionPosition, type CanonicalStore } from '../../state';
 import { disclosureFixture } from '../__fixtures__/disclosure';
 import { contextOf, envelope, testStore } from '../__fixtures__/store';
-import { MAP_ACCESSIBILITY_TEST_ID, buildMapAccessibilityTree } from '../accessibility';
+import {
+  MAP_ACCESSIBILITY_TEST_ID,
+  MAP_CONTAINER_NEUTRAL_LABEL,
+  MAP_VIEWPORT_ACTIONS,
+  buildMapAccessibilityTree,
+  mapAccessibilityWithoutProjection,
+} from '../accessibility';
 import { decodeCameraIntent, zoomSemanticStep } from '../camera';
 import { directJump, inspectObject, isCurrentMapContext, resolveEntitledInspection, inspectEntitled, switchContext } from '../inspection';
 import { mapProjectionRequest } from '../projection';
@@ -83,6 +89,26 @@ describe('STALE-01 — semantic depth drift hides the old deeper scene', () => {
     expect(view.queryByTestId(`${MAP_ACCESSIBILITY_TEST_ID}:THREAD:thread-a`)).toBeNull();
     expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
 
+    // R2-FIX-01 — and neither does the container carry stale disclosure semantics. A collection
+    // role would publish a set size, and a label naming the old rung would tell a reader that the
+    // Map still discloses it. Both are derived from the scene, so both are gone with it.
+    const container = view.getByTestId(MAP_ACCESSIBILITY_TEST_ID);
+    expect(container.props.accessibilityRole).toBe('none');
+    expect(container.props.accessibilityLabel).toBe(MAP_CONTAINER_NEUTRAL_LABEL);
+    expect(container.props.accessibilityLabel).not.toContain('ANALYTICAL_OBJECT');
+    expect(container.props.accessibilityLabel).not.toContain('disclosed at');
+    for (const depth of SEMANTIC_DEPTHS) expect(container.props.accessibilityLabel).not.toContain(depth);
+    // Nothing anywhere in the rendered surface still names the depth the scene was disclosed at.
+    expect(painted(view)).not.toContain('ANALYTICAL_OBJECT');
+    // The intentionally allowed viewport routes remain: they act on the camera, not on the world.
+    expect((container.props.accessibilityActions as { name: string }[]).map((action) => action.name).sort()).toEqual([...MAP_VIEWPORT_ACTIONS].sort());
+    await act(async () => {
+      fireEvent(container, 'accessibilityAction', { nativeEvent: { actionName: 'explore-right' } });
+    });
+    expect(store.getState().history.map((entry) => entry.act)).toEqual(['ZOOM_SEMANTIC', 'PAN']);
+    // Exploring moved the camera and nothing else: the context is still not this Map.
+    expect(isCurrentMapContext(store, context).fresh).toBe(false);
+
     // And no object action can run from the stale context, by any route.
     const before = store.getState();
     expect(inspectObject(store, context, { family: 'READING', id: 'reading-only-at-analytical' })).toMatchObject({
@@ -91,7 +117,10 @@ describe('STALE-01 — semantic depth drift hides the old deeper scene', () => {
     });
     expect(directJump(store, context, { family: 'THREAD', id: 'thread-a' })).toMatchObject({ outcome: 'REJECTED', code: 'STALE_PROJECTION' });
     expect(store.getState()).toBe(before);
-    expect(store.getState().history.map((entry) => entry.act)).toEqual(['ZOOM_SEMANTIC']);
+    expect(store.getState().history.map((entry) => entry.act)).toEqual(['ZOOM_SEMANTIC', 'PAN']);
+    await act(async () => {
+      view.unmount();
+    });
   });
 
   it('an entitlement minted from the deeper projection is refused after the depth moved', () => {
@@ -174,6 +203,9 @@ describe('STALE-04 — a context for another Session fails closed', () => {
     expect(inspectObject(store, foreign, { family: 'THREAD', id: 'thread-a' })).toMatchObject({ outcome: 'REJECTED', code: 'STALE_PROJECTION' });
     expect(store.getState()).toBe(before);
     expect(store.getState().history).toHaveLength(0);
+    await act(async () => {
+      view.unmount();
+    });
   });
 
   it('a context whose disclosure and scene are different projections is incoherent, not current', () => {
@@ -197,7 +229,9 @@ describe('STALE-05 — a fresh replacement restores the accepted behaviour', () 
 
     const staleView = await render(<MapSurface store={store} context={stale} envelope={envelope()} />);
     expect(staleView.queryByTestId(MAP_CANVAS_TEST_ID)).toBeNull();
-    staleView.unmount();
+    await act(async () => {
+      staleView.unmount();
+    });
 
     // A fresh V for the exact current (Session, TC, depth).
     const fresh = contextOf(store, threadDisclosure());
@@ -229,6 +263,9 @@ describe('STALE-05 — a fresh replacement restores the accepted behaviour', () 
       'SWITCH_CONTEXT',
       'DIRECT_JUMP',
     ]);
+    await act(async () => {
+      view.unmount();
+    });
   });
 
   it('after a temporal move, a context for the new TC works again', () => {
@@ -238,6 +275,53 @@ describe('STALE-05 — a fresh replacement restores the accepted behaviour', () 
     expect(isCurrentMapContext(store, fresh).fresh).toBe(true);
     expect(inspectObject(store, fresh, { family: 'THREAD', id: 'thread-a' }).outcome).toBe('APPLIED');
     expect(store.getState().history.map((entry) => entry.act)).toEqual(['COMMIT_MOMENT', 'INSPECT_OBJECT']);
+  });
+});
+
+describe('R2-FIX-01 — a Map with no current projection publishes no disclosure semantics', () => {
+  it('the no-projection tree is built without a scene and carries only the viewport routes', () => {
+    const tree = mapAccessibilityWithoutProjection();
+    expect(tree.nodes).toEqual([]);
+    expect([...tree.keys]).toEqual([]);
+    expect(tree.containerRole).toBe('none');
+    expect(tree.containerLabel).toBe(MAP_CONTAINER_NEUTRAL_LABEL);
+    // The label names the surface and nothing about a disclosure.
+    for (const depth of SEMANTIC_DEPTHS) expect(tree.containerLabel).not.toContain(depth);
+    expect(tree.containerLabel).not.toMatch(/disclosed|rung|depth|TC|Session/u);
+    expect(tree.viewportActions.map((action) => action.name).sort()).toEqual([...MAP_VIEWPORT_ACTIONS].sort());
+  });
+
+  it('a fully disclosed scene still takes its collection role while it is current', async () => {
+    const store = testStore({ depth: 'SOURCE_PROVENANCE' });
+    const context = contextOf(
+      store,
+      disclosureFixture({ depth: 'SOURCE_PROVENANCE', threads: WORLD, appearances: APPEARANCES, readings: [{ id: 'reading-1' }] }),
+    );
+    const view = await render(<MapSurface store={store} context={context} envelope={envelope()} />);
+    const container = view.getByTestId(MAP_ACCESSIBILITY_TEST_ID);
+    // The accepted fresh behaviour is preserved exactly: the role and the label are unchanged.
+    expect(container.props.accessibilityRole).toBe('list');
+    expect(container.props.accessibilityLabel).toBe('Living Analysis Map, disclosed at SOURCE_PROVENANCE');
+    expect(view.getByTestId(`${MAP_ACCESSIBILITY_TEST_ID}:THREAD:thread-a`)).toBeTruthy();
+    await act(async () => {
+      view.unmount();
+    });
+  });
+
+  it('a foreign-Session context publishes the neutral container too', async () => {
+    const store = testStore({ depth: 'ANALYTICAL_OBJECT' });
+    const foreign = {
+      disclosure: analyticalDisclosure(4, 'session-other'),
+      scene: contextOf(testStore({ depth: 'ANALYTICAL_OBJECT', sessionId: 'session-other' }), analyticalDisclosure(4, 'session-other')).scene,
+    };
+    const view = await render(<MapSurface store={store} context={foreign} envelope={envelope()} />);
+    const container = view.getByTestId(MAP_ACCESSIBILITY_TEST_ID);
+    expect(container.props.accessibilityRole).toBe('none');
+    expect(container.props.accessibilityLabel).toBe(MAP_CONTAINER_NEUTRAL_LABEL);
+    expect(painted(view)).not.toContain('session-other');
+    await act(async () => {
+      view.unmount();
+    });
   });
 });
 

@@ -259,7 +259,15 @@ Where it is enforced:
   placement, so there is nothing to paint and nothing to hit-test.
 - **Accessibility side.** `MapAccessibilityLayer` enforces the same rule itself rather than
   trusting its parent, so the object set disappears exactly when the pixels do. There is no
-  accessibility-only retention, no dimming, no zero-opacity node.
+  accessibility-only retention, no dimming, no zero-opacity node. Removing the nodes is not
+  enough, though: a container role and a container label derived from the stale scene are
+  disclosure semantics in their own right — a collection role publishes a set size, and a label
+  naming the rung the old scene was disclosed at tells a reader that the Map still discloses that
+  rung after the camera has moved. So when the projection is not current, no scene-derived tree is
+  built at all: `mapAccessibilityWithoutProjection()` returns the neutral container
+  (`role: 'none'`, label `Living Analysis Map`, no nodes) plus the viewport routes, which act on
+  the camera rather than on the disclosed world and are how a reader returns to a matching rung.
+  While the projection IS current, the tree is exactly what it always was.
 
 A mismatch is a transient projection-availability state, not a Product truth state. Nothing infers
 a replacement disclosure, falls back to a shallower or deeper one, or treats an
@@ -404,7 +412,7 @@ graphic-language styling.
 | AUTH-03 | Forged direct jump cannot reach canonical mutation | `authority.test.ts` |
 | AUTH-04 | Legitimate V-resolved paths unchanged | `authority.test.ts` |
 | AUTH-05 | Knowing an identifier is not entitlement | `authority.test.ts` |
-| STALE-01 | Depth drift hides the old deeper scene | `stale-projection.test.tsx` |
+| STALE-01 | Depth drift hides the old deeper scene, its container role and its depth label | `stale-projection.test.tsx` |
 | STALE-02 | A later-TC context cannot authorize at an earlier pinned TC | `stale-projection.test.tsx` |
 | STALE-03 | A `FOLLOW_LIVE` head advance invalidates the old head context | `stale-projection.test.tsx` |
 | STALE-04 | Session mismatch, and an incoherent context, fail closed | `stale-projection.test.tsx` |

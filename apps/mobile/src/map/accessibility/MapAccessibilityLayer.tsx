@@ -11,10 +11,12 @@
  *
  * It also enforces the ONE context-freshness rule itself rather than trusting its parent, so a
  * stale projection cannot survive here after it has left the pixels. When the supplied context is
- * no longer the store's `(Session, effective TC, MC.depth)`, the object set is empty — not
- * hidden, not dimmed, not retained without actions — exactly as the sighted scene is. The
- * viewport routes stay, because they act on the camera rather than on the disclosed world, and
- * they are how a reader brings the camera back to a rung the held projection matches.
+ * no longer the store's `(Session, effective TC, MC.depth)`, NOTHING is derived from that scene —
+ * not the object nodes, and not the container's role or label, which are disclosure semantics in
+ * their own right. The object set is empty, not hidden, not dimmed, not retained without actions,
+ * exactly as the sighted scene is. The viewport routes stay, because they act on the camera rather
+ * than on the disclosed world, and they are how a reader brings the camera back to a rung the held
+ * projection matches.
  */
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
@@ -33,7 +35,12 @@ import {
   type MapInspectionContext,
 } from '../inspection';
 import type { MapActionOutcome } from '../outcome';
-import { buildMapAccessibilityTree, type MapAccessibilityFocus, type MapAccessibilityNode } from './map-accessibility';
+import {
+  buildMapAccessibilityTree,
+  mapAccessibilityWithoutProjection,
+  type MapAccessibilityFocus,
+  type MapAccessibilityNode,
+} from './map-accessibility';
 
 export const MAP_ACCESSIBILITY_TEST_ID = 'qandeel-map-accessibility';
 
@@ -70,9 +77,12 @@ export function MapAccessibilityLayer({ store, context, camera, envelope, onOutc
     };
   }, [inspection]);
 
+  // A stale projection produces no scene-derived tree at all — not a scene-derived tree with its
+  // nodes removed. The container role and label are disclosure semantics too, so they are built
+  // from the scene only while that scene is this Map (R2-FIX-01).
   const tree = useMemo(
-    () => buildMapAccessibilityTree(context.scene, camera, envelope, focus),
-    [context.scene, camera, envelope, focus],
+    () => (freshness.fresh ? buildMapAccessibilityTree(context.scene, camera, envelope, focus) : mapAccessibilityWithoutProjection()),
+    [freshness, context.scene, camera, envelope, focus],
   );
 
   // The act runs first and the observer is notified afterwards. An optional call would not
@@ -140,7 +150,7 @@ export function MapAccessibilityLayer({ store, context, camera, envelope, onOutc
       accessibilityActions={[...tree.viewportActions]}
       onAccessibilityAction={(event: AccessibilityActionEvent) => runViewportAction(event.nativeEvent.actionName)}
     >
-      {(freshness.fresh ? tree.nodes : []).map((node) => (
+      {tree.nodes.map((node) => (
         <View
           key={node.key}
           testID={`${MAP_ACCESSIBILITY_TEST_ID}:${node.key}`}
