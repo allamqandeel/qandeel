@@ -136,6 +136,7 @@
     "prebuild:mobile": "npm run prebuild:verify --workspace @qandeel/mobile",
     "test:mobile-foundation-contract": "node --test tests/mobile-foundation-toolchain-contract.test.mjs",
     "test:mobile-canonical-state-contract": "node --test tests/mobile-canonical-state-contract.test.mjs",
+    "test:living-analysis-map-runtime-contract": "node --test tests/living-analysis-map-runtime-contract.test.mjs",
     "test:mobile-native-impact-classifier": "node --test tests/mobile-native-impact-classifier.test.mjs"
   },
   "devDependencies": {"pg": "^8.16.3"},

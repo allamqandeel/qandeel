@@ -1,0 +1,42 @@
+/**
+ * T-04 — the single outcome vocabulary of every Map act, and the one place a canonical dispatch
+ * is turned into it.
+ *
+ * The canonical store is the only authority: it throws typed `CanonicalStateError`s for a
+ * precondition, an authority violation, a shape violation or a later-owner identity. A Map
+ * surface should not have to catch exceptions to stay truthful, so every act in this layer
+ * returns a total, typed outcome instead — while the store keeps throwing, unchanged.
+ *
+ * `NO_OP` and `APPLIED` are the store's own answers, not a local approximation: a true no-op
+ * writes no state and appends no RH, and an effective act appends exactly one checkpoint.
+ * `REJECTED` carries the store's own error code, so nothing is flattened into a generic failure.
+ */
+import { CanonicalStateError, type CanonicalStateErrorCode, type CanonicalStore, type RhEntry, type StoreAction } from '../state';
+
+export type MapActionRejectionCode =
+  | CanonicalStateErrorCode
+  | 'CAMERA_NOT_DECODABLE'
+  | 'PROJECTION_NOT_AVAILABLE'
+  | 'NOT_ENTITLED'
+  | 'NOT_LOCATABLE'
+  | 'INVALID_INPUT'
+  | 'BEYOND_CANONICAL_BOUND'
+  | 'AT_RUNG_BOUNDARY';
+
+export type MapActionOutcome =
+  | { readonly outcome: 'APPLIED'; readonly entry: RhEntry | null }
+  | { readonly outcome: 'NO_OP' }
+  | { readonly outcome: 'REJECTED'; readonly code: MapActionRejectionCode; readonly detail: string };
+
+export const rejected = (code: MapActionRejectionCode, detail: string): MapActionOutcome => ({ outcome: 'REJECTED', code, detail });
+
+/** Runs one canonical dispatch and reports its own answer; nothing here decides authority. */
+export function dispatchMapAction(store: CanonicalStore, action: StoreAction): MapActionOutcome {
+  try {
+    const result = store.dispatch(action);
+    return result.outcome === 'NO_OP' ? { outcome: 'NO_OP' } : { outcome: 'APPLIED', entry: result.entry };
+  } catch (error) {
+    if (error instanceof CanonicalStateError) return rejected(error.code, error.message);
+    throw error;
+  }
+}

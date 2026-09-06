@@ -2,10 +2,10 @@
  * T-02 — Canonical state kernel: the store boundary.
  *
  * Two entry points with separate authority paths:
- * - `dispatch(action)`: explicit Product acts (kernel only). Runs the transition, the exact
- *   canonical-shape validator, the immutable-context guard, the per-field writer guard,
- *   `Φ_eff` no-op detection and the RH append. Never accepts an event, a Class C / D identity
- *   or a later-owner identity.
+ * - `dispatch(action)`: explicit Product acts — the T-02 kernel plus the three Map acts T-04
+ *   promoted to `EXECUTABLE`. Runs the transition, the exact canonical-shape validator, the
+ *   immutable-context guard, the per-field writer guard, `Φ_eff` no-op detection and the RH
+ *   append. Never accepts an event, a Class C / D identity or a later-owner identity.
  * - `ingest(event)`: passive authoritative events (closed catalog). Runs the event transition,
  *   the exact shape validator and the guard restricted to the event's single authoritative
  *   field. Never appends RH and never borrows transaction authority.
@@ -16,7 +16,7 @@
  * authoritative snapshot. It performs no persistence, no restart behaviour and no entry-state
  * behaviour. No UI or control exposes the kernel actions in T-02.
  */
-import { catalogEntry, isRhActionId, type AuthoritativeEvent, type KernelAction } from './actions';
+import { catalogEntry, isRhActionId, type AuthoritativeEvent, type StoreAction } from './actions';
 import {
   ImmutableContextViolation,
   InvalidCanonicalShape,
@@ -41,8 +41,8 @@ import {
 } from './classes';
 import { appendIfEffective } from './history';
 import {
-  KERNEL_ACTION_TRANSITIONS,
   KERNEL_EVENT_TRANSITIONS,
+  STORE_ACTION_TRANSITIONS,
   type ActionTransitionTable,
   type EventTransitionTable,
 } from './transitions';
@@ -68,7 +68,7 @@ export type IngestResult = { readonly outcome: 'APPLIED' } | { readonly outcome:
 export interface CanonicalStore {
   getState(): CanonicalState;
   subscribe(listener: () => void): () => void;
-  dispatch(action: KernelAction): DispatchResult;
+  dispatch(action: StoreAction): DispatchResult;
   ingest(event: AuthoritativeEvent): IngestResult;
 }
 
@@ -98,7 +98,7 @@ function buildInitialState(init: CanonicalStateInit): CanonicalState {
 }
 
 export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDependencies = {}): CanonicalStore {
-  const actionTransitions: ActionTransitionTable = { ...KERNEL_ACTION_TRANSITIONS, ...deps.actionTransitions };
+  const actionTransitions: ActionTransitionTable = { ...STORE_ACTION_TRANSITIONS, ...deps.actionTransitions };
   const eventTransitions: EventTransitionTable = { ...KERNEL_EVENT_TRANSITIONS, ...deps.eventTransitions };
 
   let state: CanonicalState = deepFreeze(buildInitialState(init));
@@ -118,7 +118,7 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     }
   }
 
-  function dispatch(action: KernelAction): DispatchResult {
+  function dispatch(action: StoreAction): DispatchResult {
     const id = isPlainRecord(action) ? action.type : undefined;
     const entry = catalogEntry(id);
     if (!entry) throw new UnknownAction(String(id));
@@ -131,7 +131,7 @@ export function createCanonicalStore(init: CanonicalStateInit, deps: StoreDepend
     if (entry.level === 'METADATA_ONLY') throw new OwnedByLaterTask(entry.id, entry.owner);
 
     const before = state;
-    const transition = actionTransitions[action.type] as (s: CanonicalState, a: KernelAction) => unknown;
+    const transition = actionTransitions[action.type] as (s: CanonicalState, a: StoreAction) => unknown;
     const result = transition(before, action);
     if (!isPlainRecord(result)) throw new InvalidCanonicalShape(`${entry.id}: transition result must be a plain object`);
     // Every returned key is overlaid so the validator and the guard see any attempted write, including keys the

@@ -351,6 +351,19 @@ test('no database, Supabase, Nest, runtime, mobile, provider or B1 / B2a import;
         `${file} reuses the stored Home and never defines, mirrors or calls an engine`);
       continue;
     }
+    // T-04 re-anchor. The mobile Map layer READS the frozen scheme id and its coordinate bound
+    // so that it can decode a disclosed Home exactly and refuse a malformed one; that is
+    // consumption of permanent world truth, not placement. What it must never do is compute,
+    // recompute, adjust or re-lay-out a Home, so the engine's own call surface AND its placement
+    // vocabulary stay forbidden there — a strictly stronger statement than "must not say OSDAP".
+    if (file.startsWith('apps/mobile/src/map/')) {
+      assert.doesNotMatch(
+        read(file),
+        /home-placement|placeCanonicalHome|resolveThreadHome|HomePlacementRequest|CanonicalHomePlacement|HOME_STEP|MIN_HOME_SEPARATION|CANDIDATES_PER_SHELL|MAX_ATTEMPTS|worldFingerprint|originFingerprint|ConversationalOrigin/u,
+        `${file} consumes a committed Home and never places one`,
+      );
+      continue;
+    }
     assert.doesNotMatch(read(file), /home-placement|placeCanonicalHome|OSDAP|HomePlacementRequest/u, `${file} does not reach the engine`);
   }
   for (const file of B2B2_DATABASE_FILES) {

@@ -16,6 +16,7 @@
     "prebuild:verify": "node scripts/verify-prebuild-idempotency.mjs"
   },
   "dependencies": {
+    "@shopify/react-native-skia": "2.6.2",
     "expo": "~57.0.20",
     "expo-constants": "~57.0.17",
     "expo-dev-client": "~57.0.18",
@@ -44,7 +45,10 @@
     "typescript": "~5.9.3"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.js"
+    ]
   },
   "expo": {
     "install": {

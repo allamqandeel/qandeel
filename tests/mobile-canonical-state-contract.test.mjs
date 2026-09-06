@@ -131,7 +131,11 @@ test('the authority policy is a frozen readonly array, never a mutable Set, and 
   assert.match(actions, /readonly authority: readonly ClassAField\[\];/u);
   assert.match(actions, /return Object\.freeze\(\[\.\.\.names\]\);/u);
   assert.match(actions, /Object\.freeze\(catalog\[key\]\)/u);
-  assert.match(actions, /export type RhActionId = KernelActionType \| MetadataOnlyActionType;/u);
+  // T-04 re-anchor, by exact name: `INSPECT_OBJECT`, `SWITCH_CONTEXT` and `DIRECT_JUMP` were
+  // promoted out of the later-owner set into `MapActionType`. Their frozen RH_CHECKPOINT
+  // behaviour is unchanged, and every other later-owner act still fails closed.
+  assert.match(actions, /export type RhActionId = KernelActionType \| MapActionType \| MetadataOnlyActionType;/u);
+  assert.match(actions, /MAP_ACTION_TYPES = Object\.freeze\(\['INSPECT_OBJECT', 'SWITCH_CONTEXT', 'DIRECT_JUMP'\] as const\);/u);
   assert.match(productionCode['classes.ts'], /readonly act: RhActionId;/u);
   assert.match(productionCode['classes.ts'], /readonly tc: SessionPosition;/u);
   assert.match(productionCode['history.ts'], /act: RhActionId\)/u);
@@ -177,7 +181,10 @@ test('the semantic depth rungs are the frozen five and no envelope geometry ente
 
 test('no persistence, no state library and no dependency change', async () => {
   const mobilePackage = await readJson('apps/mobile/package.json');
+  // T-04 re-anchor: the Map renderer is the ONE dependency this task adds, and it is pinned
+  // exactly. No state-management or persistence library joins the list.
   assert.deepEqual(Object.keys(mobilePackage.dependencies).sort(), [
+    '@shopify/react-native-skia',
     'expo',
     'expo-constants',
     'expo-dev-client',

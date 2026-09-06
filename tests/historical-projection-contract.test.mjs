@@ -242,15 +242,18 @@ test('the client seam is passive and typed: decode, fetch, hold; NOT_FETCHED / D
     }
   }
   // The T-02 kernel, the shell, the router root and the T-03A2 / T-03D temporal boundary are byte-identical; nothing is mounted.
+  // T-04 re-anchor: the four kernel files it touched to promote `INSPECT_OBJECT`,
+  // `SWITCH_CONTEXT` and `DIRECT_JUMP` carry their post-promotion ids. The pins stay exact, so
+  // any further kernel change still trips this gate, and T-03C itself changed none of them.
   for (const [file, blob] of [
-    ['apps/mobile/src/state/actions.ts', '0fa63f31ebeb47575244e827d7ffd2090eec090c'],
+    ['apps/mobile/src/state/actions.ts', 'b41b59158dd56e914af51a55338551ead4ddfd0f'],
     ['apps/mobile/src/state/authority.ts', '1920ec550ad7b3b8eca02fb690f790654ce4609a'],
     ['apps/mobile/src/state/classes.ts', 'f0d17c675c148e26c523291e07769c3ed764f263'],
     ['apps/mobile/src/state/history.ts', 'e12caa557ab719611d11e43392723a1bb2389c62'],
-    ['apps/mobile/src/state/index.ts', 'a70c2d61d112f62dfa11cc7209b35d0466eb4141'],
+    ['apps/mobile/src/state/index.ts', '88436ef00ad9977c9ba883edcfeb70269e152597'],
     ['apps/mobile/src/state/selectors.ts', '72c156c298c5914a578fd41f3243c7bb596756ae'],
-    ['apps/mobile/src/state/store.ts', '8933e3ef05c10bd28a748cc4896871c8e50e658e'],
-    ['apps/mobile/src/state/transitions.ts', 'a078c6bc025b8c6ea9bdd321d2f03c1fcbe5c0ef'],
+    ['apps/mobile/src/state/store.ts', 'df522a529e5dab9d1de2701131788bd633b895dd'],
+    ['apps/mobile/src/state/transitions.ts', '9e3725cc3c48ffb3d36fccbbeff4746ec2345b0f'],
     ['apps/mobile/src/state/CanonicalStateProvider.tsx', 'b7ea8b6e775f74f7d331843e4783dc7291b11b49'],
     ['apps/mobile/src/shell/FoundationShell.tsx', 'e2286ba1a35c2e40def475af5deed2d8ba8120d3'],
     ['apps/mobile/src/app/_layout.tsx', '90179f6d13026e9b0e2345e0418012214b9c9aab'],
@@ -267,8 +270,13 @@ test('the client seam is passive and typed: decode, fetch, hold; NOT_FETCHED / D
   }
   // Native CI RUNS for this change: the mobile source change is a native-impact path by the frozen MOB-CI-01 classifier.
   assert.equal(isNativeImpactPath(`${MOBILE_DIR}/historical-projection-wire.ts`), true, 'the Android / iOS smoke gates run for T-03C');
-  assert.equal(gitBlobId(mobileCi), '8efe44a2d2e95688c7612a2429b8f3ab106ecb8c', 'mobile-ci.yml is byte-identical (MOB-CI-01 preserved)');
-  assert.equal(gitBlobId(read('apps/mobile/package.json')), 'a259368e87baeca24d7374dd922d866bbe6a6f88', 'the mobile package declaration is byte-identical');
+  // T-04 re-anchor: the workflow gained exactly one Node-only gate step and one trigger path for
+  // the T-04 static contract. MOB-CI-01's structure is unchanged and is asserted structurally by
+  // the T-01, T-02 and T-04 contracts: one fast gate plus two conditional native jobs.
+  assert.equal(gitBlobId(mobileCi), '6c7a0928456eb34eb5e264fb9dbd1509038d04f7', 'mobile-ci.yml carries only the authorized T-04 gate step (MOB-CI-01 preserved)');
+  // T-04 re-anchor: the mobile package gained exactly the authorized Skia pin and the Jest setup
+  // for it. The pin stays exact, so a further dependency change still trips this gate.
+  assert.equal(gitBlobId(read('apps/mobile/package.json')), 'd10b3a577d6ee26c0af2e045f4bc39496181b2e7', 'the mobile package declaration carries only the authorized T-04 renderer pin beyond this baseline');
 });
 
 test('R2: the production A-1 path is the canonical subject-grounding authority end to end - server-built universe, opaque handles, server authorization, atomic persistence, derived appearance - and nothing else writes an appearance or a grounding', () => {
@@ -366,7 +374,9 @@ test('anti-scope: no Return-to-Live-Focus, no Go Live + Locate, no Map geometry,
   for (const name of ['uuid', 'zod', 'p-retry', 'async-retry', 'retry', 'bottleneck', 'xstate', 'immer', 'rxjs-live', 'socket.io', 'ws', 'lru-cache']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}) || name in (mobilePackage.dependencies ?? {}) || name in (mobilePackage.devDependencies ?? {}), false, `${name} must not be introduced`);
   }
-  assert.equal(gitBlobId(read('package-lock.json')), 'da9e64f217db91c4e72da27073c578a108a99bad', 'the lockfile is byte-identical: no dependency change');
+  // T-04 re-anchor: the lockfile moved exactly once since, for the authorized Map renderer. The
+  // pin stays exact, and T-03C still adds nothing to it.
+  assert.equal(gitBlobId(read('package-lock.json')), 'c5b6e12cc45d32bd782b3a690179fedabde7169d', 'the lockfile carries only the authorized T-04 renderer beyond the T-03C baseline');
   assert.doesNotMatch(read('package-lock.json'), /historical-projection/u, 'the lockfile knows nothing of T-03C');
   assert.doesNotMatch(read('apps/api/src/app.module.ts'), /historical|projection/iu, 'AppModule is untouched: the controller lives in ConversationModule');
   assert.equal(gitBlobId(read('apps/api/src/app.module.ts')), 'fc3ce9c12b67552fb54214d0b6b4931b89601da6', 'AppModule is byte-identical');

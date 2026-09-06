@@ -1,11 +1,15 @@
 /**
  * T-02 — Normalized action identity foundation.
  *
- * Two levels (Execution Authorization §7, §11, §12):
+ * Four levels (Execution Authorization §7, §11, §12; T-04 Direct Implementation §3, §18):
  *
  * - KERNEL: the only executable transitions in T-02 — `PAN`, `ZOOM_SEMANTIC`, `COMMIT_MOMENT`,
  *   `COMMIT_LIVE_EDGE`, and the two authoritative mirror ingestions `LIVE_HEAD_ADVANCED` and
  *   `LIVE_FOCUS_TRANSITION`.
+ * - EXECUTABLE: a frozen act whose owning task has landed its substrate and has promoted it to
+ *   a typed transition through this same boundary. T-04 promotes exactly three by name —
+ *   `INSPECT_OBJECT`, `SWITCH_CONTEXT`, `DIRECT_JUMP` — keeping their frozen identities, field
+ *   authorities and RH behaviour. Nothing else moves out of METADATA_ONLY.
  * - METADATA_ONLY: frozen later-owner acts recorded as identity, owner, class, permitted
  *   Class-A authority and frozen transactional category. They carry no payload type and fail
  *   closed at the store (`OwnedByLaterTask`).
@@ -21,12 +25,14 @@
  */
 import type {
   ClassAField,
+  InspectionRef,
   LiveFocus,
   ScaleIntentRef,
   SemanticDepth,
   SessionPosition,
   SpatialDestinationRef,
   WorldAnchorRef,
+  WorldOrientationRef,
 } from './classes';
 
 // ------------------------------------------------------------------------------------------
@@ -59,6 +65,36 @@ export type KernelActionType = KernelAction['type'];
 export const KERNEL_ACTION_TYPES = Object.freeze(['PAN', 'ZOOM_SEMANTIC', 'COMMIT_MOMENT', 'COMMIT_LIVE_EDGE'] as const);
 
 // ------------------------------------------------------------------------------------------
+// Map acts promoted to executable by T-04 (exactly three, by name)
+// ------------------------------------------------------------------------------------------
+
+/**
+ * Authorized landing of a direct jump. The kernel never resolves a locus: T-04's entitlement
+ * layer derives every reference here from the disclosed projection `V` before the act is built.
+ * `destination` is mandatory because a direct jump lands in an identified contextual locus;
+ * ordinary inspection carries none and can therefore never smuggle a locate.
+ */
+export interface DirectJumpLanding {
+  readonly depth: SemanticDepth;
+  readonly anchor: WorldAnchorRef;
+  readonly destination: SpatialDestinationRef;
+  readonly scale?: ScaleIntentRef;
+  readonly orientation?: WorldOrientationRef;
+}
+
+export type MapAction =
+  | { readonly type: 'INSPECT_OBJECT'; readonly ref: InspectionRef }
+  | { readonly type: 'SWITCH_CONTEXT'; readonly ref: InspectionRef }
+  | { readonly type: 'DIRECT_JUMP'; readonly ref: InspectionRef; readonly to: DirectJumpLanding };
+
+export type MapActionType = MapAction['type'];
+export const MAP_ACTION_TYPES = Object.freeze(['INSPECT_OBJECT', 'SWITCH_CONTEXT', 'DIRECT_JUMP'] as const);
+
+/** Every Product act the store can execute: the T-02 kernel plus the three T-04 Map acts. */
+export type StoreAction = KernelAction | MapAction;
+export type StoreActionType = StoreAction['type'];
+
+// ------------------------------------------------------------------------------------------
 // Authoritative events (passive, server-originated; closed catalog)
 // ------------------------------------------------------------------------------------------
 
@@ -82,9 +118,6 @@ export const METADATA_ONLY_ACTION_TYPES = Object.freeze([
   'RETURN_WORLD',
   'EXACT_RETURN',
   'BACK_ONE_STEP',
-  'INSPECT_OBJECT',
-  'SWITCH_CONTEXT',
-  'DIRECT_JUMP',
 ] as const);
 export type MetadataOnlyActionType = (typeof METADATA_ONLY_ACTION_TYPES)[number];
 
@@ -103,15 +136,17 @@ export const NON_STORE_IDENTITY_TYPES = Object.freeze([
 export type NonStoreIdentityType = (typeof NON_STORE_IDENTITY_TYPES)[number];
 
 /** Every registered identity, of every level and class. */
-export type ProductActId = KernelActionType | AuthoritativeEventType | MetadataOnlyActionType | NonStoreIdentityType;
+export type ProductActId = KernelActionType | MapActionType | AuthoritativeEventType | MetadataOnlyActionType | NonStoreIdentityType;
 
 /**
  * RH-eligible identities (FIX-T02-03): explicit Class-A Product acts only. Authoritative
  * events and Class C / D identities are unrepresentable as an RH act. Later-owner acts are
- * eligible in type because their RH behaviour is frozen and owned later; T-02 never appends them.
+ * eligible in type because their RH behaviour is frozen and owned later; T-02 never appends
+ * them. The three T-04 Map acts are RH-eligible for the same frozen reason and, unlike the
+ * later-owner set, T-04 does append them at the existing `RH_CHECKPOINT` boundary.
  */
-export type RhActionId = KernelActionType | MetadataOnlyActionType;
-export const RH_ACTION_IDS: readonly RhActionId[] = Object.freeze([...KERNEL_ACTION_TYPES, ...METADATA_ONLY_ACTION_TYPES]);
+export type RhActionId = KernelActionType | MapActionType | MetadataOnlyActionType;
+export const RH_ACTION_IDS: readonly RhActionId[] = Object.freeze([...KERNEL_ACTION_TYPES, ...MAP_ACTION_TYPES, ...METADATA_ONLY_ACTION_TYPES]);
 
 export function isRhActionId(value: unknown): value is RhActionId {
   return typeof value === 'string' && (RH_ACTION_IDS as readonly string[]).includes(value);
@@ -121,7 +156,9 @@ export type TaskId = 'T-02' | 'T-03A2' | 'T-03D' | 'T-04' | 'T-05' | 'T-06' | 'T
 export const FROZEN_TASK_IDS: readonly TaskId[] = Object.freeze(['T-02', 'T-03A2', 'T-03D', 'T-04', 'T-05', 'T-06', 'T-07', 'T-10', 'T-11']);
 
 export type CatalogClass = 'A' | 'C' | 'D' | 'EVENT';
-export type CatalogLevel = 'KERNEL' | 'METADATA_ONLY' | 'NOT_STORE_ACTION';
+export type CatalogLevel = 'KERNEL' | 'EXECUTABLE' | 'METADATA_ONLY' | 'NOT_STORE_ACTION';
+/** The levels the store runs a transition for; every other level fails closed. */
+export const EXECUTABLE_CATALOG_LEVELS: readonly CatalogLevel[] = Object.freeze(['KERNEL', 'EXECUTABLE']);
 export type TransactionalCategory =
   | 'EFFECTIVE_TRANSACTION'
   | 'COMPOSITE_TRANSACTION'
@@ -224,6 +261,40 @@ export const ACTION_CATALOG: Readonly<Record<ProductActId, CatalogEntry>> = free
     transactional: 'NEVER',
     frozenSource: 'Stage 6.5 v3 SDM-04 LF-01…04; S5-RH-05',
   },
+  // --- EXECUTABLE: the three Map acts T-04 promoted (frozen identities unchanged) ----------
+  INSPECT_OBJECT: {
+    id: 'INSPECT_OBJECT',
+    frozenName: 'Inspection transition (Stage 4)',
+    cls: 'A',
+    level: 'EXECUTABLE',
+    owner: 'T-04',
+    substrateOwner: null,
+    authority: fields('IF_ref'),
+    transactional: 'RH_CHECKPOINT',
+    frozenSource: 'Stage 4.1/4.3; Stage 5.2 §2.7 checkpoint',
+  },
+  SWITCH_CONTEXT: {
+    id: 'SWITCH_CONTEXT',
+    frozenName: 'Context switching (same object, different appearance)',
+    cls: 'A',
+    level: 'EXECUTABLE',
+    owner: 'T-04',
+    substrateOwner: null,
+    authority: fields('IF_ref'),
+    transactional: 'RH_CHECKPOINT',
+    frozenSource: 'Stage 4.3; Stage 5.2 §2.7 checkpoint',
+  },
+  DIRECT_JUMP: {
+    id: 'DIRECT_JUMP',
+    frozenName: 'Direct addressability / direct jump',
+    cls: 'A',
+    level: 'EXECUTABLE',
+    owner: 'T-04',
+    substrateOwner: null,
+    authority: fields('IF_ref', 'MC.depth', ...SPATIAL),
+    transactional: 'RH_CHECKPOINT',
+    frozenSource: 'Stage 4.1/4.3; Stage 5.2 §2.7 checkpoint',
+  },
   // --- METADATA_ONLY: frozen later-owner acts (no payload types; fail closed) --------------
   COMMIT_MOMENT_AND_LOCATE: {
     id: 'COMMIT_MOMENT_AND_LOCATE',
@@ -312,39 +383,6 @@ export const ACTION_CATALOG: Readonly<Record<ProductActId, CatalogEntry>> = free
     authority: fields('TM', 'IF_ref', 'MC.depth', ...SPATIAL),
     transactional: 'CONSUMES_RH',
     frozenSource: 'S5-RET-01; Stage 5.2 P8, FREEZE-01, REV-05',
-  },
-  INSPECT_OBJECT: {
-    id: 'INSPECT_OBJECT',
-    frozenName: 'Inspection transition (Stage 4)',
-    cls: 'A',
-    level: 'METADATA_ONLY',
-    owner: 'T-04',
-    substrateOwner: null,
-    authority: fields('IF_ref'),
-    transactional: 'RH_CHECKPOINT',
-    frozenSource: 'Stage 4.1/4.3; Stage 5.2 §2.7 checkpoint',
-  },
-  SWITCH_CONTEXT: {
-    id: 'SWITCH_CONTEXT',
-    frozenName: 'Context switching (same object, different appearance)',
-    cls: 'A',
-    level: 'METADATA_ONLY',
-    owner: 'T-04',
-    substrateOwner: null,
-    authority: fields('IF_ref'),
-    transactional: 'RH_CHECKPOINT',
-    frozenSource: 'Stage 4.3; Stage 5.2 §2.7 checkpoint',
-  },
-  DIRECT_JUMP: {
-    id: 'DIRECT_JUMP',
-    frozenName: 'Direct addressability / direct jump',
-    cls: 'A',
-    level: 'METADATA_ONLY',
-    owner: 'T-04',
-    substrateOwner: null,
-    authority: fields('IF_ref', 'MC.depth', ...SPATIAL),
-    transactional: 'RH_CHECKPOINT',
-    frozenSource: 'Stage 4.1/4.3; Stage 5.2 §2.7 checkpoint',
   },
   // --- NOT_STORE_ACTION: Class C / D identities (classification only) ----------------------
   PREVIEW_TEMPORAL_TARGET: {

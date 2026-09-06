@@ -28,6 +28,10 @@ const mobileCi = await read('.github/workflows/mobile-ci.yml');
 const bootSmoke = await read('apps/mobile/.maestro/boot-smoke.yaml');
 
 const expectedDependencies = {
+  // T-04: the authorized Living Analysis Map renderer, pinned exactly (not a range) because it
+  // is a native dependency whose generated projects the native smoke jobs build. It is the
+  // Expo SDK 57 recommended Skia version and `expo install --check` accepts it unchanged.
+  '@shopify/react-native-skia': '2.6.2',
   // MOB-CI-01: Expo SDK 57 patch baseline refreshed to what `expo install --check`
   // now requires. Only these two patch pins moved; the SDK minor is unchanged.
   expo: '~57.0.20',

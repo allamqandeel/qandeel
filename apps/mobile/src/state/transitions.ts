@@ -1,5 +1,5 @@
 /**
- * T-02 — Executable kernel transitions.
+ * T-02 — Executable kernel transitions, extended by T-04 with the three promoted Map acts.
  *
  * Action transitions return `ClientWritable` only: `live` (LH, LF) and `history` (RH) are
  * unreachable from a Product action at compile time. Event transitions return `LiveTruth`
@@ -7,16 +7,22 @@
  * per-field guard in `authority.ts` re-checks every result regardless.
  *
  * Preconditions throw before any state is produced. No transition performs gesture-to-world
- * mathematics, Preview handling, locate resolution or any later-owner semantics.
+ * mathematics, Preview handling, locate resolution or any later-owner semantics. The Map
+ * transitions are structural in exactly the same sense: entitlement against the disclosed
+ * projection `V` is resolved before the act exists, in `src/map/inspection`, and never here —
+ * the kernel receives an already-entitled `InspectionRef` the way `PAN` receives an already
+ * authorized `WORLD_ANCHOR`. Not one of the three writes `TM` or `LF`.
  */
-import type { AuthoritativeEvent, KernelAction, KernelActionType } from './actions';
+import type { AuthoritativeEvent, KernelAction, KernelActionType, MapAction, MapActionType, StoreAction, StoreActionType } from './actions';
 import { OutOfOrderTransition, PreconditionFailed, RetractionRejected } from './authority';
 import {
+  inspectionRefShapeIssue,
   isLiveFocus,
   isOpaqueRefOfKind,
   isSemanticDepth,
   isSessionPosition,
   liveFocusEquals,
+  opaqueRefEquals,
   type CameraIntent,
   type CanonicalState,
   type LiveTruth,
@@ -24,12 +30,14 @@ import {
 
 export type ClientWritable = Pick<CanonicalState, 'temporal' | 'inspection' | 'camera'>;
 
-export type ActionTransition<A extends KernelAction> = (state: CanonicalState, action: A) => ClientWritable;
+export type ActionTransition<A extends StoreAction> = (state: CanonicalState, action: A) => ClientWritable;
 export type EventTransition<E extends AuthoritativeEvent> = (state: CanonicalState, event: E) => LiveTruth;
 
 export type ActionTransitionTable = {
-  readonly [K in KernelActionType]: ActionTransition<Extract<KernelAction, { type: K }>>;
+  readonly [K in StoreActionType]: ActionTransition<Extract<StoreAction, { type: K }>>;
 };
+export type KernelActionTransitionTable = Pick<ActionTransitionTable, KernelActionType>;
+export type MapActionTransitionTable = Pick<ActionTransitionTable, MapActionType>;
 export type EventTransitionTable = {
   readonly [K in AuthoritativeEvent['type']]: EventTransition<Extract<AuthoritativeEvent, { type: K }>>;
 };
@@ -102,11 +110,101 @@ const commitLiveEdge: ActionTransition<Extract<KernelAction, { type: 'COMMIT_LIV
   return writable(state, undefined, { kind: 'FOLLOW_LIVE' });
 };
 
-export const KERNEL_ACTION_TRANSITIONS: ActionTransitionTable = Object.freeze({
+export const KERNEL_ACTION_TRANSITIONS: KernelActionTransitionTable = Object.freeze({
   PAN: pan,
   ZOOM_SEMANTIC: zoomSemantic,
   COMMIT_MOMENT: commitMoment,
   COMMIT_LIVE_EDGE: commitLiveEdge,
+});
+
+// ------------------------------------------------------------------------------------------
+// T-04 — the three promoted Map acts
+// ------------------------------------------------------------------------------------------
+
+/** Structural validation only: whether the reference is *entitled* was decided in `src/map/inspection`. */
+function assertInspectionRefShape(actId: MapActionType, ref: unknown): void {
+  const issue = inspectionRefShapeIssue(ref, `${actId}.ref`);
+  if (issue) throw new PreconditionFailed(actId, issue);
+}
+
+/**
+ * `INSPECT_OBJECT`: `IF_ref := the exact requested inspection reference`. No temporal movement,
+ * no `LF`, and no camera write at all — an ordinary inspection can never smuggle a locate,
+ * which is why the frozen authority of this act is `IF_ref` alone.
+ */
+const inspectObject: ActionTransition<Extract<MapAction, { type: 'INSPECT_OBJECT' }>> = (state, action) => {
+  assertInspectionRefShape('INSPECT_OBJECT', action.ref);
+  return { temporal: state.temporal, inspection: action.ref, camera: state.camera };
+};
+
+/**
+ * `SWITCH_CONTEXT`: the same canonical object seen through another legitimate contextual
+ * appearance. The canonical identity and the semantic depth must be identical — a switch is
+ * never a depth move and never a second canonical object — and the new reference must name a
+ * contextual appearance. An identical reference is a true no-op and is dropped by `Φ_eff`.
+ */
+const switchContext: ActionTransition<Extract<MapAction, { type: 'SWITCH_CONTEXT' }>> = (state, action) => {
+  assertInspectionRefShape('SWITCH_CONTEXT', action.ref);
+  const current = state.inspection;
+  if (current === null) {
+    throw new PreconditionFailed('SWITCH_CONTEXT', 'a context switch requires a current inspection to switch the context of');
+  }
+  if (!opaqueRefEquals(current.canonicalIdentity, action.ref.canonicalIdentity)) {
+    throw new PreconditionFailed('SWITCH_CONTEXT', 'the canonical identity must remain identical; a different identity is an inspection, not a context switch');
+  }
+  if (current.depth !== action.ref.depth) {
+    throw new PreconditionFailed('SWITCH_CONTEXT', 'a context switch never changes semantic depth');
+  }
+  if (action.ref.contextualAppearance === undefined) {
+    throw new PreconditionFailed('SWITCH_CONTEXT', 'a context switch names the contextual appearance it switches to');
+  }
+  return { temporal: state.temporal, inspection: action.ref, camera: state.camera };
+};
+
+/**
+ * `DIRECT_JUMP`: one effective transaction that sets the exact `IF_ref`, the semantic depth and
+ * the authorized camera intent required to land in the identified contextual locus. Temporal
+ * state is untouched: `TM` is preserved and no `LF` exists. Orientation, scale and destination
+ * are written only when the authorized landing supplies them (EX02-03's rule for `PAN`).
+ */
+const directJump: ActionTransition<Extract<MapAction, { type: 'DIRECT_JUMP' }>> = (state, action) => {
+  assertInspectionRefShape('DIRECT_JUMP', action.ref);
+  const to = action.to;
+  if (to === null || typeof to !== 'object') throw new PreconditionFailed('DIRECT_JUMP', 'requires an authorized landing');
+  if (!isSemanticDepth(to.depth)) {
+    throw new PreconditionFailed('DIRECT_JUMP', `landing depth must be one of the five frozen rungs, got ${String(to.depth)}`);
+  }
+  if (!isOpaqueRefOfKind(to.anchor, 'WORLD_ANCHOR')) throw new PreconditionFailed('DIRECT_JUMP', 'the landing requires a WORLD_ANCHOR reference');
+  if (!isOpaqueRefOfKind(to.destination, 'SPATIAL_DESTINATION')) {
+    throw new PreconditionFailed('DIRECT_JUMP', 'the landing requires an authorized SPATIAL_DESTINATION locus');
+  }
+  if (to.scale !== undefined && !isOpaqueRefOfKind(to.scale, 'SCALE_INTENT')) {
+    throw new PreconditionFailed('DIRECT_JUMP', 'scale must be a SCALE_INTENT reference');
+  }
+  if (to.orientation !== undefined && !isOpaqueRefOfKind(to.orientation, 'WORLD_ORIENTATION')) {
+    throw new PreconditionFailed('DIRECT_JUMP', 'orientation must be a WORLD_ORIENTATION reference');
+  }
+  const base: CameraIntent = {
+    ...state.camera,
+    anchor: to.anchor,
+    depth: to.depth,
+    destination: to.destination,
+    scale: to.scale ?? state.camera.scale,
+  };
+  const camera: CameraIntent = to.orientation === undefined ? base : { ...base, orientation: to.orientation };
+  return { temporal: state.temporal, inspection: action.ref, camera };
+};
+
+export const MAP_ACTION_TRANSITIONS: MapActionTransitionTable = Object.freeze({
+  INSPECT_OBJECT: inspectObject,
+  SWITCH_CONTEXT: switchContext,
+  DIRECT_JUMP: directJump,
+});
+
+/** Every Product transition the store can run: the T-02 kernel plus the three T-04 Map acts. */
+export const STORE_ACTION_TRANSITIONS: ActionTransitionTable = Object.freeze({
+  ...KERNEL_ACTION_TRANSITIONS,
+  ...MAP_ACTION_TRANSITIONS,
 });
 
 /** `LIVE_HEAD_ADVANCED`: monotonic `LH` mirror; retraction rejected; redelivery idempotent. */

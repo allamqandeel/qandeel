@@ -3,6 +3,7 @@ import {
   AUTHORITATIVE_EVENT_TYPES,
   FROZEN_TASK_IDS,
   KERNEL_ACTION_TYPES,
+  MAP_ACTION_TYPES,
   METADATA_ONLY_ACTION_TYPES,
   NON_STORE_IDENTITY_TYPES,
   PRODUCT_ACT_IDS,
@@ -41,7 +42,11 @@ const SIX_RETURN_ACTS = ['RETURN_LIVE_HEAD', 'RETURN_LIVE_FOCUS', 'GO_LIVE_AND_L
 
 describe('action registry invariants', () => {
   it('every identity is registered once, keyed by its own id, with a frozen owner', () => {
-    expect(PRODUCT_ACT_IDS).toHaveLength(KERNEL_ACTION_TYPES.length + AUTHORITATIVE_EVENT_TYPES.length + METADATA_ONLY_ACTION_TYPES.length + NON_STORE_IDENTITY_TYPES.length);
+    // T-04 re-anchor: the registry is unchanged in size; the three named Map acts moved out of
+    // the later-owner set into their own executable level. No other identity moved.
+    expect(PRODUCT_ACT_IDS).toHaveLength(
+      KERNEL_ACTION_TYPES.length + MAP_ACTION_TYPES.length + AUTHORITATIVE_EVENT_TYPES.length + METADATA_ONLY_ACTION_TYPES.length + NON_STORE_IDENTITY_TYPES.length,
+    );
     for (const id of PRODUCT_ACT_IDS) {
       const entry = ACTION_CATALOG[id];
       expect(entry.id).toBe(id);
@@ -66,7 +71,10 @@ describe('action registry invariants', () => {
   });
 
   it('RH-eligible identities are exactly the Class-A Product acts; events and Class C / D are excluded (FIX-T02-03)', () => {
-    expect([...RH_ACTION_IDS].sort()).toEqual([...KERNEL_ACTION_TYPES, ...METADATA_ONLY_ACTION_TYPES].sort());
+    // T-04 re-anchor: `INSPECT_OBJECT`, `SWITCH_CONTEXT` and `DIRECT_JUMP` keep their frozen
+    // RH_CHECKPOINT behaviour; they are now RH-eligible through MAP_ACTION_TYPES instead of
+    // through the later-owner set.
+    expect([...RH_ACTION_IDS].sort()).toEqual([...KERNEL_ACTION_TYPES, ...MAP_ACTION_TYPES, ...METADATA_ONLY_ACTION_TYPES].sort());
     for (const id of RH_ACTION_IDS) expect(ACTION_CATALOG[id].cls).toBe('A');
     for (const id of [...AUTHORITATIVE_EVENT_TYPES, ...NON_STORE_IDENTITY_TYPES]) expect(isRhActionId(id)).toBe(false);
     expect(isRhActionId('NAVIGATE')).toBe(false);
