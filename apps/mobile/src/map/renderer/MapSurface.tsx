@@ -10,12 +10,12 @@
  * shell: the technical container is T-01's and stays byte-identical, and where the Map appears in
  * the Product is a later task's decision.
  */
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
 import type { CanonicalStore } from '../../state';
-import { useMapPanGesture, type MapCamera, type ViewportEnvelope } from '../camera';
+import { decodeCameraIntent, useMapPanGesture, type ViewportEnvelope } from '../camera';
 import { MapAccessibilityLayer } from '../accessibility';
 import { inspectObject, type DirectJumpOutcome, type MapInspectionContext } from '../inspection';
 import type { MapActionOutcome } from '../outcome';
@@ -29,20 +29,29 @@ export const MAP_SURFACE_PLANE_TEST_ID = 'qandeel-map-surface-plane';
 export interface MapSurfaceProps {
   readonly store: CanonicalStore;
   readonly context: MapInspectionContext;
-  readonly camera: MapCamera;
   readonly envelope: ViewportEnvelope;
   readonly style?: RenderStyle;
   readonly onOutcome?: (outcome: MapActionOutcome | DirectJumpOutcome) => void;
 }
 
-export function MapSurface({ store, context, camera, envelope, style = DEFAULT_RENDER_STYLE, onOutcome }: MapSurfaceProps) {
-  const placed = useMemo(() => placeScene(context.scene, camera, envelope), [context.scene, camera, envelope]);
-  const { gesture, progress } = useMapPanGesture(store, { onSettled: onOutcome });
+export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_STYLE, onOutcome }: MapSurfaceProps) {
+  // The camera is READ from canonical state, never held beside it: an act dispatched from this
+  // surface re-renders both the canvas and the accessible layer from the same new `MC`, so the
+  // two can never disagree about where the camera is.
+  const intent = useSyncExternalStore(store.subscribe, () => store.getState().camera);
+  const decoded = useMemo(() => decodeCameraIntent(intent), [intent]);
+  const camera = decoded.ok ? decoded.camera : null;
+  const placed = useMemo(
+    () => (camera === null ? null : placeScene(context.scene, camera, envelope)),
+    [context.scene, camera, envelope],
+  );
+  const { gesture, progress } = useMapPanGesture(store, { enabled: camera !== null, onSettled: onOutcome });
 
   // The act runs first and the observer is notified afterwards: an optional call would not
   // evaluate its argument when no observer is attached, silently disabling the pointer route.
   const onTap = useCallback(
     (x: number, y: number) => {
+      if (placed === null) return;
       const node = hitTest(placed, { x, y });
       if (node === null) return;
       if (node.family !== 'THREAD' && node.family !== 'READING' && node.family !== 'EMERGING_FOCUS') return;
@@ -51,6 +60,9 @@ export function MapSurface({ store, context, camera, envelope, style = DEFAULT_R
     },
     [placed, store, context, onOutcome],
   );
+
+  // An undecodable camera renders an empty surface rather than a plausible wrong Map.
+  if (camera === null || placed === null) return <View testID={MAP_SURFACE_TEST_ID} style={styles.surface} />;
 
   return (
     <View testID={MAP_SURFACE_TEST_ID} style={styles.surface}>

@@ -9,7 +9,7 @@
  * will want them: they remain later-owner metadata, and offering an action this task cannot
  * honour would be a promise, not a route.
  */
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
 
 import { type CanonicalStore } from '../../state';
@@ -41,8 +41,14 @@ export interface MapAccessibilityLayerProps {
 const historicalFamilyOf = (family: MapObjectFamily): 'THREAD' | 'READING' | 'EMERGING_FOCUS' => family;
 
 export function MapAccessibilityLayer({ store, context, camera, envelope, onOutcome }: MapAccessibilityLayerProps) {
+  // Subscribed, not sampled: the offered actions depend on the current `IF_ref`, so a tree built
+  // from a snapshot taken once at mount would keep offering — or keep withholding — a context
+  // switch after the inspection moved. Reading through `useSyncExternalStore` is the T-02 kernel's
+  // own subscription seam, and it makes this layer correct independently of its parent.
+  const inspection = useSyncExternalStore(store.subscribe, () => store.getState().inspection);
+
   const focus: MapAccessibilityFocus | null = useMemo(() => {
-    const decoded = decodeInspectionRef(store.getState().inspection);
+    const decoded = decodeInspectionRef(inspection);
     if (decoded === null) return null;
     if (decoded.family !== 'THREAD' && decoded.family !== 'READING' && decoded.family !== 'EMERGING_FOCUS') return null;
     return {
@@ -50,7 +56,7 @@ export function MapAccessibilityLayer({ store, context, camera, envelope, onOutc
       id: decoded.id,
       bindingId: decoded.appearance?.kind === 'THREAD_READING' ? decoded.appearance.bindingId : null,
     };
-  }, [store]);
+  }, [inspection]);
 
   const tree = useMemo(
     () => buildMapAccessibilityTree(context.scene, camera, envelope, focus),
