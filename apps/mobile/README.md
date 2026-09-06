@@ -228,16 +228,27 @@ explicit user act.
   its own strip below the Track, so presentation movement and temporal traversal are told apart
   by where they are touched as well as by what they announce. Every scheduled scrub callback carries
   its gesture's interaction epoch, so a callback from a settled, cancelled or superseded gesture is
-  inert whatever order the two runtimes deliver in.
+  inert whatever order the two runtimes deliver in — and ownership belongs to ONE coordinator per
+  mounted surface, bound to the store and preview controller and reading its observers at call
+  time, so a rerender with new callback identities, a replaced controller or an unmount can never
+  split it; a retired surface's callbacks are inert. The strip is sized to T-05's own viewport at
+  the row's start edge, and `presentation-geometry.ts` is the ONE logical↔physical rule shared by
+  the pointer side and the motion side, so under right-to-left the markers rest where T-05 draws
+  the same Moments and the outboard Live slot is never Moment-targeting space.
 - **Motion** (`motion/`): decided in plain arithmetic first, then bound to Reanimated. Motion
   explains Product truth and never carries it — the pure contract imports nothing at all, the
   binding holds no store, and the commit acknowledgement is called with the store's answer
-  already in hand. Four transitions, all under 300 ms; reduced motion collapses every one of them
-  to zero while changing no target, capability or stance.
+  already in hand. Four transitions, all under 300 ms; reduced motion collapses every movement to
+  zero (keeping the preview's opacity bridge) while changing no target, capability or stance.
+  Positions animate in Track space and become physical only in the style, through the shared
+  geometry, with the window offset, viewport and direction in never-animated shared values.
 - **Accessibility** (`accessibility/`): exact targeting, preview, commit, cancel, forward
   continuation and the Live target each have a route needing neither a drag nor a precision
   pointer. A preview is announced as a preview, committed truth keeps its own sentence, and
-  nothing announces presentation movement as temporal movement.
+  nothing announces presentation movement as temporal movement. The container is a plain layout
+  View; the stance and preview live on a dedicated leaf summary element that also carries the named
+  actions, and the exact-entry input and the four controls are individually focusable siblings — no
+  accessibility element in the layer owns an interactive descendant.
 - Not here, by design: the T-07 return acts (still later-owner metadata, still failing closed),
   the Map's own projection handoff, final chrome and art direction, and the general input and
   responsive substrate (T-11). Nothing under `src/temporal-navigation/` is mounted in the shell.

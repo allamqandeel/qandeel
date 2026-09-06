@@ -13,6 +13,7 @@ import { sessionPosition } from '../../state';
 import { createPresentationController, TIMELINE_STEP } from '../../timeline';
 import {
   CANCEL_DAMPING_RATIO,
+  COMMIT_SETTLE_SCALE,
   TEMPORAL_MOTION_DURATIONS,
   cursorOffsetFor,
   temporalMotionPlan,
@@ -170,6 +171,16 @@ describe('R1-MOTION — the animation review findings', () => {
     expect(transform.some((entry) => 'scaleY' in entry)).toBe(true);
     // Translate before scale, so the acknowledgement never multiplies the position.
     expect(Object.keys(transform[0])).toEqual(['translateX']);
+
+    // FCR-MOTION-02 — the strip clips its overflow, so the acknowledgement's full growth must fit
+    // inside it: a marker that filled the strip would pulse into the clipped region and show nothing.
+    const strip = flatten(view.getByTestId(TEMPORAL_TARGET_STRIP_TEST_ID).props.style);
+    const marker = flatten(view.getByTestId(TEMPORAL_COMMITTED_MARKER_TEST_ID).props.style);
+    expect(strip.overflow).toBe('hidden');
+    const grown = (marker.height as number) * (1 + COMMIT_SETTLE_SCALE);
+    const centre = (marker.top as number) + (marker.height as number) / 2;
+    expect(centre - grown / 2).toBeGreaterThanOrEqual(0);
+    expect(centre + grown / 2).toBeLessThanOrEqual(strip.height as number);
 
     await act(async () => {
       view.unmount();

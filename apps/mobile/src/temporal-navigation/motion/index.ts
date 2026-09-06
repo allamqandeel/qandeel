@@ -13,5 +13,5 @@ export {
   trackOffsetFor,
 } from './temporal-motion';
 
-export type { TemporalMotionBinding } from './useTemporalMotion';
+export type { TemporalMarkerGeometry, TemporalMotionBinding } from './useTemporalMotion';
 export { PREVIEW_MARKER_OPACITY, useTemporalMotion } from './useTemporalMotion';

@@ -7,6 +7,31 @@
  * forward continuation is a repeatable single step, and preview, commit, cancel and the Live target
  * are named actions.
  *
+ * ## Why the container is not an accessibility element (FCR-02)
+ *
+ * On React Native, `accessible={true}` makes a View ONE accessibility element — on iOS it becomes
+ * `isAccessibilityElement`, on Android a single focusable node — and assistive technology does not
+ * reliably reach the interactive descendants of such an element independently: they collapse into
+ * the parent. A container that grouped the exact-entry `TextInput` and the four controls would
+ * therefore hide exactly the routes this component exists to provide, and a test renderer would
+ * never notice, because it can still find and fire the children.
+ *
+ * So the structure is split by what each element IS:
+ *
+ *   - the CONTAINER is a plain layout View. It carries no accessibility props at all, so it groups
+ *     nothing and suppresses nothing;
+ *   - the SUMMARY is a dedicated accessibility element with NO interactive descendants — only the
+ *     two statements, committed stance and preview. It is focusable on its own, it announces the
+ *     one truthful sentence, and it carries the named temporal actions, which cost nothing there
+ *     because there is nothing beneath it to suppress;
+ *   - the exact-entry input and the four controls are ordinary, individually focusable native
+ *     elements, siblings of the summary, each with its own truthful label and state.
+ *
+ * The named actions are deliberately kept, and deliberately on the summary: a reader who has just
+ * heard the temporal state can act on it without moving focus, and each action converges on the
+ * same executor as the sibling control that offers the same capability. There is no capability that
+ * exists only as an action, and none that exists only as a control.
+ *
  * The T-07 return acts are deliberately absent even though a final accessibility architecture will
  * want them: they remain later-owner metadata, and offering an action this task cannot honour would
  * be a promise rather than a route.
@@ -32,6 +57,8 @@ import {
 } from './temporal-accessibility';
 
 export const TEMPORAL_NAVIGATOR_TEST_ID = 'qandeel-temporal-navigator';
+/** The one accessibility element that states temporal truth and carries the named actions. */
+export const TEMPORAL_SUMMARY_TEST_ID = 'qandeel-temporal-summary';
 export const TEMPORAL_EXACT_ENTRY_TEST_ID = 'qandeel-temporal-exact-entry';
 export const TEMPORAL_COMMIT_TEST_ID = 'qandeel-temporal-commit';
 export const TEMPORAL_LIVE_TEST_ID = 'qandeel-temporal-live';
@@ -105,20 +132,25 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
   }, [entry, preview, targeting]);
 
   return (
-    <View
-      testID={TEMPORAL_NAVIGATOR_TEST_ID}
-      style={styles.surface}
-      accessible
-      accessibilityRole="none"
-      accessibilityLabel={model.surfaceLabel}
-      accessibilityValue={{ text: temporalAnnouncement(model) }}
-      accessibilityActions={model.actions.map((action) => ({ name: action.name, label: action.label }))}
-      onAccessibilityAction={(event: AccessibilityActionEvent) => runAction(event.nativeEvent.actionName)}
-    >
-      {/* Committed truth and the preview are separate statements. The preview never overwrites the
-          committed sentence, and it always says that it is a preview. */}
-      <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`}>{model.stanceLabel}</Text>
-      {model.previewLabel !== null && <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:preview`}>{model.previewLabel}</Text>}
+    // Layout only. No accessibility prop of any kind: this View must never become an accessibility
+    // element, because it owns the interactive descendants below.
+    <View testID={TEMPORAL_NAVIGATOR_TEST_ID} style={styles.surface}>
+      {/* The summary element: a leaf. Committed truth and the preview are separate statements — the
+          preview never overwrites the committed sentence, and it always says that it is a preview.
+          Nothing interactive lives inside it, so making it ONE element suppresses nothing. */}
+      <View
+        testID={TEMPORAL_SUMMARY_TEST_ID}
+        style={styles.summary}
+        accessible
+        accessibilityRole="text"
+        accessibilityLabel={model.surfaceLabel}
+        accessibilityValue={{ text: temporalAnnouncement(model) }}
+        accessibilityActions={model.actions.map((action) => ({ name: action.name, label: action.label }))}
+        onAccessibilityAction={(event: AccessibilityActionEvent) => runAction(event.nativeEvent.actionName)}
+      >
+        <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`}>{model.stanceLabel}</Text>
+        {model.previewLabel !== null && <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:preview`}>{model.previewLabel}</Text>}
+      </View>
 
       <TextInput
         testID={TEMPORAL_EXACT_ENTRY_TEST_ID}
@@ -195,6 +227,7 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
 
 const styles = StyleSheet.create({
   surface: { flexDirection: 'column' },
+  summary: { flexDirection: 'column' },
   entry: { minHeight: 44 },
   control: { minHeight: 44, justifyContent: 'center' },
 });

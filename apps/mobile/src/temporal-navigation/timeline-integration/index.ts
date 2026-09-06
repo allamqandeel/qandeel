@@ -2,10 +2,22 @@
  * T-06 — the one-way bridge from T-05's disclosed presentation to temporal intent, and the composed
  * temporal surface. T-05 gains no store, no dispatch, no selection and no Live commit in return.
  */
-export { disclosedTargetAt, presentationX, temporalTargetFromDisclosed } from './disclosed-bridge';
+export type { PresentationStripGeometry } from './presentation-geometry';
+export { MIRROR_EPSILON, markerTranslateX, physicalPresentationX, presentationX, restingMarkerX } from './presentation-geometry';
 
-export type { ScrubDependencies, ScrubHandlers } from './scrub';
-export { createScrubHandlers } from './scrub';
+export { disclosedTargetAt, temporalTargetFromDisclosed } from './disclosed-bridge';
+
+export type {
+  ScrubCoordinator,
+  ScrubCoordinatorOptions,
+  ScrubDependencies,
+  ScrubForwarder,
+  ScrubHandlers,
+  ScrubInteraction,
+  ScrubObservers,
+  ScrubSurface,
+} from './scrub';
+export { createScrubCoordinator, createScrubForwarder, createScrubHandlers } from './scrub';
 
 export type { TemporalScrubBinding, TemporalScrubGeometry, TemporalScrubOptions } from './useTemporalScrub';
 export { useTemporalScrub } from './useTemporalScrub';

@@ -11,6 +11,17 @@
  * reader can move the window without going anywhere in time, and can go somewhere in time without
  * moving the window, and the two are told apart by where they touch as well as by what they hear.
  *
+ * ## Where the strip is, physically (FCR-03)
+ *
+ * The strip is sized to T-05's own Timeline viewport and aligned to the row's START edge, so it sits
+ * exactly under the Track in both writing directions: flush left in LTR, flush right in RTL, with
+ * T-05's discontinuity and outboard Live slot beside it rather than beneath it. The outboard Live
+ * region is therefore never Moment-targeting space — a touch there does not reach the strip at all,
+ * in either direction — and the strip's own local coordinates ARE the viewport's physical
+ * coordinates, which is what lets the pointer side and the motion side share one geometry. The
+ * markers are anchored at the strip's logical start (`start: 0`), so the same translateX rule
+ * places them in LTR and its exact reflection places them in RTL.
+ *
  * ## What is canonical here, and what is not
  *
  * The store is the only writer. The presentation controller, the preview controller and the motion
@@ -32,7 +43,7 @@ import Animated from 'react-native-reanimated';
 import type { CanonicalStore } from '../../state';
 import { TIMELINE_STEP, TimelinePresentation, type PresentationController } from '../../timeline';
 import { TemporalNavigator } from '../accessibility';
-import { useTemporalMotion } from '../motion';
+import { useTemporalMotion, type TemporalMarkerGeometry } from '../motion';
 import type { TemporalOutcome } from '../outcome';
 import type { TemporalPreviewController } from '../preview/preview-state';
 import { temporalTargeting } from '../targeting/disclosed-availability';
@@ -48,6 +59,13 @@ export const TEMPORAL_LIVE_EDGE_TEST_ID = 'qandeel-temporal-live-edge';
 /** Minimum touch target. The strip is the temporal surface, never a presentation control. */
 const STRIP_HEIGHT = 44;
 const MARKER_WIDTH = 2;
+/**
+ * The markers sit inside the strip's clip with room to breathe: the commit acknowledgement grows
+ * the committed marker by `COMMIT_SETTLE_SCALE` about its centre, and a marker that filled the
+ * strip would grow straight into the clipped region and acknowledge nothing (FCR-MOTION-02).
+ */
+const MARKER_INSET = 2;
+const MARKER_HEIGHT = STRIP_HEIGHT - 2 * MARKER_INSET;
 
 export interface LiveEdgeTargetProps {
   readonly store: CanonicalStore;
@@ -110,6 +128,15 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
     preview.reconcile(targeting);
   }, [preview, targeting]);
 
+  // ONE presentation geometry for the pointer side and the motion side: T-05's invariant step,
+  // T-05's window offset, T-05's viewport, and the layout direction the strip is laid out under.
+  // Presentation quantities every one of them; none is consulted by any Product decision.
+  const rtl = I18nManager.isRTL;
+  const geometry = useMemo<TemporalMarkerGeometry>(
+    () => ({ stepWidth: TIMELINE_STEP, windowOffset: window.offset, viewport: window.viewport, rtl }),
+    [window.offset, window.viewport, rtl],
+  );
+
   const motion = useTemporalMotion(
     {
       committedSp: bounds.committedTc,
@@ -119,7 +146,7 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
       // the JS-runtime plan never claims to know whether one is down.
       dragging: false,
     },
-    { stepWidth: TIMELINE_STEP, windowOffset: window.offset },
+    geometry,
   );
 
   const snapshot = useCallback(() => presentation.getSnapshot(), [presentation]);
@@ -127,7 +154,7 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
     store,
     preview,
     snapshot,
-    geometry: { viewport: window.viewport, windowOffset: window.offset, rtl: I18nManager.isRTL },
+    geometry,
     enabled,
     fingerX: motion.fingerX,
     tracking: motion.tracking,
@@ -153,7 +180,9 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
       <GestureDetector gesture={gesture}>
         <View
           testID={TEMPORAL_TARGET_STRIP_TEST_ID}
-          style={styles.strip}
+          // Exactly T-05's viewport, at the row's start edge: under the Track in both directions,
+          // and never under the discontinuity or the outboard Live slot.
+          style={[styles.strip, { width: window.viewport }]}
           // The strip is the temporal surface. Its own semantics are supplied by the navigator
           // below, which is the non-drag route to everything reachable here.
           accessible={false}
@@ -185,8 +214,14 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
 
 const styles = StyleSheet.create({
   layer: { flexDirection: 'column' },
-  strip: { height: STRIP_HEIGHT },
-  marker: { position: 'absolute', top: 0, width: MARKER_WIDTH, height: STRIP_HEIGHT },
+  // `alignSelf: 'flex-start'` is the row's START edge: left in LTR, right in RTL — the same edge
+  // T-05's Timeline is flush against. A marker for a Moment outside the presentation window has no
+  // physical place inside the strip, and is clipped rather than painted over the outboard slot.
+  strip: { height: STRIP_HEIGHT, alignSelf: 'flex-start', overflow: 'hidden' },
+  // Anchored at the strip's logical START, so one translateX rule places it in LTR and its exact
+  // reflection places it in RTL (see `presentation-geometry.ts`); inset vertically so the commit
+  // acknowledgement's growth stays inside the strip's clip.
+  marker: { position: 'absolute', top: MARKER_INSET, start: 0, width: MARKER_WIDTH, height: MARKER_HEIGHT },
   committedMarker: { borderLeftWidth: MARKER_WIDTH },
   previewMarker: { borderLeftWidth: MARKER_WIDTH, borderStyle: 'dashed' },
   liveEdge: { minHeight: 44, justifyContent: 'center' },

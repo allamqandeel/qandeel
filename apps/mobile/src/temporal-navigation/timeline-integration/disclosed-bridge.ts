@@ -23,32 +23,12 @@
 import { hitTest, type DisclosedMomentTarget, type DisclosedTrack, type PresentationSnapshot } from '../../timeline';
 import type { TargetResolution } from '../targeting/addressability';
 import { resolveDisclosedTarget, type TemporalTargeting } from '../targeting/disclosed-availability';
+import { presentationX } from './presentation-geometry';
 
 /**
- * Sub-point correction for the right-to-left mirror. A logical coordinate is a half-open `[0, w)`
- * interval, and mirroring a half-open interval produces `(0, w]`; this keeps the mirrored extreme
- * inside the presentation's own convention instead of falling one step past its end.
- */
-const MIRROR_EPSILON = 1 / 1024;
-
-/**
- * The logical presentation coordinate of a touch, in the same left-to-right space T-05's own hit
- * testing and item layout use. Right-to-left is mirrored here and nowhere else, and `rtl` is passed
- * in rather than read from the platform, so this stays a pure function with one behaviour per input.
- */
-export function presentationX(x: number, viewport: number, rtl: boolean): number | null {
-  // Also callable from the UI runtime, so the scrub gesture's own step detection uses this exact
-  // rule instead of a second copy of it.
-  'worklet';
-  if (!Number.isFinite(x) || !Number.isFinite(viewport) || viewport <= 0) return null;
-  if (x < 0 || x >= viewport) return null;
-  if (!rtl) return x;
-  return Math.min(viewport - x, viewport - MIRROR_EPSILON);
-}
-
-/**
- * The disclosed target under a touch, or `null`. This is T-05's own presentation hit test — it is
- * not re-implemented here — and it is activation-neutral: identifying a target is not selecting it,
+ * The disclosed target under a touch, or `null`. The physical-to-logical mirror is the ONE shared
+ * presentation geometry (`presentation-geometry.ts`), and the hit test is T-05's own — neither is
+ * re-implemented here — and it is activation-neutral: identifying a target is not selecting it,
  * previewing it or committing it.
  */
 export function disclosedTargetAt(snapshot: PresentationSnapshot, x: number, rtl: boolean): DisclosedMomentTarget | null {

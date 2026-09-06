@@ -17,5 +17,6 @@ export {
   TEMPORAL_EXACT_ENTRY_TEST_ID,
   TEMPORAL_LIVE_TEST_ID,
   TEMPORAL_NAVIGATOR_TEST_ID,
+  TEMPORAL_SUMMARY_TEST_ID,
   TemporalNavigator,
 } from './TemporalNavigator';

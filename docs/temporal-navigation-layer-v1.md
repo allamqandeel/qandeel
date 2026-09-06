@@ -373,7 +373,7 @@ The motion contract was decided before any animation code existed, and lives in
 | # | Purpose | Values |
 | --- | --- | --- |
 | M1 cursor retarget | State indication / preventing a jarring change | `withTiming` 140 ms, `cubic-bezier(0.23, 1, 0.32, 1)`; retargets rather than restarting, so held continuation glides |
-| M2 commit settle | Feedback, after the store has already answered | `withSequence` 80 ms up / 120 ms down on opacity + `scale(1 → 1.06)`; never from `scale(0)` |
+| M2 commit settle | Feedback, after the store has already answered | `withSequence` 80 ms up / 120 ms down of a `scaleY` pulse (`1 → 1.06`) on the committed marker itself, composed after its `translateX`; never from `scale(0)`, and not on opacity |
 | M3 cancel return | Spatial consistency | `withSpring` 240 ms, `dampingRatio: 1` — critically damped, so it cannot overshoot past committed truth |
 | M4 preview presence | Preview-versus-commit legibility | `withTiming` 160 ms on opacity to `0.72`; a preview marker is never drawn at committed weight |
 
@@ -408,9 +408,63 @@ animate; every duration is under 300 ms; all motion is `withTiming`/`withSpring`
 therefore retargets rather than restarting; the locus chooser has no motion at all, which is correct
 for a surface whose job is to present a choice without implying one.
 
-Two things still need a real device and cannot be judged from code: how the scrub feels when
-interrupted mid-flight and reversed, and whether the 140 ms cursor retarget reads as continuous at a
-held continuation's cadence on a slow Android device.
+The gate ran again on the final closure revision (after FCR-01/02/03) and produced two material
+findings and one minor one, all fixed and pinned:
+
+| # | Finding | Fix |
+| --- | --- | --- |
+| FCR-MOTION-01 | On release the cursor style switched from the finger branch to the rest branch while the animated Track position already sat at the step centre — a teleport of up to half a step (24 pt) at the exact moment the hand lets go, in both writing directions. | A `useAnimatedReaction` on the `tracking` edge seeds the animated Track position from the finger's own logical place (`presentationX(finger) + offset`, the very value the finger branch drew) and retargets with M1 from there. UI runtime only, nothing scheduled, no Product decision: the rest target was already the preview controller's. `rtl-geometry.test.tsx` proves the seed reproduces the finger branch exactly at every finger position in LTR and RTL. |
+| FCR-MOTION-02 | FCR-03 gave the strip `overflow: 'hidden'` (so an off-window marker is never painted over the outboard Live slot), but the markers filled the strip's full height — so the `scaleY` commit acknowledgement grew straight into the clipped region and was invisible again, the R1-MOTION-03 regression by another route. | The markers are inset 2 pt top and bottom; `motion.test.tsx` asserts the acknowledgement's full growth fits inside the strip's clip. |
+| FCR-MOTION-03 | The never-animated window offset, viewport and direction were written in a passive effect, one frame after T-05 places its list in a layout effect — markers could trail a scroll by a frame. | Written in a layout effect, with the content. |
+
+Still device-only: whether the 6 % `scaleY` pulse on a 2 pt marker reads as an acknowledgement at all
+on a real screen, and the feel of the release handoff at continuation cadence.
+
+Three things still need a real device and cannot be judged from code: how the scrub feels when
+interrupted mid-flight and reversed, whether the 140 ms cursor retarget reads as continuous at a
+held continuation's cadence on a slow Android device, and whether an Arabic reader's finger and the
+preview marker agree to the pixel on a real RTL layout.
+
+### Presentation geometry in both writing directions (FCR-03)
+
+T-05 lays the Timeline out in a **logical** left-to-right space — logical `0` is the window's
+origin, a later Moment has a larger coordinate — in both writing directions, and only its physical
+placement mirrors under right-to-left: logical `0` sits at the viewport's physical right edge. The
+first T-06 shape mirrored the *touch* (`presentationX`) but drew the *markers* at the unmirrored
+LTR coordinate, and spanned the whole row with a strip that assumed physical `x = 0` was the
+viewport origin. In RTL a preview marker therefore followed the finger 1:1 and then, on release,
+retargeted to the opposite side of the screen; and the outboard Live slot — on the physical left in
+RTL — became Moment-targeting space.
+
+Both are fixed by ONE geometry, `timeline-integration/presentation-geometry.ts`, pure and
+import-free, every function a worklet so the UI runtime evaluates the same rule the tests do:
+
+| Direction | Function | LTR | RTL |
+| --- | --- | --- | --- |
+| physical → logical | `presentationX(x, viewport, rtl)` | `x` | `viewport − x` (half-open, `MIRROR_EPSILON`) |
+| logical → physical | `physicalPresentationX(l, viewport, rtl)` | `l` | `viewport − l` |
+| physical → marker `translateX` | `markerTranslateX(x, viewport, rtl)` | `x` | `x − viewport` |
+| logical → resting `translateX` | `restingMarkerX(l, viewport, rtl)` | `l` | `−l` |
+
+The strip is sized to exactly `window.viewport` and aligned `flex-start` — the row's START edge,
+left in LTR and right in RTL — so it sits under the Track in both directions, beside T-05's
+discontinuity and outboard slot rather than beneath them. Its local coordinates are therefore the
+viewport's own physical coordinates, and a touch in the outboard region never reaches it at all.
+The markers are anchored at the strip's logical start (`start: 0`): leading edge left in LTR, right
+in RTL. `translateX: 0` rests that edge on logical `0` in both directions, so the RTL rule is the
+exact reflection of the LTR one — LTR is untouched, and there is no second convention to drift.
+
+Motion still animates in Track space and subtracts the never-animated window offset outside the
+animated value; the mirror is linear, so easing in logical space is easing in physical space, and
+the viewport and the direction join the offset as never-animated shared values. A finger is already
+physical, so it takes only `markerTranslateX` — no offset, no mirror — and stays 1:1. Releasing it
+rests the same target's marker at that target's mirrored centre, never across the screen;
+`rtl-geometry.test.tsx` proves every visible Moment's mirrored centre resolves back to the same
+disclosed SP through T-05's own hit test, that release continuity holds within half a step at every
+finger position, that a window move shifts RTL markers by exactly the offset, and that reduced
+motion changes no target or place. No coordinate, mirror, pixel or viewport value is consulted by
+anything in `targeting/`, `preview/`, `continuation/`, `locus-choice/` or `outcome.ts`, and T-05
+stays byte-identical.
 
 ### Threading
 
@@ -422,8 +476,8 @@ the RN runtime:
 - `scheduleOnRN` is never called per frame. A `useAnimatedReaction` watches the derived disclosed step
   index and crosses runtimes only when that index changes — at most once per 48-point step — and once
   more when the gesture ends;
-- every Product decision lives in `createScrubHandlers`, as ordinary functions with no gesture, no
-  renderer and no worklet, which is why they are tested directly;
+- every Product decision lives in `createScrubCoordinator`, as ordinary functions with no gesture,
+  no renderer and no worklet, which is why they are tested directly;
 - `runOnJS` is absent from the layer: it is removed in Reanimated 4, and `scheduleOnRN` replaces it.
 
 A scrub is a completed act with an unambiguous boundary, exactly like the Map's drag. While a finger
@@ -438,7 +492,8 @@ after the gesture that produced it has settled, cancelled, failed or been supers
 must not depend on delivery order, so it does not.
 
 Every scheduled callback carries the **epoch** of its gesture — a monotonic counter incremented once
-per gesture in `onBegin` — and `createScrubHandlers` keeps a small state machine over it:
+per gesture in `onBegin` — and the coordinator (`createScrubCoordinator`; `createScrubHandlers` is
+the same machine over fixed dependencies) keeps a small state machine over it:
 
 | Epoch | Meaning | Effect |
 | --- | --- | --- |
@@ -464,6 +519,44 @@ gestures, each with its exact expected outcome sequence and RH length. Two compl
 committing twice is correct; a settle that arrives before its own target must fail closed. Nothing in
 this file uses a timer, a clock or a microtask as a correctness guarantee.
 
+### Interaction ownership survives React (FCR-01)
+
+The state machine above is a guarantee only while every callback of a surface reaches the **same**
+instance of it. The first shape built it with a `useMemo` keyed on the observer callbacks, so a
+change of `onOutcome` identity produced a second instance — and a `scheduleOnRN` queued before that
+rerender still held the old one, with its own epoch, its own open flag and its own owned generation.
+A late callback could therefore run against an instance that knew nothing of the newer interaction
+and retarget, commit or cancel what the newer one owned. Correctness must not depend on callers
+memoizing their callbacks, so it no longer does:
+
+- a **coordinator** (`createScrubCoordinator`) is bound to exactly two things — the store and the
+  preview controller, the *surface* whose interaction it owns — and reads everything else (the
+  presentation snapshot and the four observers) through `latest()` at call time. Observer identity
+  can change on every render without touching ownership;
+- the hook creates ONE coordinator per mounted surface in a layout effect keyed on
+  `[store, preview]`, attaches it to a **forwarder** created once per hook (`createScrubForwarder`,
+  plain JavaScript, never a React ref), and **retires** it in that effect's cleanup — on unmount, or
+  when the store or the preview controller is replaced. Retirement is one-way: afterwards every
+  callback is ignored, nothing is adopted, no observer is called, and the interaction still open at
+  that moment is treated as interrupted — its own preview is discarded through the coordinator's
+  *own* controller, nothing canonical moves, and nobody else's preview is touched;
+- what the gesture and the reaction schedule is the forwarder's stable handler set, never the
+  coordinator. Every queued callback, however old, reaches whichever coordinator is attached at
+  delivery, and one delivered after unmount reaches nothing;
+- a successor coordinator starts **after** every epoch the retired surface already minted
+  (`{ after: epoch.get() }`, read from the UI-runtime counter when it is created), so a gesture that
+  began before a replacement is never adopted by the surface that replaced it, whatever order its
+  callbacks arrive in.
+
+`createScrubHandlers` remains the same machine over fixed dependencies, so every R1-02 proof still
+describes it. `interaction-ownership.test.tsx` adds the cross-boundary cases at both levels — the
+coordinator with the deterministic scheduler seam, and the real hook inside a real `GestureDetector`,
+rerendered with fresh observer identities, driven through Gesture Handler's own jest utilities, its
+preview controller replaced beneath an open gesture, and unmounted with callbacks still in flight.
+The static gate pins the shape: no `createScrubHandlers` in the hook, exactly one construction in
+the surface-keyed layout effect, no memo whose dependencies name an observer, and a one-way
+`retired` flag consulted before anything else.
+
 ## 10. Accessibility
 
 Every essential capability has a route needing neither a drag nor a precision pointer: exact disclosed
@@ -483,6 +576,37 @@ Temporal targeting is also physically separate: the disclosed Track above scroll
 built it, and temporal targeting happens on its own strip below, aligned to the same invariant ordinal
 geometry. Presentation movement and temporal traversal are told apart by where they are touched as
 well as by what they announce.
+
+### Native structure (FCR-02)
+
+On React Native, `accessible={true}` makes a View ONE accessibility element — `isAccessibilityElement`
+on iOS, a single focusable node on Android — and assistive technology does not reliably reach the
+interactive descendants of such an element independently. The first shape put `accessible` on the
+navigator's root while that root owned the exact-entry `TextInput` and the four controls, which could
+collapse exactly the routes the component exists to provide; a test renderer never notices, because
+it can still find and fire the children.
+
+So `TemporalNavigator` is split by what each element *is*:
+
+- the **container** is a plain layout View with no accessibility prop of any kind, so it groups and
+  suppresses nothing;
+- the **summary** (`TEMPORAL_SUMMARY_TEST_ID`) is a dedicated accessibility element with no
+  interactive descendant — only the two statements, committed stance and preview. It is focusable on
+  its own, announces the one truthful sentence as its value, and carries the four named actions,
+  which cost nothing there because there is nothing beneath it to suppress. They are kept on purpose:
+  a reader who has just heard the temporal state can act on it without moving focus, and each action
+  converges on the same executor as the sibling control offering the same capability;
+- the exact-entry input and the four controls are ordinary, individually focusable native elements,
+  siblings of the summary, each with its own truthful label and state.
+
+`accessibility.test.tsx` asserts the structure rather than only firing events: no accessibility
+element on the path from the container to any control, the summary a leaf, the input reachable by its
+own label and editable, each control a button with a truthful disabled state, `PINNED(LH)` and
+`FOLLOW_LIVE` still distinguishable on the summary, and preview-versus-commit wording unchanged. The
+static gate walks every `accessible` element in the layer's `.tsx` sources and refuses one that owns
+a `TextInput`, a `Pressable` or any touchable — so the grouping cannot return anywhere in the layer.
+Native reachability itself is a device fact; what the code and the gate prove is that no ancestor
+can suppress it.
 
 ## 11. Failure and interruption
 

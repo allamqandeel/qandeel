@@ -48,6 +48,7 @@ const PRODUCTION_FILES = [
   'timeline-integration/TemporalTargetLayer.tsx',
   'timeline-integration/disclosed-bridge.ts',
   'timeline-integration/index.ts',
+  'timeline-integration/presentation-geometry.ts',
   'timeline-integration/scrub.ts',
   'timeline-integration/useTemporalScrub.ts',
 ];
@@ -88,10 +89,235 @@ test('the authorized T-06 file surface is the only production surface of the tem
     .sort();
   assert.deepEqual(production, [...PRODUCTION_FILES].sort());
   const suites = readdirSync(join(dir, '__tests__')).filter((file) => /\.test\.tsx?$/u.test(file));
-  assert.ok(suites.length >= 11, `expected the T-06 adversarial suites, found ${suites.length}`);
-  // R1 added two adversarial suites by name; neither may be dropped while the code they guard stays.
-  for (const suite of ['interaction-race.test.ts', 'locus-choice.test.tsx']) {
-    assert.ok(suites.includes(suite), `the R1 suite ${suite} must exist`);
+  assert.ok(suites.length >= 13, `expected the T-06 adversarial suites, found ${suites.length}`);
+  // R1 added two adversarial suites by name and the final closure review two more; none may be
+  // dropped while the code they guard stays.
+  for (const suite of ['interaction-race.test.ts', 'locus-choice.test.tsx', 'interaction-ownership.test.tsx', 'rtl-geometry.test.tsx']) {
+    assert.ok(suites.includes(suite), `the adversarial suite ${suite} must exist`);
+  }
+});
+
+/**
+ * The source of ONE JSX element: from its opening `<Tag` up to and including its matching close
+ * (or its own `/>`). JSX expression containers are skipped by brace counting, so an arrow function
+ * or a template literal inside a prop cannot end a tag early.
+ */
+function elementSubtree(text, start) {
+  const opener = /^<(>|[A-Za-z][\w.]*)/u;
+  const root = opener.exec(text.slice(start, start + 64));
+  assert.ok(root, `no JSX element opens at ${start}`);
+  // Every element opened inside is tracked, whatever its name: the root's subtree ends exactly when
+  // the stack it started empties, whether by its own `</Tag>` or its own `/>`.
+  const stack = [];
+  let index = start;
+  let braces = 0;
+  while (index < text.length) {
+    const character = text[index];
+    if (character === '{') {
+      braces += 1;
+      index += 1;
+      continue;
+    }
+    if (character === '}') {
+      braces -= 1;
+      index += 1;
+      continue;
+    }
+    if (braces > 0) {
+      index += 1;
+      continue;
+    }
+    if (text.startsWith('</', index)) {
+      const end = text.indexOf('>', index);
+      stack.pop();
+      if (stack.length === 0) return text.slice(start, end + 1);
+      index = end + 1;
+      continue;
+    }
+    if (text.startsWith('/>', index)) {
+      stack.pop();
+      if (stack.length === 0) return text.slice(start, index + 2);
+      index += 2;
+      continue;
+    }
+    const open = character === '<' ? opener.exec(text.slice(index, index + 64)) : null;
+    if (open) {
+      stack.push(open[1]);
+      index += open[0].length;
+      continue;
+    }
+    index += 1;
+  }
+  throw new Error(`unterminated <${root[1]}> at ${start}`);
+}
+
+// FCR-01 — interaction ownership is one coordinator per mounted surface. It is never a memo whose
+// lifetime depends on observer identity, and a retired surface's callbacks are inert.
+test('FCR-01 — scrub interaction ownership survives handler reconfiguration, replacement and unmount', () => {
+  const hook = code['timeline-integration/useTemporalScrub.ts'];
+  const scrub = code['timeline-integration/scrub.ts'];
+
+  // The hook never builds the state machine from fixed dependencies, and builds exactly one.
+  assert.equal(hook.includes('createScrubHandlers('), false, 'the hook must not build a per-dependency handler set');
+  assert.equal((hook.match(/createScrubCoordinator\(/gu) ?? []).length, 1, 'exactly one coordinator construction');
+  // Constructed in a layout effect keyed on the SURFACE only, attached to a forwarder created once
+  // per hook, retired and detached in the cleanup, and floored at every epoch the UI runtime has
+  // already minted.
+  assert.match(hook, /const \[forwarder\] = useState\(createScrubForwarder\);\s*\n\s*const handlers = forwarder\.handlers;/u);
+  assert.equal((hook.match(/createScrubForwarder/gu) ?? []).length, 2, 'the forwarder is imported and created exactly once');
+  assert.match(
+    hook,
+    /useLayoutEffect\(\(\) => \{\s*\n\s*const coordinator = createScrubCoordinator\(\{ store, preview \}, \(\) => latest\.current, \{ after: epoch\.get\(\) \}\);\s*\n\s*forwarder\.attach\(coordinator\);\s*\n\s*return \(\) => \{\s*\n\s*coordinator\.retire\(\);\s*\n\s*forwarder\.detach\(\);\s*\n\s*\};\s*\n\s*\}, \[store, preview, epoch, forwarder\]\);/u,
+  );
+  assert.equal(hook.includes('useRef<ScrubCoordinator'), false, 'no coordinator is ever held in a React ref');
+  // The observers are read at CALL time, through a ref refreshed on every commit.
+  assert.match(hook, /const latest = useRef<ScrubObservers>\(\{ snapshot, onCommitted, onCancelled, onOutcome, onPreview \}\);/u);
+  assert.match(hook, /useLayoutEffect\(\(\) => \{\s*\n\s*latest\.current = \{ snapshot, onCommitted, onCancelled, onOutcome, onPreview \};\s*\n\s*\}\);/u);
+  // No memo or callback in the hook lists an observer, the snapshot or an authority as a dependency:
+  // interaction ownership cannot return to a memo whose lifetime follows callback identity.
+  const memos = [...hook.matchAll(/use(?:Memo|Callback)(?:<[^>]*>)?\(([\s\S]*?)\n\s*\[([^\]]*)\],?\s*\n?\s*\);/gu)];
+  assert.equal(memos.length, 1, 'only the gesture is memoized; no handler set is');
+  for (const memo of memos) {
+    for (const forbidden of ['onOutcome', 'onCommitted', 'onCancelled', 'onPreview', 'snapshot', 'store', 'preview']) {
+      assert.equal(new RegExp(`\\b${forbidden}\\b`, 'u').test(memo[2]), false, `interaction ownership must not depend on ${forbidden}`);
+    }
+  }
+  assert.match(hook, /\[enabled, fingerX, tracking, epoch, handlers\],\s*\n\s*\);/u);
+  // What the gesture and the reaction schedule is the forwarder's stable handler set, which
+  // reaches whichever coordinator is attached at DELIVERY, and nothing after retirement.
+  assert.match(scrub, /export function createScrubForwarder\(\): ScrubForwarder \{\s*\n\s*let live: ScrubCoordinator \| null = null;/u);
+  assert.match(scrub, /targetIndex: \(epoch, index\) => live\?\.handlers\.targetIndex\(epoch, index\) \?\? RETIRED,/u);
+  assert.match(scrub, /settle: \(epoch, committed\) => live\?\.handlers\.settle\(epoch, committed\),/u);
+  assert.match(scrub, /liveInteraction: \(\) => live\?\.handlers\.liveInteraction\(\) \?\? NO_INTERACTION,/u);
+  assert.match(scrub, /detach: \(\) => \{\s*\n\s*live = null;/u);
+
+  // The coordinator is bound to its surface at construction and reads only observers later.
+  assert.match(
+    scrub,
+    /export function createScrubCoordinator\(\s*\n\s*surface: ScrubSurface,\s*\n\s*latest: \(\) => ScrubObservers,\s*\n\s*options: ScrubCoordinatorOptions = \{\},\s*\n\s*\): ScrubCoordinator \{/u,
+  );
+  assert.match(scrub, /const \{ store, preview \} = surface;/u);
+  assert.equal(/latest\(\)\.(?:store|preview)\b/u.test(scrub), false, 'the surface is never read through latest()');
+  assert.equal(/observers\.(?:store|preview)\b/u.test(scrub), false, 'the surface is never read through the observers');
+  // Admission refuses a retired coordinator before anything else, and honours the successor floor.
+  assert.match(scrub, /function admit\(candidate: number\): 'CURRENT' \| 'IGNORED' \{\s*\n\s*if \(retired\) return 'IGNORED';/u);
+  assert.match(scrub, /let epoch = Number\.isSafeInteger\(after\) && after > 0 \? after : 0;/u);
+  // Retirement is one-way, answers without consulting the observers, and touches only its own preview.
+  assert.match(scrub, /function retire\(\): void \{\s*\n\s*if \(retired\) return;\s*\n\s*retired = true;/u);
+  assert.equal((scrub.match(/retired = true;/gu) ?? []).length, 1);
+  assert.equal((scrub.match(/(?<!let )retired = false/gu) ?? []).length, 0, 'retirement is one-way');
+  assert.match(scrub, /if \(retired\) return RETIRED;/u);
+  assert.match(scrub, /if \(owned !== null && preview\.isCurrent\(owned\)\) preview\.cancel\(\);/u);
+  // The fixed-dependency shape is the same machine, so the R1-02 proofs still describe it.
+  assert.match(scrub, /export function createScrubHandlers\(deps: ScrubDependencies\): ScrubHandlers \{\s*\n\s*return createScrubCoordinator\(deps, \(\) => deps\)\.handlers;/u);
+});
+
+// FCR-02 — an accessibility element must not own an interactive descendant. `accessible={true}`
+// makes a View ONE native element and collapses the controls beneath it for VoiceOver and TalkBack.
+test('FCR-02 — no accessibility element in the layer groups an interactive descendant', () => {
+  const INTERACTIVE = /<(?:TextInput|Pressable|TouchableOpacity|TouchableHighlight|TouchableWithoutFeedback|Switch|Button)\b/u;
+  for (const [name, text] of Object.entries(code)) {
+    if (!name.endsWith('.tsx')) continue;
+    for (const match of text.matchAll(/\baccessible(?:=\{true\})?(?=[\s>])/gu)) {
+      const start = text.lastIndexOf('<', match.index);
+      const subtree = elementSubtree(text, start);
+      assert.equal(INTERACTIVE.test(subtree), false, `${name}: the accessibility element at ${start} owns an interactive descendant`);
+    }
+  }
+
+  const navigator = code['accessibility/TemporalNavigator.tsx'];
+  // The container that owns the input and the controls carries no accessibility prop at all.
+  const container = elementSubtree(navigator, navigator.indexOf('<View testID={TEMPORAL_NAVIGATOR_TEST_ID}'));
+  const containerTag = container.slice(0, container.indexOf('>') + 1);
+  assert.equal(/\baccessib/u.test(containerTag), false, 'the navigator container must not be an accessibility element');
+  assert.equal((container.match(/<TextInput\b/gu) ?? []).length, 1);
+  assert.equal((container.match(/<Pressable\b/gu) ?? []).length, 4);
+  // The summary is a dedicated leaf element: its own name, the one announcement, the named
+  // actions, and nothing interactive beneath it.
+  const summary = elementSubtree(navigator, navigator.indexOf('<View\n        testID={TEMPORAL_SUMMARY_TEST_ID}'));
+  assert.match(summary, /\n\s*accessible\n/u);
+  assert.match(summary, /accessibilityLabel=\{model\.surfaceLabel\}/u);
+  assert.match(summary, /accessibilityValue=\{\{ text: temporalAnnouncement\(model\) \}\}/u);
+  assert.match(summary, /accessibilityActions=\{model\.actions\.map\(\(action\) => \(\{ name: action\.name, label: action\.label \}\)\)\}/u);
+  assert.equal(INTERACTIVE.test(summary), false, 'the summary must contain nothing interactive');
+  assert.equal((summary.match(/<View\b/gu) ?? []).length, 1, 'the summary nests no further View');
+  // Exact entry stays an ordinary, editable, individually labelled input.
+  assert.match(navigator, /<TextInput\s*\n\s*testID=\{TEMPORAL_EXACT_ENTRY_TEST_ID\}/u);
+  assert.equal(/editable=\{false\}/u.test(navigator), false);
+  assert.match(navigator, /accessibilityLabel="Exact Moment number"/u);
+});
+
+// FCR-03 — one logical↔physical presentation geometry, defined once, consulted by the pointer side
+// and the motion side alike, and never by anything that judges Product truth.
+test('FCR-03 — the temporal strip and its markers share one RTL-aware presentation geometry with T-05', () => {
+  const geometry = code['timeline-integration/presentation-geometry.ts'];
+  const bridge = code['timeline-integration/disclosed-bridge.ts'];
+  const hook = code['timeline-integration/useTemporalScrub.ts'];
+  const binding = code['motion/useTemporalMotion.ts'];
+  const layer = code['timeline-integration/TemporalTargetLayer.tsx'];
+
+  assert.equal((geometry.match(/^import /gmu) ?? []).length, 0, 'the presentation geometry imports nothing');
+  assert.equal((geometry.match(/'worklet';/gu) ?? []).length, 4, 'every rule is evaluable on the UI runtime');
+  assert.match(geometry, /export function presentationX\(x: number, viewport: number, rtl: boolean\): number \| null \{/u);
+  assert.match(geometry, /export function physicalPresentationX\(logicalX: number, viewport: number, rtl: boolean\): number \{\s*\n\s*'worklet';\s*\n\s*return rtl \? viewport - logicalX : logicalX;/u);
+  assert.match(geometry, /export function markerTranslateX\(x: number, viewport: number, rtl: boolean\): number \{\s*\n\s*'worklet';\s*\n\s*return rtl \? x - viewport : x;/u);
+  assert.match(geometry, /export function restingMarkerX\(logicalX: number, viewport: number, rtl: boolean\): number \{\s*\n\s*'worklet';\s*\n\s*return markerTranslateX\(physicalPresentationX\(logicalX, viewport, rtl\), viewport, rtl\);/u);
+  // The mirror is defined ONCE: no other production file spells a viewport subtraction or the epsilon.
+  for (const [name, text] of Object.entries(code)) {
+    if (name === 'timeline-integration/presentation-geometry.ts' || name.endsWith('/index.ts')) continue;
+    assert.doesNotMatch(text, /viewport\s*-\s*\w+|\w+\s*-\s*viewport\b/u, `${name} must not carry a second mirror formula`);
+    assert.equal(text.includes('MIRROR_EPSILON'), false, `${name} must not re-apply the mirror epsilon`);
+  }
+  // The pointer side asks it; the bridge no longer holds a copy.
+  assert.match(bridge, /import \{ presentationX \} from '\.\/presentation-geometry';/u);
+  assert.equal(bridge.includes('export function presentationX'), false);
+  assert.match(hook, /import \{ presentationX \} from '\.\/presentation-geometry';/u);
+  assert.match(hook, /const logical = presentationX\(fingerX\.get\(\), viewport\.get\(\), rtl\.get\(\) === 1\);/u);
+  // The motion side asks it too, with the viewport and the direction in never-animated shared values.
+  assert.match(
+    binding,
+    /import \{\s*\n\s*markerTranslateX,\s*\n\s*presentationX,\s*\n\s*restingMarkerX,\s*\n\s*type PresentationStripGeometry,\s*\n\s*\} from '\.\.\/timeline-integration\/presentation-geometry';/u,
+  );
+  assert.match(binding, /const viewport = useSharedValue\(geometry\.viewport\);\s*\n\s*const rtl = useSharedValue\(geometry\.rtl \? 1 : 0\);/u);
+  assert.doesNotMatch(binding, /with(?:Timing|Spring)\([^)]*\b(?:viewport|rtl)\b/u, 'neither the viewport nor the direction is ever animated');
+  assert.match(
+    binding,
+    /\? markerTranslateX\(fingerX\.get\(\), viewport\.get\(\), rtl\.get\(\) === 1\)\s*\n\s*: restingMarkerX\(cursorTrack\.get\(\) - windowOffset\.get\(\), viewport\.get\(\), rtl\.get\(\) === 1\),/u,
+  );
+  // The strip is exactly T-05's viewport at the row's START edge, clipping what falls outside, and
+  // the markers are anchored at the logical start — never placed by a physical inset, and never by
+  // arithmetic over T-05's outboard extents.
+  assert.match(layer, /style=\{\[styles\.strip, \{ width: window\.viewport \}\]\}/u);
+  assert.match(layer, /strip: \{ height: STRIP_HEIGHT, alignSelf: 'flex-start', overflow: 'hidden' \},/u);
+  assert.match(layer, /marker: \{ position: 'absolute', top: MARKER_INSET, start: 0, width: MARKER_WIDTH, height: MARKER_HEIGHT \},/u);
+  // FCR-MOTION-02 — the strip clips, so the markers are inset far enough that the commit
+  // acknowledgement's growth never enters the clipped region.
+  assert.match(layer, /const MARKER_INSET = 2;\s*\n\s*const MARKER_HEIGHT = STRIP_HEIGHT - 2 \* MARKER_INSET;/u);
+  // FCR-MOTION-01 — releasing a finger continues the cursor from under the finger to its rest
+  // position, on the UI runtime, through the same geometry the finger branch drew with.
+  assert.match(binding, /const restTrack = useSharedValue\(cursorTarget \?\? committedTarget \?\? 0\);/u);
+  assert.match(binding, /restTrack\.set\(cursorTo\);/u);
+  assert.doesNotMatch(binding, /restTrack\.set\(with/u, 'the rest target is never animated');
+  assert.match(
+    binding,
+    /useAnimatedReaction\(\s*\n\s*\(\) => tracking\.get\(\),\s*\n\s*\(now, before\) => \{\s*\n\s*if \(before !== 1 \|\| now !== 0\) return;\s*\n\s*const logical = presentationX\(fingerX\.get\(\), viewport\.get\(\), rtl\.get\(\) === 1\);\s*\n\s*if \(logical === null\) return;\s*\n\s*cursorTrack\.set\(logical \+ windowOffset\.get\(\)\);\s*\n\s*cursorTrack\.set\(withTiming\(restTrack\.get\(\), \{ duration: cursorMs, easing: EASE_OUT \}\)\);/u,
+  );
+  assert.equal(binding.includes('scheduleOnRN'), false, 'the release handoff never crosses to the RN runtime');
+  // FCR-MOTION-03 — the never-animated geometry lands in a layout effect, with the content.
+  assert.match(binding, /useLayoutEffect\(\(\) => \{\s*\n\s*windowOffset\.set\(geometry\.windowOffset\);\s*\n\s*viewport\.set\(geometry\.viewport\);\s*\n\s*rtl\.set\(geometry\.rtl \? 1 : 0\);/u);
+  for (const forbidden of ['left:', 'right:', 'marginLeft', 'marginRight', 'OUTBOARD_LIVE_EXTENT', 'DISCONTINUITY', 'onLayout']) {
+    assert.equal(layer.includes(forbidden), false, `the layer must not place the strip by ${forbidden}`);
+  }
+  // ONE geometry object, from T-05's snapshot and the platform direction, feeds both hooks.
+  assert.match(layer, /const geometry = useMemo<TemporalMarkerGeometry>\(\s*\n\s*\(\) => \(\{ stepWidth: TIMELINE_STEP, windowOffset: window\.offset, viewport: window\.viewport, rtl \}\),/u);
+  assert.match(layer, /useTemporalMotion\(\s*\n[\s\S]*?\},\s*\n\s*geometry,\s*\n\s*\);/u);
+  assert.match(layer, /useTemporalScrub\(\{\s*\n\s*store,\s*\n\s*preview,\s*\n\s*snapshot,\s*\n\s*geometry,/u);
+  assert.equal((layer.match(/I18nManager\.isRTL/gu) ?? []).length, 1, 'the direction is read once, for the geometry');
+  // No coordinate gains Product authority: nothing that judges truth consults the geometry.
+  for (const [name, text] of Object.entries(code)) {
+    if (/^(?:targeting|preview|continuation|locus-choice)\//u.test(name) || name === 'outcome.ts') {
+      assert.equal(text.includes('presentation-geometry'), false, `${name} must not consult presentation geometry`);
+    }
   }
 });
 
@@ -169,9 +395,10 @@ test('R1-02 — every scheduled scrub callback carries its interaction, and a cl
   assert.match(scrub, /if \(admit\(candidateEpoch\) === 'IGNORED'\) return;/u);
   // A settle closes its interaction BEFORE acting, so its own in-flight callbacks are already inert.
   assert.match(scrub, /open = false;\s*\n\s*const owned = generation;/u);
-  // An interaction acts only on the preview it established.
-  assert.match(scrub, /const ownsLivePreview = owned !== null && deps\.preview\.isCurrent\(owned\);/u);
-  assert.match(scrub, /if \(ownsLivePreview\) deps\.preview\.cancel\(\);/u);
+  // An interaction acts only on the preview it established — through the preview controller the
+  // coordinator was bound to at construction, never one read later.
+  assert.match(scrub, /const ownsLivePreview = owned !== null && preview\.isCurrent\(owned\);/u);
+  assert.match(scrub, /if \(ownsLivePreview\) preview\.cancel\(\);/u);
   assert.match(scrub, /if \(!ownsLivePreview\) \{/u);
   // Correctness never rests on timing.
   for (const forbidden of ['setTimeout', 'setInterval', 'Date.now', 'performance.now', 'requestAnimationFrame', 'queueMicrotask', 'Promise.resolve']) {
@@ -651,13 +878,16 @@ test('no temporal act can be reached from a camera act, an animation or a presen
 
   // R1-MOTION-03 — the commit acknowledgement rides the committed marker itself; there is no
   // separate element that could animate while painting nothing.
-  assert.match(binding, /\{ translateX: committedTrack\.get\(\) - windowOffset\.get\(\) \},\s*\n[\s\S]*?\{ scaleY: 1 \+ settle\.get\(\) \* COMMIT_SETTLE_SCALE \},/u);
+  assert.match(
+    binding,
+    /\{ translateX: restingMarkerX\(committedTrack\.get\(\) - windowOffset\.get\(\), viewport\.get\(\), rtl\.get\(\) === 1\) \},\s*\n[\s\S]*?\{ scaleY: 1 \+ settle\.get\(\) \* COMMIT_SETTLE_SCALE \},/u,
+  );
   assert.equal(binding.includes('settleStyle'), false, 'the dead acknowledgement overlay is gone');
   assert.equal(code['timeline-integration/TemporalTargetLayer.tsx'].includes('settleStyle'), false);
   // Reduced motion never depends on a spring's zero-duration behaviour.
   assert.match(binding, /\} else if \(cancelMs === 0\) \{\s*\n\s*cursorTrack\.set\(withTiming\(committedTarget, \{ duration: 0 \}\)\);/u);
   // The commit acknowledgement is called with the store's answer already in hand.
-  assert.match(code['timeline-integration/scrub.ts'], /const outcome = commitPreviewedTarget\(deps\.store, deps\.preview, targeting\(\)\);\s*\n\s*deps\.onOutcome\?\.\(outcome\);/u);
+  assert.match(code['timeline-integration/scrub.ts'], /const outcome = commitPreviewedTarget\(store, preview, targeting\(observers\)\);\s*\n\s*observers\.onOutcome\?\.\(outcome\);/u);
   // Per-frame work never crosses to the RN runtime: only a threshold crossing and the ending do.
   const scrubHook = code['timeline-integration/useTemporalScrub.ts'];
   assert.equal((scrubHook.match(/scheduleOnRN\(/gu) ?? []).length, 3, 'exactly one reaction crossing and the two gesture endings');
