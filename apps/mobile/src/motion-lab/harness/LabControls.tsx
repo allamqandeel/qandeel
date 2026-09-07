@@ -40,7 +40,14 @@ export interface LabControlsProps {
 
 function Chip({ label, active, onPress, testID }: { readonly label: string; readonly active: boolean; readonly onPress: () => void; readonly testID?: string }) {
   return (
-    <Pressable testID={testID} onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: active }} style={[styles.chip, active ? styles.chipActive : null]}>
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      // Instant pressed feedback, no transition: a harness control is a 100+/session action.
+      style={({ pressed }) => [styles.chip, active ? styles.chipActive : null, pressed ? styles.pressed : null]}
+    >
       <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>{label}</Text>
     </Pressable>
   );
@@ -113,6 +120,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { minHeight: 32, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(0,0,0,0.18)', justifyContent: 'center' },
   chipActive: { backgroundColor: 'rgb(47,46,43)', borderColor: 'rgb(47,46,43)' },
+  pressed: { opacity: 0.6 },
   chipText: { fontSize: 13, lineHeight: 18 },
   chipTextActive: { color: 'white' },
 });

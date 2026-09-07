@@ -17,7 +17,7 @@ in execution order. Skills never own Product truth; the frozen contracts and the
 
 | Skill | Use | Notes |
 | --- | --- | --- |
-| `ui-ux-pro-max` | Its Python search helper cannot run here (this host has only the Store `python.exe` stub; Python was NOT installed, per §10). The readable `references/pro-rules.md` and the priority table were applied by hand. | Applied: 44 pt targets on every lab control; pressed feedback without layout shift (opacity); one duration token family per act, not one duration for all; no emoji icons (no icons at all in the lab); spacing on a 4/8 rhythm in the harness; motion conveys spatial continuity; reduced motion supported; drag has a non-drag alternative (T-04's accessible Map + the harness buttons). Recorded limitation: no database matches were consulted, so no "style" recommendation is claimed. |
+| `ui-ux-pro-max` | Its Python search helper cannot run here (this host has only the Store `python.exe` stub; Python was NOT installed, per §10). The readable `references/pro-rules.md` and the priority table were applied by hand. | Applied: 44 pt targets on every lab control; one duration token family per act, not one duration for all; no emoji icons (no icons at all in the lab); spacing on a 4/8 rhythm in the harness; motion conveys spatial continuity; reduced motion supported; drag has a non-drag alternative (T-04's accessible Map + the harness buttons). Correction: pressed feedback on the harness controls was claimed here before it existed; `/review-animations` caught it and it was added (instant pressed opacity, no transition, because a harness control is a 100+/session action). Recorded limitation: no database matches were consulted, so no "style" recommendation is claimed. |
 | `frontend-design` | For the coherence of the motion idea rather than the look (VI-03 owns the look). | One signature per direction (A: the damped slide; B: the unfold; C: the field breath) and one shared rare signature under test (brass Ignition); everything else quiet. No template default was spent on the harness: neutral warm greys are placeholders and are stated as such. |
 | `designing-arabic-frontends` | For the Arabic/RTL runs. | The lab's Product surfaces are T-08 (frozen bilingual copy, line-height 1.6+, no letter-spacing, no italics) and T-06 (RTL geometry mirrored through its one presentation-geometry rule). The harness sets `dir` on the frame and the `I18nManager.isRTL` flag on the web renderer before remounting, since the flag is inert there. The world plane has no text and is not mirrored (a map is not reading-order content); the register stays start-anchored through T-04's placement. Digits: Western in both languages (T-08's recorded decision; regional policy deferred to T-12). No new Arabic copy was authored, so `writing-eloquent-arabic` stays N/A. |
 | `fixing-accessibility` | For reduced motion and the non-gesture routes. | Every act has a non-drag route: T-04's `MapAccessibilityLayer` (inspect, direct jump, context switch, semantic zoom, explore) is mounted over the lab plane; T-06's navigator and T-08's buttons are the production routes; the harness buttons are native `Pressable`s with roles and states. Reduced motion is an alternate choreography with the same acts and destinations; no information is carried only by standard motion (every arrival also fades; every departure is a removal; the preview veil is opacity). |
@@ -27,7 +27,43 @@ in execution order. Skills never own Product truth; the frozen contracts and the
 | Skill | Status |
 | --- | --- |
 | `design-critique` | Done, over the captured filmstrips and full-resolution frames of every run (A/B/C × S1–S5, real-pointer drag, reduced motion, Arabic/RTL, Ignition on/off) — the critique is `05-comparison-matrix.md`. |
-| `/review-animations` | User-invoke-only skill. The session stops ONCE at the final prototype review gate for the user to run it; the final report continues afterwards. |
+| `/review-animations` | Run by the user at the final prototype review gate. Result below. |
+
+## `/review-animations` result
+
+Reviewed: `motion/profiles.ts`, `motion/settle.ts`, `motion/useLabCamera.ts`, `motion/world-presence.ts`, `world/LabNode.tsx`, `world/LabWorldCanvas.tsx`, `world/LabWorldSurface.tsx`, `harness/LabControls.tsx`, `MotionLab.tsx`, against the ten standards (justified motion, frequency, easing, sub-300 ms, origin/physicality, interruptibility, GPU-only, accessibility, asymmetry, cohesion).
+
+### Findings
+
+| Before | After | Why |
+| --- | --- | --- |
+| `useLabCamera.ts:143-157` — velocity low-pass `vx = vx·0.6 + ivx·0.4` never reaches zero; every node's radius derives from `speed` | **Fixed:** snap below 0.5 pt/s, write only on change | A plane at rest repainted the whole canvas 53–72×/s in C (measured); after the fix 2.6×/s idle (A: 2.2), 22–33×/s while moving. A recalc storm, not a property of the field idea. |
+| `LabNode.tsx:149` — Ignition ring radius grows `5 + 16·ignition` under every profile | **Fixed:** `ignition.ringGrowthPoints` = 16 (A/B/C), **0 under reduced motion** | Reduced motion keeps opacity and drops movement; the ring expansion was movement the reduced profile claimed not to have. |
+| `LabControls.tsx:43`, `MotionLab.tsx:288` — `Pressable` with no pressed state | **Fixed:** instant pressed opacity 0.6, no transition | Every pressable needs feedback; at 100+/session a harness control gets instant feedback, never an animation. |
+| `profiles.ts:169` C zoom `spring(540, 0.86)` | `spring(≤ 320, 1)` | A depth step is a Product act with no finger on it: no bounce, and 540 ms is far over the UI budget. |
+| `profiles.ts:171-172` C disclosure `spring(520, 0.72)`, temporal `spring(420, 0.74)` | critically damped, ≤ 300 ms | Bounce only where a gesture carried momentum; an arrival that overshoots reads as toy motion. |
+| `profiles.ts:137` A zoom `spring(460, 1)` | `spring(≤ 320, 1)` | Over budget with no stated reason; the ×8 reinforcement is state indication, not a flight. |
+| `profiles.ts:138, 154, 170` travel caps 560 / 380 / 640 ms | keep A/B with the stated reason (P1: a flight across one world, Q2); cut C to ≤ 560 | The one justified over-300 ms motion in the lab; C's cap has no extra reason. |
+| `profiles.ts:136, 168` pan cancel settle 320 ms / `spring(360, 0.85)` | `spring(≤ 200, 1)` | A cancelled input is a system response: it snaps back, it does not perform. |
+| `profiles.ts:156` B temporal stagger 28 ms | `0` | A temporal set becomes known at once; staggering it is "stagger because a list exists" and adds an order the record does not state. |
+| `profiles.ts:138` A travel `carriesVelocity: false` | `true` (velocity tracking is now cheap at rest) | When an act interrupts momentum the travel starts from zero velocity: a visible break mid-flight. Springs should carry velocity through an interruption. |
+| `LabNode.tsx:52` from-host grow starts at `0.6` | `0.85–0.9` | Nothing appears from (near) nothing; the travel from the host already says where it came from. |
+| `useLabCamera.ts:317-319` resolve-in-place: opacity to 0.3 then fade, no transform | never the default for a long flight; if kept, pair with a `0.97 → 1` scale about the destination; keep the cut under reduced motion | A pure-fade entrance at the destination is a comes-from-nowhere; under reduced motion the cut is the point. |
+| `profiles.ts:174-175`, `LabNode.tsx:108-112`, `LabWorldCanvas.tsx:95-100` field breath, arrival breath, ripple | delete | Decoration on a functional surface: size follows speed, neighbours react to an arrival. Both imply meaning the record does not carry. |
+| `profiles.ts:153` B zoom delay 90 ms after a 340 ms unfold | delay ≤ 60, unfold ≤ 260, overlapping | Sequencing is the idea; the sum (≈ 430 ms + stagger) is not. |
+
+### Verdict
+
+1. **Feel-breaking:** C's overshoot on act-driven motion (zoom 0.86, disclosure 0.72, temporal 0.74); B's default cut on the long flights of Back and Exact Return (the world arrives from nowhere at the destination).
+2. **Missed simplifications:** C's field breath, arrival breath and ripple; B's temporal stagger; B's brass disc under the Ignition ring adds little over the ring.
+3. **Performance:** the idle repaint storm (fixed above). While moving, C still recomputes every node's radius from speed each frame, which is acceptable because a moving plane repaints anyway. All three pay a ~200 ms main-thread stall on a depth change in the dev bundle (React reconciliation of the new rung, not animation); measure on a release build before treating it as a finding.
+4. **Interruptibility & timing:** A's and B's travel restart from zero velocity when an act interrupts momentum; cancel settles over 300 ms; A's 460 ms zoom.
+5. **Origin, physicality & cohesion:** the 0.6 grow start; the Exact Return lock draws chrome on the world (Q7, a Product question); C's bouncy personality does not match an analysis surface, A and B are cohesive.
+6. **Accessibility:** the reduced-motion ring (fixed above). Otherwise sound: reduced motion is an alternate choreography with the same acts, no hover motion exists, every act has a non-drag route.
+
+**Decision: Block as production motion, as built; approved as the comparison instrument the shootout needs.** The three defects were fixed in the lab (none changes a direction's standard-motion choreography or any recording). The remaining rows are the conditions any chosen direction or hybrid must meet before production T-10, and they coincide with the matrix's recommendation: A's camera, B's depth disclosure only, no field, no default cut, critically damped everywhere a finger is not involved.
+
+Verification after the fixes: typecheck, lint (local no-native config) and the lab's Jest suites — see the final report for the run results; the repaint re-measurement is in `E:\QANDEEL\CW\_t10-captures\fix-*` (`fix-C-idle` 2.6/s, `fix-A-idle` 2.2/s, `fix-C-S1` 32.8/s, `fix-C-S2` 22.1/s, in-page meter 60 fps in all four).
 
 ## Harness defects found by the review itself (and what was re-captured)
 

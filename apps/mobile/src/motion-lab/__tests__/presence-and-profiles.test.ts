@@ -115,6 +115,9 @@ describe('direction profiles', () => {
       expect(reduced.disclosure.staggerMs).toBe(0);
       expect(reduced.field).toEqual({ velocityBreath: 0, arrivalBreath: 0 });
       expect(reduced.ignition.style).toBe('ring');
+      // The cue is opacity-only under reduced motion; standard motion lets the ring expand.
+      expect(reduced.ignition.ringGrowthPoints).toBe(0);
+      expect(DIRECTIONS[id].ignition.ringGrowthPoints).toBeGreaterThan(0);
       expect(reduced.travel.resolveMs).toBeLessThanOrEqual(200);
       expect(motionProfile(id, false)).toBe(DIRECTIONS[id]);
     }

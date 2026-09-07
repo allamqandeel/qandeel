@@ -115,6 +115,7 @@ export function LabNode({ entry, profile, inverseScale, speed, arrival, inspecte
   const velocityBreath = profile.field.velocityBreath;
   const arrivalBreath = profile.field.arrivalBreath;
   const rippleAmount = profile.ignition.rippleBreath;
+  const ringGrowth = profile.ignition.ringGrowthPoints;
 
   // The canonical position and the host position travel as shared values, written in a layout
   // effect: the plane's re-based residual is written in a layout effect of the same commit, so the
@@ -146,7 +147,7 @@ export function LabNode({ entry, profile, inverseScale, speed, arrival, inspecte
   const tetherEnd = useDerivedValue(() => vec(cx.get(), cy.get()));
   const inspectedRadius = useDerivedValue(() => radius.get() + 5 * (counter === null ? 1 : counter.get()), [counter]);
   const strokeWidth = useDerivedValue(() => 1.5 * (counter === null ? 1 : counter.get()), [counter]);
-  const ignitionRingRadius = useDerivedValue(() => radius.get() + (5 + 16 * ignition.get()) * (counter === null ? 1 : counter.get()), [counter]);
+  const ignitionRingRadius = useDerivedValue(() => radius.get() + (5 + ringGrowth * ignition.get()) * (counter === null ? 1 : counter.get()), [counter, ringGrowth]);
   const ignitionRingOpacity = useDerivedValue(() => ignition.get() * 0.9);
   const bloomRadius = useDerivedValue(() => radius.get() * (1.4 + 0.8 * ignition.get()));
   const bloomOpacity = useDerivedValue(() => (profile.ignition.style === 'bloom' ? ignition.get() * 0.3 : 0), [profile.ignition.style]);

@@ -116,6 +116,8 @@ export interface MotionProfile {
   readonly ignition: {
     readonly style: 'ring' | 'bloom' | 'ripple';
     readonly durationMs: number;
+    /** How far (in points) the ring expands over the cue; `0` keeps it an opacity-only ring (reduced motion). */
+    readonly ringGrowthPoints: number;
     /** Ripple only: how far (in points) neighbouring nodes respond, and by how much. */
     readonly rippleRadiusPoints: number;
     readonly rippleBreath: number;
@@ -140,7 +142,7 @@ export const DIRECTION_A: MotionProfile = Object.freeze<MotionProfile>({
   temporal: { enter: 'in-place', enterMs: 160, enterSettle: timing(160), staggerMs: 0, exit: 'instant', exitMs: 0 },
   goLiveSpatialDelayMs: 140,
   field: { velocityBreath: 0, arrivalBreath: 0 },
-  ignition: { style: 'ring', durationMs: 420, rippleRadiusPoints: 0, rippleBreath: 0 },
+  ignition: { style: 'ring', durationMs: 420, ringGrowthPoints: 16, rippleRadiusPoints: 0, rippleBreath: 0 },
   exactReturnLockMs: 240,
 });
 
@@ -156,7 +158,7 @@ export const DIRECTION_B: MotionProfile = Object.freeze<MotionProfile>({
   temporal: { enter: 'from-host', enterMs: 180, enterSettle: timing(260), staggerMs: 28, exit: 'instant', exitMs: 0 },
   goLiveSpatialDelayMs: 260,
   field: { velocityBreath: 0, arrivalBreath: 0 },
-  ignition: { style: 'bloom', durationMs: 560, rippleRadiusPoints: 0, rippleBreath: 0 },
+  ignition: { style: 'bloom', durationMs: 560, ringGrowthPoints: 16, rippleRadiusPoints: 0, rippleBreath: 0 },
   exactReturnLockMs: 280,
 });
 
@@ -172,7 +174,7 @@ export const DIRECTION_C: MotionProfile = Object.freeze<MotionProfile>({
   temporal: { enter: 'in-place', enterMs: 160, enterSettle: spring(420, 0.74), staggerMs: 0, exit: 'instant', exitMs: 0 },
   goLiveSpatialDelayMs: 80,
   field: { velocityBreath: 0.05, arrivalBreath: 0.06 },
-  ignition: { style: 'ripple', durationMs: 520, rippleRadiusPoints: 120, rippleBreath: 0.06 },
+  ignition: { style: 'ripple', durationMs: 520, ringGrowthPoints: 16, rippleRadiusPoints: 120, rippleBreath: 0.06 },
   exactReturnLockMs: 260,
 });
 
@@ -191,7 +193,9 @@ export function reducedMotionProfile(profile: MotionProfile): MotionProfile {
     temporal: { enter: 'fade', enterMs: 120, enterSettle: CUT, staggerMs: 0, exit: 'instant', exitMs: 0 },
     goLiveSpatialDelayMs: profile.goLiveSpatialDelayMs,
     field: { velocityBreath: 0, arrivalBreath: 0 },
-    ignition: { style: 'ring', durationMs: 260, rippleRadiusPoints: 0, rippleBreath: 0 },
+    // Opacity only: the ring does not expand under reduced motion (§12: no movement that only
+    // standard motion would carry; the cue is a fade, and it stays local).
+    ignition: { style: 'ring', durationMs: 260, ringGrowthPoints: 0, rippleRadiusPoints: 0, rippleBreath: 0 },
     exactReturnLockMs: 0,
   });
 }

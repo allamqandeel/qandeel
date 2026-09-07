@@ -285,7 +285,14 @@ export function MotionLab() {
 
 function LabActButton({ label, hint, disabled = false, onPress }: { readonly label: string; readonly hint?: string; readonly disabled?: boolean; readonly onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={[styles.act, disabled ? styles.actDisabled : null]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      // Instant pressed feedback, no transition: a lab act button is a harness control.
+      style={({ pressed }) => [styles.act, disabled ? styles.actDisabled : null, pressed ? styles.actPressed : null]}
+    >
       <Text style={styles.actLabel}>{label}</Text>
       {hint === undefined ? null : <Text style={styles.actHint}>{hint}</Text>}
     </Pressable>
@@ -301,6 +308,7 @@ const styles = StyleSheet.create({
   labActs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
   act: { minHeight: 36, maxWidth: 190, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(0,0,0,0.18)', justifyContent: 'center' },
   actDisabled: { opacity: 0.4 },
+  actPressed: { opacity: 0.6 },
   actLabel: { fontSize: 13, lineHeight: 20 },
   actHint: { fontSize: 11, lineHeight: 16, opacity: 0.7 },
 });

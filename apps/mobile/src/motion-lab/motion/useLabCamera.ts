@@ -150,10 +150,18 @@ export function useLabCamera(options: LabCameraOptions): LabCameraBinding {
     const ivy = ((ny - lastTy.get()) * z * 1000) / dt;
     lastTx.set(nx);
     lastTy.set(ny);
-    // A light low-pass so a single late frame does not read as a jolt.
-    vx.set(vx.get() * 0.6 + ivx * 0.4);
-    vy.set(vy.get() * 0.6 + ivy * 0.4);
-    speed.set(Math.hypot(vx.get(), vy.get()));
+    // A light low-pass so a single late frame does not read as a jolt — snapped to zero below half
+    // a point per second. Without the snap the filter never reaches zero, the speed changes by a
+    // hair every frame, and everything derived from it (every node's radius) repaints a plane that
+    // is at rest (the /review-animations finding: 53–72 repaints/s idle).
+    const fx = vx.get() * 0.6 + ivx * 0.4;
+    const fy = vy.get() * 0.6 + ivy * 0.4;
+    const sx = Math.abs(fx) < 0.5 ? 0 : fx;
+    const sy = Math.abs(fy) < 0.5 ? 0 : fy;
+    if (sx !== vx.get()) vx.set(sx);
+    if (sy !== vy.get()) vy.set(sy);
+    const magnitude = Math.hypot(sx, sy);
+    if (magnitude !== speed.get()) speed.set(magnitude);
   }, false);
   const { velocityTracking } = options;
   useEffect(() => {

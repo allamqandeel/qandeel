@@ -112,13 +112,16 @@ evidence. Nothing else was affected.
 | --- | --- | --- | --- |
 | Frames in the last second / avg / worst | 59–60 / 16.7 ms / ≤ 17.6 ms | 59–60 / 16.7 ms / ≤ 17.7 ms | 59–60 / 16.7 ms / ≤ 17.8 ms |
 | Frames over 33.6 ms | 0 | 0 | 0 |
-| Canvas repaints per second while the scenario runs (screencast) | 9–28 | 10–24 | **53–72** |
+| Canvas repaints per second while the scenario runs (screencast) | 9–28 | 10–24 | 53–72 before the review fix; 22–33 after |
+| Canvas repaints per second at rest | 2.2 | ≈ 2 | 53–72 before the review fix; **2.6 after** |
 
-C repaints the whole canvas every frame, at rest included: its velocity tracking writes a shared
-value every frame and every node's radius derives from it. A and B repaint only when something
-moves. On a phone that is the difference between an idle surface and a surface that never idles.
-A depth change costs a ~190–220 ms main-thread stall in the dev bundle (all three; React
-reconciliation of the new rung, not animation) — a production-build measurement is pending.
+Before `/review-animations`, C repainted the whole canvas every frame at rest: its velocity
+low-pass never reached zero, so `speed` changed by a hair each frame and every node's radius
+(derived from it) invalidated the canvas. That was a defect, not a property of the field idea, and
+it was fixed after the review (snap below 0.5 pt/s). While moving, C still derives every radius
+from speed each frame, which costs nothing extra because a moving plane repaints anyway. A depth
+change costs a ~190–220 ms main-thread stall in the dev bundle (all three; React reconciliation of
+the new rung, not animation) — a production-build measurement is pending.
 
 ## Scores (§14)
 
@@ -137,9 +140,9 @@ reconciliation of the new rung, not animation) — a production-build measuremen
 | 11 | Reduced-motion quality | 4 | 4 | 4 | One shared reduced profile: cut + resolve, fade-in-place arrivals, no stagger, no field, veil and lock kept as opacity. Return acts lose their explanation under a cut (Q5). |
 | 12 | Android physical feel | — | — | — | Unscored: no device (Q9). |
 | 13 | iOS feel where observable | — | — | — | Unscored: no device (Q9). |
-| 14 | Implementation sustainability | **5** | 4 | 2 | A: springs and timings only, repaint on change. B: host lookups, ordinal bookkeeping, one threshold constant (1.25 diagonals). C: per-frame invalidation of the whole canvas, distance work per node per ignition. |
+| 14 | Implementation sustainability | **5** | 4 | 3 | A: springs and timings only, repaint on change. B: host lookups, ordinal bookkeeping, one threshold constant (1.25 diagonals). C: velocity tracking always on, every radius derived per frame while moving, distance work per node per ignition; the idle repaint storm turned out to be a fixable defect (see Performance), so C is scored on what remains. |
 | 15 | Risk of decorative drift (5 = low) | **5** | 3 | 1 | A has nowhere to drift. B's stagger is one step from "stagger because a list exists". C is one step from "ambient breathing everywhere" and "floating field". |
-| | **Total of scored rows (13 × 5 = 65)** | **56** | **51** | **41** | |
+| | **Total of scored rows (13 × 5 = 65)** | **56** | **51** | **42** | |
 
 Totals are a summary, not the decision: row 4 alone is the reason B exists, and row 3 alone is the
 reason A exists.
@@ -196,10 +199,11 @@ behaviour + a very small amount of C's field response + rare Meaning Ignition.
 - **B's disclosure behaviour — supported, for depth disclosure only.** Row 4 is the largest single
   gain in the matrix. B's temporal stagger is not supported (row 5).
 - **A very small amount of C's field response — NOT supported.** The smallest response tested
-  (+5 % size per 1000 pt/s) already makes size mean speed on a surface where size may mean nothing,
-  and the cost is structural (per-frame invalidation), not proportional to the amount. What survives
-  from C is not a field response: it is velocity carry-over into a travel spring, which belongs to
-  the camera.
+  (+5 % size per 1000 pt/s) already makes size mean speed on a surface where size may mean nothing;
+  a smaller amount would be imperceptible and a perceptible amount carries meaning. (The repaint cost
+  first attributed to the field was a fixable defect, so the objection rests on meaning, not on
+  cost.) What survives from C is not a field response: it is velocity carry-over into a travel
+  spring, which belongs to the camera.
 - **Rare Meaning Ignition — supported only in its narrowest form.** Once, local, at the object,
   ring or bloom, never a ripple, never at a scrub/return/tap; and the WORLD-rung case (a promoted
   Home igniting) needs an Architecture answer because it is an attention claim on the whole world
@@ -262,4 +266,7 @@ regardless of direction.
 
 **Priority recommendations.** (1) Take the hybrid to the human review with the seven questions
 answered above. (2) Get Q1–Q4 answered by Architecture before production T-10 assumes any of
-them. (3) Measure one direction on a device before scoring rows 12 and 13.
+them. (3) Measure one direction on a device before scoring rows 12 and 13. (4) Whatever is
+chosen must meet the `/review-animations` conditions in `06-review-log.md` (critically damped
+settles wherever a finger is not involved, no default cut on long flights, no temporal stagger,
+velocity carried through an interruption, cancel settles that snap).
