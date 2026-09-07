@@ -259,10 +259,11 @@ export function orientationModel(store: CanonicalStore, projection: ChromeProjec
       availability,
       temporal,
       focusReturn: live.focusReturn,
-      // Bound to this store's own lifecycle, so a foreign or replaced store offers nothing at all,
-      // and an origin whose ordinal is beyond the current reversible depth retires itself. This is
-      // presentation only: authority remains entirely T-07's, which re-proves provenance and
-      // presence before writing anything.
+      // Provenance is asked of T-07 itself: it minted this handle, THIS store minted it, and that
+      // exact reversible-history entry is still recorded. There is no ordinal and no depth
+      // comparison anywhere in it, which is why a consumed origin stays retired however far history
+      // later regrows. This is presentation only: authority remains entirely T-07's, which re-proves
+      // provenance and presence before writing anything.
       exactReturnBound: exactReturnTargetFor(store, options.exactReturnOrigin) !== null,
       // Client capability, decided before anything about Live is known. It cannot move with `LF`, so
       // requiring it adds no future-relative input to the offered set.

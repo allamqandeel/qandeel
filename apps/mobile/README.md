@@ -340,9 +340,14 @@ where the reader is, plus controls that reach the existing executors and no othe
 - **The six returns stay six, and the offered set is context-sensitive** (`return-orientation.ts`,
   `ReturnControls.tsx`): each control reaches exactly one T-07 executor through a `switch` with one
   call per arm. Return to Live Head is temporal only and promises no camera movement; Return to Live
-  Focus is spatial only and promises no temporal movement; Go Live + Locate says it is both, as ONE
-  transaction, and is offered only while the reader is historical — following Live it would collapse
-  into Return to Live Focus. Only the acts that are meaningful right now are rendered: a permanent
+  Focus is spatial only and attempts the camera once; Go Live + Locate owns its temporal half and
+  states its spatial half as CONDITIONAL, as ONE transaction. It is offered only while the reader is
+  historical — following Live it would collapse into Return to Live Focus — **and only where a real
+  `liveContext` provider exists on the mounted surface**, because a control whose spatial half has
+  nothing to attempt with is a capability the surface does not have. Provider presence is a client
+  capability settled before anything about Live is known, so it discloses nothing. The promises
+  themselves are typed per dimension rather than asserted as booleans: a restored viewpoint may
+  legitimately differ in no field at all. Only the acts that are meaningful right now are rendered: a permanent
   six-control matrix is a toolbar, which is the dashboard drift the contract forbids. The six
   MEANINGS are untouched by that — `returnMeaning(id)` is a constant whether or not an act is
   offered — and every input to the offer is knowledge-safe, so the offered set leaks nothing either.
@@ -373,13 +378,17 @@ where the reader is, plus controls that reach the existing executors and no othe
   intent.
 - **Exact Return** stays opaque and its provenance is asked of T-07 (`exact-return-origin.ts`): T-08
   never mints a target, never reads reversible-history internals, never treats the oldest checkpoint
-  as an original inspection and builds no history browser. A caller turns a target into an
-  opportunity with `bindExactReturnOrigin`, which is refused unless T-07's own
-  `isCurrentReturnCheckpointTargetForStore` confirms all three of: T-07 minted this handle, THIS
-  store minted it, and that exact history entry is still recorded. The same question is re-asked on
-  every render, so a handle from a foreign or replaced store is never offered at all, and a consumed
-  origin stays retired forever — the opportunity carries no ordinal, so history regrowing past its
-  old position cannot revive it. The predicate returns a boolean and nothing else: it exposes no
+  as an original inspection and builds no history browser. **The public barrel exposes no way to turn
+  an arbitrary checkpoint target into an Original Inspection at all**: same-store provenance is
+  necessary and proven, but it is not evidence that a checkpoint is the named origin of a real
+  inspection journey — a checkpoint recorded by Return to World is a valid handle and is not an
+  inspection. T-08 therefore CONSUMES an opaque origin, and establishing the real journey origin at
+  the real journey boundary belongs to the T-12 integration gate; until one is supplied, Exact Return
+  is simply absent. Whenever an origin is supplied, its validity is re-asked of T-07's own
+  `isCurrentReturnCheckpointTargetForStore` on every render, which confirms all three of: T-07 minted
+  this handle, THIS store minted it, and that exact history entry is still recorded. So a handle from
+  a foreign or replaced store is never offered at all, and a consumed origin stays retired forever —
+  the opportunity carries no ordinal, so history regrowing past its old position cannot revive it. The predicate returns a boolean and nothing else: it exposes no
   checkpoint internals, and `resolveCheckpointTarget` stays private to T-07, which remains the
   independent final authority and re-proves provenance and presence at execution.
 - **Lifecycle**: subscribed through the T-02 kernel's own seam, so a replaced store is

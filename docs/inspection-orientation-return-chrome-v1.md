@@ -210,26 +210,39 @@ empty offered set renders no group at all rather than an empty one.
 | act | offered when |
 | --- | --- |
 | `BACK_ONE_STEP` | something of the reader's own is reversible |
-| `EXACT_RETURN` | a bound origin still holds against this store |
+| `EXACT_RETURN` | an opaque origin was SUPPLIED and still holds against this store (T-08 mints none) |
 | `RETURN_LIVE_HEAD` | a Live Head exists and the committed stance is `PINNED` |
 | `RETURN_LIVE_FOCUS` | the projection-bound query says `AVAILABLE` — never raw `LF` |
 | `RETURN_WORLD` | the camera is not already at the canonical World viewpoint |
-| `GO_LIVE_AND_LOCATE` | a Live Head exists and the stance is `PINNED` |
+| `GO_LIVE_AND_LOCATE` | a Live Head exists, the stance is `PINNED`, **and a real `liveContext` provider exists on this surface** |
 
 The composite is deliberately **not** offered while the reader already follows Live: there its
 temporal half does nothing, so it would collapse into "move to where attention is now" and become a
 second button for one act. Historically it is genuinely a third thing, and it is offered.
 
+The composite's second condition is a CLIENT capability, not world truth: without a provider this
+surface has no way to attempt the spatial half at all, and a control that cannot attempt its own
+promise is a capability the surface does not have. Provider presence is settled before anything about
+Live is known, so requiring it adds no future-relative input.
+
 Every input to that decision is knowledge-safe — the reader's own history, their own camera, their
-own temporal stance, an origin they themselves bound, and for Live Focus the projection-bound answer
-alone. So the offered SET is knowledge-safe too: two viewpoints differing only in a Live Focus this
+own temporal stance, an origin that was SUPPLIED to this surface, and for Live Focus the
+projection-bound answer alone. So the offered SET is knowledge-safe too: two viewpoints differing only in a Live Focus this
 position cannot disclose offer exactly the same acts, and the whole rendered tree is identical.
 
 A meaning is a constant. `returnMeaning(id)` returns the frozen shape of any identity whether or not
 it is currently offered, and an offered entry is always deeply equal to it: being offered adds an
 entry to a list and changes nothing about what an act claims.
 
-### The Exact Return opportunity (R2-01)
+### The Exact Return opportunity (R2-01, narrowed by R3-04)
+
+> **Superseded history, kept for the reasoning.** The provenance predicate and the non-resurrection
+> guarantee below are current and unchanged. What is NO LONGER current is the public entry point:
+> R3-04 removed `bindExactReturnOrigin` from the barrel entirely, because same-store provenance —
+> though necessary and proven — is not evidence that a checkpoint is the named origin of a real
+> inspection **journey**. T-08 now CONSUMES an opaque origin and can mint none, and establishing the
+> real journey origin belongs to the T-12 integration gate. Read §13 for the current boundary; the
+> function named below is internal to the layer and is not Product API.
 
 T-08 never mints a target. It does not read reversible-history internals, does not treat the oldest
 recorded checkpoint as an "original inspection", and builds no history browser. T-07 remains the

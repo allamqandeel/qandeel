@@ -79,8 +79,8 @@ written. No row is claimed by a test that proves something adjacent.
 | 37 | no context substitution | `inspection.test.ts` — D36, D37 — an unavailable context withholds its name and substitutes nothing | PROVEN |
 | 38 | depth-withheld != unknown | `inspection.test.ts` — D38, D39 — depth-withheld is not absence, names the rung, and exposes no withheld content | PROVEN |
 | 39 | withheld content absent | `inspection.test.ts` — D38, D39 — depth-withheld is not absence, names the rung, and exposes no withheld content | PROVEN |
-| 40 | NOT_FETCHED technical only | `inspection.test.ts` — D40, D41 — NOT_FETCHED and UNAVAILABLE stay technical and stay different from each other | PROVEN |
-| 41 | UNAVAILABLE technical only | `inspection.test.ts` — D40, D41 — NOT_FETCHED and UNAVAILABLE stay technical and stay different from each other | PROVEN |
+| 40 | NOT_FETCHED technical only | `inspection.test.ts, technical-states.test.tsx` — D40, D41 — NOT_FETCHED and UNAVAILABLE stay technical and stay different from each other | PROVEN |
+| 41 | UNAVAILABLE technical only | `inspection.test.ts, technical-states.test.tsx` — D40, D41 — NOT_FETCHED and UNAVAILABLE stay technical and stay different from each other | PROVEN |
 | 42 | malformed resolution fails closed | `inspection.test.ts` — D42 — a malformed or disagreeing resolution fails closed | PROVEN |
 
 ### E — freshness (43–50)

@@ -243,7 +243,10 @@ const EN: LanguagePack = Object.freeze<LanguagePack>({
         // Withheld, not absent. The reader is told where it would be disclosed, in plain language.
         return `You are inspecting ${EN.family[render.family]}. Go deeper to see it: it is disclosed with ${EN.depth[render.requiredDepth]}.`;
       case 'PROJECTION_NOT_FETCHED':
-        return 'This moment has not arrived yet.';
+        // The subject is the SHOWING, never the moment. "Has not arrived" made the sentence assert
+        // that the moment itself had not happened — world truth that `NOT_FETCHED` cannot support,
+        // because it means only that the client has not obtained the disclosure for this viewpoint.
+        return 'This moment is not ready to show yet.';
       case 'PROJECTION_UNAVAILABLE':
         // The typed code stays in the model. A reader is never shown a transport code.
         return 'This moment cannot be shown right now.';
@@ -379,7 +382,10 @@ const AR: LanguagePack = Object.freeze<LanguagePack>({
         // family's gender. Withheld, not absent: it says where disclosure begins.
         return `قيد المعاينة: ${AR.family[render.family]}. يبدأ الكشف من ${AR.depth[render.requiredDepth]}.`;
       case 'PROJECTION_NOT_FETCHED':
-        return 'لم تصل هذه اللحظة بعد.';
+        // «لم تصل هذه اللحظة» made the MOMENT the subject that had not arrived. The incompleteness
+        // belongs to «عرض» — the showing — and the verbal shape keeps it distinct from the nominal
+        // «غير معروف» of unknown-at-TC and from «تعذّر» of a refusal.
+        return 'لم يكتمل عرض هذه اللحظة بعد.';
       case 'PROJECTION_UNAVAILABLE':
         return 'تعذّر عرض هذه اللحظة الآن.';
       case 'PROJECTION_STALE':
