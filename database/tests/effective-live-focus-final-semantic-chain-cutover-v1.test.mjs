@@ -48,12 +48,13 @@ function gitBlobId(content) {
 test('0071 remains frozen, and 0064 - 0070 are byte-identical', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.endsWith('.sql')).sort();
   // 0071 closed the T-03D chain; T-03C's 0072 and the isolated keep-alive
-  // infrastructure migration are the only migrations that follow it.
+  // infrastructure migrations are the only migrations that follow it.
   assert.ok(migrations.includes('0071_effective_live_focus_final_semantic_chain_cutover_v1.sql'), 'migration 0071 is deployed');
   assert.deepEqual(migrations.filter((name) => name > '0071_effective_live_focus_final_semantic_chain_cutover_v1.sql'), [
     '0072_historical_coverage_projection_disclosure_v1.sql',
     '0073_supabase_free_plan_keepalive_v1.sql',
-  ], 'only T-03C and the isolated keep-alive infrastructure migration follow 0071');
+    '0074_supabase_keepalive_permission_correction_v1.sql',
+  ], 'only T-03C and the isolated keep-alive infrastructure migrations follow 0071');
   assert.equal(migrations.filter((name) => name.startsWith('0071_')).length, 1, 'exactly one 0071 migration exists');
   assert.match(migration, /^BEGIN;/mu);
   assert.match(migration, /COMMIT;\s*$/u);

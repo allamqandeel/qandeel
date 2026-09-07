@@ -68,7 +68,11 @@ const mobileCi = read('.github/workflows/mobile-ci.yml');
 
 test('migration 0072 is the ONE migration after 0071, 0001 - 0071 are byte-identical, and the delivered surface exists', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  assert.deepEqual(migrations.slice(-2), [MIGRATION, '0073_supabase_free_plan_keepalive_v1.sql']);
+  assert.deepEqual(migrations.slice(-3), [
+    MIGRATION,
+    '0073_supabase_free_plan_keepalive_v1.sql',
+    '0074_supabase_keepalive_permission_correction_v1.sql',
+  ]);
   assert.deepEqual(migrations.filter((name) => /0072_/u.test(name)), [MIGRATION], 'T-03C ships exactly ONE migration');
   // 0001 - 0071 are frozen bytes: compared against the git blob ids the
   // canonical repository carried at 0f1a8e7ebfa53dcb2eb610a295b5e05684e51b52
