@@ -117,7 +117,8 @@ test('migration 0070 is the FINAL Thread-layer migration, 0071 (T-03D) orders di
     B3D_MIGRATION,
     '0072_historical_coverage_projection_disclosure_v1.sql',
     '0073_supabase_free_plan_keepalive_v1.sql',
-  ], 'T-03B3, T-03D, T-03C, and the isolated keep-alive infrastructure each ship exactly one migration');
+    '0074_supabase_keepalive_permission_correction_v1.sql',
+  ], 'T-03B3, T-03D, T-03C, and the isolated keep-alive infrastructure migrations are exact');
   for (const [file, blob] of [
     ['database/migrations/0064_committed_conversational_unit_substrate_v1.sql', '0a2ee63980e59072b3e9f52a643efa8220e95b08'],
     ['database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql', '3dc061c71bcb237cec648abb2d1fa02f450cd57f'],
