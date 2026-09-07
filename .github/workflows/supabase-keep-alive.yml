@@ -1,0 +1,56 @@
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    - cron: '17 */8 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: supabase-keep-alive
+  cancel-in-progress: false
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - name: Call zero-data database keep-alive
+        shell: bash
+        run: |
+          if [[ -z "${SUPABASE_URL}" ]]; then
+            echo "Required secret SUPABASE_URL is missing." >&2
+            exit 1
+          fi
+
+          if [[ -z "${SUPABASE_PUBLISHABLE_KEY}" ]]; then
+            echo "Required secret SUPABASE_PUBLISHABLE_KEY is missing." >&2
+            exit 1
+          fi
+
+          response="$(curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --connect-timeout 10 \
+            --max-time 45 \
+            --retry 2 \
+            --retry-delay 2 \
+            --retry-max-time 30 \
+            --request POST \
+            --header "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_PUBLISHABLE_KEY}" \
+            --header "Content-Type: application/json" \
+            --data '{}' \
+            "${SUPABASE_URL%/}/rest/v1/rpc/qandeel_keepalive")"
+
+          if [[ "${response}" != 'true' ]]; then
+            echo "Supabase database keep-alive returned an unexpected response." >&2
+            exit 1
+          fi
+
+          echo "Supabase database keep-alive succeeded."
