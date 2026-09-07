@@ -219,7 +219,18 @@ test('T-08 adds no dependency and touches no backend, database or schema', async
   }
   const rootPackage = await readJson('package.json');
   assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg'], 'no new root dependency');
-  assert.deepEqual(readdirSync(join(rootPath, 'database/migrations')).filter((name) => /007[3-9]|00[8-9][0-9]/u.test(name)), [], 'T-08 adds no migration');
+  // Forward-safe by construction. An earlier draft of this assertion banned every migration
+  // numbered beyond the T-08 baseline, which freezes the FUTURE rather than the past: an unrelated
+  // migration landing on `main` would fail a mobile chrome contract that has nothing to do with it.
+  // The real statement is that T-08 is a mobile-only layer — it ships no database artifact and
+  // reaches nothing in the database — and that stays true however far the migration chain grows.
+  const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql'));
+  assert.ok(migrations.length > 0, 'the migration chain was read');
+  assert.deepEqual(migrations.filter((name) => /orientation|chrome|inspection|return/iu.test(name)), [], 'T-08 added no migration of its own');
+  assert.deepEqual(listFiles(join(rootPath, OC_DIR)).filter((file) => file.endsWith('.sql')), [], 'the layer ships no database artifact');
+  for (const reach of ['database/', 'migrations/', 'supabase', 'postgres', 'rpc/', 'SELECT ', 'INSERT ']) {
+    assert.equal(layerText.includes(reach), false, `T-08 must not reach ${reach}`);
+  }
 });
 
 // Section 25.28...25.31 - the later tasks' scope is left alone.
