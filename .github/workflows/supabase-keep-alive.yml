@@ -43,7 +43,6 @@ jobs:
             --retry-max-time 30 \
             --request POST \
             --header "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
-            --header "Authorization: Bearer ${SUPABASE_PUBLISHABLE_KEY}" \
             --header "Content-Type: application/json" \
             --data '{}' \
             "${SUPABASE_URL%/}/rest/v1/rpc/qandeel_keepalive")"
