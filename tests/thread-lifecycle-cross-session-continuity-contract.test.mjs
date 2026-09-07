@@ -112,7 +112,12 @@ test('migration 0070 is the FINAL Thread-layer migration, 0071 (T-03D) orders di
   assert.equal(migrations.indexOf(B3D_MIGRATION), migrations.indexOf(MIGRATION) + 1, '0071 orders directly after 0070');
   // (T-03C added 0072, the historical coverage / projection / disclosure migration,
   // pinned by tests/historical-projection-contract.test.mjs.)
-  assert.deepEqual(migrations.filter((name) => /007\d_/u.test(name)), [MIGRATION, B3D_MIGRATION, '0072_historical_coverage_projection_disclosure_v1.sql'], 'T-03B3 ships exactly ONE migration; T-03D exactly one more; T-03C exactly one more');
+  assert.deepEqual(migrations.filter((name) => /007\d_/u.test(name)), [
+    MIGRATION,
+    B3D_MIGRATION,
+    '0072_historical_coverage_projection_disclosure_v1.sql',
+    '0073_supabase_free_plan_keepalive_v1.sql',
+  ], 'T-03B3, T-03D, T-03C, and the isolated keep-alive infrastructure each ship exactly one migration');
   for (const [file, blob] of [
     ['database/migrations/0064_committed_conversational_unit_substrate_v1.sql', '0a2ee63980e59072b3e9f52a643efa8220e95b08'],
     ['database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql', '3dc061c71bcb237cec648abb2d1fa02f450cd57f'],

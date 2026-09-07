@@ -100,11 +100,15 @@ const mobilePackage = readJson('apps/mobile/package.json');
 const apiCi = read('.github/workflows/api-ci.yml');
 const mobileCi = read('.github/workflows/mobile-ci.yml');
 
-test('migration 0071 is the newest, 0064 - 0070 keep their exact pins, the delivered surface exists, and no split-task marker exists', () => {
+test('migration 0071 remains frozen, 0064 - 0070 keep their exact pins, the delivered surface exists, and no split-task marker exists', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  // 0071 closed the T-03D chain; T-03C's 0072 is the ONE migration that follows it.
+  // 0071 closed the T-03D chain; T-03C's 0072 and the isolated keep-alive
+  // infrastructure migration are the only migrations that follow it.
   assert.ok(migrations.includes(MIGRATION), 'migration 0071 is deployed');
-  assert.deepEqual(migrations.filter((name) => name > MIGRATION), ['0072_historical_coverage_projection_disclosure_v1.sql'], 'nothing beyond T-03C follows 0071');
+  assert.deepEqual(migrations.filter((name) => name > MIGRATION), [
+    '0072_historical_coverage_projection_disclosure_v1.sql',
+    '0073_supabase_free_plan_keepalive_v1.sql',
+  ], 'only T-03C and the isolated keep-alive infrastructure migration follow 0071');
   assert.deepEqual(migrations.filter((name) => /0071_/u.test(name)), [MIGRATION], 'T-03D ships exactly ONE migration');
   for (const [file, blob] of [
     ['database/migrations/0064_committed_conversational_unit_substrate_v1.sql', '0a2ee63980e59072b3e9f52a643efa8220e95b08'],

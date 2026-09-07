@@ -80,6 +80,51 @@ jobs:
           SQL
       - name: Apply all migrations to fresh PostgreSQL
         run: for migration in database/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
+      - name: Verify Supabase keep-alive database contract
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          DECLARE
+            keepalive_oid oid := 'public.qandeel_keepalive()'::regprocedure::oid;
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1
+              FROM pg_proc AS p
+              JOIN pg_language AS language ON language.oid = p.prolang
+              WHERE p.oid = keepalive_oid
+                AND p.prorettype = 'boolean'::regtype
+                AND p.pronargs = 0
+                AND p.provolatile = 's'
+                AND p.prosecdef = false
+                AND p.proconfig = ARRAY['search_path=""']::text[]
+                AND language.lanname = 'sql'
+            ) THEN
+              RAISE EXCEPTION 'qandeel_keepalive function posture is invalid';
+            END IF;
+
+            IF EXISTS (
+              SELECT 1
+              FROM pg_proc AS p,
+                LATERAL aclexplode(p.proacl) AS privilege
+              WHERE p.oid = keepalive_oid
+                AND privilege.grantee = 0
+                AND privilege.privilege_type = 'EXECUTE'
+            ) THEN
+              RAISE EXCEPTION 'PUBLIC can execute qandeel_keepalive';
+            END IF;
+
+            IF NOT has_function_privilege('anon', keepalive_oid, 'EXECUTE')
+              OR has_function_privilege('authenticated', keepalive_oid, 'EXECUTE')
+              OR has_function_privilege('service_role', keepalive_oid, 'EXECUTE') THEN
+              RAISE EXCEPTION 'qandeel_keepalive role grants are invalid';
+            END IF;
+          END
+          $$;
+
+          SET ROLE anon;
+          SELECT 1 / CASE WHEN public.qandeel_keepalive() IS TRUE THEN 1 ELSE 0 END;
+          RESET ROLE;
+          SQL
       - {name: Verify authenticated database foundation, run: npm run verify:database:integration}
       - {name: Verify conversation authority hardening, run: npm run verify:conversation-authority:integration}
       - {name: Verify conversation session authority hardening, run: npm run verify:conversation-session-authority:integration}
@@ -158,4 +203,3 @@ jobs:
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
       - {name: Verify Integrated Brain end-to-end hardening v2, run: npm run verify:integrated-brain:e2e-hardening-v2}
-
