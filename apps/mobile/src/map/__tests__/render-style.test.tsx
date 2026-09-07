@@ -6,7 +6,9 @@ import { render } from '@testing-library/react-native';
 import { disclosureFixture } from '../__fixtures__/disclosure';
 import { contextOf, envelope, testStore } from '../__fixtures__/store';
 import { buildMapAccessibilityTree } from '../accessibility';
-import { decodeCameraIntent } from '../camera';
+import { canvasProps } from '../../motion/__fixtures__/canvas';
+import { stubPresentationCamera } from '../../motion/__fixtures__/presentation-camera';
+import { decodeCameraIntent, envelopeCenter } from '../camera';
 import { deriveMapScene, mapProjectionRequest } from '../projection';
 import { MAP_CANVAS_TEST_ID, MapCanvas, hitTest, placeScene, renderStyle, RENDER_STYLE_CHANNELS } from '../renderer';
 
@@ -113,15 +115,18 @@ describe('OPEN-17 — the two presentation channels change pixels and nothing el
     // opacity removed: everything that is not paint — the elements, their identities, their
     // geometry and their order — is identical under both values, and `opacity` is the only
     // property that moves at all.
+    // ONE stand-in for both renders: the presentation camera is not a paint channel, so it must be
+    // identical on both sides of the comparison for the comparison to be about paint at all.
+    const motion = stubPresentationCamera({ center: envelopeCenter(envelope()) });
     const quietRender = await render(
-      <MapCanvas scene={quietContext.scene} camera={camera.camera} envelope={envelope()} placed={placed} style={QUIET} />,
+      <MapCanvas {...canvasProps({ placed, motion, envelope: envelope(), style: QUIET })} />,
     );
     expect(quietRender.getByTestId(MAP_CANVAS_TEST_ID)).toBeTruthy();
     const quietJson = quietRender.toJSON();
     quietRender.unmount();
 
     const loudRender = await render(
-      <MapCanvas scene={loudContext.scene} camera={camera.camera} envelope={envelope()} placed={placed} style={LOUD} />,
+      <MapCanvas {...canvasProps({ placed, motion, envelope: envelope(), style: LOUD })} />,
     );
     const loudJson = loudRender.toJSON();
     loudRender.unmount();

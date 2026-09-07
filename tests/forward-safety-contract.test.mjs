@@ -193,22 +193,32 @@ test('the mirror is a faithful, independently runnable copy of the repository', 
 // Authorized future work. Each of these WILL happen, and none of it may break a contract.
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * T-10 re-anchor. The hypothetical used to be T-10's own gate; T-10 has now registered it for
+ * real, so re-using that name would insert a DUPLICATE registration — which several contracts
+ * correctly refuse, and rightly so. A hypothetical has to stay hypothetical, so it moves to the
+ * next gate that is genuinely still in the future. The claim is unchanged and unweakened: a later
+ * task registering its own Node-only mobile gate is authorized work.
+ */
+const FUTURE_GATE = 'test:t11-responsive-contract';
+const FUTURE_GATE_FILE = 'tests/t11-responsive-contract.test.mjs';
+
 test('a future authorized Mobile CI gate breaks no historical contract', () => scenario(
-  ['.github/workflows/mobile-ci.yml', 'package.json', 'tests/t10-motion-contract.test.mjs'],
+  ['.github/workflows/mobile-ci.yml', 'package.json', FUTURE_GATE_FILE],
   () => {
-  const gate = 'test:t10-motion-contract';
+  const gate = FUTURE_GATE;
   patch('.github/workflows/mobile-ci.yml',
     (text) => text
       .replace(/^(\s*)- \{name: Verify Session Semantic Clock/mu,
-        (match, indent) => `${indent}- {name: Verify hypothetical future motion contract (T-10), run: npm run ${gate}}\n${match}`)
+        (match, indent) => `${indent}- {name: Verify hypothetical future responsive contract (T-11), run: npm run ${gate}}\n${match}`)
       .replace("'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs'",
-        "'tests/t10-motion-contract.test.mjs', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs'"),
+        `'${FUTURE_GATE_FILE}', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs'`),
     gate);
   patch('package.json',
     (text) => text.replace(/^(\s*)"test:inspection-orientation-return-chrome-contract":/mu,
-      (match, indent) => `${indent}"${gate}": "node --test tests/t10-motion-contract.test.mjs",\n${match}`),
+      (match, indent) => `${indent}"${gate}": "node --test ${FUTURE_GATE_FILE}",\n${match}`),
     gate);
-  writeFileSync(join(mirrorPath, 'tests/t10-motion-contract.test.mjs'), "import test from 'node:test';\ntest('probe', () => {});\n");
+  writeFileSync(join(mirrorPath, FUTURE_GATE_FILE), "import test from 'node:test';\ntest('probe', () => {});\n");
 
   assertAllSurvive('a later task registering its own Node-only mobile gate is authorized work');
 }));
@@ -314,21 +324,21 @@ test('a duplicated Mobile CI gate registration is refused', () => scenario(['.gi
 
 /** The four authorized future changes, applied together. */
 function applyEveryAuthorizedChange() {
-  const gate = 'test:t10-motion-contract';
+  const gate = FUTURE_GATE;
   patch('.github/workflows/mobile-ci.yml',
     (text) => text
       .replace(/^(\s*)- \{name: Verify Session Semantic Clock/mu,
-        (match, indent) => `${indent}- {name: Verify hypothetical future motion contract (T-10), run: npm run ${gate}}\n${match}`)
+        (match, indent) => `${indent}- {name: Verify hypothetical future responsive contract (T-11), run: npm run ${gate}}\n${match}`)
       .replace("'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs'",
-        "'tests/t10-motion-contract.test.mjs', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs'"),
+        `'${FUTURE_GATE_FILE}', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs'`),
     gate);
   patch('package.json',
     (text) => text
       .replace(/^(\s*)"test:inspection-orientation-return-chrome-contract":/mu,
-        (match, indent) => `${indent}"${gate}": "node --test tests/t10-motion-contract.test.mjs",\n${match}`)
+        (match, indent) => `${indent}"${gate}": "node --test ${FUTURE_GATE_FILE}",\n${match}`)
       .replace('"devDependencies": {"pg":', '"devDependencies": {"c8": "^10.1.3", "pg":'),
     gate);
-  writeFileSync(join(mirrorPath, 'tests/t10-motion-contract.test.mjs'), "import test from 'node:test';\ntest('probe', () => {});\n");
+  writeFileSync(join(mirrorPath, FUTURE_GATE_FILE), "import test from 'node:test';\ntest('probe', () => {});\n");
   writeFileSync(join(mirrorPath, PROBE_MIGRATION),
     '-- Forward-safety probe: an ordinary later migration that owns its own object.\n' +
     'CREATE TABLE public.forward_safety_probe_v1 (id uuid PRIMARY KEY);\n');
@@ -348,7 +358,7 @@ function applyEveryAuthorizedChange() {
 }
 
 test('every authorized future change at once breaks nothing, including the contracts that execute production code', () => scenario(
-  ['.github/workflows/mobile-ci.yml', 'package.json', 'tests/t10-motion-contract.test.mjs', PROBE_MIGRATION, ...CHROME_MUTATIONS],
+  ['.github/workflows/mobile-ci.yml', 'package.json', FUTURE_GATE_FILE, PROBE_MIGRATION, ...CHROME_MUTATIONS],
   () => {
     applyEveryAuthorizedChange();
     // The FULL set this time: a repository one authorized step into its own future must be green.

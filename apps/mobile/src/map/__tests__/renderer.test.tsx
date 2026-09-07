@@ -3,8 +3,10 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { disclosureFixture } from '../__fixtures__/disclosure';
 import { contextOf, envelope, testStore } from '../__fixtures__/store';
 import { MAP_ACCESSIBILITY_TEST_ID } from '../accessibility';
+import { canvasProps } from '../../motion/__fixtures__/canvas';
+import { stubPresentationCamera } from '../../motion/__fixtures__/presentation-camera';
 import { inspectObject } from '../inspection';
-import { decodeCameraIntent } from '../camera';
+import { decodeCameraIntent, envelopeCenter } from '../camera';
 import {
   MAP_CANVAS_TEST_ID,
   MAP_SURFACE_PLANE_TEST_ID,
@@ -40,7 +42,8 @@ describe('the structural Skia renderer', () => {
     const camera = cameraOf(store);
     const placed = placeScene(context.scene, camera, envelope());
 
-    const view = await render(<MapCanvas scene={context.scene} camera={camera} envelope={envelope()} placed={placed} />);
+    const motion = stubPresentationCamera({ center: envelopeCenter(envelope()) });
+    const view = await render(<MapCanvas {...canvasProps({ placed: placed, motion: motion, envelope: envelope() })} />);
     expect(view.getByTestId(MAP_CANVAS_TEST_ID)).toBeTruthy();
 
     // Two Homes, one contextual appearance, two ungeographic entries: every entitled locus and

@@ -14,10 +14,11 @@ export {
   initialCameraIntent,
 } from './camera';
 
-export type { ScreenPoint, ViewportEnvelope, ViewportInsets, WorldFootprint } from './viewport';
+export type { CanonicalCameraTransition, ScreenPoint, ViewportEnvelope, ViewportInsets, WorldFootprint } from './viewport';
 export {
   FINITE_PROJECTION_LIMIT_POINTS,
   POINT_SUBDIVISION,
+  cameraTransition,
   envelopeAspectRatio,
   envelopeCenter,
   exactPoints,
@@ -55,5 +56,5 @@ export {
 
 export { currentCamera, exploreViewport, panByTranslation, zoomSemanticStep } from './map-camera-actions';
 
-export type { MapPanGestureBinding, MapPanGestureOptions, MapPanProgress } from './useMapPanGesture';
-export { IDLE_PAN_PROGRESS, useMapPanGesture } from './useMapPanGesture';
+export type { MapPanGestureBinding, MapPanGestureOptions } from './useMapPanGesture';
+export { useMapPanGesture } from './useMapPanGesture';
