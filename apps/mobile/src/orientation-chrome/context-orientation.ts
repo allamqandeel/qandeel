@@ -29,6 +29,7 @@
  */
 import { disclosedAppearances, type MapInspectionContext, type MapObjectFamily } from '../map';
 import type { HistoricalFamily } from '../projection';
+import { contextChoiceLabel } from './product-copy';
 import type { ContextAppearanceOption, ContextChrome, ContextStep } from './types';
 
 /** Says explicitly that the order carries no preference. */
@@ -77,23 +78,34 @@ export function contextOrientation(inputs: ContextOrientationInputs): ContextChr
   for (const locus of disclosedAppearances(context, family, identity.id)) {
     const where = locus.locus;
     if (where.kind !== 'CONTEXTUAL_APPEARANCE') continue;
+    // Where the reader is, read from their own inspection. Never a preference and never a default.
+    const current = currentBindingId !== null && where.bindingId === currentBindingId;
     options.push(
       Object.freeze({
-        key: locus.key,
+        ordinal: options.length,
         bindingId: where.bindingId,
-        threadId: where.threadId,
-        label: `${identity.family} ${identity.id} in Thread ${where.threadId}, context ${where.bindingId}`,
-        // Where the reader is, read from their own inspection. Never a preference and never a default.
-        current: currentBindingId !== null && where.bindingId === currentBindingId,
+        boundAtMoment: where.boundSp,
+        current,
+        // Built from the two things the reader already has: whether this is the context they are
+        // looking through, and the Moment it was taken up at. No Thread id, no binding id, no key.
+        label: contextChoiceLabel(current, where.boundSp),
       }),
     );
   }
 
+  // Fail closed rather than invent. `V` discloses no human-readable name for a Thread, so two
+  // appearances taken up at the same Moment cannot be told apart by anything a reader may see.
+  // Offering them anyway would mean either labelling them with internal handles or making a name up;
+  // both are worse than saying nothing, so no chooser is produced at all.
+  const labels = new Set(options.map((option) => option.label));
+  const distinguishable = labels.size === options.length;
+
   return Object.freeze({
     lineage,
-    appearances: Object.freeze(options),
-    // One appearance is not a choice, and zero is not an empty chooser.
-    choiceAvailable: options.length >= 2,
+    // One appearance is not a choice, zero is not an empty chooser, and an indistinguishable set is
+    // not a choice a reader could make.
+    appearances: options.length >= 2 && distinguishable ? Object.freeze(options) : Object.freeze([]),
+    choiceAvailable: options.length >= 2 && distinguishable,
     ordering: CONTEXT_ORDERING_NOTE,
   });
 }

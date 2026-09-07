@@ -13,7 +13,9 @@
  *     world stays live and pannable while the chrome is on screen. That is what keeps it
  *     perceptually continuous, and it is structural rather than a matter of styling;
  *   - contains no scroller and no list of world objects. Enumerating the world here would build a
- *     second Map that could disagree with the first.
+ *     second Map that could disagree with the first;
+ *   - offers only the acts that are meaningful right now, so it never becomes a permanent command
+ *     panel of everything the system can do.
  *
  * ## Subscribed, not sampled
  *
@@ -30,21 +32,23 @@
  *
  * The whole orientation answer is recomputed from props and subscribed state on every render, so a
  * changed callback identity, an extra rerender or a remount cannot alter what any control means or
- * does. Nothing is captured at mount: the Exact Return target is a prop and is never recaptured, no
- * context is auto-selected, and no act is replayed. Every executor call happens synchronously inside
- * the press it belongs to, so there is no asynchronous window in which a late callback could act
- * after unmount — the provider this component passes down is a pure function that holds no store and
- * can write nothing.
+ * does. Nothing is captured at mount: the Exact Return opportunity is a prop and is never
+ * recaptured, no context is auto-selected, and no act is replayed. Every executor call happens
+ * synchronously inside the press it belongs to, so there is no asynchronous window in which a late
+ * callback could act after unmount — and the provider this component passes down is a pure function
+ * that holds no store and can write nothing.
  */
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { MapActionOutcome, MapProjectionRequest } from '../map';
-import type { ReturnCheckpointTarget, ReturnMapContext, ReturnOutcome, ReturnSurface } from '../return-navigation';
+import type { ReturnMapContext, ReturnOutcome, ReturnSurface } from '../return-navigation';
+import { exactReturnTargetFor, type ExactReturnOrigin } from './exact-return-origin';
 import { InspectionOrientation } from './InspectionOrientation';
 import { orientationModel, type ChromeProjection } from './model';
+import { liveSentence, spatialSentence, temporalSentence } from './product-copy';
 import { ReturnControls } from './ReturnControls';
-import type { LiveChrome, OrientationModel, ReturnOpportunityId, SpatialChrome, TemporalChrome } from './types';
+import type { OrientationModel, ReturnOpportunityId } from './types';
 
 export const ORIENTATION_CHROME_TEST_ID = 'qandeel-orientation-chrome';
 
@@ -55,13 +59,14 @@ export interface OrientationChromeProps {
   readonly surface: ReturnSurface;
   readonly projection: ChromeProjection;
   /**
-   * An opaque checkpoint target bound from a real explicit inspection journey.
+   * An Exact Return opportunity bound from a real explicit inspection journey.
    *
    * It is never minted here. T-08 does not read the reversible history, does not treat the oldest
    * recorded checkpoint as an original inspection, and builds no history browser: the caller that
-   * genuinely started the journey binds it, and T-07 re-proves it at execution.
+   * genuinely started the journey binds it with `bindExactReturnOrigin`, and T-07 re-proves it at
+   * execution. An opportunity bound against a different store is not offered at all.
    */
-  readonly exactReturnTarget?: ReturnCheckpointTarget | null;
+  readonly exactReturnOrigin?: ExactReturnOrigin | null;
   readonly liveContext?: (request: MapProjectionRequest) => ReturnMapContext;
   readonly onReturnOutcome?: (id: ReturnOpportunityId, outcome: ReturnOutcome) => void;
   readonly onMapOutcome?: (outcome: MapActionOutcome) => void;
@@ -74,35 +79,10 @@ export interface OrientationChromeProps {
   readonly bottomInset?: number;
 }
 
-/** Where the reader stands in conversational time. Never a claim about where anything else is. */
-export function temporalStatement(temporal: TemporalChrome): string {
-  if (temporal.mode === 'FOLLOW_LIVE') {
-    return temporal.liveHeadEstablished ? 'Following the conversation as it continues.' : 'The conversation has not started yet.';
-  }
-  return `Reading at moment ${temporal.at}.`;
-}
-
-/** The camera's own orientation. Derived from the camera, never from how full the view happens to be. */
-export function spatialStatement(spatial: SpatialChrome): string {
-  return spatial.atWorldViewpoint ? `Looking at the whole world, disclosing ${spatial.depth}.` : `Disclosing ${spatial.depth}.`;
-}
-
-/**
- * Everything a historical reader may be told about Live.
- *
- * It says THAT the conversation has moved on and nothing about where it moved to: no identity, no
- * name, no category, no direction, no distance, no side of the screen and no count. Two viewpoints
- * that differ only in a Live Focus this position cannot disclose produce the same sentence, because
- * this function cannot see one.
- */
-export function liveStatement(live: LiveChrome): string | null {
-  return live.advancedWhileHistorical ? 'The conversation has continued since this moment.' : null;
-}
-
 export function OrientationChrome({
   surface,
   projection,
-  exactReturnTarget,
+  exactReturnOrigin,
   liveContext,
   onReturnOutcome,
   onMapOutcome,
@@ -115,28 +95,31 @@ export function OrientationChrome({
   /**
    * The one piece of Class-D state in T-08, and it is subtractive by construction.
    *
-   * A bound target that T-07 has refused has lost its justification, so its control is retired
-   * rather than left standing as an act that will refuse again. It is compared by object identity,
-   * so an ordinary rerender keeps the retirement, a newly bound target is offered normally, and a
-   * remount starts clean. It can never make an unavailable act available.
+   * An opportunity T-07 has refused has lost its justification, so it is retired rather than left
+   * standing as an act that will refuse again. It is compared by object identity, so an ordinary
+   * rerender keeps the retirement, a newly bound opportunity is offered normally, and a remount
+   * starts clean. It can never make an unavailable act available.
    */
-  const [refusedTarget, setRefusedTarget] = useState<ReturnCheckpointTarget | null>(null);
-  const bound = exactReturnTarget === undefined || exactReturnTarget === null || exactReturnTarget === refusedTarget ? null : exactReturnTarget;
+  const [refusedOrigin, setRefusedOrigin] = useState<ExactReturnOrigin | null>(null);
+  const origin = exactReturnOrigin === undefined || exactReturnOrigin === null || exactReturnOrigin === refusedOrigin ? null : exactReturnOrigin;
+  // Resolved against this store's own lifecycle: a foreign or replaced store yields nothing here,
+  // so the act is never offered rather than being offered and then refused on press.
+  const exactReturnTarget = exactReturnTargetFor(surface.store, origin);
 
-  const model: OrientationModel = orientationModel(surface.store, projection, { exactReturnTarget: bound });
+  const model: OrientationModel = orientationModel(surface.store, projection, { exactReturnOrigin: origin });
   const current = model.projection.status === 'CURRENT' && projection.held ? projection.context : null;
 
   const handleReturn = useCallback(
     (id: ReturnOpportunityId, outcome: ReturnOutcome) => {
-      // A refusal is evidence that this target's justification is gone. A no-op is not: it means the
-      // act legitimately changed nothing, and the opportunity is still real.
-      if (id === 'EXACT_RETURN' && outcome.outcome === 'REJECTED' && bound !== null) setRefusedTarget(bound);
+      // A refusal is evidence that this opportunity's justification is gone. A no-op is not: it
+      // means the act legitimately changed nothing, and the opportunity is still real.
+      if (id === 'EXACT_RETURN' && outcome.outcome === 'REJECTED' && origin !== null) setRefusedOrigin(origin);
       onReturnOutcome?.(id, outcome);
     },
-    [bound, onReturnOutcome],
+    [origin, onReturnOutcome],
   );
 
-  const live = liveStatement(model.live);
+  const live = liveSentence(model.live);
 
   return (
     <View
@@ -150,10 +133,10 @@ export function OrientationChrome({
     >
       <View style={styles.orientation}>
         <Text testID={`${ORIENTATION_CHROME_TEST_ID}:temporal`} style={styles.line}>
-          {temporalStatement(model.temporal)}
+          {temporalSentence(model.temporal)}
         </Text>
         <Text testID={`${ORIENTATION_CHROME_TEST_ID}:spatial`} style={styles.line}>
-          {spatialStatement(model.spatial)}
+          {spatialSentence(model.spatial)}
         </Text>
         {live === null ? null : (
           <Text testID={`${ORIENTATION_CHROME_TEST_ID}:live`} style={styles.line}>
@@ -174,7 +157,7 @@ export function OrientationChrome({
         surface={surface}
         orientation={model.returns}
         context={current}
-        exactReturnTarget={bound}
+        exactReturnTarget={exactReturnTarget}
         liveContext={liveContext}
         onOutcome={handleReturn}
       />

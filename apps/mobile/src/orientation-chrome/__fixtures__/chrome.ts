@@ -17,10 +17,51 @@ import { inspectObject, mapProjectionRequest, type MapInspectionContext } from '
 import type { HistoricalDisclosureEntry } from '../../projection';
 import { sessionPosition, type CanonicalStore, type InspectionRef } from '../../state';
 import { chromeProjection, type ChromeProjection } from '../model';
+import type { OrientationModel, ReturnOpportunityId } from '../types';
 import { contextAt, returnSurface, returnTestStore, world, type ReturnTestStoreOptions } from '../../return-navigation/__fixtures__/return';
 
 export { contextAt, returnSurface as chromeSurface, returnTestStore as chromeStore, world };
 export type { ReturnTestStoreOptions };
+
+/** Which return acts the model currently OFFERS, in the frozen logical order. */
+export const offeredIds = (model: OrientationModel): readonly ReturnOpportunityId[] => model.returns.offered.map((candidate) => candidate.id);
+
+/** Whether one frozen identity is offered right now. Being unoffered is a fact, not an absence of one. */
+export const isOffered = (model: OrientationModel, id: ReturnOpportunityId): boolean =>
+  model.returns.offered.some((candidate) => candidate.id === id);
+
+/**
+ * Everything a reader can actually see or hear: rendered text, accessibility labels and hints.
+ *
+ * Deliberately NOT the whole serialized tree — a `testID` and a style key are engineering surface a
+ * reader never encounters, and scanning them would make the "no internals" proof fail on
+ * `flexDirection`. This is the honest definition of user-visible.
+ */
+export function readableText(node: unknown, out: string[] = []): string[] {
+  if (node === null || node === undefined) return out;
+  if (typeof node === 'string') {
+    out.push(node);
+    return out;
+  }
+  if (Array.isArray(node)) {
+    for (const child of node) readableText(child, out);
+    return out;
+  }
+  const element = node as { props?: Record<string, unknown>; children?: unknown };
+  const props = element.props ?? {};
+  for (const key of ['accessibilityLabel', 'accessibilityHint']) {
+    if (typeof props[key] === 'string') out.push(props[key] as string);
+  }
+  const actions = props.accessibilityActions;
+  if (Array.isArray(actions)) {
+    for (const action of actions as readonly { name?: unknown; label?: unknown }[]) {
+      if (typeof action.name === 'string') out.push(action.name);
+      if (typeof action.label === 'string') out.push(action.label);
+    }
+  }
+  readableText(element.children, out);
+  return out;
+}
 
 /** A React Native style prop, flattened the way the platform composes it, for structural assertions. */
 export function flattenStyle(style: unknown): Record<string, unknown> {

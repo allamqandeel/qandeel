@@ -205,17 +205,24 @@ export type ReturnEffect = 'HISTORY' | 'TEMPORAL' | 'SPATIAL' | 'TEMPORAL_AND_SP
  */
 export interface ReturnOpportunity {
   readonly id: ReturnOpportunityId;
-  readonly available: boolean;
   readonly effect: ReturnEffect;
   readonly movesTime: boolean;
   readonly movesCamera: boolean;
-  /** Structural placeholder copy. Distinct per identity; final wording belongs to a later task. */
   readonly label: string;
   readonly hint: string;
 }
 
 export interface ReturnChrome {
-  readonly opportunities: readonly ReturnOpportunity[];
+  /**
+   * The acts that are meaningful RIGHT NOW, in the frozen logical order — never all six by default.
+   *
+   * The six meanings stay six: each identity keeps its own effect, promises and wording, and no two
+   * are ever merged. What is context-sensitive is which of them a reader is offered, and every input
+   * to that decision is knowledge-safe — the reader's own history, their own camera, their own
+   * temporal stance, and for Live Focus the projection-bound answer alone. Two viewpoints that
+   * differ only in a Live Focus this position cannot disclose therefore offer the SAME set.
+   */
+  readonly offered: readonly ReturnOpportunity[];
   /** How many of the reader's OWN transactions are reversible. Never a count of anything in the world. */
   readonly checkpointCount: number;
 }
@@ -229,11 +236,15 @@ export interface ReturnChrome {
  * IS; it is not a recommendation, and no option is ever preselected, defaulted or marked preferable.
  */
 export interface ContextAppearanceOption {
-  readonly key: string;
+  /** Position within this chooser. A React key and a test id; never spoken and never drawn. */
+  readonly ordinal: number;
+  /** The disclosed binding this option switches to. It reaches T-04's executor, never a reader. */
   readonly bindingId: string;
-  readonly threadId: string;
-  readonly label: string;
+  /** The Moment this appearance was taken up at. Reader-facing Product truth, like any Moment. */
+  readonly boundAtMoment: number;
   readonly current: boolean;
+  /** Built from `current` and `boundAtMoment` alone — never from an id, a key or a Thread. */
+  readonly label: string;
 }
 
 /**

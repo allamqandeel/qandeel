@@ -37,7 +37,8 @@ describe('OC08-F — when a chooser exists at all', () => {
     const store = historicalStore();
     inspect(store, contextAt(single), { family: 'READING', id: 'reading-1', appearance: { kind: 'THREAD_READING', bindingId: 'binding-a' } });
     const model = orientationModel(store, projectionFor(store, fetched(withInspection(single, known()))));
-    expect(model.context.appearances).toHaveLength(1);
+    // One appearance is not a choice, so nothing is offered rather than a chooser of one.
+    expect(model.context.appearances).toEqual([]);
     expect(model.context.choiceAvailable).toBe(false);
 
     const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projectionFor(store, fetched(withInspection(single, known())))} />);
@@ -59,7 +60,7 @@ describe('OC08-F — when a chooser exists at all', () => {
 
     const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} />);
     const selected = model.context.appearances.map(
-      (option) => view.getByTestId(`${CONTEXT_CHOICE_TEST_ID}:option:${option.key}`).props.accessibilityState.selected,
+      (option) => view.getByTestId(`${CONTEXT_CHOICE_TEST_ID}:option:${option.ordinal}`).props.accessibilityState.selected,
     );
     expect(selected).toEqual([true, false]);
     await act(async () => {
@@ -93,7 +94,7 @@ describe('OC08-F — choosing', () => {
 
     const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} />);
     await act(async () => {
-      fireEvent.press(view.getByTestId(`${CONTEXT_CHOICE_TEST_ID}:option:${other.key}`));
+      fireEvent.press(view.getByTestId(`${CONTEXT_CHOICE_TEST_ID}:option:${other.ordinal}`));
     });
 
     const after = store.getState();

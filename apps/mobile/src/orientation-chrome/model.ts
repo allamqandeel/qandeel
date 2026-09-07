@@ -48,7 +48,8 @@ import {
   type MapSceneDerivation,
 } from '../map';
 import type { HistoricalDisclosureEntry } from '../projection';
-import { isReturnCheckpointTarget, liveFocusReturnAvailability, returnAvailability, type ReturnCheckpointTarget } from '../return-navigation';
+import { liveFocusReturnAvailability, returnAvailability } from '../return-navigation';
+import { exactReturnTargetFor, type ExactReturnOrigin } from './exact-return-origin';
 import { contextOrientation, currentBindingOf, CONTEXT_ORDERING_NOTE } from './context-orientation';
 import { inspectionRender, renderableIdentity } from './inspection-orientation';
 import { returnOrientation } from './return-orientation';
@@ -140,14 +141,15 @@ function temporalOf(state: CanonicalState): TemporalChrome {
 
 export interface OrientationModelOptions {
   /**
-   * An opaque checkpoint target bound from a real explicit inspection journey, or nothing.
+   * An Exact Return opportunity bound from a real explicit inspection journey, or nothing.
    *
    * T-08 never mints one: it does not read the reversible history, does not assume the oldest
-   * recorded checkpoint is an original inspection, and builds no history browser. It only checks
-   * that a target it was GIVEN is a real one and that its justification still stands, then hands it
-   * straight back to T-07's executor, which re-proves provenance and presence independently.
+   * recorded checkpoint is an original inspection, and builds no history browser. The opportunity is
+   * bound against the store the journey happened in, so a handle from a replaced or foreign store is
+   * not offered at all — and T-07 still re-proves provenance and presence independently at
+   * execution, which remains the only authority.
    */
-  readonly exactReturnTarget?: ReturnCheckpointTarget | null;
+  readonly exactReturnOrigin?: ExactReturnOrigin | null;
 }
 
 /**
@@ -197,7 +199,6 @@ export function orientationModel(store: CanonicalStore, projection: ChromeProjec
           lineage: render.kind === 'RENDERABLE' ? render.lineage : Object.freeze([]),
         });
 
-  const bound = options.exactReturnTarget;
   return Object.freeze({
     projection: projectionState,
     temporal,
@@ -208,12 +209,11 @@ export function orientationModel(store: CanonicalStore, projection: ChromeProjec
       availability,
       temporal,
       focusReturn: live.focusReturn,
-      // Conservative and necessary, never sufficient: a bound target whose ordinal is at or beyond
-      // the current reversible depth cannot still be recorded, so the opportunity retires itself as
-      // soon as its justification is gone. Authority remains entirely T-07's, which re-proves
-      // provenance and presence before writing anything.
-      exactReturnBound:
-        bound !== undefined && bound !== null && isReturnCheckpointTarget(bound) && bound.index < availability.checkpointCount,
+      // Bound to this store's own lifecycle, so a foreign or replaced store offers nothing at all,
+      // and an origin whose ordinal is beyond the current reversible depth retires itself. This is
+      // presentation only: authority remains entirely T-07's, which re-proves provenance and
+      // presence before writing anything.
+      exactReturnBound: exactReturnTargetFor(store, options.exactReturnOrigin) !== null,
     }),
     context,
   });

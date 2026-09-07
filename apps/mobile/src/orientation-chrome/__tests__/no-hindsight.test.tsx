@@ -17,8 +17,9 @@ import { act, render } from '@testing-library/react-native';
 import { sessionPosition, type CanonicalStore, type LiveFocus } from '../../state';
 import { OrientationChrome, ORIENTATION_CHROME_TEST_ID } from '../OrientationChrome';
 import { orientationModel } from '../model';
+import { returnMeaning } from '../return-orientation';
 import { RETURN_OPPORTUNITY_IDS } from '../types';
-import { chromeStore, chromeSurface, fetched, projectionFor, TWO_CONTEXT_WORLD, world } from '../__fixtures__/chrome';
+import { chromeStore, chromeSurface, fetched, isOffered, projectionFor, TWO_CONTEXT_WORLD, world } from '../__fixtures__/chrome';
 
 /** A historical reader at SP(4); Live has reached SP(6) and its focus is whatever the case supplies. */
 const readerWith = (liveFocus: LiveFocus): CanonicalStore =>
@@ -156,22 +157,22 @@ describe('OC08-C — two positions that differ only in a future Live Focus are i
     // not asked at all, and no capability appears.
     const unproven = orientationModel(store, { held: false, derivation: { status: 'PROJECTION_NOT_FETCHED' } });
     expect(unproven.live.focusReturn).toBe('UNPROVEN');
-    expect(unproven.returns.opportunities.find((candidate) => candidate.id === 'RETURN_LIVE_FOCUS')?.available).toBe(false);
+    expect(isOffered(unproven, 'RETURN_LIVE_FOCUS')).toBe(false);
   });
 
-  it('C30 — a legitimately locatable Live Focus enables the act and attaches no metadata to it', async () => {
+  it('C30 — a legitimately locatable Live Focus offers the act and attaches no metadata to it', async () => {
     const store = readerWith({ kind: 'ESTABLISHED_THREAD', threadId: 'thread-a' });
     const projection = projectionFor(store, fetched(WORLD_AT_TC()));
-    const enabled = orientationModel(store, projection).returns.opportunities.find((candidate) => candidate.id === 'RETURN_LIVE_FOCUS');
-    expect(enabled?.available).toBe(true);
+    const offered = orientationModel(store, projection).returns.offered.find((candidate) => candidate.id === 'RETURN_LIVE_FOCUS');
+    expect(offered).toBeDefined();
 
-    // The shape is a constant: enabling it changed the availability bit and absolutely nothing else.
+    // The meaning is a constant: being offered added an entry to a list and changed nothing about
+    // what the act claims, so the offered shape is exactly the frozen one.
+    expect(offered).toEqual(returnMeaning('RETURN_LIVE_FOCUS'));
+    // And where it is not offered, it is simply absent — never a differently-worded variant.
     const none = readerWith(NONE);
-    const disabled = orientationModel(none, projectionFor(none, fetched(WORLD_AT_TC()))).returns.opportunities.find(
-      (candidate) => candidate.id === 'RETURN_LIVE_FOCUS',
-    );
-    expect({ ...enabled, available: false }).toEqual(disabled);
-    expect(spokenText(await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} />))).not.toContain('thread-a in');
+    expect(isOffered(orientationModel(none, projectionFor(none, fetched(WORLD_AT_TC()))), 'RETURN_LIVE_FOCUS')).toBe(false);
+    expect(spokenText(await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} />))).not.toContain('thread-a');
   });
 
   it('C21b — an ungeographic live focus is UNAVAILABLE, and stays indistinguishable from NONE', () => {
@@ -191,15 +192,28 @@ describe('OC08-C — two positions that differ only in a future Live Focus are i
     expect(model).toEqual(orientationModel(none, projectionFor(none, fetched(disclosure))));
   });
 
-  it('C-shape — every return label, hint and promise is a constant no live truth can move', () => {
-    const shapes = [NONE, FUTURE_THREAD, { kind: 'ESTABLISHED_THREAD' as const, threadId: 'thread-a' }].map((focus) => {
+  it('C-shape — every return meaning is a constant, and the OFFERED SET never moves with future truth', () => {
+    const offeredFor = (focus: LiveFocus) => {
       const store = readerWith(focus);
-      return orientationModel(store, projectionFor(store, fetched(WORLD_AT_TC()))).returns.opportunities.map(
-        ({ id, effect, movesTime, movesCamera, label, hint }) => ({ id, effect, movesTime, movesCamera, label, hint }),
-      );
-    });
-    expect(shapes[1]).toEqual(shapes[0]);
-    expect(shapes[2]).toEqual(shapes[0]);
-    expect(shapes[0].map((shape) => shape.id)).toEqual([...RETURN_OPPORTUNITY_IDS]);
+      return orientationModel(store, projectionFor(store, fetched(WORLD_AT_TC()))).returns.offered;
+    };
+
+    // The whole vocabulary keeps its meanings whatever live truth is, offered or not.
+    for (const id of RETURN_OPPORTUNITY_IDS) {
+      const meaning = returnMeaning(id);
+      expect(meaning.id).toBe(id);
+      for (const focus of [NONE, FUTURE_THREAD, { kind: 'ESTABLISHED_THREAD' as const, threadId: 'thread-a' }]) {
+        const offered = offeredFor(focus).find((candidate) => candidate.id === id);
+        // Offered or absent — never a differently-worded variant of itself.
+        if (offered !== undefined) expect(offered).toEqual(meaning);
+      }
+    }
+
+    // The no-hindsight statement: a Live Focus this position cannot disclose changes the offered set
+    // in no way at all, while one it CAN disclose legitimately adds the spatial act.
+    expect(offeredFor(FUTURE_THREAD)).toEqual(offeredFor(NONE));
+    expect(offeredFor(FUTURE_FOCUS)).toEqual(offeredFor(NONE));
+    expect(offeredFor({ kind: 'ESTABLISHED_THREAD', threadId: 'thread-a' }).map((candidate) => candidate.id)).toContain('RETURN_LIVE_FOCUS');
+    expect(offeredFor(NONE).map((candidate) => candidate.id)).not.toContain('RETURN_LIVE_FOCUS');
   });
 });

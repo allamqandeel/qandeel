@@ -14,6 +14,7 @@ import { decodeInspectionRef } from '../../map';
 import { CONTEXT_CHOICE_TEST_ID, INSPECTION_ORIENTATION_TEST_ID } from '../InspectionOrientation';
 import { ORIENTATION_CHROME_TEST_ID, OrientationChrome } from '../OrientationChrome';
 import { RETURN_CONTROLS_TEST_ID } from '../ReturnControls';
+import { bindExactReturnOrigin } from '../exact-return-origin';
 import { orientationModel } from '../model';
 import { chromeStore, chromeSurface, contextAt, fetched, historicalStore, inspect, known, projectionFor, TWO_CONTEXT_WORLD, withInspection } from '../__fixtures__/chrome';
 
@@ -42,10 +43,10 @@ describe('OC08-M — inspection chains', () => {
     const model = orientationModel(store, projection);
     const other = model.context.appearances.find((option) => option.bindingId === 'binding-b')!;
     await act(async () => {
-      fireEvent.press(view.getByTestId(`${CONTEXT_CHOICE_TEST_ID}:option:${other.key}`));
+      fireEvent.press(view.getByTestId(`${CONTEXT_CHOICE_TEST_ID}:option:${other.ordinal}`));
     });
     expect(decodeInspectionRef(store.getState().inspection)?.appearance?.bindingId).toBe('binding-b');
-    const selectedAfterSwitch = view.getByTestId(`${CONTEXT_CHOICE_TEST_ID}:option:${other.key}`).props.accessibilityState.selected;
+    const selectedAfterSwitch = view.getByTestId(`${CONTEXT_CHOICE_TEST_ID}:option:${other.ordinal}`).props.accessibilityState.selected;
     expect(selectedAfterSwitch).toBe(true);
 
     await act(async () => {
@@ -54,8 +55,8 @@ describe('OC08-M — inspection chains', () => {
 
     // The chrome describes the RESTORED truth, not the truth it was showing a moment ago.
     expect(decodeInspectionRef(store.getState().inspection)?.appearance?.bindingId).toBe('binding-a');
-    expect(view.getByTestId(`${CONTEXT_CHOICE_TEST_ID}:option:${other.key}`).props.accessibilityState.selected).toBe(false);
-    expect(statementOf(view)).toContain('reading-1');
+    expect(view.getByTestId(`${CONTEXT_CHOICE_TEST_ID}:option:${other.ordinal}`).props.accessibilityState.selected).toBe(false);
+    expect(statementOf(view)).toContain('You are inspecting a reading.');
 
     await act(async () => {
       view.unmount();
@@ -71,11 +72,11 @@ describe('OC08-M — inspection chains', () => {
     await act(async () => {
       fireEvent.press(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_LIVE_FOCUS`));
     });
-    const target = latestReturnCheckpoint(store)!;
+    const origin = bindExactReturnOrigin(store, latestReturnCheckpoint(store));
     const movedCamera = store.getState().camera;
 
     await act(async () => {
-      view.rerender(<OrientationChrome surface={surface} projection={projection} exactReturnTarget={target} />);
+      view.rerender(<OrientationChrome surface={surface} projection={projection} exactReturnOrigin={origin} />);
     });
     await act(async () => {
       fireEvent.press(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:EXACT_RETURN`));
@@ -83,8 +84,8 @@ describe('OC08-M — inspection chains', () => {
 
     expect(store.getState().camera).not.toEqual(movedCamera);
     expect(store.getState().history).toHaveLength(0);
-    // The opportunity retires itself the moment its checkpoint is consumed.
-    expect(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:EXACT_RETURN`).props.accessibilityState.disabled).toBe(true);
+    // The opportunity retires itself the moment its checkpoint is consumed: it is no longer offered.
+    expect(view.queryByTestId(`${RETURN_CONTROLS_TEST_ID}:EXACT_RETURN`)).toBeNull();
 
     await act(async () => {
       view.unmount();
@@ -109,8 +110,9 @@ describe('OC08-M — Live chains', () => {
     expect(JSON.stringify(view.toJSON())).not.toContain('thread-future');
     // M118 — passive authoritative events are not the reader's own transactions.
     expect(store.getState().history).toEqual([]);
-    // The Live Focus act is no longer available, and says nothing about why beyond being unavailable.
-    expect(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_LIVE_FOCUS`).props.accessibilityState.disabled).toBe(true);
+    // The Live Focus act is no longer meaningful, so it is simply gone — and its disappearance says
+    // nothing about why, because a future Live Focus and no Live Focus retire it identically.
+    expect(view.queryByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_LIVE_FOCUS`)).toBeNull();
 
     await act(async () => {
       view.unmount();
@@ -165,17 +167,17 @@ describe('OC08-M — Live chains', () => {
     const store = reader();
     const surface = chromeSurface(store);
     const view = await render(<OrientationChrome surface={surface} projection={projectionFor(store, fetched(DISCLOSED()))} />);
-    expect(view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:spatial`).props.children).toBe('Disclosing ANALYTICAL_OBJECT.');
+    expect(view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:spatial`).props.children).toBe('Showing readings and findings.');
 
     await act(async () => {
       fireEvent.press(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_WORLD`));
     });
-    expect(view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:spatial`).props.children).toBe('Looking at the whole world, disclosing WORLD.');
+    expect(view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:spatial`).props.children).toBe('Looking at the whole world.');
 
     await act(async () => {
       fireEvent.press(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:BACK_ONE_STEP`));
     });
-    expect(view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:spatial`).props.children).toBe('Disclosing ANALYTICAL_OBJECT.');
+    expect(view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:spatial`).props.children).toBe('Showing readings and findings.');
     expect(store.getState().camera.depth).toBe('ANALYTICAL_OBJECT');
 
     await act(async () => {
@@ -194,14 +196,14 @@ describe('OC08-M — projection handoff', () => {
     const view = await render(
       <OrientationChrome surface={surface} projection={{ held: true, context: contextAt(withInspection(TWO_CONTEXT_WORLD({ tc: 3 }), known())) }} />,
     );
-    expect(statementOf(view)).toBe('The view is being brought up to date.');
+    expect(statementOf(view)).toBe('Catching up with where you are.');
     expect(view.queryByTestId(CONTEXT_CHOICE_TEST_ID)).toBeNull();
 
     // The matching disclosure arrives.
     await act(async () => {
       view.rerender(<OrientationChrome surface={surface} projection={projectionFor(store, fetched(DISCLOSED()))} />);
     });
-    expect(statementOf(view)).toContain('reading-1');
+    expect(statementOf(view)).toContain('You are inspecting a reading.');
     expect(view.queryByTestId(CONTEXT_CHOICE_TEST_ID)).not.toBeNull();
 
     // And back again: the semantic frame is retired, not kept warm.
@@ -210,7 +212,7 @@ describe('OC08-M — projection handoff', () => {
         <OrientationChrome surface={surface} projection={{ held: true, context: contextAt(withInspection(TWO_CONTEXT_WORLD({ tc: 3 }), known())) }} />,
       );
     });
-    expect(statementOf(view)).toBe('The view is being brought up to date.');
+    expect(statementOf(view)).toBe('Catching up with where you are.');
     expect(JSON.stringify(view.toJSON())).not.toContain('binding-a');
 
     await act(async () => {
@@ -223,13 +225,13 @@ describe('OC08-M — projection handoff', () => {
     inspect(store, contextAt(TWO_CONTEXT_WORLD()), { family: 'READING', id: 'reading-1' });
     const surface = chromeSurface(store);
     const view = await render(<OrientationChrome surface={surface} projection={projectionFor(store, fetched(DISCLOSED()))} />);
-    expect(statementOf(view)).toContain('reading-1');
+    expect(statementOf(view)).toContain('You are inspecting a reading.');
 
     await act(async () => {
       returnWorld(surface);
     });
     // The rung changed, so the held disclosure is no longer this Map: technical, never an absence.
-    expect(statementOf(view)).toBe('The view is being brought up to date.');
+    expect(statementOf(view)).toBe('Catching up with where you are.');
     // The exact requested inspection is untouched by any of it.
     expect(decodeInspectionRef(store.getState().inspection)?.id).toBe('reading-1');
 

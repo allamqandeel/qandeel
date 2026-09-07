@@ -67,16 +67,20 @@ describe('OC08-L — the world is not replaced', () => {
     });
   });
 
-  it('L108 — availability is carried by native disabled semantics, never by a decorative glow', async () => {
+  it('L108 — meaning is carried by words and by presence, never by a decorative glow', async () => {
     const store = reader();
     const view = await renderChrome(store);
     const serialized = JSON.stringify(view.toJSON());
     for (const decoration of ['shadowColor', 'shadowRadius', 'shadowOpacity', 'elevation', 'textShadow', 'glow']) {
       expect(serialized).not.toContain(decoration);
     }
-    // Colour is never the only indicator: the state is published to the platform as `disabled`.
-    expect(serialized).toContain('"disabled":true');
-    expect(serialized).toContain('"disabled":false');
+    // Colour is never an indicator at all: the chrome paints none, so nothing can depend on one.
+    expect(serialized).not.toContain('color');
+    // Every offered control says what it does in words, so presence is never the only signal either.
+    for (const opportunity of orientationModel(store, projectionFor(store, fetched(withInspection(TWO_CONTEXT_WORLD(), known())))).returns.offered) {
+      expect(serialized).toContain(opportunity.label);
+      expect(serialized).toContain(opportunity.hint);
+    }
 
     await act(async () => {
       view.unmount();
@@ -92,7 +96,11 @@ describe('OC08-L — no new Product vocabulary and no new authority', () => {
     for (const generic of ['"HOME"', '"RESET"', '"NAVIGATE"', '"GO_LIVE"', '"BACK_OR_HOME"', '"RETURN"', '"REPLAY"', '"BOOKMARK"']) {
       expect(vocabulary).not.toContain(generic);
     }
-    expect(model.returns.opportunities).toHaveLength(6);
+    // Context-sensitive, never the whole vocabulary as a permanent panel — and never fewer meanings
+    // than the frozen six, which stay six whether or not each is offered.
+    expect(model.returns.offered.length).toBeLessThan(6);
+    expect(model.returns.offered.length).toBeGreaterThan(0);
+    expect(new Set(model.returns.offered.map((candidate) => candidate.id)).size).toBe(model.returns.offered.length);
   });
 
   it('L107 — nothing in the answer carries importance, confidence, ranking or prominence', () => {

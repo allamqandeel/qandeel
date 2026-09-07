@@ -64,7 +64,7 @@ export interface ReturnCapabilityInputs {
  * identity, so no state — and in particular no live state — can change what an opportunity claims.
  * The copy is a structural placeholder; final wording, tone and localization belong to a later task.
  */
-const SHAPES: Readonly<Record<ReturnOpportunityId, Omit<ReturnOpportunity, 'available'>>> = Object.freeze({
+const SHAPES: Readonly<Record<ReturnOpportunityId, ReturnOpportunity>> = Object.freeze({
   BACK_ONE_STEP: Object.freeze({
     id: 'BACK_ONE_STEP' as const,
     effect: 'HISTORY' as const,
@@ -118,7 +118,15 @@ const SHAPES: Readonly<Record<ReturnOpportunityId, Omit<ReturnOpportunity, 'avai
   }),
 });
 
-function availabilityOf(id: ReturnOpportunityId, inputs: ReturnCapabilityInputs): boolean {
+/**
+ * Whether this act is meaningful for the reader RIGHT NOW.
+ *
+ * Every input is knowledge-safe: the reader's own reversible history, their own camera, their own
+ * committed temporal stance, an origin they themselves bound, and — for Live Focus alone — the
+ * projection-bound answer. Nothing here can move with a fact the reader's own `K(TC)` does not
+ * disclose, which is why a context-sensitive set is still a no-hindsight set.
+ */
+function isMeaningful(id: ReturnOpportunityId, inputs: ReturnCapabilityInputs): boolean {
   const { availability, temporal, focusReturn, exactReturnBound } = inputs;
   switch (id) {
     case 'BACK_ONE_STEP':
@@ -128,7 +136,7 @@ function availabilityOf(id: ReturnOpportunityId, inputs: ReturnCapabilityInputs)
       // inspection journey from is not an "original inspection", and there is no history to browse.
       return exactReturnBound;
     case 'RETURN_LIVE_HEAD':
-      // Meaningful whenever the committed stance is not already following Live. Pinned AT the Live
+      // Meaningful only while the committed stance is not already following Live. Pinned AT the Live
       // Head still counts: the mode is the effect, and the two modes are different Product states.
       return availability.liveReturnAvailable && temporal.mode === 'PINNED';
     case 'RETURN_LIVE_FOCUS':
@@ -137,9 +145,11 @@ function availabilityOf(id: ReturnOpportunityId, inputs: ReturnCapabilityInputs)
     case 'RETURN_WORLD':
       return availability.worldReturnAvailable;
     case 'GO_LIVE_AND_LOCATE':
-      // The composite needs an authoritative Live Head to return to. Its spatial half may or may not
-      // find somewhere to land, and that is the act's own truthful answer, not a precondition here.
-      return availability.liveReturnAvailable;
+      // The composite is offered only where it is MATERIALLY distinct from its own halves. While the
+      // reader already follows Live its temporal half does nothing, so it would collapse into
+      // "Return to Live Focus" and become a second button for one act. While the reader is
+      // historical it is genuinely a third thing: go back to Live AND move there, as one step.
+      return availability.liveReturnAvailable && temporal.mode === 'PINNED';
     default: {
       const exhaustive: never = id;
       return exhaustive;
@@ -148,27 +158,32 @@ function availabilityOf(id: ReturnOpportunityId, inputs: ReturnCapabilityInputs)
 }
 
 /**
- * The six, always all six, in the frozen logical order.
+ * The acts that are meaningful right now, in the frozen logical order.
  *
- * They are never filtered down to "the useful ones": a reader who can see that an act exists and is
- * currently unavailable learns something true about their own position, whereas an act that appears
- * and disappears turns availability itself into a moving signal. What must never move with future
- * truth is the SHAPE — and it cannot, because the shape is a constant.
+ * Deliberately NOT all six. A permanent six-control matrix is a toolbar, and a toolbar is the
+ * dashboard drift the Product contract forbids: it presents the whole vocabulary of the system as
+ * though every part of it were a live choice. What a reader needs is the minimum set that is true
+ * here.
+ *
+ * The six MEANINGS are untouched by that. Each keeps its own identity, effect, promises and wording;
+ * none is merged into a generic act; and the decision to offer one is never a decision about what it
+ * means. `RETURN_OPPORTUNITY_IDS` remains the frozen vocabulary whether or not an act is offered.
  */
 export function returnOrientation(inputs: ReturnCapabilityInputs): ReturnChrome {
   return Object.freeze({
-    opportunities: Object.freeze(
-      RETURN_OPPORTUNITY_IDS.map((id) => Object.freeze({ ...SHAPES[id], available: availabilityOf(id, inputs) })),
-    ),
+    offered: Object.freeze(RETURN_OPPORTUNITY_IDS.filter((id) => isMeaningful(id, inputs)).map((id) => SHAPES[id])),
     // A count of the reader's own reversible transactions. It is orientation, not a destination
     // list: nothing here can be turned into a named history entry, because nothing names one.
     checkpointCount: inputs.availability.checkpointCount,
   });
 }
 
-/** The opportunity with this identity. Every identity is always present, so this never fails. */
-export function opportunity(orientation: ReturnChrome, id: ReturnOpportunityId): ReturnOpportunity {
-  const found = orientation.opportunities.find((candidate) => candidate.id === id);
-  if (found === undefined) throw new RangeError(`the return orientation is missing the frozen identity ${id}`);
-  return found;
+/** The offered opportunity with this identity, or `null` when it is not meaningful right now. */
+export function opportunity(orientation: ReturnChrome, id: ReturnOpportunityId): ReturnOpportunity | null {
+  return orientation.offered.find((candidate) => candidate.id === id) ?? null;
+}
+
+/** The frozen meaning of one identity, offered or not. It is a constant: no state can move it. */
+export function returnMeaning(id: ReturnOpportunityId): ReturnOpportunity {
+  return SHAPES[id];
 }

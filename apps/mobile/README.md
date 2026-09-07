@@ -337,13 +337,23 @@ where the reader is, plus controls that reach the existing executors and no othe
   `UNAVAILABLE`, `PROJECTION_STALE`, `INSPECTION_NOT_RESOLVED` and `RESOLUTION_MALFORMED` stay
   separate members; none becomes an absence in the world, and a superseded or not-yet-current
   version keeps its exact lineage intent and is never called wrong, deleted or never valid.
-- **The six returns stay six** (`return-orientation.ts`, `ReturnControls.tsx`): each control
-  reaches exactly one T-07 executor through a `switch` with one call per arm. Return to Live Head
-  is temporal only and promises no camera movement; Return to Live Focus is spatial only and
-  promises no temporal movement; Go Live + Locate says it is both, as ONE transaction. Every label,
-  hint, effect and promise is a CONSTANT of the frozen identity, so no live truth can move what an
-  opportunity claims. There is no generic `Home`, `Reset`, `Navigate`, `Go Live`, `BackOrHome` or
-  `Return`, and Product Back is never router history.
+- **The six returns stay six, and the offered set is context-sensitive** (`return-orientation.ts`,
+  `ReturnControls.tsx`): each control reaches exactly one T-07 executor through a `switch` with one
+  call per arm. Return to Live Head is temporal only and promises no camera movement; Return to Live
+  Focus is spatial only and promises no temporal movement; Go Live + Locate says it is both, as ONE
+  transaction, and is offered only while the reader is historical — following Live it would collapse
+  into Return to Live Focus. Only the acts that are meaningful right now are rendered: a permanent
+  six-control matrix is a toolbar, which is the dashboard drift the contract forbids. The six
+  MEANINGS are untouched by that — `returnMeaning(id)` is a constant whether or not an act is
+  offered — and every input to the offer is knowledge-safe, so the offered set leaks nothing either.
+  There is no generic `Home`, `Reset`, `Navigate`, `Go Live`, `BackOrHome` or `Return`, and Product
+  Back is never router history.
+- **No engineering vocabulary reaches the reader** (`product-copy.ts`): every word the chrome can
+  say is written in one module. A family is named in plain language and never as its wire token; a
+  rung is named by what it discloses and never as its enum; a projection refusal is a sentence about
+  what the Product can show and never a transport code; and no identifier of any kind — canonical
+  id, binding id, locus key or lineage token — is ever spoken or drawn, in any script. The typed
+  distinctions behind the words are untouched.
 - **No hindsight** (`OrientationChrome.tsx`): while historical, the chrome says only that the
   conversation has continued and that an explicit route back exists. Two viewpoints differing only
   in a Live Focus this position cannot disclose render an IDENTICAL native tree — same labels,
@@ -351,25 +361,37 @@ where the reader is, plus controls that reach the existing executors and no othe
   specific capability comes from `liveFocusReturnAvailability` against a proven projection, and
   adds no metadata about its target.
 - **Contextual appearance** (`context-orientation.ts`): the lineage is the exact route T-04 minted
-  from `V`, rendered as text and never as a clickable page breadcrumb. Several disclosed
-  appearances are all offered, in the disclosed scene's own order, with the note that the order is
-  not a ranking; nothing is primary, defaulted or preselected, `current` states only where the
-  reader is, one appearance produces no chooser, and switching goes through T-04's own executor
-  carrying the requested version intent.
-- **Exact Return** stays opaque: T-08 never mints a target, never reads reversible-history
-  internals, never treats the oldest checkpoint as an original inspection and builds no history
-  browser. It receives one bound handle, retires it conservatively when its ordinal can no longer
-  be recorded or when T-07 refuses it, and authority stays entirely T-07's.
+  from `V`, rendered as the SHAPE of the route in words — "Inside a thread, inside a context" — and
+  never as a clickable page breadcrumb or a string of ids. Several disclosed appearances are all
+  offered, in the disclosed scene's own order, with the note that the order is not a ranking;
+  nothing is primary, defaulted or preselected, and `current` states only where the reader is.
+  Options are distinguished by the two things a reader already has — whether this is the context
+  they are looking through, and the Moment the appearance was taken up at. `V` discloses no
+  human-readable name for a Thread, so when two appearances cannot be told apart that way the
+  chooser **fails closed**: nothing is invented and no internal handle is exposed. One appearance is
+  not a choice either. Switching goes through T-04's own executor carrying the requested version
+  intent.
+- **Exact Return** stays opaque and is bound to a store lifecycle (`exact-return-origin.ts`): T-08
+  never mints a target, never reads reversible-history internals, never treats the oldest checkpoint
+  as an original inspection and builds no history browser. A caller turns a target into an
+  opportunity with `bindExactReturnOrigin`, and the act is offered only while that opportunity was
+  bound against the store being acted on and its ordinal is still within reach — so a handle from a
+  foreign or replaced store is never offered rather than being offered and then refused on press.
+  Authority stays entirely T-07's, which re-proves provenance and presence at execution.
 - **Lifecycle**: subscribed through the T-02 kernel's own seam, so a replaced store is
   resubscribed to rather than remembered. The whole answer is recomputed from props and subscribed
   state every render, so callback churn, extra renders, remounts and store replacement cannot
   rebind a target, elect a context or replay an act. The one piece of Class-D state is subtractive
   and can only ever remove an opportunity.
-- **Accessibility and RTL**: every act has a press route and an accessibility action on the group,
-  converging on the same executor; the containers are never `accessible`, so six independent
-  controls stay six elements; targets are at least 44pt with hit slop; nothing is drag-only. There
-  is no icon, arrow or chevron anywhere, so mirroring has nothing directional to invert, and
-  Arabic and code-switched identities render verbatim in both writing directions.
+- **Accessibility and RTL**: every offered act is its own native button with its own label and hint —
+  that is the route a screen reader actually reaches. The grouping containers are never `accessible`
+  so they cannot swallow the buttons, and precisely because they are not focusable they publish no
+  custom actions either: a non-focusable container's actions are not a discoverable route, and
+  claiming them as one would document behaviour React Native does not provide. Targets are at least
+  44pt with hit slop and nothing is drag-only. There is no icon, arrow or chevron anywhere, so
+  mirroring has nothing directional to invert; the offered set, its order, its labels and its hints
+  are identical under RTL, and an Arabic or code-switched world produces the same internal-free
+  chrome in both writing directions.
 - Not here, by design: general and final motion (T-10), responsive recomposition (T-11), final
   app-shell integration (T-12) and persistence (T-13). Nothing under `src/orientation-chrome/` is
   mounted in the shell, and the layer adds no dependency at all.

@@ -69,11 +69,9 @@ describe('OC08-H — no-ops and refusals', () => {
         onReturnOutcome={(_id, outcome) => outcomes.push(outcome)}
       />,
     );
-    // The act is not even offered, because the camera is already exactly there.
-    expect(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_WORLD`).props.accessibilityState.disabled).toBe(true);
-    await act(async () => {
-      fireEvent.press(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_WORLD`));
-    });
+    // The act is not even offered, because the camera is already exactly there — so there is no
+    // control to press and no route to the executor at all.
+    expect(view.queryByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_WORLD`)).toBeNull();
     expect(store.getState()).toBe(before);
     expect(store.getState().history).toEqual([]);
     // No selected state, no acknowledgement state, no canonical-looking residue.
@@ -94,8 +92,8 @@ describe('OC08-H — no-ops and refusals', () => {
         onReturnOutcome={(_id, outcome) => outcomes.push(outcome)}
       />,
     );
-    // Back with an empty history is offered only when something is reversible; nothing is.
-    expect(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:BACK_ONE_STEP`).props.accessibilityState.disabled).toBe(true);
+    // Back is offered only when something is reversible; nothing is, so it is absent.
+    expect(view.queryByTestId(`${RETURN_CONTROLS_TEST_ID}:BACK_ONE_STEP`)).toBeNull();
     expect(store.getState().history).toEqual([]);
 
     await act(async () => {
@@ -110,7 +108,7 @@ describe('OC08-H — no-ops and refusals', () => {
     );
     // The disclosure does not describe this viewpoint, so the Live Focus act is not offered — and
     // the reason is technical, never "there is nowhere to go".
-    expect(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_LIVE_FOCUS`).props.accessibilityState.disabled).toBe(true);
+    expect(view.queryByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_LIVE_FOCUS`)).toBeNull();
     expect(JSON.stringify(view.toJSON())).not.toContain('nowhere');
 
     await act(async () => {

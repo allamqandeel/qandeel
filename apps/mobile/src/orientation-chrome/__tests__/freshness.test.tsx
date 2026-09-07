@@ -15,7 +15,7 @@ import { INSPECTION_ORIENTATION_TEST_ID } from '../InspectionOrientation';
 import { CONTEXT_CHOICE_TEST_ID } from '../InspectionOrientation';
 import { OrientationChrome } from '../OrientationChrome';
 import { orientationModel } from '../model';
-import { chromeStore, chromeSurface, contextAt, fetched, historicalStore, inspect, known, projectionFor, TWO_CONTEXT_WORLD, withInspection } from '../__fixtures__/chrome';
+import { chromeStore, chromeSurface, contextAt, fetched, historicalStore, inspect, isOffered, known, projectionFor, TWO_CONTEXT_WORLD, withInspection } from '../__fixtures__/chrome';
 
 const DISCLOSED = () => withInspection(TWO_CONTEXT_WORLD(), known());
 
@@ -42,7 +42,7 @@ describe('OC08-E — a projection that is not this viewpoint\'s yields no semant
     expect(model.projection).toEqual({ status: 'STALE', reason });
     // E48 — a stale context cannot enable the focus return: the question is not even asked.
     expect(model.live.focusReturn).toBe('UNPROVEN');
-    expect(model.returns.opportunities.find((candidate) => candidate.id === 'RETURN_LIVE_FOCUS')?.available).toBe(false);
+    expect(isOffered(model, 'RETURN_LIVE_FOCUS')).toBe(false);
     // E49 — and it cannot enumerate contexts, or retain the ones it used to know.
     expect(model.context.appearances).toEqual([]);
     expect(model.context.lineage).toEqual([]);
@@ -75,7 +75,7 @@ describe('OC08-E — retirement happens on the very next render', () => {
     const surface = chromeSurface(store);
 
     const view = await render(<OrientationChrome surface={surface} projection={projection} />);
-    expect(view.getByTestId(`${INSPECTION_ORIENTATION_TEST_ID}:statement`).props.children).toContain('reading-1');
+    expect(view.getByTestId(`${INSPECTION_ORIENTATION_TEST_ID}:statement`).props.children).toContain('You are inspecting a reading.');
     expect(view.queryByTestId(CONTEXT_CHOICE_TEST_ID)).not.toBeNull();
 
     // Return to World moves the camera to the WORLD rung, so the held ANALYTICAL_OBJECT disclosure
@@ -85,7 +85,7 @@ describe('OC08-E — retirement happens on the very next render', () => {
     });
 
     const statement = view.getByTestId(`${INSPECTION_ORIENTATION_TEST_ID}:statement`).props.children as string;
-    expect(statement).toBe('The view is being brought up to date.');
+    expect(statement).toBe('Catching up with where you are.');
     expect(statement).not.toContain('reading-1');
     // E50 — no stale semantic residue survives in the accessible output either.
     expect(view.queryByTestId(CONTEXT_CHOICE_TEST_ID)).toBeNull();

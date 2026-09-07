@@ -6,10 +6,10 @@
  * as absence, an unavailable context must not be substituted, a noncurrent version must keep its
  * lineage intent, and the five technical states must never become statements about the world.
  */
-import { inspectionStatement } from '../InspectionOrientation';
+import { inspectionSentence } from '../product-copy';
 import { contextLineage, inspectionRender } from '../inspection-orientation';
 import { orientationModel } from '../model';
-import { contextAt, fetched, historicalStore, inspect, known, projectionFor, TWO_CONTEXT_WORLD, unknownAtTc, withInspection } from '../__fixtures__/chrome';
+import { contextAt, fetched, historicalStore, inspect, known, offeredIds, projectionFor, TWO_CONTEXT_WORLD, unknownAtTc, withInspection } from '../__fixtures__/chrome';
 
 /** A real `IF_ref`, minted by the real inspection act against the real disclosure. */
 function readerInspecting(over: Parameters<typeof known>[0] | null = {}) {
@@ -26,7 +26,7 @@ describe('OC08-D — knowledge', () => {
     // The member has no fields at all: there is nothing on it that could name the target.
     expect(model.inspection.render).toEqual({ kind: 'IDENTITY_UNKNOWN_AT_TC' });
     expect(Object.keys(model.inspection.render)).toEqual(['kind']);
-    const statement = inspectionStatement(model.inspection.render);
+    const statement = inspectionSentence(model.inspection.render);
     expect(statement).not.toContain('reading-1');
     expect(statement).not.toContain('READING');
     // No place is held for it either: no lineage and no contextual chooser.
@@ -37,26 +37,30 @@ describe('OC08-D — knowledge', () => {
 
   it('D32 — an unknown identity keeps every safe generic recovery route', () => {
     const { model } = readerInspecting(null);
-    const available = model.returns.opportunities.filter((candidate) => candidate.available).map((candidate) => candidate.id);
+    const available = offeredIds(model);
     expect(available).toContain('RETURN_LIVE_HEAD');
     expect(available).toContain('RETURN_WORLD');
     expect(available).toContain('GO_LIVE_AND_LOCATE');
   });
 
-  it('D33 — a known, renderable identity may be named, with the exact requested lineage', () => {
+  it('D33 — a known, renderable identity may be named, in plain language and never by its id', () => {
     const { model } = readerInspecting({});
+    // The typed answer keeps the exact identity; the SENTENCE names only the family, in words.
     expect(model.inspection.render).toMatchObject({ kind: 'RENDERABLE', family: 'READING', id: 'reading-1', versionIntent: null, noncurrent: null });
-    expect(inspectionStatement(model.inspection.render)).toContain('reading-1');
+    const statement = inspectionSentence(model.inspection.render);
+    expect(statement).toBe('You are inspecting a reading.');
+    expect(statement).not.toContain('reading-1');
+    expect(statement).not.toContain('READING');
   });
 
   it('D34, D35 — a noncurrent version keeps its lineage intent and is never called wrong or deleted', () => {
     for (const [noncurrent, expected] of [
       ['SUPERSEDED', 'It had already been replaced by this moment.'],
-      ['PREVALID', 'It was not yet the current one at this moment.'],
+      ['PREVALID', 'It was not yet in use at this moment.'],
     ] as const) {
       const { model } = readerInspecting({ knowledge: 'KNOWN_NONCURRENT_AT_TC', noncurrent });
       expect(model.inspection.render).toMatchObject({ kind: 'RENDERABLE', noncurrent });
-      const statement = inspectionStatement(model.inspection.render);
+      const statement = inspectionSentence(model.inspection.render);
       expect(statement).toContain(expected);
       for (const forbidden of ['wrong', 'deleted', 'never valid', 'invalid', 'does not exist']) {
         expect(statement.toLowerCase()).not.toContain(forbidden);
@@ -69,10 +73,12 @@ describe('OC08-D — context and depth', () => {
   it('D36, D37 — an unavailable context withholds its name and substitutes nothing', () => {
     const { model } = readerInspecting({ context: 'CONTEXT_UNAVAILABLE_AT_TC' });
     expect(model.inspection.render).toMatchObject({ kind: 'CONTEXT_UNAVAILABLE_AT_TC', family: 'READING', id: 'reading-1' });
-    const statement = inspectionStatement(model.inspection.render);
-    // The identity is part of K(TC) and may be named; the context may not be, and no other
-    // disclosed appearance is put in its place.
-    expect(statement).toContain('reading-1');
+    const statement = inspectionSentence(model.inspection.render);
+    // The identity is part of K(TC) and may be named in plain language; the context may not be
+    // named at all, and no other disclosed appearance is put in its place.
+    expect(statement).toContain('You are inspecting a reading.');
+    expect(statement).toContain('The context you asked for is not part of this moment.');
+    expect(statement).not.toContain('reading-1');
     expect(statement).not.toContain('binding-a');
     expect(statement).not.toContain('binding-b');
     expect(model.context.appearances).toEqual([]);
@@ -87,14 +93,16 @@ describe('OC08-D — context and depth', () => {
       id: 'reading-1',
       requiredDepth: 'SOURCE_PROVENANCE',
     });
-    const statement = inspectionStatement(model.inspection.render);
-    expect(statement).toContain('SOURCE_PROVENANCE');
+    const statement = inspectionSentence(model.inspection.render);
+    // The rung is named by what it discloses, never by its constant.
+    expect(statement).toContain('it is disclosed with sources');
+    expect(statement).not.toContain('SOURCE_PROVENANCE');
     for (const forbidden of ['not known', 'does not know', 'unknown', 'not there', 'no longer']) {
       expect(statement.toLowerCase()).not.toContain(forbidden);
     }
     // Withheld content is withheld: the deeper rung's route is not published either.
     expect(model.context.lineage).toEqual([]);
-    expect(inspectionStatement({ kind: 'IDENTITY_UNKNOWN_AT_TC' })).not.toEqual(statement);
+    expect(inspectionSentence({ kind: 'IDENTITY_UNKNOWN_AT_TC' })).not.toEqual(statement);
   });
 });
 
@@ -111,7 +119,7 @@ describe('OC08-D — technical states are never absences', () => {
     expect(notFetched.inspection.render).not.toEqual(unavailable.inspection.render);
 
     for (const model of [notFetched, unavailable]) {
-      const statement = inspectionStatement(model.inspection.render).toLowerCase();
+      const statement = inspectionSentence(model.inspection.render).toLowerCase();
       // Neither may be recast as knowledge about the world.
       for (const forbidden of ['does not know', 'unknown', 'never existed', 'was not there', 'no context']) {
         expect(statement).not.toContain(forbidden);
@@ -136,7 +144,7 @@ describe('OC08-D — technical states are never absences', () => {
 
     // A disclosure that was never asked about this inspection is a technical gap, not an absence.
     expect(inspectionRender(ref, contextAt(TWO_CONTEXT_WORLD()))).toEqual({ kind: 'INSPECTION_NOT_RESOLVED' });
-    expect(inspectionStatement({ kind: 'INSPECTION_NOT_RESOLVED' }).toLowerCase()).not.toContain('unknown');
+    expect(inspectionSentence({ kind: 'INSPECTION_NOT_RESOLVED' }).toLowerCase()).not.toContain('unknown');
   });
 });
 
@@ -161,13 +169,13 @@ describe('OC08-D — IF_ref itself', () => {
     inspect(store, contextAt(TWO_CONTEXT_WORLD()), { family: 'READING', id: 'reading-1' });
     const withoutVersion = orientationModel(store, projectionFor(store, fetched(withInspection(TWO_CONTEXT_WORLD(), known()))));
     expect(withoutVersion.inspection.render).toMatchObject({ versionIntent: null });
-    expect(inspectionStatement(withoutVersion.inspection.render)).toContain('The version current at this moment.');
+    expect(inspectionSentence(withoutVersion.inspection.render)).toBe('You are inspecting a reading.');
 
     const versioned = historicalStore();
     inspect(versioned, contextAt(TWO_CONTEXT_WORLD()), { family: 'READING', id: 'reading-1', version: 1 });
     const model = orientationModel(versioned, projectionFor(versioned, fetched(withInspection(TWO_CONTEXT_WORLD(), known()))));
     expect(model.inspection.render).toMatchObject({ versionIntent: 1 });
-    expect(inspectionStatement(model.inspection.render)).toContain('Version 1, exactly as you asked for it.');
+    expect(inspectionSentence(model.inspection.render)).toContain('You asked for version 1 of it.');
   });
 });
 

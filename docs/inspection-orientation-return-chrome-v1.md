@@ -183,22 +183,67 @@ There is deliberately no generic `Home`, `Reset`, `Navigate`, `Go Live`, `BackOr
 a generic identity would make the differences between the six unstatable, and every one of those
 differences is frozen Product truth. Product Back is never router history.
 
-All six are always rendered, with a knowledge-safe disabled state, so the screen-reader focus order
-is stable and availability itself is not a signal that appears and disappears. The non-pointer
-route publishes only the acts that are currently possible.
+### The offered set is context-sensitive (R1)
 
-### The Exact Return target
+The six **meanings** are always six. What is context-sensitive is which of them a reader is offered.
+
+A permanent six-control matrix — every act rendered, the unavailable ones disabled — is a toolbar,
+and a toolbar presents the entire vocabulary of the system as though every part of it were a live
+choice. That is the dashboard drift the Product contract forbids. So `returnOrientation` returns
+`offered`: the acts that are meaningful *here*, in the frozen logical order, and nothing else. An
+empty offered set renders no group at all rather than an empty one.
+
+| act | offered when |
+| --- | --- |
+| `BACK_ONE_STEP` | something of the reader's own is reversible |
+| `EXACT_RETURN` | a bound origin still holds against this store |
+| `RETURN_LIVE_HEAD` | a Live Head exists and the committed stance is `PINNED` |
+| `RETURN_LIVE_FOCUS` | the projection-bound query says `AVAILABLE` — never raw `LF` |
+| `RETURN_WORLD` | the camera is not already at the canonical World viewpoint |
+| `GO_LIVE_AND_LOCATE` | a Live Head exists and the stance is `PINNED` |
+
+The composite is deliberately **not** offered while the reader already follows Live: there its
+temporal half does nothing, so it would collapse into "move to where attention is now" and become a
+second button for one act. Historically it is genuinely a third thing, and it is offered.
+
+Every input to that decision is knowledge-safe — the reader's own history, their own camera, their
+own temporal stance, an origin they themselves bound, and for Live Focus the projection-bound answer
+alone. So the offered SET is knowledge-safe too: two viewpoints differing only in a Live Focus this
+position cannot disclose offer exactly the same acts, and the whole rendered tree is identical.
+
+A meaning is a constant. `returnMeaning(id)` returns the frozen shape of any identity whether or not
+it is currently offered, and an offered entry is always deeply equal to it: being offered adds an
+entry to a list and changes nothing about what an act claims.
+
+### The Exact Return opportunity (R1)
 
 T-08 never mints a target. It does not read reversible-history internals, does not treat the oldest
-recorded checkpoint as an "original inspection", and builds no history browser. It receives one
-opaque, provenance-bound handle from a real explicit inspection journey and hands it straight back
-to T-07, which re-proves provenance and presence independently before writing anything.
+recorded checkpoint as an "original inspection", and builds no history browser. T-07 remains the
+only authority: it re-proves provenance and presence independently before writing anything.
 
-The local check is conservative and ordinal-only — `index < checkpointCount` — and is a *necessary*
-condition, never a sufficient one. It retires the opportunity the moment history has unwound past
-the checkpoint, including immediately after a successful Exact Return. A target T-07 refuses is
-retired too, by object identity, so an ordinary rerender keeps the retirement, a newly bound target
-is offered normally, and a remount starts clean.
+The first version checked only `isReturnCheckpointTarget(target) && index < checkpointCount`. That
+is a *necessary* condition, not a sufficient one, and it left a real Product defect: a handle minted
+by ANOTHER store is a genuine handle whose ordinal may well sit inside this store's reversible depth,
+so the control was offered, the reader pressed it, and only then did T-07 refuse. Canonical state was
+never at risk — but a control that lies about what it can do is a Product defect regardless.
+
+`exact-return-origin.ts` closes it with the narrowest possible presentation binding. A caller turns a
+target into an opportunity with `bindExactReturnOrigin(store, target)`; a module-private `WeakMap`
+keyed on the opaque handle records the store it was bound against. `exactReturnTargetFor` then
+requires all three of:
+
+- the handle is one this module bound (a forged or copied object is not);
+- it was bound against **this** store — so a replaced store retires it immediately, and a foreign
+  handle is never offered in the first place;
+- its ordinal is still within the store's reversible depth — so a consumed or unwound-past origin
+  retires itself, including immediately after a successful Exact Return.
+
+It reads no checkpoint internals, serializes nothing, persists nothing, enumerates nothing, and
+grants nothing: it hands back the very handle it was given. No T-07 private authority was widened and
+no persistent checkpoint identity was introduced.
+
+A target T-07 still refuses at execution is retired too, by object identity, so an ordinary rerender
+keeps the retirement, a newly bound opportunity is offered normally, and a remount starts clean.
 
 `checkpointCount` supports generic orientation — a count of the reader's **own** transactions — and
 authorizes no named history destination.
@@ -267,12 +312,20 @@ There is no raw store dispatch anywhere in the layer.
 
 ## 10. Accessibility and RTL
 
-Every essential act has a press route and an accessibility action on its group, and both converge
-on the same executor: there is no accessibility-only capability and no accessibility-only
-entitlement. The grouping containers are never `accessible`, so six independent controls stay six
-independent native elements. Targets are at least 44pt with hit slop, nothing is drag-only, and no
-`accessibilityValue` is ever populated — no set size, child count or position in a total is
-published.
+Every offered act is its own native button, with its own label and hint. That is the route a screen
+reader actually reaches, by touch exploration and by swipe traversal, and it is the same route the
+pointer takes — there is no accessibility-only capability and no accessibility-only entitlement.
+
+**R1 corrected an overclaim here.** The grouping `View`s are deliberately non-accessible so they
+cannot swallow the independent Pressables, and they also carried `accessibilityActions` which were
+documented and tested as a second, non-pointer route. A container that is not an accessibility
+element is not focusable, so a screen reader never reaches its custom actions: the route was
+asserted but not real. The redundant group actions are now gone rather than re-documented, and the
+contract asserts that no `accessibilityActions` exists anywhere in the layer. Nothing here claims
+behaviour the platform does not give.
+
+Targets are at least 44pt with hit slop, nothing is drag-only, and no `accessibilityValue` is ever
+populated — no set size, child count or position in a total is published.
 
 There is no icon, arrow or chevron anywhere in the surface. An arrow would encode a direction, and
 a direction is a claim about where something is — a claim T-08 is never entitled to make, in either
@@ -304,7 +357,25 @@ belongs to a later task.
 
 - `npm run test:inspection-orientation-return-chrome-contract` — the static contract: the file
   surface, the allowlisted barrel, the T-07 firewall, no new canonical state or Product act, one
-  freshness rule, no raw `LF` shortcut, opaque targets, no dependency or lockfile move, no shell
-  mount (pinned byte-identical), no stolen T-10 / T-11 scope, and CI registration.
-- The Jest suites under `src/orientation-chrome/__tests__/` — the OC08-A…OC08-M adversarial matrix,
-  including the total differential no-hindsight proof over the rendered native tree.
+  freshness rule, no raw `LF` shortcut, context-sensitive offering without semantic collapse, the
+  copy discipline, the store-bound Exact Return opportunity, the single module-level registry, no
+  claimed-but-unreal accessibility route, no dependency, no shell mount, no stolen T-10 / T-11 scope,
+  and CI registration.
+- The Jest suites under `src/orientation-chrome/__tests__/` — the OC08-A…OC08-M adversarial matrix
+  plus the R1 suites (`context-sensitivity`, `no-internals`), including the total differential
+  no-hindsight proof over the rendered native tree.
+
+### The contract guards T-08, not the repository (R1)
+
+Every assertion in the static contract is scoped to something T-08 owns, or to a genuinely permanent
+invariant. Deliberately absent, because a legitimate later task is expected to change them:
+
+- any global migration census. The first version asserted that no migration beyond the T-08 baseline
+  existed; PR #209 then landed an unrelated Supabase keep-alive migration, GitHub tests a merge ref
+  against current `main`, and a mobile chrome contract failed over a database keep-alive. Freezing a
+  mutable global ceiling freezes the future, not the past;
+- any hash of a file a later authorized task will change — the lockfile, the mobile manifest, the app
+  shell. "T-08 mounts nothing into the shell" is stated as what it is: an assertion that the shell
+  files do not reference this layer;
+- any census of the mobile source tree, which a sibling task would break by adding its own owner
+  directory. The invariant is that T-08 owns exactly one directory and takes over none.

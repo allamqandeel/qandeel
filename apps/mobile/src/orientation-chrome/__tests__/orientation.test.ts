@@ -6,8 +6,7 @@
  */
 import { CANONICAL_STATE_KEYS, sessionPosition } from '../../state';
 import { orientationModel, type ChromeProjection } from '../model';
-import { opportunity } from '../return-orientation';
-import { chromeStore, fetched, historicalStore, projectionFor, TWO_CONTEXT_WORLD, world } from '../__fixtures__/chrome';
+import { chromeStore, fetched, historicalStore, isOffered, projectionFor, TWO_CONTEXT_WORLD, world } from '../__fixtures__/chrome';
 
 const NO_PROJECTION: ChromeProjection = { held: false, derivation: { status: 'PROJECTION_NOT_FETCHED' } };
 
@@ -38,10 +37,10 @@ describe('OC08-A — temporal orientation', () => {
     expect(model.temporal.earlierThanLiveHead).toBe(false);
     expect(model.live.advancedWhileHistorical).toBe(false);
     // ...but the MODE is the effect, and the two modes are different Product states.
-    expect(opportunity(model.returns, 'RETURN_LIVE_HEAD').available).toBe(true);
+    expect(isOffered(model, 'RETURN_LIVE_HEAD')).toBe(true);
 
     const following = orientationModel(chromeStore({ liveHead: 6, temporal: { kind: 'FOLLOW_LIVE' } }), NO_PROJECTION);
-    expect(opportunity(following.returns, 'RETURN_LIVE_HEAD').available).toBe(false);
+    expect(isOffered(following, 'RETURN_LIVE_HEAD')).toBe(false);
     expect(following.temporal).not.toEqual(model.temporal);
   });
 
@@ -52,8 +51,8 @@ describe('OC08-A — temporal orientation', () => {
     expect(model.live.liveEstablished).toBe(false);
     expect(model.live.routeBackToLiveAvailable).toBe(false);
     expect(model.live.advancedWhileHistorical).toBe(false);
-    expect(opportunity(model.returns, 'RETURN_LIVE_HEAD').available).toBe(false);
-    expect(opportunity(model.returns, 'GO_LIVE_AND_LOCATE').available).toBe(false);
+    expect(isOffered(model, 'RETURN_LIVE_HEAD')).toBe(false);
+    expect(isOffered(model, 'GO_LIVE_AND_LOCATE')).toBe(false);
   });
 });
 
@@ -77,7 +76,7 @@ describe('OC08-A — spatial orientation', () => {
     const model = orientationModel(store, empty);
     expect(model.projection.status).toBe('CURRENT');
     expect(model.spatial.atWorldViewpoint).toBe(false);
-    expect(opportunity(model.returns, 'RETURN_WORLD').available).toBe(true);
+    expect(isOffered(model, 'RETURN_WORLD')).toBe(true);
   });
 });
 
@@ -109,7 +108,7 @@ describe('OC08-A — inspection and the absence of new state', () => {
     const model = orientationModel(store, projectionFor(store, fetched(TWO_CONTEXT_WORLD())));
     expect(Object.isFrozen(model)).toBe(true);
     expect(Object.isFrozen(model.returns)).toBe(true);
-    expect(Object.isFrozen(model.returns.opportunities)).toBe(true);
-    for (const candidate of model.returns.opportunities) expect(Object.isFrozen(candidate)).toBe(true);
+    expect(Object.isFrozen(model.returns.offered)).toBe(true);
+    for (const candidate of model.returns.offered) expect(Object.isFrozen(candidate)).toBe(true);
   });
 });

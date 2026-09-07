@@ -1,35 +1,36 @@
 /**
- * T-08 — the six frozen return acts as six Product controls.
+ * T-08 — the return acts that are meaningful right now, as Product controls.
  *
  * Each control reaches exactly ONE T-07 executor. There is no shared handler that decides between
- * them from a payload, no generic `navigate(id)`, no router call and no store dispatch: a reader
- * who presses "follow the live conversation" runs `returnLiveHead` and can run nothing else, and the
+ * them from a payload, no generic `navigate(id)`, no router call and no store dispatch: a reader who
+ * presses "follow the live conversation" runs `returnLiveHead` and can run nothing else, and the
  * mapping is a `switch` with one call per arm so it is readable as a proof rather than as a lookup.
  *
  * The Preview is not cancelled here. T-06 froze the precedence and T-07 already applies it inside
  * every executor, so duplicating it would create a second cancellation with its own ordering bugs.
  * This component holds no preview state and never calls the controller.
  *
- * ## Both routes, one executor
+ * ## Context-sensitive, not a toolbar
  *
- * The pointer route is a `Pressable` per act. The non-pointer route is an accessibility action per
- * act on the container, named by the act's own frozen identity so it needs no index and no ordering
- * assumption. Both call the same function; there is no accessibility-only capability and no
- * accessibility-only entitlement.
+ * Only the acts the model says are meaningful are rendered. A permanent six-control matrix would
+ * present the whole vocabulary of the system as though every part of it were a live choice, which is
+ * the dashboard drift the Product contract forbids. The six MEANINGS are untouched by that: each
+ * keeps its own identity, effect, promises and wording, and none is ever merged into a generic act.
  *
- * The container is deliberately NOT `accessible`: marking it so would collapse six independent
- * controls into one element and take the individual actions away from the reader.
+ * Every input to "is this meaningful" is knowledge-safe, so the offered SET is knowledge-safe too:
+ * two viewpoints that differ only in a Live Focus this position cannot disclose render an identical
+ * tree, because the Live Focus act is absent from both.
  *
- * ## What never moves with live truth
+ * ## One accessible route, not two claimed ones
  *
- * Every label, hint, effect and promise is a CONSTANT of the frozen identity. Only `available`
- * varies, and for Return to Live Focus that comes from the projection-bound answer alone. Two
- * viewpoints that differ only in a Live Focus the reader's own `K(TC)` cannot disclose therefore
- * render an identical tree — identical labels, identical hints, identical disabled states, identical
- * accessibility actions — because there is no expression here that could tell them apart.
+ * Each control is its own native button, which is the route a screen reader actually reaches. The
+ * group is a plain layout `View`: it is deliberately not an accessibility element, so it must not
+ * also advertise custom actions — a non-focusable container's actions are not a discoverable route,
+ * and claiming them as one would document behaviour React Native does not provide. The buttons give
+ * full parity on their own, so the redundant group actions are simply not there.
  */
 import { useCallback } from 'react';
-import { Pressable, StyleSheet, Text, View, type AccessibilityActionEvent } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { MapInspectionContext, MapProjectionRequest } from '../map';
 import {
@@ -60,7 +61,10 @@ export interface ReturnControlsProps {
    * proven. Return to Live Focus needs it; every other act ignores it entirely.
    */
   readonly context: MapInspectionContext | null;
-  /** An opaque target bound from a real inspection journey, or nothing. Never minted here. */
+  /**
+   * The target behind an offered Exact Return, already resolved against this store's lifecycle.
+   * `null` whenever the act is not offered, so there is nothing here to press.
+   */
   readonly exactReturnTarget?: ReturnCheckpointTarget | null;
   /**
    * Resolves the disclosed projection of the LIVE viewpoint for the composite act.
@@ -79,10 +83,9 @@ const notFetched = (request: MapProjectionRequest): ReturnMapContext => returnMa
 export function ReturnControls({ surface, orientation, context, exactReturnTarget, liveContext, onOutcome }: ReturnControlsProps) {
   const run = useCallback(
     (id: ReturnOpportunityId) => {
-      const chosen = orientation.opportunities.find((candidate) => candidate.id === id);
-      // An unavailable act is not reachable by either route. The executors would refuse or no-op
-      // anyway; refusing here means the accessible route offers exactly what the pointer route does.
-      if (chosen === undefined || !chosen.available) return;
+      // Only an offered act is reachable. The executors would refuse or no-op anyway; refusing here
+      // means a control that is not on screen has no route at all.
+      if (!orientation.offered.some((candidate) => candidate.id === id)) return;
 
       // The act runs FIRST and the observer is notified afterwards. Calling `onOutcome?.(act())`
       // would not evaluate its argument at all when no observer is attached, silently turning every
@@ -93,8 +96,7 @@ export function ReturnControls({ surface, orientation, context, exactReturnTarge
           outcome = backOneStep(surface);
           break;
         case 'EXACT_RETURN': {
-          // Bound, never discovered. Without a legitimate target there is nothing to return to, and
-          // nothing is substituted for it.
+          // Bound, never discovered, and already proven to belong to this store's own lifecycle.
           if (exactReturnTarget === undefined || exactReturnTarget === null) return;
           outcome = exactReturn(surface, exactReturnTarget);
           break;
@@ -125,19 +127,12 @@ export function ReturnControls({ surface, orientation, context, exactReturnTarge
     [surface, orientation, context, exactReturnTarget, liveContext, onOutcome],
   );
 
-  const available = orientation.opportunities.filter((candidate) => candidate.available);
+  // Nothing meaningful to offer is a legitimate answer, and an empty group is not a surface.
+  if (orientation.offered.length === 0) return null;
 
   return (
-    <View
-      testID={RETURN_CONTROLS_TEST_ID}
-      style={styles.group}
-      // Never `accessible`: six independent controls must stay six independent elements.
-      accessibilityRole="none"
-      accessibilityLabel={RETURN_CONTROLS_LABEL}
-      accessibilityActions={available.map((candidate) => ({ name: candidate.id, label: candidate.label }))}
-      onAccessibilityAction={(event: AccessibilityActionEvent) => run(event.nativeEvent.actionName as ReturnOpportunityId)}
-    >
-      {orientation.opportunities.map((candidate) => (
+    <View testID={RETURN_CONTROLS_TEST_ID} style={styles.group} accessibilityRole="none" accessibilityLabel={RETURN_CONTROLS_LABEL}>
+      {orientation.offered.map((candidate) => (
         <ReturnControl key={candidate.id} opportunity={candidate} onPress={run} />
       ))}
     </View>
@@ -160,19 +155,17 @@ interface ReturnControlProps {
  * animation driver. Motion is T-10's.
  */
 function ReturnControl({ opportunity, onPress }: ReturnControlProps) {
-  const disabled = !opportunity.available;
   return (
     <Pressable
       testID={`${RETURN_CONTROLS_TEST_ID}:${opportunity.id}`}
-      style={({ pressed }) => [styles.control, pressed && !disabled ? styles.pressed : null, disabled ? styles.disabled : null]}
-      hitSlop={8}
-      disabled={disabled}
+      style={({ pressed }) => [styles.control, pressed ? styles.pressed : null]}
+      // Horizontal only. The controls are stacked, so a vertical slop would make adjacent hit areas
+      // overlap and turn a near-miss into the wrong act; the 44pt minimum already covers the
+      // vertical axis, and the group's own gap keeps the targets apart.
+      hitSlop={HORIZONTAL_SLOP}
       accessibilityRole="button"
       accessibilityLabel={opportunity.label}
       accessibilityHint={opportunity.hint}
-      // Knowledge-safe: every one of the six always publishes a disabled state, and the state is
-      // derived only from facts the reader's own position entitles them to.
-      accessibilityState={{ disabled }}
       onPress={() => onPress(opportunity.id)}
     >
       <Text style={styles.label}>{opportunity.label}</Text>
@@ -181,13 +174,16 @@ function ReturnControl({ opportunity, onPress }: ReturnControlProps) {
   );
 }
 
+/** Slop on the reading axis only; see the control below for why the vertical axis carries none. */
+const HORIZONTAL_SLOP = Object.freeze({ left: 8, right: 8 });
+
 const styles = StyleSheet.create({
-  group: { flexDirection: 'column' },
+  // `rowGap` keeps adjacent touch targets at least 8pt apart, which is the platform minimum.
+  group: { flexDirection: 'column', rowGap: 8 },
   // `minHeight` rather than `height`, so the control still contains its label at the largest system
   // text size; 44 is the platform minimum for a comfortable target.
   control: { minHeight: 44, justifyContent: 'center', paddingVertical: 8 },
   pressed: { opacity: 0.6 },
-  disabled: { opacity: 0.4 },
   label: { fontSize: 15, fontWeight: '600' },
   hint: { fontSize: 13 },
 });

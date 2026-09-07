@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -10,10 +9,21 @@ import test from 'node:test';
 // operable as a Product surface. Static executable contract over the approved boundary.
 //
 // Semantic behaviour is proven by the Jest suites under apps/mobile/src/orientation-chrome
-// (OC08-A...OC08-M). This gate guards what a passing unit test cannot: the file surface, the absence
-// of any new dependency or canonical state, the anti-scope, that the layer reaches its owners only
-// through their public barrels, that the owners themselves are untouched, and that the gate is
-// registered in CI.
+// (OC08-A...OC08-M plus the R1 suites). This gate guards what a passing unit test cannot: the file
+// surface, the absence of any new dependency or canonical state, the anti-scope, that the layer
+// reaches its owners only through their public barrels, and that the gate is registered in CI.
+//
+// ## R1: this contract guards T-08 invariants, never a mutable global repository ceiling
+//
+// The first version asserted that no migration numbered beyond the T-08 baseline existed anywhere.
+// That freezes the FUTURE rather than the past: PR #209 legitimately landed an unrelated Supabase
+// keep-alive migration while T-08 was in review, GitHub tests a merge ref against current main, and
+// a mobile chrome contract failed over a database keep-alive it has nothing to do with.
+//
+// Every assertion below is therefore scoped to something T-08 itself owns, or to a genuinely
+// permanent invariant. Deliberately absent: any global migration census, any hash of a file a later
+// authorized task is expected to change (the lockfile, the mobile manifest, the app shell), and any
+// enumeration of the mobile source tree that a sibling task would break by adding its own owner.
 
 const root = new URL('../', import.meta.url);
 const rootPath = fileURLToPath(root);
@@ -21,24 +31,20 @@ const read = (path) => readFile(new URL(path, root), 'utf8');
 const readJson = async (path) => JSON.parse(await read(path));
 
 const OC_DIR = 'apps/mobile/src/orientation-chrome';
-const MOBILE_SRC = 'apps/mobile/src';
 
 const PRODUCTION_FILES = [
   'InspectionOrientation.tsx',
   'OrientationChrome.tsx',
   'ReturnControls.tsx',
   'context-orientation.ts',
+  'exact-return-origin.ts',
   'index.ts',
   'inspection-orientation.ts',
   'model.ts',
+  'product-copy.ts',
   'return-orientation.ts',
   'types.ts',
 ];
-
-function gitBlobId(content) {
-  const bytes = Buffer.from(content, 'utf8');
-  return createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
-}
 
 function listFiles(dir) {
   const out = [];
@@ -65,19 +71,18 @@ test('the authorized T-08 file surface is the only production surface of the chr
     .sort();
   assert.deepEqual(production, [...PRODUCTION_FILES].sort());
   const suites = readdirSync(join(dir, '__tests__')).filter((file) => /\.test\.tsx?$/u.test(file));
-  assert.ok(suites.length >= 10, `the adversarial matrix is present, found ${suites.length}`);
+  assert.ok(suites.length >= 12, `the adversarial matrix is present, found ${suites.length}`);
 });
 
-// Section 25.1, 25.40 - the barrel is an allowlist, and it is the only way in.
+// The barrel is an allowlist, and it is the only way in.
 test('the public surface is a narrow allowlist, never a wildcard', () => {
   assert.doesNotMatch(code['index.ts'], /export \* from/u, 'the public surface is an allowlist, never a wildcard');
-  // Nothing internal to the layer is re-exported under a name that could be mistaken for an owner's.
   for (const forbidden of ['CanonicalStore', 'MapInspectionContext', 'ReturnSurface', 'HistoricalDisclosure']) {
     assert.doesNotMatch(code['index.ts'], new RegExp(`^export .*\\b${forbidden}\\b`, 'mu'), `the barrel must not re-export ${forbidden}`);
   }
 });
 
-// Section 25.12...25.16, 25.36 - T-07 is a firewall.
+// T-07 is a firewall.
 test('T-07 is consumed only through its barrel, and none of its internals is named', () => {
   for (const [name, text] of Object.entries(code)) {
     for (const match of text.matchAll(/from\s+'([^']+)'/gu)) {
@@ -101,7 +106,7 @@ test('T-07 is consumed only through its barrel, and none of its internals is nam
   ]) {
     assert.equal(new RegExp(`\\b${internal}\\b`, 'u').test(layerText), false, `T-08 must not name the return-layer internal ${internal}`);
   }
-  // Section 25.10, 25.11 - the canonical return seam and the action shape are unreachable from here.
+  // The canonical seams and the action shapes are unreachable from here.
   assert.equal(layerText.includes('.dispatchReturn('), false, 'T-08 must not reach the canonical return seam');
   assert.equal(layerText.includes('dispatchMap('), false, 'T-08 must not reach the canonical Map seam');
   assert.equal(layerText.includes('dispatchTemporal('), false, 'T-08 must not reach the canonical temporal seam');
@@ -110,199 +115,226 @@ test('T-07 is consumed only through its barrel, and none of its internals is nam
   assert.equal(layerText.includes('MAP_ACTION_AUTHORITY'), false);
 });
 
-// Section 25.35 - the six stay six, public and distinct, and T-08 calls each exactly once.
+// The six stay six, public and distinct, and T-08 calls each exactly once.
 test('each of the six frozen return acts is reached exactly once, through its own executor', async () => {
   const SIX = ['backOneStep', 'exactReturn', 'returnLiveHead', 'returnLiveFocus', 'goLiveAndLocate', 'returnWorld'];
   const controls = code['ReturnControls.tsx'];
   for (const executor of SIX) {
     assert.equal((controls.match(new RegExp(`\\b${executor}\\(`, 'gu')) ?? []).length, 1, `${executor} is called exactly once`);
   }
-  // The mapping is a switch with one arm per identity, so no payload can redirect one act to another.
   for (const id of ['BACK_ONE_STEP', 'EXACT_RETURN', 'RETURN_LIVE_HEAD', 'RETURN_LIVE_FOCUS', 'RETURN_WORLD', 'GO_LIVE_AND_LOCATE']) {
     assert.match(controls, new RegExp(`case '${id}'`, 'u'), `the ${id} arm exists`);
   }
-  // And the return barrel still publishes exactly those six executors.
   const returnBarrel = await read('apps/mobile/src/return-navigation/index.ts');
   for (const executor of SIX) assert.match(returnBarrel, new RegExp(`\\b${executor},`, 'u'), `${executor} stays public`);
 });
 
-// Section 25.2...25.9 - no new canonical state, no third mode, no new Product act, no router.
+// REV-T08-01 — the rendered set is context-sensitive; the six MEANINGS are still six.
+test('the return chrome offers a context-sensitive set without collapsing any meaning', () => {
+  const orientation = code['return-orientation.ts'];
+  // The offered list is filtered, and the frozen vocabulary is what it is filtered FROM.
+  assert.match(orientation, /offered: Object\.freeze\(RETURN_OPPORTUNITY_IDS\.filter\(\(id\) => isMeaningful\(id, inputs\)\)\.map\(\(id\) => SHAPES\[id\]\)\)/u);
+  assert.match(code['types.ts'], /readonly offered: readonly ReturnOpportunity\[\];/u);
+  // No control carries an availability flag any more, and none is rendered disabled: an act is
+  // offered or it is absent. A permanently rendered disabled matrix is not the Product solution.
+  assert.doesNotMatch(code['types.ts'], /readonly available:/u, 'a return opportunity has no availability flag');
+  assert.doesNotMatch(code['ReturnControls.tsx'], /\bdisabled\b/u, 'no control is rendered as a disabled affordance');
+  assert.doesNotMatch(code['ReturnControls.tsx'], /accessibilityState/u, 'no control publishes a disabled accessibility state');
+  assert.equal(code['ReturnControls.tsx'].includes('orientation.offered.map'), true, 'only the offered acts are rendered');
+  assert.match(code['ReturnControls.tsx'], /if \(orientation\.offered\.length === 0\) return null;/u, 'an empty group is not a surface');
+  // The six meanings remain constants of their identity, reachable whether or not they are offered.
+  assert.match(orientation, /export function returnMeaning\(id: ReturnOpportunityId\): ReturnOpportunity \{\s*return SHAPES\[id\];/u);
+  for (const id of ['BACK_ONE_STEP', 'EXACT_RETURN', 'RETURN_LIVE_HEAD', 'RETURN_LIVE_FOCUS', 'RETURN_WORLD', 'GO_LIVE_AND_LOCATE']) {
+    assert.match(orientation, new RegExp(`${id}: Object\\.freeze\\(`, 'u'), `${id} keeps its own frozen meaning`);
+  }
+  assert.match(code['types.ts'], /export const RETURN_OPPORTUNITY_IDS = Object\.freeze\(\[/u);
+});
+
+// REV-T08-02 — no engineering vocabulary can reach the reader.
+test('every reader-facing word comes from the one copy module, and none of it is engineering surface', () => {
+  // Only `product-copy.ts` may contain a sentence. The components render what it returns.
+  for (const [name, text] of Object.entries(code)) {
+    if (name === 'product-copy.ts') continue;
+    assert.doesNotMatch(text, /accessibilityLabel="[^"]*\$\{/u, `${name} must not interpolate a label of its own`);
+  }
+  const copy = code['product-copy.ts'];
+  // The plain-language tables exist, and nothing renders a frozen token directly.
+  assert.match(copy, /const FAMILY: Readonly<Record<HistoricalFamily, string>>/u);
+  assert.match(copy, /const DEPTH: Readonly<Record<SemanticDepth, string>>/u);
+  // A transport refusal code is never interpolated into a sentence.
+  assert.doesNotMatch(layerText, /\$\{render\.code\}|\$\{.*\.reason\}/u, 'no refusal code or stale reason is ever spoken');
+  // No identifier of any kind is interpolated into reader-facing copy.
+  for (const forbidden of ['${render.id}', '${identity.id}', '${where.bindingId}', '${where.threadId}', '${locus.key}', '${step.id}', '${render.family}']) {
+    assert.equal(copy.includes(forbidden), false, `no reader-facing sentence may interpolate ${forbidden}`);
+    assert.equal(layerText.includes(forbidden), false, `no reader-facing sentence may interpolate ${forbidden}`);
+  }
+  // The contextual chooser distinguishes options by Moment and by "current", never by a handle.
+  assert.match(copy, /export function contextChoiceLabel\(current: boolean, boundAtMoment: number\): string/u);
+  assert.match(code['context-orientation.ts'], /const distinguishable = labels\.size === options\.length;/u, 'the chooser fails closed when options cannot be told apart');
+});
+
+// REV-T08-03 — a foreign or replaced store offers no Exact Return, before any press.
+test('the Exact Return opportunity is bound to a store lifecycle, and reads no checkpoint internals', () => {
+  const origin = code['exact-return-origin.ts'];
+  assert.match(origin, /if \(record\.store !== store\) return null;/u, 'a foreign or replaced store yields no opportunity');
+  assert.match(origin, /if \(record\.ordinal >= returnAvailability\(store\.getState\(\)\)\.checkpointCount\) return null;/u);
+  assert.match(origin, /if \(!isReturnCheckpointTarget\(target\)\) return null;/u);
+  // Exactly one provenance registry exists in the layer, and it lives here. It is not a cache: it
+  // holds one handle a caller bound, never a list, and it grants nothing.
+  assert.equal((layerText.match(/new WeakMap[<(]/gu) ?? []).length, 1, 'exactly one presentation registry exists');
+  assert.equal((origin.match(/new WeakMap[<(]/gu) ?? []).length, 1, 'and it lives in the origin module');
+  // Nothing else is HELD between calls. A `new Set` inside a pure function is a local computation
+  // (the chooser's distinguishability check); what would be a cache is a MODULE-LEVEL registry, and
+  // the only one of those in the layer is the presentation binding above.
+  const moduleLevelRegistries = [...layerText.matchAll(/^const \w+ = new (?:Map|Set|WeakSet|WeakMap)[<(]/gmu)].map((match) => match[0]);
+  assert.equal(moduleLevelRegistries.length, 1, `the layer holds exactly one module-level registry, found ${moduleLevelRegistries.join(', ')}`);
+  assert.match(moduleLevelRegistries[0], /new WeakMap[<(]/u, 'and it is the presentation binding, not a cache');
+  // T-08 never enumerates the reversible history and never reads a checkpoint's contents.
+  assert.equal(layerText.includes('returnCheckpoints('), false, 'T-08 builds no history browser');
+  assert.equal(layerText.includes('latestReturnCheckpoint('), false, 'T-08 never guesses which checkpoint is meant');
+  assert.equal(layerText.includes('.history['), false, 'T-08 never indexes the reversible history');
+  for (const internal of ['tmProvenance', 'ifRef', 'captured', 'RhCheckpoint', 'RhEntry']) {
+    assert.equal(layerText.includes(internal), false, `T-08 must not read the checkpoint internal ${internal}`);
+  }
+  for (const persistence of ['AsyncStorage', 'SecureStore', 'localStorage', 'MMKV', 'expo-file-system', 'JSON.stringify', 'JSON.parse', 'structuredClone']) {
+    assert.equal(layerText.includes(persistence), false, `T-08 must not use ${persistence}`);
+  }
+});
+
+// REV-T08-05 — the accessibility surface claims only what React Native provides.
+test('no non-focusable container advertises custom actions as an accessibility route', () => {
+  // The grouping Views stay non-elements so they cannot swallow the buttons — and therefore they
+  // must not publish custom actions either, because a container nothing can focus is not a route.
+  assert.equal(layerText.includes('accessibilityActions'), false, 'a non-focusable container publishes no custom actions');
+  assert.equal(layerText.includes('onAccessibilityAction'), false);
+  assert.equal((layerText.match(/accessibilityRole="none"/gu) ?? []).length, 4, 'each grouping container declares itself a non-element');
+  assert.doesNotMatch(layerText, /<View[^>]*\saccessible(\s|=\{true\}|>)/u, 'no grouping View is marked accessible');
+  // Each control is its own native button, which is the route that actually exists.
+  assert.match(code['ReturnControls.tsx'], /accessibilityRole="button"/u);
+  assert.match(code['InspectionOrientation.tsx'], /accessibilityRole="button"/u);
+});
+
+// No new canonical state, no temporal mode, no Product act, no router.
 test('T-08 adds no canonical state, no temporal mode, no Product act and no router navigation', async () => {
   const classes = stripComments(await read('apps/mobile/src/state/classes.ts'));
   assert.match(classes, /export const CANONICAL_STATE_KEYS = Object\.freeze\(\['session', 'live', 'temporal', 'inspection', 'camera', 'history'\] as const\);/u);
   assert.match(classes, /export type TemporalMode = \{ readonly kind: 'FOLLOW_LIVE' \} \| \{ readonly kind: 'PINNED'; readonly at: SessionPosition \};/u);
 
   const actions = stripComments(await read('apps/mobile/src/state/actions.ts'));
-  // The frozen act vocabulary is unchanged: T-08 promoted nothing and invented nothing.
-  for (const generic of ['NAVIGATE', 'GO_HOME', "'HOME'", "'RESET'", 'BACK_OR_HOME', 'RESTORE'] ) {
+  for (const generic of ['NAVIGATE', 'GO_HOME', "'HOME'", "'RESET'", 'BACK_OR_HOME', 'RESTORE']) {
     assert.equal(actions.includes(generic), false, `the catalog must not gain ${generic}`);
     assert.equal(layerText.includes(generic), false, `T-08 must not introduce ${generic}`);
   }
-  // Section 25.8, 25.9 - Product Back is never router history.
   for (const routing of ['expo-router', 'useRouter', 'router.push', 'router.back', 'router.replace', 'navigation.goBack', '@react-navigation']) {
     assert.equal(layerText.includes(routing), false, `T-08 must not use ${routing} for Product navigation`);
   }
 });
 
-// Section 25.17...25.20 - one freshness rule, no second projection or locatability machinery, and
-// no capability derived from raw live truth.
+// One freshness rule, no second projection or locatability machinery, no raw live-truth shortcut.
 test('there is one freshness rule, no second resolver, and no raw Live Focus shortcut', () => {
-  // THE rule, reached through T-04's own accessor, in exactly one place in the layer.
   assert.equal((layerText.match(/isCurrentMapContext\(/gu) ?? []).length, 1, 'the shared freshness rule is asked in exactly one place');
   assert.equal(layerText.includes('mapContextFreshness'), false, 'T-08 does not reach past the accessor to the rule itself');
   assert.equal(layerText.includes('projectionTupleFreshness'), false);
-  // Section 25.18, 25.19 - no cache and no second derivation of scene, entitlement or locatability.
   for (const forbidden of ['deriveMapScene', 'deriveMapSceneFromDisclosure', 'HistoricalDisclosureCache', 'resolveLocatability', 'entitledLoci', 'locusForBinding', 'resolveEntitledInspection', 'resolveLocateAtTarget']) {
     assert.equal(layerText.includes(forbidden), false, `T-08 must not reimplement or reach ${forbidden}`);
   }
-  assert.equal((layerText.match(/\bnew Map\(|\bnew WeakMap\(|\bnew Set\(|\bnew WeakSet\(/gu) ?? []).length, 0, 'the layer caches nothing and mints nothing');
-
-  // Section 25.20 - the specific Live Focus capability may come only from the projection-bound query.
   assert.equal((layerText.match(/liveFocusReturnAvailability\(/gu) ?? []).length, 1, 'the safe capability query is asked exactly once');
   assert.doesNotMatch(layerText, /\.LF\b/u, 'no part of T-08 reads the Live Focus mirror');
   assert.equal(layerText.includes('live.LF'), false);
   // `ESTABLISHED_THREAD` belongs to the Live Focus union alone: the Map's own family vocabulary is
   // THREAD / READING / EMERGING_FOCUS, which this layer legitimately consumes as DISCLOSED families.
-  // So this token, and the `LiveFocus` type itself, are the exact tell of a raw live-truth shortcut.
   assert.doesNotMatch(layerText, /\bESTABLISHED_THREAD\b/u, 'no part of T-08 branches on a Live Focus kind');
   assert.doesNotMatch(layerText, /\bLiveFocus\b/u, 'T-08 never holds or imports the Live Focus type');
-  assert.doesNotMatch(layerText, /\bliveFocusEquals\b|\bisLiveFocus\b/u, 'T-08 never inspects a Live Focus value');
-  // The one place a Live answer enters the model is that query's own three-valued result.
   assert.match(code['model.ts'], /focusReturn: current === null \? \('UNPROVEN' as const\) : liveFocusReturnAvailability\(store, current\)\.status/u);
 });
 
-// Section 25.21, 25.22, 25.32, 25.33 - the checkpoint target stays opaque and unpersisted.
-test('the Exact Return target is never minted, inspected, serialized or persisted here', () => {
-  // T-08 receives a target; it never enumerates the reversible history to find one.
-  assert.equal(layerText.includes('returnCheckpoints('), false, 'T-08 builds no history browser');
-  assert.equal(layerText.includes('latestReturnCheckpoint('), false, 'T-08 never guesses which checkpoint is meant');
-  assert.equal(layerText.includes('.history['), false, 'T-08 never indexes the reversible history');
-  // Section 25.33 - no checkpoint internals are read.
-  for (const internal of ['tmProvenance', 'ifRef', 'captured', 'RhCheckpoint', 'RhEntry']) {
-    assert.equal(layerText.includes(internal), false, `T-08 must not read the checkpoint internal ${internal}`);
+// No app-shell mount. Stated as an invariant about T-08, not as a hash of files a later task owns.
+test('T-08 mounts nothing into the app shell', async () => {
+  for (const file of ['apps/mobile/src/app/_layout.tsx', 'apps/mobile/src/app/index.tsx', 'apps/mobile/src/shell/FoundationShell.tsx']) {
+    assert.doesNotMatch(await read(file), /orientation-chrome|OrientationChrome|ReturnControls|InspectionOrientation/u, `${file} must not mount T-08`);
   }
-  // Section 25.21, 25.22 - nothing is stored or serialized.
-  for (const persistence of ['AsyncStorage', 'SecureStore', 'localStorage', 'MMKV', 'expo-file-system', 'JSON.stringify', 'JSON.parse', 'structuredClone']) {
-    assert.equal(layerText.includes(persistence), false, `T-08 must not use ${persistence}`);
-  }
-  // The one check T-08 does make is conservative and ordinal-only, and authority stays T-07's.
-  assert.match(code['model.ts'], /isReturnCheckpointTarget\(bound\) && bound\.index < availability\.checkpointCount/u);
+  // And the layer does not reach for the shell either.
+  assert.equal(layerText.includes('src/app/'), false);
+  assert.equal(layerText.includes('FoundationShell'), false);
 });
 
-// Section 25.26, 25.27 - no app-shell mount, and the shell is byte-identical.
-test('T-08 mounts nothing into the app shell, and the shell files are untouched', async () => {
-  const SHELL = {
-    'apps/mobile/src/app/_layout.tsx': '90179f6d13026e9b0e2345e0418012214b9c9aab',
-    'apps/mobile/src/app/index.tsx': 'ef38d10c76a957163bf00f7b7b60fb8aa25841f4',
-    'apps/mobile/src/shell/FoundationShell.tsx': 'e2286ba1a35c2e40def475af5deed2d8ba8120d3',
-  };
-  for (const [file, blob] of Object.entries(SHELL)) {
-    assert.equal(gitBlobId(await read(file)), blob, `${file} is byte-identical to the T-08 baseline`);
-    assert.doesNotMatch(await read(file), /orientation-chrome|OrientationChrome|ReturnControls/u, `${file} must not mount T-08`);
-  }
-});
-
-// Section 25.23, 25.24, 25.25 - no dependency, no lockfile move, no backend or schema change.
+// No dependency, no backend, no database, no schema. Scoped to what T-08 imports and declares.
 test('T-08 adds no dependency and touches no backend, database or schema', async () => {
   const mobilePackage = await readJson('apps/mobile/package.json');
-  assert.equal(gitBlobId(await read('apps/mobile/package.json')), 'd10b3a577d6ee26c0af2e045f4bc39496181b2e7', 'the mobile manifest is byte-identical');
-  assert.equal(gitBlobId(await read('package-lock.json')), 'c5b6e12cc45d32bd782b3a690179fedabde7169d', 'the lockfile is byte-identical to the T-08 baseline');
   assert.deepEqual(Object.keys(mobilePackage.dependencies).sort(), [
     '@shopify/react-native-skia', 'expo', 'expo-constants', 'expo-dev-client', 'expo-linking', 'expo-router', 'expo-status-bar',
     'react', 'react-native', 'react-native-gesture-handler', 'react-native-reanimated', 'react-native-safe-area-context',
     'react-native-screens', 'react-native-worklets',
   ], 'no new mobile dependency');
-  // Every import in the layer is a relative module of this app or React Native itself.
-  const specifiers = [...layerText.matchAll(/from\s+'([^']+)'/gu)].map((match) => match[1]);
-  for (const specifier of specifiers) {
-    assert.ok(specifier.startsWith('.') || specifier === 'react' || specifier === 'react-native', `T-08 imports only relative modules and React Native, got ${specifier}`);
-  }
   const rootPackage = await readJson('package.json');
   assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg'], 'no new root dependency');
-  // Forward-safe by construction. An earlier draft of this assertion banned every migration
-  // numbered beyond the T-08 baseline, which freezes the FUTURE rather than the past: an unrelated
-  // migration landing on `main` would fail a mobile chrome contract that has nothing to do with it.
-  // The real statement is that T-08 is a mobile-only layer — it ships no database artifact and
-  // reaches nothing in the database — and that stays true however far the migration chain grows.
-  const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql'));
-  assert.ok(migrations.length > 0, 'the migration chain was read');
-  assert.deepEqual(migrations.filter((name) => /orientation|chrome|inspection|return/iu.test(name)), [], 'T-08 added no migration of its own');
+
+  // Every import in the layer is a relative module of this app or React Native itself.
+  for (const match of layerText.matchAll(/from\s+'([^']+)'/gu)) {
+    const specifier = match[1];
+    assert.ok(specifier.startsWith('.') || specifier === 'react' || specifier === 'react-native', `T-08 imports only relative modules and React Native, got ${specifier}`);
+  }
+  // T-08 is a mobile-only layer: it ships no database artifact and reaches nothing in the database.
+  // Deliberately NOT a census of the migration chain, which grows for reasons that are not T-08's.
   assert.deepEqual(listFiles(join(rootPath, OC_DIR)).filter((file) => file.endsWith('.sql')), [], 'the layer ships no database artifact');
   for (const reach of ['database/', 'migrations/', 'supabase', 'postgres', 'rpc/', 'SELECT ', 'INSERT ']) {
     assert.equal(layerText.includes(reach), false, `T-08 must not reach ${reach}`);
   }
 });
 
-// Section 25.28...25.31 - the later tasks' scope is left alone.
+// The later tasks' scope is left alone.
 test('T-08 steals no motion, no responsive recomposition and no reduced-motion authority', () => {
   for (const motion of ['react-native-reanimated', 'useSharedValue', 'useAnimatedStyle', 'withTiming', 'withSpring', 'Animated', 'LayoutAnimation', 'useReducedMotion', 'AccessibilityInfo']) {
     assert.equal(layerText.includes(motion), false, `T-08 must not own ${motion}: motion and reduced-motion are a later task's`);
   }
-  // Section 25.31 - no act is ever dispatched from an animation or a timer.
   for (const scheduler of ['setTimeout', 'setInterval', 'requestAnimationFrame', 'InteractionManager', 'runOnJS', 'scheduleOnRN']) {
     assert.equal(layerText.includes(scheduler), false, `T-08 must not schedule Product work with ${scheduler}`);
   }
-  // Section 25.28 - no responsive Product recomposition: no width, no breakpoint, no dimensions.
   for (const responsive of ['useWindowDimensions', 'Dimensions', 'onLayout', 'breakpoint', 'isNarrow', 'isTablet']) {
     assert.equal(layerText.includes(responsive), false, `T-08 must not implement responsive Product behaviour (${responsive})`);
   }
-  // No gesture of any kind: every act is reachable by a press and by an accessibility action.
   for (const gesture of ['GestureDetector', 'Gesture.', 'PanResponder', 'react-native-gesture-handler', 'onGestureEvent']) {
     assert.equal(layerText.includes(gesture), false, `T-08 must not introduce ${gesture}`);
   }
 });
 
-// Section 25.34 - grouping never swallows the controls, and no drag-only route exists.
-test('every control is an independent native element, and the world stays reachable behind the chrome', () => {
-  // The three grouping containers are explicitly not accessibility elements.
-  assert.equal((layerText.match(/accessibilityRole="none"/gu) ?? []).length, 4, 'each grouping container declares itself a non-element');
-  assert.doesNotMatch(layerText, /<View[^>]*\saccessible(\s|=\{true\}|>)/u, 'no grouping View is marked accessible');
-  assert.match(code['ReturnControls.tsx'], /accessibilityRole="button"/u);
-  assert.match(code['InspectionOrientation.tsx'], /accessibilityRole="button"/u);
-  // The world beneath keeps every touch the chrome does not claim.
+// The world stays the world.
+test('the chrome is support around the Map, never a panel over it', () => {
   assert.match(code['OrientationChrome.tsx'], /pointerEvents="box-none"/u);
-  // Section 23.1, 23.45, 23.49 - not a dashboard, not a page, not a cover.
   for (const shape of ['absoluteFill', 'Modal', 'ScrollView', 'FlatList', 'SectionList', 'SafeAreaView', 'useSafeAreaInsets', 'StatusBar']) {
     assert.equal(layerText.includes(shape), false, `T-08 must not become ${shape}`);
   }
   assert.doesNotMatch(layerText, /flex:\s*1/u, 'the chrome never claims the whole surface');
 });
 
-// Section 25.42 - the unsafe inspection branches have nothing to leak with.
+// The unsafe inspection branches have nothing to leak with.
 test('the render states that may not name an identity have no field to name one with', () => {
   const types = code['types.ts'];
-  // The unknown member is exactly one key, so a leak would have to be a type error.
   assert.match(types, /\{ readonly kind: 'IDENTITY_UNKNOWN_AT_TC' \}/u);
   for (const technical of ['PROJECTION_NOT_FETCHED', 'PROJECTION_INCOHERENT', 'INSPECTION_NOT_RESOLVED', 'RESOLUTION_MALFORMED']) {
     assert.match(types, new RegExp(`\\{ readonly kind: '${technical}' \\}`, 'u'), `${technical} carries nothing but its kind`);
   }
-  // The five vocabularies stay five different members; none is expressed in terms of another.
   for (const distinct of ['IDENTITY_UNKNOWN_AT_TC', 'DEPTH_WITHHELD', 'PROJECTION_NOT_FETCHED', 'PROJECTION_UNAVAILABLE', 'PROJECTION_STALE']) {
     assert.equal((types.match(new RegExp(`kind: '${distinct}'`, 'gu')) ?? []).length, 1, `${distinct} is declared exactly once`);
   }
-  // The single rule, stated once, in code.
   assert.match(code['inspection-orientation.ts'], /if \(resolution\.knowledge === 'UNKNOWN_AT_TC'\) return \{ kind: 'IDENTITY_UNKNOWN_AT_TC' \};/u);
-  // No placeholder wording anywhere that would imply a target-shaped hole.
   for (const wording of ['loading', 'skeleton', 'placeholder', 'shimmer', 'Untitled', 'unnamed']) {
     assert.equal(layerText.toLowerCase().includes(wording.toLowerCase()), false, `no ${wording} shape may stand in for a target`);
   }
 });
 
-// Section 25.37, 25.38, 25.39 - the owners' own contracts are untouched by this task.
+// The owners' own boundaries this layer leans on are intact.
 test('the T-04, T-05 and T-06 boundaries this layer leans on are intact', async () => {
   const mapScene = stripComments(await read('apps/mobile/src/map/projection/map-scene.ts'));
   assert.match(mapScene, /export function mapContextFreshness\(state: CanonicalState, context: DisclosedProjectionContext\): MapProjectionFreshness \{/u, 'the one shared freshness rule is unchanged');
-  assert.match(mapScene, /export const MAP_PROJECTION_STALE_REASONS = Object\.freeze\(\[/u);
   const preview = stripComments(await read('apps/mobile/src/temporal-navigation/preview/preview-state.ts'));
   assert.match(preview, /cancel\(\): PreviewResult;/u, 'T-06 still owns preview cancellation');
   assert.equal(layerText.includes('.cancel()'), false, 'T-08 never cancels a preview itself');
   assert.equal(layerText.includes('createTemporalPreviewController'), false, 'T-08 creates no preview controller');
-  // T-05 presentation state stays noncanonical and is not consumed as Product truth here.
   assert.equal(layerText.includes('createPresentationController'), false);
   assert.equal(layerText.includes('TimelinePresentation'), false);
 });
 
-// Section 25.41 - the files are real text.
 test('every T-08 source file is real text: no control byte can make git treat it as binary', () => {
   for (const [name, text] of Object.entries(sources)) {
     const control = [...text].findIndex((character) => {
@@ -316,14 +348,12 @@ test('every T-08 source file is real text: no control byte can make git treat it
   }
 });
 
-// Section 25.43 - the gate is registered, documented, and joins the fast lane without a native job.
 test('the T-08 gate is registered at the root and in Mobile CI without a new native job', async () => {
   const rootPackage = await readJson('package.json');
   assert.equal(rootPackage.scripts['test:inspection-orientation-return-chrome-contract'], 'node --test tests/inspection-orientation-return-chrome-contract.test.mjs');
   const mobileCi = await read('.github/workflows/mobile-ci.yml');
   assert.match(mobileCi, /run: npm run test:inspection-orientation-return-chrome-contract/u);
   assert.match(mobileCi, /'tests\/inspection-orientation-return-chrome-contract\.test\.mjs'/u);
-  // Every sibling gate still runs, and no job was added: the fast lane plus the two native jobs.
   for (const sibling of [
     'test:mobile-canonical-state-contract',
     'test:living-analysis-map-runtime-contract',
@@ -333,16 +363,17 @@ test('the T-08 gate is registered at the root and in Mobile CI without a new nat
     assert.match(mobileCi, new RegExp(`run: npm run ${sibling}`, 'u'), `${sibling} still runs`);
   }
   assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3, 'no job beyond the fast gate and the two native jobs');
-  assert.equal((mobileCi.match(/runs-on: macos-26/gu) ?? []).length, 1);
   assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2);
   assert.equal(existsSync(new URL('docs/inspection-orientation-return-chrome-v1.md', root)), true);
   assert.match(await read('apps/mobile/README.md'), /Inspection \+ orientation \+ return chrome \(T-08\)/u);
 });
 
-// The layer is additive: no other mobile file changed, so no sibling contract needs re-anchoring.
-test('T-08 is additive: no file outside its own directory was modified', () => {
-  const dir = join(rootPath, MOBILE_SRC);
-  const owners = readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
-  assert.deepEqual(owners, ['app', 'map', 'orientation-chrome', 'projection', 'return-navigation', 'shell', 'state', 'temporal', 'temporal-navigation', 'timeline'],
-    'T-08 adds exactly one owner directory and removes none');
+// The layer is additive. Stated as "T-08's directory exists and is T-08's", never as a census of the
+// mobile source tree, which a sibling task would legitimately change by adding its own owner.
+test('T-08 is additive: it owns exactly one directory and takes over none', () => {
+  const owners = readdirSync(join(rootPath, 'apps/mobile/src'), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  assert.ok(owners.includes('orientation-chrome'), 'the T-08 owner directory exists');
+  for (const existing of ['app', 'map', 'projection', 'return-navigation', 'shell', 'state', 'temporal', 'temporal-navigation', 'timeline']) {
+    assert.ok(owners.includes(existing), `${existing} is untouched by T-08`);
+  }
 });

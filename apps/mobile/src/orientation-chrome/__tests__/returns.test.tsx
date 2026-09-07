@@ -16,8 +16,9 @@ import { initialCameraIntent } from '../../map';
 import { latestReturnCheckpoint, returnMapContext, type ReturnCheckpointTarget } from '../../return-navigation';
 import type { MapProjectionRequest } from '../../map';
 import { OrientationChrome } from '../OrientationChrome';
+import { bindExactReturnOrigin } from '../exact-return-origin';
+import { returnMeaning } from '../return-orientation';
 import { RETURN_CONTROLS_TEST_ID } from '../ReturnControls';
-import { orientationModel } from '../model';
 import { RETURN_OPPORTUNITY_IDS, type ReturnOpportunityId } from '../types';
 import { countingStore } from '../../return-navigation/__fixtures__/return';
 import { chromeStore, chromeSurface, fetched, projectionFor, TWO_CONTEXT_WORLD } from '../__fixtures__/chrome';
@@ -42,11 +43,13 @@ const viewpoint = (state: CanonicalState) => ({ temporal: state.temporal, inspec
 const liveProvider = (request: MapProjectionRequest) => returnMapContext(fetched(TWO_CONTEXT_WORLD({ tc: 6, liveHead: 6 })), request);
 
 async function press(store: CanonicalStore, id: ReturnOpportunityId, target?: ReturnCheckpointTarget | null) {
+  // The opportunity is bound against the store the journey happened in, exactly as a caller would.
+  const origin = target === undefined || target === null ? null : bindExactReturnOrigin(store, target);
   const view = await render(
     <OrientationChrome
       surface={chromeSurface(store)}
       projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD()))}
-      exactReturnTarget={target ?? null}
+      exactReturnOrigin={origin}
       liveContext={liveProvider}
     />,
   );
@@ -164,15 +167,15 @@ describe('OC08-B — no act aliases another', () => {
   });
 
   it('B16…B20 — every identity states its own effect and its own promises, and no two agree', () => {
-    const store = reader();
-    const model = orientationModel(store, projectionFor(store, fetched(TWO_CONTEXT_WORLD())));
-    const shapes = model.returns.opportunities;
+    // The MEANINGS are the frozen six whether or not each is offered right now: context-sensitive
+    // rendering changed which controls appear, never what any of them claims.
+    const shapes = RETURN_OPPORTUNITY_IDS.map((id) => returnMeaning(id));
 
     expect(shapes.map((shape) => shape.id)).toEqual([...RETURN_OPPORTUNITY_IDS]);
     expect(new Set(shapes.map((shape) => shape.label)).size).toBe(6);
     expect(new Set(shapes.map((shape) => shape.hint)).size).toBe(6);
 
-    const by = (id: ReturnOpportunityId) => shapes.find((shape) => shape.id === id)!;
+    const by = (id: ReturnOpportunityId) => returnMeaning(id);
     // Live Head promises time and NOT a location; Live Focus promises a location and NOT time.
     expect({ time: by('RETURN_LIVE_HEAD').movesTime, camera: by('RETURN_LIVE_HEAD').movesCamera }).toEqual({ time: true, camera: false });
     expect({ time: by('RETURN_LIVE_FOCUS').movesTime, camera: by('RETURN_LIVE_FOCUS').movesCamera }).toEqual({ time: false, camera: true });

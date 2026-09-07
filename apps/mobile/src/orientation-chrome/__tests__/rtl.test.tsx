@@ -40,11 +40,11 @@ const reader = (): CanonicalStore =>
     liveFocusAtSp: 5,
   });
 
-/** The rendered surface as a list of (testID, label, hint, disabled) rows, in tree order. */
+/** The controls actually offered, as (identity, label, hint) rows, in the frozen logical order. */
 function controlRows(view: Awaited<ReturnType<typeof render>>) {
-  return RETURN_OPPORTUNITY_IDS.map((id) => {
-    const control = view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:${id}`);
-    return { id, label: control.props.accessibilityLabel, hint: control.props.accessibilityHint, disabled: control.props.accessibilityState.disabled };
+  return RETURN_OPPORTUNITY_IDS.flatMap((id) => {
+    const control = view.queryByTestId(`${RETURN_CONTROLS_TEST_ID}:${id}`);
+    return control === null ? [] : [{ id, label: control.props.accessibilityLabel, hint: control.props.accessibilityHint }];
   });
 }
 
@@ -56,7 +56,7 @@ describe('OC08-K — mirroring changes no Product meaning', () => {
     const ltrStore = reader();
     const ltrView = await renderChrome(ltrStore);
     const ltr = controlRows(ltrView);
-    const ltrActions = (ltrView.getByTestId(RETURN_CONTROLS_TEST_ID).props.accessibilityActions as { name: string }[]).map((action) => action.name);
+    expect(ltr.length).toBeGreaterThan(0);
     await act(async () => {
       ltrView.unmount();
     });
@@ -65,14 +65,14 @@ describe('OC08-K — mirroring changes no Product meaning', () => {
       const rtlStore = reader();
       const rtlView = await renderChrome(rtlStore);
       const rtl = controlRows(rtlView);
-      const rtlActions = (rtlView.getByTestId(RETURN_CONTROLS_TEST_ID).props.accessibilityActions as { name: string }[]).map((action) => action.name);
 
-      // Identical rows, in identical order: the logical order is not the physical one.
+      // Identical rows, in identical order: the logical order is not the physical one, and K101's
+      // screen-reader traversal follows exactly this order because each row IS its own element.
       expect(rtl).toEqual(ltr);
-      // K101 — the screen-reader traversal order is the same logical order too.
-      expect(rtlActions).toEqual(ltrActions);
-      // K98/K99 — the two Live acts and the two spatial acts did not trade meanings.
-      expect(rtl.map((row) => row.id)).toEqual([...RETURN_OPPORTUNITY_IDS]);
+      // K98/K99 — the two Live acts and the two spatial acts did not trade meanings, and the offered
+      // set is a subsequence of the frozen order rather than a mirrored one.
+      const frozen = RETURN_OPPORTUNITY_IDS.filter((id) => rtl.some((row) => row.id === id));
+      expect(rtl.map((row) => row.id)).toEqual(frozen);
 
       await act(async () => {
         rtlView.unmount();
@@ -110,7 +110,7 @@ describe('OC08-K — mirroring changes no Product meaning', () => {
   });
 });
 
-describe('OC08-K — Arabic, English and code-switched identities survive verbatim', () => {
+describe('OC08-K — an Arabic and code-switched world produces the same internal-free chrome', () => {
   /** A disclosed world whose identities are Arabic, Latin and mixed with Western digits. */
   const BILINGUAL = () =>
     world({
@@ -122,7 +122,7 @@ describe('OC08-K — Arabic, English and code-switched identities survive verbat
       readings: [{ id: 'قراءة-reading-7' }],
     });
 
-  it('K96, K97 — an Arabic and code-switched identity is rendered exactly, in both directions', async () => {
+  it('K96, K97 — Arabic and code-switched identities drive the chrome without ever being spoken', async () => {
     const check = async () => {
       const store = historicalStore();
       inspect(store, contextAt(BILINGUAL()), {
@@ -132,19 +132,21 @@ describe('OC08-K — Arabic, English and code-switched identities survive verbat
       });
       const projection = projectionFor(store, fetched(withInspection(BILINGUAL(), known())));
       const model = orientationModel(store, projection);
+      // The typed answer carries the exact Arabic identity, unnormalized and untransliterated.
       expect(model.inspection.render).toMatchObject({ kind: 'RENDERABLE', id: 'قراءة-reading-7' });
 
       const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} />);
       const statement = view.getByTestId(`${INSPECTION_ORIENTATION_TEST_ID}:statement`).props.children as string;
       const lineage = view.getByTestId(`${INSPECTION_ORIENTATION_TEST_ID}:lineage`).props.children as string;
 
-      // Verbatim: not reordered, not normalized, not transliterated, not truncated.
-      expect(statement).toContain('قراءة-reading-7');
-      expect(lineage).toContain('خيط-التحليل');
-      expect(lineage).toContain('ربط-QA-12');
-      // The disclosed route reads in its logical order, root first, whatever the writing direction.
-      expect(lineage.indexOf('World')).toBeLessThan(lineage.indexOf('خيط-التحليل'));
-      expect(lineage.indexOf('خيط-التحليل')).toBeLessThan(lineage.indexOf('قراءة-reading-7'));
+      // R1-05: an identifier is an identifier in every script. Arabic ids are internal exactly as
+      // Latin ones are, so the reader sees the structure of their position, never the handles.
+      expect(statement).toBe('You are inspecting a reading.');
+      expect(lineage).toBe('Inside a thread, inside a context.');
+      for (const identifier of ['قراءة-reading-7', 'خيط-التحليل', 'ربط-QA-12']) {
+        expect(statement).not.toContain(identifier);
+        expect(lineage).not.toContain(identifier);
+      }
 
       await act(async () => {
         view.unmount();

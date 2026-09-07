@@ -53,8 +53,24 @@ export { RETURN_OPPORTUNITY_IDS } from './types';
 
 export { contextLineage, inspectionRender, renderableIdentity } from './inspection-orientation';
 
+// The ONE place any reader-facing word is written. Every sentence the chrome can say comes from
+// here, which is what makes "no engineering vocabulary reaches the Product surface" checkable.
+export {
+  CONTEXT_CHOICE_TITLE,
+  contextChoiceLabel,
+  contextPathSentence,
+  contextStepWord,
+  inspectionSentence,
+  liveSentence,
+  spatialSentence,
+  temporalSentence,
+} from './product-copy';
+
 export type { ReturnCapabilityInputs } from './return-orientation';
-export { opportunity, returnOrientation } from './return-orientation';
+export { opportunity, returnMeaning, returnOrientation } from './return-orientation';
+
+export type { ExactReturnOrigin } from './exact-return-origin';
+export { bindExactReturnOrigin, exactReturnTargetFor, isExactReturnOrigin } from './exact-return-origin';
 
 export type { ContextOrientationInputs } from './context-orientation';
 export { CONTEXT_ORDERING_NOTE, contextOrientation, currentBindingOf, mapFamilyOf } from './context-orientation';
@@ -63,14 +79,7 @@ export type { ChromeProjection, OrientationModelOptions } from './model';
 export { chromeProjection, mapProjectionRequest, orientationModel } from './model';
 
 export type { OrientationChromeProps } from './OrientationChrome';
-export {
-  ORIENTATION_CHROME_LABEL,
-  ORIENTATION_CHROME_TEST_ID,
-  OrientationChrome,
-  liveStatement,
-  spatialStatement,
-  temporalStatement,
-} from './OrientationChrome';
+export { ORIENTATION_CHROME_LABEL, ORIENTATION_CHROME_TEST_ID, OrientationChrome } from './OrientationChrome';
 
 export type { InspectionOrientationProps } from './InspectionOrientation';
 export {
@@ -78,8 +87,6 @@ export {
   INSPECTION_ORIENTATION_LABEL,
   INSPECTION_ORIENTATION_TEST_ID,
   InspectionOrientation,
-  contextStepLabel,
-  inspectionStatement,
 } from './InspectionOrientation';
 
 export type { ReturnControlsProps } from './ReturnControls';
