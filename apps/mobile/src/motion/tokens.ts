@@ -67,27 +67,13 @@ export const REST_EPSILON_ZOOM = 1e-6;
  * The world does not disappear and come back — it resolves. Deep enough to say that something
  * happened, nowhere near a flash, and opacity only: under reduced motion this is the ONE thing
  * left explaining that the reader went somewhere, so it may not itself be movement.
+ *
+ * A CONSTANT, and deliberately so. A cut is only acceptable because this dip covers it, and the
+ * cover has to be the same depth every time — a dip derived from the weight already on the glass is
+ * either stale by the time it lands or shallow enough to cover nothing. Two cuts in quick succession
+ * therefore read as two cuts, because that is what they are.
  */
 export const REDUCED_RESOLVE_FROM_OPACITY = 0.45;
-
-/**
- * Where a cut-and-resolve starts, given the weight already on the glass.
- *
- * It RETARGETS rather than restarts. A second act landing while a resolve is still running
- * continues from where the plane actually is; re-seeding the dip would drop it back down and read
- * as a blink — the restart-from-zero failure that makes a sequence the wrong tool for anything
- * that can be triggered twice quickly.
- *
- * The camera expresses that continuation by not seeding at all, because a seed is a value decided
- * NOW and a beat can delay it until the plane has moved past it. So the answer this returns for a
- * plane still under weight is the floor rather than the instruction: whatever is already on the
- * glass is where the resolve is, and nothing may push it lower.
- */
-export function resolveFromOpacity(shownOpacity: number): number {
-  'worklet';
-  if (!Number.isFinite(shownOpacity)) return REDUCED_RESOLVE_FROM_OPACITY;
-  return shownOpacity >= 1 ? REDUCED_RESOLVE_FROM_OPACITY : shownOpacity;
-}
 
 export const MOTION_DURATIONS_MS = Object.freeze({
   /** M0 — a finger owns the frame. Any duration at all is lag. */
@@ -117,7 +103,14 @@ export const MOTION_DURATIONS_MS = Object.freeze({
   travelMax: 380,
   /** M4 — the exceptional long flight across the same world. A ceiling, never a target. */
   travelLongMax: 540,
-  /** Reduced motion — the local opacity resolve that replaces travel. Not movement. */
+  /**
+   * The local opacity resolve that stands in for a travel. Not movement.
+   *
+   * Named for the case it was introduced by, and used by BOTH of them, because they are the same
+   * event: there is no continuous path to show. Reduced motion removes the path by choice; an
+   * unrepresentable destination never had one. Either way this is the resolve that covers the cut,
+   * and the same brief opacity budget is right for both — a cut wants covering, not dwelling on.
+   */
   reducedResolve: 140,
   /**
    * The explanatory beat between the two halves of Go Live + Locate.

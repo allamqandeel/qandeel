@@ -249,6 +249,45 @@ The third one reversed a change made one pass earlier on an aesthetic argument. 
 right and the argument was wrong: the two kinds of arrival are already legibly different because
 one travels along a real tether, and that difference is the part the record justifies.
 
+### R3 — the final path
+
+R1 and R2 corrected the seams. R3 corrected the transitions those seams actually run on, and every
+one of them was invisible to a passing test because the tests exercised a prop replacement where the
+Product performs a canonical handoff.
+
+| Defect | Fix |
+| --- | --- |
+| A real temporal or depth commit makes this Map's context stale before the fresh one arrives, and the disclosure record was erased in that gap — so Semantic Zoom, a committed temporal move and every Return that changes `TC` or depth compared the new world against nothing and disclosed nothing | the record survives a technical stale handoff. It is EVIDENCE, not a world: identities only, no geometry, no pixels, no entitlement, never painted. Only a replaced authority erases it |
+| Membership was read from a PLACEMENT, which omits a locus the camera cannot finitely project — so a locus that merely became representable read as newly known | membership is derived from the `MapScene`, through the same key definition that names a painted node |
+| The travel corridor never retired: the widened candidate set of the last movement stayed alive for the life of the surface | a threshold reaction on the residual retires it at rest, epoch-guarded. It is not an animation completion and it reaches no Product state |
+| A mid-flight retarget computed culling from rest while the camera rebased from the frame on the glass — two different states, so the renderer could cull an object that was visibly on screen | the corridor is an ENVELOPE, rebased exactly as the residual is. Whatever the plane shows is inside it by construction, with no shared value read during render |
+| The endpoint box was not a bound. Translation and reinforcement animate independently, so the product of two monotone factors can reach a screen position neither endpoint represents — critical damping proves nothing about it | interval arithmetic over the component RANGES. It answers for every assignment at once, so timing, delay and lead cannot make it wrong |
+| An unrepresentable transition returned `AT_REST`, so the world changed viewpoint with no travel, no dip and no resolve — a bare, uncovered cut | representability is asked before rest. Such a change is a `CUT_AND_RESOLVE` with a zero beat, so the cut and the dip that covers it land in the same frame |
+| The dip's depth was derived from the weight already on the glass. R2 caught half of it — with a beat the sample is stale by the time it lands and drops the plane backwards — and the branch that fixed the blink opened a worse hole: a cut arriving late in a running resolve was covered by whatever remained, which at 0.99 opacity is nothing. Under reduced motion every travel is a cut, so that was the ordinary case | the dip is the constant `REDUCED_RESOLVE_FROM_OPACITY`, issued with the same delay as the cut. A constant can be neither stale nor shallow, and two cuts in quick succession read as two cuts — which is what they are |
+
+**`COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12`.**
+
+R1 narrowed the composite cause from `APPLIED` to `APPLIED` + `LANDED`. That was necessary and not
+sufficient, and R3 accepts the review's reading: a pending token has no owner. A landed composite
+can arm one while the Map is between projections and cannot consume it, the accessible viewport
+routes stay deliberately reachable in exactly that gap, and the next camera change on a freshly
+mounted Map would then wear a beat belonging to an act a later action has already superseded.
+
+No narrowing repairs that, because the defect is the shape rather than the condition. A mailbox is
+not a binding; only one exact transition, one owner generation, one shot, invalidated by staleness
+would be. Which canonical change an already-returned outcome belongs to is a composition fact this
+owner does not have and cannot acquire without taking T-12's integration ownership.
+
+So the stateful channel does not ship. `presentationTravelPlan` still accepts the cause and still
+returns the beat — the choreography is real and stays tested — and nothing in production can produce
+one. The camera passes `null` unconditionally.
+
+**Carried forward, not fixed here.** Presentation culling during a DIRECT drag (M0) is still T-04's
+resting viewport cull: the surface does not re-render while a finger is down, by design, so a drag
+that carries an object in from beyond the cull margin does not repaint until the `PAN` commits. That
+is pre-existing behaviour, unchanged by T-10, and outside R3's M4/M3 scope — recorded here rather
+than left to be rediscovered.
+
 ## 11. Rejected patterns
 
 Field resonance · neighbour ripple · ambient breathing · velocity-based node size · arrival breath ·

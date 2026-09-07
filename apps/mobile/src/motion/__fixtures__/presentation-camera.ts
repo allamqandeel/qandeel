@@ -58,6 +58,9 @@ export function stubPresentationCamera(options: { center: PresentationPoint; red
   const drag = { x: 0, y: 0 };
   const planeOpacity = box(1) as unknown as SharedValue<number>;
   const dragging = box(0) as unknown as SharedValue<number>;
+  // Bumped by every mover, exactly as the real binding does, so a surface test can drive the
+  // stale/fresh distinction a rest notification has to make.
+  const epoch = box(0) as unknown as SharedValue<number>;
   const planeTransform = {
     get value() {
       const [x, y, scale] = planeTransformTriple(residual);
@@ -87,12 +90,14 @@ export function stubPresentationCamera(options: { center: PresentationPoint; red
     objectScale,
     planeOpacity,
     dragging,
+    epoch,
     reducedMotion: options.reducedMotion === true,
     changes,
     counts,
     drag,
     grab: () => {
       counts.grab += 1;
+      epoch.set(epoch.get() + 1);
     },
     dragBy: (changeX: number, changeY: number) => {
       counts.drag += 1;
@@ -105,17 +110,21 @@ export function stubPresentationCamera(options: { center: PresentationPoint; red
     },
     applyCanonicalChange: (change: CanonicalCameraChange) => {
       changes.push(change);
+      epoch.set(epoch.get() + 1);
       return { kind: 'AT_REST', translationMs: 0, zoomMs: 0, zoomDelayMs: 0, spatialDelayMs: 0, resolveMs: 0, dampingRatio: 1 };
     },
     resolveToRest: () => {
       counts.resolveToRest += 1;
+      epoch.set(epoch.get() + 1);
       residual = RESIDUAL_AT_REST;
     },
     reset: () => {
       counts.reset += 1;
+      epoch.set(epoch.get() + 1);
       residual = RESIDUAL_AT_REST;
     },
     canonicalPointAt: (point: PresentationPoint) => screenToResidual(point, residual, options.center),
+    readResidual: () => residual,
     setResidual: (next: PresentationResidual) => {
       residual = next;
     },

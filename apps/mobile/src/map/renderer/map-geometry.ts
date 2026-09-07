@@ -66,6 +66,38 @@ export interface PlacedScene {
   readonly center: ScreenPoint;
 }
 
+/**
+ * The identity of one rendered locus, independent of any camera.
+ *
+ * ONE definition, used both to key a placed node and to state authoritative membership, so the two
+ * can never drift apart. It is derived from the scene alone — an object's key and the locus's own
+ * identifier — and names no position, no viewport and no projection.
+ */
+export function locusNodeKey(objectKey: string, locus: MapSceneLocus): string {
+  return locus.kind === 'THREAD_HOME' ? `${objectKey}@THREAD_HOME:${locus.threadId}` : `${objectKey}@THREAD_READING:${locus.bindingId}`;
+}
+
+/** The identity of one ungeographic entry. Same rule: the scene decides it, the camera never does. */
+export function ungeographicNodeKey(objectKey: string): string {
+  return `${objectKey}@UNGEOGRAPHIC`;
+}
+
+/**
+ * Every locus the scene discloses, as identities — the authoritative membership of this `V`.
+ *
+ * Deliberately NOT derived from `placeScene`. A placement omits a locus whose address is not
+ * finitely representable from the current camera, which is a fact about the projection and not
+ * about the world: the same locus becomes representable again when the camera moves, and a set
+ * built from placements would then read that as the locus having just become known. Membership is
+ * asked of the scene, so representability, culling and the viewport cannot answer it (R3-01).
+ */
+export function sceneMembershipKeys(scene: MapScene): ReadonlySet<string> {
+  const keys = new Set<string>();
+  for (const object of scene.objects) for (const locus of object.loci) keys.add(locusNodeKey(object.key, locus));
+  for (const object of scene.ungeographic) keys.add(ungeographicNodeKey(object.key));
+  return keys;
+}
+
 function ringOffset(ordinal: number): ScreenPoint {
   const turn = Math.floor(ordinal / APPEARANCE_RING_SLOTS);
   const slot = ordinal % APPEARANCE_RING_SLOTS;
@@ -97,7 +129,7 @@ export function placeScene(scene: MapScene, camera: MapCamera, envelope: Viewpor
       const x = projected.x + offset.x;
       const y = projected.y + offset.y;
       nodes.push({
-        key: locus.kind === 'THREAD_HOME' ? `${object.key}@THREAD_HOME:${locus.threadId}` : `${object.key}@THREAD_READING:${locus.bindingId}`,
+        key: locusNodeKey(object.key, locus),
         objectKey: object.key,
         family: object.family,
         id: object.id,
@@ -123,7 +155,7 @@ export function placeScene(scene: MapScene, camera: MapCamera, envelope: Viewpor
     const x = envelope.insetLeft + REGISTER_INSET_POINTS + column * REGISTER_SLOT_POINTS;
     const y = registerY - row * REGISTER_SLOT_POINTS;
     nodes.push({
-      key: `${object.key}@UNGEOGRAPHIC`,
+      key: ungeographicNodeKey(object.key),
       objectKey: object.key,
       family: object.family,
       id: object.id,

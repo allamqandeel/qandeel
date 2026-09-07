@@ -32,7 +32,6 @@ import {
   RESIDUAL_AT_REST,
   counterScale,
   presentationTravelPlan,
-  resolveFromOpacity,
   rebasedResidual,
   residualIsAtRest,
   residualToScreen,
@@ -293,16 +292,21 @@ describe('T10 — the travel plan (A17, A18, A19, A20, A33, A34)', () => {
     expect(reduced.resolveMs).toBeLessThanOrEqual(180);
   });
 
-  it('a cut-and-resolve retargets rather than restarts (/review-animations)', () => {
-    // At rest the plane dips, which is the whole cue.
-    expect(resolveFromOpacity(1)).toBe(REDUCED_RESOLVE_FROM_OPACITY);
-    // Mid-resolve it continues from the weight on the glass. Re-seeding the dip would drop the
-    // plane back down and read as a blink when two acts land inside one resolve.
-    expect(resolveFromOpacity(0.7)).toBe(0.7);
-    expect(resolveFromOpacity(REDUCED_RESOLVE_FROM_OPACITY)).toBe(REDUCED_RESOLVE_FROM_OPACITY);
-    // It never brightens the plane on the way in, and it never trusts a non-finite reading.
-    expect(resolveFromOpacity(0.2)).toBeLessThan(REDUCED_RESOLVE_FROM_OPACITY);
-    expect(resolveFromOpacity(Number.NaN)).toBe(REDUCED_RESOLVE_FROM_OPACITY);
+  it('the dip that covers a cut has ONE fixed depth (/review-animations R3)', () => {
+    // Two cuts inside one resolve must read as two cuts. Deriving the dip from the weight already on
+    // the glass fails that in both directions: with a beat the sample is stale by the time it lands
+    // and drops the plane backwards, and without one a cut arriving late in a resolve is covered by
+    // whatever is left — at 0.99 opacity, by nothing at all. A constant cannot be either, and the
+    // plan carries no per-act depth for anything to derive one from.
+    expect(REDUCED_RESOLVE_FROM_OPACITY).toBeGreaterThan(0);
+    expect(REDUCED_RESOLVE_FROM_OPACITY).toBeLessThan(1);
+    const cut = plan({ tx: 40, ty: 0, zoom: 1 }, { representable: false });
+    expect(cut.kind).toBe('CUT_AND_RESOLVE');
+    expect(Object.keys(cut)).not.toContain('resolveFromOpacity');
+    expect(Object.keys(cut)).not.toContain('opacityFrom');
+    // The cut and the dip share one delay, so they cannot be issued in different frames.
+    expect(cut.spatialDelayMs).toBe(0);
+    expect(cut.resolveMs).toBeGreaterThan(0);
   });
 
   it('a destination that is not representable resolves in place rather than inventing a path', () => {

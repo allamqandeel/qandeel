@@ -100,11 +100,32 @@ export function residualIsAtRest(residual: PresentationResidual): boolean {
 }
 
 export function presentationTravelPlan(input: PresentationTravelInput): PresentationTravelPlan {
-  if (residualIsAtRest(input.residual)) return AT_REST_PLAN;
+  // R3-03 — representability is asked FIRST, because "the residual is at rest" means two completely
+  // different things.
+  //
+  // For a representable change it means the glass already shows canonical truth: the ordinary result
+  // of a completed drag, whose committed translation IS the residual. Nothing to resolve, nothing to
+  // animate.
+  //
+  // For an UNREPRESENTABLE one it means the opposite — the residual was set to rest because there is
+  // no continuous path to preserve, not because the frame is correct. Letting the rest test answer
+  // first returned `AT_REST` for exactly that case, so the world changed viewpoint with no travel,
+  // no dip and no resolve at all: a bare cut, uncovered. The cut is legitimate there; showing it
+  // without the resolve that explains it is not.
+  if (input.representable && residualIsAtRest(input.residual)) return AT_REST_PLAN;
 
   // The composite beat is the only thing a cause changes, and it changes only WHEN the spatial
   // half starts being shown. The act itself completed before this function was called.
-  const spatialDelayMs = input.cause === 'GO_LIVE_AND_LOCATE' ? MOTION_DURATIONS_MS.compositeSpatialBeat : 0;
+  //
+  // R3-03: an UNREPRESENTABLE destination earns no beat, ever. A beat is a held frame — the world
+  // stays where it looks, so the second truth reads as a consequence of the first — and when the
+  // destination is not finitely representable there is no frame to hold: the residual has nothing
+  // to preserve and the cut is the whole transition. Delaying the dip there would expose the cut at
+  // full weight and explain it 110 ms afterwards, which is the teleport the North Star forbids.
+  // Reduced motion is a different case and keeps its beat: the residual there IS representable, so
+  // the beat holds a true preserved frame and the cut still lands under the dip that covers it.
+  const spatialDelayMs =
+    input.cause === 'GO_LIVE_AND_LOCATE' && input.representable ? MOTION_DURATIONS_MS.compositeSpatialBeat : 0;
 
   if (input.reducedMotion || !input.representable) {
     // Same act, same destination, same visibility, same availability, same copy — only the

@@ -20,6 +20,23 @@
  * mutates `RH`, decides locatability, decides entitlement, decides whether an object exists, or
  * decides where the camera lands. A Product act is already true before any of this explains it,
  * and a motion that never finishes changes nothing about what is true.
+ *
+ * ## `COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12`
+ *
+ * The composite choreography — the explanatory beat between the two truths of Go Live + Locate —
+ * remains here as a PURE, tested plan: `presentationTravelPlan` accepts the cause and returns the
+ * beat. What does NOT ship is a way to arm it.
+ *
+ * A generic pending mailbox is exactly the wrong shape for it. An outcome can be noted while the Map
+ * is between projections and therefore cannot consume it, and the accessible viewport routes stay
+ * deliberately reachable during that gap — so a beat armed by one act could be worn by an unrelated
+ * later camera change once a fresh Map mounts. Narrowing the arming condition does not fix that;
+ * only binding the cause to ONE exact transition does, and the transition is not knowable here. This
+ * owner is deliberately not app-shell mounted, and which canonical change an outcome belongs to is a
+ * composition fact that T-12 owns. Binding it here would mean taking that ownership.
+ *
+ * So the capability is kept and the arming is deferred. No production path can produce a cause, and
+ * the camera passes `null` unconditionally.
  */
 export {
   ACT_DAMPING_RATIO,
@@ -31,12 +48,17 @@ export {
   REST_EPSILON_ZOOM,
   TRAVEL_CEILING_DIAGONALS,
   TRAVEL_LONG_FLIGHT_DIAGONALS,
-  resolveFromOpacity,
   travelDurationMs,
 } from './tokens';
 
-export type { PresentedCandidate, PresentedViewport } from './presentation-camera/culling';
-export { isPresentedDuringTravel } from './presentation-camera/culling';
+export type { PresentationResidualEnvelope, PresentedCandidate, PresentedViewport } from './presentation-camera/culling';
+export {
+  RESIDUAL_ENVELOPE_AT_REST,
+  envelopeHull,
+  isPresentedWithinEnvelope,
+  rebasedEnvelope,
+  residualEnvelope,
+} from './presentation-camera/culling';
 
 export type { PresentationPoint, PresentationResidual } from './presentation-camera/residual';
 export {
@@ -75,9 +97,6 @@ export { createArrivalRegistry } from './presence/arrival-registry';
 
 export type { DisclosureArrivalProps } from './presence/DisclosureArrival';
 export { DisclosureArrival } from './presence/DisclosureArrival';
-
-export type { ExecutedReturnOutcome, MotionCauseChannel } from './cause/motion-cause';
-export { createMotionCauseChannel } from './cause/motion-cause';
 
 export type { AuthorityGeneration } from './runtime/authority';
 export { useAuthorityGeneration } from './runtime/authority';

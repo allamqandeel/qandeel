@@ -166,6 +166,38 @@ readers meet them.
 `TRAVEL` is deliberately excluded from R2-a: its rebase PRESERVES the on-glass frame, so holding
 that frame for the beat reads as the world waiting. Only a discarded frame needs the cover.
 
+### R3 additions (§7 of the R3 contract)
+
+Every R3 defect was invisible to a passing test for the same reason: the suites exercised a prop
+replacement where the Product performs a canonical handoff. The proofs below drive the real acts.
+
+| | Guard | Where |
+| --- | --- | --- |
+| R3-a | semantic arrival history is presentation-independent | GATE "R3-01" — the membership derivation takes a scene and names no camera, envelope, viewport, projection or placement; GATE "R1-03" pins the surface reading it |
+| R3-b | a technical stale handoff does not erase same-authority history | GATE "R1-03" — only an accepted scene writes the record; R3-INT `R3-A01`/`R3-A02` drive a real `ZOOM_SEMANTIC` commit through the stale gap |
+| R3-c | authority replacement DOES erase it | GATE "R1-03"; R1-INT Case E |
+| R3-d | finite projection cannot create a disclosure arrival | R3-INT `R3-A03` — a locus unprojectable at one rung and projectable at the next receives no arrival; GATE "R3-01" |
+| R3-e | the culling corridor has an explicit retirement lifecycle | GATE "R3-02" — a threshold reaction, epoch-guarded, whose receiver names no store, dispatch or act; R3-INT `R3-A07`/`R3-A08` |
+| R3-f | the retarget corridor starts from the same state as the camera rebase | GATE "R3-02" — the corridor is rebased, never re-seeded from rest; R3-INT `R3-A05`, including the affine containment over the whole previous corridor |
+| R3-g | combined scale + translation culling is conservatively proven | GATE "§6.1" — interval arithmetic over all four corners, no endpoint arithmetic left; R3-INT `R3-A06` sweeps translation × reinforcement independently |
+| R3-h | the screen-space register is excluded from the world corridor | GATE "R3-02"; R3-INT `R3-A09` |
+| R3-i | an unrepresentable cut cannot be uncovered | GATE "R3-03" — representability is asked before rest, the beat is zero, and no residual is written before the plan that covers it; R3-INT `R3-A10`–`R3-A12` |
+| R3-j | no stale composite cause can survive to an unrelated transition | GATE "R1-05, R3-04" — the channel does not ship, the camera passes `null`, and `COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12` is recorded |
+| R3-k | the dip that covers a cut cannot be derived, so it can be neither stale nor shallow | GATE "§16" — the dip is the constant, the camera reads no weight at all, and `resolveFromOpacity` is refused by name; CAM "one fixed depth"; the cut branch is proven to carry exactly one delay |
+
+**What a rendered test cannot say here.** jest-expo mocks the native side of Reanimated, so every
+animation completes inside the tick that starts it and `useAnimatedReaction` never fires. There is
+no observable mid-travel frame in that environment: the corridor claims are therefore proven where
+they are decided — over the envelope arithmetic and the wiring — and the rendered suites assert only
+what does not depend on a residual in flight. The retirement's behaviour is a device item.
+
+**Pre-mortem additions.** PM-21 projection gap erases disclosure continuity · PM-22 presentation
+representability masquerades as disclosure · PM-23 travel culling never returns to rest · PM-24
+retarget culling starts from a different frame than the motion rebase · PM-25 endpoint AABB assumed
+safe for coupled zoom + translation · PM-26 unrepresentable composite cut exposed before its dip ·
+PM-27 stateful composite cause survives the transition it was intended for. Each is carried by the
+correspondingly lettered guard above.
+
 **Forward safety.** No whole-repo file count, no migration ceiling, no whole-file workflow hash as
 primary proof, no global test-count pin, no mutable-global ceiling. `npm run test:forward-safety-contract`
 runs the whole contract set — this one included — against a tree carrying the authorized future

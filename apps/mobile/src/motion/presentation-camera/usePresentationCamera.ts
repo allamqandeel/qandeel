@@ -28,6 +28,7 @@ import {
   Easing,
   ReduceMotion,
   cancelAnimation,
+  useAnimatedReaction,
   useDerivedValue,
   useReducedMotion,
   useSharedValue,
@@ -37,8 +38,8 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 
-import { MOTION_DURATIONS_MS, QANDEEL_EASE_OUT, resolveFromOpacity } from '../tokens';
-import type { DerivedValue, SharedValue } from '../runtime/bridge';
+import { MOTION_DURATIONS_MS, QANDEEL_EASE_OUT, REDUCED_RESOLVE_FROM_OPACITY } from '../tokens';
+import { handoffToProduct, type DerivedValue, type SharedValue } from '../runtime/bridge';
 import {
   RESIDUAL_AT_REST,
   counterScale,
@@ -48,7 +49,7 @@ import {
   type PresentationPoint,
   type PresentationResidual,
 } from './residual';
-import { presentationTravelPlan, type PresentationMotionCause, type PresentationTravelPlan } from './travel-plan';
+import { presentationTravelPlan, residualIsAtRest, type PresentationTravelPlan } from './travel-plan';
 
 const EASE_OUT = Easing.bezier(QANDEEL_EASE_OUT[0], QANDEEL_EASE_OUT[1], QANDEEL_EASE_OUT[2], QANDEEL_EASE_OUT[3]);
 
@@ -90,8 +91,18 @@ export interface PresentationCameraOptions {
   readonly center: PresentationPoint;
   /** The viewport diagonal, in points, so a travel is measured against the screen it crosses. */
   readonly diagonalPoints: number;
-  /** Reads and clears the cause of the change being shown. Absent means: never a composite beat. */
-  readonly cause?: { readonly take: () => PresentationMotionCause | null };
+  /**
+   * Called once when the presentation actually reaches rest, with the epoch current at that moment.
+   *
+   * PRESENTATION ONLY, and the narrowest possible signal: it says the plane has stopped, so a widened
+   * travel culling corridor is no longer needed. It carries no position, no target and no act, and
+   * the receiver may not dispatch — a corridor that outlived its travel is a paint cost, never a
+   * Product fact. It is a threshold reaction on the residual, not an animation completion, and the
+   * epoch it carries lets a notification that lost a race to a new motion be discarded (R3-02a).
+   *
+   * Must be referentially stable; it is captured by a worklet reaction.
+   */
+  readonly onTravelCorridorRetired?: (epoch: number) => void;
 }
 
 export interface PresentationCameraBinding {
@@ -110,6 +121,13 @@ export interface PresentationCameraBinding {
   readonly planeOpacity: SharedValue<number>;
   /** `1` while a finger owns the plane. Chooses direct tracking over easing; decides nothing else. */
   readonly dragging: SharedValue<number>;
+  /**
+   * How many times the presentation has been re-aimed. Presentation only, and never a Product count.
+   *
+   * It exists so a rest notification can be recognised as belonging to a motion that has since been
+   * replaced. Read at a bounded boundary — a notification, never a frame.
+   */
+  readonly epoch: SharedValue<number>;
   /** Whether this device asked for reduced motion. Read once at start, exactly as the platform reports it. */
   readonly reducedMotion: boolean;
   /** UI runtime: a finger arrives. Cancels the running settle and takes the frame. */
@@ -129,10 +147,20 @@ export interface PresentationCameraBinding {
    * placement space. A bounded read at a pointer event, never per frame.
    */
   readonly canonicalPointAt: (point: PresentationPoint) => PresentationPoint;
+  /**
+   * The residual right now, for a presentation owner that has to agree with the plane about where it
+   * is.
+   *
+   * A BOUNDED read at a commit or event boundary — never during render, never per frame, and never
+   * to drive anything visual: the plane is drawn from the shared values themselves on the UI runtime.
+   * Its one caller reads it once per canonical change, so the culling corridor is the corridor of the
+   * motion actually running rather than one inherited from a travel that already finished (R3-02).
+   */
+  readonly readResidual: () => PresentationResidual;
 }
 
 export function usePresentationCamera(options: PresentationCameraOptions): PresentationCameraBinding {
-  const { center, diagonalPoints, cause } = options;
+  const { center, diagonalPoints, onTravelCorridorRetired } = options;
   const reducedMotion = useReducedMotion();
 
   const tx = useSharedValue(0);
@@ -140,6 +168,25 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
   const zoom = useSharedValue(1);
   const planeOpacity = useSharedValue(1);
   const dragging = useSharedValue(0);
+  const epoch = useSharedValue(0);
+
+  // Whether the plane is showing canonical truth exactly AND no finger owns it. A derived value
+  // rather than a frame callback: it is recomputed on the UI runtime with the transform it already
+  // recomputes, and it crosses to the Product runtime only on the edge below.
+  const settled = useDerivedValue(() =>
+    dragging.get() === 0 && residualIsAtRest({ tx: tx.get(), ty: ty.get(), zoom: zoom.get() }) ? 1 : 0,
+  );
+  useAnimatedReaction(
+    () => settled.get(),
+    (now, previous) => {
+      'worklet';
+      // ONE crossing per motion, on the rising edge only: never per frame, and never on mount —
+      // `previous === null` is the first evaluation, which has no motion behind it to retire.
+      if (now !== 1 || previous === null || previous === 1) return;
+      if (onTravelCorridorRetired !== undefined) handoffToProduct(onTravelCorridorRetired, epoch.get());
+    },
+    [epoch, onTravelCorridorRetired, settled],
+  );
 
   const planeTransform = useDerivedValue<PlaneTransform>(() => {
     const [x, y, scale] = planeTransformTriple({ tx: tx.get(), ty: ty.get(), zoom: zoom.get() });
@@ -153,8 +200,9 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
     cancelAnimation(tx);
     cancelAnimation(ty);
     cancelAnimation(zoom);
+    epoch.set(epoch.get() + 1);
     dragging.set(1);
-  }, [dragging, tx, ty, zoom]);
+  }, [dragging, epoch, tx, ty, zoom]);
 
   const dragBy = useCallback(
     (changeX: number, changeY: number) => {
@@ -176,36 +224,42 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
   }, [dragging]);
 
   const resolveToRest = useCallback(() => {
+    epoch.set(epoch.get() + 1);
     const duration = reducedMotion ? 0 : MOTION_DURATIONS_MS.localResolve;
     tx.set(withTiming(0, { duration, easing: EASE_OUT }));
     ty.set(withTiming(0, { duration, easing: EASE_OUT }));
     zoom.set(withTiming(1, { duration, easing: EASE_OUT }));
-  }, [reducedMotion, tx, ty, zoom]);
+  }, [epoch, reducedMotion, tx, ty, zoom]);
 
   const reset = useCallback(() => {
     cancelAnimation(tx);
     cancelAnimation(ty);
     cancelAnimation(zoom);
+    epoch.set(epoch.get() + 1);
     tx.set(RESIDUAL_AT_REST.tx);
     ty.set(RESIDUAL_AT_REST.ty);
     zoom.set(RESIDUAL_AT_REST.zoom);
     planeOpacity.set(1);
     dragging.set(0);
-  }, [dragging, planeOpacity, tx, ty, zoom]);
+  }, [dragging, epoch, planeOpacity, tx, ty, zoom]);
 
   const applyCanonicalChange = useCallback(
     (change: CanonicalCameraChange): PresentationTravelPlan => {
+      epoch.set(epoch.get() + 1);
       const k = Number.isFinite(change.k) && change.k > 0 ? change.k : 1;
       const representable = change.destination !== null;
       const d = change.destination ?? { x: 0, y: 0 };
 
-      // Rebased from the CURRENT residual through a functional update, so a finger writing at this
-      // very instant loses nothing: the frame that is on the glass is preserved exactly.
+      // Rebased from the CURRENT residual, so a finger writing at this very instant loses nothing:
+      // the frame that is on the glass is preserved exactly.
+      //
+      // R3-03: the rebase is COMPUTED here and WRITTEN by the branch that owns it. Writing it before
+      // the plan existed is what left an unrepresentable cut exposed — there `rebased` is rest, so
+      // the pre-write dropped the world to the destination at full weight and the delayed dip
+      // explained it afterwards. A residual is now only ever written together with whatever covers
+      // it.
       const before: PresentationResidual = { tx: tx.get(), ty: ty.get(), zoom: zoom.get() };
       const rebased = representable ? rebasedResidual(before, k, d) : RESIDUAL_AT_REST;
-      tx.set(rebased.tx);
-      ty.set(rebased.ty);
-      zoom.set(rebased.zoom);
 
       const plan = presentationTravelPlan({
         residual: rebased,
@@ -213,7 +267,10 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
         representable,
         reducedMotion,
         depthChanged: change.depthChanged,
-        cause: cause?.take() ?? null,
+        // R3-04: no production path can arm the composite beat. The pure plan still accepts one, and
+        // is tested for it, because the choreography is real and T-12 owns binding it to the exact
+        // transition its outcome belongs to — see COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12.
+        cause: null,
       });
 
       if (plan.kind === 'AT_REST') {
@@ -228,12 +285,15 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
       if (plan.kind === 'CUT_AND_RESOLVE') {
         // The cut and the dip that covers it land in the SAME frame, beat or no beat.
         //
-        // A cut is only acceptable because the resolve covers it. Dropping the residual now while
-        // delaying the dip by the composite beat would show the world JUMP to the new viewpoint at
-        // full weight and then be explained 110 ms afterwards — a teleport with a late apology, and
-        // the one thing the North Star forbids outright. `TRAVEL` has no such problem: its rebase
-        // PRESERVES the on-glass frame, so holding that frame for the beat reads as the world
-        // waiting. Here the frame is discarded, so the hold has to be discarded with it.
+        // The rebase is written first, because it is what the beat would HOLD. When the destination
+        // was representable the rebased residual is a true preserved frame, and holding it says "the
+        // world stayed where it looks" before the cut lands under the dip. When it was NOT
+        // representable the rebase IS rest, there is no frame to hold, and R3-03 has already reduced
+        // the beat to zero — so both writes happen in this frame, together with the dip that covers
+        // them. Either way no cut is ever exposed at full weight and explained afterwards.
+        tx.set(rebased.tx);
+        ty.set(rebased.ty);
+        zoom.set(rebased.zoom);
         if (plan.spatialDelayMs > 0) {
           const held = (target: number) =>
             withDelay(plan.spatialDelayMs, withTiming(target, { duration: 0, reduceMotion: ReduceMotion.Never }));
@@ -250,27 +310,37 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
         // explicit: under reduced motion a plain `withTiming` would jump to its end and the resolve
         // — the only thing left explaining that the reader went somewhere — would never play.
         //
-        // It RETARGETS rather than restarts, and a resolve that is ALREADY running is continued
-        // rather than re-seeded. Seeding it would mean sampling the weight NOW and applying it after
-        // the beat: by then the plane has climbed past that sample, so the seed drops it backwards
-        // and reads as a blink — precisely the restart-from-zero failure a sequence invites. Nothing
-        // is sampled ahead of when it is used; the only seeded case is a plane at full weight, which
-        // has no running resolve to contradict.
-        const shownOpacity = planeOpacity.get();
+        // The dip has a FIXED depth, and it is issued with the same delay as the cut, so the two
+        // always land in the same frame. Nothing is sampled, which is the whole correction.
+        //
+        // An earlier pass sampled the weight on the glass and reused it as the seed. `/review-
+        // animations` caught the first half of that: with a beat, the plane climbed past the sample
+        // before it was applied, so the seed dropped it backwards and read as a blink. Branching
+        // around it — continuing a running resolve instead of re-seeding — fixed the blink and
+        // opened a worse hole: a second cut landing late in a resolve then arrived at ~0.99 opacity,
+        // which is a viewpoint change with nothing covering it. Under reduced motion every travel is
+        // a cut, so that was the ordinary case rather than the rare one.
+        //
+        // A constant cannot be stale, whenever it is applied. Two cuts in quick succession therefore
+        // read as two cuts, which is what they are.
         planeOpacity.set(
           withDelay(
             plan.spatialDelayMs,
-            shownOpacity < 1
-              ? withTiming(1, { duration: plan.resolveMs, easing: EASE_OUT, reduceMotion: ReduceMotion.Never })
-              : withSequence(
-                  withTiming(resolveFromOpacity(shownOpacity), { duration: 0, reduceMotion: ReduceMotion.Never }),
-                  withTiming(1, { duration: plan.resolveMs, easing: EASE_OUT, reduceMotion: ReduceMotion.Never }),
-                ),
+            withSequence(
+              withTiming(REDUCED_RESOLVE_FROM_OPACITY, { duration: 0, reduceMotion: ReduceMotion.Never }),
+              withTiming(1, { duration: plan.resolveMs, easing: EASE_OUT, reduceMotion: ReduceMotion.Never }),
+            ),
           ),
         );
         return plan;
       }
 
+      // TRAVEL. The rebase goes on the glass first — that IS the preserved frame — and each spring
+      // then starts from it. A beat here holds a frame that is true, so the world visibly waits
+      // rather than jumping.
+      tx.set(rebased.tx);
+      ty.set(rebased.ty);
+      zoom.set(rebased.zoom);
       if (plan.translationMs > 0) {
         const spring = { duration: plan.translationMs, dampingRatio: plan.dampingRatio };
         tx.set(withDelay(plan.spatialDelayMs, withSpring(0, spring)));
@@ -283,7 +353,7 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
       }
       return plan;
     },
-    [cause, diagonalPoints, planeOpacity, reducedMotion, tx, ty, zoom],
+    [diagonalPoints, epoch, planeOpacity, reducedMotion, tx, ty, zoom],
   );
 
   const canonicalPointAt = useCallback(
@@ -292,6 +362,8 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
     [center, tx, ty, zoom],
   );
 
+  const readResidual = useCallback((): PresentationResidual => ({ tx: tx.get(), ty: ty.get(), zoom: zoom.get() }), [tx, ty, zoom]);
+
   return useMemo(
     () => ({
       planeTransform,
@@ -299,6 +371,7 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
       objectScale,
       planeOpacity,
       dragging,
+      epoch,
       reducedMotion,
       grab,
       dragBy,
@@ -307,12 +380,15 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
       resolveToRest,
       reset,
       canonicalPointAt,
+      readResidual,
     }),
     [
       applyCanonicalChange,
       canonicalPointAt,
       dragBy,
+      readResidual,
       dragging,
+      epoch,
       grab,
       objectScale,
       objectTransform,

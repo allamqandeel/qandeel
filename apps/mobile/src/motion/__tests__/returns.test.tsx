@@ -40,10 +40,10 @@ import { contextAt, providing, providingNothing, returnSurface, returnTestStore,
 import {
   MOTION_DURATIONS_MS,
   RESIDUAL_AT_REST,
-  createMotionCauseChannel,
   presentationTravelPlan,
   rebasedResidual,
   type CanonicalCameraChange,
+  type PresentationMotionCause,
   type PresentationTravelPlan,
 } from '..';
 import { canvasProps } from '../__fixtures__/canvas';
@@ -81,7 +81,7 @@ interface Choreography {
 async function choreographyOf(
   store: CanonicalStore,
   run: () => void,
-  options: { cause?: ReturnType<typeof createMotionCauseChannel>; reducedMotion?: boolean } = {},
+  options: { cause?: PresentationMotionCause; reducedMotion?: boolean } = {},
 ): Promise<Choreography> {
   const scene = paintScene();
   const before = cameraOf(store);
@@ -103,7 +103,7 @@ async function choreographyOf(
     );
   });
 
-  const plans = motion.changes.map((change) => {
+  const plans = motion.changes.map((change, index) => {
     const residual = change.destination === null ? RESIDUAL_AT_REST : rebasedResidual(RESIDUAL_AT_REST, change.k, change.destination);
     return presentationTravelPlan({
       residual,
@@ -111,7 +111,11 @@ async function choreographyOf(
       representable: change.destination !== null,
       reducedMotion: options.reducedMotion === true,
       depthChanged: change.depthChanged,
-      cause: options.cause?.take() ?? null,
+      // One-shot by construction: a beat belongs to the transition the act produced and to no later
+      // one. Production cannot arm a cause at all — see
+      // `COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12` — so what this exercises is the PURE
+      // choreography capability T-12 will bind to an exact transition.
+      cause: index === 0 ? (options.cause ?? null) : null,
     });
   });
   return { changes: motion.changes, plans };
@@ -169,16 +173,15 @@ describe('T10-A38, A46…A55 — the six return choreographies', () => {
       temporal: { kind: 'PINNED', at: SP(3) },
       liveFocus: { kind: 'ESTABLISHED_THREAD', threadId: 'thread-b' },
     });
-    const cause = createMotionCauseChannel();
     const { changes, plans } = await choreographyOf(
       store,
       () => {
         const outcome = goLiveAndLocate(returnSurface(store), { liveContext: providing(contextAt(here(6, 6))) });
+        // The ONE spatial status that means a camera moved because of this act. It is what a bound
+        // cause would have to be derived from, and T-12 owns that binding.
         expect(outcome.outcome === 'APPLIED' && outcome.locate).toBe('LANDED');
-        // Written from the outcome T-07 has ALREADY returned, exactly as T-08 reports it.
-        cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', outcome);
       },
-      { cause },
+      { cause: 'GO_LIVE_AND_LOCATE' },
     );
     expect(store.getState().temporal).toEqual({ kind: 'FOLLOW_LIVE' });
     expect(changes).toHaveLength(1);
@@ -190,15 +193,13 @@ describe('T10-A38, A46…A55 — the six return choreographies', () => {
 
   it('A49 — Go Live + Locate with no landing shows no spatial phase whatsoever', async () => {
     const store = returnTestStore({ liveHead: 6, temporal: { kind: 'PINNED', at: SP(3) }, liveFocus: { kind: 'NONE' } });
-    const cause = createMotionCauseChannel();
     const { changes } = await choreographyOf(
       store,
       () => {
         const outcome = goLiveAndLocate(returnSurface(store), { liveContext: providingNothing });
         expect(outcome.outcome).toBe('APPLIED');
-        cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', { outcome: 'APPLIED', locate: 'LANDED' });
       },
-      { cause },
+      { cause: 'GO_LIVE_AND_LOCATE' },
     );
     expect(store.getState().temporal).toEqual({ kind: 'FOLLOW_LIVE' });
     // The temporal half stood alone. No camera moved, so the interaction is complete with zero
@@ -301,20 +302,49 @@ describe('T10-A38, A46…A55 — the six return choreographies', () => {
     expect(plans[0].dampingRatio).toBe(1);
   });
 
-  it('A55 — a cause is one-shot and cannot attach itself to a later, unrelated act', () => {
-    const cause = createMotionCauseChannel();
-    cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', { outcome: 'APPLIED', locate: 'LANDED' });
-    expect(cause.take()).toBe('GO_LIVE_AND_LOCATE');
-    // Consumed. The next camera change — whatever moved it — explains itself.
-    expect(cause.take()).toBeNull();
-    // A refused or no-op act arms nothing at all.
-    cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', { outcome: 'REJECTED' });
-    expect(cause.take()).toBeNull();
-    // And no other act can borrow the composite beat.
-    for (const id of ['BACK_ONE_STEP', 'EXACT_RETURN', 'RETURN_LIVE_HEAD', 'RETURN_LIVE_FOCUS', 'RETURN_WORLD']) {
-      cause.noteReturnOutcome(id, { outcome: 'APPLIED', locate: 'LANDED' });
-      expect(cause.take()).toBeNull();
-    }
+  it('A55 (R3-04) — the beat belongs to ONE transition, and nothing in production can arm it', () => {
+    // The choreography itself is real and stays tested: a composite cause produces the beat, and a
+    // transition without one produces none. That is the whole of what T-10 knows.
+    const withBeat = presentationTravelPlan({
+      residual: { tx: 600, ty: 0, zoom: 1 },
+      viewportDiagonalPoints: diagonalPoints,
+      representable: true,
+      reducedMotion: false,
+      depthChanged: false,
+      cause: 'GO_LIVE_AND_LOCATE',
+    });
+    expect(withBeat.spatialDelayMs).toBe(MOTION_DURATIONS_MS.compositeSpatialBeat);
+    expect({ ...withBeat, spatialDelayMs: 0 }).toEqual(
+      presentationTravelPlan({
+        residual: { tx: 600, ty: 0, zoom: 1 },
+        viewportDiagonalPoints: diagonalPoints,
+        representable: true,
+        reducedMotion: false,
+        depthChanged: false,
+        cause: null,
+      }),
+    );
+
+    // An unrepresentable destination earns no beat under any cause: there is no frame to hold, so a
+    // delay there would expose the cut at full weight and explain it afterwards (R3-03).
+    expect(
+      presentationTravelPlan({
+        residual: RESIDUAL_AT_REST,
+        viewportDiagonalPoints: diagonalPoints,
+        representable: false,
+        reducedMotion: false,
+        depthChanged: false,
+        cause: 'GO_LIVE_AND_LOCATE',
+      }).spatialDelayMs,
+    ).toBe(0);
+
+    // What does NOT exist is a way to ARM it. A pending mailbox was the wrong shape: an outcome can
+    // be noted while the Map is between projections and cannot consume it, the accessible viewport
+    // routes stay reachable in exactly that gap, and a later unrelated camera change would then wear
+    // a beat it never earned. Only a binding to ONE exact transition fixes that, and which
+    // transition an outcome belongs to is a composition fact this owner does not have. That absence
+    // is a statement about source, so the gate proves it: see `tests/t10-motion-contract.test.mjs`,
+    // "R3-04 — no production path can arm the composite beat".
   });
 
   it('A56, A57 — reduced motion reaches the same canonical state by the same acts', async () => {

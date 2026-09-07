@@ -81,9 +81,11 @@ test('the motion owner is a narrow presentation layer with a stated file surface
     'presentation-camera/residual.ts',
     'presentation-camera/travel-plan.ts',
     'presentation-camera/usePresentationCamera.ts',
+    'presentation-camera/culling.ts',
     'presence/arrival.ts',
+    'presence/arrival-registry.ts',
     'presence/DisclosureArrival.tsx',
-    'cause/motion-cause.ts',
+    'runtime/authority.ts',
     'runtime/bridge.ts',
   ]) {
     assert.ok(motionProduction.includes(required), `${required} is part of the motion owner`);
@@ -169,17 +171,14 @@ test('the motion owner cannot reach a store, an executor, a projection or a Prod
   for (const id of ['PAN', 'ZOOM_SEMANTIC', 'COMMIT_MOMENT', 'COMMIT_LIVE_EDGE', 'INSPECT_OBJECT', 'SWITCH_CONTEXT', 'DIRECT_JUMP', 'COMMIT_MOMENT_AND_LOCATE', 'CHOOSE_LOCUS', 'RETURN_LIVE_HEAD', 'RETURN_LIVE_FOCUS', 'RETURN_WORLD', 'EXACT_RETURN', 'BACK_ONE_STEP']) {
     assert.equal(motionText.includes(id), false, `the motion owner must not name the act ${id}`);
   }
-  // The ONE exception is the composite identity, matched by value so the beat can exist at all.
-  // It is compared, never constructed, never dispatched, and never returned to a caller.
-  const cause = motionCode['cause/motion-cause.ts'];
-  assert.match(cause, /const COMPOSITE_RETURN_ID = 'GO_LIVE_AND_LOCATE';/u);
-  // Exactly two modules may name it: the cause TYPE that the plan reads, and the channel that
-  // matches it by value. Neither constructs, dispatches or returns a Product act.
+  // The ONE exception is the composite identity, and after R3 exactly ONE module may name it: the
+  // cause TYPE the pure plan reads. It is a value in a union, never constructed from an outcome,
+  // never dispatched, never returned to a caller, and — see the R3-04 guard — never armed.
   const namesComposite = Object.entries(motionCode)
     .filter(([, text]) => text.includes('GO_LIVE_AND_LOCATE'))
     .map(([file]) => file)
     .sort();
-  assert.deepEqual(namesComposite, ['cause/motion-cause.ts', 'presentation-camera/travel-plan.ts']);
+  assert.deepEqual(namesComposite, ['presentation-camera/travel-plan.ts']);
   assert.match(motionCode['presentation-camera/travel-plan.ts'], /export type PresentationMotionCause = 'GO_LIVE_AND_LOCATE';/u);
 });
 
@@ -297,14 +296,16 @@ test('§6.1 — nothing in production can keep an object the current V no longer
   assert.match(canvas, /const planeNodes = presented\.filter\(\(node\) => node\.region === 'WORLD_PLANE'\);/u);
   assert.match(canvas, /const registerNodes = presented\.filter\(\(node\) => node\.region === 'UNGEOGRAPHIC_REGISTER'\);/u);
   // And the surface derives it from the FULL placement through the presentation-aware test, so an
-  // object leaves the paint set only when the travel can no longer put it on the glass.
+  // object leaves the paint set only when the motion can no longer put it on the glass.
   const surface = mapCode['renderer/MapSurface.tsx'];
-  assert.match(surface, /placed\.nodes\.filter\(\(node\) =>\s*\n?\s*isPresentedDuringTravel\(/u);
-  assert.match(motionCode['presentation-camera/culling.ts'], /export function isPresentedDuringTravel\(/u);
-  // The residual it culls against OUTLIVES the commit that armed it: an incidental re-render during
-  // a travel must not collapse the presented viewport back onto the destination.
-  assert.match(surface, /readonly startResidual: PresentationResidual;/u);
-  assert.match(surface, /history\.startResidual/u);
+  assert.match(surface, /placed\.nodes\.filter\(\(node\) =>\s*\n?\s*isPresentedWithinEnvelope\(/u);
+  assert.match(motionCode['presentation-camera/culling.ts'], /export function isPresentedWithinEnvelope\(/u);
+  // R3-02c re-anchor: the endpoint box is gone. An endpoint box is not a bound for a screen position
+  // whose translation and reinforcement animate independently, and no amount of damping makes it
+  // one — so the module reasons about RANGES and there is no endpoint arithmetic left to trust.
+  assert.equal(motionCode['presentation-camera/culling.ts'].includes('isPresentedDuringTravel'), false);
+  assert.match(motionCode['presentation-camera/culling.ts'], /function intervalProduct\(aMin: number, aMax: number, bMin: number, bMax: number\)/u);
+  assert.match(motionCode['presentation-camera/culling.ts'], /const corners = \[aMin \* bMin, aMin \* bMax, aMax \* bMin, aMax \* bMax\];/u);
   // The one shared freshness rule is unweakened.
   assert.match(mapCode['renderer/MapSurface.tsx'], /const usable = camera !== null && freshness\.fresh;/u);
   assert.match(mapCode['renderer/MapSurface.tsx'], /usable && camera !== null \? placeScene\(/u);
@@ -384,17 +385,28 @@ test('R1-03 — semantic arrival can never be derived from culling or from a mou
     /export function newlyDisclosedKeys\(previous: ReadonlySet<string> \| null, currentKeys: readonly string\[\]\): ReadonlySet<string>/u,
   );
   const surface = mapCode['renderer/MapSurface.tsx'];
-  assert.match(
-    surface,
-    /newlyDisclosedKeys\(authorityReplaced \? null : disclosureHistory\.get\(\), placed\.nodes\.map\(\(node\) => node\.key\)\)/u,
-  );
-  // The comparison is against the FULL previous placement, never against what was on the glass.
-  assert.equal(surface.includes('placed.visibleNodes.map((node) => node.key)'), false);
-  // And a REPLACED authority has no earlier `V` of its own, so its first placement discloses
-  // nothing: the history belongs to the store it was recorded under, exactly as the drag does.
-  // Without this, swapping the store would announce an entire world as newly disclosed.
+  // R3-01 re-anchor. Membership comes from the SCENE, never from a placement: a placement omits a
+  // locus the current camera cannot finitely project, so a placement-derived record would call that
+  // locus new the moment the camera made it representable again.
+  assert.match(surface, /newlyDisclosedKeys\(authorityReplaced \? null : disclosureHistory\.get\(\), \[\.\.\.accepted\]\)/u);
+  assert.match(surface, /const accepted = useMemo\(\(\) => \(usable \? sceneMembershipKeys\(context\.scene\) : null\)/u);
+  for (const forbidden of ['placed.nodes.map((node) => node.key)', 'placed.visibleNodes.map((node) => node.key)']) {
+    assert.equal(surface.includes(forbidden), false, `disclosure must not be derived from a placement: ${forbidden}`);
+  }
+  // ONE definition of a locus identity, used to key a painted node AND to state membership, so the
+  // two cannot drift apart.
+  const geometry = mapCode['renderer/map-geometry.ts'];
+  assert.match(geometry, /export function locusNodeKey\(objectKey: string, locus: MapSceneLocus\): string/u);
+  assert.match(geometry, /export function sceneMembershipKeys\(scene: MapScene\): ReadonlySet<string>/u);
+  assert.match(geometry, /key: locusNodeKey\(object\.key, locus\),/u);
+  assert.match(geometry, /key: ungeographicNodeKey\(object\.key\),/u);
+  // A REPLACED authority has no earlier `V` of its own, so its first accepted world discloses
+  // nothing: the record belongs to the store it was taken under, exactly as the drag does.
   assert.match(surface, /newlyDisclosedKeys\(authorityReplaced \? null :/u);
-  assert.match(surface, /disclosureHistory\.set\(placed === null \? null : new Set\(placed\.nodes\.map\(\(node\) => node\.key\)\)\);/u);
+  // And a TECHNICAL stale gap preserves it. Only an accepted scene writes, only a replaced authority
+  // erases — without which every real canonical handoff compared the new world against nothing.
+  assert.match(surface, /if \(accepted !== null\) disclosureHistory\.set\(accepted\);\s*\n\s*else if \(authorityReplaced\) disclosureHistory\.set\(null\);/u);
+  assert.equal(surface.includes('disclosureHistory.set(placed === null ? null'), false, 'a projection gap must not erase the record');
   // And the renderer asks the set, never the tree it happens to be rendering.
   assert.match(mapCode['renderer/MapCanvas.tsx'], /newlyDisclosed: newlyDisclosed\.has\(node\.key\),/u);
 });
@@ -420,21 +432,101 @@ test('R1-04 — pointer parity covers the object-local motion, not only the plan
   }
 });
 
-test('R1-05 — the composite cause cannot outlive the spatial phase it explains', () => {
-  const cause = motionCode['cause/motion-cause.ts'];
-  // It arms on the SPATIAL result of an outcome T-07 already returned — never on "applied" alone,
-  // which the composite is whenever its temporal half succeeded and no camera moved at all.
-  assert.match(cause, /const LANDED = 'LANDED';/u);
-  assert.match(cause, /const landed = id === COMPOSITE_RETURN_ID && outcome\.outcome === 'APPLIED' && outcome\.locate === LANDED;/u);
-  // Any outcome clears what was pending, so nothing can be inherited by a later, unrelated act.
-  assert.match(cause, /pending = landed \? COMPOSITE_RETURN_ID : null;/u);
-  assert.match(cause, /take: \(\) => \{[\s\S]*?pending = null;[\s\S]*?return cause;/u, 'reading consumes');
-  // The channel still decides nothing about the world: it reads a status and holds one flag. Its
-  // own import path is excluded, which is where the only remaining spatial word lives.
-  const causeBody = cause.replace(/^import [^\n]*\n/gmu, '');
-  for (const forbidden of ['locatab', 'entitle', 'projection', 'camera', 'anchor', 'depth', 'Thread', 'focus']) {
-    assert.equal(causeBody.includes(forbidden), false, `the cause channel must not reason about ${forbidden}`);
+test('R1-05, R3-04 — no production path can arm the composite beat', () => {
+  // R1 narrowed the arming condition from APPLIED to APPLIED + LANDED. Necessary, and not
+  // sufficient: a pending token still had no owner. A landed composite can arm one while the Map is
+  // between projections and therefore cannot consume it, the accessible viewport routes stay
+  // deliberately reachable in exactly that gap, and the next camera change on a freshly mounted Map
+  // would then wear a beat belonging to an act a later action has already superseded.
+  //
+  // No narrowing fixes that, because the defect is the SHAPE. A mailbox is not a binding; only ONE
+  // exact transition, one owner generation, one shot, invalidated by staleness would be — and which
+  // canonical change an already-returned outcome belongs to is a composition fact this owner does
+  // not have and cannot acquire without taking T-12's integration ownership. So the capability
+  // stays and the arming goes: COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12.
+  assert.equal(motionProduction.includes('cause/motion-cause.ts'), false, 'the stateful channel does not ship');
+  for (const forbidden of ['MotionCauseChannel', 'createMotionCauseChannel', 'noteReturnOutcome', 'ExecutedReturnOutcome', 'pending']) {
+    assert.equal(motionText.includes(forbidden), false, `no pending cause mailbox: ${forbidden}`);
+    assert.equal(mapText.includes(forbidden), false, `no pending cause mailbox reaches the Map: ${forbidden}`);
   }
+  // The camera passes `null` unconditionally: there is no option, no prop and no channel to supply
+  // one, so the beat is unreachable rather than merely unused.
+  const camera = motionCode['presentation-camera/usePresentationCamera.ts'];
+  assert.match(camera, /cause: null,/u);
+  assert.equal(camera.includes('cause?.take()'), false);
+  assert.equal(camera.includes('readonly cause?'), false);
+  assert.equal(mapCode['renderer/MapSurface.tsx'].includes('cause'), false, 'the surface takes no cause');
+  // And the deferral is RECORDED, not implied — in the production document, where the reader of
+  // this task's decisions looks, exactly as the Meaning Ignition deferral is.
+  assert.match(read('docs/living-analysis-map-motion-system-v1.md'), /COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12/u);
+  assert.match(read('docs/living-analysis-map-motion-system-v1-traceability.md'), /COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12/u);
+  // The pure choreography survives, because T-12 has to bind something real.
+  assert.match(
+    motionCode['presentation-camera/travel-plan.ts'],
+    /input\.cause === 'GO_LIVE_AND_LOCATE' && input\.representable \? MOTION_DURATIONS_MS\.compositeSpatialBeat : 0/u,
+  );
+});
+
+test('R3-01 — a projection gap preserves the record; only a replaced authority erases it (PM-21, PM-22)', () => {
+  // Membership is presentation-independent by construction: the function that answers it takes a
+  // SCENE and nothing else — no camera, no envelope, no placement, no viewport.
+  const geometry = mapCode['renderer/map-geometry.ts'];
+  const membership = geometry.slice(geometry.indexOf('export function sceneMembershipKeys('), geometry.indexOf('function ringOffset('));
+  assert.ok(membership.length > 0, 'the membership derivation exists');
+  for (const forbidden of ['camera', 'envelope', 'viewport', 'projectAddress', 'visible', 'placed']) {
+    assert.equal(membership.includes(forbidden), false, `membership must not consult ${forbidden}`);
+  }
+  // Finite projectability is a fact about arithmetic, and the placement is where it is decided —
+  // which is exactly why the record may not be built from one.
+  assert.match(geometry, /if \(projected === null\) continue;/u);
+});
+
+test('R3-02 — the travel corridor starts where the camera starts, and retires when the plane stops', () => {
+  const surface = mapCode['renderer/MapSurface.tsx'];
+  const camera = motionCode['presentation-camera/usePresentationCamera.ts'];
+  // R3-02b — one presentation state, two readers. The corridor is REBASED exactly as the residual
+  // is, so whatever the plane is showing is inside it without anyone reading a shared value during
+  // render and without a per-frame bridge.
+  assert.match(surface, /rebasedEnvelope\(corridor, transition\.k, transition\.destination\)/u);
+  assert.equal(surface.includes('rebasedResidual(RESIDUAL_AT_REST'), false, 'a retarget may not assume the plane was home');
+  assert.match(motionCode['presentation-camera/culling.ts'], /export function rebasedEnvelope\(/u);
+  // The corridor is narrowed to the truth at each canonical change by a BOUNDED read at that
+  // boundary — in an effect, once per change, never during render and never per frame.
+  assert.match(camera, /readResidual = useCallback\(\(\): PresentationResidual => \(\{ tx: tx\.get\(\), ty: ty\.get\(\), zoom: zoom\.get\(\) \}\)/u);
+  assert.match(surface, /const exact = envelopeHull\(residualEnvelope\(motion\.readResidual\(\)\), RESIDUAL_ENVELOPE_AT_REST\);/u);
+  assert.equal((surface.match(/readResidual\(\)/gu) ?? []).length, 1, 'exactly one bounded read');
+  // R3-02a — and it retires at rest, through a THRESHOLD reaction rather than an animation
+  // completion, epoch-guarded so one that lost a race to a newer motion is discarded.
+  assert.match(camera, /useAnimatedReaction\(/u);
+  assert.match(camera, /if \(now !== 1 \|\| previous === null \|\| previous === 1\) return;/u);
+  assert.match(camera, /handoffToProduct\(onTravelCorridorRetired, epoch\.get\(\)\)/u);
+  assert.match(surface, /if \(binding === null \|\| restEpoch !== binding\.epoch\.get\(\)\) return;/u);
+  // Class D and nothing else: the retirement path names no act, no store and no dispatch.
+  const retire = surface.slice(surface.indexOf('const retireTravelCorridor = useCallback('), surface.indexOf('const motion = usePresentationCamera('));
+  assert.ok(retire.length > 0, 'the retirement path exists');
+  for (const forbidden of ['store', 'dispatch', 'inspectObject', 'panByTranslation', 'outcome']) {
+    assert.equal(retire.includes(forbidden), false, `a corridor retirement must not reach ${forbidden}`);
+  }
+  // R3-02 register — screen space is culled by the resting viewport, whatever the world is doing.
+  assert.match(surface, /node\.region === 'UNGEOGRAPHIC_REGISTER' \? RESIDUAL_ENVELOPE_AT_REST : travelCorridor,/u);
+});
+
+test('R3-03 — an unrepresentable transition is a cut, and its cut is never uncovered', () => {
+  const plan = motionCode['presentation-camera/travel-plan.ts'];
+  // Representability is asked FIRST. Letting the rest test answer first returned AT_REST for an
+  // unrepresentable change — no travel, no dip, no resolve — so the world changed viewpoint with
+  // nothing covering it at all.
+  assert.match(plan, /if \(input\.representable && residualIsAtRest\(input\.residual\)\) return AT_REST_PLAN;/u);
+  // And it earns no beat, because a beat holds a frame and there is no frame to hold.
+  assert.match(plan, /input\.cause === 'GO_LIVE_AND_LOCATE' && input\.representable \?/u);
+  // The camera writes no residual before it knows what covers it: the rebase is COMPUTED before the
+  // plan and WRITTEN by the branch that owns it.
+  const camera = motionCode['presentation-camera/usePresentationCamera.ts'];
+  const compute = camera.indexOf('const rebased = representable ? rebasedResidual(before, k, d) : RESIDUAL_AT_REST;');
+  const planCall = camera.indexOf('const plan = presentationTravelPlan({');
+  const firstWrite = camera.indexOf('tx.set(', compute);
+  assert.ok(compute >= 0 && planCall > compute, 'the rebase is computed before the plan');
+  assert.ok(firstWrite > planCall, 'no residual is written before the plan that covers it exists');
 });
 
 test('R1-06 — camera opacity reaches the world plane and nothing else', () => {
@@ -529,16 +621,23 @@ test('§16 — no rejected pattern exists in any production motion surface', () 
   assert.match(arrival, /fromScale: DISCLOSURE_ENTRY_SCALE,/u, 'a standard arrival is never a pure fade');
   assert.equal((arrival.match(/fromScale: 1,/gu) ?? []).length, 2, 'only the placed and reduced plans carry no scale');
 
-  // And the cut-and-resolve RETARGETS rather than restarts, so two acts inside one resolve cannot
-  // re-seed the dip and read as a blink. A running resolve is CONTINUED — nothing is sampled ahead
-  // of when it is applied, so the composite beat cannot make the seed stale and drop the plane
-  // backwards. The only seeded case is a plane already at full weight (`/review-animations` R2).
-  assert.match(motionCode['tokens.ts'], /export function resolveFromOpacity\(shownOpacity: number\): number \{/u);
+  // The dip that covers a cut has ONE fixed depth, and NOTHING about it is sampled.
+  //
+  // Two passes of `/review-animations` landed here. Deriving the seed from the weight on the glass
+  // is stale by the time a beat applies it — it drops the plane backwards and reads as a blink.
+  // Branching around that, and continuing a running resolve instead of re-seeding, removed the blink
+  // and opened a worse hole: a second cut arriving late in a resolve was covered by whatever weight
+  // remained, which at 0.99 is nothing. Under reduced motion every travel is a cut, so that was the
+  // ordinary case. A constant can be neither stale nor shallow, and two cuts in quick succession
+  // then read as two cuts — which is what they are.
   const camera = motionCode['presentation-camera/usePresentationCamera.ts'];
-  assert.match(camera, /const shownOpacity = planeOpacity\.get\(\);/u);
-  assert.match(camera, /shownOpacity < 1\s*\n\s*\? withTiming\(1, \{ duration: plan\.resolveMs/u, 'a running resolve is continued, not re-seeded');
-  assert.match(camera, /withTiming\(resolveFromOpacity\(shownOpacity\), \{ duration: 0/u, 'only a plane at full weight is seeded');
-  assert.equal(camera.includes('const resolveFrom = resolveFromOpacity(planeOpacity.get());'), false, 'no weight is sampled ahead of use');
+  assert.match(motionCode['tokens.ts'], /export const REDUCED_RESOLVE_FROM_OPACITY = 0\.45;/u);
+  assert.match(camera, /withTiming\(REDUCED_RESOLVE_FROM_OPACITY, \{ duration: 0, reduceMotion: ReduceMotion\.Never \}\)/u);
+  assert.equal(camera.includes('planeOpacity.get()'), false, 'the dip reads no weight at all');
+  assert.equal(motionText.includes('resolveFromOpacity'), false, 'no derived dip depth exists to be reintroduced');
+  // And the dip carries the SAME delay as the cut, so they cannot be issued in different frames.
+  const cutBranch = camera.slice(camera.indexOf("if (plan.kind === 'CUT_AND_RESOLVE') {"), camera.indexOf('if (plan.translationMs > 0) {'));
+  assert.equal((cutBranch.match(/plan\.spatialDelayMs/gu) ?? []).length, 3, 'one beat, applied to the cut and to the dip');
 });
 
 test('a cut and the dip that covers it land in the same frame, beat or no beat', () => {

@@ -20,6 +20,7 @@ import {
   MAP_ACCESSIBILITY_TEST_ID,
   MAP_SURFACE_PLANE_TEST_ID,
   MapSurface,
+  cameraTransition,
   decodeCameraIntent,
   envelopeCenter,
   hitTest,
@@ -27,63 +28,27 @@ import {
   type MapCamera,
   type PlacedScene,
 } from '../../map';
+import { arrivalWrappers, circles } from '../__fixtures__/paint';
+import * as motionExports from '..';
 import {
   RESIDUAL_AT_REST,
+  RESIDUAL_ENVELOPE_AT_REST,
   arrivalPresentation,
   createArrivalRegistry,
-  createMotionCauseChannel,
   disclosureArrivalPlan,
-  isPresentedDuringTravel,
+  envelopeHull,
+  isPresentedWithinEnvelope,
   newlyDisclosedKeys,
+  presentationTravelPlan,
+  rebasedEnvelope,
   rebasedResidual,
+  residualEnvelope,
   screenToResidual,
   type SharedValue,
 } from '..';
 
 const view = envelope();
 const center = envelopeCenter(view);
-
-interface TreeNode {
-  readonly props?: Record<string, unknown>;
-  readonly children?: readonly unknown[];
-}
-
-/** Every circle the renderer actually asked Skia to paint, with the ancestors it sits under. */
-function circles(json: unknown): { cx: number; cy: number; r: number; underOpacity: boolean }[] {
-  const found: { cx: number; cy: number; r: number; underOpacity: boolean }[] = [];
-  const walk = (node: unknown, opacityAbove: boolean): void => {
-    if (node === null || typeof node !== 'object') return;
-    const record = node as TreeNode;
-    const props = record.props;
-    const opacityHere = opacityAbove || (props !== undefined && props.opacity !== undefined && props.origin === undefined);
-    if (props !== undefined && typeof props.cx === 'number' && typeof props.cy === 'number' && typeof props.r === 'number') {
-      found.push({ cx: props.cx, cy: props.cy, r: props.r, underOpacity: opacityAbove });
-    }
-    for (const child of record.children ?? []) walk(child, opacityHere);
-  };
-  walk(json, false);
-  return found;
-}
-
-/**
- * How many objects are wrapped in an ARRIVAL.
- *
- * The signature is exact and stable: only `DisclosureArrival` renders a group carrying BOTH an
- * opacity and an origin. The plane's own opacity group has no origin, and the per-object
- * counter-scale group has no opacity.
- */
-function arrivalWrappers(json: unknown): number {
-  let count = 0;
-  const walk = (node: unknown): void => {
-    if (node === null || typeof node !== 'object') return;
-    const record = node as TreeNode;
-    const props = record.props;
-    if (props !== undefined && props.opacity !== undefined && props.origin !== undefined) count += 1;
-    for (const child of record.children ?? []) walk(child);
-  };
-  walk(json);
-  return count;
-}
 
 const cameraOf = (store: ReturnType<typeof testStore>): MapCamera => {
   const decoded = decodeCameraIntent(store.getState().camera);
@@ -109,12 +74,13 @@ describe('R1-02 — a current-V object does not vanish because the DESTINATION v
       threads: [homeAtScreenX('thread-near-edge', 20), homeAtScreenX('thread-centre', 200)],
     });
 
-  it('A13, A36 — it is still PAINTED where it was in the first rebased frame, then culled once it truly leaves', async () => {
+  it('A13, A36 — a Home the destination viewport excludes is a paint candidate for the whole travel', async () => {
     const store = testStore({ depth: 'THREAD' });
     const context = contextOf(store, WORLD());
     const rendered = await render(<MapSurface store={store} context={context} envelope={view} />);
 
-    const before = placeScene(context.scene, cameraOf(store), view);
+    const cameraBefore = cameraOf(store);
+    const before = placeScene(context.scene, cameraBefore, view);
     const edge = before.nodes.find((node) => node.id === 'thread-near-edge');
     if (edge === undefined) throw new Error('expected the edge Home');
     expect(edge.visible).toBe(true);
@@ -131,41 +97,50 @@ describe('R1-02 — a current-V object does not vanish because the DESTINATION v
     if (moved === undefined) throw new Error('the Home left the scene, which is not what this test is about');
     // The FINAL canonical viewport excludes it — which is exactly the trap.
     expect(moved.visible).toBe(false);
-    // ...and it is still painted, because the presentation camera still shows it travelling out.
-    const painted = circles(rendered.toJSON());
-    expect(painted.some((circle) => Math.abs(circle.cx - moved.x) < 0.5)).toBe(true);
     // Semantic membership never wavered: it is still in current `V`.
     expect(context.scene.keys.has('THREAD:thread-near-edge')).toBe(true);
 
-    // A second step, and now it has genuinely left the presented viewport too: culling may remove it.
-    await act(async () => {
-      fireEvent(rendered.getByTestId(MAP_ACCESSIBILITY_TEST_ID), 'accessibilityAction', { nativeEvent: { actionName: 'explore-right' } });
-    });
-    const gone = placeScene(context.scene, cameraOf(store), view).nodes.find((node) => node.id === 'thread-near-edge');
-    if (gone === undefined) throw new Error('expected the Home to still be placed');
-    expect(circles(rendered.toJSON()).some((circle) => Math.abs(circle.cx - gone.x) < 0.5)).toBe(false);
-    // The centre Home was never in question.
+    // And the corridor the surface computes for that travel keeps it as a paint candidate for every
+    // residual the plane can be at, while the resting cull — the rule R1 replaced — drops it in the
+    // first rebased frame.
+    //
+    // Asserted over the corridor rather than over the rendered tree deliberately. jest-expo mocks
+    // the native side of Reanimated, so every animation completes inside the tick that started it:
+    // there is no observable mid-travel frame in this environment at all, and a rendered assertion
+    // here would be measuring the mock rather than the renderer. The rendered halves of R1-02 that
+    // do NOT depend on a residual in flight are asserted above and below; the travel itself is
+    // proven where it is decided, and confirmed on a device.
+    const transition = cameraTransition(cameraBefore, cameraOf(store), view);
+    if (transition === null || transition.destination === null) throw new Error('expected a representable transition');
+    const corridor = envelopeHull(rebasedEnvelope(RESIDUAL_ENVELOPE_AT_REST, transition.k, transition.destination), RESIDUAL_ENVELOPE_AT_REST);
+    expect(isPresentedWithinEnvelope({ x: moved.x, y: moved.y, radius: moved.radius }, corridor, center, view, 48)).toBe(true);
+    expect(isPresentedWithinEnvelope({ x: moved.x, y: moved.y, radius: moved.radius }, RESIDUAL_ENVELOPE_AT_REST, center, view, 48)).toBe(false);
+
+    // The centre Home was never in question, and the surface is still painting a world.
     expect(circles(rendered.toJSON()).length).toBeGreaterThan(0);
   });
 
   it('at rest the presented set IS the resting viewport set: a still world paints what it always painted', () => {
     const node = { x: 500, y: 100, radius: 13 };
     // 500 is beyond the 390-wide viewport plus its 61-point margin.
-    expect(isPresentedDuringTravel(node, RESIDUAL_AT_REST, center, view, 48)).toBe(false);
-    expect(isPresentedDuringTravel({ x: 200, y: 400, radius: 13 }, RESIDUAL_AT_REST, center, view, 48)).toBe(true);
+    expect(isPresentedWithinEnvelope(node, RESIDUAL_ENVELOPE_AT_REST, center, view, 48)).toBe(false);
+    expect(isPresentedWithinEnvelope({ x: 200, y: 400, radius: 13 }, RESIDUAL_ENVELOPE_AT_REST, center, view, 48)).toBe(true);
+    // The degenerate envelope is the exact residual at rest, so the two agree by construction.
+    expect(residualEnvelope(RESIDUAL_AT_REST)).toEqual(RESIDUAL_ENVELOPE_AT_REST);
   });
 
   it('during travel the candidate set is a strict SUPERSET, and bounded by the travel itself', () => {
     // A travel that started 400 points to the right of where it ends: an object whose FINAL
     // position is off the left edge began on the glass, and must be painted travelling out.
-    const travelling = rebasedResidual(RESIDUAL_AT_REST, 1, { x: 400, y: 0 });
-    expect(travelling.tx).toBeCloseTo(400, 9);
-    expect(isPresentedDuringTravel({ x: -300, y: 400, radius: 13 }, travelling, center, view, 48)).toBe(true);
+    const start = rebasedResidual(RESIDUAL_AT_REST, 1, { x: 400, y: 0 });
+    expect(start.tx).toBeCloseTo(400, 9);
+    const travelling = envelopeHull(residualEnvelope(start), RESIDUAL_ENVELOPE_AT_REST);
+    expect(isPresentedWithinEnvelope({ x: -300, y: 400, radius: 13 }, travelling, center, view, 48)).toBe(true);
     // The resting test would have removed it, which is exactly the frame the review caught.
-    expect(isPresentedDuringTravel({ x: -300, y: 400, radius: 13 }, RESIDUAL_AT_REST, center, view, 48)).toBe(false);
+    expect(isPresentedWithinEnvelope({ x: -300, y: 400, radius: 13 }, RESIDUAL_ENVELOPE_AT_REST, center, view, 48)).toBe(false);
     // And a node that is off the glass at BOTH ends of the travel is still not painted: the
     // superset is bounded by the travel, not opened up for everything.
-    expect(isPresentedDuringTravel({ x: -3000, y: 400, radius: 13 }, travelling, center, view, 48)).toBe(false);
+    expect(isPresentedWithinEnvelope({ x: -3000, y: 400, radius: 13 }, travelling, center, view, 48)).toBe(false);
   });
 });
 
@@ -424,53 +399,31 @@ describe('R1-04 — a touch reaches an arriving object where it is DRAWN, not wh
 // R1-05 — the composite cause may not outlive its spatial phase
 // ---------------------------------------------------------------------------------------------
 
-describe('R1-05 — the composite beat belongs to the landing that earned it', () => {
-  const composite = (locate?: string, outcome = 'APPLIED') => ({ outcome, locate });
-
-  it('APPLIED with no landing arms nothing, so a later camera act inherits no beat', () => {
-    for (const locate of ['NO_FOCUS', 'NOT_ENTITLED', 'NOT_LOCATABLE', 'AMBIGUOUS_LOCUS', 'PROJECTION_NOT_AVAILABLE', 'STALE_PROJECTION', 'NOT_ATTEMPTED']) {
-      const cause = createMotionCauseChannel();
-      cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', composite(locate));
-      expect(cause.take()).toBeNull();
-    }
+describe('R1-05 / R3-04 — the composite beat cannot be armed by anything that ships', () => {
+  it('the pure choreography is intact: a composite cause earns the beat, and nothing else does', () => {
+    const travel = { residual: { tx: 600, ty: 0, zoom: 1 }, viewportDiagonalPoints: 928, reducedMotion: false, depthChanged: false };
+    expect(presentationTravelPlan({ ...travel, representable: true, cause: 'GO_LIVE_AND_LOCATE' }).spatialDelayMs).toBe(110);
+    expect(presentationTravelPlan({ ...travel, representable: true, cause: null }).spatialDelayMs).toBe(0);
   });
 
-  it('APPLIED but ALREADY_THERE arms nothing: no camera moved, so there is nothing to explain', () => {
-    const cause = createMotionCauseChannel();
-    cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', composite('ALREADY_THERE'));
-    expect(cause.take()).toBeNull();
-  });
-
-  it('a real landing arms exactly one cause, and only the transition that consumes it gets the beat', () => {
-    const cause = createMotionCauseChannel();
-    cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', composite('LANDED'));
-    expect(cause.take()).toBe('GO_LIVE_AND_LOCATE');
-    // The next camera change — whatever moved it — explains itself.
-    expect(cause.take()).toBeNull();
-  });
-
-  it('a rejected or no-op composite never arms', () => {
-    for (const outcome of ['REJECTED', 'NO_OP']) {
-      const cause = createMotionCauseChannel();
-      cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', composite('LANDED', outcome));
-      expect(cause.take()).toBeNull();
-    }
-  });
-
-  it('any later return outcome clears a pending cause rather than letting it be inherited', () => {
-    const cause = createMotionCauseChannel();
-    cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', composite('LANDED'));
-    // An unrelated act happens before any camera change consumed the beat.
-    cause.noteReturnOutcome('BACK_ONE_STEP', { outcome: 'APPLIED', locate: 'NOT_ATTEMPTED' });
-    expect(cause.take()).toBeNull();
-  });
-
-  it('no other act can borrow the composite beat, however it landed', () => {
-    for (const id of ['BACK_ONE_STEP', 'EXACT_RETURN', 'RETURN_LIVE_HEAD', 'RETURN_LIVE_FOCUS', 'RETURN_WORLD']) {
-      const cause = createMotionCauseChannel();
-      cause.noteReturnOutcome(id, composite('LANDED'));
-      expect(cause.take()).toBeNull();
-    }
+  it('R3-04 — the beat cannot be ARMED: there is no channel, and the camera passes null', () => {
+    // R1 narrowed the arming condition from APPLIED to APPLIED + LANDED, which was necessary and
+    // not sufficient. A pending token still had no owner: a landed composite can arm it while the
+    // Map is between projections and cannot consume it, the accessible viewport routes stay
+    // deliberately reachable in exactly that gap, and the next camera change on a freshly mounted
+    // Map would then wear a beat belonging to an act that a later action has already superseded.
+    //
+    // No narrowing fixes that, because the defect is the SHAPE: a mailbox is not a binding. Only
+    // one exact transition, one owner generation, one shot, invalidated by staleness, would be —
+    // and which transition an already-returned outcome belongs to is a composition fact this owner
+    // does not have and cannot acquire without taking T-12's integration ownership.
+    //
+    // So the capability stays and the arming goes. The public surface no longer offers one, and no
+    // surface prop can carry one; that the camera itself passes `null` unconditionally is a claim
+    // about source, and `tests/t10-motion-contract.test.mjs` carries it.
+    expect(Object.keys(motionExports)).not.toContain('createMotionCauseChannel');
+    expect(Object.keys(motionExports)).not.toContain('MotionCauseChannel');
+    expect(Object.keys(motionExports).filter((name) => name.toLowerCase().includes('cause'))).toEqual([]);
   });
 });
 
