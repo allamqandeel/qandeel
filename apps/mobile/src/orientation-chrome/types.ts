@@ -33,22 +33,87 @@
 import type { SemanticDepth, SessionPosition } from '../state';
 import type { MapProjectionStaleReason } from '../map';
 import type { HistoricalFamily, HistoricalProjectionUnavailableCode } from '../projection';
+import type { PreviewSource, TemporalPreview } from '../temporal-navigation';
+
+// ------------------------------------------------------------------------------------------
+// Language
+// ------------------------------------------------------------------------------------------
+
+/**
+ * The Product language the chrome speaks. Class D, presentation configuration, and nothing else.
+ *
+ * It is NOT canonical state, not `RH`, not `TM`, not `TC`, not `PTC`, not projection authority, not
+ * history, not inspection identity and not return authority. Nothing below this line in the file is
+ * parameterised by it: the whole orientation answer is derived without knowing which language will
+ * be used to say it, which is what makes "the semantic model is identical in Arabic and in English"
+ * a structural fact rather than a discipline someone has to keep.
+ *
+ * It is also NOT the reading direction. `I18nManager.isRTL` says which way the platform lays a
+ * surface out; it does not say which language a reader reads. An English reader on an RTL device and
+ * an Arabic reader on an LTR one are both ordinary, so the two are separate inputs and neither is
+ * inferred from the other anywhere in this layer.
+ *
+ * Where the preference COMES from is a later task's: T-12 owns the app-level provider. T-08 owns
+ * only the honest seam, which is why it is a required prop rather than a defaulted one — defaulting
+ * it would silently make one of the two languages the Product's default, and that is not T-08's
+ * decision to take.
+ */
+export type ChromeLanguage = 'ar' | 'en';
 
 // ------------------------------------------------------------------------------------------
 // Temporal
 // ------------------------------------------------------------------------------------------
 
 /**
+ * The transient temporal preview, as orientation.
+ *
+ * T-06 owns it entirely: this is a read-only view of the snapshot that layer publishes, narrowed to
+ * what a reader may be told. It is deliberately not a temporal MODE — `mode` above still has exactly
+ * two members and this sits beside it — because a preview is not a commitment. While one is open the
+ * committed `TM` is unchanged, the committed effective `TC` is unchanged, and no `RH` entry exists.
+ */
+export type PreviewChrome =
+  | { readonly status: 'IDLE' }
+  | {
+      readonly status: 'PREVIEWING';
+      /** `PTC`: the previewed Session Position. Never a commitment, never a mode, never `TC`. */
+      readonly at: SessionPosition;
+      /** Which of the reader's own legitimate routes established it. It grants nothing. */
+      readonly source: PreviewSource;
+    };
+
+/**
+ * Where the reader stands in conversational time, and what they are transiently looking at.
+ *
  * Entailed by Class A alone. `PINNED` at the Live Head is NOT `FOLLOW_LIVE`: the modes differ, and
- * only one of them advances when Live does. There is no third mode here and nowhere to put one.
+ * only one of them advances when Live does. There is no third mode here and nowhere to put one —
+ * `preview` is a SIBLING of the committed stance, never a member of it, so a preview can never be
+ * expressed as a temporal mode and `PTC` can never be expressed as `TC`.
  */
 export interface TemporalChrome {
+  /** The COMMITTED stance. A preview never moves it. */
   readonly mode: 'FOLLOW_LIVE' | 'PINNED';
-  /** The effective `TC`; `null` only while no authoritative Session Position has been mirrored. */
+  /** The committed effective `TC`; `null` only while no authoritative Session Position has been mirrored. */
   readonly at: SessionPosition | null;
   /** A pinned position strictly earlier than the current Live Head. Always false under Live. */
   readonly earlierThanLiveHead: boolean;
   readonly liveHeadEstablished: boolean;
+  /** Transient, and never canonical. `IDLE` whenever no preview source is supplied at all. */
+  readonly preview: PreviewChrome;
+}
+
+/**
+ * The read-only half of T-06's preview controller, and the only half T-08 is given.
+ *
+ * The narrowing is the firewall. `preview(...)`, `stepForward(...)`, `cancel()` and `reconcile(...)`
+ * are absent from this type, so T-08 cannot start, retarget, commit or cancel a preview even by
+ * mistake — a call to any of them is a type error rather than a rule someone has to remember. T-06
+ * and T-07 keep the whole of preview precedence, including the cancellation every return act
+ * performs for itself.
+ */
+export interface TemporalPreviewSource {
+  getSnapshot(): TemporalPreview;
+  subscribe(listener: () => void): () => void;
 }
 
 // ------------------------------------------------------------------------------------------
@@ -192,24 +257,81 @@ export const RETURN_OPPORTUNITY_IDS = Object.freeze([
 ] as const);
 export type ReturnOpportunityId = (typeof RETURN_OPPORTUNITY_IDS)[number];
 
-/** What an act actually changes. Four different shapes; none of them is "navigation". */
+/**
+ * Which dimensions an act is ALLOWED to write. A classification of its write-set, never a claim
+ * that anything will physically change. Four different shapes; none of them is "navigation".
+ */
 export type ReturnEffect = 'HISTORY' | 'TEMPORAL' | 'SPATIAL' | 'TEMPORAL_AND_SPATIAL';
+
+/**
+ * What the act is FOR, as one frozen phrase per identity.
+ *
+ * Six intents for six acts. This is the thing a reader is actually choosing between, and it is what
+ * keeps the six from collapsing: a generic `Home` or `Return` would have to pick one of these and
+ * silently mean the others.
+ */
+export type ReturnIntent =
+  | 'RESTORE_LATEST_CAPTURED_VIEWPOINT'
+  | 'RESTORE_BOUND_INSPECTION_EXACTLY'
+  | 'ESTABLISH_FOLLOW_LIVE'
+  | 'LOCATE_LIVE_FOCUS_ONCE'
+  | 'RETURN_TO_WORLD_VIEWPOINT'
+  | 'GO_LIVE_THEN_LOCATE_ONCE';
+
+/**
+ * What one act may promise about ONE dimension — and a boolean is not one of the options.
+ *
+ * R3-03. `movesTime` / `movesCamera` could each say only "this will change" or "this will not
+ * change", and four of the six frozen acts fit neither.
+ *
+ *   - Back and Exact Return restore a CAPTURED tuple. Whether any individual field physically moves
+ *     depends on how it compares with the current one, so the delta is legitimately zero sometimes.
+ *     The contract they keep is the target, not the movement.
+ *   - Return to Live Focus binds its referent once at activation and attempts the camera once. An
+ *     authorization race can legitimately make that attempt a no-op.
+ *   - Go Live + Locate binds the Live Focus once at the logical post-live boundary and moves the
+ *     camera only if that bound referent is legitimately locatable at `K(LH)`. Where it is `NONE`,
+ *     pregeographic, undisclosed, unentitled, ungeographic or ambiguous, or where the live
+ *     projection is not fetched or is stale at authorization, the temporal return still succeeds and
+ *     the camera does not move. That is a valid result of the one act, not a failure of it.
+ *
+ * A boolean therefore forced a choice between two lies. At activation T-08 cannot know which will
+ * happen — and it must not: knowing would itself require reading a future-relative fact. So the
+ * promise is typed rather than asserted, and the copy is written from the type.
+ *
+ *   `DIRECT`                        the act writes this dimension to a target it owns;
+ *   `PRESERVED`                     the act does not write this dimension at all;
+ *   `RESTORED_IF_DIFFERENT`         restored from the captured viewpoint; the delta may be zero;
+ *   `ONE_SHOT_BOUNDED`              one attempt from the current viewpoint, entitlement- and
+ *                                   race-bounded, which may legitimately not land;
+ *   `CONDITIONAL_POST_LIVE_LOCATE`  one attempt AFTER the temporal return, whose landing is not
+ *                                   knowable in advance and must never be promised.
+ */
+export type ReturnPromise = 'DIRECT' | 'PRESERVED' | 'RESTORED_IF_DIFFERENT' | 'ONE_SHOT_BOUNDED' | 'CONDITIONAL_POST_LIVE_LOCATE';
+
+/** The three dimensions a return act can touch, each with its own promise. */
+export interface ReturnEffects {
+  readonly temporal: ReturnPromise;
+  readonly spatial: ReturnPromise;
+  readonly inspection: ReturnPromise;
+}
 
 /**
  * One offered return, and the promises it is allowed to make.
  *
- * `movesTime` and `movesCamera` are what the frozen act does, not what a reader might hope: Return
- * to Live Head moves time and promises no camera movement, Return to Live Focus moves the camera and
- * promises no temporal movement, and the composite says both out loud so it can never be mistaken
- * for either half. Nothing here names a target, a place, a direction or a count.
+ * There is no `label` and no `hint` here. Words are not semantics: they belong to `product-copy.ts`,
+ * which is asked for them at the presentation boundary in the reader's own language. Keeping them
+ * out is what makes "the model is deeply equal in Arabic and in English" a structural fact rather
+ * than a discipline. Nothing here names a target, a place, a direction or a count.
+ *
+ * This metadata is descriptive and is never an execution input: which executor runs is decided from
+ * the frozen identity alone, so nothing here can become a second authority over what an act does.
  */
 export interface ReturnOpportunity {
   readonly id: ReturnOpportunityId;
   readonly effect: ReturnEffect;
-  readonly movesTime: boolean;
-  readonly movesCamera: boolean;
-  readonly label: string;
-  readonly hint: string;
+  readonly intent: ReturnIntent;
+  readonly effects: ReturnEffects;
 }
 
 export interface ReturnChrome {
@@ -243,23 +365,25 @@ export interface ContextAppearanceOption {
   /** The Moment this appearance was taken up at. Reader-facing Product truth, like any Moment. */
   readonly boundAtMoment: number;
   readonly current: boolean;
-  /** Built from `current` and `boundAtMoment` alone — never from an id, a key or a Thread. */
-  readonly label: string;
 }
 
 /**
  * "What am I inside?" — answered from disclosed truth only.
  *
  * The lineage is the exact route the disclosure minted, not a computed hierarchy: no parent is
- * inferred, no ownership is implied, no geometry is consulted and no ranking exists. `ordering` says
- * so explicitly, because a list that does not deny being a ranking will be read as one.
+ * inferred, no ownership is implied, no geometry is consulted and no ranking exists. The chooser says
+ * so out loud in the reader's own language, because a list that does not deny being a ranking will be
+ * read as one — but that sentence is copy, so it lives in `product-copy.ts` and not on this model.
+ *
+ * An option carries only `current` and `boundAtMoment`, the two facts the reader already has.
+ * Whether two options can be told apart is decided from exactly those, so distinguishability is a
+ * semantic question with one answer in every language rather than a property of a rendered string.
  */
 export interface ContextChrome {
   readonly lineage: readonly ContextStep[];
   readonly appearances: readonly ContextAppearanceOption[];
   /** Several legitimate appearances exist and none is elected. One appearance needs no chooser. */
   readonly choiceAvailable: boolean;
-  readonly ordering: string;
 }
 
 // ------------------------------------------------------------------------------------------

@@ -49,10 +49,12 @@ import {
 } from '../map';
 import type { HistoricalDisclosureEntry } from '../projection';
 import { liveFocusReturnAvailability, returnAvailability } from '../return-navigation';
+// Type only, so no module of T-06 is loaded at runtime by this layer and no value of it is reachable
+// from here. What T-08 receives is the SNAPSHOT T-06 publishes, never its controller.
+import type { TemporalPreview } from '../temporal-navigation';
 import { exactReturnTargetFor, type ExactReturnOrigin } from './exact-return-origin';
 import { contextOrientation, currentBindingOf } from './context-orientation';
 import { inspectionRender, renderableIdentity } from './inspection-orientation';
-import { CONTEXT_ORDERING_NOTE } from './product-copy';
 import { returnOrientation } from './return-orientation';
 import type {
   ChromeProjectionState,
@@ -60,6 +62,7 @@ import type {
   InspectionRenderState,
   LiveChrome,
   OrientationModel,
+  PreviewChrome,
   SpatialChrome,
   TemporalChrome,
 } from './types';
@@ -93,8 +96,29 @@ const EMPTY_CONTEXT: ContextChrome = Object.freeze({
   lineage: Object.freeze([]),
   appearances: Object.freeze([]),
   choiceAvailable: false,
-  ordering: CONTEXT_ORDERING_NOTE,
 });
+
+/**
+ * The preview orientation of a surface that was given no preview source at all.
+ *
+ * Not a re-implementation of T-06's own idle value: it is what "this surface cannot observe a
+ * preview" means, which is the same thing a reader is told either way — that nothing transient is
+ * being looked at. It is a frozen module constant so the subscription below has a stable snapshot to
+ * return, which is what keeps `useSyncExternalStore` from looping.
+ */
+const NO_PREVIEW: PreviewChrome = Object.freeze({ status: 'IDLE' });
+
+/**
+ * T-06's published snapshot, narrowed to what a reader may be told.
+ *
+ * `origin` and `generation` are deliberately dropped: the first is T-06's own evidence that nothing
+ * committed moved, the second is its interruption guard, and neither is orientation. What survives is
+ * the previewed position and which of the reader's own routes established it.
+ */
+function previewOf(preview: TemporalPreview | null | undefined): PreviewChrome {
+  if (preview === null || preview === undefined || preview.status === 'IDLE') return NO_PREVIEW;
+  return Object.freeze({ status: 'PREVIEWING' as const, at: preview.ptc, source: preview.source });
+}
 
 function projectionStateOf(store: CanonicalStore, projection: ChromeProjection): ChromeProjectionState {
   if (!projection.held) {
@@ -127,16 +151,25 @@ function technicalRender(projection: ChromeProjectionState): InspectionRenderSta
   }
 }
 
-function temporalOf(state: CanonicalState): TemporalChrome {
+/**
+ * The committed temporal stance, and beside it whatever is transiently being looked at.
+ *
+ * The preview is a SIBLING of the committed answer and never a substitute for it: `mode` is still
+ * derived from `TM` alone and `at` from the committed effective `TC` alone, so an open preview cannot
+ * make a reader appear to have travelled, cannot turn `FOLLOW_LIVE` into `PINNED`, and cannot rewrite
+ * a pinned target. There is still no third mode, and still nowhere to put one.
+ */
+function temporalOf(state: CanonicalState, preview: PreviewChrome): TemporalChrome {
   const orientation = canonicalTemporalOrientation(state);
   const liveHeadEstablished = state.live.LH !== null;
   return orientation.mode === 'FOLLOW_LIVE'
-    ? Object.freeze({ mode: 'FOLLOW_LIVE' as const, at: effectiveTC(state), earlierThanLiveHead: false, liveHeadEstablished })
+    ? Object.freeze({ mode: 'FOLLOW_LIVE' as const, at: effectiveTC(state), earlierThanLiveHead: false, liveHeadEstablished, preview })
     : Object.freeze({
         mode: 'PINNED' as const,
         at: orientation.at,
         earlierThanLiveHead: orientation.earlierThanLiveHead,
         liveHeadEstablished,
+        preview,
       });
 }
 
@@ -151,6 +184,22 @@ export interface OrientationModelOptions {
    * execution, which remains the only authority.
    */
   readonly exactReturnOrigin?: ExactReturnOrigin | null;
+  /**
+   * T-06's published preview SNAPSHOT, or nothing when this surface observes no preview.
+   *
+   * A snapshot rather than a controller, so this function stays pure and has no way to start,
+   * retarget, commit or cancel a preview. T-06 keeps all of that, including the cancellation every
+   * T-07 executor performs for itself.
+   */
+  readonly preview?: TemporalPreview | null;
+  /**
+   * Whether this mounted surface can attempt the composite's spatial half at all.
+   *
+   * Presentation capability, not world truth: it is settled before anything about Live is known, so
+   * it discloses nothing and cannot move with `LF`. Absent, the composite is not offered — a control
+   * whose spatial half has nothing to attempt with is a promise the surface cannot keep.
+   */
+  readonly liveContextAvailable?: boolean;
 }
 
 /**
@@ -163,7 +212,7 @@ export interface OrientationModelOptions {
 export function orientationModel(store: CanonicalStore, projection: ChromeProjection, options: OrientationModelOptions = {}): OrientationModel {
   const state = store.getState();
   const availability = returnAvailability(state);
-  const temporal = temporalOf(state);
+  const temporal = temporalOf(state, previewOf(options.preview));
 
   const spatial: SpatialChrome = Object.freeze({
     // The camera's own rung, from canonical state. A sparse scene is never evidence about the camera.
@@ -215,6 +264,9 @@ export function orientationModel(store: CanonicalStore, projection: ChromeProjec
       // presentation only: authority remains entirely T-07's, which re-proves provenance and
       // presence before writing anything.
       exactReturnBound: exactReturnTargetFor(store, options.exactReturnOrigin) !== null,
+      // Client capability, decided before anything about Live is known. It cannot move with `LF`, so
+      // requiring it adds no future-relative input to the offered set.
+      liveContextAvailable: options.liveContextAvailable === true,
     }),
     context,
   });

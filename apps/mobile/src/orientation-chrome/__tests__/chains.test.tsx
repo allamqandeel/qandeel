@@ -38,7 +38,7 @@ describe('OC08-M — inspection chains', () => {
     inspect(store, contextAt(TWO_CONTEXT_WORLD()), { family: 'READING', id: 'reading-1', appearance: { kind: 'THREAD_READING', bindingId: 'binding-a' } });
     const projection = projectionFor(store, fetched(DISCLOSED()));
     const surface = chromeSurface(store);
-    const view = await render(<OrientationChrome surface={surface} projection={projection} />);
+    const view = await render(<OrientationChrome language="en" surface={surface} projection={projection} />);
 
     const model = orientationModel(store, projection);
     const other = model.context.appearances.find((option) => option.bindingId === 'binding-b')!;
@@ -67,7 +67,7 @@ describe('OC08-M — inspection chains', () => {
     const store = reader();
     const surface = chromeSurface(store);
     const projection = projectionFor(store, fetched(DISCLOSED()));
-    const view = await render(<OrientationChrome surface={surface} projection={projection} />);
+    const view = await render(<OrientationChrome language="en" surface={surface} projection={projection} />);
 
     await act(async () => {
       fireEvent.press(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_LIVE_FOCUS`));
@@ -76,7 +76,7 @@ describe('OC08-M — inspection chains', () => {
     const movedCamera = store.getState().camera;
 
     await act(async () => {
-      view.rerender(<OrientationChrome surface={surface} projection={projection} exactReturnOrigin={origin} />);
+      view.rerender(<OrientationChrome language="en" surface={surface} projection={projection} exactReturnOrigin={origin} />);
     });
     await act(async () => {
       fireEvent.press(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:EXACT_RETURN`));
@@ -97,7 +97,7 @@ describe('OC08-M — Live chains', () => {
   it('M112, M118 — Live advancing while pinned changes the generic meta and grows no fake history', async () => {
     const store = reader();
     const projection = projectionFor(store, fetched(DISCLOSED()));
-    const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} />);
+    const view = await render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projection} />);
     expect(view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:live`)).toBeTruthy();
 
     await act(async () => {
@@ -121,7 +121,7 @@ describe('OC08-M — Live chains', () => {
 
   it('M113 — returning to the live focus moves the camera and leaves the reader pinned', async () => {
     const store = reader();
-    const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projectionFor(store, fetched(DISCLOSED()))} />);
+    const view = await render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projectionFor(store, fetched(DISCLOSED()))} />);
     await act(async () => {
       fireEvent.press(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_LIVE_FOCUS`));
     });
@@ -137,7 +137,7 @@ describe('OC08-M — Live chains', () => {
     const store = reader();
     const surface = chromeSurface(store);
     const projection = projectionFor(store, fetched(DISCLOSED()));
-    const view = await render(<OrientationChrome surface={surface} projection={projection} />);
+    const view = await render(<OrientationChrome language="en" surface={surface} projection={projection} />);
     const before = store.getState();
     const temporalLine = view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:temporal`).props.children;
     const spatialLine = view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:spatial`).props.children;
@@ -166,7 +166,7 @@ describe('OC08-M — Live chains', () => {
   it('M116 — Return to World then Back restores the prior depth, and the chrome restates it', async () => {
     const store = reader();
     const surface = chromeSurface(store);
-    const view = await render(<OrientationChrome surface={surface} projection={projectionFor(store, fetched(DISCLOSED()))} />);
+    const view = await render(<OrientationChrome language="en" surface={surface} projection={projectionFor(store, fetched(DISCLOSED()))} />);
     expect(view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:spatial`).props.children).toBe('Showing readings and findings.');
 
     await act(async () => {
@@ -194,14 +194,14 @@ describe('OC08-M — projection handoff', () => {
 
     // Start with a projection for a position the reader is not at.
     const view = await render(
-      <OrientationChrome surface={surface} projection={{ held: true, context: contextAt(withInspection(TWO_CONTEXT_WORLD({ tc: 3 }), known())) }} />,
+      <OrientationChrome language="en" surface={surface} projection={{ held: true, context: contextAt(withInspection(TWO_CONTEXT_WORLD({ tc: 3 }), known())) }} />,
     );
     expect(statementOf(view)).toBe('Catching up with where you are.');
     expect(view.queryByTestId(CONTEXT_CHOICE_TEST_ID)).toBeNull();
 
     // The matching disclosure arrives.
     await act(async () => {
-      view.rerender(<OrientationChrome surface={surface} projection={projectionFor(store, fetched(DISCLOSED()))} />);
+      view.rerender(<OrientationChrome language="en" surface={surface} projection={projectionFor(store, fetched(DISCLOSED()))} />);
     });
     expect(statementOf(view)).toContain('You are inspecting a reading.');
     expect(view.queryByTestId(CONTEXT_CHOICE_TEST_ID)).not.toBeNull();
@@ -209,7 +209,7 @@ describe('OC08-M — projection handoff', () => {
     // And back again: the semantic frame is retired, not kept warm.
     await act(async () => {
       view.rerender(
-        <OrientationChrome surface={surface} projection={{ held: true, context: contextAt(withInspection(TWO_CONTEXT_WORLD({ tc: 3 }), known())) }} />,
+        <OrientationChrome language="en" surface={surface} projection={{ held: true, context: contextAt(withInspection(TWO_CONTEXT_WORLD({ tc: 3 }), known())) }} />,
       );
     });
     expect(statementOf(view)).toBe('Catching up with where you are.');
@@ -224,7 +224,7 @@ describe('OC08-M — projection handoff', () => {
     const store = historicalStore();
     inspect(store, contextAt(TWO_CONTEXT_WORLD()), { family: 'READING', id: 'reading-1' });
     const surface = chromeSurface(store);
-    const view = await render(<OrientationChrome surface={surface} projection={projectionFor(store, fetched(DISCLOSED()))} />);
+    const view = await render(<OrientationChrome language="en" surface={surface} projection={projectionFor(store, fetched(DISCLOSED()))} />);
     expect(statementOf(view)).toContain('You are inspecting a reading.');
 
     await act(async () => {

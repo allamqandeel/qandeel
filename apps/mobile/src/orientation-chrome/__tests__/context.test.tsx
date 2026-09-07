@@ -13,6 +13,7 @@ import { CONTEXT_CHOICE_TEST_ID } from '../InspectionOrientation';
 import { OrientationChrome } from '../OrientationChrome';
 import { contextOrientation } from '../context-orientation';
 import { orientationModel } from '../model';
+import { contextOrderingNote } from '../product-copy';
 import { chromeSurface, contextAt, fetched, historicalStore, inspect, known, projectionFor, TWO_CONTEXT_WORLD, withInspection, world } from '../__fixtures__/chrome';
 
 const DISCLOSED = () => withInspection(TWO_CONTEXT_WORLD(), known());
@@ -41,7 +42,7 @@ describe('OC08-F — when a chooser exists at all', () => {
     expect(model.context.appearances).toEqual([]);
     expect(model.context.choiceAvailable).toBe(false);
 
-    const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projectionFor(store, fetched(withInspection(single, known())))} />);
+    const view = await render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projectionFor(store, fetched(withInspection(single, known())))} />);
     expect(view.queryByTestId(CONTEXT_CHOICE_TEST_ID)).toBeNull();
     await act(async () => {
       view.unmount();
@@ -56,9 +57,9 @@ describe('OC08-F — when a chooser exists at all', () => {
     // `current` states where the reader IS. Exactly one, and only because their own `IF_ref` says so.
     expect(model.context.appearances.filter((option) => option.current).map((option) => option.bindingId)).toEqual(['binding-a']);
     // The order denies being a ranking, out loud.
-    expect(model.context.ordering).toContain('not a ranking');
+    expect(contextOrderingNote('en')).toContain('not a ranking');
 
-    const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} />);
+    const view = await render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projection} />);
     const selected = model.context.appearances.map(
       (option) => view.getByTestId(`${CONTEXT_CHOICE_TEST_ID}:option:${option.ordinal}`).props.accessibilityState.selected,
     );
@@ -92,7 +93,7 @@ describe('OC08-F — choosing', () => {
     const other = model.context.appearances.find((option) => option.bindingId === 'binding-b')!;
     const before = store.getState();
 
-    const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} />);
+    const view = await render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projection} />);
     await act(async () => {
       fireEvent.press(view.getByTestId(`${CONTEXT_CHOICE_TEST_ID}:option:${other.ordinal}`));
     });
@@ -114,13 +115,13 @@ describe('OC08-F — choosing', () => {
     });
   });
 
-  it('F57 — rendering the chooser performs no act; only an explicit press does', async () => {
+  it('F57, I81 — rendering the chooser performs no act; only an explicit press does', async () => {
     const { store, projection } = inspectingThroughA();
     const before = store.getState();
-    const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} />);
+    const view = await render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projection} />);
     // Mounted, re-rendered and left alone: nothing is chosen for the reader.
     await act(async () => {
-      view.rerender(<OrientationChrome surface={chromeSurface(store)} projection={projection} />);
+      view.rerender(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projection} />);
     });
     // Object identity: not merely equal afterwards, but never republished at all. The reader's own
     // earlier inspection is still the only thing recorded.

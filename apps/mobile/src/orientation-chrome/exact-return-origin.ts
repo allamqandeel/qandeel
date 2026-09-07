@@ -64,6 +64,19 @@ const bound = new WeakMap<ExactReturnOrigin, BoundOrigin>();
 /**
  * Binds a checkpoint target that THIS store minted and still records.
  *
+ * @internal NOT Product API, and deliberately absent from the barrel (R3-04).
+ *
+ * Same-store provenance is necessary and it is proven here. It is NOT sufficient to call something
+ * "the original inspection": a checkpoint recorded by Return to World is a perfectly valid handle
+ * and is not an inspection origin at all, so a public mint over an arbitrary target would let any
+ * caller manufacture a Product capability whose name is false. T-08 owns no inspection-journey
+ * coordinator and cannot tell which checkpoint began the journey, so it consumes an origin and never
+ * mints one from the public surface.
+ *
+ * The legitimate binding happens at the real journey boundary, which the T-12 integration gate owns.
+ * Inside this layer the function exists for the layer's own tests, which need a legitimate opaque
+ * origin to exercise consumer behaviour with — and a test fixture is not Product API.
+ *
  * The caller does this at the moment their inspection journey begins, with the store they are
  * actually reading. A value that is not a real target, one minted by a different store, and one
  * whose checkpoint has already been consumed all yield no opportunity at all rather than a broken

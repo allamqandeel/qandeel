@@ -104,7 +104,7 @@ describe('OC08-C — two positions that differ only in a future Live Focus are i
     // about identical output must not depend on how the proof itself was scheduled.
     const rendered: string[] = [];
     for (const store of [withNone, withFuture]) {
-      const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projectionFor(store, fetched(disclosure))} />);
+      const view = await render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projectionFor(store, fetched(disclosure))} />);
       const native = nativeTree(view);
       // A comparison of two empty trees would pass while proving nothing, so each render is proven
       // to have produced the surface before it is compared.
@@ -117,9 +117,9 @@ describe('OC08-C — two positions that differ only in a future Live Focus are i
     expect(rendered[1]).toEqual(rendered[0]);
   });
 
-  it('C22…C26 — nothing spoken names the future target, its family, a direction, a distance or a count', async () => {
+  it('C22, C23, C24, C25, C26, J92 — nothing spoken names the future target, its family, a direction, a distance or a count', async () => {
     const store = readerWith(FUTURE_THREAD);
-    const tree = await render(<OrientationChrome surface={chromeSurface(store)} projection={projectionFor(store, fetched(WORLD_AT_TC()))} />);
+    const tree = await render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projectionFor(store, fetched(WORLD_AT_TC()))} />);
     const words = spokenText(tree);
 
     expect(words).not.toContain('thread-future');
@@ -142,7 +142,7 @@ describe('OC08-C — two positions that differ only in a future Live Focus are i
     expect(model.live.advancedWhileHistorical).toBe(true);
     expect(model.live.routeBackToLiveAvailable).toBe(true);
 
-    const tree = await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} />);
+    const tree = await render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projection} />);
     expect(nativeTree(tree)).toContain(`"${ORIENTATION_CHROME_TEST_ID}:live"`);
     expect(spokenText(tree)).toContain('the conversation has continued since this moment.');
   });
@@ -172,7 +172,7 @@ describe('OC08-C — two positions that differ only in a future Live Focus are i
     // And where it is not offered, it is simply absent — never a differently-worded variant.
     const none = readerWith(NONE);
     expect(isOffered(orientationModel(none, projectionFor(none, fetched(WORLD_AT_TC()))), 'RETURN_LIVE_FOCUS')).toBe(false);
-    expect(spokenText(await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} />))).not.toContain('thread-a');
+    expect(spokenText(await render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projection} />))).not.toContain('thread-a');
   });
 
   it('C21b — an ungeographic live focus is UNAVAILABLE, and stays indistinguishable from NONE', () => {

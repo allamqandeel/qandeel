@@ -18,6 +18,7 @@ import type { MapProjectionRequest } from '../../map';
 import { OrientationChrome } from '../OrientationChrome';
 import { bindExactReturnOrigin } from '../exact-return-origin';
 import { returnMeaning } from '../return-orientation';
+import { returnActWords } from '../product-copy';
 import { RETURN_CONTROLS_TEST_ID } from '../ReturnControls';
 import { RETURN_OPPORTUNITY_IDS, type ReturnOpportunityId } from '../types';
 import { countingStore } from '../../return-navigation/__fixtures__/return';
@@ -46,7 +47,7 @@ async function press(store: CanonicalStore, id: ReturnOpportunityId, target?: Re
   // The opportunity is bound against the store the journey happened in, exactly as a caller would.
   const origin = target === undefined || target === null ? null : bindExactReturnOrigin(store, target);
   const view = await render(
-    <OrientationChrome
+    <OrientationChrome language="en"
       surface={chromeSurface(store)}
       projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD()))}
       exactReturnOrigin={origin}
@@ -123,7 +124,7 @@ describe('OC08-B — each control reaches exactly one frozen act', () => {
     expect(after.temporal).toEqual({ kind: 'PINNED', at: 4 });
   });
 
-  it('B10 — Exact Return restores the named checkpoint and consumes it and everything newer', async () => {
+  it('B10, G61 — Exact Return restores the named checkpoint and consumes it and everything newer', async () => {
     const store = reader();
     const start = viewpoint(store.getState());
     // The spatial act first, while the held projection is still this viewpoint's: Return to World
@@ -172,24 +173,24 @@ describe('OC08-B — no act aliases another', () => {
     const shapes = RETURN_OPPORTUNITY_IDS.map((id) => returnMeaning(id));
 
     expect(shapes.map((shape) => shape.id)).toEqual([...RETURN_OPPORTUNITY_IDS]);
-    expect(new Set(shapes.map((shape) => shape.label)).size).toBe(6);
-    expect(new Set(shapes.map((shape) => shape.hint)).size).toBe(6);
+    expect(new Set(shapes.map((shape) => returnActWords('en', shape.id).label)).size).toBe(6);
+    expect(new Set(shapes.map((shape) => returnActWords('en', shape.id).hint)).size).toBe(6);
 
     const by = (id: ReturnOpportunityId) => returnMeaning(id);
     // Live Head promises time and NOT a location; Live Focus promises a location and NOT time.
-    expect({ time: by('RETURN_LIVE_HEAD').movesTime, camera: by('RETURN_LIVE_HEAD').movesCamera }).toEqual({ time: true, camera: false });
-    expect({ time: by('RETURN_LIVE_FOCUS').movesTime, camera: by('RETURN_LIVE_FOCUS').movesCamera }).toEqual({ time: false, camera: true });
+    expect(by('RETURN_LIVE_HEAD').effects).toEqual({ temporal: 'DIRECT', spatial: 'PRESERVED', inspection: 'PRESERVED' });
+    expect(by('RETURN_LIVE_FOCUS').effects).toEqual({ temporal: 'PRESERVED', spatial: 'ONE_SHOT_BOUNDED', inspection: 'PRESERVED' });
     // The composite is communicated as neither half.
     expect(by('GO_LIVE_AND_LOCATE').effect).toBe('TEMPORAL_AND_SPATIAL');
     expect(by('RETURN_LIVE_HEAD').effect).toBe('TEMPORAL');
     // World is spatial; Back is history. They are never the same statement.
     expect(by('RETURN_WORLD').effect).toBe('SPATIAL');
     expect(by('BACK_ONE_STEP').effect).toBe('HISTORY');
-    expect(by('RETURN_WORLD').label).not.toEqual(by('BACK_ONE_STEP').label);
+    expect(returnActWords('en', 'RETURN_WORLD').label).not.toEqual(returnActWords('en', 'BACK_ONE_STEP').label);
 
     // No generic Product identity exists to stand in for any of them.
     for (const shape of shapes) {
-      expect(/^(home|reset|navigate|go ?live|back or home|return)$/iu.test(shape.label.trim())).toBe(false);
+      expect(/^(home|reset|navigate|go ?live|back or home|return)$/iu.test(returnActWords('en', shape.id).label.trim())).toBe(false);
     }
   });
 });

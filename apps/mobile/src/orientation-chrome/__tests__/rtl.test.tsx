@@ -49,7 +49,7 @@ function controlRows(view: Awaited<ReturnType<typeof render>>) {
 }
 
 const renderChrome = (store: CanonicalStore) =>
-  render(<OrientationChrome surface={chromeSurface(store)} projection={projectionFor(store, fetched(withInspection(TWO_CONTEXT_WORLD(), known())))} />);
+  render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projectionFor(store, fetched(withInspection(TWO_CONTEXT_WORLD(), known())))} />);
 
 describe('OC08-K — mirroring changes no Product meaning', () => {
   it('K98, K99, K101 — the six keep their identities, order, labels and states under RTL', async () => {
@@ -135,14 +135,14 @@ describe('OC08-K — an Arabic and code-switched world produces the same interna
       // The typed answer carries the exact Arabic identity, unnormalized and untransliterated.
       expect(model.inspection.render).toMatchObject({ kind: 'RENDERABLE', id: 'قراءة-reading-7' });
 
-      const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} />);
+      const view = await render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projection} />);
       const statement = view.getByTestId(`${INSPECTION_ORIENTATION_TEST_ID}:statement`).props.children as string;
       const lineage = view.getByTestId(`${INSPECTION_ORIENTATION_TEST_ID}:lineage`).props.children as string;
 
       // R1-05: an identifier is an identifier in every script. Arabic ids are internal exactly as
       // Latin ones are, so the reader sees the structure of their position, never the handles.
       expect(statement).toBe('You are inspecting a reading.');
-      expect(lineage).toBe('Inside a thread, inside a context.');
+      expect(lineage).toBe('Inside a thread, inside a place.');
       for (const identifier of ['قراءة-reading-7', 'خيط-التحليل', 'ربط-QA-12']) {
         expect(statement).not.toContain(identifier);
         expect(lineage).not.toContain(identifier);

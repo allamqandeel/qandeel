@@ -70,7 +70,7 @@ describe('R2-01 — binding requires real provenance, not a claim', () => {
     expect(offersExact(store, origin)).toBe(true);
   });
 
-  it('R2-01.1 — a target minted by ANOTHER store cannot be bound to this one', () => {
+  it('G64, R2-01.1 — a target minted by ANOTHER store cannot be bound to this one', () => {
     const mine = afterOneStep();
     const foreign = afterOneStep();
     // Both stores have exactly one checkpoint, so the foreign target's ordinal fits this store's
@@ -92,7 +92,7 @@ describe('R2-01 — binding requires real provenance, not a claim', () => {
 
     const before = mine.store.getState();
     const view = await render(
-      <OrientationChrome
+      <OrientationChrome language="en"
         surface={chromeSurface(mine.store)}
         projection={projectionFor(mine.store, fetched(TWO_CONTEXT_WORLD()))}
         exactReturnOrigin={forged}
@@ -106,7 +106,7 @@ describe('R2-01 — binding requires real provenance, not a claim', () => {
     });
   });
 
-  it('R2-01.3, R2-01.4 — a structural copy and a JSON round trip cannot bind', () => {
+  it('G62, G63, R2-01.3, R2-01.4 — a structural copy and a JSON round trip cannot bind', () => {
     const { store, target } = afterOneStep();
     for (const forgery of [{ ...target }, JSON.parse(JSON.stringify(target)), { index: 0 }, Object.freeze({ index: 0 })]) {
       expect(isReturnCheckpointTarget(forgery)).toBe(false);
@@ -118,7 +118,7 @@ describe('R2-01 — binding requires real provenance, not a claim', () => {
     expect(exactReturnTargetFor(store, {})).toBeNull();
   });
 
-  it('R2-01.5 — a target consumed BEFORE binding cannot bind', () => {
+  it('G65, R2-01.5 — a target consumed BEFORE binding cannot bind', () => {
     const { store, surface, target } = afterOneStep();
     backOneStep(surface);
     expect(store.getState().history).toHaveLength(0);
@@ -128,11 +128,11 @@ describe('R2-01 — binding requires real provenance, not a claim', () => {
 });
 
 describe('R2-01 — a consumed opportunity never resurrects', () => {
-  it('R2-01.8, R2-01.9 — Exact Return retires the origin, and history regrowth does not revive it', async () => {
+  it('G66, R2-01.8, R2-01.9 — Exact Return retires the origin, and history regrowth does not revive it', async () => {
     const { store, origin } = afterOneStep();
     const surface = chromeSurface(store);
     const view = await render(
-      <OrientationChrome surface={surface} projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD({ depth: 'WORLD' })))} exactReturnOrigin={origin} />,
+      <OrientationChrome language="en" surface={surface} projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD({ depth: 'WORLD' })))} exactReturnOrigin={origin} />,
     );
     expect(view.queryByTestId(`${RETURN_CONTROLS_TEST_ID}:EXACT_RETURN`)).not.toBeNull();
 
@@ -174,7 +174,7 @@ describe('R2-01 — a consumed opportunity never resurrects', () => {
     backOneStep(surface);
 
     const view = await render(
-      <OrientationChrome surface={surface} projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD()))} exactReturnOrigin={origin} />,
+      <OrientationChrome language="en" surface={surface} projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD()))} exactReturnOrigin={origin} />,
     );
     expect(view.queryByTestId(`${RETURN_CONTROLS_TEST_ID}:EXACT_RETURN`)).toBeNull();
 
@@ -183,7 +183,7 @@ describe('R2-01 — a consumed opportunity never resurrects', () => {
     });
   });
 
-  it('R2-01.7 — a target consumed between validation and press is refused by T-07, with no extra mutation', () => {
+  it('H76, R2-01.7 — a target consumed between validation and press is refused by T-07, with no extra mutation', () => {
     const { store, surface, origin } = afterOneStep();
     const target = exactReturnTargetFor(store, origin);
     expect(target).not.toBeNull();
@@ -201,14 +201,14 @@ describe('R2-01 — a consumed opportunity never resurrects', () => {
 });
 
 describe('R2-01 — lifecycle and surface', () => {
-  it('R2-01.11 — a replaced store invalidates the origin immediately', async () => {
+  it('I84, R2-01.11 — a replaced store invalidates the origin immediately', async () => {
     const original = afterOneStep();
     const replacement = afterOneStep();
     // The replacement has a checkpoint at the same ordinal, so only provenance tells them apart.
     expect(replacement.store.getState().history).toHaveLength(1);
 
     const view = await render(
-      <OrientationChrome
+      <OrientationChrome language="en"
         surface={original.surface}
         projection={projectionFor(original.store, fetched(TWO_CONTEXT_WORLD({ depth: 'WORLD' })))}
         exactReturnOrigin={original.origin}
@@ -218,7 +218,7 @@ describe('R2-01 — lifecycle and surface', () => {
 
     await act(async () => {
       view.rerender(
-        <OrientationChrome
+        <OrientationChrome language="en"
           surface={chromeSurface(replacement.store)}
           projection={projectionFor(replacement.store, fetched(TWO_CONTEXT_WORLD({ depth: 'WORLD' })))}
           exactReturnOrigin={original.origin}
@@ -233,11 +233,11 @@ describe('R2-01 — lifecycle and surface', () => {
     });
   });
 
-  it('R2-01.12 — a valid same-store origin survives rerenders and callback churn', async () => {
+  it('G70, I80, R2-01.12 — a valid same-store origin survives rerenders and callback churn', async () => {
     const { store, origin } = afterOneStep();
     const projection = projectionFor(store, fetched(TWO_CONTEXT_WORLD({ depth: 'WORLD' })));
     const view = await render(
-      <OrientationChrome surface={chromeSurface(store)} projection={projection} exactReturnOrigin={origin} onReturnOutcome={() => undefined} />,
+      <OrientationChrome language="en" surface={chromeSurface(store)} projection={projection} exactReturnOrigin={origin} onReturnOutcome={() => undefined} />,
     );
     const present = () => view.queryByTestId(`${RETURN_CONTROLS_TEST_ID}:EXACT_RETURN`) !== null;
     expect(present()).toBe(true);
@@ -245,7 +245,7 @@ describe('R2-01 — lifecycle and surface', () => {
     for (let index = 0; index < 3; index += 1) {
       await act(async () => {
         view.rerender(
-          <OrientationChrome surface={chromeSurface(store)} projection={projection} exactReturnOrigin={origin} onReturnOutcome={() => undefined} />,
+          <OrientationChrome language="en" surface={chromeSurface(store)} projection={projection} exactReturnOrigin={origin} onReturnOutcome={() => undefined} />,
         );
       });
       expect(present()).toBe(true);
@@ -257,7 +257,7 @@ describe('R2-01 — lifecycle and surface', () => {
     });
   });
 
-  it('R2-01.13 — the predicate answers with a boolean and exposes no checkpoint internals', () => {
+  it('G67, R2-01.13 — the predicate answers with a boolean and exposes no checkpoint internals', () => {
     const { store, target, origin } = afterOneStep();
     const answer = isCurrentReturnCheckpointTargetForStore(store, target);
     expect(typeof answer).toBe('boolean');

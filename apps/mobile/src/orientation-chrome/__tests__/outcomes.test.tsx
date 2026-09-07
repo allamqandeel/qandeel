@@ -38,7 +38,7 @@ describe('OC08-H — Preview precedence is T-07\'s, and is not duplicated', () =
 
     const depth = counting.store.getState().camera.depth;
     const view = await render(
-      <OrientationChrome surface={surface} projection={projectionFor(counting.store, fetched(TWO_CONTEXT_WORLD({ depth })))} />,
+      <OrientationChrome language="en" surface={surface} projection={projectionFor(counting.store, fetched(TWO_CONTEXT_WORLD({ depth })))} />,
     );
     await act(async () => {
       fireEvent.press(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:${id}`));
@@ -63,7 +63,7 @@ describe('OC08-H — no-ops and refusals', () => {
     const before = store.getState();
     const outcomes: ReturnOutcome[] = [];
     const view = await render(
-      <OrientationChrome
+      <OrientationChrome language="en"
         surface={chromeSurface(store)}
         projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD({ depth: 'WORLD' })))}
         onReturnOutcome={(_id, outcome) => outcomes.push(outcome)}
@@ -86,7 +86,7 @@ describe('OC08-H — no-ops and refusals', () => {
     const store = reader();
     const outcomes: ReturnOutcome[] = [];
     const view = await render(
-      <OrientationChrome
+      <OrientationChrome language="en"
         surface={chromeSurface(store)}
         projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD()))}
         onReturnOutcome={(_id, outcome) => outcomes.push(outcome)}
@@ -104,7 +104,7 @@ describe('OC08-H — no-ops and refusals', () => {
   it('H75 — a stale projection stays technical and never becomes a semantic absence', async () => {
     const store = reader();
     const view = await render(
-      <OrientationChrome surface={chromeSurface(store)} projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD({ tc: 3 })))} />,
+      <OrientationChrome language="en" surface={chromeSurface(store)} projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD({ tc: 3 })))} />,
     );
     // The disclosure does not describe this viewpoint, so the Live Focus act is not offered — and
     // the reason is technical, never "there is nowhere to go".
@@ -120,7 +120,7 @@ describe('OC08-H — no-ops and refusals', () => {
 describe('OC08-H — the observer is an observer', () => {
   it('H77 — an absent outcome observer never suppresses the act itself', async () => {
     const store = reader();
-    const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD()))} />);
+    const view = await render(<OrientationChrome language="en" surface={chromeSurface(store)} projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD()))} />);
     await act(async () => {
       fireEvent.press(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_WORLD`));
     });
@@ -137,7 +137,7 @@ describe('OC08-H — the observer is an observer', () => {
     const store = reader();
     const seen: { id: ReturnOpportunityId; outcome: ReturnOutcome; historyAtCall: number }[] = [];
     const view = await render(
-      <OrientationChrome
+      <OrientationChrome language="en"
         surface={chromeSurface(store)}
         projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD()))}
         onReturnOutcome={(id, outcome) => seen.push({ id, outcome, historyAtCall: store.getState().history.length })}

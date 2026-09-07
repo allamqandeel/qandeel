@@ -29,15 +29,25 @@
  */
 import { disclosedAppearances, type MapInspectionContext, type MapObjectFamily } from '../map';
 import type { HistoricalFamily } from '../projection';
-import { CONTEXT_ORDERING_NOTE, contextChoiceLabel } from './product-copy';
 import type { ContextAppearanceOption, ContextChrome, ContextStep } from './types';
 
 const EMPTY: ContextChrome = Object.freeze({
   lineage: Object.freeze([]),
   appearances: Object.freeze([]),
   choiceAvailable: false,
-  ordering: CONTEXT_ORDERING_NOTE,
 });
+
+/**
+ * What a reader could tell one appearance from another BY.
+ *
+ * It is the semantic pair the chooser is allowed to show — whether this is the one they are looking
+ * through, and the Moment it was taken up at — and never a rendered string. Deriving it from the
+ * words would make "can these be told apart?" a question with a different answer in each language,
+ * and the answer is a fact about the disclosure, not about the wording. A Moment is a number, so it
+ * can never collide with the current-appearance key.
+ */
+const CURRENT_KEY = 'CURRENT';
+const distinguisher = (option: ContextAppearanceOption): string => (option.current ? CURRENT_KEY : String(option.boundAtMoment));
 
 /** The Map families are exactly the disclosure families of the same name; every other family is inspectable but unplaced. */
 const MAP_FAMILIES: readonly string[] = Object.freeze(['THREAD', 'READING', 'EMERGING_FOCUS']);
@@ -68,7 +78,7 @@ export function contextOrientation(inputs: ContextOrientationInputs): ContextChr
   if (identity === null) return EMPTY;
   const family = mapFamilyOf(identity.family);
   if (family === null) {
-    return Object.freeze({ lineage, appearances: Object.freeze([]), choiceAvailable: false, ordering: CONTEXT_ORDERING_NOTE });
+    return Object.freeze({ lineage, appearances: Object.freeze([]), choiceAvailable: false });
   }
 
   const options: ContextAppearanceOption[] = [];
@@ -83,9 +93,6 @@ export function contextOrientation(inputs: ContextOrientationInputs): ContextChr
         bindingId: where.bindingId,
         boundAtMoment: where.boundSp,
         current,
-        // Built from the two things the reader already has: whether this is the context they are
-        // looking through, and the Moment it was taken up at. No Thread id, no binding id, no key.
-        label: contextChoiceLabel(current, where.boundSp),
       }),
     );
   }
@@ -94,8 +101,11 @@ export function contextOrientation(inputs: ContextOrientationInputs): ContextChr
   // appearances taken up at the same Moment cannot be told apart by anything a reader may see.
   // Offering them anyway would mean either labelling them with internal handles or making a name up;
   // both are worse than saying nothing, so no chooser is produced at all.
-  const labels = new Set(options.map((option) => option.label));
-  const distinguishable = labels.size === options.length;
+  //
+  // Asked of the semantic pair rather than of the rendered words, so the chooser appears and
+  // disappears identically in every language.
+  const keys = new Set(options.map(distinguisher));
+  const distinguishable = keys.size === options.length;
 
   return Object.freeze({
     lineage,
@@ -103,7 +113,6 @@ export function contextOrientation(inputs: ContextOrientationInputs): ContextChr
     // not a choice a reader could make.
     appearances: options.length >= 2 && distinguishable ? Object.freeze(options) : Object.freeze([]),
     choiceAvailable: options.length >= 2 && distinguishable,
-    ordering: CONTEXT_ORDERING_NOTE,
   });
 }
 

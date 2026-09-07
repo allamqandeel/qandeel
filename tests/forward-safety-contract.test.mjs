@@ -267,8 +267,8 @@ const MODEL = 'apps/mobile/src/orientation-chrome/model.ts';
 
 test('a truth module that reaches an animation API is refused', () => scenario([MODEL], () => {
   patch(MODEL,
-    (text) => text.replace("import { CONTEXT_ORDERING_NOTE } from './product-copy';",
-      "import { useSharedValue } from 'react-native-reanimated';\nimport { CONTEXT_ORDERING_NOTE } from './product-copy';"),
+    (text) => text.replace("import { returnOrientation } from './return-orientation';",
+      "import { useSharedValue } from 'react-native-reanimated';\nimport { returnOrientation } from './return-orientation';"),
     'useSharedValue');
   assertRefused('inspection-orientation-return-chrome-contract', 'what is true may never depend on a frame clock');
 }));
@@ -288,8 +288,8 @@ test('a new chrome module that writes its own reader-facing words is refused', (
 
 test('a chrome module that imports an undeclared package is refused', () => scenario([MODEL], () => {
   patch(MODEL,
-    (text) => text.replace("import { CONTEXT_ORDERING_NOTE } from './product-copy';",
-      "import { produce } from 'immer';\nimport { CONTEXT_ORDERING_NOTE } from './product-copy';"),
+    (text) => text.replace("import { returnOrientation } from './return-orientation';",
+      "import { produce } from 'immer';\nimport { returnOrientation } from './return-orientation';"),
     "from 'immer'");
   assertRefused('inspection-orientation-return-chrome-contract', 'T-08 adds no dependency');
 }));
@@ -408,4 +408,62 @@ test('this gate is registered, and every contract it protects is still reachable
   // Every contract is either mutated against, or explicitly named as working-tree dependent. There
   // is no third category, so a new contract cannot quietly escape this gate.
   assert.deepEqual([...CONTRACTS, ...WORKING_TREE_CONTRACTS].sort(), [...ALL_CONTRACTS].sort());
+});
+
+// ---------------------------------------------------------------------------------------------
+// R3-05 — the semantic firewall follows the import graph, not a list of today's filenames.
+//
+// Each of these adds a module that did not exist when the guard was written, and each is reachable
+// from a semantic root only THROUGH another module. A filename census passes every one of them.
+// ---------------------------------------------------------------------------------------------
+
+const RETURN_ORIENTATION = 'apps/mobile/src/orientation-chrome/return-orientation.ts';
+const HELPER = 'apps/mobile/src/orientation-chrome/semantic-helper.ts';
+const HELPER_A = 'apps/mobile/src/orientation-chrome/semantic-a.ts';
+const HELPER_B = 'apps/mobile/src/orientation-chrome/semantic-b.ts';
+
+/** Writes a brand-new module into the mirrored layer. */
+function addModule(relative, source) {
+  const target = join(mirrorPath, relative);
+  assert.equal(existsSync(target), false, `${relative} must not already exist`);
+  writeFileSync(target, source);
+}
+
+test('a semantic helper one hop from the model that reads the viewport is refused', () => scenario([MODEL, HELPER], () => {
+  addModule(HELPER, "import { useWindowDimensions } from 'react-native';\nexport const width = (): number => useWindowDimensions().width;\n");
+  patch(MODEL, (text) => `import { width } from './semantic-helper';\n${text}`, "from './semantic-helper'");
+  assertRefused('inspection-orientation-return-chrome-contract', 'what is true may never depend on the size of the viewport');
+}));
+
+test('a semantic helper one hop from the return orientation that reaches an animation API is refused', () => scenario([RETURN_ORIENTATION, HELPER], () => {
+  addModule(HELPER, "import { withTiming } from 'react-native-reanimated';\nexport const settle = (value: number): number => withTiming(value);\n");
+  patch(RETURN_ORIENTATION, (text) => `import { settle } from './semantic-helper';\n${text}`, "from './semantic-helper'");
+  assertRefused('inspection-orientation-return-chrome-contract', 'an act is meaningful or not; an animation cannot decide it');
+}));
+
+test('a frame clock TWO hops from the model is refused', () => scenario([MODEL, HELPER_A, HELPER_B], () => {
+  // Neither new module is named in any guard, and only the first is imported by a root. The second
+  // is reachable only through the first, which is exactly what a census cannot see.
+  addModule(HELPER_B, 'export const tick = (): void => {\n  requestAnimationFrame(() => undefined);\n};\n');
+  addModule(HELPER_A, "import { tick } from './semantic-b';\nexport const relay = (): void => tick();\n");
+  patch(MODEL, (text) => `import { relay } from './semantic-a';\n${text}`, "from './semantic-a'");
+  assertRefused('inspection-orientation-return-chrome-contract', 'the closure is transitive, at any depth');
+}));
+
+test('a semantic helper that reads a gesture is refused', () => scenario([MODEL, HELPER], () => {
+  addModule(HELPER, "import { Gesture } from 'react-native-gesture-handler';\nexport const pan = () => Gesture.Pan();\n");
+  patch(MODEL, (text) => `import { pan } from './semantic-helper';\n${text}`, "from './semantic-helper'");
+  // The package is declared by the mobile app, so the dependency guard does NOT catch this one.
+  // Only the semantic closure does, which is the point.
+  assertRefused('inspection-orientation-return-chrome-contract', 'a gesture stream may never decide what is true');
+}));
+
+test('a semantic module that reaches sideways into a future presentation layer is refused', () => scenario([RETURN_ORIENTATION], () => {
+  patch(RETURN_ORIENTATION, (text) => `import { breakpointOf } from '../responsive';\n${text}`, "from '../responsive'");
+  assertRefused('inspection-orientation-return-chrome-contract', 'a semantic module may only reach an authorized owner layer');
+}));
+
+test('the mirror is back to the real repository after the transitive mutations', () => {
+  for (const added of [HELPER, HELPER_A, HELPER_B]) assert.equal(existsSync(join(mirrorPath, added)), false, `${added} was removed again`);
+  assertAllSurvive('the transitive scenarios left the mirror exactly as they found it');
 });

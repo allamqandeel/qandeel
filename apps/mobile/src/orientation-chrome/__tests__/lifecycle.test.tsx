@@ -34,14 +34,20 @@ describe('OC08-I — rerender and callback churn', () => {
   it('I79 — a new callback identity on every render changes no semantics and runs no act', async () => {
     const store = reader();
     const projection = projectionFor(store, fetched(TWO_CONTEXT_WORLD()));
-    const view = await render(<OrientationChrome surface={chromeSurface(store)} projection={projection} onReturnOutcome={() => undefined} />);
+    const view = await render(<OrientationChrome
+        language="en"
+        surface={chromeSurface(store)}
+        projection={projection}
+        onReturnOutcome={() => undefined}
+        liveContext={() => ({ ok: false, code: 'PROJECTION_NOT_AVAILABLE', detail: 'none' })}
+      />);
     const before = store.getState();
     const snapshot = JSON.stringify(view.toJSON(), (_key, value) => (typeof value === 'function' ? '[handler]' : value));
 
     for (let index = 0; index < 4; index += 1) {
       await act(async () => {
         view.rerender(
-          <OrientationChrome
+          <OrientationChrome language="en"
             surface={chromeSurface(store)}
             projection={projection}
             onReturnOutcome={() => undefined}
@@ -67,7 +73,7 @@ describe('OC08-I — rerender and callback churn', () => {
     expect(store.getState().history).toHaveLength(1);
 
     const view = await render(
-      <OrientationChrome surface={surface} projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD({ depth: 'WORLD' })))} />,
+      <OrientationChrome language="en" surface={surface} projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD({ depth: 'WORLD' })))} />,
     );
     await act(async () => {
       const control = view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:BACK_ONE_STEP`);
@@ -99,7 +105,7 @@ describe('OC08-I — unmount and replacement', () => {
     };
 
     const view = await render(
-      <OrientationChrome surface={chromeSurface(store)} projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD()))} liveContext={provider} />,
+      <OrientationChrome language="en" surface={chromeSurface(store)} projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD()))} liveContext={provider} />,
     );
     await act(async () => {
       fireEvent.press(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:GO_LIVE_AND_LOCATE`));
@@ -127,7 +133,7 @@ describe('OC08-I — unmount and replacement', () => {
     const originalAfterSetup = original.getState();
 
     const view = await render(
-      <OrientationChrome
+      <OrientationChrome language="en"
         surface={surface}
         projection={projectionFor(original, fetched(TWO_CONTEXT_WORLD({ depth: 'WORLD' })))}
         exactReturnOrigin={origin}
@@ -140,7 +146,7 @@ describe('OC08-I — unmount and replacement', () => {
     returnWorld(chromeSurface(replacement));
     await act(async () => {
       view.rerender(
-        <OrientationChrome
+        <OrientationChrome language="en"
           surface={chromeSurface(replacement)}
           projection={projectionFor(replacement, fetched(TWO_CONTEXT_WORLD({ depth: 'WORLD' })))}
           exactReturnOrigin={origin}
@@ -173,7 +179,7 @@ describe('OC08-I — unmount and replacement', () => {
     const before = store.getState();
 
     const view = await render(
-      <OrientationChrome
+      <OrientationChrome language="en"
         surface={surface}
         projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD({ depth: 'WORLD' })))}
         exactReturnOrigin={origin}
@@ -183,7 +189,7 @@ describe('OC08-I — unmount and replacement', () => {
     // Merely rendering and rerendering never writes anything.
     await act(async () => {
       view.rerender(
-        <OrientationChrome
+        <OrientationChrome language="en"
           surface={surface}
           projection={projectionFor(store, fetched(TWO_CONTEXT_WORLD({ depth: 'WORLD' })))}
           exactReturnOrigin={origin}

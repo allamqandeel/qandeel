@@ -164,20 +164,34 @@ never asked. The label and hint are constants, so they do not move with the answ
 
 ## 6. The six returns stay six Product acts
 
-| act | effect | moves time | moves camera |
-| --- | --- | --- | --- |
-| `BACK_ONE_STEP` | history | yes | yes |
-| `EXACT_RETURN` | history | yes | yes |
-| `RETURN_LIVE_HEAD` | temporal | yes | **no** |
-| `RETURN_LIVE_FOCUS` | spatial | **no** | yes |
-| `RETURN_WORLD` | spatial | no | yes |
-| `GO_LIVE_AND_LOCATE` | temporal **and** spatial | yes | yes |
+| act | intent | temporal | spatial | inspection |
+| --- | --- | --- | --- | --- |
+| `BACK_ONE_STEP` | restore the latest captured viewpoint | restored if different | restored if different | restored if different |
+| `EXACT_RETURN` | restore the bound inspection exactly | restored if different | restored if different | restored if different |
+| `RETURN_LIVE_HEAD` | establish `FOLLOW_LIVE` | direct | **preserved** | preserved |
+| `RETURN_LIVE_FOCUS` | locate the live focus once | **preserved** | one-shot, bounded | preserved |
+| `RETURN_WORLD` | return to the World viewpoint | preserved | direct | preserved |
+| `GO_LIVE_AND_LOCATE` | go Live, then locate once | direct | **conditional** | preserved |
 
 Each control reaches exactly ONE T-07 executor, through a `switch` with one call per arm, so no
-payload can redirect one act to another. `movesTime` and `movesCamera` are constants of the frozen
-identity: Return to Live Head must never be presented as taking the reader anywhere, Return to Live
-Focus must never be presented as going Live, and the composite says it is both rather than being
-disguised as either half.
+payload can redirect one act to another. The promises are constants of the frozen identity: Return
+to Live Head must never be presented as taking the reader anywhere, Return to Live Focus must never
+be presented as going Live, and the composite states its temporal half as owned and its spatial half
+as conditional, so it can be mistaken for neither half — nor for a guarantee.
+
+**R3-03 — why these are not two booleans.** `movesTime` and `movesCamera` could each say only "this
+will change" or "this will not change", and four of the six acts fit neither. Back and Exact Return
+restore a *captured tuple*, so an individual field may legitimately come back unchanged — the
+contract they keep is the target, not the movement. Return to Live Focus attempts the camera once and
+an authorization race may make that a no-op. And Go Live + Locate moves the camera only if the
+referent it bound at the post-live boundary turns out to be locatable at `K(LH)`; where it is not,
+the temporal return still succeeds and the camera does not move, which is a valid result of the one
+act rather than a failure of it. At activation T-08 cannot know which will happen — and must not,
+because knowing would itself require reading a future-relative fact. So each dimension carries its
+own typed promise and the copy is written from it.
+
+The metadata is descriptive. Which executor runs is decided from the frozen identity alone, so
+nothing here can become a second authority over what an act does.
 
 There is deliberately no generic `Home`, `Reset`, `Navigate`, `Go Live`, `BackOrHome` or `Return`:
 a generic identity would make the differences between the six unstatable, and every one of those
@@ -482,3 +496,99 @@ every root contract for the ceiling *shapes* themselves, so the class cannot com
 Two contracts are excluded from the mutation runs and named explicitly: `toolchain` and
 `mobile-foundation-toolchain-contract` interrogate git itself — which paths are tracked, which are
 ignored — so they are meaningless against a copy that is not a repository. The shape sweep covers them.
+
+---
+
+## 13. R3 — two Product languages, a visible preview, and honest promises
+
+### Arabic and English are both real, and neither is the semantics
+
+`ChromeLanguage` is `'ar' | 'en'`, and it is Class D presentation configuration: not canonical state,
+not `RH`, not `TM`, not `TC`, not `PTC`, not projection authority and not return authority. It is a
+**required** prop rather than a defaulted one, because defaulting it would quietly elect one of the
+two languages as the Product's default, which is not this layer's decision.
+
+Language is an input at the copy boundary and nowhere above it. `orientationModel` takes no language
+argument at all, and the model it returns carries no sentence: every string in it is a frozen token
+or an opaque handle. That is what makes "the semantic answer is identical in Arabic and in English" a
+structural fact rather than a discipline — there is no code path along which the two could disagree,
+because the answer is complete before a word is chosen.
+
+Reading direction is a **separate axis**. `I18nManager.isRTL` says how the platform lays a surface
+out; it does not say which language a reader reads. An English reader on an RTL device and an Arabic
+reader on an LTR one are both ordinary, so neither is inferred from the other anywhere in this layer,
+and all four combinations are exercised.
+
+The register is **VI-01's, not this task's**. Every string here is T1 · Chrome under the VI-01
+register law, which assigns neutral contemporary Arabic — explicitly not فصحى تراثية and not
+MSA-by-default — with no displayed case endings, gender-neutral by default, and the retired
+«المشهد» not reintroduced. Two VI-01 divergences shape the English: "context" as a noun does not
+ship (Arabic «سياق» is ordinary and approved, so the two languages legitimately diverge), and "live"
+does not ship as user-facing English. Numerals are Western in both languages through one formatter,
+because this layer's seam is a *language* and carries no region — and `ar` alone does not determine
+digits. No regional numeral policy is frozen here; that belongs with T-12's locale provider.
+
+### The preview is looked at, not travelled to
+
+T-08 consumes T-06's published snapshot through a read-only seam that carries `getSnapshot` and
+`subscribe` and nothing else, so starting, retargeting, committing or cancelling a preview is a type
+error rather than a rule. T-06 and T-07 keep the whole of preview precedence, including the
+cancellation every return executor performs for itself.
+
+The transient target is a **sibling** of the committed stance, never a member of it: `mode` still has
+exactly two values, so a preview cannot be expressed as a temporal mode and `PTC` cannot be expressed
+as `TC`. The copy says both halves out loud — what is being looked at, and that the reader's own
+position has not moved — because a preview that does not deny being a commitment reads as one.
+
+### The composite is not offered where it cannot be attempted
+
+Go Live + Locate resolves the live viewpoint's disclosure through a provider the surface supplies.
+Without one there is nothing to attempt the spatial half with, so the act is not offered at all, and
+no built-in "not fetched" provider stands in to keep the control on screen. Provider presence is a
+client capability decided before anything about Live is known: it cannot move with `LF` and it
+discloses nothing, so requiring it adds no future-relative input to the offered set.
+
+### "The original inspection" is consumed, never manufactured (R3-04)
+
+Same-store provenance is necessary, and T-07 proves it. It is **not** sufficient to call a checkpoint
+the named origin of a real explicit inspection **journey**: a checkpoint recorded by Return to World
+is a perfectly valid handle and is not an inspection at all. A public mint over an arbitrary target
+therefore let any caller manufacture a Product capability whose name was false — and the earlier
+tests did exactly that, binding a Return-World checkpoint and labelling it the original inspection.
+
+T-08 is not app-shell integrated and owns no inspection-**journey** coordinator, so it cannot know
+which checkpoint began the journey. The boundary is therefore consumer-only: the opaque capability
+and its consumer helpers are public, and the mint is absent from the barrel. Nothing outside this
+layer can construct an origin from a target.
+
+> **Deferred, explicitly, to the T-12 integration gate:** establishing the real inspection-**journey**
+> origin at the actual journey boundary. T-12 may add a narrow journey-origin coordinator or
+> integration seam for it **without reopening T-07's return semantics**. Until such an origin is
+> supplied, the Exact Return control is simply absent. T-07 remains the final execution authority and
+> re-proves provenance and presence before writing anything.
+
+### The semantic firewall follows the import graph
+
+The permanent claim is that what a reader is told is true may never depend on a frame clock, a
+viewport size, a measured layout, a gesture stream or a scheduler. Guarding that with a census of
+today's semantic filenames was a proxy: a future `semantic-helper.ts` imported by `model.ts` would
+have decided things too and escaped the list. The guard now walks the local import graph from the
+semantic roots, so anything reachable is in the closure automatically, at any depth — and a
+specifier that leaves the layer must resolve to one of the owner layers T-08 is authorized to
+consume, which closes the sideways route as well. Presentation-only motion and responsive work in
+the components remain allowed, because T-10 and T-11 own them.
+
+### Pass-through is a property of the subtree
+
+`pointerEvents="box-none"` on the root exempts only the root. Every noninteractive wrapper in this
+layer now declares `box-none`, every text-only surface declares `none`, and the only nodes that can
+take a press are the controls that mean something. The composition proof mounts the **real**
+`MapSurface` beside the **real** `OrientationChrome` and shows a tap that misses the controls reaching
+the Map's own route, a control press not falling through, a context-choice press switching context
+only, and a stale Map projection staying unavailable while the chrome is on screen. It is a test
+composition: nothing is mounted into the app shell, which stays T-12's.
+
+Narrow width is proved with a real 320-point parent and viewport envelope rather than a safe-area
+inset. At that width the semantic model, the offered acts, their order and every word are identical
+to the wide surface, and canonical state and the camera are untouched — presentation only, in both
+languages.

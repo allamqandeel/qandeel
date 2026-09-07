@@ -83,7 +83,61 @@ const layerText = Object.values(code).join('\n');
  * be a guard against authorized work. Banning them from the truth modules forever is a different and
  * permanent claim — what is true may never depend on a frame clock, a viewport size or a measurement.
  */
-const TRUTH_MODULES = ['types.ts', 'inspection-orientation.ts', 'return-orientation.ts', 'context-orientation.ts', 'model.ts', 'product-copy.ts', 'exact-return-origin.ts'];
+const SEMANTIC_ROOTS = ['model.ts', 'inspection-orientation.ts', 'return-orientation.ts', 'context-orientation.ts', 'exact-return-origin.ts', 'types.ts', 'product-copy.ts'];
+
+/** The owner layers T-08 is authorized to consume, and the only ones it may reach across to. */
+const OWNER_LAYERS = ['../state', '../map', '../projection', '../return-navigation', '../temporal-navigation'];
+
+/** Resolves a relative specifier to a module of THIS layer, or `null` when it leaves the layer. */
+function resolveInLayer(fromFile, specifier) {
+  const segments = fromFile.split('/').slice(0, -1).concat(specifier.split('/'));
+  const stack = [];
+  for (const segment of segments) {
+    if (segment === '.' || segment === '') continue;
+    if (segment === '..') stack.pop();
+    else stack.push(segment);
+  }
+  const base = stack.join('/');
+  for (const candidate of [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`]) {
+    if (productionFiles.includes(candidate)) return candidate;
+  }
+  return null;
+}
+
+/**
+ * Every module the semantic answer can reach, found by WALKING the imports rather than by naming
+ * today's files.
+ *
+ * R3-05. The census version was a list of the seven modules that happened to decide things when it
+ * was written. A future `semantic-helper.ts` imported by `model.ts` would have decided things too,
+ * and would have escaped it — so the guard has to follow the graph. Anything reachable from a root
+ * is in the closure automatically, however many hops away and whatever it is called.
+ *
+ * A specifier that leaves the layer is recorded as a BOUNDARY rather than followed: those layers
+ * have their own contracts, and T-06 legitimately owns motion that this walk must not wander into.
+ * The boundary set is checked against the owner allowlist instead, which closes the other half —
+ * a semantic module cannot reach sideways into some future presentation layer either.
+ */
+function semanticClosure() {
+  const closure = new Set();
+  const boundary = new Set();
+  const queue = [...SEMANTIC_ROOTS];
+  while (queue.length > 0) {
+    const current = queue.pop();
+    if (closure.has(current) || !(current in code)) continue;
+    closure.add(current);
+    for (const match of code[current].matchAll(/from\s+'([^']+)'/gu)) {
+      const specifier = match[1];
+      if (!specifier.startsWith('.')) continue;
+      const resolved = resolveInLayer(current, specifier);
+      if (resolved === null) boundary.add(specifier);
+      else queue.push(resolved);
+    }
+  }
+  return { closure: [...closure].sort(), boundary: [...boundary].sort() };
+}
+
+const { closure: SEMANTIC_CLOSURE, boundary: SEMANTIC_BOUNDARY } = semanticClosure();
 
 // FORWARD-SAFE (R2-02). The first version asserted this directory contains EXACTLY these files. That
 // is a ceiling on T-10, which is authorized to bring motion into this very layer and will bring its
@@ -194,13 +248,30 @@ test('every reader-facing word comes from the one copy module, and none of it is
   }
   // And the copy module is where all of it actually is.
   const copy = code['product-copy.ts'];
-  assert.match(copy, /export function returnActWords\(id: ReturnOpportunityId\)/u, 'the six control labels and hints are written here');
-  for (const name of ['CONTEXT_CHOICE_TITLE', 'CONTEXT_ORDERING_NOTE', 'ORIENTATION_CHROME_LABEL', 'INSPECTION_ORIENTATION_LABEL', 'RETURN_CONTROLS_LABEL']) {
-    assert.match(copy, new RegExp(`export const ${name} = '`, 'u'), `${name} is written here`);
+  // R3-01: every reader-facing function takes the language FIRST and decides nothing.
+  assert.match(copy, /export const returnActWords = \(language: ChromeLanguage, id: ReturnOpportunityId\)/u, 'the six control labels and hints are written here, per language');
+  for (const name of ['contextChoiceTitle', 'contextOrderingNote', 'orientationChromeLabel', 'inspectionOrientationLabel', 'returnControlsLabel']) {
+    assert.match(copy, new RegExp(`export const ${name} = \\(language: ChromeLanguage\\)`, 'u'), `${name} is written here, per language`);
   }
-  // The plain-language tables exist, and nothing renders a frozen token directly.
-  assert.match(copy, /const FAMILY: Readonly<Record<HistoricalFamily, string>>/u);
-  assert.match(copy, /const DEPTH: Readonly<Record<SemanticDepth, string>>/u);
+  for (const phrase of ['inspectionSentence', 'temporalSentence', 'previewSentence', 'spatialSentence', 'liveSentence', 'contextPathSentence', 'contextChoiceLabel', 'contextStepWord']) {
+    assert.match(copy, new RegExp(`export const ${phrase} = \\(language: ChromeLanguage`, 'u'), `${phrase} is asked in a language`);
+  }
+  // BOTH packs implement the same interface, so a phrase cannot exist in one language only: the
+  // parity is a type error rather than a discipline.
+  assert.match(copy, /interface LanguagePack \{/u, 'one interface holds every phrase the chrome can produce');
+  assert.match(copy, /const EN: LanguagePack = Object\.freeze<LanguagePack>\(\{/u, 'the English pack implements it');
+  assert.match(copy, /const AR: LanguagePack = Object\.freeze<LanguagePack>\(\{/u, 'the Arabic pack implements it');
+  assert.match(copy, /const PACKS: Readonly<Record<ChromeLanguage, LanguagePack>>/u, 'and the two are the whole set');
+  // Real Arabic script is present, so "bilingual" is not English behind a language switch.
+  assert.match(copy, /[\u0600-\u06FF]/u, 'the Arabic pack contains Arabic');
+  // ONE numeral formatter for both languages: a reader never meets two numeral systems in a surface.
+  assert.equal((copy.match(/const digits = /gu) ?? []).length, 1, 'exactly one numeral formatter exists');
+  assert.doesNotMatch(copy, /[\u0660-\u0669\u06F0-\u06F9]/u, 'no Eastern-Arabic digit is hard-coded anywhere');
+  // No bidi control character is smuggled into any string.
+  assert.doesNotMatch(copy, /[\u200E\u200F\u2066-\u2069]/u, 'no bidi control character appears in the copy');
+  // The plain-language tables exist in both, and nothing renders a frozen token directly.
+  assert.equal((copy.match(/family: Object\.freeze\(\{/gu) ?? []).length, 2, 'both packs name the families in plain language');
+  assert.equal((copy.match(/depth: Object\.freeze\(\{/gu) ?? []).length, 2, 'both packs name the rungs by what they disclose');
   // A transport refusal code is never interpolated into a sentence.
   assert.doesNotMatch(layerText, /\$\{render\.code\}|\$\{.*\.reason\}/u, 'no refusal code or stale reason is ever spoken');
   // No identifier of any kind is interpolated into reader-facing copy.
@@ -209,8 +280,12 @@ test('every reader-facing word comes from the one copy module, and none of it is
     assert.equal(layerText.includes(forbidden), false, `no reader-facing sentence may interpolate ${forbidden}`);
   }
   // The contextual chooser distinguishes options by Moment and by "current", never by a handle.
-  assert.match(copy, /export function contextChoiceLabel\(current: boolean, boundAtMoment: number\): string/u);
-  assert.match(code['context-orientation.ts'], /const distinguishable = labels\.size === options\.length;/u, 'the chooser fails closed when options cannot be told apart');
+  assert.match(copy, /export const contextChoiceLabel = \(language: ChromeLanguage, current: boolean, boundAtMoment: number\)/u);
+  // Distinguishability is decided from the SEMANTIC pair, not from the rendered words, so the
+  // chooser appears and disappears identically in every language.
+  assert.match(code['context-orientation.ts'], /const keys = new Set\(options\.map\(distinguisher\)\);/u, 'the chooser is told apart by what it means');
+  assert.match(code['context-orientation.ts'], /const distinguishable = keys\.size === options\.length;/u, 'the chooser fails closed when options cannot be told apart');
+  assert.equal(code['context-orientation.ts'].includes('product-copy'), false, 'the chooser does not consult the words to decide what it offers');
 });
 
 // R2-01 — presentation provenance is ASKED of T-07, never inferred here.
@@ -277,7 +352,7 @@ test('T-08 adds no canonical state, no temporal mode, no Product act and no rout
   assert.match(classes, /export type TemporalMode = \{ readonly kind: 'FOLLOW_LIVE' \} \| \{ readonly kind: 'PINNED'; readonly at: SessionPosition \};/u);
 
   const actions = stripComments(await read('apps/mobile/src/state/actions.ts'));
-  for (const generic of ['NAVIGATE', 'GO_HOME', "'HOME'", "'RESET'", 'BACK_OR_HOME', 'RESTORE']) {
+  for (const generic of ['NAVIGATE', 'GO_HOME', "'HOME'", "'RESET'", 'BACK_OR_HOME', "'RESTORE'"]) {
     assert.equal(actions.includes(generic), false, `the catalog must not gain ${generic}`);
     assert.equal(layerText.includes(generic), false, `T-08 must not introduce ${generic}`);
   }
@@ -379,13 +454,23 @@ test('no truth in this layer may ever depend on animation, measurement, scheduli
     'runOnJS', 'scheduleOnRN', 'useWindowDimensions', 'Dimensions', 'onLayout', 'breakpoint', 'isNarrow', 'isTablet',
     'GestureDetector', 'Gesture.', 'PanResponder', 'react-native-gesture-handler', 'onGestureEvent',
   ];
-  for (const name of TRUTH_MODULES) {
+  for (const name of SEMANTIC_CLOSURE) {
     for (const api of APIS) {
       assert.equal(code[name].includes(api), false, `${name} decides what is true and must never reach ${api}`);
     }
     // A truth module renders nothing, so it imports no view layer either.
     assert.doesNotMatch(code[name], /from\s+'react-native'/u, `${name} is a truth module and imports no view layer`);
   }
+  // The walk really did reach every root, and it is a CLOSURE rather than a list: every module
+  // reachable from a root is in it, so a helper added tomorrow is guarded the day it is imported.
+  for (const root of SEMANTIC_ROOTS) assert.ok(SEMANTIC_CLOSURE.includes(root), `the semantic closure includes ${root}`);
+  // And the closure may only reach ACROSS to the owners T-08 is authorized to consume. A semantic
+  // module importing some future presentation or responsive layer fails here rather than passing
+  // because that layer's name was not on a denylist.
+  for (const specifier of SEMANTIC_BOUNDARY) {
+    assert.ok(OWNER_LAYERS.includes(specifier), `a semantic module may only reach an owner layer, got ${specifier}`);
+  }
+
   // Two layer-wide bans that no later task makes legitimate either:
   //   - polling. The kernel publishes a subscription seam, so a chrome layer that sampled on a timer
   //     would be re-deriving state that is already pushed to it, and would drift from it.
@@ -441,6 +526,11 @@ test('every T-08 source file is real text: no control byte can make git treat it
     assert.equal(control, -1, `${name} contains a control character at index ${control}`);
     assert.equal(text.charCodeAt(0) === 0xfeff, false, `${name} carries a byte order mark`);
     assert.equal(text.includes('\r'), false, `${name} carries a carriage return`);
+    // Invisible bidi formatting is the Trojan-Source class: source that reads one way to a human and
+    // another to the compiler. A bilingual layer is exactly where it would hide, so it is refused
+    // outright — the Arabic here needs none of it, because a digit run inside a right-to-left line
+    // is already ordered correctly by the algorithm itself.
+    assert.doesNotMatch(text, /[\u200E\u200F\u202A-\u202E\u2066-\u2069]/u, `${name} carries an invisible bidi control character`);
     assert.doesNotMatch(text, /(?:ANTHROPIC|OPENAI|GOOGLE_AI|SUPABASE_SERVICE_ROLE)_(?:API_)?KEY|SUPABASE_PUBLISHABLE_KEY|EXPO_PUBLIC_|sk-ant-/u, `${name} references a credential`);
   }
 });
@@ -473,4 +563,258 @@ test('T-08 is additive: it owns exactly one directory and takes over none', () =
   for (const existing of ['app', 'map', 'projection', 'return-navigation', 'shell', 'state', 'temporal', 'temporal-navigation', 'timeline']) {
     assert.ok(owners.includes(existing), `${existing} is untouched by T-08`);
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// R3 — language, preview, promises and the Original-Inspection boundary.
+// ---------------------------------------------------------------------------------------------
+
+// R3-01. Language is presentation configuration and nothing else. The two failure shapes are that it
+// becomes state, and that it is inferred from the reading direction — which is a different question
+// with a different answer, and conflating them is what made the earlier RTL proof look like an
+// Arabic proof.
+test('the Product language is presentation only, and is never inferred from the reading direction', async () => {
+  const classes = stripComments(await read('apps/mobile/src/state/classes.ts'));
+  for (const canonical of ['ChromeLanguage', 'language']) {
+    assert.equal(classes.includes(canonical), false, `the canonical state must not gain ${canonical}`);
+  }
+  // The seam exists, it is a two-member union, and it lives in the vocabulary module.
+  assert.match(code['types.ts'], /export type ChromeLanguage = 'ar' \| 'en';/u);
+  // It is never read from the platform, and the platform is never written from it.
+  assert.equal(layerText.includes('I18nManager'), false, 'reading direction never selects the Product language');
+  assert.equal(layerText.includes('isRTL'), false);
+  assert.equal(layerText.includes('writingDirection'), false, 'and the language never forces a direction either');
+  // The model carries no reader-facing field at all, which is what makes it language-neutral.
+  for (const field of ['readonly label:', 'readonly hint:', 'readonly ordering:']) {
+    assert.equal(code['types.ts'].includes(field), false, `the semantic model must not carry ${field}`);
+  }
+  // The oracle takes no language: the answer is complete before any word is chosen.
+  assert.match(code['model.ts'], /export function orientationModel\(store: CanonicalStore, projection: ChromeProjection, options: OrientationModelOptions = \{\}\): OrientationModel/u);
+  assert.equal(code['model.ts'].includes('ChromeLanguage'), false, 'the model never sees a language');
+  // And the copy module decides nothing: it formats an answer it was handed.
+  const copy = code['product-copy.ts'];
+  for (const decision of ['returnAvailability', 'liveFocusReturnAvailability', 'isCurrentMapContext', 'disclosedAppearances', 'offered', '.LF']) {
+    assert.equal(copy.includes(decision), false, `the copy module must not decide ${decision}`);
+  }
+});
+
+// R3-02. T-06 owns the preview entirely. T-08 observes it and can do nothing else to it, which is
+// enforced by the SHAPE of what it is given rather than by a rule about what it may call.
+test('the preview is consumed read-only, and never becomes a temporal mode', () => {
+  // The seam carries the published snapshot and the subscription, and nothing else.
+  assert.match(code['types.ts'], /export interface TemporalPreviewSource \{\s*getSnapshot\(\): TemporalPreview;\s*subscribe\(listener: \(\) => void\): \(\) => void;\s*\}/u,
+    'T-08 is given exactly the read-only half of the controller');
+  for (const write of ['.preview(', '.stepForward(', '.cancel(', '.reconcile(', 'createTemporalPreviewController']) {
+    assert.equal(layerText.includes(write), false, `T-08 must never reach ${write}`);
+  }
+  for (const commit of ['COMMIT_MOMENT', 'COMMIT_LIVE_EDGE', 'PREVIEW_TEMPORAL_TARGET', 'CANCEL_PREVIEW']) {
+    assert.equal(layerText.includes(commit), false, `T-08 commits nothing: ${commit}`);
+  }
+  // Still exactly two committed modes, with the preview beside them rather than inside them.
+  assert.match(code['types.ts'], /readonly mode: 'FOLLOW_LIVE' \| 'PINNED';/u, 'there is no third temporal mode');
+  assert.match(code['types.ts'], /readonly preview: PreviewChrome;/u, 'the transient target is a sibling of the committed stance');
+  // `PTC` is T-06's word for a transient position and never becomes a key here.
+  assert.equal(code['types.ts'].includes('PTC'), false, 'no canonical or model key is named PTC');
+  // T-06 is reached type-only, so no module of it is loaded at runtime by this layer.
+  assert.match(code['model.ts'], /import type \{ TemporalPreview \} from '\.\.\/temporal-navigation';/u);
+});
+
+// R3-03. The promises are typed per dimension, and the composite is not offered where its spatial
+// half cannot even be attempted.
+test('each return promises per dimension, and the composite requires a real live-context provider', () => {
+  const orientation = code['return-orientation.ts'];
+  // No guarantee-shaped boolean survives anywhere in the layer.
+  for (const boolean of ['movesTime', 'movesCamera']) {
+    assert.equal(layerText.includes(boolean), false, `${boolean} claimed a physical delta the act cannot promise`);
+  }
+  assert.match(code['types.ts'], /export type ReturnPromise = 'DIRECT' \| 'PRESERVED' \| 'RESTORED_IF_DIFFERENT' \| 'ONE_SHOT_BOUNDED' \| 'CONDITIONAL_POST_LIVE_LOCATE';/u);
+  // The composite is the one asymmetric act, and it says so in the type.
+  assert.match(orientation, /GO_LIVE_AND_LOCATE: Object\.freeze\(\{[\s\S]*?spatial: 'CONDITIONAL_POST_LIVE_LOCATE' as const/u,
+    'the composite states its spatial half as conditional');
+  assert.match(orientation, /RETURN_LIVE_FOCUS: Object\.freeze\(\{[\s\S]*?spatial: 'ONE_SHOT_BOUNDED' as const/u);
+  assert.match(orientation, /RETURN_LIVE_HEAD: Object\.freeze\(\{[\s\S]*?spatial: 'PRESERVED' as const/u, 'Live Head promises no camera movement');
+  // Offering it requires the capability, and the capability is a client fact rather than a target.
+  assert.match(orientation, /readonly liveContextAvailable: boolean;/u);
+  assert.match(orientation, /return availability\.liveReturnAvailable && temporal\.mode === 'PINNED' && liveContextAvailable;/u,
+    'the composite is offered only where its spatial half can be attempted');
+  assert.match(code['model.ts'], /liveContextAvailable: options\.liveContextAvailable === true,/u);
+  assert.match(code['OrientationChrome.tsx'], /liveContextAvailable: liveContext !== undefined,/u);
+  // And no substitute provider is manufactured to keep the control on screen.
+  assert.equal(code['ReturnControls.tsx'].includes('returnMapContext'), false, 'no built-in provider stands in for a real one');
+  assert.equal(code['ReturnControls.tsx'].includes('NOT_FETCHED'), false);
+  assert.match(code['ReturnControls.tsx'], /if \(liveContext === undefined\) return;/u, 'without a provider the act has no route at all');
+  // The metadata is descriptive: which executor runs is decided from the identity alone.
+  const arms = [...code['ReturnControls.tsx'].matchAll(/case '([A-Z_]+)':/gu)].map((match) => match[1]);
+  assert.deepEqual(arms.sort(), ['BACK_ONE_STEP', 'EXACT_RETURN', 'GO_LIVE_AND_LOCATE', 'RETURN_LIVE_FOCUS', 'RETURN_LIVE_HEAD', 'RETURN_WORLD']);
+  for (const metadata of ['.intent', '.effects', 'RESTORED_IF_DIFFERENT']) {
+    assert.equal(code['ReturnControls.tsx'].includes(metadata), false, `${metadata} must never select an executor`);
+  }
+});
+
+// R3-04. The opaque capability is public; the mint is not. Same-store provenance is necessary and
+// proven, and it is still not evidence that a checkpoint is the named origin of a real journey.
+test('no arbitrary checkpoint target can be minted into an Original Inspection through the public surface', async () => {
+  assert.doesNotMatch(code['index.ts'], /\bbindExactReturnOrigin\b/u, 'the mint is not part of the public barrel');
+  assert.match(code['index.ts'], /export \{ exactReturnTargetFor, isExactReturnOrigin \} from '\.\/exact-return-origin';/u,
+    'the capability and its consumer helpers stay public');
+  // Nothing outside the layer reaches the module that holds it, so there is no way in around the
+  // barrel either.
+  for (const owner of ['app', 'shell', 'map', 'state', 'timeline', 'temporal-navigation', 'return-navigation', 'projection']) {
+    const dir = join(rootPath, 'apps/mobile/src', owner);
+    if (!existsSync(dir)) continue;
+    for (const file of listFiles(dir)) {
+      if (!/\.tsx?$/u.test(file)) continue;
+      const text = await readFile(file, 'utf8');
+      assert.equal(text.includes('bindExactReturnOrigin'), false, `${file} must not mint an Original Inspection`);
+      assert.equal(text.includes('exact-return-origin'), false, `${file} must not deep-import the origin module`);
+    }
+  }
+  // Inside the layer only the tests and the module itself name it: no production caller mints one.
+  for (const [name, text] of Object.entries(code)) {
+    if (name === 'exact-return-origin.ts') continue;
+    assert.equal(text.includes('bindExactReturnOrigin'), false, `${name} must not mint an Original Inspection`);
+  }
+  // The real journey-origin binding is explicitly deferred, in writing, to the integration gate.
+  const notes = await read('docs/inspection-orientation-return-chrome-v1.md');
+  assert.match(notes, /T-12/u, 'the design notes name the task that owns the real journey origin');
+  assert.match(notes, /journey/iu);
+});
+
+// R3-06. Pass-through is a property of the whole subtree, not of the root prop. The root's own
+// `box-none` is asserted above; what matters here is that no descendant re-claims the world.
+test('every noninteractive node of the chrome is transparent to touch', () => {
+  for (const component of ['OrientationChrome.tsx', 'InspectionOrientation.tsx', 'ReturnControls.tsx']) {
+    const text = code[component];
+    const views = (text.match(/<View\b/gu) ?? []).length;
+    const transparent = (text.match(/pointerEvents="(?:box-none|none)"/gu) ?? []).length;
+    assert.equal(views, transparent, `${component}: every View declares whether it claims touch (${views} views, ${transparent} declarations)`);
+  }
+  // Only the real controls are targets, and they are Pressables rather than responder-bearing Views.
+  assert.equal(layerText.includes('onStartShouldSetResponder'), false, 'no hand-rolled responder claims the world');
+  assert.equal(layerText.includes('onResponderRelease'), false);
+  // And a grouping container carries no accessible NAME either. React Native maps an
+  // `accessibilityLabel` to the Android ViewGroup's `contentDescription`, which makes TalkBack focus
+  // the container and stop traversing into it — the independent controls become one unreadable node.
+  // That is the same defect R1 removed the container `accessibilityActions` for, and it is why the
+  // region vocabulary in `product-copy.ts` is not applied to a container: naming a region without
+  // swallowing it needs a landmark mechanism React Native does not give a non-focusable View.
+  //
+  // So every accessible name in a component belongs to a control: one per button, and no others.
+  for (const component of ['OrientationChrome.tsx', 'InspectionOrientation.tsx', 'ReturnControls.tsx']) {
+    const names = (code[component].match(/accessibilityLabel=/gu) ?? []).length;
+    const buttons = (code[component].match(/accessibilityRole="button"/gu) ?? []).length;
+    assert.equal(names, buttons, `${component}: ${names} accessible names for ${buttons} controls — a container must not carry one`);
+  }
+  // Arabic type: a line height is set wherever words are rendered, and nothing letter-spaces or
+  // italicises a script that cannot take either.
+  for (const component of ['OrientationChrome.tsx', 'InspectionOrientation.tsx', 'ReturnControls.tsx']) {
+    assert.match(code[component], /lineHeight: \d+/u, `${component} sets a line height for Arabic`);
+    assert.equal(code[component].includes('letterSpacing'), false, `${component} must not letter-space Arabic`);
+    assert.equal(code[component].includes("fontStyle: 'italic'"), false, `${component} must not italicise Arabic`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// R3-07 — the ORIGINAL contract's own coverage, checked rather than claimed.
+//
+// A traceability matrix written in prose rots the moment a test is renamed or deleted. These two
+// guards recompute it from the tree on every run, so a case that loses its proof fails here instead
+// of quietly becoming a gap in a document nobody re-derives.
+// ---------------------------------------------------------------------------------------------
+
+/** The original T-08 §24 categories, in the contract's own numbering. */
+const ADVERSARIAL_BANDS = [
+  ['A', 1, 8], ['B', 9, 20], ['C', 21, 30], ['D', 31, 42], ['E', 43, 50], ['F', 51, 60], ['G', 61, 70],
+  ['H', 71, 78], ['I', 79, 86], ['J', 87, 95], ['K', 96, 102], ['L', 103, 110], ['M', 111, 120],
+];
+
+test('every one of the original 120 adversarial cases is cited by a real test', async () => {
+  const dir = join(rootPath, OC_DIR, '__tests__');
+  const cited = new Map();
+  for (const name of readdirSync(dir)) {
+    if (!/\.test\.tsx?$/u.test(name)) continue;
+    // eslint-disable-next-line no-await-in-loop
+    (await readFile(join(dir, name), 'utf8'))
+      .split('\n')
+      .forEach((line, index) => {
+        for (const match of line.matchAll(/\b([A-M])(\d{1,3})\b/gu)) {
+          const band = ADVERSARIAL_BANDS.find((entry) => entry[0] === match[1]);
+          const number = Number(match[2]);
+          // The id counts only where the number really falls in that letter's band, so an unrelated
+          // token can never be mistaken for a case reference and inflate the count.
+          if (band === undefined || number < band[1] || number > band[2]) continue;
+          if (!cited.has(number)) cited.set(number, []);
+          cited.get(number).push(`${name}:${index + 1}`);
+        }
+      });
+  }
+  const uncovered = [];
+  for (let id = 1; id <= 120; id += 1) if (!cited.has(id)) uncovered.push(id);
+  assert.deepEqual(uncovered, [], `every original adversarial case must name the test that proves it; uncovered: ${uncovered.join(', ')}`);
+  assert.equal(cited.size, 120, `all 120 original cases are accounted for, found ${cited.size}`);
+});
+
+/**
+ * The original §25 static guards, each mapped to the assertion in THIS file that enforces it.
+ *
+ * The mapping is a pair of needles rather than a sentence: the guard is present only if the text
+ * that implements it is still here, so deleting an assertion breaks the matrix instead of leaving a
+ * document that describes a guard the repository no longer has.
+ */
+const STATIC_GUARDS = [
+  [1, 'owner directory exists', "assert.ok(owners.includes('orientation-chrome')"],
+  [2, 'no new canonical key', 'CANONICAL_STATE_KEYS = Object.freeze'],
+  [3, 'no third temporal mode', "readonly mode: 'FOLLOW_LIVE' \\| 'PINNED';"],
+  [4, 'no Product action added', "type:\\s*'(?:RETURN_"],
+  [5, 'no generic NAVIGATE', "'NAVIGATE'"],
+  [6, 'no generic Product HOME', "\"'HOME'\""],
+  [7, 'no Product RESET', "\"'RESET'\""],
+  [8, 'no router Product Back', "'BACK_OR_HOME'"],
+  [9, 'no router push/back', "'router.push'"],
+  [10, 'no T-08 dispatchReturn', ".dispatchReturn("],
+  [11, 'no ReturnAction construction', 'T-08 constructs no action of any owner'],
+  [12, 'no T-07 deep import', 'may import the return layer only through its barrel'],
+  [13, 'no focusMapTarget', "'focusMapTarget'"],
+  [14, 'no resolveFocusLanding', "'resolveFocusLanding'"],
+  [15, 'no runReturnPlan', "'runReturnPlan'"],
+  [16, 'no private T-07 plan/landing types', "'AuthorizedLanding'"],
+  [17, 'no duplicate freshness algorithm', "the shared freshness rule is asked in exactly one place"],
+  [18, 'no projection cache', "the layer holds exactly one module-level registry"],
+  [19, 'no locatability resolver duplication', "'resolveLocatability'"],
+  [20, 'no focus availability from raw LF', 'no part of T-08 reads the Live Focus mirror'],
+  [21, 'no persistence API', "'AsyncStorage'"],
+  [22, 'no checkpoint serialization', "'JSON.stringify'"],
+  [23, 'no new package dependency', 'T-08 adds no dependency:'],
+  [24, 'lockfile unchanged unless reauthorized', 'the verifier database driver is still declared'],
+  [25, 'no backend/API/database/schema change', 'the layer ships no database artifact'],
+  [26, 'no app/** change', 'may reach T-08 only through its barrel'],
+  [27, 'no final shell mount', 'T-08 never reaches for the app shell'],
+  [28, 'no T-11 responsive action', "'breakpoint'"],
+  [29, 'no T-10 reduced-motion ownership', "'useReducedMotion'"],
+  [30, 'no general Reanimated system in truth', "'react-native-reanimated'"],
+  [31, 'no animation callback Product dispatch', "T-08 introduces no generic navigation act"],
+  [32, 'no RH browser', 'T-08 builds no history browser'],
+  [33, 'no checkpoint metadata extraction', 'must not read the checkpoint internal'],
+  [34, 'no accessible parent swallowing controls', 'a container must not carry one'],
+  [35, 'six T-07 executors remain public/distinct', 'stays public'],
+  [36, 'T-07 forbidden internals remain private', 'T-08 never calls the T-07 resolver'],
+  [37, 'T-04 stale-projection firewall intact', 'the one shared freshness rule is unchanged'],
+  [38, 'T-06 Preview contract intact', 'T-06 still owns preview cancellation'],
+  [39, 'T-05 presentation state noncanonical', "'TimelinePresentation'"],
+  [40, 'T-08 barrel allowlisted/narrow', 'the public surface is an allowlist, never a wildcard'],
+  [41, 'no BOM/NUL/control-character corruption', 'contains a control character at index'],
+  [42, 'no future-target placeholder wording', 'may stand in for a target'],
+  [43, 'upstream root contracts remain green', "the T-04, T-05 and T-06 boundaries this layer leans on are intact"],
+];
+
+test('every one of the original 43 static guards is still implemented in this contract', async () => {
+  const self = await read('tests/inspection-orientation-return-chrome-contract.test.mjs');
+  const uncovered = [];
+  for (const [id, what, needle] of STATIC_GUARDS) {
+    if (!self.includes(needle.replace(/\\\\/gu, '\\'))) uncovered.push(`${id} (${what})`);
+  }
+  assert.deepEqual(uncovered, [], `every original static guard must still be implemented; uncovered: ${uncovered.join('; ')}`);
+  assert.equal(STATIC_GUARDS.length, 43, 'all 43 original static guards are accounted for');
+  const ids = STATIC_GUARDS.map((entry) => entry[0]);
+  assert.deepEqual(ids, Array.from({ length: 43 }, (_value, index) => index + 1), 'the guard matrix is 1..43 with no gap and no repeat');
 });

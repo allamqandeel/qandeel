@@ -32,6 +32,7 @@
  * the exact set of names below, so nothing can drift back into it by accident.
  */
 export type {
+  ChromeLanguage,
   ChromeProjectionState,
   ContextAppearanceOption,
   ContextChrome,
@@ -42,33 +43,41 @@ export type {
   LiveChrome,
   NoncurrentVersionState,
   OrientationModel,
+  PreviewChrome,
   ReturnChrome,
   ReturnEffect,
+  ReturnEffects,
+  ReturnIntent,
   ReturnOpportunity,
   ReturnOpportunityId,
+  ReturnPromise,
   SpatialChrome,
   TemporalChrome,
+  TemporalPreviewSource,
 } from './types';
 export { RETURN_OPPORTUNITY_IDS } from './types';
 
 export { contextLineage, inspectionRender, renderableIdentity } from './inspection-orientation';
 
-// The ONE place any reader-facing word is written — every sentence, every control label, every
-// control hint, every region name and the ordering note. That is what makes "no engineering
-// vocabulary reaches the Product surface" checkable rather than aspirational, and it is enforced
-// statically: no other module of this layer contains a reader-facing string at all.
+// The ONE place any reader-facing word is written, in BOTH Product languages — every sentence,
+// every control label, every control hint, every region name and the ordering note. That is what
+// makes "no engineering vocabulary reaches the Product surface" checkable rather than aspirational,
+// and it is enforced statically: no other module of this layer contains a reader-facing string at
+// all. Every one of these takes the language as its first argument and decides nothing.
+export type { ReturnWords } from './product-copy';
 export {
-  CONTEXT_CHOICE_TITLE,
-  CONTEXT_ORDERING_NOTE,
-  INSPECTION_ORIENTATION_LABEL,
-  ORIENTATION_CHROME_LABEL,
-  RETURN_CONTROLS_LABEL,
   contextChoiceLabel,
+  contextChoiceTitle,
+  contextOrderingNote,
   contextPathSentence,
   contextStepWord,
+  inspectionOrientationLabel,
   inspectionSentence,
   liveSentence,
+  orientationChromeLabel,
+  previewSentence,
   returnActWords,
+  returnControlsLabel,
   spatialSentence,
   temporalSentence,
 } from './product-copy';
@@ -76,8 +85,19 @@ export {
 export type { ReturnCapabilityInputs } from './return-orientation';
 export { opportunity, returnMeaning, returnOrientation } from './return-orientation';
 
+// R3-04. The opaque capability is public; the MINT is not, and deliberately.
+//
+// `bindExactReturnOrigin` turned any currently valid T-07 checkpoint into a Product capability
+// labelled "return to the original inspection". Same-store provenance is necessary and it is proven
+// — but it is not evidence that the checkpoint IS the named origin of a real explicit inspection
+// journey, and a checkpoint recorded by Return to World is not an original inspection however valid
+// its handle. T-08 is not app-shell integrated and owns no journey coordinator, so it cannot know
+// which checkpoint that is; the honest boundary is therefore to CONSUME an origin and never to
+// manufacture one. Establishing the real journey origin at the actual journey boundary belongs to
+// the T-12 integration gate, which can add a narrow coordinator without reopening T-07's semantics.
+// Until such an origin is supplied the Exact Return control is simply absent.
 export type { ExactReturnOrigin } from './exact-return-origin';
-export { bindExactReturnOrigin, exactReturnTargetFor, isExactReturnOrigin } from './exact-return-origin';
+export { exactReturnTargetFor, isExactReturnOrigin } from './exact-return-origin';
 
 export type { ContextOrientationInputs } from './context-orientation';
 export { contextOrientation, currentBindingOf, mapFamilyOf } from './context-orientation';

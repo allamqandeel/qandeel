@@ -10,6 +10,7 @@ import { act, render } from '@testing-library/react-native';
 import { sessionPosition, type CanonicalStore } from '../../state';
 import { ORIENTATION_CHROME_TEST_ID, OrientationChrome } from '../OrientationChrome';
 import { orientationModel } from '../model';
+import { contextOrderingNote, returnActWords } from '../product-copy';
 import { chromeStore, chromeSurface, fetched, flattenStyle, known, projectionFor, TWO_CONTEXT_WORLD, withInspection } from '../__fixtures__/chrome';
 
 const reader = (): CanonicalStore =>
@@ -23,7 +24,7 @@ const reader = (): CanonicalStore =>
 
 const renderChrome = (store: CanonicalStore, bottomInset?: number) =>
   render(
-    <OrientationChrome
+    <OrientationChrome language="en"
       surface={chromeSurface(store)}
       projection={projectionFor(store, fetched(withInspection(TWO_CONTEXT_WORLD(), known())))}
       {...(bottomInset === undefined ? {} : { bottomInset })}
@@ -78,8 +79,8 @@ describe('OC08-L — the world is not replaced', () => {
     expect(serialized).not.toContain('color');
     // Every offered control says what it does in words, so presence is never the only signal either.
     for (const opportunity of orientationModel(store, projectionFor(store, fetched(withInspection(TWO_CONTEXT_WORLD(), known())))).returns.offered) {
-      expect(serialized).toContain(opportunity.label);
-      expect(serialized).toContain(opportunity.hint);
+      expect(serialized).toContain(returnActWords('en', opportunity.id).label);
+      expect(serialized).toContain(returnActWords('en', opportunity.id).hint);
     }
 
     await act(async () => {
@@ -109,7 +110,7 @@ describe('OC08-L — no new Product vocabulary and no new authority', () => {
 
     // The ordering note is excluded from the scan because it exists precisely to DENY a ranking;
     // it is asserted separately, so the denial cannot be quietly dropped either.
-    expect(model.context.ordering).toContain('not a ranking');
+    expect(contextOrderingNote('en')).toContain('not a ranking');
     const serialized = JSON.stringify({ ...model, context: { ...model.context, ordering: '' } });
     for (const forbidden of ['importance', 'confidence', 'rank', 'score', 'weight', 'priority', 'primary', 'prominence', 'recommended']) {
       expect(serialized.toLowerCase()).not.toContain(forbidden);

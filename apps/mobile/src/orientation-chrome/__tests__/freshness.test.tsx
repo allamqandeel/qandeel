@@ -74,7 +74,7 @@ describe('OC08-E — retirement happens on the very next render', () => {
     const projection = projectionFor(store, fetched(DISCLOSED()));
     const surface = chromeSurface(store);
 
-    const view = await render(<OrientationChrome surface={surface} projection={projection} />);
+    const view = await render(<OrientationChrome language="en" surface={surface} projection={projection} />);
     expect(view.getByTestId(`${INSPECTION_ORIENTATION_TEST_ID}:statement`).props.children).toContain('You are inspecting a reading.');
     expect(view.queryByTestId(CONTEXT_CHOICE_TEST_ID)).not.toBeNull();
 
