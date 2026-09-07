@@ -96,7 +96,10 @@ test('no Product-semantic Thread / LF / T-03C scope creep, anywhere in the slice
   // No score / embedding / keyword / timer authority.
   assert.doesNotMatch(sliceCode, /score|embedding|similarity|cosine|keyword|levenshtein|setTimeout|setInterval|Date\.now|new Date/iu);
   // No new third-party dependency anywhere.
-  assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg']);
+  // FORWARD-SAFE (R2-02): an exhaustive census of the ROOT toolchain is a global ceiling that
+  // any authorized future task trips. What is permanent is that the verifier database driver is
+  // declared, alongside the forward-safe denylists this contract already carries.
+  assert.ok('pg' in rootPackage.devDependencies, 'the verifier database driver is still declared');
   for (const name of ['uuid', 'nanoid', 'zod', 'knex', 'prisma', 'pg-promise', 'postgres', 'kysely', 'drizzle-orm']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}) || name in (mobilePackage.dependencies ?? {}), false, `${name} must not be introduced`);
   }

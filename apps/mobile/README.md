@@ -310,6 +310,125 @@ identity would make unstatable.
 Contract: `npm run test:return-navigation-layer-contract` (repository root) plus the Jest suites
 under `src/return-navigation/__tests__/`. Design notes: `docs/return-navigation-layer-v1.md`.
 
+## Inspection + orientation + return chrome (T-08)
+
+`src/orientation-chrome/` makes the already-correct Living Analysis Map understandable and
+operable as a Product surface. It invents no navigation semantics: it consumes T-02, T-03C,
+T-04, T-05, T-06 and T-07 through their public barrels and adds one read-only account of
+where the reader is, plus controls that reach the existing executors and no others.
+
+- **Freshness before meaning** (`model.ts`): current canonical viewpoint, then prove the held
+  disclosure IS this viewpoint's, then derive semantic chrome, then present actions. While the
+  projection is not proven current, NO semantic answer is derived from it: the inspection state
+  becomes the matching technical state, the lineage and appearance list are empty rather than
+  retained, and the Live Focus question is `UNPROVEN` — the statement that it was never asked,
+  not a quieter `UNAVAILABLE`. The rule is T-04's ONE shared rule, reached through
+  `isCurrentMapContext` and called in exactly one place; there is no second freshness algorithm,
+  no projection cache, no second locatability resolver and no second Live Focus resolver.
+- **Five orientation dimensions stay apart** (`types.ts`): temporal, spatial, inspection, Live
+  and return are five different questions, kept separate in the type system so that a collapsed
+  answer is a type error rather than a wording mistake. The temporal, spatial and generic return
+  facts are entailed by Class A alone and stay truthful with no projection at all.
+- **`IF_ref` vs `IF_render`** (`inspection-orientation.ts`): `IF_ref` lives in canonical state and
+  is never rewritten, re-elected or "rescued" here. `IF_render` is what the selected disclosure may
+  legitimately show of it, under ONE rule — an identity may be named only where the resolution says
+  `knowledge != UNKNOWN_AT_TC`. `IDENTITY_UNKNOWN_AT_TC` therefore has no fields at all: there is
+  nothing on it to render and no target-shaped hole to leave. `DEPTH_WITHHELD`, `NOT_FETCHED`,
+  `UNAVAILABLE`, `PROJECTION_STALE`, `INSPECTION_NOT_RESOLVED` and `RESOLUTION_MALFORMED` stay
+  separate members; none becomes an absence in the world, and a superseded or not-yet-current
+  version keeps its exact lineage intent and is never called wrong, deleted or never valid.
+- **The six returns stay six, and the offered set is context-sensitive** (`return-orientation.ts`,
+  `ReturnControls.tsx`): each control reaches exactly one T-07 executor through a `switch` with one
+  call per arm. Return to Live Head is temporal only and promises no camera movement; Return to Live
+  Focus is spatial only and attempts the camera once; Go Live + Locate owns its temporal half and
+  states its spatial half as CONDITIONAL, as ONE transaction. It is offered only while the reader is
+  historical — following Live it would collapse into Return to Live Focus — **and only where a real
+  `liveContext` provider exists on the mounted surface**, because a control whose spatial half has
+  nothing to attempt with is a capability the surface does not have. Provider presence is a client
+  capability settled before anything about Live is known, so it discloses nothing. The promises
+  themselves are typed per dimension rather than asserted as booleans: a restored viewpoint may
+  legitimately differ in no field at all. Only the acts that are meaningful right now are rendered: a permanent
+  six-control matrix is a toolbar, which is the dashboard drift the contract forbids. The six
+  MEANINGS are untouched by that — `returnMeaning(id)` is a constant whether or not an act is
+  offered — and every input to the offer is knowledge-safe, so the offered set leaks nothing either.
+  There is no generic `Home`, `Reset`, `Navigate`, `Go Live`, `BackOrHome` or `Return`, and Product
+  Back is never router history.
+- **No engineering vocabulary reaches the reader** (`product-copy.ts`): every word the chrome can
+  say is written in one module. A family is named in plain language and never as its wire token; a
+  rung is named by what it discloses and never as its enum; a projection refusal is a sentence about
+  what the Product can show and never a transport code; and no identifier of any kind — canonical
+  id, binding id, locus key or lineage token — is ever spoken or drawn, in any script. The typed
+  distinctions behind the words are untouched.
+- **No hindsight** (`OrientationChrome.tsx`): while historical, the chrome says only that the
+  conversation has continued and that an explicit route back exists. Two viewpoints differing only
+  in a Live Focus this position cannot disclose render an IDENTICAL native tree — same labels,
+  hints, disabled states and accessibility actions — because nothing here reads `LF`. The one
+  specific capability comes from `liveFocusReturnAvailability` against a proven projection, and
+  adds no metadata about its target.
+- **Contextual appearance** (`context-orientation.ts`): the lineage is the exact route T-04 minted
+  from `V`, rendered as the SHAPE of the route in words — "Inside a thread, inside a context" — and
+  never as a clickable page breadcrumb or a string of ids. Several disclosed appearances are all
+  offered, in the disclosed scene's own order, with the note that the order is not a ranking;
+  nothing is primary, defaulted or preselected, and `current` states only where the reader is.
+  Options are distinguished by the two things a reader already has — whether this is the context
+  they are looking through, and the Moment the appearance was taken up at. `V` discloses no
+  human-readable name for a Thread, so when two appearances cannot be told apart that way the
+  chooser **fails closed**: nothing is invented and no internal handle is exposed. One appearance is
+  not a choice either. Switching goes through T-04's own executor carrying the requested version
+  intent.
+- **Exact Return** stays opaque and its provenance is asked of T-07 (`exact-return-origin.ts`): T-08
+  never mints a target, never reads reversible-history internals, never treats the oldest checkpoint
+  as an original inspection and builds no history browser. **The public barrel exposes no way to turn
+  an arbitrary checkpoint target into an Original Inspection at all**: same-store provenance is
+  necessary and proven, but it is not evidence that a checkpoint is the named origin of a real
+  inspection journey — a checkpoint recorded by Return to World is a valid handle and is not an
+  inspection. T-08 therefore CONSUMES an opaque origin, and establishing the real journey origin at
+  the real journey boundary belongs to the T-12 integration gate; until one is supplied, Exact Return
+  is simply absent. Whenever an origin is supplied, its validity is re-asked of T-07's own
+  `isCurrentReturnCheckpointTargetForStore` on every render, which confirms all three of: T-07 minted
+  this handle, THIS store minted it, and that exact history entry is still recorded. So a handle from
+  a foreign or replaced store is never offered at all, and a consumed origin stays retired forever —
+  the opportunity carries no ordinal, so history regrowing past its old position cannot revive it. The predicate returns a boolean and nothing else: it exposes no
+  checkpoint internals, and `resolveCheckpointTarget` stays private to T-07, which remains the
+  independent final authority and re-proves provenance and presence at execution.
+- **Lifecycle**: subscribed through the T-02 kernel's own seam, so a replaced store is
+  resubscribed to rather than remembered. The whole answer is recomputed from props and subscribed
+  state every render, so callback churn, extra renders, remounts and store replacement cannot
+  rebind a target, elect a context or replay an act. The one piece of Class-D state is subtractive
+  and can only ever remove an opportunity.
+- **Accessibility and RTL**: every offered act is its own native button with its own label and hint —
+  that is the route a screen reader actually reaches. The grouping containers are never `accessible`
+  so they cannot swallow the buttons, and precisely because they are not focusable they publish no
+  custom actions either: a non-focusable container's actions are not a discoverable route, and
+  claiming them as one would document behaviour React Native does not provide. Targets are at least
+  44pt with hit slop and nothing is drag-only. There is no icon, arrow or chevron anywhere, so
+  mirroring has nothing directional to invert; the offered set, its order, its labels and its hints
+  are identical under RTL, and an Arabic or code-switched world produces the same internal-free
+  chrome in both writing directions.
+- **One copy module**: every sentence, control label, control hint, region name and the ordering note
+  are written in `product-copy.ts` and nowhere else, which is what makes "no engineering vocabulary
+  reaches the reader" checkable in one file. The static contract asserts it directly: outside that
+  module, no file of the layer contains a reader-facing string at all.
+- Not here, by design: general and final motion (T-10), responsive recomposition (T-11), final
+  app-shell integration (T-12) and persistence (T-13). As delivered, nothing under
+  `src/orientation-chrome/` is mounted in the shell and the layer reaches no animation, measurement,
+  scheduling or gesture API. What the contract *permanently* forbids is narrower and survives those
+  tasks: the modules that decide what is true may never reach any of it, whatever the components
+  later do, and every non-relative import must already be declared by this app.
+
+Contract: `npm run test:inspection-orientation-return-chrome-contract` (repository root) plus the
+Jest suites under `src/orientation-chrome/__tests__/`. Design notes:
+`docs/inspection-orientation-return-chrome-v1.md`.
+
+## Repository forward-safety gate
+
+`npm run test:forward-safety-contract` (repository root) mirrors the repository, applies the
+authorized future changes that are known to be coming — a new Mobile CI gate, a new migration, T-10
+motion, T-11 responsive work, T-12 shell integration, a new root devDependency — and re-runs every
+static contract against the mutated tree, then requires the mutations that must be refused to fail.
+It exists because a static contract that freezes a file the whole repository shares will break
+correct work done by someone who never read it, which has already happened twice here.
+
 ## Toolchain pins (Expo SDK 57)
 
 | Package | Pin |

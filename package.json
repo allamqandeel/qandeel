@@ -139,6 +139,8 @@
     "test:living-analysis-map-runtime-contract": "node --test tests/living-analysis-map-runtime-contract.test.mjs",
     "test:temporal-navigation-layer-contract": "node --test tests/temporal-navigation-layer-contract.test.mjs",
     "test:return-navigation-layer-contract": "node --test tests/return-navigation-layer-contract.test.mjs",
+    "test:inspection-orientation-return-chrome-contract": "node --test tests/inspection-orientation-return-chrome-contract.test.mjs",
+    "test:forward-safety-contract": "node --test tests/forward-safety-contract.test.mjs",
     "test:mobile-native-impact-classifier": "node --test tests/mobile-native-impact-classifier.test.mjs"
   },
   "devDependencies": {"pg": "^8.16.3"},

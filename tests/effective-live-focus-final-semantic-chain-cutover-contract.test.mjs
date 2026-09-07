@@ -102,15 +102,20 @@ const mobileCi = read('.github/workflows/mobile-ci.yml');
 
 test('migration 0071 remains frozen, 0064 - 0070 keep their exact pins, the delivered surface exists, and no split-task marker exists', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  // 0071 closed the T-03D chain; T-03C's 0072 and the isolated keep-alive
-  // infrastructure migrations are the only migrations that follow it.
+  // FORWARD-SAFE (R2-02): enumerating everything that follows 0071 is a repository ceiling — the
+  // next authorized migration, on any track, breaks a contract that has nothing to do with it. What
+  // T-03D permanently owns is: exactly ONE 0071; T-03C's 0072 ordering directly after it (file names
+  // are immutable once merged, so that neighbour relation never changes); and the guarantee that no
+  // later migration re-declares the LF substrate this migration is the sole authority for.
   assert.ok(migrations.includes(MIGRATION), 'migration 0071 is deployed');
-  assert.deepEqual(migrations.filter((name) => name > MIGRATION), [
-    '0072_historical_coverage_projection_disclosure_v1.sql',
-    '0073_supabase_free_plan_keepalive_v1.sql',
-    '0074_supabase_keepalive_permission_correction_v1.sql',
-  ], 'only T-03C and the isolated keep-alive infrastructure migrations follow 0071');
   assert.deepEqual(migrations.filter((name) => /0071_/u.test(name)), [MIGRATION], 'T-03D ships exactly ONE migration');
+  assert.equal(migrations.indexOf('0072_historical_coverage_projection_disclosure_v1.sql'), migrations.indexOf(MIGRATION) + 1,
+    "T-03C's 0072 orders directly after the T-03D cutover");
+  for (const later of migrations.slice(migrations.indexOf(MIGRATION) + 1)) {
+    assert.doesNotMatch(read(`database/migrations/${later}`),
+      /CREATE TABLE public\.conversation_live_focus_transitions\b|CREATE (?:OR REPLACE )?FUNCTION public\.get_session_live_state_v1\(/u,
+      `${later} declares no second effective-Live-Focus substrate or delivery read`);
+  }
   for (const [file, blob] of [
     ['database/migrations/0064_committed_conversational_unit_substrate_v1.sql', '0a2ee63980e59072b3e9f52a643efa8220e95b08'],
     ['database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql', '3dc061c71bcb237cec648abb2d1fa02f450cd57f'],
@@ -331,9 +336,20 @@ test('bounded recovery: ONE shared semantic retry over BOTH exact stale tokens, 
 
 test('the wire is additive and closed: the LF reference identity and its effective SP, the frozen T-03A2 fields untouched, no label / Home / sequence / content', () => {
   const files = listFiles(join(rootPath, 'packages/runtime')).map(relative).sort();
-  // (T-03C added src/historical-projection.d.ts: the historical disclosure wire, V. It is pinned by the T-03C contract.)
-  assert.deepEqual(files, ['packages/runtime/README.md', 'packages/runtime/package.json', 'packages/runtime/src/historical-projection.d.ts', 'packages/runtime/src/index.d.ts', 'packages/runtime/src/live-focus.d.ts', 'packages/runtime/src/temporal.d.ts']);
-  assert.equal(gitBlobId(read('packages/runtime/package.json')), '932b837629f23b5cb765eda196fb659418d07916', 'the type-only package declaration is byte-identical');
+  // FORWARD-SAFE (R2-02): `packages/runtime` is a shared wire package, and a later authorized task
+  // may add its own declaration to it. An exhaustive file census and a whole-manifest hash are
+  // therefore ceilings. The permanent invariants are the ones that make the package a WIRE: the
+  // T-03D declaration exists, and the package can never gain executable code or a dependency.
+  for (const required of ['packages/runtime/package.json', 'packages/runtime/src/index.d.ts', 'packages/runtime/src/temporal.d.ts', 'packages/runtime/src/live-focus.d.ts']) {
+    assert.ok(files.includes(required), `${required} exists`);
+  }
+  for (const file of files) {
+    assert.match(file, /\.d\.ts$|\/package\.json$|\/README\.md$/u, `${file} keeps packages/runtime type-only: no executable module may live here`);
+  }
+  const runtimePackage = readJson('packages/runtime/package.json');
+  assert.equal(runtimePackage.private, true, 'the wire package is never published');
+  assert.equal('dependencies' in runtimePackage, false, 'the wire package declares no dependency');
+  assert.equal('main' in runtimePackage, false, 'the wire package has no runtime entry point');
   const lf = stripComments(runtimeLiveFocus);
   assert.match(lf, /export type LiveFocusTransitionType = 'LIVE_FOCUS_TRANSITION';/u);
   assert.match(lf, /export type LiveFocusWireValue =\s*\|\s*\{ readonly kind: 'NONE' \}\s*\|\s*\{ readonly kind: 'EMERGING'; readonly emergingFocusId: string \}\s*\|\s*\{ readonly kind: 'THREAD'; readonly threadId: string \};/u,
@@ -423,25 +439,28 @@ test('the client ingests LF passively into the frozen T-02 kernel through the ON
     ['apps/mobile/src/state/store.ts', '5d52ed4dab69de862a6381244bf44e32018609fa'],
     ['apps/mobile/src/state/transitions.ts', '14577b58af5aba0d2e95a1b4e2f969d094bc2c38'],
     ['apps/mobile/src/state/CanonicalStateProvider.tsx', 'b7ea8b6e775f74f7d331843e4783dc7291b11b49'],
-    ['apps/mobile/src/shell/FoundationShell.tsx', 'e2286ba1a35c2e40def475af5deed2d8ba8120d3'],
-    ['apps/mobile/src/app/_layout.tsx', '90179f6d13026e9b0e2345e0418012214b9c9aab'],
-    ['apps/mobile/src/app/index.tsx', 'ef38d10c76a957163bf00f7b7b60fb8aa25841f4'],
   ]) {
-    assert.equal(gitBlobId(read(file)), blob, `${file} is byte-identical: the kernel, the shell and the router root are untouched`);
+    assert.equal(gitBlobId(read(file)), blob, `${file} is byte-identical: the canonical kernel is untouched`);
   }
+  // FORWARD-SAFE (R2-02): the app shell and the router root were hashed here too. Mounting the
+  // Product surfaces into the shell is a later authorized task's entire job, so those hashes were
+  // guards against work the roadmap already schedules. The permanent claim survives it: whatever the
+  // shell grows into, it never mounts anything temporal.
   for (const file of ['apps/mobile/src/app/_layout.tsx', 'apps/mobile/src/app/index.tsx', 'apps/mobile/src/shell/FoundationShell.tsx']) {
     assert.doesNotMatch(read(file), /temporal|live-focus|LiveFocus|TemporalApiClient/u, `${file} mounts nothing temporal`);
   }
   // Native CI RUNS for this change: the mobile source change is a native-impact path by the frozen MOB-CI-01 classifier.
   assert.equal(isNativeImpactPath(`${MOBILE_TEMPORAL_DIR}/live-focus-sync.ts`), true, 'the Android / iOS smoke gates run for T-03D');
-  // T-04 re-anchor, extended by T-06 and T-07: the workflow gained exactly one Node-only gate step
-  // and one trigger path per owning task's static contract. MOB-CI-01's structure is unchanged and
-  // is asserted structurally by the T-01, T-02, T-04, T-06 and T-07 contracts: one fast gate plus
-  // two conditional native jobs.
-  assert.equal(gitBlobId(mobileCi), '31bed2b0cba0015c4ed98799d5cd440f31a2ee3b', 'mobile-ci.yml carries only the authorized T-04, T-06 and T-07 gate steps (MOB-CI-01 preserved)');
-  // T-04 re-anchor: the mobile package gained exactly the authorized Skia pin and the Jest setup
-  // for it. The pin stays exact, so a further dependency change still trips this gate.
-  assert.equal(gitBlobId(read('apps/mobile/package.json')), 'd10b3a577d6ee26c0af2e045f4bc39496181b2e7', 'the mobile package declaration carries only the authorized T-04 renderer pin beyond this baseline');
+  // FORWARD-SAFE (R2-02). T-03D owns no part of `mobile-ci.yml`, and every later mobile task adds
+  // its own Node-only gate. A whole-file hash and an exhaustive gate list therefore fail on correct
+  // future work — that is a repository ceiling, not an invariant of this slice. The permanent facts
+  // are that MOB-CI-01's job SHAPE is frozen and that no gate is registered twice.
+  const gateSteps = [...mobileCi.matchAll(/run: npm run (test:[a-z0-9-]+contract)/gu)].map((match) => match[1]);
+  assert.equal(new Set(gateSteps).size, gateSteps.length, 'no gate step is registered twice');
+  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3, 'MOB-CI-01 preserved: one fast gate plus two native jobs');
+  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2, 'both native jobs stay conditional');
+  // Likewise the mobile manifest: the frozen fact is the renderer VERSION T-04's architecture pins.
+  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
 });
 
 test('deterministic identities: RFC 4122 v5 over the documented URI, derived in TypeScript and re-derived by the database; payload exact', () => {
@@ -470,12 +489,16 @@ test('no T-03C, no Return-to-Live-Focus / Go Live + Locate, no visual UI, no LF 
     'the LF substrate carries reference identity only');
   const delivery = executable.slice(executable.indexOf('CREATE FUNCTION public.get_session_live_state_v1('), executable.indexOf('CREATE FUNCTION public.assert_conversation_full_semantic_chain_cutover_ready_v1('));
   assert.doesNotMatch(delivery, /same_sp_event_sequence|reason_code|label|home|committed_text|created_at|projection|knowledge|historical|pre_first_sp/u, 'the delivery reads expose no sequence, reason, label, Home, content or history');
-  assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg']);
+  // FORWARD-SAFE (R2-02): an exhaustive census of the ROOT toolchain is a global ceiling that any
+  // authorized future task trips. The permanent fact is that the verifier driver is declared and
+  // that the denied packages below stay out.
+  assert.ok('pg' in rootPackage.devDependencies, 'the verifier database driver is still declared');
   for (const name of ['uuid', 'zod', 'p-retry', 'async-retry', 'retry', 'bottleneck', 'xstate', 'immer', 'rxjs-live', 'socket.io', 'ws']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}) || name in (mobilePackage.dependencies ?? {}) || name in (mobilePackage.devDependencies ?? {}), false, `${name} must not be introduced`);
   }
-  // T-04 re-anchor: the lockfile moved exactly once since, for the authorized Map renderer.
-  assert.equal(gitBlobId(read('package-lock.json')), 'c5b6e12cc45d32bd782b3a690179fedabde7169d', 'the lockfile carries only the authorized T-04 renderer beyond the T-03D baseline');
+  // FORWARD-SAFE (R2-02): a whole-lockfile hash makes every future authorized dependency fail this
+  // contract. The frozen fact is the renderer VERSION T-04 pins; the T-03D fact is the line below.
+  assert.equal(JSON.parse(read('package-lock.json')).packages['node_modules/@shopify/react-native-skia'].version, '2.6.2', 'the authorized T-04 renderer version is locked exactly');
   assert.doesNotMatch(read('package-lock.json'), /live-focus|effective-live-focus/u, 'the lockfile knows nothing of T-03D');
   assert.doesNotMatch(stripComments(establishment), /liveFocus|LIVE_FOCUS|live-focus/u, 'the retired T-03A2 establishment service never learned about LF');
 });

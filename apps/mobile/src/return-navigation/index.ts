@@ -67,8 +67,17 @@ export type { ReturnSurface } from './surface';
 export type { ReturnMapContext } from './focus-target';
 export { returnMapContext } from './focus-target';
 
+// `isCurrentReturnCheckpointTargetForStore` is the ONE read-only provenance question a presentation
+// surface may ask. It answers with a boolean and nothing else, so a surface can stop offering an act
+// that could never work without ever seeing a checkpoint, an entry or the private provenance. It is
+// not authority: the resolver and the store still re-prove provenance and presence before any write.
 export type { ReturnCheckpointTarget } from './checkpoint-target';
-export { isReturnCheckpointTarget, latestReturnCheckpoint, returnCheckpoints } from './checkpoint-target';
+export {
+  isCurrentReturnCheckpointTargetForStore,
+  isReturnCheckpointTarget,
+  latestReturnCheckpoint,
+  returnCheckpoints,
+} from './checkpoint-target';
 
 // The six executors, the verifier the store is constructed with, and the one capability question
 // that can only be answered against a proven projection. The mint crosses no boundary at all.

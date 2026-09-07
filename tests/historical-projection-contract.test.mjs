@@ -68,12 +68,12 @@ const mobileCi = read('.github/workflows/mobile-ci.yml');
 
 test('migration 0072 is the ONE migration after 0071, 0001 - 0071 are byte-identical, and the delivered surface exists', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  assert.deepEqual(migrations.slice(-3), [
-    MIGRATION,
-    '0073_supabase_free_plan_keepalive_v1.sql',
-    '0074_supabase_keepalive_permission_correction_v1.sql',
-  ]);
+  // FORWARD-SAFE (R2-02). What T-03C owns is its OWN migration: exactly one 0072, ordered directly
+  // after 0071. Enumerating everything that follows it makes an old contract responsible for every
+  // future migration, and each new one then "breaks" a task it has nothing to do with.
   assert.deepEqual(migrations.filter((name) => /0072_/u.test(name)), [MIGRATION], 'T-03C ships exactly ONE migration');
+  assert.equal(migrations.indexOf(MIGRATION), migrations.indexOf('0071_effective_live_focus_final_semantic_chain_cutover_v1.sql') + 1,
+    '0072 orders directly after 0071');
   // 0001 - 0071 are frozen bytes: compared against the git blob ids the
   // canonical repository carried at 0f1a8e7ebfa53dcb2eb610a295b5e05684e51b52
   // (raw bytes, so a CRLF file is pinned exactly as git stores it).
@@ -262,13 +262,14 @@ test('the client seam is passive and typed: decode, fetch, hold; NOT_FETCHED / D
     ['apps/mobile/src/state/store.ts', '5d52ed4dab69de862a6381244bf44e32018609fa'],
     ['apps/mobile/src/state/transitions.ts', '14577b58af5aba0d2e95a1b4e2f969d094bc2c38'],
     ['apps/mobile/src/state/CanonicalStateProvider.tsx', 'b7ea8b6e775f74f7d331843e4783dc7291b11b49'],
-    ['apps/mobile/src/shell/FoundationShell.tsx', 'e2286ba1a35c2e40def475af5deed2d8ba8120d3'],
-    ['apps/mobile/src/app/_layout.tsx', '90179f6d13026e9b0e2345e0418012214b9c9aab'],
-    ['apps/mobile/src/app/index.tsx', 'ef38d10c76a957163bf00f7b7b60fb8aa25841f4'],
     ['apps/mobile/src/temporal/live-head-sync.ts', '77ec84982d9202c81152907ac6844af1d3e18883'],
   ]) {
-    assert.equal(gitBlobId(read(file)), blob, `${file} is byte-identical: the kernel, the shell, the router root and the LH seam are untouched`);
+    assert.equal(gitBlobId(read(file)), blob, `${file} is byte-identical: the kernel and the LH seam are untouched`);
   }
+  // FORWARD-SAFE (R2-02): the app shell and the router root were hashed here too. Mounting the
+  // Product surfaces into the shell is a later authorized task's entire job, so those hashes were
+  // guards against work the roadmap already schedules. The permanent claim survives it: whatever the
+  // shell grows into, it never mounts anything historical.
   for (const file of ['apps/mobile/src/app/_layout.tsx', 'apps/mobile/src/app/index.tsx', 'apps/mobile/src/shell/FoundationShell.tsx']) {
     assert.doesNotMatch(read(file), /projection|historical|Historical/u, `${file} mounts nothing historical`);
   }
@@ -277,14 +278,27 @@ test('the client seam is passive and typed: decode, fetch, hold; NOT_FETCHED / D
   }
   // Native CI RUNS for this change: the mobile source change is a native-impact path by the frozen MOB-CI-01 classifier.
   assert.equal(isNativeImpactPath(`${MOBILE_DIR}/historical-projection-wire.ts`), true, 'the Android / iOS smoke gates run for T-03C');
-  // T-04 re-anchor, extended by T-06 and T-07: the workflow gained exactly one Node-only gate step
-  // and one trigger path per owning task's static contract. MOB-CI-01's structure is unchanged and
-  // is asserted structurally by the T-01, T-02, T-04, T-06 and T-07 contracts: one fast gate plus
-  // two conditional native jobs.
-  assert.equal(gitBlobId(mobileCi), '31bed2b0cba0015c4ed98799d5cd440f31a2ee3b', 'mobile-ci.yml carries only the authorized T-04, T-06 and T-07 gate steps (MOB-CI-01 preserved)');
-  // T-04 re-anchor: the mobile package gained exactly the authorized Skia pin and the Jest setup
-  // for it. The pin stays exact, so a further dependency change still trips this gate.
-  assert.equal(gitBlobId(read('apps/mobile/package.json')), 'd10b3a577d6ee26c0af2e045f4bc39496181b2e7', 'the mobile package declaration carries only the authorized T-04 renderer pin beyond this baseline');
+  // T-04 re-anchor, extended by T-06, T-07 and now T-08: the workflow gained exactly one Node-only
+  // gate step and one trigger path per owning task's static contract. MOB-CI-01's structure is
+  // unchanged and is asserted structurally by the T-01, T-02, T-04, T-06, T-07 and T-08 contracts:
+  // one fast gate plus two conditional native jobs.
+  //
+  // FORWARD-SAFE (R2-02). This contract does not own `mobile-ci.yml`, and later authorized tasks
+  // (T-10 motion, T-11 responsive, T-12 shell integration) will legitimately add their own Node-only
+  // gates. A whole-file hash and an exhaustive gate list would therefore be guaranteed to fail on
+  // correct future work, which is a ceiling on the repository rather than an invariant of T-03C.
+  //
+  // What T-03C actually owns is its OWN gate: it must exist, exactly once. MOB-CI-01's job SHAPE is
+  // frozen independently of any task's gate, so that part stays exact.
+  const gateSteps = [...mobileCi.matchAll(/run: npm run (test:[a-z0-9-]+contract)/gu)].map((match) => match[1]);
+  assert.equal(gateSteps.filter((step) => step === 'test:session-semantic-clock-sp-lh-delivery-contract').length, 1,
+    'the T-03A2 delivery gate this contract rides on is registered exactly once');
+  assert.equal(new Set(gateSteps).size, gateSteps.length, 'no gate step is registered twice');
+  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3, 'MOB-CI-01 preserved: one fast gate plus two native jobs');
+  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2, 'both native jobs stay conditional');
+  // The mobile manifest is likewise not owned here. What IS frozen is the renderer version T-04's
+  // architecture pins; a later task adding an unrelated dependency is not this contract's business.
+  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
 });
 
 test('R2: the production A-1 path is the canonical subject-grounding authority end to end - server-built universe, opaque handles, server authorization, atomic persistence, derived appearance - and nothing else writes an appearance or a grounding', () => {
@@ -378,13 +392,17 @@ test('anti-scope: no Return-to-Live-Focus, no Go Live + Locate, no Map geometry,
   }
   assert.doesNotMatch(productionCode, /expires_at\s*[<>]|expiresAt\s*[<>]|tc\s*[<>=]+\s*(?:now|Date)/u, 'no wall-clock comparison to TC anywhere on the server');
   assert.doesNotMatch(migration.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n'), /p_tc\s*[<>=]+\s*[^;]*(?:now\(\)|CURRENT_TIMESTAMP|expires_at)|expires_at\s*[<>=]+\s*p_tc/u, 'the migration never compares an expiry or a clock to TC');
-  assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg']);
+  // FORWARD-SAFE (R2-02): "T-03C added no dependency" is a delivery fact, proven in its own diff.
+  // Freezing the whole root devDependency set makes every future authorized dependency fail an old
+  // contract. The permanent invariant is the denylist below: the packages T-03C must never pull in.
+  assert.ok('pg' in rootPackage.devDependencies, 'the verifier database driver is still declared');
   for (const name of ['uuid', 'zod', 'p-retry', 'async-retry', 'retry', 'bottleneck', 'xstate', 'immer', 'rxjs-live', 'socket.io', 'ws', 'lru-cache']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}) || name in (mobilePackage.dependencies ?? {}) || name in (mobilePackage.devDependencies ?? {}), false, `${name} must not be introduced`);
   }
-  // T-04 re-anchor: the lockfile moved exactly once since, for the authorized Map renderer. The
-  // pin stays exact, and T-03C still adds nothing to it.
-  assert.equal(gitBlobId(read('package-lock.json')), 'c5b6e12cc45d32bd782b3a690179fedabde7169d', 'the lockfile carries only the authorized T-04 renderer beyond the T-03C baseline');
+  // FORWARD-SAFE (R2-02): a whole-lockfile hash makes every future authorized dependency fail this
+  // contract. What is genuinely frozen is the renderer VERSION T-04 pins, which is asserted from the
+  // lockfile itself; and what T-03C permanently owes is that IT pulled nothing in.
+  assert.equal(JSON.parse(read('package-lock.json')).packages['node_modules/@shopify/react-native-skia'].version, '2.6.2', 'the authorized T-04 renderer version is locked exactly');
   assert.doesNotMatch(read('package-lock.json'), /historical-projection/u, 'the lockfile knows nothing of T-03C');
   assert.doesNotMatch(read('apps/api/src/app.module.ts'), /historical|projection/iu, 'AppModule is untouched: the controller lives in ConversationModule');
   assert.equal(gitBlobId(read('apps/api/src/app.module.ts')), 'fc3ce9c12b67552fb54214d0b6b4931b89601da6', 'AppModule is byte-identical');

@@ -202,7 +202,10 @@ test('no B3 lifecycle, no LF, no T-03C, no Reading / Neighborhood / merge, no mo
       assert.doesNotMatch(source, /threadId|thread_id|emergingFocus|emerging_focus/u, `${file} declares no Thread or Emerging Focus payload`);
     }
   }
-  assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg']);
+  // FORWARD-SAFE (R2-02): an exhaustive census of the ROOT toolchain is a global ceiling that
+  // any authorized future task trips. What is permanent is that the verifier database driver is
+  // declared, alongside the forward-safe denylists this contract already carries.
+  assert.ok('pg' in rootPackage.devDependencies, 'the verifier database driver is still declared');
   for (const name of ['uuid', 'zod', 'p-retry', 'async-retry', 'retry', 'bottleneck']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}), false, `${name} must not be introduced`);
   }
