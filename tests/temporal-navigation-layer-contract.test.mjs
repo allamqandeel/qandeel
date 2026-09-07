@@ -548,12 +548,13 @@ test('R2-02 — pending-choice construction is provenance-bound, not shape-bound
   }
 });
 
-test('the T-01 technical shell stays byte-identical: the temporal layer is not mounted in the app container', async () => {
+test('the T-01 technical shell keeps its two-file router root: the temporal layer is not mounted in the app container', async () => {
+  // The two-file router root is a frozen architectural decision — the Product is not a route stack —
+  // so the CENSUS stays exact.
   const entries = readdirSync(new URL('apps/mobile/src/app/', root)).sort();
   assert.deepEqual(entries, ['_layout.tsx', 'index.tsx']);
-  assert.equal(gitBlobId(await read('apps/mobile/src/app/_layout.tsx')), '90179f6d13026e9b0e2345e0418012214b9c9aab');
-  assert.equal(gitBlobId(await read('apps/mobile/src/app/index.tsx')), 'ef38d10c76a957163bf00f7b7b60fb8aa25841f4');
-  assert.equal(gitBlobId(await read('apps/mobile/src/shell/FoundationShell.tsx')), 'e2286ba1a35c2e40def475af5deed2d8ba8120d3');
+  // FORWARD-SAFE (R2-02): a byte hash of the shell is not. Mounting the Product surfaces into the
+  // app shell is a later authorized task's entire job. The permanent claim is the one below.
   for (const file of ['apps/mobile/src/app/_layout.tsx', 'apps/mobile/src/app/index.tsx', 'apps/mobile/src/shell/FoundationShell.tsx']) {
     const text = await read(file);
     assert.doesNotMatch(text, /temporal-navigation|TemporalTargetLayer|TemporalNavigator/u, `${file} must not mount the temporal layer in T-06`);

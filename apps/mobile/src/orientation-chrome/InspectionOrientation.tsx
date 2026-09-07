@@ -31,14 +31,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { switchContext, type MapActionOutcome, type MapInspectionContext } from '../map';
 import type { CanonicalStore } from '../state';
-import { CONTEXT_CHOICE_TITLE, contextPathSentence, inspectionSentence } from './product-copy';
+import { CONTEXT_CHOICE_TITLE, INSPECTION_ORIENTATION_LABEL, contextPathSentence, inspectionSentence } from './product-copy';
 import type { ContextChrome, InspectionChrome } from './types';
 
 export const INSPECTION_ORIENTATION_TEST_ID = 'qandeel-inspection-orientation';
 export const CONTEXT_CHOICE_TEST_ID = 'qandeel-context-choice';
-
-/** The neutral name of the region. It names the region, never the object or the state of the world. */
-export const INSPECTION_ORIENTATION_LABEL = 'What you are inspecting';
 
 export interface InspectionOrientationProps {
   readonly store: CanonicalStore;

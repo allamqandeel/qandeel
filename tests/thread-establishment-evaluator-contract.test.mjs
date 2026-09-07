@@ -354,12 +354,22 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
   // The evaluator slice still owns no verifier step: the only Thread verifiers
   // in CI are the T-03B2b2 durable-substrate one and the T-03B2b3 read/audit
   // one, in that order.
-  assert.deepEqual([...apiCi.matchAll(/npm run (verify:[\w:-]*thread[\w:-]*)/gu)].map((m) => m[1]),
-    ['verify:durable-thread-home-same-sp-substrate:integration', 'verify:thread-runtime-integration-readiness:integration', 'verify:thread-lifecycle-cross-session-continuity:integration']);
+  // FORWARD-SAFE (R2-02): the root `scripts` map and api-ci are shared mutable globals, and the
+  // Thread layer is entitled to gain further verifiers. Enumerating every Thread verifier that
+  // exists is a repository ceiling. What T-03B2a permanently owns is: it contributes NO verifier of
+  // its own (it is production-inert and ships no migration), the three substrate verifiers that
+  // existed at its closure are still registered in their frozen relative order, and the foundation
+  // gate still knows nothing of Threads.
+  const threadVerifiers = [...apiCi.matchAll(/npm run (verify:[\w:-]*thread[\w:-]*)/gu)].map((m) => m[1]);
+  for (const script of ['verify:durable-thread-home-same-sp-substrate:integration', 'verify:thread-runtime-integration-readiness:integration', 'verify:thread-lifecycle-cross-session-continuity:integration']) {
+    assert.ok(script in rootPackage.scripts, `${script} is still registered`);
+    assert.equal(threadVerifiers.filter((name) => name === script).length, 1, `${script} runs exactly once in API CI`);
+  }
+  assert.ok(threadVerifiers.indexOf('verify:durable-thread-home-same-sp-substrate:integration') < threadVerifiers.indexOf('verify:thread-runtime-integration-readiness:integration'));
+  assert.ok(threadVerifiers.indexOf('verify:thread-runtime-integration-readiness:integration') < threadVerifiers.indexOf('verify:thread-lifecycle-cross-session-continuity:integration'));
   assert.doesNotMatch(rootPackage.scripts['verify:foundation-integration-gate'] ?? '', /thread/u);
-  assert.deepEqual(Object.keys(rootPackage.scripts).filter((name) => /verify:.*thread/u.test(name)),
-    ['verify:durable-thread-home-same-sp-substrate:integration', 'verify:thread-runtime-integration-readiness:integration', 'verify:thread-lifecycle-cross-session-continuity:integration'],
-    'the only Thread verifier scripts are the T-03B2b2 substrate one, the T-03B2b3 read/audit one and the T-03B3 lifecycle / continuity one');
+  assert.deepEqual(Object.keys(rootPackage.scripts).filter((name) => /establishment/u.test(name) && name.startsWith('verify:')), [],
+    'T-03B2a is production-inert: it contributes no verifier of its own');
 });
 
 test('the provider request is the one-CU input and nothing wider: no analytical object, count, rank, similarity, Thread, Home, SP or LF channel (task §7)', () => {
@@ -550,7 +560,10 @@ test('the gate is registered at the root and in API CI after the B1 contracts, M
   for (const name of ['zod', 'ajv', 'uuid', 'nanoid', 'natural', 'compromise', 'franc', 'p-retry', 'retry']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}), false, `${name} must not be introduced`);
   }
-  assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg']);
+  // FORWARD-SAFE (R2-02): an exhaustive census of the ROOT toolchain is a global ceiling that
+  // any authorized future task trips. What is permanent is that the verifier database driver is
+  // declared, alongside the forward-safe denylists this contract already carries.
+  assert.ok('pg' in rootPackage.devDependencies, 'the verifier database driver is still declared');
   // Documentation.
   assert.match(doc, /production-inert/u);
   assert.match(doc, /TE-01[\s\S]*TE-02[\s\S]*TE-03/u);

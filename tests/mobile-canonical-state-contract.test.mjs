@@ -66,12 +66,15 @@ test('the authorized T-02 file surface exists and is the only production surface
   assert.ok(tests.length >= 9, `expected the nine T-02 suites, found ${tests.length}`);
 });
 
-test('the T-01 technical shell is byte-identical and does not mount the state layer', async () => {
+test('the T-01 technical shell keeps its two-file router root and does not mount the state layer', async () => {
+  // The two-file router root is a frozen architectural decision — the Product is not a route stack —
+  // so the CENSUS stays exact.
   const entries = readdirSync(new URL('apps/mobile/src/app/', root)).sort();
   assert.deepEqual(entries, ['_layout.tsx', 'index.tsx']);
-  assert.equal(gitBlobId(await read('apps/mobile/src/app/_layout.tsx')), '90179f6d13026e9b0e2345e0418012214b9c9aab');
-  assert.equal(gitBlobId(await read('apps/mobile/src/app/index.tsx')), 'ef38d10c76a957163bf00f7b7b60fb8aa25841f4');
-  assert.equal(gitBlobId(await read('apps/mobile/src/shell/FoundationShell.tsx')), 'e2286ba1a35c2e40def475af5deed2d8ba8120d3');
+  // FORWARD-SAFE (R2-02): a byte hash of the shell is not. Mounting the Product surfaces into the
+  // app shell is a later authorized task's entire job, so a hash of those three files is a guard
+  // against work the roadmap already schedules. The permanent claim is the one below: whatever the
+  // shell grows into, it never mounts THIS layer.
   for (const file of ['apps/mobile/src/app/_layout.tsx', 'apps/mobile/src/app/index.tsx', 'apps/mobile/src/shell/FoundationShell.tsx']) {
     const text = await read(file);
     assert.doesNotMatch(text, /state\//u, `${file} must not import the canonical state layer in T-02`);
@@ -197,24 +200,11 @@ test('the semantic depth rungs are the frozen five and no envelope geometry ente
 
 test('no persistence, no state library and no dependency change', async () => {
   const mobilePackage = await readJson('apps/mobile/package.json');
-  // T-04 re-anchor: the Map renderer is the ONE dependency this task adds, and it is pinned
-  // exactly. No state-management or persistence library joins the list.
-  assert.deepEqual(Object.keys(mobilePackage.dependencies).sort(), [
-    '@shopify/react-native-skia',
-    'expo',
-    'expo-constants',
-    'expo-dev-client',
-    'expo-linking',
-    'expo-router',
-    'expo-status-bar',
-    'react',
-    'react-native',
-    'react-native-gesture-handler',
-    'react-native-reanimated',
-    'react-native-safe-area-context',
-    'react-native-screens',
-    'react-native-worklets',
-  ]);
+  // FORWARD-SAFE (R2-02): an exhaustive census of the mobile manifest is a ceiling on a package
+  // T-02 does not own — every later authorized mobile task would trip it. The frozen facts are the
+  // exact T-04 renderer pin and the denylist below: no state-management or persistence library ever
+  // joins this app, which is what "the kernel is the only state authority" actually means.
+  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
   const lock = await readJson('package-lock.json');
   for (const name of [
     'zustand',

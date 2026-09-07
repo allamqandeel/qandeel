@@ -58,19 +58,44 @@ function listFiles(dir) {
 
 const stripComments = (text) => text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/\/\/[^\n]*/gu, '');
 
-const sources = Object.fromEntries(await Promise.all(PRODUCTION_FILES.map(async (name) => [name, await read(`${OC_DIR}/${name}`)])));
+/**
+ * Every production module of the layer AS IT IS ON DISK, not a fixed list.
+ *
+ * FORWARD-SAFE (R2-02): the guards below have to apply to a module a later authorized task adds to
+ * this layer just as much as to the eleven delivered here. Reading the directory is what makes that
+ * true; `PRODUCTION_FILES` is then a floor — what must still be here — rather than a ceiling.
+ */
+const productionFiles = listFiles(join(rootPath, OC_DIR))
+  .map((file) => file.slice(join(rootPath, OC_DIR).length + 1).replace(/\\/gu, '/'))
+  .filter((file) => !file.startsWith('__tests__/') && !file.startsWith('__fixtures__/'))
+  .sort();
+
+const sources = Object.fromEntries(await Promise.all(productionFiles.map(async (name) => [name, await read(`${OC_DIR}/${name}`)])));
 /** Code only: a comment may name a forbidden pattern in order to forbid it. */
 const code = Object.fromEntries(Object.entries(sources).map(([name, text]) => [name, stripComments(text)]));
 const layerText = Object.values(code).join('\n');
 
-test('the authorized T-08 file surface is the only production surface of the chrome layer', () => {
-  const dir = join(rootPath, OC_DIR);
-  const production = listFiles(dir)
-    .map((file) => file.slice(dir.length + 1).replace(/\\/gu, '/'))
-    .filter((file) => !file.startsWith('__tests__/') && !file.startsWith('__fixtures__/'))
-    .sort();
-  assert.deepEqual(production, [...PRODUCTION_FILES].sort());
-  const suites = readdirSync(join(dir, '__tests__')).filter((file) => /\.test\.tsx?$/u.test(file));
+/**
+ * The modules that decide what is TRUE, as opposed to the components that show it.
+ *
+ * The separation is the point of the R2 forward-safety rule below: T-10 owns motion in this layer and
+ * T-11 owns its responsive behaviour, so banning their primitives from the components forever would
+ * be a guard against authorized work. Banning them from the truth modules forever is a different and
+ * permanent claim — what is true may never depend on a frame clock, a viewport size or a measurement.
+ */
+const TRUTH_MODULES = ['types.ts', 'inspection-orientation.ts', 'return-orientation.ts', 'context-orientation.ts', 'model.ts', 'product-copy.ts', 'exact-return-origin.ts'];
+
+// FORWARD-SAFE (R2-02). The first version asserted this directory contains EXACTLY these files. That
+// is a ceiling on T-10, which is authorized to bring motion into this very layer and will bring its
+// own module with it. What is permanent is the other direction: every file T-08 delivered still
+// exists and still carries its own responsibility, and this directory never becomes a home for
+// something that is not a chrome module.
+test('the authorized T-08 file surface is present, and the directory stays a chrome layer', () => {
+  for (const file of PRODUCTION_FILES) assert.ok(productionFiles.includes(file), `${file} is still delivered`);
+  for (const file of productionFiles) {
+    assert.match(file, /^[\w.-]+\.tsx?$/u, `${file} is a TypeScript module at the top of the layer: no asset, no config, no nested surface`);
+  }
+  const suites = readdirSync(join(rootPath, OC_DIR, '__tests__')).filter((file) => /\.test\.tsx?$/u.test(file));
   assert.ok(suites.length >= 12, `the adversarial matrix is present, found ${suites.length}`);
 });
 
@@ -150,14 +175,29 @@ test('the return chrome offers a context-sensitive set without collapsing any me
   assert.match(code['types.ts'], /export const RETURN_OPPORTUNITY_IDS = Object\.freeze\(\[/u);
 });
 
-// REV-T08-02 — no engineering vocabulary can reach the reader.
+// REV-T08-02, closed in R2-03 — the centralization claim is now literally true, and proved.
+//
+// R1 asserted "every reader-facing word comes from the one copy module" while the six control labels
+// and hints lived in `return-orientation.ts`, three region names lived in their components and the
+// ordering note lived in `context-orientation.ts`. The words moved; what is asserted here is the
+// claim itself, not a proxy for it: outside `product-copy.ts` no module of this layer contains a
+// reader-facing string AT ALL — no literal carrying whitespace, and no JSX text node.
 test('every reader-facing word comes from the one copy module, and none of it is engineering surface', () => {
-  // Only `product-copy.ts` may contain a sentence. The components render what it returns.
   for (const [name, text] of Object.entries(code)) {
     if (name === 'product-copy.ts') continue;
+    for (const match of text.matchAll(/'([^'\n]*)'|"([^"\n]*)"|`([^`\n]*)`/gu)) {
+      const value = match[1] ?? match[2] ?? match[3] ?? '';
+      assert.doesNotMatch(value, /\s/u, `${name} contains the reader-facing string "${value}"; every word belongs in product-copy.ts`);
+    }
+    assert.doesNotMatch(text, />\s*[A-Za-z][^<>{}\n]*[a-z]\s*</u, `${name} renders literal text; every word belongs in product-copy.ts`);
     assert.doesNotMatch(text, /accessibilityLabel="[^"]*\$\{/u, `${name} must not interpolate a label of its own`);
   }
+  // And the copy module is where all of it actually is.
   const copy = code['product-copy.ts'];
+  assert.match(copy, /export function returnActWords\(id: ReturnOpportunityId\)/u, 'the six control labels and hints are written here');
+  for (const name of ['CONTEXT_CHOICE_TITLE', 'CONTEXT_ORDERING_NOTE', 'ORIENTATION_CHROME_LABEL', 'INSPECTION_ORIENTATION_LABEL', 'RETURN_CONTROLS_LABEL']) {
+    assert.match(copy, new RegExp(`export const ${name} = '`, 'u'), `${name} is written here`);
+  }
   // The plain-language tables exist, and nothing renders a frozen token directly.
   assert.match(copy, /const FAMILY: Readonly<Record<HistoricalFamily, string>>/u);
   assert.match(copy, /const DEPTH: Readonly<Record<SemanticDepth, string>>/u);
@@ -173,12 +213,24 @@ test('every reader-facing word comes from the one copy module, and none of it is
   assert.match(code['context-orientation.ts'], /const distinguishable = labels\.size === options\.length;/u, 'the chooser fails closed when options cannot be told apart');
 });
 
-// REV-T08-03 — a foreign or replaced store offers no Exact Return, before any press.
-test('the Exact Return opportunity is bound to a store lifecycle, and reads no checkpoint internals', () => {
+// R2-01 — presentation provenance is ASKED of T-07, never inferred here.
+test('the Exact Return opportunity is proven by T-07 provenance, and reads no checkpoint internals', () => {
   const origin = code['exact-return-origin.ts'];
+  // Binding CHECKS the claim rather than recording it: a target this store did not mint never binds.
+  assert.match(origin, /export function bindExactReturnOrigin\(store: CanonicalStore, target: unknown\): ExactReturnOrigin \| null \{\s*if \(!isCurrentReturnCheckpointTargetForStore\(store, target\)\) return null;/u,
+    'binding is refused unless T-07 confirms this store minted the target and still records it');
   assert.match(origin, /if \(record\.store !== store\) return null;/u, 'a foreign or replaced store yields no opportunity');
-  assert.match(origin, /if \(record\.ordinal >= returnAvailability\(store\.getState\(\)\)\.checkpointCount\) return null;/u);
-  assert.match(origin, /if \(!isReturnCheckpointTarget\(target\)\) return null;/u);
+  // Validity is re-asked of T-07 on every read, against the entry itself...
+  assert.match(origin, /return isCurrentReturnCheckpointTargetForStore\(store, record\.target\) \? record\.target : null;/u,
+    'the opportunity holds only while T-07 still records this exact entry');
+  // ...and there is no ordinal, depth or count anywhere in the module, so a consumed origin cannot be
+  // resurrected by history regrowing past its old position. The handle carries nothing at all.
+  assert.match(origin, /export interface ExactReturnOrigin \{\s*readonly \[ORIGIN\]: true;\s*\}/u, 'the handle is opaque and empty');
+  for (const revived of ['ordinal', 'checkpointCount', 'returnAvailability', 'length', 'index']) {
+    assert.equal(origin.includes(revived), false, `presentation validity must not be re-derived from ${revived}`);
+  }
+  // T-07 stays the independent final authority: the resolver is never exported to or called from here.
+  assert.equal(layerText.includes('resolveCheckpointTarget'), false, 'T-08 never calls the T-07 resolver');
   // Exactly one provenance registry exists in the layer, and it lives here. It is not a cache: it
   // holds one handle a caller bound, never a list, and it grants nothing.
   assert.equal((layerText.match(/new WeakMap[<(]/gu) ?? []).length, 1, 'exactly one presentation registry exists');
@@ -207,7 +259,11 @@ test('no non-focusable container advertises custom actions as an accessibility r
   // must not publish custom actions either, because a container nothing can focus is not a route.
   assert.equal(layerText.includes('accessibilityActions'), false, 'a non-focusable container publishes no custom actions');
   assert.equal(layerText.includes('onAccessibilityAction'), false);
-  assert.equal((layerText.match(/accessibilityRole="none"/gu) ?? []).length, 4, 'each grouping container declares itself a non-element');
+  // A floor, not a census: T-11 may legitimately add a container, and the invariant is that a
+  // container is a non-element, never that there are exactly this many of them.
+  for (const component of ['OrientationChrome.tsx', 'InspectionOrientation.tsx', 'ReturnControls.tsx']) {
+    assert.match(code[component], /accessibilityRole="none"/u, `${component} declares its grouping container a non-element`);
+  }
   assert.doesNotMatch(layerText, /<View[^>]*\saccessible(\s|=\{true\}|>)/u, 'no grouping View is marked accessible');
   // Each control is its own native button, which is the route that actually exists.
   assert.match(code['ReturnControls.tsx'], /accessibilityRole="button"/u);
@@ -248,12 +304,25 @@ test('there is one freshness rule, no second resolver, and no raw Live Focus sho
   assert.match(code['model.ts'], /focusReturn: current === null \? \('UNPROVEN' as const\) : liveFocusReturnAvailability\(store, current\)\.status/u);
 });
 
-// No app-shell mount. Stated as an invariant about T-08, not as a hash of files a later task owns.
-test('T-08 mounts nothing into the app shell', async () => {
+// FORWARD-SAFE (R2-02). "The shell does not import T-08" is a DELIVERY fact of this candidate, and
+// T-12 is authorized to invert it — a perpetual guard against it would be a guard against authorized
+// work. The permanent invariants are the two that survive that integration:
+//
+//   - T-08 never reaches for the shell. A chrome layer that imported the app root would invert
+//     control and could never be mounted twice, or tested without one;
+//   - whenever the shell does mount T-08, it does so through the public barrel. A deep import would
+//     reach past the allowlist into a module the layer does not publish.
+//
+// That the shell mounts nothing today is recorded as closure evidence in
+// docs/inspection-orientation-return-chrome-v1.md, not frozen here.
+test('T-08 never reaches for the app shell, and the shell may reach T-08 only through its barrel', async () => {
   for (const file of ['apps/mobile/src/app/_layout.tsx', 'apps/mobile/src/app/index.tsx', 'apps/mobile/src/shell/FoundationShell.tsx']) {
-    assert.doesNotMatch(await read(file), /orientation-chrome|OrientationChrome|ReturnControls|InspectionOrientation/u, `${file} must not mount T-08`);
+    for (const match of (await read(file)).matchAll(/from\s+'([^']+)'/gu)) {
+      if (!match[1].includes('orientation-chrome')) continue;
+      assert.match(match[1], /orientation-chrome$/u, `${file} may reach T-08 only through its barrel, got ${match[1]}`);
+    }
   }
-  // And the layer does not reach for the shell either.
+  // And the layer does not reach for the shell either. This one never changes.
   assert.equal(layerText.includes('src/app/'), false);
   assert.equal(layerText.includes('FoundationShell'), false);
 });
@@ -261,18 +330,31 @@ test('T-08 mounts nothing into the app shell', async () => {
 // No dependency, no backend, no database, no schema. Scoped to what T-08 imports and declares.
 test('T-08 adds no dependency and touches no backend, database or schema', async () => {
   const mobilePackage = await readJson('apps/mobile/package.json');
-  assert.deepEqual(Object.keys(mobilePackage.dependencies).sort(), [
-    '@shopify/react-native-skia', 'expo', 'expo-constants', 'expo-dev-client', 'expo-linking', 'expo-router', 'expo-status-bar',
-    'react', 'react-native', 'react-native-gesture-handler', 'react-native-reanimated', 'react-native-safe-area-context',
-    'react-native-screens', 'react-native-worklets',
-  ], 'no new mobile dependency');
+  // FORWARD-SAFE (R2-02): an exhaustive census of the mobile manifest is a ceiling on a package
+  // T-08 does not own — T-11 and T-12 may legitimately add to it. The permanent, SCOPED proof that
+  // T-08 adds no dependency is the import scan below: every import in the layer is a relative
+  // module of this app, `react`, or `react-native`. A dependency T-08 cannot import is not T-08's.
+  for (const name of ['zustand', 'redux', '@reduxjs/toolkit', 'jotai', 'mobx', 'valtio', 'recoil', 'react-native-mmkv',
+    '@react-native-async-storage/async-storage', 'expo-secure-store', 'expo-sqlite', 'moment', 'dayjs', 'date-fns', 'luxon']) {
+    assert.equal(name in (mobilePackage.dependencies ?? {}) || name in (mobilePackage.devDependencies ?? {}), false, `${name} must not be introduced`);
+  }
   const rootPackage = await readJson('package.json');
-  assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg'], 'no new root dependency');
+  // FORWARD-SAFE (R2-02): an exhaustive census of the ROOT toolchain is a global ceiling that
+  // any authorized future task trips. What is permanent is that the verifier database driver is
+  // declared, alongside the forward-safe denylists this contract already carries.
+  assert.ok('pg' in rootPackage.devDependencies, 'the verifier database driver is still declared');
 
-  // Every import in the layer is a relative module of this app or React Native itself.
+  // FORWARD-SAFE (R2-02): "only relative modules, `react` and `react-native`" would forbid T-10 from
+  // using the renderer and the animation driver this app ALREADY declares — a guard against
+  // authorized work. The permanent claim is the one that matters: T-08 adds no dependency. Every
+  // non-relative import it makes is already declared by the mobile app, so a new package cannot enter
+  // the repository through this layer.
+  const declared = new Set([...Object.keys(mobilePackage.dependencies ?? {}), 'react', 'react-native']);
   for (const match of layerText.matchAll(/from\s+'([^']+)'/gu)) {
     const specifier = match[1];
-    assert.ok(specifier.startsWith('.') || specifier === 'react' || specifier === 'react-native', `T-08 imports only relative modules and React Native, got ${specifier}`);
+    if (specifier.startsWith('.')) continue;
+    const pkg = specifier.startsWith('@') ? specifier.split('/').slice(0, 2).join('/') : specifier.split('/')[0];
+    assert.ok(declared.has(pkg), `T-08 adds no dependency: ${specifier} is not declared by the mobile app`);
   }
   // T-08 is a mobile-only layer: it ships no database artifact and reaches nothing in the database.
   // Deliberately NOT a census of the migration chain, which grows for reasons that are not T-08's.
@@ -282,20 +364,35 @@ test('T-08 adds no dependency and touches no backend, database or schema', async
   }
 });
 
-// The later tasks' scope is left alone.
-test('T-08 steals no motion, no responsive recomposition and no reduced-motion authority', () => {
-  for (const motion of ['react-native-reanimated', 'useSharedValue', 'useAnimatedStyle', 'withTiming', 'withSpring', 'Animated', 'LayoutAnimation', 'useReducedMotion', 'AccessibilityInfo']) {
-    assert.equal(layerText.includes(motion), false, `T-08 must not own ${motion}: motion and reduced-motion are a later task's`);
+// FORWARD-SAFE (R2-02). The first version banned every motion, measurement, scheduling and gesture
+// primitive from the WHOLE layer, forever. T-10 is authorized to bring motion into these components
+// and T-11 to make them responsive, so that guard was written to be violated by correct future work.
+//
+// What is permanent, and what this now says, is the separation of powers inside the layer: the truth
+// modules may never touch any of it. A frame clock, a viewport size, a measured layout or a gesture
+// stream must never be an input to what the reader is told is true — otherwise the answer would start
+// depending on how it is shown, which is the whole failure T-08 exists to prevent.
+test('no truth in this layer may ever depend on animation, measurement, scheduling or a gesture', () => {
+  const APIS = [
+    'react-native-reanimated', 'useSharedValue', 'useAnimatedStyle', 'withTiming', 'withSpring', 'Animated', 'LayoutAnimation',
+    'useReducedMotion', 'AccessibilityInfo', 'setTimeout', 'setInterval', 'requestAnimationFrame', 'InteractionManager',
+    'runOnJS', 'scheduleOnRN', 'useWindowDimensions', 'Dimensions', 'onLayout', 'breakpoint', 'isNarrow', 'isTablet',
+    'GestureDetector', 'Gesture.', 'PanResponder', 'react-native-gesture-handler', 'onGestureEvent',
+  ];
+  for (const name of TRUTH_MODULES) {
+    for (const api of APIS) {
+      assert.equal(code[name].includes(api), false, `${name} decides what is true and must never reach ${api}`);
+    }
+    // A truth module renders nothing, so it imports no view layer either.
+    assert.doesNotMatch(code[name], /from\s+'react-native'/u, `${name} is a truth module and imports no view layer`);
   }
-  for (const scheduler of ['setTimeout', 'setInterval', 'requestAnimationFrame', 'InteractionManager', 'runOnJS', 'scheduleOnRN']) {
-    assert.equal(layerText.includes(scheduler), false, `T-08 must not schedule Product work with ${scheduler}`);
-  }
-  for (const responsive of ['useWindowDimensions', 'Dimensions', 'onLayout', 'breakpoint', 'isNarrow', 'isTablet']) {
-    assert.equal(layerText.includes(responsive), false, `T-08 must not implement responsive Product behaviour (${responsive})`);
-  }
-  for (const gesture of ['GestureDetector', 'Gesture.', 'PanResponder', 'react-native-gesture-handler', 'onGestureEvent']) {
-    assert.equal(layerText.includes(gesture), false, `T-08 must not introduce ${gesture}`);
-  }
+  // Two layer-wide bans that no later task makes legitimate either:
+  //   - polling. The kernel publishes a subscription seam, so a chrome layer that sampled on a timer
+  //     would be re-deriving state that is already pushed to it, and would drift from it.
+  assert.equal(layerText.includes('setInterval'), false, 'T-08 polls nothing: it subscribes');
+  //   - Product navigation by gesture or otherwise. Motion may move pixels; it may never move the
+  //     reader. Every act still runs through exactly one T-07 executor, proven above.
+  assert.equal(layerText.includes('navigate('), false, 'T-08 introduces no generic navigation act');
 });
 
 // The world stays the world.

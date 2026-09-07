@@ -50,8 +50,9 @@ import {
 import type { HistoricalDisclosureEntry } from '../projection';
 import { liveFocusReturnAvailability, returnAvailability } from '../return-navigation';
 import { exactReturnTargetFor, type ExactReturnOrigin } from './exact-return-origin';
-import { contextOrientation, currentBindingOf, CONTEXT_ORDERING_NOTE } from './context-orientation';
+import { contextOrientation, currentBindingOf } from './context-orientation';
 import { inspectionRender, renderableIdentity } from './inspection-orientation';
+import { CONTEXT_ORDERING_NOTE } from './product-copy';
 import { returnOrientation } from './return-orientation';
 import type {
   ChromeProjectionState,

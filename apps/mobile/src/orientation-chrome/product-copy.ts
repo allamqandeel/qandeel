@@ -25,7 +25,7 @@
  */
 import type { SemanticDepth } from '../state';
 import type { HistoricalFamily } from '../projection';
-import type { ContextStep, InspectionRenderState, LiveChrome, NoncurrentVersionState, SpatialChrome, TemporalChrome } from './types';
+import type { ContextStep, InspectionRenderState, LiveChrome, NoncurrentVersionState, ReturnOpportunityId, SpatialChrome, TemporalChrome } from './types';
 
 /** The frozen families, in plain language. Never the wire token. */
 const FAMILY: Readonly<Record<HistoricalFamily, string>> = Object.freeze({
@@ -153,3 +153,59 @@ export function contextChoiceLabel(current: boolean, boundAtMoment: number): str
 }
 
 export const CONTEXT_CHOICE_TITLE = 'This appears in more than one context';
+
+/** Says explicitly that the order carries no preference. */
+export const CONTEXT_ORDERING_NOTE = 'Listed in the order the map discloses them. The order is not a ranking.';
+
+/** The neutral name of the whole chrome. It names the chrome, never the world or a state of it. */
+export const ORIENTATION_CHROME_LABEL = 'Where you are';
+
+/** The neutral name of the inspection region. It names the region, never the object it describes. */
+export const INSPECTION_ORIENTATION_LABEL = 'What you are inspecting';
+
+/** The neutral name of the return group. It names the controls, never a place or a state. */
+export const RETURN_CONTROLS_LABEL = 'Ways back';
+
+/**
+ * The six frozen return acts, in the reader's language.
+ *
+ * Each states its OWN effect and borrows no other's, because the six differ in what they move and a
+ * reader who cannot tell which one they pressed has been misled. In particular "follow the live
+ * conversation" promises no movement and "move to where attention is now" promises no change of
+ * moment, because those two acts are opposites.
+ *
+ * These are constants of each identity, not functions of state: nothing the reader's position cannot
+ * disclose can change what an act claims. Final tone and localization belong to a later task; the
+ * distinctions are what is frozen here.
+ */
+const RETURN_WORDS: Readonly<Record<ReturnOpportunityId, { readonly label: string; readonly hint: string }>> = Object.freeze({
+  BACK_ONE_STEP: Object.freeze({
+    label: 'Back one step',
+    hint: 'Reverses your most recent step. It does not return you to the live conversation.',
+  }),
+  EXACT_RETURN: Object.freeze({
+    label: 'Return to the original inspection',
+    hint: 'Restores exactly the viewpoint this inspection started from.',
+  }),
+  RETURN_LIVE_HEAD: Object.freeze({
+    label: 'Follow the live conversation',
+    hint: 'Follows the conversation as it continues. The view does not move.',
+  }),
+  RETURN_LIVE_FOCUS: Object.freeze({
+    label: 'Move to where attention is now',
+    hint: 'Moves the view to where live attention is. The moment you are reading does not change.',
+  }),
+  RETURN_WORLD: Object.freeze({
+    label: 'Return to the whole world',
+    hint: 'Returns to the world viewpoint at the same moment you are reading.',
+  }),
+  GO_LIVE_AND_LOCATE: Object.freeze({
+    label: 'Follow the conversation and move there',
+    hint: 'Returns to the live conversation and moves the view there, as one step.',
+  }),
+});
+
+/** The words for one return act. A constant of the identity: no state can move it. */
+export function returnActWords(id: ReturnOpportunityId): { readonly label: string; readonly hint: string } {
+  return RETURN_WORDS[id];
+}

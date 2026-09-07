@@ -35,6 +35,7 @@
  * projection-bound answer, and the label and hint are CONSTANTS that do not move with it either.
  */
 import type { ReturnAvailability } from '../return-navigation';
+import { returnActWords } from './product-copy';
 import type { LiveChrome, ReturnOpportunity, ReturnOpportunityId, ReturnChrome, TemporalChrome } from './types';
 import { RETURN_OPPORTUNITY_IDS } from './types';
 
@@ -62,7 +63,11 @@ export interface ReturnCapabilityInputs {
  *
  * `movesTime` and `movesCamera` describe the act, not the reader's hope. They are constants of the
  * identity, so no state — and in particular no live state — can change what an opportunity claims.
- * The copy is a structural placeholder; final wording, tone and localization belong to a later task.
+ *
+ * The WORDS are not written here. Every reader-facing sentence in this layer lives in
+ * `product-copy.ts`, so there is exactly one file a Product writer edits and exactly one place the
+ * "no engineering vocabulary reaches the reader" rule has to hold. What this module owns is the
+ * structural half of each identity: its effect, and what it therefore may promise.
  */
 const SHAPES: Readonly<Record<ReturnOpportunityId, ReturnOpportunity>> = Object.freeze({
   BACK_ONE_STEP: Object.freeze({
@@ -70,16 +75,14 @@ const SHAPES: Readonly<Record<ReturnOpportunityId, ReturnOpportunity>> = Object.
     effect: 'HISTORY' as const,
     movesTime: true,
     movesCamera: true,
-    label: 'Back one step',
-    hint: 'Reverses your most recent step. It does not return you to the live conversation.',
+    ...returnActWords('BACK_ONE_STEP'),
   }),
   EXACT_RETURN: Object.freeze({
     id: 'EXACT_RETURN' as const,
     effect: 'HISTORY' as const,
     movesTime: true,
     movesCamera: true,
-    label: 'Return to the original inspection',
-    hint: 'Restores exactly the viewpoint this inspection started from.',
+    ...returnActWords('EXACT_RETURN'),
   }),
   RETURN_LIVE_HEAD: Object.freeze({
     id: 'RETURN_LIVE_HEAD' as const,
@@ -88,8 +91,7 @@ const SHAPES: Readonly<Record<ReturnOpportunityId, ReturnOpportunity>> = Object.
     // Frozen: this act writes the temporal mode and nothing else. Promising a camera movement here
     // would be a promise the act cannot keep.
     movesCamera: false,
-    label: 'Follow the live conversation',
-    hint: 'Follows the conversation as it continues. The view does not move.',
+    ...returnActWords('RETURN_LIVE_HEAD'),
   }),
   RETURN_LIVE_FOCUS: Object.freeze({
     id: 'RETURN_LIVE_FOCUS' as const,
@@ -97,24 +99,21 @@ const SHAPES: Readonly<Record<ReturnOpportunityId, ReturnOpportunity>> = Object.
     // Frozen: this act writes the camera and never the temporal mode. It is not a way to go Live.
     movesTime: false,
     movesCamera: true,
-    label: 'Move to where attention is now',
-    hint: 'Moves the view to where live attention is. The moment you are reading does not change.',
+    ...returnActWords('RETURN_LIVE_FOCUS'),
   }),
   RETURN_WORLD: Object.freeze({
     id: 'RETURN_WORLD' as const,
     effect: 'SPATIAL' as const,
     movesTime: false,
     movesCamera: true,
-    label: 'Return to the whole world',
-    hint: 'Returns to the world viewpoint at the same moment you are reading.',
+    ...returnActWords('RETURN_WORLD'),
   }),
   GO_LIVE_AND_LOCATE: Object.freeze({
     id: 'GO_LIVE_AND_LOCATE' as const,
     effect: 'TEMPORAL_AND_SPATIAL' as const,
     movesTime: true,
     movesCamera: true,
-    label: 'Follow the conversation and move there',
-    hint: 'Returns to the live conversation and moves the view there, as one step.',
+    ...returnActWords('GO_LIVE_AND_LOCATE'),
   }),
 });
 

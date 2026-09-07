@@ -62,6 +62,40 @@ export function latestReturnCheckpoint(store: CanonicalStore): ReturnCheckpointT
   return mint(store, history[history.length - 1], history.length - 1);
 }
 
+/**
+ * Whether this value is a target THIS store minted whose checkpoint is STILL recorded — as a
+ * boolean, and nothing else.
+ *
+ * A presentation surface has a real problem that `isReturnCheckpointTarget` cannot solve: that
+ * predicate proves only that SOME store minted the handle. A handle minted by another store is
+ * therefore indistinguishable from a local one, so a surface can offer an Exact Return that can
+ * never work and only find out when the reader presses it. Provenance lives in this module's private
+ * `WeakMap`, so no consumer can answer the question for itself, and answering it by comparing
+ * ordinals against the history LENGTH is not an answer at all: a consumed checkpoint's ordinal is
+ * re-occupied as soon as unrelated new transactions are recorded, which would resurrect a dead
+ * target.
+ *
+ * So this predicate asks exactly the three questions the execution path asks, and returns only
+ * whether all three hold:
+ *
+ *   1. was this handle minted here at all;
+ *   2. does its provenance name THIS store;
+ *   3. is the exact provenance entry OBJECT still present in this store's current history.
+ *
+ * It is deliberately read-only and inert. It yields no `RhEntry`, no captured position, no
+ * inspection, no camera and no provenance object; it mints nothing, consumes nothing and mutates
+ * nothing; and it grants no authority whatsoever. Being told "yes" is not permission to return —
+ * `exactReturn` re-proves provenance AND presence itself, and the store re-proves presence
+ * independently after that, both before anything is written. A target that passes here and is
+ * consumed a moment later is refused there, exactly as before.
+ */
+export function isCurrentReturnCheckpointTargetForStore(store: CanonicalStore, target: unknown): target is ReturnCheckpointTarget {
+  if (!isReturnCheckpointTarget(target)) return false;
+  const provenance = minted.get(target);
+  if (provenance === undefined || provenance.store !== store) return false;
+  return store.getState().history.includes(provenance.entry);
+}
+
 export type ResolvedCheckpointTarget =
   | { readonly ok: true; readonly entry: RhEntry }
   | { readonly ok: false; readonly code: ReturnRejectionCode; readonly detail: string };

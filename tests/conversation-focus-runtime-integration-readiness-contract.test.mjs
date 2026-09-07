@@ -196,7 +196,10 @@ test('no Thread / LF / T-03C scope, no mobile change, no new dependency', () => 
   for (const file of listFiles(join(rootPath, 'apps/mobile/src')).map(relative)) {
     assert.doesNotMatch(read(file), /with_focus_v1|focus_runtime_context|integrated_batch_snapshot|cutover_ready|ConversationFocus/u, `${file} untouched`);
   }
-  assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg']);
+  // FORWARD-SAFE (R2-02): an exhaustive census of the ROOT toolchain is a global ceiling that
+  // any authorized future task trips. What is permanent is that the verifier database driver is
+  // declared, alongside the forward-safe denylists this contract already carries.
+  assert.ok('pg' in rootPackage.devDependencies, 'the verifier database driver is still declared');
   for (const name of ['uuid', 'zod', 'p-retry', 'async-retry', 'retry', 'bottleneck']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}), false, `${name} must not be introduced`);
   }

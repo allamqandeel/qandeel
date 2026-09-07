@@ -46,12 +46,10 @@ import {
   type ReturnOutcome,
   type ReturnSurface,
 } from '../return-navigation';
+import { RETURN_CONTROLS_LABEL } from './product-copy';
 import type { ReturnChrome, ReturnOpportunity, ReturnOpportunityId } from './types';
 
 export const RETURN_CONTROLS_TEST_ID = 'qandeel-return-controls';
-
-/** The neutral name of the group. It names the controls, never a place or a state of the world. */
-export const RETURN_CONTROLS_LABEL = 'Ways back';
 
 export interface ReturnControlsProps {
   readonly surface: ReturnSurface;

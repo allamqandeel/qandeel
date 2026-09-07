@@ -60,6 +60,12 @@ jobs:
       - {name: Verify Thread lifecycle + cross-Session continuity static contract (T-03B3), run: npm run test:thread-lifecycle-cross-session-continuity-contract}
       - {name: Verify effective Live Focus + FINAL semantic-chain cutover static contract (T-03D), run: npm run test:effective-live-focus-final-semantic-chain-cutover-contract}
       - {name: Verify historical coverage + Layer A projection + Layer B disclosure static contract (T-03C), run: npm run test:historical-projection-contract}
+      # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
+      # performs the authorized future changes that are known to be coming (a new mobile gate, a new
+      # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
+      # devDependency) and re-runs every contract above against the mutated tree — then proves the
+      # mutations that must still be refused really are.
+      - {name: Verify repository forward-safety gate (no static contract is a mutable-global ceiling), run: npm run test:forward-safety-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}

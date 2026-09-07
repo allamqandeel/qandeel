@@ -415,9 +415,14 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
   }
   assert.deepEqual(readdirSync(join(rootPath, 'database')).filter((name) => /home|placement|osdap|thread/iu.test(name)), [],
     'no Home / placement verifier is named after the engine');
-  assert.deepEqual(Object.keys(rootPackage.scripts).filter((name) => /verify:.*(?:home|placement|osdap|thread)/u.test(name)),
-    ['verify:durable-thread-home-same-sp-substrate:integration', 'verify:thread-runtime-integration-readiness:integration', 'verify:thread-lifecycle-cross-session-continuity:integration'],
-    'the only Home-related verifier script is the T-03B2b2 one; the T-03B2b3 and T-03B3 ones verify reads / reuse, never a placement');
+  // FORWARD-SAFE (R2-02): the root `scripts` map is a shared mutable global, and the Thread layer is
+  // entitled to gain verifiers. The permanent claim is narrower and survives that: there is exactly
+  // ONE Home / placement verifier in the repository, because T-03B2b2 is the sole Home authority and
+  // this engine is production-inert. Thread verifiers unrelated to Home are none of this contract's
+  // business, so they are no longer enumerated here.
+  assert.deepEqual(Object.keys(rootPackage.scripts).filter((name) => /verify:.*(?:home|placement|osdap)/u.test(name)),
+    ['verify:durable-thread-home-same-sp-substrate:integration'],
+    'the only Home-related verifier script is the T-03B2b2 one; this engine contributes none');
   assert.deepEqual([...apiCi.matchAll(/npm run (verify:[\w:-]*(?:home|placement|osdap)[\w:-]*)/gu)].map((m) => m[1]),
     ['verify:durable-thread-home-same-sp-substrate:integration']);
 });
@@ -432,13 +437,17 @@ test('the gate is registered at the root and in API CI after T-03B2a and before 
   assert.doesNotMatch(mobileCi, /home-placement|placement|osdap/u);
   assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3);
   assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2);
-  assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg']);
-  assert.deepEqual(Object.keys(apiPackage.dependencies), [
-    '@anthropic-ai/sdk', '@nestjs/common', '@nestjs/core', '@opentelemetry/api', '@opentelemetry/exporter-metrics-otlp-http', '@opentelemetry/exporter-trace-otlp-http',
-    '@opentelemetry/instrumentation-express', '@opentelemetry/instrumentation-http', '@opentelemetry/resources', '@opentelemetry/sdk-metrics', '@opentelemetry/sdk-node',
-    '@opentelemetry/semantic-conventions', '@sentry/nestjs', 'openai', 'redis', 'reflect-metadata', 'rxjs',
-  ], 'no new API dependency');
-  assert.deepEqual(Object.keys(apiPackage.devDependencies), ['@nestjs/cli', '@qandeel/runtime', '@nestjs/testing', '@types/jest', '@types/node', 'jest', 'ts-jest', 'ts-node', 'typescript'], 'no new API devDependency');
+  // FORWARD-SAFE (R2-02): an exhaustive census of the ROOT toolchain is a global ceiling that
+  // any authorized future task trips. What is permanent is that the verifier database driver is
+  // declared, alongside the forward-safe denylists this contract already carries.
+  assert.ok('pg' in rootPackage.devDependencies, 'the verifier database driver is still declared');
+  // FORWARD-SAFE (R2-02): an exhaustive census of the API manifest is a ceiling on a package this
+  // contract does not own. The permanent, SCOPED proof that this engine adds no dependency is the
+  // import scan above — every module of the engine reaches only `./*` and `node:crypto`. What is
+  // additionally permanent is that the engine's purity is never satisfied by importing one of these.
+  for (const name of ['uuid', 'nanoid', 'zod', 'lodash', 'ramda', 'mathjs', 'gl-matrix', 'd3', 'd3-quadtree', 'rbush', 'quadtree-lib', 'graphlib', 'ngraph.graph', 'seedrandom']) {
+    assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}), false, `${name} must not be introduced`);
+  }
   assert.match(doc, /production-inert/u);
   assert.match(doc, /QANDEEL_OSDAP_V1/u);
   assert.match(doc, /T-03B2b2/u);

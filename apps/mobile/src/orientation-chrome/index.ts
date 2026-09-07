@@ -53,15 +53,22 @@ export { RETURN_OPPORTUNITY_IDS } from './types';
 
 export { contextLineage, inspectionRender, renderableIdentity } from './inspection-orientation';
 
-// The ONE place any reader-facing word is written. Every sentence the chrome can say comes from
-// here, which is what makes "no engineering vocabulary reaches the Product surface" checkable.
+// The ONE place any reader-facing word is written — every sentence, every control label, every
+// control hint, every region name and the ordering note. That is what makes "no engineering
+// vocabulary reaches the Product surface" checkable rather than aspirational, and it is enforced
+// statically: no other module of this layer contains a reader-facing string at all.
 export {
   CONTEXT_CHOICE_TITLE,
+  CONTEXT_ORDERING_NOTE,
+  INSPECTION_ORIENTATION_LABEL,
+  ORIENTATION_CHROME_LABEL,
+  RETURN_CONTROLS_LABEL,
   contextChoiceLabel,
   contextPathSentence,
   contextStepWord,
   inspectionSentence,
   liveSentence,
+  returnActWords,
   spatialSentence,
   temporalSentence,
 } from './product-copy';
@@ -73,21 +80,16 @@ export type { ExactReturnOrigin } from './exact-return-origin';
 export { bindExactReturnOrigin, exactReturnTargetFor, isExactReturnOrigin } from './exact-return-origin';
 
 export type { ContextOrientationInputs } from './context-orientation';
-export { CONTEXT_ORDERING_NOTE, contextOrientation, currentBindingOf, mapFamilyOf } from './context-orientation';
+export { contextOrientation, currentBindingOf, mapFamilyOf } from './context-orientation';
 
 export type { ChromeProjection, OrientationModelOptions } from './model';
 export { chromeProjection, mapProjectionRequest, orientationModel } from './model';
 
 export type { OrientationChromeProps } from './OrientationChrome';
-export { ORIENTATION_CHROME_LABEL, ORIENTATION_CHROME_TEST_ID, OrientationChrome } from './OrientationChrome';
+export { ORIENTATION_CHROME_TEST_ID, OrientationChrome } from './OrientationChrome';
 
 export type { InspectionOrientationProps } from './InspectionOrientation';
-export {
-  CONTEXT_CHOICE_TEST_ID,
-  INSPECTION_ORIENTATION_LABEL,
-  INSPECTION_ORIENTATION_TEST_ID,
-  InspectionOrientation,
-} from './InspectionOrientation';
+export { CONTEXT_CHOICE_TEST_ID, INSPECTION_ORIENTATION_TEST_ID, InspectionOrientation } from './InspectionOrientation';
 
 export type { ReturnControlsProps } from './ReturnControls';
-export { RETURN_CONTROLS_LABEL, RETURN_CONTROLS_TEST_ID, ReturnControls } from './ReturnControls';
+export { RETURN_CONTROLS_TEST_ID, ReturnControls } from './ReturnControls';

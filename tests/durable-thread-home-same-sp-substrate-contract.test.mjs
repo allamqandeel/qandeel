@@ -438,35 +438,26 @@ test('the whole slice is production-inert: no grant, no wiring, no runtime reade
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src'))].map(relative)) {
     assert.doesNotMatch(read(file), /with_focus_and_thread|durable-thread|conversation_threads|thread_home/u, `${file} does not reach the substrate`);
   }
-  // No new dependency from T-03B2b2; MOB-CI-01 is untouched. T-04 re-anchor: the lockfile moved
-  // exactly once since, for the authorized Map renderer, and the pin stays exact.
-  assert.equal(gitBlobId(read('package-lock.json')), 'c5b6e12cc45d32bd782b3a690179fedabde7169d', 'the lockfile carries only the authorized T-04 renderer beyond the T-03B2b2 baseline');
-  assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg']);
+  // FORWARD-SAFE (R2-02): a whole-lockfile hash and an exhaustive root devDependency set both make
+  // future authorized dependencies fail an old contract. The frozen fact is the renderer VERSION;
+  // "T-03B2b2 added nothing" is a delivery fact, and its permanent half is the denylist below.
+  assert.equal(JSON.parse(read('package-lock.json')).packages['node_modules/@shopify/react-native-skia'].version, '2.6.2', 'the authorized T-04 renderer version is locked exactly');
+  assert.ok('pg' in rootPackage.devDependencies, 'the verifier database driver is still declared');
   for (const name of ['uuid', 'nanoid', 'zod', 'knex', 'prisma', 'pg-promise', 'postgres', 'kysely', 'drizzle-orm']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}) || name in (mobilePackage.dependencies ?? {}), false, `${name} must not be introduced`);
   }
-  // T-04 re-anchor, extended by T-06, T-07 and now T-08: the workflow gained exactly one Node-only
-  // gate step and one trigger path per owning task's static contract. MOB-CI-01's structure is
-  // unchanged and is asserted structurally by the T-01, T-02, T-04, T-06, T-07 and T-08 contracts:
-  // one fast gate plus two conditional native jobs.
-  //
-  // The invariant the pin protects is stated structurally as well as by the hash, so a future
-  // re-anchor cannot quietly widen it.
+  // FORWARD-SAFE (R2-02). T-03B2b2 does not own `mobile-ci.yml`, and T-10 / T-11 / T-12 will
+  // legitimately add their own Node-only gates. A whole-file hash and an exhaustive gate list are
+  // therefore guaranteed to fail on correct future work — a repository ceiling, not an invariant of
+  // this slice. What is permanent is that MOB-CI-01's job SHAPE is frozen, and that no gate is
+  // registered twice; the job shape is independent of any task's gate.
   const mobileCiText = read('.github/workflows/mobile-ci.yml');
-  assert.deepEqual([...mobileCiText.matchAll(/run: npm run (test:[a-z0-9-]+contract)/gu)].map((match) => match[1]), [
-    'test:mobile-foundation-contract',
-    'test:mobile-canonical-state-contract',
-    'test:living-analysis-map-runtime-contract',
-    'test:temporal-navigation-layer-contract',
-    'test:return-navigation-layer-contract',
-    'test:inspection-orientation-return-chrome-contract',
-    'test:session-semantic-clock-sp-lh-delivery-contract',
-  ], 'one Node-only gate step per owning task, in order, and no other');
+  const gateSteps = [...mobileCiText.matchAll(/run: npm run (test:[a-z0-9-]+contract)/gu)].map((match) => match[1]);
+  assert.equal(new Set(gateSteps).size, gateSteps.length, 'no gate step is registered twice');
   assert.equal((mobileCiText.match(/runs-on: /gu) ?? []).length, 3, 'MOB-CI-01 preserved: one fast gate plus two native jobs');
-  assert.equal(gitBlobId(mobileCiText), '093360ad244980fe2b7305844813f515060ec76b', 'Mobile CI carries only the authorized T-04, T-06, T-07 and T-08 gate steps beyond this baseline');
-  // T-04 re-anchor: the mobile package gained exactly the authorized Skia pin and the Jest setup
-  // for it. The pin stays exact, so a further dependency change still trips this gate.
-  assert.equal(gitBlobId(read('apps/mobile/package.json')), 'd10b3a577d6ee26c0af2e045f4bc39496181b2e7', 'the mobile package carries only the authorized T-04 renderer pin beyond this baseline');
+  assert.equal((mobileCiText.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2, 'both native jobs stay conditional');
+  // Likewise the mobile manifest: the frozen fact is the renderer VERSION T-04's architecture pins.
+  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
 });
 
 test('the gates are registered at the root and in API CI, and the slice is documented', () => {

@@ -287,6 +287,10 @@ test('R2-01 — the public surface is exactly the safe set, and exports no raw s
     'backOneStep',
     'exactReturn',
     'goLiveAndLocate',
+    // R2-01: the ONE authorized additive surface. A read-only boolean about current provenance, for
+    // a presentation that must stop offering an act it can never perform. It exposes no checkpoint
+    // internals and grants nothing; T-07 remains the independent final execution authority.
+    'isCurrentReturnCheckpointTargetForStore',
     'isReturnCheckpointTarget',
     'latestReturnCheckpoint',
     'liveFocusReturnAvailability',
@@ -480,7 +484,11 @@ test('every committed return act cancels Preview first, and nothing resolves fro
   assert.match(surface, /export function committedReturn\(surface: ReturnSurface, run: \(store: CanonicalStore\) => ReturnOutcome\): ReturnOutcome \{\s*\n\s*surface\.preview\.cancel\(\);\s*\n\s*return run\(surface\.store\);\s*\n\}/u);
   assert.equal((layerText.match(/preview\.cancel\(\)/gu) ?? []).length, 1, 'the T-06 cancellation seam is consumed in exactly one place');
   assert.equal((layerText.match(/committedReturn\(/gu) ?? []).length, 7, 'the gate is defined once and used by exactly the six public acts');
-  for (const forbidden of ['getSnapshot', 'ptc', 'PTC', 'ActiveTemporalPreview', 'previewProjection', 'stepForward', 'reconcile', 'isCurrent']) {
+  // `isCurrentMapContext`, not the substring `isCurrent`: the invariant is that T-07 never uses the
+  // pre-act ACCESSOR — it asks T-04's one shared rule against post-act state, above. The bare
+  // substring also caught this layer's own R2-01 provenance predicate, which is a different question
+  // entirely (did THIS store mint this handle, and does it still record that exact entry).
+  for (const forbidden of ['getSnapshot', 'ptc', 'PTC', 'ActiveTemporalPreview', 'previewProjection', 'stepForward', 'reconcile', 'isCurrentMapContext']) {
     assert.equal(layerText.includes(forbidden), false, `the return layer must not read ${forbidden}`);
   }
   assert.equal(layerText.includes('createTemporalPreviewController'), false);
@@ -613,22 +621,11 @@ test('the return layer adds no dependency: every import is a relative module of 
   assert.deepEqual([...specifiers], [], 'the return layer imports nothing outside this app');
 
   const mobilePackage = await readJson('apps/mobile/package.json');
-  assert.deepEqual(Object.keys(mobilePackage.dependencies).sort(), [
-    '@shopify/react-native-skia',
-    'expo',
-    'expo-constants',
-    'expo-dev-client',
-    'expo-linking',
-    'expo-router',
-    'expo-status-bar',
-    'react',
-    'react-native',
-    'react-native-gesture-handler',
-    'react-native-reanimated',
-    'react-native-safe-area-context',
-    'react-native-screens',
-    'react-native-worklets',
-  ]);
+  // FORWARD-SAFE (R2-02): an exhaustive census of the mobile manifest is a ceiling on a package
+  // T-07 does not own. The permanent, SCOPED proof that T-07 adds no dependency is the assertion
+  // directly above: the layer imports nothing outside this app. The frozen manifest fact is the
+  // exact T-04 renderer pin, and the lockfile denylist below.
+  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
   const lock = await readJson('package-lock.json');
   for (const name of ['zustand', 'redux', '@reduxjs/toolkit', 'react-redux', 'immer', 'xstate', 'jotai', 'mobx', 'valtio', 'recoil', 'react-native-mmkv', '@react-native-async-storage/async-storage', 'expo-secure-store', 'expo-sqlite', 'history', 'react-router', 'moment', 'dayjs', 'date-fns', 'luxon']) {
     const copies = Object.keys(lock.packages).filter((key) => key === `node_modules/${name}` || key.endsWith(`/node_modules/${name}`));

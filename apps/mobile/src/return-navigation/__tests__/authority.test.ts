@@ -181,6 +181,9 @@ describe('RN07-A — the return-family authority boundary', () => {
       'backOneStep',
       'exactReturn',
       'goLiveAndLocate',
+      // R2-01: the ONE authorized additive surface. A read-only boolean about current provenance,
+      // for a presentation that must stop offering an act it can never perform. It grants nothing.
+      'isCurrentReturnCheckpointTargetForStore',
       'isReturnCheckpointTarget',
       'latestReturnCheckpoint',
       'liveFocusReturnAvailability',

@@ -215,38 +215,77 @@ A meaning is a constant. `returnMeaning(id)` returns the frozen shape of any ide
 it is currently offered, and an offered entry is always deeply equal to it: being offered adds an
 entry to a list and changes nothing about what an act claims.
 
-### The Exact Return opportunity (R1)
+### The Exact Return opportunity (R2-01)
 
 T-08 never mints a target. It does not read reversible-history internals, does not treat the oldest
 recorded checkpoint as an "original inspection", and builds no history browser. T-07 remains the
-only authority: it re-proves provenance and presence independently before writing anything.
+independent final authority: it re-proves provenance and presence before writing anything, and no
+part of that judgement moved into this layer.
 
-The first version checked only `isReturnCheckpointTarget(target) && index < checkpointCount`. That
-is a *necessary* condition, not a sufficient one, and it left a real Product defect: a handle minted
-by ANOTHER store is a genuine handle whose ordinal may well sit inside this store's reversible depth,
-so the control was offered, the reader pressed it, and only then did T-07 refuse. Canonical state was
-never at risk — but a control that lies about what it can do is a Product defect regardless.
+What changed in R2 is *presentation* provenance — whether an act may be **offered** at all.
 
-`exact-return-origin.ts` closes it with the narrowest possible presentation binding. A caller turns a
-target into an opportunity with `bindExactReturnOrigin(store, target)`; a module-private `WeakMap`
-keyed on the opaque handle records the store it was bound against. `exactReturnTargetFor` then
-requires all three of:
+The first candidate checked `isReturnCheckpointTarget(target) && index < checkpointCount`. Both are
+necessary; together they are not sufficient, and two real Product defects survived them:
 
-- the handle is one this module bound (a forged or copied object is not);
-- it was bound against **this** store — so a replaced store retires it immediately, and a foreign
-  handle is never offered in the first place;
-- its ordinal is still within the store's reversible depth — so a consumed or unwound-past origin
-  retires itself, including immediately after a successful Exact Return.
+- `isReturnCheckpointTarget` proves only that **some** store minted the handle. A caller could hand
+  `bindExactReturnOrigin` a foreign target and this store, and nothing here could tell: the binding
+  recorded a claim rather than checking it. The control was offered, the reader pressed it, and only
+  then did T-07 refuse.
+- An ordinal is **re-occupied**. Consume a checkpoint and the opportunity correctly disappears — but
+  record enough unrelated new transactions and the reversible history grows past that ordinal again,
+  and a dead target would be offered a second time. A consumed origin must stay dead forever.
 
-It reads no checkpoint internals, serializes nothing, persists nothing, enumerates nothing, and
-grants nothing: it hands back the very handle it was given. No T-07 private authority was widened and
-no persistent checkpoint identity was introduced.
+Canonical state was never at risk in either case. A control that lies about what it can do is a
+Product defect regardless.
+
+Only T-07 knows the answer, because its provenance lives in a module-private map. Architecture
+therefore authorized **one** minimal additive read-only predicate on the T-07 barrel:
+
+```ts
+isCurrentReturnCheckpointTargetForStore(store, target): target is ReturnCheckpointTarget
+```
+
+It answers three questions as a single boolean — T-07 minted this handle; it was minted by **this**
+store; and that exact `RhEntry` is still recorded in the current history. It exposes no checkpoint
+internals, returns no target, resolves nothing and grants nothing. `resolveCheckpointTarget` remains
+private to T-07 and is neither exported nor called from T-08.
+
+`exact-return-origin.ts` asks it twice: once when a caller turns a target into an opportunity, and
+again on every render through `exactReturnTargetFor`. Consequently a foreign handle never binds at
+all, a replaced store retires the opportunity immediately, and a consumed origin stays retired
+**forever** — history regrowing past its old position cannot revive it, because presence is asked
+about the entry itself and never about a count.
+
+`ExactReturnOrigin` is now opaque and **empty**. Once provenance is asked of T-07 there is nothing an
+ordinal could add except a second, weaker notion of validity that could disagree with the first, so
+resurrection is structurally impossible rather than merely checked for.
+
+The module reads no checkpoint internals, serializes nothing, persists nothing, enumerates nothing,
+and hands back the very handle it was given.
 
 A target T-07 still refuses at execution is retired too, by object identity, so an ordinary rerender
 keeps the retirement, a newly bound opportunity is offered normally, and a remount starts clean.
 
 `checkpointCount` supports generic orientation — a count of the reader's **own** transactions — and
 authorizes no named history destination.
+
+---
+
+### Every reader-facing word is written in one file (R2-03)
+
+R1 claimed that all Product copy had been centralized in `product-copy.ts`. It had not: the six
+control labels and hints still lived in `return-orientation.ts`, three region names lived in their
+components, and the ordering note lived in `context-orientation.ts`. The claim was aspirational and
+the contract asserted a proxy for it (no component interpolates a label of its own) rather than the
+claim itself.
+
+R2 makes the claim true. `product-copy.ts` now holds every sentence, every control label and hint,
+every region name and the ordering note; `return-orientation.ts` keeps the structural half of each
+identity — its effect, and what it may therefore promise — and takes its words from
+`returnActWords(id)`. The contract asserts the claim directly: outside `product-copy.ts`, no module
+of this layer contains a reader-facing string at all, neither a literal carrying whitespace nor a JSX
+text node. One file is where a Product writer works, and "no engineering vocabulary reaches the
+reader" is checkable there rather than everywhere.
 
 ---
 
@@ -351,6 +390,16 @@ Product answer can depend on one. The only layout-shaped prop is `bottomInset`, 
 surface eventually mounts this one — the safe-area provider lives at the app root, and the app root
 belongs to a later task.
 
+**Anti-scope is not the same as a permanent ban (R2-02).** T-10 will bring motion into these
+components and T-11 will make them responsive; a contract forbidding those primitives here forever
+would be a guard against authorized work. What is permanent, and what the contract now says, is the
+separation of powers *inside* the layer: `types`, `inspection-orientation`, `return-orientation`,
+`context-orientation`, `model`, `product-copy` and `exact-return-origin` decide what is true and may
+never reach an animation, measurement, scheduling or gesture API, nor import a view layer at all. The
+components are where later tasks work. Two bans stay layer-wide because no later task makes them
+legitimate either: this layer polls nothing (the kernel publishes a subscription seam), and it
+introduces no generic navigation act — motion may move pixels, it may never move the reader.
+
 ---
 
 ## 12. What proves it
@@ -365,17 +414,71 @@ belongs to a later task.
   plus the R1 suites (`context-sensitivity`, `no-internals`), including the total differential
   no-hindsight proof over the rendered native tree.
 
-### The contract guards T-08, not the repository (R1)
+- `npm run test:forward-safety-contract` — the repository-wide forward-safety gate. See below.
 
-Every assertion in the static contract is scoped to something T-08 owns, or to a genuinely permanent
-invariant. Deliberately absent, because a legitimate later task is expected to change them:
+### A static contract may freeze what its task owns, never a mutable global (R2-02)
 
-- any global migration census. The first version asserted that no migration beyond the T-08 baseline
-  existed; PR #209 then landed an unrelated Supabase keep-alive migration, GitHub tests a merge ref
-  against current `main`, and a mobile chrome contract failed over a database keep-alive. Freezing a
-  mutable global ceiling freezes the future, not the past;
-- any hash of a file a later authorized task will change — the lockfile, the mobile manifest, the app
-  shell. "T-08 mounts nothing into the shell" is stated as what it is: an assertion that the shell
-  files do not reference this layer;
-- any census of the mobile source tree, which a sibling task would break by adding its own owner
-  directory. The invariant is that T-08 owns exactly one directory and takes over none.
+A static contract can be written in two shapes that look identical while it passes:
+
+| shape | example | where it belongs |
+| --- | --- | --- |
+| **permanent invariant** | "the Map is the only spatial authority"; "no truth may depend on a frame clock" | a perpetual static guard |
+| **delivery fact** | "the workflow contains exactly these seven gates"; "no migration exists after 0072"; "this manifest has exactly these dependencies" | closure evidence at one SHA |
+
+The second shape is a ceiling on the repository. It fails on correct future work done by people who
+have never read the contract that stops them, and it had already happened here twice: an unrelated
+Supabase keep-alive migration failed a mobile chrome contract, and a whole-file hash of
+`mobile-ci.yml` failed three database contracts that have nothing to do with mobile CI.
+
+R1 re-anchored those. R2 removed the class. Converted repository-wide:
+
+- whole-file hashes of `mobile-ci.yml`, of the root and mobile manifests, and of the lockfile;
+- exhaustive lists of the workflow's mobile gate steps;
+- exhaustive censuses of root, API and mobile dependencies;
+- enumerations of every migration following 0068 / 0070 / 0071 / 0072;
+- byte hashes of the app shell and the router root — mounting the Product surfaces there is T-12's
+  entire job;
+- T-08's own guards that T-10 and T-11 were scheduled to violate: the exact production-file census,
+  the blanket ban on motion, measurement, scheduling and gesture primitives across the whole layer,
+  and "only relative modules, `react` and `react-native`".
+
+What replaced each is the invariant underneath it. MOB-CI-01's job *shape* stays exact and no gate
+may be registered twice, but the gate list may grow. The renderer version stays pinned exactly, but
+the manifest may gain a dependency. Each migration is still the sole authority for the objects it
+declares, but the chain may grow. The shell may grow, but it never mounts a layer it should not, and
+whenever it does mount T-08 it must come through the barrel. Motion, measurement and gestures may
+enter the components, but never the modules that decide what is TRUE — because what is true may not
+depend on how it is shown, how long it takes to show, or how large the screen is. And T-08 may import
+anything the mobile app already declares, but nothing it does not: that, not a manifest census, is
+what "T-08 adds no dependency" means.
+
+### Closure evidence at this SHA, which is not the same as a perpetual guard
+
+These were true when T-08 closed, and are recorded here rather than frozen in CI:
+
+- the app shell and the router root reference nothing in `orientation-chrome`; T-08 is mounted
+  nowhere;
+- the layer imports no animation, measurement, scheduling or gesture API anywhere, in components as
+  well as in truth modules;
+- `apps/mobile/src/orientation-chrome/` contains exactly the eleven modules listed in §12's contract
+  and no others.
+
+### The forward-safety gate
+
+Removing ceilings is half a fix; nothing would stop the next one. So `tests/forward-safety-contract.test.mjs`
+proves the property directly. It mirrors the repository into a temporary directory, performs the
+authorized future changes that are known to be coming — a new Mobile CI gate, a new migration, T-10
+motion, T-11 responsive work, T-12 shell integration, a new root devDependency — and re-runs **every**
+real contract against the mutated tree. Not a re-implementation of their assertions: the contracts
+themselves, so the gate cannot drift from what they actually check.
+
+The negative half matters as much, because a gate that only proved "everything still passes" would be
+satisfied by contracts that assert nothing. So it also performs the mutations that must be refused —
+a truth module reaching an animation API, a shell deep-importing past the barrel, a new chrome module
+writing its own copy, a chrome module importing an undeclared package, a migration re-declaring an
+owned substrate, a duplicated CI gate — and requires the owning contract to fail. Finally it sweeps
+every root contract for the ceiling *shapes* themselves, so the class cannot come back.
+
+Two contracts are excluded from the mutation runs and named explicitly: `toolchain` and
+`mobile-foundation-toolchain-contract` interrogate git itself — which paths are tracked, which are
+ignored — so they are meaningless against a copy that is not a repository. The shape sweep covers them.

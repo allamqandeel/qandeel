@@ -110,15 +110,16 @@ test('migration 0070 is the FINAL Thread-layer migration, 0071 (T-03D) orders di
   // by tests/effective-live-focus-final-semantic-chain-cutover-contract.test.mjs.)
   const B3D_MIGRATION = '0071_effective_live_focus_final_semantic_chain_cutover_v1.sql';
   assert.equal(migrations.indexOf(B3D_MIGRATION), migrations.indexOf(MIGRATION) + 1, '0071 orders directly after 0070');
-  // (T-03C added 0072, the historical coverage / projection / disclosure migration,
-  // pinned by tests/historical-projection-contract.test.mjs.)
-  assert.deepEqual(migrations.filter((name) => /007\d_/u.test(name)), [
-    MIGRATION,
-    B3D_MIGRATION,
-    '0072_historical_coverage_projection_disclosure_v1.sql',
-    '0073_supabase_free_plan_keepalive_v1.sql',
-    '0074_supabase_keepalive_permission_correction_v1.sql',
-  ], 'T-03B3, T-03D, T-03C, and the isolated keep-alive infrastructure migrations are exact');
+  // FORWARD-SAFE (R2-02): enumerating the whole `007x` band is a repository ceiling — the next
+  // authorized migration on any track breaks a contract that has nothing to do with it. What T-03B3
+  // permanently owns is: exactly ONE 0070, the immutable neighbour relation above, and the guarantee
+  // that no later migration re-declares the lifecycle substrate this migration is sole authority for.
+  assert.deepEqual(migrations.filter((name) => /0070_/u.test(name)), [MIGRATION], 'T-03B3 ships exactly ONE migration');
+  for (const later of migrations.slice(migrations.indexOf(MIGRATION) + 1)) {
+    assert.doesNotMatch(read(`database/migrations/${later}`),
+      /CREATE TABLE public\.(?:conversation_thread_focus_bindings|conversation_thread_lifecycle_events)\b/u,
+      `${later} declares no second Thread-lifecycle or focus-binding substrate`);
+  }
   for (const [file, blob] of [
     ['database/migrations/0064_committed_conversational_unit_substrate_v1.sql', '0a2ee63980e59072b3e9f52a643efa8220e95b08'],
     ['database/migrations/0065_session_semantic_clock_sp_lh_delivery_v1.sql', '3dc061c71bcb237cec648abb2d1fa02f450cd57f'],
@@ -490,11 +491,13 @@ test('no LF, no T-03C, no T-03D, no Reading / Neighborhood, no new dependency, n
     assert.equal(productionCode.includes(forbidden), false, `the runtime must not contain ${forbidden}`);
   }
   assert.doesNotMatch(executableBody, /live_focus|effective_lf|knowledge_frontier|historical_coverage|projection|neighborhood|reading_id|semantic_version|thread_enabled/iu, '0070 carries no LF / T-03C / T-03D substrate');
-  assert.deepEqual(Object.keys(rootPackage.devDependencies), ['pg']);
+  // FORWARD-SAFE (R2-02): an exhaustive census of the ROOT toolchain is a global ceiling that any
+  // authorized future task trips. The permanent fact is that the verifier driver is declared and
+  // that the denied packages below stay out.
+  assert.ok('pg' in rootPackage.devDependencies, 'the verifier database driver is still declared');
   for (const name of ['uuid', 'zod', 'p-retry', 'async-retry', 'retry', 'bottleneck', 'xstate', 'immer']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}), false, `${name} must not be introduced`);
   }
-  assert.equal(gitBlobId(read('package-lock.json')), gitBlobId(read('package-lock.json')), 'lockfile is read once');
   assert.doesNotMatch(read('package-lock.json'), /thread-lifecycle|thread-continuity/u, 'the lockfile knows nothing of T-03B3');
 });
 

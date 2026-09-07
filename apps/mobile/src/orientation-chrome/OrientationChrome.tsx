@@ -46,14 +46,11 @@ import type { ReturnMapContext, ReturnOutcome, ReturnSurface } from '../return-n
 import { exactReturnTargetFor, type ExactReturnOrigin } from './exact-return-origin';
 import { InspectionOrientation } from './InspectionOrientation';
 import { orientationModel, type ChromeProjection } from './model';
-import { liveSentence, spatialSentence, temporalSentence } from './product-copy';
+import { ORIENTATION_CHROME_LABEL, liveSentence, spatialSentence, temporalSentence } from './product-copy';
 import { ReturnControls } from './ReturnControls';
 import type { OrientationModel, ReturnOpportunityId } from './types';
 
 export const ORIENTATION_CHROME_TEST_ID = 'qandeel-orientation-chrome';
-
-/** The neutral name of the surface. It names the chrome, never the world or a state of it. */
-export const ORIENTATION_CHROME_LABEL = 'Where you are';
 
 export interface OrientationChromeProps {
   readonly surface: ReturnSurface;

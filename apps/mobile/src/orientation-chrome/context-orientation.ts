@@ -29,11 +29,8 @@
  */
 import { disclosedAppearances, type MapInspectionContext, type MapObjectFamily } from '../map';
 import type { HistoricalFamily } from '../projection';
-import { contextChoiceLabel } from './product-copy';
+import { CONTEXT_ORDERING_NOTE, contextChoiceLabel } from './product-copy';
 import type { ContextAppearanceOption, ContextChrome, ContextStep } from './types';
-
-/** Says explicitly that the order carries no preference. */
-export const CONTEXT_ORDERING_NOTE = 'Listed in the order the map discloses them. The order is not a ranking.';
 
 const EMPTY: ContextChrome = Object.freeze({
   lineage: Object.freeze([]),

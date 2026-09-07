@@ -371,13 +371,17 @@ where the reader is, plus controls that reach the existing executors and no othe
   chooser **fails closed**: nothing is invented and no internal handle is exposed. One appearance is
   not a choice either. Switching goes through T-04's own executor carrying the requested version
   intent.
-- **Exact Return** stays opaque and is bound to a store lifecycle (`exact-return-origin.ts`): T-08
+- **Exact Return** stays opaque and its provenance is asked of T-07 (`exact-return-origin.ts`): T-08
   never mints a target, never reads reversible-history internals, never treats the oldest checkpoint
   as an original inspection and builds no history browser. A caller turns a target into an
-  opportunity with `bindExactReturnOrigin`, and the act is offered only while that opportunity was
-  bound against the store being acted on and its ordinal is still within reach — so a handle from a
-  foreign or replaced store is never offered rather than being offered and then refused on press.
-  Authority stays entirely T-07's, which re-proves provenance and presence at execution.
+  opportunity with `bindExactReturnOrigin`, which is refused unless T-07's own
+  `isCurrentReturnCheckpointTargetForStore` confirms all three of: T-07 minted this handle, THIS
+  store minted it, and that exact history entry is still recorded. The same question is re-asked on
+  every render, so a handle from a foreign or replaced store is never offered at all, and a consumed
+  origin stays retired forever — the opportunity carries no ordinal, so history regrowing past its
+  old position cannot revive it. The predicate returns a boolean and nothing else: it exposes no
+  checkpoint internals, and `resolveCheckpointTarget` stays private to T-07, which remains the
+  independent final authority and re-proves provenance and presence at execution.
 - **Lifecycle**: subscribed through the T-02 kernel's own seam, so a replaced store is
   resubscribed to rather than remembered. The whole answer is recomputed from props and subscribed
   state every render, so callback churn, extra renders, remounts and store replacement cannot
@@ -392,13 +396,29 @@ where the reader is, plus controls that reach the existing executors and no othe
   mirroring has nothing directional to invert; the offered set, its order, its labels and its hints
   are identical under RTL, and an Arabic or code-switched world produces the same internal-free
   chrome in both writing directions.
+- **One copy module**: every sentence, control label, control hint, region name and the ordering note
+  are written in `product-copy.ts` and nowhere else, which is what makes "no engineering vocabulary
+  reaches the reader" checkable in one file. The static contract asserts it directly: outside that
+  module, no file of the layer contains a reader-facing string at all.
 - Not here, by design: general and final motion (T-10), responsive recomposition (T-11), final
-  app-shell integration (T-12) and persistence (T-13). Nothing under `src/orientation-chrome/` is
-  mounted in the shell, and the layer adds no dependency at all.
+  app-shell integration (T-12) and persistence (T-13). As delivered, nothing under
+  `src/orientation-chrome/` is mounted in the shell and the layer reaches no animation, measurement,
+  scheduling or gesture API. What the contract *permanently* forbids is narrower and survives those
+  tasks: the modules that decide what is true may never reach any of it, whatever the components
+  later do, and every non-relative import must already be declared by this app.
 
 Contract: `npm run test:inspection-orientation-return-chrome-contract` (repository root) plus the
 Jest suites under `src/orientation-chrome/__tests__/`. Design notes:
 `docs/inspection-orientation-return-chrome-v1.md`.
+
+## Repository forward-safety gate
+
+`npm run test:forward-safety-contract` (repository root) mirrors the repository, applies the
+authorized future changes that are known to be coming — a new Mobile CI gate, a new migration, T-10
+motion, T-11 responsive work, T-12 shell integration, a new root devDependency — and re-runs every
+static contract against the mutated tree, then requires the mutations that must be refused to fail.
+It exists because a static contract that freezes a file the whole repository shares will break
+correct work done by someone who never read it, which has already happened twice here.
 
 ## Toolchain pins (Expo SDK 57)
 

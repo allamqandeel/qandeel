@@ -12,7 +12,13 @@
 import { sessionPosition, type RhCheckpoint } from '../../state';
 import { initialCameraIntent, panByTranslation, zoomSemanticStep } from '../../map';
 import { backOneStep, exactReturn } from '../return-actions';
-import { isReturnCheckpointTarget, latestReturnCheckpoint, returnCheckpoints, type ReturnCheckpointTarget } from '../checkpoint-target';
+import {
+  isCurrentReturnCheckpointTargetForStore,
+  isReturnCheckpointTarget,
+  latestReturnCheckpoint,
+  returnCheckpoints,
+  type ReturnCheckpointTarget,
+} from '../checkpoint-target';
 import { permissiveReturnStore, returnSurface, returnTestStore, unavailableInspectionRef, viewpoint } from '../__fixtures__/return';
 import type { CanonicalStore } from '../../state';
 
@@ -202,5 +208,81 @@ describe('RN07-C — Exact Return', () => {
     // ...and the latest one is accepted, consuming exactly itself.
     expect(store.dispatchReturn({ type: 'BACK_ONE_STEP', target: history[3] })).toEqual({ outcome: 'APPLIED', entry: null });
     expect(store.getState().history).toHaveLength(3);
+  });
+});
+
+/**
+ * The ONE read-only provenance question a presentation surface may ask (R2-01).
+ *
+ * `isReturnCheckpointTarget` proves only that SOME store minted a handle, which is not enough for a
+ * surface deciding whether to OFFER an act: a foreign handle is indistinguishable from a local one,
+ * so the reader is shown a capability that can never work. This predicate answers the whole question
+ * — minted here, belongs to this store, entry still recorded — as a boolean, and grants nothing.
+ */
+describe('RN07-C — the current-provenance predicate', () => {
+  it('answers the three questions the executor asks, and nothing else', () => {
+    const store = returnTestStore();
+    const surface = returnSurface(store);
+    fourSteps(store);
+    const history = returnCheckpoints(store);
+
+    // Minted here, this store, still present.
+    for (const target of history) expect(isCurrentReturnCheckpointTargetForStore(store, target)).toBe(true);
+
+    // Not minted at all.
+    for (const forgery of [{ index: 0 }, Object.freeze({ index: 0 }), { ...history[0] }, JSON.parse(JSON.stringify(history[0])), null, undefined, 'x', 0]) {
+      expect(isReturnCheckpointTarget(forgery)).toBe(false);
+      expect(isCurrentReturnCheckpointTargetForStore(store, forgery)).toBe(false);
+    }
+
+    // Minted, but by a different store — the case an ordinal could never catch, because the other
+    // store has a checkpoint at every one of these positions too.
+    const other = returnTestStore();
+    fourSteps(other);
+    const foreign = returnCheckpoints(other);
+    expect(foreign).toHaveLength(history.length);
+    for (const target of foreign) {
+      expect(isReturnCheckpointTarget(target)).toBe(true);
+      expect(isCurrentReturnCheckpointTargetForStore(store, target)).toBe(false);
+    }
+
+    // Minted here, but consumed. Exact Return takes the named entry AND everything newer.
+    expect(exactReturn(surface, history[2]).outcome).toBe('APPLIED');
+    expect(store.getState().history).toHaveLength(2);
+    for (const consumed of [history[2], history[3]]) expect(isCurrentReturnCheckpointTargetForStore(store, consumed)).toBe(false);
+    for (const surviving of [history[0], history[1]]) expect(isCurrentReturnCheckpointTargetForStore(store, surviving)).toBe(true);
+  });
+
+  it('a consumed entry stays gone however far history regrows', () => {
+    const store = returnTestStore();
+    const surface = returnSurface(store);
+    fourSteps(store);
+    const history = returnCheckpoints(store);
+
+    backOneStep(surface);
+    expect(store.getState().history).toHaveLength(3);
+    expect(isCurrentReturnCheckpointTargetForStore(store, history[3])).toBe(false);
+
+    // New, unrelated transactions refill the position the consumed entry used to occupy. Presence is
+    // a question about the entry OBJECT, so the answer does not change.
+    for (const step of [1, 2, 3, 4]) expect(panByTranslation(store, step * 40, 0).outcome).toBe('APPLIED');
+    expect(store.getState().history.length).toBeGreaterThan(4);
+    expect(isCurrentReturnCheckpointTargetForStore(store, history[3])).toBe(false);
+  });
+
+  it('it is inert: it mints nothing, consumes nothing and mutates nothing', () => {
+    const store = returnTestStore();
+    fourSteps(store);
+    const target = latestReturnCheckpoint(store);
+    const before = store.getState();
+
+    for (let index = 0; index < 5; index += 1) {
+      expect(isCurrentReturnCheckpointTargetForStore(store, target)).toBe(true);
+    }
+    // Object identity: the state was never republished, and nothing was consumed.
+    expect(store.getState()).toBe(before);
+    expect(store.getState().history).toHaveLength(4);
+    // And it grants nothing — the handle it approved still carries only its ordinal.
+    expect(Object.keys(target as ReturnCheckpointTarget)).toEqual(['index']);
   });
 });
