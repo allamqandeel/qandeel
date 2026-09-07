@@ -65,7 +65,7 @@ describe('T10-A56, A57, A58 — reduced motion changes the transition and nothin
     expect(reduced.translationMs).toBe(0);
     expect(reduced.zoomMs).toBe(0);
     expect(reduced.resolveMs).toBe(MOTION_DURATIONS_MS.reducedResolve);
-    const arrival = disclosureArrivalPlan({ established: true, hostOffset: { x: -40, y: 40 }, reducedMotion: true });
+    const arrival = disclosureArrivalPlan({ newlyDisclosed: true, hostOffset: { x: -40, y: 40 }, reducedMotion: true });
     expect(arrival.fromX).toBe(0);
     expect(arrival.fromY).toBe(0);
     expect(arrival.fromScale).toBe(1);

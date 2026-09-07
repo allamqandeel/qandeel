@@ -8,25 +8,34 @@
  * It has no exit path. When the object leaves the current `V` the renderer stops rendering it and
  * React unmounts this wrapper with it, in the same commit — which is why a no-longer-disclosed
  * object cannot survive for a frame no matter what any animation is doing.
+ *
+ * R1: it registers the very shared value its transform is driven by, so the pointer route reads
+ * the same progress through the same pure recipe. Paint and pointer are one number apart from
+ * being one number — they ARE one number.
  */
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Group, vec } from '@shopify/react-native-skia';
 import { Easing, ReduceMotion, useDerivedValue, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { QANDEEL_EASE_OUT } from '../tokens';
-import type { DisclosureArrivalPlan } from './arrival';
+import { arrivalPresentation, type DisclosureArrivalPlan } from './arrival';
+import type { ArrivalRegistry } from './arrival-registry';
 
 const EASE_OUT = Easing.bezier(QANDEEL_EASE_OUT[0], QANDEEL_EASE_OUT[1], QANDEEL_EASE_OUT[2], QANDEEL_EASE_OUT[3]);
 
 export interface DisclosureArrivalProps {
+  /** The locus this arrival belongs to: the key the pointer route asks the registry about. */
+  readonly nodeKey: string;
   readonly plan: DisclosureArrivalPlan;
   /** The object's own centre: the local resolve scales about the object, never about the screen. */
   readonly originX: number;
   readonly originY: number;
+  /** Where paint and pointer meet. */
+  readonly registry: ArrivalRegistry;
   readonly children: React.ReactNode;
 }
 
-export function DisclosureArrival({ plan, originX, originY, children }: DisclosureArrivalProps) {
+export function DisclosureArrival({ nodeKey, plan, originX, originY, registry, children }: DisclosureArrivalProps) {
   // An arrival's recipe is decided when the object arrives, and never revised. Freezing it keeps
   // the worklets below closed over stable numbers, so a later canonical change — which moves every
   // node's position — does not rebuild one derived value per object for a resolve already at rest.
@@ -35,7 +44,12 @@ export function DisclosureArrival({ plan, originX, originY, children }: Disclosu
   // there is no commit in which it is drawn at full weight before the resolve begins.
   const progress = useSharedValue(entry.animated ? 0 : 1);
   const played = useRef(false);
-  const { animated, durationMs, fromScale, fromX, fromY } = entry;
+  const { animated, durationMs } = entry;
+
+  useLayoutEffect(() => {
+    if (!animated) return undefined;
+    return registry.bind(nodeKey, entry, progress);
+  }, [animated, entry, nodeKey, progress, registry]);
 
   useLayoutEffect(() => {
     if (played.current || !animated) return;
@@ -47,13 +61,8 @@ export function DisclosureArrival({ plan, originX, originY, children }: Disclosu
 
   const opacity = useDerivedValue(() => progress.get());
   const transform = useDerivedValue(() => {
-    const done = progress.get();
-    const remaining = 1 - done;
-    return [
-      { translateX: fromX * remaining },
-      { translateY: fromY * remaining },
-      { scale: fromScale + (1 - fromScale) * done },
-    ];
+    const shown = arrivalPresentation(entry, progress.get());
+    return [{ translateX: shown.dx }, { translateY: shown.dy }, { scale: shown.scale }];
   });
 
   // An object that is not arriving is drawn exactly as the renderer drew it before this task

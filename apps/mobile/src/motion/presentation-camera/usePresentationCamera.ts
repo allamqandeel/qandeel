@@ -226,24 +226,46 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
       }
 
       if (plan.kind === 'CUT_AND_RESOLVE') {
-        tx.set(RESIDUAL_AT_REST.tx);
-        ty.set(RESIDUAL_AT_REST.ty);
-        zoom.set(RESIDUAL_AT_REST.zoom);
+        // The cut and the dip that covers it land in the SAME frame, beat or no beat.
+        //
+        // A cut is only acceptable because the resolve covers it. Dropping the residual now while
+        // delaying the dip by the composite beat would show the world JUMP to the new viewpoint at
+        // full weight and then be explained 110 ms afterwards — a teleport with a late apology, and
+        // the one thing the North Star forbids outright. `TRAVEL` has no such problem: its rebase
+        // PRESERVES the on-glass frame, so holding that frame for the beat reads as the world
+        // waiting. Here the frame is discarded, so the hold has to be discarded with it.
+        if (plan.spatialDelayMs > 0) {
+          const held = (target: number) =>
+            withDelay(plan.spatialDelayMs, withTiming(target, { duration: 0, reduceMotion: ReduceMotion.Never }));
+          tx.set(held(RESIDUAL_AT_REST.tx));
+          ty.set(held(RESIDUAL_AT_REST.ty));
+          zoom.set(held(RESIDUAL_AT_REST.zoom));
+        } else {
+          tx.set(RESIDUAL_AT_REST.tx);
+          ty.set(RESIDUAL_AT_REST.ty);
+          zoom.set(RESIDUAL_AT_REST.zoom);
+        }
+
         // Opacity is not movement, so it is what survives when movement is removed. `Never` is
         // explicit: under reduced motion a plain `withTiming` would jump to its end and the resolve
         // — the only thing left explaining that the reader went somewhere — would never play.
         //
-        // It RETARGETS rather than restarts. A second act landing while a resolve is still running
-        // continues from the weight on the glass; re-seeding the dip would drop the plane back down
-        // and read as a blink, which is exactly the restart-from-zero failure a sequence invites.
-        const resolveFrom = resolveFromOpacity(planeOpacity.get());
+        // It RETARGETS rather than restarts, and a resolve that is ALREADY running is continued
+        // rather than re-seeded. Seeding it would mean sampling the weight NOW and applying it after
+        // the beat: by then the plane has climbed past that sample, so the seed drops it backwards
+        // and reads as a blink — precisely the restart-from-zero failure a sequence invites. Nothing
+        // is sampled ahead of when it is used; the only seeded case is a plane at full weight, which
+        // has no running resolve to contradict.
+        const shownOpacity = planeOpacity.get();
         planeOpacity.set(
           withDelay(
             plan.spatialDelayMs,
-            withSequence(
-              withTiming(resolveFrom, { duration: 0, reduceMotion: ReduceMotion.Never }),
-              withTiming(1, { duration: plan.resolveMs, easing: EASE_OUT, reduceMotion: ReduceMotion.Never }),
-            ),
+            shownOpacity < 1
+              ? withTiming(1, { duration: plan.resolveMs, easing: EASE_OUT, reduceMotion: ReduceMotion.Never })
+              : withSequence(
+                  withTiming(resolveFromOpacity(shownOpacity), { duration: 0, reduceMotion: ReduceMotion.Never }),
+                  withTiming(1, { duration: plan.resolveMs, easing: EASE_OUT, reduceMotion: ReduceMotion.Never }),
+                ),
           ),
         );
         return plan;

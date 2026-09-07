@@ -22,11 +22,23 @@
  * world HOLDS ITS PLACE where the reader put it. QANDEEL is not a slippy map. When the act does
  * NOT change canonical state — a refusal at the coordinate bound, a movement too small to be an
  * act — the presentation returns to the camera the reader is actually at, because nothing moved.
+ *
+ * ## R1 — a drag belongs to the authority it began under
+ *
+ * A drag is performed against one store, one Session, one camera. If that owner is REPLACED before
+ * the completion crossing arrives, the drag is stale: it describes a world nobody is looking at.
+ *
+ * The earlier version read the current store at call time and dispatched into the replacement. That
+ * is the wrong reading of "one completed drag is one PAN": the finger moved a world that no longer
+ * exists, and replaying its translation into a different world's camera is an act the reader never
+ * performed there. It is now DROPPED — no `PAN` in the store the drag began under, none in the
+ * replacement, and no outcome claiming an act happened. The presentation is reconciled under the
+ * new owner instead.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
 
-import { createBox, handoffToProduct, type PresentationCameraBinding } from '../../motion';
+import { createBox, handoffToProduct, type AuthorityGeneration, type PresentationCameraBinding } from '../../motion';
 import type { CanonicalStore } from '../../state';
 import type { MapActionOutcome } from '../outcome';
 import { panByTranslation } from './map-camera-actions';
@@ -40,20 +52,26 @@ export interface MapPanGestureOptions {
   readonly enabled?: boolean;
   /** The presentation residual the drag writes. Class D: never canonical, discarded on cancel. */
   readonly camera: PresentationCameraBinding;
+  /**
+   * Which authority this surface is bound to.
+   *
+   * Stamped on the gesture when it begins and re-read when its crossing arrives, so a completion
+   * that outlived its owner can be recognised as stale rather than re-aimed at a new one.
+   */
+  readonly authority: AuthorityGeneration;
   /** Observes the single canonical outcome of a completed drag; purely informational. */
   readonly onSettled?: (outcome: MapActionOutcome) => void;
 }
 
 export function useMapPanGesture(store: CanonicalStore, options: MapPanGestureOptions): MapPanGestureBinding {
-  const { enabled = true, camera, onSettled } = options;
+  const { enabled = true, camera, authority, onSettled } = options;
 
   // What the crossing must reach when it ARRIVES, not what was current when the gesture was built.
   //
-  // Two failures live here and both are silent. A store REPLACED mid-drag would otherwise receive
-  // its `PAN` in the store the reader has already left — a write to an authority nobody is looking
-  // at. And a changing observer would otherwise rebuild the gesture on every render, re-attaching
-  // the recognizer and risking a completion arriving twice. Reading at call time fixes both, and
-  // it is why the gesture below depends on nothing that changes per render.
+  // A changing observer would otherwise rebuild the gesture on every render, re-attaching the
+  // recognizer and risking a completion arriving twice; reading at call time is why the gesture
+  // below depends on nothing that changes per render. The STORE is read here too, but only to
+  // dispatch a drag that is still its own — the generation check above decides that first.
   //
   // A box rather than a ref, because these functions are handed to gesture callbacks and the React
   // Compiler's rules — correctly — refuse a ref that crosses that boundary.
@@ -71,9 +89,17 @@ export function useMapPanGesture(store: CanonicalStore, options: MapPanGestureOp
   );
 
   const settle = useCallback(
-    (translationX: number, translationY: number) => {
+    (translationX: number, translationY: number, generation: number) => {
       const current = latest.get();
       if (!current.mounted) return;
+      if (generation !== authority.current()) {
+        // STALE. The owner that this drag moved was replaced before its completion arrived: no act
+        // in the old store, no act in the new one, and no outcome claiming otherwise. The residual
+        // belongs to a world that is gone, so it is dropped rather than resolved — the replacement
+        // owner's own camera is what the surface shows next.
+        camera.reset();
+        return;
+      }
       const outcome = panByTranslation(current.store, translationX, translationY);
       // An act that changed no canonical camera leaves the plane displaced from the truth it is
       // supposed to be showing, so the presentation comes home. An APPLIED act needs nothing here:
@@ -81,13 +107,20 @@ export function useMapPanGesture(store: CanonicalStore, options: MapPanGestureOp
       if (outcome.outcome !== 'APPLIED') camera.resolveToRest();
       current.onSettled?.(outcome);
     },
-    [camera, latest],
+    [authority, camera, latest],
   );
 
-  const discard = useCallback(() => {
-    if (!latest.get().mounted) return;
-    camera.resolveToRest();
-  }, [camera, latest]);
+  const discard = useCallback(
+    (generation: number) => {
+      if (!latest.get().mounted) return;
+      if (generation !== authority.current()) {
+        camera.reset();
+        return;
+      }
+      camera.resolveToRest();
+    },
+    [authority, camera, latest],
+  );
 
   const gesture = useMemo(
     () =>
@@ -96,6 +129,8 @@ export function useMapPanGesture(store: CanonicalStore, options: MapPanGestureOp
         // Every callback below is a worklet on the UI runtime. None of them touches the canonical
         // store, which is plain JavaScript and has no worklet representation.
         .onBegin(() => {
+          // The authority this drag is being performed against, stamped before the first point.
+          authority.capture();
           camera.grab();
         })
         .onChange((event) => {
@@ -104,17 +139,18 @@ export function useMapPanGesture(store: CanonicalStore, options: MapPanGestureOp
         .onEnd((event, success) => {
           camera.release();
           // The ONE crossing: at the end of a completed gesture, with the finger's own total
-          // translation. Never per frame, never from a decay, never from an animation callback.
-          if (success) handoffToProduct(settle, event.translationX, event.translationY);
-          else handoffToProduct(discard);
+          // translation AND the generation it began under. Never per frame, never from a decay,
+          // never from an animation callback.
+          if (success) handoffToProduct(settle, event.translationX, event.translationY, authority.captured.get());
+          else handoffToProduct(discard, authority.captured.get());
         })
         // Cancellation, failure and interruption all land here without ever having dispatched.
         .onFinalize((_event, success) => {
           if (success) return;
           camera.release();
-          handoffToProduct(discard);
+          handoffToProduct(discard, authority.captured.get());
         }),
-    [camera, discard, enabled, settle],
+    [authority, camera, discard, enabled, settle],
   );
 
   return { gesture };

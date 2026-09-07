@@ -77,6 +77,11 @@ export const REDUCED_RESOLVE_FROM_OPACITY = 0.45;
  * continues from where the plane actually is; re-seeding the dip would drop it back down and read
  * as a blink — the restart-from-zero failure that makes a sequence the wrong tool for anything
  * that can be triggered twice quickly.
+ *
+ * The camera expresses that continuation by not seeding at all, because a seed is a value decided
+ * NOW and a beat can delay it until the plane has moved past it. So the answer this returns for a
+ * plane still under weight is the floor rather than the instruction: whatever is already on the
+ * glass is where the resolve is, and nothing may push it lower.
  */
 export function resolveFromOpacity(shownOpacity: number): number {
   'worklet';

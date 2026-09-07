@@ -16,6 +16,7 @@ import { disclosureFixture } from '../../map/__fixtures__/disclosure';
 import { contextOf, envelope, testStore } from '../../map/__fixtures__/store';
 import { MapCanvas, decodeCameraIntent, envelopeCenter, hitTest, placeScene, type MapCamera } from '../../map';
 import { DISCLOSURE_ENTRY_SCALE, MOTION_DURATIONS_MS, disclosureArrivalPlan } from '..';
+import { canvasProps } from '../__fixtures__/canvas';
 import { stubPresentationCamera } from '../__fixtures__/presentation-camera';
 
 const WORLD = (threads: readonly { id: string; x: string; y: string }[], appearances: readonly { bindingId: string; threadId: string }[] = []) =>
@@ -65,7 +66,7 @@ describe('T10-A21…A29, A35 — current V is what is painted, in the same commi
     const placed = placeScene(context.scene, camera, view);
     const motion = stubPresentationCamera({ center: envelopeCenter(view) });
     const rendered = await render(
-      <MapCanvas scene={context.scene} camera={camera} envelope={view} placed={placed} motion={motion} />,
+      <MapCanvas {...canvasProps({ placed: placed, motion: motion, envelope: view })} />,
     );
     return { rendered, placed, motion, camera, context };
   }
@@ -86,7 +87,7 @@ describe('T10-A21…A29, A35 — current V is what is painted, in the same commi
     const nextPlaced = placeScene(nextContext.scene, camera, view);
     await act(async () => {
       rendered.rerender(
-        <MapCanvas scene={nextContext.scene} camera={camera} envelope={view} placed={nextPlaced} motion={motion} />,
+        <MapCanvas {...canvasProps({ placed: nextPlaced, motion: motion, envelope: view })} />,
       );
     });
 
@@ -113,7 +114,7 @@ describe('T10-A21…A29, A35 — current V is what is painted, in the same commi
     const shallowPlaced = placeScene(shallow.scene, shallowCamera, view);
     await act(async () => {
       rendered.rerender(
-        <MapCanvas scene={shallow.scene} camera={shallowCamera} envelope={view} placed={shallowPlaced} motion={motion} />,
+        <MapCanvas {...canvasProps({ placed: shallowPlaced, motion: motion, envelope: view })} />,
       );
     });
     const after = painted(rendered.toJSON());
@@ -153,7 +154,7 @@ describe('T10-A21…A29, A35 — current V is what is painted, in the same commi
 
 describe('T10-A30, A31, A32 — arrivals are earned, local and unordered', () => {
   it('A30 — a new object travels only from a host that is disclosed right now', () => {
-    const plan = disclosureArrivalPlan({ established: true, hostOffset: { x: -40, y: 12 }, reducedMotion: false });
+    const plan = disclosureArrivalPlan({ newlyDisclosed: true, hostOffset: { x: -40, y: 12 }, reducedMotion: false });
     expect(plan.animated).toBe(true);
     expect(plan.fromX).toBe(-40);
     expect(plan.fromY).toBe(12);
@@ -163,7 +164,7 @@ describe('T10-A30, A31, A32 — arrivals are earned, local and unordered', () =>
   });
 
   it('A31 — with no disclosed host the object resolves where it belongs, inventing no origin', () => {
-    const plan = disclosureArrivalPlan({ established: true, hostOffset: null, reducedMotion: false });
+    const plan = disclosureArrivalPlan({ newlyDisclosed: true, hostOffset: null, reducedMotion: false });
     expect(plan.animated).toBe(true);
     expect(plan.fromX).toBe(0);
     expect(plan.fromY).toBe(0);
@@ -177,8 +178,8 @@ describe('T10-A30, A31, A32 — arrivals are earned, local and unordered', () =>
   });
 
   it('A32 — simultaneous arrivals carry no order at all: there is no delay to give one', () => {
-    const first = disclosureArrivalPlan({ established: true, hostOffset: { x: -40, y: 0 }, reducedMotion: false });
-    const second = disclosureArrivalPlan({ established: true, hostOffset: { x: -40, y: 0 }, reducedMotion: false });
+    const first = disclosureArrivalPlan({ newlyDisclosed: true, hostOffset: { x: -40, y: 0 }, reducedMotion: false });
+    const second = disclosureArrivalPlan({ newlyDisclosed: true, hostOffset: { x: -40, y: 0 }, reducedMotion: false });
     expect(first).toEqual(second);
     // Structural: the plan has no delay, index, ordinal or stagger field for an order to live in.
     expect(Object.keys(first).sort()).toEqual(['animated', 'durationMs', 'fromScale', 'fromX', 'fromY']);
@@ -188,7 +189,7 @@ describe('T10-A30, A31, A32 — arrivals are earned, local and unordered', () =>
     // A pure opacity entrance with no initial transform is a comes-from-nowhere. Every arrival
     // that moves at standard motion carries the entry scale, hosted or not.
     for (const hostOffset of [null, { x: -40, y: 12 }, { x: 0, y: 0 }]) {
-      const plan = disclosureArrivalPlan({ established: true, hostOffset, reducedMotion: false });
+      const plan = disclosureArrivalPlan({ newlyDisclosed: true, hostOffset, reducedMotion: false });
       expect(plan.animated).toBe(true);
       expect(plan.fromScale).toBe(DISCLOSURE_ENTRY_SCALE);
       expect(plan.fromScale).toBeGreaterThanOrEqual(0.88);
@@ -196,16 +197,16 @@ describe('T10-A30, A31, A32 — arrivals are earned, local and unordered', () =>
     }
     // Reduced motion is the ONE exception, and it is the rule working: movement is what gets
     // removed there, so the opacity bridge is deliberately left alone.
-    expect(disclosureArrivalPlan({ established: true, hostOffset: null, reducedMotion: true }).fromScale).toBe(1);
+    expect(disclosureArrivalPlan({ newlyDisclosed: true, hostOffset: null, reducedMotion: true }).fromScale).toBe(1);
   });
 
   it('nothing arrives from nowhere on the first painted frame', () => {
-    const plan = disclosureArrivalPlan({ established: false, hostOffset: { x: -40, y: 12 }, reducedMotion: false });
+    const plan = disclosureArrivalPlan({ newlyDisclosed: false, hostOffset: { x: -40, y: 12 }, reducedMotion: false });
     expect(plan).toEqual({ animated: false, fromScale: 1, fromX: 0, fromY: 0, durationMs: 0 });
   });
 
   it('reduced motion keeps the bridge and drops every movement in it (A58)', () => {
-    const plan = disclosureArrivalPlan({ established: true, hostOffset: { x: -40, y: 12 }, reducedMotion: true });
+    const plan = disclosureArrivalPlan({ newlyDisclosed: true, hostOffset: { x: -40, y: 12 }, reducedMotion: true });
     expect(plan.animated).toBe(true);
     expect(plan.fromX).toBe(0);
     expect(plan.fromY).toBe(0);

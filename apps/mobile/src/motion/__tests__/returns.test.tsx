@@ -18,6 +18,7 @@ import { disclosureFixture } from '../../map/__fixtures__/disclosure';
 import { address, contextOf, envelope, testStore } from '../../map/__fixtures__/store';
 import {
   MapCanvas,
+  cameraTransition,
   decodeCameraIntent,
   envelopeCenter,
   initialCameraIntent,
@@ -45,6 +46,7 @@ import {
   type CanonicalCameraChange,
   type PresentationTravelPlan,
 } from '..';
+import { canvasProps } from '../__fixtures__/canvas';
 import { stubPresentationCamera } from '../__fixtures__/presentation-camera';
 
 const SP = sessionPosition;
@@ -85,14 +87,20 @@ async function choreographyOf(
   const before = cameraOf(store);
   const motion = stubPresentationCamera({ center, reducedMotion: options.reducedMotion === true });
   const rendered = await render(
-    <MapCanvas scene={scene} camera={before} envelope={view} placed={placeScene(scene, before, view)} motion={motion} />,
+    <MapCanvas {...canvasProps({ placed: placeScene(scene, before, view), motion: motion, envelope: view })} />,
   );
 
   run();
 
   const after = cameraOf(store);
+  // The production derivation, from the two canonical cameras the executors actually left behind.
+  // `cameraTransition` is the same function the surface calls; what this file is about is what the
+  // presentation then DOES with it, act by act.
+  const transition = cameraTransition(before, after, view);
   await act(async () => {
-    rendered.rerender(<MapCanvas scene={scene} camera={after} envelope={view} placed={placeScene(scene, after, view)} motion={motion} />);
+    rendered.rerender(
+      <MapCanvas {...canvasProps({ placed: placeScene(scene, after, view), motion: motion, envelope: view, transition })} />,
+    );
   });
 
   const plans = motion.changes.map((change) => {
@@ -168,7 +176,7 @@ describe('T10-A38, A46…A55 — the six return choreographies', () => {
         const outcome = goLiveAndLocate(returnSurface(store), { liveContext: providing(contextAt(here(6, 6))) });
         expect(outcome.outcome === 'APPLIED' && outcome.locate).toBe('LANDED');
         // Written from the outcome T-07 has ALREADY returned, exactly as T-08 reports it.
-        cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', outcome.outcome === 'APPLIED');
+        cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', outcome);
       },
       { cause },
     );
@@ -188,7 +196,7 @@ describe('T10-A38, A46…A55 — the six return choreographies', () => {
       () => {
         const outcome = goLiveAndLocate(returnSurface(store), { liveContext: providingNothing });
         expect(outcome.outcome).toBe('APPLIED');
-        cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', true);
+        cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', { outcome: 'APPLIED', locate: 'LANDED' });
       },
       { cause },
     );
@@ -295,16 +303,16 @@ describe('T10-A38, A46…A55 — the six return choreographies', () => {
 
   it('A55 — a cause is one-shot and cannot attach itself to a later, unrelated act', () => {
     const cause = createMotionCauseChannel();
-    cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', true);
+    cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', { outcome: 'APPLIED', locate: 'LANDED' });
     expect(cause.take()).toBe('GO_LIVE_AND_LOCATE');
     // Consumed. The next camera change — whatever moved it — explains itself.
     expect(cause.take()).toBeNull();
     // A refused or no-op act arms nothing at all.
-    cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', false);
+    cause.noteReturnOutcome('GO_LIVE_AND_LOCATE', { outcome: 'REJECTED' });
     expect(cause.take()).toBeNull();
     // And no other act can borrow the composite beat.
     for (const id of ['BACK_ONE_STEP', 'EXACT_RETURN', 'RETURN_LIVE_HEAD', 'RETURN_LIVE_FOCUS', 'RETURN_WORLD']) {
-      cause.noteReturnOutcome(id, true);
+      cause.noteReturnOutcome(id, { outcome: 'APPLIED', locate: 'LANDED' });
       expect(cause.take()).toBeNull();
     }
   });

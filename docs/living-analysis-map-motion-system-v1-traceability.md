@@ -13,8 +13,14 @@ Short names used below:
 | **SCENE** | `apps/mobile/src/motion/__tests__/scene-truth.test.tsx` |
 | **RET** | `apps/mobile/src/motion/__tests__/returns.test.tsx` |
 | **PAR** | `apps/mobile/src/motion/__tests__/parity.test.tsx` |
+| **R1** | `apps/mobile/src/motion/__tests__/r1-integration.test.tsx` |
 | **GATE** | `tests/t10-motion-contract.test.mjs` |
 | **T04/T06/T07/T08** | the frozen root contract of that task, re-run unchanged |
+
+> **R1 corrections are authoritative over anything this document claimed before them.** Independent
+> Architecture + Motion review found five places where two different facts had been allowed to wear
+> the same clothes, and one where a claim was the opposite of the execution contract. Every one is
+> corrected below, in the row it belongs to, and marked **R1**.
 
 ---
 
@@ -52,7 +58,7 @@ Short names used below:
 | --- | --- | --- |
 | PM-01 | motion completion becomes authority | GATE "no animation completion can reach canonical state" — no `with*` call takes a callback, and the owner's import closure cannot name a store |
 | PM-02 | momentum reopens T-04 / two RH entries | PAN A03/A05 (exactly one act, nothing after the end); GATE momentum denylist |
-| PM-03 | one-frame stale `V` | SCENE A21–A24 — painted set equals the current placement exactly; STRUCTURALLY IMPOSSIBLE: no exit path |
+| **PM-03 (R1)** | one-frame stale `V` | SCENE A21–A24 — painted set equals the current placement exactly; STRUCTURALLY IMPOSSIBLE: no exit path. **R1 separates the two facts the Scene Truth Cut had been carrying in one word.** *Semantic absence* is membership: an object not in current `V` is not rendered, in the commit that removed it, and no code path could keep it. *Presentation culling* is the viewport: an object may be unpainted because it is off the glass, which states nothing about the world and is now decided against the PRESENTED viewport rather than the destination one. Culling can no longer masquerade as absence (R1-02), and viewport entry can no longer masquerade as disclosure (R1-03). The same separation holds at world scale: a REPLACED authority compares against `null`, so swapping the store cannot dress a whole-world truth cut in the grammar of meaning becoming known — the disclosure history belongs to the store it was recorded under, exactly as the drag and its residual do (R1-INT Case E). |
 | PM-04 | Semantic Zoom becomes optical zoom | CAM "a preserved frame keeps its SIZES"; GATE counter-scale pins. **Found by the visual proof, not by a test.** |
 | PM-05 | from-host motion invents a relationship | SCENE A30/A31 — the origin comes from the same placement the tether is drawn from |
 | PM-06 | stagger invents order | SCENE A32 — the arrival plan has no delay/index/ordinal field at all |
@@ -77,27 +83,28 @@ Short names used below:
 | --- | --- |
 | A01, A02 | PAN "the finger moves the plane 1:1"; CAM "a drag is 1:1 in the plane" |
 | A03 – A08 | PAN, one test each |
-| A09, A10 | PAN — a replaced store receives the act and the old one does not; one gesture object across every render |
+| **A09 (R1)** | PAN — a drag whose owner was replaced is **STALE**: no act in the store it began under, none in the replacement, no outcome claiming one, and the residual dropped rather than resolved. Covered for replacement before the first change frame, mid-drag, and on a cancelled drag; the unchanged-owner case still commits exactly one PAN. **The previous claim — "a replaced store receives the act" — was the opposite of the execution contract and is withdrawn.** |
+| A10 | PAN — one gesture object across every render, so a changing observer neither rebuilds the recognizer nor duplicates a completion |
 | A11, A12 | PAN "a whole drag costs zero React renders and zero crossings"; GATE per-frame path allows exactly `camera.dragBy(` |
-| A13 | CAM rebase invariant (pan, long pan, single-axis, zoom in, zoom out) |
+| **A13, A36 (R1)** | CAM rebase invariant (pan, long pan, single-axis, zoom in, zoom out) — necessary, and by itself **insufficient**. R1 adds the RENDERED continuity proof through the real surface: a Home visible before a landing, still in current `V`, and outside the FINAL canonical viewport is still painted at its previous place in the first rebased frame, travels out, and is culled only once the presented viewport can no longer show it. Pure arithmetic over `placement.nodes` proved the equation; this proves the pixels. |
 | A14, A15, A16 | CAM "a rebase arriving mid-travel composes onto the residual on screen"; "an interruption is structural" |
 | A17, A20 | CAM long-flight test — travels, capped, monotonic, never a cut |
 | A18 | CAM reduced-motion plan |
 | A19, A34 | CAM "no act-driven motion is ever underdamped"; GATE `ACT_DAMPING_RATIO = 1` is the only damping value |
 | A21 – A24 | SCENE — the painted set equals the current placement, exactly |
 | A25 – A29 | SCENE "a surface that stops painting a world leaves no residual behind"; T04's stale-`V` firewall re-run unchanged |
-| A30, A31, A32 | SCENE arrivals block |
+| **A30, A31, A32 (R1)** | SCENE arrivals block **plus** R1 Cases A-D: an already-disclosed Home entering the viewport gets no arrival; an already-disclosed appearance does not unfold; a locus that legitimately joins `V` does resolve from its real host; a remount with an identical `V` announces nothing. **Mount is no longer equated with disclosure**: eligibility is a membership transition against the previous commit's FULL placement, so culling entry, camera travel and remount all fail it. |
 | A33 | CAM depth-step overlap and budget |
 | A35 | SCENE "a shallower rung removes the detail it no longer discloses" |
-| A36 | CAM rebase invariant — the first frame after a change IS the previous frame |
-| A37 | CAM inverse exactness; SCENE touch mid-travel |
+| A36 | see A13 (R1) — the rendered proof, not only the equation |
+| **A37 (R1)** | CAM inverse exactness; SCENE touch mid-travel; **and** R1 per-object parity: mid-arrival the drawn position hits and the final-only position does not, with and without a camera residual also in flight. Paint and pointer read ONE progress through ONE recipe (`arrivalPresentation`) from the shared value the component registered, so parity is an identity rather than an approximation. No interaction is gated on an animation finishing. |
 | A38 | RET "Return to Live Head moves no camera at all" |
 | A39 | PAR/GATE — the owner cannot see a Preview |
 | A40 | SCENE A21–A24 |
 | A41, A45 | T06 (unchanged, re-run); PAR "the refined temporal numbers stay inside their frozen bands" |
 | A42, A43 | T06 — the commit is dispatched with the store's answer already in hand and the acknowledgement is called afterwards; PAR band test |
 | A44 | T06 RTL geometry suite (unchanged); GATE — T-06's ONE presentation rule still owns the mirroring |
-| A46 – A55 | RET, one test each |
+| **A46 – A55 (R1)** | RET, one test each. **A48 / A49 / A55:** the composite beat is armed only by an outcome whose SPATIAL half reports `LANDED`. `APPLIED` with `NO_FOCUS`, `NOT_ENTITLED`, `NOT_LOCATABLE`, `AMBIGUOUS_LOCUS`, `PROJECTION_NOT_AVAILABLE`, `STALE_PROJECTION` or `NOT_ATTEMPTED` arms nothing; `ALREADY_THERE` arms nothing, because no camera moved; a rejected or no-op composite arms nothing; and any later return outcome clears a pending cause. A temporal-only composite therefore cannot lend its 110 ms beat to an unrelated later landing. |
 | A56, A57, A58 | PAR; RET reduced-motion case |
 | A59, A60, A61 | PAR; GATE §14 |
 | A62, A63 | PAR; GATE "the world is a world, not reading-order content" |
@@ -132,6 +139,32 @@ not by a flag being read.
 | 18 | T-11 owners untouched | GATE |
 | 19 | T-12 integration / copy owners untouched | GATE |
 | 20 | static visual language not redesigned | GATE — every palette value and radius pinned |
+
+### R1 additions (§8 of the R1 contract)
+
+| | Guard | Where |
+| --- | --- | --- |
+| R1-a | an in-flight gesture cannot be re-routed into a replacement store | GATE "R1-01" — the generation is stamped at begin, re-checked at the crossing, and the refusal is proven to sit BEFORE the file's only dispatch |
+| R1-b | arrival eligibility cannot be derived from `visibleNodes` or from a mount | GATE "R1-03" — the recipe has no mount, viewport, visibility or culling vocabulary at all, and the surface diffs the FULL placement |
+| R1-b2 | a REPLACED authority cannot announce its whole world as newly disclosed | GATE "R1-03" — the diff is proven to pass `null` when `authorityReplaced`; R1-INT Case E, with the planted inverse failing |
+| R1-c | a stale unqualified composite cause cannot survive a no-camera act | GATE "R1-05" — arming requires `locate === 'LANDED'`, and any outcome clears what was pending |
+| R1-d | world-plane opacity cannot reach the screen-space register | GATE "R1-06" — the register is proven to be painted after the last camera group closes, and carries no camera transform |
+| R1-e | pointer parity cannot cover only the plane residual | GATE "R1-04" — the tap path is proven to undo BOTH the plane residual and the object's own arrival, and to scale the hit radius with the drawn size |
+
+### R2 additions (`/review-animations` over the R1 candidate)
+
+Both findings are the same root cause — a quantity applied later than it was decided — and both are
+reachable only when the composite beat is non-zero, which is why the six R1 scenarios did not reach
+them. Under reduced motion every travel is a cut, so the composite path is where reduced-motion
+readers meet them.
+
+| | Guard | Where |
+| --- | --- | --- |
+| R2-a | a cut cannot happen outside the dip that covers it | GATE "a cut and the dip that covers it land in the same frame" — the residual is held by the SAME `spatialDelayMs` the opacity is, and the branch is proven to reference exactly one beat |
+| R2-b | no plane weight is sampled ahead of when it is applied | GATE "§16" — a running resolve is continued rather than re-seeded; only a plane already at full weight is seeded, and the pre-sampled form is refused by name |
+
+`TRAVEL` is deliberately excluded from R2-a: its rebase PRESERVES the on-glass frame, so holding
+that frame for the beat reads as the world waiting. Only a discarded frame needs the cover.
 
 **Forward safety.** No whole-repo file count, no migration ceiling, no whole-file workflow hash as
 primary proof, no global test-count pin, no mutable-global ceiling. `npm run test:forward-safety-contract`

@@ -35,6 +35,9 @@ export {
   travelDurationMs,
 } from './tokens';
 
+export type { PresentedCandidate, PresentedViewport } from './presentation-camera/culling';
+export { isPresentedDuringTravel } from './presentation-camera/culling';
+
 export type { PresentationPoint, PresentationResidual } from './presentation-camera/residual';
 export {
   RESIDUAL_AT_REST,
@@ -64,14 +67,20 @@ export type {
 } from './presentation-camera/usePresentationCamera';
 export { usePresentationCamera } from './presentation-camera/usePresentationCamera';
 
-export type { DisclosureArrivalInput, DisclosureArrivalPlan } from './presence/arrival';
-export { disclosureArrivalPlan } from './presence/arrival';
+export type { ArrivalPresentation, DisclosureArrivalInput, DisclosureArrivalPlan } from './presence/arrival';
+export { ARRIVAL_AT_REST, arrivalPresentation, disclosureArrivalPlan, newlyDisclosedKeys } from './presence/arrival';
+
+export type { ArrivalRegistry } from './presence/arrival-registry';
+export { createArrivalRegistry } from './presence/arrival-registry';
 
 export type { DisclosureArrivalProps } from './presence/DisclosureArrival';
 export { DisclosureArrival } from './presence/DisclosureArrival';
 
-export type { MotionCauseChannel } from './cause/motion-cause';
+export type { ExecutedReturnOutcome, MotionCauseChannel } from './cause/motion-cause';
 export { createMotionCauseChannel } from './cause/motion-cause';
+
+export type { AuthorityGeneration } from './runtime/authority';
+export { useAuthorityGeneration } from './runtime/authority';
 
 export type { DerivedValue, SharedValue } from './runtime/bridge';
 export { handoffToProduct } from './runtime/bridge';

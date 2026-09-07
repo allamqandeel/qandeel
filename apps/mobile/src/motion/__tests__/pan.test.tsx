@@ -15,6 +15,7 @@ import { envelope, testStore } from '../../map/__fixtures__/store';
 import { currentCamera, envelopeCenter, panFromTranslation, useMapPanGesture, type MapPanGestureBinding } from '../../map';
 import type { MapActionOutcome } from '../../map';
 import type { CanonicalStore } from '../../state';
+import { useAuthorityGeneration } from '..';
 import { stubPresentationCamera, type StubPresentationCamera } from '../__fixtures__/presentation-camera';
 
 interface Driver {
@@ -43,11 +44,17 @@ async function mount(initialStore: CanonicalStore, options: { enabled?: boolean 
 
   function Probe({ store, onSettled }: { store: CanonicalStore; onSettled: (outcome: MapActionOutcome) => void }) {
     renders += 1;
-    const binding = useMapPanGesture(store, { enabled: options.enabled ?? true, camera, onSettled });
-    held.current = binding;
+    // The REAL authority binding: a drag stamped under one store must be recognisable as stale if
+    // that store is replaced before its crossing arrives.
+    const authority = useAuthorityGeneration(store);
+    const binding = useMapPanGesture(store, { enabled: options.enabled ?? true, camera, authority, onSettled });
+    keep(binding);
     seen.add(binding.gesture);
     return null;
   }
+  const keep = (binding: MapPanGestureBinding) => {
+    held.current = binding;
+  };
 
   const record = (outcome: MapActionOutcome) => {
     outcomes.push(outcome);
@@ -207,18 +214,75 @@ describe('T10-A01…A12 — one completed drag is one canonical PAN, and nothing
     expect(store.getState().history).toHaveLength(0);
   });
 
-  it('A09 — a replaced store receives the act; the store the reader left does not', async () => {
+  it('A09 — a drag whose owner was replaced is STALE: neither store receives it (R1-01)', async () => {
     const first = testStore({ sessionId: 'session-1' });
     const second = testStore({ sessionId: 'session-2' });
     const harness = await mount(first);
     const driver = harness.drive();
     await driver.begin();
     await driver.change(70, 0);
-    // The store is replaced WHILE the drag is in flight, and the same gesture object finishes it.
+    // The owner is replaced WHILE the drag is in flight, and the same gesture object finishes it.
     await harness.rerender({ store: second });
     await driver.end(70, 0);
+
+    // The drag moved a world nobody is looking at any more. It is not replayed into the store the
+    // reader left, and it is not re-aimed at the one they arrived in.
     expect(acts(first)).toEqual([]);
-    expect(acts(second)).toEqual(['PAN']);
+    expect(acts(second)).toEqual([]);
+    expect(first.getState().history).toHaveLength(0);
+    expect(second.getState().history).toHaveLength(0);
+    // And no outcome claims an act happened.
+    expect(harness.outcomes.some((outcome) => outcome.outcome === 'APPLIED')).toBe(false);
+    expect(harness.outcomes).toHaveLength(0);
+    // The residual belongs to the world that is gone, so it is dropped outright rather than
+    // resolved: the replacement owner's own camera is what the surface shows next.
+    expect(harness.camera.counts.reset).toBe(1);
+    expect(harness.camera.counts.resolveToRest).toBe(0);
+    expect(harness.camera.residual()).toEqual({ tx: 0, ty: 0, zoom: 1 });
+  });
+
+  it('A09 — the owner may be replaced before a single frame moves, and it is still stale', async () => {
+    const first = testStore({ sessionId: 'session-1' });
+    const second = testStore({ sessionId: 'session-2' });
+    const harness = await mount(first);
+    const driver = harness.drive();
+    await driver.begin();
+    await harness.rerender({ store: second });
+    await driver.change(40, 0);
+    await driver.end(40, 0);
+    expect(acts(first)).toEqual([]);
+    expect(acts(second)).toEqual([]);
+    expect(harness.camera.counts.reset).toBe(1);
+  });
+
+  it('A09 — a cancelled drag whose owner was replaced also drops rather than resolving', async () => {
+    const first = testStore({ sessionId: 'session-1' });
+    const second = testStore({ sessionId: 'session-2' });
+    const harness = await mount(first);
+    const driver = harness.drive();
+    await driver.begin();
+    await driver.change(55, 12);
+    await harness.rerender({ store: second });
+    await driver.end(55, 12, false);
+    await driver.finalize(false);
+    expect(acts(first)).toEqual([]);
+    expect(acts(second)).toEqual([]);
+    expect(harness.camera.counts.resolveToRest).toBe(0);
+    expect(harness.camera.counts.reset).toBeGreaterThanOrEqual(1);
+  });
+
+  it('a drag under an UNCHANGED owner still commits exactly one PAN', async () => {
+    // The staleness rule must not become a rule against panning: the ordinary case is untouched.
+    const store = testStore({ sessionId: 'session-1' });
+    const harness = await mount(store);
+    const driver = harness.drive();
+    await driver.begin();
+    await driver.change(70, 0);
+    // A rerender that does NOT replace the owner is not a change of authority.
+    await harness.rerender({});
+    await driver.end(70, 0);
+    expect(acts(store)).toEqual(['PAN']);
+    expect(harness.camera.counts.reset).toBe(0);
   });
 
   it('A10 — a changing observer neither rebuilds the gesture nor duplicates a completion', async () => {

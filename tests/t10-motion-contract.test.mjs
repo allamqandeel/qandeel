@@ -233,8 +233,9 @@ test('Q1 — one completed drag is one PAN, from the finger, with no momentum an
   assert.match(mapCode['camera/pan.ts'], /export function panFromTranslation\(camera: MapCamera, translationX: number, translationY: number\): PanResolution \{/u);
   assert.equal((gesture.match(/panByTranslation\(/gu) ?? []).length, 1, 'exactly one place commits a drag');
   assert.match(gesture, /const outcome = panByTranslation\(current\.store, translationX, translationY\);/u);
-  // ...and it is reached ONLY from a successful gesture end, with the finger's own translation.
-  assert.match(gesture, /if \(success\) handoffToProduct\(settle, event\.translationX, event\.translationY\);/u);
+  // ...and it is reached ONLY from a successful gesture end, with the finger's own translation AND
+  // the authority generation the drag began under (R1-01 re-anchor).
+  assert.match(gesture, /if \(success\) handoffToProduct\(settle, event\.translationX, event\.translationY, authority\.captured\.get\(\)\);/u);
 
   // No momentum, in any form, anywhere in production motion.
   for (const forbidden of ['withDecay', 'deceleration', 'velocityX', 'velocityY', 'momentum', 'fling', 'inertia']) {
@@ -283,11 +284,27 @@ test('§6.1 — nothing in production can keep an object the current V no longer
   ]) {
     assert.equal(productionText.includes(forbidden), false, `an object that left V must not survive as ${forbidden}`);
   }
-  // The renderer paints from the CURRENT placement and from nothing else.
-  // Three reads, one per painted family — the tethers, the world plane and the register — and each
-  // one is `visibleNodes` of the CURRENT placement. There is no fourth source of anything painted.
-  assert.equal((mapCode['renderer/MapCanvas.tsx'].match(/placement\.visibleNodes/gu) ?? []).length, 3);
-  assert.equal((mapCode['renderer/MapCanvas.tsx'].match(/\.map\(/gu) ?? []).length, 3, 'exactly three painted families');
+  // The renderer paints from the set the SURFACE presented, and from nothing else.
+  //
+  // R1-02 re-anchor. It used to cull against the final canonical viewport itself, which made an
+  // object still in current `V` vanish the moment the camera it was travelling toward no longer
+  // contained it — culling wearing the clothes of semantic absence. The decision moved to the
+  // surface, which makes it against the PRESENTED viewport; the renderer now has no culling
+  // vocabulary at all, which is the strongest form of "it cannot confuse the two".
+  const canvas = mapCode['renderer/MapCanvas.tsx'];
+  assert.equal(canvas.includes('visibleNodes'), false, 'the renderer holds no culling decision of its own');
+  assert.equal(canvas.includes('withinViewport'), false, 'the renderer holds no culling decision of its own');
+  assert.match(canvas, /const planeNodes = presented\.filter\(\(node\) => node\.region === 'WORLD_PLANE'\);/u);
+  assert.match(canvas, /const registerNodes = presented\.filter\(\(node\) => node\.region === 'UNGEOGRAPHIC_REGISTER'\);/u);
+  // And the surface derives it from the FULL placement through the presentation-aware test, so an
+  // object leaves the paint set only when the travel can no longer put it on the glass.
+  const surface = mapCode['renderer/MapSurface.tsx'];
+  assert.match(surface, /placed\.nodes\.filter\(\(node\) =>\s*\n?\s*isPresentedDuringTravel\(/u);
+  assert.match(motionCode['presentation-camera/culling.ts'], /export function isPresentedDuringTravel\(/u);
+  // The residual it culls against OUTLIVES the commit that armed it: an incidental re-render during
+  // a travel must not collapse the presented viewport back onto the destination.
+  assert.match(surface, /readonly startResidual: PresentationResidual;/u);
+  assert.match(surface, /history\.startResidual/u);
   // The one shared freshness rule is unweakened.
   assert.match(mapCode['renderer/MapSurface.tsx'], /const usable = camera !== null && freshness\.fresh;/u);
   assert.match(mapCode['renderer/MapSurface.tsx'], /usable && camera !== null \? placeScene\(/u);
@@ -304,7 +321,7 @@ test('§13 — the rebase is issued from inside the Skia root, after the positio
   // order, so the residual lands in the same inner commit as the node positions it preserves.
   const plane = canvas.slice(canvas.indexOf('<Group transform={motion.planeTransform}'), canvas.indexOf('</Group>', canvas.indexOf('<PresentationCameraRebase')));
   assert.ok(plane.length > 0, 'the plane group contains the rebase');
-  assert.match(plane, /<PresentationCameraRebase motion=\{motion\} camera=\{camera\} envelope=\{envelope\} \/>\s*$/u);
+  assert.match(plane, /<PresentationCameraRebase motion=\{motion\} cameraCommit=\{cameraCommit\} \/>\s*$/u);
   assert.match(canvas, /useLayoutEffect\(/u, 'the rebase is issued in a layout effect, not a passive one');
   // And it drops the residual outright when the surface stops painting this world.
   assert.match(canvas, /useLayoutEffect\(\(\) => \(\) => motion\.reset\(\), \[motion\]\);/u);
@@ -323,6 +340,122 @@ test('§13 — the rebase is issued from inside the Skia root, after the positio
   assert.match(canvas, /strokeWidth=\{motion\.objectScale\}/u);
   assert.match(motionCode['presentation-camera/residual.ts'], /export function counterScale\(zoom: number\): number \{/u);
 });
+
+// ---------------------------------------------------------------------------------------------
+// 5a. R1 — the five integration seams the independent review found, guarded structurally.
+// ---------------------------------------------------------------------------------------------
+
+test('R1-01 — an in-flight drag cannot be re-routed into a replacement store', () => {
+  const gesture = mapCode['camera/useMapPanGesture.ts'];
+  // The generation is stamped when the drag BEGINS, carried across the crossing, and compared
+  // before anything is dispatched. A drag that outlived its owner reaches no store at all.
+  assert.match(gesture, /authority\.capture\(\);/u, 'the drag is stamped at begin');
+  assert.match(gesture, /if \(generation !== authority\.current\(\)\) \{/u, 'the crossing re-checks the authority');
+  const settle = gesture.slice(gesture.indexOf('const settle = useCallback('), gesture.indexOf('const discard = useCallback('));
+  assert.ok(settle.length > 0, 'the completion path exists');
+  // The refusal comes BEFORE the only dispatch in the file, so no ordering can put an act first.
+  assert.ok(
+    settle.indexOf('authority.current()') < settle.indexOf('panByTranslation('),
+    'staleness is decided before anything is dispatched',
+  );
+  assert.match(settle, /camera\.reset\(\);\s*\n\s*return;/u, 'a stale drag drops its residual and returns');
+  // And the presentation makes the same distinction: a replaced authority has no continuity to
+  // preserve, so the camera is reset rather than rebased across two unrelated worlds.
+  assert.match(mapCode['renderer/MapSurface.tsx'], /const authorityReplaced = history !== null && history\.owner !== store;/u);
+  assert.match(
+    mapCode['renderer/MapCanvas.tsx'],
+    /if \(reset\) motion\.reset\(\);\s*\n\s*else if \(transition !== null\) motion\.applyCanonicalChange\(transition\);/u,
+  );
+  assert.match(motionCode['runtime/authority.ts'], /export function useAuthorityGeneration\(owner: unknown\): AuthorityGeneration \{/u);
+});
+
+test('R1-03 — semantic arrival can never be derived from culling or from a mount', () => {
+  const arrival = motionCode['presence/arrival.ts'];
+  // The recipe's own input is a MEMBERSHIP transition. There is no mount, viewport, visibility or
+  // culling vocabulary in it at all, so there is nothing for a viewport to be mistaken for.
+  assert.match(arrival, /readonly newlyDisclosed: boolean;/u);
+  for (const forbidden of ['visible', 'visibleNodes', 'mount', 'established', 'viewport', 'culled', 'onScreen']) {
+    assert.equal(arrival.includes(forbidden), false, `an arrival must not know about ${forbidden}`);
+  }
+  // The diff is over the FULL placement of the previous commit, so a node that was merely off the
+  // glass is not new when culling lets it back in.
+  assert.match(
+    arrival,
+    /export function newlyDisclosedKeys\(previous: ReadonlySet<string> \| null, currentKeys: readonly string\[\]\): ReadonlySet<string>/u,
+  );
+  const surface = mapCode['renderer/MapSurface.tsx'];
+  assert.match(
+    surface,
+    /newlyDisclosedKeys\(authorityReplaced \? null : disclosureHistory\.get\(\), placed\.nodes\.map\(\(node\) => node\.key\)\)/u,
+  );
+  // The comparison is against the FULL previous placement, never against what was on the glass.
+  assert.equal(surface.includes('placed.visibleNodes.map((node) => node.key)'), false);
+  // And a REPLACED authority has no earlier `V` of its own, so its first placement discloses
+  // nothing: the history belongs to the store it was recorded under, exactly as the drag does.
+  // Without this, swapping the store would announce an entire world as newly disclosed.
+  assert.match(surface, /newlyDisclosedKeys\(authorityReplaced \? null :/u);
+  assert.match(surface, /disclosureHistory\.set\(placed === null \? null : new Set\(placed\.nodes\.map\(\(node\) => node\.key\)\)\);/u);
+  // And the renderer asks the set, never the tree it happens to be rendering.
+  assert.match(mapCode['renderer/MapCanvas.tsx'], /newlyDisclosed: newlyDisclosed\.has\(node\.key\),/u);
+});
+
+test('R1-04 — pointer parity covers the object-local motion, not only the plane residual', () => {
+  const surface = mapCode['renderer/MapSurface.tsx'];
+  const tap = surface.slice(surface.indexOf('const onTap = useCallback('), surface.indexOf('if (camera === null || placed === null)'));
+  assert.ok(tap.length > 0, 'the pointer route exists');
+  // BOTH transforms, in the one place a touch becomes an act.
+  assert.match(tap, /motion\.canonicalPointAt\(\{ x, y \}\)/u, 'the plane residual is undone');
+  assert.match(tap, /arrivals\.presentationOf\(node\.key\)/u, 'the object-local arrival is undone too');
+  assert.match(tap, /radius: node\.radius \* shown\.scale/u, 'the hit radius follows the drawn size');
+  // Paint and pointer read ONE progress through ONE recipe: there is no second copy to drift from.
+  assert.match(
+    motionCode['presence/arrival.ts'],
+    /export function arrivalPresentation\(plan: DisclosureArrivalPlan, progress: number\): ArrivalPresentation \{/u,
+  );
+  assert.match(motionCode['presence/DisclosureArrival.tsx'], /const shown = arrivalPresentation\(entry, progress\.get\(\)\);/u);
+  assert.match(motionCode['presence/arrival-registry.ts'], /arrivalPresentation\(entry\.plan, entry\.progress\.get\(\)\)/u);
+  // And no interaction is gated on an animation finishing.
+  for (const forbidden of ['disablePointer', 'interactionsDisabled', 'awaitAnimation', 'pointerEvents="none"']) {
+    assert.equal(mapText.includes(forbidden), false, `animation completion must not gate interaction: ${forbidden}`);
+  }
+});
+
+test('R1-05 — the composite cause cannot outlive the spatial phase it explains', () => {
+  const cause = motionCode['cause/motion-cause.ts'];
+  // It arms on the SPATIAL result of an outcome T-07 already returned — never on "applied" alone,
+  // which the composite is whenever its temporal half succeeded and no camera moved at all.
+  assert.match(cause, /const LANDED = 'LANDED';/u);
+  assert.match(cause, /const landed = id === COMPOSITE_RETURN_ID && outcome\.outcome === 'APPLIED' && outcome\.locate === LANDED;/u);
+  // Any outcome clears what was pending, so nothing can be inherited by a later, unrelated act.
+  assert.match(cause, /pending = landed \? COMPOSITE_RETURN_ID : null;/u);
+  assert.match(cause, /take: \(\) => \{[\s\S]*?pending = null;[\s\S]*?return cause;/u, 'reading consumes');
+  // The channel still decides nothing about the world: it reads a status and holds one flag. Its
+  // own import path is excluded, which is where the only remaining spatial word lives.
+  const causeBody = cause.replace(/^import [^\n]*\n/gmu, '');
+  for (const forbidden of ['locatab', 'entitle', 'projection', 'camera', 'anchor', 'depth', 'Thread', 'focus']) {
+    assert.equal(causeBody.includes(forbidden), false, `the cause channel must not reason about ${forbidden}`);
+  }
+});
+
+test('R1-06 — camera opacity reaches the world plane and nothing else', () => {
+  const canvas = mapCode['renderer/MapCanvas.tsx'];
+  // The plane's opacity group opens, contains the plane, and CLOSES before the register is painted.
+  const opacityGroup = canvas.indexOf('<Group opacity={motion.planeOpacity}>');
+  assert.ok(opacityGroup >= 0, 'the plane carries the camera opacity');
+  assert.ok(canvas.indexOf('planeNodes.map(') > opacityGroup, 'the world plane is inside it');
+  assert.ok(
+    canvas.indexOf('registerNodes.map(') > canvas.lastIndexOf('</Group>'),
+    'the screen-space register is painted outside every camera group',
+  );
+  // The register is not translated or scaled by the camera either: its own coordinates, unmodified.
+  const registerBlock = canvas.slice(canvas.indexOf('registerNodes.map('));
+  assert.equal(registerBlock.includes('motion.planeTransform'), false);
+  assert.equal(registerBlock.includes('motion.objectTransform'), false);
+  assert.equal(registerBlock.includes('motion.planeOpacity'), false);
+  // It may still arrive on its own account, if its own membership changed.
+  assert.match(registerBlock, /<DisclosureArrival/u);
+});
+
 
 // ---------------------------------------------------------------------------------------------
 // 6. §16 — the hard creative rejections, absent by construction.
@@ -397,9 +530,39 @@ test('§16 — no rejected pattern exists in any production motion surface', () 
   assert.equal((arrival.match(/fromScale: 1,/gu) ?? []).length, 2, 'only the placed and reduced plans carry no scale');
 
   // And the cut-and-resolve RETARGETS rather than restarts, so two acts inside one resolve cannot
-  // re-seed the dip and read as a blink.
+  // re-seed the dip and read as a blink. A running resolve is CONTINUED — nothing is sampled ahead
+  // of when it is applied, so the composite beat cannot make the seed stale and drop the plane
+  // backwards. The only seeded case is a plane already at full weight (`/review-animations` R2).
   assert.match(motionCode['tokens.ts'], /export function resolveFromOpacity\(shownOpacity: number\): number \{/u);
-  assert.match(motionCode['presentation-camera/usePresentationCamera.ts'], /const resolveFrom = resolveFromOpacity\(planeOpacity\.get\(\)\);/u);
+  const camera = motionCode['presentation-camera/usePresentationCamera.ts'];
+  assert.match(camera, /const shownOpacity = planeOpacity\.get\(\);/u);
+  assert.match(camera, /shownOpacity < 1\s*\n\s*\? withTiming\(1, \{ duration: plan\.resolveMs/u, 'a running resolve is continued, not re-seeded');
+  assert.match(camera, /withTiming\(resolveFromOpacity\(shownOpacity\), \{ duration: 0/u, 'only a plane at full weight is seeded');
+  assert.equal(camera.includes('const resolveFrom = resolveFromOpacity(planeOpacity.get());'), false, 'no weight is sampled ahead of use');
+});
+
+test('a cut and the dip that covers it land in the same frame, beat or no beat', () => {
+  // `/review-animations` R2. A cut is acceptable ONLY because the resolve covers it. Dropping the
+  // residual immediately while delaying the dip by the composite beat showed the world jump to the
+  // new viewpoint at full weight and explained it 110 ms later — a teleport with a late apology,
+  // and reachable on every composite act under reduced motion, where every travel is a cut.
+  //
+  // TRAVEL is deliberately not held this way: its rebase PRESERVES the on-glass frame, so holding
+  // that frame for the beat reads as the world waiting. Only a discarded frame needs the cover.
+  const camera = motionCode['presentation-camera/usePresentationCamera.ts'];
+  const cut = camera.slice(camera.indexOf("if (plan.kind === 'CUT_AND_RESOLVE') {"), camera.indexOf('if (plan.translationMs > 0) {'));
+  assert.ok(cut.length > 0, 'the cut-and-resolve branch exists');
+  assert.match(cut, /if \(plan\.spatialDelayMs > 0\) \{/u, 'the beat is the only thing that changes the cut');
+  assert.match(
+    cut,
+    /const held = \(target: number\) =>\s*\n\s*withDelay\(plan\.spatialDelayMs, withTiming\(target, \{ duration: 0, reduceMotion: ReduceMotion\.Never \}\)\);/u,
+  );
+  for (const axis of ['tx', 'ty', 'zoom']) {
+    assert.match(cut, new RegExp(`${axis}\\.set\\(held\\(RESIDUAL_AT_REST\\.${axis === 'zoom' ? 'zoom' : axis}\\)\\);`, 'u'), `${axis} is held for the beat`);
+  }
+  // The delay reaching the residual is the SAME quantity the opacity is delayed by: one beat, not
+  // two, so the position change can never fall outside the dip.
+  assert.equal((cut.match(/plan\.spatialDelayMs/gu) ?? []).length, 3, 'one beat, applied to the cut and to the dip');
 });
 
 test('§2.8, §2.9 — no Preview world veil and no Exact Return lock frame exist', () => {

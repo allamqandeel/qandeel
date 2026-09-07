@@ -9,8 +9,15 @@
  *   is not rendered, so React unmounts it in the same commit that removed it. It cannot fade, fold
  *   back, ghost, trail or linger for a frame, because there is no code path that could make it;
  *
- *   **arrivals are earned.** An object that IS in the current `V` is already legitimate, so it may
- *   resolve into legibility rather than appear at full weight in one frame.
+ *   **arrivals are earned.** An object that IS in the current `V` may resolve into legibility —
+ *   but only because it BECAME part of `V`, never because it happened to appear on the glass.
+ *
+ * R1 corrected exactly that second half. Eligibility used to be "this node just mounted", and a
+ * node mounts whenever culling lets it back in — so panning the camera over an already-disclosed
+ * Home dressed ordinary navigation in the grammar of semantic disclosure. Eligibility is now a
+ * MEMBERSHIP TRANSITION in the authoritative placement: present now, absent in the previous
+ * commit's full `V`-derived node set. Viewport entry, culling entry, camera travel and remount all
+ * fail that test, and correctly.
  *
  * An arrival never invents a relationship. It travels from a host only when that host is disclosed
  * RIGHT NOW, in the same placement, along the same tether the renderer is drawing — and when there
@@ -22,13 +29,13 @@ import { DISCLOSURE_ENTRY_SCALE, MOTION_DURATIONS_MS } from '../tokens';
 
 export interface DisclosureArrivalInput {
   /**
-   * Whether the surface has already painted.
+   * Whether this locus became part of the current `V` in THIS commit.
    *
-   * The first frame is not an arrival. Nothing animates into place from nowhere on mount, or on
-   * the first mirrored scene: the objects are simply where they belong, exactly as T-06's markers
-   * are placed rather than animated to on their first Moment.
+   * Not "did it mount", not "is it on screen": those are questions about the viewport, and the
+   * viewport decides nothing about meaning. The first painted frame is never an arrival either —
+   * there is no previous `V` to have joined, so nothing animates into place from nowhere on mount.
    */
-  readonly established: boolean;
+  readonly newlyDisclosed: boolean;
   /**
    * The host's offset from this object, in points, or `null` when no host is disclosed here.
    *
@@ -50,10 +57,19 @@ export interface DisclosureArrivalPlan {
   readonly durationMs: number;
 }
 
+/** How an arrival is presented at a given progress: the exact numbers paint and pointer share. */
+export interface ArrivalPresentation {
+  readonly dx: number;
+  readonly dy: number;
+  readonly scale: number;
+}
+
 const PLACED: DisclosureArrivalPlan = Object.freeze({ animated: false, fromScale: 1, fromX: 0, fromY: 0, durationMs: 0 });
 
+export const ARRIVAL_AT_REST: ArrivalPresentation = Object.freeze({ dx: 0, dy: 0, scale: 1 });
+
 export function disclosureArrivalPlan(input: DisclosureArrivalInput): DisclosureArrivalPlan {
-  if (!input.established) return PLACED;
+  if (!input.newlyDisclosed) return PLACED;
   if (input.reducedMotion) {
     // Fewer and gentler, not none. Movement goes; the opacity bridge stays, because an object
     // blinking into a dense analytical surface is a harsher transition than one resolving into it.
@@ -77,3 +93,39 @@ export function disclosureArrivalPlan(input: DisclosureArrivalInput): Disclosure
     durationMs: travels ? MOTION_DURATIONS_MS.disclosure : MOTION_DURATIONS_MS.localResolve,
   });
 }
+
+/**
+ * Where an arriving object is, and how big it is, at a given progress.
+ *
+ * ONE function, read by the renderer to draw and by the pointer route to hit-test, from the SAME
+ * progress value. That is what makes "painted position equals pointer target" an identity rather
+ * than an approximation: there is no second copy of this arithmetic to drift from.
+ */
+export function arrivalPresentation(plan: DisclosureArrivalPlan, progress: number): ArrivalPresentation {
+  'worklet';
+  if (!plan.animated) return ARRIVAL_AT_REST;
+  const done = Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 1;
+  const remaining = 1 - done;
+  return {
+    dx: plan.fromX * remaining,
+    dy: plan.fromY * remaining,
+    scale: plan.fromScale + (1 - plan.fromScale) * done,
+  };
+}
+
+/**
+ * Which loci became part of `V` in this commit.
+ *
+ * `previous` is the FULL placement key set of the last commit — every locus the projection
+ * disclosed, culled or not — so a node that was merely off the glass is not new when it returns.
+ * `null` is the first painted frame: nothing is an arrival, because there is no earlier `V` for
+ * anything to have joined.
+ */
+export function newlyDisclosedKeys(previous: ReadonlySet<string> | null, currentKeys: readonly string[]): ReadonlySet<string> {
+  if (previous === null) return EMPTY_KEYS;
+  const fresh = new Set<string>();
+  for (const key of currentKeys) if (!previous.has(key)) fresh.add(key);
+  return fresh;
+}
+
+const EMPTY_KEYS: ReadonlySet<string> = Object.freeze(new Set<string>());

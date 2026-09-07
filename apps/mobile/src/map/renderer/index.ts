@@ -22,7 +22,7 @@ export {
   placeScene,
 } from './map-geometry';
 
-export type { MapCanvasProps } from './MapCanvas';
+export type { CanonicalCameraCommit, MapCanvasProps } from './MapCanvas';
 export { MAP_CANVAS_TEST_ID, MapCanvas } from './MapCanvas';
 
 export type { MapSurfaceProps } from './MapSurface';

@@ -20,16 +20,26 @@
  *   the world plane carries the presentation camera's residual, so an already-authorized canonical
  *   camera change is shown as continuous travel through the same world rather than as a teleport;
  *
- *   an object that is NEW in the current `V` resolves into legibility — locally, or out from the
- *   Home that hosts it along the very tether drawn beside it, and never from anywhere else.
+ *   an object that has just BECOME part of the current `V` resolves into legibility — locally, or
+ *   out from the Home that hosts it along the very tether drawn beside it, and never from anywhere
+ *   else. Which objects those are is decided by the surface, from a membership transition in the
+ *   authoritative placement, and never by this renderer from what happens to have mounted.
+ *
+ * The screen-space register sits OUTSIDE the plane entirely. It does not translate with the camera,
+ * does not scale with it, and does not dim when it moves: its position and its truth are unrelated
+ * to where the camera is (R1-06).
  */
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect } from 'react';
 import { Canvas, Circle, Group, Line, Rect, vec } from '@shopify/react-native-skia';
 
-import { DisclosureArrival, createBox, disclosureArrivalPlan, type PresentationCameraBinding } from '../../motion';
-import { cameraTransition, envelopeCenter, type MapCamera, type ViewportEnvelope } from '../camera';
-import type { MapScene } from '../projection';
-import { placeScene, type PlacedNode, type PlacedScene } from './map-geometry';
+import {
+  DisclosureArrival,
+  disclosureArrivalPlan,
+  type ArrivalRegistry,
+  type PresentationCameraBinding,
+} from '../../motion';
+import { envelopeCenter, type CanonicalCameraTransition, type ViewportEnvelope } from '../camera';
+import type { PlacedNode, PlacedScene } from './map-geometry';
 import { DEFAULT_RENDER_STYLE, type RenderStyle } from './render-style';
 
 export const MAP_CANVAS_TEST_ID = 'qandeel-map-canvas';
@@ -43,15 +53,39 @@ const APPEARANCE_FILL = 'rgb(126,126,122)';
 const TETHER = 'rgb(178,178,174)';
 const REGISTER_FILL = 'rgb(150,150,146)';
 
+/**
+ * What the surface decided about this commit's canonical camera.
+ *
+ * `reset` means there is no continuity to preserve at all — the authority itself was replaced, and
+ * a residual carried across that boundary would present a travel between two unrelated worlds.
+ */
+export interface CanonicalCameraCommit {
+  readonly transition: CanonicalCameraTransition | null;
+  readonly reset: boolean;
+  /** Records the commit once it has been applied, so the surface can keep its own history. */
+  readonly commit: () => void;
+}
+
 export interface MapCanvasProps {
-  readonly scene: MapScene;
-  readonly camera: MapCamera;
   readonly envelope: ViewportEnvelope;
   /** The presentation camera. Class D: never canonical, and never a route to one. */
   readonly motion: PresentationCameraBinding;
+  /** The full `V`-derived placement. Hosts are looked up here, culled or not. */
+  readonly placed: PlacedScene;
+  /**
+   * What may be on the glass during the current travel.
+   *
+   * Presentation culling, decided by the surface against the PRESENTED viewport rather than only
+   * the final canonical one — an object still in current `V` must not vanish because a viewport it
+   * has not reached yet does not contain it.
+   */
+  readonly presented: readonly PlacedNode[];
+  /** The loci that became part of the current `V` in this commit. Never "what just mounted". */
+  readonly newlyDisclosed: ReadonlySet<string>;
+  /** Where paint and pointer read one arriving object's progress from one shared value. */
+  readonly arrivals: ArrivalRegistry;
+  readonly cameraCommit: CanonicalCameraCommit;
   readonly style?: RenderStyle;
-  /** Supplied by a caller that already placed the scene, so paint and hit testing share one placement. */
-  readonly placed?: PlacedScene;
 }
 
 /** The Home that hosts a contextual appearance, in THIS placement, or `undefined`. */
@@ -64,7 +98,7 @@ function hostOf(node: PlacedNode, placement: PlacedScene): PlacedNode | undefine
 }
 
 /**
- * Re-bases the presentation camera from INSIDE the Skia root, as the LAST child of the plane.
+ * Applies the surface's camera decision from INSIDE the Skia root, as the LAST child of the plane.
  *
  * This position is load-bearing and was found the expensive way. The Skia canvas reconciles its
  * children in its own React root, which commits after the surrounding surface's own commit. A
@@ -75,30 +109,22 @@ function hostOf(node: PlacedNode, placement: PlacedScene): PlacedNode | undefine
  * the residual and the positions land together.
  *
  * It renders nothing and it decides nothing: the canonical camera has already moved before this
- * runs, and this only relates the two projections of the same world.
+ * runs, and the surface has already read what changed.
  */
 function PresentationCameraRebase({
   motion,
-  camera,
-  envelope,
+  cameraCommit,
 }: {
   readonly motion: PresentationCameraBinding;
-  readonly camera: MapCamera;
-  readonly envelope: ViewportEnvelope;
+  readonly cameraCommit: CanonicalCameraCommit;
 }) {
-  const previous = useRef<MapCamera | null>(null);
+  const { transition, reset, commit } = cameraCommit;
 
   useLayoutEffect(() => {
-    const before = previous.current;
-    previous.current = camera;
-    // Nothing to relate on the first commit: there is no earlier frame to preserve.
-    if (before === null) return;
-    const transition = cameraTransition(before, camera, envelope);
-    // `null` is a camera that did not move. A depth-only change is exactly that: the rung is
-    // disclosure, and disclosure is not a camera move.
-    if (transition === null) return;
-    motion.applyCanonicalChange(transition);
-  }, [camera, envelope, motion]);
+    if (reset) motion.reset();
+    else if (transition !== null) motion.applyCanonicalChange(transition);
+    commit();
+  }, [commit, motion, reset, transition]);
 
   // A surface that stops painting this world leaves no residual behind for the next one to inherit.
   useLayoutEffect(() => () => motion.reset(), [motion]);
@@ -106,31 +132,34 @@ function PresentationCameraRebase({
   return null;
 }
 
-export function MapCanvas({ scene, camera, envelope, motion, style = DEFAULT_RENDER_STYLE, placed }: MapCanvasProps) {
-  const placement = placed ?? placeScene(scene, camera, envelope);
-  const center = useMemo(() => envelopeCenter(envelope), [envelope]);
+export function MapCanvas({
+  envelope,
+  motion,
+  placed,
+  presented,
+  newlyDisclosed,
+  arrivals,
+  cameraCommit,
+  style = DEFAULT_RENDER_STYLE,
+}: MapCanvasProps) {
+  const center = envelopeCenter(envelope);
   const emptySpaceInset = 24;
 
-  // The first painted frame is not an arrival: objects are simply where they belong. Only what
-  // becomes legitimate AFTER the world is on screen has somewhere to resolve from. A box, set
-  // once after the first commit — not state, because flipping state from an effect would cost a
-  // cascading render on every mount to say something that changes nothing about what is drawn.
-  const [painted] = useState(() => createBox(false));
-  const established = painted.get();
-  useLayoutEffect(() => {
-    painted.set(true);
-  }, [painted]);
-
   const arrivalOf = (node: PlacedNode) => {
-    const host = hostOf(node, placement);
+    const host = hostOf(node, placed);
     return disclosureArrivalPlan({
-      established,
+      // A membership transition in the authoritative placement — never a mount, never a viewport
+      // entry, never a remount, and never the camera having moved (R1-03).
+      newlyDisclosed: newlyDisclosed.has(node.key),
       // The from-host origin is read from the SAME placement the tether is drawn from, so an
       // arrival can never travel along a relationship the renderer is not showing.
       hostOffset: host === undefined ? null : { x: host.x - node.x, y: host.y - node.y },
       reducedMotion: motion.reducedMotion,
     });
   };
+
+  const planeNodes = presented.filter((node) => node.region === 'WORLD_PLANE');
+  const registerNodes = presented.filter((node) => node.region === 'UNGEOGRAPHIC_REGISTER');
 
   return (
     <Canvas testID={MAP_CANVAS_TEST_ID} style={{ width: envelope.width, height: envelope.height }}>
@@ -145,13 +174,15 @@ export function MapCanvas({ scene, camera, envelope, motion, style = DEFAULT_REN
         color={EMPTY_SPACE}
         opacity={style.emptySpace * 0.35}
       />
+      {/* The world plane: it travels with the camera, and it is the ONLY thing camera opacity
+          reaches. A cut-and-resolve is a statement about the camera's path, and the register has
+          no path (R1-06). */}
       <Group opacity={motion.planeOpacity}>
-        {/* The world plane carries the residual; the register does not, because it is screen space. */}
         <Group transform={motion.planeTransform} origin={vec(center.x, center.y)}>
-          {placement.visibleNodes
-            .filter((node) => node.region === 'WORLD_PLANE' && node.locus?.kind === 'CONTEXTUAL_APPEARANCE')
+          {planeNodes
+            .filter((node) => node.locus?.kind === 'CONTEXTUAL_APPEARANCE')
             .map((node) => {
-              const host = hostOf(node, placement);
+              const host = hostOf(node, placed);
               if (host === undefined) return null;
               // The stroke is one point on the glass at every rung, so it is counter-scaled with
               // the objects it connects rather than thinned and thickened by the plane's residual.
@@ -159,31 +190,29 @@ export function MapCanvas({ scene, camera, envelope, motion, style = DEFAULT_REN
                 <Line key={`tether:${node.key}`} p1={vec(host.x, host.y)} p2={vec(node.x, node.y)} color={TETHER} strokeWidth={motion.objectScale} />
               );
             })}
-          {placement.visibleNodes
-            .filter((node) => node.region === 'WORLD_PLANE')
-            .map((node) => (
-              // Two nested corrections, and the order matters. The arrival is OUTSIDE, so its
-              // from-host travel is measured in the placement's own space and starts exactly at the
-              // host as drawn. The counter-scale is INSIDE, so it corrects only the object's SIZE:
-              // a radius is a screen quantity, the same number of points at every rung, and a plane
-              // carrying a residual zoom would otherwise shrink every object to an eighth and grow
-              // it back — an optical zoom wearing Semantic Zoom's clothes.
-              <DisclosureArrival key={node.key} plan={arrivalOf(node)} originX={node.x} originY={node.y}>
-                <Group transform={motion.objectTransform} origin={vec(node.x, node.y)}>
-                  <Circle cx={node.x} cy={node.y} r={node.radius} color={node.locus?.kind === 'THREAD_HOME' ? HOME_FILL : APPEARANCE_FILL} />
-                </Group>
-              </DisclosureArrival>
-            ))}
-          <PresentationCameraRebase motion={motion} camera={camera} envelope={envelope} />
-        </Group>
-        {placement.visibleNodes
-          .filter((node) => node.region === 'UNGEOGRAPHIC_REGISTER')
-          .map((node) => (
-            <DisclosureArrival key={node.key} plan={arrivalOf(node)} originX={node.x} originY={node.y}>
-              <Circle cx={node.x} cy={node.y} r={node.radius} color={REGISTER_FILL} />
+          {planeNodes.map((node) => (
+            // Two nested corrections, and the order matters. The arrival is OUTSIDE, so its
+            // from-host travel is measured in the placement's own space and starts exactly at the
+            // host as drawn. The counter-scale is INSIDE, so it corrects only the object's SIZE:
+            // a radius is a screen quantity, the same number of points at every rung, and a plane
+            // carrying a residual zoom would otherwise shrink every object to an eighth and grow
+            // it back — an optical zoom wearing Semantic Zoom's clothes.
+            <DisclosureArrival key={node.key} nodeKey={node.key} plan={arrivalOf(node)} originX={node.x} originY={node.y} registry={arrivals}>
+              <Group transform={motion.objectTransform} origin={vec(node.x, node.y)}>
+                <Circle cx={node.x} cy={node.y} r={node.radius} color={node.locus?.kind === 'THREAD_HOME' ? HOME_FILL : APPEARANCE_FILL} />
+              </Group>
             </DisclosureArrival>
           ))}
+          <PresentationCameraRebase motion={motion} cameraCommit={cameraCommit} />
+        </Group>
       </Group>
+      {/* Screen space. It does not translate, scale or dim with the camera; it changes only when
+          its own current-`V` membership does, and then by its own local arrival. */}
+      {registerNodes.map((node) => (
+        <DisclosureArrival key={node.key} nodeKey={node.key} plan={arrivalOf(node)} originX={node.x} originY={node.y} registry={arrivals}>
+          <Circle cx={node.x} cy={node.y} r={node.radius} color={REGISTER_FILL} />
+        </DisclosureArrival>
+      ))}
     </Canvas>
   );
 }
