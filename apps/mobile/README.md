@@ -310,6 +310,74 @@ identity would make unstatable.
 Contract: `npm run test:return-navigation-layer-contract` (repository root) plus the Jest suites
 under `src/return-navigation/__tests__/`. Design notes: `docs/return-navigation-layer-v1.md`.
 
+## Inspection + orientation + return chrome (T-08)
+
+`src/orientation-chrome/` makes the already-correct Living Analysis Map understandable and
+operable as a Product surface. It invents no navigation semantics: it consumes T-02, T-03C,
+T-04, T-05, T-06 and T-07 through their public barrels and adds one read-only account of
+where the reader is, plus controls that reach the existing executors and no others.
+
+- **Freshness before meaning** (`model.ts`): current canonical viewpoint, then prove the held
+  disclosure IS this viewpoint's, then derive semantic chrome, then present actions. While the
+  projection is not proven current, NO semantic answer is derived from it: the inspection state
+  becomes the matching technical state, the lineage and appearance list are empty rather than
+  retained, and the Live Focus question is `UNPROVEN` — the statement that it was never asked,
+  not a quieter `UNAVAILABLE`. The rule is T-04's ONE shared rule, reached through
+  `isCurrentMapContext` and called in exactly one place; there is no second freshness algorithm,
+  no projection cache, no second locatability resolver and no second Live Focus resolver.
+- **Five orientation dimensions stay apart** (`types.ts`): temporal, spatial, inspection, Live
+  and return are five different questions, kept separate in the type system so that a collapsed
+  answer is a type error rather than a wording mistake. The temporal, spatial and generic return
+  facts are entailed by Class A alone and stay truthful with no projection at all.
+- **`IF_ref` vs `IF_render`** (`inspection-orientation.ts`): `IF_ref` lives in canonical state and
+  is never rewritten, re-elected or "rescued" here. `IF_render` is what the selected disclosure may
+  legitimately show of it, under ONE rule — an identity may be named only where the resolution says
+  `knowledge != UNKNOWN_AT_TC`. `IDENTITY_UNKNOWN_AT_TC` therefore has no fields at all: there is
+  nothing on it to render and no target-shaped hole to leave. `DEPTH_WITHHELD`, `NOT_FETCHED`,
+  `UNAVAILABLE`, `PROJECTION_STALE`, `INSPECTION_NOT_RESOLVED` and `RESOLUTION_MALFORMED` stay
+  separate members; none becomes an absence in the world, and a superseded or not-yet-current
+  version keeps its exact lineage intent and is never called wrong, deleted or never valid.
+- **The six returns stay six** (`return-orientation.ts`, `ReturnControls.tsx`): each control
+  reaches exactly one T-07 executor through a `switch` with one call per arm. Return to Live Head
+  is temporal only and promises no camera movement; Return to Live Focus is spatial only and
+  promises no temporal movement; Go Live + Locate says it is both, as ONE transaction. Every label,
+  hint, effect and promise is a CONSTANT of the frozen identity, so no live truth can move what an
+  opportunity claims. There is no generic `Home`, `Reset`, `Navigate`, `Go Live`, `BackOrHome` or
+  `Return`, and Product Back is never router history.
+- **No hindsight** (`OrientationChrome.tsx`): while historical, the chrome says only that the
+  conversation has continued and that an explicit route back exists. Two viewpoints differing only
+  in a Live Focus this position cannot disclose render an IDENTICAL native tree — same labels,
+  hints, disabled states and accessibility actions — because nothing here reads `LF`. The one
+  specific capability comes from `liveFocusReturnAvailability` against a proven projection, and
+  adds no metadata about its target.
+- **Contextual appearance** (`context-orientation.ts`): the lineage is the exact route T-04 minted
+  from `V`, rendered as text and never as a clickable page breadcrumb. Several disclosed
+  appearances are all offered, in the disclosed scene's own order, with the note that the order is
+  not a ranking; nothing is primary, defaulted or preselected, `current` states only where the
+  reader is, one appearance produces no chooser, and switching goes through T-04's own executor
+  carrying the requested version intent.
+- **Exact Return** stays opaque: T-08 never mints a target, never reads reversible-history
+  internals, never treats the oldest checkpoint as an original inspection and builds no history
+  browser. It receives one bound handle, retires it conservatively when its ordinal can no longer
+  be recorded or when T-07 refuses it, and authority stays entirely T-07's.
+- **Lifecycle**: subscribed through the T-02 kernel's own seam, so a replaced store is
+  resubscribed to rather than remembered. The whole answer is recomputed from props and subscribed
+  state every render, so callback churn, extra renders, remounts and store replacement cannot
+  rebind a target, elect a context or replay an act. The one piece of Class-D state is subtractive
+  and can only ever remove an opportunity.
+- **Accessibility and RTL**: every act has a press route and an accessibility action on the group,
+  converging on the same executor; the containers are never `accessible`, so six independent
+  controls stay six elements; targets are at least 44pt with hit slop; nothing is drag-only. There
+  is no icon, arrow or chevron anywhere, so mirroring has nothing directional to invert, and
+  Arabic and code-switched identities render verbatim in both writing directions.
+- Not here, by design: general and final motion (T-10), responsive recomposition (T-11), final
+  app-shell integration (T-12) and persistence (T-13). Nothing under `src/orientation-chrome/` is
+  mounted in the shell, and the layer adds no dependency at all.
+
+Contract: `npm run test:inspection-orientation-return-chrome-contract` (repository root) plus the
+Jest suites under `src/orientation-chrome/__tests__/`. Design notes:
+`docs/inspection-orientation-return-chrome-v1.md`.
+
 ## Toolchain pins (Expo SDK 57)
 
 | Package | Pin |

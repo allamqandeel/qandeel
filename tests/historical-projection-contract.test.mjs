@@ -273,11 +273,28 @@ test('the client seam is passive and typed: decode, fetch, hold; NOT_FETCHED / D
   }
   // Native CI RUNS for this change: the mobile source change is a native-impact path by the frozen MOB-CI-01 classifier.
   assert.equal(isNativeImpactPath(`${MOBILE_DIR}/historical-projection-wire.ts`), true, 'the Android / iOS smoke gates run for T-03C');
-  // T-04 re-anchor, extended by T-06 and T-07: the workflow gained exactly one Node-only gate step
-  // and one trigger path per owning task's static contract. MOB-CI-01's structure is unchanged and
-  // is asserted structurally by the T-01, T-02, T-04, T-06 and T-07 contracts: one fast gate plus
-  // two conditional native jobs.
-  assert.equal(gitBlobId(mobileCi), '31bed2b0cba0015c4ed98799d5cd440f31a2ee3b', 'mobile-ci.yml carries only the authorized T-04, T-06 and T-07 gate steps (MOB-CI-01 preserved)');
+  // T-04 re-anchor, extended by T-06, T-07 and now T-08: the workflow gained exactly one Node-only
+  // gate step and one trigger path per owning task's static contract. MOB-CI-01's structure is
+  // unchanged and is asserted structurally by the T-01, T-02, T-04, T-06, T-07 and T-08 contracts:
+  // one fast gate plus two conditional native jobs.
+  //
+  // The invariant this pin exists to protect is stated structurally as well as by the hash, so a
+  // future re-anchor cannot quietly widen it: every owning task contributes exactly ONE Node-only
+  // contract step to the fast gate, and MOB-CI-01's job shape is untouched.
+  const gateSteps = [...mobileCi.matchAll(/run: npm run (test:[a-z0-9-]+contract)/gu)].map((match) => match[1]);
+  assert.deepEqual(gateSteps, [
+    'test:mobile-foundation-contract',
+    'test:mobile-canonical-state-contract',
+    'test:living-analysis-map-runtime-contract',
+    'test:temporal-navigation-layer-contract',
+    'test:return-navigation-layer-contract',
+    'test:inspection-orientation-return-chrome-contract',
+    'test:session-semantic-clock-sp-lh-delivery-contract',
+  ], 'one Node-only gate step per owning task, in order, and no other');
+  assert.equal(new Set(gateSteps).size, gateSteps.length, 'no gate step is registered twice');
+  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3, 'MOB-CI-01 preserved: one fast gate plus two native jobs');
+  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2, 'both native jobs stay conditional');
+  assert.equal(gitBlobId(mobileCi), '093360ad244980fe2b7305844813f515060ec76b', 'mobile-ci.yml carries only the authorized T-04, T-06, T-07 and T-08 gate steps (MOB-CI-01 preserved)');
   // T-04 re-anchor: the mobile package gained exactly the authorized Skia pin and the Jest setup
   // for it. The pin stays exact, so a further dependency change still trips this gate.
   assert.equal(gitBlobId(read('apps/mobile/package.json')), 'd10b3a577d6ee26c0af2e045f4bc39496181b2e7', 'the mobile package declaration carries only the authorized T-04 renderer pin beyond this baseline');
