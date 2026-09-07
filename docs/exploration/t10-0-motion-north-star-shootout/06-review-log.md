@@ -1,0 +1,39 @@
+# T-10.0 — Skill coverage and review log
+
+The exploration contract (§10) names the skills and when they must be used. This is the evidence,
+in execution order. Skills never own Product truth; the frozen contracts and the brief come first.
+
+## Required BEFORE implementation
+
+| Skill | When used | What it changed |
+| --- | --- | --- |
+| `react-native-best-practices` (+ `animations`, `gestures`, `canvas-animations`, `animation-functions`, `animations-performance`, `continuous-gestures` references) | After the substrate inspection, before writing any lab code. | Confirmed the architecture: one Skia canvas; shared/derived values as Skia props; gestures memoized; `.get()/.set()` only; `scheduleOnRN` only at a boundary (rest, tap, report) and never per frame; `withDecay` on release; `runOnJS` nowhere; the ~100/500 animated-view ceiling is why the world is not views. Audited: worklet/RN boundary (epoch-guarded rest commit), JS/canonical boundary (only executors dispatch), rerender/remount (call-time boxes, T-06 FCR-01 pattern), callback churn (boxes, not deps), interruption (grab cancels; acts retarget), stale closures (boxes), store replacement (session key), accessibility (T-04's accessible Map mounted over the plane), performance (measured, below). |
+| `find-animation-opportunities` | Before building; over the baseline surfaces. | Produced `03-opportunity-and-anti-opportunity-inventory.md`: 8 opportunities, 13 moments deliberately kept still (including two candidates rejected during design: tether tension, inspection dimming). |
+| `prototype` | The lab IS the prototype harness: one piece of UI (the world's motion), three genuinely different variants on a named axis each (camera / disclosure / field), a picker that switches instantly, full working interactions, real fixtures, the choice left to the human. The skill is `disable-model-invocation`; its instructions were read from disk and followed. | Variant axes stated per direction in `04-directions.md`; the picker is the harness chrome, not a contestant; nothing in production was touched. |
+| `emil-design-eng` | Before fixing the motion grammar, and again while tuning. | Frequency gate applied (pan/scrub quietest; hero only for Ignition); every arrival under 300 ms except the deliberately long travel; ease-out everywhere on entrances; `scale(0)` never (0.6/0.9 starts); springs only where a finger or momentum is involved (P3); reduced motion as fewer and gentler, opacity kept; exit faster than enter (fold 180 vs unfold 340). |
+| `animate-expo` | Before the Reanimated mechanics. | Duration/dampingRatio spring form throughout; velocity handed to springs only in C; `overshootClamping` not needed because cuts/critical damping are used where a hard edge exists; `useReducedMotion` OR'd with the harness toggle; `ReduceMotion.Never` on the explicit reduced choreography. |
+
+## Required DURING
+
+| Skill | Use | Notes |
+| --- | --- | --- |
+| `ui-ux-pro-max` | Its Python search helper cannot run here (this host has only the Store `python.exe` stub; Python was NOT installed, per §10). The readable `references/pro-rules.md` and the priority table were applied by hand. | Applied: 44 pt targets on every lab control; pressed feedback without layout shift (opacity); one duration token family per act, not one duration for all; no emoji icons (no icons at all in the lab); spacing on a 4/8 rhythm in the harness; motion conveys spatial continuity; reduced motion supported; drag has a non-drag alternative (T-04's accessible Map + the harness buttons). Recorded limitation: no database matches were consulted, so no "style" recommendation is claimed. |
+| `frontend-design` | For the coherence of the motion idea rather than the look (VI-03 owns the look). | One signature per direction (A: the damped slide; B: the unfold; C: the field breath) and one shared rare signature under test (brass Ignition); everything else quiet. No template default was spent on the harness: neutral warm greys are placeholders and are stated as such. |
+| `designing-arabic-frontends` | For the Arabic/RTL runs. | The lab's Product surfaces are T-08 (frozen bilingual copy, line-height 1.6+, no letter-spacing, no italics) and T-06 (RTL geometry mirrored through its one presentation-geometry rule). The harness sets `dir` on the frame and the `I18nManager.isRTL` flag on the web renderer before remounting, since the flag is inert there. The world plane has no text and is not mirrored (a map is not reading-order content); the register stays start-anchored through T-04's placement. Digits: Western in both languages (T-08's recorded decision; regional policy deferred to T-12). No new Arabic copy was authored, so `writing-eloquent-arabic` stays N/A. |
+| `fixing-accessibility` | For reduced motion and the non-gesture routes. | Every act has a non-drag route: T-04's `MapAccessibilityLayer` (inspect, direct jump, context switch, semantic zoom, explore) is mounted over the lab plane; T-06's navigator and T-08's buttons are the production routes; the harness buttons are native `Pressable`s with roles and states. Reduced motion is an alternate choreography with the same acts and destinations; no information is carried only by standard motion (every arrival also fades; every departure is a removal; the preview veil is opacity). |
+
+## Required AFTER the three directions exist
+
+| Skill | Status |
+| --- | --- |
+| `design-critique` | Done, over the captured filmstrips and full-resolution frames of every run (A/B/C × S1–S5, real-pointer drag, reduced motion, Arabic/RTL, Ignition on/off) — the critique is `05-comparison-matrix.md`. |
+| `/review-animations` | User-invoke-only skill. The session stops ONCE at the final prototype review gate for the user to run it; the final report continues afterwards. |
+
+## Harness defects found by the review itself (and what was re-captured)
+
+| Defect | Effect | Correction |
+| --- | --- | --- |
+| The capture driver read a chip's state from `aria-selected`, which the web renderer does not emit for a `Pressable`'s `accessibilityState`. The read was always `null`, so every chip whose default is ON was toggled OFF when the driver "ensured" it on. | The Ignition cue (default on) was OFF in every run labelled as on, and ON in the one run labelled `ignition-off`. Every other chip has a default of off, so language, RTL and reduced motion were set correctly (their readouts confirm it). | The driver now reads the chip's own label (": on", "RTL", "العربية") and verifies the state after the click. The five Ignition runs (`A/B/C-S5-ignition`, `C-ar-rtl-S5-ignition`, `B-S5-ignition-off-2`) were re-captured; the first-batch S5 runs are kept as the cue-off controls they actually are. |
+| T-06's `TemporalTargetLayer` carries English-only presentation copy at the baseline (it has no language input; VI-01's bilingual authority reached T-08 only). | In the phone frame the visible strip under the world is English under Arabic copy; the T-08 chrome and the lab's act labels ARE Arabic but sit below the fold of the lower panel. | Two extra runs (`A/B-ar-rtl-S4-chrome`) scroll the lower panel so the Arabic, right-aligned T-08 orientation sentence and the Arabic Exact Return control are in frame. Recorded as an open item for production T-12 (Arabic copy for the temporal layer), not a shootout finding. |
+| Two Ignition captures overlapped a heavy transcript scan on the same machine. | Capture-side frame rates dropped (the in-page meter is unaffected but the recordings stutter). | Re-captured on an idle machine. Every perf figure quoted in the matrix is from an idle-machine run. |
+| Scrolling the lower panel BEFORE clicking a scenario chip left the scenario un-started (cause not established; the page and chip were unchanged). | Two chrome runs recorded nothing. | The driver scrolls AFTER the scenario chip is clicked; verified by the end state (`reversible history 5` at 4 s). |
