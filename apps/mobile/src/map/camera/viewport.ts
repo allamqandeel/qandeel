@@ -13,7 +13,7 @@
  * the delta is not finitely representable is reported as such rather than clamped to an edge,
  * so a wrong pixel can never be mistaken for a real position.
  */
-import { clampBigInt, ratioToFinite, roundDiv, type CanonicalWorldAddress } from '../world';
+import { clampBigInt, mapScaleEquals, ratioToFinite, roundDiv, worldAddressEquals, type CanonicalWorldAddress } from '../world';
 import { OSDAP_MAX_COORD, OSDAP_MIN_COORD, canonicalWorldAddress } from '../world';
 import type { MapCamera } from './camera';
 
@@ -157,4 +157,40 @@ export function isWithinFootprint(footprint: WorldFootprint, address: CanonicalW
 
 export function footprintEquals(a: WorldFootprint, b: WorldFootprint): boolean {
   return a.minX === b.minX && a.maxX === b.maxX && a.minY === b.minY && a.maxY === b.maxY;
+}
+
+/**
+ * T-10 — how two canonical cameras of the same world relate, in presentation quantities.
+ *
+ * The presentation camera has to be able to keep the frame that is on the glass while canonical
+ * truth moves under it, and the only two things it needs to do that are here: how much finer the
+ * new camera draws the world (`k`, points per world unit, new over old — a Semantic Zoom one rung
+ * deeper is exactly `8`), and where the new anchor WAS on the old screen, relative to the centre.
+ *
+ * It is derived, Class D and exact until the last step: the anchor delta stays `bigint` through
+ * `projectAddress`, so no canonical coordinate is ever a float. `destination: null` means the new
+ * anchor was not finitely representable from the old camera — a fact about the projection, never
+ * a claim about the world, and never silently replaced by a clamped pixel.
+ *
+ * `null` means the two cameras look at the same place at the same scale, so there is nothing to
+ * keep and nothing to resolve. A depth-only change is exactly that case: the rung is disclosure,
+ * and disclosure is not a camera move.
+ */
+export interface CanonicalCameraTransition {
+  readonly k: number;
+  readonly destination: ScreenPoint | null;
+  readonly depthChanged: boolean;
+}
+
+export function cameraTransition(before: MapCamera, after: MapCamera, envelope: ViewportEnvelope): CanonicalCameraTransition | null {
+  if (worldAddressEquals(before.anchor, after.anchor) && mapScaleEquals(before.scale, after.scale)) return null;
+  const kNumerator = Number(after.scale.denominator * before.scale.numerator);
+  const kDenominator = Number(after.scale.numerator * before.scale.denominator);
+  const projected = projectAddress(before, envelope, after.anchor);
+  const center = envelopeCenter(envelope);
+  return Object.freeze({
+    k: kDenominator === 0 || !Number.isFinite(kNumerator / kDenominator) ? 1 : kNumerator / kDenominator,
+    destination: projected === null ? null : { x: projected.x - center.x, y: projected.y - center.y },
+    depthChanged: before.depth !== after.depth,
+  });
 }

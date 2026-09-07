@@ -1,82 +1,121 @@
 /**
  * T-04 — the drag route: a pointer / touch gesture bound to the frozen `PAN` act.
+ * T-10 — the same route, moved onto the UI runtime.
  *
- * The in-progress translation is Class C / D presentation progress. It lives here, in React
- * state, and it is what the renderer offsets its transform by while a finger is down. It is not
- * canonical: nothing is dispatched until the gesture ends, so one drag is one canonical camera
- * intent and one RH checkpoint — never one per frame.
+ * The Product mechanic is UNCHANGED and is the reason this file is careful:
  *
- * A cancelled or interrupted gesture discards the progress and dispatches nothing at all. There
- * is no "partial pan" transaction, and an interrupted drag invents no semantics.
+ *   ONE completed drag → ONE canonical `PAN`, at the actual end of the gesture, from the finger's
+ *   own reported total translation. No momentum is added, no commit is delayed until visual rest,
+ *   no second `PAN` is dispatched when the plane settles, no translation is synthesised from
+ *   velocity, and no animation completion commits anything. A cancelled, failed or interrupted
+ *   gesture dispatches nothing at all and invents no semantics.
  *
- * Smooth, interruptible motion is T-10's; this binding only guarantees that the mechanics are
- * truthful.
+ * What changed is where the in-progress translation LIVES. It used to be React state, so every
+ * gesture frame re-rendered the surface on the JS runtime. It is now the presentation camera's
+ * residual, written on the UI runtime, so the plane is attached to the hand at 1:1 with no easing,
+ * no lag and not one React render for the whole drag. Exactly one crossing back to the Product
+ * runtime exists, at the end of a completed gesture, and it carries the same two numbers the
+ * frozen act always took.
+ *
+ * The release is deliberately silent. The committed `PAN` moves the canonical anchor by the
+ * finger's own translation, so the rebase that follows it cancels the residual almost exactly: the
+ * world HOLDS ITS PLACE where the reader put it. QANDEEL is not a slippy map. When the act does
+ * NOT change canonical state — a refusal at the coordinate bound, a movement too small to be an
+ * act — the presentation returns to the camera the reader is actually at, because nothing moved.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
 
+import { createBox, handoffToProduct, type PresentationCameraBinding } from '../../motion';
 import type { CanonicalStore } from '../../state';
 import type { MapActionOutcome } from '../outcome';
 import { panByTranslation } from './map-camera-actions';
 
-export interface MapPanProgress {
-  readonly active: boolean;
-  readonly translationX: number;
-  readonly translationY: number;
-}
-
-export const IDLE_PAN_PROGRESS: MapPanProgress = Object.freeze({ active: false, translationX: 0, translationY: 0 });
-
 export interface MapPanGestureBinding {
   /** Compose into a `GestureDetector`. */
   readonly gesture: ReturnType<typeof Gesture.Pan>;
-  /** Presentation-only progress of the live drag. Never written to canonical state. */
-  readonly progress: MapPanProgress;
 }
 
 export interface MapPanGestureOptions {
   readonly enabled?: boolean;
+  /** The presentation residual the drag writes. Class D: never canonical, discarded on cancel. */
+  readonly camera: PresentationCameraBinding;
   /** Observes the single canonical outcome of a completed drag; purely informational. */
   readonly onSettled?: (outcome: MapActionOutcome) => void;
 }
 
-export function useMapPanGesture(store: CanonicalStore, options: MapPanGestureOptions = {}): MapPanGestureBinding {
-  const { enabled = true, onSettled } = options;
-  const [progress, setProgress] = useState<MapPanProgress>(IDLE_PAN_PROGRESS);
+export function useMapPanGesture(store: CanonicalStore, options: MapPanGestureOptions): MapPanGestureBinding {
+  const { enabled = true, camera, onSettled } = options;
+
+  // What the crossing must reach when it ARRIVES, not what was current when the gesture was built.
+  //
+  // Two failures live here and both are silent. A store REPLACED mid-drag would otherwise receive
+  // its `PAN` in the store the reader has already left — a write to an authority nobody is looking
+  // at. And a changing observer would otherwise rebuild the gesture on every render, re-attaching
+  // the recognizer and risking a completion arriving twice. Reading at call time fixes both, and
+  // it is why the gesture below depends on nothing that changes per render.
+  //
+  // A box rather than a ref, because these functions are handed to gesture callbacks and the React
+  // Compiler's rules — correctly — refuse a ref that crosses that boundary.
+  const [latest] = useState(() => createBox({ store, onSettled, mounted: true }));
+  useLayoutEffect(() => {
+    latest.set({ store, onSettled, mounted: true });
+  }, [latest, onSettled, store]);
+  // An unmount between the gesture ending on the UI runtime and the crossing arriving on the
+  // Product runtime must dispatch nothing: a surface that is gone has no reader to have panned.
+  useEffect(
+    () => () => {
+      latest.set({ ...latest.get(), mounted: false });
+    },
+    [latest],
+  );
 
   const settle = useCallback(
     (translationX: number, translationY: number) => {
-      setProgress(IDLE_PAN_PROGRESS);
-      const outcome = panByTranslation(store, translationX, translationY);
-      onSettled?.(outcome);
+      const current = latest.get();
+      if (!current.mounted) return;
+      const outcome = panByTranslation(current.store, translationX, translationY);
+      // An act that changed no canonical camera leaves the plane displaced from the truth it is
+      // supposed to be showing, so the presentation comes home. An APPLIED act needs nothing here:
+      // the rebase that observes the new canonical camera resolves the residual by itself.
+      if (outcome.outcome !== 'APPLIED') camera.resolveToRest();
+      current.onSettled?.(outcome);
     },
-    [store, onSettled],
+    [camera, latest],
   );
 
   const discard = useCallback(() => {
-    setProgress(IDLE_PAN_PROGRESS);
-  }, []);
+    if (!latest.get().mounted) return;
+    camera.resolveToRest();
+  }, [camera, latest]);
 
   const gesture = useMemo(
     () =>
       Gesture.Pan()
-        // The callbacks run on the JS thread: they touch the canonical store, which is plain
-        // JavaScript and has no worklet representation.
-        .runOnJS(true)
         .enabled(enabled)
-        .onUpdate((event) => {
-          setProgress({ active: true, translationX: event.translationX, translationY: event.translationY });
+        // Every callback below is a worklet on the UI runtime. None of them touches the canonical
+        // store, which is plain JavaScript and has no worklet representation.
+        .onBegin(() => {
+          camera.grab();
+        })
+        .onChange((event) => {
+          camera.dragBy(event.changeX, event.changeY);
         })
         .onEnd((event, success) => {
-          if (success) settle(event.translationX, event.translationY);
-          else discard();
+          camera.release();
+          // The ONE crossing: at the end of a completed gesture, with the finger's own total
+          // translation. Never per frame, never from a decay, never from an animation callback.
+          if (success) handoffToProduct(settle, event.translationX, event.translationY);
+          else handoffToProduct(discard);
         })
         // Cancellation, failure and interruption all land here without ever having dispatched.
         .onFinalize((_event, success) => {
-          if (!success) discard();
+          if (success) return;
+          camera.release();
+          handoffToProduct(discard);
         }),
-    [enabled, settle, discard],
+    [camera, discard, enabled, settle],
   );
 
-  return { gesture, progress };
+  return { gesture };
 }

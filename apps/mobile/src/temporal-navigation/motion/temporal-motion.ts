@@ -62,15 +62,30 @@ export const TEMPORAL_MOTION_DURATIONS = Object.freeze({
   presenceMs: 160,
   /** M2 — the acknowledgement of a commit that has already been applied. */
   commitSettleMs: 200,
-  /** M3 — the return to committed truth after a cancellation. */
-  cancelMs: 240,
+  /**
+   * M3 — the return to committed truth after a cancellation.
+   *
+   * T-10 refinement: 240 → 200 ms. A cancellation is the system answering, not the interface
+   * performing. It should read as the cursor snapping back to where truth is, and at 240 ms the
+   * return was long enough to look like a considered journey to a position the reader had just
+   * decided against.
+   */
+  cancelMs: 200,
 });
 
 /** Critically damped: settles as fast as a spring can without ever overshooting. */
 export const CANCEL_DAMPING_RATIO = 1;
 
-/** The extra scale the commit acknowledgement reaches. Never a scale from zero. */
-export const COMMIT_SETTLE_SCALE = 0.06;
+/**
+ * The extra scale the commit acknowledgement reaches. Never a scale from zero.
+ *
+ * T-10 refinement: 0.06 → 0.09. The acknowledgement is the ONE confirmation that a temporal
+ * commit landed, it rides the committed marker itself, and at 6 % on a thin marker it was recorded
+ * as barely perceptible in the T-10.0 device carry-forward. 9 % is legible at a glance and is
+ * still an acknowledgement rather than a gesture: it grows from the marker's own size, returns to
+ * it inside 200 ms, and is skipped outright under reduced motion.
+ */
+export const COMMIT_SETTLE_SCALE = 0.09;
 
 export interface TemporalMotionInput {
   /** Effective committed `TC`, or `null` before the first mirrored Moment. */

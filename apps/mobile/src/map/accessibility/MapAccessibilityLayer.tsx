@@ -145,6 +145,11 @@ export function MapAccessibilityLayer({ store, context, camera, envelope, onOutc
     <View
       testID={MAP_ACCESSIBILITY_TEST_ID}
       style={StyleSheet.absoluteFill}
+      // T-10 — the semantic layer covers the whole plane and must never take a touch from it. Its
+      // own nodes stay independently reachable by assistive technology, which does not go through
+      // pointer routing at all; what `box-none` removes is the container's ability to swallow a
+      // drag or a pointer miss on its way to the world underneath.
+      pointerEvents="box-none"
       accessibilityRole={tree.containerRole === 'list' ? 'list' : 'none'}
       accessibilityLabel={tree.containerLabel}
       accessibilityActions={[...tree.viewportActions]}

@@ -1,10 +1,13 @@
 /**
  * T-04 — the composed Map surface: the structural Skia canvas, the drag route, the tap route and
  * the accessible semantic layer over ONE disclosed projection.
+ * T-10 — the same surface, over ONE presentation camera.
  *
- * The three routes cannot disagree, because they share one derivation and one placement: a tap
- * hits exactly what is painted, and the accessible tree names exactly what is entitled. A future,
- * off-depth or unavailable identity is in none of them.
+ * The three routes cannot disagree, because they share one derivation, one placement AND one
+ * residual: a tap is converted through the very residual the frame was painted with, so while the
+ * plane is between two viewpoints a touch still selects the object the reader is looking at rather
+ * than the object that would be there once the travel finished. The accessible tree names exactly
+ * what is entitled, and a future, off-depth or unavailable identity is in none of them.
  *
  * They also cannot disagree with the store. The surface subscribes to canonical state — not to
  * the camera alone — and asks the ONE freshness rule whether the supplied context still is this
@@ -14,6 +17,11 @@
  * so the surface stays structurally empty rather than showing anything about it — final chrome,
  * including anything that would explain the wait, is T-08's.
  *
+ * Motion here is presentation and never authority. The residual is Class D: it is discarded on a
+ * cancelled gesture, it is dropped outright when this surface stops painting a world, and it can
+ * neither dispatch an act nor decide where the camera lands. The canonical camera has always
+ * already moved before the presentation explains it.
+ *
  * This component is a truthful mechanics substrate. It is deliberately not mounted in the app
  * shell: the technical container is T-01's and stays byte-identical, and where the Map appears in
  * the Product is a later task's decision.
@@ -22,8 +30,9 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
+import { usePresentationCamera, type MotionCauseChannel } from '../../motion';
 import type { CanonicalStore } from '../../state';
-import { decodeCameraIntent, useMapPanGesture, type ViewportEnvelope } from '../camera';
+import { decodeCameraIntent, envelopeCenter, useMapPanGesture, type ViewportEnvelope } from '../camera';
 import { MapAccessibilityLayer } from '../accessibility';
 import { inspectObject, type DirectJumpOutcome, type MapInspectionContext } from '../inspection';
 import { mapContextFreshness } from '../projection';
@@ -40,10 +49,19 @@ export interface MapSurfaceProps {
   readonly context: MapInspectionContext;
   readonly envelope: ViewportEnvelope;
   readonly style?: RenderStyle;
+  /**
+   * A presentation-only note of which ALREADY-EXECUTED act the next camera change explains.
+   *
+   * Optional, and correctness never depends on it: absent one, every choreography is read from
+   * what actually changed. Its only effect is the explanatory beat between the two halves of the
+   * one composite Product act. It is written by whoever composes this surface with T-08's chrome,
+   * from an outcome T-07 has already returned.
+   */
+  readonly cause?: MotionCauseChannel;
   readonly onOutcome?: (outcome: MapActionOutcome | DirectJumpOutcome) => void;
 }
 
-export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_STYLE, onOutcome }: MapSurfaceProps) {
+export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_STYLE, cause, onOutcome }: MapSurfaceProps) {
   // Canonical state is READ, never held beside the store: the whole state, because the projection
   // tuple is Session + effective TC + `MC.depth`, and the camera alone cannot tell us whether the
   // supplied projection is still this Map.
@@ -57,20 +75,26 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
     () => (usable && camera !== null ? placeScene(context.scene, camera, envelope) : null),
     [usable, context.scene, camera, envelope],
   );
-  const { gesture, progress } = useMapPanGesture(store, { enabled: usable, onSettled: onOutcome });
+
+  const center = useMemo(() => envelopeCenter(envelope), [envelope]);
+  const diagonalPoints = useMemo(() => Math.hypot(envelope.width, envelope.height), [envelope.width, envelope.height]);
+  const motion = usePresentationCamera({ center, diagonalPoints, cause });
+  const { gesture } = useMapPanGesture(store, { enabled: usable, camera: motion, onSettled: onOutcome });
 
   // The act runs first and the observer is notified afterwards: an optional call would not
   // evaluate its argument when no observer is attached, silently disabling the pointer route.
   const onTap = useCallback(
     (x: number, y: number) => {
       if (placed === null) return;
-      const node = hitTest(placed, { x, y });
+      // Through the SAME residual the frame was painted with: paint, pointer and act agree even
+      // while the plane is mid-travel, and a stale canonical screen coordinate can select nothing.
+      const node = hitTest(placed, motion.canonicalPointAt({ x, y }));
       if (node === null) return;
       if (node.family !== 'THREAD' && node.family !== 'READING' && node.family !== 'EMERGING_FOCUS') return;
       const outcome = inspectObject(store, context, { family: node.family, id: node.id });
       onOutcome?.(outcome);
     },
-    [placed, store, context, onOutcome],
+    [placed, motion, store, context, onOutcome],
   );
 
   // An undecodable camera, or a projection that is no longer this Map's, renders an empty surface
@@ -96,15 +120,7 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
           onStartShouldSetResponder={() => true}
           onResponderRelease={(event) => onTap(event.nativeEvent.locationX, event.nativeEvent.locationY)}
         >
-          <MapCanvas
-            scene={context.scene}
-            camera={camera}
-            envelope={envelope}
-            placed={placed}
-            panTranslationX={progress.translationX}
-            panTranslationY={progress.translationY}
-            style={style}
-          />
+          <MapCanvas scene={context.scene} camera={camera} envelope={envelope} placed={placed} motion={motion} style={style} />
         </View>
       </GestureDetector>
       <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={envelope} onOutcome={onOutcome} />
