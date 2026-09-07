@@ -55,9 +55,13 @@ function gitBlobId(content) {
   return createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
 }
 
-test('0072 is the newest migration, 0064 - 0071 are byte-identical, and every frozen precondition is required', () => {
+test('0072 remains frozen, 0064 - 0071 are byte-identical, and every frozen precondition is required', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0072_historical_coverage_projection_disclosure_v1.sql');
+  assert.deepEqual(migrations.slice(-3), [
+    '0072_historical_coverage_projection_disclosure_v1.sql',
+    '0073_supabase_free_plan_keepalive_v1.sql',
+    '0074_supabase_keepalive_permission_correction_v1.sql',
+  ]);
   assert.equal(migrations.filter((name) => name.startsWith('0072_')).length, 1, 'exactly one 0072 migration exists');
   assert.match(migration, /^BEGIN;/mu);
   assert.match(migration, /COMMIT;\s*$/u);
