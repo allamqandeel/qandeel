@@ -84,7 +84,7 @@ Next task: **VI-03 — Visual North Star + Graphic Language**.
 - [QANDEEL Canonical Backlog v1](qandeel-canonical-backlog-v1.md) — the one canonical register of
   deferred obligations, conditional validation items and open unassigned capabilities, each with an
   explicit owner (or `UNASSIGNED`), severity and reopen condition. It also carries the governance
-  rules `BG-01 … BG-07`, of which the first is that a finding violating the ACTIVE task contract may
+  rules `BG-01 … BG-08`, of which the first is that a finding violating the ACTIVE task contract may
   never be moved to backlog in order to close that task. Architecture checks it at every task
   kickoff. Documentation only; an item becomes executable only through a future Task Contract.
 

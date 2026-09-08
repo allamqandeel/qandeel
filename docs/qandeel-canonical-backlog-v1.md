@@ -7,8 +7,10 @@ closed T-10 Living Analysis Map Motion System v1
 **Authority:** documentation and governance only. Nothing recorded here is executable, and nothing
 recorded here authorizes implementation, a migration, a dependency or a Product semantic.
 
-There is exactly one QANDEEL backlog, and this is it. An obligation that is not recorded here is not
-tracked; an obligation that *is* recorded here is not thereby scheduled.
+This is QANDEEL's one canonical **cross-task** backlog. Active-task blockers remain owned by the
+active contract until they are fixed and never move here merely to close a task. Outside those
+active blockers, a cross-task obligation is tracked only when it is recorded here — and an
+obligation that *is* recorded here is not thereby scheduled.
 
 ---
 
@@ -100,6 +102,16 @@ validation, or Architecture explicitly designates it.
 
 **BG-07 — Backlog is not Product authority.** An item becomes executable only through a future Task
 Contract. Nothing here defines runtime semantics, and no reader may implement from an entry.
+
+**BG-08 — Closure reconciliation / backlog admission.** Before an ACTIVE task may be declared
+CLOSED / FROZEN, Architecture reconciles that task's cross-task residue against this backlog. Every
+newly discovered item that is not a current blocker and qualifies under BG-06 is admitted here, with
+the complete schema of §2, *before* closure. Every backlog item that task inherited is explicitly
+updated as one of: completed → `CLOSED — TOMBSTONE`, re-owned to one named task, or still deferred
+with a recorded reason. Once the task has closed, a qualifying item may not exist only in a review
+comment, a final report, a task-local note or a model's memory. This adds no lifecycle state and
+relaxes nothing: a current blocker is still fixed inside the active task (BG-01), anti-scope is
+still not automatically backlog (BG-06), and admission still authorizes no implementation (BG-07).
 
 ---
 
@@ -424,7 +436,9 @@ here. Their record is the canonical document of the owning task.
 
 ---
 
-## 9. Task kickoff checklist (BG-05)
+## 9. Task lifecycle checklist (BG-05 at kickoff, BG-08 at closure)
+
+### At kickoff (BG-05)
 
 At the kickoff of any future task, Architecture:
 
@@ -445,3 +459,16 @@ Inherited at this baseline:
 
 T-11 inherits nothing from this backlog. That is a fact about the register, not a statement that
 T-11 has been started, scoped or authorized.
+
+### At closure (BG-08)
+
+Before any task is declared CLOSED / FROZEN, Architecture:
+
+1. reconciles every backlog item that task inherited — completed → `CLOSED — TOMBSTONE` with the
+   closing task, PR, SHA and disposition; re-owned to one named task; or still deferred with a
+   recorded reason;
+2. admits every newly accepted cross-task deferral that qualifies under BG-06, with the complete
+   schema of §2;
+3. leaves every current blocker where it belongs — inside the active task, fixed (BG-01);
+4. does not declare the task CLOSED / FROZEN while a qualifying cross-task residue exists only
+   outside this document.
