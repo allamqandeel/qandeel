@@ -1,6 +1,7 @@
 # QANDEEL — Responsive Recomposition v1 (T-11)
 
-**Status:** candidate — awaiting independent Architecture + Experience review
+**Status:** CLOSED / FROZEN
+**Closure:** PR #215 · merge commit `7908612ff3fdc2bcc8936bc9f4e6f3de89393332`
 **Owner:** `apps/mobile/src/responsive/**`
 **Baseline:** `1615cea070e7a6594284fc54c6737ce5d5a1a2fb`
 **Backlog:** `T-11 backlog inheritance: NONE`
