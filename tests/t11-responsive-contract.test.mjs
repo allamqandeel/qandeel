@@ -255,6 +255,35 @@ test('the world is sized first, and the support around it yields', () => {
   assert.doesNotMatch(plan, /maxHeightPoints/u, 'the plan hands out no vertical ceiling at all');
 });
 
+test('R1 — the settled band is keyed to the usable width, not to the event that happened to move it', () => {
+  const hook = responsiveCode['useResponsiveSurface.ts'];
+  // The usable width has three authorities and only one of them is an event. A settlement taken in
+  // the layout handler is correct for the measured width and stale for either inset (T11-R1-01), so
+  // the handler stores the rect and NOTHING else, and carries no inset in its dependencies.
+  assert.doesNotMatch(hook, /bandFor\([^)]*width - left - right/u, 'the band is not settled from the layout event');
+  assert.match(hook, /const onLayout = useCallback\(\(event: LayoutChangeEvent\) => \{[\s\S]*?\}, \[\]\);/u, 'the layout handler depends on nothing');
+  const measuredBlock = hook.match(/interface Measured \{[^}]*\}/u);
+  assert.ok(measuredBlock !== null, 'the measurement shape is still declared');
+  assert.doesNotMatch(measuredBlock[0], /band/u, 'the measurement does not carry a band');
+
+  // The settlement is keyed to the usable width it was taken at, so it can never be reused across a
+  // width it does not belong to, and the predecessor handed to `bandFor` is the band the
+  // immediately preceding composition actually settled.
+  assert.match(hook, /const usable = measured === null \? null : measured\.width - left - right;/u, 'the usable width comes from all three authorities');
+  assert.match(hook, /interface Settled \{\s*\n\s*readonly usable: number;\s*\n\s*readonly band: PresentationBand;\s*\n\}/u, 'a settlement carries the width it was taken at');
+  assert.match(
+    hook,
+    /if \(usable !== null && \(settled === null \|\| settled\.usable !== usable\)\) \{\s*\n\s*band = bandFor\(usable, settled === null \? null : settled\.band\);\s*\n\s*setSettled\(\{ usable, band \}\);/u,
+    'the predecessor is the band the preceding composition settled, and the update is guarded',
+  );
+
+  // And it is done without any of the mechanisms the finding rules out.
+  assert.doesNotMatch(hook, /useEffect|useLayoutEffect/u, 'no effect drives the settlement');
+  assert.doesNotMatch(hook, /useRef/u, 'no ref is read during render');
+  assert.doesNotMatch(hook, /setTimeout|setInterval|requestAnimationFrame|Date\.now/u, 'no timer decides a band');
+  assert.doesNotMatch(hook, /key=/u, 'nothing is remounted to re-settle a band');
+});
+
 test('the two thresholds are derived quantities, and the hysteresis is bounded and pure', () => {
   const plan = responsiveCode['plan.ts'];
   // The width boundary is COMPOSED from the content-stress quantities rather than written down, so

@@ -102,11 +102,47 @@ memoizes it on those numbers — so a container that reports the same rect twice
 plan OBJECT. A resize that changes nothing therefore costs nothing at all: no placement is
 re-derived, no Skia tree is rebuilt, no hit map is recomputed and no accessible tree is rebuilt.
 
-The band's hysteresis needs to know which band is already on screen, and that is decided **inside
-the layout handler**, from the band the previous measurement settled on, and stored with the
-measurement it belongs to. Writing it from an effect would set state synchronously inside one — a
-cascading render, and a rule the React Compiler correctly refuses — and reading it from a ref during
-render would make the hook impure. One state, written by an event, read during render.
+### The settled band follows the usable width, whatever moved it (R1)
+
+The band's hysteresis needs to know which band is already on screen. Its input — the usable width —
+has **three independent authorities**: the measured container width, the left inset and the right
+inset. Only the first of them arrives as an event.
+
+The first version settled the band inside the layout handler, which is correct for exactly one of
+the three. When an inset prop changed without a new container layout, the surface and the plan
+recomposed against the new usable width while the stored band still described the old one, so the
+hysteresis was handed a predecessor from a width that no longer existed.
+
+That is not cosmetic. Hysteresis is path-dependent by construction: inside the dead zone the band is
+decided by history rather than by the width, so a wrong predecessor is a wrong band. An inset-only
+step down through the boundary settles `COMPACT` on screen while the stored band stays `EXPANSIVE`,
+and the next inset-only step then flips back up using the stale `EXPANSIVE` down-threshold (544)
+instead of the `COMPACT` up-threshold (552) it should have been held to. One presentation
+composition ends up decided by a band no composition ever settled.
+
+So the settlement lives where the usable width actually resolves — the render — keyed to the width
+it was taken at, and adjusted against the band the immediately preceding composition settled:
+
+```ts
+const usable = measured === null ? null : measured.width - left - right;
+let band = settled?.band ?? null;
+if (usable !== null && (settled === null || settled.usable !== usable)) {
+  band = bandFor(usable, settled?.band ?? null);
+  setSettled({ usable, band });
+}
+```
+
+This is React's own pattern for state derived from previous state: the update is issued during
+render of this same component, so React discards the in-progress output and re-runs immediately,
+before any commit. There is no effect, no cascading commit, no extra paint, no timer, no ref read
+during render and no remount — and the guard makes it self-terminating, so an unchanged measurement
+costs no extra pass at all. The React Compiler's lint accepts it; what that rule set refuses is
+`setState` inside an effect, which is what an earlier draft of this hook was corrected away from.
+
+Keeping the width alongside the band is the load-bearing half: it is what says whether a settlement
+still belongs to the composition being derived, so one can never be reused across a usable width it
+was not taken at. `onLayout` is consequently free of the insets, its identity never changes for the
+life of the hook, and the measured container never re-attaches its handler.
 
 The plan's `geometry` is an **identity**, not a counter: it names WHICH coordinate frame this
 composition is, derived from the six quantities a physical coordinate is actually taken through.
@@ -210,6 +246,12 @@ as it sat there. Crossing **up** happens at the threshold; crossing **down** hap
 it — the 8-point rhythm, the smallest change that is a layout change rather than noise. The settled
 band is an ARGUMENT to `bandFor`, not hidden state, so the function stays pure and total, and
 `bandFor(w, bandFor(w, p)) === bandFor(w, p)` for every width.
+
+The dead zone is the **half-open `[544, 552)`**: `544` is the last expansive width, not the first
+compact one. That is deliberate and it mirrors the up-crossing, which is the closed `usable >= 552`
+— together they make the hysteresis exactly the 8 points it is named for. Closing the lower bound
+the other way would make it 7. `inset-settlement.test.tsx` asserts both edges by name so the
+boundary is recorded rather than assumed.
 
 ### The composition, case by case
 

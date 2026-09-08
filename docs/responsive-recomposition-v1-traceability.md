@@ -20,6 +20,7 @@ says so and points at `QAN-BL-RSP-01`.
 | `time` | `apps/mobile/src/responsive/__tests__/timeline-resize.test.tsx` |
 | `chrome` | `apps/mobile/src/responsive/__tests__/chrome-resize.test.tsx` |
 | `cont` | `apps/mobile/src/responsive/__tests__/continuity.test.tsx` |
+| `inset` | `apps/mobile/src/responsive/__tests__/inset-settlement.test.tsx` (R1) |
 | `static` | `tests/t11-responsive-contract.test.mjs` |
 | `fwd` | `tests/forward-safety-contract.test.mjs` |
 | `visual` | the 27 rendered frames of `apps/mobile/src/responsive/__tests__/visual-proof.test.tsx`, covering §25 of the execution contract |
@@ -81,7 +82,7 @@ says so and points at `QAN-BL-RSP-01`.
 | A07 no `V` change | same tests — the scene and the disclosed Track are identical by identity |
 | A08 safe-inset change presentation-only | `plan` "T11-A08, T11-A09"; `chrome` "T11-A08" (padding moves, words do not) |
 | A09 font-scale change presentation-only | `plan` "T11-A08, T11-A09"; `chrome` "T11-A56…A58" |
-| A10 repeated measurement idempotent | `plan` "T11-A10" (band fixed point over 1160 widths) and "repeated identical measurements" (plan identity) |
+| A10 repeated measurement idempotent | `plan` "T11-A10" (band fixed point over 1160 widths) and "repeated identical measurements" (plan identity); and after R1 also across the inset authority — `inset` "R1-A04" proves six identical inset props produce the same plan OBJECT |
 
 ### Geography / Map
 
@@ -192,6 +193,35 @@ says so and points at `QAN-BL-RSP-01`.
 | A78 no device-brand branch | `static` "no device, brand, model or platform is a responsive category anywhere" |
 | A79 no global-screen authority in a reusable responsive owner | `static` "no reusable surface takes the display as its authority" — covers the owner, the chrome, the Map and the scrub |
 | A80 backlog kickoff says T-11 inherits NONE | `static` "the canonical backlog still says T-11 inherits nothing, and T-11 records it" |
+
+---
+
+## 3a. `T11-R1-01` — the settled band follows the usable width (independent review, R1)
+
+The usable width has three authorities — measured width, left inset, right inset — and only one is
+an event. Settling the band in the layout handler was correct for that one and stale for the other
+two, and hysteresis is path-dependent, so a stale predecessor is a wrong band.
+
+Every row is proven through the REAL hook inside the REAL component, with `onLayout` fired once at
+setup and every step afterwards changing props only.
+
+| ID | Proof |
+| --- | --- |
+| R1-A01 inset-only down-cross | `inset` "R1-A01" — 560 usable → `EXPANSIVE`; insets to 12+12 → usable 536, no layout event → `COMPACT` |
+| R1-A02 history after an inset-only change | `inset` "R1-A02" — insets to 6+6 → usable 548 → stays `COMPACT`, held by the `COMPACT` up-threshold (552) rather than the stale `EXPANSIVE` down-threshold (544). **This is the discriminating test: it FAILS on the pre-R1 hook** |
+| R1-A03 true up-cross | `inset` "R1-A03" — 550 still `COMPACT`; 552 becomes `EXPANSIVE`; exactly two band changes across the whole sequence. **Also fails on the pre-R1 hook** |
+| R1-A04 reverse and no oscillation | `inset` "R1-A04" — 548 from above stays `EXPANSIVE`; six identical inset props produce the same plan OBJECT; 536 becomes `COMPACT` |
+| R1-A05 Product authority | `inset` "R1-A05" — store identity across a seven-step inset sweep in both directions, semantic model deep-equal, same words, same acts in the same order, `MapSurface` and `MapAccessibilityLayer` the same instances throughout, zero outcomes, RH empty |
+| the closed boundary | `inset` "the closed boundary…" — `544` is the last expansive width and `543` crosses, so the dead zone is the half-open `[544, 552)` and the hysteresis is exactly its documented 8 points |
+| either authority reaches the same composition | `inset` "a width change and an inset change…" — 560 with 12+12 insets and a measured 536 settle the same band and the same arrangement |
+| the invariant cannot regress | `static` "R1 — the settled band is keyed to the usable width…" — refuses a band settled from the layout event, an inset in the handler's dependencies, a band on the measurement, an effect, a ref, a timer and a remount. **Verified to fail on the pre-R1 hook** with `the band is not settled from the layout event` |
+
+Mechanisms the finding rules out, and where each is refused: Product state (`static` §1 closure — the
+owner can reach none), global `Dimensions` (`static` "no reusable surface takes the display as its
+authority"), timers, effect-driven render loops, refs read during render, hidden device classes
+(`static` "no device, brand, model or platform"), disabled hysteresis (`bandFor` unchanged; `plan`
+still asserts the 8-point rhythm), and remounting the responsive world (`static` "nothing is keyed by
+a width, a height or a band"; `inset` R1-A05 asserts instance identity).
 
 ---
 
