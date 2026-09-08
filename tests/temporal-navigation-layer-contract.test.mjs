@@ -182,7 +182,13 @@ test('FCR-01 — scrub interaction ownership survives handler reconfiguration, r
       assert.equal(new RegExp(`\\b${forbidden}\\b`, 'u').test(memo[2]), false, `interaction ownership must not depend on ${forbidden}`);
     }
   }
-  assert.match(hook, /\[enabled, fingerX, tracking, epoch, handlers\],\s*\n\s*\);/u);
+  // Re-anchored by T-11, unweakened. The two additions are `useSharedValue` boxes, stable for the
+  // component's whole life exactly as `fingerX`, `tracking` and `epoch` are, so the claim this line
+  // makes — that the gesture depends on nothing that changes per render, and therefore that the
+  // recognizer is never re-attached mid-interaction — is the same claim over one more presentation
+  // quantity. They carry the geometry an interaction is being performed through; see
+  // `docs/responsive-recomposition-v1.md` §6.
+  assert.match(hook, /\[enabled, fingerX, tracking, epoch, gestureGeometry, geometryGeneration, handlers\],\s*\n\s*\);/u);
   // What the gesture and the reaction schedule is the forwarder's stable handler set, which
   // reaches whichever coordinator is attached at DELIVERY, and nothing after retirement.
   assert.match(scrub, /export function createScrubForwarder\(\): ScrubForwarder \{\s*\n\s*let live: ScrubCoordinator \| null = null;/u);
@@ -911,9 +917,15 @@ test('no temporal act can be reached from a camera act, an animation or a presen
   assert.ok(beforeEnd.length > 0, 'the gesture has a per-frame path to check');
   assert.equal(beforeEnd.includes('scheduleOnRN'), false, 'scheduleOnRN is never called per frame');
   assert.equal(beforeEnd.includes('handlers.'), false, 'no Product handler is reached per frame');
-  // `onBegin` mints the interaction epoch once; `onUpdate` — the actual per-frame callback — writes
-  // exactly one shared value and nothing else at all.
-  assert.deepEqual([...beforeEnd.matchAll(/(\w+)\.set\(/gu)].map((match) => match[1]).sort(), ['epoch', 'fingerX', 'fingerX', 'tracking']);
+  // `onBegin` mints the interaction epoch once and stamps the presentation geometry that
+  // interaction is being performed through (T-11, re-anchored and unweakened: both are written
+  // exactly once per gesture, both are presentation-only, and neither names a target, a Moment or
+  // an act); `onUpdate` — the actual per-frame callback — writes exactly one shared value and
+  // nothing else at all.
+  assert.deepEqual(
+    [...beforeEnd.matchAll(/(\w+)\.set\(/gu)].map((match) => match[1]).sort(),
+    ['epoch', 'fingerX', 'fingerX', 'gestureGeometry', 'tracking'],
+  );
   const perFrame = scrubHook.slice(scrubHook.indexOf('.onUpdate('), scrubHook.indexOf('.onEnd('));
   assert.deepEqual([...perFrame.matchAll(/(\w+)\.set\(/gu)].map((match) => match[1]), ['fingerX']);
   // Shared values are read and written through `get`/`set`: the React Compiler cannot see through

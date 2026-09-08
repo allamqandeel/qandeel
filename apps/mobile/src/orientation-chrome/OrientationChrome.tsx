@@ -110,6 +110,15 @@ export interface OrientationChromeProps {
    * app root belongs to the later integration task. This is the seam, not the ownership.
    */
   readonly bottomInset?: number;
+  /**
+   * How the return acts are arranged (T-11), supplied by whichever surface composes this one.
+   *
+   * The SECOND layout-shaped prop, and the same kind of seam as `bottomInset`: an already-decided
+   * arrangement, never a width, a breakpoint or a measurement. Nothing this component computes
+   * consults it — the semantic model, the offered set, the order and every word are identical under
+   * either value — so no Product answer can depend on how much room the reader's window has.
+   */
+  readonly returnArrangement?: 'STACKED' | 'PAIRED';
 }
 
 /**
@@ -141,6 +150,7 @@ export function OrientationChrome({
   onReturnOutcome,
   onMapOutcome,
   bottomInset = 0,
+  returnArrangement = 'STACKED',
 }: OrientationChromeProps) {
   // The kernel's own subscription seam. This is the rerender trigger AND the guarantee that a
   // replaced store is resubscribed to rather than remembered.
@@ -237,6 +247,7 @@ export function OrientationChrome({
         exactReturnTarget={exactReturnTarget}
         liveContext={liveContext}
         onOutcome={handleReturn}
+        arrangement={returnArrangement}
       />
     </View>
   );
