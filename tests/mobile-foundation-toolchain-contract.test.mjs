@@ -32,13 +32,14 @@ const expectedDependencies = {
   // is a native dependency whose generated projects the native smoke jobs build. It is the
   // Expo SDK 57 recommended Skia version and `expo install --check` accepts it unchanged.
   '@shopify/react-native-skia': '2.6.2',
-  // MOB-CI-01: Expo SDK 57 patch baseline refreshed to what `expo install --check`
-  // now requires. Only these two patch pins moved; the SDK minor is unchanged.
-  expo: '~57.0.20',
+  // MOB-CI-01, then QAN-INF-02: Expo SDK 57 patch baseline refreshed to what
+  // `expo install --check` now requires against the live registry. Only these two patch
+  // pins moved; the SDK minor is unchanged and the assertion is exact, not a range.
+  expo: '~57.0.21',
   'expo-constants': '~57.0.17',
   'expo-dev-client': '~57.0.18',
   'expo-linking': '~57.0.9',
-  'expo-router': '~57.0.19',
+  'expo-router': '~57.0.20',
   'expo-status-bar': '~57.0.1',
   react: '19.2.3',
   'react-native': '0.86.3',
