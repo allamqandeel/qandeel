@@ -130,6 +130,8 @@ still not automatically backlog (BG-06), and admission still authorizes no imple
 | `QAN-BL-MOT-02` | Exact Composite Spatial-Cause Binding | `T-12 — Final Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-MOT-03` | Physical Motion Validation | `T-12 — Final Integration / pre-release physical validation gate` | `HIGH` | `VALIDATION — OPEN` |
 | `QAN-BL-MOT-04` | Direct-Drag Presentation Culling | `T-12 — Final Integration / pre-release physical validation gate` | `MEDIUM` | `VALIDATION — OPEN` |
+| `QAN-BL-RSP-01` | Physical Responsive Recomposition Validation | `T-12 — Final Integration / pre-release physical validation gate` | `HIGH` | `VALIDATION — OPEN` |
+| `QAN-BL-RSP-02` | Outboard Live Label Clipped at Large Text | `T-12 — Final Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-T13-01` | Restart / Recovery / Persistence | `T-13 — Recovery / Persistence` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-NAV-01` | Cross-Session Timeline | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-NAV-02` | Analysis Replay | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
@@ -353,6 +355,76 @@ from code and CI alone.
   that produces this behaviour is deliberate.
 - **Status:** `VALIDATION — OPEN`
 
+### `QAN-BL-RSP-01` — Physical Responsive Recomposition Validation
+
+- **Title / Finding:** `PHYSICAL RESPONSIVE REVIEW PENDING`. The frozen T-11 recomposition has never
+  been laid out by a real type engine, a real safe-area provider or a real window manager.
+- **Source:** [T-11 §11 and §15](responsive-recomposition-v1.md) — "Native and physical validation
+  limits", which states the four unproven claims by name rather than glossing them.
+- **Why deferred:** `jest-expo` performs no layout at all — there is no Yoga in the test renderer, so
+  `onLayout` never fires by itself and the proof composition supplies the rect a real column would
+  produce. That proves everything the responsive owner does *given* a measurement, and nothing about
+  the measurement itself. The browser proof shows real layout of the real components, but browser
+  layout is not native layout and is in particular not a Dynamic Type proof. The authoring machine
+  has no simulator, emulator, Xcode or device, and exact-head CI proves build, install and boot
+  integrity rather than perceptual layout on release-capable hardware.
+- **Owner task:** `T-12 — Final Integration / pre-release physical validation gate`
+- **Severity:** `HIGH`
+- **Validation set:**
+  1. real type-engine layout of the Arabic and English return wording at the largest system text
+     sizes, at 320 points, in both writing directions — no clipped final line, no ellipsis on any
+     canonical identity, status or Return wording, and every control still at least 44 points;
+  2. real safe-area insets on a notched device and on a gesture-bar device, including the asymmetric
+     and landscape cases, with the chrome's bottom seam and the Map's usable rect both correct;
+  3. real continuous resize — split view, Stage-Manager-style dragging and orientation change — with
+     no visible lag, no band flip-flop and no layout loop;
+  4. a real mid-travel resize and a real mid-scrub resize performed with a finger, confirming no
+     teleport and no stale-mapped commit on hardware — and, on the mid-scrub case, whether the
+     retirement READS as an interruption. It reuses T-06's own cancellation choreography exactly,
+     so the preview cursor fades out under a finger that is still down and nothing previews again
+     until that finger lifts. That is correct and it is deliberately silent: a positive signal
+     would need either a new motion vocabulary or new Product copy, and T-11 is authorized to add
+     neither. Whether silence is enough is a perceptual question, and this is where it is asked.
+- **Reopen condition:** device evidence shows clipped or ellipsized essential wording, a control
+  below 44 points, an unreachable act, a band that oscillates, a visible layout lag during a
+  continuous resize, a teleport during a resize under motion, a stale-mapped temporal commit, or any
+  other violation of the frozen T-11 contract.
+- **If validation passes:** close as `CLOSED — TOMBSTONE` with the device evidence recorded. Do not
+  invent tuning work to justify the gate.
+- **Status:** `VALIDATION — OPEN`
+
+Nothing here is known to be wrong. This item exists because a specific class of claim — how a real
+type engine, a real inset provider and a real window manager lay out these exact strings — cannot be
+made from code and CI alone. It is admitted under BG-08 before T-11 closes rather than left in a
+report.
+
+### `QAN-BL-RSP-02` — Outboard Live Label Clipped at Large Text
+
+- **Title / Finding:** T-05 gives the outboard Live slot a fixed `width: OUTBOARD_LIVE_EXTENT` (64
+  points) with `overflow: 'hidden'`. At a 200 % system text size its label — "Go live" / "Live", and
+  the Arabic equivalents — needs roughly 110 points, so the reader sees "Go". Essential wording is
+  clipped by a fixed presentation width.
+- **Source:** [T-11 §15 — "What the proof found that T-11 could not fix"](responsive-recomposition-v1.md).
+  Visible in the `P07-large-text` and `P07b-largest-text` frames of the T-11 visual proof.
+- **Why deferred:** it is **pre-existing and outside T-11's reach**, not a T-11 regression. The slot,
+  its fixed width and its clip all predate this task, and the clipping occurs at that text size with
+  or without the responsive layer. T-11 cannot fix it either: the T-06 contract holds every T-05
+  file byte-identical, and a presentation task reaching sideways into a frozen owner to change its
+  geometry is exactly what that freeze exists to prevent. The control's accessible name is
+  unaffected, so the act remains reachable to a screen reader; what is lost is the visible word.
+- **Owner task:** `T-12 — Final Integration`
+- **Severity:** `HIGH` — clipped essential wording is an accessibility-parity failure at a text size
+  real readers use, even though no act becomes unreachable.
+- **Reopen condition:** automatic when T-12 begins. Any fix must keep T-06's single physical mirror
+  rule and the outboard slot's separation from Moment-targeting space intact: the slot may grow, but
+  it may not become part of the strip, and `presentationX` must keep receiving T-05's own measured
+  viewport.
+- **Status:** `DEFERRED — OWNED`
+
+The two candidate shapes — letting the slot size to its content, or giving the Track row a wrapping
+composition at large text — are recorded as observations, not as a design. Which one is correct
+depends on where the temporal surface finally sits, which is `QAN-BL-T12-03`'s question.
+
 ### `QAN-BL-T13-01` — Restart / Recovery / Persistence
 
 - **Title / Finding:** restart, recovery and persistence of the reader's viewpoint and reversible
@@ -405,15 +477,15 @@ and records the closing task, PR, SHA and a short disposition. IDs are never re-
 
 | Status | Count |
 | --- | --- |
-| `DEFERRED — OWNED` | 6 |
-| `VALIDATION — OPEN` | 2 |
+| `DEFERRED — OWNED` | 7 |
+| `VALIDATION — OPEN` | 3 |
 | `OPEN — UNASSIGNED` | 6 |
 | `CLOSED — TOMBSTONE` | 0 |
-| **Total** | **14** |
+| **Total** | **16** |
 
 | Severity | Count |
 | --- | --- |
-| `HIGH` | 5 |
+| `HIGH` | 7 |
 | `MEDIUM` | 8 |
 | `LOW` | 1 |
 
@@ -454,7 +526,7 @@ Inherited at this baseline:
 | Task | Items it inherits on kickoff |
 | --- | --- |
 | `T-11` | none |
-| `T-12 — Final Integration` | `QAN-BL-T12-01`, `QAN-BL-T12-02`, `QAN-BL-T12-03`, `QAN-BL-MOT-01`, `QAN-BL-MOT-02`, and — at the pre-release physical validation gate — `QAN-BL-MOT-03`, `QAN-BL-MOT-04` |
+| `T-12 — Final Integration` | `QAN-BL-T12-01`, `QAN-BL-T12-02`, `QAN-BL-T12-03`, `QAN-BL-MOT-01`, `QAN-BL-MOT-02`, `QAN-BL-RSP-02`, and — at the pre-release physical validation gate — `QAN-BL-MOT-03`, `QAN-BL-MOT-04`, `QAN-BL-RSP-01` |
 | `T-13 — Recovery / Persistence` | `QAN-BL-T13-01` |
 
 T-11 inherits nothing from this backlog. That is a fact about the register, not a statement that

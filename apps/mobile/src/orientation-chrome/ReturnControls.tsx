@@ -88,9 +88,30 @@ export interface ReturnControlsProps {
   readonly liveContext?: (request: MapProjectionRequest) => ReturnMapContext;
   /** Observes the executor's own answer. Purely informational; it authorizes nothing. */
   readonly onOutcome?: (id: ReturnOpportunityId, outcome: ReturnOutcome) => void;
+  /**
+   * How the offered acts are arranged (T-11). An already-decided ARRANGEMENT, never a measurement.
+   *
+   * This component still reads no width, no breakpoint and no layout: it is told, by the layer that
+   * owns responsive recomposition, whether the room it has been given makes a second column
+   * truthful. Nothing about the answer depends on it — the same acts, in the same order, with the
+   * same words and the same availability, are rendered either way, and both arrangements are
+   * direction-neutral so `row` is the reading direction rather than the physical left.
+   *
+   * `STACKED` is the default because it is the only arrangement that is always truthful.
+   */
+  readonly arrangement?: 'STACKED' | 'PAIRED';
 }
 
-export function ReturnControls({ surface, language, orientation, context, exactReturnTarget, liveContext, onOutcome }: ReturnControlsProps) {
+export function ReturnControls({
+  surface,
+  language,
+  orientation,
+  context,
+  exactReturnTarget,
+  liveContext,
+  onOutcome,
+  arrangement = 'STACKED',
+}: ReturnControlsProps) {
   const run = useCallback(
     (id: ReturnOpportunityId) => {
       // Only an offered act is reachable. The executors would refuse or no-op anyway; refusing here
@@ -147,7 +168,7 @@ export function ReturnControls({ surface, language, orientation, context, exactR
   return (
     <View
       testID={RETURN_CONTROLS_TEST_ID}
-      style={styles.group}
+      style={arrangement === 'PAIRED' ? styles.pairedGroup : styles.group}
       // The group itself claims no touch: only the buttons inside it are targets, so every press
       // that misses a control reaches the world beneath rather than being swallowed here.
       //
@@ -159,7 +180,7 @@ export function ReturnControls({ surface, language, orientation, context, exactR
       accessibilityRole="none"
     >
       {orientation.offered.map((candidate) => (
-        <ReturnControl key={candidate.id} language={language} opportunity={candidate} onPress={run} />
+        <ReturnControl key={candidate.id} language={language} opportunity={candidate} onPress={run} paired={arrangement === 'PAIRED'} />
       ))}
     </View>
   );
@@ -169,6 +190,8 @@ interface ReturnControlProps {
   readonly language: ChromeLanguage;
   readonly opportunity: ReturnOpportunity;
   readonly onPress: (id: ReturnOpportunityId) => void;
+  /** Whether this control shares its row. Layout only: the act, its words and its target are the same. */
+  readonly paired: boolean;
 }
 
 /**
@@ -185,12 +208,12 @@ interface ReturnControlProps {
  * The pressed state is a static opacity swap, not an animation: no duration, no easing and no
  * animation driver. Motion is T-10's.
  */
-function ReturnControl({ language, opportunity, onPress }: ReturnControlProps) {
+function ReturnControl({ language, opportunity, onPress, paired }: ReturnControlProps) {
   const words = returnActWords(language, opportunity.id);
   return (
     <Pressable
       testID={`${RETURN_CONTROLS_TEST_ID}:${opportunity.id}`}
-      style={({ pressed }) => [styles.control, pressed ? styles.pressed : null]}
+      style={({ pressed }) => [styles.control, paired ? styles.pairedControl : null, pressed ? styles.pressed : null]}
       // Horizontal only. The controls are stacked, so a vertical slop would make adjacent hit areas
       // overlap and turn a near-miss into the wrong act; the 44pt minimum already covers the
       // vertical axis, and the group's own gap keeps the targets apart. Symmetric, so it is the
@@ -213,11 +236,22 @@ const HORIZONTAL_SLOP = Object.freeze({ left: 8, right: 8 });
 const styles = StyleSheet.create({
   // `rowGap` keeps adjacent touch targets at least 8pt apart, which is the platform minimum.
   group: { flexDirection: 'column', rowGap: 8 },
+  // Two across, when the layer that owns recomposition says the room makes it truthful. `row` is
+  // the READING direction — React Native reverses it under a right-to-left layout — so the acts
+  // keep their frozen order in both directions and neither the wrapping nor the order is mirrored
+  // into a different meaning. Both gaps stay at the 8pt platform minimum between touch targets.
+  pairedGroup: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 8, rowGap: 8 },
   // `minHeight` rather than `height`, so the control still contains its label at the largest system
   // text size and under Arabic wording that runs longer than the English; 44 is the platform
   // minimum for a comfortable target. Growing downwards can never overlap a sibling, because the
   // group lays them out in a column with a gap.
   control: { minHeight: 44, justifyContent: 'center', paddingVertical: 8 },
+  // A basis under half the row plus the 8pt gap, so exactly two share a line and a third wraps;
+  // `flexGrow` lets a lone control on the last line take the whole measure rather than half of it.
+  // No `width`, no `maxWidth` and no `numberOfLines`: the cell is a floor for the words, never a
+  // ceiling, so the control still grows downwards to contain the longest Arabic wording at the
+  // largest text size.
+  pairedControl: { flexBasis: '48%', flexGrow: 1 },
   pressed: { opacity: 0.6 },
   label: { fontSize: 15, lineHeight: 24, fontWeight: '600' },
   hint: { fontSize: 13, lineHeight: 21 },

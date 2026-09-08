@@ -194,14 +194,19 @@ test('the mirror is a faithful, independently runnable copy of the repository', 
 // ---------------------------------------------------------------------------------------------
 
 /**
- * T-10 re-anchor. The hypothetical used to be T-10's own gate; T-10 has now registered it for
- * real, so re-using that name would insert a DUPLICATE registration — which several contracts
- * correctly refuse, and rightly so. A hypothetical has to stay hypothetical, so it moves to the
- * next gate that is genuinely still in the future. The claim is unchanged and unweakened: a later
- * task registering its own Node-only mobile gate is authorized work.
+ * T-11 re-anchor, for the same reason as the T-10 one before it.
+ *
+ * The hypothetical was T-10's gate, then T-11's; each in turn registered it for real, and re-using
+ * a registered name would insert a DUPLICATE registration — which several contracts correctly
+ * refuse. A hypothetical has to stay hypothetical, so it moves on to the next gate that is
+ * genuinely still in the future. The claim is unchanged and unweakened: a later task registering
+ * its own Node-only mobile gate is authorized work.
+ *
+ * This is the mechanism working, not drifting: the assertion that survives is a property of gate
+ * registration in general, and the name it is demonstrated with is deliberately disposable.
  */
-const FUTURE_GATE = 'test:t11-responsive-contract';
-const FUTURE_GATE_FILE = 'tests/t11-responsive-contract.test.mjs';
+const FUTURE_GATE = 'test:t12-integration-contract';
+const FUTURE_GATE_FILE = 'tests/t12-integration-contract.test.mjs';
 
 test('a future authorized Mobile CI gate breaks no historical contract', () => scenario(
   ['.github/workflows/mobile-ci.yml', 'package.json', FUTURE_GATE_FILE],
@@ -236,7 +241,7 @@ test('a future authorized migration breaks no T-03C, T-03D or Thread-layer contr
 }));
 
 const CHROME_MUTATIONS = ['apps/mobile/src/orientation-chrome/motion.ts', 'apps/mobile/src/orientation-chrome/OrientationChrome.tsx',
-  'apps/mobile/src/shell/FoundationShell.tsx', 'apps/mobile/package.json'];
+  'apps/mobile/src/orientation-chrome/ReturnControls.tsx', 'apps/mobile/src/shell/FoundationShell.tsx', 'apps/mobile/package.json'];
 
 test('authorized T-10 motion, T-11 responsive work and T-12 shell integration break no T-08 contract', () => scenario(CHROME_MUTATIONS, () => {
   const chrome = 'apps/mobile/src/orientation-chrome';
@@ -247,8 +252,19 @@ test('authorized T-10 motion, T-11 responsive work and T-12 shell integration br
     'export const presence = (to: number) => withTiming(to, { duration: 160 });\n');
   patch(`${chrome}/OrientationChrome.tsx`,
     (text) => text.replace("import { StyleSheet, Text, View } from 'react-native';",
-      "import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';\nimport Animated, { useSharedValue } from 'react-native-reanimated';"),
+      "import { StyleSheet, Text, View } from 'react-native';\nimport Animated, { useSharedValue } from 'react-native-reanimated';"),
     'react-native-reanimated');
+  // T-11 re-anchor: responsive work in the components is authorized, and this is the SHAPE it took.
+  //
+  // The mutation used to add `useWindowDimensions` here. T-11 has now landed, and it deliberately
+  // did NOT teach the chrome to measure: the recomposition layer decides the arrangement from a
+  // measured container and passes an already-decided token, which is what T-08 Â§11 meant by "it has
+  // no width, breakpoint or layout input". A chrome that read the window would now be a defect, so
+  // that mutation has moved to the refused half below, where it belongs — the authorized claim is
+  // demonstrated with the presentation change T-11 actually makes.
+  patch(`${chrome}/ReturnControls.tsx`,
+    (text) => text.replace('  pressed: { opacity: 0.6 },', "  wrapped: { flexDirection: 'row', flexWrap: 'wrap' },\n  pressed: { opacity: 0.6 },"),
+    'wrapped:');
   // T-12: the app shell mounts the chrome — through the public barrel, as the boundary requires.
   patch('apps/mobile/src/shell/FoundationShell.tsx',
     (text) => `import { OrientationChrome } from '../orientation-chrome';\n${text}`,
@@ -347,8 +363,14 @@ function applyEveryAuthorizedChange() {
     'export const presence = (to: number) => withTiming(to, { duration: 160 });\n');
   patch('apps/mobile/src/orientation-chrome/OrientationChrome.tsx',
     (text) => text.replace("import { StyleSheet, Text, View } from 'react-native';",
-      "import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';\nimport Animated, { useSharedValue } from 'react-native-reanimated';"),
+      "import { StyleSheet, Text, View } from 'react-native';\nimport Animated, { useSharedValue } from 'react-native-reanimated';"),
     'react-native-reanimated');
+  // T-11 re-anchor, matching the scenario above: responsive work in the components is authorized,
+  // and the shape it took is a presentation arrangement rather than a window measurement. Reading
+  // the display here is now a defect, and is proven refused in the negative half.
+  patch('apps/mobile/src/orientation-chrome/ReturnControls.tsx',
+    (text) => text.replace('  pressed: { opacity: 0.6 },', "  wrapped: { flexDirection: 'row', flexWrap: 'wrap' },\n  pressed: { opacity: 0.6 },"),
+    'wrapped:');
   patch('apps/mobile/src/shell/FoundationShell.tsx',
     (text) => `import { OrientationChrome } from '../orientation-chrome';\n${text}`,
     "from '../orientation-chrome'");
@@ -471,6 +493,46 @@ test('a semantic helper that reads a gesture is refused', () => scenario([MODEL,
 test('a semantic module that reaches sideways into a future presentation layer is refused', () => scenario([RETURN_ORIENTATION], () => {
   patch(RETURN_ORIENTATION, (text) => `import { breakpointOf } from '../responsive';\n${text}`, "from '../responsive'");
   assertRefused('inspection-orientation-return-chrome-contract', 'a semantic module may only reach an authorized owner layer');
+}));
+
+// ---------------------------------------------------------------------------------------------
+// T-11's own half of the refusals. The responsive owner is a closure, not a convention: what it may
+// never reach must fail when reached, or the boundary is only a comment.
+// ---------------------------------------------------------------------------------------------
+
+const CHROME_COMPONENT = 'apps/mobile/src/orientation-chrome/OrientationChrome.tsx';
+const RESPONSIVE_PLAN = 'apps/mobile/src/responsive/plan.ts';
+const RESPONSIVE_HELPER = 'apps/mobile/src/responsive/helper.ts';
+
+test('a Product surface that takes the DISPLAY as its responsive authority is refused', () => scenario([CHROME_COMPONENT], () => {
+  // The mutation the old authorized scenario used to perform. A reusable surface does not own the
+  // display: it is composed inside something, and answering "how big is the screen" confidently is
+  // how one Product becomes two.
+  patch(CHROME_COMPONENT,
+    (text) => text.replace("import { StyleSheet, Text, View } from 'react-native';", "import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';"),
+    'useWindowDimensions');
+  assertRefused('t11-responsive-contract', 'the measured container is the only responsive authority');
+}));
+
+test('a responsive module that reaches a canonical executor is refused', () => scenario([RESPONSIVE_PLAN], () => {
+  patch(RESPONSIVE_PLAN, (text) => `import { returnWorld } from '../return-navigation';\n${text}`, "from '../return-navigation'");
+  assertRefused('t11-responsive-contract', 'a layout may never reach an act');
+}));
+
+test('a responsive helper that names a Product concept is refused', () => scenario([RESPONSIVE_PLAN, RESPONSIVE_HELPER], () => {
+  addModule(RESPONSIVE_HELPER, 'export const FOLLOW_LIVE = 1;\n');
+  patch(RESPONSIVE_PLAN, (text) => `import { FOLLOW_LIVE } from './helper';\n${text}`, "from './helper'");
+  assertRefused('t11-responsive-contract', 'no Product answer can be spelled in a layout');
+}));
+
+test('a responsive module that invents its own motion vocabulary is refused', () => scenario([RESPONSIVE_PLAN], () => {
+  patch(RESPONSIVE_PLAN, (text) => `import { withTiming } from 'react-native-reanimated';\nexport const ease = () => withTiming(1);\n${text}`, 'withTiming');
+  assertRefused('t11-responsive-contract', 'a window is not a destination, and a resize is not a transition');
+}));
+
+test('a chrome that branches on a device class is refused', () => scenario([CHROME_COMPONENT], () => {
+  patch(CHROME_COMPONENT, (text) => text.replace("import { useCallback", "import { Platform } from 'react-native';\nimport { useCallback"), 'Platform');
+  assertRefused('t11-responsive-contract', 'a breakpoint that names a device becomes a Product concept');
 }));
 
 test('the mirror is back to the real repository after the transitive mutations', () => {

@@ -43,6 +43,36 @@
  * one on release, and either can be abandoned. `enabled` is honoured for gestures that have not
  * started yet; an in-flight gesture is not cancelled by it, which is Gesture Handler's own
  * behaviour and is safe here because ending an in-flight gesture always goes through `settle`.
+ *
+ * ## An interaction also belongs to the GEOMETRY it began under (T-11)
+ *
+ * The epoch above answers "which gesture is speaking". It cannot answer "does this coordinate still
+ * mean what it meant", and that is a different question with the same shape.
+ *
+ * A finger position is physical. It becomes a disclosed step through `presentationX(x, viewport,
+ * rtl)` and the window offset, and the viewport is a MEASURED presentation quantity: a rotation, a
+ * split-view drag, a safe-area change or a font-scale reflow can change it while a finger is still
+ * down. When it does, the very same untouched physical point resolves to a different step — and in
+ * right-to-left it resolves to a step on the other side of the strip, because the mirror is taken
+ * about a width that no longer exists. The open interaction would then retarget its Preview to a
+ * Moment the reader never pointed at, and its release would COMMIT that Moment. Nothing in the
+ * epoch machine can see it: the gesture never ended, so its epoch is still current and still open.
+ *
+ * So an interaction carries the presentation geometry generation it began under, exactly as it
+ * carries its epoch. The generation advances only when the two quantities the MAPPING is taken
+ * through change — the viewport and the direction. The window offset is deliberately not one of
+ * them: scrolling the Track during a scrub is a presentation move T-05 and T-06 already support,
+ * the offset is read live on the UI runtime, and the finger keeps pointing at the physical place it
+ * is pointing at.
+ *
+ * When the generation advances under a live finger the interaction is RETIRED through T-06's own
+ * interruption route — `settle(epoch, false)`, the same path a cancellation, a failure and a
+ * competing recognizer take. That closes the interaction, discards the Preview it established, and
+ * writes nothing canonical. Everything that follows falls out of the epoch machine rather than out
+ * of a new rule: the reaction stops scheduling because its captured generation is stale, and the
+ * gesture's own eventual end arrives with an epoch that is current but CLOSED, so it is ignored. A
+ * stale coordinate therefore cannot commit a Moment, cannot retarget a Preview and cannot be
+ * adopted by the geometry that replaced it — and no timer decides any of it.
  */
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
@@ -55,6 +85,14 @@ import { createScrubCoordinator, createScrubForwarder, type ScrubDependencies, t
 
 /** No disclosed step is under the finger. Never a valid index, so it can never target anything. */
 const NO_STEP = -1;
+
+/**
+ * The mapping every surface starts with. Declared here rather than imported from the responsive
+ * owner: this guard is T-06's own interaction ownership, it must hold for every caller — including
+ * one that composes the strip itself — and a temporal layer that needed a presentation layer to be
+ * mounted before it could refuse a stale coordinate would be exactly the wrong dependency.
+ */
+const FIRST_GEOMETRY_GENERATION = 1;
 
 export interface TemporalScrubGeometry {
   readonly viewport: number;
@@ -112,15 +150,32 @@ export function useTemporalScrub(options: TemporalScrubOptions): TemporalScrubBi
   const viewport = useSharedValue(geometry.viewport);
   const windowOffset = useSharedValue(geometry.windowOffset);
   const rtl = useSharedValue(geometry.rtl ? 1 : 0);
+  // How many times the MAPPING has been replaced, and which replacement the open gesture belongs to.
+  // Presentation only, and never a Product count: it names no target, no Moment and no act.
+  const geometryGeneration = useSharedValue(FIRST_GEOMETRY_GENERATION);
+  const gestureGeometry = useSharedValue(FIRST_GEOMETRY_GENERATION);
+  const mapping = useRef<{ readonly viewport: number; readonly rtl: boolean } | null>(null);
   useLayoutEffect(() => {
     viewport.set(geometry.viewport);
     windowOffset.set(geometry.windowOffset);
     rtl.set(geometry.rtl ? 1 : 0);
-  }, [geometry.viewport, geometry.windowOffset, geometry.rtl, viewport, windowOffset, rtl]);
+    const previous = mapping.current;
+    mapping.current = { viewport: geometry.viewport, rtl: geometry.rtl };
+    // The first mapping replaces nothing; there is no interaction that could predate it.
+    if (previous === null || (previous.viewport === geometry.viewport && previous.rtl === geometry.rtl)) return;
+    geometryGeneration.set(geometryGeneration.get() + 1);
+    // A bounded read at a commit boundary — never during render, never per frame. A finger that is
+    // down right now is pointing through a mapping that no longer exists, so its interaction is
+    // interrupted through the route every other interruption takes.
+    if (tracking.get() === 1) handlers.settle(epoch.get(), false);
+  }, [geometry.viewport, geometry.windowOffset, geometry.rtl, viewport, windowOffset, rtl, geometryGeneration, tracking, handlers, epoch]);
 
   useAnimatedReaction(
     () => {
       if (tracking.get() !== 1) return NO_STEP;
+      // A coordinate taken under a replaced mapping is not a coordinate in this one. It is dropped
+      // rather than converted: converting it would be inventing a place the finger never touched.
+      if (geometryGeneration.get() !== gestureGeometry.get()) return NO_STEP;
       const logical = presentationX(fingerX.get(), viewport.get(), rtl.get() === 1);
       if (logical === null) return NO_STEP;
       return Math.floor((windowOffset.get() + logical) / TIMELINE_STEP);
@@ -140,6 +195,8 @@ export function useTemporalScrub(options: TemporalScrubOptions): TemporalScrubBi
           // One increment per gesture, before anything can be scheduled for it. Every later
           // callback of this gesture carries this number, and no other gesture can reuse it.
           epoch.set(epoch.get() + 1);
+          // And the mapping it is being performed through, stamped before the first point.
+          gestureGeometry.set(geometryGeneration.get());
           fingerX.set(event.x);
           tracking.set(1);
         })
@@ -157,7 +214,7 @@ export function useTemporalScrub(options: TemporalScrubOptions): TemporalScrubBi
           tracking.set(0);
           if (success !== true) scheduleOnRN(handlers.settle, epoch.get(), false);
         }),
-    [enabled, fingerX, tracking, epoch, handlers],
+    [enabled, fingerX, tracking, epoch, gestureGeometry, geometryGeneration, handlers],
   );
 
   return { gesture, handlers };
