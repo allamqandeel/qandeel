@@ -306,3 +306,31 @@ edge · cinematic camera arc · Exact Return lock frame · Preview world veil.
 
 Every one is refused by `tests/t10-motion-contract.test.mjs`, which also plants each class of defect
 into a mirrored copy of the owner and requires its own scan to catch it.
+
+### The scope of that list — QAN-GOV-02
+
+Every entry above is refused as a **motion or dynamic-response behaviour**, and every one stays
+refused exactly as written. Two of them name a noun rather than a behaviour — `permanent glow or
+neon` and `particle field` — and in this list those nouns mean the moving thing they have always
+meant here: a luminance that pulses, breathes, ignites or repeats, and a field of particles that
+drifts or reacts to the reader.
+
+They are **not** a ban on the underlying Static/Graphic Visual Language. Restrained persistent
+luminance, low-energy luminous halos, atmospheric glow and falloff, luminous semantic territories,
+non-semantic dust or filamentary texture, sparse points of light, atmospheric depth and restrained
+Living Brass illumination are visual-material questions. T-10 owns motion semantics and dynamic
+response; it does not own, and never froze, what the world is made of when it is standing still.
+
+What governs that material is the rule that governs everything drawn: **a visual relationship may be
+drawn only if it is true of the runtime.** Material may not invent a relation, use intensity for
+confidence, importance or recency, use direction or flow for causality, manufacture rank, disclose
+what the current `V` does not, or stand in for Product state. The gate is truth, not restraint.
+
+The boundary runs the other way too, and that half is what keeps this section whole: **material that
+is legal while still is not thereby legal to move.** Animating a halo, a filament, a dust field or a
+luminous substrate is a motion question, answered here and by the gate — never by this clarification.
+QAN-GOV-02 authorizes no new motion and re-authorizes nothing on this list.
+
+The gate itself is unchanged. Its scans read comment-stripped **source identifiers inside the owner's
+own code**, never rendered output and never documentation, and a future visual implementation is
+expected to satisfy them as they stand. See `docs/visual-motion-authority-boundary-v1.md`.

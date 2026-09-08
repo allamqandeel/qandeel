@@ -87,6 +87,15 @@ Next task: **VI-03 — Visual North Star + Graphic Language**.
   rules `BG-01 … BG-08`, of which the first is that a finding violating the ACTIVE task contract may
   never be moved to backlog in order to close that task. Architecture checks it at every task
   kickoff. Documentation only; an item becomes executable only through a future Task Contract.
+- [Visual ↔ Motion Authority Boundary v1](visual-motion-authority-boundary-v1.md) — QAN-GOV-02, the
+  canonical boundary between the two owners: **static/material richness is governed by visual truth;
+  dynamic response is governed by motion truth.** T-10 §11's `permanent glow or neon` and `particle
+  field` are motion/dynamic-response rejections, not a ban on restrained persistent luminance,
+  atmospheric depth or non-semantic particulate/filament texture — and material that is legal at rest
+  is not thereby legal to move. Every T-10 dynamic rejection stays frozen, the T-10 executable
+  contract is unchanged, no new motion is authorized, and the truth rule — *a visual relationship may
+  be drawn only if it is true of the runtime* — remains the gate. Documentation only; no production,
+  runtime or database behaviour.
 
 ## Operational Foundation hardening
 
