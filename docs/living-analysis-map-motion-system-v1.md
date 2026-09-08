@@ -1,6 +1,7 @@
 # QANDEEL — Living Analysis Map Motion System v1
 
-**Task:** T-10 · **Status:** production candidate, pending independent Architecture + Motion review
+**Task:** T-10 · **Status:** CLOSED / FROZEN
+**Merge commit:** `4473beb3d34993103baa82c034a76998bb40bc03` (PR #213)
 **Owner:** `apps/mobile/src/motion/**` (presentation only)
 **Gate:** `tests/t10-motion-contract.test.mjs` (`npm run test:t10-motion-contract`)
 
@@ -124,9 +125,13 @@ canonical state, which is a reading of truth rather than a claim about intent.
 | `BACK_ONE_STEP` | captured tuple | M4 where the camera differs, reinforcement where the rung differs, M2 where `TC` differs. Interruptible throughout. |
 | `EXACT_RETURN` | captured tuple, exactly | The same vocabulary as Back. No lock frame, no ink, no brass. |
 
-The **motion cause channel** (`createMotionCauseChannel`) exists only for the composite beat. It is
-written from an outcome T-07 has *already returned*, exactly as T-08's `onReturnOutcome` reports it;
-it is one-shot, cleared on read, and armed by nothing else. A refused or no-op act arms nothing.
+The composite beat has **no production cause**:
+**`COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12`.** The pure composite choreography stays in
+T-10 — `presentationTravelPlan` accepts a `GO_LIVE_AND_LOCATE` cause and returns the 110 ms beat,
+and that path is tested — but no generic pending stateful cause channel ships as production
+integration. The camera passes `null` unconditionally, and nothing in production can produce a
+cause. Binding an outcome T-07 has *already returned* to the exact camera transition it belongs to
+is a composition fact this owner does not have; it belongs to T-12. See §10a.
 
 T-08 needed no change: `onReturnOutcome` already exists on `OrientationChrome`.
 
