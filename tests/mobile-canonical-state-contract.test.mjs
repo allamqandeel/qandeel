@@ -222,7 +222,11 @@ test('no persistence, no state library and no dependency change', async () => {
     'react-native-mmkv',
     '@react-native-async-storage/async-storage',
     'expo-secure-store',
-    'expo-sqlite',
+    // `expo-sqlite` was removed from this denylist by T-12P §2.4, which authorizes exactly one
+    // narrow re-anchor: an AUTHENTICATION session store. The T-02 invariant this list defends is
+    // untouched and is still proven, twice over — the loop below keeps the state layer free of
+    // every storage API by name, and tests/t12p-mobile-runtime-entry-contract.test.mjs proves the
+    // package is reachable from one module only and that no canonical state is ever persisted.
   ]) {
     const copies = Object.keys(lock.packages).filter((key) => key === `node_modules/${name}` || key.endsWith(`/node_modules/${name}`));
     assert.deepEqual(copies, [], `${name} must not be installed`);

@@ -984,7 +984,10 @@ test('the temporal layer adds no dependency, and no state, persistence or naviga
     }
   }
   const lock = await readJson('package-lock.json');
-  for (const name of ['zustand', 'redux', '@reduxjs/toolkit', 'react-redux', 'immer', 'xstate', 'jotai', 'mobx', 'valtio', 'recoil', 'react-native-mmkv', '@react-native-async-storage/async-storage', 'expo-secure-store', 'expo-sqlite', 'moment', 'dayjs', 'date-fns', 'luxon']) {
+  // `expo-sqlite` left this denylist under T-12P §2.4 (authentication session store only). The
+  // T-06 invariant is unaffected and still exactly proven by the specifier census above: every
+  // module the temporal layer imports is already an authorized dependency of this app.
+  for (const name of ['zustand', 'redux', '@reduxjs/toolkit', 'react-redux', 'immer', 'xstate', 'jotai', 'mobx', 'valtio', 'recoil', 'react-native-mmkv', '@react-native-async-storage/async-storage', 'expo-secure-store', 'moment', 'dayjs', 'date-fns', 'luxon']) {
     const copies = Object.keys(lock.packages).filter((key) => key === `node_modules/${name}` || key.endsWith(`/node_modules/${name}`));
     assert.deepEqual(copies, [], `${name} must not be installed`);
   }

@@ -420,6 +420,49 @@ Contract: `npm run test:inspection-orientation-return-chrome-contract` (reposito
 Jest suites under `src/orientation-chrome/__tests__/`. Design notes:
 `docs/inspection-orientation-return-chrome-v1.md`.
 
+## Mobile runtime entry (T-12P)
+
+`src/runtime-entry/` is the first legitimate path into a live runtime: it obtains an authenticated
+identity, acquires one QANDEEL conversation Session, builds the canonical store exactly once, and
+keeps the authoritative live mirrors caught up. It mounts nothing — `FoundationShell` is still the
+route output, and replacing it is T-12's job.
+
+- **Public config** (`config/`): `app.config.js` -> Expo `extra` -> `expo-constants` -> a validated
+  `MobilePublicConfig`. This is the ONE place ambient configuration is read, and no runtime module
+  reads `process.env`. It fails closed on a missing, blank or malformed value. The Supabase key is an
+  ALLOWLIST of two documented shapes — the documented new-format structure
+  `sb_publishable_<22-char-random>_<8-char-checksum>`, or a legacy JWT whose decoded role is exactly
+  `anon` — so an elevated key, a user's own token, a malformed JWT, an arbitrary string and a
+  well-prefixed key of the wrong structure are all refused. The checksum itself is not verified: no
+  algorithm is documented for it, and the client does not invent one. Origins must be HTTPS; there is one off-by-default development seam that admits
+  loopback hosts only and can never make a remote cleartext origin valid. `app.json` is untouched and
+  still carries no `extra`.
+- **Identity** (`auth/`): the mobile app gets its own Supabase Auth session and forwards the access
+  token to this API as a bearer; the API remains the verifier and gained no route. `authGeneration`
+  identifies an authenticated IDENTITY, not a token — a refresh keeps it, which is precisely why a
+  refresh cannot create a second conversation Session. A sign-out closes the auth epoch, and while it
+  is closed only an explicit `SIGNED_IN` may authenticate again, so a refresh callback still in
+  flight cannot resurrect a signed-out reader. Tokens are never logged, and the refresh token never
+  crosses the port at all. The session store (`expo-sqlite/kv-store`, its own database file) holds
+  authentication material ONLY; Product persistence remains T-13's. **That store is not encrypted at
+  rest and no test or CI job exercises its real persistence path — see `QAN-BL-T12-04` in the
+  canonical backlog, which owns the device validation and the encrypted-at-rest disposition.**
+- **Conversation Session** (`conversation/`): `POST /conversation/sessions` is NOT idempotent and the
+  API's five-second upstream abort surfaces as a 503 after the INSERT may have committed, so an
+  ambiguous outcome is reported as typed `OUTCOME_UNKNOWN` and is never retried. Duplicate prevention
+  lives in the coordinator, which memoises its bootstrap per auth generation.
+- **Bootstrap** (`bootstrap/`): store created LAST, exactly once per runtime generation, from frozen
+  laws only — `FOLLOW_LIVE`, `initialCameraIntent()`, `inspection: null`. A brand-new Session has
+  `LH = null`, so no `SP(1)` and no `V` are invented and no projection is requested.
+- **Live driver** (`live/`): foreground-only HTTP catch-up over the existing T-03 transports. No
+  WebSocket, no SSE, no background polling. One injected cadence (5000 ms, justified and pinned in one
+  owner) with bounded jittered backoff; every application is gated on the runtime generation and the
+  authenticated identity, so sign-out, user replacement and disposal produce zero late writes.
+
+Contract: `npm run test:t12p-mobile-runtime-entry-contract` (repository root) plus the Jest suites
+under `src/runtime-entry/__tests__/`. Design notes:
+`docs/mobile-runtime-entry-preconditions-v1.md`.
+
 ## Repository forward-safety gate
 
 `npm run test:forward-safety-contract` (repository root) mirrors the repository, applies the
@@ -522,3 +565,11 @@ shell is visible; no gesture or accessibility Product suite exists yet.
 
 No provider keys, credentials or secret-bearing environment files belong in this workspace
 or in the app bundle.
+
+T-12P added the one authorized exception in shape, not in kind: three PUBLIC facts — the API base
+URL, the Supabase project URL and the Supabase **publishable** key — reach the bundle through
+`app.config.js` and Expo `extra`. Supabase documents the publishable key as safe to ship because Row
+Level Security, not the key, is the boundary. Everything placed in `extra` is readable by anyone
+holding the binary, so nothing else may go there: a Supabase **secret** key, a provider key, a
+database password or any private credential is still forbidden, and the config authority refuses an
+elevated key at runtime rather than shipping it.

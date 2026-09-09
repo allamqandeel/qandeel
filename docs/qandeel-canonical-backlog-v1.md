@@ -132,6 +132,7 @@ still not automatically backlog (BG-06), and admission still authorizes no imple
 | `QAN-BL-MOT-04` | Direct-Drag Presentation Culling | `T-12 — Final Integration / pre-release physical validation gate` | `MEDIUM` | `VALIDATION — OPEN` |
 | `QAN-BL-RSP-01` | Physical Responsive Recomposition Validation | `T-12 — Final Integration / pre-release physical validation gate` | `HIGH` | `VALIDATION — OPEN` |
 | `QAN-BL-RSP-02` | Outboard Live Label Clipped at Large Text | `T-12 — Final Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-T12-04` | Mobile Auth Session Storage Production Security + Device Validation | `T-12 — Final Integration / pre-release physical validation gate` | `HIGH` | `VALIDATION — OPEN` |
 | `QAN-BL-T13-01` | Restart / Recovery / Persistence | `T-13 — Recovery / Persistence` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-NAV-01` | Cross-Session Timeline | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-NAV-02` | Analysis Replay | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
@@ -425,6 +426,49 @@ The two candidate shapes — letting the slot size to its content, or giving the
 composition at large text — are recorded as observations, not as a design. Which one is correct
 depends on where the temporal surface finally sits, which is `QAN-BL-T12-03`'s question.
 
+### `QAN-BL-T12-04` — Mobile Auth Session Storage Production Security + Device Validation
+
+- **Title / Finding:** the mobile auth-session store that T-12P introduced is **not encrypted at
+  rest**, and no test or CI job exercises its real persistence path. It holds Supabase session
+  material — an access token and a refresh token — through `expo-sqlite/kv-store` in its own
+  database file.
+- **Source:** [T-12P §4 and §9](mobile-runtime-entry-preconditions-v1.md), which record the storage
+  choice, its threat posture and the exact claims local gates cannot make. Admitted under BG-06 by
+  the T-12P R1 independent Architecture + Security review.
+- **Why deferred:** it is a validation and disposition item, not a defect and not unfinished work.
+  The adapter follows a current official Expo/Supabase integration path and adds no custom
+  cryptography, which is what T-12P was authorized to do. What cannot be settled from code and CI on
+  the authoring host is how the real store behaves on device and whether an encrypted-at-rest
+  mechanism is warranted — and that judgement needs the then-current official guidance and the
+  actual observed session size, neither of which is knowable in advance.
+- **Owner task:** `T-12 — Final Integration / pre-release physical validation gate`
+- **Severity:** `HIGH` — persisted authentication material on a device is a credential-exposure
+  surface, even though nothing is known to be wrong today.
+- **Validation set:** on release-equivalent or physical iOS **and** Android, exercise the real
+  auth-session storage path end to end:
+  1. persist a session;
+  2. restart the process and restore the auth session only — with no Product truth restored;
+  3. refresh the token and confirm the persisted material is replaced, not duplicated;
+  4. sign out and confirm the credential is removed;
+  5. replace the identity and confirm the previous identity's material cannot be read back.
+- **Reopen condition:** device evidence shows a session that fails to persist or restore, credential
+  material surviving a sign-out, one identity reading another's material, a stored value the chosen
+  mechanism cannot hold, or any other violation of the T-12P storage boundary.
+- **Required disposition at that gate:** Architecture and Security explicitly disposition
+  encrypted-at-rest storage using the **then-current** maintained official Expo/Supabase pattern and
+  the observed stored-session behaviour and size. Official guidance is currently mixed — Supabase's
+  React Native quickstart uses AsyncStorage, its Expo quickstart and Expo's own Supabase guide use
+  `expo-sqlite`, while Supabase's client reference documents a SecureStore-backed `LargeSecureStore`
+  and Expo's authentication guide recommends `expo-secure-store` for tokens — so the choice must be
+  made against the guidance and evidence of that day rather than restated from this entry. If SQLite
+  remains, its threat model and acceptance must be written down explicitly.
+- **Status:** `VALIDATION — OPEN`
+
+This is validation residue. It is **not** T-13 Product persistence: `CanonicalState`, the camera,
+TC/PTC, RH, inspection, Live Focus, Return state, the disclosure cache and the conversation
+`sessionId` remain forbidden from this store and stay T-13's. It is also not an auth UI question. No
+custom or hand-rolled cryptography is authorized by this entry.
+
 ### `QAN-BL-T13-01` — Restart / Recovery / Persistence
 
 - **Title / Finding:** restart, recovery and persistence of the reader's viewpoint and reversible
@@ -478,16 +522,19 @@ and records the closing task, PR, SHA and a short disposition. IDs are never re-
 | Status | Count |
 | --- | --- |
 | `DEFERRED — OWNED` | 7 |
-| `VALIDATION — OPEN` | 3 |
+| `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 6 |
 | `CLOSED — TOMBSTONE` | 0 |
-| **Total** | **16** |
+| **Total** | **17** |
 
 | Severity | Count |
 | --- | --- |
-| `HIGH` | 7 |
+| `HIGH` | 8 |
 | `MEDIUM` | 8 |
 | `LOW` | 1 |
+
+`QAN-BL-T12-04` was admitted under BG-06 by the T-12P R1 independent Architecture + Security review.
+It is the only addition since this document's own baseline.
 
 ---
 
@@ -526,7 +573,7 @@ Inherited at this baseline:
 | Task | Items it inherits on kickoff |
 | --- | --- |
 | `T-11` | none |
-| `T-12 — Final Integration` | `QAN-BL-T12-01`, `QAN-BL-T12-02`, `QAN-BL-T12-03`, `QAN-BL-MOT-01`, `QAN-BL-MOT-02`, `QAN-BL-RSP-02`, and — at the pre-release physical validation gate — `QAN-BL-MOT-03`, `QAN-BL-MOT-04`, `QAN-BL-RSP-01` |
+| `T-12 — Final Integration` | `QAN-BL-T12-01`, `QAN-BL-T12-02`, `QAN-BL-T12-03`, `QAN-BL-MOT-01`, `QAN-BL-MOT-02`, `QAN-BL-RSP-02`, and — at the pre-release physical validation gate — `QAN-BL-MOT-03`, `QAN-BL-MOT-04`, `QAN-BL-RSP-01`, `QAN-BL-T12-04` |
 | `T-13 — Recovery / Persistence` | `QAN-BL-T13-01` |
 
 T-11 inherits nothing from this backlog. That is a fact about the register, not a statement that
