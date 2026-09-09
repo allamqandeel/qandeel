@@ -228,6 +228,15 @@ export interface AuthPortDouble extends SupabaseAuthPort {
   readonly listenerCount: () => number;
   restoreWith(result: AuthPortResult<AuthSessionSnapshot | null>): void;
   signInWith(result: AuthPortResult<AuthSessionSnapshot>): void;
+  /**
+   * Make `signInWithPassword` block until the returned gate is opened, and — crucially — emit
+   * `SIGNED_IN` to the subscriber BEFORE resolving, exactly as the maintained SDK does.
+   *
+   * `GoTrueClient.signInWithPassword` is `_saveSession` ->
+   * `await _notifyAllSubscribers('SIGNED_IN', session)` -> `return`. A double that resolves without
+   * emitting first is not production-faithful and cannot discriminate the R2-01 race at all.
+   */
+  blockSignIn(session: AuthSessionSnapshot): Gate;
 }
 
 export function authPortDouble(initial: AuthSessionSnapshot | null = null): AuthPortDouble {
@@ -235,8 +244,18 @@ export function authPortDouble(initial: AuthSessionSnapshot | null = null): Auth
   const autoRefresh = { started: 0, stopped: 0 };
   let restore: AuthPortResult<AuthSessionSnapshot | null> = { ok: true, value: initial };
   let signIn: AuthPortResult<AuthSessionSnapshot> | null = null;
+  let blocked: { gate: Gate; session: AuthSessionSnapshot } | null = null;
+
+  const notify = (change: AuthSessionChange) => {
+    for (const listener of Array.from(listeners)) listener(change);
+  };
 
   return {
+    blockSignIn(session) {
+      const opened = gate();
+      blocked = { gate: opened, session };
+      return opened;
+    },
     autoRefresh,
     listenerCount: () => listeners.size,
     restoreWith: (result) => {
@@ -246,11 +265,21 @@ export function authPortDouble(initial: AuthSessionSnapshot | null = null): Auth
       signIn = result;
     },
     emit: (session, kind = 'TOKEN_REFRESHED') => {
-      for (const listener of Array.from(listeners)) listener({ kind, session });
+      notify({ kind, session });
     },
     restoreSession: async () => restore,
-    signInWithPassword: async (email) =>
-      signIn ?? { ok: true, value: { userId: `user-for-${email}`, accessToken: `token-for-${email}` } },
+    signInWithPassword: async (email) => {
+      if (blocked !== null) {
+        const pending = blocked;
+        blocked = null;
+        await pending.gate.wait();
+        // Production ordering: the SDK saves the session, awaits its subscribers, and only then
+        // returns. A double that skipped this could not discriminate a stale sign-in at all.
+        notify({ kind: 'SIGNED_IN', session: pending.session });
+        return { ok: true, value: pending.session };
+      }
+      return signIn ?? { ok: true, value: { userId: `user-for-${email}`, accessToken: `token-for-${email}` } };
+    },
     signOut: async () => ({ ok: true, value: null }),
     onSessionChange: (listener) => {
       listeners.add(listener);

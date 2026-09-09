@@ -120,6 +120,54 @@ test('R1-04A — only the two documented publishable shapes are accepted', () =>
   expect(readMobilePublicConfig({ ...complete, supabasePublishableKey: legacyKey('anon') }).ok).toBe(true);
 });
 
+test('R2-02 — the new-format prefix is necessary but not sufficient', () => {
+  // Documented shape: the `sb_publishable_` prefix, and "short strings, not JWTs". No charset and no
+  // length is documented anywhere, and supabase-js itself validates nothing beyond the prefix — so
+  // the payload is required to be non-empty printable non-space ASCII and nothing narrower is
+  // invented. A guessed alphabet or length would reject a valid production key.
+  expect(readMobilePublicConfig({ ...complete, supabasePublishableKey: 'sb_publishable_aB3-_x9' }).ok).toBe(true);
+
+  const malformed: readonly string[] = [
+    // Written as ESCAPES on purpose: a literal control or bidi character in source makes git
+    // treat the file as binary and would be caught by the repository's own encoding sweep.
+    'sb_publishable_', // the bare prefix
+    'sb_publishable_ ', // a trailing space
+    'sb_publishable_abc def', // an interior space
+    'sb_publishable_abc\t', // a tab
+    'sb_publishable_abc\n', // a newline
+    'sb_publishable_abc\r', // a carriage return - the header-injection shape
+    'sb_publishable_abc\u0000', // NUL
+    'sb_publishable_abc\u007F', // DEL
+    'sb_publishable_abc\u00E9', // non-ASCII
+    'sb_publishable_abc\u200E', // a bidi control
+  ];
+  for (const value of malformed) {
+    const result = readMobilePublicConfig({ ...complete, supabasePublishableKey: value });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error(`accepted a malformed key: ${JSON.stringify(value)}`);
+    expect(result.failure.kind).toBe('UNSUPPORTED_KEY_SHAPE');
+  }
+});
+
+test('R2-02 — a refusal never echoes the supplied key, in text or serialised form', () => {
+  // Each case carries a distinctive payload. A diagnostic may legitimately name the PREFIX it
+  // recognised — that is documentation, not the key — but the payload must never appear.
+  const cases: readonly string[] = [
+    'sb_publishable_leakyvalue\u0000', // a control character after a real payload
+    'sb_secret_leakyvalue',
+    'not-a-key-leakyvalue',
+    legacyKey('service_role'),
+  ];
+  for (const value of cases) {
+    const result = readMobilePublicConfig({ ...complete, supabasePublishableKey: value });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(describeConfigFailure(result.failure)).not.toContain(value);
+    expect(JSON.stringify(result.failure)).not.toContain(value);
+    expect(describeConfigFailure(result.failure)).not.toContain('leaky');
+  }
+});
+
 test('R1-04A — an unrecognised key shape fails closed without echoing the value', () => {
   const cases: readonly string[] = [
     'not-a-key-at-all',

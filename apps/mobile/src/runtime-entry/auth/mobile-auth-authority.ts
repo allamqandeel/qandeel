@@ -63,22 +63,22 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
   let started = false;
   let disposed = false;
   /**
-   * R1-01 — whether the current auth epoch has been retired by a sign-out.
+   * Whether the current auth epoch has been retired — by a sign-out, or by a restore that found no
+   * session. While it is retired NO observed SDK event may establish authentication, whatever kind
+   * it carries. Only an explicit sign-in completion whose operation epoch is still current may.
    *
-   * While this is true, ONLY an explicit `SIGNED_IN` may authenticate again. A `TOKEN_REFRESHED`,
-   * `INITIAL`, `USER_UPDATED` or unrecognised callback that was already in flight when the sign-out
-   * ran belongs to the retired epoch and is dropped, however fresh the token it carries.
-   *
-   * The earlier rule compared `{userId, accessToken}` against the retired pair, and that is exactly
-   * the case it missed: a refresh completing after sign-out delivers the SAME user with a DIFFERENT
-   * token, so the pair never matched and the identity came back. Provenance, not token equality.
+   * R2-01: an earlier version let a subscriber `SIGNED_IN` cross this barrier, and the maintained
+   * SDK makes that fatal. `GoTrueClient.signInWithPassword` does
+   * `_saveSession` -> `await _notifyAllSubscribers('SIGNED_IN', session)` -> `return`, so a sign-in
+   * that raced a sign-out delivers its subscriber event BEFORE its own promise resolves — and an
+   * epoch check that only runs after the await is already too late. Event kind is not operation
+   * provenance, so the barrier no longer consults it.
    */
   let epochRetired = false;
   /**
    * Increments on every explicit auth command. A command captures it before awaiting and abandons
-   * its own result if it has moved: a sign-in still in flight when the reader signs out must not
-   * re-authenticate them, and its `SIGNED_IN` provenance would otherwise be accepted by design.
-   * The reader's last explicit instruction wins.
+   * its own result if it has moved, so the reader's last explicit instruction wins. This is the ONLY
+   * thing that may re-establish authentication after a retirement.
    */
   let operationEpoch = 0;
   let unsubscribePort: (() => void) | null = null;
@@ -102,28 +102,54 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
     else port.stopAutoRefresh();
   }
 
-  function acceptChange(change: AuthSessionChange): void {
-    if (disposed) return;
-    const { kind, session } = change;
-    if (session === null) {
-      epochRetired = true;
-      if (state.kind !== 'SIGNED_OUT') publish({ kind: 'SIGNED_OUT' });
-      return;
-    }
-    if (epochRetired && kind !== 'SIGNED_IN') {
-      // A callback belonging to the retired auth epoch. Dropped, not applied — this is R1-01.
-      return;
-    }
+  /** Establish or update the authenticated identity. The one place `state` becomes AUTHENTICATED. */
+  function authenticate(session: AuthSessionSnapshot): void {
     epochRetired = false;
-    const sameIdentity = state.kind === 'AUTHENTICATED' && state.userId === session.userId;
-    if (sameIdentity) {
-      // A token refresh. Same identity, same generation, new credential.
-      if (state.kind === 'AUTHENTICATED' && state.accessToken === session.accessToken) return;
+    if (state.kind === 'AUTHENTICATED' && state.userId === session.userId) {
+      // A token refresh: same identity, same generation, new credential. Keeping the generation is
+      // exactly what stops a refresh from creating a second conversation Session.
+      if (state.accessToken === session.accessToken) return;
       publish({ kind: 'AUTHENTICATED', userId: session.userId, accessToken: session.accessToken, authGeneration: generation });
       return;
     }
     generation += 1;
     publish({ kind: 'AUTHENTICATED', userId: session.userId, accessToken: session.accessToken, authGeneration: generation });
+  }
+
+  /**
+   * R2-01 — an OBSERVED SDK event. Reconciliation, never establishment across a retirement.
+   *
+   * An observed event may retire the runtime, refresh an already-authenticated identity's
+   * credential, or carry an already-authorized replacement while a runtime is live. It may NOT
+   * establish authentication once the epoch is retired, because at that point the event is evidence
+   * that the SDK completed something — not evidence that the reader currently wants to be signed in.
+   * A sign-in racing a sign-out emits exactly such an event, and it must lose.
+   */
+  function acceptObservedAuthChange(change: AuthSessionChange): void {
+    if (disposed) return;
+    const { session } = change;
+    if (session === null) {
+      epochRetired = true;
+      if (state.kind !== 'SIGNED_OUT') publish({ kind: 'SIGNED_OUT' });
+      return;
+    }
+    // The barrier. Deliberately does NOT consult `change.kind`: a subscriber `SIGNED_IN` is the
+    // precise event a stale sign-in delivers, and letting the kind authorize it is the R2-01 defect.
+    if (epochRetired) return;
+    authenticate(session);
+  }
+
+  /**
+   * R2-01 — an EXPLICIT sign-in completion. The only provenance that may cross a retirement.
+   *
+   * `epoch` is captured before the request is issued. If it has moved, a later explicit command —
+   * a sign-out, or another sign-in — superseded this one while it was in flight, and the reader's
+   * later instruction stands.
+   */
+  function acceptExplicitSignInCompletion(session: AuthSessionSnapshot, epoch: number): void {
+    if (disposed) return;
+    if (epoch !== operationEpoch) return;
+    authenticate(session);
   }
 
   return {
@@ -140,7 +166,7 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
     async start() {
       if (started || disposed) return state;
       started = true;
-      unsubscribePort = port.onSessionChange(acceptChange);
+      unsubscribePort = port.onSessionChange(acceptObservedAuthChange);
       unsubscribeForeground = foreground.subscribe(() => syncAutoRefresh());
       const restored = await port.restoreSession();
       if (disposed) return state;
@@ -148,7 +174,7 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
         publish({ kind: 'ERROR', failure: restored.failure });
         return state;
       }
-      acceptChange({ kind: 'INITIAL', session: restored.value });
+      acceptObservedAuthChange({ kind: 'INITIAL', session: restored.value });
       // A restore that legitimately found nothing still has to leave RESTORING.
       if (state.kind === 'RESTORING') publish({ kind: 'SIGNED_OUT' });
       return state;
@@ -157,6 +183,9 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
       if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };
       operationEpoch += 1;
       const epoch = operationEpoch;
+      // The SDK notifies subscribers of SIGNED_IN and awaits them BEFORE this promise resolves, so
+      // by the time control returns here the observed path has already seen — and, if the epoch was
+      // retired meanwhile, correctly refused — that event.
       const result = await port.signInWithPassword(email, password);
       if (disposed) return result;
       // A sign-out (or another sign-in) happened while this was in flight. The reader's later
@@ -169,8 +198,7 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
         }
         return result;
       }
-      // An explicit sign-in is the one provenance that may start an identity after a sign-out.
-      acceptChange({ kind: 'SIGNED_IN', session: result.value });
+      acceptExplicitSignInCompletion(result.value, epoch);
       return result;
     },
     async signOut() {

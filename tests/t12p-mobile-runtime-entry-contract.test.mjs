@@ -160,23 +160,47 @@ test('no credential, secret key or public runtime secret can enter the mobile bu
   );
 });
 
-test('R1-01 — a retired auth epoch is closed by provenance, not by token equality', () => {
+test('R2-01 — only an explicit sign-in completion may cross a retired auth barrier', () => {
   const port = entryCode['auth/supabase-auth-port.ts'];
   const authority = entryCode['auth/mobile-auth-authority.ts'];
-  // The SDK's event kind must survive the port boundary: it is the only thing that distinguishes a
-  // genuinely new authentication from a refresh belonging to the epoch a sign-out just retired.
   assert.match(port, /AuthChangeKind/u, 'the port must carry the auth event kind');
   assert.match(port, /onAuthStateChange\(\(event, session\)/u, 'the SDK event must not be discarded');
-  assert.match(authority, /epochRetired/u, 'the authority must track the retired epoch');
-  assert.match(authority, /epochRetired && kind !== 'SIGNED_IN'/u, 'only an explicit sign-in may reopen a retired epoch');
-  // The pair comparison this replaced is exactly what missed a refreshed token, so it must be gone.
+
+  // The two paths are separate by construction. `GoTrueClient.signInWithPassword` notifies
+  // subscribers of SIGNED_IN and AWAITS them before its own promise resolves, so an observed event
+  // is never evidence of current user intent and may not establish authentication after a
+  // retirement — only the explicit completion, whose operation epoch is still current, may.
+  assert.match(authority, /function acceptObservedAuthChange\(/u, 'the observed path is its own function');
+  assert.match(authority, /function acceptExplicitSignInCompletion\(/u, 'the explicit path is its own function');
+  assert.match(authority, /if \(epochRetired\) return;/u, 'the observed path refuses to establish across a retirement');
+  assert.match(authority, /if \(epoch !== operationEpoch\) return;/u, 'a superseded explicit completion is abandoned');
+  assert.match(authority, /unsubscribePort = port\.onSessionChange\(acceptObservedAuthChange\)/u, 'the subscriber uses the observed path');
+
+  // Two shapes that were the defect, in R1 and before it, must both be gone.
+  assert.doesNotMatch(authority, /epochRetired && kind !== 'SIGNED_IN'/u, 'event kind must not authorize crossing the barrier');
   assert.doesNotMatch(authority, /retired\.accessToken/u, 'token equality must not be used as provenance');
 
   guards(
-    'retired epoch closed by provenance',
+    'observed events cannot establish across a retirement',
     authority,
-    (text) => /epochRetired && kind !== 'SIGNED_IN'/u.test(text) && !/retired\.accessToken/u.test(text),
-    'if (retired.accessToken === session.accessToken) return;',
+    (text) => /if \(epochRetired\) return;/u.test(text) && !/epochRetired && kind !== 'SIGNED_IN'/u.test(text),
+    "if (epochRetired && kind !== 'SIGNED_IN') return;",
+  );
+});
+
+test('R2-02 — the new-format key prefix is necessary but not sufficient', () => {
+  const config = entryCode['config/mobile-public-config.ts'];
+  assert.match(config, /function isOpaqueKeyToken\(/u, 'the key must be validated as an opaque header token');
+  assert.match(config, /publishable\.length === PUBLISHABLE_KEY_PREFIX\.length/u, 'the bare prefix must be refused');
+  // The raw value is validated: trimming would silently repair config that a build produced wrong.
+  assert.match(config, /values\[key\] = raw;/u, 'values are validated raw rather than trimmed into shape');
+  assert.doesNotMatch(config, /raw\.trim\(\);/u, 'a value must not be repaired before validation');
+
+  guards(
+    'no silent repair of malformed config',
+    config,
+    (text) => !/raw\.trim\(\);/u.test(text),
+    'values[key] = raw.trim();',
   );
 });
 

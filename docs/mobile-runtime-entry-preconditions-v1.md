@@ -61,16 +61,40 @@ the QANDEEL API a credential custodian it has never been.
 | [docs.expo.dev/guides/environment-variables](https://docs.expo.dev/guides/environment-variables) | `EXPO_PUBLIC_*` is statically inlined by Metro and visible in plain text in the compiled app. |
 | `github.com/supabase/auth` `openapi.yaml` | `POST /auth/v1/token` requires only the `apikey` header; the response carries a server-computed `expires_at`. No admin session-minting operation exists. |
 
-**Provenance, not token equality, retires an identity (R1-01).** A sign-out closes the auth epoch,
-and while it is closed only an explicit `SIGNED_IN` may authenticate again. A `TOKEN_REFRESHED`,
-`INITIAL`, `USER_UPDATED` or unrecognised callback that was already in flight when the sign-out ran
-belongs to the retired epoch and is dropped, however fresh the token it carries. The port therefore
-carries the SDK's event kind across the boundary instead of discarding it. The earlier rule compared
-the retired `{userId, accessToken}` pair, and that is precisely the case it missed: a refresh
-completing after a sign-out delivers the *same user* with a *different token*, so the pair never
-matched and the identity came back. The epoch is closed **before** the sign-out round trip is
-awaited, so a callback landing mid-flight is already outside it. A refresh is still not a new
-identity: the auth generation is unchanged, so no second conversation Session is created.
+### Establishing authentication vs. observing it (R1-01, corrected by R2-01)
+
+A sign-out — or a restore that finds nothing — **retires the auth epoch**. Two paths then exist, and
+only one of them may establish authentication:
+
+| Path | May it establish across a retirement? |
+| --- | --- |
+| `acceptObservedAuthChange` — any SDK subscriber event | **No.** It may retire, refresh a live identity's credential, or carry an already-authorized replacement while a runtime is live. |
+| `acceptExplicitSignInCompletion` — the awaited `signInWithPassword` result | **Yes**, if its captured operation epoch is still current, the authority is not disposed, and no later explicit command superseded it. |
+
+**Event kind is not operation provenance.** This is the correction R2 required, and the maintained
+SDK is why. `GoTrueClient.signInWithPassword` does:
+
+```js
+await this._saveSession(data.session);
+await this._notifyAllSubscribers('SIGNED_IN', data.session);
+return this._returnResult({ ... });
+```
+
+— the subscriber sees `SIGNED_IN` **before** the promise resolves. So a sign-in that raced a sign-out
+delivers a perfectly genuine-looking `SIGNED_IN` callback while the reader is already signed out, and
+any rule that lets the *kind* authorize crossing the barrier resurrects them. An epoch check that
+runs only after the `await` is too late: the damage is done by then. The barrier therefore does not
+consult the kind at all, and the operation epoch guards the completion.
+
+Two earlier rules are gone, both because they answered the wrong question:
+
+- comparing the retired `{userId, accessToken}` pair — a refresh completing after a sign-out carries
+  the *same user* with a *different token*, so the pair never matched;
+- allowing a subscriber `SIGNED_IN` through — that is precisely the event a stale sign-in emits.
+
+The epoch closes **before** the sign-out round trip is awaited, so a callback landing mid-flight is
+already outside it. A refresh is still not a new identity: the auth generation is unchanged, so no
+second conversation Session is created.
 
 **Adopted pattern:** the official React Native client options exactly — `autoRefreshToken: true`,
 `persistSession: true`, `detectSessionInUrl: false` — with `startAutoRefresh`/`stopAutoRefresh` bound
@@ -101,8 +125,25 @@ that no runtime is built at all. The refusal never echoes the offending value.
 
 The key check is an **allowlist**, not a denylist (R1-04A). Exactly two shapes are accepted:
 
-1. a new-format publishable key, `sb_publishable_…`; or
+1. a new-format publishable key, `sb_publishable_` followed by a **non-empty payload**; or
 2. a legacy key — a JWT — whose decoded `role` claim is exactly `anon`.
+
+**The prefix alone is not validation (R2-02).** Before any shape is classified, the value must be an
+opaque header token: non-empty, and printable non-space ASCII throughout. That refuses the bare
+prefix, a whitespace or control-character suffix, and anything non-ASCII — all of which would
+otherwise be interpolated into an HTTP `apikey` header.
+
+Nothing narrower is imposed, deliberately. Supabase documents the prefix and that these are "short
+strings, not JWTs"; it documents **no** character set and **no** length, and `supabase-js` itself
+validates nothing beyond `startsWith`. Guessing an alphabet or a length would reject a valid
+production key and take the app down, whereas a slightly-too-permissive structural check merely lets
+a malformed key reach Supabase, which rejects it. The security question — *is this a secret?* — is
+answered exactly and separately, by the `sb_secret_` prefix and the decoded legacy role.
+
+Values are validated **raw**, not trimmed. Trimming would silently repair a key or origin that
+arrived with a stray newline from a build pipeline, and a value that needs repairing is evidence the
+pipeline is wrong. The same rule refuses whitespace in an origin, which would otherwise be
+concatenated into every request URL.
 
 Everything else fails closed. `sb_secret_…` is `FORBIDDEN_SECRET` because it bypasses Row Level
 Security. A legacy `service_role` is `FORBIDDEN_SECRET` for the same reason, and `authenticated` is

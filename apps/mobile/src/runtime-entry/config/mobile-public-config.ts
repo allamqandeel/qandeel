@@ -74,6 +74,36 @@ const SECRET_KEY_PREFIX = 'sb_secret_';
  */
 const ALLOWED_LEGACY_ROLE = 'anon';
 
+/**
+ * R2-02 — is this a usable opaque token: non-empty, printable non-space ASCII throughout?
+ *
+ * Applied to BOTH the key and the origins, because every one of them is interpolated into a request
+ * URL or an HTTP header, where a stray space, newline or control character is a correctness and
+ * injection concern rather than a cosmetic one. (An internationalised hostname must therefore be
+ * supplied in punycode, which is what a URL carries on the wire anyway.)
+ *
+ * For the key specifically, the prefix alone is not validation: `sb_publishable_` on its own, or
+ * with a whitespace-bearing suffix, would otherwise pass and then be sent as an `apikey` header.
+ *
+ * WHAT THE DOCUMENTATION ACTUALLY SPECIFIES, and therefore all that is checked: the
+ * `sb_publishable_` prefix, and that these are "short strings, not JWTs". No character set and no
+ * length is documented anywhere, and `supabase-js` itself validates nothing beyond the prefix.
+ *
+ * A tighter guess — base64url, or a fixed length — is deliberately NOT imposed. The failure modes
+ * are asymmetric: too narrow rejects a valid production key and takes the app down, while too wide
+ * merely lets a malformed key reach Supabase, which rejects it. The security question "is this a
+ * secret?" is answered separately and exactly, by the `sb_secret_` prefix and the legacy role claim.
+ */
+function isOpaqueKeyToken(value: string): boolean {
+  if (value.length === 0) return false;
+  for (const character of value) {
+    const code = character.codePointAt(0) ?? 0;
+    // 0x21 '!' .. 0x7E '~': excludes space, every control character and everything non-ASCII.
+    if (code < 0x21 || code > 0x7e) return false;
+  }
+  return true;
+}
+
 /** Does this look like a JWT at all? Three dot-separated non-empty segments. */
 function looksLikeJwt(value: string): boolean {
   const parts = value.split('.');
@@ -127,6 +157,11 @@ function readExtra(): Record<string, unknown> {
  * loopback — an arbitrary remote `http://…` can never be valid config, with or without the seam.
  */
 function absoluteUrlIssue(value: string, allowLoopbackHttp: boolean): string | null {
+  // Refused rather than trimmed: this string is concatenated into every request URL, so a stray
+  // space or newline is a broken request, not a formatting detail.
+  if (!isOpaqueKeyToken(value)) {
+    return 'must not contain whitespace, a control character or a non-ASCII character';
+  }
   if (value.endsWith('/')) {
     return 'must not end with "/": the transports append their own path segments';
   }
@@ -184,7 +219,12 @@ export function readMobilePublicConfig(
       missing.push(key);
       continue;
     }
-    values[key] = raw.trim();
+    // Kept RAW, deliberately. Trimming would silently REPAIR a value that arrived with a stray
+    // newline or tab from a build pipeline, and a config value that needed repairing is evidence
+    // the pipeline is wrong. Every value here ends up in a URL or an HTTP header, where stray
+    // whitespace is a correctness and injection concern rather than a cosmetic one, so it is
+    // refused below instead.
+    values[key] = raw;
   }
   if (missing.length > 0) return { ok: false, failure: { kind: 'MISSING', keys: missing } };
 
@@ -206,10 +246,20 @@ export function readMobilePublicConfig(
     failure: { kind: 'UNSUPPORTED_KEY_SHAPE', key: 'supabasePublishableKey', detail },
   });
 
+  // R2-02: every accepted shape is an opaque token that will be sent as an HTTP header value, so
+  // whitespace, control characters and non-ASCII are refused before the shape is classified at all.
+  if (!isOpaqueKeyToken(publishable)) {
+    return unsupported('a key containing whitespace, a control character or a non-ASCII character');
+  }
   if (publishable.startsWith(SECRET_KEY_PREFIX)) {
     return forbidden(`an elevated Supabase key was supplied as public config (prefix "${SECRET_KEY_PREFIX}")`);
   }
-  if (!publishable.startsWith(PUBLISHABLE_KEY_PREFIX)) {
+  if (publishable.startsWith(PUBLISHABLE_KEY_PREFIX)) {
+    // The prefix is necessary, not sufficient: the bare prefix carries no key at all.
+    if (publishable.length === PUBLISHABLE_KEY_PREFIX.length) {
+      return unsupported('a new-format key with an empty payload');
+    }
+  } else {
     if (!looksLikeJwt(publishable)) {
       return unsupported(`not a "${PUBLISHABLE_KEY_PREFIX}…" key and not a legacy key`);
     }
