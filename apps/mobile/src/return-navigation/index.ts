@@ -71,9 +71,17 @@ export { returnMapContext } from './focus-target';
 // surface may ask. It answers with a boolean and nothing else, so a surface can stop offering an act
 // that could never work without ever seeing a checkpoint, an entry or the private provenance. It is
 // not authority: the resolver and the store still re-prove provenance and presence before any write.
+//
+// `isInspectionJourneyOriginFor` is the second, strictly narrower one, added for T-12 §14. It asks
+// everything the first asks and then one thing more — was this checkpoint recorded by an act that can
+// begin an explicit inspection journey — so that "the original inspection" is bound from evidence
+// rather than asserted about an arbitrary valid handle. It reads the entry's recorded ACT and no part
+// of its checkpoint, holds nothing, and grants nothing.
 export type { ReturnCheckpointTarget } from './checkpoint-target';
 export {
+  INSPECTION_JOURNEY_ORIGIN_ACTS,
   isCurrentReturnCheckpointTargetForStore,
+  isInspectionJourneyOriginFor,
   isReturnCheckpointTarget,
   latestReturnCheckpoint,
   returnCheckpoints,

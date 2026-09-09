@@ -1,0 +1,47 @@
+# T-12 Phase M / QAN-BL-T12-04 — phase 3, sign-out and identity replacement.
+#
+# Runs against the SAME launch as phase 2, with no clear and no reinstall. Identity B is supplied here
+# and nowhere else; its email is erased from the field before the screenshot exists.
+#
+# `T12-04.5` is the claim that matters most and the only one that is a credential-exposure question
+# rather than a convenience one: after A signs out and B signs in, B must receive its own QANDEEL
+# Session and must not adopt A's. That is decided by the real API's authorization boundary, never by
+# the client, so this flow proves nothing at all if the API is unreachable — the report says so, with
+# `phase=` rather than a Session shape.
+appId: com.qandeel.mobile
+env:
+  EMAIL_B: ""
+  PASSWORD_B: ""
+---
+- launchApp
+- assertVisible:
+    id: "qandeel-t1204-validation-harness"
+
+- tapOn:
+    id: "t1204-second-email"
+- inputText: ${EMAIL_B}
+- tapOn:
+    id: "t1204-second-password"
+- inputText: ${PASSWORD_B}
+- hideKeyboard
+
+- tapOn:
+    id: "t1204-run-SIGN_OUT_AND_REPLACEMENT"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 90000
+
+- tapOn:
+    id: "t1204-second-email"
+- eraseText: 64
+- hideKeyboard
+
+- takeScreenshot: t1204-phase-3-signout-replacement
+
+- assertVisible:
+    id: "t1204-step-T12-04.4"
+- assertVisible:
+    id: "t1204-step-T12-04.5"
+- assertVisible:
+    text: "AFTER_RESTART — allPassed=true"

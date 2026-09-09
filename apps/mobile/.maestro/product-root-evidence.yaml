@@ -1,0 +1,33 @@
+# T-12 Phase M — PRODUCT-root build evidence, beyond the boot smoke.
+#
+# The boot smoke asserts one thing: the integrated Product root mounted. This flow adds the two claims
+# a Product artifact must also carry, and deliberately no more:
+#
+#   the validation harness is NOT in this build — its root test id is absent, which is the runtime
+#   counterpart of the static import-closure proof;
+#
+#   the root survives a real orientation change rather than only appearing once.
+#
+# It makes no perceptual claim. Frame pacing, drag feel, velocity handoff and the composite beat are
+# `QAN-BL-MOT-03`'s, they need a finger on hardware, and no simulator or emulator run may be recorded
+# against them.
+appId: com.qandeel.mobile
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "qandeel-product-root"
+
+# The harness ships in the Product artifact nowhere and at no depth. Its root id is the one runtime
+# witness of that, and its absence here is what the static closure proof predicts.
+- assertNotVisible:
+    id: "qandeel-t1204-validation-harness"
+
+- takeScreenshot: product-root-portrait
+- setOrientation: LANDSCAPE_LEFT
+- assertVisible:
+    id: "qandeel-product-root"
+- takeScreenshot: product-root-landscape
+- setOrientation: PORTRAIT
+- assertVisible:
+    id: "qandeel-product-root"

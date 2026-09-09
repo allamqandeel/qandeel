@@ -22,7 +22,7 @@ import { returnActWords } from '../product-copy';
 import { RETURN_CONTROLS_TEST_ID } from '../ReturnControls';
 import { RETURN_OPPORTUNITY_IDS, type ReturnOpportunityId } from '../types';
 import { countingStore } from '../../return-navigation/__fixtures__/return';
-import { chromeStore, chromeSurface, fetched, projectionFor, TWO_CONTEXT_WORLD } from '../__fixtures__/chrome';
+import { beginInspectionJourney, chromeStore, chromeSurface, fetched, projectionFor, TWO_CONTEXT_WORLD } from '../__fixtures__/chrome';
 
 /** A historical reader whose live focus IS disclosed here, so all six are reachable in one fixture. */
 const reader = (): CanonicalStore =>
@@ -127,12 +127,11 @@ describe('OC08-B — each control reaches exactly one frozen act', () => {
   it('B10, G61 — Exact Return restores the named checkpoint and consumes it and everything newer', async () => {
     const store = reader();
     const start = viewpoint(store.getState());
-    // The spatial act first, while the held projection is still this viewpoint's: Return to World
-    // moves the camera to the WORLD rung, after which an ANALYTICAL_OBJECT disclosure is correctly
-    // no longer this Map, and the reader's own journey is what binds the target.
-    await press(store, 'RETURN_LIVE_FOCUS');
-    const target = latestReturnCheckpoint(store);
-    expect(target).not.toBeNull();
+    // The reader's own inspection journey is what binds the target (T-12 §14): its checkpoint IS the
+    // starting viewpoint, which is what "restores exactly the viewpoint this inspection started from"
+    // promises. Return to World then records a second, newer checkpoint — so the consumption below
+    // is observably "the named one AND everything newer" rather than a Back step.
+    const target = beginInspectionJourney(store);
     await press(store, 'RETURN_WORLD');
     expect(store.getState().history).toHaveLength(2);
 
@@ -149,11 +148,12 @@ describe('OC08-B — no act aliases another', () => {
     const results = new Map<ReturnOpportunityId, string>();
     for (const id of RETURN_OPPORTUNITY_IDS) {
       const store = reader();
-      // Give the two history acts something to reverse, so all six are genuinely exercised.
+      // Give the two history acts something to reverse, so all six are genuinely exercised. Exact
+      // Return needs a real inspection journey to name (T-12 §14); Back needs only a checkpoint, and
+      // the same journey provides one.
       let target: ReturnCheckpointTarget | null = null;
       if (id === 'BACK_ONE_STEP' || id === 'EXACT_RETURN') {
-        await press(store, 'RETURN_LIVE_FOCUS');
-        target = latestReturnCheckpoint(store);
+        target = beginInspectionJourney(store);
       }
       await press(store, id, target);
       results.set(id, JSON.stringify(viewpoint(store.getState())));

@@ -16,7 +16,7 @@ import { ORIENTATION_CHROME_TEST_ID, OrientationChrome } from '../OrientationChr
 import { RETURN_CONTROLS_TEST_ID } from '../ReturnControls';
 import { bindExactReturnOrigin } from '../exact-return-origin';
 import { orientationModel } from '../model';
-import { chromeStore, chromeSurface, contextAt, fetched, historicalStore, inspect, known, projectionFor, TWO_CONTEXT_WORLD, withInspection } from '../__fixtures__/chrome';
+import { beginInspectionJourney, chromeStore, chromeSurface, contextAt, fetched, historicalStore, inspect, known, projectionFor, TWO_CONTEXT_WORLD, withInspection } from '../__fixtures__/chrome';
 
 const DISCLOSED = () => withInspection(TWO_CONTEXT_WORLD(), known());
 
@@ -66,13 +66,17 @@ describe('OC08-M — inspection chains', () => {
   it('M111b — Exact Return updates the chrome from the restored viewpoint', async () => {
     const store = reader();
     const surface = chromeSurface(store);
+    // T-12 §14 — the origin is the checkpoint the inspection journey STARTED from, so the journey
+    // begins first and its own checkpoint is what is bound. The Live Focus return below then adds a
+    // newer one, which is what makes "consumes it and everything newer" observable here.
+    const target = beginInspectionJourney(store, DISCLOSED());
     const projection = projectionFor(store, fetched(DISCLOSED()));
     const view = await render(<OrientationChrome language="en" surface={surface} projection={projection} />);
 
     await act(async () => {
       fireEvent.press(view.getByTestId(`${RETURN_CONTROLS_TEST_ID}:RETURN_LIVE_FOCUS`));
     });
-    const origin = bindExactReturnOrigin(store, latestReturnCheckpoint(store));
+    const origin = bindExactReturnOrigin(store, target);
     const movedCamera = store.getState().camera;
 
     await act(async () => {

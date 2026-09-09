@@ -37,6 +37,7 @@ import {
   disclosureArrivalPlan,
   type ArrivalRegistry,
   type PresentationCameraBinding,
+  type PresentationMotionCause,
 } from '../../motion';
 import { envelopeCenter, type CanonicalCameraTransition, type ViewportEnvelope } from '../camera';
 import type { PlacedNode, PlacedScene } from './map-geometry';
@@ -64,6 +65,14 @@ export interface CanonicalCameraCommit {
   readonly reset: boolean;
   /** Records the commit once it has been applied, so the surface can keep its own history. */
   readonly commit: () => void;
+  /**
+   * The composite spatial cause of THIS transition, asked for at the instant it is applied.
+   *
+   * Invoked only in the branch that applies a transition, so it is asked once per canonical camera
+   * change and never for a reset, a render that applies nothing, or a frame. This renderer neither
+   * inspects the answer nor keeps it: it hands it to the presentation camera in the same call.
+   */
+  readonly cause: () => PresentationMotionCause | null;
 }
 
 export interface MapCanvasProps {
@@ -118,13 +127,15 @@ function PresentationCameraRebase({
   readonly motion: PresentationCameraBinding;
   readonly cameraCommit: CanonicalCameraCommit;
 }) {
-  const { transition, reset, commit } = cameraCommit;
+  const { transition, reset, commit, cause } = cameraCommit;
 
   useLayoutEffect(() => {
     if (reset) motion.reset();
-    else if (transition !== null) motion.applyCanonicalChange(transition);
+    // The cause is asked for HERE and used in the same expression: there is one call per applied
+    // transition, so the binding is consumed by the travel it belongs to and by nothing else.
+    else if (transition !== null) motion.applyCanonicalChange(transition, cause());
     commit();
-  }, [commit, motion, reset, transition]);
+  }, [cause, commit, motion, reset, transition]);
 
   // A surface that stops painting this world leaves no residual behind for the next one to inherit.
   useLayoutEffect(() => () => motion.reset(), [motion]);

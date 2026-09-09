@@ -365,7 +365,7 @@ test('R1-01 — an in-flight drag cannot be re-routed into a replacement store',
   assert.match(mapCode['renderer/MapSurface.tsx'], /const authorityReplaced = history !== null && history\.owner !== store;/u);
   assert.match(
     mapCode['renderer/MapCanvas.tsx'],
-    /if \(reset\) motion\.reset\(\);\s*\n\s*else if \(transition !== null\) motion\.applyCanonicalChange\(transition\);/u,
+    /if \(reset\) motion\.reset\(\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*else if \(transition !== null\) motion\.applyCanonicalChange\(transition, cause\(\)\);/u,
   );
   assert.match(motionCode['runtime/authority.ts'], /export function useAuthorityGeneration\(owner: unknown\): AuthorityGeneration \{/u);
 });
@@ -432,7 +432,7 @@ test('R1-04 — pointer parity covers the object-local motion, not only the plan
   }
 });
 
-test('R1-05, R3-04 — no production path can arm the composite beat', () => {
+test('R1-05, R3-04 — the composite beat is armed by a binding, and a mailbox remains impossible', () => {
   // R1 narrowed the arming condition from APPLIED to APPLIED + LANDED. Necessary, and not
   // sufficient: a pending token still had no owner. A landed composite can arm one while the Map is
   // between projections and therefore cannot consume it, the accessible viewport routes stay
@@ -442,25 +442,42 @@ test('R1-05, R3-04 — no production path can arm the composite beat', () => {
   // No narrowing fixes that, because the defect is the SHAPE. A mailbox is not a binding; only ONE
   // exact transition, one owner generation, one shot, invalidated by staleness would be — and which
   // canonical change an already-returned outcome belongs to is a composition fact this owner does
-  // not have and cannot acquire without taking T-12's integration ownership. So the capability
-  // stays and the arming goes: COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12.
+  // not have and cannot acquire without taking T-12's integration ownership.
+  //
+  // T-12 §15 RE-ANCHOR. The composition fact now exists, and the arming is a BINDING rather than a
+  // mailbox: the cause is an ARGUMENT to the call that applies the transition, resolved by a
+  // function the surface invokes in that one branch. Nothing in this layer stores it, so there is
+  // still nothing to queue, expire, or hand to a later unrelated act — which is why every anti-
+  // mailbox assertion below is unchanged and still passes. What is asserted is now the shape of the
+  // seam rather than its absence, because absence is no longer what makes it safe.
   assert.equal(motionProduction.includes('cause/motion-cause.ts'), false, 'the stateful channel does not ship');
   for (const forbidden of ['MotionCauseChannel', 'createMotionCauseChannel', 'noteReturnOutcome', 'ExecutedReturnOutcome', 'pending']) {
     assert.equal(motionText.includes(forbidden), false, `no pending cause mailbox: ${forbidden}`);
     assert.equal(mapText.includes(forbidden), false, `no pending cause mailbox reaches the Map: ${forbidden}`);
   }
-  // The camera passes `null` unconditionally: there is no option, no prop and no channel to supply
-  // one, so the beat is unreachable rather than merely unused.
   const camera = motionCode['presentation-camera/usePresentationCamera.ts'];
-  assert.match(camera, /cause: null,/u);
-  assert.equal(camera.includes('cause?.take()'), false);
-  assert.equal(camera.includes('readonly cause?'), false);
-  assert.equal(mapCode['renderer/MapSurface.tsx'].includes('cause'), false, 'the surface takes no cause');
-  // And the deferral is RECORDED, not implied — in the production document, where the reader of
-  // this task's decisions looks, exactly as the Meaning Ignition deferral is.
+  // The cause is a parameter of the applying call and is passed straight through to the pure plan.
+  // It has a default, so a caller that has no composition above it gets exactly the previous
+  // behaviour, and the beat stays unreachable for every path that cannot prove an identity.
+  assert.match(camera, /\(change: CanonicalCameraChange, cause: PresentationMotionCause \| null = null\): PresentationTravelPlan =>/u,
+    'the cause arrives as an argument to the call that applies the transition');
+  assert.match(camera, /^\s*cause,$/mu, 'and is handed to the pure plan unchanged');
+  // Nothing HOLDS it: no field, no ref, no shared value, no channel, no take().
+  assert.equal(camera.includes('cause?.take()'), false, 'the camera pulls from no channel');
+  assert.equal(camera.includes('readonly cause'), false, 'the binding is not a property of the hook');
+  assert.doesNotMatch(camera, /useSharedValue<[^>]*Cause|causeRef|lastCause|storedCause/u, 'no cause is retained between calls');
+  // The surface carries the QUESTION, never an answer it kept. It resolves at apply time only.
+  const surface = mapCode['renderer/MapSurface.tsx'];
+  assert.match(surface, /readonly spatialCause\?: \(destination: CameraIntent\) => PresentationMotionCause \| null;/u,
+    'the surface takes a resolver keyed to the destination, not a value');
+  assert.doesNotMatch(surface, /useState<[^>]*Cause|useRef<[^>]*Cause/u, 'the surface stores no cause');
+  assert.match(mapCode['renderer/MapCanvas.tsx'], /readonly cause: \(\) => PresentationMotionCause \| null;/u,
+    'the renderer receives the question and hands the answer straight on');
+  // The deferral is discharged in writing, in the production document, where the reader of this
+  // task's decisions looks — and the integration document records how.
   assert.match(read('docs/living-analysis-map-motion-system-v1.md'), /COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12/u);
   assert.match(read('docs/living-analysis-map-motion-system-v1-traceability.md'), /COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12/u);
-  // The pure choreography survives, because T-12 has to bind something real.
+  // The pure choreography is unchanged: T-12 bound something real to the beat that already existed.
   assert.match(
     motionCode['presentation-camera/travel-plan.ts'],
     /input\.cause === 'GO_LIVE_AND_LOCATE' && input\.representable \? MOTION_DURATIONS_MS\.compositeSpatialBeat : 0/u,

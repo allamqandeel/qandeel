@@ -296,9 +296,15 @@ describe('T11 — the Timeline shows a different amount of the same disclosed tr
         );
         await resize(view, 320, 568);
         const outboard = view.getByTestId('timeline-outboard-live');
-        // Its own slot, at its own fixed extent, BESIDE the Track — never inside the strip and
-        // never a Moment. Narrow width does not take the slot away.
-        expect(outboard.props.style).toMatchObject({ width: OUTBOARD_LIVE_EXTENT, overflow: 'hidden' });
+        // Its own slot, BESIDE the Track — never inside the strip and never a Moment. Narrow width
+        // does not take the slot away.
+        //
+        // The extent is a FLOOR rather than a fixed width after T-12 §17 (`QAN-BL-RSP-02`), and the
+        // clip is gone: at 200 % text the fixed 64 points showed "Go" where the reader needed "Go
+        // live", and every way of fixing that inside 64 points is forbidden. `flexShrink: 0` is what
+        // keeps the Track from squeezing the wording back out at this narrowest width.
+        expect(outboard.props.style).toMatchObject({ minWidth: OUTBOARD_LIVE_EXTENT, flexShrink: 0 });
+        expect(outboard.props.style.overflow).toBeUndefined();
         expect(view.getByTestId(TEMPORAL_LIVE_EDGE_TEST_ID)).toBeTruthy();
         // The Moment-targeting strip is sized to T-05's own viewport, which the outboard slot is
         // not part of: a touch in the Live region cannot reach the strip in either direction.

@@ -38,7 +38,7 @@
  * `ExactReturnOrigin` is opaque and empty. Once provenance is asked of T-07 there is nothing an
  * ordinal could add except a second, weaker notion of validity that could disagree with the first.
  */
-import { isCurrentReturnCheckpointTargetForStore, type ReturnCheckpointTarget } from '../return-navigation';
+import { isInspectionJourneyOriginFor, type ReturnCheckpointTarget } from '../return-navigation';
 import type { CanonicalStore } from '../state';
 
 /**
@@ -62,28 +62,39 @@ interface BoundOrigin {
 const bound = new WeakMap<ExactReturnOrigin, BoundOrigin>();
 
 /**
- * Binds a checkpoint target that THIS store minted and still records.
+ * Binds the checkpoint an explicit inspection journey started from.
  *
- * @internal NOT Product API, and deliberately absent from the barrel (R3-04).
+ * ## R3-04, and how T-12 §14 closed it rather than continuing to hide it
  *
- * Same-store provenance is necessary and it is proven here. It is NOT sufficient to call something
- * "the original inspection": a checkpoint recorded by Return to World is a perfectly valid handle
- * and is not an inspection origin at all, so a public mint over an arbitrary target would let any
- * caller manufacture a Product capability whose name is false. T-08 owns no inspection-journey
- * coordinator and cannot tell which checkpoint began the journey, so it consumes an origin and never
- * mints one from the public surface.
+ * R1 of this layer bound ANY currently valid checkpoint target. Same-store provenance is necessary
+ * and it is proven — but it is NOT evidence that the checkpoint IS the named origin of an inspection
+ * journey: a checkpoint recorded by Return to World is a perfectly valid local handle and is not an
+ * inspection at all, so a mint over an arbitrary target let a caller manufacture a Product capability
+ * whose name is false. R3 removed the mint from the public surface, which stopped the defect and left
+ * the legitimate journey binding with no route at all — the state `QAN-BL-T12-01` recorded.
  *
- * The legitimate binding happens at the real journey boundary, which the T-12 integration gate owns.
- * Inside this layer the function exists for the layer's own tests, which need a legitimate opaque
- * origin to exercise consumer behaviour with — and a test fixture is not Product API.
+ * The defect is now refused by the MINT rather than by the mint's obscurity. `isInspectionJourneyOriginFor`
+ * asks T-07 — the owner of reversible history and of provenance — everything the old predicate asked
+ * AND whether the entry behind this handle was recorded by an act that can begin an explicit
+ * inspection journey. A Return-to-World checkpoint, a Back, a pan, a zoom, a commit, a context switch
+ * and every one of the six return acts are therefore refused HERE, by construction, however valid
+ * their handles are. That is strictly stronger than hiding the function was, so the capability is
+ * public again and the integration gate can bind the real journey origin through the barrel instead
+ * of reaching past it.
  *
- * The caller does this at the moment their inspection journey begins, with the store they are
- * actually reading. A value that is not a real target, one minted by a different store, and one
- * whose checkpoint has already been consumed all yield no opportunity at all rather than a broken
- * one — the claim is checked, never recorded.
+ * ## What is still not decided here
+ *
+ * Whether a given journey-capable checkpoint began THIS journey or continued one depends on the
+ * inspection state immediately before the act, which is a composition fact this layer does not have:
+ * T-08 owns no journey coordinator, reads no reversible history and builds no history browser. The
+ * caller binds at the moment their journey actually begins, with the store they are actually reading.
+ *
+ * The claim is checked, never recorded. A value that is not a real target, one minted by a different
+ * store, one whose checkpoint has already been consumed, and one whose act cannot start a journey all
+ * yield no opportunity at all rather than a broken one.
  */
 export function bindExactReturnOrigin(store: CanonicalStore, target: unknown): ExactReturnOrigin | null {
-  if (!isCurrentReturnCheckpointTargetForStore(store, target)) return null;
+  if (!isInspectionJourneyOriginFor(store, target)) return null;
   const origin = Object.freeze({}) as ExactReturnOrigin;
   bound.set(origin, { store, target });
   return origin;
@@ -107,5 +118,7 @@ export function exactReturnTargetFor(store: CanonicalStore, origin: unknown): Re
   const record = bound.get(origin as ExactReturnOrigin);
   if (record === undefined) return null;
   if (record.store !== store) return null;
-  return isCurrentReturnCheckpointTargetForStore(store, record.target) ? record.target : null;
+  // Re-asked with the SAME predicate that admitted it, so validity has exactly one definition here
+  // and a second, weaker one cannot drift in beside it.
+  return isInspectionJourneyOriginFor(store, record.target) ? record.target : null;
 }

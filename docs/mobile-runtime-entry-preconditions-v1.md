@@ -441,7 +441,11 @@ refuse to apply anything they returned.
 - **No app-shell mount.** `FoundationShell` remains the route output and is byte-unchanged; the router
   root is still exactly `_layout.tsx` and `index.tsx`; the boot smoke still asserts the technical
   shell. Replacing it is T-12's entire job.
-- **No T-12 backlog item.** The nine inherited items remain T-12's.
+- **No T-12 backlog item.** The inherited items remain T-12's — **ten** of them, not the nine this
+  sentence originally said. The count was already stale when it was written: T-12P's own R1 review
+  admitted `QAN-BL-T12-04` under BG-06, owned by the T-12 pre-release physical validation gate, which
+  the canonical register records. Corrected by T-12 rather than left to be rediscovered, in the same
+  candidate, because the number concerns T-12's inheritance and no other document repeated it.
 - **No T-13 work.** No restart, no recovery, no Product persistence.
 - **No backend change.** The API gained no route and no idempotency; making
   `POST /conversation/sessions` idempotent is explicitly out of scope.

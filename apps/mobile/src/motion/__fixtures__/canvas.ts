@@ -6,7 +6,7 @@
  * so a test that renders the canvas alone has to supply them. Defaulting them to "at rest, nothing
  * new, nothing to commit" keeps every existing paint assertion about paint.
  */
-import type { ArrivalRegistry, PresentationCameraBinding } from '..';
+import type { ArrivalRegistry, PresentationCameraBinding, PresentationMotionCause } from '..';
 import { createArrivalRegistry } from '..';
 import type { CanonicalCameraTransition, ViewportEnvelope } from '../../map';
 import type { MapCanvasProps, PlacedNode, PlacedScene, RenderStyle } from '../../map';
@@ -21,6 +21,8 @@ export interface CanvasPropsOptions {
   readonly transition?: CanonicalCameraTransition | null;
   readonly reset?: boolean;
   readonly commit?: () => void;
+  /** The composite spatial cause resolver, for a test that drives the beat directly. */
+  readonly cause?: () => PresentationMotionCause | null;
   readonly style?: RenderStyle;
 }
 
@@ -40,6 +42,10 @@ export function canvasProps(options: CanvasPropsOptions): MapCanvasProps {
       transition: options.transition ?? null,
       reset: options.reset === true,
       commit: options.commit ?? NOOP,
+      // The composite cause is a COMPOSITION fact and this fixture composes nothing: a surface with
+      // no integration owner above it has no outcome to bind, so it answers the only honest thing.
+      // A test that needs the beat supplies its own resolver through `MapSurface`.
+      cause: options.cause ?? (() => null),
     },
   };
   return options.style === undefined ? base : { ...base, style: options.style };

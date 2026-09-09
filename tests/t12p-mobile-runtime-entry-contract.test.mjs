@@ -389,21 +389,47 @@ test('the app shell is untouched and mounts nothing from this layer', () => {
   assert.match(read('apps/mobile/src/shell/FoundationShell.tsx'), /T-01 foundation shell/u, 'the technical shell is unchanged');
   // The router root is still exactly two files: no login route, no gateway route.
   assert.deepEqual(readdirSync(join(rootPath, 'apps/mobile/src/app')).sort(), ['_layout.tsx', 'index.tsx']);
-  // The boot smoke still asserts the technical shell, because no Product root exists yet.
-  assert.match(read('apps/mobile/.maestro/boot-smoke.yaml'), /qandeel-foundation-shell/u);
+  // T-12 §24 RE-ANCHOR. This assertion used to be `qandeel-foundation-shell`, with the reason stated
+  // beside it: "because no Product root exists yet". One now does, so the delivery fact expired
+  // exactly as its own comment predicted — and keeping it would have forced the very defect T-12's
+  // contract forbids, a technical shell rendered invisibly to hold an old smoke green.
+  //
+  // The permanent claim survives and is what is asserted instead: the smoke names the integrated
+  // Product root, and it no longer names the technical shell. T-12P's own boundary — that IT mounted
+  // nothing — is unaffected and is asserted above.
+  const smoke = read('apps/mobile/.maestro/boot-smoke.yaml');
+  assert.match(smoke, /qandeel-product-root/u, 'the boot smoke targets the integrated Product root');
+  assert.doesNotMatch(smoke, /qandeel-foundation-shell/u, 'and no longer asserts the technical shell it replaced');
 });
 
 test('a consumer may reach this layer only through its public barrel', () => {
-  // Permanent: when T-12 composes the runtime it must import the barrel, never a submodule. Nothing
-  // outside the layer imports it yet, and that fact is deliberately NOT frozen.
+  // Permanent: T-12 composes the runtime through the barrel, never a submodule. That is now a real
+  // consumer rather than a hypothetical, and it holds — `integration/` imports `'../../runtime-entry'`
+  // and nothing deeper.
+  //
+  // T-12 re-anchor, narrower than it looks. Every PRODUCTION module is still checked and reaching any
+  // deep module is still a failure. The one thing now allowed is a TEST or FIXTURE file importing
+  // this layer's own `__fixtures__` — the HTTP double, the auth port double, the wire builders — which
+  // is what T-08's suites already do with T-07's. Forbidding it would force a second, drifting copy
+  // of exactly the doubles this layer built to be driven by, which is a worse outcome than the
+  // import: two Supabase doubles that disagree is precisely the defect the fixtures exist to prevent.
+  const isTestScaffolding = (file) => /(?:^|\/)__(?:tests|fixtures)__\//u.test(file.replace(/\\/gu, '/'));
+  const reachesFixtures = (specifier) => specifier.includes('runtime-entry/__fixtures__/');
   for (const [file, text] of mobileOutsideEntry) {
     const code = stripComments(text);
-    assert.doesNotMatch(code, /from\s+'[^']*runtime-entry\/[^']+'/u, `${file} must not deep-import the runtime entry`);
+    for (const match of code.matchAll(/from\s+'([^']*runtime-entry\/[^']+)'/gu)) {
+      if (isTestScaffolding(file) && reachesFixtures(match[1])) continue;
+      assert.fail(`${file} must not deep-import the runtime entry: ${match[1]}`);
+    }
   }
 
+  // Production only: a deep import of a PRIVATE implementation is refused, which is the whole claim.
   guards(
     'no deep import',
-    mobileOutsideEntry.map(([, text]) => stripComments(text)).join('\n'),
+    mobileOutsideEntry
+      .filter(([file]) => !isTestScaffolding(file))
+      .map(([, text]) => stripComments(text))
+      .join('\n'),
     (text) => !/from\s+'[^']*runtime-entry\/[^']+'/u.test(text),
     "import { createSupabaseAuthPort } from '../runtime-entry/auth/supabase-auth-port';",
   );

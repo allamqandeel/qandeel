@@ -277,8 +277,12 @@ describe('FCR-03 — outboard separation', () => {
     const width = flatten(view.getByTestId(TEMPORAL_TARGET_STRIP_TEST_ID).props.style).width;
     expect(width).toBe(VIEWPORT);
     expect(width).toBeLessThan(VIEWPORT + OUTBOARD_LIVE_EXTENT);
-    // T-05's outboard slot is still rendered, beside the strip and not beneath it.
-    expect(view.getByTestId('timeline-outboard-live').props.style.width).toBe(OUTBOARD_LIVE_EXTENT);
+    // T-05's outboard slot is still rendered, beside the strip and not beneath it. Its extent is a
+    // FLOOR after T-12 §17 (`QAN-BL-RSP-02`), which is why this is `minWidth`: the slot may grow to
+    // hold the whole Live wording at a large text size, and it may never shrink below the extent it
+    // has always had. The separation asserted above is unaffected — the strip is still sized to
+    // T-05's own viewport, and the slot is still not part of it.
+    expect(view.getByTestId('timeline-outboard-live').props.style).toMatchObject({ minWidth: OUTBOARD_LIVE_EXTENT });
     await act(async () => {
       view.unmount();
     });

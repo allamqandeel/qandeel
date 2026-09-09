@@ -58,9 +58,10 @@ import {
   useAuthorityGeneration,
   usePresentationCamera,
   type PresentationCameraBinding,
+  type PresentationMotionCause,
   type PresentationResidualEnvelope,
 } from '../../motion';
-import type { CanonicalStore } from '../../state';
+import type { CameraIntent, CanonicalStore } from '../../state';
 import { cameraTransition, decodeCameraIntent, envelopeCenter, useMapPanGesture, type MapCamera, type ViewportEnvelope } from '../camera';
 import { MapAccessibilityLayer } from '../accessibility';
 import { inspectObject, type DirectJumpOutcome, type MapInspectionContext } from '../inspection';
@@ -79,6 +80,16 @@ export interface MapSurfaceProps {
   readonly envelope: ViewportEnvelope;
   readonly style?: RenderStyle;
   readonly onOutcome?: (outcome: MapActionOutcome | DirectJumpOutcome) => void;
+  /**
+   * Asked ONCE, at the instant a canonical camera transition is applied, with the destination this
+   * surface is actually travelling to (T-12 §15).
+   *
+   * The surface neither knows nor asks why the camera moved — it has no access to an outcome, an act
+   * or an intent, and it cannot derive one. It carries the question to the integration owner that
+   * does, and passes the answer straight to the presentation plan. Absent, every travel is the plain
+   * one, which is exactly the behaviour before this prop existed.
+   */
+  readonly spatialCause?: (destination: CameraIntent) => PresentationMotionCause | null;
 }
 
 /** Which authority and which canonical camera the last accepted commit was drawn under. */
@@ -87,7 +98,7 @@ interface CameraHistory {
   readonly camera: MapCamera;
 }
 
-export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_STYLE, onOutcome }: MapSurfaceProps) {
+export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_STYLE, onOutcome, spatialCause }: MapSurfaceProps) {
   // Canonical state is READ, never held beside the store: the whole state, because the projection
   // tuple is Session + effective TC + `MC.depth`, and the camera alone cannot tell us whether the
   // supplied projection is still this Map.
@@ -193,9 +204,22 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
     setCorridor((current) => (envelopesEqual(current, exact) ? current : exact));
   }, [camera, cameraHistory, motion, store]);
 
+  /**
+   * The cause of the transition being applied, asked for at APPLY time and never during render.
+   *
+   * It closes over the exact destination camera this transition travels to, so the question the
+   * integration owner is asked names its own answer's target. It is invoked in exactly one place —
+   * the branch that applies a transition — so it is asked once per canonical camera change, and
+   * never for a reset, never for a render that applies nothing, and never per frame.
+   */
+  const causeOfTransition = useCallback(
+    () => (spatialCause === undefined || camera === null ? null : spatialCause(state.camera)),
+    [camera, spatialCause, state.camera],
+  );
+
   const cameraCommit: CanonicalCameraCommit = useMemo(
-    () => ({ transition, reset: authorityReplaced, commit: commitCamera }),
-    [authorityReplaced, commitCamera, transition],
+    () => ({ transition, reset: authorityReplaced, commit: commitCamera, cause: causeOfTransition }),
+    [authorityReplaced, causeOfTransition, commitCamera, transition],
   );
 
   // Presentation culling: what the motion could still put on the glass. At rest the corridor is the

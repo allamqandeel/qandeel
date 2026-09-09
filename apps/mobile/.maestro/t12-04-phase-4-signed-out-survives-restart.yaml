@@ -1,0 +1,31 @@
+# T-12 Phase M / QAN-BL-T12-04 — phase 4, the other half of `T04-4`.
+#
+# Sign-out is only proved when the credential is gone from the STORE, not merely from memory. So after
+# phase 3 the process is killed again (outside this flow) and the restore path is re-run.
+#
+# The expected report is therefore a FAILING one, and that is the pass condition: `allPassed=false`
+# with `auth=SIGNED_OUT` is exactly what a cleared store must produce. An `allPassed=true` here would
+# mean credential material survived a sign-out, which is the failure this phase exists to detect.
+appId: com.qandeel.mobile
+---
+- launchApp
+- assertVisible:
+    id: "qandeel-t1204-validation-harness"
+
+- tapOn:
+    id: "t1204-run-AFTER_RESTART"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 90000
+
+- takeScreenshot: t1204-phase-4-signed-out-survives-restart
+
+- assertVisible:
+    id: "t1204-step-T12-04.2a"
+# The store gave nothing back. Both assertions are required: the phase must be reported as not-passed
+# AND the reason must be the absence of a credential rather than any other failure.
+- assertVisible:
+    text: "AFTER_RESTART — allPassed=false"
+- assertVisible:
+    text: "(?s).*auth=SIGNED_OUT.*"

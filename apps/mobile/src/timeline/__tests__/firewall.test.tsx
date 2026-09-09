@@ -14,16 +14,21 @@ test('TL05-14 / Stage 6.2 sections 8–9: outboard Live seam consumes no ordinal
   const c = createPresentationController(fixture(20), 240);
   await render(<TimelinePresentation controller={c} outboardLivePresentation={<Text>Live presentation supplied by owner</Text>} />);
   const outboard = screen.getByTestId('timeline-outboard-live');
-  expect(outboard.props.style.width).toBe(OUTBOARD_LIVE_EXTENT);
+  // T-12 §17 / QAN-BL-RSP-02: the slot's extent is now a FLOOR rather than a fixed width, and it no
+  // longer clips. What this test is about is unchanged and is asserted below: the seam consumes no
+  // ordinal distance, whatever the slot's own extent turns out to be.
+  expect(outboard.props.style).toMatchObject({ minWidth: OUTBOARD_LIVE_EXTENT, flexShrink: 0 });
+  expect(outboard.props.style.overflow).toBeUndefined();
+  expect(outboard.props.style.width).toBeUndefined();
   expect(c.getSnapshot().maximum).toBe(20 * 48 - 240);
   expect(c.getSnapshot().track.targets.at(-1)?.sessionPosition).toBe(20);
   expect(screen.queryByTestId('timeline-sp-21')).toBeNull();
   expect(screen.getByTestId('timeline-discontinuity').props.accessibilityLabel).toBe('Disclosed Track continues');
   await act(async () => c.move({ type: 'PRESENTATION_POSITION_MOVE', position: 1 }));
   expect(screen.queryByTestId('timeline-discontinuity')).toBeNull();
-  expect(screen.getByTestId('timeline-outboard-live').props.style.width).toBe(OUTBOARD_LIVE_EXTENT);
+  expect(screen.getByTestId('timeline-outboard-live').props.style).toMatchObject({ minWidth: OUTBOARD_LIVE_EXTENT });
   await act(async () => c.replaceDisclosed(fixture(100)));
-  expect(screen.getByTestId('timeline-outboard-live').props.style.width).toBe(OUTBOARD_LIVE_EXTENT);
+  expect(screen.getByTestId('timeline-outboard-live').props.style).toMatchObject({ minWidth: OUTBOARD_LIVE_EXTENT });
   expect(c.getSnapshot().offset).toBe(720);
   expect(screen.getByTestId('timeline-discontinuity')).toBeTruthy();
 });

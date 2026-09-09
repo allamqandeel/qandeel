@@ -432,7 +432,7 @@ test('a travel in flight is neither re-issued nor re-culled by a geometry change
   const rebase = mapCode['renderer/MapCanvas.tsx'];
   // The rebase runs only for a canonical camera CHANGE. A resize produces no transition, so a
   // travel already scheduled keeps its targets and its durations: nothing restarts, nothing snaps.
-  assert.match(rebase, /if \(reset\) motion\.reset\(\);\s*\n\s*else if \(transition !== null\) motion\.applyCanonicalChange\(transition\);/u, 'the rebase is driven by a canonical transition');
+  assert.match(rebase, /if \(reset\) motion\.reset\(\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*else if \(transition !== null\) motion\.applyCanonicalChange\(transition, cause\(\)\);/u, 'the rebase is driven by a canonical transition');
   assert.match(surface, /const transition = cameraChanged && history !== null && camera !== null \? cameraTransition\(history\.camera, camera, envelope\) : null;/u, 'a transition exists only when the canonical camera changed');
   // The travel corridor is a RESIDUAL envelope. It is rebased through the canonical transition and
   // retired when the presentation reaches rest — neither of which a resize can cause — so a resize
@@ -555,12 +555,21 @@ test('the barrel is an allowlist, and the deep modules are not a second public s
   const barrel = responsiveSources['index.ts'];
   assert.doesNotMatch(stripComments(barrel), /export \* from/u, 'the public surface is an allowlist, never a wildcard');
   // Every consumer outside the owner comes through the barrel. A deep import would reach past it.
+  //
+  // T-12 re-anchor, and it is narrower than it looks. The rule being defended is that PRODUCTION code
+  // cannot reach past the public surface, and that is unchanged: every production module is still
+  // checked, and reaching any deep module is still a failure. What is now allowed is one thing only —
+  // a TEST or FIXTURE file importing this owner's own `__fixtures__`, which is what T-08's suites
+  // already do with T-07's. Forbidding it would force every later task to grow a second, drifting
+  // copy of `resize()` and the proof composition, which is a worse outcome than the import.
   const mobileRoot = join(rootPath, 'apps/mobile/src');
   for (const file of listFiles(mobileRoot)) {
     const relative = file.slice(mobileRoot.length + 1).replace(/\\/gu, '/');
     if (relative.startsWith('responsive/')) continue;
+    const isTestScaffolding = /(?:^|\/)__(?:tests|fixtures)__\//u.test(relative);
     const text = stripComments(readFileSync(file, 'utf8'));
     for (const match of text.matchAll(/from\s+'([^']*\/responsive\/[^']*)'/gu)) {
+      if (isTestScaffolding && match[1].includes('/responsive/__fixtures__/')) continue;
       assert.fail(`${relative} deep-imports the responsive owner: ${match[1]}`);
     }
   }

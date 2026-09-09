@@ -34,11 +34,23 @@ import { chromeStore, chromeSurface, contextAt, fetched, isOffered, projectionFo
 const reader = (): CanonicalStore =>
   chromeStore({ liveHead: 6, temporal: { kind: 'PINNED', at: sessionPosition(4) }, depth: 'ANALYTICAL_OBJECT' });
 
-/** A real journey: one committed act, so a real checkpoint exists to be named. */
+/**
+ * A real explicit inspection journey: one committed inspection, so a real ORIGIN exists to be named.
+ *
+ * It used to start the journey with `returnWorld`, and T-12 §14 is why it no longer can. A checkpoint
+ * recorded by Return to World is a perfectly valid handle and is not an inspection at all — it is the
+ * exact case R3-04 named — and the mint now refuses it rather than relying on the caller to know
+ * that. So the fixture does what its own comment always claimed: it inspects something, and the
+ * checkpoint that act appended is the viewpoint the journey started from.
+ *
+ * Nothing else about these tests changed. Provenance, consumption, resurrection and store replacement
+ * are the subjects, and each is exercised against the same one-checkpoint history as before.
+ */
 function afterOneStep() {
   const store = reader();
   const surface = chromeSurface(store);
-  returnWorld(surface);
+  const outcome = inspectObject(store, contextAt(TWO_CONTEXT_WORLD()), { family: 'THREAD', id: 'thread-a' });
+  if (outcome.outcome !== 'APPLIED') throw new Error(`fixture produced no journey: ${JSON.stringify(outcome)}`);
   const target = latestReturnCheckpoint(store);
   if (target === null) throw new Error('fixture produced no checkpoint');
   const origin = bindExactReturnOrigin(store, target);

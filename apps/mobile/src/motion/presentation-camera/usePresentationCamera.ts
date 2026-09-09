@@ -49,7 +49,7 @@ import {
   type PresentationPoint,
   type PresentationResidual,
 } from './residual';
-import { presentationTravelPlan, residualIsAtRest, type PresentationTravelPlan } from './travel-plan';
+import { presentationTravelPlan, residualIsAtRest, type PresentationMotionCause, type PresentationTravelPlan } from './travel-plan';
 
 const EASE_OUT = Easing.bezier(QANDEEL_EASE_OUT[0], QANDEEL_EASE_OUT[1], QANDEEL_EASE_OUT[2], QANDEEL_EASE_OUT[3]);
 
@@ -136,8 +136,21 @@ export interface PresentationCameraBinding {
   readonly dragBy: (changeX: number, changeY: number) => void;
   /** UI runtime: the finger left. Ownership ends; the residual is left for the rebase to resolve. */
   readonly release: () => void;
-  /** Rebases the visible frame onto an already-authorized camera, then resolves toward it. */
-  readonly applyCanonicalChange: (change: CanonicalCameraChange) => PresentationTravelPlan;
+  /**
+   * Rebases the visible frame onto an already-authorized camera, then resolves toward it.
+   *
+   * `cause` is the composite spatial cause for THIS transition, or nothing. It is an ARGUMENT to the
+   * call that applies the transition rather than a channel this hook holds, and that is the whole of
+   * why it cannot become the pending mailbox R3-04 refused: there is nothing to hold, nothing to
+   * queue, nothing to expire and nothing for a later unrelated camera act to find. A cause exists
+   * only for the duration of the one call it was passed to.
+   *
+   * It changes exactly one thing, and only in the plan T-10 already froze: whether the preserved
+   * frame is held for the composite beat before the spatial half is shown. It is never required for
+   * correctness — absent one, the plan is simply the plain one — and it can neither move the camera,
+   * choose a destination, nor make any claim about the world.
+   */
+  readonly applyCanonicalChange: (change: CanonicalCameraChange, cause?: PresentationMotionCause | null) => PresentationTravelPlan;
   /** Returns the plane to the canonical camera when a completed input changed nothing. */
   readonly resolveToRest: () => void;
   /** Drops the residual outright. For an unmount, or a surface with no decodable camera. */
@@ -244,7 +257,7 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
   }, [dragging, epoch, planeOpacity, tx, ty, zoom]);
 
   const applyCanonicalChange = useCallback(
-    (change: CanonicalCameraChange): PresentationTravelPlan => {
+    (change: CanonicalCameraChange, cause: PresentationMotionCause | null = null): PresentationTravelPlan => {
       epoch.set(epoch.get() + 1);
       const k = Number.isFinite(change.k) && change.k > 0 ? change.k : 1;
       const representable = change.destination !== null;
@@ -267,10 +280,12 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
         representable,
         reducedMotion,
         depthChanged: change.depthChanged,
-        // R3-04: no production path can arm the composite beat. The pure plan still accepts one, and
-        // is tested for it, because the choreography is real and T-12 owns binding it to the exact
-        // transition its outcome belongs to — see COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12.
-        cause: null,
+        // R3-04, closed by T-12 §15. The cause arrives as an argument to THIS call and is used
+        // immediately; nothing about it is stored, so the mailbox R3-04 refused remains impossible
+        // by construction rather than by policy. Which transition an already-returned outcome
+        // belongs to is still a composition fact this owner does not have and does not compute — the
+        // integration owner proves the identity and hands the answer in.
+        cause,
       });
 
       if (plan.kind === 'AT_REST') {

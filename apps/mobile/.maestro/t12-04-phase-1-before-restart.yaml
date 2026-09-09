@@ -1,0 +1,55 @@
+# T-12 Phase M / QAN-BL-T12-04 — phase 1, BEFORE the process is killed.
+#
+# Runs in the AUTH-VALIDATION build only. That build's root component is the isolated harness, so this
+# flow reaches no Product surface and proves nothing about MOT-03, MOT-04 or RSP-01.
+#
+# `clearState: true` is deliberate and belongs to phase 1 alone: the claim under test is that a session
+# written by THIS run survives a kill, so the run must start from an empty store. Phases 2 and 3 must
+# never clear state — that would erase the very thing they exist to read back.
+#
+# The identity email is typed in and then ERASED from the field before any screenshot is taken. The
+# password field is `secureTextEntry` and is cleared by the harness itself when the run ends. Nothing
+# in the report carries a credential: it reports kinds, booleans and character counts.
+appId: com.qandeel.mobile
+env:
+  EMAIL_A: ""
+  PASSWORD_A: ""
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "qandeel-t1204-validation-harness"
+
+- tapOn:
+    id: "t1204-email"
+- inputText: ${EMAIL_A}
+- tapOn:
+    id: "t1204-password"
+- inputText: ${PASSWORD_A}
+- hideKeyboard
+
+- tapOn:
+    id: "t1204-run-BEFORE_RESTART"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 90000
+
+# The credential field is emptied before the evidence image exists, so the screenshot is safe to
+# attach. The run already holds its own copy; clearing the field cannot affect a call in flight.
+- tapOn:
+    id: "t1204-email"
+- eraseText: 64
+- hideKeyboard
+
+- takeScreenshot: t1204-phase-1-before-restart
+
+# The claims. A failure here fails the job, and the screenshot above is already on disk.
+- assertVisible:
+    id: "t1204-step-T12-04.0"
+- assertVisible:
+    id: "t1204-step-T12-04.1"
+- assertVisible:
+    id: "t1204-step-T12-04.1b"
+- assertVisible:
+    text: "BEFORE_RESTART — allPassed=true"

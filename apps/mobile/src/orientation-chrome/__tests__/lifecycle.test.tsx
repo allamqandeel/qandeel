@@ -15,7 +15,7 @@ import type { MapProjectionRequest } from '../../map';
 import { OrientationChrome } from '../OrientationChrome';
 import { RETURN_CONTROLS_TEST_ID } from '../ReturnControls';
 import { bindExactReturnOrigin } from '../exact-return-origin';
-import { chromeStore, chromeSurface, fetched, projectionFor, TWO_CONTEXT_WORLD } from '../__fixtures__/chrome';
+import { beginInspectionJourney, chromeStore, chromeSurface, fetched, projectionFor, TWO_CONTEXT_WORLD } from '../__fixtures__/chrome';
 
 /** A live focus is supplied so the composite act actually reaches its `liveContext` provider. */
 const reader = (): CanonicalStore =>
@@ -127,8 +127,9 @@ describe('OC08-I — unmount and replacement', () => {
   it('R1-08 — a replaced store invalidates the old Exact Return opportunity immediately', async () => {
     const original = reader();
     const surface = chromeSurface(original);
-    returnWorld(surface);
-    const origin = bindExactReturnOrigin(original, latestReturnCheckpoint(original));
+    // T-12 §14: an Original Inspection origin comes from a real inspection journey, never from
+    // whatever checkpoint happens to be latest.
+    const origin = bindExactReturnOrigin(original, beginInspectionJourney(original));
     expect(origin).not.toBeNull();
     const originalAfterSetup = original.getState();
 
@@ -174,8 +175,7 @@ describe('OC08-I — unmount and replacement', () => {
   it('I86 — the one piece of local state is noncanonical and can only ever remove an opportunity', async () => {
     const store = reader();
     const surface = chromeSurface(store);
-    returnWorld(surface);
-    const origin = bindExactReturnOrigin(store, latestReturnCheckpoint(store));
+    const origin = bindExactReturnOrigin(store, beginInspectionJourney(store));
     const before = store.getState();
 
     const view = await render(
