@@ -142,6 +142,7 @@
     "test:inspection-orientation-return-chrome-contract": "node --test tests/inspection-orientation-return-chrome-contract.test.mjs",
     "test:t10-motion-contract": "node --test tests/t10-motion-contract.test.mjs",
     "test:t11-responsive-contract": "node --test tests/t11-responsive-contract.test.mjs",
+    "test:t12p-mobile-runtime-entry-contract": "node --test tests/t12p-mobile-runtime-entry-contract.test.mjs",
     "test:forward-safety-contract": "node --test tests/forward-safety-contract.test.mjs",
     "test:mobile-native-impact-classifier": "node --test tests/mobile-native-impact-classifier.test.mjs"
   },

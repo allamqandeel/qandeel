@@ -32,6 +32,15 @@ const expectedDependencies = {
   // is a native dependency whose generated projects the native smoke jobs build. It is the
   // Expo SDK 57 recommended Skia version and `expo install --check` accepts it unchanged.
   '@shopify/react-native-skia': '2.6.2',
+  // T-12P §2.1: the authorized direct-Supabase mobile identity authority. The mobile app obtains
+  // its own Supabase Auth session and forwards the access token to the existing API, which stays
+  // the verifier. No backend-issued substitute token exists, and no secret key ships here.
+  //
+  // Pinned EXACTLY, not as a range, for the same reason the Skia pin is exact and one more: this is
+  // the credential-handling dependency, so the version an Architecture and Security review audited
+  // must be the version that ships. A caret would also reintroduce the live-registry drift QAN-INF-02
+  // had to close.
+  '@supabase/supabase-js': '2.116.0',
   // MOB-CI-01, then QAN-INF-02: Expo SDK 57 patch baseline refreshed to what
   // `expo install --check` now requires against the live registry. Only these two patch
   // pins moved; the SDK minor is unchanged and the assertion is exact, not a range.
@@ -40,6 +49,11 @@ const expectedDependencies = {
   'expo-dev-client': '~57.0.18',
   'expo-linking': '~57.0.9',
   'expo-router': '~57.0.20',
+  // T-12P §2.4: the Supabase auth-session store, pinned to the Expo SDK 57 bundled version. It is
+  // the current official Supabase-on-Expo storage recommendation and it holds AUTHENTICATION
+  // material only. It is not a Product persistence permission: T-12P's own contract proves the
+  // package is reachable from exactly one module and that no canonical state is ever written.
+  'expo-sqlite': '~57.0.2',
   'expo-status-bar': '~57.0.1',
   react: '19.2.3',
   'react-native': '0.86.3',

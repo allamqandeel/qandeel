@@ -175,7 +175,10 @@ test('the Map layer adds exactly one dependency, and no state, persistence or na
   }
   assert.deepEqual([...specifiers].sort(), ['@qandeel/runtime', '@shopify/react-native-skia', 'react', 'react-native', 'react-native-gesture-handler']);
 
-  for (const name of ['zustand', 'redux', '@reduxjs/toolkit', 'react-redux', 'immer', 'xstate', 'jotai', 'mobx', 'valtio', 'recoil', 'react-native-mmkv', '@react-native-async-storage/async-storage', 'expo-secure-store', 'expo-sqlite', 'react-native-svg', 'react-native-webview']) {
+  // `expo-sqlite` left this denylist under T-12P §2.4 (authentication session store only). The
+  // T-04 invariant is unaffected and still exactly proven by the import census above: the Map
+  // layer may import only @qandeel/runtime, Skia, react, react-native and Gesture Handler.
+  for (const name of ['zustand', 'redux', '@reduxjs/toolkit', 'react-redux', 'immer', 'xstate', 'jotai', 'mobx', 'valtio', 'recoil', 'react-native-mmkv', '@react-native-async-storage/async-storage', 'expo-secure-store', 'react-native-svg', 'react-native-webview']) {
     const copies = Object.keys(lock.packages).filter((key) => key === `node_modules/${name}` || key.endsWith(`/node_modules/${name}`));
     assert.deepEqual(copies, [], `${name} must not be installed`);
   }

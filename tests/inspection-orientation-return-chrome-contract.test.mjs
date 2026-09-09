@@ -409,8 +409,11 @@ test('T-08 adds no dependency and touches no backend, database or schema', async
   // T-08 does not own — T-11 and T-12 may legitimately add to it. The permanent, SCOPED proof that
   // T-08 adds no dependency is the import scan below: every import in the layer is a relative
   // module of this app, `react`, or `react-native`. A dependency T-08 cannot import is not T-08's.
+  // `expo-sqlite` left this denylist under T-12P §2.4 (authentication session store only), which
+  // is exactly the "T-11 and T-12 may legitimately add to it" case this comment anticipated. The
+  // T-08 invariant is unaffected and still exactly proven by the import scan below.
   for (const name of ['zustand', 'redux', '@reduxjs/toolkit', 'jotai', 'mobx', 'valtio', 'recoil', 'react-native-mmkv',
-    '@react-native-async-storage/async-storage', 'expo-secure-store', 'expo-sqlite', 'moment', 'dayjs', 'date-fns', 'luxon']) {
+    '@react-native-async-storage/async-storage', 'expo-secure-store', 'moment', 'dayjs', 'date-fns', 'luxon']) {
     assert.equal(name in (mobilePackage.dependencies ?? {}) || name in (mobilePackage.devDependencies ?? {}), false, `${name} must not be introduced`);
   }
   const rootPackage = await readJson('package.json');

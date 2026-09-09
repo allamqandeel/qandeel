@@ -627,7 +627,10 @@ test('the return layer adds no dependency: every import is a relative module of 
   // exact T-04 renderer pin, and the lockfile denylist below.
   assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
   const lock = await readJson('package-lock.json');
-  for (const name of ['zustand', 'redux', '@reduxjs/toolkit', 'react-redux', 'immer', 'xstate', 'jotai', 'mobx', 'valtio', 'recoil', 'react-native-mmkv', '@react-native-async-storage/async-storage', 'expo-secure-store', 'expo-sqlite', 'history', 'react-router', 'moment', 'dayjs', 'date-fns', 'luxon']) {
+  // `expo-sqlite` left this denylist under T-12P §2.4 (authentication session store only). The
+  // T-07 invariant is unaffected and still exactly proven by the import assertion above: the
+  // return layer imports nothing outside this app, so a dependency it cannot import is not its.
+  for (const name of ['zustand', 'redux', '@reduxjs/toolkit', 'react-redux', 'immer', 'xstate', 'jotai', 'mobx', 'valtio', 'recoil', 'react-native-mmkv', '@react-native-async-storage/async-storage', 'expo-secure-store', 'history', 'react-router', 'moment', 'dayjs', 'date-fns', 'luxon']) {
     const copies = Object.keys(lock.packages).filter((key) => key === `node_modules/${name}` || key.endsWith(`/node_modules/${name}`));
     assert.deepEqual(copies, [], `${name} must not be installed`);
   }
