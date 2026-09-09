@@ -61,6 +61,17 @@ the QANDEEL API a credential custodian it has never been.
 | [docs.expo.dev/guides/environment-variables](https://docs.expo.dev/guides/environment-variables) | `EXPO_PUBLIC_*` is statically inlined by Metro and visible in plain text in the compiled app. |
 | `github.com/supabase/auth` `openapi.yaml` | `POST /auth/v1/token` requires only the `apikey` header; the response carries a server-computed `expires_at`. No admin session-minting operation exists. |
 
+**Provenance, not token equality, retires an identity (R1-01).** A sign-out closes the auth epoch,
+and while it is closed only an explicit `SIGNED_IN` may authenticate again. A `TOKEN_REFRESHED`,
+`INITIAL`, `USER_UPDATED` or unrecognised callback that was already in flight when the sign-out ran
+belongs to the retired epoch and is dropped, however fresh the token it carries. The port therefore
+carries the SDK's event kind across the boundary instead of discarding it. The earlier rule compared
+the retired `{userId, accessToken}` pair, and that is precisely the case it missed: a refresh
+completing after a sign-out delivers the *same user* with a *different token*, so the pair never
+matched and the identity came back. The epoch is closed **before** the sign-out round trip is
+awaited, so a callback landing mid-flight is already outside it. A refresh is still not a new
+identity: the auth generation is unchanged, so no second conversation Session is created.
+
 **Adopted pattern:** the official React Native client options exactly — `autoRefreshToken: true`,
 `persistSession: true`, `detectSessionInUrl: false` — with `startAutoRefresh`/`stopAutoRefresh` bound
 to app state. **Deviation:** no `react-native-url-polyfill`, per Expo's explicit guidance that it is
@@ -88,13 +99,29 @@ config authority therefore **fails closed** on a missing, blank, non-string or m
 additionally **refuses an elevated key outright**, producing a typed `FORBIDDEN_SECRET` failure so
 that no runtime is built at all. The refusal never echoes the offending value.
 
-That refusal is deliberately not a substring scan, because a substring scan would miss the exact
-mistake it exists to catch. A new-format elevated key is caught by its `sb_secret_` prefix, but a
-**legacy** Supabase key is a JWT whose privilege lives in the base64url-encoded `role` claim — the
-text `service_role` never appears in it. The authority therefore decodes the claim and accepts only
-`anon`, which is the legacy equivalent of a publishable key. `service_role` is refused because it
-bypasses Row Level Security, and `authenticated` is refused because its presence would mean somebody
-pasted a *user's* own access token into build configuration.
+The key check is an **allowlist**, not a denylist (R1-04A). Exactly two shapes are accepted:
+
+1. a new-format publishable key, `sb_publishable_…`; or
+2. a legacy key — a JWT — whose decoded `role` claim is exactly `anon`.
+
+Everything else fails closed. `sb_secret_…` is `FORBIDDEN_SECRET` because it bypasses Row Level
+Security. A legacy `service_role` is `FORBIDDEN_SECRET` for the same reason, and `authenticated` is
+too, because its presence would mean somebody pasted a *user's own access token* into build
+configuration. A malformed JWT, a JWT with a missing or non-string role, an unknown prefix and an
+arbitrary string are all `UNSUPPORTED_KEY_SHAPE`: an unrecognised key is not evidence of safety, and
+the SDK is not the right place to find out.
+
+The legacy check **decodes** rather than substring-matching, because a substring scan would miss the
+exact mistake it exists to catch: a legacy key's privilege lives in the base64url-encoded payload, so
+the text `service_role` never appears literally. Nothing here verifies a signature — classifying
+public build config does not make the app a JWT trust authority, and a forged key simply fails
+against Supabase.
+
+**Origins must be HTTPS** (R1-04B). Every request built on them carries a bearer token, and the
+sign-in that produces it carries a password; a cleartext remote origin would put both on the wire.
+`http:` is refused outright. There is one narrow development seam — `allowLoopbackHttp` — which is
+off by default and, even when opened, admits **loopback hosts only**. An arbitrary remote
+`http://…` can never be valid config, with or without the seam.
 
 The identity SDK is pinned **exactly** (`2.116.0`), not as a caret range: the credential-handling
 dependency that ships must be the one an Architecture and Security review audited, and a range would
@@ -122,13 +149,39 @@ material through an unrelated key, and the adapter exposes only `getItem` / `set
 
 ### The security trade-off, stated plainly
 
-**This storage is not encrypted at rest.** `expo-secure-store` is keystore-backed, but Supabase's own
-guidance does not use it for sessions, because a serialised session can exceed SecureStore's value
-size limit; Supabase's published workaround splits the value and encrypts it with hand-rolled AES,
-which is exactly the custom cryptography this task is instructed not to invent. So the v1 position is:
-follow official guidance, isolate the store behind one module, and put the hardening question to the
-Security review rather than answer it by improvisation. **Changing the mechanism is a one-file change**
-— nothing outside `auth-session-storage.ts` names the package, and the static contract enforces that.
+**This storage is not encrypted at rest.**
+
+Official guidance is **mixed**, and an earlier draft of this document overstated it — corrected here
+after the R1 review. All four of these are current official positions:
+
+| Source | Storage it uses for the session |
+| --- | --- |
+| Supabase — React Native quickstart | `@react-native-async-storage/async-storage` (unencrypted) |
+| Supabase — Expo quickstart | `expo-sqlite` (unencrypted) |
+| Expo — "Using Supabase" guide | `expo-sqlite` (unencrypted) |
+| Supabase — JS client reference | a `LargeSecureStore` class: an AES-256 key in `expo-secure-store`, ciphertext in AsyncStorage |
+| Expo — authentication guide | recommends `expo-secure-store` for access tokens, and says AsyncStorage is not secure for this |
+
+So it is **not** true that official guidance avoids SecureStore. What is true is that the
+SecureStore-backed session pattern Supabase publishes wraps it in **hand-rolled AES**, because a
+serialised session can exceed SecureStore's value-size limit — and hand-rolled cryptography is
+exactly what this task is instructed not to introduce. T-12P therefore takes the unencrypted
+official Expo path, isolates it, and refers the encrypted-at-rest question to a gate that can decide
+it against real evidence instead of guessing now.
+
+**Changing the mechanism is a one-file change** — nothing outside `auth-session-storage.ts` names the
+package, and the static contract enforces that.
+
+What is forbidden from this store regardless: `CanonicalState`, the camera, TC/PTC, RH, inspection,
+Live Focus, Return state, the disclosure cache and the conversation `sessionId`. Those are T-13's.
+
+**What no local gate proves.** Jest does not exercise the native SQLite persistence path at all —
+constructing the real store under `jest-expo` kills the worker. The Android and iOS native jobs prove
+build, install and boot, **not** session write, restore, refresh or sign-out. That gap is admitted as
+`QAN-BL-T12-04` (`VALIDATION — OPEN`, HIGH, owned by the T-12 pre-release physical validation gate),
+which also requires Architecture and Security to explicitly disposition encrypted-at-rest storage
+against the then-current official pattern and the observed session size. No custom or hand-rolled
+cryptography is authorized, then or now.
 
 The four lockfile denylists and one manifest denylist that previously banned `expo-sqlite` were
 re-anchored narrowly, each with a comment naming this authority and pointing at the confinement proof.
@@ -271,6 +324,36 @@ delivery leaves it untouched while the event was still delivered. The cursor adv
 outcome the sync owner did not `REJECT`; `REJECTED` means the payload never became client truth, the
 seam stops the page there, and so does the cursor. A cursor never moves backwards. Paging is bounded
 per cycle so one cycle cannot page forever against a fast-moving Session.
+
+### Strict cross-stream Session Position order (R1-03)
+
+Draining committed pages fully and Live Focus pages afterwards leaves each stream internally ordered
+and the delivery as a whole out of order: committed 10, LF 11, committed 12 would apply 10 → 12 → 11.
+So the driver fetches bounded pages from **both** streams and applies them merged by authoritative
+Session Position — `lastSp` for a committed CU, `atSp` for a Live Focus transition — through the
+existing T-03 sync owners, one delivery at a time. It adds no temporal authority; it decides only the
+order in which the frozen owners are called.
+
+**The tie rule is read off frozen semantics, not invented.** Within one Session Position the server
+reserves same-SP sequence 1 for the committed CU and sequence 3 for the Live Focus transition, so at
+an equal SP the committed CU is applied first.
+
+**A full page holds back what it cannot yet order.** If a stream's page comes back full, events
+beyond its last position may still exist below the other stream's, so nothing past that watermark is
+applied in that iteration. Whatever is held back is simply re-fetched, because the cursors advanced
+only for what was actually applied. Session-mismatch refusal, cursor monotonicity, idempotent
+redelivery, stale classification, bounded pages, no overlap and the per-application generation check
+are all unchanged.
+
+### Credential freshness at every request boundary (R1-02)
+
+`TemporalApiConfig` captures the access token at construction and exposes no setter, so a client
+built once per cycle keeps the token it was born with. If the token refreshed after the snapshot but
+before the next page, that page would go out stale. The driver therefore reads the current credential
+and builds the transport **immediately before every request** — snapshot, committed page and Live
+Focus page alike — and the generation check rides along, so a request can never be issued for an
+identity that has already been replaced. A refresh is not a generation change and does not interrupt
+the catch-up in progress.
 
 A failure never invents state and never rewinds truth: the cursor is untouched and the next cycle asks
 again from the last position genuinely accepted.

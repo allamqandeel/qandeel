@@ -31,6 +31,32 @@ export type AuthPortResult<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly failure: AuthPortFailure };
 
+/**
+ * R1-01 — the PROVENANCE of a session change, preserved across this boundary.
+ *
+ * Token equality is not provenance. A token-refresh callback can already be in flight when a
+ * sign-out runs and then deliver the same user with a DIFFERENT refreshed token, so suppressing an
+ * exact `{userId, accessToken}` pair misses precisely the callback that would resurrect a
+ * signed-out identity. What distinguishes "a genuinely new authentication" from "a late callback
+ * belonging to the retired auth epoch" is the KIND of event, which the SDK already knows and which
+ * this port therefore carries rather than discards.
+ */
+export type AuthChangeKind =
+  /** The subscription's first emission for whatever session was already restored. */
+  | 'INITIAL'
+  /** An explicit new authentication. The ONLY kind that may start an identity after a sign-out. */
+  | 'SIGNED_IN'
+  | 'SIGNED_OUT'
+  | 'TOKEN_REFRESHED'
+  | 'USER_UPDATED'
+  /** Anything else the SDK may emit. Treated as non-authenticating, like a refresh. */
+  | 'OTHER';
+
+export interface AuthSessionChange {
+  readonly kind: AuthChangeKind;
+  readonly session: AuthSessionSnapshot | null;
+}
+
 export interface SupabaseAuthPort {
   /** The persisted session, if the SDK could restore one. `null` means signed out, not an error. */
   restoreSession(): Promise<AuthPortResult<AuthSessionSnapshot | null>>;
@@ -41,10 +67,10 @@ export interface SupabaseAuthPort {
   signInWithPassword(email: string, password: string): Promise<AuthPortResult<AuthSessionSnapshot>>;
   signOut(): Promise<AuthPortResult<null>>;
   /**
-   * Every subsequent session change: a token refresh, a sign-in, a sign-out, a user replacement.
-   * Returns an idempotent unsubscribe.
+   * Every subsequent session change, WITH its provenance: a token refresh, a sign-in, a sign-out,
+   * a user replacement. Returns an idempotent unsubscribe.
    */
-  onSessionChange(listener: (session: AuthSessionSnapshot | null) => void): () => void;
+  onSessionChange(listener: (change: AuthSessionChange) => void): () => void;
   /** Bound to the foreground signal — see `createSupabaseAuthPort`. */
   startAutoRefresh(): void;
   stopAutoRefresh(): void;
@@ -132,8 +158,8 @@ export function createSupabaseAuthPort({ config, storage }: SupabaseAuthPortOpti
       }
     },
     onSessionChange(listener) {
-      const { data } = client.auth.onAuthStateChange((_event, session) => {
-        listener(snapshotOf(session));
+      const { data } = client.auth.onAuthStateChange((event, session) => {
+        listener({ kind: toChangeKind(event), session: snapshotOf(session) });
       });
       let removed = false;
       return () => {
@@ -149,6 +175,28 @@ export function createSupabaseAuthPort({ config, storage }: SupabaseAuthPortOpti
       void client.auth.stopAutoRefresh();
     },
   };
+}
+
+/**
+ * Map the SDK's event vocabulary onto this layer's. Anything unrecognised becomes `OTHER`, which is
+ * treated as non-authenticating — the safe default, since a kind nobody anticipated must not be
+ * able to start an identity after a sign-out.
+ */
+function toChangeKind(event: string): AuthChangeKind {
+  switch (event) {
+    case 'SIGNED_IN':
+      return 'SIGNED_IN';
+    case 'SIGNED_OUT':
+      return 'SIGNED_OUT';
+    case 'TOKEN_REFRESHED':
+      return 'TOKEN_REFRESHED';
+    case 'INITIAL_SESSION':
+      return 'INITIAL';
+    case 'USER_UPDATED':
+      return 'USER_UPDATED';
+    default:
+      return 'OTHER';
+  }
 }
 
 /** Describe a thrown value without ever interpolating a credential-bearing object. */

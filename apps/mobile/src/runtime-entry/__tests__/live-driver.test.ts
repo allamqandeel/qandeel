@@ -19,6 +19,7 @@ import {
   httpDouble,
   liveFocusEvent,
   serveHappyPath,
+  servePagedStream,
   settle,
   snapshot,
   timerDouble,
@@ -137,6 +138,105 @@ test('P38 — Live Focus pages advance their own cursor independently of the hea
   expect(h.driver.getStatus().cursors.liveFocusAfterSp).toBe(6);
   // The head cursor was already current, so no committed page was requested.
   expect(eventCalls(http)).toHaveLength(0);
+  h.driver.dispose();
+});
+
+test('R1-03 — interleaved streams are applied in strict Session Position order', async () => {
+  // THE DISCRIMINATING CASE. Candidate 050f19c drained committed pages fully and only then Live
+  // Focus pages, so committed 10, LF 11, committed 12, LF 13 was applied 10 -> 12 -> 11 -> 13.
+  // Each stream was internally ordered and the delivery as a whole was not.
+  const http = httpDouble();
+  const h = await harness({ liveHead: 9, liveFocusAtSp: 9, http });
+  // A Live Focus anchored beyond the Live Head is refused by the frozen snapshot decoder, so the
+  // head must lead: committed 10, LF 11, committed 12, LF 13, committed 14.
+  http.on('/temporal', () => ({ status: 200, body: snapshot({ liveHead: 14, liveFocusAtSp: 13 }) }));
+  servePagedStream(http, '/temporal/events', [committedEvent(10, 10), committedEvent(12, 12), committedEvent(14, 14)]);
+  servePagedStream(http, '/temporal/live-focus-events', [
+    liveFocusEvent(11, { kind: 'EMERGING', emergingFocusId: 'e-11' }),
+    liveFocusEvent(13, { kind: 'THREAD', threadId: 't-13' }),
+  ]);
+
+  // Observe the ACTUAL application order through the store rather than trusting the driver's report.
+  const applied: string[] = [];
+  const unsubscribe = h.bundle.store.subscribe(() => {
+    const live = h.bundle.store.getState().live;
+    applied.push(`LH=${String(live.LH)} LF=${live.LF.value.kind}@${String(live.LF.atSp)}`);
+  });
+
+  h.driver.start();
+  await settle();
+  unsubscribe();
+
+  // 10 -> 11 -> 12 -> 13 -> 14, across streams. On 050f19c this was 10 -> 12 -> 14 -> 11 -> 13.
+  expect(applied).toEqual([
+    'LH=10 LF=NONE@9',
+    'LH=10 LF=EMERGING_FOCUS@11',
+    'LH=12 LF=EMERGING_FOCUS@11',
+    'LH=12 LF=ESTABLISHED_THREAD@13',
+    'LH=14 LF=ESTABLISHED_THREAD@13',
+  ]);
+  expect(h.driver.getStatus().cursors).toEqual({ committedAfterSp: 14, liveFocusAfterSp: 13 });
+  h.driver.dispose();
+});
+
+test('R1-03 — at an equal Session Position the committed CU precedes the Live Focus transition', async () => {
+  // Not invented here: within one SP the server reserves same-SP sequence 1 for the committed CU
+  // and sequence 3 for the Live Focus transition, so this is the frozen write order read back.
+  const http = httpDouble();
+  const h = await harness({ liveHead: 9, liveFocusAtSp: 9, http });
+  http.on('/temporal', () => ({ status: 200, body: snapshot({ liveHead: 10, liveFocusAtSp: 10 }) }));
+  http.on('/temporal/events', () => ({ status: 200, body: { sessionId: SESSION_A, events: [committedEvent(10, 10)] } }));
+  http.on('/temporal/live-focus-events', () => ({
+    status: 200,
+    body: { sessionId: SESSION_A, events: [liveFocusEvent(10, { kind: 'THREAD', threadId: 't-10' })] },
+  }));
+
+  const applied: string[] = [];
+  const unsubscribe = h.bundle.store.subscribe(() => {
+    const live = h.bundle.store.getState().live;
+    applied.push(`LH=${String(live.LH)} LF=${live.LF.value.kind}`);
+  });
+  h.driver.start();
+  await settle();
+  unsubscribe();
+
+  expect(applied).toEqual(['LH=10 LF=NONE', 'LH=10 LF=ESTABLISHED_THREAD']);
+  h.driver.dispose();
+});
+
+test('R1-03 — a full page from one stream holds back what it cannot yet order', async () => {
+  // With pageLimit 2 the committed page comes back FULL, so events beyond its last position might
+  // still exist below the other stream's. Applying past that watermark could invert the order, so
+  // the surplus waits and is simply re-fetched — the cursors only advanced for what was applied.
+  const http = httpDouble();
+  const h = await harness({ liveHead: 9, liveFocusAtSp: 9, http });
+  http.on('/temporal', () => ({ status: 200, body: snapshot({ liveHead: 40, liveFocusAtSp: 30 }) }));
+  // Many committed events at low positions, so with pageLimit 2 the committed page keeps coming
+  // back FULL while the Live Focus stream reaches much higher positions.
+  servePagedStream(
+    http,
+    '/temporal/events',
+    [10, 11, 12, 13, 14, 20, 40].map((sp) => committedEvent(sp, sp)),
+  );
+  servePagedStream(http, '/temporal/live-focus-events', [
+    liveFocusEvent(15, { kind: 'EMERGING', emergingFocusId: 'e-15' }),
+    liveFocusEvent(30, { kind: 'THREAD', threadId: 't-30' }),
+  ]);
+
+  const applied: number[] = [];
+  const unsubscribe = h.bundle.store.subscribe(() => {
+    const live = h.bundle.store.getState().live;
+    applied.push(Math.max(Number(live.LH ?? 0), Number(live.LF.atSp ?? 0)));
+  });
+  h.driver.start();
+  await settle();
+  unsubscribe();
+
+  // Monotonic non-decreasing: nothing was applied out of Session Position order, even though the
+  // Live Focus page reached SP 30 while the committed stream was still paging through the teens.
+  expect(applied.length).toBeGreaterThan(0);
+  expect(applied).toEqual([...applied].sort((a, b) => a - b));
+  expect(h.driver.getStatus().cursors).toEqual({ committedAfterSp: 40, liveFocusAfterSp: 30 });
   h.driver.dispose();
 });
 
@@ -334,6 +434,68 @@ test('P47 — returning to the foreground reconciles immediately rather than wai
   h.foreground.set('ACTIVE');
   await settle();
   expect(snapshotCalls(h.http).length).toBe(before + 1);
+  h.driver.dispose();
+});
+
+test('R1-02 — a token refreshed MID-CYCLE is used by the very next request in that cycle', async () => {
+  // THE DISCRIMINATING CASE. Candidate 050f19c read the credential once at the top of a cycle and
+  // built ONE client for the snapshot and every page. A refresh landing after the snapshot but
+  // before the next page left that page going out with the old token. `TemporalApiConfig` captures
+  // the token at construction and exposes no setter, so freshness has to be re-established per
+  // request, not per cycle.
+  const http = httpDouble();
+  const h = await harness({ liveHead: 4, http });
+  const snapshotGate = gate();
+  http.on('/temporal', async () => {
+    await snapshotGate.wait();
+    return { status: 200, body: snapshot({ liveHead: 9, liveFocusAtSp: 4 }) };
+  });
+  http.on('/temporal/events', () => ({ status: 200, body: { sessionId: SESSION_A, events: [committedEvent(5, 9)] } }));
+
+  h.driver.start();
+  await settle();
+
+  // The refresh happens while the snapshot is still in flight — same identity, new token.
+  h.credential.value = { accessToken: 'token-alice-2', authGeneration: 1 };
+  snapshotGate.open();
+  await settle();
+
+  const authorizations = http.calls
+    .filter((call) => call.url.includes('/temporal'))
+    .map((call) => call.authorization);
+  const pageAuth = http.calls.filter((call) => call.url.includes('/temporal/events')).map((call) => call.authorization);
+
+  // The snapshot legitimately went out on A1; every request AFTER the refresh must be on A2.
+  expect(pageAuth.length).toBeGreaterThan(0);
+  expect(pageAuth.every((auth) => auth === 'Bearer token-alice-2')).toBe(true);
+  // And nothing later in the cycle regressed to A1.
+  const firstA2 = authorizations.indexOf('Bearer token-alice-2');
+  expect(firstA2).toBeGreaterThanOrEqual(0);
+  expect(authorizations.slice(firstA2).every((auth) => auth === 'Bearer token-alice-2')).toBe(true);
+  // A refresh is not a generation change: the catch-up still applied.
+  expect(h.bundle.store.getState().live.LH).toBe(9);
+  h.driver.dispose();
+});
+
+test('R1-02 — a request is never issued once the identity generation has moved on', async () => {
+  const http = httpDouble();
+  const h = await harness({ liveHead: 4, http });
+  const snapshotGate = gate();
+  http.on('/temporal', async () => {
+    await snapshotGate.wait();
+    return { status: 200, body: snapshot({ liveHead: 9, liveFocusAtSp: 4 }) };
+  });
+  http.on('/temporal/events', () => ({ status: 200, body: { sessionId: SESSION_A, events: [committedEvent(5, 9)] } }));
+
+  h.driver.start();
+  await settle();
+  // A DIFFERENT identity, not a refresh.
+  h.credential.value = { accessToken: 'token-bob-1', authGeneration: 2 };
+  snapshotGate.open();
+  await settle();
+
+  expect(http.matching('/temporal/events')).toHaveLength(0);
+  expect(h.bundle.store.getState().live.LH).toBe(4);
   h.driver.dispose();
 });
 

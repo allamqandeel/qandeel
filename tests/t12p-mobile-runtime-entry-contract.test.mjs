@@ -137,18 +137,81 @@ test('no credential, secret key or public runtime secret can enter the mobile bu
 
   // A service-role / secret key must be refused at the config boundary, not merely absent today.
   const config = entryCode['config/mobile-public-config.ts'];
-  assert.match(config, /sb_secret_/u, 'the config authority must recognise the new-format elevated prefix');
+  // R1-04A: an ALLOWLIST of the two documented publishable shapes, not a denylist.
+  assert.match(config, /SECRET_KEY_PREFIX = 'sb_secret_'/u, 'the config authority must recognise the elevated prefix');
+  assert.match(config, /PUBLISHABLE_KEY_PREFIX = 'sb_publishable_'/u, 'the config authority must allowlist the publishable prefix');
   // A LEGACY elevated key is a JWT whose privilege is in the base64url `role` claim, so the
   // authority must DECODE it. A substring scan would miss the exact mistake it exists to catch.
   assert.match(config, /legacyRoleClaim/u, 'the config authority must decode the legacy role claim');
   assert.match(config, /ALLOWED_LEGACY_ROLE = 'anon'/u, 'only the legacy publishable role is acceptable');
   assert.match(config, /FORBIDDEN_SECRET/u, 'an elevated key must produce a typed refusal');
+  assert.match(config, /UNSUPPORTED_KEY_SHAPE/u, 'an unrecognised key shape must fail closed rather than pass through');
+
+  // R1-04B: a cleartext remote origin would put the bearer token and the password on the wire.
+  assert.match(config, /parsed\.protocol === 'https:'/u, 'https is the accepted origin scheme');
+  assert.match(config, /allowLoopbackHttp/u, 'the http seam is explicit and off by default');
+  assert.match(config, /isLoopback\(parsed\.hostname\)/u, 'the http seam admits loopback hosts only');
 
   guards(
     'credential scan',
     entryText,
     (text) => !CREDENTIAL.test(text),
     "const key = process.env.EXPO_PUBLIC_SUPABASE_URL;",
+  );
+});
+
+test('R1-01 — a retired auth epoch is closed by provenance, not by token equality', () => {
+  const port = entryCode['auth/supabase-auth-port.ts'];
+  const authority = entryCode['auth/mobile-auth-authority.ts'];
+  // The SDK's event kind must survive the port boundary: it is the only thing that distinguishes a
+  // genuinely new authentication from a refresh belonging to the epoch a sign-out just retired.
+  assert.match(port, /AuthChangeKind/u, 'the port must carry the auth event kind');
+  assert.match(port, /onAuthStateChange\(\(event, session\)/u, 'the SDK event must not be discarded');
+  assert.match(authority, /epochRetired/u, 'the authority must track the retired epoch');
+  assert.match(authority, /epochRetired && kind !== 'SIGNED_IN'/u, 'only an explicit sign-in may reopen a retired epoch');
+  // The pair comparison this replaced is exactly what missed a refreshed token, so it must be gone.
+  assert.doesNotMatch(authority, /retired\.accessToken/u, 'token equality must not be used as provenance');
+
+  guards(
+    'retired epoch closed by provenance',
+    authority,
+    (text) => /epochRetired && kind !== 'SIGNED_IN'/u.test(text) && !/retired\.accessToken/u.test(text),
+    'if (retired.accessToken === session.accessToken) return;',
+  );
+});
+
+test('R1-02 — the credential is read immediately before every request', () => {
+  const driver = entryCode['live/foreground-live-driver.ts'];
+  assert.match(driver, /function clientForRequest\(\)/u, 'a per-request transport factory must exist');
+  assert.match(driver, /current\.authGeneration !== bundle\.authGeneration/u, 'every request re-checks the identity generation');
+  // Three request sites, three fresh clients: snapshot, committed page, Live Focus page.
+  assert.equal((driver.match(/clientForRequest\(\)/gu) ?? []).length >= 4, true, 'every request site builds its own client');
+  assert.doesNotMatch(driver, /const client = createTemporalClient\(current\.accessToken\);/u, 'no cycle-wide client may be reused');
+
+  guards(
+    'per-request credential',
+    driver,
+    (text) => !/const client = createTemporalClient\(current\.accessToken\);/u.test(text),
+    'const client = createTemporalClient(current.accessToken);',
+  );
+});
+
+test('R1-03 — catch-up is merged and applied in strict Session Position order', () => {
+  const driver = entryCode['live/foreground-live-driver.ts'];
+  assert.match(driver, /type DeliveryEntry/u, 'deliveries must be keyed by Session Position');
+  assert.match(driver, /a\.sp === b\.sp \? a\.rank - b\.rank : a\.sp - b\.sp/u, 'entries are ordered by SP, then by the frozen same-SP rank');
+  assert.match(driver, /watermark/u, 'a full page must hold back what it cannot yet order');
+  // The sequential drain this replaced is what produced 10 -> 12 -> 11, so it must be gone.
+  assert.doesNotMatch(driver, /catchUpCommitted|catchUpLiveFocus/u, 'the sequential per-stream drain must not return');
+  // Still applied only through the frozen T-03 owners — no new temporal authority.
+  assert.match(driver, /applyCommittedUnitsPage\(bundle\.store, \[entry\.event\]\)/u, 'committed deliveries go through the frozen seam');
+  assert.match(driver, /applyLiveFocusEventsPage\(bundle\.store, \[entry\.event\]\)/u, 'live-focus deliveries go through the frozen seam');
+
+  guards(
+    'no sequential per-stream drain',
+    driver,
+    (text) => !/catchUpCommitted/u.test(text),
+    'async function catchUpCommitted(client) { return; }',
   );
 });
 
@@ -371,4 +434,37 @@ test('the canonical task document exists and records the three closed gates', ()
   ]) {
     assert.match(doc, required, 'the task document must record what it closed and what it did not');
   }
+  // The storage posture must be stated, not implied, and it must not overstate official guidance.
+  assert.match(doc, /not encrypted at rest/u, 'the storage posture is stated plainly');
+  assert.match(doc, /QAN-BL-T12-04/u, 'the validation residue is discoverable from the task document');
+  assert.doesNotMatch(
+    doc,
+    /Supabase's own\s+guidance does not use it for sessions/u,
+    'the document must not claim official guidance categorically avoids SecureStore',
+  );
+});
+
+test('the auth-storage validation residue is admitted to the canonical backlog', () => {
+  const backlog = read('docs/qandeel-canonical-backlog-v1.md');
+  assert.match(backlog, /\| `QAN-BL-T12-04` \|/u, 'the item appears in the index');
+  assert.match(backlog, /### `QAN-BL-T12-04` — Mobile Auth Session Storage Production Security \+ Device Validation/u);
+  // The complete schema: every one of the eight fields the register requires.
+  const section = backlog.slice(backlog.indexOf('### `QAN-BL-T12-04`'), backlog.indexOf('### `QAN-BL-T13-01`'));
+  for (const field of [
+    /\*\*Title \/ Finding:\*\*/u,
+    /\*\*Source:\*\*/u,
+    /\*\*Why deferred:\*\*/u,
+    /\*\*Owner task:\*\* `T-12 — Final Integration \/ pre-release physical validation gate`/u,
+    /\*\*Severity:\*\* `HIGH`/u,
+    /\*\*Reopen condition:\*\*/u,
+    /\*\*Status:\*\* `VALIDATION — OPEN`/u,
+    /\*\*Validation set:\*\*/u,
+  ]) {
+    assert.match(section, field, 'the item carries the full canonical schema');
+  }
+  // It is validation residue, not a T-13 land grab.
+  assert.match(section, /not\*\* T-13 Product persistence/u, 'the item states what it is not');
+  assert.match(backlog, /`QAN-BL-RSP-01`, `QAN-BL-T12-04`/u, 'T-12 inherits it at the physical validation gate');
+  // The mobile README must make it discoverable from the workspace itself.
+  assert.match(read('apps/mobile/README.md'), /QAN-BL-T12-04/u, 'the mobile README points at the validation item');
 });

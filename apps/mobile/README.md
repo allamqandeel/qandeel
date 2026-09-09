@@ -429,14 +429,22 @@ route output, and replacing it is T-12's job.
 
 - **Public config** (`config/`): `app.config.js` -> Expo `extra` -> `expo-constants` -> a validated
   `MobilePublicConfig`. This is the ONE place ambient configuration is read, and no runtime module
-  reads `process.env`. It fails closed on a missing, blank or malformed value, and refuses outright a
-  value that looks like an elevated Supabase key. `app.json` is untouched and still carries no `extra`.
+  reads `process.env`. It fails closed on a missing, blank or malformed value. The Supabase key is an
+  ALLOWLIST of two documented shapes — `sb_publishable_…`, or a legacy JWT whose decoded role is
+  exactly `anon` — so an elevated key, a user's own token, a malformed JWT and an arbitrary string are
+  all refused. Origins must be HTTPS; there is one off-by-default development seam that admits
+  loopback hosts only and can never make a remote cleartext origin valid. `app.json` is untouched and
+  still carries no `extra`.
 - **Identity** (`auth/`): the mobile app gets its own Supabase Auth session and forwards the access
   token to this API as a bearer; the API remains the verifier and gained no route. `authGeneration`
   identifies an authenticated IDENTITY, not a token — a refresh keeps it, which is precisely why a
-  refresh cannot create a second conversation Session. Tokens are never logged, and the refresh token
-  never crosses the port at all. The session store (`expo-sqlite/kv-store`, its own database file)
-  holds authentication material ONLY; Product persistence remains T-13's.
+  refresh cannot create a second conversation Session. A sign-out closes the auth epoch, and while it
+  is closed only an explicit `SIGNED_IN` may authenticate again, so a refresh callback still in
+  flight cannot resurrect a signed-out reader. Tokens are never logged, and the refresh token never
+  crosses the port at all. The session store (`expo-sqlite/kv-store`, its own database file) holds
+  authentication material ONLY; Product persistence remains T-13's. **That store is not encrypted at
+  rest and no test or CI job exercises its real persistence path — see `QAN-BL-T12-04` in the
+  canonical backlog, which owns the device validation and the encrypted-at-rest disposition.**
 - **Conversation Session** (`conversation/`): `POST /conversation/sessions` is NOT idempotent and the
   API's five-second upstream abort surfaces as a 503 after the INSERT may have committed, so an
   ambiguous outcome is reported as typed `OUTCOME_UNKNOWN` and is never retried. Duplicate prevention

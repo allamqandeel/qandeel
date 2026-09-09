@@ -113,6 +113,79 @@ test('P04 — a refusal never echoes the offending value', () => {
   expect(JSON.stringify(result.failure)).not.toContain('do_not_leak_me');
 });
 
+test('R1-04A — only the two documented publishable shapes are accepted', () => {
+  // An ALLOWLIST, not a denylist: an unrecognised key is not evidence of safety, and the SDK is not
+  // the right place to find out.
+  expect(readMobilePublicConfig({ ...complete, supabasePublishableKey: 'sb_publishable_abc123' }).ok).toBe(true);
+  expect(readMobilePublicConfig({ ...complete, supabasePublishableKey: legacyKey('anon') }).ok).toBe(true);
+});
+
+test('R1-04A — an unrecognised key shape fails closed without echoing the value', () => {
+  const cases: readonly string[] = [
+    'not-a-key-at-all',
+    'sb_something_else_abc',
+    'eyJhbGciOiJIUzI1NiJ9',
+    'a.b',
+    'a.b.c.d',
+    'header..signature',
+  ];
+  for (const value of cases) {
+    const result = readMobilePublicConfig({ ...complete, supabasePublishableKey: value });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.failure.kind).toBe('UNSUPPORTED_KEY_SHAPE');
+    expect(describeConfigFailure(result.failure)).not.toContain(value);
+  }
+});
+
+test('R1-04A — a JWT whose role claim cannot be read is refused', () => {
+  const encode = (raw: string) => Buffer.from(raw).toString('base64').replace(/\+/gu, '-').replace(/\//gu, '_').replace(/=+$/u, '');
+  const undecodable = `${encode('{"alg":"HS256"}')}.${encode('not json at all')}.sig`;
+  const roleless = `${encode('{"alg":"HS256"}')}.${encode('{"iss":"supabase"}')}.sig`;
+  const nonStringRole = `${encode('{"alg":"HS256"}')}.${encode('{"role":42}')}.sig`;
+  for (const value of [undecodable, roleless, nonStringRole]) {
+    const result = readMobilePublicConfig({ ...complete, supabasePublishableKey: value });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.failure.kind).toBe('UNSUPPORTED_KEY_SHAPE');
+  }
+});
+
+test('R1-04B — a cleartext origin is refused by the production reader', () => {
+  for (const key of ['qandeelApiBaseUrl', 'supabaseUrl'] as const) {
+    const result = readMobilePublicConfig({ ...complete, [key]: 'http://api.example.test/v1' });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.failure.kind).toBe('MALFORMED');
+    if (result.failure.kind !== 'MALFORMED') throw new Error('unreachable');
+    expect(result.failure.detail).toContain('https');
+  }
+});
+
+test('R1-04B — even a loopback http origin is refused unless the seam is explicitly opened', () => {
+  const result = readMobilePublicConfig({ ...complete, qandeelApiBaseUrl: 'http://localhost:3000' });
+  expect(result.ok).toBe(false);
+});
+
+test('R1-04B — the development seam admits loopback only, never a remote host', () => {
+  for (const loopback of ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://api.localhost:3000']) {
+    const result = readMobilePublicConfig({ ...complete, qandeelApiBaseUrl: loopback }, { allowLoopbackHttp: true });
+    expect(result.ok).toBe(true);
+  }
+  // The seam is a local-development affordance, not a way to make a remote cleartext origin valid.
+  for (const remote of ['http://api.example.test/v1', 'http://10.0.0.5:3000', 'http://evil.localhost.example.test']) {
+    const result = readMobilePublicConfig({ ...complete, qandeelApiBaseUrl: remote }, { allowLoopbackHttp: true });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.failure.kind).toBe('MALFORMED');
+  }
+});
+
+test('R1-04B — https is accepted with or without the seam', () => {
+  expect(readMobilePublicConfig(complete).ok).toBe(true);
+  expect(readMobilePublicConfig(complete, { allowLoopbackHttp: true }).ok).toBe(true);
+});
+
 test('a URL that would corrupt a built path is refused', () => {
   // Both transports concatenate `${baseUrl}/conversation/...`, so a trailing slash silently
   // produces a double slash that nothing validates downstream.

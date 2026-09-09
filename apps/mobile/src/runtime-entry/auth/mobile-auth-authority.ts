@@ -17,7 +17,13 @@
  * at all — it stays inside the SDK and its storage.
  */
 import type { ForegroundSignal } from '../lifecycle/foreground-signal';
-import type { AuthPortFailure, AuthPortResult, AuthSessionSnapshot, SupabaseAuthPort } from './supabase-auth-port';
+import type {
+  AuthPortFailure,
+  AuthPortResult,
+  AuthSessionChange,
+  AuthSessionSnapshot,
+  SupabaseAuthPort,
+} from './supabase-auth-port';
 
 export type MobileAuthState =
   /** The persisted session is being restored. The first state, and never returned to. */
@@ -57,11 +63,24 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
   let started = false;
   let disposed = false;
   /**
-   * The exact credential a sign-out retired. A session callback that was already in flight when the
-   * sign-out ran will deliver this same pair; accepting it would resurrect a signed-out identity.
-   * Any genuinely new authentication carries a different token, so it is unaffected.
+   * R1-01 — whether the current auth epoch has been retired by a sign-out.
+   *
+   * While this is true, ONLY an explicit `SIGNED_IN` may authenticate again. A `TOKEN_REFRESHED`,
+   * `INITIAL`, `USER_UPDATED` or unrecognised callback that was already in flight when the sign-out
+   * ran belongs to the retired epoch and is dropped, however fresh the token it carries.
+   *
+   * The earlier rule compared `{userId, accessToken}` against the retired pair, and that is exactly
+   * the case it missed: a refresh completing after sign-out delivers the SAME user with a DIFFERENT
+   * token, so the pair never matched and the identity came back. Provenance, not token equality.
    */
-  let retired: { readonly userId: string; readonly accessToken: string } | null = null;
+  let epochRetired = false;
+  /**
+   * Increments on every explicit auth command. A command captures it before awaiting and abandons
+   * its own result if it has moved: a sign-in still in flight when the reader signs out must not
+   * re-authenticate them, and its `SIGNED_IN` provenance would otherwise be accepted by design.
+   * The reader's last explicit instruction wins.
+   */
+  let operationEpoch = 0;
   let unsubscribePort: (() => void) | null = null;
   let unsubscribeForeground: (() => void) | null = null;
   const listeners = new Set<(next: MobileAuthState) => void>();
@@ -83,18 +102,19 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
     else port.stopAutoRefresh();
   }
 
-  function acceptSession(session: AuthSessionSnapshot | null): void {
+  function acceptChange(change: AuthSessionChange): void {
     if (disposed) return;
+    const { kind, session } = change;
     if (session === null) {
-      retired = null;
+      epochRetired = true;
       if (state.kind !== 'SIGNED_OUT') publish({ kind: 'SIGNED_OUT' });
       return;
     }
-    if (retired !== null && retired.userId === session.userId && retired.accessToken === session.accessToken) {
-      // A stale callback from before the sign-out. Ignored, not applied.
+    if (epochRetired && kind !== 'SIGNED_IN') {
+      // A callback belonging to the retired auth epoch. Dropped, not applied — this is R1-01.
       return;
     }
-    retired = null;
+    epochRetired = false;
     const sameIdentity = state.kind === 'AUTHENTICATED' && state.userId === session.userId;
     if (sameIdentity) {
       // A token refresh. Same identity, same generation, new credential.
@@ -120,7 +140,7 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
     async start() {
       if (started || disposed) return state;
       started = true;
-      unsubscribePort = port.onSessionChange(acceptSession);
+      unsubscribePort = port.onSessionChange(acceptChange);
       unsubscribeForeground = foreground.subscribe(() => syncAutoRefresh());
       const restored = await port.restoreSession();
       if (disposed) return state;
@@ -128,15 +148,20 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
         publish({ kind: 'ERROR', failure: restored.failure });
         return state;
       }
-      acceptSession(restored.value);
+      acceptChange({ kind: 'INITIAL', session: restored.value });
       // A restore that legitimately found nothing still has to leave RESTORING.
       if (state.kind === 'RESTORING') publish({ kind: 'SIGNED_OUT' });
       return state;
     },
     async signInWithPassword(email, password) {
       if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };
+      operationEpoch += 1;
+      const epoch = operationEpoch;
       const result = await port.signInWithPassword(email, password);
       if (disposed) return result;
+      // A sign-out (or another sign-in) happened while this was in flight. The reader's later
+      // instruction stands; this result is abandoned rather than applied.
+      if (epoch !== operationEpoch) return result;
       if (!result.ok) {
         // A rejected credential is not a runtime error: the reader is simply still signed out.
         if (result.failure.kind === 'INVALID_CREDENTIALS' && state.kind !== 'AUTHENTICATED') {
@@ -144,12 +169,17 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
         }
         return result;
       }
-      acceptSession(result.value);
+      // An explicit sign-in is the one provenance that may start an identity after a sign-out.
+      acceptChange({ kind: 'SIGNED_IN', session: result.value });
       return result;
     },
     async signOut() {
       if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };
-      if (state.kind === 'AUTHENTICATED') retired = { userId: state.userId, accessToken: state.accessToken };
+      // Retire the epoch BEFORE awaiting: a refresh callback that lands while the sign-out is in
+      // flight already belongs to the epoch the reader has asked to end, and so does a sign-in
+      // whose own request has not come back yet.
+      operationEpoch += 1;
+      epochRetired = true;
       const result = await port.signOut();
       if (disposed) return result;
       // The local runtime is retired whether or not the network round trip succeeded: continuing to

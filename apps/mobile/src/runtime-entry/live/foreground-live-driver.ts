@@ -25,6 +25,7 @@
  * client truth, and the seam stops the page there, so the cursor stops there too and the page is
  * re-requested from the last position that was genuinely accepted.
  */
+import type { ConversationalUnitsCommittedWireEvent, LiveFocusTransitionWireEvent } from '@qandeel/runtime';
 import {
   applyCommittedUnitsPage,
   applyLiveFocusEventsPage,
@@ -144,76 +145,134 @@ export function createForegroundLiveDriver(options: ForegroundLiveDriverOptions)
     return after === null ? { limit: pageLimit } : { afterSp: after, limit: pageLimit };
   }
 
-  async function catchUpCommitted(client: TemporalApiClient): Promise<void> {
-    for (let page = 0; page < maxPages; page += 1) {
-      if (!canRequest()) return;
-      const events = await client.fetchCommittedEvents(bundle.sessionId, pageRequest(committedAfterSp));
-      if (!canApply()) return;
-      if (events.length === 0) return;
-      const outcomes = applyCommittedUnitsPage(bundle.store, events);
-      let advanced: number | null = null;
-      let rejected: string | null = null;
-      for (const outcome of outcomes) {
-        if (outcome.outcome === 'REJECTED') {
-          rejected = `${outcome.reason}: ${outcome.detail}`;
-          break;
-        }
-        advanced = outcome.toSp;
-      }
-      if (advanced !== null) {
-        const next = sessionPosition(advanced);
-        // A cursor never moves backwards, whatever a server or a race delivers.
-        if (committedAfterSp === null || next > committedAfterSp) committedAfterSp = next;
-      }
-      if (rejected !== null) throw new Error(`committed delivery refused (${rejected})`);
-      if (events.length < pageLimit) return;
-    }
+  /**
+   * R1-02 — a transport built from the credential as it is RIGHT NOW, or `null` if no request may
+   * be issued.
+   *
+   * `TemporalApiConfig` captures the access token at construction and exposes no setter, so a client
+   * built once at the top of a cycle would keep using the token it was born with. If the token
+   * refreshes after the snapshot but before the next page, that page would go out with a stale
+   * credential. Building per request is what makes freshness true at every request boundary rather
+   * than only at the first one — and the generation check rides along, so a request can never be
+   * issued for an identity that has already been replaced.
+   */
+  function clientForRequest(): TemporalApiClient | null {
+    if (!canRequest()) return null;
+    const current = credential();
+    if (current === null || current.authGeneration !== bundle.authGeneration) return null;
+    return createTemporalClient(current.accessToken);
   }
 
-  async function catchUpLiveFocus(client: TemporalApiClient): Promise<void> {
-    for (let page = 0; page < maxPages; page += 1) {
-      if (!canRequest()) return;
-      const events = await client.fetchLiveFocusEvents(bundle.sessionId, pageRequest(liveFocusAfterSp));
-      if (!canApply()) return;
-      if (events.length === 0) return;
-      const outcomes = applyLiveFocusEventsPage(bundle.store, events);
-      let advanced: number | null = null;
-      let rejected: string | null = null;
-      for (const outcome of outcomes) {
-        if (outcome.outcome === 'REJECTED') {
-          rejected = `${outcome.reason}: ${outcome.detail}`;
-          break;
-        }
-        advanced = outcome.atSp;
+  /**
+   * R1-03 — one delivery entry, keyed by the authoritative Session Position it belongs to.
+   *
+   * `rank` encodes the frozen same-SP order. Within one Session Position the server reserves
+   * same-SP sequence 1 for the committed CU and sequence 3 for the Live Focus transition, so at an
+   * equal SP the committed CU precedes the LF transition. That rule is read off the frozen write
+   * order, not invented here.
+   */
+  type DeliveryEntry =
+    | { readonly sp: number; readonly rank: 0; readonly stream: 'COMMITTED'; readonly event: ConversationalUnitsCommittedWireEvent }
+    | { readonly sp: number; readonly rank: 1; readonly stream: 'LIVE_FOCUS'; readonly event: LiveFocusTransitionWireEvent };
+
+  /**
+   * Apply ONE delivery through its own frozen T-03 sync owner, and advance only that stream's
+   * cursor, and only when the owner did not refuse the payload.
+   *
+   * Returns `false` when the delivery was REJECTED — the payload never became client truth, so the
+   * cursor stays where it was and the caller stops the cycle there.
+   */
+  function applyOne(entry: DeliveryEntry): boolean {
+    if (entry.stream === 'COMMITTED') {
+      const [outcome] = applyCommittedUnitsPage(bundle.store, [entry.event]);
+      if (outcome === undefined || outcome.outcome === 'REJECTED') {
+        lastFailure =
+          outcome === undefined ? 'committed delivery produced no outcome' : `committed delivery refused (${outcome.reason}: ${outcome.detail})`;
+        return false;
       }
-      if (advanced !== null) {
-        const next = sessionPosition(advanced);
-        if (liveFocusAfterSp === null || next > liveFocusAfterSp) liveFocusAfterSp = next;
-      }
-      if (rejected !== null) throw new Error(`live-focus delivery refused (${rejected})`);
-      if (events.length < pageLimit) return;
+      const next = sessionPosition(outcome.toSp);
+      // A cursor never moves backwards, whatever a server or a race delivers.
+      if (committedAfterSp === null || next > committedAfterSp) committedAfterSp = next;
+      return true;
     }
+    const [outcome] = applyLiveFocusEventsPage(bundle.store, [entry.event]);
+    if (outcome === undefined || outcome.outcome === 'REJECTED') {
+      lastFailure =
+        outcome === undefined ? 'live-focus delivery produced no outcome' : `live-focus delivery refused (${outcome.reason}: ${outcome.detail})`;
+      return false;
+    }
+    const next = sessionPosition(outcome.atSp);
+    if (liveFocusAfterSp === null || next > liveFocusAfterSp) liveFocusAfterSp = next;
+    return true;
   }
 
   async function cycle(): Promise<void> {
-    const current = credential();
-    if (current === null || !canRequest()) return;
-    const client = createTemporalClient(current.accessToken);
-
-    // Reconcile against the authoritative snapshot FIRST. It is the target the catch-up is aiming
-    // at, and it is also what makes a quiet Session cost one request instead of three.
-    const snapshot = await client.fetchSessionTemporalState(bundle.sessionId);
+    // Reconcile against the authoritative snapshot FIRST. It is the target the catch-up aims at,
+    // and it is also what makes a quiet Session cost one request instead of three.
+    const snapshotClient = clientForRequest();
+    if (snapshotClient === null) return;
+    const snapshot = await snapshotClient.fetchSessionTemporalState(bundle.sessionId);
     if (!canApply()) return;
     if (snapshot.sessionId !== bundle.sessionId) {
       throw new Error(`snapshot names Session ${snapshot.sessionId}, expected ${bundle.sessionId}`);
     }
 
-    const headBehind = snapshot.liveHead !== null && (committedAfterSp === null || snapshot.liveHead > committedAfterSp);
-    if (headBehind) await catchUpCommitted(client);
+    const headTarget = snapshot.liveHead;
+    const focusTarget = snapshot.liveFocusAtSp;
+    const behindHead = () => headTarget !== null && (committedAfterSp === null || headTarget > committedAfterSp);
+    const behindFocus = () => focusTarget !== null && (liveFocusAfterSp === null || focusTarget > liveFocusAfterSp);
+    // A stream that returns an empty page cannot advance, so it is finished for this cycle. Without
+    // this the loop below would spin against a server that has nothing more to give.
+    let headExhausted = false;
+    let focusExhausted = false;
 
-    const focusBehind =
-      snapshot.liveFocusAtSp !== null && (liveFocusAfterSp === null || snapshot.liveFocusAtSp > liveFocusAfterSp);
-    if (focusBehind) await catchUpLiveFocus(client);
+    for (let page = 0; page < maxPages; page += 1) {
+      const wantHead = behindHead() && !headExhausted;
+      const wantFocus = behindFocus() && !focusExhausted;
+      if (!wantHead && !wantFocus) return;
+
+      let committed: readonly ConversationalUnitsCommittedWireEvent[] = [];
+      let focus: readonly LiveFocusTransitionWireEvent[] = [];
+
+      if (wantHead) {
+        const client = clientForRequest();
+        if (client === null) return;
+        committed = await client.fetchCommittedEvents(bundle.sessionId, pageRequest(committedAfterSp));
+        if (!canApply()) return;
+        if (committed.length === 0) headExhausted = true;
+      }
+      if (wantFocus) {
+        const client = clientForRequest();
+        if (client === null) return;
+        focus = await client.fetchLiveFocusEvents(bundle.sessionId, pageRequest(liveFocusAfterSp));
+        if (!canApply()) return;
+        if (focus.length === 0) focusExhausted = true;
+      }
+
+      const entries: DeliveryEntry[] = [
+        ...committed.map((event): DeliveryEntry => ({ sp: event.lastSp, rank: 0, stream: 'COMMITTED', event })),
+        ...focus.map((event): DeliveryEntry => ({ sp: event.atSp, rank: 1, stream: 'LIVE_FOCUS', event })),
+      ].sort((a, b) => (a.sp === b.sp ? a.rank - b.rank : a.sp - b.sp));
+
+      // A stream whose page came back FULL may have more events below the other stream's last
+      // position, so nothing beyond that watermark can be applied yet without risking an
+      // out-of-order application. Whatever is held back is simply re-fetched next iteration: the
+      // cursors only advanced for what was actually applied.
+      const bounds: number[] = [];
+      if (wantHead && committed.length === pageLimit) bounds.push(committed[committed.length - 1].lastSp);
+      if (wantFocus && focus.length === pageLimit) bounds.push(focus[focus.length - 1].atSp);
+      const watermark = bounds.length > 0 ? Math.min(...bounds) : Number.POSITIVE_INFINITY;
+
+      let applied = 0;
+      for (const entry of entries) {
+        if (entry.sp > watermark) break;
+        if (!canApply()) return;
+        if (!applyOne(entry)) throw new Error(lastFailure ?? 'delivery refused');
+        applied += 1;
+      }
+      // No progress is possible from here without new data; stop rather than spin.
+      if (applied === 0) return;
+    }
   }
 
   async function runCycle(): Promise<void> {

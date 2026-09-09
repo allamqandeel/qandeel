@@ -13,8 +13,14 @@ import type {
   SessionTemporalSnapshot,
 } from '@qandeel/runtime';
 import { disclosureFixture } from '../../map/__fixtures__/disclosure';
-import { CONVERSATIONAL_UNITS_COMMITTED, LIVE_FOCUS_TRANSITION } from '../../temporal';
-import type { AuthPortResult, AuthSessionSnapshot, SupabaseAuthPort } from '../auth/supabase-auth-port';
+import { CONVERSATIONAL_UNITS_COMMITTED, LIVE_FOCUS_TRANSITION, MAX_TEMPORAL_EVENT_PAGE } from '../../temporal';
+import type {
+  AuthChangeKind,
+  AuthPortResult,
+  AuthSessionChange,
+  AuthSessionSnapshot,
+  SupabaseAuthPort,
+} from '../auth/supabase-auth-port';
 import type { MobilePublicConfig } from '../config/mobile-public-config';
 import type { RuntimeHttpFetch, TimerHandle } from '..';
 
@@ -156,6 +162,30 @@ export function httpDouble(): HttpDouble {
   };
 }
 
+/**
+ * Serve one catch-up stream the way the server actually does: honour `afterSp` and `limit`.
+ *
+ * Call-count-based responders make paging tests fragile and, worse, can make a driver look correct
+ * because the double replayed a page rather than because the cursor advanced.
+ */
+export function servePagedStream(
+  http: HttpDouble,
+  fragment: '/temporal/events' | '/temporal/live-focus-events',
+  events: readonly (ConversationalUnitsCommittedWireEvent | LiveFocusTransitionWireEvent)[],
+  sessionId = SESSION_A,
+): void {
+  const key = (event: ConversationalUnitsCommittedWireEvent | LiveFocusTransitionWireEvent): number =>
+    'lastSp' in event ? event.lastSp : event.atSp;
+  http.on(fragment, (request) => {
+    const url = new URL(request.url);
+    const afterSp = url.searchParams.get('afterSp');
+    const limit = Number(url.searchParams.get('limit') ?? String(MAX_TEMPORAL_EVENT_PAGE));
+    const cursor = afterSp === null ? 0 : Number(afterSp);
+    const page = events.filter((event) => key(event) > cursor).slice(0, limit);
+    return { status: 200, body: { sessionId, events: page } };
+  });
+}
+
 /** Register the whole happy path: session create, snapshot, both event routes, projection. */
 export function serveHappyPath(
   http: HttpDouble,
@@ -186,8 +216,14 @@ export function serveHappyPath(
 // ---------------------------------------------------------------------------------------------
 
 export interface AuthPortDouble extends SupabaseAuthPort {
-  /** Push a session change exactly as the SDK's `onAuthStateChange` would. */
-  emit(session: AuthSessionSnapshot | null): void;
+  /**
+   * Push a session change exactly as the SDK's `onAuthStateChange` would, WITH its provenance.
+   *
+   * The default is `TOKEN_REFRESHED` because that is the callback whose provenance actually matters:
+   * it is the one that can already be in flight when a sign-out runs. A test that means "the reader
+   * signed in again" must say `SIGNED_IN` explicitly.
+   */
+  emit(session: AuthSessionSnapshot | null, kind?: AuthChangeKind): void;
   readonly autoRefresh: { started: number; stopped: number };
   readonly listenerCount: () => number;
   restoreWith(result: AuthPortResult<AuthSessionSnapshot | null>): void;
@@ -195,7 +231,7 @@ export interface AuthPortDouble extends SupabaseAuthPort {
 }
 
 export function authPortDouble(initial: AuthSessionSnapshot | null = null): AuthPortDouble {
-  const listeners = new Set<(session: AuthSessionSnapshot | null) => void>();
+  const listeners = new Set<(change: AuthSessionChange) => void>();
   const autoRefresh = { started: 0, stopped: 0 };
   let restore: AuthPortResult<AuthSessionSnapshot | null> = { ok: true, value: initial };
   let signIn: AuthPortResult<AuthSessionSnapshot> | null = null;
@@ -209,8 +245,8 @@ export function authPortDouble(initial: AuthSessionSnapshot | null = null): Auth
     signInWith: (result) => {
       signIn = result;
     },
-    emit: (session) => {
-      for (const listener of Array.from(listeners)) listener(session);
+    emit: (session, kind = 'TOKEN_REFRESHED') => {
+      for (const listener of Array.from(listeners)) listener({ kind, session });
     },
     restoreSession: async () => restore,
     signInWithPassword: async (email) =>

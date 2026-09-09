@@ -1,7 +1,7 @@
 /** T-12P adversarial matrix — Config / auth, P05…P12. */
 import { createMobileAuthAuthority, type MobileAuthState } from '../auth/mobile-auth-authority';
 import { createManualForegroundSignal } from '../lifecycle/foreground-signal';
-import { authPortDouble, settle } from '../__fixtures__/runtime-entry';
+import { authPortDouble, gate, settle } from '../__fixtures__/runtime-entry';
 
 const ALICE = { userId: 'alice', accessToken: 'token-alice-1' };
 const ALICE_REFRESHED = { userId: 'alice', accessToken: 'token-alice-2' };
@@ -77,14 +77,117 @@ test('P09 — sign-out invalidates the identity and a stale callback cannot resu
   expect(authority.getState()).toEqual({ kind: 'SIGNED_OUT' });
 });
 
-test('P09 — a genuinely new sign-in after a sign-out is accepted and increments the generation', async () => {
+test('R1-01 — the retired epoch does not survive a later authentication', async () => {
+  // Signing out must not permanently poison the authority: once a genuine SIGNED_IN is accepted,
+  // ordinary refresh callbacks work again.
   const { port, authority } = build(ALICE);
   await authority.start();
   await authority.signOut();
-  port.emit(ALICE_REFRESHED);
+  port.emit(ALICE, 'SIGNED_IN');
+  port.emit(ALICE_REFRESHED, 'TOKEN_REFRESHED');
   const state = authority.getState();
   if (state.kind !== 'AUTHENTICATED') throw new Error('unreachable');
   expect(state.accessToken).toBe('token-alice-2');
+  // A refresh is not a new identity.
+  expect(state.authGeneration).toBe(2);
+});
+
+test('R1-01 — a refresh callback from the retired epoch cannot resurrect a signed-out identity', async () => {
+  // THE DISCRIMINATING CASE. Candidate 050f19c suppressed only the exact {userId, accessToken} pair
+  // that was signed out. A token refresh already in flight when the sign-out ran completes with the
+  // SAME user and a DIFFERENT token, so the pair never matched and the identity came back.
+  // Provenance, not token equality, is what tells the two apart.
+  const { port, authority } = build(ALICE);
+  await authority.start();
+  const beforeSignOut = authority.getState();
+  if (beforeSignOut.kind !== 'AUTHENTICATED') throw new Error('unreachable');
+
+  await authority.signOut();
+  expect(authority.getState()).toEqual({ kind: 'SIGNED_OUT' });
+
+  // The refresh that was in flight lands AFTER the sign-out, carrying a fresh token.
+  port.emit(ALICE_REFRESHED, 'TOKEN_REFRESHED');
+
+  expect(authority.getState()).toEqual({ kind: 'SIGNED_OUT' });
+});
+
+test('R1-01 — no non-SIGNED_IN provenance can re-authenticate a retired epoch', async () => {
+  for (const kind of ['TOKEN_REFRESHED', 'INITIAL', 'USER_UPDATED', 'OTHER'] as const) {
+    const { port, authority } = build(ALICE);
+    await authority.start();
+    await authority.signOut();
+    port.emit(ALICE_REFRESHED, kind);
+    expect(authority.getState()).toEqual({ kind: 'SIGNED_OUT' });
+  }
+});
+
+test('R1-01 — the retired epoch is closed before the sign-out round trip completes', async () => {
+  // A callback landing WHILE the sign-out request is in flight already belongs to the epoch the
+  // reader asked to end, so the epoch is retired before the await rather than after it.
+  const port = authPortDouble(ALICE);
+  const gateOpen = gate();
+  const slow = {
+    ...port,
+    signOut: async () => {
+      await gateOpen.wait();
+      return { ok: true as const, value: null };
+    },
+  };
+  const authority = createMobileAuthAuthority({ port: slow, foreground: createManualForegroundSignal('ACTIVE') });
+  await authority.start();
+
+  const signingOut = authority.signOut();
+  port.emit(ALICE_REFRESHED, 'TOKEN_REFRESHED');
+  gateOpen.open();
+  await signingOut;
+
+  expect(authority.getState()).toEqual({ kind: 'SIGNED_OUT' });
+});
+
+test('P09/R1-01 — a genuinely new SIGNED_IN after a sign-out is accepted and increments the generation', async () => {
+  const { port, authority } = build(ALICE);
+  await authority.start();
+  await authority.signOut();
+  port.emit(ALICE_REFRESHED, 'SIGNED_IN');
+  const state = authority.getState();
+  if (state.kind !== 'AUTHENTICATED') throw new Error('unreachable');
+  expect(state.accessToken).toBe('token-alice-2');
+  expect(state.authGeneration).toBe(2);
+});
+
+test('R1-01 — a sign-in still in flight when the reader signs out does not re-authenticate them', async () => {
+  // The sign-in result legitimately carries SIGNED_IN provenance, so the epoch rule alone would
+  // accept it. The reader's later explicit instruction has to win, which is what the operation
+  // epoch is for.
+  const port = authPortDouble(null);
+  const signInGate = gate();
+  const slow = {
+    ...port,
+    signInWithPassword: async () => {
+      await signInGate.wait();
+      return { ok: true as const, value: ALICE };
+    },
+  };
+  const authority = createMobileAuthAuthority({ port: slow, foreground: createManualForegroundSignal('ACTIVE') });
+  await authority.start();
+
+  const signingIn = authority.signInWithPassword('alice@example.test', 'pw');
+  await authority.signOut();
+  signInGate.open();
+  await signingIn;
+
+  expect(authority.getState()).toEqual({ kind: 'SIGNED_OUT' });
+});
+
+test('R1-01 — an explicit signInWithPassword after a sign-out is accepted', async () => {
+  const { port, authority } = build(ALICE);
+  await authority.start();
+  await authority.signOut();
+  port.signInWith({ ok: true, value: ALICE_REFRESHED });
+  const result = await authority.signInWithPassword('alice@example.test', 'pw');
+  expect(result.ok).toBe(true);
+  const state = authority.getState();
+  if (state.kind !== 'AUTHENTICATED') throw new Error('unreachable');
   expect(state.authGeneration).toBe(2);
 });
 
