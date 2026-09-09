@@ -191,7 +191,21 @@ test('R2-01 — only an explicit sign-in completion may cross a retired auth bar
 test('R2-02 — the new-format key prefix is necessary but not sufficient', () => {
   const config = entryCode['config/mobile-public-config.ts'];
   assert.match(config, /function isOpaqueKeyToken\(/u, 'the key must be validated as an opaque header token');
-  assert.match(config, /publishable\.length === PUBLISHABLE_KEY_PREFIX\.length/u, 'the bare prefix must be refused');
+
+  // Supabase documents the new-format key as `sb_publishable_<22-char-random>_<8-char-checksum>`,
+  // so the prefix followed by an arbitrary suffix is acceptance, not validation. The documented
+  // STRUCTURE is the fail-closed boundary and must be enforced by construction.
+  assert.match(config, /PUBLISHABLE_RANDOM_LENGTH = 22/u, 'the documented random-component length must be stated');
+  assert.match(config, /PUBLISHABLE_CHECKSUM_LENGTH = 8/u, 'the documented checksum length must be stated');
+  assert.match(config, /function hasDocumentedPublishableBody\(/u, 'the new-format body must be structurally validated');
+  assert.match(config, /!hasDocumentedPublishableBody\(publishable\)/u, 'the structural check must gate acceptance');
+  // The R2 rule this replaces accepted any non-empty suffix, so its return must be gone.
+  assert.doesNotMatch(config, /a new-format key with an empty payload/u, 'the prefix-only rule must not survive');
+
+  // Structure is all that may be checked here. No checksum algorithm is documented — the
+  // self-hosting guide notes the API gateway itself does not validate it — so verifying one would
+  // mean inventing cryptography, and no character alphabet is documented for either component.
+  assert.doesNotMatch(config, /createHash|crypto\.subtle|crc32/iu, 'the client must not invent checksum verification');
   // The raw value is validated: trimming would silently repair config that a build produced wrong.
   assert.match(config, /values\[key\] = raw;/u, 'values are validated raw rather than trimmed into shape');
   assert.doesNotMatch(config, /raw\.trim\(\);/u, 'a value must not be repaired before validation');
@@ -201,6 +215,22 @@ test('R2-02 — the new-format key prefix is necessary but not sufficient', () =
     config,
     (text) => !/raw\.trim\(\);/u.test(text),
     'values[key] = raw.trim();',
+  );
+
+  guards(
+    'the documented key structure, not the prefix alone',
+    config,
+    (text) =>
+      /!hasDocumentedPublishableBody\(publishable\)/u.test(text) &&
+      !/publishable\.length === PUBLISHABLE_KEY_PREFIX\.length/u.test(text),
+    'if (publishable.length === PUBLISHABLE_KEY_PREFIX.length) {',
+  );
+
+  guards(
+    'no invented checksum verification',
+    config,
+    (text) => !/createHash|crypto\.subtle|crc32/iu.test(text),
+    "const sum = createHash('sha256').update(body).digest('hex').slice(0, 8);",
   );
 });
 

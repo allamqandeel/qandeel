@@ -27,7 +27,9 @@ import type { RuntimeHttpFetch, TimerHandle } from '..';
 export const TEST_CONFIG: MobilePublicConfig = Object.freeze({
   apiBaseUrl: 'https://api.example.test/v1',
   supabaseUrl: 'https://project.supabase.example',
-  supabasePublishableKey: 'sb_publishable_example',
+  // The documented new-format shape: `sb_publishable_<22-char-random>_<8-char-checksum>`. Spelled
+  // out in words rather than random-looking characters so it can never be mistaken for a real key.
+  supabasePublishableKey: 'sb_publishable_examplekeyexamplekey12_checksum',
 });
 
 export const SESSION_A = '11111111-1111-4111-8111-111111111111';

@@ -32,19 +32,25 @@ export type AuthPortResult<T> =
   | { readonly ok: false; readonly failure: AuthPortFailure };
 
 /**
- * R1-01 — the PROVENANCE of a session change, preserved across this boundary.
+ * R1-01, corrected by R2-01 — the KIND of a session change, preserved across this boundary.
  *
  * Token equality is not provenance. A token-refresh callback can already be in flight when a
  * sign-out runs and then deliver the same user with a DIFFERENT refreshed token, so suppressing an
  * exact `{userId, accessToken}` pair misses precisely the callback that would resurrect a
- * signed-out identity. What distinguishes "a genuinely new authentication" from "a late callback
- * belonging to the retired auth epoch" is the KIND of event, which the SDK already knows and which
- * this port therefore carries rather than discards.
+ * signed-out identity. The kind is therefore carried across this port rather than discarded.
+ *
+ * But EVENT KIND IS NOT OPERATION PROVENANCE, and this port must not be read as claiming it is.
+ * `GoTrueClient.signInWithPassword` notifies its subscribers of `SIGNED_IN` and awaits them BEFORE
+ * its own promise resolves, so a sign-in that raced a sign-out delivers a perfectly genuine
+ * `SIGNED_IN` to a reader that is already signed out. The kind is kept for reconciliation and
+ * diagnosis; it is not an authorization. An observed `SIGNED_IN` alone can never cross a retired
+ * auth barrier — only the completion of a CURRENT explicit sign-in operation may establish or
+ * re-establish authentication there. See `mobile-auth-authority.ts` for where that split is made.
  */
 export type AuthChangeKind =
   /** The subscription's first emission for whatever session was already restored. */
   | 'INITIAL'
-  /** An explicit new authentication. The ONLY kind that may start an identity after a sign-out. */
+  /** An explicit new authentication as the SDK saw it — not, by itself, authority to cross a retirement. */
   | 'SIGNED_IN'
   | 'SIGNED_OUT'
   | 'TOKEN_REFRESHED'

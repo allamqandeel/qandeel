@@ -64,6 +64,21 @@ const PUBLISHABLE_KEY_PREFIX = 'sb_publishable_';
 const SECRET_KEY_PREFIX = 'sb_secret_';
 
 /**
+ * The documented body of a new-format key, everything after the prefix:
+ *
+ *     sb_publishable_<22-char-random>_<8-char-checksum>
+ *
+ * Supabase's self-hosting auth-keys guide states this structure and that self-hosted keys use the
+ * same format as platform API keys. Both components have a fixed documented length, which makes
+ * them non-empty by construction and fixes the separator at a known offset.
+ */
+const PUBLISHABLE_RANDOM_LENGTH = 22;
+const PUBLISHABLE_CHECKSUM_LENGTH = 8;
+const PUBLISHABLE_COMPONENT_SEPARATOR = '_';
+const PUBLISHABLE_BODY_LENGTH =
+  PUBLISHABLE_RANDOM_LENGTH + PUBLISHABLE_COMPONENT_SEPARATOR.length + PUBLISHABLE_CHECKSUM_LENGTH;
+
+/**
  * The only role a key in this slot may carry.
  *
  * A LEGACY Supabase key is a JWT, and its privilege lives in the `role` claim inside the base64url
@@ -82,17 +97,15 @@ const ALLOWED_LEGACY_ROLE = 'anon';
  * injection concern rather than a cosmetic one. (An internationalised hostname must therefore be
  * supplied in punycode, which is what a URL carries on the wire anyway.)
  *
- * For the key specifically, the prefix alone is not validation: `sb_publishable_` on its own, or
- * with a whitespace-bearing suffix, would otherwise pass and then be sent as an `apikey` header.
+ * This is the CHARACTER rule only, and it runs before any shape is classified, so a value carrying
+ * whitespace or a control character is refused whatever prefix it wears. The new-format key's
+ * STRUCTURE — the documented component lengths and separator — is a separate check below.
  *
- * WHAT THE DOCUMENTATION ACTUALLY SPECIFIES, and therefore all that is checked: the
- * `sb_publishable_` prefix, and that these are "short strings, not JWTs". No character set and no
- * length is documented anywhere, and `supabase-js` itself validates nothing beyond the prefix.
- *
- * A tighter guess — base64url, or a fixed length — is deliberately NOT imposed. The failure modes
- * are asymmetric: too narrow rejects a valid production key and takes the app down, while too wide
- * merely lets a malformed key reach Supabase, which rejects it. The security question "is this a
- * secret?" is answered separately and exactly, by the `sb_secret_` prefix and the legacy role claim.
+ * No character ALPHABET is imposed on top of this. Supabase documents the lengths and the separator
+ * but names no character set for either component, so a guessed alphabet (base64url, base58) could
+ * reject a valid production key and take the app down. This rule cannot: anything Supabase could
+ * legally place in an HTTP header value passes it. The security question "is this a secret?" is
+ * answered separately and exactly, by the `sb_secret_` prefix and the legacy role claim.
  */
 function isOpaqueKeyToken(value: string): boolean {
   if (value.length === 0) return false;
@@ -102,6 +115,27 @@ function isOpaqueKeyToken(value: string): boolean {
     if (code < 0x21 || code > 0x7e) return false;
   }
   return true;
+}
+
+/**
+ * Does the new-format body match the documented structure?
+ *
+ * Checked POSITIONALLY rather than by splitting on `_`, deliberately: no alphabet is documented for
+ * either component, so a component may itself contain an underscore, and a `split('_')` rule would
+ * then reject a structurally valid key. The documented lengths fix the separator's offset exactly,
+ * which is the one reading that cannot be wrong.
+ *
+ * What is NOT done here: the checksum is not verified. No algorithm is documented for it — the
+ * self-hosting guide notes the API gateway itself does not validate it — and guessing one would be
+ * inventing cryptography. This is local fail-closed config validation of STRUCTURE; whether the key
+ * is genuine stays Supabase's answer to give.
+ */
+function hasDocumentedPublishableBody(value: string): boolean {
+  const body = value.slice(PUBLISHABLE_KEY_PREFIX.length);
+  return (
+    body.length === PUBLISHABLE_BODY_LENGTH &&
+    body.charAt(PUBLISHABLE_RANDOM_LENGTH) === PUBLISHABLE_COMPONENT_SEPARATOR
+  );
 }
 
 /** Does this look like a JWT at all? Three dot-separated non-empty segments. */
@@ -255,9 +289,13 @@ export function readMobilePublicConfig(
     return forbidden(`an elevated Supabase key was supplied as public config (prefix "${SECRET_KEY_PREFIX}")`);
   }
   if (publishable.startsWith(PUBLISHABLE_KEY_PREFIX)) {
-    // The prefix is necessary, not sufficient: the bare prefix carries no key at all.
-    if (publishable.length === PUBLISHABLE_KEY_PREFIX.length) {
-      return unsupported('a new-format key with an empty payload');
+    // The prefix is necessary, not sufficient. The bare prefix carries no key at all, and an
+    // arbitrary suffix is not a key either — the documented structure is the fail-closed boundary.
+    if (!hasDocumentedPublishableBody(publishable)) {
+      return unsupported(
+        `a new-format key whose body is not the documented ${PUBLISHABLE_RANDOM_LENGTH}-character random component, ` +
+          `"${PUBLISHABLE_COMPONENT_SEPARATOR}", ${PUBLISHABLE_CHECKSUM_LENGTH}-character checksum`,
+      );
     }
   } else {
     if (!looksLikeJwt(publishable)) {

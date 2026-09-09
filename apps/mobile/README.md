@@ -430,9 +430,11 @@ route output, and replacing it is T-12's job.
 - **Public config** (`config/`): `app.config.js` -> Expo `extra` -> `expo-constants` -> a validated
   `MobilePublicConfig`. This is the ONE place ambient configuration is read, and no runtime module
   reads `process.env`. It fails closed on a missing, blank or malformed value. The Supabase key is an
-  ALLOWLIST of two documented shapes — `sb_publishable_…`, or a legacy JWT whose decoded role is
-  exactly `anon` — so an elevated key, a user's own token, a malformed JWT and an arbitrary string are
-  all refused. Origins must be HTTPS; there is one off-by-default development seam that admits
+  ALLOWLIST of two documented shapes — the documented new-format structure
+  `sb_publishable_<22-char-random>_<8-char-checksum>`, or a legacy JWT whose decoded role is exactly
+  `anon` — so an elevated key, a user's own token, a malformed JWT, an arbitrary string and a
+  well-prefixed key of the wrong structure are all refused. The checksum itself is not verified: no
+  algorithm is documented for it, and the client does not invent one. Origins must be HTTPS; there is one off-by-default development seam that admits
   loopback hosts only and can never make a remote cleartext origin valid. `app.json` is untouched and
   still carries no `extra`.
 - **Identity** (`auth/`): the mobile app gets its own Supabase Auth session and forwards the access

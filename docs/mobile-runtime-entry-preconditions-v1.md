@@ -53,6 +53,8 @@ the QANDEEL API a credential custodian it has never been.
 | Source | What it established |
 | --- | --- |
 | [supabase.com/docs/guides/api/api-keys](https://supabase.com/docs/guides/api/api-keys) | Current key model: `sb_publishable_…` (client-safe, RLS-bounded) vs `sb_secret_…` (bypasses RLS, never shipped). `anon`/`service_role` are legacy and deprecate by end of 2026. |
+| [supabase.com/docs/guides/getting-started/api-keys](https://supabase.com/docs/guides/getting-started/api-keys) | Publishable and secret keys are "short strings, not JWTs"; a long key beginning `eyJ` is a legacy key. Re-inspected during the R2 final closure patch. |
+| [supabase.com/docs/guides/self-hosting/self-hosted-auth-keys](https://supabase.com/docs/guides/self-hosting/self-hosted-auth-keys) | The documented new-key STRUCTURE — `sb_publishable_<22-char-random>_<8-char-checksum>`, the same format self-hosted as on the platform — and that the API gateway does not itself validate the checksum. This is what corrected the earlier "prefix only, no documented length" claim. |
 | [supabase.com/docs/guides/auth/quickstarts/react-native](https://supabase.com/docs/guides/auth/quickstarts/react-native) | The official RN client shape and the `AppState`-driven refresh requirement. |
 | [docs.expo.dev/guides/using-supabase](https://docs.expo.dev/guides/using-supabase) | Expo's own guidance: `expo-sqlite` storage, and that `react-native-url-polyfill` is unnecessary on Expo, which ships `URL`, `structuredClone` and `TextEncoder` as globals. |
 | [supabase.com/docs/guides/auth/sessions](https://supabase.com/docs/guides/auth/sessions) | Access token default 3600 s; refresh tokens never expire but are single-use with a 10-second reuse interval; reuse outside it revokes the whole session. |
@@ -125,20 +127,42 @@ that no runtime is built at all. The refusal never echoes the offending value.
 
 The key check is an **allowlist**, not a denylist (R1-04A). Exactly two shapes are accepted:
 
-1. a new-format publishable key, `sb_publishable_` followed by a **non-empty payload**; or
+1. a new-format publishable key matching the documented structure below; or
 2. a legacy key — a JWT — whose decoded `role` claim is exactly `anon`.
 
-**The prefix alone is not validation (R2-02).** Before any shape is classified, the value must be an
-opaque header token: non-empty, and printable non-space ASCII throughout. That refuses the bare
-prefix, a whitespace or control-character suffix, and anything non-ASCII — all of which would
-otherwise be interpolated into an HTTP `apikey` header.
+**The prefix alone is not validation.** Two independent rules apply, in this order.
 
-Nothing narrower is imposed, deliberately. Supabase documents the prefix and that these are "short
-strings, not JWTs"; it documents **no** character set and **no** length, and `supabase-js` itself
-validates nothing beyond `startsWith`. Guessing an alphabet or a length would reject a valid
-production key and take the app down, whereas a slightly-too-permissive structural check merely lets
-a malformed key reach Supabase, which rejects it. The security question — *is this a secret?* — is
-answered exactly and separately, by the `sb_secret_` prefix and the decoded legacy role.
+*The character rule (R2-02).* Before any shape is classified at all, the value must be an opaque
+header token: non-empty, and printable non-space ASCII throughout. That refuses a whitespace or
+control-character suffix and anything non-ASCII, all of which would otherwise be interpolated into
+an HTTP `apikey` header.
+
+*The structure rule.* Supabase documents the new-format keys as:
+
+```text
+sb_publishable_<22-char-random>_<8-char-checksum>
+sb_secret_<22-char-random>_<8-char-checksum>
+```
+
+so the prefix followed by an arbitrary suffix is acceptance rather than validation: `sb_publishable_x`
+satisfied the R2 rule and does not satisfy this one. The body after the prefix must be exactly 22
+characters, then one `_`, then exactly 8 characters — which also makes both components non-empty by
+construction. It is checked **positionally** rather than by splitting on `_`, deliberately: no
+alphabet is documented, so a component may itself contain an underscore and a `split('_')` rule
+would then reject a structurally valid key. The documented lengths fix the separator's offset
+exactly, which is the one reading that cannot be wrong.
+
+**What is deliberately NOT done.** The checksum is not verified. No algorithm is documented for it —
+the self-hosting guide records that the API gateway itself does not validate it — and implementing
+one would mean inventing cryptography, which §2.4 forbids. No character alphabet is imposed either,
+because none is documented; guessing one (base64url, base58) would reject a valid production key and
+take the app down, while this rule cannot: anything Supabase could legally place in an HTTP header
+value passes it.
+
+The line is therefore: **structural validation is local fail-closed config validation; cryptographic
+and checksum validation remain Supabase's concern, and the client neither implements nor guesses a
+checksum algorithm.** The security question — *is this a secret?* — is answered exactly and
+separately again, by the `sb_secret_` prefix and the decoded legacy role.
 
 Values are validated **raw**, not trimmed. Trimming would silently repair a key or origin that
 arrived with a stray newline from a build pipeline, and a value that needs repairing is evidence the

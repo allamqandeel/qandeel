@@ -8,19 +8,28 @@
  * none of them may be written here. The store is keyed and namespaced so that is checkable: the
  * auth database holds Supabase's own keys and nothing this repository writes by hand.
  *
- * WHY THIS MECHANISM. `expo-sqlite/kv-store` is the current official Supabase-on-Expo storage
- * recommendation: Supabase's Expo quickstart and Expo's own Supabase guide both route session
+ * WHY THIS MECHANISM. `expo-sqlite/kv-store` is one of the officially documented Supabase-on-Expo
+ * storage routes: Supabase's Expo quickstart and Expo's own Supabase guide both route session
  * storage through `expo-sqlite`, and its exported `SQLiteStorage` is documented as a drop-in
- * replacement for `@react-native-async-storage/async-storage`. The contract requires following that
- * guidance and forbids inventing cryptography where an official maintained adapter exists.
+ * replacement for `@react-native-async-storage/async-storage`. The contract requires following
+ * official guidance and forbids inventing cryptography where a maintained adapter already exists.
  *
- * WHAT THAT COSTS, STATED PLAINLY. This storage is NOT encrypted at rest. `expo-secure-store` is
- * keystore-backed but Supabase's own guidance does not use it for sessions, because a serialised
- * session can exceed SecureStore's value-size limit; Supabase's published workaround splits the
- * value and encrypts it with hand-rolled AES, which is exactly the custom cryptography §2.4
- * forbids. So the honest v1 position is: follow official guidance, isolate the store, and put the
- * hardening question to the Security review rather than answer it by improvisation. Every use of
- * this module goes through the single adapter below, so changing the mechanism is a one-file change.
+ * WHAT THAT COSTS, STATED PLAINLY. This storage is NOT encrypted at rest.
+ *
+ * The official guidance here is MIXED rather than settled, and saying otherwise would be false:
+ * Supabase's client reference documents a SecureStore-backed `LargeSecureStore`, and Expo's auth
+ * guide recommends `expo-secure-store` and states that AsyncStorage is not secure — while the
+ * Supabase and Expo quickstarts both route sessions through `expo-sqlite`. What decides it for v1
+ * is not which document is louder: SecureStore has a value-size limit that a serialised session can
+ * exceed, and Supabase's own published workaround for that splits the value and encrypts it with
+ * hand-rolled AES — exactly the custom cryptography §2.4 forbids. So v1 follows a documented route,
+ * isolates the store, and states the cost rather than improvising around it.
+ *
+ * The boundary that makes this acceptable is stated above and must stay enforced: Product truth and
+ * the QANDEEL conversation `sessionId` are forbidden from this store, so what sits here unencrypted
+ * is Supabase's own session material and nothing else. `QAN-BL-T12-04` owns the production security
+ * disposition and the physical-device validation of this adapter. Every use of this module goes
+ * through the single adapter below, so changing the mechanism is a one-file change.
  */
 import { SQLiteStorage } from 'expo-sqlite/kv-store';
 
