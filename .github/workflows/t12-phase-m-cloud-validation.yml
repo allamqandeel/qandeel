@@ -1,0 +1,448 @@
+name: T-12 Phase M cloud validation
+# T-12 Phase M. MANUAL ONLY, and deliberately not part of any gate.
+#
+# `mobile-ci.yml` stays the repository's mobile gate and is untouched by this file. This workflow
+# exists for one narrow job the gate cannot do: produce PHYSICALLY INSTALLABLE Android artifacts and
+# iOS Release-simulator evidence for `QAN-BL-MOT-03`, `QAN-BL-MOT-04`, `QAN-BL-RSP-01` and
+# `QAN-BL-T12-04`, from an exact checkpoint SHA, against a reachable QANDEEL API.
+#
+# Three differences from the gate, and only three:
+#
+#   ABI. The gate builds `-PreactNativeArchitectures=x86_64` because it installs onto an x86_64
+#   emulator. That artifact will not install on any physical ARM phone, so this workflow builds
+#   `arm64-v8a` instead. Nothing else about the Release build changes: Hermes stays enabled, the New
+#   Architecture stays in its canonical state, and the signing disposition is the repository's own
+#   measured one (the prebuild-generated debug keystore — a sideloadable Release-type build, never a
+#   distributable production-signed artifact).
+#
+#   CONFIGURATION. The gate builds with no configuration at all, which is why its boot smoke can only
+#   assert that the root mounted. These jobs receive the real Phase-M public values, so the runtime can
+#   actually reach an identity and a Session.
+#
+#   ENTRY. Two of the four jobs build the isolated `QAN-BL-T12-04` harness as the root component
+#   instead of the Product root, through `scripts/select-validation-entry.mjs`. That script runs in the
+#   two auth-validation jobs and nowhere else, the Product jobs assert the committed Product entry
+#   before building, and the repository itself always carries `expo-router/entry`.
+#
+# The auth-validation artifacts mount NO Product surface — no Map, no Timeline, no chrome — so nothing
+# observed in them may ever be recorded against MOT-03, MOT-04 or RSP-01. The Product artifacts mount
+# no harness, so nothing observed in them can close T12-04. All four come from one checkout, and each
+# writes the checkpoint SHA into its own artifact so the evidence can prove they did.
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: 'HTTPS origin of the reachable QANDEEL API (the temporary Cloudflare Quick Tunnel). No trailing slash.'
+        required: true
+        type: string
+      run_ios:
+        description: 'Run the two macOS iOS Release simulator jobs'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: t12-phase-m-cloud-validation
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  # The same pinned Maestro line the canonical Mobile CI uses, verified by SHA-256 before extraction.
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+  # The ONE build-time configuration boundary (`apps/mobile/app.config.js`) reads exactly these three.
+  # The publishable key is public by design; the API origin is an input because a Quick Tunnel origin
+  # is regenerated per session and is not a credential. No password or token appears here.
+  QANDEEL_API_BASE_URL: ${{ inputs.api_base_url }}
+  QANDEEL_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  QANDEEL_SUPABASE_PUBLIC_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+
+jobs:
+  android-product-arm64:
+    name: Android Release arm64-v8a — PRODUCT root
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout the exact checkpoint
+        uses: actions/checkout@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Setup Temurin JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies from the root lockfile
+        run: npm ci
+      - name: Refuse to build unless this is the PRODUCT entry
+        run: node scripts/phase-m/assert-validation-preconditions.mjs entry product
+      - name: Refuse to build without the public configuration
+        run: node scripts/phase-m/assert-validation-preconditions.mjs configuration
+      - name: Generate the Android project (CNG)
+        run: npm run prebuild:android --workspace @qandeel/mobile
+      - name: Build the Release APK (arm64-v8a — installable on a physical device)
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+      - name: Record the artifact identity
+        run: node scripts/phase-m/record-artifact-identity.mjs android PRODUCT "${{ github.sha }}" "$RUNNER_TEMP/android-product-identity.txt"
+      - name: Upload the PRODUCT Release APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t12-phase-m-android-product-arm64
+          path: |
+            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            ${{ runner.temp }}/android-product-identity.txt
+          if-no-files-found: error
+
+  android-auth-validation-arm64:
+    name: Android Release arm64-v8a — AUTH VALIDATION root
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout the exact checkpoint
+        uses: actions/checkout@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Setup Temurin JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies from the root lockfile
+        run: npm ci
+      - name: Select the isolated validation entry (this job only)
+        env:
+          T12_PHASE_M_VALIDATION: '1'
+        run: node apps/mobile/scripts/select-validation-entry.mjs --apply
+      - name: Confirm the validation entry is selected
+        run: node scripts/phase-m/assert-validation-preconditions.mjs entry validation
+      - name: Refuse to build without the public configuration
+        run: node scripts/phase-m/assert-validation-preconditions.mjs configuration
+      - name: Generate the Android project (CNG)
+        run: npm run prebuild:android --workspace @qandeel/mobile
+      - name: Build the Release APK (arm64-v8a — installable on a physical device)
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+      - name: Record the artifact identity
+        run: node scripts/phase-m/record-artifact-identity.mjs android AUTH_VALIDATION "${{ github.sha }}" "$RUNNER_TEMP/android-auth-validation-identity.txt"
+      - name: Upload the AUTH-VALIDATION Release APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t12-phase-m-android-auth-validation-arm64
+          path: |
+            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            ${{ runner.temp }}/android-auth-validation-identity.txt
+          if-no-files-found: error
+
+  ios-product-simulator:
+    name: iOS Release simulator — PRODUCT root
+    if: inputs.run_ios
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      IOS_SIMULATOR_NAME: iPhone 17
+      IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+    steps:
+      - name: Checkout the exact checkpoint
+        uses: actions/checkout@v4
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Guard the simulator (iPhone 17 on iOS 26.5)
+        run: |
+          udid="$(xcrun simctl list devices available -j | jq -r --arg name "$IOS_SIMULATOR_NAME" --arg suffix "$IOS_SIMULATOR_RUNTIME_SUFFIX" '.devices | to_entries[] | select(.key | endswith($suffix)) | .value[] | select(.name == $name) | .udid' | head -n 1)"
+          if [ -z "$udid" ]; then
+            echo "STOP: the authorized simulator (${IOS_SIMULATOR_NAME} / ${IOS_SIMULATOR_RUNTIME_SUFFIX}) is not on this image"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "IOS_SIM_UDID=$udid" >> "$GITHUB_ENV"
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies from the root lockfile
+        run: npm ci
+      - name: Refuse to build unless this is the PRODUCT entry
+        run: node scripts/phase-m/assert-validation-preconditions.mjs entry product
+      - name: Refuse to build without the public configuration
+        run: node scripts/phase-m/assert-validation-preconditions.mjs configuration
+      - name: Generate the iOS project (CNG)
+        run: npm run prebuild:ios --workspace @qandeel/mobile
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build the Release simulator app
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
+      - name: Boot the simulator and install the app
+        run: |
+          xcrun simctl boot "$IOS_SIM_UDID" || true
+          xcrun simctl bootstatus "$IOS_SIM_UDID" -b
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          xcrun simctl install "$IOS_SIM_UDID" "$app"
+          echo "IOS_APP_PATH=$app" >> "$GITHUB_ENV"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Guard the Maestro version
+        run: |
+          maestro --version
+          maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
+      - name: Boot smoke on the iOS Release simulator
+        run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml
+      # Not fatal on purpose. If this flow fails, the RSP evidence set below is still worth having and
+      # the artifact is still worth uploading — one run should collect the whole finding set rather
+      # than stop at the first. The gate at the end of the job is what decides the outcome.
+      - name: Product-root evidence — mount, orientation, and no harness present
+        id: product_evidence
+        continue-on-error: true
+        run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/product-root-evidence.yaml
+      - name: Capture the Release simulator evidence set
+        if: always()
+        run: bash scripts/phase-m/capture-ios-simulator-evidence.sh "$IOS_SIM_UDID" "$RUNNER_TEMP/ios-product-evidence"
+      - name: Record the artifact identity
+        if: always()
+        run: node scripts/phase-m/record-artifact-identity.mjs ios PRODUCT "${{ github.sha }}" "$RUNNER_TEMP/ios-product-identity.txt"
+      - name: Package the simulator app
+        if: always()
+        run: |
+          if [ -n "${IOS_APP_PATH:-}" ] && [ -d "$IOS_APP_PATH" ]; then
+            ditto -c -k --keepParent "$IOS_APP_PATH" "$RUNNER_TEMP/qandeel-ios-simulator.app.zip"
+          fi
+      - name: Upload the PRODUCT simulator evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t12-phase-m-ios-product-simulator
+          path: |
+            ${{ runner.temp }}/qandeel-ios-simulator.app.zip
+            ${{ runner.temp }}/ios-product-evidence
+            ${{ runner.temp }}/ios-product-identity.txt
+          if-no-files-found: warn
+      - name: 'Gate: the Product-root evidence flow must have passed'
+        if: always()
+        env:
+          PRODUCT_EVIDENCE: ${{ steps.product_evidence.outcome }}
+        run: |
+          echo "product-root evidence: $PRODUCT_EVIDENCE"
+          {
+            echo '### Product root — iOS Release simulator'
+            echo ''
+            echo "| flow | outcome |"
+            echo "| --- | --- |"
+            echo "| boot smoke | passed (the job reached this step) |"
+            echo "| product-root evidence | \`$PRODUCT_EVIDENCE\` |"
+            echo ''
+            echo 'IOS RELEASE SIMULATOR evidence only. Never a physical or tactile claim.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          test "$PRODUCT_EVIDENCE" = success
+
+  ios-auth-validation-simulator:
+    name: iOS Release simulator — AUTH VALIDATION root (QAN-BL-T12-04)
+    if: inputs.run_ios
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      IOS_SIMULATOR_NAME: iPhone 17
+      IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+    steps:
+      - name: Checkout the exact checkpoint
+        uses: actions/checkout@v4
+      - name: Refuse to run without the two validation identities
+        env:
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+        run: node scripts/phase-m/assert-validation-preconditions.mjs identities
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Guard the simulator (iPhone 17 on iOS 26.5)
+        run: |
+          udid="$(xcrun simctl list devices available -j | jq -r --arg name "$IOS_SIMULATOR_NAME" --arg suffix "$IOS_SIMULATOR_RUNTIME_SUFFIX" '.devices | to_entries[] | select(.key | endswith($suffix)) | .value[] | select(.name == $name) | .udid' | head -n 1)"
+          if [ -z "$udid" ]; then
+            echo "STOP: the authorized simulator is not on this image"
+            exit 1
+          fi
+          echo "IOS_SIM_UDID=$udid" >> "$GITHUB_ENV"
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies from the root lockfile
+        run: npm ci
+      - name: Select the isolated validation entry (this job only)
+        env:
+          T12_PHASE_M_VALIDATION: '1'
+        run: node apps/mobile/scripts/select-validation-entry.mjs --apply
+      - name: Confirm the validation entry is selected
+        run: node scripts/phase-m/assert-validation-preconditions.mjs entry validation
+      - name: Refuse to build without the public configuration
+        run: node scripts/phase-m/assert-validation-preconditions.mjs configuration
+      - name: Generate the iOS project (CNG)
+        run: npm run prebuild:ios --workspace @qandeel/mobile
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build the Release simulator app
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
+      - name: Boot the simulator and install the harness build
+        run: |
+          xcrun simctl boot "$IOS_SIM_UDID" || true
+          xcrun simctl bootstatus "$IOS_SIM_UDID" -b
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          xcrun simctl install "$IOS_SIM_UDID" "$app"
+          echo "IOS_APP_PATH=$app" >> "$GITHUB_ENV"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Guard the Maestro version
+        run: |
+          maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
+
+      # ---------------------------------------------------------------------------------------
+      # The T12-04 sequence. Every phase runs even when an earlier one fails, so ONE run collects
+      # the whole finding set instead of stopping at the first, and the gate at the end is what
+      # decides the job. The restart between phases is a REAL process kill: `simctl terminate` and
+      # then a fresh `launchApp`. It is never a reinstall, which would destroy what is under test.
+      # ---------------------------------------------------------------------------------------
+      - name: 'T12-04 phase 1 — sign in as identity A, before the restart'
+        id: phase1
+        continue-on-error: true
+        env:
+          EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+        run: maestro --device "$IOS_SIM_UDID" test -e EMAIL_A="$EMAIL_A" -e PASSWORD_A="$PASSWORD_A" apps/mobile/.maestro/t12-04-phase-1-before-restart.yaml
+      - name: Kill the process (never a reinstall)
+        if: always()
+        run: |
+          xcrun simctl terminate "$IOS_SIM_UDID" com.qandeel.mobile || true
+          sleep 3
+      - name: 'T12-04 phase 2 — restart restores the AUTH session only'
+        id: phase2
+        if: always()
+        continue-on-error: true
+        run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/t12-04-phase-2-after-restart.yaml
+      - name: 'T12-04 phase 3 — sign out, then identity B'
+        id: phase3
+        if: always()
+        continue-on-error: true
+        env:
+          EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+        run: maestro --device "$IOS_SIM_UDID" test -e EMAIL_B="$EMAIL_B" -e PASSWORD_B="$PASSWORD_B" apps/mobile/.maestro/t12-04-phase-3-signout-replacement.yaml
+      - name: Kill the process again
+        if: always()
+        run: |
+          xcrun simctl terminate "$IOS_SIM_UDID" com.qandeel.mobile || true
+          sleep 3
+      - name: 'T12-04 phase 4 — a signed-out store gives nothing back'
+        id: phase4
+        if: always()
+        continue-on-error: true
+        run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/t12-04-phase-4-signed-out-survives-restart.yaml
+
+      - name: Collect the evidence, with every credential redacted
+        if: always()
+        env:
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+        run: node scripts/phase-m/collect-validation-evidence.mjs "$HOME/.maestro/tests" "$RUNNER_TEMP/t1204-evidence"
+      - name: Record the artifact identity and the phase outcomes
+        if: always()
+        env:
+          PHASE_1: ${{ steps.phase1.outcome }}
+          PHASE_2: ${{ steps.phase2.outcome }}
+          PHASE_3: ${{ steps.phase3.outcome }}
+          PHASE_4: ${{ steps.phase4.outcome }}
+        run: node scripts/phase-m/record-artifact-identity.mjs ios AUTH_VALIDATION "${{ github.sha }}" "$RUNNER_TEMP/t1204-evidence/ios-auth-validation-identity.txt"
+      - name: Upload the T12-04 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t12-phase-m-ios-auth-validation-simulator
+          path: ${{ runner.temp }}/t1204-evidence
+          if-no-files-found: warn
+      - name: 'Gate: every T12-04 phase must have passed'
+        if: always()
+        env:
+          PHASE_1: ${{ steps.phase1.outcome }}
+          PHASE_2: ${{ steps.phase2.outcome }}
+          PHASE_3: ${{ steps.phase3.outcome }}
+          PHASE_4: ${{ steps.phase4.outcome }}
+        run: |
+          echo "phase 1 (before restart):        $PHASE_1"
+          echo "phase 2 (after restart):         $PHASE_2"
+          echo "phase 3 (sign out + identity B): $PHASE_3"
+          echo "phase 4 (signed out survives):   $PHASE_4"
+          {
+            echo '### QAN-BL-T12-04 — iOS Release simulator'
+            echo ''
+            echo "| phase | outcome |"
+            echo "| --- | --- |"
+            echo "| 1 before restart | \`$PHASE_1\` |"
+            echo "| 2 after restart | \`$PHASE_2\` |"
+            echo "| 3 sign out + identity B | \`$PHASE_3\` |"
+            echo "| 4 signed out survives a restart | \`$PHASE_4\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          test "$PHASE_1" = success
+          test "$PHASE_2" = success
+          test "$PHASE_3" = success
+          test "$PHASE_4" = success
