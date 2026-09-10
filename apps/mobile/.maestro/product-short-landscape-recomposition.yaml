@@ -1,0 +1,72 @@
+# T-12 Phase M / T12-PROD-05 — the composed surface, through a real orientation change.
+#
+# The Product-root evidence flow rotates the app, but it launches with `clearState: true` and therefore
+# never leaves the technical SIGNED_OUT state: there is no Session, no plan and no support band to
+# assert. This flow runs against a Product build that has INHERITED an authenticated session from the
+# validation harness build — same bundle id, same data container — so the world is actually composed
+# and the three responsive regions exist to be found.
+#
+# What it asserts is exactly the shape of the defect. A short landscape window recomposes the support
+# band across, at 159 points, in the room the world does not need. When the world holds a share taken
+# inside the previous envelope, that band is laid out BELOW the bottom of the window and the reader
+# sees neither the Timeline nor the orientation, while the plan itself is perfectly correct. Asserting
+# that each region is VISIBLE after the rotation is what separates those two outcomes: an off-window
+# region is present in the tree and absent from the screen.
+#
+# What it does NOT claim: it is a simulator, so nothing here is a perceptual, tactile or frame-pacing
+# claim, and the session it inherits carries no committed Moments, so this is the geometry of an empty
+# world. The populated case is closed on physical hardware, where it was found.
+appId: com.qandeel.mobile
+---
+# NO `clearState`. The inherited session is the entire point: clearing it would put the app back into
+# the technical state view and every assertion below would be vacuous.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-product-root"
+    timeout: 90000
+
+# The composed world, rather than a technical state. The responsive surface only exists once there is
+# an authenticated identity, a Session and an authoritative snapshot, so finding it IS the proof that
+# the inheritance worked.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-responsive-surface"
+    timeout: 90000
+- assertVisible:
+    id: "qandeel-responsive-map-frame"
+- assertVisible:
+    id: "qandeel-responsive-support-band"
+- assertVisible:
+    id: "qandeel-responsive-timeline-row"
+- assertVisible:
+    id: "qandeel-responsive-chrome-band"
+- takeScreenshot: rsp-composed-portrait
+
+# The measurement. Short landscape is where the world and the support compete for every point.
+- setOrientation: LANDSCAPE_LEFT
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-responsive-support-band"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-responsive-map-frame"
+- assertVisible:
+    id: "qandeel-responsive-timeline-row"
+- assertVisible:
+    id: "qandeel-responsive-chrome-band"
+- takeScreenshot: rsp-composed-landscape
+
+# And back, because a composition that survives one direction and not the other is not a composition.
+- setOrientation: PORTRAIT
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-responsive-support-band"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-responsive-map-frame"
+- assertVisible:
+    id: "qandeel-responsive-timeline-row"
+- assertVisible:
+    id: "qandeel-responsive-chrome-band"
+- takeScreenshot: rsp-composed-portrait-return

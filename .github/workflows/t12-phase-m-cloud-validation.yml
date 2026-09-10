@@ -19,14 +19,16 @@ name: T-12 Phase M cloud validation
 #   assert that the root mounted. These jobs receive the real Phase-M public values, so the runtime can
 #   actually reach an identity and a Session.
 #
-#   ENTRY. Two of the four jobs build the isolated `QAN-BL-T12-04` harness as the root component
-#   instead of the Product root, through `scripts/select-validation-entry.mjs`. That script runs in the
-#   two auth-validation jobs and nowhere else, the Product jobs assert the committed Product entry
-#   before building, and the repository itself always carries `expo-router/entry`.
+#   ENTRY. Three of the five jobs build the isolated `QAN-BL-T12-04` harness as the root component
+#   instead of the Product root, through `scripts/select-validation-entry.mjs`. The two auth-validation
+#   jobs ship that build as their artifact; the iOS responsive-composition job builds BOTH and ships
+#   neither as a harness artifact, because it uses the harness only to establish a session that the
+#   Product build then inherits. Every Product build asserts the committed Product entry immediately
+#   before `xcodebuild` runs, and the repository itself always carries `expo-router/entry`.
 #
 # The auth-validation artifacts mount NO Product surface â€” no Map, no Timeline, no chrome â€” so nothing
 # observed in them may ever be recorded against MOT-03, MOT-04 or RSP-01. The Product artifacts mount
-# no harness, so nothing observed in them can close T12-04. All four come from one checkout, and each
+# no harness, so nothing observed in them can close T12-04. All five come from one checkout, and each
 # writes the checkpoint SHA into its own artifact so the evidence can prove they did.
 on:
   workflow_dispatch:
@@ -36,7 +38,7 @@ on:
         required: true
         type: string
       run_ios:
-        description: 'Run the two macOS iOS Release simulator jobs'
+        description: 'Run the three macOS iOS Release simulator jobs'
         required: false
         type: boolean
         default: true
@@ -536,3 +538,189 @@ jobs:
           test "$PHASE_5" = success
           test "$PHASE_6" = success
           test "$PHASE_7" = success
+
+  # =========================================================================================
+  # T12-PROD-05 on iOS, which needs a COMPOSED Product and therefore an authenticated identity.
+  #
+  # The Product build carries no sign-in surface, deliberately: an injection point on the production
+  # route is exactly the hole `PM-05` names. So the session is established by the validation-harness
+  # build and INHERITED — the two builds differ in one line of the manifest and share a bundle id, so
+  # installing the Product app over the harness app keeps the data container the session was written
+  # into. It is the same inheritance the physical Honor run uses, and on a simulator it is the only
+  # way to reach the composed world at all.
+  #
+  # Both apps are built from ONE generated project: the native project does not depend on which root
+  # component the JS entry registers, so the entry is toggled between two `xcodebuild` invocations
+  # rather than prebuilding twice.
+  #
+  # WHAT THIS PROVES, precisely: that on iOS the composed surface keeps its map frame, its support
+  # band and BOTH support regions on screen through a real portrait -> landscape -> portrait change,
+  # in a short landscape window where the two of them compete for every point.
+  #
+  # WHAT IT DOES NOT PROVE: the session it inherits holds no committed Moments, and the defect this
+  # closes reproduced on hardware only with a POPULATED world. Seeding one needs a database
+  # credential that this workflow does not have and will not be given. The populated case is closed
+  # on physical hardware, where it was found; this is the iOS geometry of an empty world, and saying
+  # so is the difference between evidence and a green tick.
+  # =========================================================================================
+  ios-responsive-composition-simulator:
+    name: iOS Release simulator — RESPONSIVE COMPOSITION (T12-PROD-05)
+    if: inputs.run_ios
+    runs-on: macos-26
+    timeout-minutes: 150
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      IOS_SIMULATOR_NAME: iPhone 17
+      IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+    steps:
+      - name: Checkout the exact checkpoint
+        uses: actions/checkout@v4
+      - name: Refuse to run without the two validation identities
+        env:
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+        run: node scripts/phase-m/assert-validation-preconditions.mjs identities
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Guard the simulator (iPhone 17 on iOS 26.5)
+        run: |
+          udid="$(xcrun simctl list devices available -j | jq -r --arg name "$IOS_SIMULATOR_NAME" --arg suffix "$IOS_SIMULATOR_RUNTIME_SUFFIX" '.devices | to_entries[] | select(.key | endswith($suffix)) | .value[] | select(.name == $name) | .udid' | head -n 1)"
+          if [ -z "$udid" ]; then
+            echo "STOP: the authorized simulator (${IOS_SIMULATOR_NAME} / ${IOS_SIMULATOR_RUNTIME_SUFFIX}) is not on this image"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "IOS_SIM_UDID=$udid" >> "$GITHUB_ENV"
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies from the root lockfile
+        run: npm ci
+      - name: Refuse to build without the public configuration
+        run: node scripts/phase-m/assert-validation-preconditions.mjs configuration
+      - name: Generate the iOS project (CNG)
+        run: npm run prebuild:ios --workspace @qandeel/mobile
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build the PRODUCT app (the entry the repository carries)
+        run: |
+          set -o pipefail
+          node scripts/phase-m/assert-validation-preconditions.mjs entry product
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build-product CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee "$RUNNER_TEMP/xcodebuild-product.log"
+          app="$(find apps/mobile/ios/build-product/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          echo "IOS_PRODUCT_APP=$app" >> "$GITHUB_ENV"
+      - name: Build the AUTH-VALIDATION app (one manifest line apart, same bundle id)
+        env:
+          T12_PHASE_M_VALIDATION: '1'
+        run: |
+          set -o pipefail
+          node apps/mobile/scripts/select-validation-entry.mjs --apply
+          node scripts/phase-m/assert-validation-preconditions.mjs entry validation
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build-validation CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee "$RUNNER_TEMP/xcodebuild-validation.log"
+          app="$(find apps/mobile/ios/build-validation/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          echo "IOS_HARNESS_APP=$app" >> "$GITHUB_ENV"
+      - name: Restore the PRODUCT entry before anything else runs
+        env:
+          T12_PHASE_M_VALIDATION: '1'
+        run: |
+          node apps/mobile/scripts/select-validation-entry.mjs --restore
+          node scripts/phase-m/assert-validation-preconditions.mjs entry product
+      - name: Boot the simulator and install the harness build
+        run: |
+          xcrun simctl boot "$IOS_SIM_UDID" || true
+          xcrun simctl bootstatus "$IOS_SIM_UDID" -b
+          xcrun simctl install "$IOS_SIM_UDID" "$IOS_HARNESS_APP"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Guard the Maestro version
+        run: |
+          maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
+      - name: Establish the session in the harness build
+        id: signin
+        continue-on-error: true
+        env:
+          EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+        run: maestro --device "$IOS_SIM_UDID" test --debug-output "$RUNNER_TEMP/rsp-debug/signin" -e EMAIL_A="$EMAIL_A" -e PASSWORD_A="$PASSWORD_A" apps/mobile/.maestro/t12-04-phase-1-before-restart.yaml
+      - name: Hand the container to the PRODUCT build
+        if: steps.signin.outcome == 'success'
+        run: |
+          xcrun simctl terminate "$IOS_SIM_UDID" com.qandeel.mobile || true
+          sleep 3
+          # Same bundle id, so this replaces the executable and keeps the data container the session
+          # was written into. An uninstall would take the store with it, which is the whole point.
+          xcrun simctl install "$IOS_SIM_UDID" "$IOS_PRODUCT_APP"
+      - name: Short-landscape recomposition on the composed Product
+        id: rsp
+        if: steps.signin.outcome == 'success'
+        continue-on-error: true
+        run: maestro --device "$IOS_SIM_UDID" test --debug-output "$RUNNER_TEMP/rsp-debug/recomposition" apps/mobile/.maestro/product-short-landscape-recomposition.yaml
+      - name: Collect the evidence, with every credential redacted
+        if: always()
+        env:
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+        run: node scripts/phase-m/collect-validation-evidence.mjs "$RUNNER_TEMP/rsp-debug" "$RUNNER_TEMP/rsp-evidence"
+      - name: Record the artifact identity
+        if: always()
+        run: node scripts/phase-m/record-artifact-identity.mjs ios PRODUCT "${{ github.sha }}" "$RUNNER_TEMP/rsp-evidence/ios-responsive-composition-identity.txt"
+      - name: Upload the responsive-composition evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t12-phase-m-ios-responsive-composition-simulator
+          path: ${{ runner.temp }}/rsp-evidence
+          if-no-files-found: error
+          include-hidden-files: true
+      - name: 'Gate: the composed surface must survive the orientation change'
+        if: always()
+        env:
+          SIGNIN: ${{ steps.signin.outcome }}
+          RSP: ${{ steps.rsp.outcome }}
+        run: |
+          # Three states, kept apart: a recomposition that never ran because the inheritance failed is
+          # a different fact from one that ran and lost a region.
+          case "$RSP" in
+            success) state='EXECUTED — PASS' ;;
+            failure) state='EXECUTED — FAIL' ;;
+            *) state='NOT EXECUTED — the session inheritance did not complete' ;;
+          esac
+          {
+            echo '### T12-PROD-05 — iOS Release simulator, composed surface'
+            echo ''
+            echo "| step | result |"
+            echo "| --- | --- |"
+            echo "| session established in the harness build | \`$SIGNIN\` |"
+            echo "| portrait -> short landscape -> portrait, every region on screen | \`$state\` |"
+            echo ''
+            echo 'IOS RELEASE SIMULATOR evidence only, on a session holding no committed Moments.'
+            echo 'Never a physical, tactile or frame-pacing claim.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          test "$SIGNIN" = success
+          test "$RSP" = success
