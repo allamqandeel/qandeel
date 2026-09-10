@@ -62,7 +62,10 @@ export function ResponsiveMapFrame({ frame, children, style, testID = RESPONSIVE
   return (
     <View
       testID={testID}
-      style={[styles.frame, { flexBasis: frame.basisPoints, minHeight: frame.minHeightPoints }, style]}
+      // Floor and ceiling both come from the plan, and both are load-bearing. The floor is what the
+      // world is guaranteed; the ceiling is what the surface has left once the support around it has
+      // been allocated. Between them the frame still flexes exactly as it did.
+      style={[styles.frame, { flexBasis: frame.basisPoints, minHeight: frame.minHeightPoints, maxHeight: frame.ceilingPoints }, style]}
       onLayout={onLayout}
     >
       {rect === null ? null : children(rect)}
@@ -72,10 +75,30 @@ export function ResponsiveMapFrame({ frame, children, style, testID = RESPONSIVE
 
 const styles = StyleSheet.create({
   // The world is sized FIRST, at the plan's share, and grows into whatever the support around it
-  // does not need. `flexShrink: 0` is the load-bearing half: without it the support takes its
-  // natural height and the world gets the remainder, which on a tall window is a strip under a
-  // wall of controls — a description of the world where the world should be. The support regions
-  // carry `flexShrink: 1` and their own reachable overflow, so nothing is lost by the world
-  // refusing to yield.
-  frame: { flexGrow: 1, flexShrink: 0 },
+  // does not need.
+  //
+  // ## T-12 — why the world now yields, when it once must not have
+  //
+  // This carried `flexShrink: 0`, and at the time that was the correction: the support regions took
+  // their height from a `ScrollView`, a scroller reports no intrinsic height to its parent, and the
+  // world was the only child that grew — so if the world yielded at all, a truthful region resolved
+  // to ZERO and its own `overflow: hidden` clipped it off the composition entirely.
+  //
+  // That is no longer the shape of the thing. The band beneath the world now has a DEFINITE height,
+  // decided in the plan before either region renders and after the world's own floor has been set
+  // aside, and it neither grows nor shrinks. So the room the world yields is a fixed, already-decided
+  // allocation rather than whatever a scroller happened to ask for, and `minHeight` below is an
+  // absolute stop: the world cannot be pushed under its floor by anything.
+  //
+  // What refusing to yield actually bought was the ability to hold a share that no longer described
+  // the surface. Measured on a device: a rotation into a short landscape window recomposed the band
+  // correctly, at 159 points across with the short 4-point gap, while the world kept the 388-point
+  // half of the PORTRAIT usable height — and because it would not give the 182 points back, the band
+  // was laid out starting 392 points down a 369-point window and neither the Timeline nor the
+  // orientation was on screen. The same arithmetic overflows a stationary window between roughly 456
+  // and 638 points tall, where the two support floors together cost more than the surface leaves.
+  //
+  // Yielding to a region that has a definite allocation and cannot yield back is the correct order:
+  // it is the world that can show less of itself without ceasing to be true.
+  frame: { flexGrow: 1, flexShrink: 1 },
 });

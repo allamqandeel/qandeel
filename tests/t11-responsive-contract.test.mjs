@@ -229,8 +229,34 @@ test('the world is sized first, and the support around it yields', () => {
   const row = responsiveCode['ResponsiveTimelineRow.tsx'];
   // The world's share is a FLOOR on its size, taken before the support asks for anything.
   assert.match(plan, /basisPoints: Math\.max\(MAP_MIN_HEIGHT_POINTS, Math\.round\(height \/ WORLD_SHARE_DENOMINATOR\)\)/u, 'the world is sized first');
-  assert.match(frame, /frame: \{ flexGrow: 1, flexShrink: 0 \}/u, 'the world does not yield to the support around it');
-  assert.match(frame, /flexBasis: frame\.basisPoints, minHeight: frame\.minHeightPoints/u, 'the world carries its share and its floor');
+  // T-12 re-anchor, and it replaces `flexShrink: 0` with something STRONGER rather than weaker.
+  //
+  // The old line said the world never yields, and what it was protecting against was real: the
+  // support regions had no height of their own, so a yielding world let a truthful region resolve to
+  // zero. That protection now lives where it belongs — the band's height is a DEFINITE allocation
+  // decided in the plan after the world's floor has been set aside, and the band neither grows nor
+  // shrinks — so the world yields a fixed, already-decided amount and its `minHeight` is an absolute
+  // stop. What the refusal actually bought, in the end, was the ability to hold a share that no
+  // longer described the surface: on a device a rotation into a short landscape window left the
+  // world at the portrait half-height and put the ENTIRE support band below the bottom of the
+  // screen while every allocation in the plan was correct.
+  //
+  // So the world now yields to a region that cannot yield back, and it carries a CEILING as well as
+  // a floor — the measured column minus what the support was allocated — which makes the room the
+  // world may occupy a decision of the same plan that allocated the band rather than a consequence
+  // of whichever basis happens to be in the tree.
+  assert.match(frame, /frame: \{ flexGrow: 1, flexShrink: 1 \}/u, 'the world yields to a band that has a definite allocation and cannot yield back');
+  assert.match(frame, /minHeight: frame\.minHeightPoints/u, 'and never below the floor it is guaranteed');
+  assert.match(
+    frame,
+    /flexBasis: frame\.basisPoints, minHeight: frame\.minHeightPoints, maxHeight: frame\.ceilingPoints/u,
+    'the world carries its share, its floor and the ceiling the support allocation leaves it',
+  );
+  assert.match(
+    plan,
+    /ceilingPoints: Math\.max\(MAP_MIN_HEIGHT_POINTS, surface\.height - support\.bandPoints - support\.gapPoints\)/u,
+    'the ceiling is the measured column minus the support allocation, never below the world floor',
+  );
   // Both support regions yield, clip to what they were given, and keep the remainder reachable.
   assert.match(band, /flexShrink: 1, flexGrow: 0, overflow: 'hidden'/u, 'the chrome band yields and clips to the room it was given');
   assert.match(row, /flexShrink: TIMELINE_ROW_SHRINK,[\s\S]*?overflow: 'hidden',/u, 'the temporal row yields and clips to the room it was given');

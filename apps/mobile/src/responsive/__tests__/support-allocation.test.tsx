@@ -86,10 +86,22 @@ describe('T12 — the plan allocation reaches the regions that used to reach zer
         expect(chrome.height).toBeGreaterThan(0);
         expect(band.height).toBeGreaterThan(0);
 
-        // The world keeps its own floor throughout.
+        // The world keeps its own floor throughout, and takes no more than the room the support
+        // allocation leaves it — the two together are what keep every region on the surface.
         const frame = flattenStyle(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID).props.style);
         expect(frame.minHeight).toBe(plan.mapFrame.minHeightPoints);
-        expect(frame.flexShrink).toBe(0);
+        expect(frame.maxHeight).toBe(plan.mapFrame.ceilingPoints);
+        // The world yields, and only to a band whose allocation is definite and which cannot yield
+        // back. That is what stops a share taken in some earlier envelope from displacing a region
+        // off the surface; the floor above is what stops the yield ever going too far.
+        expect(frame.flexShrink).toBe(1);
+        // The ceiling and the band's allocation are one partition of the measured column: what the
+        // world may take, plus the band, plus the gap between them, is the surface exactly — unless
+        // the world's own floor binds first, which it never may be pushed under.
+        expect(plan.mapFrame.ceilingPoints).toBe(
+          Math.max(plan.mapFrame.minHeightPoints, testCase.height - plan.support.bandPoints - plan.support.gapPoints),
+        );
+        expect(plan.mapFrame.ceilingPoints + plan.support.bandPoints + plan.support.gapPoints).toBeLessThanOrEqual(testCase.height);
       }
       await act(async () => {
         view.unmount();
@@ -138,6 +150,44 @@ describe('T12 — the plan allocation reaches the regions that used to reach zer
     await act(async () => {
       view.unmount();
     });
+  });
+
+  it('a share taken in one envelope cannot survive into another and push the band off the surface', async () => {
+    // The device defect this closes, stated as arithmetic.
+    //
+    // On the Honor, a rotation from portrait (369 x 816) into short landscape (816 x 369) recomposed
+    // the band correctly — 159 points, across, with the short gap — while the world kept the PORTRAIT
+    // half-height of 388. The world would not give that back, so the band was laid out 392 points
+    // down a 369-point window and neither the Timeline nor the orientation was on screen at all.
+    // Every allocation in the plan was right; the composition still lost two of them.
+    //
+    // Two independent things close it now, and either one alone is enough: the world yields to a
+    // band whose allocation is definite and which cannot yield back, and the world carries the
+    // plan's own ceiling. This asserts the arithmetic behind the second; the first is asserted as a
+    // style above, because a JS renderer performs no layout and cannot be asked to shrink anything.
+    const portrait = recompositionPlan(presentationSurface({ width: 369, height: 816, insetTop: 40 }) as never);
+    const landscape = recompositionPlan(presentationSurface({ width: 816, height: 369 }) as never);
+
+    // The stale share is real and it is larger than the whole landscape window.
+    expect(portrait.mapFrame.basisPoints).toBe(388);
+    expect(portrait.mapFrame.basisPoints).toBeGreaterThan(landscape.surface.height);
+    // The landscape plan's own allocation is the one the reader must see.
+    expect(landscape.support.arrangement).toBe('SIDE_BY_SIDE');
+    expect(landscape.support.bandPoints).toBe(159);
+    expect(landscape.support.gapPoints).toBe(4);
+
+    // The ceiling refuses the stale share without touching the correct one: it is exactly the room
+    // left over, so the band and the gap always fit inside the measured column.
+    expect(landscape.mapFrame.ceilingPoints).toBe(369 - 159 - 4);
+    expect(Math.min(portrait.mapFrame.basisPoints, landscape.mapFrame.ceilingPoints)).toBe(landscape.mapFrame.ceilingPoints);
+    expect(landscape.mapFrame.ceilingPoints + landscape.support.bandPoints + landscape.support.gapPoints).toBeLessThanOrEqual(
+      landscape.surface.height,
+    );
+
+    // And it changes nothing that was already correct: in portrait the world was resolving to the
+    // remainder anyway, so the ceiling is that same number rather than a new constraint.
+    expect(portrait.mapFrame.ceilingPoints).toBe(816 - portrait.support.bandPoints - portrait.support.gapPoints);
+    expect(portrait.mapFrame.ceilingPoints).toBeGreaterThan(portrait.mapFrame.basisPoints);
   });
 
   it('branches on measured geometry alone — never on a device, a brand or a platform', async () => {

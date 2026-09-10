@@ -160,6 +160,30 @@ export interface MapFrameComposition {
    */
   readonly basisPoints: number;
   readonly minHeightPoints: number;
+  /**
+   * The most room the world may occupy: the measured column minus what the support was allocated.
+   *
+   * The basis above says what the world is given BEFORE the support asks. This says what is left
+   * AFTER, and both are needed, because the world neither shrinks nor yields — `flexShrink: 0` is
+   * what stops the support being squeezed to nothing, and it equally stops the world giving room
+   * back once it holds it. A basis that no longer describes this surface therefore cannot be
+   * corrected by anything downstream: it is simply kept, and the support band it displaces goes off
+   * the bottom of the window entirely.
+   *
+   * Measured on a device, that is exactly what happened. A rotation into a short landscape window
+   * recomposed the band correctly — 159 points, across, with the short 4-point gap — while the world
+   * stayed at the 388-point half of the PORTRAIT usable height, so the band was laid out starting
+   * 392 points down a 369-point window and no part of the Timeline or the orientation was on screen.
+   * Every region's allocation was right; the surface still showed one of them and not the others.
+   *
+   * So the world's room is a decision of the same plan that allocated the band, rather than a
+   * consequence of whatever basis happens to be in the tree. In every composition that is already
+   * correct this is precisely the height the world was resolving to anyway — 428 of 816 in portrait,
+   * 206 of 369 across a short landscape — so it changes no correct layout and can only refuse an
+   * allocation that no longer belongs to this surface. It is clamped to the world's own floor so the
+   * ceiling can never fall below the minimum the world is guaranteed.
+   */
+  readonly ceilingPoints: number;
   readonly insetTop: number;
   readonly insetRight: number;
   readonly insetLeft: number;
@@ -329,6 +353,9 @@ export function recompositionPlan(surface: PresentationSurface, options: Recompo
     mapFrame: Object.freeze({
       basisPoints: Math.max(MAP_MIN_HEIGHT_POINTS, Math.round(height / WORLD_SHARE_DENOMINATOR)),
       minHeightPoints: MAP_MIN_HEIGHT_POINTS,
+      // The measured column, not the usable height: the band's allocation and the world's frame are
+      // both laid out in the full measured rect, and each region applies its own insets inside itself.
+      ceilingPoints: Math.max(MAP_MIN_HEIGHT_POINTS, surface.height - support.bandPoints - support.gapPoints),
       insetTop: surface.insetTop,
       insetRight: surface.insetRight,
       insetLeft: surface.insetLeft,
@@ -382,6 +409,7 @@ export function planEquals(a: RecompositionPlan, b: RecompositionPlan): boolean 
     a.timelineWidthPoints === b.timelineWidthPoints &&
     a.mapFrame.basisPoints === b.mapFrame.basisPoints &&
     a.mapFrame.minHeightPoints === b.mapFrame.minHeightPoints &&
+    a.mapFrame.ceilingPoints === b.mapFrame.ceilingPoints &&
     a.mapFrame.insetTop === b.mapFrame.insetTop &&
     a.mapFrame.insetRight === b.mapFrame.insetRight &&
     a.mapFrame.insetLeft === b.mapFrame.insetLeft &&
