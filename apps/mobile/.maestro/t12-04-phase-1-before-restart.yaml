@@ -13,17 +13,24 @@
 appId: com.qandeel.mobile
 # NO env: block, and that absence is the correction.
 #
-# It used to declare EMAIL_A and PASSWORD_A as empty defaults. Measured on a real run, the flow
-# used those empty strings and IGNORED the values passed with `-e` on the command line: the harness
-# reported `email=0` characters while the step log said `Input text ${EMAIL_A}... COMPLETED`, and the
-# sign-in was then refused as INVALID_CREDENTIALS by a provider that accepts those very identities.
-# A declared default is what the flow gets, so the only way to receive the supplied value is to
-# declare no default at all.
+# It used to declare EMAIL_A and PASSWORD_A as empty defaults. They are gone because an empty
+# declared default is a trap: it turns a missing value into a silent one instead of an error.
+#
+# It is NOT, however, what broke the sign-in, and the earlier note here saying so was wrong. The
+# harness reports identityEmailChars=22 and identityPasswordChars=9, so the supplied values do
+# reach the fields. The flow had been failing on its own assertion instead, before the sign-in was
+# ever attempted.
 ---
 - launchApp:
     clearState: true
-- assertVisible:
-    id: "qandeel-t1204-validation-harness"
+# A cold Release launch on a loaded runner can take longer than the default assertion window, and
+# the captured hierarchy proved it: the harness WAS on screen with every control present when the
+# debug snapshot was taken moments after the assertion had already given up. An impatient wait
+# reported the app as broken when it was only slow, so the wait is now explicit.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
 
 - tapOn:
     id: "t1204-email"

@@ -9,8 +9,14 @@
 appId: com.qandeel.mobile
 ---
 - launchApp
-- assertVisible:
-    id: "qandeel-t1204-validation-harness"
+# A cold Release launch on a loaded runner can take longer than the default assertion window, and
+# the captured hierarchy proved it: the harness WAS on screen with every control present when the
+# debug snapshot was taken moments after the assertion had already given up. An impatient wait
+# reported the app as broken when it was only slow, so the wait is now explicit.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
 
 - tapOn:
     id: "t1204-run-AFTER_RESTART"
