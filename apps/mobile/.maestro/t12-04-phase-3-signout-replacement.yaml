@@ -9,9 +9,14 @@
 # the client, so this flow proves nothing at all if the API is unreachable — the report says so, with
 # `phase=` rather than a Session shape.
 appId: com.qandeel.mobile
-env:
-  EMAIL_B: ""
-  PASSWORD_B: ""
+# NO env: block, and that absence is the correction.
+#
+# It used to declare EMAIL_B and PASSWORD_B as empty defaults. Measured on a real run, the flow
+# used those empty strings and IGNORED the values passed with `-e` on the command line: the harness
+# reported `email=0` characters while the step log said `Input text ${EMAIL_B}... COMPLETED`, and the
+# sign-in was then refused as INVALID_CREDENTIALS by a provider that accepts those very identities.
+# A declared default is what the flow gets, so the only way to receive the supplied value is to
+# declare no default at all.
 ---
 - launchApp
 - assertVisible:

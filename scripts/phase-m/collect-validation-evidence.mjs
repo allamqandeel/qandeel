@@ -98,7 +98,16 @@ function walk(directory, into, root = directory) {
       skipped += 1;
       continue;
     }
-    place(from, join(into, relative(root, from)));
+    // A leading dot on any segment makes the whole subtree HIDDEN, and the artifact uploader drops
+    // hidden files by default. Maestro writes its diagnostics under `.maestro/tests/...`, so the very
+    // files that explain a failure were being collected and then silently left out of the upload. The
+    // segments are un-hidden here rather than relying on an uploader flag, so the evidence survives
+    // whatever the packaging step happens to default to.
+    const shaped = relative(root, from)
+      .split(/[\\/]/u)
+      .map((segment) => (segment.startsWith('.') ? `dot-${segment.slice(1)}` : segment))
+      .join('/');
+    place(from, join(into, shaped));
   }
 }
 
@@ -142,7 +151,11 @@ process.stdout.write(`collected ${copied} file(s); redacted ${redactions} occurr
 // disk. A missing diagnostic fails this step explicitly rather than being discovered later as an
 // absence nobody can explain.
 // ---------------------------------------------------------------------------------------------
-const onDisk = present(out);
+// The collector's OWN outputs are not evidence it collected, so they are excluded from the count.
+// Including them made the two numbers differ by one and reported a complete evidence set as
+// incomplete — a gate that cries wolf is worth no more than the silence it replaced.
+const SELF_WRITTEN = new Set(['REDACTION.txt', 'COMPLETENESS.txt', 'maestro-output-absent.txt', 'ios-auth-validation-identity.txt']);
+const onDisk = present(out).filter((file) => !SELF_WRITTEN.has(basename(file)));
 const expected = (process.env.T12_REQUIRED_PHASES ?? '')
   .split(',')
   .map((name) => name.trim())

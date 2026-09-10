@@ -104,6 +104,9 @@ jobs:
             apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             ${{ runner.temp }}/android-product-identity.txt
           if-no-files-found: error
+          # Maestro writes diagnostics under a dotted directory, and v4 drops hidden files by default -
+          # which quietly removed the only evidence that could explain a failed phase.
+          include-hidden-files: true
 
   android-auth-validation-arm64:
     name: Android Release arm64-v8a â€” AUTH VALIDATION root
@@ -150,6 +153,9 @@ jobs:
             apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             ${{ runner.temp }}/android-auth-validation-identity.txt
           if-no-files-found: error
+          # Maestro writes diagnostics under a dotted directory, and v4 drops hidden files by default -
+          # which quietly removed the only evidence that could explain a failed phase.
+          include-hidden-files: true
 
   ios-product-simulator:
     name: iOS Release simulator â€” PRODUCT root
@@ -255,6 +261,9 @@ jobs:
             ${{ runner.temp }}/ios-product-evidence
             ${{ runner.temp }}/ios-product-identity.txt
           if-no-files-found: warn
+          # Maestro writes diagnostics under a dotted directory, and v4 drops hidden files by default -
+          # which quietly removed the only evidence that could explain a failed phase.
+          include-hidden-files: true
       - name: 'Gate: the Product-root evidence flow must have passed'
         if: always()
         env:
@@ -476,6 +485,9 @@ jobs:
           path: ${{ runner.temp }}/t1204-evidence
           # Not `warn`: an absent evidence set is a failed evidence gate, not a note in a log.
           if-no-files-found: error
+          # Maestro writes diagnostics under a dotted directory, and v4 drops hidden files by default -
+          # which quietly removed the only evidence that could explain a failed phase.
+          include-hidden-files: true
       - name: 'Gate: every T12-04 phase must have passed'
         if: always()
         env:

@@ -11,9 +11,14 @@
 # password field is `secureTextEntry` and is cleared by the harness itself when the run ends. Nothing
 # in the report carries a credential: it reports kinds, booleans and character counts.
 appId: com.qandeel.mobile
-env:
-  EMAIL_A: ""
-  PASSWORD_A: ""
+# NO env: block, and that absence is the correction.
+#
+# It used to declare EMAIL_A and PASSWORD_A as empty defaults. Measured on a real run, the flow
+# used those empty strings and IGNORED the values passed with `-e` on the command line: the harness
+# reported `email=0` characters while the step log said `Input text ${EMAIL_A}... COMPLETED`, and the
+# sign-in was then refused as INVALID_CREDENTIALS by a provider that accepts those very identities.
+# A declared default is what the flow gets, so the only way to receive the supplied value is to
+# declare no default at all.
 ---
 - launchApp:
     clearState: true
