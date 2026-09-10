@@ -35,6 +35,7 @@ import { createTemporalPreviewController, TemporalTargetLayer, type TemporalOutc
 import { chromeSurface } from '../../orientation-chrome/__fixtures__/chrome';
 import { MAP_MIN_HEIGHT_POINTS, WORLD_SHARE_DENOMINATOR, type RecompositionPlan } from '../plan';
 import { RESPONSIVE_CHROME_BAND_TEST_ID, ResponsiveChromeBand } from '../ResponsiveChromeBand';
+import { ResponsiveSupportBand } from '../ResponsiveSupportBand';
 import { RESPONSIVE_MAP_FRAME_TEST_ID, ResponsiveMapFrame } from '../ResponsiveMapFrame';
 import { RESPONSIVE_SURFACE_TEST_ID, ResponsiveSurface } from '../ResponsiveSurface';
 import { RESPONSIVE_TIMELINE_ROW_TEST_ID, ResponsiveTimelineRow } from '../ResponsiveTimelineRow';
@@ -99,11 +100,14 @@ export function ResponsiveWorld({
               }}
             </ResponsiveMapFrame>
 
-            <ResponsiveTimelineRow widthPoints={plan.timelineWidthPoints} paddingHorizontal={plan.chrome.paddingHorizontal}>
+            {/* The proof composition holds the SAME band as the Product one, so what a reviewer looks
+                at and what the contract checks are the same arrangement. */}
+            <ResponsiveSupportBand support={plan.support}>
+            <ResponsiveTimelineRow widthPoints={plan.timelineWidthPoints} paddingHorizontal={plan.chrome.paddingHorizontal} support={plan.support}>
               <TemporalTargetLayer store={store} preview={preview} presentation={presentation} onOutcome={onTemporal} />
             </ResponsiveTimelineRow>
 
-            <ResponsiveChromeBand chrome={plan.chrome}>
+            <ResponsiveChromeBand chrome={plan.chrome} support={plan.support}>
               <OrientationChrome
                 surface={chromeSurface(store, preview)}
                 language={language}
@@ -115,6 +119,7 @@ export function ResponsiveWorld({
                 returnArrangement={plan.chrome.arrangement}
               />
             </ResponsiveChromeBand>
+            </ResponsiveSupportBand>
           </>
         );
       }}

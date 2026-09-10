@@ -165,6 +165,49 @@ export interface MapFrameComposition {
   readonly insetLeft: number;
 }
 
+/**
+ * How the two support regions share the band beneath the world.
+ *
+ * `STACKED` is the normal composition: the temporal instrument above the orientation, each with its
+ * own frozen minimum. `SIDE_BY_SIDE` is the short-height composition, where stacking the two full
+ * vertical minimums (136 + 159) would cost more height than a short window has to give. Placing them
+ * across instead costs `max(136, 159)` rather than their sum, which is what lets a short window keep
+ * BOTH truths at full size instead of removing one of them.
+ */
+export type SupportArrangement = 'STACKED' | 'SIDE_BY_SIDE';
+
+/**
+ * The room each support region is GIVEN, decided before either of them renders.
+ *
+ * This exists because a support region whose height is inferred from its content cannot state a floor:
+ * both regions hold a `ScrollView`, a scroller reports no intrinsic height to its parent, and the world
+ * is the only child that grows — so "whatever the world did not take" was resolving to zero and taking
+ * a truthful region off the surface with it. The allocation is therefore decided here, in arithmetic
+ * over the measured surface and the three frozen minimums, and handed to the components as a basis.
+ *
+ * It is an ALLOCATION, never a ceiling: each region still clips to what it was given and keeps the
+ * remainder reachable inside its own scroller, exactly as before.
+ */
+export interface SupportComposition {
+  readonly arrangement: SupportArrangement;
+  /** The whole band beneath the world, gaps between the two regions included. */
+  readonly bandPoints: number;
+  /** The temporal instrument's share. In `SIDE_BY_SIDE` this is the band's full height. */
+  readonly timelinePoints: number;
+  /** The orientation's share. In `SIDE_BY_SIDE` this is the band's full height. */
+  readonly chromePoints: number;
+  /**
+   * The width the orientation is composed in.
+   *
+   * The whole band width when stacked; its own half of the band when across. Across, the two widths
+   * are stated rather than left to flex, so the instrument and the orientation each get a definite
+   * measure and neither can be squeezed out by the other.
+   */
+  readonly chromeWidthPoints: number;
+  /** The vertical rhythm between the world and the band, and between the two regions when stacked. */
+  readonly gapPoints: number;
+}
+
 export interface RecompositionPlan {
   readonly surface: PresentationSurface;
   readonly band: PresentationBand;
@@ -172,6 +215,8 @@ export interface RecompositionPlan {
   readonly shortHeight: boolean;
   readonly mapFrame: MapFrameComposition;
   readonly chrome: ChromeComposition;
+  /** The room the two support regions are given, and how they share it. */
+  readonly support: SupportComposition;
   /**
    * The width the Timeline row is composed in. T-05 measures its own viewport inside it.
    *
@@ -234,6 +279,49 @@ export function recompositionPlan(surface: PresentationSurface, options: Recompo
 
   const gapPoints = shortHeight ? SHORT_BAND_GAP_POINTS : BAND_GAP_POINTS;
 
+  // The world is sized first here too: the support asks only for what is left once the world's own
+  // floor is set aside, so no allocation below can push the world under `MAP_MIN_HEIGHT_POINTS`.
+  const stackedBudget = Math.max(0, height - MAP_MIN_HEIGHT_POINTS - 2 * gapPoints);
+  const acrossBudget = Math.max(0, height - MAP_MIN_HEIGHT_POINTS - gapPoints);
+  // The SAME two-cell readable threshold the chrome's own arrangement already uses. A short window
+  // wide enough to read two columns is wide enough to put the instrument beside the orientation.
+  const acrossReadable = shortHeight && band === 'EXPANSIVE' && cell >= PAIRED_MIN_CELL_POINTS;
+
+  const bothFloors = TIMELINE_ROW_POINTS + CHROME_FLOOR_POINTS;
+  let support: SupportComposition;
+  if (!shortHeight) {
+    // Above the threshold there is slack to spend. The band takes the room the world's own share
+    // leaves — which is what the composition already did when the scrollers happened to measure — and
+    // the surplus above the two frozen minimums is shared in the ratio of those minimums, so neither
+    // region is pinned to its floor while the other has room to spare.
+    const mapShare = Math.max(MAP_MIN_HEIGHT_POINTS, Math.round(height / WORLD_SHARE_DENOMINATOR));
+    const bandPoints = Math.max(bothFloors + gapPoints, Math.max(0, height - mapShare - gapPoints));
+    const surplus = Math.max(0, bandPoints - gapPoints - bothFloors);
+    const chromePoints = CHROME_FLOOR_POINTS + Math.round((surplus * CHROME_FLOOR_POINTS) / bothFloors);
+    const timelinePoints = Math.max(TIMELINE_ROW_POINTS, bandPoints - gapPoints - chromePoints);
+    support = { arrangement: 'STACKED', bandPoints: timelinePoints + chromePoints + gapPoints, timelinePoints, chromePoints, gapPoints, chromeWidthPoints: available };
+  } else if (acrossReadable) {
+    // Across, the band costs the LARGER of the two minimums instead of their sum, and each region is
+    // given the band's full height. This is what keeps a short window from having to drop a truth.
+    const bandPoints = Math.min(Math.max(TIMELINE_ROW_POINTS, CHROME_FLOOR_POINTS), acrossBudget);
+    const half = Math.max(0, Math.round((available - PAIRED_COLUMN_GAP_POINTS) / 2));
+    support = { arrangement: 'SIDE_BY_SIDE', bandPoints, timelinePoints: bandPoints, chromePoints: bandPoints, gapPoints, chromeWidthPoints: available - PAIRED_COLUMN_GAP_POINTS - half };
+  } else {
+    // Short AND too narrow to read two columns. Neither region may disappear, so the remaining room is
+    // split in the ratio of the two frozen minimums and each keeps its own reachable overflow: the
+    // pressure is paid in presentation, never by removing an act.
+    const bothFloors = TIMELINE_ROW_POINTS + CHROME_FLOOR_POINTS;
+    const chromePoints = stackedBudget <= 0 ? 0 : Math.min(CHROME_FLOOR_POINTS, Math.max(1, Math.round((stackedBudget * CHROME_FLOOR_POINTS) / bothFloors)));
+    const timelinePoints = stackedBudget <= 0 ? 0 : Math.min(TIMELINE_ROW_POINTS, Math.max(1, stackedBudget - chromePoints));
+    support = { arrangement: 'STACKED', bandPoints: timelinePoints + chromePoints + gapPoints, timelinePoints, chromePoints, gapPoints, chromeWidthPoints: available };
+  }
+
+  // Across, the instrument is composed in its own half of the band rather than the whole width, and
+  // that is a coordinate quantity: T-05 maps a scrub through it, so it feeds the mapping identity.
+  const timelineWidthPoints = support.arrangement === 'SIDE_BY_SIDE'
+    ? Math.max(0, Math.round((available - PAIRED_COLUMN_GAP_POINTS) / 2))
+    : available;
+
   return Object.freeze({
     surface,
     band,
@@ -252,14 +340,15 @@ export function recompositionPlan(surface: PresentationSurface, options: Recompo
       gapPoints,
       bottomInset: surface.insetBottom,
     }),
-    timelineWidthPoints: available,
+    support: Object.freeze(support),
+    timelineWidthPoints,
     geometry: mappingIdentity([
       surface.width,
       surface.height,
       surface.insetTop,
       surface.insetLeft,
       surface.insetRight,
-      available,
+      timelineWidthPoints,
     ]),
   });
 }
@@ -301,6 +390,11 @@ export function planEquals(a: RecompositionPlan, b: RecompositionPlan): boolean 
     a.chrome.paddingHorizontal === b.chrome.paddingHorizontal &&
     a.chrome.gapPoints === b.chrome.gapPoints &&
     a.chrome.bottomInset === b.chrome.bottomInset &&
+    a.support.arrangement === b.support.arrangement &&
+    a.support.bandPoints === b.support.bandPoints &&
+    a.support.timelinePoints === b.support.timelinePoints &&
+    a.support.chromePoints === b.support.chromePoints &&
+    a.support.gapPoints === b.support.gapPoints &&
     a.surface.width === b.surface.width &&
     a.surface.height === b.surface.height &&
     a.surface.fontScale === b.surface.fontScale &&

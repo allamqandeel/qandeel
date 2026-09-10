@@ -233,8 +233,32 @@ test('the world is sized first, and the support around it yields', () => {
   assert.match(frame, /flexBasis: frame\.basisPoints, minHeight: frame\.minHeightPoints/u, 'the world carries its share and its floor');
   // Both support regions yield, clip to what they were given, and keep the remainder reachable.
   assert.match(band, /flexShrink: 1, flexGrow: 0, overflow: 'hidden'/u, 'the chrome band yields and clips to the room it was given');
-  assert.match(row, /flexShrink: TIMELINE_ROW_SHRINK,[\s\S]*?minHeight: TIMELINE_ROW_POINTS,[\s\S]*?overflow: 'hidden',/u, 'the temporal row yields to its own interactive minimum');
+  assert.match(row, /flexShrink: TIMELINE_ROW_SHRINK,[\s\S]*?overflow: 'hidden',/u, 'the temporal row yields and clips to the room it was given');
   assert.match(row, /TIMELINE_ROW_SHRINK = 2/u, 'the instrument yields before the orientation');
+  // T-12 re-anchor, and it is STRONGER than the line it replaces, not weaker.
+  //
+  // The row used to carry `minHeight: TIMELINE_ROW_POINTS` in its own stylesheet, and that read as a
+  // guarantee that the instrument never falls below its interactive minimum. It was not one. Both
+  // support regions take their height from a `ScrollView`, a scroller reports no intrinsic height to
+  // its parent, and the world is the only child that grows — so the regions had no size of their own
+  // to apply a minimum to. Measured on a device, this row resolved to ZERO while carrying that very
+  // `minHeight`, and the chrome band, which never had one at all, did the same with the orientation
+  // and every return act still mounted inside it.
+  //
+  // The room is therefore DECIDED in the plan now, before either region renders, and handed down. So
+  // what is checked here is the whole chain rather than one hopeful declaration: the plan owns the
+  // allocation, both regions consume it, and neither the plan nor a component may hand a present
+  // region a height of zero.
+  for (const [name, text] of [['the chrome band', band], ['the temporal row', row]]) {
+    assert.match(text, /support\.(?:chromePoints|timelinePoints)/u, `${name} takes the room the plan gave it`);
+    assert.match(text, /height: support\./u, `${name} states its allocation rather than inferring it from a scroller`);
+  }
+  assert.match(plan, /MAP_MIN_HEIGHT_POINTS - 2 \* gapPoints/u, 'the support asks only for what the world does not need');
+  assert.match(plan, /TIMELINE_ROW_POINTS/u, 'the plan still honours the instrument minimum');
+  assert.match(plan, /CHROME_FLOOR_POINTS/u, 'the plan still honours the orientation minimum');
+  // `minHeightPoints` is a plan QUANTITY and stays; what the plan must never write is a style.
+  assert.doesNotMatch(plan, /minHeight:/u, 'the plan states allocations, never component styles');
+  assert.doesNotMatch(plan, /flexBasis|flexGrow|flexShrink|StyleSheet/u, 'the plan writes no layout property of its own');
   for (const [name, text] of [['the chrome band', band], ['the temporal row', row]]) {
     assert.match(text, /<ScrollView/u, `${name} keeps what does not fit reachable inside itself`);
     // Bounce is suppressed only where there is NOTHING to reach. Disabling it outright would
@@ -245,7 +269,13 @@ test('the world is sized first, and the support around it yields', () => {
   }
   // Only the WORDS are clamped to a reading measure. A Timeline is not prose, and every extra
   // point of it is one more disclosed Moment the reader can see and reach at once.
-  assert.match(plan, /timelineWidthPoints: available,/u, 'the Timeline gets the whole available width');
+  // T-12 re-anchor. Stacked, the instrument still takes the WHOLE available width and only the words
+  // are clamped — unchanged. The one reduction is the short-height arrangement where the instrument
+  // and the orientation sit across each other inside the same band, and there its half IS its whole
+  // available width. The clamp is still the chrome's alone, which is the rule this defends.
+  assert.match(plan, /const timelineWidthPoints = support\.arrangement === 'SIDE_BY_SIDE'/u, 'the only width reduction is the across arrangement');
+  assert.match(plan, /\n\s*: available;/u, 'stacked, the Timeline still gets the whole available width');
+  assert.doesNotMatch(plan, /timelineWidthPoints = Math\.min\(available, CHROME_MAX_MEASURE_POINTS/u, 'the Timeline is never clamped to a reading measure');
   assert.match(plan, /const measurePoints = Math\.min\(available, CHROME_MAX_MEASURE_POINTS \+ 2 \* CHROME_OWN_HORIZONTAL_PADDING\);/u, 'only the chrome is clamped');
   // No region asserts a height it cannot know. A ceiling computed from a constant for a surface
   // whose height depends on unlaid-out words is what put a Return act off the screen.

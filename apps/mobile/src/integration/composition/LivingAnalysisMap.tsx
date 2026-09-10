@@ -38,6 +38,7 @@ import { returnMapContext } from '../../return-navigation';
 import {
   ResponsiveChromeBand,
   ResponsiveMapFrame,
+  ResponsiveSupportBand,
   ResponsiveSurface,
   ResponsiveTimelineRow,
   type ResponsiveInsets,
@@ -191,26 +192,38 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale }: Living
             }}
           </ResponsiveMapFrame>
 
-          <ResponsiveTimelineRow widthPoints={plan.timelineWidthPoints} paddingHorizontal={plan.chrome.paddingHorizontal}>
-            <TemporalTargetLayer store={store} preview={preview} presentation={presentation} />
-          </ResponsiveTimelineRow>
+          {/*
+            The two support regions share ONE band, and it is mounted unconditionally so that a
+            measurement threshold changes a style and never an element type — a remount here would
+            clear local state that a resize must not touch. Which way they sit inside it is the
+            plan's decision, never this composition's.
+          */}
+          <ResponsiveSupportBand support={plan.support}>
+            <ResponsiveTimelineRow
+              widthPoints={plan.timelineWidthPoints}
+              paddingHorizontal={plan.chrome.paddingHorizontal}
+              support={plan.support}
+            >
+              <TemporalTargetLayer store={store} preview={preview} presentation={presentation} />
+            </ResponsiveTimelineRow>
 
-          <ResponsiveChromeBand chrome={plan.chrome}>
-            {chrome === null ? null : (
-              <OrientationChrome
-                surface={returnSurface}
-                language={locale.language}
-                projection={chrome}
-                exactReturnOrigin={journey.origin()}
-                preview={preview}
-                liveContext={liveContext}
-                onMapOutcome={observeMapOutcome}
-                onReturnOutcome={observeReturnOutcome}
-                bottomInset={plan.chrome.bottomInset}
-                returnArrangement={plan.chrome.arrangement}
-              />
-            )}
-          </ResponsiveChromeBand>
+            <ResponsiveChromeBand chrome={plan.chrome} support={plan.support}>
+              {chrome === null ? null : (
+                <OrientationChrome
+                  surface={returnSurface}
+                  language={locale.language}
+                  projection={chrome}
+                  exactReturnOrigin={journey.origin()}
+                  preview={preview}
+                  liveContext={liveContext}
+                  onMapOutcome={observeMapOutcome}
+                  onReturnOutcome={observeReturnOutcome}
+                  bottomInset={plan.chrome.bottomInset}
+                  returnArrangement={plan.chrome.arrangement}
+                />
+              )}
+            </ResponsiveChromeBand>
+          </ResponsiveSupportBand>
         </>
       )}
     </ResponsiveSurface>

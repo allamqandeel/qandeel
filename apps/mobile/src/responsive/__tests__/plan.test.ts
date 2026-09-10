@@ -11,11 +11,13 @@ import {
   CHROME_OWN_HORIZONTAL_PADDING,
   EXPANSIVE_BAND_PADDING,
   EXPANSIVE_MIN_WIDTH,
+  CHROME_FLOOR_POINTS,
   MAP_MIN_HEIGHT_POINTS,
   PAIRED_COLUMN_GAP_POINTS,
   PAIRED_MIN_CELL_POINTS,
   PRESENTATION_BANDS,
   SHORT_HEIGHT_POINTS,
+  TIMELINE_ROW_POINTS,
   bandFor,
   planEquals,
   recompositionPlan,
@@ -298,5 +300,111 @@ describe('T11 — idempotence, jitter and the plan as a value', () => {
     }
     expect(crossings).toBe(2);
     expect(planEquals(plan, planOf(240, 900))).toBe(true);
+  });
+});
+
+/**
+ * T-12 — the support allocation, proved as arithmetic.
+ *
+ * This is Layer A of the correction's proof: it runs no renderer and claims nothing about Yoga. What
+ * it establishes is that the NUMBERS handed to the two support regions can never be the numbers that
+ * took a truthful region off the surface — above all, that a present region is never allocated zero.
+ */
+describe('T12 — the support band is allocated, never inferred', () => {
+  const cases = ENVELOPE.map((c) => ({ id: c.id, width: c.width, height: c.height }));
+
+  it('never allocates a present support region to zero, anywhere in the envelope', () => {
+    for (const c of cases) {
+      for (const fontScale of [1, 1.5, 2, MAX_TRACKED_FONT_SCALE]) {
+        for (const insets of [{}, { insetTop: 48, insetBottom: 34 }, { insetTop: 48, insetBottom: 34, insetLeft: 8, insetRight: 8 }]) {
+          const plan = recompositionPlan(presentationSurface({ width: c.width, height: c.height, fontScale, ...insets }) as never);
+          expect(plan.support.timelinePoints).toBeGreaterThan(0);
+          expect(plan.support.chromePoints).toBeGreaterThan(0);
+          expect(plan.support.bandPoints).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  it('leaves the world its floor in every case, so the support never takes the world', () => {
+    for (const c of cases) {
+      const plan = recompositionPlan(presentationSurface({ width: c.width, height: c.height }) as never);
+      const usable = usableHeight(presentationSurface({ width: c.width, height: c.height }) as never);
+      expect(usable - plan.support.bandPoints).toBeGreaterThanOrEqual(MAP_MIN_HEIGHT_POINTS - plan.support.gapPoints);
+      expect(plan.mapFrame.minHeightPoints).toBe(MAP_MIN_HEIGHT_POINTS);
+    }
+  });
+
+  it('honours BOTH frozen minimums wherever the surface is not short', () => {
+    for (const c of cases) {
+      const plan = recompositionPlan(presentationSurface({ width: c.width, height: c.height }) as never);
+      if (plan.shortHeight) continue;
+      expect(plan.support.arrangement).toBe('STACKED');
+      expect(plan.support.timelinePoints).toBeGreaterThanOrEqual(TIMELINE_ROW_POINTS);
+      expect(plan.support.chromePoints).toBeGreaterThanOrEqual(CHROME_FLOOR_POINTS);
+    }
+  });
+
+  it('goes across only when the surface is short AND the width clears the two-cell threshold', () => {
+    for (const c of cases) {
+      const plan = recompositionPlan(presentationSurface({ width: c.width, height: c.height }) as never);
+      if (plan.support.arrangement !== 'SIDE_BY_SIDE') continue;
+      expect(plan.shortHeight).toBe(true);
+      expect(plan.band).toBe('EXPANSIVE');
+      // Across costs the LARGER of the two minimums rather than their sum, which is the whole point.
+      expect(plan.support.bandPoints).toBeLessThanOrEqual(Math.max(TIMELINE_ROW_POINTS, CHROME_FLOOR_POINTS));
+      expect(plan.support.timelinePoints).toBe(plan.support.bandPoints);
+      expect(plan.support.chromePoints).toBe(plan.support.bandPoints);
+      // Each side keeps a readable measure.
+      expect(plan.support.chromeWidthPoints).toBeGreaterThanOrEqual(PAIRED_MIN_CELL_POINTS);
+      expect(plan.timelineWidthPoints).toBeGreaterThanOrEqual(PAIRED_MIN_CELL_POINTS);
+    }
+  });
+
+  it('the short envelope really is served across, not stacked into an impossible column', () => {
+    // 568x320 and 844x390 are the frozen short cases, and both clear the readable width.
+    for (const [width, height] of [[568, 320], [844, 390]] as const) {
+      const plan = recompositionPlan(presentationSurface({ width, height }) as never);
+      expect(plan.shortHeight).toBe(true);
+      expect(plan.support.arrangement).toBe('SIDE_BY_SIDE');
+      // Stacking both floors here would need more height than the surface has.
+      expect(TIMELINE_ROW_POINTS + CHROME_FLOOR_POINTS + MAP_MIN_HEIGHT_POINTS).toBeGreaterThan(height);
+    }
+  });
+
+  it('is idempotent and jitter-free: the same surface always allocates the same room', () => {
+    for (const c of cases) {
+      const once = recompositionPlan(presentationSurface({ width: c.width, height: c.height }) as never);
+      const twice = recompositionPlan(presentationSurface({ width: c.width, height: c.height }) as never);
+      expect(planEquals(once, twice)).toBe(true);
+      expect(once.support).toEqual(twice.support);
+    }
+  });
+
+  it('takes no direction of its own: the allocation is identical whatever the reading order', () => {
+    // The plan has no direction input at all, which is what makes it direction-neutral by
+    // construction rather than by a second code path.
+    const plan = recompositionPlan(presentationSurface({ width: 844, height: 390 }) as never);
+    expect(Object.keys(plan.support).sort()).toEqual(['arrangement', 'bandPoints', 'chromePoints', 'chromeWidthPoints', 'gapPoints', 'timelinePoints']);
+    expect(JSON.stringify(plan.support)).not.toMatch(/left|right|rtl|ltr/iu);
+  });
+
+  it('carries no Product meaning and no timing', () => {
+    const plan = recompositionPlan(presentationSurface({ width: 390, height: 844 }) as never);
+    const serialized = JSON.stringify(plan.support);
+    for (const forbidden of ['duration', 'easing', 'delay', 'spring', 'cue', 'animate', 'Moment', 'Thread', 'Session']) {
+      expect(serialized).not.toContain(forbidden);
+    }
+    for (const value of Object.values(plan.support)) {
+      if (typeof value === 'number') expect(Number.isFinite(value)).toBe(true);
+    }
+  });
+
+  it('grows the band with the room available, instead of pinning it to the floors', () => {
+    // A tall window gives the support more than its minimums, which is what keeps the orientation
+    // from scrolling on a surface that had room to show it whole.
+    const tall = recompositionPlan(presentationSurface({ width: 390, height: 844 }) as never);
+    expect(tall.support.chromePoints).toBeGreaterThan(CHROME_FLOOR_POINTS);
+    expect(tall.support.timelinePoints).toBeGreaterThan(TIMELINE_ROW_POINTS);
   });
 });

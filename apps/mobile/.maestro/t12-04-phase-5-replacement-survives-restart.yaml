@@ -1,0 +1,34 @@
+# T-12 Phase M / QAN-BL-T12-04 — phase 5: the REPLACEMENT identity survives a restart.
+#
+# This phase exists because the sequence used to jump from "identity B has just signed in" straight to
+# "prove the store gives nothing back", and asserted SIGNED_OUT. That assertion passed for the wrong
+# reason whenever the run had already failed to sign anyone in — a phase must never pass merely
+# because an earlier failure left the app in the state it happens to assert.
+#
+# What is true here is the opposite of SIGNED_OUT: B was persisted, so a restart must restore B. The
+# signed-out claim belongs after an explicit sign-out with no replacement, which is phase 7.
+#
+# `clearState` is deliberately absent: this flow reads back what phase 4 wrote.
+appId: com.qandeel.mobile
+---
+- launchApp
+- assertVisible:
+    id: "qandeel-t1204-validation-harness"
+
+- tapOn:
+    id: "t1204-run-AFTER_RESTART"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 90000
+
+- takeScreenshot: t1204-phase-5-replacement-survives-restart
+
+# The auth session came back, and it is a session rather than nothing. The identity itself is never
+# printed: distinctness is proven at the boundary line, not by naming anybody here.
+- assertVisible:
+    id: "t1204-step-T12-04.2a"
+- assertVisible:
+    text: "AFTER_RESTART — allPassed=true"
+- assertNotVisible:
+    text: "(?s).*auth=SIGNED_OUT.*"

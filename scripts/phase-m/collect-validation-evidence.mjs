@@ -75,11 +75,22 @@ function place(from, to) {
   copied += 1;
 }
 
-function walk(directory, into) {
+/**
+ * Copy a tree, KEEPING its shape.
+ *
+ * The `root` argument is the whole repair. This used to recurse with the subdirectory as the base and
+ * then compute the destination as `relative(subdirectory, file)`, which threw the directory away and
+ * flattened every file to its own basename. Each Maestro run writes a `commands.json` and a
+ * `maestro.log`, so every phase after the first silently overwrote the one before it — and the
+ * counter still counted each write, which is how the evidence could report 35 files collected while
+ * 21 reached the artifact. The files that vanished were exactly the ones that could say where a
+ * credential was lost.
+ */
+function walk(directory, into, root = directory) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const from = join(directory, entry.name);
     if (entry.isDirectory()) {
-      walk(from, into);
+      walk(from, into, root);
       continue;
     }
     if (!entry.isFile()) continue;
@@ -87,8 +98,20 @@ function walk(directory, into) {
       skipped += 1;
       continue;
     }
-    place(from, join(into, relative(directory, from)));
+    place(from, join(into, relative(root, from)));
   }
+}
+
+/** Every file actually on disk under a directory, so "collected" can be checked against reality. */
+function present(directory) {
+  if (!existsSync(directory)) return [];
+  const found = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const at = join(directory, entry.name);
+    if (entry.isDirectory()) found.push(...present(at));
+    else if (entry.isFile()) found.push(at);
+  }
+  return found;
 }
 
 // Maestro's `takeScreenshot` writes into the working directory; its debug output goes to its own
@@ -111,3 +134,34 @@ writeFileSync(
 );
 
 process.stdout.write(`collected ${copied} file(s); redacted ${redactions} occurrence(s) of ${secrets.length} supplied value(s); skipped ${skipped}\n`);
+
+// ---------------------------------------------------------------------------------------------
+// Completeness. Counting what was WRITTEN is not the same as counting what SURVIVED, and the
+// difference is the whole of the defect above: the evidence claimed 35 files while 21 existed. So the
+// two numbers are compared here, and every phase directory the run was told to expect must be on
+// disk. A missing diagnostic fails this step explicitly rather than being discovered later as an
+// absence nobody can explain.
+// ---------------------------------------------------------------------------------------------
+const onDisk = present(out);
+const expected = (process.env.T12_REQUIRED_PHASES ?? '')
+  .split(',')
+  .map((name) => name.trim())
+  .filter((name) => name.length > 0);
+const missing = expected.filter((phase) => !onDisk.some((file) => file.split(/[\\/]/u).includes(phase)));
+const failures = [];
+if (onDisk.length !== copied) failures.push(`collected ${copied} file(s) but ${onDisk.length} reached the evidence directory`);
+if (missing.length > 0) failures.push(`no diagnostic output for phase(s): ${missing.join(', ')}`);
+
+writeFileSync(
+  join(out, 'COMPLETENESS.txt'),
+  `collected=${copied}\nonDisk=${onDisk.length}\nskipped=${skipped}\n` +
+    `expectedPhases=${expected.length === 0 ? '(none declared)' : expected.join(',')}\n` +
+    `missingPhases=${missing.length === 0 ? '(none)' : missing.join(',')}\n` +
+    `result=${failures.length === 0 ? 'COMPLETE' : 'INCOMPLETE'}\n`,
+);
+
+if (failures.length > 0) {
+  for (const failure of failures) process.stderr.write(`evidence incomplete: ${failure}\n`);
+  process.exit(1);
+}
+process.stdout.write(`evidence complete: ${onDisk.length} file(s) on disk, ${expected.length} required phase directory(ies) present\n`);

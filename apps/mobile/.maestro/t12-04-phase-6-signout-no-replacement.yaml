@@ -1,0 +1,43 @@
+# T-12 Phase M / QAN-BL-T12-04 — phase 6: sign out with NO replacement.
+#
+# The lifecycle has to distinguish two different sign-outs. Phase 4 signs out and immediately signs a
+# REPLACEMENT identity in, so the store legitimately still holds a session afterwards. This phase
+# signs out and puts nothing in its place, which is the only state from which "a signed-out store
+# gives nothing back" can honestly be asserted — and that assertion is phase 7's.
+#
+# No identity is supplied on purpose: the harness is given an empty replacement, so the run exercises
+# the sign-out alone. `T12-04.5` is therefore NOT_RUN here rather than failed, and what is checked is
+# the sign-out claim itself plus the resulting state.
+#
+# `clearState` is deliberately absent: this flow acts on the session phase 4 left behind.
+appId: com.qandeel.mobile
+---
+- launchApp
+- assertVisible:
+    id: "qandeel-t1204-validation-harness"
+
+# Every credential field is emptied first, so the replacement really is absent rather than stale.
+- tapOn:
+    id: "t1204-second-email"
+- eraseText: 64
+- tapOn:
+    id: "t1204-second-password"
+- eraseText: 64
+- hideKeyboard
+
+- tapOn:
+    id: "t1204-run-SIGN_OUT_AND_REPLACEMENT"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 90000
+
+- takeScreenshot: t1204-phase-6-signout-no-replacement
+
+# The sign-out itself is the claim under test, and the runtime is genuinely signed out afterwards.
+- assertVisible:
+    id: "t1204-step-T12-04.4"
+- assertVisible:
+    text: "(?s).*PASS  T12-04\\.4.*"
+- assertVisible:
+    text: "(?s).*auth=SIGNED_OUT.*"

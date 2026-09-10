@@ -113,6 +113,20 @@ export function AuthStorageValidationHarness() {
           testID="t1204-second-password"
         />
 
+        {/*
+          The credential BOUNDARY, stated in quantities that are not the credential.
+
+          A run once failed with `INVALID_CREDENTIALS` while the same identity authenticated directly,
+          and the evidence needed to say where the value was lost did not exist: the field is erased
+          before any screenshot by design, and the per-run diagnostics were overwritten. Character
+          counts and distinctness answer "did the value arrive, whole and as the right one" without
+          carrying any part of the value, so the next run can localise the boundary instead of
+          guessing at it. Nothing here is reversible into a credential, and nothing is persisted.
+        */}
+        <Text style={styles.step} testID="t1204-input-lengths">
+          {`email=${email.length} password=${password.length} second-email=${secondEmail.length} second-password=${secondPassword.length} distinct=${String(email.length > 0 && secondEmail.length > 0 && email !== secondEmail)}`}
+        </Text>
+
         {(['BEFORE_RESTART', 'AFTER_RESTART', 'SIGN_OUT_AND_REPLACEMENT'] as const).map((kind) => (
           <TouchableOpacity
             key={kind}

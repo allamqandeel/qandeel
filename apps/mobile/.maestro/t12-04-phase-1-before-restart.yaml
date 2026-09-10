@@ -28,6 +28,19 @@ env:
 - inputText: ${PASSWORD_A}
 - hideKeyboard
 
+# The credential BOUNDARY, checked before the sign-in is attempted rather than after it fails.
+#
+# A run once returned INVALID_CREDENTIALS while the same identity authenticated directly, and nothing
+# in the evidence could say whether the value had arrived at the field at all. These are character
+# counts and a distinctness flag — never a value, never a fragment of one, never anything reversible —
+# so a future failure says WHERE it happened instead of only that it did.
+- assertVisible:
+    id: "t1204-input-lengths"
+- assertNotVisible:
+    text: "(?s).*email=0 .*"
+- assertNotVisible:
+    text: "(?s).*password=0 .*"
+
 - tapOn:
     id: "t1204-run-BEFORE_RESTART"
 - extendedWaitUntil:
