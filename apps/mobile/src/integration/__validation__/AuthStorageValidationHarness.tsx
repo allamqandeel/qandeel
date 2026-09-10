@@ -123,8 +123,16 @@ export function AuthStorageValidationHarness() {
           carrying any part of the value, so the next run can localise the boundary instead of
           guessing at it. Nothing here is reversible into a credential, and nothing is persisted.
         */}
+        {/*
+          Each count carries a name no other count contains as a substring. The first version wrote
+          `email=` and `second-email=`, and an assertion looking for `email=0` matched the SECOND one —
+          which is legitimately zero until a replacement identity is entered. The flow therefore failed
+          before it ever reached the sign-in, and the failure looked exactly like a credential that had
+          not arrived. A diagnostic that can be misread as the fault it is meant to localise is worse
+          than none.
+        */}
         <Text style={styles.step} testID="t1204-input-lengths">
-          {`email=${email.length} password=${password.length} second-email=${secondEmail.length} second-password=${secondPassword.length} distinct=${String(email.length > 0 && secondEmail.length > 0 && email !== secondEmail)}`}
+          {`identityEmailChars=${email.length} identityPasswordChars=${password.length} replacementEmailChars=${secondEmail.length} replacementPasswordChars=${secondPassword.length} identitiesDistinct=${String(email.length > 0 && secondEmail.length > 0 && email !== secondEmail)}`}
         </Text>
 
         {(['BEFORE_RESTART', 'AFTER_RESTART', 'SIGN_OUT_AND_REPLACEMENT'] as const).map((kind) => (

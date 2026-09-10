@@ -39,12 +39,16 @@ appId: com.qandeel.mobile
 # in the evidence could say whether the value had arrived at the field at all. These are character
 # counts and a distinctness flag — never a value, never a fragment of one, never anything reversible —
 # so a future failure says WHERE it happened instead of only that it did.
+# `identityEmailChars` is a name no other count contains, so this can only be read as the identity's
+# own field. The first version asserted on `email=0`, which also matched `second-email=0` — the
+# replacement identity's count, legitimately zero here — and failed the flow before the sign-in was
+# ever attempted, looking exactly like the credential problem it was meant to localise.
 - assertVisible:
     id: "t1204-input-lengths"
 - assertNotVisible:
-    text: "(?s).*email=0 .*"
+    text: "(?s).*identityEmailChars=0 .*"
 - assertNotVisible:
-    text: "(?s).*password=0 .*"
+    text: "(?s).*identityPasswordChars=0 .*"
 
 - tapOn:
     id: "t1204-run-BEFORE_RESTART"
