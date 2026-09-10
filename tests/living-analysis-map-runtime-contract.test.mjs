@@ -30,6 +30,10 @@ const PRODUCTION_FILES = [
   'camera/map-camera-actions.ts',
   'camera/pan.ts',
   'camera/useMapPanGesture.ts',
+  // T-12: the reader's own route into the canonical depth act. The act, its rung lineage and its
+  // boundary refusal all predate this file; what did not exist was any way for a reader to ask for
+  // one, so the Map carried a pan and nothing else.
+  'camera/useMapSemanticZoomGesture.ts',
   'camera/viewport.ts',
   'camera/zoom.ts',
   'index.ts',

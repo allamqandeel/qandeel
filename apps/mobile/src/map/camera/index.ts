@@ -58,3 +58,5 @@ export { currentCamera, exploreViewport, panByTranslation, zoomSemanticStep } fr
 
 export type { MapPanGestureBinding, MapPanGestureOptions } from './useMapPanGesture';
 export { useMapPanGesture } from './useMapPanGesture';
+export type { MapSemanticZoomGestureBinding, MapSemanticZoomGestureOptions } from './useMapSemanticZoomGesture';
+export { SEMANTIC_ZOOM_GESTURE_THRESHOLD, semanticZoomDirectionFor, useMapSemanticZoomGesture } from './useMapSemanticZoomGesture';

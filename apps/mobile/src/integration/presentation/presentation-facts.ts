@@ -26,6 +26,7 @@
  * unaltered is what keeps one validity rule instead of two.
  */
 
+import { useMemo } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -36,6 +37,14 @@ export interface PresentationFacts {
   readonly insets: ResponsiveInsets;
   /** The reader's real text-size multiplier, exactly as the platform reports it. */
   readonly fontScale: number;
+  /**
+   * The envelope the composed world is presented inside, in points.
+   *
+   * T-11 measures its own container and must not read a display, so the app root reads it here and
+   * hands it down as a seam — the same shape of arrangement the insets and the font scale already
+   * use. It exists so a measurement taken inside a previous envelope cannot survive into a new one.
+   */
+  readonly envelope: { readonly width: number; readonly height: number };
 }
 
 /**
@@ -48,6 +57,9 @@ export interface PresentationFacts {
  */
 export function usePresentationFacts(): PresentationFacts {
   const insets = useSafeAreaInsets();
-  const { fontScale } = useWindowDimensions();
-  return { insets, fontScale };
+  const { width, height, fontScale } = useWindowDimensions();
+  // Memoized on its own numbers so an unchanged envelope hands down an unchanged object and nothing
+  // downstream re-derives a plan that did not move.
+  const envelope = useMemo(() => ({ width, height }), [width, height]);
+  return { insets, fontScale, envelope };
 }

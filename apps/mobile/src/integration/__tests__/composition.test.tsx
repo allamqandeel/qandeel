@@ -41,6 +41,7 @@ async function composed(
       locale={productLocale(options.language ?? 'en', options.direction ?? 'LTR')}
       insets={{ top: 44, bottom: 34, left: 0, right: 0 }}
       fontScale={options.fontScale ?? 1}
+        envelope={{ width: 390, height: 844 }}
     />,
   );
   await act(async () => {
@@ -186,7 +187,7 @@ describe('T12-A91, T12-A92, T12-A99, T12-A103, T12-A104 — Arabic, direction, l
     const before = runtime.store.getState();
 
     const view = await render(
-      <LivingAnalysisMap runtime={runtime} locale={productLocale('en', 'LTR')} insets={{ top: 0, bottom: 0 }} fontScale={1} />,
+      <LivingAnalysisMap runtime={runtime} locale={productLocale('en', 'LTR')} insets={{ top: 0, bottom: 0 }} fontScale={1} envelope={{ width: 390, height: 844 }} />,
     );
     await act(async () => {
       await settle();
@@ -199,6 +200,7 @@ describe('T12-A91, T12-A92, T12-A99, T12-A103, T12-A104 — Arabic, direction, l
           locale={productLocale('ar', 'RTL')}
           insets={{ top: 59, bottom: 34, left: 21, right: 21 }}
           fontScale={2}
+        envelope={{ width: 390, height: 844 }}
         />,
       );
     });

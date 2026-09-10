@@ -299,7 +299,21 @@ test('R1 — the settled band is keyed to the usable width, not to the event tha
   // The settlement is keyed to the usable width it was taken at, so it can never be reused across a
   // width it does not belong to, and the predecessor handed to `bandFor` is the band the
   // immediately preceding composition actually settled.
-  assert.match(hook, /const usable = measured === null \? null : measured\.width - left - right;/u, 'the usable width comes from all three authorities');
+  // T-12 re-anchor. The rule is unchanged — the usable width is still the measured container width
+  // less BOTH insets, from all three authorities at once. What changed is which measurement it reads:
+  // `current` is the measurement after a stale one has been retired, so a width taken inside an
+  // envelope that no longer exists can no longer reach the band. Reading `measured` directly here was
+  // how a portrait width survived into landscape.
+  assert.match(hook, /const usable = current === null \? null : current\.width - left - right;/u, 'the usable width comes from all three authorities');
+  assert.match(
+    hook,
+    /const envelopeChanged =[\s\S]*?composedIn === null \|\| composedIn\.width !== envelopeWidth \|\| composedIn\.height !== envelopeHeight/u,
+    'a measurement is retired when the envelope it was taken inside changes',
+  );
+  assert.match(hook, /current = \{ width: envelopeWidth, height: envelopeHeight \};/u, 'the new envelope opens the new composition');
+  // The envelope is an INVALIDATION seam, not a second authority: the container still reports.
+  assert.match(hook, /const onLayout = useCallback/u, 'the container is still measured');
+  assert.doesNotMatch(hook, /useWindowDimensions|Dimensions\.get|useSafeAreaInsets/u, 'the owner still reads no display of its own');
   assert.match(hook, /interface Settled \{\s*\n\s*readonly usable: number;\s*\n\s*readonly band: PresentationBand;\s*\n\}/u, 'a settlement carries the width it was taken at');
   assert.match(
     hook,

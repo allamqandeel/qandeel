@@ -138,11 +138,11 @@ function MountedRuntime({ runtime }: { readonly runtime: IntegrationRuntime }) {
 
 /** The world, with the two app-root presentation facts bound. Below the provider, by necessity. */
 function ComposedWorld({ runtime }: { readonly runtime: Extract<IntegrationPhase, { kind: 'READY' }>['runtime'] }) {
-  const { insets, fontScale } = usePresentationFacts();
+  const { insets, fontScale, envelope } = usePresentationFacts();
   // Resolved once per mount: it is a presentation configuration, and re-reading it every render
   // would rebuild the value T-11 memoizes its whole plan on.
   const locale = useMemo(() => deviceProductLocale(), []);
-  return <LivingAnalysisMap runtime={runtime} locale={locale} insets={insets} fontScale={fontScale} />;
+  return <LivingAnalysisMap runtime={runtime} locale={locale} insets={insets} fontScale={fontScale} envelope={envelope} />;
 }
 
 const styles = StyleSheet.create({

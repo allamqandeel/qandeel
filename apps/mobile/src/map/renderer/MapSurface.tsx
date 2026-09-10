@@ -44,7 +44,7 @@
  */
 import { useCallback, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import {
   RESIDUAL_ENVELOPE_AT_REST,
@@ -62,7 +62,7 @@ import {
   type PresentationResidualEnvelope,
 } from '../../motion';
 import type { CameraIntent, CanonicalStore } from '../../state';
-import { cameraTransition, decodeCameraIntent, envelopeCenter, useMapPanGesture, type MapCamera, type ViewportEnvelope } from '../camera';
+import { cameraTransition, decodeCameraIntent, envelopeCenter, useMapPanGesture, useMapSemanticZoomGesture, type MapCamera, type ViewportEnvelope } from '../camera';
 import { MapAccessibilityLayer } from '../accessibility';
 import { inspectObject, type DirectJumpOutcome, type MapInspectionContext } from '../inspection';
 import { mapContextFreshness } from '../projection';
@@ -151,7 +151,14 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
     cameraBox.set(motion);
   }, [cameraBox, motion]);
   const authority = useAuthorityGeneration(store);
-  const { gesture } = useMapPanGesture(store, { enabled: usable, camera: motion, authority, onSettled: onOutcome });
+  const { gesture: panGesture } = useMapPanGesture(store, { enabled: usable, camera: motion, authority, onSettled: onOutcome });
+  const { gesture: zoomGesture } = useMapSemanticZoomGesture(store, { enabled: usable, authority, onSettled: onOutcome });
+  // Simultaneous, not exclusive. The two recognisers are already separated by pointer count — the pan
+  // takes one finger and the pinch takes two — so neither has to lose a race, and racing them would
+  // make the winner depend on which recogniser happened to activate first. What this composition
+  // guarantees is that a second finger reaches the pinch instead of being swallowed by a pan that has
+  // already claimed the plane.
+  const gesture = useMemo(() => Gesture.Simultaneous(panGesture, zoomGesture), [panGesture, zoomGesture]);
 
   // What this commit does about the canonical camera, and what the presented viewport is while it
   // does it. Read during render because the presented set is rendering input; applied inside the

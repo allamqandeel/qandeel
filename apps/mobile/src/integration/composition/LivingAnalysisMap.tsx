@@ -53,9 +53,11 @@ export interface LivingAnalysisMapProps {
   readonly locale: ProductLocale;
   readonly insets: ResponsiveInsets;
   readonly fontScale: number;
+  /** The envelope this composition is presented inside; T-11 uses it to retire a stale measurement. */
+  readonly envelope: { readonly width: number; readonly height: number };
 }
 
-export function LivingAnalysisMap({ runtime, locale, insets, fontScale }: LivingAnalysisMapProps) {
+export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope: surfaceEnvelope }: LivingAnalysisMapProps) {
   const { store, projection, journey, spatialCause, witness, preview, presentation, returnSurface, bundle } = runtime;
 
   // The two subscriptions this composition reads from, and there are only two: the canonical store,
@@ -166,7 +168,7 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale }: Living
     // T-11's own surface identity is kept: the responsive container belongs to that owner, and
     // overriding its test id would make the composition unrecognizable to the owner's own tooling.
     // The integration root's stable identity is PRODUCT_ROOT_TEST_ID, one level up.
-    <ResponsiveSurface insets={insets} fontScale={fontScale}>
+    <ResponsiveSurface insets={insets} fontScale={fontScale} envelope={surfaceEnvelope}>
       {(plan) => (
         <>
           <ResponsiveMapFrame frame={plan.mapFrame}>

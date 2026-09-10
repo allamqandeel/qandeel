@@ -126,6 +126,12 @@ export function useMapPanGesture(store: CanonicalStore, options: MapPanGestureOp
     () =>
       Gesture.Pan()
         .enabled(enabled)
+        // ONE finger, and this is load-bearing rather than tidy. A second finger on the plane means
+        // the reader is asking for a depth change, and a pan that kept recognising through it would
+        // commit a translation the reader never asked for at the moment they asked for something
+        // else. Capping the pointer count is what makes the two gestures mutually exclusive at the
+        // recogniser instead of at a guess about intent.
+        .maxPointers(1)
         // Every callback below is a worklet on the UI runtime. None of them touches the canonical
         // store, which is plain JavaScript and has no worklet representation.
         .onBegin(() => {
