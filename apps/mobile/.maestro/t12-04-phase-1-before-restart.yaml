@@ -34,9 +34,20 @@ appId: com.qandeel.mobile
 
 - tapOn:
     id: "t1204-email"
+# Let the keyboard finish being presented before anything is typed.
+#
+# A tap that has "completed" only means the field was hit. On the iOS simulator the software keyboard
+# is still animating in, and text sent during that animation goes nowhere at all — the run then reports
+# `identityPasswordChars=0` for an identity whose password was supplied correctly, which reads exactly
+# like a credential problem and is not one. Measured: the email landed and the password did not, in the
+# same run, on a loaded runner. This waits for the presentation to settle instead of racing it.
+- waitForAnimationToEnd:
+    timeout: 5000
 - inputText: ${EMAIL_A}
 - tapOn:
     id: "t1204-password"
+- waitForAnimationToEnd:
+    timeout: 5000
 - inputText: ${PASSWORD_A}
 - hideKeyboard
 

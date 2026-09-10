@@ -566,6 +566,11 @@ jobs:
   ios-responsive-composition-simulator:
     name: iOS Release simulator — RESPONSIVE COMPOSITION (T12-PROD-05)
     if: inputs.run_ios
+    # AFTER the Product job rather than beside it. Two macOS jobs at a time ran reliably; adding a
+    # third made every one of them slow enough to trip a timing assumption in the flows, and a run
+    # whose failures are caused by its own concurrency proves nothing about the code it is testing.
+    # This job needs the Product build to exist as a claim before it is worth composing anyway.
+    needs: ios-product-simulator
     runs-on: macos-26
     timeout-minutes: 150
     env:

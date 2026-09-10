@@ -15,8 +15,14 @@ appId: com.qandeel.mobile
 ---
 - launchApp:
     clearState: true
-- assertVisible:
-    id: "qandeel-product-root"
+# An EXPLICIT wait, for the same reason the T12-04 flows already carry one: a cold Release launch on
+# a loaded runner can take longer than the default assertion window. This flow failed on exactly that
+# while the boot smoke had asserted the SAME id successfully forty seconds earlier in the same job,
+# which is an impatient tool reporting the app as broken when it was only slow.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-product-root"
+    timeout: 90000
 
 # The harness ships in the Product artifact nowhere and at no depth. Its root id is the one runtime
 # witness of that, and its absence here is what the static closure proof predicts.
@@ -25,9 +31,14 @@ appId: com.qandeel.mobile
 
 - takeScreenshot: product-root-portrait
 - setOrientation: LANDSCAPE_LEFT
-- assertVisible:
-    id: "qandeel-product-root"
+# A rotation is a real relayout, and on a loaded runner it is not instant either.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-product-root"
+    timeout: 30000
 - takeScreenshot: product-root-landscape
 - setOrientation: PORTRAIT
-- assertVisible:
-    id: "qandeel-product-root"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-product-root"
+    timeout: 30000

@@ -29,11 +29,18 @@ appId: com.qandeel.mobile
       id: "qandeel-t1204-validation-harness"
     timeout: 90000
 
+# The same keyboard-presentation settle phase 1 carries, and for the same measured reason: text sent
+# while the software keyboard is still animating in arrives nowhere, and the run then reports a zero
+# character count for a credential that was supplied correctly.
 - tapOn:
     id: "t1204-second-email"
+- waitForAnimationToEnd:
+    timeout: 5000
 - inputText: ${EMAIL_B}
 - tapOn:
     id: "t1204-second-password"
+- waitForAnimationToEnd:
+    timeout: 5000
 - inputText: ${PASSWORD_B}
 - hideKeyboard
 
