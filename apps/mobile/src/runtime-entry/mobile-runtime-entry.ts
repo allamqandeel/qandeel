@@ -31,7 +31,7 @@ import { createMobileAuthAuthority, type MobileAuthAuthority } from './auth/mobi
 import { createAuthorizedFetch, NO_CAPTURED_CREDENTIAL } from './auth/request-credential';
 import { createSupabaseAuthPort, type SupabaseAuthPort } from './auth/supabase-auth-port';
 import { bootstrapCanonicalRuntime } from './bootstrap/canonical-runtime-bootstrap';
-import type { BootstrapResult, CanonicalRuntimeBundle } from './bootstrap/bootstrap-types';
+import type { BootstrapResult, CanonicalRuntimeBundle, InitialViewpoint } from './bootstrap/bootstrap-types';
 import { ConversationSessionApiClient, type RuntimeHttpFetch } from './conversation/conversation-session-api';
 import {
   createAppStateForegroundSignal,
@@ -68,8 +68,13 @@ export interface MobileRuntimeEntryOptions {
 export interface BootstrapOverrides {
   /** Wired by T-12 when it composes the Product surfaces. T-12P passes none. */
   readonly storeDependencies?: StoreDependencies;
-  /** An already-authorized Session id for a test or integration seam. Skips creation entirely. */
+  /**
+   * An already-authorized Session id for a test or integration seam. Skips creation entirely.
+   * T-13 passes the Session locator of the identity's validated Product recovery record here.
+   */
   readonly existingSessionId?: string;
+  /** T-13 — the validated durable viewpoint the store is constructed from, judged against the fresh snapshot. */
+  readonly initialViewpoint?: InitialViewpoint;
 }
 
 export interface MobileRuntimeEntry {
@@ -216,6 +221,7 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
         isCurrent: () => !disposed && runtimeGeneration === generation,
         storeDependencies: overrides.storeDependencies,
         existingSessionId: overrides.existingSessionId,
+        initialViewpoint: overrides.initialViewpoint,
       });
       inFlight = attempt;
       return attempt;

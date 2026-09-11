@@ -1,0 +1,66 @@
+# T-13 recovery validation — identity replacement: B signs in FRESH and never sees A's record; B signs
+# out; A signs in again and RESUMES A's own record, with the viewpoint A left.
+#
+# Both identities are supplied here and nowhere else; both emails are erased before the screenshot.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+- tapOn:
+    id: "t1204-email"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${EMAIL_A}
+- tapOn:
+    id: "t1204-password"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${PASSWORD_A}
+- tapOn:
+    id: "t1204-second-email"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${EMAIL_B}
+- tapOn:
+    id: "t1204-second-password"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${PASSWORD_B}
+- hideKeyboard
+
+- assertNotVisible:
+    text: "(?s).*identityEmailChars=0 .*"
+- assertNotVisible:
+    text: "(?s).*replacementEmailChars=0 .*"
+- assertVisible:
+    text: "(?s).*identitiesDistinct=true.*"
+
+- tapOn:
+    id: "t13-run-RECOVERY_REPLACEMENT"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 180000
+
+- tapOn:
+    id: "t1204-email"
+- eraseText: 64
+- tapOn:
+    id: "t1204-second-email"
+- eraseText: 64
+- hideKeyboard
+
+- takeScreenshot: t13-replacement
+
+- assertVisible:
+    id: "t1204-step-T13-R.1"
+- assertVisible:
+    id: "t1204-step-T13-R.2"
+- assertVisible:
+    text: "(?s).*origin=RESUMED.*tm=${TM}.*"
+- assertVisible:
+    text: "RECOVERY_REPLACEMENT — allPassed=true"

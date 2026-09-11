@@ -1,0 +1,57 @@
+# T-13 recovery validation — phase 1, a CLEAN install: identity A signs in and the locator is written.
+#
+# Runs in the validation build only (the isolated harness is the root component). `clearState: true`
+# belongs to this phase alone: every later phase reads back what an earlier one left in the REAL
+# `expo-sqlite` Product recovery store, so clearing there would erase the evidence.
+#
+# The identity email is erased from the field before any screenshot; the password field is
+# `secureTextEntry` and is cleared by the harness when the run ends. The report carries kinds, modes,
+# counts and the Session LOCATOR — never a credential.
+appId: com.qandeel.mobile
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+- tapOn:
+    id: "t1204-email"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${EMAIL_A}
+- tapOn:
+    id: "t1204-password"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${PASSWORD_A}
+- hideKeyboard
+
+- assertVisible:
+    id: "t1204-input-lengths"
+- assertNotVisible:
+    text: "(?s).*identityEmailChars=0 .*"
+- assertNotVisible:
+    text: "(?s).*identityPasswordChars=0 .*"
+
+- tapOn:
+    id: "t13-run-RECOVERY_BEFORE"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 120000
+
+- tapOn:
+    id: "t1204-email"
+- eraseText: 64
+- hideKeyboard
+
+- takeScreenshot: t13-phase-1-fresh-signin
+
+- assertVisible:
+    id: "t1204-step-T13-B.2"
+- assertVisible:
+    id: "t1204-step-T13-B.3"
+- assertVisible:
+    text: "RECOVERY_BEFORE — allPassed=true"

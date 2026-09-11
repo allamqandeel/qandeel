@@ -1,0 +1,39 @@
+# T-13 recovery validation — adopt a Session locator through the production Product recovery store.
+#
+# The Product build carries no surface that navigates to a populated Session, so a Session the server
+# populated for identity A is made the active one by writing ONE record through the real store and the
+# real codec, under A's own namespace. Whether that Session is really A's is then decided by the SERVER
+# on the next launch — an adopted foreign Session must yield RECOVERY_FAILED, never a world — which is
+# exactly the ownership boundary this validation exists to observe.
+#
+# The locator is not a credential and is shown in the report on purpose.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+- tapOn:
+    id: "t13-session-locator"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${SESSION_ID}
+- hideKeyboard
+
+- tapOn:
+    id: "t13-run-ADOPT_SESSION"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 120000
+
+- takeScreenshot: ${SHOT}
+
+- assertVisible:
+    id: "t1204-step-T13-D.1"
+- assertVisible:
+    text: "(?s).*write=COMMITTED.*"
+- assertVisible:
+    text: "ADOPT_SESSION — allPassed=true"

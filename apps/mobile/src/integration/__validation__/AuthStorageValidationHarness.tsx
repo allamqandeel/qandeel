@@ -1,5 +1,5 @@
 /**
- * T-12 Phase M — the `QAN-BL-T12-04` harness surface.
+ * T-12 Phase M — the `QAN-BL-T12-04` harness surface, extended by T-13 with the recovery procedures.
  *
  * VALIDATION ONLY, and deliberately ugly. It is the least interface that can take two credentials and
  * show a report on a device, and it is not a login gateway: no branding, no onboarding, no provider
@@ -19,6 +19,13 @@
  * password, never logged, never persisted, never rendered back, and never placed in the report. There
  * is no default, no placeholder value and no autofill hint carrying one. A failure shows the failure
  * KIND, so a screenshot of this screen is safe to attach as evidence.
+ *
+ * ## T-13
+ *
+ * The recovery procedures take two more inputs, neither a credential: a Session LOCATOR to adopt and a
+ * Moment to pin. The report they produce prints the Session locator on purpose — "the same Session came
+ * back" can only be checked across two launches by comparing values — and nothing else that is not a
+ * kind, a mode or a count.
  */
 
 import { useCallback, useState } from 'react';
@@ -30,17 +37,31 @@ import {
   validateSignOutAndReplacement,
   type AuthStorageValidationReport,
 } from './auth-storage-validation';
+import { runRecoveryValidation, type RecoveryRunKind, type RecoveryValidationReport } from './recovery-validation';
 
 export const VALIDATION_HARNESS_TEST_ID = 'qandeel-t1204-validation-harness';
 
 type RunKind = 'BEFORE_RESTART' | 'AFTER_RESTART' | 'SIGN_OUT_AND_REPLACEMENT';
+
+const RECOVERY_RUNS: readonly RecoveryRunKind[] = [
+  'RECOVERY_BEFORE',
+  'RECOVERY_AFTER',
+  'RECOVERY_AFTER_SIGNED_OUT',
+  'RECOVERY_AFTER_REFUSED',
+  'ADOPT_SESSION',
+  'PIN_MOMENT',
+  'RECOVERY_SIGN_OUT',
+  'RECOVERY_REPLACEMENT',
+];
 
 export function AuthStorageValidationHarness() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [secondEmail, setSecondEmail] = useState('');
   const [secondPassword, setSecondPassword] = useState('');
-  const [report, setReport] = useState<AuthStorageValidationReport | null>(null);
+  const [sessionLocator, setSessionLocator] = useState('');
+  const [moment, setMoment] = useState('');
+  const [report, setReport] = useState<AuthStorageValidationReport | RecoveryValidationReport | null>(null);
   const [running, setRunning] = useState(false);
 
   const run = useCallback(
@@ -67,10 +88,32 @@ export function AuthStorageValidationHarness() {
     [email, password, secondEmail, secondPassword],
   );
 
+  const runRecovery = useCallback(
+    async (kind: RecoveryRunKind) => {
+      setRunning(true);
+      setReport(null);
+      try {
+        setReport(
+          await runRecoveryValidation(kind, {
+            credentials: email === '' ? undefined : { email, password },
+            replacement: secondEmail === '' ? undefined : { email: secondEmail, password: secondPassword },
+            sessionId: sessionLocator === '' ? undefined : sessionLocator,
+            moment: moment === '' ? undefined : Number(moment),
+          }),
+        );
+      } finally {
+        setPassword('');
+        setSecondPassword('');
+        setRunning(false);
+      }
+    },
+    [email, password, secondEmail, secondPassword, sessionLocator, moment],
+  );
+
   return (
     <View style={styles.root} testID={VALIDATION_HARNESS_TEST_ID}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>T-12 / QAN-BL-T12-04 validation harness — NOT PRODUCT</Text>
+        <Text style={styles.heading}>T-12 / QAN-BL-T12-04 + T-13 recovery validation harness — NOT PRODUCT</Text>
 
         <TextInput
           style={styles.input}
@@ -112,6 +155,26 @@ export function AuthStorageValidationHarness() {
           accessibilityLabel="replacement identity password"
           testID="t1204-second-password"
         />
+        {/* T-13 inputs. Neither is a credential: a Session locator and a Moment ordinal. */}
+        <TextInput
+          style={styles.input}
+          value={sessionLocator}
+          onChangeText={setSessionLocator}
+          autoCapitalize="none"
+          autoCorrect={false}
+          accessibilityLabel="session locator to adopt"
+          testID="t13-session-locator"
+        />
+        <TextInput
+          style={styles.input}
+          value={moment}
+          onChangeText={setMoment}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="number-pad"
+          accessibilityLabel="moment to pin"
+          testID="t13-moment"
+        />
 
         {/*
           The credential BOUNDARY, stated in quantities that are not the credential.
@@ -132,7 +195,7 @@ export function AuthStorageValidationHarness() {
           than none.
         */}
         <Text style={styles.step} testID="t1204-input-lengths">
-          {`identityEmailChars=${email.length} identityPasswordChars=${password.length} replacementEmailChars=${secondEmail.length} replacementPasswordChars=${secondPassword.length} identitiesDistinct=${String(email.length > 0 && secondEmail.length > 0 && email !== secondEmail)}`}
+          {`identityEmailChars=${email.length} identityPasswordChars=${password.length} replacementEmailChars=${secondEmail.length} replacementPasswordChars=${secondPassword.length} identitiesDistinct=${String(email.length > 0 && secondEmail.length > 0 && email !== secondEmail)} sessionLocatorChars=${sessionLocator.length} momentChars=${moment.length}`}
         </Text>
 
         {(['BEFORE_RESTART', 'AFTER_RESTART', 'SIGN_OUT_AND_REPLACEMENT'] as const).map((kind) => (
@@ -144,6 +207,20 @@ export function AuthStorageValidationHarness() {
             accessibilityRole="button"
             accessibilityLabel={`run ${kind}`}
             testID={`t1204-run-${kind}`}
+          >
+            <Text style={styles.buttonText}>{running ? 'running…' : `run ${kind}`}</Text>
+          </TouchableOpacity>
+        ))}
+
+        {RECOVERY_RUNS.map((kind) => (
+          <TouchableOpacity
+            key={kind}
+            style={styles.button}
+            disabled={running}
+            onPress={() => void runRecovery(kind)}
+            accessibilityRole="button"
+            accessibilityLabel={`run ${kind}`}
+            testID={`t13-run-${kind}`}
           >
             <Text style={styles.buttonText}>{running ? 'running…' : `run ${kind}`}</Text>
           </TouchableOpacity>

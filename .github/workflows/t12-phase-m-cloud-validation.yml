@@ -38,10 +38,37 @@ on:
         required: true
         type: string
       run_ios:
-        description: 'Run the three macOS iOS Release simulator jobs'
+        description: 'Run the macOS iOS Release simulator jobs'
         required: false
         type: boolean
         default: true
+      # T-13 — the job families are selectable so a recovery run does not rebuild the Product jobs it
+      # does not need. The defaults keep every T-12 dispatch exactly as it was.
+      run_t12_product:
+        description: 'Run the T-12 PRODUCT-root jobs (Android arm64 APK, iOS Product simulator, iOS responsive composition)'
+        required: false
+        type: boolean
+        default: true
+      run_t12_auth:
+        description: 'Run the T-12 AUTH-VALIDATION jobs (Android arm64 harness APK, iOS T12-04 lifecycle)'
+        required: false
+        type: boolean
+        default: true
+      run_t13_recovery:
+        description: 'Run the T-13 RECOVERY jobs (Android API 36 emulator + iOS simulator restart / recovery sequence)'
+        required: false
+        type: boolean
+        default: false
+      t13_seeded_session_id:
+        description: 'T-13: a conversation Session the server populated for identity A (adopted through the production recovery store to prove PINNED(t) recovery). Required when run_t13_recovery is true.'
+        required: false
+        type: string
+        default: ''
+      t13_moment:
+        description: 'T-13: the Session Position to pin (must be <= the seeded Session Live Head)'
+        required: false
+        type: string
+        default: '5'
 
 concurrency:
   group: t12-phase-m-cloud-validation
@@ -77,6 +104,7 @@ env:
 jobs:
   android-product-arm64:
     name: Android Release arm64-v8a â€” PRODUCT root
+    if: inputs.run_t12_product
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -122,6 +150,7 @@ jobs:
 
   android-auth-validation-arm64:
     name: Android Release arm64-v8a â€” AUTH VALIDATION root
+    if: inputs.run_t12_auth
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -171,7 +200,7 @@ jobs:
 
   ios-product-simulator:
     name: iOS Release simulator â€” PRODUCT root
-    if: inputs.run_ios
+    if: inputs.run_ios && inputs.run_t12_product
     runs-on: macos-26
     timeout-minutes: 120
     env:
@@ -296,7 +325,7 @@ jobs:
 
   ios-auth-validation-simulator:
     name: iOS Release simulator â€” AUTH VALIDATION root (QAN-BL-T12-04)
-    if: inputs.run_ios
+    if: inputs.run_ios && inputs.run_t12_auth
     runs-on: macos-26
     timeout-minutes: 120
     env:
@@ -739,3 +768,268 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           test "$SIGNIN" = success
           test "$RSP" = success
+
+  # =========================================================================================
+  # T-13 — Recovery / Persistence: native restart proof, on both platforms, from ONE sequencer.
+  #
+  # Each job builds the VALIDATION entry (the isolated harness as the root component — the Product
+  # route is byte-identical and carries no sign-in surface), installs it ONCE, and drives the T-13
+  # sequence in `scripts/phase-m/run-t13-recovery-phases.sh`: a clean sign-in, a kill, an adoption of
+  # the server-populated Session through the production recovery store, a kill (FOLLOW_LIVE recovery
+  # with a fresh Live Head), a pin, a kill (PINNED(t) recovery), a home-and-reopen, a device restart,
+  # a sign-out and a kill (signed-out launch exposes nothing), identity replacement (B fresh, A resumes
+  # A's own pinned record), and an adoption of a FOREIGN Session followed by a kill (recovery fails
+  # closed, no replacement Session). Every interruption is real and happens outside the flows.
+  #
+  # What these jobs prove: the functional recovery contract on a Release build against the real API and
+  # the real `expo-sqlite` stores. What they do not prove: anything physical or tactile, and anything
+  # about a device's own backup or Data Protection behaviour, which remain `QAN-SEC-01`'s.
+  # =========================================================================================
+  android-t13-recovery-emulator:
+    name: Android API 36 emulator — T-13 RECOVERY (validation root)
+    if: inputs.run_t13_recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout the exact checkpoint
+        uses: actions/checkout@v4
+      - name: Refuse to run without the two validation identities and a seeded Session
+        env:
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+          SEEDED: ${{ inputs.t13_seeded_session_id }}
+        run: |
+          node scripts/phase-m/assert-validation-preconditions.mjs identities
+          test -n "$SEEDED" || { echo "STOP: t13_seeded_session_id is required for the T-13 recovery sequence"; exit 1; }
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Setup Temurin JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies from the root lockfile
+        run: npm ci
+      - name: Select the isolated validation entry (this job only)
+        env:
+          T12_PHASE_M_VALIDATION: '1'
+        run: node apps/mobile/scripts/select-validation-entry.mjs --apply
+      - name: Confirm the validation entry is selected
+        run: node scripts/phase-m/assert-validation-preconditions.mjs entry validation
+      - name: Refuse to build without the public configuration
+        run: node scripts/phase-m/assert-validation-preconditions.mjs configuration
+      - name: Generate the Android project (CNG)
+        run: npm run prebuild:android --workspace @qandeel/mobile
+      - name: Build the Release APK (x86_64 for the emulator)
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64 --no-daemon
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | sha256sum --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Guard the Maestro version
+        run: |
+          maestro --version
+          maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: 'T-13 recovery sequence on the Android emulator (API 36, x86_64, google_apis)'
+        id: sequence
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        env:
+          PLATFORM: android
+          EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+          SESSION_ID: ${{ inputs.t13_seeded_session_id }}
+          FOREIGN_SESSION_ID: 0f0e0d0c-0b0a-4000-8000-000000000001
+          MOMENT: ${{ inputs.t13_moment }}
+          DEBUG_ROOT: ${{ runner.temp }}/t13-debug
+          RESULTS: ${{ runner.temp }}/t13-phase-results.txt
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          disable-animations: true
+          emulator-boot-timeout: 900
+          script: |
+            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            bash scripts/phase-m/run-t13-recovery-phases.sh
+      - name: Collect the evidence, with every credential redacted
+        if: always()
+        env:
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+        run: |
+          results="$RUNNER_TEMP/t13-phase-results.txt"
+          required=""
+          if [ -f "$results" ]; then
+            required="$(grep -E '=(success|failure)$' "$results" | grep -v '^phase-08-' | cut -d= -f1 | paste -sd, -)"
+          fi
+          echo "required phase diagnostics: ${required:-(none)}"
+          T12_REQUIRED_PHASES="$required" node scripts/phase-m/collect-validation-evidence.mjs "$RUNNER_TEMP/t13-debug" "$RUNNER_TEMP/t13-evidence"
+          if [ -f "$results" ]; then cp "$results" "$RUNNER_TEMP/t13-evidence/t13-phase-results.txt"; fi
+      - name: Record the artifact identity
+        if: always()
+        run: node scripts/phase-m/record-artifact-identity.mjs android AUTH_VALIDATION "${{ github.sha }}" "$RUNNER_TEMP/t13-evidence/android-recovery-validation-identity.txt"
+      - name: Upload the T-13 Android evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t13-recovery-android-emulator
+          path: ${{ runner.temp }}/t13-evidence
+          if-no-files-found: error
+          include-hidden-files: true
+      - name: 'Gate: every T-13 phase must have passed (the device restart is reported on its own)'
+        if: always()
+        run: bash scripts/phase-m/gate-t13-recovery-phases.sh "$RUNNER_TEMP/t13-phase-results.txt" "Android API 36 emulator"
+
+  ios-t13-recovery-simulator:
+    name: iOS Release simulator — T-13 RECOVERY (validation root)
+    if: inputs.run_ios && inputs.run_t13_recovery
+    runs-on: macos-26
+    timeout-minutes: 150
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      IOS_SIMULATOR_NAME: iPhone 17
+      IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+    steps:
+      - name: Checkout the exact checkpoint
+        uses: actions/checkout@v4
+      - name: Refuse to run without the two validation identities and a seeded Session
+        env:
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+          SEEDED: ${{ inputs.t13_seeded_session_id }}
+        run: |
+          node scripts/phase-m/assert-validation-preconditions.mjs identities
+          test -n "$SEEDED" || { echo "STOP: t13_seeded_session_id is required for the T-13 recovery sequence"; exit 1; }
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Guard the simulator (iPhone 17 on iOS 26.5)
+        run: |
+          udid="$(xcrun simctl list devices available -j | jq -r --arg name "$IOS_SIMULATOR_NAME" --arg suffix "$IOS_SIMULATOR_RUNTIME_SUFFIX" '.devices | to_entries[] | select(.key | endswith($suffix)) | .value[] | select(.name == $name) | .udid' | head -n 1)"
+          if [ -z "$udid" ]; then
+            echo "STOP: the authorized simulator is not on this image"
+            exit 1
+          fi
+          echo "IOS_SIM_UDID=$udid" >> "$GITHUB_ENV"
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies from the root lockfile
+        run: npm ci
+      - name: Select the isolated validation entry (this job only)
+        env:
+          T12_PHASE_M_VALIDATION: '1'
+        run: node apps/mobile/scripts/select-validation-entry.mjs --apply
+      - name: Confirm the validation entry is selected
+        run: node scripts/phase-m/assert-validation-preconditions.mjs entry validation
+      - name: Refuse to build without the public configuration
+        run: node scripts/phase-m/assert-validation-preconditions.mjs configuration
+      - name: Generate the iOS project (CNG)
+        run: npm run prebuild:ios --workspace @qandeel/mobile
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build the Release simulator app
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
+      - name: Boot the simulator and install the harness build
+        run: |
+          xcrun simctl boot "$IOS_SIM_UDID" || true
+          xcrun simctl bootstatus "$IOS_SIM_UDID" -b
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          xcrun simctl install "$IOS_SIM_UDID" "$app"
+          echo "IOS_APP_PATH=$app" >> "$GITHUB_ENV"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Guard the Maestro version
+        run: |
+          maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
+      - name: 'T-13 recovery sequence on the iOS Release simulator'
+        id: sequence
+        continue-on-error: true
+        env:
+          PLATFORM: ios
+          DEVICE: ${{ env.IOS_SIM_UDID }}
+          EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+          SESSION_ID: ${{ inputs.t13_seeded_session_id }}
+          FOREIGN_SESSION_ID: 0f0e0d0c-0b0a-4000-8000-000000000001
+          MOMENT: ${{ inputs.t13_moment }}
+          DEBUG_ROOT: ${{ runner.temp }}/t13-debug
+          RESULTS: ${{ runner.temp }}/t13-phase-results.txt
+        run: bash scripts/phase-m/run-t13-recovery-phases.sh
+      - name: Collect the evidence, with every credential redacted
+        if: always()
+        env:
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+        run: |
+          results="$RUNNER_TEMP/t13-phase-results.txt"
+          required=""
+          if [ -f "$results" ]; then
+            required="$(grep -E '=(success|failure)$' "$results" | grep -v '^phase-08-' | cut -d= -f1 | paste -sd, -)"
+          fi
+          echo "required phase diagnostics: ${required:-(none)}"
+          T12_REQUIRED_PHASES="$required" node scripts/phase-m/collect-validation-evidence.mjs "$RUNNER_TEMP/t13-debug" "$RUNNER_TEMP/t13-evidence"
+          if [ -f "$results" ]; then cp "$results" "$RUNNER_TEMP/t13-evidence/t13-phase-results.txt"; fi
+      - name: Record the artifact identity
+        if: always()
+        run: node scripts/phase-m/record-artifact-identity.mjs ios AUTH_VALIDATION "${{ github.sha }}" "$RUNNER_TEMP/t13-evidence/ios-recovery-validation-identity.txt"
+      - name: Upload the T-13 iOS evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t13-recovery-ios-simulator
+          path: ${{ runner.temp }}/t13-evidence
+          if-no-files-found: error
+          include-hidden-files: true
+      - name: 'Gate: every T-13 phase must have passed (the simulator restart is reported on its own)'
+        if: always()
+        run: bash scripts/phase-m/gate-t13-recovery-phases.sh "$RUNNER_TEMP/t13-phase-results.txt" "iOS Release simulator"

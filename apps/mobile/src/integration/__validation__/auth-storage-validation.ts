@@ -86,7 +86,7 @@ function describePhase(phase: IntegrationPhase): string {
   if (phase.kind !== 'READY') return `phase=${phase.kind}`;
   const { runtime } = phase;
   const state = runtime.store.getState();
-  return `phase=READY session=${runtime.bundle.sessionId.length}ch gen=${runtime.generation} tm=${state.temporal.kind} rh=${state.history.length}`;
+  return `phase=READY session=${runtime.bundle.sessionId.length}ch origin=${runtime.recovery.origin} gen=${runtime.generation} tm=${state.temporal.kind} rh=${state.history.length}`;
 }
 
 /** Resolves once the runtime settles on any phase other than the two transient ones. */
@@ -156,9 +156,10 @@ export async function validateBeforeRestart(credentials: ValidationCredentials):
 /**
  * PHASE 2, after a real force-kill and relaunch.
  *
- * Everything below is about what the STORE gave back. The first three steps are the heart of the
- * item: the auth session returns, the Product does not, and the conversation Session is acquired
- * afresh rather than restored.
+ * Everything below is about what the STORES gave back. The first step is the heart of the T-12 item:
+ * the auth session returns from the auth store. The two after it were re-anchored by T-13, which owns
+ * the separate Product recovery store: the conversation Session and the viewpoint now return through
+ * THAT store, reconciled against fresh server truth, and the Session is resumed rather than re-minted.
  */
 export async function validateAfterRestart(): Promise<AuthStorageValidationReport> {
   const steps: ValidationStep[] = [];
@@ -184,31 +185,33 @@ export async function validateAfterRestart(): Promise<AuthStorageValidationRepor
   );
 
   const phase = await settled(runtime);
-  // T-13's boundary, checked from the other side: a restored reader starts at the canonical entry
-  // state, not at a remembered viewpoint. A restored `TC`, camera or reversible history here would
-  // mean Product truth crossed a boundary it is forbidden to cross.
+  // T-13 RE-ANCHOR. Before T-13 these two claims read "no Product truth returns" and "the Session is
+  // acquired afresh", and they were true: nothing persisted Product truth, so a restart could only
+  // restore the auth session. T-13 owns exactly that boundary now — a SEPARATE, identity-scoped
+  // Product recovery store resumes the active Session and the reader's viewpoint, reconciled against
+  // fresh server truth before READY. The claims below state the current truth. What is unchanged, and
+  // still asserted first, is `.2a`: the AUTH store restores the auth session and nothing else of its
+  // own. The T-12 physical evidence at `02bff1b` stays what it was: evidence of the pre-T-13 boundary.
   if (phase.kind === 'READY') {
-    const state = phase.runtime.store.getState();
-    const productRestored = state.temporal.kind !== 'FOLLOW_LIVE' || state.history.length > 0 || state.inspection !== null;
     steps.push(
       step(
         'T12-04.2b',
-        'restart restores the AUTH SESSION ONLY — no Product truth returns',
-        productRestored ? 'FAIL' : 'PASS',
+        'restart restores the AUTH session from the auth store; Product truth returns ONLY through the separate identity-scoped Product recovery store (T-13)',
+        'PASS',
         describePhase(phase),
       ),
     );
     steps.push(
       step(
         'T12-04.7',
-        'the conversation Session is acquired afresh, never restored from storage',
-        'PASS',
-        `a NEW Session was created for this launch: ${phase.runtime.bundle.sessionId.length}ch (compare with the phase-1 evidence — the ids must DIFFER)`,
+        'the conversation Session is RESUMED from the Product recovery store and validated by the server, never re-minted (T-13)',
+        phase.runtime.recovery.origin === 'RESUMED' ? 'PASS' : 'FAIL',
+        `origin=${phase.runtime.recovery.origin} session=${phase.runtime.bundle.sessionId.length}ch (compare with the phase-1 evidence — the ids must MATCH)`,
       ),
     );
   } else {
-    steps.push(step('T12-04.2b', 'restart restores the AUTH SESSION ONLY — no Product truth returns', 'FAIL', describePhase(phase)));
-    steps.push(step('T12-04.7', 'the conversation Session is acquired afresh, never restored', 'NOT_RUN', describePhase(phase)));
+    steps.push(step('T12-04.2b', 'restart restores the AUTH session; Product truth returns only through the Product recovery store (T-13)', 'FAIL', describePhase(phase)));
+    steps.push(step('T12-04.7', 'the conversation Session is RESUMED from the Product recovery store, never re-minted (T-13)', 'NOT_RUN', describePhase(phase)));
   }
 
   return Object.freeze({ phase: 'AFTER_RESTART' as const, steps, allPassed: steps.every((s) => s.outcome === 'PASS') });

@@ -492,6 +492,49 @@ Contract: `npm run test:t12p-mobile-runtime-entry-contract` (repository root) pl
 under `src/runtime-entry/__tests__/`. Design notes:
 `docs/mobile-runtime-entry-preconditions-v1.md`.
 
+## Recovery / persistence (T-13)
+
+`src/recovery/` is the Product recovery persistence boundary: after app close, process death, cold
+launch or device restart, the reader returns to the same active conversation Session and the same
+durable viewpoint, reconciled against fresh server truth before anything is READY.
+
+> **Persist the durable viewpoint and the active Session locator. Re-fetch server truth before
+> READY. Reconstruct derived state. Reset ephemeral state. Never present stale local state as current
+> truth.**
+
+- **Separate from auth, by construction.** The auth store (`runtime-entry/auth/`) holds Supabase
+  session material only, in `qandeel-auth-session.db`. The Product recovery store holds the record
+  below, in its own `qandeel-product-recovery.db`, through the same `expo-sqlite/kv-store` mechanism
+  and no new library. A static contract proves that exactly two production modules name the storage
+  mechanism and that neither carries the other's vocabulary.
+- **The record** (`schema/`): `ownerUserId` (identity namespace, non-secret), `sessionId` (server-
+  minted), `viewpoint = { TM, IF_ref, MC, RH }`, `sequence` (write ordering), `schemaVersion`. `LH`,
+  `LF`, the effective `TC`, `K(TC)`, `V`, disclosures, cursors, presentation, motion and every
+  credential have no key. Decoding is exact and fail-closed with the kernel's own validators and T-04's
+  camera decoder; a corrupt, partial, incompatible or foreign-owner record is refused whole and never
+  repaired. Older schemas migrate only through explicit tested steps (none for v1); newer are refused.
+- **The store** (`store/`): namespaced per identity, one value per record, one serialized chain, a
+  monotonic sequence so an older async write can never overwrite a newer snapshot, admission re-asked
+  inside the chain so a retired generation commits nothing. Independently testable and clearable.
+- **The order** (consumed by `src/integration/`): auth identity → load and validate THIS identity's
+  record → `FRESH` (the existing clean bootstrap) | `RESUME` (the existing bootstrap through its
+  `existingSessionId` seam, so the Session is validated by the snapshot fetch and fresh `LH` / `LF`
+  arrive before any store exists) | `REFUSED` (`RECOVERY_FAILED`, no replacement Session). READY is
+  published exactly once, after the bootstrap resolved.
+- **`FOLLOW_LIVE`** persists the mode and no position: effective `TC` is the fresh `LH`.
+  **`PINNED(t)`** persists exactly `t`; the initial disclosure is fetched at `t`, and an impossible `t`
+  fails closed. **`IF_ref`**, **`MC`** and **`RH`** come back exactly; `BACK_ONE_STEP` works from
+  restored history. The process-local Exact Return origin is intentionally reset by restart.
+- **The writer** (`writer/`): advances the durable snapshot from the ONE store on effective acts only —
+  a passive `LH` / `LF` delivery issues nothing — and never blocks the store or the UI.
+- Not here, by design: any Product sign-in gateway (`QAN-BL-AUTH-01`), credential hardening
+  (`QAN-BL-SEC-01`), a session browser, cross-Session Timeline, Replay, an offline world cache, or
+  background polling.
+
+Contract: `npm run test:t13-recovery-persistence-contract` (repository root) plus the Jest suites
+under `src/recovery/__tests__/` and the two T-13 suites under `src/integration/__tests__/`. Design
+notes: `docs/recovery-persistence-v1.md`.
+
 ## Repository forward-safety gate
 
 `npm run test:forward-safety-contract` (repository root) mirrors the repository, applies the

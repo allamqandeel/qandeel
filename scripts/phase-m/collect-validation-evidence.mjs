@@ -127,7 +127,8 @@ function present(directory) {
 // tests directory. Both are collected, and neither is uploaded unredacted.
 mkdirSync(out, { recursive: true });
 for (const entry of readdirSync(process.cwd(), { withFileTypes: true })) {
-  if (entry.isFile() && IMAGE.test(entry.name) && /^(?:t1204|product-root)-/u.test(entry.name)) {
+  // T-13 adds its own screenshot prefix beside the two Phase-M ones.
+  if (entry.isFile() && IMAGE.test(entry.name) && /^(?:t1204|t13|product-root)-/u.test(entry.name)) {
     place(join(process.cwd(), entry.name), join(out, 'screenshots', basename(entry.name)));
   }
 }
@@ -154,7 +155,15 @@ process.stdout.write(`collected ${copied} file(s); redacted ${redactions} occurr
 // The collector's OWN outputs are not evidence it collected, so they are excluded from the count.
 // Including them made the two numbers differ by one and reported a complete evidence set as
 // incomplete — a gate that cries wolf is worth no more than the silence it replaced.
-const SELF_WRITTEN = new Set(['REDACTION.txt', 'COMPLETENESS.txt', 'maestro-output-absent.txt', 'ios-auth-validation-identity.txt']);
+const SELF_WRITTEN = new Set([
+  'REDACTION.txt',
+  'COMPLETENESS.txt',
+  'maestro-output-absent.txt',
+  'ios-auth-validation-identity.txt',
+  'ios-recovery-validation-identity.txt',
+  'android-recovery-validation-identity.txt',
+  't13-phase-results.txt',
+]);
 const onDisk = present(out).filter((file) => !SELF_WRITTEN.has(basename(file)));
 const expected = (process.env.T12_REQUIRED_PHASES ?? '')
   .split(',')

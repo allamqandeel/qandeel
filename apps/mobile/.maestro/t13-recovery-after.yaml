@@ -1,0 +1,42 @@
+# T-13 recovery validation — AFTER a real process kill, cold launch, reopen or device restart.
+#
+# The interruption happens OUTSIDE this flow (`xcrun simctl terminate`, `adb shell am force-stop`, a
+# reboot, or home-and-reopen), because a process cannot restart itself. `clearState` is deliberately
+# absent, and no credential is typed: the whole claim is that none is needed and that the SAME Session
+# and viewpoint come back through RESUME, reconciled against fresh server truth.
+#
+# Reused for every "after" checkpoint of the sequence; the sequencer names the screenshot per phase
+# through SHOT, and the expected temporal mode through TM so a pinned viewpoint is asserted exactly.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+- tapOn:
+    id: "t13-run-RECOVERY_AFTER"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 120000
+
+- takeScreenshot: ${SHOT}
+
+# A.1 the AUTH session came back from the auth store; A.2 the Product is READY through RESUME with
+# the stored Session validated by the server; A.3 the mirrors are fresh; A.4 no Exact Return origin.
+- assertVisible:
+    id: "t1204-step-T13-A.1"
+- assertVisible:
+    id: "t1204-step-T13-A.2"
+- assertVisible:
+    id: "t1204-step-T13-A.4"
+- assertVisible:
+    text: "(?s).*origin=RESUMED.*"
+- assertVisible:
+    text: "(?s).*tm=${TM}.*"
+- assertVisible:
+    text: "(?s).*session=${SESSION}.*"
+- assertVisible:
+    text: "RECOVERY_AFTER — allPassed=true"

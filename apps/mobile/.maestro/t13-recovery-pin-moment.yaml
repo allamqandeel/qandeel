@@ -1,0 +1,36 @@
+# T-13 recovery validation — commit PINNED(moment) on the READY store; the durable snapshot advances.
+#
+# `COMMIT_MOMENT` is the kernel act a reader performs through T-06; it is dispatched here on the real
+# READY store so the pinned viewpoint can be proven to survive the kill that follows, outside this flow.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+- tapOn:
+    id: "t13-moment"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${MOMENT}
+- hideKeyboard
+
+- tapOn:
+    id: "t13-run-PIN_MOMENT"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 120000
+
+- takeScreenshot: t13-pin-moment
+
+- assertVisible:
+    id: "t1204-step-T13-P.1"
+- assertVisible:
+    id: "t1204-step-T13-P.2"
+- assertVisible:
+    text: "(?s).*tm=PINNED\\(${MOMENT}\\).*"
+- assertVisible:
+    text: "PIN_MOMENT — allPassed=true"

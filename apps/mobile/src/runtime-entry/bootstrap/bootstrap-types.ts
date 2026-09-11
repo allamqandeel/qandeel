@@ -5,10 +5,25 @@
  * path deterministic: either every required authoritative fact is coherent and one store exists, or
  * no store exists at all. There is no partial runtime.
  */
-import type { CanonicalStore, SessionPosition } from '../../state';
+import type { CameraIntent, CanonicalStore, InspectionRef, RhEntry, SessionPosition, TemporalMode } from '../../state';
 import type { HistoricalDisclosureCache } from '../../projection';
 import type { MobilePublicConfigFailure } from '../config/mobile-public-config';
 import type { ConversationSessionOutcome } from '../conversation/conversation-session-api';
+
+/**
+ * T-13 — a validated durable viewpoint the store is constructed from INSTEAD of the fresh entry laws.
+ *
+ * Exactly the four client-owned Class-A facts. `LH` and `LF` have no key here and never could: they
+ * come from the fresh authoritative snapshot the bootstrap fetches, so a recovered viewpoint is always
+ * reconciled against current server truth before a store exists. The bootstrap still judges coherence
+ * — a pinned position or a checkpoint beyond the fresh Live Head fails the whole attempt closed.
+ */
+export interface InitialViewpoint {
+  readonly temporal: TemporalMode;
+  readonly inspection: InspectionRef | null;
+  readonly camera: CameraIntent;
+  readonly history: readonly RhEntry[];
+}
 
 export type BootstrapPhase =
   | 'WAITING_FOR_AUTH'
@@ -61,6 +76,12 @@ export type BootstrapFailure =
   | { readonly kind: 'SNAPSHOT'; readonly detail: string }
   /** The authoritative facts were internally incoherent; no store was created. */
   | { readonly kind: 'INVALID_INITIAL_STATE'; readonly detail: string }
+  /**
+   * T-13 — a supplied durable viewpoint is impossible under the fresh authoritative snapshot (a pinned
+   * position or a recorded checkpoint beyond the Live Head). Refused whole, never clamped or repaired;
+   * no store was created.
+   */
+  | { readonly kind: 'VIEWPOINT_INCOHERENT'; readonly detail: string }
   /** A newer generation replaced this one mid-flight. Nothing was created. */
   | { readonly kind: 'RETIRED' };
 

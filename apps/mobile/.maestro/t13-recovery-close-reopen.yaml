@@ -1,0 +1,37 @@
+# T-13 recovery validation — a NORMAL close and reopen: home, then bring the app back.
+#
+# Not a kill. The process may or may not survive backgrounding on a given platform, and that is the
+# point: whichever it does, the same Session and the same viewpoint must be what the reader returns to.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+- pressKey: Home
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+- tapOn:
+    id: "t13-run-RECOVERY_AFTER"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 120000
+
+- takeScreenshot: t13-close-reopen
+
+- assertVisible:
+    id: "t1204-step-T13-A.2"
+- assertVisible:
+    text: "(?s).*origin=RESUMED.*"
+- assertVisible:
+    text: "(?s).*tm=${TM}.*"
+- assertVisible:
+    text: "(?s).*session=${SESSION}.*"
+- assertVisible:
+    text: "RECOVERY_AFTER — allPassed=true"
