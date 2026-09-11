@@ -89,9 +89,16 @@ function describePhase(phase: IntegrationPhase): string {
   return `phase=READY session=${runtime.bundle.sessionId.length}ch origin=${runtime.recovery.origin} gen=${runtime.generation} tm=${state.temporal.kind} rh=${state.history.length}`;
 }
 
-/** Resolves once the runtime settles on any phase other than the two transient ones. */
-async function settled(runtime: IntegrationRuntime, timeoutMs = 20_000): Promise<IntegrationPhase> {
-  const transient = new Set<IntegrationPhase['kind']>(['RESTORING', 'BOOTSTRAPPING']);
+/**
+ * Resolves once the runtime settles on any phase other than the transient ones.
+ *
+ * `RECOVERING` is T-13's phase between a signed-in identity and the bootstrap: the recovery store is
+ * being read. It is transient exactly as `BOOTSTRAPPING` is, and the first cloud run on the T-13 tree
+ * proved what leaving it out does — the iOS simulator, slower to open the store, was sampled in
+ * `RECOVERING` and the sign-in claim failed while Android passed on timing alone.
+ */
+async function settled(runtime: IntegrationRuntime, timeoutMs = 30_000): Promise<IntegrationPhase> {
+  const transient = new Set<IntegrationPhase['kind']>(['RESTORING', 'RECOVERING', 'BOOTSTRAPPING']);
   const started = Date.now();
   return new Promise((resolve) => {
     const check = () => {

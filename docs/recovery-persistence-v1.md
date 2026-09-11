@@ -291,6 +291,21 @@ device remains validation tooling, unreachable from the Product route, and is no
 - **`integration/__tests__/credential-freshness.test.ts`** now injects an in-memory recovery storage,
   the same kind of seam as its injected auth port; without one the runtime builds the real SQLite
   adapter, which fails closed under Jest (correct on a device, not what that suite proves).
+- **`tests/t13-recovery-persistence-contract.test.mjs` §18** (this task's own gate) was re-anchored
+  after the first cloud run: the sequencer literal it pinned (`outcome[$name]="blocked"`) named a bash-4
+  associative array that macOS `/bin/bash` 3.2 rejects. The permanent claims now asserted are stronger:
+  the sequencer needs nothing beyond bash 3.2 and reads every outcome back from the results file; the
+  gate declares all fourteen phases itself and cannot pass an empty or truncated results file; no flow
+  uses Maestro's `hideKeyboard`; every flow that types retries the field until the harness's character
+  count matches the count the sequencer passes; the harness renders the report before the inputs.
+- **T-12 Maestro flows `t12-04-phase-1`, `-3`, `-6`** replaced `hideKeyboard` with a tap on the harness
+  heading. Maestro's iOS fallback for `hideKeyboard` swipes at the centre of the screen; the two T-13
+  inputs moved the Moment field under that point, so the heuristic raised a number pad it could not
+  dismiss. The heading tap is the `ScrollView`'s own outside-tap blur, on both platforms. Nothing else in
+  those flows changed, and the T-12 AUTH and PRODUCT jobs were re-run on the same dispatch as proof (§16).
+- **Workflow iOS harness boot steps** (`t12-phase-m-cloud-validation.yml`, the three jobs that type into
+  the harness) declare the simulator's one-time "slide to type" keyboard introduction shown before the
+  app is installed: on a fresh simulator it swallowed every typed key after the first.
 
 Nothing in `apps/mobile/src/state/` changed. The T-12P layer gained one optional bootstrap override
 (`initialViewpoint`), one failure kind (`VIEWPOINT_INCOHERENT`) and the viewpoint-coherence judgement;
