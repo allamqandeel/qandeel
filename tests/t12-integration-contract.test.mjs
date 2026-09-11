@@ -289,6 +289,26 @@ test('§28.15 — projection coordination writes no canonical state', () => {
   }
 });
 
+test('AC-01 — a projection request is authorized by the credential read at that request', () => {
+  const coordinator = stripComments(code['projection/projection-coordinator.ts']);
+  const runtime = stripComments(code['runtime/integration-runtime.ts']);
+
+  // `HistoricalProjectionApiConfig` captures the access token at construction and exposes no setter,
+  // so a client HELD across a token refresh would present a superseded bearer on every later
+  // request — and a refresh deliberately keeps the auth generation, so nothing retires and nothing
+  // notices. This owner reaches freshness by building the client immediately before each request.
+  assert.match(coordinator, /const held = credential\(\);/u, 'the credential is read at the request');
+  assert.match(coordinator, /const client = createProjectionClient\(held\.accessToken\);/u, 'the client is built from that read');
+  assert.match(coordinator, /held\.authGeneration !== authGeneration/u, "a replaced identity's credential authorizes nothing");
+  // A client held on the coordinator, or built once and reused, is the defect itself.
+  assert.doesNotMatch(coordinator, /this\.client|let client/u, 'no client may be held across requests');
+
+  // The runtime supplies a FACTORY. A coordinator handed a finished client could not reach the
+  // property however carefully it read the credential.
+  assert.match(runtime, /createProjectionClient: \(accessToken\) =>\n\s*new HistoricalProjectionApiClient\(\{/u, 'the coordinator is handed a factory');
+  assert.match(runtime, /credential: \(\) => \{/u, 'the credential is a live read, not a captured value');
+});
+
 // ---------------------------------------------------------------------------------------------
 // §28.16–18 — motion causes
 // ---------------------------------------------------------------------------------------------

@@ -250,6 +250,97 @@ test('R1-02 — the credential is read immediately before every request', () => 
   );
 });
 
+test('AC-01 — every bootstrap request is authorized at the request, not at construction', () => {
+  const seam = entryCode['auth/request-credential.ts'];
+  const entry = entryCode['mobile-runtime-entry.ts'];
+
+  // The seam reads the credential INSIDE the request. A read hoisted out of the returned function
+  // would capture exactly what this exists to stop capturing.
+  assert.match(seam, /export function createAuthorizedFetch\(/u, 'the seam is one named factory');
+  assert.match(seam, /return async \(input, init\) => \{\n\s*const current = credential\(\);/u, 'the credential is read per request');
+  // The bearer is written AFTER the caller's own headers are spread, so a token a frozen transport
+  // captured for itself can never survive into the request.
+  assert.match(
+    seam,
+    /headers: \{ \.\.\.init\?\.headers, Authorization: `Bearer \$\{current\.accessToken\}` \}/u,
+    'the bearer is written last and always wins',
+  );
+  // Bound to an identity, and fail-closed in both directions.
+  assert.match(seam, /new CredentialUnavailableError\('NOT_AUTHENTICATED'\)/u, 'an unauthenticated request is refused');
+  assert.match(seam, /new CredentialUnavailableError\('IDENTITY_REPLACED'\)/u, "a replaced identity's credential is refused");
+  // It reads what the SDK already supplied and never asks for a token of its own.
+  assert.doesNotMatch(seam, /refreshSession|setSession|startAutoRefresh|signInWith/u, 'the seam triggers no auth call');
+
+  // Every client the bootstrap attempt uses is built on ONE seam bound to that attempt's identity.
+  assert.match(entry, /const authorized = authorizedFetchFor\(state\.authGeneration\);/u, 'one seam per attempt, bound to the identity');
+  assert.match(entry, /conversation: new ConversationSessionApiClient\(\{ baseUrl: config\.apiBaseUrl, fetch: authorized \}\)/u);
+  assert.match(entry, /temporal: new TemporalApiClient\(\{ baseUrl: config\.apiBaseUrl, accessToken: NO_CAPTURED_CREDENTIAL, fetch: authorized \}\)/u);
+  assert.match(entry, /projection: new HistoricalProjectionApiClient\(\{\n\s*baseUrl: config\.apiBaseUrl,\n\s*accessToken: NO_CAPTURED_CREDENTIAL,\n\s*fetch: authorized,\n\s*\}\)/u);
+  // THE DEFECT, named exactly. `TemporalApiConfig` and `HistoricalProjectionApiConfig` read their
+  // token on every request and expose no setter, so a live token captured in a CONSTRUCTOR here is
+  // presented for the life of that client — and `authGeneration` is stable across a refresh, so
+  // nothing retires and nothing notices.
+  assert.doesNotMatch(entry, /ApiClient\(\{[^}]*accessToken: state\.accessToken/u, 'no transport constructor may capture the live token');
+  // `identity.accessToken` is deliberately NOT caught by that rule and deliberately survives. It is
+  // a true statement about the identity the attempt is bound to, and `bootstrapCanonicalRuntime` is
+  // exported and must stay usable by a caller that supplies its own plain transport. It is not what
+  // authorizes any request issued here — the seam is.
+  assert.match(
+    entry,
+    /identity: \{ userId: state\.userId, accessToken: state\.accessToken, authGeneration: state\.authGeneration \}/u,
+    'the attempt still names the identity it is bound to',
+  );
+
+  // The one path that legitimately passes a live token still builds its client PER REQUEST, which
+  // is the other way to the same property. R1-02 guards the driver itself; this guards the wiring.
+  assert.match(entry, /createTemporalClient: \(accessToken\) =>/u, 'the driver is handed a factory, never a client');
+
+  guards(
+    'no captured bootstrap credential',
+    entry,
+    (text) => !/ApiClient\(\{[^}]*accessToken: state\.accessToken/u.test(text),
+    'temporal: new TemporalApiClient({ baseUrl: config.apiBaseUrl, accessToken: state.accessToken, fetch: httpFetch }),',
+  );
+});
+
+test('AC-02 — the layer holds no clock, so elapsed time can never retire an identity on its own', () => {
+  // A physical validation session reached SIGNED_OUT about 90 minutes after sign-in. Whether that is
+  // a Product defect turns on one question: can this runtime sign a reader out by itself? It cannot,
+  // and the reason is structural rather than careful — there is no clock here to do it with.
+  for (const file of entryFiles) {
+    assert.doesNotMatch(
+      entryCode[file],
+      /Date\.now|performance\.now|expires_at|expiresAt|expiresIn|expiry/u,
+      `${file} must observe no credential lifetime`,
+    );
+  }
+
+  const authority = entryCode['auth/mobile-auth-authority.ts'];
+  // FOUR sign-out sites, and only four: a restore that found nothing, a null session observed from
+  // the SDK, a rejected sign-in while nobody is authenticated, and an explicit sign-out command. A
+  // fifth would be a new way for a reader to lose a session and must be reviewed, not absorbed.
+  assert.equal((authority.match(/publish\(\{ kind: 'SIGNED_OUT' \}\)/gu) ?? []).length, 4, 'exactly four sign-out sites');
+  // The observed one is reached ONLY by a null session — never by a kind, a token or a timeout.
+  assert.match(authority, /if \(session === null\) \{\n\s*epochRetired = true;/u, 'the observed sign-out is a null session');
+
+  // Refresh runs exactly while an authenticated identity is foregrounded: the documented React
+  // Native pattern, and the thing whose absence would make expiry a Product defect.
+  assert.match(
+    authority,
+    /if \(state\.kind === 'AUTHENTICATED' && foreground\.current\(\) === 'ACTIVE'\) port\.startAutoRefresh\(\);\n\s*else port\.stopAutoRefresh\(\);/u,
+    'auto-refresh is bound to the foreground signal',
+  );
+  assert.match(entryCode['auth/supabase-auth-port.ts'], /autoRefreshToken: true/u, 'the SDK refreshes');
+  assert.match(entryCode['auth/supabase-auth-port.ts'], /persistSession: true/u, 'the SDK persists');
+
+  guards(
+    'no credential clock',
+    entryText,
+    (text) => !/Date\.now|expires_at/u.test(text),
+    'if (Date.now() > session.expires_at * 1000) publish({ kind: "SIGNED_OUT" });',
+  );
+});
+
 test('R1-03 — catch-up is merged and applied in strict Session Position order', () => {
   const driver = entryCode['live/foreground-live-driver.ts'];
   assert.match(driver, /type DeliveryEntry/u, 'deliveries must be keyed by Session Position');

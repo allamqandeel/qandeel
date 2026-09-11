@@ -462,6 +462,15 @@ depends on where the temporal surface finally sits, which is `QAN-BL-T12-03`'s q
   and Expo's authentication guide recommends `expo-secure-store` for tokens — so the choice must be
   made against the guidance and evidence of that day rather than restated from this entry. If SQLite
   remains, its threat model and acceptance must be written down explicitly.
+- **Disposition produced (AC-03):** [`t12-auth-storage-at-rest-disposition-v1.md`](t12-auth-storage-at-rest-disposition-v1.md)
+  — **ACCEPTED V1 RISK**, SQLite retained, threat boundary written down, no cryptography introduced.
+  It carries two items forward rather than accepting them silently: `AC-03-R1`, that
+  `android:allowBackup` resolves to `true` so Android Auto Backup includes the auth database (remedy
+  stated, deferred because the change alters the native artifact Phase M validated on hardware); and
+  the absence of iOS **hardware** evidence, the iOS run being a simulator. The "observed session
+  size" this entry asks for was never measured and is now moot: Expo documents no fixed SecureStore
+  size limit to compare it against, so the reason to refuse the published SecureStore pattern is the
+  hand-rolled AES in it. This entry's status is deliberately unchanged — admitting it is BG-08's.
 - **Status:** `VALIDATION — OPEN`
 
 This is validation residue. It is **not** T-13 Product persistence: `CanonicalState`, the camera,

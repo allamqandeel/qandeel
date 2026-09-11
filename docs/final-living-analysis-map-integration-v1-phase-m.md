@@ -1030,3 +1030,120 @@ with real Arabic wording. `QAN-BL-T12-04` never needed one.
 
 It remains true that none of the four is closed. Every one of them still needs the artifacts built and
 run on hardware, and no seeded database changes that.
+
+---
+
+# PART SIX — ARCHITECTURE CLOSURE CORRECTION (AC-01 … AC-04)
+
+The Architecture Closure Review accepted the Product, motion and responsive corrections and returned
+four items. None reopens Phase M. This part records what each turned out to be.
+
+## 25. `AC-01` — request-time credential freshness
+
+**Finding CONFIRMED, corrected, and proven by a regression that fails without the correction.**
+
+`TemporalApiConfig` and `HistoricalProjectionApiConfig` hold the bearer as an immutable field and
+read it on every request. `createMobileRuntimeEntry` built both bootstrap clients from the access
+token as it stood at bootstrap, so any request they issued after a `TOKEN_REFRESHED` went out on the
+superseded token — and because a refresh deliberately keeps `authGeneration`, nothing retired,
+nothing re-bootstrapped and nothing failed. `P19` proved only that a refresh creates no second
+Session; it says nothing about what the next request carries.
+
+Five authenticated request paths exist. **Three were already fresh and were NOT changed**, which the
+review asked to be recorded rather than churned:
+
+| Path | How it reaches freshness | Changed |
+| --- | --- | --- |
+| live driver catch-up | T-12P `clientForRequest()` builds a transport per request (R1-02) | no |
+| T-12 projection coordination | `createProjectionClient(held.accessToken)` per request | no |
+| conversation Session create | now issued through the seam | yes |
+| bootstrap temporal snapshot | now issued through the seam | yes |
+| bootstrap historical projection | now issued through the seam | yes |
+
+The correction is one narrow seam owned by runtime entry —
+`apps/mobile/src/runtime-entry/auth/request-credential.ts` — which stamps the `Authorization`
+header at the moment of each request from the credential read one line earlier, bound to one auth
+generation. No frozen T-03 module changed. The two frozen transports are constructed with
+`NO_CAPTURED_CREDENTIAL` rather than a live token, so a stale bearer is not merely unused but
+structurally absent; if the seam is ever bypassed the result is an immediate self-describing `401`
+rather than a well-formed stale token.
+
+Proven by `apps/mobile/src/integration/__tests__/credential-freshness.test.ts`, which refreshes the
+token WHILE the bootstrap is in flight — the only window in which those clients can issue a
+post-refresh request. Against the pre-correction source that test fails with exactly the defect
+(`Bearer token-A` where `token-B` was required) while its two sibling cases pass, which is also the
+evidence that the other three paths were already correct.
+
+## 26. `AC-02` — the 90-minute `SIGNED_OUT`
+
+**Classification: EXPECTED / TEST-CAUSED. Not a Product defect.**
+
+No logcat was retained for the device event, so it cannot be replayed. What decides the
+classification is settled from source instead:
+
+1. **The runtime cannot sign a reader out on its own.** The whole runtime-entry layer contains no
+   clock and no expiry field — no `Date.now`, no `expires_at` — so elapsed time is not an input to
+   it. Pinned by `tests/t12p-mobile-runtime-entry-contract.test.mjs`.
+2. **After `start()` there are exactly two sources of `SIGNED_OUT`:** an explicit `signOut()`
+   command, and the SDK delivering a null session. The Product build reaches neither by itself — it
+   ships no sign-in and no sign-out surface, and the validation harness is proven unreachable from
+   the Product route, transitively.
+3. **The validation procedure revokes that identity, globally, by design.** `T12-04` phases 3 and 6
+   call `client.auth.signOut()`, whose SDK default is `{ scope: 'global' }` — which revokes every
+   refresh token for that user on every device. Both phases EXECUTED and PASSED during the same
+   window, on `T12_TEST_EMAIL_A`; the device was holding a session for the validation identity
+   established by that same harness. The device's next refresh would then fail, and a failed refresh
+   is precisely how the SDK removes the local session and emits `SIGNED_OUT`.
+
+What is NOT attested, stated so the classification can be weighed rather than taken: there is no
+device-side timestamp to correlate, and no retained record proving the identity typed into the
+host-local device sign-in is byte-identical to `T12_TEST_EMAIL_A`. Every remaining reading is still
+non-Product, because of (1) and (2).
+
+Deterministic coverage added instead of a 90-minute device vigil:
+`apps/mobile/src/runtime-entry/__tests__/signed-out-provenance.test.ts` — sixty consecutive
+refreshes never sign anybody out, a four-hour wall-clock jump changes nothing, backgrounding stops
+the refresh loop without signing out, and a null session from the SDK IS honoured whatever kind
+carries it, so this runtime cannot mask a real one.
+
+## 27. `AC-03` — auth storage at rest
+
+**Disposition produced: ACCEPTED V1 RISK.** Written in full at
+[`t12-auth-storage-at-rest-disposition-v1.md`](t12-auth-storage-at-rest-disposition-v1.md). Nothing
+about the storage mechanism changed.
+
+Two things are carried forward rather than accepted silently: `AC-03-R1`, that
+`android:allowBackup` resolves to `true` — measured by evaluating the real project config through
+Expo's own plugin — so Android Auto Backup includes the auth database; and the absence of iOS
+hardware evidence, the iOS run being a simulator.
+
+The documentation correction the review required is applied in two places: Expo documents **no**
+fixed SecureStore size limit, only that the platform may reject a large value and that some
+historical iOS releases rejected values around 2048 bytes.
+
+## 28. `AC-04` — the T-11 allocation arithmetic
+
+**Classification: non-blocking implementation detail.** T-11 is not altered.
+
+Measured rather than argued, across heights 300–1400 at fifteen widths:
+
+- **no region is allocated zero anywhere in the envelope** — the failure this mechanism exists to
+  prevent does not occur at any measurement;
+- the partition `ceiling + band + gap` equals the measured column **exactly**, everywhere the
+  world's own floor does not bind;
+- where it does bind, the plan asks for more than the surface — and that window is exactly
+  **456…478 usable points, 23 values wide, at most 23 points deep**, width-independent;
+- **any vertical safe-area inset of 23 points or more removes the window entirely**, because the
+  branch arithmetic runs on the usable height while the ceiling is taken from the measured column;
+- the short-height composition never over-subscribes: both short branches subtract the world's floor
+  before allocating, which is exactly what the taller branch does not do;
+- both Honor configurations, portrait and short landscape, are outside the window either way up — so
+  the observation is arithmetic, not something the device ever showed.
+
+No truth-bearing region becomes inaccessible, overlaps or collapses in any measured configuration,
+which is the review's own test for a Product defect. The excess is smaller than either support
+floor.
+
+Pinned as a boundary rather than a note by
+`apps/mobile/src/responsive/__tests__/allocation-envelope.test.ts`: any change that widens the
+window, deepens the excess, or lets a region reach zero fails there instead of on a device.
