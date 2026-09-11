@@ -1,83 +1,117 @@
 # QANDEEL — Canonical Backlog v1
 
-**Status:** ACTIVE — governance authority  
-**Established by:** QAN-GOV-01 (documentation-only normalization)  
-**Canonical baseline:** `4473beb3d34993103baa82c034a76998bb40bc03` — merge of PR #213, which closed T-10 Living Analysis Map Motion System v1  
-**Authority:** documentation and governance only. Nothing recorded here is executable, and nothing recorded here authorizes implementation, a migration, a dependency or a Product semantic.
+**Status:** ACTIVE — governance authority
+**Established by:** QAN-GOV-01 (documentation-only normalization)
+**Canonical baseline:** `4473beb3d34993103baa82c034a76998bb40bc03` — the merge of PR #213, which
+closed T-10 Living Analysis Map Motion System v1
+**Authority:** documentation and governance only. Nothing recorded here is executable, and nothing
+recorded here authorizes implementation, a migration, a dependency or a Product semantic.
 
-This is QANDEEL's one canonical **cross-task** backlog. Active-task blockers remain owned by the active contract until they are fixed and never move here merely to close a task. Outside those active blockers, a cross-task obligation is tracked only when it is recorded here — and an obligation that *is* recorded here is not thereby scheduled.
+This is QANDEEL's one canonical **cross-task** backlog. Active-task blockers remain owned by the
+active contract until they are fixed and never move here merely to close a task. Outside those
+active blockers, a cross-task obligation is tracked only when it is recorded here — and an
+obligation that *is* recorded here is not thereby scheduled.
 
 ---
 
 ## 1. Why this document exists
 
-Review findings must not become an endless revision loop, and closing a task must not become a way of making a defect somebody else's problem. This register distinguishes:
+Review findings must not become an endless revision loop, and closing a task must not become a way
+of making a defect somebody else's problem. So this backlog distinguishes four things that a single
+undifferentiated "todo" list would blur:
 
-1. **a current blocker** — fixed inside the active task;
-2. **a deferred obligation** with a named future owner — `DEFERRED — OWNED`;
-3. **a validation item** with a concrete reopen condition — `VALIDATION — OPEN`;
-4. **an open future capability** — `OPEN — UNASSIGNED`;
-5. **closed work retained for traceability** — `CLOSED — TOMBSTONE`.
+1. **a current blocker** — a finding that violates the ACTIVE task contract. It is fixed before that
+   task closes and it never appears here (BG-01);
+2. **a deferred obligation** with a known future owner — `DEFERRED — OWNED`;
+3. **a validation item** that becomes implementation work only if a stated reopen condition is
+   observed — `VALIDATION — OPEN`;
+4. **an open future capability** deliberately not owned by any current roadmap stage —
+   `OPEN — UNASSIGNED`.
 
-The backlog is intentionally small enough to be read at every task kickoff.
+The backlog is kept small enough to be read in full at every task kickoff. That is a functional
+requirement, not a style preference: a register nobody can read is a register nobody checks.
 
 ---
 
 ## 2. Item schema
 
-Every active item carries:
+Every item carries all eight fields:
 
 | Field | Meaning |
 | --- | --- |
-| **ID** | stable, never reused |
+| **ID** | stable, never reused (BG-04) |
 | **Title / Finding** | what is actually outstanding |
-| **Source** | canonical source |
-| **Why deferred** | why it is not current work |
-| **Owner task** | one named future task, or `UNASSIGNED` |
+| **Source** | the exact canonical document and section that establishes it |
+| **Why deferred** | the reason it is not current work |
+| **Owner task** | one named future task, or `UNASSIGNED` (BG-02) |
 | **Severity** | `HIGH` / `MEDIUM` / `LOW` |
-| **Reopen condition** | evidence/event that makes it executable |
-| **Status** | lifecycle state below |
+| **Reopen condition** | the exact evidence or event that makes it executable (BG-03) |
+| **Status** | one of the four below |
 
-Closed items retain their ID, closing task, PR, evidence SHA and a concise disposition.
+Some items additionally carry a **canonical disposition** token, a **current truth** statement, a
+**required future property**, a **validation set**, or a stated **closure rule**. Those are recorded
+because the canonical source states them, not because the schema requires them.
 
-### Statuses
+### The only four statuses
 
 | Status | Meaning |
 | --- | --- |
 | `DEFERRED — OWNED` | a real obligation with one named future owner |
-| `VALIDATION — OPEN` | nothing is known to be wrong; stated evidence would reopen implementation |
+| `VALIDATION — OPEN` | nothing is known to be wrong; stated evidence would make it work |
 | `OPEN — UNASSIGNED` | an open future capability with no frozen owner |
-| `CLOSED — TOMBSTONE` | retired, retained with closure evidence and disposition |
+| `CLOSED — TOMBSTONE` | retired, retained with closure task / PR / SHA and disposition |
 
 ### Severity
 
 | Severity | Meaning |
 | --- | --- |
-| `HIGH` | if reopened, can affect Product truth, accessibility parity, major interaction correctness, release quality, security, or an already-frozen capability |
+| `HIGH` | if reopened, can affect Product truth, accessibility parity, major interaction correctness, release quality, or an already-frozen capability |
 | `MEDIUM` | meaningful Product capability or quality work, not currently violating a frozen contract |
 | `LOW` | optional or lower-risk future capability |
 
-Severity is consequence, not schedule or estimate.
+Severity states the consequence *if the item is reopened*. It is not a schedule, a priority order or
+an estimate, and this document holds none of those.
 
 ---
 
 ## 3. Governance rules
 
-**BG-01 — No blocker laundering.** A finding that violates the ACTIVE task contract cannot be moved into this backlog merely so the task can close. It is fixed, unless Architecture explicitly changes or dispositions the active contract; then the disposition, not the backlog entry, is the record.
+**BG-01 — No blocker laundering.** A finding that violates the ACTIVE task contract cannot be moved
+into this backlog merely so the task can close. It is fixed, unless Architecture explicitly changes
+or dispositions the active contract — and then the disposition, not the backlog entry, is the
+record. Nothing in this document may be cited as authority for leaving a contract violated.
 
-**BG-02 — Ownership is explicit.** Every active owned item names one future owner task or says `UNASSIGNED`. “Later”, “a future release” and “TBD” are not owners.
+**BG-02 — Ownership is explicit.** Every item names one future owner task or says `UNASSIGNED`.
+"Later", "a future release" and "TBD" are not owners.
 
-**BG-03 — Validation is conditional.** Every `VALIDATION — OPEN` item states exact evidence that reopens implementation.
+**BG-03 — Validation is conditional.** Every `VALIDATION — OPEN` item states the exact evidence that
+reopens implementation. "Check later" is not a reopen condition.
 
-**BG-04 — IDs are never reused.** A closed item remains as `CLOSED — TOMBSTONE` with its closing task, PR, evidence SHA and disposition.
+**BG-04 — IDs are never reused.** A closed item stays here as `CLOSED — TOMBSTONE` carrying its
+closure task, PR and SHA and a short disposition. A retired ID is never re-issued to different work.
 
-**BG-05 — Future tasks inherit owned items.** At kickoff, Architecture reads this backlog and explicitly dispositions every item owned by that task.
+**BG-05 — Future tasks inherit owned items.** At every task kickoff, Architecture reads this backlog
+and lists every open item whose owner matches that task. Each such item is then included in the task
+contract, explicitly re-owned, or explicitly left deferred with a reason. Silence is not a
+disposition. See §9.
 
-**BG-06 — Anti-scope is not automatically backlog.** A task boundary becomes backlog only when an existing OPEN identifier, canonical deferral, carried validation obligation, or explicit Architecture designation requires it.
+**BG-06 — Anti-scope is not automatically backlog.** A sentence saying a task did not do something
+is not an obligation. An item enters this backlog only if it has an existing `OPEN` identifier, is
+explicitly deferred to a future task by a canonical document, is explicitly carried forward for
+validation, or Architecture explicitly designates it.
 
-**BG-07 — Backlog is not Product authority.** An item becomes executable only through a future Task Contract.
+**BG-07 — Backlog is not Product authority.** An item becomes executable only through a future Task
+Contract. Nothing here defines runtime semantics, and no reader may implement from an entry.
 
-**BG-08 — Closure reconciliation / backlog admission.** Before an ACTIVE task is declared CLOSED / FROZEN, Architecture reconciles every inherited item and admits every qualifying new cross-task residue. Current blockers remain inside the active task and are fixed there.
+**BG-08 — Closure reconciliation / backlog admission.** Before an ACTIVE task may be declared
+CLOSED / FROZEN, Architecture reconciles that task's cross-task residue against this backlog. Every
+newly discovered item that is not a current blocker and qualifies under BG-06 is admitted here, with
+the complete schema of §2, *before* closure. Every backlog item that task inherited is explicitly
+updated as one of: completed → `CLOSED — TOMBSTONE`, re-owned to one named task, or still deferred
+with a recorded reason. Once the task has closed, a qualifying item may not exist only in a review
+comment, a final report, a task-local note or a model's memory. This adds no lifecycle state and
+relaxes nothing: a current blocker is still fixed inside the active task (BG-01), anti-scope is
+still not automatically backlog (BG-06), and admission still authorizes no implementation (BG-07).
 
 ---
 
@@ -106,80 +140,126 @@ Severity is consequence, not schedule or estimate.
 
 ---
 
-## 5. Active items
+## 5. Items
 
 ### `OPEN-06` — Bookmarks
 
-- **Title / Finding:** no bookmarking capability exists.
-- **Source:** T-04 §14 and T-07 §12.
-- **Why deferred:** a bookmark is a new destination type, not a gap in frozen Return semantics.
+- **Title / Finding:** no bookmarking capability exists. A reader cannot mark a position, an object
+  or a viewpoint and return to it by name.
+- **Source:** Architecture planning carry-forward — the `OPEN` register that issued this identifier
+  is not itself a repository document. Corroborated in the repository as an explicit boundary by
+  [T-04 §14 Anti-scope](living-analysis-map-runtime-v1.md) ("no bookmarks (OPEN-06)") and by
+  [T-07 §12](return-navigation-layer-v1.md) ("no bookmarks").
+- **Why deferred:** intentionally outside the frozen T-07 Return semantics. The six return
+  identities are complete as frozen, and a bookmark is a seventh kind of destination rather than a
+  gap in them.
 - **Owner task:** `UNASSIGNED`
 - **Severity:** `MEDIUM`
-- **Reopen condition:** Architecture opens a dedicated bookmarking/navigation capability task or a future integration contract explicitly claims it.
+- **Reopen condition:** Architecture opens a dedicated bookmarking / navigation capability task, or a
+  future integration contract explicitly claims it.
 - **Status:** `OPEN — UNASSIGNED`
 
-No bookmark storage, identity, lifetime, sharing or restoration semantics are implied here.
+No bookmark semantics — storage, identity, lifetime, sharing, restoration or relation to reversible
+history — are defined here or implied by this entry.
 
 ### `OPEN-08` — Coarse Temporal Step
 
-- **Title / Finding:** no coarse-grained temporal stepping exists; targeting is per disclosed Moment.
-- **Source:** T-04 §14 and T-07 §12.
-- **Why deferred:** not part of frozen temporal or Return contracts.
+- **Title / Finding:** no coarse-grained temporal stepping exists. Temporal targeting is per
+  disclosed Moment.
+- **Source:** Architecture planning carry-forward. Corroborated as an explicit boundary by
+  [T-04 §14](living-analysis-map-runtime-v1.md) ("no coarse temporal step (OPEN-08)") and by
+  [T-07 §12](return-navigation-layer-v1.md) ("no coarse temporal stepping").
+- **Why deferred:** not part of the current frozen temporal or Return contracts.
 - **Owner task:** `UNASSIGNED`
 - **Severity:** `MEDIUM`
-- **Reopen condition:** a future temporal-navigation task defines coarse stepping and its relationship to exact disclosed Moment targeting.
+- **Reopen condition:** a future temporal-navigation task explicitly defines coarse stepping
+  semantics *and* their relationship to exact disclosed Moment targeting.
 - **Status:** `OPEN — UNASSIGNED`
+
+The relationship named in the reopen condition is the hard part, and it is deliberately left
+undefined here: T-06 keeps canonical Moment addressability and disclosed interaction availability as
+two separate gates, and any coarse step would have to answer to both.
 
 ### `OPEN-09` — Object-Originated Version Jump
 
-- **Title / Finding:** selecting an object does not authorize temporal/version navigation from it.
-- **Source:** T-04 §14 and T-07 §12.
-- **Why deferred:** inspection is not temporal authority.
+- **Title / Finding:** selecting an object does not authorize temporal or version navigation from
+  it.
+- **Source:** Architecture planning carry-forward. Corroborated as an explicit boundary by
+  [T-04 §14](living-analysis-map-runtime-v1.md) ("no object-originated version jump (OPEN-09)") and
+  by [T-07 §12](return-navigation-layer-v1.md) ("no object-originated version jumps").
+- **Why deferred:** current object selection is inspection, not temporal authority. Inspecting is
+  not navigating.
 - **Owner task:** `UNASSIGNED`
 - **Severity:** `MEDIUM`
-- **Reopen condition:** a future Product contract explicitly authorizes object-originated temporal/version navigation and defines its truth/history semantics.
+- **Reopen condition:** a future Product contract explicitly authorizes object-originated
+  temporal / version navigation and defines its truth and history semantics.
 - **Status:** `OPEN — UNASSIGNED`
 
 ### `OPEN-19` — Dedicated No-Op Acknowledgement
 
-- **Title / Finding:** no dedicated canonical acknowledgement state exists for a Return act that correctly does nothing.
-- **Source:** T-08 §9; also T-04 §14 and T-07 §12.
-- **Why deferred:** the frozen Return layer already resolves no-op truthfully without fabricated state or motion.
+- **Title / Finding:** there is no dedicated canonical acknowledgement state for a return act that
+  correctly does nothing.
+- **Source:** [T-08 §9](inspection-orientation-return-chrome-v1.md) states it by identifier — "There
+  is no dedicated no-op acknowledgement state; `OPEN-19` stays deferred." Also carried as a boundary
+  by [T-04 §14](living-analysis-map-runtime-v1.md) and [T-07 §12](return-navigation-layer-v1.md).
+  The register that issued the identifier is an Architecture planning carry-forward.
+- **Why deferred:** the frozen Return layer has no such state, and a no-op already resolves
+  truthfully: no fabricated canonical state, no invented reversible-history entry, no invented camera
+  movement, no persistent selected state.
 - **Owner task:** `UNASSIGNED`
 - **Severity:** `LOW`
-- **Reopen condition:** Product/user evidence shows current truthful outcome and chrome feedback are insufficient and Architecture opens a dedicated contract.
+- **Reopen condition:** product or user evidence shows that the existing truthful outcome and chrome
+  feedback is insufficient, *and* Architecture opens a dedicated contract for the acknowledgement.
 - **Status:** `OPEN — UNASSIGNED`
 
 ### `QAN-BL-SEC-01` — Mobile Credential Backup & Hardware Security Hardening
 
-- **Title / Finding:** the accepted-v1 auth storage boundary still has two platform-security residues: Android `allowBackup` currently resolves to `true`, so the isolated auth database is eligible for Auto Backup; and the iOS functional storage contract is proven on a Release simulator, not physical hardware, so iOS Data Protection / backup-exclusion behaviour is not physically attested.
-- **Source:** `docs/t12-auth-storage-at-rest-disposition-v1.md` §§4, 6 and 7; admitted by T-12 BG-08 closure reconciliation after AC-03 explicitly accepted the v1 storage risk.
-- **Why deferred:** T-12 proved the functional auth-storage lifecycle on Android hardware and iOS Release simulator and Architecture/Security explicitly accepted the v1 SQLite threat boundary. Changing backup policy changes the native artifact and belongs in one deliberate pre-release credential-security pass rather than an unvalidated final T-12 edit.
+- **Title / Finding:** the accepted-v1 auth storage boundary has two platform-security residues:
+  Android `allowBackup` currently resolves to `true`, so the isolated auth database is eligible for
+  Auto Backup; and the iOS functional storage contract is proven on a Release simulator rather than
+  physical hardware, so iOS Data Protection / backup-exclusion behaviour is not physically attested.
+- **Source:** [T-12 auth storage-at-rest disposition §§4, 6 and 7](t12-auth-storage-at-rest-disposition-v1.md),
+  admitted by T-12 BG-08 closure reconciliation after AC-03 explicitly accepted the v1 storage risk.
+- **Why deferred:** T-12 proved the functional auth-storage lifecycle on Android hardware and iOS
+  Release simulator and Architecture/Security explicitly accepted the v1 SQLite threat boundary.
+  Changing backup policy changes the native artifact and belongs in one deliberate pre-release
+  credential-security pass rather than an unvalidated final T-12 edit.
 - **Owner task:** `QAN-SEC-01 — Pre-release Mobile Credential Security`
 - **Severity:** `HIGH`
-- **Reopen condition:** automatic before the first production-store release, or earlier if the auth-storage mechanism, backup policy, platform credential model or mobile threat model changes.
-- **Required future properties:** settle Android backup policy (`allowBackup: false` or precise auth-database exclusion); settle the equivalent iOS backup/data-protection policy; validate the generated native configuration; preserve sign-out removal, identity isolation, token replacement, and the prohibition on Product truth / QANDEEL conversation `sessionId` in auth storage; use maintained platform mechanisms only — no custom cryptography.
+- **Reopen condition:** automatic before the first production-store release, or earlier if the
+  auth-storage mechanism, backup policy, platform credential model or mobile threat model changes.
+- **Required future properties:** settle Android backup policy (`allowBackup: false` or precise
+  auth-database exclusion); settle the equivalent iOS backup/Data-Protection policy; validate the
+  generated native configuration; preserve sign-out removal, identity isolation, token replacement,
+  and the prohibition on Product truth / QANDEEL conversation `sessionId` in auth storage; use
+  maintained platform mechanisms only — no custom cryptography.
 - **Status:** `DEFERRED — OWNED`
 
-This item is platform-wide: Family, Match and any future QANDEEL surface using the shared mobile auth foundation inherit the same credential-storage boundary.
+This item is platform-wide: Family, Match and any future QANDEEL surface using the shared mobile auth
+foundation inherit the same credential-storage boundary.
 
 ### `QAN-BL-T13-01` — Restart / Recovery / Persistence
 
-- **Title / Finding:** restart, recovery and persistence of the reader's viewpoint and reversible history are unimplemented.
-- **Source:** T-07 §12 and T-08 §11.
-- **Why deferred:** explicitly outside T-07/T-08 and already assigned to recovery/persistence work.
+- **Title / Finding:** restart, recovery and persistence of the reader's viewpoint and reversible
+  history are unimplemented.
+- **Source:** [T-07 §12](return-navigation-layer-v1.md) ("no T-13 restart or persistence");
+  [T-08 §11](inspection-orientation-return-chrome-v1.md) ("restart and persistence to T-13").
+- **Why deferred:** explicitly outside T-07, and already assigned to future recovery / persistence
+  work by both canonical documents.
 - **Owner task:** `T-13 — Recovery / Persistence`
 - **Severity:** `HIGH`
 - **Reopen condition:** automatic when T-13 begins.
 - **Status:** `DEFERRED — OWNED`
 
-No persistence semantics are defined by this entry.
+No persistence semantics — what survives a restart, for how long, under what identity, and what
+happens to reversible history — are defined here.
 
 ### `QAN-BL-NAV-01` — Cross-Session Timeline
 
-- **Title / Finding:** the Timeline is Session-scoped; no cross-Session temporal navigation exists.
-- **Source:** T-07 §12.
-- **Why deferred:** explicitly excluded and no current roadmap owner is frozen.
+- **Title / Finding:** the Timeline is Session-scoped. There is no cross-Session temporal
+  navigation.
+- **Source:** [T-07 §12](return-navigation-layer-v1.md) ("no cross-session Timeline").
+- **Why deferred:** T-07 explicitly excludes it, and no current roadmap owner is frozen for it.
 - **Owner task:** `UNASSIGNED`
 - **Severity:** `MEDIUM`
 - **Reopen condition:** Architecture opens a future cross-Session temporal-navigation contract.
@@ -188,8 +268,8 @@ No persistence semantics are defined by this entry.
 ### `QAN-BL-NAV-02` — Analysis Replay
 
 - **Title / Finding:** there is no Replay of how an analysis developed.
-- **Source:** T-07 §12.
-- **Why deferred:** explicitly excluded and no current owner is frozen.
+- **Source:** [T-07 §12](return-navigation-layer-v1.md) ("no Replay").
+- **Why deferred:** T-07 explicitly excludes Replay, and no current owner is frozen.
 - **Owner task:** `UNASSIGNED`
 - **Severity:** `MEDIUM`
 - **Reopen condition:** Architecture opens a dedicated Replay contract.
@@ -199,91 +279,109 @@ No persistence semantics are defined by this entry.
 
 ## 6. Tombstones
 
-All T-12 tombstones below were reconciled under BG-08 against **T-12 — Final Living Analysis Map Integration v1**, PR **#220**, with final validated/reconciled evidence head **`02bff1b61c65c33a0d186da52dfa25d25baebe9e`**. The subsequent BG-08 documentation commit changes governance records only.
+All T-12 tombstones below were reconciled under BG-08 against **T-12 — Final Living Analysis Map
+Integration v1**, PR **#220**, with final validated/reconciled evidence head
+**`02bff1b61c65c33a0d186da52dfa25d25baebe9e`**. The later BG-08 documentation commit changes
+governance records only.
 
 ### `QAN-BL-T12-01` — Original Inspection Journey-Origin Binding
 
 - **Closing task:** `T-12 — Final Integration`
-- **PR / evidence SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
-- **Disposition:** completed. T-12 supplies the real inspection-journey origin at the integration boundary; T-07 remains the final Return execution authority and no origin is manufactured by presentation.
-- **Severity:** `HIGH`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed. T-12 supplies the real inspection-journey origin at the integration
+  boundary; T-07 remains the final Return execution authority and no origin is manufactured by
+  presentation.
 - **Status:** `CLOSED — TOMBSTONE`
 
 ### `QAN-BL-T12-02` — Locale Provider / Regional Numeral Policy
 
 - **Closing task:** `T-12 — Final Integration`
-- **PR / evidence SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
-- **Disposition:** completed. One app-level locale authority is integrated; language and direction remain independent; Egypt is the v1 region where needed; Western `latn` digits remain the frozen v1 numeral policy unless a later Product contract changes it.
-- **Severity:** `MEDIUM`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed. One app-level locale authority is integrated; language and direction
+  remain independent; Egypt is the v1 region where needed; Western `latn` digits remain the v1
+  numeral policy unless a later Product contract changes it.
 - **Status:** `CLOSED — TOMBSTONE`
 
 ### `QAN-BL-T12-03` — Final App-Shell Composition
 
 - **Closing task:** `T-12 — Final Integration`
-- **PR / evidence SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
-- **Disposition:** completed. The real Product root composes the Living Analysis Map owners from one canonical runtime/store; the hidden FoundationShell path is not the Product route.
-- **Severity:** `HIGH`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed. The real Product root composes the Living Analysis Map owners from one
+  canonical runtime/store; the FoundationShell validation path is not the Product route.
 - **Status:** `CLOSED — TOMBSTONE`
 
 ### `QAN-BL-MOT-01` — Meaning Ignition Authoritative Trigger
 
 - **Closing task:** `T-12 — Final Integration`
-- **PR / evidence SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
-- **Disposition:** completed by the contract's explicit no-trigger branch: T-12 found no truthful authoritative semantic-crystallization signal, therefore **NO MEANING IGNITION CUE SHIPS**. No dormant or fabricated trigger was introduced.
-- **Severity:** `MEDIUM`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed by the canonical no-trigger branch. T-12 found no truthful authoritative
+  semantic-crystallization signal, therefore **NO MEANING IGNITION CUE SHIPS**. No dormant or
+  fabricated trigger was introduced.
 - **Status:** `CLOSED — TOMBSTONE`
 
 ### `QAN-BL-MOT-02` — Exact Composite Spatial-Cause Binding
 
 - **Closing task:** `T-12 — Final Integration`
-- **PR / evidence SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
-- **Disposition:** completed. The exact `GO_LIVE_AND_LOCATE` cause is bound one-shot to its exact camera transition and cannot be borrowed by an unrelated act.
-- **Severity:** `HIGH`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed. The exact `GO_LIVE_AND_LOCATE` cause is bound one-shot to its exact
+  camera transition and cannot be borrowed by an unrelated act.
 - **Status:** `CLOSED — TOMBSTONE`
 
 ### `QAN-BL-MOT-03` — Physical Motion Validation
 
 - **Closing task:** `T-12 — Final Integration / pre-release physical validation gate`
-- **PR / evidence SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
-- **Disposition:** passed under the T-12 platform matrix. Release-equivalent Android hardware evidence on the Honor X9b plus iOS Release-simulator/native evidence showed no blocking teleport/jank/parity violation. The protected Pan baseline remained 0.00% janky in measured runs and the user's physical judgement was smooth, fast, direct and comfortable.
-- **Severity:** `HIGH`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** passed under the T-12 platform matrix. Release-equivalent Android hardware evidence
+  on the Honor X9b plus iOS Release native/simulator evidence showed no blocking teleport, jank or
+  truth/parity violation. The protected Pan baseline remained 0.00% janky in measured runs and the
+  user's physical judgement was smooth, fast, direct and comfortable.
 - **Status:** `CLOSED — TOMBSTONE`
 
 ### `QAN-BL-MOT-04` — Direct-Drag Presentation Culling
 
 - **Closing task:** `T-12 — Final Integration / pre-release physical validation gate`
-- **PR / evidence SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
-- **Disposition:** hardware testing reopened this item by proving blank-entry / sudden pop-in. T-12 fixed the stale live-drag visibility corridor with bounded presentation admission; before/after evidence reduced the largest release-time admission jump from **+26.55 points to 0.00**, and the user confirmed the visible pop-in was completely gone while Pan feel improved.
-- **Severity:** `MEDIUM`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** hardware testing reopened this item by proving blank-entry / sudden pop-in. T-12
+  fixed the stale live-drag visibility corridor with bounded presentation admission; before/after
+  evidence reduced the largest release-time admission jump from **+26.55 points to 0.00**, and the
+  user confirmed the visible pop-in was completely gone while Pan feel improved.
 - **Status:** `CLOSED — TOMBSTONE`
 
 ### `QAN-BL-RSP-01` — Physical Responsive Recomposition Validation
 
 - **Closing task:** `T-12 — Final Integration / pre-release physical validation gate`
-- **PR / evidence SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
-- **Disposition:** passed after T-12 corrected the short-landscape allocation defect. Android physical portrait↔landscape round-trips and iOS Release native composition kept all truth-bearing regions visible; no zero-height support region remained; large-text/RTL affected coverage passed.
-- **Severity:** `HIGH`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** passed after T-12 corrected the short-landscape allocation defect. Android physical
+  portrait↔landscape round-trips and iOS Release native composition kept all truth-bearing regions
+  visible; no zero-height support region remained; affected large-text/RTL coverage passed.
 - **Status:** `CLOSED — TOMBSTONE`
 
 ### `QAN-BL-RSP-02` — Outboard Live Label Clipped at Large Text
 
 - **Closing task:** `T-12 — Final Integration`
-- **PR / evidence SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
-- **Disposition:** completed. The final integrated responsive composition preserves visible/accessible Live wording at the required large-text envelope while keeping the outboard control separate from Moment-targeting space and preserving T-05 measurement authority.
-- **Severity:** `HIGH`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed. The final integrated responsive composition preserves visible and
+  accessible Live wording at the required large-text envelope while keeping the outboard control
+  separate from Moment-targeting space and preserving T-05 measurement authority.
 - **Status:** `CLOSED — TOMBSTONE`
 
 ### `QAN-BL-T12-04` — Mobile Auth Session Storage Production Security + Device Validation
 
 - **Closing task:** `T-12 — Final Integration / pre-release physical validation gate`
-- **PR / evidence SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
-- **Disposition:** completed for T-12. Android hardware and iOS Release-simulator lifecycle validation proved persist/restore, token replacement, sign-out removal, identity isolation and auth-only restoration. Architecture/Security produced `docs/t12-auth-storage-at-rest-disposition-v1.md` and explicitly accepted the v1 isolated SQLite risk boundary; no custom cryptography was introduced. The narrower platform-hardening residue (Android backup policy and physical iOS backup/Data-Protection attestation) is admitted separately as `QAN-BL-SEC-01`, not left hidden inside this closed item.
-- **Severity:** `HIGH`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed for T-12. Android hardware and iOS Release-simulator lifecycle validation
+  proved persist/restore, token replacement, sign-out removal, identity isolation and auth-only
+  restoration. Architecture/Security produced
+  [`t12-auth-storage-at-rest-disposition-v1.md`](t12-auth-storage-at-rest-disposition-v1.md) and
+  explicitly accepted the v1 isolated SQLite risk boundary; no custom cryptography was introduced.
+  The narrower platform-hardening residue — Android backup policy and physical iOS backup/Data-
+  Protection attestation — is admitted separately as `QAN-BL-SEC-01`, not left hidden inside this
+  closed item.
 - **Status:** `CLOSED — TOMBSTONE`
 
 ---
 
-## 7. Counts after T-12 BG-08 reconciliation
+## 7. Counts at this baseline
 
 | Status | Count |
 | --- | ---: |
@@ -299,51 +397,65 @@ All T-12 tombstones below were reconciled under BG-08 against **T-12 — Final L
 | `MEDIUM` | 8 |
 | `LOW` | 1 |
 
-T-12 inherited ten items and all ten are now tombstoned. `QAN-BL-SEC-01` is the sole new BG-08 admission from T-12 closure residue.
+T-12 inherited ten items and all ten are now tombstoned. `QAN-BL-SEC-01` is the sole new BG-08
+admission from T-12 closure residue.
 
 ---
 
 ## 8. What is deliberately not in this backlog
 
-- Current unresolved blockers — they remain in the active task and are fixed there.
-- Speculative features.
-- Every anti-scope sentence.
-- Implementation design for future tasks.
-- Estimates, priorities and schedules.
-- Duplicate aliases for already-recorded items.
-- Already-closed work except as tombstones.
+- **Current unresolved blockers.** By BG-01 they do not belong here at all.
+- **Speculative features.** Nothing enters because it might be nice.
+- **Every anti-scope sentence.** Task documents state many boundaries; a boundary is not an
+  obligation (BG-06).
+- **Implementation design for T-11, T-12 or T-13.** Entries name obligations, never solutions.
+- **Estimates, priorities and schedules.** Severity is consequence, not order.
+- **Detailed code solutions and duplicate aliases** for items already recorded.
+- **Already-closed work**, except as a tombstone.
+
+Items resolved *within* the tasks that raised them — the T-10 R1 / R2 / R3 corrections, the T-06
+FCR findings, the T-08 R1 / R2 / R3 corrections, `OPEN-17` — are closed work and are not recorded
+here. Their record is the canonical document of the owning task.
 
 ---
 
-## 9. Task lifecycle checklist
+## 9. Task lifecycle checklist (BG-05 at kickoff, BG-08 at closure)
 
 ### At kickoff (BG-05)
 
-Architecture:
+At the kickoff of any future task, Architecture:
 
 1. reads this document in full;
-2. lists every active item whose **Owner task** matches the task being opened;
-3. records one of: included, re-owned to one named task, or remains deferred with reason;
-4. confirms no blocker was laundered into the register;
-5. leaves `OPEN — UNASSIGNED` alone unless the task explicitly claims it.
+2. lists every open item whose **Owner task** matches the task being opened;
+3. for each, records one of: *included in this contract*, *re-owned to <named task>*, or *remains
+   deferred, because <reason>*;
+4. confirms that no finding from the previous task's review was moved here in violation of BG-01;
+5. leaves any `OPEN — UNASSIGNED` item alone unless the task contract explicitly claims it.
 
-Current inheritance:
+Inherited after T-12 closure reconciliation:
 
-| Task | Items inherited on kickoff |
+| Task | Items it inherits on kickoff |
 | --- | --- |
 | `QAN-SEC-01 — Pre-release Mobile Credential Security` | `QAN-BL-SEC-01` |
 | `T-13 — Recovery / Persistence` | `QAN-BL-T13-01` |
-| `T-12 — Final Integration` | none — closure reconciled under BG-08 / PR #220 |
+| `T-12 — Final Integration` | none — reconciled and tombstoned under BG-08 / PR #220 |
 
 ### At closure (BG-08)
 
-Before a task is declared CLOSED / FROZEN, Architecture:
+Before any task is declared CLOSED / FROZEN, Architecture:
 
-1. reconciles every inherited item — completed → `CLOSED — TOMBSTONE`, re-owned, or still deferred with a recorded reason;
-2. admits every newly accepted cross-task deferral that qualifies under BG-06;
-3. leaves current blockers inside the active task until fixed;
-4. does not close while qualifying residue exists only outside this document.
+1. reconciles every backlog item that task inherited — completed → `CLOSED — TOMBSTONE` with the
+   closing task, PR and SHA and disposition; re-owned to one named task; or still deferred with a
+   recorded reason;
+2. admits every newly accepted cross-task deferral that qualifies under BG-06, with the complete
+   schema of §2;
+3. leaves every current blocker where it belongs — inside the active task, fixed (BG-01);
+4. does not declare the task CLOSED / FROZEN while a qualifying cross-task residue exists only
+   outside this document.
 
 ### T-12 closure record
 
-T-12 BG-08 reconciliation is complete on PR #220 against validated/reconciled evidence head `02bff1b61c65c33a0d186da52dfa25d25baebe9e`: all ten inherited items are tombstoned, the one qualifying new security residue is admitted as `QAN-BL-SEC-01`, and no T-12 Product / validation / Architecture blocker remains open in this register.
+T-12 BG-08 reconciliation is complete on PR #220 against validated/reconciled evidence head
+`02bff1b61c65c33a0d186da52dfa25d25baebe9e`: all ten inherited items are tombstoned, the one
+qualifying new security residue is admitted as `QAN-BL-SEC-01`, and no T-12 Product, validation,
+Architecture or Security blocker remains open in this register.
