@@ -12,6 +12,15 @@
  * store, the projection cache, the live driver — is then stale by construction, and every late
  * async completion is dropped rather than applied.
  *
+ * AC-01 — CREDENTIAL FRESHNESS IS A PROPERTY OF THE SEAM, NOT OF EACH CLIENT. A refresh keeps the
+ * auth generation, which is precisely why it must not create a second Session — and precisely why
+ * it cannot be allowed to leave a captured token behind either. The bootstrap clients used to be
+ * built from the access token as it stood at bootstrap and would have gone on presenting it for
+ * the life of the attempt. They are now built on `createAuthorizedFetch`, which decides the bearer
+ * at the moment of each request. The live driver and T-12's projection coordinator reach the same
+ * property the other way, by building a transport immediately before each request; neither is
+ * changed here, and `credential-freshness.test.ts` proves all of them together.
+ *
  * Nothing here mounts anything. T-12 composes the bundle this produces into the Product shell;
  * T-12P deliberately leaves `FoundationShell` as the route output.
  */
@@ -19,6 +28,7 @@ import { HistoricalProjectionApiClient } from '../projection';
 import { TemporalApiClient } from '../temporal';
 import { createAuthSessionStorage, type AuthSessionStorage } from './auth/auth-session-storage';
 import { createMobileAuthAuthority, type MobileAuthAuthority } from './auth/mobile-auth-authority';
+import { createAuthorizedFetch, NO_CAPTURED_CREDENTIAL } from './auth/request-credential';
 import { createSupabaseAuthPort, type SupabaseAuthPort } from './auth/supabase-auth-port';
 import { bootstrapCanonicalRuntime } from './bootstrap/canonical-runtime-bootstrap';
 import type { BootstrapResult, CanonicalRuntimeBundle } from './bootstrap/bootstrap-types';
@@ -113,7 +123,6 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
   const auth = createMobileAuthAuthority({ port, foreground });
   const httpFetch: RuntimeHttpFetch =
     options.httpFetch ?? ((input, init) => fetch(input, init as RequestInit) as unknown as ReturnType<RuntimeHttpFetch>);
-  const conversation = new ConversationSessionApiClient({ baseUrl: config.apiBaseUrl, fetch: httpFetch });
   const schedule = createCatchUpSchedule(options.schedule ?? {});
 
   let runtimeGeneration = 0;
@@ -155,6 +164,16 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
       : null;
   };
 
+  /**
+   * AC-01 — the HTTP implementation every request issued on behalf of ONE identity goes through.
+   *
+   * Bound to an auth generation rather than to a token, because that is what identifies the reader:
+   * a refresh keeps the generation and the seam simply carries the new token, while a replacement
+   * changes it and the seam refuses instead of authorizing a request for the wrong person.
+   */
+  const authorizedFetchFor = (authGeneration: number): RuntimeHttpFetch =>
+    createAuthorizedFetch({ credential, authGeneration, fetch: httpFetch });
+
   const runtime: MobileRuntimeEntry = {
     config,
     auth,
@@ -171,15 +190,26 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
 
       const generation = runtimeGeneration;
       bootstrappedAuthGeneration = state.authGeneration;
+      // AC-01. Every client this attempt uses is built on the seam, so the bearer on each request
+      // is the credential as it stands AT THAT REQUEST. The two frozen T-03 transports capture
+      // `NO_CAPTURED_CREDENTIAL` rather than the live token: the seam overwrites the header before
+      // every request, so a real token here would be dead weight that a later change could
+      // resurrect as a stale bearer without any test noticing.
+      //
+      // `identity.accessToken` below is NOT what authorizes the Session create — the seam is. It
+      // stays because it is a true statement about the identity this attempt is bound to, and
+      // because `bootstrapCanonicalRuntime` is exported and must remain usable by a caller that
+      // supplies its own plain transport.
+      const authorized = authorizedFetchFor(state.authGeneration);
       const attempt = bootstrapCanonicalRuntime({
         identity: { userId: state.userId, accessToken: state.accessToken, authGeneration: state.authGeneration },
         clients: {
-          conversation,
-          temporal: new TemporalApiClient({ baseUrl: config.apiBaseUrl, accessToken: state.accessToken, fetch: httpFetch }),
+          conversation: new ConversationSessionApiClient({ baseUrl: config.apiBaseUrl, fetch: authorized }),
+          temporal: new TemporalApiClient({ baseUrl: config.apiBaseUrl, accessToken: NO_CAPTURED_CREDENTIAL, fetch: authorized }),
           projection: new HistoricalProjectionApiClient({
             baseUrl: config.apiBaseUrl,
-            accessToken: state.accessToken,
-            fetch: httpFetch,
+            accessToken: NO_CAPTURED_CREDENTIAL,
+            fetch: authorized,
           }),
         },
         runtimeGeneration: generation,
