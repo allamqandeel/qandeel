@@ -29,7 +29,8 @@ appId: com.qandeel.mobile
 - tapOn:
     id: "t1204-second-password"
 - eraseText: 64
-- hideKeyboard
+- tapOn:
+    id: "t1204-heading"
 
 - tapOn:
     id: "t1204-run-SIGN_OUT_AND_REPLACEMENT"

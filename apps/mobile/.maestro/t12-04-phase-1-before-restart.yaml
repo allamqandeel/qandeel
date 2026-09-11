@@ -49,7 +49,8 @@ appId: com.qandeel.mobile
 - waitForAnimationToEnd:
     timeout: 5000
 - inputText: ${PASSWORD_A}
-- hideKeyboard
+- tapOn:
+    id: "t1204-heading"
 
 # The credential BOUNDARY, checked before the sign-in is attempted rather than after it fails.
 #
@@ -80,7 +81,8 @@ appId: com.qandeel.mobile
 - tapOn:
     id: "t1204-email"
 - eraseText: 64
-- hideKeyboard
+- tapOn:
+    id: "t1204-heading"
 
 - takeScreenshot: t1204-phase-1-before-restart
 

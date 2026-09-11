@@ -10,27 +10,65 @@ appId: com.qandeel.mobile
       id: "qandeel-t1204-validation-harness"
     timeout: 90000
 
-- tapOn:
-    id: "t1204-email"
-- waitForAnimationToEnd:
-    timeout: 5000
-- inputText: ${EMAIL_A}
-- tapOn:
-    id: "t1204-password"
-- waitForAnimationToEnd:
-    timeout: 5000
-- inputText: ${PASSWORD_A}
-- tapOn:
-    id: "t1204-second-email"
-- waitForAnimationToEnd:
-    timeout: 5000
-- inputText: ${EMAIL_B}
-- tapOn:
-    id: "t1204-second-password"
-- waitForAnimationToEnd:
-    timeout: 5000
-- inputText: ${PASSWORD_B}
-- hideKeyboard
+# Typing is retried until the WHOLE value has arrived — the harness prints character counts, never a
+# value, and the sequencer passes the expected count beside each value. A fresh iOS simulator shows a
+# one-time "slide to type" introduction over the keyboard, which swallows every key after the first;
+# the workflow declares it shown, and this block would still catch a short value.
+# The keyboard is dismissed by tapping the heading: with the keyboard up, the harness ScrollView takes
+# any tap outside the focused input and blurs it, on both platforms — never Maestro's hideKeyboard
+# heuristic, whose iOS fallback swipes at the centre of the screen, wherever that happens to land.
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: "t1204-email"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - eraseText: 64
+      - inputText: ${EMAIL_A}
+      - tapOn:
+          id: "t1204-heading"
+      - assertVisible:
+          text: "(?s).*identityEmailChars=${EMAIL_A_CHARS} .*"
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: "t1204-password"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - eraseText: 64
+      - inputText: ${PASSWORD_A}
+      - tapOn:
+          id: "t1204-heading"
+      - assertVisible:
+          text: "(?s).*identityPasswordChars=${PASSWORD_A_CHARS} .*"
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: "t1204-second-email"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - eraseText: 64
+      - inputText: ${EMAIL_B}
+      - tapOn:
+          id: "t1204-heading"
+      - assertVisible:
+          text: "(?s).*replacementEmailChars=${EMAIL_B_CHARS} .*"
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: "t1204-second-password"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - eraseText: 64
+      - inputText: ${PASSWORD_B}
+      - tapOn:
+          id: "t1204-heading"
+      - assertVisible:
+          text: "(?s).*replacementPasswordChars=${PASSWORD_B_CHARS} .*"
 
 - assertNotVisible:
     text: "(?s).*identityEmailChars=0 .*"
@@ -52,7 +90,8 @@ appId: com.qandeel.mobile
 - tapOn:
     id: "t1204-second-email"
 - eraseText: 64
-- hideKeyboard
+- tapOn:
+    id: "t1204-heading"
 
 - takeScreenshot: t13-replacement
 

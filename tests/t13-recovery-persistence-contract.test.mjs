@@ -396,13 +396,51 @@ test('§18 — the native restart proof reuses the T-12 Phase-M infrastructure: 
     assert.equal(commands.includes('qandeel-product-root'), false, `${flow} drives the harness, never the Product root`);
     // Only the clean-install phase may clear state: every other flow reads back what an earlier one wrote.
     if (flow !== 't13-recovery-phase-1-fresh-signin.yaml') assert.equal(commands.includes('clearState'), false, `${flow} must not clear the store it reads back`);
+    // A flow that types checks that the WHOLE value arrived (the sequencer passes each value's character
+    // count beside it; the harness prints counts, never values), retrying the field until it did, and
+    // dismisses the keyboard through the harness heading — never Maestro's `hideKeyboard` heuristic,
+    // whose iOS fallback swipes at the centre of the screen (the first cloud run landed that swipe on
+    // the new Moment input and could not dismiss the number pad it had just raised).
+    if (commands.includes('inputText')) {
+      assert.match(commands, /- retry:\n\s+maxRetries: 3\n\s+commands:/u, `${flow} retries typing until the whole value arrived`);
+      assert.match(commands, /_CHARS\}/u, `${flow} checks the typed length against the sequencer's count`);
+      assert.match(commands, /id: "t1204-heading"/u, `${flow} dismisses the keyboard through the harness heading`);
+    }
   }
+  // No flow at all leans on the heuristic: the harness geometry the T-13 inputs changed is the geometry
+  // it swiped through, for the T-12 flows as much as these.
+  for (const file of readdirSync(join(rootPath, 'apps/mobile/.maestro'))) {
+    assert.equal(read(`apps/mobile/.maestro/${file}`).replace(/^\s*#[^\n]*$/gmu, '').includes('hideKeyboard'), false, `${file} must not use hideKeyboard`);
+  }
+  // The harness renders the report FIRST — on screen without scrolling however many controls follow
+  // it (the first Android run never saw a report that sat below eleven buttons) — exposes the heading
+  // the flows tap, and clears every credential field as a run starts, so Maestro's own failure
+  // screenshot (taken before any flow reaches its erase step) cannot carry one.
+  const harness = stripComments(read(`${VALIDATION_DIR}/AuthStorageValidationHarness.tsx`));
+  assert.match(harness, /testID="t1204-heading"/u, 'the heading is addressable');
+  assert.ok(harness.indexOf('testID="t1204-report"') < harness.indexOf('testID="t1204-email"'), 'the report precedes the inputs');
+  assert.equal((harness.match(/clearCredentialFields\(\);/gu) ?? []).length, 2, 'both run paths clear the credential fields as they start');
   const sequencer = read('scripts/phase-m/run-t13-recovery-phases.sh');
   for (const interruption of ['xcrun simctl terminate', 'adb shell am force-stop', 'xcrun simctl shutdown', 'adb reboot', 'pressKey']) {
     assert.ok(`${sequencer}${flows.map((flow) => read(`apps/mobile/.maestro/${flow}`)).join('')}`.includes(interruption), `a real ${interruption} interruption exists`);
   }
-  assert.match(sequencer, /outcome\[\$name\]="blocked"/u, 'a phase whose prerequisite failed is blocked, never passed');
+  assert.match(sequencer, /record "\$name" blocked "requires \$r=\$\{prior:-missing\}"/u, 'a phase whose prerequisite failed is blocked, never passed');
+  // macOS ships /bin/bash 3.2: the first cloud run died on `declare -A` before recording any outcome
+  // and left an empty results file. No bash-4 feature; the results file is the one record.
+  assert.doesNotMatch(sequencer.replace(/^\s*#[^\n]*$/gmu, ''), /declare -A|readarray|mapfile|\$\{[A-Za-z_]+\[@\]\}/u, 'the sequencer needs nothing beyond bash 3.2 (its comments may name what it avoids)');
+  assert.match(sequencer, /^outcome_of\(\) \{$/mu, 'every outcome is read back from the results file');
+  // The gate declares the complete phase list itself and is held to the phases the sequencer runs: an
+  // empty or truncated results file can never pass (the first iOS run passed on zero rows).
   assert.equal(existsSync(new URL('scripts/phase-m/gate-t13-recovery-phases.sh', root)), true);
+  const gate = read('scripts/phase-m/gate-t13-recovery-phases.sh');
+  const declared = ((gate.match(/^EXPECTED_PHASES="([^"]+)"$/mu) ?? [])[1] ?? '').split(' ').filter(Boolean);
+  const sequenced = [...sequencer.matchAll(/^run_phase (phase-\d\d-[a-z-]+) /gmu)].map((match) => match[1]).concat('phase-08-device-restart');
+  assert.equal(declared.length, 14, 'fourteen phases are declared');
+  assert.deepEqual([...declared].sort(), [...sequenced].sort(), 'the gate expects exactly the phases the sequencer runs');
+  assert.match(gate, /missing\) state='NOT RECORDED/u, 'a phase the sequencer never reached is recorded as missing, not skipped over');
+  assert.match(gate, /\*\)\n\s+\[ "\$outcome" = success \] \|\| failed=1/u, 'anything but success fails the gate');
+  assert.match(gate, /if \[ "\$restarted" = success \]; then\n\s+\[ "\$outcome" = success \] \|\| failed=1/u, 'recovery after a successful device restart is gated like any other phase');
+  assert.doesNotMatch(gate, /declare -A|readarray|mapfile/u);
   const workflow = read('.github/workflows/t12-phase-m-cloud-validation.yml');
   assert.match(workflow, /run_t13_recovery:/u, 'the recovery jobs are dispatchable from the existing Phase-M workflow');
   assert.match(workflow, /^  android-t13-recovery-emulator:$/mu);

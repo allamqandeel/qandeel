@@ -389,6 +389,9 @@ jobs:
         run: |
           xcrun simctl boot "$IOS_SIM_UDID" || true
           xcrun simctl bootstatus "$IOS_SIM_UDID" -b
+          # A fresh simulator shows a one-time "slide to type" introduction over the keyboard; while it
+          # is up, every key after the first is swallowed. Declare it shown before the app is installed.
+          xcrun simctl spawn "$IOS_SIM_UDID" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
           app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
           test -n "$app"
           xcrun simctl install "$IOS_SIM_UDID" "$app"
@@ -691,6 +694,9 @@ jobs:
         run: |
           xcrun simctl boot "$IOS_SIM_UDID" || true
           xcrun simctl bootstatus "$IOS_SIM_UDID" -b
+          # A fresh simulator shows a one-time "slide to type" introduction over the keyboard; while it
+          # is up, every key after the first is swallowed. Declare it shown before the app is installed.
+          xcrun simctl spawn "$IOS_SIM_UDID" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
           xcrun simctl install "$IOS_SIM_UDID" "$IOS_HARNESS_APP"
       - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
         run: |
@@ -972,6 +978,9 @@ jobs:
         run: |
           xcrun simctl boot "$IOS_SIM_UDID" || true
           xcrun simctl bootstatus "$IOS_SIM_UDID" -b
+          # A fresh simulator shows a one-time "slide to type" introduction over the keyboard; while it
+          # is up, every key after the first is swallowed. Declare it shown before the app is installed.
+          xcrun simctl spawn "$IOS_SIM_UDID" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
           app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
           test -n "$app"
           xcrun simctl install "$IOS_SIM_UDID" "$app"
