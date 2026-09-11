@@ -436,9 +436,12 @@ Inherited after T-12 closure reconciliation:
 
 | Task | Items it inherits on kickoff |
 | --- | --- |
+| `T-11` | none |
 | `QAN-SEC-01 — Pre-release Mobile Credential Security` | `QAN-BL-SEC-01` |
 | `T-13 — Recovery / Persistence` | `QAN-BL-T13-01` |
 | `T-12 — Final Integration` | none — reconciled and tombstoned under BG-08 / PR #220 |
+
+T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 
 ### At closure (BG-08)
 
