@@ -458,5 +458,5 @@ Before any task is declared CLOSED / FROZEN, Architecture:
 T-12 BG-08 reconciliation is complete on PR #220 against final implementation/validation evidence
 head `02bff1b61c65c33a0d186da52dfa25d25baebe9e`: all ten inherited items are tombstoned, the one
 qualifying new security residue is admitted as `QAN-BL-SEC-01`, and no T-12 Product, validation,
-Architecture or Security blocker remains open in this register. Subsequent BG-08 commits are
-documentation-only governance records.
+Architecture or Security blocker remains open in this register. The BG-08 commits after that head
+are documentation-only governance records and do not alter Product/runtime code.
