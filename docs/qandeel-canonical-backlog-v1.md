@@ -238,6 +238,23 @@ two separate gates, and any coarse step would have to answer to both.
 This item is platform-wide: Family, Match and any future QANDEEL surface using the shared mobile auth
 foundation inherit the same credential-storage boundary.
 
+### `QAN-BL-T12-04` — Mobile Auth Session Storage Production Security + Device Validation
+
+> **Historical pre-closure schema retained for the frozen T-12P contract only.** This block records
+> what T-12 inherited before physical validation. It is not the current lifecycle state; the current
+> state is the `CLOSED — TOMBSTONE` record in §6 below.
+
+- **Title / Finding:** production mobile auth-session storage security and native lifecycle/device validation were still outstanding at T-12P closure.
+- **Source:** T-12P mobile runtime-entry preconditions and the original canonical backlog admission for `QAN-BL-T12-04`.
+- **Why deferred:** T-12P established the runtime-entry boundary but deliberately left production physical validation to T-12 Final Integration.
+- **Owner task:** `T-12 — Final Integration / pre-release physical validation gate`
+- **Severity:** `HIGH`
+- **Reopen condition:** T-12 physical validation gate reached with production-equivalent auth storage and native builds.
+- **Status:** `VALIDATION — OPEN`
+- **Validation set:** persistence/restore, token replacement, identity isolation, sign-out removal, auth-only storage boundary, Android hardware, and iOS Release-native evidence where available.
+
+This historical validation residue was **not** T-13 Product persistence. Historical T-12 physical-gate inheritance included `QAN-BL-RSP-01`, `QAN-BL-T12-04`. T-12 subsequently discharged it; the only narrower future security residue is `QAN-BL-SEC-01`.
+
 ### `QAN-BL-T13-01` — Restart / Recovery / Persistence
 
 - **Title / Finding:** restart, recovery and persistence of the reader's viewpoint and reversible
