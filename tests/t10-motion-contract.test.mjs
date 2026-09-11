@@ -528,6 +528,58 @@ test('R3-02 — the travel corridor starts where the camera starts, and retires 
   assert.match(surface, /node\.region === 'UNGEOGRAPHIC_REGISTER' \? RESIDUAL_ENVELOPE_AT_REST : travelCorridor,/u);
 });
 
+test('R4-01 — a DRAG opens a corridor too, and the rule that decides when is not inside the reaction', () => {
+  const surface = mapCode['renderer/MapSurface.tsx'];
+  const camera = motionCode['presentation-camera/usePresentationCamera.ts'];
+  const culling = motionCode['presentation-camera/culling.ts'];
+
+  // The defect R3 could not see. A travel declares its whole path when it is authorized; a drag
+  // declares nothing, because no canonical camera changes until the finger lifts. So the corridor
+  // stayed degenerate for the entire gesture and `presented` was computed against the RESTING
+  // viewport while the reader dragged new world onto the glass — measured on hardware as two blank
+  // slices of the leading edge, and every missing object appearing at once at release.
+  assert.match(camera, /readonly onPresentationAdvanced\?: \(tx: number, ty: number, zoom: number, padPlaneUnits: number, epoch: number\) => void;/u);
+  assert.match(camera, /handoffToProduct\(\s*onPresentationAdvanced,/u);
+  assert.match(surface, /onPresentationAdvanced: advancePresentation,/u);
+  // The budget is the renderer's OWN cull margin, named rather than copied, so the band the plane
+  // reports within can never drift from the band the renderer paints.
+  assert.match(surface, /advancePoints: CULL_MARGIN_POINTS,/u);
+  assert.equal(/advancePoints: \d/u.test(surface), false, 'the reporting budget is never a second literal');
+
+  // The RULE is an ordinary function, not a body inside a worklet reaction. `useAnimatedReaction` is
+  // a no-op in the test runtime by design, so a rule living inside it would be a rule nothing could
+  // check — which is exactly how a corridor nobody opened survived a green suite.
+  assert.match(culling, /export function presentationAdvance\(/u);
+  assert.match(culling, /if \(!Number\.isFinite\(moved\) \|\| moved < advancePoints\) return null;/u);
+  assert.match(camera, /const advance = presentationAdvance\(/u);
+  assert.match(camera, /if \(advance === null\) return;/u);
+
+  // Epoch-guarded exactly as the retirement is: a report that lost a race to a newer motion describes
+  // a plane that is no longer on the glass.
+  assert.match(surface, /if \(binding === null \|\| advanceEpoch !== binding\.epoch\.get\(\)\) return;/u);
+  // Class D and nothing else, the same as the retirement beside it.
+  const advance = surface.slice(surface.indexOf('const advancePresentation = useCallback('), surface.indexOf('const motion = usePresentationCamera('));
+  assert.ok(advance.length > 0, 'the advance path exists');
+  for (const forbidden of ['store', 'dispatch', 'inspectObject', 'panByTranslation', 'outcome']) {
+    assert.equal(advance.includes(forbidden), false, `a corridor advance must not reach ${forbidden}`);
+  }
+  // It WIDENS and never replaces: an object on the glass cannot blink because the hand moved on.
+  assert.match(surface, /const next = envelopeHull\(current, reached\);/u);
+
+  // And the commit beside it may not take the band away again. Narrowing to "from here to rest" is
+  // right for a travel — the path is known and everything behind the plane is finished with — and
+  // wrong for a drag, which is going somewhere nobody knows yet. Without the distinction a canonical
+  // commit undid each advance a render after it was granted, which a mounted-surface test caught by
+  // watching the corridor widen and collapse in consecutive renders.
+  assert.match(surface, /const held = motion\.dragging\.get\(\) === 1;/u);
+  assert.match(surface, /const next = held \? envelopeHull\(current, exact\) : exact;/u);
+  assert.equal((surface.match(/dragging\.get\(\)/gu) ?? []).length, 1, 'the drag state is read once, at the same bounded boundary as the residual');
+  assert.match(culling, /export function expandedEnvelope\(/u);
+  // And the band is translation only — a pinch writes no residual per frame, so widening the zoom
+  // interval would multiply the candidate set for nothing a reader could see.
+  assert.match(culling, /zoomMin: envelope\.zoomMin,\s*\n\s*zoomMax: envelope\.zoomMax,\s*\n\s*\}\);\s*\n\}/u);
+});
+
 test('R3-03 — an unrepresentable transition is a cut, and its cut is never uncovered', () => {
   const plan = motionCode['presentation-camera/travel-plan.ts'];
   // Representability is asked FIRST. Letting the rest test answer first returned AT_REST for an

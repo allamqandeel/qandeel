@@ -71,7 +71,28 @@ jest.mock('react-native-reanimated', () => {
     default: { View, Text, Image, ScrollView, FlatList, createAnimatedComponent: identity },
     useSharedValue: (initial) => React.useRef(box(initial)).current,
     useAnimatedStyle: (updater) => updater(),
-    useDerivedValue: (processor) => ({ value: processor(), get: () => processor() }),
+    // A derived value is a STABLE HANDLE whose current value tracks its inputs, and the stability is
+    // not cosmetic. Returning a fresh object per render made every consumer's `useMemo` miss: the
+    // presentation camera's binding depends on three derived values, so its identity changed on every
+    // render, and `MapCanvas`'s `useLayoutEffect(() => () => motion.reset(), [motion])` therefore
+    // reset the plane on EVERY render here while resetting it only on unmount in production. A test
+    // could not observe a live drag at all — the drag was cancelled a render after it began, by the
+    // mock rather than by anything in the code. The handle is now stable and the value still
+    // re-evaluates on every read, which is exactly what the real one does.
+    useDerivedValue: (processor) => {
+      const latest = React.useRef(processor);
+      latest.current = processor;
+      const handle = React.useRef(null);
+      if (handle.current === null) {
+        handle.current = {
+          get value() {
+            return latest.current();
+          },
+          get: () => latest.current(),
+        };
+      }
+      return handle.current;
+    },
     useAnimatedReaction: () => undefined,
     useAnimatedRef: () => ({ current: null }),
     // Gesture Handler reaches for these three when Reanimated is installed, so a `GestureDetector`

@@ -51,6 +51,7 @@ import {
   createArrivalRegistry,
   createBox,
   envelopeHull,
+  expandedEnvelope,
   isPresentedWithinEnvelope,
   newlyDisclosedKeys,
   rebasedEnvelope,
@@ -146,7 +147,43 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
     [cameraBox],
   );
 
-  const motion = usePresentationCamera({ center, diagonalPoints, onTravelCorridorRetired: retireTravelCorridor });
+  // R4 — a DRAG opens a corridor too, and this is the half that was missing.
+  //
+  // A travel declares its whole path when it is authorized, so `commitCamera` below can open a
+  // corridor that already contains every frame of it. A drag declares nothing: no canonical camera
+  // changes until the finger lifts, so nothing widened the corridor and `presented` went on being
+  // computed against the RESTING viewport for the entire gesture. Measured on a device: the leading
+  // edge of the glass was blank while the reader dragged — two whole slices of the world at zero ink —
+  // and every object the drag had brought on screen appeared at once at the moment of release.
+  //
+  // The plane now reports where it has got to, once per cull margin of travel, and the corridor is
+  // hulled with a band around that position. Painting a margin ahead of the hand is the same idea the
+  // cull margin already expresses; it simply has to follow the hand instead of the resting viewport.
+  // It is state, like the travel corridor, and it retires with it at rest, so an idle world is
+  // unchanged and the cost is bounded by how far the reader actually dragged.
+  const advancePresentation = useCallback(
+    (tx: number, ty: number, residualZoom: number, padPlaneUnits: number, advanceEpoch: number) => {
+      const binding = cameraBox.get();
+      // A report that lost a race to a newer motion describes a plane that is no longer on the glass.
+      if (binding === null || advanceEpoch !== binding.epoch.get()) return;
+      const reached = expandedEnvelope(residualEnvelope({ tx, ty, zoom: residualZoom }), padPlaneUnits);
+      setCorridor((current) => {
+        const next = envelopeHull(current, reached);
+        return envelopesEqual(current, next) ? current : next;
+      });
+    },
+    [cameraBox],
+  );
+
+  const motion = usePresentationCamera({
+    center,
+    diagonalPoints,
+    onTravelCorridorRetired: retireTravelCorridor,
+    onPresentationAdvanced: advancePresentation,
+    // The renderer's own margin, so the plane reports exactly as often as the painted band allows and
+    // there is no second number to keep in step with this one.
+    advancePoints: CULL_MARGIN_POINTS,
+  });
   useLayoutEffect(() => {
     cameraBox.set(motion);
   }, [cameraBox, motion]);
@@ -206,9 +243,22 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
     // It narrows on every commit as a travel proceeds, and it is a bounded read at a commit
     // boundary — never during render, never per frame.
     const exact = envelopeHull(residualEnvelope(motion.readResidual()), RESIDUAL_ENVELOPE_AT_REST);
+    // R4 — while a FINGER owns the plane, a commit may widen this corridor and may not narrow it.
+    //
+    // Narrowing to "from here to rest" is right for a travel: the path is known, the plane is on its
+    // way home, and everything behind it is finished with. A drag is the opposite case. It is going
+    // somewhere nobody knows yet, the band the advance opened AHEAD of the hand is the entire reason
+    // the leading edge is painted at all, and this read happens on the very next commit — so without
+    // this distinction a canonical commit would take that band away again a frame after it was
+    // granted, and the blank edge would come straight back. `dragging` is one bounded read at the
+    // same boundary as the residual beside it, never during render and never per frame.
+    const held = motion.dragging.get() === 1;
     // Only a corridor that actually differs costs a second pass; the frame already painted was a
     // superset of this one, so nothing was ever wrongly culled while the two disagreed.
-    setCorridor((current) => (envelopesEqual(current, exact) ? current : exact));
+    setCorridor((current) => {
+      const next = held ? envelopeHull(current, exact) : exact;
+      return envelopesEqual(current, next) ? current : next;
+    });
   }, [camera, cameraHistory, motion, store]);
 
   /**
@@ -249,7 +299,6 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
           ),
     [center, envelope, placed, travelCorridor],
   );
-
   // Which loci BECAME part of the accepted current `V` in this commit (R3-01).
   //
   // Membership is asked of the SCENE, never of a placement. A placement omits a locus that is not

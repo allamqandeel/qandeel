@@ -89,6 +89,73 @@ export function residualEnvelope(residual: PresentationResidual): PresentationRe
   });
 }
 
+/** What the plane should tell the renderer when it has moved far enough to be worth saying. */
+export interface PresentationAdvance {
+  readonly residual: PresentationResidual;
+  /** How far beyond that residual to paint, in the plane's own units. */
+  readonly padPlaneUnits: number;
+}
+
+/**
+ * Whether the plane has moved far enough since it last said so — and if it has, what to say.
+ *
+ * THE RULE, as an ordinary function. The reaction that calls it is a no-op in a test runtime by
+ * design, so a rule living inside it would be a rule nobody could check; every decision therefore
+ * lives here and the reaction is only the glue that decides WHEN, on the UI runtime, where no Product
+ * rule belongs. It is the same separation the scrub already uses.
+ *
+ * The distance is measured on the GLASS, because that is what the reader sees and what a cull margin
+ * is expressed in: a residual translation moves the glass by `zoom · t`, and a residual zoom moves it
+ * by roughly the viewport diagonal times the scale change. Both count, so one rule serves a drag and
+ * a travel alike.
+ *
+ * The pad is one budget PLUS the distance just covered. A slow drag therefore asks for the budget and
+ * a fast flick asks for more — the band widens with the speed that made it necessary, with no velocity
+ * estimate, no prediction and no second constant. `null` means the plane has not moved enough to be
+ * worth a crossing, which at rest is every frame.
+ */
+export function presentationAdvance(
+  residual: PresentationResidual,
+  reported: PresentationResidual,
+  diagonalPoints: number,
+  advancePoints: number,
+): PresentationAdvance | null {
+  'worklet';
+  if (!(advancePoints > 0) || !Number.isFinite(advancePoints)) return null;
+  const scale = residual.zoom;
+  const moved =
+    Math.hypot((residual.tx - reported.tx) * scale, (residual.ty - reported.ty) * scale) +
+    Math.abs(residual.zoom - reported.zoom) * (Number.isFinite(diagonalPoints) ? Math.abs(diagonalPoints) : 0);
+  if (!Number.isFinite(moved) || moved < advancePoints) return null;
+  const divisor = Math.abs(scale) < 1e-9 ? 1 : Math.abs(scale);
+  return { residual, padPlaneUnits: (advancePoints + moved) / divisor };
+}
+
+/**
+ * The same envelope with a margin of plane distance on every side of its translation.
+ *
+ * A travel declares its whole path at once, so its envelope is complete the moment it opens. A DRAG
+ * does not: the plane is attached to a hand, nobody knows where it is going, and the corridor can
+ * only ever describe where the hand has already been. Padding is what buys the time to find out —
+ * the renderer paints a band beyond the last reported position, so the region the next fraction of a
+ * second brings onto the glass has already been drawn when it arrives.
+ *
+ * It pads the translation only. The residual zoom is not a direction a hand travels in — a pinch
+ * writes nothing per frame — and widening it would multiply the candidate set for no reader-visible
+ * gain.
+ */
+export function expandedEnvelope(envelope: PresentationResidualEnvelope, padPlaneUnits: number): PresentationResidualEnvelope {
+  const pad = Number.isFinite(padPlaneUnits) && padPlaneUnits > 0 ? padPlaneUnits : 0;
+  return Object.freeze({
+    txMin: envelope.txMin - pad,
+    txMax: envelope.txMax + pad,
+    tyMin: envelope.tyMin - pad,
+    tyMax: envelope.tyMax + pad,
+    zoomMin: envelope.zoomMin,
+    zoomMax: envelope.zoomMax,
+  });
+}
+
 /** The smallest envelope containing both. Used to add the destination — always rest — to a travel. */
 export function envelopeHull(a: PresentationResidualEnvelope, b: PresentationResidualEnvelope): PresentationResidualEnvelope {
   return Object.freeze({
