@@ -280,9 +280,9 @@ happens to reversible history — are defined here.
 ## 6. Tombstones
 
 All T-12 tombstones below were reconciled under BG-08 against **T-12 — Final Living Analysis Map
-Integration v1**, PR **#220**, with final validated/reconciled evidence head
-**`02bff1b61c65c33a0d186da52dfa25d25baebe9e`**. The later BG-08 documentation commit changes
-governance records only.
+Integration v1**, PR **#220**, with final implementation/validation evidence head
+**`02bff1b61c65c33a0d186da52dfa25d25baebe9e`**. The BG-08 commits after that head are governance-
+record changes only and do not modify Product/runtime code.
 
 ### `QAN-BL-T12-01` — Original Inspection Journey-Origin Binding
 
@@ -455,7 +455,8 @@ Before any task is declared CLOSED / FROZEN, Architecture:
 
 ### T-12 closure record
 
-T-12 BG-08 reconciliation is complete on PR #220 against validated/reconciled evidence head
-`02bff1b61c65c33a0d186da52dfa25d25baebe9e`: all ten inherited items are tombstoned, the one
+T-12 BG-08 reconciliation is complete on PR #220 against final implementation/validation evidence
+head `02bff1b61c65c33a0d186da52dfa25d25baebe9e`: all ten inherited items are tombstoned, the one
 qualifying new security residue is admitted as `QAN-BL-SEC-01`, and no T-12 Product, validation,
-Architecture or Security blocker remains open in this register.
+Architecture or Security blocker remains open in this register. Subsequent BG-08 commits are
+documentation-only governance records.
