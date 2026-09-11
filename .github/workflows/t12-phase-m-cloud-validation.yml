@@ -57,6 +57,16 @@ env:
   # The same pinned Maestro line the canonical Mobile CI uses, verified by SHA-256 before extraction.
   MAESTRO_VERSION: 2.10.0
   MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+  # Before a flow runs at all, Maestro starts an XCUITest driver on the simulator. On a loaded macOS
+  # runner that start can outlast its default window, and the flow then fails having executed not one
+  # command — which reads exactly like a broken app and is not one. Measured: the boot smoke in the
+  # SAME job had driven the SAME driver successfully three minutes earlier, and the failure carried
+  # Maestro's own `iOS driver not ready in time` with the name of this variable in it.
+  #
+  # This is the third impatience of the same family in these flows, after the cold-launch assertion
+  # and the keyboard-presentation race. Waiting longer costs a slow run nothing it was not already
+  # spending; being impatient costs a false report of a broken Product.
+  MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
   # The ONE build-time configuration boundary (`apps/mobile/app.config.js`) reads exactly these three.
   # The publishable key is public by design; the API origin is an input because a Quick Tunnel origin
   # is regenerated per session and is not a credential. No password or token appears here.
