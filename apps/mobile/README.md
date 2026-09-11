@@ -420,12 +420,41 @@ Contract: `npm run test:inspection-orientation-return-chrome-contract` (reposito
 Jest suites under `src/orientation-chrome/__tests__/`. Design notes:
 `docs/inspection-orientation-return-chrome-v1.md`.
 
+## Final Living Analysis Map integration (T-12)
+
+`src/integration/` is the app's composition owner, and the route now renders its `ProductRoot`.
+
+> **One world. One truth. One composition.**
+> **Integration connects owners. Integration does not replace owners.**
+
+It owns four things and deliberately nothing else: the app-root lifecycle (one runtime, one store,
+one projection cache, one live driver, retired together); the app-root presentation facts T-11 left
+as seams (real safe-area insets, the real font scale); the one locale authority (Product language and
+layout direction as INDEPENDENT axes, region `EG`, and the v1 `latn` numeral pin); and the two
+bindings that are composition facts by nature — the Original Inspection journey origin and the exact
+composite spatial cause.
+
+It is not a second canonical store, a second Return engine, a second projection cache, a second
+temporal cursor, a second camera, a semantic resolver, or persistence. It writes no reader-facing
+word — every word on screen comes from T-08's copy boundary — and it paints nothing and names no
+colour: the Map's paint is still the neutral structural placeholder, and the final Graphic Language
+remains VI-03's.
+
+The composition is one column at every width: `ResponsiveSurface` over the real `MapSurface`, the
+real `TemporalTargetLayer` and the real `OrientationChrome`. There is still exactly one route —
+World, Thread, Reading, Return, a Timeline position and an inspection depth are canonical STATE, and
+none of them is a page.
+
+Contract: `npm run test:t12-integration-contract` (repository root) plus the Jest suites under
+`src/integration/__tests__/`. Design notes: `docs/final-living-analysis-map-integration-v1.md` and
+its traceability companion.
+
 ## Mobile runtime entry (T-12P)
 
 `src/runtime-entry/` is the first legitimate path into a live runtime: it obtains an authenticated
 identity, acquires one QANDEEL conversation Session, builds the canonical store exactly once, and
-keeps the authoritative live mirrors caught up. It mounts nothing — `FoundationShell` is still the
-route output, and replacing it is T-12's job.
+keeps the authoritative live mirrors caught up. It mounts nothing itself — T-12's integration owner
+composes the bundle it produces, and is the only consumer of its public barrel.
 
 - **Public config** (`config/`): `app.config.js` -> Expo `extra` -> `expo-constants` -> a validated
   `MobilePublicConfig`. This is the ONE place ambient configuration is read, and no runtime module

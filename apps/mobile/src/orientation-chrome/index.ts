@@ -85,19 +85,25 @@ export {
 export type { ReturnCapabilityInputs } from './return-orientation';
 export { opportunity, returnMeaning, returnOrientation } from './return-orientation';
 
-// R3-04. The opaque capability is public; the MINT is not, and deliberately.
+// R3-04, closed by T-12 §14 rather than continued.
 //
-// `bindExactReturnOrigin` turned any currently valid T-07 checkpoint into a Product capability
-// labelled "return to the original inspection". Same-store provenance is necessary and it is proven
-// — but it is not evidence that the checkpoint IS the named origin of a real explicit inspection
+// `bindExactReturnOrigin` once turned ANY currently valid T-07 checkpoint into a Product capability
+// labelled "return to the original inspection". Same-store provenance is necessary and it is proven —
+// but it is not evidence that the checkpoint IS the named origin of a real explicit inspection
 // journey, and a checkpoint recorded by Return to World is not an original inspection however valid
-// its handle. T-08 is not app-shell integrated and owns no journey coordinator, so it cannot know
-// which checkpoint that is; the honest boundary is therefore to CONSUME an origin and never to
-// manufacture one. Establishing the real journey origin at the actual journey boundary belongs to
-// the T-12 integration gate, which can add a narrow coordinator without reopening T-07's semantics.
-// Until such an origin is supplied the Exact Return control is simply absent.
+// its handle. R3 answered that by removing the mint from this barrel, which stopped the defect and
+// left the legitimate binding with no route at all.
+//
+// The mint is public again because the defect is now refused by the mint ITSELF: it admits only a
+// target T-07 confirms was recorded by an act that can begin an explicit inspection journey, so a
+// Return-to-World checkpoint — or a Back, a pan, a zoom, a commit, a context switch, or any of the
+// six return acts — cannot become one, whatever a caller passes. That is strictly stronger than
+// obscurity was. Which journey-capable checkpoint began THIS journey remains a composition fact this
+// layer does not have, and the integration gate binds it at the real boundary; T-07 still re-proves
+// provenance and presence independently at execution, which remains the only authority. Until an
+// origin is supplied the Exact Return control is simply absent.
 export type { ExactReturnOrigin } from './exact-return-origin';
-export { exactReturnTargetFor, isExactReturnOrigin } from './exact-return-origin';
+export { bindExactReturnOrigin, exactReturnTargetFor, isExactReturnOrigin } from './exact-return-origin';
 
 export type { ContextOrientationInputs } from './context-orientation';
 export { contextOrientation, currentBindingOf, mapFamilyOf } from './context-orientation';

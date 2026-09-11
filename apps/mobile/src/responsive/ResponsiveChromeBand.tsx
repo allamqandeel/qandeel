@@ -47,22 +47,45 @@
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import type { ChromeComposition } from './plan';
+import { CHROME_FLOOR_POINTS, type ChromeComposition, type SupportComposition } from './plan';
 
 export const RESPONSIVE_CHROME_BAND_TEST_ID = 'qandeel-responsive-chrome-band';
 export const RESPONSIVE_CHROME_MEASURE_TEST_ID = 'qandeel-responsive-chrome-measure';
 
 export interface ResponsiveChromeBandProps {
   readonly chrome: ChromeComposition;
+  /**
+   * The room the plan gave this region.
+   *
+   * The band held no floor at all, and its height came from a `ScrollView` that reports none — so on
+   * a device it resolved to ZERO while the chrome inside it was still mounted, and `overflow: hidden`
+   * clipped away every orientation sentence and every return act. The allocation is now stated.
+   */
+  readonly support: SupportComposition;
   readonly children: ReactNode;
   readonly testID?: string;
 }
 
-export function ResponsiveChromeBand({ chrome, children, testID = RESPONSIVE_CHROME_BAND_TEST_ID }: ResponsiveChromeBandProps) {
+export function ResponsiveChromeBand({ chrome, support, children, testID = RESPONSIVE_CHROME_BAND_TEST_ID }: ResponsiveChromeBandProps) {
+  const across = support.arrangement === 'SIDE_BY_SIDE';
   return (
     <View
       testID={testID}
-      style={[styles.band, { paddingHorizontal: chrome.paddingHorizontal, marginTop: chrome.gapPoints }]}
+      style={[
+        styles.band,
+        {
+          paddingHorizontal: chrome.paddingHorizontal,
+          // Across, the two regions share one rhythm from the band above them and sit beside each
+          // other, so the orientation takes no second gap of its own.
+          marginTop: across ? 0 : chrome.gapPoints,
+          // The START edge, never the left one: across, the orientation sits after the instrument in
+          // reading order, which is the right-hand side in Arabic and the left-hand side in English.
+          marginStart: across ? support.gapPoints : 0,
+          width: across ? support.chromeWidthPoints : undefined,
+          height: support.chromePoints,
+          minHeight: Math.min(CHROME_FLOOR_POINTS, support.chromePoints),
+        },
+      ]}
       // The band claims no touch of its own, exactly as the chrome inside it does not: a press that
       // reaches neither a control nor the scroller belongs to whatever is underneath.
       pointerEvents="box-none"
@@ -98,6 +121,14 @@ const styles = StyleSheet.create({
   // floor hold — the world is sized first, and the support around it takes the remainder — and
   // `overflow: 'hidden'` is what guarantees the alternative is REACHABLE rather than off the
   // screen: whatever does not fit is inside the scroller, not below the surface.
+  // T-12 re-anchor. The band still yields and still clips to the room it was given — `flexShrink: 1`
+  // and `overflow: 'hidden'` are unchanged, and so is the rule that whatever does not fit stays
+  // reachable inside the scroller rather than below the surface. What changed is that the room is now
+  // GIVEN rather than inferred: this band had no floor of any kind, its height came from a scroller
+  // that reports none, and measured on a device it resolved to zero with the chrome still mounted
+  // inside it — which took every return act off the surface. `flexShrink: 0` here would have been the
+  // wrong repair, because the band must still be able to yield; what it must not do is start from
+  // nothing.
   band: { flexShrink: 1, flexGrow: 0, overflow: 'hidden' },
   scroller: { flexGrow: 0, flexShrink: 1 },
   content: { flexGrow: 1 },

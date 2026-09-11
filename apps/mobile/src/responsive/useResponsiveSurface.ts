@@ -70,6 +70,14 @@ export interface ResponsiveSurfaceOptions {
    * a device accessibility setting and no container can be asked for it.
    */
   readonly fontScale?: number;
+  /**
+   * The envelope this container is composed inside, in points.
+   *
+   * The same kind of seam again, and for the same reason: no container can be asked whether the
+   * thing it sits in has changed shape. It is an INVALIDATION input — it says a measurement taken
+   * before it no longer describes anything — and never a substitute for what the container reports.
+   */
+  readonly envelope?: { readonly width: number; readonly height: number } | null;
 }
 
 export interface MeasuredSurfaceBinding {
@@ -100,15 +108,46 @@ interface Settled {
 }
 
 export function useResponsiveSurface(options: ResponsiveSurfaceOptions = {}): MeasuredSurfaceBinding {
-  const { insets, fontScale } = options;
+  const { insets, fontScale, envelope } = options;
   const top = quantizePoints(insets?.top ?? 0);
   const right = quantizePoints(insets?.right ?? 0);
   const bottom = quantizePoints(insets?.bottom ?? 0);
   const left = quantizePoints(insets?.left ?? 0);
   const scale = quantizeFontScale(fontScale ?? 1);
+  const envelopeWidth = quantizePoints(envelope?.width ?? 0);
+  const envelopeHeight = quantizePoints(envelope?.height ?? 0);
 
   const [measured, setMeasured] = useState<Measured | null>(null);
   const [settled, setSettled] = useState<Settled | null>(null);
+  const [composedIn, setComposedIn] = useState<Measured | null>(null);
+
+  // R2 — retire a measurement the moment the envelope it was taken inside stops existing.
+  //
+  // The container is still the geometry authority and still reports through `onLayout`. What this
+  // adds is the ONE thing a container cannot tell us: that the envelope it is composed inside has
+  // changed, so a measurement taken in the previous one no longer describes anything. Without it a
+  // portrait measurement survived into landscape and every region was allocated against a surface
+  // that was no longer there — measured on a device, the world kept a 388-point portrait share
+  // inside a 369-point landscape window and pushed the whole support band off the bottom.
+  //
+  // The envelope arrives as an explicit presentation seam, exactly as the insets and the font scale
+  // do, so this layer still reads no display of its own. It is used to INVALIDATE, and only as the
+  // opening value for the new composition until the container reports again — never as a standing
+  // authority over what the container says.
+  //
+  // Issued during render, which is React's own pattern for state derived from previous state, and
+  // self-terminating for the same reason the band settlement below is: the second pass finds the
+  // envelope already recorded and issues nothing.
+  let current = measured;
+  const envelopeChanged =
+    envelopeWidth > 0 &&
+    envelopeHeight > 0 &&
+    (composedIn === null || composedIn.width !== envelopeWidth || composedIn.height !== envelopeHeight);
+  if (envelopeChanged) {
+    current = { width: envelopeWidth, height: envelopeHeight };
+    setComposedIn({ width: envelopeWidth, height: envelopeHeight });
+    setMeasured(current);
+  }
 
   // Quantized before it is state, so a container that has not moved cannot re-render anything by
   // reporting a different float for the same rect. It reports the rect and nothing else — the band
@@ -121,23 +160,23 @@ export function useResponsiveSurface(options: ResponsiveSurfaceOptions = {}): Me
 
   const surface = useMemo(
     () =>
-      measured === null
+      current === null
         ? null
         : presentationSurface({
-            width: measured.width,
-            height: measured.height,
+            width: current.width,
+            height: current.height,
             insetTop: top,
             insetRight: right,
             insetBottom: bottom,
             insetLeft: left,
             fontScale: scale,
           }),
-    [bottom, left, measured, right, scale, top],
+    [bottom, left, current, right, scale, top],
   );
 
   // The usable width, from all three of its authorities at once. This is the quantity the band is a
   // function of, and the only quantity a settlement may be keyed to.
-  const usable = measured === null ? null : measured.width - left - right;
+  const usable = current === null ? null : current.width - left - right;
 
   // Settle the band for THIS usable width, against the band the immediately preceding composition
   // settled — never against one remembered from a width that has since changed.

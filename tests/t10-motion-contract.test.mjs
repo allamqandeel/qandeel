@@ -365,7 +365,7 @@ test('R1-01 — an in-flight drag cannot be re-routed into a replacement store',
   assert.match(mapCode['renderer/MapSurface.tsx'], /const authorityReplaced = history !== null && history\.owner !== store;/u);
   assert.match(
     mapCode['renderer/MapCanvas.tsx'],
-    /if \(reset\) motion\.reset\(\);\s*\n\s*else if \(transition !== null\) motion\.applyCanonicalChange\(transition\);/u,
+    /if \(reset\) motion\.reset\(\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*else if \(transition !== null\) motion\.applyCanonicalChange\(transition, cause\(\)\);/u,
   );
   assert.match(motionCode['runtime/authority.ts'], /export function useAuthorityGeneration\(owner: unknown\): AuthorityGeneration \{/u);
 });
@@ -432,7 +432,7 @@ test('R1-04 — pointer parity covers the object-local motion, not only the plan
   }
 });
 
-test('R1-05, R3-04 — no production path can arm the composite beat', () => {
+test('R1-05, R3-04 — the composite beat is armed by a binding, and a mailbox remains impossible', () => {
   // R1 narrowed the arming condition from APPLIED to APPLIED + LANDED. Necessary, and not
   // sufficient: a pending token still had no owner. A landed composite can arm one while the Map is
   // between projections and therefore cannot consume it, the accessible viewport routes stay
@@ -442,25 +442,42 @@ test('R1-05, R3-04 — no production path can arm the composite beat', () => {
   // No narrowing fixes that, because the defect is the SHAPE. A mailbox is not a binding; only ONE
   // exact transition, one owner generation, one shot, invalidated by staleness would be — and which
   // canonical change an already-returned outcome belongs to is a composition fact this owner does
-  // not have and cannot acquire without taking T-12's integration ownership. So the capability
-  // stays and the arming goes: COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12.
+  // not have and cannot acquire without taking T-12's integration ownership.
+  //
+  // T-12 §15 RE-ANCHOR. The composition fact now exists, and the arming is a BINDING rather than a
+  // mailbox: the cause is an ARGUMENT to the call that applies the transition, resolved by a
+  // function the surface invokes in that one branch. Nothing in this layer stores it, so there is
+  // still nothing to queue, expire, or hand to a later unrelated act — which is why every anti-
+  // mailbox assertion below is unchanged and still passes. What is asserted is now the shape of the
+  // seam rather than its absence, because absence is no longer what makes it safe.
   assert.equal(motionProduction.includes('cause/motion-cause.ts'), false, 'the stateful channel does not ship');
   for (const forbidden of ['MotionCauseChannel', 'createMotionCauseChannel', 'noteReturnOutcome', 'ExecutedReturnOutcome', 'pending']) {
     assert.equal(motionText.includes(forbidden), false, `no pending cause mailbox: ${forbidden}`);
     assert.equal(mapText.includes(forbidden), false, `no pending cause mailbox reaches the Map: ${forbidden}`);
   }
-  // The camera passes `null` unconditionally: there is no option, no prop and no channel to supply
-  // one, so the beat is unreachable rather than merely unused.
   const camera = motionCode['presentation-camera/usePresentationCamera.ts'];
-  assert.match(camera, /cause: null,/u);
-  assert.equal(camera.includes('cause?.take()'), false);
-  assert.equal(camera.includes('readonly cause?'), false);
-  assert.equal(mapCode['renderer/MapSurface.tsx'].includes('cause'), false, 'the surface takes no cause');
-  // And the deferral is RECORDED, not implied — in the production document, where the reader of
-  // this task's decisions looks, exactly as the Meaning Ignition deferral is.
+  // The cause is a parameter of the applying call and is passed straight through to the pure plan.
+  // It has a default, so a caller that has no composition above it gets exactly the previous
+  // behaviour, and the beat stays unreachable for every path that cannot prove an identity.
+  assert.match(camera, /\(change: CanonicalCameraChange, cause: PresentationMotionCause \| null = null\): PresentationTravelPlan =>/u,
+    'the cause arrives as an argument to the call that applies the transition');
+  assert.match(camera, /^\s*cause,$/mu, 'and is handed to the pure plan unchanged');
+  // Nothing HOLDS it: no field, no ref, no shared value, no channel, no take().
+  assert.equal(camera.includes('cause?.take()'), false, 'the camera pulls from no channel');
+  assert.equal(camera.includes('readonly cause'), false, 'the binding is not a property of the hook');
+  assert.doesNotMatch(camera, /useSharedValue<[^>]*Cause|causeRef|lastCause|storedCause/u, 'no cause is retained between calls');
+  // The surface carries the QUESTION, never an answer it kept. It resolves at apply time only.
+  const surface = mapCode['renderer/MapSurface.tsx'];
+  assert.match(surface, /readonly spatialCause\?: \(destination: CameraIntent\) => PresentationMotionCause \| null;/u,
+    'the surface takes a resolver keyed to the destination, not a value');
+  assert.doesNotMatch(surface, /useState<[^>]*Cause|useRef<[^>]*Cause/u, 'the surface stores no cause');
+  assert.match(mapCode['renderer/MapCanvas.tsx'], /readonly cause: \(\) => PresentationMotionCause \| null;/u,
+    'the renderer receives the question and hands the answer straight on');
+  // The deferral is discharged in writing, in the production document, where the reader of this
+  // task's decisions looks — and the integration document records how.
   assert.match(read('docs/living-analysis-map-motion-system-v1.md'), /COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12/u);
   assert.match(read('docs/living-analysis-map-motion-system-v1-traceability.md'), /COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12/u);
-  // The pure choreography survives, because T-12 has to bind something real.
+  // The pure choreography is unchanged: T-12 bound something real to the beat that already existed.
   assert.match(
     motionCode['presentation-camera/travel-plan.ts'],
     /input\.cause === 'GO_LIVE_AND_LOCATE' && input\.representable \? MOTION_DURATIONS_MS\.compositeSpatialBeat : 0/u,
@@ -509,6 +526,58 @@ test('R3-02 — the travel corridor starts where the camera starts, and retires 
   }
   // R3-02 register — screen space is culled by the resting viewport, whatever the world is doing.
   assert.match(surface, /node\.region === 'UNGEOGRAPHIC_REGISTER' \? RESIDUAL_ENVELOPE_AT_REST : travelCorridor,/u);
+});
+
+test('R4-01 — a DRAG opens a corridor too, and the rule that decides when is not inside the reaction', () => {
+  const surface = mapCode['renderer/MapSurface.tsx'];
+  const camera = motionCode['presentation-camera/usePresentationCamera.ts'];
+  const culling = motionCode['presentation-camera/culling.ts'];
+
+  // The defect R3 could not see. A travel declares its whole path when it is authorized; a drag
+  // declares nothing, because no canonical camera changes until the finger lifts. So the corridor
+  // stayed degenerate for the entire gesture and `presented` was computed against the RESTING
+  // viewport while the reader dragged new world onto the glass — measured on hardware as two blank
+  // slices of the leading edge, and every missing object appearing at once at release.
+  assert.match(camera, /readonly onPresentationAdvanced\?: \(tx: number, ty: number, zoom: number, padPlaneUnits: number, epoch: number\) => void;/u);
+  assert.match(camera, /handoffToProduct\(\s*onPresentationAdvanced,/u);
+  assert.match(surface, /onPresentationAdvanced: advancePresentation,/u);
+  // The budget is the renderer's OWN cull margin, named rather than copied, so the band the plane
+  // reports within can never drift from the band the renderer paints.
+  assert.match(surface, /advancePoints: CULL_MARGIN_POINTS,/u);
+  assert.equal(/advancePoints: \d/u.test(surface), false, 'the reporting budget is never a second literal');
+
+  // The RULE is an ordinary function, not a body inside a worklet reaction. `useAnimatedReaction` is
+  // a no-op in the test runtime by design, so a rule living inside it would be a rule nothing could
+  // check — which is exactly how a corridor nobody opened survived a green suite.
+  assert.match(culling, /export function presentationAdvance\(/u);
+  assert.match(culling, /if \(!Number\.isFinite\(moved\) \|\| moved < advancePoints\) return null;/u);
+  assert.match(camera, /const advance = presentationAdvance\(/u);
+  assert.match(camera, /if \(advance === null\) return;/u);
+
+  // Epoch-guarded exactly as the retirement is: a report that lost a race to a newer motion describes
+  // a plane that is no longer on the glass.
+  assert.match(surface, /if \(binding === null \|\| advanceEpoch !== binding\.epoch\.get\(\)\) return;/u);
+  // Class D and nothing else, the same as the retirement beside it.
+  const advance = surface.slice(surface.indexOf('const advancePresentation = useCallback('), surface.indexOf('const motion = usePresentationCamera('));
+  assert.ok(advance.length > 0, 'the advance path exists');
+  for (const forbidden of ['store', 'dispatch', 'inspectObject', 'panByTranslation', 'outcome']) {
+    assert.equal(advance.includes(forbidden), false, `a corridor advance must not reach ${forbidden}`);
+  }
+  // It WIDENS and never replaces: an object on the glass cannot blink because the hand moved on.
+  assert.match(surface, /const next = envelopeHull\(current, reached\);/u);
+
+  // And the commit beside it may not take the band away again. Narrowing to "from here to rest" is
+  // right for a travel — the path is known and everything behind the plane is finished with — and
+  // wrong for a drag, which is going somewhere nobody knows yet. Without the distinction a canonical
+  // commit undid each advance a render after it was granted, which a mounted-surface test caught by
+  // watching the corridor widen and collapse in consecutive renders.
+  assert.match(surface, /const held = motion\.dragging\.get\(\) === 1;/u);
+  assert.match(surface, /const next = held \? envelopeHull\(current, exact\) : exact;/u);
+  assert.equal((surface.match(/dragging\.get\(\)/gu) ?? []).length, 1, 'the drag state is read once, at the same bounded boundary as the residual');
+  assert.match(culling, /export function expandedEnvelope\(/u);
+  // And the band is translation only — a pinch writes no residual per frame, so widening the zoom
+  // interval would multiply the candidate set for nothing a reader could see.
+  assert.match(culling, /zoomMin: envelope\.zoomMin,\s*\n\s*zoomMax: envelope\.zoomMax,\s*\n\s*\}\);\s*\n\}/u);
 });
 
 test('R3-03 — an unrepresentable transition is a cut, and its cut is never uncovered', () => {

@@ -15,6 +15,7 @@ import type { HistoricalDisclosure, HistoricalInspectionResolution, HistoricalSe
 
 import { inspectObject, mapProjectionRequest, type MapInspectionContext } from '../../map';
 import type { HistoricalDisclosureEntry } from '../../projection';
+import { latestReturnCheckpoint, type ReturnCheckpointTarget } from '../../return-navigation';
 import { sessionPosition, type CanonicalStore, type InspectionRef } from '../../state';
 import { chromeProjection, type ChromeProjection } from '../model';
 import type { OrientationModel, ReturnOpportunityId } from '../types';
@@ -149,4 +150,23 @@ export function inspect(store: CanonicalStore, context: MapInspectionContext, re
   const ref = store.getState().inspection;
   if (ref === null) throw new Error('fixture inspection left no reference');
   return ref;
+}
+
+/**
+ * Begins a REAL explicit inspection journey and returns the checkpoint it started from.
+ *
+ * T-12 §14 made this necessary and it is the point of the change: only an act that establishes an
+ * inspection can record an Original Inspection origin, so a test that binds one has to begin a
+ * journey rather than take whatever checkpoint happens to be latest. Every fixture here previously
+ * used a Return to World checkpoint — a perfectly valid handle that is not an inspection at all, and
+ * exactly the R3-04 case the mint now refuses.
+ *
+ * The checkpoint it yields captures the PRE-act viewpoint, which is what "the viewpoint this
+ * inspection started from" means and what an Exact Return restores.
+ */
+export function beginInspectionJourney(store: CanonicalStore, disclosure: HistoricalDisclosure = TWO_CONTEXT_WORLD()): ReturnCheckpointTarget {
+  inspect(store, contextAt(disclosure), { family: 'THREAD', id: 'thread-a' });
+  const target = latestReturnCheckpoint(store);
+  if (target === null) throw new Error('fixture journey recorded no checkpoint');
+  return target;
 }

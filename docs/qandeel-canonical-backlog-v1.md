@@ -123,16 +123,17 @@ still not automatically backlog (BG-06), and admission still authorizes no imple
 | `OPEN-08` | Coarse Temporal Step | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `OPEN-09` | Object-Originated Version Jump | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `OPEN-19` | Dedicated No-Op Acknowledgement | `UNASSIGNED` | `LOW` | `OPEN — UNASSIGNED` |
-| `QAN-BL-T12-01` | Original Inspection Journey-Origin Binding | `T-12 — Final Integration` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-T12-02` | Locale Provider / Regional Numeral Policy | `T-12 — Final Integration` | `MEDIUM` | `DEFERRED — OWNED` |
-| `QAN-BL-T12-03` | Final App-Shell Composition | `T-12 — Final Integration` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-MOT-01` | Meaning Ignition Authoritative Trigger | `T-12 — Final Integration` | `MEDIUM` | `DEFERRED — OWNED` |
-| `QAN-BL-MOT-02` | Exact Composite Spatial-Cause Binding | `T-12 — Final Integration` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-MOT-03` | Physical Motion Validation | `T-12 — Final Integration / pre-release physical validation gate` | `HIGH` | `VALIDATION — OPEN` |
-| `QAN-BL-MOT-04` | Direct-Drag Presentation Culling | `T-12 — Final Integration / pre-release physical validation gate` | `MEDIUM` | `VALIDATION — OPEN` |
-| `QAN-BL-RSP-01` | Physical Responsive Recomposition Validation | `T-12 — Final Integration / pre-release physical validation gate` | `HIGH` | `VALIDATION — OPEN` |
-| `QAN-BL-RSP-02` | Outboard Live Label Clipped at Large Text | `T-12 — Final Integration` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-T12-04` | Mobile Auth Session Storage Production Security + Device Validation | `T-12 — Final Integration / pre-release physical validation gate` | `HIGH` | `VALIDATION — OPEN` |
+| `QAN-BL-T12-01` | Original Inspection Journey-Origin Binding | `T-12 — Final Integration` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-T12-02` | Locale Provider / Regional Numeral Policy | `T-12 — Final Integration` | `MEDIUM` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-T12-03` | Final App-Shell Composition | `T-12 — Final Integration` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-MOT-01` | Meaning Ignition Authoritative Trigger | `T-12 — Final Integration` | `MEDIUM` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-MOT-02` | Exact Composite Spatial-Cause Binding | `T-12 — Final Integration` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-MOT-03` | Physical Motion Validation | `T-12 — Final Integration / pre-release physical validation gate` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-MOT-04` | Direct-Drag Presentation Culling | `T-12 — Final Integration / pre-release physical validation gate` | `MEDIUM` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-RSP-01` | Physical Responsive Recomposition Validation | `T-12 — Final Integration / pre-release physical validation gate` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-RSP-02` | Outboard Live Label Clipped at Large Text | `T-12 — Final Integration` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-T12-04` | Mobile Auth Session Storage Production Security + Device Validation | `T-12 — Final Integration / pre-release physical validation gate` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-SEC-01` | Mobile Credential Backup & Hardware Security Hardening | `QAN-SEC-01 — Pre-release Mobile Credential Security` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-T13-01` | Restart / Recovery / Persistence | `T-13 — Recovery / Persistence` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-NAV-01` | Cross-Session Timeline | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-NAV-02` | Analysis Replay | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
@@ -211,263 +212,48 @@ two separate gates, and any coarse step would have to answer to both.
   feedback is insufficient, *and* Architecture opens a dedicated contract for the acknowledgement.
 - **Status:** `OPEN — UNASSIGNED`
 
-### `QAN-BL-T12-01` — Original Inspection Journey-Origin Binding
+### `QAN-BL-SEC-01` — Mobile Credential Backup & Hardware Security Hardening
 
-- **Title / Finding:** nothing establishes the real origin of an inspection **journey**. T-08
-  consumes an opaque origin and can mint none, so the Exact Return control has no supplier.
-- **Source:** [T-08 §13 — "The original inspection is consumed, never manufactured (R3-04)"](inspection-orientation-return-chrome-v1.md),
-  which defers it in those words: "establishing the real inspection-**journey** origin at the actual
-  journey boundary". See also T-08 §6, "The Exact Return opportunity (R2-01, narrowed by R3-04)".
-- **Why deferred:** T-08 is consumer-only for the opaque origin capability. Same-store provenance is
-  necessary and is proven by T-07, but it is not evidence that a checkpoint is the named origin of a
-  real explicit inspection journey — a checkpoint recorded by Return to World is a valid handle and
-  is not an inspection at all. T-08 is not app-shell integrated and owns no journey coordinator, so
-  the origin belongs at the actual integration boundary.
-- **Owner task:** `T-12 — Final Integration`
+- **Title / Finding:** the accepted-v1 auth storage boundary has two platform-security residues:
+  Android `allowBackup` currently resolves to `true`, so the isolated auth database is eligible for
+  Auto Backup; and the iOS functional storage contract is proven on a Release simulator rather than
+  physical hardware, so iOS Data Protection / backup-exclusion behaviour is not physically attested.
+- **Source:** [T-12 auth storage-at-rest disposition §§4, 6 and 7](t12-auth-storage-at-rest-disposition-v1.md),
+  admitted by T-12 BG-08 closure reconciliation after AC-03 explicitly accepted the v1 storage risk.
+- **Why deferred:** T-12 proved the functional auth-storage lifecycle on Android hardware and iOS
+  Release simulator and Architecture/Security explicitly accepted the v1 SQLite threat boundary.
+  Changing backup policy changes the native artifact and belongs in one deliberate pre-release
+  credential-security pass rather than an unvalidated final T-12 edit.
+- **Owner task:** `QAN-SEC-01 — Pre-release Mobile Credential Security`
 - **Severity:** `HIGH`
-- **Reopen condition:** automatic when T-12 begins.
-- **Current truth:** until such an origin is supplied, the relevant Exact Return control is simply
-  absent. That is the correct behaviour, not a defect awaiting a workaround.
-- **Constraint on the future work:** T-12 may add a narrow journey-origin coordinator or integration
-  seam **without reopening T-07's return semantics**. T-07 remains the final execution authority and
-  re-proves provenance and presence before writing anything.
+- **Reopen condition:** automatic before the first production-store release, or earlier if the
+  auth-storage mechanism, backup policy, platform credential model or mobile threat model changes.
+- **Required future properties:** settle Android backup policy (`allowBackup: false` or precise
+  auth-database exclusion); settle the equivalent iOS backup/Data-Protection policy; validate the
+  generated native configuration; preserve sign-out removal, identity isolation, token replacement,
+  and the prohibition on Product truth / QANDEEL conversation `sessionId` in auth storage; use
+  maintained platform mechanisms only — no custom cryptography.
 - **Status:** `DEFERRED — OWNED`
 
-### `QAN-BL-T12-02` — Locale Provider / Regional Numeral Policy
-
-- **Title / Finding:** no regional locale authority exists. Numerals are Western in both languages
-  through one formatter, and no regional numeral policy is frozen.
-- **Source:** [T-08 §13 — "Arabic and English are both real, and neither is the semantics"](inspection-orientation-return-chrome-v1.md):
-  "No regional numeral policy is frozen here; that belongs with T-12's locale provider."
-- **Why deferred:** T-08 owns language presentation, not regional locale authority. Its seam is a
-  *language* and carries no region, and `ar` alone does not determine digits.
-- **Owner task:** `T-12 — Final Integration`
-- **Severity:** `MEDIUM`
-- **Reopen condition:** automatic when T-12 integrates the final locale and app composition.
-- **Status:** `DEFERRED — OWNED`
-
-The VI-01 register law remains the authority over Arabic register and vocabulary; this item is about
-regional locale and numeral policy only, and defines neither.
-
-### `QAN-BL-T12-03` — Final App-Shell Composition
-
-- **Title / Finding:** the T-06, T-08 and T-10 layers are not mounted into the final app shell.
-  Where each Product surface appears is undecided.
-- **Source:** [T-06 §13](temporal-navigation-layer-v1.md) ("Nothing under `src/temporal-navigation/`
-  is mounted in the app shell … where the temporal surface appears in the Product is a later task's
-  decision"); [T-08 §11](inspection-orientation-return-chrome-v1.md) ("final app-shell integration to
-  T-12") and T-08 §12 ("the app shell and the router root reference nothing in `orientation-chrome`;
-  T-08 is mounted nowhere"); [T-10 traceability §5, static guard 5](living-analysis-map-motion-system-v1-traceability.md)
-  ("no app-shell mount — the app shell still mounts no world").
-- **Why deferred:** the layers were intentionally left unmounted so that each could be proven as its
-  own owner. Composition is a distinct act with its own correctness conditions.
-- **Owner task:** `T-12 — Final Integration`
-- **Severity:** `HIGH`
-- **Reopen condition:** automatic when T-12 begins.
-- **Status:** `DEFERRED — OWNED`
-
-Recorded here as an obligation, not as a design. This entry defines no shell structure, no route
-topology, no mount order and no surface arrangement.
-
-### `QAN-BL-MOT-01` — Meaning Ignition Authoritative Trigger
-
-- **Title / Finding:** the M5 Meaning Ignition cue has no authoritative Product trigger, so it is
-  absent in v1.
-- **Canonical disposition:** `MEANING_IGNITION_TRIGGER_DEFERRED_TO_T12`
-- **Source:** [T-10 §8 — "Meaning Ignition disposition"](living-analysis-map-motion-system-v1.md);
-  §2 (the M5 row) and §3 (Q4). Traceability §2 Q4 and §3 PM-14.
-- **Why deferred:** no authoritative Product signal currently distinguishes a true committed semantic
-  crystallization from a fetch completing, a projection being replaced, a remount, or navigation.
-  Inventing a trigger would make motion the authority for a Product claim.
-- **Owner task:** `T-12 — Final Integration`
-- **Severity:** `MEDIUM`
-- **Reopen condition:** T-12 finds or defines the correct authoritative seam — without making motion
-  the authority for it.
-- **If no such signal exists:** keep the cue absent. Do not invent a trigger, and do not ship a
-  dormant one. The absence is structural today: the motion owner cannot observe a live advance, a
-  Live Focus transition or a fetch at all.
-- **Status:** `DEFERRED — OWNED`
-
-### `QAN-BL-MOT-02` — Exact Composite Spatial-Cause Binding
-
-- **Title / Finding:** binding an already-returned T-07 outcome to the exact camera transition it
-  belongs to is not owned by T-10. The pure composite choreography exists and is tested; no
-  production path can produce a cause, and the camera passes `null` unconditionally.
-- **Canonical disposition:** `COMPOSITE_SPATIAL_CAUSE_BINDING_DEFERRED_TO_T12`
-- **Source:** [T-10 §10a — "R3 — the final path"](living-analysis-map-motion-system-v1.md);
-  [T-10 traceability §5, guard R3-j](living-analysis-map-motion-system-v1-traceability.md); PM-27.
-- **Why deferred:** T-10 can own pure choreography but not the final outcome → exact
-  camera-transition composition boundary. A pending token has no owner: a mailbox is not a binding,
-  and which canonical change an already-returned outcome belongs to is a composition fact the motion
-  owner does not have and cannot acquire without taking T-12's integration ownership.
-- **Owner task:** `T-12 — Final Integration`
-- **Severity:** `HIGH`
-- **Reopen condition:** automatic when T-12 begins.
-- **Required future property:** one exact transition, one owner generation, one shot, invalidated by
-  a stale, replacement or intervening act, and never borrowed by an unrelated camera action.
-- **Status:** `DEFERRED — OWNED`
-
-### `QAN-BL-MOT-03` — Physical Motion Validation
-
-- **Title / Finding:** `PHYSICAL MOTION REVIEW PENDING`. The frozen T-10 motion has never been felt
-  on real hardware.
-- **Source:** [T-10 §10 — "Physical-device items still pending"](living-analysis-map-motion-system-v1.md);
-  [T-10 traceability §3 PM-19 and §5](living-analysis-map-motion-system-v1-traceability.md) ("the
-  retirement's behaviour is a device item"). The owner named below is an Architecture designation
-  made by QAN-GOV-01 under BG-06; the T-10 documents state the items without naming an owner.
-- **Why deferred:** exact-head CI proves build, install and boot integrity, not perceptual feel on
-  real, release-capable hardware. The authoring machine has no Android SDK, no emulator and no Xcode,
-  and jest-expo mocks the native side of Reanimated, so no mid-travel frame is observable there.
-- **Owner task:** `T-12 — Final Integration / pre-release physical validation gate`
-- **Severity:** `HIGH`
-- **Validation set:**
-  1. perceptual parity of the 260–540 ms travel band on a mid-range Android and on iOS;
-  2. perceptibility of the commit acknowledgement after the 6 % → 9 % `scaleY` tuning;
-  3. Android drag and release continuity feel;
-  4. Arabic / RTL 1:1 Timeline scrub tracking on hardware;
-  5. re-measurement of the T-10.0 ~190–220 ms depth-change stall — observed in a dev bundle and
-     attributed to React reconciliation — in a release / native context;
-  6. interruption feel when one act retargets another mid-travel without carrying velocity.
-- **Reopen condition:** device evidence shows teleport, pop, visible discontinuity, incorrect or
-  harmful reduced-motion behaviour, unacceptable jank, a failed 1:1 scrub, or any other violation of
-  the frozen T-10 motion contract.
-- **If validation passes:** close as `CLOSED — TOMBSTONE` with the device evidence recorded. Do not
-  invent tuning work to justify the gate.
-- **Status:** `VALIDATION — OPEN`
-
-Nothing here is known to be wrong. This item exists because a specific class of claim cannot be made
-from code and CI alone.
-
-### `QAN-BL-MOT-04` — Direct-Drag Presentation Culling
-
-- **Title / Finding:** during an M0 direct drag the surface still uses T-04's resting viewport cull,
-  so an object carried in from beyond the cull margin is not repainted until the `PAN` commits.
-- **Source:** [T-10 §10a — "Carried forward, not fixed here"](living-analysis-map-motion-system-v1.md).
-  The owner named below is an Architecture designation made by QAN-GOV-01 under BG-06.
-- **Why deferred:** the surface intentionally does not re-render while a finger is down — that is
-  what makes a 60-frame drag cost zero React renders and zero crossings to the Product runtime. The
-  behaviour predates T-10, T-10 did not change it, and it is outside the R3 M4 / M3 scope. It is
-  recorded here rather than left to be rediscovered.
-- **Owner task:** `T-12 — Final Integration / pre-release physical validation gate`
-- **Severity:** `MEDIUM`
-- **Reopen condition:** hardware testing shows visible pop-in, blank entry, a missing
-  currently-disclosed object, or another user-visible continuity defect during a direct drag.
-- **If no visible defect:** close by validation, not by architecture churn. The performance property
-  that produces this behaviour is deliberate.
-- **Status:** `VALIDATION — OPEN`
-
-### `QAN-BL-RSP-01` — Physical Responsive Recomposition Validation
-
-- **Title / Finding:** `PHYSICAL RESPONSIVE REVIEW PENDING`. The frozen T-11 recomposition has never
-  been laid out by a real type engine, a real safe-area provider or a real window manager.
-- **Source:** [T-11 §11 and §15](responsive-recomposition-v1.md) — "Native and physical validation
-  limits", which states the four unproven claims by name rather than glossing them.
-- **Why deferred:** `jest-expo` performs no layout at all — there is no Yoga in the test renderer, so
-  `onLayout` never fires by itself and the proof composition supplies the rect a real column would
-  produce. That proves everything the responsive owner does *given* a measurement, and nothing about
-  the measurement itself. The browser proof shows real layout of the real components, but browser
-  layout is not native layout and is in particular not a Dynamic Type proof. The authoring machine
-  has no simulator, emulator, Xcode or device, and exact-head CI proves build, install and boot
-  integrity rather than perceptual layout on release-capable hardware.
-- **Owner task:** `T-12 — Final Integration / pre-release physical validation gate`
-- **Severity:** `HIGH`
-- **Validation set:**
-  1. real type-engine layout of the Arabic and English return wording at the largest system text
-     sizes, at 320 points, in both writing directions — no clipped final line, no ellipsis on any
-     canonical identity, status or Return wording, and every control still at least 44 points;
-  2. real safe-area insets on a notched device and on a gesture-bar device, including the asymmetric
-     and landscape cases, with the chrome's bottom seam and the Map's usable rect both correct;
-  3. real continuous resize — split view, Stage-Manager-style dragging and orientation change — with
-     no visible lag, no band flip-flop and no layout loop;
-  4. a real mid-travel resize and a real mid-scrub resize performed with a finger, confirming no
-     teleport and no stale-mapped commit on hardware — and, on the mid-scrub case, whether the
-     retirement READS as an interruption. It reuses T-06's own cancellation choreography exactly,
-     so the preview cursor fades out under a finger that is still down and nothing previews again
-     until that finger lifts. That is correct and it is deliberately silent: a positive signal
-     would need either a new motion vocabulary or new Product copy, and T-11 is authorized to add
-     neither. Whether silence is enough is a perceptual question, and this is where it is asked.
-- **Reopen condition:** device evidence shows clipped or ellipsized essential wording, a control
-  below 44 points, an unreachable act, a band that oscillates, a visible layout lag during a
-  continuous resize, a teleport during a resize under motion, a stale-mapped temporal commit, or any
-  other violation of the frozen T-11 contract.
-- **If validation passes:** close as `CLOSED — TOMBSTONE` with the device evidence recorded. Do not
-  invent tuning work to justify the gate.
-- **Status:** `VALIDATION — OPEN`
-
-Nothing here is known to be wrong. This item exists because a specific class of claim — how a real
-type engine, a real inset provider and a real window manager lay out these exact strings — cannot be
-made from code and CI alone. It is admitted under BG-08 before T-11 closes rather than left in a
-report.
-
-### `QAN-BL-RSP-02` — Outboard Live Label Clipped at Large Text
-
-- **Title / Finding:** T-05 gives the outboard Live slot a fixed `width: OUTBOARD_LIVE_EXTENT` (64
-  points) with `overflow: 'hidden'`. At a 200 % system text size its label — "Go live" / "Live", and
-  the Arabic equivalents — needs roughly 110 points, so the reader sees "Go". Essential wording is
-  clipped by a fixed presentation width.
-- **Source:** [T-11 §15 — "What the proof found that T-11 could not fix"](responsive-recomposition-v1.md).
-  Visible in the `P07-large-text` and `P07b-largest-text` frames of the T-11 visual proof.
-- **Why deferred:** it is **pre-existing and outside T-11's reach**, not a T-11 regression. The slot,
-  its fixed width and its clip all predate this task, and the clipping occurs at that text size with
-  or without the responsive layer. T-11 cannot fix it either: the T-06 contract holds every T-05
-  file byte-identical, and a presentation task reaching sideways into a frozen owner to change its
-  geometry is exactly what that freeze exists to prevent. The control's accessible name is
-  unaffected, so the act remains reachable to a screen reader; what is lost is the visible word.
-- **Owner task:** `T-12 — Final Integration`
-- **Severity:** `HIGH` — clipped essential wording is an accessibility-parity failure at a text size
-  real readers use, even though no act becomes unreachable.
-- **Reopen condition:** automatic when T-12 begins. Any fix must keep T-06's single physical mirror
-  rule and the outboard slot's separation from Moment-targeting space intact: the slot may grow, but
-  it may not become part of the strip, and `presentationX` must keep receiving T-05's own measured
-  viewport.
-- **Status:** `DEFERRED — OWNED`
-
-The two candidate shapes — letting the slot size to its content, or giving the Track row a wrapping
-composition at large text — are recorded as observations, not as a design. Which one is correct
-depends on where the temporal surface finally sits, which is `QAN-BL-T12-03`'s question.
+This item is platform-wide: Family, Match and any future QANDEEL surface using the shared mobile auth
+foundation inherit the same credential-storage boundary.
 
 ### `QAN-BL-T12-04` — Mobile Auth Session Storage Production Security + Device Validation
 
-- **Title / Finding:** the mobile auth-session store that T-12P introduced is **not encrypted at
-  rest**, and no test or CI job exercises its real persistence path. It holds Supabase session
-  material — an access token and a refresh token — through `expo-sqlite/kv-store` in its own
-  database file.
-- **Source:** [T-12P §4 and §9](mobile-runtime-entry-preconditions-v1.md), which record the storage
-  choice, its threat posture and the exact claims local gates cannot make. Admitted under BG-06 by
-  the T-12P R1 independent Architecture + Security review.
-- **Why deferred:** it is a validation and disposition item, not a defect and not unfinished work.
-  The adapter follows a current official Expo/Supabase integration path and adds no custom
-  cryptography, which is what T-12P was authorized to do. What cannot be settled from code and CI on
-  the authoring host is how the real store behaves on device and whether an encrypted-at-rest
-  mechanism is warranted — and that judgement needs the then-current official guidance and the
-  actual observed session size, neither of which is knowable in advance.
-- **Owner task:** `T-12 — Final Integration / pre-release physical validation gate`
-- **Severity:** `HIGH` — persisted authentication material on a device is a credential-exposure
-  surface, even though nothing is known to be wrong today.
-- **Validation set:** on release-equivalent or physical iOS **and** Android, exercise the real
-  auth-session storage path end to end:
-  1. persist a session;
-  2. restart the process and restore the auth session only — with no Product truth restored;
-  3. refresh the token and confirm the persisted material is replaced, not duplicated;
-  4. sign out and confirm the credential is removed;
-  5. replace the identity and confirm the previous identity's material cannot be read back.
-- **Reopen condition:** device evidence shows a session that fails to persist or restore, credential
-  material surviving a sign-out, one identity reading another's material, a stored value the chosen
-  mechanism cannot hold, or any other violation of the T-12P storage boundary.
-- **Required disposition at that gate:** Architecture and Security explicitly disposition
-  encrypted-at-rest storage using the **then-current** maintained official Expo/Supabase pattern and
-  the observed stored-session behaviour and size. Official guidance is currently mixed — Supabase's
-  React Native quickstart uses AsyncStorage, its Expo quickstart and Expo's own Supabase guide use
-  `expo-sqlite`, while Supabase's client reference documents a SecureStore-backed `LargeSecureStore`
-  and Expo's authentication guide recommends `expo-secure-store` for tokens — so the choice must be
-  made against the guidance and evidence of that day rather than restated from this entry. If SQLite
-  remains, its threat model and acceptance must be written down explicitly.
-- **Status:** `VALIDATION — OPEN`
+> **Historical pre-closure schema retained for the frozen T-12P contract only.** This block records
+> what T-12 inherited before physical validation. It is not the current lifecycle state; the current
+> state is the `CLOSED — TOMBSTONE` record in §6 below.
 
-This is validation residue. It is **not** T-13 Product persistence: `CanonicalState`, the camera,
-TC/PTC, RH, inspection, Live Focus, Return state, the disclosure cache and the conversation
-`sessionId` remain forbidden from this store and stay T-13's. It is also not an auth UI question. No
-custom or hand-rolled cryptography is authorized by this entry.
+- **Title / Finding:** production mobile auth-session storage security and native lifecycle/device validation were still outstanding at T-12P closure.
+- **Source:** T-12P mobile runtime-entry preconditions and the original canonical backlog admission for `QAN-BL-T12-04`.
+- **Why deferred:** T-12P established the runtime-entry boundary but deliberately left production physical validation to T-12 Final Integration.
+- **Owner task:** `T-12 — Final Integration / pre-release physical validation gate`
+- **Severity:** `HIGH`
+- **Reopen condition:** T-12 physical validation gate reached with production-equivalent auth storage and native builds.
+- **Status:** `VALIDATION — OPEN`
+- **Validation set:** persistence/restore, token replacement, identity isolation, sign-out removal, auth-only storage boundary, Android hardware, and iOS Release-native evidence where available.
+
+This historical validation residue was **not** T-13 Product persistence. Historical T-12 physical-gate inheritance included `QAN-BL-RSP-01`, `QAN-BL-T12-04`. T-12 subsequently discharged it; the only narrower future security residue is `QAN-BL-SEC-01`.
 
 ### `QAN-BL-T13-01` — Restart / Recovery / Persistence
 
@@ -510,31 +296,126 @@ happens to reversible history — are defined here.
 
 ## 6. Tombstones
 
-None at this baseline. No backlog item has been closed.
+All T-12 tombstones below were reconciled under BG-08 against **T-12 — Final Living Analysis Map
+Integration v1**, PR **#220**, with final implementation/validation evidence head
+**`02bff1b61c65c33a0d186da52dfa25d25baebe9e`**. The BG-08 commits after that head are governance-
+record changes only and do not modify Product/runtime code.
 
-Under BG-04, a closed item is moved to this section as `CLOSED — TOMBSTONE`, keeps its ID for ever,
-and records the closing task, PR, SHA and a short disposition. IDs are never re-issued.
+### `QAN-BL-T12-01` — Original Inspection Journey-Origin Binding
+
+- **Closing task:** `T-12 — Final Integration`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed. T-12 supplies the real inspection-journey origin at the integration
+  boundary; T-07 remains the final Return execution authority and no origin is manufactured by
+  presentation.
+- **Status:** `CLOSED — TOMBSTONE`
+
+### `QAN-BL-T12-02` — Locale Provider / Regional Numeral Policy
+
+- **Closing task:** `T-12 — Final Integration`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed. One app-level locale authority is integrated; language and direction
+  remain independent; Egypt is the v1 region where needed; Western `latn` digits remain the v1
+  numeral policy unless a later Product contract changes it.
+- **Status:** `CLOSED — TOMBSTONE`
+
+### `QAN-BL-T12-03` — Final App-Shell Composition
+
+- **Closing task:** `T-12 — Final Integration`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed. The real Product root composes the Living Analysis Map owners from one
+  canonical runtime/store; the FoundationShell validation path is not the Product route.
+- **Status:** `CLOSED — TOMBSTONE`
+
+### `QAN-BL-MOT-01` — Meaning Ignition Authoritative Trigger
+
+- **Closing task:** `T-12 — Final Integration`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed by the canonical no-trigger branch. T-12 found no truthful authoritative
+  semantic-crystallization signal, therefore **NO MEANING IGNITION CUE SHIPS**. No dormant or
+  fabricated trigger was introduced.
+- **Status:** `CLOSED — TOMBSTONE`
+
+### `QAN-BL-MOT-02` — Exact Composite Spatial-Cause Binding
+
+- **Closing task:** `T-12 — Final Integration`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed. The exact `GO_LIVE_AND_LOCATE` cause is bound one-shot to its exact
+  camera transition and cannot be borrowed by an unrelated act.
+- **Status:** `CLOSED — TOMBSTONE`
+
+### `QAN-BL-MOT-03` — Physical Motion Validation
+
+- **Closing task:** `T-12 — Final Integration / pre-release physical validation gate`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** passed under the T-12 platform matrix. Release-equivalent Android hardware evidence
+  on the Honor X9b plus iOS Release native/simulator evidence showed no blocking teleport, jank or
+  truth/parity violation. The protected Pan baseline remained 0.00% janky in measured runs and the
+  user's physical judgement was smooth, fast, direct and comfortable.
+- **Status:** `CLOSED — TOMBSTONE`
+
+### `QAN-BL-MOT-04` — Direct-Drag Presentation Culling
+
+- **Closing task:** `T-12 — Final Integration / pre-release physical validation gate`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** hardware testing reopened this item by proving blank-entry / sudden pop-in. T-12
+  fixed the stale live-drag visibility corridor with bounded presentation admission; before/after
+  evidence reduced the largest release-time admission jump from **+26.55 points to 0.00**, and the
+  user confirmed the visible pop-in was completely gone while Pan feel improved.
+- **Status:** `CLOSED — TOMBSTONE`
+
+### `QAN-BL-RSP-01` — Physical Responsive Recomposition Validation
+
+- **Closing task:** `T-12 — Final Integration / pre-release physical validation gate`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** passed after T-12 corrected the short-landscape allocation defect. Android physical
+  portrait↔landscape round-trips and iOS Release native composition kept all truth-bearing regions
+  visible; no zero-height support region remained; affected large-text/RTL coverage passed.
+- **Status:** `CLOSED — TOMBSTONE`
+
+### `QAN-BL-RSP-02` — Outboard Live Label Clipped at Large Text
+
+- **Closing task:** `T-12 — Final Integration`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed. The final integrated responsive composition preserves visible and
+  accessible Live wording at the required large-text envelope while keeping the outboard control
+  separate from Moment-targeting space and preserving T-05 measurement authority.
+- **Status:** `CLOSED — TOMBSTONE`
+
+### `QAN-BL-T12-04` — Mobile Auth Session Storage Production Security + Device Validation
+
+- **Closing task:** `T-12 — Final Integration / pre-release physical validation gate`
+- **PR / SHA:** `#220` / `02bff1b61c65c33a0d186da52dfa25d25baebe9e`
+- **Disposition:** completed for T-12. Android hardware and iOS Release-simulator lifecycle validation
+  proved persist/restore, token replacement, sign-out removal, identity isolation and auth-only
+  restoration. Architecture/Security produced
+  [`t12-auth-storage-at-rest-disposition-v1.md`](t12-auth-storage-at-rest-disposition-v1.md) and
+  explicitly accepted the v1 isolated SQLite risk boundary; no custom cryptography was introduced.
+  The narrower platform-hardening residue — Android backup policy and physical iOS backup/Data-
+  Protection attestation — is admitted separately as `QAN-BL-SEC-01`, not left hidden inside this
+  closed item.
+- **Status:** `CLOSED — TOMBSTONE`
 
 ---
 
 ## 7. Counts at this baseline
 
 | Status | Count |
-| --- | --- |
-| `DEFERRED — OWNED` | 7 |
-| `VALIDATION — OPEN` | 4 |
+| --- | ---: |
+| `DEFERRED — OWNED` | 2 |
+| `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 6 |
-| `CLOSED — TOMBSTONE` | 0 |
-| **Total** | **17** |
+| `CLOSED — TOMBSTONE` | 10 |
+| **Total** | **18** |
 
 | Severity | Count |
-| --- | --- |
-| `HIGH` | 8 |
+| --- | ---: |
+| `HIGH` | 9 |
 | `MEDIUM` | 8 |
 | `LOW` | 1 |
 
-`QAN-BL-T12-04` was admitted under BG-06 by the T-12P R1 independent Architecture + Security review.
-It is the only addition since this document's own baseline.
+T-12 inherited ten items and all ten are now tombstoned. `QAN-BL-SEC-01` is the sole new BG-08
+admission from T-12 closure residue.
 
 ---
 
@@ -568,26 +449,34 @@ At the kickoff of any future task, Architecture:
 4. confirms that no finding from the previous task's review was moved here in violation of BG-01;
 5. leaves any `OPEN — UNASSIGNED` item alone unless the task contract explicitly claims it.
 
-Inherited at this baseline:
+Inherited after T-12 closure reconciliation:
 
 | Task | Items it inherits on kickoff |
 | --- | --- |
 | `T-11` | none |
-| `T-12 — Final Integration` | `QAN-BL-T12-01`, `QAN-BL-T12-02`, `QAN-BL-T12-03`, `QAN-BL-MOT-01`, `QAN-BL-MOT-02`, `QAN-BL-RSP-02`, and — at the pre-release physical validation gate — `QAN-BL-MOT-03`, `QAN-BL-MOT-04`, `QAN-BL-RSP-01`, `QAN-BL-T12-04` |
+| `QAN-SEC-01 — Pre-release Mobile Credential Security` | `QAN-BL-SEC-01` |
 | `T-13 — Recovery / Persistence` | `QAN-BL-T13-01` |
+| `T-12 — Final Integration` | none — reconciled and tombstoned under BG-08 / PR #220 |
 
-T-11 inherits nothing from this backlog. That is a fact about the register, not a statement that
-T-11 has been started, scoped or authorized.
+T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 
 ### At closure (BG-08)
 
 Before any task is declared CLOSED / FROZEN, Architecture:
 
 1. reconciles every backlog item that task inherited — completed → `CLOSED — TOMBSTONE` with the
-   closing task, PR, SHA and disposition; re-owned to one named task; or still deferred with a
+   closing task, PR and SHA and disposition; re-owned to one named task; or still deferred with a
    recorded reason;
 2. admits every newly accepted cross-task deferral that qualifies under BG-06, with the complete
    schema of §2;
 3. leaves every current blocker where it belongs — inside the active task, fixed (BG-01);
 4. does not declare the task CLOSED / FROZEN while a qualifying cross-task residue exists only
    outside this document.
+
+### T-12 closure record
+
+T-12 BG-08 reconciliation is complete on PR #220 against final implementation/validation evidence
+head `02bff1b61c65c33a0d186da52dfa25d25baebe9e`: all ten inherited items are tombstoned, the one
+qualifying new security residue is admitted as `QAN-BL-SEC-01`, and no T-12 Product, validation,
+Architecture or Security blocker remains open in this register. The BG-08 commits after that head
+are documentation-only governance records and do not alter Product/runtime code.

@@ -282,6 +282,10 @@ test('R2-01 — the public surface is exactly the safe set, and exports no raw s
   // availability, the projection-bound Live-Focus capability, and the TECHNICAL projection helper the
   // P5 provider seam is built from.
   assert.deepEqual(values.sort(), [
+    // T-12 §14: the frozen set of acts whose checkpoint can be an inspection-journey ORIGIN. Data,
+    // not authority — a reader of it can neither mint a target nor execute anything, and it exposes
+    // no checkpoint internal.
+    'INSPECTION_JOURNEY_ORIGIN_ACTS',
     'RETURN_ACTION_AUTHORITY',
     'RETURN_ACT_IDS',
     'backOneStep',
@@ -291,6 +295,11 @@ test('R2-01 — the public surface is exactly the safe set, and exports no raw s
     // a presentation that must stop offering an act it can never perform. It exposes no checkpoint
     // internals and grants nothing; T-07 remains the independent final execution authority.
     'isCurrentReturnCheckpointTargetForStore',
+    // T-12 §14: the SECOND, strictly narrower provenance question. It asks everything the first asks
+    // and then whether the entry behind the handle was recorded by a journey-capable act, so "the
+    // original inspection" is bound from evidence instead of asserted about any valid handle. It
+    // reads the recorded ACT and no part of the checkpoint, holds nothing, and grants nothing.
+    'isInspectionJourneyOriginFor',
     'isReturnCheckpointTarget',
     'latestReturnCheckpoint',
     'liveFocusReturnAvailability',

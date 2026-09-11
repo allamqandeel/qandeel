@@ -292,12 +292,23 @@ test('every reader-facing word comes from the one copy module, and none of it is
 test('the Exact Return opportunity is proven by T-07 provenance, and reads no checkpoint internals', () => {
   const origin = code['exact-return-origin.ts'];
   // Binding CHECKS the claim rather than recording it: a target this store did not mint never binds.
-  assert.match(origin, /export function bindExactReturnOrigin\(store: CanonicalStore, target: unknown\): ExactReturnOrigin \| null \{\s*if \(!isCurrentReturnCheckpointTargetForStore\(store, target\)\) return null;/u,
-    'binding is refused unless T-07 confirms this store minted the target and still records it');
+  //
+  // T-12 §14 RE-ANCHOR, and it is a STRENGTHENING. The predicate was
+  // `isCurrentReturnCheckpointTargetForStore`, which proves the handle is real, local and still
+  // recorded — necessary, and not evidence that the checkpoint is an inspection at all. It is now
+  // `isInspectionJourneyOriginFor`, which asks T-07 all of that AND whether the entry was recorded by
+  // an act that can begin an explicit inspection journey. Everything the old rule refused is still
+  // refused; a Return-to-World checkpoint is refused too, which is the R3-04 case by name. Weakening
+  // this back to the previous predicate would reopen that defect and must fail here.
+  assert.match(origin, /export function bindExactReturnOrigin\(store: CanonicalStore, target: unknown\): ExactReturnOrigin \| null \{\s*if \(!isInspectionJourneyOriginFor\(store, target\)\) return null;/u,
+    'binding is refused unless T-07 confirms this store minted the target, still records it, and recorded it for a journey-capable act');
   assert.match(origin, /if \(record\.store !== store\) return null;/u, 'a foreign or replaced store yields no opportunity');
-  // Validity is re-asked of T-07 on every read, against the entry itself...
-  assert.match(origin, /return isCurrentReturnCheckpointTargetForStore\(store, record\.target\) \? record\.target : null;/u,
-    'the opportunity holds only while T-07 still records this exact entry');
+  // Validity is re-asked of T-07 on every read, against the entry itself, with the SAME predicate
+  // that admitted it — one definition of validity, never two that could disagree.
+  assert.match(origin, /return isInspectionJourneyOriginFor\(store, record\.target\) \? record\.target : null;/u,
+    'the opportunity holds only while T-07 still records this exact entry as a journey origin');
+  assert.equal(origin.includes('isCurrentReturnCheckpointTargetForStore'), false,
+    'the weaker predicate is gone from this module entirely, so it cannot drift back in beside the narrower one');
   // ...and there is no ordinal, depth or count anywhere in the module, so a consumed origin cannot be
   // resurrected by history regrowing past its old position. The handle carries nothing at all.
   assert.match(origin, /export interface ExactReturnOrigin \{\s*readonly \[ORIGIN\]: true;\s*\}/u, 'the handle is opaque and empty');
@@ -654,14 +665,27 @@ test('each return promises per dimension, and the composite requires a real live
   }
 });
 
-// R3-04. The opaque capability is public; the mint is not. Same-store provenance is necessary and
-// proven, and it is still not evidence that a checkpoint is the named origin of a real journey.
+// R3-04, CLOSED by T-12 §14 rather than continued.
+//
+// The defect was that a mint over an arbitrary valid checkpoint let a caller manufacture a Product
+// capability whose name is false. R3 answered it by keeping the mint off this barrel, which stopped
+// the defect and left the legitimate journey binding with no route at all — the state QAN-BL-T12-01
+// recorded, and the reason Exact Return could never appear in the Product.
+//
+// It is now refused by the MINT, which admits only a target T-07 confirms was recorded by a
+// journey-capable act (asserted above). So the capability is public again, and what this guard pins
+// is the property that actually matters: exactly ONE constructor exists, it is the narrow one, and
+// no consumer reaches the module around the barrel. That is strictly stronger than absence — an
+// absence check would have passed silently if the ORIGINAL broad mint had been re-exported.
 test('no arbitrary checkpoint target can be minted into an Original Inspection through the public surface', async () => {
-  assert.doesNotMatch(code['index.ts'], /\bbindExactReturnOrigin\b/u, 'the mint is not part of the public barrel');
-  assert.match(code['index.ts'], /export \{ exactReturnTargetFor, isExactReturnOrigin \} from '\.\/exact-return-origin';/u,
-    'the capability and its consumer helpers stay public');
+  assert.match(code['index.ts'], /export \{ bindExactReturnOrigin, exactReturnTargetFor, isExactReturnOrigin \} from '\.\/exact-return-origin';/u,
+    'the narrow mint and the consumer helpers are the whole of the origin surface');
+  // ONE constructor. A second, broader one beside it is how the defect would return.
+  const constructors = [...code['index.ts'].matchAll(/\b(bind[A-Z]\w*|mint\w*)\b/gu)].map((match) => match[1]);
+  assert.deepEqual([...new Set(constructors)], ['bindExactReturnOrigin'], 'the barrel publishes exactly one origin constructor');
   // Nothing outside the layer reaches the module that holds it, so there is no way in around the
-  // barrel either.
+  // barrel either. The integration owner is the authorized caller and reaches it THROUGH the barrel,
+  // which is why it is not in this list — and it is proven to use the barrel by the T-12 contract.
   for (const owner of ['app', 'shell', 'map', 'state', 'timeline', 'temporal-navigation', 'return-navigation', 'projection']) {
     const dir = join(rootPath, 'apps/mobile/src', owner);
     if (!existsSync(dir)) continue;
@@ -672,12 +696,12 @@ test('no arbitrary checkpoint target can be minted into an Original Inspection t
       assert.equal(text.includes('exact-return-origin'), false, `${file} must not deep-import the origin module`);
     }
   }
-  // Inside the layer only the tests and the module itself name it: no production caller mints one.
+  // Inside the layer only the module itself and the barrel name it: no chrome component mints one.
   for (const [name, text] of Object.entries(code)) {
-    if (name === 'exact-return-origin.ts') continue;
+    if (name === 'exact-return-origin.ts' || name === 'index.ts') continue;
     assert.equal(text.includes('bindExactReturnOrigin'), false, `${name} must not mint an Original Inspection`);
   }
-  // The real journey-origin binding is explicitly deferred, in writing, to the integration gate.
+  // The real journey-origin binding is still owned by the integration gate, in writing.
   const notes = await read('docs/inspection-orientation-return-chrome-v1.md');
   assert.match(notes, /T-12/u, 'the design notes name the task that owns the real journey origin');
   assert.match(notes, /journey/iu);

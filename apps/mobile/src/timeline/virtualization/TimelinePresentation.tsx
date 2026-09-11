@@ -12,7 +12,25 @@ const MomentStep = memo(function MomentStep({ target }: { target: DisclosedMomen
 });
 const renderItem = ({ item }: { item: DisclosedMomentTarget }) => <MomentStep target={item} />;
 
-/** Presentation dimensions only; neither participates in ordinal list layout. */
+/**
+ * Presentation dimensions only; neither participates in ordinal list layout.
+ *
+ * `OUTBOARD_LIVE_EXTENT` is the outboard slot's MINIMUM extent, not its fixed one (`QAN-BL-RSP-02`,
+ * corrected in T-12 §17). It was a fixed `width` with `overflow: 'hidden'`, and the T-11 visual proof
+ * showed what that costs: at a 200 % system text size the essential Live wording — "Go live" /
+ * "Live", and the Arabic equivalents — needs roughly 110 points, so the reader saw "Go". Essential
+ * wording clipped by a presentation width is an accessibility-parity failure at a text size real
+ * readers use, and every way of "fixing" it inside 64 points is forbidden: truncating the copy,
+ * replacing it with an icon, hiding the label, and shrinking the text are all ruled out, and moving
+ * the slot under the strip would destroy the outboard identity that keeps Live out of Moment-targeting
+ * space.
+ *
+ * So the slot sizes to its content and this is its floor. Nothing shrinks: at ordinary text sizes the
+ * geometry is exactly what it was. Nothing about temporal meaning changes either — the slot is still
+ * outboard, still separated from the Track by the discontinuity, still not a Moment and still not a
+ * target — and T-05's own viewport measurement stays self-consistent because the Track's `onLayout`
+ * reports the width the list ACTUALLY got beside the slot, whatever the slot took.
+ */
 export const OUTBOARD_LIVE_EXTENT = 64;
 const DISCONTINUITY_EXTENT = 16;
 
@@ -40,7 +58,11 @@ export function TimelinePresentation({ controller, outboardLivePresentation }: {
     }
   };
   return <View>
-    <View style={{ flexDirection: 'row', height: TIMELINE_STEP }}>
+    {/* `minHeight` rather than `height`: the row was clipping the Live label in BOTH axes, and a
+        taller wrapped label needs the row to grow with it. The Track itself keeps its exact
+        `TIMELINE_STEP` below, so the invariant step, the window offset and the position scale are
+        untouched — only the row around them may be taller. */}
+    <View style={{ flexDirection: 'row', minHeight: TIMELINE_STEP }}>
     <FlatList key={`list:${state.track.sessionId}`} ref={list} testID="timeline-list" horizontal
       data={state.track.targets} renderItem={renderItem} keyExtractor={targetKey} getItemLayout={itemLayout}
       initialNumToRender={12} maxToRenderPerBatch={12} windowSize={5} updateCellsBatchingPeriod={16}
@@ -67,7 +89,10 @@ export function TimelinePresentation({ controller, outboardLivePresentation }: {
         {state.offset < state.maximum && <Text testID="timeline-discontinuity"
           accessibilityLabel="Disclosed Track continues">…</Text>}
       </View>
-      <View testID="timeline-outboard-live" style={{ width: OUTBOARD_LIVE_EXTENT, overflow: 'hidden' }}>
+      {/* Sizes to its content, never below the floor, and never clipped. `flexShrink: 0` is what
+          keeps the Track from squeezing the wording back out at a narrow width — the list beside it
+          is the flexible half and measures whatever it is left. */}
+      <View testID="timeline-outboard-live" style={{ minWidth: OUTBOARD_LIVE_EXTENT, flexShrink: 0 }}>
         {outboardLivePresentation}
       </View>
     </>}

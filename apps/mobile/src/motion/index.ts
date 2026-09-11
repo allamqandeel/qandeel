@@ -51,11 +51,13 @@ export {
   travelDurationMs,
 } from './tokens';
 
-export type { PresentationResidualEnvelope, PresentedCandidate, PresentedViewport } from './presentation-camera/culling';
+export type { PresentationAdvance, PresentationResidualEnvelope, PresentedCandidate, PresentedViewport } from './presentation-camera/culling';
 export {
   RESIDUAL_ENVELOPE_AT_REST,
   envelopeHull,
+  expandedEnvelope,
   isPresentedWithinEnvelope,
+  presentationAdvance,
   rebasedEnvelope,
   residualEnvelope,
 } from './presentation-camera/culling';

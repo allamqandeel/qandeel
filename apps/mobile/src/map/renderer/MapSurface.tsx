@@ -44,13 +44,14 @@
  */
 import { useCallback, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import {
   RESIDUAL_ENVELOPE_AT_REST,
   createArrivalRegistry,
   createBox,
   envelopeHull,
+  expandedEnvelope,
   isPresentedWithinEnvelope,
   newlyDisclosedKeys,
   rebasedEnvelope,
@@ -58,10 +59,11 @@ import {
   useAuthorityGeneration,
   usePresentationCamera,
   type PresentationCameraBinding,
+  type PresentationMotionCause,
   type PresentationResidualEnvelope,
 } from '../../motion';
-import type { CanonicalStore } from '../../state';
-import { cameraTransition, decodeCameraIntent, envelopeCenter, useMapPanGesture, type MapCamera, type ViewportEnvelope } from '../camera';
+import type { CameraIntent, CanonicalStore } from '../../state';
+import { cameraTransition, decodeCameraIntent, envelopeCenter, useMapPanGesture, useMapSemanticZoomGesture, type MapCamera, type ViewportEnvelope } from '../camera';
 import { MapAccessibilityLayer } from '../accessibility';
 import { inspectObject, type DirectJumpOutcome, type MapInspectionContext } from '../inspection';
 import { mapContextFreshness } from '../projection';
@@ -79,6 +81,16 @@ export interface MapSurfaceProps {
   readonly envelope: ViewportEnvelope;
   readonly style?: RenderStyle;
   readonly onOutcome?: (outcome: MapActionOutcome | DirectJumpOutcome) => void;
+  /**
+   * Asked ONCE, at the instant a canonical camera transition is applied, with the destination this
+   * surface is actually travelling to (T-12 §15).
+   *
+   * The surface neither knows nor asks why the camera moved — it has no access to an outcome, an act
+   * or an intent, and it cannot derive one. It carries the question to the integration owner that
+   * does, and passes the answer straight to the presentation plan. Absent, every travel is the plain
+   * one, which is exactly the behaviour before this prop existed.
+   */
+  readonly spatialCause?: (destination: CameraIntent) => PresentationMotionCause | null;
 }
 
 /** Which authority and which canonical camera the last accepted commit was drawn under. */
@@ -87,7 +99,7 @@ interface CameraHistory {
   readonly camera: MapCamera;
 }
 
-export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_STYLE, onOutcome }: MapSurfaceProps) {
+export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_STYLE, onOutcome, spatialCause }: MapSurfaceProps) {
   // Canonical state is READ, never held beside the store: the whole state, because the projection
   // tuple is Session + effective TC + `MC.depth`, and the camera alone cannot tell us whether the
   // supplied projection is still this Map.
@@ -135,12 +147,55 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
     [cameraBox],
   );
 
-  const motion = usePresentationCamera({ center, diagonalPoints, onTravelCorridorRetired: retireTravelCorridor });
+  // R4 — a DRAG opens a corridor too, and this is the half that was missing.
+  //
+  // A travel declares its whole path when it is authorized, so `commitCamera` below can open a
+  // corridor that already contains every frame of it. A drag declares nothing: no canonical camera
+  // changes until the finger lifts, so nothing widened the corridor and `presented` went on being
+  // computed against the RESTING viewport for the entire gesture. Measured on a device: the leading
+  // edge of the glass was blank while the reader dragged — two whole slices of the world at zero ink —
+  // and every object the drag had brought on screen appeared at once at the moment of release.
+  //
+  // The plane now reports where it has got to, once per cull margin of travel, and the corridor is
+  // hulled with a band around that position. Painting a margin ahead of the hand is the same idea the
+  // cull margin already expresses; it simply has to follow the hand instead of the resting viewport.
+  // It is state, like the travel corridor, and it retires with it at rest, so an idle world is
+  // unchanged and the cost is bounded by how far the reader actually dragged.
+  const advancePresentation = useCallback(
+    (tx: number, ty: number, residualZoom: number, padPlaneUnits: number, advanceEpoch: number) => {
+      const binding = cameraBox.get();
+      // A report that lost a race to a newer motion describes a plane that is no longer on the glass.
+      if (binding === null || advanceEpoch !== binding.epoch.get()) return;
+      const reached = expandedEnvelope(residualEnvelope({ tx, ty, zoom: residualZoom }), padPlaneUnits);
+      setCorridor((current) => {
+        const next = envelopeHull(current, reached);
+        return envelopesEqual(current, next) ? current : next;
+      });
+    },
+    [cameraBox],
+  );
+
+  const motion = usePresentationCamera({
+    center,
+    diagonalPoints,
+    onTravelCorridorRetired: retireTravelCorridor,
+    onPresentationAdvanced: advancePresentation,
+    // The renderer's own margin, so the plane reports exactly as often as the painted band allows and
+    // there is no second number to keep in step with this one.
+    advancePoints: CULL_MARGIN_POINTS,
+  });
   useLayoutEffect(() => {
     cameraBox.set(motion);
   }, [cameraBox, motion]);
   const authority = useAuthorityGeneration(store);
-  const { gesture } = useMapPanGesture(store, { enabled: usable, camera: motion, authority, onSettled: onOutcome });
+  const { gesture: panGesture } = useMapPanGesture(store, { enabled: usable, camera: motion, authority, onSettled: onOutcome });
+  const { gesture: zoomGesture } = useMapSemanticZoomGesture(store, { enabled: usable, authority, onSettled: onOutcome });
+  // Simultaneous, not exclusive. The two recognisers are already separated by pointer count — the pan
+  // takes one finger and the pinch takes two — so neither has to lose a race, and racing them would
+  // make the winner depend on which recogniser happened to activate first. What this composition
+  // guarantees is that a second finger reaches the pinch instead of being swallowed by a pan that has
+  // already claimed the plane.
+  const gesture = useMemo(() => Gesture.Simultaneous(panGesture, zoomGesture), [panGesture, zoomGesture]);
 
   // What this commit does about the canonical camera, and what the presented viewport is while it
   // does it. Read during render because the presented set is rendering input; applied inside the
@@ -188,14 +243,40 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
     // It narrows on every commit as a travel proceeds, and it is a bounded read at a commit
     // boundary — never during render, never per frame.
     const exact = envelopeHull(residualEnvelope(motion.readResidual()), RESIDUAL_ENVELOPE_AT_REST);
+    // R4 — while a FINGER owns the plane, a commit may widen this corridor and may not narrow it.
+    //
+    // Narrowing to "from here to rest" is right for a travel: the path is known, the plane is on its
+    // way home, and everything behind it is finished with. A drag is the opposite case. It is going
+    // somewhere nobody knows yet, the band the advance opened AHEAD of the hand is the entire reason
+    // the leading edge is painted at all, and this read happens on the very next commit — so without
+    // this distinction a canonical commit would take that band away again a frame after it was
+    // granted, and the blank edge would come straight back. `dragging` is one bounded read at the
+    // same boundary as the residual beside it, never during render and never per frame.
+    const held = motion.dragging.get() === 1;
     // Only a corridor that actually differs costs a second pass; the frame already painted was a
     // superset of this one, so nothing was ever wrongly culled while the two disagreed.
-    setCorridor((current) => (envelopesEqual(current, exact) ? current : exact));
+    setCorridor((current) => {
+      const next = held ? envelopeHull(current, exact) : exact;
+      return envelopesEqual(current, next) ? current : next;
+    });
   }, [camera, cameraHistory, motion, store]);
 
+  /**
+   * The cause of the transition being applied, asked for at APPLY time and never during render.
+   *
+   * It closes over the exact destination camera this transition travels to, so the question the
+   * integration owner is asked names its own answer's target. It is invoked in exactly one place —
+   * the branch that applies a transition — so it is asked once per canonical camera change, and
+   * never for a reset, never for a render that applies nothing, and never per frame.
+   */
+  const causeOfTransition = useCallback(
+    () => (spatialCause === undefined || camera === null ? null : spatialCause(state.camera)),
+    [camera, spatialCause, state.camera],
+  );
+
   const cameraCommit: CanonicalCameraCommit = useMemo(
-    () => ({ transition, reset: authorityReplaced, commit: commitCamera }),
-    [authorityReplaced, commitCamera, transition],
+    () => ({ transition, reset: authorityReplaced, commit: commitCamera, cause: causeOfTransition }),
+    [authorityReplaced, causeOfTransition, commitCamera, transition],
   );
 
   // Presentation culling: what the motion could still put on the glass. At rest the corridor is the
@@ -218,7 +299,6 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
           ),
     [center, envelope, placed, travelCorridor],
   );
-
   // Which loci BECAME part of the accepted current `V` in this commit (R3-01).
   //
   // Membership is asked of the SCENE, never of a placement. A placement omits a locus that is not

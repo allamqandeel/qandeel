@@ -1,0 +1,95 @@
+# T-12 Phase M / QAN-BL-T12-04 — phase 1, BEFORE the process is killed.
+#
+# Runs in the AUTH-VALIDATION build only. That build's root component is the isolated harness, so this
+# flow reaches no Product surface and proves nothing about MOT-03, MOT-04 or RSP-01.
+#
+# `clearState: true` is deliberate and belongs to phase 1 alone: the claim under test is that a session
+# written by THIS run survives a kill, so the run must start from an empty store. Phases 2 and 3 must
+# never clear state — that would erase the very thing they exist to read back.
+#
+# The identity email is typed in and then ERASED from the field before any screenshot is taken. The
+# password field is `secureTextEntry` and is cleared by the harness itself when the run ends. Nothing
+# in the report carries a credential: it reports kinds, booleans and character counts.
+appId: com.qandeel.mobile
+# NO env: block, and that absence is the correction.
+#
+# It used to declare EMAIL_A and PASSWORD_A as empty defaults. They are gone because an empty
+# declared default is a trap: it turns a missing value into a silent one instead of an error.
+#
+# It is NOT, however, what broke the sign-in, and the earlier note here saying so was wrong. The
+# harness reports identityEmailChars=22 and identityPasswordChars=9, so the supplied values do
+# reach the fields. The flow had been failing on its own assertion instead, before the sign-in was
+# ever attempted.
+---
+- launchApp:
+    clearState: true
+# A cold Release launch on a loaded runner can take longer than the default assertion window, and
+# the captured hierarchy proved it: the harness WAS on screen with every control present when the
+# debug snapshot was taken moments after the assertion had already given up. An impatient wait
+# reported the app as broken when it was only slow, so the wait is now explicit.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+- tapOn:
+    id: "t1204-email"
+# Let the keyboard finish being presented before anything is typed.
+#
+# A tap that has "completed" only means the field was hit. On the iOS simulator the software keyboard
+# is still animating in, and text sent during that animation goes nowhere at all — the run then reports
+# `identityPasswordChars=0` for an identity whose password was supplied correctly, which reads exactly
+# like a credential problem and is not one. Measured: the email landed and the password did not, in the
+# same run, on a loaded runner. This waits for the presentation to settle instead of racing it.
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${EMAIL_A}
+- tapOn:
+    id: "t1204-password"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${PASSWORD_A}
+- hideKeyboard
+
+# The credential BOUNDARY, checked before the sign-in is attempted rather than after it fails.
+#
+# A run once returned INVALID_CREDENTIALS while the same identity authenticated directly, and nothing
+# in the evidence could say whether the value had arrived at the field at all. These are character
+# counts and a distinctness flag — never a value, never a fragment of one, never anything reversible —
+# so a future failure says WHERE it happened instead of only that it did.
+# `identityEmailChars` is a name no other count contains, so this can only be read as the identity's
+# own field. The first version asserted on `email=0`, which also matched `second-email=0` — the
+# replacement identity's count, legitimately zero here — and failed the flow before the sign-in was
+# ever attempted, looking exactly like the credential problem it was meant to localise.
+- assertVisible:
+    id: "t1204-input-lengths"
+- assertNotVisible:
+    text: "(?s).*identityEmailChars=0 .*"
+- assertNotVisible:
+    text: "(?s).*identityPasswordChars=0 .*"
+
+- tapOn:
+    id: "t1204-run-BEFORE_RESTART"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 90000
+
+# The credential field is emptied before the evidence image exists, so the screenshot is safe to
+# attach. The run already holds its own copy; clearing the field cannot affect a call in flight.
+- tapOn:
+    id: "t1204-email"
+- eraseText: 64
+- hideKeyboard
+
+- takeScreenshot: t1204-phase-1-before-restart
+
+# The claims. A failure here fails the job, and the screenshot above is already on disk.
+- assertVisible:
+    id: "t1204-step-T12-04.0"
+- assertVisible:
+    id: "t1204-step-T12-04.1"
+- assertVisible:
+    id: "t1204-step-T12-04.1b"
+- assertVisible:
+    text: "BEFORE_RESTART — allPassed=true"

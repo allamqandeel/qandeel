@@ -20,10 +20,15 @@
  * Supabase's client reference documents a SecureStore-backed `LargeSecureStore`, and Expo's auth
  * guide recommends `expo-secure-store` and states that AsyncStorage is not secure — while the
  * Supabase and Expo quickstarts both route sessions through `expo-sqlite`. What decides it for v1
- * is not which document is louder: SecureStore has a value-size limit that a serialised session can
- * exceed, and Supabase's own published workaround for that splits the value and encrypts it with
- * hand-rolled AES — exactly the custom cryptography §2.4 forbids. So v1 follows a documented route,
- * isolates the store, and states the cost rather than improvising around it.
+ * is not which document is louder: Supabase's own published SecureStore pattern splits the value
+ * and encrypts it with hand-rolled AES — exactly the custom cryptography §2.4 forbids. So v1
+ * follows a documented route, isolates the store, and states the cost rather than improvising.
+ *
+ * AC-03 CORRECTION. That pattern is NOT justified by a fixed Expo limit, and this comment used to
+ * imply it was. Expo documents no size limit of its own: it states that the underlying platform MAY
+ * reject a large value, and that some historical iOS releases rejected values around 2048 bytes.
+ * "A session does not fit in SecureStore" is therefore not a fact to reason from. What stands is
+ * the narrower and sufficient reason above — the published workaround is hand-rolled cryptography.
  *
  * The boundary that makes this acceptable is stated above and must stay enforced: Product truth and
  * the QANDEEL conversation `sessionId` are forbidden from this store, so what sits here unencrypted

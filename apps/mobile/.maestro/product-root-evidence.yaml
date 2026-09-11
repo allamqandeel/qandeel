@@ -1,0 +1,44 @@
+# T-12 Phase M — PRODUCT-root build evidence, beyond the boot smoke.
+#
+# The boot smoke asserts one thing: the integrated Product root mounted. This flow adds the two claims
+# a Product artifact must also carry, and deliberately no more:
+#
+#   the validation harness is NOT in this build — its root test id is absent, which is the runtime
+#   counterpart of the static import-closure proof;
+#
+#   the root survives a real orientation change rather than only appearing once.
+#
+# It makes no perceptual claim. Frame pacing, drag feel, velocity handoff and the composite beat are
+# `QAN-BL-MOT-03`'s, they need a finger on hardware, and no simulator or emulator run may be recorded
+# against them.
+appId: com.qandeel.mobile
+---
+- launchApp:
+    clearState: true
+# An EXPLICIT wait, for the same reason the T12-04 flows already carry one: a cold Release launch on
+# a loaded runner can take longer than the default assertion window. This flow failed on exactly that
+# while the boot smoke had asserted the SAME id successfully forty seconds earlier in the same job,
+# which is an impatient tool reporting the app as broken when it was only slow.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-product-root"
+    timeout: 90000
+
+# The harness ships in the Product artifact nowhere and at no depth. Its root id is the one runtime
+# witness of that, and its absence here is what the static closure proof predicts.
+- assertNotVisible:
+    id: "qandeel-t1204-validation-harness"
+
+- takeScreenshot: product-root-portrait
+- setOrientation: LANDSCAPE_LEFT
+# A rotation is a real relayout, and on a loaded runner it is not instant either.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-product-root"
+    timeout: 30000
+- takeScreenshot: product-root-landscape
+- setOrientation: PORTRAIT
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-product-root"
+    timeout: 30000

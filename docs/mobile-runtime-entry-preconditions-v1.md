@@ -59,7 +59,7 @@ the QANDEEL API a credential custodian it has never been.
 | [docs.expo.dev/guides/using-supabase](https://docs.expo.dev/guides/using-supabase) | Expo's own guidance: `expo-sqlite` storage, and that `react-native-url-polyfill` is unnecessary on Expo, which ships `URL`, `structuredClone` and `TextEncoder` as globals. |
 | [supabase.com/docs/guides/auth/sessions](https://supabase.com/docs/guides/auth/sessions) | Access token default 3600 s; refresh tokens never expire but are single-use with a 10-second reuse interval; reuse outside it revokes the whole session. |
 | [supabase.com/docs/reference/javascript/auth-getuser](https://supabase.com/docs/reference/javascript/auth-getuser) | `getUser()` performs a network request and is therefore authoritative — confirming the API's existing guard is the documented trustworthy pattern. |
-| [docs.expo.dev/versions/latest/sdk/securestore](https://docs.expo.dev/versions/latest/sdk/securestore) | SecureStore has no web support and a historical ~2048-byte iOS value limit. |
+| [docs.expo.dev/versions/latest/sdk/securestore](https://docs.expo.dev/versions/latest/sdk/securestore) | SecureStore has no web support. It documents **no size limit of its own**: the underlying platform may reject a large value, and some historical iOS releases rejected values around 2048 bytes. Corrected by AC-03 — there is no universal current hard limit to reason from. |
 | [docs.expo.dev/guides/environment-variables](https://docs.expo.dev/guides/environment-variables) | `EXPO_PUBLIC_*` is statically inlined by Metro and visible in plain text in the compiled app. |
 | `github.com/supabase/auth` `openapi.yaml` | `POST /auth/v1/token` requires only the `apikey` header; the response carries a server-computed `expires_at`. No admin session-minting operation exists. |
 
@@ -228,11 +228,17 @@ after the R1 review. All four of these are current official positions:
 | Expo — authentication guide | recommends `expo-secure-store` for access tokens, and says AsyncStorage is not secure for this |
 
 So it is **not** true that official guidance avoids SecureStore. What is true is that the
-SecureStore-backed session pattern Supabase publishes wraps it in **hand-rolled AES**, because a
-serialised session can exceed SecureStore's value-size limit — and hand-rolled cryptography is
-exactly what this task is instructed not to introduce. T-12P therefore takes the unencrypted
-official Expo path, isolates it, and refers the encrypted-at-rest question to a gate that can decide
-it against real evidence instead of guessing now.
+SecureStore-backed session pattern Supabase publishes wraps it in **hand-rolled AES** — and
+hand-rolled cryptography is exactly what this task is instructed not to introduce. T-12P therefore
+takes the unencrypted official Expo path, isolates it, and refers the encrypted-at-rest question to
+a gate that can decide it against real evidence instead of guessing now.
+
+**AC-03 correction.** An earlier draft of this paragraph attributed that workaround to a fixed
+SecureStore size limit. Expo documents no limit of its own: it states that the underlying platform
+**may** reject a large value, and that some historical iOS releases rejected values around 2048
+bytes. So the size question is neither settled nor load-bearing — the reason to refuse the published
+pattern is the hand-rolled AES inside it, not a byte count. The gate this paragraph refers to has
+now reported: `docs/t12-auth-storage-at-rest-disposition-v1.md`.
 
 **Changing the mechanism is a one-file change** — nothing outside `auth-session-storage.ts` names the
 package, and the static contract enforces that.
@@ -441,7 +447,11 @@ refuse to apply anything they returned.
 - **No app-shell mount.** `FoundationShell` remains the route output and is byte-unchanged; the router
   root is still exactly `_layout.tsx` and `index.tsx`; the boot smoke still asserts the technical
   shell. Replacing it is T-12's entire job.
-- **No T-12 backlog item.** The nine inherited items remain T-12's.
+- **No T-12 backlog item.** The inherited items remain T-12's — **ten** of them, not the nine this
+  sentence originally said. The count was already stale when it was written: T-12P's own R1 review
+  admitted `QAN-BL-T12-04` under BG-06, owned by the T-12 pre-release physical validation gate, which
+  the canonical register records. Corrected by T-12 rather than left to be rediscovered, in the same
+  candidate, because the number concerns T-12's inheritance and no other document repeated it.
 - **No T-13 work.** No restart, no recovery, no Product persistence.
 - **No backend change.** The API gained no route and no idempotency; making
   `POST /conversation/sessions` idempotent is explicitly out of scope.

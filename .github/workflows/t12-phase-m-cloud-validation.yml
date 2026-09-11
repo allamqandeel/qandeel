@@ -12,21 +12,23 @@ name: T-12 Phase M cloud validation
 #   emulator. That artifact will not install on any physical ARM phone, so this workflow builds
 #   `arm64-v8a` instead. Nothing else about the Release build changes: Hermes stays enabled, the New
 #   Architecture stays in its canonical state, and the signing disposition is the repository's own
-#   measured one (the prebuild-generated debug keystore — a sideloadable Release-type build, never a
+#   measured one (the prebuild-generated debug keystore â€” a sideloadable Release-type build, never a
 #   distributable production-signed artifact).
 #
 #   CONFIGURATION. The gate builds with no configuration at all, which is why its boot smoke can only
 #   assert that the root mounted. These jobs receive the real Phase-M public values, so the runtime can
 #   actually reach an identity and a Session.
 #
-#   ENTRY. Two of the four jobs build the isolated `QAN-BL-T12-04` harness as the root component
-#   instead of the Product root, through `scripts/select-validation-entry.mjs`. That script runs in the
-#   two auth-validation jobs and nowhere else, the Product jobs assert the committed Product entry
-#   before building, and the repository itself always carries `expo-router/entry`.
+#   ENTRY. Three of the five jobs build the isolated `QAN-BL-T12-04` harness as the root component
+#   instead of the Product root, through `scripts/select-validation-entry.mjs`. The two auth-validation
+#   jobs ship that build as their artifact; the iOS responsive-composition job builds BOTH and ships
+#   neither as a harness artifact, because it uses the harness only to establish a session that the
+#   Product build then inherits. Every Product build asserts the committed Product entry immediately
+#   before `xcodebuild` runs, and the repository itself always carries `expo-router/entry`.
 #
-# The auth-validation artifacts mount NO Product surface — no Map, no Timeline, no chrome — so nothing
+# The auth-validation artifacts mount NO Product surface â€” no Map, no Timeline, no chrome â€” so nothing
 # observed in them may ever be recorded against MOT-03, MOT-04 or RSP-01. The Product artifacts mount
-# no harness, so nothing observed in them can close T12-04. All four come from one checkout, and each
+# no harness, so nothing observed in them can close T12-04. All five come from one checkout, and each
 # writes the checkpoint SHA into its own artifact so the evidence can prove they did.
 on:
   workflow_dispatch:
@@ -36,7 +38,7 @@ on:
         required: true
         type: string
       run_ios:
-        description: 'Run the two macOS iOS Release simulator jobs'
+        description: 'Run the three macOS iOS Release simulator jobs'
         required: false
         type: boolean
         default: true
@@ -55,6 +57,16 @@ env:
   # The same pinned Maestro line the canonical Mobile CI uses, verified by SHA-256 before extraction.
   MAESTRO_VERSION: 2.10.0
   MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+  # Before a flow runs at all, Maestro starts an XCUITest driver on the simulator. On a loaded macOS
+  # runner that start can outlast its default window, and the flow then fails having executed not one
+  # command — which reads exactly like a broken app and is not one. Measured: the boot smoke in the
+  # SAME job had driven the SAME driver successfully three minutes earlier, and the failure carried
+  # Maestro's own `iOS driver not ready in time` with the name of this variable in it.
+  #
+  # This is the third impatience of the same family in these flows, after the cold-launch assertion
+  # and the keyboard-presentation race. Waiting longer costs a slow run nothing it was not already
+  # spending; being impatient costs a false report of a broken Product.
+  MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
   # The ONE build-time configuration boundary (`apps/mobile/app.config.js`) reads exactly these three.
   # The publishable key is public by design; the API origin is an input because a Quick Tunnel origin
   # is regenerated per session and is not a credential. No password or token appears here.
@@ -64,7 +76,7 @@ env:
 
 jobs:
   android-product-arm64:
-    name: Android Release arm64-v8a — PRODUCT root
+    name: Android Release arm64-v8a â€” PRODUCT root
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -88,7 +100,7 @@ jobs:
         run: node scripts/phase-m/assert-validation-preconditions.mjs configuration
       - name: Generate the Android project (CNG)
         run: npm run prebuild:android --workspace @qandeel/mobile
-      - name: Build the Release APK (arm64-v8a — installable on a physical device)
+      - name: Build the Release APK (arm64-v8a â€” installable on a physical device)
         working-directory: apps/mobile/android
         run: |
           chmod +x ./gradlew
@@ -104,9 +116,12 @@ jobs:
             apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             ${{ runner.temp }}/android-product-identity.txt
           if-no-files-found: error
+          # Maestro writes diagnostics under a dotted directory, and v4 drops hidden files by default -
+          # which quietly removed the only evidence that could explain a failed phase.
+          include-hidden-files: true
 
   android-auth-validation-arm64:
-    name: Android Release arm64-v8a — AUTH VALIDATION root
+    name: Android Release arm64-v8a â€” AUTH VALIDATION root
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -134,7 +149,7 @@ jobs:
         run: node scripts/phase-m/assert-validation-preconditions.mjs configuration
       - name: Generate the Android project (CNG)
         run: npm run prebuild:android --workspace @qandeel/mobile
-      - name: Build the Release APK (arm64-v8a — installable on a physical device)
+      - name: Build the Release APK (arm64-v8a â€” installable on a physical device)
         working-directory: apps/mobile/android
         run: |
           chmod +x ./gradlew
@@ -150,9 +165,12 @@ jobs:
             apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             ${{ runner.temp }}/android-auth-validation-identity.txt
           if-no-files-found: error
+          # Maestro writes diagnostics under a dotted directory, and v4 drops hidden files by default -
+          # which quietly removed the only evidence that could explain a failed phase.
+          include-hidden-files: true
 
   ios-product-simulator:
-    name: iOS Release simulator — PRODUCT root
+    name: iOS Release simulator â€” PRODUCT root
     if: inputs.run_ios
     runs-on: macos-26
     timeout-minutes: 120
@@ -227,9 +245,9 @@ jobs:
       - name: Boot smoke on the iOS Release simulator
         run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml
       # Not fatal on purpose. If this flow fails, the RSP evidence set below is still worth having and
-      # the artifact is still worth uploading — one run should collect the whole finding set rather
+      # the artifact is still worth uploading â€” one run should collect the whole finding set rather
       # than stop at the first. The gate at the end of the job is what decides the outcome.
-      - name: Product-root evidence — mount, orientation, and no harness present
+      - name: Product-root evidence â€” mount, orientation, and no harness present
         id: product_evidence
         continue-on-error: true
         run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/product-root-evidence.yaml
@@ -255,6 +273,9 @@ jobs:
             ${{ runner.temp }}/ios-product-evidence
             ${{ runner.temp }}/ios-product-identity.txt
           if-no-files-found: warn
+          # Maestro writes diagnostics under a dotted directory, and v4 drops hidden files by default -
+          # which quietly removed the only evidence that could explain a failed phase.
+          include-hidden-files: true
       - name: 'Gate: the Product-root evidence flow must have passed'
         if: always()
         env:
@@ -262,7 +283,7 @@ jobs:
         run: |
           echo "product-root evidence: $PRODUCT_EVIDENCE"
           {
-            echo '### Product root — iOS Release simulator'
+            echo '### Product root â€” iOS Release simulator'
             echo ''
             echo "| flow | outcome |"
             echo "| --- | --- |"
@@ -274,7 +295,7 @@ jobs:
           test "$PRODUCT_EVIDENCE" = success
 
   ios-auth-validation-simulator:
-    name: iOS Release simulator — AUTH VALIDATION root (QAN-BL-T12-04)
+    name: iOS Release simulator â€” AUTH VALIDATION root (QAN-BL-T12-04)
     if: inputs.run_ios
     runs-on: macos-26
     timeout-minutes: 120
@@ -356,10 +377,23 @@ jobs:
           maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
 
       # ---------------------------------------------------------------------------------------
-      # The T12-04 sequence. Every phase runs even when an earlier one fails, so ONE run collects
-      # the whole finding set instead of stopping at the first, and the gate at the end is what
-      # decides the job. The restart between phases is a REAL process kill: `simctl terminate` and
-      # then a fresh `launchApp`. It is never a reinstall, which would destroy what is under test.
+      # The T12-04 lifecycle, in the order the claims are actually true in.
+      #
+      # Two things were wrong before and both are corrected here.
+      #
+      # ORDER. "A signed-out store gives nothing back" used to run immediately after a REPLACEMENT
+      # identity had signed in, where the store legitimately still holds a session. It passed anyway
+      # whenever an earlier phase had failed and left the app signed out — a phase passing because a
+      # prerequisite failed is worse than a phase failing. The signed-out claim now runs only after an
+      # explicit sign-out with no replacement.
+      #
+      # SEQUENCING. Every phase used to run under `if: always()`, so one broken sign-in produced four
+      # failures and three of them were noise. A phase now runs only if its prerequisite actually
+      # succeeded, and a phase that never ran is reported as blocked rather than as anything else.
+      #
+      # Each phase writes its diagnostics to its OWN directory: they used to share one, so every run
+      # overwrote the one before it and the evidence that could explain a failure was gone by the time
+      # anyone looked.
       # ---------------------------------------------------------------------------------------
       - name: 'T12-04 phase 1 — sign in as identity A, before the restart'
         id: phase1
@@ -367,7 +401,7 @@ jobs:
         env:
           EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
           PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
-        run: maestro --device "$IOS_SIM_UDID" test -e EMAIL_A="$EMAIL_A" -e PASSWORD_A="$PASSWORD_A" apps/mobile/.maestro/t12-04-phase-1-before-restart.yaml
+        run: maestro --device "$IOS_SIM_UDID" test --debug-output "$RUNNER_TEMP/t1204-debug/phase-1" -e EMAIL_A="$EMAIL_A" -e PASSWORD_A="$PASSWORD_A" apps/mobile/.maestro/t12-04-phase-1-before-restart.yaml
       - name: Kill the process (never a reinstall)
         if: always()
         run: |
@@ -375,27 +409,47 @@ jobs:
           sleep 3
       - name: 'T12-04 phase 2 — restart restores the AUTH session only'
         id: phase2
-        if: always()
+        if: steps.phase1.outcome == 'success'
         continue-on-error: true
-        run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/t12-04-phase-2-after-restart.yaml
-      - name: 'T12-04 phase 3 — sign out, then identity B'
+        run: maestro --device "$IOS_SIM_UDID" test --debug-output "$RUNNER_TEMP/t1204-debug/phase-2" apps/mobile/.maestro/t12-04-phase-2-after-restart.yaml
+      - name: 'T12-04 phase 3 — the restored session is still authenticated and ready'
         id: phase3
-        if: always()
+        if: steps.phase2.outcome == 'success'
+        continue-on-error: true
+        run: maestro --device "$IOS_SIM_UDID" test --debug-output "$RUNNER_TEMP/t1204-debug/phase-3" apps/mobile/.maestro/t12-04-phase-2-after-restart.yaml
+      - name: 'T12-04 phase 4 — sign out, then identity B'
+        id: phase4
+        if: steps.phase3.outcome == 'success'
         continue-on-error: true
         env:
           EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
           PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
-        run: maestro --device "$IOS_SIM_UDID" test -e EMAIL_B="$EMAIL_B" -e PASSWORD_B="$PASSWORD_B" apps/mobile/.maestro/t12-04-phase-3-signout-replacement.yaml
+        run: maestro --device "$IOS_SIM_UDID" test --debug-output "$RUNNER_TEMP/t1204-debug/phase-4" -e EMAIL_B="$EMAIL_B" -e PASSWORD_B="$PASSWORD_B" apps/mobile/.maestro/t12-04-phase-3-signout-replacement.yaml
       - name: Kill the process again
         if: always()
         run: |
           xcrun simctl terminate "$IOS_SIM_UDID" com.qandeel.mobile || true
           sleep 3
-      - name: 'T12-04 phase 4 — a signed-out store gives nothing back'
-        id: phase4
-        if: always()
+      - name: 'T12-04 phase 5 — the REPLACEMENT identity survives the restart'
+        id: phase5
+        if: steps.phase4.outcome == 'success'
         continue-on-error: true
-        run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/t12-04-phase-4-signed-out-survives-restart.yaml
+        run: maestro --device "$IOS_SIM_UDID" test --debug-output "$RUNNER_TEMP/t1204-debug/phase-5" apps/mobile/.maestro/t12-04-phase-5-replacement-survives-restart.yaml
+      - name: 'T12-04 phase 6 — sign out with NO replacement'
+        id: phase6
+        if: steps.phase5.outcome == 'success'
+        continue-on-error: true
+        run: maestro --device "$IOS_SIM_UDID" test --debug-output "$RUNNER_TEMP/t1204-debug/phase-6" apps/mobile/.maestro/t12-04-phase-6-signout-no-replacement.yaml
+      - name: Kill the process a third time
+        if: always()
+        run: |
+          xcrun simctl terminate "$IOS_SIM_UDID" com.qandeel.mobile || true
+          sleep 3
+      - name: 'T12-04 phase 7 — a signed-out store gives nothing back'
+        id: phase7
+        if: steps.phase6.outcome == 'success'
+        continue-on-error: true
+        run: maestro --device "$IOS_SIM_UDID" test --debug-output "$RUNNER_TEMP/t1204-debug/phase-7" apps/mobile/.maestro/t12-04-phase-7-signed-out-survives-restart.yaml
 
       - name: Collect the evidence, with every credential redacted
         if: always()
@@ -404,7 +458,26 @@ jobs:
           T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
           T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
           T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
-        run: node scripts/phase-m/collect-validation-evidence.mjs "$HOME/.maestro/tests" "$RUNNER_TEMP/t1204-evidence"
+          # Only the phases that actually ran are required to have left diagnostics behind. A phase
+          # blocked by a failed prerequisite legitimately has none.
+          P1: ${{ steps.phase1.outcome }}
+          P2: ${{ steps.phase2.outcome }}
+          P3: ${{ steps.phase3.outcome }}
+          P4: ${{ steps.phase4.outcome }}
+          P5: ${{ steps.phase5.outcome }}
+          P6: ${{ steps.phase6.outcome }}
+          P7: ${{ steps.phase7.outcome }}
+        run: |
+          required=""
+          n=1
+          for outcome in "$P1" "$P2" "$P3" "$P4" "$P5" "$P6" "$P7"; do
+            if [ "$outcome" = success ] || [ "$outcome" = failure ]; then
+              required="${required}${required:+,}phase-${n}"
+            fi
+            n=$((n + 1))
+          done
+          echo "required phase diagnostics: ${required:-(none)}"
+          T12_REQUIRED_PHASES="$required" node scripts/phase-m/collect-validation-evidence.mjs "$RUNNER_TEMP/t1204-debug" "$RUNNER_TEMP/t1204-evidence"
       - name: Record the artifact identity and the phase outcomes
         if: always()
         env:
@@ -412,6 +485,9 @@ jobs:
           PHASE_2: ${{ steps.phase2.outcome }}
           PHASE_3: ${{ steps.phase3.outcome }}
           PHASE_4: ${{ steps.phase4.outcome }}
+          PHASE_5: ${{ steps.phase5.outcome }}
+          PHASE_6: ${{ steps.phase6.outcome }}
+          PHASE_7: ${{ steps.phase7.outcome }}
         run: node scripts/phase-m/record-artifact-identity.mjs ios AUTH_VALIDATION "${{ github.sha }}" "$RUNNER_TEMP/t1204-evidence/ios-auth-validation-identity.txt"
       - name: Upload the T12-04 evidence
         if: always()
@@ -419,7 +495,11 @@ jobs:
         with:
           name: t12-phase-m-ios-auth-validation-simulator
           path: ${{ runner.temp }}/t1204-evidence
-          if-no-files-found: warn
+          # Not `warn`: an absent evidence set is a failed evidence gate, not a note in a log.
+          if-no-files-found: error
+          # Maestro writes diagnostics under a dotted directory, and v4 drops hidden files by default -
+          # which quietly removed the only evidence that could explain a failed phase.
+          include-hidden-files: true
       - name: 'Gate: every T12-04 phase must have passed'
         if: always()
         env:
@@ -427,22 +507,235 @@ jobs:
           PHASE_2: ${{ steps.phase2.outcome }}
           PHASE_3: ${{ steps.phase3.outcome }}
           PHASE_4: ${{ steps.phase4.outcome }}
+          PHASE_5: ${{ steps.phase5.outcome }}
+          PHASE_6: ${{ steps.phase6.outcome }}
+          PHASE_7: ${{ steps.phase7.outcome }}
         run: |
-          echo "phase 1 (before restart):        $PHASE_1"
-          echo "phase 2 (after restart):         $PHASE_2"
-          echo "phase 3 (sign out + identity B): $PHASE_3"
-          echo "phase 4 (signed out survives):   $PHASE_4"
+          # Four states, kept apart. `skipped` means the phase never ran, and whether that was because
+          # a prerequisite failed is a different fact from the phase itself failing.
+          blocked=no
           {
             echo '### QAN-BL-T12-04 — iOS Release simulator'
             echo ''
-            echo "| phase | outcome |"
-            echo "| --- | --- |"
-            echo "| 1 before restart | \`$PHASE_1\` |"
-            echo "| 2 after restart | \`$PHASE_2\` |"
-            echo "| 3 sign out + identity B | \`$PHASE_3\` |"
-            echo "| 4 signed out survives a restart | \`$PHASE_4\` |"
+            echo "| phase | claim | result |"
+            echo "| --- | --- | --- |"
           } >> "$GITHUB_STEP_SUMMARY"
+          n=1
+          for pair in \
+            "$PHASE_1|sign in as identity A" \
+            "$PHASE_2|restart restores the AUTH session only" \
+            "$PHASE_3|the restored session is still authenticated and ready" \
+            "$PHASE_4|sign out, then identity B" \
+            "$PHASE_5|the replacement identity survives a restart" \
+            "$PHASE_6|sign out with no replacement" \
+            "$PHASE_7|a signed-out store gives nothing back"; do
+            outcome="${pair%%|*}"
+            claim="${pair#*|}"
+            case "$outcome" in
+              success) state='EXECUTED — PASS' ;;
+              failure) state='EXECUTED — FAIL' ;;
+              *) if [ "$blocked" = yes ]; then state='NOT EXECUTED — prerequisite blocked'; else state='NOT EXECUTED'; fi ;;
+            esac
+            if [ "$outcome" = failure ]; then blocked=yes; fi
+            echo "| $n | $claim | \`$state\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "phase $n ($claim): $state"
+            n=$((n + 1))
+          done
           test "$PHASE_1" = success
           test "$PHASE_2" = success
           test "$PHASE_3" = success
           test "$PHASE_4" = success
+          test "$PHASE_5" = success
+          test "$PHASE_6" = success
+          test "$PHASE_7" = success
+
+  # =========================================================================================
+  # T12-PROD-05 on iOS, which needs a COMPOSED Product and therefore an authenticated identity.
+  #
+  # The Product build carries no sign-in surface, deliberately: an injection point on the production
+  # route is exactly the hole `PM-05` names. So the session is established by the validation-harness
+  # build and INHERITED — the two builds differ in one line of the manifest and share a bundle id, so
+  # installing the Product app over the harness app keeps the data container the session was written
+  # into. It is the same inheritance the physical Honor run uses, and on a simulator it is the only
+  # way to reach the composed world at all.
+  #
+  # Both apps are built from ONE generated project: the native project does not depend on which root
+  # component the JS entry registers, so the entry is toggled between two `xcodebuild` invocations
+  # rather than prebuilding twice.
+  #
+  # WHAT THIS PROVES, precisely: that on iOS the composed surface keeps its map frame, its support
+  # band and BOTH support regions on screen through a real portrait -> landscape -> portrait change,
+  # in a short landscape window where the two of them compete for every point.
+  #
+  # WHAT IT DOES NOT PROVE: the session it inherits holds no committed Moments, and the defect this
+  # closes reproduced on hardware only with a POPULATED world. Seeding one needs a database
+  # credential that this workflow does not have and will not be given. The populated case is closed
+  # on physical hardware, where it was found; this is the iOS geometry of an empty world, and saying
+  # so is the difference between evidence and a green tick.
+  # =========================================================================================
+  ios-responsive-composition-simulator:
+    name: iOS Release simulator — RESPONSIVE COMPOSITION (T12-PROD-05)
+    if: inputs.run_ios
+    # AFTER the Product job rather than beside it. Two macOS jobs at a time ran reliably; adding a
+    # third made every one of them slow enough to trip a timing assumption in the flows, and a run
+    # whose failures are caused by its own concurrency proves nothing about the code it is testing.
+    # This job needs the Product build to exist as a claim before it is worth composing anyway.
+    needs: ios-product-simulator
+    runs-on: macos-26
+    timeout-minutes: 150
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      IOS_SIMULATOR_NAME: iPhone 17
+      IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+    steps:
+      - name: Checkout the exact checkpoint
+        uses: actions/checkout@v4
+      - name: Refuse to run without the two validation identities
+        env:
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+        run: node scripts/phase-m/assert-validation-preconditions.mjs identities
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Guard the simulator (iPhone 17 on iOS 26.5)
+        run: |
+          udid="$(xcrun simctl list devices available -j | jq -r --arg name "$IOS_SIMULATOR_NAME" --arg suffix "$IOS_SIMULATOR_RUNTIME_SUFFIX" '.devices | to_entries[] | select(.key | endswith($suffix)) | .value[] | select(.name == $name) | .udid' | head -n 1)"
+          if [ -z "$udid" ]; then
+            echo "STOP: the authorized simulator (${IOS_SIMULATOR_NAME} / ${IOS_SIMULATOR_RUNTIME_SUFFIX}) is not on this image"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "IOS_SIM_UDID=$udid" >> "$GITHUB_ENV"
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies from the root lockfile
+        run: npm ci
+      - name: Refuse to build without the public configuration
+        run: node scripts/phase-m/assert-validation-preconditions.mjs configuration
+      - name: Generate the iOS project (CNG)
+        run: npm run prebuild:ios --workspace @qandeel/mobile
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build the PRODUCT app (the entry the repository carries)
+        run: |
+          set -o pipefail
+          node scripts/phase-m/assert-validation-preconditions.mjs entry product
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build-product CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee "$RUNNER_TEMP/xcodebuild-product.log"
+          app="$(find apps/mobile/ios/build-product/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          echo "IOS_PRODUCT_APP=$app" >> "$GITHUB_ENV"
+      - name: Build the AUTH-VALIDATION app (one manifest line apart, same bundle id)
+        env:
+          T12_PHASE_M_VALIDATION: '1'
+        run: |
+          set -o pipefail
+          node apps/mobile/scripts/select-validation-entry.mjs --apply
+          node scripts/phase-m/assert-validation-preconditions.mjs entry validation
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build-validation CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee "$RUNNER_TEMP/xcodebuild-validation.log"
+          app="$(find apps/mobile/ios/build-validation/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          echo "IOS_HARNESS_APP=$app" >> "$GITHUB_ENV"
+      - name: Restore the PRODUCT entry before anything else runs
+        env:
+          T12_PHASE_M_VALIDATION: '1'
+        run: |
+          node apps/mobile/scripts/select-validation-entry.mjs --restore
+          node scripts/phase-m/assert-validation-preconditions.mjs entry product
+      - name: Boot the simulator and install the harness build
+        run: |
+          xcrun simctl boot "$IOS_SIM_UDID" || true
+          xcrun simctl bootstatus "$IOS_SIM_UDID" -b
+          xcrun simctl install "$IOS_SIM_UDID" "$IOS_HARNESS_APP"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Guard the Maestro version
+        run: |
+          maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
+      - name: Establish the session in the harness build
+        id: signin
+        continue-on-error: true
+        env:
+          EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+        run: maestro --device "$IOS_SIM_UDID" test --debug-output "$RUNNER_TEMP/rsp-debug/signin" -e EMAIL_A="$EMAIL_A" -e PASSWORD_A="$PASSWORD_A" apps/mobile/.maestro/t12-04-phase-1-before-restart.yaml
+      - name: Hand the container to the PRODUCT build
+        if: steps.signin.outcome == 'success'
+        run: |
+          xcrun simctl terminate "$IOS_SIM_UDID" com.qandeel.mobile || true
+          sleep 3
+          # Same bundle id, so this replaces the executable and keeps the data container the session
+          # was written into. An uninstall would take the store with it, which is the whole point.
+          xcrun simctl install "$IOS_SIM_UDID" "$IOS_PRODUCT_APP"
+      - name: Short-landscape recomposition on the composed Product
+        id: rsp
+        if: steps.signin.outcome == 'success'
+        continue-on-error: true
+        run: maestro --device "$IOS_SIM_UDID" test --debug-output "$RUNNER_TEMP/rsp-debug/recomposition" apps/mobile/.maestro/product-short-landscape-recomposition.yaml
+      - name: Collect the evidence, with every credential redacted
+        if: always()
+        env:
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+        run: node scripts/phase-m/collect-validation-evidence.mjs "$RUNNER_TEMP/rsp-debug" "$RUNNER_TEMP/rsp-evidence"
+      - name: Record the artifact identity
+        if: always()
+        run: node scripts/phase-m/record-artifact-identity.mjs ios PRODUCT "${{ github.sha }}" "$RUNNER_TEMP/rsp-evidence/ios-responsive-composition-identity.txt"
+      - name: Upload the responsive-composition evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t12-phase-m-ios-responsive-composition-simulator
+          path: ${{ runner.temp }}/rsp-evidence
+          if-no-files-found: error
+          include-hidden-files: true
+      - name: 'Gate: the composed surface must survive the orientation change'
+        if: always()
+        env:
+          SIGNIN: ${{ steps.signin.outcome }}
+          RSP: ${{ steps.rsp.outcome }}
+        run: |
+          # Three states, kept apart: a recomposition that never ran because the inheritance failed is
+          # a different fact from one that ran and lost a region.
+          case "$RSP" in
+            success) state='EXECUTED — PASS' ;;
+            failure) state='EXECUTED — FAIL' ;;
+            *) state='NOT EXECUTED — the session inheritance did not complete' ;;
+          esac
+          {
+            echo '### T12-PROD-05 — iOS Release simulator, composed surface'
+            echo ''
+            echo "| step | result |"
+            echo "| --- | --- |"
+            echo "| session established in the harness build | \`$SIGNIN\` |"
+            echo "| portrait -> short landscape -> portrait, every region on screen | \`$state\` |"
+            echo ''
+            echo 'IOS RELEASE SIMULATOR evidence only, on a session holding no committed Moments.'
+            echo 'Never a physical, tactile or frame-pacing claim.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          test "$SIGNIN" = success
+          test "$RSP" = success

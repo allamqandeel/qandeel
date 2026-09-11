@@ -231,7 +231,28 @@ instead are the two properties it can guarantee: the world is sized first, and e
 clips to what it was given and keeps the remainder reachable inside itself.
 
 `TIMELINE_ROW_POINTS` and `CHROME_FLOOR_POINTS` survive as what they always were — the two
-MINIMUMS that `SHORT_HEIGHT_POINTS` is derived from — and are used for nothing else.
+MINIMUMS that `SHORT_HEIGHT_POINTS` is derived from.
+
+**T-12 correction.** They are no longer used for *nothing else*. Leaving them unapplied assumed the
+two support regions would take their natural height and yield from there, and on a device they did
+not: both regions hold a `ScrollView`, a scroller reports no intrinsic height to its parent, and the
+Map is the only child that grows. A region's height was therefore "whatever the world did not take",
+and when a re-layout let the world's growth take the remainder, the chrome band resolved to **zero**
+with the orientation and every return act still mounted inside it — clipped away by its own
+`overflow: hidden`. The temporal row reached zero the same way *while carrying a `minHeight` of 136*,
+which is precisely why an unconditional `minHeight` was not the repair.
+
+The plan now computes the room each support region gets — from the measured surface and these two
+minimums — before either region renders, and the components consume that allocation instead of
+inferring one. Nothing about the yielding ORDER changed: the instrument still yields at twice the
+orientation's rate, and each region still clips to what it was given and keeps the remainder reachable
+inside its own scroller.
+
+Below `SHORT_HEIGHT_POINTS` the three minimums cannot all be honoured by stacking — `160 + 136 + 159`
+is more height than a short window has. There the two support regions are composed **across** each
+other inside the same band, where they cost `max(136, 159)` rather than their sum, and the world pays
+the difference in area, which is the one thing the contract permits it to pay. The threshold for that
+is not a new one: it is the same two-cell readable width the chrome's own arrangement already uses.
 
 ### `CHROME_MAX_MEASURE_POINTS = 544`
 

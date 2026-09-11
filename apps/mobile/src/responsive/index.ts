@@ -47,6 +47,8 @@ export type {
   PresentationBand,
   RecompositionOptions,
   RecompositionPlan,
+  SupportArrangement,
+  SupportComposition,
 } from './plan';
 export {
   BAND_GAP_POINTS,
@@ -77,6 +79,9 @@ export { RESPONSIVE_SURFACE_TEST_ID, ResponsiveSurface } from './ResponsiveSurfa
 
 export type { ResponsiveMapFrameProps } from './ResponsiveMapFrame';
 export { RESPONSIVE_MAP_FRAME_TEST_ID, ResponsiveMapFrame } from './ResponsiveMapFrame';
+
+export type { ResponsiveSupportBandProps } from './ResponsiveSupportBand';
+export { RESPONSIVE_SUPPORT_BAND_TEST_ID, ResponsiveSupportBand } from './ResponsiveSupportBand';
 
 export type { ResponsiveTimelineRowProps } from './ResponsiveTimelineRow';
 export { RESPONSIVE_TIMELINE_ROW_TEST_ID, ResponsiveTimelineRow, TIMELINE_ROW_SHRINK } from './ResponsiveTimelineRow';

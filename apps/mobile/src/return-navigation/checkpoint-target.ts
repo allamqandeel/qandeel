@@ -18,7 +18,7 @@
  * The store then re-proves the same thing independently, by locating the entry OBJECT in its own
  * current history, so a refusal never depends on this module having asked first.
  */
-import type { CanonicalStore, RhEntry } from '../state';
+import type { CanonicalStore, RhActionId, RhEntry } from '../state';
 import type { ReturnRejectionCode } from './outcomes';
 
 /**
@@ -94,6 +94,50 @@ export function isCurrentReturnCheckpointTargetForStore(store: CanonicalStore, t
   const provenance = minted.get(target);
   if (provenance === undefined || provenance.store !== store) return false;
   return store.getState().history.includes(provenance.entry);
+}
+
+/**
+ * The two acts whose checkpoint can be the origin of an explicit inspection journey (T-12 §14).
+ *
+ * An inspection journey begins with an act that establishes `IF_ref` where there was none, and only
+ * these two can: `INSPECT_OBJECT` writes the reference alone, and `DIRECT_JUMP` writes it together
+ * with the landing it authorizes. `SWITCH_CONTEXT` cannot — its transition refuses outright unless a
+ * current inspection already exists, so it always continues a journey and never starts one. Nothing
+ * else in the catalog writes `IF_ref` at all.
+ *
+ * This is a structural floor, not the whole answer. Whether a given `DIRECT_JUMP` began a journey or
+ * continued one depends on the inspection state immediately before it, which is the integration
+ * coordinator's to observe at the boundary. What the floor buys is that the question can no longer be
+ * asked about a checkpoint that is not an inspection at all.
+ */
+export const INSPECTION_JOURNEY_ORIGIN_ACTS: readonly RhActionId[] = Object.freeze(['INSPECT_OBJECT', 'DIRECT_JUMP']);
+
+/**
+ * Whether this target is one THIS store minted for a checkpoint an inspection journey could have
+ * started from — as a boolean, and nothing else.
+ *
+ * ## Why this exists (R3-04, closed by T-12 §14)
+ *
+ * `isCurrentReturnCheckpointTargetForStore` proves that a handle is real, local and still recorded.
+ * That is necessary and it is NOT evidence that the checkpoint is the named origin of an inspection
+ * journey: a checkpoint recorded by Return to World is a perfectly valid local handle and is not an
+ * inspection at all. Binding one as "the original inspection" is precisely the defect R3-04 named,
+ * and it was previously prevented only by keeping the mint off T-08's public surface — which left
+ * the real journey binding with no legitimate route at all.
+ *
+ * So the question is answered here, where the recorded act actually lives. The entry's own `act` is
+ * read; nothing of its CHECKPOINT is. No captured position, no inspection reference, no camera and
+ * no temporal provenance is examined, returned or disclosed, and this yields no entry either.
+ *
+ * It holds nothing and mints nothing: the answer is derived from the provenance this module already
+ * records, so there is no second registry and no second notion of validity that could disagree with
+ * the first. Being told "yes" grants nothing — `exactReturn` re-proves provenance AND presence, and
+ * the store re-proves presence independently again, both before anything is written.
+ */
+export function isInspectionJourneyOriginFor(store: CanonicalStore, target: unknown): target is ReturnCheckpointTarget {
+  if (!isCurrentReturnCheckpointTargetForStore(store, target)) return false;
+  const provenance = minted.get(target);
+  return provenance !== undefined && INSPECTION_JOURNEY_ORIGIN_ACTS.includes(provenance.entry.act);
 }
 
 export type ResolvedCheckpointTarget =

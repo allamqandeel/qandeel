@@ -11,7 +11,7 @@ name: Mobile CI
 # install and boot-smoke contract.
 on:
   pull_request:
-    paths: ['apps/mobile/**', 'packages/runtime/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'tests/living-analysis-map-runtime-contract.test.mjs', 'tests/temporal-navigation-layer-contract.test.mjs', 'tests/return-navigation-layer-contract.test.mjs', 'tests/inspection-orientation-return-chrome-contract.test.mjs', 'tests/t10-motion-contract.test.mjs', 'tests/t11-responsive-contract.test.mjs', 'tests/t12p-mobile-runtime-entry-contract.test.mjs', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs', 'tests/mobile-native-impact-classifier.test.mjs', 'scripts/classify-mobile-native-impact.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml']
+    paths: ['apps/mobile/**', 'packages/runtime/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'tests/living-analysis-map-runtime-contract.test.mjs', 'tests/temporal-navigation-layer-contract.test.mjs', 'tests/return-navigation-layer-contract.test.mjs', 'tests/inspection-orientation-return-chrome-contract.test.mjs', 'tests/t10-motion-contract.test.mjs', 'tests/t11-responsive-contract.test.mjs', 'tests/t12-integration-contract.test.mjs', 'tests/t12p-mobile-runtime-entry-contract.test.mjs', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs', 'tests/mobile-native-impact-classifier.test.mjs', 'tests/qan-inf-03-deterministic-expo-dependency-validation-contract.test.mjs', 'scripts/classify-mobile-native-impact.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml', '.github/workflows/mobile-expo-dependency-drift-advisory.yml']
   push:
     branches: [main]
 concurrency:
@@ -82,13 +82,26 @@ jobs:
       - {name: Verify Living Analysis Map Motion System contract (T-10), run: npm run test:t10-motion-contract}
       - {name: Verify Responsive Recomposition contract (T-11), run: npm run test:t11-responsive-contract}
       - {name: Verify Mobile Runtime Entry Preconditions contract (T-12P), run: npm run test:t12p-mobile-runtime-entry-contract}
+      - {name: Verify Final Living Analysis Map Integration contract (T-12), run: npm run test:t12-integration-contract}
       - {name: Verify Session Semantic Clock / SP / LH delivery contract (T-03A2), run: npm run test:session-semantic-clock-sp-lh-delivery-contract}
       - {name: Verify the native-impact classifier, run: npm run test:mobile-native-impact-classifier}
+      - {name: Verify deterministic Expo SDK 57 dependency validation contract (QAN-INF-03), run: npm run test:qan-inf-03-deterministic-expo-dependency-validation-contract}
       - {name: Type-check mobile (TypeScript 5.9 line), run: npm run typecheck:mobile}
       - {name: Lint mobile, run: npm run lint:mobile}
       - {name: Unit and component tests (jest-expo), run: npm run test:mobile}
-      - {name: Expo dependency validation (intentional typescript exclusion), run: npm run deps:check:mobile}
-      - {name: Expo Doctor, run: npm run doctor:mobile}
+      # QAN-INF-03: `EXPO_OFFLINE` makes `expo install --check` validate against the
+      # deterministic `expo/bundledNativeModules.json` shipped inside the installed,
+      # lockfile-pinned `expo` package instead of the mutable live registry, so a
+      # previously green, unchanged commit cannot go red merely because Expo
+      # publishes a newer recommended patch. `expo-doctor`'s dependency-version
+      # check spawns this exact command as a subprocess and inherits this env, so it
+      # is covered too; `EXPO_DOCTOR_ENABLE_DIRECTORY_CHECK: '0'` turns off its
+      # separate, independently-live React Native Directory check for the same
+      # reason. Real dependency compatibility is still enforced: see
+      # `.github/workflows/mobile-expo-dependency-drift-advisory.yml` for the live
+      # signal this intentionally no longer gates merges.
+      - {name: Expo dependency validation (intentional typescript exclusion), run: npm run deps:check:mobile, env: {EXPO_OFFLINE: '1'}}
+      - {name: Expo Doctor, run: npm run doctor:mobile, env: {EXPO_OFFLINE: '1', EXPO_DOCTOR_ENABLE_DIRECTORY_CHECK: '0'}}
       - {name: Prebuild idempotency gate (CNG Level 2), run: npm run prebuild:mobile}
   verify-android:
     name: Android (API 36 emulator boot smoke)

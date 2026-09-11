@@ -229,12 +229,62 @@ test('the world is sized first, and the support around it yields', () => {
   const row = responsiveCode['ResponsiveTimelineRow.tsx'];
   // The world's share is a FLOOR on its size, taken before the support asks for anything.
   assert.match(plan, /basisPoints: Math\.max\(MAP_MIN_HEIGHT_POINTS, Math\.round\(height \/ WORLD_SHARE_DENOMINATOR\)\)/u, 'the world is sized first');
-  assert.match(frame, /frame: \{ flexGrow: 1, flexShrink: 0 \}/u, 'the world does not yield to the support around it');
-  assert.match(frame, /flexBasis: frame\.basisPoints, minHeight: frame\.minHeightPoints/u, 'the world carries its share and its floor');
+  // T-12 re-anchor, and it replaces `flexShrink: 0` with something STRONGER rather than weaker.
+  //
+  // The old line said the world never yields, and what it was protecting against was real: the
+  // support regions had no height of their own, so a yielding world let a truthful region resolve to
+  // zero. That protection now lives where it belongs — the band's height is a DEFINITE allocation
+  // decided in the plan after the world's floor has been set aside, and the band neither grows nor
+  // shrinks — so the world yields a fixed, already-decided amount and its `minHeight` is an absolute
+  // stop. What the refusal actually bought, in the end, was the ability to hold a share that no
+  // longer described the surface: on a device a rotation into a short landscape window left the
+  // world at the portrait half-height and put the ENTIRE support band below the bottom of the
+  // screen while every allocation in the plan was correct.
+  //
+  // So the world now yields to a region that cannot yield back, and it carries a CEILING as well as
+  // a floor — the measured column minus what the support was allocated — which makes the room the
+  // world may occupy a decision of the same plan that allocated the band rather than a consequence
+  // of whichever basis happens to be in the tree.
+  assert.match(frame, /frame: \{ flexGrow: 1, flexShrink: 1 \}/u, 'the world yields to a band that has a definite allocation and cannot yield back');
+  assert.match(frame, /minHeight: frame\.minHeightPoints/u, 'and never below the floor it is guaranteed');
+  assert.match(
+    frame,
+    /flexBasis: frame\.basisPoints, minHeight: frame\.minHeightPoints, maxHeight: frame\.ceilingPoints/u,
+    'the world carries its share, its floor and the ceiling the support allocation leaves it',
+  );
+  assert.match(
+    plan,
+    /ceilingPoints: Math\.max\(MAP_MIN_HEIGHT_POINTS, surface\.height - support\.bandPoints - support\.gapPoints\)/u,
+    'the ceiling is the measured column minus the support allocation, never below the world floor',
+  );
   // Both support regions yield, clip to what they were given, and keep the remainder reachable.
   assert.match(band, /flexShrink: 1, flexGrow: 0, overflow: 'hidden'/u, 'the chrome band yields and clips to the room it was given');
-  assert.match(row, /flexShrink: TIMELINE_ROW_SHRINK,[\s\S]*?minHeight: TIMELINE_ROW_POINTS,[\s\S]*?overflow: 'hidden',/u, 'the temporal row yields to its own interactive minimum');
+  assert.match(row, /flexShrink: TIMELINE_ROW_SHRINK,[\s\S]*?overflow: 'hidden',/u, 'the temporal row yields and clips to the room it was given');
   assert.match(row, /TIMELINE_ROW_SHRINK = 2/u, 'the instrument yields before the orientation');
+  // T-12 re-anchor, and it is STRONGER than the line it replaces, not weaker.
+  //
+  // The row used to carry `minHeight: TIMELINE_ROW_POINTS` in its own stylesheet, and that read as a
+  // guarantee that the instrument never falls below its interactive minimum. It was not one. Both
+  // support regions take their height from a `ScrollView`, a scroller reports no intrinsic height to
+  // its parent, and the world is the only child that grows — so the regions had no size of their own
+  // to apply a minimum to. Measured on a device, this row resolved to ZERO while carrying that very
+  // `minHeight`, and the chrome band, which never had one at all, did the same with the orientation
+  // and every return act still mounted inside it.
+  //
+  // The room is therefore DECIDED in the plan now, before either region renders, and handed down. So
+  // what is checked here is the whole chain rather than one hopeful declaration: the plan owns the
+  // allocation, both regions consume it, and neither the plan nor a component may hand a present
+  // region a height of zero.
+  for (const [name, text] of [['the chrome band', band], ['the temporal row', row]]) {
+    assert.match(text, /support\.(?:chromePoints|timelinePoints)/u, `${name} takes the room the plan gave it`);
+    assert.match(text, /height: support\./u, `${name} states its allocation rather than inferring it from a scroller`);
+  }
+  assert.match(plan, /MAP_MIN_HEIGHT_POINTS - 2 \* gapPoints/u, 'the support asks only for what the world does not need');
+  assert.match(plan, /TIMELINE_ROW_POINTS/u, 'the plan still honours the instrument minimum');
+  assert.match(plan, /CHROME_FLOOR_POINTS/u, 'the plan still honours the orientation minimum');
+  // `minHeightPoints` is a plan QUANTITY and stays; what the plan must never write is a style.
+  assert.doesNotMatch(plan, /minHeight:/u, 'the plan states allocations, never component styles');
+  assert.doesNotMatch(plan, /flexBasis|flexGrow|flexShrink|StyleSheet/u, 'the plan writes no layout property of its own');
   for (const [name, text] of [['the chrome band', band], ['the temporal row', row]]) {
     assert.match(text, /<ScrollView/u, `${name} keeps what does not fit reachable inside itself`);
     // Bounce is suppressed only where there is NOTHING to reach. Disabling it outright would
@@ -245,7 +295,13 @@ test('the world is sized first, and the support around it yields', () => {
   }
   // Only the WORDS are clamped to a reading measure. A Timeline is not prose, and every extra
   // point of it is one more disclosed Moment the reader can see and reach at once.
-  assert.match(plan, /timelineWidthPoints: available,/u, 'the Timeline gets the whole available width');
+  // T-12 re-anchor. Stacked, the instrument still takes the WHOLE available width and only the words
+  // are clamped — unchanged. The one reduction is the short-height arrangement where the instrument
+  // and the orientation sit across each other inside the same band, and there its half IS its whole
+  // available width. The clamp is still the chrome's alone, which is the rule this defends.
+  assert.match(plan, /const timelineWidthPoints = support\.arrangement === 'SIDE_BY_SIDE'/u, 'the only width reduction is the across arrangement');
+  assert.match(plan, /\n\s*: available;/u, 'stacked, the Timeline still gets the whole available width');
+  assert.doesNotMatch(plan, /timelineWidthPoints = Math\.min\(available, CHROME_MAX_MEASURE_POINTS/u, 'the Timeline is never clamped to a reading measure');
   assert.match(plan, /const measurePoints = Math\.min\(available, CHROME_MAX_MEASURE_POINTS \+ 2 \* CHROME_OWN_HORIZONTAL_PADDING\);/u, 'only the chrome is clamped');
   // No region asserts a height it cannot know. A ceiling computed from a constant for a surface
   // whose height depends on unlaid-out words is what put a Return act off the screen.
@@ -269,7 +325,21 @@ test('R1 — the settled band is keyed to the usable width, not to the event tha
   // The settlement is keyed to the usable width it was taken at, so it can never be reused across a
   // width it does not belong to, and the predecessor handed to `bandFor` is the band the
   // immediately preceding composition actually settled.
-  assert.match(hook, /const usable = measured === null \? null : measured\.width - left - right;/u, 'the usable width comes from all three authorities');
+  // T-12 re-anchor. The rule is unchanged — the usable width is still the measured container width
+  // less BOTH insets, from all three authorities at once. What changed is which measurement it reads:
+  // `current` is the measurement after a stale one has been retired, so a width taken inside an
+  // envelope that no longer exists can no longer reach the band. Reading `measured` directly here was
+  // how a portrait width survived into landscape.
+  assert.match(hook, /const usable = current === null \? null : current\.width - left - right;/u, 'the usable width comes from all three authorities');
+  assert.match(
+    hook,
+    /const envelopeChanged =[\s\S]*?composedIn === null \|\| composedIn\.width !== envelopeWidth \|\| composedIn\.height !== envelopeHeight/u,
+    'a measurement is retired when the envelope it was taken inside changes',
+  );
+  assert.match(hook, /current = \{ width: envelopeWidth, height: envelopeHeight \};/u, 'the new envelope opens the new composition');
+  // The envelope is an INVALIDATION seam, not a second authority: the container still reports.
+  assert.match(hook, /const onLayout = useCallback/u, 'the container is still measured');
+  assert.doesNotMatch(hook, /useWindowDimensions|Dimensions\.get|useSafeAreaInsets/u, 'the owner still reads no display of its own');
   assert.match(hook, /interface Settled \{\s*\n\s*readonly usable: number;\s*\n\s*readonly band: PresentationBand;\s*\n\}/u, 'a settlement carries the width it was taken at');
   assert.match(
     hook,
@@ -432,7 +502,7 @@ test('a travel in flight is neither re-issued nor re-culled by a geometry change
   const rebase = mapCode['renderer/MapCanvas.tsx'];
   // The rebase runs only for a canonical camera CHANGE. A resize produces no transition, so a
   // travel already scheduled keeps its targets and its durations: nothing restarts, nothing snaps.
-  assert.match(rebase, /if \(reset\) motion\.reset\(\);\s*\n\s*else if \(transition !== null\) motion\.applyCanonicalChange\(transition\);/u, 'the rebase is driven by a canonical transition');
+  assert.match(rebase, /if \(reset\) motion\.reset\(\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*else if \(transition !== null\) motion\.applyCanonicalChange\(transition, cause\(\)\);/u, 'the rebase is driven by a canonical transition');
   assert.match(surface, /const transition = cameraChanged && history !== null && camera !== null \? cameraTransition\(history\.camera, camera, envelope\) : null;/u, 'a transition exists only when the canonical camera changed');
   // The travel corridor is a RESIDUAL envelope. It is rebased through the canonical transition and
   // retired when the presentation reaches rest — neither of which a resize can cause — so a resize
@@ -555,12 +625,21 @@ test('the barrel is an allowlist, and the deep modules are not a second public s
   const barrel = responsiveSources['index.ts'];
   assert.doesNotMatch(stripComments(barrel), /export \* from/u, 'the public surface is an allowlist, never a wildcard');
   // Every consumer outside the owner comes through the barrel. A deep import would reach past it.
+  //
+  // T-12 re-anchor, and it is narrower than it looks. The rule being defended is that PRODUCTION code
+  // cannot reach past the public surface, and that is unchanged: every production module is still
+  // checked, and reaching any deep module is still a failure. What is now allowed is one thing only —
+  // a TEST or FIXTURE file importing this owner's own `__fixtures__`, which is what T-08's suites
+  // already do with T-07's. Forbidding it would force every later task to grow a second, drifting
+  // copy of `resize()` and the proof composition, which is a worse outcome than the import.
   const mobileRoot = join(rootPath, 'apps/mobile/src');
   for (const file of listFiles(mobileRoot)) {
     const relative = file.slice(mobileRoot.length + 1).replace(/\\/gu, '/');
     if (relative.startsWith('responsive/')) continue;
+    const isTestScaffolding = /(?:^|\/)__(?:tests|fixtures)__\//u.test(relative);
     const text = stripComments(readFileSync(file, 'utf8'));
     for (const match of text.matchAll(/from\s+'([^']*\/responsive\/[^']*)'/gu)) {
+      if (isTestScaffolding && match[1].includes('/responsive/__fixtures__/')) continue;
       assert.fail(`${relative} deep-imports the responsive owner: ${match[1]}`);
     }
   }

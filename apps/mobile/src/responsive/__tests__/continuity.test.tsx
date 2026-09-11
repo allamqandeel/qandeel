@@ -200,7 +200,10 @@ describe('T11 — a geometry change during a travel moves the whole plane, and n
     // animation API, holds no clock and has no path to the motion layer at all — which is proven
     // exhaustively by the root static contract's import guard, not guessed at here.
     const plan = recompositionPlan(presentationSurface({ width: 390, height: 844 }) as never);
-    expect(Object.keys(plan).sort()).toEqual(['band', 'chrome', 'geometry', 'mapFrame', 'shortHeight', 'surface', 'timelineWidthPoints']);
+    // T-12 re-anchor: `support` is the room the two support regions are GIVEN. It is arithmetic over
+    // the measured surface and the three frozen minimums, it names nothing, and it carries no timing
+    // of any kind — which is what the rest of this test goes on to prove of every key.
+    expect(Object.keys(plan).sort()).toEqual(['band', 'chrome', 'geometry', 'mapFrame', 'shortHeight', 'support', 'surface', 'timelineWidthPoints']);
     // No duration, no easing, no delay, no curve and no cue anywhere in what it produces.
     const serialized = JSON.stringify(plan);
     for (const forbidden of ['duration', 'easing', 'delay', 'spring', 'cue', 'ignition', 'animate']) {
@@ -324,8 +327,20 @@ describe('T11 — the recomposition lifecycle', () => {
     const style = JSON.stringify(band.props.style);
     expect(style).toContain('"flexShrink":1');
     expect(style).toContain('"overflow":"hidden"');
+    // Still no CEILING: a height computed from a constant this layer cannot know is what put the
+    // bottom of the chrome off the screen once, and it stays forbidden.
     expect(style).not.toContain('maxHeight');
-    expect(style).not.toContain('"height"');
+    // T-12 re-anchor. The band now carries a height, and that is the correction rather than a
+    // regression: it used to have none, its only source of size was a `ScrollView` that reports no
+    // intrinsic height, and on a device it therefore resolved to ZERO with the chrome still mounted
+    // inside it — which took every return act off the surface. The height is the PLAN's allocation,
+    // computed before any region renders, so what is asserted here is that it is exactly that
+    // allocation and that the allocation is never zero while the chrome is present.
+    // The rendered surface is the one resized above, which carries no insets of its own.
+    const rendered = recompositionPlan(presentationSurface({ width: 320, height: 320 }) as never);
+    expect(style).toContain(`"height":${rendered.support.chromePoints}`);
+    expect(rendered.support.chromePoints).toBeGreaterThan(0);
+    expect(rendered.support.timelinePoints).toBeGreaterThan(0);
     // and the reachable route inside it is a real scroll container holding the real chrome.
     expect(subtree(view, RESPONSIVE_CHROME_BAND_TEST_ID).some((node) => node.type === 'RCTScrollView')).toBe(true);
     expect(view.getByTestId(ORIENTATION_CHROME_TEST_ID)).toBeTruthy();

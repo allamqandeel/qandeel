@@ -29,8 +29,8 @@ export interface ResponsiveSurfaceProps extends ResponsiveSurfaceOptions {
   readonly testID?: string;
 }
 
-export function ResponsiveSurface({ children, insets, fontScale, style, testID = RESPONSIVE_SURFACE_TEST_ID }: ResponsiveSurfaceProps) {
-  const { onLayout, plan } = useResponsiveSurface({ insets, fontScale });
+export function ResponsiveSurface({ children, insets, fontScale, envelope, style, testID = RESPONSIVE_SURFACE_TEST_ID }: ResponsiveSurfaceProps) {
+  const { onLayout, plan } = useResponsiveSurface({ insets, fontScale, envelope });
   return (
     <View testID={testID} style={[styles.surface, style]} onLayout={onLayout}>
       {plan === null ? null : children(plan)}

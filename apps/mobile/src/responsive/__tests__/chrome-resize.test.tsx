@@ -24,7 +24,8 @@ import { createTemporalPreviewController } from '../../temporal-navigation/previ
 import { temporalTargeting } from '../../temporal-navigation/targeting';
 import { trackOf } from '../../temporal-navigation/__fixtures__/temporal';
 import { isPressTarget, nodes, RESPONSIVE_CHROME_BAND_TEST_ID, ResponsiveWorld, resize, subtree } from '../__fixtures__/composition';
-import { CHROME_MAX_MEASURE_POINTS, CHROME_OWN_HORIZONTAL_PADDING, type RecompositionPlan } from '../plan';
+import { CHROME_MAX_MEASURE_POINTS, CHROME_OWN_HORIZONTAL_PADDING, recompositionPlan, type RecompositionPlan } from '../plan';
+import { presentationSurface } from '../surface';
 
 jest.setTimeout(120_000);
 
@@ -295,7 +296,22 @@ describe('T11 — the same truthful answer at every supported size', () => {
       expect(style.flex).toBeUndefined();
       const band = flattenStyle(world.view.getByTestId(RESPONSIVE_CHROME_BAND_TEST_ID).props.style);
       expect(band.position).toBeUndefined();
-      expect(band.width).toBeUndefined();
+      // T-12 re-anchor. What this defends is that the chrome is never a DRAWER, a SIDEBAR or an
+      // INSPECTOR — never floated over the world, never pinned to a side, never a fraction of the
+      // window. That is unchanged and still checked above and below. What a bare `width` no longer
+      // distinguishes is the short-height composition, where the instrument and the orientation sit
+      // ACROSS each other inside the same bottom band: there the orientation legitimately occupies
+      // its own half of that band. So the rule is stated precisely instead of by absence — a width
+      // may exist ONLY in that arrangement, and only as the plan's own half of the band.
+      const plan = recompositionPlan(presentationSurface({ width: testCase.width, height: testCase.height }) as never);
+      if (plan.support.arrangement === 'SIDE_BY_SIDE') {
+        expect(band.width).toBe(plan.support.chromeWidthPoints);
+        expect(plan.shortHeight).toBe(true);
+      } else {
+        expect(band.width).toBeUndefined();
+      }
+      // Never a fraction of the window, in either arrangement.
+      expect(typeof band.width === 'string').toBe(false);
     }
     await act(async () => {
       world.view.unmount();

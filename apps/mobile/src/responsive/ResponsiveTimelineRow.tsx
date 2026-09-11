@@ -34,7 +34,7 @@
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { TIMELINE_ROW_POINTS } from './plan';
+import { TIMELINE_ROW_POINTS, type SupportComposition } from './plan';
 
 export const RESPONSIVE_TIMELINE_ROW_TEST_ID = 'qandeel-responsive-timeline-row';
 
@@ -46,6 +46,15 @@ export interface ResponsiveTimelineRowProps {
   readonly widthPoints: number;
   /** The band's own horizontal padding, so the two support regions share one vertical rhythm. */
   readonly paddingHorizontal?: number;
+  /**
+   * The room the plan gave this region.
+   *
+   * Taken as an ALLOCATION rather than measured from the content: the scroller below reports no
+   * intrinsic height, so a region that asked its own content how tall to be could be resolved to
+   * zero and clipped off the surface. `minHeight` alone does not hold it — this row already carried
+   * one and still reached zero — so the allocation is stated as a definite height as well.
+   */
+  readonly support: SupportComposition;
   readonly children: ReactNode;
   readonly testID?: string;
 }
@@ -53,11 +62,24 @@ export interface ResponsiveTimelineRowProps {
 export function ResponsiveTimelineRow({
   widthPoints,
   paddingHorizontal = 0,
+  support,
   children,
   testID = RESPONSIVE_TIMELINE_ROW_TEST_ID,
 }: ResponsiveTimelineRowProps) {
   return (
-    <View testID={testID} style={[styles.row, { width: widthPoints, marginHorizontal: paddingHorizontal }]} pointerEvents="box-none">
+    <View
+      testID={testID}
+      style={[
+        styles.row,
+        {
+          width: widthPoints,
+          marginHorizontal: paddingHorizontal,
+          height: support.timelinePoints,
+          minHeight: Math.min(TIMELINE_ROW_POINTS, support.timelinePoints),
+        },
+      ]}
+      pointerEvents="box-none"
+    >
       <ScrollView
         style={styles.scroller}
         contentContainerStyle={styles.content}
@@ -78,10 +100,17 @@ export function ResponsiveTimelineRow({
 const styles = StyleSheet.create({
   // Yields at twice the chrome's rate, and never below the extent at which the Track, the position
   // rail and the target strip stop being one instrument.
+  // T-12 re-anchor. `flexShrink: TIMELINE_ROW_SHRINK` and `minHeight: TIMELINE_ROW_POINTS` said the
+  // instrument yields at twice the orientation's rate and never below its own interactive minimum,
+  // and BOTH claims are kept: the rate is still 2, and the minimum is still 136 wherever the surface
+  // can afford it. What changed is where the height comes from. It was inferred from a `ScrollView`,
+  // which reports none, so the claim was unenforceable — measured on a device this row reached ZERO
+  // while carrying that very `minHeight`. The height is now the plan's allocation, which is computed
+  // from the same frozen minimums before any region renders, so the guarantee is structural instead
+  // of hopeful. The shrink rate stays because it still orders the two regions inside the plan.
   row: {
     flexShrink: TIMELINE_ROW_SHRINK,
     flexGrow: 0,
-    minHeight: TIMELINE_ROW_POINTS,
     overflow: 'hidden',
     alignSelf: 'center',
   },

@@ -1,0 +1,44 @@
+# T-12 Phase M / QAN-BL-T12-04 — phase 2, AFTER a genuine process kill.
+#
+# The kill happens OUTSIDE this flow (`xcrun simctl terminate` / `adb shell am force-stop`), because a
+# process cannot restart itself and anything that simulated a restart in-process would test nothing.
+#
+# `clearState` is deliberately absent. This flow reads back what phase 1 wrote, so clearing the store
+# would destroy the only evidence the item is about, and a reinstall would do the same — the runbook
+# forbids substituting either for a restart.
+#
+# No credential is typed here at all: phase 2's whole claim is that none is needed.
+appId: com.qandeel.mobile
+---
+- launchApp
+# A cold Release launch on a loaded runner can take longer than the default assertion window, and
+# the captured hierarchy proved it: the harness WAS on screen with every control present when the
+# debug snapshot was taken moments after the assertion had already given up. An impatient wait
+# reported the app as broken when it was only slow, so the wait is now explicit.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+- tapOn:
+    id: "t1204-run-AFTER_RESTART"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 90000
+
+- takeScreenshot: t1204-phase-2-after-restart
+
+# 2a — the AUTH session came back from the real `expo-sqlite` store.
+- assertVisible:
+    id: "t1204-step-T12-04.2a"
+# 2b — and nothing else did. A restored viewpoint, history or inspection would be Product truth
+# crossing a boundary it is forbidden to cross.
+- assertVisible:
+    id: "t1204-step-T12-04.2b"
+# 7 — the conversation Session is minted afresh. The reported id LENGTH is a shape, not a value; the
+# ids themselves are compared by a human across the two phase screenshots.
+- assertVisible:
+    id: "t1204-step-T12-04.7"
+- assertVisible:
+    text: "AFTER_RESTART — allPassed=true"

@@ -938,6 +938,12 @@ test('no temporal act can be reached from a camera act, an animation or a presen
 });
 
 test('T-05 stays presentation-only: every T-05 file is byte-identical and gains no store authority', async () => {
+  // T-12 §17 RE-ANCHOR. Two of these blobs moved, and only two: `QAN-BL-RSP-02` is the authorized
+  // correction of the outboard Live slot, which T-11 proved clips essential wording at 200 % text and
+  // which T-11 itself could not make across this freeze. The nine untouched files keep their original
+  // pins, so the claim that T-06 gains T-05 nothing is unweakened everywhere it was ever about T-06;
+  // the two that moved are re-pinned to their corrected bytes AND carry the permanent claims below,
+  // which are what the pin was standing in for.
   for (const [file, blob] of [
     ['apps/mobile/src/timeline/index.ts', '99ce579be9d3543658d226c6634db6e9b01499eb'],
     ['apps/mobile/src/timeline/model/disclosedTrack.ts', '1348a13e8fe20aebffc3ebf44b3b64db747d67ac'],
@@ -945,14 +951,35 @@ test('T-05 stays presentation-only: every T-05 file is byte-identical and gains 
     ['apps/mobile/src/timeline/window/controller.ts', '83b9bc86de9240f85bac209e862c3b80576d059b'],
     ['apps/mobile/src/timeline/accessibility/commands.ts', '8debbb68131e6f34739ea8abf7ff067089e26276'],
     ['apps/mobile/src/timeline/accessibility/PresentationNavigator.tsx', '35efaa9286b98c8670f767e04b7aa3e2c00639a0'],
-    ['apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx', '388037bc524dca8a7abbe1cad240a6517585cb5d'],
+    // T-12 §17: the outboard slot's fixed width and clip became a floor. Nothing else in it changed.
+    ['apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx', '03212dbb122d00934832e8dd0dba12825cb2b30f'],
     ['apps/mobile/src/timeline/testing/fixtures.ts', 'f59c962d13e6af81088e69168c0c00f307acbf8e'],
     ['apps/mobile/src/timeline/__tests__/controller.test.ts', '8453bae72e867c13788384a81f3eaca17cde2ada'],
-    ['apps/mobile/src/timeline/__tests__/firewall.test.tsx', 'ab260d5034ba9ac291c4c89f858fa1254529b6e8'],
+    // T-12 §17: the same correction's own assertions, re-anchored beside it.
+    ['apps/mobile/src/timeline/__tests__/firewall.test.tsx', '67c429a698aecbbb073284c7fe6df33420fa76a0'],
     ['apps/mobile/src/timeline/__tests__/large-history.test.tsx', '88bf84b0df0cca20dc68335768c62a5245d22197'],
   ]) {
     assert.equal(gitBlobId(await read(file)), blob, `${file} is byte-identical: T-05 gains nothing from the temporal layer`);
   }
+  // The PERMANENT claims the pin above exists to protect, asserted directly so a future authorized
+  // presentation correction is checked rather than merely re-hashed.
+  // Code only: the correction's own comment necessarily names the clip it removed in order to
+  // explain it, and a comment is not a style.
+  const presentation = stripComments(await read('apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx'));
+  // T-05 still writes no canonical state and holds no store authority of any kind.
+  for (const forbidden of ['CanonicalStore', 'dispatch', 'store.', 'commitPreviewedTarget', 'temporalTargeting', 'inspection']) {
+    assert.equal(presentation.includes(forbidden), false, `T-05 presentation must not reach ${forbidden}`);
+  }
+  // The Track's invariant step is untouched: the correction changed the slot BESIDE the strip, and
+  // the row around it, and nothing about ordinal geometry, the window offset or the position scale.
+  assert.match(presentation, /style=\{\{ width: TIMELINE_STEP, height: TIMELINE_STEP \}\}/u, 'the Moment step keeps its exact invariant extent');
+  assert.match(presentation, /style=\{\{ height: TIMELINE_STEP, flexGrow: 1, flexShrink: 1, flexBasis: 0 \}\}/u, 'the Track keeps its exact height and measures its own viewport');
+  // The Live edge is still OUTBOARD: its own slot, beside the strip, separated by the discontinuity,
+  // and never inside the list that carries the Moments.
+  assert.match(presentation, /<View testID="timeline-outboard-live" style=\{\{ minWidth: OUTBOARD_LIVE_EXTENT, flexShrink: 0 \}\}>/u,
+    'the outboard slot sizes to its content, never below its floor, and no longer clips');
+  assert.equal(presentation.includes("overflow: 'hidden'"), false, 'essential Live wording is never clipped by the slot');
+  assert.match(presentation, /minHeight: TIMELINE_STEP/u, 'the row grows for a taller label instead of clipping it');
   // The bridge runs one way: T-06 reads T-05's model and writes nothing back into it.
   const bridge = code['timeline-integration/disclosed-bridge.ts'];
   assert.match(bridge, /import \{ hitTest, type DisclosedMomentTarget, type DisclosedTrack, type PresentationSnapshot \} from '\.\.\/\.\.\/timeline';/u);

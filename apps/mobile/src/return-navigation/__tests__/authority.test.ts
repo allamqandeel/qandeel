@@ -176,6 +176,9 @@ describe('RN07-A — the return-family authority boundary', () => {
     // a regex could miss is caught too.
     const surface = Object.keys(publicSurface).sort();
     expect(surface).toEqual([
+      // T-12 §14: the frozen set of acts a checkpoint can be an inspection-journey ORIGIN of. It is
+      // data, not authority — a reader of it can neither mint a target nor execute anything.
+      'INSPECTION_JOURNEY_ORIGIN_ACTS',
       'RETURN_ACTION_AUTHORITY',
       'RETURN_ACT_IDS',
       'backOneStep',
@@ -184,6 +187,10 @@ describe('RN07-A — the return-family authority boundary', () => {
       // R2-01: the ONE authorized additive surface. A read-only boolean about current provenance,
       // for a presentation that must stop offering an act it can never perform. It grants nothing.
       'isCurrentReturnCheckpointTargetForStore',
+      // T-12 §14: the second, strictly NARROWER provenance question — everything the first asks, and
+      // then whether the entry behind the handle was recorded by a journey-capable act. It reads the
+      // recorded act and no part of the checkpoint, holds nothing, and grants nothing either.
+      'isInspectionJourneyOriginFor',
       'isReturnCheckpointTarget',
       'latestReturnCheckpoint',
       'liveFocusReturnAvailability',
