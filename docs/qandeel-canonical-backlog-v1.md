@@ -137,6 +137,7 @@ still not automatically backlog (BG-06), and admission still authorizes no imple
 | `QAN-BL-T13-01` | Restart / Recovery / Persistence | `T-13 — Recovery / Persistence` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-NAV-01` | Cross-Session Timeline | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-NAV-02` | Analysis Replay | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -292,6 +293,43 @@ happens to reversible history — are defined here.
 - **Reopen condition:** Architecture opens a dedicated Replay contract.
 - **Status:** `OPEN — UNASSIGNED`
 
+### `QAN-BL-AUTH-01` — Mobile Product Sign-In Gateway
+
+- **Title / Finding:** there is no Product mobile sign-in experience, and no task owns one. The
+  Product has no entry path for a signed-out reader.
+- **Source:** [T-12 §14 residual limitations](final-living-analysis-map-integration-v1.md) — "There
+  is no mobile sign-in experience, and no task owns one. T-12P shipped the capability and named no
+  owner for the gateway. It is not T-12's, and it is not registered in the canonical backlog."
+  Corroborated by [T-12P §8](mobile-runtime-entry-preconditions-v1.md) ("No login experience.
+  `signInWithPassword` is a runtime capability for a future auth gateway to call.") and by
+  [T-12 Phase M §11](final-living-analysis-map-integration-v1-phase-m.md), which routes around the
+  absent gateway rather than building one.
+- **Why deferred:** T-12P owns authentication/runtime capability and T-12 owns final Living Analysis
+  Map integration, but neither task owns or defines the Product-facing login/onboarding gateway.
+  Implementing it requires a dedicated Product/experience contract rather than being smuggled into
+  T-12 closure or T-13 recovery.
+- **Owner task:** `UNASSIGNED`
+- **Severity:** `HIGH`
+- **Reopen condition:** Architecture opens a dedicated Product authentication / onboarding gateway
+  task, or pre-release readiness requires a real Product entry path for signed-out users.
+- **Status:** `OPEN — UNASSIGNED`
+
+This entry authorizes **no implementation**. Its boundaries, stated so the obligation is not
+misread as a decision:
+
+- the validation-only T12-04 auth harness is **not** the Product login experience and must not be
+  promoted into one by implication;
+- the existence of Supabase auth capability, auth-session persistence, or `signInWithPassword` is
+  not the same thing as a Product login gateway;
+- `T-13 — Recovery / Persistence` does not own this item merely because T-13 interacts with
+  authenticated identity;
+- `QAN-SEC-01 — Pre-release Mobile Credential Security` does not own this Product experience merely
+  because it owns credential security (`QAN-BL-SEC-01`);
+- no visual language, onboarding flow, registration flow, password-recovery flow, social auth,
+  account creation, account linking, or credential UX semantics are defined by this entry.
+
+The backlog records the obligation only (BG-07).
+
 ---
 
 ## 6. Tombstones
@@ -404,18 +442,21 @@ record changes only and do not modify Product/runtime code.
 | --- | ---: |
 | `DEFERRED — OWNED` | 2 |
 | `VALIDATION — OPEN` | 0 |
-| `OPEN — UNASSIGNED` | 6 |
+| `OPEN — UNASSIGNED` | 7 |
 | `CLOSED — TOMBSTONE` | 10 |
-| **Total** | **18** |
+| **Total** | **19** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 9 |
+| `HIGH` | 10 |
 | `MEDIUM` | 8 |
 | `LOW` | 1 |
 
-T-12 inherited ten items and all ten are now tombstoned. `QAN-BL-SEC-01` is the sole new BG-08
-admission from T-12 closure residue.
+T-12 inherited ten items and all ten are now tombstoned. `QAN-BL-SEC-01` was the sole new BG-08
+admission made *at* T-12 closure. `QAN-BL-AUTH-01` is a later BG-08 reconciliation: the residue was
+explicitly named in the T-12 document but missed this register, and it was admitted afterwards by
+`PRE-T13 — T-12 Documentation / Governance Reconciliation`. Admitting it reopens nothing — T-12
+remains `CLOSED / FROZEN`.
 
 ---
 
@@ -480,3 +521,11 @@ head `02bff1b61c65c33a0d186da52dfa25d25baebe9e`: all ten inherited items are tom
 qualifying new security residue is admitted as `QAN-BL-SEC-01`, and no T-12 Product, validation,
 Architecture or Security blocker remains open in this register. The BG-08 commits after that head
 are documentation-only governance records and do not alter Product/runtime code.
+
+**Late BG-08 reconciliation.** One qualifying cross-task residue named by T-12 — the absent Product
+mobile sign-in gateway — was recorded only in the task document and did not reach this register
+before closure. It is admitted here as `QAN-BL-AUTH-01 — Mobile Product Sign-In Gateway`,
+`OPEN — UNASSIGNED`, by `PRE-T13 — T-12 Documentation / Governance Reconciliation`, so that no
+qualifying residue exists only in a task-local note. This is a register correction, not a lifecycle
+change: T-12 stays `CLOSED / FROZEN`, no blocker is laundered (BG-01), no owner is invented (BG-02),
+and no implementation is authorized (BG-07).

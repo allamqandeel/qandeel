@@ -1,6 +1,8 @@
 # Final Living Analysis Map Integration v1 — T-12
 
-**Status:** CANDIDATE — pre-`/review-animations`, and ACTIVE at its physical validation gate
+**Status:** CLOSED / FROZEN — closed by PR #220 at `0b86de85443738e0c88111508c000661276d0fb1`
+**Status at authoring (historical):** CANDIDATE — pre-`/review-animations`, and ACTIVE at its
+physical validation gate
 **Baseline:** `fee91dc80d68ba23b0320ff4420bc5399ec32aaa` (the merge of PR #219, T-12P)
 **Branch:** `feat/t12-final-living-analysis-map-integration-v1`
 **Owner of:** app-root lifecycle and composition, the one locale authority, the inspection-journey
@@ -10,6 +12,19 @@ final Graphic Language, or any persistence
 
 > **One world. One truth. One composition.**
 > **Integration connects owners. Integration does not replace owners.**
+
+> **CURRENT LIFECYCLE STATUS — SUPERSEDED.** T-12 is **CLOSED / FROZEN**, closed by PR **#220** at
+> `0b86de85443738e0c88111508c000661276d0fb1`. Every `CANDIDATE` / `ACTIVE` / "no physical or
+> release-equivalent device evidence exists" / "T-12 is not CLOSED" statement below — in particular
+> in §14 and §15 — is a historical snapshot of the state at authoring time, before final physical
+> validation and closure. Those statements are preserved for provenance and are **not** current
+> lifecycle authority. Physical validation did occur before closure, on real Android hardware
+> (Honor X9b, Android 15) among other configurations, and all ten inherited backlog items are now
+> `CLOSED — TOMBSTONE`. The current register is
+> [`qandeel-canonical-backlog-v1.md`](qandeel-canonical-backlog-v1.md) — see its §6 tombstones and
+> §9 T-12 closure record, and
+> [`t12-auth-storage-at-rest-disposition-v1.md`](t12-auth-storage-at-rest-disposition-v1.md) for the
+> accepted v1 storage boundary.
 
 `T-12 backlog inheritance: 10 items`
 
@@ -356,6 +371,13 @@ restores. `QAN-BL-T13-01` remains T-13's and is not claimed. **T-13 NOT STARTED.
 
 ## 14. Residual limitations, stated honestly
 
+> **Historical — superseded at closure.** This section records the limitations as they stood at
+> authoring time. Physical validation was subsequently executed and T-12 closed via PR #220 at
+> `0b86de85443738e0c88111508c000661276d0fb1`; the current disposition of every item named here is in
+> [`qandeel-canonical-backlog-v1.md`](qandeel-canonical-backlog-v1.md). The sign-in governance gap
+> recorded below is now admitted to that register as `QAN-BL-AUTH-01 — Mobile Product Sign-In
+> Gateway` (`OPEN — UNASSIGNED`), and it remains unimplemented and unowned.
+
 - **No physical or release-equivalent device evidence exists.** The authoring host has no Android SDK,
   no emulator, no `adb`, no `java` and no Xcode, and is Windows. `QAN-BL-MOT-03`, `QAN-BL-MOT-04`,
   `QAN-BL-RSP-01` and `QAN-BL-T12-04` therefore remain open at the validation gate, and T-12 is not
@@ -421,6 +443,12 @@ would normally judge is not T-12's to change — and the parts that are were che
 ---
 
 ## 15. Backlog dispositions
+
+> **Historical — superseded at closure.** The dispositions below are the candidate-era ones, taken
+> before the physical validation gate. They are preserved as provenance. The current dispositions are
+> the BG-08 tombstones in [`qandeel-canonical-backlog-v1.md`](qandeel-canonical-backlog-v1.md) §6:
+> all ten inherited items are `CLOSED — TOMBSTONE` under PR #220, the sole closure-time security
+> residue is `QAN-BL-SEC-01` (owned by `QAN-SEC-01`), and `QAN-BL-T13-01` is still not claimed here.
 
 | ID | Disposition at this candidate |
 | --- | --- |
