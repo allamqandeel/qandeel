@@ -1,8 +1,24 @@
 # T-12 Phase M — External Native / Physical Validation
 
-**Status:** PREPARED — awaiting external device execution. **No result in this document is a PASS.**
+**Status:** EXECUTED / SUPERSEDED — T-12 is CLOSED / FROZEN, closed by PR #220 at
+`0b86de85443738e0c88111508c000661276d0fb1`
+**Status at authoring (historical):** PREPARED — awaiting external device execution. **No result in
+this document is a PASS.**
 **Baseline:** `fee91dc80d68ba23b0320ff4420bc5399ec32aaa`
 **Branch:** `feat/t12-final-living-analysis-map-integration-v1` (uncommitted working tree)
+
+> **CURRENT LIFECYCLE STATUS — SUPERSEDED.** External validation was subsequently executed and T-12
+> closed. The "PREPARED — awaiting external device execution" status and the "No result in this
+> document is a PASS" statement above are historical snapshots from before execution: they describe
+> Parts One–Three as authored, and they are **not** current lifecycle authority. Parts Four to Six
+> below record executed evidence, and physical validation ran on real Android hardware (Honor X9b,
+> Android 15). The four gate items — `QAN-BL-MOT-03`, `QAN-BL-MOT-04`, `QAN-BL-RSP-01`,
+> `QAN-BL-T12-04` — are now `CLOSED — TOMBSTONE` in
+> [`qandeel-canonical-backlog-v1.md`](qandeel-canonical-backlog-v1.md) §6, which is the authority on
+> their outcome; the accepted storage boundary and its residue `QAN-BL-SEC-01` are in
+> [`t12-auth-storage-at-rest-disposition-v1.md`](t12-auth-storage-at-rest-disposition-v1.md). The
+> preparation material, procedures, evidence-state rules and candidate-era limitations are preserved
+> unchanged for provenance.
 
 Four T-12-owned items are mandatory closure gates and none may be closed from unit tests or a CI boot
 smoke: `QAN-BL-MOT-03`, `QAN-BL-MOT-04`, `QAN-BL-RSP-01`, `QAN-BL-T12-04`.
