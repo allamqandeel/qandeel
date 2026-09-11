@@ -1,0 +1,47 @@
+name: Mobile Expo SDK 57 dependency drift advisory
+# QAN-INF-03. The mandatory fast mobile contract gate in `mobile-ci.yml` validates
+# Expo dependency compatibility deterministically (the offline env override, set
+# there and only there, against the `expo/bundledNativeModules.json` map shipped
+# inside the installed `expo` package) so that a previously green, unchanged
+# commit can never go red merely because the live Expo compatibility registry
+# advances its recommended patch versions.
+#
+# Live drift is still a real maintenance signal, so this workflow runs the SAME
+# two checks (`expo install --check`, `expo-doctor`) against the live registry on
+# purpose, with no offline override of any kind. It is intentionally NOT
+# triggered by `pull_request` or `push`: a red run here is visible in the Actions
+# tab but cannot gate, retroactively fail, or otherwise affect any pull
+# request's merge status.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch: {}
+concurrency:
+  group: mobile-expo-dependency-drift-advisory
+  cancel-in-progress: true
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+jobs:
+  live-dependency-drift:
+    name: Live Expo SDK 57 dependency drift (advisory; never gates a merge)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - name: Live Expo dependency validation (queries the mutable Expo registry on purpose)
+        if: always()
+        run: npm run deps:check:mobile
+      - name: Live Expo Doctor (queries the mutable Expo registry on purpose)
+        if: always()
+        run: npm run doctor:mobile
+      - name: Summarize
+        if: always()
+        run: |
+          echo '### Live Expo SDK 57 dependency drift advisory' >> "$GITHUB_STEP_SUMMARY"
+          echo 'This workflow is advisory-only and never gates a pull request merge.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'A failing step above means the live Expo registry currently recommends newer patches than the committed baseline. Open a narrow infrastructure task to review and, if warranted, bump the minimum required patch versions.' >> "$GITHUB_STEP_SUMMARY"
