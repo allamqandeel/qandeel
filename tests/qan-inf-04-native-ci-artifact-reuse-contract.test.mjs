@@ -242,6 +242,43 @@ test('3, 4 — a consumer downloads, verifies provenance, and only then installs
     'the ordering predicate rejects an install placed before the verification');
 });
 
+test('4a — no provenance gate can be swallowed by the pipeline it is written in', () => {
+  // Measured in the cloud, not reasoned about. A dispatch whose build inputs had genuinely changed was
+  // refused by the verifier exactly as designed — `BUILD_INPUT_FINGERPRINT_MISMATCH`, then `REUSE
+  // REFUSED`, exit 1 — and the STEP WENT GREEN, and the job installed the artifact and launched it.
+  //
+  // The cause: the step piped the verifier into `tee` to capture its verdict for the evidence, and a
+  // shell pipeline reports the status of its LAST command. GitHub's default `bash -e {0}` carries no
+  // `pipefail`, so `tee` decided the gate.
+  //
+  // This is the precise failure mode the whole task exists to prevent, one level up: not a bad artifact
+  // accepted by a weak rule, but a correct refusal that changed nothing. Every gate that pipes must
+  // therefore report the verifier, and the check is structural so it holds for gates not yet written.
+  for (const workflow of [PHASE_M, MOBILE_CI, DEMONSTRATION]) {
+    const text = read(workflow);
+    // Each `run: |` block that invokes the verifier, taken whole.
+    const blocks = [...text.matchAll(/^( +)run: \|\n((?:\1 {2}[^\n]*\n|\n)*)/gmu)]
+      .map((match) => match[2])
+      .filter((block) => block.includes('verify-native-artifact-manifest.mjs'));
+    assert.ok(blocks.length > 0, `${workflow} invokes the verifier in a run block`);
+    for (const block of blocks) {
+      const code = block.replace(/^\s*#[^\n]*$/gmu, '');
+      // The verifier's own command, from its invocation to the end of its backslash continuations.
+      const invocation = /node scripts\/phase-m\/verify-native-artifact-manifest\.mjs(?:[^\n]*\\\n)*[^\n]*/u.exec(code)?.[0] ?? '';
+      if (/\|\s*(?:tee|cat|head|tail)/u.test(invocation)) {
+        assert.match(code, /set -o pipefail|set -[a-z]*o[a-z]* pipefail|set -euo pipefail/u,
+          `${workflow}: the verifier is piped, so the block MUST set pipefail or the pipe decides the gate`);
+      }
+    }
+  }
+
+  // Non-vacuity: the predicate must reject the exact block shape that shipped and passed.
+  const swallowed = 'node scripts/phase-m/verify-native-artifact-manifest.mjs \\\n  --mode "$MODE" \\\n  | tee out.txt\n';
+  const invocation = /node scripts\/phase-m\/verify-native-artifact-manifest\.mjs(?:[^\n]*\\\n)*[^\n]*/u.exec(swallowed)?.[0] ?? '';
+  assert.equal(/\|\s*tee/u.test(invocation), true, 'the predicate sees the pipe');
+  assert.equal(/set -o pipefail/u.test(swallowed), false, 'and rejects the block for having no pipefail');
+});
+
 test('4b — prior-run reuse is manual, explicit, and skips only the producer it replaces', () => {
   const workflow = read(PHASE_M);
   const jobs = jobBlocks(workflow);

@@ -165,6 +165,12 @@ jobs:
         env:
           MODE: ${{ inputs.reuse_artifacts_from_run_id != '' && 'prior-run' || 'same-run' }}
         run: |
+          # The `| tee` below would otherwise decide this step's status, because a pipeline reports its
+          # LAST command and GitHub's default shell carries no `pipefail`. Measured in the cloud, not
+          # reasoned about: the verifier printed REUSE REFUSED and exited 1, the step went green, and
+          # the job installed the artifact anyway. A fail-closed gate that cannot fail its job is not a
+          # gate, so the pipeline is made to report the verifier.
+          set -o pipefail
           node scripts/phase-m/verify-native-artifact-manifest.mjs \
             --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
             --artifact "$RUNNER_TEMP/native-build/app-release.apk" \
@@ -331,6 +337,12 @@ jobs:
         env:
           MODE: ${{ inputs.reuse_artifacts_from_run_id != '' && 'prior-run' || 'same-run' }}
         run: |
+          # The `| tee` below would otherwise decide this step's status, because a pipeline reports its
+          # LAST command and GitHub's default shell carries no `pipefail`. Measured in the cloud, not
+          # reasoned about: the verifier printed REUSE REFUSED and exited 1, the step went green, and
+          # the job installed the artifact anyway. A fail-closed gate that cannot fail its job is not a
+          # gate, so the pipeline is made to report the verifier.
+          set -o pipefail
           node scripts/phase-m/verify-native-artifact-manifest.mjs \
             --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
             --artifact "$RUNNER_TEMP/native-build/qandeel-ios-simulator.app.zip" \

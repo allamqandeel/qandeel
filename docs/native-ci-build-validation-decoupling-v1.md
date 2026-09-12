@@ -163,6 +163,20 @@ Refusal codes: `MANIFEST_NOT_AN_OBJECT`, `SCHEMA_MISMATCH`, `MANIFEST_FIELD_MISS
 Modes: `same-run` additionally requires the commit to equal the checkout's; `prior-run` relaxes **that
 one field and nothing else**.
 
+### The gate must be able to fail its job
+
+A consumer pipes the verifier into `tee` so the verdict reaches the evidence. A shell pipeline reports
+the status of its **last** command, and GitHub's default `bash -e {0}` carries no `pipefail` — so for
+one cloud run, `tee` decided the gate: the verifier printed `BUILD_INPUT_FINGERPRINT_MISMATCH` and
+`REUSE REFUSED` and exited 1, the step went **green**, and the job installed the artifact and launched
+it.
+
+That is this task's own failure mode one level up: not a bad artifact accepted by a weak rule, but a
+correct refusal that changed nothing. Every piped gate now sets `set -o pipefail`, and the contract
+checks it structurally — it finds each `run:` block that invokes the verifier, and if the invocation is
+piped it requires `pipefail` in that block — so the rule holds for gates not yet written. The guard is
+run against the exact block that shipped and passed, and required to reject it.
+
 `QANDEEL_API_BASE_URL` is a build-time value — `app.config.js` embeds it in `extra` — so an artifact
 built for a Cloudflare Quick Tunnel that has since died is refused against a new tunnel, by name.
 
