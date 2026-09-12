@@ -108,14 +108,28 @@ function describeSession(session: IntegrationSessionRuntime): string {
   );
 }
 
+type BootstrapFailureOf = Extract<IntegrationPhase, { kind: 'BOOTSTRAP_FAILED' }>['failure'];
+
+/**
+ * A bootstrap failure with its own detail. The detail is the transport's error message (a status, a
+ * network error), never a credential; it is what tells a `SNAPSHOT` that timed out apart from one the
+ * server refused, which a kind alone cannot — the eighth cloud run showed the kind alone is not enough.
+ */
+function describeBootstrapFailure(failure: BootstrapFailureOf): string {
+  if ('detail' in failure) return `${failure.kind} (${failure.detail.replace(/\s+/gu, ' ').slice(0, 160)})`;
+  if (failure.kind === 'SESSION_ACQUISITION') return `${failure.kind} (${failure.outcome.kind})`;
+  return failure.kind;
+}
+
 function describePhase(phase: IntegrationPhase): string {
   if (phase.kind === 'READY') return `phase=READY ${describeSession(phase.runtime)}`;
   if (phase.kind === 'RECOVERY_FAILED') {
     const failure = phase.failure;
-    const detail = failure.kind === 'SESSION_INVALID' ? failure.failure.kind : failure.kind === 'RECORD_INVALID' ? failure.reason : 'storage';
+    const detail =
+      failure.kind === 'SESSION_INVALID' ? describeBootstrapFailure(failure.failure) : failure.kind === 'RECORD_INVALID' ? failure.reason : 'storage';
     return `phase=RECOVERY_FAILED failure=${failure.kind}/${detail}`;
   }
-  if (phase.kind === 'BOOTSTRAP_FAILED') return `phase=BOOTSTRAP_FAILED failure=${phase.failure.kind}`;
+  if (phase.kind === 'BOOTSTRAP_FAILED') return `phase=BOOTSTRAP_FAILED failure=${describeBootstrapFailure(phase.failure)}`;
   return `phase=${phase.kind}`;
 }
 
