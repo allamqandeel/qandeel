@@ -306,6 +306,26 @@ device remains validation tooling, unreachable from the Product route, and is no
 - **Workflow iOS harness boot steps** (`t12-phase-m-cloud-validation.yml`, the three jobs that type into
   the harness) declare the simulator's one-time "slide to type" keyboard introduction shown before the
   app is installed: on a fresh simulator it swallowed every typed key after the first.
+- **`integration/__validation__/auth-storage-validation.ts` `settled()`** treated only `RESTORING` and
+  `BOOTSTRAPPING` as transient. T-13 publishes `RECOVERING` between them, so the T12-04 procedure could
+  sample the runtime while the recovery store was still being read: the second cloud run did exactly
+  that on the iOS simulator (`T12-04.1b` reported `phase=RECOVERING`) while Android passed on timing
+  alone. `RECOVERING` is transient there now, as it already was in the T-13 procedures. A validation
+  procedure's omission, not a Product one: `ProductRoot` renders every non-`READY` phase as a runtime
+  state and never sampled anything.
+- **`scripts/phase-m/run-t13-recovery-phases.sh`** now waits for the device after every interruption
+  (`adb get-state` = `device` and `sys.boot_completed` = 1 on Android, `simctl bootstatus -b` on iOS)
+  instead of sleeping three seconds: the fifth cloud run met an emulator whose adb transport was still
+  `offline` after the force-stop, and the next flow died at `launchApp` before any claim. Phase 9 also
+  requires phase 7, so when the chain before it broke it is recorded as `blocked`, never as the failure
+  of a `PINNED(5)` claim that phase 5 never established.
+- **`scripts/phase-m/run-t13-recovery-phases.sh`** (Android) keeps the emulator's crash / ANR dialogs
+  hidden (`settings put global hide_error_dialogs 1`) for the whole sequence and again after the reboot,
+  and waits for the boot animation to stop plus fifteen seconds before the next flow: the sixth cloud
+  run lost phases 9 and 10 to a "System UI isn't responding" dialog that sat over the app after
+  `adb reboot`, with the harness underneath it and no claim made. The boot-animation wait that came
+  with it is bounded at sixty seconds: the seventh run showed that a headless emulator need not ever
+  report the service `stopped`, and an unbounded wait turned that into an eighty-minute hang.
 
 Nothing in `apps/mobile/src/state/` changed. The T-12P layer gained one optional bootstrap override
 (`initialViewpoint`), one failure kind (`VIEWPOINT_INCOHERENT`) and the viewpoint-coherence judgement;
@@ -316,8 +336,100 @@ unchanged and still proven.
 
 ## 16. Native restart validation
 
-Recorded in the final report and in the PR. The T-12 Phase-M infrastructure is reused: the
-validation-only harness (`integration/__validation__/`) gains T-13 procedures, the cloud workflow
-gains a recovery job per platform, and every phase is separated by a real process kill.
+Evidence class: the functional recovery contract on a Release build against the real API and the real
+Supabase auth authority, on the iOS simulator (iPhone 17 / iOS 26.5, Xcode 26.6) and the Android
+emulator (API 36, x86_64). Never a physical, tactile, backup or Data Protection claim. The T-12 Phase-M
+infrastructure is reused: the validation-only harness (`integration/__validation__/`) gains the T-13
+procedures, the cloud workflow gains one recovery job per platform, and every artifact carries an
+identity record that pins the checkpoint SHA it was built from.
 
-`T-13 native validation: see PR evidence`
+### The proof
+
+One sequencer (`scripts/phase-m/run-t13-recovery-phases.sh`) runs fourteen phases against ONE
+installation of the validation build, with a real interruption between them performed outside any
+flow: `xcrun simctl terminate` / `adb shell am force-stop`, a home-and-reopen (`pressKey: Home`), and a
+simulator shutdown-and-boot / `adb reboot`. The gate (`gate-t13-recovery-phases.sh`) declares all
+fourteen phases itself, records a phase the sequencer never reached as `missing`, reports phase 8 (the
+restart itself) without gating it, and gates phase 9 (recovery after the restart) whenever phase 8
+succeeded — which it did on every run of both platforms. A phase is `success` only when its flow's
+every assertion held; `blocked` and `skipped` are never success; the T-13 static contract holds the
+gate's list to the sequencer's phases.
+
+| phase | what it proves |
+| --- | --- |
+| 01 `fresh-signin` | clean install; identity A signs in; READY through `FRESH`; the locator is committed (`T13-B`) |
+| 02 `kill-resume` | after a process kill: `RESUMED`, `FOLLOW_LIVE`, no Exact Return origin (`T13-A`) |
+| 03 `adopt-session` | a server-populated Session is adopted through the production store and codec (`T13-D`) |
+| 04 `kill-adopted-follow-live` | the adopted Session resumes with a fresh Live Head from the server |
+| 05 `pin-moment` | `COMMIT_MOMENT(5)` on the READY store; the durable snapshot advances (`T13-P`) |
+| 06 `kill-pinned` | `PINNED(5)` survives a kill — exactly 5 |
+| 07 `close-reopen` | `PINNED(5)` survives a normal close and reopen |
+| 08 `device-restart` | the environment restarts (reported, not gated) |
+| 09 `after-device-restart` | `PINNED(5)` and the same Session survive the device restart |
+| 10 `sign-out` | sign-out retires the runtime (`T13-O`) |
+| 11 `signed-out-launch` | a signed-out launch exposes nothing: `auth=SIGNED_OUT phase=SIGNED_OUT` (`T13-S`) |
+| 12 `replacement` | B reaches READY `FRESH` in B's own namespace, B signs out, A resumes A's own `PINNED(5)` record (`T13-R`) |
+| 13 `adopt-foreign` | a Session that is NOT A's is adopted through the store |
+| 14 `refused` | the next launch fails closed: `RECOVERY_FAILED` / `SESSION_INVALID`, no replacement Session, no world (`T13-F`) |
+
+### Runs
+
+Workflow `t12-phase-m-cloud-validation.yml`, branch `feat/t13-recovery-persistence-v1`, the local API
+served through a Cloudflare Quick Tunnel from the validating host, the seeded Session owned by
+identity A (Live Head 13), moment 5. Every run is listed; none is hidden.
+
+| run | commit | T-13 Android | T-13 iOS | other jobs | what it established |
+| --- | --- | --- | --- | --- | --- |
+| 34652975615 | `cce4787f` | FAIL — phases 01 and 09 failed, the rest blocked | job green on an EMPTY results file | — | the four infrastructure defects of §15 (bash 3.2, off-screen report, `hideKeyboard`, the keyboard introduction) and a gate that could pass vacuously; the run also produced Maestro's own failure screenshot with the identity field still filled, which is why the harness now clears credential fields as a run starts (that artifact should be deleted or left to expire) |
+| 34657321018 | `aa0ca685` | 14/14 PASS, gate PASS | 14/14 PASS, gate PASS | Android AUTH PASS, Android PRODUCT PASS, iOS PRODUCT PASS; iOS AUTH and iOS RESPONSIVE FAIL at `T12-04.1b` (`phase=RECOVERING` sampled) | the recovery contract holds on both platforms; the T-12 procedure's wait needed `RECOVERING` (§15) |
+| 34659986008 | `d136590` | phase 01 FAIL `BOOTSTRAP_FAILED failure=SESSION_ACQUISITION` | same | Android AUTH PASS (it had finished first) | environmental: the API tunnel on the validating host ended with its session mid-run; nothing in the tree changed but the T-12 procedure |
+| 34674638527 | `d136590`, full workflow | 14/14 PASS, gate PASS | 01–03 PASS; 04 FAIL `RECOVERY_FAILED failure=SESSION_INVALID/SNAPSHOT` at 05:30:41Z | Android AUTH PASS, Android PRODUCT PASS, iOS PRODUCT PASS, iOS RESPONSIVE PASS; iOS AUTH phases 1–3 PASS, phase 4 FAIL `sign-in refused: UNEXPECTED` at 05:30:19Z | two independent iOS jobs failed within thirty seconds on two paths that share one dependency — the app signs in against Supabase Auth, and the API validates every bearer against `/auth/v1/user` with a five-second timeout — an external transient, so the affected jobs were re-run |
+| 34677724416 | `d136590`, auth + recovery | 01 PASS; 02 FAIL at `launchApp`: `host:transport:emulator-5554: device offline` (no claim was made); 03–07 blocked; 08 PASS; 09 FAIL asserting a `PINNED(5)` that phase 05 never established | cancelled after 28 minutes inside the sequence step (the run was already failed by the Android gate; the step's output was not flushed) | Android AUTH PASS; iOS AUTH PASS, phases 1–7 and its gate | the emulator's adb transport was still down seconds after the force-stop: the sequencer now observes the device back after every interruption, and phase 9 also requires phase 7 so a broken chain records it as `blocked` (§15) |
+| 34680242364 | `cef5d29e`, recovery only | 01–08 PASS; 09 and 10 FAIL with the harness never visible: the screen hierarchy at both steps is Android's own "System UI isn't responding" dialog over the freshly launched app; 11–14 blocked | **14/14 PASS, gate PASS** | — | the emulator's System UI stalls after `adb reboot` on a loaded runner: error dialogs are now kept hidden for the whole sequence and System UI is given time to settle after the reboot (§15) |
+| 34682302709 | `95d8ff84`, recovery only | hung inside the sequence after the reboot for over eighty minutes — the wait for the boot-animation service to report `stopped` had no bound — and was cancelled | **14/14 PASS, gate PASS** | — | the wait is bounded at sixty seconds; `sys.boot_completed` stays the readiness criterion (§15) |
+| 34685898388 | `8b3a00db`, recovery only | **14/14 PASS, gate PASS** | 01–04 PASS; 05 FAIL `RECOVERY_FAILED failure=SESSION_INVALID/SNAPSHOT` at 09:50Z (the temporal snapshot read failed on that launch); 06–14 blocked | — | the same transient as run 34674638527, iOS only, on a launch that had just succeeded on the launch before; the report now prints the bootstrap failure's own detail so the next occurrence names its cause |
+| 34687258684 | `1803d5e4`, recovery only | phase 01 FAIL before the app was launched: Maestro's transport to the emulator died seventeen seconds into the session, `host:transport:emulator-5554: device offline`, at the first `launchApp`; 02–14 blocked; nothing of the Product ran | **14/14 PASS, gate PASS** | — | the same adb-transport class as run 34677724416's phase 02 and as this branch's Mobile CI Android boot smoke (which failed the same way on two pushes and passed on re-run); by instruction, the final run — no further run was launched |
+
+### Result
+
+Both native gates passed on the delivered implementation, on separate runs of the same, unchanged
+Product code:
+
+| platform | run | commit | phases | gate |
+| --- | --- | --- | --- | --- |
+| Android API 36 emulator (x86_64, google_apis, Release APK) | 34685898388 | `8b3a00db` | 14/14 `success` | PASS |
+| iOS iPhone 17 / iOS 26.5 simulator (Xcode 26.6, Release) | 34687258684 | `1803d5e4` | 14/14 `success` | PASS |
+
+Earlier full passes of the same fourteen phases: iOS on `95d8ff84` (run 34682302709), `cef5d29e`
+(34680242364) and `aa0ca685` (34657321018); Android on `cef5d29e` (34680242364), `d136590`
+(34674638527) and `aa0ca685` (34657321018). Every pass above includes the device / simulator restart
+(phase 8 `success`) and recovery after it (phase 9 `success`).
+
+Why two runs are one proof: the Product implementation has not changed since `aa0ca685`. Every commit
+after it touches only `integration/__validation__/`, `scripts/phase-m/` and `docs/` — four files in
+all (`git diff --stat aa0ca685..1803d5e4`) — none of which the Product import closure reaches: the
+T-12 static contract proves that closure contains no reference to `__validation__`, and the sequencer
+and workflow run outside the app. Between the Android pass (`8b3a00db`) and the iOS pass (`1803d5e4`)
+exactly one file changed, `recovery-validation.ts`, and only in what the validation report prints.
+The Android failure of run 34687258684 happened before the app was launched and says nothing about
+the implementation. Nothing is treated as passed that did not pass: every `blocked`, `failure` and
+cancelled outcome above is listed as such, and the gate that decides a job declares all fourteen
+phases itself.
+
+Observed and left as it is, deliberately: on iOS only, a launch that had just succeeded on the launch
+before twice failed its bootstrap with `SESSION_INVALID/SNAPSHOT` (runs 34674638527 and 34685898388),
+never on Android. The Product fails closed exactly as T-12P's bootstrap always did on a snapshot it
+cannot read — no Session is synthesised, nothing is READY — so this is not a T-13 defect and no
+Product semantics were changed; the validation report now prints the transport's own detail so the
+next occurrence names its cause. Whether the bootstrap should retry a transient transport failure is
+a T-12P design question, recorded for the backlog, not answered here.
+
+### Evidence
+
+Artifacts `t13-recovery-android-emulator` and `t13-recovery-ios-simulator` of each run: the identity
+record (checkpoint SHA, build configuration, simulator / emulator identity), `t13-phase-results.txt`
+(the record the gate reads), `COMPLETENESS.txt`, `REDACTION.txt` (every supplied value redacted from the
+text evidence), and per phase the Maestro command log, screen hierarchies and screenshots. The
+screenshots carry kinds, modes, counts and the Session locator — never a credential (the harness prints
+counts; the flows erase the identity field before their own screenshot; the harness clears every
+credential field as a run starts).
