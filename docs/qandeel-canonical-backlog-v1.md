@@ -460,7 +460,8 @@ changes no T-13 semantics.
 ### `QAN-BL-AUTH-01` — Mobile Product Sign-In Gateway
 
 - **Closing task:** `T-14 — Mobile Product Sign-In Gateway v1`
-- **PR / SHA:** `#PENDING` / `PENDING` — recorded when the T-14 candidate head is pushed.
+- **PR / SHA:** `#225` / `784d8de75d97410d08dd9149ce822138ecfe9748` — the implementation/validation
+  evidence head. The BG-08 commit that writes this record follows it and changes no Product code.
 - **Disposition:** completed. A signed-out reader has one real Product entry surface, and it consumes
   only the already-frozen `MobileAuthAuthority.signInWithPassword`. A successful sign-in hands control
   back to the existing integration runtime, which owns

@@ -3,6 +3,7 @@
 **Status:** CANDIDATE — awaiting independent review
 **Baseline:** `e132091ae9af1e2a2137d59494c04505c218032c` (canonical `main` after QAN-INF-04)
 **Branch:** `feat/t14-mobile-product-sign-in-gateway-v1`
+**PR / evidence head:** `#225` / `784d8de75d97410d08dd9149ce822138ecfe9748`
 **Architecture:** `QANDEEL — T-14 Mobile Product Sign-In Gateway v1`, FROZEN FOR IMPLEMENTATION
 **Owner of:** the signed-out Product entry surface (`apps/mobile/src/integration/auth-gateway/`), the
 frozen bilingual sign-in copy, the local required-field rejections, the one in-flight request state,
