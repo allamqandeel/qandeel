@@ -1,0 +1,50 @@
+# T-13 recovery validation — commit PINNED(moment) on the READY store; the durable snapshot advances.
+#
+# `COMMIT_MOMENT` is the kernel act a reader performs through T-06; it is dispatched here on the real
+# READY store so the pinned viewpoint can be proven to survive the kill that follows, outside this flow.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+# Typing is retried until the WHOLE value has arrived — the harness prints character counts, never a
+# value, and the sequencer passes the expected count beside each value. A fresh iOS simulator shows a
+# one-time "slide to type" introduction over the keyboard, which swallows every key after the first;
+# the workflow declares it shown, and this block would still catch a short value.
+# The keyboard is dismissed by tapping the heading: with the keyboard up, the harness ScrollView takes
+# any tap outside the focused input and blurs it, on both platforms — never Maestro's hideKeyboard
+# heuristic, whose iOS fallback swipes at the centre of the screen, wherever that happens to land.
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: "t13-moment"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - eraseText: 64
+      - inputText: ${MOMENT}
+      - tapOn:
+          id: "t1204-heading"
+      - assertVisible:
+          text: "(?s).*momentChars=${MOMENT_CHARS}"
+
+- tapOn:
+    id: "t13-run-PIN_MOMENT"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 120000
+
+- takeScreenshot: t13-pin-moment
+
+- assertVisible:
+    id: "t1204-step-T13-P.1"
+- assertVisible:
+    id: "t1204-step-T13-P.2"
+- assertVisible:
+    text: "(?s).*tm=PINNED\\(${MOMENT}\\).*"
+- assertVisible:
+    text: "PIN_MOMENT — allPassed=true"

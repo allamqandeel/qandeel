@@ -28,6 +28,7 @@ import {
   type HttpDouble,
 } from '../../runtime-entry/__fixtures__/runtime-entry';
 import { createManualForegroundSignal, type ForegroundState, type ManualForegroundSignal } from '../../runtime-entry';
+import { createEphemeralProductRecoveryStorage, type ProductRecoveryStorage } from '../../recovery';
 import {
   createIntegrationRuntime,
   type IntegrationPhase,
@@ -55,6 +56,8 @@ export interface IntegrationHarness {
   readonly auth: AuthPortDouble;
   readonly http: HttpDouble;
   readonly foreground: ManualForegroundSignal;
+  /** T-13: the in-memory Product recovery storage this runtime reads and writes. Fresh per harness unless supplied. */
+  readonly recoveryStorage: ProductRecoveryStorage;
   /** The READY session runtime, or a thrown error naming the phase that was reached instead. */
   ready(): IntegrationSessionRuntime;
   phase(): IntegrationPhase;
@@ -68,6 +71,8 @@ export interface HarnessOptions {
   readonly serve?: boolean;
   readonly sessionId?: string;
   readonly liveHead?: number | null;
+  /** T-13: a storage carried across two harnesses stands in for a storage that survived a process death. */
+  readonly recoveryStorage?: ProductRecoveryStorage;
 }
 
 /**
@@ -87,8 +92,9 @@ export async function harness(options: HarnessOptions = {}): Promise<Integration
   }
   const auth = authPortDouble(options.initialSession === undefined ? { userId: 'user-1', accessToken: 'token-1' } : options.initialSession);
   const foreground = createManualForegroundSignal(options.foreground ?? 'INACTIVE');
+  const recoveryStorage = options.recoveryStorage ?? createEphemeralProductRecoveryStorage();
 
-  const built = createIntegrationRuntime({ config: TEST_CONFIG, authPort: auth, foreground, httpFetch: http.fetch });
+  const built = createIntegrationRuntime({ config: TEST_CONFIG, authPort: auth, foreground, httpFetch: http.fetch, recoveryStorage });
   if (!built.ok) throw new Error(`the harness could not build a runtime: ${built.phase.detail}`);
   const runtime = built.runtime;
 
@@ -100,6 +106,7 @@ export async function harness(options: HarnessOptions = {}): Promise<Integration
     auth,
     http,
     foreground,
+    recoveryStorage,
     phase: () => runtime.getPhase(),
     ready() {
       const phase = runtime.getPhase();

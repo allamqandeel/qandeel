@@ -1,0 +1,53 @@
+# T-13 recovery validation — adopt a Session locator through the production Product recovery store.
+#
+# The Product build carries no surface that navigates to a populated Session, so a Session the server
+# populated for identity A is made the active one by writing ONE record through the real store and the
+# real codec, under A's own namespace. Whether that Session is really A's is then decided by the SERVER
+# on the next launch — an adopted foreign Session must yield RECOVERY_FAILED, never a world — which is
+# exactly the ownership boundary this validation exists to observe.
+#
+# The locator is not a credential and is shown in the report on purpose.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+# Typing is retried until the WHOLE value has arrived — the harness prints character counts, never a
+# value, and the sequencer passes the expected count beside each value. A fresh iOS simulator shows a
+# one-time "slide to type" introduction over the keyboard, which swallows every key after the first;
+# the workflow declares it shown, and this block would still catch a short value.
+# The keyboard is dismissed by tapping the heading: with the keyboard up, the harness ScrollView takes
+# any tap outside the focused input and blurs it, on both platforms — never Maestro's hideKeyboard
+# heuristic, whose iOS fallback swipes at the centre of the screen, wherever that happens to land.
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: "t13-session-locator"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - eraseText: 64
+      - inputText: ${SESSION_ID}
+      - tapOn:
+          id: "t1204-heading"
+      - assertVisible:
+          text: "(?s).*sessionLocatorChars=${SESSION_ID_CHARS} .*"
+
+- tapOn:
+    id: "t13-run-ADOPT_SESSION"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 120000
+
+- takeScreenshot: ${SHOT}
+
+- assertVisible:
+    id: "t1204-step-T13-D.1"
+- assertVisible:
+    text: "(?s).*write=COMMITTED.*"
+- assertVisible:
+    text: "ADOPT_SESSION — allPassed=true"

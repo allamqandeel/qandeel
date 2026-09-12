@@ -41,6 +41,7 @@ import {
   type HttpDouble,
 } from '../../runtime-entry/__fixtures__/runtime-entry';
 import { createManualForegroundSignal } from '../../runtime-entry';
+import { createEphemeralProductRecoveryStorage } from '../../recovery';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 
 const READER = { userId: 'reader-1', accessToken: 'token-A' };
@@ -56,7 +57,15 @@ const wire = (http: HttpDouble) =>
 function build(http: HttpDouble, session: typeof READER, state: 'ACTIVE' | 'INACTIVE') {
   const auth = authPortDouble(session);
   const foreground = createManualForegroundSignal(state);
-  const built = createIntegrationRuntime({ config: TEST_CONFIG, authPort: auth, foreground, httpFetch: http.fetch });
+  // T-13: the Product recovery storage is a seam like the auth port. Without it the runtime builds the
+  // real SQLite adapter, which fails closed under Jest — correct on a device, not what this proves.
+  const built = createIntegrationRuntime({
+    config: TEST_CONFIG,
+    authPort: auth,
+    foreground,
+    httpFetch: http.fetch,
+    recoveryStorage: createEphemeralProductRecoveryStorage(),
+  });
   if (!built.ok) throw new Error(`the test config must build a runtime: ${built.phase.detail}`);
   return { auth, foreground, runtime: built.runtime };
 }

@@ -1,0 +1,80 @@
+# T-13 recovery validation — phase 1, a CLEAN install: identity A signs in and the locator is written.
+#
+# Runs in the validation build only (the isolated harness is the root component). `clearState: true`
+# belongs to this phase alone: every later phase reads back what an earlier one left in the REAL
+# `expo-sqlite` Product recovery store, so clearing there would erase the evidence.
+#
+# The harness clears every credential field the moment the run starts, and the identity email is
+# erased again before the screenshot this flow takes; the password field is `secureTextEntry`. The
+# report carries kinds, modes, counts and the Session LOCATOR — never a credential.
+appId: com.qandeel.mobile
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+# Typing is retried until the WHOLE value has arrived — the harness prints character counts, never a
+# value, and the sequencer passes the expected count beside each value. A fresh iOS simulator shows a
+# one-time "slide to type" introduction over the keyboard, which swallows every key after the first;
+# the workflow declares it shown, and this block would still catch a short value.
+# The keyboard is dismissed by tapping the heading: with the keyboard up, the harness ScrollView takes
+# any tap outside the focused input and blurs it, on both platforms — never Maestro's hideKeyboard
+# heuristic, whose iOS fallback swipes at the centre of the screen, wherever that happens to land.
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: "t1204-email"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - eraseText: 64
+      - inputText: ${EMAIL_A}
+      - tapOn:
+          id: "t1204-heading"
+      - assertVisible:
+          text: "(?s).*identityEmailChars=${EMAIL_A_CHARS} .*"
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: "t1204-password"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - eraseText: 64
+      - inputText: ${PASSWORD_A}
+      - tapOn:
+          id: "t1204-heading"
+      - assertVisible:
+          text: "(?s).*identityPasswordChars=${PASSWORD_A_CHARS} .*"
+
+- assertVisible:
+    id: "t1204-input-lengths"
+- assertNotVisible:
+    text: "(?s).*identityEmailChars=0 .*"
+- assertNotVisible:
+    text: "(?s).*identityPasswordChars=0 .*"
+
+- tapOn:
+    id: "t13-run-RECOVERY_BEFORE"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 120000
+
+- tapOn:
+    id: "t1204-email"
+- eraseText: 64
+- tapOn:
+    id: "t1204-heading"
+
+- takeScreenshot: t13-phase-1-fresh-signin
+
+- assertVisible:
+    id: "t1204-step-T13-B.2"
+- assertVisible:
+    id: "t1204-step-T13-B.3"
+- assertVisible:
+    text: "RECOVERY_BEFORE — allPassed=true"

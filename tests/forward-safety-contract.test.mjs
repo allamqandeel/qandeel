@@ -194,21 +194,21 @@ test('the mirror is a faithful, independently runnable copy of the repository', 
 // ---------------------------------------------------------------------------------------------
 
 /**
- * T-12 re-anchor, for the same reason as the T-10 and T-11 ones before it.
+ * T-13 re-anchor, for the same reason as the T-10, T-11 and T-12 ones before it.
  *
- * The hypothetical was T-10's gate, then T-11's, then T-12's; each in turn registered it for real,
- * and re-using a registered name would insert a DUPLICATE registration — which several contracts
- * correctly refuse. A hypothetical has to stay hypothetical, so it moves on to the next gate that is
- * genuinely still in the future. The claim is unchanged and unweakened: a later task registering its
- * own Node-only mobile gate is authorized work.
+ * The hypothetical was T-10's gate, then T-11's, then T-12's, then T-13's; each in turn registered
+ * it for real, and re-using a registered name would insert a DUPLICATE registration — which several
+ * contracts correctly refuse. A hypothetical has to stay hypothetical, so it moves on to the next
+ * gate that is genuinely still in the future. The claim is unchanged and unweakened: a later task
+ * registering its own Node-only mobile gate is authorized work.
  *
  * This is the mechanism working, not drifting: the assertion that survives is a property of gate
- * registration in general, and the name it is demonstrated with is deliberately disposable. T-13 is
- * NOT authorized and nothing here starts it — this is a name for a gate that does not exist, which
- * is precisely what makes it a usable hypothetical.
+ * registration in general, and the name it is demonstrated with is deliberately disposable.
+ * `QAN-SEC-01` is NOT authorized and nothing here starts it — this is a name for a gate that does not
+ * exist, which is precisely what makes it a usable hypothetical.
  */
-const FUTURE_GATE = 'test:t13-recovery-persistence-contract';
-const FUTURE_GATE_FILE = 'tests/t13-recovery-persistence-contract.test.mjs';
+const FUTURE_GATE = 'test:qan-sec-01-mobile-credential-security-contract';
+const FUTURE_GATE_FILE = 'tests/qan-sec-01-mobile-credential-security-contract.test.mjs';
 
 test('a future authorized Mobile CI gate breaks no historical contract', () => scenario(
   ['.github/workflows/mobile-ci.yml', 'package.json', FUTURE_GATE_FILE],

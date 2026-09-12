@@ -1,0 +1,27 @@
+# T-13 recovery validation — AFTER a kill that followed a sign-out: nothing Product-shaped comes back.
+#
+# The pass condition is SIGNED_OUT with no world and no Product recovery read. A READY here would mean
+# a signed-out launch reached an identity's record, which is the failure this phase exists to detect.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+- tapOn:
+    id: "t13-run-RECOVERY_AFTER_SIGNED_OUT"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 120000
+
+- takeScreenshot: t13-after-signed-out
+
+- assertVisible:
+    id: "t1204-step-T13-S.1"
+- assertVisible:
+    text: "(?s).*auth=SIGNED_OUT phase=SIGNED_OUT.*"
+- assertVisible:
+    text: "RECOVERY_AFTER_SIGNED_OUT — allPassed=true"

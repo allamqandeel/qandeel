@@ -20,8 +20,10 @@
  * NOT here, by design: any Product surface. No Map, no Timeline, no chrome, no login screen, no
  * Product copy, no motion, no locale provider, no responsive composition. `FoundationShell` is
  * still the route output, and T-12 is the first task authorized to replace it. Restart, recovery
- * and Product persistence remain T-13's: the only thing this layer persists is authentication
- * material, through the official Supabase mechanism.
+ * and Product persistence are T-13's, in its own `recovery/` layer: the only thing THIS layer
+ * persists is authentication material, through the official Supabase mechanism. The bootstrap
+ * accepts a validated durable viewpoint (`InitialViewpoint`) and an already-authorized Session id
+ * from T-13's consumer, and still fetches the authoritative snapshot before any store exists.
  */
 
 export type {
@@ -60,6 +62,7 @@ export type {
   BootstrapResult,
   CanonicalRuntimeBundle,
   InitialDisclosureDisposition,
+  InitialViewpoint,
   LiveDeliveryCursors,
 } from './bootstrap/bootstrap-types';
 export type { BootstrapClients, BootstrapIdentity, BootstrapRequest } from './bootstrap/canonical-runtime-bootstrap';

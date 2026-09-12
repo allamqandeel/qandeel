@@ -1,0 +1,22 @@
+# T-13 recovery validation — sign out. The runtime retires; the record stays stored and unreachable.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-t1204-validation-harness"
+    timeout: 90000
+
+- tapOn:
+    id: "t13-run-RECOVERY_SIGN_OUT"
+- extendedWaitUntil:
+    visible:
+      id: "t1204-report"
+    timeout: 120000
+
+- takeScreenshot: t13-sign-out
+
+- assertVisible:
+    id: "t1204-step-T13-O.1"
+- assertVisible:
+    text: "RECOVERY_SIGN_OUT — allPassed=true"

@@ -42,7 +42,8 @@ appId: com.qandeel.mobile
 - waitForAnimationToEnd:
     timeout: 5000
 - inputText: ${PASSWORD_B}
-- hideKeyboard
+- tapOn:
+    id: "t1204-heading"
 
 - tapOn:
     id: "t1204-run-SIGN_OUT_AND_REPLACEMENT"
@@ -54,7 +55,8 @@ appId: com.qandeel.mobile
 - tapOn:
     id: "t1204-second-email"
 - eraseText: 64
-- hideKeyboard
+- tapOn:
+    id: "t1204-heading"
 
 - takeScreenshot: t1204-phase-3-signout-replacement
 

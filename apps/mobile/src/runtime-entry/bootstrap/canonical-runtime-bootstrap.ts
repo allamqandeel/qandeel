@@ -26,6 +26,17 @@
  * GENERATION SAFETY. Each attempt captures its generation and re-checks it before every step and
  * immediately before creating the store. A superseded attempt creates nothing and reports RETIRED,
  * so an old bootstrap can never become READY late or hand back a store nobody is watching.
+ *
+ * T-13 — RECOVERY GOES THROUGH THIS SAME SEQUENCE, NOT AROUND IT. A resumed Session arrives as
+ * `existingSessionId` (the seam §2.5 already reserved for an already-authorized Session) and the
+ * reader's durable viewpoint arrives as `initialViewpoint`. Nothing about the order changes: the
+ * Session is validated by fetching its authoritative snapshot, the fresh `LH` / `LF` come from that
+ * snapshot and never from storage, the viewpoint is judged against that snapshot — a pinned position
+ * or a checkpoint beyond the fresh Live Head fails the attempt closed rather than being clamped — and
+ * only then is the ONE store created, from fresh live truth plus the recovered `TM`, `IF_ref`, `MC`
+ * and `RH`. The effective `TC` is derived by the kernel as always; it is never stored and never
+ * supplied. A stale local frame therefore cannot exist: there is no store to render until the server
+ * has answered.
  */
 import { HistoricalDisclosureCache, HistoricalTransportError, type HistoricalProjectionApiClient } from '../../projection';
 import { initialCameraIntent } from '../../map';
@@ -37,7 +48,13 @@ import {
 } from '../../state';
 import { liveTruthFromSnapshot, type TemporalApiClient } from '../../temporal';
 import type { ConversationSessionApiClient } from '../conversation/conversation-session-api';
-import type { BootstrapFailure, BootstrapResult, CanonicalRuntimeBundle, InitialDisclosureDisposition } from './bootstrap-types';
+import type {
+  BootstrapFailure,
+  BootstrapResult,
+  CanonicalRuntimeBundle,
+  InitialDisclosureDisposition,
+  InitialViewpoint,
+} from './bootstrap-types';
 
 /** The authenticated identity a bootstrap attempt is bound to. */
 export interface BootstrapIdentity {
@@ -72,11 +89,39 @@ export interface BootstrapRequest {
    * An already-authorized conversation Session id, for a test or integration seam. When supplied,
    * NO session is created — this is the "unless an explicit already-authorized session ID is
    * supplied" half of §2.5 and it is the only way to avoid the create call.
+   *
+   * T-13 is the one production caller: the id comes from the identity's validated Product recovery
+   * record, and the snapshot fetch below is what validates the Session against server authority.
    */
   readonly existingSessionId?: string;
+  /**
+   * T-13 — the reader's validated durable viewpoint, constructed INTO the store in place of the fresh
+   * entry laws. Judged against the fresh snapshot first; refused whole if it is incoherent with it.
+   */
+  readonly initialViewpoint?: InitialViewpoint;
 }
 
 const failed = (failure: BootstrapFailure): BootstrapResult => ({ kind: 'FAILED', failure });
+
+/**
+ * T-13 — whether a durable viewpoint is possible under the fresh Live Head. The kernel's own
+ * construction rule refuses `PINNED(t)` with `t > LH`; the checkpoints need the same judgement, because
+ * a restoration is `PINNED(capturedTC)` and a captured position beyond the Live Head could never be
+ * restored truthfully. Nothing is clamped, dropped or repaired: the first impossibility refuses all.
+ */
+function viewpointCoherenceIssue(viewpoint: InitialViewpoint, liveHead: number | null): string | null {
+  if (viewpoint.temporal.kind === 'PINNED') {
+    if (liveHead === null) return `PINNED(${viewpoint.temporal.at}) is impossible: the Session has no addressable Live Head`;
+    if (viewpoint.temporal.at > liveHead) return `PINNED(${viewpoint.temporal.at}) is beyond the authoritative Live Head ${liveHead}`;
+  }
+  for (let index = 0; index < viewpoint.history.length; index += 1) {
+    const captured = viewpoint.history[index].captured.tc;
+    if (liveHead === null || captured > liveHead) {
+      return `history[${index}] captured Session Position ${captured} is beyond the authoritative Live Head ${liveHead === null ? 'null' : liveHead}`;
+    }
+  }
+  return null;
+}
 
 /**
  * Run one bootstrap attempt.
@@ -117,15 +162,8 @@ export async function bootstrapCanonicalRuntime(request: BootstrapRequest): Prom
     });
   }
 
-  // 3 — the initial WORLD disclosure, only where one is legal.
-  const projection = new HistoricalDisclosureCache();
-  let initialDisclosure: InitialDisclosureDisposition = 'NOT_APPLICABLE';
-  if (snapshot.liveHead !== null) {
-    initialDisclosure = await loadInitialDisclosure(clients.projection, projection, sessionId, snapshot.liveHead);
-    if (!isCurrent()) return failed({ kind: 'RETIRED' });
-  }
-
-  // 4 — the initial canonical state, from frozen laws only.
+  // 3 — the initial canonical state: fresh live truth from the snapshot, and either the frozen entry
+  // laws or (T-13) the reader's validated durable viewpoint judged against that same snapshot.
   let init: CanonicalStateInit;
   try {
     init = {
@@ -137,6 +175,29 @@ export async function bootstrapCanonicalRuntime(request: BootstrapRequest): Prom
     };
   } catch (cause) {
     return failed({ kind: 'INVALID_INITIAL_STATE', detail: describe(cause, 'the snapshot could not become live truth') });
+  }
+  if (request.initialViewpoint !== undefined) {
+    const issue = viewpointCoherenceIssue(request.initialViewpoint, snapshot.liveHead);
+    if (issue !== null) return failed({ kind: 'VIEWPOINT_INCOHERENT', detail: issue });
+    // `live` stays the snapshot's. The four recovered fields replace the entry laws, by name.
+    init = {
+      session: init.session,
+      live: init.live,
+      temporal: request.initialViewpoint.temporal,
+      inspection: request.initialViewpoint.inspection,
+      camera: request.initialViewpoint.camera,
+      history: request.initialViewpoint.history,
+    };
+  }
+
+  // 4 — the initial WORLD disclosure, only where one is legal, at the viewpoint the reader will
+  // actually stand on: the fresh Live Head when following Live, the exact pinned position otherwise.
+  const projection = new HistoricalDisclosureCache();
+  let initialDisclosure: InitialDisclosureDisposition = 'NOT_APPLICABLE';
+  const initialTc = init.temporal.kind === 'PINNED' ? init.temporal.at : snapshot.liveHead;
+  if (initialTc !== null) {
+    initialDisclosure = await loadInitialDisclosure(clients.projection, projection, sessionId, initialTc);
+    if (!isCurrent()) return failed({ kind: 'RETIRED' });
   }
 
   // 5 — the last possible moment before the store exists. Nothing is created for a stale attempt.
@@ -167,7 +228,8 @@ export async function bootstrapCanonicalRuntime(request: BootstrapRequest): Prom
 }
 
 /**
- * Fetch the one WORLD disclosure at the Live Head and hold whatever the server actually said.
+ * Fetch the one WORLD disclosure at the initial viewpoint's position and hold whatever the server
+ * actually said. For a fresh Session that is the Live Head; for a recovered `PINNED(t)` it is `t`.
  *
  * A typed refusal is held as `UNAVAILABLE` — it is knowledge, and the frozen contract keeps it
  * distinct from "not fetched". A transport failure holds nothing: the cache stays `NOT_FETCHED`,
@@ -179,15 +241,15 @@ async function loadInitialDisclosure(
   client: HistoricalProjectionApiClient,
   cache: HistoricalDisclosureCache,
   sessionId: string,
-  liveHead: number,
+  tc: number,
 ): Promise<InitialDisclosureDisposition> {
   try {
-    const disclosure = await client.fetchDisclosure(sessionId, { tc: liveHead });
+    const disclosure = await client.fetchDisclosure(sessionId, { tc });
     cache.hold(disclosure);
     return 'FETCHED';
   } catch (cause) {
     if (cause instanceof HistoricalTransportError && cause.failure.kind === 'UNAVAILABLE') {
-      cache.holdUnavailable(sessionId, liveHead, 'WORLD', cause.failure.code);
+      cache.holdUnavailable(sessionId, tc, 'WORLD', cause.failure.code);
       return 'UNAVAILABLE';
     }
     return 'NOT_FETCHED';

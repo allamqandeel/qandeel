@@ -1,5 +1,5 @@
 /**
- * T-12 Phase M — the `QAN-BL-T12-04` harness surface.
+ * T-12 Phase M — the `QAN-BL-T12-04` harness surface, extended by T-13 with the recovery procedures.
  *
  * VALIDATION ONLY, and deliberately ugly. It is the least interface that can take two credentials and
  * show a report on a device, and it is not a login gateway: no branding, no onboarding, no provider
@@ -15,10 +15,28 @@
  *
  * ## Credentials
  *
- * Typed at validation time, held in component state for the life of one run, `secureTextEntry` on the
- * password, never logged, never persisted, never rendered back, and never placed in the report. There
- * is no default, no placeholder value and no autofill hint carrying one. A failure shows the failure
- * KIND, so a screenshot of this screen is safe to attach as evidence.
+ * Typed at validation time, captured by the one procedure call that needs them, `secureTextEntry` on
+ * the password, never logged, never persisted, never rendered back, and never placed in the report.
+ * There is no default, no placeholder value and no autofill hint carrying one. Every credential field
+ * is cleared the moment a run starts — Maestro takes its own screenshot at the failing step, before a
+ * flow reaches its erase step — and the flows erase the identity field again before any screenshot
+ * they take. A failure shows the failure KIND, so a screenshot of this screen is safe to attach.
+ *
+ * ## Layout, for the flows
+ *
+ * The heading carries a test id because tapping it is how a flow dismisses the keyboard: with the
+ * keyboard up, the `ScrollView` (`keyboardShouldPersistTaps` never, the default) takes any tap
+ * outside the focused input and blurs it, on both platforms. Maestro's own `hideKeyboard` is a
+ * heuristic whose iOS fallback swipes at the centre of the screen, wherever that lands. The report
+ * renders FIRST, directly under the heading, so it is on screen without scrolling however many
+ * controls follow it; the run buttons form a two-column grid so the whole surface fits one screen.
+ *
+ * ## T-13
+ *
+ * The recovery procedures take two more inputs, neither a credential: a Session LOCATOR to adopt and a
+ * Moment to pin. The report they produce prints the Session locator on purpose — "the same Session came
+ * back" can only be checked across two launches by comparing values — and nothing else that is not a
+ * kind, a mode or a count.
  */
 
 import { useCallback, useState } from 'react';
@@ -30,23 +48,47 @@ import {
   validateSignOutAndReplacement,
   type AuthStorageValidationReport,
 } from './auth-storage-validation';
+import { runRecoveryValidation, type RecoveryRunKind, type RecoveryValidationReport } from './recovery-validation';
 
 export const VALIDATION_HARNESS_TEST_ID = 'qandeel-t1204-validation-harness';
 
 type RunKind = 'BEFORE_RESTART' | 'AFTER_RESTART' | 'SIGN_OUT_AND_REPLACEMENT';
+
+const RECOVERY_RUNS: readonly RecoveryRunKind[] = [
+  'RECOVERY_BEFORE',
+  'RECOVERY_AFTER',
+  'RECOVERY_AFTER_SIGNED_OUT',
+  'RECOVERY_AFTER_REFUSED',
+  'ADOPT_SESSION',
+  'PIN_MOMENT',
+  'RECOVERY_SIGN_OUT',
+  'RECOVERY_REPLACEMENT',
+];
 
 export function AuthStorageValidationHarness() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [secondEmail, setSecondEmail] = useState('');
   const [secondPassword, setSecondPassword] = useState('');
-  const [report, setReport] = useState<AuthStorageValidationReport | null>(null);
+  const [sessionLocator, setSessionLocator] = useState('');
+  const [moment, setMoment] = useState('');
+  const [report, setReport] = useState<AuthStorageValidationReport | RecoveryValidationReport | null>(null);
   const [running, setRunning] = useState(false);
+
+  // The credential fields are emptied as the run starts: the values live on in the procedure call
+  // alone, for exactly as long as it takes, and no screenshot taken from here on can carry them.
+  const clearCredentialFields = useCallback(() => {
+    setEmail('');
+    setPassword('');
+    setSecondEmail('');
+    setSecondPassword('');
+  }, []);
 
   const run = useCallback(
     async (kind: RunKind) => {
       setRunning(true);
       setReport(null);
+      clearCredentialFields();
       try {
         if (kind === 'BEFORE_RESTART') {
           setReport(await validateBeforeRestart({ email, password }));
@@ -57,20 +99,50 @@ export function AuthStorageValidationHarness() {
           setReport(await validateSignOutAndReplacement(replacement));
         }
       } finally {
-        // The credentials are dropped the moment the run that needed them is over. They are held for
-        // exactly as long as one procedure call, and never longer.
-        setPassword('');
-        setSecondPassword('');
         setRunning(false);
       }
     },
-    [email, password, secondEmail, secondPassword],
+    [clearCredentialFields, email, password, secondEmail, secondPassword],
+  );
+
+  const runRecovery = useCallback(
+    async (kind: RecoveryRunKind) => {
+      setRunning(true);
+      setReport(null);
+      clearCredentialFields();
+      try {
+        setReport(
+          await runRecoveryValidation(kind, {
+            credentials: email === '' ? undefined : { email, password },
+            replacement: secondEmail === '' ? undefined : { email: secondEmail, password: secondPassword },
+            sessionId: sessionLocator === '' ? undefined : sessionLocator,
+            moment: moment === '' ? undefined : Number(moment),
+          }),
+        );
+      } finally {
+        setRunning(false);
+      }
+    },
+    [clearCredentialFields, email, password, secondEmail, secondPassword, sessionLocator, moment],
   );
 
   return (
     <View style={styles.root} testID={VALIDATION_HARNESS_TEST_ID}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>T-12 / QAN-BL-T12-04 validation harness — NOT PRODUCT</Text>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="never">
+        <Text style={styles.heading} testID="t1204-heading">
+          T-12 / QAN-BL-T12-04 + T-13 recovery validation harness — NOT PRODUCT
+        </Text>
+
+        {report === null ? null : (
+          <View testID="t1204-report">
+            <Text style={styles.heading}>{`${report.phase} — allPassed=${String(report.allPassed)}`}</Text>
+            {report.steps.map((entry) => (
+              <Text key={entry.id} style={styles.step} testID={`t1204-step-${entry.id}`}>
+                {`${entry.outcome}  ${entry.id}\n  ${entry.claim}\n  ${entry.evidence}`}
+              </Text>
+            ))}
+          </View>
+        )}
 
         <TextInput
           style={styles.input}
@@ -112,6 +184,26 @@ export function AuthStorageValidationHarness() {
           accessibilityLabel="replacement identity password"
           testID="t1204-second-password"
         />
+        {/* T-13 inputs. Neither is a credential: a Session locator and a Moment ordinal. */}
+        <TextInput
+          style={styles.input}
+          value={sessionLocator}
+          onChangeText={setSessionLocator}
+          autoCapitalize="none"
+          autoCorrect={false}
+          accessibilityLabel="session locator to adopt"
+          testID="t13-session-locator"
+        />
+        <TextInput
+          style={styles.input}
+          value={moment}
+          onChangeText={setMoment}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="number-pad"
+          accessibilityLabel="moment to pin"
+          testID="t13-moment"
+        />
 
         {/*
           The credential BOUNDARY, stated in quantities that are not the credential.
@@ -132,33 +224,38 @@ export function AuthStorageValidationHarness() {
           than none.
         */}
         <Text style={styles.step} testID="t1204-input-lengths">
-          {`identityEmailChars=${email.length} identityPasswordChars=${password.length} replacementEmailChars=${secondEmail.length} replacementPasswordChars=${secondPassword.length} identitiesDistinct=${String(email.length > 0 && secondEmail.length > 0 && email !== secondEmail)}`}
+          {`identityEmailChars=${email.length} identityPasswordChars=${password.length} replacementEmailChars=${secondEmail.length} replacementPasswordChars=${secondPassword.length} identitiesDistinct=${String(email.length > 0 && secondEmail.length > 0 && email !== secondEmail)} sessionLocatorChars=${sessionLocator.length} momentChars=${moment.length}`}
         </Text>
 
-        {(['BEFORE_RESTART', 'AFTER_RESTART', 'SIGN_OUT_AND_REPLACEMENT'] as const).map((kind) => (
-          <TouchableOpacity
-            key={kind}
-            style={styles.button}
-            disabled={running}
-            onPress={() => void run(kind)}
-            accessibilityRole="button"
-            accessibilityLabel={`run ${kind}`}
-            testID={`t1204-run-${kind}`}
-          >
-            <Text style={styles.buttonText}>{running ? 'running…' : `run ${kind}`}</Text>
-          </TouchableOpacity>
-        ))}
+        <View style={styles.buttons}>
+          {(['BEFORE_RESTART', 'AFTER_RESTART', 'SIGN_OUT_AND_REPLACEMENT'] as const).map((kind) => (
+            <TouchableOpacity
+              key={kind}
+              style={styles.button}
+              disabled={running}
+              onPress={() => void run(kind)}
+              accessibilityRole="button"
+              accessibilityLabel={`run ${kind}`}
+              testID={`t1204-run-${kind}`}
+            >
+              <Text style={styles.buttonText}>{running ? 'running…' : `run ${kind}`}</Text>
+            </TouchableOpacity>
+          ))}
 
-        {report === null ? null : (
-          <View testID="t1204-report">
-            <Text style={styles.heading}>{`${report.phase} — allPassed=${String(report.allPassed)}`}</Text>
-            {report.steps.map((entry) => (
-              <Text key={entry.id} style={styles.step} testID={`t1204-step-${entry.id}`}>
-                {`${entry.outcome}  ${entry.id}\n  ${entry.claim}\n  ${entry.evidence}`}
-              </Text>
-            ))}
-          </View>
-        )}
+          {RECOVERY_RUNS.map((kind) => (
+            <TouchableOpacity
+              key={kind}
+              style={styles.button}
+              disabled={running}
+              onPress={() => void runRecovery(kind)}
+              accessibilityRole="button"
+              accessibilityLabel={`run ${kind}`}
+              testID={`t13-run-${kind}`}
+            >
+              <Text style={styles.buttonText}>{running ? 'running…' : `run ${kind}`}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
     </View>
   );
@@ -166,10 +263,11 @@ export function AuthStorageValidationHarness() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, paddingTop: 64 },
-  content: { padding: 16, rowGap: 12 },
+  content: { padding: 16, rowGap: 8 },
   heading: { fontSize: 14, fontWeight: '600' },
-  input: { minHeight: 44, borderWidth: 1, paddingHorizontal: 8 },
-  button: { minHeight: 44, justifyContent: 'center', borderWidth: 1, paddingHorizontal: 8 },
-  buttonText: { fontSize: 14 },
+  input: { minHeight: 40, borderWidth: 1, paddingHorizontal: 8 },
+  buttons: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
+  button: { width: '48%', minHeight: 40, justifyContent: 'center', borderWidth: 1, paddingHorizontal: 8 },
+  buttonText: { fontSize: 12 },
   step: { fontSize: 12, marginTop: 8 },
 });

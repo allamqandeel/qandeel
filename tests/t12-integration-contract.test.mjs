@@ -100,7 +100,7 @@ test('§28.4 — there is exactly one canonical store implementation, and T-12 i
   assert.equal(layerCode.includes('createCanonicalStore'), false, 'T-12 creates no store of its own');
 });
 
-test('§28.19–20 — the integration owner persists nothing, and implements no part of T-13', () => {
+test('§28.19–20 — the integration owner persists nothing itself, and holds no part of the T-13 boundary', () => {
   for (const persistence of [
     'AsyncStorage',
     'SecureStore',
@@ -115,9 +115,34 @@ test('§28.19–20 — the integration owner persists nothing, and implements no
   ]) {
     assert.equal(layerCode.includes(persistence), false, `T-12 must not persist through ${persistence}`);
   }
-  for (const t13 of ['restore', 'rehydrate', 'recover', 'resume(']) {
-    assert.equal(layerCode.toLowerCase().includes(t13.toLowerCase()), false, `restart and recovery are T-13's: ${t13}`);
+  // T-13 RE-ANCHOR. This used to forbid the WORDS `restore`, `rehydrate`, `recover` and `resume(` in
+  // the layer, with the reason stated beside it: "restart and recovery are T-13's". That was a
+  // delivery fact about a T-13 that had not started, and it expired exactly as its own reason
+  // predicted: T-13 now exists, and the integration owner consumes it the way it consumes every other
+  // owner — through its barrel, as a lifecycle it sequences and never as a mechanism it holds.
+  //
+  // The PERMANENT claim survives and is what is asserted instead: the integration layer holds no
+  // codec, no schema, no storage adapter, no namespace key and no record of its own. It may not
+  // decode, encode, key or store a Product recovery record; it may only ask the T-13 owner to load,
+  // decide, and write. That is strictly stronger than a vocabulary ban, because it is a statement
+  // about mechanisms rather than about spellings.
+  for (const mechanism of [
+    'createProductRecoveryStorage',
+    'decodeProductRecoveryRecord',
+    'encodeProductRecoveryRecord',
+    'parseProductRecoveryPayload',
+    'migrateRecoveryRecord',
+    'namespaceKeyFor',
+    'PRODUCT_RECOVERY_DATABASE_NAME',
+    'PRODUCT_RECOVERY_KEY_PREFIX',
+    'RECOVERY_RECORD_KEYS',
+    'schemaVersion',
+  ]) {
+    assert.equal(layerCode.includes(mechanism), false, `the T-13 boundary is consumed, never held: ${mechanism}`);
   }
+  // Reached ONLY through the T-13 barrel, like every other owner.
+  assert.doesNotMatch(layerCode, /from\s+'[^']*\/recovery\/[^']+'/u, 'T-13 is reached only through its barrel');
+  assert.match(code['runtime/integration-runtime.ts'], /from '\.\.\/\.\.\/recovery';/u, 'the integration owner consumes the T-13 barrel');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -125,7 +150,7 @@ test('§28.19–20 — the integration owner persists nothing, and implements no
 // ---------------------------------------------------------------------------------------------
 
 test('§28.5 — every owner is reached through its public barrel, never through a deep internal', () => {
-  const OWNERS = ['state', 'map', 'timeline', 'temporal', 'temporal-navigation', 'return-navigation', 'orientation-chrome', 'motion', 'responsive', 'projection', 'runtime-entry'];
+  const OWNERS = ['state', 'map', 'timeline', 'temporal', 'temporal-navigation', 'return-navigation', 'orientation-chrome', 'motion', 'responsive', 'projection', 'runtime-entry', 'recovery'];
   const allowed = new Set(OWNERS.map((owner) => `../../${owner}`));
   for (const [name, text] of Object.entries(code)) {
     for (const match of stripComments(text).matchAll(/from\s+'(\.\.\/\.\.\/[^']+)'/gu)) {
@@ -137,11 +162,23 @@ test('§28.5 — every owner is reached through its public barrel, never through
   }
 });
 
-test('§28.6 — the T-12P runtime entry is consumed through its barrel and its test seam is never used', () => {
+test('§28.6 — the T-12P runtime entry is consumed through its barrel, and the existing-Session seam carries only a validated recovery locator', () => {
   assert.doesNotMatch(layerCode, /from\s+'[^']*runtime-entry\/[^']+'/u, 'the runtime entry is reached only through its barrel');
-  // `existingSessionId` skips authenticated Session acquisition entirely. It is T-12P's test seam and
-  // the production path must never pass it.
-  assert.equal(layerCode.includes('existingSessionId'), false, 'no production use of the existing-Session seam');
+  // T-13 RE-ANCHOR. `existingSessionId` skips Session ACQUISITION, and at T-12 closure no production
+  // path was allowed to pass it, because nothing could yet vouch for a Session id that was not
+  // freshly minted. The T-13 architecture names this exact seam as the resume path: the id must
+  // come from THIS identity's validated Product recovery record, and the bootstrap still validates
+  // the Session against server authority by fetching its snapshot before any store exists.
+  //
+  // The permanent claim is therefore narrower and stronger than absence: the seam is passed from
+  // exactly ONE place, only inside a RESUME decision, only as the record's own locator — never a
+  // literal, never a fixture, never a synthesised id, and never beside a create.
+  const uses = [...layerCode.matchAll(/existingSessionId/gu)];
+  assert.equal(uses.length, 1, `the existing-Session seam is passed from exactly one place, found ${uses.length}`);
+  assert.match(layerCode, /existingSessionId: decision\.record\.sessionId,/u, 'the seam carries the validated record’s own Session locator');
+  for (const fabricated of ["existingSessionId: '", 'existingSessionId: "', 'existingSessionId: SESSION', 'existingSessionId: randomUUID']) {
+    assert.equal(layerCode.includes(fabricated), false, `no literal or synthesised Session may reach the seam: ${fabricated}`);
+  }
 });
 
 test('§28.6 — the bootstrap is called in exactly ONE place, and it cannot be called without the authorities', () => {
@@ -149,13 +186,20 @@ test('§28.6 — the bootstrap is called in exactly ONE place, and it cannot be 
   // The memoization trap: `bootstrap` memoises per auth generation and IGNORES the overrides of every
   // later call, so a single call without `storeDependencies` would leave this generation with a store
   // that has no Map, temporal or Return authority — permanently, silently, and looking mounted.
+  //
+  // T-13 RE-ANCHOR. The one call site now takes the recovery DECISION beside the entry. Both branches
+  // carry the authorities by name; the RESUME branch additionally carries the record's Session locator
+  // and viewpoint, and there is still nothing a caller could pass that omits the authorities.
   assert.match(
     runtime,
-    /function bootstrapWithAuthorities\(entry: MobileRuntimeEntry\) \{\s*\n\s*return entry\.bootstrap\(\{ storeDependencies: T12_STORE_DEPENDENCIES \}\);\s*\n\}/u,
-    'the one bootstrap call carries the authorities and takes no argument that could omit them',
+    /function bootstrapWithAuthorities\(entry: MobileRuntimeEntry, decision: Extract<RecoveryDecision, \{ kind: 'FRESH' \| 'RESUME' \}>\) \{/u,
+    'the one bootstrap function takes the entry and the recovery decision, and nothing that could omit the authorities',
   );
+  assert.equal((runtime.match(/storeDependencies: T12_STORE_DEPENDENCIES/gu) ?? []).length, 2, 'both branches carry the authorities by name');
+  assert.match(runtime, /return entry\.bootstrap\(\{ storeDependencies: T12_STORE_DEPENDENCIES \}\);/u, 'the FRESH branch is the unchanged clean bootstrap');
   const calls = [...stripComments(layerText).matchAll(/\.bootstrap\(/gu)];
-  assert.equal(calls.length, 1, `exactly one bootstrap call site, found ${calls.length}`);
+  assert.equal(calls.length, 2, `exactly one bootstrap function with its two branches, found ${calls.length} call expressions`);
+  assert.equal((stripComments(layerText).match(/bootstrapWithAuthorities\(entry, decision\)/gu) ?? []).length, 1, 'the function is invoked from exactly one place');
   // And the runtime entry is never published, so nothing outside this module can start a second one.
   assert.doesNotMatch(stripComments(code['runtime/integration-runtime.ts']), /^\s*entry,$/mu, 'the runtime entry is not exposed');
   assert.equal(code['index.ts'].includes('bootstrap'), false, 'the barrel exposes no bootstrap seam');

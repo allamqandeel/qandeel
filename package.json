@@ -145,6 +145,7 @@
     "test:phase-m-canonical-world-seeder-contract": "node --test tests/phase-m-canonical-world-seeder-contract.test.mjs",
     "test:t12-integration-contract": "node --test tests/t12-integration-contract.test.mjs",
     "test:t12p-mobile-runtime-entry-contract": "node --test tests/t12p-mobile-runtime-entry-contract.test.mjs",
+    "test:t13-recovery-persistence-contract": "node --test tests/t13-recovery-persistence-contract.test.mjs",
     "test:forward-safety-contract": "node --test tests/forward-safety-contract.test.mjs",
     "test:mobile-native-impact-classifier": "node --test tests/mobile-native-impact-classifier.test.mjs",
     "test:qan-inf-03-deterministic-expo-dependency-validation-contract": "node --test tests/qan-inf-03-deterministic-expo-dependency-validation-contract.test.mjs"
