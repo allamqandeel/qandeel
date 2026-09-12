@@ -396,6 +396,42 @@ test('7 — a runner-only Phase-M orchestration or flow change stays reusable, b
   }
 });
 
+test('7c — every excluded-from-the-fingerprint Maestro flow is still parseable text', () => {
+  // Measured, the expensive way. Excluding `apps/mobile/.maestro/` from the fingerprint is what makes
+  // a flow fix cheap — the binary is reused rather than rebuilt — and that same exclusion means NO
+  // gate downstream of this one ever looks at a flow again before a runner feeds it to Maestro.
+  //
+  // A comment edit to `boot-smoke.yaml` in this very task inserted a raw BEL (0x07) through a shell
+  // escaping mistake. Every static gate passed it: the byte sat inside a comment, so the token and
+  // absence predicates the T-12 and T-13 contracts run were all still satisfied. Maestro then failed
+  // with `Parsing Failed at boot-smoke.yaml:1:1` on two platforms, after the artifacts were built,
+  // downloaded and installed — the most expensive possible place to discover a one-byte defect.
+  //
+  // So the file that reuse makes cheap to change is the file that gets a cheap check.
+  const dir = join(rootPath, 'apps/mobile/.maestro');
+  const flows = readdirSync(dir).filter((file) => file.endsWith('.yaml'));
+  assert.ok(flows.length > 0, 'there are flows to check');
+  for (const flow of flows) {
+    const text = readFileSync(join(dir, flow), 'utf8');
+    const control = [...text].findIndex((ch) => {
+      const code = ch.codePointAt(0);
+      return code < 0x20 && ch !== '\n' && ch !== '\t';
+    });
+    assert.equal(control, -1,
+      `${flow} carries a control character at offset ${control} (0x${text.codePointAt(Math.max(control, 0)).toString(16)}); `
+      + 'Maestro refuses the whole file and the failure surfaces only on a runner');
+    assert.equal(text.includes('﻿'), false, `${flow} carries a byte-order mark`);
+    // The two structural lines Maestro needs before it will run anything at all.
+    assert.match(text, /^appId: com\.qandeel\.mobile$/mu, `${flow} declares the app id`);
+    assert.match(text, /^---$/mu, `${flow} separates its header from its commands`);
+  }
+
+  // Non-vacuity: the predicate must reject the exact byte that got through.
+  const planted = 'appId: com.qandeel.mobile\n# a comment with a  in it\n---\n';
+  assert.notEqual([...planted].findIndex((ch) => ch.codePointAt(0) < 0x20 && ch !== '\n' && ch !== '\t'), -1,
+    'the predicate rejects a planted control character');
+});
+
 test('7b — the fingerprint is deterministic, order-independent, and self-protecting against rule drift', () => {
   assert.equal(computeFingerprint(treeEntries).value, baseline.value, 'the same tree gives the same digest');
   assert.equal(computeFingerprint([...treeEntries].reverse()).value, baseline.value, 'input order cannot change it');
