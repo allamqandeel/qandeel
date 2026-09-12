@@ -53,13 +53,34 @@ maestro_cmd() {
 }
 
 # --- the interruptions, performed here and never simulated in a flow --------------------------
+# The device must be observed BACK before the next flow starts, never assumed: a run once followed a
+# force-stop within seconds and met an emulator whose adb transport was still `offline`, so the next
+# flow died at `launchApp` before it could make any claim, and the phase read as a failure of nothing.
+await_device() {
+  local waited=0
+  if [ "$PLATFORM" = "ios" ]; then
+    xcrun simctl bootstatus "$DEVICE" -b || true
+  else
+    adb wait-for-device || true
+    until [ "$(adb get-state 2>/dev/null | tr -d '\r')" = "device" ] && [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do
+      sleep 2
+      waited=$((waited + 2))
+      if [ "$waited" -ge 120 ]; then
+        echo "device did not come back within 120s"
+        return 1
+      fi
+    done
+  fi
+  sleep 3
+}
+
 kill_app() {
   if [ "$PLATFORM" = "ios" ]; then
     xcrun simctl terminate "$DEVICE" "$APP_ID" || true
   else
     adb shell am force-stop "$APP_ID" || true
   fi
-  sleep 3
+  await_device || echo "continuing; the next flow will record what it finds"
 }
 
 restart_device() {
@@ -82,7 +103,7 @@ restart_device() {
     done
     adb shell input keyevent 82 || true
   fi
-  sleep 5
+  await_device
 }
 
 # --- the record -------------------------------------------------------------------------------
@@ -146,7 +167,9 @@ run_phase phase-07-close-reopen t13-recovery-close-reopen.yaml phase-06-kill-pin
 # 8. a device / simulator restart, where the environment supports it. Reported on its own line and
 #    judged on its own: the phases after it depend on phase 7, so an environment that cannot restart
 #    cleanly is recorded as exactly that and cannot mask the kill / reopen proofs. When the restart
-#    DID succeed, phase 9 is a recovery claim like any other and the gate holds it to that.
+#    DID succeed, phase 9 is a recovery claim like any other and the gate holds it to that. Phase 9
+#    also requires phase 7: it asserts the pinned viewpoint phase 5 established, so when that chain
+#    broke it is `blocked` — never a failure of a claim nobody made.
 if [ "${SKIP_DEVICE_RESTART:-0}" = "1" ]; then
   record phase-08-device-restart skipped
 elif restart_device; then
@@ -154,7 +177,7 @@ elif restart_device; then
 else
   record phase-08-device-restart failure
 fi
-run_phase phase-09-after-device-restart t13-recovery-after.yaml phase-08-device-restart -e SHOT=t13-phase-9-after-device-restart -e "TM=$PINNED_TM" -e SESSION="$SESSION_ID"
+run_phase phase-09-after-device-restart t13-recovery-after.yaml phase-08-device-restart,phase-07-close-reopen -e SHOT=t13-phase-9-after-device-restart -e "TM=$PINNED_TM" -e SESSION="$SESSION_ID"
 # 10. sign out, kill, and a signed-out launch exposes nothing
 run_phase phase-10-sign-out t13-recovery-sign-out.yaml phase-07-close-reopen
 kill_app
