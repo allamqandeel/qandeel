@@ -41,15 +41,17 @@ on:
         required: false
         type: string
         default: ''
-  # It also runs whenever the reuse architecture itself changes, which is exactly when it is worth
-  # re-demonstrating. The path list is tight on purpose: nothing else in the repository triggers it,
-  # and a native-impact change reaches the canonical Mobile CI gate instead.
-  pull_request:
-    paths:
-      - '.github/workflows/qan-inf-04-artifact-reuse-demonstration.yml'
-      - 'scripts/phase-m/native-build-fingerprint.mjs'
-      - 'scripts/phase-m/native-artifact-manifest.mjs'
-      - 'scripts/phase-m/verify-native-artifact-manifest.mjs'
+  # MANUAL ONLY, and measured rather than assumed.
+  #
+  # This began with a `pull_request` trigger scoped to this workflow and the three provenance scripts,
+  # on the reasoning that the demonstration is worth re-running whenever the architecture changes. It
+  # is not: a `pull_request` path filter matches the WHOLE PR DIFF, not the files in the push that
+  # triggered it, so a pull request that touches any of those paths once re-runs both native builds on
+  # every subsequent push to it. Three such runs were cancelled by hand while this task was in flight,
+  # and the fourth would have been too.
+  #
+  # A demonstration is dispatched deliberately. The canonical Mobile CI gate remains what runs on every
+  # PR, and it already carries the fingerprint key, the provenance gate and both native smokes.
 
 concurrency:
   group: qan-inf-04-artifact-reuse-demonstration-${{ github.ref }}
@@ -71,7 +73,7 @@ env:
 jobs:
   android-demonstration-build:
     name: Android x86_64 Release — BUILD PRODUCER
-    if: github.event_name != 'workflow_dispatch' || inputs.reuse_artifacts_from_run_id == ''
+    if: inputs.reuse_artifacts_from_run_id == ''
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -126,7 +128,7 @@ jobs:
   android-demonstration-validate:
     name: Android API 36 emulator — VALIDATION CONSUMER (no build)
     needs: [android-demonstration-build]
-    if: always() && (needs.android-demonstration-build.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.reuse_artifacts_from_run_id != ''))
+    if: always() && (needs.android-demonstration-build.result == 'success' || inputs.reuse_artifacts_from_run_id != '')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -146,13 +148,13 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Download the Android build from this run
-        if: github.event_name != 'workflow_dispatch' || inputs.reuse_artifacts_from_run_id == ''
+        if: inputs.reuse_artifacts_from_run_id == ''
         uses: actions/download-artifact@v4
         with:
           name: qan-inf-04-android-build
           path: ${{ runner.temp }}/native-build
       - name: Download the Android build from the requested earlier run
-        if: github.event_name == 'workflow_dispatch' && inputs.reuse_artifacts_from_run_id != ''
+        if: inputs.reuse_artifacts_from_run_id != ''
         uses: actions/download-artifact@v4
         with:
           name: qan-inf-04-android-build
@@ -161,7 +163,7 @@ jobs:
           github-token: ${{ github.token }}
       - name: Verify the artifact provenance BEFORE anything is installed
         env:
-          MODE: ${{ (github.event_name == 'workflow_dispatch' && inputs.reuse_artifacts_from_run_id != '') && 'prior-run' || 'same-run' }}
+          MODE: ${{ inputs.reuse_artifacts_from_run_id != '' && 'prior-run' || 'same-run' }}
         run: |
           node scripts/phase-m/verify-native-artifact-manifest.mjs \
             --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
@@ -211,7 +213,7 @@ jobs:
 
   ios-demonstration-build:
     name: iOS Release simulator — BUILD PRODUCER
-    if: (github.event_name != 'workflow_dispatch' || inputs.reuse_artifacts_from_run_id == '') && (github.event_name != 'workflow_dispatch' || inputs.run_ios)
+    if: inputs.run_ios && inputs.reuse_artifacts_from_run_id == ''
     runs-on: macos-26
     timeout-minutes: 120
     env:
@@ -275,7 +277,7 @@ jobs:
   ios-demonstration-validate:
     name: iOS simulator — VALIDATION CONSUMER (no build)
     needs: [ios-demonstration-build]
-    if: always() && (github.event_name != 'workflow_dispatch' || inputs.run_ios) && (needs.ios-demonstration-build.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.reuse_artifacts_from_run_id != ''))
+    if: always() && inputs.run_ios && (needs.ios-demonstration-build.result == 'success' || inputs.reuse_artifacts_from_run_id != '')
     runs-on: macos-26
     timeout-minutes: 60
     permissions:
@@ -312,13 +314,13 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Download the iOS build from this run
-        if: github.event_name != 'workflow_dispatch' || inputs.reuse_artifacts_from_run_id == ''
+        if: inputs.reuse_artifacts_from_run_id == ''
         uses: actions/download-artifact@v4
         with:
           name: qan-inf-04-ios-build
           path: ${{ runner.temp }}/native-build
       - name: Download the iOS build from the requested earlier run
-        if: github.event_name == 'workflow_dispatch' && inputs.reuse_artifacts_from_run_id != ''
+        if: inputs.reuse_artifacts_from_run_id != ''
         uses: actions/download-artifact@v4
         with:
           name: qan-inf-04-ios-build
@@ -327,7 +329,7 @@ jobs:
           github-token: ${{ github.token }}
       - name: Verify the artifact provenance BEFORE anything is installed
         env:
-          MODE: ${{ (github.event_name == 'workflow_dispatch' && inputs.reuse_artifacts_from_run_id != '') && 'prior-run' || 'same-run' }}
+          MODE: ${{ inputs.reuse_artifacts_from_run_id != '' && 'prior-run' || 'same-run' }}
         run: |
           node scripts/phase-m/verify-native-artifact-manifest.mjs \
             --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \

@@ -207,9 +207,15 @@ The contract asserts every one of those absences.
 against the live API with a seeded Session, unchanged. A distinct build recipe keeps the two artifact
 families non-interchangeable in both directions.
 
-Triggers: `workflow_dispatch` (including `reuse_artifacts_from_run_id` for prior-run reuse), and
-`pull_request` scoped tightly to this workflow and the three provenance scripts — which is exactly
-when the architecture is worth re-demonstrating.
+Trigger: `workflow_dispatch` only, including `reuse_artifacts_from_run_id` for prior-run reuse.
+
+It briefly carried a `pull_request` trigger scoped to this workflow and the three provenance scripts,
+on the reasoning that the demonstration is worth re-running whenever the architecture changes. It is
+not: a `pull_request` path filter matches the **whole PR diff**, not the files in the push that
+triggered it, so a pull request that touches any of those paths once re-runs both native builds on
+every subsequent push to it. A demonstration is dispatched deliberately; the canonical Mobile CI gate
+is what runs on every PR, and it already carries the fingerprint key, the provenance gate and both
+native smokes.
 
 ## 9. Residual limitations
 
