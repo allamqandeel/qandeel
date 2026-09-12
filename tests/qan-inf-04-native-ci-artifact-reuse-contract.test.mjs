@@ -706,48 +706,239 @@ test('13 — no automatic retry loop exists in any of the three workflows', () =
 });
 
 // ---------------------------------------------------------------------------------------------
-// Mobile CI — reuse without weakening the gate
+// Mobile CI — QAN-INF-04-FIX-01: the UPLOADED ARTIFACT carries the retry, not the cache
 // ---------------------------------------------------------------------------------------------
+//
+// QAN-INF-04 shipped canonical Mobile CI with one job per platform and `actions/cache` as the only
+// reuse path. That path cannot serve the failure it was built for: a cache is written by a POST step,
+// and the post step is SKIPPED when the job fails, so the run that needed the reuse is the run that
+// never wrote the key. It was measured rather than argued — T-14's Mobile CI run 34699120176 built the
+// APK, passed provenance, uploaded the binary and then failed at the emulator; the repository's cache
+// list holds the iOS entry for that build-input fingerprint (b8317330) and NO Android entry, so the one
+// platform that flaked was the one platform denied reuse, while its verified APK sat uploaded and
+// unreachable.
+//
+// The rules below are therefore about a PERMANENT INVARIANT rather than about a cache:
+//
+//   the availability of a built binary for retry may not depend on the outcome of the validation.
+//
+// They say nothing about how many jobs exist, in what order steps appear, or which runner image is
+// used. A later task may add platforms, recipes and steps freely; it may not make a consumer build,
+// make a publish conditional on a device outcome, or let a retry install something it cannot prove.
 
-test('Mobile CI reuses a build-compatible binary, and proves it before installing it', () => {
+/** The canonical Mobile CI native chains: `[producer, consumer]` per platform. */
+const MOBILE_CI_CHAINS = Object.freeze({
+  android: {
+    producer: 'build-android',
+    consumer: 'verify-android',
+    artifact: 'qandeel-mobile-android-release-apk',
+    file: 'app-release.apk',
+    cacheKey: 'qandeel-native-android-x86_64-PRODUCT-mobile-ci-boot-smoke-v1',
+    build: /\.\/gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64/u,
+  },
+  ios: {
+    producer: 'build-ios',
+    consumer: 'verify-ios',
+    artifact: 'qandeel-mobile-ios-simulator-app',
+    file: 'qandeel-ios-simulator.app.zip',
+    cacheKey: 'qandeel-native-ios-simulator-PRODUCT-mobile-ci-boot-smoke-v1',
+    build: /xcodebuild .*-configuration Release -sdk iphonesimulator/u,
+  },
+});
+
+/**
+ * Everything that drives a real device. A job containing one of these is a VALIDATION job, and a
+ * validation job is a job that can flake — which is exactly why none of them may appear in the job
+ * whose success the retry depends on.
+ */
+const NATIVE_VALIDATION_COMMANDS = Object.freeze([
+  'maestro test',
+  'adb install',
+  'simctl install',
+  'android-emulator-runner',
+]);
+
+/** The ONE step a marker sits in: from the list item that opens it to the next one, or the job's end. */
+const stepBlockAt = (job, marker) => {
+  const at = job.indexOf(marker);
+  assert.ok(at >= 0, `expected to find ${marker}`);
+  const start = job.lastIndexOf('\n      - ', at);
+  const end = job.indexOf('\n      - ', at);
+  return job.slice(start + 1, end < 0 ? undefined : end);
+};
+
+test('14a — the job that publishes the binary never validates it, so a flaked validation cannot lose it', () => {
   const jobs = jobBlocks(read(MOBILE_CI));
-  for (const [job, platform, artifact] of [
-    ['verify-android', 'android', 'app-release.apk'],
-    ['verify-ios', 'ios', 'qandeel-ios-simulator.app.zip'],
-  ]) {
-    const code = stripYamlComments(jobs.get(job));
-    // The key IS the provenance: a restore can only ever hand back a binary whose build inputs match.
-    assert.match(code, /native-build-fingerprint\.mjs/u, `${job} keys its artifact by build inputs`);
-    assert.match(code, /key: qandeel-native-[A-Za-z0-9_-]+-mobile-ci-boot-smoke-v1-\$\{\{ steps\.fingerprint\.outputs\.value \}\}/u,
-      `${job}'s cache key is the fingerprint, not the run or the branch`);
-    // And the restore is still only a hint: the gate re-derives everything.
-    const verify = code.indexOf('verify-native-artifact-manifest.mjs');
-    assert.ok(verify >= 0, `${job} verifies provenance`);
-    assert.match(code, /--recipe mobile-ci-boot-smoke/u);
-    assert.match(code, /--role PRODUCT/u, `${job} builds and validates the Product root, as it always did`);
-    assert.match(code, new RegExp(`--platform ${platform}\\b`, 'u'));
-    // A restored artifact is honestly declared as prior-run: its commit is expected to differ.
-    assert.match(code, /MODE: \$\{\{ steps\.native-build-cache\.outputs\.cache-hit == 'true' && 'prior-run' \|\| 'same-run' \}\}/u);
-    for (const install of ['adb install', 'simctl install']) {
-      const at = code.indexOf(install);
-      if (at >= 0) assert.ok(verify < at, `${job} verifies before ${install}`);
-    }
-    assert.ok(code.includes(artifact), `${job} installs the artifact it verified`);
+  for (const [, chain] of Object.entries(MOBILE_CI_CHAINS)) {
+    assert.ok(jobs.has(chain.producer), `${chain.producer} exists`);
+    assert.ok(jobs.has(chain.consumer), `${chain.consumer} exists`);
+    const producer = stripYamlComments(jobs.get(chain.producer));
+    const consumer = stripYamlComments(jobs.get(chain.consumer));
 
-    // The gate is NOT weakened: the build still happens on a miss, and it is the same build.
-    assert.match(code, /if: steps\.native-build-cache\.outputs\.cache-hit != 'true'/u, `${job} still builds when nothing is reusable`);
+    // The producer publishes the binary together with its identity manifest, and an empty publish is
+    // a failure rather than a silent success.
+    assert.match(producer, /uses: actions\/upload-artifact@v4/u, `${chain.producer} publishes the binary`);
+    assert.match(producer, new RegExp(`name: ${chain.artifact}\\b`, 'u'));
+    assert.match(producer, /if-no-files-found: error/u, 'publishing nothing is a failure, never a silent pass');
+    assert.match(producer, /overwrite: true/u, 're-running every job replaces the artifact instead of colliding with it');
+
+    // THE INVARIANT. Nothing that touches a device runs in the publishing job, so no device outcome
+    // can stand between a successful build and the artifact a retry consumes.
+    for (const command of NATIVE_VALIDATION_COMMANDS) {
+      assert.equal(producer.includes(command), false,
+        `${chain.producer} must not ${command}: a job that validates is a job that can fail before it publishes`);
+    }
+    // And the publish itself is unconditional — not on the cache, not on anything.
+    assert.equal(/^\s*if:/mu.test(stepBlockAt(producer, 'uses: actions/upload-artifact@v4')), false,
+      `${chain.producer}'s publish carries no condition`);
+
+    // The consumer never republishes: the binary's availability is the producer's business alone, so
+    // a consumer that fails cannot take the artifact down with it.
+    assert.equal(consumer.includes('upload-artifact'), false, `${chain.consumer} publishes nothing`);
+
+    // Exactly ONE job publishes this platform's artifact, and it is the producer — stated per chain
+    // rather than as a total, so a later task adding its own native job inherits the rule instead of
+    // tripping a count.
+    const publishers = [...jobs].filter(([, body]) => {
+      const code = stripYamlComments(body);
+      return code.includes('uses: actions/upload-artifact@v4') && code.includes(`name: ${chain.artifact}`);
+    }).map(([name]) => name);
+    assert.deepEqual(publishers, [chain.producer], `${chain.artifact} has exactly one publisher`);
   }
-  assert.match(stripYamlComments(jobs.get('verify-android')), /\.\/gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64/u);
-  assert.match(stripYamlComments(jobs.get('verify-ios')), /xcodebuild .*-configuration Release -sdk iphonesimulator/u);
+
+  // Non-vacuity: the sweep must reject a producer that also validated.
+  assert.equal(NATIVE_VALIDATION_COMMANDS.some((command) =>
+    '        script: |\n          adb install -r "$APK"\n'.includes(command)), true);
+});
+
+test('14b — each platform retry has an explicit, attempt-independent artifact-consumption path', () => {
+  const jobs = jobBlocks(read(MOBILE_CI));
+  for (const [platform, chain] of Object.entries(MOBILE_CI_CHAINS)) {
+    const consumer = stripYamlComments(jobs.get(chain.consumer));
+
+    // It builds NOTHING. "No Gradle on retry" and "no xcodebuild on retry" are therefore properties of
+    // this file that can be read off it, not hopes about whether a cache happened to be warm.
+    for (const command of NATIVE_BUILD_COMMANDS) {
+      assert.equal(consumer.includes(command), false, `${chain.consumer} must not ${command}`);
+    }
+    assert.equal(/\bnpm ci\b/u.test(consumer), false, `${chain.consumer} installs no dependencies`);
+
+    // It downloads by name from THE RUN, not from this attempt. `run-id` plus a token resolves through
+    // the run's artifact API, which lists every attempt — so a consumer re-run in attempt 2 still finds
+    // the binary attempt 1 published. That is the whole retry mechanism, and it is stated here because
+    // an attempt-local download would silently reintroduce the defect this task fixes.
+    const download = consumer.indexOf('uses: actions/download-artifact@v4');
+    assert.ok(download >= 0, `${chain.consumer} downloads the artifact`);
+    assert.match(consumer, new RegExp(`name: ${chain.artifact}\\b`, 'u'));
+    assert.match(consumer, /run-id: \$\{\{ github\.run_id \}\}/u,
+      `${chain.consumer} resolves the artifact through the run, so a later attempt can still reach it`);
+    assert.match(consumer, /github-token: \$\{\{ github\.token \}\}/u);
+    assert.match(jobs.get(chain.consumer), /actions: read/u, 'and it is granted exactly the scope that needs');
+
+    // Download, then PROVE, then install. Never any other order.
+    const verify = consumer.indexOf('verify-native-artifact-manifest.mjs');
+    assert.ok(verify > download, `${chain.consumer} verifies after it downloads`);
+    for (const install of ['adb install', 'simctl install']) {
+      const at = consumer.indexOf(install);
+      if (at >= 0) assert.ok(verify < at, `${chain.consumer} verifies before ${install}`);
+    }
+    // The gate must decide its own step: without `pipefail` a pipeline reports `tee`, and a fail-closed
+    // gate that cannot fail its job is not a gate. Measured in the cloud during QAN-INF-04.
+    assert.match(stepBlockAt(consumer, 'verify-native-artifact-manifest.mjs'), /set -o pipefail/u);
+
+    // It consumes the identity it was given, under the identity it is the consumer of.
+    assert.ok(consumer.includes(chain.file), `${chain.consumer} installs the artifact it verified`);
+    assert.match(consumer, /--recipe mobile-ci-boot-smoke/u);
+    assert.match(consumer, /--role PRODUCT/u, `${chain.consumer} validates the Product root, as it always did`);
+    assert.match(consumer, new RegExp(`--platform ${platform}\\b`, 'u'));
+    assert.match(consumer, /maestro (?:--device "\$IOS_SIM_UDID" )?test apps\/mobile\/\.maestro\/boot-smoke\.yaml/u,
+      `${chain.consumer} launches the artifact it verified`);
+  }
   assert.match(stripYamlComments(jobs.get('verify-android')), /maestro test apps\/mobile\/\.maestro\/boot-smoke\.yaml/u);
   assert.match(stripYamlComments(jobs.get('verify-ios')), /maestro --device "\$IOS_SIM_UDID" test apps\/mobile\/\.maestro\/boot-smoke\.yaml/u);
 
+  // Non-vacuity: the no-build sweep must reject a consumer that reached for Gradle.
+  assert.equal(NATIVE_BUILD_COMMANDS.some((command) =>
+    '        run: ./gradlew :app:assembleRelease\n'.includes(command)), true);
+});
+
+test('14c — a cache miss builds, a cache hit is still proven, and a lost reuse signal fails CLOSED', () => {
+  const jobs = jobBlocks(read(MOBILE_CI));
+  for (const [, chain] of Object.entries(MOBILE_CI_CHAINS)) {
+    const producer = stripYamlComments(jobs.get(chain.producer));
+    const consumer = stripYamlComments(jobs.get(chain.consumer));
+
+    // NORMAL FRESH CI STILL BUILDS, and the cache can only ever hand back a binary whose build inputs
+    // match: the key IS the fingerprint, never the run, the branch or the date.
+    assert.match(producer, /native-build-fingerprint\.mjs/u, `${chain.producer} keys its artifact by build inputs`);
+    assert.match(producer, new RegExp(`key: ${chain.cacheKey}-\\$\\{\\{ steps\\.fingerprint\\.outputs\\.value \\}\\}`, 'u'));
+    assert.match(producer, /if: steps\.native-build-cache\.outputs\.cache-hit != 'true'/u,
+      `${chain.producer} still builds when nothing is reusable`);
+    assert.match(producer, chain.build, `${chain.producer} performs the real Release build`);
+
+    // A CACHE MISS NEVER FALLS BACK TO SOMETHING UNVERIFIED, and a cache HIT is not trusted either:
+    // the provenance gate carries NO condition, so unlike every build step above it, it runs on the
+    // build path and the restore path alike. (It reads `cache-hit` to decide the MODE it verifies
+    // under — which is the opposite of being skipped by it.)
+    assert.equal(/^\s*if:/mu.test(stepBlockAt(producer, 'verify-native-artifact-manifest.mjs')), false,
+      `${chain.producer}'s provenance gate is never skipped, by a cache hit or by anything else`);
+
+    // The producer DECLARES the mode. A restored binary legitimately carries an older commit and is
+    // honestly declared `prior-run`; a freshly built one is `same-run`.
+    assert.match(producer, /MODE: \$\{\{ steps\.native-build-cache\.outputs\.cache-hit == 'true' && 'prior-run' \|\| 'same-run' \}\}/u);
+    assert.match(jobs.get(chain.producer), /provenance_mode: \$\{\{ steps\.provenance\.outputs\.mode \}\}/u);
+
+    // The consumer READS that declaration, and its fallback branch is the STRICT one. An absent or
+    // empty producer output resolves to `same-run`, which additionally demands commit equality — so a
+    // lost signal REFUSES a foreign-commit artifact rather than admitting one. The direction is the
+    // point: the consumer must never be the thing that decides how leniently to judge its own input.
+    assert.match(consumer, new RegExp(
+      `MODE: \\$\\{\\{ needs\\.${chain.producer}\\.outputs\\.provenance_mode == 'prior-run' && 'prior-run' \\|\\| 'same-run' \\}\\}`, 'u'));
+    assert.equal(/MODE:[^\n]*manifest/u.test(consumer), false,
+      `${chain.consumer} must not derive its verification mode from the artifact it is judging`);
+  }
+
+  // And `same-run` really is the stricter of the two — proven against the verifier itself, so the
+  // fail-closed claim above is not merely asserted about a string in a YAML file.
+  const foreign = goodManifest({ commit: 'f'.repeat(40) });
+  assert.equal(verifyManifest(foreign, goodExpectation({ mode: 'prior-run' })).ok, true,
+    'prior-run accepts a foreign commit on identical inputs');
+  refuses('COMMIT_MISMATCH', foreign, goodExpectation({ mode: 'same-run' }));
+
+  // Non-vacuity for the unconditional-gate predicate: it must reject a step that WAS conditional.
+  assert.equal(/^\s*if:/mu.test("- name: Verify\n        if: steps.native-build-cache.outputs.cache-hit != 'true'\n"), true);
+});
+
+test('14d — the two Mobile CI chains are independent: one platform retry cannot rerun the other', () => {
+  const jobs = jobBlocks(read(MOBILE_CI));
+  const needsOf = (job) => [...jobs.get(job).matchAll(/^\s+needs: (.+)$/gmu)].map((match) => match[1].trim()).join(' ');
+
+  for (const [platform, chain] of Object.entries(MOBILE_CI_CHAINS)) {
+    const other = platform === 'android' ? 'ios' : 'android';
+    // The consumer waits for its OWN producer and the contract gate, and names no other platform — so
+    // re-running it re-runs it alone, and the succeeded platform is never dragged back onto a runner.
+    assert.match(needsOf(chain.consumer), new RegExp(`\\b${chain.producer}\\b`, 'u'));
+    assert.equal(needsOf(chain.consumer).includes(other), false, `${chain.consumer} waits for no ${other} job`);
+    assert.equal(needsOf(chain.producer).includes(other), false, `${chain.producer} waits for no ${other} job`);
+    // Separate artifacts and separate cache keys, so neither platform can consume the other's binary.
+    assert.equal(stripYamlComments(jobs.get(chain.consumer)).includes(MOBILE_CI_CHAINS[other].artifact), false);
+    assert.equal(stripYamlComments(jobs.get(chain.producer)).includes(MOBILE_CI_CHAINS[other].artifact), false);
+  }
+  assert.notEqual(MOBILE_CI_CHAINS.android.artifact, MOBILE_CI_CHAINS.ios.artifact);
+  assert.notEqual(MOBILE_CI_CHAINS.android.cacheKey, MOBILE_CI_CHAINS.ios.cacheKey);
+
   // The native-impact classifier is untouched by this task: deciding WHEN native smoke runs is its
-  // job, and reuse must not become a reason to skip a gate the classifier said was needed.
+  // job, and reuse must not become a reason to skip a gate the classifier said was needed. All four
+  // native jobs stay behind that one decision.
   const classifier = read('scripts/classify-mobile-native-impact.mjs');
   assert.match(classifier, /export const NATIVE_IMPACT_PREFIXES = Object\.freeze\(\['apps\/mobile\/'\]\);/u);
   assert.match(classifier, /export const NATIVE_IMPACT_FILES = Object\.freeze\(\['package-lock\.json', '\.github\/workflows\/mobile-ci\.yml'\]\);/u);
-  assert.match(read(MOBILE_CI), /if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/u);
+  // Every job past the fast contract gate stays behind that one decision. Stated as a RATIO rather
+  // than a count, so a later task adding a native job inherits the invariant instead of tripping it —
+  // the ceiling this task had to clear out of nineteen contracts is not worth recreating here.
+  const workflow = read(MOBILE_CI);
+  assert.equal((workflow.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
+    (workflow.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate is native-impact gated');
 });
 
 // ---------------------------------------------------------------------------------------------

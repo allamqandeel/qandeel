@@ -563,8 +563,15 @@ test('the T-08 gate is registered at the root and in Mobile CI without a new nat
   ]) {
     assert.match(mobileCi, new RegExp(`run: npm run ${sibling}`, 'u'), `${sibling} still runs`);
   }
-  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3, 'no job beyond the fast gate and the two native jobs');
-  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2);
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  assert.match(mobileCi, /^  verify-mobile-contracts:$/mu);
+  assert.match(mobileCi, /^  verify-android:$/mu);
+  assert.match(mobileCi, /^  verify-ios:$/mu);
+  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
+    (mobileCi.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate stays behind the classifier');
   assert.equal(existsSync(new URL('docs/inspection-orientation-return-chrome-v1.md', root)), true);
   assert.match(await read('apps/mobile/README.md'), /Inspection \+ orientation \+ return chrome \(T-08\)/u);
 });

@@ -241,7 +241,13 @@ test('the new writer, coordinator and context read are production-inert; the T-0
   }
   // Mobile CI is not touched (MOB-CI-01 preserved).
   assert.doesNotMatch(mobileCi, /durable-reference|0066/u);
-  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3);
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  assert.match(mobileCi, /^  verify-mobile-contracts:$/mu);
+  assert.match(mobileCi, /^  verify-android:$/mu);
+  assert.match(mobileCi, /^  verify-ios:$/mu);
 });
 
 test('the per-CU integrated order is structurally present and reuses the ONE same-SP seam', () => {

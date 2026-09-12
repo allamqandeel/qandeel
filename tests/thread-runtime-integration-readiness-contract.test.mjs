@@ -164,7 +164,13 @@ test('no B3 lifecycle, no LF, no T-03C, no Reading / Neighborhood / merge, no mo
   }
   assert.doesNotMatch(runtimeCode, /score|embedding|similarity|keyword|setInterval|Date\.now|new Date|Math\.random/iu);
   assert.doesNotMatch(mobileCi, /0069|thread-runtime-integration-readiness/u);
-  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3);
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  assert.match(mobileCi, /^  verify-mobile-contracts:$/mu);
+  assert.match(mobileCi, /^  verify-android:$/mu);
+  assert.match(mobileCi, /^  verify-ios:$/mu);
   for (const file of listFiles(join(rootPath, 'apps/mobile/src')).map(relative)) {
     assert.doesNotMatch(read(file), /with_focus_and_thread_v1|focus_thread_runtime_context|thread_capture_cutover_ready|ConversationThread|Conversational Origin/u, `${file} untouched`);
   }

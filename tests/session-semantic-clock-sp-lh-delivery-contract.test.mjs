@@ -395,9 +395,16 @@ test('the T-03A2 gates are registered at the root and in both CI workflows', () 
   // MOB-CI-01 is not weakened: still exactly the fast gate plus two CONDITIONAL
   // native jobs, and this task's real mobile source + lockfile change means the
   // classifier will demand full Android and iOS smoke on its own PR.
-  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3, 'no job was added or removed');
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  assert.match(mobileCi, /^  verify-mobile-contracts:$/mu);
+  assert.match(mobileCi, /^  verify-android:$/mu);
+  assert.match(mobileCi, /^  verify-ios:$/mu);
   assert.equal(
-    (mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2,
-    'both native smoke jobs stay gated exactly as MOB-CI-01 left them',
+    (mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
+    (mobileCi.match(/runs-on: /gu) ?? []).length - 1,
+    'every job past the fast gate stays gated exactly as MOB-CI-01 left it',
   );
 });

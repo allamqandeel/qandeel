@@ -454,8 +454,15 @@ test('the whole slice is production-inert: no grant, no wiring, no runtime reade
   const mobileCiText = read('.github/workflows/mobile-ci.yml');
   const gateSteps = [...mobileCiText.matchAll(/run: npm run (test:[a-z0-9-]+contract)/gu)].map((match) => match[1]);
   assert.equal(new Set(gateSteps).size, gateSteps.length, 'no gate step is registered twice');
-  assert.equal((mobileCiText.match(/runs-on: /gu) ?? []).length, 3, 'MOB-CI-01 preserved: one fast gate plus two native jobs');
-  assert.equal((mobileCiText.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2, 'both native jobs stay conditional');
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  assert.match(mobileCiText, /^  verify-mobile-contracts:$/mu);
+  assert.match(mobileCiText, /^  verify-android:$/mu);
+  assert.match(mobileCiText, /^  verify-ios:$/mu);
+  assert.equal((mobileCiText.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
+    (mobileCiText.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate stays behind the classifier');
   // Likewise the mobile manifest: the frozen fact is the renderer VERSION T-04's architecture pins.
   assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
 });
@@ -474,8 +481,15 @@ test('the gates are registered at the root and in API CI, and the slice is docum
   assert.ok(apiCi.indexOf('verify:durable-thread-home-same-sp-substrate:integration') > apiCi.indexOf('verify:conversation-focus-runtime-integration-readiness:integration'),
     'the 0068 verifier runs after the 0067 verifier');
   assert.doesNotMatch(mobileCi, /durable-thread|0068|thread-home/u);
-  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3);
-  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2);
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  assert.match(mobileCi, /^  verify-mobile-contracts:$/mu);
+  assert.match(mobileCi, /^  verify-android:$/mu);
+  assert.match(mobileCi, /^  verify-ios:$/mu);
+  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
+    (mobileCi.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate stays behind the classifier');
   assert.match(doc, /production-inert/iu);
   assert.match(doc, /QANDEEL_OSDAP_V1/u);
   assert.match(docsIndex, /durable-thread-home-same-sp-substrate-v1\.md/u);

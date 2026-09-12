@@ -1076,9 +1076,18 @@ test('the T-06 gate is registered at the root and in Mobile CI without a new nat
   assert.match(mobileCi, /run: npm run test:temporal-navigation-layer-contract/u);
   assert.match(mobileCi, /'tests\/temporal-navigation-layer-contract\.test\.mjs'/u);
   // The native set is unchanged: exactly the fast gate plus Android and iOS, both still gated.
-  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3, 'no job beyond the fast gate and the two native jobs');
-  assert.equal((mobileCi.match(/runs-on: macos-26/gu) ?? []).length, 1);
-  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2);
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  assert.match(mobileCi, /^  verify-mobile-contracts:$/mu);
+  assert.match(mobileCi, /^  verify-android:$/mu);
+  assert.match(mobileCi, /^  verify-ios:$/mu);
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a count froze Mobile CI at three jobs; the ratio is the invariant.
+  assert.equal((mobileCi.match(/runs-on: macos-26/gu) ?? []).length,
+    (mobileCi.match(/^ {2}[a-z0-9-]*ios[a-z0-9-]*:$/gmu) ?? []).length, 'macOS runs the iOS chain and nothing else');
+  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
+    (mobileCi.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate stays behind the classifier');
   assert.equal(existsSync(new URL('docs/temporal-navigation-layer-v1.md', root)), true);
   assert.match(await read('apps/mobile/README.md'), /Temporal navigation layer \(T-06\)/u);
 });

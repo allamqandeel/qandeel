@@ -1,7 +1,8 @@
 # Native CI Build / Validation Decoupling v1 (QAN-INF-04)
 
-Status: DELIVERED
+Status: DELIVERED — corrected by `QAN-INF-04-FIX-01` (Mobile CI failed-job artifact reuse; see §3, §8)
 Baseline: `5d9ba46efc6cf2d391096fcb3784bf2a5588ae15`
+Correction baseline: `615e586f42be39a300370dcf32ef018d40cfaa94`
 Scope: infrastructure only. No QANDEEL Product semantics change.
 
 ## 1. Why
@@ -54,7 +55,20 @@ flow, sequencer or phase gate was modified by this task.**
 | producer failed | nothing downstream: the consumer's `if` reaches neither branch | — |
 
 GitHub's single-job re-run keeps the successful producer's result and its uploaded artifact, so the
-consumer's same-run `download-artifact` finds the binary from the first attempt.
+consumer's `download-artifact` finds the binary from the first attempt.
+
+Canonical **Mobile CI** behaves the same way after QAN-INF-04-FIX-01, and for the same reason:
+
+| situation | what runs | what does not |
+| --- | --- | --- |
+| fresh PR | fast gate, both producers, both consumers | — |
+| Android boot smoke flaked | re-run failed jobs: `verify-android` only — download + verify + emulator | Gradle, `build-android`, and all of iOS |
+| iOS boot smoke flaked | re-run failed jobs: `verify-ios` only — download + verify + simulator | `xcodebuild`, `build-ios`, and all of Android |
+| producer failed | the consumer's `needs` is unsatisfied, so it does not run | — |
+| non-native change | nothing native at all: the classifier says so | — |
+
+**The reuse guarantee is the uploaded artifact, not the cache.** See §8.1 for the measured failure that
+proves why the distinction is not academic.
 
 **There is no automatic retry loop, and there must never be one.** A flaky native failure is a human
 decision to re-run; an automatic retry turns an intermittent Product defect into a green run nobody
@@ -182,23 +196,83 @@ built for a Cloudflare Quick Tunnel that has since died is refused against a new
 
 ## 8. Mobile CI
 
-Mobile CI keeps its three jobs and its full contract: the fast mobile contract gate, then Android and
-iOS native smoke gated by the unchanged native-impact classifier. The Release build, the install and
-the boot smoke are exactly what they were.
+Mobile CI keeps its full contract: the fast mobile contract gate, then Android and iOS native smoke
+gated by the unchanged native-impact classifier. The Release build, the install and the boot smoke are
+exactly what they were.
 
-What is new is that each native job keys its binary by the build-input fingerprint (`actions/cache`),
-and skips `npm ci`, the CNG prebuild and the compile on a hit. The restore is a hint, never a licence:
-the same provenance gate runs on both paths, declaring a restored artifact honestly as `prior-run`
-because its commit is expected to differ. A miss simply builds.
+Each native platform is **two jobs** — a build producer and a validation consumer:
 
-This is what gives Mobile CI the property §Mobile CI of the task asks for: a head that changed only
-documentation, a Maestro flow or runner-only Phase-M orchestration restores the binary an equivalent
-head already produced, because those paths are excluded from the fingerprint and the key is therefore
-unchanged. A head that touched `apps/mobile/src`, the bundled harness, the lockfile or the app config
-gets a different key and a real build.
+```
+verify-mobile-contracts ──native_impact──┬─▶ build-android ──uploads──▶ verify-android
+  fast Node-only gate                    │     prebuild + Gradle         download → VERIFY → install
+                                         │                              emulator + boot smoke
+                                         └─▶ build-ios     ──uploads──▶ verify-ios
+                                               prebuild + pods + xcodebuild
+```
+
+### 8.1 Why two jobs, and not one with a cache — QAN-INF-04-FIX-01
+
+The first version of this document claimed that re-running a flaked native job "restores the same key
+and skips Gradle entirely". **That was wrong, and it was wrong in the one case the reuse exists for.**
+
+`actions/cache` writes its entry in a POST step, and the post step is **skipped when the job fails**.
+So the run that most needed the reuse is precisely the run that never wrote the key.
+
+Measured, not reasoned about. T-14's Mobile CI run `34699120176` (head `c3a7065b`, build-input
+fingerprint `b8317330…`): the Android job built the Release APK, passed the provenance gate, uploaded
+the binary, and then failed inside the emulator runner at the first `launchApp`. Afterwards the
+repository's cache list held
+
+- `qandeel-native-ios-simulator-…-b8317330…` — written, because iOS passed;
+- **no** `qandeel-native-android-x86_64-…-b8317330…` — never written, because Android failed.
+
+The platform that flaked was the only platform denied reuse, while its verified 29.2 MB APK sat
+uploaded, unexpired, and unreachable by any retry path in the workflow.
+
+The guarantee therefore moves off the cache and onto the **uploaded artifact**. The producer builds
+once and publishes the binary with its identity manifest; that publish happens before any emulator
+exists to flake, in a job that contains no `maestro test`, no `adb install`, no `simctl install` and no
+emulator runner. The consumer downloads it, re-proves its provenance and only then installs. GitHub's
+own "re-run failed jobs" re-runs the consumer alone: the producer succeeded, so it is not re-run, and
+the consumer cannot rebuild anything because it contains no build command at all.
+
+The consumer resolves its artifact with `run-id: ${{ github.run_id }}` and a token rather than through
+the attempt-local upload channel. That is load-bearing: a retry runs in a **new attempt** while the
+producer does not re-run at all, so the binary it needs was published by an attempt that is already
+over. The run id is stable across attempts, so the artifact stays addressable.
+
+The verification MODE is declared by the producer and read by the consumer, never derived by the
+consumer from the artifact it is judging. An absent or empty producer output resolves to `same-run`,
+which is the **stricter** mode — it additionally demands commit equality — so a lost signal refuses a
+foreign-commit artifact instead of admitting one.
+
+### 8.2 The cache, demoted
+
+`actions/cache` stays in the producers as an **optimization**, which is all it ever honestly was: a
+head that changed only documentation, a Maestro flow or runner-only Phase-M orchestration restores the
+binary an equivalent head already produced, because those paths are excluded from the fingerprint. A
+head that touched `apps/mobile/src`, the bundled harness, the lockfile or the app config gets a
+different key and a real build. Its post-save skip on failure now costs nothing, because it is no
+longer the retry mechanism.
+
+The restore is a hint, never a licence: the provenance gate carries no condition, so it runs on the
+build path and the restore path alike, declaring a restored artifact honestly as `prior-run`.
 
 The native-impact classifier is untouched. Deciding *when* native smoke runs remains its job, and reuse
-is never a reason to skip a gate the classifier said was needed.
+is never a reason to skip a gate the classifier said was needed. All four native jobs stay behind that
+one decision.
+
+### 8.3 The ceiling this had to clear
+
+Nineteen contracts had frozen Mobile CI's job **count** — `runs-on: ` seen exactly three times, the
+native-impact condition seen exactly twice, and a job slice bounded by the *name* of the job that
+follows it. Almost all of them belong to closed tasks that do not own `mobile-ci.yml`, and all of them
+failed on a change that weakened nothing.
+
+Each was re-anchored to the narrowest durable invariant: the fast contract gate and **both** native
+validation jobs must exist, and every job past the fast gate stays behind the classifier. No semantic
+owner moved and no Product or runtime assertion was touched. `forward-safety-contract.test.mjs` now
+carries an additive-native-job scenario, so the next task to add one owes nobody a re-anchor.
 
 ## 8a. The demonstration workflow
 
@@ -247,11 +321,14 @@ native smokes.
    cannot prove. Mobile CI gets the automatic form only because the cache key *is* the proof and the
    gate re-derives it.
 
-4. **Mobile CI's build steps are conditional rather than absent.** The Phase-M consumers can be proven
-   not to build by inspection; Mobile CI's native jobs still contain their build, guarded by the cache
-   hit. Splitting them into producer/consumer jobs would be the stronger shape, and was not done here:
-   T-13's frozen contract pins `mobile-ci.yml` to exactly three jobs, and reopening a closed task's
-   self-limiting assertion was out of scope.
+4. ~~**Mobile CI's build steps are conditional rather than absent.**~~ **RESOLVED by
+   QAN-INF-04-FIX-01.** This was recorded as a residual because splitting the native jobs "would be
+   the stronger shape, and was not done here: T-13's frozen contract pins `mobile-ci.yml` to exactly
+   three jobs". That reasoning was sound about the obstacle and wrong about the priority — the
+   conditional shape was not merely weaker to read, it did not deliver the guarantee at all, because
+   the cache it depended on is not written when the job fails (§8.1). Mobile CI's validation consumers
+   now contain no build command, exactly like the Phase-M ones, and the nineteen count ceilings were
+   re-anchored rather than worked around.
 
 5. **Artifact size.** The iOS `.app` archive and the APK are uploaded on every Phase-M dispatch
    (30-day retention) and cached on every Mobile CI native run. Worth watching against the repository
@@ -260,9 +337,27 @@ native smokes.
 ## 10. Gates
 
 `npm run test:qan-inf-04-native-ci-artifact-reuse-contract`, registered in the Mobile CI fast gate and
-in its trigger paths. Twenty-one tests covering: consumers do not build; producers upload binary and
-manifest together; download precedes verification precedes install; reuse requires provenance; a
-build-affecting mobile change invalidates; a bundled `__validation__` change invalidates; a runner-only
-Phase-M or flow change does not; configuration, artifact-hash, missing/malformed identity, platform,
-role, entry, recipe and device-target mismatches each refuse by name; platform isolation; no automatic
-retry loop; Mobile CI reuse is gated; no credential in the manifest; no Product semantics moved.
+in its trigger paths. It covers: consumers do not build; producers upload binary and manifest together;
+download precedes verification precedes install; reuse requires provenance; a build-affecting mobile
+change invalidates; a bundled `__validation__` change invalidates; a runner-only Phase-M or flow change
+does not; configuration, artifact-hash, missing/malformed identity, platform, role, entry, recipe and
+device-target mismatches each refuse by name; platform isolation; no automatic retry loop; no
+credential in the manifest; no Product semantics moved.
+
+QAN-INF-04-FIX-01 adds four rules about canonical Mobile CI (`14a`–`14d`), each paired with a planted
+defect in the real workflow:
+
+- **14a** the job that publishes the binary never validates it, so a flaked validation cannot lose it —
+  the publish carries no condition, the producer runs no device command, the consumer publishes
+  nothing, and exactly one job publishes each platform's artifact;
+- **14b** each platform retry has an explicit, attempt-independent consumption path — no build command,
+  no `npm ci`, resolved by `run-id` so a later attempt can still reach it, download → verify → install
+  in that order, with `pipefail` so the gate decides its own step;
+- **14c** a cache miss builds, a cache hit is still proven (the gate carries no condition), and a lost
+  reuse signal falls back to the **stricter** mode — proven against the verifier, not asserted about it;
+- **14d** the two chains are independent, so one platform's retry cannot rerun the other.
+
+Counts are deliberately avoided in these rules: `14d` states the classifier gating as a **ratio** of
+conditions to jobs rather than as a total, so a later additive native job inherits the invariant
+instead of tripping it. That is the same mistake this task had to clear out of nineteen other
+contracts, and `forward-safety-contract.test.mjs` now proves it cannot recur.

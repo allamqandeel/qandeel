@@ -215,7 +215,11 @@ test('CI baselines: API CI on Node 22; mobile CI pins runner, Xcode, JDK, emulat
   assert.match(apiCi, /run: npm run test:toolchain/u);
 
   const nodeVersions = mobileCi.match(/node-version: '\d+'/gu) ?? [];
-  assert.equal(nodeVersions.length, 3, 'the fast gate and both native jobs must set up Node explicitly');
+  // RE-ANCHORED (QAN-INF-04-FIX-01): this was `=== 3`, a count that froze Mobile CI's job total. The
+  // invariant it existed for is the PIN below — no job may inherit the runner's default Node — and
+  // that one applies to however many jobs exist. The floor keeps the original "and there are at least
+  // the fast gate and both native validations" claim without capping additive work.
+  assert.ok(nodeVersions.length >= 3, 'the fast gate and both native validation jobs set up Node explicitly');
   for (const entry of nodeVersions) assert.equal(entry, "node-version: '22'");
   assert.match(mobileCi, /runs-on: ubuntu-latest/u);
   assert.match(mobileCi, /runs-on: macos-26/u);
@@ -251,11 +255,15 @@ test('CI baselines: API CI on Node 22; mobile CI pins runner, Xcode, JDK, emulat
 // MOB-CI-01 - Mobile CI is a FAST MOBILE CONTRACT GATE that always runs plus
 // CONDITIONAL NATIVE SMOKE GATES. The optimization is WHEN native smoke runs,
 // never what it proves when it runs.
-const jobSlice = (name, next) => {
+// RE-ANCHORED (QAN-INF-04-FIX-01): the slice used to be bounded by the NAME of the job that follows,
+// which froze Mobile CI's job order and count. It is bounded by the next job header instead, whatever
+// that header happens to be, so an additive job can never silently widen another job's slice.
+const jobSlice = (name) => {
   const start = mobileCi.indexOf(`\n  ${name}:`);
   assert.notEqual(start, -1, `job ${name} must exist`);
-  const end = next === undefined ? mobileCi.length : mobileCi.indexOf(`\n  ${next}:`);
-  return mobileCi.slice(start, end === -1 ? mobileCi.length : end);
+  const afterHeader = mobileCi.indexOf('\n', start + 1);
+  const next = mobileCi.slice(afterHeader).search(/\n {2}[A-Za-z0-9_-]+:$/mu);
+  return next === -1 ? mobileCi.slice(start) : mobileCi.slice(start, afterHeader + next);
 };
 
 test('mobile CI keeps root package.json in the trigger so root changes still get contract validation', () => {
@@ -266,7 +274,7 @@ test('mobile CI keeps root package.json in the trigger so root changes still get
 });
 
 test('the fast mobile contract gate always runs and owns every Node-only gate', () => {
-  const fast = jobSlice('verify-mobile-contracts', 'verify-android');
+  const fast = jobSlice('verify-mobile-contracts');
   assert.match(fast, /runs-on: ubuntu-latest/u);
   assert.doesNotMatch(fast, /^\s{4}if:/mu, 'the fast gate is never conditional');
   assert.doesNotMatch(fast, /^\s{4}needs:/mu, 'the fast gate depends on nothing');
@@ -298,34 +306,50 @@ test('the fast mobile contract gate always runs and owns every Node-only gate', 
 });
 
 test('both native smoke jobs are gated by native_impact and keep their full contract', () => {
-  const android = jobSlice('verify-android', 'verify-ios');
+  // RE-ANCHORED (QAN-INF-04-FIX-01): each platform is now a BUILD PRODUCER plus a separately
+  // re-runnable VALIDATION CONSUMER, so a flaked emulator no longer costs a rebuild. Every claim
+  // below is the one it always was — it is asserted against the job that now performs the thing,
+  // and nothing is dropped: the same CNG generation, the same Release build, the same pinned
+  // emulator/simulator and the same boot smoke are all still required.
+  const androidBuild = jobSlice('build-android');
+  const android = jobSlice('verify-android');
+  const iosBuild = jobSlice('build-ios');
   const ios = jobSlice('verify-ios');
-  for (const [name, job] of [['android', android], ['ios', ios]]) {
-    assert.match(job, /needs: verify-mobile-contracts/u, `${name} must depend on the fast gate`);
+  for (const [name, job] of [['android', android], ['ios', ios], ['android build', androidBuild], ['ios build', iosBuild]]) {
+    assert.match(job, /needs: (?:\[[^\]]*)?verify-mobile-contracts/u, `${name} must depend on the fast gate`);
     assert.match(
       job,
       /if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/u,
       `${name} must run only for true native-impact changes`,
     );
+    assert.doesNotMatch(job, /continue-on-error/u, `${name} never soft-fails`);
+  }
+  for (const [name, job] of [['android', android], ['ios', ios]]) {
     assert.match(job, /uses: actions\/setup-java@v6/u, `${name} keeps JDK 17`);
     assert.match(job, /boot-smoke\.yaml/u, `${name} keeps boot smoke`);
     assert.match(job, /MAESTRO_VERSION\}/u, `${name} keeps the pinned Maestro guard`);
-    assert.doesNotMatch(job, /continue-on-error/u, `${name} never soft-fails`);
+    // The consumer installs a binary it did not build, so it must prove the binary first.
+    assert.match(job, /verify-native-artifact-manifest\.mjs/u, `${name} proves provenance before it installs`);
   }
-  // Android: Ubuntu, CNG, Release APK on x86_64, API 36 google_apis emulator.
+  // Android: Ubuntu, CNG and the Release APK on x86_64 in the producer; the API 36 google_apis
+  // emulator and the boot smoke in the consumer.
+  assert.match(androidBuild, /runs-on: ubuntu-latest/u);
+  assert.match(androidBuild, /run: npm run prebuild:android --workspace @qandeel\/mobile/u);
+  assert.match(androidBuild, /assembleRelease -PreactNativeArchitectures=x86_64/u);
   assert.match(android, /runs-on: ubuntu-latest/u);
-  assert.match(android, /run: npm run prebuild:android --workspace @qandeel\/mobile/u);
-  assert.match(android, /assembleRelease -PreactNativeArchitectures=x86_64/u);
   assert.match(android, /api-level: 36/u);
   assert.match(android, /arch: x86_64/u);
   assert.match(android, /target: google_apis/u);
   assert.match(android, /sha256sum --check --strict/u);
-  // iOS: macos-26, Xcode 26.6, CNG, CocoaPods, Release simulator build.
+  // iOS: macos-26 and Xcode 26.6 throughout; CNG, CocoaPods and the Release simulator build in the
+  // producer; the install and the smoke in the consumer.
+  assert.match(iosBuild, /runs-on: macos-26/u);
+  assert.match(iosBuild, /Xcode_26\.6\.app/u);
+  assert.match(iosBuild, /run: npm run prebuild:ios --workspace @qandeel\/mobile/u);
+  assert.match(iosBuild, /run: pod install/u);
+  assert.match(iosBuild, /-configuration Release -sdk iphonesimulator/u);
   assert.match(ios, /runs-on: macos-26/u);
   assert.match(ios, /Xcode_26\.6\.app/u);
-  assert.match(ios, /run: npm run prebuild:ios --workspace @qandeel\/mobile/u);
-  assert.match(ios, /run: pod install/u);
-  assert.match(ios, /-configuration Release -sdk iphonesimulator/u);
   assert.match(ios, /simctl install/u);
   assert.match(ios, /shasum -a 256 --check --strict/u);
 });

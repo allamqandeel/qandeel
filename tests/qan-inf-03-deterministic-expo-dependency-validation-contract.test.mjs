@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+﻿import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
@@ -44,11 +44,15 @@ const { isDependencyVersionIncorrect } = require(
   '../node_modules/@expo/cli/build/src/start/doctor/dependencies/validateDependenciesVersions.js',
 );
 
-function jobSlice(name, next) {
+// RE-ANCHORED (QAN-INF-04-FIX-01): the slice used to be bounded by the NAME of the job that follows,
+// which froze Mobile CI's job order and count. It is bounded by the next job header instead, whatever
+// that header happens to be, so an additive job can never silently widen another job's slice.
+function jobSlice(name) {
   const start = mobileCi.indexOf(`\n  ${name}:`);
   assert.notEqual(start, -1, `job ${name} must exist`);
-  const end = next === undefined ? mobileCi.length : mobileCi.indexOf(`\n  ${next}:`);
-  return mobileCi.slice(start, end === -1 ? mobileCi.length : end);
+  const afterHeader = mobileCi.indexOf('\n', start + 1);
+  const next = mobileCi.slice(afterHeader).search(/\n {2}[A-Za-z0-9_-]+:$/mu);
+  return next === -1 ? mobileCi.slice(start) : mobileCi.slice(start, afterHeader + next);
 }
 
 function stepLine(job, stepName) {
@@ -75,7 +79,7 @@ function runNpmScript(scriptName, extraEnv) {
 }
 
 test('the mandatory fast gate pins Expo dependency validation to the deterministic offline compatibility source', () => {
-  const fast = jobSlice('verify-mobile-contracts', 'verify-android');
+  const fast = jobSlice('verify-mobile-contracts');
   const depsLine = stepLine(fast, 'Expo dependency validation (intentional typescript exclusion)');
   assert.match(depsLine, /run: npm run deps:check:mobile/u);
   assert.match(depsLine, /EXPO_OFFLINE:\s*'1'/u, 'deps:check:mobile must not depend on the live Expo registry');

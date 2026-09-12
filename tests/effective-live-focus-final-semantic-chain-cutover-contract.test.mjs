@@ -457,8 +457,15 @@ test('the client ingests LF passively into the frozen T-02 kernel through the ON
   // are that MOB-CI-01's job SHAPE is frozen and that no gate is registered twice.
   const gateSteps = [...mobileCi.matchAll(/run: npm run (test:[a-z0-9-]+contract)/gu)].map((match) => match[1]);
   assert.equal(new Set(gateSteps).size, gateSteps.length, 'no gate step is registered twice');
-  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3, 'MOB-CI-01 preserved: one fast gate plus two native jobs');
-  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2, 'both native jobs stay conditional');
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  assert.match(mobileCi, /^  verify-mobile-contracts:$/mu);
+  assert.match(mobileCi, /^  verify-android:$/mu);
+  assert.match(mobileCi, /^  verify-ios:$/mu);
+  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
+    (mobileCi.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate stays behind the classifier');
   // Likewise the mobile manifest: the frozen fact is the renderer VERSION T-04's architecture pins.
   assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
 });

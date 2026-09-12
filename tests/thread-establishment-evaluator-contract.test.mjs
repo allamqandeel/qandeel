@@ -554,8 +554,15 @@ test('the gate is registered at the root and in API CI after the B1 contracts, M
   assert.ok(apiCi.indexOf('test:thread-establishment-evaluator-contract') > apiCi.indexOf('test:conversation-focus-runtime-integration-readiness-contract'), 'runs after the T-03B1b2 static contract');
   assert.ok(apiCi.indexOf('test:thread-establishment-evaluator-contract') < apiCi.indexOf('Apply all migrations to fresh PostgreSQL'), 'runs before the database bootstrap');
   assert.doesNotMatch(mobileCi, /thread/u);
-  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3);
-  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2);
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  assert.match(mobileCi, /^  verify-mobile-contracts:$/mu);
+  assert.match(mobileCi, /^  verify-android:$/mu);
+  assert.match(mobileCi, /^  verify-ios:$/mu);
+  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
+    (mobileCi.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate stays behind the classifier');
   assert.ok('openai' in apiPackage.dependencies);
   for (const name of ['zod', 'ajv', 'uuid', 'nanoid', 'natural', 'compromise', 'franc', 'p-retry', 'retry']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}), false, `${name} must not be introduced`);
