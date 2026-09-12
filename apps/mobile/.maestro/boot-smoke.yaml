@@ -8,6 +8,11 @@
 #
 # The T-01 technical shell is no longer asserted, and it is no longer rendered: the Product root
 # replaced it rather than hiding it behind it.
+#
+# QAN-INF-04: this flow is also the validation script of the artifact reuse demonstration, which
+# installs a separately-built binary and launches it. Flow files live under apps/mobile/.maestro/,
+# which the build-input fingerprint excludes: Maestro interprets them on the runner and drives the
+# app from outside it, so changing one cannot change a binary and must not invalidate one.
 appId: com.qandeel.mobile
 ---
 - launchApp:
