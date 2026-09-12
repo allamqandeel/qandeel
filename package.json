@@ -148,7 +148,8 @@
     "test:t13-recovery-persistence-contract": "node --test tests/t13-recovery-persistence-contract.test.mjs",
     "test:forward-safety-contract": "node --test tests/forward-safety-contract.test.mjs",
     "test:mobile-native-impact-classifier": "node --test tests/mobile-native-impact-classifier.test.mjs",
-    "test:qan-inf-03-deterministic-expo-dependency-validation-contract": "node --test tests/qan-inf-03-deterministic-expo-dependency-validation-contract.test.mjs"
+    "test:qan-inf-03-deterministic-expo-dependency-validation-contract": "node --test tests/qan-inf-03-deterministic-expo-dependency-validation-contract.test.mjs",
+    "test:qan-inf-04-native-ci-artifact-reuse-contract": "node --test tests/qan-inf-04-native-ci-artifact-reuse-contract.test.mjs"
   },
   "devDependencies": {"pg": "^8.16.3"},
   "overrides": {

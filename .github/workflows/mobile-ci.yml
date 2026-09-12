@@ -11,7 +11,7 @@ name: Mobile CI
 # install and boot-smoke contract.
 on:
   pull_request:
-    paths: ['apps/mobile/**', 'packages/runtime/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'tests/living-analysis-map-runtime-contract.test.mjs', 'tests/temporal-navigation-layer-contract.test.mjs', 'tests/return-navigation-layer-contract.test.mjs', 'tests/inspection-orientation-return-chrome-contract.test.mjs', 'tests/t10-motion-contract.test.mjs', 'tests/t11-responsive-contract.test.mjs', 'tests/t12-integration-contract.test.mjs', 'tests/t12p-mobile-runtime-entry-contract.test.mjs', 'tests/t13-recovery-persistence-contract.test.mjs', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs', 'tests/mobile-native-impact-classifier.test.mjs', 'tests/qan-inf-03-deterministic-expo-dependency-validation-contract.test.mjs', 'scripts/classify-mobile-native-impact.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml', '.github/workflows/mobile-expo-dependency-drift-advisory.yml']
+    paths: ['apps/mobile/**', 'packages/runtime/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'tests/living-analysis-map-runtime-contract.test.mjs', 'tests/temporal-navigation-layer-contract.test.mjs', 'tests/return-navigation-layer-contract.test.mjs', 'tests/inspection-orientation-return-chrome-contract.test.mjs', 'tests/t10-motion-contract.test.mjs', 'tests/t11-responsive-contract.test.mjs', 'tests/t12-integration-contract.test.mjs', 'tests/t12p-mobile-runtime-entry-contract.test.mjs', 'tests/t13-recovery-persistence-contract.test.mjs', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs', 'tests/mobile-native-impact-classifier.test.mjs', 'tests/qan-inf-03-deterministic-expo-dependency-validation-contract.test.mjs', 'tests/qan-inf-04-native-ci-artifact-reuse-contract.test.mjs', 'scripts/classify-mobile-native-impact.mjs', 'scripts/phase-m/native-build-fingerprint.mjs', 'scripts/phase-m/native-artifact-manifest.mjs', 'scripts/phase-m/verify-native-artifact-manifest.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml', '.github/workflows/t12-phase-m-cloud-validation.yml', '.github/workflows/mobile-expo-dependency-drift-advisory.yml']
   push:
     branches: [main]
 concurrency:
@@ -87,6 +87,7 @@ jobs:
       - {name: Verify Session Semantic Clock / SP / LH delivery contract (T-03A2), run: npm run test:session-semantic-clock-sp-lh-delivery-contract}
       - {name: Verify the native-impact classifier, run: npm run test:mobile-native-impact-classifier}
       - {name: Verify deterministic Expo SDK 57 dependency validation contract (QAN-INF-03), run: npm run test:qan-inf-03-deterministic-expo-dependency-validation-contract}
+      - {name: Verify native CI build/validation decoupling contract (QAN-INF-04), run: npm run test:qan-inf-04-native-ci-artifact-reuse-contract}
       - {name: Type-check mobile (TypeScript 5.9 line), run: npm run typecheck:mobile}
       - {name: Lint mobile, run: npm run lint:mobile}
       - {name: Unit and component tests (jest-expo), run: npm run test:mobile}
@@ -118,16 +119,67 @@ jobs:
       - name: Setup Temurin JDK 17
         uses: actions/setup-java@v6
         with: {distribution: temurin, java-version: '17'}
-      - {name: Install dependencies from the root lockfile, run: npm ci}
+      # QAN-INF-04 — the binary is keyed by its build inputs, not by this run.
+      #
+      # The fingerprint covers every tracked path that can reach the APK and excludes only the Maestro
+      # flows, the runner-only `scripts/phase-m/` orchestration and prose. So a head that changed a flow,
+      # a doc or a Phase-M script restores the APK an equivalent head already produced, and a head that
+      # touched `apps/mobile/src`, the lockfile or the app config does not and cannot: any rule change
+      # that alters the included set alters the digest, so the key is self-protecting against its own
+      # drift. Re-running THIS job after a flaky emulator restores the same key and skips Gradle
+      # entirely, which is the failure this task exists to stop paying for.
+      #
+      # The restore is a hint, never a licence: the provenance gate below re-derives everything and
+      # refuses the artifact outright if it cannot prove it. A cache miss simply builds.
+      - name: Compute the build-input fingerprint
+        id: fingerprint
+        run: |
+          value="$(node scripts/phase-m/native-build-fingerprint.mjs)"
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+          echo "### Android build-input fingerprint: \`$value\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Restore a build-compatible Release APK, if one exists
+        id: native-build-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/native-build
+          key: qandeel-native-android-x86_64-PRODUCT-mobile-ci-boot-smoke-v1-${{ steps.fingerprint.outputs.value }}
+      # Everything from here to the provenance gate is the BUILD, and it is skipped wholesale on a hit.
+      # `npm ci` is part of it: nothing after the gate needs `node_modules`, because the gate, the
+      # evidence and the smoke use Node builtins, Maestro and the platform tools alone.
+      - {name: Install dependencies from the root lockfile, if: steps.native-build-cache.outputs.cache-hit != 'true', run: npm ci}
       # The fast gate already proved contracts, typecheck, lint, Jest, Expo
       # dependency validation, Expo Doctor and prebuild idempotency. This job
       # exists to prove native generation, build, install and boot.
-      - {name: Generate the Android project (CNG), run: npm run prebuild:android --workspace @qandeel/mobile}
+      - {name: Generate the Android project (CNG), if: steps.native-build-cache.outputs.cache-hit != 'true', run: npm run prebuild:android --workspace @qandeel/mobile}
       - name: Build the Release APK (x86_64 for the emulator)
+        if: steps.native-build-cache.outputs.cache-hit != 'true'
         working-directory: apps/mobile/android
         run: |
           chmod +x ./gradlew
           ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64 --no-daemon
+      - name: Stage the artifact and record its identity
+        if: steps.native-build-cache.outputs.cache-hit != 'true'
+        run: |
+          out="$RUNNER_TEMP/native-build"
+          mkdir -p "$out"
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "$out/app-release.apk"
+          node scripts/phase-m/native-artifact-manifest.mjs \
+            --platform android --role PRODUCT --recipe mobile-ci-boot-smoke --abis x86_64 \
+            --artifact "$out/app-release.apk" --out "$out/native-artifact-manifest.json"
+      # THE GATE. It runs on both paths. On a miss it confirms what this job just built; on a hit it is
+      # the whole argument for installing a binary this job did not produce. `prior-run` is the honest
+      # mode for a restored artifact: an equal fingerprint from another head is exactly the claim, and
+      # the commit is expected to differ.
+      - name: Verify the artifact provenance BEFORE anything is installed
+        env:
+          MODE: ${{ steps.native-build-cache.outputs.cache-hit == 'true' && 'prior-run' || 'same-run' }}
+        run: |
+          node scripts/phase-m/verify-native-artifact-manifest.mjs \
+            --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
+            --artifact "$RUNNER_TEMP/native-build/app-release.apk" \
+            --mode "$MODE" --platform android --role PRODUCT \
+            --recipe mobile-ci-boot-smoke --abis x86_64 --commit "${{ github.sha }}"
+          echo "### Android artifact provenance: \`$MODE\`" >> "$GITHUB_STEP_SUMMARY"
       - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
         run: |
           curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
@@ -146,6 +198,8 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Boot smoke on the Android emulator (API 36, x86_64, google_apis)
+        env:
+          APK: ${{ runner.temp }}/native-build/app-release.apk
         uses: reactivecircus/android-emulator-runner@v2.38.0
         with:
           api-level: 36
@@ -155,14 +209,14 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 900
           script: |
-            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            adb install -r "$APK"
             maestro test apps/mobile/.maestro/boot-smoke.yaml
-      - name: Upload the Release APK
+      - name: Upload the Release APK and its identity
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: qandeel-mobile-android-release-apk
-          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          path: ${{ runner.temp }}/native-build
           if-no-files-found: ignore
   verify-ios:
     name: iOS (iPhone 17 / iOS 26.5 simulator boot smoke)
@@ -198,23 +252,63 @@ jobs:
       - name: Setup Temurin JDK 17 (Maestro tooling path)
         uses: actions/setup-java@v6
         with: {distribution: temurin, java-version: '17'}
-      - {name: Install dependencies from the root lockfile, run: npm ci}
-      - {name: Generate the iOS project (CNG), run: npm run prebuild:ios --workspace @qandeel/mobile}
+      # QAN-INF-04 — the same build-input key as the Android job, for the same reason, at seventeen
+      # minutes a rebuild instead of ten. See that job for why the key is self-protecting.
+      - name: Compute the build-input fingerprint
+        id: fingerprint
+        run: |
+          value="$(node scripts/phase-m/native-build-fingerprint.mjs)"
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+          echo "### iOS build-input fingerprint: \`$value\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Restore a build-compatible Release simulator app, if one exists
+        id: native-build-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/native-build
+          key: qandeel-native-ios-simulator-PRODUCT-mobile-ci-boot-smoke-v1-${{ steps.fingerprint.outputs.value }}
+      - {name: Install dependencies from the root lockfile, if: steps.native-build-cache.outputs.cache-hit != 'true', run: npm ci}
+      - {name: Generate the iOS project (CNG), if: steps.native-build-cache.outputs.cache-hit != 'true', run: npm run prebuild:ios --workspace @qandeel/mobile}
       - name: Install CocoaPods dependencies
+        if: steps.native-build-cache.outputs.cache-hit != 'true'
         working-directory: apps/mobile/ios
         run: pod install
       - name: Build the Release simulator app
+        if: steps.native-build-cache.outputs.cache-hit != 'true'
         run: |
           set -o pipefail
           workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
           scheme="$(basename "$workspace" .xcworkspace)"
           echo "workspace=$workspace scheme=$scheme"
           xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
-      - name: Boot the simulator and install the app
+      # Packaged before it is installed, not after: the archive is what the key caches and what a later
+      # run installs, so the bytes that are validated here are the bytes a reuse would validate there.
+      - name: Package the simulator app and record its identity
+        if: steps.native-build-cache.outputs.cache-hit != 'true'
+        run: |
+          out="$RUNNER_TEMP/native-build"
+          mkdir -p "$out"
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          ditto -c -k --keepParent "$app" "$out/qandeel-ios-simulator.app.zip"
+          node scripts/phase-m/native-artifact-manifest.mjs \
+            --platform ios --role PRODUCT --recipe mobile-ci-boot-smoke \
+            --artifact "$out/qandeel-ios-simulator.app.zip" --out "$out/native-artifact-manifest.json"
+      - name: Verify the artifact provenance BEFORE anything is installed
+        env:
+          MODE: ${{ steps.native-build-cache.outputs.cache-hit == 'true' && 'prior-run' || 'same-run' }}
+        run: |
+          node scripts/phase-m/verify-native-artifact-manifest.mjs \
+            --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
+            --artifact "$RUNNER_TEMP/native-build/qandeel-ios-simulator.app.zip" \
+            --mode "$MODE" --platform ios --role PRODUCT \
+            --recipe mobile-ci-boot-smoke --commit "${{ github.sha }}"
+          echo "### iOS artifact provenance: \`$MODE\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Boot the simulator and install the verified app
         run: |
           xcrun simctl boot "$IOS_SIM_UDID" || true
           xcrun simctl bootstatus "$IOS_SIM_UDID" -b
-          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          ditto -x -k "$RUNNER_TEMP/native-build/qandeel-ios-simulator.app.zip" "$RUNNER_TEMP/native-app"
+          app="$(find "$RUNNER_TEMP/native-app" -maxdepth 1 -name '*.app' | head -n 1)"
           test -n "$app"
           xcrun simctl install "$IOS_SIM_UDID" "$app"
           echo "IOS_APP_PATH=$app" >> "$GITHUB_ENV"
@@ -232,16 +326,10 @@ jobs:
           maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
       - name: Boot smoke on the iOS simulator
         run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml
-      - name: Package the simulator app
-        if: always()
-        run: |
-          if [ -n "${IOS_APP_PATH:-}" ] && [ -d "$IOS_APP_PATH" ]; then
-            ditto -c -k --keepParent "$IOS_APP_PATH" "$RUNNER_TEMP/qandeel-ios-simulator.app.zip"
-          fi
-      - name: Upload the simulator app
+      - name: Upload the simulator app and its identity
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: qandeel-mobile-ios-simulator-app
-          path: ${{ runner.temp }}/qandeel-ios-simulator.app.zip
+          path: ${{ runner.temp }}/native-build
           if-no-files-found: ignore

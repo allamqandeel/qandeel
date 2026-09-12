@@ -69,6 +69,20 @@ on:
         required: false
         type: string
         default: '5'
+      # QAN-INF-04 — the manual prior-run retry. Leave EMPTY for any ordinary dispatch: the build
+      # producers then run and the consumers validate what those producers just built.
+      #
+      # Given a run id, the producers are skipped entirely and the consumers take their binaries from
+      # that earlier run of this workflow. Nothing about that is trusted. Each consumer re-verifies the
+      # downloaded identity manifest before it installs anything, and refuses unless the build-input
+      # fingerprint, the artifact digest, the role, the device target, the build recipe and all three
+      # build-time configuration values match this checkout and this dispatch. An artifact built for a
+      # Quick Tunnel origin that has since died is exactly the case it refuses.
+      reuse_artifacts_from_run_id:
+        description: 'QAN-INF-04: reuse the native builds from this earlier run id of THIS workflow instead of rebuilding. Provenance is verified before install; any mismatch fails closed. Empty = build normally.'
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: t12-phase-m-cloud-validation
@@ -774,41 +788,63 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           test "$SIGNIN" = success
           test "$RSP" = success
-
   # =========================================================================================
   # T-13 — Recovery / Persistence: native restart proof, on both platforms, from ONE sequencer.
   #
-  # Each job builds the VALIDATION entry (the isolated harness as the root component — the Product
-  # route is byte-identical and carries no sign-in surface), installs it ONCE, and drives the T-13
-  # sequence in `scripts/phase-m/run-t13-recovery-phases.sh`: a clean sign-in, a kill, an adoption of
-  # the server-populated Session through the production recovery store, a kill (FOLLOW_LIVE recovery
-  # with a fresh Live Head), a pin, a kill (PINNED(t) recovery), a home-and-reopen, a device restart,
-  # a sign-out and a kill (signed-out launch exposes nothing), identity replacement (B fresh, A resumes
-  # A's own pinned record), and an adoption of a FOREIGN Session followed by a kill (recovery fails
-  # closed, no replacement Session). Every interruption is real and happens outside the flows.
+  # The sequence is unchanged and its meaning is unchanged: a clean sign-in, a kill, an adoption of the
+  # server-populated Session through the production recovery store, a kill (FOLLOW_LIVE recovery with a
+  # fresh Live Head), a pin, a kill (PINNED(t) recovery), a home-and-reopen, a device restart, a sign-out
+  # and a kill (signed-out launch exposes nothing), identity replacement (B fresh, A resumes A's own
+  # pinned record), and an adoption of a FOREIGN Session followed by a kill (recovery fails closed, no
+  # replacement Session). Every interruption is real and happens outside the flows.
   #
   # What these jobs prove: the functional recovery contract on a Release build against the real API and
   # the real `expo-sqlite` stores. What they do not prove: anything physical or tactile, and anything
   # about a device's own backup or Data Protection behaviour, which remain `QAN-SEC-01`'s.
+  #
+  # -----------------------------------------------------------------------------------------
+  # QAN-INF-04 — why each platform is now TWO jobs
+  # -----------------------------------------------------------------------------------------
+  #
+  # T-13's cloud runs failed, repeatedly, in the emulator, the simulator, ADB and Maestro — and every
+  # one of those failures rebuilt a Release binary that was never in question, because the build and the
+  # validation lived in one job and GitHub can only re-run a job whole. An hour of Gradle and Xcode was
+  # spent, more than once, to retry a flow file.
+  #
+  # So each platform is a BUILD PRODUCER and a VALIDATION CONSUMER:
+  #
+  #   android-t13-build   -> t13-recovery-android-build  -> android-t13-recovery-emulator
+  #   ios-t13-build       -> t13-recovery-ios-build      -> ios-t13-recovery-simulator
+  #
+  # The consumers contain no Gradle invocation, no `xcodebuild`, no CocoaPods and no CNG prebuild. They
+  # do not even run `npm ci`: every script they execute — the preconditions, the provenance gate, the
+  # sequencer, the evidence collector, the phase gate — uses Node builtins, Maestro and the platform
+  # tools alone, and a job with no `node_modules` cannot accidentally acquire a build step. Re-running
+  # one failed consumer therefore re-runs exactly the validation, against the binary the producer
+  # already built and uploaded, and the other platform is not touched: the two chains share no `needs`.
+  #
+  # PROVENANCE. A downloaded file is not evidence of anything until it proves what it is. Each producer
+  # writes `native-artifact-manifest.json` beside its binary — commit, platform, role, entry, artifact
+  # digest, build-input fingerprint, device target, toolchain and the digests of the three build-time
+  # configuration values — and every consumer re-verifies all of it BEFORE the first install, through
+  # `verify-native-artifact-manifest.mjs`, which has no accept-on-doubt path.
+  #
+  # PRIOR-RUN REUSE. `reuse_artifacts_from_run_id` skips the producers and takes the binaries from an
+  # earlier run of this workflow. That is the one place where the commit may legitimately differ from
+  # the artifact's, and the build-input fingerprint is then the entire argument: it covers every tracked
+  # path that can reach the binary and deliberately excludes only the Maestro flows, the runner-only
+  # `scripts/phase-m/` orchestration and prose. So a fixed flow or a fixed sequencer reuses the binary;
+  # a changed `apps/mobile/src`, a changed bundled `__validation__` harness, a changed lockfile or a
+  # changed API origin does not, and is refused by name rather than silently accepted.
   # =========================================================================================
-  android-t13-recovery-emulator:
-    name: Android API 36 emulator — T-13 RECOVERY (validation root)
-    if: inputs.run_t13_recovery
+  android-t13-build:
+    name: Android x86_64 Release — T-13 RECOVERY BUILD PRODUCER
+    if: inputs.run_t13_recovery && inputs.reuse_artifacts_from_run_id == ''
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 90
     steps:
       - name: Checkout the exact checkpoint
         uses: actions/checkout@v4
-      - name: Refuse to run without the two validation identities and a seeded Session
-        env:
-          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
-          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
-          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
-          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
-          SEEDED: ${{ inputs.t13_seeded_session_id }}
-        run: |
-          node scripts/phase-m/assert-validation-preconditions.mjs identities
-          test -n "$SEEDED" || { echo "STOP: t13_seeded_session_id is required for the T-13 recovery sequence"; exit 1; }
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
@@ -836,6 +872,97 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64 --no-daemon
+      # The binary, its human evidence record and its machine identity are staged into ONE directory and
+      # uploaded together. An artifact that travels without its manifest is an artifact no consumer may
+      # install, so they are never uploaded separately.
+      - name: Stage the artifact and record its identity
+        run: |
+          out="$RUNNER_TEMP/native-build"
+          mkdir -p "$out"
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "$out/app-release.apk"
+          node scripts/phase-m/record-artifact-identity.mjs android AUTH_VALIDATION "${{ github.sha }}" "$out/android-recovery-validation-identity.txt"
+          node scripts/phase-m/native-artifact-manifest.mjs \
+            --platform android --role AUTH_VALIDATION --recipe t13-recovery-validation --abis x86_64 \
+            --artifact "$out/app-release.apk" --out "$out/native-artifact-manifest.json"
+      - name: Upload the T-13 Android validation build
+        uses: actions/upload-artifact@v4
+        with:
+          name: t13-recovery-android-build
+          path: ${{ runner.temp }}/native-build
+          if-no-files-found: error
+          retention-days: 30
+
+  android-t13-recovery-emulator:
+    name: Android API 36 emulator — T-13 RECOVERY (validation consumer, no build)
+    needs: [android-t13-build]
+    # Runs when its own producer succeeded, or when the operator asked for a prior run's artifact and
+    # the producer was therefore never scheduled. A FAILED producer reaches neither branch.
+    if: always() && inputs.run_t13_recovery && (needs.android-t13-build.result == 'success' || inputs.reuse_artifacts_from_run_id != '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      # The minimum for `actions/download-artifact` to read ANOTHER run's artifacts. Granted here only,
+      # never at workflow level, and never write.
+      actions: read
+    steps:
+      - name: Checkout the exact checkpoint
+        uses: actions/checkout@v4
+      - name: Refuse to run without the two validation identities and a seeded Session
+        env:
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+          SEEDED: ${{ inputs.t13_seeded_session_id }}
+        run: |
+          node scripts/phase-m/assert-validation-preconditions.mjs identities
+          test -n "$SEEDED" || { echo "STOP: t13_seeded_session_id is required for the T-13 recovery sequence"; exit 1; }
+      # No `cache: npm` and no `npm ci`: this job installs no dependencies, because every script it runs
+      # uses Node builtins only. Node is here for those scripts; the JDK is Maestro's.
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Download the validation build from this run
+        if: inputs.reuse_artifacts_from_run_id == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: t13-recovery-android-build
+          path: ${{ runner.temp }}/native-build
+      - name: Download the validation build from the requested earlier run
+        if: inputs.reuse_artifacts_from_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: t13-recovery-android-build
+          path: ${{ runner.temp }}/native-build
+          run-id: ${{ inputs.reuse_artifacts_from_run_id }}
+          github-token: ${{ github.token }}
+      # THE GATE. Nothing below this step may run against an artifact this step did not accept, and this
+      # step accepts nothing it cannot prove. A mismatch of bytes, build inputs, role, ABI, recipe or
+      # any of the three build-time configuration values is a refusal, and a refusal fails the job.
+      - name: 'Verify the artifact provenance BEFORE anything is installed'
+        env:
+          MODE: ${{ inputs.reuse_artifacts_from_run_id == '' && 'same-run' || 'prior-run' }}
+        run: |
+          node scripts/phase-m/verify-native-artifact-manifest.mjs \
+            --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
+            --artifact "$RUNNER_TEMP/native-build/app-release.apk" \
+            --mode "$MODE" --platform android --role AUTH_VALIDATION \
+            --recipe t13-recovery-validation --abis x86_64 --commit "${{ github.sha }}" \
+            | tee "$RUNNER_TEMP/android-provenance.txt"
+          {
+            echo "### T-13 Android artifact provenance: \`$MODE\`"
+            echo ''
+            echo '```'
+            cat "$RUNNER_TEMP/android-provenance.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
         run: |
           curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
@@ -868,6 +995,7 @@ jobs:
           MOMENT: ${{ inputs.t13_moment }}
           DEBUG_ROOT: ${{ runner.temp }}/t13-debug
           RESULTS: ${{ runner.temp }}/t13-phase-results.txt
+          APK: ${{ runner.temp }}/native-build/app-release.apk
         with:
           api-level: 36
           arch: x86_64
@@ -876,7 +1004,7 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 900
           script: |
-            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            adb install -r "$APK"
             bash scripts/phase-m/run-t13-recovery-phases.sh
       - name: Collect the evidence, with every credential redacted
         if: always()
@@ -894,9 +1022,17 @@ jobs:
           echo "required phase diagnostics: ${required:-(none)}"
           T12_REQUIRED_PHASES="$required" node scripts/phase-m/collect-validation-evidence.mjs "$RUNNER_TEMP/t13-debug" "$RUNNER_TEMP/t13-evidence"
           if [ -f "$results" ]; then cp "$results" "$RUNNER_TEMP/t13-evidence/t13-phase-results.txt"; fi
-      - name: Record the artifact identity
+      # The provenance travels WITH the evidence: the identity record of the binary that produced these
+      # phase outcomes, its machine manifest, and the verifier's own accepted verdict. Without these
+      # three the evidence names no artifact, and a claim with no recorded build identity is NOT TESTED.
+      - name: Carry the artifact provenance into the evidence
         if: always()
-        run: node scripts/phase-m/record-artifact-identity.mjs android AUTH_VALIDATION "${{ github.sha }}" "$RUNNER_TEMP/t13-evidence/android-recovery-validation-identity.txt"
+        run: |
+          mkdir -p "$RUNNER_TEMP/t13-evidence"
+          for file in android-recovery-validation-identity.txt native-artifact-manifest.json; do
+            if [ -f "$RUNNER_TEMP/native-build/$file" ]; then cp "$RUNNER_TEMP/native-build/$file" "$RUNNER_TEMP/t13-evidence/$file"; fi
+          done
+          if [ -f "$RUNNER_TEMP/android-provenance.txt" ]; then cp "$RUNNER_TEMP/android-provenance.txt" "$RUNNER_TEMP/t13-evidence/artifact-provenance-verdict.txt"; fi
       - name: Upload the T-13 Android evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -909,11 +1045,11 @@ jobs:
         if: always()
         run: bash scripts/phase-m/gate-t13-recovery-phases.sh "$RUNNER_TEMP/t13-phase-results.txt" "Android API 36 emulator"
 
-  ios-t13-recovery-simulator:
-    name: iOS Release simulator — T-13 RECOVERY (validation root)
-    if: inputs.run_ios && inputs.run_t13_recovery
+  ios-t13-build:
+    name: iOS Release simulator — T-13 RECOVERY BUILD PRODUCER
+    if: inputs.run_ios && inputs.run_t13_recovery && inputs.reuse_artifacts_from_run_id == ''
     runs-on: macos-26
-    timeout-minutes: 150
+    timeout-minutes: 120
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       IOS_SIMULATOR_NAME: iPhone 17
@@ -921,38 +1057,15 @@ jobs:
     steps:
       - name: Checkout the exact checkpoint
         uses: actions/checkout@v4
-      - name: Refuse to run without the two validation identities and a seeded Session
-        env:
-          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
-          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
-          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
-          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
-          SEEDED: ${{ inputs.t13_seeded_session_id }}
-        run: |
-          node scripts/phase-m/assert-validation-preconditions.mjs identities
-          test -n "$SEEDED" || { echo "STOP: t13_seeded_session_id is required for the T-13 recovery sequence"; exit 1; }
       - name: Select Xcode 26.6 explicitly (never the runner default)
         run: |
           sudo xcode-select -s /Applications/Xcode_26.6.app
           xcodebuild -version | grep -x 'Xcode 26.6'
-      - name: Guard the simulator (iPhone 17 on iOS 26.5)
-        run: |
-          udid="$(xcrun simctl list devices available -j | jq -r --arg name "$IOS_SIMULATOR_NAME" --arg suffix "$IOS_SIMULATOR_RUNTIME_SUFFIX" '.devices | to_entries[] | select(.key | endswith($suffix)) | .value[] | select(.name == $name) | .udid' | head -n 1)"
-          if [ -z "$udid" ]; then
-            echo "STOP: the authorized simulator is not on this image"
-            exit 1
-          fi
-          echo "IOS_SIM_UDID=$udid" >> "$GITHUB_ENV"
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-      - name: Setup Temurin JDK 17 (Maestro tooling path)
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '17'
       - name: Install dependencies from the root lockfile
         run: npm ci
       - name: Select the isolated validation entry (this job only)
@@ -974,14 +1087,119 @@ jobs:
           workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
           scheme="$(basename "$workspace" .xcworkspace)"
           xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
-      - name: Boot the simulator and install the harness build
+      # A `.app` is a directory, and an uploaded directory loses the symlinks and the executable bit a
+      # simulator install needs. `ditto -c -k --keepParent` is the packaging the Mobile CI gate already
+      # uses; the consumer unpacks it with `ditto -x -k` and installs the bundle that comes out.
+      - name: Package the simulator app and record its identity
+        run: |
+          out="$RUNNER_TEMP/native-build"
+          mkdir -p "$out"
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          ditto -c -k --keepParent "$app" "$out/qandeel-ios-simulator.app.zip"
+          node scripts/phase-m/record-artifact-identity.mjs ios AUTH_VALIDATION "${{ github.sha }}" "$out/ios-recovery-validation-identity.txt"
+          node scripts/phase-m/native-artifact-manifest.mjs \
+            --platform ios --role AUTH_VALIDATION --recipe t13-recovery-validation \
+            --artifact "$out/qandeel-ios-simulator.app.zip" --out "$out/native-artifact-manifest.json"
+      - name: Upload the T-13 iOS validation build
+        uses: actions/upload-artifact@v4
+        with:
+          name: t13-recovery-ios-build
+          path: ${{ runner.temp }}/native-build
+          if-no-files-found: error
+          retention-days: 30
+
+  ios-t13-recovery-simulator:
+    name: iOS Release simulator — T-13 RECOVERY (validation consumer, no build)
+    needs: [ios-t13-build]
+    if: always() && inputs.run_ios && inputs.run_t13_recovery && (needs.ios-t13-build.result == 'success' || inputs.reuse_artifacts_from_run_id != '')
+    runs-on: macos-26
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      actions: read
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      IOS_SIMULATOR_NAME: iPhone 17
+      IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+    steps:
+      - name: Checkout the exact checkpoint
+        uses: actions/checkout@v4
+      - name: Refuse to run without the two validation identities and a seeded Session
+        env:
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+          T12_TEST_EMAIL_B: ${{ secrets.T12_TEST_EMAIL_B }}
+          T12_TEST_PASSWORD_B: ${{ secrets.T12_TEST_PASSWORD_B }}
+          SEEDED: ${{ inputs.t13_seeded_session_id }}
+        run: |
+          node scripts/phase-m/assert-validation-preconditions.mjs identities
+          test -n "$SEEDED" || { echo "STOP: t13_seeded_session_id is required for the T-13 recovery sequence"; exit 1; }
+      # The developer directory still has to be the authorized one — `simctl` resolves its runtimes
+      # through it. It is SELECTED and READ BACK, never confirmed with `xcodebuild`: this job may not
+      # invoke that binary at all, and a guard that did would make the no-build claim unverifiable by
+      # inspection.
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          test "$(xcode-select -p)" = '/Applications/Xcode_26.6.app/Contents/Developer'
+      - name: Guard the simulator (iPhone 17 on iOS 26.5)
+        run: |
+          udid="$(xcrun simctl list devices available -j | jq -r --arg name "$IOS_SIMULATOR_NAME" --arg suffix "$IOS_SIMULATOR_RUNTIME_SUFFIX" '.devices | to_entries[] | select(.key | endswith($suffix)) | .value[] | select(.name == $name) | .udid' | head -n 1)"
+          if [ -z "$udid" ]; then
+            echo "STOP: the authorized simulator is not on this image"
+            exit 1
+          fi
+          echo "IOS_SIM_UDID=$udid" >> "$GITHUB_ENV"
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Download the validation build from this run
+        if: inputs.reuse_artifacts_from_run_id == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: t13-recovery-ios-build
+          path: ${{ runner.temp }}/native-build
+      - name: Download the validation build from the requested earlier run
+        if: inputs.reuse_artifacts_from_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: t13-recovery-ios-build
+          path: ${{ runner.temp }}/native-build
+          run-id: ${{ inputs.reuse_artifacts_from_run_id }}
+          github-token: ${{ github.token }}
+      - name: 'Verify the artifact provenance BEFORE anything is installed'
+        env:
+          MODE: ${{ inputs.reuse_artifacts_from_run_id == '' && 'same-run' || 'prior-run' }}
+        run: |
+          node scripts/phase-m/verify-native-artifact-manifest.mjs \
+            --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
+            --artifact "$RUNNER_TEMP/native-build/qandeel-ios-simulator.app.zip" \
+            --mode "$MODE" --platform ios --role AUTH_VALIDATION \
+            --recipe t13-recovery-validation --commit "${{ github.sha }}" \
+            | tee "$RUNNER_TEMP/ios-provenance.txt"
+          {
+            echo "### T-13 iOS artifact provenance: \`$MODE\`"
+            echo ''
+            echo '```'
+            cat "$RUNNER_TEMP/ios-provenance.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Boot the simulator and install the verified build
         run: |
           xcrun simctl boot "$IOS_SIM_UDID" || true
           xcrun simctl bootstatus "$IOS_SIM_UDID" -b
           # A fresh simulator shows a one-time "slide to type" introduction over the keyboard; while it
           # is up, every key after the first is swallowed. Declare it shown before the app is installed.
           xcrun simctl spawn "$IOS_SIM_UDID" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
-          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          ditto -x -k "$RUNNER_TEMP/native-build/qandeel-ios-simulator.app.zip" "$RUNNER_TEMP/native-app"
+          app="$(find "$RUNNER_TEMP/native-app" -maxdepth 1 -name '*.app' | head -n 1)"
           test -n "$app"
           xcrun simctl install "$IOS_SIM_UDID" "$app"
           echo "IOS_APP_PATH=$app" >> "$GITHUB_ENV"
@@ -1028,9 +1246,14 @@ jobs:
           echo "required phase diagnostics: ${required:-(none)}"
           T12_REQUIRED_PHASES="$required" node scripts/phase-m/collect-validation-evidence.mjs "$RUNNER_TEMP/t13-debug" "$RUNNER_TEMP/t13-evidence"
           if [ -f "$results" ]; then cp "$results" "$RUNNER_TEMP/t13-evidence/t13-phase-results.txt"; fi
-      - name: Record the artifact identity
+      - name: Carry the artifact provenance into the evidence
         if: always()
-        run: node scripts/phase-m/record-artifact-identity.mjs ios AUTH_VALIDATION "${{ github.sha }}" "$RUNNER_TEMP/t13-evidence/ios-recovery-validation-identity.txt"
+        run: |
+          mkdir -p "$RUNNER_TEMP/t13-evidence"
+          for file in ios-recovery-validation-identity.txt native-artifact-manifest.json; do
+            if [ -f "$RUNNER_TEMP/native-build/$file" ]; then cp "$RUNNER_TEMP/native-build/$file" "$RUNNER_TEMP/t13-evidence/$file"; fi
+          done
+          if [ -f "$RUNNER_TEMP/ios-provenance.txt" ]; then cp "$RUNNER_TEMP/ios-provenance.txt" "$RUNNER_TEMP/t13-evidence/artifact-provenance-verdict.txt"; fi
       - name: Upload the T-13 iOS evidence
         if: always()
         uses: actions/upload-artifact@v4
