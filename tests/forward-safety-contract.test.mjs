@@ -230,6 +230,40 @@ test('a future authorized Mobile CI gate breaks no historical contract', () => s
   assertAllSurvive('a later task registering its own Node-only mobile gate is authorized work');
 }));
 
+/**
+ * An ADDITIVE NATIVE JOB, which is the ceiling class QAN-INF-04-FIX-01 had to clear.
+ *
+ * That task split each Mobile CI native job into a build producer and a separately re-runnable
+ * validation consumer, so a flaked emulator stops costing a full Gradle or Xcode rebuild. It took the
+ * workflow from three jobs to five — and NINETEEN contracts had frozen the COUNT: `runs-on: ` seen
+ * exactly three times, the native-impact condition seen exactly twice, a job slice bounded by the
+ * NAME of the job that follows it. Every one of them belonged to a task that does not own
+ * `mobile-ci.yml`, and every one of them failed on a change that weakened nothing.
+ *
+ * They were re-anchored to the jobs that must durably EXIST and to the gating ratio. This scenario is
+ * what stops the ceiling growing back: the next additive native job must cost nobody a re-anchor.
+ */
+const FUTURE_NATIVE_JOB = 'build-android-arm64';
+
+test('a future authorized additive native job breaks no historical contract', () => scenario(
+  ['.github/workflows/mobile-ci.yml'],
+  () => {
+  patch('.github/workflows/mobile-ci.yml',
+    (text) => text.replace(/^ {2}build-ios:$/mu, [
+      `  ${FUTURE_NATIVE_JOB}:`,
+      '    name: Android Release APK (arm64) — HYPOTHETICAL FUTURE PRODUCER',
+      '    needs: verify-mobile-contracts',
+      "    if: needs.verify-mobile-contracts.outputs.native_impact == 'true'",
+      '    runs-on: ubuntu-latest',
+      '    steps:',
+      '      - {name: Checkout, uses: actions/checkout@v4}',
+      '  build-ios:',
+    ].join('\n')),
+    FUTURE_NATIVE_JOB);
+
+  assertAllSurvive('a later task adding a native job to Mobile CI is authorized work');
+}));
+
 const PROBE_MIGRATION = 'database/migrations/0099_forward_safety_probe_v1.sql';
 
 test('a future authorized migration breaks no T-03C, T-03D or Thread-layer contract', () => scenario([PROBE_MIGRATION], () => {
@@ -416,6 +450,15 @@ test('no root contract carries a mutable-global ceiling of any known shape', () 
     // An exhaustive list of the workflow's gate steps. The next authorized task adds one.
     [/deepEqual\(\s*\[\s*\.\.\.\s*\w+\.matchAll\(\/run: npm run/u,
       'an exhaustive list of a workflow\'s gate steps'],
+    // A COUNT of a shared workflow's jobs. QAN-INF-04-FIX-01 split each Mobile CI native job into a
+    // build producer and a separately re-runnable validation consumer — infrastructure that weakened
+    // nothing — and had to clear this shape out of NINETEEN contracts, almost all belonging to closed
+    // tasks that do not own `mobile-ci.yml`. What a contract may durably claim is which jobs EXIST and
+    // that each one stays behind the classifier; never how many there are.
+    [/\.match\(\/runs-on:[^/]*\/gu\)\s*\?\?\s*\[\]\)\.length,\s*\d/u,
+      "a count of a shared workflow's jobs"],
+    [/native_impact == 'true'\/gu\)\s*\?\?\s*\[\]\)\.length,\s*\d/u,
+      "a count of a shared workflow's gated jobs"],
     // An enumeration of everything that follows a migration. The next migration breaks it.
     [/deepEqual\(\s*migrations\.filter\(\([\w\s)]*\)\s*=>\s*\w+\s*>\s*\w+\)/u,
       'an enumeration of every migration that follows this one'],

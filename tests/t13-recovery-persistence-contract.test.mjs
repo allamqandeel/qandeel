@@ -377,7 +377,13 @@ test('the gate registers itself, the forward-safety hypothetical moved on, and t
   const workflow = read('.github/workflows/mobile-ci.yml');
   assert.equal((workflow.match(/run: npm run test:t13-recovery-persistence-contract\b/gu) ?? []).length, 1, 'exactly one gate step');
   assert.equal((workflow.match(/'tests\/t13-recovery-persistence-contract\.test\.mjs'/gu) ?? []).length, 1, 'exactly one trigger path');
-  assert.equal((workflow.match(/runs-on: /gu) ?? []).length, 3, 'no job beyond the fast gate and the two native jobs');
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  assert.match(workflow, /^  verify-mobile-contracts:$/mu);
+  assert.match(workflow, /^  verify-android:$/mu);
+  assert.match(workflow, /^  verify-ios:$/mu);
   // The forward-safety gate no longer uses THIS gate's name as its hypothetical.
   const forwardSafety = read('tests/forward-safety-contract.test.mjs');
   assert.doesNotMatch(forwardSafety, /const FUTURE_GATE = 'test:t13-recovery-persistence-contract';/u, 'a registered gate cannot be the hypothetical');
@@ -475,8 +481,15 @@ test('§18 — the native restart proof reuses the T-12 Phase-M infrastructure: 
   assert.match(workflow, /^  android-t13-recovery-emulator:$/mu);
   assert.match(workflow, /^  ios-t13-recovery-simulator:$/mu);
   assert.equal((workflow.match(/bash scripts\/phase-m\/run-t13-recovery-phases\.sh/gu) ?? []).length, 2, 'one sequencer, both platforms');
-  // The canonical Mobile CI gate is untouched by the native proof: still exactly its three jobs.
-  assert.equal((read('.github/workflows/mobile-ci.yml').match(/runs-on: /gu) ?? []).length, 3);
+  // The canonical Mobile CI gate is untouched by the native proof.
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  const mobileCiWorkflow = read('.github/workflows/mobile-ci.yml');
+  assert.match(mobileCiWorkflow, /^  verify-mobile-contracts:$/mu);
+  assert.match(mobileCiWorkflow, /^  verify-android:$/mu);
+  assert.match(mobileCiWorkflow, /^  verify-ios:$/mu);
 });
 
 test('scope — no Product sign-in gateway, no credential hardening, no session browser, no replay, no background polling', () => {

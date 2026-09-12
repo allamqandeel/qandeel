@@ -435,8 +435,15 @@ test('the gate is registered at the root and in API CI after T-03B2a and before 
   assert.ok(apiCi.indexOf('test:canonical-home-placement-engine-contract') < apiCi.indexOf('test:him-generic-write-authority-retirement-contract'), 'runs with the static contracts');
   assert.ok(apiCi.indexOf('test:canonical-home-placement-engine-contract') < apiCi.indexOf('Apply all migrations to fresh PostgreSQL'), 'runs before the database bootstrap');
   assert.doesNotMatch(mobileCi, /home-placement|placement|osdap/u);
-  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3);
-  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2);
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  assert.match(mobileCi, /^  verify-mobile-contracts:$/mu);
+  assert.match(mobileCi, /^  verify-android:$/mu);
+  assert.match(mobileCi, /^  verify-ios:$/mu);
+  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
+    (mobileCi.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate stays behind the classifier');
   // FORWARD-SAFE (R2-02): an exhaustive census of the ROOT toolchain is a global ceiling that
   // any authorized future task trips. What is permanent is that the verifier database driver is
   // declared, alongside the forward-safe denylists this contract already carries.

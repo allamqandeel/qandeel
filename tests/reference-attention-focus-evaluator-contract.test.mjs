@@ -468,8 +468,15 @@ test('the gate is registered at the root and in API CI, and MOB-CI-01 is untouch
     'exactly the 0066 substrate verifier, the 0067 readiness verifier and the T-03D 0071 cutover verifier');
   // Mobile CI is not edited: no new step, still the fast gate plus two conditional native jobs.
   assert.doesNotMatch(mobileCi, /reference-attention-focus/u);
-  assert.equal((mobileCi.match(/runs-on: /gu) ?? []).length, 3);
-  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length, 2);
+  // RE-ANCHORED (QAN-INF-04-FIX-01): a `runs-on:` count froze Mobile CI at three jobs, and each
+  // native job is now a build producer plus a separately re-runnable validation consumer, so a
+  // flaked emulator no longer costs a rebuild. The durable claim is that the fast contract gate
+  // and BOTH native validation jobs remain; an additive infrastructure job is not a weakening.
+  assert.match(mobileCi, /^  verify-mobile-contracts:$/mu);
+  assert.match(mobileCi, /^  verify-android:$/mu);
+  assert.match(mobileCi, /^  verify-ios:$/mu);
+  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
+    (mobileCi.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate stays behind the classifier');
   // No new dependency: the adapter reuses the installed OpenAI SDK.
   assert.ok('openai' in apiPackage.dependencies);
   for (const name of ['zod', 'ajv', 'uuid', 'nanoid', '@anthropic-ai/sdk-focus', 'natural', 'compromise', 'franc']) {
