@@ -460,8 +460,10 @@ changes no T-13 semantics.
 ### `QAN-BL-AUTH-01` — Mobile Product Sign-In Gateway
 
 - **Closing task:** `T-14 — Mobile Product Sign-In Gateway v1`
-- **PR / SHA:** `#225` / `784d8de75d97410d08dd9149ce822138ecfe9748` — the implementation/validation
-  evidence head. The BG-08 commit that writes this record follows it and changes no Product code.
+- **PR / SHA:** `#225` / `784d8de75d97410d08dd9149ce822138ecfe9748` — the implementation evidence
+  head, carrying every Product and test change of T-14. The commits after it are this BG-08
+  governance record and one documentation correction; neither changes Product, runtime or test
+  behaviour, and standard PR CI is green on the final head.
 - **Disposition:** completed. A signed-out reader has one real Product entry surface, and it consumes
   only the already-frozen `MobileAuthAuthority.signInWithPassword`. A successful sign-in hands control
   back to the existing integration runtime, which owns

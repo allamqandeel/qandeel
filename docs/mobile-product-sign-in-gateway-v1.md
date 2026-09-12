@@ -3,7 +3,10 @@
 **Status:** CANDIDATE — awaiting independent review
 **Baseline:** `e132091ae9af1e2a2137d59494c04505c218032c` (canonical `main` after QAN-INF-04)
 **Branch:** `feat/t14-mobile-product-sign-in-gateway-v1`
-**PR / evidence head:** `#225` / `784d8de75d97410d08dd9149ce822138ecfe9748`
+**PR:** `#225`
+**Implementation evidence head:** `784d8de75d97410d08dd9149ce822138ecfe9748` — every Product and test
+change of T-14. The commits after it are a BG-08 governance record and one documentation correction;
+neither changes Product, runtime or test behaviour. Standard PR CI is green on the final head.
 **Architecture:** `QANDEEL — T-14 Mobile Product Sign-In Gateway v1`, FROZEN FOR IMPLEMENTATION
 **Owner of:** the signed-out Product entry surface (`apps/mobile/src/integration/auth-gateway/`), the
 frozen bilingual sign-in copy, the local required-field rejections, the one in-flight request state,
@@ -268,10 +271,14 @@ T-12P / T-12 and T-14 is forbidden from re-proving that layer.
 | `integration/__tests__/signed-out-product-root.test.tsx` | `SIGNED_OUT` renders the gateway and no longer the engineering surface; six other non-`READY` phases stay technical; `READY` still composes the unchanged world; a real sign-in through the real runtime reaches `READY` with exactly one Session create, and no Product recovery read occurs while signed out |
 | `tests/t14-mobile-product-sign-in-gateway-contract.test.mjs` | the permanent boundary, by construction, with planted-defect checks on every absence predicate that matters |
 | T-12P / T-12 / T-13 contracts, full mobile Jest, typecheck, lint, root contracts | no regression |
+| standard PR CI — API CI, the fast mobile contract gate, and the Android and iOS native boot smokes | the merged head builds, installs and launches on both platforms |
 
 **No cloud dependency.** T-14 created no Phase-M run, no T-13 recovery validation, no Quick Tunnel, no
 seeded Session and no live QANDEEL API. None of them is needed to prove a signed-out auth gateway, and
-running one would have been a broad native execution bought for a screenshot.
+running one would have been a broad native execution bought for a screenshot. The only native evidence
+is the standard PR Mobile CI boot smoke, which asserts one integration identifier and no Product
+semantics — this build carries no configuration, so there is nothing about the gateway's own behaviour
+for it to claim, and it claims none.
 
 ### One re-anchored assertion
 
@@ -285,6 +292,35 @@ replaces: the composed **world** exists in one place, is reachable from one phas
 `READY` — so no world, no Session, no viewpoint and nothing derived from a recovery record can be on
 screen before the bootstrap has reconciled against server authority. T-13's signed-out non-exposure is
 untouched and still proven behaviourally by `S1-10`: the gateway reads no Product recovery at all.
+
+### One Architecture finding, raised and deliberately not fixed here
+
+**`QAN-INF-04-FIX-01` — Mobile CI Failed-Job Artifact Reuse Correction.**
+
+T-14's first Mobile CI run produced a clean infrastructure failure: the Android job built the Release
+APK, passed the provenance gate, installed the APK, and then failed inside the emulator runner at the
+first `launchApp`, before any Product assertion, with repeated `adb: device offline` during emulator
+boot. Diagnosing it before any rerun — which §17 requires — surfaced something the flake itself was
+not about.
+
+QAN-INF-04's stated promise for exactly this case is that *"re-running THIS job after a flaky emulator
+restores the same key and skips Gradle entirely"*. It does not hold. The cache save step
+(`Post Restore a build-compatible Release APK, if one exists`) is **skipped when the job fails**, so
+the fingerprint key is never written for the very failure the reuse exists to absorb. Measured rather
+than reasoned about: the repository's Android cache list holds no entry for this head's build-input
+fingerprint, and the Mobile CI Android job has no other reuse path — no `reuse_artifacts_from_run_id`
+input and no artifact download — even though the verified APK was uploaded and is still available. The
+separate `qan-inf-04-artifact-reuse-demonstration.yml` cannot consume it either: it downloads a
+different artifact name and its provenance gate refuses a foreign recipe with `RECIPE_MISMATCH`.
+
+The consequence is narrow and worth stating plainly: **a flaky native validation currently costs a
+full rebuild**, which is the cost QAN-INF-04 was created to remove.
+
+This is **not fixed here, and not admitted to the canonical backlog by T-14.** It is CI architecture,
+it violates no T-14 contract, and BG-01 does not apply because it is not a T-14 blocker. Whether it
+qualifies for admission under BG-06 is Architecture's decision, not this task's (BG-07). It is
+recorded here so the finding exists outside a review comment and a model's memory, and it is proposed
+as one immediate, separate infrastructure correction after T-14.
 
 ---
 

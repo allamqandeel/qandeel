@@ -14,14 +14,33 @@
  * and the status bar — one integration runtime for the life of the mount, and the choice of which
  * surface is on screen for each runtime phase. Everything else is delegated.
  *
- * ## The technical states are technical, and say so
+ * ## Which phase gets which surface (T-14)
  *
- * Before a runtime exists there is no Product to show, and inventing one would be a lie of exactly
- * the kind this task exists to prevent: no Session, no `TC`, no `V`, no acts. So those phases render
- * a technical state view carrying no Product copy, no Product language and no visual language — the
- * same honesty `FoundationShell` had, for the same reason. The Product surface appears when, and only
- * when, there is a Product: an authenticated identity, a conversation Session, an authoritative
- * snapshot and one canonical store.
+ * TWO phases are reader-facing, and they show different things because the reader is in genuinely
+ * different situations:
+ *
+ *   `SIGNED_OUT`  — nobody is authenticated. This is a correct resting state rather than a failure,
+ *                   and the one thing the reader needs is a way in, so it renders the Product
+ *                   sign-in entry. That surface carries NO Session, NO world and NO Product truth:
+ *                   there is no `TC`, no `V`, no act and no canonical store behind it, and it claims
+ *                   none. It collects a credential, hands it to the frozen auth authority, and is
+ *                   replaced by whatever the runtime decides comes next.
+ *
+ *   `READY`       — there is an authenticated identity, a conversation Session, an authoritative
+ *                   snapshot and one canonical store, so there is a world: the Living Analysis Map,
+ *                   composed after the authenticated bootstrap reconciled against server authority.
+ *
+ * ## Every remaining phase is technical, and says so
+ *
+ * `CONFIG_REFUSED`, `RESTORING`, `AUTH_ERROR`, `RECOVERING`, `BOOTSTRAPPING`, `BOOTSTRAP_FAILED` and
+ * `RECOVERY_FAILED` are a failure or transient work the reader did not ask about. For each of them
+ * there is no Product to show, and inventing one would be a lie of exactly the kind this file exists
+ * to prevent. So they render a technical state view carrying no Product copy, no Product language and
+ * no visual language — the same honesty `FoundationShell` had, for the same reason.
+ *
+ * The distinction is between "not signed in" and "something is loading or broken", not between
+ * "before READY" and "at READY": a signed-out entry is honest because it promises nothing, while a
+ * Product frame over `RECOVERING` or `RECOVERY_FAILED` would promise a world that does not exist.
  *
  * The root's test ID is present in EVERY phase, which is what makes the boot smoke honest: it proves
  * the integrated root mounts and nothing more, and it can no longer be satisfied by the old technical
