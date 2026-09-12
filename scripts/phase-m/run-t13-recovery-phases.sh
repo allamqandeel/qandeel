@@ -105,7 +105,13 @@ restart_device() {
     # "System UI isn't responding" dialog over whatever launches next; error dialogs stay hidden
     # (re-applied here: a reboot is exactly when they appear) and the shell is given time to settle.
     adb shell settings put global hide_error_dialogs 1 || true
-    until [ "$(adb shell getprop init.svc.bootanim 2>/dev/null | tr -d '\r')" = "stopped" ]; do sleep 2; done
+    # Bounded: on a headless emulator the boot-animation service need not ever report `stopped`, and
+    # `sys.boot_completed` above is the criterion that matters. Never an unbounded wait.
+    local settled=0
+    until [ "$(adb shell getprop init.svc.bootanim 2>/dev/null | tr -d '\r')" = "stopped" ] || [ "$settled" -ge 60 ]; do
+      sleep 2
+      settled=$((settled + 2))
+    done
     sleep 15
     adb shell input keyevent 82 || true
   fi
