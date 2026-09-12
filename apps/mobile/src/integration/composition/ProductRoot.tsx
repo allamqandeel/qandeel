@@ -14,14 +14,33 @@
  * and the status bar — one integration runtime for the life of the mount, and the choice of which
  * surface is on screen for each runtime phase. Everything else is delegated.
  *
- * ## The technical states are technical, and say so
+ * ## Which phase gets which surface (T-14)
  *
- * Before a runtime exists there is no Product to show, and inventing one would be a lie of exactly
- * the kind this task exists to prevent: no Session, no `TC`, no `V`, no acts. So those phases render
- * a technical state view carrying no Product copy, no Product language and no visual language — the
- * same honesty `FoundationShell` had, for the same reason. The Product surface appears when, and only
- * when, there is a Product: an authenticated identity, a conversation Session, an authoritative
- * snapshot and one canonical store.
+ * TWO phases are reader-facing, and they show different things because the reader is in genuinely
+ * different situations:
+ *
+ *   `SIGNED_OUT`  — nobody is authenticated. This is a correct resting state rather than a failure,
+ *                   and the one thing the reader needs is a way in, so it renders the Product
+ *                   sign-in entry. That surface carries NO Session, NO world and NO Product truth:
+ *                   there is no `TC`, no `V`, no act and no canonical store behind it, and it claims
+ *                   none. It collects a credential, hands it to the frozen auth authority, and is
+ *                   replaced by whatever the runtime decides comes next.
+ *
+ *   `READY`       — there is an authenticated identity, a conversation Session, an authoritative
+ *                   snapshot and one canonical store, so there is a world: the Living Analysis Map,
+ *                   composed after the authenticated bootstrap reconciled against server authority.
+ *
+ * ## Every remaining phase is technical, and says so
+ *
+ * `CONFIG_REFUSED`, `RESTORING`, `AUTH_ERROR`, `RECOVERING`, `BOOTSTRAPPING`, `BOOTSTRAP_FAILED` and
+ * `RECOVERY_FAILED` are a failure or transient work the reader did not ask about. For each of them
+ * there is no Product to show, and inventing one would be a lie of exactly the kind this file exists
+ * to prevent. So they render a technical state view carrying no Product copy, no Product language and
+ * no visual language — the same honesty `FoundationShell` had, for the same reason.
+ *
+ * The distinction is between "not signed in" and "something is loading or broken", not between
+ * "before READY" and "at READY": a signed-out entry is honest because it promises nothing, while a
+ * Product frame over `RECOVERING` or `RECOVERY_FAILED` would promise a world that does not exist.
  *
  * The root's test ID is present in EVERY phase, which is what makes the boot smoke honest: it proves
  * the integrated root mounts and nothing more, and it can no longer be satisfied by the old technical
@@ -34,6 +53,8 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
+import type { MobileAuthAuthority } from '../../runtime-entry';
+import { ProductSignInGateway } from '../auth-gateway';
 import { deviceProductLocale } from '../locale/device-locale';
 import { usePresentationFacts } from '../presentation/presentation-facts';
 import { createIntegrationRuntime, type IntegrationPhase, type IntegrationRuntime } from '../runtime/integration-runtime';
@@ -110,30 +131,71 @@ export function ProductRoot() {
       */}
       <View style={styles.root} testID={PRODUCT_ROOT_TEST_ID}>
         <StatusBar style="auto" />
-        {runtime === null ? <RuntimeState phase="CONFIG_REFUSED" /> : <MountedRuntime runtime={runtime} />}
+        {runtime === null ? <RuntimeState phase="CONFIG_REFUSED" /> : <RuntimePhaseSurface runtime={runtime} />}
       </View>
     </GestureHandlerRootView>
   );
 }
 
 /**
- * The phase reader.
+ * The phase reader, and the whole of T-14's structural change.
  *
- * The technical states need no insets — they are centred — so they render above the provider and are
- * visible immediately. Only the composed world sits inside it, which is also the only thing that
- * consumes an inset.
+ * TWO phases now have a reader-facing surface, and they are the only two that can honestly have one:
+ *
+ *   `READY`       — there is an authenticated identity, a Session, an authoritative snapshot and one
+ *                   canonical store, so there is a world to show;
+ *   `SIGNED_OUT`  — nobody is authenticated, which is a correct resting state rather than a failure,
+ *                   and the one thing a reader in it actually needs is a way in.
+ *
+ * Every OTHER phase stays exactly what it was: a technical state, in engineering vocabulary, with no
+ * Product copy and no Product claim. `RESTORING`, `RECOVERING` and `BOOTSTRAPPING` are transient work
+ * the reader did not ask about, and `AUTH_ERROR`, `BOOTSTRAP_FAILED`, `RECOVERY_FAILED` and
+ * `CONFIG_REFUSED` are failures. Dressing any of them as a Product state would be inventing
+ * reassurance the runtime cannot back — the same lie the technical state view exists to refuse.
+ *
+ * The signed-out surface calls one already-frozen capability and owns nothing else. It does not
+ * bootstrap, does not navigate, and does not create a Session: when it succeeds the auth authority
+ * publishes authentication, this same phase machinery moves on, and the surface is simply replaced.
+ *
+ * Both reader-facing phases sit inside the safe-area provider, because both are laid out against the
+ * reader's real device. The technical states need no insets — they are centred — so they still render
+ * above it and are visible immediately.
+ *
+ * Exported for the integration proofs, which drive it over a runtime the harness genuinely built.
+ * It is not published from the layer barrel, and it offers no seam of its own: the only thing it can
+ * be given is an `IntegrationRuntime`, which only `createIntegrationRuntime` can produce.
  */
-function MountedRuntime({ runtime }: { readonly runtime: IntegrationRuntime }) {
+export function RuntimePhaseSurface({ runtime }: { readonly runtime: IntegrationRuntime }) {
   const phase = useSyncExternalStore(runtime.subscribe, runtime.getPhase);
-  if (phase.kind !== 'READY') return <RuntimeState phase={phase.kind} />;
-  return (
-    // `initialMetrics` is the documented way to render on the first frame instead of waiting for the
-    // native module to report. Without it the reader sees one blank frame between READY and the
-    // world, which would read as the app stalling at exactly the moment it finished starting.
-    <SafeAreaProvider initialMetrics={initialWindowMetrics} style={styles.root}>
-      <ComposedWorld runtime={phase.runtime} />
-    </SafeAreaProvider>
-  );
+  // `initialMetrics` is the documented way to render on the first frame instead of waiting for the
+  // native module to report. Without it the reader sees one blank frame before the surface, which
+  // would read as the app stalling at exactly the moment it finished starting.
+  if (phase.kind === 'READY') {
+    return (
+      <SafeAreaProvider initialMetrics={initialWindowMetrics} style={styles.root}>
+        <ComposedWorld runtime={phase.runtime} />
+      </SafeAreaProvider>
+    );
+  }
+  if (phase.kind === 'SIGNED_OUT') {
+    return (
+      <SafeAreaProvider initialMetrics={initialWindowMetrics} style={styles.root}>
+        <SignedOutEntry auth={runtime.auth} />
+      </SafeAreaProvider>
+    );
+  }
+  return <RuntimeState phase={phase.kind} />;
+}
+
+/**
+ * The Product entry, with the one app-level locale bound.
+ *
+ * Resolved once per mount, exactly as the composed world resolves it: it is a presentation
+ * configuration, and there is one authority for it in the app rather than one per surface.
+ */
+function SignedOutEntry({ auth }: { readonly auth: MobileAuthAuthority }) {
+  const locale = useMemo(() => deviceProductLocale(), []);
+  return <ProductSignInGateway auth={auth} locale={locale} />;
 }
 
 /** The world, with the two app-root presentation facts bound. Below the provider, by necessity. */

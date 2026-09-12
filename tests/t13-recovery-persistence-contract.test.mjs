@@ -253,9 +253,38 @@ test('§6 — READY is published exactly once, only after load, decide, and the 
   assert.ok(at('await recovery.load(userId)') < at('decideRecovery(userId, loaded)'), 'load, then decide');
   assert.ok(at('decideRecovery(userId, loaded)') < at('await bootstrapWithAuthorities(entry, decision)'), 'decide, then bootstrap');
   assert.ok(at('await bootstrapWithAuthorities(entry, decision)') < at("publish({ kind: 'READY'"), 'READY only after the bootstrap resolved');
-  // The technical states are technical: the Product root renders the phase name and no world for them.
+  // The WORLD is rendered for exactly one phase, and it is READY.
+  //
+  // T-14 RE-ANCHOR, for the same reason as the T-10, T-11 and T-12 re-anchors before it. This used
+  // to pin the exact line `if (phase.kind !== 'READY') return <RuntimeState phase={phase.kind} />;`
+  // with the reason stated beside it: "no Product frame before READY". That was a DELIVERY FACT
+  // about a Product that had no signed-out entry at all — T-12 §14 recorded the absent gateway as a
+  // residual limitation, `QAN-BL-AUTH-01` registered it, and T-14 built it. Keeping the pin would
+  // have frozen the shape of a `return` statement into a rule that a reader who is merely not signed
+  // in must go on being shown an engineering status line, which is not a recovery claim and was
+  // never this contract's to make.
+  //
+  // The PERMANENT claim survives and is what is asserted instead, and it is stronger than a line
+  // match: the composed world exists in ONE place, it is reachable from ONE phase, and that phase is
+  // READY — so no world, no Session, no viewpoint and nothing derived from a recovery record can be
+  // on screen before the bootstrap has reconciled against server authority. What the signed-out
+  // reader now meets instead is proven to compose no world here, and proven to read no Product
+  // recovery at all by `S1-10` below.
   const productRoot = integrationCode['composition/ProductRoot.tsx'];
-  assert.match(productRoot, /if \(phase\.kind !== 'READY'\) return <RuntimeState phase=\{phase\.kind\} \/>;/u, 'no Product frame before READY');
+  assert.equal((productRoot.match(/<ComposedWorld\b/gu) ?? []).length, 1, 'the world is composed in exactly one place');
+  const worldAt = productRoot.indexOf('<ComposedWorld');
+  const readyAt = productRoot.lastIndexOf("if (phase.kind === 'READY')", worldAt);
+  assert.ok(readyAt >= 0, 'the world is rendered inside a READY guard');
+  assert.equal((productRoot.slice(readyAt, worldAt).match(/if \(phase\.kind/gu) ?? []).length, 1,
+    'no other phase guard stands between READY and the world');
+  // Every remaining phase still reaches the technical state view, in engineering vocabulary.
+  assert.match(productRoot, /return <RuntimeState phase=\{phase\.kind\} \/>;/u, 'the other phases are technical');
+  // And the signed-out entry is a surface of its own: it composes no world and holds no recovery.
+  assert.equal((productRoot.match(/<SignedOutEntry\b/gu) ?? []).length, 1, 'one signed-out entry');
+  const entryAt = productRoot.indexOf('<SignedOutEntry');
+  const signedOutAt = productRoot.lastIndexOf("if (phase.kind === 'SIGNED_OUT')", entryAt);
+  assert.ok(signedOutAt >= 0, 'the signed-out entry is rendered inside a SIGNED_OUT guard');
+  assert.equal(productRoot.includes('recovery'), false, 'the Product root holds no recovery of its own');
 });
 
 test('§15 — the durable snapshot advances from the ONE store on effective acts, never on a passive delivery, and never blocks it', () => {
