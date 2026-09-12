@@ -134,10 +134,10 @@ still not automatically backlog (BG-06), and admission still authorizes no imple
 | `QAN-BL-RSP-02` | Outboard Live Label Clipped at Large Text | `T-12 — Final Integration` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-T12-04` | Mobile Auth Session Storage Production Security + Device Validation | `T-12 — Final Integration / pre-release physical validation gate` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-SEC-01` | Mobile Credential Backup & Hardware Security Hardening | `QAN-SEC-01 — Pre-release Mobile Credential Security` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-T13-01` | Restart / Recovery / Persistence | `T-13 — Recovery / Persistence` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-T13-01` | Restart / Recovery / Persistence | `T-13 — Recovery / Persistence v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-NAV-01` | Cross-Session Timeline | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-NAV-02` | Analysis Replay | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
-| `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `T-14 — Mobile Product Sign-In Gateway v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 
 ---
 
@@ -258,6 +258,10 @@ This historical validation residue was **not** T-13 Product persistence. Histori
 
 ### `QAN-BL-T13-01` — Restart / Recovery / Persistence
 
+> **Historical pre-closure schema retained for the frozen T-07 / T-08 deferrals only.** This block
+> records what T-13 inherited before it ran. It is not the current lifecycle state; the current state
+> is the `CLOSED — TOMBSTONE` record in §6 below.
+
 - **Title / Finding:** restart, recovery and persistence of the reader's viewpoint and reversible
   history are unimplemented.
 - **Source:** [T-07 §12](return-navigation-layer-v1.md) ("no T-13 restart or persistence");
@@ -294,6 +298,10 @@ happens to reversible history — are defined here.
 - **Status:** `OPEN — UNASSIGNED`
 
 ### `QAN-BL-AUTH-01` — Mobile Product Sign-In Gateway
+
+> **Historical pre-closure schema retained for the frozen T-12 / T-12P residue only.** This block
+> records the obligation as it was admitted, with no owner. It is not the current lifecycle state;
+> the current state is the `CLOSED — TOMBSTONE` record in §6 below.
 
 - **Title / Finding:** there is no Product mobile sign-in experience, and no task owns one. The
   Product has no entry path for a signed-out reader.
@@ -434,16 +442,48 @@ record changes only and do not modify Product/runtime code.
   closed item.
 - **Status:** `CLOSED — TOMBSTONE`
 
+### `QAN-BL-T13-01` — Restart / Recovery / Persistence
+
+- **Closing task:** `T-13 — Recovery / Persistence v1`
+- **PR / SHA:** `#223` / `5d9ba46efc6cf2d391096fcb3784bf2a5588ae15`
+- **Disposition:** completed. Restart, recovery and persistence of the reader's viewpoint and
+  reversible history are delivered. Product recovery is identity-scoped and separate from auth
+  persistence: a signed-out launch reads no Product recovery at all, a record is validated before any
+  Session is resumed, and a record that cannot be trusted fails closed rather than minting a
+  replacement Session.
+- **Status:** `CLOSED — TOMBSTONE`
+
+This tombstone was recorded by `T-14 — Mobile Product Sign-In Gateway v1` under BG-08. T-13 closed
+without reconciling its own inherited item, and this is that reconciliation; it reopens nothing and
+changes no T-13 semantics.
+
+### `QAN-BL-AUTH-01` — Mobile Product Sign-In Gateway
+
+- **Closing task:** `T-14 — Mobile Product Sign-In Gateway v1`
+- **PR / SHA:** `#PENDING` / `PENDING` — recorded when the T-14 candidate head is pushed.
+- **Disposition:** completed. A signed-out reader has one real Product entry surface, and it consumes
+  only the already-frozen `MobileAuthAuthority.signInWithPassword`. A successful sign-in hands control
+  back to the existing integration runtime, which owns
+  `AUTHENTICATED → RECOVERING → BOOTSTRAPPING → READY`; the gateway creates no client, no storage, no
+  Session and no route, and it navigates nothing. No onboarding, registration, password-recovery,
+  social auth, account linking or credential-UX semantics were defined — the entry described by this
+  item is the whole of what was built.
+- **Status:** `CLOSED — TOMBSTONE`
+
+The boundaries this item stated remain true: the validation-only T12-04 auth harness was not promoted
+into a Product experience, and `QAN-SEC-01 — Pre-release Mobile Credential Security` still owns
+credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
+
 ---
 
 ## 7. Counts at this baseline
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 2 |
+| `DEFERRED — OWNED` | 1 |
 | `VALIDATION — OPEN` | 0 |
-| `OPEN — UNASSIGNED` | 7 |
-| `CLOSED — TOMBSTONE` | 10 |
+| `OPEN — UNASSIGNED` | 6 |
+| `CLOSED — TOMBSTONE` | 12 |
 | **Total** | **19** |
 
 | Severity | Count |
@@ -457,6 +497,15 @@ admission made *at* T-12 closure. `QAN-BL-AUTH-01` is a later BG-08 reconciliati
 explicitly named in the T-12 document but missed this register, and it was admitted afterwards by
 `PRE-T13 — T-12 Documentation / Governance Reconciliation`. Admitting it reopens nothing — T-12
 remains `CLOSED / FROZEN`.
+
+T-14 tombstoned two: its own `QAN-BL-AUTH-01`, and `QAN-BL-T13-01`, which T-13 delivered but did not
+reconcile here before closing. `QAN-BL-SEC-01` is now the only `DEFERRED — OWNED` item in the
+register, and it is unchanged. **T-14 admitted no new item.** Its anti-scope — sign-up, email
+verification, password reset, magic link, OTP, social auth, biometrics, passkeys, profile,
+onboarding, account deletion, account linking, "remember me", a password visibility toggle and
+sign-out chrome — is anti-scope, and BG-06 admits none of it: none has an existing `OPEN` identifier,
+none is deferred to a future task by a canonical document, none is carried forward for validation,
+and Architecture designated none.
 
 ---
 
@@ -496,8 +545,9 @@ Inherited after T-12 closure reconciliation:
 | --- | --- |
 | `T-11` | none |
 | `QAN-SEC-01 — Pre-release Mobile Credential Security` | `QAN-BL-SEC-01` |
-| `T-13 — Recovery / Persistence` | `QAN-BL-T13-01` |
+| `T-13 — Recovery / Persistence` | `QAN-BL-T13-01` — delivered; tombstoned under BG-08 by T-14 |
 | `T-12 — Final Integration` | none — reconciled and tombstoned under BG-08 / PR #220 |
+| `T-14 — Mobile Product Sign-In Gateway v1` | `QAN-BL-AUTH-01` — explicitly claimed by the T-14 contract |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 
@@ -529,3 +579,21 @@ before closure. It is admitted here as `QAN-BL-AUTH-01 — Mobile Product Sign-I
 qualifying residue exists only in a task-local note. This is a register correction, not a lifecycle
 change: T-12 stays `CLOSED / FROZEN`, no blocker is laundered (BG-01), no owner is invented (BG-02),
 and no implementation is authorized (BG-07).
+
+### T-14 closure record
+
+T-14 BG-08 reconciliation covers two items.
+
+`QAN-BL-AUTH-01` is the item T-14 opened by claiming: the contract names it, the task implements
+exactly the Product entry it describes and nothing beside it, and the tombstone in §6 records the
+disposition. `QAN-BL-T13-01` is a **late reconciliation of a predecessor**, in the same shape as the
+`QAN-BL-AUTH-01` admission above: T-13 delivered restart, recovery and persistence and closed, but
+left its own inherited item reading `DEFERRED — OWNED` here. T-14 records the tombstone rather than
+leaving the register disagreeing with a closed task. That is a register correction, not a lifecycle
+change — T-13 stays `CLOSED / FROZEN`, nothing about its semantics is reopened, and T-14 claims none
+of its work.
+
+`QAN-BL-SEC-01` remains `DEFERRED — OWNED` by `QAN-SEC-01 — Pre-release Mobile Credential Security`,
+untouched: T-14 changed no auth persistence, no storage mechanism, no backup policy and no platform
+credential model, and introduced no cryptography. No new item was admitted (BG-06), and no T-14
+finding was moved here in order to close (BG-01).

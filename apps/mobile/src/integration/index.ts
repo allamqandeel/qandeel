@@ -78,3 +78,7 @@ export { LivingAnalysisMap } from './composition/LivingAnalysisMap';
 
 export type { ProductRootProps } from './composition/ProductRoot';
 export { PRODUCT_ROOT_TEST_ID, ProductRoot, RUNTIME_STATE_TEST_ID } from './composition/ProductRoot';
+
+// T-14 — the signed-out Product entry. It consumes the frozen auth owner and becomes none of it.
+export type { ProductSignInCopy, ProductSignInGatewayProps } from './auth-gateway';
+export { PRODUCT_SIGN_IN_GATEWAY_TEST_ID, ProductSignInGateway, productSignInCopy } from './auth-gateway';
