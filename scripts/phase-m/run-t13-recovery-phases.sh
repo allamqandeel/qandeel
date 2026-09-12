@@ -101,6 +101,12 @@ restart_device() {
         return 1
       fi
     done
+    # The emulator's System UI can stall right after boot on a loaded runner and raise its own
+    # "System UI isn't responding" dialog over whatever launches next; error dialogs stay hidden
+    # (re-applied here: a reboot is exactly when they appear) and the shell is given time to settle.
+    adb shell settings put global hide_error_dialogs 1 || true
+    until [ "$(adb shell getprop init.svc.bootanim 2>/dev/null | tr -d '\r')" = "stopped" ]; do sleep 2; done
+    sleep 15
     adb shell input keyevent 82 || true
   fi
   await_device
@@ -143,6 +149,12 @@ run_phase() {
     record "$name" failure
   fi
 }
+
+# Android: a crash / ANR dialog from ANY process would sit over the app and hide the harness from
+# every flow after it; the emulator is told to keep them hidden for the whole sequence.
+if [ "$PLATFORM" != "ios" ]; then
+  adb shell settings put global hide_error_dialogs 1 || true
+fi
 
 # 1. clean install, identity A signs in, the locator is written
 run_phase phase-01-fresh-signin t13-recovery-phase-1-fresh-signin.yaml - \
