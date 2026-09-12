@@ -1,0 +1,364 @@
+name: QAN-INF-04 artifact reuse demonstration
+# QAN-INF-04. This workflow demonstrates the build/validation decoupling ITSELF, on real GitHub
+# native runners, and it is deliberately not a gate.
+#
+# ## What it may claim, and what it may not
+#
+# It claims CI ARCHITECTURE FACTS ONLY:
+#
+#   - an Android and an iOS producer job build the native artifact exactly once;
+#   - the consumer jobs download those exact artifacts and provenance-verify them before installing;
+#   - the consumers install the real binary and it launches with the Product root on screen;
+#   - re-running only the Android consumer reuses the APK and runs NO Gradle;
+#   - re-running only the iOS consumer reuses the `.app` and runs NO `xcodebuild`;
+#   - the two platforms retry independently.
+#
+# It makes NO T-13 claim of any kind. It stops before every API-dependent recovery and auth phase and
+# it has no way to reach one: it builds the PRODUCT root with NO configuration, so the binary embeds
+# a null API origin and null Supabase values, there is no Session, no viewpoint, no world and no
+# identity. `boot-smoke.yaml` asserts one integration identifier and nothing else.
+#
+# T-13 is CLOSED and FROZEN, and `t12-phase-m-cloud-validation.yml` remains the ONLY place a recovery
+# or auth claim can be made — still against the live API, still with a seeded Session, unchanged by
+# this file.
+#
+# ## Why a separate workflow rather than an experiment inside Phase M
+#
+# The Phase-M recovery jobs need a reachable API and a seeded Session because their subject is Product
+# truth. This workflow's subject is the ARTIFACT PIPELINE, which needs neither. Keeping them apart is
+# what lets the pipeline be demonstrated honestly without either weakening Phase M's preconditions or
+# producing a red recovery gate that asserts nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      run_ios:
+        description: 'Run the macOS iOS producer and consumer'
+        required: false
+        type: boolean
+        default: true
+      reuse_artifacts_from_run_id:
+        description: 'Reuse the native builds from this earlier run id of THIS workflow instead of rebuilding. Provenance is verified before install; any mismatch fails closed. Empty = build normally.'
+        required: false
+        type: string
+        default: ''
+  # It also runs whenever the reuse architecture itself changes, which is exactly when it is worth
+  # re-demonstrating. The path list is tight on purpose: nothing else in the repository triggers it,
+  # and a native-impact change reaches the canonical Mobile CI gate instead.
+  pull_request:
+    paths:
+      - '.github/workflows/qan-inf-04-artifact-reuse-demonstration.yml'
+      - 'scripts/phase-m/native-build-fingerprint.mjs'
+      - 'scripts/phase-m/native-artifact-manifest.mjs'
+      - 'scripts/phase-m/verify-native-artifact-manifest.mjs'
+
+concurrency:
+  group: qan-inf-04-artifact-reuse-demonstration-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+  # No QANDEEL_* configuration is set anywhere in this file, and that is a property rather than an
+  # omission: the manifest records all three values as `present: false`, so an artifact from this
+  # workflow is provably not interchangeable with a configured Phase-M one, in either direction.
+
+jobs:
+  android-demonstration-build:
+    name: Android x86_64 Release — BUILD PRODUCER
+    if: github.event_name != 'workflow_dispatch' || inputs.reuse_artifacts_from_run_id == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Setup Temurin JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies from the root lockfile
+        run: npm ci
+      - name: Report the build-input fingerprint
+        run: |
+          value="$(node scripts/phase-m/native-build-fingerprint.mjs)"
+          echo "### Android build-input fingerprint: \`$value\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Generate the Android project (CNG)
+        run: npm run prebuild:android --workspace @qandeel/mobile
+      - name: Build the Release APK (x86_64 for the emulator)
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64 --no-daemon
+      - name: Stage the artifact and record its identity
+        run: |
+          out="$RUNNER_TEMP/native-build"
+          mkdir -p "$out"
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "$out/app-release.apk"
+          node scripts/phase-m/native-artifact-manifest.mjs \
+            --platform android --role PRODUCT --recipe qan-inf-04-demonstration --abis x86_64 \
+            --artifact "$out/app-release.apk" --out "$out/native-artifact-manifest.json"
+          {
+            echo '### Android producer — the artifact this run built ONCE'
+            echo ''
+            echo '```json'
+            cat "$out/native-artifact-manifest.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the Android build
+        uses: actions/upload-artifact@v4
+        with:
+          name: qan-inf-04-android-build
+          path: ${{ runner.temp }}/native-build
+          if-no-files-found: error
+          retention-days: 30
+
+  android-demonstration-validate:
+    name: Android API 36 emulator — VALIDATION CONSUMER (no build)
+    needs: [android-demonstration-build]
+    if: always() && (needs.android-demonstration-build.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.reuse_artifacts_from_run_id != ''))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      # No `npm ci`, and no `cache: npm`. Every script below uses Node builtins only.
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Download the Android build from this run
+        if: github.event_name != 'workflow_dispatch' || inputs.reuse_artifacts_from_run_id == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: qan-inf-04-android-build
+          path: ${{ runner.temp }}/native-build
+      - name: Download the Android build from the requested earlier run
+        if: github.event_name == 'workflow_dispatch' && inputs.reuse_artifacts_from_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: qan-inf-04-android-build
+          path: ${{ runner.temp }}/native-build
+          run-id: ${{ inputs.reuse_artifacts_from_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify the artifact provenance BEFORE anything is installed
+        env:
+          MODE: ${{ (github.event_name == 'workflow_dispatch' && inputs.reuse_artifacts_from_run_id != '') && 'prior-run' || 'same-run' }}
+        run: |
+          node scripts/phase-m/verify-native-artifact-manifest.mjs \
+            --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
+            --artifact "$RUNNER_TEMP/native-build/app-release.apk" \
+            --mode "$MODE" --platform android --role PRODUCT \
+            --recipe qan-inf-04-demonstration --abis x86_64 --commit "${{ github.sha }}" \
+            | tee "$RUNNER_TEMP/provenance.txt"
+          {
+            echo "### Android consumer — provenance \`$MODE\`, and NO build ran in this job"
+            echo ''
+            echo '```'
+            cat "$RUNNER_TEMP/provenance.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | sha256sum --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Guard the Maestro version
+        run: maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      # Install and launch the VERIFIED binary. `boot-smoke.yaml` asserts one integration identifier:
+      # the app launched and the Product root mounted. Nothing about Product semantics is asserted,
+      # and this build carries no configuration with which it could be.
+      - name: Install the verified artifact and launch it
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        env:
+          APK: ${{ runner.temp }}/native-build/app-release.apk
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          disable-animations: true
+          emulator-boot-timeout: 900
+          script: |
+            adb install -r "$APK"
+            maestro test apps/mobile/.maestro/boot-smoke.yaml
+
+  ios-demonstration-build:
+    name: iOS Release simulator — BUILD PRODUCER
+    if: (github.event_name != 'workflow_dispatch' || inputs.reuse_artifacts_from_run_id == '') && (github.event_name != 'workflow_dispatch' || inputs.run_ios)
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      IOS_SIMULATOR_NAME: iPhone 17
+      IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies from the root lockfile
+        run: npm ci
+      - name: Report the build-input fingerprint
+        run: |
+          value="$(node scripts/phase-m/native-build-fingerprint.mjs)"
+          echo "### iOS build-input fingerprint: \`$value\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Generate the iOS project (CNG)
+        run: npm run prebuild:ios --workspace @qandeel/mobile
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build the Release simulator app
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
+      - name: Package the simulator app and record its identity
+        run: |
+          out="$RUNNER_TEMP/native-build"
+          mkdir -p "$out"
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          ditto -c -k --keepParent "$app" "$out/qandeel-ios-simulator.app.zip"
+          node scripts/phase-m/native-artifact-manifest.mjs \
+            --platform ios --role PRODUCT --recipe qan-inf-04-demonstration \
+            --artifact "$out/qandeel-ios-simulator.app.zip" --out "$out/native-artifact-manifest.json"
+          {
+            echo '### iOS producer — the artifact this run built ONCE'
+            echo ''
+            echo '```json'
+            cat "$out/native-artifact-manifest.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the iOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: qan-inf-04-ios-build
+          path: ${{ runner.temp }}/native-build
+          if-no-files-found: error
+          retention-days: 30
+
+  ios-demonstration-validate:
+    name: iOS simulator — VALIDATION CONSUMER (no build)
+    needs: [ios-demonstration-build]
+    if: always() && (github.event_name != 'workflow_dispatch' || inputs.run_ios) && (needs.ios-demonstration-build.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.reuse_artifacts_from_run_id != ''))
+    runs-on: macos-26
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      IOS_SIMULATOR_NAME: iPhone 17
+      IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      # Selected and READ BACK, never confirmed with `xcodebuild`: this job may not invoke that binary
+      # at all, and a guard that did would make the no-build claim unverifiable by inspection.
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          test "$(xcode-select -p)" = '/Applications/Xcode_26.6.app/Contents/Developer'
+      - name: Guard the simulator (iPhone 17 on iOS 26.5)
+        run: |
+          udid="$(xcrun simctl list devices available -j | jq -r --arg name "$IOS_SIMULATOR_NAME" --arg suffix "$IOS_SIMULATOR_RUNTIME_SUFFIX" '.devices | to_entries[] | select(.key | endswith($suffix)) | .value[] | select(.name == $name) | .udid' | head -n 1)"
+          if [ -z "$udid" ]; then
+            echo "STOP: the authorized simulator is not on this image"
+            exit 1
+          fi
+          echo "IOS_SIM_UDID=$udid" >> "$GITHUB_ENV"
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Download the iOS build from this run
+        if: github.event_name != 'workflow_dispatch' || inputs.reuse_artifacts_from_run_id == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: qan-inf-04-ios-build
+          path: ${{ runner.temp }}/native-build
+      - name: Download the iOS build from the requested earlier run
+        if: github.event_name == 'workflow_dispatch' && inputs.reuse_artifacts_from_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: qan-inf-04-ios-build
+          path: ${{ runner.temp }}/native-build
+          run-id: ${{ inputs.reuse_artifacts_from_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify the artifact provenance BEFORE anything is installed
+        env:
+          MODE: ${{ (github.event_name == 'workflow_dispatch' && inputs.reuse_artifacts_from_run_id != '') && 'prior-run' || 'same-run' }}
+        run: |
+          node scripts/phase-m/verify-native-artifact-manifest.mjs \
+            --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
+            --artifact "$RUNNER_TEMP/native-build/qandeel-ios-simulator.app.zip" \
+            --mode "$MODE" --platform ios --role PRODUCT \
+            --recipe qan-inf-04-demonstration --commit "${{ github.sha }}" \
+            | tee "$RUNNER_TEMP/provenance.txt"
+          {
+            echo "### iOS consumer — provenance \`$MODE\`, and NO build ran in this job"
+            echo ''
+            echo '```'
+            cat "$RUNNER_TEMP/provenance.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Install the verified artifact on the simulator
+        run: |
+          xcrun simctl boot "$IOS_SIM_UDID" || true
+          xcrun simctl bootstatus "$IOS_SIM_UDID" -b
+          ditto -x -k "$RUNNER_TEMP/native-build/qandeel-ios-simulator.app.zip" "$RUNNER_TEMP/native-app"
+          app="$(find "$RUNNER_TEMP/native-app" -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          xcrun simctl install "$IOS_SIM_UDID" "$app"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Guard the Maestro version
+        run: maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
+      - name: Launch the verified artifact
+        run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml

@@ -65,6 +65,7 @@ const read = (path) => readFileSync(new URL(path, root), 'utf8').replace(/\r\n/g
 
 const PHASE_M = '.github/workflows/t12-phase-m-cloud-validation.yml';
 const MOBILE_CI = '.github/workflows/mobile-ci.yml';
+const DEMONSTRATION = '.github/workflows/qan-inf-04-artifact-reuse-demonstration.yml';
 
 /** Code only: a comment may name a forbidden pattern in order to forbid it. */
 const stripYamlComments = (text) => text.replace(/^\s*#[^\n]*$/gmu, '');
@@ -617,8 +618,8 @@ test('12 — the two platform chains are independent: neither can rebuild or rer
   }
 });
 
-test('13 — no automatic retry loop exists in either workflow', () => {
-  for (const workflow of [PHASE_M, MOBILE_CI]) {
+test('13 — no automatic retry loop exists in any of the three workflows', () => {
+  for (const workflow of [PHASE_M, MOBILE_CI, DEMONSTRATION]) {
     const code = stripYamlComments(read(workflow));
     for (const construct of AUTOMATIC_RETRY_CONSTRUCTS) {
       assert.equal(code.includes(construct), false, `${workflow} must not ${construct}`);
@@ -677,6 +678,79 @@ test('Mobile CI reuses a build-compatible binary, and proves it before installin
 });
 
 // ---------------------------------------------------------------------------------------------
+// The demonstration workflow — it proves the pipeline, and it may claim nothing else
+// ---------------------------------------------------------------------------------------------
+
+test('the demonstration workflow is a producer/consumer pair that makes no Product claim', () => {
+  const text = read(DEMONSTRATION);
+  const jobs = jobBlocks(text);
+  const CHAINS = {
+    android: { producer: 'android-demonstration-build', consumer: 'android-demonstration-validate' },
+    ios: { producer: 'ios-demonstration-build', consumer: 'ios-demonstration-validate' },
+  };
+
+  for (const [platform, { producer, consumer }] of Object.entries(CHAINS)) {
+    const build = stripYamlComments(jobs.get(producer));
+    const validate = stripYamlComments(jobs.get(consumer));
+
+    // The producer builds ONCE and ships the binary with its manifest.
+    assert.match(build, /native-artifact-manifest\.mjs/u);
+    assert.match(build, /--recipe qan-inf-04-demonstration/u);
+    assert.match(build, /if-no-files-found: error/u);
+    assert.match(build, new RegExp(`name: qan-inf-04-${platform}-build`, 'u'));
+
+    // The consumer builds NOTHING.
+    for (const command of NATIVE_BUILD_COMMANDS) {
+      assert.equal(validate.includes(command), false, `the ${platform} demonstration consumer must not run ${command}`);
+    }
+    assert.equal(/\bnpm ci\b/u.test(validate), false, `the ${platform} demonstration consumer installs no dependencies`);
+
+    // Download, then prove, then install and launch — in that order.
+    const download = validate.indexOf('uses: actions/download-artifact@v4');
+    const verify = validate.indexOf('verify-native-artifact-manifest.mjs');
+    assert.ok(download >= 0 && verify > download, `the ${platform} demonstration consumer downloads before it verifies`);
+    for (const install of ['adb install', 'simctl install']) {
+      const at = validate.indexOf(install);
+      if (at >= 0) assert.ok(verify < at, `the ${platform} demonstration consumer verifies before ${install}`);
+    }
+    assert.match(validate, /maestro (?:--device "\$IOS_SIM_UDID" )?test apps\/mobile\/\.maestro\/boot-smoke\.yaml/u,
+      `the ${platform} demonstration consumer launches the artifact it verified`);
+    assert.match(validate, new RegExp(`--platform ${platform}\\b`, 'u'));
+    assert.match(validate, /--role PRODUCT/u);
+    assert.match(jobs.get(consumer), new RegExp(`needs: \\[${producer}\\]`, 'u'));
+  }
+
+  // Platform isolation, again, in this workflow.
+  assert.equal(jobs.get(CHAINS.android.consumer).includes('ios-demonstration'), false);
+  assert.equal(jobs.get(CHAINS.ios.consumer).includes('android-demonstration'), false);
+
+  // IT CAN MAKE NO PRODUCT CLAIM, and the reason is structural rather than declared: it sets no
+  // QANDEEL_* configuration anywhere, so the binary embeds a null API origin and null Supabase
+  // values; it touches no credential; it never selects the validation entry; and the only flow it
+  // runs is the boot smoke, which asserts one integration identifier.
+  for (const forbidden of [
+    'QANDEEL_API_BASE_URL', 'QANDEEL_SUPABASE_URL', 'QANDEEL_SUPABASE_PUBLIC_KEY',
+    'T12_TEST_EMAIL', 'T12_TEST_PASSWORD', 'secrets.',
+    'select-validation-entry', 'run-t13-recovery-phases', 'gate-t13-recovery-phases',
+    't13_seeded_session_id', 'AUTH_VALIDATION',
+  ]) {
+    assert.equal(stripYamlComments(text).includes(forbidden), false,
+      `the demonstration workflow must not reference ${forbidden}: it proves the pipeline, never a Product or recovery fact`);
+  }
+  const flows = [...stripYamlComments(text).matchAll(/apps\/mobile\/\.maestro\/([a-z0-9-]+\.yaml)/gu)].map((match) => match[1]);
+  assert.deepEqual([...new Set(flows)], ['boot-smoke.yaml'], 'the ONLY flow it runs is the boot smoke');
+  // Non-vacuity: the sweep must reject a workflow that reached for a credential.
+  assert.equal(['secrets.'].some((f) => 'EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}'.includes(f)), true);
+
+  // And the frozen recovery workflow is untouched by it: Phase M still requires the live API and a
+  // seeded Session for every claim it makes.
+  const phaseM = read(PHASE_M);
+  assert.match(phaseM, /t13_seeded_session_id is required for the T-13 recovery sequence/u);
+  assert.match(phaseM, /assert-validation-preconditions\.mjs configuration/u);
+  assert.equal(phaseM.includes('qan-inf-04-demonstration'), false, 'the demonstration recipe never appears in Phase M');
+});
+
+// ---------------------------------------------------------------------------------------------
 // Security, evidence and registration
 // ---------------------------------------------------------------------------------------------
 
@@ -723,8 +797,10 @@ test('the gate registers itself and the four owned files exist', () => {
   ]) {
     assert.ok(read(file).length > 0, `${file} exists`);
   }
-  // The two recipes this task defines, and only deliberate ones.
-  assert.deepEqual(Object.keys(BUILD_RECIPES).sort(), ['mobile-ci-boot-smoke', 't13-recovery-validation']);
+  // The three recipes, and only deliberate ones: an artifact built for one purpose can never be
+  // installed by a job validating another.
+  assert.deepEqual(Object.keys(BUILD_RECIPES).sort(),
+    ['mobile-ci-boot-smoke', 'qan-inf-04-demonstration', 't13-recovery-validation']);
   assert.equal(MANIFEST_SCHEMA, 'qandeel.native-artifact-identity/1');
   // A digest of the canonical rule set, recomputed here from the module's own exports, so a silent
   // widening of the exclusions changes this file too rather than passing unnoticed.

@@ -186,6 +186,31 @@ gets a different key and a real build.
 The native-impact classifier is untouched. Deciding *when* native smoke runs remains its job, and reuse
 is never a reason to skip a gate the classifier said was needed.
 
+## 8a. The demonstration workflow
+
+`.github/workflows/qan-inf-04-artifact-reuse-demonstration.yml` demonstrates this architecture itself
+on real GitHub native runners. It is **not a gate**, and it makes **no T-13 or Product claim**.
+
+It is the same producer/consumer shape — `android-demonstration-build` →
+`android-demonstration-validate`, `ios-demonstration-build` → `ios-demonstration-validate` — building
+the **Product** root under recipe `qan-inf-04-demonstration` with **no configuration at all**. The
+consumers download, provenance-verify, install and launch the binary through
+`apps/mobile/.maestro/boot-smoke.yaml`, which asserts one integration identifier: the app launched and
+the Product root mounted.
+
+It therefore claims only CI architecture facts — build-once, download, provenance verification,
+install, launch, reuse and platform isolation — and it cannot claim more: it sets no `QANDEEL_*`
+value, reaches no secret, never selects the validation entry, and never runs the recovery sequencer.
+The contract asserts every one of those absences.
+
+`t12-phase-m-cloud-validation.yml` remains the only place a recovery or auth claim can be made, still
+against the live API with a seeded Session, unchanged. A distinct build recipe keeps the two artifact
+families non-interchangeable in both directions.
+
+Triggers: `workflow_dispatch` (including `reuse_artifacts_from_run_id` for prior-run reuse), and
+`pull_request` scoped tightly to this workflow and the three provenance scripts — which is exactly
+when the architecture is worth re-demonstrating.
+
 ## 9. Residual limitations
 
 1. **The build toolchain is recorded, not compared.** A consumer does not build, so it cannot re-derive

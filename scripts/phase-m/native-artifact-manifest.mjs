@@ -65,10 +65,18 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 /** The manifest schema. A consumer requires this value exactly; an older or newer one is refused. */
 export const MANIFEST_SCHEMA = 'qandeel.native-artifact-identity/1';
 
-/** The build recipes that exist. A consumer names the one it is the consumer of. */
+/**
+ * The build recipes that exist. A consumer names the one it is the consumer of, so an artifact built
+ * for one purpose can never be installed by a job validating another — the existing validation-artifact
+ * role separation, extended from the ROOT COMPONENT to the whole build recipe.
+ */
 export const BUILD_RECIPES = Object.freeze({
+  /** The T-13 recovery validation root: harness entry, configured, driven against the live API. */
   't13-recovery-validation': 1,
+  /** The canonical Mobile CI native gate: Product entry, unconfigured, boot smoke. */
   'mobile-ci-boot-smoke': 1,
+  /** QAN-INF-04's own demonstration of the pipeline: Product entry, unconfigured, boot smoke. */
+  'qan-inf-04-demonstration': 1,
 });
 
 export const PRODUCT_ENTRY = 'expo-router/entry';
