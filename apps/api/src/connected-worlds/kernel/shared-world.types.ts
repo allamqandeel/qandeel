@@ -145,8 +145,17 @@ export interface BornSharedWorld {
   readonly membershipAtBirth: ReadonlyArray<HumanPrincipal>;
 }
 
-/** Every reason a birth fails closed. The list is closed so callers cannot invent a softer outcome. */
+/**
+ * Every reason a birth fails closed. The list is closed so callers cannot
+ * invent a softer outcome. The MALFORMED_* rejections cover structurally
+ * broken runtime payloads (a missing invitation, mutual match, proposal or
+ * pair); the validator never dereferences them and never throws.
+ */
 export const SHARED_WORLD_BIRTH_REJECTIONS = [
+  'MALFORMED_REQUEST',
+  'MALFORMED_INVITATION',
+  'MALFORMED_MUTUAL_MATCH',
+  'MALFORMED_PROPOSAL',
   'BLANK_WORLD_ID',
   'UNKNOWN_PHASE',
   'UNKNOWN_BIRTH_BASIS',

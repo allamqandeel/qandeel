@@ -191,6 +191,29 @@ describe('Connected Worlds kernel - Shared World birth (task §8)', () => {
     expect(rejectionOf({ ...standardBirth(), event: { basis: 'PENDING_PROPOSAL' } as never })).toBe('UNKNOWN_BIRTH_BASIS');
     expect(rejectionOf({ ...standardBirth(), participantsAtBirth: [MOHAMED, MOHAMED] })).toBe('DUPLICATE_PARTICIPANT');
   });
+
+  it('rejects malformed nested birth payloads with a named rejection instead of throwing', () => {
+    const malformed = (request: unknown): string => rejectionOf(request as SharedWorldBirthRequest);
+    expect(malformed(null)).toBe('MALFORMED_REQUEST');
+    expect(malformed('shared-world-1')).toBe('MALFORMED_REQUEST');
+    expect(malformed({ ...standardBirth(), participantsAtBirth: 'MOHAMED,HADIR' })).toBe('MALFORMED_REQUEST');
+    // ACCEPTED_INVITATION without an invitation, with a non-invitation object, or with a target-less invitation.
+    expect(malformed({ ...standardBirth(), event: { basis: 'ACCEPTED_INVITATION', acceptance: accepted(HADIR) } })).toBe('MALFORMED_INVITATION');
+    expect(malformed({ ...standardBirth(), event: { basis: 'ACCEPTED_INVITATION', invitation: proposal(MOHAMED, HADIR), acceptance: accepted(HADIR) } })).toBe('MALFORMED_INVITATION');
+    expect(malformed({ ...standardBirth(), event: { basis: 'ACCEPTED_INVITATION', invitation: { prospective: 'SHARED_INVITATION', inviter: MOHAMED }, acceptance: accepted(HADIR) } })).toBe('NON_HUMAN_PARTICIPANT');
+    expect(malformed({ ...standardBirth(), event: { basis: 'ACCEPTED_INVITATION', invitation: invitation(MOHAMED, HADIR), acceptance: 'yes' } })).toBe('MISSING_ACCEPTANCE_AUTHORITY');
+    // MUTUAL_MATCH without a mutual match, without a proposal, with a broken pair, or without acceptances.
+    expect(malformed({ ...introductionBirth(), event: { basis: 'MUTUAL_MATCH' } })).toBe('MALFORMED_MUTUAL_MATCH');
+    expect(malformed({ ...introductionBirth(), event: { basis: 'MUTUAL_MATCH', mutualMatch: { kind: 'MUTUAL_MATCH', acceptedBy: [MOHAMED, HADIR] } } })).toBe('MALFORMED_PROPOSAL');
+    expect(malformed({ ...introductionBirth(), event: { basis: 'MUTUAL_MATCH', mutualMatch: { kind: 'MUTUAL_MATCH', proposal: invitation(MOHAMED, HADIR), acceptedBy: [MOHAMED, HADIR] } } })).toBe('MALFORMED_PROPOSAL');
+    expect(malformed({ ...introductionBirth(), event: { basis: 'MUTUAL_MATCH', mutualMatch: { kind: 'MUTUAL_MATCH', proposal: { ...proposal(MOHAMED, HADIR), pair: [MOHAMED] }, acceptedBy: [MOHAMED, HADIR] } } })).toBe('MALFORMED_PROPOSAL');
+    expect(malformed({ ...introductionBirth(), event: { basis: 'MUTUAL_MATCH', mutualMatch: { kind: 'MUTUAL_MATCH', proposal: { ...proposal(MOHAMED, HADIR), pair: 'MOHAMED,HADIR' }, acceptedBy: [MOHAMED, HADIR] } } })).toBe('MALFORMED_PROPOSAL');
+    expect(malformed({ ...introductionBirth(), event: { basis: 'MUTUAL_MATCH', mutualMatch: { kind: 'MUTUAL_MATCH', proposal: proposal(MOHAMED, HADIR) } } })).toBe('NON_HUMAN_ACCEPTOR');
+    expect(malformed({ ...introductionBirth(), event: { basis: 'MUTUAL_MATCH', mutualMatch: { kind: 'MUTUAL_MATCH', proposal: proposal(MOHAMED, HADIR), acceptedBy: [MOHAMED] } } })).toBe('NON_HUMAN_ACCEPTOR');
+    // And the well-formed requests still pass, so the guards are not over-rejecting.
+    expect(attemptSharedWorldBirth(standardBirth()).born).toBe(true);
+    expect(attemptSharedWorldBirth(introductionBirth()).born).toBe(true);
+  });
 });
 
 describe('Connected Worlds kernel - Shared lifecycle and phase (task §9)', () => {
@@ -213,8 +236,20 @@ describe('Connected Worlds kernel - Shared lifecycle and phase (task §9)', () =
     expect(isIntroductionPairIntact(introduction, [MOHAMED, HADIR, OMAR])).toBe(false);
     expect(isIntroductionPairIntact(introduction, [MOHAMED, OMAR])).toBe(false);
     expect(isIntroductionPairIntact(introduction, [MOHAMED])).toBe(false);
+    expect(isIntroductionPairIntact(introduction, [])).toBe(false);
     // The freeze is a property of the phase, not of Shared Worlds in general.
     expect(isIntroductionPairIntact(born(standardBirth()), [MOHAMED, HADIR, OMAR])).toBe(true);
+  });
+
+  it('expects no active member once an Introduction has closed, because closure terminates every active episode', () => {
+    const closedIntroduction = { ...born(introductionBirth()), state: { lifecycle: 'READ_ONLY_CLOSED', phase: 'INTRODUCTION' } as const };
+    expect(closedIntroduction.membershipAtBirth).toEqual([MOHAMED, HADIR]);
+    expect(isIntroductionPairIntact(closedIntroduction, [])).toBe(true);
+    // Historical viewing is a separate entitlement (CW2-03 §33), never an active membership.
+    expect(isIntroductionPairIntact(closedIntroduction, [MOHAMED, HADIR])).toBe(false);
+    expect(isIntroductionPairIntact(closedIntroduction, [MOHAMED])).toBe(false);
+    // A closed STANDARD World is outside the pair freeze entirely.
+    expect(isIntroductionPairIntact({ ...born(standardBirth()), state: { lifecycle: 'READ_ONLY_CLOSED', phase: 'STANDARD' } }, [])).toBe(true);
   });
 });
 
@@ -232,6 +267,9 @@ describe('Connected Worlds kernel - membership vs historical access (task §10)'
     expect(validateMembershipEpisodes([episode(OMAR, '2026-02-01T00:00:00Z', '2026-01-01T00:00:00Z')])).toEqual({ valid: false, rejection: 'ENDED_BEFORE_JOINED' });
     expect(validateMembershipEpisodes([episode(OMAR, 'yesterday', null)])).toEqual({ valid: false, rejection: 'UNPARSEABLE_TIMESTAMP' });
     expect(validateMembershipEpisodes([episode(QANDEEL_SYSTEM_ACTOR as unknown as HumanPrincipal, '2026-01-01T00:00:00Z', null)])).toEqual({ valid: false, rejection: 'NON_HUMAN_MEMBER' });
+    expect(validateMembershipEpisodes([null as never])).toEqual({ valid: false, rejection: 'MALFORMED_EPISODE' });
+    expect(validateMembershipEpisodes([{ kind: 'HISTORY_ACCESS_GRANT' } as never])).toEqual({ valid: false, rejection: 'MALFORMED_EPISODE' });
+    expect(validateMembershipEpisodes('none' as never)).toEqual({ valid: false, rejection: 'MALFORMED_EPISODE' });
   });
 
   it('keeps a membership episode and a history-access grant distinct and never derives whole-history access from membership', () => {
@@ -278,6 +316,9 @@ describe('Connected Worlds kernel - Context Admission (task §13)', () => {
   const sharedAdmission: ContextAdmission = { scope: 'SHARED_EXACT_WORLD', owner: MOHAMED, targetWorldId: sharedWorld.worldId, purpose: 'SHARED_REASONING' };
   const matchingAdmission: ContextAdmission = { scope: 'MATCHING', owner: MOHAMED, purpose: 'MATCHING_CAPABILITY' };
 
+  const sharedCandidate = { scope: 'SHARED_EXACT_WORLD', owner: MOHAMED, purpose: 'SHARED_REASONING' };
+  const matchingCandidate = { scope: 'MATCHING', owner: MOHAMED, purpose: 'MATCHING_CAPABILITY' };
+
   it('has no legal Public private-context admission', () => {
     expect([...CONTEXT_ADMISSION_SCOPES].sort()).toEqual(['MATCHING', 'SHARED_EXACT_WORLD']);
     expect(validateContextAdmission({ scope: 'PUBLIC_WORLD', owner: MOHAMED, purpose: 'PUBLIC_REASONING' })).toEqual({ valid: false, rejection: 'UNSUPPORTED_SCOPE' });
@@ -288,12 +329,29 @@ describe('Connected Worlds kernel - Context Admission (task §13)', () => {
   });
 
   it('validates the two supported scopes and fails closed on a QANDEEL owner, a missing target or a foreign purpose', () => {
-    expect(validateContextAdmission(sharedAdmission)).toEqual({ valid: true, admission: sharedAdmission });
-    expect(validateContextAdmission(matchingAdmission)).toEqual({ valid: true, admission: matchingAdmission });
-    expect(validateContextAdmission({ ...sharedAdmission, owner: QANDEEL_SYSTEM_ACTOR })).toEqual({ valid: false, rejection: 'NON_HUMAN_OWNER' });
-    expect(validateContextAdmission({ scope: 'SHARED_EXACT_WORLD', owner: MOHAMED, purpose: 'SHARED_REASONING' })).toEqual({ valid: false, rejection: 'MISSING_TARGET_WORLD' });
-    expect(validateContextAdmission({ ...sharedAdmission, purpose: 'MATCHING_CAPABILITY' })).toEqual({ valid: false, rejection: 'PURPOSE_SCOPE_MISMATCH' });
-    expect(validateContextAdmission({ ...matchingAdmission, purpose: 'SHARED_REASONING' })).toEqual({ valid: false, rejection: 'PURPOSE_SCOPE_MISMATCH' });
+    expect(validateContextAdmission(sharedCandidate, sharedWorld)).toEqual({ valid: true, admission: sharedAdmission });
+    expect(validateContextAdmission(matchingCandidate)).toEqual({ valid: true, admission: matchingAdmission });
+    expect(validateContextAdmission({ ...sharedCandidate, owner: QANDEEL_SYSTEM_ACTOR }, sharedWorld)).toEqual({ valid: false, rejection: 'NON_HUMAN_OWNER' });
+    expect(validateContextAdmission(sharedCandidate)).toEqual({ valid: false, rejection: 'MISSING_TARGET_WORLD' });
+    expect(validateContextAdmission({ ...sharedCandidate, purpose: 'MATCHING_CAPABILITY' }, sharedWorld)).toEqual({ valid: false, rejection: 'PURPOSE_SCOPE_MISMATCH' });
+    expect(validateContextAdmission({ ...matchingCandidate, purpose: 'SHARED_REASONING' })).toEqual({ valid: false, rejection: 'PURPOSE_SCOPE_MISMATCH' });
+    expect(validateContextAdmission(matchingCandidate, sharedWorld)).toEqual({ valid: false, rejection: 'TARGET_WORLD_NOT_APPLICABLE' });
+  });
+
+  it('never mints a SharedWorldId from raw admission input; the target must be an already-born World', () => {
+    // A raw identifier on the candidate is refused outright, whether or not it happens to match a born World.
+    expect(validateContextAdmission({ ...sharedCandidate, targetWorldId: 'shared-world-1' })).toEqual({ valid: false, rejection: 'UNBRANDED_TARGET_WORLD' });
+    expect(validateContextAdmission({ ...sharedCandidate, targetWorldId: sharedWorld.worldId }, sharedWorld)).toEqual({ valid: false, rejection: 'UNBRANDED_TARGET_WORLD' });
+    expect(validateContextAdmission({ ...sharedCandidate, targetWorld: sharedWorld }, sharedWorld)).toEqual({ valid: false, rejection: 'UNBRANDED_TARGET_WORLD' });
+    // Only a born Shared World reference is accepted as the target, and its existing brand is copied, not re-minted.
+    const outcome = validateContextAdmission(sharedCandidate, { architectureClass: 'WORLD', worldType: 'SHARED_WORLD', worldId: otherWorld.worldId });
+    expect(outcome).toEqual({ valid: true, admission: { ...sharedAdmission, targetWorldId: otherWorld.worldId } });
+    expect(validateContextAdmission(sharedCandidate, 'shared-world-1' as never)).toEqual({ valid: false, rejection: 'MISSING_TARGET_WORLD' });
+    expect(validateContextAdmission(sharedCandidate, { architectureClass: 'WORLD', worldType: 'MY_WORLD', owner: MOHAMED } as never)).toEqual({ valid: false, rejection: 'MISSING_TARGET_WORLD' });
+    expect(validateContextAdmission(sharedCandidate, { ...sharedWorld, worldId: '  ' as never })).toEqual({ valid: false, rejection: 'MISSING_TARGET_WORLD' });
+    // @ts-expect-error a raw string is not a born Shared World reference.
+    const rawTarget = validateContextAdmission(sharedCandidate, 'shared-world-1');
+    expect(rawTarget.valid).toBe(false);
   });
 
   it('scopes Shared admission to the exact target World and never to material disclosure', () => {

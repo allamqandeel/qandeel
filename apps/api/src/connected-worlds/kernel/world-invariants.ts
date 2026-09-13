@@ -11,7 +11,7 @@
 
 import type { HumanPrincipal } from './principal.types';
 import { NON_WORLD_KINDS, WORLD_TYPES } from './world.types';
-import type { NonWorldKind, SharedWorldId, WorldClassification, WorldType } from './world.types';
+import type { NonWorldKind, SharedWorldId, SharedWorldRef, WorldClassification, WorldType } from './world.types';
 import { SHARED_WORLD_BIRTH_BASES, SHARED_WORLD_LEGAL_STATES, SHARED_WORLD_PHASES } from './shared-world.types';
 import type {
   AcceptedInvitationBirthEvent,
@@ -120,12 +120,26 @@ export function memberOperationAvailability(state: SharedWorldState, operation: 
 }
 
 /**
- * In INTRODUCTION phase the human membership is exactly the matched pair at
- * birth (CW2-01 A8). Outside that phase the freeze does not apply and this
- * predicate imposes nothing.
+ * Introduction membership is lifecycle-aware:
+ *
+ *   ACTIVE / INTRODUCTION           -> the active human membership is exactly the
+ *                                      matched pair at birth (CW2-01 A8, CW2-03 §9);
+ *   READ_ONLY_CLOSED / INTRODUCTION -> every active membership episode has
+ *                                      terminated (CW2-03 §32, §34, C29); historical
+ *                                      viewing is a separate entitlement, never an
+ *                                      active member, so NO active member is expected.
+ *
+ * Outside INTRODUCTION the pair freeze does not apply and this predicate
+ * imposes nothing. `currentMembers` means humans with an OPEN membership
+ * episode. The world may be at any later state, so only `state` and
+ * `membershipAtBirth` are read.
  */
-export function isIntroductionPairIntact(world: BornSharedWorld, currentMembers: ReadonlyArray<HumanPrincipal>): boolean {
+export function isIntroductionPairIntact(
+  world: Pick<BornSharedWorld, 'state' | 'membershipAtBirth'>,
+  currentMembers: ReadonlyArray<HumanPrincipal>,
+): boolean {
   if (world.state.phase !== 'INTRODUCTION') return true;
+  if (world.state.lifecycle === 'READ_ONLY_CLOSED') return currentMembers.length === 0;
   return currentMembers.length === 2 && sameHumanSet(currentMembers, world.membershipAtBirth);
 }
 
@@ -140,16 +154,26 @@ function rejected(rejection: SharedWorldBirthRejection): SharedWorldBirthOutcome
 // CW2-03 §6: a direct birth creates exactly the inviter's and the exact
 // target's membership episodes. Anyone else joins later through add-member
 // governance (CW2-03 §16), never at birth.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+// Every nested payload is checked for SHAPE before it is read, so a malformed
+// runtime event (missing invitation, missing mutual match, missing proposal,
+// missing pair) yields a named rejection instead of a dereference error.
 function validateAcceptedInvitation(
   event: AcceptedInvitationBirthEvent,
   participants: ReadonlyArray<HumanPrincipal>,
 ): SharedWorldBirthRejection | undefined {
-  const { invitation, acceptance } = event;
-  if (!isHumanPrincipal(invitation.inviter) || !isHumanPrincipal(invitation.target)) return 'NON_HUMAN_PARTICIPANT';
-  if (typeof acceptance !== 'object' || acceptance === null || acceptance.kind !== 'INVITATION_ACCEPTANCE') return 'MISSING_ACCEPTANCE_AUTHORITY';
+  const invitation: unknown = event.invitation;
+  if (!isRecord(invitation) || invitation.prospective !== 'SHARED_INVITATION') return 'MALFORMED_INVITATION';
+  const { inviter, target } = invitation;
+  if (!isHumanPrincipal(inviter) || !isHumanPrincipal(target)) return 'NON_HUMAN_PARTICIPANT';
+  const acceptance: unknown = event.acceptance;
+  if (!isRecord(acceptance) || acceptance.kind !== 'INVITATION_ACCEPTANCE') return 'MISSING_ACCEPTANCE_AUTHORITY';
   if (!isHumanPrincipal(acceptance.acceptedBy)) return 'NON_HUMAN_ACCEPTOR';
-  if (!sameHuman(acceptance.acceptedBy, invitation.target)) return 'ACCEPTOR_NOT_THE_TARGET';
-  if (!sameHumanSet(participants, [invitation.inviter, invitation.target])) return 'PARTICIPANTS_NOT_INVITER_AND_TARGET';
+  if (!sameHuman(acceptance.acceptedBy, target)) return 'ACCEPTOR_NOT_THE_TARGET';
+  if (!sameHumanSet(participants, [inviter, target])) return 'PARTICIPANTS_NOT_INVITER_AND_TARGET';
   return undefined;
 }
 
@@ -157,10 +181,16 @@ function validateMutualMatch(
   event: MutualMatchBirthEvent,
   participants: ReadonlyArray<HumanPrincipal>,
 ): SharedWorldBirthRejection | undefined {
-  const { proposal, acceptedBy } = event.mutualMatch;
-  const pair = proposal.pair;
-  if (!pair.every(isHumanPrincipal) || pair.length !== 2 || sameHuman(pair[0], pair[1])) return 'NON_HUMAN_PARTICIPANT';
-  if (acceptedBy.length !== 2 || !acceptedBy.every(isHumanPrincipal)) return 'NON_HUMAN_ACCEPTOR';
+  const mutualMatch: unknown = event.mutualMatch;
+  if (!isRecord(mutualMatch) || mutualMatch.kind !== 'MUTUAL_MATCH') return 'MALFORMED_MUTUAL_MATCH';
+  const proposal: unknown = mutualMatch.proposal;
+  if (!isRecord(proposal) || proposal.prospective !== 'MATCHING_PROPOSAL' || !Array.isArray(proposal.pair) || proposal.pair.length !== 2) {
+    return 'MALFORMED_PROPOSAL';
+  }
+  const pair: ReadonlyArray<unknown> = proposal.pair;
+  if (!pair.every(isHumanPrincipal) || sameHuman(pair[0], pair[1])) return 'NON_HUMAN_PARTICIPANT';
+  const acceptedBy: unknown = mutualMatch.acceptedBy;
+  if (!Array.isArray(acceptedBy) || acceptedBy.length !== 2 || !acceptedBy.every(isHumanPrincipal)) return 'NON_HUMAN_ACCEPTOR';
   // Mutual means BOTH humans of the proposal accepted - one acceptance, or an
   // acceptance by someone outside the pair, is still a pending proposal.
   if (!sameHumanSet(acceptedBy, pair)) return 'PROPOSAL_NOT_MUTUAL';
@@ -178,16 +208,18 @@ function validateMutualMatch(
  * brands the caller-supplied `worldId`; it never generates one.
  */
 export function attemptSharedWorldBirth(request: SharedWorldBirthRequest): SharedWorldBirthOutcome {
+  if (!isRecord(request)) return rejected('MALFORMED_REQUEST');
   const { worldId, phase, participantsAtBirth, event } = request;
   if (typeof worldId !== 'string' || worldId.trim().length === 0) return rejected('BLANK_WORLD_ID');
   if (!(SHARED_WORLD_PHASES as ReadonlyArray<unknown>).includes(phase)) return rejected('UNKNOWN_PHASE');
-  if (typeof event !== 'object' || event === null || !(SHARED_WORLD_BIRTH_BASES as ReadonlyArray<unknown>).includes(event.basis)) {
+  if (!isRecord(event) || !(SHARED_WORLD_BIRTH_BASES as ReadonlyArray<unknown>).includes(event.basis)) {
     return rejected('UNKNOWN_BIRTH_BASIS');
   }
   const expectedPhase = event.basis === 'ACCEPTED_INVITATION' ? 'STANDARD' : 'INTRODUCTION';
   if (phase !== expectedPhase) return rejected('PHASE_BASIS_MISMATCH');
 
-  if (!Array.isArray(participantsAtBirth) || !participantsAtBirth.every(isHumanPrincipal)) return rejected('NON_HUMAN_PARTICIPANT');
+  if (!Array.isArray(participantsAtBirth)) return rejected('MALFORMED_REQUEST');
+  if (!participantsAtBirth.every(isHumanPrincipal)) return rejected('NON_HUMAN_PARTICIPANT');
   const distinct = new Set(participantsAtBirth.map((participant) => participant.humanId));
   if (distinct.size !== participantsAtBirth.length) return rejected('DUPLICATE_PARTICIPANT');
   if (participantsAtBirth.length < 2) return rejected('TOO_FEW_PARTICIPANTS');
@@ -217,7 +249,9 @@ export function attemptSharedWorldBirth(request: SharedWorldBirthRequest): Share
 // Membership episodes and history access.
 // ---------------------------------------------------------------------------
 
-function parseInstant(value: string): number {
+// Accepts `unknown` because it runs after only a shape check; a non-string
+// timestamp is simply unparseable and fails closed like any other bad instant.
+function parseInstant(value: unknown): number {
   return typeof value === 'string' ? Date.parse(value) : Number.NaN;
 }
 
@@ -228,8 +262,10 @@ function parseInstant(value: string): number {
  * Timestamps are compared, never generated.
  */
 export function validateMembershipEpisodes(episodes: ReadonlyArray<MembershipEpisode>): MembershipEpisodeValidation {
+  if (!Array.isArray(episodes)) return { valid: false, rejection: 'MALFORMED_EPISODE' };
   const parsed: Array<{ readonly key: string; readonly joined: number; readonly ended: number | null }> = [];
   for (const episode of episodes) {
+    if (!isRecord(episode) || episode.kind !== 'MEMBERSHIP_EPISODE') return { valid: false, rejection: 'MALFORMED_EPISODE' };
     if (!isHumanPrincipal(episode.member)) return { valid: false, rejection: 'NON_HUMAN_MEMBER' };
     const joined = parseInstant(episode.joinedAt);
     const ended = episode.endedAt === null ? null : parseInstant(episode.endedAt);
@@ -327,25 +363,52 @@ export function classifyAudienceExpansion(operation: AudienceOperation): Audienc
 // ---------------------------------------------------------------------------
 
 /**
- * Structural validation of a Context Admission. Exactly two scopes exist;
- * a Public World scope, a QANDEEL owner, a Shared scope without an exact target
- * World, or a purpose that does not belong to its scope all fail closed.
+ * Structural validation of a Context Admission.
+ *
+ * The raw `candidate` carries scope, owner and purpose ONLY. It can never name
+ * a World by identifier: a `SharedWorldId` is minted by Shared World birth
+ * alone, so this validator mints nothing and casts nothing. A Shared admission
+ * references its exact World through `targetWorld`, an already-born / already-
+ * branded Shared World reference supplied separately by the caller; the
+ * admission copies that World's existing brand and adds none of its own.
+ *
+ * Fail-closed cases: a Public or unknown scope, a QANDEEL owner, a raw
+ * `targetWorldId` on the candidate, a Shared scope without a target World, a
+ * Matching scope with one, or a purpose that does not belong to its scope.
  */
-export function validateContextAdmission(candidate: unknown): ContextAdmissionValidation {
-  if (typeof candidate !== 'object' || candidate === null) return { valid: false, rejection: 'UNSUPPORTED_SCOPE' };
-  const admission = candidate as { readonly scope?: unknown; readonly owner?: unknown; readonly targetWorldId?: unknown; readonly purpose?: unknown };
-  if (!(CONTEXT_ADMISSION_SCOPES as ReadonlyArray<unknown>).includes(admission.scope)) return { valid: false, rejection: 'UNSUPPORTED_SCOPE' };
-  if (!isHumanPrincipal(admission.owner)) return { valid: false, rejection: 'NON_HUMAN_OWNER' };
-  if (admission.scope === 'SHARED_EXACT_WORLD') {
-    if (typeof admission.targetWorldId !== 'string' || admission.targetWorldId.trim().length === 0) return { valid: false, rejection: 'MISSING_TARGET_WORLD' };
-    if (admission.purpose !== 'SHARED_REASONING') return { valid: false, rejection: 'PURPOSE_SCOPE_MISMATCH' };
+export function validateContextAdmission(
+  candidate: unknown,
+  targetWorld?: SharedWorldRef | BornSharedWorld,
+): ContextAdmissionValidation {
+  if (!isRecord(candidate)) return { valid: false, rejection: 'UNSUPPORTED_SCOPE' };
+  const { scope, owner, purpose } = candidate;
+  if (!(CONTEXT_ADMISSION_SCOPES as ReadonlyArray<unknown>).includes(scope)) return { valid: false, rejection: 'UNSUPPORTED_SCOPE' };
+  if (!isHumanPrincipal(owner)) return { valid: false, rejection: 'NON_HUMAN_OWNER' };
+  if ('targetWorldId' in candidate || 'targetWorld' in candidate) return { valid: false, rejection: 'UNBRANDED_TARGET_WORLD' };
+  if (scope === 'SHARED_EXACT_WORLD') {
+    if (!isBornSharedWorldReference(targetWorld)) return { valid: false, rejection: 'MISSING_TARGET_WORLD' };
+    if (purpose !== 'SHARED_REASONING') return { valid: false, rejection: 'PURPOSE_SCOPE_MISMATCH' };
     return {
       valid: true,
-      admission: { scope: 'SHARED_EXACT_WORLD', owner: admission.owner, targetWorldId: admission.targetWorldId as SharedWorldId, purpose: 'SHARED_REASONING' },
+      admission: { scope: 'SHARED_EXACT_WORLD', owner, targetWorldId: targetWorld.worldId, purpose: 'SHARED_REASONING' },
     };
   }
-  if (admission.purpose !== 'MATCHING_CAPABILITY') return { valid: false, rejection: 'PURPOSE_SCOPE_MISMATCH' };
-  return { valid: true, admission: { scope: 'MATCHING', owner: admission.owner, purpose: 'MATCHING_CAPABILITY' } };
+  if (targetWorld !== undefined) return { valid: false, rejection: 'TARGET_WORLD_NOT_APPLICABLE' };
+  if (purpose !== 'MATCHING_CAPABILITY') return { valid: false, rejection: 'PURPOSE_SCOPE_MISMATCH' };
+  return { valid: true, admission: { scope: 'MATCHING', owner, purpose: 'MATCHING_CAPABILITY' } };
+}
+
+// The runtime shape of a born Shared World reference. The brand itself is a
+// compile-time fact carried by the `SharedWorldRef` / `BornSharedWorld` types
+// that only `attemptSharedWorldBirth` produces; this guard only refuses a
+// structurally wrong object (a MY_WORLD ref, a raw string, an empty id) and
+// never converts anything into a `SharedWorldId`.
+function isBornSharedWorldReference(value: SharedWorldRef | BornSharedWorld | undefined): value is SharedWorldRef | BornSharedWorld {
+  return isRecord(value)
+    && value.architectureClass === 'WORLD'
+    && value.worldType === 'SHARED_WORLD'
+    && typeof value.worldId === 'string'
+    && value.worldId.trim().length > 0;
 }
 
 /**

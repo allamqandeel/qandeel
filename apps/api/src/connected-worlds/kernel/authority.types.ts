@@ -82,10 +82,19 @@ export type ContextAdmissionQuestion =
   | { readonly question: 'REASONING_FOR_MATCHING' }
   | { readonly question: 'MATERIAL_DISCLOSURE' };
 
+/**
+ * Rejections of `validateContextAdmission`. A raw candidate may never carry its
+ * own world identifier: `UNBRANDED_TARGET_WORLD` fails closed whenever it does,
+ * because a `SharedWorldId` is minted by Shared World birth alone and an
+ * admission can only reference a World that already exists (passed separately
+ * as a born / branded World reference).
+ */
 export const CONTEXT_ADMISSION_REJECTIONS = [
   'UNSUPPORTED_SCOPE',
   'NON_HUMAN_OWNER',
+  'UNBRANDED_TARGET_WORLD',
   'MISSING_TARGET_WORLD',
+  'TARGET_WORLD_NOT_APPLICABLE',
   'PURPOSE_SCOPE_MISMATCH',
 ] as const;
 export type ContextAdmissionRejection = (typeof CONTEXT_ADMISSION_REJECTIONS)[number];

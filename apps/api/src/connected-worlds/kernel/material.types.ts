@@ -68,6 +68,7 @@ export interface HistoryAccessGrant {
 }
 
 export const MEMBERSHIP_EPISODE_REJECTIONS = [
+  'MALFORMED_EPISODE',
   'NON_HUMAN_MEMBER',
   'UNPARSEABLE_TIMESTAMP',
   'ENDED_BEFORE_JOINED',
