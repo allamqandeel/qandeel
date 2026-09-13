@@ -179,3 +179,41 @@ No production guard is weakened and no role gains `DELETE`. The 0072 verifier
 (`npm run verify:historical-projection:integration`) replays these exact teardown
 statements from this file's source against real PostgreSQL, so the smoke's teardown
 compatibility is proven in CI even when the live Supabase smoke cannot run.
+
+## Connected Worlds Shared persistence foundation (migration 0075, I-02A)
+
+Migration 0075 is the first Connected Worlds v2 persistence slice. It is additive
+beside the frozen Personal conversation tables (nothing in `users`,
+`conversation_sessions` or `conversation_turns` changes, and there is no generic
+`worlds` table) and creates exactly two Shared-specific tables:
+
+- `shared_worlds` — one row per born Shared World: `id`, `lifecycle`
+  (`ACTIVE` | `READ_ONLY_CLOSED`), `phase` (`STANDARD` | `INTRODUCTION`),
+  `birth_basis` (`ACCEPTED_INVITATION` | `MUTUAL_MATCH`), `born_at` (database
+  clock) and `closed_at`. Checks encode only frozen truths: `ACTIVE` ⇔ `closed_at`
+  null, a direct-invitation World is always `STANDARD`, and a World cannot close
+  before its birth. The vocabulary is in exact parity with the merged I-01A kernel.
+  There is deliberately no owner / admin / inviter column: identity is not
+  participant ownership.
+- `shared_world_membership_episodes` — historical, episodic membership (`id`,
+  `world_id`, `user_id`, `joined_at`, `ended_at`) with `ON DELETE RESTRICT` foreign
+  keys to `shared_worlds` and `users`, `ended_at >= joined_at`, and a partial unique
+  index allowing at most one open episode per `(world_id, user_id)` so leave and a
+  later rejoin are two rows.
+
+Posture: both tables are RLS-enabled with **zero** policies, and `PUBLIC`, `anon`,
+`authenticated` and `service_role` hold no `SELECT`, `INSERT`, `UPDATE` or `DELETE`.
+No function, trigger or RPC writes or reads them, so no application caller can create
+a Shared World or a membership episode, and no Shared runtime, read or write path is
+activated by this migration. Membership storage is not historical-access entitlement;
+authorized birth, lifecycle, membership and read boundaries arrive only with later
+authority / Shared runtime contracts. The migration ends with self-assertions that
+refuse to deploy a reachable, policy-bearing or owner-column-bearing substrate.
+
+The secret-free structural contract runs under `npm run test:database`. The real
+PostgreSQL verifier proves the catalog, ACL matrix, policy absence, every check and
+FK rejection, open-episode uniqueness and the rejoin shape with rolled-back fixtures:
+
+```sh
+npm run verify:connected-worlds-shared-persistence:integration
+```
