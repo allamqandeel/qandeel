@@ -1,6 +1,11 @@
 # Recovery / Persistence v1 — T-13
 
-**Status:** CANDIDATE — awaiting independent review
+**Status:** CLOSED / FROZEN — reviewed, accepted and merged into `main` by PR #223 at
+`5d9ba46efc6cf2d391096fcb3784bf2a5588ae15`. The banner above this line previously still read
+`CANDIDATE — awaiting independent review`; it was reconciled by `QAN-GOV-03` under BG-09. That is a
+historical lifecycle correction and nothing else: no recovery or persistence semantic, no ownership,
+no security disposition, no acceptance criterion, no evidence claim and no anti-scope statement below
+was reopened or rewritten.
 **Baseline:** `6bf04ccec5c4fe4f847eecd7f76083b23694711b` (canonical `main` after PR #222)
 **Branch:** `feat/t13-recovery-persistence-v1`
 **Architecture:** `QANDEEL — T-13 Recovery / Persistence v1` (re-anchored), FROZEN FOR IMPLEMENTATION
