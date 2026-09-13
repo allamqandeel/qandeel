@@ -235,7 +235,7 @@ export function validateMembershipEpisodes(episodes: ReadonlyArray<MembershipEpi
     const ended = episode.endedAt === null ? null : parseInstant(episode.endedAt);
     if (Number.isNaN(joined) || (ended !== null && Number.isNaN(ended))) return { valid: false, rejection: 'UNPARSEABLE_TIMESTAMP' };
     if (ended !== null && ended < joined) return { valid: false, rejection: 'ENDED_BEFORE_JOINED' };
-    parsed.push({ key: `${episode.worldId} ${episode.member.humanId}`, joined, ended });
+    parsed.push({ key: JSON.stringify([episode.worldId, episode.member.humanId]), joined, ended });
   }
   const byMember = new Map<string, Array<{ readonly joined: number; readonly ended: number | null }>>();
   for (const entry of parsed) {
