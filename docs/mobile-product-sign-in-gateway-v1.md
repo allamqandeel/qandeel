@@ -1,6 +1,11 @@
 # Mobile Product Sign-In Gateway v1 — T-14
 
-**Status:** CANDIDATE — awaiting independent review
+**Status:** CLOSED / FROZEN — reviewed, accepted and merged into `main` by PR #225 at
+`615e586f42be39a300370dcf32ef018d40cfaa94`. The banner above this line previously still read
+`CANDIDATE — awaiting independent review`; it was reconciled by `QAN-GOV-03` under BG-09. That is a
+historical lifecycle correction and nothing else: no gateway behaviour, no authentication ownership,
+no error semantic, no copy contract, no acceptance criterion, no Product or runtime claim and no
+anti-scope statement below was reopened or rewritten.
 **Baseline:** `e132091ae9af1e2a2137d59494c04505c218032c` (canonical `main` after QAN-INF-04)
 **Branch:** `feat/t14-mobile-product-sign-in-gateway-v1`
 **PR:** `#225`

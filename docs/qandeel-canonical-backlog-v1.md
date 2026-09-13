@@ -113,6 +113,21 @@ comment, a final report, a task-local note or a model's memory. This adds no lif
 relaxes nothing: a current blocker is still fixed inside the active task (BG-01), anti-scope is
 still not automatically backlog (BG-06), and admission still authorizes no implementation (BG-07).
 
+**BG-09 — Same-task closure-state synchronization.** A task may not be treated as CLOSED / FROZEN
+while its primary canonical task document still advertises a pre-closure lifecycle state such as
+`CANDIDATE — awaiting independent review`. The closing task — the change that closes it — performs
+BOTH halves itself: the BG-08 backlog reconciliation above, and the update of its own primary
+document from its candidate/review banner to its final lifecycle state. A later ordinary task must
+not be relied upon to finish a predecessor's closure record. Where a historical omission is
+discovered after the fact, it is repaired by an explicit governance-reconciliation task that records
+the correction without reopening Product semantics — never by quietly rewriting the record so that
+the omission appears not to have happened.
+
+This complements BG-08; it does not replace it, duplicate it or relax it. BG-08 remains the one
+authority for what the backlog must say at closure, and this document remains the one backlog: BG-09
+adds no second register, no second lifecycle model and no new Product state. It governs only the
+agreement between a closed task's own banner and the closure the register already records.
+
 ---
 
 ## 4. Index
@@ -565,7 +580,9 @@ Before any task is declared CLOSED / FROZEN, Architecture:
    schema of §2;
 3. leaves every current blocker where it belongs — inside the active task, fixed (BG-01);
 4. does not declare the task CLOSED / FROZEN while a qualifying cross-task residue exists only
-   outside this document.
+   outside this document;
+5. updates that task's own primary canonical document from its candidate/review banner to its final
+   lifecycle state, in the same closing change (BG-09), leaving no successor task to do it.
 
 ### T-12 closure record
 
@@ -600,3 +617,32 @@ of its work.
 untouched: T-14 changed no auth persistence, no storage mechanism, no backup policy and no platform
 credential model, and introduced no cryptography. No new item was admitted (BG-06), and no T-14
 finding was moved here in order to close (BG-01).
+
+### QAN-GOV-03 lifecycle reconciliation
+
+Two closed tasks were still advertising a pre-closure banner. `docs/recovery-persistence-v1.md`
+(T-13) and `docs/mobile-product-sign-in-gateway-v1.md` (T-14) both read
+`CANDIDATE — awaiting independent review` long after each had been reviewed, accepted and merged —
+T-13 by PR #223 at `5d9ba46efc6cf2d391096fcb3784bf2a5588ae15`, T-14 by PR #225 at
+`615e586f42be39a300370dcf32ef018d40cfaa94`. `QAN-GOV-03` corrected both banners and added BG-09
+above, which is the rule whose absence allowed the drift.
+
+**This changes no lifecycle and reopens nothing.** Both tasks were already CLOSED / FROZEN; only the
+documents disagreed with the register. No Product semantics, ownership, security disposition or
+acceptance criterion was touched, no backlog item changed status, and no implementation is authorized
+(BG-07).
+
+**The record of what went wrong stays.** The three late reconciliations above — `QAN-BL-AUTH-01`
+admitted after T-12 closed, `QAN-BL-T13-01` tombstoned by T-14 after T-13 closed, and these two stale
+banners — are the evidence BG-09 exists for. They are deliberately not rewritten to read as though
+each task closed cleanly. The pattern is the point: in every case a successor absorbed work its
+predecessor owed, which is precisely what BG-09 now forbids.
+
+A bounded read-only sweep for the exact phrase `CANDIDATE — awaiting independent review` found these
+two documents and no others. Two near-variant banners were found, classified and deliberately left
+alone: `docs/mobile-runtime-entry-preconditions-v1.md` (T-12P) reads
+`CANDIDATE — awaiting independent Architecture + Security review`, and
+`docs/living-analysis-map-runtime-v1.md` (T-04) reads `implemented, awaiting independent Architecture
+review`. Neither task carries a CLOSED / FROZEN closure record in this register, so neither is an
+established stale banner, and repairing either on inference would be exactly the opportunistic
+history-editing BG-09 warns against. They are reported to Architecture rather than corrected here.

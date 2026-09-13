@@ -54,7 +54,22 @@ Do not claim a check passed unless it actually ran successfully.
 The Foundation Freeze may be tuned through configuration where explicitly allowed, but material contract changes require controlled change.
 Do not casually alter runtime ownership boundaries, provider abstraction, memory principles, user isolation, safety requirements, or core behavioral principles.
 
-## 10. Default engineering bias
+## 10. Task closure discipline
+Before claiming a task is `CLOSED / FROZEN`, or preparing the change that closes it:
+1. Read `docs/qandeel-canonical-backlog-v1.md`. It is the governance authority; this section only
+   makes it hard to overlook.
+2. Reconcile every backlog item the task inherited (BG-08) — tombstone it, re-own it to one named
+   task, or record why it stays deferred. Silence is not a disposition.
+3. Admit any new qualifying cross-task residue (BG-08 / BG-06). A qualifying item must not survive
+   only in a review comment, a final report or a task-local note.
+4. Update the task's own primary canonical document from its candidate/review banner to its final
+   lifecycle state (BG-09), in the same closing change.
+5. Leave no successor task responsible for finishing any of the above. Repairing a predecessor's
+   closure record is a governance task, not ordinary inheritance.
+6. Run `npm run test:task-closure-governance-contract`, which enforces 4 and the continued existence
+   of the rules behind 1–3.
+
+## 11. Default engineering bias
 When more than one valid implementation exists, prefer:
 1. simpler,
 2. easier to test,

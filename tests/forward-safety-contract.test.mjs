@@ -142,6 +142,19 @@ function assertRefused(name, reason) {
   assert.equal(result.ok, false, `${name} must refuse this: ${reason}`);
 }
 
+/**
+ * Requires ONE named contract to survive a mutation.
+ *
+ * `assertAllSurvive` is the stronger claim and stays the default, but it attributes nothing: any one
+ * of forty contracts failing for any reason reads as a failure of the scenario. Where a scenario
+ * exists to prove something about a PARTICULAR contract, saying so directly means a failure names
+ * the contract that actually broke.
+ */
+function assertSurvives(name, reason) {
+  const result = runContract(name);
+  assert.ok(result.ok, `${name} must accept this: ${reason}\n\n${result.output}`);
+}
+
 /** Reverts one mirrored path to the real repository's version, or removes a file that was added. */
 function restore(...paths) {
   for (const relative of paths) {
@@ -580,7 +593,98 @@ test('a chrome that branches on a device class is refused', () => scenario([CHRO
   assertRefused('t11-responsive-contract', 'a breakpoint that names a device becomes a Product concept');
 }));
 
+// ---------------------------------------------------------------------------------------------
+// QAN-GOV-03 — the closure-governance gate's own halves.
+//
+// That gate derives its subjects from the canonical backlog precisely so it is not a ceiling, and
+// that claim is worth exactly as much as a test of it. The positive scenario grows the repository in
+// the two ways task work actually grows it — one task opening, one task closing — and requires the
+// gate to stay green without being edited. The refusals below are the planted defects it exists to
+// catch; without them a gate that asserted nothing would satisfy the positive half.
+// ---------------------------------------------------------------------------------------------
+
+const CLOSURE_GATE = 'task-closure-governance-contract';
+const BACKLOG_DOC = 'docs/qandeel-canonical-backlog-v1.md';
+const T13_DOC = 'docs/recovery-persistence-v1.md';
+const T14_DOC = 'docs/mobile-product-sign-in-gateway-v1.md';
+const FUTURE_OPEN_DOC = 'docs/hypothetical-future-task-v1.md';
+const FUTURE_CLOSED_DOC = 'docs/hypothetical-closed-task-v1.md';
+const STALE_BANNER = '**Status:** CANDIDATE — awaiting independent review';
+
+test('a future task opening and a future task closing break no closure-governance contract', () => scenario(
+  [FUTURE_OPEN_DOC, FUTURE_CLOSED_DOC, BACKLOG_DOC],
+  () => {
+    // A task genuinely still in review. Its banner is the exact phrase QAN-GOV-03 repaired — and it
+    // is CORRECT here, because the register makes no closure claim about T-99. A gate that simply
+    // banned the phrase would fail this, and would teach the next author to lie in a banner.
+    writeFileSync(join(mirrorPath, FUTURE_OPEN_DOC),
+      '# Hypothetical Future Task v1 — T-99\n\n' +
+      `${STALE_BANNER}\n**Owner of:** nothing; this document exists only inside the forward-safety mirror.\n`);
+
+    // A task that closes CORRECTLY after this contract was written: a tombstone naming it, and a
+    // primary document whose banner agrees. The gate must pick it up with no edit to the gate.
+    writeFileSync(join(mirrorPath, FUTURE_CLOSED_DOC),
+      '# Hypothetical Closed Task v1 — T-98\n\n' +
+      '**Status:** CLOSED / FROZEN — merged by a hypothetical future PR.\n');
+    patch(BACKLOG_DOC,
+      (text) => text.replace('| `QAN-BL-NAV-01` |',
+        '| `QAN-BL-FS-01` | Hypothetical forward-safety probe | `T-98 — Hypothetical Closed Task` | `LOW` | `CLOSED — TOMBSTONE` |\n| `QAN-BL-NAV-01` |'),
+      'QAN-BL-FS-01');
+
+    // The claim this scenario exists for, named directly: the gate covers the newly closed task
+    // without being edited, and does not fire on the open one merely because the phrase appears.
+    assertSurvives(CLOSURE_GATE, 'a task opening and a task closing are ordinary growth, not a governance failure');
+    // And the broader claim: no other contract minds two new documents and a new register row.
+    assertAllSurvive('a task opening and a task closing are ordinary growth, not a governance failure');
+  }));
+
+test('a closed task reverted to a candidate banner is refused', () => scenario([T13_DOC], () => {
+  patch(T13_DOC,
+    (text) => text.replace(/\*\*Status:\*\*[^\r\n]*/u, STALE_BANNER),
+    STALE_BANNER);
+  assertRefused(CLOSURE_GATE, 'T-13 is recorded closed; its own document may not still be awaiting review');
+}));
+
+test('a second closed task reverted to a candidate banner is refused', () => scenario([T14_DOC], () => {
+  patch(T14_DOC,
+    (text) => text.replace(/\*\*Status:\*\*[^\r\n]*/u, STALE_BANNER),
+    STALE_BANNER);
+  assertRefused(CLOSURE_GATE, 'T-14 is recorded closed; its own document may not still be awaiting review');
+}));
+
+test('removing the BG-08 closure-reconciliation authority is refused', () => scenario([BACKLOG_DOC], () => {
+  patch(BACKLOG_DOC,
+    (text) => text.replace('**BG-08 — Closure reconciliation / backlog admission.**', '**BG-08 — Reserved.**'),
+    '**BG-08 — Reserved.**');
+  assertRefused(CLOSURE_GATE, 'BG-08 is the one closure-reconciliation authority and QAN-GOV-03 did not replace it');
+}));
+
+test('weakening BG-08 so reconciliation may happen after closure is refused', () => scenario([BACKLOG_DOC], () => {
+  // The subtle half. The rule still exists, still names the backlog, still lists the dispositions —
+  // it has only stopped requiring that any of it happen BEFORE the task is called closed, which is
+  // the single property that made it a gate rather than a suggestion.
+  patch(BACKLOG_DOC,
+    (text) => text.replace('the complete schema of §2, *before* closure.', 'the complete schema of §2, after closure.'),
+    'the complete schema of §2, after closure.');
+  assertRefused(CLOSURE_GATE, 'reconciliation after closure is the defect BG-08 exists to prevent');
+}));
+
+test('removing the BG-09 closure-state synchronization rule is refused', () => scenario([BACKLOG_DOC], () => {
+  patch(BACKLOG_DOC,
+    (text) => {
+      const start = text.indexOf('**BG-09 — Same-task closure-state synchronization.**');
+      assert.ok(start > 0, 'BG-09 must be present in order to be removed');
+      const end = text.indexOf('\n---', start);
+      assert.ok(end > start, 'the BG-09 section must be bounded by the rules-section break');
+      return `${text.slice(0, start)}<!-- BG-09 removed by the forward-safety probe -->${text.slice(end)}`;
+    },
+    '<!-- BG-09 removed by the forward-safety probe -->');
+  assertRefused(CLOSURE_GATE, 'the rule whose absence let two closed tasks advertise candidate banners may not simply be deleted');
+}));
+
 test('the mirror is back to the real repository after the transitive mutations', () => {
-  for (const added of [HELPER, HELPER_A, HELPER_B]) assert.equal(existsSync(join(mirrorPath, added)), false, `${added} was removed again`);
+  for (const added of [HELPER, HELPER_A, HELPER_B, FUTURE_OPEN_DOC, FUTURE_CLOSED_DOC]) {
+    assert.equal(existsSync(join(mirrorPath, added)), false, `${added} was removed again`);
+  }
   assertAllSurvive('the transitive scenarios left the mirror exactly as they found it');
 });

@@ -60,6 +60,7 @@ jobs:
       - {name: Verify Thread lifecycle + cross-Session continuity static contract (T-03B3), run: npm run test:thread-lifecycle-cross-session-continuity-contract}
       - {name: Verify effective Live Focus + FINAL semantic-chain cutover static contract (T-03D), run: npm run test:effective-live-focus-final-semantic-chain-cutover-contract}
       - {name: Verify historical coverage + Layer A projection + Layer B disclosure static contract (T-03C), run: npm run test:historical-projection-contract}
+      - {name: Verify task closure governance contract (BG-08 reconciliation + BG-09 status synchronization), run: npm run test:task-closure-governance-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
