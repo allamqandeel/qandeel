@@ -398,6 +398,20 @@ test('birth imports no hidden Personal truth, creates no Standing Context author
   assert.match(migration, /may never delete canonical history/u);
 });
 
+test('every RAISE in 0082 passes exactly as many arguments as its message has placeholders', () => {
+  // PL/pgSQL rejects `RAISE ... , arg` when the message carries no `%`, with
+  // "too many parameters specified for RAISE" - and it does so at COMPILE time,
+  // so one mismatch anywhere stops the entire migration from deploying. That is
+  // a full CI round trip to discover and one regex to prevent.
+  const raises = [...migration.matchAll(/RAISE EXCEPTION '((?:[^']|'')*)'((?:,\s*[A-Za-z_][A-Za-z0-9_.]*)*)/gu)];
+  assert.ok(raises.length > 20, `the migration raises its own assertions, found ${raises.length}`);
+  for (const [, message, tail] of raises) {
+    const placeholders = (message.match(/%/gu) ?? []).length;
+    const supplied = tail ? tail.split(',').filter((part) => part.trim().length > 0).length : 0;
+    assert.equal(supplied, placeholders, `RAISE "${message}" passes ${supplied} arguments for ${placeholders} placeholders`);
+  }
+});
+
 test('every identifier 0082 introduces fits the PostgreSQL 63-byte limit', () => {
   const identifiers = [...migration.matchAll(/\b(?:TABLE|FUNCTION|INDEX|TRIGGER|CONSTRAINT)\s+(?:public\.)?([A-Za-z_][A-Za-z0-9_]*)/gu)].map((m) => m[1]);
   assert.ok(identifiers.length > 0);

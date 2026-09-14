@@ -772,21 +772,35 @@ async function verifyConcurrency(c) {
     const [fourthInvitation] = await rows(`SELECT status FROM ${INVITATIONS} WHERE id=$1`, [c.invitations.collideH]);
     assert.equal(fourthInvitation.status, 'PENDING', 'and the invitation remains PENDING');
 
-    stage = 'concurrency: no deadlock, and no orphan row anywhere';
+    stage = 'concurrency: no deadlock, and no orphan or wrongly-shaped birth among the Worlds these races bore';
     const [{ n: deadlocksAfter }] = await rows(
       'SELECT COALESCE(sum(deadlocks), 0)::int n FROM pg_stat_database WHERE datname = current_database()');
     assert.equal(deadlocksAfter, deadlocksBefore, 'the credential-first lock order produced no deadlock across any of these races');
-    const [orphans] = await rows(
-      `SELECT (SELECT count(*)::int FROM ${BIRTH_EVENTS} e LEFT JOIN ${WORLDS} w ON w.id = e.world_id WHERE w.id IS NULL) orphan_events,
-              (SELECT count(*)::int FROM ${ACCEPTANCE_COMMANDS} ac LEFT JOIN ${WORLDS} w ON w.id = ac.world_id WHERE w.id IS NULL) orphan_commands,
-              (SELECT count(*)::int FROM ${EPISODES} ep LEFT JOIN ${WORLDS} w ON w.id = ep.world_id WHERE w.id IS NULL) orphan_episodes,
-              (SELECT count(*)::int FROM ${WORLDS} w LEFT JOIN ${BIRTH_EVENTS} e ON e.world_id = w.id
-                WHERE w.birth_basis = 'ACCEPTED_INVITATION' AND e.world_id IS NULL) unwitnessed_worlds,
+    // Scoped to the Worlds THESE races gave birth to. A whole-database sweep over
+    // every ACCEPTED_INVITATION World would couple this verifier to whatever
+    // fixtures the 0075 - 0081 verifiers happen to leave behind, which is not a
+    // fact about I-04B.
+    const raced = [shared.world, winner.world, survivor.world, collidingWorld, third.world];
+    const [shape] = await rows(
+      `SELECT (SELECT count(*)::int FROM ${WORLDS} w LEFT JOIN ${BIRTH_EVENTS} e ON e.world_id = w.id
+                WHERE w.id = ANY($1::uuid[]) AND e.world_id IS NULL) unwitnessed_worlds,
               (SELECT count(*)::int FROM ${WORLDS} w
-                WHERE w.birth_basis = 'ACCEPTED_INVITATION'
-                  AND (SELECT count(*) FROM ${EPISODES} ep WHERE ep.world_id = w.id) <> 2) wrong_membership`);
-    assert.deepEqual(orphans, { orphan_events: 0, orphan_commands: 0, orphan_episodes: 0, unwitnessed_worlds: 0, wrong_membership: 0 },
-      'every directly born World has exactly one birth event and exactly two membership episodes, and nothing is orphaned');
+                WHERE w.id = ANY($1::uuid[]) AND (SELECT count(*) FROM ${EPISODES} ep WHERE ep.world_id = w.id) <> 2) wrong_membership,
+              (SELECT count(*)::int FROM ${WORLDS} w
+                WHERE w.id = ANY($1::uuid[]) AND NOT (w.lifecycle = 'ACTIVE' AND w.phase = 'STANDARD'
+                  AND w.birth_basis = 'ACCEPTED_INVITATION' AND w.closed_at IS NULL)) wrong_state,
+              (SELECT count(*)::int FROM ${WORLDS} w WHERE w.id = ANY($1::uuid[])) worlds,
+              (SELECT count(*)::int FROM ${ACCEPTANCE_COMMANDS} ac WHERE ac.world_id = ANY($1::uuid[])) commands,
+              (SELECT count(*)::int FROM ${BIRTH_EVENTS} e WHERE e.world_id = ANY($1::uuid[])) events`, [raced]);
+    assert.deepEqual(shape, { unwitnessed_worlds: 0, wrong_membership: 0, wrong_state: 0, worlds: 5, commands: 5, events: 5 },
+      'these races bore exactly five Worlds, each ACTIVE / STANDARD / ACCEPTED_INVITATION with one birth event, one acceptance command and two membership episodes');
+    // Foreign keys make an orphan structurally impossible; asserted anyway so a
+    // future migration that weakened one would be caught here rather than silently.
+    const [{ n: orphans }] = await rows(
+      `SELECT ((SELECT count(*) FROM ${BIRTH_EVENTS} e LEFT JOIN ${WORLDS} w ON w.id = e.world_id WHERE w.id IS NULL)
+             + (SELECT count(*) FROM ${ACCEPTANCE_COMMANDS} ac LEFT JOIN ${WORLDS} w ON w.id = ac.world_id WHERE w.id IS NULL)
+             + (SELECT count(*) FROM ${EPISODES} ep LEFT JOIN ${WORLDS} w ON w.id = ep.world_id WHERE w.id IS NULL))::int AS n`);
+    assert.equal(orphans, 0, 'no birth event, acceptance command or membership episode is orphaned from its World');
   } finally {
     for (const conn of connections) await conn.end().catch(() => undefined);
   }

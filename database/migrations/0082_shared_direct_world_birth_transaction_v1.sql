@@ -434,7 +434,7 @@ BEGIN
     RAISE EXCEPTION 'I-04B: % must accept exactly the five opaque persistence identities', fn;
   END IF;
   IF p.identity_args <> 'uuid, uuid, uuid, uuid, uuid' THEN
-    RAISE EXCEPTION 'I-04B: every supplied identity must be an opaque uuid', fn;
+    RAISE EXCEPTION 'I-04B: % must accept only opaque uuid identities', fn;
   END IF;
   -- The ban is non-vacuous by construction: the exact list above proves these
   -- really are the parameter names being scanned.
