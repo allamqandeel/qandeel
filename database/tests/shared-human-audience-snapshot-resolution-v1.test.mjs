@@ -183,7 +183,15 @@ test('the API resolver calls exactly the RPC over the service-role transport, pe
   assert.match(executableResolver, /AbortSignal\.timeout\(REQUEST_TIMEOUT_MS\)/u);
   assert.match(executableResolver, /if \(!baseUrl \|\| !serviceRoleKey\) return unresolved\('AUDIENCE_SNAPSHOT_UNAVAILABLE'\);/u);
   assert.match(executableResolver, /isTimeout\(error\) \? 'LOOKUP_TIMED_OUT' : 'LOOKUP_FAILED'/u);
-  assert.match(executableResolver, /if \(!response\.ok\) return unresolved\('LOOKUP_FAILED'\);/u, 'a bounded nonexistent-World error is never EMPTY');
+  assert.match(executableResolver, /if \(!response\.ok\) return unresolved\(await classifyRejection\(response\)\);/u, 'a rejection is never EMPTY');
+  // Task §19: the bounded 0079 nonexistent-World code (P0002) is canonical contradiction; every other rejection is infrastructure failure. Only `code` is read.
+  assert.match(executableResolver, /NONCANONICAL_WORLD_SQLSTATE = 'P0002' as const;/u);
+  assert.match(executableResolver, /return isRecord\(body\) && body\.code === NONCANONICAL_WORLD_SQLSTATE \? 'CONTRADICTORY_CANONICAL_STATE' : 'LOOKUP_FAILED';/u);
+  assert.doesNotMatch(executableResolver, /body\.message|body\.details|body\.hint|response\.text\(|response\.statusText/u, 'no raw error message, detail, hint or body enters a result');
+  assert.match(migration, /USING ERRCODE='P0002'/u, 'the migration raises exactly the code the resolver classifies');
+  assert.match(resolverSpec, /maps the bounded nonexistent-World rejection \(SQLSTATE P0002 from migration 0079\) to CONTRADICTORY_CANONICAL_STATE, never to LOOKUP_FAILED or EMPTY/u);
+  assert.match(resolverSpec, /keeps every other rejection as LOOKUP_FAILED/u);
+  assert.match(resolverSpec, /anti-vacuity: canonical contradiction and infrastructure failure are two different results/u);
   assert.match(executableResolver, /if \(interpreted === 'CONTRADICTORY'\) return unresolved\('CONTRADICTORY_CANONICAL_STATE'\);/u);
   assert.match(executableResolver, /if \(interpreted === 'NO_CURRENT_MEMBERS'\) \{\s+return Object\.freeze\(\{ state: 'EMPTY', snapshotRef: fingerprintSharedHumanAudience\(\{ state: 'EMPTY', worldId \}\) \} as const\);/u);
   assert.doesNotMatch(executableResolver, /humans: \[\]|humans: Object\.freeze\(\[\]\)/u, 'no zero-human snapshot is manufactured');

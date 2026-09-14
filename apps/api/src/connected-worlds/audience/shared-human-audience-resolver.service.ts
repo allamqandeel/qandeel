@@ -24,7 +24,13 @@
 //   EMPTY      - the canonical World exists and has zero open episodes;
 //   UNRESOLVED - the current audience could not be safely established.
 // Infrastructure failure, a noncanonical World and malformed rows never become
-// EMPTY; EMPTY never becomes a failure.
+// EMPTY; EMPTY never becomes a failure. Within UNRESOLVED the two are kept
+// apart (task I-03D §19): the 0079 resolver raises the bounded SQLSTATE P0002
+// for a nonexistent canonical World, and exactly that code is
+// CONTRADICTORY_CANONICAL_STATE; every other rejection - permission, missing
+// function, 5xx, any other code, a malformed or non-JSON error body - is
+// LOOKUP_FAILED. Only the bounded `code` of a rejection is read; its message,
+// details and body never enter a result.
 //
 // `snapshotRef` is a deterministic, versioned SHA-256 content fingerprint
 // (`sha256:<64 hex>`) that binds the World and, for every current human, BOTH
@@ -49,6 +55,8 @@ export const SHARED_HUMAN_AUDIENCE_SNAPSHOT_VERSION = 'QANDEEL_CWV2_SHARED_HUMAN
 const CANONICAL_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const AUDIENCE_ROW_KEYS = ['world_id', 'membership_episode_id', 'user_id'] as const;
 const REQUEST_TIMEOUT_MS = 5000;
+/** The bounded SQLSTATE migration 0079 raises for a nonexistent canonical Shared World (no_data_found). */
+export const NONCANONICAL_WORLD_SQLSTATE = 'P0002' as const;
 
 /** One current membership fact: a human and the exact open episode under which they are present. */
 export interface CurrentMembership {
@@ -66,6 +74,24 @@ function isCanonicalUuid(value: unknown): value is string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Classifies a non-2xx rejection by its bounded database error code alone.
+ * Exactly the 0079 nonexistent-World SQLSTATE is canonical contradiction;
+ * everything else - a permission or configuration failure, a missing
+ * function, a 5xx, any other code, a malformed or non-JSON error body - is
+ * infrastructure failure. The body is read only to extract `code`; no
+ * message, detail, hint or body text is retained.
+ */
+async function classifyRejection(response: Response): Promise<SharedHumanAudienceResolutionFailure> {
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return 'LOOKUP_FAILED';
+  }
+  return isRecord(body) && body.code === NONCANONICAL_WORLD_SQLSTATE ? 'CONTRADICTORY_CANONICAL_STATE' : 'LOOKUP_FAILED';
 }
 
 // Locale-independent code-unit ordering, so the same membership state always
@@ -145,9 +171,10 @@ export class SharedHumanAudienceResolverService {
     } catch (error) {
       return unresolved(isTimeout(error) ? 'LOOKUP_TIMED_OUT' : 'LOOKUP_FAILED');
     }
-    // A noncanonical World is a bounded database error (non-2xx): not safely
-    // knowable, never an empty audience.
-    if (!response.ok) return unresolved('LOOKUP_FAILED');
+    // A rejection is never an empty audience. A noncanonical World is the
+    // bounded P0002 (canonical contradiction); any other rejection is
+    // infrastructure failure.
+    if (!response.ok) return unresolved(await classifyRejection(response));
     let payload: unknown;
     try {
       payload = await response.json();

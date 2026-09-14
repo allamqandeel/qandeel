@@ -10,6 +10,7 @@ import type { SharedHumanAudienceSnapshot, StandingContextAuthorityRequest, Stan
 import { SHARED_HUMAN_AUDIENCE_RESOLUTION_FAILURES } from './shared-human-audience-resolution.types';
 import type { SharedHumanAudienceResolution } from './shared-human-audience-resolution.types';
 import {
+  NONCANONICAL_WORLD_SQLSTATE,
   SHARED_HUMAN_AUDIENCE_RESOLUTION_RPC,
   SHARED_HUMAN_AUDIENCE_SNAPSHOT_VERSION,
   SharedHumanAudienceResolverService,
@@ -246,10 +247,8 @@ describe('SharedHumanAudienceResolverService', () => {
       expect(await service.resolveCurrent(WORLD)).toEqual({ state: 'UNRESOLVED', failure: 'LOOKUP_TIMED_OUT' });
     });
 
-    it('maps a network failure, a non-2xx status (including the bounded nonexistent-World error) and invalid JSON to LOOKUP_FAILED, never to EMPTY', async () => {
+    it('maps a network failure, a generic non-2xx status and invalid JSON to LOOKUP_FAILED, never to EMPTY', async () => {
       (fetch as jest.Mock).mockRejectedValueOnce(new Error('ECONNREFUSED SENTINEL_SERVICE_ROLE'));
-      expect(await service.resolveCurrent(WORLD)).toEqual({ state: 'UNRESOLVED', failure: 'LOOKUP_FAILED' });
-      respond({ code: 'P0002', message: 'Shared human audience resolution target is not a canonical Shared World' }, 400);
       expect(await service.resolveCurrent(WORLD)).toEqual({ state: 'UNRESOLVED', failure: 'LOOKUP_FAILED' });
       respond({ message: 'permission denied' }, 401);
       expect(await service.resolveCurrent(WORLD)).toEqual({ state: 'UNRESOLVED', failure: 'LOOKUP_FAILED' });
@@ -257,6 +256,54 @@ describe('SharedHumanAudienceResolverService', () => {
       expect(await service.resolveCurrent(WORLD)).toEqual({ state: 'UNRESOLVED', failure: 'LOOKUP_FAILED' });
       (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, status: 200, json: async () => { throw new SyntaxError('Unexpected token'); } } as unknown as Response);
       expect(await service.resolveCurrent(WORLD)).toEqual({ state: 'UNRESOLVED', failure: 'LOOKUP_FAILED' });
+    });
+
+    it('maps the bounded nonexistent-World rejection (SQLSTATE P0002 from migration 0079) to CONTRADICTORY_CANONICAL_STATE, never to LOOKUP_FAILED or EMPTY', async () => {
+      expect(NONCANONICAL_WORLD_SQLSTATE).toBe('P0002');
+      for (const status of [400, 404, 500]) {
+        respond({ code: 'P0002', message: 'Shared human audience resolution target is not a canonical Shared World', details: null, hint: null }, status);
+        expect(await service.resolveCurrent(WORLD)).toEqual({ state: 'UNRESOLVED', failure: 'CONTRADICTORY_CANONICAL_STATE' });
+      }
+    });
+
+    it.each([
+      ['NULL-input 22023 (never sent by this resolver)', { code: '22023', message: 'requires an exact Shared World' }, 400],
+      ['permission denied 42501', { code: '42501', message: 'permission denied for function' }, 403],
+      ['missing function PGRST202', { code: 'PGRST202', message: 'Could not find the function' }, 404],
+      ['generic 5xx with an unrelated code', { code: '57014', message: 'canceling statement' }, 500],
+      ['P0001 (a different bounded class)', { code: 'P0001', message: 'raise' }, 400],
+      ['lowercase p0002', { code: 'p0002', message: 'x' }, 400],
+      ['P0002 with trailing text', { code: 'P0002 ', message: 'x' }, 400],
+      ['a non-string code', { code: 2, message: 'x' }, 400],
+      ['a code nested in details', { message: 'x', details: { code: 'P0002' } }, 400],
+      ['no code at all', { message: 'x' }, 400],
+      ['an array error body', [{ code: 'P0002' }], 400],
+      ['a string error body', 'P0002', 400],
+      ['a null error body', null, 400],
+    ])('keeps every other rejection as LOOKUP_FAILED: %s', async (_name, body, status) => {
+      respond(body, status);
+      expect(await service.resolveCurrent(WORLD)).toEqual({ state: 'UNRESOLVED', failure: 'LOOKUP_FAILED' });
+    });
+
+    it('keeps a non-JSON non-2xx body as LOOKUP_FAILED', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 400, json: async () => { throw new SyntaxError('Unexpected token <'); } } as unknown as Response);
+      expect(await service.resolveCurrent(WORLD)).toEqual({ state: 'UNRESOLVED', failure: 'LOOKUP_FAILED' });
+      (fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 502, json: async () => { throw new SyntaxError('Bad Gateway'); } } as unknown as Response);
+      expect(await service.resolveCurrent(WORLD)).toEqual({ state: 'UNRESOLVED', failure: 'LOOKUP_FAILED' });
+    });
+
+    it('anti-vacuity: canonical contradiction and infrastructure failure are two different results from two rejections that differ only in code', async () => {
+      respond({ code: 'P0002', message: 'same message SENTINEL_SERVICE_ROLE', details: 'same details' }, 400);
+      const contradiction = await service.resolveCurrent(WORLD);
+      respond({ code: '42501', message: 'same message SENTINEL_SERVICE_ROLE', details: 'same details' }, 400);
+      const infrastructure = await service.resolveCurrent(WORLD);
+      expect(contradiction).toEqual({ state: 'UNRESOLVED', failure: 'CONTRADICTORY_CANONICAL_STATE' });
+      expect(infrastructure).toEqual({ state: 'UNRESOLVED', failure: 'LOOKUP_FAILED' });
+      expect(contradiction).not.toEqual(infrastructure);
+      for (const result of [contradiction, infrastructure]) {
+        expect(JSON.stringify(result)).not.toMatch(/SENTINEL_SERVICE_ROLE|same message|same details|P0002|42501/u);
+        expect(Object.keys(result).sort()).toEqual(['failure', 'state']);
+      }
     });
 
     it('never places the service-role secret or a raw upstream error body in a result, and uses only the bounded failure union', async () => {
@@ -368,6 +415,12 @@ describe('SharedHumanAudienceResolverService', () => {
       expect(source).toContain('AbortSignal.timeout(');
       expect(source).toContain('@');
       expect(source.length).toBeGreaterThan(500);
+      // The rejection classifier reads only the bounded `code`: exactly P0002 is canonical contradiction, everything else infrastructure failure.
+      expect(source).toContain("NONCANONICAL_WORLD_SQLSTATE = 'P0002' as const;");
+      expect(source).toContain('if (!response.ok) return unresolved(await classifyRejection(response));');
+      expect(source).toMatch(/return isRecord\(body\) && body\.code === NONCANONICAL_WORLD_SQLSTATE \? 'CONTRADICTORY_CANONICAL_STATE' : 'LOOKUP_FAILED';/u);
+      expect(source).not.toMatch(/body\.message|body\.details|body\.hint|response\.text\(|response\.statusText|error\.message/u);
+      expect(source).not.toMatch(/return unresolved\('LOOKUP_FAILED'\);\s*\n\s*let payload/u);
     });
 
     it('is determinism-safe: identical inputs and payloads give identical results, and every frozen failure class is reachable', async () => {
