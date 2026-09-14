@@ -8,7 +8,10 @@
 //     the expected columns / types / nullability / defaults, every check and
 //     foreign-key constraint with restrictive deletion, the partial
 //     one-open-episode unique index and the two join-order indexes, RLS on,
-//     no trigger, and no function in the public schema that touches them;
+//     and no trigger. (Whether a later, separately verified narrow read
+//     boundary references these tables is not a 0075 property: this verifier
+//     proves that 0075 itself sealed them, not a global ceiling on every
+//     future function.)
 //   * ACLs: anon, authenticated and service_role hold no SELECT / INSERT /
 //     UPDATE / DELETE on either table (has_table_privilege AND an actual
 //     rejected statement under SET LOCAL ROLE), PUBLIC holds no grant, and
@@ -197,16 +200,11 @@ async function verifySchema() {
   );
   assert.deepEqual(worldIndexes.map((i) => i.name), ['shared_worlds_pkey'], 'shared_worlds carries only its primary key index');
 
-  stage = 'schema: no trigger, no writing function';
+  stage = 'schema: no trigger';
   for (const table of TABLES) {
     const [{ n }] = await rows('SELECT count(*)::int n FROM pg_trigger WHERE tgrelid=$1::regclass AND NOT tgisinternal', [table]);
     assert.equal(n, 0, `${table} has no trigger`);
   }
-  const [{ n: touchingFunctions }] = await rows(
-    `SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace ns ON ns.oid=p.pronamespace
-      WHERE ns.nspname='public' AND (p.prosrc ~* 'shared_worlds' OR p.prosrc ~* 'shared_world_membership_episodes')`,
-  );
-  assert.equal(touchingFunctions, 0, 'no public function reads or writes the Shared tables');
 }
 
 async function verifyAcls() {
@@ -379,7 +377,7 @@ async function main() {
       [worldIds, [member, other]],
     );
     assert.equal(Number(n), 0, 'no fixture row remains after completion');
-    console.log('Verified migration 0075: shared_worlds and shared_world_membership_episodes exist with the exact frozen columns, checks, restrictive foreign keys, one-open-episode partial uniqueness and RLS on; anon/authenticated/service_role/PUBLIC hold no privilege and no policy exists; every illegal lifecycle/phase/birth-basis/closure row is rejected; membership closes and rejoins as a new episode; no function or trigger touches the tables; zero fixture residue.');
+    console.log('Verified migration 0075: shared_worlds and shared_world_membership_episodes exist with the exact frozen columns, checks, restrictive foreign keys, one-open-episode partial uniqueness and RLS on; anon/authenticated/service_role/PUBLIC hold no privilege and no policy exists; every illegal lifecycle/phase/birth-basis/closure row is rejected; membership closes and rejoins as a new episode; no trigger touches the tables; zero fixture residue.');
   } finally {
     await client.end();
   }

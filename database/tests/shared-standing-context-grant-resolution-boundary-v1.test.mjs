@@ -138,6 +138,36 @@ test('the 0076 verifier correction removes only its future-global function ceili
   assert.match(contract0076, /no grant, revoke or effective-authority command exists yet/u);
 });
 
+test('the 0075 verifier receives the identical correction only: its global function ceiling is gone and every seal proof remains', () => {
+  // The resolver must positively check public.shared_worlds existence (task I-03B §5), which the
+  // 0075 verifier's mutable-global "no public function mentions shared_worlds" ceiling forbade.
+  // The correction is limited to that assertion; nothing about RLS / ACL / policy / FK changes.
+  const verifier0075 = read('../verify-migration-0075.mjs');
+  assert.doesNotMatch(verifier0075, /pg_proc|touchingFunctions|no public function|writing function/u);
+  assert.doesNotMatch(verifier0075, new RegExp(FN, 'u'), 'the 0075 verifier is not made aware of the I-03B function by name');
+  for (const proof of [
+    'has_table_privilege($1,$2,$3)',
+    "SET LOCAL ROLE ${role}",
+    'relrowsecurity',
+    'pg_policy WHERE polrelid',
+    'aclexplode(c.relacl)',
+    'confdeltype',
+    "'(ended_at IS NULL)'",
+    "['42501']",
+    "SELECT count(*)::int n FROM pg_trigger WHERE tgrelid=$1::regclass AND NOT tgisinternal",
+    'leave + rejoin are two episodes',
+    "DELETE FROM public.users WHERE id=$1",
+    'no fixture row remains after completion',
+    "await q('ROLLBACK')",
+  ]) {
+    assert.ok(verifier0075.includes(proof), `0075 verifier still proves: ${proof}`);
+  }
+  assert.doesNotMatch(verifier0075, /\bGRANT\b|CREATE POLICY|DISABLE ROW LEVEL SECURITY/u);
+  const contract0075 = read('./connected-worlds-shared-persistence-foundation-v1.test.mjs');
+  assert.match(contract0075, /no function, trigger, policy, view or extension is introduced/u);
+  assert.match(contract0075, /no birth, lifecycle or membership command exists yet/u);
+});
+
 test('the 0077 verifier proves the catalog, both ACLs, canonical existence errors, ACTIVE-only resolution and rolled-back fixtures', () => {
   for (const proof of [
     'process.env.DATABASE_URL',
