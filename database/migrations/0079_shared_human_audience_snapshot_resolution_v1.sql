@@ -80,7 +80,7 @@ BEGIN
     RAISE EXCEPTION 'Shared human audience resolution target is not a canonical Shared World' USING ERRCODE='P0002';
   END IF;
   -- Exactly the currently open membership episodes of the exact World.
-  -- Lifecycle is deliberately not a filter here.
+  -- Whether the World is open or closed is deliberately not a filter here.
   RETURN QUERY
     SELECT e.world_id, e.id, e.user_id
       FROM public.shared_world_membership_episodes e
