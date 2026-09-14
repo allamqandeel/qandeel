@@ -57,18 +57,28 @@ function gitBlobId(content) {
 
 test('0072 remains frozen, 0064 - 0071 are byte-identical, and every frozen precondition is required', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.endsWith('.sql')).sort();
-  assert.deepEqual(migrations.slice(-9), [
-    '0072_historical_coverage_projection_disclosure_v1.sql',
-    '0073_supabase_free_plan_keepalive_v1.sql',
-    '0074_supabase_keepalive_permission_correction_v1.sql',
-    '0075_connected_worlds_shared_persistence_foundation_v1.sql',
-    '0076_shared_world_standing_context_grant_persistence_v1.sql',
-    '0077_shared_standing_context_grant_resolution_boundary_v1.sql',
-    '0078_shared_standing_context_consent_commands_v1.sql',
-    '0079_shared_human_audience_snapshot_resolution_v1.sql',
-    '0080_shared_pre_model_world_state_resolution_v1.sql',
-  ]);
+  // This contract owns migration 0072 and proves 0072's OWN historical
+  // invariant: it exists exactly once, it applies after the 0064 - 0071 chain it
+  // was built on, and that chain is byte-identical to what it was written
+  // against. It deliberately does NOT enumerate what comes after 0072. A census
+  // of every later migration - a slice(-N) tail, or an exhaustive list - proves
+  // nothing about 0072 and is a mutable global ceiling: it makes every future
+  // migration fail merely by existing until somebody edits this historical file.
+  // The predecessor blob pins below are what actually prove immutability, and
+  // they prove it without banning additions.
+  const OWN = '0072_historical_coverage_projection_disclosure_v1.sql';
+  assert.ok(migrations.includes(OWN), 'migration 0072 is deployed');
   assert.equal(migrations.filter((name) => name.startsWith('0072_')).length, 1, 'exactly one 0072 migration exists');
+  for (const predecessor of ['0064_committed_conversational_unit_substrate_v1.sql', '0071_effective_live_focus_final_semantic_chain_cutover_v1.sql']) {
+    assert.ok(migrations.includes(predecessor) && migrations.indexOf(predecessor) < migrations.indexOf(OWN),
+      `0072 still applies after ${predecessor}`);
+  }
+  // The isolated keep-alive infrastructure pair was cut after 0072 and must stay
+  // after it. That is an ordering fact about 0072's own history, not a census of
+  // the future.
+  for (const later of ['0073_supabase_free_plan_keepalive_v1.sql', '0074_supabase_keepalive_permission_correction_v1.sql']) {
+    assert.ok(migrations.includes(later) && migrations.indexOf(later) > migrations.indexOf(OWN), `${later} still applies after 0072`);
+  }
   assert.match(migration, /^BEGIN;/mu);
   assert.match(migration, /COMMIT;\s*$/u);
   for (const [name, blob] of [
