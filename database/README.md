@@ -217,3 +217,61 @@ FK rejection, open-episode uniqueness and the rejoin shape with rolled-back fixt
 ```sh
 npm run verify:connected-worlds-shared-persistence:integration
 ```
+
+## Shared Standing Context Grant persistence foundation (migration 0076, I-02B)
+
+Migration 0076 persists the one Product-approved private-context exception: a
+participant may explicitly allow QANDEEL to use that participant's private
+`MY_WORLD` context for reasoning inside one exact Shared World (CW2-02 §16-§19,
+CW2-03 §39-§40). It is additive on top of 0075 (nothing in `shared_worlds`,
+`shared_world_membership_episodes` or any Personal table changes; they are only
+foreign-key parents) and creates exactly two tables:
+
+- `shared_world_standing_context_grants` — one row per Standing Context Grant:
+  `id`, `world_id` (non-null `ON DELETE RESTRICT` FK to `shared_worlds`),
+  `grantor_user_id` (non-null `ON DELETE RESTRICT` FK to `users`), `status`
+  (`ACTIVE` | `REVOKED`), `granted_at` (database clock) and `revoked_at`. Checks:
+  `ACTIVE` ⇔ `revoked_at` null, `REVOKED` ⇔ `revoked_at` set, and `revoked_at >=
+  granted_at`. A partial unique index allows at most one `ACTIVE` grant per
+  `(world_id, grantor_user_id)`; revoked rows stay as history and a later
+  reconfirmation / expanded-audience grant is a new row. The grant's meaning is
+  fixed by table identity — source = the grantor's `MY_WORLD`, target = the exact
+  `world_id`, purpose = `SHARED_REASONING`, effect = reasoning eligibility only —
+  so there is deliberately no generic `scope`, `purpose`, `action`, `source`,
+  `permissions` or JSON column, and no TTL column (TTL is not frozen).
+- `shared_world_standing_context_grant_audience` — the explicit human audience
+  ceiling of one grant: `(grant_id, audience_user_id)` primary key with `ON DELETE
+  RESTRICT` FKs to the grant and to `users`. Shared membership expansion never
+  expands a grant: the ceiling is explicit rows, nothing reads current membership,
+  and no trigger or function auto-populates a new member. Whether an output
+  audience lies inside the ceiling is I-03's effective-authority decision.
+
+What this is not: reasoning authority is not disclosure authority
+(`REASON_FROM_PRIVATE_CONTEXT` ≠ `DISCLOSE_PRIVATE_FACT`), so no column or literal
+implies source copying, quoting, publication, sharing, export or provenance
+disclosure. It is not Matching Context Admission (its own later capability
+persistence) and not Public private Context Admission (structurally unsupported in
+v1): the only possible target is an existing `shared_worlds` row. Grantor and
+audience are `users` rows only; QANDEEL is never a grantor, audience member, owner
+or consent principal. The CW2-02 §10 `CONSENT_EVENT_LOG` is deliberately deferred:
+this slice stores only the bounded standing-grant record and its ceiling, and the
+later authoritative grant / revoke command must create immutable consent events,
+maintain current grant state transactionally and preserve revocation history.
+
+Posture: both tables are RLS-enabled with **zero** policies, and `PUBLIC`, `anon`,
+`authenticated` and `service_role` hold no `SELECT`, `INSERT`, `UPDATE` or `DELETE`.
+No function, trigger, RPC, API path or Supabase client path reads or writes them,
+so no application caller can read, create, revoke or widen a grant, and no
+effective-authority evaluator or model-context builder exists yet: the tables store
+grant truth before runtime authority. The migration ends with self-assertions that
+refuse to deploy a reachable, policy-bearing, trigger-bearing or generic-column
+substrate.
+
+The secret-free structural contract runs under `npm run test:database`. The real
+PostgreSQL verifier proves the catalog, ACL matrix, policy absence, every check and
+FK rejection, one-ACTIVE-grant uniqueness, the revoke-then-reconfirm shape and the
+audience ceiling with rolled-back fixtures:
+
+```sh
+npm run verify:shared-world-standing-context-grants:integration
+```
