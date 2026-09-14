@@ -148,23 +148,25 @@ async function verifySchema() {
   assert.deepEqual(grantConstraints.map((c) => c.name), [
     'shared_world_standing_context_grants_grantor_fk',
     'shared_world_standing_context_grants_pkey',
-    'shared_world_standing_context_grants_revocation_consistency_check',
-    'shared_world_standing_context_grants_revoked_after_granted_check',
+    'shared_world_standing_context_grants_revocation_check',
+    'shared_world_standing_context_grants_revoked_after_grant_check',
     'shared_world_standing_context_grants_status_check',
     'shared_world_standing_context_grants_world_fk',
   ], 'grants carry exactly the expected constraints');
+  // Every name is well within PostgreSQL's 63-byte identifier limit, so none was silently truncated.
+  for (const { name } of grantConstraints) assert.ok(Buffer.byteLength(name) <= 62, `${name} sits below the 63-byte identifier limit`);
   assert.equal(grants.shared_world_standing_context_grants_pkey.def, 'PRIMARY KEY (id)');
   assert.equal(grants.shared_world_standing_context_grants_status_check.type, 'c');
   assert.match(grants.shared_world_standing_context_grants_status_check.def, /'ACTIVE'.*'REVOKED'/u);
   assert.doesNotMatch(grants.shared_world_standing_context_grants_status_check.def, /PENDING|DECLINED|EXPIRED|PAUSED|SUPERSEDED|PUBLIC|MATCHING/u);
   // pg_get_constraintdef renders `'X'::text` and wraps every operand in parentheses; the
   // regexes tolerate that canonical form without accepting a weaker predicate.
-  assert.equal(grants.shared_world_standing_context_grants_revocation_consistency_check.type, 'c');
-  assert.match(grants.shared_world_standing_context_grants_revocation_consistency_check.def, /status = 'ACTIVE'(?:::text)?\)? AND \(?revoked_at IS NULL\)/u);
-  assert.match(grants.shared_world_standing_context_grants_revocation_consistency_check.def, /status = 'REVOKED'(?:::text)?\)? AND \(?revoked_at IS NOT NULL\)/u);
-  assert.match(grants.shared_world_standing_context_grants_revocation_consistency_check.def, /\) OR \(/u, 'revocation consistency is the disjunction of the two status cases');
-  assert.equal(grants.shared_world_standing_context_grants_revoked_after_granted_check.type, 'c');
-  assert.match(grants.shared_world_standing_context_grants_revoked_after_granted_check.def, /revoked_at IS NULL\)? OR \(?revoked_at >= granted_at/u);
+  assert.equal(grants.shared_world_standing_context_grants_revocation_check.type, 'c');
+  assert.match(grants.shared_world_standing_context_grants_revocation_check.def, /status = 'ACTIVE'(?:::text)?\)? AND \(?revoked_at IS NULL\)/u);
+  assert.match(grants.shared_world_standing_context_grants_revocation_check.def, /status = 'REVOKED'(?:::text)?\)? AND \(?revoked_at IS NOT NULL\)/u);
+  assert.match(grants.shared_world_standing_context_grants_revocation_check.def, /\) OR \(/u, 'revocation consistency is the disjunction of the two status cases');
+  assert.equal(grants.shared_world_standing_context_grants_revoked_after_grant_check.type, 'c');
+  assert.match(grants.shared_world_standing_context_grants_revoked_after_grant_check.def, /revoked_at IS NULL\)? OR \(?revoked_at >= granted_at/u);
   for (const [name, parent] of [
     ['shared_world_standing_context_grants_world_fk', 'shared_worlds'],
     ['shared_world_standing_context_grants_grantor_fk', 'users'],

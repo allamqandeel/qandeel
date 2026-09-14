@@ -92,11 +92,12 @@ CREATE TABLE public.shared_world_standing_context_grants (
     CONSTRAINT shared_world_standing_context_grants_status_check
         CHECK (status IN ('ACTIVE', 'REVOKED')),
     -- ACTIVE <=> revoked_at IS NULL; REVOKED <=> revoked_at IS NOT NULL.
-    CONSTRAINT shared_world_standing_context_grants_revocation_consistency_check
+    -- (Constraint names stay within PostgreSQL's 63-byte identifier limit.)
+    CONSTRAINT shared_world_standing_context_grants_revocation_check
         CHECK ((status = 'ACTIVE' AND revoked_at IS NULL)
             OR (status = 'REVOKED' AND revoked_at IS NOT NULL)),
     -- A grant cannot be revoked before it was granted.
-    CONSTRAINT shared_world_standing_context_grants_revoked_after_granted_check
+    CONSTRAINT shared_world_standing_context_grants_revoked_after_grant_check
         CHECK (revoked_at IS NULL OR revoked_at >= granted_at)
 );
 

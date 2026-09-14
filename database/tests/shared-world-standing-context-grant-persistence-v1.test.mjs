@@ -59,6 +59,14 @@ test('0076 exists, is the forward migration after 0075, and edits no historical 
   assert.doesNotMatch(migration0075, /standing_context/u, '0075 is not edited to know about grants');
 });
 
+test('every identifier 0076 creates fits PostgreSQL\'s 63-byte limit, so no constraint or index name is silently truncated', () => {
+  const identifiers = [...executableSql.matchAll(/(?:CREATE TABLE public\.|CONSTRAINT |CREATE (?:UNIQUE )?INDEX )(\w+)/gu)].map((m) => m[1]);
+  assert.ok(identifiers.length >= 12, 'the migration names its tables, constraints and indexes explicitly');
+  for (const identifier of identifiers) {
+    assert.ok(Buffer.byteLength(identifier) <= 63, `${identifier} (${Buffer.byteLength(identifier)} bytes) would be truncated by PostgreSQL`);
+  }
+});
+
 test('0076 introduces exactly the grant and audience-ceiling tables and no generic admission, grant, permission or consent-event table', () => {
   const tables = [...executableSql.matchAll(/CREATE TABLE public\.(\w+)/gu)].map((m) => m[1]).sort();
   assert.deepEqual(tables, [AUDIENCE, GRANTS]);
@@ -97,11 +105,11 @@ test('the grant row is exact-world, human-grantor, ACTIVE|REVOKED, and carries n
 });
 
 test('status / revoked_at consistency and revoked_at >= granted_at are constrained exactly', () => {
-  const consistency = executableSql.match(new RegExp(`CONSTRAINT ${GRANTS}_revocation_consistency_check\\s+CHECK \\(([\\s\\S]+?)\\),\\n`, 'u'));
+  const consistency = executableSql.match(new RegExp(`CONSTRAINT ${GRANTS}_revocation_check\\s+CHECK \\(([\\s\\S]+?)\\),\\n`, 'u'));
   assert.ok(consistency, 'revocation consistency check exists');
   assert.equal(consistency[1].replace(/\s+/gu, ' '),
     "(status = 'ACTIVE' AND revoked_at IS NULL) OR (status = 'REVOKED' AND revoked_at IS NOT NULL)");
-  const ordering = executableSql.match(new RegExp(`CONSTRAINT ${GRANTS}_revoked_after_granted_check\\s+CHECK \\(([^;]+?)\\)\\n\\);`, 'u'));
+  const ordering = executableSql.match(new RegExp(`CONSTRAINT ${GRANTS}_revoked_after_grant_check\\s+CHECK \\(([^;]+?)\\)\\n\\);`, 'u'));
   assert.ok(ordering, 'revoked-after-granted check exists');
   assert.equal(ordering[1].replace(/\s+/gu, ' '), 'revoked_at IS NULL OR revoked_at >= granted_at');
   // No default on revoked_at: a persistence field never fabricates a revocation time.
