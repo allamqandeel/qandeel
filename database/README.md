@@ -416,3 +416,65 @@ resolver composition with rolled-back or removed fixtures:
 ```sh
 npm run verify:shared-standing-context-consent-commands:integration
 ```
+## Shared human audience snapshot resolution boundary (migration 0079, I-03D)
+
+Migration 0079 opens the **one** server-only read path from the sealed I-02A Shared
+membership persistence into the frozen I-03A `SharedHumanAudienceSnapshot`. It
+creates a single function, `resolve_shared_world_human_audience_snapshot_v1(p_world_id
+uuid)`, returning `(world_id, membership_episode_id, user_id)` - one row per
+currently open membership episode of the exact World. No table, view, type,
+trigger, policy or extension is added and migrations 0001-0078 are untouched.
+
+Semantics: the **current Shared human audience comes only from open membership
+episodes** (`world_id = p_world_id AND ended_at IS NULL`, CW2-03 section 15). Closed
+historical episodes, "latest episode regardless of `ended_at`", other Worlds'
+members and Standing Context grant ceilings contribute nothing; the grant ceiling is
+compared **to** the audience later and **never defines the audience** (CW2-02
+section 44: audience is never inferred from a UI surface or a client-supplied list).
+Current membership is **not historical-material access** (CW2-02 B21): a current
+member may be `FROM_JOIN_FORWARD`; nothing here reads Shared material, Sessions or
+history grants. Before any answer the function positively verifies that the Shared
+World exists; a nonexistent World raises a bounded error (`P0002`, `NULL` input
+`22023`) that the API resolver maps to `UNRESOLVED` - never to an empty audience. A
+canonical World with zero open episodes is a successful zero-row answer.
+
+**Lifecycle authority is not decided here.** A `READ_ONLY_CLOSED` World with open
+episodes resolves exactly as persisted: audience-state resolution is not permission
+to start a new generation, which the later pre-model execution boundary owns. If a
+later lifecycle command closes episodes, the resolver reports the resulting state.
+
+Posture: `SECURITY DEFINER`, `STABLE`, `search_path = ''`, fully qualified names,
+owned by postgres. EXECUTE is revoked from `PUBLIC`, `anon` and `authenticated` and
+granted to `service_role` only; no `auth.uid()` or JWT is consulted. **The direct
+membership-table ACL stays sealed**: after 0079, `anon`, `authenticated` and
+`service_role` still hold no `SELECT`, `INSERT`, `UPDATE` or `DELETE` on
+`shared_worlds` or `shared_world_membership_episodes`, both keep RLS on with zero
+policies, and the migration ends with self-assertions that refuse a client-callable,
+mutable, unpinned, lifecycle-filtering or table-privileged deploy.
+
+The API side is `apps/api/src/connected-worlds/audience/
+shared-human-audience-resolver.service.ts`, which calls exactly this RPC over the
+server-only service-role transport and maps the untrusted payload into
+`RESOLVED { snapshot }` (the frozen I-03A `SharedHumanAudienceSnapshot`, humans
+canonically ordered), `EMPTY { snapshotRef }` or `UNRESOLVED { failure }`.
+**`EMPTY` is distinct from `UNRESOLVED`**: known absence is never unknown state, and
+no zero-human snapshot is manufactured. The **snapshot fingerprint binds each
+`user_id` together with its current membership episode** (`sha256:` over the
+versioned `world` + sorted `user@episode` pairs), so a leave followed by a rejoin
+changes the snapshot even when the human set is identical again - the load-bearing
+stale-state property for later delivery revalidation. Row order, clock, random
+identity and secrets never enter it. The `RESOLVED` snapshot **composes directly
+into I-03A** as `audienceSnapshot` without translation; the later I-03 slice
+composes audience + grant resolution + the I-03A decision + candidate context into an
+EffectiveContext. Nothing here invokes a model, assembles an EffectiveContext, adds a
+lifecycle command, a controller or a route.
+
+The secret-free structural contract runs under `npm run test:database`. The real
+PostgreSQL verifier proves the function catalog, the execute ACL, the still-sealed
+membership-table ACL, the canonical existence error, open-membership-only semantics,
+lifecycle separation, leave / rejoin episode identity and zero mutation with
+rolled-back fixtures:
+
+```sh
+npm run verify:shared-human-audience-snapshot-resolution:integration
+```
