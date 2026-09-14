@@ -106,10 +106,11 @@ async function verifyCatalog() {
     const [{ rls }] = await rows('SELECT c.relrowsecurity rls FROM pg_class c WHERE c.oid=$1::regclass', [table]);
     assert.equal(rls, true, `${table} keeps row level security enabled`);
   }
-  const [{ n: resolverTables }] = await rows(
-    "SELECT count(*)::int n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','v','m') AND c.relname ~* 'resolution|resolver|consent|permission'",
+  // The Standing Context relations are still exactly the two I-02B tables: 0077 added no table or view of its own.
+  const standingContextRelations = await rows(
+    "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','v','m','p','f') AND c.relname ~* 'standing_context' ORDER BY c.relname COLLATE \"C\"",
   );
-  assert.equal(resolverTables, 0, 'migration 0077 added no table or view');
+  assert.deepEqual(standingContextRelations.map((r) => r.relname), ['shared_world_standing_context_grant_audience', 'shared_world_standing_context_grants'], 'migration 0077 added no table or view');
 }
 
 async function verifyExecuteAcl() {
