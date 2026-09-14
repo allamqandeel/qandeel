@@ -249,15 +249,21 @@ async function verifyCatalog() {
   stage = 'catalog: the two commands are pinned SECURITY DEFINER human self-authority';
   for (const [name, fn] of [['rotate', ROTATE_FN], ['submit', SUBMIT_FN]]) {
     const [p] = await rows(
+      // pg_get_function_ARGUMENTS, not _identity_arguments: the identity form
+      // returns types only, which would make the parameter-NAME checks below
+      // vacuously true.
       `SELECT pr.prosecdef, pr.provolatile, pr.proconfig, pr.prosrc, pg_get_userbyid(pr.proowner) AS owner,
-              pg_get_function_identity_arguments(pr.oid) AS args
+              pg_get_function_arguments(pr.oid) AS args
          FROM pg_proc pr WHERE pr.oid = $1::regprocedure`, [fn]);
     assert.equal(p.prosecdef, true, `${name} is SECURITY DEFINER`);
     assert.equal(p.provolatile, 'v', `${name} is a mutation and is VOLATILE`);
     assert.ok((p.proconfig ?? []).some((cfg) => cfg === 'search_path=' || cfg === 'search_path=""'), `${name} pins an empty search_path`);
     assert.equal(p.owner, 'postgres', `${name} is owned by postgres`);
     assert.match(p.prosrc, /auth\.uid\(\)/u, `${name} derives the actor from auth.uid()`);
-    // No caller-supplied identity of any kind, and specifically no target.
+    // No caller-supplied identity of any kind, and specifically no target. The
+    // positive check first, so the ban cannot pass vacuously against a string
+    // that carries no parameter names at all.
+    assert.match(p.args, /p_command_id uuid/u, `${name} accepts the caller-supplied command id by name`);
     assert.doesNotMatch(p.args, /inviter|target|actor|user_id|status|world|timestamp/iu, `${name} accepts no identity, status, World or timestamp parameter`);
     // THE load-bearing invariant, read from the catalog rather than the file.
     assert.doesNotMatch(p.prosrc, /public\.shared_worlds\b|public\.shared_world_membership_episodes/u,

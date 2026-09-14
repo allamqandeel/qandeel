@@ -479,7 +479,10 @@ DECLARE
   invitation_pos integer;
 BEGIN
   FOREACH fn IN ARRAY commands LOOP
-    SELECT pr.prosecdef, pr.provolatile, pr.proconfig, pr.prosrc, pg_get_function_identity_arguments(pr.oid) AS args
+    -- pg_get_function_ARGUMENTS, not _identity_arguments: the identity form
+    -- returns types only, which would make every parameter-NAME check below
+    -- vacuously true.
+    SELECT pr.prosecdef, pr.provolatile, pr.proconfig, pr.prosrc, pg_get_function_arguments(pr.oid) AS args
       INTO p FROM pg_proc pr WHERE pr.oid = fn::regprocedure;
     IF NOT p.prosecdef THEN RAISE EXCEPTION 'I-04A: % must be SECURITY DEFINER', fn; END IF;
     IF p.provolatile <> 'v' THEN RAISE EXCEPTION 'I-04A: % is a mutation and must be VOLATILE', fn; END IF;
@@ -487,7 +490,12 @@ BEGIN
       RAISE EXCEPTION 'I-04A: % must pin an empty search_path', fn;
     END IF;
     IF p.prosrc !~ 'auth\.uid\(\)' THEN RAISE EXCEPTION 'I-04A: % must derive the actor from auth.uid()', fn; END IF;
-    -- No caller-supplied identity, status or clock of any kind.
+    -- No caller-supplied identity, status or clock of any kind. The guard is
+    -- non-vacuous by construction: the parameter names it scans really are
+    -- present, which the positive check immediately below requires.
+    IF p.args !~ 'p_command_id uuid' THEN
+      RAISE EXCEPTION 'I-04A: % must accept the caller-supplied command id by name', fn;
+    END IF;
     IF p.args ~* 'inviter' OR p.args ~* 'target' OR p.args ~* 'user_id' OR p.args ~* 'actor'
        OR p.args ~* 'status' OR p.args ~* 'timestamp' OR p.args ~* '_at\M' OR p.args ~* 'world' THEN
       RAISE EXCEPTION 'I-04A: % must not accept an inviter, target, actor, status, World or timestamp parameter', fn;
