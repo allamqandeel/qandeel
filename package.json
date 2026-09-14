@@ -124,6 +124,7 @@
     "test:historical-projection-contract": "node --test tests/historical-projection-contract.test.mjs",
     "verify:historical-projection:integration": "node --env-file-if-exists=.env database/verify-migration-0072.mjs",
     "verify:connected-worlds-shared-persistence:integration": "node --env-file-if-exists=.env database/verify-migration-0075.mjs",
+    "verify:shared-world-standing-context-grants:integration": "node --env-file-if-exists=.env database/verify-migration-0076.mjs",
     "test:integrated-intelligence-runtime-phase-closure-contract": "node --test tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs",
     "verify:explicit-session-context-activation:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/verify-explicit-session-context-activation-runtime.ts",
     "verify:him-measurement-preflight": "node --test tests/him-structured-measurement-preflight.test.mjs && npm run test:api && npm run test:database && node node_modules/typescript/bin/tsc -p apps/api/tsconfig.json --noEmit && node node_modules/typescript/bin/tsc -p apps/api/tsconfig.scripts.json --noEmit && npm run build:api",
