@@ -355,8 +355,8 @@ BEGIN
     GET STACKED DIAGNOSTICS conflict_constraint = CONSTRAINT_NAME;
     -- Durable idempotency, THIRD pass. FIRST setup is the one case the two
     -- passes above structurally cannot cover: there is no credential row yet,
-    -- so `FOR UPDATE` locks nothing, and two concurrent executions of the SAME
-    -- semantic command both legitimately observe absence and both proceed. The
+    -- so the row lock above takes nothing, and two concurrent executions of the
+    -- SAME semantic command both legitimately observe absence and proceed. The
     -- uniqueness conflict IS their serialization point: it resolves only when
     -- the winner commits, and the winner commits its credential state and its
     -- command-history row in one transaction. So the equivalent retry is

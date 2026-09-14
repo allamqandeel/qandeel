@@ -101,6 +101,21 @@ const functionBody = (name) => {
   assert.ok(end > start, `${name} has a terminated body`);
   return migration.slice(start, end);
 };
+/**
+ * Exactly what PostgreSQL stores as `prosrc`: the body between the `$$` delimiters, COMMENTS
+ * INCLUDED.
+ *
+ * The real-PostgreSQL verifier reads this string, not the comment-stripped code, so prose inside a
+ * command is behaviour as far as every prosrc-based check is concerned - a comment that merely
+ * MENTIONS a row-lock clause, a Shared World table or a delete reads exactly like one.
+ */
+const storedSource = (name) => {
+  const body = functionBody(name);
+  const start = body.indexOf('AS $$');
+  assert.ok(start > 0, `${name} has a $$-delimited body`);
+  return body.slice(start + 'AS $$'.length);
+};
+
 /** The declared column names of one CREATE TABLE block, in order. Constraint lines are not columns. */
 const columnNames = (block) => (block.match(/^ {4}(\w+) (?:uuid|text|bigint|timestamptz)\b/gmu) ?? [])
   .map((line) => line.trim().split(' ')[0]);
@@ -479,6 +494,12 @@ test('the canonical lock order is credential-state first, invitation rows second
   for (const name of OWN_FUNCTIONS) {
     const code = executableFunction(name);
     assert.equal((code.match(/FOR UPDATE/gu) ?? []).length, 1, `${name} takes exactly one row lock`);
+    // Counted again over the source PostgreSQL actually stores - comments and
+    // all - because that is what the verifier reads from prosrc, where a comment
+    // that merely MENTIONS the row-lock clause is indistinguishable from a
+    // second lock. Prose about locking must not read as locking.
+    assert.equal((functionBody(name).match(/FOR UPDATE/gu) ?? []).length, 1,
+      `${name} names the row-lock clause exactly once in its stored source, so no comment can be mistaken for a second lock`);
     assert.doesNotMatch(code, /LOCK TABLE|pg_advisory/iu, `${name} locks one row, never a table and never an advisory key`);
   }
   // The invariant is documented for I-04B to continue, and asserted at deploy time.
@@ -486,6 +507,26 @@ test('the canonical lock order is credential-state first, invitation rows second
   assert.match(migration, /must lock the credential-state row before invalidating invitation rows/u);
   assert.match(migration, /must lock the credential-state row before inserting an invitation row/u);
   assert.match(readme, /\*\*Canonical lock order\*\*, a transaction invariant I-04B must continue/u);
+});
+
+test('the stored source states nothing that a prosrc-based check would read as behaviour', () => {
+  // Every assertion here mirrors one the real-PostgreSQL verifier makes against `prosrc`. Making
+  // them locally too is not redundancy: it is the difference between catching a comment that reads
+  // as code here, and catching it one CI round trip later.
+  for (const name of OWN_FUNCTIONS) {
+    const src = storedSource(name);
+    assert.match(src, /auth\.uid\(\)/u, `${name} derives the actor from auth.uid()`);
+    assert.doesNotMatch(src, /public\.shared_worlds\b|public\.shared_world_membership_episodes/u,
+      `${name} must not even NAME the Shared World substrate in its stored source`);
+    assert.doesNotMatch(src, /conversation_|\Wmemor|human_intelligence|hypothes|standing_context|matching|introduction_record/iu,
+      `${name} names no Personal context, Standing Context or Matching object`);
+    assert.doesNotMatch(src, /DELETE FROM|TRUNCATE|pg_advisory/iu, `${name} names no delete and no advisory lock`);
+    assert.equal((src.match(/FOR UPDATE/gu) ?? []).length, 1, `${name} names the row-lock clause exactly once`);
+    const lockAt = src.indexOf('FROM public.shared_world_invite_credential_state s');
+    const invitationAt = src.search(/(?:UPDATE|INSERT INTO) public\.shared_world_direct_invitations/u);
+    assert.ok(lockAt >= 0 && invitationAt > lockAt,
+      `${name}: the canonical lock order must hold in the stored source the verifier reads`);
+  }
 });
 
 test('the verifier is wired into the toolchain, API CI after fresh migrations and the 0075 - 0080 verifiers, and the database README', () => {
