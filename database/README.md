@@ -478,3 +478,78 @@ rolled-back fixtures:
 ```sh
 npm run verify:shared-human-audience-snapshot-resolution:integration
 ```
+## Shared pre-model World-state resolution boundary and EffectiveContext (migration 0080, I-03E)
+
+Migration 0080 opens the **one** server-only read path from the sealed I-02A Shared
+World row into the Shared pre-model World gate. It creates a single function,
+`resolve_shared_world_pre_model_state_v1(p_world_id uuid)`, returning exactly
+`(world_id, lifecycle, phase)` - one row for the exact canonical World. No table,
+view, type, trigger, policy or extension is added and migrations 0001-0079 are
+untouched. **No lifecycle mutation exists**: the function returns lifecycle and phase,
+it never sets them, and no I-04 lifecycle command is invented.
+
+Semantics: before any answer the function positively verifies that the Shared World
+exists; a nonexistent World raises a bounded error (`P0002`, `NULL` input `22023`)
+that the API resolver maps to `UNRESOLVED / CONTRADICTORY_CANONICAL_STATE` - never to
+a closed World, never to an empty answer, never to `NOT_FOUND`. Exactly the row's
+`lifecycle` (`ACTIVE` | `READ_ONLY_CLOSED`) and `phase` (`STANDARD` | `INTRODUCTION`)
+are returned: no `closed_at`, no `born_at`, no `birth_basis`, no membership, no
+Standing Context state, no Shared material. **Lifecycle is returned, not decided**:
+the `ACTIVE` vs `READ_ONLY_CLOSED` distinction is applied by the API-side
+EffectiveContext service, where `READ_ONLY_CLOSED` blocks ordinary pre-model Shared
+generation (CW2-03 section 35) while `ACTIVE / STANDARD` and `ACTIVE / INTRODUCTION`
+may proceed with no extra privacy authority for Introduction (CW2-03 section 44).
+
+Posture: `SECURITY DEFINER`, `STABLE`, `search_path = ''`, fully qualified names,
+owned by postgres. EXECUTE is revoked from `PUBLIC`, `anon` and `authenticated` and
+granted to `service_role` only; no `auth.uid()` or JWT is consulted and no
+client-supplied lifecycle is trusted. **No direct Shared table read**: after 0080,
+`anon`, `authenticated` and `service_role` still hold no `SELECT`, `INSERT`, `UPDATE`
+or `DELETE` on `shared_worlds`, which keeps RLS on with zero policies; the migration
+ends with self-assertions that refuse a client-callable, mutable, unpinned,
+membership-, grant- or material-reading or table-privileged deploy.
+
+The API side lives under `apps/api/src/connected-worlds/effective-context/`.
+`shared-pre-model-world-state-resolver.service.ts` calls exactly this RPC over the
+server-only service-role transport and maps the untrusted payload (exactly one row,
+exact three keys, the requested World, a kernel-legal lifecycle / phase pair) into
+`RESOLVED { snapshot }` or `UNRESOLVED { failure }`. The **World-state snapshot
+reference** is `sha256:` over the versioned `world` + `lifecycle` + `phase`, so any
+lifecycle or phase change changes it; clock, random identity and secrets never enter it.
+It is the **state snapshot the EffectiveContext binds**, evidence for later
+revalidation, never a bearer permission.
+
+`shared-effective-context.service.ts` is the **server-internal** Shared EffectiveContext
+private Context Admission boundary (CW2-02 section 21; I-00 section 7). It receives a
+finite candidate list from a server-owned collector (it retrieves no private context
+and reads no Personal table), validates the set structurally (MY_WORLD origin, human
+owner, non-blank context id, supported availability, no duplicate owner + context id,
+no content on a deleted / unavailable candidate - any violation fails the whole set
+closed), resolves the World state (closed -> `BLOCKED / WORLD_READ_ONLY_CLOSED`),
+resolves one exact current audience snapshot for every candidate (empty ->
+`BLOCKED / NO_ACTIVE_HUMANS`), excludes `DELETED_BY_OWNER` / `UNAVAILABLE` candidates
+before any grant lookup so no grant can resurrect them, resolves the Standing Context
+grant once per unique owner, evaluates every AVAILABLE candidate through the frozen
+I-03A evaluator against that same audience snapshot, admits `ALLOW` and excludes
+`DENY` and `UNKNOWN` before any provider path. Grants are never unioned; no
+grantor-in-audience rule is invented. Every admitted item is **private reasoning-only**:
+it carries the exact I-03A ALLOW constraints (`PRIVATE_REASONING_ONLY_CONTEXT`, material
+and direct private disclosure `NOT_GRANTED`, provenance `SEALED`, delivery
+`REQUIRES_REVALIDATION`), its content byte-for-byte with a `sha256:` content digest,
+and a `SourceContextRef` to its MY_WORLD source - never a `SourceMaterialRef`. The
+`effectiveContextRef` binds World, World-state snapshot, audience snapshot and every
+admitted item's ordinal, owner, context id, content digest, grant id and authority
+snapshot; candidate order is preserved and never reranked; no byte or token budget is
+invented (QIR resource budgeting stays separate). **No model integration**: nothing here
+builds a `ModelRouterRequest`, invokes a provider, scans output, revalidates delivery,
+persists anything or exposes a route.
+
+The secret-free structural contract runs under `npm run test:database`. The real
+PostgreSQL verifier proves the function catalog, the execute ACL, the still-sealed
+`shared_worlds` ACL, the canonical existence error, every legal lifecycle / phase row,
+no membership or grant read, zero mutation and forward safety against a hypothetical
+later trigger, with rolled-back fixtures:
+
+```sh
+npm run verify:shared-pre-model-world-state:integration
+```

@@ -12,7 +12,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
 const MIGRATION_NAME = '0079_shared_human_audience_snapshot_resolution_v1.sql';
@@ -158,12 +158,20 @@ test('the frozen kernel, I-03A evaluator and I-03B resolver production sources a
   assert.doesNotMatch(read('../../apps/api/src/app.module.ts'), /connected-worlds|StandingContext|SharedHumanAudience/u, 'app.module.ts registers no Connected Worlds module');
   const apiSrc = new URL('../../apps/api/src/', import.meta.url);
   const connectedWorlds = readdirSync(new URL('connected-worlds/', apiSrc), { recursive: true }).map(String);
-  assert.deepEqual(connectedWorlds.filter((name) => /controller|module|gateway|\.dto\.|effective-context/u.test(name)), [], 'no controller, Nest module, gateway, DTO or EffectiveContext under connected-worlds');
-  assert.ok(!existsSync(new URL('connected-worlds/effective-context/', apiSrc)), 'no effective-context namespace yet');
-  // The audience namespace is the only place that names the audience RPC; nothing in conversation / model-router / intelligence-runtime knows it.
-  const sources = readdirSync(apiSrc, { recursive: true }).map(String).filter((name) => /\.(?:ts|js|mjs)$/u.test(name) && !name.includes(`connected-worlds${name.includes('\\') ? '\\' : '/'}audience`));
-  const invokers = sources.filter((name) => readFileSync(new URL(name, apiSrc), 'utf8').includes(FN) || readFileSync(new URL(name, apiSrc), 'utf8').includes('SharedHumanAudienceResolverService'));
-  assert.deepEqual(invokers, [], 'no other API file invokes the audience resolver: no EffectiveContext, model or conversation wiring');
+  assert.deepEqual(connectedWorlds.filter((name) => /controller|module|gateway|\.dto\./u.test(name)), [], 'no controller, Nest module, gateway or DTO under connected-worlds');
+  // The audience namespace is the only place that names the audience RPC, and
+  // no API file outside the Connected Worlds domain (conversation, model-router,
+  // intelligence-runtime, memory, human-model, ...) knows the resolver at all.
+  // A later authorized Connected Worlds slice (the pre-model EffectiveContext,
+  // I-03E) may consume the resolved snapshot; that is not a 0079 property, so
+  // this contract proves what I-03D introduced rather than a permanent ceiling
+  // on the later authorized consumers.
+  const separator = (name) => (name.includes('\\') ? '\\' : '/');
+  const sources = readdirSync(apiSrc, { recursive: true }).map(String).filter((name) => /\.(?:ts|js|mjs)$/u.test(name));
+  const rpcInvokers = sources.filter((name) => !name.includes(`connected-worlds${separator(name)}audience`) && readFileSync(new URL(name, apiSrc), 'utf8').includes(FN));
+  assert.deepEqual(rpcInvokers, [], 'no API file outside the audience namespace names the audience RPC');
+  const outsideConnectedWorlds = sources.filter((name) => !name.startsWith('connected-worlds') && /SharedHumanAudience|shared-human-audience/u.test(readFileSync(new URL(name, apiSrc), 'utf8')));
+  assert.deepEqual(outsideConnectedWorlds, [], 'no API file outside the Connected Worlds domain knows the audience resolver: no model, conversation or controller wiring');
 });
 
 test('the API resolver calls exactly the RPC over the service-role transport, performs no direct table REST read, reuses the frozen I-03A snapshot type and keeps EMPTY distinct from UNRESOLVED', () => {
