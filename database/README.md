@@ -329,3 +329,90 @@ ceiling row and revoked-history exclusion with rolled-back fixtures:
 ```sh
 npm run verify:shared-standing-context-grant-resolution:integration
 ```
+
+## Standing Context consent commands and immutable consent history (migration 0078, I-03C)
+
+Migration 0078 gives the sealed I-02B Standing Context Grant state its **one**
+legitimate mutation boundary and the immutable consent history CW2-02 section 10
+requires (`CONSENT_EVENT_LOG != EFFECTIVE_GRANT_STATE`). It creates exactly one
+append-only table, `shared_world_standing_context_consent_events` (`id` = the
+command id, `world_id`, `grantor_user_id`, `event_type` exactly `GRANTED` |
+`RECONFIRMED` | `REVOKED`, `subject_grant_id`, `prior_grant_id` for `RECONFIRMED`
+only, database-owned `occurred_at`; restrictive foreign keys; no JSON, scope,
+purpose, source, material or disclosure column), and exactly two authenticated
+commands: `grant_shared_world_standing_context_v1(p_command_id, p_new_grant_id,
+p_world_id, p_audience_user_ids, p_expected_active_grant_id DEFAULT NULL)` and
+`revoke_shared_world_standing_context_v1(p_command_id, p_world_id,
+p_expected_active_grant_id)`. Each returns `(consent_event_id, event_type,
+grant_id, prior_grant_id, grant_status)` and nothing else. No trigger, no policy,
+no view, no type, no extension; migrations 0001-0077 are untouched.
+
+**Human self-authority.** Standing Context consent belongs to the exact human: both
+commands derive the grantor from `auth.uid()` and accept no grantor, status,
+purpose, source, event type, timestamp or material parameter. EXECUTE is granted to
+`authenticated` only. `PUBLIC`, `anon` and **`service_role` cannot execute them**:
+the server may facilitate the UX later, but possession of the service-role
+credential can never forge or withdraw a human's consent. There is no server-side
+"act as user" consent command; QANDEEL is not a consent principal.
+
+**Consent events vs current grant state.** Every successful command commits exactly
+one authority mutation on the I-02B grant rows and exactly one immutable consent
+event in one transaction. Events are never updated or deleted; a grant only ever
+moves `ACTIVE -> REVOKED`; a revoked grant is never reactivated; the historical
+audience ceiling of a grant is never edited. **Reconfirm = revoke old + create
+new**: `p_expected_active_grant_id` names the current grant, which becomes
+`REVOKED`, and `p_new_grant_id` becomes the new `ACTIVE` grant with its own
+explicit ceiling and one `RECONFIRMED` event (`subject` = new, `prior` = old). The
+old grant and its ceiling rows remain history. No code derives current authority
+from "a `GRANTED` event once existed": the I-03B resolver keeps reading the
+`ACTIVE` row only, so it returns the new grant after grant / reconfirm and zero
+rows after revoke while the history remains.
+
+**Explicit audience ceiling.** `p_audience_user_ids` is the exact human set the
+grantor approves: non-empty, no `NULL`, no duplicate (rejected, never normalized),
+order without authority meaning, every human a current open member of the exact
+World at commit time. The ceiling is never inferred from membership, never
+auto-filled and never widened; the grantor is not required inside it, and a
+bounded subset is valid. Membership expansion after commit changes nothing.
+
+**Grant preconditions.** The World must exist and be `ACTIVE` (an Introduction-phase
+Shared World is still a Shared World), and the grantor must hold one open
+membership episode there. **Stale-state compare-and-swap:** `NULL` expected grant
+requires no current `ACTIVE` grant; a named expected grant must still be the
+current `ACTIVE` grant; anything else is `40001 STANDING_CONTEXT_STALE_STATE` and
+nothing is "applied to whatever is current". Commands for one World serialize on
+the `shared_worlds` row (`FOR UPDATE`).
+
+**Revoke.** Revocation is self-owned privacy authority: it requires only that the
+World exists and that the exact expected grant is the caller's own `ACTIVE` grant in
+that World. It is **allowed after membership loss and after the World closed**. An
+expected grant that is no longer `ACTIVE` fails stale; a grant that is not the
+caller's own in that World is reported as not found, so an error never discloses
+another human's consent state.
+
+**Durable idempotency.** The consent-event primary key is the command id. An
+equivalent retry (same grantor, World, command kind, grant ids and exact audience
+set) returns the already committed result with no new grant, event or revocation;
+a materially different command under the same id fails closed with
+`23505 STANDING_CONTEXT_COMMAND_ID_CONFLICT`. There is no second idempotency table.
+
+**Not here.** No material / provenance / disclosure authority
+(`REASON_FROM_PRIVATE_CONTEXT != DISCLOSE_PRIVATE_FACT`), no Matching or Public
+scope, no DECLINE event or consent-request object, no TTL, no automatic revocation
+on leave (I-04), no Shared messaging, EffectiveContext, model invocation,
+private-context retrieval, controller, route or UI. The 0077 verifier's former
+"the Standing Context relations are exactly the two I-02B tables" assertion was a
+mutable ceiling on future domain evolution, not a property of migration 0077; it
+was removed (forward-safety correction, I-03C) while every 0077 function, ACL,
+existence, ACTIVE-only and revoked-history proof is unchanged.
+
+The secret-free structural contract runs under `npm run test:database`. The real
+PostgreSQL verifier proves the schema, both ACLs, the authenticated-only execute
+path, first grant, audience subset, outsider / non-member / closed-World rejection,
+reconfirm with the old ceiling untouched, stale compare-and-swap, revoke (also after
+leaving and after closure), durable idempotency, the World-row race and the I-03B
+resolver composition with rolled-back or removed fixtures:
+
+```sh
+npm run verify:shared-standing-context-consent-commands:integration
+```
