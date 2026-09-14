@@ -248,9 +248,24 @@ async function verifyCatalog() {
   }
 
   stage = 'catalog: the two commands are pinned SECURITY DEFINER, and the birth core is caller-identity-free';
+  // PostgreSQL itself derives the IN and OUT/TABLE name arrays, preserving its
+  // own subscript alignment. They are NOT partitioned client-side:
+  // pg_proc.proargmodes is a `"char"[]`, which node-postgres has no parser for
+  // and hands back as the raw literal `{i,i,i,i,i,t,...}`, so indexing it from
+  // JavaScript reads characters rather than modes and misclassifies RETURNS
+  // TABLE columns as input parameters. proargtypes stays the authority for the
+  // IN argument types.
   const [fn] = await rows(
-    `SELECT pr.prosecdef, pr.provolatile, pr.proconfig, pr.prosrc, pr.proargnames, pr.proargmodes,
+    `SELECT pr.prosecdef, pr.provolatile, pr.proconfig, pr.prosrc,
             pg_get_userbyid(pr.proowner) AS owner,
+            ARRAY(SELECT pr.proargnames[s.i]
+                    FROM generate_subscripts(pr.proargnames, 1) AS s(i)
+                   WHERE pr.proargmodes[s.i] = 'i'::"char"
+                   ORDER BY s.i) AS in_names,
+            ARRAY(SELECT pr.proargnames[s.i]
+                    FROM generate_subscripts(pr.proargnames, 1) AS s(i)
+                   WHERE pr.proargmodes[s.i] IN ('o'::"char", 't'::"char")
+                   ORDER BY s.i) AS out_names,
             (SELECT array_agg(t.typname::text ORDER BY a.ord)
                FROM unnest(pr.proargtypes::oid[]) WITH ORDINALITY AS a(argtype, ord)
                JOIN pg_type t ON t.oid = a.argtype) AS in_types
@@ -263,16 +278,36 @@ async function verifyCatalog() {
   // the authority. A rendered signature is not: pg_get_function_arguments folds
   // this function's RETURNS TABLE columns into the same string.
   assert.deepEqual(fn.in_types, ['uuid', 'uuid', 'uuid', 'uuid', 'uuid'], 'every supplied identity is an opaque uuid');
-  const inNames = fn.proargnames.filter((_name, index) => fn.proargmodes[index] === 'i');
-  const outNames = fn.proargnames.filter((_name, index) => ['t', 'o'].includes(fn.proargmodes[index]));
-  assert.deepEqual(inNames, ['p_command_id', 'p_invitation_id', 'p_world_id', 'p_inviter_membership_episode_id', 'p_target_membership_episode_id'],
+  assert.deepEqual(fn.in_names,
+    ['p_command_id', 'p_invitation_id', 'p_world_id', 'p_inviter_membership_episode_id', 'p_target_membership_episode_id'],
     'the birth core accepts exactly the five opaque persistence identities and no acceptor, actor or target');
-  for (const name of inNames) {
+  for (const name of fn.in_names) {
     assert.doesNotMatch(name, /user_id|acceptor|actor|status|epoch|basis|lifecycle|phase|timestamp|_at$/iu,
       `${name}: no caller-supplied identity, status, epoch or clock`);
   }
-  assert.deepEqual(outNames, ['outcome', 'command_id', 'accepted_invitation_id', 'born_world_id', 'world_lifecycle', 'world_phase', 'world_birth_basis'],
+  assert.deepEqual(fn.out_names,
+    ['outcome', 'command_id', 'accepted_invitation_id', 'born_world_id', 'world_lifecycle', 'world_phase', 'world_birth_basis'],
     'the committed result is bounded and carries no human identity');
+
+  stage = 'catalog: the "char"[] decoding class is locked, so the argument split can never move back into JavaScript';
+  // A regression proof, not a restatement: it shows that the naive client-side
+  // partition really does produce the wrong answer against this exact function
+  // on real PostgreSQL through this exact driver.
+  const [raw] = await rows(
+    `SELECT pr.proargnames AS names, pr.proargmodes AS modes, pg_typeof(pr.proargmodes)::text AS modes_type
+       FROM pg_proc pr WHERE pr.oid = $1::regprocedure`, [BIRTH_FN]);
+  assert.equal(raw.modes_type, '"char"[]', 'argument modes are a "char"[] in the catalog');
+  assert.ok(Array.isArray(raw.names), 'proargnames is a text[] and the driver decodes it as an array');
+  if (Array.isArray(raw.modes)) {
+    // The driver grew a parser. The hazard is gone, but the split stays in SQL.
+    assert.deepEqual(raw.names.filter((_name, index) => raw.modes[index] === 'i'), fn.in_names);
+  } else {
+    const naive = raw.names.filter((_name, index) => raw.modes[index] === 'i');
+    assert.notDeepEqual(naive, fn.in_names,
+      'partitioning proargnames client-side by an unparsed "char"[] is provably wrong here, which is why PostgreSQL derives both arrays');
+    assert.ok(naive.includes('outcome'),
+      'and it misclassifies a RETURNS TABLE column as an input parameter - exactly the defect this proof locks out');
+  }
   assert.match(fn.prosrc, /auth\.uid\(\)/u, 'the accepting human is derived from auth.uid()');
   assert.doesNotMatch(fn.prosrc, /conversation_|\Wmemor|human_intelligence|hypothes|effective_context|standing_context|matching|introduction/iu,
     'the birth core reads no Personal context and creates no Standing Context, Matching or Introduction state');

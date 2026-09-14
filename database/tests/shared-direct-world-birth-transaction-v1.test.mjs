@@ -472,6 +472,16 @@ test('the verifier and the kernel parity proof are wired into the toolchain, API
   assert.match(verifier, /import pg from 'pg';/u);
   assert.match(verifier, /new Client\(\{ connectionString: databaseUrl \}\)/u);
   assert.doesNotMatch(verifier, /readFileSync|migrations\//u, 'the verifier proves live behaviour, never the migration text');
+  // The IN / TABLE argument split is derived by PostgreSQL, never partitioned in
+  // JavaScript: proargmodes is a `"char"[]` that node-postgres returns unparsed,
+  // so indexing it client-side reads characters and misclassifies RETURNS TABLE
+  // columns as input parameters.
+  assert.match(verifier, /generate_subscripts\(pr\.proargnames, 1\)/u, 'PostgreSQL derives the argument-name arrays');
+  assert.match(verifier, /pr\.proargmodes\[s\.i\] = 'i'::"char"/u);
+  assert.match(verifier, /pr\.proargmodes\[s\.i\] IN \('o'::"char", 't'::"char"\)/u);
+  assert.doesNotMatch(verifier, /proargmodes\[index\]|proargmodes\.filter|proargnames\.filter\(\(_name, index\) => fn\./u,
+    'the verifier never partitions the catalog arrays client-side');
+  assert.ok(verifier.includes('the "char"[] decoding class is locked'), 'and it carries the regression proof for that defect class');
   for (const proof of ['SET LOCAL ROLE', 'has_function_privilege', 'has_table_privilege', 'pg_policy', 'information_schema.columns', 'BLOCKED',
     'SHARED_DIRECT_INVITATION_NOT_ACCEPTABLE', 'SHARED_DIRECT_BIRTH_ID_CONFLICT', 'SHARED_DIRECT_ACCEPTANCE_COMMAND_ID_CONFLICT',
     'cannot execute the birth core before the launch gate exists', 'ONE database-owned instant',
