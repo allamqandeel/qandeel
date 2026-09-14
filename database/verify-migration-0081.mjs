@@ -302,11 +302,30 @@ async function verifyCatalog() {
     `SELECT count(*)::int n FROM pg_proc pr JOIN pg_namespace ns ON ns.oid=pr.pronamespace
       WHERE ns.nspname='public' AND pr.proname IN ('rotate_shared_world_invite_credential_v1','submit_shared_world_direct_invitation_v1')`);
   assert.equal(commandCount, 2, 'exactly the two commands exist, one overload each');
-  // No acceptance, decline, cancel or expiry command exists yet in this slice.
-  const premature = await rows(
-    `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace ns ON ns.oid=pr.pronamespace
-      WHERE ns.nspname='public' AND pr.proname ~* 'shared_world.*(accept|decline|cancel|expire)'`);
-  assert.deepEqual(premature, [], 'I-04A adds no acceptance, decline, cancel or expiry command');
+  // I-04A itself invented no acceptance, decline, cancel or expiry command.
+  //
+  // SCOPED to the two commands migration 0081 created. This was previously a
+  // census over every function in the database, which is the mutable-global
+  // ceiling shape the I-04A review retired elsewhere: a later reviewed slice
+  // legitimately adds exactly such a command - I-04B's internal direct birth
+  // core is the first - and a census would fail here the moment that authorized
+  // work landed, which is not a fact about I-04A. What 0081 itself created is
+  // proven from 0081's own text by
+  // database/tests/shared-direct-invitation-runtime-v1.test.mjs, which refuses
+  // any `CREATE FUNCTION public.*accept|decline|cancel|expire*` in this
+  // migration.
+  for (const command of [ROTATE_FN, SUBMIT_FN]) {
+    assert.doesNotMatch(command, /accept|decline|cancel|expire/iu,
+      `${command} is a prospective-path command, not an acceptance, decline, cancel or expiry command`);
+  }
+  // The load-bearing consequence is unchanged and still proven live: whatever
+  // else comes to exist, I-04A's tables stay unreachable and its two commands
+  // stay the only paths it opened.
+  const [{ n: writers }] = await rows(
+    `SELECT count(*)::int n FROM pg_proc pr JOIN pg_namespace ns ON ns.oid=pr.pronamespace
+      WHERE ns.nspname='public' AND pr.proname IN ('rotate_shared_world_invite_credential_v1','submit_shared_world_direct_invitation_v1')
+        AND pr.prosrc ~ 'public\\.shared_world_direct_invitations'`);
+  assert.equal(writers, 2, "both of I-04A's commands act on the invitation substrate it created");
 }
 
 async function verifyDirectTableAcl() {

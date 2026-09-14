@@ -359,6 +359,28 @@ test('acceptance is durably idempotent, and every refusal is one bounded non-enu
     && handler.indexOf('SELECT * INTO committed') < handler.indexOf("RAISE EXCEPTION 'SHARED_DIRECT_BIRTH_ID_CONFLICT'"),
     'an equivalent retry is answered from durable history before any identity conflict is reported');
   assert.doesNotMatch(executableFunction, /pg_advisory|SET LOCAL lock_timeout|temp table/iu, 'nothing is process-local');
+  // DURABLE RESULT idempotency, not just durable command idempotency. An
+  // equivalent retry returns the result the command COMMITTED. It must never
+  // read the live World row into that result: a later reviewed lifecycle slice
+  // may legitimately close this same stable world id, and a historical command
+  // cannot start answering differently because of it.
+  assert.doesNotMatch(executableFunction, /RETURN QUERY SELECT[^;]*w\.(?:lifecycle|phase|birth_basis)/u,
+    'no retry path reads the World current lifecycle, phase or basis into its result');
+  assert.doesNotMatch(executableFunction, /RETURN QUERY SELECT[^;]*FROM public\.shared_worlds/u,
+    'no retry path returns a read of the live World row at all');
+  assert.equal((executableFunction.match(/RETURN QUERY SELECT 'BORN'::text, committed\.id, committed\.invitation_id, committed\.world_id,\s*\n\s*'ACTIVE'::text, 'STANDARD'::text, 'ACCEPTED_INVITATION'::text;/gu) ?? []).length, 3,
+    'all three retry paths return the identities and the immutable constants this command committed');
+  assert.equal((executableFunction.match(/RETURN QUERY SELECT 'BORN'::text/gu) ?? []).length, 4,
+    'exactly four results exist: the fresh birth and the three equivalent retries');
+  // The retry still fails closed if the immutable facts stopped being coherent.
+  assert.equal((executableFunction.match(/JOIN public\.shared_world_direct_birth_events e ON e\.world_id = w\.id/gu) ?? []).length, 3,
+    'each retry path positively requires its World and its birth fact to still exist and still be a direct birth');
+  assert.match(executableFunction, /WHERE w\.id = committed\.world_id\s*\n\s*AND w\.birth_basis = 'ACCEPTED_INVITATION'\s*\n\s*AND e\.invitation_id = committed\.invitation_id/u);
+  // And it does NOT require the World to still be ACTIVE - closure is legitimate.
+  assert.doesNotMatch(executableFunction, /AND w\.lifecycle = 'ACTIVE'/u,
+    'a later closure of the born World must not make an old successful birth command contradictory');
+  assert.match(migration, /an equivalent retry must return the committed birth result, never the World current state/u);
+  assert.match(migration, /every equivalent retry must fail closed on a World or birth fact that has vanished/u);
   // Exactly the bounded classes, and none of them says WHY.
   assert.deepEqual([...new Set(executableFunction.match(/RAISE EXCEPTION '([^']+)'/gu) ?? [])].sort(), [
     "RAISE EXCEPTION 'SHARED_DIRECT_ACCEPTANCE_AUTHENTICATION_REQUIRED'",
@@ -453,6 +475,8 @@ test('the verifier and the kernel parity proof are wired into the toolchain, API
   for (const proof of ['SET LOCAL ROLE', 'has_function_privilege', 'has_table_privilege', 'pg_policy', 'information_schema.columns', 'BLOCKED',
     'SHARED_DIRECT_INVITATION_NOT_ACCEPTABLE', 'SHARED_DIRECT_BIRTH_ID_CONFLICT', 'SHARED_DIRECT_ACCEPTANCE_COMMAND_ID_CONFLICT',
     'cannot execute the birth core before the launch gate exists', 'ONE database-owned instant',
+    'the historical birth result stays ACTIVE even though the World is now closed',
+    'and the retry neither reopened nor mutated the World',
     'exactly two membership episodes - no third human and no system member',
     'a later rotation never re-terminalizes an ACCEPTED invitation',
     'no World was born from the invalidated invitation',
@@ -547,25 +571,22 @@ test('the contract is not vacuous: every deliberate weakening of migration 0082 
     ['accepts a caller-supplied acceptor identity', (text) => text.replace(
       '  p_inviter_membership_episode_id uuid, p_target_membership_episode_id uuid\n)',
       '  p_inviter_membership_episode_id uuid, p_target_membership_episode_id uuid, p_acceptor_user_id uuid\n)')],
-    ['drops the durable idempotency recheck under the locks', (text) => text.replace(
-      "  -- Durable idempotency, second pass: now under both locks, so two concurrent\n"
-      + '  -- equivalent acceptances serialize and the loser returns the committed result\n'
-      + '  -- instead of attempting a second birth.\n'
-      + '  SELECT * INTO committed FROM public.shared_world_direct_acceptance_commands c WHERE c.id = p_command_id;\n'
-      + '  IF FOUND THEN\n'
-      + '    IF committed.actor_user_id = u AND committed.invitation_id = p_invitation_id\n'
-      + '       AND committed.world_id = p_world_id\n'
-      + '       AND committed.inviter_membership_episode_id = p_inviter_membership_episode_id\n'
-      + '       AND committed.target_membership_episode_id = p_target_membership_episode_id THEN\n'
-      + "      RETURN QUERY SELECT 'BORN'::text, committed.id, committed.invitation_id, w.id, w.lifecycle, w.phase, w.birth_basis\n"
-      + "        FROM public.shared_worlds w WHERE w.id = committed.world_id AND w.birth_basis = 'ACCEPTED_INVITATION';\n"
-      + '      IF NOT FOUND THEN\n'
-      + "        RAISE EXCEPTION 'SHARED_DIRECT_BIRTH_CONTRADICTORY_STATE' USING ERRCODE='P0001';\n"
-      + '      END IF;\n'
-      + '      RETURN;\n'
-      + '    END IF;\n'
-      + "    RAISE EXCEPTION 'SHARED_DIRECT_ACCEPTANCE_COMMAND_ID_CONFLICT' USING ERRCODE='23505';\n"
-      + '  END IF;\n\n', '')],
+    ['returns the World current lifecycle to an equivalent retry instead of the committed result', (text) => text.replace(
+      "      RETURN QUERY SELECT 'BORN'::text, committed.id, committed.invitation_id, committed.world_id,\n                          'ACTIVE'::text, 'STANDARD'::text, 'ACCEPTED_INVITATION'::text;",
+      "      RETURN QUERY SELECT 'BORN'::text, committed.id, committed.invitation_id, w.id, w.lifecycle, w.phase, w.birth_basis\n        FROM public.shared_worlds w WHERE w.id = committed.world_id;")],
+    ['makes an old successful birth command contradictory once its World is closed', (text) => text.replace(
+      "           AND w.birth_basis = 'ACCEPTED_INVITATION'\n           AND e.invitation_id = committed.invitation_id",
+      "           AND w.birth_basis = 'ACCEPTED_INVITATION'\n           AND w.lifecycle = 'ACTIVE'\n           AND e.invitation_id = committed.invitation_id")],
+    // Anchored on the block's own boundaries rather than on its whole text, so
+    // that editing the pass cannot silently turn this mutation into a no-op -
+    // the `matched nothing` guard below would catch that, but a mutation that
+    // survives its own subject's evolution is better.
+    ['drops the durable idempotency recheck under the locks', (text) => {
+      const from = text.indexOf('  -- Durable idempotency, second pass:');
+      const to = text.indexOf('  -- THE CANONICAL CURRENT STATE', from);
+      assert.ok(from > 0 && to > from, 'the second idempotency pass is locatable');
+      return text.slice(0, from) + text.slice(to);
+    }],
   ];
   // One mirror, reused: the weakenings differ only in the migration text.
   const mirror = buildMirror();
@@ -596,9 +617,12 @@ test('the contract is not vacuous: every deliberate weakening of migration 0082 
 // regressions it must still refuse, so the forward safety is not bought by asserting nothing.
 // ---------------------------------------------------------------------------------------------
 
-/** Only the paths this contract actually reads. */
-const MIRRORED = ['database/migrations', 'database/tests', 'database/verify-migration-0082.mjs', 'database/README.md',
-  'apps/api/src/connected-worlds/kernel', '.github/workflows/api-ci.yml', 'package.json'];
+/**
+ * Only the paths this contract actually reads. The whole `database` directory is
+ * mirrored because the verifier-census sweep reads every Connected Worlds
+ * verifier, not just this slice's.
+ */
+const MIRRORED = ['database', 'apps/api/src/connected-worlds/kernel', '.github/workflows/api-ci.yml', 'package.json'];
 const SKIP = /(?:^|[\\/])(?:node_modules|\.git|\.expo|\.turbo|coverage)(?:[\\/]|$)/u;
 
 function buildMirror() {
@@ -761,6 +785,24 @@ test('the launch-gated wrapper and every later authorized lifecycle slice leave 
 
   assert.ok(runInMirror(mirror).ok, 'every mutation was reverted');
   rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+});
+
+test('no Connected Worlds verifier censuses the function catalog for names a later authorized slice will legitimately use', () => {
+  // I-04A's verifier asserted that NO function anywhere in the database was
+  // named like an acceptance, decline, cancel or expiry command. That is the
+  // same mutable-global ceiling the I-04A review retired from the two historical
+  // migration manifests - it simply lived in a verifier, where a static sweep
+  // could not see it, and I-04B's birth core tripped it by existing. A verifier
+  // may pin what its OWN migration created; it may not forbid the rest of the
+  // roadmap from being built.
+  const verifiers = readdirSync(new URL('../', import.meta.url))
+    .filter((name) => /^verify-migration-00(?:7[5-9]|8\d)\.mjs$/u.test(name));
+  assert.ok(verifiers.length >= 7, `the Connected Worlds verifiers are present, found ${verifiers.length}`);
+  for (const file of verifiers) {
+    const text = read(`../${file}`);
+    assert.doesNotMatch(text, /proname\s*~\*?\s*'[^']*(?:accept|decline|cancel|expire|birth|launch|wrapper)/u,
+      `${file} must not census every function in the database for names later authorized work will legitimately use`);
+  }
 });
 
 test('no database contract - this one included - carries a migration census, so 0083 can exist without editing one', () => {

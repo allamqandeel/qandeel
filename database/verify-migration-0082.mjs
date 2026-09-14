@@ -575,6 +575,35 @@ async function verifyIdempotency(f, existing) {
   await rejected(() => birth(existing.command.id, existing.invitationId, existing.command.world,
     existing.command.inviterEpisode, existing.command.targetEpisode), CONFLICT, /SHARED_DIRECT_ACCEPTANCE_COMMAND_ID_CONFLICT/u);
 
+  stage = 'idempotency: a later legitimate lifecycle closure does not change the historical retry result';
+  // A direct World is born ACTIVE / STANDARD, but a later reviewed lifecycle
+  // slice may close the same stable world id (CW2-03 section 31). That must not
+  // make an already-committed birth command answer differently. The closure is
+  // applied here as a fixture through the database owner ONLY - I-04B implements
+  // no close command and this proves nothing about how closure will work.
+  await identity('postgres');
+  await q(`UPDATE ${WORLDS} SET lifecycle='READ_ONLY_CLOSED', closed_at = born_at WHERE id=$1`, [existing.command.world]);
+  const [closed] = await rows(`SELECT lifecycle, closed_at FROM ${WORLDS} WHERE id=$1`, [existing.command.world]);
+  assert.equal(closed.lifecycle, 'READ_ONLY_CLOSED', 'the fixture closure applied');
+  const beforeClosedRetry = await snapshot(f.humans);
+  await identity('postgres', f.target);
+  const [afterClosure] = await birth(existing.command.id, existing.invitationId, existing.command.world,
+    existing.command.inviterEpisode, existing.command.targetEpisode);
+  assert.deepEqual(afterClosure, again,
+    'the retry returns exactly what the command committed, byte for byte, after the World was closed');
+  assert.equal(afterClosure.world_lifecycle, 'ACTIVE', 'the historical birth result stays ACTIVE even though the World is now closed');
+  assert.equal(afterClosure.world_phase, 'STANDARD');
+  assert.equal(afterClosure.world_birth_basis, 'ACCEPTED_INVITATION');
+  assert.equal(afterClosure.outcome, 'BORN');
+  await identity('postgres');
+  const [stillClosed] = await rows(`SELECT lifecycle, closed_at FROM ${WORLDS} WHERE id=$1`, [existing.command.world]);
+  assert.equal(stillClosed.lifecycle, 'READ_ONLY_CLOSED', 'and the retry neither reopened nor mutated the World');
+  assert.equal(stillClosed.closed_at.getTime(), closed.closed_at.getTime());
+  assert.deepEqual(worldOf(await snapshot(f.humans)), worldOf(beforeClosedRetry),
+    'the retry after closure created no World, episode, birth event or command row');
+  // Put the fixture back, so the rest of this run sees the canonical born state.
+  await q(`UPDATE ${WORLDS} SET lifecycle='ACTIVE', closed_at = NULL WHERE id=$1`, [existing.command.world]);
+
   stage = 'idempotency: one invitation can never bind to a second command or a second World';
   await identity('postgres', f.target);
   await rejected(() => birth(randomUUID(), existing.invitationId, randomUUID(), randomUUID(), randomUUID()),

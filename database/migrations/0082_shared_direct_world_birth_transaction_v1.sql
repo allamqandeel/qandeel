@@ -222,11 +222,27 @@ BEGIN
        AND committed.world_id = p_world_id
        AND committed.inviter_membership_episode_id = p_inviter_membership_episode_id
        AND committed.target_membership_episode_id = p_target_membership_episode_id THEN
-      RETURN QUERY SELECT 'BORN'::text, committed.id, committed.invitation_id, w.id, w.lifecycle, w.phase, w.birth_basis
-        FROM public.shared_worlds w WHERE w.id = committed.world_id AND w.birth_basis = 'ACCEPTED_INVITATION';
-      IF NOT FOUND THEN
+      -- An equivalent retry returns the result this command COMMITTED, never a
+      -- read of the live World row. The birth basis, the sourcing invitation,
+      -- the birth membership and the birth instant are immutable facts of the
+      -- birth; the World lifecycle is NOT, and a later reviewed slice may
+      -- legitimately transition this same stable world id. A historical command
+      -- must not start answering differently because of that, so the constants
+      -- below are the ones this command committed. What is still required is
+      -- that the immutable facts remain coherent: a command whose World or
+      -- birth fact has vanished, or whose World is no longer a directly born
+      -- one, is contradictory rather than repairable.
+      IF NOT EXISTS (
+        SELECT 1 FROM public.shared_worlds w
+          JOIN public.shared_world_direct_birth_events e ON e.world_id = w.id
+         WHERE w.id = committed.world_id
+           AND w.birth_basis = 'ACCEPTED_INVITATION'
+           AND e.invitation_id = committed.invitation_id
+      ) THEN
         RAISE EXCEPTION 'SHARED_DIRECT_BIRTH_CONTRADICTORY_STATE' USING ERRCODE='P0001';
       END IF;
+      RETURN QUERY SELECT 'BORN'::text, committed.id, committed.invitation_id, committed.world_id,
+                          'ACTIVE'::text, 'STANDARD'::text, 'ACCEPTED_INVITATION'::text;
       RETURN;
     END IF;
     RAISE EXCEPTION 'SHARED_DIRECT_ACCEPTANCE_COMMAND_ID_CONFLICT' USING ERRCODE='23505';
@@ -263,11 +279,27 @@ BEGIN
        AND committed.world_id = p_world_id
        AND committed.inviter_membership_episode_id = p_inviter_membership_episode_id
        AND committed.target_membership_episode_id = p_target_membership_episode_id THEN
-      RETURN QUERY SELECT 'BORN'::text, committed.id, committed.invitation_id, w.id, w.lifecycle, w.phase, w.birth_basis
-        FROM public.shared_worlds w WHERE w.id = committed.world_id AND w.birth_basis = 'ACCEPTED_INVITATION';
-      IF NOT FOUND THEN
+      -- An equivalent retry returns the result this command COMMITTED, never a
+      -- read of the live World row. The birth basis, the sourcing invitation,
+      -- the birth membership and the birth instant are immutable facts of the
+      -- birth; the World lifecycle is NOT, and a later reviewed slice may
+      -- legitimately transition this same stable world id. A historical command
+      -- must not start answering differently because of that, so the constants
+      -- below are the ones this command committed. What is still required is
+      -- that the immutable facts remain coherent: a command whose World or
+      -- birth fact has vanished, or whose World is no longer a directly born
+      -- one, is contradictory rather than repairable.
+      IF NOT EXISTS (
+        SELECT 1 FROM public.shared_worlds w
+          JOIN public.shared_world_direct_birth_events e ON e.world_id = w.id
+         WHERE w.id = committed.world_id
+           AND w.birth_basis = 'ACCEPTED_INVITATION'
+           AND e.invitation_id = committed.invitation_id
+      ) THEN
         RAISE EXCEPTION 'SHARED_DIRECT_BIRTH_CONTRADICTORY_STATE' USING ERRCODE='P0001';
       END IF;
+      RETURN QUERY SELECT 'BORN'::text, committed.id, committed.invitation_id, committed.world_id,
+                          'ACTIVE'::text, 'STANDARD'::text, 'ACCEPTED_INVITATION'::text;
       RETURN;
     END IF;
     RAISE EXCEPTION 'SHARED_DIRECT_ACCEPTANCE_COMMAND_ID_CONFLICT' USING ERRCODE='23505';
@@ -339,11 +371,27 @@ BEGIN
          AND committed.world_id = p_world_id
          AND committed.inviter_membership_episode_id = p_inviter_membership_episode_id
          AND committed.target_membership_episode_id = p_target_membership_episode_id THEN
-        RETURN QUERY SELECT 'BORN'::text, committed.id, committed.invitation_id, w.id, w.lifecycle, w.phase, w.birth_basis
-          FROM public.shared_worlds w WHERE w.id = committed.world_id AND w.birth_basis = 'ACCEPTED_INVITATION';
-        IF NOT FOUND THEN
+        -- An equivalent retry returns the result this command COMMITTED, never a
+        -- read of the live World row. The birth basis, the sourcing invitation,
+        -- the birth membership and the birth instant are immutable facts of the
+        -- birth; the World lifecycle is NOT, and a later reviewed slice may
+        -- legitimately transition this same stable world id. A historical command
+        -- must not start answering differently because of that, so the constants
+        -- below are the ones this command committed. What is still required is
+        -- that the immutable facts remain coherent: a command whose World or
+        -- birth fact has vanished, or whose World is no longer a directly born
+        -- one, is contradictory rather than repairable.
+        IF NOT EXISTS (
+          SELECT 1 FROM public.shared_worlds w
+            JOIN public.shared_world_direct_birth_events e ON e.world_id = w.id
+           WHERE w.id = committed.world_id
+             AND w.birth_basis = 'ACCEPTED_INVITATION'
+             AND e.invitation_id = committed.invitation_id
+        ) THEN
           RAISE EXCEPTION 'SHARED_DIRECT_BIRTH_CONTRADICTORY_STATE' USING ERRCODE='P0001';
         END IF;
+        RETURN QUERY SELECT 'BORN'::text, committed.id, committed.invitation_id, committed.world_id,
+                            'ACTIVE'::text, 'STANDARD'::text, 'ACCEPTED_INVITATION'::text;
         RETURN;
       END IF;
       RAISE EXCEPTION 'SHARED_DIRECT_ACCEPTANCE_COMMAND_ID_CONFLICT' USING ERRCODE='23505';
@@ -479,6 +527,25 @@ BEGIN
   END IF;
   IF p.prosrc ~ 'READ_ONLY_CLOSED|MUTUAL_MATCH|''DRAFT''|''DORMANT''' THEN
     RAISE EXCEPTION 'I-04B: the direct birth core may create no other lifecycle, phase or birth basis';
+  END IF;
+
+  -- DURABLE RESULT IDEMPOTENCY. An equivalent retry must return the result the
+  -- command COMMITTED, so it may never read the live World row into its result:
+  -- a later reviewed lifecycle slice may transition this same stable world id,
+  -- and a historical command must not start answering differently because of it.
+  IF p.prosrc ~ 'RETURN QUERY SELECT[^;]*w\.(lifecycle|phase|birth_basis)' THEN
+    RAISE EXCEPTION 'I-04B: an equivalent retry must return the committed birth result, never the World current state';
+  END IF;
+  IF (length(p.prosrc) - length(replace(p.prosrc,
+        'RETURN QUERY SELECT ''BORN''::text, committed.id, committed.invitation_id, committed.world_id,', '')))
+     / length('RETURN QUERY SELECT ''BORN''::text, committed.id, committed.invitation_id, committed.world_id,') <> 3 THEN
+    RAISE EXCEPTION 'I-04B: every equivalent retry must return the identities and constants this command committed';
+  END IF;
+  -- And the immutable facts must still be coherent, checked once per retry path.
+  IF (length(p.prosrc) - length(replace(p.prosrc,
+        'JOIN public.shared_world_direct_birth_events e ON e.world_id = w.id', '')))
+     / length('JOIN public.shared_world_direct_birth_events e ON e.world_id = w.id') <> 3 THEN
+    RAISE EXCEPTION 'I-04B: every equivalent retry must fail closed on a World or birth fact that has vanished';
   END IF;
 
   -- THE CANONICAL LOCK ORDER, asserted on the stored source: the target
