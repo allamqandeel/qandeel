@@ -739,3 +739,127 @@ rolled-back and cleaned-up fixtures:
 ```sh
 npm run verify:shared-direct-world-birth:integration
 ```
+
+## Standard voluntary leave and membership episode closure (migration 0083, I-04C)
+
+Migration `0083_shared_world_standard_voluntary_leave_v1.sql` adds the first primitive that
+ENDS a membership episode, and it is
+deliberately the only membership mutation frozen canon makes **unilateral**: CW2-03 section
+23 / C19 and CW2-02 section 35 make voluntary leave an individual authority that requires no
+group approval. Add-member, removal, rejoin and Standard World end all require a unanimous
+governance substrate that does not exist yet, so none of them is implemented here.
+
+A valid leave commits as one transaction: the exact authenticated human's own open membership
+episode is closed with `end_reason = VOLUNTARY_LEAVE`, one `MEMBER_LEFT` fact is appended and
+one durable leave command is written. All writes commit together or not at all.
+
+The canonical episode gains **exactly one additive, unconstrained column**:
+
+```sql
+ALTER TABLE public.shared_world_membership_episodes ADD COLUMN end_reason text;
+```
+
+CW2-03 section 15 models the episode as `{user, start, end?, end_reason?}`; migration 0075
+created every part of that except the reason, because it had no writer for it yet. The column
+is nullable and carries **no check constraint**: CW2-03 section 25 removal and section 32
+closure must be able to write their own canonical reasons later without a superseding
+migration, and an enum frozen here would freeze exactly the future this slice must not
+decide. An open episode keeps `ended_at = NULL` and `end_reason = NULL`; the only writer in
+this repository sets both together, in one statement.
+
+Four predecessor verifiers were repaired to make that additive evolution legal. Migrations
+0075, 0076, 0078 and 0081 are **byte-identical**; their verifiers were asserting the exact
+LIVE column, constraint and index shape of tables they do not own forever, which is a
+mutable-global ceiling rather than a fact about the historical migration. Each now proves the
+stronger and correct thing - every column it owns is still present with its original type,
+nullability, default and ordinal position (a prefix, so a drop, a type change or a reorder
+still fails), and every constraint and index it owns is still present and still means exactly
+what it meant - while permitting later additive evolution. Migration 0078's census of every
+function in the database whose name matched a Standing Context pattern was narrowed to the
+exact two commands it created, for the same reason.
+
+The leave core is **executable by no application role**, exactly as I-04B left the birth core.
+Closing a membership episode is irreversible - the episode is permanent historical truth and a
+later rejoin is a NEW episode, never a reopening (CW2-03 section 28 / C25) - and CW2-08
+section 25 / H18 binds a current Launch Gate Snapshot before an irreversible commit, with
+section 40 failing closed. So `commit_shared_world_standard_voluntary_leave_v1` is fully
+implemented and real-PostgreSQL tested while `PUBLIC`, `anon`, `authenticated` and
+`service_role` all hold no `EXECUTE`: migration 0083 contains no `GRANT` statement at all and
+refuses to deploy if any of those four can execute it. A later reviewed launch-gated wrapper
+is expected; nothing here forbids one.
+
+Human authority is exact and unilateral. The function takes **no actor, target, episode,
+instant or reason parameter** - only three opaque uuid identities (the command id, the exact
+World and the identity the new `MEMBER_LEFT` row will carry) which must be non-null and
+pairwise distinct. The leaving human is `auth.uid()`, and the episode is resolved from
+canonical current state as `world_id = p_world_id AND user_id = auth.uid() AND ended_at IS
+NULL`. No other member approves, no owner or admin exists, and QANDEEL has no session
+identity so can never leave for a human.
+
+**Canonical lock order: the exact World row first**, then the actor's own open episode.
+Membership topology is a property of the World, not of one human, so every future topology
+mutation must bind the exact current topology and serialize there. The frozen I-03C consent
+commands already take that same row first, which gives a leave racing a grant exactly two
+canonical outcomes: the grant commits under current membership and the later leave ends that
+membership without revoking anything, or the leave commits and the later grant finds no
+current membership and fails closed under I-03C's own unchanged rule.
+
+**ONE database-owned instant** is captured once and persisted unchanged as the episode's
+`ended_at`, the event's `occurred_at` and the command's `committed_at`; the verifier compares
+all three in SQL at full precision.
+
+Ordinary leave mechanics are **ACTIVE / STANDARD only**. CW2-03 section 14 keeps ordinary
+add-member / remove-member / leave mechanics out of `INTRODUCTION`, which has its own single
+terminal transition, and section 35 blocks ordinary mutation on `READ_ONLY_CLOSED`. All three
+other legal states are refused through the one bounded class
+`SHARED_WORLD_STANDARD_LEAVE_NOT_AVAILABLE`, which also answers an outsider, an
+already-departed human and a World that does not exist - so no future wrapper can become a
+membership oracle. No Introduction exit is implemented or guessed.
+
+Leave never closes, deletes or converts the World. One remaining active human is a valid
+Shared World with no sole-survivor authority (section 26, C22 - C23); zero remaining active
+humans is the valid inert `NO_ACTIVE_HUMAN_MEMBERS` state, **derived** from zero open
+episodes rather than stored, with no automatic deletion, conversion or recovery and with
+empty-set unanimity never treated as approval (section 27, C24). There is no
+"must retain one member" rule: the last human may leave.
+
+**Standing Context Grants are not touched.** Leaving does not revoke the departed grantor's
+`ACTIVE` grant, does not contract its audience ceiling, appends no consent event and installs
+no trigger that could do any of it implicitly. CW2-02 section 32 freezes that there is no
+universal retroactive revocation rule and that a Standing Context Grant is revocable for
+FUTURE reasoning - explicitly, by its owner - and section 35 makes leave invalidate future use
+"according to grant policy" rather than by rewriting the grant. Frozen I-03E states that a
+departed owner's private context is still unavailable unless there is a valid independent
+authority basis, and that a valid current Standing Context Grant IS such a basis where all
+frozen conditions permit it; frozen I-03A deliberately derives nothing from membership.
+Membership loss and grant revocation are separate canonical truths. What leave changes is the
+canonical membership topology, and therefore the current human Audience Snapshot the frozen
+0079 resolver derives from open episodes - which is the input the already-frozen authority,
+admission and delivery-revalidation layers consume. A grant or reconfirm ATTEMPTED after
+leaving still fails, but under I-03C's own unchanged current-membership rule. An explicit
+revoke after leaving still works.
+
+Idempotency is durable and checked at every point an equivalent retry can arrive: before the
+lock, under the lock, and inside the uniqueness conflict that two commands sharing a command
+id across different humans have as their only serialization point. A retry returns the
+immutable committed result and reads neither current membership nor the current World row, so
+a later authorized rejoin or closure cannot change a historical answer. Uniqueness is per
+EPISODE and per EVENT, never per `(world_id, actor_user_id)`, so a future rejoin episode may
+itself later leave.
+
+Deliberately absent: no application wrapper, controller or route; no Launch Gate, feature flag
+or entitlement; no removal, add-member, rejoin, World-end, closed-world-viewing or
+history-grant command; no `INTRODUCTION_ENDED` event and no phase transition; no Shared
+conversation, message or QANDEEL generation; no Personal-context read.
+
+The secret-free structural contract runs under `npm run test:database`, and a test-only Jest
+spec proves the frozen I-03F revalidator turns exactly the observed audience transition into
+`STALE / AUDIENCE_CHANGED` and `STALE / NO_ACTIVE_HUMANS` without inventing a new authority
+code. The real PostgreSQL verifier proves the catalog, both ACLs, the additive column with
+every 0075 invariant intact, the atomic closure and its single instant, every bounded refusal,
+the audience transition through the frozen 0079 resolver, Standing Context Grant survival,
+idempotency and the multi-connection races, with rolled-back and cleaned-up fixtures:
+
+```sh
+npm run verify:shared-world-standard-voluntary-leave:integration
+```

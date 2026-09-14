@@ -4,12 +4,15 @@
 // Runs against a fully migrated database and proves, from live catalogs and
 // live behaviour rather than from the migration text:
 //
-//   * schema: both grant tables exist, are owned by postgres, carry exactly the
-//     expected columns / types / nullability / defaults (no scope / purpose /
-//     action / source / permission / JSON column), every check and foreign-key
+//   * schema: both grant tables exist, are owned by postgres, and still carry
+//     every column / type / nullability / default, check and foreign-key
 //     constraint with restrictive deletion and the intended parents
-//     (shared_worlds and users only), the partial one-ACTIVE-grant unique
-//     index, the exact index set, RLS on, and no trigger on the grant tables or
+//     (shared_worlds and users only), the partial one-ACTIVE-grant unique index
+//     and every other index that migration 0076 OWNS - unchanged and in their
+//     original positions, with later additive columns / constraints / indexes
+//     from a reviewed slice permitted rather than censused - while no column,
+//     future ones included, is a scope / purpose / action / source / permission
+//     / JSON column, with RLS on and no trigger on the grant tables or
 //     on the membership-episode table; no generic context-admission / grant /
 //     permission / consent-event table exists. (Whether a later, separately
 //     verified narrow read boundary exists is not a 0076 property: this
@@ -124,11 +127,20 @@ async function verifySchema() {
         WHERE table_schema='public' AND table_name=$1 ORDER BY ordinal_position`,
       [table.replace('public.', '')],
     );
+    // FORWARD SAFETY (I-04C): what 0076 OWNS, asserted as a PREFIX rather than as
+    // a census of the live schema. A drop, a type / nullability / default change
+    // or a reorder still fails; a later reviewed slice may append a column. The
+    // shape bans below keep scanning EVERY column, future ones included.
+    const observed = columns.map((c) => [c.column_name, c.data_type, c.is_nullable, c.column_default]);
+    const owned = EXPECTED_COLUMNS[table];
     assert.deepEqual(
-      columns.map((c) => [c.column_name, c.data_type, c.is_nullable, c.column_default]),
-      EXPECTED_COLUMNS[table],
-      `${table} carries exactly the expected columns`,
+      observed.slice(0, owned.length),
+      owned,
+      `${table} still carries every column migration 0076 owns, unchanged and in its original position`,
     );
+    for (const [name] of owned) {
+      assert.equal(observed.filter((column) => column[0] === name).length, 1, `${table}.${name} appears exactly once`);
+    }
     for (const { column_name: name, data_type: type } of columns) {
       assert.doesNotMatch(name, /scope|purpose|action|source|permission|disclos|quote|copy|publish|share|export|provenance|transfer|owner|admin|ttl|expir/iu,
         `${table}.${name} is not a generic, disclosure-shaped or owner column`);
@@ -145,18 +157,29 @@ async function verifySchema() {
     [table],
   );
   const byName = (list) => Object.fromEntries(list.map((c) => [c.name, c]));
+  // FORWARD SAFETY (I-04C): every constraint 0076 OWNS must still be present, and
+  // each one's meaning is asserted individually below. A later additive
+  // constraint from a reviewed slice is not a 0076 regression.
+  const owns = (list, names, label) => {
+    const present = new Set(list.map((c) => c.name));
+    for (const name of names) assert.ok(present.has(name), `${label} still carries migration 0076's ${name}`);
+  };
   const grantConstraints = await constraints(GRANTS);
   const grants = byName(grantConstraints);
-  assert.deepEqual(grantConstraints.map((c) => c.name), [
+  owns(grantConstraints, [
     'shared_world_standing_context_grants_grantor_fk',
     'shared_world_standing_context_grants_pkey',
     'shared_world_standing_context_grants_revocation_check',
     'shared_world_standing_context_grants_revoked_after_grant_check',
     'shared_world_standing_context_grants_status_check',
     'shared_world_standing_context_grants_world_fk',
-  ], 'grants carry exactly the expected constraints');
-  // Every name is well within PostgreSQL's 63-byte identifier limit, so none was silently truncated.
-  for (const { name } of grantConstraints) assert.ok(Buffer.byteLength(name) <= 62, `${name} sits below the 63-byte identifier limit`);
+  ], 'grants');
+  // Every name 0076 chose is well within PostgreSQL's 63-byte identifier limit,
+  // so none was silently truncated. Scoped to 0076's own names: what a later
+  // reviewed slice names its own constraints is that slice's contract.
+  for (const { name } of grantConstraints.filter((c) => c.name.startsWith('shared_world_standing_context_grants_'))) {
+    assert.ok(Buffer.byteLength(name) <= 62, `${name} sits below the 63-byte identifier limit`);
+  }
   assert.equal(grants.shared_world_standing_context_grants_pkey.def, 'PRIMARY KEY (id)');
   assert.equal(grants.shared_world_standing_context_grants_status_check.type, 'c');
   assert.match(grants.shared_world_standing_context_grants_status_check.def, /'ACTIVE'.*'REVOKED'/u);
@@ -182,11 +205,11 @@ async function verifySchema() {
 
   const audienceConstraints = await constraints(AUDIENCE);
   const audience = byName(audienceConstraints);
-  assert.deepEqual(audienceConstraints.map((c) => c.name), [
+  owns(audienceConstraints, [
     'shared_world_standing_context_grant_audience_grant_fk',
     'shared_world_standing_context_grant_audience_pkey',
     'shared_world_standing_context_grant_audience_user_fk',
-  ], 'audience ceiling carries exactly the expected constraints');
+  ], 'audience ceiling');
   assert.equal(audience.shared_world_standing_context_grant_audience_pkey.def, 'PRIMARY KEY (grant_id, audience_user_id)');
   for (const [name, parent] of [
     ['shared_world_standing_context_grant_audience_grant_fk', 'shared_world_standing_context_grants'],
@@ -207,23 +230,22 @@ async function verifySchema() {
       WHERE ix.indrelid=$1::regclass ORDER BY i.relname COLLATE "C"`,
     [table],
   );
-  assert.deepEqual(
-    (await indexes(GRANTS)).map((i) => [i.name, i.uniq, i.cols, i.pred]),
-    [
-      ['shared_world_standing_context_grants_one_active_idx', true, 'world_id,grantor_user_id', "(status = 'ACTIVE'::text)"],
-      ['shared_world_standing_context_grants_pkey', true, 'id', null],
-      ['shared_world_standing_context_grants_world_grantor_idx', false, 'world_id,grantor_user_id', null],
-    ],
-    'grants carry exactly the expected indexes',
-  );
-  assert.deepEqual(
-    (await indexes(AUDIENCE)).map((i) => [i.name, i.uniq, i.cols, i.pred]),
-    [
-      ['shared_world_standing_context_grant_audience_pkey', true, 'grant_id,audience_user_id', null],
-      ['shared_world_standing_context_grant_audience_user_idx', false, 'audience_user_id', null],
-    ],
-    'audience ceiling carries exactly the expected indexes',
-  );
+  // FORWARD SAFETY (I-04C): every index 0076 OWNS, still present and unchanged in
+  // uniqueness, key columns and partial predicate. A later additive index from a
+  // reviewed slice is not a 0076 regression.
+  const ownsIndexes = async (table, expected, label) => {
+    const live = new Map((await indexes(table)).map((i) => [i.name, [i.name, i.uniq, i.cols, i.pred]]));
+    for (const index of expected) assert.deepEqual(live.get(index[0]), index, `${label} still carries 0076's ${index[0]}, unchanged`);
+  };
+  await ownsIndexes(GRANTS, [
+    ['shared_world_standing_context_grants_one_active_idx', true, 'world_id,grantor_user_id', "(status = 'ACTIVE'::text)"],
+    ['shared_world_standing_context_grants_pkey', true, 'id', null],
+    ['shared_world_standing_context_grants_world_grantor_idx', false, 'world_id,grantor_user_id', null],
+  ], 'grants');
+  await ownsIndexes(AUDIENCE, [
+    ['shared_world_standing_context_grant_audience_pkey', true, 'grant_id,audience_user_id', null],
+    ['shared_world_standing_context_grant_audience_user_idx', false, 'audience_user_id', null],
+  ], 'audience ceiling');
 
   stage = 'schema: no trigger';
   // No trigger on the grant tables, and none on the membership-episode table
@@ -419,7 +441,7 @@ async function main() {
       [[world, otherWorld], grantIds, [grantor, other, third]],
     );
     assert.equal(Number(n), 0, 'no fixture row remains after completion');
-    console.log('Verified migration 0076: shared_world_standing_context_grants and shared_world_standing_context_grant_audience exist with the exact columns (no scope/purpose/action/source/permission/JSON column), ACTIVE|REVOKED status, revocation-consistency and revoked-after-granted checks, restrictive FKs to shared_worlds and users only, one-ACTIVE-grant partial uniqueness, per-grant audience uniqueness and RLS on; anon/authenticated/service_role/PUBLIC hold no privilege and no policy exists; every illegal status/revocation/FK row is rejected; revocation keeps history and reconfirmation is a new row; no trigger touches the tables; zero fixture residue.');
+    console.log('Verified migration 0076: shared_world_standing_context_grants and shared_world_standing_context_grant_audience exist and still carry every column they own, unchanged and in its original position, with later additive columns permitted and no column of any kind a scope/purpose/action/source/permission/JSON column, ACTIVE|REVOKED status, revocation-consistency and revoked-after-granted checks, restrictive FKs to shared_worlds and users only, one-ACTIVE-grant partial uniqueness, per-grant audience uniqueness and RLS on; anon/authenticated/service_role/PUBLIC hold no privilege and no policy exists; every illegal status/revocation/FK row is rejected; revocation keeps history and reconfirmation is a new row; no trigger touches the tables; zero fixture residue.');
   } finally {
     await client.end();
   }

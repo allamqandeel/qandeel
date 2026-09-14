@@ -180,15 +180,22 @@ async function verifyCatalog() {
     assert.equal(n, 0, `I-04B introduced no ${name}: this slice is the direct birth core only`);
   }
 
-  stage = 'catalog: exact columns';
+  stage = 'catalog: the columns migration 0082 owns, unchanged';
+  // FORWARD SAFETY (I-04C): what 0082 OWNS, asserted as a PREFIX rather than as a
+  // census of the live schema. A drop, a type or nullability change or a reorder
+  // still fails; a later reviewed slice may append a column - which is exactly
+  // what I-04C's additive `end_reason` does to the canonical episode. The shape
+  // bans below keep scanning EVERY column, future ones included.
   for (const [table, expected] of [[BIRTH_EVENTS, BIRTH_EVENT_COLUMNS], [ACCEPTANCE_COMMANDS, ACCEPTANCE_COMMAND_COLUMNS]]) {
     const observed = await rows(
       `SELECT column_name, data_type, is_nullable FROM information_schema.columns
-        WHERE table_schema='public' AND table_name=$1`, [table.replace('public.', '')]);
-    assert.deepEqual(
-      observed.map((r) => [r.column_name, r.data_type, r.is_nullable]).sort((a, b) => a[0].localeCompare(b[0])),
-      [...expected].sort((a, b) => a[0].localeCompare(b[0])),
-      `${table} carries exactly its own columns`);
+        WHERE table_schema='public' AND table_name=$1 ORDER BY ordinal_position`, [table.replace('public.', '')]);
+    const shape = observed.map((r) => [r.column_name, r.data_type, r.is_nullable]);
+    assert.deepEqual(shape.slice(0, expected.length), expected,
+      `${table} still carries every column migration 0082 owns, unchanged and in its original position`);
+    for (const [name] of expected) {
+      assert.equal(shape.filter((column) => column[0] === name).length, 1, `${table}.${name} appears exactly once`);
+    }
     // Initiating creates no superior authority, and a birth fact is not a payload.
     for (const column of observed.map((r) => r.column_name)) {
       assert.doesNotMatch(column, /owner|admin|creator|initiator|privilege|role|capability|payload|metadata|scope|permission|topic|avatar|setting/iu,
@@ -209,7 +216,10 @@ async function verifyCatalog() {
     `SELECT c.conrelid::regclass::text AS tbl, pg_get_constraintdef(c.oid) AS def
        FROM pg_constraint c WHERE c.conrelid = ANY($1::regclass[]) AND c.contype IN ('p','u')`,
     [OWN_TABLES]);
-  assert.deepEqual(uniques.map((r) => `${bare(r.tbl)} ${r.def}`).sort(), [
+  // Every uniqueness constraint 0082 OWNS is still present and still means what
+  // it meant; a later reviewed slice may add its own.
+  const liveUniques = new Set(uniques.map((r) => `${bare(r.tbl)} ${r.def}`));
+  for (const owned of [
     `${bare(ACCEPTANCE_COMMANDS)} PRIMARY KEY (id)`,
     `${bare(ACCEPTANCE_COMMANDS)} UNIQUE (inviter_membership_episode_id)`,
     `${bare(ACCEPTANCE_COMMANDS)} UNIQUE (invitation_id)`,
@@ -217,7 +227,9 @@ async function verifyCatalog() {
     `${bare(ACCEPTANCE_COMMANDS)} UNIQUE (world_id)`,
     `${bare(BIRTH_EVENTS)} PRIMARY KEY (world_id)`,
     `${bare(BIRTH_EVENTS)} UNIQUE (invitation_id)`,
-  ].sort(), 'one World and one invitation per birth, and one of each identity per committed acceptance');
+  ]) {
+    assert.ok(liveUniques.has(owned), `still enforced: ${owned} - one World and one invitation per birth, one of each identity per committed acceptance`);
+  }
 
   const foreignKeys = await rows(
     `SELECT c.conrelid::regclass::text AS tbl, pg_get_constraintdef(c.oid) AS def
@@ -227,7 +239,8 @@ async function verifyCatalog() {
   for (const { tbl, def } of foreignKeys) {
     assert.match(def, /ON DELETE RESTRICT$/u, `${tbl} ${def}: birth history is never silently cascaded away`);
   }
-  assert.deepEqual(foreignKeys.map((r) => `${bare(r.tbl)} ${normalize(r.def)}`).sort(), [
+  const liveForeignKeys = new Set(foreignKeys.map((r) => `${bare(r.tbl)} ${normalize(r.def)}`));
+  for (const owned of [
     `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE RESTRICT`,
     `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (inviter_membership_episode_id) REFERENCES shared_world_membership_episodes(id) ON DELETE RESTRICT`,
     `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (invitation_id) REFERENCES shared_world_direct_invitations(id) ON DELETE RESTRICT`,
@@ -235,7 +248,9 @@ async function verifyCatalog() {
     `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (world_id) REFERENCES shared_worlds(id) ON DELETE RESTRICT`,
     `${bare(BIRTH_EVENTS)} FOREIGN KEY (invitation_id) REFERENCES shared_world_direct_invitations(id) ON DELETE RESTRICT`,
     `${bare(BIRTH_EVENTS)} FOREIGN KEY (world_id) REFERENCES shared_worlds(id) ON DELETE RESTRICT`,
-  ].sort(), 'the birth fact and the command bind exactly the canonical rows');
+  ]) {
+    assert.ok(liveForeignKeys.has(owned), `still bound to the canonical row: ${owned}`);
+  }
 
   stage = 'catalog: RLS on, zero policies, no trigger';
   for (const table of OWN_TABLES) {
@@ -970,7 +985,7 @@ async function main() {
             + (SELECT count(*) FROM auth.users WHERE id = ANY($1::uuid[])) AS n`,
       [humans, bornWorlds]);
     assert.equal(Number(n), 0, 'no fixture row remains after completion - not even a Shared World this run gave birth to');
-    console.log('Verified migration 0082: shared_world_direct_birth_events and shared_world_direct_acceptance_commands exist once with the exact columns, the exact unique bindings (one World and one invitation per direct birth; one invitation, World and membership episode per committed acceptance), seven restrictive foreign keys, RLS on, zero policies, no trigger and no owner/admin/role/payload column, and no direct privilege for PUBLIC/anon/authenticated/service_role; commit_shared_world_direct_acceptance_birth_v1 is a postgres-owned SECURITY DEFINER, search_path-pinned, VOLATILE primitive that PUBLIC, anon, authenticated AND service_role all cannot execute - the frozen system-policy / Launch Gate precondition is not implemented, so the birth core stays non-application-executable and migration 0082 grants EXECUTE to nobody at all; it accepts exactly five opaque uuid identities with the IN and TABLE argument arrays derived by PostgreSQL rather than partitioned client-side with no acceptor, actor, target, status, epoch or clock parameter, derives the accepting human from auth.uid(), reads no Personal context and creates no Standing Context, Matching or Introduction state; a valid exact-target acceptance atomically creates exactly one ACTIVE/STANDARD/ACCEPTED_INVITATION World with a NULL closure, exactly two open membership episodes for exactly the inviter and the exact accepting target, exactly one direct WORLD_BIRTH, the invitation ACCEPTED with its inviter/target/epoch bindings untouched, and one durable command - with born_at, both joined_at, occurred_at, terminal_at and committed_at proven equal in SQL to ONE database-owned instant; the inviter, an unrelated human, a NULL auth.uid(), every terminal invitation status, a stale bound credential epoch, an absent credential state and a nonexistent invitation all fail through one bounded non-enumerating class that names no human and creates no World; an equivalent retry returns the same World while any different identity under a committed command id is 23505 and one invitation sources exactly one World birth; a taken World id or membership-episode id rolls the WHOLE birth back leaving the invitation PENDING; and against real concurrent connections two identical acceptances produce one birth and the same result to both, two competing commands on one invitation have exactly one winner, acceptance before rotation leaves the born World and its ACCEPTED invitation untouched while rotation before acceptance births nothing, World-id and episode-id collisions each roll back atomically, the credential-first lock order produced no deadlock, and no orphan or wrongly-sized membership remains; zero fixture residue.');
+    console.log('Verified migration 0082: shared_world_direct_birth_events and shared_world_direct_acceptance_commands exist once and still carry every column they own, unchanged and in its original position, with later additive schema evolution permitted rather than censused, plus the exact unique bindings (one World and one invitation per direct birth; one invitation, World and membership episode per committed acceptance), seven restrictive foreign keys, RLS on, zero policies, no trigger and no owner/admin/role/payload column, and no direct privilege for PUBLIC/anon/authenticated/service_role; commit_shared_world_direct_acceptance_birth_v1 is a postgres-owned SECURITY DEFINER, search_path-pinned, VOLATILE primitive that PUBLIC, anon, authenticated AND service_role all cannot execute - the frozen system-policy / Launch Gate precondition is not implemented, so the birth core stays non-application-executable and migration 0082 grants EXECUTE to nobody at all; it accepts exactly five opaque uuid identities with the IN and TABLE argument arrays derived by PostgreSQL rather than partitioned client-side with no acceptor, actor, target, status, epoch or clock parameter, derives the accepting human from auth.uid(), reads no Personal context and creates no Standing Context, Matching or Introduction state; a valid exact-target acceptance atomically creates exactly one ACTIVE/STANDARD/ACCEPTED_INVITATION World with a NULL closure, exactly two open membership episodes for exactly the inviter and the exact accepting target, exactly one direct WORLD_BIRTH, the invitation ACCEPTED with its inviter/target/epoch bindings untouched, and one durable command - with born_at, both joined_at, occurred_at, terminal_at and committed_at proven equal in SQL to ONE database-owned instant; the inviter, an unrelated human, a NULL auth.uid(), every terminal invitation status, a stale bound credential epoch, an absent credential state and a nonexistent invitation all fail through one bounded non-enumerating class that names no human and creates no World; an equivalent retry returns the same World while any different identity under a committed command id is 23505 and one invitation sources exactly one World birth; a taken World id or membership-episode id rolls the WHOLE birth back leaving the invitation PENDING; and against real concurrent connections two identical acceptances produce one birth and the same result to both, two competing commands on one invitation have exactly one winner, acceptance before rotation leaves the born World and its ACCEPTED invitation untouched while rotation before acceptance births nothing, World-id and episode-id collisions each roll back atomically, the credential-first lock order produced no deadlock, and no orphan or wrongly-sized membership remains; zero fixture residue.');
   } finally {
     await client.end();
   }
