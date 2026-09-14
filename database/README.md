@@ -595,6 +595,13 @@ can never manufacture a human invitation.
 p_expected_epoch)` is compare-and-swap on the caller's own state - `NULL` expects no
 current credential and yields epoch 1, `N` requires exactly `N` and yields `N + 1`, and
 any other current state is a bounded `40001 SHARED_INVITE_CREDENTIAL_STALE_STATE`.
+**A rotation must actually change the credential**: when current state exists,
+re-presenting the reference that is already current is refused with a bounded
+`22023 SHARED_INVITE_CREDENTIAL_UNCHANGED` **before any mutation**, so a no-op value
+advances no epoch, moves no `updated_at`, invalidates no `PENDING` invitation and
+writes no command-history row - accepting it would retire nothing while invalidating
+everything. The comparison is against the caller's own locked row, so it discloses no
+other human's state.
 In the same transaction it moves every `PENDING` invitation of that target bound to an
 older epoch to `INVALIDATED` with a database-clock `terminal_at` (CW2-03 section 5).
 Nothing is deleted, `ACCEPTED` / `DECLINED` / `CANCELLED` / `EXPIRED` rows are never
@@ -620,8 +627,14 @@ pre-rotation epoch and the rotation then invalidated it, or the rotation committ
 first and the retired reference resolved to nothing. No advisory lock and no
 process-local mutex is used. Idempotency is durable, never process-local: an equivalent
 retry returns the committed result, and a reused command id with different semantics
-fails closed with `23505`. One invitation identity is owned by one command forever and
-is never re-bound to another target.
+fails closed with `23505`. It is checked at every point an equivalent retry can arrive -
+before the lock, under the lock, and, for a **first** setup, inside the uniqueness
+conflict handler, because a first setup has no credential row to lock and two concurrent
+executions of the same command both legitimately observe absence; there the conflict
+itself is the serialization point, so both callers receive the same committed epoch-1
+result while a *different* losing first setup still gets bounded stale state. One
+invitation identity is owned by one command forever and is never re-bound to another
+target.
 
 Deliberately absent: no accept / decline / cancel / expire command (`INVALIDATED` is the
 only terminal transition this slice performs), no expiry duration, TTL, cron,

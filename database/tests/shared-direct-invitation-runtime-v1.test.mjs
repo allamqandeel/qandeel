@@ -23,11 +23,17 @@
 // all of it (task I-04A section 33). So every assertion below is scoped to one
 // of exactly two things:
 //
-//   (a) migration 0081 itself, the verifier it added, and the four registration
-//       lines it added (package.json, API CI, and the two pre-existing migration
-//       manifests it was required to append to);
+//   (a) migration 0081 itself, the verifier it added, and the two registration
+//       lines it added (package.json and API CI);
 //   (b) the frozen predecessor migrations it was required not to modify, pinned
 //       by content hash - which proves immutability without banning additions.
+//
+// The two pre-existing historical database contracts are deliberately NOT
+// appended to. They used to enumerate every migration after the one each owns,
+// so a new migration failed them merely by existing; I-04A retired those
+// censuses instead of extending them, and the R3 probe at the end of this file
+// proves both halves of that - a hypothetical 0082 and 0083 leave them passing,
+// while a real edit to, or removal of, the migration each one owns still fails.
 //
 // There is no assertion of the form "no migration after 0081 may exist", "no
 // function named accept... may ever exist", "this directory contains exactly N
@@ -116,6 +122,23 @@ const ROTATE_FN = 'rotate_shared_world_invite_credential_v1';
 const SUBMIT_FN = 'submit_shared_world_direct_invitation_v1';
 const OWN_FUNCTIONS = [ROTATE_FN, SUBMIT_FN];
 const OWN_SCRIPT = 'verify:shared-direct-invitation-runtime:integration';
+
+/**
+ * The two pre-existing historical database contracts that used to enumerate
+ * every migration after 0071 / 0072, mapped to the migration each one OWNS.
+ *
+ * I-04A retired those censuses rather than appending 0081 to them, so a future
+ * 0082 can exist without editing a historical file - and the R3 probe at the end
+ * of this file proves both halves of that: a hypothetical later migration leaves
+ * them passing, and a real edit to the migration each one owns still fails.
+ */
+const HISTORICAL_OWNERSHIP = {
+  'historical-projection-v1.test.mjs': 'database/migrations/0072_historical_coverage_projection_disclosure_v1.sql',
+  'effective-live-focus-final-semantic-chain-cutover-v1.test.mjs': 'database/migrations/0071_effective_live_focus_final_semantic_chain_cutover_v1.sql',
+};
+const HISTORICAL_CONTRACTS = Object.keys(HISTORICAL_OWNERSHIP);
+/** A predecessor both of them pin by content hash. */
+const HISTORICAL_PINNED = 'database/migrations/0070_thread_lifecycle_cross_session_continuity_v1.sql';
 
 /** Exactly the frozen CW2-03 section 3 conceptual invitation states. */
 const INVITATION_STATUSES = ['PENDING', 'ACCEPTED', 'DECLINED', 'CANCELLED', 'EXPIRED', 'INVALIDATED'];
@@ -365,14 +388,19 @@ test('submission resolves the target only from the exact current lookup referenc
 });
 
 test('idempotency is durable and semantic, and a reused command id fails closed', () => {
+  // Two passes: one before any lock so a retry stays answerable after state
+  // moved on, one under the lock so concurrent identical retries serialize.
+  // Rotation needs a THIRD, inside its uniqueness-conflict handler: a FIRST
+  // setup has no credential row, so `FOR UPDATE` locks nothing and two
+  // concurrent executions of the same command both legitimately observe
+  // absence. There the conflict itself is the serialization point.
+  const IDEMPOTENCY_PASSES = { [ROTATE_FN]: 3, [SUBMIT_FN]: 2 };
   for (const name of OWN_FUNCTIONS) {
     const body = functionBody(name);
-    // Two passes: one before any lock so a retry stays answerable after state
-    // moved on, one under the lock so concurrent identical retries serialize.
-    assert.equal((body.match(/SELECT \* INTO committed FROM public\.shared_world_invitation_commands c WHERE c\.id = p_command_id;/gu) ?? []).length, 2,
-      `${name} checks durable idempotency before and under the lock`);
-    assert.equal((body.match(/RAISE EXCEPTION 'SHARED_INVITE_COMMAND_ID_CONFLICT' USING ERRCODE='23505'/gu) ?? []).length, 2,
-      `${name} fails closed on a reused command id with different semantics`);
+    assert.equal((body.match(/SELECT \* INTO committed FROM public\.shared_world_invitation_commands c WHERE c\.id = p_command_id;/gu) ?? []).length,
+      IDEMPOTENCY_PASSES[name], `${name} checks durable idempotency at every point where an equivalent retry can arrive`);
+    assert.equal((body.match(/RAISE EXCEPTION 'SHARED_INVITE_COMMAND_ID_CONFLICT' USING ERRCODE='23505'/gu) ?? []).length,
+      IDEMPOTENCY_PASSES[name], `${name} fails closed on a reused command id with different semantics at every one of them`);
     assert.match(body, /committed\.actor_user_id = u/u, `${name} binds equivalence to the same actor`);
     // Nothing process-local.
     assert.doesNotMatch(executableFunction(name), /pg_advisory|pg_try_advisory|SET LOCAL lock_timeout|temp table/iu,
@@ -382,6 +410,57 @@ test('idempotency is durable and semantic, and a reused command id fails closed'
     'a rotation retry is equivalent only for the same reference and the same resulting epoch');
   assert.match(functionBody(SUBMIT_FN), /committed\.invitation_id = p_invitation_id\s*\n\s*AND committed\.credential_lookup_ref = p_credential_lookup_ref/u,
     'a submission retry is equivalent only for the same invitation identity and the same submitted reference');
+  // The third pass lives INSIDE the uniqueness-conflict handler, ahead of both
+  // bounded conflict answers, so a concurrent identical FIRST setup returns the
+  // committed epoch instead of a stale-state error - while a DIFFERENT command
+  // that lost the same race still gets bounded stale state, and the same command
+  // id carrying different semantics still fails closed.
+  const rotate = functionBody(ROTATE_FN);
+  const handler = rotate.slice(rotate.indexOf('EXCEPTION WHEN unique_violation'));
+  assert.ok(handler.length > 0, 'rotation handles the uniqueness conflict itself');
+  const thirdPass = handler.indexOf('SELECT * INTO committed FROM public.shared_world_invitation_commands c WHERE c.id = p_command_id;');
+  assert.ok(thirdPass > 0, 'the conflict handler consults durable command history');
+  assert.ok(thirdPass < handler.indexOf("RAISE EXCEPTION 'SHARED_INVITE_CREDENTIAL_REF_UNAVAILABLE'")
+    && thirdPass < handler.indexOf("RAISE EXCEPTION 'SHARED_INVITE_CREDENTIAL_STALE_STATE'"),
+    'an equivalent retry is answered from durable history BEFORE either bounded conflict answer');
+  assert.match(handler, /RETURN QUERY SELECT committed\.id, committed\.resulting_credential_epoch;/u,
+    'and it returns the committed result, not a second current state');
+  assert.match(handler, /RAISE EXCEPTION 'SHARED_INVITE_CREDENTIAL_STALE_STATE' USING ERRCODE='40001';/u,
+    'a DIFFERENT first-setup command that lost the race keeps bounded stale state');
+  assert.match(migration, /a concurrent identical first setup must be answered from durable command history, never as stale state/u,
+    'and the migration refuses to deploy without it');
+});
+
+test('a rotation must actually rotate: a no-op credential value is refused before any mutation', () => {
+  const body = functionBody(ROTATE_FN);
+  const code = executableFunction(ROTATE_FN);
+  // The current reference is read under the SAME row lock that the epoch is read
+  // under, so the comparison cannot race the state it is comparing against.
+  assert.match(body, /SELECT s\.epoch, s\.credential_lookup_ref INTO current_epoch, current_ref\s*\n\s*FROM public\.shared_world_invite_credential_state s\s*\n\s*WHERE s\.user_id = u\s*\n\s*FOR UPDATE;/u,
+    'the current reference is read under the credential-state row lock');
+  assert.match(code, /IF has_state AND current_ref = p_new_credential_lookup_ref THEN\s*\n\s*RAISE EXCEPTION 'SHARED_INVITE_CREDENTIAL_UNCHANGED' USING ERRCODE='22023';/u,
+    'presenting the reference that is already current is not a rotation');
+  // Before EVERY mutation: no epoch advance, no updated_at, no invalidation
+  // sweep and no command-history row can have happened when it fires.
+  const refusal = code.indexOf("RAISE EXCEPTION 'SHARED_INVITE_CREDENTIAL_UNCHANGED'");
+  for (const [what, mutation] of [
+    ['the credential state update', 'UPDATE public.shared_world_invite_credential_state s'],
+    ['the first-setup insert', 'INSERT INTO public.shared_world_invite_credential_state'],
+    ['the old-epoch invalidation sweep', 'UPDATE public.shared_world_direct_invitations i'],
+    ['the command-history row', 'INSERT INTO public.shared_world_invitation_commands'],
+  ]) {
+    assert.ok(code.indexOf(mutation) > refusal, `the refusal precedes ${what}`);
+  }
+  // It is the caller's OWN locked row that is compared, so nothing about any
+  // other human is disclosed, and the class stays bounded and non-retryable -
+  // never 40001, which would tell a client to re-read and try again.
+  assert.equal((code.match(/\bcurrent_ref\b/gu) ?? []).length, 3,
+    'the current reference is declared, read once under the lock and compared once - it never leaves the transaction');
+  assert.doesNotMatch(code, /RETURN QUERY SELECT[^;]*current_ref/u, 'and it is never returned to the caller');
+  assert.doesNotMatch(code, /SHARED_INVITE_CREDENTIAL_UNCHANGED' USING ERRCODE='40001'/u,
+    'the refusal is a bounded invalid-command class, never a 40001 that would tell a client to retry the same no-op');
+  assert.match(migration, /rotation must refuse a no-op credential value: re-presenting the current reference is not a rotation/u);
+  assert.match(migration, /the no-op credential refusal must precede every mutation/u);
 });
 
 test('the canonical lock order is credential-state first, invitation rows second', () => {
@@ -432,9 +511,16 @@ test('the verifier is wired into the toolchain, API CI after fresh migrations an
   assert.match(readme, /\*\*The human-facing credential format is not frozen and is not invented here\.\*\*/u);
   assert.match(readme, /\*\*Inviter-side behaviour is\s+non-enumerating\*\*/u);
   assert.match(readme, /\*\*no target parameter\*\*/u);
-  // The two pre-existing migration manifests were appended to, not reshaped.
-  for (const manifest of ['historical-projection-v1.test.mjs', 'effective-live-focus-final-semantic-chain-cutover-v1.test.mjs']) {
-    assert.match(read(`./${manifest}`), /'0081_shared_direct_invitation_runtime_v1\.sql',/u, `${manifest} lists the new migration`);
+  // The two pre-existing historical contracts are NOT appended to. They used to
+  // enumerate every migration after 0071 / 0072, which made each new migration
+  // fail merely by existing until somebody edited a historical file; that
+  // ceiling is retired rather than extended, so 0081 appears in neither of them.
+  for (const manifest of HISTORICAL_CONTRACTS) {
+    const text = read(`./${manifest}`);
+    assert.doesNotMatch(text, /migrations\.slice\(-\d+\)/u, `${manifest} runs no migration tail census`);
+    assert.doesNotMatch(text, /migrations\.filter\(\(name\) => name > '\d{4}_/u, `${manifest} enumerates no exhaustive successor list`);
+    assert.doesNotMatch(text, new RegExp(MIGRATION_NAME.replace(/\./gu, '\\.'), 'u'),
+      `${manifest} does not have to name this slice's migration, and must not have to name the next one either`);
   }
   // The verifier is a real-PostgreSQL proof, not a re-reading of the migration
   // text: it reads live catalogs, executes both commands under real roles, and
@@ -444,7 +530,12 @@ test('the verifier is wired into the toolchain, API CI after fresh migrations an
   assert.match(verifier, /new Client\(\{ connectionString: databaseUrl \}\)/u);
   assert.doesNotMatch(verifier, /readFileSync|migrations\//u, 'the verifier proves live behaviour, never the migration text');
   for (const proof of ['SET LOCAL ROLE', 'has_function_privilege', 'has_table_privilege', 'pg_policy', 'information_schema.columns',
-    'BLOCKED', 'SHARED_INVITE_TARGET_NOT_USABLE', 'SHARED_INVITE_CREDENTIAL_STALE_STATE', 'no fixture row remains after completion']) {
+    'BLOCKED', 'SHARED_INVITE_TARGET_NOT_USABLE', 'SHARED_INVITE_CREDENTIAL_STALE_STATE', 'no fixture row remains after completion',
+    // The two targeted corrections are proven against real PostgreSQL, not here.
+    'SHARED_INVITE_CREDENTIAL_UNCHANGED', 'a no-op rotation does not increment the epoch', 'a no-op rotation does not move updated_at',
+    'a no-op rotation invalidates no PENDING invitation', 'a no-op rotation writes no command-history row',
+    'two IDENTICAL first credential setups are idempotent', 'both callers receive the SAME committed epoch-1 result',
+    'SHARED_INVITE_COMMAND_ID_CONFLICT']) {
     assert.ok(verifier.includes(proof), `the verifier proves ${proof}`);
   }
   // It counts the 0075 substrate before and after, so "no World is ever created"
@@ -486,6 +577,18 @@ test('the contract is not vacuous: every deliberate weakening of migration 0081 
     ['an expiry policy is invented', (text) => text.replace('    terminal_at timestamptz,', '    terminal_at timestamptz,\n    expires_at timestamptz,')],
     ['the credential becomes the user id', (text) => text.replace('        CHECK (credential_lookup_ref <> user_id::text)', '        CHECK (length(credential_lookup_ref) > 0)')],
     ['the command history learns the target', (text) => text.replace('    invitation_id uuid,', '    invitation_id uuid,\n    target_user_id uuid,')],
+    ['rotation accepts a no-op credential value', (text) => text.replace(
+      "  IF has_state AND current_ref = p_new_credential_lookup_ref THEN\n    RAISE EXCEPTION 'SHARED_INVITE_CREDENTIAL_UNCHANGED' USING ERRCODE='22023';\n  END IF;",
+      '  NULL;')],
+    ['the no-op refusal moves after the epoch has already advanced', (text) => text.replace(
+      "  IF has_state AND current_ref = p_new_credential_lookup_ref THEN\n    RAISE EXCEPTION 'SHARED_INVITE_CREDENTIAL_UNCHANGED' USING ERRCODE='22023';\n  END IF;\n",
+      '').replace(
+      "  INSERT INTO public.shared_world_invitation_commands\n    (id, actor_user_id, command_type, credential_lookup_ref, resulting_credential_epoch)",
+      "  IF has_state AND current_ref = p_new_credential_lookup_ref THEN\n    RAISE EXCEPTION 'SHARED_INVITE_CREDENTIAL_UNCHANGED' USING ERRCODE='22023';\n  END IF;\n"
+      + '  INSERT INTO public.shared_world_invitation_commands\n    (id, actor_user_id, command_type, credential_lookup_ref, resulting_credential_epoch)')],
+    ['a concurrent identical first setup is reported as stale state', (text) => text.replace(
+      "    SELECT * INTO committed FROM public.shared_world_invitation_commands c WHERE c.id = p_command_id;\n    IF FOUND THEN\n      IF committed.command_type = 'CREDENTIAL_ROTATION' AND committed.actor_user_id = u\n         AND committed.credential_lookup_ref = p_new_credential_lookup_ref\n         AND committed.resulting_credential_epoch = new_epoch THEN\n        RETURN QUERY SELECT committed.id, committed.resulting_credential_epoch;\n        RETURN;\n      END IF;\n      -- The same command id carrying different semantics is still a conflict.\n      RAISE EXCEPTION 'SHARED_INVITE_COMMAND_ID_CONFLICT' USING ERRCODE='23505';\n    END IF;\n",
+      '')],
   ];
   // One mirror, reused: the weakenings differ only in the migration text, and
   // re-copying the tree twelve times would cost seconds for nothing.
@@ -518,9 +621,11 @@ test('the contract is not vacuous: every deliberate weakening of migration 0081 
 // still refuse are planted, so the forward safety is not bought by asserting nothing.
 // ---------------------------------------------------------------------------------------------
 
-/** Only the paths this contract actually reads. */
-const MIRRORED = ['database/migrations', 'database/tests', 'database/verify-migration-0081.mjs', 'database/README.md',
-  '.github/workflows/api-ci.yml', 'package.json'];
+/**
+ * Only the paths this contract - and the two historical database contracts the
+ * R3 probe below runs in the same mirror - actually read.
+ */
+const MIRRORED = ['database', '.github/workflows/api-ci.yml', 'package.json'];
 const SKIP = /(?:^|[\\/])(?:node_modules|\.git|\.expo|\.turbo|coverage)(?:[\\/]|$)/u;
 
 function buildMirror() {
@@ -542,10 +647,10 @@ function buildMirror() {
  * a reporting child of this runner: it switches to the parent's serialization protocol and exits 0
  * whatever its tests did, which would make every refusal above and below read as an acceptance.
  */
-function runInMirror(mirror) {
+function runInMirror(mirror, file = SELF) {
   const env = { ...process.env, [PROBE_CHILD]: '1' };
   delete env.NODE_TEST_CONTEXT;
-  const result = spawnSync(process.execPath, ['--test', join(mirror, 'database', 'tests', SELF)], { cwd: mirror, encoding: 'utf8', env });
+  const result = spawnSync(process.execPath, ['--test', join(mirror, 'database', 'tests', file)], { cwd: mirror, encoding: 'utf8', env });
   assert.equal(result.error, undefined, `the mirrored contract could not be started: ${result.error?.message}`);
   assert.notEqual(result.status, null, 'the mirrored contract did not exit normally');
   return { ok: result.status === 0, output: `${result.stdout ?? ''}${result.stderr ?? ''}` };
@@ -681,4 +786,78 @@ test('I-04B and every later authorized invitation slice leave this contract pass
   // And the mirror is back to where it started, so the refusals above were real.
   assert.ok(runInMirror(mirror).ok, 'every mutation was reverted');
   rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R3: the two pre-existing historical database contracts no longer carry a migration ceiling.
+//
+// Both used to enumerate every migration after the one they own - a `slice(-N)` tail in one, an
+// exhaustive successor list in the other - so every new migration failed a historical contract
+// merely by existing until somebody edited it. I-04A retired those censuses instead of appending
+// 0081 to them. Retiring a ceiling is only worth anything if both halves are shown: a hypothetical
+// later migration must leave them passing, AND a real edit to the migration each one owns, or to a
+// predecessor it pins by content hash, must still fail. Asserting the first alone would be
+// satisfied by a contract that checks nothing.
+// ---------------------------------------------------------------------------------------------
+
+const LATER_MIGRATIONS = ['database/migrations/0082_shared_direct_invitation_acceptance_v1.sql',
+  'database/migrations/0083_some_later_authorized_slice_v1.sql'];
+
+test('R3: a future migration may exist without editing either historical contract, and a real edit to the migration each one owns still fails',
+  { skip: process.env[PROBE_CHILD] === '1' ? 'inner probe run' : false }, () => {
+  // No database contract carries a migration census any more - not just the two this slice had to
+  // touch. A census is recognisable by shape: a `slice(-N)` tail of the sorted migration list, or
+  // an exhaustive comparison of everything after some migration. (A CONTENT sweep over later
+  // migrations is a different thing and stays: it does not break by existence.)
+  for (const file of readdirSync(new URL('./', import.meta.url)).filter((name) => name.endsWith('.test.mjs') && name !== SELF)) {
+    const text = read(`./${file}`);
+    assert.doesNotMatch(text, /migrations\.slice\(-\d+\)/u, `${file} runs no migration tail census`);
+    assert.doesNotMatch(text, /migrations\.filter\(\(name\) => name > '\d{4}_/u, `${file} enumerates no exhaustive successor list`);
+  }
+
+  const mirror = buildMirror();
+  try {
+    // The baseline: both historical contracts pass on the untouched mirror. Every claim below is
+    // worthless without it.
+    for (const manifest of HISTORICAL_CONTRACTS) {
+      const baseline = runInMirror(mirror, manifest);
+      assert.ok(baseline.ok, `${manifest} must pass on the untouched mirror\n\n${baseline.output}`);
+    }
+
+    // ---- the ceiling is gone: later migrations are not their business ------------------------
+    LATER_MIGRATIONS.forEach((later, index) => {
+      write(mirror, later, `-- Hypothetical later authorized slice.\nBEGIN;\nCREATE TABLE public.later_authorized_probe_${index} (id uuid PRIMARY KEY);\nCOMMIT;\n`);
+    });
+    for (const manifest of HISTORICAL_CONTRACTS) {
+      const grown = runInMirror(mirror, manifest);
+      assert.ok(grown.ok,
+        `I-04B's 0082 and a later 0083 are authorized work; ${manifest} owns ${HISTORICAL_OWNERSHIP[manifest]} and must not `
+        + `have to be edited for either of them to exist\n\n${grown.output}`);
+    }
+    for (const later of LATER_MIGRATIONS) rmSync(join(mirror, later), { force: true });
+
+    // ---- the other half: what each contract must still refuse --------------------------------
+    for (const manifest of HISTORICAL_CONTRACTS) {
+      const owned = HISTORICAL_OWNERSHIP[manifest];
+      // An edit to the migration it owns.
+      patch(mirror, owned, (text) => `${text}\n-- probe\n`, '-- probe');
+      assert.equal(runInMirror(mirror, manifest).ok, false, `${manifest} must still refuse an edit to ${owned}`);
+      restore(mirror, owned);
+      // The migration it owns removed outright.
+      rmSync(join(mirror, owned), { force: true });
+      assert.equal(runInMirror(mirror, manifest).ok, false, `${manifest} must still refuse ${owned} being removed`);
+      restore(mirror, owned);
+      // And an edit to a frozen predecessor it pins by content hash.
+      patch(mirror, HISTORICAL_PINNED, (text) => `${text}\n-- probe\n`, '-- probe');
+      assert.equal(runInMirror(mirror, manifest).ok, false, `${manifest} must still refuse an edit to ${HISTORICAL_PINNED}`);
+      restore(mirror, HISTORICAL_PINNED);
+    }
+
+    // And the mirror is back to where it started, so the refusals above were real.
+    for (const manifest of HISTORICAL_CONTRACTS) {
+      assert.ok(runInMirror(mirror, manifest).ok, `every mutation of ${manifest}'s inputs was reverted`);
+    }
+  } finally {
+    rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+  }
 });

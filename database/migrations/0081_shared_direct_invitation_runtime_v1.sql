@@ -34,7 +34,11 @@
 --   * public.shared_world_invitation_commands - the narrow durable command
 --     history that makes both consequential operations idempotent (CW2-03
 --     section 47). The row id IS the caller-supplied command id, so the primary
---     key is the idempotency record. It stores the opaque lookup reference the
+--     key is the idempotency record, and it is consulted before the lock, under
+--     the lock, and - for a FIRST setup, where there is no row to lock and a
+--     uniqueness conflict is the only serialization point - inside the conflict
+--     handler, so an equivalent retry always returns the committed result. It
+--     stores the opaque lookup reference the
 --     command acted on or with - already the internal derived representation -
 --     and deliberately NO target user id: knowing the target is the invitation
 --     row's business, and the command history must never become a second way for
@@ -76,7 +80,11 @@
 --
 -- Credential epoch law (CW2-03 section 5): an invitation binds the target's
 -- EXACT current epoch as read under the credential-state row lock at commit -
--- never an epoch supplied by the client. Rotation increments the epoch and, in
+-- never an epoch supplied by the client. A rotation must actually CHANGE the
+-- lookup reference: re-presenting the reference that is already current is
+-- refused before any mutation, because advancing the epoch and invalidating
+-- every PENDING invitation while the supposedly retired secret stays usable is
+-- not a rotation. Rotation increments the epoch and, in
 -- the same transaction, moves every PENDING invitation of that target bound to
 -- an older epoch to INVALIDATED with a database-clock terminal_at. Rows are
 -- never deleted, ACCEPTED / DECLINED / CANCELLED / EXPIRED rows are never
@@ -245,6 +253,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE
   u uuid := auth.uid();
   current_epoch bigint;
+  current_ref text;
   has_state boolean;
   new_epoch bigint;
   committed public.shared_world_invitation_commands;
@@ -283,7 +292,7 @@ BEGIN
   -- CANONICAL LOCK ORDER, STEP 1: the caller's own credential-state row. Every
   -- rotation and every submission that resolves to this human queues here
   -- before any invitation row is read or written.
-  SELECT s.epoch INTO current_epoch
+  SELECT s.epoch, s.credential_lookup_ref INTO current_epoch, current_ref
     FROM public.shared_world_invite_credential_state s
    WHERE s.user_id = u
    FOR UPDATE;
@@ -313,6 +322,21 @@ BEGIN
     END IF;
   END IF;
 
+  -- A ROTATION MUST ACTUALLY ROTATE (CW2-03 section 5: lock the current state,
+  -- CHANGE the lookup reference, increment the epoch, invalidate the old-epoch
+  -- PENDING invitations). Re-presenting the reference that is already current
+  -- is not a rotation: PostgreSQL would accept the UPDATE, the epoch would
+  -- advance and every PENDING invitation would be invalidated while the secret
+  -- the human believes they retired stayed immediately usable. It is refused
+  -- BEFORE any mutation, so a no-op value writes nothing at all - no epoch, no
+  -- updated_at, no invalidation and no command-history row. The comparison is
+  -- against the caller's OWN locked row only, so it discloses no other human's
+  -- state and adds no channel that the bounded collision answer below does not
+  -- already have.
+  IF has_state AND current_ref = p_new_credential_lookup_ref THEN
+    RAISE EXCEPTION 'SHARED_INVITE_CREDENTIAL_UNCHANGED' USING ERRCODE='22023';
+  END IF;
+
   -- The new reference must be free. The answer is bounded: it never says that
   -- another human holds it, so rotation is not an enumeration oracle either.
   BEGIN
@@ -329,11 +353,33 @@ BEGIN
     END IF;
   EXCEPTION WHEN unique_violation THEN
     GET STACKED DIAGNOSTICS conflict_constraint = CONSTRAINT_NAME;
+    -- Durable idempotency, THIRD pass. FIRST setup is the one case the two
+    -- passes above structurally cannot cover: there is no credential row yet,
+    -- so `FOR UPDATE` locks nothing, and two concurrent executions of the SAME
+    -- semantic command both legitimately observe absence and both proceed. The
+    -- uniqueness conflict IS their serialization point: it resolves only when
+    -- the winner commits, and the winner commits its credential state and its
+    -- command-history row in one transaction. So the equivalent retry is
+    -- answered from durable history here exactly as it would have been under
+    -- the lock - an equivalent retry of a committed command returns that
+    -- command's committed result, never a stale-state error.
+    SELECT * INTO committed FROM public.shared_world_invitation_commands c WHERE c.id = p_command_id;
+    IF FOUND THEN
+      IF committed.command_type = 'CREDENTIAL_ROTATION' AND committed.actor_user_id = u
+         AND committed.credential_lookup_ref = p_new_credential_lookup_ref
+         AND committed.resulting_credential_epoch = new_epoch THEN
+        RETURN QUERY SELECT committed.id, committed.resulting_credential_epoch;
+        RETURN;
+      END IF;
+      -- The same command id carrying different semantics is still a conflict.
+      RAISE EXCEPTION 'SHARED_INVITE_COMMAND_ID_CONFLICT' USING ERRCODE='23505';
+    END IF;
     IF conflict_constraint = 'shared_world_invite_credential_ref_key' THEN
       RAISE EXCEPTION 'SHARED_INVITE_CREDENTIAL_REF_UNAVAILABLE' USING ERRCODE='23505';
     END IF;
-    -- The primary key: another connection established this human's first
-    -- credential state while this one believed there was none.
+    -- The primary key, reached by a DIFFERENT command: another connection
+    -- established this human's first credential state while this one believed
+    -- there was none, so this command's view of the state is simply stale.
     RAISE EXCEPTION 'SHARED_INVITE_CREDENTIAL_STALE_STATE' USING ERRCODE='40001';
   END;
 
@@ -477,6 +523,7 @@ DECLARE
   rls_enabled boolean;
   lock_pos integer;
   invitation_pos integer;
+  handler_pos integer;
 BEGIN
   FOREACH fn IN ARRAY commands LOOP
     -- pg_get_function_ARGUMENTS, not _identity_arguments: the identity form
@@ -541,6 +588,28 @@ BEGIN
   IF p.prosrc !~ 'WHERE s\.user_id = u\s+FOR UPDATE' THEN
     RAISE EXCEPTION 'I-04A: rotation must take a row lock on the actor''s own credential state';
   END IF;
+
+  -- A rotation must actually change the credential, and the refusal must come
+  -- before every mutation, so a no-op value can never advance an epoch or
+  -- invalidate a PENDING invitation.
+  IF p.prosrc !~ 'SHARED_INVITE_CREDENTIAL_UNCHANGED' THEN
+    RAISE EXCEPTION 'I-04A: rotation must refuse a no-op credential value: re-presenting the current reference is not a rotation';
+  END IF;
+  lock_pos := strpos(p.prosrc, 'SHARED_INVITE_CREDENTIAL_UNCHANGED');
+  invitation_pos := strpos(p.prosrc, 'UPDATE public.shared_world_invite_credential_state s');
+  IF invitation_pos = 0 OR lock_pos > invitation_pos THEN
+    RAISE EXCEPTION 'I-04A: the no-op credential refusal must precede every mutation';
+  END IF;
+
+  -- A concurrent IDENTICAL first setup has no row to lock, so the uniqueness
+  -- conflict is its serialization point: the conflict handler must consult
+  -- durable command history rather than report stale state.
+  handler_pos := strpos(p.prosrc, 'EXCEPTION WHEN unique_violation');
+  IF handler_pos = 0 OR strpos(substr(p.prosrc, handler_pos),
+       'SELECT * INTO committed FROM public.shared_world_invitation_commands c WHERE c.id = p_command_id') = 0 THEN
+    RAISE EXCEPTION 'I-04A: a concurrent identical first setup must be answered from durable command history, never as stale state';
+  END IF;
+
   SELECT pr.prosrc INTO p FROM pg_proc pr WHERE pr.oid = commands[2]::regprocedure;
   lock_pos := strpos(p.prosrc, 'FROM public.shared_world_invite_credential_state s');
   invitation_pos := strpos(p.prosrc, 'INSERT INTO public.shared_world_direct_invitations');
