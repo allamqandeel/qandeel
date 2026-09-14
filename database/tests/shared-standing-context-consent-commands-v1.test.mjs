@@ -425,6 +425,45 @@ test('the 0078 verifier proves schema, both ACLs, every command behaviour, the r
   assert.doesNotMatch(verifier, /\bGRANT\b|CREATE POLICY|DISABLE ROW LEVEL SECURITY|session_replication_role/u, 'the verifier never widens an ACL or bypasses a rule to make a proof easy');
 });
 
+test('forward safety: the 0078 verifier asserts triggerlessness only over the three Standing Context tables and proves a later unrelated trigger elsewhere is not a 0078 failure', () => {
+  // The live zero-trigger / zero-policy proof is exactly the frozen seal of the
+  // consent-event, grant and audience tables - never a permanent global ceiling
+  // over shared_worlds or the membership-episode table, which a later,
+  // separately reviewed lifecycle / governance migration may legitimately touch.
+  assert.match(verifier, /const SEALED_TABLES = \[EVENTS, GRANTS, AUDIENCE\];/u);
+  assert.match(verifier, /async function verifyStandingContextSeal\(\) \{\s+for \(const table of SEALED_TABLES\) \{\s+const \[\{ n: triggers \}\] = await rows\('SELECT count\(\*\)::int n FROM pg_trigger WHERE tgrelid=\$1::regclass AND NOT tgisinternal', \[table\]\);\s+assert\.equal\(triggers, 0, `\$\{table\} has no trigger`\);/u);
+  const triggerLoops = [...verifier.matchAll(/for \(const table of ([^)]+)\) \{\s+const \[\{ n: triggers \}\] = await rows\('SELECT count\(\*\)::int n FROM pg_trigger/gu)].map((m) => m[1]);
+  assert.deepEqual(triggerLoops, ['SEALED_TABLES'], 'the only live zero-trigger loop runs over the sealed Standing Context tables');
+  assert.equal((verifier.match(/assert\.equal\(triggers, 0/gu) ?? []).length, 1, 'exactly one zero-trigger assertion, inside the seal proof');
+  assert.doesNotMatch(verifier, /\[\.\.\.SEALED_TABLES, EPISODES, WORLDS\]|\[\.\.\.SEALED_TABLES, WORLDS, EPISODES\]|assert\.equal\(triggers, 0, `\$\{(?:WORLDS|EPISODES)\}/u, 'no permanent zero-trigger requirement over shared_worlds or membership episodes');
+  // The non-vacuity probe: a hypothetical later trigger on both tables is created inside the rolled-back
+  // transaction, the seal proof and both commands still pass beside it, and a trigger on a Standing
+  // Context table itself is still refused.
+  for (const proof of [
+    'async function verifyForwardSafety(f)',
+    'CREATE TRIGGER ${probe}_worlds AFTER UPDATE ON ${WORLDS}',
+    'CREATE TRIGGER ${probe}_episodes AFTER INSERT OR UPDATE ON ${EPISODES}',
+    'now carries the hypothetical later trigger',
+    'the historical 0078 verifier does not fail merely because a later trigger exists elsewhere',
+    'a grant still commits beside the unrelated trigger',
+    'a revoke still commits beside the unrelated trigger',
+    'CREATE TRIGGER ${probe}_audience AFTER INSERT ON ${AUDIENCE}',
+    'await assert.rejects(verifyStandingContextSeal(), /has no trigger/u',
+    'probe = await verifyForwardSafety(f);',
+    "(SELECT count(*) FROM pg_proc WHERE proname = $4)",
+  ]) {
+    assert.ok(verifier.includes(proof), `0078 verifier forward-safety proof is missing ${proof}`);
+  }
+  assert.ok(verifier.indexOf('await verifyCatalog();') < verifier.indexOf('probe = await verifyForwardSafety(f);'), 'the probe runs after the catalog proofs, inside the rolled-back fixture transaction');
+  assert.ok(verifier.indexOf('probe = await verifyForwardSafety(f);') < verifier.indexOf("await q('ROLLBACK');"), 'the probe is rolled back with the fixtures');
+  // Migration 0078 itself still adds no trigger, membership hook or automatic audience path (static text),
+  // and its deploy-time self-assertion still checks that posture at the moment 0078 is applied.
+  const { executable, selfAssertion } = analyse(migration);
+  assert.doesNotMatch(executable, /CREATE (?:OR REPLACE )?TRIGGER|CREATE EVENT TRIGGER|RETURNS trigger/iu, 'migration 0078 creates no trigger');
+  assert.match(selfAssertion, new RegExp(`t\\.tgrelid = 'public\\.${EPISODES}'::regclass AND NOT t\\.tgisinternal\\) THEN\\s+RAISE EXCEPTION 'I-03C: no trigger may couple membership to a grant ceiling'`, 'u'));
+  assert.match(selfAssertion, /IF EXISTS \(SELECT 1 FROM pg_trigger t WHERE t\.tgrelid = target_table::regclass AND NOT t\.tgisinternal\) THEN\s+RAISE EXCEPTION 'I-03C: no trigger may exist on %'/u);
+});
+
 test('the verifier is wired into the toolchain, API CI after fresh migrations and the 0075 / 0076 / 0077 verifiers, and the database README', () => {
   assert.match(packageJson, /"verify:shared-standing-context-consent-commands:integration": "node --env-file-if-exists=\.env database\/verify-migration-0078\.mjs"/u);
   assert.equal((workflow.match(/verify:shared-standing-context-consent-commands:integration/gu) ?? []).length, 1, 'registered exactly once in API CI');

@@ -8,9 +8,16 @@
 //     with exactly the expected columns / types / nullability / defaults, the
 //     exact checks (event vocabulary, event-type / prior-grant consistency),
 //     restrictive foreign keys to shared_worlds, users and the I-02B grant
-//     table, the exact index set, RLS on, zero policies, no trigger (on the
-//     event table, the two grant tables and the membership-episode table),
-//     and no generic grant / consent / permission table;
+//     table, the exact index set, RLS on, zero policies, no trigger on the
+//     three Standing Context tables (consent events, grants, audience), and
+//     no generic grant / consent / permission table. Whether shared_worlds or
+//     the membership-episode table carries a trigger is deliberately NOT a
+//     0078 property: a later, separately reviewed lifecycle / governance
+//     migration may add one without widening any ceiling, and this historical
+//     verifier must not become a permanent global ceiling. (The static
+//     contract and the migration's own deploy-time self-assertion prove that
+//     migration 0078 itself added no trigger, membership hook or automatic
+//     audience-mutation path.)
 //   * direct ACL: PUBLIC, anon, authenticated and service_role hold no SELECT /
 //     INSERT / UPDATE / DELETE on the consent events (catalog AND actual 42501
 //     under SET LOCAL ROLE), and the two I-02B grant tables remain directly
@@ -39,12 +46,18 @@
 //     revocation; a command-id reuse for a different command is 23505 with no
 //     mutation; consent history remains while the I-03B resolver returns the
 //     ACTIVE grant after grant / reconfirm and zero rows after revoke;
+//   * forward safety, inside the same rolled-back transaction: a hypothetical
+//     later unrelated trigger on shared_worlds and on the membership-episode
+//     table is created, the Standing Context seal proof still passes and both
+//     consent commands still commit, so this verifier does not fail merely
+//     because such a trigger exists; a trigger on a Standing Context table
+//     itself (an automatic ceiling-mutation path) is still refused;
 //   * concurrency, with committed fixtures and two extra connections: two
 //     first-grant commands from the same grantor for the same World with
 //     different command ids block on the World row; exactly one establishes the
 //     ACTIVE state, the other fails stale, never two ACTIVE grants, never an
 //     orphan event;
-//   * zero fixture residue after completion.
+//   * zero fixture residue after completion (the forward-safety probe included).
 //
 // Nothing here weakens an ACL: application roles are used only to prove denial
 // and the ONE authenticated path; service_role is used only to prove that it
@@ -140,6 +153,21 @@ async function snapshot(worldIds) {
   return counts;
 }
 
+// The three Standing Context tables stay trigger-free and policy-free: a
+// trigger on the consent events would be a history-rewrite path, a trigger on
+// the grant or audience rows would be an automatic authority / ceiling mutation
+// path (CW2-02 B13 / B14). That is a frozen invariant of exactly these
+// relations, so it is proven live. It is deliberately not asserted over
+// shared_worlds or the membership-episode table (see the header).
+async function verifyStandingContextSeal() {
+  for (const table of SEALED_TABLES) {
+    const [{ n: triggers }] = await rows('SELECT count(*)::int n FROM pg_trigger WHERE tgrelid=$1::regclass AND NOT tgisinternal', [table]);
+    assert.equal(triggers, 0, `${table} has no trigger`);
+    const [{ n: policies }] = await rows('SELECT count(*)::int n FROM pg_policy WHERE polrelid=$1::regclass', [table]);
+    assert.equal(policies, 0, `${table} carries zero RLS policies`);
+  }
+}
+
 async function verifyCatalog() {
   stage = 'catalog: consent-event table';
   const [{ n: tableCount }] = await rows("SELECT count(*)::int n FROM pg_class c JOIN pg_namespace ns ON ns.oid=c.relnamespace WHERE ns.nspname='public' AND c.relname='shared_world_standing_context_consent_events'");
@@ -224,15 +252,8 @@ async function verifyCatalog() {
   assert.match(predicates.shared_world_standing_context_consent_events_revoke_event_idx, /event_type = 'REVOKED'/u);
   assert.match(predicates.shared_world_standing_context_consent_events_prior_grant_idx, /prior_grant_id IS NOT NULL/u);
 
-  stage = 'catalog: no trigger, zero policies';
-  for (const table of [...SEALED_TABLES, EPISODES, WORLDS]) {
-    const [{ n: triggers }] = await rows('SELECT count(*)::int n FROM pg_trigger WHERE tgrelid=$1::regclass AND NOT tgisinternal', [table]);
-    assert.equal(triggers, 0, `${table} has no trigger`);
-  }
-  for (const table of SEALED_TABLES) {
-    const [{ n: policies }] = await rows('SELECT count(*)::int n FROM pg_policy WHERE polrelid=$1::regclass', [table]);
-    assert.equal(policies, 0, `${table} carries zero RLS policies`);
-  }
+  stage = 'catalog: Standing Context tables carry no trigger and zero policies';
+  await verifyStandingContextSeal();
 
   stage = 'catalog: command functions';
   for (const [name, expectedArgs] of [
@@ -508,6 +529,46 @@ async function verifyBehaviour(f) {
   return [grantA, grantB, grantD, grantE];
 }
 
+// Forward safety / non-vacuity. A later, separately reviewed lifecycle or
+// governance migration may legitimately add a trigger on shared_worlds or on
+// the membership-episode table without widening any Standing Context ceiling.
+// This proves that such a trigger does not make the historical 0078 verifier
+// fail merely by existing - the seal proof still passes and both consent
+// commands still commit beside it - while a trigger on a Standing Context
+// table itself is still refused. Everything is created inside the rolled-back
+// fixture transaction.
+async function verifyForwardSafety(f) {
+  stage = 'forward safety: a later unrelated trigger on shared_worlds / membership episodes is not a 0078 failure';
+  await identity('postgres');
+  const probe = `i03c_forward_safety_probe_${randomUUID().replace(/-/gu, '')}`;
+  await q(`CREATE FUNCTION public.${probe}() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN RETURN NULL; END$$`);
+  await q(`CREATE TRIGGER ${probe}_worlds AFTER UPDATE ON ${WORLDS} FOR EACH ROW EXECUTE FUNCTION public.${probe}()`);
+  await q(`CREATE TRIGGER ${probe}_episodes AFTER INSERT OR UPDATE ON ${EPISODES} FOR EACH ROW EXECUTE FUNCTION public.${probe}()`);
+  for (const table of [WORLDS, EPISODES]) {
+    const [{ n }] = await rows('SELECT count(*)::int n FROM pg_trigger WHERE tgrelid=$1::regclass AND NOT tgisinternal', [table]);
+    assert.ok(n >= 1, `${table} now carries the hypothetical later trigger`);
+  }
+  await verifyStandingContextSeal();
+  const [{ n: sealedTriggers }] = await rows('SELECT count(*)::int n FROM pg_trigger WHERE tgrelid = ANY($1::regclass[]) AND NOT tgisinternal', [SEALED_TABLES]);
+  assert.equal(sealedTriggers, 0, 'the historical 0078 verifier does not fail merely because a later trigger exists elsewhere');
+  // The consent commands are unaffected by the unrelated trigger.
+  await identity('authenticated', f.hadir);
+  const cmdGrant = randomUUID(), grantH = randomUUID(), cmdRevoke = randomUUID();
+  assert.deepEqual(await grant(cmdGrant, grantH, f.world, [f.hadir]),
+    [{ consent_event_id: cmdGrant, event_type: 'GRANTED', grant_id: grantH, prior_grant_id: null, grant_status: 'ACTIVE' }], 'a grant still commits beside the unrelated trigger');
+  assert.deepEqual(await revoke(cmdRevoke, f.world, grantH),
+    [{ consent_event_id: cmdRevoke, event_type: 'REVOKED', grant_id: grantH, prior_grant_id: null, grant_status: 'REVOKED' }], 'a revoke still commits beside the unrelated trigger');
+  await identity('postgres');
+
+  stage = 'forward safety: a trigger on a Standing Context table itself is still refused';
+  await q('SAVEPOINT forward_safety');
+  await q(`CREATE TRIGGER ${probe}_audience AFTER INSERT ON ${AUDIENCE} FOR EACH ROW EXECUTE FUNCTION public.${probe}()`);
+  await assert.rejects(verifyStandingContextSeal(), /has no trigger/u, 'an audience-table trigger (an automatic ceiling-mutation path) is refused by the seal proof');
+  await q('ROLLBACK TO SAVEPOINT forward_safety');
+  await q('RELEASE SAVEPOINT forward_safety');
+  return probe;
+}
+
 async function verifyConcurrency(f) {
   stage = 'concurrency: two first grants race on the World row';
   const clientA = new Client({ connectionString: databaseUrl });
@@ -561,6 +622,7 @@ async function main() {
   // Committed fixtures for the two-connection race, removed afterwards.
   const c = { world: randomUUID(), grantor: randomUUID(), hadir: randomUUID() };
   let grantIds = [];
+  let probe = 'i03c_forward_safety_probe_none';
   try {
     await client.connect();
     await verifyCatalog();
@@ -584,6 +646,7 @@ async function main() {
       // A former member: a closed episode only.
       await q(`INSERT INTO ${EPISODES}(id,world_id,user_id,joined_at,ended_at) VALUES($1,$2,$3,'2026-01-01T00:00:00Z','2026-01-02T00:00:00Z')`, [randomUUID(), f.world, f.former]);
       grantIds = await verifyBehaviour(f);
+      probe = await verifyForwardSafety(f);
       await identity('postgres');
     } finally {
       await q('ROLLBACK');
@@ -617,11 +680,13 @@ async function main() {
             + (SELECT count(*) FROM ${AUDIENCE} WHERE grant_id = ANY($2::uuid[]) OR audience_user_id = ANY($3::uuid[]))
             + (SELECT count(*) FROM ${EVENTS} WHERE world_id = ANY($1::uuid[]) OR grantor_user_id = ANY($3::uuid[]) OR subject_grant_id = ANY($2::uuid[]))
             + (SELECT count(*) FROM public.users WHERE id = ANY($3::uuid[]))
-            + (SELECT count(*) FROM auth.users WHERE id = ANY($3::uuid[])) AS n`,
-      [worlds, grantIds, humans],
+            + (SELECT count(*) FROM auth.users WHERE id = ANY($3::uuid[]))
+            + (SELECT count(*) FROM pg_proc WHERE proname = $4)
+            + (SELECT count(*) FROM pg_trigger WHERE tgname LIKE $4 || '%') AS n`,
+      [worlds, grantIds, humans, probe],
     );
     assert.equal(Number(n), 0, 'no fixture row remains after completion');
-    console.log('Verified migration 0078: shared_world_standing_context_consent_events exists once with the exact append-only columns (GRANTED|RECONFIRMED|REVOKED, event-type/prior-grant consistency, restrictive FKs, RLS on, zero policies, no trigger, no direct privilege for PUBLIC/anon/authenticated/service_role); grant_shared_world_standing_context_v1 and revoke_shared_world_standing_context_v1 are SECURITY DEFINER, search_path-pinned, auth.uid()-derived, authenticated-only commands that anon, service_role and PUBLIC cannot execute; first grant, audience subset, outsider / non-member / closed-World rejection, reconfirm as revoke-old-plus-new-grant with the old ceiling untouched, stale compare-and-swap, revoke (also after leaving and after closure), durable command idempotency and command-id conflicts behave exactly; the I-03B resolver returns the ACTIVE grant after grant / reconfirm and zero rows after revoke while history remains; two racing first grants serialize on the World row with one winner and no orphan; zero fixture residue.');
+    console.log('Verified migration 0078: shared_world_standing_context_consent_events exists once with the exact append-only columns (GRANTED|RECONFIRMED|REVOKED, event-type/prior-grant consistency, restrictive FKs, RLS on, zero policies, no trigger, no direct privilege for PUBLIC/anon/authenticated/service_role); grant_shared_world_standing_context_v1 and revoke_shared_world_standing_context_v1 are SECURITY DEFINER, search_path-pinned, auth.uid()-derived, authenticated-only commands that anon, service_role and PUBLIC cannot execute; first grant, audience subset, outsider / non-member / closed-World rejection, reconfirm as revoke-old-plus-new-grant with the old ceiling untouched, stale compare-and-swap, revoke (also after leaving and after closure), durable command idempotency and command-id conflicts behave exactly; the I-03B resolver returns the ACTIVE grant after grant / reconfirm and zero rows after revoke while history remains; two racing first grants serialize on the World row with one winner and no orphan; a hypothetical later trigger on shared_worlds or the membership-episode table does not fail this verifier while a trigger on a Standing Context table is still refused; zero fixture residue.');
   } finally {
     await client.end();
   }
