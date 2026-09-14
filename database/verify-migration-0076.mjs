@@ -334,9 +334,11 @@ async function verifyGrantConstraints(world, otherWorld, grantor, other) {
   await rejected(() => q(`UPDATE ${GRANTS} SET world_id=$1 WHERE id=$2`, [world, elsewhere]), UNIQUE_VIOLATION);
 
   stage = 'grants: revoke, then a new ACTIVE grant for the same pair';
-  await q(`UPDATE ${GRANTS} SET status='REVOKED', revoked_at='2026-02-01T00:00:00Z' WHERE id=$1`, [first]);
+  // The first grant was granted on the database clock, so its revocation and the
+  // reconfirmation are placed relative to that clock (revoked_at >= granted_at).
+  await q(`UPDATE ${GRANTS} SET status='REVOKED', revoked_at=CURRENT_TIMESTAMP + interval '1 hour' WHERE id=$1`, [first]);
   const second = randomUUID();
-  await q(`INSERT INTO ${GRANTS}(id,world_id,grantor_user_id,status,granted_at) VALUES($1,$2,$3,'ACTIVE','2026-03-01T00:00:00Z')`, [second, world, grantor]);
+  await q(`INSERT INTO ${GRANTS}(id,world_id,grantor_user_id,status,granted_at) VALUES($1,$2,$3,'ACTIVE',CURRENT_TIMESTAMP + interval '2 hours')`, [second, world, grantor]);
   const history = await rows(`SELECT id, status FROM ${GRANTS} WHERE world_id=$1 AND grantor_user_id=$2 ORDER BY granted_at`, [world, grantor]);
   assert.deepEqual(history.map((r) => [r.id, r.status]), [[first, 'REVOKED'], [second, 'ACTIVE']], 'revocation keeps the historical row and the reconfirmation is a new row');
   // With the new grant ACTIVE, neither a third ACTIVE row nor reactivating the revoked one is possible.
