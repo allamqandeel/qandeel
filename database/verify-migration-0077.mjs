@@ -8,8 +8,12 @@
 //     SECURITY DEFINER and STABLE with an empty search_path, takes exactly
 //     (p_world_id uuid, p_grantor_user_id uuid) and returns exactly the five
 //     minimal columns; its source reads only the grant and audience tables
-//     (never membership episodes, Personal context or auth.uid); migration 0077
-//     added no table, trigger or policy;
+//     (never membership episodes, Personal context or auth.uid); the grant,
+//     audience, Shared World and membership tables carry no trigger or policy
+//     and keep RLS on. (Whether a later, separately verified Standing Context
+//     relation exists is not a 0077 property: the static contract proves that
+//     migration 0077 itself created no table or view, and this verifier does
+//     not put a global ceiling on future domain evolution.)
 //   * execute ACL: PUBLIC, anon and authenticated cannot execute it (catalog
 //     privilege AND an actual 42501 under SET LOCAL ROLE); service_role can;
 //   * direct table ACL stays sealed: anon, authenticated and service_role still
@@ -97,7 +101,7 @@ async function verifyCatalog() {
   assert.match(fn.prosrc, /FROM public\.users u WHERE u\.id = p_grantor_user_id/u);
   assert.doesNotMatch(fn.prosrc, /membership_episodes|conversation|memor|auth\.uid|INSERT|UPDATE|DELETE|MERGE|TRUNCATE/iu, 'the resolver reads only the grant and audience tables and writes nothing');
 
-  stage = 'catalog: nothing else added';
+  stage = 'catalog: no trigger or policy on the tables the resolver reads';
   for (const table of [...TABLES, WORLDS, EPISODES]) {
     const [{ n: triggers }] = await rows('SELECT count(*)::int n FROM pg_trigger WHERE tgrelid=$1::regclass AND NOT tgisinternal', [table]);
     assert.equal(triggers, 0, `${table} has no trigger`);
@@ -106,11 +110,6 @@ async function verifyCatalog() {
     const [{ rls }] = await rows('SELECT c.relrowsecurity rls FROM pg_class c WHERE c.oid=$1::regclass', [table]);
     assert.equal(rls, true, `${table} keeps row level security enabled`);
   }
-  // The Standing Context relations are still exactly the two I-02B tables: 0077 added no table or view of its own.
-  const standingContextRelations = await rows(
-    "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','v','m','p','f') AND c.relname ~* 'standing_context' ORDER BY c.relname COLLATE \"C\"",
-  );
-  assert.deepEqual(standingContextRelations.map((r) => r.relname), ['shared_world_standing_context_grant_audience', 'shared_world_standing_context_grants'], 'migration 0077 added no table or view');
 }
 
 async function verifyExecuteAcl() {
