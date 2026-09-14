@@ -553,3 +553,89 @@ later trigger, with rolled-back fixtures:
 ```sh
 npm run verify:shared-pre-model-world-state:integration
 ```
+
+## Direct Shared invitation credential and prospective invitation runtime (migration 0081, I-04A)
+
+Migration 0081 opens the I-04 Shared World lifecycle phase with the state that may
+exist **before** a World does. CW2-01 section 5 / A4 and CW2-03 sections 2-3 freeze the
+rule it implements: no Shared World exists before the corresponding valid creation
+event, and **an invitation is not a dormant World**. This migration therefore creates
+the prospective direct path and stops exactly where World birth begins. **No Shared
+World is created here**: nothing in it can insert into `shared_worlds` or
+`shared_world_membership_episodes`, there is no `world_id` column, no `WORLD_BIRTH`
+event and no acceptance command. I-04B owns the atomic exact-target acceptance
+transaction that creates `ACTIVE / STANDARD`.
+
+Three tables, all RLS-on with zero policies and every application role revoked from
+every privilege. `shared_world_invite_credential_state` is the secret Shared
+invitation credential as **user / account state** (CW2-01 section 17, CW2-03 section
+4): one current row per human, private, non-searchable, rotatable, distinct from
+Public Alias, never World identity, with a monotonic `epoch` from 1.
+`shared_world_direct_invitations` is the `DIRECT_WORLD_INVITATION` prospective object
+carrying exactly the frozen status vocabulary `PENDING | ACCEPTED | DECLINED |
+CANCELLED | EXPIRED | INVALIDATED`, two distinct humans, and `PENDING <=> terminal_at
+IS NULL`; the inviter's factual identity confers no owner, admin or superior World
+authority. `shared_world_invitation_commands` is the narrow durable command history
+whose primary key **is** the caller-supplied command id, and which deliberately stores
+no target user id.
+
+**The human-facing credential format is not frozen and is not invented here.** No short
+code length, alphabet, QR shape, URL form, username syntax or Public Alias reuse is
+chosen. Persistence stores only an opaque derived `credential_lookup_ref`: non-empty,
+exact-match lookup only, no semantic meaning, and specifically not the user id (a CHECK
+refuses that collapse). A later reviewed adapter may change how a human secret becomes
+this reference without touching these tables.
+
+Both commands are `SECURITY DEFINER`, `VOLATILE`, `search_path = ''`, owned by postgres,
+and derive the actor from `auth.uid()` with **no actor, inviter, target, status, World
+or timestamp parameter**. EXECUTE is granted to `authenticated` only: `PUBLIC`, `anon`
+**and `service_role`** cannot execute either one, so possession of a system credential
+can never manufacture a human invitation.
+`rotate_shared_world_invite_credential_v1(p_command_id, p_new_credential_lookup_ref,
+p_expected_epoch)` is compare-and-swap on the caller's own state - `NULL` expects no
+current credential and yields epoch 1, `N` requires exactly `N` and yields `N + 1`, and
+any other current state is a bounded `40001 SHARED_INVITE_CREDENTIAL_STALE_STATE`.
+In the same transaction it moves every `PENDING` invitation of that target bound to an
+older epoch to `INVALIDATED` with a database-clock `terminal_at` (CW2-03 section 5).
+Nothing is deleted, `ACCEPTED` / `DECLINED` / `CANCELLED` / `EXPIRED` rows are never
+touched, and an already-born World is entirely unaffected.
+
+`submit_shared_world_direct_invitation_v1(p_command_id, p_invitation_id,
+p_credential_lookup_ref)` takes **no target parameter**: the target is resolved only
+from the exact current lookup reference, inside the transaction, under the
+credential-state row lock, and the invitation binds the **exact current epoch read
+under that lock** - never one supplied by the client. **Inviter-side behaviour is
+non-enumerating**: the result is `SUBMITTED` with the command id and the requested
+invitation id and carries no target id, name, alias, profile, epoch or existence
+boolean, and a reference that never existed, was rotated away, resolves to the caller
+or belongs to an unavailable account collapses into the one bounded internal class
+`SHARED_INVITE_TARGET_NOT_USABLE`. Rotation's own reference-collision answer is bounded
+the same way and never says that another human holds a reference.
+
+**Canonical lock order**, a transaction invariant I-04B must continue: the target
+credential-state row first, invitation rows second. Both commands take it, so a
+rotation and a submission racing on the same target serialize on one row and the race
+has exactly two canonical outcomes - the submission committed first against the
+pre-rotation epoch and the rotation then invalidated it, or the rotation committed
+first and the retired reference resolved to nothing. No advisory lock and no
+process-local mutex is used. Idempotency is durable, never process-local: an equivalent
+retry returns the committed result, and a reused command id with different semantics
+fails closed with `23505`. One invitation identity is owned by one command forever and
+is never re-bound to another target.
+
+Deliberately absent: no accept / decline / cancel / expire command (`INVALIDATED` is the
+only terminal transition this slice performs), no expiry duration, TTL, cron,
+`expires_at` column or scheduler (CW2-03 section 50 defers it), no Matching or
+Introduction state, no Personal context read, no Standing Context grant, no RLS policy,
+no trigger, and no generic invitation engine spanning add-member governance, Matching,
+Public or Replay.
+
+The secret-free structural contract runs under `npm run test:database`. The real
+PostgreSQL verifier proves the catalog, both ACLs, the still-sealed 0075 substrate,
+first setup and rotation, old-epoch invalidation, non-enumerating submission,
+idempotency, invitation-id collisions, that no World or membership row is ever created,
+and the two-connection races, with rolled-back and cleaned-up fixtures:
+
+```sh
+npm run verify:shared-direct-invitation-runtime:integration
+```

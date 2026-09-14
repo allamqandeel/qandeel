@@ -57,7 +57,7 @@ function gitBlobId(content) {
 
 test('0072 remains frozen, 0064 - 0071 are byte-identical, and every frozen precondition is required', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.endsWith('.sql')).sort();
-  assert.deepEqual(migrations.slice(-9), [
+  assert.deepEqual(migrations.slice(-10), [
     '0072_historical_coverage_projection_disclosure_v1.sql',
     '0073_supabase_free_plan_keepalive_v1.sql',
     '0074_supabase_keepalive_permission_correction_v1.sql',
@@ -67,6 +67,7 @@ test('0072 remains frozen, 0064 - 0071 are byte-identical, and every frozen prec
     '0078_shared_standing_context_consent_commands_v1.sql',
     '0079_shared_human_audience_snapshot_resolution_v1.sql',
     '0080_shared_pre_model_world_state_resolution_v1.sql',
+    '0081_shared_direct_invitation_runtime_v1.sql',
   ]);
   assert.equal(migrations.filter((name) => name.startsWith('0072_')).length, 1, 'exactly one 0072 migration exists');
   assert.match(migration, /^BEGIN;/mu);
