@@ -275,3 +275,57 @@ audience ceiling with rolled-back fixtures:
 ```sh
 npm run verify:shared-world-standing-context-grants:integration
 ```
+## Shared Standing Context Grant resolution boundary (migration 0077, I-03B)
+
+Migration 0077 opens the **one** server-only read path from the sealed I-02B
+Standing Context Grant tables into the frozen I-03A resolution type. It creates a
+single function, `resolve_shared_world_standing_context_grant_v1(p_world_id uuid,
+p_grantor_user_id uuid)`, that returns `(grant_id, world_id, grantor_user_id,
+status, audience_user_id)` — one row per explicit audience-ceiling human, an ACTIVE
+grant with an empty ceiling being one row with a `NULL` audience (distinguishable
+from "no grant"). No table, view, type, trigger, policy or extension is added and
+migrations 0001–0076 are untouched.
+
+Semantics: **ACTIVE-only current resolution** — exact World + exact grantor +
+`status = 'ACTIVE'`, LEFT JOINed only to that grant's explicit audience rows.
+Historical `REVOKED` rows remain history and are never chosen as "the latest
+grant". Membership episodes are never read, so the ceiling is never derived from
+current membership. Before a zero-row answer the function positively verifies that
+the Shared World and the human exist; a noncanonical World or human raises a bounded
+error (`P0002`, `NULL` input `22023`) which the API resolver maps to `UNRESOLVED`,
+never to `NOT_FOUND`.
+
+Posture: `SECURITY DEFINER`, `STABLE`, `search_path = ''`, fully qualified names,
+owned by postgres. EXECUTE is revoked from `PUBLIC`, `anon` and `authenticated` and
+granted to `service_role` only; no `auth.uid()` or JWT is consulted. **No direct
+table privilege was opened**: after 0077, `anon`, `authenticated` and `service_role`
+still hold no `SELECT`, `INSERT`, `UPDATE` or `DELETE` on either Standing Context
+Grant table, and both tables keep RLS on with zero policies. The migration ends with
+self-assertions that refuse a client-callable, mutable, unpinned or table-privileged
+deploy. There is no client access, no grant / revoke / extend mutation and no
+consent-event write: those remain a later atomic authority-command slice.
+
+The API side is `apps/api/src/connected-worlds/authority-resolution/
+standing-context-grant-resolver.service.ts`, which calls exactly this RPC over the
+server-only service-role transport and maps the untrusted payload into the frozen
+`StandingContextGrantResolution` (`FOUND` | `NOT_FOUND` | `UNRESOLVED`) with a
+deterministic versioned SHA-256 `authoritySnapshotRef`. **I-03A remains the
+decision law**: the resolver establishes current authority state; whether that state
+is sufficient for a request and audience is decided only by
+`evaluateStandingContextAuthority`.
+
+The 0076 verifier's former global "no public function may touch the grant tables"
+assertion was a mutable ceiling on every future function rather than a property of
+migration 0076; it was removed (forward-safety correction, I-03B). Every 0076 schema,
+constraint, RLS, policy-absence, direct-table-ACL, uniqueness, history and restrictive-FK
+proof is unchanged, and the 0076 static contract still proves that migration 0076
+itself created no function, trigger, policy or application access path.
+
+The secret-free structural contract runs under `npm run test:database`. The real
+PostgreSQL verifier proves the function catalog, the execute ACL, the still-sealed
+direct table ACL, the canonical existence errors, ACTIVE-only resolution, the empty
+ceiling row and revoked-history exclusion with rolled-back fixtures:
+
+```sh
+npm run verify:shared-standing-context-grant-resolution:integration
+```

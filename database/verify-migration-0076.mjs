@@ -9,10 +9,12 @@
 //     action / source / permission / JSON column), every check and foreign-key
 //     constraint with restrictive deletion and the intended parents
 //     (shared_worlds and users only), the partial one-ACTIVE-grant unique
-//     index, the exact index set, RLS on, no trigger on the grant tables or on
-//     the membership-episode table, and no function in the public schema that
-//     touches the grant tables; no generic context-admission / grant /
-//     permission / consent-event table exists;
+//     index, the exact index set, RLS on, and no trigger on the grant tables or
+//     on the membership-episode table; no generic context-admission / grant /
+//     permission / consent-event table exists. (Whether a later, separately
+//     verified narrow read boundary exists is not a 0076 property: this
+//     verifier proves that 0076 itself sealed the tables, not a global ceiling
+//     on every future function.)
 //   * ACLs: anon, authenticated and service_role hold no SELECT / INSERT /
 //     UPDATE / DELETE on either table (has_table_privilege AND an actual
 //     rejected statement under SET LOCAL ROLE, including a direct revoke),
@@ -223,18 +225,13 @@ async function verifySchema() {
     'audience ceiling carries exactly the expected indexes',
   );
 
-  stage = 'schema: no trigger, no writing function';
+  stage = 'schema: no trigger';
   // No trigger on the grant tables, and none on the membership-episode table
   // either: membership expansion has no database path into the audience ceiling.
   for (const table of [...TABLES, EPISODES]) {
     const [{ n }] = await rows('SELECT count(*)::int n FROM pg_trigger WHERE tgrelid=$1::regclass AND NOT tgisinternal', [table]);
     assert.equal(n, 0, `${table} has no trigger`);
   }
-  const [{ n: touchingFunctions }] = await rows(
-    `SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace ns ON ns.oid=p.pronamespace
-      WHERE ns.nspname='public' AND p.prosrc ~* 'shared_world_standing_context_grant'`,
-  );
-  assert.equal(touchingFunctions, 0, 'no public function reads or writes the grant tables');
 }
 
 async function verifyAcls() {
@@ -422,7 +419,7 @@ async function main() {
       [[world, otherWorld], grantIds, [grantor, other, third]],
     );
     assert.equal(Number(n), 0, 'no fixture row remains after completion');
-    console.log('Verified migration 0076: shared_world_standing_context_grants and shared_world_standing_context_grant_audience exist with the exact columns (no scope/purpose/action/source/permission/JSON column), ACTIVE|REVOKED status, revocation-consistency and revoked-after-granted checks, restrictive FKs to shared_worlds and users only, one-ACTIVE-grant partial uniqueness, per-grant audience uniqueness and RLS on; anon/authenticated/service_role/PUBLIC hold no privilege and no policy exists; every illegal status/revocation/FK row is rejected; revocation keeps history and reconfirmation is a new row; no trigger or function touches the tables; zero fixture residue.');
+    console.log('Verified migration 0076: shared_world_standing_context_grants and shared_world_standing_context_grant_audience exist with the exact columns (no scope/purpose/action/source/permission/JSON column), ACTIVE|REVOKED status, revocation-consistency and revoked-after-granted checks, restrictive FKs to shared_worlds and users only, one-ACTIVE-grant partial uniqueness, per-grant audience uniqueness and RLS on; anon/authenticated/service_role/PUBLIC hold no privilege and no policy exists; every illegal status/revocation/FK row is rejected; revocation keeps history and reconfirmation is a new row; no trigger touches the tables; zero fixture residue.');
   } finally {
     await client.end();
   }
