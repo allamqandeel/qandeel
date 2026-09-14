@@ -201,7 +201,11 @@ describe('SharedEffectiveContextService', () => {
         audience.resolveCurrent.mockResolvedValueOnce({ state: 'UNRESOLVED', failure });
         expect(await resolve(candidates)).toEqual({ state: 'UNRESOLVED', reason: 'AUDIENCE_UNRESOLVED' });
       }
-      for (const malformed of [undefined, null, {}, { state: 'RESOLVED' }, audienceOf([MOHAMED, HADIR], ''), audienceOf([], AUTHORITY_REF('x')), audienceOf([MOHAMED, MOHAMED], AUTHORITY_REF('d')), audienceOf([MOHAMED, QANDEEL_SYSTEM_ACTOR as never], AUTHORITY_REF('q'))]) {
+      for (const malformed of [
+        undefined, null, {}, { state: 'RESOLVED' }, audienceOf([MOHAMED, HADIR], ''), audienceOf([], AUTHORITY_REF('x')), audienceOf([MOHAMED, MOHAMED], AUTHORITY_REF('d')), audienceOf([MOHAMED, QANDEEL_SYSTEM_ACTOR as never], AUTHORITY_REF('q')),
+        { ...audienceOf([MOHAMED, HADIR]), lifecycle: 'ACTIVE' }, { state: 'RESOLVED', snapshot: { snapshotRef: AUTHORITY_REF('s'), humans: [MOHAMED, HADIR], membershipEpisodeIds: [] } },
+        { state: 'EMPTY' }, { state: 'EMPTY', snapshotRef: '' },
+      ]) {
         audience.resolveCurrent.mockResolvedValueOnce(malformed as never);
         expect(await resolve(candidates)).toEqual({ state: 'UNRESOLVED', reason: 'AUDIENCE_UNRESOLVED' });
       }
@@ -215,6 +219,32 @@ describe('SharedEffectiveContextService', () => {
       expect(resolution.state).not.toBe('UNRESOLVED');
       expect(grants.resolveCurrent).not.toHaveBeenCalled();
       expect(await resolve([])).toEqual({ state: 'BLOCKED', reason: 'NO_ACTIVE_HUMANS' });
+      expect(Object.keys(AUDIENCE_EMPTY).sort()).toEqual(['snapshotRef', 'state']);
+    });
+
+    it.each([
+      ['missing snapshotRef', { state: 'EMPTY' }],
+      ['blank snapshotRef', { state: 'EMPTY', snapshotRef: '' }],
+      ['whitespace snapshotRef', { state: 'EMPTY', snapshotRef: '   ' }],
+      ['non-string snapshotRef', { state: 'EMPTY', snapshotRef: 42 }],
+      ['null snapshotRef', { state: 'EMPTY', snapshotRef: null }],
+      ['extra property (an empty humans list)', { ...AUDIENCE_EMPTY, humans: [] }],
+      ['extra property (a snapshot)', { ...AUDIENCE_EMPTY, snapshot: { snapshotRef: AUTHORITY_REF('s'), humans: [] } }],
+      ['extra permission-shaped property', { ...AUDIENCE_EMPTY, generationAllowed: true }],
+      ['EMPTY carried inside a RESOLVED shape', { state: 'RESOLVED', snapshotRef: AUDIENCE_EMPTY.snapshotRef }],
+      ['a bare EMPTY string', 'EMPTY'],
+      ['an EMPTY array', ['EMPTY']],
+      ['lowercase state', { state: 'empty', snapshotRef: AUDIENCE_EMPTY.snapshotRef }],
+    ])('anti-vacuity: an EMPTY-like malformed audience result (%s) is UNRESOLVED / AUDIENCE_UNRESOLVED, never BLOCKED, and grants are not called', async (_name, malformed) => {
+      audience.resolveCurrent.mockResolvedValue(malformed as never);
+      const resolution = await resolve([available(MOHAMED, 'c1', 'private')]);
+      expect(resolution).toEqual({ state: 'UNRESOLVED', reason: 'AUDIENCE_UNRESOLVED' });
+      expect(resolution.state).not.toBe('BLOCKED');
+      expect(grants.resolveCurrent).not.toHaveBeenCalled();
+      // The exact frozen EMPTY shape, and only it, still blocks: the distinction is not vacuous.
+      audience.resolveCurrent.mockResolvedValue(AUDIENCE_EMPTY);
+      expect(await resolve([available(MOHAMED, 'c1', 'private')])).toEqual({ state: 'BLOCKED', reason: 'NO_ACTIVE_HUMANS' });
+      expect(grants.resolveCurrent).not.toHaveBeenCalled();
     });
 
     it('keeps BLOCKED and UNRESOLVED distinct vocabularies', () => {
@@ -765,8 +795,12 @@ describe('SharedEffectiveContextService', () => {
       expect(source.match(/evaluateStandingContextAuthority\(/gu)).toHaveLength(1);
       expect(source).toContain("if (validated === 'MALFORMED') return unresolved('MALFORMED_CANDIDATE_SET');");
       expect(source).toContain("if (worldState.snapshot.lifecycle === 'READ_ONLY_CLOSED') return blocked('WORLD_READ_ONLY_CLOSED');");
-      expect(source).toContain("if (isRecord(audience) && audience.state === 'EMPTY') return blocked('NO_ACTIVE_HUMANS');");
+      expect(source).toContain("if (isEmptyAudience(audience)) return blocked('NO_ACTIVE_HUMANS');");
       expect(source).toContain("if (!isResolvedAudience(audience)) return unresolved('AUDIENCE_UNRESOLVED');");
+      // Only the exact frozen I-03D EMPTY shape is known BLOCKED state; the validator requires exact keys and a non-blank reference.
+      expect(source).toContain("const AUDIENCE_EMPTY_KEYS = ['state', 'snapshotRef'] as const;");
+      expect(source).toMatch(/return isRecord\(value\) && hasExactKeys\(value, AUDIENCE_EMPTY_KEYS\) && value\.state === 'EMPTY' && isNonBlankString\(value\.snapshotRef\);/u);
+      expect(source).not.toMatch(/audience\.state === 'EMPTY'/u);
       expect(source).toContain('const owners = [...new Set(validated.map((candidate) => candidate.ownerHumanId))];');
       expect(source).toContain('for (const candidate of validated) {');
       expect(source).toContain("if (decision.decision !== 'ALLOW') continue;");

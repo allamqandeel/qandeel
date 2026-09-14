@@ -238,7 +238,7 @@ test('the EffectiveContext service composes I-03E + I-03D + I-03B + I-03A in the
     "if (!isResolvedWorldState(worldState, targetWorldId)) return unresolved('WORLD_STATE_UNRESOLVED');",
     "if (worldState.snapshot.lifecycle === 'READ_ONLY_CLOSED') return blocked('WORLD_READ_ONLY_CLOSED');",
     'audience = await this.audience.resolveCurrent(targetWorldId);',
-    "if (isRecord(audience) && audience.state === 'EMPTY') return blocked('NO_ACTIVE_HUMANS');",
+    "if (isEmptyAudience(audience)) return blocked('NO_ACTIVE_HUMANS');",
     "if (!isResolvedAudience(audience)) return unresolved('AUDIENCE_UNRESOLVED');",
     'const owners = [...new Set(validated.map((candidate) => candidate.ownerHumanId))];',
     'await this.grants.resolveCurrent(targetWorldId, Object.freeze({ kind: \'HUMAN\', humanId: ownerHumanId } as const));',
@@ -254,6 +254,17 @@ test('the EffectiveContext service composes I-03E + I-03D + I-03B + I-03A in the
     const at = executableService.indexOf(step, cursor + 1);
     assert.ok(at > cursor, `EffectiveContext step is present in order: ${step}`);
     cursor = at;
+  }
+  // Review R1: only the exact frozen I-03D EMPTY result (`{ state, snapshotRef }`, non-blank, no unknown property) is known BLOCKED state; an EMPTY-like malformed result is UNRESOLVED.
+  assert.match(executableService, /const AUDIENCE_EMPTY_KEYS = \['state', 'snapshotRef'\] as const;/u);
+  assert.match(executableService, /const AUDIENCE_RESOLVED_KEYS = \['state', 'snapshot'\] as const;/u);
+  assert.match(executableService, /const AUDIENCE_SNAPSHOT_KEYS = \['snapshotRef', 'humans'\] as const;/u);
+  assert.match(executableService, /return isRecord\(value\) && hasExactKeys\(value, AUDIENCE_EMPTY_KEYS\) && value\.state === 'EMPTY' && isNonBlankString\(value\.snapshotRef\);/u);
+  assert.match(executableService, /if \(!isRecord\(value\) \|\| !hasExactKeys\(value, AUDIENCE_RESOLVED_KEYS\) \|\| value\.state !== 'RESOLVED' \|\| !isRecord\(value\.snapshot\)\) return false;/u);
+  assert.doesNotMatch(executableService, /audience\.state === 'EMPTY'/u, 'no bare state check decides the BLOCKED branch');
+  assert.ok(effectiveContextSpec.includes('anti-vacuity: an EMPTY-like malformed audience result (%s) is UNRESOLVED / AUDIENCE_UNRESOLVED, never BLOCKED, and grants are not called'), 'the spec proves the EMPTY-shape distinction');
+  for (const probe of ["['missing snapshotRef', { state: 'EMPTY' }]", "['blank snapshotRef', { state: 'EMPTY', snapshotRef: '' }]", "['extra property (an empty humans list)', { ...AUDIENCE_EMPTY, humans: [] }]", "['a bare EMPTY string', 'EMPTY']"]) {
+    assert.ok(effectiveContextSpec.includes(probe), `EffectiveContext spec is missing the EMPTY-shape probe ${probe}`);
   }
   // The request handed to I-03A is exactly the frozen shape, with the SAME audience snapshot for every candidate and the candidate's exact owner as grantor.
   assert.match(executableService, /action: STANDING_CONTEXT_ACTION,\s+grantor,\s+targetWorldId,\s+purpose: STANDING_CONTEXT_PURPOSE,\s+audienceSnapshot,/u);

@@ -80,8 +80,13 @@ interface ValidatedAvailableCandidate {
   readonly reasoningContent: string;
 }
 
+const AUDIENCE_EMPTY_KEYS = ['state', 'snapshotRef'] as const;
+const AUDIENCE_RESOLVED_KEYS = ['state', 'snapshot'] as const;
+const AUDIENCE_SNAPSHOT_KEYS = ['snapshotRef', 'humans'] as const;
+
 type ResolvedWorldState = Extract<SharedPreModelWorldStateResolution, { readonly state: 'RESOLVED' }>;
 type ResolvedAudience = Extract<SharedHumanAudienceResolution, { readonly state: 'RESOLVED' }>;
+type EmptyAudience = Extract<SharedHumanAudienceResolution, { readonly state: 'EMPTY' }>;
 
 function unresolved(reason: SharedEffectiveContextUnresolvedReason): SharedEffectiveContextResolution {
   return Object.freeze({ state: 'UNRESOLVED', reason } as const);
@@ -156,11 +161,21 @@ function isResolvedWorldState(value: unknown, targetWorldId: SharedWorldId): val
   return worldId === targetWorldId && isLegalSharedWorldState({ lifecycle, phase }) && isNonBlankString(snapshotRef);
 }
 
-// The audience snapshot every candidate is evaluated against must be the
-// frozen I-03A shape: a non-blank reference and a non-empty, duplicate-free
-// set of human principals. Membership of any particular owner is NOT checked.
+// A known canonical zero-audience state is exactly the frozen I-03D EMPTY
+// result - `{ state: 'EMPTY', snapshotRef: <non-blank> }` and nothing else.
+// An EMPTY-like object that is malformed (missing or blank reference, unknown
+// property) is uncertainty, never known BLOCKED state.
+function isEmptyAudience(value: unknown): value is EmptyAudience {
+  return isRecord(value) && hasExactKeys(value, AUDIENCE_EMPTY_KEYS) && value.state === 'EMPTY' && isNonBlankString(value.snapshotRef);
+}
+
+// The audience snapshot every candidate is evaluated against must be exactly
+// the frozen I-03D RESOLVED result carrying the frozen I-03A shape: a non-blank
+// reference and a non-empty, duplicate-free set of human principals, with no
+// unknown property. Membership of any particular owner is NOT checked.
 function isResolvedAudience(value: unknown): value is ResolvedAudience {
-  if (!isRecord(value) || value.state !== 'RESOLVED' || !isRecord(value.snapshot)) return false;
+  if (!isRecord(value) || !hasExactKeys(value, AUDIENCE_RESOLVED_KEYS) || value.state !== 'RESOLVED' || !isRecord(value.snapshot)) return false;
+  if (!hasExactKeys(value.snapshot, AUDIENCE_SNAPSHOT_KEYS)) return false;
   const { snapshotRef, humans } = value.snapshot;
   if (!isNonBlankString(snapshotRef) || !Array.isArray(humans) || humans.length === 0 || !humans.every(isHumanPrincipal)) return false;
   return new Set(humans.map((human) => human.humanId)).size === humans.length;
@@ -244,7 +259,9 @@ export class SharedEffectiveContextService {
     } catch {
       return unresolved('AUDIENCE_UNRESOLVED');
     }
-    if (isRecord(audience) && audience.state === 'EMPTY') return blocked('NO_ACTIVE_HUMANS');
+    // Only the exact frozen EMPTY result is known canonical state that blocks;
+    // anything else that is not the exact RESOLVED result is not safely knowable.
+    if (isEmptyAudience(audience)) return blocked('NO_ACTIVE_HUMANS');
     if (!isResolvedAudience(audience)) return unresolved('AUDIENCE_UNRESOLVED');
     const audienceSnapshot: SharedHumanAudienceSnapshot = audience.snapshot;
 
