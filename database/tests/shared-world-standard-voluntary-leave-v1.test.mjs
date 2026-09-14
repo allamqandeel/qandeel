@@ -158,6 +158,22 @@ test('the ONLY change to a predecessor table is the additive, unconstrained end_
 test('0083 creates exactly its own two narrow tables, and neither is a generic engine', () => {
   const created = [...executableSql.matchAll(/^CREATE TABLE public\.(\w+)/gmu)].map((match) => match[1]);
   assert.deepEqual(created.sort(), [...OWN_TABLES].sort(), 'exactly two tables, both new');
+  // The complete claim about what 0083 did NOT create lives HERE, in 0083's own
+  // text, and nowhere else. The real-PostgreSQL verifier deliberately makes no
+  // such claim: it runs against a FULLY migrated database, so a live absence
+  // census there would reject exactly the later authorized objects the roadmap
+  // requires - a governance proposal table, a Launch Gate snapshot table,
+  // removal / rejoin / closure / history-grant substrate - the moment any of
+  // them legitimately landed.
+  for (const absent of [
+    'shared_world_events', 'world_events', 'shared_world_event_log', 'shared_world_removals',
+    'shared_world_member_removals', 'shared_world_rejoins', 'shared_world_closures',
+    'shared_world_end_commands', 'shared_world_governance_proposals', 'shared_world_member_approvals',
+    'closed_world_view_entitlements', 'shared_world_history_grants', 'shared_world_settings',
+    'shared_world_launch_gates', 'launch_gate_snapshots', 'feature_flags', 'introduction_records',
+  ]) {
+    assert.ok(!created.includes(absent), `migration 0083 creates no ${absent}: no governance, removal, rejoin, closure, entitlement or launch substrate`);
+  }
   assert.deepEqual(columnNames(tableBlock(LEFT_EVENTS)), ['id', 'world_id', 'membership_episode_id', 'actor_user_id', 'occurred_at'],
     'the MEMBER_LEFT fact carries only its four facts and its identity');
   assert.deepEqual(columnNames(tableBlock(LEAVE_COMMANDS)),
@@ -219,6 +235,22 @@ test('the leaving human is exactly auth.uid(), with no caller-supplied identity,
     'exactly three opaque uuid identities');
   assert.doesNotMatch(parameters, /actor|target|leaver|user_id|episode|reason|audience|count|status|lifecycle|phase|_at\b/iu,
     'no actor, target, episode, reason, audience, count or clock parameter');
+  // OPAQUE means opaque: no meaning is inferred from a UUID value, INCLUDING
+  // from one value equalling another. The three parameters address three
+  // different domains - a command, a World and an event - and nothing frozen
+  // assigns them cross-domain inequality semantics, so a pairwise-distinctness
+  // rule would be invented identifier algebra. What must actually hold is
+  // enforced by the primary keys, the unique bindings and the canonical-state
+  // checks; database/verify-migration-0083.mjs proves cross-domain equality
+  // commits with exact persisted bindings.
+  assert.doesNotMatch(executableFunction, /count\(DISTINCT[^)]*\)\s*FROM unnest\(ARRAY\[p_/u,
+    'no cross-domain pairwise-distinctness rule is invented over the opaque identities');
+  assert.doesNotMatch(executableFunction, /p_command_id\s*(?:=|<>)\s*p_(?:world_id|member_left_event_id)/u,
+    'and no identity is compared against another identity');
+  assert.doesNotMatch(executableFunction, /p_world_id\s*(?:=|<>)\s*p_member_left_event_id/u);
+  // The only structural refusal over the parameters is the one that really is
+  // structural: a missing identity.
+  assert.match(executableFunction, /IF p_command_id IS NULL OR p_world_id IS NULL OR p_member_left_event_id IS NULL THEN\s*\n\s*RAISE EXCEPTION 'SHARED_WORLD_VOLUNTARY_LEAVE_COMMAND_INVALID'/u);
   // QANDEEL and an unauthenticated caller both fail closed.
   assert.match(executableFunction, /IF u IS NULL THEN\s*\n\s*RAISE EXCEPTION 'SHARED_WORLD_VOLUNTARY_LEAVE_AUTHENTICATION_REQUIRED'/u,
     'a call with no human session identity fails closed, so QANDEEL can never leave for a human');
@@ -407,6 +439,56 @@ test('the verifier, the script and the CI step are registered, and the README re
   assert.doesNotMatch(workflow, /Mobile CI/u, 'I-04C adds no Mobile CI step');
   assert.match(readme, /0083_shared_world_standard_voluntary_leave_v1\.sql/u, 'the README records migration 0083');
   assert.match(readme, /VOLUNTARY_LEAVE/u);
+  // Anti-drift: the README's count of repaired predecessor verifiers is derived
+  // from the actual set, not written by hand.
+  const repairedVerifiers = ['0075', '0076', '0078', '0081', '0082']
+    .filter((name) => read(`../verify-migration-${name}.mjs`).includes('FORWARD SAFETY (I-04C)'));
+  assert.equal(repairedVerifiers.length, 5, 'five predecessor verifiers carry the I-04C forward-safety repair');
+  const repairParagraph = readme.slice(readme.indexOf('Five predecessor verifiers were repaired'));
+  assert.ok(repairParagraph.startsWith('Five predecessor verifiers were repaired'), 'the README says five, not four');
+  const named = repairParagraph.slice(0, 400);
+  for (const name of repairedVerifiers) assert.ok(named.includes(name), `and names ${name} among them`);
+  assert.doesNotMatch(readme, /Four predecessor verifiers were repaired/u, 'no stale count remains');
+  // The README must not describe the removed distinctness rule either.
+  const leaveSection = readme.slice(readme.indexOf('## Standard voluntary leave'));
+  assert.doesNotMatch(leaveSection, /pairwise distinct/u, 'the README describes no cross-domain distinctness rule for I-04C');
+});
+
+test('the real-PostgreSQL verifier carries no live-schema ceiling of its own', () => {
+  // FIX-01 and FIX-02. This verifier runs against a FULLY migrated database, so
+  // any absence census or exact-count assertion in it is a ceiling on the whole
+  // roadmap rather than a fact about migration 0083.
+  assert.doesNotMatch(verifier, /FORBIDDEN_TABLES/u,
+    'no live future-table absence census: what 0083 did not create is proven from 0083 own text, above');
+  assert.doesNotMatch(verifier, /assert\.equal\(\s*foreignKeys\.length/u, 'foreign keys are asserted exactly, never counted');
+  assert.doesNotMatch(verifier, /assert\.equal\(\s*\w*[Cc]onstraints\.length/u, 'and neither are constraints');
+  // Each foreign key 0083 owns is pinned by name, local columns, parent and
+  // restrictive deletion - which is strictly stronger than a count of seven.
+  assert.match(verifier, /const OWNED_FOREIGN_KEYS = \{/u);
+  for (const [name, columns, parent] of [
+    ['shared_world_member_left_events_world_fk', 'world_id', 'shared_worlds'],
+    ['shared_world_member_left_events_episode_fk', 'membership_episode_id', 'shared_world_membership_episodes'],
+    ['shared_world_member_left_events_actor_fk', 'actor_user_id', 'users'],
+    ['shared_world_voluntary_leave_commands_actor_fk', 'actor_user_id', 'users'],
+    ['shared_world_voluntary_leave_commands_world_fk', 'world_id', 'shared_worlds'],
+    ['shared_world_voluntary_leave_commands_episode_fk', 'membership_episode_id', 'shared_world_membership_episodes'],
+    ['shared_world_voluntary_leave_commands_event_fk', 'member_left_event_id', 'shared_world_member_left_events'],
+  ]) {
+    assert.ok(verifier.includes(`${name}: 'FOREIGN KEY (${columns}) REFERENCES ${parent}(id) ON DELETE RESTRICT'`),
+      `${name} is pinned exactly: local columns, parent and restrictive deletion`);
+    assert.match(migration, new RegExp(`CONSTRAINT ${name}\\s*\\n?\\s*FOREIGN KEY \\(${columns}\\) REFERENCES public\\.${parent} \\(id\\) ON DELETE RESTRICT`, 'u'),
+      `and migration 0083 really declares ${name} that way`);
+  }
+  // FIX-02's second half: the forward safety is proven by the real-PostgreSQL
+  // verifier itself, not only by the static mirror below.
+  assert.match(verifier, /async function verifyForwardSafety\(/u, 'the verifier proves forward safety against real PostgreSQL');
+  assert.match(verifier, /await verifyForwardSafety\(f\);/u, 'and actually runs it');
+  for (const authorized of ['_proposals (id uuid PRIMARY KEY)', 'ADD COLUMN', 'ADD CONSTRAINT', 'CREATE INDEX']) {
+    assert.ok(verifier.includes(authorized), `the probe performs a later authorized ${authorized}`);
+  }
+  assert.match(verifier, /await assert\.rejects\(verifyCatalog\(\), refuses/u, 'and requires the real regressions to still be refused');
+  assert.ok((verifier.match(/ALTER TABLE \$\{(?:LEAVE_COMMANDS|LEFT_EVENTS|EPISODES)\} (?:DROP|ADD)/gu) ?? []).length >= 5,
+    'the probe plants both the authorized evolution and the regressions');
 });
 
 test('the repaired predecessor verifiers keep every invariant they owned, and stop censusing the live schema', () => {
@@ -552,6 +634,16 @@ test('the contract is not vacuous: every deliberate weakening of migration 0083 
     ['returns the current World lifecycle as the committed result', (text) => text.replace(
       "RETURN QUERY SELECT 'LEFT'::text, p_command_id, p_world_id, episode.id,\n                      p_member_left_event_id, 'VOLUNTARY_LEAVE'::text, leave_at;",
       "RETURN QUERY SELECT 'LEFT'::text, p_command_id, p_world_id, episode.id,\n                      p_member_left_event_id, world.lifecycle, leave_at;")],
+    ['invents a cross-domain pairwise-distinctness rule over the opaque identities', (text) => text.replace(
+      '  -- Durable idempotency, first pass: before any lock, so an equivalent retry of',
+      '  IF (SELECT count(DISTINCT supplied) FROM unnest(ARRAY[p_command_id, p_world_id, p_member_left_event_id]) AS supplied) <> 3 THEN\n'
+      + "    RAISE EXCEPTION 'SHARED_WORLD_VOLUNTARY_LEAVE_COMMAND_INVALID' USING ERRCODE='22023';\n  END IF;\n\n"
+      + '  -- Durable idempotency, first pass: before any lock, so an equivalent retry of')],
+    ['compares one opaque identity against another', (text) => text.replace(
+      '  IF p_command_id IS NULL OR p_world_id IS NULL OR p_member_left_event_id IS NULL THEN',
+      '  IF p_command_id = p_world_id THEN\n'
+      + "    RAISE EXCEPTION 'SHARED_WORLD_VOLUNTARY_LEAVE_COMMAND_INVALID' USING ERRCODE='22023';\n  END IF;\n"
+      + '  IF p_command_id IS NULL OR p_world_id IS NULL OR p_member_left_event_id IS NULL THEN')],
     ['adds a membership-to-grant trigger', (text) => text.replace(
       'CREATE FUNCTION public.commit_shared_world_standard_voluntary_leave_v1(',
       'CREATE TRIGGER shared_world_leave_revokes_grants AFTER UPDATE ON public.shared_world_membership_episodes\n'

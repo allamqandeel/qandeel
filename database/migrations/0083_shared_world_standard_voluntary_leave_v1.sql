@@ -238,11 +238,14 @@ BEGIN
   IF p_command_id IS NULL OR p_world_id IS NULL OR p_member_left_event_id IS NULL THEN
     RAISE EXCEPTION 'SHARED_WORLD_VOLUNTARY_LEAVE_COMMAND_INVALID' USING ERRCODE='22023';
   END IF;
-  -- The three supplied identities are opaque and pairwise distinct. No identity
-  -- semantics is inferred from a UUID value.
-  IF (SELECT count(DISTINCT supplied) FROM unnest(ARRAY[p_command_id, p_world_id, p_member_left_event_id]) AS supplied) <> 3 THEN
-    RAISE EXCEPTION 'SHARED_WORLD_VOLUNTARY_LEAVE_COMMAND_INVALID' USING ERRCODE='22023';
-  END IF;
+  -- The three supplied identities are OPAQUE, and opaqueness is the whole rule:
+  -- no meaning is inferred from a UUID value, INCLUDING from one value being
+  -- equal to another. They address three different domains - a command, a World
+  -- and an event - so equality across those domains is not a contradiction and
+  -- nothing frozen makes it one. A cross-domain pairwise-distinctness rule would
+  -- be invented identifier algebra, and it is deliberately absent: what actually
+  -- has to hold is enforced where it lives, by the primary keys, the unique
+  -- bindings and the canonical-state checks below.
 
   -- Durable idempotency, first pass: before any lock, so an equivalent retry of
   -- a command that already committed is answered even though the episode it

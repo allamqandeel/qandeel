@@ -767,9 +767,10 @@ migration, and an enum frozen here would freeze exactly the future this slice mu
 decide. An open episode keeps `ended_at = NULL` and `end_reason = NULL`; the only writer in
 this repository sets both together, in one statement.
 
-Four predecessor verifiers were repaired to make that additive evolution legal. Migrations
-0075, 0076, 0078 and 0081 are **byte-identical**; their verifiers were asserting the exact
-LIVE column, constraint and index shape of tables they do not own forever, which is a
+Five predecessor verifiers were repaired to make that additive evolution legal. Migrations
+0075 - 0082 are **byte-identical**; the verifiers of 0075, 0076, 0078, 0081 and 0082 were
+asserting the exact LIVE column, constraint and index shape of tables they do not own
+forever, which is a
 mutable-global ceiling rather than a fact about the historical migration. Each now proves the
 stronger and correct thing - every column it owns is still present with its original type,
 nullability, default and ordinal position (a prefix, so a drop, a type change or a reorder
@@ -790,8 +791,10 @@ is expected; nothing here forbids one.
 
 Human authority is exact and unilateral. The function takes **no actor, target, episode,
 instant or reason parameter** - only three opaque uuid identities (the command id, the exact
-World and the identity the new `MEMBER_LEFT` row will carry) which must be non-null and
-pairwise distinct. The leaving human is `auth.uid()`, and the episode is resolved from
+World and the identity the new `MEMBER_LEFT` row will carry), which must be non-null.
+They are opaque in the strict sense: they address three different domains, so equality
+between any two of them is legal input and commits normally. No cross-domain distinctness
+rule is invented, because nothing frozen assigns identifiers that algebra. The leaving human is `auth.uid()`, and the episode is resolved from
 canonical current state as `world_id = p_world_id AND user_id = auth.uid() AND ended_at IS
 NULL`. No other member approves, no owner or admin exists, and QANDEEL has no session
 identity so can never leave for a human.

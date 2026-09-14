@@ -158,14 +158,23 @@ const LEAVE_COMMAND_COLUMNS = [
   ['committed_at', 'timestamp with time zone', 'NO'],
 ];
 
-/** Tables this slice must not have introduced: no governance, entitlement or launch engine. */
-const FORBIDDEN_TABLES = [
-  'shared_world_events', 'world_events', 'shared_world_event_log', 'shared_world_removals',
-  'shared_world_member_removals', 'shared_world_rejoins', 'shared_world_closures',
-  'shared_world_end_commands', 'shared_world_governance_proposals', 'shared_world_member_approvals',
-  'closed_world_view_entitlements', 'shared_world_history_grants', 'shared_world_settings',
-  'shared_world_launch_gates', 'launch_gate_snapshots', 'feature_flags', 'introduction_records',
-];
+/**
+ * Every foreign key migration 0083 OWNS, by exact name, exact local columns,
+ * exact parent and restrictive deletion - not a count. A count is a live-schema
+ * ceiling: a later authorized slice may add its own foreign key to one of these
+ * tables (a governance proposal reference, for one), and that is not a 0083
+ * regression. `REFERENCES public.` is normalized away because pg_get_constraintdef
+ * renders against the session search_path.
+ */
+const OWNED_FOREIGN_KEYS = {
+  shared_world_member_left_events_world_fk: 'FOREIGN KEY (world_id) REFERENCES shared_worlds(id) ON DELETE RESTRICT',
+  shared_world_member_left_events_episode_fk: 'FOREIGN KEY (membership_episode_id) REFERENCES shared_world_membership_episodes(id) ON DELETE RESTRICT',
+  shared_world_member_left_events_actor_fk: 'FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE RESTRICT',
+  shared_world_voluntary_leave_commands_actor_fk: 'FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE RESTRICT',
+  shared_world_voluntary_leave_commands_world_fk: 'FOREIGN KEY (world_id) REFERENCES shared_worlds(id) ON DELETE RESTRICT',
+  shared_world_voluntary_leave_commands_episode_fk: 'FOREIGN KEY (membership_episode_id) REFERENCES shared_world_membership_episodes(id) ON DELETE RESTRICT',
+  shared_world_voluntary_leave_commands_event_fk: 'FOREIGN KEY (member_left_event_id) REFERENCES shared_world_member_left_events(id) ON DELETE RESTRICT',
+};
 
 async function snapshot(humans) {
   const [{ role }] = await rows('SELECT current_user AS role');
@@ -205,11 +214,15 @@ async function verifyCatalog() {
     const [{ owner }] = await rows('SELECT pg_get_userbyid(c.relowner) owner FROM pg_class c WHERE c.oid = $1::regclass', [table]);
     assert.equal(owner, 'postgres', `${table} is owned by postgres`);
   }
-  for (const name of FORBIDDEN_TABLES) {
-    const [{ n }] = await rows(
-      "SELECT count(*)::int n FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace WHERE ns.nspname='public' AND c.relname=$1", [name]);
-    assert.equal(n, 0, `I-04C introduces no ${name}: no governance, removal, rejoin, closure, entitlement or launch substrate`);
-  }
+  // That migration 0083 introduced NO governance, removal, rejoin, closure,
+  // entitlement or launch substrate is a claim about 0083's own text, and it is
+  // proven there, by
+  // database/tests/shared-world-standard-voluntary-leave-v1.test.mjs. It is
+  // deliberately NOT asserted from the live catalog: this verifier runs against
+  // a FULLY migrated database, so a live absence census would reject exactly the
+  // later authorized objects the roadmap requires - a governance proposal table,
+  // a Launch Gate snapshot table, removal / rejoin / closure / history-grant
+  // substrate - the moment any of them legitimately landed.
 
   stage = 'catalog: the canonical episode gained an ADDITIVE nullable end_reason';
   const episodeColumns = await rows(
@@ -272,7 +285,10 @@ async function verifyCatalog() {
     `SELECT conname name, contype type, pg_get_constraintdef(oid) def FROM pg_constraint WHERE conrelid = $1::regclass ORDER BY conname`, [LEFT_EVENTS]);
   const leaveConstraints = await rows(
     `SELECT conname name, contype type, pg_get_constraintdef(oid) def FROM pg_constraint WHERE conrelid = $1::regclass ORDER BY conname`, [LEAVE_COMMANDS]);
-  const defOf = (list, name) => (list.find((c) => c.name === name) ?? {}).def;
+  // A sentinel rather than `undefined`, so a DROPPED constraint fails as a named
+  // assertion instead of as a TypeError - which is what the forward-safety
+  // regressions below rely on being able to recognise.
+  const defOf = (list, name) => (list.find((c) => c.name === name) ?? { def: `MISSING CONSTRAINT ${name}` }).def;
   assert.match(defOf(leftEventConstraints, 'shared_world_member_left_events_pk'), /PRIMARY KEY \(id\)/u);
   assert.match(defOf(leftEventConstraints, 'shared_world_member_left_events_episode_key'), /UNIQUE \(membership_episode_id\)/u,
     'one membership episode is ended by at most one voluntary leave');
@@ -289,9 +305,15 @@ async function verifyCatalog() {
         `${constraint.name} must not make a human permanently unable to hold a future episode in the same World`);
     }
   }
-  const foreignKeys = [...leftEventConstraints, ...leaveConstraints].filter((c) => c.type === 'f');
-  assert.equal(foreignKeys.length, 7, 'seven foreign keys bind the leave history to canonical rows');
-  for (const fk of foreignKeys) assert.match(fk.def, /ON DELETE RESTRICT/u, `${fk.name} is restrictive: canonical history is never cascaded away`);
+  // Every foreign key 0083 OWNS, asserted exactly - name, local columns, parent
+  // and restrictive deletion - rather than counted. A later additive foreign key
+  // from a reviewed slice is not a 0083 regression.
+  const normalize = (def) => def.replace(/REFERENCES (?:public\.)?/u, 'REFERENCES ');
+  const liveForeignKeys = new Map([...leftEventConstraints, ...leaveConstraints]
+    .filter((c) => c.type === 'f').map((c) => [c.name, normalize(c.def)]));
+  for (const [name, def] of Object.entries(OWNED_FOREIGN_KEYS)) {
+    assert.equal(liveForeignKeys.get(name), def, `${name} binds exactly the canonical row, restrictively: canonical history is never cascaded away`);
+  }
 
   stage = 'catalog: RLS on, zero policies, no trigger';
   for (const table of OWN_TABLES) {
@@ -565,9 +587,58 @@ async function verifyUnavailable(f, departed) {
   await identity('postgres', f.inviter);
   await rejected(() => leave(null, departed.worldId, randomUUID()), INVALID_PARAMETER);
   await rejected(() => leave(randomUUID(), departed.worldId, null), INVALID_PARAMETER);
-  const duplicated = randomUUID();
-  await rejected(() => leave(duplicated, departed.worldId, duplicated), INVALID_PARAMETER);
   await identity('postgres');
+}
+
+/**
+ * The three parameters are OPAQUE persistence identities addressing three
+ * different domains - a command, a World and an event. Nothing frozen assigns
+ * cross-domain inequality semantics to them, so equality between them is legal
+ * input and must COMMIT with correct persisted bindings rather than being
+ * refused by invented identifier algebra.
+ */
+async function verifyCrossDomainIdentityEquality(f) {
+  stage = 'opaque identities: a command id equal to the event id is legal and commits with exact bindings';
+  const shared = await provisionWorld(f.inviter, f.equalityTarget, 'equality');
+  const both = randomUUID();
+  await identity('postgres', f.equalityTarget);
+  const [left] = await leave(both, shared.worldId, both);
+  assert.equal(left.outcome, 'LEFT');
+  assert.equal(left.command_id, both);
+  assert.equal(left.left_event_id, both);
+  assert.equal(left.closed_membership_episode_id, shared.targetEpisode);
+  await identity('postgres');
+  const [event] = await rows(`SELECT * FROM ${LEFT_EVENTS} WHERE id=$1`, [both]);
+  const [command] = await rows(`SELECT * FROM ${LEAVE_COMMANDS} WHERE id=$1`, [both]);
+  assert.ok(event && command, 'both rows exist under the same opaque value, in their own tables');
+  assert.equal(command.member_left_event_id, both, 'the command binds the event by that value');
+  assert.equal(event.membership_episode_id, shared.targetEpisode, 'and the event names the episode that actually closed');
+  assert.equal(command.membership_episode_id, shared.targetEpisode);
+  assert.equal(event.actor_user_id, f.equalityTarget);
+  const [{ coherent }] = await rows(
+    `SELECT (e.ended_at = ev.occurred_at AND e.ended_at = c.committed_at AND e.end_reason = 'VOLUNTARY_LEAVE') AS coherent
+       FROM ${EPISODES} e JOIN ${LEFT_EVENTS} ev ON ev.membership_episode_id = e.id
+       JOIN ${LEAVE_COMMANDS} c ON c.membership_episode_id = e.id WHERE e.id=$1`, [shared.targetEpisode]);
+  assert.equal(coherent, true, 'the one canonical instant and the reason are unaffected by the equal identities');
+  // And the retry is still durable under the equal identities.
+  await identity('postgres', f.equalityTarget);
+  const [retry] = await leave(both, shared.worldId, both);
+  assert.deepEqual(retry, left, 'an equivalent retry under equal identities returns the committed result');
+  await identity('postgres');
+
+  stage = 'opaque identities: all three equal is legal too, when the World really is that value';
+  const survivor = await provisionWorld(f.inviter, f.equalitySecond, 'equality-triple');
+  await identity('postgres', f.equalitySecond);
+  const [triple] = await leave(survivor.worldId, survivor.worldId, survivor.worldId);
+  assert.equal(triple.outcome, 'LEFT', 'a command id and an event id equal to the World id are still just opaque values');
+  assert.equal(triple.left_world_id, survivor.worldId);
+  await identity('postgres');
+  const [{ n: worldUntouched }] = await rows(
+    `SELECT count(*)::int n FROM ${WORLDS} WHERE id=$1 AND lifecycle='ACTIVE' AND phase='STANDARD' AND closed_at IS NULL`, [survivor.worldId]);
+  assert.equal(worldUntouched, 1, 'the World row is untouched by an event or command that happens to share its id');
+  const [{ n: rowsUnderId }] = await rows(
+    `SELECT ((SELECT count(*) FROM ${LEFT_EVENTS} WHERE id=$1) + (SELECT count(*) FROM ${LEAVE_COMMANDS} WHERE id=$1))::int n`, [survivor.worldId]);
+  assert.equal(rowsUnderId, 2, 'exactly one event and one command carry that value, each in its own table');
 }
 
 async function verifyAudience(f, departed) {
@@ -901,6 +972,82 @@ async function verifyConcurrency(c) {
   }
 }
 
+/**
+ * FORWARD SAFETY, proven against real PostgreSQL rather than only in the static
+ * mirror contract.
+ *
+ * This verifier runs against a FULLY migrated database, so it is the place where
+ * a live-schema ceiling does its damage: it would start failing the moment a
+ * later authorized slice evolved the schema, even though nothing about migration
+ * 0083 had changed. So the repository is pushed several authorized steps into
+ * its future - a governance table, an additive foreign key on an I-04C table, an
+ * additive column and an end-reason CHECK on the canonical episode, an additive
+ * index - and THIS verifier's own catalog proof is required to still pass. Then
+ * the regressions it must still refuse are planted, so the forward safety is not
+ * bought by asserting nothing.
+ */
+async function verifyForwardSafety(f) {
+  stage = 'forward safety: later authorized additive schema evolution does not fail this historical verifier';
+  await identity('postgres');
+  const probe = `i04c_forward_safety_probe_${randomUUID().replace(/-/gu, '')}`;
+  await q('SAVEPOINT forward_safety');
+  try {
+    // A later reviewed slice: governed removal (CW2-03 section 25) with its own
+    // proposal substrate and its own broader end-reason vocabulary, plus an
+    // additive link from the MEMBER_LEFT fact and an additive read index.
+    await q(`CREATE TABLE public.${probe}_proposals (id uuid PRIMARY KEY)`);
+    await q(`ALTER TABLE ${LEFT_EVENTS} ADD COLUMN ${probe}_proposal_id uuid`);
+    await q(`ALTER TABLE ${LEFT_EVENTS} ADD CONSTRAINT ${probe}_fk
+             FOREIGN KEY (${probe}_proposal_id) REFERENCES public.${probe}_proposals (id) ON DELETE RESTRICT`);
+    await q(`ALTER TABLE ${EPISODES} ADD COLUMN ${probe}_ended_by uuid`);
+    await q(`ALTER TABLE ${EPISODES} ADD CONSTRAINT ${probe}_reason_check
+             CHECK (end_reason IS NULL OR end_reason IN ('VOLUNTARY_LEAVE', 'REMOVED', 'WORLD_CLOSED'))`);
+    await q(`CREATE INDEX ${probe}_committed_idx ON ${LEAVE_COMMANDS} (committed_at)`);
+    await verifyCatalog();
+
+    // And the leave core itself still commits beside all of it.
+    const world = await provisionWorld(f.inviter, f.forwardTarget, 'forward');
+    await identity('postgres', f.forwardTarget);
+    const [stillWorks] = await leave(randomUUID(), world.worldId, randomUUID());
+    assert.equal(stillWorks.outcome, 'LEFT', 'a voluntary leave still commits beside the later authorized schema');
+    assert.equal(stillWorks.episode_end_reason, 'VOLUNTARY_LEAVE', 'and still writes the reason the broader vocabulary now permits');
+    await identity('postgres');
+
+    stage = 'forward safety: a real regression is still refused';
+    for (const [reason, plant, refuses] of [
+      ['the per-episode uniqueness 0083 owns is dropped',
+        `ALTER TABLE ${LEAVE_COMMANDS} DROP CONSTRAINT shared_world_voluntary_leave_commands_episode_key`,
+        /shared_world_voluntary_leave_commands_episode_key/u],
+      ['a foreign key 0083 owns stops being restrictive',
+        `ALTER TABLE ${LEFT_EVENTS} DROP CONSTRAINT shared_world_member_left_events_actor_fk,
+         ADD CONSTRAINT shared_world_member_left_events_actor_fk FOREIGN KEY (actor_user_id) REFERENCES public.users (id) ON DELETE CASCADE`,
+        /shared_world_member_left_events_actor_fk/u],
+      ['a permanent (World, human) key would forbid a future rejoin from leaving again',
+        `ALTER TABLE ${LEFT_EVENTS} ADD CONSTRAINT ${probe}_pair_key UNIQUE (world_id, actor_user_id)`,
+        /future episode in the same World/u],
+      ['the additive end_reason is dropped',
+        `ALTER TABLE ${EPISODES} DROP COLUMN end_reason`,
+        /end_reason/u],
+    ]) {
+      await q('SAVEPOINT forward_safety_regression');
+      await q(plant);
+      await assert.rejects(verifyCatalog(), refuses, `a database where ${reason} must still be refused`);
+      await q('ROLLBACK TO SAVEPOINT forward_safety_regression');
+      await q('RELEASE SAVEPOINT forward_safety_regression');
+    }
+    // Every regression was reverted, so the untouched future still passes.
+    stage = 'forward safety: every planted regression was reverted';
+    await verifyCatalog();
+  } finally {
+    await identity('postgres');
+    await q('ROLLBACK TO SAVEPOINT forward_safety');
+    await q('RELEASE SAVEPOINT forward_safety');
+  }
+  // And the ordinary present-day catalog is intact once the future is rolled back.
+  stage = 'forward safety: the present-day catalog is unchanged';
+  await verifyCatalog();
+}
+
 async function provisionHumans(ids) {
   await identity('postgres');
   await q('INSERT INTO auth.users(id) SELECT unnest($1::uuid[])', [ids]);
@@ -931,8 +1078,10 @@ async function main() {
   // Rolled-back fixtures for the behaviour proofs.
   const f = {
     inviter: randomUUID(), target: randomUUID(), secondTarget: randomUUID(), thirdTarget: randomUUID(), outsider: randomUUID(),
+    equalityTarget: randomUUID(), equalitySecond: randomUUID(), forwardTarget: randomUUID(),
   };
-  f.humans = [f.inviter, f.target, f.secondTarget, f.thirdTarget, f.outsider];
+  f.humans = [f.inviter, f.target, f.secondTarget, f.thirdTarget, f.outsider,
+    f.equalityTarget, f.equalitySecond, f.forwardTarget];
   // Committed fixtures for the multi-connection races, removed afterwards.
   const c = {
     inviter: randomUUID(), targetA: randomUUID(), targetB: randomUUID(), targetC: randomUUID(),
@@ -956,6 +1105,8 @@ async function main() {
       const granted = await verifyGrants(f);
       await verifyStaleness(f, granted);
       await verifyIdempotency(f, departed, finalCommand);
+      await verifyCrossDomainIdentityEquality(f);
+      await verifyForwardSafety(f);
       await identity('postgres');
     } finally {
       await q('ROLLBACK');
