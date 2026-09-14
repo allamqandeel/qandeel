@@ -346,7 +346,8 @@ async function verifyGrantConstraints(world, otherWorld, grantor, other) {
   await rejected(() => q(`UPDATE ${GRANTS} SET status='ACTIVE', revoked_at=NULL WHERE id=$1`, [first]), UNIQUE_VIOLATION);
   // Any number of REVOKED rows for the same pair coexist as history.
   await q(`INSERT INTO ${GRANTS}(id,world_id,grantor_user_id,status,granted_at,revoked_at) VALUES($1,$2,$3,'REVOKED','2025-06-01T00:00:00Z','2025-07-01T00:00:00Z')`, [randomUUID(), world, grantor]);
-  await rejected(() => q(`INSERT INTO ${GRANTS}(id,world_id,grantor_user_id,status) VALUES($1,$2,$3,'ACTIVE')`, [first]), UNIQUE_VIOLATION);
+  // The primary key also refuses a replayed grant id.
+  await rejected(() => q(`INSERT INTO ${GRANTS}(id,world_id,grantor_user_id,status,granted_at,revoked_at) VALUES($1,$2,$3,'REVOKED','2025-06-01T00:00:00Z','2025-07-01T00:00:00Z')`, [first, world, grantor]), UNIQUE_VIOLATION);
   return { first, second, others };
 }
 
