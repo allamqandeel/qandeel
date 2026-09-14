@@ -652,3 +652,90 @@ and the two-connection races, with rolled-back and cleaned-up fixtures:
 ```sh
 npm run verify:shared-direct-invitation-runtime:integration
 ```
+
+## Direct invitation acceptance and atomic Shared World birth (migration 0082, I-04B)
+
+Migration 0082 is the first migration allowed to create a real Shared World. It implements
+CW2-03 section 6 as **one atomic transaction**: a valid exact-target acceptance consumes the
+exact `PENDING` invitation, creates the Shared World, creates the inviter and target
+membership episodes, records one direct `WORLD_BIRTH`, marks the invitation `ACCEPTED` and
+writes one durable acceptance command. All seven writes commit together or not at all.
+
+The birth core is **executable by no application role**. CW2-03 section 6 lists `system
+policy allows creation` among the birth preconditions and CW2-08 section 25 / H18 binds a
+current Launch Gate Snapshot before an irreversible commit, with section 40 making
+`UNKNOWN` / `UNCONFIGURED` / `UNSATISFIED` / `UNTESTED` fail closed. The Connected Worlds
+Launch Gate does not exist yet, and creating a World is irreversible (section 31 makes World
+end an archival closure, never a deletion). So `commit_shared_world_direct_acceptance_birth_v1`
+is fully implemented and real-PostgreSQL tested but `PUBLIC`, `anon`, `authenticated` and
+`service_role` all hold no `EXECUTE` - migration 0082 contains no `GRANT` statement at all,
+and refuses to deploy if any of those four can execute it. That is the pre-launch security
+boundary, not a temporary testing convenience. A later reviewed launch-gated wrapper is
+expected to authenticate the exact human, resolve and revalidate current system policy,
+preserve that human's own session claims and only then call this primitive; nothing here
+forbids such a wrapper.
+
+Human acceptance authority is exact. The function takes **no acceptor, actor or target
+parameter** - only five opaque uuid persistence identities (the command id, the invitation
+and the three row identities the birth will create) which must be non-null and pairwise
+distinct. The accepting human is `auth.uid()`, and the birth commits only when that human IS
+the invitation's persisted `target_user_id`. The inviter cannot accept on the target's
+behalf, QANDEEL has no session identity and so can never accept, and `service_role` cannot
+execute the primitive at all.
+
+**Canonical lock order**, continued exactly from I-04A: the target credential-state row
+first, the exact invitation row second. Because acceptance requires `auth.uid()` to be the
+target, the target's credential-state row is the caller's own row and is taken before the
+invitation is read. Rotation takes the same row first, so an acceptance racing a rotation
+serializes on one row with exactly two canonical outcomes - acceptance commits and the later
+rotation leaves the now-`ACCEPTED` invitation untouched, or the rotation commits and the
+acceptance then sees a non-`PENDING` or stale-epoch invitation and no World is born. Under
+both locks the command revalidates that the invitation is exactly `PENDING`, that its target
+is `auth.uid()` and that its bound `target_credential_epoch` equals the current epoch.
+
+On a valid birth the World is exactly `ACTIVE` / `STANDARD` with `birth_basis =
+ACCEPTED_INVITATION` and a NULL closure, and membership is **exactly the inviter and the
+exact accepting target** - two open episodes written by one statement, with both user ids
+read from the persisted invitation. No third human, no QANDEEL membership, no owner, admin or
+role column anywhere. `shared_world_direct_birth_events` is the canonical direct
+`WORLD_BIRTH` fact: table identity is the event type, so there is no payload and no mutable
+event state, and its unique `invitation_id` is one of the structural reasons one invitation
+creates at most one World.
+
+**ONE database-owned instant** is captured once inside the transaction and persisted
+unchanged as the World's `born_at`, both episodes' `joined_at`, the birth event's
+`occurred_at`, the invitation's `terminal_at` and the command's `committed_at`. No client
+timestamp is accepted and no second clock read can drift; the verifier compares all six in
+SQL at full precision.
+
+Refusals are bounded and non-enumerating. A nonexistent invitation, a caller who is not the
+exact target, a non-`PENDING` invitation, an absent credential state and a stale bound epoch
+all fail through the single internal class `SHARED_DIRECT_INVITATION_NOT_ACCEPTABLE`, which
+names no human and no reason, so a future wrapper cannot become an existence oracle. Any
+supplied identity that is already taken fails through `SHARED_DIRECT_BIRTH_ID_CONFLICT` and
+rolls the whole birth back - no World, no episode, no birth event, no command row, and the
+invitation stays `PENDING`. Acceptance idempotency is durable and checked at every point an
+equivalent retry can arrive: before the locks, under the locks, and inside the uniqueness
+conflict that two commands sharing a command id across different humans have as their only
+serialization point. Impossible canonical state fails closed through
+`SHARED_DIRECT_BIRTH_CONTRADICTORY_STATE` rather than being silently repaired.
+
+Deliberately absent: no application wrapper, controller or route; no Launch Gate, feature
+flag, entitlement or moderation state; no decline / cancel / expiry / add-member / leave /
+remove / rejoin command; no World name, description, topic, avatar or settings requirement;
+no Shared conversation, message or QANDEEL generation; no Personal-context read and no
+Standing Context Grant; no Matching or Introduction state; and no account-status, ban, age or
+eligibility model - the repository has no such frozen Connected Worlds restriction, and this
+slice requires only that the canonical human rows exist, which the restrictive foreign keys
+already enforce.
+
+The secret-free structural contract runs under `npm run test:database`, and a Jest parity
+spec checks the persisted birth constants against the frozen I-01A kernel's own
+`attemptSharedWorldBirth`. The real PostgreSQL verifier proves the catalog, both ACLs, the
+still-sealed 0075 / 0081 substrate, the atomic birth and its single instant, every bounded
+refusal, idempotency, identity-collision rollback and the multi-connection races, with
+rolled-back and cleaned-up fixtures:
+
+```sh
+npm run verify:shared-direct-world-birth:integration
+```
