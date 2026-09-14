@@ -677,7 +677,7 @@ async function verifyStaleness(f, granted) {
   // persisted: the frozen I-03B boundary reads no membership, so the SURVIVING
   // authority basis and the CHANGED audience stay separate inputs - which is
   // what lets the frozen I-03A / I-03E / I-03F layers decide, unchanged.
-  const resolved = await rows('SELECT grant_id, grant_status, audience_user_id FROM public.resolve_shared_world_standing_context_grant_v1($1,$2)',
+  const resolved = await rows('SELECT grant_id, status, audience_user_id FROM public.resolve_shared_world_standing_context_grant_v1($1,$2)',
     [granted.worldId, f.secondTarget]);
   assert.deepEqual(resolved, [], 'after the explicit revoke above, the departed owner has no ACTIVE grant - because they revoked it, not because they left');
 }
