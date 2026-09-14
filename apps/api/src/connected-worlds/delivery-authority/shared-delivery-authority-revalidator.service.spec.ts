@@ -1127,14 +1127,15 @@ describe('SharedDeliveryAuthorityRevalidatorService', () => {
 
   // -------------------------------------------------------------------------
   describe('scope guard (task §8, §28-§34, §38, §50-§51)', () => {
-    it('contains exactly the three production files and their one spec, with closed import sets', () => {
-      expect(readdirSync(__dirname).filter((name) => name.endsWith('.ts')).sort()).toEqual([
-        'shared-delivery-authority-revalidator.service.spec.ts',
-        'shared-delivery-authority-revalidator.service.ts',
-        'shared-delivery-authority.types.ts',
-        'shared-private-source-state-resolver.types.ts',
-      ]);
-      expect(readdirSync(__dirname).filter((name) => !name.endsWith('.ts'))).toEqual([]);
+    // The three files I-03F introduced exist, and each imports exactly what it is
+    // allowed to import. Deliberately NOT a census of the directory: a later
+    // authorized source-state adapter, helper or second spec in this namespace is
+    // expected growth (I-03G, I-04), and a historical guard that counted the files
+    // here would fail on it for no reason. The root static contract proves that
+    // property by mutation rather than asserting it.
+    it('carries the three production files it introduced, each with a closed import set', () => {
+      const present = readdirSync(__dirname);
+      for (const file of [...PRODUCTION, 'shared-delivery-authority-revalidator.service.spec.ts']) expect(present).toContain(file);
       expect(imports(executable('shared-delivery-authority.types.ts'))).toEqual(['../kernel/world.types']);
       expect(imports(executable('shared-private-source-state-resolver.types.ts'))).toEqual(['../effective-context/shared-effective-context.types']);
       expect(imports(executable('shared-delivery-authority-revalidator.service.ts'))).toEqual([
