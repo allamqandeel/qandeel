@@ -220,19 +220,33 @@ async function verifyCatalog() {
   assert.ok(terminalCheck && /PENDING/u.test(terminalCheck.def) && /terminal_at IS NULL/u.test(terminalCheck.def),
     'PENDING <=> terminal_at IS NULL is enforced by the database');
 
-  const foreignKeys = await rows(
+  const foreignKeys = (await rows(
     `SELECT con.conname, pg_get_constraintdef(con.oid) AS def FROM pg_constraint con
-      WHERE con.conrelid = ANY($1::regclass[]) AND con.contype='f' ORDER BY con.conname`, [OWN_TABLES]);
-  assert.equal(foreignKeys.length, 4, 'exactly four foreign keys: three to users, one to the invitation row');
+      WHERE con.conrelid = ANY($1::regclass[]) AND con.contype='f'`, [OWN_TABLES]))
+    .sort((left, right) => (left.conname < right.conname ? -1 : left.conname > right.conname ? 1 : 0));
+  // Five: the credential owner, the inviter, the target, the command actor -
+  // all to public.users - and the command's reference to the invitation it
+  // created.
+  assert.deepEqual(foreignKeys.map((fk) => fk.conname), [
+    'shared_world_direct_invitations_inviter_fk',
+    'shared_world_direct_invitations_target_fk',
+    'shared_world_invitation_commands_actor_fk',
+    'shared_world_invitation_commands_invitation_fk',
+    'shared_world_invite_credential_user_fk',
+  ].sort(), 'exactly the five expected foreign keys');
   for (const fk of foreignKeys) {
     assert.match(fk.def, /ON DELETE RESTRICT/u, `${fk.conname} is restrictive: history never cascades`);
   }
-  assert.equal(foreignKeys.filter((fk) => /REFERENCES users\(id\)/u.test(fk.def)).length, 3);
+  assert.equal(foreignKeys.filter((fk) => /REFERENCES (?:public\.)?users\(id\)/u.test(fk.def)).length, 4,
+    'four human identities, all restrictive');
+  assert.equal(foreignKeys.filter((fk) => /REFERENCES (?:public\.)?shared_world_direct_invitations\(id\)/u.test(fk.def)).length, 1);
 
   const indexes = await rows(
-    `SELECT indexname, indexdef FROM pg_indexes WHERE schemaname='public' AND tablename = ANY($1::text[]) ORDER BY indexname`,
+    `SELECT indexname, indexdef FROM pg_indexes WHERE schemaname='public' AND tablename = ANY($1::text[])`,
     [OWN_TABLES.map((t) => t.split('.')[1])]);
-  assert.deepEqual(indexes.map((i) => i.indexname), [
+  // Sorted in JS, not by the database: index ordering must not depend on the
+  // server's collation.
+  assert.deepEqual(indexes.map((i) => i.indexname).sort(), [
     'shared_world_direct_invitations_inviter_idx',
     'shared_world_direct_invitations_pk',
     'shared_world_direct_invitations_target_pending_idx',
@@ -240,7 +254,7 @@ async function verifyCatalog() {
     'shared_world_invitation_commands_pk',
     'shared_world_invite_credential_pk',
     'shared_world_invite_credential_ref_key',
-  ], 'exactly the expected index set: two primary keys, the reference identity, the two access patterns and the one-command-per-invitation rule');
+  ], 'exactly the expected index set: three primary keys, the reference identity, the two access patterns and the one-command-per-invitation rule');
   assert.match(indexes.find((i) => i.indexname === 'shared_world_direct_invitations_target_pending_idx').indexdef,
     /\(target_user_id, target_credential_epoch\) WHERE \(status = 'PENDING'::text\)/u);
   assert.match(indexes.find((i) => i.indexname === 'shared_world_invitation_commands_invitation_idx').indexdef,
