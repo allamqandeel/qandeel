@@ -122,7 +122,13 @@ const FORBIDDEN_TABLES = [
   'context_admissions', 'grants', 'permissions', 'standing_context_consent_events', 'shared_world_consent_events',
 ];
 
+// Counts are read as the owner: the current application role is restored
+// afterwards so a behaviour proof can take a snapshot without leaving the
+// identity it is proving. (The JWT claim setting is transaction-local and
+// survives RESET ROLE.)
 async function snapshot(worldIds) {
+  const [{ role }] = await rows('SELECT current_user AS role');
+  await q('RESET ROLE');
   const [counts] = await rows(
     `SELECT (SELECT count(*)::int FROM ${GRANTS} WHERE world_id = ANY($1::uuid[])) grants,
             (SELECT count(*)::int FROM ${GRANTS} WHERE world_id = ANY($1::uuid[]) AND status='ACTIVE') active,
@@ -130,6 +136,7 @@ async function snapshot(worldIds) {
             (SELECT count(*)::int FROM ${EVENTS} WHERE world_id = ANY($1::uuid[])) events`,
     [worldIds],
   );
+  if (['anon', 'authenticated', 'service_role'].includes(role)) await q(`SET LOCAL ROLE ${role}`);
   return counts;
 }
 
