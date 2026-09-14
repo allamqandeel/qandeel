@@ -379,6 +379,7 @@ DECLARE
                              'public.shared_world_direct_acceptance_commands'];
   p record;
   in_names text[];
+  in_types text[];
   out_names text[];
   arg_name text;
   target_role text;
@@ -397,7 +398,7 @@ BEGIN
   -- same string, which would make the caller-supplied-parameter ban fire on this
   -- function's own result shape. The catalog arrays separate the two exactly.
   SELECT pr.prosecdef, pr.provolatile, pr.proconfig, pr.prosrc, pr.proargnames, pr.proargmodes,
-         pg_get_function_identity_arguments(pr.oid) AS identity_args, pg_get_userbyid(pr.proowner) AS owner
+         pr.proargtypes, pg_get_userbyid(pr.proowner) AS owner
     INTO p FROM pg_proc pr WHERE pr.oid = fn::regprocedure;
   IF p.owner <> 'postgres' THEN RAISE EXCEPTION 'I-04B: % must be owned by postgres', fn; END IF;
   IF NOT p.prosecdef THEN RAISE EXCEPTION 'I-04B: % must be SECURITY DEFINER', fn; END IF;
@@ -431,10 +432,18 @@ BEGIN
     FROM unnest(p.proargnames, p.proargmodes) WITH ORDINALITY AS a(n, m, ord);
   IF in_names <> ARRAY['p_command_id', 'p_invitation_id', 'p_world_id',
                        'p_inviter_membership_episode_id', 'p_target_membership_episode_id'] THEN
-    RAISE EXCEPTION 'I-04B: % must accept exactly the five opaque persistence identities', fn;
+    RAISE EXCEPTION 'I-04B: % must accept exactly the five opaque persistence identities, not %', fn, in_names;
   END IF;
-  IF p.identity_args <> 'uuid, uuid, uuid, uuid, uuid' THEN
-    RAISE EXCEPTION 'I-04B: % must accept only opaque uuid identities', fn;
+  -- pg_proc.proargtypes holds the IN argument types and nothing else, so it is
+  -- the authority here. A rendered signature is not: pg_get_function_arguments
+  -- folds this function's RETURNS TABLE columns into the same string, and
+  -- pg_get_function_identity_arguments does not render what its name suggests
+  -- either. Every one of these checks names the observed value when it fails.
+  SELECT array_agg(t.typname::text ORDER BY a.ord) INTO in_types
+    FROM unnest(p.proargtypes::oid[]) WITH ORDINALITY AS a(argtype, ord)
+    JOIN pg_type t ON t.oid = a.argtype;
+  IF in_types <> ARRAY['uuid', 'uuid', 'uuid', 'uuid', 'uuid'] THEN
+    RAISE EXCEPTION 'I-04B: % must accept only opaque uuid identities, not %', fn, in_types;
   END IF;
   -- The ban is non-vacuous by construction: the exact list above proves these
   -- really are the parameter names being scanned.
@@ -448,7 +457,7 @@ BEGIN
   -- private column may be added to it.
   IF out_names <> ARRAY['outcome', 'command_id', 'accepted_invitation_id', 'born_world_id',
                         'world_lifecycle', 'world_phase', 'world_birth_basis'] THEN
-    RAISE EXCEPTION 'I-04B: % must return exactly the bounded committed result', fn;
+    RAISE EXCEPTION 'I-04B: % must return exactly the bounded committed result, not %', fn, out_names;
   END IF;
 
   -- No hidden Personal truth at birth (CW2-03 section 8, C7), no Standing

@@ -250,13 +250,19 @@ async function verifyCatalog() {
   stage = 'catalog: the two commands are pinned SECURITY DEFINER, and the birth core is caller-identity-free';
   const [fn] = await rows(
     `SELECT pr.prosecdef, pr.provolatile, pr.proconfig, pr.prosrc, pr.proargnames, pr.proargmodes,
-            pg_get_userbyid(pr.proowner) AS owner, pg_get_function_identity_arguments(pr.oid) AS identity_args
+            pg_get_userbyid(pr.proowner) AS owner,
+            (SELECT array_agg(t.typname::text ORDER BY a.ord)
+               FROM unnest(pr.proargtypes::oid[]) WITH ORDINALITY AS a(argtype, ord)
+               JOIN pg_type t ON t.oid = a.argtype) AS in_types
        FROM pg_proc pr WHERE pr.oid = $1::regprocedure`, [BIRTH_FN]);
   assert.equal(fn.owner, 'postgres', 'the birth core is owned by postgres');
   assert.equal(fn.prosecdef, true, 'the birth core is SECURITY DEFINER');
   assert.equal(fn.provolatile, 'v', 'the birth core is a mutation and is VOLATILE');
   assert.ok((fn.proconfig ?? []).some((cfg) => cfg === 'search_path=' || cfg === 'search_path=""'), 'the birth core pins an empty search_path');
-  assert.equal(fn.identity_args, 'uuid, uuid, uuid, uuid, uuid', 'every supplied identity is an opaque uuid');
+  // pg_proc.proargtypes holds the IN argument types and nothing else, so it is
+  // the authority. A rendered signature is not: pg_get_function_arguments folds
+  // this function's RETURNS TABLE columns into the same string.
+  assert.deepEqual(fn.in_types, ['uuid', 'uuid', 'uuid', 'uuid', 'uuid'], 'every supplied identity is an opaque uuid');
   const inNames = fn.proargnames.filter((_name, index) => fn.proargmodes[index] === 'i');
   const outNames = fn.proargnames.filter((_name, index) => ['t', 'o'].includes(fn.proargmodes[index]));
   assert.deepEqual(inNames, ['p_command_id', 'p_invitation_id', 'p_world_id', 'p_inviter_membership_episode_id', 'p_target_membership_episode_id'],
