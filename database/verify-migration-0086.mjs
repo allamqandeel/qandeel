@@ -257,15 +257,20 @@ async function verifyCatalog() {
     assert.equal(column.is_nullable, 'YES', `the ${field} setting is optional`);
     assert.equal(column.column_default, null, `the ${field} setting carries no default`);
   }
-  const [{ generic }] = await rows(
-    `SELECT EXISTS (SELECT 1 FROM information_schema.columns c
-       WHERE c.table_schema = 'public'
-         AND c.table_name IN ('shared_world_settings_versions','shared_world_settings_state',
-                              'shared_world_setting_changed_events','shared_world_settings_change_commands')
-         AND (c.column_name ~* '(owner|admin|creator|initiator|proposer|moderator|privilege|capability|permission|entitlement|commercial|safety|moderation|flag|metadata|settings_json|payload|blob|document)'
-              OR c.data_type IN ('json','jsonb','ARRAY'))) AS generic`);
-  assert.equal(generic, false,
-    'Shared settings are exact columns under unanimity, never a JSON blob, a role or a policy engine');
+  // There is deliberately NO migration-wide column NAME or TYPE filter over the live
+  // column list here, for the same reason 0085 carries none and the I-04D FIX-01A
+  // correction removed one from 0084: it would refuse every column a later REVIEWED
+  // slice appends beside the four frozen v1 settings, which is that slice's business
+  // rather than 0086's to forbid - and the forward-safety probe below appends exactly
+  // such a column. That migration 0086 ITSELF created no blob, key/value store or
+  // role column is a claim about 0086's own text, and it is proven there, by
+  // database/tests/shared-world-governed-settings-v1.test.mjs over its CREATE TABLE
+  // declarations.
+  //
+  // What stays live is stronger over what 0086 DOES own: the nine owned columns are
+  // pinned above by name, type, nullability and the absence of a default, in order,
+  // so a frozen v1 setting that was dropped, retyped, made mandatory or given a
+  // default still fails.
 
   stage = 'catalog: the exact bindings and foreign keys 0086 owns';
   const constraintsOf = async (table) => rows(
@@ -287,7 +292,7 @@ async function verifyCatalog() {
       `${name} binds exactly the canonical row, restrictively: canonical history is never cascaded away`);
   }
 
-  stage = 'catalog: RLS on, zero policies, no trigger and no application-role privilege';
+  stage = 'catalog: RLS on, zero policies and no application-role privilege';
   for (const table of OWN_TABLES) {
     const [{ n: policies }] = await rows('SELECT count(*)::int n FROM pg_policy p WHERE p.polrelid = $1::regclass', [table]);
     assert.equal(policies, 0, `${table} carries zero RLS policies`);
@@ -476,9 +481,14 @@ async function verifySettings(f) {
   stage = 'S3: an old approval can never authorize a changed payload or a second version';
   // The exact same proposal cannot be committed twice, under any command id.
   await rejected(() => commitSettings(randomUUID(), p.proposal, randomUUID()), CONFLICT, /SHARED_WORLD_SETTINGS_ID_CONFLICT/u);
-  // A new value under the SAME proposal is refused: a version is immutable.
+  // A new value under the SAME proposal is refused - and the refusal comes from the
+  // FROZEN I-04D capture rather than from this slice, which is the correct boundary:
+  // a committed proposal identity is never re-bound to a different payload version,
+  // and that is I-04D's rule to enforce. 0086 never gets the chance to have an
+  // opinion, and asserting its own class here would have been asserting the wrong
+  // layer owns the invariant.
   await rejected(() => prepareSettings({ ...p, version: randomUUID() }, world.worldId, { ...values, name: 'Other' }),
-    CONFLICT, /SHARED_WORLD_SETTINGS_ID_CONFLICT/u);
+    CONFLICT, /SHARED_WORLD_GOVERNANCE_ID_CONFLICT/u);
   // A DIFFERENT value for the same version id is not an equivalent retry.
   await rejected(() => prepareSettings(p, world.worldId, { ...values, name: 'Different' }),
     CONFLICT, /SHARED_WORLD_SETTINGS_ID_CONFLICT/u);
@@ -683,12 +693,12 @@ async function verifyForwardSafety(f) {
       ['a frozen v1 setting gains a default the primitives never write',
         `ALTER TABLE ${VERSIONS} ALTER COLUMN topic SET DEFAULT 'general'`,
         /still carries every column migration 0086 owns/u],
-      ['the settings surface becomes a JSON blob',
-        `ALTER TABLE ${VERSIONS} ADD COLUMN settings_json jsonb`,
-        /never a JSON blob, a role or a policy engine/u],
-      ['the settings surface gains a moderator role',
-        `ALTER TABLE ${VERSIONS} ADD COLUMN moderator_user_id uuid`,
-        /never a JSON blob, a role or a policy engine/u],
+      // A later reviewed jsonb or role column APPENDED beside the frozen v1 surface is
+      // deliberately NOT a regression here: 0086 owns the nine columns it created, not
+      // the vocabulary of every column that follows, and the authorized future above
+      // appends exactly such a column. That 0086 itself created none is proven from
+      // 0086's own text by its static contract. What IS a regression is any damage to
+      // the frozen surface itself, which the four plants above and below cover.
       ['a settings table becomes directly readable by an application role',
         `GRANT SELECT ON ${VERSIONS} TO authenticated`,
         /authenticated must not hold SELECT/u],

@@ -318,6 +318,15 @@ test('the real-PostgreSQL verifier carries no live-schema ceiling of its own', (
   assert.doesNotMatch(verifier, /assert\.equal\(\s*\w*[Ff]oreign[Kk]ey\w*\.length/u, 'foreign keys are asserted exactly, never counted');
   assert.doesNotMatch(verifier, /assert\.equal\(\s*\w*[Cc]onstraint\w*\.length/u, 'and neither are constraints');
   assert.doesNotMatch(verifier, /proname\s*~/u, 'and the function catalog is never swept for future names');
+  // The two ceiling shapes the I-04D FIX-01A correction removed from 0084, kept out of
+  // this verifier by detector. A migration-wide column NAME or TYPE filter over the
+  // LIVE column list refuses every column a later reviewed slice appends beside the
+  // frozen v1 surface - which is that slice's business, and which the forward-safety
+  // probe below appends on purpose.
+  assert.doesNotMatch(verifier, /c\.column_name ~\*/u,
+    'no migration-wide column NAME filter over the live column list: 0086 owns the nine columns it created, not the vocabulary of every column that follows');
+  assert.doesNotMatch(verifier, /c\.data_type IN \('json'/u,
+    'and no migration-wide column TYPE filter over it either');
   assert.doesNotMatch(verifier, /FROM pg_trigger/u,
     'no live trigger census: that 0086 installs no trigger is proven from 0086 own text, and a later reviewed audit trigger is not an 0086 regression');
   assert.match(verifier, /const OWNED_FOREIGN_KEYS = \{/u);
