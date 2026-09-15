@@ -464,7 +464,9 @@ function buildMirror() {
 function runInMirror(mirror) {
   const env = { ...process.env, [PROBE_CHILD]: '1' };
   delete env.NODE_TEST_CONTEXT;
-  // The child never stands in the mirror: that is the handle that used to block its removal.
+  // The child intentionally runs with the mirror as its cwd, so cwd-relative reads keep resolving
+  // exactly as they would in the real repository. A transient Windows directory-handle release
+  // delay is handled by removeHarnessMirror's bounded cleanup retry, not by moving cwd.
   const result = spawnSync(process.execPath, ['--test', join(mirror, 'tests', SELF)],
     { cwd: mirror, encoding: 'utf8', env });
   assert.equal(result.error, undefined, `the mirrored contract could not be started: ${result.error?.message}`);
