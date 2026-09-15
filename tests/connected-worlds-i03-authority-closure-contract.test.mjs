@@ -55,10 +55,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHarnessMirror, harnessChildCwd, removeHarnessMirror } from './harness-temp-dir.mjs';
 
 const rootPath = fileURLToPath(new URL('../', import.meta.url));
 const SELF = 'connected-worlds-i03-authority-closure-contract.test.mjs';
@@ -438,11 +438,12 @@ test('the contract is not vacuous: the files it asserts over are real, substanti
 // ---------------------------------------------------------------------------------------------
 
 /** Only the paths this contract actually reads. Copying the whole tree would cost seconds for nothing. */
-const MIRRORED = ['apps/api/src', 'apps/mobile/src', 'database/migrations', '.github/workflows/api-ci.yml', 'package.json', `tests/${SELF}`];
+const MIRRORED = ['apps/api/src', 'apps/mobile/src', 'database/migrations', '.github/workflows/api-ci.yml', 'package.json',
+  `tests/${SELF}`, 'tests/harness-temp-dir.mjs'];
 const SKIP = /(?:^|[\\/])(?:node_modules|\.git|\.expo|\.turbo|coverage)(?:[\\/]|$)/u;
 
 function buildMirror() {
-  const mirror = mkdtempSync(join(tmpdir(), 'qandeel-i03-closure-'));
+  const mirror = createHarnessMirror('qandeel-i03-closure-');
   for (const entry of MIRRORED) {
     const from = join(rootPath, entry);
     if (!existsSync(from)) continue;
@@ -463,7 +464,9 @@ function buildMirror() {
 function runInMirror(mirror) {
   const env = { ...process.env, [PROBE_CHILD]: '1' };
   delete env.NODE_TEST_CONTEXT;
-  const result = spawnSync(process.execPath, ['--test', join(mirror, 'tests', SELF)], { cwd: mirror, encoding: 'utf8', env });
+  // The child never stands in the mirror: that is the handle that used to block its removal.
+  const result = spawnSync(process.execPath, ['--test', join(mirror, 'tests', SELF)],
+    { cwd: harnessChildCwd(mirror), encoding: 'utf8', env });
   assert.equal(result.error, undefined, `the mirrored contract could not be started: ${result.error?.message}`);
   assert.notEqual(result.status, null, 'the mirrored contract did not exit normally');
   return { ok: result.status === 0, output: `${result.stdout ?? ''}${result.stderr ?? ''}` };
@@ -517,8 +520,11 @@ const SCENARIO_PATHS = [
   `${API}/conversation/i03-closure-forward-safety-probe.ts`,
 ];
 
-test('every authorized continuation of I-03 leaves this contract passing, and a real regression still breaks it', { skip: process.env[PROBE_CHILD] === '1' ? 'inner probe run' : false }, () => {
+test('every authorized continuation of I-03 leaves this contract passing, and a real regression still breaks it', { skip: process.env[PROBE_CHILD] === '1' ? 'inner probe run' : false }, (t) => {
   const mirror = buildMirror();
+  // Registered the moment the mirror exists, so no path out of this test - including a failed
+  // assertion in the refusals below - can leave the tree behind.
+  t.after(() => removeHarnessMirror(mirror));
   try {
     // The baseline. Every claim below is worthless if the untouched mirror does not already pass.
     assert.ok(runInMirror(mirror).ok, 'the untouched mirror must reproduce this contract exactly');
@@ -653,5 +659,4 @@ test('every authorized continuation of I-03 leaves this contract passing, and a 
 
   // And the mirror is back to where it started, so the refusals above were real.
   assert.ok(runInMirror(mirror).ok, 'every mutation was reverted');
-  rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
 });

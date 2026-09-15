@@ -45,10 +45,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHarnessMirror, harnessChildCwd, removeHarnessMirror } from '../../tests/harness-temp-dir.mjs';
 
 const rootPath = fileURLToPath(new URL('../../', import.meta.url));
 const SELF = 'shared-direct-world-birth-transaction-v1.test.mjs';
@@ -343,7 +343,7 @@ test('the canonical lock order is the target credential-state row, then the exac
   const episodes = executableFunction.indexOf('INSERT INTO public.shared_world_membership_episodes');
   assert.ok(credential > 0 && invitation > credential && world > invitation && episodes > world,
     'I-04A froze credential-state first, invitation rows second, and I-04B continues it exactly');
-  assert.match(executableFunction, /WHERE s\.user_id = u\s*\n\s*FOR UPDATE;/u, 'the credential row locked is the accepting human’s own row');
+  assert.match(executableFunction, /WHERE s\.user_id = u\s*\n\s*FOR UPDATE;/u, 'the credential row locked is the accepting humanâ€™s own row');
   assert.match(executableFunction, /WHERE i\.id = p_invitation_id\s*\n\s*FOR UPDATE;/u, 'and then the exact invitation row');
   assert.equal((executableFunction.match(/FOR UPDATE/gu) ?? []).length, 2, 'exactly two row locks');
   // Counted again over the stored source, comments and all, because a comment
@@ -627,7 +627,7 @@ test('the contract is not vacuous: every deliberate weakening of migration 0082 
     }
     assert.ok(runInMirror(mirror).ok, 'every weakening was reverted');
   } finally {
-    rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+    removeHarnessMirror(mirror);
   }
 });
 
@@ -647,11 +647,12 @@ test('the contract is not vacuous: every deliberate weakening of migration 0082 
  * mirrored because the verifier-census sweep reads every Connected Worlds
  * verifier, not just this slice's.
  */
-const MIRRORED = ['database', 'apps/api/src/connected-worlds/kernel', '.github/workflows/api-ci.yml', 'package.json'];
+const MIRRORED = ['database', 'apps/api/src/connected-worlds/kernel', '.github/workflows/api-ci.yml', 'package.json',
+  'tests/harness-temp-dir.mjs'];
 const SKIP = /(?:^|[\\/])(?:node_modules|\.git|\.expo|\.turbo|coverage)(?:[\\/]|$)/u;
 
 function buildMirror() {
-  const mirror = mkdtempSync(join(tmpdir(), 'qandeel-i04b-forward-'));
+  const mirror = createHarnessMirror('qandeel-i04b-forward-');
   for (const entry of MIRRORED) {
     const from = join(rootPath, entry);
     if (!existsSync(from)) continue;
@@ -672,7 +673,7 @@ function buildMirror() {
 function runInMirror(mirror, file = SELF) {
   const env = { ...process.env, [PROBE_CHILD]: '1' };
   delete env.NODE_TEST_CONTEXT;
-  const result = spawnSync(process.execPath, ['--test', join(mirror, 'database', 'tests', file)], { cwd: mirror, encoding: 'utf8', env });
+  const result = spawnSync(process.execPath, ['--test', join(mirror, 'database', 'tests', file)], { cwd: harnessChildCwd(mirror), encoding: 'utf8', env });
   assert.equal(result.error, undefined, `the mirrored contract could not be started: ${result.error?.message}`);
   assert.notEqual(result.status, null, 'the mirrored contract did not exit normally');
   return { ok: result.status === 0, output: `${result.stdout ?? ''}${result.stderr ?? ''}` };
@@ -712,8 +713,10 @@ const SCENARIO_PATHS = [LAUNCH_MIGRATION, LATER_MIGRATION, FUTURE_VERIFIER, FUTU
   'database/migrations/0081_shared_direct_invitation_runtime_v1.sql', 'database/README.md'];
 
 test('the launch-gated wrapper and every later authorized lifecycle slice leave this contract passing, and a real regression still breaks it',
-  { skip: process.env[PROBE_CHILD] === '1' ? 'inner probe run' : false }, () => {
+  { skip: process.env[PROBE_CHILD] === '1' ? 'inner probe run' : false }, (t) => {
   const mirror = buildMirror();
+  // Registered the moment the mirror exists, so no path out of this test can leave the tree behind.
+  t.after(() => removeHarnessMirror(mirror));
   try {
     assert.ok(runInMirror(mirror).ok, 'the untouched mirror must reproduce this contract exactly');
 
@@ -796,7 +799,7 @@ test('the launch-gated wrapper and every later authorized lifecycle slice leave 
     ['a second clock read instead of the one canonical instant', () => patch(mirror, `database/migrations/${MIGRATION_NAME}`,
       (text) => text.replace('VALUES (p_world_id, p_invitation_id, birth_at);', 'VALUES (p_world_id, p_invitation_id, clock_timestamp());'),
       'clock_timestamp());')],
-    ['an edit to I-04A’s frozen migration 0081', () => patch(mirror, 'database/migrations/0081_shared_direct_invitation_runtime_v1.sql',
+    ['an edit to I-04Aâ€™s frozen migration 0081', () => patch(mirror, 'database/migrations/0081_shared_direct_invitation_runtime_v1.sql',
       (text) => `${text}\n-- probe\n`, '-- probe')],
   ];
   for (const [reason, mutate] of refusals) {
@@ -809,7 +812,6 @@ test('the launch-gated wrapper and every later authorized lifecycle slice leave 
   }
 
   assert.ok(runInMirror(mirror).ok, 'every mutation was reverted');
-  rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
 });
 
 test('no Connected Worlds verifier censuses the function catalog for names a later authorized slice will legitimately use', () => {

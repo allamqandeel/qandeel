@@ -47,10 +47,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHarnessMirror, harnessChildCwd, removeHarnessMirror } from '../../tests/harness-temp-dir.mjs';
 
 const rootPath = fileURLToPath(new URL('../../', import.meta.url));
 const SELF = 'shared-direct-invitation-runtime-v1.test.mjs';
@@ -661,7 +661,7 @@ test('the contract is not vacuous: every deliberate weakening of migration 0081 
     // And the mirror is back to where it started, so the refusals were real.
     assert.ok(runInMirror(mirror).ok, 'every weakening was reverted');
   } finally {
-    rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+    removeHarnessMirror(mirror);
   }
 });
 
@@ -680,11 +680,12 @@ test('the contract is not vacuous: every deliberate weakening of migration 0081 
  * Only the paths this contract - and the two historical database contracts the
  * R3 probe below runs in the same mirror - actually read.
  */
-const MIRRORED = ['database', '.github/workflows/api-ci.yml', 'package.json'];
+const MIRRORED = ['database', '.github/workflows/api-ci.yml', 'package.json',
+  'tests/harness-temp-dir.mjs'];
 const SKIP = /(?:^|[\\/])(?:node_modules|\.git|\.expo|\.turbo|coverage)(?:[\\/]|$)/u;
 
 function buildMirror() {
-  const mirror = mkdtempSync(join(tmpdir(), 'qandeel-i04a-forward-'));
+  const mirror = createHarnessMirror('qandeel-i04a-forward-');
   for (const entry of MIRRORED) {
     const from = join(rootPath, entry);
     if (!existsSync(from)) continue;
@@ -705,7 +706,7 @@ function buildMirror() {
 function runInMirror(mirror, file = SELF) {
   const env = { ...process.env, [PROBE_CHILD]: '1' };
   delete env.NODE_TEST_CONTEXT;
-  const result = spawnSync(process.execPath, ['--test', join(mirror, 'database', 'tests', file)], { cwd: mirror, encoding: 'utf8', env });
+  const result = spawnSync(process.execPath, ['--test', join(mirror, 'database', 'tests', file)], { cwd: harnessChildCwd(mirror), encoding: 'utf8', env });
   assert.equal(result.error, undefined, `the mirrored contract could not be started: ${result.error?.message}`);
   assert.notEqual(result.status, null, 'the mirrored contract did not exit normally');
   return { ok: result.status === 0, output: `${result.stdout ?? ''}${result.stderr ?? ''}` };
@@ -743,8 +744,10 @@ const SCENARIO_PATHS = [FUTURE_MIGRATION, FUTURE_CONTRACT, FUTURE_VERIFIER, 'pac
   `database/migrations/${MIGRATION_NAME}`, 'database/migrations/0080_shared_pre_model_world_state_resolution_v1.sql', 'database/README.md'];
 
 test('I-04B and every later authorized invitation slice leave this contract passing, and a real regression still breaks it',
-  { skip: process.env[PROBE_CHILD] === '1' ? 'inner probe run' : false }, () => {
+  { skip: process.env[PROBE_CHILD] === '1' ? 'inner probe run' : false }, (t) => {
   const mirror = buildMirror();
+  // Registered the moment the mirror exists, so no path out of this test can leave the tree behind.
+  t.after(() => removeHarnessMirror(mirror));
   try {
     // The baseline. Every claim below is worthless if the untouched mirror does not already pass.
     assert.ok(runInMirror(mirror).ok, 'the untouched mirror must reproduce this contract exactly');
@@ -840,7 +843,6 @@ test('I-04B and every later authorized invitation slice leave this contract pass
 
   // And the mirror is back to where it started, so the refusals above were real.
   assert.ok(runInMirror(mirror).ok, 'every mutation was reverted');
-  rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -913,6 +915,6 @@ test('R3: a future migration may exist without editing either historical contrac
       assert.ok(runInMirror(mirror, manifest).ok, `every mutation of ${manifest}'s inputs was reverted`);
     }
   } finally {
-    rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+    removeHarnessMirror(mirror);
   }
 });

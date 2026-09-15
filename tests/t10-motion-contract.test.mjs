@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpSync, existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { createHarnessMirror, removeHarnessMirror } from './harness-temp-dir.mjs';
 
 // T-10 — Living Analysis Map Motion System v1. Static executable contract over the frozen boundary.
 //
@@ -949,7 +949,7 @@ test('the T-10 gate is registered at the root and in Mobile CI without a new nat
  * that reads nothing, so the scan is made to FAIL on a tree that carries the defect.
  */
 test('the scans really do refuse the things they claim to refuse', () => {
-  const mirror = mkdtempSync(join(tmpdir(), 'qandeel-t10-'));
+  const mirror = createHarnessMirror('qandeel-t10-');
   try {
     cpSync(motionAbsolute, join(mirror, 'motion'), { recursive: true });
     const scan = () => {
@@ -987,6 +987,6 @@ test('the scans really do refuse the things they claim to refuse', () => {
     assert.ok(leaked.includes('..' + '/../state'), 'a reach outside the owner must be visible');
     rmSync(probe, { force: true });
   } finally {
-    rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+    removeHarnessMirror(mirror);
   }
 });
