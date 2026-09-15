@@ -139,6 +139,8 @@ const PRIVILEGES = ['SELECT', 'INSERT', 'UPDATE', 'DELETE'];
 const PREPARE_FN = 'public.prepare_shared_world_standard_end_governance_v1(uuid,uuid,uuid,uuid)';
 const COMMIT_FN = 'public.commit_shared_world_standard_end_v1(uuid,uuid,uuid)';
 const RESOLVE_FN = 'public.resolve_shared_world_closed_history_visibility_v1(uuid,uuid)';
+/** The ONE application/server-role historical visibility entry point, owned by 0087. */
+const ENTRY_POINT_FN = 'public.resolve_shared_world_history_visibility_v1(uuid,uuid)';
 const MUTATION_FUNCTIONS = [PREPARE_FN, COMMIT_FN];
 
 const INSUFFICIENT_PRIVILEGE = ['42501'];
@@ -403,15 +405,22 @@ async function verifyCatalog() {
     'closed viewing is entitlement, never membership');
   assert.match(resolver.prosrc, /i\.availability_state = 'AVAILABLE'/u,
     'a closed entitlement can never reconstruct owner-deleted or unavailable source');
+  stage = 'catalog: EXACTLY ONE server-role historical visibility entry point';
+  // The closed-mode reader is an INTERNAL helper: no application role executes it,
+  // service_role included. Only migration 0087's postgres-owned SECURITY DEFINER
+  // resolver calls it, and it reaches it as its own owner.
   const [{ allowed: resolverPublic }] = await rows("SELECT has_function_privilege('public', $1, 'EXECUTE') AS allowed", [RESOLVE_FN]);
-  assert.equal(resolverPublic, false, 'PUBLIC must not execute the closed-history reader');
-  for (const role of ['anon', 'authenticated']) {
+  assert.equal(resolverPublic, false, 'PUBLIC must not execute the internal closed-history helper');
+  for (const role of APPLICATION_ROLES) {
     const [{ allowed }] = await rows('SELECT has_function_privilege($1, $2, $3) AS allowed', [role, RESOLVE_FN, 'EXECUTE']);
-    assert.equal(allowed, false, `${role} must not execute the closed-history reader`);
+    assert.equal(allowed, false,
+      `${role} must not execute the internal closed-history helper: I-04F has ONE historical visibility entry point`);
   }
-  const [{ allowed: serviceExecute }] = await rows('SELECT has_function_privilege($1, $2, $3) AS allowed',
-    ['service_role', RESOLVE_FN, 'EXECUTE']);
-  assert.equal(serviceExecute, true, 'service_role is the only executor of the closed-history reader');
+  // And that one entry point is still reachable, so this slice narrowed the
+  // boundary rather than closing it.
+  const [{ allowed: entryPoint }] = await rows('SELECT has_function_privilege($1, $2, $3) AS allowed',
+    ['service_role', ENTRY_POINT_FN, 'EXECUTE']);
+  assert.equal(entryPoint, true, 'service_role must still execute the ONE historical visibility entry point');
 }
 
 async function verifyDirectTableAcl() {
@@ -432,9 +441,18 @@ async function verifyFunctionAcl() {
     await rejected(() => rows(END_PREPARE_SQL, [randomUUID(), randomUUID(), randomUUID(), randomUUID()]), INSUFFICIENT_PRIVILEGE);
     await rejected(() => rows(END_COMMIT_SQL, [randomUUID(), randomUUID(), randomUUID()]), INSUFFICIENT_PRIVILEGE);
   }
-  for (const role of ['anon', 'authenticated']) {
+  stage = 'ACL: NO application role may execute the internal closed-history helper, service_role included';
+  for (const role of APPLICATION_ROLES) {
     await identity(role, randomUUID());
     await rejected(() => rows(CLOSED_VISIBILITY_SQL, [randomUUID(), randomUUID()]), INSUFFICIENT_PRIVILEGE);
+  }
+  // The ONE entry point is still reachable by service_role, and by nobody else.
+  await identity('service_role');
+  await rejected(() => rows(VISIBILITY_SQL, [randomUUID(), randomUUID()]), UNAVAILABLE,
+    /SHARED_WORLD_HISTORY_NOT_AVAILABLE/u);
+  for (const role of ['anon', 'authenticated']) {
+    await identity(role, randomUUID());
+    await rejected(() => rows(VISIBILITY_SQL, [randomUUID(), randomUUID()]), INSUFFICIENT_PRIVILEGE);
   }
   await identity('postgres');
 }
@@ -657,20 +675,27 @@ async function verifyClosure(f) {
       'the entitlement item set is exactly what that human could resolve immediately before closure');
   }
 
-  stage = 'C16 / C13: the closed resolver answers from the entitlement, and a closed viewer is not a member';
+  stage = 'C16 / C13: the ONE entry point answers the closed World from its entitlement snapshot';
   await identity('service_role');
   for (const human of [f.inviter, f.second, f.third]) {
     assert.deepEqual((await visibleFor(world.worldId, human)).sort(), beforeClosure[human],
-      'the ONE resolver now answers the closed World from its entitlement snapshot');
-    assert.deepEqual(
-      (await rows(CLOSED_VISIBILITY_SQL, [world.worldId, human])).map((row) => row.history_item_id).sort(),
-      beforeClosure[human], 'and the closed-mode reader agrees exactly');
+      'the ONE service-role entry point now answers the closed World from its entitlement snapshot');
   }
   assert.deepEqual(await visibleFor(world.worldId, f.departed), [],
     'the departed human sees nothing: closure created no access that did not exist');
   assert.deepEqual(await visibleFor(world.worldId, f.outsider), [],
     'and neither does an outsider');
+  // EXACTLY ONE entry point: service_role reaches the closed view only through the
+  // 0087 resolver, never through the internal helper that implements its branch.
+  await rejected(() => rows(CLOSED_VISIBILITY_SQL, [world.worldId, f.inviter]), INSUFFICIENT_PRIVILEGE);
   await identity('postgres');
+  // As the owner, the internal helper agrees EXACTLY with the entry point - which
+  // is what makes it the implementation of that branch rather than a second answer.
+  for (const human of [f.inviter, f.second, f.third]) {
+    assert.deepEqual(
+      (await rows(CLOSED_VISIBILITY_SQL, [world.worldId, human])).map((row) => row.history_item_id).sort(),
+      beforeClosure[human], 'the internal helper agrees exactly with the entry point');
+  }
   const [{ n: openAgain }] = await rows(
     `SELECT count(*)::int n FROM ${EPISODES} WHERE world_id = $1 AND ended_at IS NULL`, [world.worldId]);
   assert.equal(openAgain, 0, 'C16: a closed viewer is an entitlement holder, never an active member');
@@ -907,14 +932,14 @@ async function verifyForwardSafety(f) {
     const [closed] = await commitEnd(randomUUID(), end.proposal, randomUUID());
     assert.equal(closed.outcome, 'WORLD_ENDED', 'closure still commits beside later tables, columns, indexes and triggers');
     await identity('service_role');
-    assert.deepEqual((await rows(CLOSED_VISIBILITY_SQL, [world.worldId, f.inviter])).map((row) => row.history_item_id), [item],
-      'and the closed entitlement still answers correctly');
+    assert.deepEqual(await visibleFor(world.worldId, f.inviter), [item],
+      'and the closed entitlement still answers correctly through the ONE entry point');
     await identity('postgres');
     // The reviewed privacy material mutation runs on an ALREADY CLOSED World and
     // narrows the closed answer, without reopening lifecycle.
     await q(`SELECT public.${probe}_privacy_material_mutation($1)`, [item]);
     await identity('service_role');
-    assert.deepEqual(await rows(CLOSED_VISIBILITY_SQL, [world.worldId, f.inviter]), [],
+    assert.deepEqual(await visibleFor(world.worldId, f.inviter), [],
       'a reviewed privacy material mutation after closure still narrows source visibility');
     await identity('postgres');
     const [{ lifecycle }] = await rows(`SELECT lifecycle FROM ${WORLDS} WHERE id = $1`, [world.worldId]);
@@ -952,9 +977,15 @@ async function verifyForwardSafety(f) {
       ['a closure primitive becomes executable by an application role',
         `GRANT EXECUTE ON FUNCTION ${COMMIT_FN} TO authenticated`,
         /must not hold EXECUTE/u],
-      ['the closed-history reader becomes executable by authenticated',
+      ['the internal closed-history helper becomes executable by authenticated',
         `GRANT EXECUTE ON FUNCTION ${RESOLVE_FN} TO authenticated`,
-        /authenticated must not execute the closed-history reader/u],
+        /authenticated must not execute the internal closed-history helper/u],
+      ['a SECOND server-role visibility entry point is opened on the internal helper',
+        `GRANT EXECUTE ON FUNCTION ${RESOLVE_FN} TO service_role`,
+        /service_role must not execute the internal closed-history helper/u],
+      ['the ONE historical visibility entry point is taken away from service_role',
+        `REVOKE ALL ON FUNCTION ${ENTRY_POINT_FN} FROM service_role`,
+        /service_role must still execute the ONE historical visibility entry point/u],
       ['the closed-history reader starts answering from active membership',
         `CREATE OR REPLACE FUNCTION public.resolve_shared_world_closed_history_visibility_v1(p_world_id uuid, p_user_id uuid)
          RETURNS TABLE(world_id uuid, history_item_id uuid, occurred_at timestamptz)

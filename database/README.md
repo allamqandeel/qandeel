@@ -1118,8 +1118,27 @@ required set and NOT current World membership, and approving writes no membershi
 restores no browsing. One narrow server-only resolver,
 `resolve_shared_world_history_visibility_v1`, answers "what history may this exact human see in this
 exact Shared World" as item identity and time only - never content and never a placeholder for hidden
-history. Availability dominates every mode, so no grant or entitlement can reconstruct owner-deleted
-source.
+history. It is the ONLY application/server-role historical visibility entry point in I-04F, and
+`service_role` is its only executor. Availability dominates every mode, so no grant or entitlement can
+reconstruct owner-deleted source.
+
+**`occurred_at` means one thing, and it is frozen.** It is the canonical Shared-World
+establishment/commit instant of the history item - the moment it became Shared truth in this exact
+World - and that is the only reading under which comparing it against a membership episode is
+correct. It is NOT an underlying recalled event time, source-event semantic timestamp or provenance
+event time; those belong to I-04G material/provenance and must never be written here. The rule is
+deployed as a `COMMENT ON COLUMN`, not left in a source comment, so the slice that later writes this
+column meets it in the catalog. The distinction is load-bearing: if A says at `t2` "last week at `t1`
+I changed jobs", the history item is established at `t2` and a member B really did receive it -
+storing `t1` here would hide from B a statement B actually received.
+
+**Owner deletion is terminal.** Once `availability_state` is `DELETED_BY_OWNER`, both availability
+fields this migration owns are frozen exactly as they are: no higher revision can resurrect the item
+as `AVAILABLE`, and none can relabel it `UNAVAILABLE` either, because the historical truth that its
+*owner* deleted it is part of what must survive. The rule is scoped to those two owned fields and is
+not a table freeze - a later reviewed slice may still append columns and write them. Whether
+`UNAVAILABLE` is permanently terminal is deliberately not decided: frozen canon does not require it,
+and an item that is merely unavailable may legitimately become available again.
 
 ```sh
 npm run verify:shared-world-selective-history-access:integration
@@ -1151,6 +1170,15 @@ already requires `ACTIVE / STANDARD`. No blanket freeze is added, so a later rev
 `PRIVACY_MATERIAL_MUTATION` such as owner deletion stays possible on a closed World without reopening
 lifecycle. Pending member invitations terminalize through the reviewed I-04E topology trigger rather
 than a second mechanism. Introduction closure is deliberately not implemented here.
+
+`resolve_shared_world_closed_history_visibility_v1` is not a second resolver and not a second read
+boundary: it is the implementation of the `READ_ONLY_CLOSED / STANDARD` branch of 0087's single entry
+point, living here because the entitlement snapshot is what **this** migration owns. It is an INTERNAL
+postgres-owned helper - migration 0088 grants nothing to anybody, so no application role executes it,
+`service_role` included; its only caller is 0087's postgres-owned `SECURITY DEFINER` resolver, which
+reaches it as its own owner. I-04F therefore keeps exactly ONE application/server-role historical
+visibility entry point, `resolve_shared_world_history_visibility_v1`. The helper also refuses any World
+that is not an archived Standard World, and consults no membership at all.
 
 ```sh
 npm run verify:shared-world-standard-closure:integration

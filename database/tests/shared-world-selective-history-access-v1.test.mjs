@@ -395,6 +395,42 @@ test('temporal truth is immutable, and availability is the only future-evolvable
   assert.match(executableSql, /CREATE TRIGGER shared_world_history_item_immutable_truth\s*\n\s*BEFORE UPDATE ON public\.shared_world_history_items/u);
 });
 
+test('owner deletion is TERMINAL: no revision can resurrect or relabel a DELETED_BY_OWNER item', () => {
+  assert.match(BODY[TRIGGER_FN],
+    /OLD\.availability_state = 'DELETED_BY_OWNER'\s*\n\s*AND \(NEW\.availability_state <> 'DELETED_BY_OWNER'\s*\n\s*OR NEW\.availability_revision <> OLD\.availability_revision\)/u,
+    'once owner-deleted, BOTH availability fields this slice owns are frozen exactly as they are');
+  assert.match(BODY[TRIGGER_FN], /SHARED_WORLD_HISTORY_OWNER_DELETION_TERMINAL/u,
+    'and the rule fails closed with its own bounded class');
+  // Scoped to the two owned fields, NOT a table freeze: a later reviewed slice may
+  // still append a column and write it on an owner-deleted item.
+  assert.doesNotMatch(BODY[TRIGGER_FN], /RETURN OLD|NEW IS DISTINCT FROM OLD|to_jsonb/u,
+    'the terminal rule freezes the two owned availability fields, never the whole row');
+  // UNAVAILABLE is deliberately NOT declared terminal: frozen canon does not require it.
+  assert.ok(!/OLD\.availability_state = 'UNAVAILABLE'/u.test(BODY[TRIGGER_FN]),
+    'an item that is merely UNAVAILABLE may legitimately become available again');
+  assert.ok(selfAssertions.includes('I-04F: owner deletion must be terminal: a higher revision may never resurrect or relabel it'));
+});
+
+test('the meaning of occurred_at is frozen, and deployed into the catalog rather than only commented', () => {
+  assert.match(executableSql, /COMMENT ON COLUMN public\.shared_world_history_items\.occurred_at IS/u,
+    'the frozen meaning reaches the catalog, where the slice that later writes this column will read it');
+  const comment = executableSql.slice(executableSql.indexOf('COMMENT ON COLUMN public.shared_world_history_items.occurred_at'));
+  // The statement is written as adjacent SQL string literals across several lines,
+  // which PostgreSQL concatenates into one comment - so assert on the value the
+  // catalog will actually hold, not on the source layout.
+  const text = (comment.slice(0, comment.indexOf(';')).match(/'((?:[^']|'')*)'/gu) ?? [])
+    .map((part) => part.slice(1, -1)).join('');
+  assert.match(text, /canonical Shared-World establishment\/commit instant/u,
+    'occurred_at is the establishment instant of the history item in this exact World');
+  assert.match(text, /only instant history visibility compares against a membership episode/u);
+  assert.match(text, /NOT an underlying recalled event time, source-event semantic timestamp or provenance event time/u,
+    'and is explicitly not a source or provenance event time');
+  assert.match(text, /I-04G material\/provenance/u, 'which belongs to I-04G');
+  // The resolver really does compare THAT column against the membership interval.
+  assert.match(BODY[RESOLVE_FN], /i\.occurred_at >= e\.joined_at/u);
+  assert.ok(selfAssertions.includes('I-04F: occurred_at must carry its frozen Shared-World establishment meaning in the catalog'));
+});
+
 test('the visibility resolver is read-only, service-role-only and returns identity and time only', () => {
   assert.match(executableSql, new RegExp(`public\\.${RESOLVE_FN}\\(p_world_id uuid, p_user_id uuid\\)\\s*\\nRETURNS TABLE\\(world_id uuid, history_item_id uuid, occurred_at timestamptz\\)\\s*\\nLANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path=''`, 'u'),
     'the resolver returns exactly world, item identity and time - never content, never a count');
@@ -503,6 +539,10 @@ test('the contract is not vacuous: every deliberate weakening of migration 0087 
         'resolve_shared_world_closed_history_visibility_v1(p_world_id, p_user_id) c;', 'NULL::uuid, NULL::uuid, NULL::timestamptz;')],
       ['lets a history item time be rewritten', (text) => text.replace(
         '     OR NEW.occurred_at <> OLD.occurred_at OR NEW.registered_at <> OLD.registered_at\n', '')],
+      ['lets an owner-deleted item be resurrected under a higher revision', (text) => text.replace(
+        /  -- OWNER DELETION IS TERMINAL, whatever revision is offered\.\n  IF OLD\.availability_state = 'DELETED_BY_OWNER'\n[\s\S]{0,320}?  END IF;\n/u, '')],
+      ['drops the frozen catalog meaning of occurred_at', (text) => text.replace(
+        'COMMENT ON COLUMN public.shared_world_history_items.occurred_at IS', '-- removed:')],
       ['closes the World from a history grant', (text) => text.replace(
         '    INSERT INTO public.shared_world_history_granted_events',
         "    UPDATE public.shared_worlds SET lifecycle='READ_ONLY_CLOSED' WHERE id = manifest.world_id;\n"
@@ -552,6 +592,8 @@ test('the contract is not vacuous: every deliberate weakening of migration 0087 
         () => assert.match(bodies[RESOLVE_FN], /i\.availability_state = 'AVAILABLE'/u),
         () => assert.match(bodies[RESOLVE_FN], /resolve_shared_world_closed_history_visibility_v1/u),
         () => assert.match(bodies[TRIGGER_FN], /NEW\.occurred_at <> OLD\.occurred_at/u),
+        () => assert.match(bodies[TRIGGER_FN], /SHARED_WORLD_HISTORY_OWNER_DELETION_TERMINAL/u),
+        () => assert.match(sql, /COMMENT ON COLUMN public\.shared_world_history_items\.occurred_at IS/u),
         () => assert.ok(!bodies[GRANT_FN].includes('UPDATE public.shared_worlds')),
         () => assert.doesNotMatch(body, /revoked_at/u),
         () => assert.ok(!grantLines.some((line) => /GRANT [A-Z]+ ON TABLE/u.test(line))),

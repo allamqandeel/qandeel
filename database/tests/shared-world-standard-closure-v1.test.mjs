@@ -202,11 +202,11 @@ test('a closed viewer is an entitlement holder, and never an active member', () 
 });
 
 test('both primitives are sealed, pinned, World-first, actor-free and executable by no application role', () => {
-  const grantLines = executableSql.split('\n').filter((line) => /\bGRANT\b/u.test(line));
-  assert.equal(grantLines.length, 1, 'migration 0088 contains exactly one GRANT statement');
-  assert.match(grantLines[0],
-    new RegExp(`^GRANT EXECUTE ON FUNCTION public\\.${RESOLVE_FN}\\(uuid, uuid\\) TO service_role;$`, 'u'),
-    'and it is service_role EXECUTE on the read-only closed-history reader, nothing else');
+  // I-04F keeps EXACTLY ONE application/server-role historical visibility entry
+  // point, and it is migration 0087's. This migration therefore grants nothing at
+  // all: its closed-mode reader is an internal helper the 0087 resolver calls as
+  // its own owner.
+  assert.doesNotMatch(executableSql, /\bGRANT\b/u, 'migration 0088 grants nothing to anybody');
   for (const name of MUTATION_FUNCTIONS) {
     assert.match(executableSql, new RegExp(`ALTER FUNCTION public\\.${name}\\([^)]*\\) OWNER TO postgres;`, 'u'));
     assert.match(executableSql, new RegExp(`REVOKE ALL ON FUNCTION public\\.${name}\\([^)]*\\) FROM PUBLIC, anon, authenticated;`, 'u'));
@@ -348,8 +348,25 @@ test('the closed-history reader is read-only, service-role-only and never consul
     'closed viewing is entitlement, never membership');
   assert.match(BODY[RESOLVE_FN], /world\.lifecycle <> 'READ_ONLY_CLOSED' OR world\.phase <> 'STANDARD'/u,
     'and it refuses any World that is not an archived Standard World');
-  assert.match(executableSql, new RegExp(`REVOKE ALL ON FUNCTION public\\.${RESOLVE_FN}\\(uuid, uuid\\) FROM PUBLIC, anon, authenticated;`, 'u'));
   assert.ok(selfAssertions.includes('I-04F: closed viewing is entitlement, never membership: the reader must not consult episodes'));
+});
+
+test('the closed-history reader is INTERNAL: I-04F keeps exactly one server-role visibility entry point', () => {
+  assert.match(executableSql, new RegExp(`REVOKE ALL ON FUNCTION public\\.${RESOLVE_FN}\\(uuid, uuid\\) FROM PUBLIC, anon, authenticated;`, 'u'));
+  assert.match(executableSql, new RegExp(`REVOKE ALL ON FUNCTION public\\.${RESOLVE_FN}\\(uuid, uuid\\) FROM service_role`, 'u'),
+    'service_role is revoked too: the helper is not a second read boundary');
+  assert.doesNotMatch(executableSql, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${RESOLVE_FN}`, 'u'),
+    'and it is granted to nobody');
+  assert.match(executableSql, /ALTER FUNCTION public\.resolve_shared_world_closed_history_visibility_v1\(uuid, uuid\) OWNER TO postgres;/u,
+    'it stays a postgres-owned internal helper');
+  for (const phrase of [
+    'I-04F: % must not execute the internal closed-history helper: I-04F has ONE historical visibility entry point',
+    'I-04F: PUBLIC must not execute the internal closed-history helper',
+    'I-04F: service_role must still execute the ONE historical visibility entry point',
+  ]) assert.ok(selfAssertions.includes(phrase), `migration 0088 refuses to deploy without: ${phrase}`);
+  // The one entry point stays 0087's, and 0088 names it as the thing that must
+  // still be reachable - so this slice narrowed the boundary rather than closing it.
+  assert.match(selfAssertions, /public\.resolve_shared_world_history_visibility_v1\(uuid,uuid\)', 'EXECUTE'/u);
 });
 
 test('the verifier, the script and the CI step are registered, and the README records the slice', () => {
@@ -398,6 +415,12 @@ test('the contract is not vacuous: every deliberate weakening of migration 0088 
       ['grants authenticated EXECUTE on the closure commit', (text) => text.replace(
         `REVOKE ALL ON FUNCTION public.${COMMIT_FN}(uuid, uuid, uuid) FROM PUBLIC, anon, authenticated;`,
         `GRANT EXECUTE ON FUNCTION public.${COMMIT_FN}(uuid, uuid, uuid) TO authenticated;`)],
+      ['opens a SECOND server-role visibility entry point on the internal helper', (text) => text.replace(
+        `ALTER FUNCTION public.${RESOLVE_FN}(uuid, uuid) OWNER TO postgres;`,
+        `ALTER FUNCTION public.${RESOLVE_FN}(uuid, uuid) OWNER TO postgres;\n`
+        + `GRANT EXECUTE ON FUNCTION public.${RESOLVE_FN}(uuid, uuid) TO service_role;`)],
+      ['stops revoking the internal helper from service_role', (text) => text.replace(
+        `  EXECUTE 'REVOKE ALL ON FUNCTION public.${RESOLVE_FN}(uuid, uuid) FROM service_role';\n`, '')],
       ['lets a client supply a closure reason', (text) => text.replace(
         '    governance_operation_kind text NOT NULL,\n    created_at timestamptz NOT NULL,',
         '    governance_operation_kind text NOT NULL,\n    closure_reason text,\n    created_at timestamptz NOT NULL,')],
@@ -457,7 +480,8 @@ test('the contract is not vacuous: every deliberate weakening of migration 0088 
       const at = (needle) => bodies[COMMIT_FN].indexOf(needle);
       const grantLines = sql.split('\n').filter((line) => /\bGRANT\b/u.test(line));
       const caught = [
-        () => assert.equal(grantLines.length, 1),
+        () => assert.equal(grantLines.length, 0),
+        () => assert.match(sql, new RegExp(`REVOKE ALL ON FUNCTION public\\.${RESOLVE_FN}\\(uuid, uuid\\) FROM service_role`, 'u')),
         () => assert.doesNotMatch(body, /closure_reason/u),
         () => assert.doesNotMatch(bodies[COMMIT_FN], /auth\.uid/u),
         () => assert.match(body, /CONSTRAINT shared_world_ended_events_world_key UNIQUE \(world_id\)/u),

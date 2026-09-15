@@ -127,6 +127,7 @@ const PREPARE_FN = 'public.prepare_shared_world_history_package_v1(uuid,uuid,uui
 const APPROVE_FN = 'public.commit_shared_world_history_package_approval_v1(uuid,uuid)';
 const GRANT_FN = 'public.commit_shared_world_history_access_grant_v1(uuid,uuid,uuid,uuid)';
 const RESOLVE_FN = 'public.resolve_shared_world_history_visibility_v1(uuid,uuid)';
+const TRUTH_FN = 'public.shared_world_history_item_temporal_truth_v1()';
 const MUTATION_FUNCTIONS = [PREPARE_FN, APPROVE_FN, GRANT_FN];
 
 const INSUFFICIENT_PRIVILEGE = ['42501'];
@@ -283,6 +284,19 @@ async function verifyCatalog() {
       assert.equal(observed.filter((column) => column[0] === name).length, 1, `${table}.${name} appears exactly once`);
     }
   }
+  stage = 'catalog: the frozen meaning of occurred_at is deployed, not merely commented';
+  const [occurred] = await rows(
+    `SELECT col_description($1::regclass, c.ordinal_position::int) AS note
+       FROM information_schema.columns c
+      WHERE c.table_schema = 'public' AND c.table_name = 'shared_world_history_items'
+        AND c.column_name = 'occurred_at'`, [ITEMS]);
+  assert.match(occurred?.note ?? '', /canonical Shared-World establishment\/commit instant/u,
+    'occurred_at is the Shared-World establishment instant of the history item, in the catalog where a later slice reads it');
+  assert.match(occurred?.note ?? '', /only instant history visibility compares against a membership episode/u,
+    'and it is the instant membership-interval comparison uses');
+  assert.match(occurred?.note ?? '', /NOT an underlying recalled event time, source-event semantic timestamp or provenance event time/u,
+    'and never a source or provenance event time: those belong to I-04G');
+
   // There is deliberately NO migration-wide column NAME or TYPE filter over the live
   // column list, for the same reason 0085 and 0086 carry none: it would refuse every
   // column a later REVIEWED slice appends, which is that slice's business rather than
@@ -389,6 +403,23 @@ async function verifyCatalog() {
   const [{ allowed: serviceExecute }] = await rows('SELECT has_function_privilege($1, $2, $3) AS allowed',
     ['service_role', RESOLVE_FN, 'EXECUTE']);
   assert.equal(serviceExecute, true, 'service_role is the only executor of the visibility resolver');
+
+  stage = 'catalog: temporal truth is immutable and owner deletion is terminal';
+  const [truth] = await rows(
+    'SELECT pr.prosrc, pg_get_userbyid(pr.proowner) owner FROM pg_proc pr WHERE pr.oid = $1::regprocedure',
+    [TRUTH_FN]);
+  assert.ok(truth, 'the immutability trigger function exists');
+  assert.equal(truth.owner, 'postgres');
+  assert.match(truth.prosrc, /NEW\.occurred_at <> OLD\.occurred_at/u, 'an item time can never be rewritten in place');
+  assert.match(truth.prosrc, /OLD\.availability_state = 'DELETED_BY_OWNER'/u,
+    'owner deletion must stay terminal: no revision may resurrect or relabel an owner-deleted item');
+  assert.match(truth.prosrc, /SHARED_WORLD_HISTORY_OWNER_DELETION_TERMINAL/u,
+    'and the terminal rule must fail closed with its own bounded class');
+  const [{ n: truthTriggers }] = await rows(
+    `SELECT count(*)::int n FROM pg_trigger t JOIN pg_proc pr ON pr.oid = t.tgfoid
+      WHERE t.tgrelid = $1::regclass AND NOT t.tgisinternal AND pr.proname = 'shared_world_history_item_temporal_truth_v1'`,
+    [ITEMS]);
+  assert.equal(truthTriggers, 1, 'and it is really wired to the history projection');
 }
 
 async function verifyDirectTableAcl() {
@@ -755,17 +786,49 @@ async function verifyAvailabilityAndStaleness(f) {
           + (SELECT count(*) FROM ${MANIFEST_ITEMS} WHERE manifest_version_id = $4) AS n`,
     [grantId, eventId, commandId, liveManifest]);
   assert.equal(Number(audit), 4, 'the grant, its event, its command and its manifest items all remain');
-  await setAvailability(deletable, 'UNAVAILABLE');
-  assert.deepEqual(await visibleAsService(w.worldId, f.grantee), [], 'and UNAVAILABLE is equally invisible');
+
+  stage = 'owner deletion is TERMINAL: no revision can resurrect or relabel a DELETED_BY_OWNER item';
+  // Both transitions are refused even when a HIGHER revision is offered, which is
+  // the only way they could otherwise have slipped past the revision rules.
+  await rejected(() => q(
+    `UPDATE ${ITEMS} SET availability_state = 'AVAILABLE', availability_revision = availability_revision + 1
+      WHERE id = $1`, [deletable]), CONTRADICTORY, /SHARED_WORLD_HISTORY_OWNER_DELETION_TERMINAL/u);
+  await rejected(() => q(
+    `UPDATE ${ITEMS} SET availability_state = 'UNAVAILABLE', availability_revision = availability_revision + 1
+      WHERE id = $1`, [deletable]), CONTRADICTORY, /SHARED_WORLD_HISTORY_OWNER_DELETION_TERMINAL/u);
+  // The revision alone is frozen too: the historical truth that the OWNER deleted
+  // it, and at which revision, is part of what must survive.
+  await rejected(() => q(
+    `UPDATE ${ITEMS} SET availability_revision = availability_revision + 1 WHERE id = $1`, [deletable]),
+    CONTRADICTORY, /SHARED_WORLD_HISTORY_OWNER_DELETION_TERMINAL/u);
+  const [terminal] = await rows(
+    `SELECT availability_state, availability_revision FROM ${ITEMS} WHERE id = $1`, [deletable]);
+  assert.equal(terminal.availability_state, 'DELETED_BY_OWNER', 'the item still reads exactly as its owner left it');
+  assert.equal(Number(terminal.availability_revision), 2);
+  assert.deepEqual(await visibleAsService(w.worldId, f.grantee), [], 'and it stays invisible');
+  const [{ n: auditAfter }] = await rows(
+    `SELECT (SELECT count(*) FROM ${GRANTS} WHERE id = $1)
+          + (SELECT count(*) FROM ${GRANTED_EVENTS} WHERE id = $2)
+          + (SELECT count(*) FROM ${GRANT_COMMANDS} WHERE id = $3)
+          + (SELECT count(*) FROM ${MANIFEST_ITEMS} WHERE manifest_version_id = $4) AS n`,
+    [grantId, eventId, commandId, liveManifest]);
+  assert.equal(Number(auditAfter), 4, 'and the whole grant audit is still intact');
+
+  stage = 'UNAVAILABLE is deliberately NOT terminal: frozen canon does not require it';
+  // `moved` was taken AVAILABLE -> UNAVAILABLE -> AVAILABLE above, which is exactly
+  // the transition an item that is merely unavailable must still be able to make.
+  const [recoverable] = await rows(`SELECT availability_state FROM ${ITEMS} WHERE id = $1`, [moved]);
+  assert.equal(recoverable.availability_state, 'AVAILABLE',
+    'an item that was only UNAVAILABLE legitimately became available again');
 
   stage = 'temporal truth is immutable: an item time can never be rewritten';
-  await rejected(() => q(`UPDATE ${ITEMS} SET occurred_at = clock_timestamp() WHERE id = $1`, [deletable]),
+  await rejected(() => q(`UPDATE ${ITEMS} SET occurred_at = clock_timestamp() WHERE id = $1`, [moved]),
     CONTRADICTORY, /TEMPORAL_TRUTH_IMMUTABLE/u);
-  await rejected(() => q(`UPDATE ${ITEMS} SET authority_requirement_mode = 'EXACT_HUMAN_APPROVER_SET' WHERE id = $1`, [deletable]),
+  await rejected(() => q(`UPDATE ${ITEMS} SET authority_requirement_mode = 'NO_HUMAN_APPROVAL_REQUIRED' WHERE id = $1`, [moved]),
     CONTRADICTORY, /TEMPORAL_TRUTH_IMMUTABLE/u);
-  await rejected(() => q(`UPDATE ${ITEMS} SET availability_state = 'AVAILABLE' WHERE id = $1`, [deletable]),
+  await rejected(() => q(`UPDATE ${ITEMS} SET availability_state = 'UNAVAILABLE' WHERE id = $1`, [moved]),
     CONTRADICTORY, /AVAILABILITY_REVISION_REQUIRED/u);
-  await rejected(() => q(`UPDATE ${ITEMS} SET availability_revision = 1 WHERE id = $1`, [deletable]),
+  await rejected(() => q(`UPDATE ${ITEMS} SET availability_revision = 1 WHERE id = $1`, [moved]),
     CONTRADICTORY, /AVAILABILITY_REVISION_REGRESSED/u);
   return w;
 }
@@ -1022,6 +1085,17 @@ async function verifyForwardSafety(f) {
       ['an owned column gains a default the primitives never write',
         `ALTER TABLE ${ITEMS} ALTER COLUMN availability_state SET DEFAULT 'AVAILABLE'`,
         /still carries every column migration 0087 owns/u],
+      ['the frozen meaning of occurred_at is stripped from the catalog',
+        `COMMENT ON COLUMN ${ITEMS}.occurred_at IS NULL`,
+        /canonical Shared-World establishment\/commit instant/u],
+      ['occurred_at is reinterpreted as an underlying source event time',
+        `COMMENT ON COLUMN ${ITEMS}.occurred_at IS 'The underlying real-world event time this item refers to.'`,
+        /canonical Shared-World establishment\/commit instant/u],
+      ['owner deletion stops being terminal',
+        `CREATE OR REPLACE FUNCTION public.shared_world_history_item_temporal_truth_v1()
+         RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+         BEGIN RETURN NEW; END$fn$`,
+        /owner deletion must stay terminal/u],
       ['a history relation becomes directly readable by an application role',
         `GRANT SELECT ON ${ITEMS} TO authenticated`,
         /authenticated must not hold SELECT/u],

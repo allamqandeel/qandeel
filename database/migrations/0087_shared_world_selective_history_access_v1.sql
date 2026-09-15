@@ -59,6 +59,28 @@
 -- (CW2-02 B4: UNKNOWN fails closed).
 --
 -- ===========================================================================
+-- WHAT occurred_at MEANS, FROZEN
+-- ===========================================================================
+--
+-- shared_world_history_items.occurred_at is THE CANONICAL SHARED-WORLD
+-- ESTABLISHMENT / COMMIT INSTANT OF THIS HISTORY ITEM: the moment the item became
+-- Shared truth in this exact World. That is the only reading under which
+-- comparing it against a human's membership episode is correct, and this slice
+-- compares it against exactly that.
+--
+-- It is NOT an underlying recalled event time, a source-event semantic timestamp
+-- or a provenance event time. Those belong to I-04G material / provenance and
+-- must never be written here. The distinction is load-bearing rather than
+-- cosmetic:
+--
+--   at t2, while B is a member, A says "last week at t1 I changed jobs"
+--
+-- The history item is established at t2 and B really did receive it. Storing t1
+-- here would hide from B a statement B actually received, by making the item look
+-- as though it predated B's membership. A later slice that needs t1 adds its own
+-- column for it; it does not reinterpret this one.
+--
+-- ===========================================================================
 -- BASELINE VISIBILITY IS NOT "WAS A MEMBER"
 -- ===========================================================================
 --
@@ -176,6 +198,11 @@ BEGIN;
 --    kind, and no author, owner, admin or role column: material authority is the
 --    exact required-approver relation below, never a single superior principal.
 --
+--    occurred_at is the canonical Shared-World ESTABLISHMENT / COMMIT instant of
+--    the item, never an underlying recalled or source event time - see the frozen
+--    note above, and the deployed COMMENT ON COLUMN that carries it into the
+--    catalog where a later slice will actually read it.
+--
 --    UNIQUE (world_id, id) exists for exactly one reason: it lets every consumer
 --    of an item - the manifest items here, and the closed-view entitlement items
 --    migration 0088 adds - carry a COMPOSITE foreign key, which turns "this item
@@ -209,6 +236,16 @@ CREATE TABLE public.shared_world_history_items (
 -- The one frozen access pattern: a World's history in time order. Nothing speculative.
 CREATE INDEX shared_world_history_items_world_time_idx
     ON public.shared_world_history_items (world_id, occurred_at);
+
+-- The frozen meaning of occurred_at, deployed into the catalog rather than left in
+-- a comment only, so the slice that later writes this column reads the rule where
+-- it works instead of where it was once documented.
+COMMENT ON COLUMN public.shared_world_history_items.occurred_at IS
+  'The canonical Shared-World establishment/commit instant of this history item: '
+  'the moment it became Shared truth in this exact World, and the only instant '
+  'history visibility compares against a membership episode. NOT an underlying '
+  'recalled event time, source-event semantic timestamp or provenance event time '
+  '- those belong to I-04G material/provenance and must never be written here.';
 
 -- ---------------------------------------------------------------------------
 -- 2. THE EXACT ORIGINAL HUMAN AUDIENCE OF ONE HISTORY ITEM.
@@ -483,6 +520,21 @@ END IF;END$$;
 --     way frozen canon already constrains it, and forbids nothing that canon
 --     permits: I-04G binds real material to this identity and transitions
 --     availability; it does not rewrite when something happened.
+--
+--     OWNER DELETION IS TERMINAL. CW2-01 A18 and CW2-03 section 37 freeze that
+--     owner-deleted material is unavailable for future use and can never be
+--     reconstructed. A higher revision must therefore not be able to resurrect it
+--     as AVAILABLE, and must not be able to relabel it as UNAVAILABLE either - the
+--     historical truth that its OWNER deleted it is part of what must survive. So
+--     once availability_state is DELETED_BY_OWNER, both availability fields this
+--     migration owns are frozen exactly as they are.
+--
+--     The rule is scoped to those two owned fields on purpose: it is NOT a table
+--     freeze. A later reviewed slice may still append columns to this relation and
+--     write them on an owner-deleted item, which is that slice's business. And
+--     whether UNAVAILABLE is permanently terminal is deliberately NOT decided here,
+--     because frozen canon does not require it: an item that is merely unavailable
+--     may legitimately become available again.
 -- ---------------------------------------------------------------------------
 CREATE FUNCTION public.shared_world_history_item_temporal_truth_v1()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
@@ -491,6 +543,12 @@ BEGIN
      OR NEW.occurred_at <> OLD.occurred_at OR NEW.registered_at <> OLD.registered_at
      OR NEW.authority_requirement_mode <> OLD.authority_requirement_mode THEN
     RAISE EXCEPTION 'SHARED_WORLD_HISTORY_TEMPORAL_TRUTH_IMMUTABLE' USING ERRCODE='P0001';
+  END IF;
+  -- OWNER DELETION IS TERMINAL, whatever revision is offered.
+  IF OLD.availability_state = 'DELETED_BY_OWNER'
+     AND (NEW.availability_state <> 'DELETED_BY_OWNER'
+          OR NEW.availability_revision <> OLD.availability_revision) THEN
+    RAISE EXCEPTION 'SHARED_WORLD_HISTORY_OWNER_DELETION_TERMINAL' USING ERRCODE='P0001';
   END IF;
   IF NEW.availability_revision < OLD.availability_revision THEN
     RAISE EXCEPTION 'SHARED_WORLD_HISTORY_AVAILABILITY_REVISION_REGRESSED' USING ERRCODE='P0001';
@@ -1190,6 +1248,7 @@ DECLARE
   approve_fn text := 'public.commit_shared_world_history_package_approval_v1(uuid,uuid)';
   grant_fn text := 'public.commit_shared_world_history_access_grant_v1(uuid,uuid,uuid,uuid)';
   resolve_fn text := 'public.resolve_shared_world_history_visibility_v1(uuid,uuid)';
+  truth_fn text := 'public.shared_world_history_item_temporal_truth_v1()';
   own_tables text[] := ARRAY['public.shared_world_history_items',
                              'public.shared_world_history_item_baseline_viewers',
                              'public.shared_world_history_item_required_approvers',
@@ -1313,9 +1372,10 @@ BEGIN
     END IF;
   END LOOP;
   -- PostgreSQL ARE matches newlines with `.` by default, so a bounded `.` span is
-  -- the portable way to cross the line break here; `[\s\S]` is illegal inside a
-  -- PostgreSQL bracket expression.
-  IF p.prosrc !~ 'INSERT INTO public\.shared_world_history_package_required_approvers.{0,400}SELECT DISTINCT' THEN
+  -- the portable way to cross the line break here. Two PostgreSQL-only rules apply:
+  -- `[\s\S]` is illegal inside a bracket expression, and a repetition bound may
+  -- never exceed 255.
+  IF p.prosrc !~ 'INSERT INTO public\.shared_world_history_package_required_approvers.{0,200}SELECT DISTINCT' THEN
     RAISE EXCEPTION 'I-04F: the required approver set must be DERIVED as the exact union over the included items';
   END IF;
   IF p.prosrc !~ 'ORDER BY i\.id FOR UPDATE' THEN
@@ -1421,6 +1481,31 @@ BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles r WHERE r.rolname = 'service_role')
      AND NOT has_function_privilege('service_role', resolve_fn, 'EXECUTE') THEN
     RAISE EXCEPTION 'I-04F: service_role must be the only executor of the visibility resolver';
+  END IF;
+
+  -- ===================================================================
+  -- TEMPORAL TRUTH AND TERMINAL OWNER DELETION, asserted rather than commented.
+  -- ===================================================================
+  SELECT pr.prosrc, pg_get_userbyid(pr.proowner) AS owner INTO p
+    FROM pg_proc pr WHERE pr.oid = truth_fn::regprocedure;
+  IF p.owner <> 'postgres' THEN RAISE EXCEPTION 'I-04F: the immutability trigger must be owned by postgres'; END IF;
+  IF p.prosrc !~ 'NEW\.occurred_at <> OLD\.occurred_at' THEN
+    RAISE EXCEPTION 'I-04F: a history item time can never be rewritten in place';
+  END IF;
+  IF p.prosrc !~ 'OLD\.availability_state = ''DELETED_BY_OWNER''' THEN
+    RAISE EXCEPTION 'I-04F: owner deletion must be terminal: a higher revision may never resurrect or relabel it';
+  END IF;
+  IF p.prosrc !~ 'SHARED_WORLD_HISTORY_OWNER_DELETION_TERMINAL' THEN
+    RAISE EXCEPTION 'I-04F: the terminal owner-deletion rule must fail closed with its own bounded class';
+  END IF;
+  -- The frozen meaning of occurred_at is deployed into the catalog, so the later
+  -- slice that writes this column meets the rule where it works.
+  IF coalesce(col_description('public.shared_world_history_items'::regclass,
+                              (SELECT c.ordinal_position::int FROM information_schema.columns c
+                                WHERE c.table_schema = 'public' AND c.table_name = 'shared_world_history_items'
+                                  AND c.column_name = 'occurred_at')), '')
+     !~ 'establishment/commit instant' THEN
+    RAISE EXCEPTION 'I-04F: occurred_at must carry its frozen Shared-World establishment meaning in the catalog';
   END IF;
 
   -- ===================================================================

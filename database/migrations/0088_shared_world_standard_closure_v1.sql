@@ -104,9 +104,11 @@
 --
 -- As in every Connected Worlds mutation slice since 0082: both consequential
 -- primitives are fully implemented and executable by NO application role, because
--- the Connected Worlds launch gate does not exist yet. The only GRANT here is
--- service_role EXECUTE on the read-only closed-history reader, matching the
--- narrow resolver precedent of 0077 / 0079 / 0080 / 0087. The exact World row is
+-- the Connected Worlds launch gate does not exist yet. This migration GRANTS
+-- NOTHING to anybody: the closed-mode reader is an internal postgres-owned helper
+-- that only migration 0087's resolver calls, so I-04F keeps exactly ONE
+-- application/server-role historical visibility entry point, and it is 0087's.
+-- The exact World row is
 -- the canonical first lock, so a closure racing a leave, a removal, a rejoin, a
 -- settings change or a history grant has exactly two canonical outcomes and
 -- cannot deadlock. ONE database-owned closure instant is read once and reused for
@@ -587,14 +589,18 @@ END$$;
 -- ---------------------------------------------------------------------------
 -- 8. THE CLOSED-MODE BRANCH OF THE ONE HISTORICAL VISIBILITY RESOLVER.
 --
---    This is not a second resolver. Migration 0087's
---    resolve_shared_world_history_visibility_v1 is the single entry point for
---    "what history may this exact human see in this exact Shared World"; this
---    function is the implementation of its READ_ONLY_CLOSED / STANDARD branch,
---    which lives here because the entitlement snapshot is what THIS migration
---    owns. It refuses any World that is not an archived Standard World, so it can
---    never be used to answer an ACTIVE World's question behind the entry point's
---    back.
+--    This is not a second resolver, and it is not a second read boundary either.
+--    Migration 0087's resolve_shared_world_history_visibility_v1 is the single
+--    entry point for "what history may this exact human see in this exact Shared
+--    World"; this function is the implementation of its READ_ONLY_CLOSED /
+--    STANDARD branch, which lives here because the entitlement snapshot is what
+--    THIS migration owns.
+--
+--    It is INTERNAL: no application role executes it, service_role included. The
+--    only caller is 0087's postgres-owned SECURITY DEFINER resolver, which reaches
+--    it as its own owner and needs no grant to do so. It also refuses any World
+--    that is not an archived Standard World, so it could not answer an ACTIVE
+--    World's question behind the entry point's back even if it were reachable.
 --
 --    Active membership is deliberately NOT consulted: closed viewing is
 --    entitlement, never membership. A human with no entitlement gets a truthful
@@ -629,9 +635,19 @@ BEGIN
 END$$;
 
 -- ---------------------------------------------------------------------------
--- 9. Ownership and THE PRE-LAUNCH ACL. Both consequential primitives are
---    executable by no application role at all; the only grant is service_role
---    EXECUTE on the read-only closed-history reader.
+-- 9. Ownership and THE PRE-LAUNCH ACL. This migration GRANTS NOTHING to anybody.
+--
+--    The closed-history reader is an INTERNAL postgres-owned helper, not a second
+--    server read boundary: it needs no application-role EXECUTE, because the only
+--    thing that calls it is migration 0087's postgres-owned SECURITY DEFINER
+--    resolver, which reaches it as its own owner. Granting service_role EXECUTE
+--    on it would create a second independently callable historical-visibility
+--    entry point, which is exactly what "one narrow server-only resolver" forbids.
+--
+--    So I-04F keeps EXACTLY ONE application/server-role historical visibility
+--    entry point, and it is the one migration 0087 owns:
+--
+--      public.resolve_shared_world_history_visibility_v1(uuid, uuid)
 -- ---------------------------------------------------------------------------
 ALTER FUNCTION public.prepare_shared_world_standard_end_governance_v1(uuid, uuid, uuid, uuid) OWNER TO postgres;
 ALTER FUNCTION public.commit_shared_world_standard_end_v1(uuid, uuid, uuid) OWNER TO postgres;
@@ -642,8 +658,8 @@ REVOKE ALL ON FUNCTION public.resolve_shared_world_closed_history_visibility_v1(
 DO $$BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN
   EXECUTE 'REVOKE ALL ON FUNCTION public.prepare_shared_world_standard_end_governance_v1(uuid, uuid, uuid, uuid) FROM service_role';
   EXECUTE 'REVOKE ALL ON FUNCTION public.commit_shared_world_standard_end_v1(uuid, uuid, uuid) FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.resolve_shared_world_closed_history_visibility_v1(uuid, uuid) FROM service_role';
 END IF;END$$;
-GRANT EXECUTE ON FUNCTION public.resolve_shared_world_closed_history_visibility_v1(uuid, uuid) TO service_role;
 
 -- ---------------------------------------------------------------------------
 -- 10. Terminal self-assertions. The migration refuses to deploy a closure
@@ -840,18 +856,24 @@ BEGIN
   IF p.prosrc !~ 'i\.availability_state = ''AVAILABLE''' THEN
     RAISE EXCEPTION 'I-04F: a closed entitlement can never reconstruct owner-deleted or unavailable source';
   END IF;
+  -- EXACTLY ONE SERVER-ROLE HISTORICAL VISIBILITY ENTRY POINT. The closed-mode
+  -- helper is internal: no application role executes it, including service_role.
   IF has_function_privilege('public', resolve_fn, 'EXECUTE') THEN
-    RAISE EXCEPTION 'I-04F: PUBLIC must not execute the closed-history reader';
+    RAISE EXCEPTION 'I-04F: PUBLIC must not execute the internal closed-history helper';
   END IF;
-  FOREACH target_role IN ARRAY ARRAY['anon','authenticated'] LOOP
+  FOREACH target_role IN ARRAY ARRAY['anon','authenticated','service_role'] LOOP
     IF EXISTS (SELECT 1 FROM pg_roles r WHERE r.rolname = target_role)
        AND has_function_privilege(target_role, resolve_fn, 'EXECUTE') THEN
-      RAISE EXCEPTION 'I-04F: % must not execute the closed-history reader', target_role;
+      RAISE EXCEPTION 'I-04F: % must not execute the internal closed-history helper: I-04F has ONE historical visibility entry point', target_role;
     END IF;
   END LOOP;
+  -- And that one entry point is migration 0087's resolver, which service_role
+  -- really can still reach - otherwise this slice would have closed the boundary
+  -- rather than narrowed it.
   IF EXISTS (SELECT 1 FROM pg_roles r WHERE r.rolname = 'service_role')
-     AND NOT has_function_privilege('service_role', resolve_fn, 'EXECUTE') THEN
-    RAISE EXCEPTION 'I-04F: service_role must be the only executor of the closed-history reader';
+     AND NOT has_function_privilege('service_role',
+                                    'public.resolve_shared_world_history_visibility_v1(uuid,uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'I-04F: service_role must still execute the ONE historical visibility entry point';
   END IF;
 
   -- ===================================================================
