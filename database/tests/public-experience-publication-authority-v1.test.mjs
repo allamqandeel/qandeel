@@ -228,6 +228,21 @@ test('an item whose source authority is unresolved is unrepresentable inside a p
     /resolution_state = 'RESOLVED_NO_HUMAN_REQUIREMENT' AND required_approver_count = 0/u);
   assert.match(selfAssertions, /an item with unresolved source authority must be unrepresentable inside a package/u);
   assert.match(selfAssertions, /the frozen I-04G source historical-authority state must exist/u);
+
+  // Those two CHECKs overlap: an unresolved row violates BOTH, and no approver count
+  // separates them. Which one PostgreSQL reports is its ordering for simultaneous
+  // violations, not a Product invariant, so the real-PostgreSQL proof must accept
+  // either NAMED constraint and nothing else. Pinning one would freeze the ordering;
+  // accepting a bare 23514 would stop proving that this row is what was refused.
+  assert.ok(verifier.includes("const AUTHORITY_STATE_CHECK = 'publication_package_item_authority_state_check'")
+    && verifier.includes("const AUTHORITY_COUNT_CHECK = 'publication_package_item_authority_count_check'"),
+  'the verifier names BOTH frozen authority checks');
+  assert.match(verifier, /AUTHORITY_CHECKS\.has\(refusal\.constraint\)/u,
+    'and requires the unresolved refusal to come from exactly one of the two, never an arbitrary 23514');
+  // Only the UNRESOLVED probe is ambiguous. A valid state with the wrong count
+  // violates the count check alone, so those probes still pin it by name.
+  assert.match(verifier, /UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT', count\), \['23514'\]\)/u,
+    'and the unresolved probe pins no single constraint name of its own');
 });
 
 test('an approval is structurally impossible outside the derived required set and grants no Experience control', () => {

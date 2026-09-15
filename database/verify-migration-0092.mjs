@@ -66,6 +66,15 @@ const PROVENANCE = 'public.publication_package_item_provenance';
 const ITEM_AUTHORITY = 'public.publication_package_item_authority';
 const REQUIRED = 'public.publication_manifest_required_approvers';
 const APPROVALS = 'public.publication_manifest_approvals';
+
+/**
+ * The TWO frozen CHECK constraints that JOINTLY make unresolved source authority
+ * unrepresentable. An unresolved row violates both at once, so the runtime proof
+ * requires one of exactly these two - never a third CHECK, and never a bare 23514.
+ */
+const AUTHORITY_STATE_CHECK = 'publication_package_item_authority_state_check';
+const AUTHORITY_COUNT_CHECK = 'publication_package_item_authority_count_check';
+const AUTHORITY_CHECKS = new Set([AUTHORITY_STATE_CHECK, AUTHORITY_COUNT_CHECK]);
 const OWN = [MANIFESTS, ITEMS, BODIES, PROVENANCE, ITEM_AUTHORITY, REQUIRED, APPROVALS];
 /** The two relations whose columns a PUBLIC audience may one day see. */
 const PUBLIC_FACING = [ITEMS, BODIES];
@@ -226,15 +235,40 @@ async function verifyCatalog() {
   assert.equal(Number(crossed), 0,
     'P07 / P21 Experience control and content rights are distinct authorities with no path between them');
 
-  // The unresolved state is UNREPRESENTABLE inside a package.
-  const [{ def: authorityDef }] = await rows(
+  // The unresolved state is UNREPRESENTABLE inside a package, and TWO frozen CHECK
+  // constraints enforce that JOINTLY. Both are proven here from the live catalog,
+  // because an unresolved row violates both at once: no value of
+  // required_approver_count satisfies the count check while the state check is the
+  // only thing broken. That is why the behaviour proof below refuses to name a
+  // single winner - doing so would freeze PostgreSQL's reporting order for
+  // simultaneous violations instead of the Product invariant.
+  const authorityCheckDef = async (name) => (await rows(
     `SELECT pg_get_constraintdef(c.oid) def FROM pg_constraint c
-      WHERE c.conrelid = $1::regclass AND c.conname = 'publication_package_item_authority_state_check'`, [ITEM_AUTHORITY]);
-  assert.ok(!authorityDef.includes('UNRESOLVED'),
+      WHERE c.conrelid = $1::regclass AND c.conname = $2`, [ITEM_AUTHORITY, name]))[0]?.def;
+
+  const stateDef = await authorityCheckDef(AUTHORITY_STATE_CHECK);
+  assert.ok(stateDef, `${AUTHORITY_STATE_CHECK} is present`);
+  assert.ok(!stateDef.includes('UNRESOLVED'),
     'an item with unresolved source authority cannot exist inside a package');
   for (const resolved of ['RESOLVED_EXACT_HUMAN_REQUIREMENT', 'RESOLVED_NO_HUMAN_REQUIREMENT']) {
-    assert.ok(authorityDef.includes(resolved), `${resolved} is representable`);
+    assert.ok(stateDef.includes(resolved), `${resolved} is representable`);
   }
+
+  // The second half of the same invariant: each resolved state is bound to the only
+  // approver count that can mean it. pg_get_constraintdef renders `'X'::text` and
+  // parenthesises every operand, so the regexes tolerate that canonical form without
+  // accepting a weaker predicate.
+  const countDef = await authorityCheckDef(AUTHORITY_COUNT_CHECK);
+  assert.ok(countDef, `${AUTHORITY_COUNT_CHECK} is present`);
+  assert.ok(!countDef.includes('UNRESOLVED'),
+    'and the count check admits no unresolved state either, so the two agree');
+  assert.match(countDef,
+    /RESOLVED_EXACT_HUMAN_REQUIREMENT'(?:::text)?\)? AND \(?required_approver_count > 0\)/u,
+    'an exact human requirement binds a positive approver count');
+  assert.match(countDef,
+    /RESOLVED_NO_HUMAN_REQUIREMENT'(?:::text)?\)? AND \(?required_approver_count = 0\)/u,
+    'and no human requirement binds exactly zero');
+  assert.match(countDef, /\) OR \(/u, 'the count check is the disjunction of exactly those two cases');
   // And the frozen I-04G source-side state this depends on still exists.
   const [{ n: sourceState }] = await rows(
     "SELECT count(*) n FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace WHERE ns.nspname='public' AND c.relname='shared_world_material_historical_authority'");
@@ -405,8 +439,22 @@ async function verifyBehaviour(f) {
     ['23514'], /publication_package_item_authority_count_check/u);
   await rejected(() => itemAuthority(reservedItem, 'RESOLVED_NO_HUMAN_REQUIREMENT', 2),
     ['23514'], /publication_package_item_authority_count_check/u);
-  await rejected(() => itemAuthority(reservedItem, 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT', 0),
-    ['23514'], /publication_package_item_authority_state_check/u);
+  // An unresolved row violates BOTH frozen authority checks at once, and which of
+  // the two PostgreSQL names is its reporting order for simultaneous violations -
+  // undocumented, and not the invariant we are freezing. So the proof is exact in
+  // the way that matters: the refusal must be 23514 AND must come from one of
+  // exactly those two constraints. A third CHECK is not acceptable, and neither is
+  // a bare 23514 from somewhere else on the row.
+  //
+  // Both counts are tried, because the claim is not "count 0 is refused" but that NO
+  // approver count makes the unresolved state representable.
+  for (const count of [0, 1]) {
+    const refusal = await rejected(
+      () => itemAuthority(reservedItem, 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT', count), ['23514']);
+    assert.ok(AUTHORITY_CHECKS.has(refusal.constraint),
+      `unresolved source authority with count ${count} must be refused by ${[...AUTHORITY_CHECKS].join(' or ')}, `
+      + `not by ${refusal.constraint}`);
+  }
 
   // P19 an approval by a human this exact manifest does not require is
   // STRUCTURALLY impossible, however the row is produced - and this connection is

@@ -819,8 +819,19 @@ async function verifyConcurrency(c) {
     // The approval landed on manifest A, which is no longer the current package.
     // That is truthful history, and it can never commit: the current version is B.
     await actAs(c.mohamed);
-    await rejected(() => commitReady(randomUUID(), c.experience, versionA), ['40001'],
-      /PUBLIC_EXPERIENCE_STALE/u);
+    // The COMMIT above is LOAD-BEARING: it releases the Experience lock so the
+    // blocked approval can finish, so it must not move. Its consequence is that this
+    // connection is now in autocommit, and rejected() opens with a SAVEPOINT, which
+    // PostgreSQL refuses outside a transaction block with 25P01 - before the stale
+    // assertion is ever evaluated. Open a transaction for this one assertion and roll
+    // it back. The race above and the lock-release order are untouched.
+    await q('BEGIN');
+    try {
+      await rejected(() => commitReady(randomUUID(), c.experience, versionA), ['40001'],
+        /PUBLIC_EXPERIENCE_STALE/u);
+    } finally {
+      await q('ROLLBACK');
+    }
     const [{ n: carried }] = await rows(`SELECT count(*) n FROM ${APPROVALS} WHERE manifest_version_id = $1`, [manifestB]);
     assert.equal(Number(carried), 0, 'P33 and no approval floated onto the changed package');
 

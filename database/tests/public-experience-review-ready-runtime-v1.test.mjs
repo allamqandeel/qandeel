@@ -785,6 +785,17 @@ test('the contracts are not vacuous: every deliberate weakening of I-05A is refu
         '.github/workflows/api-ci.yml',
         `if npm run ${OWN_SCRIPT}; then result_0093=PASS; else status=1; fi`,
         `npm run ${OWN_SCRIPT} || true`],
+      // Unresolved source authority is refused by two overlapping CHECKs at once.
+      // The proof must accept either NAMED constraint - so it may not decay into
+      // accepting any 23514, and it may not re-freeze one of them as the winner.
+      ['the unresolved-authority proof accepts an arbitrary 23514',
+        'database/verify-migration-0092.mjs',
+        'assert.ok(AUTHORITY_CHECKS.has(refusal.constraint),', 'assert.ok(true,'],
+      ['the unresolved-authority proof re-pins one CHECK as the mandatory winner',
+        'database/verify-migration-0092.mjs',
+        "      () => itemAuthority(reservedItem, 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT', count), ['23514']);",
+        "      () => itemAuthority(reservedItem, 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT', count), ['23514'],\n"
+        + '      /publication_package_item_authority_count_check/u);'],
     ];
     for (const [reason, file, from, to] of regressions) {
       const fresh = buildMirror();
