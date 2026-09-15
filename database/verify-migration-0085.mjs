@@ -1379,6 +1379,21 @@ async function verifyForwardSafety(f) {
   const probe = `i04e_probe_${randomUUID().replace(/-/gu, '').slice(0, 16)}`;
   await q('SAVEPOINT forward_safety');
   try {
+    // FLUSH THE DEFERRED BINDING FIRST, and note what that proves.
+    //
+    // Every acceptance above left a pending deferred event on
+    // shared_world_member_invitations_episode_fk, because this whole behaviour phase
+    // is ONE uncommitted transaction. PostgreSQL refuses to ALTER a table that has
+    // pending trigger events (55006), so the authorized future below could not be
+    // built on it. Forcing the constraint to be checked now clears them - and it
+    // only succeeds if EVERY acceptance in this transaction really did leave a valid
+    // binding, which is a proof worth having rather than a workaround.
+    //
+    // In production this never arises: each acceptance is its own transaction and
+    // flushes at its own COMMIT. It is an artefact of proving many of them at once.
+    await q('SET CONSTRAINTS public.shared_world_member_invitations_episode_fk IMMEDIATE');
+    await q('SET CONSTRAINTS public.shared_world_member_invitations_episode_fk DEFERRED');
+
     // I-04F: selective past-history sharing and closed-World viewing.
     await q(`CREATE TABLE public.${probe}_history_access_grants (id uuid PRIMARY KEY, world_id uuid NOT NULL,
              audience_user_id uuid NOT NULL, from_at timestamptz, to_at timestamptz)`);

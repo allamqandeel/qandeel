@@ -395,6 +395,14 @@ CREATE TABLE public.shared_world_member_invitations (
     -- intermediate state, and a commit whose episode does not exist still fails.
     -- What deferral buys is the ONE ordering the frozen leave primitive forces on
     -- this slice.
+    --
+    -- Its one operational consequence, stated rather than discovered later: a
+    -- transaction that has accepted an invitation holds a pending event on this
+    -- constraint until it commits, and PostgreSQL refuses to ALTER a table with
+    -- pending trigger events. An acceptance is always its own transaction, and a
+    -- migration never performs one, so the two never meet in practice - but a
+    -- future slice that wants to do both at once must flush with SET CONSTRAINTS
+    -- first, exactly as this slice's own verifier does.
     CONSTRAINT shared_world_member_invitations_episode_fk
         FOREIGN KEY (accepted_membership_episode_id) REFERENCES public.shared_world_membership_episodes (id)
         ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
