@@ -542,6 +542,46 @@ test('the verifier proves its forward safety inside a rolled-back savepoint, and
   }
 });
 
+test('the concurrency proofs cannot hang CI and P35 proves independence rather than a no-wait guarantee', () => {
+  // P35 races an alias change against a package preparation. The manifest carries
+  // the frozen composite publisher foreign key, so validating it makes PostgreSQL
+  // hold a parent-row lock on that Public Identity for the life of the preparing
+  // transaction, and the alias primitive takes the same row FOR UPDATE. Awaiting
+  // the alias update BEFORE committing the preparation is therefore an
+  // application-level wait cycle no deadlock detector can break - the test itself
+  // is withholding the COMMIT the other connection is waiting for. It hung CI
+  // indefinitely. The release edge must be issued first.
+  const launch = verifier.indexOf('const relabelling = q2(');
+  assert.ok(launch > 0, 'P35 LAUNCHES the alias update rather than awaiting it inline');
+  const release = verifier.indexOf("await q('COMMIT')", launch);
+  const settle = verifier.indexOf('await relabelling', launch);
+  assert.ok(release > launch && settle > release,
+    'P35 releases the package transaction BEFORE awaiting the alias update');
+
+  // The Product invariant is semantic independence under either legal
+  // serialization - never that the alias update is physically non-blocking.
+  assert.doesNotMatch(verifier, /does not even wait for it|does not wait behind an in-flight/u,
+    'P35 no longer claims an undocumented no-wait guarantee as a Product requirement');
+  assert.ok(!/settled[A-Za-z]*, (?:true|false),\s*\n?\s*'P35/u.test(verifier),
+    'and asserts neither that the alias update had settled nor that it had blocked');
+
+  // A lock left unreleased must fail this verifier in seconds, not hang the job for
+  // tens of minutes. PostgreSQL has to be the one that cancels: a JS-only timeout
+  // leaves the statement running and poisons teardown.
+  const bound = (setting) => {
+    const found = new RegExp(`SET ${setting} = '(\\d+)s'`, 'u').exec(verifier);
+    assert.ok(found, `the concurrency harness bounds ${setting} in the database`);
+    return Number(found[1]);
+  };
+  const lockTimeout = bound('lock_timeout');
+  const statementTimeout = bound('statement_timeout');
+  assert.ok(lockTimeout >= 2 && lockTimeout <= 60,
+    `lock_timeout ${lockTimeout}s must clear the 400ms observation windows and still bound a hang`);
+  assert.ok(statementTimeout > lockTimeout && statementTimeout <= 120,
+    'statement_timeout is the outer bound, so it must exceed lock_timeout');
+  assert.match(verifier, /SET lock_timeout = '0'/u, 'and the primary session is restored before teardown');
+});
+
 test('FIX-C: nothing I-05A owns freezes a historical approval row as eternally effective', () => {
   // The historical row stays append-only evidence - that is deliberate, and the
   // review explicitly does not want retroactive deletion of it. What must stay
@@ -791,6 +831,16 @@ test('the contracts are not vacuous: every deliberate weakening of I-05A is refu
       ['the unresolved-authority proof accepts an arbitrary 23514',
         'database/verify-migration-0092.mjs',
         'assert.ok(AUTHORITY_CHECKS.has(refusal.constraint),', 'assert.ok(true,'],
+      // P35 hung CI for as long as the job was allowed to run. Both halves of the
+      // fix are held open: the release edge must precede the await, and the harness
+      // must keep a database-enforced bound on any wait.
+      ['P35 awaits the alias update again before releasing the package transaction',
+        'database/verify-migration-0093.mjs',
+        "    await q('COMMIT');\n    const [relabelled] = (await relabelling).rows;",
+        "    const [relabelled] = (await relabelling).rows;\n    await q('COMMIT');"],
+      ['the concurrency harness loses its database-enforced wait bound',
+        'database/verify-migration-0093.mjs',
+        `      await run("SET lock_timeout = '10s'");\n`, ''],
       ['the unresolved-authority proof re-pins one CHECK as the mandatory winner',
         'database/verify-migration-0092.mjs',
         "      () => itemAuthority(reservedItem, 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT', count), ['23514']);",

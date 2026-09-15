@@ -791,8 +791,21 @@ async function verifyConcurrency(c) {
     await q2("SELECT set_config('request.jwt.claims', $1, false)", [JSON.stringify({ sub: uid, role: 'authenticated' })]);
   };
   try {
+    // A BOUNDED WAIT, enforced by PostgreSQL rather than by JavaScript. A JS-only
+    // timeout would leave the statement running and poison teardown; these make the
+    // database itself cancel. The bound is far above the intentional 400 ms
+    // observation windows, so every expected block still behaves exactly as before -
+    // but a lock left unreleased fails this verifier in seconds instead of hanging
+    // the whole job. A timeout here is a real failure and is never swallowed.
+    for (const run of [q, q2]) {
+      await run("SET lock_timeout = '10s'");
+      await run("SET statement_timeout = '15s'");
+    }
+
     // P33 PACKAGE CHANGE VERSUS APPROVAL. One holds the Experience row; the other
     // blocks on it, and whichever order they land in, the result is truthful.
+    stage = 'concurrency: P33 package change versus approval';
+    console.log('0093 concurrency P33 start');
     await asRole('postgres');
     await actAs(c.mohamed);
     const manifestA = randomUUID(); const versionA = randomUUID();
@@ -834,8 +847,11 @@ async function verifyConcurrency(c) {
     }
     const [{ n: carried }] = await rows(`SELECT count(*) n FROM ${APPROVALS} WHERE manifest_version_id = $1`, [manifestB]);
     assert.equal(Number(carried), 0, 'P33 and no approval floated onto the changed package');
+    console.log('0093 concurrency P33 pass');
 
     // P34 SOURCE DELETION VERSUS THE READY COMMIT: exactly one truthful winner.
+    stage = 'concurrency: P34 source deletion versus the READY commit';
+    console.log('0093 concurrency P34 start');
     await actAs(c.mohamed);
     const manifestC = randomUUID(); const versionC = randomUUID();
     await prepare(randomUUID(), c.experience, manifestC, versionC, NONE, NONE,
@@ -865,7 +881,10 @@ async function verifyConcurrency(c) {
     const [{ current_lifecycle: stillDraft }] = await rows(
       `SELECT current_lifecycle FROM ${EXPERIENCES} WHERE id = $1`, [c.experience]);
     assert.equal(stillDraft, 'DRAFT', 'P34 and the Experience stayed exactly where it was');
+    console.log('0093 concurrency P34 pass');
 
+    stage = 'concurrency: SA07 source visibility change versus preparation';
+    console.log('0093 concurrency SA07 start');
     // SA07 A SOURCE-VISIBILITY CHANGE RACING WITH PREPARATION has one truthful
     // winner, and no stale hidden-body copy commits. The membership change takes
     // `shared_worlds FOR UPDATE` exactly as every I-04 mutation does; preparation
@@ -894,33 +913,70 @@ async function verifyConcurrency(c) {
     await asRole('postgres');
     await q(`UPDATE public.shared_world_membership_episodes e SET ended_at = NULL
               WHERE e.world_id = $1 AND e.user_id = $2`, [c.world, c.mohamed]);
+    console.log('0093 concurrency SA07 pass');
 
     // P35 AN ALIAS CHANGE CONCURRENT WITH PACKAGE PREPARATION changes neither the
-    // package nor its version - and, because the identity primitives take no
-    // global lock, it does not even wait for it.
+    // package nor its version. The identity primitives take no Public World global
+    // lock and create no package or version mutation - but ordinary
+    // referential-integrity row locking may still serialize concurrent statements
+    // touching the same Public Identity. The manifest carries the frozen composite
+    // publisher foreign key, so validating it makes PostgreSQL hold a parent-row
+    // lock on that exact identity for the life of the preparing transaction, and
+    // the alias primitive takes the same row FOR UPDATE.
+    //
+    // So the alias update is LAUNCHED here and awaited only after the package
+    // transaction is released. Awaiting it first was an application-level wait
+    // cycle that no deadlock detector can break: this connection is not blocked
+    // inside a statement, it is JavaScript declining to issue the COMMIT the other
+    // connection is waiting for. That hung CI indefinitely.
+    //
+    // What is proven is SEMANTIC INDEPENDENCE under either legal serialization -
+    // never an undocumented no-wait guarantee. The test must pass whether or not a
+    // given PostgreSQL version lets the alias update finish before the commit.
+    stage = 'concurrency: P35 alias change versus package preparation';
+    console.log('0093 concurrency P35 start');
     const countVersions = async () => Number((await q2(
       `SELECT count(*) n FROM ${VERSIONS} WHERE experience_id = $1`, [c.experience])).rows[0].n);
+    const countManifests = async () => Number((await q2(
+      `SELECT count(*) n FROM ${MANIFESTS} WHERE experience_id = $1`, [c.experience])).rows[0].n);
     const versionsBefore = await countVersions();
+    const manifestsBefore = await countManifests();
     await q('BEGIN');
     await actAs(c.mohamed);
     const manifestD = randomUUID(); const versionD = randomUUID();
     await prepare(randomUUID(), c.experience, manifestD, versionD, NONE, NONE,
       [randomUUID()], [c.world], [c.hadirMaterial]);
     await actAs2(c.mohamed);
-    const [relabelled] = (await q2('SELECT * FROM public.update_public_display_label_v1($1, $2, $3)',
-      [randomUUID(), 'PSEUDONYM', 'renamed during a preparation'])).rows;
-    assert.equal(relabelled.outcome, 'UPDATED',
-      'P35 an alias change does not wait behind an in-flight package preparation');
-    assert.equal(await countVersions(), versionsBefore,
-      'P35 and the alias change created no Experience version of its own');
+    const relabelling = q2('SELECT * FROM public.update_public_display_label_v1($1, $2, $3)',
+      [randomUUID(), 'PSEUDONYM', 'renamed during a preparation']);
+    // Long enough to establish that the concurrent statement is genuinely in flight.
+    // Whether it has settled by now is PostgreSQL's business: asserting either way
+    // would freeze an implementation detail as a Product requirement.
+    await new Promise((resolve) => { setTimeout(resolve, 400); });
     await q('COMMIT');
+    const [relabelled] = (await relabelling).rows;
+    assert.equal(relabelled.outcome, 'UPDATED',
+      'P35 the alias change succeeds under either legal serialization order');
+
     const [manifestRow] = await rows(`SELECT publisher_public_identity_ref FROM ${MANIFESTS} WHERE id = $1`,
       [manifestD]);
     assert.equal(manifestRow.publisher_public_identity_ref, c.mohamedRef,
       'P35 the package bound the stable ref, so the alias change altered no package meaning');
+    const [{ display_label: currentLabel }] = await rows(
+      `SELECT display_label FROM ${DISPLAY} WHERE public_identity_ref = $1`, [c.mohamedRef]);
+    assert.equal(currentLabel, 'renamed during a preparation',
+      'P35 and the alias change really did land on the mutable display state');
     assert.equal(await countVersions(), versionsBefore + 1,
       'P35 the preparation created exactly one version, and the alias change none');
+    assert.equal(await countManifests(), manifestsBefore + 1,
+      'P35 and exactly one manifest, so the alias change rewrote no package row');
+    console.log('0093 concurrency P35 pass');
   } finally {
+    // Best effort, in this order: stop any wait, leave no open transaction, and
+    // hand fixture teardown a session with its default timeouts back.
+    await q('ROLLBACK').catch(() => undefined);
+    await q("SET lock_timeout = '0'").catch(() => undefined);
+    await q("SET statement_timeout = '0'").catch(() => undefined);
     await second.end().catch(() => undefined);
   }
 }
@@ -1390,7 +1446,9 @@ async function main() {
       await verifyConcurrency(c);
     } finally {
       stage = 'concurrency: fixture removal';
+      console.log('0093 concurrency teardown start');
       await removeConcurrencyFixtures(c);
+      console.log('0093 concurrency teardown pass');
     }
 
     stage = 'fixture residue';
