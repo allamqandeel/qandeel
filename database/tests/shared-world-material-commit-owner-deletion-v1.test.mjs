@@ -56,6 +56,10 @@ const packageJson = read('../../package.json');
 const workflow = read('../../.github/workflows/api-ci.yml');
 /** The frozen I-03G readiness boundary this migration's evidence binding must reproduce exactly. */
 const readiness = read('../../apps/api/src/connected-worlds/source-disclosure/shared-privacy-authority-delivery-readiness.service.ts');
+/** The frozen I-03D audience boundary whose snapshot fingerprint this migration revalidates against. */
+const audience = read('../../apps/api/src/connected-worlds/audience/shared-human-audience-resolver.service.ts');
+/** The narrow internal evidence binder this slice adds, which is registered nowhere. */
+const binder = read('../../apps/api/src/connected-worlds/material-commit/shared-qandeel-material-commit-binding.ts');
 
 const executableSql = migration.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n');
 const deployableSql = executableSql.slice(0, executableSql.indexOf('DO $$\nDECLARE'));
@@ -63,16 +67,19 @@ const selfAssertions = executableSql.slice(executableSql.indexOf('DO $$\nDECLARE
 
 const COMMIT_COMMANDS = 'shared_world_material_commit_commands';
 const EVIDENCE = 'shared_world_qandeel_material_evidence';
+const AUTHORITY = 'shared_world_material_historical_authority';
 const DELETED_EVENTS = 'shared_world_material_deleted_events';
 const DELETE_COMMANDS = 'shared_world_material_delete_commands';
-const OWN_TABLES = [COMMIT_COMMANDS, EVIDENCE, DELETED_EVENTS, DELETE_COMMANDS];
+const OWN_TABLES = [COMMIT_COMMANDS, EVIDENCE, AUTHORITY, DELETED_EVENTS, DELETE_COMMANDS];
 
 const HUMAN_CORE = 'commit_shared_world_human_material_v1';
 const TEXT_FN = 'commit_shared_world_human_text_v1';
 const VOICE_FN = 'commit_shared_world_human_voice_note_v1';
 const QANDEEL_FN = 'commit_shared_world_qandeel_material_v1';
 const DELETE_FN = 'delete_shared_world_owned_material_v1';
+const GATE_FN = 'shared_world_material_historical_widening_gate_v1';
 const OWN_FUNCTIONS = [HUMAN_CORE, TEXT_FN, VOICE_FN, QANDEEL_FN, DELETE_FN];
+const ALL_FUNCTIONS = [...OWN_FUNCTIONS, GATE_FN];
 const OWN_SCRIPT = 'verify:shared-world-material-commit-owner-deletion:integration';
 
 const functionBody = (name) => {
@@ -84,7 +91,7 @@ const functionBody = (name) => {
   assert.ok(end > start, `${name} has a terminated body`);
   return migration.slice(start + 'AS $$'.length, end + '\nEND'.length);
 };
-const BODY = Object.fromEntries(OWN_FUNCTIONS.map((name) => [name, functionBody(name)]));
+const BODY = Object.fromEntries(ALL_FUNCTIONS.map((name) => [name, functionBody(name)]));
 
 /**
  * The declared parameter list of one function. `RETURNS` may sit on the same line
@@ -151,8 +158,18 @@ test('0090 alters no predecessor table and installs no trigger of its own', () =
   const foreign = alters.filter((statement) => !OWN_TABLES.some((name) => statement.includes(`public.${name}`)));
   assert.deepEqual(foreign, [], 'no statement alters a table 0090 did not create');
   assert.doesNotMatch(deployableSql, /ADD COLUMN/iu, 'no predecessor table gains a column');
-  assert.doesNotMatch(executableSql, /CREATE TRIGGER/iu, 'migration 0090 creates no trigger at all');
-  assert.doesNotMatch(executableSql, /RETURNS trigger/iu, 'and no trigger function for one to call');
+  // ONE trigger, and it exists for exactly one reason: to refuse HISTORICAL
+  // WIDENING of material whose additional human authority is unresolved, at the
+  // one place widening actually happens. It is additive to the frozen I-04F
+  // table and narrows nothing else.
+  assert.equal((executableSql.match(/CREATE TRIGGER/gu) ?? []).length, 1, 'migration 0090 creates exactly one trigger');
+  assert.equal((executableSql.match(/RETURNS trigger/gu) ?? []).length, 1, 'and exactly one trigger function for it');
+  assert.match(executableSql, /CREATE TRIGGER shared_world_material_historical_widening_gate\s*\n\s*BEFORE INSERT ON public\.shared_world_history_package_manifest_items/u,
+    'it guards the exact frozen I-04F relation a history package is built from');
+  assert.match(BODY[GATE_FN], /resolution_state = 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'/u,
+    'and refuses exactly the unresolved state, nothing else');
+  assert.doesNotMatch(BODY[GATE_FN], /INSERT INTO|UPDATE public\.|DELETE FROM|auth\.uid/u,
+    'the gate decides; it mutates nothing and trusts no client claim');
   assert.doesNotMatch(executableSql, /CREATE (?:OR REPLACE )?RULE|CREATE EVENT TRIGGER/iu, 'and no rule or event trigger');
   assert.doesNotMatch(executableSql, /CREATE POLICY/iu, 'and no RLS policy');
   // The availability transitions go THROUGH the frozen I-04F revision semantics.
@@ -162,7 +179,7 @@ test('0090 alters no predecessor table and installs no trigger of its own', () =
 
 test('no command, event or evidence row carries content, a reason, a role or a Safety or Launch claim', () => {
   const created = [...executableSql.matchAll(/CREATE TABLE public\.(\w+) \(/gu)].map((m) => m[1]);
-  assert.deepEqual(created.sort(), [...OWN_TABLES].sort(), 'exactly the four relations, and nothing else');
+  assert.deepEqual(created.sort(), [...OWN_TABLES].sort(), 'exactly the five relations, and nothing else');
   for (const name of OWN_TABLES) {
     for (const declaration of columnLines(name)) {
       assert.doesNotMatch(declaration, /\b(?:json|jsonb|hstore|bytea)\b|\[\]/iu,
@@ -321,7 +338,7 @@ test('the audience is derived under the World lock and never supplied, on every 
       `${name} reads the database clock exactly once`);
     assert.match(BODY[name], /VALUES \(p_history_item_id, p_world_id, commit_instant, [^;]*?1, commit_instant\);/su,
       `${name} writes occurred_at and registered_at from that ONE instant`);
-    assert.match(BODY[name], /body_digest, baseline_viewer_count, committed_at\)/u);
+    assert.match(BODY[name], /body_digest, request_ref, baseline_viewer_count, committed_at\)/u);
   }
   assert.equal((BODY[DELETE_FN].match(/clock_timestamp\(\)/gu) ?? []).length, 1,
     'owner deletion reads the database clock exactly once');
@@ -333,8 +350,16 @@ test('the audience is derived under the World lock and never supplied, on every 
 });
 
 test('the QANDEEL approver set is dependency-derived, never every member and never a constant', () => {
-  assert.match(BODY[QANDEEL_FN], /CASE WHEN approvers > 0 THEN 'EXACT_HUMAN_APPROVER_SET' ELSE 'NO_HUMAN_APPROVAL_REQUIRED' END/u,
-    'an empty derived union is written explicitly, never left ambiguous');
+  // MISSING AUTHORITY NEVER MEANS EMPTY. A reasoning dependency means a protected
+  // human subject may be implicated whose authority this repository cannot yet
+  // resolve, and unknown is recorded as unknown.
+  assert.match(BODY[QANDEEL_FN], /WHEN reasoning_edges > 0 THEN 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'/u,
+    'an unresolvable additional human requirement is recorded as unresolved, never as a known-empty one');
+  assert.match(BODY[QANDEEL_FN], /authority_mode := CASE WHEN authority_resolution = 'RESOLVED_NO_HUMAN_REQUIREMENT'/u,
+    'NO_HUMAN_APPROVAL_REQUIRED is reachable only from a RESOLVED empty requirement');
+  // Known MATERIAL_DEPENDENCY owners do not resolve the whole requirement alone.
+  assert.match(BODY[QANDEEL_FN], /WHEN reasoning_edges > 0 THEN[\s\S]{0,120}WHEN approvers > 0 THEN 'RESOLVED_EXACT_HUMAN_REQUIREMENT'/u,
+    'the unresolved branch is decided BEFORE the known-owner branch, so known owners never mask it');
   assert.match(BODY[QANDEEL_FN], /SELECT DISTINCT p_history_item_id, ra\.approver_user_id\s*\n\s*FROM public\.shared_world_materials m\s*\n\s*JOIN public\.shared_world_history_item_required_approvers ra ON ra\.history_item_id = m\.history_item_id\s*\n\s*WHERE m\.id = ANY\(sources\);/u,
     'the required set is the exact UNION over the MATERIAL_DEPENDENCY sources, and nothing else');
   // A REASONING_DEPENDENCY contributes nothing to material authority.
@@ -353,9 +378,148 @@ test('the QANDEEL approver set is dependency-derived, never every member and nev
     'a source that is no longer AVAILABLE stales the commit rather than silently succeeding');
   for (const phrase of [
     'I-04G: the QANDEEL approver set is dependency-derived, never the World membership and never a constant',
-    'I-04G: an empty derived authority union must be written explicitly as NO_HUMAN_APPROVAL_REQUIRED',
+    'I-04G: an unresolvable additional human requirement must be recorded as unresolved, never as empty',
+    'I-04G: NO_HUMAN_APPROVAL_REQUIRED may be written only for a RESOLVED empty human requirement',
     'I-04G: exact I-03 operation evidence must bind these exact body bytes, recomputed rather than trusted',
   ]) assert.ok(selfAssertions.includes(phrase), `migration 0090 refuses to deploy without: ${phrase}`);
+});
+
+test('the supplied audience snapshot is REVALIDATED against the frozen I-03D fingerprint', () => {
+  // The frozen I-03D fingerprint is where this contract believes it is, and
+  // migration 0090 reproduces it line for line rather than from memory.
+  assert.match(audience, /const SHARED_HUMAN_AUDIENCE_SNAPSHOT_VERSION = 'QANDEEL_CWV2_SHARED_HUMAN_AUDIENCE_SNAPSHOT_V1'/u);
+  assert.match(audience, /`\$\{member\.userId\}@\$\{member\.membershipEpisodeId\}`/u,
+    'the frozen fingerprint is per (user, EPISODE), which is what makes a rejoin stale an old snapshot');
+  assert.match(audience, /const lines = \[SHARED_HUMAN_AUDIENCE_SNAPSHOT_VERSION, `state=\$\{facts\.state\}`, `world=\$\{facts\.worldId\.toLowerCase\(\)\}`, `members=\$\{members\}`\]/u);
+  for (const line of ['QANDEEL_CWV2_SHARED_HUMAN_AUDIENCE_SNAPSHOT_V1', 'state=RESOLVED', 'world=', 'members=']) {
+    assert.ok(BODY[QANDEEL_FN].includes(`'${line}`), `migration 0090 reproduces the ${line} line exactly`);
+  }
+  assert.match(BODY[QANDEEL_FN], /lower\(a\.user_id::text\) \|\| '@' \|\| lower\(a\.membership_episode_id::text\)/u,
+    'including the exact per-episode member rendering');
+  assert.match(BODY[QANDEEL_FN], /COLLATE "C"/u,
+    'ordered by byte value, which is what the frozen code-unit comparison means');
+  assert.match(BODY[QANDEEL_FN], /IF p_audience_snapshot_ref <> current_audience_ref THEN\s*\n\s*RAISE EXCEPTION 'SHARED_WORLD_MATERIAL_STALE'/u,
+    'and stale audience evidence REFUSES the commit rather than silently retargeting it');
+  // One audience meaning: the same resolved rows produce the fingerprint and the
+  // baseline viewers.
+  assert.match(BODY[QANDEEL_FN], /INTO audience, current_audience_ref\s*\n\s*FROM public\.resolve_shared_world_human_audience_snapshot_v1\(p_world_id\) a;/u,
+    'the fingerprint and the baseline audience come from the SAME resolved rows');
+  for (const phrase of [
+    'I-04G: the supplied audience snapshot must be recomputed against the frozen I-03D fingerprint',
+    'I-04G: stale audience evidence must refuse the commit, never silently retarget it',
+  ]) assert.ok(selfAssertions.includes(phrase), `migration 0090 refuses to deploy without: ${phrase}`);
+});
+
+test('durable retry identity binds the WHOLE immutable request, not part of it', () => {
+  for (const name of [HUMAN_CORE, QANDEEL_FN]) {
+    assert.match(BODY[name], /'QANDEEL_CWV2_SHARED_MATERIAL_COMMIT_REQUEST_V1'/u,
+      `${name} builds one versioned durable request identity`);
+    // Every retry path decides on the whole identity. There are three per core:
+    // pre-lock, under-lock and unique-violation recovery.
+    assert.equal((BODY[name].match(/committed\.request_ref = request/gu) ?? []).length, 3,
+      `${name} compares the whole request identity in all three retry paths`);
+    assert.doesNotMatch(BODY[name], /committed\.body_digest = digest/u,
+      `${name} no longer decides equivalence on the body alone`);
+  }
+  // C1: voice-note duration is part of request identity, with presence distinct
+  // from value - the exact gap the review found.
+  assert.match(BODY[HUMAN_CORE], /'duration=' \|\| CASE WHEN p_duration_ms IS NULL THEN 'NONE' ELSE p_duration_ms::text END/u,
+    'a NULL duration and a valued duration can never fingerprint alike');
+  assert.match(BODY[HUMAN_CORE], /'audio=' \|\| CASE WHEN p_audio_object_ref IS NULL THEN 'NONE'/u);
+  assert.match(BODY[HUMAN_CORE], /'transcript=' \|\| CASE WHEN p_transcript_text IS NULL THEN 'NONE'/u);
+  // C2: the QANDEEL identity binds every evidence reference and both exact
+  // dependency sets, in canonical order.
+  for (const bound of ['effectiveContext=', 'outputDigest=', 'sourceDisclosureGate=',
+    'authorityRevalidation=', 'readiness=', 'audienceSnapshot=', 'materialSources=', 'reasoningSources=']) {
+    assert.ok(BODY[QANDEEL_FN].includes(`'${bound}`), `the QANDEEL request identity binds ${bound}`);
+  }
+  assert.match(BODY[QANDEEL_FN], /ORDER BY lower\(s\.item::text\) COLLATE "C"/u,
+    'set ORDER cannot change identity, because the members are canonically ordered');
+  // And a retry answers from committed truth, never from its own input arrays.
+  assert.doesNotMatch(BODY[QANDEEL_FN], /committed\.baseline_viewer_count, approvers, material_edges, reasoning_edges/u,
+    'a retry never reports the counts it was called with');
+  assert.equal((BODY[QANDEEL_FN].match(/INTO db_material_edges, db_reasoning_edges/gu) ?? []).length, 3,
+    'all three retry paths read their dependency counts from committed rows');
+  assert.match(tableBlock(COMMIT_COMMANDS), /CHECK \(request_ref ~ '\^sha256:\[0-9a-f\]\{64\}\$'\)/u);
+  for (const phrase of [
+    'I-04G: % must bind its whole immutable request into one versioned durable identity',
+    'I-04G: % must decide retry equivalence on the whole request identity, not on part of it',
+    'I-04G: a retry must report committed dependency counts, never the arrays it was called with',
+    'I-04G: every one of the three retry paths must read its counts from committed rows',
+  ]) assert.ok(selfAssertions.includes(phrase), `migration 0090 refuses to deploy without: ${phrase}`);
+});
+
+test('unresolved historical-sharing authority is recorded, and blocks widening where it happens', () => {
+  const relation = tableBlock(AUTHORITY);
+  for (const state of ['RESOLVED_EXACT_HUMAN_REQUIREMENT', 'RESOLVED_NO_HUMAN_REQUIREMENT',
+    'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT']) {
+    assert.ok(relation.includes(`'${state}'`), `${state} is representable`);
+  }
+  assert.match(relation, /PRIMARY KEY \(material_id\)/u, 'one resolution per material');
+  assert.match(relation, /UNIQUE \(history_item_id\)/u);
+  // Every commit records one, so no committed material is silently unclassified.
+  for (const name of [HUMAN_CORE, QANDEEL_FN]) {
+    assert.match(BODY[name], /INSERT INTO public\.shared_world_material_historical_authority/u,
+      `${name} records the historical-sharing authority resolution of what it commits`);
+  }
+  assert.match(BODY[HUMAN_CORE], /'RESOLVED_EXACT_HUMAN_REQUIREMENT'\);/u,
+    'a human author is their own known authority: nothing about it is unresolved');
+  // A reasoning grantor is NEVER turned into a material approver.
+  const approverInsert = BODY[QANDEEL_FN].slice(
+    BODY[QANDEEL_FN].indexOf('INSERT INTO public.shared_world_history_item_required_approvers'));
+  assert.ok(!approverInsert.slice(0, approverInsert.indexOf(';')).includes('source_context_ref'),
+    'no reasoning context reference ever becomes an approver identity');
+  assert.ok(selfAssertions.includes('I-04G: a reasoning dependency is never material consent: no reasoning grantor becomes an approver'));
+  assert.ok(selfAssertions.includes('I-04G: unresolved historical-sharing authority must be refused where widening actually happens'));
+  // Current delivery is untouched: the gate is on the history package, not on the
+  // commit and not on the material resolver.
+  assert.ok(!BODY[QANDEEL_FN].includes('shared_world_history_package_manifest_items'),
+    'committing is never blocked by an unresolved future redistribution authority');
+});
+
+test('the QANDEEL evidence binder is internal, unregistered and binds the exact World and operation', () => {
+  // The database proves what it can see - the readiness fingerprint, the body
+  // digest and the current World-bound audience fingerprint. The one thing it
+  // cannot see is whether the I-03F revalidation behind an opaque reference was
+  // performed for THIS World, so that half is bound here, against the frozen
+  // typed result rather than against a re-implementation of it.
+  assert.match(binder, /export function bindSharedQandeelMaterialCommit\(/u);
+  assert.match(binder, /if \(authority\.targetWorldId !== request\.targetWorldId\) return refused\('WORLD_MISMATCH'\);/u,
+    'evidence for another World cannot assemble a commit here');
+  assert.match(binder, /if \(authority\.outputDigest !== outputDigest\) return refused\('OUTPUT_MISMATCH'\);/u);
+  assert.match(binder, /if \(readiness\.outputDigest !== outputDigest\) return refused\('OUTPUT_MISMATCH'\);/u);
+  assert.match(binder, /const outputDigest = digestProviderOutput\(request\.outputText\);/u,
+    'the output identity is recomputed with the frozen I-03F convention, never trusted');
+  assert.match(binder, /if \(authority\.effectiveContextRef !== readiness\.effectiveContextRef\) return refused\('OPERATION_MISMATCH'\);/u);
+  assert.match(binder, /if \(readiness\.authorityRevalidationRef !== authority\.revalidationRef\) return refused\('OPERATION_MISMATCH'\);/u);
+  assert.match(binder, /if \(authority\.audienceSnapshotRef !== request\.currentAudienceSnapshotRef\) return refused\('AUDIENCE_MISMATCH'\);/u);
+  assert.match(binder, /request\.revalidation\.state !== 'CURRENT'/u);
+  assert.match(binder, /request\.readiness\.state !== 'READY_FOR_LATER_DELIVERY_GATES'/u);
+
+  // It is an ADAPTER, not a boundary: no decorator, no module, no transport, no
+  // I/O, no state, and no Safety or Launch position of its own.
+  for (const forbidden of ['@Injectable', '@Controller', '@Module', '@Get', '@Post',
+    'NestModule', 'providers:', 'imports:', 'Repository', 'createClient', 'fetch(']) {
+    assert.ok(!binder.includes(forbidden), `the evidence binder carries no ${forbidden}`);
+  }
+  assert.doesNotMatch(binder, /systemSafetyStatus:|launchGateStatus:|deliveryCommitAuthority:/u,
+    'it restates no Safety, Launch or delivery position: CW2-08 owns those and this grants nothing');
+  // Nothing imports it, so it is unreachable from any registered surface.
+  const importers = [];
+  const walk = (directory) => {
+    for (const entry of readdirSync(join(rootPath, directory), { withFileTypes: true })) {
+      const relative = `${directory}/${entry.name}`;
+      if (entry.isDirectory()) { walk(relative); continue; }
+      if (!entry.name.endsWith('.ts')) continue;
+      if (relative.includes('material-commit/')) continue;
+      if (readFileSync(join(rootPath, relative), 'utf8').includes('shared-qandeel-material-commit-binding')) {
+        importers.push(relative);
+      }
+    }
+  };
+  walk('apps/api/src');
+  assert.deepEqual(importers, [],
+    'the evidence binder is imported by nothing: it is server-internal and transport-unreachable');
 });
 
 test('owner deletion destroys bodies and nothing else, and never reopens a World', () => {
@@ -608,8 +772,13 @@ test('the real-PostgreSQL verifier carries no live-schema ceiling of its own', (
   assert.match(verifier, /SAVEPOINT forward_safety/u, 'inside a rolled-back savepoint');
   assert.match(verifier, /await assert\.rejects\(verifyCatalog\(\), refuses/u, 'and requires real regressions to still be refused');
   assert.match(verifier, /async function verifyConcurrency\(/u, 'and proves the mandatory races with real independent connections');
+  assert.match(verifier, /async function verifyReviewFixes\(/u, 'and proves the Independent Review FIX-01 corrections');
+  assert.match(verifier, /await verifyReviewFixes\(f\);/u, 'and actually runs them');
+  assert.match(verifier, /async function currentAudienceSnapshotRef\(/u,
+    'valid QANDEEL fixtures use the real canonical I-03D fingerprint, never a fabricated one');
+  assert.doesNotMatch(verifier, /audienceSnapshotRef: `aud:/u, 'no fabricated audience reference survives in a valid fixture');
   for (const authorized of ['_introduction_producer', '_cw208_wrapper', '_launch_gates', '_public_consumer',
-    '_replay_consumer', 'CREATE INDEX', 'CREATE TRIGGER', '_command_metadata']) {
+    '_replay_consumer', '_subject_authority_resolver', 'CREATE INDEX', 'CREATE TRIGGER', '_command_metadata']) {
     assert.ok(verifier.includes(authorized), `the probe proves a later reviewed ${authorized} is not an 0090 regression`);
   }
 });
@@ -628,14 +797,19 @@ test('the contract is not vacuous: every deliberate weakening of migration 0090 
         "'actor|author_|author$|user_id|viewer|baseline|approver|member|episode|audience_human",
         "'actor|author|user_id|viewer|baseline|approver|member|episode|audience_human")],
       ['gives QANDEEL a human actor', (text) => text.replace(
-        'DECLARE\n  committed public.shared_world_material_commit_commands;\n  world public.shared_worlds;\n  digest text;\n  recomputed_readiness text;',
-        'DECLARE\n  u uuid := auth.uid();\n  committed public.shared_world_material_commit_commands;\n  world public.shared_worlds;\n  digest text;\n  recomputed_readiness text;')],
+        'DECLARE\n  committed public.shared_world_material_commit_commands;\n  world public.shared_worlds;\n  digest text;\n  request text;',
+        'DECLARE\n  u uuid := auth.uid();\n  committed public.shared_world_material_commit_commands;\n  world public.shared_worlds;\n  digest text;\n  request text;')],
       ['lets the QANDEEL approver set become every current member', (text) => text.replace(
         "    SELECT DISTINCT p_history_item_id, ra.approver_user_id\n      FROM public.shared_world_materials m\n      JOIN public.shared_world_history_item_required_approvers ra ON ra.history_item_id = m.history_item_id\n     WHERE m.id = ANY(sources);",
         '    SELECT p_history_item_id, v.member FROM unnest(audience) AS v(member);')],
-      ['makes an empty derived authority union ambiguous', (text) => text.replace(
-        "  authority_mode := CASE WHEN approvers > 0 THEN 'EXACT_HUMAN_APPROVER_SET' ELSE 'NO_HUMAN_APPROVAL_REQUIRED' END;",
-        "  authority_mode := 'EXACT_HUMAN_APPROVER_SET';")],
+      ['turns an UNRESOLVED additional human requirement into a known-empty one', (text) => text.replace(
+        "    WHEN reasoning_edges > 0 THEN 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'",
+        "    WHEN reasoning_edges > 0 THEN 'RESOLVED_NO_HUMAN_REQUIREMENT'")],
+      ['lets NO_HUMAN_APPROVAL_REQUIRED be written for an unresolved requirement', (text) => text.replace(
+        "  authority_mode := CASE WHEN authority_resolution = 'RESOLVED_NO_HUMAN_REQUIREMENT'",
+        "  authority_mode := CASE WHEN approvers = 0")],
+      ['drops the historical widening gate', (text) => text.replace(
+        'CREATE TRIGGER shared_world_material_historical_widening_gate', '-- CREATE TRIGGER removed')],
       ['trusts the supplied readiness reference instead of recomputing it', (text) => text.replace(
         '  IF p_readiness_ref <> recomputed_readiness THEN', '  IF FALSE THEN')],
       ['lets evidence bind bytes other than the body being committed', (text) => text.replace(
@@ -651,8 +825,8 @@ test('the contract is not vacuous: every deliberate weakening of migration 0090 
         '  p_command_id uuid, p_world_id uuid, p_material_id uuid, p_history_item_id uuid, p_body_text text\n',
         '  p_command_id uuid, p_world_id uuid, p_material_id uuid, p_history_item_id uuid, p_body_text text, p_committed_at timestamptz\n')],
       ['lets a human commit under somebody else s identity', (text) => text.replace(
-        '  u uuid := auth.uid();\n  committed public.shared_world_material_commit_commands;\n  world public.shared_worlds;\n  digest text;\n  form text;',
-        '  u uuid := p_material_id;\n  committed public.shared_world_material_commit_commands;\n  world public.shared_worlds;\n  digest text;\n  form text;')],
+        '  u uuid := auth.uid();\n  committed public.shared_world_material_commit_commands;\n  world public.shared_worlds;\n  digest text;\n  request text;\n  form text;',
+        '  u uuid := p_material_id;\n  committed public.shared_world_material_commit_commands;\n  world public.shared_worlds;\n  digest text;\n  request text;\n  form text;')],
       ['lets membership co-own another human s material', (text) => text.replace(
         '    INSERT INTO public.shared_world_history_item_required_approvers (history_item_id, approver_user_id)\n    VALUES (p_history_item_id, u);',
         '    INSERT INTO public.shared_world_history_item_required_approvers (history_item_id, approver_user_id)\n    SELECT p_history_item_id, v.member FROM unnest(audience) AS v(member);')],
@@ -720,7 +894,9 @@ test('the contract is not vacuous: every deliberate weakening of migration 0090 
         () => { for (const p of denyPatterns) assert.doesNotMatch(p, /(?:^|\|)author(?:\||$)/u); },
         () => assert.doesNotMatch(bodies[QANDEEL_FN], /auth\.uid/u),
         () => assert.match(bodies[QANDEEL_FN], /SELECT DISTINCT p_history_item_id, ra\.approver_user_id/u),
-        () => assert.match(bodies[QANDEEL_FN], /CASE WHEN approvers > 0 THEN 'EXACT_HUMAN_APPROVER_SET' ELSE 'NO_HUMAN_APPROVAL_REQUIRED' END/u),
+        () => assert.match(bodies[QANDEEL_FN], /WHEN reasoning_edges > 0 THEN 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'/u),
+        () => assert.match(bodies[QANDEEL_FN], /authority_mode := CASE WHEN authority_resolution = 'RESOLVED_NO_HUMAN_REQUIREMENT'/u),
+        () => assert.match(sql, /CREATE TRIGGER shared_world_material_historical_widening_gate/u),
         () => assert.match(bodies[QANDEEL_FN], /IF p_readiness_ref <> recomputed_readiness THEN/u),
         () => assert.match(bodies[QANDEEL_FN], /IF p_output_digest <> digest THEN/u),
         () => assert.match(block(EVIDENCE), /UNIQUE \(readiness_ref\)/u),
@@ -761,7 +937,8 @@ test('the contract is not vacuous: every deliberate weakening of migration 0090 
 // probe has to be able to change it. Only that one directory is copied: mirroring
 // the whole API tree would cost seconds per probe to prove nothing extra.
 const MIRRORED = ['database', '.github/workflows/api-ci.yml', 'package.json', 'tests/harness-temp-dir.mjs',
-  'apps/api/src/connected-worlds/source-disclosure'];
+  'apps/api/src/connected-worlds/source-disclosure', 'apps/api/src/connected-worlds/audience',
+  'apps/api/src/connected-worlds/material-commit'];
 const SKIP = /(?:^|[\\/])(?:node_modules|\.git|\.expo|\.turbo|coverage)(?:[\\/]|$)/u;
 
 function buildMirror() {
@@ -849,8 +1026,8 @@ test('a later reviewed producer, a CW2-08 wrapper, Public and Replay consumers, 
       ['a frozen predecessor migration is edited', 'database/migrations/0088_shared_world_standard_closure_v1.sql',
         'BEGIN;', 'BEGIN;\n-- edited\n'],
       ['0090 gives QANDEEL a human actor', `database/migrations/${MIGRATION_NAME}`,
-        'DECLARE\n  committed public.shared_world_material_commit_commands;\n  world public.shared_worlds;\n  digest text;\n  recomputed_readiness text;',
-        'DECLARE\n  u uuid := auth.uid();\n  committed public.shared_world_material_commit_commands;\n  world public.shared_worlds;\n  digest text;\n  recomputed_readiness text;'],
+        'DECLARE\n  committed public.shared_world_material_commit_commands;\n  world public.shared_worlds;\n  digest text;\n  request text;',
+        'DECLARE\n  u uuid := auth.uid();\n  committed public.shared_world_material_commit_commands;\n  world public.shared_worlds;\n  digest text;\n  request text;'],
       ['0090 alters a predecessor table', `database/migrations/${MIGRATION_NAME}`,
         'CREATE TABLE public.shared_world_material_commit_commands (',
         'ALTER TABLE public.shared_world_materials ADD COLUMN commit_note text;\nCREATE TABLE public.shared_world_material_commit_commands ('],
@@ -863,12 +1040,12 @@ test('a later reviewed producer, a CW2-08 wrapper, Public and Replay consumers, 
         "        JOIN reachable step ON d.source_material_id = step.material_id\n       WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY'",
         "        JOIN reachable step ON d.source_material_id = step.material_id\n       WHERE d.dependency_kind = 'REASONING_DEPENDENCY'"],
       ['0090 installs a trigger of its own', `database/migrations/${MIGRATION_NAME}`,
-        '-- ---------------------------------------------------------------------------\n-- 4. Deny-by-default posture',
+        '-- ---------------------------------------------------------------------------\n-- 5. Deny-by-default posture',
         'CREATE FUNCTION public.shared_world_material_guard_v1() RETURNS trigger LANGUAGE plpgsql AS $fn$\n'
         + 'BEGIN RETURN NEW; END$fn$;\n'
         + 'CREATE TRIGGER shared_world_material_commit_guard BEFORE INSERT ON public.shared_world_material_commit_commands\n'
         + '  FOR EACH ROW EXECUTE FUNCTION public.shared_world_material_guard_v1();\n'
-        + '-- ---------------------------------------------------------------------------\n-- 4. Deny-by-default posture'],
+        + '-- ---------------------------------------------------------------------------\n-- 5. Deny-by-default posture'],
       ['the CI step that runs the 0090 verifier is removed', '.github/workflows/api-ci.yml',
         `run: npm run ${OWN_SCRIPT}}`, 'run: npm run test:toolchain}'],
       ['the frozen I-03G readiness fingerprint changes without this migration following it',

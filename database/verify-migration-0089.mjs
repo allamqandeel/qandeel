@@ -300,8 +300,14 @@ async function verifyCatalog() {
 
 async function provisionWorld(inviter, target, label) {
   const ref = opaqueRef(label);
+  // The frozen I-04A rotation is a compare-and-swap: a NULL expected epoch means
+  // `this human has no credential yet`, and offering it to a human who already has
+  // one is a stale-state refusal. A fixture human may legitimately be the target of
+  // more than one World here, so the CURRENT epoch is read and offered.
+  await identity('postgres');
+  const [state] = await rows(`SELECT epoch FROM ${CREDENTIAL} WHERE user_id = $1`, [target]);
   await identity('authenticated', target);
-  await rows(ROTATE_SQL, [randomUUID(), ref, null]);
+  await rows(ROTATE_SQL, [randomUUID(), ref, state ? state.epoch : null]);
   await identity('authenticated', inviter);
   const invitationId = randomUUID();
   await rows(SUBMIT_SQL, [randomUUID(), invitationId, ref]);

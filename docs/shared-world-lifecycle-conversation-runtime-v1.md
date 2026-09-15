@@ -93,6 +93,29 @@ material. It reinterprets `READY_FOR_LATER_DELIVERY_GATES` as nothing: the evide
 system-safety, launch-gate or delivery-permission column, and the migration refuses to deploy if one
 appears.
 
+It also **revalidates the audience**. The supplied audience snapshot reference must equal the canonical
+I-03D fingerprint of the World's CURRENT audience, recomputed in SQL under the World lock from the same
+rows that become the baseline viewers. Because that fingerprint is per (user, **episode**) and carries
+the exact World, a leave, a same-human rejoin, a governed add or remove, and evidence generated for a
+different World each stale it — so an output cannot be silently delivered to an audience it was never
+revalidated against, and cross-World evidence reuse fails at the database boundary.
+
+What SQL cannot see is the I-03F result behind an opaque `authorityRevalidationRef`. That half is bound
+by one narrow server-internal adapter,
+`apps/api/src/connected-worlds/material-commit/shared-qandeel-material-commit-binding.ts`, which
+consumes the already-frozen typed I-03F and I-03G results and refuses to assemble commit inputs unless
+`targetWorldId`, `outputDigest`, `effectiveContextRef`, `authorityRevalidationRef` and
+`audienceSnapshotRef` all describe the same operation, output and World. It is registered in no module,
+imported by nothing, performs no I/O, and grants nothing — the database still decides.
+
+**Durable idempotency binds the whole immutable request**, not part of it. Each commit computes one
+versioned `material_commit_request_ref` covering the World, material and history identities, the kind,
+the exact body, the media reference, the transcript and the **duration** (presence distinguished from
+value), every I-03 evidence reference, the audience snapshot and both canonically ordered dependency
+sets. Set order cannot change identity; set content always does. All three retry paths — pre-lock,
+under-lock and unique-violation recovery — decide on that one identity, and every count a retry reports
+comes from committed rows rather than from the arrays the retry supplied.
+
 Owner deletion makes reconstruction impossible rather than merely hidden: the body row is physically
 removed — human text, audio object reference and stored transcript together — and the history item
 becomes terminally `DELETED_BY_OWNER`. Every transitively source-content-bearing target becomes
@@ -102,23 +125,47 @@ the source.
 
 ---
 
-## 4. The one interpretive decision this slice made, and why
+## 4. Unresolved historical-sharing authority, and why it fails closed
 
 Task §9 admits **two** contributors to the QANDEEL required-approver set: the human authorities
 propagated from `MATERIAL_DEPENDENCY` sources, **and** "any additional exact protected-human
 subject/material authorities produced by an already-reviewed server-owned authority source, **if such a
 canonical source exists**".
 
-In this repository it does not. The whole I-03 chain terminates at
-`materialDisclosureAuthority: NOT_GRANTED` and `provenanceDisclosure: SEALED`, and produces no
+In this repository the second does not exist. The whole I-03 chain terminates at
+`materialDisclosureAuthority: NOT_GRANTED` and `provenanceDisclosure: SEALED` and produces no
 protected-subject authority set of any kind. Accepting one as a parameter would be exactly the
 "app/client supplies final authority claims" that the same section forbids, and manufacturing one would
 be engineering inventing missing Product logic (`AGENTS.md` §2).
 
-I-04G therefore derives the union from `MATERIAL_DEPENDENCY` sources alone, and leaves the second
-contributor to the reviewed slice that first builds a real server-owned source for it. This is recorded
-here rather than only in a commit message because it is the kind of decision a later reader must be
-able to find.
+**What does not follow is that the requirement is empty.** "We cannot compute it" and "we computed it,
+and there is none" are different facts, and the frozen rule is explicit: *missing or unresolved
+authority metadata never means approval-free*. So I-04G records which of the three it actually is, in
+`shared_world_material_historical_authority`:
+
+```text
+RESOLVED_EXACT_HUMAN_REQUIREMENT        the exact required humans are known
+RESOLVED_NO_HUMAN_REQUIREMENT           there is genuinely no human requirement
+UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT an additional human requirement may exist and is not resolvable
+```
+
+QANDEEL material carrying **any** `REASONING_DEPENDENCY` is `UNRESOLVED` — including when it also
+carries known `MATERIAL_DEPENDENCY` owners, because those known owners do not resolve the whole
+requirement. A reasoning dependency still propagates **no** material consent: no reasoning grantor is
+ever turned into an approver, and the required-approver set stays exactly the propagated material
+owners.
+
+**Current delivery is untouched.** The material commits, its exact baseline audience sees it, and the
+material resolver returns it. What is blocked is **historical audience widening**: a narrow additive
+trigger on the frozen I-04F `shared_world_history_package_manifest_items` refuses to admit any item
+whose material is `UNRESOLVED`. That is enforced in the database, at the one place widening actually
+happens — not left to a future Product wrapper and not left to this document. `NO_HUMAN_APPROVAL_REQUIRED`
+is written **only** for a genuinely resolved empty requirement; anything unresolved keeps the
+exact-approver mode, so the frozen I-04F path can never read it as approval-free either.
+
+The representation is additive on purpose. A later reviewed subject-authority resolver moves a row
+forward to `RESOLVED`, and the same item becomes packageable with no change to the gate and no source
+history rewritten.
 
 ---
 

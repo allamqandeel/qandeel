@@ -36,6 +36,16 @@
 //     audits surviving; direct and transitive MATERIAL_DEPENDENCY targets becoming
 //     UNAVAILABLE; REASONING_DEPENDENCY targets surviving; provenance identity
 //     surviving;
+//   * FIX-A a fabricated audience snapshot, a snapshot staled by a leave, by the
+//     SAME human rejoining, and by a governed removal are each refused, and the
+//     validated snapshot IS the baseline audience;
+//   * FIX-B evidence valid for World A cannot commit into World B even byte for byte;
+//   * FIX-C an exact voice retry succeeds while a changed duration conflicts, and a
+//     QANDEEL retry binds every evidence reference and both exact dependency sets,
+//     answering with COMMITTED counts rather than its own input arrays;
+//   * FIX-D unresolved additional human authority is recorded as unresolved, blocks
+//     historical widening at the frozen I-04F package, never turns a reasoning
+//     grantor into an approver, and never blocks current baseline delivery;
 //   * Q01-Q05 QANDEEL never becomes a human authority principal, I-03 readiness is
 //     never treated as Safety or Launch clearance, app roles cannot execute the
 //     commit core, stale World / audience / dependency state refuses a commit, and
@@ -131,9 +141,10 @@ const VOICE_BODIES = 'public.shared_world_voice_note_material_bodies';
 const DEPENDENCIES = 'public.shared_world_material_dependencies';
 const COMMIT_COMMANDS = 'public.shared_world_material_commit_commands';
 const EVIDENCE = 'public.shared_world_qandeel_material_evidence';
+const AUTHORITY = 'public.shared_world_material_historical_authority';
 const DELETED_EVENTS = 'public.shared_world_material_deleted_events';
 const DELETE_COMMANDS = 'public.shared_world_material_delete_commands';
-const OWN_TABLES = [COMMIT_COMMANDS, EVIDENCE, DELETED_EVENTS, DELETE_COMMANDS];
+const OWN_TABLES = [COMMIT_COMMANDS, EVIDENCE, AUTHORITY, DELETED_EVENTS, DELETE_COMMANDS];
 const APPLICATION_ROLES = ['anon', 'authenticated', 'service_role'];
 const PRIVILEGES = ['SELECT', 'INSERT', 'UPDATE', 'DELETE'];
 
@@ -144,6 +155,7 @@ const QANDEEL_FN = 'public.commit_shared_world_qandeel_material_v1(uuid,uuid,uui
 const DELETE_FN = 'public.delete_shared_world_owned_material_v1(uuid,uuid,uuid,uuid)';
 const OWN_FUNCTIONS = [HUMAN_CORE, TEXT_FN, VOICE_FN, QANDEEL_FN, DELETE_FN];
 const MATERIAL_RESOLVER = 'public.resolve_shared_world_material_v1(uuid,uuid)';
+const GATE_FN = 'public.shared_world_material_historical_widening_gate_v1()';
 
 const INSUFFICIENT_PRIVILEGE = ['42501'];
 const INVALID_PARAMETER = ['22023'];
@@ -151,6 +163,7 @@ const UNAVAILABLE = ['P0002'];
 const CONFLICT = ['23505'];
 const STALE = ['40001'];
 const CONTRADICTORY = ['P0001'];
+const INCOMPLETE = ['55000'];
 
 const ROTATE_SQL = 'SELECT command_id, credential_epoch FROM public.rotate_shared_world_invite_credential_v1($1,$2,$3)';
 const SUBMIT_SQL = 'SELECT outcome, command_id, requested_invitation_id FROM public.submit_shared_world_direct_invitation_v1($1,$2,$3)';
@@ -163,6 +176,10 @@ const REMOVE_PREPARE_SQL = `SELECT outcome, prepared_proposal_id
   FROM public.prepare_shared_world_remove_member_governance_v1($1,$2,$3,$4,$5)`;
 const REMOVE_COMMIT_SQL = `SELECT outcome, removed_world_id
   FROM public.commit_shared_world_member_removal_v1($1,$2,$3)`;
+const REJOIN_PREPARE_SQL = `SELECT outcome, prepared_proposal_id
+  FROM public.prepare_shared_world_rejoin_governance_v1($1,$2,$3,$4,$5)`;
+const REJOIN_COMMIT_SQL = `SELECT outcome, rejoined_world_id
+  FROM public.commit_shared_world_member_rejoin_v1($1,$2,$3,$4)`;
 const HISTORY_PREPARE_SQL = `SELECT outcome, prepared_manifest_version_id, prepared_required_approver_count
   FROM public.prepare_shared_world_history_package_v1($1,$2,$3,$4)`;
 const HISTORY_APPROVE_SQL = 'SELECT outcome, committed_approval_id FROM public.commit_shared_world_history_package_approval_v1($1,$2)';
@@ -198,8 +215,33 @@ const readinessRef = ({ effectiveContextRef, outputDigest, sourceDisclosureGateR
     `authorityRevalidation=${authorityRevalidationRef}`,
   ].join('\n'), 'utf8').digest('hex')}`;
 
-/** One complete, internally consistent I-03 evidence bundle for one exact body. */
-function evidenceFor(body, label) {
+/**
+ * The exact frozen I-03D audience-state fingerprint of a World's CURRENT audience,
+ * reproduced here from the frozen definition.
+ *
+ * It is per (user, EPISODE) and carries the exact World, which is what makes a
+ * leave, a rejoin, a governed topology change and a different World each produce a
+ * different reference.
+ */
+async function currentAudienceSnapshotRef(worldId) {
+  const members = await rows(
+    'SELECT user_id, membership_episode_id FROM public.resolve_shared_world_human_audience_snapshot_v1($1)', [worldId]);
+  const byCodeUnit = (left, right) => (left < right ? -1 : left > right ? 1 : 0);
+  const rendered = members
+    .map((row) => ({ user: String(row.user_id).toLowerCase(), episode: String(row.membership_episode_id).toLowerCase() }))
+    .sort((left, right) => byCodeUnit(left.user, right.user) || byCodeUnit(left.episode, right.episode))
+    .map((member) => `${member.user}@${member.episode}`)
+    .join(',');
+  return `sha256:${createHash('sha256').update([
+    'QANDEEL_CWV2_SHARED_HUMAN_AUDIENCE_SNAPSHOT_V1',
+    'state=RESOLVED',
+    `world=${String(worldId).toLowerCase()}`,
+    `members=${rendered}`,
+  ].join('\n'), 'utf8').digest('hex')}`;
+}
+
+/** One complete, internally consistent I-03 evidence bundle for one exact body and audience. */
+function evidenceFor(body, label, audienceSnapshotRef) {
   const effectiveContextRef = `ec:${label}:${randomUUID()}`;
   const sourceDisclosureGateRef = `gate:${label}:${randomUUID()}`;
   const authorityRevalidationRef = `rev:${label}:${randomUUID()}`;
@@ -210,7 +252,7 @@ function evidenceFor(body, label) {
     sourceDisclosureGateRef,
     authorityRevalidationRef,
     readiness: readinessRef({ effectiveContextRef, outputDigest, sourceDisclosureGateRef, authorityRevalidationRef }),
-    audienceSnapshotRef: `aud:${label}:${randomUUID()}`,
+    audienceSnapshotRef,
   };
 }
 
@@ -224,6 +266,7 @@ const OWNED_COLUMNS = {
     ['id', UUID, 'NO', null], ['world_id', UUID, 'NO', null], ['material_id', UUID, 'NO', null],
     ['history_item_id', UUID, 'NO', null], ['material_kind', TEXT, 'NO', null], ['producer_kind', TEXT, 'NO', null],
     ['actor_user_id', UUID, 'YES', null], ['body_digest', TEXT, 'NO', null],
+    ['request_ref', TEXT, 'NO', null],
     ['baseline_viewer_count', INT, 'NO', null], ['committed_at', TSTZ, 'NO', null],
   ],
   [EVIDENCE]: [
@@ -231,6 +274,10 @@ const OWNED_COLUMNS = {
     ['readiness_ref', TEXT, 'NO', null], ['effective_context_ref', TEXT, 'NO', null],
     ['output_digest', TEXT, 'NO', null], ['source_disclosure_gate_ref', TEXT, 'NO', null],
     ['authority_revalidation_ref', TEXT, 'NO', null], ['audience_snapshot_ref', TEXT, 'NO', null],
+  ],
+  [AUTHORITY]: [
+    ['material_id', UUID, 'NO', null], ['world_id', UUID, 'NO', null],
+    ['history_item_id', UUID, 'NO', null], ['resolution_state', TEXT, 'NO', null],
   ],
   [DELETED_EVENTS]: [
     ['id', UUID, 'NO', null], ['world_id', UUID, 'NO', null], ['material_id', UUID, 'NO', null],
@@ -248,6 +295,8 @@ const OWNED_FOREIGN_KEYS = {
   shared_world_material_commit_commands_history_item_fk: 'FOREIGN KEY (history_item_id, world_id) REFERENCES shared_world_history_items(id, world_id) ON DELETE RESTRICT',
   shared_world_material_commit_commands_actor_fk: 'FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE RESTRICT',
   shared_world_qandeel_material_evidence_material_fk: 'FOREIGN KEY (material_id, world_id) REFERENCES shared_world_materials(id, world_id) ON DELETE RESTRICT',
+  shared_world_material_historical_authority_material_fk: 'FOREIGN KEY (material_id, world_id) REFERENCES shared_world_materials(id, world_id) ON DELETE RESTRICT',
+  shared_world_material_historical_authority_item_fk: 'FOREIGN KEY (history_item_id, world_id) REFERENCES shared_world_history_items(id, world_id) ON DELETE RESTRICT',
   shared_world_material_deleted_events_world_fk: 'FOREIGN KEY (world_id) REFERENCES shared_worlds(id) ON DELETE RESTRICT',
   shared_world_material_deleted_events_material_fk: 'FOREIGN KEY (material_id, world_id) REFERENCES shared_world_materials(id, world_id) ON DELETE RESTRICT',
   shared_world_material_deleted_events_history_item_fk: 'FOREIGN KEY (history_item_id, world_id) REFERENCES shared_world_history_items(id, world_id) ON DELETE RESTRICT',
@@ -262,6 +311,10 @@ const OWNED_BINDINGS = [
   [COMMIT_COMMANDS, 'shared_world_material_commit_commands_history_item_key', /UNIQUE \(history_item_id\)/u],
   [COMMIT_COMMANDS, 'shared_world_material_commit_commands_producer_check', /QANDEEL/u],
   [COMMIT_COMMANDS, 'shared_world_material_commit_commands_digest_check', /sha256/u],
+  [COMMIT_COMMANDS, 'shared_world_material_commit_commands_request_check', /sha256/u],
+  [AUTHORITY, 'shared_world_material_historical_authority_pk', /PRIMARY KEY \(material_id\)/u],
+  [AUTHORITY, 'shared_world_material_historical_authority_item_key', /UNIQUE \(history_item_id\)/u],
+  [AUTHORITY, 'shared_world_material_historical_authority_state_check', /UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT/u],
   [COMMIT_COMMANDS, 'shared_world_material_commit_commands_viewers_check', /baseline_viewer_count > 0/u],
   [EVIDENCE, 'shared_world_qandeel_material_evidence_pk', /PRIMARY KEY \(material_id\)/u],
   [EVIDENCE, 'shared_world_qandeel_material_evidence_readiness_key', /UNIQUE \(readiness_ref\)/u],
@@ -403,8 +456,8 @@ async function verifyCatalog() {
   const qandeel = await sourceOf(QANDEEL_FN);
   assert.doesNotMatch(qandeel, /auth\.uid/u,
     'the QANDEEL commit core derives no human: a system actor is never a consent or ownership principal');
-  assert.match(qandeel, /CASE WHEN approvers > 0 THEN 'EXACT_HUMAN_APPROVER_SET' ELSE 'NO_HUMAN_APPROVAL_REQUIRED' END/u,
-    'and an empty derived authority union is written explicitly');
+  assert.match(qandeel, /WHEN reasoning_edges > 0 THEN 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'/u,
+    'and an unresolvable additional human requirement is recorded as unresolved, never as a known-empty one');
   const humanCore = await sourceOf(HUMAN_CORE);
   assert.match(humanCore, /auth\.uid\(\)/u, 'the human commit core derives its human from auth.uid()');
   for (const fnName of [HUMAN_CORE, TEXT_FN, VOICE_FN, QANDEEL_FN]) {
@@ -418,6 +471,26 @@ async function verifyCatalog() {
   assert.doesNotMatch(deletion, /SET lifecycle|SET phase|SET closed_at/u,
     'a privacy material mutation never reopens or changes World lifecycle');
 
+  stage = 'catalog: the historical widening gate is installed, sealed and on the exact frozen relation';
+  const [gate] = await rows(
+    `SELECT pg_get_userbyid(pr.proowner) owner, pr.prosecdef secdef, pr.proconfig config, pr.prosrc
+       FROM pg_proc pr WHERE pr.oid = $1::regprocedure`, [GATE_FN]);
+  assert.ok(gate, 'the widening gate function exists');
+  assert.equal(gate.owner, 'postgres');
+  assert.equal(gate.secdef, true);
+  assert.ok((gate.config ?? []).some((cfg) => cfg === 'search_path=' || cfg === 'search_path=""'));
+  assert.match(gate.prosrc, /resolution_state = 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'/u,
+    'it refuses exactly the unresolved state and nothing else');
+  assert.doesNotMatch(gate.prosrc, /INSERT INTO|UPDATE public\.|DELETE FROM|auth\.uid/u,
+    'the gate decides; it mutates nothing and trusts no client claim');
+  const [{ installed }] = await rows(
+    `SELECT EXISTS (SELECT 1 FROM pg_trigger tg
+       WHERE tg.tgrelid = 'public.shared_world_history_package_manifest_items'::regclass
+         AND tg.tgname = 'shared_world_material_historical_widening_gate'
+         AND NOT tg.tgisinternal) AS installed`);
+  assert.equal(installed, true,
+    'unresolved historical-sharing authority is refused where widening actually happens');
+
   stage = 'catalog: the ONE material read boundary is unchanged';
   const [{ allowed: resolverExecute }] = await rows('SELECT has_function_privilege($1,$2,$3) allowed',
     ['service_role', MATERIAL_RESOLVER, 'EXECUTE']);
@@ -428,8 +501,14 @@ async function verifyCatalog() {
 
 async function provisionWorld(inviter, target, label) {
   const ref = opaqueRef(label);
+  // The frozen I-04A rotation is a compare-and-swap: a NULL expected epoch means
+  // `this human has no credential yet`, and offering it to a human who already has
+  // one is a stale-state refusal. A fixture human may legitimately be the target of
+  // more than one World here, so the CURRENT epoch is read and offered.
+  await identity('postgres');
+  const [state] = await rows(`SELECT epoch FROM ${CREDENTIAL} WHERE user_id = $1`, [target]);
   await identity('authenticated', target);
-  await rows(ROTATE_SQL, [randomUUID(), ref, null]);
+  await rows(ROTATE_SQL, [randomUUID(), ref, state ? state.epoch : null]);
   await identity('authenticated', inviter);
   const invitationId = randomUUID();
   await rows(SUBMIT_SQL, [randomUUID(), invitationId, ref]);
@@ -489,7 +568,10 @@ async function commitQandeel(worldId, body, {
   kind = 'QANDEEL_ANALYSIS', sources = [], reasoning = [], evidence = null, commandId = randomUUID(),
   materialId = randomUUID(), itemId = randomUUID(),
 } = {}) {
-  const e = evidence ?? evidenceFor(body, 'qandeel');
+  await identity('postgres');
+  // A valid fixture uses the REAL canonical I-03D fingerprint of this World's
+  // current audience, never a fabricated reference: the core revalidates it.
+  const e = evidence ?? evidenceFor(body, 'qandeel', await currentAudienceSnapshotRef(worldId));
   await identity('postgres');
   const [committed] = await rows(QANDEEL_COMMIT_SQL, [
     commandId, worldId, materialId, itemId, kind, body,
@@ -593,7 +675,13 @@ async function verifyCommit(f) {
   assert.equal(Number(reasoningOnly.authority_size), 0, 'no material dependency means no propagated human authority');
   const [{ mode: reasoningMode }] = await rows(`SELECT authority_requirement_mode mode FROM ${ITEMS} WHERE id = $1`,
     [reasoningOnly.committed_history_item_id]);
-  assert.equal(reasoningMode, 'NO_HUMAN_APPROVAL_REQUIRED', 'an empty union is written explicitly, never left ambiguous');
+  // Unknown is NOT known-empty. Reasoning-dependent material keeps the exact-approver
+  // mode, so the frozen I-04F package path can never read it as approval-free.
+  assert.equal(reasoningMode, 'EXACT_HUMAN_APPROVER_SET',
+    'an unresolved additional human requirement is never written as approval-free');
+  const [{ resolution: reasoningResolution }] = await rows(
+    `SELECT resolution_state resolution FROM ${AUTHORITY} WHERE material_id = $1`, [reasoningOnly.committed_material_id]);
+  assert.equal(reasoningResolution, 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT');
   const refs = (await rows(
     `SELECT source_context_ref r FROM ${DEPENDENCIES} WHERE target_material_id = $1 AND dependency_kind = 'REASONING_DEPENDENCY' ORDER BY r`,
     [reasoningOnly.committed_material_id])).map((row) => row.r);
@@ -629,7 +717,7 @@ async function verifyCommit(f) {
   await rejected(() => commitQandeel(world.worldId, 'an analysis that reproduces what was said', { evidence: reused }),
     CONFLICT, /SHARED_WORLD_MATERIAL_ID_CONFLICT/u);
   // And evidence whose readiness reference does not derive from its own parts is refused.
-  const tampered = evidenceFor('a fresh analysis body', 'tampered');
+  const tampered = evidenceFor('a fresh analysis body', 'tampered', await currentAudienceSnapshotRef(world.worldId));
   await rejected(() => commitQandeel(world.worldId, 'a fresh analysis body',
     { evidence: { ...tampered, readiness: digestOutput('not the fingerprint') } }),
   INVALID_PARAMETER, /SHARED_WORLD_MATERIAL_EVIDENCE_INVALID/u);
@@ -899,6 +987,261 @@ async function verifyQandeelBoundary(f) {
     UNAVAILABLE, /SHARED_WORLD_MATERIAL_NOT_AVAILABLE/u);
 }
 
+/**
+ * The Independent Review FIX-01 corrections, proven against real PostgreSQL.
+ *
+ * FIX-A stale audience evidence, FIX-B cross-World evidence reuse, FIX-C whole-request
+ * durable idempotency, FIX-D unresolved historical-sharing authority.
+ */
+async function verifyReviewFixes(f) {
+  const world = await provisionWorld(f.inviter, f.fixSecond, 'review-fix');
+
+  stage = 'FIX-A: a valid CURRENT audience snapshot is accepted, and a fabricated one is refused';
+  const validRef = await currentAudienceSnapshotRef(world.worldId);
+  const accepted = await commitQandeel(world.worldId, 'an analysis for the exact current audience');
+  assert.equal(accepted.outcome, 'MATERIAL_COMMITTED');
+  assert.equal(accepted.evidence.audienceSnapshotRef, validRef, 'the fixture used the real canonical fingerprint');
+  const fabricatedBody = 'an analysis carrying a fabricated audience snapshot';
+  await rejected(() => commitQandeel(world.worldId, fabricatedBody, {
+    evidence: evidenceFor(fabricatedBody, 'fabricated', `sha256:${'f'.repeat(64)}`),
+  }), STALE, /SHARED_WORLD_MATERIAL_STALE/u);
+
+  stage = 'FIX-A: the validated snapshot IS the baseline audience - there is one audience meaning';
+  const viewers = (await rows(`SELECT user_id FROM ${BASELINE} WHERE history_item_id = $1 ORDER BY user_id`,
+    [accepted.committed_history_item_id])).map((row) => row.user_id);
+  const snapshotMembers = (await rows(
+    'SELECT user_id FROM public.resolve_shared_world_human_audience_snapshot_v1($1) ORDER BY user_id',
+    [world.worldId])).map((row) => row.user_id);
+  assert.deepEqual(viewers, snapshotMembers,
+    'the baseline viewers are exactly the audience the validated snapshot described');
+
+  stage = 'FIX-A: a leave AFTER generation stales the snapshot';
+  const staleAfterLeave = evidenceFor('an analysis generated before the leave', 'pre-leave',
+    await currentAudienceSnapshotRef(world.worldId));
+  await leaveAs(world.worldId, f.fixSecond);
+  await rejected(() => commitQandeel(world.worldId, 'an analysis generated before the leave',
+    { evidence: staleAfterLeave }), STALE, /SHARED_WORLD_MATERIAL_STALE/u);
+
+  stage = 'FIX-A: a leave then the SAME human rejoining stales it too - the human set is not the identity';
+  const rejoinProposal = randomUUID();
+  await identity('postgres');
+  const [rejoinPrepared] = await rows(REJOIN_PREPARE_SQL,
+    [rejoinProposal, randomUUID(), randomUUID(), world.worldId, f.fixSecond]);
+  assert.equal(rejoinPrepared.outcome, 'PREPARED');
+  await approveWith(rejoinProposal, [f.inviter]);
+  const [rejoined] = await rows(REJOIN_COMMIT_SQL, [randomUUID(), rejoinProposal, randomUUID(), randomUUID()]);
+  assert.equal(rejoined.outcome, 'REJOINED');
+  const afterRejoinRef = await currentAudienceSnapshotRef(world.worldId);
+  const rejoinMembers = (await rows(
+    'SELECT user_id FROM public.resolve_shared_world_human_audience_snapshot_v1($1) ORDER BY user_id',
+    [world.worldId])).map((row) => row.user_id);
+  assert.deepEqual(rejoinMembers.sort(), [f.inviter, f.fixSecond].sort(),
+    'the HUMAN set is exactly what it was before the leave');
+  assert.notEqual(afterRejoinRef, validRef,
+    'yet the snapshot reference differs, because the membership EPISODE is new');
+  await rejected(() => commitQandeel(world.worldId, 'an analysis generated before the rejoin', {
+    evidence: evidenceFor('an analysis generated before the rejoin', 'pre-rejoin', validRef),
+  }), STALE, /SHARED_WORLD_MATERIAL_STALE/u);
+  // And the CURRENT snapshot is accepted, so this is a freshness rule and not a ban.
+  const afterRejoin = await commitQandeel(world.worldId, 'an analysis generated after the rejoin');
+  assert.equal(afterRejoin.outcome, 'MATERIAL_COMMITTED');
+
+  stage = 'FIX-A: a governed removal stales the snapshot as well';
+  const removedWorld = await provisionWorld(f.inviter, f.fixRemoved, 'review-fix-remove');
+  const beforeRemoval = evidenceFor('an analysis generated before the removal', 'pre-remove',
+    await currentAudienceSnapshotRef(removedWorld.worldId));
+  const removeProposal = randomUUID();
+  await identity('postgres');
+  const [removePrepared] = await rows(REMOVE_PREPARE_SQL,
+    [removeProposal, randomUUID(), randomUUID(), removedWorld.worldId, f.fixRemoved]);
+  assert.equal(removePrepared.outcome, 'PREPARED');
+  await approveWith(removeProposal, [f.inviter]);
+  const [removed] = await rows(REMOVE_COMMIT_SQL, [randomUUID(), removeProposal, randomUUID()]);
+  assert.equal(removed.outcome, 'REMOVED');
+  await rejected(() => commitQandeel(removedWorld.worldId, 'an analysis generated before the removal',
+    { evidence: beforeRemoval }), STALE, /SHARED_WORLD_MATERIAL_STALE/u);
+
+  stage = 'FIX-B: evidence valid for World A cannot commit into World B, identical bytes and all';
+  const worldA = await provisionWorld(f.inviter, f.fixCrossA, 'review-fix-cross-a');
+  const worldB = await provisionWorld(f.inviter, f.fixCrossB, 'review-fix-cross-b');
+  const sharedBody = 'the very same analysis body, byte for byte';
+  const evidenceForA = evidenceFor(sharedBody, 'cross', await currentAudienceSnapshotRef(worldA.worldId));
+  const inA = await commitQandeel(worldA.worldId, sharedBody, { evidence: evidenceForA });
+  assert.equal(inA.outcome, 'MATERIAL_COMMITTED', 'it is genuinely valid evidence, in its own World');
+  // World B is a perfectly healthy ACTIVE World with its own valid audience, and
+  // the bytes are identical - so the ONLY thing refusing this is the binding.
+  await rejected(() => commitQandeel(worldB.worldId, sharedBody, { evidence: evidenceForA }),
+    STALE, /SHARED_WORLD_MATERIAL_STALE/u);
+  // And World B commits the same bytes perfectly well under its OWN evidence, so
+  // the refusal above is about the binding and not about the body.
+  const inB = await commitQandeel(worldB.worldId, sharedBody);
+  assert.equal(inB.outcome, 'MATERIAL_COMMITTED');
+
+  stage = 'FIX-C1: an exact voice retry succeeds, and a changed duration is a conflict';
+  const voiceWorld = await provisionWorld(f.inviter, f.fixVoice, 'review-fix-voice');
+  const voiceCommand = randomUUID();
+  const voiceMaterial = randomUUID();
+  const voiceItem = randomUUID();
+  await identity('postgres', f.inviter);
+  const [voiceFirst] = await rows(VOICE_COMMIT_SQL,
+    [voiceCommand, voiceWorld.worldId, voiceMaterial, voiceItem, 'media-object-review', 'a transcript', 1200]);
+  assert.equal(voiceFirst.outcome, 'MATERIAL_COMMITTED');
+  const [voiceRetry] = await rows(VOICE_COMMIT_SQL,
+    [voiceCommand, voiceWorld.worldId, voiceMaterial, voiceItem, 'media-object-review', 'a transcript', 1200]);
+  assert.deepEqual(voiceRetry, voiceFirst, 'an exact retry is historically stable');
+  // The SAME command, material, history item, media reference and transcript - and
+  // a different duration. That is a different request, not a retry.
+  await rejected(() => rows(VOICE_COMMIT_SQL,
+    [voiceCommand, voiceWorld.worldId, voiceMaterial, voiceItem, 'media-object-review', 'a transcript', 1201]),
+  CONFLICT, /SHARED_WORLD_MATERIAL_COMMAND_ID_CONFLICT/u);
+  // Presence is distinguished from value: dropping the duration entirely is also a conflict.
+  await rejected(() => rows(VOICE_COMMIT_SQL,
+    [voiceCommand, voiceWorld.worldId, voiceMaterial, voiceItem, 'media-object-review', 'a transcript', null]),
+  CONFLICT, /SHARED_WORLD_MATERIAL_COMMAND_ID_CONFLICT/u);
+  await identity('postgres');
+
+  stage = 'FIX-C2: a QANDEEL retry binds the exact evidence and both exact dependency sets';
+  const retryWorld = await provisionWorld(f.inviter, f.fixRetry, 'review-fix-retry');
+  const anchor = await commitText(retryWorld.worldId, f.inviter, 'a statement the analysis will reproduce');
+  const second = await commitText(retryWorld.worldId, f.inviter, 'a second statement');
+  const retryBody = 'an analysis whose whole request is its identity';
+  const retryEvidence = evidenceFor(retryBody, 'retry', await currentAudienceSnapshotRef(retryWorld.worldId));
+  const retryIds = { commandId: randomUUID(), materialId: randomUUID(), itemId: randomUUID() };
+  const base = {
+    ...retryIds, evidence: retryEvidence,
+    sources: [anchor.committed_material_id], reasoning: ['ctx:personal:1111', 'ctx:personal:2222'],
+  };
+  const firstCommit = await commitQandeel(retryWorld.worldId, retryBody, base);
+  assert.equal(firstCommit.outcome, 'MATERIAL_COMMITTED');
+  const exactRetry = await commitQandeel(retryWorld.worldId, retryBody, base);
+  assert.equal(exactRetry.outcome, 'MATERIAL_COMMITTED', 'an exact retry is still equivalent');
+  assert.equal(Number(exactRetry.material_dependency_edges), 1, 'and reports COMMITTED dependency counts');
+  assert.equal(Number(exactRetry.reasoning_dependency_edges), 2);
+  assert.equal(Number(exactRetry.authority_size), 1);
+  // Set ORDER is not identity: the same reasoning set, reversed, is the same request.
+  const reordered = await commitQandeel(retryWorld.worldId, retryBody,
+    { ...base, reasoning: ['ctx:personal:2222', 'ctx:personal:1111'] });
+  assert.deepEqual(reordered, exactRetry, 'canonical ordering makes set order irrelevant to identity');
+  // Set CONTENT is identity.
+  for (const [reason, changed] of [
+    ['a changed MATERIAL_DEPENDENCY source set', { ...base, sources: [second.committed_material_id] }],
+    ['an added MATERIAL_DEPENDENCY source', { ...base, sources: [anchor.committed_material_id, second.committed_material_id] }],
+    ['a changed REASONING_DEPENDENCY reference set', { ...base, reasoning: ['ctx:personal:3333', 'ctx:personal:2222'] }],
+    ['a dropped REASONING_DEPENDENCY reference', { ...base, reasoning: ['ctx:personal:1111'] }],
+    ['a changed effective context reference', { ...base, evidence: evidenceFor(retryBody, 'retry-ec', retryEvidence.audienceSnapshotRef) }],
+  ]) {
+    const error = await rejected(() => commitQandeel(retryWorld.worldId, retryBody, changed), CONFLICT);
+    assert.match(error.message, /SHARED_WORLD_MATERIAL_COMMAND_ID_CONFLICT/u,
+      `${reason} must be a bounded command conflict, never a silent equivalence`);
+  }
+  // A changed BODY is a conflict too, and is caught before the command identity
+  // even matters, because the evidence no longer binds these bytes.
+  await rejected(() => commitQandeel(retryWorld.worldId, 'an entirely different analysis body', base),
+    INVALID_PARAMETER, /SHARED_WORLD_MATERIAL_EVIDENCE_INVALID/u);
+
+  stage = 'FIX-C: a retry after a legitimate owner deletion is still historically stable';
+  await deleteOwn(retryWorld.worldId, f.inviter, anchor.committed_material_id);
+  const afterDeletion = await commitQandeel(retryWorld.worldId, retryBody, base);
+  assert.deepEqual(afterDeletion, exactRetry,
+    'the committed answer does not change because a source was later withdrawn');
+
+  stage = 'FIX-D: a truly known zero human requirement is RESOLVED, and may be shared historically';
+  const authorityWorld = await provisionWorld(f.inviter, f.fixAuthority, 'review-fix-authority');
+  const independent = await commitQandeel(authorityWorld.worldId, 'an independently established analysis');
+  const [{ resolution: independentState }] = await rows(
+    `SELECT resolution_state resolution FROM ${AUTHORITY} WHERE material_id = $1`, [independent.committed_material_id]);
+  assert.equal(independentState, 'RESOLVED_NO_HUMAN_REQUIREMENT');
+  const [{ mode: independentMode }] = await rows(
+    `SELECT authority_requirement_mode mode FROM ${ITEMS} WHERE id = $1`, [independent.committed_history_item_id]);
+  assert.equal(independentMode, 'NO_HUMAN_APPROVAL_REQUIRED',
+    'a genuinely resolved empty requirement is the ONLY thing written as approval-free');
+  const packagedManifest = randomUUID();
+  await identity('postgres');
+  const [packaged] = await rows(HISTORY_PREPARE_SQL,
+    [packagedManifest, authorityWorld.worldId, f.fixAuthority, [independent.committed_history_item_id]]);
+  assert.equal(packaged.outcome, 'PREPARED', 'and it enters a history package normally');
+
+  stage = 'FIX-D: reasoning-dependent material is UNRESOLVED and cannot be historically widened';
+  const reasoningMaterial = await commitQandeel(authorityWorld.worldId, 'an analysis shaped by private reasoning',
+    { reasoning: ['ctx:personal:dddd'] });
+  const [{ resolution: reasoningState }] = await rows(
+    `SELECT resolution_state resolution FROM ${AUTHORITY} WHERE material_id = $1`,
+    [reasoningMaterial.committed_material_id]);
+  assert.equal(reasoningState, 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT');
+  const [{ mode: reasoningMode }] = await rows(
+    `SELECT authority_requirement_mode mode FROM ${ITEMS} WHERE id = $1`,
+    [reasoningMaterial.committed_history_item_id]);
+  assert.equal(reasoningMode, 'EXACT_HUMAN_APPROVER_SET',
+    'unresolved material is never written as approval-free');
+  // TWO independent fail-closed paths cover this item, and the FROZEN one reaches
+  // it first: I-04F already refuses an item claiming an exact approver set with no
+  // enumerable approver, which is exactly what "the requirement exists and is not
+  // resolvable" looks like in its vocabulary. That refusal is asserted as it
+  // really is, rather than as the one this slice added.
+  await rejected(() => rows(HISTORY_PREPARE_SQL,
+    [randomUUID(), authorityWorld.worldId, f.fixAuthority, [reasoningMaterial.committed_history_item_id]]),
+  CONTRADICTORY, /SHARED_WORLD_HISTORY_CONTRADICTORY_STATE/u);
+
+  stage = 'FIX-D: known material owners alone do NOT resolve a mixed requirement';
+  const owned = await commitText(authorityWorld.worldId, f.inviter, 'a statement the mixed analysis reproduces');
+  const mixed = await commitQandeel(authorityWorld.worldId, 'an analysis with a known owner AND private reasoning',
+    { sources: [owned.committed_material_id], reasoning: ['ctx:personal:eeee'] });
+  const [{ resolution: mixedState }] = await rows(
+    `SELECT resolution_state resolution FROM ${AUTHORITY} WHERE material_id = $1`, [mixed.committed_material_id]);
+  assert.equal(mixedState, 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT',
+    'a known owner does not resolve the whole requirement');
+  assert.equal(Number(mixed.authority_size), 1, 'the known owner IS required - that part is resolved');
+  // THIS is the case only the I-04G gate catches. The item is perfectly coherent
+  // to the frozen I-04F rule - an exact approver set with one enumerable approver -
+  // so the frozen fail-closed path lets it through, and it would have been
+  // packageable the moment that known owner approved. Known owners alone do not
+  // resolve the whole requirement, and preparation is refused before any approval
+  // is even relevant.
+  await rejected(() => rows(HISTORY_PREPARE_SQL,
+    [randomUUID(), authorityWorld.worldId, f.fixAuthority, [mixed.committed_history_item_id]]),
+  INCOMPLETE, /SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED/u);
+  // And one unresolved item poisons a package it is merely PART of, rather than
+  // being silently dropped from it.
+  await rejected(() => rows(HISTORY_PREPARE_SQL, [randomUUID(), authorityWorld.worldId, f.fixAuthority,
+    [independent.committed_history_item_id, mixed.committed_history_item_id]]),
+  INCOMPLETE, /SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED/u);
+
+  stage = 'FIX-D: a reasoning dependency never becomes material consent';
+  const reasoningApprovers = (await rows(
+    `SELECT approver_user_id u FROM ${ITEM_APPROVERS} WHERE history_item_id = $1`,
+    [reasoningMaterial.committed_history_item_id])).map((row) => row.u);
+  assert.deepEqual(reasoningApprovers, [],
+    'no reasoning grantor was turned into an approver: reasoning authority is not material consent');
+  const mixedApprovers = (await rows(
+    `SELECT approver_user_id u FROM ${ITEM_APPROVERS} WHERE history_item_id = $1`,
+    [mixed.committed_history_item_id])).map((row) => row.u);
+  assert.deepEqual(mixedApprovers, [f.inviter],
+    'exactly the known MATERIAL_DEPENDENCY owner, and nobody the reasoning implicated');
+
+  stage = 'FIX-D: current baseline-audience delivery of unresolved material is UNAFFECTED';
+  await identity('service_role');
+  const visible = (await materialFor(authorityWorld.worldId, f.fixAuthority)).map((row) => row.material_id);
+  assert.ok(visible.includes(reasoningMaterial.committed_material_id),
+    'the exact already-authorized baseline audience still sees reasoning-dependent material');
+  assert.ok(visible.includes(mixed.committed_material_id));
+  assert.ok(visible.includes(independent.committed_material_id));
+  await identity('postgres');
+
+  stage = 'FIX-D: a later reviewed subject-authority resolution extends this additively';
+  await q('SAVEPOINT later_resolution');
+  try {
+    await q(`UPDATE ${AUTHORITY} SET resolution_state = 'RESOLVED_EXACT_HUMAN_REQUIREMENT' WHERE material_id = $1`,
+      [mixed.committed_material_id]);
+    const [nowPackaged] = await rows(HISTORY_PREPARE_SQL,
+      [randomUUID(), authorityWorld.worldId, f.fixAuthority, [mixed.committed_history_item_id]]);
+    assert.equal(nowPackaged.outcome, 'PREPARED',
+      'resolving the requirement makes the same item packageable, with no source history rewritten');
+  } finally {
+    await q('ROLLBACK TO SAVEPOINT later_resolution');
+    await q('RELEASE SAVEPOINT later_resolution');
+  }
+}
+
 async function verifyNonRegression(f, worldIds) {
   stage = 'N02 / N03 / N04 / N05: no grant, Personal, Public, Replay, Matching or live-call state is created';
   const before = await sharedCounts(worldIds, f.humans);
@@ -937,6 +1280,17 @@ async function verifyForwardSafety(f) {
              REFERENCES ${MATERIALS} (id) ON DELETE RESTRICT)`);
     await q(`CREATE TABLE public.${probe}_replay_consumer (id uuid PRIMARY KEY, material_id uuid NOT NULL
              REFERENCES ${MATERIALS} (id) ON DELETE RESTRICT)`);
+    // The reviewed protected-human subject-authority resolver this slice fails
+    // closed for. When it exists it RESOLVES rows additively; it does not rewrite
+    // them, and it does not change the gate.
+    await q(`CREATE FUNCTION public.${probe}_subject_authority_resolver_v1(p_material_id uuid) RETURNS void
+             LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+             BEGIN
+               UPDATE public.shared_world_material_historical_authority a
+                  SET resolution_state = 'RESOLVED_EXACT_HUMAN_REQUIREMENT'
+                WHERE a.material_id = p_material_id;
+             END$fn$`);
+    await q(`ALTER TABLE ${AUTHORITY} ADD COLUMN ${probe}_resolver_ref text`);
     // Later additive command metadata, with names and types 0090 would never write.
     await q(`ALTER TABLE ${COMMIT_COMMANDS} ADD COLUMN ${probe}_command_metadata jsonb`);
     await q(`ALTER TABLE ${DELETED_EVENTS} ADD COLUMN ${probe}_delivery_epoch bigint`);
@@ -981,6 +1335,23 @@ async function verifyForwardSafety(f) {
       ['a material could be deleted twice',
         `ALTER TABLE ${DELETE_COMMANDS} DROP CONSTRAINT shared_world_material_delete_commands_material_key`,
         /shared_world_material_delete_commands_material_key/u],
+      ['the historical widening gate is removed',
+        `DROP TRIGGER shared_world_material_historical_widening_gate ON public.shared_world_history_package_manifest_items`,
+        /unresolved historical-sharing authority is refused where widening actually happens/u],
+      ['the widening gate stops refusing the unresolved state',
+        `CREATE OR REPLACE FUNCTION public.shared_world_material_historical_widening_gate_v1()
+         RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+         BEGIN RETURN NEW; END$fn$`,
+        /it refuses exactly the unresolved state and nothing else/u],
+      ['the unresolved authority state stops being representable',
+        `ALTER TABLE ${AUTHORITY} DROP CONSTRAINT shared_world_material_historical_authority_state_check`,
+        /shared_world_material_historical_authority_state_check/u],
+      ['a material could carry two historical authority resolutions',
+        `ALTER TABLE ${AUTHORITY} DROP CONSTRAINT shared_world_material_historical_authority_pk CASCADE`,
+        /shared_world_material_historical_authority_pk/u],
+      ['the durable request identity is dropped',
+        `ALTER TABLE ${COMMIT_COMMANDS} DROP COLUMN request_ref CASCADE`,
+        /still carries every column migration 0090 owns/u],
       ['an owned column is dropped',
         `ALTER TABLE ${COMMIT_COMMANDS} DROP COLUMN body_digest CASCADE`,
         /still carries every column migration 0090 owns/u],
@@ -1236,6 +1607,7 @@ async function removeFixtures(humans) {
   await q(`DELETE FROM ${DELETE_COMMANDS} WHERE world_id = ANY($1::uuid[])`, [worldIds]);
   await q(`DELETE FROM ${DELETED_EVENTS} WHERE world_id = ANY($1::uuid[])`, [worldIds]);
   await q(`DELETE FROM ${COMMIT_COMMANDS} WHERE world_id = ANY($1::uuid[])`, [worldIds]);
+  await q(`DELETE FROM ${AUTHORITY} WHERE world_id = ANY($1::uuid[])`, [worldIds]);
   await q(`DELETE FROM ${EVIDENCE} WHERE world_id = ANY($1::uuid[])`, [worldIds]);
   await q(`DELETE FROM ${DEPENDENCIES} WHERE world_id = ANY($1::uuid[])`, [worldIds]);
   await q(`DELETE FROM ${TEXT_BODIES} WHERE material_id IN (SELECT id FROM ${MATERIALS} WHERE world_id = ANY($1::uuid[]))`, [worldIds]);
@@ -1314,6 +1686,8 @@ async function main() {
     inviter: randomUUID(), second: randomUUID(), third: randomUUID(), outsider: randomUUID(),
     departed: randomUUID(), closedSecond: randomUUID(), chainSecond: randomUUID(), grantSecond: randomUUID(),
     staleSecond: randomUUID(), regressionSecond: randomUUID(), forwardSecond: randomUUID(),
+    fixSecond: randomUUID(), fixRemoved: randomUUID(), fixCrossA: randomUUID(), fixCrossB: randomUUID(),
+    fixVoice: randomUUID(), fixRetry: randomUUID(), fixAuthority: randomUUID(),
   };
   f.humans = Object.values(f);
   const c = {
@@ -1331,6 +1705,7 @@ async function main() {
       const lifecycle = await verifyLifecycle(f);
       const deletion = await verifyDeletion(f, lifecycle);
       await verifyQandeelBoundary(f);
+      await verifyReviewFixes(f);
       await verifyNonRegression(f, [committed.world.worldId, deletion.world.worldId]);
       await verifyForwardSafety(f);
       await identity('postgres');

@@ -188,6 +188,7 @@ CREATE TABLE public.shared_world_material_commit_commands (
     producer_kind text NOT NULL,
     actor_user_id uuid,
     body_digest text NOT NULL,
+    request_ref text NOT NULL,
     baseline_viewer_count integer NOT NULL,
     committed_at timestamptz NOT NULL,
     CONSTRAINT shared_world_material_commit_commands_pk PRIMARY KEY (id),
@@ -198,6 +199,8 @@ CREATE TABLE public.shared_world_material_commit_commands (
             OR (producer_kind = 'QANDEEL' AND actor_user_id IS NULL)),
     CONSTRAINT shared_world_material_commit_commands_digest_check
         CHECK (body_digest ~ '^sha256:[0-9a-f]{64}$'),
+    CONSTRAINT shared_world_material_commit_commands_request_check
+        CHECK (request_ref ~ '^sha256:[0-9a-f]{64}$'),
     -- The original delivery audience is never empty: ordinary material is
     -- committed into a World that has at least one current human in it.
     CONSTRAINT shared_world_material_commit_commands_viewers_check
@@ -273,7 +276,60 @@ COMMENT ON TABLE public.shared_world_qandeel_material_evidence IS
   'No column here may ever assert otherwise.';
 
 -- ---------------------------------------------------------------------------
--- 3. The append-only MATERIAL_DELETED fact (CW2-03 section 46) and its durable
+-- 3. THE HISTORICAL-SHARING AUTHORITY RESOLUTION OF ONE COMMITTED MATERIAL.
+--
+--    CW2-02 section 26 derives a publishable QANDEEL analysis's
+--    AUTHORITY_REQUIREMENT_SET from the protected human material and SUBJECTS
+--    actually implicated in it. I-04G can compute the first half exactly - the
+--    human authorities propagated from MATERIAL_DEPENDENCY sources - and cannot
+--    compute the second: no reviewed server-owned producer of an additional
+--    protected-human subject authority exists in this repository yet.
+--
+--    "Cannot compute" is NOT "computed, and empty". The frozen rule is that
+--    missing or unresolved authority metadata NEVER means approval-free, so this
+--    relation records which of the three it actually is:
+--
+--      RESOLVED_EXACT_HUMAN_REQUIREMENT       the exact required humans are known
+--      RESOLVED_NO_HUMAN_REQUIREMENT          there is genuinely no human requirement
+--      UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT an additional human requirement may
+--                                             exist and is not yet resolvable
+--
+--    QANDEEL material carrying ANY reasoning dependency is UNRESOLVED, even when
+--    it also carries known MATERIAL_DEPENDENCY owners: the known owners alone do
+--    not resolve the whole requirement. A REASONING_DEPENDENCY still propagates
+--    NO material consent - no reasoning grantor is ever turned into an approver.
+--
+--    This changes nothing about CURRENT delivery. The material exists, its exact
+--    baseline audience sees it, and the material resolver returns it. What is
+--    blocked is HISTORICAL AUDIENCE WIDENING, by the trigger in section 5.
+--
+--    The representation is additive on purpose: a later reviewed subject-authority
+--    resolver transitions a row forward without rewriting any source history.
+-- ---------------------------------------------------------------------------
+CREATE TABLE public.shared_world_material_historical_authority (
+    material_id uuid NOT NULL,
+    world_id uuid NOT NULL,
+    history_item_id uuid NOT NULL,
+    resolution_state text NOT NULL,
+    CONSTRAINT shared_world_material_historical_authority_pk PRIMARY KEY (material_id),
+    CONSTRAINT shared_world_material_historical_authority_item_key UNIQUE (history_item_id),
+    CONSTRAINT shared_world_material_historical_authority_state_check
+        CHECK (resolution_state IN ('RESOLVED_EXACT_HUMAN_REQUIREMENT',
+                                    'RESOLVED_NO_HUMAN_REQUIREMENT',
+                                    'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT')),
+    CONSTRAINT shared_world_material_historical_authority_material_fk
+        FOREIGN KEY (material_id, world_id)
+        REFERENCES public.shared_world_materials (id, world_id) ON DELETE RESTRICT,
+    CONSTRAINT shared_world_material_historical_authority_item_fk
+        FOREIGN KEY (history_item_id, world_id)
+        REFERENCES public.shared_world_history_items (id, world_id) ON DELETE RESTRICT
+);
+
+CREATE INDEX shared_world_material_historical_authority_item_idx
+    ON public.shared_world_material_historical_authority (history_item_id);
+
+-- ---------------------------------------------------------------------------
+-- 4. The append-only MATERIAL_DELETED fact (CW2-03 section 46) and its durable
 --    command history.
 --
 --    UNIQUE (material_id) on BOTH is the "one effective owner deletion per
@@ -324,24 +380,66 @@ CREATE TABLE public.shared_world_material_delete_commands (
 );
 
 -- ---------------------------------------------------------------------------
--- 4. Deny-by-default posture for all four new relations.
+-- 5. Deny-by-default posture for all five new relations.
 -- ---------------------------------------------------------------------------
 ALTER TABLE public.shared_world_material_commit_commands OWNER TO postgres;
 ALTER TABLE public.shared_world_qandeel_material_evidence OWNER TO postgres;
+ALTER TABLE public.shared_world_material_historical_authority OWNER TO postgres;
 ALTER TABLE public.shared_world_material_deleted_events OWNER TO postgres;
 ALTER TABLE public.shared_world_material_delete_commands OWNER TO postgres;
 ALTER TABLE public.shared_world_material_commit_commands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shared_world_qandeel_material_evidence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.shared_world_material_historical_authority ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shared_world_material_deleted_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shared_world_material_delete_commands ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.shared_world_material_commit_commands,
                     public.shared_world_qandeel_material_evidence,
+                    public.shared_world_material_historical_authority,
                     public.shared_world_material_deleted_events,
                     public.shared_world_material_delete_commands
   FROM PUBLIC, anon, authenticated;
 DO $$BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN
-  EXECUTE 'REVOKE ALL ON TABLE public.shared_world_material_commit_commands, public.shared_world_qandeel_material_evidence, public.shared_world_material_deleted_events, public.shared_world_material_delete_commands FROM service_role';
+  EXECUTE 'REVOKE ALL ON TABLE public.shared_world_material_commit_commands, public.shared_world_qandeel_material_evidence, public.shared_world_material_historical_authority, public.shared_world_material_deleted_events, public.shared_world_material_delete_commands FROM service_role';
 END IF;END$$;
+
+-- ---------------------------------------------------------------------------
+-- 6. THE HISTORICAL WIDENING GATE.
+--
+--    The one place an audience can be widened over already-committed material is
+--    the frozen I-04F history package: its manifest items are what a later
+--    HISTORY_ACCESS_GRANT exposes. This narrow additive trigger refuses to admit
+--    any item whose material's additional human authority is UNRESOLVED.
+--
+--    It is deliberately enforced HERE rather than left to a future Product
+--    wrapper or to documentation: the frozen 0087 primitive is postgres-owned and
+--    would otherwise package an unresolved item the moment its KNOWN material
+--    owners approved - and known owners alone do not resolve the requirement.
+--
+--    It narrows nothing else. Ordinary current-audience participation, the
+--    material resolver, owner deletion and every human-authored item are
+--    untouched, and an item with no I-04G material at all - which is every item a
+--    later reviewed producer creates outside this store - passes through.
+--
+--    A later reviewed subject-authority resolver moves a row to RESOLVED and the
+--    same item becomes packageable, with no change to this trigger and no
+--    rewriting of source history.
+-- ---------------------------------------------------------------------------
+CREATE FUNCTION public.shared_world_material_historical_widening_gate_v1()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.shared_world_material_historical_authority a
+     WHERE a.history_item_id = NEW.history_item_id
+       AND a.resolution_state = 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'
+  ) THEN
+    RAISE EXCEPTION 'SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED' USING ERRCODE='55000';
+  END IF;
+  RETURN NEW;
+END$$;
+
+CREATE TRIGGER shared_world_material_historical_widening_gate
+  BEFORE INSERT ON public.shared_world_history_package_manifest_items
+  FOR EACH ROW EXECUTE FUNCTION public.shared_world_material_historical_widening_gate_v1();
 
 -- ---------------------------------------------------------------------------
 -- 5. THE HUMAN MATERIAL COMMIT CORE.
@@ -391,6 +489,7 @@ DECLARE
   committed public.shared_world_material_commit_commands;
   world public.shared_worlds;
   digest text;
+  request text;
   form text;
   audience uuid[];
   actor_episode uuid;
@@ -432,6 +531,40 @@ BEGIN
     RAISE EXCEPTION 'SHARED_WORLD_MATERIAL_COMMAND_INVALID' USING ERRCODE='22023';
   END IF;
 
+  -- THE DURABLE REQUEST IDENTITY, which is a DIFFERENT concept from the body
+  -- digest above: the body digest identifies the content, this identifies the
+  -- whole immutable request. It binds every input that must not differ between a
+  -- retry and the command it retries - the exact World, material, history item,
+  -- kind, actor, body, media reference, transcript and DURATION, with presence
+  -- distinguished from value so a NULL and a value can never fingerprint alike.
+  --
+  -- Duration matters here and nowhere else: it is real voice-note metadata that
+  -- the body digest deliberately does not cover, so without this a retry naming
+  -- the same audio and transcript but a DIFFERENT duration would have been
+  -- accepted as equivalent.
+  request := 'sha256:' || encode(sha256(convert_to(
+      'QANDEEL_CWV2_SHARED_MATERIAL_COMMIT_REQUEST_V1' || E'\n'
+   || 'world=' || lower(p_world_id::text) || E'\n'
+   || 'material=' || lower(p_material_id::text) || E'\n'
+   || 'historyItem=' || lower(p_history_item_id::text) || E'\n'
+   || 'kind=' || p_material_kind || E'\n'
+   || 'producer=HUMAN' || E'\n'
+   || 'actor=' || lower(u::text) || E'\n'
+   || 'body=' || digest || E'\n'
+   || 'audio=' || CASE WHEN p_audio_object_ref IS NULL THEN 'NONE'
+        ELSE 'sha256:' || encode(sha256(convert_to(p_audio_object_ref, 'UTF8')), 'hex') END || E'\n'
+   || 'transcript=' || CASE WHEN p_transcript_text IS NULL THEN 'NONE'
+        ELSE 'sha256:' || encode(sha256(convert_to(p_transcript_text, 'UTF8')), 'hex') END || E'\n'
+   || 'duration=' || CASE WHEN p_duration_ms IS NULL THEN 'NONE' ELSE p_duration_ms::text END || E'\n'
+   || 'effectiveContext=NONE' || E'\n'
+   || 'outputDigest=NONE' || E'\n'
+   || 'sourceDisclosureGate=NONE' || E'\n'
+   || 'authorityRevalidation=NONE' || E'\n'
+   || 'readiness=NONE' || E'\n'
+   || 'audienceSnapshot=NONE' || E'\n'
+   || 'materialSources=' || E'\n'
+   || 'reasoningSources=', 'UTF8')), 'hex');
+
   -- STEP 1. DURABLE IDEMPOTENCY, FIRST PASS: before any lock, so an equivalent
   -- retry of a command that already committed is answered even after the human
   -- has left, the World has closed or the owner has since deleted the body.
@@ -440,10 +573,10 @@ BEGIN
   -- start answering differently because of them.
   SELECT * INTO committed FROM public.shared_world_material_commit_commands c WHERE c.id = p_command_id;
   IF FOUND THEN
+    -- EVERY immutable input must match, through the ONE durable request identity.
     IF committed.actor_user_id = u AND committed.world_id = p_world_id
        AND committed.material_id = p_material_id AND committed.history_item_id = p_history_item_id
-       AND committed.material_kind = p_material_kind AND committed.producer_kind = 'HUMAN'
-       AND committed.body_digest = digest THEN
+       AND committed.producer_kind = 'HUMAN' AND committed.request_ref = request THEN
       IF NOT EXISTS (
         SELECT 1 FROM public.shared_world_materials m
           JOIN public.shared_world_history_items i ON i.id = m.history_item_id
@@ -480,10 +613,10 @@ BEGIN
   -- result instead of attempting a second mutation.
   SELECT * INTO committed FROM public.shared_world_material_commit_commands c WHERE c.id = p_command_id;
   IF FOUND THEN
+    -- EVERY immutable input must match, through the ONE durable request identity.
     IF committed.actor_user_id = u AND committed.world_id = p_world_id
        AND committed.material_id = p_material_id AND committed.history_item_id = p_history_item_id
-       AND committed.material_kind = p_material_kind AND committed.producer_kind = 'HUMAN'
-       AND committed.body_digest = digest THEN
+       AND committed.producer_kind = 'HUMAN' AND committed.request_ref = request THEN
       RETURN QUERY SELECT 'MATERIAL_COMMITTED'::text, committed.id, committed.world_id, committed.material_id,
                           committed.history_item_id, committed.material_kind,
                           committed.baseline_viewer_count, committed.committed_at;
@@ -589,11 +722,17 @@ BEGIN
       (id, world_id, dependency_kind, target_material_id, target_established_at)
     VALUES (gen_random_uuid(), p_world_id, 'INDEPENDENT_TARGET_TRUTH', p_material_id, commit_instant);
 
+    -- HISTORICAL-SHARING AUTHORITY. A human's own material has exactly one human
+    -- authority and it is known: themselves. Nothing about it is unresolved.
+    INSERT INTO public.shared_world_material_historical_authority
+      (material_id, world_id, history_item_id, resolution_state)
+    VALUES (p_material_id, p_world_id, p_history_item_id, 'RESOLVED_EXACT_HUMAN_REQUIREMENT');
+
     INSERT INTO public.shared_world_material_commit_commands
       (id, world_id, material_id, history_item_id, material_kind, producer_kind, actor_user_id,
-       body_digest, baseline_viewer_count, committed_at)
+       body_digest, request_ref, baseline_viewer_count, committed_at)
     VALUES (p_command_id, p_world_id, p_material_id, p_history_item_id, p_material_kind, 'HUMAN', u,
-            digest, viewers, commit_instant);
+            digest, request, viewers, commit_instant);
   EXCEPTION WHEN unique_violation THEN
     -- DURABLE IDEMPOTENCY, THIRD PASS. Two equivalent commits by the same human
     -- always serialize on the World row above, but two commands sharing a
@@ -604,8 +743,7 @@ BEGIN
     IF FOUND THEN
       IF committed.actor_user_id = u AND committed.world_id = p_world_id
          AND committed.material_id = p_material_id AND committed.history_item_id = p_history_item_id
-         AND committed.material_kind = p_material_kind AND committed.producer_kind = 'HUMAN'
-         AND committed.body_digest = digest THEN
+         AND committed.producer_kind = 'HUMAN' AND committed.request_ref = request THEN
         RETURN QUERY SELECT 'MATERIAL_COMMITTED'::text, committed.id, committed.world_id, committed.material_id,
                             committed.history_item_id, committed.material_kind,
                             committed.baseline_viewer_count, committed.committed_at;
@@ -704,7 +842,9 @@ DECLARE
   committed public.shared_world_material_commit_commands;
   world public.shared_worlds;
   digest text;
+  request text;
   recomputed_readiness text;
+  current_audience_ref text;
   audience uuid[];
   sources uuid[];
   reasoning text[];
@@ -714,6 +854,9 @@ DECLARE
   reasoning_edges integer;
   affected integer;
   authority_mode text;
+  authority_resolution text;
+  db_material_edges integer;
+  db_reasoning_edges integer;
   commit_instant timestamptz;
 BEGIN
   IF p_command_id IS NULL OR p_world_id IS NULL OR p_material_id IS NULL OR p_history_item_id IS NULL
@@ -767,13 +910,45 @@ BEGIN
     RAISE EXCEPTION 'SHARED_WORLD_MATERIAL_COMMAND_INVALID' USING ERRCODE='22023';
   END IF;
 
+  -- THE DURABLE REQUEST IDENTITY. It binds EVERY immutable input of this exact
+  -- request: the World, the material and history identities, the kind, the exact
+  -- body, all five I-03 evidence references, the exact audience snapshot the
+  -- output was generated for, and BOTH dependency sets in canonical order. Set
+  -- ORDER therefore cannot change identity while set CONTENT always does, and a
+  -- retry that alters any of them is a conflict rather than an equivalence.
+  request := 'sha256:' || encode(sha256(convert_to(
+      'QANDEEL_CWV2_SHARED_MATERIAL_COMMIT_REQUEST_V1' || E'\n'
+   || 'world=' || lower(p_world_id::text) || E'\n'
+   || 'material=' || lower(p_material_id::text) || E'\n'
+   || 'historyItem=' || lower(p_history_item_id::text) || E'\n'
+   || 'kind=' || p_material_kind || E'\n'
+   || 'producer=QANDEEL' || E'\n'
+   || 'actor=NONE' || E'\n'
+   || 'body=' || digest || E'\n'
+   || 'audio=NONE' || E'\n'
+   || 'transcript=NONE' || E'\n'
+   || 'duration=NONE' || E'\n'
+   || 'effectiveContext=' || p_effective_context_ref || E'\n'
+   || 'outputDigest=' || p_output_digest || E'\n'
+   || 'sourceDisclosureGate=' || p_source_disclosure_gate_ref || E'\n'
+   || 'authorityRevalidation=' || p_authority_revalidation_ref || E'\n'
+   || 'readiness=' || p_readiness_ref || E'\n'
+   || 'audienceSnapshot=' || p_audience_snapshot_ref || E'\n'
+   || 'materialSources=' || coalesce((SELECT string_agg(lower(s.item::text), ','
+        ORDER BY lower(s.item::text) COLLATE "C") FROM unnest(sources) AS s(item)), '') || E'\n'
+   || 'reasoningSources=' || coalesce((SELECT string_agg(r.item, ','
+        ORDER BY r.item COLLATE "C") FROM unnest(reasoning) AS r(item)), ''),
+      'UTF8')), 'hex');
+
   -- DURABLE IDEMPOTENCY, FIRST PASS.
   SELECT * INTO committed FROM public.shared_world_material_commit_commands c WHERE c.id = p_command_id;
   IF FOUND THEN
+    -- EVERY immutable input must match, through the ONE durable request identity:
+    -- body, every I-03 evidence reference, the exact audience snapshot and both
+    -- exact dependency sets are all inside it.
     IF committed.actor_user_id IS NULL AND committed.world_id = p_world_id
        AND committed.material_id = p_material_id AND committed.history_item_id = p_history_item_id
-       AND committed.material_kind = p_material_kind AND committed.producer_kind = 'QANDEEL'
-       AND committed.body_digest = digest THEN
+       AND committed.producer_kind = 'QANDEEL' AND committed.request_ref = request THEN
       IF NOT EXISTS (
         SELECT 1 FROM public.shared_world_materials m
           JOIN public.shared_world_history_items i ON i.id = m.history_item_id
@@ -787,12 +962,19 @@ BEGIN
       ) THEN
         RAISE EXCEPTION 'SHARED_WORLD_MATERIAL_CONTRADICTORY_STATE' USING ERRCODE='P0001';
       END IF;
+      -- EVERY count in a retry answer comes from COMMITTED truth, never from the
+      -- arrays this retry happened to pass in.
       SELECT count(*)::integer INTO approvers
         FROM public.shared_world_history_item_required_approvers ra
        WHERE ra.history_item_id = committed.history_item_id;
+      SELECT count(*) FILTER (WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY')::integer,
+             count(*) FILTER (WHERE d.dependency_kind = 'REASONING_DEPENDENCY')::integer
+        INTO db_material_edges, db_reasoning_edges
+        FROM public.shared_world_material_dependencies d
+       WHERE d.target_material_id = committed.material_id;
       RETURN QUERY SELECT 'MATERIAL_COMMITTED'::text, committed.id, committed.world_id, committed.material_id,
                           committed.history_item_id, committed.material_kind,
-                          committed.baseline_viewer_count, approvers, material_edges, reasoning_edges,
+                          committed.baseline_viewer_count, approvers, db_material_edges, db_reasoning_edges,
                           committed.committed_at;
       RETURN;
     END IF;
@@ -808,16 +990,25 @@ BEGIN
   -- DURABLE IDEMPOTENCY, SECOND PASS, under the World lock.
   SELECT * INTO committed FROM public.shared_world_material_commit_commands c WHERE c.id = p_command_id;
   IF FOUND THEN
+    -- EVERY immutable input must match, through the ONE durable request identity:
+    -- body, every I-03 evidence reference, the exact audience snapshot and both
+    -- exact dependency sets are all inside it.
     IF committed.actor_user_id IS NULL AND committed.world_id = p_world_id
        AND committed.material_id = p_material_id AND committed.history_item_id = p_history_item_id
-       AND committed.material_kind = p_material_kind AND committed.producer_kind = 'QANDEEL'
-       AND committed.body_digest = digest THEN
+       AND committed.producer_kind = 'QANDEEL' AND committed.request_ref = request THEN
+      -- EVERY count in a retry answer comes from COMMITTED truth, never from the
+      -- arrays this retry happened to pass in.
       SELECT count(*)::integer INTO approvers
         FROM public.shared_world_history_item_required_approvers ra
        WHERE ra.history_item_id = committed.history_item_id;
+      SELECT count(*) FILTER (WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY')::integer,
+             count(*) FILTER (WHERE d.dependency_kind = 'REASONING_DEPENDENCY')::integer
+        INTO db_material_edges, db_reasoning_edges
+        FROM public.shared_world_material_dependencies d
+       WHERE d.target_material_id = committed.material_id;
       RETURN QUERY SELECT 'MATERIAL_COMMITTED'::text, committed.id, committed.world_id, committed.material_id,
                           committed.history_item_id, committed.material_kind,
-                          committed.baseline_viewer_count, approvers, material_edges, reasoning_edges,
+                          committed.baseline_viewer_count, approvers, db_material_edges, db_reasoning_edges,
                           committed.committed_at;
       RETURN;
     END IF;
@@ -875,13 +1066,54 @@ BEGIN
     FROM public.shared_world_materials m
     JOIN public.shared_world_history_item_required_approvers ra ON ra.history_item_id = m.history_item_id
    WHERE m.id = ANY(sources);
-  authority_mode := CASE WHEN approvers > 0 THEN 'EXACT_HUMAN_APPROVER_SET' ELSE 'NO_HUMAN_APPROVAL_REQUIRED' END;
+  -- HISTORICAL-SHARING AUTHORITY RESOLUTION. A reasoning dependency propagates no
+  -- material consent and never turns its grantor into an approver - but it DOES
+  -- mean a protected human subject may be implicated whose authority this
+  -- repository cannot yet resolve. Unknown is recorded as unknown, never as a
+  -- known-empty requirement, and known MATERIAL_DEPENDENCY owners do not resolve
+  -- the whole requirement on their own.
+  authority_resolution := CASE
+    WHEN reasoning_edges > 0 THEN 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'
+    WHEN approvers > 0 THEN 'RESOLVED_EXACT_HUMAN_REQUIREMENT'
+    ELSE 'RESOLVED_NO_HUMAN_REQUIREMENT' END;
+  -- NO_HUMAN_APPROVAL_REQUIRED is written ONLY for a genuinely resolved empty
+  -- requirement. Anything unresolved keeps the exact-approver mode, so the frozen
+  -- I-04F package path can never read it as approval-free, and the widening gate
+  -- above refuses it outright.
+  authority_mode := CASE WHEN authority_resolution = 'RESOLVED_NO_HUMAN_REQUIREMENT'
+    THEN 'NO_HUMAN_APPROVAL_REQUIRED' ELSE 'EXACT_HUMAN_APPROVER_SET' END;
 
-  -- THE EXACT CURRENT HUMAN AUDIENCE, derived under the World lock.
-  SELECT array_agg(a.user_id ORDER BY a.user_id) INTO audience
+  -- THE EXACT CURRENT HUMAN AUDIENCE, derived under the World lock, together with
+  -- its canonical I-03D snapshot fingerprint - the SAME rows serve both, so there
+  -- is exactly one audience meaning here.
+  SELECT array_agg(a.user_id ORDER BY a.user_id),
+         'sha256:' || encode(sha256(convert_to(
+             'QANDEEL_CWV2_SHARED_HUMAN_AUDIENCE_SNAPSHOT_V1' || E'\n'
+          || 'state=RESOLVED' || E'\n'
+          || 'world=' || lower(p_world_id::text) || E'\n'
+          || 'members=' || coalesce(string_agg(
+                 lower(a.user_id::text) || '@' || lower(a.membership_episode_id::text), ','
+                 ORDER BY lower(a.user_id::text) COLLATE "C",
+                          lower(a.membership_episode_id::text) COLLATE "C"), ''),
+             'UTF8')), 'hex')
+    INTO audience, current_audience_ref
     FROM public.resolve_shared_world_human_audience_snapshot_v1(p_world_id) a;
   IF audience IS NULL OR array_length(audience, 1) IS NULL THEN
     RAISE EXCEPTION 'SHARED_WORLD_MATERIAL_NOT_AVAILABLE' USING ERRCODE='P0002';
+  END IF;
+
+  -- STALE AUDIENCE EVIDENCE REFUSES THE COMMIT. The output was generated and
+  -- revalidated for one exact audience; if the World's membership has moved since,
+  -- that proof is about a different audience and this commit must not silently
+  -- deliver to the new one.
+  --
+  -- The fingerprint is per (user, EPISODE), so a leave followed by the same
+  -- human's rejoin stales it even though the human SET is identical - which is
+  -- correct: the absent interval is real, and the new episode is a new membership.
+  -- Because the fingerprint also carries the exact World, evidence generated for
+  -- another World can never satisfy this either.
+  IF p_audience_snapshot_ref <> current_audience_ref THEN
+    RAISE EXCEPTION 'SHARED_WORLD_MATERIAL_STALE' USING ERRCODE='40001';
   END IF;
 
   -- THE ONE canonical establishment instant.
@@ -957,24 +1189,34 @@ BEGIN
       VALUES (gen_random_uuid(), p_world_id, 'INDEPENDENT_TARGET_TRUTH', p_material_id, commit_instant);
     END IF;
 
+    INSERT INTO public.shared_world_material_historical_authority
+      (material_id, world_id, history_item_id, resolution_state)
+    VALUES (p_material_id, p_world_id, p_history_item_id, authority_resolution);
+
     INSERT INTO public.shared_world_material_commit_commands
       (id, world_id, material_id, history_item_id, material_kind, producer_kind, actor_user_id,
-       body_digest, baseline_viewer_count, committed_at)
+       body_digest, request_ref, baseline_viewer_count, committed_at)
     VALUES (p_command_id, p_world_id, p_material_id, p_history_item_id, p_material_kind, 'QANDEEL', NULL,
-            digest, viewers, commit_instant);
+            digest, request, viewers, commit_instant);
   EXCEPTION WHEN unique_violation THEN
     SELECT * INTO committed FROM public.shared_world_material_commit_commands c WHERE c.id = p_command_id;
     IF FOUND THEN
       IF committed.actor_user_id IS NULL AND committed.world_id = p_world_id
          AND committed.material_id = p_material_id AND committed.history_item_id = p_history_item_id
-         AND committed.material_kind = p_material_kind AND committed.producer_kind = 'QANDEEL'
-         AND committed.body_digest = digest THEN
+         AND committed.producer_kind = 'QANDEEL' AND committed.request_ref = request THEN
+        -- EVERY count in a retry answer comes from COMMITTED truth, never from the
+        -- arrays this retry happened to pass in.
         SELECT count(*)::integer INTO approvers
           FROM public.shared_world_history_item_required_approvers ra
          WHERE ra.history_item_id = committed.history_item_id;
+        SELECT count(*) FILTER (WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY')::integer,
+               count(*) FILTER (WHERE d.dependency_kind = 'REASONING_DEPENDENCY')::integer
+          INTO db_material_edges, db_reasoning_edges
+          FROM public.shared_world_material_dependencies d
+         WHERE d.target_material_id = committed.material_id;
         RETURN QUERY SELECT 'MATERIAL_COMMITTED'::text, committed.id, committed.world_id, committed.material_id,
                             committed.history_item_id, committed.material_kind,
-                            committed.baseline_viewer_count, approvers, material_edges, reasoning_edges,
+                            committed.baseline_viewer_count, approvers, db_material_edges, db_reasoning_edges,
                             committed.committed_at;
         RETURN;
       END IF;
@@ -1294,6 +1536,7 @@ DECLARE
   entry_point_fn text := 'public.resolve_shared_world_history_visibility_v1(uuid,uuid)';
   own_tables text[] := ARRAY['public.shared_world_material_commit_commands',
                              'public.shared_world_qandeel_material_evidence',
+                             'public.shared_world_material_historical_authority',
                              'public.shared_world_material_deleted_events',
                              'public.shared_world_material_delete_commands'];
   all_fns text[];
@@ -1342,6 +1585,7 @@ BEGIN
     SELECT 1 FROM information_schema.columns c
      WHERE c.table_schema = 'public'
        AND c.table_name IN ('shared_world_material_commit_commands','shared_world_qandeel_material_evidence',
+                            'shared_world_material_historical_authority',
                             'shared_world_material_deleted_events','shared_world_material_delete_commands')
        AND (c.column_name ~* '(body_text|transcript|audio|content|payload|reason|note|prompt|message|excerpt|snippet|owner|admin|moderator|safety|launch|entitlement|clearance|approved|allowed)'
          OR c.data_type IN ('json','jsonb','bytea'))
@@ -1480,14 +1724,32 @@ BEGIN
      OR p.prosrc ~ 'authority_mode := ''EXACT_HUMAN_APPROVER_SET''' THEN
     RAISE EXCEPTION 'I-04G: the QANDEEL approver set is dependency-derived, never the World membership and never a constant';
   END IF;
-  IF p.prosrc !~ 'WHEN approvers > 0 THEN ''EXACT_HUMAN_APPROVER_SET'' ELSE ''NO_HUMAN_APPROVAL_REQUIRED''' THEN
-    RAISE EXCEPTION 'I-04G: an empty derived authority union must be written explicitly as NO_HUMAN_APPROVAL_REQUIRED';
+  -- MISSING AUTHORITY NEVER MEANS EMPTY. A reasoning dependency records an
+  -- UNRESOLVED additional human requirement, and NO_HUMAN_APPROVAL_REQUIRED is
+  -- reachable ONLY from a resolved empty one.
+  IF p.prosrc !~ 'WHEN reasoning_edges > 0 THEN ''UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT''' THEN
+    RAISE EXCEPTION 'I-04G: an unresolvable additional human requirement must be recorded as unresolved, never as empty';
+  END IF;
+  IF p.prosrc !~ 'authority_mode := CASE WHEN authority_resolution = ''RESOLVED_NO_HUMAN_REQUIREMENT''' THEN
+    RAISE EXCEPTION 'I-04G: NO_HUMAN_APPROVAL_REQUIRED may be written only for a RESOLVED empty human requirement';
+  END IF;
+  IF p.prosrc ~ 'reasoning_grantor|reasoning.*approver_user_id|source_context_ref[^;]*approver' THEN
+    RAISE EXCEPTION 'I-04G: a reasoning dependency is never material consent: no reasoning grantor becomes an approver';
   END IF;
   IF p.prosrc !~ 'p_readiness_ref <> recomputed_readiness' OR p.prosrc !~ 'p_output_digest <> digest' THEN
     RAISE EXCEPTION 'I-04G: exact I-03 operation evidence must bind these exact body bytes, recomputed rather than trusted';
   END IF;
+  -- THE SUPPLIED AUDIENCE SNAPSHOT IS REVALIDATED, not merely stored: it must be
+  -- the canonical I-03D fingerprint of the CURRENT audience of the EXACT World.
+  IF p.prosrc !~ 'QANDEEL_CWV2_SHARED_HUMAN_AUDIENCE_SNAPSHOT_V1' THEN
+    RAISE EXCEPTION 'I-04G: the supplied audience snapshot must be recomputed against the frozen I-03D fingerprint';
+  END IF;
+  IF p.prosrc !~ 'IF p_audience_snapshot_ref <> current_audience_ref THEN' THEN
+    RAISE EXCEPTION 'I-04G: stale audience evidence must refuse the commit, never silently retarget it';
+  END IF;
 
-  -- EVERY SURFACE DERIVES ITS OWN AUDIENCE AND ACCEPTS NO VIEWER LIST.
+  -- EVERY SURFACE DERIVES ITS OWN AUDIENCE, ACCEPTS NO VIEWER LIST, AND BINDS ITS
+  -- WHOLE IMMUTABLE REQUEST INTO ONE DURABLE IDENTITY.
   FOREACH fn IN ARRAY ARRAY[human_core, qandeel_fn] LOOP
     SELECT pr.prosrc INTO p FROM pg_proc pr WHERE pr.oid = fn::regprocedure;
     IF p.prosrc !~ 'public\.resolve_shared_world_human_audience_snapshot_v1\(p_world_id\)' THEN
@@ -1496,7 +1758,36 @@ BEGIN
     IF p.prosrc !~ 'INSERT INTO public\.shared_world_history_item_baseline_viewers' THEN
       RAISE EXCEPTION 'I-04G: % must write the exact original delivery audience as baseline viewers', fn;
     END IF;
+    IF p.prosrc !~ 'QANDEEL_CWV2_SHARED_MATERIAL_COMMIT_REQUEST_V1' THEN
+      RAISE EXCEPTION 'I-04G: % must bind its whole immutable request into one versioned durable identity', fn;
+    END IF;
+    IF p.prosrc !~ 'committed\.request_ref = request' THEN
+      RAISE EXCEPTION 'I-04G: % must decide retry equivalence on the whole request identity, not on part of it', fn;
+    END IF;
+    IF p.prosrc !~ 'INSERT INTO public\.shared_world_material_historical_authority' THEN
+      RAISE EXCEPTION 'I-04G: % must record the historical-sharing authority resolution of what it commits', fn;
+    END IF;
   END LOOP;
+  -- A RETRY ANSWERS FROM COMMITTED TRUTH. Returning a count taken from the retry's
+  -- own input arrays would make a conflicting retry describe itself.
+  SELECT pr.prosrc INTO p FROM pg_proc pr WHERE pr.oid = qandeel_fn::regprocedure;
+  IF p.prosrc ~ 'committed\.baseline_viewer_count, approvers, material_edges, reasoning_edges' THEN
+    RAISE EXCEPTION 'I-04G: a retry must report committed dependency counts, never the arrays it was called with';
+  END IF;
+  IF (length(p.prosrc) - length(replace(p.prosrc, 'INTO db_material_edges, db_reasoning_edges', '')))
+     / length('INTO db_material_edges, db_reasoning_edges') <> 3 THEN
+    RAISE EXCEPTION 'I-04G: every one of the three retry paths must read its counts from committed rows';
+  END IF;
+
+  -- THE HISTORICAL WIDENING GATE EXISTS AND GUARDS THE EXACT FROZEN I-04F TABLE.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger tg
+     WHERE tg.tgrelid = 'public.shared_world_history_package_manifest_items'::regclass
+       AND tg.tgname = 'shared_world_material_historical_widening_gate'
+       AND NOT tg.tgisinternal
+  ) THEN
+    RAISE EXCEPTION 'I-04G: unresolved historical-sharing authority must be refused where widening actually happens';
+  END IF;
 
   -- NO CALLER-SUPPLIED ACTOR, AUDIENCE, AUTHORITY, COUNT OR CLOCK, on any
   -- surface. The exact parameter list is pinned first, so each ban below is

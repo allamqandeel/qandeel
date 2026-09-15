@@ -639,14 +639,24 @@ Public World, `CW2-05` owns Replay, `CW2-06` owns Matching and Introduction runt
 safety, moderation, entitlements and launch integration. A contract that already owns a capability does
 not also need a backlog entry claiming it.
 
-**One decision recorded outside this register, deliberately.** I-04G's task contract admitted a second
-possible contributor to the QANDEEL required-approver set — protected-human subject authorities from an
-already-reviewed server-owned authority source — *if such a source exists*. It does not exist in this
-repository, so I-04G derived the set from material dependencies alone. That is an implementation
-decision inside the active contract, not a cross-task obligation: no future task inherits work from it,
-and BG-06 admits it nowhere. It is recorded in §4 of
-[`docs/shared-world-lifecycle-conversation-runtime-v1.md`](shared-world-lifecycle-conversation-runtime-v1.md),
-which is the I-04 primary document, so it does not survive only in a review comment or a final report.
+**The unresolved-authority boundary is implemented, not deferred.** I-04G's task contract admitted a
+second possible contributor to the QANDEEL required-approver set — protected-human subject authorities
+from an already-reviewed server-owned authority source — *if such a source exists*. It does not exist in
+this repository. That does **not** make the requirement empty, and I-04G does not treat it as empty:
+independent review FIX-01 required, and I-04G implements, an explicit
+`UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` state and a database-enforced fail-closed boundary that
+prevents such material from entering an I-04F history package at all. Current baseline-audience
+delivery is unaffected; only historical audience widening is blocked.
+
+Because that boundary is complete inside this PR, **no backlog item is admitted for it**. There is no
+outstanding correctness obligation to record, and BG-01 forbids moving an active-contract requirement
+here rather than fixing it. The *enabling* capability — a future reviewed protected-human
+subject-authority resolver — is owned by the frozen `CW2-08` and later domain contracts rather than by
+an unassigned backlog entry, and qualifies under none of BG-06's four admission routes: it has no
+existing `OPEN` identifier, no canonical document defers it to a named future task as an obligation, it
+is not carried forward for validation, and Architecture designated none. The representation I-04G ships
+is additive precisely so that resolver can extend it without reopening anything, which is recorded in
+§4 of [`docs/shared-world-lifecycle-conversation-runtime-v1.md`](shared-world-lifecycle-conversation-runtime-v1.md).
 
 **Banner state.** `I-04`'s primary document reads `CANDIDATE — awaiting independent ChatGPT review`,
 which is the truth at this point: independent review has not happened. Under `BG-09` the change that
