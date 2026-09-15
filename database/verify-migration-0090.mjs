@@ -43,9 +43,10 @@
 //   * N02-N05 no Standing Context Grant mutation, no Personal material copied, no
 //     Public / Replay / Matching state created and no live call, proven by an exact
 //     count delta;
-//   * M18 / M19 / M20 concurrency, with real independent connections: commit versus
-//     leave, commit versus closure and two competing owner deletions serialize
-//     World-first in both orders with no deadlock and no hybrid state;
+//   * M18 / M19 / M20 concurrency, with real independent connections: a material
+//     commit versus a unilateral leave, versus a GOVERNED removal, and versus a
+//     World closure, plus two competing owner deletions - all serializing
+//     World-first with no deadlock, no hybrid state and no stale audience;
 //   * forward safety: a later reviewed Introduction producer, a CW2-08 wrapper,
 //     Public and Replay consumers, a Launch Gate, later additive columns, indexes
 //     and audit triggers are created for real inside a rolled-back SAVEPOINT and
@@ -120,6 +121,9 @@ const ENTITLEMENT_ITEMS = 'public.shared_world_standard_closed_view_entitlement_
 const ENDED_EVENTS = 'public.shared_world_ended_events';
 const END_COMMANDS = 'public.shared_world_standard_end_commands';
 const GRANT_STATE = 'public.shared_world_standing_context_grants';
+const REMOVE_PAYLOADS = 'public.shared_world_remove_member_payload_versions';
+const REMOVED_EVENTS = 'public.shared_world_member_removed_events';
+const REMOVAL_COMMANDS = 'public.shared_world_member_removal_commands';
 
 const MATERIALS = 'public.shared_world_materials';
 const TEXT_BODIES = 'public.shared_world_text_material_bodies';
@@ -155,6 +159,10 @@ const LEAVE_SQL = 'SELECT outcome, closed_membership_episode_id FROM public.comm
 const GOV_APPROVE_SQL = 'SELECT outcome, committed_approval_id FROM public.commit_shared_world_governance_approval_v1($1,$2)';
 const END_PREPARE_SQL = `SELECT outcome, prepared_proposal_id FROM public.prepare_shared_world_standard_end_governance_v1($1,$2,$3,$4)`;
 const END_COMMIT_SQL = `SELECT outcome, ended_world_id FROM public.commit_shared_world_standard_end_v1($1,$2,$3)`;
+const REMOVE_PREPARE_SQL = `SELECT outcome, prepared_proposal_id
+  FROM public.prepare_shared_world_remove_member_governance_v1($1,$2,$3,$4,$5)`;
+const REMOVE_COMMIT_SQL = `SELECT outcome, removed_world_id
+  FROM public.commit_shared_world_member_removal_v1($1,$2,$3)`;
 const HISTORY_PREPARE_SQL = `SELECT outcome, prepared_manifest_version_id, prepared_required_approver_count
   FROM public.prepare_shared_world_history_package_v1($1,$2,$3,$4)`;
 const HISTORY_APPROVE_SQL = 'SELECT outcome, committed_approval_id FROM public.commit_shared_world_history_package_approval_v1($1,$2)';
@@ -1111,6 +1119,36 @@ async function verifyConcurrency(c) {
     }
   }
 
+  stage = 'M19: a material commit and a GOVERNED removal serialize World-first';
+  {
+    const committer = await openConnection('postgres', c.inviter);
+    const remover = await openConnection('postgres', c.inviter);
+    try {
+      // The governed removal takes the World row first; the commit blocks on it.
+      // This is the add / remove / rejoin arm of the same canonical order M18
+      // proves for a unilateral leave: every I-04E topology mutation locks
+      // shared_worlds first, so material commit serializes against all of them
+      // through one row rather than racing each one separately.
+      await remover.query(REMOVE_COMMIT_SQL, [randomUUID(), c.worlds.removeFirst.proposal, randomUUID()]);
+      const committing = committer.query(TEXT_COMMIT_SQL,
+        [randomUUID(), c.worlds.removeFirst.worldId, randomUUID(), randomUUID(), 'said as they were removed']);
+      await remover.query('COMMIT');
+      const [committed] = (await committing).rows;
+      assert.equal(committed.outcome, 'MATERIAL_COMMITTED');
+      assert.equal(Number(committed.audience_size), 1,
+        'the baseline audience is the post-removal membership, never the stale one');
+      await committer.query('COMMIT');
+      const viewers = (await q(`SELECT user_id FROM ${BASELINE} WHERE history_item_id = $1`,
+        [committed.committed_history_item_id])).rows.map((row) => row.user_id);
+      assert.deepEqual(viewers, [c.inviter], 'and the removed human is not one of its original viewers');
+    } finally {
+      await committer.query('ROLLBACK').catch(() => undefined);
+      await remover.query('ROLLBACK').catch(() => undefined);
+      await committer.end().catch(() => undefined);
+      await remover.end().catch(() => undefined);
+    }
+  }
+
   stage = 'M20: a material commit and a World closure have exactly one truthful winner';
   {
     const committer = await openConnection('postgres', c.inviter);
@@ -1218,6 +1256,9 @@ async function removeFixtures(humans) {
   await q(`DELETE FROM ${ITEM_APPROVERS} WHERE history_item_id IN (SELECT id FROM ${ITEMS} WHERE world_id = ANY($1::uuid[]))`, [worldIds]);
   await q(`DELETE FROM ${BASELINE} WHERE history_item_id IN (SELECT id FROM ${ITEMS} WHERE world_id = ANY($1::uuid[]))`, [worldIds]);
   await q(`DELETE FROM ${ITEMS} WHERE world_id = ANY($1::uuid[])`, [worldIds]);
+  await q(`DELETE FROM ${REMOVAL_COMMANDS} WHERE world_id = ANY($1::uuid[])`, [worldIds]);
+  await q(`DELETE FROM ${REMOVED_EVENTS} WHERE world_id = ANY($1::uuid[])`, [worldIds]);
+  await q(`DELETE FROM ${REMOVE_PAYLOADS} WHERE world_id = ANY($1::uuid[])`, [worldIds]);
   await q(`DELETE FROM ${APPROVALS} WHERE proposal_id IN (SELECT id FROM ${PROPOSALS} WHERE world_id = ANY($1::uuid[]))`, [worldIds]);
   await q(`DELETE FROM ${PROPOSALS} WHERE world_id = ANY($1::uuid[])`, [worldIds]);
   await q(`DELETE FROM ${SNAPSHOT_MEMBERS} WHERE membership_snapshot_id IN (SELECT id FROM ${SNAPSHOTS} WHERE world_id = ANY($1::uuid[]))`, [worldIds]);
@@ -1242,6 +1283,18 @@ async function provisionRaceWorlds(c) {
 
   worlds.leaveFirst = await provisionWorld(c.inviter, c.raceSecond, 'race-leave');
 
+  // A governed removal, prepared and unanimously approved by every current
+  // member EXCEPT the target - which, in a two-human World, is the one other
+  // human. The removal itself is left uncommitted so the race can commit it.
+  const removeFirst = await provisionWorld(c.inviter, c.raceSecondD, 'race-remove');
+  const removeProposal = randomUUID();
+  await identity('postgres');
+  const [removePrepared] = await rows(REMOVE_PREPARE_SQL,
+    [removeProposal, randomUUID(), randomUUID(), removeFirst.worldId, c.raceSecondD]);
+  assert.equal(removePrepared.outcome, 'PREPARED');
+  await approveWith(removeProposal, [c.inviter]);
+  worlds.removeFirst = { ...removeFirst, proposal: removeProposal };
+
   const closeFirst = await provisionWorld(c.inviter, c.raceSecondB, 'race-close');
   const proposal = randomUUID();
   await identity('postgres');
@@ -1265,6 +1318,7 @@ async function main() {
   f.humans = Object.values(f);
   const c = {
     inviter: randomUUID(), raceSecond: randomUUID(), raceSecondB: randomUUID(), raceSecondC: randomUUID(),
+    raceSecondD: randomUUID(),
   };
   c.humans = Object.values(c);
   try {
