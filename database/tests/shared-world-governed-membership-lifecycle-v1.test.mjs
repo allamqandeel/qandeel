@@ -536,6 +536,21 @@ test('the real-PostgreSQL verifier carries no live-schema ceiling of its own', (
   assert.doesNotMatch(verifier, /assert\.equal\(\s*\w*[Ff]oreign[Kk]ey\w*\.length/u, 'foreign keys are asserted exactly, never counted');
   assert.doesNotMatch(verifier, /assert\.equal\(\s*\w*[Cc]onstraint\w*\.length/u, 'and neither are constraints');
   assert.doesNotMatch(verifier, /proname\s*~/u, 'and the function catalog is never swept for future names');
+  // The two ceiling shapes the I-04D FIX-01A correction removed from 0084, kept out
+  // by detector rather than only by having been deleted once. A migration-wide column
+  // NAME or TYPE filter over the LIVE column list refuses every column a later
+  // reviewed consumer appends beside the ones 0085 created - which is that consumer's
+  // business, and exactly what the forward-safety probe below adds.
+  assert.doesNotMatch(verifier, /c\.column_name ~\*/u,
+    'no migration-wide column NAME filter over the live column list: 0085 owns the columns it created, not the vocabulary of every column that follows');
+  assert.doesNotMatch(verifier, /c\.data_type IN \('json'/u,
+    'and no migration-wide column TYPE filter over it either');
+  for (const [shape, needle] of [
+    ['a later column whose NAME such a filter would have banned', '_consumer_metadata jsonb'],
+    ['a later column whose NAME such a filter would have banned', '_reviewer_scope text'],
+    ['a later audit trigger on a table 0085 owns', '_invitation_audit AFTER INSERT ON'],
+    ['a later audit trigger on the membership table 0085 already triggers', '_episode_audit AFTER UPDATE ON'],
+  ]) assert.ok(verifier.includes(needle), `the probe proves historical 0085 survives ${shape}: ${needle}`);
   assert.match(verifier, /const OWNED_FOREIGN_KEYS = \{/u);
   assert.match(verifier, /const OWNED_COLUMNS = \{/u);
   // The owned-column proof reads the DEFAULT too, and is a PREFIX so later additive

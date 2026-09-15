@@ -425,16 +425,21 @@ async function verifyCatalog() {
       assert.equal(observed.filter((column) => column[0] === name).length, 1, `${table}.${name} appears exactly once`);
     }
   }
-  // The rule the task actually froze, on the relations it is about: governed
-  // membership creates no owner, admin or initiator, stores no payload blob and
-  // grants no history access. Asserted over the tables 0085 CREATED.
-  const [{ superior }] = await rows(
-    `SELECT EXISTS (SELECT 1 FROM information_schema.columns c
-       WHERE c.table_schema = 'public' AND c.table_name IN (${OWN_TABLES.map((t) => `'${t.replace('public.', '')}'`).join(',')})
-         AND (c.column_name ~* '(owner|admin|creator|initiator|proposer|survivor|privilege|capability|permission|scope|metadata|vote|weight|token|body|blob|document|entitlement|history_access)'
-              OR c.data_type IN ('json','jsonb','ARRAY'))) AS superior`);
-  assert.equal(superior, false,
-    'the governed membership lifecycle creates no owner, admin or initiator, stores no payload blob and grants no history access');
+  // There is deliberately NO migration-wide column NAME or TYPE filter over the live
+  // column list here. That 0085 creates no owner, admin or initiator, stores no
+  // payload blob and grants no history access is a claim about 0085's OWN text, and
+  // it is proven there, by
+  // database/tests/shared-world-governed-membership-lifecycle-v1.test.mjs over its
+  // CREATE TABLE blocks. A live filter would instead refuse every column a later
+  // REVIEWED consumer appends beside them - a `_consumer_metadata jsonb`, a
+  // `_reviewer_scope text` - which is that consumer's business and not 0085's to
+  // forbid. It is the same ceiling the I-04D FIX-01A correction removed from 0084,
+  // and the forward-safety probe below adds exactly those two columns to prove this
+  // verifier really does tolerate them.
+  //
+  // What replaces it is strictly stronger over what 0085 DOES own: the owned columns
+  // above are pinned by name, type, nullability AND the absence of a default, so an
+  // owned column that became jsonb, or gained a default, still fails.
 
   stage = 'catalog: the exact unique bindings and checks 0085 owns';
   const constraintsOf = async (table) => rows(
@@ -1455,8 +1460,11 @@ async function verifyForwardSafety(f) {
       ['an 0085-owned column gains a default the primitives never write',
         `ALTER TABLE ${MEMBER_INVITATIONS} ALTER COLUMN created_at SET DEFAULT clock_timestamp()`,
         /still carries every column migration 0085 owns/u],
+      // Retyped on a column with no index, check or foreign key depending on it, so
+      // the plant exercises the COLUMN proof rather than PostgreSQL's own refusal to
+      // retype a column something else is built on.
       ['an 0085-owned column changes type',
-        `ALTER TABLE ${MEMBER_INVITATIONS} ALTER COLUMN invitation_state TYPE varchar(64)`,
+        `ALTER TABLE ${ADD_PAYLOADS} ALTER COLUMN created_at TYPE timestamp without time zone`,
         /still carries every column migration 0085 owns/u],
       ['the terminal-state consistency rule is dropped',
         `ALTER TABLE ${MEMBER_INVITATIONS} DROP CONSTRAINT shared_world_member_invitations_terminal_consistency_check`,
@@ -1488,23 +1496,34 @@ async function verifyForwardSafety(f) {
       ['governed membership gains a permanent (world, human) key that would forbid a rejoin',
         `ALTER TABLE ${JOINED_EVENTS} ADD CONSTRAINT ${probe}_pair_key UNIQUE (world_id, actor_user_id)`,
         /must never make a \(world, human\) pair permanently unique/u],
-      ['a governed membership table gains a payload blob',
-        `ALTER TABLE ${REMOVAL_COMMANDS} ADD COLUMN removal_metadata jsonb`,
-        /stores no payload blob/u],
+      // A later reviewed jsonb column on one of these tables is deliberately NOT a
+      // regression: 0085 owns the columns it created, not the vocabulary of every
+      // column that follows. That 0085 itself stores no blob is proven from its own
+      // text, and the authorized future above adds exactly such a column.
     ]) {
+      stage = `forward safety: regression - ${reason}`;
       await q('SAVEPOINT forward_safety_regression');
-      await q(plant);
-      await assert.rejects(verifyCatalog(), refuses, `a database where ${reason} must still be refused`);
-      await q('ROLLBACK TO SAVEPOINT forward_safety_regression');
-      await q('RELEASE SAVEPOINT forward_safety_regression');
+      try {
+        await q(plant);
+        await assert.rejects(verifyCatalog(), refuses, `a database where ${reason} must still be refused`);
+      } finally {
+        // Always reverted, even when the plant itself or the assertion threw: a mirror
+        // that kept a planted regression would make every scenario after it prove the
+        // wrong thing, and a half-applied plant would mask the real error below.
+        await q('ROLLBACK TO SAVEPOINT forward_safety_regression');
+        await q('RELEASE SAVEPOINT forward_safety_regression');
+      }
     }
     // Every regression was reverted, so the untouched authorized future still passes.
     stage = 'forward safety: every planted regression was reverted';
     await verifyCatalog();
   } finally {
-    await identity('postgres');
+    // ROLLBACK FIRST. If anything above raised a database error the transaction is
+    // aborted, and a RESET ROLE issued before the rollback fails with 25P02 - which
+    // would replace the real error with a useless one.
     await q('ROLLBACK TO SAVEPOINT forward_safety');
     await q('RELEASE SAVEPOINT forward_safety');
+    await identity('postgres');
   }
   stage = 'forward safety: the present-day catalog is unchanged';
   await verifyCatalog();
