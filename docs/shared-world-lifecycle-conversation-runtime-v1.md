@@ -1,0 +1,204 @@
+# I-04 — Shared World Lifecycle / Conversation Runtime v1
+
+**Status:** `I-04 — CANDIDATE — awaiting independent ChatGPT review`
+**Phase:** Connected Worlds v2 — `I-04`
+**Closing task:** `I-04G — Shared Conversation / Material Commit Runtime + I-04 Closure v1`
+**Baseline:** `22343431ab57ad8b16e7ce4629038410c98c7031` — the merge of PR #246, which closed I-04F
+**Authority:** implements the frozen `CW2-01`, `CW2-02` and `CW2-03` contracts. It defines no Product
+semantic of its own, and nothing recorded here authorizes a route, a client surface or a launch.
+
+This document is the primary canonical record of the `I-04` phase. It inventories what I-04A→I-04G
+built, states precisely what remains unbuilt, and is the banner `BG-09` governs. It is **not** a
+declaration that I-04 is closed: the lifecycle line above is the current state, and only the change
+that actually closes the phase may move it.
+
+---
+
+## 1. What I-04 was for
+
+`I-03` finished the Shared authority chain: who may reason over what, for which audience, and whether
+a produced output is still current. It deliberately stopped at a boundary it named exactly:
+
+```text
+READY_FOR_LATER_DELIVERY_GATES
+  != System / Safety clearance
+  != Launch Gate clearance
+  != delivery / commit permission
+```
+
+I-04 is what stands behind that boundary: the Shared World itself. A World has to be born, gain and
+lose members under governance, carry settings, disclose its own history selectively, close, and — last
+— actually hold the material all of that governs. Without the last part, every authority I-04A→I-04F
+built governed nothing.
+
+---
+
+## 2. Inventory
+
+| Slice | What it established | Migrations | PR |
+| --- | --- | --- | --- |
+| `I-04A` | Direct invitation runtime: a secret rotatable invite credential, its epoch rule, and `PENDING` invitations that create **no World** | `0081` | #238 |
+| `I-04B` | Direct World birth: one atomic transaction turning an accepted invitation into a born `ACTIVE / STANDARD` World with two membership episodes | `0082` | #239 |
+| `I-04C` | Standard voluntary leave: a unilateral, episodic, history-preserving departure that revokes no Standing Context Grant | `0083` | #240 |
+| `I-04D` | Governance approval foundation: the exact membership snapshot and the proposal/approval substrate every later governed operation binds to | `0084` | #242 |
+| `I-04E` | Governed membership lifecycle and Shared settings: add / remove / rejoin under unanimity, and unanimous settings changes | `0085`, `0086` | #244 |
+| `I-04F` | Selective historical access and Standard World closure: the history-visibility projection, the immutable package manifest, the `HISTORY_ACCESS_GRANT`, and archival closure with a bounded `CLOSED_WORLD_VIEW_ENTITLEMENT` | `0087`, `0088` | #246 |
+| `I-04G` | Shared conversation / material commit runtime: real `HUMAN_TEXT`, `HUMAN_VOICE_NOTE`, `QANDEEL_OUTPUT` and `QANDEEL_ANALYSIS`, their provenance, and human owner deletion | `0089`, `0090` | this PR |
+
+The PR column records where each slice's implementation evidence lives. The authoritative record of
+each slice is its own migration, static contract and real-PostgreSQL verifier, all of which are in the
+repository; this table is an index into them, not a substitute for them.
+
+---
+
+## 3. What I-04G added, precisely
+
+### 3.1 The material envelope (migration `0089`)
+
+One material is one envelope bound **one-to-one** to exactly one I-04F history item in exactly one
+Shared World, plus exactly one normalized body in the relation its kind structurally requires. The
+frozen `CW2-03 §36` vocabulary is complete in the envelope; `HUMAN_TEXT`, `HUMAN_VOICE_NOTE`,
+`QANDEEL_OUTPUT` and `QANDEEL_ANALYSIS` pin their producer exactly, and `EXPLICIT_DISCLOSURE` and
+`WORLD_EVENT_DERIVED_MATERIAL` are RESERVED with no producer path at all.
+
+There is no universal JSON payload, no generic content column, no owner/admin/moderator column and no
+mutable audience blob. Availability, audience and material authority stay on the frozen I-04F
+projection: this slice adds neither a second history model nor a second audience model.
+
+Provenance keeps `MATERIAL_DEPENDENCY`, `REASONING_DEPENDENCY` and `INDEPENDENT_TARGET_TRUTH` apart by
+one exact-shape constraint, and a `MATERIAL_DEPENDENCY` cycle is **unrepresentable** — each edge carries
+both endpoints' establishment instants and requires the source's to be strictly earlier.
+
+One narrow server-only resolver, `resolve_shared_world_material_v1`, CONSUMES the frozen I-04F
+visibility entry point and intersects it with the bodies that still exist. It returns no row for hidden
+or deleted material — no count, no placeholder — and no provenance source, private context reference,
+material authority row or membership data.
+
+### 3.2 The commit runtime and owner deletion (migration `0090`)
+
+A material commit is ONE transaction producing the envelope, its body, the history item, that item's
+exact original human audience, its exact human material authorities, its provenance and its durable
+command — or none of them. `clock_timestamp()` is read exactly once per commit and written to every
+authoritative moment.
+
+Human material carries the exact human author as its only required approver; membership co-owns
+nothing. QANDEEL material derives its required approver set as the exact union over its
+`MATERIAL_DEPENDENCY` sources, never every member, and never anything a `REASONING_DEPENDENCY`
+contributed; an empty union is written explicitly as `NO_HUMAN_APPROVAL_REQUIRED`, and missing or
+contradictory source authority metadata fails the commit closed.
+
+The QANDEEL core binds the exact I-03 operation evidence to the exact body bytes, recomputing the
+I-03G readiness fingerprint in SQL rather than trusting it, and one readiness commits at most one
+material. It reinterprets `READY_FOR_LATER_DELIVERY_GATES` as nothing: the evidence relation carries no
+system-safety, launch-gate or delivery-permission column, and the migration refuses to deploy if one
+appears.
+
+Owner deletion makes reconstruction impossible rather than merely hidden: the body row is physically
+removed — human text, audio object reference and stored transcript together — and the history item
+becomes terminally `DELETED_BY_OWNER`. Every transitively source-content-bearing target becomes
+`UNAVAILABLE` and loses its body; analytical derivatives survive; provenance identity is never erased;
+a history grant audit and a closed-World entitlement audit both survive while neither can reconstruct
+the source.
+
+---
+
+## 4. The one interpretive decision this slice made, and why
+
+Task §9 admits **two** contributors to the QANDEEL required-approver set: the human authorities
+propagated from `MATERIAL_DEPENDENCY` sources, **and** "any additional exact protected-human
+subject/material authorities produced by an already-reviewed server-owned authority source, **if such a
+canonical source exists**".
+
+In this repository it does not. The whole I-03 chain terminates at
+`materialDisclosureAuthority: NOT_GRANTED` and `provenanceDisclosure: SEALED`, and produces no
+protected-subject authority set of any kind. Accepting one as a parameter would be exactly the
+"app/client supplies final authority claims" that the same section forbids, and manufacturing one would
+be engineering inventing missing Product logic (`AGENTS.md` §2).
+
+I-04G therefore derives the union from `MATERIAL_DEPENDENCY` sources alone, and leaves the second
+contributor to the reviewed slice that first builds a real server-owned source for it. This is recorded
+here rather than only in a commit message because it is the kind of decision a later reader must be
+able to find.
+
+---
+
+## 5. Frozen laws this phase did not bend
+
+- Shared-native truth arises from human statements, human voice notes, World events, explicit
+  disclosures and legitimate QANDEEL output; reasoning-only Personal context never automatically
+  becomes Shared truth (`CW2-01 §26`, `CW2-03 §38`).
+- Membership `!=` historical access (`CW2-01 A9`); knowledge possession `!=` audience permission
+  (`A12`); reasoning authority `!=` material disclosure authority (`CW2-02 §19`).
+- Material authority is independent of World membership and survives its loss (`CW2-03 §24 / C21`).
+- `MATERIAL_DEPENDENCY != REASONING_DEPENDENCY != INDEPENDENT_TARGET_TRUTH` (`I-00 §12`).
+- Owner-deleted material is unavailable for future use and cannot be reconstructed by QANDEEL; no
+  history grant or closed entitlement preserves it (`CW2-01 A18`, `CW2-03 §37`).
+- `READ_ONLY_CLOSED` blocks ordinary mutation but permits an authorized privacy material mutation,
+  which never reopens lifecycle (`CW2-03 §35 / C31`).
+- QANDEEL is a system actor and never a human consent or ownership principal (`CW2-01 §7 / A3`).
+- Safety, entitlement and Launch may further restrict; they never manufacture missing privacy
+  authority (`CW2-02 §46`, `B30`, `B31`).
+
+---
+
+## 6. Completed internal runtime versus later Product execution work
+
+This distinction is the point of this section, and it is deliberately blunt.
+
+**What I-04 completed is an internal database runtime.** Every consequential primitive it created —
+invitation dispatch, World birth, leave, governance preparation and approval, add / remove / rejoin,
+settings change, history package preparation, history approval, history grant, Standard closure,
+material commit and owner deletion — is executable by **no application role at all**: not `PUBLIC`, not
+`anon`, not `authenticated`, not `service_role`. Every direct table is RLS-enabled with zero policies
+and zero application-role privileges. The only things an application role may call are the narrow
+read-only resolvers, and `service_role` alone may call those.
+
+**What remains is Product execution work, and it is not I-04's.** In particular:
+
+- `CW2-08` Safety / moderation / entitlement / Launch Gate — the frozen precondition that makes any of
+  these primitives reachable at all;
+- authenticated Product routes, controllers and public RPC;
+- mobile surfaces of any kind;
+- a media storage provider, upload path or storage credential for voice notes;
+- history-grant withdrawal after viewing (explicitly deferred frozen policy);
+- Introduction birth, success and end; Matching; Public World; Replay;
+- human-to-human live call, which remains `DISABLED_BY_PRODUCT_LEGAL_GATE` (`CW2-03 §42 / C37`);
+- the explicit-disclosure and World-event-derived material producers, whose authority and source
+  contracts do not yet exist.
+
+None of these is a gap in I-04. Each is a boundary I-04 stated and kept.
+
+---
+
+## 7. Verification
+
+Every slice carries a secret-free static contract over its own migration and a real-PostgreSQL verifier
+run in API CI against a freshly migrated database. For I-04G specifically:
+
+```sh
+npm run test:database
+npm run verify:shared-world-material-persistence:integration
+npm run verify:shared-world-material-commit-owner-deletion:integration
+```
+
+The static contracts prove structure before deploy — including that each migration's own
+self-assertions do not reject the migration itself, which is the defect class I-04F FIX-02 and FIX-03
+were spent on. The verifiers prove live catalog, ACL, behaviour, concurrency with real independent
+connections, and forward safety: a later reviewed producer, wrapper, consumer, column, index or audit
+trigger is created for real inside a rolled-back savepoint and must leave the verifier passing, after
+which every regression to something the slice OWNS is planted and must still be refused.
+
+Migrations `0075`–`0088` are byte-identical: I-04G reopened no predecessor.
+
+---
+
+## 8. Governance
+
+`BG-08` reconciliation for this phase is recorded in
+[`docs/qandeel-canonical-backlog-v1.md`](qandeel-canonical-backlog-v1.md) §9. I-04 inherited no backlog
+item, and I-04G admitted none: its anti-scope is anti-scope, and `BG-06` admits none of it.
+
+`BG-09` governs the Status banner at the top of this document. It currently reads
+`CANDIDATE — awaiting independent ChatGPT review`, which is the truth: independent review has not
+happened. The change that closes the phase performs both halves itself — the backlog reconciliation and
+this banner — and no successor task may be left to finish either.

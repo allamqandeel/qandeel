@@ -1183,3 +1183,120 @@ that is not an archived Standard World, and consults no membership at all.
 ```sh
 npm run verify:shared-world-standard-closure:integration
 ```
+## I-04G - Shared Material Persistence (migration 0089)
+
+`0089_shared_world_material_persistence_v1.sql` creates the actual Shared material that every
+authority built by I-04A-I-04F governs. One material is one envelope bound one-to-one to exactly one
+I-04F history item in exactly one Shared World, plus exactly one normalized body in the relation its
+kind structurally requires. There is no universal JSON payload, no generic content column, no owner,
+admin or moderator column and no mutable audience blob: the audience of a history item is the frozen
+I-04F baseline-viewer relation and its material authority is the frozen I-04F required-approver
+relation, and this slice adds neither a second history model nor a second audience model.
+
+The frozen CW2-03 section 36 vocabulary is complete in the envelope. `HUMAN_TEXT`, `HUMAN_VOICE_NOTE`,
+`QANDEEL_OUTPUT` and `QANDEEL_ANALYSIS` pin their producer exactly; `EXPLICIT_DISCLOSURE` and
+`WORLD_EVENT_DERIVED_MATERIAL` are RESERVED and get no producer path at all, because neither has an
+authority/source contract in this repository yet and inventing one would be engineering inventing
+missing Product logic. Their body form is `RESERVED`, which no body relation accepts.
+
+**The kind-to-body binding is structural.** `body_form` is CHECK-derived from `material_kind`, the
+envelope carries `UNIQUE (id, body_form)`, and each body relation pins its own form and binds BOTH
+columns by composite foreign key - so a text body on a voice note is a constraint violation rather
+than a defect a reviewer must catch. The bodies are separate relations because owner deletion has to
+be able to DESTROY a body while the envelope, the history identity and the provenance identity survive
+as non-content history; a body in a column could only be nulled, a body in its own row can be
+physically removed.
+
+The text body is a real non-empty UTF-8 body with **no invented maximum**: no frozen contract states a
+Product copy limit. The voice-note body keeps an opaque immutable server-side `audio_object_ref` that
+is CHECKed to be neither a public URL nor a credential - no scheme separator, no query string, no
+fragment, no credential-shaped token - plus an optional transcript and an optional positive
+`duration_ms`. There is no `media_type` column, because the repository has no media-type convention to
+follow. I-04G builds no storage provider, upload path or storage credential.
+
+Provenance keeps the three frozen kinds apart by one exact-shape CHECK:
+`MATERIAL_DEPENDENCY` names a committed Shared source material and no context, `REASONING_DEPENDENCY`
+names an opaque bounded whitespace-free server-owned context reference and no material, and
+`INDEPENDENT_TARGET_TRUTH` names neither. Reasoning influence therefore cannot be stored as material
+provenance by accident, and raw private prose cannot be stored in a context reference.
+
+**A `MATERIAL_DEPENDENCY` cycle is unrepresentable, not merely refused.** Each dependency row carries
+both endpoints' exact `established_at`, bound by composite foreign key to the material each names, and
+CHECKs that the source's instant is strictly EARLIER than the target's. Every edge therefore strictly
+increases a total order, which also makes migration 0090's recursive invalidation traversal provably
+terminating.
+
+`resolve_shared_world_material_v1` is the only function here and the only thing any application role
+may execute. It CONSUMES 0087's `resolve_shared_world_history_visibility_v1` - the single authority for
+which history item identities a human may see - and intersects that answer with the material bodies
+that still exist. It returns renderable material only: no row at all for an item the human may not see
+or whose body is gone, and no provenance source identity, private context reference, material
+authority row, dependency or membership data. Every direct relation stays sealed.
+
+```sh
+npm run verify:shared-world-material-persistence:integration
+```
+
+## I-04G - Shared Material Commit Runtime and Owner Deletion (migration 0090)
+
+`0090_shared_world_material_commit_owner_deletion_v1.sql` creates the only things that ever write the
+material store, and the only thing that ever destroys a body.
+
+A material commit is ONE transaction that produces all of this or none of it: the envelope, its
+normalized body, the I-04F history item that IS its Shared identity, that item's exact original human
+audience, that item's exact human material authorities, its provenance record and the durable command
+that answers an equivalent retry. `clock_timestamp()` is read EXACTLY ONCE and written to
+`materials.established_at`, `history_items.occurred_at`, `history_items.registered_at` and
+`commit_commands.committed_at`. No caller supplies baseline viewers, an approver, an episode, a count
+or an instant.
+
+**Material authority.** Human text and voice notes carry `EXACT_HUMAN_APPROVER_SET` with the exact
+human author as the only required approver - membership does not co-own material owned by another
+human; every other current member is a baseline VIEWER, which is a different relation and a different
+meaning. QANDEEL output and analysis derive their required approver set as the exact UNION of the human
+material authorities of their `MATERIAL_DEPENDENCY` sources; it is never every World member, and a
+`REASONING_DEPENDENCY` contributes nothing to it. An empty union is written explicitly as
+`NO_HUMAN_APPROVAL_REQUIRED`, and missing or contradictory source authority metadata fails the commit
+closed rather than being read as approval-free.
+
+The task also admits a second contributor to that union - exact protected-human subject authorities
+from an already-reviewed server-owned authority source - **if such a source exists**. In this
+repository it does not: the whole I-03 chain terminates at `materialDisclosureAuthority: NOT_GRANTED`
+and `provenanceDisclosure: SEALED` and produces no protected-subject authority set. Accepting one as a
+parameter would be an app supplying final authority claims, so this slice derives from dependencies
+alone and leaves the second contributor to the reviewed slice that first builds a real source for it.
+
+**The QANDEEL core is unreachable and its evidence is not a clearance.** It has no `auth.uid()` and no
+human author. It binds the exact I-03 operation evidence of the output it commits, and binds it to the
+exact BYTES: the supplied output digest must equal the digest of the body, and the supplied readiness
+reference must equal the I-03G readiness fingerprint RECOMPUTED in SQL from its own four parts, so
+evidence for one output cannot be replayed for another body or World. `UNIQUE (readiness_ref)` makes
+one readiness commit at most one material. I-03G froze that `READY_FOR_LATER_DELIVERY_GATES` is not
+System/Safety clearance, not Launch Gate clearance and not delivery or commit permission; the evidence
+relation therefore carries no system-safety, launch-gate or delivery-permission column, the migration
+refuses to deploy if one appears, and no fake Safety or Launch evidence is manufactured anywhere.
+
+**Owner deletion** is a `PRIVACY_MATERIAL_MUTATION`. The deleting human is exactly `auth.uid()`, and a
+human may delete their own human-authored material as a current member, a former member or a viewer of
+an archived World - `READ_ONLY_CLOSED` does not block it and it never reopens the lifecycle. It makes
+reconstruction impossible rather than merely hidden: the body row is PHYSICALLY REMOVED - human text,
+audio object reference and stored transcript together - and the history item transitions to the
+terminal `DELETED_BY_OWNER` through the frozen I-04F revision semantics. Envelope, history identity
+and provenance identity remain as non-content history.
+
+Every Shared target that is transitively source-content-bearing through `MATERIAL_DEPENDENCY` becomes
+`UNAVAILABLE` and loses its body too, because it reproduces or contains the deleted source. It is NOT
+marked `DELETED_BY_OWNER` - that would falsely claim its own owner deleted it - and its dependency
+identity is never erased. `REASONING_DEPENDENCY` targets are ANALYTICAL derivatives and are not erased:
+legitimate prior analysis may remain historical. A history grant audit and a closed-World entitlement
+audit both survive a later owner deletion, while both resolvers stop returning the source.
+
+Every consequential mutation locks `shared_worlds FOR UPDATE` first, then material, history and
+dependency rows in deterministic identity order. There is no advisory lock, table lock or process
+mutex. All five primitives are executable by no application role at all, `service_role` included: this
+migration grants nothing to anybody, and 0089's read-only resolver stays the one material read
+boundary.
+
+```sh
+npm run verify:shared-world-material-commit-owner-deletion:integration
+```
