@@ -239,10 +239,28 @@ async function verifySchema() {
   const worldPkey = worldIndexes.find((i) => i.name === 'shared_worlds_pkey');
   assert.ok(worldPkey && worldPkey.uniq === true, "shared_worlds still carries 0075's unique primary key index");
 
-  stage = 'schema: no trigger';
+  // FORWARD SAFETY (I-04E). This verifier runs against a FULLY migrated database,
+  // so "these two tables carry no trigger at all" was a ceiling on the whole
+  // roadmap rather than a fact about migration 0075: I-04E's reviewed
+  // membership-topology triggers, and any later reviewed audit trigger, would fail
+  // it while weakening nothing 0075 owns. That migration 0075 ITSELF created no
+  // trigger is a claim about 0075's own text, and it is proven there, by
+  // database/tests/connected-worlds-shared-persistence-foundation-v1.test.mjs.
+  //
+  // What stays LIVE is the invariant 0075 really owns. Its foreign keys are
+  // restrictive precisely so canonical Shared history is never silently cascaded
+  // away; a trigger that deleted it would defeat that from the other side, so no
+  // trigger on either table may delete or truncate a canonical Shared relation.
+  stage = 'schema: no trigger deletes canonical Shared history';
   for (const table of TABLES) {
     const [{ n }] = await rows('SELECT count(*)::int n FROM pg_trigger WHERE tgrelid=$1::regclass AND NOT tgisinternal', [table]);
-    assert.equal(n, 0, `${table} has no trigger`);
+    const destructive = await rows(
+      `SELECT t.tgname FROM pg_trigger t
+        WHERE t.tgrelid = $1::regclass AND NOT t.tgisinternal
+          AND pg_get_functiondef(t.tgfoid) ~* '(DELETE\\s+FROM|TRUNCATE)\\s+(public\\.)?shared_world'
+        ORDER BY t.tgname`, [table]);
+    assert.deepEqual(destructive.map((row) => row.tgname), [],
+      `${table} carries ${n} reviewed trigger(s) and none of them deletes canonical Shared history`);
   }
 }
 

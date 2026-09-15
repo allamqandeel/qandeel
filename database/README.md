@@ -951,3 +951,133 @@ serve, with rolled-back and cleaned-up fixtures:
 ```sh
 npm run verify:shared-world-governance-approval-foundation:integration
 ```
+## Governed Standard membership lifecycle (migration 0085, I-04E)
+
+Migration `0085_shared_world_governed_membership_lifecycle_v1.sql` is the first CONSUMER of the
+I-04D governance substrate. It implements three of the four remaining governed Standard mutations
+(CW2-03 sections 16, 25 and 28):
+
+```text
+ADD_MEMBER     -> ALL_CURRENT_MEMBERS               -> MEMBER_INVITATION -> the exact target accepts
+REMOVE_MEMBER  -> ALL_CURRENT_MEMBERS_EXCEPT_TARGET -> the exact excluded episode closes in place
+REJOIN_MEMBER  -> ALL_CURRENT_MEMBERS               -> a NEW membership episode
+```
+
+Everything about authority is consumed rather than duplicated: `capture_shared_world_governance_
+proposal_v1` opens the proposal over the exact current topology and
+`resolve_shared_world_governance_approval_v1` re-proves it inside the SAME transaction as each
+irreversible mutation. What is new is the operation-owned immutable PAYLOAD. I-04D deliberately left
+`proposed_payload_version_id` opaque, so each operation now owns one narrow table -
+`shared_world_add_member_payload_versions`, `shared_world_remove_member_payload_versions` and
+`shared_world_rejoin_payload_versions` - whose primary key IS that opaque identity. The binding back
+to the proposal is STRUCTURAL: a four-column composite foreign key on
+`(governance_proposal_id, world_id, governance_operation_kind, id)` can only name a proposal that
+really carries that exact World, that exact operation and that exact payload version, so a payload
+for one operation can never be presented as another's. For a removal the target episode is bound the
+same way, to the proposal's own `excluded_membership_episode_id`, so a removal can never close an
+episode the approvers did not exclude.
+
+`shared_world_member_invitations` is the durable MEMBER_INVITATION between the two human acts of an
+add. It binds the exact target, World, proposal, captured topology and payload version, and
+`UNIQUE (governance_proposal_id)` makes one proposal worth exactly one effective invitation. Its
+state VOCABULARY carries no CHECK - a later reviewed decline, cancel or expiry state must not need a
+superseding migration - while the CONSISTENCY of the states is frozen structurally: `PENDING` is the
+only non-terminal state in both directions, and an accepted membership episode exists exactly when
+the invitation is `ACCEPTED`.
+
+**The terminalization mechanism, and why it is a trigger.** The topology change that stales an
+invitation may come from the ALREADY FROZEN I-04C leave, which this slice may not modify and which
+knows nothing about invitations. A staleness check performed only at acceptance would leave every
+OTHER pending invitation of that World in a state that is no longer true. So two narrow AFTER
+triggers sit on `shared_world_membership_episodes`, each reacting to exactly one real open-topology
+transition - a new OPEN episode appearing, and an OPEN episode becoming closed - and nothing else.
+The trigger function transitions only still-PENDING member invitations of the exact World whose
+captured topology has actually stopped matching, exactly once, with a database-owned terminal
+instant; it writes that one relation and no other. Acceptance is ordered so the trigger cannot race
+it: the invitation moves from `PENDING` to `ACCEPTED` BEFORE the new episode is inserted, inside one
+transaction that rolls back as a whole.
+
+`FROM_JOIN_FORWARD` is the new episode's `joined_at` and the ABSENCE of any retrospective grant.
+Nothing is stored to encode the default, because storing a synthetic entitlement would manufacture a
+history-access record this slice has no authority to write. A rejoin likewise leaves the absence
+interval between the old `ended_at` and the new `joined_at` explicit and ungranted; selective past
+history belongs to I-04F.
+
+Membership loss is not revocation. Governed removal changes the canonical membership topology - and
+therefore the current human Audience Snapshot the frozen 0079 / I-03A / I-03E / I-03F layers derive
+from open episodes - and rewrites, revokes, deletes and widens nothing else. No add or rejoin widens
+an audience ceiling either.
+
+**Four predecessor verifiers were narrowed.** `verify-migration-0075.mjs`, `verify-migration-0076.mjs`,
+`verify-migration-0077.mjs` and `verify-migration-0083.mjs` each asserted that
+`shared_world_membership_episodes` carried NO trigger at all. Those verifiers run against a FULLY
+migrated database, so that was a ceiling on the whole roadmap rather than a fact about their own
+migrations - exactly the defect class 0078 had already excluded for this table and the I-04D FIX-01
+correction removed from 0084. Each was narrowed to the invariant it really owns: 0075 now proves no
+trigger on its tables DELETES canonical Shared history, and 0076, 0077 and 0083 prove that no trigger
+on the membership table reaches a Standing Context relation - which is strictly stronger than a
+count, because it fails a real membership-to-grant coupling however it was installed. The Standing
+Context tables keep their live zero-trigger census, because there an automatic ceiling-mutation path
+IS what CW2-02 B13 / B14 forbid.
+
+Deliberately absent: no World closure, history-access grant, absence-period grant or closed-world
+entitlement; no Shared conversation, message or material; no Introduction, Matching, Public or
+Replay path; no Launch Gate, feature flag, entitlement or moderation policy; no route, controller or
+application wrapper; no decline, cancel or expiry lifecycle. Every new table is RLS-enabled with zero
+policies, and no application role holds any privilege on them or EXECUTE on any primitive, because
+the frozen Launch Gate precondition is unimplemented.
+
+The secret-free structural contract runs under `npm run test:database`. The real PostgreSQL verifier
+proves the catalog, both ACLs, the two topology triggers, the whole add / remove / rejoin journey,
+the staleness law across a frozen leave and a same-human rejoin, the exact count deltas that show no
+history access is created, the multi-connection races and forward safety against the I-04F and I-04G
+substrate, with rolled-back and cleaned-up fixtures:
+
+```sh
+npm run verify:shared-world-governed-membership-lifecycle:integration
+```
+## Governed Shared settings (migration 0086, I-04E)
+
+Migration `0086_shared_world_governed_settings_v1.sql` is the fourth governed Standard operation:
+World-level settings affecting all participants require exact unanimous current-member governance
+(CW2-03 section 30).
+
+```text
+WORLD_SETTINGS_CHANGE -> ALL_CURRENT_MEMBERS
+```
+
+It is a separate migration from 0085 because settings and membership topology have different durable
+ownership: a settings change moves no topology, terminalizes no member invitation, and a later
+reviewed settings extension must be able to evolve without reopening the membership lifecycle.
+
+Architecture freezes exactly four optional v1 fields, and they are REAL COLUMNS on
+`shared_world_settings_versions`: `name`, `description`, `topic` and `general_visual_marker`, each
+nullable text with no default. There is deliberately no JSON blob, no generic key/value settings
+store and no common-metadata table - a generic settings engine would be exactly the polymorphic
+structure I-04D refused to invent for payloads, and it would make every future reviewed setting
+invisible to the schema. A later reviewed setting is an ADDITIVE column or table, which this slice
+forbids nowhere. No avatar or media storage decision is taken; no commercial, safety, moderation or
+entitlement setting exists here at all; and there is no owner, admin, creator or moderator column,
+because settings authority is unanimity and never a role.
+
+A settings VERSION is immutable and is proposed once. Changing a value - even back to a value some
+earlier version already carried - is a NEW version under a NEW proposal with NEWLY collected
+approvals, which the frozen I-04D resolver enforces directly because the commit must name the exact
+payload version it is about to apply. `shared_world_settings_state` is the only mutable relation: one
+row per World, and NO row at all is the valid neutral/default state.
+
+Deliberately absent: no membership mutation, no invitation terminalization (the topology did not
+change, so 0085's triggers never fire), no grant, ceiling or consent mutation, no World creation or
+closure, and no history-access or closed-World entitlement. Both primitives derive no actor of any
+kind, all four tables are RLS-enabled with zero policies, and no application role holds any privilege
+on them or EXECUTE on either primitive, because the frozen Launch Gate precondition is unimplemented.
+
+The secret-free structural contract runs under `npm run test:database`. The real PostgreSQL verifier
+proves the catalog, both ACLs, the neutral state, one committed pointer and SETTING_CHANGED on one
+instant, the non-reusable approval across a value that returns to an earlier one, the exact count
+delta showing nothing else moved, the settings-versus-topology and settings-versus-settings races and
+forward safety against later additive settings schema, with rolled-back and cleaned-up fixtures:
+
+```sh
+npm run verify:shared-world-governed-settings:integration
+```

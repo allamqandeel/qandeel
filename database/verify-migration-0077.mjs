@@ -104,7 +104,28 @@ async function verifyCatalog() {
   stage = 'catalog: no trigger or policy on the tables the resolver reads';
   for (const table of [...TABLES, WORLDS, EPISODES]) {
     const [{ n: triggers }] = await rows('SELECT count(*)::int n FROM pg_trigger WHERE tgrelid=$1::regclass AND NOT tgisinternal', [table]);
-    assert.equal(triggers, 0, `${table} has no trigger`);
+    if (TABLES.includes(table)) {
+      // The grant and audience tables ARE what this resolver reads, and a trigger
+      // on either is an automatic authority / ceiling mutation path.
+      assert.equal(triggers, 0, `${table} has no trigger`);
+    } else {
+      // FORWARD SAFETY (I-04E). shared_worlds and the membership-episode table are
+      // evolvable predecessor tables this verifier does not own, and a later
+      // reviewed lifecycle slice may legitimately add a trigger to either - I-04E
+      // adds two to the membership table. Against a FULLY migrated database a
+      // zero-trigger census there is a ceiling on the roadmap, not a fact about
+      // 0077. The 0077 property is narrower and still exactly true: the resolver
+      // never names either table (asserted above, from its own stored source), so
+      // no trigger on them can change what it returns, and none may reach the
+      // Standing Context relations the resolver does read.
+      const reachingGrantState = await rows(
+        `SELECT t.tgname FROM pg_trigger t
+          WHERE t.tgrelid = $1::regclass AND NOT t.tgisinternal
+            AND pg_get_functiondef(t.tgfoid) ~* 'shared_world_standing_context'
+          ORDER BY t.tgname`, [table]);
+      assert.deepEqual(reachingGrantState.map((row) => row.tgname), [],
+        `${table} carries ${triggers} reviewed trigger(s) and none of them reaches Standing Context state`);
+    }
     const [{ n: policies }] = await rows('SELECT count(*)::int n FROM pg_policy WHERE polrelid=$1::regclass', [table]);
     assert.equal(policies, 0, `${table} carries zero RLS policies`);
     const [{ rls }] = await rows('SELECT c.relrowsecurity rls FROM pg_class c WHERE c.oid=$1::regclass', [table]);
