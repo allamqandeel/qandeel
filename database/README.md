@@ -1300,3 +1300,218 @@ boundary.
 ```sh
 npm run verify:shared-world-material-commit-owner-deletion:integration
 ```
+
+## I-05A - Public World and Experience Foundation (migration 0091)
+
+`0091_public_world_experience_identity_foundation_v1.sql` is the first Public World persistence in
+the repository. It creates the ONE logical Public World, the audience-policy gate beside it, the
+stable Public Identity a public authorship binds to, the mutable display label a public rendering
+later uses, the stable Public Experience, its control authority, its immutable versions and the
+append-only truth of its lifecycle transitions.
+
+**Exactly one Public World is representable, not merely expected.** `public_world_state` is keyed on
+a boolean that a CHECK pins to `true`, so the relation can hold exactly one row and a second Public
+World cannot exist. Every Public object binds to the World through that same boolean by foreign key,
+so "belongs to the one Public World" is a constraint rather than a convention. There is deliberately
+no `public_world_id uuid`: the merged I-01A kernel's `PublicWorldRef` carries no identifier either,
+because a singleton needs none, and a uuid here would be the first step towards a second one.
+
+A `PUBLIC_EXPERIENCE` is an OBJECT inside that World, never a World. It is not a row in
+`shared_worlds`, and it carries no world type, phase, birth basis, membership or governance - each of
+which the migration refuses to deploy with.
+
+**The audience policy is a gate, not identity.** `public_audience_policy_state` records the current
+registered-member direction and keeps the frozen CW2-08 `SIGNED_OUT_PUBLIC_VIEW_POLICY` as
+`UNRESOLVED`, which fails closed. Nothing references it by foreign key and no authority decision
+reads it, so changing who may view Public World later creates no new World and alters no Experience
+identity, version, manifest or fingerprint.
+
+**The Public Identity ref is stable and opaque; the display label is not.** One Public Identity per
+human in v1. `public_identity_ref <> user_id` is CHECKed, so the public ref is structurally distinct
+from the private account identifier, and no relation here carries an email, phone, address,
+credential or invite column - the migration refuses to deploy if one appears. Display labels are
+`PSEUDONYM` or `REAL_NAME`, are deliberately NOT unique (uniqueness would invent a public namespace no
+frozen contract states), assert no identity verification, and live in a relation with no foreign key
+to an Experience, a version or a package - so an alias change creates no version and mutates no
+manifest. Historical alias rendering is deferred, so there is no label history relation.
+
+`EXPERIENCE_CONTROL_AUTHORITY` is a normalized `(Experience, controller)` relation rather than an
+owner column, so a later reviewed multi-controller or transfer semantics is additive; I-05A invents
+neither. `control_basis` is deliberately an open bounded string: no frozen contract enumerates control
+bases, and pinning one here would force a later reviewed transfer to reopen this migration.
+
+Experience Versions are immutable, ordinal within their Experience, bijective with their manifest, and
+carry no semantic placement, coordinate, embedding, vitality or ranking column - semantic
+interpretation binds to the exact version and belongs to I-05B. A version and a committed lifecycle
+transition are append-only by TRIGGER rather than by privilege, because a privilege does not bind the
+table owner.
+
+The lifecycle vocabulary is complete - `DRAFT`, `READY_FOR_REVIEW`, `PUBLISHED`,
+`ABSENT_FROM_PUBLIC_WORLD` - so I-05B and I-05C are additive. There is deliberately no trigger refusing
+`PUBLISHED`: a guard a later authorized slice would have to remove is a ceiling on the roadmap rather
+than an invariant of this one. PART A creates no writer at all, so it can produce no lifecycle; the
+one function it owns is the append-only trigger function.
+
+```sh
+npm run verify:public-world-experience-foundation:integration
+```
+
+## I-05A - Publication Package and Authority (migration 0092)
+
+`0092_public_experience_publication_package_authority_v1.sql` creates the IMMUTABLE PUBLICATION
+PACKAGE those versions are made of: the manifest, its exact item set, the bounded PUBLIC derivative
+each item carries, the SEALED internal provenance that says where each item came from, the exact
+content rightsholder set derived from that provenance, and the manifest-bound human approvals. It
+creates no writer; every primitive is migration 0093.
+
+**The public payload and the source provenance are different relations, physically.** A Public
+Experience stores a bounded public derivative, not a live pointer into its source: publication never
+creates navigation back into a source World, Session, omitted material or future source update. So
+`publication_package_manifest_items` and `public_experience_text_derivative_bodies` carry the payload
+and the public classification and NO source identifier of any kind - no Session, turn, conversational
+unit, Shared World, Shared material or history item - while
+`publication_package_item_provenance` carries the exact source and is sealed against every application
+role. That is provenance truth without provenance disclosure.
+
+The derivative is a SNAPSHOT: the body row holds its own bytes, and no foreign key, trigger, rule or
+view connects it to a source, so no later source update can rewrite it. There is no maximum length,
+because no frozen contract states a Product copy limit.
+
+**Reserved body kinds have no producer, and none is faked.** `public_body_form` admits `PUBLIC_TEXT`,
+`PUBLIC_VOICE` and `RESERVED`; only `PUBLIC_TEXT` has a body relation. There is no durable Personal
+voice or call source in this repository at all - `conversation_units.source_modality` is CHECK-pinned
+to `TEXT` and no audio object exists anywhere in the Personal schema. A Shared `HUMAN_VOICE_NOTE` does
+have a durable `audio_object_ref`, but that is an opaque server-side handle I-04G left for a future
+reviewed media boundary; copying it into a public row would put a hidden source identifier in the
+public payload and turn the derivative into a live pointer into private storage. A public voice
+derivative therefore needs a reviewed public media boundary that mints a public object reference, and
+building one here would be engineering inventing missing Product logic.
+
+`REPLAY_ARTIFACT` is reserved as a source class with no identifier to bind: no Replay runtime exists.
+
+**An item whose source authority is unresolved is UNREPRESENTABLE inside a package.**
+`publication_package_item_authority` admits only `RESOLVED_EXACT_HUMAN_REQUIREMENT` and
+`RESOLVED_NO_HUMAN_REQUIREMENT`. This is not reinterpreting unresolved as zero approvers: "we cannot
+compute the requirement" and "we computed it and there is none" stay different facts, the second is
+written only when the source state explicitly proves it, and the first cannot enter a package at all.
+The unresolved state is deliberately not re-represented here - it is a property of the SOURCE and
+already has exactly one canonical home in I-04G's `shared_world_material_historical_authority`, and a
+second copy in the Public domain could drift from it. The representation stays additive: a later
+reviewed protected-human subject-authority resolver moves the SOURCE row forward and the same material
+becomes packageable with no change here.
+
+`publication_manifest_required_approvers` is the `CONTENT_RIGHTSHOLDER_SET` and
+`public_experience_controllers` is the `EXPERIENCE_CONTROL_AUTHORITY`. They are different relations
+with no foreign key between them in either direction. An approval binds its approver into the DERIVED
+required set by composite foreign key, exactly as the frozen I-04F history package does, so recording
+an approval by a human the exact manifest does not require is structurally impossible however the row
+is produced.
+
+```sh
+npm run verify:public-experience-publication-authority:integration
+```
+
+## I-05A - Draft / Approval / READY_FOR_REVIEW Runtime (migration 0093)
+
+`0093_public_experience_review_ready_runtime_v1.sql` creates the only things that ever write any of
+it. It can produce `DRAFT` and `READY_FOR_REVIEW` and nothing else: no primitive writes `PUBLISHED` or
+`ABSENT_FROM_PUBLIC_WORLD`, no primitive creates a public serving surface, and no resolver here is
+reachable by any public audience. Draft and review are not publication.
+
+**Source-access authority is proven before any Shared body is copied.** Content publication authority
+is not source-access authority: a rightsholder approving the widening of THEIR material says nothing
+about whether the human assembling the package was ever entitled to see it. So for every selected
+`SHARED_WORLD` item, preparation requires the initiating human to be CURRENTLY entitled to view that
+exact history item, and only then reads the body. The entitlement question is not re-implemented here
+— it consumes the canonical I-04F entry point `resolve_shared_world_history_visibility_v1`, which
+already owns the whole meaning: the ACTIVE union of membership-period visibility and explicit history
+grants, the `READ_ONLY_CLOSED` delegation to the exact frozen closure entitlement, the requirement of
+an open episode, availability dominating every basis, and a truthful EMPTY answer rather than a
+distinguishable error for a human with no standing. The refusal uses the same bounded class a
+NONEXISTENT source gets, and runs before the kind, availability and authority checks, so nothing in
+the error surface reveals whether a guessed identifier is real.
+
+This is a different right from approval, in both directions. A former member whose material authority
+survived their departure may still approve their own included material — and may still not use
+preparation as a backdoor to retrieve it.
+
+**The canonical Public mutation lock order** is the Public World singleton, then the exact Experience,
+then the exact manifest, then `shared_worlds`, then `shared_world_materials`, then
+`shared_world_history_items`, then `conversation_units` — each by id — then the rows it writes. That
+order is not free: every I-04 consequential mutation that can change what a human may see (leave,
+removal, rejoin, a history grant, Standard closure, owner deletion) locks `shared_worlds` FIRST, then
+materials by id, then history items by id. This migration takes the SAME relative order, so the two
+domains queue behind each other and can never form a cycle — I-04 never takes a Public lock, so no
+Public lock can be the second edge of one. Holding the Shared World row is what stops the
+source-view answer from going stale between resolution and the copy. Public source locks are SHARE
+locks throughout: Public reads Shared truth and never writes it.
+
+The two Public Identity primitives deliberately take no singleton lock - they touch one identity's own
+rows, and serializing every display-label change in the product behind one global row would be a
+bottleneck with no correctness benefit.
+
+**One authority derivation, shared by preparation, approval and the READY commit.**
+`derive_public_publication_authority_v1` recomputes from CURRENT state that every included source is
+still available at the exact captured revision, that none carries unresolved additional human
+authority, that the source authority metadata agrees in both directions, the exact
+`CONTENT_RIGHTSHOLDER_SET`, and the `AUTHORITY_REQUEST_FINGERPRINT`. It fails closed rather than
+returning a partial answer, and missing metadata is never an empty requirement.
+
+The fingerprint binds the INTENDED PROTECTED ACTION, the target Public World, the Public World
+audience class, the privacy/ownership readiness, the exact Experience, the exact prospective version,
+the exact manifest, the exact publisher identity, the exact source scope, the exact derived
+rightsholder set and the Public World authority snapshot version. It is DERIVED and never supplied, so
+it is not a bearer token: it cannot authorize another package, Experience, version, source or
+audience. It deliberately does NOT bind `PUBLIC_AUDIENCE_POLICY`, because who may currently view
+Public World is a gate rather than the identity of a package.
+
+**The action it binds is `PUBLISH_TO_PUBLIC_WORLD`, not the command that ran.** Preparing a package is
+`PREPARE_PUBLICATION`, it lives in `publication_package_prepare_commands.command_action` with its own
+request-reference namespace, and it is explicitly not audience expansion. What a rightsholder consents
+to when they approve an exact immutable package is the future publication of that package, so that is
+what `publication_package_manifest_versions.intended_publication_action` records and what their
+approval is bound to. A frozen authority decision is request-bound and may not be replayed for a
+different action, which is precisely why I-05B can revalidate THIS approval before executing
+`PUBLISHED` instead of having to collect every human's consent a second time — and why a preparation
+request reference can never read as a publication consent token.
+
+Binding the future action changes nothing about what I-05A does: committing `READY_FOR_REVIEW`
+performs no publication, widens no audience and creates no public visibility. I-05B must still
+revalidate the exact manifest-bound authority, the EFFECTIVE approval state — a later reviewed
+withdrawal or supersession object composes beside the append-only approval evidence, which I-05A
+freezes nothing against — and the Safety, Launch and entitlement gates this slice evaluates none of.
+
+**Source adapters.** `MY_WORLD` binds `conversation_units` - the committed Conversational Unit of
+migration 0064, append-only for every role - and the actor must own it exactly. A `USER` unit is human
+material whose exact owning human is the content authority; an `ASSISTANT` unit is Personal QANDEEL
+analysis and FAILS CLOSED, because no reviewed server-owned producer of a protected-human subject
+authority exists in this repository and accepting one from the caller would be exactly the
+app-supplied authority claim the frozen contract forbids. `SHARED_WORLD` binds the exact I-04G
+material, its exact I-04F history item and its exact availability revision, and takes I-04G's EXACT
+material authority set for the exact included item. World membership contributes nothing: a human
+appears in the rightsholder set only because material whose authority is theirs is actually in this
+package, and a FORMER member whose material authority survived their departure may approve their own
+included material without regaining any Shared browsing, because no primitive here reads membership at
+all.
+
+The public derivative is the exact committed source text. Sub-item portion selection is deliberately
+not invented: a publisher selects which committed units to include, and the public body is provably a
+faithful copy of authorized source rather than free text a caller could substitute for it. Item order
+is derived canonically from the source scope, so the same selection always produces the same package.
+
+**Committing `READY_FOR_REVIEW`** requires the exact controller, the Experience's CURRENT version (a
+newer preparation stales the attempt), the complete derived approval set, and every approval still
+carrying the currently derived fingerprint. A controller cannot substitute for a missing content
+approval, and an approval grants no Experience control.
+
+Every consequential primitive is postgres-owned, `SECURITY DEFINER`, `VOLATILE`, search_path-pinned and
+executable by NO application role: the frozen CW2-08 Launch Gate precondition that would make any of
+them reachable is unimplemented, so granting EXECUTE now would be manufacturing a launch decision
+I-05A has no authority to make. The one read boundary, `resolve_public_experience_review_v1`, answers
+the exact controller and nobody else, returns zero rows to anyone else, discloses no account
+identifier or contact endpoint and never reads sealed provenance. It is not the Public World serving
+resolver; I-05B creates that.
+
+```sh
+npm run verify:public-experience-review-ready-runtime:integration
+```
