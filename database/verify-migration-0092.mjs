@@ -110,7 +110,7 @@ const OWNED_COLUMNS = {
 async function verifyCatalog() {
   for (const table of OWN) {
     const columns = await rows(
-      `SELECT a.attname name, format_type(a.atttypid, a.atttypmod) type, a.attnotnull notnull,
+      `SELECT a.attname name, format_type(a.atttypid, a.atttypmod) type, a.attnotnull AS is_not_null,
               (a.atthasdef OR a.attidentity <> '') has_default
          FROM pg_attribute a WHERE a.attrelid = $1::regclass AND a.attnum > 0 AND NOT a.attisdropped
         ORDER BY a.attnum`, [table]);
@@ -119,7 +119,13 @@ async function verifyCatalog() {
       assert.ok(column, `${table} still has a column at position ${index + 1}`);
       assert.equal(column.name, name, `${table} position ${index + 1} is still ${name}`);
       assert.equal(column.type, type, `${table}.${name} is still ${type}`);
-      assert.equal(column.notnull, !nullable, `${table}.${name} nullability is unchanged`);
+      // Harness shape before semantics: a catalog alias that stops arriving must fail as itself,
+      // not silently compare undefined and look like a nullability regression.
+      assert.equal(typeof column.is_not_null, 'boolean',
+        `${table}.${name}: the catalog query returned no boolean is_not_null, so the comparison below would be vacuous`);
+      assert.equal(typeof column.has_default, 'boolean',
+        `${table}.${name}: the catalog query returned no boolean has_default, so the comparison below would be vacuous`);
+      assert.equal(column.is_not_null, !nullable, `${table}.${name} nullability is unchanged`);
       assert.equal(column.has_default, false, `${table}.${name} carries no default`);
     }
 
