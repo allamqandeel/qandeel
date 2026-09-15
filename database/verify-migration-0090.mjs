@@ -1006,7 +1006,12 @@ async function verifyForwardSafety(f) {
          LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
          DECLARE u uuid := auth.uid();
          BEGIN
-           PERFORM 1 FROM public.shared_worlds w WHERE w.id = p_world_id AND u IS NOT NULL FOR UPDATE;
+           -- The World lock stays EXACTLY canonical on purpose: this plant must
+           -- isolate the one invariant it is about - QANDEEL deriving a human -
+           -- and an incidental lock-order violation would make the verifier raise
+           -- a different message than the matcher below expects.
+           IF u IS NULL THEN RETURN; END IF;
+           PERFORM 1 FROM public.shared_worlds w WHERE w.id = p_world_id FOR UPDATE;
            RETURN;
          END$fn$`,
         /derives no human/u],
@@ -1070,12 +1075,10 @@ async function openConnection(role, uid) {
 }
 
 async function verifyConcurrency(c) {
-  const settle = async (a, b) => {
-    const results = await Promise.allSettled([a, b]);
-    return results.map((result) => (result.status === 'fulfilled'
-      ? { ok: true, rows: result.value.rows }
-      : { ok: false, code: result.reason?.code, message: result.reason?.message }));
-  };
+  /** Never throws: a rejected query becomes a describable outcome so it can be raced. */
+  const outcome = (promise) => promise.then(
+    (result) => ({ ok: true, rows: result.rows }),
+    (error) => ({ ok: false, code: error?.code, message: error?.message }));
 
   stage = 'M18: a human material commit and a voluntary leave serialize World-first';
   {
@@ -1153,14 +1156,19 @@ async function verifyConcurrency(c) {
     const first = await openConnection('postgres', c.inviter);
     const second = await openConnection('postgres', c.inviter);
     try {
-      const a = first.query(DELETE_SQL, [randomUUID(), c.worlds.twoDeletes.worldId, c.worlds.twoDeletes.materialId, randomUUID()]);
-      const b = second.query(DELETE_SQL, [randomUUID(), c.worlds.twoDeletes.worldId, c.worlds.twoDeletes.materialId, randomUUID()]);
-      const outcome = await settle(a, b);
-      await first.query('COMMIT').catch(() => undefined);
-      await second.query('COMMIT').catch(() => undefined);
-      const winners = outcome.filter((result) => result.ok);
-      assert.equal(winners.length, 1, `exactly one owner deletion may commit, got ${JSON.stringify(outcome)}`);
-      const loser = outcome.find((result) => !result.ok);
+      // Both are started together; whichever takes the World row first finishes,
+      // and the other BLOCKS on that row until the winner's transaction ends. So
+      // the winner is committed BEFORE the loser is awaited - awaiting both first
+      // would wait forever for a query the winner's own open transaction is
+      // holding up.
+      const a = outcome(first.query(DELETE_SQL, [randomUUID(), c.worlds.twoDeletes.worldId, c.worlds.twoDeletes.materialId, randomUUID()]));
+      const b = outcome(second.query(DELETE_SQL, [randomUUID(), c.worlds.twoDeletes.worldId, c.worlds.twoDeletes.materialId, randomUUID()]));
+      const [label, winner] = await Promise.race([a.then((r) => ['a', r]), b.then((r) => ['b', r])]);
+      assert.equal(winner.ok, true, `the unblocked owner deletion must commit, got ${winner.code}: ${winner.message}`);
+      await (label === 'a' ? first : second).query('COMMIT');
+      const loser = await (label === 'a' ? b : a);
+      await (label === 'a' ? second : first).query('COMMIT').catch(() => undefined);
+      assert.equal(loser.ok, false, 'exactly one owner deletion may commit: the second must be refused');
       assert.ok(['P0002', '23505', '40001'].includes(loser.code),
         `the loser is refused with a bounded class, got ${loser.code}: ${loser.message}`);
       const [{ n }] = (await q(`SELECT count(*)::int n FROM ${DELETED_EVENTS} WHERE material_id = $1`,
