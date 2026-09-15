@@ -145,10 +145,16 @@ export function removeHarnessMirror(mirror, {
   }
 
   let lastError;
+  // The real count of `rm` calls made, not the bound on how many were allowed. A non-transient
+  // error breaks out on the first attempt, and reporting `retries + 1` there would claim a dozen
+  // tries were made when there was exactly one — the count in both the return value and the
+  // warning must be what actually happened.
+  let attemptsMade = 0;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
+    attemptsMade = attempt + 1;
     try {
       rm(mirror);
-      return { removed: true, attempts: attempt + 1 };
+      return { removed: true, attempts: attemptsMade };
     } catch (error) {
       lastError = error;
       if (!TRANSIENT.has(error?.code)) break;
@@ -160,8 +166,9 @@ export function removeHarnessMirror(mirror, {
     }
   }
 
-  warn(`QANDEEL harness cleanup: could not remove ${resolve(mirror)} after ${retries + 1} attempts`
+  const plural = attemptsMade === 1 ? 'attempt' : 'attempts';
+  warn(`QANDEEL harness cleanup: could not remove ${resolve(mirror)} after ${attemptsMade} ${plural}`
     + ` (${lastError?.code ?? 'unknown'}: ${lastError?.message ?? lastError}).`
     + ' The test result above is unaffected; remove the directory manually.');
-  return { removed: false, attempts: retries + 1, error: lastError };
+  return { removed: false, attempts: attemptsMade, error: lastError };
 }

@@ -343,7 +343,7 @@ test('the canonical lock order is the target credential-state row, then the exac
   const episodes = executableFunction.indexOf('INSERT INTO public.shared_world_membership_episodes');
   assert.ok(credential > 0 && invitation > credential && world > invitation && episodes > world,
     'I-04A froze credential-state first, invitation rows second, and I-04B continues it exactly');
-  assert.match(executableFunction, /WHERE s\.user_id = u\s*\n\s*FOR UPDATE;/u, 'the credential row locked is the accepting humanâ€™s own row');
+  assert.match(executableFunction, /WHERE s\.user_id = u\s*\n\s*FOR UPDATE;/u, 'the credential row locked is the accepting human’s own row');
   assert.match(executableFunction, /WHERE i\.id = p_invitation_id\s*\n\s*FOR UPDATE;/u, 'and then the exact invitation row');
   assert.equal((executableFunction.match(/FOR UPDATE/gu) ?? []).length, 2, 'exactly two row locks');
   // Counted again over the stored source, comments and all, because a comment
@@ -799,7 +799,7 @@ test('the launch-gated wrapper and every later authorized lifecycle slice leave 
     ['a second clock read instead of the one canonical instant', () => patch(mirror, `database/migrations/${MIGRATION_NAME}`,
       (text) => text.replace('VALUES (p_world_id, p_invitation_id, birth_at);', 'VALUES (p_world_id, p_invitation_id, clock_timestamp());'),
       'clock_timestamp());')],
-    ['an edit to I-04Aâ€™s frozen migration 0081', () => patch(mirror, 'database/migrations/0081_shared_direct_invitation_runtime_v1.sql',
+    ['an edit to I-04A’s frozen migration 0081', () => patch(mirror, 'database/migrations/0081_shared_direct_invitation_runtime_v1.sql',
       (text) => `${text}\n-- probe\n`, '-- probe')],
   ];
   for (const [reason, mutate] of refusals) {

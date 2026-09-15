@@ -170,9 +170,14 @@ test('a lock that never clears is bounded, reported, and does not throw', () => 
 
   assert.equal(outcome.removed, false);
   assert.equal(remover.calls, 4, 'bounded: retries + the first attempt, and not one more');
+  // The reported count must be the real number of rm calls, not the retry ceiling restated —
+  // here they happen to coincide (every attempt was exhausted), so this also pins the exact
+  // bounded count the requirement asks for.
+  assert.equal(outcome.attempts, 4, 'the exact bounded attempt count is reported, not just the ceiling');
   assert.equal(warnings.length, 1, 'the failure is stated exactly once');
   assert.match(warnings[0], /QANDEEL harness cleanup/u);
   assert.match(warnings[0], /EBUSY/u, 'the warning names the error it gave up on');
+  assert.match(warnings[0], /after 4 attempts/u, 'the warning states the real attempt count, not the ceiling restated');
   assert.match(warnings[0], /test result above is unaffected/u, 'and says the test result is not what failed');
 });
 
@@ -181,13 +186,18 @@ test('a non-transient error is surfaced at once rather than retried', () => {
   const slept = [];
   const warnings = [];
   const outcome = removeHarnessMirror(join(tmpdir(), 'qandeel-inf02-enospc'),
-    { rm: remover.rm, sleep: (ms) => slept.push(ms), warn: (m) => warnings.push(m) });
+    { retries: 12, rm: remover.rm, sleep: (ms) => slept.push(ms), warn: (m) => warnings.push(m) });
 
   assert.equal(outcome.removed, false);
   assert.equal(remover.calls, 1, 'a real filesystem problem is not a lock to wait out');
+  // With retries: 12 the ceiling is 13 possible attempts; only one ever happened, and both the
+  // returned outcome and the warning text must say ONE, never the ceiling.
+  assert.equal(outcome.attempts, 1, 'exactly one rm call was made, so attempts must be 1, not the retry ceiling');
   assert.deepEqual(slept, [], 'and nothing is slept away');
   assert.equal(outcome.error?.code, 'ENOSPC', 'the original error is returned, not swallowed');
   assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /after 1 attempt\b/u, 'the warning must not claim 13 attempts when only 1 rm call occurred');
+  assert.doesNotMatch(warnings[0], /after 13 attempts/u, 'the retry ceiling is not the same thing as what actually happened');
 });
 
 test('a failing cleanup cannot replace the failure the test actually found', () => {
