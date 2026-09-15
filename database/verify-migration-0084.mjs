@@ -328,7 +328,7 @@ async function verifyCatalog() {
     'and exposes the composite binding an approval must reference');
   assert.match(defOf(approvalConstraints, 'shared_world_governance_approvals_pk'), /PRIMARY KEY \(id\)/u);
   assert.match(defOf(approvalConstraints, 'shared_world_governance_approvals_one_per_episode_key'), /UNIQUE \(proposal_id, membership_episode_id\)/u,
-    'one snapshot episode is worth exactly one effective approval, whatever id it arrives under');
+    'shared_world_governance_approvals_one_per_episode_key: one snapshot episode is worth exactly one effective approval, whatever id it arrives under');
   // Governance is never keyed on a human id, which survives a leave and a rejoin.
   for (const list of [memberConstraints, approvalConstraints]) {
     for (const constraint of list.filter((c) => c.type === 'u' || /PRIMARY KEY/u.test(c.def))) {
