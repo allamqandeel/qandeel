@@ -700,7 +700,12 @@ async function verifyExactAuthority(f) {
   await rejected(() => preparePackage(randomUUID(), w.worldId, f.grantee, [free, free]), INVALID_PARAMETER);
   await rejected(() => preparePackage(randomUUID(), w.worldId, f.grantee, [null]), INVALID_PARAMETER);
   await rejected(() => preparePackage(randomUUID(), w.worldId, f.grantee, [randomUUID()]), UNAVAILABLE, /NOT_AVAILABLE/u);
+  // A manifest that does not exist reaches the same bounded class as a human who is
+  // not a required approver - asked under a real session, because the approval
+  // primitive fails closed on an absent one before it looks at anything else.
+  await identity('postgres', f.firstAuthority);
   await rejected(() => approvePackage(randomUUID(), randomUUID()), UNAVAILABLE, /NOT_AVAILABLE/u);
+  await identity('postgres');
   await rejected(() => commitGrant(randomUUID(), randomUUID(), randomUUID(), randomUUID()), UNAVAILABLE, /NOT_AVAILABLE/u);
   await rejected(() => rows(RESOLVE_SQL, [randomUUID(), f.grantee]), UNAVAILABLE, /NOT_AVAILABLE/u);
   await rejected(() => rows(RESOLVE_SQL, [null, f.grantee]), INVALID_PARAMETER);
@@ -716,11 +721,13 @@ async function verifyAvailabilityAndStaleness(f) {
     { user: f.anchor, from: 0 },
     { user: f.grantee, from: 30 },
   ]);
-  const moved = await seedItem(w.worldId, { hours: 1, viewers: [f.anchor] });
+  const moved = await seedItem(w.worldId, { hours: 1, viewers: [f.anchor], approvers: [f.anchor] });
   const staleManifest = randomUUID();
   await preparePackage(staleManifest, w.worldId, f.grantee, [moved]);
   await setAvailability(moved, 'UNAVAILABLE');
-  await rejected(() => approvePackage(randomUUID(), staleManifest), STALE, /SHARED_WORLD_HISTORY_STALE/u);
+  // The required human tries to approve: the item staleness is found before the
+  // approver check, so even the right human cannot approve a moved package.
+  await rejected(() => approveAs(f.anchor, randomUUID(), staleManifest), STALE, /SHARED_WORLD_HISTORY_STALE/u);
   await rejected(() => commitGrant(randomUUID(), staleManifest, randomUUID(), randomUUID()), STALE,
     /SHARED_WORLD_HISTORY_STALE/u);
   // Even restoring AVAILABLE does not revive it: the revision moved, and the
@@ -776,7 +783,7 @@ async function verifyGranteeLifecycle(f) {
   await identity('postgres', f.mover);
   await leave(randomUUID(), born.worldId, randomUUID());
   await identity('postgres');
-  await rejected(() => approvePackage(randomUUID(), firstManifest), STALE, /SHARED_WORLD_HISTORY_STALE/u);
+  await rejected(() => approveAs(f.anchor, randomUUID(), firstManifest), STALE, /SHARED_WORLD_HISTORY_STALE/u);
   await rejected(() => commitGrant(randomUUID(), firstManifest, randomUUID(), randomUUID()), STALE,
     /SHARED_WORLD_HISTORY_STALE/u);
 

@@ -694,7 +694,7 @@ async function verifyClosure(f) {
   stage = 'C18 / C17: every ordinary mutation path refuses a READ_ONLY_CLOSED World';
   await identity('postgres', f.inviter);
   await rejected(() => leave(randomUUID(), world.worldId, randomUUID()), UNAVAILABLE,
-    /SHARED_WORLD_VOLUNTARY_LEAVE_NOT_AVAILABLE/u);
+    /SHARED_WORLD_STANDARD_LEAVE_NOT_AVAILABLE/u);
   await identity('postgres');
   await rejected(() => rows(ADD_PREPARE_SQL, [randomUUID(), randomUUID(), randomUUID(), world.worldId, f.outsider]),
     UNAVAILABLE);
