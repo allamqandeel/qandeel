@@ -69,6 +69,7 @@ jobs:
       # devDependency) and re-runs every contract above against the mutated tree — then proves the
       # mutations that must still be refused really are.
       - {name: Verify repository forward-safety gate (no static contract is a mutable-global ceiling), run: npm run test:forward-safety-contract}
+      - {name: Verify harness temp-mirror cleanup (QANDEEL_TMP override + child cwd outside the mirror + bounded retry), run: npm run test:qan-inf-02-windows-temp-harness-cleanup-contract}
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}

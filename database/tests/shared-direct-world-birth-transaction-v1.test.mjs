@@ -45,10 +45,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHarnessMirror, removeHarnessMirror } from '../../tests/harness-temp-dir.mjs';
 
 const rootPath = fileURLToPath(new URL('../../', import.meta.url));
 const SELF = 'shared-direct-world-birth-transaction-v1.test.mjs';
@@ -627,7 +627,7 @@ test('the contract is not vacuous: every deliberate weakening of migration 0082 
     }
     assert.ok(runInMirror(mirror).ok, 'every weakening was reverted');
   } finally {
-    rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+    removeHarnessMirror(mirror);
   }
 });
 
@@ -647,11 +647,12 @@ test('the contract is not vacuous: every deliberate weakening of migration 0082 
  * mirrored because the verifier-census sweep reads every Connected Worlds
  * verifier, not just this slice's.
  */
-const MIRRORED = ['database', 'apps/api/src/connected-worlds/kernel', '.github/workflows/api-ci.yml', 'package.json'];
+const MIRRORED = ['database', 'apps/api/src/connected-worlds/kernel', '.github/workflows/api-ci.yml', 'package.json',
+  'tests/harness-temp-dir.mjs'];
 const SKIP = /(?:^|[\\/])(?:node_modules|\.git|\.expo|\.turbo|coverage)(?:[\\/]|$)/u;
 
 function buildMirror() {
-  const mirror = mkdtempSync(join(tmpdir(), 'qandeel-i04b-forward-'));
+  const mirror = createHarnessMirror('qandeel-i04b-forward-');
   for (const entry of MIRRORED) {
     const from = join(rootPath, entry);
     if (!existsSync(from)) continue;
@@ -712,8 +713,10 @@ const SCENARIO_PATHS = [LAUNCH_MIGRATION, LATER_MIGRATION, FUTURE_VERIFIER, FUTU
   'database/migrations/0081_shared_direct_invitation_runtime_v1.sql', 'database/README.md'];
 
 test('the launch-gated wrapper and every later authorized lifecycle slice leave this contract passing, and a real regression still breaks it',
-  { skip: process.env[PROBE_CHILD] === '1' ? 'inner probe run' : false }, () => {
+  { skip: process.env[PROBE_CHILD] === '1' ? 'inner probe run' : false }, (t) => {
   const mirror = buildMirror();
+  // Registered the moment the mirror exists, so no path out of this test can leave the tree behind.
+  t.after(() => removeHarnessMirror(mirror));
   try {
     assert.ok(runInMirror(mirror).ok, 'the untouched mirror must reproduce this contract exactly');
 
@@ -809,7 +812,6 @@ test('the launch-gated wrapper and every later authorized lifecycle slice leave 
   }
 
   assert.ok(runInMirror(mirror).ok, 'every mutation was reverted');
-  rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
 });
 
 test('no Connected Worlds verifier censuses the function catalog for names a later authorized slice will legitimately use', () => {

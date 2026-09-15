@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { copyFileSync, cpSync, existsSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { createHarnessMirror, removeHarnessMirror } from './harness-temp-dir.mjs';
 
 // R2-02 — the forward-safety gate: this repository's static contracts must not be ceilings.
 //
@@ -42,7 +42,7 @@ const MIRRORED = ['.github', 'apps', 'database', 'docs', 'infra', 'packages', 's
   'package.json', 'package-lock.json', 'tsconfig.base.json', 'README.md', 'AGENTS.md', '.env.example', '.gitignore'];
 const SKIP = /(?:^|[\\/])(?:node_modules|\.git|\.expo|\.turbo|coverage)(?:[\\/]|$)/u;
 
-const mirrorPath = mkdtempSync(join(tmpdir(), 'qandeel-forward-safety-'));
+const mirrorPath = createHarnessMirror('qandeel-forward-safety-');
 for (const entry of MIRRORED) {
   const from = join(rootPath, entry);
   if (!existsSync(from)) continue;
@@ -62,11 +62,9 @@ for (const modules of ['node_modules', join('apps', 'mobile', 'node_modules'), j
   }
 }
 process.on('exit', () => {
-  try {
-    rmSync(mirrorPath, { recursive: true, force: true, maxRetries: 3 });
-  } catch {
-    // A temporary directory that outlives the process is not a test failure.
-  }
+  // Bounded, synchronous, and never throws: an exit handler has no chance to await, and a mirror
+  // that outlives the process must not be able to change this file's reported result.
+  removeHarnessMirror(mirrorPath);
 });
 
 /**

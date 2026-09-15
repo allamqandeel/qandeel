@@ -39,10 +39,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHarnessMirror, removeHarnessMirror } from '../../tests/harness-temp-dir.mjs';
 
 const rootPath = fileURLToPath(new URL('../../', import.meta.url));
 const SELF = 'shared-world-standard-voluntary-leave-v1.test.mjs';
@@ -719,7 +719,7 @@ test('the contract is not vacuous: every deliberate weakening of migration 0083 
     }
     assert.ok(runInMirror(mirror).ok, 'every weakening was reverted');
   } finally {
-    rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+    removeHarnessMirror(mirror);
   }
 });
 
@@ -728,11 +728,12 @@ test('the contract is not vacuous: every deliberate weakening of migration 0083 
 // ---------------------------------------------------------------------------------------------
 
 /** Only the paths this contract actually reads. */
-const MIRRORED = ['database', 'apps/api/src/connected-worlds', '.github/workflows/api-ci.yml', 'package.json'];
+const MIRRORED = ['database', 'apps/api/src/connected-worlds', '.github/workflows/api-ci.yml', 'package.json',
+  'tests/harness-temp-dir.mjs'];
 const SKIP = /(?:^|[\\/])(?:node_modules|\.git|\.expo|\.turbo|coverage)(?:[\\/]|$)/u;
 
 function buildMirror() {
-  const mirror = mkdtempSync(join(tmpdir(), 'qandeel-i04c-forward-'));
+  const mirror = createHarnessMirror('qandeel-i04c-forward-');
   for (const entry of MIRRORED) {
     const from = join(rootPath, entry);
     if (!existsSync(from)) continue;
@@ -771,8 +772,10 @@ const patch = (mirror, relative, from, to) => {
 };
 
 test('the launch-gated wrapper and every later authorized lifecycle slice leave this contract passing, and a real regression still breaks it',
-  { skip: process.env[PROBE_CHILD] === '1' ? 'probe child' : false }, () => {
+  { skip: process.env[PROBE_CHILD] === '1' ? 'probe child' : false }, (t) => {
     const mirror = buildMirror();
+    // Registered the moment the mirror exists, so no path out of this test can leave the tree behind.
+    t.after(() => removeHarnessMirror(mirror));
     try {
       // The repository, several authorized steps into its future.
       write(mirror, 'database/migrations/0084_shared_world_member_removal_v1.sql',
@@ -839,12 +842,17 @@ test('the launch-gated wrapper and every later authorized lifecycle slice leave 
           plant(mirror);
           assert.equal(runInMirror(mirror).ok, false, `a repository where ${reason} must still be refused`);
         } finally {
-          rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+          // The wipe-and-restore has to actually happen: a mirror that kept a planted regression
+          // would make every scenario after this one prove the wrong thing. This is the one place
+          // where a cleanup failure must fail, so it is asserted rather than only warned about.
+          const wiped = removeHarnessMirror(mirror);
+          assert.ok(wiped.removed,
+            `the mirror must be wiped before the snapshot is restored: ${wiped.error?.message ?? wiped.refused ?? ''}`);
           cpSync(snapshot, mirror, { recursive: true });
-          rmSync(snapshot, { recursive: true, force: true, maxRetries: 3 });
+          removeHarnessMirror(snapshot);
         }
       }
     } finally {
-      rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+      removeHarnessMirror(mirror);
     }
   });
