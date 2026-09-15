@@ -175,8 +175,11 @@ async function verifyCatalog() {
       `SELECT (SELECT string_agg(a.attname, ',' ORDER BY x.ord)
                  FROM unnest(c.conkey) WITH ORDINALITY x(att, ord)
                  JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = x.att) local,
-              c.confrelid::regclass::text parent, c.confdeltype
-         FROM pg_constraint c WHERE c.conrelid = $1::regclass AND c.conname = $2 AND c.contype = 'f'`, [table, name]);
+              parent_ns.nspname || '.' || parent_rel.relname AS parent, c.confdeltype
+         FROM pg_constraint c
+         JOIN pg_class parent_rel ON parent_rel.oid = c.confrelid
+         JOIN pg_namespace parent_ns ON parent_ns.oid = parent_rel.relnamespace
+        WHERE c.conrelid = $1::regclass AND c.conname = $2 AND c.contype = 'f'`, [table, name]);
     assert.ok(fk, `${table} still carries foreign key ${name}`);
     assert.equal(fk.local, local, `${name} binds exactly ${local}`);
     assert.equal(fk.parent, parent, `${name} points at ${parent}`);
@@ -195,7 +198,10 @@ async function verifyCatalog() {
   // A public-facing relation reaches nothing outside its own package.
   for (const table of PUBLIC_FACING) {
     const parents = (await rows(
-      `SELECT DISTINCT c.confrelid::regclass::text parent FROM pg_constraint c
+      `SELECT DISTINCT parent_ns.nspname || '.' || parent_rel.relname AS parent
+         FROM pg_constraint c
+         JOIN pg_class parent_rel ON parent_rel.oid = c.confrelid
+         JOIN pg_namespace parent_ns ON parent_ns.oid = parent_rel.relnamespace
         WHERE c.conrelid = $1::regclass AND c.contype = 'f'`, [table])).map((r) => r.parent);
     for (const parent of parents) {
       assert.ok([MANIFESTS, ITEMS].includes(parent), `${table} references ${parent}, which is outside its own package`);
