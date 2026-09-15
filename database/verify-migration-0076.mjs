@@ -251,11 +251,32 @@ async function verifySchema() {
   ], 'audience ceiling');
 
   stage = 'schema: no trigger';
-  // No trigger on the grant tables, and none on the membership-episode table
-  // either: membership expansion has no database path into the audience ceiling.
+  // No trigger on the grant tables: a trigger on the grant or audience rows IS an
+  // automatic authority / ceiling mutation path (CW2-02 B13 / B14), so that one
+  // stays a live absence over exactly the relations 0076 owns.
+  //
+  // FORWARD SAFETY (I-04E). The membership-episode table is different: it is an
+  // evolvable predecessor table this verifier does not own, and a later reviewed
+  // lifecycle slice may legitimately put a trigger on it - I-04E's governed
+  // membership lifecycle installs two. Because this verifier runs against a FULLY
+  // migrated database, requiring that table to carry no trigger at all was a
+  // ceiling on the roadmap rather than a fact about 0076. The claim 0076 actually
+  // makes survives, proven more precisely than a census could: membership
+  // expansion still has no database path into the audience ceiling, because no
+  // trigger on the membership table reaches a Standing Context relation at all.
   for (const table of [...TABLES, EPISODES]) {
     const [{ n }] = await rows('SELECT count(*)::int n FROM pg_trigger WHERE tgrelid=$1::regclass AND NOT tgisinternal', [table]);
-    assert.equal(n, 0, `${table} has no trigger`);
+    if (table === EPISODES) {
+      const reachingCeiling = await rows(
+        `SELECT t.tgname FROM pg_trigger t
+          WHERE t.tgrelid = $1::regclass AND NOT t.tgisinternal
+            AND pg_get_functiondef(t.tgfoid) ~* 'shared_world_standing_context'
+          ORDER BY t.tgname`, [table]);
+      assert.deepEqual(reachingCeiling.map((row) => row.tgname), [],
+        `${table} carries ${n} reviewed trigger(s) and none of them reaches Standing Context state`);
+    } else {
+      assert.equal(n, 0, `${table} has no trigger`);
+    }
   }
 }
 

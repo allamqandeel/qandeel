@@ -714,11 +714,28 @@ async function verifyGrants(f) {
   assert.deepEqual(afterConsent, beforeConsent, 'leaving appends no revoke consent event');
   // And there is no mechanism by which it could happen implicitly, in either
   // direction, anywhere in the schema.
+  // FORWARD SAFETY (I-04E). The three Standing Context relations keep their live
+  // absence: a trigger on the consent events would be a history-rewrite path and a
+  // trigger on the grant or audience rows an automatic ceiling-mutation path, so
+  // there the census IS the invariant. The membership-episode table is different -
+  // it is an evolvable predecessor table, this verifier runs against a FULLY
+  // migrated database, and I-04E's reviewed governed membership lifecycle
+  // legitimately installs two topology triggers on it. So the claim is made where
+  // it is actually true, and more precisely than a census could make it: nothing
+  // on any of these four relations reaches Standing Context state.
   const [{ n: couplings }] = await rows(
     `SELECT count(*)::int n FROM pg_trigger t
       WHERE NOT t.tgisinternal AND t.tgrelid = ANY($1::regclass[])`,
-    [[EPISODES, GRANTS, CEILING, CONSENT_EVENTS]]);
+    [[GRANTS, CEILING, CONSENT_EVENTS]]);
   assert.equal(couplings, 0, 'no trigger couples membership to Standing Context state');
+  const reachingGrantState = await rows(
+    `SELECT t.tgname FROM pg_trigger t
+      WHERE NOT t.tgisinternal AND t.tgrelid = ANY($1::regclass[])
+        AND pg_get_functiondef(t.tgfoid) ~* 'shared_world_standing_context'
+      ORDER BY t.tgname`,
+    [[EPISODES, GRANTS, CEILING, CONSENT_EVENTS]]);
+  assert.deepEqual(reachingGrantState.map((row) => row.tgname), [],
+    'and no trigger on the canonical membership table reaches Standing Context state either');
 
   stage = 'grants: the departed owner may still explicitly revoke - withdrawal survives leaving';
   await identity('authenticated', f.secondTarget);

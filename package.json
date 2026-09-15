@@ -133,6 +133,8 @@
     "verify:shared-direct-world-birth:integration": "node --env-file-if-exists=.env database/verify-migration-0082.mjs",
     "verify:shared-world-standard-voluntary-leave:integration": "node --env-file-if-exists=.env database/verify-migration-0083.mjs",
     "verify:shared-world-governance-approval-foundation:integration": "node --env-file-if-exists=.env database/verify-migration-0084.mjs",
+    "verify:shared-world-governed-membership-lifecycle:integration": "node --env-file-if-exists=.env database/verify-migration-0085.mjs",
+    "verify:shared-world-governed-settings:integration": "node --env-file-if-exists=.env database/verify-migration-0086.mjs",
     "test:shared-delivery-authority-revalidation-contract": "node --test tests/shared-delivery-authority-revalidation-contract.test.mjs",
     "test:connected-worlds-i03-authority-closure-contract": "node --test tests/connected-worlds-i03-authority-closure-contract.test.mjs",
     "test:integrated-intelligence-runtime-phase-closure-contract": "node --test tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs",
