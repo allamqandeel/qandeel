@@ -1081,3 +1081,105 @@ forward safety against later additive settings schema, with rolled-back and clea
 ```sh
 npm run verify:shared-world-governed-settings:integration
 ```
+
+## I-04F - Selective Historical Access (migration 0087)
+
+`0087_shared_world_selective_history_access_v1.sql` implements the first of the two frozen Shared
+laws I-04E left unimplemented: **membership is not historical access** (CW2-01 A9 / A25, CW2-02 B21 /
+B22, CW2-03 sections 19-22 and 29). A new member defaults to `FROM_JOIN_FORWARD`; past access is a
+separate explicit authority object whose approval requirement derives from the EXACT included
+material rather than from World membership.
+
+Because the Shared material store belongs to I-04G, this slice creates a minimal **history-visibility
+projection** rather than content: `shared_world_history_items` is an opaque item identity carrying
+only which World, when it occurred, how its human material authority is expressed
+(`EXACT_HUMAN_APPROVER_SET` or `NO_HUMAN_APPROVAL_REQUIRED`) and whether its source is still
+`AVAILABLE`, `DELETED_BY_OWNER` or `UNAVAILABLE`, at which `availability_revision`. There is no
+message text, transcript, audio, analysis body, JSON payload, provenance payload or content blob
+anywhere in the migration, and no column one could hide in. I-04G will bind real material to this
+item identity atomically.
+
+`shared_world_history_item_baseline_viewers` is the item's exact ORIGINAL human audience, so the
+ordinary historical-membership basis is the conjunction *membership interval AND baseline viewer
+membership* - a membership interval alone never means "could see everything that existed".
+`shared_world_history_item_required_approvers` is the exact set of humans whose material authority
+must be exercised to expose that item as old history.
+
+A `shared_world_history_package_manifest_versions` row is immutable, holds a normalized exact item set
+with each captured availability revision, and binds the grantee's EXACT open membership episode, so a
+leave-then-rejoin needs a fresh manifest and can never revive the old one. Its required approver set
+is DERIVED as the exact union over the included items and is never caller-supplied; an approval is
+bound by composite foreign key into that derived set, so an approval by a human the manifest does not
+require is structurally impossible. A committed `HISTORY_ACCESS_GRANT` carries no mutable status
+column at all, because grant withdrawal after viewing is explicitly deferred frozen policy.
+
+Material authority survives membership loss: the approval primitive requires the exact derived
+required set and NOT current World membership, and approving writes no membership episode, so it
+restores no browsing. One narrow server-only resolver,
+`resolve_shared_world_history_visibility_v1`, answers "what history may this exact human see in this
+exact Shared World" as item identity and time only - never content and never a placeholder for hidden
+history. It is the ONLY application/server-role historical visibility entry point in I-04F, and
+`service_role` is its only executor. Availability dominates every mode, so no grant or entitlement can
+reconstruct owner-deleted source.
+
+**`occurred_at` means one thing, and it is frozen.** It is the canonical Shared-World
+establishment/commit instant of the history item - the moment it became Shared truth in this exact
+World - and that is the only reading under which comparing it against a membership episode is
+correct. It is NOT an underlying recalled event time, source-event semantic timestamp or provenance
+event time; those belong to I-04G material/provenance and must never be written here. The rule is
+deployed as a `COMMENT ON COLUMN`, not left in a source comment, so the slice that later writes this
+column meets it in the catalog. The distinction is load-bearing: if A says at `t2` "last week at `t1`
+I changed jobs", the history item is established at `t2` and a member B really did receive it -
+storing `t1` here would hide from B a statement B actually received.
+
+**Owner deletion is terminal.** Once `availability_state` is `DELETED_BY_OWNER`, both availability
+fields this migration owns are frozen exactly as they are: no higher revision can resurrect the item
+as `AVAILABLE`, and none can relabel it `UNAVAILABLE` either, because the historical truth that its
+*owner* deleted it is part of what must survive. The rule is scoped to those two owned fields and is
+not a table freeze - a later reviewed slice may still append columns and write them. Whether
+`UNAVAILABLE` is permanently terminal is deliberately not decided: frozen canon does not require it,
+and an item that is merely unavailable may legitimately become available again.
+
+```sh
+npm run verify:shared-world-selective-history-access:integration
+```
+
+## I-04F - Standard World Closure (migration 0088)
+
+`0088_shared_world_standard_closure_v1.sql` implements the second frozen law: an `ACTIVE / STANDARD`
+Shared World ends by unanimous `END_WORLD` (CW2-03 section 31) and becomes
+`READ_ONLY_CLOSED / STANDARD`, with the CW2-03 Final Freeze Review tightening F1 that comes with it.
+
+Archival closure is not deletion: the World id, its phase, its whole history, its settings and its
+governance record all remain. What changes is the lifecycle, the closure instant, and the fact that no
+membership episode stays open. At the same instant every open episode closes in place with
+`end_reason = WORLD_CLOSED`, and every exact current human receives one bounded
+`CLOSED_WORLD_VIEW_ENTITLEMENT` plus its exact frozen item snapshot - exactly what that human could
+resolve immediately BEFORE closure, captured through the one frozen I-04F visibility resolver while
+the World is still ACTIVE.
+
+The snapshot is exact rather than a rule evaluated later, so future material, future grants and future
+episode objects cannot widen a closed entitlement - while later owner deletion still narrows it
+dynamically, because the closed reader re-checks current availability on every read. An entitlement may
+legitimately hold zero item rows and still truthfully represent a historical viewer. A human who had
+already left before closure is never silently restored to browsing.
+
+The entitlement is not membership: it carries no open, current or active state, and it needs no rule to
+block ordinary activity because every ordinary Shared mutation primitive in 0083, 0085, 0086 and 0087
+already requires `ACTIVE / STANDARD`. No blanket freeze is added, so a later reviewed
+`PRIVACY_MATERIAL_MUTATION` such as owner deletion stays possible on a closed World without reopening
+lifecycle. Pending member invitations terminalize through the reviewed I-04E topology trigger rather
+than a second mechanism. Introduction closure is deliberately not implemented here.
+
+`resolve_shared_world_closed_history_visibility_v1` is not a second resolver and not a second read
+boundary: it is the implementation of the `READ_ONLY_CLOSED / STANDARD` branch of 0087's single entry
+point, living here because the entitlement snapshot is what **this** migration owns. It is an INTERNAL
+postgres-owned helper - migration 0088 grants nothing to anybody, so no application role executes it,
+`service_role` included; its only caller is 0087's postgres-owned `SECURITY DEFINER` resolver, which
+reaches it as its own owner. I-04F therefore keeps exactly ONE application/server-role historical
+visibility entry point, `resolve_shared_world_history_visibility_v1`. The helper also refuses any World
+that is not an archived Standard World, and consults no membership at all.
+
+```sh
+npm run verify:shared-world-standard-closure:integration
+```
