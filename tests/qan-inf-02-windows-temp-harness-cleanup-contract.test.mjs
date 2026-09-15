@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { createHarnessMirror, harnessChildCwd, harnessTmpRoot, removeHarnessMirror } from './harness-temp-dir.mjs';
+import { createHarnessMirror, harnessTmpRoot, removeHarnessMirror } from './harness-temp-dir.mjs';
 
 // QAN-INF-02 — the forward-safety harnesses must not strand their mirrors on Windows.
 //
@@ -14,19 +14,30 @@ import { createHarnessMirror, harnessChildCwd, harnessTmpRoot, removeHarnessMirr
 // A harness mirrors part of the repository into a temporary directory and runs a real contract
 // against the copy in a spawned child. Every one of them spawned that child with the MIRROR ROOT as
 // its `cwd`, then removed that same directory in `finally`. On Windows the working directory of a
-// process stays open briefly after it exits, so the recursive remove hit `EBUSY`/`EPERM` on the one
-// node it could not skip. `rmSync` threw out of the `finally`, the remaining teardown never ran, and
-// the tree stayed on disk. A single I-04C run left 817 mirrors behind in one minute.
+// process stays open briefly after it exits, so the recursive remove sometimes hit `EBUSY`/`EPERM`
+// on the one node it could not skip. `rmSync` threw out of the `finally`, the remaining teardown
+// never ran, and the tree stayed on disk. A single I-04C run left 817 mirrors behind in one minute.
+//
+// An earlier version of this fix also moved the spawned child OUT of the mirror, reasoning that
+// nothing should hold a handle on the directory about to be deleted. That broke a real contract
+// (`tests/him-foundation-integration-regression-gate.test.mjs`) that reads its own subject files with
+// bare relative paths, which only resolve when `cwd` is the mirror root — caught by CI, not by any
+// test here, because nothing here was asserting that OTHER contracts keep working when run from a
+// harness's mirror. The child's `cwd` is back to being the mirror root, unconditionally, and this
+// file now proves that alone — with no cwd change at all — is enough to stop the leak.
 //
 // ## What this contract holds
 //
-// The three properties that make that impossible, and it holds them over every harness that builds
-// a mirror — discovered by scanning, not from a list of today's filenames, so a harness added
-// tomorrow cannot quietly reintroduce the shape.
+// The properties that make the leak impossible without changing where a spawned child runs, held
+// over every harness that builds a mirror — discovered by scanning, not from a list of today's
+// filenames, so a harness added tomorrow cannot quietly reintroduce the shape.
 //
 // The retry and failure paths are driven through injected doubles rather than by hoping a real
 // Windows lock occurs while the suite happens to be running. A test that can only fail when the
-// timing is unlucky proves nothing on the runs where the timing is kind.
+// timing is unlucky proves nothing on the runs where the timing is kind. One test additionally
+// spawns real children with the mirror as their own `cwd`, repeatedly, on the live filesystem — the
+// closest a test can get to the original failure mode — as a direct check that this is not merely
+// asserted away.
 
 const rootPath = fileURLToPath(new URL('../', import.meta.url));
 const SELF = 'qan-inf-02-windows-temp-harness-cleanup-contract.test.mjs';
@@ -92,38 +103,52 @@ test('no tracked harness hardcodes a drive or a machine-specific temp path', () 
 });
 
 // ---------------------------------------------------------------------------------------------
-// 3 — the child never stands in the directory that is about to be removed.
+// 3 — the child stands IN the mirror (repo-root semantics), and removal still never leaks.
 // ---------------------------------------------------------------------------------------------
 
-test('the child working directory is outside the mirror, and no harness spawns with the mirror as cwd', () => {
-  const mirror = createHarnessMirror('qandeel-inf02-cwd-');
-  try {
-    const cwd = harnessChildCwd(mirror);
-    assert.notEqual(resolve(cwd), resolve(mirror), 'the child must not stand in the mirror root');
-    assert.ok(!resolve(cwd).startsWith(resolve(mirror)), 'the child must not stand anywhere inside the mirror');
-    assert.equal(resolve(cwd), resolve(dirname(mirror)), 'and it is the containing directory, not something broader');
-    assert.ok(existsSync(cwd), 'the chosen working directory exists');
-    assert.notEqual(resolve(cwd), resolve(rootPath), 'it is not the repository, so a cwd-relative read would fail loudly');
-  } finally {
-    removeHarnessMirror(mirror);
-  }
-
+test('every harness that spawns a child does so with the mirror itself as cwd, matching a real repository checkout', () => {
+  // Deliberately the opposite assertion from an earlier version of this file: cwd-relative reads
+  // (`readFileSync('apps/api/src/...')`, as tests/him-foundation-integration-regression-gate.test.mjs
+  // does) must keep resolving exactly as they would in the real repository, so the mirror's own cwd
+  // has to be indistinguishable from a checkout root. Scoped to harnesses that spawn a child at all -
+  // t10-motion-contract.test.mjs builds a mirror only to copy a fixture into it and never spawns one.
   const offenders = harnessSources()
-    .filter(({ text }) => /cwd:\s*(mirror|mirrorPath)\s*[,}]/u.test(text))
+    .filter(({ text }) => /spawnSync\(/u.test(text))
+    .filter(({ text }) => !/cwd:\s*(mirror|mirrorPath)\s*[,}]/u.test(text))
     .map(({ name }) => name);
-  assert.deepEqual(offenders, [], 'a harness that spawns with its mirror as cwd reopens the Windows leak this contract closes');
+  assert.deepEqual(offenders, [],
+    'every spawned child must use the mirror itself as cwd - moving it elsewhere silently breaks any contract that reads a cwd-relative path');
 });
 
-test('a mirror is removable immediately after a child that ran against it has exited', () => {
+test('a mirror is removable immediately after a child that ran WITH THE MIRROR AS ITS OWN cwd has exited', () => {
   const mirror = createHarnessMirror('qandeel-inf02-spawned-');
   writeFileSync(join(mirror, 'probe.mjs'), 'process.exitCode = 0;\n');
-  const result = spawnSync(process.execPath, [join(mirror, 'probe.mjs')], { cwd: harnessChildCwd(mirror), encoding: 'utf8' });
+  // The exact shape that used to strand mirrors on Windows: the child's cwd IS the directory this
+  // test is about to remove.
+  const result = spawnSync(process.execPath, ['probe.mjs'], { cwd: mirror, encoding: 'utf8' });
   assert.equal(result.error, undefined, 'the probe child could not be started');
   assert.equal(result.status, 0, 'the probe child must exit cleanly');
 
   const outcome = removeHarnessMirror(mirror);
-  assert.ok(outcome.removed, `the mirror must be removable right after its child exits: ${outcome.error?.message ?? ''}`);
+  assert.ok(outcome.removed, `the mirror must be removable right after a child that used it as cwd exits: ${outcome.error?.message ?? ''}`);
   assert.equal(existsSync(mirror), false, 'and it is gone');
+});
+
+test('repeated real cycles of "spawn a child with the mirror as its cwd, then remove it" leave nothing behind', () => {
+  // The closest a test can get to the original failure mode without mocking anything: real mkdtemp,
+  // a real spawned child whose cwd is the exact directory about to be removed, real rmSync, on
+  // whatever filesystem this suite happens to run on. One I-04C run leaked on effectively every
+  // cycle; this runs the same shape twenty times and requires every one to succeed.
+  const ITERATIONS = 20;
+  let leaked = 0;
+  for (let i = 0; i < ITERATIONS; i += 1) {
+    const mirror = createHarnessMirror('qandeel-inf02-cycle-real-');
+    writeFileSync(join(mirror, 'probe.mjs'), 'process.exitCode = 0;\n');
+    const result = spawnSync(process.execPath, ['probe.mjs'], { cwd: mirror, encoding: 'utf8' });
+    assert.equal(result.status, 0, `iteration ${i}: probe child must exit cleanly`);
+    if (!removeHarnessMirror(mirror).removed) leaked += 1;
+  }
+  assert.equal(leaked, 0, `${leaked}/${ITERATIONS} cycles left a mirror behind with the child's cwd equal to the mirror root`);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -255,7 +280,7 @@ test('every harness that builds a mirror uses the shared lifecycle, and none bui
 
   const byHand = sources.filter(({ text }) => /mkdtempSync\(/u.test(text)).map(({ name }) => name);
   assert.deepEqual(byHand, [],
-    'a mirror built with mkdtempSync bypasses QANDEEL_TMP, the child-cwd rule and the bounded retry all at once');
+    'a mirror built with mkdtempSync bypasses QANDEEL_TMP and the bounded retry both at once');
 
   const unimported = sources.filter(({ text }) => !/from '(\.\.\/)*(\.\/)?(tests\/)?harness-temp-dir\.mjs'/u.test(text))
     .map(({ name }) => name);

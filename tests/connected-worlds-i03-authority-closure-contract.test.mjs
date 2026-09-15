@@ -58,7 +58,7 @@ import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHarnessMirror, harnessChildCwd, removeHarnessMirror } from './harness-temp-dir.mjs';
+import { createHarnessMirror, removeHarnessMirror } from './harness-temp-dir.mjs';
 
 const rootPath = fileURLToPath(new URL('../', import.meta.url));
 const SELF = 'connected-worlds-i03-authority-closure-contract.test.mjs';
@@ -466,7 +466,7 @@ function runInMirror(mirror) {
   delete env.NODE_TEST_CONTEXT;
   // The child never stands in the mirror: that is the handle that used to block its removal.
   const result = spawnSync(process.execPath, ['--test', join(mirror, 'tests', SELF)],
-    { cwd: harnessChildCwd(mirror), encoding: 'utf8', env });
+    { cwd: mirror, encoding: 'utf8', env });
   assert.equal(result.error, undefined, `the mirrored contract could not be started: ${result.error?.message}`);
   assert.notEqual(result.status, null, 'the mirrored contract did not exit normally');
   return { ok: result.status === 0, output: `${result.stdout ?? ''}${result.stderr ?? ''}` };

@@ -4,7 +4,7 @@ import { copyFileSync, cpSync, existsSync, readFileSync, readdirSync, rmSync, sy
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { createHarnessMirror, harnessChildCwd, removeHarnessMirror } from './harness-temp-dir.mjs';
+import { createHarnessMirror, removeHarnessMirror } from './harness-temp-dir.mjs';
 
 // R2-02 — the forward-safety gate: this repository's static contracts must not be ceilings.
 //
@@ -61,15 +61,6 @@ for (const modules of ['node_modules', join('apps', 'mobile', 'node_modules'), j
     // the correct outcome: this gate never silently proves less than it claims.
   }
 }
-/**
- * The working directory every child below is spawned in.
- *
- * Deliberately NOT the mirror. A child whose cwd is the mirror root leaves Windows holding a handle
- * on the one directory the teardown must remove, which is exactly how this gate used to strand its
- * mirror on every run. See tests/harness-temp-dir.mjs.
- */
-const CHILD_CWD = harnessChildCwd(mirrorPath);
-
 process.on('exit', () => {
   // Bounded, synchronous, and never throws: an exit handler has no chance to await, and a mirror
   // that outlives the process must not be able to change this file's reported result.
@@ -117,7 +108,7 @@ delete CHILD_ENV.NODE_TEST_CONTEXT;
 
 function runContract(name) {
   const result = spawnSync(process.execPath, ['--test', join(mirrorPath, 'tests', `${name}.test.mjs`)],
-    { cwd: CHILD_CWD, encoding: 'utf8', env: CHILD_ENV });
+    { cwd: mirrorPath, encoding: 'utf8', env: CHILD_ENV });
   assert.equal(result.error, undefined, `${name} could not be started: ${result.error?.message}`);
   assert.notEqual(result.status, null, `${name} did not exit normally`);
   return { ok: result.status === 0, output: `${result.stdout ?? ''}${result.stderr ?? ''}` };
@@ -133,7 +124,7 @@ function runContract(name) {
 function assertAllSurvive(reason, names = FAST_CONTRACTS) {
   const files = names.map((name) => join(mirrorPath, 'tests', `${name}.test.mjs`));
   const result = spawnSync(process.execPath, ['--test', '--test-reporter=tap', ...files],
-    { cwd: CHILD_CWD, encoding: 'utf8', env: CHILD_ENV, maxBuffer: 128 * 1024 * 1024 });
+    { cwd: mirrorPath, encoding: 'utf8', env: CHILD_ENV, maxBuffer: 128 * 1024 * 1024 });
   assert.equal(result.error, undefined, `the contract set could not be started: ${result.error?.message}`);
   if (result.status === 0) return;
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;

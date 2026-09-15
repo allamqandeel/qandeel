@@ -12,22 +12,32 @@ import { dirname, join, resolve, sep } from 'node:path';
 //
 // Each harness spawned `node --test` with the MIRROR ROOT ITSELF as the child's `cwd`, then removed
 // that same directory in `finally`. On Windows a directory that was a process's working directory
-// stays open for a short while after the process exits, so the recursive remove hits `EBUSY` or
-// `EPERM` on the one node it cannot skip — the root. `rmSync` threw out of the `finally`, the rest
-// of the teardown never ran, and the tree was stranded. One I-04C run left 817 mirrors behind in a
-// single minute; 828 of them held 5.6 GB across 243,327 files on the system drive.
+// stays open for a short while after the process exits, so the recursive remove sometimes hit
+// `EBUSY` or `EPERM` on the one node it cannot skip — the root. `rmSync` threw out of the `finally`,
+// the rest of the teardown never ran, and the tree was stranded. One I-04C run left 817 mirrors
+// behind in a single minute; 828 of them held 5.6 GB across 243,327 files on the system drive.
 //
-// Three things fix it, and this module owns all three so no harness has to remember them:
+// The obvious-looking fix — spawn the child somewhere OTHER than the mirror, so nothing is holding a
+// handle on the directory being removed — turns out to be wrong. At least one contract
+// (`tests/him-foundation-integration-regression-gate.test.mjs`) reads its subject files with bare
+// relative paths (`readFileSync('apps/api/src/...')`), which resolve against the CHILD's `cwd` and
+// only exist relative to the mirror root. Moving the child elsewhere makes that contract — and any
+// other contract with the same, entirely reasonable, "I'm running from the repository root" pattern
+// — fail to find its own files. That is a correctness regression, not a fix.
+//
+// So the child's `cwd` stays exactly what it always was: the mirror root, indistinguishable from the
+// real repository for anything that reads a cwd-relative path. Two things fix the leak instead:
 //
 //   1. the mirror root comes from `QANDEEL_TMP` when it is set, so a machine that wants its mirrors
 //      on another volume says so through the environment — nothing here knows about any drive;
-//   2. the child runs OUTSIDE the tree that is about to be removed, so the handle Windows keeps is
-//      on a directory nobody deletes;
-//   3. the removal retries a bounded number of times against the transient lock errors, and when it
-//      finally gives up it says so on stderr instead of throwing over whatever the test found.
+//   2. the removal retries a bounded number of times against the transient lock errors — a released
+//      Windows handle comes back within tens of milliseconds, well inside the retry window — and
+//      when it finally gives up it says so on stderr instead of throwing over whatever the test
+//      found. This alone is enough: it was verified directly, spawning a child with the mirror as
+//      its own `cwd` and nothing else, that the retry loop clears the lock with zero residue.
 //
-// Nothing here changes what any contract proves. It changes only where the mirror lives and how it
-// is taken down.
+// Nothing here changes what any contract proves, or where a spawned child runs. It changes only
+// where the mirror lives and how it is taken down.
 
 /** Every mirror this module will create or remove is named for the project. */
 const MIRROR_PREFIX = 'qandeel-';
@@ -77,27 +87,6 @@ export function createHarnessMirror(prefix) {
     throw new TypeError(`a harness mirror prefix must start with "${MIRROR_PREFIX}", got ${JSON.stringify(prefix)}`);
   }
   return mkdtempSync(join(harnessTmpRoot(), prefix));
-}
-
-/**
- * The working directory for a child spawned against `mirror`.
- *
- * It is the directory that CONTAINS the mirror, which is the narrowest choice that is still outside
- * the tree the parent is about to delete. Two properties matter and both are load-bearing:
- *
- *   it is never removed by a harness, so the handle Windows holds on a child's working directory
- *   cannot block the one remove that has to succeed;
- *
- *   it is not the repository, so a contract that ever started reading a cwd-relative path would fail
- *   loudly against an empty temp directory instead of quietly reading the real tree and reporting
- *   that the mutated mirror was fine.
- *
- * Nothing in these contracts resolves anything from `cwd` today — they derive their root from
- * `import.meta.url`, and Node resolves a child's imports from the test file's own directory — so
- * this changes where the child stands, not what it can see.
- */
-export function harnessChildCwd(mirror) {
-  return dirname(resolve(mirror));
 }
 
 /** A path is removable here only if it is a directory this module would have created. */
