@@ -982,7 +982,13 @@ async function verifyForwardSafety() {
     await q('ROLLBACK TO SAVEPOINT r4');
 
     await q('SAVEPOINT r5');
-    await q(`CREATE OR REPLACE FUNCTION ${RESOLVER}
+    // CREATE OR REPLACE cannot change a function's RESULT ROW TYPE - PostgreSQL
+    // answers 42P13 at the DDL - so replacing the resolver in place never installed
+    // the mutant and the assertion below was never evaluated. A DDL that fails is
+    // NOT an anti-vacuity proof: the mutant has to install and then be refused.
+    // Drop and recreate inside this savepoint instead, which the rollback undoes.
+    await q(`DROP FUNCTION ${RESOLVER}`);
+    await q(`CREATE FUNCTION public.resolve_public_experience_review_v1(p_experience_id uuid, p_user_id uuid)
              RETURNS TABLE(experience_id uuid, current_lifecycle text, experience_version_id uuid,
                            version_ordinal integer, manifest_version_id uuid, publisher_public_identity_ref uuid,
                            publisher_label_mode text, publisher_display_label text, publisher_user_id uuid,
@@ -990,7 +996,14 @@ async function verifyForwardSafety() {
                            public_body_form text, public_text_body text, required_approver_count integer,
                            satisfied_approval_count integer, approvals_complete boolean)
              LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path='' AS $fn$ BEGIN RETURN; END$fn$`);
-    await assert.rejects(verifyCatalog(), refuses,
+    // A freshly created function carries EXECUTE for PUBLIC by default. Left alone,
+    // the ACL assertion would fire first and this probe would "pass" while proving
+    // something else entirely, so the mutant is restored to the exact posture the
+    // real resolver has: every property legitimate, and ONE forbidden output column.
+    await q(`REVOKE ALL ON FUNCTION ${RESOLVER} FROM PUBLIC`);
+    await q(`GRANT EXECUTE ON FUNCTION ${RESOLVER} TO service_role`);
+    await assert.rejects(verifyCatalog(),
+      { name: 'AssertionError', message: /P05 the review resolver must not return publisher_user_id/u },
       'the review resolver disclosing the account behind a public identity is a regression');
     await q('ROLLBACK TO SAVEPOINT r5');
 

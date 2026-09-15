@@ -574,7 +574,7 @@ async function main() {
                  (id, user_id, session_id, source_turn_id, commit_batch_id, source_role, speaker_state,
                   source_modality, ordinal_within_turn, source_span_start, source_span_end, committed_text,
                   source_content_sha256, session_position)
-               VALUES ($1, $2, $3, $4, $5, 'USER', 'RESOLVED', 'TEXT', 0, 0, 27,
+               VALUES ($1, $2, $3, $4, $5, 'USER', 'RESOLVED', 'TEXT', 0, 0, 26,
                        'a committed human sentence', sha256('src'::bytea), 1)`,
       [f.unit, f.mohamed, f.session, f.turn, f.batch]);
       // A minimal Shared source, exactly as I-04F and I-04G shape it.

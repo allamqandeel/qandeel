@@ -386,7 +386,29 @@ async function verifyBehaviour(f) {
 
   // P06 stable Experience identity survives many immutable versions, and the
   // ordinal relation is deterministic.
+  //
+  // SUPPORT ROWS ONLY. CI runs this verifier against the FULLY migrated schema, and
+  // migration 0092 binds (package_manifest_version_id, experience_id) on the version
+  // relation to publication_package_manifest_versions (id, experience_id). A version
+  // row therefore cannot exist at all without a real manifest. These rows assert
+  // nothing about migration 0091 - they exist so 0091's own assertions below can be
+  // REACHED - and the verifier's outer transaction rolls them back. Nothing here
+  // fabricates an approval, a provenance row, a publication or a runtime command.
   const manifests = [randomUUID(), randomUUID(), randomUUID()];
+  // A fourth manifest, deliberately bound to no version, so the duplicate-ordinal
+  // probe below can carry a manifest that is both VALID and UNUSED. Its foreign key
+  // then holds and its uniqueness is not at issue, which leaves the duplicate
+  // (experience_id, version_ordinal) as the only thing wrong with that row.
+  const spareManifest = randomUUID();
+  for (const manifest of [...manifests, spareManifest]) {
+    await q(`INSERT INTO public.publication_package_manifest_versions
+               (id, experience_id, public_world_singleton, publisher_public_identity_ref, publisher_user_id,
+                intended_publication_action, target_audience_class, authority_readiness,
+                prepared_authority_snapshot_version, item_count, created_at)
+             VALUES ($1, $2, true, $3, $4, 'PUBLISH_TO_PUBLIC_WORLD', 'PUBLIC_WORLD_AUDIENCE',
+                     'PRIVACY_OWNERSHIP_AUTHORITY_ONLY', 1, 1, now())`,
+    [manifest, f.experience, f.mohamedRef, f.mohamed]);
+  }
   const versions = [randomUUID(), randomUUID(), randomUUID()];
   for (const [index, version] of versions.entries()) {
     await q(`INSERT INTO ${VERSIONS} (id, experience_id, package_manifest_version_id, version_ordinal, created_at)
@@ -397,7 +419,7 @@ async function verifyBehaviour(f) {
   const [{ id: stillTheSame }] = await rows(`SELECT id FROM ${EXPERIENCES} WHERE id = $1`, [f.experience]);
   assert.equal(stillTheSame, f.experience, 'P06 and its identity is unchanged by any of them');
   await rejected(() => q(`INSERT INTO ${VERSIONS} (id, experience_id, package_manifest_version_id, version_ordinal, created_at)
-                          VALUES ($1, $2, $3, 2, now())`, [randomUUID(), f.experience, randomUUID()]), ['23505'],
+                          VALUES ($1, $2, $3, 2, now())`, [randomUUID(), f.experience, spareManifest]), ['23505'],
     /public_experience_versions_ordinal_key/u);
   await rejected(() => q(`INSERT INTO ${VERSIONS} (id, experience_id, package_manifest_version_id, version_ordinal, created_at)
                           VALUES ($1, $2, $3, 4, now())`, [randomUUID(), f.experience, manifests[0]]), ['23505'],
