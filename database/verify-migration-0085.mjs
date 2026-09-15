@@ -1371,6 +1371,19 @@ async function verifyConcurrency(c) {
  * something 0085 OWNS is planted and must still be refused, so the forward safety
  * is not bought by asserting nothing.
  */
+/**
+ * Checks the deferred accepted-episode binding NOW, then restores the deferral.
+ *
+ * It clears the pending events every acceptance in this transaction has queued -
+ * PostgreSQL refuses to ALTER a table that holds any (55006) - and it only succeeds
+ * if every one of those acceptances really did leave a valid binding, so it is a
+ * proof rather than a workaround.
+ */
+async function flushDeferredAcceptanceBinding() {
+  await q('SET CONSTRAINTS public.shared_world_member_invitations_episode_fk IMMEDIATE');
+  await q('SET CONSTRAINTS public.shared_world_member_invitations_episode_fk DEFERRED');
+}
+
 async function verifyForwardSafety(f) {
   stage = 'forward safety: the I-04F and I-04G substrate and a Launch Gate do not fail this historical verifier';
   await identity('postgres');
@@ -1391,8 +1404,7 @@ async function verifyForwardSafety(f) {
     //
     // In production this never arises: each acceptance is its own transaction and
     // flushes at its own COMMIT. It is an artefact of proving many of them at once.
-    await q('SET CONSTRAINTS public.shared_world_member_invitations_episode_fk IMMEDIATE');
-    await q('SET CONSTRAINTS public.shared_world_member_invitations_episode_fk DEFERRED');
+    await flushDeferredAcceptanceBinding();
 
     // I-04F: selective past-history sharing and closed-World viewing.
     await q(`CREATE TABLE public.${probe}_history_access_grants (id uuid PRIMARY KEY, world_id uuid NOT NULL,
@@ -1444,6 +1456,11 @@ async function verifyForwardSafety(f) {
     await approveWith(removal.proposal, [f.inviter, f.forwardTarget]);
     const [removed] = await commitRemoval(randomUUID(), removal.proposal, randomUUID());
     assert.equal(removed.outcome, 'REMOVED', 'and so does a governed removal');
+
+    // The acceptance just performed queued a fresh deferred event of its own, and the
+    // regressions below ALTER this table. Flush again - which also re-proves that the
+    // acceptance made beside the authorized future left a valid binding.
+    await flushDeferredAcceptanceBinding();
 
     stage = 'forward safety: a real regression to something 0085 OWNS is still refused';
     for (const [reason, plant, refuses] of [
