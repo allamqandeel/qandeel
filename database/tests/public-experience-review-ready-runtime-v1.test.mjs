@@ -199,15 +199,21 @@ test('the canonical Public lock order is Public World then Experience then manif
     const world = body.indexOf('public.public_world_state w WHERE w.singleton FOR UPDATE');
     const experience = body.indexOf('public.public_experiences e WHERE e.id');
     assert.ok(world >= 0 && experience > world, `${name} locks the Experience after the World`);
-    // The SAME relative order I-04G's owner deletion uses - materials, then
-    // history items - and never `shared_worlds`, so no cross-domain cycle exists.
+    // The SAME relative order EVERY I-04 consequential mutation uses: the Shared
+    // World row, then materials by id, then history items by id. Taking the World
+    // row is what makes a source-view answer unable to go stale before the body
+    // is copied, and taking it in I-04's own order is what keeps the two domains
+    // from ever forming a cycle.
+    const sharedWorld = body.indexOf('public.shared_worlds w');
     const materials = body.indexOf('public.shared_world_materials m');
     const history = body.indexOf('public.shared_world_history_items i');
-    assert.ok(materials > 0 && history > materials,
+    assert.ok(sharedWorld > experience, `${name} locks the Shared World row after the Public rows`);
+    assert.ok(materials > sharedWorld, `${name} locks Shared materials after the Shared World row`);
+    assert.ok(history > materials,
       `${name} locks Shared materials before Shared history items, exactly as I-04G does`);
-    assert.ok(!body.includes('public.shared_worlds '), `${name} never locks the Shared World row`);
-    assert.ok(body.includes('ORDER BY m.id FOR SHARE') && body.includes('ORDER BY i.id FOR SHARE'),
-      `${name} takes SHARE locks in identity order: Public reads Shared truth and never writes it`);
+    assert.ok(body.includes('ORDER BY w.id FOR SHARE') && body.includes('ORDER BY m.id FOR SHARE')
+      && body.includes('ORDER BY i.id FOR SHARE'),
+    `${name} takes SHARE locks in identity order: Public reads Shared truth and never writes it`);
   }
   for (const name of MUTATIONS) {
     const { body } = functionBody(name);
@@ -232,19 +238,94 @@ test('the two Public Identity primitives deliberately take no global lock, and t
   }
 });
 
-test('a mutation touches no Shared, Personal or predecessor state, and reads no membership', () => {
+test('a mutation mutates no predecessor state and re-implements no Shared entitlement', () => {
   for (const name of MUTATIONS) {
     const { body } = functionBody(name);
     assert.doesNotMatch(body, /(INSERT INTO|UPDATE|DELETE FROM) public\.(shared_world|conversation_|users|memories|hypothes|standing_context|matching_|introduction)/u,
       `${name} mutates no Shared Personal or predecessor state`);
+    // What is banned is a Public primitive deciding Shared entitlement for
+    // itself. Consuming the canonical I-04F entry point is required, not banned.
     for (const forbidden of ['shared_world_membership_episodes', 'shared_world_history_access_grants',
-      'shared_world_invite_credential_state', 'shared_world_standard_closed_view_entitlements']) {
+      'shared_world_invite_credential_state', 'shared_world_standard_closed_view_entitlements',
+      'shared_world_history_package_manifest_items']) {
       assert.ok(!body.includes(forbidden),
-        `${name} reads no ${forbidden}: publication rights come from the exact included material, never membership`);
+        `${name} must not re-implement Shared authorization out of ${forbidden}`);
     }
   }
-  assert.match(selfAssertions, /must not lock or read the Shared World row: Public does not depend on Shared membership/u);
-  assert.match(selfAssertions, /must not read Shared membership or history grants: rights come from included material/u);
+  assert.match(selfAssertions, /must not re-implement Shared membership or history authorization: consume the canonical I-04F visibility entry point/u);
+});
+
+// ---------------------------------------------------------------------------
+// FIX-A. Content publication authority is not source-access authority.
+// ---------------------------------------------------------------------------
+
+test('a Shared body is copied only after the initiator is proven currently entitled to SEE it', () => {
+  const { body } = functionBody('prepare_public_experience_manifest_v1');
+  // It CONSUMES the canonical I-04F entry point rather than re-deriving the answer.
+  assert.match(body,
+    /FROM public\.resolve_shared_world_history_visibility_v1\(sm\.world_id, u\) v\s*\n\s*WHERE v\.history_item_id = sm\.history_item_id/u,
+    'the visibility question is answered by the frozen I-04F entry point, for the exact human and the exact item');
+  // And it does so BEFORE anything reads or copies a body. Positions are measured
+  // over the EXECUTABLE body with comments stripped: a prose mention of the
+  // resolver would otherwise satisfy an ordering claim that no code establishes.
+  const code = body.split('\n').map((line) => line.replace(/--.*$/u, '')).join('\n');
+  const visibility = code.indexOf('resolve_shared_world_history_visibility_v1');
+  const copy = code.indexOf('public.resolve_public_package_items_v1');
+  const bodyExists = code.indexOf('shared_world_text_material_bodies');
+  const kind = code.indexOf('material_kind NOT IN');
+  const authority = code.indexOf('shared_world_material_historical_authority');
+  assert.ok(visibility > 0 && copy > visibility, 'the body is copied only after the source-view proof');
+  assert.ok(bodyExists > visibility, 'and no body is even probed before it');
+  assert.ok(kind > visibility && authority > visibility,
+    'the kind and authority checks run after it too, so neither can answer whether a hidden source exists');
+  // The denial is the SAME class a nonexistent source gets: a caller learns
+  // nothing about whether the id they guessed exists. This reads the exact
+  // statement the visibility check raises, not a window around it.
+  const visibilityStatement = code.slice(visibility, code.indexOf('END IF;', visibility));
+  assert.match(visibilityStatement, /RAISE EXCEPTION 'PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE'/u,
+    'a hidden Shared source is refused with the same class a nonexistent one gets');
+  assert.ok(!visibilityStatement.includes('PUBLIC_EXPERIENCE_NOT_AUTHORIZED'),
+    'a hidden Shared source and a nonexistent one are indistinguishable from the error');
+  // The nonexistent-source check immediately before it raises that same class.
+  const existence = code.lastIndexOf('PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE', visibility);
+  assert.ok(existence > 0 && existence < visibility,
+    'and the existence check that precedes it raises the identical class');
+  // The Shared World row is held while the answer is used.
+  assert.match(body, /FROM public\.shared_worlds w\s*\n\s*WHERE w\.id = ANY\(p_shared_source_world_ids\) ORDER BY w\.id FOR SHARE;/u);
+  assert.ok(body.indexOf('public.shared_worlds w') < visibility,
+    'the Shared World row is locked before the visibility answer is resolved, so it cannot go stale');
+  assert.match(selfAssertions, /publication preparation must prove the initiator may currently SEE each selected Shared history item/u);
+  assert.match(selfAssertions, /publication preparation must synchronize on the exact Shared World row before resolving source visibility/u);
+  assert.match(selfAssertions, /the frozen I-04F history visibility entry point must still be reachable/u);
+  // Approving is a different right and reads no visibility at all.
+  assert.ok(!functionBody('approve_public_experience_manifest_v1').body.includes('resolve_shared_world_history_visibility_v1'),
+    'approving your own included material never asks whether you may browse: material authority survives membership loss');
+});
+
+// ---------------------------------------------------------------------------
+// FIX-B. The approval binds the protected action, not the command.
+// ---------------------------------------------------------------------------
+
+test('the manifest binds PUBLISH_TO_PUBLIC_WORLD while the prepare command stays PREPARE_PUBLICATION', () => {
+  const { body } = functionBody('prepare_public_experience_manifest_v1');
+  assert.match(body, /'PUBLISH_TO_PUBLIC_WORLD', 'PUBLIC_WORLD_AUDIENCE', 'PRIVACY_OWNERSHIP_AUTHORITY_ONLY'/u,
+    'the manifest intends the protected audience-expansion action');
+  assert.match(body, /'PREPARE_PUBLICATION', total, derived_count/u,
+    'the command that ran stays in its own namespace');
+  // AB04 the prepare request reference is a different digest namespace entirely.
+  assert.match(body, /QANDEEL_CWV2_PUBLIC_PACKAGE_PREPARE_COMMAND_V1/u);
+  const derive = functionBody('derive_public_publication_authority_v1').body;
+  assert.match(derive, /'action=' \|\| manifest\.intended_publication_action/u,
+    'AB02 the authority fingerprint binds the INTENDED protected action');
+  assert.ok(!derive.includes('PREPARE_PUBLICATION'),
+    'and never the preparation command');
+  assert.match(selfAssertions, /a manifest must not intend PREPARE_PUBLICATION: preparing is not audience expansion/u);
+  assert.match(selfAssertions, /the intended publication action and the prepare command action must each be pinned/u);
+  assert.match(selfAssertions, /the authority request fingerprint must bind the intended publication action/u);
+  // AB05 binding the future action changes nothing about what this slice does.
+  const commit = functionBody('commit_public_experience_ready_for_review_v1').body;
+  assert.ok(!commit.includes('PUBLISH_TO_PUBLIC_WORLD'),
+    'AB05 the READY commit executes no publication: it only checks the authority the manifest already bound');
 });
 
 test('the Personal source adapter is the canonical committed unit, owner-exact, and fails closed on analysis', () => {
@@ -411,8 +492,13 @@ test('the self-assertions refuse to deploy a migration that lost any of this', (
     'may not accept an authority audience visibility body ordinal or instant parameter',
     'accepts no clock but one read of the database clock',
     'must mutate no Shared Personal or predecessor state',
-    'must not lock or read the Shared World row',
-    'must not read Shared membership or history grants',
+    'must not re-implement Shared membership or history authorization',
+    'publication preparation must prove the initiator may currently SEE each selected Shared history item',
+    'publication preparation must synchronize on the exact Shared World row before resolving source visibility',
+    'the frozen I-04F history visibility entry point must still be reachable',
+    'a manifest must not intend PREPARE_PUBLICATION: preparing is not audience expansion',
+    'the intended publication action and the prepare command action must each be pinned',
+    'the authority request fingerprint must bind the intended publication action',
     'the frozen committed Personal source must still be append-only',
     'the frozen I-04G historical widening gate must still be in place',
     'the frozen I-04G material resolver must still be reachable',
@@ -439,10 +525,39 @@ test('the verifier proves its forward safety inside a rolled-back savepoint, and
   assert.match(verifier, /ROLLBACK TO SAVEPOINT forward_safety/u);
   // Every later reviewed addition CW2-04 and the I-05 plan already schedule.
   for (const authorized of ['semantic_placement', 'public_discussion', 'public_qandeel', 'vitality',
-    'search_projection', 'owner_deletion', 'replay_source', 'launch_gate', 'CREATE INDEX', 'CREATE TRIGGER']) {
+    'search_projection', 'owner_deletion', 'replay_source', 'launch_gate', 'CREATE INDEX', 'CREATE TRIGGER',
+    // FIX-C. Final publication must be able to reject an approval withdrawn
+    // before publish, so a later reviewed effective-approval-state writer must
+    // not be a regression against anything I-05A froze.
+    'approval_effective_state', 'approval_withdrawal']) {
     assert.ok(verifier.includes(authorized),
       `the probe proves a later reviewed ${authorized} is not an I-05A regression`);
   }
+});
+
+test('FIX-C: nothing I-05A owns freezes a historical approval row as eternally effective', () => {
+  // The historical row stays append-only evidence - that is deliberate, and the
+  // review explicitly does not want retroactive deletion of it. What must stay
+  // possible is an ADDITIVE later relation that says whether that evidence is
+  // still EFFECTIVE at publish time.
+  assert.match(read('../migrations/0092_public_experience_publication_package_authority_v1.sql'),
+    /BEFORE UPDATE OR DELETE ON public\.publication_manifest_approvals/u,
+    'the approval event itself remains immutable historical evidence');
+  // Nothing claims the approval set is the final word on publication authority.
+  const commit = functionBody('commit_public_experience_ready_for_review_v1').body;
+  assert.ok(!commit.includes('PUBLISHED'),
+    'the READY commit is not a publication decision, so its approval count is not a publication permit');
+  // And no self-assertion REFUSES a later effective-state or withdrawal object.
+  // This reads the messages the migration can raise, not every occurrence of the
+  // word: `REVOKE ALL ON FUNCTION` contains "revoke" and forbids nothing.
+  const refusals = [...selfAssertions.matchAll(/RAISE EXCEPTION '([^']*)'/gu)].map((m) => m[1].toLowerCase());
+  for (const shape of ['effective', 'withdraw', 'supersed', 'revoke', 'approval_state']) {
+    const offender = refusals.find((message) => message.includes(shape));
+    assert.equal(offender, undefined,
+      `no self-assertion forbids a later reviewed approval ${shape} state; found: ${offender}`);
+  }
+  // Nor does any of them cap the relations, functions or triggers that may exist.
+  assert.ok(!selfAssertions.includes('count(*) = '), 'no self-assertion caps how many objects may exist');
 });
 
 // ---------------------------------------------------------------------------
@@ -519,6 +634,19 @@ test('every authorized later I-05B / I-05C / CW2-08 addition leaves all three I-
         + 'CREATE TABLE public.public_search_projection (experience_id uuid PRIMARY KEY, lens text NOT NULL);\n'
         + 'CREATE TABLE public.public_experience_replay_source (package_item_id uuid PRIMARY KEY, replay_id uuid NOT NULL);\n'
         + 'CREATE TABLE public.public_launch_gate_snapshots (id uuid PRIMARY KEY, capability text NOT NULL);\n'
+        // FIX-C. The later reviewed effective-approval state I-05B composes at
+        // final PUBLISH revalidation, plus its withdrawal event. Both are purely
+        // additive beside the append-only historical approval evidence.
+        + 'CREATE TABLE public.publication_approval_effective_state (\n'
+        + '  approval_id uuid PRIMARY KEY REFERENCES public.publication_manifest_approvals (id),\n'
+        + "  effective_state text NOT NULL CHECK (effective_state IN ('EFFECTIVE', 'WITHDRAWN', 'SUPERSEDED')));\n"
+        + 'CREATE TABLE public.publication_approval_withdrawal_events (\n'
+        + '  id uuid PRIMARY KEY, approval_id uuid NOT NULL REFERENCES public.publication_manifest_approvals (id),\n'
+        + '  occurred_at timestamptz NOT NULL);\n'
+        + 'CREATE FUNCTION public.withdraw_publication_approval_v1(p_id uuid) RETURNS void\n'
+        + "  LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$\n"
+        + '  BEGIN UPDATE public.publication_approval_effective_state s\n'
+        + "          SET effective_state = 'WITHDRAWN' WHERE s.approval_id = p_id; END$fn$;\n"
         + 'ALTER TABLE public.public_experiences ADD COLUMN published_at timestamptz;\n'
         + 'ALTER TABLE public.publication_package_manifest_versions ADD COLUMN provider_metadata text;\n'
         + 'CREATE INDEX public_experiences_lifecycle_idx ON public.public_experiences (current_lifecycle);\n'
@@ -609,10 +737,32 @@ test('the contracts are not vacuous: every deliberate weakening of I-05A is refu
       ['the review resolver stops requiring a controller', M93,
         '    JOIN public.public_experience_controllers c\n      ON c.experience_id = e.id AND c.controller_user_id = p_user_id',
         '    LEFT JOIN public.public_experience_controllers c\n      ON c.experience_id = e.id'],
-      ['a mutation reads Shared membership', M93,
+      ['a mutation re-implements Shared entitlement out of membership episodes', M93,
         '  -- ===================== THE PERSONAL SOURCE ADAPTER =====================',
         '  PERFORM 1 FROM public.shared_world_membership_episodes ep WHERE ep.ended_at IS NULL;\n'
         + '  -- ===================== THE PERSONAL SOURCE ADAPTER ====================='],
+      ['preparation stops proving the initiator may see the Shared source', M93,
+        '    SELECT 1 FROM public.resolve_shared_world_history_visibility_v1(sm.world_id, u) v\n'
+        + '          WHERE v.history_item_id = sm.history_item_id)',
+        '    SELECT 1 FROM public.shared_world_history_items v\n'
+        + '          WHERE v.id = sm.history_item_id)'],
+      ['preparation stops holding the Shared World row while it resolves visibility', M93,
+        '  PERFORM 1 FROM public.shared_worlds w\n'
+        + '    WHERE w.id = ANY(p_shared_source_world_ids) ORDER BY w.id FOR SHARE;\n', ''],
+      ['a hidden Shared source is denied with a different class than a nonexistent one', M93,
+        '         SELECT 1 FROM public.resolve_shared_world_history_visibility_v1(sm.world_id, u) v\n'
+        + '          WHERE v.history_item_id = sm.history_item_id)\n'
+        + '  ) THEN\n'
+        + "    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE' USING ERRCODE='P0002';",
+        '         SELECT 1 FROM public.resolve_shared_world_history_visibility_v1(sm.world_id, u) v\n'
+        + '          WHERE v.history_item_id = sm.history_item_id)\n'
+        + '  ) THEN\n'
+        + "    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_NOT_AUTHORIZED' USING ERRCODE='42501';"],
+      ['the manifest intends the preparation command instead of the protected action', M92,
+        "CHECK (intended_publication_action = 'PUBLISH_TO_PUBLIC_WORLD')",
+        "CHECK (intended_publication_action IN ('PREPARE_PUBLICATION', 'PUBLISH_TO_PUBLIC_WORLD'))"],
+      ['the fingerprint stops binding the intended publication action', M93,
+        "     || 'action=' || manifest.intended_publication_action || E'\\n'\n", ''],
       ['a frozen predecessor migration is edited',
         'database/migrations/0090_shared_world_material_commit_owner_deletion_v1.sql', 'BEGIN;', 'BEGIN;\n-- edited\n'],
       ['the CI step that runs an I-05A verifier is removed', '.github/workflows/api-ci.yml',

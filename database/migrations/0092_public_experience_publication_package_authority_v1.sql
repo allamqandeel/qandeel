@@ -152,7 +152,7 @@ CREATE TABLE public.publication_package_manifest_versions (
     public_world_singleton boolean NOT NULL,
     publisher_public_identity_ref uuid NOT NULL,
     publisher_user_id uuid NOT NULL,
-    action text NOT NULL,
+    intended_publication_action text NOT NULL,
     target_audience_class text NOT NULL,
     authority_readiness text NOT NULL,
     prepared_authority_snapshot_version bigint NOT NULL,
@@ -164,10 +164,21 @@ CREATE TABLE public.publication_package_manifest_versions (
     CONSTRAINT publication_package_manifest_versions_exp_key UNIQUE (id, experience_id),
     CONSTRAINT publication_package_manifest_versions_pub_key UNIQUE (id, publisher_user_id),
     CONSTRAINT publication_package_manifest_versions_world_check CHECK (public_world_singleton),
-    -- The two frozen audience-expansion actions of the Public domain (CW2-02
-    -- section 39, CW2-04 section 4). I-05A's writer produces only the first.
+    -- THE PROTECTED ACTION THE RIGHTSHOLDERS ARE CONSENTING TO, which is the
+    -- frozen audience-expansion action `PUBLISH_TO_PUBLIC_WORLD` and nothing
+    -- else. It is NOT the command being executed now: preparing a package is a
+    -- command in its own durable namespace and is explicitly NOT audience
+    -- expansion, so `PREPARE_PUBLICATION` is not a value this column may hold.
+    --
+    -- This matters because a frozen authority decision is request-bound and an
+    -- approval of one action may not be replayed for another (CW2-02 section 7 /
+    -- B6). An approval collected against a preparation command could not lawfully
+    -- be used by I-05B to execute publication; an approval bound to
+    -- PUBLISH_TO_PUBLIC_WORLD can, once I-05B revalidates the manifest, the
+    -- effective approval state and the Safety / Launch / entitlement gates that
+    -- I-05A evaluates none of.
     CONSTRAINT publication_package_manifest_versions_action_check
-        CHECK (action IN ('PREPARE_PUBLICATION', 'PUBLISH_TO_PUBLIC_WORLD')),
+        CHECK (intended_publication_action = 'PUBLISH_TO_PUBLIC_WORLD'),
     CONSTRAINT publication_package_manifest_versions_aud_check
         CHECK (target_audience_class = 'PUBLIC_WORLD_AUDIENCE'),
     -- PRIVACY / OWNERSHIP only. Never Safety, never Launch, never entitlement.

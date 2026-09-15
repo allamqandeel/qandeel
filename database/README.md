@@ -1418,13 +1418,33 @@ it. It can produce `DRAFT` and `READY_FOR_REVIEW` and nothing else: no primitive
 `ABSENT_FROM_PUBLIC_WORLD`, no primitive creates a public serving surface, and no resolver here is
 reachable by any public audience. Draft and review are not publication.
 
+**Source-access authority is proven before any Shared body is copied.** Content publication authority
+is not source-access authority: a rightsholder approving the widening of THEIR material says nothing
+about whether the human assembling the package was ever entitled to see it. So for every selected
+`SHARED_WORLD` item, preparation requires the initiating human to be CURRENTLY entitled to view that
+exact history item, and only then reads the body. The entitlement question is not re-implemented here
+— it consumes the canonical I-04F entry point `resolve_shared_world_history_visibility_v1`, which
+already owns the whole meaning: the ACTIVE union of membership-period visibility and explicit history
+grants, the `READ_ONLY_CLOSED` delegation to the exact frozen closure entitlement, the requirement of
+an open episode, availability dominating every basis, and a truthful EMPTY answer rather than a
+distinguishable error for a human with no standing. The refusal uses the same bounded class a
+NONEXISTENT source gets, and runs before the kind, availability and authority checks, so nothing in
+the error surface reveals whether a guessed identifier is real.
+
+This is a different right from approval, in both directions. A former member whose material authority
+survived their departure may still approve their own included material — and may still not use
+preparation as a backdoor to retrieve it.
+
 **The canonical Public mutation lock order** is the Public World singleton, then the exact Experience,
-then the exact manifest, then the exact source rows in deterministic identity order, then the rows it
-writes. That last step is not free: I-04G's owner deletion locks `shared_worlds` first, then
-`shared_world_materials` by id, then `shared_world_history_items` by id. This migration takes the SAME
-relative order over those two relations and NEVER locks `shared_worlds` at all, so a Public
-preparation and a Shared owner deletion can queue behind each other but cannot form a cycle. Public
-source locks are SHARE locks: Public reads Shared truth and never writes it.
+then the exact manifest, then `shared_worlds`, then `shared_world_materials`, then
+`shared_world_history_items`, then `conversation_units` — each by id — then the rows it writes. That
+order is not free: every I-04 consequential mutation that can change what a human may see (leave,
+removal, rejoin, a history grant, Standard closure, owner deletion) locks `shared_worlds` FIRST, then
+materials by id, then history items by id. This migration takes the SAME relative order, so the two
+domains queue behind each other and can never form a cycle — I-04 never takes a Public lock, so no
+Public lock can be the second edge of one. Holding the Shared World row is what stops the
+source-view answer from going stale between resolution and the copy. Public source locks are SHARE
+locks throughout: Public reads Shared truth and never writes it.
 
 The two Public Identity primitives deliberately take no singleton lock - they touch one identity's own
 rows, and serializing every display-label change in the product behind one global row would be a
@@ -1437,13 +1457,29 @@ authority, that the source authority metadata agrees in both directions, the exa
 `CONTENT_RIGHTSHOLDER_SET`, and the `AUTHORITY_REQUEST_FINGERPRINT`. It fails closed rather than
 returning a partial answer, and missing metadata is never an empty requirement.
 
-The fingerprint binds the action, the target Public World, the Public World audience class, the
-privacy/ownership readiness, the exact Experience, the exact prospective version, the exact manifest,
-the exact publisher identity, the exact source scope, the exact derived rightsholder set and the
-Public World authority snapshot version. It is DERIVED and never supplied, so it is not a bearer
-token: it cannot authorize another package, Experience, version, source or audience. It deliberately
-does NOT bind `PUBLIC_AUDIENCE_POLICY`, because who may currently view Public World is a gate rather
-than the identity of a package.
+The fingerprint binds the INTENDED PROTECTED ACTION, the target Public World, the Public World
+audience class, the privacy/ownership readiness, the exact Experience, the exact prospective version,
+the exact manifest, the exact publisher identity, the exact source scope, the exact derived
+rightsholder set and the Public World authority snapshot version. It is DERIVED and never supplied, so
+it is not a bearer token: it cannot authorize another package, Experience, version, source or
+audience. It deliberately does NOT bind `PUBLIC_AUDIENCE_POLICY`, because who may currently view
+Public World is a gate rather than the identity of a package.
+
+**The action it binds is `PUBLISH_TO_PUBLIC_WORLD`, not the command that ran.** Preparing a package is
+`PREPARE_PUBLICATION`, it lives in `publication_package_prepare_commands.command_action` with its own
+request-reference namespace, and it is explicitly not audience expansion. What a rightsholder consents
+to when they approve an exact immutable package is the future publication of that package, so that is
+what `publication_package_manifest_versions.intended_publication_action` records and what their
+approval is bound to. A frozen authority decision is request-bound and may not be replayed for a
+different action, which is precisely why I-05B can revalidate THIS approval before executing
+`PUBLISHED` instead of having to collect every human's consent a second time — and why a preparation
+request reference can never read as a publication consent token.
+
+Binding the future action changes nothing about what I-05A does: committing `READY_FOR_REVIEW`
+performs no publication, widens no audience and creates no public visibility. I-05B must still
+revalidate the exact manifest-bound authority, the EFFECTIVE approval state — a later reviewed
+withdrawal or supersession object composes beside the append-only approval evidence, which I-05A
+freezes nothing against — and the Safety, Launch and entitlement gates this slice evaluates none of.
 
 **Source adapters.** `MY_WORLD` binds `conversation_units` - the committed Conversational Unit of
 migration 0064, append-only for every role - and the actor must own it exactly. A `USER` unit is human

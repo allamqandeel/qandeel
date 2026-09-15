@@ -187,10 +187,34 @@ async function verifyCatalog() {
     assert.doesNotMatch(prosrc, /pg_advisory|LOCK TABLE|TRUNCATE/iu, `${fn} takes no advisory or table lock`);
     assert.doesNotMatch(prosrc, /CURRENT_TIMESTAMP|now\(\)|localtimestamp|transaction_timestamp|statement_timestamp/iu,
       `${fn} accepts no clock but one read of the database's own`);
-    assert.ok(!prosrc.includes('public.shared_worlds'), `${fn} never reads or locks the Shared World row`);
-    assert.ok(!prosrc.includes('shared_world_membership_episodes'),
-      `${fn} reads no Shared membership: publication rights come from included material`);
+    // FIX-A narrowed this. Re-implementing Shared entitlement is banned;
+    // CONSUMING the canonical I-04F entry point is required, and the SHARE lock
+    // on the Shared World row is what keeps its answer from going stale.
+    for (const forbidden of ['shared_world_membership_episodes', 'shared_world_history_access_grants',
+      'shared_world_standard_closed_view_entitlements', 'shared_world_history_package_manifest_items']) {
+      assert.ok(!prosrc.includes(forbidden),
+        `${fn} must not re-implement Shared authorization out of ${forbidden}`);
+    }
   }
+  // The one place a Shared body is copied proves source-view authority through
+  // the canonical entry point, while holding the Shared World row.
+  const [{ prosrc: prepareSrc }] = await rows(
+    'SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure',
+    ['public.prepare_public_experience_manifest_v1(uuid, uuid, uuid, uuid, uuid[], uuid[], uuid[], uuid[], uuid[])']);
+  assert.ok(prepareSrc.includes('resolve_shared_world_history_visibility_v1'),
+    'preparation proves the initiator may currently SEE each selected Shared history item');
+  assert.ok(prepareSrc.indexOf('public.shared_worlds w') < prepareSrc.indexOf('resolve_shared_world_history_visibility_v1'),
+    'and it holds the Shared World row before resolving that answer');
+  const [{ allowed: entryPoint }] = await rows('SELECT has_function_privilege($1, $2, $3) allowed',
+    ['service_role', 'public.resolve_shared_world_history_visibility_v1(uuid, uuid)', 'EXECUTE']);
+  assert.equal(entryPoint, true, 'the frozen I-04F visibility entry point is still reachable');
+  // FIX-B the fingerprint binds the intended protected action, not the command.
+  const [{ prosrc: deriveSrc }] = await rows(
+    'SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure',
+    ['public.derive_public_publication_authority_v1(uuid)']);
+  assert.ok(deriveSrc.includes('manifest.intended_publication_action'),
+    'AB02 the authority fingerprint binds the intended publication action');
+  assert.ok(!deriveSrc.includes('PREPARE_PUBLICATION'), 'and never the preparation command');
 
   // The ONE review resolver.
   const [resolver] = await rows(
@@ -831,6 +855,35 @@ async function verifyConcurrency(c) {
       `SELECT current_lifecycle FROM ${EXPERIENCES} WHERE id = $1`, [c.experience]);
     assert.equal(stillDraft, 'DRAFT', 'P34 and the Experience stayed exactly where it was');
 
+    // SA07 A SOURCE-VISIBILITY CHANGE RACING WITH PREPARATION has one truthful
+    // winner, and no stale hidden-body copy commits. The membership change takes
+    // `shared_worlds FOR UPDATE` exactly as every I-04 mutation does; preparation
+    // holds the same row FOR SHARE, so the two serialize rather than interleave.
+    await q('BEGIN');
+    await asRole('postgres');
+    await q(`SELECT 1 FROM public.shared_worlds w WHERE w.id = $1 FOR UPDATE`, [c.world]);
+    await q(`UPDATE public.shared_world_membership_episodes e SET ended_at = now()
+              WHERE e.world_id = $1 AND e.user_id = $2 AND e.ended_at IS NULL`, [c.world, c.mohamed]);
+
+    await q2('BEGIN');
+    await actAs2(c.mohamed);
+    const racing = q2(`SELECT * FROM public.prepare_public_experience_manifest_v1($1,$2,$3,$4,$5::uuid[],$6::uuid[],$7::uuid[],$8::uuid[],$9::uuid[])`,
+      [randomUUID(), c.experience, randomUUID(), randomUUID(), NONE, NONE,
+        [randomUUID()], [c.world], [c.hadirMaterial]]);
+    let racingSettled = false;
+    racing.then(() => { racingSettled = true; }, () => { racingSettled = true; });
+    await new Promise((resolve) => { setTimeout(resolve, 400); });
+    assert.equal(racingSettled, false,
+      'SA07 preparation blocks on the exact Shared World row the membership change holds');
+    await q('COMMIT');
+    await assert.rejects(racing, (error) => error.code === 'P0002',
+      'SA07 the membership change won, so the source is no longer visible and no body is copied');
+    await q2('ROLLBACK');
+    // Restore the fixture standing for the remaining races.
+    await asRole('postgres');
+    await q(`UPDATE public.shared_world_membership_episodes e SET ended_at = NULL
+              WHERE e.world_id = $1 AND e.user_id = $2`, [c.world, c.mohamed]);
+
     // P35 AN ALIAS CHANGE CONCURRENT WITH PACKAGE PREPARATION changes neither the
     // package nor its version - and, because the identity primitives take no
     // global lock, it does not even wait for it.
@@ -875,6 +928,21 @@ async function verifyForwardSafety() {
     await q('CREATE TABLE public.i05a93_probe_search_projection (experience_id uuid PRIMARY KEY, lens text NOT NULL)');
     await q('CREATE TABLE public.i05a93_probe_replay_source (package_item_id uuid PRIMARY KEY, replay_id uuid NOT NULL)');
     await q('CREATE TABLE public.i05a93_probe_launch_gate (id uuid PRIMARY KEY, capability text NOT NULL)');
+    // FIX-C. Final publication must be able to reject an approval withdrawn
+    // before publish, so the later reviewed effective-state and withdrawal
+    // objects I-05B composes must not be regressions against anything I-05A
+    // froze. The historical approval row stays untouched evidence beside them.
+    await q(`CREATE TABLE public.i05a93_probe_approval_effective_state (
+               approval_id uuid PRIMARY KEY REFERENCES ${APPROVALS} (id),
+               effective_state text NOT NULL
+                 CHECK (effective_state IN ('EFFECTIVE', 'WITHDRAWN', 'SUPERSEDED')))`);
+    await q(`CREATE TABLE public.i05a93_probe_approval_withdrawal_events (
+               id uuid PRIMARY KEY, approval_id uuid NOT NULL REFERENCES ${APPROVALS} (id),
+               occurred_at timestamptz NOT NULL)`);
+    await q(`CREATE FUNCTION public.i05a93_probe_withdraw_approval_v1(p_id uuid) RETURNS void
+             LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+             BEGIN UPDATE public.i05a93_probe_approval_effective_state s
+                      SET effective_state = 'WITHDRAWN' WHERE s.approval_id = p_id; END$fn$`);
     await q(`CREATE FUNCTION public.i05a93_probe_publish_v1(p_id uuid) RETURNS void
              LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
              BEGIN UPDATE public.public_experiences e
@@ -1038,6 +1106,14 @@ async function commitMaterial(world, id, kind, author, text, mode, resolution, a
 
 async function provisionMaterials(f, world) {
   const EXACT = 'EXACT_HUMAN_APPROVER_SET';
+  // FIX-A fixture. Mohamed's baseline visibility is what the canonical I-04F
+  // resolver reads, so a material whose ONLY baseline viewer is Hadir is
+  // material Mohamed genuinely may not see - the SA02 case - while everything
+  // else below is material he was actually present for.
+  if (f.hiddenMaterial) {
+    await commitMaterial(world, f.hiddenMaterial, 'HUMAN_TEXT', f.hadir, 'a sentence Mohamed never saw',
+      EXACT, 'RESOLVED_EXACT_HUMAN_REQUIREMENT', [f.hadir], f.hadir);
+  }
   await commitMaterial(world, f.mohamedMaterial, 'HUMAN_TEXT', f.mohamed, 'a sentence Mohamed wrote',
     EXACT, 'RESOLVED_EXACT_HUMAN_REQUIREMENT', [f.mohamed], f.mohamed);
   await commitMaterial(world, f.hadirMaterial, 'HUMAN_TEXT', f.hadir, 'a sentence Hadir wrote',
@@ -1054,6 +1130,149 @@ async function provisionMaterials(f, world) {
   // Material with NO source-side authority metadata at all: missing never means empty.
   await commitMaterial(world, f.metadatalessMaterial, 'QANDEEL_ANALYSIS', null, 'analysis with no recorded resolution',
     EXACT, null, [f.mohamed], f.mohamed);
+}
+
+/**
+ * A CLOSED Shared World carrying the exact frozen I-04F/0088 closed-view
+ * entitlement, so SA06 asks the canonical resolver's closed branch a real
+ * question: one entitled item and one outside the entitlement.
+ */
+async function provisionClosedWorld(f) {
+  const episode = randomUUID();
+  await q(`INSERT INTO public.shared_worlds (id, lifecycle, phase, birth_basis, born_at, closed_at)
+           VALUES ($1, 'READ_ONLY_CLOSED', 'STANDARD', 'ACCEPTED_INVITATION', now(), now())`, [f.closedWorld]);
+  await q(`INSERT INTO public.shared_world_membership_episodes (id, world_id, user_id, joined_at, ended_at)
+           VALUES ($1, $2, $3, now(), now())`, [episode, f.closedWorld, f.mohamed]);
+  const entitled = await commitMaterial(f.closedWorld, f.closedEntitledMaterial, 'HUMAN_TEXT', f.mohamed,
+    'a sentence inside the closed entitlement', 'EXACT_HUMAN_APPROVER_SET',
+    'RESOLVED_EXACT_HUMAN_REQUIREMENT', [f.mohamed], f.mohamed);
+  await commitMaterial(f.closedWorld, f.closedOutsideMaterial, 'HUMAN_TEXT', f.mohamed,
+    'a sentence outside the closed entitlement', 'EXACT_HUMAN_APPROVER_SET',
+    'RESOLVED_EXACT_HUMAN_REQUIREMENT', [f.mohamed], f.mohamed);
+  await q(`INSERT INTO public.shared_world_standard_closed_view_entitlements
+             (world_id, user_id, membership_episode_id, entitled_at) VALUES ($1, $2, $3, now())`,
+  [f.closedWorld, f.mohamed, episode]);
+  // The entitlement is BOUNDED: exactly one of the two items is inside it.
+  await q(`INSERT INTO public.shared_world_standard_closed_view_entitlement_items
+             (world_id, user_id, history_item_id) VALUES ($1, $2, $3)`,
+  [f.closedWorld, f.mohamed, entitled]);
+}
+
+// ------------------------------------------------- FIX-A source-access authority
+
+async function verifySourceAccessAuthority(f) {
+  // SA01 a currently authorized Shared viewer prepares a visible item.
+  await actAs(f.mohamed);
+  const sa01 = randomUUID();
+  const [prepared] = await prepare(randomUUID(), f.experience, sa01, randomUUID(), NONE, NONE,
+    [randomUUID()], [f.world], [f.hadirMaterial]);
+  assert.equal(prepared.outcome, 'PACKAGE_PREPARED',
+    'SA01 a human who may currently see the item may prepare it');
+
+  // SA02 a CURRENT member whose selected item is outside their authorized history
+  // visibility is denied. Mohamed has an open episode and full standing in this
+  // World - he simply was never in this item's baseline audience.
+  const visible = await rows(
+    'SELECT history_item_id FROM public.resolve_shared_world_history_visibility_v1($1, $2)', [f.world, f.mohamed]);
+  const hiddenItem = (await rows('SELECT history_item_id FROM public.shared_world_materials WHERE id = $1',
+    [f.hiddenMaterial]))[0].history_item_id;
+  assert.ok(!visible.some((r) => r.history_item_id === hiddenItem),
+    'SA02 fixture: the canonical resolver really does hide this item from Mohamed');
+  assert.ok(visible.length > 0, 'SA02 fixture: and Mohamed is otherwise a fully entitled viewer');
+  const denial = await rejected(() => prepare(randomUUID(), f.experience, randomUUID(), randomUUID(),
+    NONE, NONE, [randomUUID()], [f.world], [f.hiddenMaterial]), ['P0002'],
+  /PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE/u);
+
+  // SA08 the denial is INDISTINGUISHABLE from a source that does not exist: a
+  // caller learns nothing about whether the identifier they guessed is real.
+  const absent = await rejected(() => prepare(randomUUID(), f.experience, randomUUID(), randomUUID(),
+    NONE, NONE, [randomUUID()], [f.world], [randomUUID()]), ['P0002'],
+  /PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE/u);
+  assert.equal(denial.message, absent.message,
+    'SA08 a hidden Shared source and a nonexistent one produce the identical bounded error');
+  assert.equal(denial.code, absent.code);
+
+  // SA03 an UNRELATED Public controller holding exact valid Shared identifiers is
+  // denied, and nothing partial is left behind.
+  await actAs(f.stranger);
+  await ensureIdentity(randomUUID(), f.strangerRef, 'PSEUDONYM', 'a stranger');
+  await createDraft(randomUUID(), f.strangerExperience);
+  const forgedManifest = randomUUID(); const forgedVersion = randomUUID(); const forgedItem = randomUUID();
+  await rejected(() => prepare(randomUUID(), f.strangerExperience, forgedManifest, forgedVersion,
+    NONE, NONE, [forgedItem], [f.world], [f.mohamedMaterial]), ['P0002'],
+  /PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE/u);
+  const [{ n: residue }] = await rows(
+    `SELECT (SELECT count(*) FROM ${MANIFESTS} WHERE id = $1)
+          + (SELECT count(*) FROM ${ITEMS} WHERE package_item_id = $2)
+          + (SELECT count(*) FROM ${BODIES} WHERE package_item_id = $2)
+          + (SELECT count(*) FROM ${PROVENANCE} WHERE package_item_id = $2)
+          + (SELECT count(*) FROM ${VERSIONS} WHERE id = $3) AS n`,
+    [forgedManifest, forgedItem, forgedVersion]);
+  assert.equal(Number(residue), 0,
+    'SA03 no manifest, item, derivative body, provenance row or version survives the refusal');
+
+  // SA04 a FORMER member with surviving material authority but no current
+  // source-view entitlement cannot use preparation as a browsing backdoor.
+  await actAs(f.hadir);
+  await createDraft(randomUUID(), f.hadirExperience);
+  const hadirVisible = await rows(
+    'SELECT history_item_id FROM public.resolve_shared_world_history_visibility_v1($1, $2)', [f.world, f.hadir]);
+  assert.equal(hadirVisible.length, 0,
+    'SA04 fixture: a closed episode leaves the canonical resolver with nothing to show');
+  await rejected(() => prepare(randomUUID(), f.hadirExperience, randomUUID(), randomUUID(),
+    NONE, NONE, [randomUUID()], [f.world], [f.hadirMaterial]), ['P0002'],
+  /PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE/u,);
+  // ...not even for material whose publication authority is HERS.
+  const [{ approver }] = await rows(
+    `SELECT ra.approver_user_id approver FROM public.shared_world_history_item_required_approvers ra
+      JOIN public.shared_world_materials m ON m.history_item_id = ra.history_item_id WHERE m.id = $1`,
+    [f.hadirMaterial]);
+  assert.equal(approver, f.hadir,
+    'SA04 / SA05 the same human still holds the material authority the refusal did not touch');
+
+  // SA06 a CLOSED-World viewer may prepare only what their exact frozen
+  // entitlement contains - and the canonical resolver is what decides that.
+  await actAs(f.mohamed);
+  const closedVisible = await rows(
+    'SELECT history_item_id FROM public.resolve_shared_world_history_visibility_v1($1, $2)',
+    [f.closedWorld, f.mohamed]);
+  assert.equal(closedVisible.length, 1, 'SA06 fixture: the closed entitlement is bounded to one item');
+  const [inside] = await prepare(randomUUID(), f.experience, randomUUID(), randomUUID(), NONE, NONE,
+    [randomUUID()], [f.closedWorld], [f.closedEntitledMaterial]);
+  assert.equal(inside.outcome, 'PACKAGE_PREPARED',
+    'SA06 an item inside the closed entitlement may be prepared');
+  await rejected(() => prepare(randomUUID(), f.experience, randomUUID(), randomUUID(), NONE, NONE,
+    [randomUUID()], [f.closedWorld], [f.closedOutsideMaterial]), ['P0002'],
+  /PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE/u);
+
+  // AB01 / AB02 preparing widened no audience, and the package binds the FUTURE
+  // protected action rather than the command that just ran.
+  const [manifestRow] = await rows(
+    `SELECT intended_publication_action, target_audience_class, authority_readiness FROM ${MANIFESTS} WHERE id = $1`,
+    [sa01]);
+  assert.equal(manifestRow.intended_publication_action, 'PUBLISH_TO_PUBLIC_WORLD',
+    'AB02 the manifest binds the protected audience-expansion action');
+  assert.equal(manifestRow.authority_readiness, 'PRIVACY_OWNERSHIP_AUTHORITY_ONLY',
+    'and asserts no Safety, Launch or entitlement clearance');
+  const [command] = await rows(
+    'SELECT command_action, request_ref FROM public.publication_package_prepare_commands WHERE manifest_version_id = $1',
+    [sa01]);
+  assert.equal(command.command_action, 'PREPARE_PUBLICATION',
+    'AB04 while the command that ran stays in its own namespace');
+  const [{ fingerprint }] = await rows(
+    'SELECT authority_fingerprint fingerprint FROM public.derive_public_publication_authority_v1($1)', [sa01]);
+  assert.notEqual(command.request_ref, fingerprint,
+    'AB04 a preparation request reference is not the publication authority identity');
+  // AB03 changing only the intended action changes the authority identity.
+  const [{ same, altered }] = await rows(
+    `SELECT encode(sha256(convert_to('action=' || $1, 'UTF8')), 'hex') same,
+            encode(sha256(convert_to('action=' || $2, 'UTF8')), 'hex') altered`,
+    ['PUBLISH_TO_PUBLIC_WORLD', 'PREPARE_PUBLICATION']);
+  assert.notEqual(same, altered,
+    'AB03 the action is inside the hashed identity, so a different action is a different authority request');
+  // And the manifest cannot be made to intend the command instead.
+  await rejected(() => q(`UPDATE ${MANIFESTS} SET intended_publication_action = 'PREPARE_PUBLICATION' WHERE id = $1`,
+    [sa01]), ['55000'], /PUBLICATION_PACKAGE_IS_IMMUTABLE/u);
 }
 
 // --------------------------------------------------------------------------
@@ -1073,7 +1292,9 @@ async function main() {
       userText: 'the exact committed human sentence', assistantText: 'the analysis QANDEEL produced',
       world: randomUUID(), mohamedMaterial: randomUUID(), hadirMaterial: randomUUID(),
       unresolvedMaterial: randomUUID(), noHumanMaterial: randomUUID(), voiceMaterial: randomUUID(),
-      metadatalessMaterial: randomUUID(),
+      metadatalessMaterial: randomUUID(), hiddenMaterial: randomUUID(),
+      closedWorld: randomUUID(), closedEntitledMaterial: randomUUID(), closedOutsideMaterial: randomUUID(),
+      strangerRef: randomUUID(), strangerExperience: randomUUID(), hadirExperience: randomUUID(),
       experience: randomUUID(), draftCommand: randomUUID(), prepareCommand: randomUUID(),
       readyCommand: randomUUID(), approval: randomUUID(),
       manifest: randomUUID(), version: randomUUID(), personalItem: randomUUID(),
@@ -1093,6 +1314,9 @@ async function main() {
       await verifyIdentityAndExperience(f);
       stage = 'Personal source';
       await verifyPersonalSource(f);
+      stage = 'source-access authority';
+      await provisionClosedWorld(f);
+      await verifySourceAccessAuthority(f);
       stage = 'Shared source and authority';
       const prepared = await verifySharedAuthority(f);
       stage = 'approval and READY commit';
@@ -1154,10 +1378,11 @@ async function main() {
             + (SELECT count(*) FROM ${APPROVALS} WHERE approver_user_id = ANY($1::uuid[]))
             + (SELECT count(*) FROM ${EXPERIENCES} WHERE id = ANY($4::uuid[]))
             + (SELECT count(*) FROM public.conversation_units WHERE user_id = ANY($1::uuid[]))
-            + (SELECT count(*) FROM public.shared_worlds WHERE id = ANY(ARRAY[$2::uuid, $3::uuid]))
+            + (SELECT count(*) FROM public.shared_worlds WHERE id = ANY(ARRAY[$2::uuid, $3::uuid, $5::uuid]))
             + (SELECT count(*) FROM public.users WHERE id = ANY($1::uuid[]))
             + (SELECT count(*) FROM auth.users WHERE id = ANY($1::uuid[])) AS n`,
-      [humans, f.world, c.world, [f.experience, c.experience]]);
+      [humans, f.world, c.world, [f.experience, c.experience, f.strangerExperience, f.hadirExperience],
+        f.closedWorld]);
     assert.equal(Number(n), 0, 'every fixture this verifier created was rolled back or removed');
     const [{ worlds }] = await rows('SELECT count(*) worlds FROM public.public_world_state');
     assert.equal(Number(worlds), 1, 'and exactly one logical Public World still exists');

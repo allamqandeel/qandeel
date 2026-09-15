@@ -81,7 +81,7 @@ const digest = (n) => `sha256:${n.toString().padStart(64, '0')}`;
 const OWNED_COLUMNS = {
   [MANIFESTS]: [['id', 'uuid', false], ['experience_id', 'uuid', false],
     ['public_world_singleton', 'boolean', false], ['publisher_public_identity_ref', 'uuid', false],
-    ['publisher_user_id', 'uuid', false], ['action', 'text', false],
+    ['publisher_user_id', 'uuid', false], ['intended_publication_action', 'text', false],
     ['target_audience_class', 'text', false], ['authority_readiness', 'text', false],
     ['prepared_authority_snapshot_version', 'bigint', false], ['item_count', 'integer', false],
     ['created_at', 'timestamp with time zone', false]],
@@ -256,9 +256,9 @@ async function verifyBehaviour(f) {
   const manifest = async (id, items) => {
     await q(`INSERT INTO ${MANIFESTS}
                (id, experience_id, public_world_singleton, publisher_public_identity_ref, publisher_user_id,
-                action, target_audience_class, authority_readiness, prepared_authority_snapshot_version,
+                intended_publication_action, target_audience_class, authority_readiness, prepared_authority_snapshot_version,
                 item_count, created_at)
-             VALUES ($1, $2, true, $3, $4, 'PREPARE_PUBLICATION', 'PUBLIC_WORLD_AUDIENCE',
+             VALUES ($1, $2, true, $3, $4, 'PUBLISH_TO_PUBLIC_WORLD', 'PUBLIC_WORLD_AUDIENCE',
                      'PRIVACY_OWNERSHIP_AUTHORITY_ONLY', $5, $6, now())`,
       [id, f.experience, f.mohamedRef, f.mohamed, world, items]);
   };
@@ -267,18 +267,38 @@ async function verifyBehaviour(f) {
   await rejected(() => manifest(randomUUID(), 0), ['23514'], /publication_package_manifest_versions_count_check/u);
   await rejected(() => q(`INSERT INTO ${MANIFESTS}
                (id, experience_id, public_world_singleton, publisher_public_identity_ref, publisher_user_id,
-                action, target_audience_class, authority_readiness, prepared_authority_snapshot_version,
+                intended_publication_action, target_audience_class, authority_readiness, prepared_authority_snapshot_version,
                 item_count, created_at)
-             VALUES ($1, $2, true, $3, $4, 'PREPARE_PUBLICATION', 'PUBLIC_WORLD_AUDIENCE',
+             VALUES ($1, $2, true, $3, $4, 'PUBLISH_TO_PUBLIC_WORLD', 'PUBLIC_WORLD_AUDIENCE',
                      'SAFETY_AND_LAUNCH_CLEARED', 1, 1, now())`,
   [randomUUID(), f.experience, f.mohamedRef, f.mohamed]), ['23514'],
   /publication_package_manifest_versions_ready_check/u);
+  // AB03 the intended protected action is pinned: a manifest cannot intend the
+  // PREPARATION command, because preparing is not audience expansion and an
+  // approval of one action may not be replayed for another.
+  await rejected(() => q(`INSERT INTO ${MANIFESTS}
+               (id, experience_id, public_world_singleton, publisher_public_identity_ref, publisher_user_id,
+                intended_publication_action, target_audience_class, authority_readiness,
+                prepared_authority_snapshot_version, item_count, created_at)
+             VALUES ($1, $2, true, $3, $4, 'PREPARE_PUBLICATION', 'PUBLIC_WORLD_AUDIENCE',
+                     'PRIVACY_OWNERSHIP_AUTHORITY_ONLY', 1, 1, now())`,
+  [randomUUID(), f.experience, f.mohamedRef, f.mohamed]), ['23514'],
+  /publication_package_manifest_versions_action_check/u);
+  await rejected(() => q(`INSERT INTO ${MANIFESTS}
+               (id, experience_id, public_world_singleton, publisher_public_identity_ref, publisher_user_id,
+                intended_publication_action, target_audience_class, authority_readiness,
+                prepared_authority_snapshot_version, item_count, created_at)
+             VALUES ($1, $2, true, $3, $4, 'DISTRIBUTE_REPLAY_EXTERNALLY', 'PUBLIC_WORLD_AUDIENCE',
+                     'PRIVACY_OWNERSHIP_AUTHORITY_ONLY', 1, 1, now())`,
+  [randomUUID(), f.experience, f.mohamedRef, f.mohamed]), ['23514'],
+  /publication_package_manifest_versions_action_check/u);
+
   // A manifest can never attribute one human's public identity to another account.
   await rejected(() => q(`INSERT INTO ${MANIFESTS}
                (id, experience_id, public_world_singleton, publisher_public_identity_ref, publisher_user_id,
-                action, target_audience_class, authority_readiness, prepared_authority_snapshot_version,
+                intended_publication_action, target_audience_class, authority_readiness, prepared_authority_snapshot_version,
                 item_count, created_at)
-             VALUES ($1, $2, true, $3, $4, 'PREPARE_PUBLICATION', 'PUBLIC_WORLD_AUDIENCE',
+             VALUES ($1, $2, true, $3, $4, 'PUBLISH_TO_PUBLIC_WORLD', 'PUBLIC_WORLD_AUDIENCE',
                      'PRIVACY_OWNERSHIP_AUTHORITY_ONLY', 1, 1, now())`,
   [randomUUID(), f.experience, f.mohamedRef, f.hadir]), ['23503'],
   /publication_package_manifest_versions_pub_fk/u);

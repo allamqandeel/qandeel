@@ -124,8 +124,15 @@ test('0092 alters exactly one table, its own sibling, and only to add one bindin
 test('a manifest is immutable, non-empty, and binds exactly one Experience, publisher and audience', () => {
   const manifest = tableBlock(MANIFESTS);
   assert.match(manifest, /CHECK \(item_count > 0\)/u, 'a package is never empty');
-  assert.match(manifest, /CHECK \(action IN \('PREPARE_PUBLICATION', 'PUBLISH_TO_PUBLIC_WORLD'\)\)/u,
-    'the two frozen audience-expansion actions, complete, so I-05B is additive');
+  // FIX-B. The manifest binds the PROTECTED ACTION the rightsholders consent to,
+  // which is the frozen audience-expansion action - never the command that is
+  // being executed now. Preparing a package is explicitly not audience expansion,
+  // so `PREPARE_PUBLICATION` is not a value this column may hold, and a frozen
+  // authority decision may not be replayed for a different action (CW2-02 B6).
+  assert.match(manifest, /intended_publication_action text NOT NULL,/u);
+  assert.match(manifest, /CHECK \(intended_publication_action = 'PUBLISH_TO_PUBLIC_WORLD'\)/u);
+  assert.ok(!tableBlock(MANIFESTS).includes('PREPARE_PUBLICATION'),
+    'a manifest can never intend the preparation command as its protected action');
   assert.match(manifest, /CHECK \(target_audience_class = 'PUBLIC_WORLD_AUDIENCE'\)/u);
   assert.match(manifest, /CHECK \(authority_readiness = 'PRIVACY_OWNERSHIP_AUTHORITY_ONLY'\)/u,
     'I-05A proves PRIVACY and OWNERSHIP readiness only');

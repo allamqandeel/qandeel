@@ -30,17 +30,27 @@
 --   1  public_world_state        the singleton, FOR UPDATE
 --   2  public_experiences        the exact Experience row, FOR UPDATE
 --   3  the exact manifest        FOR SHARE (a manifest is immutable)
---   4  the exact source rows     FOR SHARE, deterministically ordered
---   5  the package / approval / command rows it writes
+--   4  shared_worlds             FOR SHARE, by id
+--   5  shared_world_materials    FOR SHARE, by id
+--   6  shared_world_history_items FOR SHARE, by id
+--   7  conversation_units        FOR SHARE, by id
+--   8  the package / approval / command rows it writes
 --
--- Step 4's order is not free. I-04G's owner deletion and its dependency
--- invalidation both lock `shared_worlds` FIRST, then `shared_world_materials`
--- ordered by id, then `shared_world_history_items` ordered by id. This migration
--- takes the SAME relative order over those two relations and NEVER locks
--- `shared_worlds` at all, so a Public preparation and a Shared owner deletion
--- can queue behind each other but can never form a cycle. Public source locks
--- are SHARE locks: Public reads Shared truth and must not let it change
--- underneath, and it never writes it.
+-- Steps 4-6 are not free, and step 4 is load-bearing. Every I-04 consequential
+-- mutation that can change what a human may SEE - leave, removal, rejoin, a
+-- history grant, Standard closure, owner deletion - locks `shared_worlds` FIRST,
+-- then `shared_world_materials` by id, then `shared_world_history_items` by id.
+-- This migration takes the SAME relative order over those three relations, so a
+-- Public preparation and any Shared mutation queue behind each other and can
+-- never form a cycle: I-04 never takes a Public lock, so no Public lock can ever
+-- be the second edge of one.
+--
+-- Holding the Shared World row is what makes source-view authority mean
+-- something. Without it, the visibility answer resolved in step 4 could go stale
+-- between resolution and the moment the body is copied, and a human who had just
+-- lost access could still have their loss raced. Public source locks are SHARE
+-- locks throughout: Public reads Shared truth, must not let it change underneath,
+-- and never writes it.
 --
 -- The Personal source is locked last and is `conversation_units`, which migration
 -- 0064 makes append-only for every role including the table owner - so no I-04 or
@@ -67,14 +77,31 @@
 --   * the exact CONTENT_RIGHTSHOLDER_SET;
 --   * the AUTHORITY_REQUEST_FINGERPRINT.
 --
--- The fingerprint binds the action, the target Public World, the Public World
--- audience class, the privacy/ownership readiness, the exact Experience, the
--- exact prospective Experience Version, the exact manifest, the exact publisher
--- identity, the exact source scope, the exact derived rightsholder set and the
--- Public World authority snapshot version. It is DERIVED and never supplied, so
--- it is not a bearer token: it cannot authorize another package, Experience,
--- version, source or audience, and it changes the moment the authority it
--- describes changes.
+-- The fingerprint binds the INTENDED PROTECTED ACTION, the target Public World,
+-- the Public World audience class, the privacy/ownership readiness, the exact
+-- Experience, the exact prospective Experience Version, the exact manifest, the
+-- exact publisher identity, the exact source scope, the exact derived
+-- rightsholder set and the Public World authority snapshot version. It is DERIVED
+-- and never supplied, so it is not a bearer token: it cannot authorize another
+-- package, Experience, version, source or audience, and it changes the moment the
+-- authority it describes changes.
+--
+-- The action it binds is `PUBLISH_TO_PUBLIC_WORLD`, NOT the command being run.
+-- Preparing a package is `PREPARE_PUBLICATION`, it lives in the prepare command's
+-- own durable namespace, and it is explicitly NOT audience expansion. What a
+-- rightsholder consents to when they approve an exact immutable package is the
+-- future publication of that package - so that is what their approval is bound
+-- to, and a preparation request reference is never a publication consent token.
+-- A frozen authority decision is request-bound and may not be replayed for a
+-- different action (CW2-02 section 7 / B6), which is precisely why I-05B can
+-- revalidate THIS approval before executing PUBLISHED instead of having to
+-- collect every human's consent a second time.
+--
+-- Binding the future action changes nothing about what I-05A does: committing
+-- READY_FOR_REVIEW performs no publication, widens no audience and creates no
+-- public visibility. I-05B must still revalidate the exact manifest-bound
+-- authority, the EFFECTIVE approval state, and the Safety / Launch / entitlement
+-- gates this slice evaluates none of, before any PUBLISHED transition.
 --
 -- It deliberately does NOT bind PUBLIC_AUDIENCE_POLICY. Who may currently view
 -- Public World is a gate, not the identity of a package (CW2-04 D13), so a
@@ -109,8 +136,26 @@
 --   is CHECK-pinned to TEXT in 0064 and no audio object exists anywhere in the
 --   Personal schema. So no Personal voice adapter is written, and none is faked.
 --
--- SHARED_WORLD. The exact I-04G material, its exact I-04F history item and its
--- exact availability revision.
+-- SHARED_WORLD. Two INDEPENDENT rights are checked, and neither substitutes for
+-- the other:
+--
+--   SOURCE-ACCESS AUTHORITY      may the initiating human currently SEE this
+--                                exact history item? Answered by the canonical
+--                                I-04F entry point, never re-derived here.
+--   CONTENT-RIGHTSHOLDER AUTHORITY  whose consent widens this material to the
+--                                Public audience? Derived from I-04G's exact
+--                                material authority for the exact item.
+--
+-- A rightsholder approving the widening of THEIR material says nothing about
+-- whether the human assembling the package was ever entitled to see it, so the
+-- source-view check runs FIRST and before any body is read. Conversely a former
+-- member whose material authority survived their departure may still approve
+-- their own included material without regaining any browsing. Publication
+-- consent is not a source-retrieval permit, and material authority is not a
+-- membership restoration.
+--
+-- The exact I-04G material, its exact I-04F history item and its exact
+-- availability revision.
 --   * HUMAN_TEXT, QANDEEL_OUTPUT, QANDEEL_ANALYSIS carry a text body and are
 --     publishable when their authority resolves.
 --   * HUMAN_VOICE_NOTE is REFUSED: its durable `audio_object_ref` is an opaque
@@ -197,18 +242,32 @@ CREATE TABLE public.public_experience_draft_commands (
         FOREIGN KEY (actor_user_id) REFERENCES public.users (id) ON DELETE RESTRICT
 );
 
+-- THE COMMAND EXECUTED NOW IS NOT THE PROTECTED ACTION IT PREPARES.
+--
+-- `command_action` is `PREPARE_PUBLICATION`, in this relation's own durable
+-- namespace. The protected audience-expansion action the rightsholders consent
+-- to is `intended_publication_action` on the manifest, and it is
+-- `PUBLISH_TO_PUBLIC_WORLD`. Keeping them in two relations, with two pinned
+-- vocabularies, is what stops a preparation request reference from ever reading
+-- as a publication consent token: preparing is explicitly NOT audience expansion,
+-- and an approval of one action may not be replayed for another (CW2-02 B6).
 CREATE TABLE public.publication_package_prepare_commands (
     id uuid NOT NULL,
     experience_id uuid NOT NULL,
     manifest_version_id uuid NOT NULL,
     experience_version_id uuid NOT NULL,
     actor_user_id uuid NOT NULL,
+    command_action text NOT NULL,
     item_count integer NOT NULL,
     required_approver_count integer NOT NULL,
     authority_request_fingerprint text NOT NULL,
     request_ref text NOT NULL,
     committed_at timestamptz NOT NULL,
     CONSTRAINT publication_package_prepare_commands_pk PRIMARY KEY (id),
+    -- The command namespace, pinned, and deliberately disjoint from the
+    -- manifest's intended publication action.
+    CONSTRAINT publication_package_prepare_commands_action_check
+        CHECK (command_action = 'PREPARE_PUBLICATION'),
     CONSTRAINT publication_package_prepare_commands_manifest_key UNIQUE (manifest_version_id),
     CONSTRAINT publication_package_prepare_commands_version_key UNIQUE (experience_version_id),
     CONSTRAINT publication_package_prepare_commands_count_check
@@ -426,7 +485,7 @@ BEGIN
     coalesce(array_length(approvers, 1), 0)::integer,
     'sha256:' || encode(sha256(convert_to(
         'QANDEEL_CWV2_PUBLIC_PUBLICATION_AUTHORITY_REQUEST_V1' || E'\n'
-     || 'action=' || manifest.action || E'\n'
+     || 'action=' || manifest.intended_publication_action || E'\n'
      || 'target=PUBLIC_WORLD' || E'\n'
      || 'audienceClass=' || manifest.target_audience_class || E'\n'
      || 'readiness=' || manifest.authority_readiness || E'\n'
@@ -606,7 +665,13 @@ BEGIN
     -- the difference between "retry" and "choose another identity": a concurrent
     -- first creation by the same human lost the race on UNIQUE (user_id), while a
     -- reused public ref belongs to somebody else already.
-    GET STACKED DIAGNOSTICS conflict = PG_EXCEPTION_CONSTRAINT;
+    --
+    -- The item is CONSTRAINT_NAME. PostgreSQL's `PG_EXCEPTION_` prefix exists for
+    -- DETAIL, HINT and CONTEXT only; the constraint, column, table and schema
+    -- items are unprefixed, and an invented name is not a syntax error the
+    -- surrounding SQL reveals - plpgsql rejects it when the FUNCTION is created,
+    -- and reports it at the line of the closing END.
+    GET STACKED DIAGNOSTICS conflict = CONSTRAINT_NAME;
     IF conflict = 'public_identities_user_key' THEN
       RAISE EXCEPTION 'PUBLIC_EXPERIENCE_STALE' USING ERRCODE='40001';
     END IF;
@@ -947,9 +1012,19 @@ BEGIN
   END IF;
 
   -- CANONICAL LOCK ORDER, STEP 4: the exact source rows, in the SAME relative
-  -- order I-04G's owner deletion uses - materials by id, then history items by
-  -- id - and never `shared_worlds`, so no cross-domain cycle is possible. SHARE
-  -- locks: Public reads Shared truth and never writes it.
+  -- order every I-04 consequential mutation uses - the Shared World row, then
+  -- materials by id, then history items by id. SHARE locks throughout: Public
+  -- reads Shared truth and never writes it.
+  --
+  -- The Shared World row is the synchronization point source-view authority
+  -- needs. Every I-04 mutation that can change what this human may see - leave,
+  -- removal, rejoin, a history grant, closure, owner deletion - takes
+  -- `shared_worlds FOR UPDATE` FIRST, so a SHARE lock here means the visibility
+  -- answer resolved below cannot go stale before the body is copied. Taking it
+  -- creates no cycle: I-04 never takes a Public lock, and Public acquires the
+  -- three Shared relations in I-04's own order.
+  PERFORM 1 FROM public.shared_worlds w
+    WHERE w.id = ANY(p_shared_source_world_ids) ORDER BY w.id FOR SHARE;
   PERFORM 1 FROM public.shared_world_materials m
     WHERE m.id = ANY(p_shared_source_material_ids) ORDER BY m.id FOR SHARE;
   PERFORM 1 FROM public.shared_world_history_items i
@@ -987,6 +1062,45 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE' USING ERRCODE='P0002';
   END IF;
+
+  -- ============ SOURCE-ACCESS AUTHORITY, BEFORE ANY BODY IS READ ============
+  --
+  -- Content publication authority is NOT source-access authority. A rightsholder
+  -- approving the widening of THEIR material says nothing about whether the human
+  -- assembling the package was ever entitled to SEE it. Without this check, a
+  -- controller who merely knew valid Shared identifiers could make this
+  -- SECURITY DEFINER path copy hidden bytes into their own DRAFT and then read
+  -- them back through the controller review boundary - before any rightsholder
+  -- approval, and before any audience expansion existed to be refused.
+  --
+  -- The entitlement question belongs to I-04F and is NOT re-implemented here.
+  -- This consumes the canonical entry point,
+  -- `resolve_shared_world_history_visibility_v1(world, human)`, which already
+  -- owns the whole meaning: the ACTIVE union of membership-period visibility and
+  -- explicit history grants, the READ_ONLY_CLOSED delegation to the exact frozen
+  -- closure entitlement, the requirement of an open episode, availability
+  -- dominating every basis, and a truthful EMPTY answer rather than a
+  -- distinguishable error for a human with no standing - so it is not a
+  -- membership oracle and neither is this.
+  --
+  -- A former member keeps material authority to APPROVE their own included
+  -- material (proven separately below). That is a different right from browsing,
+  -- and this check is what keeps preparation from becoming the backdoor.
+  --
+  -- The denial class is deliberately the SAME one a nonexistent material gets, so
+  -- a caller cannot learn from the error whether a hidden source id exists. It is
+  -- also evaluated BEFORE the kind, availability and authority checks below, so
+  -- none of those can answer that question either.
+  IF EXISTS (
+    SELECT 1 FROM public.shared_world_materials sm
+     WHERE sm.id = ANY(p_shared_source_material_ids)
+       AND NOT EXISTS (
+         SELECT 1 FROM public.resolve_shared_world_history_visibility_v1(sm.world_id, u) v
+          WHERE v.history_item_id = sm.history_item_id)
+  ) THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE' USING ERRCODE='P0002';
+  END IF;
+
   -- Only a kind that has a PUBLIC body form may be included. HUMAN_VOICE_NOTE
   -- has no reviewed public media boundary; EXPLICIT_DISCLOSURE and
   -- WORLD_EVENT_DERIVED_MATERIAL have no producer at all.
@@ -1033,10 +1147,10 @@ BEGIN
   BEGIN
     INSERT INTO public.publication_package_manifest_versions
       (id, experience_id, public_world_singleton, publisher_public_identity_ref, publisher_user_id,
-       action, target_audience_class, authority_readiness, prepared_authority_snapshot_version,
-       item_count, created_at)
+       intended_publication_action, target_audience_class, authority_readiness,
+       prepared_authority_snapshot_version, item_count, created_at)
     SELECT p_manifest_version_id, p_experience_id, true, controller.controller_public_identity_ref, u,
-           'PREPARE_PUBLICATION', 'PUBLIC_WORLD_AUDIENCE', 'PRIVACY_OWNERSHIP_AUTHORITY_ONLY',
+           'PUBLISH_TO_PUBLIC_WORLD', 'PUBLIC_WORLD_AUDIENCE', 'PRIVACY_OWNERSHIP_AUTHORITY_ONLY',
            w.state_version, total, instant
       FROM public.public_world_state w WHERE w.singleton;
   EXCEPTION WHEN unique_violation THEN
@@ -1111,10 +1225,10 @@ BEGIN
    WHERE e.id = p_experience_id;
 
   INSERT INTO public.publication_package_prepare_commands
-    (id, experience_id, manifest_version_id, experience_version_id, actor_user_id, item_count,
-     required_approver_count, authority_request_fingerprint, request_ref, committed_at)
-  VALUES (p_command_id, p_experience_id, p_manifest_version_id, p_experience_version_id, u, total,
-          derived_count, derived_fingerprint, request, instant);
+    (id, experience_id, manifest_version_id, experience_version_id, actor_user_id, command_action,
+     item_count, required_approver_count, authority_request_fingerprint, request_ref, committed_at)
+  VALUES (p_command_id, p_experience_id, p_manifest_version_id, p_experience_version_id, u,
+          'PREPARE_PUBLICATION', total, derived_count, derived_fingerprint, request, instant);
 
   RETURN QUERY SELECT 'PACKAGE_PREPARED'::text, p_manifest_version_id, p_experience_version_id,
                       next_ordinal, total, derived_count, derived_fingerprint, instant;
@@ -1211,7 +1325,12 @@ BEGIN
     RAISE EXCEPTION 'PUBLIC_EXPERIENCE_CONTRADICTORY_STATE' USING ERRCODE='P0001';
   END IF;
 
-  -- CANONICAL LOCK ORDER, STEP 4: the exact source rows, same relative order.
+  -- CANONICAL LOCK ORDER, STEP 4: the exact source rows, same relative order -
+  -- the Shared World row first, exactly as every I-04 mutation takes it.
+  PERFORM 1 FROM public.shared_worlds w
+    WHERE w.id IN (SELECT p.shared_world_id FROM public.publication_package_item_provenance p
+                    WHERE p.manifest_version_id = p_manifest_version_id AND p.source_class = 'SHARED_WORLD')
+    ORDER BY w.id FOR SHARE;
   PERFORM 1 FROM public.shared_world_materials m
     WHERE m.id IN (SELECT p.shared_material_id FROM public.publication_package_item_provenance p
                     WHERE p.manifest_version_id = p_manifest_version_id AND p.source_class = 'SHARED_WORLD')
@@ -1361,7 +1480,12 @@ BEGIN
     RAISE EXCEPTION 'PUBLIC_EXPERIENCE_CONTRADICTORY_STATE' USING ERRCODE='P0001';
   END IF;
 
-  -- CANONICAL LOCK ORDER, STEP 4: the exact source rows, same relative order.
+  -- CANONICAL LOCK ORDER, STEP 4: the exact source rows, same relative order -
+  -- the Shared World row first, exactly as every I-04 mutation takes it.
+  PERFORM 1 FROM public.shared_worlds w
+    WHERE w.id IN (SELECT p.shared_world_id FROM public.publication_package_item_provenance p
+                    WHERE p.manifest_version_id = manifest.id AND p.source_class = 'SHARED_WORLD')
+    ORDER BY w.id FOR SHARE;
   PERFORM 1 FROM public.shared_world_materials m
     WHERE m.id IN (SELECT p.shared_material_id FROM public.publication_package_item_provenance p
                     WHERE p.manifest_version_id = manifest.id AND p.source_class = 'SHARED_WORLD')
@@ -1562,6 +1686,7 @@ DECLARE
     'public.derive_public_publication_authority_v1(uuid)',
     'public.resolve_public_package_items_v1(uuid[], uuid[], uuid[], uuid[], uuid[])'];
   resolver text := 'public.resolve_public_experience_review_v1(uuid, uuid)';
+  preparer text := 'public.prepare_public_experience_manifest_v1(uuid, uuid, uuid, uuid, uuid[], uuid[], uuid[], uuid[], uuid[])';
   own_tables text[] := ARRAY['public_identity_commands', 'public_experience_draft_commands',
                              'publication_package_prepare_commands',
                              'public_experience_review_ready_commands'];
@@ -1661,6 +1786,37 @@ BEGIN
     RAISE EXCEPTION 'I-05A: the READY commit must write exactly READY_FOR_REVIEW';
   END IF;
 
+  -- THE APPROVAL BINDS THE PROTECTED ACTION, NOT THE COMMAND. A manifest may
+  -- only ever intend `PUBLISH_TO_PUBLIC_WORLD`, the prepare command may only ever
+  -- be `PREPARE_PUBLICATION`, and the two vocabularies are disjoint - so a
+  -- preparation request can never read as publication consent, and an approval
+  -- collected here is bound to the action I-05B will actually execute.
+  IF (SELECT pg_get_constraintdef(c.oid) FROM pg_constraint c
+       WHERE c.conrelid = 'public.publication_package_manifest_versions'::regclass
+         AND c.conname = 'publication_package_manifest_versions_action_check') ~ 'PREPARE_PUBLICATION' THEN
+    RAISE EXCEPTION 'I-05A: a manifest must not intend PREPARE_PUBLICATION: preparing is not audience expansion';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint c
+     WHERE c.conrelid = 'public.publication_package_manifest_versions'::regclass
+       AND c.conname = 'publication_package_manifest_versions_action_check'
+       AND pg_get_constraintdef(c.oid) ~ 'PUBLISH_TO_PUBLIC_WORLD'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_constraint c
+     WHERE c.conrelid = 'public.publication_package_prepare_commands'::regclass
+       AND c.conname = 'publication_package_prepare_commands_action_check'
+       AND pg_get_constraintdef(c.oid) ~ 'PREPARE_PUBLICATION'
+  ) THEN
+    RAISE EXCEPTION 'I-05A: the intended publication action and the prepare command action must each be pinned';
+  END IF;
+  -- And the fingerprint must actually hash the intended action, or binding it
+  -- would be a column nobody consults.
+  IF (SELECT pr.prosrc FROM pg_proc pr
+       WHERE pr.oid = 'public.derive_public_publication_authority_v1(uuid)'::regprocedure)
+     !~ 'intended_publication_action' THEN
+    RAISE EXCEPTION 'I-05A: the authority request fingerprint must bind the intended publication action';
+  END IF;
+
   -- NO FUNCTION ACCEPTS AN AUTHORITY, APPROVER, AUDIENCE, VISIBILITY, BODY,
   -- ORDINAL OR INSTANT PARAMETER. Two things make this assertion mean what it
   -- says. It reads only mode 'i' - the INPUT parameters - because for a RETURNS
@@ -1698,13 +1854,37 @@ BEGIN
     IF p.prosrc ~ '(INSERT INTO|UPDATE|DELETE FROM) public\.(shared_world|conversation_|users|memories|hypothes|standing_context|matching_|introduction)' THEN
       RAISE EXCEPTION 'I-05A: % must mutate no Shared Personal or predecessor state', fn;
     END IF;
-    IF p.prosrc ~ 'public\.shared_worlds' THEN
-      RAISE EXCEPTION 'I-05A: % must not lock or read the Shared World row: Public does not depend on Shared membership', fn;
-    END IF;
-    IF p.prosrc ~ 'shared_world_membership_episodes' OR p.prosrc ~ 'shared_world_history_access_grants' THEN
-      RAISE EXCEPTION 'I-05A: % must not read Shared membership or history grants: rights come from included material', fn;
+    -- SOURCE-ACCESS AUTHORITY IS CONSUMED, NEVER RE-IMPLEMENTED. What is banned
+    -- is a Public primitive deciding Shared entitlement for itself out of
+    -- membership episodes, history grants or closed-World entitlements - the
+    -- exact semantics I-04F and I-04G already own. Consuming the canonical
+    -- visibility entry point is not only allowed, it is REQUIRED below.
+    IF p.prosrc ~ 'shared_world_membership_episodes'
+       OR p.prosrc ~ 'shared_world_history_access_grants'
+       OR p.prosrc ~ 'shared_world_standard_closed_view_entitlements'
+       OR p.prosrc ~ 'shared_world_history_package_manifest_items' THEN
+      RAISE EXCEPTION 'I-05A: % must not re-implement Shared membership or history authorization: consume the canonical I-04F visibility entry point', fn;
     END IF;
   END LOOP;
+
+  -- THE ONE PLACE A SHARED BODY IS COPIED MUST PROVE SOURCE-VIEW AUTHORITY, and
+  -- it must do so through the canonical entry point rather than by inventing a
+  -- second answer to a question I-04F already owns.
+  IF (SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = preparer::regprocedure)
+     !~ 'resolve_shared_world_history_visibility_v1' THEN
+    RAISE EXCEPTION 'I-05A: publication preparation must prove the initiator may currently SEE each selected Shared history item';
+  END IF;
+  -- And it must hold the Shared World row while it does, or the answer can go
+  -- stale between resolution and the copy.
+  IF (SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = preparer::regprocedure)
+     !~ 'FROM public\.shared_worlds w' THEN
+    RAISE EXCEPTION 'I-05A: publication preparation must synchronize on the exact Shared World row before resolving source visibility';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles r WHERE r.rolname = 'service_role')
+     AND NOT has_function_privilege('service_role',
+       'public.resolve_shared_world_history_visibility_v1(uuid, uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'I-05A: the frozen I-04F history visibility entry point must still be reachable';
+  END IF;
 
   -- THE FROZEN PREDECESSOR BOUNDARIES THIS SLICE CONSUMES MUST STILL BE INTACT.
   IF NOT EXISTS (SELECT 1 FROM pg_trigger tg
