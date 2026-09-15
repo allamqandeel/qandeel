@@ -376,8 +376,28 @@ CREATE TABLE public.shared_world_member_invitations (
     CONSTRAINT shared_world_member_invitations_payload_target_fk
         FOREIGN KEY (add_member_payload_version_id, target_user_id)
         REFERENCES public.shared_world_add_member_payload_versions (id, target_user_id) ON DELETE RESTRICT,
+    -- DEFERRED, and this is load-bearing rather than a convenience.
+    --
+    -- Section 11 requires the invitation to become ACCEPTED - carrying the exact
+    -- episode it produced - BEFORE that episode is inserted, so the topology
+    -- trigger the insert fires can never find this invitation still PENDING and
+    -- terminalize the very acceptance that is creating it. An IMMEDIATE foreign
+    -- key makes that ordering impossible: the episode does not exist yet at the
+    -- instant the invitation names it, and the acceptance fails 23503.
+    --
+    -- Reversing the order is not an alternative. Inserting the episode first
+    -- changes current topology while the invitation is still PENDING, so the
+    -- trigger stales it, the state transition then matches no row, and acceptance
+    -- can never succeed at all.
+    --
+    -- So the binding is checked at COMMIT instead of per statement. It is exactly
+    -- as strong: the transaction is atomic, no other session ever observes the
+    -- intermediate state, and a commit whose episode does not exist still fails.
+    -- What deferral buys is the ONE ordering the frozen leave primitive forces on
+    -- this slice.
     CONSTRAINT shared_world_member_invitations_episode_fk
-        FOREIGN KEY (accepted_membership_episode_id) REFERENCES public.shared_world_membership_episodes (id) ON DELETE RESTRICT
+        FOREIGN KEY (accepted_membership_episode_id) REFERENCES public.shared_world_membership_episodes (id)
+        ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
 );
 
 -- The one access pattern the terminalization trigger needs: the still-PENDING
@@ -2124,6 +2144,26 @@ BEGIN
        AND pg_get_constraintdef(con.oid) LIKE '%(id, excluded_membership_episode_id)%'
   ) THEN
     RAISE EXCEPTION 'I-04E: a removal payload target episode must be the proposal exact excluded episode, structurally';
+  END IF;
+  -- EXACTLY ONE deferred constraint exists in this slice, and it is the one the
+  -- acceptance ordering forces. Every other binding is checked per statement, so a
+  -- later change that quietly defers another - or that makes THIS one immediate,
+  -- which would make acceptance impossible - is refused here.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint con
+     WHERE con.conrelid = 'public.shared_world_member_invitations'::regclass
+       AND con.conname = 'shared_world_member_invitations_episode_fk'
+       AND con.condeferrable AND con.condeferred
+  ) THEN
+    RAISE EXCEPTION 'I-04E: the accepted-episode binding must be deferred, or an acceptance can never mark the invitation terminal before the episode exists';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint con
+     WHERE con.conrelid = ANY (ARRAY(SELECT t::regclass FROM unnest(own_tables) t))
+       AND con.condeferrable
+       AND con.conname <> 'shared_world_member_invitations_episode_fk'
+  ) THEN
+    RAISE EXCEPTION 'I-04E: no constraint but the accepted-episode binding may be deferrable: every other one is checked per statement';
   END IF;
   -- The invited human IS the payload target, and the invitation carries the
   -- exact proposal, snapshot and payload it was dispatched under.

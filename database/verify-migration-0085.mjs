@@ -277,7 +277,11 @@ const OWNED_FOREIGN_KEYS = {
   shared_world_member_invitations_snapshot_binding_fk: 'FOREIGN KEY (governance_proposal_id, membership_snapshot_id) REFERENCES shared_world_governance_proposals(id, membership_snapshot_id) ON DELETE RESTRICT',
   shared_world_member_invitations_payload_binding_fk: 'FOREIGN KEY (governance_proposal_id, add_member_payload_version_id) REFERENCES shared_world_add_member_payload_versions(governance_proposal_id, id) ON DELETE RESTRICT',
   shared_world_member_invitations_payload_target_fk: 'FOREIGN KEY (add_member_payload_version_id, target_user_id) REFERENCES shared_world_add_member_payload_versions(id, target_user_id) ON DELETE RESTRICT',
-  shared_world_member_invitations_episode_fk: 'FOREIGN KEY (accepted_membership_episode_id) REFERENCES shared_world_membership_episodes(id) ON DELETE RESTRICT',
+  // DEFERRED deliberately: the acceptance must mark the invitation terminal BEFORE
+  // the episode it names exists, or the topology trigger terminalizes the very
+  // acceptance creating it. Still enforced - at COMMIT - which verifyDeferredBinding
+  // proves below rather than assumes.
+  shared_world_member_invitations_episode_fk: 'FOREIGN KEY (accepted_membership_episode_id) REFERENCES shared_world_membership_episodes(id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED',
   shared_world_member_joined_events_world_fk: 'FOREIGN KEY (world_id) REFERENCES shared_worlds(id) ON DELETE RESTRICT',
   shared_world_member_joined_events_episode_fk: 'FOREIGN KEY (membership_episode_id) REFERENCES shared_world_membership_episodes(id) ON DELETE RESTRICT',
   shared_world_member_joined_events_invitation_fk: 'FOREIGN KEY (member_invitation_id) REFERENCES shared_world_member_invitations(id) ON DELETE RESTRICT',
@@ -466,6 +470,26 @@ async function verifyCatalog() {
   for (const [name, def] of Object.entries(OWNED_FOREIGN_KEYS)) {
     assert.equal(liveForeignKeys.get(name), def,
       `${name} binds exactly the canonical row, restrictively: canonical history is never cascaded away`);
+  }
+
+  stage = 'catalog: the one deferred binding the acceptance ordering forces, and no other';
+  // Asserted per OWNED NAME rather than as a census of every deferrable constraint on
+  // these tables. A census would read "no later slice may defer anything here", which
+  // is a ceiling on the roadmap rather than a fact about 0085 - the same shape this
+  // file refuses everywhere else.
+  const deferralOf = new Map();
+  for (const table of OWN_TABLES) {
+    for (const row of await rows(
+      `SELECT con.conname name, con.condeferrable deferrable, con.condeferred deferred
+         FROM pg_constraint con WHERE con.conrelid = $1::regclass`, [table])) {
+      deferralOf.set(row.name, row);
+    }
+  }
+  assert.equal(deferralOf.get('shared_world_member_invitations_episode_fk')?.deferred, true,
+    'the accepted-episode binding is INITIALLY DEFERRED, so an acceptance may name the episode before inserting it');
+  for (const name of Object.keys(OWNED_FOREIGN_KEYS)) {
+    if (name === 'shared_world_member_invitations_episode_fk') continue;
+    assert.equal(deferralOf.get(name)?.deferrable, false, `${name} is checked per statement, never deferred`);
   }
 
   stage = 'catalog: the one access pattern index 0085 owns';
@@ -793,6 +817,28 @@ async function verifyAddMember(f) {
   assert.equal(newEpisode.user_id, f.newcomer);
   assert.equal(newEpisode.ended_at, null, 'the new member holds an OPEN episode');
   assert.equal(newEpisode.end_reason, null);
+
+  stage = 'A4: deferring the accepted-episode binding did not weaken it - it is still enforced, at COMMIT';
+  // The ordering section 11 requires makes an IMMEDIATE foreign key impossible, so
+  // the binding is checked when the transaction settles instead. That is only
+  // acceptable if it REALLY still fails, which is proven here rather than assumed:
+  // forcing the deferred constraint to be checked must reject an episode that does
+  // not exist, with the exact foreign-key violation.
+  await q('SAVEPOINT deferred_binding');
+  await q(`UPDATE ${MEMBER_INVITATIONS} SET accepted_membership_episode_id = $1 WHERE id = $2`,
+    [randomUUID(), invitationId]);
+  let deferredError;
+  try {
+    await q('SET CONSTRAINTS public.shared_world_member_invitations_episode_fk IMMEDIATE');
+  } catch (caught) { deferredError = caught; }
+  assert.ok(deferredError, 'an accepted invitation naming an episode that does not exist must still be refused');
+  assert.equal(deferredError.code, '23503',
+    'and it is refused as the exact foreign-key violation, only at the moment the transaction settles');
+  await q('ROLLBACK TO SAVEPOINT deferred_binding');
+  await q('RELEASE SAVEPOINT deferred_binding');
+  const [stillBound] = await rows(`SELECT accepted_membership_episode_id FROM ${MEMBER_INVITATIONS} WHERE id = $1`, [invitationId]);
+  assert.equal(stillBound.accepted_membership_episode_id, acceptance.episode,
+    'and the real binding is intact after the probe rolled back');
 
   stage = 'A9: acceptance creates NO retrospective history grant and no ghost history metadata';
   const after = await sharedCounts(f.humans, [world.worldId]);

@@ -229,6 +229,25 @@ test('the member invitation freezes its state CONSISTENCY without freezing the f
     'one proposal dispatches at most ONE effective invitation');
   assert.match(block, /CONSTRAINT shared_world_member_invitations_episode_key UNIQUE \(accepted_membership_episode_id\)/u,
     'one acceptance produces at most ONE membership episode');
+  // EXACTLY ONE deferred binding, and it is the one the acceptance ordering forces.
+  //
+  // Section 11 requires the invitation to become ACCEPTED - carrying the episode it
+  // produced - BEFORE that episode is inserted, so the topology trigger the insert
+  // fires cannot terminalize the very acceptance creating it. An IMMEDIATE foreign
+  // key makes that ordering impossible, and reversing the order makes acceptance
+  // impossible outright. Deferral is as strong: the transaction is atomic and the
+  // binding still fails at COMMIT, which the real-PostgreSQL verifier proves by
+  // forcing the check rather than assuming it.
+  assert.match(block, /FOREIGN KEY \(accepted_membership_episode_id\) REFERENCES public\.shared_world_membership_episodes \(id\)\s*\n?\s*ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED/u,
+    'the accepted-episode binding is deferred so the terminal transition can precede the episode');
+  assert.equal((executableSql.match(/DEFERRABLE/gu) ?? []).length, 1,
+    'and it is the ONLY deferred constraint in the slice: every other binding is checked per statement');
+  for (const phrase of [
+    'I-04E: the accepted-episode binding must be deferred, or an acceptance can never mark the invitation terminal before the episode exists',
+    'I-04E: no constraint but the accepted-episode binding may be deferrable: every other one is checked per statement',
+  ]) assert.ok(selfAssertions.includes(phrase), `migration 0085 refuses to deploy without: ${phrase}`);
+  assert.match(verifier, /SET CONSTRAINTS public\.shared_world_member_invitations_episode_fk IMMEDIATE/u,
+    'and the verifier proves the deferred binding is still enforced rather than merely present');
   // The exact target is the payload's target, and the payload is the proposal's own.
   assert.match(block, /FOREIGN KEY \(add_member_payload_version_id, target_user_id\)/u);
   assert.match(block, /FOREIGN KEY \(governance_proposal_id, add_member_payload_version_id\)/u);
@@ -682,6 +701,8 @@ test('the contract is not vacuous: every deliberate weakening of migration 0085 
       ['stores a payload blob on a governed membership table', (text) => text.replace(
         '    created_at timestamptz NOT NULL,\n    CONSTRAINT shared_world_add_member_payload_versions_pk',
         '    created_at timestamptz NOT NULL,\n    payload jsonb,\n    CONSTRAINT shared_world_add_member_payload_versions_pk')],
+      ['makes the accepted-episode binding immediate, which would make acceptance impossible', (text) => text.replace(
+        'ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED', 'ON DELETE RESTRICT')],
       ['records a remover identity', (text) => text.replace(
         'DECLARE\n  committed public.shared_world_member_removal_commands;',
         'DECLARE\n  u uuid := auth.uid();\n  committed public.shared_world_member_removal_commands;')],
@@ -721,6 +742,7 @@ test('the contract is not vacuous: every deliberate weakening of migration 0085 
           < bodies[ACCEPT_FN].indexOf('INSERT INTO public.shared_world_membership_episodes')),
         () => assert.doesNotMatch(sql, /UNIQUE \(world_id, (?:target_|actor_)?user_id\)/u),
         () => assert.doesNotMatch(sql, /^\s{4}payload jsonb,/mu),
+        () => assert.match(sql, /ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED/u),
         () => assert.doesNotMatch(bodies[REMOVE_FN], /auth\.uid/u),
       ];
       let refused = false;
