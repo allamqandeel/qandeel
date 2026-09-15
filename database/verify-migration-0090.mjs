@@ -538,12 +538,52 @@ async function leaveAs(worldId, human) {
   await identity('postgres');
 }
 
+/**
+ * THE ACTOR BELONGS TO THE CALL SITE, NEVER TO LEFTOVER SESSION STATE.
+ *
+ * `commit_shared_world_member_rejoin_v1` is a HUMAN authority in frozen 0085: it
+ * derives the rejoining human from `auth.uid()` and admits only the exact former
+ * member the approved proposal names. The whole verifier runs inside ONE
+ * transaction, so a `SET LOCAL` subject established by one helper survives into
+ * the next - and this rejoin was invoked with whatever subject the preceding
+ * approvals happened to leave behind, which was none. The frozen runtime refused
+ * it correctly. The repair is this helper, not a change to the runtime: the exact
+ * actor is established immediately before the call, every time.
+ */
+async function rejoinAs(targetUserId, proposalId) {
+  await identity('postgres', targetUserId);
+  const [rejoined] = await rows(REJOIN_COMMIT_SQL, [randomUUID(), proposalId, randomUUID(), randomUUID()]);
+  await identity('postgres');
+  return rejoined;
+}
+
+/** The frozen 0087 package approval also derives its human from `auth.uid()`. */
+async function approvePackageAs(human, manifestId) {
+  await identity('postgres', human);
+  const [approved] = await rows(HISTORY_APPROVE_SQL, [randomUUID(), manifestId]);
+  await identity('postgres');
+  return approved;
+}
+
+/**
+ * Governance EXECUTION carries no human authority of its own - frozen 0085 and
+ * 0088 derive nothing from `auth.uid()` here, the approvals already did. It is
+ * still invoked from an explicit no-actor session rather than from whichever
+ * approver went last, so the fixture never depends on that being true.
+ */
+async function removeMemberBy(proposalId) {
+  await identity('postgres');
+  const [removed] = await rows(REMOVE_COMMIT_SQL, [randomUUID(), proposalId, randomUUID()]);
+  return removed;
+}
+
 async function closeWorld(worldId, humans) {
   const proposal = randomUUID();
   await identity('postgres');
   const [prepared] = await rows(END_PREPARE_SQL, [proposal, randomUUID(), randomUUID(), worldId]);
   assert.equal(prepared.outcome, 'PREPARED');
   await approveWith(proposal, humans);
+  await identity('postgres');
   const [closed] = await rows(END_COMMIT_SQL, [randomUUID(), proposal, randomUUID()]);
   assert.equal(closed.outcome, 'WORLD_ENDED');
   await identity('postgres');
@@ -912,8 +952,7 @@ async function verifyDeletion(f, lifecycle) {
   const [prepared] = await rows(HISTORY_PREPARE_SQL, [manifest, granted.worldId, f.grantSecond, [older.committed_history_item_id]]);
   assert.equal(prepared.outcome, 'PREPARED');
   assert.equal(Number(prepared.prepared_required_approver_count), 1, 'the exact author is the derived required approver');
-  await identity('postgres', f.inviter);
-  const [approved] = await rows(HISTORY_APPROVE_SQL, [randomUUID(), manifest]);
+  const approved = await approvePackageAs(f.inviter, manifest);
   assert.equal(approved.outcome, 'APPROVED');
   await identity('postgres');
   const [grantCommitted] = await rows(HISTORY_GRANT_SQL, [randomUUID(), manifest, randomUUID(), randomUUID()]);
@@ -1029,8 +1068,15 @@ async function verifyReviewFixes(f) {
     [rejoinProposal, randomUUID(), randomUUID(), world.worldId, f.fixSecond]);
   assert.equal(rejoinPrepared.outcome, 'PREPARED');
   await approveWith(rejoinProposal, [f.inviter]);
-  const [rejoined] = await rows(REJOIN_COMMIT_SQL, [randomUUID(), rejoinProposal, randomUUID(), randomUUID()]);
+  // ONLY the exact former human may commit their own rejoin, so the actor is
+  // established here rather than inherited from the approval that preceded it.
+  const rejoined = await rejoinAs(f.fixSecond, rejoinProposal);
   assert.equal(rejoined.outcome, 'REJOINED');
+  assert.equal(rejoined.rejoined_world_id, world.worldId, 'the exact World reopened for the exact human');
+  const [reopened] = await rows(
+    `SELECT user_id FROM ${EPISODES} WHERE world_id = $1 AND user_id = $2 AND ended_at IS NULL`,
+    [world.worldId, f.fixSecond]);
+  assert.ok(reopened, 'and the new open membership episode belongs to the human who committed the rejoin');
   const afterRejoinRef = await currentAudienceSnapshotRef(world.worldId);
   const rejoinMembers = (await rows(
     'SELECT user_id FROM public.resolve_shared_world_human_audience_snapshot_v1($1) ORDER BY user_id',
@@ -1056,7 +1102,7 @@ async function verifyReviewFixes(f) {
     [removeProposal, randomUUID(), randomUUID(), removedWorld.worldId, f.fixRemoved]);
   assert.equal(removePrepared.outcome, 'PREPARED');
   await approveWith(removeProposal, [f.inviter]);
-  const [removed] = await rows(REMOVE_COMMIT_SQL, [randomUUID(), removeProposal, randomUUID()]);
+  const removed = await removeMemberBy(removeProposal);
   assert.equal(removed.outcome, 'REMOVED');
   await rejected(() => commitQandeel(removedWorld.worldId, 'an analysis generated before the removal',
     { evidence: beforeRemoval }), STALE, /SHARED_WORLD_MATERIAL_STALE/u);

@@ -900,6 +900,295 @@ test('the QANDEEL approver write is proven structurally, not by an unbounded neg
     'the unbounded cross-body negative pattern is gone for good');
 });
 
+/**
+ * FIXTURE AUTHORITY.
+ *
+ * The verifier borrows frozen primitives, and several of them derive their human
+ * from `auth.uid()`. The whole verifier runs inside ONE transaction, so a session
+ * subject established by one helper survives into the next - and a helper that
+ * clears it on the way out leaves the NEXT call with no human at all. That is how
+ * the FIX-A rejoin reached CI: `commit_shared_world_member_rejoin_v1` admits only
+ * the exact former member, the preceding approvals had cleared the subject, and
+ * the frozen runtime refused the fixture correctly.
+ *
+ * This proves the class is gone, and stays gone, without parsing JavaScript: which
+ * primitives are human authorities is read from the MIGRATIONS, and each
+ * invocation is required to establish its own actor.
+ */
+const migrations = (() => {
+  const dir = new URL('../migrations/', import.meta.url);
+  const bodies = new Map();
+  const signatures = new Map();
+  for (const file of readdirSync(dir).filter((name) => name.endsWith('.sql'))) {
+    const sql = readFileSync(new URL(file, dir), 'utf8').replace(/\r\n/gu, '\n');
+    for (const m of sql.matchAll(/CREATE FUNCTION public\.(\w+)\(/gu)) {
+      const open = m.index + m[0].length - 1;
+      let depth = 0;
+      let close = open;
+      for (; close < sql.length; close += 1) {
+        if (sql[close] === '(') depth += 1;
+        else if (sql[close] === ')') { depth -= 1; if (depth === 0) break; }
+      }
+      const declared = sql.slice(open + 1, close).trim();
+      const opens = sql.indexOf('AS $$', close);
+      const table = /RETURNS TABLE\(([\s\S]*?)\)\s*\n?\s*LANGUAGE/u.exec(sql.slice(close + 1, opens));
+      signatures.set(m[1], {
+        arity: declared.length === 0 ? 0 : declared.split(',').length,
+        outs: table ? table[1].split(',').map((column) => column.trim().split(/\s+/u)[0]) : null,
+      });
+      const end = sql.indexOf('\nEND$$;', opens);
+      if (opens > 0 && end > opens) bodies.set(m[1], sql.slice(opens, end));
+    }
+  }
+  return { bodies, signatures };
+})();
+const migrationBodies = migrations.bodies;
+
+/** Human authority is INHERITED: a thin wrapper is one when the core it delegates to is. */
+const derivesHuman = (() => {
+  const found = new Set([...migrationBodies].filter(([, body]) => /auth\.uid\(\)/u.test(body)).map(([name]) => name));
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const [name, body] of migrationBodies) {
+      if (found.has(name)) continue;
+      for (const m of body.matchAll(/public\.(\w+)\(/gu)) {
+        if (found.has(m[1]) && m[1] !== name) { found.add(name); changed = true; break; }
+      }
+    }
+  }
+  return found;
+})();
+
+/** Every `X_SQL` constant in the verifier, mapped to the primitive it invokes. */
+function verifierConstants(source) {
+  return new Map([...source.matchAll(/^const (\w+_SQL) = [`'][\s\S]*?FROM public\.(\w+)\(/gmu)]
+    .map((m) => [m[1], m[2]]));
+}
+
+/** Fixture helpers that CLEAR the session subject on the way out. */
+function clearingHelpers(source) {
+  const clearing = new Set();
+  for (const m of source.matchAll(/^async function (\w+)\([\s\S]*?\n\}/gmu)) {
+    const calls = [...m[0].matchAll(/\bidentity\(([^)]*)\)/gu)];
+    if (calls.length && !calls.at(-1)[1].includes(',')) clearing.add(m[1]);
+  }
+  return clearing;
+}
+
+function fixtureAuthorityViolations(source) {
+  const lines = source.split('\n');
+  const constants = verifierConstants(source);
+  const clearing = clearingHelpers(source);
+  const actorConnections = new Set([...source.matchAll(/const (\w+) = await openConnection\(([^,]+),\s*([^)]+)\)/gu)]
+    .filter((m) => m[3].trim() && m[3].trim() !== 'null').map((m) => m[1]));
+
+  /** The session subject in effect at a line: the nearest preceding identity-affecting event. */
+  const actorAt = (index) => {
+    for (let j = index - 1; j >= 0; j -= 1) {
+      const direct = /\bidentity\(([^)]*)\)/u.exec(lines[j]);
+      if (direct) return direct[1].includes(',') ? direct[1].split(',')[1].trim() : null;
+      for (const call of lines[j].matchAll(/\b(\w+)\(/gu)) if (clearing.has(call[1])) return null;
+    }
+    return null;
+  };
+
+  const violations = [];
+  for (const [name, fn] of constants) {
+    if (!derivesHuman.has(fn)) continue;
+    for (let i = 0; i < lines.length; i += 1) {
+      if (!new RegExp(`\\b${name}\\b`, 'u').test(lines[i])) continue;
+      if (new RegExp(`^const ${name} = `, 'u').test(lines[i])) continue;
+      const onConnection = /\b(\w+)\.query\(/u.exec(lines[i]);
+      if (onConnection) {
+        if (!actorConnections.has(onConnection[1]))
+          violations.push({ name, fn, line: i + 1, why: `connection \`${onConnection[1]}\` carries no explicit subject` });
+        continue;
+      }
+      if (actorAt(i) === null) violations.push({ name, fn, line: i + 1, why: 'no actor is in effect at this call' });
+    }
+  }
+  return violations;
+}
+
+test('every auth.uid()-bound primitive the 0090 verifier borrows establishes its own actor', () => {
+  const constants = verifierConstants(verifier);
+  const bound = [...constants].filter(([, fn]) => derivesHuman.has(fn)).map(([name]) => name);
+  // The map is read from the migrations, so this only guards against the audit
+  // silently becoming vacuous - not against the list being wrong.
+  for (const required of ['ROTATE_SQL', 'SUBMIT_SQL', 'BIRTH_SQL', 'LEAVE_SQL', 'GOV_APPROVE_SQL',
+    'REJOIN_COMMIT_SQL', 'HISTORY_APPROVE_SQL', 'TEXT_COMMIT_SQL', 'VOICE_COMMIT_SQL', 'DELETE_SQL']) {
+    assert.ok(bound.includes(required), `${required} is a human authority and must be audited`);
+  }
+  assert.ok(constants.get('QANDEEL_COMMIT_SQL') && !derivesHuman.has(constants.get('QANDEEL_COMMIT_SQL')),
+    'and QANDEEL is a system actor, so it must NOT be audited as a human authority');
+
+  const violations = fixtureAuthorityViolations(verifier);
+  assert.deepEqual(violations, [], violations.map((v) => `${v.name} (${v.fn}) at line ${v.line}: ${v.why}`).join('\n'));
+});
+
+test('the actor of each human-authority call is owned by the call site, not inherited', () => {
+  // The three that a governance step precedes - where the preceding helper leaves
+  // NO subject behind - are the ones this class of defect actually reaches.
+  const enclosing = (needle) => {
+    const at = verifier.indexOf(needle);
+    assert.ok(at > 0, `the verifier still contains ${needle}`);
+    // The last top-level `async function` declared before it. A default parameter
+    // value closes a parenthesis of its own, so only the name is matched.
+    return [...verifier.slice(0, at).matchAll(/^async function (\w+)\(/gmu)].at(-1)?.[1];
+  };
+  const occurrences = (name) => verifier.split('\n')
+    .filter((line) => new RegExp(`\\b${name}\\b`, 'u').test(line) && !new RegExp(`^const ${name} = `, 'u').test(line));
+
+  assert.equal(occurrences('REJOIN_COMMIT_SQL').length, 1, 'the rejoin is invoked in exactly one place');
+  assert.equal(enclosing('rows(REJOIN_COMMIT_SQL'), 'rejoinAs', 'and that place is the actor-owning helper');
+  assert.match(verifier, /async function rejoinAs\(targetUserId, proposalId\) \{\s*\n\s*await identity\('postgres', targetUserId\);\s*\n\s*const \[rejoined\] = await rows\(REJOIN_COMMIT_SQL/u,
+    'rejoinAs establishes the exact rejoining human immediately before the commit');
+  assert.match(verifier, /const rejoined = await rejoinAs\(f\.fixSecond, rejoinProposal\);/u,
+    'and the FIX-A same-human rejoin scenario uses it with the exact proposal target');
+
+  assert.equal(occurrences('GOV_APPROVE_SQL').length, 1, 'governance approval is invoked in exactly one place');
+  assert.equal(enclosing('rows(GOV_APPROVE_SQL'), 'approveWith', 'and that place sets each approver identity');
+  assert.equal(occurrences('HISTORY_APPROVE_SQL').length, 1, 'package approval is invoked in exactly one place');
+  assert.equal(enclosing('rows(HISTORY_APPROVE_SQL'), 'approvePackageAs', 'and that place sets the approving human');
+  assert.equal(enclosing('rows(LEAVE_SQL'), 'leaveAs', 'the shared-client leave goes through the leave helper');
+  assert.equal(enclosing('rows(DELETE_SQL'), 'deleteOwn', 'and the owner deletion through the owner helper');
+});
+
+/**
+ * PRE-CI SEMANTIC AUDIT of the verifier's SQL call sites.
+ *
+ * Four classes of fixture defect that otherwise surface only eight minutes into
+ * GitHub CI - a wrong argument count, a placeholder list that is not $1..$n, a
+ * SELECT of a column the function does not return, and an asserted outcome the
+ * function can never produce - are decided here, against the migrations.
+ */
+function sqlCallProblems(source) {
+  const constants = new Map([...source.matchAll(/^const (\w+_SQL) = (`[\s\S]*?`|'[^']*');/gmu)]
+    .map((m) => [m[1], m[2].slice(1, -1).replace(/\n\s*/gu, ' ').trim()]));
+  const problems = [];
+
+  /** A thin wrapper returns what its core produces, so the search follows the calls. */
+  const reachable = (fn, seen = new Set()) => {
+    if (seen.has(fn) || !migrationBodies.has(fn)) return '';
+    seen.add(fn);
+    const body = migrationBodies.get(fn);
+    return body + [...body.matchAll(/public\.(\w+)\(/gu)].map((m) => reachable(m[1], seen)).join('');
+  };
+  /** The balanced `[...]` argument array that follows a call. */
+  const argumentArray = (text, from) => {
+    const open = text.indexOf('[', from);
+    if (open < 0) return null;
+    let depth = 0;
+    for (let i = open; i < text.length; i += 1) {
+      if ('[({'.includes(text[i])) depth += 1;
+      else if ('])}'.includes(text[i])) { depth -= 1; if (depth === 0) return text.slice(open + 1, i); }
+    }
+    return null;
+  };
+  const topLevelCount = (list) => {
+    if (list.trim() === '') return 0;
+    let depth = 0;
+    let count = 1;
+    for (const character of list) {
+      if ('[({'.includes(character)) depth += 1;
+      else if ('])}'.includes(character)) depth -= 1;
+      else if (character === ',' && depth === 0) count += 1;
+    }
+    return count;
+  };
+  const lineOf = (index) => source.slice(0, index).split('\n').length;
+
+  for (const [name, sql] of constants) {
+    const call = /FROM public\.(\w+)\(([^)]*)\)/u.exec(sql);
+    if (!call) { problems.push(`${name}: no invoked primitive could be read from the constant`); continue; }
+    const [, fn, args] = call;
+    const signature = migrations.signatures.get(fn);
+    if (!signature) { problems.push(`${name}: ${fn} is declared in no migration`); continue; }
+    const placeholders = [...args.matchAll(/\$(\d+)/gu)].map((p) => Number(p[1]));
+    if (placeholders.some((p, i) => p !== i + 1) || placeholders.length !== signature.arity) {
+      problems.push(`${name}: ${fn} declares ${signature.arity} parameters, the constant passes ${args}`);
+    }
+    const selected = /SELECT ([\s\S]*?) FROM public\./u.exec(sql);
+    if (selected && signature.outs) {
+      for (const column of selected[1].split(',').map((c) => c.trim().split(/\s+/u)[0])) {
+        if (column === '*' || /^\d/u.test(column) || signature.outs.includes(column)) continue;
+        problems.push(`${name}: ${fn} returns no column named \`${column}\``);
+      }
+    }
+    for (const site of source.matchAll(new RegExp(`(?:rows|query|q)\\(\\s*${name}\\s*,`, 'gu'))) {
+      const list = argumentArray(source, site.index + site[0].length);
+      if (list === null) { problems.push(`${name} at line ${lineOf(site.index)}: no argument array`); continue; }
+      const passed = topLevelCount(list);
+      if (passed !== signature.arity) {
+        problems.push(`${name} at line ${lineOf(site.index)}: ${fn} takes ${signature.arity} arguments, ${passed} passed`);
+      }
+    }
+  }
+
+  // Only a variable bound DIRECTLY from a constant is attributed to a primitive.
+  const boundTo = new Map([...source.matchAll(/const \[?(\w+)\]? = await (?:rows|q)\(\s*(\w+_SQL)/gu)]
+    .map((m) => [m[1], /FROM public\.(\w+)\(/u.exec(constants.get(m[2]) ?? '')?.[1]])
+    .filter(([, fn]) => fn));
+  let attributed = 0;
+  for (const m of source.matchAll(/assert\.equal\((\w+)\.outcome, '([A-Z_]+)'/gu)) {
+    const fn = boundTo.get(m[1]);
+    if (!fn) continue;
+    attributed += 1;
+    if (!new RegExp(`'${m[2]}'`, 'u').test(reachable(fn))) {
+      problems.push(`line ${lineOf(m.index)}: ${fn} can never return outcome '${m[2]}'`);
+    }
+  }
+  return { problems, constants: constants.size, attributed };
+}
+
+test('every SQL call site in the 0090 verifier matches the signature it invokes', () => {
+  const { problems, constants, attributed } = sqlCallProblems(verifier);
+  assert.ok(constants >= 18, `the verifier's SQL constants are readable (found ${constants})`);
+  assert.ok(attributed >= 20, `and its asserted outcomes are attributable (found ${attributed})`);
+  assert.deepEqual(problems, [], problems.join('\n'));
+});
+
+test('the pre-CI semantic audit catches a wrong arity, an unreturned column and an impossible outcome', () => {
+  // Three deliberate fixture defects of the kind CI would otherwise discover.
+  const mutations = [
+    ['const [rejoined] = await rows(REJOIN_COMMIT_SQL, [randomUUID(), proposalId, randomUUID(), randomUUID()]);',
+      'const [rejoined] = await rows(REJOIN_COMMIT_SQL, [randomUUID(), proposalId, randomUUID()]);',
+      /takes 4 arguments, 3 passed/u],
+    ["const LEAVE_SQL = 'SELECT outcome, closed_membership_episode_id FROM",
+      "const LEAVE_SQL = 'SELECT outcome, closed_membership_episode_id, not_a_column FROM",
+      /returns no column named `not_a_column`/u],
+    ["assert.equal(left.outcome, 'LEFT');", "assert.equal(left.outcome, 'DEPARTED');",
+      /can never return outcome 'DEPARTED'/u],
+  ];
+  for (const [from, to, expected] of mutations) {
+    assert.ok(verifier.includes(from), `the audit probe still anchors on: ${from}`);
+    const { problems } = sqlCallProblems(verifier.replace(from, to));
+    assert.ok(problems.some((problem) => expected.test(problem)),
+      `the audit must report ${expected}, got: ${problems.join(' | ') || 'nothing'}`);
+  }
+});
+
+test('the fixture-authority contract rejects the raw rejoin invocation that failed in CI', () => {
+  // FIX-03C anti-vacuity: restore the exact call that reached CI and require this
+  // contract to catch it here instead.
+  const helperCall = '  const rejoined = await rejoinAs(f.fixSecond, rejoinProposal);';
+  assert.ok(verifier.includes(helperCall), 'the corrected call site is where this probe replaces it');
+  const restored = verifier.replace(helperCall,
+    '  const [rejoined] = await rows(REJOIN_COMMIT_SQL, [randomUUID(), rejoinProposal, randomUUID(), randomUUID()]);');
+  const violations = fixtureAuthorityViolations(restored);
+  assert.equal(violations.length, 1, 'the raw invocation is reported, and nothing else changes');
+  assert.equal(violations[0].name, 'REJOIN_COMMIT_SQL');
+  assert.equal(violations[0].fn, 'commit_shared_world_member_rejoin_v1');
+  assert.match(violations[0].why, /no actor is in effect/u);
+  // And the same probe over a no-actor primitive must NOT fire, so the rule is
+  // about human authority and not about raw invocation.
+  const rawSystemCall = verifier.replace('  const removed = await removeMemberBy(removeProposal);',
+    '  const [removed] = await rows(REMOVE_COMMIT_SQL, [randomUUID(), removeProposal, randomUUID()]);');
+  assert.notEqual(rawSystemCall, verifier, 'the governed-removal call site is where this probe replaces it');
+  assert.deepEqual(fixtureAuthorityViolations(rawSystemCall), [],
+    'a governance execution primitive derives no human, so raw invocation is not a fixture-authority defect');
+});
+
 test('the verifier, the script and the CI step are registered, and the README records the slice', () => {
   assert.ok(existsSync(new URL('../verify-migration-0090.mjs', import.meta.url)), 'the real-PostgreSQL verifier exists');
   assert.match(verifier, /0090/u);
