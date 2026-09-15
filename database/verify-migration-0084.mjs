@@ -5,11 +5,22 @@
 // behaviour rather than from the migration text:
 //
 //   * schema: the four narrow governance relations exist exactly once, owned by
-//     postgres, with the exact columns, the exact unique bindings - one proposal per
-//     captured topology, one effective approval per snapshot episode - the two
+//     postgres, carrying every column migration 0084 OWNS by exact name, type,
+//     nullability and absence of a default; the exact unique bindings - one proposal
+//     per captured topology, one effective approval per snapshot episode - the two
 //     COMPOSITE foreign keys that make CW2-02 section 31 structural rather than
-//     procedural, restrictive deletion everywhere, RLS on, zero policies, no
-//     trigger, and no owner / admin / initiator / payload / status column;
+//     procedural, restrictive deletion everywhere, RLS on, zero policies, and no
+//     duplicated human id beside the membership episode;
+//
+//     What this verifier deliberately does NOT assert is anything about columns,
+//     triggers or objects migration 0084 did not create. It runs against a FULLY
+//     migrated database, so a live vocabulary filter or a live trigger census here
+//     would be a ceiling on the whole roadmap rather than a fact about 0084 - the
+//     add-member consumer this foundation exists to serve will bring its own columns
+//     and may well bring an audit trigger. That migration 0084 ITSELF created no
+//     generic metadata / payload / permission engine, and installed no trigger and no
+//     implicit coupling, is proven from 0084's own text by
+//     database/tests/shared-world-governance-approval-foundation-v1.test.mjs;
 //   * THE PRE-LAUNCH SECURITY BOUNDARY: all three primitives are owned by postgres,
 //     SECURITY DEFINER, search_path-pinned and VOLATILE, and are executable by NO
 //     application role - PUBLIC, anon, authenticated and service_role are all denied
@@ -160,30 +171,30 @@ const ALL = 'ALL_CURRENT_MEMBERS';
 const EXCEPT_TARGET = 'ALL_CURRENT_MEMBERS_EXCEPT_TARGET';
 
 const SNAPSHOT_COLUMNS = [
-  ['id', 'uuid', 'NO'],
-  ['world_id', 'uuid', 'NO'],
-  ['captured_at', 'timestamp with time zone', 'NO'],
+  ['id', 'uuid', 'NO', null],
+  ['world_id', 'uuid', 'NO', null],
+  ['captured_at', 'timestamp with time zone', 'NO', null],
 ];
 const SNAPSHOT_MEMBER_COLUMNS = [
-  ['membership_snapshot_id', 'uuid', 'NO'],
-  ['membership_episode_id', 'uuid', 'NO'],
+  ['membership_snapshot_id', 'uuid', 'NO', null],
+  ['membership_episode_id', 'uuid', 'NO', null],
 ];
 const PROPOSAL_COLUMNS = [
-  ['id', 'uuid', 'NO'],
-  ['world_id', 'uuid', 'NO'],
-  ['membership_snapshot_id', 'uuid', 'NO'],
-  ['operation_kind', 'text', 'NO'],
-  ['proposed_payload_version_id', 'uuid', 'NO'],
-  ['approval_rule', 'text', 'NO'],
-  ['excluded_membership_episode_id', 'uuid', 'YES'],
-  ['created_at', 'timestamp with time zone', 'NO'],
+  ['id', 'uuid', 'NO', null],
+  ['world_id', 'uuid', 'NO', null],
+  ['membership_snapshot_id', 'uuid', 'NO', null],
+  ['operation_kind', 'text', 'NO', null],
+  ['proposed_payload_version_id', 'uuid', 'NO', null],
+  ['approval_rule', 'text', 'NO', null],
+  ['excluded_membership_episode_id', 'uuid', 'YES', null],
+  ['created_at', 'timestamp with time zone', 'NO', null],
 ];
 const APPROVAL_COLUMNS = [
-  ['id', 'uuid', 'NO'],
-  ['proposal_id', 'uuid', 'NO'],
-  ['membership_snapshot_id', 'uuid', 'NO'],
-  ['membership_episode_id', 'uuid', 'NO'],
-  ['approved_at', 'timestamp with time zone', 'NO'],
+  ['id', 'uuid', 'NO', null],
+  ['proposal_id', 'uuid', 'NO', null],
+  ['membership_snapshot_id', 'uuid', 'NO', null],
+  ['membership_episode_id', 'uuid', 'NO', null],
+  ['approved_at', 'timestamp with time zone', 'NO', null],
 ];
 
 /**
@@ -274,24 +285,32 @@ async function verifyCatalog() {
   for (const [table, expected] of [[SNAPSHOTS, SNAPSHOT_COLUMNS], [SNAPSHOT_MEMBERS, SNAPSHOT_MEMBER_COLUMNS],
     [PROPOSALS, PROPOSAL_COLUMNS], [APPROVALS, APPROVAL_COLUMNS]]) {
     const columns = await rows(
-      `SELECT column_name, data_type, is_nullable FROM information_schema.columns
+      `SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns
         WHERE table_schema='public' AND table_name=$1 ORDER BY ordinal_position`, [table.replace('public.', '')]);
-    // A PREFIX, never a census of the live column list: a later reviewed slice may
-    // append its own column, and that is not an 0084 regression. A drop, a type or
-    // nullability change and a reorder all still fail.
-    const shape = columns.map((c) => [c.column_name, c.data_type, c.is_nullable]);
+    // FIX-01A. Exactly the columns migration 0084 OWNS, by exact name, exact type,
+    // exact nullability and the absence of a default - asserted as a PREFIX, never as
+    // a census of the live column list. A drop, a type change, a nullability change,
+    // a new default and a reorder all still fail.
+    //
+    // What a LATER reviewed slice appends is deliberately NOT judged here. I-04D owns
+    // the columns it created; it does not own the vocabulary or the type system of
+    // every column that will ever follow, and the add-member consumer this foundation
+    // exists to serve will bring its own. That migration 0084 ITSELF created no
+    // generic metadata / payload / permission engine is a claim about 0084's own
+    // text, and it is proven there, by
+    // database/tests/shared-world-governance-approval-foundation-v1.test.mjs.
+    const shape = columns.map((c) => [c.column_name, c.data_type, c.is_nullable, c.column_default]);
     assert.deepEqual(shape.slice(0, expected.length), expected,
       `${table} still carries every column migration 0084 owns, unchanged and in its original position`);
     for (const [name] of expected) {
       assert.equal(shape.filter((column) => column[0] === name).length, 1, `${table}.${name} appears exactly once`);
     }
-    for (const { column_name: column, data_type: type } of columns) {
-      assert.doesNotMatch(column, /owner|admin|creator|initiator|proposer|survivor|privilege|capability|permission|scope|metadata|vote|weight|token/iu,
-        `${table}.${column} creates no superior authority and no generic permission store`);
-      assert.ok(!['json', 'jsonb', 'ARRAY'].includes(type), `${table}.${column} is not a JSON or array payload`);
-    }
   }
-  // The exact human is the immutable membership episode, never a duplicated id.
+  // The ONE column rule the task freezes durably rather than as a name filter: the
+  // exact human IS the immutable membership episode, and no governance row may carry
+  // a second copy of that identity beside it (task sections 5.2 and 5.4). This is an
+  // explicit I-04D invariant about two named tables, not a migration-wide vocabulary
+  // census, so it stays live.
   for (const table of [SNAPSHOT_MEMBERS, APPROVALS]) {
     const [{ duplicated }] = await rows(
       `SELECT EXISTS (SELECT 1 FROM information_schema.columns c
@@ -345,14 +364,26 @@ async function verifyCatalog() {
     assert.equal(liveForeignKeys.get(name), def, `${name} binds exactly the canonical row, restrictively: canonical history is never cascaded away`);
   }
 
-  stage = 'catalog: RLS on, zero policies, no trigger, and no application-role privilege';
+  // FIX-01B. There is deliberately NO live trigger census here - not on the tables
+  // 0084 owns, and not on any predecessor table. That migration 0084 ITSELF installs
+  // no trigger, and no implicit governance-to-membership or
+  // governance-to-Standing-Context coupling, is a claim about 0084's own text and is
+  // proven there, by
+  // database/tests/shared-world-governance-approval-foundation-v1.test.mjs. A later
+  // reviewed audit trigger on an evolvable table is not an 0084 regression, and a
+  // historical verifier that failed merely because one existed would be a ceiling on
+  // the whole roadmap.
+  //
+  // What I-04D actually owns is the BEHAVIOUR, and that is proven live and
+  // forward-safely instead: verifyExactProposal compares every membership, lifecycle,
+  // Standing Context and Personal count across a full propose / approve / resolve
+  // cycle (G17), which fails on real coupling however it was installed.
+  stage = 'catalog: RLS on, zero policies, and no application-role privilege';
   for (const table of OWN_TABLES) {
     const [{ rls }] = await rows('SELECT c.relrowsecurity rls FROM pg_class c WHERE c.oid = $1::regclass', [table]);
     assert.equal(rls, true, `row level security is enabled on ${table}`);
     const [{ n: policies }] = await rows('SELECT count(*)::int n FROM pg_policy p WHERE p.polrelid = $1::regclass', [table]);
     assert.equal(policies, 0, `${table} carries zero RLS policies`);
-    const [{ n: triggers }] = await rows('SELECT count(*)::int n FROM pg_trigger t WHERE t.tgrelid = $1::regclass AND NOT t.tgisinternal', [table]);
-    assert.equal(triggers, 0, `${table} carries no trigger`);
     const [{ publicAcl }] = await rows(
       'SELECT EXISTS (SELECT 1 FROM pg_class c, LATERAL aclexplode(c.relacl) a WHERE c.oid = $1::regclass AND a.grantee = 0) AS "publicAcl"', [table]);
     assert.equal(publicAcl, false, `PUBLIC must not hold any privilege on ${table}`);
@@ -373,11 +404,11 @@ async function verifyCatalog() {
       assert.equal(allowed, false, `${role} must not hold EXECUTE on ${fnName} before the launch gate exists`);
     }
   }
-  // And no trigger couples governance to membership or Standing Context state.
-  for (const table of [EPISODES, WORLDS, GRANTS, CEILING]) {
-    const [{ n: triggers }] = await rows('SELECT count(*)::int n FROM pg_trigger t WHERE t.tgrelid = $1::regclass AND NOT t.tgisinternal', [table]);
-    assert.equal(triggers, 0, `${table} carries no trigger that governance could fire`);
-  }
+  // FIX-01B. The predecessor trigger census that used to stand here is gone for the
+  // same reason: shared_worlds, the membership episodes and the Standing Context
+  // tables are EVOLVABLE, and their future trigger catalog is not migration 0084's to
+  // freeze. I-04D's own claim - that it installs no coupling - is proven from its own
+  // text, and its behavioural consequence is proven by G17.
 
   stage = 'catalog: all three primitives are postgres-owned, SECURITY DEFINER, pinned and VOLATILE';
   for (const fnName of OWN_FUNCTIONS) {
@@ -1181,15 +1212,30 @@ async function verifyConcurrency(c) {
  * add-member consumer this foundation exists to serve actually landed. So the
  * repository is pushed several authorized steps into its future - a member
  * invitation table, a consumer-owned immutable payload/version table, a consumer
- * foreign key into a proposal, a broader operation vocabulary, an additive column,
- * an additive index and a later Launch Gate table - and THIS verifier's own catalog
- * proof is required to still pass. Then the regressions it must still refuse are
- * planted, so the forward safety is not bought by asserting nothing.
+ * foreign key into a proposal, a broader operation vocabulary, additive columns, an
+ * additive index and a later Launch Gate table - and THIS verifier's own catalog
+ * proof is required to still pass.
+ *
+ * REVIEW FIX-01 widened the probe to cover the two ceiling shapes the independent
+ * review found, so neither can reappear silently:
+ *
+ *   * later reviewed columns on tables 0084 owns whose NAME and TYPE 0084 would never
+ *     have written itself - `metadata`, `scope`, jsonb - which the old migration-wide
+ *     vocabulary/type filter refused;
+ *   * a later reviewed audit TRIGGER simply existing, both on a table 0084 owns and on
+ *     the evolvable predecessor membership table, which the old live trigger census
+ *     refused.
+ *
+ * Then the regressions it must still refuse are planted - including every way an
+ * OWNED column can be damaged - so the forward safety is not bought by asserting
+ * nothing.
  */
 async function verifyForwardSafety(f) {
   stage = 'forward safety: the add-member consumer and a Launch Gate do not fail this historical verifier';
   await identity('postgres');
-  const probe = `i04d_forward_safety_probe_${randomUUID().replace(/-/gu, '')}`;
+  // Short enough that every `${probe}_suffix` below stays inside PostgreSQL's 63-byte
+  // identifier limit, so nothing is silently truncated into a collision.
+  const probe = `i04d_probe_${randomUUID().replace(/-/gu, '').slice(0, 16)}`;
   await q('SAVEPOINT forward_safety');
   try {
     await q(`CREATE TABLE public.${probe}_invitations (id uuid PRIMARY KEY)`);
@@ -1203,6 +1249,22 @@ async function verifyForwardSafety(f) {
     // Additive evolution of the tables 0084 owns.
     await q(`ALTER TABLE ${APPROVALS} ADD COLUMN ${probe}_client_epoch bigint`);
     await q(`ALTER TABLE ${PROPOSALS} ADD COLUMN ${probe}_invitation_id uuid`);
+    // FIX-01C(1). The sharpest form of the same claim: later reviewed columns whose
+    // NAME and TYPE migration 0084 would never have written itself. The old broad
+    // filter refused exactly these - `metadata`, `scope`, and jsonb - on every current
+    // and future column of the tables 0084 owns. 0084 owns the columns it created;
+    // what a reviewed consumer appends beside them is that consumer's business, and
+    // the claim that 0084 ITSELF stores no payload blob is proven from 0084's text.
+    await q(`ALTER TABLE ${PROPOSALS} ADD COLUMN ${probe}_consumer_metadata jsonb`);
+    await q(`ALTER TABLE ${APPROVALS} ADD COLUMN ${probe}_reviewer_scope text`);
+    // FIX-01C(2). A later reviewed AUDIT trigger simply EXISTS - both on a table 0084
+    // owns and on the evolvable predecessor membership table. Neither is 0084's to
+    // forbid. It is deliberately inert: an AFTER ... FOR EACH ROW trigger whose return
+    // value PostgreSQL discards, so it changes no row and couples nothing. The
+    // behavioural proof that I-04D itself couples nothing (G17) is unaffected by it.
+    await q(`CREATE FUNCTION public.${probe}_audit_fn() RETURNS trigger LANGUAGE plpgsql AS $fn$ BEGIN RETURN NULL; END$fn$`);
+    await q(`CREATE TRIGGER ${probe}_audit AFTER INSERT ON ${APPROVALS} FOR EACH ROW EXECUTE FUNCTION public.${probe}_audit_fn()`);
+    await q(`CREATE TRIGGER ${probe}_episode_audit AFTER UPDATE ON ${EPISODES} FOR EACH ROW EXECUTE FUNCTION public.${probe}_audit_fn()`);
     await q(`ALTER TABLE ${PROPOSALS} ADD CONSTRAINT ${probe}_operation_check
              CHECK (operation_kind IN ('ADD_MEMBER','REMOVE_MEMBER','REJOIN_MEMBER','WORLD_SETTINGS_CHANGE','END_WORLD','GRANT_HISTORY_ACCESS'))`);
     await q(`CREATE INDEX ${probe}_created_idx ON ${PROPOSALS} (world_id, created_at)`);
@@ -1259,10 +1321,24 @@ async function verifyForwardSafety(f) {
       ['a governance table gains a duplicated human id',
         `ALTER TABLE ${APPROVALS} ADD COLUMN actor_user_id uuid`,
         /duplicates no human id/u],
-      ['a trigger couples governance to membership',
-        `CREATE FUNCTION public.${probe}_trigger_fn() RETURNS trigger LANGUAGE plpgsql AS $fn$ BEGIN RETURN NEW; END$fn$;
-         CREATE TRIGGER ${probe}_trigger AFTER INSERT ON ${APPROVALS} FOR EACH ROW EXECUTE FUNCTION public.${probe}_trigger_fn()`,
-        /carries no trigger/u],
+      // FIX-01D. Narrowing the column proof to what 0084 owns must not weaken it, so
+      // every way an OWNED column can be damaged is planted here: dropped, made
+      // nullable, given a default the primitives never write, and retyped.
+      ['an 0084-owned column is dropped',
+        `ALTER TABLE ${SNAPSHOTS} DROP COLUMN captured_at CASCADE`,
+        /still carries every column migration 0084 owns/u],
+      ['an 0084-owned NOT NULL column becomes nullable',
+        `ALTER TABLE ${APPROVALS} ALTER COLUMN membership_episode_id DROP NOT NULL`,
+        /still carries every column migration 0084 owns/u],
+      ['an 0084-owned column gains a default the primitives never write',
+        `ALTER TABLE ${PROPOSALS} ALTER COLUMN created_at SET DEFAULT clock_timestamp()`,
+        /still carries every column migration 0084 owns/u],
+      ['an 0084-owned column changes type',
+        `ALTER TABLE ${PROPOSALS} ALTER COLUMN operation_kind TYPE varchar(64)`,
+        /still carries every column migration 0084 owns/u],
+      ['the opaque payload version stops being an opaque uuid',
+        `ALTER TABLE ${PROPOSALS} ALTER COLUMN proposed_payload_version_id DROP NOT NULL`,
+        /opaque non-null uuid identity|still carries every column migration 0084 owns/u],
     ]) {
       await q('SAVEPOINT forward_safety_regression');
       await q(plant);

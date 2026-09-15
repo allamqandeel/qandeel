@@ -706,6 +706,94 @@ test('the real-PostgreSQL verifier carries no live-schema ceiling of its own', (
     assert.ok(verifier.includes(authorized), `the probe performs a later authorized ${authorized}`);
   }
   assert.match(verifier, /await assert\.rejects\(verifyCatalog\(\), refuses/u, 'and requires the real regressions to still be refused');
+
+  // REVIEW FIX-01A / FIX-01B. The two ceiling shapes the independent review found,
+  // kept out by detector rather than only by having been deleted once.
+  //
+  // Scoped to THIS verifier deliberately. A predecessor verifier carrying the same
+  // shape is that slice's record to repair, and silently re-owning it here would be
+  // the "repairing a predecessor's closure record is a governance task" mistake
+  // AGENTS.md section 10 names.
+  assert.doesNotMatch(verifier, /FROM pg_trigger/u,
+    'no live trigger census: that 0084 installs no trigger is proven from 0084 own text, and a later reviewed audit trigger is not an 0084 regression');
+  assert.doesNotMatch(verifier, /assert\.doesNotMatch\(column,/u,
+    'no migration-wide column NAME filter over the live column list: 0084 owns the columns it created, not the vocabulary of every column that follows');
+  assert.doesNotMatch(verifier, /\['json', 'jsonb', 'ARRAY'\]\.includes\(type\)/u,
+    'and no migration-wide column TYPE filter over it either');
+  // What replaced them: the owned columns pinned by name, type, nullability AND the
+  // absence of a default, which is strictly stronger than the filter it removed.
+  assert.match(verifier, /SELECT column_name, data_type, is_nullable, column_default FROM information_schema\.columns/u,
+    'the owned-column proof reads the default too');
+  for (const owned of [
+    "['captured_at', 'timestamp with time zone', 'NO', null]",
+    "['excluded_membership_episode_id', 'uuid', 'YES', null]",
+    "['proposed_payload_version_id', 'uuid', 'NO', null]",
+    "['membership_episode_id', 'uuid', 'NO', null]",
+  ]) assert.ok(verifier.includes(owned), `an 0084-owned column is pinned exactly: ${owned}`);
+  // And the durable rule the task really froze is still live, on the two tables it is
+  // about rather than as a vocabulary sweep.
+  assert.match(verifier, /c\.column_name IN \('user_id','actor_user_id'\)\) AS duplicated/u,
+    'the no-duplicated-human-id rule stays a live invariant');
+
+  // REVIEW FIX-01C. The probe must actually exercise both ceiling shapes, or their
+  // removal is unproven.
+  for (const [shape, needle] of [
+    ['a later column whose name the old filter banned', '_consumer_metadata jsonb'],
+    ['a later column whose name the old filter banned', '_reviewer_scope text'],
+    ['a later audit trigger on a table 0084 owns', `CREATE TRIGGER \${probe}_audit AFTER INSERT ON \${APPROVALS}`],
+    ['a later audit trigger on the evolvable membership table', `CREATE TRIGGER \${probe}_episode_audit AFTER UPDATE ON \${EPISODES}`],
+  ]) assert.ok(verifier.includes(needle), `the probe proves historical 0084 survives ${shape}: ${needle}`);
+  // REVIEW FIX-01D. Narrowing the column proof did not weaken it: every way an OWNED
+  // column can be damaged is planted and must still be refused.
+  for (const owned of [
+    'an 0084-owned column is dropped',
+    'an 0084-owned NOT NULL column becomes nullable',
+    'an 0084-owned column gains a default the primitives never write',
+    'an 0084-owned column changes type',
+    'the opaque payload version stops being an opaque uuid',
+  ]) assert.ok(verifier.includes(owned), `the probe still refuses: ${owned}`);
+});
+
+test('that 0084 ITSELF installs no trigger, no coupling and no generic engine is proven from its own text', () => {
+  // REVIEW FIX-01B. This is the home of the claim the live trigger census used to
+  // make. It is a statement about migration 0084, so it belongs where 0084's text is,
+  // and it stays true forever no matter what a later reviewed slice installs.
+  assert.doesNotMatch(executableSql, /CREATE TRIGGER/iu, 'migration 0084 creates no trigger at all');
+  assert.doesNotMatch(deployableSql, /RETURNS trigger/iu, 'and no trigger function for one to call');
+  assert.doesNotMatch(deployableSql, /CREATE (?:OR REPLACE )?RULE|CREATE EVENT TRIGGER/iu, 'and no rule or event trigger either');
+  // No coupling INTO membership, lifecycle or Standing Context state, in either
+  // direction, by any statement 0084 deploys.
+  for (const coupled of [
+    'UPDATE public.shared_world_membership_episodes', 'INSERT INTO public.shared_world_membership_episodes',
+    'UPDATE public.shared_worlds', 'INSERT INTO public.shared_worlds',
+    'UPDATE public.shared_world_standing_context_grants',
+    'INSERT INTO public.shared_world_standing_context_grant_audience',
+    'DELETE FROM public.shared_world_standing_context_grant_audience',
+    'INSERT INTO public.shared_world_standing_context_consent_events',
+  ]) assert.ok(!deployableSql.includes(coupled), `0084 never performs: ${coupled}`);
+  // And the deployment itself refuses to install without those guarantees.
+  for (const phrase of [
+    'I-04D: no trigger may exist on %',
+    'I-04D: no trigger may couple governance to membership or Standing Context state on %',
+    'I-04D: % must not open or close a membership episode',
+    'I-04D: % must not create, close or mutate a Shared World',
+    'I-04D: % must not read Personal context or touch Standing Context state',
+  ]) assert.ok(selfAssertions.includes(phrase), `migration 0084 refuses to deploy without: ${phrase}`);
+
+  // REVIEW FIX-01A. Likewise the "no generic metadata / payload / permission engine"
+  // claim: it is about the four tables 0084 CREATED, read out of 0084's own CREATE
+  // TABLE blocks, and it does not reach a single column a later slice appends.
+  for (const name of OWN_TABLES) {
+    const block = tableBlock(name);
+    assert.doesNotMatch(block, /\b(?:json|jsonb)\b|\[\]/iu, `${name} as 0084 created it stores no JSON and no array`);
+    assert.doesNotMatch(block, /(owner|admin|creator|initiator|proposer|survivor|privilege|capability|permission|scope|metadata|vote|weight|token|status)/iu,
+      `${name} as 0084 created it is no permission store and carries no superior authority`);
+  }
+  // The one opaque identity, pinned positively rather than by what it is not.
+  assert.match(tableBlock(PROPOSALS), /proposed_payload_version_id uuid NOT NULL,/u,
+    'the proposed payload version is an opaque uuid: I-04D owns no future payload schema');
+  assert.ok(selfAssertions.includes('I-04D: governance creates no owner, admin or initiator, stores no payload blob and is not a permission engine'));
+  assert.ok(selfAssertions.includes('I-04D: the proposed payload version must be an opaque non-null uuid identity'));
 });
 
 test('no database contract - this one included - carries a migration census, so 0085 can exist without editing one', () => {
