@@ -5,10 +5,13 @@
 // live behaviour rather than from the migration text:
 //
 //   * schema: the consent-event table exists exactly once, owned by postgres,
-//     with exactly the expected columns / types / nullability / defaults, the
-//     exact checks (event vocabulary, event-type / prior-grant consistency),
+//     still carrying every column / type / nullability / default, check and
+//     index migration 0078 OWNS - unchanged and in their original positions,
+//     with later additive columns / constraints / indexes from a reviewed slice
+//     permitted rather than censused - including the
+//     checks (event vocabulary, event-type / prior-grant consistency),
 //     restrictive foreign keys to shared_worlds, users and the I-02B grant
-//     table, the exact index set, RLS on, zero policies, no trigger on the
+//     table, every owned index, RLS on, zero policies, no trigger on the
 //     three Standing Context tables (consent events, grants, audience), and
 //     no generic grant / consent / permission table. Whether shared_worlds or
 //     the membership-episode table carries a trigger is deliberately NOT a
@@ -129,11 +132,13 @@ const EXPECTED_COLUMNS = [
   ['occurred_at', 'timestamp with time zone', 'NO', 'CURRENT_TIMESTAMP'],
 ];
 
-// Generic tables this slice must not have introduced.
-const FORBIDDEN_TABLES = [
-  'consent_events', 'consent_event_log', 'consent_requests', 'authority_grants', 'generic_permissions', 'permission_grants',
-  'context_admissions', 'grants', 'permissions', 'standing_context_consent_events', 'shared_world_consent_events',
-];
+// FORWARD SAFETY (I-04C FIX-02D). The live-database census of a fixed list of
+// table names that must stay absent is removed: a historical verifier runs against
+// the FULLY migrated database, so such a list freezes the future namespace rather
+// than proving anything about migration 0078. The claim is a claim about 0078's
+// own TEXT and is proven there, by
+// database/tests/shared-standing-context-consent-commands-v1.test.mjs, which
+// asserts the exact set of tables and functions 0078 creates.
 
 // Counts are read as the owner: the current application role is restored
 // afterwards so a behaviour proof can take a snapshot without leaving the
@@ -176,17 +181,21 @@ async function verifyCatalog() {
   assert.equal(meta.kind, 'r', 'the consent-event table is an ordinary table');
   assert.equal(meta.owner, 'postgres', 'the consent-event table is owned by postgres');
   assert.equal(meta.rls, true, 'the consent-event table has row level security enabled');
-  const [{ n: forbidden }] = await rows(
-    "SELECT count(*)::int n FROM pg_class c JOIN pg_namespace ns ON ns.oid=c.relnamespace WHERE ns.nspname='public' AND c.relname = ANY($1::text[])",
-    [FORBIDDEN_TABLES],
-  );
-  assert.equal(forbidden, 0, 'no generic consent, grant, permission or context-admission table exists');
 
   stage = 'catalog: columns';
   const columns = await rows(
     "SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='shared_world_standing_context_consent_events' ORDER BY ordinal_position",
   );
-  assert.deepEqual(columns.map((c) => [c.column_name, c.data_type, c.is_nullable, c.column_default]), EXPECTED_COLUMNS, 'the consent-event table carries exactly the expected columns');
+  // FORWARD SAFETY (I-04C): what 0078 OWNS, asserted as a PREFIX rather than as a
+  // census of the live schema. A drop, a type / nullability / default change or a
+  // reorder still fails; a later reviewed slice may append a column. The shape
+  // bans below keep scanning EVERY column, future ones included.
+  const observedColumns = columns.map((c) => [c.column_name, c.data_type, c.is_nullable, c.column_default]);
+  assert.deepEqual(observedColumns.slice(0, EXPECTED_COLUMNS.length), EXPECTED_COLUMNS,
+    'the consent-event table still carries every column migration 0078 owns, unchanged and in its original position');
+  for (const [name] of EXPECTED_COLUMNS) {
+    assert.equal(observedColumns.filter((column) => column[0] === name).length, 1, `${name} appears exactly once`);
+  }
   for (const { column_name: name, data_type: type } of columns) {
     assert.doesNotMatch(name, /scope|purpose|action|source|permission|disclos|quote|copy|publish|share|export|provenance|transfer|owner|admin|ttl|expir|material|matching|public/iu, `${name} is not a generic, disclosure-shaped or owner column`);
     assert.ok(!['json', 'jsonb', 'ARRAY'].includes(type), `${name} is not a JSON or array column`);
@@ -200,7 +209,10 @@ async function verifyCatalog() {
     [EVENTS],
   );
   const byName = Object.fromEntries(constraints.map((c) => [c.name, c]));
-  assert.deepEqual(constraints.map((c) => c.name), [
+  // FORWARD SAFETY (I-04C): every constraint 0078 OWNS must still be present, and
+  // each one's meaning is asserted individually below. A later additive
+  // constraint from a reviewed slice is not a 0078 regression.
+  const OWNED_CONSTRAINTS = [
     'shared_world_standing_context_consent_events_event_type_check',
     'shared_world_standing_context_consent_events_grantor_fk',
     'shared_world_standing_context_consent_events_pkey',
@@ -208,8 +220,11 @@ async function verifyCatalog() {
     'shared_world_standing_context_consent_events_prior_grant_fk',
     'shared_world_standing_context_consent_events_subject_grant_fk',
     'shared_world_standing_context_consent_events_world_fk',
-  ], 'the consent-event table carries exactly the expected constraints');
-  for (const { name } of constraints) assert.ok(Buffer.byteLength(name) <= 63, `${name} was not silently truncated`);
+  ];
+  for (const name of OWNED_CONSTRAINTS) {
+    assert.ok(byName[name], `the consent-event table still carries migration 0078's ${name}`);
+    assert.ok(Buffer.byteLength(name) <= 63, `${name} was not silently truncated`);
+  }
   assert.equal(byName.shared_world_standing_context_consent_events_pkey.def, 'PRIMARY KEY (id)');
   assert.equal(byName.shared_world_standing_context_consent_events_event_type_check.type, 'c');
   assert.match(byName.shared_world_standing_context_consent_events_event_type_check.def, /'GRANTED'.*'RECONFIRMED'.*'REVOKED'/u);
@@ -240,13 +255,19 @@ async function verifyCatalog() {
       WHERE ix.indrelid=$1::regclass ORDER BY i.relname COLLATE "C"`,
     [EVENTS],
   );
-  assert.deepEqual(indexes.map((i) => [i.name, i.uniq, i.cols]), [
+  // FORWARD SAFETY (I-04C): every index 0078 OWNS, still present and unchanged in
+  // uniqueness and key columns, with its partial predicate asserted below. A
+  // later additive index from a reviewed slice is not a 0078 regression.
+  const liveIndexes = new Map(indexes.map((i) => [i.name, [i.name, i.uniq, i.cols]]));
+  for (const index of [
     ['shared_world_standing_context_consent_events_birth_event_idx', true, 'subject_grant_id'],
     ['shared_world_standing_context_consent_events_pkey', true, 'id'],
     ['shared_world_standing_context_consent_events_prior_grant_idx', true, 'prior_grant_id'],
     ['shared_world_standing_context_consent_events_revoke_event_idx', true, 'subject_grant_id'],
     ['shared_world_standing_context_consent_events_world_grantor_idx', false, 'world_id,grantor_user_id,occurred_at'],
-  ], 'the consent-event table carries exactly the expected indexes');
+  ]) {
+    assert.deepEqual(liveIndexes.get(index[0]), index, `the consent-event table still carries 0078's ${index[0]}, unchanged`);
+  }
   const predicates = Object.fromEntries(indexes.map((i) => [i.name, i.pred]));
   assert.match(predicates.shared_world_standing_context_consent_events_birth_event_idx, /'GRANTED'.*'RECONFIRMED'/u);
   assert.match(predicates.shared_world_standing_context_consent_events_revoke_event_idx, /event_type = 'REVOKED'/u);
@@ -281,8 +302,29 @@ async function verifyCatalog() {
     assert.match(fn.prosrc, /STANDING_CONTEXT_COMMAND_ID_CONFLICT' USING ERRCODE='23505'/u);
     assert.doesNotMatch(fn.prosrc, /UPDATE public\.shared_world_standing_context_consent_events|UPDATE public\.shared_world_standing_context_grant_audience|DELETE FROM|TRUNCATE|conversation|memor|model|provider/iu, `${name} never rewrites history or reads Personal context`);
   }
-  const [{ n: commands }] = await rows("SELECT count(*)::int n FROM pg_proc pr JOIN pg_namespace n ON n.oid=pr.pronamespace WHERE n.nspname='public' AND pr.proname ~ 'standing_context' AND pr.proname !~ '^resolve_'");
-  assert.equal(commands, 2, 'exactly two Standing Context command functions exist');
+  // FORWARD SAFETY (I-04C). This was a census over EVERY function in the database
+  // whose name matched a Standing Context pattern, asserting a global total of
+  // two. That is the mutable-global ceiling defect class already retired from the
+  // historical migration manifests and from 0081's function census: a later
+  // reviewed slice may legitimately add such a function - CW2-02 §18 / CW2-03
+  // §40 reconfirmation, or a launch-gated wrapper - and the census would fail
+  // here the moment that authorized work landed, which is not a fact about 0078.
+  //
+  // Narrowed to the exact functions 0078 created. What 0078 itself introduced is
+  // proven from 0078's own text by
+  // database/tests/shared-standing-context-consent-commands-v1.test.mjs.
+  const [{ n: commands }] = await rows(
+    `SELECT count(*)::int n FROM pg_proc pr JOIN pg_namespace n ON n.oid=pr.pronamespace
+      WHERE n.nspname='public' AND pr.proname IN ('grant_shared_world_standing_context_v1','revoke_shared_world_standing_context_v1')`);
+  assert.equal(commands, 2, "exactly the two commands migration 0078 created exist, one overload each");
+  // The load-bearing consequence is unchanged and still proven live: whatever
+  // else comes to exist, these two remain the only consent-writing paths 0078
+  // opened, and each still writes the append-only consent history it created.
+  const [{ n: writers }] = await rows(
+    `SELECT count(*)::int n FROM pg_proc pr JOIN pg_namespace n ON n.oid=pr.pronamespace
+      WHERE n.nspname='public' AND pr.proname IN ('grant_shared_world_standing_context_v1','revoke_shared_world_standing_context_v1')
+        AND pr.prosrc ~ 'public\\.shared_world_standing_context_consent_events'`);
+  assert.equal(writers, 2, "both of 0078's commands write the consent history it created");
 }
 
 async function verifyDirectTableAcl() {
@@ -686,7 +728,7 @@ async function main() {
       [worlds, grantIds, humans, probe],
     );
     assert.equal(Number(n), 0, 'no fixture row remains after completion');
-    console.log('Verified migration 0078: shared_world_standing_context_consent_events exists once with the exact append-only columns (GRANTED|RECONFIRMED|REVOKED, event-type/prior-grant consistency, restrictive FKs, RLS on, zero policies, no trigger, no direct privilege for PUBLIC/anon/authenticated/service_role); grant_shared_world_standing_context_v1 and revoke_shared_world_standing_context_v1 are SECURITY DEFINER, search_path-pinned, auth.uid()-derived, authenticated-only commands that anon, service_role and PUBLIC cannot execute; first grant, audience subset, outsider / non-member / closed-World rejection, reconfirm as revoke-old-plus-new-grant with the old ceiling untouched, stale compare-and-swap, revoke (also after leaving and after closure), durable command idempotency and command-id conflicts behave exactly; the I-03B resolver returns the ACTIVE grant after grant / reconfirm and zero rows after revoke while history remains; two racing first grants serialize on the World row with one winner and no orphan; a hypothetical later trigger on shared_worlds or the membership-episode table does not fail this verifier while a trigger on a Standing Context table is still refused; zero fixture residue.');
+    console.log('Verified migration 0078: shared_world_standing_context_consent_events exists once and still carries every append-only column, check and index it owns, unchanged and in its original position, with later additive schema evolution permitted rather than censused (GRANTED|RECONFIRMED|REVOKED, event-type/prior-grant consistency, restrictive FKs, RLS on, zero policies, no trigger, no direct privilege for PUBLIC/anon/authenticated/service_role); exactly the two commands 0078 created exist and both still write that consent history, scoped to those two names rather than to a global census of every Standing Context function in the database; grant_shared_world_standing_context_v1 and revoke_shared_world_standing_context_v1 are SECURITY DEFINER, search_path-pinned, auth.uid()-derived, authenticated-only commands that anon, service_role and PUBLIC cannot execute; first grant, audience subset, outsider / non-member / closed-World rejection, reconfirm as revoke-old-plus-new-grant with the old ceiling untouched, stale compare-and-swap, revoke (also after leaving and after closure), durable command idempotency and command-id conflicts behave exactly; the I-03B resolver returns the ACTIVE grant after grant / reconfirm and zero rows after revoke while history remains; two racing first grants serialize on the World row with one winner and no orphan; a hypothetical later trigger on shared_worlds or the membership-episode table does not fail this verifier while a trigger on a Standing Context table is still refused; zero fixture residue.');
   } finally {
     await client.end();
   }

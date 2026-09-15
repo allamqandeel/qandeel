@@ -131,6 +131,7 @@
     "verify:shared-pre-model-world-state:integration": "node --env-file-if-exists=.env database/verify-migration-0080.mjs",
     "verify:shared-direct-invitation-runtime:integration": "node --env-file-if-exists=.env database/verify-migration-0081.mjs",
     "verify:shared-direct-world-birth:integration": "node --env-file-if-exists=.env database/verify-migration-0082.mjs",
+    "verify:shared-world-standard-voluntary-leave:integration": "node --env-file-if-exists=.env database/verify-migration-0083.mjs",
     "test:shared-delivery-authority-revalidation-contract": "node --test tests/shared-delivery-authority-revalidation-contract.test.mjs",
     "test:connected-worlds-i03-authority-closure-contract": "node --test tests/connected-worlds-i03-authority-closure-contract.test.mjs",
     "test:integrated-intelligence-runtime-phase-closure-contract": "node --test tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs",

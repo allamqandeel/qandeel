@@ -4,11 +4,14 @@
 // Runs against a fully migrated database and proves, from live catalogs and
 // live behaviour rather than from the migration text:
 //
-//   * schema: both Shared tables exist, are owned by postgres, carry exactly
-//     the expected columns / types / nullability / defaults, every check and
-//     foreign-key constraint with restrictive deletion, the partial
-//     one-open-episode unique index and the two join-order indexes, RLS on,
-//     and no trigger. (Whether a later, separately verified narrow read
+//   * schema: both Shared tables exist, are owned by postgres, and still carry
+//     every column / type / nullability / default, every check and foreign-key
+//     constraint with restrictive deletion, the partial one-open-episode unique
+//     index and the two join-order indexes that migration 0075 OWNS - unchanged
+//     and in their original positions - with RLS on and no trigger. Later
+//     additive columns, constraints and indexes from a reviewed slice are
+//     permitted: an exact live-shape census would be a mutable-global ceiling
+//     rather than a fact about 0075. (Whether a later, separately verified narrow read
 //     boundary references these tables is not a 0075 property: this verifier
 //     proves that 0075 itself sealed them, not a global ceiling on every
 //     future function.)
@@ -66,6 +69,31 @@ const UNIQUE_VIOLATION = ['23505'];
 const FK_VIOLATION = ['23503'];
 const INSUFFICIENT_PRIVILEGE = ['42501'];
 
+/**
+ * FORWARD SAFETY (I-04C).
+ *
+ * These lists are what migration 0075 OWNS, not a census of the live schema. An
+ * exact-live-shape assertion is a mutable-global ceiling: it fails the moment a
+ * later reviewed slice evolves a table additively, which is not a fact about
+ * 0075 - I-04C's additive `end_reason` on the canonical episode (CW2-03 §15,
+ * which models `end_reason?` and which 0075 simply had no writer for yet) is the
+ * first such evolution. The historical contract is preserved exactly and
+ * deliberately not weakened:
+ *
+ *   every column 0075 created is still present, with its original type,
+ *   nullability, default AND original ordinal position - a prefix, so a drop, a
+ *   type change or a reorder still fails - while later additive columns, which
+ *   can only be appended, are permitted;
+ *
+ *   every constraint and index 0075 created is still present and still means
+ *   exactly what it meant, each asserted individually below, while a later
+ *   additive constraint or index is permitted.
+ *
+ * What 0075 really guarantees is proven either way by the behaviour section: the
+ * illegal lifecycle / phase / birth-basis combinations are still rejected, a
+ * second open episode is still rejected, and the restrictive foreign keys still
+ * refuse to cascade.
+ */
 const EXPECTED_COLUMNS = {
   [WORLDS]: [
     ['id', 'uuid', 'NO', null],
@@ -109,11 +137,16 @@ async function verifySchema() {
         WHERE table_schema='public' AND table_name=$1 ORDER BY ordinal_position`,
       [table.replace('public.', '')],
     );
+    const observed = columns.map((c) => [c.column_name, c.data_type, c.is_nullable, c.column_default]);
+    const owned = EXPECTED_COLUMNS[table];
     assert.deepEqual(
-      columns.map((c) => [c.column_name, c.data_type, c.is_nullable, c.column_default]),
-      EXPECTED_COLUMNS[table],
-      `${table} carries exactly the expected columns`,
+      observed.slice(0, owned.length),
+      owned,
+      `${table} still carries every column migration 0075 owns, unchanged and in its original position`,
     );
+    for (const [name] of owned) {
+      assert.equal(observed.filter((column) => column[0] === name).length, 1, `${table}.${name} appears exactly once`);
+    }
     for (const { column_name: name } of columns) {
       assert.doesNotMatch(name, /owner|admin|inviter|creator|initiator|privilege/iu, `${table}.${name} is not a superior authority column`);
     }
@@ -129,7 +162,11 @@ async function verifySchema() {
   const worldConstraints = await constraints(WORLDS);
   const byName = (list) => Object.fromEntries(list.map((c) => [c.name, c]));
   const worlds = byName(worldConstraints);
-  assert.deepEqual(worldConstraints.map((c) => c.name), [
+  const owns = (list, names, table) => {
+    const present = new Set(list.map((c) => c.name));
+    for (const name of names) assert.ok(present.has(name), `${table} still carries migration 0075's ${name}`);
+  };
+  owns(worldConstraints, [
     'shared_worlds_birth_basis_check',
     'shared_worlds_closed_after_birth_check',
     'shared_worlds_closure_consistency_check',
@@ -137,7 +174,7 @@ async function verifySchema() {
     'shared_worlds_lifecycle_check',
     'shared_worlds_phase_check',
     'shared_worlds_pkey',
-  ], 'shared_worlds carries exactly the expected constraints');
+  ], 'shared_worlds');
   assert.equal(worlds.shared_worlds_pkey.def, 'PRIMARY KEY (id)');
   assert.match(worlds.shared_worlds_lifecycle_check.def, /'ACTIVE'.*'READ_ONLY_CLOSED'/u);
   assert.match(worlds.shared_worlds_phase_check.def, /'STANDARD'.*'INTRODUCTION'/u);
@@ -149,18 +186,20 @@ async function verifySchema() {
   assert.match(worlds.shared_worlds_closure_consistency_check.def, /\) OR \(/u, 'closure consistency is the disjunction of the two lifecycle cases');
   assert.match(worlds.shared_worlds_direct_birth_phase_check.def, /birth_basis <> 'ACCEPTED_INVITATION'(?:::text)?\)? OR \(?phase = 'STANDARD'(?:::text)?/u);
   assert.match(worlds.shared_worlds_closed_after_birth_check.def, /closed_at IS NULL\)? OR \(?closed_at >= born_at/u);
-  for (const name of Object.keys(worlds)) {
+  for (const name of ['shared_worlds_birth_basis_check', 'shared_worlds_closed_after_birth_check',
+    'shared_worlds_closure_consistency_check', 'shared_worlds_direct_birth_phase_check',
+    'shared_worlds_lifecycle_check', 'shared_worlds_phase_check', 'shared_worlds_pkey']) {
     assert.equal(worlds[name].type, name === 'shared_worlds_pkey' ? 'p' : 'c', `${name} kind`);
   }
 
   const episodeConstraints = await constraints(EPISODES);
   const episodes = byName(episodeConstraints);
-  assert.deepEqual(episodeConstraints.map((c) => c.name), [
+  owns(episodeConstraints, [
     'shared_world_membership_episodes_interval_check',
     'shared_world_membership_episodes_pkey',
     'shared_world_membership_episodes_user_fk',
     'shared_world_membership_episodes_world_fk',
-  ], 'membership episodes carry exactly the expected constraints');
+  ], 'membership episodes');
   assert.equal(episodes.shared_world_membership_episodes_pkey.def, 'PRIMARY KEY (id)');
   assert.equal(episodes.shared_world_membership_episodes_interval_check.type, 'c');
   assert.match(episodes.shared_world_membership_episodes_interval_check.def, /ended_at IS NULL\)? OR \(?ended_at >= joined_at/u);
@@ -184,21 +223,21 @@ async function verifySchema() {
       WHERE ix.indrelid=$1::regclass ORDER BY i.relname`,
     [EPISODES],
   );
-  assert.deepEqual(
-    indexes.map((i) => [i.name, i.uniq, i.cols, i.pred]),
-    [
-      ['shared_world_membership_episodes_one_open_idx', true, 'world_id,user_id', '(ended_at IS NULL)'],
-      ['shared_world_membership_episodes_pkey', true, 'id', null],
-      ['shared_world_membership_episodes_user_joined_idx', false, 'user_id,joined_at', null],
-      ['shared_world_membership_episodes_world_joined_idx', false, 'world_id,joined_at', null],
-    ],
-    'membership episodes carry exactly the expected indexes',
-  );
+  const observedIndexes = new Map(indexes.map((i) => [i.name, [i.name, i.uniq, i.cols, i.pred]]));
+  for (const owned of [
+    ['shared_world_membership_episodes_one_open_idx', true, 'world_id,user_id', '(ended_at IS NULL)'],
+    ['shared_world_membership_episodes_pkey', true, 'id', null],
+    ['shared_world_membership_episodes_user_joined_idx', false, 'user_id,joined_at', null],
+    ['shared_world_membership_episodes_world_joined_idx', false, 'world_id,joined_at', null],
+  ]) {
+    assert.deepEqual(observedIndexes.get(owned[0]), owned, `membership episodes still carry 0075's ${owned[0]}, unchanged`);
+  }
   const worldIndexes = await rows(
-    'SELECT i.relname name FROM pg_index ix JOIN pg_class i ON i.oid=ix.indexrelid WHERE ix.indrelid=$1::regclass ORDER BY i.relname',
+    'SELECT i.relname name, ix.indisunique uniq FROM pg_index ix JOIN pg_class i ON i.oid=ix.indexrelid WHERE ix.indrelid=$1::regclass ORDER BY i.relname',
     [WORLDS],
   );
-  assert.deepEqual(worldIndexes.map((i) => i.name), ['shared_worlds_pkey'], 'shared_worlds carries only its primary key index');
+  const worldPkey = worldIndexes.find((i) => i.name === 'shared_worlds_pkey');
+  assert.ok(worldPkey && worldPkey.uniq === true, "shared_worlds still carries 0075's unique primary key index");
 
   stage = 'schema: no trigger';
   for (const table of TABLES) {
@@ -377,7 +416,7 @@ async function main() {
       [worldIds, [member, other]],
     );
     assert.equal(Number(n), 0, 'no fixture row remains after completion');
-    console.log('Verified migration 0075: shared_worlds and shared_world_membership_episodes exist with the exact frozen columns, checks, restrictive foreign keys, one-open-episode partial uniqueness and RLS on; anon/authenticated/service_role/PUBLIC hold no privilege and no policy exists; every illegal lifecycle/phase/birth-basis/closure row is rejected; membership closes and rejoins as a new episode; no trigger touches the tables; zero fixture residue.');
+    console.log('Verified migration 0075: shared_worlds and shared_world_membership_episodes exist and still carry every frozen column (unchanged and in its original position, with later additive columns permitted), check, restrictive foreign keys, one-open-episode partial uniqueness and RLS on; anon/authenticated/service_role/PUBLIC hold no privilege and no policy exists; every illegal lifecycle/phase/birth-basis/closure row is rejected; membership closes and rejoins as a new episode; no trigger touches the tables; zero fixture residue.');
   } finally {
     await client.end();
   }

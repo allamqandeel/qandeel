@@ -5,11 +5,13 @@
 // behaviour rather than from the migration text:
 //
 //   * schema: the three tables exist exactly once, owned by postgres, with the
-//     exact columns / types / nullability / defaults, the exact checks (epoch
+//     columns / types / nullability / defaults they own, unchanged and in their
+//     original positions (later additive columns from a reviewed slice are
+//     permitted rather than censused), the checks (epoch
 //     floor, opaque reference, distinct humans, the six frozen invitation
 //     statuses, PENDING <=> terminal_at IS NULL, per-command-kind shape),
-//     restrictive foreign keys to public.users, the exact index set, RLS on,
-//     zero policies and no trigger. The invitation table carries NO world id;
+//     every restrictive foreign key to public.users and every index they own,
+//     RLS on, zero policies and no trigger. The invitation table carries NO world id;
 //     no expiry column exists on any of them;
 //   * direct ACL: PUBLIC, anon, authenticated and service_role hold no SELECT /
 //     INSERT / UPDATE / DELETE on any of the three (catalog AND actual 42501
@@ -140,11 +142,19 @@ const COMMAND_COLUMNS = [
   ['committed_at', 'timestamp with time zone', 'NO', 'CURRENT_TIMESTAMP'],
 ];
 
-/** Generic tables this slice must not have introduced (task I-04A section 35). */
-const FORBIDDEN_TABLES = [
-  'invitations', 'invites', 'world_invitations', 'shared_invitations', 'generic_invitations',
-  'invitation_credentials', 'matching_proposals', 'introduction_records', 'shared_world_invitation_expiry',
-];
+/**
+ * FORWARD SAFETY (I-04C FIX-02A). This file used to census the LIVE database for
+ * a fixed list of table names and require them to stay absent - a list that
+ * included `matching_proposals` and `introduction_records`, both of which a
+ * later authorized Matching / Introduction slice legitimately creates. A
+ * historical verifier runs against the FULLY migrated database, so such a census
+ * freezes the future namespace rather than proving anything about migration
+ * 0081. The claim it was making is a claim about 0081's own TEXT, and it now
+ * lives there, in database/tests/shared-direct-invitation-runtime-v1.test.mjs,
+ * which asserts the exact set of tables, functions and indexes 0081 creates and
+ * refuses every generic invitation / credential / Matching / Introduction /
+ * expiry name inside 0081 itself.
+ */
 
 /**
  * Counts every row class the behaviour proofs may touch, PLUS the two 0075
@@ -189,8 +199,16 @@ async function verifyCatalog() {
     const columns = await rows(
       `SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns
         WHERE table_schema='public' AND table_name=$1 ORDER BY ordinal_position`, [table.split('.')[1]]);
-    assert.deepEqual(columns.map((c) => [c.column_name, c.data_type, c.is_nullable, c.column_default]), expected,
-      `${table} carries exactly the expected columns`);
+    // FORWARD SAFETY (I-04C): what 0081 OWNS, asserted as a PREFIX rather than as
+    // a census of the live schema. A drop, a type / nullability / default change
+    // or a reorder still fails; a later reviewed slice may append a column. The
+    // shape ban below keeps scanning EVERY column, future ones included.
+    const observed = columns.map((c) => [c.column_name, c.data_type, c.is_nullable, c.column_default]);
+    assert.deepEqual(observed.slice(0, expected.length), expected,
+      `${table} still carries every column migration 0081 owns, unchanged and in its original position`);
+    for (const [name] of expected) {
+      assert.equal(observed.filter((column) => column[0] === name).length, 1, `${table}.${name} appears exactly once`);
+    }
   }
 
   stage = 'catalog: a prospective invitation is not a World, and no expiry policy exists';
@@ -200,9 +218,6 @@ async function verifyCatalog() {
         AND column_name ~* '(world_id|lifecycle|phase|birth|episode|alias|owner|admin|creator|privilege|expires|ttl|matching|introduction|scope|permission|kind|capability|payload|metadata)'`,
     [OWN_TABLES.map((t) => t.split('.')[1])]);
   assert.deepEqual(shaped, [], 'no World, alias, owner, expiry or generic-engine column exists on an I-04A table');
-  const generic = await rows(
-    `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name = ANY($1::text[])`, [FORBIDDEN_TABLES]);
-  assert.deepEqual(generic, [], 'no generic invitation / matching / expiry table was introduced');
 
   stage = 'catalog: checks, foreign keys and indexes';
   const checks = await rows(
@@ -234,26 +249,35 @@ async function verifyCatalog() {
   // Five: the credential owner, the inviter, the target, the command actor -
   // all to public.users - and the command's reference to the invitation it
   // created.
-  assert.deepEqual(foreignKeys.map((fk) => fk.conname), [
+  // FORWARD SAFETY (I-04C): every foreign key 0081 OWNS must still be present and
+  // still restrictive. A later reviewed slice may add its own; that is not a 0081
+  // regression.
+  const ownedForeignKeys = [
     'shared_world_direct_invitations_inviter_fk',
     'shared_world_direct_invitations_target_fk',
     'shared_world_invitation_commands_actor_fk',
     'shared_world_invitation_commands_invitation_fk',
     'shared_world_invite_credential_user_fk',
-  ].sort(), 'exactly the five expected foreign keys');
-  for (const fk of foreignKeys) {
+  ];
+  const foreignKeyByName = new Map(foreignKeys.map((fk) => [fk.conname, fk]));
+  for (const name of ownedForeignKeys) assert.ok(foreignKeyByName.has(name), `0081's ${name} is still present`);
+  const owned = ownedForeignKeys.map((name) => foreignKeyByName.get(name));
+  for (const fk of owned) {
     assert.match(fk.def, /ON DELETE RESTRICT/u, `${fk.conname} is restrictive: history never cascades`);
   }
-  assert.equal(foreignKeys.filter((fk) => /REFERENCES (?:public\.)?users\(id\)/u.test(fk.def)).length, 4,
+  assert.equal(owned.filter((fk) => /REFERENCES (?:public\.)?users\(id\)/u.test(fk.def)).length, 4,
     'four human identities, all restrictive');
-  assert.equal(foreignKeys.filter((fk) => /REFERENCES (?:public\.)?shared_world_direct_invitations\(id\)/u.test(fk.def)).length, 1);
+  assert.equal(owned.filter((fk) => /REFERENCES (?:public\.)?shared_world_direct_invitations\(id\)/u.test(fk.def)).length, 1);
 
   const indexes = await rows(
     `SELECT indexname, indexdef FROM pg_indexes WHERE schemaname='public' AND tablename = ANY($1::text[])`,
     [OWN_TABLES.map((t) => t.split('.')[1])]);
   // Sorted in JS, not by the database: index ordering must not depend on the
   // server's collation.
-  assert.deepEqual(indexes.map((i) => i.indexname).sort(), [
+  // FORWARD SAFETY (I-04C): every index 0081 OWNS is still present. A later
+  // reviewed slice may add its own; that is not a 0081 regression.
+  const liveIndexes = new Set(indexes.map((i) => i.indexname));
+  for (const name of [
     'shared_world_direct_invitations_inviter_idx',
     'shared_world_direct_invitations_pk',
     'shared_world_direct_invitations_target_pending_idx',
@@ -261,7 +285,9 @@ async function verifyCatalog() {
     'shared_world_invitation_commands_pk',
     'shared_world_invite_credential_pk',
     'shared_world_invite_credential_ref_key',
-  ], 'exactly the expected index set: three primary keys, the reference identity, the two access patterns and the one-command-per-invitation rule');
+  ]) {
+    assert.ok(liveIndexes.has(name), `0081's ${name} is still present: three primary keys, the reference identity, the two access patterns and the one-command-per-invitation rule`);
+  }
   assert.match(indexes.find((i) => i.indexname === 'shared_world_direct_invitations_target_pending_idx').indexdef,
     /\(target_user_id, target_credential_epoch\) WHERE \(status = 'PENDING'::text\)/u);
   assert.match(indexes.find((i) => i.indexname === 'shared_world_invitation_commands_invitation_idx').indexdef,
@@ -772,6 +798,57 @@ async function verifyConcurrency(c) {
   }
 }
 
+/**
+ * FORWARD SAFETY (I-04C FIX-02D), proven against real PostgreSQL.
+ *
+ * This verifier runs against a FULLY migrated database, so it is exactly where a
+ * ceiling on the future does its damage. The repository is pushed forward into
+ * the domains this file used to require to stay empty for ever - Matching,
+ * Introduction and the generic invitation namespace - and this verifier's own
+ * catalog proof is required to still pass. Then the regressions it must still
+ * refuse are planted, so the forward safety is not bought by asserting nothing.
+ */
+async function verifyForwardSafety() {
+  stage = 'forward safety: later authorized Matching / Introduction objects do not fail this historical verifier';
+  await identity('postgres');
+  await q('SAVEPOINT forward_safety');
+  try {
+    // Exactly the names this file used to require to stay absent for ever.
+    for (const table of ['matching_proposals', 'introduction_records', 'invitations', 'world_invitations',
+      'invitation_credentials', 'shared_world_invitation_expiry']) {
+      await q(`CREATE TABLE public.${table} (id uuid PRIMARY KEY)`);
+    }
+    await verifyCatalog();
+
+    stage = 'forward safety: a real regression to an 0081-owned binding is still refused';
+    for (const [reason, plant, refuses] of [
+      ['an owned foreign key is removed',
+        `ALTER TABLE ${INVITATIONS} DROP CONSTRAINT shared_world_direct_invitations_inviter_fk`,
+        /shared_world_direct_invitations_inviter_fk/u],
+      ['an owned index is removed',
+        'DROP INDEX public.shared_world_invitation_commands_invitation_idx',
+        /shared_world_invitation_commands_invitation_idx/u],
+      ['an owned column is dropped',
+        `ALTER TABLE ${CREDENTIAL} DROP COLUMN epoch CASCADE`,
+        /still carries every column migration 0081 owns/u],
+    ]) {
+      await q('SAVEPOINT forward_safety_regression');
+      await q(plant);
+      await assert.rejects(verifyCatalog(), refuses, `a database where ${reason} must still be refused`);
+      await q('ROLLBACK TO SAVEPOINT forward_safety_regression');
+      await q('RELEASE SAVEPOINT forward_safety_regression');
+    }
+    stage = 'forward safety: every planted regression was reverted';
+    await verifyCatalog();
+  } finally {
+    await identity('postgres');
+    await q('ROLLBACK TO SAVEPOINT forward_safety');
+    await q('RELEASE SAVEPOINT forward_safety');
+  }
+  stage = 'forward safety: the present-day catalog is unchanged';
+  await verifyCatalog();
+}
+
 async function provisionHumans(ids) {
   await identity('postgres');
   await q('INSERT INTO auth.users(id) SELECT unnest($1::uuid[])', [ids]);
@@ -807,6 +884,7 @@ async function main() {
       await verifyCredentialBehaviour(f);
       const existing = await verifyInvitationBehaviour(f);
       await verifyRotationInvalidation(f, existing);
+      await verifyForwardSafety();
       await identity('postgres');
     } finally {
       await q('ROLLBACK');
@@ -837,7 +915,7 @@ async function main() {
             + (SELECT count(*) FROM auth.users WHERE id = ANY($1::uuid[])) AS n`,
       [humans]);
     assert.equal(Number(n), 0, 'no fixture row remains after completion');
-    console.log('Verified migration 0081: shared_world_invite_credential_state, shared_world_direct_invitations and shared_world_invitation_commands exist once with the exact columns, checks (epoch >= 1, opaque reference, distinct humans, the six frozen invitation states, PENDING <=> terminal_at IS NULL), restrictive foreign keys, the exact index set, RLS on, zero policies, no trigger and no direct privilege for PUBLIC/anon/authenticated/service_role; the invitation table carries no world id and no expiry column; rotate_shared_world_invite_credential_v1 and submit_shared_world_direct_invitation_v1 are SECURITY DEFINER, search_path-pinned, auth.uid()-derived, authenticated-only commands that anon, service_role and PUBLIC cannot execute and that accept no inviter, target, status, World or timestamp parameter; first setup yields epoch 1 for the exact caller, exact rotation yields N + 1, a stale expected epoch and a duplicate reference are bounded, retries are idempotent and command-id mismatches are 23505; a submission resolves the target only from the exact current opaque reference, binds the exact current epoch, returns no target identity, and nonexistent / retired / self-target references are indistinguishable through one bounded class; a rotation must actually change the credential, so re-presenting the current reference is bounded and writes nothing - no epoch, no updated_at, no invalidation, no command row - while a genuinely new reference still rotates; rotation invalidates every PENDING old-epoch invitation with a database-clock terminal_at while already-terminal rows and the 0075 substrate are untouched; an invitation identity is never re-bound; no command, retry, collision or race ever created a Shared World or a membership episode; the credential-first lock order makes concurrent first setups, rotations, invitation-versus-rotation races and duplicate submissions resolve to exactly the canonical outcomes, and two concurrent IDENTICAL first setups create exactly one credential state and return the same committed epoch-1 result to both callers while the same command id with different semantics still fails closed; zero fixture residue.');
+    console.log('Verified migration 0081: shared_world_invite_credential_state, shared_world_direct_invitations and shared_world_invitation_commands exist once and still carry every column they own, unchanged and in its original position, with later additive schema evolution permitted rather than censused, plus the checks (epoch >= 1, opaque reference, distinct humans, the six frozen invitation states, PENDING <=> terminal_at IS NULL), every restrictive foreign key and index they own, RLS on, zero policies, no trigger and no direct privilege for PUBLIC/anon/authenticated/service_role; the invitation table carries no world id and no expiry column; rotate_shared_world_invite_credential_v1 and submit_shared_world_direct_invitation_v1 are SECURITY DEFINER, search_path-pinned, auth.uid()-derived, authenticated-only commands that anon, service_role and PUBLIC cannot execute and that accept no inviter, target, status, World or timestamp parameter; first setup yields epoch 1 for the exact caller, exact rotation yields N + 1, a stale expected epoch and a duplicate reference are bounded, retries are idempotent and command-id mismatches are 23505; a submission resolves the target only from the exact current opaque reference, binds the exact current epoch, returns no target identity, and nonexistent / retired / self-target references are indistinguishable through one bounded class; a rotation must actually change the credential, so re-presenting the current reference is bounded and writes nothing - no epoch, no updated_at, no invalidation, no command row - while a genuinely new reference still rotates; rotation invalidates every PENDING old-epoch invitation with a database-clock terminal_at while already-terminal rows and the 0075 substrate are untouched; an invitation identity is never re-bound; no command, retry, collision or race ever created a Shared World or a membership episode; the credential-first lock order makes concurrent first setups, rotations, invitation-versus-rotation races and duplicate submissions resolve to exactly the canonical outcomes, and two concurrent IDENTICAL first setups create exactly one credential state and return the same committed epoch-1 result to both callers while the same command id with different semantics still fails closed; zero fixture residue.');
   } finally {
     await client.end();
   }

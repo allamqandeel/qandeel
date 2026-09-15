@@ -176,6 +176,20 @@ test('0081 is the forward migration after 0080 and edits no historical migration
   }
   assert.doesNotMatch(deployableSql, /CREATE\s+(?:OR REPLACE\s+)?(?:TRIGGER|POLICY|EXTENSION|TYPE|VIEW|MATERIALIZED VIEW)\b/iu,
     '0081 adds no trigger, policy, extension, type or view');
+  // I-04C FIX-02A. The complete claim about what 0081 did NOT create lives HERE,
+  // in 0081's own text. The real-PostgreSQL verifier used to assert it as a LIVE
+  // absence census over a fixed list that included `matching_proposals` and
+  // `introduction_records` - objects a later authorized Matching or Introduction
+  // slice legitimately creates - which froze the future namespace rather than
+  // proving anything about migration 0081.
+  const createdTables = [...deployableSql.matchAll(/^CREATE TABLE public\.(\w+)/gmu)].map((match) => match[1]).sort();
+  assert.deepEqual(createdTables, [...OWN_TABLES].map((name) => name.replace('public.', '')).sort(),
+    '0081 creates exactly its own three tables, and no others');
+  for (const generic of ['invitations', 'invites', 'world_invitations', 'shared_invitations', 'generic_invitations',
+    'invitation_credentials', 'matching_proposals', 'introduction_records', 'shared_world_invitation_expiry']) {
+    assert.ok(!createdTables.includes(generic),
+      `0081 creates no ${generic}: no generic invitation / credential / Matching / Introduction / expiry substrate`);
+  }
   // Frozen predecessors: content pins prove immutability of what exists. They
   // say nothing about migrations that do not exist yet.
   for (const [name, blob] of [
