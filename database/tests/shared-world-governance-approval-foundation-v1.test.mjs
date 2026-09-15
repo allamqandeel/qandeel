@@ -42,10 +42,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHarnessMirror, removeHarnessMirror } from '../../tests/harness-temp-dir.mjs';
 
 const rootPath = fileURLToPath(new URL('../../', import.meta.url));
 const SELF = 'shared-world-governance-approval-foundation-v1.test.mjs';
@@ -928,7 +928,7 @@ test('the contract is not vacuous: every deliberate weakening of migration 0084 
     }
     assert.ok(runInMirror(mirror).ok, 'every weakening was reverted');
   } finally {
-    rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+    removeHarnessMirror(mirror);
   }
 });
 
@@ -937,11 +937,11 @@ test('the contract is not vacuous: every deliberate weakening of migration 0084 
 // ---------------------------------------------------------------------------------------------
 
 /** Only the paths this contract actually reads. */
-const MIRRORED = ['database', '.github/workflows/api-ci.yml', 'package.json'];
+const MIRRORED = ['database', '.github/workflows/api-ci.yml', 'package.json', 'tests/harness-temp-dir.mjs'];
 const SKIP = /(?:^|[\\/])(?:node_modules|\.git|\.expo|\.turbo|coverage)(?:[\\/]|$)/u;
 
 function buildMirror() {
-  const mirror = mkdtempSync(join(tmpdir(), 'qandeel-i04d-forward-'));
+  const mirror = createHarnessMirror('qandeel-i04d-forward-');
   for (const entry of MIRRORED) {
     const from = join(rootPath, entry);
     if (!existsSync(from)) continue;
@@ -1045,12 +1045,12 @@ test('the add-member consumer, a Launch Gate and every later authorized governan
           plant(mirror);
           assert.equal(runInMirror(mirror).ok, false, `a repository where ${reason} must still be refused`);
         } finally {
-          rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+          removeHarnessMirror(mirror);
           cpSync(snapshot, mirror, { recursive: true });
-          rmSync(snapshot, { recursive: true, force: true, maxRetries: 3 });
+          removeHarnessMirror(snapshot);
         }
       }
     } finally {
-      rmSync(mirror, { recursive: true, force: true, maxRetries: 3 });
+      removeHarnessMirror(mirror);
     }
   });

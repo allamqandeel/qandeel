@@ -734,18 +734,29 @@ async function verifyForwardSafety(f) {
          END$fn$`,
         /records no settings actor/u],
     ]) {
+      stage = `forward safety: regression - ${reason}`;
       await q('SAVEPOINT forward_safety_regression');
-      await q(plant);
-      await assert.rejects(verifyCatalog(), refuses, `a database where ${reason} must still be refused`);
-      await q('ROLLBACK TO SAVEPOINT forward_safety_regression');
-      await q('RELEASE SAVEPOINT forward_safety_regression');
+      try {
+        await q(plant);
+        await assert.rejects(verifyCatalog(), refuses, `a database where ${reason} must still be refused`);
+      } finally {
+        // Always reverted, even when the plant itself or the assertion threw. A
+        // regression left in place would make every scenario after it prove the wrong
+        // thing, and a half-applied plant would leave the transaction aborted so that
+        // the FIRST real failure gets replaced by a later 25P02 from the cleanup.
+        await q('ROLLBACK TO SAVEPOINT forward_safety_regression');
+        await q('RELEASE SAVEPOINT forward_safety_regression');
+      }
     }
     stage = 'forward safety: every planted regression was reverted';
     await verifyCatalog();
   } finally {
-    await identity('postgres');
+    // ROLLBACK FIRST. If anything above raised a database error the transaction is
+    // aborted, and a RESET ROLE issued before the rollback fails with 25P02 - which
+    // would replace the real cause with a useless one.
     await q('ROLLBACK TO SAVEPOINT forward_safety');
     await q('RELEASE SAVEPOINT forward_safety');
+    await identity('postgres');
   }
   stage = 'forward safety: the present-day catalog is unchanged';
   await verifyCatalog();
