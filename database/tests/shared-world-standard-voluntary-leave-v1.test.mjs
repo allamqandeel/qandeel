@@ -549,6 +549,62 @@ test('no Connected Worlds verifier censuses the live schema or the function cata
       `${file} must not count every function in the database whose name matches a pattern`);
     assert.doesNotMatch(text, /proname\s*~\*?\s*'[^']*(?:accept|decline|cancel|expire|birth|leave|remove|rejoin|close|launch|wrapper)/u,
       `${file} must not census the catalog for names later authorized work will legitimately use`);
+
+    // FIX-02D, class 1: a LIVE future-object absence census. The structural
+    // signature is a query against the TABLE catalog - information_schema.tables
+    // or pg_class - whose name predicate is a fixed list, asserted to be empty.
+    // Deliberately narrow: an owned-shape query over a verifier's OWN tables
+    // (`information_schema.columns ... table_name = ANY(OWN_TABLES)`) is a
+    // legitimate owned invariant and must keep passing, and so must a single
+    // named architectural ban such as 0075's `relname='worlds'`.
+    assert.doesNotMatch(text, /FROM (?:information_schema\.tables|pg_class)[^;]*\b(?:relname|table_name)\s*=\s*ANY\(/u,
+      `${file} must not require a fixed list of table names to stay absent from the fully migrated database`);
+    assert.doesNotMatch(text, /const (?:FORBIDDEN|ABSENT|BANNED|MUST_NOT_EXIST|NONEXISTENT)\w*\s*=\s*\[/u,
+      `${file} declares no fixed future-object list: what a migration did not create is proven from its own text`);
+
+    // FIX-02D, class 2: an exact total count of a live schema object on a table a
+    // later reviewed slice may extend. Counting is weaker than naming AND it is a
+    // ceiling; each owned object is asserted individually instead.
+    assert.doesNotMatch(text, /assert\.(?:equal|strictEqual)\(\s*\w*(?:[Ff]oreign[Kk]ey|[Cc]onstraint|[Ii]ndex|[Pp]olic|[Cc]olumn)\w*\.length\s*,\s*\d+/u,
+      `${file} must not assert an exact total count of live foreign keys, constraints, indexes or columns`);
+    assert.doesNotMatch(text, /\w*(?:[Ff]oreign[Kk]ey|[Cc]onstraint|[Ii]ndex)\w*\.length\s*===\s*\d+/u,
+      `${file} must not compare a live schema-object count to a fixed number`);
+  }
+});
+
+test('the historical 0081 and 0082 verifiers prove their own forward safety against real PostgreSQL', () => {
+  // FIX-02D's executable half. A detector alone would only stop the class coming
+  // back; these probes show the repaired verifiers actually survive the future
+  // they used to forbid, and still refuse a real regression to what they own.
+  const invitation = read('../verify-migration-0081.mjs');
+  const birth = read('../verify-migration-0082.mjs');
+  for (const [name, text] of [['0081', invitation], ['0082', birth]]) {
+    assert.match(text, /async function verifyForwardSafety\(/u, `verifier ${name} proves forward safety against real PostgreSQL`);
+    assert.match(text, /await verifyForwardSafety\(\);/u, `and verifier ${name} actually runs it`);
+    assert.match(text, /await assert\.rejects\(verifyCatalog\(\), refuses/u, `and verifier ${name} requires real regressions to still be refused`);
+    assert.match(text, /SAVEPOINT forward_safety/u, `and verifier ${name} rolls the hypothetical future back`);
+  }
+  // The probes create exactly the objects each file used to forbid for ever.
+  for (const future of ['matching_proposals', 'introduction_records', 'invitations', 'invitation_credentials']) {
+    assert.ok(invitation.includes(`'${future}'`), `0081's probe creates a later ${future}`);
+  }
+  for (const future of ['shared_world_settings', 'shared_world_launch_gates', 'launch_gate_snapshots', 'feature_flags', 'introduction_records']) {
+    assert.ok(birth.includes(`'${future}'`), `0082's probe creates a later ${future}`);
+  }
+  // And 0082's probe adds a later additive foreign key on one of its OWN tables,
+  // with a deletion rule 0082 has no authority over.
+  assert.match(birth, /ADD CONSTRAINT \$\{probe\}_fk[\s\S]{0,200}ON DELETE SET NULL/u,
+    "0082's probe proves a later additive foreign key with its own deletion rule is not an 0082 regression");
+  // Each of the seven foreign keys 0082 owns is named, and a regression to one is refused.
+  for (const owned of ['shared_direct_acceptance_actor_fk', 'shared_direct_acceptance_inviter_episode_fk',
+    'shared_direct_acceptance_invitation_fk', 'shared_direct_acceptance_target_episode_fk',
+    'shared_direct_acceptance_world_fk', 'shared_world_direct_birth_events_invitation_fk',
+    'shared_world_direct_birth_events_world_fk']) {
+    assert.ok(birth.includes(`['${owned}',`), `0082 asserts ${owned} individually, by name`);
+  }
+  for (const refused of ['one of the seven owned foreign keys is removed', 'an owned foreign key stops being restrictive',
+    'an owned foreign key is repointed at another table']) {
+    assert.ok(birth.includes(refused), `0082 still refuses: ${refused}`);
   }
 });
 

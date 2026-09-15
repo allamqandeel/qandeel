@@ -174,6 +174,21 @@ test('THE PRE-LAUNCH SECURITY BOUNDARY: the birth core is executable by no appli
   // executable object it creates is the internal primitive itself.
   assert.equal((deployableSql.match(/^CREATE FUNCTION public\./gmu) ?? []).length, 1, '0082 creates exactly its own one internal primitive');
   assert.match(functionBody, /LANGUAGE plpgsql SECURITY DEFINER SET search_path=''/u, 'the birth core is a pinned SECURITY DEFINER primitive');
+  // I-04C FIX-02B. The complete claim about what 0082 did NOT create lives HERE,
+  // in 0082's own text. The real-PostgreSQL verifier used to assert it as a LIVE
+  // absence census over a fixed list that included `shared_world_settings`,
+  // `shared_world_launch_gates`, `launch_gate_snapshots`, `feature_flags` and
+  // Introduction substrate - every one an explicitly expected later roadmap
+  // object - which froze the future namespace rather than proving anything about
+  // migration 0082.
+  const createdTables = [...deployableSql.matchAll(/^CREATE TABLE public\.(\w+)/gmu)].map((match) => match[1]).sort();
+  assert.deepEqual(createdTables, [...OWN_TABLES].sort(), '0082 creates exactly its own two tables, and no others');
+  for (const generic of ['shared_world_events', 'world_events', 'shared_world_event_log', 'shared_world_settings',
+    'shared_world_member_invitations', 'shared_world_launch_gates', 'launch_gate_snapshots',
+    'feature_flags', 'shared_world_introductions', 'introduction_records']) {
+    assert.ok(!createdTables.includes(generic),
+      `0082 creates no ${generic}: this slice is the direct birth core only, with no generic event, lifecycle or launch engine`);
+  }
   // The only TypeScript this slice adds is a test-only parity spec: no service,
   // no provider, no controller, no route.
   assert.ok(parity.includes('attemptSharedWorldBirth'), 'the kernel parity proof exists');

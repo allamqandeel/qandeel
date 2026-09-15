@@ -142,11 +142,19 @@ const COMMAND_COLUMNS = [
   ['committed_at', 'timestamp with time zone', 'NO', 'CURRENT_TIMESTAMP'],
 ];
 
-/** Generic tables this slice must not have introduced (task I-04A section 35). */
-const FORBIDDEN_TABLES = [
-  'invitations', 'invites', 'world_invitations', 'shared_invitations', 'generic_invitations',
-  'invitation_credentials', 'matching_proposals', 'introduction_records', 'shared_world_invitation_expiry',
-];
+/**
+ * FORWARD SAFETY (I-04C FIX-02A). This file used to census the LIVE database for
+ * a fixed list of table names and require them to stay absent - a list that
+ * included `matching_proposals` and `introduction_records`, both of which a
+ * later authorized Matching / Introduction slice legitimately creates. A
+ * historical verifier runs against the FULLY migrated database, so such a census
+ * freezes the future namespace rather than proving anything about migration
+ * 0081. The claim it was making is a claim about 0081's own TEXT, and it now
+ * lives there, in database/tests/shared-direct-invitation-runtime-v1.test.mjs,
+ * which asserts the exact set of tables, functions and indexes 0081 creates and
+ * refuses every generic invitation / credential / Matching / Introduction /
+ * expiry name inside 0081 itself.
+ */
 
 /**
  * Counts every row class the behaviour proofs may touch, PLUS the two 0075
@@ -210,9 +218,6 @@ async function verifyCatalog() {
         AND column_name ~* '(world_id|lifecycle|phase|birth|episode|alias|owner|admin|creator|privilege|expires|ttl|matching|introduction|scope|permission|kind|capability|payload|metadata)'`,
     [OWN_TABLES.map((t) => t.split('.')[1])]);
   assert.deepEqual(shaped, [], 'no World, alias, owner, expiry or generic-engine column exists on an I-04A table');
-  const generic = await rows(
-    `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name = ANY($1::text[])`, [FORBIDDEN_TABLES]);
-  assert.deepEqual(generic, [], 'no generic invitation / matching / expiry table was introduced');
 
   stage = 'catalog: checks, foreign keys and indexes';
   const checks = await rows(
@@ -793,6 +798,57 @@ async function verifyConcurrency(c) {
   }
 }
 
+/**
+ * FORWARD SAFETY (I-04C FIX-02D), proven against real PostgreSQL.
+ *
+ * This verifier runs against a FULLY migrated database, so it is exactly where a
+ * ceiling on the future does its damage. The repository is pushed forward into
+ * the domains this file used to require to stay empty for ever - Matching,
+ * Introduction and the generic invitation namespace - and this verifier's own
+ * catalog proof is required to still pass. Then the regressions it must still
+ * refuse are planted, so the forward safety is not bought by asserting nothing.
+ */
+async function verifyForwardSafety() {
+  stage = 'forward safety: later authorized Matching / Introduction objects do not fail this historical verifier';
+  await identity('postgres');
+  await q('SAVEPOINT forward_safety');
+  try {
+    // Exactly the names this file used to require to stay absent for ever.
+    for (const table of ['matching_proposals', 'introduction_records', 'invitations', 'world_invitations',
+      'invitation_credentials', 'shared_world_invitation_expiry']) {
+      await q(`CREATE TABLE public.${table} (id uuid PRIMARY KEY)`);
+    }
+    await verifyCatalog();
+
+    stage = 'forward safety: a real regression to an 0081-owned binding is still refused';
+    for (const [reason, plant, refuses] of [
+      ['an owned foreign key is removed',
+        `ALTER TABLE ${INVITATIONS} DROP CONSTRAINT shared_world_direct_invitations_inviter_fk`,
+        /shared_world_direct_invitations_inviter_fk/u],
+      ['an owned index is removed',
+        'DROP INDEX public.shared_world_invitation_commands_invitation_idx',
+        /shared_world_invitation_commands_invitation_idx/u],
+      ['an owned column is dropped',
+        `ALTER TABLE ${CREDENTIAL} DROP COLUMN epoch CASCADE`,
+        /still carries every column migration 0081 owns/u],
+    ]) {
+      await q('SAVEPOINT forward_safety_regression');
+      await q(plant);
+      await assert.rejects(verifyCatalog(), refuses, `a database where ${reason} must still be refused`);
+      await q('ROLLBACK TO SAVEPOINT forward_safety_regression');
+      await q('RELEASE SAVEPOINT forward_safety_regression');
+    }
+    stage = 'forward safety: every planted regression was reverted';
+    await verifyCatalog();
+  } finally {
+    await identity('postgres');
+    await q('ROLLBACK TO SAVEPOINT forward_safety');
+    await q('RELEASE SAVEPOINT forward_safety');
+  }
+  stage = 'forward safety: the present-day catalog is unchanged';
+  await verifyCatalog();
+}
+
 async function provisionHumans(ids) {
   await identity('postgres');
   await q('INSERT INTO auth.users(id) SELECT unnest($1::uuid[])', [ids]);
@@ -828,6 +884,7 @@ async function main() {
       await verifyCredentialBehaviour(f);
       const existing = await verifyInvitationBehaviour(f);
       await verifyRotationInvalidation(f, existing);
+      await verifyForwardSafety();
       await identity('postgres');
     } finally {
       await q('ROLLBACK');

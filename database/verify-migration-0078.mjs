@@ -132,11 +132,13 @@ const EXPECTED_COLUMNS = [
   ['occurred_at', 'timestamp with time zone', 'NO', 'CURRENT_TIMESTAMP'],
 ];
 
-// Generic tables this slice must not have introduced.
-const FORBIDDEN_TABLES = [
-  'consent_events', 'consent_event_log', 'consent_requests', 'authority_grants', 'generic_permissions', 'permission_grants',
-  'context_admissions', 'grants', 'permissions', 'standing_context_consent_events', 'shared_world_consent_events',
-];
+// FORWARD SAFETY (I-04C FIX-02D). The live-database census of a fixed list of
+// table names that must stay absent is removed: a historical verifier runs against
+// the FULLY migrated database, so such a list freezes the future namespace rather
+// than proving anything about migration 0078. The claim is a claim about 0078's
+// own TEXT and is proven there, by
+// database/tests/shared-standing-context-consent-commands-v1.test.mjs, which
+// asserts the exact set of tables and functions 0078 creates.
 
 // Counts are read as the owner: the current application role is restored
 // afterwards so a behaviour proof can take a snapshot without leaving the
@@ -179,11 +181,6 @@ async function verifyCatalog() {
   assert.equal(meta.kind, 'r', 'the consent-event table is an ordinary table');
   assert.equal(meta.owner, 'postgres', 'the consent-event table is owned by postgres');
   assert.equal(meta.rls, true, 'the consent-event table has row level security enabled');
-  const [{ n: forbidden }] = await rows(
-    "SELECT count(*)::int n FROM pg_class c JOIN pg_namespace ns ON ns.oid=c.relnamespace WHERE ns.nspname='public' AND c.relname = ANY($1::text[])",
-    [FORBIDDEN_TABLES],
-  );
-  assert.equal(forbidden, 0, 'no generic consent, grant, permission or context-admission table exists');
 
   stage = 'catalog: columns';
   const columns = await rows(

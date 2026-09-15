@@ -13,8 +13,12 @@
 //     from a reviewed slice permitted rather than censused - while no column,
 //     future ones included, is a scope / purpose / action / source / permission
 //     / JSON column, with RLS on and no trigger on the grant tables or
-//     on the membership-episode table; no generic context-admission / grant /
-//     permission / consent-event table exists. (Whether a later, separately
+//     on the membership-episode table. That 0076 itself introduced no generic
+//     context-admission / grant / permission / Matching / Public / consent-event
+//     table is a claim about 0076's own text and is proven there, by
+//     database/tests/shared-world-standing-context-grant-persistence-v1.test.mjs,
+//     never as a live-database absence rule over the future namespace.
+//     (Whether a later, separately
 //     verified narrow read boundary exists is not a 0076 property: this
 //     verifier proves that 0076 itself sealed the tables, not a global ceiling
 //     on every future function.)
@@ -96,10 +100,15 @@ const EXPECTED_COLUMNS = {
 // Generic tables this slice must not have introduced: a generic Context
 // Admission / grant / permission engine, Matching or Public private admission,
 // or a half-generic consent-event log.
-const FORBIDDEN_TABLES = [
-  'context_admissions', 'context_admission_grants', 'grants', 'permissions', 'permission_grants', 'authority_grants',
-  'consent_events', 'consent_event_log', 'matching_context_grants', 'public_context_grants', 'standing_context_grants',
-];
+// FORWARD SAFETY (I-04C FIX-02D). The live-database census of a fixed list of
+// table names that must stay absent is removed: it included matching_context_grants
+// and public_context_grants, both of which a later authorized Matching or Public
+// slice legitimately creates (CW2-02 section 32 names a Matching Context Grant),
+// and a historical verifier runs against the FULLY migrated database. The claim is
+// a claim about 0076's own TEXT and is proven there, by
+// database/tests/shared-world-standing-context-grant-persistence-v1.test.mjs, which
+// asserts the exact set of tables 0076 creates and refuses every generic admission /
+// grant / permission / Matching / Public / consent-event name inside 0076 itself.
 
 async function verifySchema() {
   stage = 'schema: tables';
@@ -113,12 +122,6 @@ async function verifySchema() {
     assert.equal(meta.owner, 'postgres', `${table} is owned by postgres`);
     assert.equal(meta.rls, true, `${table} has row level security enabled`);
   }
-  const [{ n: forbidden }] = await rows(
-    "SELECT count(*)::int n FROM pg_class c JOIN pg_namespace ns ON ns.oid=c.relnamespace WHERE ns.nspname='public' AND c.relname = ANY($1::text[])",
-    [FORBIDDEN_TABLES],
-  );
-  assert.equal(forbidden, 0, 'no generic context-admission, grant, permission, Matching, Public or consent-event table exists');
-
   stage = 'schema: columns';
   for (const table of TABLES) {
     const columns = await rows(

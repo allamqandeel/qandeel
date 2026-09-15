@@ -129,12 +129,19 @@ const ACCEPTANCE_COMMAND_COLUMNS = [
   ['committed_at', 'timestamp with time zone', 'NO'],
 ];
 
-/** Tables this slice must not have introduced: no generic event, lifecycle or launch engine. */
-const FORBIDDEN_TABLES = [
-  'shared_world_events', 'world_events', 'shared_world_event_log', 'shared_world_settings',
-  'shared_world_member_invitations', 'shared_world_launch_gates', 'launch_gate_snapshots',
-  'feature_flags', 'shared_world_introductions', 'introduction_records',
-];
+/**
+ * FORWARD SAFETY (I-04C FIX-02B). This file used to census the LIVE database for
+ * a fixed list of table names and require them to stay absent - a list that
+ * included `shared_world_settings`, `shared_world_launch_gates`,
+ * `launch_gate_snapshots`, `feature_flags` and Introduction substrate, every one
+ * of which is an explicitly expected later roadmap object. A historical verifier
+ * runs against the FULLY migrated database, so such a census freezes the future
+ * namespace rather than proving anything about migration 0082. The claim it was
+ * making is a claim about 0082's own TEXT, and it now lives there, in
+ * database/tests/shared-direct-world-birth-transaction-v1.test.mjs, which
+ * asserts the exact set of tables and functions 0082 creates and refuses every
+ * generic event / lifecycle / launch / Introduction name inside 0082 itself.
+ */
 
 async function snapshot(humans) {
   const [{ role }] = await rows('SELECT current_user AS role');
@@ -174,10 +181,6 @@ async function verifyCatalog() {
     assert.equal(n, 1, `${table} exists exactly once`);
     const [{ owner }] = await rows('SELECT pg_get_userbyid(c.relowner) owner FROM pg_class c WHERE c.oid = $1::regclass', [table]);
     assert.equal(owner, 'postgres', `${table} is owned by postgres`);
-  }
-  for (const name of FORBIDDEN_TABLES) {
-    const [{ n }] = await rows("SELECT count(*)::int n FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace WHERE ns.nspname='public' AND c.relname=$1", [name]);
-    assert.equal(n, 0, `I-04B introduced no ${name}: this slice is the direct birth core only`);
   }
 
   stage = 'catalog: the columns migration 0082 owns, unchanged';
@@ -231,25 +234,37 @@ async function verifyCatalog() {
     assert.ok(liveUniques.has(owned), `still enforced: ${owned} - one World and one invitation per birth, one of each identity per committed acceptance`);
   }
 
+  // FORWARD SAFETY (I-04C FIX-02C). The seven foreign keys migration 0082 OWNS
+  // are asserted INDIVIDUALLY and by name, each with its exact table, exact local
+  // column, exact referenced canonical table and column, and ON DELETE RESTRICT.
+  // What was here before was a total count plus a rule imposed on EVERY live
+  // foreign key of the two tables - a mutable-global ceiling, because a later
+  // reviewed migration may legitimately add its own foreign key to one of them
+  // and 0082 has no authority over how that one deletes. Asserting each owned
+  // binding by name is strictly stronger than counting them.
   const foreignKeys = await rows(
-    `SELECT c.conrelid::regclass::text AS tbl, pg_get_constraintdef(c.oid) AS def
+    `SELECT c.conname AS name, c.conrelid::regclass::text AS tbl, pg_get_constraintdef(c.oid) AS def
        FROM pg_constraint c WHERE c.conrelid = ANY($1::regclass[]) AND c.contype = 'f'`,
     [OWN_TABLES]);
-  assert.equal(foreignKeys.length, 7, 'exactly seven foreign keys: two from the birth event, five from the acceptance command');
-  for (const { tbl, def } of foreignKeys) {
-    assert.match(def, /ON DELETE RESTRICT$/u, `${tbl} ${def}: birth history is never silently cascaded away`);
-  }
-  const liveForeignKeys = new Set(foreignKeys.map((r) => `${bare(r.tbl)} ${normalize(r.def)}`));
-  for (const owned of [
-    `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE RESTRICT`,
-    `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (inviter_membership_episode_id) REFERENCES shared_world_membership_episodes(id) ON DELETE RESTRICT`,
-    `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (invitation_id) REFERENCES shared_world_direct_invitations(id) ON DELETE RESTRICT`,
-    `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (target_membership_episode_id) REFERENCES shared_world_membership_episodes(id) ON DELETE RESTRICT`,
-    `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (world_id) REFERENCES shared_worlds(id) ON DELETE RESTRICT`,
-    `${bare(BIRTH_EVENTS)} FOREIGN KEY (invitation_id) REFERENCES shared_world_direct_invitations(id) ON DELETE RESTRICT`,
-    `${bare(BIRTH_EVENTS)} FOREIGN KEY (world_id) REFERENCES shared_worlds(id) ON DELETE RESTRICT`,
+  const liveForeignKeys = new Map(foreignKeys.map((r) => [r.name, `${bare(r.tbl)} ${normalize(r.def)}`]));
+  for (const [name, owned] of [
+    ['shared_direct_acceptance_actor_fk',
+      `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE RESTRICT`],
+    ['shared_direct_acceptance_inviter_episode_fk',
+      `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (inviter_membership_episode_id) REFERENCES shared_world_membership_episodes(id) ON DELETE RESTRICT`],
+    ['shared_direct_acceptance_invitation_fk',
+      `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (invitation_id) REFERENCES shared_world_direct_invitations(id) ON DELETE RESTRICT`],
+    ['shared_direct_acceptance_target_episode_fk',
+      `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (target_membership_episode_id) REFERENCES shared_world_membership_episodes(id) ON DELETE RESTRICT`],
+    ['shared_direct_acceptance_world_fk',
+      `${bare(ACCEPTANCE_COMMANDS)} FOREIGN KEY (world_id) REFERENCES shared_worlds(id) ON DELETE RESTRICT`],
+    ['shared_world_direct_birth_events_invitation_fk',
+      `${bare(BIRTH_EVENTS)} FOREIGN KEY (invitation_id) REFERENCES shared_world_direct_invitations(id) ON DELETE RESTRICT`],
+    ['shared_world_direct_birth_events_world_fk',
+      `${bare(BIRTH_EVENTS)} FOREIGN KEY (world_id) REFERENCES shared_worlds(id) ON DELETE RESTRICT`],
   ]) {
-    assert.ok(liveForeignKeys.has(owned), `still bound to the canonical row: ${owned}`);
+    assert.equal(liveForeignKeys.get(name), owned,
+      `${name} still binds exactly the canonical row, restrictively: birth history is never silently cascaded away`);
   }
 
   stage = 'catalog: RLS on, zero policies, no trigger';
@@ -891,6 +906,73 @@ async function verifyConcurrency(c) {
   }
 }
 
+/**
+ * FORWARD SAFETY (I-04C FIX-02D), proven against real PostgreSQL.
+ *
+ * This verifier runs against a FULLY migrated database, so it is exactly where a
+ * ceiling on the future does its damage. The repository is pushed several
+ * authorized steps forward - the Matching / Introduction / Launch-Gate /
+ * feature-flag / World-settings tables whose absence this file used to require,
+ * plus an additive foreign key on one of 0082's own tables - and this verifier's
+ * own catalog proof is required to still pass. Then the regressions it must
+ * still refuse are planted, so the forward safety is not bought by asserting
+ * nothing.
+ */
+async function verifyForwardSafety() {
+  stage = 'forward safety: later authorized roadmap objects do not fail this historical verifier';
+  await identity('postgres');
+  const probe = `i04b_forward_safety_probe_${randomUUID().replace(/-/gu, '')}`;
+  await q('SAVEPOINT forward_safety');
+  try {
+    // Exactly the names this file used to require to stay absent for ever.
+    for (const table of ['shared_world_settings', 'shared_world_launch_gates', 'launch_gate_snapshots',
+      'feature_flags', 'introduction_records', 'shared_world_events']) {
+      await q(`CREATE TABLE public.${table} (id uuid PRIMARY KEY)`);
+    }
+    // And a later reviewed slice adding its OWN foreign key to an 0082 table,
+    // with its own deletion rule, which 0082 has no authority over.
+    await q(`CREATE TABLE public.${probe}_proposals (id uuid PRIMARY KEY)`);
+    await q(`ALTER TABLE ${ACCEPTANCE_COMMANDS} ADD COLUMN ${probe}_proposal_id uuid`);
+    await q(`ALTER TABLE ${ACCEPTANCE_COMMANDS} ADD CONSTRAINT ${probe}_fk
+             FOREIGN KEY (${probe}_proposal_id) REFERENCES public.${probe}_proposals (id) ON DELETE SET NULL`);
+    await verifyCatalog();
+
+    stage = 'forward safety: a real regression to an 0082-owned binding is still refused';
+    for (const [reason, plant, refuses] of [
+      ['one of the seven owned foreign keys is removed',
+        `ALTER TABLE ${BIRTH_EVENTS} DROP CONSTRAINT shared_world_direct_birth_events_world_fk`,
+        /shared_world_direct_birth_events_world_fk/u],
+      ['an owned foreign key stops being restrictive',
+        `ALTER TABLE ${ACCEPTANCE_COMMANDS} DROP CONSTRAINT shared_direct_acceptance_actor_fk,
+         ADD CONSTRAINT shared_direct_acceptance_actor_fk FOREIGN KEY (actor_user_id) REFERENCES public.users (id) ON DELETE CASCADE`,
+        /shared_direct_acceptance_actor_fk/u],
+      // NOT VALID, because the existing birth events legitimately point at real
+      // invitations: the point is that the BINDING changed, not that the data did.
+      ['an owned foreign key is repointed at another table',
+        `ALTER TABLE ${BIRTH_EVENTS} DROP CONSTRAINT shared_world_direct_birth_events_invitation_fk,
+         ADD CONSTRAINT shared_world_direct_birth_events_invitation_fk FOREIGN KEY (invitation_id) REFERENCES public.${probe}_proposals (id) ON DELETE RESTRICT NOT VALID`,
+        /shared_world_direct_birth_events_invitation_fk/u],
+      ['an owned uniqueness binding is dropped',
+        `ALTER TABLE ${ACCEPTANCE_COMMANDS} DROP CONSTRAINT shared_direct_acceptance_invitation_key`,
+        /UNIQUE \(invitation_id\)/u],
+    ]) {
+      await q('SAVEPOINT forward_safety_regression');
+      await q(plant);
+      await assert.rejects(verifyCatalog(), refuses, `a database where ${reason} must still be refused`);
+      await q('ROLLBACK TO SAVEPOINT forward_safety_regression');
+      await q('RELEASE SAVEPOINT forward_safety_regression');
+    }
+    stage = 'forward safety: every planted regression was reverted';
+    await verifyCatalog();
+  } finally {
+    await identity('postgres');
+    await q('ROLLBACK TO SAVEPOINT forward_safety');
+    await q('RELEASE SAVEPOINT forward_safety');
+  }
+  stage = 'forward safety: the present-day catalog is unchanged';
+  await verifyCatalog();
+}
+
 async function provisionHumans(ids) {
   await identity('postgres');
   await q('INSERT INTO auth.users(id) SELECT unnest($1::uuid[])', [ids]);
@@ -944,6 +1026,7 @@ async function main() {
       await verifyStaleAndTerminal(f, pending);
       await verifyIdempotency(f, existing);
       await verifyIdCollisionRollback(f, existing);
+      await verifyForwardSafety();
       await identity('postgres');
     } finally {
       await q('ROLLBACK');
