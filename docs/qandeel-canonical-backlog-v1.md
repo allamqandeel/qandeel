@@ -618,6 +618,51 @@ untouched: T-14 changed no auth persistence, no storage mechanism, no backup pol
 credential model, and introduced no cryptography. No new item was admitted (BG-06), and no T-14
 finding was moved here in order to close (BG-01).
 
+### I-04 closure record (Connected Worlds v2 — Shared World Lifecycle / Conversation Runtime)
+
+**Inherited: none.** At the kickoff of `I-04G`, the phase-closing slice, this register was read in
+full. No item names `I-04`, `I-04G`, or any earlier `I-04` slice as its **Owner task**, and no item's
+reopen condition is met by anything I-04 built. The only `DEFERRED — OWNED` item in the register,
+`QAN-BL-SEC-01`, is owned by `QAN-SEC-01` and is untouched: I-04 changed no mobile auth persistence, no
+storage mechanism, no backup policy and no platform credential model, and introduced no cryptography.
+
+**Admitted: none.** I-04G's anti-scope is anti-scope, and `BG-06` admits none of it. The boundaries
+I-04 stated and kept — `CW2-08` Safety / moderation / entitlement / Launch Gate; authenticated Product
+routes, controllers and public RPC; mobile surfaces; a media storage provider, upload path or storage
+credential; history-grant withdrawal after viewing; Introduction birth, success and end; Matching;
+Public World; Replay; human-to-human live call; and the explicit-disclosure and World-event-derived
+material producers — qualify under none of BG-06's four admission routes. None carries an existing
+`OPEN` identifier; none is deferred to a future task **by a canonical document** as an obligation rather
+than as a scope boundary; none is carried forward for validation; and Architecture designated none.
+Several are owned by their own frozen `CW2-0N` contracts, which is where they belong: `CW2-04` owns
+Public World, `CW2-05` owns Replay, `CW2-06` owns Matching and Introduction runtime, and `CW2-08` owns
+safety, moderation, entitlements and launch integration. A contract that already owns a capability does
+not also need a backlog entry claiming it.
+
+**The unresolved-authority boundary is implemented, not deferred.** I-04G's task contract admitted a
+second possible contributor to the QANDEEL required-approver set — protected-human subject authorities
+from an already-reviewed server-owned authority source — *if such a source exists*. It does not exist in
+this repository. That does **not** make the requirement empty, and I-04G does not treat it as empty:
+independent review FIX-01 required, and I-04G implements, an explicit
+`UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` state and a database-enforced fail-closed boundary that
+prevents such material from entering an I-04F history package at all. Current baseline-audience
+delivery is unaffected; only historical audience widening is blocked.
+
+Because that boundary is complete inside this PR, **no backlog item is admitted for it**. There is no
+outstanding correctness obligation to record, and BG-01 forbids moving an active-contract requirement
+here rather than fixing it. The *enabling* capability — a future reviewed protected-human
+subject-authority resolver — is owned by the frozen `CW2-08` and later domain contracts rather than by
+an unassigned backlog entry, and qualifies under none of BG-06's four admission routes: it has no
+existing `OPEN` identifier, no canonical document defers it to a named future task as an obligation, it
+is not carried forward for validation, and Architecture designated none. The representation I-04G ships
+is additive precisely so that resolver can extend it without reopening anything, which is recorded in
+§4 of [`docs/shared-world-lifecycle-conversation-runtime-v1.md`](shared-world-lifecycle-conversation-runtime-v1.md).
+
+**Banner state.** `I-04`'s primary document reads `CANDIDATE — awaiting independent ChatGPT review`,
+which is the truth at this point: independent review has not happened. Under `BG-09` the change that
+actually closes the phase performs both halves itself — this reconciliation and that banner — and no
+successor task is left to finish either.
+
 ### QAN-GOV-03 lifecycle reconciliation
 
 Two closed tasks were still advertising a pre-closure banner. `docs/recovery-persistence-v1.md`
