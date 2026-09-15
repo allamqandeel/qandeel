@@ -130,6 +130,19 @@ const RESOLVE_FN = 'public.resolve_shared_world_history_visibility_v1(uuid,uuid)
 const TRUTH_FN = 'public.shared_world_history_item_temporal_truth_v1()';
 const MUTATION_FUNCTIONS = [PREPARE_FN, APPROVE_FN, GRANT_FN];
 
+// The exact MESSAGE these catalog assertions fail with. A forward-safety regression
+// probe below matches the thrown AssertionError.message - never the catalog VALUE
+// regex the assertion tests the live database against, which is a different string
+// entirely. Hand-copying one into the other is how a probe ends up rejecting the
+// very refusal it asked for, so the two sites share one constant instead.
+const REFUSES_OCCURRED_AT_MEANING =
+  'occurred_at is the Shared-World establishment instant of the history item, in the catalog where a later slice reads it';
+const REFUSES_NO_GRANTING_ACTOR =
+  'the grant commit derives no granting actor: the authority is the completed material-authority set';
+const REFUSES_RESOLVER_AVAILABILITY = 'availability dominates every visibility mode';
+const REFUSES_OWNER_DELETION_TERMINAL =
+  'owner deletion must stay terminal: no revision may resurrect or relabel an owner-deleted item';
+
 const INSUFFICIENT_PRIVILEGE = ['42501'];
 const INVALID_PARAMETER = ['22023'];
 const UNAVAILABLE = ['P0002'];
@@ -291,7 +304,7 @@ async function verifyCatalog() {
       WHERE c.table_schema = 'public' AND c.table_name = 'shared_world_history_items'
         AND c.column_name = 'occurred_at'`, [ITEMS]);
   assert.match(occurred?.note ?? '', /canonical Shared-World establishment\/commit instant/u,
-    'occurred_at is the Shared-World establishment instant of the history item, in the catalog where a later slice reads it');
+    REFUSES_OCCURRED_AT_MEANING);
   assert.match(occurred?.note ?? '', /only instant history visibility compares against a membership episode/u,
     'and it is the instant membership-interval comparison uses');
   assert.match(occurred?.note ?? '', /NOT an underlying recalled event time, source-event semantic timestamp or provenance event time/u,
@@ -379,8 +392,7 @@ async function verifyCatalog() {
   const [approveSource] = await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure', [APPROVE_FN]);
   assert.match(approveSource.prosrc, /u uuid := auth\.uid\(\);/u, 'the approving human is the session subject');
   const [grantSource] = await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure', [GRANT_FN]);
-  assert.doesNotMatch(grantSource.prosrc, /auth\.uid/u,
-    'the grant commit derives no granting actor: the authority is the completed material-authority set');
+  assert.doesNotMatch(grantSource.prosrc, /auth\.uid/u, REFUSES_NO_GRANTING_ACTOR);
 
   stage = 'catalog: the visibility resolver is STABLE and service-role-only';
   const [resolver] = await rows(
@@ -393,7 +405,7 @@ async function verifyCatalog() {
   assert.ok((resolver.config ?? []).some((cfg) => cfg === 'search_path=' || cfg === 'search_path=""'));
   assert.doesNotMatch(resolver.prosrc, /INSERT INTO|UPDATE public\.|DELETE FROM|FOR UPDATE|auth\.uid|request\.jwt/u,
     'the resolver mutates nothing, locks nothing and trusts no client claim');
-  assert.match(resolver.prosrc, /i\.availability_state = 'AVAILABLE'/u, 'availability dominates every visibility mode');
+  assert.match(resolver.prosrc, /i\.availability_state = 'AVAILABLE'/u, REFUSES_RESOLVER_AVAILABILITY);
   const [{ allowed: resolverPublic }] = await rows("SELECT has_function_privilege('public', $1, 'EXECUTE') AS allowed", [RESOLVE_FN]);
   assert.equal(resolverPublic, false, 'PUBLIC must not execute the visibility resolver');
   for (const role of ['anon', 'authenticated']) {
@@ -411,8 +423,7 @@ async function verifyCatalog() {
   assert.ok(truth, 'the immutability trigger function exists');
   assert.equal(truth.owner, 'postgres');
   assert.match(truth.prosrc, /NEW\.occurred_at <> OLD\.occurred_at/u, 'an item time can never be rewritten in place');
-  assert.match(truth.prosrc, /OLD\.availability_state = 'DELETED_BY_OWNER'/u,
-    'owner deletion must stay terminal: no revision may resurrect or relabel an owner-deleted item');
+  assert.match(truth.prosrc, /OLD\.availability_state = 'DELETED_BY_OWNER'/u, REFUSES_OWNER_DELETION_TERMINAL);
   assert.match(truth.prosrc, /SHARED_WORLD_HISTORY_OWNER_DELETION_TERMINAL/u,
     'and the terminal rule must fail closed with its own bounded class');
   const [{ n: truthTriggers }] = await rows(
@@ -986,6 +997,22 @@ async function verifyConcurrency(c) {
 
 // ---------------------------------------------------------------------------
 
+// A planted regression must be refused BY THIS CONTRACT and for the stated reason.
+// Two distinct strings are involved and they are easy to confuse: the catalog VALUE
+// regex an assertion tests the live database against, and the MESSAGE that assertion
+// raises when it fails. assert.rejects matches the MESSAGE. This builds the
+// validation function that keeps them apart, and additionally proves the refusal was
+// a contract assertion rather than a query the plant happened to break - a broken
+// query whose error text coincidentally matched would otherwise read as a pass.
+const catalogRefusal = (expected, reason) => (error) => {
+  assert.equal(error?.name, 'AssertionError',
+    `a database where ${reason} must be refused by this contract, not by a broken query: ${error?.name}: ${error?.message}`);
+  const because = `a database where ${reason} must be refused for exactly that reason`;
+  if (typeof expected === 'string') assert.equal(error.message, expected, because);
+  else assert.match(error.message, expected, because);
+  return true;
+};
+
 async function verifyForwardSafety(f) {
   stage = 'forward safety: the I-04G material store, a reviewed availability writer and a Launch Gate do not fail this verifier';
   await identity('postgres');
@@ -1052,7 +1079,40 @@ async function verifyForwardSafety(f) {
       'a later reviewed owner deletion removes source visibility without touching the grant');
 
     stage = 'forward safety: a real regression to something 0087 OWNS is still refused';
-    for (const [reason, plant, refuses] of [
+    // The owner-deletion plant is SURGICAL, and derived from the DEPLOYED definition
+    // rather than hand-written. A hand-written replacement of the whole trigger also
+    // destroys the temporal-truth rule, so verifyCatalog() refuses it for that reason
+    // first and terminality is never actually put on trial. Here exactly one block
+    // is removed and every other rule is carried over verbatim, so the only thing
+    // the planted database can be refused for is the one this row names.
+    const [{ def: deployedTruth }] = await rows('SELECT pg_get_functiondef($1::regprocedure) AS def', [TRUTH_FN]);
+    const TERMINAL_BLOCK = new RegExp(
+      '[ \\t]*-- OWNER DELETION IS TERMINAL[^\\n]*\\r?\\n'
+      + "[ \\t]*IF OLD\\.availability_state = 'DELETED_BY_OWNER'\\r?\\n"
+      + "[ \\t]*AND \\(NEW\\.availability_state <> 'DELETED_BY_OWNER'\\r?\\n"
+      + '[ \\t]*OR NEW\\.availability_revision <> OLD\\.availability_revision\\) THEN\\r?\\n'
+      + "[ \\t]*RAISE EXCEPTION 'SHARED_WORLD_HISTORY_OWNER_DELETION_TERMINAL' USING ERRCODE='P0001';\\r?\\n"
+      + '[ \\t]*END IF;\\r?\\n', 'gu');
+    assert.equal([...deployedTruth.matchAll(TERMINAL_BLOCK)].length, 1,
+      'the deployed trigger carries the terminal owner-deletion block exactly once, so removing exactly it is unambiguous');
+    const weakenedTruth = deployedTruth.replace(TERMINAL_BLOCK, '');
+    assert.notEqual(weakenedTruth, deployedTruth, 'and the weakened definition really differs from the deployed one');
+    assert.match(weakenedTruth, /^CREATE OR REPLACE FUNCTION/u, 'and is directly deployable as a replacement');
+    assert.doesNotMatch(weakenedTruth, /DELETED_BY_OWNER/u, 'and no longer refuses a resurrected owner-deleted item');
+    for (const [survives, preserved] of [
+      ['the immutable item time', /NEW\.occurred_at <> OLD\.occurred_at/u],
+      ['the immutable registration time', /NEW\.registered_at <> OLD\.registered_at/u],
+      ['the immutable authority mode', /NEW\.authority_requirement_mode <> OLD\.authority_requirement_mode/u],
+      ['the bounded temporal-truth error class', /SHARED_WORLD_HISTORY_TEMPORAL_TRUTH_IMMUTABLE/u],
+      ['the revision-regression rule', /NEW\.availability_revision < OLD\.availability_revision/u],
+      ['the revision-required-on-state-change rule', /NEW\.availability_state IS DISTINCT FROM OLD\.availability_state/u],
+      ['the return behaviour', /RETURN NEW;/u],
+      ['the definer and pinned search_path shape', /SECURITY DEFINER/u],
+    ]) {
+      assert.match(weakenedTruth, preserved, `and preserves ${survives}, so only terminality is on trial`);
+    }
+
+    for (const [reason, plant, expected] of [
       ['an approval can come from outside the derived required set',
         `ALTER TABLE ${PACKAGE_APPROVALS} DROP CONSTRAINT shared_world_history_package_approvals_required_fk`,
         /shared_world_history_package_approvals_required_fk/u],
@@ -1087,15 +1147,13 @@ async function verifyForwardSafety(f) {
         /still carries every column migration 0087 owns/u],
       ['the frozen meaning of occurred_at is stripped from the catalog',
         `COMMENT ON COLUMN ${ITEMS}.occurred_at IS NULL`,
-        /canonical Shared-World establishment\/commit instant/u],
+        REFUSES_OCCURRED_AT_MEANING],
       ['occurred_at is reinterpreted as an underlying source event time',
         `COMMENT ON COLUMN ${ITEMS}.occurred_at IS 'The underlying real-world event time this item refers to.'`,
-        /canonical Shared-World establishment\/commit instant/u],
+        REFUSES_OCCURRED_AT_MEANING],
       ['owner deletion stops being terminal',
-        `CREATE OR REPLACE FUNCTION public.shared_world_history_item_temporal_truth_v1()
-         RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
-         BEGIN RETURN NEW; END$fn$`,
-        /owner deletion must stay terminal/u],
+        weakenedTruth,
+        REFUSES_OWNER_DELETION_TERMINAL],
       ['a history relation becomes directly readable by an application role',
         `GRANT SELECT ON ${ITEMS} TO authenticated`,
         /authenticated must not hold SELECT/u],
@@ -1110,7 +1168,7 @@ async function verifyForwardSafety(f) {
          RETURNS TABLE(world_id uuid, history_item_id uuid, occurred_at timestamptz)
          LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path='' AS $fn$
          BEGIN RETURN; END$fn$`,
-        /availability dominates every visibility mode/u],
+        REFUSES_RESOLVER_AVAILABILITY],
       ['the grant commit starts deriving a granting actor',
         `CREATE OR REPLACE FUNCTION public.commit_shared_world_history_access_grant_v1(
            p_command_id uuid, p_manifest_version_id uuid, p_history_access_grant_id uuid,
@@ -1124,9 +1182,10 @@ async function verifyForwardSafety(f) {
            SELECT * INTO target FROM public.shared_worlds w WHERE w.id = p_command_id FOR UPDATE;
            RETURN;
          END$fn$`,
-        /derives no granting actor/u],
+        REFUSES_NO_GRANTING_ACTOR],
     ]) {
       stage = `forward safety: regression - ${reason}`;
+      const refuses = catalogRefusal(expected, reason);
       await q('SAVEPOINT forward_safety_regression');
       try {
         await q(plant);
