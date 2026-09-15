@@ -598,7 +598,7 @@ BEGIN
       RAISE EXCEPTION 'I-04E: the settings commit must not accept an actor, a value or a clock parameter';
     END IF;
   END LOOP;
-  IF p.prosrc !~ 'public\.resolve_shared_world_governance_approval_v1\(\s*\n?\s*p_proposal_id, ''WORLD_SETTINGS_CHANGE'', version\.id\)' THEN
+  IF p.prosrc !~ 'public\.resolve_shared_world_governance_approval_v1\(\s*\n?\s*p_proposal_id, ''WORLD_SETTINGS_CHANGE'', settings_version\.id\)' THEN
     RAISE EXCEPTION 'I-04E: a settings commit must revalidate the exact operation AND the exact version it is about to apply';
   END IF;
   IF p.prosrc !~ 'change_instant := clock_timestamp\(\);' THEN
