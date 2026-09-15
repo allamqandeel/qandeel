@@ -315,10 +315,17 @@ test('the self-assertions refuse to deploy a migration that lost any of this', (
 
 test('0091 is registered in the toolchain, in CI and in the database README', () => {
   assert.match(packageJson, new RegExp(`"${OWN_SCRIPT}": "node --env-file-if-exists=\\.env database/verify-migration-0091\\.mjs"`, 'u'));
-  assert.ok(workflow.includes(`run: npm run ${OWN_SCRIPT}}`), 'the verifier runs in API CI');
   assert.match(readme, /0091_public_world_experience_identity_foundation_v1\.sql/u, 'the README records migration 0091');
   assert.match(verifier, /verifier for migration 0091/iu);
-  // A CI step name lives inside a YAML flow mapping, where a comma ends the entry.
-  const step = /- \{name: ([^,}]*), run: npm run verify:public-world-experience-foundation:integration\}/u.exec(workflow);
-  assert.ok(step, 'the CI step is one well-formed flow mapping whose name carries no comma');
+  // The three I-05A verifiers share ONE grouped CI step, so a failure in one still
+  // reports the other two instead of skipping them. A YAML flow mapping cannot hold
+  // a multi-line script, so the old comma-free-name check no longer applies; what
+  // replaces it is stronger, because it pins the behaviour that step exists for.
+  assert.ok(workflow.includes(`if npm run ${OWN_SCRIPT}; then result_0091=PASS; else status=1; fi`),
+    'the verifier runs in API CI and its failure is recorded rather than swallowed');
+  assert.ok(workflow.includes('exit $status'),
+    'the grouped I-05A step still fails the job when any of the three verifiers failed');
+  // The KEY not the word: this file's own comments explain why it is absent.
+  assert.doesNotMatch(workflow, /^\s*continue-on-error\s*:/mu,
+    'no API CI step continues on error: diagnostic continuation must never turn the job green');
 });

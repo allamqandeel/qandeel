@@ -293,9 +293,16 @@ test('the self-assertions refuse to deploy a migration that lost any of this', (
 
 test('0092 is registered in the toolchain, in CI and in the database README', () => {
   assert.match(packageJson, new RegExp(`"${OWN_SCRIPT}": "node --env-file-if-exists=\\.env database/verify-migration-0092\\.mjs"`, 'u'));
-  assert.ok(workflow.includes(`run: npm run ${OWN_SCRIPT}}`), 'the verifier runs in API CI');
   assert.match(readme, /0092_public_experience_publication_package_authority_v1\.sql/u);
   assert.match(verifier, /verifier for migration 0092/iu);
-  const step = new RegExp(`- \\{name: ([^,}]*), run: npm run ${OWN_SCRIPT}\\}`, 'u').exec(workflow);
-  assert.ok(step, 'the CI step is one well-formed flow mapping whose name carries no comma');
+  // One grouped CI step runs all three I-05A verifiers so that a failure in 0091
+  // no longer skips this one. See the 0091 contract for why the old flow-mapping
+  // shape check was replaced rather than dropped.
+  assert.ok(workflow.includes(`if npm run ${OWN_SCRIPT}; then result_0092=PASS; else status=1; fi`),
+    'the verifier runs in API CI and its failure is recorded rather than swallowed');
+  assert.ok(workflow.includes('exit $status'),
+    'the grouped I-05A step still fails the job when any of the three verifiers failed');
+  // The KEY not the word: this file's own comments explain why it is absent.
+  assert.doesNotMatch(workflow, /^\s*continue-on-error\s*:/mu,
+    'no API CI step continues on error: diagnostic continuation must never turn the job green');
 });

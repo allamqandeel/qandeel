@@ -513,11 +513,18 @@ test('the self-assertions refuse to deploy a migration that lost any of this', (
 
 test('0093 is registered in the toolchain, in CI and in the database README', () => {
   assert.match(packageJson, new RegExp(`"${OWN_SCRIPT}": "node --env-file-if-exists=\\.env database/verify-migration-0093\\.mjs"`, 'u'));
-  assert.ok(workflow.includes(`run: npm run ${OWN_SCRIPT}}`), 'the verifier runs in API CI');
   assert.match(readme, /0093_public_experience_review_ready_runtime_v1\.sql/u);
   assert.match(verifier, /verifier for migration 0093/iu);
-  const step = new RegExp(`- \\{name: ([^,}]*), run: npm run ${OWN_SCRIPT}\\}`, 'u').exec(workflow);
-  assert.ok(step, 'the CI step is one well-formed flow mapping whose name carries no comma');
+  // One grouped CI step runs all three I-05A verifiers so that a failure in 0091 or
+  // 0092 no longer skips this one. See the 0091 contract for why the old
+  // flow-mapping shape check was replaced rather than dropped.
+  assert.ok(workflow.includes(`if npm run ${OWN_SCRIPT}; then result_0093=PASS; else status=1; fi`),
+    'the verifier runs in API CI and its failure is recorded rather than swallowed');
+  assert.ok(workflow.includes('exit $status'),
+    'the grouped I-05A step still fails the job when any of the three verifiers failed');
+  // The KEY not the word: this file's own comments explain why it is absent.
+  assert.doesNotMatch(workflow, /^\s*continue-on-error\s*:/mu,
+    'no API CI step continues on error: diagnostic continuation must never turn the job green');
 });
 
 test('the verifier proves its forward safety inside a rolled-back savepoint, and then proves the regressions', () => {
@@ -664,10 +671,12 @@ test('every authorized later I-05B / I-05C / CW2-08 addition leaves all three I-
       write(mirror, 'database/verify-migration-0094.mjs', '// A later verifier.\nimport process from "node:process";\nprocess.exitCode = 0;\n');
       write(mirror, 'database/tests/public-semantic-publication-v1.test.mjs',
         "import test from 'node:test';\ntest('a later slice has its own contract', () => {});\n");
-      patch(mirror, '.github/workflows/api-ci.yml',
-        `- {name: Verify Public Experience draft approval and READY_FOR_REVIEW runtime against real PostgreSQL`,
-        `- {name: Verify a later I-05B slice, run: npm run verify:public-semantic-publication:integration}\n`
-        + `      - {name: Verify Public Experience draft approval and READY_FOR_REVIEW runtime against real PostgreSQL`);
+      // A later slice must be able to add its own CI gate beside the grouped I-05A
+      // step without disturbing it.
+      const groupStep = '      - name: Verify the three I-05A Public World verifiers against real PostgreSQL as one reported group';
+      patch(mirror, '.github/workflows/api-ci.yml', groupStep,
+        '      - {name: Verify a later I-05B slice, run: npm run verify:public-semantic-publication:integration}\n'
+        + groupStep);
       const { ok, output } = runInMirror(mirror);
       assert.ok(ok,
         'a later reviewed semantic placement table, public discussion, Public QANDEEL producer, vitality and '
@@ -766,7 +775,16 @@ test('the contracts are not vacuous: every deliberate weakening of I-05A is refu
       ['a frozen predecessor migration is edited',
         'database/migrations/0090_shared_world_material_commit_owner_deletion_v1.sql', 'BEGIN;', 'BEGIN;\n-- edited\n'],
       ['the CI step that runs an I-05A verifier is removed', '.github/workflows/api-ci.yml',
-        `run: npm run ${OWN_SCRIPT}}`, 'run: npm run test:toolchain}'],
+        `if npm run ${OWN_SCRIPT}; then`, 'if npm run test:toolchain; then'],
+      // The grouped step exists so one CI run reports all three verifiers instead of
+      // disclosing one defect per cycle. Both halves of that bargain are pinned: the
+      // group must still FAIL the job, and a failing verifier must still be recorded.
+      ['the grouped I-05A CI step stops failing the job when a verifier fails',
+        '.github/workflows/api-ci.yml', '\n          exit $status\n', '\n          exit 0\n'],
+      ['a failing I-05A verifier stops being recorded and is swallowed instead',
+        '.github/workflows/api-ci.yml',
+        `if npm run ${OWN_SCRIPT}; then result_0093=PASS; else status=1; fi`,
+        `npm run ${OWN_SCRIPT} || true`],
     ];
     for (const [reason, file, from, to] of regressions) {
       const fresh = buildMirror();

@@ -362,13 +362,23 @@ async function verifyBehaviour(f) {
 
   // P07 Experience control is a different authority from content rights, and a
   // controller row can never pair one human's public identity with another's account.
-  await q(`INSERT INTO ${CONTROLLERS}
-             (experience_id, controller_public_identity_ref, controller_user_id, control_basis, established_at)
-           VALUES ($1, $2, $3, 'EXPERIENCE_CREATION', now())`, [f.experience, f.mohamedRef, f.mohamed]);
+  //
+  // ORDER IS LOAD-BEARING. This probe must run while the Experience still has no
+  // controller, and it must stay that way. The table carries two unique keys -
+  // (experience_id, controller_public_identity_ref) and (experience_id,
+  // controller_user_id) - so once the legitimate row exists, EVERY mismatched pair
+  // on this Experience collides with one of them and 23505 is raised before the
+  // composite identity foreign key is ever evaluated. The probe would still fail
+  // the insert and still look like a passing negative test while proving nothing
+  // about the constraint it names. rejected() rolls back into a SAVEPOINT, so
+  // running it first leaves no residue for the legitimate insert below.
   await rejected(() => q(`INSERT INTO ${CONTROLLERS}
              (experience_id, controller_public_identity_ref, controller_user_id, control_basis, established_at)
            VALUES ($1, $2, $3, 'EXPERIENCE_CREATION', now())`, [f.experience, f.mohamedRef, f.hadir]), ['23503'],
     /public_experience_controllers_identity_fk/u);
+  await q(`INSERT INTO ${CONTROLLERS}
+             (experience_id, controller_public_identity_ref, controller_user_id, control_basis, established_at)
+           VALUES ($1, $2, $3, 'EXPERIENCE_CREATION', now())`, [f.experience, f.mohamedRef, f.mohamed]);
   await rejected(() => q(`INSERT INTO ${CONTROLLERS}
              (experience_id, controller_public_identity_ref, controller_user_id, control_basis, established_at)
            VALUES ($1, $2, $3, '   ', now())`, [f.experience, f.hadirRef, f.hadir]), ['23514'],
