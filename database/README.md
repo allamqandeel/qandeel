@@ -866,3 +866,88 @@ idempotency and the multi-connection races, with rolled-back and cleaned-up fixt
 ```sh
 npm run verify:shared-world-standard-voluntary-leave:integration
 ```
+## Exact membership snapshot and Shared governance approval foundation (migration 0084, I-04D)
+
+Migration `0084_shared_world_governance_approval_foundation_v1.sql` adds the shared governance
+authority substrate every remaining Standard membership mutation needs. I-04C delivered the only
+one frozen canon makes unilateral; add-member, removal, rejoin, settings changes and World end all
+require exact current-member approval (CW2-03 sections 16, 25, 28, 30 and 31), and CW2-02 section
+31 / B20 freezes what an approval binds:
+
+```text
+exact operation + exact proposed payload/version + exact membership snapshot
+```
+
+An approval is never a reusable token. If the proposal or the topology changes, authority is
+recomputed and approvals are re-collected.
+
+**Topology identity is the EPISODE set, not the human set.** Current members are the humans holding
+an open membership episode, and a rejoin is a NEW episode rather than a reopening (CW2-03 section
+28 / C25). So `A leaves` then `A rejoins` restores an identical human set and an identical member
+count while producing a different episode set. A count comparison and a user-id comparison both
+accept that; exact set equality over `membership_episode_id`, in BOTH directions, is the only
+comparison that rejects it. The real PostgreSQL verifier proves the trap directly: it asserts that
+the human sets and the counts really are identical again, and that the old proposal is still stale.
+
+Four narrow relations are created. `shared_world_membership_snapshots` is a durable identity for one
+captured topology - a World and an instant, with no status, no current flag and no member-list
+column. `shared_world_membership_snapshot_members` is the captured episode set, keyed on
+`(membership_snapshot_id, membership_episode_id)`, with no duplicated human id.
+`shared_world_governance_proposals` binds one operation, one OPAQUE
+`proposed_payload_version_id`, one approval rule and one exclusion to exactly one captured topology.
+`shared_world_governance_approvals` records one exact human approval, and two COMPOSITE foreign keys
+make the binding structural rather than procedural: `(proposal_id, membership_snapshot_id)` can only
+name a proposal that really carries that topology, and `(membership_snapshot_id,
+membership_episode_id)` can only name an episode really inside it. `UNIQUE (proposal_id,
+membership_episode_id)` makes one snapshot episode worth exactly one effective approval, so one
+human can never cover a two-human rule.
+
+The exact v1 mapping is
+
+```text
+ADD_MEMBER             -> ALL_CURRENT_MEMBERS
+REMOVE_MEMBER          -> ALL_CURRENT_MEMBERS_EXCEPT_TARGET
+REJOIN_MEMBER          -> ALL_CURRENT_MEMBERS
+WORLD_SETTINGS_CHANGE  -> ALL_CURRENT_MEMBERS
+END_WORLD              -> ALL_CURRENT_MEMBERS
+```
+
+and it is enforced in the primitives rather than frozen into a CHECK constraint, for the same
+forward-safety reason migration 0083 left `end_reason` unconstrained: a later reviewed slice must be
+able to extend Shared governance without a superseding migration.
+
+**Initiation is not authority.** No initiator, proposer or owner column exists, and the capture
+primitive records no actor and consults no session identity at all (CW2-01 sections 5 and 7; CW2-03
+section 16). Who may open a proposal is a later reviewed launch-gated consumer's question. The
+approving human, by contrast, is exactly `auth.uid()`, with no actor, episode or instant parameter,
+so QANDEEL and service execution both fail closed.
+
+**For a removal, the target stays inside the captured topology and outside the required set.** The
+supplied human is resolved under the World lock to their exact current open episode, that episode is
+stored as the exclusion, and only the required-approval set excludes it. The target cannot approve
+their own removal, and a sole current human can never be removed through an empty required set:
+empty-set unanimity is never approval (CW2-03 section 27 / C24), which is also why zero active humans
+cannot open ordinary governance and why a required count of zero is never satisfied.
+
+All three primitives lock the exact `shared_worlds` row FIRST - the row the frozen I-03C consent
+commands and the frozen I-04C leave already take first - so a proposal or an approval racing a leave
+serializes with exactly two canonical outcomes and cannot deadlock. The satisfaction resolver
+persists nothing: a proof is not a stored permission, and a future operation-specific transaction
+must revalidate it inside the same transaction as its own irreversible mutation.
+
+Deliberately absent: no add-member, removal, rejoin, settings or World-end command; no
+`MEMBER_INVITATION`; no history access or closed-world entitlement; no Launch Gate, feature flag or
+wrapper; no application controller or route; no Shared conversation; no Personal-context read; no
+Standing Context or consent mutation; no membership or lifecycle mutation of any kind. All four
+tables are RLS-enabled with zero policies, and no application role holds any privilege on them or
+EXECUTE on any primitive, because the frozen Launch Gate precondition is unimplemented.
+
+The secret-free structural contract runs under `npm run test:database`. The real PostgreSQL verifier
+proves the catalog, both ACLs, the exact captured topology, the non-reusable approval, the
+leave-then-rejoin staleness, the removal exclusion, the empty-set refusals, idempotency, the
+multi-connection races and forward safety against the add-member consumer this foundation exists to
+serve, with rolled-back and cleaned-up fixtures:
+
+```sh
+npm run verify:shared-world-governance-approval-foundation:integration
+```
