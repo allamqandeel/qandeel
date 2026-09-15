@@ -375,7 +375,11 @@ test('every prosrc self-assertion is satisfied by the body it actually guards', 
     .map((m) => ({ required: m[1].startsWith('!'), insensitive: m[1].endsWith('*'), pattern: m[2].replace(/''/gu, "'") }));
   assert.ok(guards.length >= 4, `migration 0089 carries prosrc self-assertions (found ${guards.length})`);
   for (const { required, insensitive, pattern } of guards) {
-    const matches = new RegExp(pattern, insensitive ? 'iu' : 'u').test(RESOLVE_BODY);
+    // PostgreSQL runs `~` / `~*` with NEWLINE-SENSITIVE MATCHING OFF, so a `.`
+    // matches a NEWLINE and a pattern can span a whole body. JavaScript's
+    // equivalent is the `s` (dotAll) flag, and simulating without it is what let
+    // a self-rejecting guard reach deploy in the 0090 slice.
+    const matches = new RegExp(pattern, insensitive ? 'siu' : 'su').test(RESOLVE_BODY);
     if (required) {
       assert.ok(matches, `migration 0089 requires /${pattern}/ of its resolver, and the deployed body does not satisfy it`);
     } else {

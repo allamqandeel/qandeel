@@ -1550,6 +1550,7 @@ DECLARE
   rls_enabled boolean;
   deletes integer;
   body_deletes integer;
+  approver_write text;
 BEGIN
   all_fns := ARRAY[human_core, text_fn, voice_fn, qandeel_fn, delete_fn];
 
@@ -1733,7 +1734,37 @@ BEGIN
   IF p.prosrc !~ 'authority_mode := CASE WHEN authority_resolution = ''RESOLVED_NO_HUMAN_REQUIREMENT''' THEN
     RAISE EXCEPTION 'I-04G: NO_HUMAN_APPROVAL_REQUIRED may be written only for a RESOLVED empty human requirement';
   END IF;
-  IF p.prosrc ~ 'reasoning_grantor|reasoning.*approver_user_id|source_context_ref[^;]*approver' THEN
+  -- A REASONING DEPENDENCY IS NEVER MATERIAL CONSENT - proven STRUCTURALLY.
+  -- An unbounded negative pattern cannot express this invariant. PostgreSQL
+  -- evaluates `~` with newline-sensitive matching OFF, so a `.` matches a
+  -- NEWLINE and spans the whole body; and this body legitimately REASONS about
+  -- REASONING_DEPENDENCY a few statements away from where it writes approvers.
+  -- The invariant was never "the word reasoning must not precede
+  -- approver_user_id". It is: there is exactly ONE approver-writing path, and it
+  -- derives its approvers only from MATERIAL_DEPENDENCY source authority. So the
+  -- writes are COUNTED, and that one statement is READ and proven by exact
+  -- shape - bounded by its own statement terminator, so nothing outside it can
+  -- satisfy or violate the proof.
+  IF (length(p.prosrc) - length(replace(p.prosrc, 'INSERT INTO public.shared_world_history_item_required_approvers', '')))
+     / length('INSERT INTO public.shared_world_history_item_required_approvers') <> 1 THEN
+    RAISE EXCEPTION 'I-04G: the QANDEEL core must write a required approver in exactly one place';
+  END IF;
+  IF p.prosrc ~ 'UPDATE public\.shared_world_history_item_required_approvers'
+     OR p.prosrc ~ 'DELETE FROM public\.shared_world_history_item_required_approvers' THEN
+    RAISE EXCEPTION 'I-04G: the QANDEEL core must write a required approver in exactly one place';
+  END IF;
+  approver_write := substr(p.prosrc, strpos(p.prosrc, 'INSERT INTO public.shared_world_history_item_required_approvers'));
+  approver_write := left(approver_write, strpos(approver_write, ';'));
+  IF length(approver_write) = 0 THEN
+    RAISE EXCEPTION 'I-04G: the one QANDEEL approver write must be one complete bounded statement';
+  END IF;
+  IF approver_write !~ 'SELECT DISTINCT p_history_item_id, ra\.approver_user_id'
+     OR approver_write !~ 'FROM public\.shared_world_materials m'
+     OR approver_write !~ 'JOIN public\.shared_world_history_item_required_approvers ra ON ra\.history_item_id = m\.history_item_id'
+     OR approver_write !~ 'WHERE m\.id = ANY\(sources\)' THEN
+    RAISE EXCEPTION 'I-04G: the one QANDEEL approver write must derive approvers from the MATERIAL_DEPENDENCY source authorities alone';
+  END IF;
+  IF approver_write ~* 'reasoning|source_context_ref|grantor' THEN
     RAISE EXCEPTION 'I-04G: a reasoning dependency is never material consent: no reasoning grantor becomes an approver';
   END IF;
   IF p.prosrc !~ 'p_readiness_ref <> recomputed_readiness' OR p.prosrc !~ 'p_output_digest <> digest' THEN

@@ -651,19 +651,74 @@ test('0090 own parameter deny-patterns never reject the exact frozen parameter l
  * spared, and a bare `REASONING_DEPENDENCY` ban would have made the migration
  * refuse itself the first time PostgreSQL saw it.
  */
-function prosrcGuards() {
+const TERM = /(p\.prosrc|[a-z_][a-z_0-9]*)\s+(!?~\*?)\s*'((?:[^']|'')*)'/gu;
+
+/**
+ * PostgreSQL's `~` / `~*` run with NEWLINE-SENSITIVE MATCHING OFF: a `.` matches
+ * a NEWLINE, and so does a bracket negation. JavaScript's equivalent is the `s`
+ * (dotAll) flag - and its ABSENCE here is precisely why migration 0090 passed
+ * this contract locally and then REFUSED ITSELF at
+ * `Apply all migrations to fresh PostgreSQL`: a guard reading
+ * `reasoning.*approver_user_id` spanned the entire function body in PostgreSQL
+ * while stopping at the first newline in this simulator.
+ */
+function pgRegExp(op, pattern) {
+  return new RegExp(pattern.replace(/''/gu, "'"), op.endsWith('*') ? 'siu' : 'su');
+}
+
+/**
+ * The migration bounds a statement with `substr`/`strpos`/`left` rather than with
+ * a regex, because a regex is exactly what it must stop depending on here - and
+ * because `strpos` over `prosrc` is the idiom migration 0081 already deploys.
+ * This models those three builtins faithfully, `strpos` = 0 included.
+ */
+function pgBounded(body, { anchor, terminator }) {
+  const start = body.indexOf(anchor);
+  let text = start < 0 ? body : body.slice(start);
+  if (terminator === undefined) return text;
+  const end = text.indexOf(terminator);
+  return end < 0 ? '' : text.slice(0, end + terminator.length);
+}
+
+/**
+ * Splits the DO block into logical statements, so an `IF` CONDITION THAT SPANS
+ * SEVERAL LINES is read whole. A line-at-a-time reader silently skips every
+ * multi-line guard, which is coverage this contract cannot afford to lose.
+ */
+function logicalLines(source) {
+  const lines = source.split('\n');
+  const out = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    let text = lines[i];
+    if (/^\s*(?:IF|ELSIF)\s/u.test(text) && !/\sTHEN\s*$/u.test(text)) {
+      for (let j = i + 1; j < lines.length && j - i <= 12; j += 1) {
+        text += `\n${lines[j]}`;
+        if (/\sTHEN\s*$/u.test(lines[j])) { i = j; break; }
+      }
+    }
+    out.push(text);
+  }
+  return out;
+}
+
+function prosrcGuards(source = selfAssertions) {
   // The DECLARE aliases, so a guard's subject can be resolved to real bodies.
   const alias = new Map();
-  for (const m of selfAssertions.matchAll(/^\s{2}(\w+) text := 'public\.(\w+)\(/gmu)) alias.set(m[1], m[2]);
+  for (const m of source.matchAll(/^\s{2}(\w+) text := 'public\.(\w+)\(/gmu)) alias.set(m[1], m[2]);
   const groups = new Map([['all_fns', OWN_FUNCTIONS]]);
-  for (const m of selfAssertions.matchAll(/(\w+) := ARRAY\[([^\]]+)\];/gu)) {
+  for (const m of source.matchAll(/(\w+) := ARRAY\[([^\]]+)\];/gu)) {
     const members = m[2].split(',').map((name) => alias.get(name.trim())).filter(Boolean);
     if (members.length) groups.set(m[1], members);
   }
 
   const guards = [];
   let subject = null;
-  for (const line of selfAssertions.split('\n')) {
+  // Text DERIVED from a body by `x := substr(p.prosrc, strpos(...))` and then
+  // `x := left(x, strpos(x, ';'))`, so a guard can be proven against ONE BOUNDED
+  // STATEMENT rather than against a whole body. That is the only honest way to
+  // ban a vocabulary token: bounded.
+  const derived = new Map();
+  for (const line of logicalLines(source)) {
     const loopAll = /FOREACH fn IN ARRAY (\w+) LOOP/u.exec(line);
     if (loopAll && groups.has(loopAll[1])) subject = groups.get(loopAll[1]);
     const loopList = /FOREACH fn IN ARRAY ARRAY\[([^\]]+)\] LOOP/u.exec(line);
@@ -673,24 +728,40 @@ function prosrcGuards() {
     }
     const pinned = /pr\.oid = (\w+)::regprocedure/u.exec(line);
     if (pinned && alias.has(pinned[1])) subject = [alias.get(pinned[1])];
-    // Only a real single-line `IF <prosrc comparison...> THEN` is a guard. A line
-    // that merely MENTIONS p.prosrc - the DELETE-statement census counts it with
-    // `length(replace(...))` - is arithmetic, not a condition, and modelling it as
-    // one would report a defect in correct code.
-    const guard = /^\s*IF (.*p\.prosrc\s*!?~.*) THEN\s*$/u.exec(line);
+    const deriveFrom = /^\s*(\w+) := substr\(p\.prosrc, strpos\(p\.prosrc, '((?:[^']|'')*)'\)\);\s*$/u.exec(line);
+    if (deriveFrom) derived.set(deriveFrom[1], { anchor: deriveFrom[2].replace(/''/gu, "'") });
+    const deriveTo = /^\s*(\w+) := left\((\w+), strpos\(\2, '((?:[^']|'')*)'\)\);\s*$/u.exec(line);
+    if (deriveTo && deriveTo[1] === deriveTo[2] && derived.has(deriveTo[1])) {
+      derived.set(deriveTo[1], { ...derived.get(deriveTo[1]), terminator: deriveTo[3].replace(/''/gu, "'") });
+    }
+    // Only a real `IF <comparison...> THEN` is a guard. A line that merely
+    // MENTIONS p.prosrc - the statement censuses count occurrences with
+    // `length(replace(...))` - is arithmetic, not a condition, and modelling it
+    // as one would report a defect in correct code.
+    const guard = /^\s*IF ([\s\S]*?) THEN\s*$/u.exec(line);
     if (!guard) continue;
+    const subjects = [...guard[1].matchAll(TERM)].map((m) => m[1]);
+    if (!subjects.some((name) => name === 'p.prosrc' || derived.has(name))) continue;
     assert.ok(subject, `a prosrc guard appears before any subject is established: ${line.trim()}`);
-    guards.push({ subject, condition: guard[1] });
+    guards.push({ subject, condition: guard[1], derived: new Map(derived) });
   }
   return guards;
 }
 
+/** The text one guard term compares against: a whole body, or a bounded derivation of it. */
+function subjectText(name, body, derived) {
+  if (name === 'p.prosrc') return body;
+  const bounds = derived.get(name);
+  assert.ok(bounds !== undefined, `this contract does not know what \`${name}\` is derived from`);
+  return pgBounded(body, bounds);
+}
+
 /** Evaluates one migration IF-condition over `prosrc` against one body, exactly as PostgreSQL would. */
-function raisesFor(condition, body) {
+function raisesFor(condition, body, derived = new Map()) {
   const terms = [];
-  const expression = condition.replace(/p\.prosrc\s+(!?~\*?)\s*'((?:[^']|'')*)'/gu, (_match, op, pattern) => {
-    const re = new RegExp(pattern.replace(/''/gu, "'"), op.endsWith('*') ? 'iu' : 'u');
-    terms.push(op.startsWith('!') ? !re.test(body) : re.test(body));
+  const expression = condition.replace(TERM, (_match, name, op, pattern) => {
+    const matched = pgRegExp(op, pattern).test(subjectText(name, body, derived));
+    terms.push(op.startsWith('!') ? !matched : matched);
     return `T[${terms.length - 1}]`;
   }).replace(/\bAND\b/gu, '&&').replace(/\bOR\b/gu, '||');
   assert.doesNotMatch(expression, /p\.prosrc|[^\s&|!()[\]0-9T]/u,
@@ -701,14 +772,56 @@ function raisesFor(condition, body) {
 
 test('every prosrc self-assertion is satisfied by the bodies it actually guards', () => {
   const guards = prosrcGuards();
-  assert.ok(guards.length >= 18, `migration 0090 carries prosrc self-assertions (found ${guards.length})`);
-  for (const { subject, condition } of guards) {
+  assert.ok(guards.length >= 22, `migration 0090 carries prosrc self-assertions (found ${guards.length})`);
+  for (const { subject, condition, derived } of guards) {
     for (const name of subject) {
-      assert.equal(raisesFor(condition, BODY[name]), false,
+      assert.equal(raisesFor(condition, BODY[name], derived), false,
         `migration 0090 would REFUSE ITSELF at deploy: its own condition \`${condition}\` raises for ${name}`);
     }
   }
 });
+
+test('every bounded derivation a guard depends on actually resolves, so no guard is vacuous', () => {
+  // A derivation that resolves to the empty string satisfies every ban and fails
+  // every requirement; one that resolves to the whole body bounds nothing. A
+  // guard proven against a derivation is worth exactly as much as the derivation.
+  const guards = prosrcGuards().filter(({ derived }) => derived.size > 0);
+  assert.ok(guards.length >= 3, `migration 0090 proves an approver write by bounded derivation (found ${guards.length})`);
+  for (const { subject, condition, derived } of guards) {
+    for (const name of [...condition.matchAll(TERM)].map((m) => m[1]).filter((n) => derived.has(n))) {
+      for (const fn of subject) {
+        const text = subjectText(name, BODY[fn], derived);
+        assert.ok(text, `migration 0090 derives \`${name}\` from ${fn} and the derivation does not resolve`);
+        assert.ok(text.length < BODY[fn].length,
+          `a derivation that returns the whole body of ${fn} bounds nothing`);
+      }
+    }
+  }
+});
+
+/** A body deliberately mutated so that `condition` must now raise, or the body unchanged. */
+function violating(condition, body, derived) {
+  let broken = body;
+  for (const m of condition.matchAll(TERM)) {
+    const [, name, op, raw] = m;
+    const literal = raw.replace(/''/gu, "'");
+    if (op.startsWith('!')) {
+      // A requirement: remove what satisfies it. Only a literal-ish pattern can be
+      // removed reliably; a regex-heavy one is exercised by the ban branch.
+      const plain = literal.replace(/\\([.()+*?^$|[\]{}\\])/gu, '$1');
+      if (broken.includes(plain)) broken = broken.split(plain).join('');
+    } else {
+      const plain = literal.split('|')[0].replace(/\\([.()+*?^$|[\]{}\\])/gu, '$1');
+      if (!/^[\w\s.:'()=<>+-]+$/u.test(plain)) continue;
+      if (name === 'p.prosrc') { broken += `\n${plain}\n`; continue; }
+      // A BOUNDED ban has to be violated INSIDE its own bounds: appending the
+      // token to the end of the body would prove only that the bound holds.
+      const region = pgBounded(broken, derived.get(name));
+      if (region) broken = broken.replace(region, region.replace(/;$/u, ` ${plain};`));
+    }
+  }
+  return broken;
+}
 
 test('every prosrc self-assertion is capable of firing, so none of them is decorative', () => {
   // A guard that can never raise proves nothing. Each one is re-evaluated against
@@ -716,29 +829,75 @@ test('every prosrc self-assertion is capable of firing, so none of them is decor
   // banned pattern inserted. If the guard still does not fire, it is inert.
   const guards = prosrcGuards();
   let exercised = 0;
-  for (const { subject, condition } of guards) {
+  for (const { subject, condition, derived } of guards) {
     const body = BODY[subject[0]];
-    // Strip every required pattern's literal occurrence, and append every banned
-    // pattern's literal source, so a correctly written condition must now raise.
-    let broken = body;
-    for (const m of condition.matchAll(/p\.prosrc\s+(!?~\*?)\s*'((?:[^']|'')*)'/gu)) {
-      const literal = m[2].replace(/''/gu, "'");
-      if (m[1].startsWith('!')) {
-        // A requirement: remove what satisfies it. Only a literal-ish pattern can
-        // be removed reliably; a regex-heavy one is exercised by the ban branch.
-        const plain = literal.replace(/\\([.()+*?^$|[\]{}\\])/gu, '$1');
-        if (broken.includes(plain)) broken = broken.split(plain).join('');
-      } else {
-        const plain = literal.split('|')[0].replace(/\\([.()+*?^$|[\]{}\\])/gu, '$1');
-        if (/^[\w\s.:'()=<>+-]+$/u.test(plain)) broken += `\n${plain}\n`;
-      }
+    const broken = violating(condition, body, derived);
+    if (broken === body) {
+      // A guard proven against a BOUNDED derivation is the one class this
+      // contract must never let slip through unexercised: it is the replacement
+      // for the unbounded pattern that reached deploy.
+      assert.ok(![...condition.matchAll(TERM)].some(([, name]) => derived.has(name)),
+        `the bounded guard \`${condition}\` was never exercised against a violating body`);
+      continue;
     }
-    if (broken === body) continue;
     exercised += 1;
-    assert.equal(raisesFor(condition, broken), true,
+    assert.equal(raisesFor(condition, broken, derived), true,
       `migration 0090 condition \`${condition}\` is inert: it does not fire even against a body that violates it`);
   }
-  assert.ok(exercised >= 12, `at least most guards are exercised against a violating body (exercised ${exercised})`);
+  assert.ok(exercised >= 14, `at least most guards are exercised against a violating body (exercised ${exercised})`);
+});
+
+test('the corrected simulator rejects the broad guard that made migration 0090 refuse itself', () => {
+  // FIX-02 anti-vacuity regression. The deploy-blocking defect was not a typo: it
+  // was this contract modelling PostgreSQL regex semantics with the wrong flags.
+  // Restoring the exact guard that failed at deploy must now FAIL LOCALLY - and
+  // it must be the dotAll correction, not something else, that catches it.
+  const anchor = "  IF p.prosrc ~ 'auth\\.uid' THEN\n";
+  assert.ok(selfAssertions.includes(anchor), 'the QANDEEL-core guard region is still anchored where this proof inserts');
+  const broadGuard = 'reasoning_grantor|reasoning.*approver_user_id|source_context_ref[^;]*approver';
+  const restored = selfAssertions.replace(anchor,
+    `  IF p.prosrc ~ '${broadGuard}' THEN\n`
+    + "    RAISE EXCEPTION 'I-04G: a reasoning dependency is never material consent';\n"
+    + '  END IF;\n' + anchor);
+
+  const reintroduced = prosrcGuards(restored).filter(({ condition }) => condition.includes(broadGuard));
+  assert.equal(reintroduced.length, 1, 'the regression probe reintroduces exactly one broad guard');
+  const [{ subject, condition, derived }] = reintroduced;
+  assert.ok(subject.includes(QANDEEL_FN), 'the probe lands on the QANDEEL core, the body the real guard rejected');
+  assert.equal(raisesFor(condition, BODY[QANDEEL_FN], derived), true,
+    'the corrected contract must report the broad guard as self-rejecting, exactly as PostgreSQL did at deploy');
+
+  // And the correction is load-bearing: under the OLD flags this same guard passed.
+  assert.equal(new RegExp(broadGuard, 'u').test(BODY[QANDEEL_FN]), false,
+    'the old non-dotAll simulator did not catch this guard, which is why it reached CI');
+  assert.equal(new RegExp(broadGuard, 'su').test(BODY[QANDEEL_FN]), true,
+    'PostgreSQL dot-matches-newline semantics are what make the guard reject its own correct body');
+});
+
+test('the QANDEEL approver write is proven structurally, not by an unbounded negative pattern', () => {
+  // The invariant is not "the word reasoning must not precede approver_user_id".
+  // It is: exactly ONE approver-writing path, deriving only from
+  // MATERIAL_DEPENDENCY source authority. That is what the migration now proves,
+  // and what this contract re-proves against the deployed body.
+  const writes = BODY[QANDEEL_FN].split('INSERT INTO public.shared_world_history_item_required_approvers').length - 1;
+  assert.equal(writes, 1, 'the QANDEEL core writes a required approver in exactly one place');
+  assert.doesNotMatch(BODY[QANDEEL_FN], /(?:UPDATE|DELETE FROM) public\.shared_world_history_item_required_approvers/su,
+    'no second approver-writing path exists in the QANDEEL core');
+  const write = pgBounded(BODY[QANDEEL_FN],
+    { anchor: 'INSERT INTO public.shared_world_history_item_required_approvers', terminator: ';' });
+  assert.ok(write && write.length < BODY[QANDEEL_FN].length, 'the one approver write is a complete bounded statement');
+  assert.match(write, /WHERE m\.id = ANY\(sources\)/u, 'it selects the MATERIAL_DEPENDENCY sources, and only them');
+  assert.doesNotMatch(write, /reasoning|source_context_ref|grantor/isu,
+    'no reasoning identity of any kind reaches the one approver write');
+  // `sources` is the MATERIAL_DEPENDENCY selection, never the reasoning one.
+  assert.match(BODY[QANDEEL_FN], /sources := coalesce\(p_material_source_ids/u);
+  assert.match(BODY[QANDEEL_FN], /reasoning := coalesce\(p_reasoning_source_refs/u);
+  // And the migration asserts all three of those things about itself.
+  assert.match(selfAssertions, /approver_write := substr\(p\.prosrc, strpos\(p\.prosrc,/u);
+  assert.match(selfAssertions, /approver_write := left\(approver_write, strpos\(approver_write, ';'\)\);/u);
+  assert.match(selfAssertions, /the QANDEEL core must write a required approver in exactly one place/u);
+  assert.doesNotMatch(selfAssertions, /reasoning\.\*approver_user_id/u,
+    'the unbounded cross-body negative pattern is gone for good');
 });
 
 test('the verifier, the script and the CI step are registered, and the README records the slice', () => {
