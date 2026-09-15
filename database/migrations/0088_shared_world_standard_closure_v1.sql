@@ -766,8 +766,15 @@ BEGIN
   IF in_types <> ARRAY['uuid','uuid','uuid','uuid'] THEN
     RAISE EXCEPTION 'I-04F: the closure preparation accepts identities only, never a reason or a payload, not %', in_types;
   END IF;
+  -- The token is member_ids, never a bare `member`: the frozen parameter
+  -- p_membership_snapshot_id is a legitimate opaque persistence identity, and a
+  -- bare `member` would make this migration refuse its own valid surface at
+  -- deploy. The frozen I-04E precedent in 0086 uses member_ids for exactly this
+  -- reason. The exact in_names equality above remains the primary proof that no
+  -- additional topology parameter can enter silently; this scan only catches a
+  -- parameter whose NAME claims an authority the surface must never accept.
   FOREACH arg_name IN ARRAY in_names LOOP
-    IF arg_name ~* 'initiator|proposer|actor|owner|admin|approver|approval|authority|reason|note|message|member|episode|count|launch|gate|timestamp|instant|_at$' THEN
+    IF arg_name ~* 'initiator|proposer|actor|owner|admin|approver|approval|authority|reason|note|message|member_ids|episode|count|launch|gate|timestamp|instant|_at$' THEN
       RAISE EXCEPTION 'I-04F: the closure preparation must accept no reason, actor, topology, count or clock parameter';
     END IF;
   END LOOP;
@@ -797,8 +804,12 @@ BEGIN
   IF in_names <> ARRAY['p_command_id','p_proposal_id','p_world_ended_event_id'] THEN
     RAISE EXCEPTION 'I-04F: the closure commit must accept exactly three opaque identities, not %', in_names;
   END IF;
+  -- Same narrowing as the preparation scan: member_ids, never a bare `member`.
+  -- This one does not fire today, because the frozen commit surface carries no
+  -- matching parameter - but it is the identical defective shape, and a latent
+  -- self-rejection is still a self-rejection.
   FOREACH arg_name IN ARRAY in_names LOOP
-    IF arg_name ~* 'user_id|actor|closer|approver|member|episode|snapshot|reason|timestamp|instant|count|_at$' THEN
+    IF arg_name ~* 'user_id|actor|closer|approver|member_ids|episode|snapshot|reason|timestamp|instant|count|_at$' THEN
       RAISE EXCEPTION 'I-04F: the closure commit must not accept an actor, a reason or a clock parameter';
     END IF;
   END LOOP;

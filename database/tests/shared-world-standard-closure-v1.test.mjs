@@ -258,6 +258,50 @@ test('both primitives accept exactly their frozen identity list, and no reason, 
   }
 });
 
+test('0088 own parameter deny-patterns never reject the exact frozen parameter lists they guard', () => {
+  // A migration whose parameter-name deny-pattern matches one of the parameters it
+  // is guarding REFUSES ITSELF at deploy. That is not a hypothetical: a bare
+  // `member` token rejected the valid frozen `p_membership_snapshot_id`, and the
+  // static contract missed it because the contract and the migration were carrying
+  // two different lists. So this proof reads the migration's OWN patterns and runs
+  // them against the migration's OWN frozen parameter names.
+  const patterns = [...selfAssertions.matchAll(
+    /FOREACH arg_name IN ARRAY in_names LOOP\s*\n\s*IF arg_name ~\*\s*'((?:[^']|'')*)'/gu)]
+    .map((m) => m[1].replace(/''/gu, "'"));
+  assert.equal(patterns.length, 2, 'exactly two parameter deny-patterns: the preparation and the commit');
+
+  const guarded = [parameters(PREPARE_FN), parameters(COMMIT_FN)];
+  patterns.forEach((pattern, index) => {
+    assert.ok(guarded[index].length > 0, 'the guarded parameter list is non-empty, so this proof is not vacuous');
+    // PostgreSQL `~*` over these tokens is equivalent to a case-insensitive JS
+    // regex: they use no PostgreSQL-only construct, and `$` anchors the whole
+    // string in both, because PostgreSQL newline-sensitive matching is off by default.
+    const deny = new RegExp(pattern, 'i');
+    for (const parameter of guarded[index]) {
+      assert.doesNotMatch(parameter, deny,
+        `migration 0088 would refuse ITSELF at deploy: its own deny pattern /${pattern}/ rejects its own frozen parameter ${parameter}`);
+    }
+  });
+
+  // The exact token this correction turns on, pinned in both patterns so the broad
+  // one cannot come back.
+  for (const pattern of patterns) {
+    assert.doesNotMatch(pattern, /(?:^|\|)member(?:\||$)/u,
+      'a bare `member` token rejects the valid frozen p_membership_snapshot_id: the narrow member_ids is required');
+    assert.ok(pattern.includes('member_ids'),
+      'both deny patterns keep the narrow member_ids token the frozen I-04E precedent in 0086 uses');
+  }
+
+  // And the exact in_names equality is untouched: it stays the PRIMARY proof that
+  // no additional topology parameter can enter either surface silently.
+  assert.match(selfAssertions,
+    /IF in_names <> ARRAY\['p_proposal_id','p_membership_snapshot_id','p_end_payload_version_id','p_world_id'\] THEN/u,
+    'the frozen preparation parameter list is still asserted exactly');
+  assert.match(selfAssertions,
+    /IF in_names <> ARRAY\['p_command_id','p_proposal_id','p_world_ended_event_id'\] THEN/u,
+    'and so is the frozen commit parameter list');
+});
+
 test('0088 consumes the frozen I-04D governance and manufactures none of its own', () => {
   assert.match(BODY[PREPARE_FN], /public\.capture_shared_world_governance_proposal_v1\(/u,
     'the preparation opens its proposal through the frozen I-04D capture');
@@ -421,6 +465,10 @@ test('the contract is not vacuous: every deliberate weakening of migration 0088 
         + `GRANT EXECUTE ON FUNCTION public.${RESOLVE_FN}(uuid, uuid) TO service_role;`)],
       ['stops revoking the internal helper from service_role', (text) => text.replace(
         `  EXECUTE 'REVOKE ALL ON FUNCTION public.${RESOLVE_FN}(uuid, uuid) FROM service_role';\n`, '')],
+      ['restores the broad bare-member token that makes the migration refuse itself', (text) => text.replace(
+        '|message|member_ids|episode|count|', '|message|member|episode|count|')],
+      ['restores the broad bare-member token in the commit deny-pattern', (text) => text.replace(
+        '|approver|member_ids|episode|snapshot|', '|approver|member|episode|snapshot|')],
       ['lets a client supply a closure reason', (text) => text.replace(
         '    governance_operation_kind text NOT NULL,\n    created_at timestamptz NOT NULL,',
         '    governance_operation_kind text NOT NULL,\n    closure_reason text,\n    created_at timestamptz NOT NULL,')],
@@ -479,8 +527,26 @@ test('the contract is not vacuous: every deliberate weakening of migration 0088 
       };
       const at = (needle) => bodies[COMMIT_FN].indexOf(needle);
       const grantLines = sql.split('\n').filter((line) => /\bGRANT\b/u.test(line));
+      // The migration's own deny-patterns, run against its own frozen parameter
+      // names - the check that would have caught the 0088 deploy failure locally.
+      const denyPatterns = [...sql.matchAll(
+        /FOREACH arg_name IN ARRAY in_names LOOP\s*\n\s*IF arg_name ~\*\s*'((?:[^']|'')*)'/gu)]
+        .map((m) => m[1].replace(/''/gu, "'"));
+      const selfRejects = () => {
+        const lists = [parameters(PREPARE_FN), parameters(COMMIT_FN)];
+        denyPatterns.forEach((pattern, index) => {
+          for (const parameter of lists[index] ?? []) {
+            assert.doesNotMatch(parameter, new RegExp(pattern, 'i'));
+          }
+        });
+      };
       const caught = [
         () => assert.equal(grantLines.length, 0),
+        selfRejects,
+        // A bare `member` in the COMMIT pattern rejects nothing today, so
+        // selfRejects cannot see it - but it is the identical defective shape, and
+        // FIX-02 requires the contract to refuse it in EITHER deny-pattern.
+        () => { for (const pattern of denyPatterns) assert.doesNotMatch(pattern, /(?:^|\|)member(?:\||$)/u); },
         () => assert.match(sql, new RegExp(`REVOKE ALL ON FUNCTION public\\.${RESOLVE_FN}\\(uuid, uuid\\) FROM service_role`, 'u')),
         () => assert.doesNotMatch(body, /closure_reason/u),
         () => assert.doesNotMatch(bodies[COMMIT_FN], /auth\.uid/u),
