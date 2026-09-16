@@ -67,12 +67,15 @@ a way to weaken both gates at once.
 
 ### Using it
 
-From the repository's Actions tab, run **Focused Database Verification** with two inputs:
+From the repository's Actions tab, select **Focused Database Verification**, choose the **default
+branch** in the workflow's own branch selector, and run it with two inputs:
 
 | Input | Meaning |
 | --- | --- |
 | `target_ref` | the branch, tag or SHA to verify |
 | `verifier` | which verifier(s) to run |
+
+Choosing any other branch in that selector fails the run in its first step, on purpose — see below.
 
 ### Two refs, and which one judges which
 
@@ -85,11 +88,28 @@ The job makes **two** checkouts, and they are pinned separately and explicitly:
 
 This split is deliberate and load-bearing, in both directions.
 
-**A dispatch is judged by merged infrastructure.** `FOCUSED_HARNESS_REF` resolves to
-`github.event.repository.default_branch`, whatever ref the person happened to dispatch from — so a
-branch cannot change the rules it is judged by while still being the branch under test. It is pinned
-rather than inherited: leaving the harness checkout without a `ref` happened to produce the right
-thing for a dispatch from `main`, and nothing structural guaranteed it.
+**Dispatch the workflow FROM `main`. Select what to test with `target_ref`.**
+
+This is a rule about the run, not only about a checkout, because a `workflow_dispatch` run executes
+the **workflow definition belonging to the ref it was dispatched from** — this file, its steps, its
+`env` block. Pinning the harness checkout is necessary and *not* sufficient: a branch could edit the
+gate, dispatch it from itself, and be judged by job logic it wrote, with the harness pin quietly
+removed. The pin cannot defend itself, because it lives in the thing being replaced.
+
+So the job's **first step** refuses any manual dispatch whose workflow ref is not the repository
+default branch, before any checkout:
+
+```text
+github.event_name == 'workflow_dispatch' && github.ref_name != github.event.repository.default_branch
+```
+
+It fails immediately and says what to do instead: run the workflow from the default branch and put
+the branch, tag or SHA under test in `target_ref`. It does not warn and continue.
+
+With that in place, `FOCUSED_HARNESS_REF` — which resolves to
+`github.event.repository.default_branch` — is the second half of the same guarantee rather than the
+whole of it: the run executes default-branch job logic, and that job logic checks out default-branch
+harness files. `target_ref` remains completely free: any branch, any tag, any SHA.
 
 **A feature branch needs no infrastructure of its own.** The branch under test supplies only its
 migrations, its verifiers and its manifest, so a slice in flight is verifiable the day this gate

@@ -65,6 +65,36 @@ jobs:
       # thing that self-test exists for.
       FOCUSED_HARNESS_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.repository.default_branch || github.sha }}
     steps:
+      # THE TRUST ROOT, and the first thing this job does.
+      #
+      # A workflow_dispatch run executes the workflow DEFINITION belonging to the
+      # ref it was dispatched from - this file, these steps, that env block. So
+      # pinning the harness checkout is necessary and NOT sufficient: a branch
+      # could edit this file, dispatch the workflow from itself, and be judged by
+      # job logic it wrote, with the harness pin quietly removed.
+      #
+      # A manual dispatch must therefore come FROM the default branch. The code
+      # under test is selected exclusively through `target_ref`, which stays free
+      # to be any branch, tag or SHA.
+      #
+      # `pull_request` is deliberately untouched by this: exercising the PR's own
+      # workflow and harness is the only thing that self-test exists for.
+      - name: A manual dispatch must run from the repository default branch
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != github.event.repository.default_branch
+        env:
+          DISPATCHED_FROM: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          echo "::error title=Dispatch this workflow from the default branch::A manual run was dispatched from a non-default ref"
+          echo "dispatched from : $DISPATCHED_FROM"
+          echo "default branch  : $DEFAULT_BRANCH"
+          echo ""
+          echo "A workflow_dispatch run executes the workflow definition of the ref it was dispatched from,"
+          echo "so dispatching from a branch would let that branch decide how it is judged."
+          echo ""
+          echo "Run this workflow FROM $DEFAULT_BRANCH, and put the branch, tag or SHA you want to verify"
+          echo "in the target_ref input."
+          exit 1
       # The harness - mapping, bootstrap and runner - at the ref pinned above. The
       # ref UNDER TEST supplies only migrations, verifiers and its manifest, so a
       # branch can be verified without first carrying this infrastructure.

@@ -418,6 +418,91 @@ test('a dispatch judges a branch with the DEFAULT BRANCH harness, not the branch
     'and every run records which harness commit actually judged it');
 });
 
+/**
+ * A deliberately small evaluator for the ONE GitHub expression this contract has
+ * to reason about: context paths, single-quoted literals, `==`, `!=`, `&&`, `||`.
+ *
+ * Asserting that a guard's text matches a regex proves the characters are there
+ * and nothing about what they DO. A guard that had been quietly inverted, or
+ * pointed at the wrong context, would satisfy every regex and let exactly the
+ * run through that it exists to stop. So the expression is read out of the
+ * workflow and actually evaluated against simulated event contexts.
+ */
+function evaluateExpression(expression, github) {
+  const lookup = (path) => path.split('.').reduce((value, key) => (value == null ? undefined : value[key]), { github });
+  const atom = (text) => {
+    const trimmed = text.trim();
+    const literal = /^'(.*)'$/u.exec(trimmed);
+    return literal ? literal[1] : lookup(trimmed);
+  };
+  const comparison = (text) => {
+    const equal = text.split('==');
+    if (equal.length === 2) return atom(equal[0]) === atom(equal[1]);
+    const unequal = text.split('!=');
+    if (unequal.length === 2) return atom(unequal[0]) !== atom(unequal[1]);
+    return Boolean(atom(text));
+  };
+  return expression.split('||').some((clause) => clause.split('&&').every(comparison));
+}
+
+test('the expression evaluator this contract relies on is itself faithful', () => {
+  const context = { event_name: 'push', ref_name: 'main', event: { repository: { default_branch: 'main' } } };
+  assert.equal(evaluateExpression("github.event_name == 'push'", context), true);
+  assert.equal(evaluateExpression("github.event_name == 'pull_request'", context), false);
+  assert.equal(evaluateExpression('github.ref_name != github.event.repository.default_branch', context), false);
+  assert.equal(evaluateExpression("github.event_name == 'push' && github.ref_name != github.event.repository.default_branch", context), false);
+  assert.equal(evaluateExpression("github.event_name == 'push' || github.ref_name == 'nothing'", context), true);
+});
+
+test('a manual dispatch is REFUSED unless the workflow itself was dispatched from the default branch', () => {
+  // The trust root, and the gap the harness pin alone left open. A
+  // workflow_dispatch run executes the workflow DEFINITION of the ref it was
+  // dispatched from - this file, its steps, its env block - so a branch could
+  // edit the gate, dispatch from itself, and be judged by job logic it wrote,
+  // with FOCUSED_HARNESS_REF quietly removed. Pinning a later checkout cannot
+  // reach that: the pin is in the thing being replaced.
+  const focused = read(FOCUSED);
+  const guard = /- name: A manual dispatch must run from the repository default branch\n\s*if: ([^\n]+)\n/u.exec(focused);
+  assert.ok(guard, 'the dispatch guard exists and is named');
+  const expression = guard[1].trim();
+
+  const dispatch = (refName, defaultBranch = 'main') =>
+    evaluateExpression(expression, { event_name: 'workflow_dispatch', ref_name: refName, event: { repository: { default_branch: defaultBranch } } });
+
+  // Fires - the run stops - for every dispatch that is not from the default branch.
+  assert.equal(dispatch('attacker/rewrites-the-gate'), true, 'a dispatch from a feature branch is refused');
+  assert.equal(dispatch('infra/qan-inf-03-focused-db-harness-v1'), true, 'including this very branch');
+  assert.equal(dispatch('v1.0.0'), true, 'and a dispatch from a tag');
+  assert.equal(dispatch('master', 'master'), false, 'the default branch is read, never hard-coded to "main"');
+
+  // Does not fire for the legitimate dispatch, or the run would always fail.
+  assert.equal(dispatch('main'), false, 'a dispatch from the default branch proceeds');
+
+  // And the pull_request self-test is untouched: exercising the PR own workflow
+  // and harness is the only thing it exists for.
+  for (const refName of ['252/merge', 'infra/qan-inf-03-focused-db-harness-v1']) {
+    assert.equal(evaluateExpression(expression, { event_name: 'pull_request', ref_name: refName, event: { repository: { default_branch: 'main' } } }),
+      false, 'the guard never fires on the pull_request self-test');
+  }
+
+  // It must be the FIRST step: refusing after a checkout and an install has
+  // already run is a diagnostic, not a guard.
+  const steps = focused.slice(focused.indexOf('\n    steps:'));
+  const firstStep = /\n {6}- (?:\{name: |name: )([^\n,}]+)/u.exec(steps);
+  assert.equal(firstStep?.[1].trim(), 'A manual dispatch must run from the repository default branch',
+    'the dispatch guard runs before any checkout');
+
+  // It must stop the run, and say what to do instead.
+  const body = focused.slice(guard.index, focused.indexOf('- name: Checkout the focused-gate harness', guard.index));
+  assert.match(body, /\n\s*exit 1\n/u, 'the guard fails the run rather than warning and continuing');
+  assert.match(body, /::error/u, 'and surfaces it as a workflow error');
+  assert.match(body, /target_ref input/u, 'the diagnostic names the correct way to test another ref');
+
+  // The guard constrains WHERE THE WORKFLOW RUNS FROM, never what may be tested.
+  assert.doesNotMatch(expression, /target_ref|FOCUSED_TARGET_REF|inputs\./u,
+    'target_ref stays independently selectable: any branch, tag or SHA');
+});
+
 test('the focused gate is registered and needs no secret', () => {
   const workflow = read('.github/workflows/focused-database-verification.yml');
   assert.match(workflow, /image: postgres:17/u, 'the same PostgreSQL major version as API CI');
