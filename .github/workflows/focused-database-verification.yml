@@ -1,0 +1,81 @@
+name: Focused Database Verification
+# QAN-INF-03 - the fast database gate.
+#
+# API CI runs about a hundred and forty steps and reaches the database verifiers at
+# the end of them, so using it to find a defect in one verifier costs roughly twenty
+# minutes per finding. This job is the same PostgreSQL 17, the same Supabase-compatible
+# bootstrap, the same migrations from zero and the same verifier command, with the
+# unrelated steps removed - so a verifier defect is found in minutes and API CI goes
+# back to being the confirmation gate rather than the debugger.
+#
+# It carries no secrets, needs none, touches no production Supabase, deploys nothing
+# and merges nothing. `contents: read` is the whole of its authority.
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: 'Branch, tag or SHA to verify (the workflow itself always runs from the default branch)'
+        required: true
+        default: 'main'
+      verifier:
+        description: 'Verifier selector: a group from database/focused-verifiers.json, or the generic form migration-NNNN'
+        required: true
+        default: 'i06a-all'
+  # Narrowly scoped self-test: only when the focused gate's OWN files change. This is
+  # not a second API CI - it proves this gate still works, against a group the default
+  # branch actually carries.
+  pull_request:
+    paths:
+      - '.github/workflows/focused-database-verification.yml'
+      - 'database/focused-verification-runner.mjs'
+      - 'database/focused-verifiers.json'
+      - 'database/supabase-compatible-bootstrap.sql'
+      - 'database/verifier-scenarios.mjs'
+permissions:
+  contents: read
+jobs:
+  focused-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: qandeel_focused}
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres -d qandeel_focused"
+          --health-interval=5s --health-timeout=5s --health-retries=12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/qandeel_focused
+      PGPASSWORD: postgres
+      # Read from the environment by the runner and by actions/checkout. Never
+      # interpolated into a shell command anywhere in this file.
+      FOCUSED_TARGET_REF: ${{ github.event.inputs.target_ref || github.sha }}
+      FOCUSED_VERIFIER: ${{ github.event.inputs.verifier || 'i05c-all' }}
+    steps:
+      # The harness - mapping, bootstrap and runner - comes from the ref this workflow
+      # itself is running from, which for a dispatch is the default branch. The ref
+      # UNDER TEST supplies only migrations, verifiers and its manifest, so a branch
+      # can be verified without first carrying this infrastructure.
+      - {name: Checkout the focused-gate harness, uses: actions/checkout@v4, with: {path: .qan-harness}}
+      # Deliberately before setup-node, on the runner's preinstalled Node: a selector
+      # that names nothing, or a ref that does not read as a ref, should cost four
+      # seconds rather than a checkout and a full install.
+      - {name: Validate the dispatch inputs, run: node .qan-harness/database/focused-verification-runner.mjs --check-inputs}
+      - name: Checkout the repository under test
+        uses: actions/checkout@v4
+        with: {ref: '${{ env.FOCUSED_TARGET_REF }}', path: repo}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm, cache-dependency-path: repo/package-lock.json}
+      - {name: Install dependencies of the repository under test, working-directory: repo, run: npm ci}
+      - name: Run the selected verifier(s) against fresh PostgreSQL 17
+        run: node .qan-harness/database/focused-verification-runner.mjs --repo repo --artifacts focused-verification-artifacts
+      - name: Upload the focused verification artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: focused-verification-${{ env.FOCUSED_VERIFIER }}-${{ github.run_number }}
+          path: focused-verification-artifacts
+          if-no-files-found: warn
+          retention-days: 14

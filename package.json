@@ -12,6 +12,8 @@
     "test:toolchain": "node --test tests/toolchain.test.mjs",
     "test:him-generic-write-authority-retirement-contract": "node --test tests/him-generic-application-write-authority-retirement.test.mjs",
     "verify:integrations:diagnose": "node scripts/diagnose-integrations.mjs",
+    "verify:db:focused": "node --env-file-if-exists=.env database/focused-verification-runner.mjs",
+    "verify:db:hazards": "node database/verifier-hazards.mjs",
     "verify:database:integration": "node --env-file-if-exists=.env database/verify-migration-0002.mjs",
     "verify:memory:integration": "node --env-file-if-exists=.env database/verify-migration-0004.mjs",
     "verify:hypothesis:integration": "node --env-file-if-exists=.env database/verify-migration-0005.mjs",

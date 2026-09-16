@@ -36,6 +36,50 @@ the predecessor and create a versioned successor. V1 deletion uses the `DELETED`
 state; authenticated users receive no physical `DELETE` privilege. See
 `docs/memory-runtime-persistence.md` for the complete boundary.
 
+## Focused database verification (QAN-INF-03)
+
+Start here when a verifier is failing. Full API CI runs about a hundred and forty steps and
+reaches the database verifiers at the end of them, so using it to find a defect in one verifier
+costs roughly twenty minutes per finding. The focused gate is the same PostgreSQL 17, the same
+Supabase-compatible bootstrap, the same migrations from zero and the same verifier command, with
+the unrelated steps removed.
+
+**In GitHub:** run the **Focused Database Verification** workflow from the Actions tab with a
+`target_ref` (any branch, tag or SHA) and a `verifier` selector. The workflow runs from the default
+branch and checks the target out separately, so a feature branch needs no infrastructure of its own.
+The artifact — environment, migration log, per-verifier output and a scenario table — is uploaded on
+failure as well as on success.
+
+**Locally**, once a PostgreSQL is available:
+
+```sh
+npm run verify:db:focused -- i06a-all
+```
+
+**Selectors:** `i06a-0100`, `i06a-0101`, `i06a-all`, `i05c-all`, or the generic `migration-NNNN`,
+which reaches any `database/verify-migration-NNNN.mjs` with no mapping entry. Named groups live in
+`database/focused-verifiers.json`.
+
+**Before a push**, the defect classes that used to be found by CI are found by:
+
+```sh
+npm run verify:db:hazards
+```
+
+which also runs inside `npm run test:database`. It refuses seven shapes that make a verifier wrong
+while it looks right — a `now()` that cannot change a value inside its own transaction, a refusal
+swallowed into an aborted transaction, a `timestamptz` truncated by a JavaScript `Date`, a literal
+fixture count the verifier has outgrown, a mutation anchored on migration text that
+`pg_get_functiondef` regenerates, a weakening probe that never proves it weakened anything, and a
+savepoint helper that does not say it needs an open transaction.
+
+`database/verifier-scenarios.mjs` is the companion result contract: independent scenarios run
+isolated, each reports its own outcome, and the run fails once with all of them named — so eight
+latent probe defects cost one CI round rather than eight.
+
+Full detail, including the fresh-database rule and the two-green-focused-runs rule for
+database-heavy tasks, is in `docs/local-focused-database-verification-v1.md`.
+
 ## Real PostgreSQL verification
 
 Migrations 0001 and 0002 can be intentionally applied and verified against a supplied

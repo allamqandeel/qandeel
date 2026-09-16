@@ -97,7 +97,20 @@ export function createRuntime(databaseUrl) {
     await q("SELECT set_config('request.jwt.claims', $1, false)", [uid ? JSON.stringify({ sub: uid, role }) : '']);
   }
   async function rejected(operation, codes, message = null) {
-    await q('SAVEPOINT s');
+    // The savepoint is what lets an expected refusal happen without aborting the
+    // caller's transaction - and PostgreSQL answers 25P01 for SAVEPOINT outside
+    // a transaction block. A section that commits as it goes is in autocommit
+    // right there, so the failure is about the CALLER's transaction state and
+    // says so: a bare 25P01 about savepoints sent I-06A into a whole CI round.
+    try {
+      await q('SAVEPOINT s');
+    } catch (error) {
+      if (error?.code === '25P01') {
+        throw new Error('rejected() needs an open transaction: it holds a SAVEPOINT so a refusal cannot abort the caller. '
+          + 'This connection is in autocommit - wrap the call in BEGIN / ROLLBACK.', { cause: error });
+      }
+      throw error;
+    }
     let error;
     try { await operation(); } catch (caught) { error = caught; } finally {
       await q('ROLLBACK TO SAVEPOINT s'); await q('RELEASE SAVEPOINT s');
