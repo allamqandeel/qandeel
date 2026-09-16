@@ -391,7 +391,12 @@ async function verifyContinuingEligibility(f, seam) {
   await rejected(() => q('UPDATE public.conversation_units SET committed_text = $2 WHERE id = $1', [f.userUnit, 'rewritten']), ['55000']);
   await q('SAVEPOINT personal');
   await q('ALTER TABLE public.conversation_units DISABLE TRIGGER conversation_units_immutable');
-  await q('UPDATE public.conversation_units SET committed_text = $2 WHERE id = $1', [f.userUnit, 'a different committed sentence']);
+  // The frozen 0064 unit pins length(committed_text) = source_span_end -
+  // source_span_start, so the probe changes the BYTES and not the length: the
+  // question is whether the package's captured digest still matches the source,
+  // not whether a malformed unit is representable.
+  await q('UPDATE public.conversation_units SET committed_text = $2 WHERE id = $1',
+    [f.userUnit, `${f.userText.slice(0, -1)}!`]);
   await q('ALTER TABLE public.conversation_units ENABLE TRIGGER conversation_units_immutable');
   assert.equal((await eligibilityOf(f.experience)).ineligibility_class, 'PUBLISHED_SOURCE_NOT_AVAILABLE');
   await rt.assertCompletelyDark(f.experience, f.reader, { lensKey, searchTerm });
