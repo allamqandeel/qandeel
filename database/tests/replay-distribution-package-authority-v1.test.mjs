@@ -175,6 +175,31 @@ test('an approval is structurally impossible outside the derived required set an
     'and exactly one foreign key into the immutable evidence');
 });
 
+test('a Public consent records its exact linked Public approval, and that link can never float', () => {
+  // THE WHOLE IMMUTABLE REQUEST IS DURABLE. A Public consent act names two
+  // identities, so the second one belongs in the committed evidence: without it a
+  // retry could only be compared on the package and the human, and would answer
+  // ALREADY_APPROVED to a materially different request.
+  const block = tableBlock('replay_distribution_approvals');
+  assert.match(block, /linked_public_approval_id uuid,\s*\n\s*linked_public_manifest_version_id uuid,/u,
+    'the linked Public identity is recorded on the immutable evidence itself');
+  assert.match(block, /CHECK \(\s*\n\s*\(destination_action = 'PUBLISH_TO_PUBLIC_WORLD'\s*\n\s*AND linked_public_approval_id IS NOT NULL AND linked_public_manifest_version_id IS NOT NULL\)/u,
+    'a Public consent must name it');
+  assert.match(block, /OR \(destination_action <> 'PUBLISH_TO_PUBLIC_WORLD'\s*\n\s*AND linked_public_approval_id IS NULL AND linked_public_manifest_version_id IS NULL\)\)/u,
+    'and a non-Public consent can never grow one');
+  assert.match(block, /UNIQUE \(linked_public_approval_id\)/u,
+    'one canonical Public approval belongs to at most one Replay consent act');
+  assert.match(block, /FOREIGN KEY \(linked_public_approval_id, linked_public_manifest_version_id, approver_user_id\)\s*\n\s*REFERENCES public\.publication_manifest_approvals \(id, manifest_version_id, approver_user_id\)/u,
+    'the linked Public consent is ONE exact canonical row representing the SAME human');
+  // The second half of "cannot float" is added after the bridge relation exists,
+  // so it is read from the whole migration rather than from the table block.
+  assert.match(migration, /ALTER TABLE public\.replay_distribution_approvals\s*\n\s*ADD CONSTRAINT replay_distribution_approvals_linked_bridge_fk\s*\n\s*FOREIGN KEY \(distribution_package_version_id, linked_public_manifest_version_id\)\s*\n\s*REFERENCES public\.replay_public_distribution_artifacts\s*\n\s*\(distribution_package_version_id, public_manifest_version_id\) ON DELETE RESTRICT;/u,
+    'and it belongs to THIS package own Public bridge, never to another distribution Public package');
+  assert.match(tableBlock('replay_public_distribution_artifacts'),
+    /UNIQUE \(distribution_package_version_id, public_manifest_version_id\)/u,
+    'which needs the bridge to expose that pair as a candidate key');
+});
+
 test('EXPORT_PRIVACY_SANITIZATION is a positive allowlist with no private identifier and no payload column', () => {
   const columns = columnsOf('replay_distribution_export_descriptors');
   assert.ok(columns.length >= 18, 'the sanitized surface declares its columns explicitly');
@@ -261,6 +286,8 @@ test('the 0104 self-assertions refuse a migration that lost any of this, and ban
   for (const anchor of ['_finalized_fk', '_version_fk', 'lifecycle', 'UNRESOLVED',
     'required_approver_count > 0', '_class_fk', 'rdx1_', '_opaque_reference',
     'replay_distribution_approvals_required_fk', 'replay_distribution_approvals_destination_fk',
+    'replay_distribution_approvals_linked_shape_check', 'replay_distribution_approvals_linked_public_fk',
+    'replay_distribution_approvals_linked_bridge_fk', 'replay_distribution_approvals_linked_key',
     'AUTHORIZED_FOR_DELIVERY', 'SAFETY_ALLOW', 'REPLAY_ARTIFACT', 'RESERVED', 'NOT_EVALUATED']) {
     assert.ok(selfAssertions.includes(anchor), `the self-assertions check ${anchor}`);
   }
@@ -318,6 +345,7 @@ test('the 0104 verifier RUNS the scenarios it claims, through the permanent aggr
     'D17 an authorization cannot exist with an unevaluated CW2-08 dimension',
     'D18 every I-06C relation is append-only for every role including the owner',
     'D19 no application role holds any privilege on any I-06C relation',
+    'D22 a Public consent records the exact linked Public approval and it can never float',
     'f1 the opacity guard is what refuses an internal identity in disguise',
     'f2 the append-only guard is what refuses a mutation by the table owner',
     'f3 the catalog check refuses a tree whose finalization binding was dropped',

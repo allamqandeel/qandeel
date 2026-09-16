@@ -342,10 +342,25 @@ CREATE TABLE public.replay_distribution_approvals (
     destination_action text NOT NULL,
     approver_user_id uuid NOT NULL,
     bound_authority_fingerprint text NOT NULL,
+    linked_public_approval_id uuid,
+    linked_public_manifest_version_id uuid,
     approved_at timestamptz NOT NULL,
     CONSTRAINT replay_distribution_approvals_pk PRIMARY KEY (id),
     CONSTRAINT replay_distribution_approvals_one_per_approver_key
         UNIQUE (distribution_package_version_id, approver_user_id),
+    -- ONE Replay consent act per canonical Public approval, forever.
+    CONSTRAINT replay_distribution_approvals_linked_key UNIQUE (linked_public_approval_id),
+    -- THE LINKED PUBLIC CONSENT EXISTS EXACTLY WHEN THE DESTINATION IS PUBLIC.
+    -- This is what makes the ONE consent act's whole immutable request DURABLE:
+    -- the linked Public approval identity is part of the committed evidence, so a
+    -- retry is compared against what was committed rather than against what the
+    -- retry happens to say, and a non-Public consent can never grow a Public link
+    -- afterwards.
+    CONSTRAINT replay_distribution_approvals_linked_shape_check CHECK (
+        (destination_action = 'PUBLISH_TO_PUBLIC_WORLD'
+            AND linked_public_approval_id IS NOT NULL AND linked_public_manifest_version_id IS NOT NULL)
+     OR (destination_action <> 'PUBLISH_TO_PUBLIC_WORLD'
+            AND linked_public_approval_id IS NULL AND linked_public_manifest_version_id IS NULL)),
     -- The exact approval identity, so a withdrawal binds id, package and
     -- approver from the SAME immutable row through ONE key - the frozen 0094
     -- precedent, and the reason a withdrawal can never name a different
@@ -360,7 +375,16 @@ CREATE TABLE public.replay_distribution_approvals (
                    (distribution_package_version_id, approver_user_id) ON DELETE RESTRICT,
     CONSTRAINT replay_distribution_approvals_destination_fk
         FOREIGN KEY (distribution_package_version_id, destination_action)
-        REFERENCES public.replay_distribution_package_versions (id, destination_action) ON DELETE RESTRICT
+        REFERENCES public.replay_distribution_package_versions (id, destination_action) ON DELETE RESTRICT,
+    -- THE LINKED PUBLIC CONSENT IS ONE EXACT ROW OF THE CANONICAL EVIDENCE, and
+    -- it represents THE SAME HUMAN: id, manifest and approver are read from the
+    -- same immutable `publication_manifest_approvals` row through the frozen 0094
+    -- exact-identity key, so a Replay consent can never name one human's Public
+    -- approval while recording another's.
+    CONSTRAINT replay_distribution_approvals_linked_public_fk
+        FOREIGN KEY (linked_public_approval_id, linked_public_manifest_version_id, approver_user_id)
+        REFERENCES public.publication_manifest_approvals (id, manifest_version_id, approver_user_id)
+        ON DELETE RESTRICT
 );
 
 COMMENT ON TABLE public.replay_distribution_approvals IS
@@ -523,6 +547,11 @@ CREATE TABLE public.replay_public_distribution_artifacts (
     created_at timestamptz NOT NULL,
     CONSTRAINT replay_public_distribution_artifacts_pk PRIMARY KEY (package_item_id),
     CONSTRAINT replay_public_distribution_artifacts_package_key UNIQUE (distribution_package_version_id),
+    -- Trivially unique because it contains the key above; it exists so a Replay
+    -- consent act can bind its linked Public manifest to THIS package's own
+    -- bridge as ONE row.
+    CONSTRAINT replay_public_distribution_artifacts_manifest_key
+        UNIQUE (distribution_package_version_id, public_manifest_version_id),
     CONSTRAINT replay_public_distribution_artifacts_reference_key UNIQUE (audience_safe_reference),
     -- The reserved Public shapes, activated explicitly and narrowly.
     CONSTRAINT replay_public_distribution_artifacts_form_check CHECK (public_body_form = 'RESERVED'),
@@ -550,6 +579,16 @@ CREATE TABLE public.replay_public_distribution_artifacts (
 
 CREATE INDEX replay_public_distribution_artifacts_experience_idx
     ON public.replay_public_distribution_artifacts (public_experience_id);
+
+-- AND THAT PUBLIC MANIFEST IS THIS PACKAGE'S OWN, through the bridge: a linked
+-- consent cannot float to the Public package of a different Replay distribution.
+-- It is added here rather than inside section 4 for the reason migration 0092
+-- adds its own bijective binding late: both relations have to exist first.
+ALTER TABLE public.replay_distribution_approvals
+    ADD CONSTRAINT replay_distribution_approvals_linked_bridge_fk
+        FOREIGN KEY (distribution_package_version_id, linked_public_manifest_version_id)
+        REFERENCES public.replay_public_distribution_artifacts
+                   (distribution_package_version_id, public_manifest_version_id) ON DELETE RESTRICT;
 
 COMMENT ON TABLE public.replay_public_distribution_artifacts IS
   'The narrow activation of the I-05A REPLAY_ARTIFACT seam: one exact Public '
@@ -945,6 +984,53 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'I-06C: an approval must bind the exact package AND destination, and must be structurally impossible outside the DERIVED required set';
   END IF;
+  -- THE WHOLE IMMUTABLE CONSENT REQUEST IS DURABLE. A Public consent act carries
+  -- two identities, and the second one - the canonical Public approval - must be
+  -- part of the committed evidence, or a retry could only be compared on the
+  -- package and the human and would answer ALREADY_APPROVED for a materially
+  -- different request.
+  -- Written as an existence test rather than as a comparison against the
+  -- definition, because a constraint that was DELETED yields NULL and `NULL !~ ...`
+  -- is NULL: the assertion would quietly accept the very removal it exists to
+  -- refuse. Both directions are named, so weakening either half is caught.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint c
+     WHERE c.conrelid = 'public.replay_distribution_approvals'::regclass
+       AND c.conname = 'replay_distribution_approvals_linked_shape_check' AND c.contype = 'c'
+       AND pg_get_constraintdef(c.oid) ~ 'PUBLISH_TO_PUBLIC_WORLD'
+       AND pg_get_constraintdef(c.oid) ~ 'linked_public_approval_id IS NOT NULL'
+       AND pg_get_constraintdef(c.oid) ~ 'linked_public_manifest_version_id IS NOT NULL'
+       AND pg_get_constraintdef(c.oid) ~ 'linked_public_approval_id IS NULL'
+       AND pg_get_constraintdef(c.oid) ~ 'linked_public_manifest_version_id IS NULL'
+  ) THEN
+    RAISE EXCEPTION 'I-06C: a Public consent must record its exact linked Public approval, and a non-Public consent must record none';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint c
+     WHERE c.conrelid = 'public.replay_distribution_approvals'::regclass
+       AND c.conname = 'replay_distribution_approvals_linked_public_fk'
+       AND c.confrelid = 'public.publication_manifest_approvals'::regclass
+       AND cardinality(c.confkey) = 3
+  ) THEN
+    RAISE EXCEPTION 'I-06C: the linked Public consent must be ONE exact canonical approval row representing the SAME human';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint c
+     WHERE c.conrelid = 'public.replay_distribution_approvals'::regclass
+       AND c.conname = 'replay_distribution_approvals_linked_bridge_fk'
+       AND c.confrelid = 'public.replay_public_distribution_artifacts'::regclass
+       AND cardinality(c.confkey) = 2
+  ) THEN
+    RAISE EXCEPTION 'I-06C: a linked Public consent must belong to THIS package own Public bridge and can never float to another';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint c
+     WHERE c.conrelid = 'public.replay_distribution_approvals'::regclass
+       AND c.conname = 'replay_distribution_approvals_linked_key' AND c.contype = 'u'
+  ) THEN
+    RAISE EXCEPTION 'I-06C: one canonical Public approval belongs to at most one Replay consent act';
+  END IF;
+
   -- A WITHDRAWAL NAMES ONE EXACT APPROVAL, through ONE composite key.
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint c

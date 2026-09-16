@@ -198,6 +198,44 @@ export function simulateSelfAssertions(source) {
       }
     }
   }
+
+  // EXACT-SUBSTRING ANCHORS, which `strpos` and `replace` express rather than a
+  // regular expression, and which may be spread over several lines: a counting
+  // assertion puts its literal on its own line. They are resolved by the nearest
+  // PRECEDING subject, and a subject that cannot be resolved - a FOREACH variable,
+  // say - is skipped rather than guessed at.
+  const subjects = [...subjectOf.entries()].sort((a, b) => a[0] - b[0]);
+  const subjectAt = (index) => {
+    let found = null;
+    for (const [at, names] of subjects) {
+      if (at > index) break;
+      found = names;
+    }
+    return found;
+  };
+  for (const match of block.matchAll(/(?:strpos|replace)\(p\.prosrc,\s*('(?:[^']|'')*')/gu)) {
+    const scoped = subjectAt(match.index);
+    if (!scoped) continue;
+    const after = block.slice(match.index + match[0].length, match.index + match[0].length + 32);
+    // `strpos(...) > 0` refuses a shape; everything else - `= 0`, an ordering
+    // comparison, a `replace` count - requires one.
+    const banned = /^\s*\)\s*>\s*0/u.test(after);
+    const needle = unquote(match[1]);
+    evaluated += 1;
+    for (const name of scoped) {
+      const body = declared.get(name);
+      if (body === undefined) continue;
+      const present = body.includes(needle);
+      if (!banned && !present) {
+        findings.push({ kind: 'unmatched-anchor', fn: name, pattern: needle,
+          detail: 'this exact substring is not in the body it is asserted over, so the invariant is never checked' });
+      }
+      if (banned && present) {
+        findings.push({ kind: 'self-match', fn: name, pattern: needle,
+          detail: 'this migration refuses ITSELF at deploy: the banned substring is in its own text' });
+      }
+    }
+  }
   return { findings, evaluated };
 }
 
@@ -250,6 +288,15 @@ test('BOTH I-06C migrations pass their own deploy-time self-assertions', () => {
     "  -- pg_advisory\n  IF p_analytical_projection_version_id IS NULL THEN");
   assert.ok(simulateSelfAssertions(selfBanned).findings.some((f) => f.kind === 'self-match'),
     'and a ban that matches the migration own text');
+  // The exact-substring half is proven the same way: one extra space breaks a
+  // `strpos` anchor while leaving every regular expression anchor matching. The
+  // first occurrence is the function body; the assertion's own copy is later.
+  const substringBroken = migration.replace(
+    'bound_authority_fingerprint, linked_public_approval_id,',
+    'bound_authority_fingerprint,  linked_public_approval_id,');
+  assert.notEqual(substringBroken, migration, 'the exact-substring probe landed');
+  assert.ok(simulateSelfAssertions(substringBroken).findings.some((f) => f.kind === 'unmatched-anchor'),
+    'and an exact substring anchor that stopped matching');
 });
 
 test('both fail-closed seams are honest about being unimplemented and manufacture nothing', () => {
@@ -398,6 +445,48 @@ test('ONE human consent act writes both immutable evidence rows and bypasses nei
     'it activates the reserved shapes explicitly');
   assert.ok(bridge.includes('descriptor.descriptor_digest'),
     'and the bounded public derivative of a Replay is its SANITIZED descriptor');
+});
+
+test('an approval retry is judged against the WHOLE immutable request and answers with what it committed', () => {
+  const body = bodyOf(APPROVE);
+  const occurrences = (text, needle) => text.split(needle).length - 1;
+  // A Public consent act names TWO identities. Comparing only the package and the
+  // human would welcome a materially different request as an equivalent retry.
+  assert.ok(occurrences(body, 'committed.linked_public_approval_id IS NOT DISTINCT FROM p_public_approval_id') >= 2,
+    'BOTH idempotency passes - before the lock and again under it - compare the linked Public identity');
+  assert.ok(occurrences(body, 'committed.linked_public_approval_id, committed.approved_at') >= 2,
+    'and both answer with the ORIGINAL committed Public identity and the ORIGINAL instant');
+  assert.ok(!body.includes('committed.bound_authority_fingerprint, p_public_approval_id'),
+    'never with the identity the retry itself supplied');
+  assert.ok(!body.includes('WHERE pa.id = p_public_approval_id'),
+    'and never with an identity re-read from current state');
+  assert.ok(body.includes('bound_authority_fingerprint, linked_public_approval_id')
+    && body.includes('linked_public_manifest_version_id, approved_at'),
+  'the Replay evidence row records the whole request, including the exact Public identity');
+  assert.ok(body.indexOf('INSERT INTO public.publication_manifest_approvals')
+    < body.indexOf('INSERT INTO public.replay_distribution_approvals'),
+  'and the canonical Public row exists before the Replay row names it under a foreign key');
+  assert.ok(bodyOf(WITHDRAW).includes('linked_approval := approval.linked_public_approval_id'),
+    'a withdrawal takes back the EXACT Public approval that act created, not one found by searching');
+  // The durable half: the wrong shapes are UNREPRESENTABLE, not merely unwritten.
+  for (const needle of [
+    'CONSTRAINT replay_distribution_approvals_linked_shape_check CHECK (',
+    'CONSTRAINT replay_distribution_approvals_linked_key UNIQUE (linked_public_approval_id)',
+    'CONSTRAINT replay_distribution_approvals_linked_public_fk',
+    'ADD CONSTRAINT replay_distribution_approvals_linked_bridge_fk',
+    'CONSTRAINT replay_public_distribution_artifacts_manifest_key',
+  ]) {
+    assert.ok(partA.includes(needle), `0104 defines ${needle}`);
+  }
+  assert.ok(partA.includes("(destination_action = 'PUBLISH_TO_PUBLIC_WORLD'\n            AND linked_public_approval_id IS NOT NULL AND linked_public_manifest_version_id IS NOT NULL)")
+    && partA.includes("(destination_action <> 'PUBLISH_TO_PUBLIC_WORLD'\n            AND linked_public_approval_id IS NULL AND linked_public_manifest_version_id IS NULL)"),
+  'a Public consent must name its Public identity and a non-Public consent must name none: both directions');
+  assert.ok(partA.includes('FOREIGN KEY (linked_public_approval_id, linked_public_manifest_version_id, approver_user_id)')
+    && partA.includes('REFERENCES public.publication_manifest_approvals (id, manifest_version_id, approver_user_id)'),
+  'the linked Public consent is the SAME human, through ONE composite key rather than by convention');
+  assert.ok(partA.includes('FOREIGN KEY (distribution_package_version_id, linked_public_manifest_version_id)')
+    && partA.includes('REFERENCES public.replay_public_distribution_artifacts'),
+  'and it belongs to THIS package own Public bridge, so a link can never float to another');
 });
 
 test('Replay is always the first lock and the CW2-08 prerequisite is always the last gate', () => {
@@ -620,6 +709,10 @@ test('the 0105 verifier RUNS the scenarios it claims, through the permanent aggr
     'X32 an Experience that is not publicly visible serves nothing',
     'X33 a Public viewer gains no source access and no Replay creation authority',
     'X34 no caller can author the required set, the approval principal or a clearance',
+    'X35 an equivalent Public retry returns the ORIGINAL committed Public identity',
+    'X36 the same Replay approval id with a DIFFERENT Public identity conflicts',
+    'X37 a Public retry cannot drop the Public identity it committed',
+    'X38 a non-Public consent cannot grow a Public identity on retry',
   ]) {
     assert.ok(verifier.includes(`report.isolated('${scenario}'`),
       `the 0105 verifier RUNS the scenario: ${scenario}`);
@@ -628,6 +721,7 @@ test('the 0105 verifier RUNS the scenarios it claims, through the permanent aggr
     'C01 a withdrawal racing the distribution commit blocks the stale commit',
     'C02 a source change racing the distribution commit blocks the stale commit',
     'C03 two competing distribution commands converge on ONE winner',
+    'C04 competing Public consent requests converge on ONE immutable consent',
   ]) {
     assert.ok(verifier.includes(`report.section('${race}'`), `the 0105 verifier RUNS the race: ${race}`);
   }
@@ -830,6 +924,28 @@ test('the contracts are not vacuous: every deliberate weakening of I-06C is refu
       ['the human consent act stops writing the canonical Public evidence row', M105,
         '      INSERT INTO public.publication_manifest_approvals\n        (id, manifest_version_id, approver_user_id, bound_authority_fingerprint, approved_at)\n      VALUES (p_public_approval_id, bridge.public_manifest_version_id, u, public_fingerprint, instant);',
         '      PERFORM 1;'],
+      // --- the approval retry stops binding the whole immutable request
+      ['the pre-lock retry stops binding the Public identity it committed', M105,
+        '  -- from current state: an already-committed command answers with what it did.\n  SELECT * INTO committed FROM public.replay_distribution_approvals a WHERE a.id = p_approval_id;\n  IF FOUND THEN\n    IF committed.distribution_package_version_id = p_distribution_package_version_id\n       AND committed.approver_user_id = u\n       AND committed.linked_public_approval_id IS NOT DISTINCT FROM p_public_approval_id THEN',
+        '  -- from current state: an already-committed command answers with what it did.\n  SELECT * INTO committed FROM public.replay_distribution_approvals a WHERE a.id = p_approval_id;\n  IF FOUND THEN\n    IF committed.distribution_package_version_id = p_distribution_package_version_id\n       AND committed.approver_user_id = u THEN'],
+      ['the under-lock retry stops binding the Public identity, so a racing loser is welcomed', M105,
+        '  -- conflict, rather than the second one being welcomed as an equivalent retry.\n  SELECT * INTO committed FROM public.replay_distribution_approvals a WHERE a.id = p_approval_id;\n  IF FOUND THEN\n    IF committed.distribution_package_version_id = p_distribution_package_version_id\n       AND committed.approver_user_id = u\n       AND committed.linked_public_approval_id IS NOT DISTINCT FROM p_public_approval_id THEN',
+        '  -- conflict, rather than the second one being welcomed as an equivalent retry.\n  SELECT * INTO committed FROM public.replay_distribution_approvals a WHERE a.id = p_approval_id;\n  IF FOUND THEN\n    IF committed.distribution_package_version_id = p_distribution_package_version_id\n       AND committed.approver_user_id = u THEN'],
+      ['the retry answers with the identity it was handed instead of the one it committed', M105,
+        '                          committed.bound_authority_fingerprint,\n                          committed.linked_public_approval_id, committed.approved_at;\n      RETURN;\n    END IF;\n    RAISE EXCEPTION \'REPLAY_DISTRIBUTION_COMMAND_ID_CONFLICT\' USING ERRCODE=\'23505\';\n  END IF;\n\n  -- Only enough of the immutable package is pre-read',
+        '                          committed.bound_authority_fingerprint, p_public_approval_id,\n                          committed.approved_at;\n      RETURN;\n    END IF;\n    RAISE EXCEPTION \'REPLAY_DISTRIBUTION_COMMAND_ID_CONFLICT\' USING ERRCODE=\'23505\';\n  END IF;\n\n  -- Only enough of the immutable package is pre-read'],
+      ['the consent act stops recording the Public identity on the Replay evidence', M105,
+        '       bound_authority_fingerprint, linked_public_approval_id,\n       linked_public_manifest_version_id, approved_at)',
+        '       bound_authority_fingerprint, approved_at)'],
+      ['a Public consent may record no linked Public identity at all', M104,
+        "        (destination_action = 'PUBLISH_TO_PUBLIC_WORLD'\n            AND linked_public_approval_id IS NOT NULL AND linked_public_manifest_version_id IS NOT NULL)",
+        "        (destination_action = 'PUBLISH_TO_PUBLIC_WORLD')"],
+      ['the linked Public consent stops having to be the SAME human', M104,
+        '        FOREIGN KEY (linked_public_approval_id, linked_public_manifest_version_id, approver_user_id)\n        REFERENCES public.publication_manifest_approvals (id, manifest_version_id, approver_user_id)',
+        '        FOREIGN KEY (linked_public_approval_id)\n        REFERENCES public.publication_manifest_approvals (id)'],
+      ['a linked Public consent may float to another package own Public package', M104,
+        '        FOREIGN KEY (distribution_package_version_id, linked_public_manifest_version_id)\n        REFERENCES public.replay_public_distribution_artifacts\n                   (distribution_package_version_id, public_manifest_version_id) ON DELETE RESTRICT;',
+        '        FOREIGN KEY (linked_public_manifest_version_id)\n        REFERENCES public.publication_package_manifest_versions (id) ON DELETE RESTRICT;'],
     ];
     for (const [label, file, from, to] of regressions) {
       const mirror = buildMirror();

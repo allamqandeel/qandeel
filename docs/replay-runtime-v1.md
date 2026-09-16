@@ -1019,6 +1019,26 @@ canonical relation, with the canonical composite key into the canonical rightsho
 canonical Public authority fingerprint. A withdrawal takes back both halves the same way, through the
 frozen `withdraw_publication_approval_v1`.
 
+Because that one act names TWO identities, the committed evidence records BOTH. The exact linked
+Public approval and its exact manifest version are columns of the Replay approval row, so the
+idempotency key is the whole immutable request rather than the package and the human:
+
+```text
+Public destination      linked Public approval NOT NULL, its exact manifest version NOT NULL
+every other destination both NULL
+equivalent retry        ALREADY_APPROVED with the ORIGINAL linked identity, fingerprint and instant
+same id, moved/dropped/added Public identity   REPLAY_DISTRIBUTION_COMMAND_ID_CONFLICT, writes nothing
+```
+
+The link is structural on three axes: a `CHECK` makes the other two combinations of destination and
+link unrepresentable; one composite foreign key onto the frozen `0094` exact-identity key proves the
+canonical Public row is the SAME human's; a second onto the bridge's own `(package, manifest)`
+candidate key proves it belongs to THIS package's Public package and can never float to another; and
+a `UNIQUE (linked_public_approval_id)` means one canonical Public approval belongs to at most one
+Replay consent act. Because the Replay row now names the Public row under a foreign key, the Public
+half is written FIRST inside the act, and the withdrawal takes back exactly the approval this act
+created instead of searching the manifest for one belonging to the same human.
+
 ## 44. Public serving, and what a viewer does not get
 
 `resolve_public_replay_artifact_v1(audience_safe_reference, viewer)` composes the ONE canonical

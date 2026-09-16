@@ -1498,16 +1498,26 @@ BEGIN
     RAISE EXCEPTION 'REPLAY_DISTRIBUTION_COMMAND_INVALID' USING ERRCODE='22023';
   END IF;
 
-  -- DURABLE IDEMPOTENCY, FIRST PASS: an approval IS its own immutable record.
+  -- DURABLE IDEMPOTENCY, FIRST PASS: an approval IS its own immutable record, and
+  -- that record is the WHOLE immutable request. A consent act to the Public World
+  -- names TWO identities - the Replay approval and the exact canonical Public
+  -- approval - so an equivalent retry is one that names both the same. A retry
+  -- that keeps the Replay approval id and moves, drops or adds the Public identity
+  -- is a DIFFERENT request under an already-spent command id, and the only honest
+  -- answer to that is the command conflict.
+  --
+  -- The answer returned is the one THIS ROW committed, read from the row itself.
+  -- It is never recomposed from the retry's own arguments and never re-derived
+  -- from current state: an already-committed command answers with what it did.
   SELECT * INTO committed FROM public.replay_distribution_approvals a WHERE a.id = p_approval_id;
   IF FOUND THEN
     IF committed.distribution_package_version_id = p_distribution_package_version_id
-       AND committed.approver_user_id = u THEN
+       AND committed.approver_user_id = u
+       AND committed.linked_public_approval_id IS NOT DISTINCT FROM p_public_approval_id THEN
       RETURN QUERY SELECT 'ALREADY_APPROVED'::text, committed.id,
                           committed.distribution_package_version_id, committed.approver_user_id,
                           committed.bound_authority_fingerprint,
-                          (SELECT pa.id FROM public.publication_manifest_approvals pa
-                            WHERE pa.id = p_public_approval_id), committed.approved_at;
+                          committed.linked_public_approval_id, committed.approved_at;
       RETURN;
     END IF;
     RAISE EXCEPTION 'REPLAY_DISTRIBUTION_COMMAND_ID_CONFLICT' USING ERRCODE='23505';
@@ -1534,14 +1544,21 @@ BEGIN
     RAISE EXCEPTION 'REPLAY_DISTRIBUTION_CONTRADICTORY_STATE' USING ERRCODE='P0001';
   END IF;
 
+  -- DURABLE IDEMPOTENCY, SECOND PASS, now under the Replay lock: the loser of a
+  -- concurrent race arrives here and must be judged against the WHOLE committed
+  -- request exactly as the first pass judges it - same comparison, same committed
+  -- answer. Two humans racing the same Replay approval id with different Public
+  -- identities therefore converge on ONE immutable consent act and ONE deterministic
+  -- conflict, rather than the second one being welcomed as an equivalent retry.
   SELECT * INTO committed FROM public.replay_distribution_approvals a WHERE a.id = p_approval_id;
   IF FOUND THEN
     IF committed.distribution_package_version_id = p_distribution_package_version_id
-       AND committed.approver_user_id = u THEN
+       AND committed.approver_user_id = u
+       AND committed.linked_public_approval_id IS NOT DISTINCT FROM p_public_approval_id THEN
       RETURN QUERY SELECT 'ALREADY_APPROVED'::text, committed.id,
                           committed.distribution_package_version_id, committed.approver_user_id,
-                          committed.bound_authority_fingerprint, p_public_approval_id,
-                          committed.approved_at;
+                          committed.bound_authority_fingerprint,
+                          committed.linked_public_approval_id, committed.approved_at;
       RETURN;
     END IF;
     RAISE EXCEPTION 'REPLAY_DISTRIBUTION_COMMAND_ID_CONFLICT' USING ERRCODE='23505';
@@ -1612,16 +1629,15 @@ BEGIN
   instant := clock_timestamp();
 
   BEGIN
-    INSERT INTO public.replay_distribution_approvals
-      (id, distribution_package_version_id, destination_action, approver_user_id,
-       bound_authority_fingerprint, approved_at)
-    VALUES (p_approval_id, p_distribution_package_version_id, package.destination_action, u,
-            derived.authority_fingerprint, instant);
-
     -- THE SAME ACT, IN THE CANONICAL PUBLIC EVIDENCE STORE. The canonical
     -- derivation supplies the Public fingerprint and the canonical composite key
     -- refuses a human the Public manifest does not require, so nothing here
     -- weakens the Public authority contract - it fulfils it once instead of twice.
+    --
+    -- This half is written FIRST, and the order is a consequence rather than a
+    -- preference: the Replay half now CARRIES the Public identity as part of its
+    -- own immutable request, under a foreign key onto the exact canonical row, so
+    -- the link can only be recorded once the row it names exists.
     IF bridge.package_item_id IS NOT NULL THEN
       SELECT pa.authority_fingerprint INTO public_fingerprint
         FROM public.derive_public_publication_authority_v1(bridge.public_manifest_version_id) pa;
@@ -1629,6 +1645,18 @@ BEGIN
         (id, manifest_version_id, approver_user_id, bound_authority_fingerprint, approved_at)
       VALUES (p_public_approval_id, bridge.public_manifest_version_id, u, public_fingerprint, instant);
     END IF;
+
+    -- THE REPLAY HALF RECORDS THE WHOLE REQUEST. For a Public destination that is
+    -- the exact linked Public approval and its exact manifest version; for every
+    -- other destination both are NULL, and the shape CHECK makes the other two
+    -- combinations unrepresentable rather than merely unwritten.
+    INSERT INTO public.replay_distribution_approvals
+      (id, distribution_package_version_id, destination_action, approver_user_id,
+       bound_authority_fingerprint, linked_public_approval_id,
+       linked_public_manifest_version_id, approved_at)
+    VALUES (p_approval_id, p_distribution_package_version_id, package.destination_action, u,
+            derived.authority_fingerprint, p_public_approval_id,
+            bridge.public_manifest_version_id, instant);
   EXCEPTION WHEN unique_violation THEN
     RAISE EXCEPTION 'REPLAY_DISTRIBUTION_COMMAND_ID_CONFLICT' USING ERRCODE='23505';
   END;
@@ -1764,10 +1792,14 @@ BEGIN
 
   -- THE SAME ACT, IN THE CANONICAL PUBLIC EVIDENCE STORE. Consent given once is
   -- taken back once, and the canonical primitive owns the Public half entirely.
+  --
+  -- The Public half is named from the LINK THE CONSENT ACT COMMITTED, not found by
+  -- searching the manifest for this human. The two coincide today, and the search
+  -- would still be wrong: a withdrawal must take back the exact approval this act
+  -- created, and never an approval that reached the same manifest another way.
   IF bridge.package_item_id IS NOT NULL THEN
-    SELECT pa.id INTO linked_approval FROM public.publication_manifest_approvals pa
-     WHERE pa.manifest_version_id = bridge.public_manifest_version_id AND pa.approver_user_id = u;
-    IF FOUND THEN
+    linked_approval := approval.linked_public_approval_id;
+    IF linked_approval IS NOT NULL THEN
       PERFORM public.withdraw_publication_approval_v1(p_public_command_id, linked_approval);
     END IF;
   END IF;
@@ -2554,6 +2586,37 @@ BEGIN
     RAISE EXCEPTION 'I-06C: an approval over a package whose authority moved must be refused as stale';
   END IF;
 
+  -- THE WHOLE IMMUTABLE REQUEST IS WHAT A RETRY IS JUDGED AGAINST. A Public
+  -- consent act names TWO identities, so comparing only the package and the human
+  -- would welcome a materially different request as an equivalent retry - and
+  -- would answer it with the retry's own Public identity rather than the one the
+  -- first act actually committed. Both passes are pinned, because the pass that
+  -- runs under the Replay lock is the one a concurrent loser arrives at.
+  IF (length(p.prosrc) - length(replace(p.prosrc,
+        'committed.linked_public_approval_id IS NOT DISTINCT FROM p_public_approval_id', '')))
+     / length('committed.linked_public_approval_id IS NOT DISTINCT FROM p_public_approval_id') < 2 THEN
+    RAISE EXCEPTION 'I-06C: an approval retry must bind the exact linked Public approval identity, before any lock and again under it';
+  END IF;
+  IF (length(p.prosrc) - length(replace(p.prosrc,
+        'committed.linked_public_approval_id, committed.approved_at', '')))
+     / length('committed.linked_public_approval_id, committed.approved_at') < 2 THEN
+    RAISE EXCEPTION 'I-06C: an already committed approval must answer with the ORIGINAL committed Public identity';
+  END IF;
+  IF strpos(p.prosrc, 'committed.bound_authority_fingerprint, p_public_approval_id') > 0
+     OR strpos(p.prosrc, 'WHERE pa.id = p_public_approval_id') > 0 THEN
+    RAISE EXCEPTION 'I-06C: an already committed approval must not recompose its answer from the retry input or from current state';
+  END IF;
+  IF strpos(p.prosrc, 'bound_authority_fingerprint, linked_public_approval_id') = 0
+     OR strpos(p.prosrc, 'linked_public_manifest_version_id, approved_at') = 0
+     OR strpos(p.prosrc, 'derived.authority_fingerprint, p_public_approval_id') = 0
+     OR strpos(p.prosrc, 'bridge.public_manifest_version_id, instant') = 0 THEN
+    RAISE EXCEPTION 'I-06C: the Replay half of the consent act must record the exact linked Public identity as part of its own immutable request';
+  END IF;
+  IF strpos(p.prosrc, 'INSERT INTO public.publication_manifest_approvals')
+     > strpos(p.prosrc, 'INSERT INTO public.replay_distribution_approvals') THEN
+    RAISE EXCEPTION 'I-06C: the canonical Public evidence must exist before the Replay half records the link that names it';
+  END IF;
+
   -- WITHDRAWAL IS APPEND-ONLY, OWN-APPROVAL ONLY, AND TAKES BACK BOTH HALVES.
   SELECT pr.prosrc INTO p FROM pg_proc pr WHERE pr.oid = withdraw_fn::regprocedure;
   IF p.prosrc !~ 'approval\.approver_user_id <> u' THEN
@@ -2565,6 +2628,9 @@ BEGIN
   END IF;
   IF p.prosrc ~ '(UPDATE|DELETE FROM) public\.replay_distribution_approvals' THEN
     RAISE EXCEPTION 'I-06C: a withdrawal must never mutate the immutable approval it withdraws';
+  END IF;
+  IF strpos(p.prosrc, 'linked_approval := approval.linked_public_approval_id') = 0 THEN
+    RAISE EXCEPTION 'I-06C: a withdrawal must take back the EXACT Public approval the consent act committed, not one found by searching the manifest';
   END IF;
 
   -- THE DISTRIBUTION COMMIT revalidates everything, in order, and the CW2-08

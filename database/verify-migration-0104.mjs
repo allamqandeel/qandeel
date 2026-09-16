@@ -27,6 +27,8 @@
 //   D19 no application role holds any privilege on any I-06C relation
 //   D20 the four additive candidate keys exist and every frozen guard survives
 //   D21 PART A writes no row and creates no writer
+//   D22 a Public consent records the exact linked Public approval, a non-Public
+//       consent records none, and neither link can float
 //
 //   f1..f3 the refused weakenings: a guard that no longer fires, an opaque
 //          reference that is an internal uuid in disguise, and a package whose
@@ -102,6 +104,16 @@ async function verifyCatalog() {
   await rt.assertExactBinding(D.APPROVALS, 'public.replay_distribution_required_approvers',
     ['distribution_package_version_id', 'approver_user_id'],
     ['distribution_package_version_id', 'approver_user_id']);
+  // D22 THE LINKED PUBLIC CONSENT IS ONE EXACT ROW, TWICE OVER: the canonical
+  // approval it names is the SAME human's, and the manifest that approval belongs
+  // to is THIS package's own Public bridge. Either half alone would let a link
+  // float - to another human's approval, or to another package's manifest.
+  await rt.assertExactBinding(D.APPROVALS, 'public.publication_manifest_approvals',
+    ['linked_public_approval_id', 'linked_public_manifest_version_id', 'approver_user_id'],
+    ['id', 'manifest_version_id', 'approver_user_id']);
+  await rt.assertExactBinding(D.APPROVALS, D.ARTIFACTS,
+    ['distribution_package_version_id', 'linked_public_manifest_version_id'],
+    ['distribution_package_version_id', 'public_manifest_version_id']);
   await rt.assertExactBinding(D.WITHDRAWALS, 'public.replay_distribution_approvals',
     ['approval_id', 'distribution_package_version_id', 'approver_user_id'],
     ['id', 'distribution_package_version_id', 'approver_user_id']);
@@ -522,6 +534,98 @@ async function verifyPublicBridge(report, f, base) {
            FROM pg_constraint c WHERE c.conrelid = $1::regclass AND c.contype = 'p'`, [D.ARTIFACTS]);
       assert.deepEqual(primary, ['package_item_id'],
         'D15 and one Public package item carries at most one Replay artifact binding');
+    });
+
+    await report.isolated('D22 a Public consent records the exact linked Public approval and it can never float', async () => {
+      // TWO Public packages over ONE manifest, because one manifest may carry two
+      // RESERVED Replay items - which is exactly the shape in which a single
+      // canonical Public approval could otherwise be claimed by two Replay consent
+      // acts. A third Public package with NO bridge, and one DOWNLOAD package.
+      const bridged = [1, 2].map((revision) =>
+        packageRow(base, { destination_action: 'PUBLISH_TO_PUBLIC_WORLD', package_revision: revision }));
+      const unbridged = packageRow(base, { destination_action: 'PUBLISH_TO_PUBLIC_WORLD', package_revision: 3 });
+      // The package revision is unique per REPLAY rather than per destination, so
+      // this fourth package takes the fourth revision rather than its own first.
+      const download = packageRow(base, { destination_action: 'DOWNLOAD', package_revision: 4 });
+      for (const row of [...bridged, unbridged, download]) {
+        await insertPackage(row);
+        await q(`INSERT INTO ${D.REQUIRED} (distribution_package_version_id, approver_user_id) VALUES ($1, $2)`,
+          [row.id, f.creator]);
+      }
+
+      const manifest = randomUUID();
+      const items = [randomUUID(), randomUUID()];
+      await q(`INSERT INTO ${T.MANIFESTS} (id, experience_id, public_world_singleton,
+                 publisher_public_identity_ref, publisher_user_id, intended_publication_action,
+                 target_audience_class, authority_readiness, prepared_authority_snapshot_version,
+                 item_count, created_at)
+               SELECT $1, $2, true, c.controller_public_identity_ref, c.controller_user_id,
+                      'PUBLISH_TO_PUBLIC_WORLD', 'PUBLIC_WORLD_AUDIENCE', 'PRIVACY_OWNERSHIP_AUTHORITY_ONLY',
+                      w.state_version, 2, clock_timestamp()
+                 FROM public.public_experience_controllers c, public.public_world_state w
+                WHERE c.experience_id = $2 AND w.singleton`, [manifest, f.experience]);
+      await q(`INSERT INTO ${T.VERSIONS} (id, experience_id, package_manifest_version_id, version_ordinal, created_at)
+               SELECT $1, $2, $3, coalesce(max(v.version_ordinal), 0) + 1, clock_timestamp()
+                 FROM ${T.VERSIONS} v WHERE v.experience_id = $2`, [randomUUID(), f.experience, manifest]);
+      for (const [index, item] of items.entries()) {
+        await q(`INSERT INTO ${T.ITEMS} (manifest_version_id, experience_id, package_item_id, item_ordinal,
+                   derivative_classification, public_body_form, public_body_digest)
+                 VALUES ($1, $2, $3, $4, 'SOURCE_CONTENT_BEARING_DERIVATIVE', 'RESERVED', $5)`,
+        [manifest, f.experience, item, index + 1, `sha256:${'1'.repeat(64)}`]);
+        await q(`INSERT INTO ${T.PROVENANCE} (package_item_id, manifest_version_id, source_class,
+                   captured_availability_state, captured_source_digest)
+                 VALUES ($1, $2, 'REPLAY_ARTIFACT', 'AVAILABLE', $3)`,
+        [item, manifest, `sha256:${'1'.repeat(64)}`]);
+        await q(`INSERT INTO ${D.ARTIFACTS} (package_item_id, public_manifest_version_id, public_experience_id,
+                   public_body_form, public_source_class, distribution_package_version_id, destination_action,
+                   replay_version_id, audience_safe_reference, created_at)
+                 VALUES ($1, $2, $3, 'RESERVED', 'REPLAY_ARTIFACT', $4, 'PUBLISH_TO_PUBLIC_WORLD', $5, $6, clock_timestamp())`,
+        [item, manifest, f.experience, bridged[index].id, bridged[index].replay_version_id,
+          bridged[index].audience_safe_reference]);
+      }
+
+      // The canonical Public consent evidence: one approval for each of two humans.
+      const publicApproval = { [f.creator]: randomUUID(), [f.stranger]: randomUUID() };
+      for (const human of [f.creator, f.stranger]) {
+        await q('INSERT INTO public.publication_manifest_required_approvers (manifest_version_id, approver_user_id) VALUES ($1, $2)',
+          [manifest, human]);
+        await q(`INSERT INTO public.publication_manifest_approvals
+                   (id, manifest_version_id, approver_user_id, bound_authority_fingerprint, approved_at)
+                 VALUES ($1, $2, $3, $4, clock_timestamp())`,
+        [publicApproval[human], manifest, human, `sha256:${'e'.repeat(64)}`]);
+      }
+
+      const approve = (row, link, linkedManifest) => q(
+        `INSERT INTO ${D.APPROVALS} (id, distribution_package_version_id, destination_action,
+           approver_user_id, bound_authority_fingerprint, linked_public_approval_id,
+           linked_public_manifest_version_id, approved_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, clock_timestamp())`,
+        [randomUUID(), row.id, row.destination_action, f.creator, `sha256:${'f'.repeat(64)}`,
+          link, linkedManifest]);
+
+      // A Public consent with no Public identity, or half of one, is UNREPRESENTABLE.
+      await rejected(() => approve(bridged[0], null, null), ['23514'], /_linked_shape_check/u);
+      await rejected(() => approve(bridged[0], publicApproval[f.creator], null), ['23514'], /_linked_shape_check/u);
+      await rejected(() => approve(bridged[0], null, manifest), ['23514'], /_linked_shape_check/u);
+      // And a DOWNLOAD consent can never grow one.
+      await rejected(() => approve(download, publicApproval[f.creator], manifest),
+        ['23514'], /_linked_shape_check/u);
+      // A link to ANOTHER human's canonical approval is refused: the two evidence
+      // rows are the same human or they are not one consent act.
+      await rejected(() => approve(bridged[0], publicApproval[f.stranger], manifest),
+        ['23503'], /_linked_public_fk/u);
+      // A link to a manifest THIS package has no bridge to cannot be recorded.
+      await rejected(() => approve(unbridged, publicApproval[f.creator], manifest),
+        ['23503'], /_linked_bridge_fk/u);
+
+      await approve(bridged[0], publicApproval[f.creator], manifest);
+      assert.equal(await count(D.APPROVALS, 'linked_public_approval_id = $1', [publicApproval[f.creator]]), 1,
+        'D22 the exact linked Public approval is recorded on the consent act that committed it');
+      // The second bridged package satisfies BOTH foreign keys with the same
+      // canonical approval - the one shape in which a Public consent could be
+      // claimed twice - and the exclusive key is what refuses it.
+      await rejected(() => approve(bridged[1], publicApproval[f.creator], manifest),
+        ['23505'], /_linked_key/u);
     });
   } finally {
     await q('ROLLBACK');

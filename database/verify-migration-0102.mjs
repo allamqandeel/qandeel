@@ -504,15 +504,21 @@ async function verifyForwardSafety(report, fixtures) {
   const { whole } = fixtures;
   await asRole('postgres');
 
-  await report.isolated('forward safety: the I-06C and I-06D additions leave the catalog proof passing', async () => {
-    await q(`CREATE TABLE public.replay_distribution_package_versions (
+  // The I-06C distribution relations are no longer hypothetical: every scenario in
+  // this verifier already runs against a schema that contains them, because the
+  // harness applies the whole migration chain from zero before this file runs. That
+  // is a stronger proof than the simulation it replaces, so this probe now
+  // simulates what is still AHEAD - a later Replay slice - and deliberately names
+  // relations no migration defines, which is exactly what makes it a probe.
+  await report.isolated('forward safety: a later Replay slice adding relations, a column and an index leaves the catalog proof passing', async () => {
+    await q(`CREATE TABLE public.replay_distribution_recall_records (
                id uuid PRIMARY KEY,
                replay_version_id uuid NOT NULL REFERENCES ${V.VERSIONS} (id) ON DELETE RESTRICT,
-               destination_class text NOT NULL, prepared_at timestamptz NOT NULL)`);
-    await q(`CREATE TABLE public.replay_distribution_approvals (
+               recall_class text NOT NULL, recalled_at timestamptz NOT NULL)`);
+    await q(`CREATE TABLE public.replay_distribution_delivery_receipts (
                id uuid PRIMARY KEY,
-               package_version_id uuid NOT NULL REFERENCES public.replay_distribution_package_versions (id) ON DELETE RESTRICT,
-               approver_user_id uuid NOT NULL, approved_at timestamptz NOT NULL)`);
+               recall_record_id uuid NOT NULL REFERENCES public.replay_distribution_recall_records (id) ON DELETE RESTRICT,
+               acknowledged_by_user_id uuid NOT NULL, acknowledged_at timestamptz NOT NULL)`);
     await q(`CREATE TABLE public.replay_source_loss_records (
                source_manifest_version_id uuid PRIMARY KEY REFERENCES ${R.MANIFESTS} (id) ON DELETE RESTRICT,
                noted_at timestamptz NOT NULL)`);

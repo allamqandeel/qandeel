@@ -32,6 +32,7 @@
 //     * X16 an approval cannot float to another package or another destination;
 //     * X17 withdrawal is append-only, own-approval only, and idempotent;
 //     * X18 MISSING, WITHDRAWN and EFFECTIVE are each derived, never counted;
+//     * X38 a non-Public consent cannot grow a Public identity on retry;
 //
 //   the distribution commit
 //     * X19 a missing approval blocks it;
@@ -59,11 +60,19 @@
 //           Replay distribution state resurrects it;
 //     * X33 a Public viewer gains no source access and no Replay creation
 //           authority from the artifact;
+//     * X35 an equivalent Public retry returns the ORIGINAL committed Public
+//           identity, the original fingerprint and the original instant;
+//     * X36 the same Replay approval id with a DIFFERENT Public identity is a
+//           deterministic conflict that writes nothing;
+//     * X37 a Public retry cannot drop the Public identity it committed;
 //
 //   concurrency, on committed state across two connections
 //     * C01 a withdrawal racing the distribution commit blocks the stale one;
 //     * C02 a source change racing the distribution commit blocks the stale one;
 //     * C03 two competing distribution commands converge on ONE winner;
+//     * C04 competing Public consent requests with the same Replay approval id and
+//           different Public identities converge on ONE immutable consent and one
+//           deterministic loser, and the equivalent concurrent retry writes nothing;
 //
 // Every scenario reports INDEPENDENTLY through the permanent aggregator and the
 // run fails ONCE at the end naming all of them.
@@ -526,6 +535,29 @@ async function verifyConsent(report, f, base) {
       assert.equal((await rt.approvalState(randomUUID())).length, 0,
         'X18 an approval that does not exist answers with zero rows, never an error');
     });
+
+    await report.isolated('X38 a non-Public consent cannot grow a Public identity on retry', async () => {
+      await actAs(f.creator);
+      const approval = randomUUID();
+      const [first] = await rt.approve({ approval, package: other.package });
+      assert.equal(first.outcome, 'REPLAY_DISTRIBUTION_APPROVED');
+      assert.equal(first.linked_public_approval_id, null,
+        'X38 a DOWNLOAD consent names no Public identity at all');
+      const [retry] = await rt.approve({ approval, package: other.package });
+      assert.equal(retry.outcome, 'ALREADY_APPROVED');
+      assert.equal(retry.linked_public_approval_id, null,
+        'X38 and the equivalent retry answers with exactly that');
+      // Compared as instants: both sides came from the SAME committed timestamptz
+      // through the same conversion, so this is exact rather than approximate.
+      assert.equal(retry.approved_at.getTime(), first.approved_at.getTime(),
+        'X38 the retry returns the ORIGINAL committed instant');
+      // The SAME command id now carrying a Public identity is a DIFFERENT request.
+      await rejected(() => rt.approve({ approval, package: other.package, publicApproval: randomUUID() }),
+        ['23505'], /REPLAY_DISTRIBUTION_COMMAND_ID_CONFLICT/u);
+      await asRole('postgres');
+      assert.equal(await count(D.APPROVALS, 'id = $1 AND linked_public_approval_id IS NULL', [approval]), 1,
+        'X38 the committed consent is untouched and still names no Public identity');
+    });
   } finally {
     await q('ROLLBACK');
   }
@@ -844,6 +876,69 @@ async function verifyPublicBridge(report, f, base) {
       assert.equal(await count(D.PACKAGES, 'replay_id <> $1', [base.replay]), 0,
         'X33 and no Replay was created from the Public artifact');
     });
+
+    // ONE CONSENT ACT NAMES TWO IDENTITIES, so an equivalent retry is one that
+    // names BOTH the same. These three scenarios are the whole request binding:
+    // the committed answer comes back, a moved identity conflicts, and a dropped
+    // one conflicts too.
+    await report.isolated('X35 an equivalent Public retry returns the ORIGINAL committed Public identity', async () => {
+      await actAs(f.creator);
+      const approval = randomUUID();
+      const publicApproval = randomUUID();
+      const [first] = await rt.approve({ approval, package: spec.package, publicApproval });
+      assert.equal(first.outcome, 'REPLAY_DISTRIBUTION_APPROVED');
+      assert.equal(first.linked_public_approval_id, publicApproval);
+      const [retry] = await rt.approve({ approval, package: spec.package, publicApproval });
+      assert.equal(retry.outcome, 'ALREADY_APPROVED');
+      assert.equal(retry.linked_public_approval_id, publicApproval,
+        'X35 the retry answers with the Public identity the first act committed');
+      assert.equal(retry.bound_authority_fingerprint, first.bound_authority_fingerprint);
+      assert.equal(retry.approving_user_id, f.creator);
+      assert.equal(retry.approved_at.getTime(), first.approved_at.getTime(),
+        'X35 and with the ORIGINAL instant, never a fresh one');
+      await asRole('postgres');
+      assert.equal(await count(D.APPROVALS, 'id = $1', [approval]), 1,
+        'X35 exactly one Replay evidence row: a retry wrote nothing');
+      assert.equal(await count(T.APPROVALS, 'id = $1', [publicApproval]), 1,
+        'X35 and exactly one canonical Public evidence row');
+    });
+
+    await report.isolated('X36 the same Replay approval id with a DIFFERENT Public identity conflicts', async () => {
+      await actAs(f.creator);
+      const approval = randomUUID();
+      const publicApproval = randomUUID();
+      await rt.approve({ approval, package: spec.package, publicApproval });
+      const intruder = randomUUID();
+      await rejected(() => rt.approve({ approval, package: spec.package, publicApproval: intruder }),
+        ['23505'], /REPLAY_DISTRIBUTION_COMMAND_ID_CONFLICT/u);
+      await asRole('postgres');
+      assert.equal(await count(T.APPROVALS, 'id = $1', [intruder]), 0,
+        'X36 the refused request wrote no Public evidence at all');
+      const [row] = await rows(`SELECT * FROM ${D.APPROVALS} WHERE id = $1`, [approval]);
+      assert.equal(row.linked_public_approval_id, publicApproval,
+        'X36 and the committed consent still names the ORIGINAL Public identity');
+      assert.equal(await count(D.APPROVALS, 'distribution_package_version_id = $1', [spec.package]), 1,
+        'X36 with exactly one consent row on the package');
+    });
+
+    await report.isolated('X37 a Public retry cannot drop the Public identity it committed', async () => {
+      await actAs(f.creator);
+      const approval = randomUUID();
+      const publicApproval = randomUUID();
+      const [first] = await rt.approve({ approval, package: spec.package, publicApproval });
+      // An already spent command id is judged against its COMMITTED request before
+      // any current state is read, so this is the command conflict rather than the
+      // shape refusal a first call with no Public identity would receive.
+      await rejected(() => rt.approve({ approval, package: spec.package }),
+        ['23505'], /REPLAY_DISTRIBUTION_COMMAND_ID_CONFLICT/u);
+      await asRole('postgres');
+      const [row] = await rows(`SELECT * FROM ${D.APPROVALS} WHERE id = $1`, [approval]);
+      assert.equal(row.linked_public_approval_id, publicApproval);
+      assert.equal(row.approved_at.getTime(), first.approved_at.getTime(),
+        'X37 nothing about the committed consent moved');
+      assert.equal(await count(T.APPROVALS, 'manifest_version_id = $1', [spec.publicManifest]), 1,
+        'X37 and the canonical Public store still holds exactly one approval');
+    });
   } finally {
     await q('ROLLBACK');
   }
@@ -883,6 +978,10 @@ async function verifyConcurrency(report, f, base) {
   const withdrawal = rt.freshPackage(base.replay, base.version, 'SHARE_EXTERNALLY');
   const sourceRace = rt.freshPackage(base.replay, base.version, 'DOWNLOAD');
   const competing = rt.freshPackage(base.replay, base.version, 'SHARE_EXTERNALLY');
+  // The Public consent race needs a COMMITTED Public package, so this one is
+  // prepared here and left unapproved: C04 is the act that first consents to it.
+  const publicRace = { ...rt.freshPackage(base.replay, base.version, 'PUBLISH_TO_PUBLIC_WORLD'),
+    ...rt.freshPublic(f.experience) };
   const approvals = { withdrawal: randomUUID(), source: randomUUID(), competing: randomUUID() };
 
   await q('BEGIN');
@@ -895,6 +994,7 @@ async function verifyConcurrency(report, f, base) {
     await rt.approve({ approval: approvals.source, package: sourceRace.package });
     await rt.prepare(competing);
     await rt.approve({ approval: approvals.competing, package: competing.package });
+    await rt.prepare(publicRace);
     await asRole('postgres');
     // BOTH seams stay simulated across the races, and both are restored below.
     await rt.simulateDistributionPrerequisites();
@@ -1002,6 +1102,67 @@ async function verifyConcurrency(report, f, base) {
         [competing.package]), 1, 'C03 and exactly one authorization record exists');
       assert.equal(await count(D.AUTHORIZATION_COMMANDS, 'distribution_package_version_id = $1',
         [competing.package]), 1, 'C03 with exactly one command history row');
+    });
+
+    await report.section('C04 competing Public consent requests converge on ONE immutable consent', async () => {
+      await q2('ROLLBACK');
+      await asRole('postgres');
+      await q('ROLLBACK');
+      const approval = randomUUID();
+      const winner = randomUUID();
+      const loser = randomUUID();
+      await q('BEGIN');
+      await actAs(f.creator);
+      await q('SELECT * FROM public.approve_replay_distribution_v1($1, $2, $3)',
+        [approval, publicRace.package, winner]);
+      await q2('BEGIN');
+      await actAs2(f.creator);
+      // The SAME Replay approval id, the same package, the same human - and a
+      // DIFFERENT Public identity. Before the request binding this arrived after
+      // the lock, found a committed row that matched on package and human, and was
+      // welcomed as an equivalent retry.
+      const second = q2('SELECT * FROM public.approve_replay_distribution_v1($1, $2, $3)',
+        [approval, publicRace.package, loser]);
+      assert.equal(await rt.stillPending(second), true,
+        'C04 the second consent waits for the Replay row the first holds');
+      await q('COMMIT');
+      let refusal = null;
+      try { await second; } catch (error) { refusal = error; }
+      assert.ok(refusal, 'C04 exactly one consent commits and the other is refused');
+      assert.equal(refusal.code, '23505');
+      assert.match(refusal.message, /REPLAY_DISTRIBUTION_COMMAND_ID_CONFLICT/u);
+      await q2('ROLLBACK');
+      await asRole('postgres');
+      assert.equal(await count(D.APPROVALS, 'id = $1 AND linked_public_approval_id = $2', [approval, winner]), 1,
+        'C04 one Replay consent row, naming the winner Public identity');
+      assert.equal(await count(T.APPROVALS, 'id = $1', [winner]), 1,
+        'C04 one canonical Public evidence row for the same act');
+      assert.equal(await count(T.APPROVALS, 'id = $1', [loser]), 0,
+        'C04 and the loser left no half-consent behind');
+
+      // THE EQUIVALENT CONCURRENT RETRY IS THE OTHER HALF: both connections name
+      // the SAME whole request, so both receive the committed answer and neither
+      // writes a second Public evidence row.
+      await q('BEGIN');
+      await actAs(f.creator);
+      await q2('BEGIN');
+      await actAs2(f.creator);
+      const call = (run) => run('SELECT * FROM public.approve_replay_distribution_v1($1, $2, $3)',
+        [approval, publicRace.package, winner]);
+      const [left, right] = await Promise.all([call(q), call(q2)]);
+      for (const [side, result] of [['first', left], ['second', right]]) {
+        assert.equal(result.rows[0].outcome, 'ALREADY_APPROVED',
+          `C04 the ${side} equivalent retry answers with the committed consent`);
+        assert.equal(result.rows[0].linked_public_approval_id, winner,
+          `C04 and the ${side} one returns the ORIGINAL Public identity`);
+      }
+      await q('COMMIT');
+      await q2('COMMIT');
+      await asRole('postgres');
+      assert.equal(await count(T.APPROVALS, 'manifest_version_id = $1', [publicRace.publicManifest]), 1,
+        'C04 exactly one human consent exists on the Public manifest, after every racer');
+      assert.equal(await count(D.APPROVALS, 'distribution_package_version_id = $1', [publicRace.package]), 1,
+        'C04 and exactly one Replay consent exists on the package');
     });
   } finally {
     await secondary.close();

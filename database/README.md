@@ -2247,6 +2247,14 @@ minted at random and a `BEFORE INSERT` guard refuses one that reproduces an inte
 own row. Four additive candidate keys are added to frozen relations, each trivially unique because
 each contains that relation's primary key.
 
+A Public consent act names two identities, so the Replay approval row records BOTH: the exact linked
+canonical Public approval and its exact manifest version. A `CHECK` makes any other combination of
+destination and link unrepresentable; one composite foreign key onto the frozen `0094` exact-identity
+key proves the linked canonical row is the SAME human's; a second onto the bridge's own
+`(package, manifest)` candidate key proves it is THIS package's Public package; and
+`UNIQUE (linked_public_approval_id)` means one canonical Public approval belongs to at most one Replay
+consent act.
+
 ### I-06C - distribution runtime, export sanitization and the Public bridge (migration 0105)
 
 `0105_replay_distribution_runtime_export_public_bridge_v1.sql` adds three typed command relations and
@@ -2264,7 +2272,13 @@ refuse rather than guess, and neither is ever reinterpreted as zero approvers or
 
 `approve_replay_distribution_v1` is ONE human consent act that writes both immutable evidence rows for
 a Public destination, so nobody is asked twice for the same payload and the canonical Public authority
-contract is fulfilled rather than bypassed. `authorize_replay_distribution_v1` revalidates the source
+contract is fulfilled rather than bypassed. Its command identity binds the WHOLE immutable request:
+both idempotency passes - before the Replay lock and again under it - compare the committed linked
+Public identity, an equivalent retry answers with what that row committed rather than with the retry's
+own arguments, and the same approval id carrying a moved, dropped or newly added Public identity is
+`REPLAY_DISTRIBUTION_COMMAND_ID_CONFLICT` and writes nothing. Because the Replay row names the Public
+row under a foreign key, the canonical Public half is written first inside the act, and a withdrawal
+takes back exactly the approval that act created. `authorize_replay_distribution_v1` revalidates the source
 through the frozen I-06A path, the required set and the authority fingerprint, every approval's
 effective state, the sanitized surface, and the CW2-08 prerequisite LAST - and then either calls the
 canonical `publish_public_experience_v1` or records `AUTHORIZED_FOR_DELIVERY`, because no transport
@@ -2280,5 +2294,5 @@ npm run verify:replay-distribution-runtime-export-public-bridge:integration
 Both need `DATABASE_URL` pointing at a FULLY migrated database and are run in CI as one reported group
 after the I-06B group. Both report every scenario independently through the permanent aggregator. The
 0105 verifier reaches past the two fail-closed seams only by replacing a seam BODY inside a
-transaction it rolls back, or - for the three committed races - by restoring it in a `finally` and
+transaction it rolls back, or - for the four committed races - by restoring it in a `finally` and
 proving the production body back byte for byte. No permissive seam is ever left installed.
