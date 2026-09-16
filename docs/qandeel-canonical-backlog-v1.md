@@ -763,6 +763,5 @@ production while the `CW2-08` prerequisite is unimplemented.
 
 **Banner state.** `I-05` has no primary canonical document of its own — the canonical Public World
 runtime documentation is [`database/README.md`](../database/README.md) — so `BG-09` has no stale banner
-to correct here, and the README's own I-05C section states the same closure and the same unresolved
-prerequisite this record does. The PR carrying `I-05C` is open and unmerged awaiting independent
-review, which is the truth at this point: independent review has not happened.
+to correct here. Independent architecture, privacy, security and database-runtime review is complete;
+this closure record is durable and intentionally carries no transient pull-request or merge-status text.
