@@ -519,6 +519,14 @@ async function verifyDraftLifecycle(f, state) {
     [[1, 1, 'TEXT_CODE_POINT_RANGE', 0, 3], [2, 2, 'WHOLE_ITEM', null, null]], 'D26 canonical chronology, with the exact anchors the caller resolved');
   assert.equal((await rows(`SELECT source_contiguous c, coverage_class k FROM ${R.SPECS} WHERE id = $1`, [reversed.selection]))[0].c, true);
   // D17 A REVISION WITH A NEW SOURCE SET IS A NEW MANIFEST VERSION.
+  //
+  // The selection count is SNAPSHOT rather than written down. Every revision
+  // above this line adds one, so a literal total here is a number this verifier
+  // itself maintains: it was right when it was written and becomes wrong the
+  // moment anyone adds a scenario earlier in the section - and the failure reads
+  // as the MIGRATION miscounting. The claim that matters is the delta.
+  const specsBefore = await count(R.SPECS, 'replay_id = $1', [spec.replay]);
+  assert.ok(specsBefore > 1, 'D17 there is already selection history for this revision to preserve');
   const remanifest = { command: randomUUID(), replay: spec.replay, expectedRevision: 3, manifest: randomUUID(), selection: randomUUID(),
     sourceClass: 'MY_WORLD', context: f.session, items: [f.userUnit], selected: [f.userUnit] };
   await rejected(() => rt.reviseDraft({ ...remanifest, items: null }), ['22023'], /REPLAY_COMMAND_INVALID/u);
@@ -528,7 +536,8 @@ async function verifyDraftLifecycle(f, state) {
   assert.equal(remanifested.composed_manifest_version_id, remanifest.manifest);
   assert.equal((await rows(`SELECT manifest_revision r, universe_complete u FROM ${R.MANIFESTS} WHERE id = $1`, [remanifest.manifest]))[0].r, 2);
   assert.equal(await count(R.MANIFESTS, 'replay_id = $1', [spec.replay]), 2, 'D28 both manifest versions remain');
-  assert.equal(await count(R.SPECS, 'replay_id = $1', [spec.replay]), 4);
+  assert.equal(await count(R.SPECS, 'replay_id = $1', [spec.replay]), specsBefore + 1,
+    'D28 exactly one new selection version, and every earlier one still stands');
   assert.deepEqual((await rt.replaySnapshot(spec.replay)).manifests[0], snapshotBefore.manifests[0], 'D28 the first manifest is byte-for-byte historical truth');
   // D24 A STRANGER CANNOT REVISE, and learns nothing; only a DRAFT is revised.
   await actAs(f.hadir);
@@ -803,8 +812,14 @@ async function verifyConcurrency(c, seam) {
     await q2('COMMIT');
     assert.equal(removed.outcome, 'MATERIAL_DELETED', 'C21 the deletion proceeds once the revision released the source');
     assert.equal((await rt.currency(bound.manifest))[0].currency_state, 'STALE', 'C21 and the committed revision is now stale, never rewritten');
-    await actAs(c.mohamed);
+    // In an EXPLICIT transaction: `rejected` holds a SAVEPOINT so a refusal
+    // cannot abort the caller, and PostgreSQL refuses SAVEPOINT outside a
+    // transaction block. The staged sections run inside the verifier's own
+    // BEGIN, but this concurrency section commits its transactions as it goes
+    // and is therefore in autocommit right here.
+    await q('BEGIN'); await actAs(c.mohamed);
     await rejected(() => rt.reviseDraft({ command: randomUUID(), replay: bound.replay, expectedRevision: 2, selection: randomUUID(), selected: [c.mohamedMaterial] }), ['40001'], /REPLAY_SOURCE_STALE/u);
+    await q('ROLLBACK');
     // C21b THE REVERSE ORDER: a deletion in flight blocks a capture, which then refuses.
     const late = randomUUID();
     await asRole('postgres');
