@@ -60,6 +60,7 @@ const { q, rows, count, actAs, asRole, rejected } = rt;
 
 const PUBLISH = 'public.publish_public_experience_v1(uuid, uuid, uuid)';
 const VISIBILITY = 'public.resolve_public_visibility_state_v1(uuid)';
+const ELIGIBILITY = 'public.derive_public_continuing_eligibility_v1(uuid)';
 const ADMISSION = 'public.resolve_public_audience_admission_v1(uuid)';
 const SERVING = 'public.resolve_public_experience_serving_v1(uuid, uuid)';
 const TRIGGER_FN = 'public.reject_public_publication_state_mutation_v1()';
@@ -99,12 +100,27 @@ async function verifyCatalog() {
     'shared_world_standard_closed_view_entitlements', 'shared_world_history_package_manifest_items']) {
     assert.ok(!publish.prosrc.includes(forbidden), `publication re-implements no Shared authorization out of ${forbidden}`);
   }
+  // The canonical visibility derivation is still the ONE serving truth and
+  // still answers exactly two states with no viewing policy. Since I-05C
+  // (migration 0098) it reaches the frozen I-05B publication binding through
+  // the ONE continuing-eligibility derivation instead of inlining it, so the
+  // binding needles are asked of that derivation - which is where they live -
+  // and this program asks the visibility resolver that it consumes it. The
+  // invariant is unchanged: PUBLISHED plus a consistent immutable publication
+  // record is still necessary, and everything else is still ONE state.
   const visibility = await rt.functionPosture(VISIBILITY);
+  const eligibility = await rt.functionPosture(ELIGIBILITY);
   for (const needle of ["current_lifecycle = 'PUBLISHED'", 'public_experience_publication_state',
-    'current_experience_version_id = s.published_experience_version_id', 'NOT_PUBLICLY_VISIBLE']) {
+    'current_experience_version_id = s.published_experience_version_id']) {
+    assert.ok(eligibility.prosrc.includes(needle), `the canonical visibility truth requires: ${needle}`);
+  }
+  for (const needle of ['derive_public_continuing_eligibility_v1', "eligibility_state = 'ELIGIBLE'",
+    'NOT_PUBLICLY_VISIBLE']) {
     assert.ok(visibility.prosrc.includes(needle), `the canonical visibility derivation requires: ${needle}`);
   }
-  assert.ok(!visibility.prosrc.includes('public_audience_policy_state'), 'object visibility reads no viewing policy');
+  for (const source of [visibility, eligibility]) {
+    assert.ok(!source.prosrc.includes('public_audience_policy_state'), 'object visibility reads no viewing policy');
+  }
   for (const fn of [PUBLISH, SEAM, VISIBILITY]) {
     for (const name of await rt.inputParameters(fn)) {
       assert.doesNotMatch(name, /approver|authority|rightsholder|owner|audience|viewer|visib|publish|lifecycle|instant|timestamp|clear|launch|safety|entitle|allow|effective|fingerprint/u,
@@ -534,8 +550,11 @@ async function verifyConcurrency(c, seam) {
 
     // C01a PUBLISH THEN WITHDRAWAL. The publication holds the Experience; the
     // withdrawal blocks; after the commit the withdrawal is recorded as truth
-    // AFTER publication, and the published version stays visible: acting on it
-    // is a later reviewed slice, never a silent I-05B decision.
+    // AFTER publication. Since I-05C (migration 0098) that recorded truth is
+    // also acted on: continuing eligibility requires every required approval to
+    // be currently EFFECTIVE, so the exact publication stops being served the
+    // instant the withdrawal commits - through canonical visibility alone, with
+    // no lifecycle row, no reconciliation and no cleanup involved.
     console.log('0095 concurrency C01a start');
     await q('BEGIN');
     await actAs(c.mohamed);
@@ -549,8 +568,13 @@ async function verifyConcurrency(c, seam) {
     const [wA] = (await withdrawing).rows;
     await q2('COMMIT');
     assert.equal(wA.outcome, 'WITHDRAWN');
-    assert.equal((await rt.visibility(exA.experience))[0].visibility_state, 'PUBLICLY_VISIBLE',
-      'C01a the publication that committed first is the truth; the later withdrawal is recorded, not silently acted on');
+    assert.equal((await rows(`SELECT current_lifecycle FROM ${T.EXPERIENCES} WHERE id = $1`, [exA.experience]))[0].current_lifecycle,
+      'PUBLISHED', 'C01a the publication that committed first is still the recorded lifecycle');
+    assert.equal(await count(T.PUBLICATION_STATE, 'experience_id = $1', [exA.experience]), 1,
+      'C01a and its immutable publication record is untouched');
+    assert.equal((await rt.visibility(exA.experience))[0].visibility_state, 'NOT_PUBLICLY_VISIBLE',
+      'C01a the later withdrawal ends effective consent, so the exact publication stops being served immediately');
+    assert.deepEqual(await rt.serving(exA.experience, c.reader), [], 'C01a and nothing is served');
     console.log('0095 concurrency C01a pass');
 
     // C01b WITHDRAWAL THEN PUBLISH: the publication blocks, then refuses.

@@ -251,7 +251,11 @@ test('0094 is registered in the toolchain, in CI as part of the I-05B group, and
   assert.match(verifier, /verifier for migration 0094/iu);
   assert.ok(workflow.includes(`if npm run ${OWN_SCRIPT}; then result_0094=PASS; else status=1; fi`),
     'the verifier runs in API CI and its failure is recorded rather than swallowed');
-  assert.ok(workflow.includes('exit "$status"'), 'the grouped I-05B step still fails the job when any of the four verifiers failed');
+  // Scoped to the I-05B step's OWN body: a later slice's grouped step ends the
+  // same way, and a whole-file check would be satisfied by that one instead.
+  const i05bStep = workflow.slice(workflow.indexOf('- name: Verify the four I-05B Public World runtime verifiers'));
+  assert.ok(i05bStep.slice(0, i05bStep.indexOf('\n      - ')).includes('exit "$status"'),
+    'the grouped I-05B step still fails the job when any of the four verifiers failed');
   assert.doesNotMatch(workflow, /^\s*continue-on-error\s*:/mu, 'no API CI step continues on error');
   const group = workflow.indexOf('Verify the four I-05B Public World runtime verifiers against real PostgreSQL as one reported group');
   const i05a = workflow.indexOf('Verify the three I-05A Public World verifiers against real PostgreSQL as one reported group');

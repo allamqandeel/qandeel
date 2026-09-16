@@ -305,6 +305,34 @@ jobs:
             printf '### I-05B real-PostgreSQL verifiers\n- 0094 = %s\n- 0095 = %s\n- 0096 = %s\n- 0097 = %s\n' "$result_0094" "$result_0095" "$result_0096" "$result_0097" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$status"
+      # The two I-05C verifiers below are NEW and share the same fixture shape and
+      # the same simulated CW2-08 clearance as the I-05B group. For the same reason
+      # that group exists they run as ONE step that executes both and fails at the
+      # end so a single run reports the whole set. Everything above stays hard-fail:
+      # a failed migration apply or ANY predecessor verifier - including the four
+      # I-05B ones - stops the job before this step. continue-on-error is not used;
+      # each exit code is captured and the step exits non-zero if any failed.
+      #
+      # 0098 proves: Verify Public continuing eligibility and canonical visibility closure against real PostgreSQL (0098 a PART A that creates no relation and writes no row at all so privacy fails closed immediately through canonical truth + ONE continuing-eligibility derivation that CONTINUES the frozen 0095 publication gates over the exact published package - the publication binding then every required approval currently EFFECTIVE through the ONE 0094 derivation still bound to the recorded fingerprint then source availability and authority through the ONE I-05A derivation then the stored rightsholder set then the exact PUBLISHER still seeing every included Shared source through the canonical I-04F entry point then Personal ownership - failing closed on every raise of a consumed derivation + a bounded INTERNAL ineligibility vocabulary of five classes that names no source World human revision or digest + the canonical visibility derivation extended additively with the frozen result shape answering exactly two states and never exposing the internal cause + a withdrawal or an owner deletion or a lost publisher source access turning serving placement discussion Public QANDEEL vitality search lens and panel dark together with no lifecycle row written + stale projections and planted vitality unable to outvote it + every public write path refusing under its own lock + a complete outward-surface census + ten refused weakenings each proven non-vacuous + withdrawal versus a public write and a rebuild that began before the disappearance)
+      # 0099 proves: Verify Public Experience disappearance runtime against real PostgreSQL (0099 exactly ONE controlled path to ABSENT_FROM_PUBLIC_WORLD with both consequential primitives delegating to it and writing no lifecycle of their own and none of them writing a serving lifecycle at all + authorized controller removal from auth.uid() with one bounded class for a stranger a content rightsholder who is not a controller and a nonexistent Experience + the exact published version bound and the manifest read from the immutable record + durable idempotency with replay cross-target refusal and ALREADY_ABSENT convergence + DRAFT and READY_FOR_REVIEW refused because they were never in the Public World + deterministic reconciliation with no auth.uid() and no control read consuming the ONE continuing-eligibility truth under the frozen I-04 source order and converging with the exact class passed straight through + every immutable historical evidence row preserved + no collateral disappearance of the stable Public Identity another Experience unrelated Shared material or Personal history + the sealed append-only disappearance record bound to ONE exact publication row through one composite restrictive foreign key onto the additive candidate key + an INTERNAL audit boundary reachable by no application role + eight refused weakenings each proven non-vacuous + publication completion versus removal duplicate removal removal versus withdrawal reconciliation versus removal and removal versus a public write)
+      - name: Verify the two I-05C Public World disappearance verifiers against real PostgreSQL as one reported group
+        run: |
+          status=0
+          result_0098=FAIL
+          result_0099=FAIL
+          echo "::group::migration 0098 - Public continuing eligibility and canonical visibility closure"
+          if npm run verify:public-continuing-eligibility-visibility-closure:integration; then result_0098=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0099 - Public Experience disappearance runtime"
+          if npm run verify:public-experience-disappearance-runtime:integration; then result_0099=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "I-05C real-PostgreSQL verifier results"
+          echo "0098 = $result_0098"
+          echo "0099 = $result_0099"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            printf '### I-05C real-PostgreSQL verifiers\n- 0098 = %s\n- 0099 = %s\n' "$result_0098" "$result_0099" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

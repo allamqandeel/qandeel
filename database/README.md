@@ -1700,3 +1700,240 @@ projection on the next rebuild without rewriting any historical post, response o
 ```sh
 npm run verify:public-vitality-search-lens-panel-projections:integration
 ```
+
+
+## I-05C - Public Disappearance, Source-Loss Enforcement and I-05 Closure v1 (migrations 0098-0099)
+
+I-05C is the final implementation slice of `I-05 - Public World Runtime`. It owns everything I-05A and
+I-05B deliberately deferred: explicit removal from the Public World, complete public disappearance,
+the final post-publication consequences of rightsholder withdrawal and source unavailability, the
+remaining I-05 race matrix, and I-05 implementation closure. It is additive: migrations 0091-0097 are
+byte-identical, every I-05C contract pins them by content, and the only two statements that touch a
+frozen relation are additive candidate keys that touch no row.
+
+**The one invariant.** If an exact published Public Experience ceases to be legitimately public for
+any I-05C-governed reason, every Public World consumer stops exposing it IMMEDIATELY through canonical
+serving truth - not after a projection rebuild, a queue, a cron, a cleanup job or a lifecycle
+reconciliation pass. That is why the slice is two migrations and in this order: `0098` is pure
+derivation and writes no row anywhere, and `0099` is the durable convergence that follows. Privacy
+therefore cannot depend on the convergence, and the split is the proof rather than the claim - after
+0098 alone a withdrawn approval or a lost source already turns every surface dark, and 0099 does not
+yet exist.
+
+### I-05C - Continuing public eligibility and canonical visibility closure (migration 0098)
+
+`0098_public_continuing_eligibility_visibility_closure_v1.sql` creates ONE derivation,
+`derive_public_continuing_eligibility_v1`, and replaces the canonical visibility derivation additively
+through `CREATE OR REPLACE` - the repository forward method - with the identical signature and the
+identical five result columns, so migration 0095 is not edited and every frozen consumer keeps reading
+the same shape. It creates no table, no trigger, no index and no policy, writes no row, grants nothing,
+and cannot write `ABSENT_FROM_PUBLIC_WORLD`.
+
+**CONTINUING PUBLIC ELIGIBILITY invents no rule.** It re-asks, of CURRENT state and over the exact
+immutable package the publication record names, exactly the gates migration 0095 asked before it
+allowed the publication:
+
+1. the frozen I-05B publication binding - lifecycle `PUBLISHED`, an immutable publication record, the
+   recorded version is the CURRENT version and its manifest is the recorded manifest;
+2. every required approval currently `EFFECTIVE` through the ONE 0094 derivation, each still bound to
+   the fingerprint the publication recorded - `MISSING`, `WITHDRAWN` and `SUPERSEDED` each refuse;
+3. every included source still available at the exact captured revision with resolved authority and
+   non-contradictory metadata, through the ONE I-05A derivation;
+4. the derived `CONTENT_RIGHTSHOLDER_SET` still equal to the stored one;
+5. every included Shared history item still visible to the exact PUBLISHER the immutable manifest
+   names, through the canonical I-04F entry point `resolve_shared_world_history_visibility_v1`;
+6. every included Personal unit still owned by that same exact publisher.
+
+The human in step 5 is read from the immutable manifest and is never a parameter, never the viewer and
+never a current Shared member: continuing eligibility is a property of the EXPERIENCE. Current Shared
+membership is never a proxy for source access or for rightsholder authority, and the derivation reads
+no membership episode, no history grant, no closed-World entitlement and no Experience control at all.
+
+**What it deliberately does not re-check, and why.** Not the CURRENT authority request fingerprint
+against the published one. Every input of that fingerprint is immutable for a published package except
+two: the derived rightsholder set, which step 4 compares exactly, and `authoritySnapshot`, the Public
+World envelope version. Migration 0092 states what that version is for in as many words - a later
+reviewed change to the Public World envelope stales an IN-FLIGHT package instead of silently applying
+to it. Turning it into a retraction of every already-published Experience would be a new Product
+policy, and I-05C invents none.
+
+**Controller authority is not a continuing-eligibility condition, and that is a finding.** Nothing in
+migrations 0091-0097 can remove, transfer or revoke a controller row: `create_public_experience_draft_v1`
+is the ONLY writer of `public_experience_controllers` in the repository and there is no counterpart.
+Controller loss therefore has no canonical producer, the frozen contracts say only that control decides
+who may ISSUE a control action, and I-05C does not invent a consequence for an event the repository
+cannot produce. Control is not content consent (CW2-04 D8), and this derivation keeps them apart by
+never reading control.
+
+**Fail closed, disclose nothing.** The derivation answers `ELIGIBLE` or `INELIGIBLE` for any non-null
+identifier, including one that names nothing, and never raises for a target it cannot find. The two
+frozen derivations it consumes DO raise, so each call is wrapped and every raise becomes an
+`INELIGIBLE` answer: the source class for the frozen `P0002`, the authority class for anything else.
+Its `ineligibility_class` is a bounded INTERNAL vocabulary of five values - `NOT_PUBLISHED`,
+`PUBLICATION_BINDING_INVALID`, `REQUIRED_APPROVAL_NOT_EFFECTIVE`, `PUBLISHED_SOURCE_NOT_AVAILABLE`,
+`PUBLICATION_AUTHORITY_INVALIDATED` - none of which names a source, a World, a Session, a human, a
+revision or a digest, and none of which ever reaches a Public surface.
+
+**Canonical visibility keeps its shape and its silence.** `resolve_public_visibility_state_v1` remains
+the ONE Public visibility truth and still answers exactly two states, so nonexistent, `DRAFT`,
+`READY_FOR_REVIEW`, never-published, `ABSENT_FROM_PUBLIC_WORLD`, source-unavailable, consent-withdrawn,
+authority-invalidated and audience-not-admitted all remain ONE bounded non-serving class outwardly. It
+still reads no viewing policy - the visibility of the OBJECT and the admission of the VIEWER are
+different gates - and it depends on no projection, so there is no cycle in which a projection's own
+write eligibility could decide whether the projection is servable. `PUBLISHED` is now necessary and no
+longer sufficient.
+
+**The complete-disappearance consumer list.** Every outward Public World surface reads that ONE
+derivation and goes dark together: `resolve_public_experience_serving_v1`,
+`resolve_public_experience_semantic_placement_v1`, `resolve_public_discussion_v1`,
+`resolve_public_qandeel_responses_v1`, `resolve_public_experience_vitality_v1`,
+`search_public_experiences_v1`, `resolve_public_lens_v1` and `resolve_public_panel_v1`. The verifier
+holds that census against the live catalog, so a NEW outward Public resolver that bypassed visibility
+could not hide from it. Every public WRITE path revalidates the same truth at execution time under its
+own lock: `post_public_discussion_v1` and `record_public_qandeel_response_v1` hold the Experience row
+`FOR UPDATE`, and `recompute_public_experience_vitality_v1` and
+`rebuild_public_experience_projection_v1` hold it `FOR SHARE`. A stale projection row or a planted
+vitality row is never an independent source of truth: the frozen readers serve a stored row only while
+it describes the CURRENTLY visible version, and a rebuild deletes the projection of an Experience that
+is not publicly visible.
+
+```sh
+npm run verify:public-continuing-eligibility-visibility-closure:integration
+```
+
+### I-05C - Public Experience disappearance runtime (migration 0099)
+
+`0099_public_experience_disappearance_runtime_v1.sql` is the durable convergence. Everything in it runs
+AFTER canonical truth has already gone dark; what it adds is that the lifecycle stops CLAIMING
+`PUBLISHED`, that the disappearance is auditable, and that the one derived relation retaining a copy of
+the public text stops retaining it. It introduces no scheduler, daemon, queue, webhook or cross-service
+event system: the reconciliation is a DB-owned deterministic primitive in the exact shape the frozen
+0097 derived-state writers already use.
+
+**The ONE controlled path.** `apply_public_experience_disappearance_v1` is the only thing in the
+repository that writes `ABSENT_FROM_PUBLIC_WORLD`. Both consequential primitives delegate to it and
+contain no lifecycle assignment of their own. It reads the exact version and manifest that disappear
+FROM the immutable publication record rather than from a parameter, refuses any predecessor state but
+`PUBLISHED` bound to its own current version, appends the transition to the frozen 0091 append-only
+lifecycle truth on ONE database-owned instant, writes the sealed evidence, and deletes the derived
+search / lens projection as defense in depth. No I-05C function writes a serving lifecycle at all, so
+nothing here reactivates an absent Experience; the frozen 0093 preparation admits `DRAFT` alone, so an
+absent Experience reaches no successor package either. Whether a reviewed republication path should
+exist is a question migrations 0091-0097 do not answer, and I-05C does not answer it by accident:
+absence is terminal here. There is deliberately no trigger refusing the value schema-wide - a guard a
+later authorized slice would have to remove is a ceiling on the roadmap - and none is needed: the
+application roles hold no privilege at all on `public_experiences`, which keeps row security on with
+zero policies, and every primitive here is executable by none of them.
+
+**Authorized removal.** `remove_public_experience_from_public_world_v1` derives the removing human from
+`auth.uid()` and requires EXPERIENCE CONTROL AUTHORITY over the exact Experience. There is no
+controller, actor, authority, basis or force parameter, and current Shared membership is never
+consulted: a content rightsholder who is not a controller cannot remove, and a controller who is not a
+rightsholder can, because removing your own Public Experience is a container act. A stranger, a
+non-controller and a nonexistent Experience receive ONE bounded class; a command identity reused
+against a different target is refused before anything about that target is read, so idempotency keys
+cannot probe either. The caller names the exact published version and the manifest is read from the
+record, so the command row binds ONE exact publication. A `DRAFT` and a `READY_FOR_REVIEW` Experience
+were never in the Public World, so there is nothing to remove from it and both are refused. A repeated
+legitimate removal converges: the same command identity replays its committed answer, and a fresh
+command against an already-absent Experience answers `ALREADY_ABSENT`.
+
+**Deterministic reconciliation.** `reconcile_public_experience_disappearance_v1` is machine state - no
+`auth.uid()`, no human, no control read - that asks the ONE continuing-eligibility truth under the
+canonical locks and converges the lifecycle to match an answer that was already true before it ran.
+Its outcomes are bounded and deterministic for the same database state: `DISAPPEARANCE_CONVERGED`,
+`STILL_ELIGIBLE`, `ALREADY_ABSENT` and `NOT_APPLICABLE`.
+
+**One vocabulary, no translation layer.** `disappearance_basis` is the authorized act plus the three
+convergeable ineligibility classes, spelled identically to 0098 so the reconciliation passes the class
+straight through: `AUTHORIZED_CONTROLLER_REMOVAL`, `REQUIRED_APPROVAL_NOT_EFFECTIVE`,
+`PUBLISHED_SOURCE_NOT_AVAILABLE`, `PUBLICATION_AUTHORITY_INVALIDATED`. `PUBLICATION_BINDING_INVALID` is
+deliberately NOT a basis: a `PUBLISHED` Experience whose binding does not hold is contradictory state
+rather than a disappearance cause, no canonical primitive can produce it, and serving is already dark
+for it - so the reconciliation reports `NOT_APPLICABLE` and writes nothing rather than inventing a
+reason. Convergence never rewrites a recorded basis: the first cause is the one the audit keeps.
+
+**Retained sealed evidence, and nothing erased.** Disappearance is zero public exposure, not a pretence
+that the event never happened internally. The version, the manifest, the items, the public bodies, the
+sealed provenance, the per-item authority, the required approver set, the approvals, the withdrawals,
+the publication record, every earlier lifecycle transition and the internal discussion, placement and
+Public QANDEEL history all survive exactly as they were, and the verifier snapshots every one of them
+before and after and proves them identical. The ONE derived row removed is the search / lens
+projection, for the same reason the frozen 0097 rebuild removes it; vitality is left exactly as 0097
+leaves it - two counts and an instant, servable only for a visible version, carrying no public content.
+The disappearance record itself is append-only for every role including the table owner, one per
+Experience, sealed, and carries no cause detail, no free text and no source identifier. It is readable
+only through `resolve_public_experience_disappearance_audit_v1`, which is INTERNAL: reading why an
+Experience disappeared is a private cause, so there is no Public or ordinary-role disappearance surface
+at all.
+
+**Exact bindings.** Both relations bind ONE exact publication row - Experience, published version and
+published manifest read from the same immutable record - through one composite restrictive foreign key
+onto an additive candidate key `(experience_id, published_experience_version_id,
+published_manifest_version_id)` that 0099 adds to the frozen 0095 record. Two independent keys would
+have admitted a disappearance naming version V1 beside the manifest of V2, or a record for an
+Experience that never published; the verifier proves both unrepresentable and proves the weakening back
+into independent keys refused AND able to admit exactly what the exact binding refuses.
+
+**Lock order.** Both primitives take a PREFIX of the canonical Public order migrations 0093 and 0095
+established - `public_world_state FOR UPDATE`, then `public_experiences FOR UPDATE`, then for the
+reconciliation the exact manifest `FOR SHARE` and the exact sources in the frozen I-04 order
+(`shared_worlds`, `shared_world_materials`, `shared_world_history_items`, `conversation_units`, all
+`FOR SHARE`) - and neither takes anything in a different relative order, so a removal, a
+reconciliation, a publication and a withdrawal queue behind one another and can never cycle. The
+removal consults no source and takes no source lock; the reconciliation consults every source through
+continuing eligibility and holds them while it decides AND while it writes, so the eligibility answer
+cannot go stale between the decision and the transition. No advisory lock, table lock, `TRUNCATE` or
+process mutex exists anywhere in I-05C.
+
+```sh
+npm run verify:public-experience-disappearance-runtime:integration
+```
+
+### I-05C - the proven race matrix
+
+Both orderings, and true concurrency on two connections with database-enforced wait bounds, are proven
+on real PostgreSQL. Publication versus withdrawal in both orders, publication versus a competing
+preparation, duplicate publication and publication versus source deletion were already proven by the
+I-05B 0095 verifier and remain proven there, with one behaviour now different: a withdrawal that
+commits after a publication no longer leaves the publication visible. I-05C adds: withdrawal versus a
+public discussion write; source loss versus a Public QANDEEL write in both orderings; a projection
+rebuild that BEGAN before the disappearance and cannot commit a newly servable stale result after it;
+publication completion versus disappearance enforcement; duplicate removal from two connections;
+removal versus withdrawal; reconciliation versus removal, where two independent ineligibility reasons
+converge on ONE absent result; and removal versus a public write. Every one resolves as one operation
+winning while the other safely refuses, or both converging to the same canonical state, or a later
+operation observing and respecting the earlier committed state. No test expects a deadlock, and none
+occurs.
+
+One race resolves by design rather than by blocking, and the verifier proves the honest outcome: the
+frozen 0096 writers take the Experience row and no Shared lock, because they consume no source, so a
+public write that commits before an owner deletion commits does land internally. It is served to
+nobody - every read path re-evaluates canonical visibility - which is exactly the frozen model: rows
+may remain internally where audit requires it, but they become unservable.
+
+### I-05C - CW2-08 status and I-05 closure
+
+The CW2-08 Safety / Launch Gate / commercial-entitlement prerequisite is UNCHANGED and still has no
+executable canonical runtime in this repository. `resolve_public_publication_prerequisites_v1` still
+answers only `NOT_EVALUATED`, the publish boundary still requires exactly `CLEARED`, and production
+publication therefore still fails closed on `PUBLIC_EXPERIENCE_LAUNCH_PREREQUISITE_UNRESOLVED` even
+when every authority gate is satisfied. `SIGNED_OUT_PUBLIC_VIEW_POLICY` is still `UNRESOLVED`, so the
+signed-out audience is still not admitted. I-05C manufactures no launch readiness: it adds no
+permissive constant, no launch-ready row and no application-role grant, and its verifiers reach
+`PUBLISHED` only by replacing the seam inside a transaction they roll back or inside a committed
+section that restores the production body and proves the restoration byte for byte.
+
+`I-05` implementation is complete: 0091-0099 leave no Public World capability that I-05A, I-05B or
+I-05C deferred to a later slice. The repository's own governance precedent permits that closure while
+the external prerequisite remains fail-closed - the I-04 closure record in
+[`docs/qandeel-canonical-backlog-v1.md`](../docs/qandeel-canonical-backlog-v1.md) records CW2-08 as a
+boundary owned by its own frozen contract rather than as an obligation of the implementing phase, and
+I-04 closed on exactly that basis. The formal register act belongs to Architecture under BG-08 and
+BG-09; the I-05 closure record this slice writes there states the same thing.
+
+**I-05 implementation closure is not launch readiness.** The Public World cannot serve anybody in
+production today, and saying so is the point: publication fails closed, the signed-out policy is
+unresolved, and every consequential primitive is executable by no application role. A later reviewed
+CW2-08 slice replaces the seam with the real gate and nothing in the publish boundary, the visibility
+truth or the disappearance runtime changes.
