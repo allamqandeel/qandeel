@@ -299,6 +299,33 @@ test('one bounded class answers every unauthorized source, and the read boundary
   const currency = code(functionBody(CURRENCY).body);
   assert.ok(currency.indexOf("'SOURCE_UNAVAILABLE'") < currency.indexOf("'SOURCE_ACCESS_LOST'"),
     'availability is reported before access');
+  // DEFENCE IN DEPTH. A source assembled from parts of two real events - a
+  // material beside another material's history item, a public ordinal belonging
+  // to a different package item - can never read CURRENT, however valid each row
+  // it names is on its own. The 0100 guard makes it unrepresentable at INSERT
+  // and this derivation refuses to bless one anyway.
+  for (const contradiction of ['m.history_item_id IS DISTINCT FROM i.shared_history_item_id',
+    'h.occurred_at IS DISTINCT FROM i.shared_occurred_at',
+    'm.material_kind IS DISTINCT FROM i.shared_material_kind',
+    'it.item_ordinal IS DISTINCT FROM i.public_item_ordinal',
+    'it.derivative_classification IS DISTINCT FROM i.public_derivative_classification',
+    "'SOURCE_CONTRADICTORY'"]) {
+    assert.ok(currency.includes(contradiction), `source currency refuses a binding that is not one row: ${contradiction}`);
+  }
+  // As a CONTIGUOUS predicate over the manifest's own items: a shape check,
+  // because a substring survives being disabled in place with `false AND`.
+  assert.match(currency, /WHERE i\.manifest_version_id = manifest\.id\s*\n\s*AND \(m\.id IS NULL OR h\.id IS NULL\s*\n\s*OR m\.history_item_id IS DISTINCT FROM i\.shared_history_item_id/u,
+    'the Shared contradiction check really runs over this manifest\'s items');
+  assert.match(currency, /WHERE i\.manifest_version_id = manifest\.id\s*\n\s*AND \(it\.package_item_id IS NULL\s*\n\s*OR it\.item_ordinal IS DISTINCT FROM i\.public_item_ordinal/u,
+    'and so does the Public one');
+  // And it refuses the contradiction BEFORE it answers availability, so a
+  // malformed binding is never reported as a mere deletion.
+  const contradictionAt = currency.indexOf('m.history_item_id IS DISTINCT FROM i.shared_history_item_id');
+  const availabilityAt = currency.indexOf("h.availability_state <> 'AVAILABLE'");
+  assert.ok(contradictionAt >= 0 && availabilityAt >= 0 && contradictionAt < availabilityAt,
+    'a contradictory source binding is answered before availability');
+  // The internal cause still never leaves the read boundary.
+  assert.ok(!resultColumns(COMPOSITION).includes('staleness_class'));
   assert.ok(currency.includes('SELECT r.created_by_user_id INTO creator'),
     'source currency is a property of the Replay and its creator, never of whoever asks');
   assert.ok(!currency.includes('auth.uid()'), 'and the derivation therefore reads no caller identity');
@@ -436,6 +463,8 @@ test('the self-assertions refuse to deploy a runtime that lost any of this, and 
     'the 0100 component immutability and chronology guards must still be in place',
     'the ONE frozen I-04F visibility entry point must still be reachable',
     'I-06A manufactures no launch readiness',
+    'must answer a source that is not ONE canonical row as contradictory, never as current',
+    'a contradictory source binding must be answered before availability and access',
   ]) {
     assert.ok(selfAssertions.includes(phrase), `the self-assertions refuse a runtime missing: ${phrase}`);
   }
@@ -483,7 +512,11 @@ test('the verifier proves the thirty-two scenario proofs, the refused weakenings
     'F6 a revision that commits over a stale source is a regression',
     'F7 a read boundary that discloses a source World is a regression',
     'F8 a birth that skips DRAFT is a regression',
-    'anti-vacuity', 'C18', 'C20', 'C21', 'C22', 'C23', 'SAVEPOINT forward_safety']) {
+    'anti-vacuity', 'C18', 'C20', 'C21', 'C22', 'C23', 'SAVEPOINT forward_safety',
+    // The contradictory-source proof, simulated under a rolled-back savepoint.
+    'S31', 'SOURCE_CONTRADICTORY', 'SAVEPOINT contradiction',
+    'DISABLE TRIGGER replay_source_manifest_items_one_row',
+    'S31 the same-row guard is enabled again after the simulation']) {
     assert.ok(verifier.includes(needle), `the verifier proves ${needle}`);
   }
   assert.ok(support.includes('removeCommittedReplays') && support.includes('REPLAY_IMMUTABLE'),
@@ -651,6 +684,34 @@ test('the contracts are not vacuous: every deliberate weakening of I-06A is refu
       ['a Personal source item is recorded as original audio that never existed', M100,
         "            AND original_medium = 'ORIGINAL_TEXT'\n            AND shared_world_id IS NULL AND shared_material_id IS NULL AND shared_history_item_id IS NULL",
         '            AND shared_world_id IS NULL AND shared_material_id IS NULL AND shared_history_item_id IS NULL'],
+
+      // --- the exact same-row source binding, which independent keys cannot express
+      ['the same-row guard stops proving a Personal unit and its Session Position are one row', M100,
+        '                          AND cu.session_position = NEW.personal_session_position\n                          AND cu.source_role = NEW.personal_source_role) THEN',
+        '                          AND cu.source_role = NEW.personal_source_role) THEN'],
+      ['the same-row guard stops proving a Shared material owns the history item named', M100,
+        '                        AND m.history_item_id = NEW.shared_history_item_id) THEN',
+        '                        AND m.world_id = NEW.shared_world_id) THEN'],
+      ['the same-row guard stops binding the captured Shared instant to that event', M100,
+        '                        AND h.occurred_at = NEW.shared_occurred_at) THEN',
+        '                        AND h.world_id = NEW.shared_world_id) THEN'],
+      ['the same-row guard stops binding the public ordinal to the exact package item', M100,
+        '                          AND it.item_ordinal = NEW.public_item_ordinal\n                          AND it.derivative_classification = NEW.public_derivative_classification) THEN',
+        '                          AND it.derivative_classification = NEW.public_derivative_classification) THEN'],
+      ['the same-row guard is no longer installed at all', M100,
+        'CREATE TRIGGER replay_source_manifest_items_one_row', 'CREATE TRIGGER replay_source_manifest_items_later'],
+      ['source currency blesses a binding that is not one canonical row', M101,
+        '       WHERE i.manifest_version_id = manifest.id\n         AND (m.id IS NULL OR h.id IS NULL',
+        '       WHERE false\n         AND (m.id IS NULL OR h.id IS NULL'],
+      ['source currency answers a contradiction only after availability', M101,
+        "      RETURN QUERY SELECT 'STALE'::text, 'SOURCE_CONTRADICTORY'::text; RETURN;\n    END IF;\n    IF EXISTS (\n      SELECT 1 FROM public.replay_source_manifest_items i\n        JOIN public.shared_world_history_items h ON h.id = i.shared_history_item_id\n       WHERE i.manifest_version_id = manifest.id AND h.availability_state <> 'AVAILABLE'\n    ) THEN\n      RETURN QUERY SELECT 'STALE'::text, 'SOURCE_UNAVAILABLE'::text; RETURN;\n    END IF;",
+        "      RETURN QUERY SELECT 'STALE'::text, 'SOURCE_CONTRADICTORY'::text; RETURN;\n    END IF;"],
+      ['the 0100 verifier stops cross-pairing two real Personal moments', V100,
+        "  await rejected(() => insertItem({ ...pPair, unit: f.userUnit, position: 2, role: 'ASSISTANT' }),\n    ['P0001'], /REPLAY_SOURCE_BINDING_NOT_ONE_ROW/u);",
+        '  // the Personal cross-pair proof was removed'],
+      ['the 0101 verifier stops proving a planted contradiction is never current', V101,
+        "    assert.equal(contradictory.staleness_class, 'SOURCE_CONTRADICTORY', 'S31 and it is reported as contradictory rather than merely changed');",
+        ''],
 
       // --- 0101: the runtime stops enforcing authority, truth or privacy
       ['the Shared adapter re-derives access from current membership', M101,

@@ -561,7 +561,13 @@ ALTER FUNCTION public.replay_lock_source_manifest_v1(uuid) OWNER TO postgres;
 --                         version is still its eligible current version, and
 --                         the public item still digests to the captured value
 --
---    Availability is answered before access, and a raise of the consumed
+--    A CONTRADICTION IS ANSWERED FIRST. The 0100 same-row guard makes a
+--    malformed binding unrepresentable at INSERT; this derivation additionally
+--    refuses to call one CURRENT, so a Shared material paired with another
+--    material's history item - or a public ordinal that belongs to a different
+--    package item - reads STALE even though every row it names exists.
+--
+--    Availability is then answered before access, and a raise of the consumed
 --    resolver is an access loss rather than an error a caller can read. The
 --    bounded staleness class is INTERNAL: the read boundary below returns the
 --    two-state currency only. The derived answer never rewrites history - a
@@ -608,6 +614,26 @@ BEGIN
       RETURN QUERY SELECT 'STALE'::text, 'SOURCE_CHANGED'::text; RETURN;
     END IF;
   ELSIF manifest.source_class = 'SHARED_WORLD' THEN
+    -- DEFENCE IN DEPTH, ANSWERED FIRST. The 0100 same-row guard makes a
+    -- malformed binding unrepresentable at INSERT, and this derivation refuses
+    -- to bless one anyway: a material and a history item that are each
+    -- individually valid, but are not the SAME canonical event, describe a
+    -- source that never happened. It can never read CURRENT, whatever the
+    -- availability and digests of the independently named rows say.
+    IF EXISTS (
+      SELECT 1 FROM public.replay_source_manifest_items i
+        LEFT JOIN public.shared_world_materials m
+          ON m.id = i.shared_material_id AND m.world_id = i.shared_world_id
+        LEFT JOIN public.shared_world_history_items h
+          ON h.id = i.shared_history_item_id AND h.world_id = i.shared_world_id
+       WHERE i.manifest_version_id = manifest.id
+         AND (m.id IS NULL OR h.id IS NULL
+              OR m.history_item_id IS DISTINCT FROM i.shared_history_item_id
+              OR m.material_kind IS DISTINCT FROM i.shared_material_kind
+              OR h.occurred_at IS DISTINCT FROM i.shared_occurred_at)
+    ) THEN
+      RETURN QUERY SELECT 'STALE'::text, 'SOURCE_CONTRADICTORY'::text; RETURN;
+    END IF;
     IF EXISTS (
       SELECT 1 FROM public.replay_source_manifest_items i
         JOIN public.shared_world_history_items h ON h.id = i.shared_history_item_id
@@ -645,6 +671,21 @@ BEGIN
       RETURN QUERY SELECT 'STALE'::text, 'SOURCE_ACCESS_LOST'::text; RETURN;
     END IF;
   ELSE
+    -- The same defence for the bounded Public derivative: an ordinal or a
+    -- classification that does not belong to the exact package item named is a
+    -- contradiction, never a current source.
+    IF EXISTS (
+      SELECT 1 FROM public.replay_source_manifest_items i
+        LEFT JOIN public.publication_package_manifest_items it
+          ON it.manifest_version_id = i.public_manifest_version_id
+         AND it.package_item_id = i.public_package_item_id
+       WHERE i.manifest_version_id = manifest.id
+         AND (it.package_item_id IS NULL
+              OR it.item_ordinal IS DISTINCT FROM i.public_item_ordinal
+              OR it.derivative_classification IS DISTINCT FROM i.public_derivative_classification)
+    ) THEN
+      RETURN QUERY SELECT 'STALE'::text, 'SOURCE_CONTRADICTORY'::text; RETURN;
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM public.public_experience_controllers c
                     WHERE c.experience_id = manifest.public_experience_id AND c.controller_user_id = creator) THEN
       RETURN QUERY SELECT 'STALE'::text, 'SOURCE_ACCESS_LOST'::text; RETURN;
@@ -1514,6 +1555,22 @@ BEGIN
      OR p.prosrc !~ 'captured_source_digest' OR p.prosrc !~ 'public_experience_controllers'
      OR p.prosrc !~ 'SOURCE_VERSION_NOT_CURRENT' THEN
     RAISE EXCEPTION 'I-06A: source currency must revalidate availability, integrity, creator visibility and Public version eligibility from current truth';
+  END IF;
+  -- AND IT MUST REFUSE A CONTRADICTION BEFORE IT ANSWERS ANYTHING ELSE: a
+  -- material paired with another material's history item, or a public ordinal
+  -- belonging to a different package item, can never read CURRENT.
+  IF p.prosrc !~ 'm\.history_item_id IS DISTINCT FROM i\.shared_history_item_id'
+     OR p.prosrc !~ 'h\.occurred_at IS DISTINCT FROM i\.shared_occurred_at'
+     OR p.prosrc !~ 'it\.item_ordinal IS DISTINCT FROM i\.public_item_ordinal'
+     OR p.prosrc !~ 'SOURCE_CONTRADICTORY' THEN
+    RAISE EXCEPTION 'I-06A: source currency must answer a source that is not ONE canonical row as contradictory, never as current';
+  END IF;
+  -- Ordering, through two anchors that occur exactly ONCE each, so this compares
+  -- the two checks inside the Shared branch and not the Personal branch's own
+  -- earlier use of the same class name.
+  IF strpos(p.prosrc, 'm.history_item_id IS DISTINCT FROM i.shared_history_item_id')
+     > strpos(p.prosrc, 'h.availability_state <> ''AVAILABLE''') THEN
+    RAISE EXCEPTION 'I-06A: a contradictory source binding must be answered before availability and access';
   END IF;
   IF p.prosrc ~ 'auth\.uid' THEN
     RAISE EXCEPTION 'I-06A: source currency is a property of the Replay and its creator, never of whoever asks';

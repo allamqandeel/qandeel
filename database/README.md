@@ -1995,9 +1995,25 @@ grants nothing and writes no row. Six relations:
 The manifest binds exactly one context per class - a Personal Session the creator owns, one Shared
 World, or one exact Public Experience Version - through `creation_authority_basis` pinned by CHECK to
 `PERSONAL_SOURCE_OWNERSHIP`, `SHARED_HISTORY_VISIBILITY` or `PUBLIC_EXPERIENCE_CONTROL`. Items carry a
-one-way `sha256:` digest of the exact source bytes and no content: there is no body, text, transcript,
+one-way `sha256:` canonical source-identity digest and no content: there is no body, text, transcript,
 audio reference, payload or JSON column in the slice, no foreign key to any body relation that owner
 deletion destroys, and no reference at all to `publication_package_item_provenance`.
+
+`captured_source_digest` is the canonical BODY-IDENTITY digest each substrate already defines, recorded
+so a later revision is detectable - not an independent attestation of media bytes. For Personal source
+it is sha256 over the committed unit's exact UTF-8 text; for Shared text, sha256 over the material body
+text; for a Public item, that item's own `public_body_digest`; and for a Shared `HUMAN_VOICE_NOTE` it
+follows the frozen I-04G convention of sha256 over the opaque audio object REFERENCE and the transcript,
+which does NOT attest the underlying audio media bytes and grants no media delivery capability. This
+slice does not rename or redesign that convention.
+
+Foreign keys prove each source row EXISTS; they cannot prove the several columns an item stores came
+from the SAME row. A Replay-owned `BEFORE INSERT` guard proves that, for every role including the table
+owner: a Personal id, Session, Session Position and role must be ONE `conversation_units` row; a Shared
+material id, world and `history_item_id` must be ONE material row whose history item carries the
+captured instant; and a public ordinal and classification must be read from the exact package item
+named. It acts only once both compared parents exist, so it never preempts a foreign key, and it reads
+identity and never content. No candidate key was added to any frozen predecessor table.
 
 `FULL_SOURCE` is representable only over a manifest that captured the complete authorized universe,
 selected whole and contiguously - `universe_complete` is GENERATED from the captured counts and bound

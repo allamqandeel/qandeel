@@ -79,17 +79,63 @@ authorized source context, so that "the complete authorized universe" has exactl
 `public.replay_source_manifest_items` holds its exact item set in canonical source order.
 
 An item identifies the source class, the exact object identity, the exact version or availability
-revision, the original medium, the canonical temporal anchor and a one-way digest of the exact source
-bytes. It identifies **nothing by content**. There is no body, text, transcript, audio reference,
+revision, the original medium, the canonical temporal anchor and the canonical source-identity
+digest. It identifies **nothing by content**. There is no body, text, transcript, audio reference,
 payload or JSON column anywhere in the slice, no foreign key to any body relation that owner deletion
 destroys, and no reference at all to the sealed Public provenance. A later owner deletion therefore
 makes a draft stale instead of being defeated by a private shadow copy. Preserving provenance
 identity after deletion is allowed; reconstructing deleted content is not.
 
+### What `captured_source_digest` attests, exactly
+
+It is the one-way canonical **body-identity** digest each source substrate already defines for its own
+material, recorded so that a later revision of that material is detectable. It is not an independent
+attestation of media bytes, and the wording matters per source:
+
+| Source | What the digest covers |
+| --- | --- |
+| `MY_WORLD` | `sha256` over the committed unit's exact UTF-8 text, so it does attest the source bytes |
+| `SHARED_WORLD` text | `sha256` over the exact material body text |
+| `SHARED_WORLD` voice note | the frozen I-04G convention: `sha256` over the opaque audio object **reference** and the transcript |
+| `PUBLIC_EXPERIENCE` | the bounded public item's own `public_body_digest`, read from the exact package row |
+
+For a Shared voice note the digest therefore attests the canonical identity of the voice-note body and
+**does not attest the underlying audio media bytes**, and it confers no media delivery capability.
+Whether that media can be fetched or rendered at all is `I-06B`'s question. This slice neither renames
+nor redesigns the established I-04G convention.
+
+### Structural separation, and exact same-row identity
+
 The three classes are kept apart **by structure**, not by convention: one exact-shape `CHECK` per
 relation, class-specific restrictive foreign keys, and composite foreign keys binding every item to
 its own manifest's exact source context. A Personal item cannot carry a Shared identifier, and an item
 cannot name a World, Session or package its manifest does not.
+
+Foreign keys prove that every source row an item names **exists**. They cannot prove that the several
+columns an item stores describe the **same** canonical row, because each key reaches its parent
+independently. Without more, a privileged malformed insert could pair committed unit A with unit B's
+Session Position, or Shared material M1 with material M2's history item inside one World, and describe
+a source event that never happened out of parts that each exist.
+
+A Replay-owned `BEFORE INSERT` guard closes that, for every role including the table owner:
+
+```text
+MY_WORLD           id + session_id + session_position + source_role   ONE conversation_units row
+SHARED_WORLD       material id + world_id + history_item_id           ONE shared_world_materials row
+                   history id + world_id + occurred_at                ONE shared_world_history_items row
+PUBLIC_EXPERIENCE  package item + ordinal + derivative classification ONE package item row
+```
+
+The guard fires **only when every parent it compares already exists**, so it never preempts a foreign
+key: a missing parent is still answered by the exact key that owns it, and that structural proof stays
+reachable rather than hidden behind a procedural check. It reads source identity and no content. This
+needed no change to any frozen predecessor migration, and **I-06A still alters no predecessor table**:
+no candidate key was added to `conversation_units`, `shared_world_materials` or any other frozen
+relation.
+
+Defence in depth: `derive_replay_source_manifest_currency_v1` refuses to call such a binding CURRENT
+even if one somehow existed, answering the internal class `SOURCE_CONTRADICTORY` **before** it answers
+availability or access.
 
 **Temporal anchors, never a new clock.** Migration `0072` owns the canonical temporal and no-hindsight
 constitution and this slice creates no competing clock. A Personal item binds the `0065` Session
@@ -214,6 +260,7 @@ state whether every bound source is still exactly what the manifest captured and
 available to the creator. It answers a two-state currency plus an INTERNAL bounded staleness class:
 
 ```text
+SOURCE_CONTRADICTORY        answered FIRST: the binding is not one canonical row
 SOURCE_UNAVAILABLE          availability is answered BEFORE access
 SOURCE_CHANGED
 SOURCE_ACCESS_LOST

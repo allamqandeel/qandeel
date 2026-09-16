@@ -66,10 +66,22 @@ async function constraintDefinition(table, name) {
 
 async function verifyCatalog() {
   await rt.verifyPosture({
-    triggers: [FN.COMPONENT_TRIGGER, FN.IDENTITY_TRIGGER, FN.FORWARD_TRIGGER, FN.CHRONOLOGY_TRIGGER],
+    triggers: [FN.COMPONENT_TRIGGER, FN.IDENTITY_TRIGGER, FN.FORWARD_TRIGGER, FN.CHRONOLOGY_TRIGGER, FN.ONE_ROW_TRIGGER],
     tables: OWN_TABLES,
     immutable: REPLAY_IMMUTABLE,
   });
+  // THE SAME-ROW GUARD IS INSTALLED AND ENABLED. The foreign keys prove each
+  // parent exists; only this proves the columns came from ONE row.
+  assert.equal(await rt.triggerEnabled(R.MANIFEST_ITEMS, 'replay_source_manifest_items_one_row'), true,
+    'a manifest item proves its source columns describe one canonical row');
+  const guard = (await rt.functionPosture(FN.ONE_ROW_TRIGGER)).prosrc;
+  for (const pairing of ['cu.source_role = NEW.personal_source_role', 'm.history_item_id = NEW.shared_history_item_id',
+    'h.occurred_at = NEW.shared_occurred_at', 'it.item_ordinal = NEW.public_item_ordinal',
+    'it.derivative_classification = NEW.public_derivative_classification']) {
+    assert.ok(guard.includes(pairing), `the same-row guard proves ${pairing}`);
+  }
+  assert.doesNotMatch(guard, /body_text|transcript_text|audio_object_ref|committed_text|public_text_body|provenance/u,
+    'the same-row guard reads source identity and never source content');
   for (const table of OWN_TABLES) {
     const cols = await columnsOf(table);
     assert.ok(cols.length > 0, `${table} has columns`);
@@ -188,8 +200,12 @@ async function verifyStructure(f) {
     `SELECT m.id material, m.history_item_id "historyItem", i.occurred_at "occurredAt"
        FROM public.shared_world_materials m JOIN public.shared_world_history_items i ON i.id = m.history_item_id
       WHERE m.id = $1`, [f.mohamedMaterial]);
-  const [{ packageItem }] = await rows(
-    'SELECT package_item_id "packageItem" FROM public.publication_package_manifest_items WHERE manifest_version_id = $1 ORDER BY item_ordinal LIMIT 1', [ready.manifest]);
+  // The ordinal and classification are READ from the exact package row rather
+  // than assumed, because the same-row guard binds them to it.
+  const packageRows = await rows(
+    `SELECT package_item_id "packageItem", item_ordinal "publicOrdinal", derivative_classification classification
+       FROM public.publication_package_manifest_items WHERE manifest_version_id = $1 ORDER BY item_ordinal`, [ready.manifest]);
+  const [{ packageItem, publicOrdinal, classification }] = packageRows;
 
   // S01 THE STABLE IDENTITY.
   const replay = randomUUID();
@@ -199,7 +215,11 @@ async function verifyStructure(f) {
     ['23503'], /replays_creator_fk/u);
   await q(`INSERT INTO ${R.REPLAYS} (id, created_by_user_id, current_lifecycle, created_at) VALUES ($1, $2, 'DRAFT', now())`, [replay, f.mohamed]);
   await rejected(() => q(`UPDATE ${R.REPLAYS} SET created_by_user_id = $2 WHERE id = $1`, [replay, f.hadir]), ['55000'], /REPLAY_IDENTITY_IS_IMMUTABLE/u);
-  await rejected(() => q(`UPDATE ${R.REPLAYS} SET created_at = now() WHERE id = $1`, [replay]), ['55000'], /REPLAY_IDENTITY_IS_IMMUTABLE/u);
+  // A DIFFERENT instant, arithmetically: `now()` is the TRANSACTION timestamp and
+  // would be byte-identical to the one this row was inserted with a moment ago,
+  // so the trigger would see no change and the update would legitimately succeed.
+  await rejected(() => q(`UPDATE ${R.REPLAYS} SET created_at = created_at + interval '1 second' WHERE id = $1`, [replay]),
+    ['55000'], /REPLAY_IDENTITY_IS_IMMUTABLE/u);
   // The lifecycle is deliberately NOT frozen here: I-06B owns its transitions.
   await q('SAVEPOINT s01');
   await q(`UPDATE ${R.REPLAYS} SET current_lifecycle = 'PREVIEW_READY' WHERE id = $1`, [replay]);
@@ -246,14 +266,73 @@ async function verifyStructure(f) {
   await rejected(() => insertItem({ ...sItem, material: randomUUID() }), ['23503'], /replay_source_manifest_items_shared_material_fk/u);
   await rejected(() => insertItem({ ...sItem, historyItem: randomUUID() }), ['23503'], /replay_source_manifest_items_shared_history_fk/u);
   await insertItem(sItem);
-  const qItem = { manifest: pub.id, ordinal: 1, rank: 1, sourceClass: 'PUBLIC_EXPERIENCE', packageManifest: ready.manifest, packageItem, publicOrdinal: 1, classification: 'SOURCE_CONTENT_BEARING_DERIVATIVE' };
+  const qItem = { manifest: pub.id, ordinal: 1, rank: 1, sourceClass: 'PUBLIC_EXPERIENCE', packageManifest: ready.manifest, packageItem, publicOrdinal, classification };
   await rejected(() => insertItem({ ...qItem, world: f.world }), ['23514'], /replay_source_manifest_items_shape_check/u);
   await rejected(() => insertItem({ ...qItem, packageItem: randomUUID() }), ['23503'], /replay_source_manifest_items_public_item_fk/u);
   await rejected(() => insertItem({ ...qItem, packageManifest: randomUUID() }), ['23503'], /replay_source_manifest_items_public_(context|item)_fk/u);
   await insertItem(qItem);
-  // A second item at the same ordinal or rank, or the same source twice, is refused.
-  await rejected(() => insertItem({ ...pItem, unit: f.assistantUnit, position: 2, rank: 2 }), ['23505']);
+  // A second item at the same ordinal or rank, or the same source twice, is
+  // refused. The unit carries its OWN role, or the same-row guard answers first.
+  await rejected(() => insertItem({ ...pItem, unit: f.assistantUnit, position: 2, role: 'ASSISTANT', rank: 2 }), ['23505']);
   await rejected(() => insertItem({ ...pItem, ordinal: 2 }), ['23505']);
+
+  // S09 EXACT SAME-ROW SOURCE IDENTITY.
+  //
+  // Every row named below EXISTS and every foreign key is satisfied: what is
+  // refused is describing a source event out of the parts of two real ones.
+  // These pairings are exactly what independent foreign keys cannot express,
+  // and each class gets its own manifest because a manifest carries ONE context.
+  const pairPersonal = { ...personal, id: randomUUID(), revision: 5 };
+  const pairShared = { ...shared, id: randomUUID(), revision: 6 };
+  const pairPublic = { ...pub, id: randomUUID(), revision: 7 };
+  for (const m of [pairPersonal, pairShared, pairPublic]) await insertManifest(m);
+  const pPair = { ...pItem, manifest: pairPersonal.id };
+  const sPair = { ...sItem, manifest: pairShared.id };
+  const qPair = { ...qItem, manifest: pairPublic.id };
+
+  // Committed unit A beside committed unit B's Session Position, same Session.
+  await rejected(() => insertItem({ ...pPair, unit: f.userUnit, position: 2, role: 'ASSISTANT' }),
+    ['P0001'], /REPLAY_SOURCE_BINDING_NOT_ONE_ROW/u);
+  await rejected(() => insertItem({ ...pPair, unit: f.assistantUnit, position: 1, role: 'USER' }),
+    ['P0001'], /REPLAY_SOURCE_BINDING_NOT_ONE_ROW/u);
+  // And one unit wearing another unit's role.
+  await rejected(() => insertItem({ ...pPair, unit: f.userUnit, position: 1, role: 'ASSISTANT' }),
+    ['P0001'], /REPLAY_SOURCE_BINDING_NOT_ONE_ROW/u);
+  // The well-formed row is accepted, so the refusals above are not vacuous.
+  await insertItem(pPair);
+
+  // Shared material M1 beside material M2's history item, in the SAME World.
+  const [other] = await rows(
+    `SELECT m.id material, m.history_item_id "historyItem", i.occurred_at "occurredAt"
+       FROM public.shared_world_materials m JOIN public.shared_world_history_items i ON i.id = m.history_item_id
+      WHERE m.world_id = $1 AND m.id <> $2 ORDER BY i.occurred_at LIMIT 1`, [f.world, material]);
+  assert.ok(other, 'fixture: the World carries a second material for the cross-pair proof');
+  await rejected(() => insertItem({ ...sPair, historyItem: other.historyItem, occurredAt: other.occurredAt }),
+    ['P0001'], /REPLAY_SOURCE_BINDING_NOT_ONE_ROW/u);
+  await rejected(() => insertItem({ ...sPair, material: other.material }),
+    ['P0001'], /REPLAY_SOURCE_BINDING_NOT_ONE_ROW/u);
+  // The captured instant must be the named history item's own frozen instant.
+  await rejected(() => insertItem({ ...sPair, occurredAt: other.occurredAt }),
+    ['P0001'], /REPLAY_SOURCE_BINDING_NOT_ONE_ROW/u);
+  await insertItem(sPair);
+
+  // Public package item P1 wearing package item P2's ordinal or classification.
+  if (packageRows.length > 1) {
+    await rejected(() => insertItem({ ...qPair, publicOrdinal: packageRows[1].publicOrdinal }),
+      ['P0001'], /REPLAY_SOURCE_BINDING_NOT_ONE_ROW/u);
+  }
+  await rejected(() => insertItem({ ...qPair, publicOrdinal: publicOrdinal + 100 }),
+    ['P0001'], /REPLAY_SOURCE_BINDING_NOT_ONE_ROW/u);
+  await rejected(() => insertItem({
+    ...qPair,
+    classification: classification === 'ANALYTICAL_DERIVATIVE' ? 'SOURCE_CONTENT_BEARING_DERIVATIVE' : 'ANALYTICAL_DERIVATIVE',
+  }), ['P0001'], /REPLAY_SOURCE_BINDING_NOT_ONE_ROW/u);
+  await insertItem(qPair);
+
+  // AND THE GUARD NEVER PREEMPTS A FOREIGN KEY: a parent that does not exist is
+  // still answered by the exact key that owns it - proven by the 23503 refusals
+  // in S03 above, which the guard leaves reachable by acting only once both
+  // compared parents exist.
 
   // S04 EVERY COMPONENT RELATION IS APPEND-ONLY FOR THE OWNER.
   await rejected(() => q(`UPDATE ${R.MANIFESTS} SET item_count = 2 WHERE id = $1`, [personal.id]), ['55000'], /REPLAY_COMPONENT_IS_IMMUTABLE/u);

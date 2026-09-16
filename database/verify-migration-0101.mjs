@@ -329,8 +329,51 @@ async function verifyShared(f) {
   assert.equal(fullStale.currency_state, 'STALE', 'S10 the six-item manifest that named the deleted source is stale too');
   // The immutable manifests were NOT rewritten to hide the loss.
   assert.equal(await count(R.MANIFEST_ITEMS, 'shared_material_id = $1', [f.hadirMaterial]), 2, 'S28 provenance identity survives deletion; content never lived here');
-  assert.equal((await rt.currency(closedSpec.manifest).catch((e) => [{ currency_state: e.code }]))[0].currency_state, 'P0002',
-    'a manifest that was rolled back with its savepoint no longer exists');
+  // Through `rejected`, which holds a SAVEPOINT: a bare `.catch()` swallows the
+  // JavaScript error but leaves the PostgreSQL transaction ABORTED, and every
+  // later statement then fails with 25P02 far away from the real cause.
+  await rejected(() => rt.currency(closedSpec.manifest), ['P0002'], /REPLAY_NOT_AVAILABLE/u);
+
+  // S31 A SOURCE BUILT FROM PARTS OF TWO REAL EVENTS CAN NEVER READ CURRENT.
+  //
+  // The 0100 same-row guard makes such a row unrepresentable at INSERT, so this
+  // plants one with that guard lifted inside a SAVEPOINT it rolls back, and
+  // proves the guard enabled again afterwards. Defence in depth: even if a
+  // malformed row somehow existed, currency refuses to bless it, because a
+  // material paired with ANOTHER material's history item describes a source
+  // event that never happened - while every row it names is individually valid.
+  const clean = fresh({ sourceClass: 'SHARED_WORLD', context: f.world, items: [f.mohamedMaterial] });
+  await actAs(f.mohamed);
+  assert.equal((await rt.createDraft(clean))[0].outcome, 'REPLAY_DRAFT_CREATED');
+  assert.equal((await rt.currency(clean.manifest))[0].currency_state, 'CURRENT', 'S31 the well-formed binding reads CURRENT');
+  await asRole('postgres');
+  await q('SAVEPOINT contradiction');
+  try {
+    await q(`ALTER TABLE ${R.MANIFEST_ITEMS} DISABLE TRIGGER replay_source_manifest_items_one_row`);
+    const [pair] = await rows(
+      `SELECT m.history_item_id "historyItem", i.occurred_at "occurredAt"
+         FROM public.shared_world_materials m JOIN public.shared_world_history_items i ON i.id = m.history_item_id
+        WHERE m.world_id = $1 AND m.id <> $2 AND i.availability_state = 'AVAILABLE'
+        ORDER BY i.occurred_at LIMIT 1`, [f.world, f.mohamedMaterial]);
+    assert.ok(pair, 'fixture: a second available event exists to cross-pair with');
+    await q(`INSERT INTO ${R.MANIFEST_ITEMS} (manifest_version_id, source_item_ordinal, source_universe_rank,
+               source_class, original_medium, captured_source_digest, shared_world_id, shared_material_id,
+               shared_history_item_id, shared_material_kind, shared_occurred_at, captured_availability_state,
+               captured_availability_revision)
+             VALUES ($1, 99, 99, 'SHARED_WORLD', 'ORIGINAL_TEXT', $2, $3, $4, $5, 'HUMAN_TEXT', $6, 'AVAILABLE', 1)`,
+    [clean.manifest, `sha256:${'a'.repeat(64)}`, f.world, f.mohamedMaterial, pair.historyItem, pair.occurredAt]);
+    const [contradictory] = await rt.currency(clean.manifest);
+    assert.equal(contradictory.currency_state, 'STALE', 'S31 a material paired with another event never reads CURRENT');
+    assert.equal(contradictory.staleness_class, 'SOURCE_CONTRADICTORY', 'S31 and it is reported as contradictory rather than merely changed');
+  } finally {
+    await q('ROLLBACK TO SAVEPOINT contradiction'); await q('RELEASE SAVEPOINT contradiction');
+  }
+  assert.equal(await rt.triggerEnabled(R.MANIFEST_ITEMS, 'replay_source_manifest_items_one_row'), true,
+    'S31 the same-row guard is enabled again after the simulation');
+  assert.equal((await rt.currency(clean.manifest))[0].currency_state, 'CURRENT',
+    'S31 and the untouched manifest reads CURRENT again, so the refusal above was the planted row');
+  await actAs(f.mohamed);
+
   return { shared: spec, full };
 }
 

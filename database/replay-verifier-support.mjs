@@ -46,6 +46,8 @@ export const FN = Object.freeze({
   IDENTITY_TRIGGER: 'public.replay_identity_truth_v1()',
   FORWARD_TRIGGER: 'public.replay_draft_state_forward_only_v1()',
   CHRONOLOGY_TRIGGER: 'public.replay_selection_chronology_v1()',
+  /** Proves an item's several source columns describe ONE canonical row. */
+  ONE_ROW_TRIGGER: 'public.replay_source_manifest_item_one_row_v1()',
 });
 
 /** Result columns no Replay read boundary may ever declare: source identity is never a DTO. */

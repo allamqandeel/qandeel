@@ -84,7 +84,7 @@ test('0100 is the forward migration after 0099, every frozen predecessor is byte
   for (const [, altered] of executableSql.matchAll(/ALTER TABLE (?:ONLY )?public\.(\w+)/gu)) {
     assert.ok(OWN_TABLES.includes(altered), `0100 alters only its own relations, not ${altered}`);
   }
-  assert.doesNotMatch(executableSql, /CREATE (?:OR REPLACE )?FUNCTION public\.(?!reject_replay_component_mutation_v1|replay_identity_truth_v1|replay_draft_state_forward_only_v1|replay_selection_chronology_v1)/u,
+  assert.doesNotMatch(executableSql, /CREATE (?:OR REPLACE )?FUNCTION public\.(?!reject_replay_component_mutation_v1|replay_identity_truth_v1|replay_draft_state_forward_only_v1|replay_selection_chronology_v1|replay_source_manifest_item_one_row_v1)/u,
     '0100 replaces no predecessor function');
 });
 
@@ -199,7 +199,63 @@ test('a manifest binds source truth that survives owner deletion, and never a bo
     (executableSql.match(/ON DELETE RESTRICT/gu) ?? []).length,
     'every REFERENCES in 0100 carries an explicit RESTRICT');
   assert.match(items, /CHECK \(captured_source_digest ~ '\^sha256:\[0-9a-f\]\{64\}\$'\)/u,
-    'the captured digest is a one-way digest of the exact source bytes');
+    'the captured digest is a one-way canonical source-identity digest');
+  // WHAT THE DIGEST ATTESTS IS STATED ACCURATELY. For a Shared voice note the
+  // frozen I-04G convention digests the audio object REFERENCE and transcript,
+  // so it is a body-identity digest and not an attestation of the media bytes.
+  // The migration must say so rather than call every digest one of source bytes.
+  assert.ok(!migration.includes('digest of the exact source bytes'),
+    'no comment may claim every captured digest attests the exact source bytes');
+  assert.ok(migration.includes('does NOT attest the underlying audio media bytes'),
+    'the Shared voice-note digest is documented as body identity, never media attestation');
+  assert.ok(migration.includes('sha256 over the opaque'),
+    'and the frozen I-04G convention it follows is named rather than redesigned');
+});
+
+test('an item must prove its source columns describe ONE canonical row, without preempting a foreign key', () => {
+  const guard = functionBody('replay_source_manifest_item_one_row_v1');
+  // Independent foreign keys prove each parent EXISTS and cannot prove SAMENESS:
+  // unit A could be stored beside unit B's Session Position, material M1 beside
+  // material M2's history item, package item P1 beside P2's ordinal.
+  // As CONTIGUOUS CHAINS, not as loose substrings: each column also appears in
+  // the guard's own precondition, so an individual substring check would still
+  // pass after the column was dropped from the comparison that matters.
+  for (const [what, chain] of [
+    ['a Personal unit, its Session, its Session Position and its role are ONE row',
+      /cu\.id = NEW\.personal_conversation_unit_id\s*\n\s*AND cu\.session_id = NEW\.personal_session_id\s*\n\s*AND cu\.session_position = NEW\.personal_session_position\s*\n\s*AND cu\.source_role = NEW\.personal_source_role/u],
+    ['a Shared material, its World and its own history item are ONE row',
+      /m\.id = NEW\.shared_material_id AND m\.world_id = NEW\.shared_world_id\s*\n\s*AND m\.history_item_id = NEW\.shared_history_item_id/u],
+    ['the captured Shared instant is that exact history item\'s frozen instant',
+      /h\.id = NEW\.shared_history_item_id AND h\.world_id = NEW\.shared_world_id\s*\n\s*AND h\.occurred_at = NEW\.shared_occurred_at/u],
+    ['the public ordinal and classification are read from the exact package item',
+      /it\.package_item_id = NEW\.public_package_item_id\s*\n\s*AND it\.item_ordinal = NEW\.public_item_ordinal\s*\n\s*AND it\.derivative_classification = NEW\.public_derivative_classification/u],
+  ]) {
+    assert.match(guard, chain, `the same-row guard proves ${what}`);
+  }
+  assert.match(guard, /REPLAY_SOURCE_BINDING_NOT_ONE_ROW' USING ERRCODE='P0001'/u);
+  // It acts only once BOTH compared parents exist, so a missing parent is still
+  // answered by the exact foreign key that owns it and that proof stays reachable.
+  for (const precondition of [
+    'IF EXISTS (SELECT 1 FROM public.conversation_units cu',
+    'IF EXISTS (SELECT 1 FROM public.shared_world_materials m',
+    'IF EXISTS (SELECT 1 FROM public.publication_package_manifest_items it',
+  ]) {
+    assert.ok(guard.includes(precondition), `the guard waits for both parents before it speaks: ${precondition}`);
+  }
+  // It reads source IDENTITY and never source content.
+  assert.doesNotMatch(guard, /body_text|transcript_text|audio_object_ref|committed_text|public_text_body|provenance/u,
+    'the same-row guard reads identity and never content');
+  // Installed for every role including the table owner, as a BEFORE trigger.
+  assert.match(executableSql, /CREATE TRIGGER replay_source_manifest_items_one_row\s*\n\s*BEFORE INSERT ON public\.replay_source_manifest_items\s*\n\s*FOR EACH ROW EXECUTE FUNCTION public\.replay_source_manifest_item_one_row_v1\(\)/u);
+  // And the migration refuses to deploy without it.
+  for (const phrase of ['a manifest item must prove its source columns describe ONE canonical row',
+    'a Personal item must prove its unit, Session, Session Position and role are ONE row',
+    'a Shared item must prove the material and the history item are the SAME canonical event',
+    'a Public item must read its ordinal and classification from the exact package item named',
+    'the same-row guard must act only when both parents exist, so it never preempts a foreign key',
+    'the same-row guard reads source identity and never source content']) {
+    assert.ok(selfAssertions.includes(phrase), `the self-assertions refuse a migration missing: ${phrase}`);
+  }
 });
 
 test('FULL_SOURCE is proven from captured truth and can never be asserted by a caller', () => {
@@ -273,7 +329,7 @@ test('every relation is sealed by default, and PART A creates no writer at all',
 
   // Every function 0100 owns returns `trigger` and is callable as nothing else.
   const created = [...executableSql.matchAll(/CREATE FUNCTION public\.(\w+)\(\)\s*\nRETURNS (\w+)/gu)];
-  assert.equal(created.length, 4, '0100 creates exactly four functions');
+  assert.equal(created.length, 5, '0100 creates exactly five functions');
   for (const [, name, returns] of created) {
     assert.equal(returns, 'trigger', `${name} is a trigger function and nothing else: PART A creates no writer`);
     assert.ok(executableSql.includes(`ALTER FUNCTION public.${name}() OWNER TO postgres;`), `${name} is postgres-owned`);
@@ -284,7 +340,7 @@ test('every relation is sealed by default, and PART A creates no writer at all',
       `${name} would be a writer, and PART A creates none`);
   }
   // Every function body is search_path-pinned.
-  assert.equal((executableSql.match(/LANGUAGE plpgsql(?: SECURITY DEFINER)? SET search_path=''/gu) ?? []).length, 4);
+  assert.equal((executableSql.match(/LANGUAGE plpgsql(?: SECURITY DEFINER)? SET search_path=''/gu) ?? []).length, 5);
 });
 
 test('the self-assertions refuse to deploy a migration that lost any of this', () => {
@@ -357,8 +413,17 @@ test('the verifier proves the structure from live rows and refuses the weakening
     'REPLAY_IDENTITY_IS_IMMUTABLE',
     'REPLAY_DRAFT_REVISION_MUST_ADVANCE',
     'replay_selection_spec_versions_full_source_check',
-    'replay_selection_spec_versions_complete_fk']) {
+    'replay_selection_spec_versions_complete_fk',
+    // The same-row proofs, against EXISTING valid rows deliberately cross-paired.
+    'S09 EXACT SAME-ROW SOURCE IDENTITY',
+    'REPLAY_SOURCE_BINDING_NOT_ONE_ROW']) {
     assert.ok(verifier.includes(needle), `the 0100 verifier proves ${needle}`);
+  }
+  // The cross-pairings themselves, so deleting one is not silent.
+  for (const pairing of ['unit: f.userUnit, position: 2', 'unit: f.assistantUnit, position: 1',
+    'historyItem: other.historyItem', 'material: other.material', 'occurredAt: other.occurredAt',
+    'publicOrdinal: publicOrdinal + 100']) {
+    assert.ok(verifier.includes(pairing), `the 0100 verifier cross-pairs ${pairing}`);
   }
   assert.ok(support.includes('MANIFESTS') && support.includes('SPEC_ITEMS') && support.includes('REPLAY_IMMUTABLE'),
     'the shared harness knows the Replay relations and the guards it must lift for teardown');

@@ -58,7 +58,7 @@
 -- Replay remains SOURCE-BOUND. A manifest item identifies exact authorized
 -- source truth - the source class, the exact object identity, the exact
 -- version / availability revision, the original medium, the canonical temporal
--- anchor and a one-way digest of the exact source bytes - and it identifies
+-- anchor and the canonical SOURCE IDENTITY DIGEST - and it identifies
 -- NOTHING BY CONTENT. There is no body, text, transcript, audio reference,
 -- payload or JSON column anywhere in this migration, no foreign key to a Shared
 -- body relation that owner deletion destroys, and no reference at all to the
@@ -297,8 +297,28 @@ COMMENT ON TABLE public.replay_source_manifest_versions IS
 --    `source_item_ordinal` is the canonical order inside the manifest and
 --    `source_universe_rank` is the item's rank inside the captured authorized
 --    universe - both derived by the writer, never supplied. Every item carries
---    a one-way digest of the exact source bytes and the original medium, and
---    nothing that could hold content.
+--    the original medium and the canonical SOURCE IDENTITY DIGEST, and nothing
+--    that could hold content.
+--
+--    WHAT `captured_source_digest` ATTESTS, exactly. It is the one-way CANONICAL
+--    BODY-IDENTITY digest each source substrate already defines for its own
+--    material, recorded so a later revision of that material is detectable - not
+--    an independent attestation of media bytes:
+--
+--      MY_WORLD           sha256 over the committed unit's exact UTF-8 text, so
+--                         it does attest the source bytes
+--      PUBLIC_EXPERIENCE  the bounded public item's own `public_body_digest`,
+--                         read from the exact package row
+--      SHARED_WORLD text  sha256 over the exact material body text
+--      SHARED_WORLD voice the frozen I-04G convention: sha256 over the opaque
+--                         audio object REFERENCE and the transcript. It attests
+--                         the canonical identity of the voice-note body, and it
+--                         does NOT attest the underlying audio media bytes and
+--                         grants no media delivery capability. Whether that
+--                         media can be fetched or rendered at all is I-06B's
+--                         question; I-06A binds identity and claims nothing more.
+--
+--    This slice does not rename or redesign the frozen I-04G convention.
 --
 --    The composite foreign keys onto (manifest, context) make "this item names
 --    the exact Session / World / package of its own manifest" structural, and
@@ -457,8 +477,11 @@ CREATE INDEX replay_source_manifest_items_public_source_idx
 COMMENT ON TABLE public.replay_source_manifest_items IS
   'The exact item set of one immutable Replay source manifest, in canonical '
   'source order: source class, exact object identity, exact version or '
-  'availability revision, original medium, canonical temporal anchor and a '
-  'one-way digest of the exact source bytes. It carries NO content: no body, '
+  'availability revision, original medium, canonical temporal anchor and the '
+  'canonical source-identity digest each substrate defines for its own body - '
+  'for a Shared voice note the frozen I-04G convention over the audio object '
+  'reference and transcript, which does NOT attest the media bytes and grants '
+  'no media delivery. It carries NO content: no body, '
   'text, transcript or audio reference, no foreign key to a body relation, and '
   'no reference to the sealed Public provenance. A binding here grants no '
   'access to the source it names.';
@@ -701,6 +724,95 @@ CREATE TRIGGER replay_selection_spec_items_chronology
     BEFORE INSERT ON public.replay_selection_spec_items
     FOR EACH ROW EXECUTE FUNCTION public.replay_selection_chronology_v1();
 
+-- EXACT SAME-ROW SOURCE IDENTITY.
+--
+-- The foreign keys above prove that every source row an item names EXISTS.
+-- They cannot prove that the several columns an item stores describe the SAME
+-- canonical row, because each key reaches its parent independently:
+--
+--   * `personal_conversation_unit_id` reaches conversation_units by id, while
+--     (`personal_session_id`, `personal_session_position`) reaches it by the
+--     frozen 0065 Session Position key - so unit A could be stored beside the
+--     Session Position of unit B;
+--   * (`shared_material_id`, `shared_world_id`) reaches the material and
+--     (`shared_world_id`, `shared_history_item_id`) reaches the history item -
+--     so material M1 could be stored beside history item H2 of the same World,
+--     and the material's OWN `history_item_id` would never be consulted;
+--   * (`public_manifest_version_id`, `public_package_item_id`) reaches the
+--     package item, but `public_item_ordinal` and
+--     `public_derivative_classification` are stored copies that nothing binds
+--     back to that exact row.
+--
+-- A privileged malformed INSERT could therefore describe a source event that
+-- never happened, out of parts that each exist. This guard closes that, for
+-- every role including the table owner.
+--
+-- It fires ONLY when every parent the row names already exists, so it never
+-- preempts a foreign key: a missing parent is still answered by the exact
+-- foreign key that owns it, and this trigger speaks only about SAMENESS. It
+-- reads source identity and no content: no body relation, no transcript, no
+-- audio handle and no sealed provenance is touched here.
+CREATE FUNCTION public.replay_source_manifest_item_one_row_v1()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+  IF NEW.source_class = 'MY_WORLD' THEN
+    IF EXISTS (SELECT 1 FROM public.conversation_units cu
+                WHERE cu.id = NEW.personal_conversation_unit_id)
+       AND EXISTS (SELECT 1 FROM public.conversation_units cu
+                    WHERE cu.session_id = NEW.personal_session_id
+                      AND cu.session_position = NEW.personal_session_position)
+       AND NOT EXISTS (SELECT 1 FROM public.conversation_units cu
+                        WHERE cu.id = NEW.personal_conversation_unit_id
+                          AND cu.session_id = NEW.personal_session_id
+                          AND cu.session_position = NEW.personal_session_position
+                          AND cu.source_role = NEW.personal_source_role) THEN
+      RAISE EXCEPTION 'REPLAY_SOURCE_BINDING_NOT_ONE_ROW' USING ERRCODE='P0001',
+        DETAIL='The committed unit, its Session, its Session Position and its role must all describe the SAME canonical conversation_units row: a Replay may not pair one real moment with another real moment''s temporal anchor.';
+    END IF;
+
+  ELSIF NEW.source_class = 'SHARED_WORLD' THEN
+    IF EXISTS (SELECT 1 FROM public.shared_world_materials m
+                WHERE m.id = NEW.shared_material_id AND m.world_id = NEW.shared_world_id)
+       AND EXISTS (SELECT 1 FROM public.shared_world_history_items h
+                    WHERE h.id = NEW.shared_history_item_id AND h.world_id = NEW.shared_world_id) THEN
+      -- The material's OWN history item is the only history item it has.
+      IF NOT EXISTS (SELECT 1 FROM public.shared_world_materials m
+                      WHERE m.id = NEW.shared_material_id AND m.world_id = NEW.shared_world_id
+                        AND m.history_item_id = NEW.shared_history_item_id) THEN
+        RAISE EXCEPTION 'REPLAY_SOURCE_BINDING_NOT_ONE_ROW' USING ERRCODE='P0001',
+          DETAIL='The Shared material and the history item must be the SAME canonical event: a Replay may not pair one material with another material''s history item, even inside one World.';
+      END IF;
+      -- The captured temporal anchor is that history item's frozen instant.
+      IF NOT EXISTS (SELECT 1 FROM public.shared_world_history_items h
+                      WHERE h.id = NEW.shared_history_item_id AND h.world_id = NEW.shared_world_id
+                        AND h.occurred_at = NEW.shared_occurred_at) THEN
+        RAISE EXCEPTION 'REPLAY_SOURCE_BINDING_NOT_ONE_ROW' USING ERRCODE='P0001',
+          DETAIL='The captured Shared source instant must be the frozen establishment instant of the exact history item named, never another event''s.';
+      END IF;
+    END IF;
+
+  ELSE
+    IF EXISTS (SELECT 1 FROM public.publication_package_manifest_items it
+                WHERE it.manifest_version_id = NEW.public_manifest_version_id
+                  AND it.package_item_id = NEW.public_package_item_id)
+       AND NOT EXISTS (SELECT 1 FROM public.publication_package_manifest_items it
+                        WHERE it.manifest_version_id = NEW.public_manifest_version_id
+                          AND it.package_item_id = NEW.public_package_item_id
+                          AND it.item_ordinal = NEW.public_item_ordinal
+                          AND it.derivative_classification = NEW.public_derivative_classification) THEN
+      RAISE EXCEPTION 'REPLAY_SOURCE_BINDING_NOT_ONE_ROW' USING ERRCODE='P0001',
+        DETAIL='The captured public ordinal and derivative classification must be read from the exact package item named, never from another item of the same package.';
+    END IF;
+  END IF;
+  RETURN NEW;
+END$$;
+
+ALTER FUNCTION public.replay_source_manifest_item_one_row_v1() OWNER TO postgres;
+
+CREATE TRIGGER replay_source_manifest_items_one_row
+    BEFORE INSERT ON public.replay_source_manifest_items
+    FOR EACH ROW EXECUTE FUNCTION public.replay_source_manifest_item_one_row_v1();
+
 -- ---------------------------------------------------------------------------
 -- 8. DENY-BY-DEFAULT POSTURE.
 -- ---------------------------------------------------------------------------
@@ -734,10 +846,11 @@ REVOKE ALL ON FUNCTION public.reject_replay_component_mutation_v1() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.replay_identity_truth_v1() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.replay_draft_state_forward_only_v1() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.replay_selection_chronology_v1() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.replay_source_manifest_item_one_row_v1() FROM PUBLIC;
 DO $$BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN
-  EXECUTE 'REVOKE ALL ON FUNCTION public.reject_replay_component_mutation_v1(), public.replay_identity_truth_v1(), public.replay_draft_state_forward_only_v1(), public.replay_selection_chronology_v1() FROM anon, authenticated, service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.reject_replay_component_mutation_v1(), public.replay_identity_truth_v1(), public.replay_draft_state_forward_only_v1(), public.replay_selection_chronology_v1(), public.replay_source_manifest_item_one_row_v1() FROM anon, authenticated, service_role';
 ELSE
-  EXECUTE 'REVOKE ALL ON FUNCTION public.reject_replay_component_mutation_v1(), public.replay_identity_truth_v1(), public.replay_draft_state_forward_only_v1(), public.replay_selection_chronology_v1() FROM anon, authenticated';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.reject_replay_component_mutation_v1(), public.replay_identity_truth_v1(), public.replay_draft_state_forward_only_v1(), public.replay_selection_chronology_v1(), public.replay_source_manifest_item_one_row_v1() FROM anon, authenticated';
 END IF;END$$;
 
 -- ---------------------------------------------------------------------------
@@ -935,6 +1048,47 @@ BEGIN
                      AND tg.tgname = 'replay_selection_spec_items_chronology' AND NOT tg.tgisinternal) THEN
     RAISE EXCEPTION 'I-06A: the identity truth, forward-only pointer and chronology triggers must be installed';
   END IF;
+
+  -- EXACT SAME-ROW SOURCE IDENTITY IS ENFORCED, for every role including the
+  -- table owner. The foreign keys prove each parent EXISTS; this guard proves
+  -- the several columns an item stores came from the SAME canonical row, which
+  -- no combination of independent keys can express.
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger tg WHERE tg.tgrelid = 'public.replay_source_manifest_items'::regclass
+                  AND tg.tgname = 'replay_source_manifest_items_one_row' AND NOT tg.tgisinternal
+                  AND tg.tgfoid = 'public.replay_source_manifest_item_one_row_v1'::regproc) THEN
+    RAISE EXCEPTION 'I-06A: a manifest item must prove its source columns describe ONE canonical row';
+  END IF;
+  DECLARE
+    guard text := (SELECT p.prosrc FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+                    WHERE ns.nspname = 'public' AND p.proname = 'replay_source_manifest_item_one_row_v1');
+  BEGIN
+    -- Personal: id, Session, Session Position and role from ONE committed unit.
+    IF guard !~ 'cu\.id = NEW\.personal_conversation_unit_id\s*\n\s*AND cu\.session_id = NEW\.personal_session_id\s*\n\s*AND cu\.session_position = NEW\.personal_session_position\s*\n\s*AND cu\.source_role = NEW\.personal_source_role' THEN
+      RAISE EXCEPTION 'I-06A: a Personal item must prove its unit, Session, Session Position and role are ONE row';
+    END IF;
+    -- Shared: the material's OWN history item, and that item's frozen instant.
+    IF guard !~ 'm\.history_item_id = NEW\.shared_history_item_id'
+       OR guard !~ 'h\.occurred_at = NEW\.shared_occurred_at' THEN
+      RAISE EXCEPTION 'I-06A: a Shared item must prove the material and the history item are the SAME canonical event';
+    END IF;
+    -- Public: the ordinal and classification of the exact package item named.
+    IF guard !~ 'it\.item_ordinal = NEW\.public_item_ordinal'
+       OR guard !~ 'it\.derivative_classification = NEW\.public_derivative_classification' THEN
+      RAISE EXCEPTION 'I-06A: a Public item must read its ordinal and classification from the exact package item named';
+    END IF;
+    -- IT NEVER PREEMPTS A FOREIGN KEY: each branch acts only once the parents it
+    -- compares already exist, so a missing parent is still answered by the exact
+    -- key that owns it and the structural proof stays reachable.
+    IF guard !~ 'IF EXISTS \(SELECT 1 FROM public\.conversation_units cu'
+       OR guard !~ 'IF EXISTS \(SELECT 1 FROM public\.shared_world_materials m'
+       OR guard !~ 'IF EXISTS \(SELECT 1 FROM public\.publication_package_manifest_items it' THEN
+      RAISE EXCEPTION 'I-06A: the same-row guard must act only when both parents exist, so it never preempts a foreign key';
+    END IF;
+    -- IT READS IDENTITY AND NO CONTENT.
+    IF guard ~ '(body_text|transcript_text|audio_object_ref|committed_text|public_text_body|provenance)' THEN
+      RAISE EXCEPTION 'I-06A: the same-row guard reads source identity and never source content';
+    END IF;
+  END;
 
   -- PART A CREATES NO WRITER. Every function this migration owns returns
   -- `trigger` and is callable as nothing else; the writers are migration 0101,
