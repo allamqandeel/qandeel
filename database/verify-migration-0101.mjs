@@ -350,18 +350,27 @@ async function verifyShared(f) {
   await q('SAVEPOINT contradiction');
   try {
     await q(`ALTER TABLE ${R.MANIFEST_ITEMS} DISABLE TRIGGER replay_source_manifest_items_one_row`);
-    const [pair] = await rows(
-      `SELECT m.history_item_id "historyItem", i.occurred_at "occurredAt"
-         FROM public.shared_world_materials m JOIN public.shared_world_history_items i ON i.id = m.history_item_id
-        WHERE m.world_id = $1 AND m.id <> $2 AND i.availability_state = 'AVAILABLE'
-        ORDER BY i.occurred_at LIMIT 1`, [f.world, f.mohamedMaterial]);
-    assert.ok(pair, 'fixture: a second available event exists to cross-pair with');
+    // ANOTHER material of this World, paired with the history item of the one
+    // the manifest really captured. The material must differ, or the partial
+    // unique index refuses the row before the contradiction is ever readable.
+    // `occurred_at::text` keeps the microseconds a JavaScript Date would drop.
+    const [planted] = await rows(
+      `SELECT other.id material, mine.history_item_id "historyItem", h.occurred_at::text "occurredAt"
+         FROM public.shared_world_materials mine
+         JOIN public.shared_world_history_items h ON h.id = mine.history_item_id
+         JOIN LATERAL (SELECT m2.id FROM public.shared_world_materials m2
+                         JOIN public.shared_world_history_items h2 ON h2.id = m2.history_item_id
+                        WHERE m2.world_id = mine.world_id AND m2.id <> mine.id
+                          AND m2.material_kind = 'HUMAN_TEXT' AND h2.availability_state = 'AVAILABLE'
+                        ORDER BY h2.occurred_at LIMIT 1) other ON true
+        WHERE mine.id = $1`, [f.mohamedMaterial]);
+    assert.ok(planted, 'fixture: a second available event exists to cross-pair with');
     await q(`INSERT INTO ${R.MANIFEST_ITEMS} (manifest_version_id, source_item_ordinal, source_universe_rank,
                source_class, original_medium, captured_source_digest, shared_world_id, shared_material_id,
                shared_history_item_id, shared_material_kind, shared_occurred_at, captured_availability_state,
                captured_availability_revision)
              VALUES ($1, 99, 99, 'SHARED_WORLD', 'ORIGINAL_TEXT', $2, $3, $4, $5, 'HUMAN_TEXT', $6, 'AVAILABLE', 1)`,
-    [clean.manifest, `sha256:${'a'.repeat(64)}`, f.world, f.mohamedMaterial, pair.historyItem, pair.occurredAt]);
+    [clean.manifest, `sha256:${'a'.repeat(64)}`, f.world, planted.material, planted.historyItem, planted.occurredAt]);
     const [contradictory] = await rt.currency(clean.manifest);
     assert.equal(contradictory.currency_state, 'STALE', 'S31 a material paired with another event never reads CURRENT');
     assert.equal(contradictory.staleness_class, 'SOURCE_CONTRADICTORY', 'S31 and it is reported as contradictory rather than merely changed');

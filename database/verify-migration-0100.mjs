@@ -196,8 +196,13 @@ const insertSpecItem = (spec, manifest, source, selected, anchor = 'WHOLE_ITEM',
 async function verifyStructure(f) {
   const ready = await rt.bringToReady(f, { experience: f.experience, manifest: f.manifest, version: f.version });
   await asRole('postgres');
+  // `occurred_at::text`, deliberately. The instant is `clock_timestamp()` with
+  // MICROSECOND precision, and a timestamptz read into JavaScript becomes a Date
+  // with millisecond precision - so sending it back would silently truncate it
+  // and no longer equal the frozen instant the same-row guard compares against.
+  // Production never round-trips it: the capture reads and writes it in SQL.
   const [{ material, historyItem, occurredAt }] = await rows(
-    `SELECT m.id material, m.history_item_id "historyItem", i.occurred_at "occurredAt"
+    `SELECT m.id material, m.history_item_id "historyItem", i.occurred_at::text "occurredAt"
        FROM public.shared_world_materials m JOIN public.shared_world_history_items i ON i.id = m.history_item_id
       WHERE m.id = $1`, [f.mohamedMaterial]);
   // The ordinal and classification are READ from the exact package row rather
@@ -303,7 +308,7 @@ async function verifyStructure(f) {
 
   // Shared material M1 beside material M2's history item, in the SAME World.
   const [other] = await rows(
-    `SELECT m.id material, m.history_item_id "historyItem", i.occurred_at "occurredAt"
+    `SELECT m.id material, m.history_item_id "historyItem", i.occurred_at::text "occurredAt"
        FROM public.shared_world_materials m JOIN public.shared_world_history_items i ON i.id = m.history_item_id
       WHERE m.world_id = $1 AND m.id <> $2 ORDER BY i.occurred_at LIMIT 1`, [f.world, material]);
   assert.ok(other, 'fixture: the World carries a second material for the cross-pair proof');
