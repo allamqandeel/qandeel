@@ -691,3 +691,77 @@ alone: `docs/mobile-runtime-entry-preconditions-v1.md` (T-12P) reads
 review`. Neither task carries a CLOSED / FROZEN closure record in this register, so neither is an
 established stale banner, and repairing either on inference would be exactly the opportunistic
 history-editing BG-09 warns against. They are reported to Architecture rather than corrected here.
+
+### I-05 closure record (Connected Worlds v2 — Public World Runtime)
+
+**Inherited: none.** At the kickoff of `I-05C`, the phase-closing slice, this register was read in
+full. No item names `I-05`, `I-05A`, `I-05B`, `I-05C` or Public World as its **Owner task**, and no
+item's reopen condition is met by anything I-05 built. `OPEN-06`, `OPEN-08`, `OPEN-09` and `OPEN-19`
+are `OPEN — UNASSIGNED` navigation and acknowledgement capabilities that I-05 neither implements nor
+blocks; `QAN-BL-SEC-01` is owned by `QAN-SEC-01` and is untouched — I-05 changed no mobile auth
+persistence, no storage mechanism, no backup policy and no platform credential model, and introduced
+no cryptography beyond the SHA-256 request and authority digests migrations 0091-0093 already
+established. `QAN-BL-NAV-01` and `QAN-BL-NAV-02` are Personal navigation and Replay items and are
+untouched: I-05C wrote no Replay producer and no Timeline surface.
+
+**Admitted: none.** I-05's anti-scope is anti-scope, and `BG-06` admits none of it. The boundaries
+I-05 stated and kept — `CW2-08` Safety / moderation / commercial entitlement / Launch Gate; the
+`SIGNED_OUT_PUBLIC_VIEW_POLICY` launch requirement; authenticated Product routes, controllers and
+public RPC; mobile surfaces; a public media boundary for `PUBLIC_VOICE`; Replay; successor-package
+publication and republication of an absent Experience; historical alias-label rendering; a spatial or
+ranking model over semantic placement; and general account deletion or erasure — qualify under none of
+BG-06's four admission routes. None carries an existing `OPEN` identifier; none is deferred to a future
+task **by a canonical document** as an obligation rather than as a scope boundary; none is carried
+forward for validation; and Architecture designated none. Several are owned by their own frozen
+`CW2-0N` contracts, which is where they belong: `CW2-04` owns Public World, `CW2-05` owns Replay and
+`CW2-08` owns safety, moderation, entitlements and launch integration.
+
+**The launch prerequisite is implemented as a fail-closed seam, not deferred.** No executable canonical
+runtime for System / Safety policy, the Launch Gate or commercial entitlement exists in this
+repository. I-05B created ONE seam, `resolve_public_publication_prerequisites_v1`, whose only answer is
+`NOT_EVALUATED`, and made the publish boundary require exactly `CLEARED` from it as its LAST gate;
+I-05C changed none of that and added no permissive constant, no launch-ready row and no
+application-role grant. Production publication therefore fails closed on
+`PUBLIC_EXPERIENCE_LAUNCH_PREREQUISITE_UNRESOLVED` even when every authority gate is satisfied, and the
+signed-out audience is still not admitted. Because that boundary is complete inside the phase, **no
+backlog item is admitted for it**: there is no outstanding correctness obligation to record, and
+`BG-01` forbids moving an active-contract requirement here rather than fixing it. The *enabling*
+capability is owned by the frozen `CW2-08` contract rather than by an unassigned backlog entry, and the
+seam is additive precisely so that slice can replace it without reopening anything. This is the same
+disposition the I-04 closure record above records for the same boundary, on the same basis.
+
+**Controller loss has no canonical producer, and I-05C did not invent one.** `I-05C`'s task contract
+required a STOP if controller-loss semantics were essential to correctness and the frozen contracts did
+not define whether controller loss invalidates an existing publication. They are not essential:
+`create_public_experience_draft_v1` is the ONLY writer of `public_experience_controllers` in this
+repository and there is no removal, transfer or revocation counterpart, so the event the policy would
+govern cannot be produced by any canonical primitive. I-05C therefore implements the frozen reading —
+control decides who may ISSUE a control action, and every consequential primitive re-checks it at
+execution time — and continuing public eligibility reads no control at all. No backlog item is admitted:
+a future reviewed multi-controller or transfer slice is an unbuilt capability owned by `CW2-04`, not an
+outstanding obligation, and it qualifies under none of BG-06's routes.
+
+**Post-publication source AVAILABILITY is a continuing condition; actor source ACCESS is not, and no
+backlog item is admitted for the difference.** The frozen `0095` gate 6 is labelled `CURRENT SOURCE
+ACCESS FOR THE PUBLISHING HUMAN` and asks the canonical I-04F entry point whether `auth.uid()` may still
+see each included Shared history item at the consequential instant of publication. Nothing in
+`0091`-`0097` re-asks it afterwards, so I-05C does not: re-asking it forever would let one human's later
+loss of Shared browsing delete everyone else's Public view, which is a Product policy no frozen contract
+states, and inferring it from the publish-time gate is exactly the inference that is unavailable.
+Continuing eligibility instead consumes the actor-free availability and integrity truth the ONE I-05A
+derivation already owns — availability state, captured availability revision, and the captured digest of
+the Shared body and of the Personal committed unit — so owner deletion and source corruption fail closed
+for the reason that is true, while a departed publisher's browsing status changes nothing. Migration
+`0098` refuses at deploy time if that distinction is ever collapsed, and the real-PostgreSQL verifier
+proves both directions against one fixture. This is a preserved frozen distinction rather than an
+outstanding obligation, and it qualifies under none of BG-06's routes.
+
+**I-05 implementation is complete; launch readiness is a different claim.** Migrations 0091-0099 leave
+no Public World capability that I-05A, I-05B or I-05C deferred to a later slice. The Public World is
+NOT product-launch ready and this record does not say otherwise: nothing in it can serve anybody in
+production while the `CW2-08` prerequisite is unimplemented.
+
+**Banner state.** `I-05` has no primary canonical document of its own — the canonical Public World
+runtime documentation is [`database/README.md`](../database/README.md) — so `BG-09` has no stale banner
+to correct here. Independent architecture, privacy, security and database-runtime review is complete;
+this closure record is durable and intentionally carries no transient pull-request or merge-status text.

@@ -232,7 +232,12 @@ test('0097 is registered in the toolchain, in the I-05B CI group, and in the dat
   assert.ok(readme.includes('I-05C'), 'the README records what I-05B leaves open');
   assert.match(verifier, /verifier for migration 0097/iu);
   assert.ok(workflow.includes(`if npm run ${OWN_SCRIPT}; then result_0097=PASS; else status=1; fi`));
-  assert.ok(workflow.includes('exit "$status"'), 'the grouped I-05B step fails the job when any verifier failed');
+  // Scoped to the I-05B step's OWN body. A later slice may add its own grouped
+  // step with its own `exit "$status"`, and a whole-file check would then be
+  // satisfied by that step rather than by this one.
+  const i05bStep = workflow.slice(workflow.indexOf('- name: Verify the four I-05B Public World runtime verifiers'));
+  assert.ok(i05bStep.slice(0, i05bStep.indexOf('\n      - ')).includes('exit "$status"'),
+    'the grouped I-05B step fails the job when any verifier failed');
   assert.doesNotMatch(workflow, /^\s*continue-on-error\s*:/mu);
   for (const result of ['result_0094=FAIL', 'result_0095=FAIL', 'result_0096=FAIL', 'result_0097=FAIL']) {
     assert.ok(workflow.includes(result), `${result}: a crash mid-way never reads as PASS`);
@@ -433,7 +438,11 @@ test('the contracts are not vacuous: every deliberate weakening of I-05B is refu
         'database/migrations/0093_public_experience_review_ready_runtime_v1.sql', 'BEGIN;', 'BEGIN;\n-- edited\n'],
       ['the CI step that runs an I-05B verifier is removed', CI,
         `if npm run ${OWN_SCRIPT}; then result_0097=PASS; else status=1; fi`, 'if npm run test:toolchain; then result_0097=PASS; else status=1; fi'],
-      ['the grouped I-05B CI step stops failing the job when a verifier fails', CI, '\n          exit "$status"\n', '\n          exit 0\n'],
+      // Anchored on the I-05B group's OWN summary line: a later slice's grouped
+      // step ends the same way, so the bare `exit "$status"` is no longer unique.
+      ['the grouped I-05B CI step stops failing the job when a verifier fails', CI,
+        '"$result_0094" "$result_0095" "$result_0096" "$result_0097" >> "$GITHUB_STEP_SUMMARY"\n          fi\n          exit "$status"\n',
+        '"$result_0094" "$result_0095" "$result_0096" "$result_0097" >> "$GITHUB_STEP_SUMMARY"\n          fi\n          exit 0\n'],
       ['a failing I-05B verifier is swallowed instead of recorded', CI,
         'if npm run verify:public-publication-effective-approval-state:integration; then result_0094=PASS; else status=1; fi',
         'npm run verify:public-publication-effective-approval-state:integration || true'],

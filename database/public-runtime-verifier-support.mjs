@@ -1,10 +1,11 @@
-// Shared support for the I-05B real-PostgreSQL verifiers (migrations 0094-0097).
+// Shared support for the I-05B and I-05C real-PostgreSQL verifiers
+// (migrations 0094-0099).
 //
-// The four verifiers prove four migrations, but they reach their subjects
+// The verifiers prove several migrations, but they reach their subjects
 // through ONE fixture shape - the frozen I-04 Shared source, the frozen 0064
 // Personal source, the I-05A identity / draft / package / approval / READY
 // runtime - and they share ONE way of simulating the CW2-08 prerequisite gate.
-// Four copies of that would be four places for it to drift, so it lives here.
+// Six copies of that would be six places for it to drift, so it lives here.
 //
 // Nothing in this module asserts anything about a migration on its own: it
 // provides fixtures, wrappers and the posture checks every verifier repeats.
@@ -43,6 +44,8 @@ export const T = Object.freeze({
   RESPONSE_COMMANDS: 'public.public_qandeel_response_commands',
   VITALITY: 'public.public_experience_vitality_state',
   PROJECTION: 'public.public_experience_search_projection',
+  DISAPPEARANCE_COMMANDS: 'public.public_experience_disappearance_commands',
+  DISAPPEARANCE_STATE: 'public.public_experience_disappearance_state',
 });
 
 export const APP_ROLES = ['anon', 'authenticated', 'service_role'];
@@ -72,6 +75,7 @@ export const IMMUTABLE_RELATIONS = [
   [T.PLACEMENTS, 'public_experience_semantic_placements_immutable'],
   [T.POSTS, 'public_discussion_posts_immutable'],
   [T.RESPONSES, 'public_qandeel_responses_immutable'],
+  [T.DISAPPEARANCE_STATE, 'public_experience_disappearance_state_immutable'],
 ];
 
 // ------------------------------------------------------------------- runtime
@@ -178,6 +182,48 @@ export function createRuntime(databaseUrl) {
     rows('SELECT * FROM public.resolve_public_lens_v1($1, $2)', [viewer, key]);
   const panel = (experience, viewer) =>
     rows('SELECT * FROM public.resolve_public_panel_v1($1, $2)', [experience, viewer]);
+
+  // ---- 0098 / 0099 (I-05C)
+  const continuingEligibility = (experience) =>
+    rows('SELECT * FROM public.derive_public_continuing_eligibility_v1($1)', [experience]);
+  const removeFromPublicWorld = (command, experience, version) =>
+    rows('SELECT * FROM public.remove_public_experience_from_public_world_v1($1, $2, $3)',
+      [command, experience, version]);
+  const reconcileDisappearance = (command, experience) =>
+    rows('SELECT * FROM public.reconcile_public_experience_disappearance_v1($1, $2)', [command, experience]);
+  const disappearanceAudit = (experience) =>
+    rows('SELECT * FROM public.resolve_public_experience_disappearance_audit_v1($1)', [experience]);
+
+  /**
+   * COMPLETE PUBLIC DISAPPEARANCE, asked of every outward Public World path
+   * I-05A and I-05B created for one exact Experience.
+   *
+   * It is one helper rather than one assertion per verifier because "every
+   * surface" is only a real claim if the same census runs everywhere: a surface
+   * that is dark in one verifier and forgotten in another is exactly the gap
+   * I-05C exists to close. `lensKey` and `searchTerm` are the projection keys
+   * the caller planted, so a planted STALE projection row is asked about too.
+   */
+  async function assertCompletelyDark(experience, viewer, { lensKey = null, searchTerm = null } = {}) {
+    const [vs] = await visibility(experience);
+    assert.equal(vs.visibility_state, 'NOT_PUBLICLY_VISIBLE', 'canonical visibility is dark');
+    assert.equal(vs.visible_experience_version_id, null, 'and names no version');
+    assert.equal(vs.visible_manifest_version_id, null, 'and names no manifest');
+    assert.deepEqual(await serving(experience, viewer), [], 'the serving resolver returns nothing');
+    assert.deepEqual(await resolvePlacement(experience, viewer), [], 'semantic placement returns nothing');
+    assert.deepEqual(await resolveDiscussion(experience, viewer), [], 'the discussion read returns nothing');
+    assert.deepEqual(await resolveResponses(experience, viewer), [], 'Public QANDEEL returns nothing');
+    assert.deepEqual(await resolveVitality(experience, viewer), [], 'vitality returns nothing');
+    assert.deepEqual(await panel(experience, viewer), [], 'the panel returns nothing');
+    if (searchTerm) {
+      assert.equal((await search(viewer, searchTerm)).filter((r) => r.experience_id === experience).length, 0,
+        'search returns nothing for the target');
+    }
+    if (lensKey) {
+      assert.equal((await lens(viewer, lensKey)).filter((r) => r.experience_id === experience).length, 0,
+        'the lens returns nothing for the target');
+    }
+  }
 
   // ---- catalog
   /** Every foreign key from `table` into `parent`, with both column lists in key order. */
@@ -503,6 +549,21 @@ export function createRuntime(databaseUrl) {
   }
 
   /**
+   * Take one Experience all the way to PUBLISHED through the frozen primitives
+   * alone, with the CW2-08 seam simulated for the single publish call and
+   * restored immediately. The I-05C verifiers start from a REAL publication:
+   * disappearance of something that was never published would prove nothing.
+   */
+  async function bringToPublished(f, spec, seam) {
+    const ready = await bringToReady(f, spec);
+    const [published] = await publishCleared(seam, f.mohamed, randomUUID(), ready.experience, ready.version);
+    assert.equal(published.outcome, 'PUBLISHED', 'fixture: the exact version published');
+    const [visible] = await visibility(ready.experience);
+    assert.equal(visible.visibility_state, 'PUBLICLY_VISIBLE', 'fixture: and it is canonically public');
+    return { ...ready, publishedAt: published.committed_at };
+  }
+
+  /**
    * VERIFIER-ONLY SIMULATION of a later reviewed successor publication.
    *
    * No product primitive can do this - a READY or PUBLISHED Experience admits no
@@ -564,6 +625,10 @@ export function createRuntime(databaseUrl) {
       }
       await q(`DELETE FROM ${T.PLACEMENT_COMMANDS} WHERE experience_id = ANY($1::uuid[])`, ex);
       await q(`DELETE FROM ${T.PLACEMENTS} WHERE experience_id = ANY($1::uuid[])`, ex);
+      // The I-05C disappearance rows bind the publication record restrictively,
+      // so they come off first.
+      await q(`DELETE FROM ${T.DISAPPEARANCE_COMMANDS} WHERE experience_id = ANY($1::uuid[])`, ex);
+      await q(`DELETE FROM ${T.DISAPPEARANCE_STATE} WHERE experience_id = ANY($1::uuid[])`, ex);
       await q(`DELETE FROM ${T.PUBLISH_COMMANDS} WHERE experience_id = ANY($1::uuid[])`, ex);
       await q(`DELETE FROM ${T.PUBLICATION_STATE} WHERE experience_id = ANY($1::uuid[])`, ex);
       await q(`DELETE FROM ${T.WITHDRAWAL_COMMANDS} WHERE manifest_version_id IN (${manifests})`, ex);
@@ -652,10 +717,13 @@ export function createRuntime(databaseUrl) {
     publish, visibility, admission, serving, prerequisites,
     recordPlacement, currentPlacement, resolvePlacement, post, resolveDiscussion, recordResponse, resolveResponses,
     recomputeVitality, resolveVitality, rebuildProjection, search, lens, panel,
+    continuingEligibility, removeFromPublicWorld, reconcileDisappearance, disappearanceAudit,
+    assertCompletelyDark,
     foreignKeysInto, uniqueKeyColumns, assertExactBinding,
     functionPosture, canExecute, resultColumns, inputParameters, triggerEnabled, verifyPosture,
     captureSeam, clearPrerequisites, restorePrerequisites, publishCleared,
-    newFixture, provision, provisionWorld, provisionMaterials, provisionIdentities, commitMaterial, bringToReady,
+    newFixture, provision, provisionWorld, provisionMaterials, provisionIdentities, commitMaterial,
+    bringToReady, bringToPublished,
     simulateSuccessorVersion, removeCommittedFixtures, openSecondary, stillPending,
   };
 }

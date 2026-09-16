@@ -310,7 +310,11 @@ test('0095 is registered in the toolchain, in the I-05B CI group, and in the dat
   assert.ok(readme.includes('PUBLIC_VISIBILITY_STATE') && readme.includes('NOT_EVALUATED'), 'the README records the visibility truth and the fail-closed seam');
   assert.match(verifier, /verifier for migration 0095/iu);
   assert.ok(workflow.includes(`if npm run ${OWN_SCRIPT}; then result_0095=PASS; else status=1; fi`));
-  assert.ok(workflow.includes('exit "$status"'));
+  // Scoped to the I-05B step's OWN body: a later slice's grouped step ends the
+  // same way, and a whole-file check would be satisfied by that one instead.
+  const i05bStep = workflow.slice(workflow.indexOf('- name: Verify the four I-05B Public World runtime verifiers'));
+  assert.ok(i05bStep.slice(0, i05bStep.indexOf('\n      - ')).includes('exit "$status"'),
+    'the grouped I-05B step still fails the job when any of the four verifiers failed');
   assert.doesNotMatch(workflow, /^\s*continue-on-error\s*:/mu);
 });
 
