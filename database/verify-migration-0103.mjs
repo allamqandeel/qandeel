@@ -14,8 +14,12 @@
 //     * P01 a covered sealed Personal selection previews into ONE complete
 //           Replay Version binding all four components;
 //     * P02 a stranger and a nonexistent Replay reach ONE bounded class;
-//     * P03 SHARED_WORLD and PUBLIC_EXPERIENCE fail closed with the bounded
-//           capability class, and their I-06A DRAFT stays exactly as valid;
+//     * P03 SHARED_WORLD fails closed with the bounded capability class, and
+//           its I-06A DRAFT stays exactly as valid;
+//     * P09 an owned PUBLIC_EXPERIENCE Replay - built through the frozen I-05A
+//           publication path and the frozen I-06A Public adapter - fails closed
+//           the same way, leaks no Public or private source detail, creates no
+//           I-06B state at all, and keeps its DRAFT and its source currency;
 //     * P04 a LEGACY UNCOVERED Personal Session fails closed the same way;
 //     * P05 the open Live Head can never be frozen as historical truth;
 //     * P06 an unproven partial cut cannot preview;
@@ -169,10 +173,10 @@ async function verifyCatalog() {
 }
 
 // -------------------------------------------------------------- 2. fixtures
-async function draftOver(f, session, { items, selected, starts = null, ends = null, sourceClass = 'MY_WORLD', context = null }) {
+async function draftOver(f, session, { items, selected, starts = null, ends = null, sourceClass = 'MY_WORLD', context = null, version = null }) {
   const spec = {
     command: randomUUID(), replay: randomUUID(), manifest: randomUUID(), selection: randomUUID(),
-    sourceClass, context: context ?? session, items, selected,
+    sourceClass, context: context ?? session, version, items, selected,
     starts: starts ?? selected.map(() => null), ends: ends ?? selected.map(() => null),
     coverage: 'SELECTED_EXCERPT',
   };
@@ -211,7 +215,7 @@ const pointDigestOf = async (p) => (await rows(
 
 // ------------------------------------------------------- 3. the capability matrix
 async function verifyCapability(report, f, drafts) {
-  const { personal, legacy, shared, openHead, partial } = drafts;
+  const { personal, legacy, shared, publicExperience, openHead, partial } = drafts;
 
   await report.isolated('P01 a covered sealed Personal selection previews into ONE complete Replay Version', async () => {
     await actAs(f.mohamed);
@@ -271,6 +275,42 @@ async function verifyCapability(report, f, drafts) {
     await asRole('service_role');
     const [composition] = await rt.composition(shared.replay, f.mohamed);
     assert.equal(composition.currency_state, 'CURRENT', 'P03 and its I-06A source composition is untouched');
+  });
+
+  await report.isolated('P09 an owned PUBLIC_EXPERIENCE Replay fails closed and its DRAFT survives', async () => {
+    await actAs(f.mohamed);
+    // The Replay under proof is a REAL one: built through the frozen I-05A
+    // publication path and the frozen I-06A Public adapter, over the bounded
+    // package of the exact current version the creator CONTROLS. Nothing about
+    // it is synthesized to reach this scenario.
+    await asRole('postgres');
+    const [manifest] = await rows(
+      `SELECT source_class, public_experience_id, public_experience_version_id, item_count
+         FROM ${R.MANIFESTS} WHERE id = $1`, [publicExperience.manifest]);
+    assert.equal(manifest.source_class, 'PUBLIC_EXPERIENCE', 'P09 the fixture really is a Public Experience Replay');
+    assert.equal(manifest.public_experience_id, publicExperience.context);
+    await actAs(f.mohamed);
+    const error = await rejected(() => rt.preview(rt.freshPreview(publicExperience.replay, 1)),
+      ['0A000'], /REPLAY_ANALYTICAL_PROJECTION_UNAVAILABLE/u);
+    // THE SAME BOUNDED CLASS AS EVERY OTHER UNSUPPORTED SOURCE, leaking no
+    // Experience, package item, digest or private provenance.
+    assert.doesNotMatch(error.message, /PUBLIC|Experience|package|digest|provenance/u,
+      'P09 the bounded class leaks no Public or private source detail');
+    await asRole('postgres');
+    for (const [relation, where] of [[V.PROJECTIONS, 'replay_id = $1'], [V.CONTRACTS, 'replay_id = $1'],
+      [V.VERSIONS, 'replay_id = $1'], [V.POINTER, 'replay_id = $1'],
+      [V.FINALIZATIONS, 'replay_id = $1'], [V.LIFECYCLE, 'replay_id = $1']]) {
+      assert.equal(await count(relation, where, [publicExperience.replay]), 0,
+        `P09 no ${relation} row was created for an unsupported source class`);
+    }
+    assert.equal((await rows(`SELECT current_lifecycle FROM ${R.REPLAYS} WHERE id = $1`, [publicExperience.replay]))[0].current_lifecycle,
+      'DRAFT', 'P09 the Public Replay remains a valid private DRAFT');
+    // AND ITS AUTHORIZED SOURCE COMPOSITION IS UNCHANGED AND STILL CURRENT.
+    await asRole('service_role');
+    const [composition] = await rt.composition(publicExperience.replay, f.mohamed);
+    assert.equal(composition.source_class, 'PUBLIC_EXPERIENCE');
+    assert.equal(composition.currency_state, 'CURRENT', 'P09 its I-06A source composition is untouched');
+    assert.equal(Number(composition.draft_revision), 1, 'P09 and its draft did not move');
   });
 
   await report.isolated('P04 a LEGACY UNCOVERED Personal Session fails closed', async () => {
@@ -948,8 +988,18 @@ runVerifier('0103', async (stage) => {
   try {
     stage('fixtures');
     await rt.provision(f);
+    await rt.provisionIdentities(f);
     const history = await rt.provisionHistoricalSession(f.mohamed, { units: 5 });
     const legacySession = await rt.provisionLegacySession(f.mohamed);
+    // ONE owned Public Experience, taken to READY_FOR_REVIEW through the frozen
+    // I-05A primitives alone, so the Public Replay below is a real one.
+    const ready = await rt.bringToReady(f, { experience: f.experience, manifest: f.manifest, version: f.version,
+      shared: [f.mohamedMaterial] });
+    await asRole('postgres');
+    const packageItems = (await rows(
+      `SELECT package_item_id id FROM public.publication_package_manifest_items
+        WHERE manifest_version_id = $1 ORDER BY item_ordinal`, [ready.manifest])).map((item) => item.id);
+    assert.ok(packageItems.length >= 1, 'the fixture Public package carries bounded items to select');
     const units = history.units;
     const drafts = {
       history,
@@ -965,6 +1015,8 @@ runVerifier('0103', async (stage) => {
         items: [f.mohamedMaterial], selected: [f.mohamedMaterial] }),
       voice: await draftOver(f, null, { sourceClass: 'SHARED_WORLD', context: f.world,
         items: [f.voiceMaterial], selected: [f.voiceMaterial] }),
+      publicExperience: await draftOver(f, null, { sourceClass: 'PUBLIC_EXPERIENCE', context: f.experience,
+        version: ready.version, items: packageItems, selected: packageItems }),
     };
     await asRole('postgres');
 

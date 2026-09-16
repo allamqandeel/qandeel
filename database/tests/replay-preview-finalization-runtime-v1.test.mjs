@@ -628,6 +628,7 @@ test('the verifier proves the scenario matrix, the refused weakenings and the ra
     'P01 a covered sealed Personal selection previews into ONE complete Replay Version',
     'P02 a stranger and a nonexistent Replay reach ONE bounded class',
     'P03 an unsupported source class fails closed and its DRAFT survives',
+    'P09 an owned PUBLIC_EXPERIENCE Replay fails closed and its DRAFT survives',
     'P04 a LEGACY UNCOVERED Personal Session fails closed',
     'P05 the open Live Head can never be frozen as historical truth',
     'P06 an unproven partial cut cannot preview',
@@ -677,6 +678,26 @@ test('the verifier proves the scenario matrix, the refused weakenings and the ra
   // CATALOG check goes through it too: it is independent of every row-level
   // scenario, and running it ahead of the report cost a whole focused round for
   // one finding.
+  // BOTH unsupported source classes are proven by an EXECUTABLE fixture, not by
+  // a header that claims one scenario covers two. The task requires a real-PG
+  // proof for SHARED_WORLD and for owned PUBLIC_EXPERIENCE, and a Public Replay
+  // that no fixture ever builds proves neither.
+  assert.match(verifier, /sourceClass: 'SHARED_WORLD'/u, 'a real Shared Replay fixture exists');
+  assert.match(verifier, /sourceClass: 'PUBLIC_EXPERIENCE', context: f\.experience,\s*\n\s*version: ready\.version/u,
+    'a real owned Public Experience Replay fixture exists, over the exact controlled current version');
+  assert.match(verifier, /rt\.bringToReady\(f, \{ experience: f\.experience/u,
+    'and that Experience is taken to READY through the frozen I-05A primitives rather than inserted');
+  assert.match(verifier, /publicExperience: await draftOver/u,
+    'through the frozen I-06A Public adapter');
+  const publicScenario = verifier.slice(verifier.indexOf("report.isolated('P09"),
+    verifier.indexOf("report.isolated('P04"));
+  assert.match(publicScenario, /REPLAY_ANALYTICAL_PROJECTION_UNAVAILABLE/u, 'P09 proves the bounded class');
+  assert.match(publicScenario, /doesNotMatch\(error\.message/u, 'P09 proves the class leaks no Public source detail');
+  assert.match(publicScenario, /'DRAFT', 'P09 the Public Replay remains a valid private DRAFT'/u);
+  assert.match(publicScenario, /currency_state, 'CURRENT'/u, 'P09 proves its I-06A source composition survives');
+  for (const relation of ['V.PROJECTIONS', 'V.VERSIONS', 'V.FINALIZATIONS', 'V.LIFECYCLE']) {
+    assert.ok(publicScenario.includes(relation), `P09 proves no ${relation} row was created`);
+  }
   assert.match(verifier, /createScenarioReport/u, 'the verifier reports scenarios independently');
   assert.match(verifier, /assertAllPassed\(\)/u, 'and fails once at the end, naming every scenario that failed');
   assert.ok(verifier.indexOf('createScenarioReport') < verifier.indexOf("stage('catalog')"),

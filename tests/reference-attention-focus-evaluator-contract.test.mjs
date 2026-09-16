@@ -218,6 +218,86 @@ test('nothing outside the directory imports it: no ConversationModule, Conversat
   }
 });
 
+/** The migration that OWNS the durable T-03B1 core, and the exact objects it owns. */
+const T03B1_OWNER_MIGRATION = '0066_durable_reference_emerging_focus_sp_substrate_v1.sql';
+const T03B1_OWNED_SUBSTRATE = [
+  'conversation_focus_commit_batches',
+  'conversation_reference_handles',
+  'conversation_unit_focus_semantics',
+  'conversation_reference_resolutions',
+  'conversation_reference_resolution_candidates',
+  'conversation_claim_attributions',
+  'conversation_emerging_focuses',
+  'conversation_emerging_focus_attention_events',
+];
+
+/**
+ * Every way one migration could take ownership of a T-03B1 core object away
+ * from migration 0066: creating it, redefining it, dropping it, or
+ * restructuring it. READING it - selecting from it, joining it, projecting it,
+ * referencing it by foreign key - is deliberately NOT one of them.
+ *
+ * Returned as a list rather than asserted here so the rule can be proven in
+ * both directions against synthetic migrations that never reach the repository.
+ */
+function t03b1OwnershipViolations(sql) {
+  const found = [];
+  for (const owned of T03B1_OWNED_SUBSTRATE) {
+    const object = `public\\.${owned}\\b`;
+    for (const [shape, pattern] of [
+      ['creates', new RegExp(`CREATE\\s+(?:OR REPLACE\\s+)?(?:UNLOGGED\\s+|TEMP\\s+|TEMPORARY\\s+)?(?:TABLE|VIEW|MATERIALIZED\\s+VIEW|SEQUENCE)\\s+(?:IF NOT EXISTS\\s+)?${object}`, 'iu')],
+      ['drops', new RegExp(`DROP\\s+(?:TABLE|VIEW|MATERIALIZED\\s+VIEW|SEQUENCE)\\s+(?:IF EXISTS\\s+)?${object}`, 'iu')],
+      ['restructures', new RegExp(`ALTER\\s+TABLE\\s+(?:ONLY\\s+)?${object}[^;]*?\\b(?:ADD\\s+COLUMN|DROP\\s+COLUMN|ALTER\\s+COLUMN|DROP\\s+CONSTRAINT|RENAME)\\b`, 'isu')],
+    ]) {
+      if (pattern.test(sql)) found.push(`${shape} public.${owned}`);
+    }
+  }
+  return found;
+}
+
+test('migration 0066 alone OWNS the durable T-03B1 core: a later migration may read it and may never redefine it', () => {
+  // A SYNTHETIC CONSUMER IS FINE. This is the shape every slice from T-03B2b2
+  // onwards has, and the shape migration 0103 has: it names the canonical
+  // substrate in order to project or consume it, and creates nothing.
+  const reader = `
+    BEGIN;
+    CREATE FUNCTION public.some_future_reader_v1(p_session_id uuid, p_tc integer)
+    RETURNS jsonb LANGUAGE sql STABLE AS $fn$
+      SELECT jsonb_agg(jsonb_build_object('id', f.id, 'startedSp', f.started_sp,
+               'lastAttentionSp', (SELECT max(a.session_position)
+                                     FROM public.conversation_emerging_focus_attention_events a
+                                    WHERE a.emerging_focus_id = f.id AND a.session_position <= p_tc)))
+        FROM public.conversation_emerging_focuses f
+        JOIN public.conversation_reference_resolutions r ON r.emerging_focus_id = f.id
+       WHERE f.session_id = p_session_id AND f.started_sp <= p_tc
+    $fn$;
+    CREATE TABLE public.some_future_projection (
+      id uuid PRIMARY KEY,
+      emerging_focus_id uuid NOT NULL REFERENCES public.conversation_emerging_focuses (id) ON DELETE RESTRICT,
+      claim_attribution_count integer NOT NULL);
+    COMMIT;`;
+  assert.deepEqual(t03b1OwnershipViolations(reader), [],
+    'a later migration that READS, JOINS and REFERENCES the frozen T-03B1 substrate is authorized');
+
+  // A SYNTHETIC OWNER IS NOT. Every owned object, and every way of taking it.
+  for (const owned of T03B1_OWNED_SUBSTRATE) {
+    for (const [shape, sql] of [
+      ['creates', `CREATE TABLE public.${owned} (id uuid PRIMARY KEY);`],
+      ['creates', `CREATE TABLE IF NOT EXISTS public.${owned} (id uuid PRIMARY KEY);`],
+      ['creates', `CREATE OR REPLACE VIEW public.${owned} AS SELECT 1 x;`],
+      ['drops', `DROP TABLE IF EXISTS public.${owned};`],
+      ['restructures', `ALTER TABLE public.${owned} DROP COLUMN started_sp;`],
+      ['restructures', `ALTER TABLE ONLY public.${owned} ADD COLUMN invented text;`],
+    ]) {
+      assert.ok(t03b1OwnershipViolations(sql).includes(`${shape} public.${owned}`),
+        `a later migration that ${shape} public.${owned} must be refused: 0066 owns it`);
+    }
+  }
+  // And the owner itself is exempt, because it is the owner.
+  assert.ok(t03b1OwnershipViolations(readFileSyncUtf8(`database/migrations/${T03B1_OWNER_MIGRATION}`)).length > 0,
+    'the owning migration does create the substrate it owns, which is why it is the only file excluded');
+});
+
 test('the evaluator adds no SQL, no durable write, no durable identity; the durable substrate is migration 0066 alone', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
   // T-03B1a shipped no migration; T-03B1b1 added exactly 0066 as the durable
@@ -246,8 +326,25 @@ test('the evaluator adds no SQL, no durable write, no durable identity; the dura
   // substrate (identity, started_sp, attention events) to project it at TC and
   // creates no B1 substrate of its own; it is pinned by
   // tests/historical-projection-contract.test.mjs.)
-  for (const name of migrations.filter((candidate) => !/^00(?:6[6789]|7[012])_/u.test(candidate))) {
-    assert.doesNotMatch(readFileSyncUtf8(`database/migrations/${name}`), /emerging_focus|reference_handle|conversational_focus|claim_attribution/iu, `${name} carries no T-03B1 substrate`);
+  // OWNERSHIP, NOT VOCABULARY.
+  //
+  // This census used to ban the WORDS `emerging_focus`, `reference_handle`,
+  // `conversational_focus` and `claim_attribution` from every migration outside
+  // a hard-coded filename range. That was never the invariant: every migration
+  // in the range was in it precisely because it legitimately READS the frozen
+  // substrate, and each new consumer had to be added to the range by hand - so
+  // the rule grew an exception per slice and protected less each time. A
+  // migration that merely names the canonical Emerging Focus substrate in order
+  // to project or consume it breaks nothing.
+  //
+  // What must remain true is that migration 0066 is the ONE owner of the
+  // durable T-03B1 core: no later migration may CREATE, REDEFINE, DROP or
+  // restructure one of the objects it owns. That is checked by name for every
+  // migration but the owner, with no filename exception at all, and it is
+  // proven two-sided below.
+  for (const name of migrations.filter((candidate) => candidate !== T03B1_OWNER_MIGRATION)) {
+    assert.deepEqual(t03b1OwnershipViolations(readFileSyncUtf8(`database/migrations/${name}`)), [],
+      `${name} may READ the frozen T-03B1 substrate, and may never create, redefine, drop or restructure an object migration 0066 owns`);
   }
   assert.doesNotMatch(readFileSyncUtf8('database/migrations/0070_thread_lifecycle_cross_session_continuity_v1.sql'),
     /CREATE TABLE public\.conversation_(?:emerging_focuses|reference_handles|reference_resolutions|unit_focus_semantics|claim_attributions)\b|claim_attribution/iu,
