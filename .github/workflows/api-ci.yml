@@ -266,6 +266,45 @@ jobs:
             printf '### I-05A real-PostgreSQL verifiers\n- 0091 = %s\n- 0092 = %s\n- 0093 = %s\n' "$result_0091" "$result_0092" "$result_0093" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit $status
+      # The four I-05B verifiers below are NEW and share one fixture shape and one
+      # simulated CW2-08 clearance. For the same reason the I-05A group exists they run
+      # as ONE step that executes all four and fails at the end so a single run reports
+      # the whole set. Everything above stays hard-fail: a failed migration apply or ANY
+      # predecessor verifier stops the job before this step. continue-on-error is not
+      # used; each exit code is captured and the step exits non-zero if any failed.
+      #
+      # 0094 proves: Verify Public publication effective approval state against real PostgreSQL (0094 append-only withdrawal events and durable withdrawal commands bound by composite foreign key into the immutable 0092 approval evidence + ONE STABLE derivation deciding EFFECTIVE or WITHDRAWN or SUPERSEDED from the evidence plus the human act plus the current version pointer + a manifest-level view reporting MISSING for a required approval never given + withdrawal requiring the exact historical rightsholder from auth.uid() with no membership read so a former Shared member withdraws without regaining browsing + one bounded class for a stranger a controller and a guessed identifier + durable idempotency + supersession by a later preparation transferring nothing + the frozen READY commit proven NOT to be the publication gate + withdrawal versus preparation and duplicate withdrawal races + every function executable by no application role)
+      # 0095 proves: Verify Public Experience publication visibility and serving against real PostgreSQL (0095 the ONE READY_FOR_REVIEW to PUBLISHED transition revalidating controller lifecycle exact current version READY binding manifest source locks in I-04 order current Shared visibility through the canonical I-04F entry point Personal ownership the ONE I-05A authority derivation the stored required set every approval EFFECTIVE through the ONE 0094 derivation the READY fingerprint and LAST the CW2-08 prerequisite seam + the seam answering NOT_EVALUATED so production publication fails closed + PUBLISHED reached only under a savepoint-scoped or restored-and-proven seam simulation + an immutable publication record + the ONE canonical PUBLIC_VISIBILITY_STATE requiring PUBLISHED plus a consistent record with DRAFT READY and nonexistent as ONE state + the audience admission gate reading the frozen 0091 policy with signed-out failing closed + the ONE service-role serving resolver composing both gates returning the bounded derivative only + publish versus withdrawal in both orders versus preparation duplicate publish and versus source deletion)
+      # 0096 proves: Verify Public semantic placement discussion and Public QANDEEL against real PostgreSQL (0096 semantic interpretation bound to the exact immutable version with additive publisher corrections whose current answer is the highest revision and which change no version package provenance approval control publication or lifecycle row + one bounded class for a rightsholder a stranger and a nonexistent Experience + discussion posts binding the author own stable Public Identity and the exact visible version through the canonical visibility truth and the admission gate with replies bound to a parent of the same Experience + DRAFT READY and nonexistent targets as ONE class + posting granting no control satisfying no approval and restoring no browsing + Public QANDEEL responses deriving no human creating no consent and carrying a context fingerprint over public-domain identities recomputed byte for byte + append-only history + three service-role resolvers + publish versus placement and concurrent posts)
+      # 0097 proves: Verify Public vitality and search lens panel projections against real PostgreSQL (0097 vitality recomputed deterministically with UNCHANGED for identical inputs and nothing written for a non-visible target + a stored row served only for the currently visible version so a planted row cannot make an invisible Experience visible + the search projection built from the public derivative bodies and the current interpretation only with UNCHANGED on identical inputs + a stale projection never served and cleared on rebuild + a moved version pointer turning search lens panel and vitality dark at once + four service-role resolvers + rebuild versus the visibility transition and concurrent rebuilds converging)
+      - name: Verify the four I-05B Public World runtime verifiers against real PostgreSQL as one reported group
+        run: |
+          status=0
+          result_0094=FAIL
+          result_0095=FAIL
+          result_0096=FAIL
+          result_0097=FAIL
+          echo "::group::migration 0094 - Public publication effective approval state"
+          if npm run verify:public-publication-effective-approval-state:integration; then result_0094=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0095 - Public Experience publication visibility and serving"
+          if npm run verify:public-experience-publication-visibility-serving:integration; then result_0095=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0096 - Public semantic placement discussion and Public QANDEEL"
+          if npm run verify:public-semantic-placement-discussion-qandeel:integration; then result_0096=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0097 - Public vitality and search lens panel projections"
+          if npm run verify:public-vitality-search-lens-panel-projections:integration; then result_0097=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "I-05B real-PostgreSQL verifier results"
+          echo "0094 = $result_0094"
+          echo "0095 = $result_0095"
+          echo "0096 = $result_0096"
+          echo "0097 = $result_0097"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            printf '### I-05B real-PostgreSQL verifiers\n- 0094 = %s\n- 0095 = %s\n- 0096 = %s\n- 0097 = %s\n' "$result_0094" "$result_0095" "$result_0096" "$result_0097" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
