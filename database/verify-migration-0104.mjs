@@ -316,16 +316,26 @@ async function verifyStructure(report, f, base) {
     });
 
     await report.isolated('D10 an approval for one destination cannot resolve against another', async () => {
-      const row = packageRow(base);
+      // The PACKAGE is the Public one and the consent claims the other two, rather
+      // than the reverse: a Public claim carrying no linked Public identity is
+      // refused by the shape CHECK before any foreign key is consulted, because
+      // PostgreSQL evaluates a CHECK before an AFTER-ROW referential trigger. Both
+      // directions are proven here, each by the guard that actually fires.
+      const row = packageRow(base, { destination_action: 'PUBLISH_TO_PUBLIC_WORLD' });
       await insertPackage(row);
       await q(`INSERT INTO ${D.REQUIRED} (distribution_package_version_id, approver_user_id) VALUES ($1, $2)`,
         [row.id, f.creator]);
-      await rejected(() => q(
+      const claim = (destination) => q(
         `INSERT INTO ${D.APPROVALS} (id, distribution_package_version_id, destination_action,
            approver_user_id, bound_authority_fingerprint, approved_at)
-         VALUES ($1, $2, 'PUBLISH_TO_PUBLIC_WORLD', $3, $4, clock_timestamp())`,
-        [randomUUID(), row.id, f.creator, `sha256:${'c'.repeat(64)}`]),
-      ['23503'], /replay_distribution_approvals_destination_fk/u);
+         VALUES ($1, $2, $3, $4, $5, clock_timestamp())`,
+        [randomUUID(), row.id, destination, f.creator, `sha256:${'c'.repeat(64)}`]);
+      await rejected(() => claim('SHARE_EXTERNALLY'),
+        ['23503'], /replay_distribution_approvals_destination_fk/u);
+      await rejected(() => claim('DOWNLOAD'),
+        ['23503'], /replay_distribution_approvals_destination_fk/u);
+      await rejected(() => claim('PUBLISH_TO_PUBLIC_WORLD'),
+        ['23514'], /replay_distribution_approvals_linked_shape_check/u);
     });
 
     await report.isolated('D11 a withdrawal names ONE exact approval through one composite key', async () => {

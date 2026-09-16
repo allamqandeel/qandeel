@@ -713,6 +713,7 @@ test('the 0105 verifier RUNS the scenarios it claims, through the permanent aggr
     'X36 the same Replay approval id with a DIFFERENT Public identity conflicts',
     'X37 a Public retry cannot drop the Public identity it committed',
     'X38 a non-Public consent cannot grow a Public identity on retry',
+    'X39 a Public consent is taken back through the exact link it committed',
   ]) {
     assert.ok(verifier.includes(`report.isolated('${scenario}'`),
       `the 0105 verifier RUNS the scenario: ${scenario}`);

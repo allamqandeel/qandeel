@@ -65,6 +65,8 @@
 //     * X36 the same Replay approval id with a DIFFERENT Public identity is a
 //           deterministic conflict that writes nothing;
 //     * X37 a Public retry cannot drop the Public identity it committed;
+//     * X39 a Public consent is taken back through the EXACT link it committed,
+//           and both halves are withdrawn;
 //
 //   concurrency, on committed state across two connections
 //     * C01 a withdrawal racing the distribution commit blocks the stale one;
@@ -938,6 +940,28 @@ async function verifyPublicBridge(report, f, base) {
         'X37 nothing about the committed consent moved');
       assert.equal(await count(T.APPROVALS, 'manifest_version_id = $1', [spec.publicManifest]), 1,
         'X37 and the canonical Public store still holds exactly one approval');
+    });
+
+    await report.isolated('X39 a Public consent is taken back through the exact link it committed', async () => {
+      await actAs(f.creator);
+      const approval = randomUUID();
+      const publicApproval = randomUUID();
+      await rt.approve({ approval, package: spec.package, publicApproval });
+      const [withdrawn] = await rt.withdraw({ command: randomUUID(), approval, publicCommand: randomUUID() });
+      assert.equal(withdrawn.outcome, 'REPLAY_DISTRIBUTION_APPROVAL_WITHDRAWN');
+      assert.equal(withdrawn.effective_state, 'WITHDRAWN');
+      await asRole('postgres');
+      // BOTH halves come back, and the canonical half is the EXACT row this act
+      // created rather than one found by searching the manifest for this human.
+      const [state] = await rows(
+        'SELECT * FROM public.derive_publication_approval_effective_state_v1($1)', [publicApproval]);
+      assert.equal(state.effective_state, 'WITHDRAWN',
+        'X39 the canonical Public consent is withdrawn too, through the frozen primitive');
+      assert.equal(await count('public.publication_approval_withdrawal_events', 'approval_id = $1',
+        [publicApproval]), 1, 'X39 exactly one canonical withdrawal event, for the linked approval');
+      const [row] = await rows(`SELECT * FROM ${D.APPROVALS} WHERE id = $1`, [approval]);
+      assert.equal(row.linked_public_approval_id, publicApproval,
+        'X39 and the immutable consent evidence still records exactly what it committed');
     });
   } finally {
     await q('ROLLBACK');
