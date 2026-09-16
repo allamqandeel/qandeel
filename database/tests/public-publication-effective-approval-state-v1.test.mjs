@@ -83,8 +83,14 @@ test('0094 is the forward migration after 0093, and every frozen predecessor it 
     assert.equal(gitBlobId(read(`../migrations/${name}`)), blob, `${name} is byte-identical: I-05B reopens no predecessor`);
   }
   assert.doesNotMatch(executableSql, /\bDROP\s+(?:TABLE|FUNCTION|INDEX|POLICY|TRIGGER|COLUMN|CONSTRAINT|TYPE|SCHEMA)\b/iu);
-  assert.doesNotMatch(executableSql, /^ALTER TABLE public\.(?!publication_approval_withdrawal_commands|publication_approval_withdrawal_events)/mu,
-    'the only tables 0094 alters are the two it created: the 0092 evidence is never touched');
+  // The ONE statement that touches a frozen relation is the additive exact-identity
+  // candidate key on the 0092 evidence (REV-01): a constraint, no row, no column, no
+  // trigger, no policy. Nothing else outside the two relations 0094 created is altered.
+  const foreignAlters = [...executableSql.matchAll(/^ALTER TABLE public\.(?!publication_approval_withdrawal_(?:commands|events)\b)[\s\S]*?;/gmu)]
+    .map((m) => m[0].replace(/\s+/gu, ' '));
+  assert.deepEqual(foreignAlters, [
+    'ALTER TABLE public.publication_manifest_approvals ADD CONSTRAINT publication_manifest_approvals_exact_identity_key UNIQUE (id, manifest_version_id, approver_user_id);',
+  ], 'the only frozen relation 0094 alters is the 0092 evidence, and only by adding the exact-identity candidate key');
   assert.doesNotMatch(executableSql, /(INSERT INTO|UPDATE|DELETE FROM) public\.publication_manifest_approvals\b/u,
     'no statement in 0094 writes the historical approval evidence');
 });
@@ -149,12 +155,26 @@ test('withdrawal requires the exact historical rightsholder from auth.uid(), und
   }
 });
 
-test('the withdrawal event is append-only, one per approval, and bound into the immutable 0092 evidence', () => {
+test('the withdrawal event is append-only, one per approval, and bound to ONE exact approval of the immutable 0092 evidence', () => {
   assert.match(executableSql, /CONSTRAINT publication_approval_withdrawal_events_approval_key UNIQUE \(approval_id\)/u);
-  assert.match(executableSql, /CONSTRAINT publication_approval_withdrawal_events_approver_fk\s*\n\s*FOREIGN KEY \(manifest_version_id, approver_user_id\)\s*\n\s*REFERENCES public\.publication_manifest_approvals \(manifest_version_id, approver_user_id\)\s*\n\s*ON DELETE RESTRICT/u,
-    'a withdrawal for a human the evidence never named is unrepresentable');
-  assert.match(executableSql, /CONSTRAINT publication_approval_withdrawal_commands_approver_fk\s*\n\s*FOREIGN KEY \(manifest_version_id, actor_user_id\)/u,
-    'and so is a withdrawal command by a human who never approved that manifest');
+  // REV-01: id, manifest and approver of the SAME approval row, through ONE composite
+  // foreign key onto the additive candidate key. Two independent foreign keys are NOT
+  // accepted as proof - each half can be satisfied by a different approval row.
+  assert.match(executableSql, /ALTER TABLE public\.publication_manifest_approvals\s*\n\s*ADD CONSTRAINT publication_manifest_approvals_exact_identity_key\s*\n\s*UNIQUE \(id, manifest_version_id, approver_user_id\);/u,
+    'the frozen evidence gains the exact-identity candidate key the composite binding needs');
+  assert.match(executableSql, /CONSTRAINT publication_approval_withdrawal_events_approval_fk\s*\n\s*FOREIGN KEY \(approval_id, manifest_version_id, approver_user_id\)\s*\n\s*REFERENCES public\.publication_manifest_approvals \(id, manifest_version_id, approver_user_id\)\s*\n\s*ON DELETE RESTRICT/u,
+    'a withdrawal event binds ONE exact approval: a human the approval never named, or approval A beside approval B\'s pair, is unrepresentable');
+  assert.match(executableSql, /CONSTRAINT publication_approval_withdrawal_commands_approval_fk\s*\n\s*FOREIGN KEY \(approval_id, manifest_version_id, actor_user_id\)\s*\n\s*REFERENCES public\.publication_manifest_approvals \(id, manifest_version_id, approver_user_id\)\s*\n\s*ON DELETE RESTRICT/u,
+    'and so does a withdrawal command: the actor IS the approver of the exact approval named');
+  assert.doesNotMatch(executableSql, /FOREIGN KEY \(approval_id\)\s+REFERENCES/u, 'no independent approval-id foreign key');
+  assert.doesNotMatch(executableSql, /FOREIGN KEY \(manifest_version_id, (?:actor|approver)_user_id\)\s*\n\s*REFERENCES public\.publication_manifest_approvals/u,
+    'no independent (manifest, approver) foreign key beside it: two independent keys are not one exact approval');
+  for (const table of OWN_TABLES) {
+    const start = executableSql.indexOf(`CREATE TABLE public.${table} (`);
+    const block = executableSql.slice(start, executableSql.indexOf('\n);', start));
+    assert.equal((block.match(/REFERENCES public\.publication_manifest_approvals/gu) ?? []).length, 1,
+      `${table} reaches the approval evidence through exactly the composite key`);
+  }
   assert.match(executableSql, /CREATE TRIGGER publication_approval_withdrawal_events_immutable\s*\n\s*BEFORE UPDATE OR DELETE ON public\.publication_approval_withdrawal_events/u);
   assert.match(executableSql, /RAISE EXCEPTION 'PUBLICATION_APPROVAL_STATE_IS_IMMUTABLE'\s*\n\s*USING ERRCODE='55000'/u);
   for (const table of OWN_TABLES) {
@@ -201,7 +221,9 @@ test('the self-assertions refuse to deploy a migration that lost any of this', (
     'withdrawal must take the canonical Public lock prefix so it serializes with publication',
     'may not accept an authority audience visibility state or instant parameter',
     'the frozen 0092 approval evidence must still be append-only',
-    'a withdrawal must bind the exact (manifest, approver) pair of the immutable approval evidence',
+    'the frozen approval evidence must carry the additive exact-identity candidate key (id, manifest, approver)',
+    'may not bind the approval evidence through an independent partial foreign key',
+    'must bind ONE exact approval - id, manifest and approver of the same immutable row - through one composite restrictive foreign key',
     'a withdrawal event must be append-only for every role',
     'must not reach Experience control',
     'may carry no Safety Launch entitlement visibility or serving column',
@@ -238,12 +260,20 @@ test('0094 is registered in the toolchain, in CI as part of the I-05B group, and
 
 test('the verifier proves the effective-state law against real PostgreSQL, with bounded races and a rolled-back forward-safety probe', () => {
   assert.match(verifier, /import \{[^}]*createRuntime[^}]*\} from '\.\/public-runtime-verifier-support\.mjs'/u);
-  for (const needle of ['E01', 'E02', 'E03', 'E04', 'E05', 'E06', 'E07', 'E08', 'C01', 'C02',
+  for (const needle of ['E01', 'E02', 'E03', 'E04', 'E05', 'E06', 'E07', 'E08', 'E09', 'C01', 'C02',
     'ALREADY_WITHDRAWN', "'SUPERSEDED'", 'no existence oracle', 'regains no Shared browsing', 'grants no Experience control',
     'the frozen READY commit counts historical rows', 'SAVEPOINT forward_safety', 'ROLLBACK TO SAVEPOINT forward_safety',
-    'i05b94_probe_absence_v1', 'anti-vacuity', 'removeCommittedFixtures', 'every fixture this verifier created was rolled back or removed']) {
+    'i05b94_probe_absence_v1', 'anti-vacuity', 'removeCommittedFixtures', 'every fixture this verifier created was rolled back or removed',
+    // REV-01: the cross-pair is refused by PostgreSQL, the exact triple is accepted, the
+    // catalog program reads both column lists of the composite key, and the weakening
+    // back into two independent keys is refused AND shown to admit the cross-pair.
+    'publication_manifest_approvals_exact_identity_key', 'assertExactBinding', 'THE CROSS-PAIR', 'exact_triple',
+    'i05b94_probe_approver_fk', 'the weakened shape admits the cross-pair']) {
     assert.ok(verifier.includes(needle), `the verifier proves ${needle}`);
   }
+  assert.match(support, /async function assertExactBinding\(table, parent, local, parentColumns\)/u);
+  assert.match(support, /must not bind \$\{parent\} through an independent partial foreign key/u,
+    'the shared catalog check refuses an independent partial key, not merely the absence of the composite one');
   // Release edges precede awaits: a launched blocking promise is awaited only after
   // the connection it waits for has issued COMMIT.
   for (const launched of ['blocked', 'duplicate']) {

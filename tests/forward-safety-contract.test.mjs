@@ -106,9 +106,17 @@ const FAST_CONTRACTS = CONTRACTS.filter((name) => !SLOW_CONTRACTS.includes(name)
 const CHILD_ENV = { ...process.env };
 delete CHILD_ENV.NODE_TEST_CONTEXT;
 
-function runContract(name) {
-  const result = spawnSync(process.execPath, ['--test', join(mirrorPath, 'tests', `${name}.test.mjs`)],
-    { cwd: mirrorPath, encoding: 'utf8', env: CHILD_ENV });
+/**
+ * Runs one mirrored contract. With `testNamePattern`, only the matching tests of that file run -
+ * used for the one contract that also executes a 50-second production replay, when the claim
+ * being made is about one of its boundary tests. A pattern that matches nothing makes the child
+ * exit 0 having run nothing, so every caller that passes one also checks the TAP summary.
+ */
+function runContract(name, testNamePattern = null) {
+  const args = ['--test', '--test-reporter=tap'];
+  if (testNamePattern) args.push('--test-name-pattern', testNamePattern);
+  args.push(join(mirrorPath, 'tests', `${name}.test.mjs`));
+  const result = spawnSync(process.execPath, args, { cwd: mirrorPath, encoding: 'utf8', env: CHILD_ENV, maxBuffer: 128 * 1024 * 1024 });
   assert.equal(result.error, undefined, `${name} could not be started: ${result.error?.message}`);
   assert.notEqual(result.status, null, `${name} did not exit normally`);
   return { ok: result.status === 0, output: `${result.stdout ?? ''}${result.stderr ?? ''}` };
@@ -135,9 +143,10 @@ function assertAllSurvive(reason, names = FAST_CONTRACTS) {
   assert.fail(`${reason}\n\n${evidence}`);
 }
 
-function assertRefused(name, reason) {
-  const result = runContract(name);
+function assertRefused(name, reason, testNamePattern = null) {
+  const result = runContract(name, testNamePattern);
   assert.equal(result.ok, false, `${name} must refuse this: ${reason}`);
+  if (testNamePattern) assert.match(result.output, /^# fail [1-9]\d*$/mu, `${name}: the refusal came from a test that ran, not from a pattern that matched nothing`);
 }
 
 /**
@@ -148,9 +157,10 @@ function assertRefused(name, reason) {
  * exists to prove something about a PARTICULAR contract, saying so directly means a failure names
  * the contract that actually broke.
  */
-function assertSurvives(name, reason) {
-  const result = runContract(name);
+function assertSurvives(name, reason, testNamePattern = null) {
+  const result = runContract(name, testNamePattern);
   assert.ok(result.ok, `${name} must accept this: ${reason}\n\n${result.output}`);
+  if (testNamePattern) assert.match(result.output, /^# pass [1-9]\d*$/mu, `${name}: the acceptance came from a test that ran, not from a pattern that matched nothing`);
 }
 
 /** Reverts one mirrored path to the real repository's version, or removes a file that was added. */
@@ -275,7 +285,13 @@ test('a future authorized additive native job breaks no historical contract', ()
   assertAllSurvive('a later task adding a native job to Mobile CI is authorized work');
 }));
 
-const PROBE_MIGRATION = 'database/migrations/0099_forward_safety_probe_v1.sql';
+// The probe migration carries the generic word "placement" in its name on purpose: the Public
+// World legitimately owns a SEMANTIC placement of an Experience (I-05B, migration 0096), and the
+// T-03B2b1 Home-placement gate once counted any "placement" in a migration name as Home / Thread
+// substrate — a mutable-global ceiling that stopped API CI before PostgreSQL bootstrap (CI-01).
+// The gate now classifies by the substrate's own identity, and this name proves the positive half.
+const PROBE_MIGRATION = 'database/migrations/0099_forward_safety_semantic_placement_probe_v1.sql';
+const HOME_BOUNDARY_TEST = 'no Thread id allocation, no Home durable allocation';
 
 test('a future authorized migration breaks no T-03C, T-03D or Thread-layer contract', () => scenario([PROBE_MIGRATION], () => {
   // Numbered past every migration that exists, owning its own object and touching nobody else's —
@@ -285,6 +301,8 @@ test('a future authorized migration breaks no T-03C, T-03D or Thread-layer contr
     'CREATE TABLE public.forward_safety_probe_v1 (id uuid PRIMARY KEY);\n');
 
   assertAllSurvive('a later authorized migration on any track is not a mobile or Thread contract failure');
+  assertSurvives('canonical-home-placement-engine-contract',
+    'a later migration named for a semantic placement is not Home / Thread substrate', HOME_BOUNDARY_TEST);
 }));
 
 const CHROME_MUTATIONS = ['apps/mobile/src/orientation-chrome/motion.ts', 'apps/mobile/src/orientation-chrome/OrientationChrome.tsx',
@@ -373,6 +391,27 @@ test('a later migration that re-declares an owned substrate is refused', () => s
     'CREATE TABLE public.conversation_thread_lifecycle_events (id uuid PRIMARY KEY);\n');
   assertRefused('effective-live-focus-final-semantic-chain-cutover-contract', '0071 is the sole LF authority');
   assertRefused('thread-lifecycle-cross-session-continuity-contract', '0070 is the sole lifecycle authority');
+}));
+
+// CI-01 anti-vacuity for the narrowed Home / Thread substrate classifier: a real unauthorized
+// substrate migration is still refused — by its CONTENT under exactly the generic name the
+// classifier now admits, and by its NAME when it is called what the substrate is called.
+const HOME_CONTENT_PROBE = 'database/migrations/0099_forward_safety_placement_probe_v1.sql';
+const HOME_NAMED_PROBE = 'database/migrations/0099_forward_safety_thread_home_probe_v1.sql';
+
+test('a later migration that carries the Home / Thread substrate under a generic name is refused', () => scenario([HOME_CONTENT_PROBE], () => {
+  writeFileSync(join(mirrorPath, HOME_CONTENT_PROBE),
+    '-- Forward-safety probe: a later migration that relocates committed Homes.\n' +
+    "UPDATE public.conversation_thread_homes SET placement_x = 0, placement_y = 0 WHERE placement_engine_version = 'canonical-home-placement-engine-v1';\n");
+  assertRefused('canonical-home-placement-engine-contract',
+    'T-03B2b2 is the sole Home authority: no later migration may carry the substrate, whatever it is called', HOME_BOUNDARY_TEST);
+}));
+
+test('a later migration NAMED as Home / Thread substrate is refused by the name census alone', () => scenario([HOME_NAMED_PROBE], () => {
+  writeFileSync(join(mirrorPath, HOME_NAMED_PROBE),
+    '-- Forward-safety probe: an innocent body under a substrate name.\n' +
+    'CREATE TABLE public.forward_safety_named_probe_v1 (id uuid PRIMARY KEY);\n');
+  assertRefused('canonical-home-placement-engine-contract', 'the Home / Thread substrate name census still holds', HOME_BOUNDARY_TEST);
 }));
 
 test('a duplicated Mobile CI gate registration is refused', () => scenario(['.github/workflows/mobile-ci.yml'], () => {

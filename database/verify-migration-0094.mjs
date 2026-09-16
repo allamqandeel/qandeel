@@ -87,14 +87,23 @@ async function verifyCatalog() {
         `${fn} may not accept ${name}`);
     }
   }
-  const [fk] = await rows(
-    `SELECT c.confdeltype, ns.nspname || '.' || cl.relname AS parent FROM pg_constraint c
-       JOIN pg_class cl ON cl.oid = c.confrelid JOIN pg_namespace ns ON ns.oid = cl.relnamespace
-      WHERE c.conrelid = $1::regclass AND c.conname = 'publication_approval_withdrawal_events_approver_fk'`, [T.WITHDRAWAL_EVENTS]);
-  assert.ok(fk, 'the withdrawal binds the (manifest, approver) pair by foreign key');
-  assert.equal(fk.parent, 'public.publication_manifest_approvals');
-  assert.equal(fk.confdeltype, 'r', 'restrictively');
+  // ONE exact approval per withdrawal row, structurally (REV-01). The frozen
+  // evidence carries the additive exact-identity candidate key, and each
+  // withdrawal relation binds (approval, manifest, approver) through ONE
+  // composite restrictive foreign key onto it. Two independent partial keys
+  // would be satisfied by "approval A exists" and "B's (manifest, approver)
+  // pair exists" at once; that shape is refused here, so weakening the binding
+  // back into independent keys fails this program (see the forward-safety r5).
+  assert.deepEqual(await rt.uniqueKeyColumns(T.APPROVALS, 'publication_manifest_approvals_exact_identity_key'),
+    ['id', 'manifest_version_id', 'approver_user_id'], 'the frozen approval evidence carries the additive exact-identity candidate key');
+  await rt.assertExactBinding(T.WITHDRAWAL_EVENTS, T.APPROVALS,
+    ['approval_id', 'manifest_version_id', 'approver_user_id'], ['id', 'manifest_version_id', 'approver_user_id']);
+  await rt.assertExactBinding(T.WITHDRAWAL_COMMANDS, T.APPROVALS,
+    ['approval_id', 'manifest_version_id', 'actor_user_id'], ['id', 'manifest_version_id', 'approver_user_id']);
 }
+
+/** A well-formed request_ref for a structural probe row; its value carries no meaning. */
+const PROBE_REF = `sha256:${'0'.repeat(64)}`;
 
 async function verifyEffectiveState(f) {
   const ready = await rt.bringToReady(f, { experience: f.experience, manifest: f.manifest, version: f.version, personal: false });
@@ -171,6 +180,27 @@ async function verifyEffectiveState(f) {
   await rejected(() => q(`INSERT INTO ${T.WITHDRAWAL_EVENTS} (id, approval_id, manifest_version_id, approver_user_id, occurred_at)
                           VALUES ($1, $2, $3, $4, now())`, [randomUUID(), mohamedApproval, f.manifest, f.stranger]), ['23503']);
 
+  // E09 THE CROSS-PAIR. Approval A's id beside approval B's (manifest, approver):
+  // Mohamed's approval id with (this manifest, Hadir). Under two independent
+  // foreign keys both halves exist - A is a real approval and (manifest, Hadir)
+  // is B's real pair - so only the exact composite binding can refuse it, and
+  // the derivation would otherwise have reported A as WITHDRAWN while the row
+  // named B. PostgreSQL refuses it structurally for the event AND the command;
+  // the same triple read from ONE row is accepted (and rolled back), so the
+  // refusal is the mismatch and nothing else.
+  await rejected(() => q(`INSERT INTO ${T.WITHDRAWAL_EVENTS} (id, approval_id, manifest_version_id, approver_user_id, occurred_at)
+                          VALUES ($1, $2, $3, $4, now())`, [randomUUID(), mohamedApproval, f.manifest, f.hadir]), ['23503']);
+  await rejected(() => q(`INSERT INTO ${T.WITHDRAWAL_COMMANDS} (id, approval_id, manifest_version_id, actor_user_id, request_ref, committed_at)
+                          VALUES ($1, $2, $3, $4, $5, now())`, [randomUUID(), mohamedApproval, f.manifest, f.hadir, PROBE_REF]), ['23503']);
+  await q('SAVEPOINT exact_triple');
+  await q(`INSERT INTO ${T.WITHDRAWAL_COMMANDS} (id, approval_id, manifest_version_id, actor_user_id, request_ref, committed_at)
+           VALUES ($1, $2, $3, $4, $5, now())`, [randomUUID(), mohamedApproval, f.manifest, f.mohamed, PROBE_REF]);
+  await q(`INSERT INTO ${T.WITHDRAWAL_EVENTS} (id, approval_id, manifest_version_id, approver_user_id, occurred_at)
+           VALUES ($1, $2, $3, $4, now())`, [randomUUID(), mohamedApproval, f.manifest, f.mohamed]);
+  assert.equal(await count(T.WITHDRAWAL_EVENTS, 'approval_id = $1', [mohamedApproval]), 1, 'E09 the exact triple of ONE row is representable');
+  await q('ROLLBACK TO SAVEPOINT exact_triple'); await q('RELEASE SAVEPOINT exact_triple');
+  assert.equal(await count(T.WITHDRAWAL_EVENTS, 'approval_id = $1', [mohamedApproval]), 0, 'E09 and was rolled back');
+
   // E03 idempotency.
   await actAs(f.hadir);
   const [retry] = await rt.withdraw(command, hadirApproval);
@@ -226,6 +256,13 @@ async function verifyEffectiveState(f) {
   const [wSup] = await rt.withdraw(randomUUID(), a3);
   assert.equal(wSup.outcome, 'WITHDRAWN');
   assert.equal((await rt.deriveApprovalState(a3))[0].effective_state, 'WITHDRAWN', 'a human act dominates structural supersession');
+  // E09 across manifests too: Hadir's approval of m4 beside Mohamed's (m3, Mohamed)
+  // pair. Both halves exist independently; the composite binding refuses the mix.
+  await asRole('postgres');
+  await rejected(() => q(`INSERT INTO ${T.WITHDRAWAL_EVENTS} (id, approval_id, manifest_version_id, approver_user_id, occurred_at)
+                          VALUES ($1, $2, $3, $4, now())`, [randomUUID(), a4, m3, f.mohamed]), ['23503']);
+  await rejected(() => q(`INSERT INTO ${T.WITHDRAWAL_COMMANDS} (id, approval_id, manifest_version_id, actor_user_id, request_ref, committed_at)
+                          VALUES ($1, $2, $3, $4, $5, now())`, [randomUUID(), a4, m3, f.mohamed, PROBE_REF]), ['23503']);
 
   // E07 a changed authority snapshot changes the CURRENT fingerprint; the bound
   // fingerprint stays what it was, which is how 0095 detects staleness.
@@ -298,6 +335,22 @@ async function verifyForwardSafety(f, ids) {
     await q(`ALTER TABLE ${T.WITHDRAWAL_EVENTS} DISABLE ROW LEVEL SECURITY`);
     await assert.rejects(verifyCatalog(), refuses, 'a relation losing RLS is a regression');
     await q('ROLLBACK TO SAVEPOINT r4');
+
+    await q('SAVEPOINT r5');
+    // The weakening REV-01 named: two independent partial foreign keys in place
+    // of the exact composite binding. The catalog program refuses the shape -
+    // and the shape really admits the cross-pair E09 proved unrepresentable.
+    await q(`ALTER TABLE ${T.WITHDRAWAL_EVENTS} DROP CONSTRAINT publication_approval_withdrawal_events_approval_fk`);
+    await q(`ALTER TABLE ${T.WITHDRAWAL_EVENTS} ADD CONSTRAINT i05b94_probe_approval_fk
+             FOREIGN KEY (approval_id) REFERENCES ${T.APPROVALS} (id) ON DELETE RESTRICT`);
+    await q(`ALTER TABLE ${T.WITHDRAWAL_EVENTS} ADD CONSTRAINT i05b94_probe_approver_fk
+             FOREIGN KEY (manifest_version_id, approver_user_id) REFERENCES ${T.APPROVALS} (manifest_version_id, approver_user_id) ON DELETE RESTRICT`);
+    await assert.rejects(verifyCatalog(), refuses, 'two independent foreign keys in place of the exact composite approval binding is a regression');
+    await q(`INSERT INTO ${T.WITHDRAWAL_EVENTS} (id, approval_id, manifest_version_id, approver_user_id, occurred_at)
+             VALUES ($1, $2, $3, $4, now())`, [randomUUID(), ids.mohamedApproval, f.manifest, f.hadir]);
+    assert.equal(await count(T.WITHDRAWAL_EVENTS, 'approval_id = $1 AND approver_user_id = $2', [ids.mohamedApproval, f.hadir]), 1,
+      'anti-vacuity: the weakened shape admits the cross-pair the exact binding refused in E09');
+    await q('ROLLBACK TO SAVEPOINT r5');
   } finally {
     await q('ROLLBACK TO SAVEPOINT forward_safety');
     await q('RELEASE SAVEPOINT forward_safety');

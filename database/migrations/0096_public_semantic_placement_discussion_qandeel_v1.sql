@@ -517,11 +517,16 @@ BEGIN
     RETURN;
   END IF;
 
-  -- A REPLY TARGETS A POST OF THIS EXACT EXPERIENCE. Same bounded class: a
-  -- parent that does not exist here reveals nothing.
+  -- A REPLY TARGETS A POST OF THIS EXACT EXPERIENCE AND OF THE CURRENTLY
+  -- VISIBLE VERSION. Discussion is exact-version-bound: a post made against an
+  -- earlier version is not a reply target once a later version is the visible
+  -- one, because successor-version discussion semantics are not decided here
+  -- and nothing silently carries one version's conversation into another.
+  -- Same bounded class: a parent that does not exist here reveals nothing.
   IF p_parent_post_id IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM public.public_discussion_posts dp
-     WHERE dp.id = p_parent_post_id AND dp.experience_id = p_experience_id) THEN
+     WHERE dp.id = p_parent_post_id AND dp.experience_id = p_experience_id
+       AND dp.target_experience_version_id = visible_version) THEN
     RAISE EXCEPTION 'PUBLIC_DISCUSSION_TARGET_NOT_AVAILABLE' USING ERRCODE='P0002';
   END IF;
 
@@ -622,16 +627,22 @@ BEGIN
     RETURN;
   END IF;
 
-  -- THE REPLY TARGET AND EVERY CONSUMED POST BELONG TO THIS EXACT EXPERIENCE.
+  -- THE REPLY TARGET AND EVERY CONSUMED POST BELONG TO THIS EXACT EXPERIENCE
+  -- AND TO THE CURRENTLY VISIBLE VERSION. Public QANDEEL output is
+  -- exact-version-bound: it never replies to or consumes a post made against
+  -- an earlier version as if it were part of the current one - successor
+  -- semantics are not decided here. One bounded class for every miss.
   IF p_in_reply_to_post_id IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM public.public_discussion_posts dp
-     WHERE dp.id = p_in_reply_to_post_id AND dp.experience_id = p_experience_id) THEN
+     WHERE dp.id = p_in_reply_to_post_id AND dp.experience_id = p_experience_id
+       AND dp.target_experience_version_id = visible_version) THEN
     RAISE EXCEPTION 'PUBLIC_QANDEEL_TARGET_NOT_AVAILABLE' USING ERRCODE='P0002';
   END IF;
   IF EXISTS (
     SELECT 1 FROM unnest(p_consumed_post_ids) AS x
      WHERE NOT EXISTS (SELECT 1 FROM public.public_discussion_posts dp
-                        WHERE dp.id = x AND dp.experience_id = p_experience_id)) THEN
+                        WHERE dp.id = x AND dp.experience_id = p_experience_id
+                          AND dp.target_experience_version_id = visible_version)) THEN
     RAISE EXCEPTION 'PUBLIC_QANDEEL_TARGET_NOT_AVAILABLE' USING ERRCODE='P0002';
   END IF;
 
@@ -676,6 +687,11 @@ END$$;
 --
 --    Each composes the ONE visibility derivation with the admission gate and
 --    returns zero rows otherwise. None reads sealed provenance or an account.
+--    Discussion and Public QANDEEL rows are served for the CURRENTLY VISIBLE
+--    version only: every row binds the exact version it was made against, and
+--    a row bound to an earlier version is never served as the current
+--    version's. What a later reviewed successor publication does with earlier
+--    conversation is that slice's decision; nothing here decides it silently.
 -- ---------------------------------------------------------------------------
 CREATE FUNCTION public.resolve_public_experience_semantic_placement_v1(p_experience_id uuid, p_viewer_user_id uuid)
 RETURNS TABLE(experience_id uuid, experience_version_id uuid, placement_revision integer,
@@ -709,6 +725,7 @@ BEGIN
     FROM public.resolve_public_visibility_state_v1(p_experience_id) vs
     JOIN public.resolve_public_audience_admission_v1(p_viewer_user_id) ad ON ad.admission = 'ADMITTED'
     JOIN public.public_discussion_posts dp ON dp.experience_id = vs.experience_id
+     AND dp.target_experience_version_id = vs.visible_experience_version_id
     JOIN public.public_identity_display_state d ON d.public_identity_ref = dp.author_public_identity_ref
    WHERE vs.visibility_state = 'PUBLICLY_VISIBLE'
    ORDER BY dp.post_ordinal;
@@ -728,6 +745,7 @@ BEGIN
     FROM public.resolve_public_visibility_state_v1(p_experience_id) vs
     JOIN public.resolve_public_audience_admission_v1(p_viewer_user_id) ad ON ad.admission = 'ADMITTED'
     JOIN public.public_qandeel_responses r ON r.experience_id = vs.experience_id
+     AND r.experience_version_id = vs.visible_experience_version_id
    WHERE vs.visibility_state = 'PUBLICLY_VISIBLE'
    ORDER BY r.response_ordinal;
 END$$;
@@ -915,6 +933,9 @@ BEGIN
      OR p.prosrc ~ 'publication_manifest_required_approvers' OR p.prosrc ~ 'current_lifecycle' THEN
     RAISE EXCEPTION 'I-05B: discussion authority is not control, not rights, not approval, and tests no lifecycle for itself';
   END IF;
+  IF p.prosrc !~ 'dp\.id = p_parent_post_id AND dp\.experience_id = p_experience_id\s+AND dp\.target_experience_version_id = visible_version' THEN
+    RAISE EXCEPTION 'I-05B: a reply must target a post of the currently visible version, never merely a post of the same Experience';
+  END IF;
 
   -- THE PUBLIC QANDEEL WRITER: no human, no consent, a visible target, and a
   -- context fingerprint over public-domain identities only.
@@ -931,6 +952,23 @@ BEGIN
   END IF;
   IF p.prosrc ~ 'public_experience_controllers' OR p.prosrc ~ 'publication_manifest_approvals' THEN
     RAISE EXCEPTION 'I-05B: Public QANDEEL output creates no control and satisfies no approval';
+  END IF;
+  IF p.prosrc !~ 'dp\.id = p_in_reply_to_post_id AND dp\.experience_id = p_experience_id\s+AND dp\.target_experience_version_id = visible_version'
+     OR p.prosrc !~ 'dp\.id = x AND dp\.experience_id = p_experience_id\s+AND dp\.target_experience_version_id = visible_version' THEN
+    RAISE EXCEPTION 'I-05B: Public QANDEEL output must reply to and consume posts of the currently visible version only';
+  END IF;
+
+  -- EXACT-VERSION CLOSURE OF THE TWO CONVERSATION RESOLVERS: a discussion post
+  -- or a Public QANDEEL response bound to an earlier version is never served
+  -- as the currently visible version's. Successor-version semantics are left
+  -- to a later reviewed slice; nothing here chooses an Experience-wide policy.
+  SELECT pr.prosrc INTO p FROM pg_proc pr WHERE pr.oid = 'public.resolve_public_discussion_v1(uuid, uuid)'::regprocedure;
+  IF p.prosrc !~ 'dp\.target_experience_version_id = vs\.visible_experience_version_id' THEN
+    RAISE EXCEPTION 'I-05B: the discussion resolver must serve only posts bound to the currently visible version';
+  END IF;
+  SELECT pr.prosrc INTO p FROM pg_proc pr WHERE pr.oid = 'public.resolve_public_qandeel_responses_v1(uuid, uuid)'::regprocedure;
+  IF p.prosrc !~ 'r\.experience_version_id = vs\.visible_experience_version_id' THEN
+    RAISE EXCEPTION 'I-05B: the Public QANDEEL resolver must serve only responses bound to the currently visible version';
   END IF;
 
   -- THE THREE RESOLVERS: STABLE, service_role-only, both gates, no provenance,

@@ -111,12 +111,21 @@ async function verifyCatalog() {
         `${fn} may not accept ${name}`);
     }
   }
-  const [fk] = await rows(
-    `SELECT c.confdeltype, ns.nspname || '.' || cl.relname AS parent FROM pg_constraint c
-       JOIN pg_class cl ON cl.oid = c.confrelid JOIN pg_namespace ns ON ns.oid = cl.relnamespace
-      WHERE c.conrelid = $1::regclass AND c.conname = 'public_experience_publication_state_version_fk'`, [T.PUBLICATION_STATE]);
-  assert.ok(fk && fk.parent === 'public.public_experience_versions' && fk.confdeltype === 'r',
-    'the publication record binds the exact version of its own Experience restrictively');
+  // Version, Experience and manifest are ONE exact version row (REV-02) in both
+  // relations this migration created: ONE composite restrictive foreign key onto
+  // the additive candidate key on the frozen version relation, no independent
+  // partial key into versions, and no direct manifest key beside it. Two
+  // independent keys would let version V1 travel with the manifest of V2 of the
+  // same Experience (PB13); weakening back into that shape fails this program.
+  assert.deepEqual(await rt.uniqueKeyColumns(T.VERSIONS, 'public_experience_versions_exact_identity_key'),
+    ['id', 'experience_id', 'package_manifest_version_id'], 'the frozen version relation carries the additive exact-identity candidate key');
+  await rt.assertExactBinding(T.PUBLICATION_STATE, T.VERSIONS,
+    ['published_experience_version_id', 'experience_id', 'published_manifest_version_id'], ['id', 'experience_id', 'package_manifest_version_id']);
+  await rt.assertExactBinding(T.PUBLISH_COMMANDS, T.VERSIONS,
+    ['experience_version_id', 'experience_id', 'manifest_version_id'], ['id', 'experience_id', 'package_manifest_version_id']);
+  for (const table of OWN_TABLES) {
+    assert.deepEqual(await rt.foreignKeysInto(table, T.MANIFESTS), [], `${table} binds the manifest through the version row, never independently`);
+  }
   const [{ allowed: entry }] = await rows('SELECT has_function_privilege($1, $2, $3) allowed',
     ['service_role', 'public.resolve_shared_world_history_visibility_v1(uuid, uuid)', 'EXECUTE']);
   assert.equal(entry, true, 'the frozen I-04F visibility entry point is still reachable');
@@ -148,6 +157,7 @@ async function verifyPublish(f, seam) {
 
   // PB01 DRAFT never jumps to PUBLISHED, even with a cleared seam.
   const draft = randomUUID(); const dm = randomUUID(); const dv = randomUUID();
+  const dm2 = randomUUID(); const dv2 = randomUUID();
   await rt.createDraft(randomUUID(), draft);
   await rt.prepare(randomUUID(), draft, dm, dv, [randomUUID()], [f.userUnit], NONE, NONE, NONE);
   await rt.approve(randomUUID(), dm);
@@ -172,6 +182,38 @@ async function verifyPublish(f, seam) {
     await rejected(() => rt.publish(randomUUID(), f.experience, randomUUID()), ['P0002'], /PUBLIC_EXPERIENCE_NOT_AVAILABLE/u);
     await rejected(() => rt.publish(randomUUID(), f.experience, dv), ['P0002'], /PUBLIC_EXPERIENCE_NOT_AVAILABLE/u);
     await assertNothingPublished(f.experience, 'READY_FOR_REVIEW');
+
+    // PB13 THE MISMATCHED PAIR, structurally. A second package of the DRAFT
+    // Experience gives it V1/M1 and V2/M2 through the frozen preparation alone.
+    // Under two independent foreign keys the pair (V1, M2) satisfies both - V1
+    // is a version of this Experience and M2 is a manifest of this Experience -
+    // so only the exact composite binding can refuse it. PostgreSQL refuses it
+    // for the publication record AND the publish command; the true pairs are
+    // accepted (and rolled back), so the refusal is the mismatch and nothing else.
+    await actAs(f.mohamed);
+    await rt.prepare(randomUUID(), draft, dm2, dv2, [randomUUID()], [f.userUnit], NONE, NONE, NONE);
+    await asRole('postgres');
+    await rejected(() => q(`INSERT INTO ${T.PUBLICATION_STATE}
+                              (experience_id, published_experience_version_id, published_manifest_version_id,
+                               authority_request_fingerprint, prerequisite_clearance_basis, publication_revision, published_at)
+                            VALUES ($1, $2, $3, $4, 'PB13 structural probe', 1, now())`, [draft, dv, dm2, PROBE_REF]), ['23503']);
+    await rejected(() => q(`INSERT INTO ${T.PUBLISH_COMMANDS}
+                              (id, experience_id, experience_version_id, manifest_version_id, actor_user_id,
+                               effective_approval_count, authority_request_fingerprint, request_ref, committed_at)
+                            VALUES ($1, $2, $3, $4, $5, 0, $6, $6, now())`, [randomUUID(), draft, dv, dm2, f.mohamed, PROBE_REF]), ['23503']);
+    await q('SAVEPOINT exact_pair');
+    await q(`INSERT INTO ${T.PUBLICATION_STATE}
+               (experience_id, published_experience_version_id, published_manifest_version_id,
+                authority_request_fingerprint, prerequisite_clearance_basis, publication_revision, published_at)
+             VALUES ($1, $2, $3, $4, 'PB13 structural probe', 1, now())`, [draft, dv2, dm2, PROBE_REF]);
+    await q(`INSERT INTO ${T.PUBLISH_COMMANDS}
+               (id, experience_id, experience_version_id, manifest_version_id, actor_user_id,
+                effective_approval_count, authority_request_fingerprint, request_ref, committed_at)
+             VALUES ($1, $2, $3, $4, $5, 0, $6, $6, now())`, [randomUUID(), draft, dv, dm, f.mohamed, PROBE_REF]);
+    assert.equal(await count(T.PUBLICATION_STATE, 'experience_id = $1', [draft]), 1, 'PB13 the exact pair of ONE version row is representable');
+    await q('ROLLBACK TO SAVEPOINT exact_pair'); await q('RELEASE SAVEPOINT exact_pair');
+    await assertNothingPublished(draft, 'DRAFT');
+    await actAs(f.mohamed);
 
     // PB05 a WITHDRAWN required approval refuses, and the READY snapshot is not trusted.
     await q('SAVEPOINT withdrawn');
@@ -278,8 +320,11 @@ async function verifyPublish(f, seam) {
     await rt.restorePrerequisites(seam);
   }
   await rejected(() => rt.publish(randomUUID(), draft, dv), ['55000'], /PUBLIC_EXPERIENCE_LIFECYCLE_INVALID/u);
-  return { draft, dv, ready };
+  return { draft, dm, dv, dm2, dv2, ready };
 }
+
+/** A well-formed fingerprint / request_ref for a structural probe row; its value carries no meaning. */
+const PROBE_REF = `sha256:${'0'.repeat(64)}`;
 
 async function verifyVisibilityAndServing(f, published) {
   // VS01 the ONE visibility derivation.
@@ -382,7 +427,7 @@ async function verifyVisibilityAndServing(f, published) {
   assert.equal((await rt.visibility(f.experience))[0].visibility_state, 'PUBLICLY_VISIBLE');
 }
 
-async function verifyForwardSafety(f, seam) {
+async function verifyForwardSafety(f, seam, published) {
   await q('SAVEPOINT forward_safety');
   try {
     // A later reviewed I-05C slice: an absence record beside the immutable
@@ -447,6 +492,26 @@ async function verifyForwardSafety(f, seam) {
     await q(`UPDATE ${T.POLICY} SET signed_out_viewing_policy = 'ALLOWED'`);
     await assert.rejects(verifyCatalog(), refuses, 'guessing the unresolved signed-out launch requirement is a regression');
     await q('ROLLBACK TO SAVEPOINT r7');
+
+    await q('SAVEPOINT r8');
+    // The weakening REV-02 named: the publication record binding version and
+    // manifest through two independent foreign keys. The catalog program refuses
+    // the shape - and the shape really admits version V1 beside the manifest of
+    // V2 of the same Experience, the pair PB13 proved unrepresentable.
+    await q(`ALTER TABLE ${T.PUBLICATION_STATE} DROP CONSTRAINT public_experience_publication_state_version_fk`);
+    await q(`ALTER TABLE ${T.PUBLICATION_STATE} ADD CONSTRAINT i05b95_probe_version_fk
+             FOREIGN KEY (published_experience_version_id, experience_id) REFERENCES ${T.VERSIONS} (id, experience_id) ON DELETE RESTRICT`);
+    await q(`ALTER TABLE ${T.PUBLICATION_STATE} ADD CONSTRAINT i05b95_probe_manifest_fk
+             FOREIGN KEY (published_manifest_version_id, experience_id) REFERENCES ${T.VERSIONS} (package_manifest_version_id, experience_id) ON DELETE RESTRICT`);
+    await assert.rejects(verifyCatalog(), refuses, 'two independent foreign keys in place of the exact version and manifest binding is a regression');
+    await q(`INSERT INTO ${T.PUBLICATION_STATE}
+               (experience_id, published_experience_version_id, published_manifest_version_id,
+                authority_request_fingerprint, prerequisite_clearance_basis, publication_revision, published_at)
+             VALUES ($1, $2, $3, $4, 'r8 weakened-shape probe', 1, now())`, [published.draft, published.dv, published.dm2, PROBE_REF]);
+    assert.equal(await count(T.PUBLICATION_STATE, 'experience_id = $1 AND published_experience_version_id = $2 AND published_manifest_version_id = $3',
+      [published.draft, published.dv, published.dm2]), 1,
+    'anti-vacuity: the weakened shape admits the mismatched version and manifest pair the exact binding refused in PB13');
+    await q('ROLLBACK TO SAVEPOINT r8');
   } finally {
     await q('ROLLBACK TO SAVEPOINT forward_safety');
     await q('RELEASE SAVEPOINT forward_safety');
@@ -591,7 +656,7 @@ await runVerifier('0095', async (stage) => {
     await verifyVisibilityAndServing(f, published);
     stage('forward safety');
     await asRole('postgres');
-    await verifyForwardSafety(f, seam);
+    await verifyForwardSafety(f, seam, published);
   } finally {
     await q('ROLLBACK');
   }

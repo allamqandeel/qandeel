@@ -1569,9 +1569,15 @@ walks the DERIVED required set and reports `MISSING` for a required human who ne
 controller row and no Public Identity: current membership is not rightsholder authority, control is
 not consent, and a FORMER Shared member withdraws her own consent without regaining any browsing. A
 withdrawal by anyone else, and a guessed identifier, receive ONE bounded class. The event is
-append-only for every role, one per approval, and bound by composite foreign key into the exact
-`(manifest, approver)` pair of the evidence. Withdrawal takes the canonical Public lock prefix so it
-serializes with publication. Everything is executable by no application role.
+append-only for every role, one per approval, and bound to ONE exact approval - its id, its manifest
+and its approver, all read from the same immutable row - through one composite foreign key onto an
+additive candidate key `(id, manifest_version_id, approver_user_id)` that 0094 adds to the frozen
+approval table (a constraint; no row is touched and migration 0092 is not edited). Two independent
+foreign keys would have let approval A's id travel with approval B's `(manifest, approver)` pair and
+made the derivation report A as withdrawn while the row named B; the verifier proves that cross-pair
+structurally unrepresentable for the event and the command, and proves the weakening back into two
+independent keys is refused. Withdrawal takes the canonical Public lock prefix so it serializes with
+publication. Everything is executable by no application role.
 
 The frozen 0093 READY commit counts historical approval rows and is deliberately NOT the publication
 gate: the verifier proves READY still commits after a withdrawal, which is exactly why 0095 must
@@ -1596,6 +1602,14 @@ required approval currently `EFFECTIVE` through the ONE 0094 derivation (`MISSIN
 fingerprint, and LAST the CW2-08 prerequisite seam. Then, in one transaction: lifecycle `PUBLISHED`,
 an immutable publication record naming the exact version, manifest, fingerprint and clearance basis,
 the append-only transition, the durable command. No failure leaves anything partial.
+
+The record and the command bind version, Experience and manifest as ONE exact version row: one
+composite foreign key onto an additive candidate key `(id, experience_id, package_manifest_version_id)`
+that 0095 adds to the frozen version relation (a constraint; migration 0091 is not edited). A record
+naming version V1 beside the manifest of V2 of the same Experience is therefore structurally
+unrepresentable - two independent keys would have admitted it - and the version's ordinal is read
+from the bound version row, never duplicated into the record. The verifier proves the mismatched pair
+refused for both relations and the weakening back into independent keys refused.
 
 **Canonical `PUBLIC_VISIBILITY_STATE`.** `resolve_public_visibility_state_v1` is the ONE serving
 truth: `PUBLICLY_VISIBLE` only when the lifecycle is `PUBLISHED`, an immutable publication record
@@ -1647,6 +1661,16 @@ placement revision, reply target, consumed posts - recomputed byte for byte by t
 creates no consent, no control and no rightsholder authority. Three service_role resolvers serve
 placement, discussion and responses; each composes both canonical gates.
 
+**Exact-version closure.** Every post and response binds the exact version it was made against, and
+that binding is what is served: the discussion and Public QANDEEL resolvers return rows bound to the
+CURRENTLY visible version only, a reply targets a post of the visible version, and Public QANDEEL
+replies to and consumes posts of the visible version only - a superseded version's conversation is
+never silently served, extended or consumed as the current version's. What a later reviewed successor
+publication does with earlier conversation is that slice's decision; I-05B chooses no Experience-wide
+policy. The verifier proves it against a simulated successor version with real V1 history behind it
+(a verifier-only simulation, rolled back): V1 rows are not served, replied to or consumed as V2's, and
+V2 conversation through the same writers is.
+
 ```sh
 npm run verify:public-semantic-placement-discussion-qandeel:integration
 ```
@@ -1654,9 +1678,12 @@ npm run verify:public-semantic-placement-discussion-qandeel:integration
 ### I-05B - Vitality and search / lens / panel projections (migration 0097)
 
 `0097_public_vitality_search_lens_panel_projections_v1.sql` creates derived state that is rebuilt and
-never trusted. `recompute_public_experience_vitality_v1` counts public discussion and Public QANDEEL
-activity for the visible version and writes only when the canonical answer differs from what is
-stored (`VITALITY_UNCHANGED` otherwise); for a non-visible target it writes nothing.
+never trusted. `recompute_public_experience_vitality_v1` counts the public discussion and Public
+QANDEEL activity bound TO the visible version - a superseded version's activity is its own history,
+never the current version's heat - and writes only when the canonical answer differs from what is
+stored (`VITALITY_UNCHANGED` otherwise); for a non-visible target it writes nothing. The verifier
+proves, against a simulated successor version, that vitality computed for V2 counts none of V1's
+activity and that the V1 row is never served as V2's.
 `rebuild_public_experience_projection_v1` builds the search document from the public derivative
 bodies of the visible manifest in package order plus the current semantic label, with the `simple`
 text-search configuration (no ranking policy is invented), and DELETES the projection of an

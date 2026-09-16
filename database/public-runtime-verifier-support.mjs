@@ -180,6 +180,42 @@ export function createRuntime(databaseUrl) {
     rows('SELECT * FROM public.resolve_public_panel_v1($1, $2)', [experience, viewer]);
 
   // ---- catalog
+  /** Every foreign key from `table` into `parent`, with both column lists in key order. */
+  async function foreignKeysInto(table, parent) {
+    return rows(
+      `SELECT c.conname, c.confdeltype,
+              (SELECT array_agg(a.attname::text ORDER BY k.ord) FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+                 JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum) AS local_columns,
+              (SELECT array_agg(a.attname::text ORDER BY k.ord) FROM unnest(c.confkey) WITH ORDINALITY AS k(attnum, ord)
+                 JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = k.attnum) AS parent_columns
+         FROM pg_constraint c
+        WHERE c.conrelid = $1::regclass AND c.contype = 'f' AND c.confrelid = $2::regclass
+        ORDER BY c.conname`, [table, parent]);
+  }
+  /** The columns of one named UNIQUE constraint, in key order; null when it does not exist. */
+  async function uniqueKeyColumns(table, name) {
+    const [key] = await rows(
+      `SELECT (SELECT array_agg(a.attname::text ORDER BY k.ord) FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+                 JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum) AS columns
+         FROM pg_constraint c WHERE c.conrelid = $1::regclass AND c.conname = $2 AND c.contype = 'u'`, [table, name]);
+    return key ? key.columns : null;
+  }
+  /**
+   * `table` binds `parent` as ONE exact row: some restrictive foreign key maps exactly
+   * `local` onto `parentColumns`, and NO foreign key into `parent` is an independent
+   * partial one (fewer columns). Two independent partial keys are the shape the exact
+   * binding exists to forbid - each half can be satisfied by a different parent row.
+   */
+  async function assertExactBinding(table, parent, local, parentColumns) {
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    const bindings = await foreignKeysInto(table, parent);
+    for (const binding of bindings) {
+      assert.equal(binding.parent_columns.length, parentColumns.length,
+        `${table}: ${binding.conname} must not bind ${parent} through an independent partial foreign key`);
+    }
+    assert.ok(bindings.some((binding) => binding.confdeltype === 'r' && same(binding.local_columns, local) && same(binding.parent_columns, parentColumns)),
+      `${table} binds ${parent} as ONE exact row: (${local.join(', ')}) -> (${parentColumns.join(', ')}), restrictively`);
+  }
   async function functionPosture(fn) {
     const [p] = await rows(
       `SELECT pr.prosecdef secdef, pr.provolatile volatility, pr.proconfig config, pr.prosrc,
@@ -466,6 +502,47 @@ export function createRuntime(databaseUrl) {
     return { experience, manifest, version, approvals, required, fingerprint: ready.authority_request_fingerprint };
   }
 
+  /**
+   * VERIFIER-ONLY SIMULATION of a later reviewed successor publication.
+   *
+   * No product primitive can do this - a READY or PUBLISHED Experience admits no
+   * new package through the frozen preparation, and the publication record is
+   * append-only for every role - and successor-publication semantics belong to a
+   * later slice. The caller runs this inside a transaction it rolls back. It
+   * writes, as the table owner: a second manifest of the SAME Experience (a copy
+   * of the published one under a new identity), a second version bound to it,
+   * the immutable publication record re-pointed at both with its guard lifted
+   * and restored, and the current pointer moved - so the ONE visibility
+   * derivation now answers the successor. It exists so the exact-version closure
+   * of discussion, Public QANDEEL and vitality can be proven against a visible
+   * V2 that has REAL V1 history behind it, written by the real writers.
+   */
+  async function simulateSuccessorVersion(experience, manifest) {
+    await asRole('postgres');
+    const successorManifest = randomUUID();
+    const successorVersion = randomUUID();
+    await q(`INSERT INTO ${T.MANIFESTS} (id, experience_id, public_world_singleton, publisher_public_identity_ref, publisher_user_id,
+               intended_publication_action, target_audience_class, authority_readiness, prepared_authority_snapshot_version, item_count, created_at)
+             SELECT $1, experience_id, true, publisher_public_identity_ref, publisher_user_id, intended_publication_action,
+                    target_audience_class, authority_readiness, prepared_authority_snapshot_version, item_count, clock_timestamp()
+               FROM ${T.MANIFESTS} WHERE id = $2`, [successorManifest, manifest]);
+    const [{ next }] = await rows(`SELECT coalesce(max(version_ordinal), 0) + 1 AS next FROM ${T.VERSIONS} WHERE experience_id = $1`, [experience]);
+    await q(`INSERT INTO ${T.VERSIONS} (id, experience_id, package_manifest_version_id, version_ordinal, created_at)
+             VALUES ($1, $2, $3, $4, clock_timestamp())`, [successorVersion, experience, successorManifest, next]);
+    await q(`ALTER TABLE ${T.PUBLICATION_STATE} DISABLE TRIGGER public_experience_publication_state_immutable`);
+    await q(`UPDATE ${T.PUBLICATION_STATE}
+                SET published_experience_version_id = $2, published_manifest_version_id = $3,
+                    publication_revision = publication_revision + 1
+              WHERE experience_id = $1`, [experience, successorVersion, successorManifest]);
+    await q(`ALTER TABLE ${T.PUBLICATION_STATE} ENABLE TRIGGER public_experience_publication_state_immutable`);
+    await q(`UPDATE ${T.EXPERIENCES} SET current_experience_version_id = $2 WHERE id = $1`, [experience, successorVersion]);
+    const [vs] = await visibility(experience);
+    assert.equal(vs.visibility_state, 'PUBLICLY_VISIBLE', 'successor simulation: the successor version is the visible one');
+    assert.equal(vs.visible_experience_version_id, successorVersion);
+    assert.equal(vs.visible_manifest_version_id, successorManifest);
+    return { successorManifest, successorVersion, successorOrdinal: Number(next) };
+  }
+
   /** Remove every committed fixture, lifting the append-only guards inside ONE transaction. */
   async function removeCommittedFixtures(c) {
     await asRole('postgres');
@@ -575,10 +652,11 @@ export function createRuntime(databaseUrl) {
     publish, visibility, admission, serving, prerequisites,
     recordPlacement, currentPlacement, resolvePlacement, post, resolveDiscussion, recordResponse, resolveResponses,
     recomputeVitality, resolveVitality, rebuildProjection, search, lens, panel,
+    foreignKeysInto, uniqueKeyColumns, assertExactBinding,
     functionPosture, canExecute, resultColumns, inputParameters, triggerEnabled, verifyPosture,
     captureSeam, clearPrerequisites, restorePrerequisites, publishCleared,
     newFixture, provision, provisionWorld, provisionMaterials, provisionIdentities, commitMaterial, bringToReady,
-    removeCommittedFixtures, openSecondary, stillPending,
+    simulateSuccessorVersion, removeCommittedFixtures, openSecondary, stillPending,
   };
 }
 

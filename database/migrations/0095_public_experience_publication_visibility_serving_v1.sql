@@ -124,10 +124,31 @@
 -- (0096 / 0097); no lifecycle other than the ONE transition named above; no
 -- disappearance, deletion or source-unavailability handling; no Launch, Safety
 -- or entitlement policy; no route, controller, RPC or mobile surface; no
--- mutation of any 0091-0094 relation beyond the two I-05A rows the transition
--- itself moves. Migrations 0001-0094 are untouched.
+-- mutation of any 0091-0094 ROW beyond the two I-05A rows the transition
+-- itself moves. The ONE change to a frozen relation is the additive candidate
+-- key in section 0 - a constraint that touches no row and exists so the
+-- publication record can bind version and manifest as one exact pair.
+-- Migrations 0001-0094 are untouched.
 
 BEGIN;
+
+-- ---------------------------------------------------------------------------
+-- 0. THE EXACT VERSION IDENTITY, AS A CANDIDATE KEY ON THE FROZEN RELATION.
+--
+--    `public_experience_versions` already binds (id, experience_id) and
+--    (package_manifest_version_id, experience_id) as separate unique keys, and
+--    a manifest produces at most one version. Two INDEPENDENT foreign keys into
+--    those keys still do not prove that a duplicated (version, manifest) pair
+--    names the SAME version row: version V1 with the manifest of V2 of the same
+--    Experience would satisfy both. The record of what exactly was published
+--    must say exactly that, structurally, so the triple below - trivially
+--    unique, it contains the primary key - exists for ONE composite foreign
+--    key per relation to bind version, Experience and manifest from one row.
+--    Additive: no row touched, migration 0091 not edited.
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.public_experience_versions
+    ADD CONSTRAINT public_experience_versions_exact_identity_key
+        UNIQUE (id, experience_id, package_manifest_version_id);
 
 -- ---------------------------------------------------------------------------
 -- 1. THE DURABLE PUBLISH COMMAND HISTORY.
@@ -150,12 +171,14 @@ CREATE TABLE public.public_experience_publish_commands (
         CHECK (authority_request_fingerprint ~ '^sha256:[0-9a-f]{64}$'),
     CONSTRAINT public_experience_publish_commands_request_check
         CHECK (request_ref ~ '^sha256:[0-9a-f]{64}$'),
+    -- Version, Experience and manifest are ONE exact version row, structurally:
+    -- a command that names version V1 beside the manifest of V2 of the same
+    -- Experience is unrepresentable. One composite foreign key onto the
+    -- section-0 candidate key, never two independent ones.
     CONSTRAINT public_experience_publish_commands_version_fk
-        FOREIGN KEY (experience_version_id, experience_id)
-        REFERENCES public.public_experience_versions (id, experience_id) ON DELETE RESTRICT,
-    CONSTRAINT public_experience_publish_commands_manifest_fk
-        FOREIGN KEY (manifest_version_id, experience_id)
-        REFERENCES public.publication_package_manifest_versions (id, experience_id) ON DELETE RESTRICT,
+        FOREIGN KEY (experience_version_id, experience_id, manifest_version_id)
+        REFERENCES public.public_experience_versions (id, experience_id, package_manifest_version_id)
+        ON DELETE RESTRICT,
     CONSTRAINT public_experience_publish_commands_actor_fk
         FOREIGN KEY (actor_user_id) REFERENCES public.users (id) ON DELETE RESTRICT
 );
@@ -170,19 +193,22 @@ CREATE TABLE public.public_experience_publish_commands (
 --    re-point a publication at another version. A later reviewed slice that
 --    ends public presence composes its own state beside this record and never
 --    rewrites it.
+--
+--    The version's ordinal is NOT duplicated here: it is a property of the
+--    version row this record binds, and the visibility derivation reads it
+--    from there. The duplicated identity is exactly (version, manifest), and
+--    it is bound as ONE pair below.
 -- ---------------------------------------------------------------------------
 CREATE TABLE public.public_experience_publication_state (
     experience_id uuid NOT NULL,
     published_experience_version_id uuid NOT NULL,
     published_manifest_version_id uuid NOT NULL,
-    version_ordinal integer NOT NULL,
     authority_request_fingerprint text NOT NULL,
     prerequisite_clearance_basis text NOT NULL,
     publication_revision bigint NOT NULL,
     published_at timestamptz NOT NULL,
     CONSTRAINT public_experience_publication_state_pk PRIMARY KEY (experience_id),
     CONSTRAINT public_experience_publication_state_version_key UNIQUE (published_experience_version_id),
-    CONSTRAINT public_experience_publication_state_ordinal_check CHECK (version_ordinal >= 1),
     CONSTRAINT public_experience_publication_state_revision_check CHECK (publication_revision > 0),
     CONSTRAINT public_experience_publication_state_print_check
         CHECK (authority_request_fingerprint ~ '^sha256:[0-9a-f]{64}$'),
@@ -190,15 +216,14 @@ CREATE TABLE public.public_experience_publication_state (
         CHECK (length(btrim(prerequisite_clearance_basis)) > 0 AND length(prerequisite_clearance_basis) <= 240),
     CONSTRAINT public_experience_publication_state_experience_fk
         FOREIGN KEY (experience_id) REFERENCES public.public_experiences (id) ON DELETE RESTRICT,
+    -- The published version, its Experience and its manifest are ONE exact
+    -- version row, structurally: a record naming version V1 beside the
+    -- manifest of V2 of the same Experience is unrepresentable, and the
+    -- published manifest can only ever be THE manifest of THE published
+    -- version. One composite foreign key onto the section-0 candidate key.
     CONSTRAINT public_experience_publication_state_version_fk
-        FOREIGN KEY (published_experience_version_id, experience_id)
-        REFERENCES public.public_experience_versions (id, experience_id) ON DELETE RESTRICT,
-    -- The manifest is bound through the version relation's own (manifest,
-    -- Experience) key, so the published manifest can only ever be a manifest
-    -- of this exact Experience.
-    CONSTRAINT public_experience_publication_state_manifest_fk
-        FOREIGN KEY (published_manifest_version_id, experience_id)
-        REFERENCES public.public_experience_versions (package_manifest_version_id, experience_id)
+        FOREIGN KEY (published_experience_version_id, experience_id, published_manifest_version_id)
+        REFERENCES public.public_experience_versions (id, experience_id, package_manifest_version_id)
         ON DELETE RESTRICT
 );
 
@@ -528,9 +553,9 @@ BEGIN
    WHERE e.id = p_experience_id;
 
   INSERT INTO public.public_experience_publication_state
-    (experience_id, published_experience_version_id, published_manifest_version_id, version_ordinal,
+    (experience_id, published_experience_version_id, published_manifest_version_id,
      authority_request_fingerprint, prerequisite_clearance_basis, publication_revision, published_at)
-  VALUES (p_experience_id, p_experience_version_id, manifest.id, publishing.version_ordinal,
+  VALUES (p_experience_id, p_experience_version_id, manifest.id,
           derived_fingerprint, btrim(clearance_reason), 1, instant);
 
   BEGIN
@@ -837,8 +862,13 @@ BEGIN
     RAISE EXCEPTION 'I-05B: the serving resolver must disclose no private identity and no sealed provenance';
   END IF;
 
-  -- THE PUBLICATION RECORD IS IMMUTABLE, BOUND TO A VERSION OF ITS OWN
-  -- EXPERIENCE, AND CARRIES NO DECISION COLUMN OF ITS OWN.
+  -- THE PUBLICATION RECORD IS IMMUTABLE, BINDS VERSION, EXPERIENCE AND MANIFEST
+  -- AS ONE EXACT VERSION ROW, AND CARRIES NO DECISION COLUMN OF ITS OWN. The
+  -- frozen version relation carries the additive exact-identity candidate key;
+  -- both relations created here bind it through ONE composite foreign key,
+  -- never through an independent partial one and never through a direct
+  -- manifest foreign key beside it - two independent keys would let version
+  -- V1 travel with the manifest of V2 of the same Experience.
   IF NOT EXISTS (SELECT 1 FROM pg_trigger tg
                   WHERE tg.tgrelid = 'public.public_experience_publication_state'::regclass
                     AND tg.tgname = 'public_experience_publication_state_immutable' AND NOT tg.tgisinternal) THEN
@@ -846,12 +876,42 @@ BEGIN
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint c
-     WHERE c.conrelid = 'public.public_experience_publication_state'::regclass
-       AND c.conname = 'public_experience_publication_state_version_fk'
-       AND c.confrelid = 'public.public_experience_versions'::regclass AND c.confdeltype = 'r'
+     WHERE c.conrelid = 'public.public_experience_versions'::regclass
+       AND c.conname = 'public_experience_versions_exact_identity_key' AND c.contype = 'u'
+       AND (SELECT array_agg(a.attname::text ORDER BY k.ord)
+              FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+              JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum)
+           = ARRAY['id', 'experience_id', 'package_manifest_version_id']
   ) THEN
-    RAISE EXCEPTION 'I-05B: the publication record must bind the exact version of its own Experience by restrictive foreign key';
+    RAISE EXCEPTION 'I-05B: the frozen version relation must carry the additive exact-identity candidate key (id, experience, manifest)';
   END IF;
+  FOREACH t IN ARRAY own_tables LOOP
+    IF EXISTS (
+      SELECT 1 FROM pg_constraint c
+       WHERE c.conrelid = ('public.' || t)::regclass AND c.contype = 'f'
+         AND (c.confrelid = 'public.publication_package_manifest_versions'::regclass
+              OR (c.confrelid = 'public.public_experience_versions'::regclass AND cardinality(c.confkey) <> 3))
+    ) THEN
+      RAISE EXCEPTION 'I-05B: % may not bind version and manifest independently: the pair is one exact version row', t;
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint c
+       WHERE c.conrelid = ('public.' || t)::regclass AND c.contype = 'f'
+         AND c.confrelid = 'public.public_experience_versions'::regclass AND c.confdeltype = 'r'
+         AND (SELECT array_agg(a.attname::text ORDER BY k.ord)
+                FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+                JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum)
+             = CASE t WHEN 'public_experience_publication_state'
+                      THEN ARRAY['published_experience_version_id', 'experience_id', 'published_manifest_version_id']
+                      ELSE ARRAY['experience_version_id', 'experience_id', 'manifest_version_id'] END
+         AND (SELECT array_agg(a.attname::text ORDER BY k.ord)
+                FROM unnest(c.confkey) WITH ORDINALITY AS k(attnum, ord)
+                JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = k.attnum)
+             = ARRAY['id', 'experience_id', 'package_manifest_version_id']
+    ) THEN
+      RAISE EXCEPTION 'I-05B: % must bind the exact version, its Experience and its manifest as one row through one composite restrictive foreign key', t;
+    END IF;
+  END LOOP;
   FOREACH t IN ARRAY own_tables LOOP
     IF EXISTS (
       SELECT 1 FROM pg_attribute a

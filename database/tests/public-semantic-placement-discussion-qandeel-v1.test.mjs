@@ -23,6 +23,7 @@ const gitBlobId = (content) => {
 const MIGRATION_NAME = '0096_public_semantic_placement_discussion_qandeel_v1.sql';
 const migration = read(`../migrations/${MIGRATION_NAME}`);
 const verifier = read('../verify-migration-0096.mjs');
+const support = read('../public-runtime-verifier-support.mjs');
 const readme = read('../README.md');
 const packageJson = read('../../package.json');
 const workflow = read('../../.github/workflows/api-ci.yml');
@@ -156,6 +157,11 @@ test('discussion authority is its own authority: the author\'s own identity, a v
     'an invisible target and a missing parent share the class');
   assert.match(body, /VALUES \(p_post_id, p_experience_id, visible_version, p_parent_post_id, next_ordinal,\s*\n\s*identity\.public_identity_ref, u, p_post_body, instant\);/u,
     'the post binds the visible version and the resolved identity');
+  // REV-03: exact-version closure. A reply targets a post of the CURRENTLY VISIBLE
+  // version, never merely a post of the same Experience: successor-version discussion
+  // semantics are not decided here, and no Experience-wide policy is chosen silently.
+  assert.match(body, /WHERE dp\.id = p_parent_post_id AND dp\.experience_id = p_experience_id\s*\n\s*AND dp\.target_experience_version_id = visible_version\) THEN\s*\n\s*RAISE EXCEPTION 'PUBLIC_DISCUSSION_TARGET_NOT_AVAILABLE'/u,
+    'a reply targets a post of the currently visible version, with the same bounded class for a superseded-version parent');
   for (const forbidden of ['public_experience_controllers', 'publication_manifest_approvals', 'publication_manifest_required_approvers',
     'current_lifecycle', 'shared_world_membership_episodes', 'publication_package_item_provenance']) {
     assert.ok(!body.includes(forbidden), `discussion reads no ${forbidden}`);
@@ -180,6 +186,12 @@ test('Public QANDEEL output is machine state: no human, no consent, a visible ta
   assert.match(body, /FROM public\.resolve_public_visibility_state_v1\(p_experience_id\) vs\s*\n\s*WHERE vs\.visibility_state = 'PUBLICLY_VISIBLE';\s*\n\s*IF NOT FOUND OR visible_version IS NULL THEN\s*\n\s*RAISE EXCEPTION 'PUBLIC_QANDEEL_TARGET_NOT_AVAILABLE' USING ERRCODE='P0002'/u);
   assert.equal((body.match(/RAISE EXCEPTION 'PUBLIC_QANDEEL_TARGET_NOT_AVAILABLE' USING ERRCODE='P0002'/gu) ?? []).length, 3,
     'invisible target, foreign reply target and foreign consumed post share ONE class');
+  // REV-03: the reply target and every consumed post belong to the CURRENTLY VISIBLE
+  // version, never merely to the same Experience.
+  assert.match(body, /WHERE dp\.id = p_in_reply_to_post_id AND dp\.experience_id = p_experience_id\s*\n\s*AND dp\.target_experience_version_id = visible_version\) THEN/u,
+    'Public QANDEEL replies only to a post of the currently visible version');
+  assert.match(body, /WHERE dp\.id = x AND dp\.experience_id = p_experience_id\s*\n\s*AND dp\.target_experience_version_id = visible_version\)\) THEN/u,
+    'Public QANDEEL consumes only posts of the currently visible version');
   assert.match(body, /'QANDEEL_CWV2_PUBLIC_QANDEEL_CONTEXT_V1' \|\| E'\\n'\s*\n\s*\|\| 'experience=' \|\| lower\(p_experience_id::text\) \|\| E'\\n'\s*\n\s*\|\| 'experienceVersion=' \|\| lower\(visible_version::text\) \|\| E'\\n'\s*\n\s*\|\| 'manifest=' \|\| lower\(visible_manifest::text\) \|\| E'\\n'\s*\n\s*\|\| 'placementRevision=' \|\| coalesce\(current_placement::text, 'NONE'\) \|\| E'\\n'\s*\n\s*\|\| 'replyTo=' \|\| coalesce\(lower\(p_in_reply_to_post_id::text\), ''\) \|\| E'\\n'\s*\n\s*\|\| 'consumed=' \|\| consumed_scope/u,
     'the context fingerprint binds the Experience, version, manifest, placement revision, reply target and consumed posts - public-domain identities only');
   for (const forbidden of ['publication_package_item_provenance', 'shared_world', 'conversation_unit', 'public_experience_controllers', 'publication_manifest_approvals']) {
@@ -203,6 +215,15 @@ test('the three resolvers compose both canonical gates, disclose no private iden
     }
   }
   assert.ok(!resultColumns('resolve_public_qandeel_responses_v1').includes('context_fingerprint'), 'the runtime-integrity fingerprint is not served');
+  // REV-03: the two conversation resolvers serve rows bound to the CURRENTLY VISIBLE
+  // version only. A post or response made against an earlier version is that
+  // version's history, never silently served as the current version's.
+  assert.match(functionBody('resolve_public_discussion_v1').body,
+    /JOIN public\.public_discussion_posts dp ON dp\.experience_id = vs\.experience_id\s*\n\s*AND dp\.target_experience_version_id = vs\.visible_experience_version_id/u,
+    'discussion is served for the visible version only');
+  assert.match(functionBody('resolve_public_qandeel_responses_v1').body,
+    /JOIN public\.public_qandeel_responses r ON r\.experience_id = vs\.experience_id\s*\n\s*AND r\.experience_version_id = vs\.visible_experience_version_id/u,
+    'Public QANDEEL responses are served for the visible version only');
   const grants = [...executableSql.matchAll(/GRANT EXECUTE ON FUNCTION ([^\n']+)/gu)].map((m) => m[1].trim());
   assert.deepEqual(grants, ['%s TO service_role'], 'the ONE grant statement is the resolvers loop, to service_role');
   assert.match(executableSql, /FOREACH fn IN ARRAY resolvers LOOP\s*\n\s*EXECUTE format\('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated', fn\);\s*\n\s*IF EXISTS\(SELECT 1 FROM pg_roles WHERE rolname='service_role'\) THEN\s*\n\s*EXECUTE format\('GRANT EXECUTE ON FUNCTION %s TO service_role', fn\);/u);
@@ -232,6 +253,10 @@ test('the self-assertions refuse to deploy a migration that lost any of this', (
     'a Public QANDEEL target must resolve through the canonical visibility truth and refuse with one bounded class',
     'the Public QANDEEL context fingerprint binds public-domain identities only and never a source',
     'Public QANDEEL output creates no control and satisfies no approval',
+    'a reply must target a post of the currently visible version, never merely a post of the same Experience',
+    'Public QANDEEL output must reply to and consume posts of the currently visible version only',
+    'the discussion resolver must serve only posts bound to the currently visible version',
+    'the Public QANDEEL resolver must serve only responses bound to the currently visible version',
     'must consume the canonical visibility state and the audience admission gate',
     'must read no sealed provenance, test no lifecycle for itself and write nothing',
     'must disclose no private identity and no sealed provenance',
@@ -258,12 +283,25 @@ test('0096 is registered in the toolchain, in the I-05B CI group, and in the dat
 });
 
 test('the verifier proves immutability of everything a correction must not touch, the fingerprint byte for byte, and the races', () => {
-  for (const needle of ['snapshotImmutables', 'SP01', 'SP02', 'SP03', 'SP04', 'SP05', 'DS01', 'DS02', 'DS03', 'DS04', 'DS05', 'DS06',
-    'QR01', 'QR02', 'QR03', 'QR04', 'C01', 'C02', 'QANDEEL_CWV2_PUBLIC_QANDEEL_CONTEXT_V1', 'placementRevision=2',
+  for (const needle of ['snapshotImmutables', 'SP01', 'SP02', 'SP03', 'SP04', 'SP05', 'DS01', 'DS02', 'DS03', 'DS04', 'DS05', 'DS06', 'DS07',
+    'QR01', 'QR02', 'QR03', 'QR04', 'QR05', 'C01', 'C02', 'QANDEEL_CWV2_PUBLIC_QANDEEL_CONTEXT_V1', 'placementRevision=2',
     'PUBLIC_DISCUSSION_TARGET_NOT_AVAILABLE', 'PUBLIC_QANDEEL_TARGET_NOT_AVAILABLE', 'SAVEPOINT forward_safety', 'i05b96_probe_absence_v1',
-    'publishCleared', 'restorePrerequisites']) {
+    'publishCleared', 'restorePrerequisites',
+    // REV-03: real V1 conversation, then a valid successor V2 becomes the visible truth
+    // (verifier-only simulation): V1 rows are not served, replied to or consumed as
+    // V2's, V2 conversation through the same writers is, and the resolver mutant that
+    // serves every version's posts is refused by the catalog program.
+    'simulateSuccessorVersion', 'SAVEPOINT successor', 'a reply across versions', 'placementRevision=NONE',
+    'a discussion resolver that serves a superseded version']) {
     assert.ok(verifier.includes(needle), `the verifier proves ${needle}`);
   }
+  // The successor simulation is named as such, is the caller's transaction to roll back,
+  // and puts the publication record's guard back before it returns.
+  assert.match(support, /VERIFIER-ONLY SIMULATION of a later reviewed successor publication/u);
+  assert.match(support, /async function simulateSuccessorVersion\(experience, manifest\)/u);
+  assert.match(support, /DISABLE TRIGGER public_experience_publication_state_immutable[\s\S]*?ENABLE TRIGGER public_experience_publication_state_immutable/u,
+    'the guard lifted for the simulation is restored inside it');
+  assert.ok(!support.includes('INSERT INTO public.public_experience_publication_state'), 'the simulation fabricates no publication record');
   assert.match(verifier, /assert\.deepEqual\(await snapshotImmutables\(f\.experience, f\.manifest\), before,\s*\n\s*'SP01 a correction changed no version/u);
   for (const launched of ['placing', 'posting']) {
     const launch = verifier.indexOf(`const ${launched} = q2(`);

@@ -117,6 +117,19 @@ async function verifyCatalog() {
   for (const forbidden of ['shared_world', 'conversation_unit', 'public_experience_controllers', 'publication_manifest_approvals']) {
     assert.ok(!response.prosrc.includes(forbidden), `Public QANDEEL reads no ${forbidden}`);
   }
+  // Exact-version closure (REV-03): a reply targets a post of the currently
+  // visible version; Public QANDEEL replies to and consumes such posts only; the
+  // two conversation resolvers serve rows bound to the visible version only.
+  assert.match(post.prosrc, /dp\.id = p_parent_post_id AND dp\.experience_id = p_experience_id\s+AND dp\.target_experience_version_id = visible_version/u,
+    'a reply targets a post of the currently visible version, never merely a post of the same Experience');
+  assert.match(response.prosrc, /dp\.id = p_in_reply_to_post_id AND dp\.experience_id = p_experience_id\s+AND dp\.target_experience_version_id = visible_version/u,
+    'Public QANDEEL replies to a post of the currently visible version only');
+  assert.match(response.prosrc, /dp\.id = x AND dp\.experience_id = p_experience_id\s+AND dp\.target_experience_version_id = visible_version/u,
+    'Public QANDEEL consumes posts of the currently visible version only');
+  assert.ok((await rt.functionPosture(RESOLVERS[1])).prosrc.includes('dp.target_experience_version_id = vs.visible_experience_version_id'),
+    'the discussion resolver serves only posts bound to the currently visible version');
+  assert.ok((await rt.functionPosture(RESOLVERS[2])).prosrc.includes('r.experience_version_id = vs.visible_experience_version_id'),
+    'the Public QANDEEL resolver serves only responses bound to the currently visible version');
   const responseColumns = (await rows(
     'SELECT a.attname FROM pg_attribute a WHERE a.attrelid = $1::regclass AND a.attnum > 0 AND NOT a.attisdropped', [T.RESPONSES])).map((r) => r.attname);
   assert.ok(responseColumns.length > 0);
@@ -370,6 +383,70 @@ async function verifyQandeel(f, x, posts, placements) {
   return { r1 };
 }
 
+async function verifySuccessorVersion(f, posts, responses) {
+  // DS07 / QR05 EXACT-VERSION CLOSURE UNDER A SUCCESSOR VISIBLE VERSION. Real V1
+  // history exists above, written by the real writers. The canonical visible
+  // truth then moves to a valid successor V2 fixture (a verifier-only
+  // simulation; successor publication semantics belong to a later slice), and
+  // V1's conversation must not be served, replied to or consumed as V2's -
+  // while V2's own conversation, through the same writers, is.
+  const v1Posts = await count(T.POSTS, 'experience_id = $1 AND target_experience_version_id = $2', [f.experience, f.version]);
+  const v1Responses = await count(T.RESPONSES, 'experience_id = $1 AND experience_version_id = $2', [f.experience, f.version]);
+  assert.ok(v1Posts >= 4 && v1Responses >= 2, 'DS07 fixture: real V1 conversation exists');
+  assert.equal((await rt.resolveDiscussion(f.experience, f.reader)).length, v1Posts, 'DS07 fixture: V1 is served while V1 is the visible version');
+  await q('SAVEPOINT successor');
+  try {
+    const { successorVersion, successorManifest } = await rt.simulateSuccessorVersion(f.experience, f.manifest);
+    assert.deepEqual(await rt.resolveDiscussion(f.experience, f.reader), [],
+      'DS07 posts bound to the superseded version are not served as the successor version\'s');
+    assert.deepEqual(await rt.resolveResponses(f.experience, f.reader), [],
+      'QR05 responses bound to the superseded version are not served as the successor version\'s');
+    assert.deepEqual(await rt.resolvePlacement(f.experience, f.reader), [], 'the V1 interpretation is not served as V2\'s either');
+    assert.equal(await count(T.POSTS, 'experience_id = $1 AND target_experience_version_id = $2', [f.experience, f.version]), v1Posts,
+      'DS07 V1 history is intact: nothing was rewritten, moved or deleted');
+    assert.equal(await count(T.RESPONSES, 'experience_id = $1 AND experience_version_id = $2', [f.experience, f.version]), v1Responses);
+    // A reply to a V1 post, Public QANDEEL replying to a V1 post, and Public
+    // QANDEEL consuming a V1 post: refused with the ONE bounded class each.
+    await actAs(f.hadir);
+    const crossReply = await rejected(() => rt.post(randomUUID(), randomUUID(), f.experience, posts.post1, 'a reply across versions'),
+      ['P0002'], /PUBLIC_DISCUSSION_TARGET_NOT_AVAILABLE/u);
+    const noParent = await rejected(() => rt.post(randomUUID(), randomUUID(), f.experience, randomUUID(), 'a reply to nothing'),
+      ['P0002'], /PUBLIC_DISCUSSION_TARGET_NOT_AVAILABLE/u);
+    assert.equal(crossReply.message, noParent.message, 'DS07 a superseded-version parent is the same bounded class as a nonexistent one');
+    await actAs(null);
+    const crossReplyQ = await rejected(() => rt.recordResponse(randomUUID(), randomUUID(), f.experience, posts.post1, 'across versions', NONE),
+      ['P0002'], /PUBLIC_QANDEEL_TARGET_NOT_AVAILABLE/u);
+    const crossConsumeQ = await rejected(() => rt.recordResponse(randomUUID(), randomUUID(), f.experience, null, 'across versions', [posts.post2]),
+      ['P0002'], /PUBLIC_QANDEEL_TARGET_NOT_AVAILABLE/u);
+    const noTargetQ = await rejected(() => rt.recordResponse(randomUUID(), randomUUID(), f.experience, randomUUID(), 'to nothing', NONE),
+      ['P0002'], /PUBLIC_QANDEEL_TARGET_NOT_AVAILABLE/u);
+    assert.equal(crossReplyQ.message, noTargetQ.message, 'QR05 a superseded-version reply target is the same bounded class as a nonexistent one');
+    assert.equal(crossConsumeQ.message, noTargetQ.message, 'QR05 and so is a superseded-version consumed post');
+    // Anti-vacuity: V2 conversation through the real writers IS served, bound to V2 and M2.
+    await actAs(f.stranger);
+    const v2Post = randomUUID();
+    const [posted] = await rt.post(randomUUID(), v2Post, f.experience, null, 'a thought on the successor');
+    assert.equal(posted.target_experience_version_id, successorVersion, 'DS07 a new post binds the successor version');
+    assert.equal(Number(posted.post_ordinal), v1Posts + 1, 'DS07 the per-Experience ordinal keeps counting: history is not renumbered');
+    await actAs(null);
+    const v2Response = randomUUID();
+    const [produced] = await rt.recordResponse(randomUUID(), v2Response, f.experience, v2Post, 'QANDEEL on the successor', [v2Post]);
+    assert.equal(produced.experience_version_id, successorVersion, 'QR05 a new response binds the successor version');
+    const successorPrint = sha256(['QANDEEL_CWV2_PUBLIC_QANDEEL_CONTEXT_V1',
+      `experience=${f.experience.toLowerCase()}`, `experienceVersion=${successorVersion.toLowerCase()}`,
+      `manifest=${successorManifest.toLowerCase()}`, 'placementRevision=NONE',
+      `replyTo=${v2Post.toLowerCase()}`, `consumed=${v2Post.toLowerCase()}`].join('\n'));
+    assert.equal(produced.context_fingerprint, successorPrint,
+      'QR05 the context fingerprint binds the successor version and manifest, and the successor has no interpretation of its own yet');
+    assert.deepEqual((await rt.resolveDiscussion(f.experience, f.reader)).map((r) => r.post_id), [v2Post], 'DS07 exactly the successor conversation is served');
+    assert.deepEqual((await rt.resolveResponses(f.experience, f.reader)).map((r) => r.response_id), [v2Response], 'QR05 exactly the successor responses are served');
+  } finally {
+    await q('ROLLBACK TO SAVEPOINT successor'); await q('RELEASE SAVEPOINT successor');
+  }
+  assert.equal((await rt.resolveDiscussion(f.experience, f.reader)).length, v1Posts, 'the simulation rolled back: V1 is the visible version and is served again');
+  assert.equal((await rt.resolveResponses(f.experience, f.reader)).some((r) => r.response_id === responses.r1), true);
+}
+
 async function verifyForwardSafety(f) {
   await q('SAVEPOINT forward_safety');
   try {
@@ -418,6 +495,25 @@ async function verifyForwardSafety(f) {
     await q(`GRANT EXECUTE ON FUNCTION ${RESOLVERS[1]} TO anon`);
     await assert.rejects(verifyCatalog(), refuses, 'a resolver opening to anon is a regression');
     await q('ROLLBACK TO SAVEPOINT r5');
+    await q('SAVEPOINT r6');
+    // A discussion resolver that serves every version's posts as the visible
+    // version's: the Experience-wide policy REV-03 refuses to choose silently.
+    // Same signature, so CREATE OR REPLACE installs it with its ACL intact.
+    await q(`CREATE OR REPLACE FUNCTION public.resolve_public_discussion_v1(p_experience_id uuid, p_viewer_user_id uuid)
+             RETURNS TABLE(post_id uuid, experience_id uuid, target_experience_version_id uuid, parent_post_id uuid,
+                           post_ordinal bigint, author_public_identity_ref uuid, author_label_mode text,
+                           author_display_label text, post_body text, posted_at timestamptz)
+             LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path='' AS $fn$
+             BEGIN RETURN QUERY
+               SELECT dp.id, dp.experience_id, dp.target_experience_version_id, dp.parent_post_id, dp.post_ordinal,
+                      dp.author_public_identity_ref, d.label_mode, d.display_label, dp.post_body, dp.posted_at
+                 FROM public.resolve_public_visibility_state_v1(p_experience_id) vs
+                 JOIN public.resolve_public_audience_admission_v1(p_viewer_user_id) ad ON ad.admission = 'ADMITTED'
+                 JOIN public.public_discussion_posts dp ON dp.experience_id = vs.experience_id
+                 JOIN public.public_identity_display_state d ON d.public_identity_ref = dp.author_public_identity_ref
+                WHERE vs.visibility_state = 'PUBLICLY_VISIBLE' ORDER BY dp.post_ordinal; END$fn$`);
+    await assert.rejects(verifyCatalog(), refuses, 'a discussion resolver that serves a superseded version\'s posts as the visible version\'s is a regression');
+    await q('ROLLBACK TO SAVEPOINT r6');
   } finally {
     await q('ROLLBACK TO SAVEPOINT forward_safety');
     await q('RELEASE SAVEPOINT forward_safety');
@@ -507,7 +603,9 @@ await runVerifier('0096', async (stage) => {
     stage('discussion');
     const posts = await verifyDiscussion(f, x);
     stage('Public QANDEEL');
-    await verifyQandeel(f, x, posts, placements);
+    const responses = await verifyQandeel(f, x, posts, placements);
+    stage('successor version closure');
+    await verifySuccessorVersion(f, posts, responses);
     stage('forward safety');
     await asRole('postgres');
     await verifyForwardSafety(f);

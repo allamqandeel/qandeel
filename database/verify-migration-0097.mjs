@@ -83,7 +83,13 @@ async function verifyCatalog() {
     'a projection of a non-visible Experience is cleared on rebuild');
   assert.ok(rebuild.prosrc.includes('public_experience_text_derivative_bodies') && rebuild.prosrc.includes('derive_public_experience_current_placement_v1'),
     'the search document is built from the public derivative bodies and the current interpretation only');
-  assert.ok((await rt.functionPosture(RECOMPUTE)).prosrc.includes('NOT_PUBLICLY_VISIBLE'), 'a recompute of a non-visible Experience writes nothing');
+  const recompute = await rt.functionPosture(RECOMPUTE);
+  assert.ok(recompute.prosrc.includes('NOT_PUBLICLY_VISIBLE'), 'a recompute of a non-visible Experience writes nothing');
+  // Exact-version vitality (REV-03): computed FOR the visible version, it counts
+  // only the activity bound TO that version - never a superseded version's.
+  assert.ok(recompute.prosrc.includes('dp.experience_id = p_experience_id AND dp.target_experience_version_id = visible_version')
+    && recompute.prosrc.includes('r.experience_id = p_experience_id AND r.experience_version_id = visible_version'),
+  'vitality computed for a version counts only the activity bound to that version');
   for (const fn of [RESOLVERS[1], RESOLVERS[2]]) {
     assert.ok((await rt.functionPosture(fn)).prosrc.includes('vs.visible_experience_version_id = pr.experience_version_id'),
       `${fn} serves a projection only while it describes the currently visible version`);
@@ -151,6 +157,40 @@ async function verifyVitality(f, x) {
              qandeel_response_count, latest_public_activity_at, computed_at) VALUES ($1, $2, 1, 999, 999, now(), now())`, [x.draft, x.dv]);
   assert.deepEqual(await rt.resolveVitality(x.draft, f.reader), [], 'VT03 vitality cannot make an invisible Experience visible');
   assert.deepEqual(await rt.panel(x.draft, f.reader), []);
+
+  // VT04 EXACT-VERSION VITALITY UNDER A SUCCESSOR VISIBLE VERSION. Three V1 posts
+  // and one V1 response exist, written by the real writers. The visible truth
+  // moves to a valid successor V2 (a verifier-only simulation; successor
+  // publication semantics belong to a later slice): the vitality computed for
+  // V1 is not served as V2's, a recompute FOR V2 counts none of V1's activity,
+  // and only V2's own activity moves it.
+  await q('SAVEPOINT successor');
+  try {
+    const { successorVersion } = await rt.simulateSuccessorVersion(f.experience, f.manifest);
+    assert.deepEqual(await rt.resolveVitality(f.experience, f.reader), [], 'VT04 the vitality computed for V1 is not served as V2\'s');
+    assert.deepEqual((await rt.panel(f.experience, f.reader)).map((r) => [r.experience_version_id, Number(r.discussion_post_count)]), [[successorVersion, 0]],
+      'VT04 the panel names the successor with zero vitality, never V1\'s numbers');
+    const [forV2] = await rt.recomputeVitality(f.experience);
+    assert.equal(forV2.outcome, 'VITALITY_RECOMPUTED');
+    assert.equal(forV2.experience_version_id, successorVersion, 'VT04 vitality is computed for the visible successor');
+    assert.equal(Number(forV2.discussion_post_count), 0, 'VT04 V2 vitality counts no V1 post');
+    assert.equal(Number(forV2.qandeel_response_count), 0, 'VT04 V2 vitality counts no V1 response');
+    assert.equal(forV2.latest_public_activity_at, null, 'VT04 no V2 activity exists yet');
+    assert.equal(await count(T.POSTS, 'experience_id = $1 AND target_experience_version_id = $2', [f.experience, f.version]), 3, 'VT04 V1 history is intact');
+    await actAs(f.stranger);
+    await rt.post(randomUUID(), randomUUID(), f.experience, null, 'the first word on the successor');
+    const [moved] = await rt.recomputeVitality(f.experience);
+    assert.equal(moved.outcome, 'VITALITY_RECOMPUTED');
+    assert.equal(Number(moved.discussion_post_count), 1, 'VT04 only V2 activity moves V2 vitality');
+    assert.equal(Number(moved.qandeel_response_count), 0);
+    const [servedV2] = await rt.resolveVitality(f.experience, f.reader);
+    assert.equal(servedV2.experience_version_id, successorVersion);
+    assert.equal(Number(servedV2.discussion_post_count), 1, 'VT04 the served vitality is the successor\'s own');
+  } finally {
+    await q('ROLLBACK TO SAVEPOINT successor'); await q('RELEASE SAVEPOINT successor');
+  }
+  const [backToV1] = await rt.resolveVitality(f.experience, f.reader);
+  assert.equal(Number(backToV1.discussion_post_count), 3, 'the simulation rolled back: V1 vitality is served again');
 }
 
 async function verifyProjections(f, x) {
@@ -308,6 +348,21 @@ async function verifyForwardSafety(f) {
     await q(`ALTER TABLE ${T.PROJECTION} ADD COLUMN source_world_id uuid`);
     await assert.rejects(verifyCatalog(), refuses, 'a source identifier entering a projection is a regression');
     await q('ROLLBACK TO SAVEPOINT r5');
+    await q('SAVEPOINT r6');
+    // A recompute that counts every version's activity as the visible version's:
+    // the Experience-wide policy REV-03 refuses to choose silently. Same signature.
+    await q(`CREATE OR REPLACE FUNCTION public.recompute_public_experience_vitality_v1(p_experience_id uuid)
+             RETURNS TABLE(outcome text, experience_id uuid, experience_version_id uuid, vitality_revision bigint,
+                           discussion_post_count integer, qandeel_response_count integer, latest_public_activity_at timestamptz)
+             LANGUAGE plpgsql SECURITY DEFINER VOLATILE SET search_path='' AS $fn$
+             BEGIN PERFORM 1 FROM public.public_experiences e WHERE e.id = p_experience_id FOR SHARE;
+                   PERFORM 1 FROM public.resolve_public_visibility_state_v1(p_experience_id) vs WHERE vs.visibility_state = 'PUBLICLY_VISIBLE';
+                   PERFORM count(*) FROM public.public_discussion_posts dp WHERE dp.experience_id = p_experience_id;
+                   PERFORM count(*) FROM public.public_qandeel_responses r WHERE r.experience_id = p_experience_id;
+                   RETURN QUERY SELECT 'NOT_PUBLICLY_VISIBLE'::text, p_experience_id, NULL::uuid, NULL::bigint,
+                                       NULL::integer, NULL::integer, NULL::timestamptz; END$fn$`);
+    await assert.rejects(verifyCatalog(), refuses, 'a vitality recompute that counts a superseded version\'s activity as the visible version\'s is a regression');
+    await q('ROLLBACK TO SAVEPOINT r6');
   } finally {
     await q('ROLLBACK TO SAVEPOINT forward_safety');
     await q('RELEASE SAVEPOINT forward_safety');

@@ -131,6 +131,13 @@ test('derived state is recomputed deterministically from canonical rows, bounded
   const recompute = functionBody(RECOMPUTE).body;
   assert.match(recompute, /RETURN QUERY SELECT 'NOT_PUBLICLY_VISIBLE'::text, p_experience_id, NULL::uuid, NULL::bigint,\s*\n\s*NULL::integer, NULL::integer, NULL::timestamptz;\s*\n\s*RETURN;/u,
     'a recompute of a non-visible Experience writes nothing and answers ONE outcome');
+  // REV-03: vitality computed FOR the visible version counts only the activity bound
+  // TO that version. A superseded version's conversation is its own history, never
+  // silently the current version's heat.
+  assert.match(recompute, /FROM public\.public_discussion_posts dp\s*\n\s*WHERE dp\.experience_id = p_experience_id AND dp\.target_experience_version_id = visible_version;/u,
+    'posts are counted for the visible version only');
+  assert.match(recompute, /FROM public\.public_qandeel_responses r\s*\n\s*WHERE r\.experience_id = p_experience_id AND r\.experience_version_id = visible_version;/u,
+    'responses are counted for the visible version only');
   assert.match(recompute, /ON CONFLICT ON CONSTRAINT public_experience_vitality_state_pk DO UPDATE/u);
   assert.match(recompute, /CASE WHEN affected = 0 THEN 'VITALITY_UNCHANGED' ELSE 'VITALITY_RECOMPUTED' END/u);
   const rebuild = functionBody(REBUILD).body;
@@ -202,6 +209,7 @@ test('the self-assertions refuse to deploy a migration that lost any of this', (
     'a projection of a non-visible Experience must be cleared on rebuild',
     'the search projection is built from the public derivative bodies and the current interpretation only',
     'a vitality recompute of a non-visible Experience must report NOT_PUBLICLY_VISIBLE and write nothing',
+    'vitality computed for a version must count only the activity bound to that version',
     'must consume the canonical visibility state and the audience admission gate',
     'must read no sealed provenance, test no lifecycle for itself and write nothing',
     'must disclose no private identity and no sealed provenance',
@@ -232,9 +240,14 @@ test('0097 is registered in the toolchain, in the I-05B CI group, and in the dat
 });
 
 test('the verifier proves determinism, the stale-projection law and the visibility race against real PostgreSQL', () => {
-  for (const needle of ['VT01', 'VT02', 'VT03', 'PJ01', 'PJ02', 'PJ03', 'PJ04', 'C01', 'C02', 'VITALITY_UNCHANGED', 'PROJECTION_UNCHANGED',
+  for (const needle of ['VT01', 'VT02', 'VT03', 'VT04', 'PJ01', 'PJ02', 'PJ03', 'PJ04', 'C01', 'C02', 'VITALITY_UNCHANGED', 'PROJECTION_UNCHANGED',
     'PROJECTION_CLEARED', 'PROJECTION_ABSENT', 'NOT_PUBLICLY_VISIBLE', 'tsvector_to_array', 'SAVEPOINT forward_safety', 'i05b97_probe_absence_v1',
-    'publishCleared', 'restorePrerequisites']) {
+    'publishCleared', 'restorePrerequisites',
+    // REV-03: under a valid successor visible version (verifier-only simulation) the V1
+    // vitality is not served, a recompute for V2 counts none of V1's activity, only V2
+    // activity moves it, and the recompute mutant that counts every version is refused.
+    'simulateSuccessorVersion', 'SAVEPOINT successor', 'V2 vitality counts no V1 post', 'only V2 activity moves V2 vitality',
+    'a vitality recompute that counts a superseded version']) {
     assert.ok(verifier.includes(needle), `the verifier proves ${needle}`);
   }
   const launch = verifier.indexOf('const rebuilding = q2(');
@@ -372,8 +385,27 @@ test('the contracts are not vacuous: every deliberate weakening of I-05B is refu
         '    LEFT JOIN public.publication_approval_withdrawal_events w ON w.approval_id = a.id\n',
         '    LEFT JOIN public.publication_approval_withdrawal_events w ON false\n'],
       ['a withdrawal for a human the evidence never named becomes representable', M94,
-        '    CONSTRAINT publication_approval_withdrawal_events_approver_fk\n        FOREIGN KEY (manifest_version_id, approver_user_id)\n        REFERENCES public.publication_manifest_approvals (manifest_version_id, approver_user_id)\n        ON DELETE RESTRICT\n',
+        '    CONSTRAINT publication_approval_withdrawal_events_approval_fk\n        FOREIGN KEY (approval_id, manifest_version_id, approver_user_id)\n        REFERENCES public.publication_manifest_approvals (id, manifest_version_id, approver_user_id)\n        ON DELETE RESTRICT\n',
         ''],
+      ['the withdrawal binding weakens back into two independent foreign keys', M94,
+        '    CONSTRAINT publication_approval_withdrawal_events_approval_fk\n        FOREIGN KEY (approval_id, manifest_version_id, approver_user_id)\n        REFERENCES public.publication_manifest_approvals (id, manifest_version_id, approver_user_id)\n        ON DELETE RESTRICT\n',
+        '    CONSTRAINT publication_approval_withdrawal_events_approval_fk\n        FOREIGN KEY (approval_id) REFERENCES public.publication_manifest_approvals (id) ON DELETE RESTRICT,\n'
+        + '    CONSTRAINT publication_approval_withdrawal_events_approver_fk\n        FOREIGN KEY (manifest_version_id, approver_user_id)\n'
+        + '        REFERENCES public.publication_manifest_approvals (manifest_version_id, approver_user_id)\n        ON DELETE RESTRICT\n'],
+      ['the publication record binds version and manifest through two independent foreign keys', M95,
+        '    CONSTRAINT public_experience_publication_state_version_fk\n        FOREIGN KEY (published_experience_version_id, experience_id, published_manifest_version_id)\n        REFERENCES public.public_experience_versions (id, experience_id, package_manifest_version_id)\n        ON DELETE RESTRICT\n',
+        '    CONSTRAINT public_experience_publication_state_version_fk\n        FOREIGN KEY (published_experience_version_id, experience_id)\n        REFERENCES public.public_experience_versions (id, experience_id) ON DELETE RESTRICT,\n'
+        + '    CONSTRAINT public_experience_publication_state_manifest_fk\n        FOREIGN KEY (published_manifest_version_id, experience_id)\n'
+        + '        REFERENCES public.public_experience_versions (package_manifest_version_id, experience_id)\n        ON DELETE RESTRICT\n'],
+      ['the discussion resolver serves a superseded version\'s posts as the visible version\'s', M96,
+        '    JOIN public.public_discussion_posts dp ON dp.experience_id = vs.experience_id\n     AND dp.target_experience_version_id = vs.visible_experience_version_id\n',
+        '    JOIN public.public_discussion_posts dp ON dp.experience_id = vs.experience_id\n'],
+      ['Public QANDEEL consumes a superseded version\'s post as the visible version\'s', M96,
+        '                        WHERE dp.id = x AND dp.experience_id = p_experience_id\n                          AND dp.target_experience_version_id = visible_version)) THEN',
+        '                        WHERE dp.id = x AND dp.experience_id = p_experience_id)) THEN'],
+      ['vitality counts a superseded version\'s activity as the visible version\'s', M97,
+        '   WHERE dp.experience_id = p_experience_id AND dp.target_experience_version_id = visible_version;\n',
+        '   WHERE dp.experience_id = p_experience_id;\n'],
       ['0094 rewrites the historical approval evidence', M94,
         'INSERT INTO public.publication_approval_withdrawal_commands\n    (id, approval_id, manifest_version_id, actor_user_id, request_ref, committed_at)\n  VALUES (p_command_id, p_approval_id, approval.manifest_version_id, u, request, instant);\n\n  RETURN QUERY SELECT \'WITHDRAWN\'::text',
         "UPDATE public.publication_manifest_approvals SET approved_at = instant WHERE id = p_approval_id;\n  INSERT INTO public.publication_approval_withdrawal_commands\n    (id, approval_id, manifest_version_id, actor_user_id, request_ref, committed_at)\n  VALUES (p_command_id, p_approval_id, approval.manifest_version_id, u, request, instant);\n\n  RETURN QUERY SELECT 'WITHDRAWN'::text"],

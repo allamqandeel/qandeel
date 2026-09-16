@@ -164,10 +164,17 @@ BEGIN
     RETURN;
   END IF;
 
+  -- EXACT-VERSION VITALITY: computed FOR the visible version, it counts only
+  -- the activity bound TO that version. Posts and responses made against an
+  -- earlier version are that version's history, not the current one's heat;
+  -- what a later reviewed successor publication carries forward is its own
+  -- decision, never taken silently here.
   SELECT count(*)::integer, max(dp.posted_at) INTO post_total, latest_post
-    FROM public.public_discussion_posts dp WHERE dp.experience_id = p_experience_id;
+    FROM public.public_discussion_posts dp
+   WHERE dp.experience_id = p_experience_id AND dp.target_experience_version_id = visible_version;
   SELECT count(*)::integer, max(r.produced_at) INTO response_total, latest_response
-    FROM public.public_qandeel_responses r WHERE r.experience_id = p_experience_id;
+    FROM public.public_qandeel_responses r
+   WHERE r.experience_id = p_experience_id AND r.experience_version_id = visible_version;
   latest_activity := greatest(latest_post, latest_response);
   instant := clock_timestamp();
 
@@ -522,6 +529,10 @@ BEGIN
   SELECT pr.prosrc INTO p FROM pg_proc pr WHERE pr.oid = recompute::regprocedure;
   IF p.prosrc !~ 'NOT_PUBLICLY_VISIBLE' THEN
     RAISE EXCEPTION 'I-05B: a vitality recompute of a non-visible Experience must report NOT_PUBLICLY_VISIBLE and write nothing';
+  END IF;
+  IF p.prosrc !~ 'dp\.experience_id = p_experience_id AND dp\.target_experience_version_id = visible_version'
+     OR p.prosrc !~ 'r\.experience_id = p_experience_id AND r\.experience_version_id = visible_version' THEN
+    RAISE EXCEPTION 'I-05B: vitality computed for a version must count only the activity bound to that version';
   END IF;
 
   -- THE FOUR RESOLVERS: STABLE, service_role-only, both gates, version-matched,

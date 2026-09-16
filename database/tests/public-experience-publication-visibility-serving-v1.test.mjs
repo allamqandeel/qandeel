@@ -91,8 +91,14 @@ test('0095 is the forward migration after 0094, and every frozen predecessor it 
     assert.equal(gitBlobId(read(`../migrations/${name}`)), blob, `${name} is byte-identical`);
   }
   assert.doesNotMatch(executableSql, /\bDROP\s+(?:TABLE|FUNCTION|INDEX|POLICY|TRIGGER|COLUMN|CONSTRAINT|TYPE|SCHEMA)\b/iu);
-  assert.doesNotMatch(executableSql, /^ALTER TABLE public\.(?!public_experience_publish_commands|public_experience_publication_state)/mu,
-    'the only tables 0095 alters are the two it created');
+  // The ONE statement that touches a frozen relation is the additive exact-identity
+  // candidate key on the 0091 version relation (REV-02): a constraint, no row, no
+  // column, no trigger, no policy. Nothing else outside the two relations 0095 created is altered.
+  const foreignAlters = [...executableSql.matchAll(/^ALTER TABLE public\.(?!public_experience_publish_commands\b|public_experience_publication_state\b)[\s\S]*?;/gmu)]
+    .map((m) => m[0].replace(/\s+/gu, ' '));
+  assert.deepEqual(foreignAlters, [
+    'ALTER TABLE public.public_experience_versions ADD CONSTRAINT public_experience_versions_exact_identity_key UNIQUE (id, experience_id, package_manifest_version_id);',
+  ], 'the only frozen relation 0095 alters is the 0091 version relation, and only by adding the exact-identity candidate key');
 });
 
 test('the CW2-08 prerequisite seam fails closed and decides nothing', () => {
@@ -210,10 +216,27 @@ test('the ONE serving resolver composes both gates, returns the bounded derivati
   }
 });
 
-test('the publication record is immutable, bound to a version of its own Experience, and carries no decision column', () => {
-  assert.match(executableSql, /CONSTRAINT public_experience_publication_state_version_fk\s*\n\s*FOREIGN KEY \(published_experience_version_id, experience_id\)\s*\n\s*REFERENCES public\.public_experience_versions \(id, experience_id\) ON DELETE RESTRICT/u);
-  assert.match(executableSql, /CONSTRAINT public_experience_publication_state_manifest_fk\s*\n\s*FOREIGN KEY \(published_manifest_version_id, experience_id\)\s*\n\s*REFERENCES public\.public_experience_versions \(package_manifest_version_id, experience_id\)/u,
-    'the published manifest can only be a manifest of a version of this exact Experience');
+test('the publication record is immutable, binds version and manifest as ONE exact version row, and carries no decision column', () => {
+  // REV-02: the duplicated identity (version, manifest) is bound as ONE pair through
+  // ONE composite foreign key onto the additive candidate key. Two independent
+  // foreign keys are NOT accepted as proof - version V1 beside the manifest of V2 of
+  // the same Experience would satisfy both - and no direct manifest key sits beside it.
+  assert.match(executableSql, /ALTER TABLE public\.public_experience_versions\s*\n\s*ADD CONSTRAINT public_experience_versions_exact_identity_key\s*\n\s*UNIQUE \(id, experience_id, package_manifest_version_id\);/u,
+    'the frozen version relation gains the exact-identity candidate key the composite binding needs');
+  assert.match(executableSql, /CONSTRAINT public_experience_publication_state_version_fk\s*\n\s*FOREIGN KEY \(published_experience_version_id, experience_id, published_manifest_version_id\)\s*\n\s*REFERENCES public\.public_experience_versions \(id, experience_id, package_manifest_version_id\)\s*\n\s*ON DELETE RESTRICT/u,
+    'the publication record binds the exact version, its Experience and its manifest as one row');
+  assert.match(executableSql, /CONSTRAINT public_experience_publish_commands_version_fk\s*\n\s*FOREIGN KEY \(experience_version_id, experience_id, manifest_version_id\)\s*\n\s*REFERENCES public\.public_experience_versions \(id, experience_id, package_manifest_version_id\)\s*\n\s*ON DELETE RESTRICT/u,
+    'and so does the publish command');
+  assert.doesNotMatch(executableSql, /FOREIGN KEY \((?:published_experience_version_id|experience_version_id), experience_id\)\s*\n\s*REFERENCES/u,
+    'no independent version foreign key: two independent keys are not one exact pair');
+  assert.doesNotMatch(executableSql, /REFERENCES public\.public_experience_versions \(package_manifest_version_id, experience_id\)/u,
+    'no independent manifest-through-version foreign key');
+  assert.doesNotMatch(executableSql, /REFERENCES public\.publication_package_manifest_versions/u,
+    'no direct manifest foreign key: the published manifest is THE manifest of THE bound version');
+  const stateStart = executableSql.indexOf('CREATE TABLE public.public_experience_publication_state (');
+  const stateBlock = executableSql.slice(stateStart, executableSql.indexOf('\n);', stateStart));
+  assert.ok(!stateBlock.includes('version_ordinal'),
+    'the ordinal is a property of the bound version row and is not duplicated into the record: the duplicated identity is exactly (version, manifest)');
   assert.match(executableSql, /CONSTRAINT public_experience_publication_state_version_key UNIQUE \(published_experience_version_id\)/u);
   assert.match(executableSql, /CREATE TRIGGER public_experience_publication_state_immutable\s*\n\s*BEFORE UPDATE OR DELETE ON public\.public_experience_publication_state/u);
   assert.match(executableSql, /CONSTRAINT public_experience_publish_commands_version_key UNIQUE \(experience_version_id\)/u, 'one version publishes at most once');
@@ -257,7 +280,9 @@ test('the self-assertions refuse to deploy a migration that lost any of this', (
     'the serving resolver must never read sealed provenance and never test a lifecycle for itself',
     'the serving resolver must disclose no private identity and no sealed provenance',
     'the publication record must be append-only for every role',
-    'the publication record must bind the exact version of its own Experience by restrictive foreign key',
+    'the frozen version relation must carry the additive exact-identity candidate key (id, experience, manifest)',
+    'may not bind version and manifest independently: the pair is one exact version row',
+    'must bind the exact version, its Experience and its manifest as one row through one composite restrictive foreign key',
     'the frozen I-04F history visibility entry point must still be reachable',
     'the frozen 0092 approval evidence must still be append-only',
     'the frozen 0091 lifecycle truth must still be append-only',
@@ -298,10 +323,16 @@ test('the verifier reaches PUBLISHED only through a simulated seam it restores a
   assert.match(support, /I-05B VERIFIER PROBE/u, 'the simulated clearance names itself as a probe');
   assert.ok(!support.includes('INSERT INTO public.public_experience_publication_state'), 'the harness never fabricates a publication record');
   assert.match(verifier, /PUBLIC_EXPERIENCE_LAUNCH_PREREQUISITE_UNRESOLVED/u, 'PB02: the production seam refuses a fully authorized publication');
-  for (const needle of ['PB01', 'PB02', 'PB03', 'PB04', 'PB05', 'PB06', 'PB07', 'PB08', 'PB09', 'PB10', 'PB11', 'PB12',
+  for (const needle of ['PB01', 'PB02', 'PB03', 'PB04', 'PB05', 'PB06', 'PB07', 'PB08', 'PB09', 'PB10', 'PB11', 'PB12', 'PB13',
     'VS01', 'VS02', 'SV01', 'SV02', 'SV03', 'C01a', 'C01b', 'C02', 'C03', 'C04', 'assertNothingPublished',
     'PUBLIC_EXPERIENCE_APPROVAL_NOT_EFFECTIVE', 'PUBLIC_EXPERIENCE_APPROVALS_INCOMPLETE', 'SAVEPOINT forward_safety',
-    'i05b95_probe_absence_v1', 'the production seam is exactly what the migration installed']) {
+    'i05b95_probe_absence_v1', 'the production seam is exactly what the migration installed',
+    // REV-02: the mismatched (V1, M2) pair of one Experience is refused by PostgreSQL for
+    // the record AND the command, the true pairs are accepted, the catalog program reads
+    // both column lists of the composite key and refuses a direct manifest key, and the
+    // weakening back into two independent keys is refused AND shown to admit the mismatch.
+    'THE MISMATCHED PAIR', 'public_experience_versions_exact_identity_key', 'assertExactBinding', 'foreignKeysInto', 'exact_pair',
+    'i05b95_probe_manifest_fk', 'the weakened shape admits the mismatched version and manifest pair']) {
     assert.ok(verifier.includes(needle), `the verifier proves ${needle}`);
   }
   // Every launched blocking promise is awaited only after the release edge.

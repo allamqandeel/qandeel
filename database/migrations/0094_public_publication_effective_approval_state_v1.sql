@@ -52,11 +52,35 @@
 --
 -- No publication, no PUBLISHED transition, no public visibility, no serving; no
 -- semantic placement, discussion, Public QANDEEL, vitality or projection; no
--- mutation of any 0091 / 0092 / 0093 relation; no trigger on any frozen table;
--- no Launch Gate, Safety or entitlement decision. Migrations 0001-0093 are
--- untouched, and no application role may execute anything created here.
+-- mutation of any 0091 / 0092 / 0093 ROW and no trigger on any frozen table -
+-- the ONE change to a frozen relation is the additive candidate key in section
+-- 0, a constraint that touches no row and exists so the withdrawal can bind
+-- one exact approval structurally; no Launch Gate, Safety or entitlement
+-- decision. Migrations 0001-0093 are untouched, and no application role may
+-- execute anything created here.
 
 BEGIN;
+
+-- ---------------------------------------------------------------------------
+-- 0. THE EXACT APPROVAL IDENTITY, AS A CANDIDATE KEY ON THE FROZEN EVIDENCE.
+--
+--    `publication_manifest_approvals (id)` is the primary key and
+--    `(manifest_version_id, approver_user_id)` is unique, but two INDEPENDENT
+--    foreign keys into those two keys do not prove that both name the SAME
+--    approval row: a malformed owner or internal insert could carry approval
+--    A's id beside approval B's (manifest, approver) pair and satisfy both,
+--    and the derivation below - which joins the withdrawal by approval id -
+--    would then report A as WITHDRAWN while the duplicated fields named B.
+--
+--    The triple below is trivially unique (it contains the primary key). It
+--    exists only so that ONE composite foreign key can bind a withdrawal to
+--    ONE exact approval: its id, its manifest and its approver, all three read
+--    from the same immutable row. It is additive: no row is touched, the 0092
+--    evidence stays append-only, and migration 0092 is not edited.
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.publication_manifest_approvals
+    ADD CONSTRAINT publication_manifest_approvals_exact_identity_key
+        UNIQUE (id, manifest_version_id, approver_user_id);
 
 -- ---------------------------------------------------------------------------
 -- 1. THE DURABLE WITHDRAWAL COMMAND HISTORY.
@@ -76,13 +100,14 @@ CREATE TABLE public.publication_approval_withdrawal_commands (
     CONSTRAINT publication_approval_withdrawal_commands_pk PRIMARY KEY (id),
     CONSTRAINT publication_approval_withdrawal_commands_request_check
         CHECK (request_ref ~ '^sha256:[0-9a-f]{64}$'),
+    -- The approval, its manifest and its actor are ONE exact row of the
+    -- immutable evidence, structurally: the actor IS the approver of the exact
+    -- approval named, and a command that carries approval A's id beside
+    -- approval B's manifest or rightsholder is unrepresentable. One composite
+    -- foreign key onto the section-0 candidate key, never two independent ones.
     CONSTRAINT publication_approval_withdrawal_commands_approval_fk
-        FOREIGN KEY (approval_id) REFERENCES public.publication_manifest_approvals (id) ON DELETE RESTRICT,
-    -- The actor IS the approver of the exact approval, structurally: the pair
-    -- must exist in the immutable approval evidence.
-    CONSTRAINT publication_approval_withdrawal_commands_approver_fk
-        FOREIGN KEY (manifest_version_id, actor_user_id)
-        REFERENCES public.publication_manifest_approvals (manifest_version_id, approver_user_id)
+        FOREIGN KEY (approval_id, manifest_version_id, actor_user_id)
+        REFERENCES public.publication_manifest_approvals (id, manifest_version_id, approver_user_id)
         ON DELETE RESTRICT,
     CONSTRAINT publication_approval_withdrawal_commands_actor_fk
         FOREIGN KEY (actor_user_id) REFERENCES public.users (id) ON DELETE RESTRICT
@@ -107,11 +132,13 @@ CREATE TABLE public.publication_approval_withdrawal_events (
     occurred_at timestamptz NOT NULL,
     CONSTRAINT publication_approval_withdrawal_events_pk PRIMARY KEY (id),
     CONSTRAINT publication_approval_withdrawal_events_approval_key UNIQUE (approval_id),
+    -- ONE exact approval: id, manifest and approver from the SAME immutable
+    -- row, through one composite foreign key onto the section-0 candidate key.
+    -- The derivation joins this event by approval id; the duplicated manifest
+    -- and approver can therefore never name a different approval than the id.
     CONSTRAINT publication_approval_withdrawal_events_approval_fk
-        FOREIGN KEY (approval_id) REFERENCES public.publication_manifest_approvals (id) ON DELETE RESTRICT,
-    CONSTRAINT publication_approval_withdrawal_events_approver_fk
-        FOREIGN KEY (manifest_version_id, approver_user_id)
-        REFERENCES public.publication_manifest_approvals (manifest_version_id, approver_user_id)
+        FOREIGN KEY (approval_id, manifest_version_id, approver_user_id)
+        REFERENCES public.publication_manifest_approvals (id, manifest_version_id, approver_user_id)
         ON DELETE RESTRICT
 );
 
@@ -489,9 +516,13 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- THE FROZEN APPROVAL EVIDENCE STAYS IMMUTABLE, and the withdrawal is bound
-  -- into it by composite foreign key so a withdrawal by a human the approval
-  -- does not name is unrepresentable.
+  -- THE FROZEN APPROVAL EVIDENCE STAYS IMMUTABLE, carries the additive exact-
+  -- identity candidate key, and every withdrawal relation is bound into it by
+  -- ONE composite foreign key - id, manifest and approver of the SAME row - so
+  -- a withdrawal by a human the approval does not name, or one that carries
+  -- approval A's id beside approval B's pair, is unrepresentable. Two
+  -- independent partial foreign keys would admit that cross-pair; the shape
+  -- is refused here at deploy time.
   IF NOT EXISTS (SELECT 1 FROM pg_trigger tg
                   WHERE tg.tgrelid = 'public.publication_manifest_approvals'::regclass
                     AND tg.tgname = 'publication_manifest_approvals_immutable' AND NOT tg.tgisinternal) THEN
@@ -499,13 +530,42 @@ BEGIN
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint c
-     WHERE c.conrelid = 'public.publication_approval_withdrawal_events'::regclass
-       AND c.conname = 'publication_approval_withdrawal_events_approver_fk'
-       AND c.confrelid = 'public.publication_manifest_approvals'::regclass
-       AND c.confdeltype = 'r'
+     WHERE c.conrelid = 'public.publication_manifest_approvals'::regclass
+       AND c.conname = 'publication_manifest_approvals_exact_identity_key' AND c.contype = 'u'
+       AND (SELECT array_agg(a.attname::text ORDER BY k.ord)
+              FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+              JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum)
+           = ARRAY['id', 'manifest_version_id', 'approver_user_id']
   ) THEN
-    RAISE EXCEPTION 'I-05B: a withdrawal must bind the exact (manifest, approver) pair of the immutable approval evidence';
+    RAISE EXCEPTION 'I-05B: the frozen approval evidence must carry the additive exact-identity candidate key (id, manifest, approver)';
   END IF;
+  FOREACH t IN ARRAY own_tables LOOP
+    IF EXISTS (
+      SELECT 1 FROM pg_constraint c
+       WHERE c.conrelid = ('public.' || t)::regclass AND c.contype = 'f'
+         AND c.confrelid = 'public.publication_manifest_approvals'::regclass
+         AND cardinality(c.confkey) <> 3
+    ) THEN
+      RAISE EXCEPTION 'I-05B: % may not bind the approval evidence through an independent partial foreign key', t;
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint c
+       WHERE c.conrelid = ('public.' || t)::regclass AND c.contype = 'f'
+         AND c.confrelid = 'public.publication_manifest_approvals'::regclass AND c.confdeltype = 'r'
+         AND (SELECT array_agg(a.attname::text ORDER BY k.ord)
+                FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+                JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum)
+             = CASE t WHEN 'publication_approval_withdrawal_commands'
+                      THEN ARRAY['approval_id', 'manifest_version_id', 'actor_user_id']
+                      ELSE ARRAY['approval_id', 'manifest_version_id', 'approver_user_id'] END
+         AND (SELECT array_agg(a.attname::text ORDER BY k.ord)
+                FROM unnest(c.confkey) WITH ORDINALITY AS k(attnum, ord)
+                JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = k.attnum)
+             = ARRAY['id', 'manifest_version_id', 'approver_user_id']
+    ) THEN
+      RAISE EXCEPTION 'I-05B: % must bind ONE exact approval - id, manifest and approver of the same immutable row - through one composite restrictive foreign key', t;
+    END IF;
+  END LOOP;
   IF NOT EXISTS (SELECT 1 FROM pg_trigger tg
                   WHERE tg.tgrelid = 'public.publication_approval_withdrawal_events'::regclass
                     AND tg.tgname = 'publication_approval_withdrawal_events_immutable' AND NOT tg.tgisinternal) THEN
