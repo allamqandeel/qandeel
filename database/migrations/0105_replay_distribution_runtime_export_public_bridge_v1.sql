@@ -1556,9 +1556,18 @@ BEGIN
     RAISE EXCEPTION 'REPLAY_DISTRIBUTION_CONTRADICTORY_STATE' USING ERRCODE='P0001';
   END IF;
 
-  -- CANONICAL LOCK ORDER, STEP 4: the source, stabilized and revalidated. A human
-  -- is never asked to consent to a payload whose source already moved.
-  PERFORM public.replay_lock_source_manifest_v1(package.source_manifest_version_id);
+  -- STEP 4: the source, revalidated. A human is never asked to consent to a
+  -- payload whose source already moved.
+  --
+  -- It does NOT take the frozen I-06A source lock, and that is deliberate rather
+  -- than an omission: `replay_lock_source_manifest_v1` is CREATOR-scoped by
+  -- design - it refuses any human who did not create the Replay - and an
+  -- approver need not be the creator. Calling it here would give a required
+  -- rightsholder, and a stranger, a distinguishable refusal from a path whose
+  -- whole purpose is to be bounded. The Replay row held FOR UPDATE above is the
+  -- serialization point every Replay path shares, the currency derivation is a
+  -- property of the Replay rather than of whoever asks, and the act that widens
+  -- an audience - the distribution commit - revalidates under the full lock.
   SELECT c.currency_state INTO currency
     FROM public.derive_replay_source_manifest_currency_v1(package.source_manifest_version_id) c;
   IF currency IS DISTINCT FROM 'CURRENT' THEN

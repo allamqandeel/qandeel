@@ -454,13 +454,23 @@ test('Replay is always the first lock and the CW2-08 prerequisite is always the 
 test('source currency is revalidated through the ONE frozen I-06A path and no competing evaluator exists', () => {
   for (const name of [PREPARE, APPROVE, AUTHORIZE]) {
     const body = bodyOf(name);
-    assert.ok(body.includes('public.replay_lock_source_manifest_v1'),
-      `${name} stabilizes the source through the frozen I-06A helper`);
     assert.ok(body.includes('public.derive_replay_source_manifest_currency_v1'),
       `${name} revalidates currency through the ONE frozen I-06A derivation`);
     assert.ok(body.includes("IF currency IS DISTINCT FROM 'CURRENT' THEN"),
       `${name} refuses on any answer but CURRENT`);
   }
+  // The two CREATOR-exact paths also take the frozen I-06A source lock. The
+  // approval act deliberately does not: `replay_lock_source_manifest_v1` is
+  // creator-scoped by design and an approver need not be the creator, so calling
+  // it there would give a required rightsholder a distinguishable refusal from a
+  // path whose whole purpose is to be bounded. The act that widens an audience
+  // still revalidates under the full lock.
+  for (const name of [PREPARE, AUTHORIZE]) {
+    assert.ok(bodyOf(name).includes('public.replay_lock_source_manifest_v1'),
+      `${name} stabilizes the source through the frozen I-06A helper`);
+  }
+  assert.ok(!bodyOf(APPROVE).includes('public.replay_lock_source_manifest_v1'),
+    'the consent act takes no creator-scoped lock, so a required rightsholder is not answered differently');
   assert.ok(!installedSql.includes('CREATE FUNCTION public.derive_replay_distribution_source_currency'),
     'no competing source-currency evaluator is created');
   // AND NO FUNCTION THIS SLICE OWNS READS A SOURCE BODY AT ALL: a distribution
@@ -631,8 +641,11 @@ test('the 0105 verifier RUNS the scenarios it claims, through the permanent aggr
   assert.ok(support.includes('assert.equal(prosrc, seam.prosrc,'),
     'and PROVES the production body back byte for byte');
   assert.ok(support.includes('VERIFIER PROBE'), 'every simulated answer says it is a probe');
-  assert.ok(verifier.includes("is production again after the races"),
-    'and the run proves the production seam back after the committed races');
+  assert.ok(verifier.includes('both production seams are restored after the committed races'),
+    'and the run proves BOTH production seams back after the committed races');
+  assert.ok(verifier.includes('await rt.restoreSeamDefinition(analytical);')
+    && verifier.includes('await rt.restoreSeamDefinition(gate);'),
+  'through the restore helper that compares the body rather than through a bare recreate');
   assert.ok(support.includes('assert.equal(await rt.triggerEnabled(table, trigger), true,'),
     'the harness proves every append-only guard it lifted back');
 });

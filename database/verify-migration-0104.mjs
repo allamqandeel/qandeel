@@ -249,8 +249,13 @@ async function verifyStructure(report, f, base) {
         ['23514'], /analytical_authority_check/u);
       await rejected(() => insertPackage(packageRow(base, { source_authority_resolution: unresolved })),
         ['23514'], /source_authority_check/u);
+      // An unresolved UNION violates three CHECKs at once - the state vocabulary,
+      // the state-count agreement and the union rule - and which of them
+      // PostgreSQL names for simultaneous violations is undocumented and is not
+      // the invariant being frozen. The proof is exact in the way that matters:
+      // the refusal is 23514 and it comes from one of exactly those three.
       await rejected(() => insertPackage(packageRow(base, { authority_requirement_state: unresolved })),
-        ['23514'], /_state_check/u);
+        ['23514'], /_state_check|_count_check|_union_check/u);
       // AND A RESOLVED-EMPTY UNION OVER A HALF THAT NAMES HUMANS IS REFUSED.
       await rejected(() => insertPackage(packageRow(base, {
         authority_requirement_state: 'RESOLVED_NO_HUMAN_REQUIREMENT', required_approver_count: 0 })),

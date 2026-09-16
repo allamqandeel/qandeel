@@ -61,8 +61,8 @@
 //           authority from the artifact;
 //
 //   concurrency, on committed state across two connections
-//     * C01 a source change racing the distribution commit blocks the stale one;
-//     * C02 a withdrawal racing the distribution commit blocks the stale one;
+//     * C01 a withdrawal racing the distribution commit blocks the stale one;
+//     * C02 a source change racing the distribution commit blocks the stale one;
 //     * C03 two competing distribution commands converge on ONE winner;
 //
 // Every scenario reports INDEPENDENTLY through the permanent aggregator and the
@@ -347,8 +347,9 @@ async function verifyPreparation(report, f, base) {
     await report.isolated('X10 a bound source that moved blocks preparation', async () => {
       await asRole('postgres');
       await q("SET LOCAL session_replication_role = 'replica'");
-      await q(`UPDATE public.conversation_units SET committed_text = committed_text || ' edited'
-               WHERE id = $1`, [base.selectedUnits[0]]);
+      await q(`UPDATE public.conversation_units
+                  SET committed_text = overlay(committed_text placing 'Z' from 1 for 1)
+                WHERE id = $1`, [base.selectedUnits[0]]);
       await q("SET LOCAL session_replication_role = 'origin'");
       await actAs(f.creator);
       await rejected(() => rt.prepare(rt.freshPackage(base.replay, base.version, 'DOWNLOAD')),
@@ -619,8 +620,9 @@ async function verifyDistribution(report, f, base) {
       await rt.simulateDistributionPrerequisites();
       await asRole('postgres');
       await q("SET LOCAL session_replication_role = 'replica'");
-      await q(`UPDATE public.conversation_units SET committed_text = committed_text || ' changed'
-               WHERE id = $1`, [base.selectedUnits[1]]);
+      await q(`UPDATE public.conversation_units
+                  SET committed_text = overlay(committed_text placing 'Q' from 1 for 1)
+                WHERE id = $1`, [base.selectedUnits[1]]);
       await q("SET LOCAL session_replication_role = 'origin'");
       await actAs(f.creator);
       await rejected(() => rt.authorize({ command: randomUUID(), package: spec.package }),
@@ -863,11 +865,14 @@ async function verifyPublicBridge(report, f, base) {
 /**
  * Three real two-connection races over COMMITTED state.
  *
- * The committed fixture is built with the analytical seam simulated and then
- * RESTORED inside the same transaction, so what commits is a real package and a
- * real approval with the production seam back in place. Only C03 needs the
- * CW2-08 seam cleared across a commit - C01 and C02 refuse at gates that come
- * before it - and that clearance is restored and proven in a `finally`.
+ * A race needs COMMITTED state, so both seams are simulated across the section
+ * rather than inside a rolled-back transaction: the distribution commit
+ * re-derives the required approver set through the analytical seam BEFORE it
+ * reaches the approval gate, so a production seam would refuse every racer for
+ * the same reason and the race would prove nothing. Both are restored in a
+ * `finally` and both are PROVEN back byte for byte afterwards - the whole point
+ * of a simulated predecessor is that it never survives the scenario that needed
+ * it.
  */
 async function verifyConcurrency(report, f, base) {
   await asRole('postgres');
@@ -891,7 +896,8 @@ async function verifyConcurrency(report, f, base) {
     await rt.prepare(competing);
     await rt.approve({ approval: approvals.competing, package: competing.package });
     await asRole('postgres');
-    await rt.restoreSeamDefinition(analytical);
+    // BOTH seams stay simulated across the races, and both are restored below.
+    await rt.simulateDistributionPrerequisites();
   } finally {
     await q('COMMIT');
   }
@@ -957,10 +963,7 @@ async function verifyConcurrency(report, f, base) {
     });
 
     await report.section('C03 two competing distribution commands converge on ONE winner', async () => {
-      // This is the ONE race that needs the CW2-08 seam cleared across a commit,
-      // because both racers must pass every gate before they can contend.
       await asRole('postgres');
-      await rt.simulateDistributionPrerequisites();
       await q('BEGIN');
       await actAs(f.creator);
       const first = q('SELECT * FROM public.authorize_replay_distribution_v1($1, $2, $3)',
@@ -987,10 +990,12 @@ async function verifyConcurrency(report, f, base) {
   } finally {
     await secondary.close();
     await asRole('postgres');
+    await q(analytical.definition);
     await q(gate.definition);
   }
-  await report.section('the CW2-08 distribution seam is production again after the races', async () => {
+  await report.section('both production seams are restored after the committed races', async () => {
     await asRole('postgres');
+    await rt.restoreSeamDefinition(analytical);
     await rt.restoreSeamDefinition(gate);
   });
 }
