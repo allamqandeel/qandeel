@@ -521,9 +521,22 @@ test('the verifier proves the thirty-two scenario proofs, the refused weakenings
     // rejection that never comes and the weakening goes unnoticed.
     "IF currency IS DISTINCT FROM 'CURRENT' THEN",
     // And the instant must reach PostgreSQL with its microseconds intact.
-    'occurred_at::text']) {
+    'occurred_at::text',
+    'F7 the mutation landed']) {
     assert.ok(verifier.includes(needle), `the verifier proves ${needle}`);
   }
+  // EVERY planted weakening must be PROVEN to land. A probe whose anchor stops
+  // matching recreates the function unchanged and then asserts a rejection that
+  // never comes, which reads as a contract failure while proving nothing. There
+  // are seven text mutations (F2 through F8), so there are seven landing checks.
+  const forwardSafety = verifier.slice(verifier.indexOf('async function verifyForwardSafety'),
+    verifier.indexOf('async function verifyConcurrency'));
+  assert.ok((forwardSafety.match(/assert\.notEqual\(/gu) ?? []).length >= 7,
+    'every mutating forward-safety probe proves its mutation landed');
+  // A probe that edits a SIGNATURE cannot anchor on the migration's own line
+  // wrapping: pg_get_functiondef regenerates the signature canonically.
+  assert.match(forwardSafety, /\.replace\(\/updated_at timestamptz\\\)\//u,
+    'the signature-editing probe anchors on the canonical function definition');
   assert.ok(support.includes('removeCommittedReplays') && support.includes('REPLAY_IMMUTABLE'),
     'the shared harness lifts the Replay guards for teardown');
   assert.ok(support.includes('DISABLE TRIGGER') && support.includes('ENABLE TRIGGER')

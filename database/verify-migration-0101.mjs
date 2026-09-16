@@ -672,10 +672,22 @@ async function verifyForwardSafety(f, state) {
     await q('ROLLBACK TO SAVEPOINT f6'); await q('RELEASE SAVEPOINT f6');
 
     // F7 THE READ BOUNDARY GROWS A SOURCE IDENTITY COLUMN.
+    //
+    // This probe edits the SIGNATURE, and `pg_get_functiondef` regenerates the
+    // signature in ITS OWN canonical form rather than reproducing the migration's
+    // line wrapping - so an anchor copied from the migration text matches
+    // nothing, the function is recreated unchanged, and the probe silently
+    // asserts a rejection that never comes. The anchor is therefore written
+    // against the canonical form, and the mutation is PROVEN to land, exactly as
+    // every other probe here proves its own.
     await q('SAVEPOINT f7');
+    const disclosing = composition
+      .replace(/updated_at timestamptz\)/u, 'updated_at timestamptz, shared_world_id uuid)')
+      .replace('cur.currency_state, s.updated_at', 'cur.currency_state, s.updated_at, m.shared_world_id');
+    assert.notEqual(disclosing, composition, 'F7 the mutation landed');
+    assert.match(disclosing, /shared_world_id uuid\)/u, 'F7 the disclosing column really reached the result shape');
     await q(`DROP FUNCTION ${FN.COMPOSITION}`);
-    await q(composition.replace('currency_state text,\n              updated_at timestamptz)', 'currency_state text,\n              updated_at timestamptz, shared_world_id uuid)')
-      .replace('cur.currency_state, s.updated_at', 'cur.currency_state, s.updated_at, m.shared_world_id'));
+    await q(disclosing);
     await q(`REVOKE ALL ON FUNCTION ${FN.COMPOSITION} FROM PUBLIC, anon, authenticated`);
     await q(`GRANT EXECUTE ON FUNCTION ${FN.COMPOSITION} TO service_role`);
     await assert.rejects(verifyCatalog(), refuses, 'F7 a read boundary that discloses a source World is a regression');
