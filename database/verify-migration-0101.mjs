@@ -647,8 +647,6 @@ async function verifyConcurrency(c, seam) {
     await rt.commitMaterial(c.world, extraMaterial, 'HUMAN_TEXT', c.hadir, 'a second sentence Hadir wrote', 'EXACT_HUMAN_APPROVER_SET', 'RESOLVED_EXACT_HUMAN_REQUIREMENT', [c.hadir], c.mohamed);
     const draftExperience = randomUUID(); const v1 = randomUUID(); const m1 = randomUUID();
     await actAs(c.mohamed);
-    await rt.createDraft({ command: randomUUID(), experience: draftExperience }).catch(() => undefined); // not a Replay call; placeholder guard
-    await rt.createDraft; // eslint-disable-line no-unused-expressions
     await rows('SELECT * FROM public.create_public_experience_draft_v1($1, $2)', [randomUUID(), draftExperience]);
     const [prepared] = await rt.prepare(randomUUID(), draftExperience, m1, v1, NONE, NONE, [randomUUID()], [c.world], [c.mohamedMaterial]);
     assert.equal(prepared.outcome, 'PACKAGE_PREPARED');

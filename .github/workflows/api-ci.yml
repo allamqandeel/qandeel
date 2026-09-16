@@ -333,6 +333,26 @@ jobs:
             printf '### I-05C real-PostgreSQL verifiers\n- 0098 = %s\n- 0099 = %s\n' "$result_0098" "$result_0099" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$status"
+      # 0100 proves: Verify Replay foundation persistence against real PostgreSQL (0100 the stable REPLAY identity as a MATERIAL_ARTIFACT that is no World and carries no distribution Safety or Launch state + exactly one authorized source context shape per source class on the manifest and exactly one identity shape per class on its items so a class can never carry another class's identifier + the exact source bindings that survive owner deletion and never a body relation the sealed Public provenance or a raw turn + the Public binding as ONE exact version row through the additive 0095 candidate key + the Personal manifest binding its Session owner to the exact Replay creator + no content column no JSON and no binary payload anywhere + manifest completeness GENERATED from the captured counts and never written + FULL_SOURCE representable only over a complete universe selected whole and contiguously + append-only manifest and selection components for every role including the table owner + a chronology reversal unrepresentable by trigger rather than merely refused + a draft pointer that moves forward exactly one revision and binds the selection to its own manifest + RLS on with zero policies and zero application-role privileges + no REPLAY_VERSION and no writer of any kind)
+      # 0101 proves: Verify Replay authorized source capture and draft runtime against real PostgreSQL (0101 the exact human derived from auth.uid() with no actor authority audience order digest medium or completeness parameter + Personal capture from owned committed conversation units with delivered QANDEEL text usable inside the owner's private Replay and no fabricated Personal audio + Shared capture consuming the ONE canonical I-04F visibility entry point and never re-deriving access from membership + a Shared voice note bound as original-audio identity with no handle copied anywhere + reserved Shared kinds unselectable because they have no producer + Public capture requiring EXPERIENCE CONTROL AUTHORITY rather than public visibility and never reading the sealed provenance + one bounded REPLAY_SOURCE_NOT_AVAILABLE class for a nonexistent source another human's source invisible Shared history and an uncontrolled Experience + coverage class derived and never caller-asserted + chronology derived from the manifest whatever order arrives + no natural-language result ever committed from caller assertion + durable idempotency with same-command replay and changed-request conflict + the creator-exact read boundary disclosing no source identity + every consequential primitive executable by no application role pending the CW2-08 wrapper + eight refused weakenings each proven non-vacuous + duplicate birth competing revisions owner deletion in both orderings Public version supersession and Shared access loss racing a capture)
+      - name: Verify the two I-06A Replay foundation and draft runtime verifiers against real PostgreSQL as one reported group
+        run: |
+          status=0
+          result_0100=FAIL
+          result_0101=FAIL
+          echo "::group::migration 0100 - Replay foundation source manifest and selection"
+          if npm run verify:replay-foundation-source-manifest:integration; then result_0100=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0101 - Replay authorized source capture and draft runtime"
+          if npm run verify:replay-authorized-draft-runtime:integration; then result_0101=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "I-06A real-PostgreSQL verifier results"
+          echo "0100 = $result_0100"
+          echo "0101 = $result_0101"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            printf '### I-06A real-PostgreSQL verifiers\n- 0100 = %s\n- 0101 = %s\n' "$result_0100" "$result_0101" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
