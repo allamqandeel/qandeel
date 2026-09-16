@@ -118,7 +118,19 @@ async function verifyCatalog() {
   }
   // THE SOURCE-EVENT PAYLOAD IS STRUCTURALLY EXCLUDED: the canonicalization's
   // exact input list carries no moments, text, body or transcript parameter.
-  assert.deepEqual(await rt.inputParameters(VFN.POINT_DIGEST), CANONICALIZER_INPUTS,
+  //
+  // Read from `proargnames` DIRECTLY rather than through a mode-filtered
+  // unnest. PostgreSQL leaves `proargmodes` NULL for a function whose arguments
+  // are all IN and whose result is scalar, and `unnest(names, NULL)` yields
+  // NOTHING - so a mode filter over this function returns an empty list and
+  // every membership check over it is vacuously satisfied. The whole point of
+  // this assertion is that it cannot be satisfied vacuously, so it compares the
+  // EXACT list and requires it to be non-empty.
+  const [{ declared }] = await rows(
+    'SELECT pr.proargnames declared FROM pg_proc pr WHERE pr.oid = $1::regprocedure', [VFN.POINT_DIGEST]);
+  assert.ok(Array.isArray(declared) && declared.length > 0,
+    'the analytical canonicalization declares named parameters this assertion can actually read');
+  assert.deepEqual(declared, CANONICALIZER_INPUTS,
     'the analytical canonicalization declares an EXACT input list and no source payload');
   // The truth revalidation is STABLE and writes nothing.
   const truth = await rt.functionPosture(VFN.TRUTH);
@@ -904,10 +916,14 @@ async function verifyConcurrency(report, c, committed) {
 // -------------------------------------------------------------------- main
 runVerifier('0103', async (stage) => {
   await rt.client.connect();
-  stage('catalog');
-  await asRole('postgres');
-  await verifyCatalog();
   const report = createScenarioReport('0103', { query: q, restore: () => asRole('postgres') });
+  stage('catalog');
+  // Through the aggregator, not ahead of it: a catalog defect is independent of
+  // every row-level scenario below, and stopping the run on it would cost a
+  // whole focused round per finding - which is exactly what this gate exists to
+  // prevent.
+  await report.section('catalog posture, the ONE read boundary and the canonical projection it consumes',
+    verifyCatalog);
 
   const f = rt.newFixture();
   await q('BEGIN');
@@ -956,7 +972,7 @@ runVerifier('0103', async (stage) => {
   } finally {
     await q('ROLLBACK');
   }
-  await verifyCatalog();
+  await report.section('the catalog is intact after the rolled-back section', verifyCatalog);
 
   stage('concurrency');
   const c = rt.newFixture();
@@ -987,7 +1003,8 @@ runVerifier('0103', async (stage) => {
 
   stage('report');
   await asRole('postgres');
-  await verifyCatalog();
+  await report.section('the catalog is exactly what the migration installed, after every fixture is gone',
+    verifyCatalog);
   report.print();
   report.assertAllPassed();
   const [{ residue }] = await rows(

@@ -154,11 +154,13 @@ export function createReplayVersionRuntime(databaseUrl) {
     }
     // The Live Head, which the frozen commit primitive would have advanced.
     await q('UPDATE public.session_semantic_clocks SET current_sp = $2 WHERE session_id = $1', [session, units]);
-    const [{ baseline }] = await rows(
+    const cut = await rows(
       'SELECT b.baseline_world_version::bigint baseline FROM public.session_historical_baselines b WHERE b.session_id = $1',
       [session]);
-    assert.ok(baseline !== undefined && baseline !== null,
-      'a COVERED Session cuts a historical baseline at its first committed Session Position');
+    assert.equal(cut.length, 1,
+      'a COVERED Session cuts exactly one historical baseline at its first committed Session Position');
+    const { baseline } = cut[0];
+    assert.ok(baseline !== null, 'and that baseline names a world version');
 
     // The analytical state, as canonical SP-native availability events. Written
     // with triggers standing aside so the capture hooks add nothing of their own

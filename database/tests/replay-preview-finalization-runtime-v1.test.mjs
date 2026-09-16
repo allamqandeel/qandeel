@@ -673,9 +673,27 @@ test('the verifier proves the scenario matrix, the refused weakenings and the ra
     assert.ok(verifier.includes(needle), `the 0103 verifier proves ${needle}`);
   }
   // EVERY PROBE REPORTS ITS OWN OUTCOME IN ONE INVOCATION, through the permanent
-  // scenario aggregator, so one defect cannot hide every later scenario.
+  // scenario aggregator, so one defect cannot hide every later scenario. The
+  // CATALOG check goes through it too: it is independent of every row-level
+  // scenario, and running it ahead of the report cost a whole focused round for
+  // one finding.
   assert.match(verifier, /createScenarioReport/u, 'the verifier reports scenarios independently');
   assert.match(verifier, /assertAllPassed\(\)/u, 'and fails once at the end, naming every scenario that failed');
+  assert.ok(verifier.indexOf('createScenarioReport') < verifier.indexOf("stage('catalog')"),
+    'the report exists before the first catalog check, so a catalog defect does not stop the run');
+  // At the main body's own indentation - a call inside a scenario is nested
+  // deeper, and a probe that deliberately expects the check to FAIL calls it
+  // through assert.rejects rather than directly.
+  assert.doesNotMatch(verifier, /^ {2}await verifyCatalog\(\);$/mu,
+    'no catalog check runs outside the aggregator');
+  // The canonicalization's parameter list is read from `proargnames` DIRECTLY.
+  // PostgreSQL leaves `proargmodes` NULL for an all-IN scalar function, and a
+  // mode-filtered unnest over one returns NOTHING - so the assertion that the
+  // source payload is structurally excluded would be vacuously satisfied.
+  assert.match(verifier, /SELECT pr\.proargnames declared FROM pg_proc pr/u,
+    'the canonicalization input list is read from proargnames, not through a mode filter that can be empty');
+  assert.match(verifier, /assert\.ok\(Array\.isArray\(declared\) && declared\.length > 0/u,
+    'and is required to be non-empty, so it can never be satisfied vacuously');
   // Every planted weakening must be PROVEN to land before a refusal is expected.
   // The probes share ONE helper, so the landing proof is written once and can
   // never be forgotten by a later probe rather than repeated seven times.
