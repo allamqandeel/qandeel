@@ -367,6 +367,29 @@ jobs:
             printf '### I-06B real-PostgreSQL verifiers\n- 0102 = %s\n- 0103 = %s\n' "$result_0102" "$result_0103" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$status"
+      # The two I-06C verifiers are NEW. Each one's first contact with real
+      # PostgreSQL can expose a defect the other would not reveal so they run as
+      # ONE reported group rather than two hard-fail steps: a failure in 0104
+      # would otherwise skip 0105 entirely and cost a whole round per finding.
+      # Each exit code is captured and the step exits non-zero if either failed.
+      - name: Verify the two I-06C Replay distribution package authority and runtime verifiers against real PostgreSQL as one reported group
+        run: |
+          status=0
+          result_0104=FAIL
+          result_0105=FAIL
+          echo "::group::migration 0104 - Replay distribution package authority and the Public REPLAY_ARTIFACT bridge"
+          if npm run verify:replay-distribution-package-authority:integration; then result_0104=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0105 - Replay distribution runtime and export privacy sanitization"
+          if npm run verify:replay-distribution-runtime-export-public-bridge:integration; then result_0105=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "I-06C real-PostgreSQL verifier results"
+          echo "0104 = $result_0104"
+          echo "0105 = $result_0105"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            printf '### I-06C real-PostgreSQL verifiers\n- 0104 = %s\n- 0105 = %s\n' "$result_0104" "$result_0105" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

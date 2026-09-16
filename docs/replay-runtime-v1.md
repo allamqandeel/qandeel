@@ -4,17 +4,22 @@
 **Slice:** `I-06A — Replay Foundation, Authorized Source Capture and Draft Construction v1` —
 **CLOSED / MERGED**
 **Slice:** `I-06B — Replay Analytical Projection, Render Truth Contract and Preview / Finalization v1` —
-**CANDIDATE — awaiting independent ChatGPT review**
+**CLOSED / MERGED**
+**Slice:** `I-06C — Replay Distribution Package, Distribution Authority, Export Privacy Sanitization
+and Destination Runtime v1` — **CANDIDATE — awaiting independent ChatGPT review**
 **Architecture authority:** `CW2-05 — Replay Runtime Architecture v1.0 — CLOSED / FROZEN`, with
 binding `CW2-01`–`CW2-04` and `CW2-08`
 **Migrations:** `0100_replay_foundation_source_manifest_selection_v1.sql`,
 `0101_replay_authorized_draft_runtime_v1.sql`,
 `0102_replay_analytical_projection_render_contract_versioning_v1.sql`,
-`0103_replay_preview_finalization_runtime_v1.sql`
+`0103_replay_preview_finalization_runtime_v1.sql`,
+`0104_replay_distribution_package_authority_v1.sql`,
+`0105_replay_distribution_runtime_export_public_bridge_v1.sql`
 
-`I-06` is **not** closed or frozen. This document records what `I-06A` and `I-06B` implemented, what
-they deliberately did not, and where each deferred capability is owned. Sections 1–16 describe the
-`I-06A` substrate, which `I-06B` consumes unchanged; sections 18–31 describe `I-06B`.
+`I-06` is **not** closed or frozen. This document records what `I-06A`, `I-06B` and `I-06C`
+implemented, what they deliberately did not, and where each deferred capability is owned. Sections
+1–16 describe the `I-06A` substrate, which the later slices consume unchanged; sections 18–31
+describe `I-06B`; sections 32–48 describe `I-06C`.
 
 ---
 
@@ -424,7 +429,9 @@ in the backlog is Product authority and no runtime semantics were taken from it.
 ```text
 I-06  — ACTIVE
 I-06A — CLOSED / MERGED
-I-06B — CANDIDATE — awaiting independent ChatGPT review
+I-06B — CLOSED / MERGED
+I-06C — CANDIDATE — awaiting independent ChatGPT review
+I-06D — NOT STARTED
 ```
 
 `I-06` is not closed and not frozen, and Claude may not declare it so.
@@ -774,3 +781,344 @@ the canonicalization and its two exclusions, Semantic Cut Safety conservatism, d
 render contract scope, `PREVIEW_READY` and `FINALIZED` audience neutrality, finalization revalidation,
 revision-after-finalization semantics, lock order, idempotency and concurrency, ACL and RLS, forward
 safety, and exact-head CI evidence.
+
+---
+
+# I-06C
+
+## 32. REPLAY_DISTRIBUTION_PACKAGE_VERSION
+
+`I-06B` ended at a private finalized Replay Version. `I-06C` owns the boundary at which one exact
+finalized version may reach an audience, and nothing about that boundary is a World: distribution
+changes **audience**, never ontology.
+
+```text
+replay_distribution_package_versions
+  id
+  replay_id                          the exact Replay
+  replay_version_id                  the exact historically FINALIZED Replay Version
+  source_manifest_version_id         that version's own manifest
+  source_class                       read FROM the manifest, CHECK-pinned MY_WORLD
+  destination_action                 PUBLISH_TO_PUBLIC_WORLD | SHARE_EXTERNALLY | DOWNLOAD
+  package_revision
+  authority_requirement_state        the union
+  source_authority_resolution        half one
+  analytical_authority_resolution    half two
+  required_approver_count
+  authority_request_fingerprint
+  sanitization_contract_id
+  audience_safe_reference            the ONLY identity an audience ever receives
+  created_at
+```
+
+It is **not** a Replay Version, a render version, a mutable export job, a Public Experience, a file,
+a URL, a storage object, a download receipt or a World. It holds no source body, path, transcript,
+audio handle or sealed provenance: the payload stays exactly where `I-06A` bound it, and a package
+carrying a shadow copy could outlive the deletion it is supposed to respect. It is append-only for
+every role **including the table owner**, so the destination, the version and the authority identity
+can never be re-pointed.
+
+## 33. Historical finalization is bound, never inferred
+
+`I-06B` allows a `FINALIZED` Replay to be reopened to `DRAFT` while the exact version it left behind
+stays historically finalized. So a package never reads `replays.current_lifecycle`. It binds
+
+```text
+(replay_version_id, replay_id) -> replay_version_finalizations
+```
+
+through an additive candidate key, so *this exact version of this exact Replay was historically
+finalized* is ONE row and an unfinalized version is **unrepresentable** rather than merely refused. A
+previously finalized version therefore remains a distribution candidate while the stable Replay is
+being revised — subject to every distribution-time gate below.
+
+## 34. Destination is part of package identity
+
+Authority for one destination never implies another. `(id, destination_action)` is a candidate key,
+so an approval binds the package **and** its destination as ONE row; an approval collected for
+`PUBLISH_TO_PUBLIC_WORLD` can never resolve against a `SHARE_EXTERNALLY` package, and vice versa.
+Changing the destination, the Replay Version, the required set or the sanitized surface means a NEW
+package version — there is no other representable outcome, because the row is immutable.
+
+## 35. The analytical-layer authority, and why production is fail-closed
+
+`CW2-02` derives a redistributable QANDEEL analysis's `AUTHORITY_REQUIREMENT_SET` from the protected
+human material **and the SUBJECTS actually implicated**. Migration `0090` records the canonical
+repository finding for the first time: the material half is computable and the subject half is not,
+because no reviewed server-owned producer of a protected-human subject authority exists — the whole
+`I-03` chain terminates at `NOT_GRANTED` / `SEALED` and produces no protected-subject authority set
+at all. So `0090` records reasoning-bearing QANDEEL material as
+`UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT`, and `0093` refuses Personal QANDEEL analysis for
+publication on exactly the same ground.
+
+An `I-06B` `ANALYTICAL_PROJECTION_VERSION` is reasoning of that kind. Its digest commits Readings,
+reading relations, evidence participations, Materials, Gaps, Questions, question appearances,
+Confidences, Threads and focuses — QANDEEL's understanding, not the creator's own words. That every
+family of `K(TC)` is owner-scoped to the creator proves no **other human's row** can enter it; it does
+not prove that no other human is a **subject** of it, and the repository's own canonical position is
+that the second question is not answerable here.
+
+```text
+resolve_replay_analytical_distribution_authority_v1(projection)
+  -> UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT, no approvers, with a stated basis
+```
+
+Package preparation therefore **fails closed** on it today, and migration `0104` makes the weaker
+outcome unrepresentable: `analytical_authority_resolution` admits only the two RESOLVED states.
+Unresolved is never reinterpreted as zero approvers, as creator-only, as "already finalized so it is
+fine" or as "Safety will catch it". A later reviewed subject-authority resolver replaces the seam body
+forward and the same package shape becomes reachable with no change to `0104` and none to the
+primitives.
+
+## 36. REQUIRED_REPLAY_DISTRIBUTION_APPROVER_SET
+
+```text
+required approvers = union(
+    human material authority of the SELECTED source segments,
+    human authority requirement of the represented analytical projection)
+```
+
+derived by `derive_replay_distribution_required_approvers_v1` and by nothing else. It reads **no**
+membership relation of any kind, accepts no approver parameter, and fails closed on unresolved or
+contradictory authority rather than answering an empty set.
+
+| half | at this baseline |
+| --- | --- |
+| `MY_WORLD` human-authored segments | the creator, exactly and only — the manifest binds the Session owner to the Replay creator structurally |
+| `MY_WORLD` QANDEEL-authored segments | `REPLAY_DISTRIBUTION_SOURCE_AUTHORITY_UNRESOLVED`, mirroring the frozen `0093` refusal |
+| the analytical projection | `UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` — section 35 |
+| `SHARED_WORLD` / `PUBLIC_EXPERIENCE` | **unrepresentable**: a complete Replay Version needs an analytical projection, which is `CHECK`-pinned to a `MY_WORLD` manifest, so no Shared or Public Replay can reach `FINALIZED` and no package over one can exist |
+
+The last line is a census result rather than an omission. Writing a Shared approver derivation for a
+subject that cannot exist would be unreachable code claiming to protect something; when a later
+reviewed slice gives those classes an analytical capability it adds the branch with its own proofs and
+consumes `shared_world_history_item_required_approvers` and
+`shared_world_material_historical_authority` exactly as `I-05A` does.
+
+## 37. Approval, withdrawal and effective state
+
+An approval binds the DERIVED required set by composite foreign key, so an approval by a human the
+package does not require is structurally impossible however the row is produced. The approver is
+`auth.uid()`; there is no approver parameter anywhere. Withdrawal is append-only — the historical
+approval row is never mutated — and a human may withdraw only their own.
+
+```text
+EFFECTIVE    neither withdrawn nor superseded
+WITHDRAWN    an append-only withdrawal event exists; a human act dominates every structural fact
+SUPERSEDED   the approval binds an authority identity its own immutable package no longer carries
+MISSING      a required human with no approval row at all
+STALE        the CURRENT derivation no longer reproduces what the package recorded — a NEW package
+```
+
+The distribution commit never counts approval rows. It reads effective states, and `MISSING`,
+`WITHDRAWN` and `SUPERSEDED` each refuse.
+
+## 38. The authority request fingerprint
+
+One canonical derivation, shared by preparation, approval, the effective-state evaluation and the
+distribution commit, binding the protected action, the exact Replay and Replay Version, the exact
+package, the four truth components and their committed digests, the sanitization contract, the
+sanitized descriptor digest, both halves of the authority resolution, the exact derived approver set
+and — for Public — the exact linked Public manifest. It is derived, never supplied, and it is not a
+bearer token: it authorizes nothing by itself.
+
+It binds the linked Public manifest **identity** rather than the Public fingerprint, deliberately: the
+canonical Public fingerprint already binds this exact Replay distribution package and Replay Version
+through its source scope and this exact required approver set, so including it here would be a cycle
+rather than a stronger binding. The pair is bound both ways instead, and the commit requires both
+sides to hold.
+
+## 39. Source revalidation at distribution time
+
+Preparation, approval and the distribution commit each stabilize the source through the frozen
+`replay_lock_source_manifest_v1` and revalidate it through the frozen
+`derive_replay_source_manifest_currency_v1`. No competing source-currency evaluator exists. A source
+that was deleted, changed, became invisible to the creator, lost controller authority or stopped being
+the eligible version refuses with `REPLAY_SOURCE_STALE`, and nothing is reconstructed from a digest:
+there is no shadow copy to rescue a stale distribution. Broader post-finalization and
+post-distribution source-loss consequences remain `I-06D`.
+
+## 40. EXPORT_PRIVACY_SANITIZATION
+
+A positive allowlist as normalized typed columns, never a blacklist over a JSON blob and never free
+text a client authored. `replay_distribution_export_descriptors` is the WHOLE audience-visible surface
+and carries exactly three kinds of column: the opaque audience reference, safe derived counts, and the
+exact versioned render-truth policies `0102` already pinned.
+
+There is no private World, Session, account, participant, source, unit, material, history item,
+package item, provenance, path, URL, filename, storage handle, audio reference or transcript column,
+and migration `0104` refuses to deploy if one appears — by column-name pattern **and** by column type,
+so a `jsonb` escape hatch is refused too. `descriptor_digest` is a one-way digest of the sanitized
+surface itself and of no source; the authority fingerprint binds it, so a package cannot be approved
+against one audience-visible surface and exported with a materially different one.
+
+## 41. The audience-safe reference
+
+```text
+audience_safe_reference text  ~ '^rdx1_[0-9a-f]{32}$'
+```
+
+Opaque `text` in its own shape, structurally distinct from every internal `uuid` identity, minted at
+random by the writer and derived from nothing. A `BEFORE INSERT` guard refuses a reference that
+reproduces the row's own Replay id, Replay Version id, manifest id or package id, so an internal
+identifier wearing an opaque costume is unrepresentable. The mapping stays inside a sealed relation,
+and the reference grants no source access and no provenance traversal.
+
+## 42. The Public REPLAY_ARTIFACT bridge
+
+`I-05A` reserved `source_class = 'REPLAY_ARTIFACT'` on the sealed publication provenance and
+`public_body_form = 'RESERVED'` on the public package item because no Replay runtime existed. `I-06C`
+activates that seam **narrowly**:
+
+```text
+exact Public package item + its RESERVED body form
+  <-> its sealed provenance row, classed exactly REPLAY_ARTIFACT
+  <-> the exact Public Experience its manifest belongs to
+  <-> the exact Replay Distribution Package Version, its destination,
+      its Replay Version and its audience-safe reference
+```
+
+each through ONE composite foreign key onto a candidate key. There is no generic `artifact_id`, no
+source URL, no private source pointer and no sealed-provenance traversal. The Public package item
+carries the sanitized descriptor digest as its `public_body_digest` and has **no public body row at
+all** — a Replay artifact is not public text, so the canonical text-serving resolver has nothing to
+serve for it and the artifact resolver of section 44 serves the sanitized descriptor instead.
+
+**No second Public World and no second Public visibility truth.** The bounded Public package is
+written into the canonical `I-05A` relations, the canonical `commit_public_experience_ready_for_review_v1`
+performs the READY transition, and the canonical `publish_public_experience_v1` performs the
+publication and owns the publication record. The `I-06C` authorization record **binds** that canonical
+record rather than restating it.
+
+### The canonical Public authority derivation, extended additively
+
+`derive_public_publication_authority_v1` stays the ONE derivation of publication authority, with the
+identical signature, the identical result columns and every rule it had. It is extended through the
+repository's canonical forward method — a `CREATE OR REPLACE` in a later migration, exactly as `0098`
+extended the canonical visibility derivation — because the reserved class had no branch:
+
+```text
+an unbridged REPLAY_ARTIFACT item   PUBLIC_EXPERIENCE_SOURCE_AUTHORITY_UNRESOLVED
+a bridged one                       contributes the EXACT required approver set of its
+                                    Replay distribution package, and its exact package and
+                                    Replay Version identity to the source scope
+```
+
+Without that branch a Replay-only Public package would read as requiring **zero** humans, which is
+precisely the reinterpretation of an unresolved requirement as an empty one that the frozen rule
+forbids — and it would become reachable for real the day a `CW2-08` runtime lands.
+
+## 43. One human consent act, two immutable evidence stores
+
+A Public Replay needs both the Replay distribution approval and the canonical Public manifest
+approval, because both subsystems own immutable authority evidence and neither may be bypassed.
+Asking the same human twice for the same immutable payload would be duplicate consent, so
+`approve_replay_distribution_v1` is ONE act that writes both rows in ONE transaction, for the same
+`auth.uid()`, over a Public package bound 1:1 to the Replay package — the Public row through the
+canonical relation, with the canonical composite key into the canonical rightsholder set, bound to the
+canonical Public authority fingerprint. A withdrawal takes back both halves the same way, through the
+frozen `withdraw_publication_approval_v1`.
+
+## 44. Public serving, and what a viewer does not get
+
+`resolve_public_replay_artifact_v1(audience_safe_reference, viewer)` composes the ONE canonical
+`resolve_public_visibility_state_v1` with the canonical `resolve_public_audience_admission_v1` and
+returns the sanitized descriptor. An Experience that was never published, one whose pointer moved, one
+that `I-05C` made `ABSENT_FROM_PUBLIC_WORLD`, one whose consent was withdrawn, an unknown reference
+and a viewer the policy does not admit all receive the SAME answer: **zero rows**. Replay distribution
+state resurrects nothing, and there is no second public visibility truth.
+
+A Public viewer receives the distributable descriptor and **no capability**. They gain no source
+return, no provenance traversal and no Replay creation authority: `I-06A` already requires exact
+`EXPERIENCE_CONTROL_AUTHORITY` for a Public-source Replay, and this slice does not weaken it.
+
+## 45. SHARE_EXTERNALLY, DOWNLOAD, and authorization versus delivery
+
+This repository has no encoder, container, bitrate, object store, CDN, public file URL, messaging
+transport, watermark or DRM, and this slice invents none.
+
+```text
+SHARE_EXTERNALLY          AUTHORIZED_FOR_DELIVERY
+DOWNLOAD                  AUTHORIZED_FOR_DELIVERY
+PUBLISH_TO_PUBLIC_WORLD   PUBLIC_PUBLICATION_COMMITTED, binding the canonical Public record
+```
+
+Nothing claims `DELIVERED`, `SHARED` or `DOWNLOADED`, no column records a delivery no transport
+performed, and the migration refuses to deploy with a storage handle, URL, filename, object key,
+codec or watermark column anywhere. Replay ownership and Replay export entitlement stay distinct: an
+absent or expired entitlement deletes no ownership and no finalization, it refuses the scoped
+destination.
+
+## 46. CW2-08 composition, and the fail-closed prerequisite
+
+```text
+PRIVACY / OWNERSHIP AUTHORITY
+AND WORLD / LIFECYCLE STATE
+AND SAFETY / MODERATION POLICY
+AND COMMERCIAL ENTITLEMENT
+AND FEATURE / LAUNCH GATE
+```
+
+No layer manufactures another. `resolve_replay_distribution_prerequisites_v1` answers each dimension
+separately and every one of them `NOT_EVALUATED` at this baseline, because no executable canonical
+runtime exists — so a protected distribution **fails closed** on it, after every privacy and ownership
+gate rather than instead of one. `replay_distribution_authorizations` `CHECK`-pins all five dimensions
+to their positive values, so an authorization row cannot exist with an unevaluated or negative one,
+and the recorded `prerequisite_clearance_basis` is exactly what the seam answered.
+
+Nothing in this slice claims `SAFETY_ALLOW`, `MODERATION_ALLOW`, `ENTITLED`, `FEATURE_ENABLED` or
+`LAUNCH_CLEARED` of its own, the frozen `resolve_public_publication_prerequisites_v1` still answers
+`NOT_EVALUATED`, and a Public Replay publication must still pass it. There is no Replay-specific
+shortcut around `I-05B`.
+
+## 47. Lock order, idempotency and anti-oracle behaviour
+
+```text
+1  public.replays                              FOR UPDATE
+2  replay_distribution_package_versions         FOR SHARE
+3  replay_versions                              FOR SHARE
+4  the source domain, through replay_lock_source_manifest_v1, SHARE, in each
+   domain's own frozen relative order
+5  replay_distribution_approvals                FOR SHARE, ORDER BY approver
+6  the destination subsystem, in ITS canonical order:
+     public_world_state                         FOR UPDATE
+     public_experiences                         FOR UPDATE
+7  the I-06C writes
+```
+
+Replay is always the first lock, no predecessor Public or Shared writer takes a Replay lock, and no
+`I-06C` path inverts source or Public before Replay. No advisory lock, table lock or process mutex
+exists anywhere in the slice. Three narrow typed command relations carry the idempotency key AND the
+exact committed answer; `request_ref` binds the whole request, so an equivalent retry returns the
+original committed answer and the same command id carrying a different request is a deterministic
+`REPLAY_DISTRIBUTION_COMMAND_ID_CONFLICT`. An approval IS its own durable record, exactly as the
+frozen `I-05A` approval is.
+
+One bounded class, `REPLAY_DISTRIBUTION_NOT_AVAILABLE` (`P0002`), covers a Replay that does not exist,
+another human's Replay, a package that is not yours, a human the package does not require and an
+Experience the caller does not control — so no surface is an existence, ownership, control or
+required-set oracle. The creator's read boundary returns COUNTS of effective, missing, withdrawn and
+superseded approvals rather than approver identities: a creator learns whether the package is
+distributable without learning a private approver's account metadata.
+
+## 48. What I-06C did not do, and who owns it
+
+| Deferred | Owner |
+| --- | --- |
+| source loss AFTER finalization or distribution, later availability changes | `I-06D` |
+| post-delivery external recall, mandatory Public withdrawal on source loss | `I-06D` |
+| `I-06` closure reconciliation and the `QAN-BL-NAV-02` register act | `I-06D` |
+| a protected-human subject-authority resolver for QANDEEL analysis | not opened — see section 35 |
+| a Shared or Public historical analytical substrate, and their approver branches | not opened — see section 36 |
+| Safety, moderation, entitlement, feature flag and Launch Gate runtime | `CW2-08`, unimplemented |
+| `DOWNLOAD` monetization policy and Premium rules | `CW2-08`, unimplemented |
+| encoder, codec, container, bitrate, resolution, object storage, CDN, public URL | deferred by `CW2-05` |
+| email / SMS / social transport, watermark, DRM, social templates | deferred by `CW2-05` |
+| mobile Replay export UI, routes, controllers and RPC surfaces | outside `I-06` |
+
+Static contracts protect what this slice owns without becoming ceilings on that roadmap: a mirrored
+probe proves that an `I-06D` source-loss record, a distribution recall reconciliation, a reviewed
+delivery receipt with a real storage handle, a resolved analytical authority seam, a cleared `CW2-08`
+seam, additive columns, an index and a new CI gate all leave both `I-06C` contracts passing, while
+each deliberate weakening of an `I-06C` authority, privacy or truth invariant breaks at least one of
+them.

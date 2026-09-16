@@ -2225,3 +2225,60 @@ npm run verify:replay-preview-finalization-runtime:integration
 Both need `DATABASE_URL` pointing at a FULLY migrated database and are run in CI as one reported group
 after the I-06A group. Both report every scenario independently through the permanent aggregator, so
 one defect can never hide the ones after it.
+
+### I-06C - distribution package and distribution authority (migration 0104)
+
+`0104_replay_distribution_package_authority_v1.sql` creates the immutable
+`REPLAY_DISTRIBUTION_PACKAGE_VERSION`, the derived required approver set, the package-bound approvals
+and their append-only withdrawals, the sanitized export descriptor, the Public `REPLAY_ARTIFACT`
+bridge and the authorization record. It creates no writer at all.
+
+A package binds ONE exact historically FINALIZED Replay Version of ONE exact Replay - through
+`replay_version_finalizations`, never through `replays.current_lifecycle`, because I-06B legitimately
+reopens a finalized Replay without erasing that evidence. The destination action is part of package
+identity, so an approval for `PUBLISH_TO_PUBLIC_WORLD` can never resolve against `SHARE_EXTERNALLY` or
+`DOWNLOAD`. Unresolved authority is UNREPRESENTABLE on both halves and on the union: only the two
+RESOLVED states exist, exactly as I-05A admits only the two inside a publication package.
+
+The sanitized export descriptor is the WHOLE audience-visible surface, as a positive allowlist of
+typed columns - an opaque `rdx1_` reference, safe derived counts and the exact versioned render-truth
+policies - with no private identifier class and no `jsonb` escape hatch. The audience reference is
+minted at random and a `BEFORE INSERT` guard refuses one that reproduces an internal identity of its
+own row. Four additive candidate keys are added to frozen relations, each trivially unique because
+each contains that relation's primary key.
+
+### I-06C - distribution runtime, export sanitization and the Public bridge (migration 0105)
+
+`0105_replay_distribution_runtime_export_public_bridge_v1.sql` adds three typed command relations and
+seventeen functions, and replaces exactly ONE predecessor function - the canonical
+`derive_public_publication_authority_v1`, additively, through the repository's canonical forward
+method, so a bridged `REPLAY_ARTIFACT` item contributes the exact required approver set of its Replay
+distribution package and an unbridged one fails closed instead of requiring nobody.
+
+Production distribution is FAIL-CLOSED on two independent seams.
+`resolve_replay_analytical_distribution_authority_v1` answers
+`UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` because the protected-human SUBJECT half of a QANDEEL
+analysis authority requirement has no canonical producer here, and
+`resolve_replay_distribution_prerequisites_v1` answers `NOT_EVALUATED` on every CW2-08 dimension. Both
+refuse rather than guess, and neither is ever reinterpreted as zero approvers or as a clearance.
+
+`approve_replay_distribution_v1` is ONE human consent act that writes both immutable evidence rows for
+a Public destination, so nobody is asked twice for the same payload and the canonical Public authority
+contract is fulfilled rather than bypassed. `authorize_replay_distribution_v1` revalidates the source
+through the frozen I-06A path, the required set and the authority fingerprint, every approval's
+effective state, the sanitized surface, and the CW2-08 prerequisite LAST - and then either calls the
+canonical `publish_public_experience_v1` or records `AUTHORIZED_FOR_DELIVERY`, because no transport
+boundary exists to claim anything more.
+
+### I-06C - verifier commands
+
+```bash
+npm run verify:replay-distribution-package-authority:integration
+npm run verify:replay-distribution-runtime-export-public-bridge:integration
+```
+
+Both need `DATABASE_URL` pointing at a FULLY migrated database and are run in CI as one reported group
+after the I-06B group. Both report every scenario independently through the permanent aggregator. The
+0105 verifier reaches past the two fail-closed seams only by replacing a seam BODY inside a
+transaction it rolls back, or - for the three committed races - by restoring it in a `finally` and
+proving the production body back byte for byte. No permissive seam is ever left installed.
