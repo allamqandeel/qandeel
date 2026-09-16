@@ -15,6 +15,21 @@
   ],
   "version": 1,
   "groups": {
+    "i06b-0102": {
+      "title": "I-06B - Replay analytical projection, render truth contract and the first complete Replay Version (migration 0102)",
+      "verifiers": ["database/verify-migration-0102.mjs"]
+    },
+    "i06b-0103": {
+      "title": "I-06B - Replay preview and finalization runtime (migration 0103)",
+      "verifiers": ["database/verify-migration-0103.mjs"]
+    },
+    "i06b-all": {
+      "title": "I-06B - both Replay Version verifiers, in migration order",
+      "verifiers": [
+        "database/verify-migration-0102.mjs",
+        "database/verify-migration-0103.mjs"
+      ]
+    },
     "i06a-0100": {
       "title": "I-06A - Replay foundation, source manifest and selection persistence (migration 0100)",
       "verifiers": ["database/verify-migration-0100.mjs"]

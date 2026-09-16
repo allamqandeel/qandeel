@@ -56,7 +56,8 @@ failure as well as on success.
 npm run verify:db:focused -- i06a-all
 ```
 
-**Selectors:** `i06a-0100`, `i06a-0101`, `i06a-all`, `i05c-all`, or the generic `migration-NNNN`,
+**Selectors:** `i06b-0102`, `i06b-0103`, `i06b-all`, `i06a-0100`, `i06a-0101`, `i06a-all`, `i05c-all`,
+or the generic `migration-NNNN`,
 which reaches any `database/verify-migration-NNNN.mjs` with no mapping entry. Named groups live in
 `database/focused-verifiers.json`.
 
@@ -2125,3 +2126,102 @@ npm run verify:replay-authorized-draft-runtime:integration
 Both need `DATABASE_URL` pointing at a FULLY migrated database and are run in CI as one reported group
 after the I-05C group. They roll back or explicitly remove every fixture they create and prove the
 residue is zero.
+
+## I-06B - Replay Analytical Projection, Render Truth Contract and Preview / Finalization v1 (migrations 0102-0103)
+
+`I-06B` continues `I-06 - Replay Runtime`. The full phase document is
+[`docs/replay-runtime-v1.md`](../docs/replay-runtime-v1.md); this section records the substrate and how
+to run its verifiers. `I-06` is ACTIVE and `I-06B` is a CANDIDATE awaiting independent review.
+
+I-06A owned two of the four truth components and refused to fake the rest. I-06B creates the missing
+two and therefore the FIRST canonical complete `REPLAY_VERSION`: every row binds the source manifest
+version, the selection spec version, the analytical projection version and the render contract version,
+all four NOT NULL and bound as ONE composition by composite foreign keys. There is no nullable truth
+component, no placeholder and no `PENDING` projection.
+
+### I-06B - immutable truth components (migration 0102)
+
+`0102_replay_analytical_projection_render_contract_versioning_v1.sql` is persistence only. It creates
+no writer, grants nothing and writes no row.
+
+| relation | what it is |
+| --- | --- |
+| `replay_analytical_projection_versions` | one immutable commitment to the canonical analytical state over the represented points |
+| `replay_analytical_projection_points` | one point per selected item: the represented TC, the sealed answer and the state digest |
+| `replay_semantic_cut_assessments` | one immutable Semantic Cut Safety assessment per selected item |
+| `replay_temporal_discontinuities` | where every real gap is, with the omitted count GENERATED from the captured ranks |
+| `replay_render_contract_versions` | the immutable versioned truth policies a renderer must obey |
+| `replay_versions` | the FIRST complete Replay Version, binding all four components |
+| `replay_current_version_state` | the ONE mutable current-version pointer, forward only |
+| `replay_version_finalizations` | append-only evidence keyed by the EXACT Replay Version |
+| `replay_lifecycle_events` | the append-only lifecycle history, admitting only the frozen transitions |
+
+Six additive candidate keys are ADDED to the frozen I-06A component relations so this migration can
+bind an exact source row rather than reach it through independent partial keys. They add no column,
+change no constraint and rewrite no row - the frozen 0095 precedent I-06A itself consumed.
+
+### I-06B - analytical projection capability matrix
+
+Documented exactly, with no optimistic parity:
+
+```text
+MY_WORLD covered Session, sealed points   PERSONAL_SESSION_HISTORICAL_PROJECTION - SUPPORTED
+MY_WORLD covered Session, open Live Head  NOT AVAILABLE - REPLAY_ANALYTICAL_PROJECTION_OPEN_HEAD
+MY_WORLD LEGACY_UNCOVERED Session         NOT AVAILABLE - fails closed, no reconstruction
+MY_WORLD source medium                    text only: conversation_units.source_modality is TEXT
+SHARED_WORLD                              NOT AVAILABLE - no canonical historical analytical substrate
+owned PUBLIC_EXPERIENCE                   NOT AVAILABLE - no canonical historical analytical substrate
+```
+
+The repository census behind the last two lines: a Shared history item of kind `QANDEEL_ANALYSIS` is
+SOURCE CONTENT in a Shared World, and a bounded Public Experience derivative is PUBLIC SOURCE MATERIAL.
+`shared_world_material_historical_authority` is a historical AUDIENCE-WIDENING resolution, and
+`public_experience_search_projection` / `public_experience_vitality_state` are derived, rebuildable and
+explicitly never authorities. None of them is a time-indexed, knowledge-time-truthful, version-valid,
+deterministically revalidatable, hindsight-free analytical state. So preview and finalization fail
+closed for those classes with ONE bounded class, `REPLAY_ANALYTICAL_PROJECTION_UNAVAILABLE`, and their
+I-06A DRAFT stays exactly as valid as it was. Nothing is synthesized to make the classes symmetrical.
+
+### I-06B - preview and finalization runtime (migration 0103)
+
+`0103_replay_preview_finalization_runtime_v1.sql` adds three typed command relations and thirteen
+functions. The three human primitives - `prepare_replay_preview_v1`, `finalize_replay_version_v1` and
+`reopen_replay_for_revision_v1` - derive the creator from `auth.uid()` and accept no actor, authority,
+audience, safety, digest, discontinuity, coverage or clock parameter.
+`resolve_replay_current_version_v1` is the ONE read boundary: it answers the exact creator, returns
+zero rows to everybody else, and discloses no source identity and no internal divergence cause.
+
+The analytical projection is CONSUMED, never recomputed: `build_replay_analytical_projection_v1`
+reaches `get_session_historical_projection_v1(session, TC)` - the canonical projection migration 0072
+owns - at the exact represented Session Position of each selected item and commits a digest of what it
+answered. No model, provider or prompt is reachable from any I-06B function.
+
+The canonicalization is `QANDEEL_REPLAY_ANALYTICAL_PROJECTION_V1`: every family of K(TC) rendered in
+PostgreSQL's own canonical jsonb form and sorted by that text under the C collation, so the digest is a
+property of the SET rather than of the producer's order. It structurally excludes the source-event
+payload - the function declares no `moments` parameter and can never be passed one - and excludes the
+wall-clock Material `expiry` mapping, which 0072 section 13 states is never compared to TC and whose
+`PENDING -> SP(LH)` mapping legitimately moves with wall time. The TC-domain answer that mapping feeds,
+`statusAtTc`, stays inside the digest.
+
+### I-06B - lock order
+
+```text
+replays FOR UPDATE
+  -> replay_draft_state FOR UPDATE            (preview)
+     replay_current_version_state FOR UPDATE  (finalize / reopen)
+  -> replay_lock_source_manifest_v1, SHARE, in each domain's own frozen order
+  -> the canonical historical projection, read only: STABLE, no lock, no write
+  -> I-06B component writes
+```
+
+### I-06B - verifier commands
+
+```bash
+npm run verify:replay-analytical-projection-render-contract:integration
+npm run verify:replay-preview-finalization-runtime:integration
+```
+
+Both need `DATABASE_URL` pointing at a FULLY migrated database and are run in CI as one reported group
+after the I-06A group. Both report every scenario independently through the permanent aggregator, so
+one defect can never hide the ones after it.

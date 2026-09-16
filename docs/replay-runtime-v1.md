@@ -2,14 +2,19 @@
 
 **Phase:** `I-06 — Replay Runtime` — **ACTIVE**
 **Slice:** `I-06A — Replay Foundation, Authorized Source Capture and Draft Construction v1` —
+**CLOSED / MERGED**
+**Slice:** `I-06B — Replay Analytical Projection, Render Truth Contract and Preview / Finalization v1` —
 **CANDIDATE — awaiting independent ChatGPT review**
 **Architecture authority:** `CW2-05 — Replay Runtime Architecture v1.0 — CLOSED / FROZEN`, with
 binding `CW2-01`–`CW2-04` and `CW2-08`
 **Migrations:** `0100_replay_foundation_source_manifest_selection_v1.sql`,
-`0101_replay_authorized_draft_runtime_v1.sql`
+`0101_replay_authorized_draft_runtime_v1.sql`,
+`0102_replay_analytical_projection_render_contract_versioning_v1.sql`,
+`0103_replay_preview_finalization_runtime_v1.sql`
 
-`I-06` is **not** closed or frozen. This document records what `I-06A` implemented, what it
-deliberately did not, and where each deferred capability is owned.
+`I-06` is **not** closed or frozen. This document records what `I-06A` and `I-06B` implemented, what
+they deliberately did not, and where each deferred capability is owned. Sections 1–16 describe the
+`I-06A` substrate, which `I-06B` consumes unchanged; sections 18–31 describe `I-06B`.
 
 ---
 
@@ -418,12 +423,354 @@ in the backlog is Product authority and no runtime semantics were taken from it.
 
 ```text
 I-06  — ACTIVE
-I-06A — CANDIDATE — awaiting independent ChatGPT review
+I-06A — CLOSED / MERGED
+I-06B — CANDIDATE — awaiting independent ChatGPT review
 ```
 
-`I-06A` is not closed and not frozen, and Claude may not declare it so. Independent review covers
-architecture, `Replay != World`, creation versus distribution separation, source access authority,
-source deletion non-bypass, anti-oracle privacy, Personal temporal non-regression, Shared history
-authority, the Public Experience owner boundary, selection truth, the absence of an incomplete Replay
-Version, lock order and concurrency, idempotency, ACL and RLS, forward safety, and exact-head CI
-evidence.
+`I-06` is not closed and not frozen, and Claude may not declare it so.
+
+---
+
+# I-06B
+
+## 18. The first complete Replay Version
+
+`I-06A` owned two of the four truth components and refused to fake the rest. `I-06B` creates the
+missing two and therefore the first canonical `REPLAY_VERSION`.
+
+```text
+replay_versions
+  id
+  replay_id
+  replay_version_revision
+  source_manifest_version_id        I-06A
+  selection_spec_version_id         I-06A
+  analytical_projection_version_id  I-06B
+  render_contract_version_id        I-06B
+  created_at
+```
+
+Every component column is `NOT NULL`, and the four are bound as ONE composition rather than through
+four independent references that could each name a row of a different Replay:
+
+```text
+manifest    (source_manifest_version_id, replay_id)
+              -> replay_source_manifest_versions (id, replay_id)
+selection   (selection_spec_version_id, source_manifest_version_id)
+              -> replay_selection_spec_versions (id, source_manifest_version_id)
+projection  (analytical_projection_version_id, selection_spec_version_id,
+             source_manifest_version_id, replay_id)
+              -> replay_analytical_projection_versions (…)
+contract    (render_contract_version_id, analytical_projection_version_id,
+             selection_spec_version_id, source_manifest_version_id, replay_id)
+              -> replay_render_contract_versions (…)
+```
+
+There is no nullable truth component, no placeholder and no `PENDING` projection. A truth or material
+change creates a NEW Replay Version; nothing is ever mutated. Every truth component is append-only for
+every role INCLUDING the table owner, by `BEFORE` trigger.
+
+## 19. ANALYTICAL_PROJECTION_VERSION
+
+An immutable commitment to **the actual QANDEEL analytical state that was legitimately available and
+projection-valid at each represented source point**. It is never a prompt result, a summary generated
+now, a current-model rerun over old source, a visual styling payload or source text copied into an
+analysis blob.
+
+Migration `0072` owns the canonical temporal / no-hindsight constitution and `I-06B` creates no
+competing clock, no Replay-specific historical substrate and no second projection authority — the
+migration refuses to deploy if a `replay_*` relation names a semantic clock, a world version, a
+baseline or a coverage decision. The ONE analytical input is:
+
+```text
+K(TC) = get_session_historical_projection_v1(session, TC)
+```
+
+taken at the exact represented Session Position of each selected source item. That position is not a
+value a writer chose: `replay_analytical_projection_points` binds
+`(source_manifest_version_id, source_item_ordinal, represented_session_position)` to the manifest
+item's own `personal_session_position` by foreign key.
+
+### Only a SEALED coordinate may be frozen
+
+Migration `0072` states its own stability contract: the result "is stable for a sealed TC and may
+legitimately evolve while TC is the open head". A Replay Version must never freeze an analytical state
+whose historical answer can still legitimately change under the same represented coordinate, so:
+
+```text
+sealed  (TC < Live Head)   may be bound
+open Live Head             REPLAY_ANALYTICAL_PROJECTION_OPEN_HEAD — retried later, never frozen
+```
+
+`projection_sealed` is `CHECK`-pinned `TRUE` and `projection_live_head > represented_session_position`
+is checked too, so an unsealed point is unrepresentable however the row is produced.
+
+## 20. Source-class analytical projection capability matrix
+
+```text
+MY_WORLD covered Session, sealed points   PERSONAL_SESSION_HISTORICAL_PROJECTION — SUPPORTED
+MY_WORLD covered Session, open Live Head  NOT AVAILABLE — REPLAY_ANALYTICAL_PROJECTION_OPEN_HEAD
+MY_WORLD LEGACY_UNCOVERED Session         NOT AVAILABLE — REPLAY_ANALYTICAL_PROJECTION_UNAVAILABLE
+MY_WORLD source medium                    text only (conversation_units.source_modality is TEXT)
+SHARED_WORLD                              NOT AVAILABLE — REPLAY_ANALYTICAL_PROJECTION_UNAVAILABLE
+owned PUBLIC_EXPERIENCE                   NOT AVAILABLE — REPLAY_ANALYTICAL_PROJECTION_UNAVAILABLE
+```
+
+The repository census behind the last two lines. A Shared history item of kind `QANDEEL_ANALYSIS` is
+**source content** in a Shared World, and a bounded Public Experience derivative is **public source
+material**; neither is a historical analytical projection of QANDEEL.
+`shared_world_material_historical_authority` is a historical AUDIENCE-WIDENING resolution state, and
+`public_experience_search_projection` and `public_experience_vitality_state` are derived, rebuildable
+and explicitly never authorities. None of them is time-indexed by a knowledge coordinate,
+knowledge-time truthful, version-valid, deterministically revalidatable or hindsight-free.
+
+So preview and finalization **fail closed** for those classes with ONE bounded class, and:
+
+```text
+the I-06A DRAFT stays exactly as valid as it was
+no hidden source detail leaks
+no current AI rerun occurs
+no fake zero-element projection is marked complete
+no silent downgrade to a source-only Replay happens
+```
+
+This is a supported capability boundary, not a task failure. `projection_capability` carries exactly
+one value, bound to `source_class = 'MY_WORLD'`, and `source_class` is read FROM the manifest by
+composite foreign key — so a Shared or Public manifest cannot carry a Personal historical projection
+however the row is produced.
+
+## 21. The projection canonicalization
+
+Schema identity `QANDEEL_REPLAY_ANALYTICAL_PROJECTION_V1`, pinned by `CHECK`.
+
+Each family of `K(TC)` is rendered in PostgreSQL's own canonical `jsonb` form — object keys in a fixed
+order, numbers as canonical numeric text — and then SORTED by that text under the `C` collation, so the
+result is a property of the SET and not of the order the producer emitted. No language-runtime
+serialization participates: there is no `JSON.stringify` anywhere in the commitment.
+
+Two things are excluded, and both by construction rather than by omission:
+
+| excluded | why |
+| --- | --- |
+| `moments` | the committed source-event payload, including `committedText`. The source manifest already binds each item's canonical source-identity digest. The canonicalization declares **no** `moments` parameter and its exact input list is pinned by the migration and by the static contract, so one cannot be added silently. |
+| `materials[].expiry` | `0072` section 13: an expiry "is a policy fact in the wall-clock domain … It is NEVER compared to TC", and its `PENDING -> SP(LH)` mapping legitimately moves with wall time while the sealed historical answer does not. The TC-domain answer it feeds, `statusAtTc`, stays in the digest. |
+
+The projection revision facts (`liveHead`, `worldVersion`, `sameSpEventSequence`, `pendingExpiries`)
+are likewise absent from the digest: they are freshness tokens of the live Session, not the historical
+answer at TC. `replay_analytical_projection_points` records them as the provenance of the derivation.
+
+## 22. Semantic Cut Safety
+
+```text
+WHOLE_ITEM              SAFE      nothing was trimmed, so no negation, qualification,
+                                  attribution or clause context can have been removed
+TEXT_CODE_POINT_RANGE   UNPROVEN  no canonical deterministic boundary / attribution substrate
+                                  exists in this repository, and none is invented here
+```
+
+Only `SAFE` may enter a complete Replay Version. The rule is structural, not procedural: a `CHECK`
+requires `SAFE` to imply `WHOLE_ITEM`, another requires `TEXT_CODE_POINT_RANGE` to be `UNPROVEN` or
+`REJECTED`, and the assessment binds the selected item AND its exact anchor kind as ONE row, so a row
+claiming an anchor kind it does not have simply does not resolve.
+
+A selection is never silently widened to make a cut pass. An expansion is a NEW explicit selection
+revision through the frozen `I-06A` draft path.
+
+## 23. Temporal discontinuity
+
+One row per adjacent selected pair whose captured source-universe ranks are non-consecutive. Both
+endpoints are bound as exact selected rows and both recorded ranks as the exact captured ranks; the
+omitted count is `GENERATED ALWAYS AS (right_rank - left_rank - 1) STORED` with `CHECK (> 0)`, so a
+fabricated gap over a contiguous pair is unrepresentable and no writer can author the number.
+
+It copies no omitted content and names no omitted item: a gap is machine truth about ABSENCE. The
+render contract requires `PERCEPTIBLE_DISCONTINUITY_REQUIRED` — a gap may never masquerade as
+continuous source time.
+
+## 24. Timing Semantic Integrity
+
+The four concepts stay separate: audit timestamp, knowledge availability, source timing, render pacing.
+
+The durable Personal source is text-only, and a text event has no original voice timing to preserve.
+The render contract therefore carries `timing_integrity_policy = 'PRESENTATION_PACING_DECLARED'`,
+pinned by `CHECK`: pacing is declared as PRESENTATION behaviour and is never presented as original
+conversational timing.
+
+Where an authorized original-audio source exists — a Shared voice note — its frozen `I-04G` digest is a
+body IDENTITY over an opaque object reference and a transcript. It attests no media bytes and grants no
+media-delivery capability, and this repository has no authorized media path. At this baseline the
+source-class census refuses such a Replay first, so the procedural medium gate in `0103` is
+unreachable; the line is actually held by `source_medium_class = 'ORIGINAL_TEXT_ONLY'` on the render
+contract, which makes an audio-bearing contract row unrepresentable. Nothing synthesizes an absent
+medium, and no transcript is ever promoted to an original spoken event.
+
+## 25. RENDER_CONTRACT_VERSION
+
+The truth contract a renderer must obey, bound to the exact analytical projection / selection /
+manifest / Replay composition, with every policy an exact versioned value:
+
+```text
+source_medium_class            ORIGINAL_TEXT_ONLY
+original_medium_policy         PRESERVE_ORIGINAL_MEDIUM_ONLY
+source_text_policy             EXACT_SOURCE_TEXT
+semantic_cut_policy            WHOLE_ITEM_ONLY_PROVEN_SAFE
+temporal_discontinuity_policy  PERCEPTIBLE_DISCONTINUITY_REQUIRED
+timing_integrity_policy        PRESENTATION_PACING_DECLARED
+analytical_projection_policy   BOUND_HISTORICAL_PROJECTION_DIGEST
+camera_emphasis_policy         EMPHASIS_WITHOUT_MEANING_CREATION
+motion_policy                  EXPLANATORY_MOTION_ONLY
+caption_provenance_policy      DERIVED_CAPTION_DISTINCT_FROM_SOURCE
+accessibility_parity_policy    EQUIVALENT_TRUTH_REQUIRED
+reduced_motion_parity_policy   EQUIVALENT_TRUTH_REQUIRED
+editorial_annotation_policy    NO_EDITORIAL_ANNOTATION
+```
+
+It defines **no** codec, container, bitrate, resolution, frame rate, storage provider, CDN, watermark,
+DRM, social template, typography or choreography — all deferred by `CW2-05` section 50, and the
+migration refuses to deploy with such a column. `contract_digest` commits the exact composition and the
+exact policy tuple through one `IMMUTABLE` function that both the builder and the finalization
+revalidation call, so the two can never drift.
+
+Derived captions and transcripts stay distinct from source truth
+(`DERIVED_CAPTION_DISTINCT_FROM_SOURCE`), and no editorial narration exists at all
+(`NO_EDITORIAL_ANNOTATION`). No mobile Replay UI is added by this slice: `I-06B` creates the truth
+contract that later visual execution must obey.
+
+## 26. PREVIEW_READY
+
+> the current draft has been truthfully compiled into ONE complete immutable Replay Version whose
+> analytical projection and render contract pass every required internal truth gate.
+
+It does **not** mean distributed, approved for Public, downloadable, encoded as a final video,
+launch-cleared, Safety-approved or entitled for export. `prepare_replay_preview_v1`:
+
+```text
+1  derives the exact actor from auth.uid()
+2  locks the Replay FIRST
+3  compares and swaps the expected draft revision
+4  requires the lifecycle to be DRAFT
+5  locks the current source manifest through the frozen I-06A helper
+6  revalidates source currency through the ONE frozen I-06A derivation
+7  derives Semantic Cut Safety and refuses any cut that is not proven SAFE
+8  derives the temporal discontinuities
+9  builds the analytical projection from the canonical historical truth
+10 builds the render contract over it
+11 creates the complete Replay Version binding all four components
+12 advances the current-version pointer, forward only
+13 transitions the lifecycle to PREVIEW_READY with append-only evidence
+14 records the durable idempotent command answer
+```
+
+It widens no audience: no relation that could carry a package, an approver, a World membership or a
+public surface is read or written anywhere in it, which the migration checks of its own text.
+
+## 27. FINALIZED, and why it is not distributed
+
+> ONE exact complete Replay Version passed final source, projection and render truth revalidation and
+> is frozen as a private finalized version.
+
+`finalize_replay_version_v1` binds the EXACT current previewed version, revalidates the source under
+lock through the frozen `I-06A` derivation, re-derives the canonical analytical answer at every
+represented coordinate and compares it to what the version froze, and recomputes the render contract
+digest from its own bound composition. Anything that moved refuses the finalization:
+
+```text
+REPLAY_SOURCE_STALE                   40001
+REPLAY_ANALYTICAL_PROJECTION_STALE    40001
+REPLAY_RENDER_CONTRACT_STALE          40001
+REPLAY_SEMANTIC_CUT_UNSAFE            0A000
+REPLAY_VERSION_STALE                  40001
+```
+
+It regenerates no missing source and builds no new Replay Version: if truth changed, it fails and a new
+draft / version cycle is required.
+
+**FINALIZED is not distributed.** It creates no distribution package, no required approver set, no
+publish, share or download action, no export sanitization result, no Public Experience and no external
+artifact, and it reserves no future authority for any of them. A finalized Replay may remain private
+forever. Evidence is append-only and keyed by the EXACT Replay Version, so `I-06C` can ask "was THIS
+exact version finalized?" with one key lookup and never has to infer it from a current lifecycle.
+
+## 28. Revision after finalization
+
+```text
+PREVIEW_READY -> DRAFT   through reopen_replay_for_revision_v1
+FINALIZED     -> DRAFT   through reopen_replay_for_revision_v1
+```
+
+only through that explicit creator-exact command. The old Replay Version stays immutable byte for byte;
+a previously finalized version stays historically finalized, because its evidence row is append-only
+and keyed by that exact version. A later preview creates a NEW Replay Version revision. No distribution
+behaviour exists here for the old or the new version.
+
+The stable Replay's lifecycle moves only along those frozen transitions, enforced by a `BEFORE UPDATE`
+trigger for every role including the table owner, so a jump from `DRAFT` straight to `FINALIZED` is
+unrepresentable rather than merely refused.
+
+## 29. Lock order, idempotency and concurrency
+
+```text
+1  replays                       FOR UPDATE
+2  replay_draft_state            FOR UPDATE   (preview)
+   replay_current_version_state  FOR UPDATE   (finalize / reopen)
+3  the source domain, through replay_lock_source_manifest_v1, SHARE, in each
+   domain's own frozen relative order
+4  the canonical historical projection: STABLE, read only, no lock, no write
+5  the I-06B component writes
+```
+
+Replay is always the first lock, so no `I-06B` path can be the second edge of a cycle. No advisory
+lock, table lock or process mutex exists anywhere in the slice.
+
+Three narrow typed command relations — `replay_preview_commands`,
+`replay_finalization_commands`, `replay_revision_reopen_commands` — carry the idempotency key AND the
+exact committed answer. `request_ref` binds the whole request, so an equivalent retry returns the
+original committed answer and the same command id carrying a different request is a deterministic
+`REPLAY_COMMAND_ID_CONFLICT`. Competing previews and competing finalizations serialize on the Replay
+row and the loser is refused as `REPLAY_LIFECYCLE_INVALID` rather than applied to whatever is current.
+
+## 30. Security and ACL posture
+
+Every `I-06B` relation is postgres-owned, RLS-enabled with zero policies and revoked from `PUBLIC`,
+`anon`, `authenticated` and `service_role`. Every function is postgres-owned and `search_path`-pinned;
+every mutation is `SECURITY DEFINER` with the actor derived from `auth.uid()`. Every consequential
+primitive, every derivation core, the canonicalizations and the truth revalidation are executable by
+**no** application role, pending a reviewed `CW2-08` wrapper. `service_role` alone may execute
+`resolve_replay_current_version_v1`, which answers the exact creator, returns zero rows to everybody
+else, and discloses no source identity and no internal divergence cause.
+
+`resolve_replay_current_version_v1` deliberately does **not** report analytical truth currency. The
+frozen `I-06A` source currency can be a property of the Replay and its creator because its inputs are
+owner-scoped columns; the analytical one cannot, because the canonical historical projection is
+owner-scoped on `auth.uid()` itself. The truth revalidation therefore happens where the exact human is
+present and holds the locks: inside finalization.
+
+Nothing in this slice claims `SAFETY_ALLOW`, `MODERATION_ALLOW`, `ENTITLED`, `FEATURE_ENABLED`,
+`LAUNCH_CLEARED` or `PUBLIC_LAUNCH_READY`. The frozen `CW2-08` prerequisite seam still answers
+`NOT_EVALUATED`, and `I-06B` asserts that it does.
+
+## 31. What I-06B did not do, and who owns it
+
+| Deferred | Owner |
+| --- | --- |
+| `REPLAY_DISTRIBUTION_PACKAGE_VERSION`, distribution approver derivation, distribution-time revalidation | `I-06C` |
+| `PUBLISH_TO_PUBLIC_WORLD`, `SHARE_EXTERNALLY`, `DOWNLOAD`, `EXPORT_PRIVACY_SANITIZATION` | `I-06C` |
+| entitlement and launch integration at distribution | `I-06C` / `CW2-08` |
+| source loss AFTER finalization, later source availability changes, withdrawal rules | `I-06D` |
+| `I-06` closure reconciliation | `I-06D` |
+| codec, container, bitrate, resolution, media storage, CDN, export resolution | deferred by `CW2-05` |
+| final visual and motion craft, typography, social templates, watermark, DRM | deferred by `CW2-05` |
+| a Shared or Public historical analytical substrate | not opened — see section 20 |
+| an NLP semantic boundary / attribution authority for partial cuts | not opened — see section 22 |
+| an authorized original-media delivery path | not opened — see section 24 |
+| mobile Replay UI, routes, controllers and RPC surfaces | outside `I-06` |
+
+Static contracts protect what this slice owns without becoming ceilings on that roadmap: a mirrored
+probe proves that every one of those authorized future additions leaves both `I-06B` contracts passing,
+while each deliberate weakening of an `I-06B` truth, authority or privacy invariant breaks at least one
+of them. Independent review covers the completeness of the Replay Version composition, the analytical
+projection capability matrix and the census behind it, the no-hindsight and sealed-coordinate rules,
+the canonicalization and its two exclusions, Semantic Cut Safety conservatism, discontinuity truth,
+render contract scope, `PREVIEW_READY` and `FINALIZED` audience neutrality, finalization revalidation,
+revision-after-finalization semantics, lock order, idempotency and concurrency, ACL and RLS, forward
+safety, and exact-head CI evidence.

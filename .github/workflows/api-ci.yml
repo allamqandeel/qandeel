@@ -344,6 +344,29 @@ jobs:
             printf '### I-06A real-PostgreSQL verifiers\n- 0100 = %s\n- 0101 = %s\n' "$result_0100" "$result_0101" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$status"
+      # The two I-06B verifiers are NEW. Each one's first contact with real
+      # PostgreSQL can expose a defect the other would not reveal so they run as
+      # ONE reported group rather than two hard-fail steps: a failure in 0102
+      # would otherwise skip 0103 entirely and cost a whole round per finding.
+      # Each exit code is captured and the step exits non-zero if either failed.
+      - name: Verify the two I-06B Replay analytical projection and preview finalization verifiers against real PostgreSQL as one reported group
+        run: |
+          status=0
+          result_0102=FAIL
+          result_0103=FAIL
+          echo "::group::migration 0102 - Replay analytical projection render contract and complete Replay Version"
+          if npm run verify:replay-analytical-projection-render-contract:integration; then result_0102=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0103 - Replay preview and finalization runtime"
+          if npm run verify:replay-preview-finalization-runtime:integration; then result_0103=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "I-06B real-PostgreSQL verifier results"
+          echo "0102 = $result_0102"
+          echo "0103 = $result_0103"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            printf '### I-06B real-PostgreSQL verifiers\n- 0102 = %s\n- 0103 = %s\n' "$result_0102" "$result_0103" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
