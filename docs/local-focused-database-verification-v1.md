@@ -1,6 +1,6 @@
 # Focused Database Verification v1
 
-**Task:** `QAN-INF-03 — Focused Database Verification + Local Disposable PostgreSQL Harness v1`
+**Task:** `QAN-INF-05 — Focused Database Verification + Local Disposable PostgreSQL Harness v1`
 **Status:** CANDIDATE — awaiting independent ChatGPT review
 **Scope:** DevEx / CI infrastructure. No Product semantics, no runtime behaviour, no migration.
 
@@ -48,6 +48,23 @@ It carries no secrets, needs none, never touches production Supabase, deploys no
 nothing. `contents: read` is the whole of its authority. It has no Redis: the Replay verifiers need
 PostgreSQL only, and parity does not mean "copy every service full CI happens to run".
 
+### The canonical bootstrap
+
+`database/supabase-compatible-bootstrap.sql` is the **one** definition of the Supabase-compatible
+posture — the three roles migrations grant to, the `auth` schema, `auth.users`, and `auth.uid()`.
+Both `api-ci.yml` and this gate apply that same file; neither carries a copy.
+
+This is not a style preference. Parity was originally enforced by comparing this file against inline
+SQL in `api-ci.yml`, and that comparison can only ever run in one direction: API CI could grow a
+bootstrap requirement while the focused gate silently stayed weaker, and the check would still pass.
+Sharing one artifact removes the direction entirely — a statement added here strengthens both gates
+in the same commit.
+
+The version number is not the parity claim; these roles and this function are. The contract pins
+both halves: that both workflows still consume the file, that neither reintroduces inline
+bootstrap SQL, and that the file itself still creates the whole posture, so sharing it cannot become
+a way to weaken both gates at once.
+
 ### Using it
 
 From the repository's Actions tab, run **Focused Database Verification** with two inputs:
@@ -57,16 +74,33 @@ From the repository's Actions tab, run **Focused Database Verification** with tw
 | `target_ref` | the branch, tag or SHA to verify |
 | `verifier` | which verifier(s) to run |
 
-### `target_ref` behaviour
+### Two refs, and which one judges which
 
-The workflow **file** always runs from the ref it was dispatched on — in practice `main`, because
-that is where a `workflow_dispatch` workflow must live to be dispatchable. It then checks out
-`target_ref` separately, as the repository under test.
+The job makes **two** checkouts, and they are pinned separately and explicitly:
 
-This split is deliberate and load-bearing: the harness — the selector mapping, the bootstrap and the
-runner — comes from the default branch, so **a feature branch can be verified without first carrying
-this infrastructure.** The branch under test supplies only its migrations, its verifiers and its
-manifest.
+| Checkout | Ref | Supplies |
+| --- | --- | --- |
+| `.qan-harness` | on a dispatch, the **repository default branch**; on the self-test, the PR's own commit | the selector mapping, the canonical bootstrap, the runner |
+| `repo` | the validated `target_ref` | migrations, verifiers, `package.json` |
+
+This split is deliberate and load-bearing, in both directions.
+
+**A dispatch is judged by merged infrastructure.** `FOCUSED_HARNESS_REF` resolves to
+`github.event.repository.default_branch`, whatever ref the person happened to dispatch from — so a
+branch cannot change the rules it is judged by while still being the branch under test. It is pinned
+rather than inherited: leaving the harness checkout without a `ref` happened to produce the right
+thing for a dispatch from `main`, and nothing structural guaranteed it.
+
+**A feature branch needs no infrastructure of its own.** The branch under test supplies only its
+migrations, its verifiers and its manifest, so a slice in flight is verifiable the day this gate
+merges.
+
+**The self-test deliberately inverts the first rule.** On `pull_request`, `FOCUSED_HARNESS_REF` is
+`github.sha`, so the PR's own harness runs — proving a change to this gate is the only thing that
+self-test exists for.
+
+Every run prints the harness ref, the resolved harness commit and the target ref, so the artifact
+says which harness produced the answer.
 
 `target_ref` is validated before anything is fetched: it must read as a plain branch, tag or SHA, and
 it is passed to `actions/checkout` through the environment rather than interpolated into any shell
@@ -167,7 +201,7 @@ Run them alone with `npm run verify:db:hazards`.
 
 `database/verify-migration-0097.mjs:179` asserts a literal count of `3` against posts it created
 itself. It is correct today. The `H4` threshold is therefore `4` — the largest literal the existing
-corpus uses, plus one. This is recorded rather than fixed because `QAN-INF-03` does not own I-05B's
+corpus uses, plus one. This is recorded rather than fixed because `QAN-INF-05` does not own I-05B's
 verifier; the next task that touches it should snapshot the count and assert the delta.
 
 ---
@@ -217,17 +251,45 @@ on its own sufficient to break the long CI loop — which is exactly why it is b
 
 ---
 
-## 7. The two-green-focused-runs rule
+## 7. The two-green-focused-runs rule, and the exact-head rule
 
 For any database-heavy task, before the final full API CI candidate:
 
-1. run the focused gate against the exact branch head;
+1. run the focused gate against the branch while hunting defects;
 2. diagnose **every** reported failure from the artifact — not just the first;
 3. fix, and rerun;
 4. require **two consecutive fresh focused runs green**, because the gate creates a new database
    every time and a single green run cannot distinguish a real pass from a lucky ordering;
 5. only then push the final candidate and run **one** exact-head full API CI;
 6. run Mobile CI as the normal regression gate.
+
+### Debugging may target a ref. Acceptance must target a SHA.
+
+A branch name is a moving target: it resolves to whatever was pushed last. Two green runs against
+`my-branch` can therefore be two runs of two **different trees**, and prove nothing jointly — the
+second could be green because the first one's defect was pushed away, or red on a tree nobody meant
+to test.
+
+So:
+
+| Purpose | `target_ref` | Why |
+| --- | --- | --- |
+| Hunting a defect | a branch name is fine | you want whatever is newest |
+| The **two green acceptance runs** | the **exact 40-character commit SHA** | two runs must be two runs of the *same* tree |
+| The final full API CI | the same exact SHA | the head that is being accepted |
+
+The runner states which kind of run it just did, in the console, in the summary and in
+`environment.txt`:
+
+```text
+ACCEPTANCE-ELIGIBLE: the target is an exact commit SHA
+DEBUGGING RUN: the target "my-branch" is a moving ref, so this run cannot count toward the
+two green acceptance runs - rerun against the exact commit SHA for those
+```
+
+It does not refuse a branch — that would make ordinary debugging awkward for no gain. It refuses to
+let a moving-ref run be **mistaken** for acceptance evidence afterwards, which is the failure that
+actually costs anything.
 
 There is no step that reads "push another correction and see what CI says". The loop this task exists
 to end is:
@@ -243,6 +305,10 @@ fix -> full API CI -> first failure -> repeat
 It changes no migration, no runtime, no Product semantics and no Replay invariant. It does not
 weaken any verifier to obtain a green build: the hazard contract makes verifiers *stricter*, and the
 aggregation helper changes only *when* a run reports, never *whether* it fails.
+
+It makes exactly one change to `api-ci.yml`: the bootstrap step now applies the canonical file
+instead of an inline copy of the same statements. Nothing else in that workflow moves, and the SQL
+executed is unchanged.
 
 It adds no backlog item. No open item in `docs/qandeel-canonical-backlog-v1.md` names an
 infrastructure task as owner, and every `OPEN — UNASSIGNED` item is left alone under BG-05 step 5.

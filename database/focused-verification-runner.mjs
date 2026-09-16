@@ -1,4 +1,4 @@
-// QAN-INF-03 - the focused database verification runner.
+// QAN-INF-05 - the focused database verification runner.
 //
 // One command that takes a disposable PostgreSQL from empty to a verified
 // answer: Supabase-compatible bootstrap, every migration from zero in canonical
@@ -191,13 +191,31 @@ const serverVersion = needsPsql
   ? run('psql', [options.databaseUrl, '-At', '-c', 'SELECT version()'], { env: childEnv, label: 'version' })
   : { output: '(not probed: psql steps were skipped)' };
 const head = run('git', ['-C', options.repo, 'log', '-1', '--format=%H %s'], { label: 'head' });
+
+/**
+ * DEBUGGING RUN versus ACCEPTANCE RUN, said out loud on every run.
+ *
+ * A branch name is a moving target: it resolves to whatever was pushed last, so
+ * two green runs against `my-branch` can be two runs of two DIFFERENT trees and
+ * prove nothing jointly. That is fine while hunting a defect, and not fine as
+ * the evidence that a head is ready. The two acceptance runs before a final full
+ * API CI must therefore name an exact commit SHA.
+ */
+const targetRef = process.env.FOCUSED_TARGET_REF ?? '(local)';
+const isExactHead = /^[0-9a-f]{40}$/u.test(targetRef);
+const acceptance = isExactHead
+  ? 'ACCEPTANCE-ELIGIBLE: the target is an exact commit SHA'
+  : `DEBUGGING RUN: the target ${JSON.stringify(targetRef)} is a moving ref, so this run cannot count`
+    + ' toward the two green acceptance runs - rerun against the exact commit SHA for those';
 artifact('environment.txt', [
   `selector: ${options.selector}`,
   `group: ${title}`,
   `verifiers: ${resolved.map((v) => v.relative).join(' ')}`,
   `repository: ${options.repo}`,
-  `target ref: ${process.env.FOCUSED_TARGET_REF ?? '(local)'}`,
+  `target ref: ${targetRef}`,
   `target head: ${head.ok ? head.output.trim() : '(not a git checkout)'}`,
+  `harness ref: ${process.env.FOCUSED_HARNESS_REF ?? '(local)'}`,
+  `acceptance: ${acceptance}`,
   `node: ${process.version}`,
   `psql: ${needsPsql ? (spawnSync('psql', ['--version'], { encoding: 'utf8', shell: false }).stdout?.trim() ?? 'unknown') : '(not used)'}`,
   `server: ${serverVersion.output.trim()}`,
@@ -275,7 +293,7 @@ for (const outcome of outcomes) {
     lines.push(`      ${scenario.ok ? 'pass' : 'FAIL'}  ${scenario.name}${scenario.detail ? `  ${scenario.detail}` : ''}`);
   }
 }
-lines.push('', `${outcomes.length} verifier(s), ${outcomes.length - failed.length} passed, ${failed.length} failed`);
+lines.push('', `${outcomes.length} verifier(s), ${outcomes.length - failed.length} passed, ${failed.length} failed`, acceptance);
 const summary = lines.join('\n');
 console.log(summary);
 artifact('summary.md', `${summary}\n`);

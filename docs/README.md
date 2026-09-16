@@ -106,7 +106,7 @@ Next task: **VI-03 — Visual North Star + Graphic Language**.
 - [Post-Response Intelligence Dispatch Runtime v1](post-response-intelligence-dispatch-runtime-v1.md)
 - [Durable Memory Effect Result Persistence v1](durable-memory-effect-result-persistence-v1.md)
 - [Durable Authorized Association Command Persistence v1](durable-association-command-persistence-v1.md)
-- [Focused Database Verification v1](local-focused-database-verification-v1.md) — QAN-INF-03: the fast PostgreSQL 17 gate that bootstraps Supabase-compatible roles, applies every migration from zero and runs only the selected verifier(s); the scenario-aggregation contract that reports every independent probe in ONE run instead of one per CI round; and the seven verifier-hazard detectors that catch, before a push, the defect classes that cost I-06A six full API CI rounds
+- [Focused Database Verification v1](local-focused-database-verification-v1.md) — QAN-INF-05: the fast PostgreSQL 17 gate that bootstraps Supabase-compatible roles, applies every migration from zero and runs only the selected verifier(s); the scenario-aggregation contract that reports every independent probe in ONE run instead of one per CI round; and the seven verifier-hazard detectors that catch, before a push, the defect classes that cost I-06A six full API CI rounds
 
 ## Recommended implementation-facing set
 

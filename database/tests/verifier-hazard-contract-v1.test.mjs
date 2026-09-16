@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { MAGIC_COUNT_THRESHOLD, inspectRepository, inspectVerifier } from '../verifier-hazards.mjs';
 import { createScenarioReport } from '../verifier-scenarios.mjs';
 
-// QAN-INF-03 - the permanent verifier-hazard contract.
+// QAN-INF-05 - the permanent verifier-hazard contract.
 //
 // ## Why this exists
 //
@@ -343,23 +343,79 @@ test('the summary is printed on a passing run, not only on a failing one', () =>
 // The focused gate itself: parity, registration, and a bounded selector.
 // ---------------------------------------------------------------------------
 
-test('the focused gate bootstraps a database at least as complete as full API CI does', () => {
-  // The ONE parity claim that matters for a database-only verifier. The version
-  // number is not it: these roles and this function are, because migrations
-  // grant to them and read auth.uid(). A subset check rather than an equality
-  // check on purpose - API CI may grow its bootstrap, and the focused gate must
-  // never bootstrap LESS.
-  const bootstrap = read('database/supabase-compatible-bootstrap.sql');
-  const apiCi = read('.github/workflows/api-ci.yml');
-  const statements = bootstrap.split('\n')
-    .filter((line) => line.trim() && !line.trim().startsWith('--'))
-    .join('\n').split(/;\s*\n/u).map((s) => s.trim().replace(/;$/u, '')).filter(Boolean);
-  assert.ok(statements.length >= 8, `the bootstrap carries its statements, found ${statements.length}`);
-  const normalized = apiCi.replace(/\s+/gu, ' ');
-  for (const statement of statements) {
-    assert.ok(normalized.includes(statement.replace(/\s+/gu, ' ')),
-      `api-ci.yml must perform this too, or the focused gate is not parity:\n${statement}`);
+const BOOTSTRAP = 'database/supabase-compatible-bootstrap.sql';
+const API_CI = '.github/workflows/api-ci.yml';
+const FOCUSED = '.github/workflows/focused-database-verification.yml';
+
+test('both gates bootstrap from the ONE canonical artifact, and neither keeps a copy', () => {
+  // Parity used to be a comparison of two texts: this file against inline SQL in
+  // api-ci.yml. That can only be checked in one direction - API CI could grow a
+  // bootstrap requirement while the focused gate silently stayed weaker, and the
+  // check would still pass. Sharing one artifact removes the direction.
+  const apiCi = read(API_CI);
+  const focused = read(FOCUSED);
+  assert.match(apiCi, /-f database\/supabase-compatible-bootstrap\.sql/u, 'API CI applies the canonical bootstrap file');
+  assert.match(read('database/focused-verification-runner.mjs'), /'supabase-compatible-bootstrap\.sql'/u,
+    'the focused runner applies the same canonical bootstrap file');
+  assert.match(focused, /focused-verification-runner\.mjs --repo/u, 'and the focused gate reaches it through that runner');
+
+  // Neither workflow may quietly reintroduce its own copy: a second definition
+  // is how the two drifted apart in the first place.
+  for (const [name, text] of [[API_CI, apiCi], [FOCUSED, focused]]) {
+    assert.doesNotMatch(text, /CREATE ROLE (?:anon|authenticated|service_role)/u,
+      `${name} must not carry inline bootstrap SQL; ${BOOTSTRAP} is the one definition`);
+    assert.doesNotMatch(text, /CREATE FUNCTION auth\.uid\(\)/u, `${name} must not redefine auth.uid()`);
   }
+});
+
+test('the canonical bootstrap still creates the whole Supabase-compatible posture', () => {
+  // Sharing one file makes drift impossible but says nothing about CONTENT, so
+  // the posture itself is pinned here: the three roles migrations grant to, the
+  // auth schema, the users table foreign keys point at, and the function every
+  // RLS-era migration reads. An additive statement is always fine; removing one
+  // of these silently weakens BOTH gates at once, which is exactly the risk that
+  // sharing the artifact creates.
+  const bootstrap = read(BOOTSTRAP);
+  for (const required of [
+    /CREATE ROLE anon NOLOGIN;/u,
+    /CREATE ROLE authenticated NOLOGIN;/u,
+    /CREATE ROLE service_role NOLOGIN;/u,
+    /CREATE SCHEMA auth;/u,
+    /CREATE TABLE auth\.users \(id uuid PRIMARY KEY\);/u,
+    /CREATE FUNCTION auth\.uid\(\) RETURNS uuid LANGUAGE sql STABLE/u,
+    /request\.jwt\.claims/u,
+    /ALTER FUNCTION auth\.uid\(\) OWNER TO postgres;/u,
+    /GRANT USAGE ON SCHEMA auth TO anon, authenticated;/u,
+    /GRANT EXECUTE ON FUNCTION auth\.uid\(\) TO anon, authenticated;/u,
+  ]) {
+    assert.match(bootstrap, required, `the canonical bootstrap may grow, never shrink: ${required}`);
+  }
+});
+
+test('a dispatch judges a branch with the DEFAULT BRANCH harness, not the branch own', () => {
+  // The whole trust model of the gate. A dispatch must take the mapping, the
+  // bootstrap and the runner from reviewed, merged infrastructure - otherwise a
+  // branch could change the rules it is judged by while still being the branch
+  // under test. Leaving the harness checkout with no `ref` happened to do the
+  // right thing for a dispatch from main and nothing structural guaranteed it.
+  const focused = read(FOCUSED);
+  const harnessRef = /FOCUSED_HARNESS_REF:\s*\$\{\{([^}]*)\}\}/u.exec(focused);
+  assert.ok(harnessRef, 'the harness ref is named, not left implicit');
+  assert.match(harnessRef[1], /github\.event_name == 'workflow_dispatch'/u, 'a dispatch is distinguished from the self-test');
+  assert.match(harnessRef[1], /github\.event\.repository\.default_branch/u, 'and a dispatch takes the harness from the default branch');
+  assert.match(harnessRef[1], /github\.sha/u, 'while the pull-request self-test exercises the PR own harness');
+
+  // Both checkouts are explicit, and they are NOT the same ref.
+  assert.match(focused, /uses: actions\/checkout@v4\s*\n\s*with: \{ref: '\$\{\{ env\.FOCUSED_HARNESS_REF \}\}', path: \.qan-harness\}/u,
+    'the harness checkout pins FOCUSED_HARNESS_REF');
+  assert.match(focused, /with: \{ref: '\$\{\{ env\.FOCUSED_TARGET_REF \}\}', path: repo\}/u,
+    'the repository under test is the separately validated target ref');
+  assert.notEqual('FOCUSED_HARNESS_REF', 'FOCUSED_TARGET_REF');
+  const targetRef = /FOCUSED_TARGET_REF:\s*\$\{\{([^}]*)\}\}/u.exec(focused);
+  assert.ok(targetRef && targetRef[1] !== harnessRef[1],
+    'the harness ref and the target ref are resolved differently, or the split is decorative');
+  assert.match(focused, /harness head: \$\(git -C \.qan-harness rev-parse HEAD\)/u,
+    'and every run records which harness commit actually judged it');
 });
 
 test('the focused gate is registered and needs no secret', () => {

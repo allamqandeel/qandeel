@@ -1,5 +1,5 @@
 name: Focused Database Verification
-# QAN-INF-03 - the fast database gate.
+# QAN-INF-05 - the fast database gate.
 #
 # API CI runs about a hundred and forty steps and reaches the database verifiers at
 # the end of them, so using it to find a defect in one verifier costs roughly twenty
@@ -52,12 +52,31 @@ jobs:
       # interpolated into a shell command anywhere in this file.
       FOCUSED_TARGET_REF: ${{ github.event.inputs.target_ref || github.sha }}
       FOCUSED_VERIFIER: ${{ github.event.inputs.verifier || 'i05c-all' }}
+      # WHICH HARNESS RUNS, stated structurally rather than assumed.
+      #
+      # A dispatch takes the mapping, the bootstrap and the runner from the
+      # repository's DEFAULT BRANCH, whatever ref a person happened to dispatch
+      # from - so the answer a dispatch gives is an answer about reviewed,
+      # merged infrastructure, and a branch cannot change the rules it is judged
+      # by while still being the branch under test.
+      #
+      # The pull-request self-test deliberately does the opposite: it exercises
+      # the PR's OWN harness, because proving a change to this gate is the only
+      # thing that self-test exists for.
+      FOCUSED_HARNESS_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.repository.default_branch || github.sha }}
     steps:
-      # The harness - mapping, bootstrap and runner - comes from the ref this workflow
-      # itself is running from, which for a dispatch is the default branch. The ref
-      # UNDER TEST supplies only migrations, verifiers and its manifest, so a branch
-      # can be verified without first carrying this infrastructure.
-      - {name: Checkout the focused-gate harness, uses: actions/checkout@v4, with: {path: .qan-harness}}
+      # The harness - mapping, bootstrap and runner - at the ref pinned above. The
+      # ref UNDER TEST supplies only migrations, verifiers and its manifest, so a
+      # branch can be verified without first carrying this infrastructure.
+      - name: Checkout the focused-gate harness
+        uses: actions/checkout@v4
+        with: {ref: '${{ env.FOCUSED_HARNESS_REF }}', path: .qan-harness}
+      - name: Record which harness and which target this run used
+        run: |
+          echo "harness ref : $FOCUSED_HARNESS_REF"
+          echo "harness head: $(git -C .qan-harness rev-parse HEAD)"
+          echo "target ref  : $FOCUSED_TARGET_REF"
+          echo "event       : $GITHUB_EVENT_NAME"
       # Deliberately before setup-node, on the runner's preinstalled Node: a selector
       # that names nothing, or a ref that does not read as a ref, should cost four
       # seconds rather than a checkout and a full install.

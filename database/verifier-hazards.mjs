@@ -1,4 +1,4 @@
-// QAN-INF-03 - the verifier-hazard detectors.
+// QAN-INF-05 - the verifier-hazard detectors.
 //
 // Seven defect classes that a real-PostgreSQL verifier can carry while looking
 // completely correct, and that no unit test on a host without PostgreSQL can

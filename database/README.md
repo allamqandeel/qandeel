@@ -36,7 +36,7 @@ the predecessor and create a versioned successor. V1 deletion uses the `DELETED`
 state; authenticated users receive no physical `DELETE` privilege. See
 `docs/memory-runtime-persistence.md` for the complete boundary.
 
-## Focused database verification (QAN-INF-03)
+## Focused database verification (QAN-INF-05)
 
 Start here when a verifier is failing. Full API CI runs about a hundred and forty steps and
 reaches the database verifiers at the end of them, so using it to find a defect in one verifier

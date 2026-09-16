@@ -1,6 +1,6 @@
 {
   "$comment": [
-    "Named verifier groups for the focused database gate (QAN-INF-03).",
+    "Named verifier groups for the focused database gate (QAN-INF-05).",
     "",
     "A selector is a NAME, never a command. The runner resolves it here, refuses any",
     "path that is not database/verify-<slug>.mjs, and spawns node with that path as an",
