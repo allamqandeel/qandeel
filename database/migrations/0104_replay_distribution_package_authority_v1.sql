@@ -801,22 +801,33 @@ BEGIN
     END IF;
     -- A DISTRIBUTION PACKAGE BINDS TRUTH AND COPIES NONE OF IT. No content
     -- column of any kind, no JSON blob, no binary payload, no private path.
+    --
+    -- The word BODY is matched as a content column rather than as a substring:
+    -- the Public bridge carries the canonical `public_body_form` discriminator,
+    -- which names WHICH body relation an item uses and holds no body at all, and
+    -- a ban broad enough to catch it would refuse the exact binding that proves
+    -- a Replay artifact has no public body row.
     IF EXISTS (
       SELECT 1 FROM pg_attribute a
        JOIN pg_type ty ON ty.oid = a.atttypid
        WHERE a.attrelid = ('public.' || t)::regclass
          AND a.attnum > 0 AND NOT a.attisdropped
-         AND (a.attname ~ '(body|_text$|^text|transcript|audio|content|payload|blob|document|excerpt|snippet|statement|moment|committed|url|uri|href|path|filename|object_key|bucket|storage|credential|secret|token)'
+         AND (a.attname ~ '(^body|_body$|body_text|_text$|^text|transcript|audio|content|payload|blob|document|excerpt|snippet|statement|moment|committed|url|uri|href|path|filename|object_key|bucket|storage|credential|secret|token)'
               OR ty.typname IN ('json', 'jsonb', 'bytea'))
     ) THEN
       RAISE EXCEPTION 'I-06C: relation % may carry no source content no private path and no storage handle: a distribution package binds truth and copies none of it', t;
     END IF;
     -- NO CODEC, CONTAINER, STORAGE OR MEDIA CRAFT IS INVENTED HERE.
+    --
+    -- The word RESOLUTION is deliberately not banned on its own: this slice
+    -- records an authority RESOLUTION state on two columns, and a ban broad
+    -- enough to catch a video resolution would refuse the very rows that keep
+    -- unresolved authority out of a package. The media sense is named exactly.
     IF EXISTS (
       SELECT 1 FROM pg_attribute a
        WHERE a.attrelid = ('public.' || t)::regclass
          AND a.attnum > 0 AND NOT a.attisdropped
-         AND a.attname ~ '(codec|container|bitrate|resolution|frame_rate|framerate|cdn|watermark|drm|template|font|typograph|choreograph|easing|palette|encoder|mime)'
+         AND a.attname ~ '(codec|container|bitrate|video_resolution|frame_rate|framerate|cdn|watermark|drm|template|font|typograph|choreograph|easing|palette|encoder|mime|pixel)'
     ) THEN
       RAISE EXCEPTION 'I-06C: relation % may define no codec container storage or media craft column: CW2-05 defers all of it', t;
     END IF;
