@@ -15,6 +15,21 @@
   ],
   "version": 1,
   "groups": {
+    "i06c-0104": {
+      "title": "I-06C - Replay distribution package, distribution authority and the Public REPLAY_ARTIFACT bridge (migration 0104)",
+      "verifiers": ["database/verify-migration-0104.mjs"]
+    },
+    "i06c-0105": {
+      "title": "I-06C - Replay distribution runtime, export privacy sanitization and the Public bridge (migration 0105)",
+      "verifiers": ["database/verify-migration-0105.mjs"]
+    },
+    "i06c-all": {
+      "title": "I-06C - both Replay distribution verifiers, in migration order",
+      "verifiers": [
+        "database/verify-migration-0104.mjs",
+        "database/verify-migration-0105.mjs"
+      ]
+    },
     "i06b-0102": {
       "title": "I-06B - Replay analytical projection, render truth contract and the first complete Replay Version (migration 0102)",
       "verifiers": ["database/verify-migration-0102.mjs"]

@@ -78,6 +78,21 @@ const PUBLIC_SURFACES = [
   'public.search_public_experiences_v1(uuid, text)',
   'public.resolve_public_lens_v1(uuid, text)',
   'public.resolve_public_panel_v1(uuid, uuid)',
+  // I-06C added the Public Replay artifact surface. The census below is an
+  // equality against the LIVE catalog precisely so a new outward Public resolver
+  // cannot hide from it, and the intended answer to one being added is to put it
+  // here - where `verifyPosture` then holds it to every rule the other eight
+  // obey: postgres-owned, SECURITY DEFINER, STABLE, search_path-pinned,
+  // service_role-only, sealed-provenance-free, disclosure-bounded, and composing
+  // the canonical visibility state with the canonical admission gate rather than
+  // testing a lifecycle of its own.
+  //
+  // It is deliberately NOT added to `assertCompletelyDark`: that helper is
+  // called with an Experience and a viewer, and this surface is addressed by the
+  // opaque audience reference of one distribution package, which only the slice
+  // that minted it holds. Its darkness is proven there, by the I-06C scenario
+  // X32, against an Experience this verifier's own fixtures never create.
+  'public.resolve_public_replay_artifact_v1(text, uuid)',
 ];
 /** Every write path that may only act on a canonically public target. */
 const PUBLIC_WRITERS = [
