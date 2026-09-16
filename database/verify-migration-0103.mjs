@@ -188,6 +188,27 @@ const previewOf = async (draft, revision = 1) => {
   return { command, answer };
 };
 
+/**
+ * The canonicalization's digest of one K(TC), called directly.
+ *
+ * EVERY jsonb ARGUMENT IS RE-SERIALIZED. A jsonb column comes back from
+ * node-postgres already PARSED into a JavaScript value, and node-postgres sends
+ * a JavaScript ARRAY back as a PostgreSQL array literal rather than as JSON -
+ * so passing `projection.readings` straight through reaches PostgreSQL as
+ * `{...}` and fails with "invalid input syntax for type json". The round trip
+ * is only in this verifier: the runtime passes the projection's own columns
+ * inside the database and never leaves it.
+ */
+const jsonb = (value) => JSON.stringify(value ?? null);
+const pointDigestOf = async (p) => (await rows(
+  `SELECT public.replay_analytical_projection_point_digest_v1(
+            $1::integer, $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb,
+            $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb, $13::jsonb) d`,
+  [p.tc, jsonb(p.emerging_focuses), jsonb(p.live_focus), jsonb(p.threads),
+    jsonb(p.thread_reading_appearances), jsonb(p.readings), jsonb(p.reading_relations),
+    jsonb(p.evidence_participations), jsonb(p.materials), jsonb(p.gaps),
+    jsonb(p.questions), jsonb(p.question_appearances), jsonb(p.confidences)]))[0].d;
+
 // ------------------------------------------------------- 3. the capability matrix
 async function verifyCapability(report, f, drafts) {
   const { personal, legacy, shared, openHead, partial } = drafts;
@@ -283,15 +304,25 @@ async function verifyCapability(report, f, drafts) {
 
   await report.isolated('P06 an unproven partial cut cannot preview', async () => {
     await actAs(f.mohamed);
-    await rejected(() => rt.preview(rt.freshPreview(partial.replay, 1)), ['0A000'], /REPLAY_SEMANTIC_CUT_UNSAFE/u);
-    await asRole('postgres');
-    // The assessment was DERIVED and recorded truthfully, and the selection was
-    // never silently widened to make the cut pass.
+    // FIRST what the derivation records, and only then the refusal. A refused
+    // preview is ONE statement: PostgreSQL rolls the whole thing back, so the
+    // assessments it wrote on the way to the refusal do not survive it and
+    // could not be read afterwards.
+    const [derived] = await rows(
+      'SELECT * FROM public.derive_replay_semantic_cut_safety_v1($1, clock_timestamp())', [partial.selection]);
+    assert.equal(Number(derived.assessed_count), partial.selected.length,
+      'P06 every selected item is assessed');
+    assert.ok(Number(derived.unsafe_count) >= 1, 'P06 and at least one of them is not proven safe');
     const assessments = await rows(
       `SELECT anchor_kind, assessment_result FROM ${V.CUTS} WHERE selection_spec_version_id = $1 ORDER BY source_item_ordinal`,
       [partial.selection]);
     assert.ok(assessments.some((a) => a.anchor_kind === 'TEXT_CODE_POINT_RANGE' && a.assessment_result === 'UNPROVEN'),
       'P06 a partial range is recorded UNPROVEN, never SAFE');
+    assert.ok(assessments.every((a) => a.anchor_kind === 'WHOLE_ITEM' || a.assessment_result !== 'SAFE'),
+      'P06 and nothing trimmed is ever SAFE');
+    // AND THE PREVIEW REFUSES OVER IT.
+    await rejected(() => rt.preview(rt.freshPreview(partial.replay, 1)), ['0A000'], /REPLAY_SEMANTIC_CUT_UNSAFE/u);
+    await asRole('postgres');
     assert.equal(await count(V.VERSIONS, 'replay_id = $1', [partial.replay]), 0,
       'P06 and no complete Replay Version was built over it');
     assert.equal(await count(R.SPEC_ITEMS, 'selection_spec_version_id = $1', [partial.selection]),
@@ -368,23 +399,16 @@ async function verifyAnalytical(report, f, drafts) {
   await report.isolated('A03 the same sealed state digests identically', async () => {
     await actAs(f.mohamed);
     const [projection] = await rt.canonicalProjection(history.session, 2);
-    const digest = async () => (await rows(
-      `SELECT public.replay_analytical_projection_point_digest_v1(
-                $1::integer, $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb,
-                $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb, $13::jsonb) d`,
-      [projection.tc, projection.emerging_focuses, projection.live_focus, projection.threads,
-        projection.thread_reading_appearances, projection.readings, projection.reading_relations,
-        projection.evidence_participations, projection.materials, projection.gaps,
-        projection.questions, projection.question_appearances, projection.confidences]))[0].d;
-    const first = await digest();
-    const second = await digest();
+    const first = await pointDigestOf(projection);
+    const second = await pointDigestOf(projection);
     assert.equal(first, second, 'A03 the canonicalization is deterministic');
     assert.match(first, /^sha256:[0-9a-f]{64}$/u, 'A03 and is a canonical one-way digest');
     // And the ORDER a family arrives in is not part of the truth.
+    assert.ok(projection.readings.length >= 2, 'A03 the fixture carries more than one Reading to reorder');
     const [{ same }] = await rows(
       `SELECT public.replay_canonical_projection_family_v1('readings', $1::jsonb, ARRAY[]::text[])
             = public.replay_canonical_projection_family_v1('readings', $2::jsonb, ARRAY[]::text[]) same`,
-      [projection.readings, JSON.stringify([...projection.readings].reverse())]);
+      [jsonb(projection.readings), jsonb([...projection.readings].reverse())]);
     assert.equal(same, true, 'A03 the canonicalization is stable under element ordering');
   });
 
@@ -393,13 +417,7 @@ async function verifyAnalytical(report, f, drafts) {
     const digests = [];
     for (const tc of [1, 2, 3]) {
       const [p] = await rt.canonicalProjection(history.session, tc);
-      digests.push((await rows(
-        `SELECT public.replay_analytical_projection_point_digest_v1(
-                  $1::integer, $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb,
-                  $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb, $13::jsonb) d`,
-        [p.tc, p.emerging_focuses, p.live_focus, p.threads, p.thread_reading_appearances, p.readings,
-          p.reading_relations, p.evidence_participations, p.materials, p.gaps, p.questions,
-          p.question_appearances, p.confidences]))[0].d);
+      digests.push(await pointDigestOf(p));
     }
     assert.equal(new Set(digests).size, 3,
       'A04 three coordinates whose analytical truth differs produce three different digests');
