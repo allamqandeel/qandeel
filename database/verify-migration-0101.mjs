@@ -113,7 +113,11 @@ async function verifyCatalog() {
     && revise.prosrc.indexOf('replay_lock_source_manifest_v1(manifest_id)') < revise.prosrc.indexOf('UPDATE public.replay_draft_state s'),
   'a revision locks the Replay first, stabilizes the source second and writes last');
   for (const needle of ['derive_replay_source_manifest_currency_v1', 'REPLAY_SOURCE_STALE', 'state.draft_revision <> p_expected_draft_revision', 'REPLAY_DRAFT_STALE',
-    'replay.created_by_user_id <> u', 'REPLAY_NOT_AVAILABLE', "current_lifecycle <> 'DRAFT'"]) {
+    'replay.created_by_user_id <> u', 'REPLAY_NOT_AVAILABLE', "current_lifecycle <> 'DRAFT'",
+    // The currency answer must be ACTED ON, not merely computed. Calling the
+    // derivation and naming the error class survives disabling the branch that
+    // reads it, so the comparison itself is what this pins.
+    "IF currency IS DISTINCT FROM 'CURRENT' THEN"]) {
     assert.ok(revise.prosrc.includes(needle), `the revision requires: ${needle}`);
   }
   const selection = await rt.functionPosture(FN.SELECT);

@@ -397,12 +397,18 @@ async function verifyStructure(f) {
   await rejected(() => q(`UPDATE ${R.DRAFT_STATE} SET draft_revision = 3 WHERE replay_id = $1`, [replay]), ['55000'], /REPLAY_DRAFT_REVISION_MUST_ADVANCE/u);
   await rejected(() => q(`UPDATE ${R.DRAFT_STATE} SET draft_revision = 1, current_source_manifest_version_id = $2, current_selection_spec_version_id = $3 WHERE replay_id = $1`,
     [replay, wide.id, wideSpec]), ['55000'], /REPLAY_DRAFT_REVISION_MUST_ADVANCE/u);
+  // Against what existed a moment BEFORE the pointer moved, rather than against
+  // a magic number every later proof would have to keep in step: the property is
+  // that advancing the draft deletes and rewrites nothing.
+  const manifestsBefore = await count(R.MANIFESTS, 'replay_id = $1', [replay]);
+  const specsBefore = await count(R.SPECS, 'replay_id = $1', [replay]);
+  assert.ok(manifestsBefore > 1 && specsBefore > 1, 'S07 there is real history to preserve');
   await q(`UPDATE ${R.DRAFT_STATE} SET draft_revision = 2, current_source_manifest_version_id = $2, current_selection_spec_version_id = $3, updated_at = now() WHERE replay_id = $1`,
     [replay, wide.id, wideSpec]);
   assert.equal(Number((await rows(`SELECT draft_revision r FROM ${R.DRAFT_STATE} WHERE replay_id = $1`, [replay]))[0].r), 2);
   // Every old component survives exactly as written.
-  assert.equal(await count(R.MANIFESTS, 'replay_id = $1', [replay]), 4, 'S07 every manifest version remains historical truth');
-  assert.equal(await count(R.SPECS, 'replay_id = $1', [replay]), 3, 'S07 every selection version remains historical truth');
+  assert.equal(await count(R.MANIFESTS, 'replay_id = $1', [replay]), manifestsBefore, 'S07 every manifest version remains historical truth');
+  assert.equal(await count(R.SPECS, 'replay_id = $1', [replay]), specsBefore, 'S07 every selection version remains historical truth');
 
   // S08 EVERY APPLICATION ROLE IS REFUSED EVERY DIRECT READ.
   for (const role of APP_ROLES) {

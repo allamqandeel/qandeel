@@ -516,7 +516,12 @@ test('the verifier proves the thirty-two scenario proofs, the refused weakenings
     // The contradictory-source proof, simulated under a rolled-back savepoint.
     'S31', 'SOURCE_CONTRADICTORY', 'SAVEPOINT contradiction',
     'DISABLE TRIGGER replay_source_manifest_items_one_row',
-    'S31 the same-row guard is enabled again after the simulation']) {
+    'S31 the same-row guard is enabled again after the simulation',
+    // The catalog check must pin the branch F6 disables, or that probe asserts a
+    // rejection that never comes and the weakening goes unnoticed.
+    "IF currency IS DISTINCT FROM 'CURRENT' THEN",
+    // And the instant must reach PostgreSQL with its microseconds intact.
+    'occurred_at::text']) {
     assert.ok(verifier.includes(needle), `the verifier proves ${needle}`);
   }
   assert.ok(support.includes('removeCommittedReplays') && support.includes('REPLAY_IMMUTABLE'),
