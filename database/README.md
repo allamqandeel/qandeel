@@ -1739,15 +1739,37 @@ allowed the publication:
    the fingerprint the publication recorded - `MISSING`, `WITHDRAWN` and `SUPERSEDED` each refuse;
 3. every included source still available at the exact captured revision with resolved authority and
    non-contradictory metadata, through the ONE I-05A derivation;
-4. the derived `CONTENT_RIGHTSHOLDER_SET` still equal to the stored one;
-5. every included Shared history item still visible to the exact PUBLISHER the immutable manifest
-   names, through the canonical I-04F entry point `resolve_shared_world_history_visibility_v1`;
-6. every included Personal unit still owned by that same exact publisher.
+4. the derived `CONTENT_RIGHTSHOLDER_SET` still equal to the stored one.
 
-The human in step 5 is read from the immutable manifest and is never a parameter, never the viewer and
-never a current Shared member: continuing eligibility is a property of the EXPERIENCE. Current Shared
-membership is never a proxy for source access or for rightsholder authority, and the derivation reads
-no membership episode, no history grant, no closed-World entitlement and no Experience control at all.
+All four are properties of the PACKAGE. No actor reaches the derivation - not the viewer, not the
+controller, not the publisher, and no `auth.uid()` - so continuing eligibility is a property of the
+EXPERIENCE rather than of whoever happens to be reading it. Current Shared membership is never a proxy
+for source access or for rightsholder authority, and the derivation reads no membership episode, no
+history grant, no closed-World entitlement and no Experience control at all.
+
+**Source AVAILABILITY is a continuing condition; actor source ACCESS is not.** The frozen runtime asks
+an actor question of a similar shape, and this derivation is deliberately not it. Migration 0095 gate 6
+is labelled `CURRENT SOURCE ACCESS FOR THE PUBLISHING HUMAN`: at the consequential instant of
+publication it asks whether `auth.uid()` may still SEE each included Shared history item, through the
+canonical I-04F entry point `resolve_shared_world_history_visibility_v1`. That is an actor gate on an
+operation, and it remains exactly where it is. It is **not** re-asked afterwards. A publisher who later
+leaves the Shared World, is removed from it, or falls outside a closed-view entitlement loses BROWSING;
+the source they published is untouched - still `AVAILABLE`, still at the captured availability revision,
+still the exact bytes the package digested. Letting one human's later browsing status delete everyone
+else's Public view would be new Product policy, and no frozen contract states it: 0095 scopes that call
+to that instant, and nothing in 0091-0097 re-asks it. Inferring a perpetual rule from a publish-time
+gate is precisely the inference that is not available.
+
+What genuinely belongs here is source availability and INTEGRITY, and step 3 is already exactly that
+truth, actor-free: the ONE I-05A derivation refuses when an included Shared history item is no longer
+`AVAILABLE` or its availability revision moved, when the Shared body is gone or its bytes no longer
+match the captured digest, and when the Personal committed unit is gone, is owned by someone other than
+the captured owner, or no longer digests to the captured value. Owner deletion - the canonical I-04G act
+that really does take a source away - moves the item to `DELETED_BY_OWNER` and bumps the revision, so it
+fails closed there, for the reason that is actually true. The migration refuses at DEPLOY time if the
+continuing derivation ever asks the actor question, and `verify-migration-0098.mjs` proves both halves
+live: a publisher stripped of Shared browsing leaves the publication served in full, and the same
+fixture in the same state goes dark the moment the source really becomes unavailable.
 
 **What it deliberately does not re-check, and why.** Not the CURRENT authority request fingerprint
 against the published one. Every input of that fingerprint is immutable for a published package except

@@ -495,12 +495,27 @@ test('the contracts are not vacuous: every deliberate weakening of I-05C is refu
       ['continuing eligibility stops revalidating source availability', M98,
         '    SELECT d.required_approvers INTO derived_approvers\n      FROM public.derive_public_publication_authority_v1(bound_manifest) d;',
         '    SELECT ARRAY[]::uuid[] INTO derived_approvers;'],
-      ['continuing eligibility stops proving the publisher may still SEE the Shared source', M98,
-        '           SELECT 1 FROM public.resolve_shared_world_history_visibility_v1(p.shared_world_id, bound_publisher) v\n            WHERE v.history_item_id = p.shared_history_item_id)',
-        '           SELECT 1 FROM public.shared_world_history_items v\n            WHERE v.id = p.shared_history_item_id)'],
+      // The REV-01 direction: re-asking the publish-time ACTOR gate forever is
+      // itself the regression, because it makes one human's later loss of Shared
+      // browsing delete everyone else's Public view.
+      ['continuing eligibility re-asks actor source ACCESS as a continuing condition', M98,
+        '  -- AND THERE IS NO FIFTH GATE, ON PURPOSE.',
+        '  IF EXISTS (\n    SELECT 1 FROM public.publication_package_item_provenance p\n'
+        + '      JOIN public.publication_package_manifest_versions mv ON mv.id = p.manifest_version_id\n'
+        + "     WHERE p.manifest_version_id = bound_manifest AND p.source_class = 'SHARED_WORLD'\n"
+        + '       AND NOT EXISTS (\n         SELECT 1 FROM public.resolve_shared_world_history_visibility_v1(\n'
+        + '                        p.shared_world_id, mv.publisher_user_id) vis\n'
+        + '          WHERE vis.history_item_id = p.shared_history_item_id)\n  ) THEN\n'
+        + "    RETURN QUERY SELECT p_experience_id, 'INELIGIBLE'::text, 'PUBLISHED_SOURCE_NOT_AVAILABLE'::text,\n"
+        + '      NULL::uuid, NULL::uuid, NULL::integer;\n    RETURN;\n  END IF;\n\n'
+        + '  -- AND THERE IS NO FIFTH GATE, ON PURPOSE.'],
       ['continuing eligibility reads Shared membership instead of canonical source truth', M98,
-        '           SELECT 1 FROM public.resolve_shared_world_history_visibility_v1(p.shared_world_id, bound_publisher) v\n            WHERE v.history_item_id = p.shared_history_item_id)',
-        '           SELECT 1 FROM public.shared_world_membership_episodes v\n            WHERE v.world_id = p.shared_world_id AND v.ended_at IS NULL)'],
+        '    SELECT d.required_approvers INTO derived_approvers\n      FROM public.derive_public_publication_authority_v1(bound_manifest) d;',
+        '    SELECT ARRAY[]::uuid[] INTO derived_approvers;\n'
+        + '    IF NOT EXISTS (SELECT 1 FROM public.shared_world_membership_episodes ep\n'
+        + '                    WHERE ep.ended_at IS NULL) THEN\n'
+        + "      RETURN QUERY SELECT p_experience_id, 'INELIGIBLE'::text, 'PUBLISHED_SOURCE_NOT_AVAILABLE'::text,\n"
+        + '        NULL::uuid, NULL::uuid, NULL::integer;\n      RETURN;\n    END IF;'],
       ['continuing eligibility stops comparing the stored rightsholder set', M98,
         '  IF stored_approvers IS DISTINCT FROM derived_approvers THEN', '  IF false THEN'],
       ['continuing eligibility lets a raise escape as an error a caller can read', M98,

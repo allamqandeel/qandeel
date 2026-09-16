@@ -11,9 +11,10 @@
 //       pinned search_path, write nothing and are executable by no application
 //       role - so the internal ineligibility cause is unreachable;
 //     * the eligibility derivation consumes the frozen publication binding, the
-//       ONE 0094 effective-approval derivation, the ONE I-05A authority
-//       derivation and the canonical I-04F entry point, and reads no Shared
-//       membership and no Experience control;
+//       ONE 0094 effective-approval derivation and the ONE I-05A authority
+//       derivation, and reads no Shared membership, no Experience control and
+//       no acting human at all - including, deliberately, no actor source-ACCESS
+//       call, which is a publish-time gate and not a continuing condition;
 //     * the visibility derivation consumes it, answers exactly two states,
 //       keeps the frozen I-05B result shape and reads no viewing policy;
 //     * EVERY outward Public surface still routes through it - the visibility
@@ -29,8 +30,10 @@
 //     * CE04 a required approval lost from the evidence refuses too;
 //     * CE05 the frozen I-04G owner deletion of an included Shared source turns
 //       every surface dark and does NOT shrink the immutable package;
-//     * CE06 a publisher who may no longer SEE an included Shared source refuses
-//       with the same class, and the hidden source leaks no distinct answer;
+//     * CE06 a publisher who may no longer SEE an included Shared source does
+//       NOT end the publication - lost actor ACCESS is not lost AVAILABILITY -
+//       while the same fixture in the same state goes dark the moment the source
+//       really becomes unavailable;
 //     * CE07 a drifted CONTENT_RIGHTSHOLDER_SET is an authority invalidation;
 //     * CE08 the Personal source class is consumed too - proven by lifting the
 //       frozen 0064 guard inside a savepoint, and proven unreachable otherwise;
@@ -41,8 +44,9 @@
 //     * CE12 every public write path refuses at execution time under its lock.
 //
 //   forward safety inside a rolled-back SAVEPOINT: a legitimate additive future
-//   slice still passes, and ten weakenings are each refused AND shown to be
-//   real regressions rather than vacuous ones.
+//   slice still passes, and eleven weakenings are each refused AND shown to be
+//   real regressions rather than vacuous ones - including P11, the plausible
+//   future mistake of re-asking actor source ACCESS forever.
 //
 //   concurrency (committed fixtures, database-bounded waits): withdrawal versus
 //   a public write, source loss versus a Public QANDEEL write, and a projection
@@ -97,7 +101,6 @@ async function verifyCatalog() {
     's.published_manifest_version_id = v.package_manifest_version_id',
     'derive_publication_manifest_effective_approvals_v1', "<> 'EFFECTIVE'",
     'derive_public_publication_authority_v1', 'publication_manifest_required_approvers',
-    'resolve_shared_world_history_visibility_v1', 'bound_publisher',
     'WHEN OTHERS THEN']) {
     assert.ok(eligibility.prosrc.includes(needle), `continuing eligibility requires: ${needle}`);
   }
@@ -106,13 +109,22 @@ async function verifyCatalog() {
     assert.ok(eligibility.prosrc.includes(cls), `the bounded internal ineligibility vocabulary includes ${cls}`);
   }
   // Current Shared membership is never a proxy for source access or for
-  // rightsholder authority, and control is never read at all.
+  // rightsholder authority, and control is never read at all. Neither is ACTOR
+  // source access a continuing condition: the frozen I-04F entry point answers
+  // "may THIS HUMAN see it", which 0095 gate 6 asks of the publishing human at
+  // the instant of publication, and which must not become a perpetual public
+  // predicate. Source AVAILABILITY is the ONE I-05A derivation, asserted above.
   for (const forbidden of ['shared_world_membership_episodes', 'shared_world_history_access_grants',
     'shared_world_standard_closed_view_entitlements', 'shared_world_history_package_manifest_items',
-    'public_experience_controllers', 'ABSENT_FROM_PUBLIC_WORLD']) {
+    'public_experience_controllers', 'ABSENT_FROM_PUBLIC_WORLD',
+    'resolve_shared_world_history_visibility_v1']) {
     assert.ok(!eligibility.prosrc.includes(forbidden),
       `continuing eligibility consumes canonical truth rather than reading ${forbidden}`);
   }
+  // No actor of any kind reaches the derivation: not a viewer, not a controller,
+  // not the publisher. Continuing eligibility is a property of the EXPERIENCE.
+  assert.ok(!eligibility.prosrc.includes('auth.uid()'),
+    'continuing eligibility reads no acting human at all');
 
   const visibility = await rt.functionPosture(VISIBILITY);
   for (const needle of ['derive_public_continuing_eligibility_v1', "eligibility_state = 'ELIGIBLE'",
@@ -157,9 +169,14 @@ async function verifyCatalog() {
 
   // The frozen boundaries PART A consumes are intact, and the CW2-08
   // prerequisite is still fail-closed and unresolved.
-  const [{ allowed: entry }] = await rows('SELECT has_function_privilege($1, $2, $3) allowed',
-    ['service_role', 'public.resolve_shared_world_history_visibility_v1(uuid, uuid)', 'EXECUTE']);
-  assert.equal(entry, true, 'the frozen I-04F visibility entry point is still reachable');
+  // Continuing eligibility now rests entirely on the ONE I-05A derivation for
+  // source truth, so what that derivation binds is asserted rather than assumed.
+  const authority = await rt.functionPosture('public.derive_public_publication_authority_v1(uuid)');
+  for (const needle of ["availability_state <> 'AVAILABLE'",
+    'availability_revision <> p.captured_availability_revision', 'captured_source_digest']) {
+    assert.ok(authority.prosrc.includes(needle),
+      `the ONE I-05A source truth still binds the exact captured source: ${needle}`);
+  }
   assert.ok((await rt.functionPosture(SEAM)).prosrc.includes('NOT_EVALUATED'),
     'the CW2-08 prerequisite seam still answers NOT_EVALUATED');
   const [{ signed_out_viewing_policy: signedOut }] = await rows(`SELECT signed_out_viewing_policy FROM ${T.POLICY} WHERE singleton`);
@@ -351,21 +368,42 @@ async function verifyContinuingEligibility(f, seam) {
   assert.equal((await rt.visibility(other))[0].visibility_state, 'PUBLICLY_VISIBLE', 'CE05 no collateral disappearance');
   await q('ROLLBACK TO SAVEPOINT deletion'); await q('RELEASE SAVEPOINT deletion');
 
-  // CE06 THE PUBLISHER MAY NO LONGER SEE AN INCLUDED SHARED SOURCE. Ending
-  // Mohamed's episode is what a leave or a removal does; the canonical I-04F
-  // resolver then shows him nothing.
+  // CE06 THE PUBLISHER LOSES SHARED BROWSING, AND THE PUBLICATION DOES NOT CARE.
+  // Ending Mohamed's episode is what a leave or a removal does, and the canonical
+  // I-04F resolver then shows him nothing at all. That is actor source ACCESS:
+  // the frozen 0095 gate 6 asks it of the PUBLISHING HUMAN at the consequential
+  // instant of publication, and nothing in 0091-0097 re-asks it afterwards.
+  // Re-asking it forever would let one human's later browsing status decide
+  // everyone else's Public view. The exact source is untouched - still
+  // AVAILABLE, still at the captured revision, still the captured bytes - so the
+  // published package stays eligible and stays served.
   await q('SAVEPOINT hidden');
   await asRole('postgres');
   await q(`UPDATE public.shared_world_membership_episodes SET ended_at = now()
             WHERE world_id = $1 AND user_id = $2 AND ended_at IS NULL`, [f.world, f.mohamed]);
+  await actAs(f.mohamed);
   assert.deepEqual(await rows('SELECT history_item_id FROM public.resolve_shared_world_history_visibility_v1($1, $2)', [f.world, f.mohamed]), [],
-    'CE06 fixture: the canonical resolver shows the former member nothing');
+    'CE06 fixture: the canonical I-04F resolver shows the former member nothing');
+  assert.equal((await eligibilityOf(f.experience)).eligibility_state, 'ELIGIBLE',
+    'CE06 lost actor source ACCESS is not lost source AVAILABILITY, and does not end the publication');
+  assert.equal((await rt.visibility(f.experience))[0].visibility_state, 'PUBLICLY_VISIBLE',
+    'CE06 the published Experience is still canonically visible');
+  assert.equal((await rt.serving(f.experience, f.reader)).length, 3,
+    'CE06 and every Public viewer is still served the whole bounded derivative');
+  // AND THE SAME FIXTURE, IN THE SAME LOST-BROWSING STATE, DOES GO DARK the
+  // moment an included source actually becomes unavailable. The owner deletes
+  // it; the only difference between these two assertions is availability, which
+  // is the entire distinction this gate exists to make. Without this half, an
+  // ELIGIBLE answer above could not be told apart from a broken fixture.
+  await actAs(f.hadir);
+  await rt.deleteMaterial(randomUUID(), f.world, f.hadirMaterial, randomUUID());
+  await actAs(f.mohamed);
   assert.equal((await eligibilityOf(f.experience)).ineligibility_class, 'PUBLISHED_SOURCE_NOT_AVAILABLE',
-    'CE06 lost source ACCESS is the same class as lost source AVAILABILITY');
+    'CE06 availability, unlike actor access, IS a continuing condition');
   await rt.assertCompletelyDark(f.experience, f.reader, { lensKey, searchTerm });
-  // CE10 and the hidden source leaks no distinct outward answer.
+  // CE10 and the unavailable source leaks no distinct outward answer.
   assert.deepEqual(await rt.serving(f.experience, f.reader), await rt.serving(randomUUID(), f.reader),
-    'CE10 a hidden Shared source is indistinguishable from an Experience that does not exist');
+    'CE10 an unavailable Shared source is indistinguishable from an Experience that does not exist');
   await q('ROLLBACK TO SAVEPOINT hidden'); await q('RELEASE SAVEPOINT hidden');
 
   // CE07 THE DERIVED CONTENT RIGHTSHOLDER SET DRIFTS. A new human material
@@ -661,6 +699,44 @@ async function verifyForwardSafety(f, state) {
              END$fn$`);
     await assert.rejects(verifyCatalog(), refuses, 'P10 an outward Public surface outside the visibility census is a regression');
     await q('ROLLBACK TO SAVEPOINT p10'); await q('RELEASE SAVEPOINT p10');
+
+    // P11 ACTOR SOURCE ACCESS RETURNS AS A CONTINUING CONDITION. This is the
+    // plausible future mistake: the frozen 0095 gate 6 reads like a source check,
+    // so a later slice re-asks it of the immutable publisher forever. It is not a
+    // source check - it answers "may THIS HUMAN see it" - and it would make one
+    // human's later loss of Shared browsing delete everyone else's Public view.
+    await q('SAVEPOINT p11');
+    await q(`CREATE OR REPLACE FUNCTION public.derive_public_continuing_eligibility_v1(p_experience_id uuid)
+             RETURNS TABLE(experience_id uuid, eligibility_state text, ineligibility_class text,
+                           eligible_experience_version_id uuid, eligible_manifest_version_id uuid,
+                           eligible_version_ordinal integer)
+             LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path='' AS $fn$
+             BEGIN
+               RETURN QUERY
+               SELECT e.id, 'ELIGIBLE'::text, NULL::text, s.published_experience_version_id,
+                      s.published_manifest_version_id, v.version_ordinal
+                 FROM public.public_experiences e
+                 JOIN public.public_experience_publication_state s ON s.experience_id = e.id
+                 JOIN public.public_experience_versions v ON v.id = s.published_experience_version_id
+                 JOIN public.publication_package_manifest_versions m ON m.id = v.package_manifest_version_id
+                WHERE e.id = p_experience_id AND e.current_lifecycle = 'PUBLISHED'
+                  AND NOT EXISTS (
+                    SELECT 1 FROM public.publication_package_item_provenance p
+                     WHERE p.manifest_version_id = m.id AND p.source_class = 'SHARED_WORLD'
+                       AND NOT EXISTS (
+                         SELECT 1 FROM public.resolve_shared_world_history_visibility_v1(
+                                        p.shared_world_id, m.publisher_user_id) vis
+                          WHERE vis.history_item_id = p.shared_history_item_id));
+             END$fn$`);
+    await assert.rejects(verifyCatalog(), refuses,
+      'P11 re-asking actor source ACCESS as a continuing public condition is a regression');
+    await asRole('postgres');
+    await q(`UPDATE public.shared_world_membership_episodes SET ended_at = now()
+              WHERE world_id = $1 AND user_id = $2 AND ended_at IS NULL`, [f.world, f.mohamed]);
+    await actAs(f.mohamed);
+    assert.equal((await rt.visibility(f.experience))[0].visibility_state, 'NOT_PUBLICLY_VISIBLE',
+      'P11 anti-vacuity: the mutant really hides an Experience whose every source is still fully available');
+    await q('ROLLBACK TO SAVEPOINT p11'); await q('RELEASE SAVEPOINT p11');
   } finally {
     await q('ROLLBACK TO SAVEPOINT forward_safety');
     await q('RELEASE SAVEPOINT forward_safety');

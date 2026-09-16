@@ -741,6 +741,21 @@ execution time — and continuing public eligibility reads no control at all. No
 a future reviewed multi-controller or transfer slice is an unbuilt capability owned by `CW2-04`, not an
 outstanding obligation, and it qualifies under none of BG-06's routes.
 
+**Post-publication source AVAILABILITY is a continuing condition; actor source ACCESS is not, and no
+backlog item is admitted for the difference.** The frozen `0095` gate 6 is labelled `CURRENT SOURCE
+ACCESS FOR THE PUBLISHING HUMAN` and asks the canonical I-04F entry point whether `auth.uid()` may still
+see each included Shared history item at the consequential instant of publication. Nothing in
+`0091`-`0097` re-asks it afterwards, so I-05C does not: re-asking it forever would let one human's later
+loss of Shared browsing delete everyone else's Public view, which is a Product policy no frozen contract
+states, and inferring it from the publish-time gate is exactly the inference that is unavailable.
+Continuing eligibility instead consumes the actor-free availability and integrity truth the ONE I-05A
+derivation already owns — availability state, captured availability revision, and the captured digest of
+the Shared body and of the Personal committed unit — so owner deletion and source corruption fail closed
+for the reason that is true, while a departed publisher's browsing status changes nothing. Migration
+`0098` refuses at deploy time if that distinction is ever collapsed, and the real-PostgreSQL verifier
+proves both directions against one fixture. This is a preserved frozen distinction rather than an
+outstanding obligation, and it qualifies under none of BG-06's routes.
+
 **I-05 implementation is complete; launch readiness is a different claim.** Migrations 0091-0099 leave
 no Public World capability that I-05A, I-05B or I-05C deferred to a later slice. The Public World is
 NOT product-launch ready and this record does not say otherwise: nothing in it can serve anybody in

@@ -47,18 +47,46 @@
 --      resolved authority and non-contradictory metadata, through the ONE I-05A
 --      derivation `derive_public_publication_authority_v1` (0095 gate 7);
 --   4  the derived CONTENT_RIGHTSHOLDER_SET still equal to the stored one
---      (0095 gate 8);
---   5  every included Shared history item still visible to the exact PUBLISHER
---      the immutable manifest names, through the canonical I-04F entry point
---      `resolve_shared_world_history_visibility_v1` (0095 gate 6);
---   6  every included Personal unit still owned by that same exact publisher
---      (0095 gate 6, Personal half).
+--      (0095 gate 8).
 --
--- The human in step 5 is read from `publication_package_manifest_versions
--- .publisher_user_id`, which is immutable and was written by the frozen
--- preparation from `auth.uid()`. It is never a parameter, never the viewer and
--- never a current Shared member: continuing eligibility is a property of the
--- EXPERIENCE, not of whoever happens to be reading it.
+-- ===========================================================================
+-- Source AVAILABILITY is not actor source ACCESS
+-- ===========================================================================
+--
+-- All four are properties of the PACKAGE. Not one of them reads an actor, and
+-- that is the whole of the design: continuing eligibility is a property of the
+-- EXPERIENCE, never of whoever happens to be reading it, and never of what some
+-- particular human may still browse.
+--
+-- The frozen runtime does ask an actor question of a similar shape, and it is
+-- important that this derivation is not it. Migration 0095 gate 6 is labelled
+-- `CURRENT SOURCE ACCESS FOR THE PUBLISHING HUMAN`: at the consequential
+-- instant of publication it asks whether `auth.uid()` - the human performing
+-- the act - may still SEE each included Shared history item, through the
+-- canonical I-04F entry point `resolve_shared_world_history_visibility_v1`.
+-- That is an actor gate on an operation, and that is where it belongs.
+--
+-- It is NOT a continuing condition, and this migration deliberately declines to
+-- make it one. A publisher who later leaves the Shared World, is removed from
+-- it, or falls outside a closed-view entitlement loses BROWSING; the source
+-- they published is untouched - still AVAILABLE, still at the captured
+-- availability revision, still the exact bytes the package digested. Turning
+-- one human's later loss of browsing into the disappearance of everyone else's
+-- Public view would be new Product policy, and no frozen contract states it:
+-- 0095 scopes that call to the publishing human at that instant, and nothing in
+-- 0091-0097 re-asks it afterwards. Inferring a perpetual rule from a
+-- publish-time gate is exactly the inference that is not available here.
+--
+-- What does belong here is source AVAILABILITY and INTEGRITY - and step 3 is
+-- already precisely that truth, actor-free. `derive_public_publication
+-- _authority_v1` refuses when an included Shared history item is no longer
+-- AVAILABLE or its availability revision moved, when the Shared body is gone or
+-- its bytes no longer match the captured digest, and when the Personal
+-- committed unit is gone, is owned by someone other than the captured owner, or
+-- no longer digests to the captured value (migration 0093). Owner deletion -
+-- the canonical I-04G act that genuinely takes a source away - moves the item
+-- to DELETED_BY_OWNER and bumps the revision, so it fails closed there, for the
+-- reason that is actually true.
 --
 -- What it deliberately does NOT re-check is the CURRENT authority request
 -- fingerprint against the published one. Every input of that fingerprint is
@@ -148,7 +176,6 @@ DECLARE
   bound_manifest uuid;
   bound_ordinal integer;
   bound_fingerprint text;
-  bound_publisher uuid;
   derived_approvers uuid[];
   stored_approvers uuid[];
 BEGIN
@@ -160,8 +187,8 @@ BEGIN
   -- PUBLISHED, an immutable publication record exists, the recorded version is
   -- the CURRENT version, and its manifest is the recorded manifest.
   SELECT s.published_experience_version_id, s.published_manifest_version_id, v.version_ordinal,
-         s.authority_request_fingerprint, m.publisher_user_id
-    INTO bound_version, bound_manifest, bound_ordinal, bound_fingerprint, bound_publisher
+         s.authority_request_fingerprint
+    INTO bound_version, bound_manifest, bound_ordinal, bound_fingerprint
     FROM public.public_experiences e
     JOIN public.public_experience_publication_state s ON s.experience_id = e.id
     JOIN public.public_experience_versions v
@@ -232,47 +259,16 @@ BEGIN
     RETURN;
   END IF;
 
-  -- STEP 5: THE EXACT PUBLISHER MAY STILL SEE EVERY INCLUDED SHARED SOURCE,
-  -- through the canonical I-04F entry point and never re-derived here. The
-  -- human is the immutable publisher of the immutable manifest, never a
-  -- parameter and never a current member: a human who left, was removed, or
-  -- whose World closed around an entitlement that excludes the item is shown
-  -- nothing by the canonical resolver, and the publication that required that
-  -- sight stops being eligible. The entry point raises on a World mode it does
-  -- not implement, which fails closed here like everything else.
-  BEGIN
-    IF EXISTS (
-      SELECT 1 FROM public.publication_package_item_provenance p
-       WHERE p.manifest_version_id = bound_manifest AND p.source_class = 'SHARED_WORLD'
-         AND NOT EXISTS (
-           SELECT 1 FROM public.resolve_shared_world_history_visibility_v1(p.shared_world_id, bound_publisher) v
-            WHERE v.history_item_id = p.shared_history_item_id)
-    ) THEN
-      RETURN QUERY SELECT p_experience_id, 'INELIGIBLE'::text, 'PUBLISHED_SOURCE_NOT_AVAILABLE'::text,
-        NULL::uuid, NULL::uuid, NULL::integer;
-      RETURN;
-    END IF;
-  EXCEPTION WHEN OTHERS THEN
-    RETURN QUERY SELECT p_experience_id, 'INELIGIBLE'::text, 'PUBLISHED_SOURCE_NOT_AVAILABLE'::text,
-      NULL::uuid, NULL::uuid, NULL::integer;
-    RETURN;
-  END;
-
-  -- STEP 6: EVERY INCLUDED PERSONAL UNIT IS STILL OWNED BY THAT SAME PUBLISHER.
-  -- The canonical Personal source is append-only and immutable for every role
-  -- including the table owner (migration 0064), so this cannot drift - which is
-  -- exactly why it is CHECKED rather than assumed: an invariant nobody verifies
-  -- is an invariant nobody notices losing.
-  IF EXISTS (
-    SELECT 1 FROM public.publication_package_item_provenance p
-     WHERE p.manifest_version_id = bound_manifest AND p.source_class = 'MY_WORLD'
-       AND p.personal_owner_user_id IS DISTINCT FROM bound_publisher
-  ) THEN
-    RETURN QUERY SELECT p_experience_id, 'INELIGIBLE'::text, 'PUBLICATION_AUTHORITY_INVALIDATED'::text,
-      NULL::uuid, NULL::uuid, NULL::integer;
-    RETURN;
-  END IF;
-
+  -- AND THERE IS NO FIFTH GATE, ON PURPOSE. No actor appears anywhere above:
+  -- not the viewer, not the controller, not the publisher. The question
+  -- `may this human still SEE this Shared item?` is the frozen 0095 gate 6, it
+  -- is asked of the human PERFORMING the act at the consequential instant of
+  -- publication, and re-asking it here forever would convert a later loss of
+  -- browsing into the disappearance of everyone else's Public view - a Product
+  -- policy no frozen contract states. Source AVAILABILITY and INTEGRITY, which
+  -- is the condition that genuinely belongs here, is step 3 in full: the ONE
+  -- I-05A derivation binds the exact captured availability revision and the
+  -- exact captured digest of every included Shared and Personal source.
   RETURN QUERY SELECT p_experience_id, 'ELIGIBLE'::text, NULL::text,
     bound_version, bound_manifest, bound_ordinal;
 END$$;
@@ -436,9 +432,14 @@ BEGIN
   IF p.prosrc !~ 'publication_manifest_required_approvers' THEN
     RAISE EXCEPTION 'I-05C: continuing eligibility must compare the derived rightsholder set with the stored one';
   END IF;
-  IF p.prosrc !~ 'resolve_shared_world_history_visibility_v1'
-     OR p.prosrc !~ 'bound_publisher' THEN
-    RAISE EXCEPTION 'I-05C: continuing eligibility must prove the exact PUBLISHER may still SEE each included Shared source through the canonical I-04F entry point';
+  -- SOURCE AVAILABILITY IS NOT ACTOR SOURCE ACCESS. The frozen 0095 gate 6 asks
+  -- whether the PUBLISHING HUMAN may still see each included Shared item, at the
+  -- consequential instant of publication. Continuing eligibility must not
+  -- repurpose that actor gate as a perpetual public predicate: a human who later
+  -- loses Shared browsing has not taken the published source away, and their
+  -- browsing is not everyone else's Public view.
+  IF p.prosrc ~ 'resolve_shared_world_history_visibility_v1' THEN
+    RAISE EXCEPTION 'I-05C: continuing eligibility must not turn actor source ACCESS into a continuing public-visibility condition: source AVAILABILITY is the ONE I-05A derivation';
   END IF;
   -- SOURCE-ACCESS AUTHORITY IS CONSUMED, NEVER RE-IMPLEMENTED, and current
   -- Shared membership is never a proxy for a rightsholder or for source access.
@@ -500,11 +501,17 @@ BEGIN
     RAISE EXCEPTION 'I-05C: the canonical visibility derivation must keep the frozen I-05B result shape';
   END IF;
 
-  -- THE FROZEN BOUNDARIES PART A CONSUMES MUST STILL BE INTACT.
-  IF EXISTS (SELECT 1 FROM pg_roles r WHERE r.rolname = 'service_role')
-     AND NOT has_function_privilege('service_role',
-       'public.resolve_shared_world_history_visibility_v1(uuid, uuid)', 'EXECUTE') THEN
-    RAISE EXCEPTION 'I-05C: the frozen I-04F history visibility entry point must still be reachable';
+  -- THE FROZEN BOUNDARIES PART A CONSUMES MUST STILL BE INTACT. Continuing
+  -- eligibility now rests entirely on the ONE I-05A derivation for source truth,
+  -- so what that derivation actually binds is asserted here rather than assumed:
+  -- the exact captured availability revision, and the exact captured digest of
+  -- the Shared body and of the Personal committed unit.
+  SELECT pr.prosrc INTO p FROM pg_proc pr
+   WHERE pr.oid = 'public.derive_public_publication_authority_v1(uuid)'::regprocedure;
+  IF p.prosrc !~ 'availability_state <> ''AVAILABLE'''
+     OR p.prosrc !~ 'availability_revision <> p\.captured_availability_revision'
+     OR p.prosrc !~ 'captured_source_digest' THEN
+    RAISE EXCEPTION 'I-05C: the ONE I-05A authority derivation must still bind the exact captured source availability revision and digest';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_trigger tg
                   WHERE tg.tgrelid = 'public.publication_manifest_approvals'::regclass

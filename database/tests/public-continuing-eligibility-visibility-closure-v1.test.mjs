@@ -128,25 +128,23 @@ test('continuing eligibility CONTINUES the frozen 0095 publication gates, in ord
   // GATE 4, the derived rightsholder set still equals the stored one.
   const stored = at('FROM public.publication_manifest_required_approvers ra');
   const compare = at('IF stored_approvers IS DISTINCT FROM derived_approvers THEN');
-  // GATE 5, the exact PUBLISHER may still SEE every included Shared source.
-  const access = at('FROM public.resolve_shared_world_history_visibility_v1(p.shared_world_id, bound_publisher) v');
-  // GATE 6, every included Personal unit is still owned by that same publisher.
-  const personal = at('AND p.personal_owner_user_id IS DISTINCT FROM bound_publisher');
   // Gate 1 is ONE statement, so its four clauses carry no order among
-  // themselves; what must hold is that the six GATES follow one another, each
+  // themselves; what must hold is that the four GATES follow one another, each
   // anchored on its last clause. Every clause above was proven present by `at`.
   assert.ok(lifecycle >= 0 && record >= 0 && pointer >= 0 && notEffective >= 0 && boundPrint >= 0 && stored >= 0);
-  const gates = [manifestBinding, approvals, authority, compare, access, personal];
+  const gates = [manifestBinding, approvals, authority, compare];
   for (let i = 1; i < gates.length; i += 1) {
     assert.ok(gates[i] > gates[i - 1], `gate ${i + 1} follows gate ${i}`);
   }
-  // The publisher is READ from the immutable manifest, never supplied.
-  assert.match(c, /m\.publisher_user_id\s*\n?\s*INTO bound_version, bound_manifest, bound_ordinal, bound_fingerprint, bound_publisher/u,
-    'the human whose source access is revalidated is the immutable publisher of the immutable manifest');
-  // It FAILS CLOSED on every raise of the two frozen derivations it consumes.
+  // AND THERE IS NO FIFTH GATE. Every one of the four is a property of the
+  // PACKAGE: no actor reaches the derivation, so continuing eligibility can
+  // never become a question about who is currently reading, controlling or
+  // browsing. See the dedicated contract below for why that is load-bearing.
+  assert.ok(!c.includes('auth.uid()'), 'continuing eligibility reads no acting human');
+  // It FAILS CLOSED on every raise of the frozen derivation it consumes.
   assert.match(c, /EXCEPTION\s*\n\s*WHEN SQLSTATE 'P0002' THEN/u,
     'the frozen source-unavailable class becomes the source ineligibility class');
-  assert.equal((c.match(/WHEN OTHERS THEN/gu) ?? []).length, 2,
+  assert.equal((c.match(/WHEN OTHERS THEN/gu) ?? []).length, 1,
     'and every other raise becomes an ineligibility answer rather than an error a caller can read');
   // Current membership is never a proxy, and control is never read at all.
   for (const forbidden of ['shared_world_membership_episodes', 'shared_world_history_access_grants',
@@ -159,6 +157,40 @@ test('continuing eligibility CONTINUES the frozen 0095 publication gates, in ord
   assert.doesNotMatch(body, /INSERT INTO|UPDATE public\.|DELETE FROM|FOR UPDATE|FOR SHARE/u);
   assert.doesNotMatch(body, /pg_advisory|LOCK TABLE|TRUNCATE/iu);
   assert.doesNotMatch(body, /CURRENT_TIMESTAMP|now\(\)|localtimestamp|transaction_timestamp|statement_timestamp/iu);
+});
+
+test('source AVAILABILITY is a continuing condition and actor source ACCESS is not', () => {
+  const { body } = functionBody(ELIGIBILITY);
+  // The frozen publish boundary asks an ACTOR question, and says so in as many
+  // words. It is untouched: this contract removes nothing from publication.
+  const frozen0095 = read('../migrations/0095_public_experience_publication_visibility_serving_v1.sql');
+  assert.match(frozen0095, /GATE 6: CURRENT SOURCE ACCESS FOR THE PUBLISHING HUMAN/u,
+    'the frozen gate is a publish-time actor gate, and the frozen migration labels it one');
+  assert.ok(frozen0095.includes('public.resolve_shared_world_history_visibility_v1(p.shared_world_id, u)'),
+    'and the publish boundary still asks it of the human performing the act');
+  // Continuing eligibility must not repurpose it into a perpetual public
+  // predicate. A publisher who later leaves the Shared World, is removed from
+  // it, or falls outside a closed-view entitlement loses BROWSING - the source
+  // they published is untouched, still AVAILABLE at the captured revision and
+  // still the captured bytes. Re-asking the actor question forever would let one
+  // human's later browsing status delete everyone else's Public view, and no
+  // frozen contract states that: 0095 scopes the call to that instant, and
+  // nothing in 0091-0097 re-asks it afterwards.
+  for (const forbidden of ['resolve_shared_world_history_visibility_v1', 'publisher_user_id', 'bound_publisher']) {
+    assert.ok(!body.includes(forbidden),
+      `continuing eligibility must not make actor source access a continuing condition: ${forbidden}`);
+  }
+  // What it consumes instead is the actor-free availability/integrity truth -
+  // and the migration refuses at DEPLOY time, not merely here, if either half of
+  // that is ever undone.
+  assert.ok(body.includes('derive_public_publication_authority_v1'),
+    'source availability comes from the ONE I-05A derivation');
+  assert.ok(selfAssertions.includes("IF p.prosrc ~ 'resolve_shared_world_history_visibility_v1' THEN"),
+    'the migration itself refuses to deploy a continuing derivation that asks the actor question');
+  assert.ok(selfAssertions.includes('availability_revision <> p\\.captured_availability_revision'),
+    'while asserting the consumed derivation still binds the exact captured availability revision');
+  assert.ok(selfAssertions.includes('captured_source_digest'),
+    'and the exact captured source digest');
 });
 
 test('the bounded internal ineligibility vocabulary is exactly five classes and names nothing private', () => {
@@ -237,7 +269,7 @@ test('the self-assertions refuse to deploy a migration that lost any of this', (
     'continuing eligibility must require every required approval to be currently EFFECTIVE through the ONE 0094 derivation',
     'continuing eligibility must revalidate source availability and authority through the ONE I-05A derivation',
     'continuing eligibility must compare the derived rightsholder set with the stored one',
-    'continuing eligibility must prove the exact PUBLISHER may still SEE each included Shared source through the canonical I-04F entry point',
+    'continuing eligibility must not turn actor source ACCESS into a continuing public-visibility condition',
     'continuing eligibility must not re-implement Shared membership or history authorization',
     'continuing eligibility must read no Experience control: control is not content consent',
     'continuing eligibility must turn every raise of a consumed derivation into an INELIGIBLE answer',
@@ -249,7 +281,7 @@ test('the self-assertions refuse to deploy a migration that lost any of this', (
     'object visibility and viewer admission are different gates',
     'must not depend on a projection whose own write eligibility depends on it',
     'the canonical visibility derivation must keep the frozen I-05B result shape',
-    'the frozen I-04F history visibility entry point must still be reachable',
+    'the ONE I-05A authority derivation must still bind the exact captured source availability revision and digest',
     'the frozen 0092 approval evidence must still be append-only',
     'the frozen 0095 publication record must still be append-only',
     'the frozen 0094 withdrawal evidence must still be append-only',
@@ -285,7 +317,7 @@ test('0098 is registered in the toolchain, in the I-05C CI group, and in the dat
   assert.doesNotMatch(workflow, /^\s*continue-on-error\s*:/mu);
 });
 
-test('the verifier proves the live semantics, the whole surface census, and ten refused weakenings', () => {
+test('the verifier proves the live semantics, the whole surface census, and eleven refused weakenings', () => {
   for (const needle of ['CE01', 'CE02', 'CE03', 'CE04', 'CE05', 'CE06', 'CE07', 'CE08', 'CE09', 'CE10', 'CE11', 'CE12',
     'P1 a Public resolver that bypasses canonical visibility is a regression',
     'P2 a projection that implies visibility is a regression',
@@ -297,6 +329,9 @@ test('the verifier proves the live semantics, the whole surface census, and ten 
     'P8 widening anonymous Public serving is a regression',
     'P9 a seam that answers CLEARED without a canonical gate is a regression',
     'P10 an outward Public surface outside the visibility census is a regression',
+    'P11 re-asking actor source ACCESS as a continuing public condition is a regression',
+    'CE06 lost actor source ACCESS is not lost source AVAILABILITY, and does not end the publication',
+    'CE06 availability, unlike actor access, IS a continuing condition',
     'anti-vacuity', 'PUBLIC_SURFACES', 'PUBLIC_WRITERS', 'assertCompletelyDark',
     'every outward Public World surface is in the visibility dependency census',
     'R01', 'R02', 'R03', 'SAVEPOINT forward_safety']) {
