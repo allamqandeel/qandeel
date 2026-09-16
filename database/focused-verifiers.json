@@ -1,0 +1,41 @@
+{
+  "$comment": [
+    "Named verifier groups for the focused database gate (QAN-INF-05).",
+    "",
+    "A selector is a NAME, never a command. The runner resolves it here, refuses any",
+    "path that is not database/verify-<slug>.mjs, and spawns node with that path as an",
+    "argument - no shell is involved at any point, so nothing in this file and nothing",
+    "a workflow input can say is ever interpreted as shell.",
+    "",
+    "A group is convenience, not a requirement: any single verifier can be selected",
+    "generically as migration-NNNN without appearing here, so a new migration needs no",
+    "edit to this file, to the runner or to the workflow.",
+    "",
+    "Groups are additive. Adding one may not change what an existing one means."
+  ],
+  "version": 1,
+  "groups": {
+    "i06a-0100": {
+      "title": "I-06A - Replay foundation, source manifest and selection persistence (migration 0100)",
+      "verifiers": ["database/verify-migration-0100.mjs"]
+    },
+    "i06a-0101": {
+      "title": "I-06A - Replay authorized source capture and draft runtime (migration 0101)",
+      "verifiers": ["database/verify-migration-0101.mjs"]
+    },
+    "i06a-all": {
+      "title": "I-06A - both Replay verifiers, in migration order",
+      "verifiers": [
+        "database/verify-migration-0100.mjs",
+        "database/verify-migration-0101.mjs"
+      ]
+    },
+    "i05c-all": {
+      "title": "I-05C - Public disappearance and source-loss enforcement (migrations 0098, 0099)",
+      "verifiers": [
+        "database/verify-migration-0098.mjs",
+        "database/verify-migration-0099.mjs"
+      ]
+    }
+  }
+}

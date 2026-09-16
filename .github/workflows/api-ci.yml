@@ -73,21 +73,12 @@ jobs:
       - {name: Verify HIM generic application write authority retirement static contract, run: npm run test:him-generic-write-authority-retirement-contract}
       - {name: Verify HIM structured-measurement preflight, run: npm run verify:him-measurement-preflight}
       - {name: Verify Foundation integration / regression gate, run: npm run verify:foundation-integration-gate}
+      # The ONE canonical bootstrap artifact, shared with the focused database gate.
+      # It used to be duplicated here as inline SQL, which made parity a comparison of
+      # two texts that could drift apart in either direction. A single file cannot:
+      # whatever this gate bootstraps, the focused gate bootstraps identically.
       - name: Bootstrap fresh Supabase-compatible PostgreSQL roles
-        run: |
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
-          CREATE ROLE anon NOLOGIN;
-          CREATE ROLE authenticated NOLOGIN;
-          CREATE ROLE service_role NOLOGIN;
-          CREATE SCHEMA auth;
-          CREATE TABLE auth.users (id uuid PRIMARY KEY);
-          CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
-            SELECT (nullif(current_setting('request.jwt.claims', true), '')::jsonb->>'sub')::uuid
-          $$;
-          ALTER FUNCTION auth.uid() OWNER TO postgres;
-          GRANT USAGE ON SCHEMA auth TO anon, authenticated;
-          GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated;
-          SQL
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/supabase-compatible-bootstrap.sql
       - name: Apply all migrations to fresh PostgreSQL
         run: for migration in database/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
       - name: Verify Supabase keep-alive database contract

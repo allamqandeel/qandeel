@@ -1,0 +1,130 @@
+name: Focused Database Verification
+# QAN-INF-05 - the fast database gate.
+#
+# API CI runs about a hundred and forty steps and reaches the database verifiers at
+# the end of them, so using it to find a defect in one verifier costs roughly twenty
+# minutes per finding. This job is the same PostgreSQL 17, the same Supabase-compatible
+# bootstrap, the same migrations from zero and the same verifier command, with the
+# unrelated steps removed - so a verifier defect is found in minutes and API CI goes
+# back to being the confirmation gate rather than the debugger.
+#
+# It carries no secrets, needs none, touches no production Supabase, deploys nothing
+# and merges nothing. `contents: read` is the whole of its authority.
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: 'Branch, tag or SHA to verify (the workflow itself always runs from the default branch)'
+        required: true
+        default: 'main'
+      verifier:
+        description: 'Verifier selector: a group from database/focused-verifiers.json, or the generic form migration-NNNN'
+        required: true
+        default: 'i06a-all'
+  # Narrowly scoped self-test: only when the focused gate's OWN files change. This is
+  # not a second API CI - it proves this gate still works, against a group the default
+  # branch actually carries.
+  pull_request:
+    paths:
+      - '.github/workflows/focused-database-verification.yml'
+      - 'database/focused-verification-runner.mjs'
+      - 'database/focused-verifiers.json'
+      - 'database/supabase-compatible-bootstrap.sql'
+      - 'database/verifier-scenarios.mjs'
+permissions:
+  contents: read
+jobs:
+  focused-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: qandeel_focused}
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres -d qandeel_focused"
+          --health-interval=5s --health-timeout=5s --health-retries=12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/qandeel_focused
+      PGPASSWORD: postgres
+      # Read from the environment by the runner and by actions/checkout. Never
+      # interpolated into a shell command anywhere in this file.
+      FOCUSED_TARGET_REF: ${{ github.event.inputs.target_ref || github.sha }}
+      FOCUSED_VERIFIER: ${{ github.event.inputs.verifier || 'i05c-all' }}
+      # WHICH HARNESS RUNS, stated structurally rather than assumed.
+      #
+      # A dispatch takes the mapping, the bootstrap and the runner from the
+      # repository's DEFAULT BRANCH, whatever ref a person happened to dispatch
+      # from - so the answer a dispatch gives is an answer about reviewed,
+      # merged infrastructure, and a branch cannot change the rules it is judged
+      # by while still being the branch under test.
+      #
+      # The pull-request self-test deliberately does the opposite: it exercises
+      # the PR's OWN harness, because proving a change to this gate is the only
+      # thing that self-test exists for.
+      FOCUSED_HARNESS_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.repository.default_branch || github.sha }}
+    steps:
+      # THE TRUST ROOT, and the first thing this job does.
+      #
+      # A workflow_dispatch run executes the workflow DEFINITION belonging to the
+      # ref it was dispatched from - this file, these steps, that env block. So
+      # pinning the harness checkout is necessary and NOT sufficient: a branch
+      # could edit this file, dispatch the workflow from itself, and be judged by
+      # job logic it wrote, with the harness pin quietly removed.
+      #
+      # A manual dispatch must therefore come FROM the default branch. The code
+      # under test is selected exclusively through `target_ref`, which stays free
+      # to be any branch, tag or SHA.
+      #
+      # `pull_request` is deliberately untouched by this: exercising the PR's own
+      # workflow and harness is the only thing that self-test exists for.
+      - name: A manual dispatch must run from the repository default branch
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != github.event.repository.default_branch
+        env:
+          DISPATCHED_FROM: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          echo "::error title=Dispatch this workflow from the default branch::A manual run was dispatched from a non-default ref"
+          echo "dispatched from : $DISPATCHED_FROM"
+          echo "default branch  : $DEFAULT_BRANCH"
+          echo ""
+          echo "A workflow_dispatch run executes the workflow definition of the ref it was dispatched from,"
+          echo "so dispatching from a branch would let that branch decide how it is judged."
+          echo ""
+          echo "Run this workflow FROM $DEFAULT_BRANCH, and put the branch, tag or SHA you want to verify"
+          echo "in the target_ref input."
+          exit 1
+      # The harness - mapping, bootstrap and runner - at the ref pinned above. The
+      # ref UNDER TEST supplies only migrations, verifiers and its manifest, so a
+      # branch can be verified without first carrying this infrastructure.
+      - name: Checkout the focused-gate harness
+        uses: actions/checkout@v4
+        with: {ref: '${{ env.FOCUSED_HARNESS_REF }}', path: .qan-harness}
+      - name: Record which harness and which target this run used
+        run: |
+          echo "harness ref : $FOCUSED_HARNESS_REF"
+          echo "harness head: $(git -C .qan-harness rev-parse HEAD)"
+          echo "target ref  : $FOCUSED_TARGET_REF"
+          echo "event       : $GITHUB_EVENT_NAME"
+      # Deliberately before setup-node, on the runner's preinstalled Node: a selector
+      # that names nothing, or a ref that does not read as a ref, should cost four
+      # seconds rather than a checkout and a full install.
+      - {name: Validate the dispatch inputs, run: node .qan-harness/database/focused-verification-runner.mjs --check-inputs}
+      - name: Checkout the repository under test
+        uses: actions/checkout@v4
+        with: {ref: '${{ env.FOCUSED_TARGET_REF }}', path: repo}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm, cache-dependency-path: repo/package-lock.json}
+      - {name: Install dependencies of the repository under test, working-directory: repo, run: npm ci}
+      - name: Run the selected verifier(s) against fresh PostgreSQL 17
+        run: node .qan-harness/database/focused-verification-runner.mjs --repo repo --artifacts focused-verification-artifacts
+      - name: Upload the focused verification artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: focused-verification-${{ env.FOCUSED_VERIFIER }}-${{ github.run_number }}
+          path: focused-verification-artifacts
+          if-no-files-found: warn
+          retention-days: 14
