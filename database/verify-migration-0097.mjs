@@ -495,5 +495,4 @@ await runVerifier('0097', async (stage) => {
           + (SELECT count(*) FROM auth.users WHERE id = ANY($1::uuid[])) AS n`,
     [humans, [f.experience, c.experience], [f.world, c.world]]);
   assert.equal(Number(n), 0, 'every fixture this verifier created was rolled back or removed');
-  await rt.client.end();
-});
+}, () => rt.client.end().catch(() => undefined));

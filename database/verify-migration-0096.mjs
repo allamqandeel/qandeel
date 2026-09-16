@@ -367,10 +367,15 @@ async function verifyQandeel(f, x, posts, placements) {
   await rejected(() => rt.recordResponse(randomUUID(), randomUUID(), f.experience, null, '  ', NONE), ['22023']);
   await rejected(() => rt.recordResponse(randomUUID(), randomUUID(), f.experience, null, 'x', null), ['22023']);
 
-  // QR03 machine output satisfies no approval and grants no control.
+  // QR03 machine output satisfies no approval and grants no control. The
+  // controller's own attempt to publish the DRAFT still fails on lifecycle -
+  // the machine output moved nothing - so the attempt is made AS the
+  // controller; as nobody it would fail one gate earlier, on authentication.
   assert.deepEqual(await snapshotImmutables(f.experience, f.manifest), before,
     'QR03 no approval, control, package, publication or lifecycle row changed');
+  await actAs(f.mohamed);
   await rejected(() => rt.publish(randomUUID(), x.draft, x.dv), ['55000'], /LIFECYCLE_INVALID/u);
+  await actAs(null);
   assert.equal(placements.p2.length > 0, true);
 
   // QR04 idempotency and immutability.
@@ -650,5 +655,4 @@ await runVerifier('0096', async (stage) => {
           + (SELECT count(*) FROM auth.users WHERE id = ANY($1::uuid[])) AS n`,
     [humans, [f.experience, c.experience], [f.world, c.world]]);
   assert.equal(Number(n), 0, 'every fixture this verifier created was rolled back or removed');
-  await rt.client.end();
-});
+}, () => rt.client.end().catch(() => undefined));

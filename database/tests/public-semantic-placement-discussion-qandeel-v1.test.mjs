@@ -302,6 +302,10 @@ test('the verifier proves immutability of everything a correction must not touch
   assert.match(support, /DISABLE TRIGGER public_experience_publication_state_immutable[\s\S]*?ENABLE TRIGGER public_experience_publication_state_immutable/u,
     'the guard lifted for the simulation is restored inside it');
   assert.ok(!support.includes('INSERT INTO public.public_experience_publication_state'), 'the simulation fabricates no publication record');
+  assert.match(verifier, /\}, \(\) => rt\.client\.end\(\)\.catch\(\(\) => undefined\)\);\s*$/u,
+    'the verifier ends its database client through the envelope on every path, so a failure exits instead of hanging the CI step');
+  assert.match(verifier, /await actAs\(f\.mohamed\);\s*\n\s*await rejected\(\(\) => rt\.publish\(randomUUID\(\), x\.draft, x\.dv\), \['55000'\], \/LIFECYCLE_INVALID\/u\);/u,
+    'QR03 attempts the publication AS the controller, so the refusal it proves is the lifecycle one');
   assert.match(verifier, /assert\.deepEqual\(await snapshotImmutables\(f\.experience, f\.manifest\), before,\s*\n\s*'SP01 a correction changed no version/u);
   for (const launched of ['placing', 'posting']) {
     const launch = verifier.indexOf(`const ${launched} = q2(`);

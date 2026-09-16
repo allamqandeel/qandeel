@@ -255,6 +255,8 @@ test('the verifier proves determinism, the stale-projection law and the visibili
   const settle = verifier.indexOf('await rebuilding', launch);
   assert.ok(launch > 0 && release > launch && settle > release, 'the rebuild race is awaited only after the publication committed');
   assert.match(support, /SET lock_timeout = '10s'/u);
+  assert.match(verifier, /\}, \(\) => rt\.client\.end\(\)\.catch\(\(\) => undefined\)\);\s*$/u,
+    'the verifier ends its database client through the envelope on every path, so a failure exits instead of hanging the CI step');
 });
 
 // ---------------------------------------------------------------------------
@@ -436,6 +438,10 @@ test('the contracts are not vacuous: every deliberate weakening of I-05B is refu
         'if npm run verify:public-publication-effective-approval-state:integration; then result_0094=PASS; else status=1; fi',
         'npm run verify:public-publication-effective-approval-state:integration || true'],
       ['the seam simulation is no longer restored', SUPPORT, '    await q(seam.definition);\n', "    await q('SELECT 1');\n"],
+      ['a failed verifier hangs its CI step instead of exiting', V95,
+        "}, () => rt.client.end().catch(() => undefined));\n", '  await rt.client.end();\n});\n'],
+      ['the verifier envelope stops ending the client after a failure', SUPPORT,
+        '      if (cleanup) await cleanup();\n', '      // cleanup no longer runs\n'],
       ['the concurrency harness loses its database-enforced wait bound', SUPPORT, `      await run("SET lock_timeout = '10s'");\n`, ''],
       ['a publish race awaits before releasing the other connection', V95,
         "    await q('COMMIT');\n    const [wA] = (await withdrawing).rows;", "    const [wA] = (await withdrawing).rows;\n    await q('COMMIT');"],

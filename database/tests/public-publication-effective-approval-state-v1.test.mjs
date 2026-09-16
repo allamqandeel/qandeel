@@ -274,6 +274,12 @@ test('the verifier proves the effective-state law against real PostgreSQL, with 
   assert.match(support, /async function assertExactBinding\(table, parent, local, parentColumns\)/u);
   assert.match(support, /must not bind \$\{parent\} through an independent partial foreign key/u,
     'the shared catalog check refuses an independent partial key, not merely the absence of the composite one');
+  // A verifier that fails must EXIT, not hang: the client is ended on every path
+  // and a bounded fallback exit follows, so a CI step never waits on a dead process.
+  assert.match(support, /\} finally \{\s*\n\s*try \{\s*\n\s*if \(cleanup\) await cleanup\(\);/u, 'cleanup runs on success, assertion failure and crash alike');
+  assert.match(support, /setTimeout\(\(\) => process\.exit\(process\.exitCode \?\? 0\), 5000\)\.unref\(\);/u, 'and the process is guaranteed to end');
+  assert.match(verifier, /\}, \(\) => rt\.client\.end\(\)\.catch\(\(\) => undefined\)\);\s*$/u,
+    'the verifier ends its database client through the envelope, on every path');
   // Release edges precede awaits: a launched blocking promise is awaited only after
   // the connection it waits for has issued COMMIT.
   for (const launched of ['blocked', 'duplicate']) {

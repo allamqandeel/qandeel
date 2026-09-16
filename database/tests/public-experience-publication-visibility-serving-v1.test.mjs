@@ -335,6 +335,8 @@ test('the verifier reaches PUBLISHED only through a simulated seam it restores a
     'i05b95_probe_manifest_fk', 'the weakened shape admits the mismatched version and manifest pair']) {
     assert.ok(verifier.includes(needle), `the verifier proves ${needle}`);
   }
+  assert.match(verifier, /\}, \(\) => rt\.client\.end\(\)\.catch\(\(\) => undefined\)\);\s*$/u,
+    'the verifier ends its database client through the envelope on every path, so a failure exits instead of hanging the CI step');
   // Every launched blocking promise is awaited only after the release edge.
   for (const [launched, release] of [['withdrawing', "await q('COMMIT')"], ['publishing', "await q2('COMMIT')"], ['preparing', "await q('COMMIT')"],
     ['duplicate', "await q('COMMIT')"], ['racing', "await q2('COMMIT')"]]) {

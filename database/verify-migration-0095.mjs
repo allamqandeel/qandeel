@@ -700,5 +700,4 @@ await runVerifier('0095', async (stage) => {
   assert.equal(Number(n), 0, 'every fixture this verifier created was rolled back or removed');
   const [{ worlds }] = await rows(`SELECT count(*) worlds FROM ${T.WORLD}`);
   assert.equal(Number(worlds), 1, 'and exactly one logical Public World still exists');
-  await rt.client.end();
-});
+}, () => rt.client.end().catch(() => undefined));

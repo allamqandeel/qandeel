@@ -660,8 +660,17 @@ export function createRuntime(databaseUrl) {
   };
 }
 
-/** Run one verifier's main with the shared stage-reporting envelope. */
-export async function runVerifier(label, body) {
+/**
+ * Run one verifier's main with the shared stage-reporting envelope.
+ *
+ * `cleanup` runs on EVERY path - success, assertion failure, harness crash - and
+ * is where the verifier ends its database client. A client left open after a
+ * failure keeps the Node process alive with nothing to do, and a CI step that
+ * never exits reports nothing: the first I-05B head hung its grouped step for
+ * this exact reason. After cleanup a bounded fallback exit guarantees the
+ * process ends even if some other handle survived; the exit code is already set.
+ */
+export async function runVerifier(label, body, cleanup = null) {
   let stage = 'connect';
   const setStage = (next) => { stage = next; console.log(`${label} stage: ${next}`); };
   try {
@@ -671,5 +680,14 @@ export async function runVerifier(label, body) {
     console.error(`migration ${label} verification failed at stage: ${stage}`);
     console.error(error);
     process.exitCode = 1;
+  } finally {
+    try {
+      if (cleanup) await cleanup();
+    } catch (error) {
+      console.error(`migration ${label} cleanup failed`);
+      console.error(error);
+      process.exitCode = 1;
+    }
+    setTimeout(() => process.exit(process.exitCode ?? 0), 5000).unref();
   }
 }
