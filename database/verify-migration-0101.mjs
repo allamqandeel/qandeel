@@ -596,80 +596,108 @@ async function verifyForwardSafety(f, state) {
     await q('GRANT EXECUTE ON FUNCTION public.i06_probe_launch_gated_create_v1(uuid, uuid) TO authenticated');
     await verifyCatalog();
 
+    // EVERY PROBE REPORTS ITS OWN OUTCOME, IN ONE INVOCATION.
+    //
+    // A real-PostgreSQL verifier is fail-fast, so a defect in probe N hides
+    // probes N+1.. entirely and each CI run can only ever expose one of them.
+    // Each probe therefore runs inside its OWN savepoint, its result is
+    // collected rather than thrown, and the section fails at the end with every
+    // failure listed. Nothing is weakened by this: a probe still fails hard if
+    // its mutation does not land, and still fails hard if the canonical check
+    // accepts the weakened state. Rolling back to the probe's savepoint also
+    // clears an aborted transaction, so one probe cannot contaminate the next.
+    const failures = [];
+    const probe = async (name, body) => {
+      await q(`SAVEPOINT ${name}`);
+      try {
+        await body();
+        console.log(`0101 forward safety ${name} pass`);
+      } catch (error) {
+        failures.push(`${name}: ${error.message.split('\n')[0]}`);
+        console.log(`0101 forward safety ${name} FAIL: ${error.message.split('\n')[0]}`);
+      } finally {
+        await q(`ROLLBACK TO SAVEPOINT ${name}`); await q(`RELEASE SAVEPOINT ${name}`);
+        await asRole('postgres');
+      }
+    };
+
+    // The pristine definitions, read ONCE before any probe mutates anything, so
+    // no probe can ever anchor on a predecessor's mutant. Sequentially, because
+    // these run inside a transaction where statement order is part of the proof.
+    const pristine = {};
+    for (const [name, fn] of [['capture', FN.CAPTURE], ['selectCore', FN.SELECT], ['composition', FN.COMPOSITION],
+      ['revise', FN.REVISE], ['create', FN.CREATE]]) {
+      pristine[name] = (await rows('SELECT pg_get_functiondef($1::regprocedure) def', [fn]))[0].def;
+    }
+    const { capture, selectCore, composition, revise, create } = pristine;
+
     // F1 A CONSEQUENTIAL PRIMITIVE BECOMES APPLICATION-REACHABLE BEFORE THE LAUNCH GATE.
-    await q('SAVEPOINT f1');
-    await q(`GRANT EXECUTE ON FUNCTION ${FN.CREATE} TO authenticated`);
-    await assert.rejects(verifyCatalog(), refuses, 'F1 creation becoming application-reachable is a regression');
-    await q('ROLLBACK TO SAVEPOINT f1'); await q('RELEASE SAVEPOINT f1');
+    await probe('f1', async () => {
+      await q(`GRANT EXECUTE ON FUNCTION ${FN.CREATE} TO authenticated`);
+      await assert.rejects(verifyCatalog(), refuses, 'F1 creation becoming application-reachable is a regression');
+    });
 
     // F2 THE SHARED ADAPTER RE-DERIVES ACCESS FROM MEMBERSHIP instead of the canonical resolver.
-    await q('SAVEPOINT f2');
-    const capture = (await rows('SELECT pg_get_functiondef($1::regprocedure) def', [FN.CAPTURE]))[0].def;
-    const mutant = capture.replace(
+    await probe('f2', async () => {
+      const mutant = capture.replace(
       'SELECT array_agg(v.history_item_id ORDER BY v.occurred_at, v.history_item_id) INTO visible\n        FROM public.resolve_shared_world_history_visibility_v1(p_source_context_id, u) v;',
-      "SELECT array_agg(i.id ORDER BY i.occurred_at, i.id) INTO visible FROM public.shared_world_history_items i\n        WHERE i.world_id = p_source_context_id AND i.availability_state = 'AVAILABLE'\n          AND EXISTS (SELECT 1 FROM public.shared_world_membership_episodes e WHERE e.world_id = i.world_id AND e.user_id = u AND e.ended_at IS NULL);");
-    assert.notEqual(mutant, capture, 'F2 the mutation landed');
-    await q(mutant);
-    await assert.rejects(verifyCatalog(), refuses, 'F2 an adapter that re-derives Shared access from membership is a regression');
-    await actAs(f.mohamed);
-    const [leak] = await rt.createDraft(fresh({ sourceClass: 'SHARED_WORLD', context: f.world, items: [f.hiddenMaterial] }));
-    assert.equal(leak.outcome, 'REPLAY_DRAFT_CREATED', 'F2 anti-vacuity: the mutant really lets a current member bind material they never saw');
-    await asRole('postgres');
-    await q('ROLLBACK TO SAVEPOINT f2'); await q('RELEASE SAVEPOINT f2');
+        "SELECT array_agg(i.id ORDER BY i.occurred_at, i.id) INTO visible FROM public.shared_world_history_items i\n        WHERE i.world_id = p_source_context_id AND i.availability_state = 'AVAILABLE'\n          AND EXISTS (SELECT 1 FROM public.shared_world_membership_episodes e WHERE e.world_id = i.world_id AND e.user_id = u AND e.ended_at IS NULL);");
+      assert.notEqual(mutant, capture, 'F2 the mutation landed');
+      await q(mutant);
+      await assert.rejects(verifyCatalog(), refuses, 'F2 an adapter that re-derives Shared access from membership is a regression');
+      await actAs(f.mohamed);
+      const [leak] = await rt.createDraft(fresh({ sourceClass: 'SHARED_WORLD', context: f.world, items: [f.hiddenMaterial] }));
+      assert.equal(leak.outcome, 'REPLAY_DRAFT_CREATED', 'F2 anti-vacuity: the mutant really lets a current member bind material they never saw');
+    });
 
     // F3 THE PUBLIC ADAPTER STOPS REQUIRING CONTROL, so a viewer can rebuild another's Experience.
-    await q('SAVEPOINT f3');
-    const noControl = capture.replace(
-      'IF NOT FOUND OR NOT EXISTS (SELECT 1 FROM public.public_experience_controllers c\n                                  WHERE c.experience_id = p_source_context_id AND c.controller_user_id = u) THEN',
-      'IF NOT FOUND THEN');
-    assert.notEqual(noControl, capture);
-    await q(noControl);
-    await assert.rejects(verifyCatalog(), refuses, 'F3 a Public adapter without Experience control is a regression');
-    const [{ id: servedItem }] = await rows('SELECT package_item_id id FROM public.publication_package_manifest_items WHERE manifest_version_id = $1', [state.published.manifest]);
-    await actAs(f.reader);
-    const [rebuilt] = await rt.createDraft(fresh({ sourceClass: 'PUBLIC_EXPERIENCE', context: state.published.experience, version: state.published.version, items: [servedItem] }));
-    assert.equal(rebuilt.outcome, 'REPLAY_DRAFT_CREATED', 'F3 anti-vacuity: the mutant really lets a viewer rebuild somebody else\'s Experience');
-    await asRole('postgres');
-    await q('ROLLBACK TO SAVEPOINT f3'); await q('RELEASE SAVEPOINT f3');
+    await probe('f3', async () => {
+      const noControl = capture.replace(
+        'IF NOT FOUND OR NOT EXISTS (SELECT 1 FROM public.public_experience_controllers c\n                                  WHERE c.experience_id = p_source_context_id AND c.controller_user_id = u) THEN',
+        'IF NOT FOUND THEN');
+      assert.notEqual(noControl, capture, 'F3 the mutation landed');
+      await q(noControl);
+      await assert.rejects(verifyCatalog(), refuses, 'F3 a Public adapter without Experience control is a regression');
+      const [{ id: servedItem }] = await rows('SELECT package_item_id id FROM public.publication_package_manifest_items WHERE manifest_version_id = $1', [state.published.manifest]);
+      await actAs(f.reader);
+      const [rebuilt] = await rt.createDraft(fresh({ sourceClass: 'PUBLIC_EXPERIENCE', context: state.published.experience, version: state.published.version, items: [servedItem] }));
+      assert.equal(rebuilt.outcome, 'REPLAY_DRAFT_CREATED', 'F3 anti-vacuity: the mutant really lets a viewer rebuild somebody else\'s Experience');
+    });
 
     // F4 THE SELECTION CORE TAKES THE CALLER'S ORDER. The 0100 chronology guard
     // still refuses the reversed rows, so the structure holds even when the writer regresses.
-    await q('SAVEPOINT f4');
-    const selectCore = (await rows('SELECT pg_get_functiondef($1::regprocedure) def', [FN.SELECT]))[0].def;
-    const callerOrder = selectCore.replace('(row_number() OVER (ORDER BY mi.source_item_ordinal))::integer,', '(row_number() OVER (ORDER BY s.ord))::integer,')
-      .replace('FROM unnest(p_selected_source_item_ids, p_range_starts, p_range_ends) AS s(sid, rs, re)\n    JOIN public.replay_source_manifest_items mi',
-        'FROM unnest(p_selected_source_item_ids, p_range_starts, p_range_ends) WITH ORDINALITY AS s(sid, rs, re, ord)\n    JOIN public.replay_source_manifest_items mi');
-    assert.notEqual(callerOrder, selectCore);
-    await q(callerOrder);
-    await assert.rejects(verifyCatalog(), refuses, 'F4 a selection core that takes the caller\'s order is a regression');
-    await actAs(f.mohamed);
-    await rejected(() => rt.reviseDraft({ command: randomUUID(), replay: state.personal.replay, expectedRevision: 4, manifest: randomUUID(), selection: randomUUID(),
-      sourceClass: 'MY_WORLD', context: f.session, items: [f.userUnit, f.assistantUnit], selected: [f.assistantUnit, f.userUnit] }), ['P0001'], /REPLAY_SELECTION_CHRONOLOGY_REVERSED/u);
-    await asRole('postgres');
-    await q('ROLLBACK TO SAVEPOINT f4'); await q('RELEASE SAVEPOINT f4');
+    await probe('f4', async () => {
+      const callerOrder = selectCore.replace('(row_number() OVER (ORDER BY mi.source_item_ordinal))::integer,', '(row_number() OVER (ORDER BY s.ord))::integer,')
+        .replace('FROM unnest(p_selected_source_item_ids, p_range_starts, p_range_ends) AS s(sid, rs, re)\n    JOIN public.replay_source_manifest_items mi',
+          'FROM unnest(p_selected_source_item_ids, p_range_starts, p_range_ends) WITH ORDINALITY AS s(sid, rs, re, ord)\n    JOIN public.replay_source_manifest_items mi');
+      assert.notEqual(callerOrder, selectCore, 'F4 the mutation landed');
+      assert.ok(callerOrder.includes('WITH ORDINALITY') && callerOrder.includes('ORDER BY s.ord'), 'F4 both halves of the mutation landed');
+      await q(callerOrder);
+      await assert.rejects(verifyCatalog(), refuses, 'F4 a selection core that takes the caller\'s order is a regression');
+      await actAs(f.mohamed);
+      await rejected(() => rt.reviseDraft({ command: randomUUID(), replay: state.personal.replay, expectedRevision: 4, manifest: randomUUID(), selection: randomUUID(),
+        sourceClass: 'MY_WORLD', context: f.session, items: [f.userUnit, f.assistantUnit], selected: [f.assistantUnit, f.userUnit] }), ['P0001'], /REPLAY_SELECTION_CHRONOLOGY_REVERSED/u);
+    });
 
     // F5 THE READ BOUNDARY ANSWERS EVERYBODY.
-    await q('SAVEPOINT f5');
-    const composition = (await rows('SELECT pg_get_functiondef($1::regprocedure) def', [FN.COMPOSITION]))[0].def;
-    const anybody = composition.replace('WHERE r.id = p_replay_id AND r.created_by_user_id = p_user_id;', 'WHERE r.id = p_replay_id;');
-    assert.notEqual(anybody, composition);
-    await q(anybody);
-    await assert.rejects(verifyCatalog(), refuses, 'F5 a composition resolver that answers a stranger is a regression');
-    assert.equal((await rt.composition(state.personal.replay, f.hadir)).length, 1, 'F5 anti-vacuity: the mutant really answers a stranger');
-    await q('ROLLBACK TO SAVEPOINT f5'); await q('RELEASE SAVEPOINT f5');
+    await probe('f5', async () => {
+      const anybody = composition.replace('WHERE r.id = p_replay_id AND r.created_by_user_id = p_user_id;', 'WHERE r.id = p_replay_id;');
+      assert.notEqual(anybody, composition, 'F5 the mutation landed');
+      await q(anybody);
+      await assert.rejects(verifyCatalog(), refuses, 'F5 a composition resolver that answers a stranger is a regression');
+      assert.equal((await rt.composition(state.personal.replay, f.hadir)).length, 1, 'F5 anti-vacuity: the mutant really answers a stranger');
+    });
 
     // F6 A REVISION STOPS REVALIDATING SOURCE CURRENCY.
-    await q('SAVEPOINT f6');
-    const revise = (await rows('SELECT pg_get_functiondef($1::regprocedure) def', [FN.REVISE]))[0].def;
-    const noCurrency = revise.replace("IF currency IS DISTINCT FROM 'CURRENT' THEN", 'IF false THEN');
-    assert.notEqual(noCurrency, revise);
-    await q(noCurrency);
-    await assert.rejects(verifyCatalog(), refuses, 'F6 a revision that commits over a stale source is a regression');
-    await actAs(f.mohamed);
-    const [staleCommit] = await rt.reviseDraft({ command: randomUUID(), replay: state.shared.replay, expectedRevision: 1, selection: randomUUID(), selected: [f.mohamedMaterial] });
-    assert.equal(staleCommit.outcome, 'REPLAY_DRAFT_REVISED', 'F6 anti-vacuity: the mutant really commits old prepared state over a deleted source');
-    await asRole('postgres');
-    await q('ROLLBACK TO SAVEPOINT f6'); await q('RELEASE SAVEPOINT f6');
+    await probe('f6', async () => {
+      const noCurrency = revise.replace("IF currency IS DISTINCT FROM 'CURRENT' THEN", 'IF false THEN');
+      assert.notEqual(noCurrency, revise, 'F6 the mutation landed');
+      await q(noCurrency);
+      await assert.rejects(verifyCatalog(), refuses, 'F6 a revision that commits over a stale source is a regression');
+      await actAs(f.mohamed);
+      const [staleCommit] = await rt.reviseDraft({ command: randomUUID(), replay: state.shared.replay, expectedRevision: 1, selection: randomUUID(), selected: [f.mohamedMaterial] });
+      assert.equal(staleCommit.outcome, 'REPLAY_DRAFT_REVISED', 'F6 anti-vacuity: the mutant really commits old prepared state over a deleted source');
+    });
 
     // F7 THE READ BOUNDARY GROWS A SOURCE IDENTITY COLUMN.
     //
@@ -677,30 +705,34 @@ async function verifyForwardSafety(f, state) {
     // signature in ITS OWN canonical form rather than reproducing the migration's
     // line wrapping - so an anchor copied from the migration text matches
     // nothing, the function is recreated unchanged, and the probe silently
-    // asserts a rejection that never comes. The anchor is therefore written
-    // against the canonical form, and the mutation is PROVEN to land, exactly as
-    // every other probe here proves its own.
-    await q('SAVEPOINT f7');
-    const disclosing = composition
-      .replace(/updated_at timestamptz\)/u, 'updated_at timestamptz, shared_world_id uuid)')
-      .replace('cur.currency_state, s.updated_at', 'cur.currency_state, s.updated_at, m.shared_world_id');
-    assert.notEqual(disclosing, composition, 'F7 the mutation landed');
-    assert.match(disclosing, /shared_world_id uuid\)/u, 'F7 the disclosing column really reached the result shape');
-    await q(`DROP FUNCTION ${FN.COMPOSITION}`);
-    await q(disclosing);
-    await q(`REVOKE ALL ON FUNCTION ${FN.COMPOSITION} FROM PUBLIC, anon, authenticated`);
-    await q(`GRANT EXECUTE ON FUNCTION ${FN.COMPOSITION} TO service_role`);
-    await assert.rejects(verifyCatalog(), refuses, 'F7 a read boundary that discloses a source World is a regression');
-    await q('ROLLBACK TO SAVEPOINT f7'); await q('RELEASE SAVEPOINT f7');
+    // asserts a rejection that never comes. The anchor is written against the
+    // canonical form, where `timestamptz` renders as `timestamp with time zone`,
+    // and the mutation is PROVEN to land exactly as every other probe proves its own.
+    await probe('f7', async () => {
+      const disclosing = composition
+        .replace(/updated_at timestamp(?: with time zone|tz)\)/u, (match) => `${match.slice(0, -1)}, shared_world_id uuid)`)
+        .replace('cur.currency_state, s.updated_at', 'cur.currency_state, s.updated_at, m.shared_world_id');
+      assert.notEqual(disclosing, composition, 'F7 the mutation landed');
+      assert.match(disclosing, /shared_world_id uuid\)/u, 'F7 the disclosing column really reached the result shape');
+      assert.ok(disclosing.includes('s.updated_at, m.shared_world_id'), 'F7 and the projection really returns it');
+      await q(`DROP FUNCTION ${FN.COMPOSITION}`);
+      await q(disclosing);
+      await q(`REVOKE ALL ON FUNCTION ${FN.COMPOSITION} FROM PUBLIC, anon, authenticated`);
+      await q(`GRANT EXECUTE ON FUNCTION ${FN.COMPOSITION} TO service_role`);
+      await assert.rejects(verifyCatalog(), refuses, 'F7 a read boundary that discloses a source World is a regression');
+    });
 
     // F8 CREATION WRITES A LATER LIFECYCLE.
-    await q('SAVEPOINT f8');
-    const create = (await rows('SELECT pg_get_functiondef($1::regprocedure) def', [FN.CREATE]))[0].def;
-    const preview = create.replace("VALUES (p_replay_id, u, 'DRAFT', instant);", "VALUES (p_replay_id, u, 'PREVIEW_READY', instant);");
-    assert.notEqual(preview, create);
-    await q(preview);
-    await assert.rejects(verifyCatalog(), refuses, 'F8 a birth that skips DRAFT is a regression');
-    await q('ROLLBACK TO SAVEPOINT f8'); await q('RELEASE SAVEPOINT f8');
+    await probe('f8', async () => {
+      const preview = create.replace("VALUES (p_replay_id, u, 'DRAFT', instant);", "VALUES (p_replay_id, u, 'PREVIEW_READY', instant);");
+      assert.notEqual(preview, create, 'F8 the mutation landed');
+      await q(preview);
+      await assert.rejects(verifyCatalog(), refuses, 'F8 a birth that skips DRAFT is a regression');
+    });
+
+    // The section fails if ANY probe failed, with every failure named, so one
+    // defect never hides the probes behind it.
+    assert.deepEqual(failures, [], `forward safety: ${failures.length} probe(s) failed:\n  - ${failures.join('\n  - ')}`);
   } finally {
     await q('ROLLBACK TO SAVEPOINT forward_safety');
     await q('RELEASE SAVEPOINT forward_safety');

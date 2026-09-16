@@ -534,9 +534,27 @@ test('the verifier proves the thirty-two scenario proofs, the refused weakenings
   assert.ok((forwardSafety.match(/assert\.notEqual\(/gu) ?? []).length >= 7,
     'every mutating forward-safety probe proves its mutation landed');
   // A probe that edits a SIGNATURE cannot anchor on the migration's own line
-  // wrapping: pg_get_functiondef regenerates the signature canonically.
-  assert.match(forwardSafety, /\.replace\(\/updated_at timestamptz\\\)\//u,
+  // wrapping: pg_get_functiondef regenerates the signature canonically, and
+  // renders `timestamptz` as `timestamp with time zone`.
+  assert.match(forwardSafety, /updated_at timestamp\(\?: with time zone\|tz\)/u,
     'the signature-editing probe anchors on the canonical function definition');
+  // EVERY PROBE REPORTS ITS OWN OUTCOME IN ONE INVOCATION. A fail-fast section
+  // lets a defect in one probe hide every probe after it, so a single CI run can
+  // only ever expose one of them. These properties make the section diagnostic
+  // without weakening any probe: each still fails hard if its mutation does not
+  // land, and each still fails hard if the weakened state is accepted.
+  assert.ok(forwardSafety.includes('const failures = []'), 'probe outcomes are collected');
+  assert.match(forwardSafety, /assert\.deepEqual\(failures, \[\]/u, 'and the section fails if any probe failed');
+  assert.match(forwardSafety, /await q\(`SAVEPOINT \$\{name\}`\)/u, 'each probe is isolated by its own savepoint');
+  assert.match(forwardSafety, /ROLLBACK TO SAVEPOINT \$\{name\}[\s\S]{0,140}await asRole\('postgres'\)/u,
+    'and a failed probe cannot contaminate the next through an aborted transaction or a changed role');
+  assert.equal((forwardSafety.match(/await probe\('f\d+'/gu) ?? []).length, 8, 'all eight probes run');
+  // The pristine definitions are read ONCE, before any probe mutates anything,
+  // so a later probe can never anchor on an earlier probe's mutant.
+  assert.match(forwardSafety, /const \{ capture, selectCore, composition, revise, create \} = pristine;/u,
+    'every probe mutates the pristine definition rather than a predecessor mutant');
+  assert.ok(forwardSafety.indexOf('pristine[name] =') < forwardSafety.indexOf("await probe('f1'"),
+    'and those definitions are read before the first probe mutates anything');
   assert.ok(support.includes('removeCommittedReplays') && support.includes('REPLAY_IMMUTABLE'),
     'the shared harness lifts the Replay guards for teardown');
   assert.ok(support.includes('DISABLE TRIGGER') && support.includes('ENABLE TRIGGER')
