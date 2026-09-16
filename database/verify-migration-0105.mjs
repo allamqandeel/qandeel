@@ -906,6 +906,11 @@ async function verifyConcurrency(report, f, base) {
   const { q2, actAs2 } = secondary;
   try {
     await report.section('C01 a withdrawal racing the distribution commit blocks the stale commit', async () => {
+      // Every race begins by clearing both connections: a scenario that failed
+      // earlier would otherwise leave one inside an ABORTED transaction, and the
+      // next race would report "current transaction is aborted" instead of what
+      // it was actually proving.
+      await q2('ROLLBACK');
       await q2('BEGIN');
       await actAs2(f.creator);
       // The withdrawal takes the Replay row FOR UPDATE and holds it, uncommitted.
@@ -931,11 +936,19 @@ async function verifyConcurrency(report, f, base) {
     });
 
     await report.section('C02 a source change racing the distribution commit blocks the stale commit', async () => {
+      await asRole('postgres');
+      const [original] = await rows('SELECT committed_text FROM public.conversation_units WHERE id = $1',
+        [base.selectedUnits[0]]);
+      await q2('ROLLBACK');
       await q2('BEGIN');
       await q2('RESET ROLE');
       await q2("SET LOCAL session_replication_role = 'replica'");
-      await q2(`UPDATE public.conversation_units SET committed_text = committed_text || ' raced'
-                WHERE id = $1`, [base.selectedUnits[0]]);
+      // The committed text is pinned to its own source span by a frozen CHECK, so
+      // the raced change replaces one character with another rather than
+      // appending: different bytes, identical length, a different digest.
+      await q2(`UPDATE public.conversation_units
+                   SET committed_text = overlay(committed_text placing 'R' from 1 for 1)
+                 WHERE id = $1`, [base.selectedUnits[0]]);
       await asRole('postgres');
       await q('BEGIN');
       await actAs(f.creator);
@@ -950,12 +963,13 @@ async function verifyConcurrency(report, f, base) {
       assert.equal(refusal.code, '40001');
       assert.match(refusal.message, /REPLAY_SOURCE_STALE/u);
       await q('ROLLBACK');
-      // Put the raced source back, so the remaining race sees the truth it needs.
+      // Put the EXACT original bytes back, so the remaining race sees the truth
+      // it needs and the fixture is what it was.
       await asRole('postgres');
       await q('BEGIN');
       await q("SET LOCAL session_replication_role = 'replica'");
-      await q(`UPDATE public.conversation_units SET committed_text = replace(committed_text, ' raced', '')
-               WHERE id = $1`, [base.selectedUnits[0]]);
+      await q('UPDATE public.conversation_units SET committed_text = $2 WHERE id = $1',
+        [base.selectedUnits[0], original.committed_text]);
       await q('COMMIT');
       await asRole('postgres');
       const [currency] = await rt.currency(base.manifest);
@@ -963,7 +977,9 @@ async function verifyConcurrency(report, f, base) {
     });
 
     await report.section('C03 two competing distribution commands converge on ONE winner', async () => {
+      await q2('ROLLBACK');
       await asRole('postgres');
+      await q('ROLLBACK');
       await q('BEGIN');
       await actAs(f.creator);
       const first = q('SELECT * FROM public.authorize_replay_distribution_v1($1, $2, $3)',
