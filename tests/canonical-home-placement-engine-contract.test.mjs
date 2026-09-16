@@ -382,6 +382,29 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
   // substrate arrived with T-03B2b2 as exactly ONE migration, 0068, pinned by
   // its own contract; nothing older may carry a Home, Thread or scheme token.
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
+  // WHAT A HOME / THREAD SUBSTRATE NAME IS. `home`, `thread`, `osdap` and `spatial` are this
+  // engine's own nouns. `placement` alone is not: it is generic English that other layers use
+  // for concepts of their own (the Public World's SEMANTIC placement of an Experience, I-05B),
+  // so a bare `placement` in a name is Home substrate only when it is the CANONICAL placement,
+  // a placement ENGINE, SEARCH or SCHEME. The classifier is proven on both sides below - it can
+  // neither miss a real substrate name nor swallow an unrelated one - and the content ban over
+  // every other migration further down catches a substrate that hides behind any name at all.
+  const HOME_PLACEMENT = 'canonical[_-]?placement|placement[_-]?(?:engine|search|scheme)';
+  const SUBSTRATE_MIGRATION_NAME = new RegExp(`home|osdap|spatial|thread|${HOME_PLACEMENT}`, 'iu');
+  const SUBSTRATE_VERIFIER_NAME = new RegExp(`home|osdap|thread|${HOME_PLACEMENT}`, 'iu');
+  const HOME_VERIFIER_SCRIPT = new RegExp(`verify:.*(?:home|osdap|${HOME_PLACEMENT})`, 'u');
+  const HOME_VERIFIER_RUN = new RegExp(`npm run (verify:[\\w:-]*(?:home|osdap|${HOME_PLACEMENT})[\\w:-]*)`, 'gu');
+  for (const substrate of ['0099_thread_home_relocation_v1.sql', '0099_osdap_v2.sql', '0099_canonical_placement_engine_v2.sql',
+    '0099_placement_engine_v2.sql', '0099_home_placement_search_v2.sql', '0099_spatial_index_v1.sql']) {
+    assert.ok(SUBSTRATE_MIGRATION_NAME.test(substrate), `${substrate} names the Home / Thread substrate`);
+  }
+  for (const unrelated of ['0096_public_semantic_placement_discussion_qandeel_v1.sql', '0099_public_semantic_placement_probe_v1.sql',
+    '0099_forward_safety_probe_v1.sql', '0099_material_placement_audit_v1.sql']) {
+    assert.ok(!SUBSTRATE_MIGRATION_NAME.test(unrelated), `${unrelated} is not a Home / Thread substrate name`);
+  }
+  assert.ok(HOME_VERIFIER_SCRIPT.test('verify:durable-thread-home-same-sp-substrate:integration'));
+  assert.ok(HOME_VERIFIER_SCRIPT.test('verify:canonical-placement-engine:integration') && HOME_VERIFIER_SCRIPT.test('verify:placement-engine-v2:integration'));
+  assert.ok(!HOME_VERIFIER_SCRIPT.test('verify:public-semantic-placement-discussion-qandeel:integration'));
   const B2B2_MIGRATION = '0068_durable_thread_home_same_sp_substrate_v1.sql';
   // (T-03B2b3 added 0069, a READ / AUDIT-only migration that creates no table
   // and computes no placement; it is pinned by its own contract.)
@@ -400,7 +423,7 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
   // conversation_thread_homes as exact integer text, defines no engine, computes
   // and moves no Home; pinned by tests/historical-projection-contract.test.mjs.)
   const C_MIGRATION = '0072_historical_coverage_projection_disclosure_v1.sql';
-  assert.deepEqual(migrations.filter((name) => /home|placement|osdap|spatial|thread/iu.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
+  assert.deepEqual(migrations.filter((name) => SUBSTRATE_MIGRATION_NAME.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
     'exactly one Home / Thread SUBSTRATE migration exists (T-03B2b2), plus the T-03B2b3 READ / AUDIT migration and the T-03B3 lifecycle migration');
   for (const name of [B3_MIGRATION, B3D_MIGRATION, C_MIGRATION]) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /CREATE FUNCTION public\.(?:osdap_|compute_canonical_home_placement)|UPDATE public\.conversation_thread_homes|placement_x\s*=|placement_y\s*=/u,
@@ -413,17 +436,17 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
   for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION)) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu, `${name} carries no Home substrate`);
   }
-  assert.deepEqual(readdirSync(join(rootPath, 'database')).filter((name) => /home|placement|osdap|thread/iu.test(name)), [],
+  assert.deepEqual(readdirSync(join(rootPath, 'database')).filter((name) => SUBSTRATE_VERIFIER_NAME.test(name)), [],
     'no Home / placement verifier is named after the engine');
   // FORWARD-SAFE (R2-02): the root `scripts` map is a shared mutable global, and the Thread layer is
   // entitled to gain verifiers. The permanent claim is narrower and survives that: there is exactly
   // ONE Home / placement verifier in the repository, because T-03B2b2 is the sole Home authority and
   // this engine is production-inert. Thread verifiers unrelated to Home are none of this contract's
   // business, so they are no longer enumerated here.
-  assert.deepEqual(Object.keys(rootPackage.scripts).filter((name) => /verify:.*(?:home|placement|osdap)/u.test(name)),
+  assert.deepEqual(Object.keys(rootPackage.scripts).filter((name) => HOME_VERIFIER_SCRIPT.test(name)),
     ['verify:durable-thread-home-same-sp-substrate:integration'],
     'the only Home-related verifier script is the T-03B2b2 one; this engine contributes none');
-  assert.deepEqual([...apiCi.matchAll(/npm run (verify:[\w:-]*(?:home|placement|osdap)[\w:-]*)/gu)].map((m) => m[1]),
+  assert.deepEqual([...apiCi.matchAll(HOME_VERIFIER_RUN)].map((m) => m[1]),
     ['verify:durable-thread-home-same-sp-substrate:integration']);
 });
 

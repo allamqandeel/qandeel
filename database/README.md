@@ -1515,3 +1515,188 @@ resolver; I-05B creates that.
 ```sh
 npm run verify:public-experience-review-ready-runtime:integration
 ```
+
+## I-05B - Public Publication, Semantic Presence and Public Runtime v1 (migrations 0094-0097)
+
+I-05B is the additive runtime layer above the frozen I-05A foundation. It owns: the effective state
+of a historical approval, the ONE `READY_FOR_REVIEW -> PUBLISHED` transition, the canonical
+`PUBLIC_VISIBILITY_STATE`, the Public World serving resolver, semantic interpretation bound to the
+exact version with publisher correction, Public discussion and replies, `Public QANDEEL`, vitality,
+and the search / lens / panel projections. Migrations 0091-0093 are byte-identical; every slice pins
+them and their frozen I-04 / 0064 inputs by content.
+
+**What stays non-public and sealed.** Sealed provenance, every account identifier, contact
+endpoint, Shared World, Session, material, history item and storage handle. No I-05B relation
+references `publication_package_item_provenance`, no resolver reads it, and every result column of
+every Public read boundary is checked against a disclosure ban in the migration, in the verifier and
+in the static contract.
+
+**What I-05B does NOT own and leaves explicitly open.** `I-05C` owns deletion, complete public
+disappearance, final source-unavailability handling, the full I-05 race matrix and I-05 closure: no
+I-05B function can write `ABSENT_FROM_PUBLIC_WORLD`, and the visibility model is built so a later
+non-serving lifecycle or an additional gate composed into the ONE derivation turns every surface dark
+without rewriting any immutable record. A successor package for an Experience that is already
+`READY_FOR_REVIEW` or `PUBLISHED` is not reachable: the frozen 0093 preparation admits `DRAFT` only,
+and I-05B neither duplicates it nor invents a re-preparation path. A withdrawal recorded AFTER a
+publication is durable truth whose public consequence I-05C decides; I-05B records it and does not
+silently act on it. I-05 is not closed.
+
+**The CW2-08 Safety / Launch / entitlement dependency.** No executable canonical runtime for System /
+Safety policy, the Launch Gate or commercial entitlement exists in this repository, so the publish
+boundary consumes ONE seam, `resolve_public_publication_prerequisites_v1`, whose only answer today is
+`NOT_EVALUATED`, and requires exactly `CLEARED` from it. Production publication therefore fails closed
+on `PUBLIC_EXPERIENCE_LAUNCH_PREREQUISITE_UNRESOLVED` even when every authority gate is satisfied,
+and no permissive constant, launch-ready row or application-role grant exists to make a test reach
+`PUBLISHED`. The verifiers reach it only by replacing the seam body inside a transaction they roll
+back, or inside a committed race section that restores the production body and proves the
+restoration byte for byte. A later reviewed CW2-08 slice replaces the seam with the real gate and
+nothing in the publish boundary changes. The seam is evaluated LAST, after every authority gate, so a
+refused publication is refused for the true reason.
+
+### I-05B - Effective approval state (migration 0094)
+
+`0094_public_publication_effective_approval_state_v1.sql` composes beside the immutable 0092
+approval evidence without touching it. The existence of an approval row is NOT perpetual consent.
+Effective state is DERIVED by `derive_publication_approval_effective_state_v1` from three immutable
+facts and one append-only act: `WITHDRAWN` when a withdrawal event exists (a human act dominates),
+`SUPERSEDED` when the approval's manifest is no longer the Experience's current version's manifest (a
+later preparation replaced the package; the approval binds the old manifest by foreign key and can
+never float forward), `EFFECTIVE` otherwise. `derive_publication_manifest_effective_approvals_v1`
+walks the DERIVED required set and reports `MISSING` for a required human who never approved.
+
+`withdraw_publication_approval_v1` requires the exact historical rightsholder the approval represents
+- `auth.uid()` compared with the immutable `approver_user_id` - and reads no Shared membership, no
+controller row and no Public Identity: current membership is not rightsholder authority, control is
+not consent, and a FORMER Shared member withdraws her own consent without regaining any browsing. A
+withdrawal by anyone else, and a guessed identifier, receive ONE bounded class. The event is
+append-only for every role, one per approval, and bound to ONE exact approval - its id, its manifest
+and its approver, all read from the same immutable row - through one composite foreign key onto an
+additive candidate key `(id, manifest_version_id, approver_user_id)` that 0094 adds to the frozen
+approval table (a constraint; no row is touched and migration 0092 is not edited). Two independent
+foreign keys would have let approval A's id travel with approval B's `(manifest, approver)` pair and
+made the derivation report A as withdrawn while the row named B; the verifier proves that cross-pair
+structurally unrepresentable for the event and the command, and proves the weakening back into two
+independent keys is refused. Withdrawal takes the canonical Public lock prefix so it serializes with
+publication. Everything is executable by no application role.
+
+The frozen 0093 READY commit counts historical approval rows and is deliberately NOT the publication
+gate: the verifier proves READY still commits after a withdrawal, which is exactly why 0095 must
+re-read effective state at publish time.
+
+```sh
+npm run verify:public-publication-effective-approval-state:integration
+```
+
+### I-05B - Publication, canonical visibility and serving (migration 0095)
+
+`0095_public_experience_publication_visibility_serving_v1.sql` creates the ONE protected transition
+`publish_public_experience_v1`. A READY snapshot is trusted for nothing: under the canonical lock
+order (singleton, Experience, manifest, `shared_worlds`, materials, history items, `conversation_units`)
+it revalidates, in order, the exact controller (one class with a nonexistent Experience), lifecycle
+`READY_FOR_REVIEW` and nothing else, the exact version - current, and the one the canonical READY
+transition committed - the exact manifest of this Experience, current Shared visibility for the
+PUBLISHING human through `resolve_shared_world_history_visibility_v1` (refused with the nonexistent-
+source class), Personal ownership, the ONE I-05A authority derivation, the stored required set, every
+required approval currently `EFFECTIVE` through the ONE 0094 derivation (`MISSING`, `WITHDRAWN` and
+`SUPERSEDED` refuse; a different bound fingerprint is stale), the READY commit's own recorded
+fingerprint, and LAST the CW2-08 prerequisite seam. Then, in one transaction: lifecycle `PUBLISHED`,
+an immutable publication record naming the exact version, manifest, fingerprint and clearance basis,
+the append-only transition, the durable command. No failure leaves anything partial.
+
+The record and the command bind version, Experience and manifest as ONE exact version row: one
+composite foreign key onto an additive candidate key `(id, experience_id, package_manifest_version_id)`
+that 0095 adds to the frozen version relation (a constraint; migration 0091 is not edited). A record
+naming version V1 beside the manifest of V2 of the same Experience is therefore structurally
+unrepresentable - two independent keys would have admitted it - and the version's ordinal is read
+from the bound version row, never duplicated into the record. The verifier proves the mismatched pair
+refused for both relations and the weakening back into independent keys refused.
+
+**Canonical `PUBLIC_VISIBILITY_STATE`.** `resolve_public_visibility_state_v1` is the ONE serving
+truth: `PUBLICLY_VISIBLE` only when the lifecycle is `PUBLISHED`, an immutable publication record
+exists, the recorded version is the Experience's CURRENT version and its manifest is the recorded
+manifest. Everything else - `DRAFT`, `READY_FOR_REVIEW`, a missing record, a moved pointer, a later
+non-serving lifecycle, an identifier that names nothing - is ONE state, `NOT_PUBLICLY_VISIBLE`. Raw
+lifecycle is never the serving truth, and no consumer tests a lifecycle string for itself.
+`resolve_public_audience_admission_v1` is the separate VIEWER gate over the frozen 0091 policy: a
+signed-out viewer is admitted only when the frozen requirement is resolved `ALLOWED` (it is
+`UNRESOLVED`, so it is not); a registered viewer must be a real account.
+
+**The ONE serving resolver** `resolve_public_experience_serving_v1` composes both gates and returns
+the bounded public derivative in package order with the publisher's stable ref and CURRENT label. It
+returns zero rows for nonexistent, `DRAFT`, `READY_FOR_REVIEW`, moved-pointer and not-admitted alike,
+never reads sealed provenance, and is service_role-executable alone, following the frozen narrow
+resolver precedent; every table stays deny-by-default and every other function is internal.
+
+```sh
+npm run verify:public-experience-publication-visibility-serving:integration
+```
+
+### I-05B - Semantic placement, discussion and Public QANDEEL (migration 0096)
+
+`0096_public_semantic_placement_discussion_qandeel_v1.sql` binds semantic interpretation - a lens key
+and a bounded semantic label - by composite foreign key to ONE exact immutable version of ONE exact
+Experience. Publisher correction is ADDITIVE and AUDITABLE: every placement row is append-only, a
+correction is the next `placement_revision` for the same version, and the current-effective
+interpretation is the highest revision. `record_public_experience_semantic_placement_v1` requires the
+exact controller and writes a placement row and its command and nothing else - the verifier snapshots
+every version, package, body, provenance, approval, control, publication and lifecycle row before and
+after a correction and proves them identical. The descriptor set is deliberately minimal: no
+coordinate, embedding or ranking is invented; a later reviewed spatial model composes beside it by the
+same version key. A correction that would need a different public payload is not a correction; it is
+a new package through the frozen preparation path.
+
+**Discussion** authority is its own authority. `post_public_discussion_v1` needs an authenticated
+human, their own stable Public Identity (resolved, never supplied) and a target the canonical
+visibility truth serves to an admitted viewer; it requires no control, grants none, reads no approval,
+and a controller posts on the same terms as anyone else. A post binds the exact version that was
+visible when it was made; a reply binds a parent of the SAME Experience by composite foreign key.
+`DRAFT`, `READY_FOR_REVIEW`, nonexistent and missing-parent targets receive ONE bounded class. Posts
+are ordered by a per-Experience ordinal derived under the Experience lock and are append-only here.
+
+**Public QANDEEL** is machine state: `record_public_qandeel_response_v1` derives no human from
+`auth.uid()`, its relation carries no author, account or approver column, it binds the visible
+version, an optional reply target and the consumed posts of the same Experience, and it records a
+context fingerprint over PUBLIC-domain identities only - Experience, version, manifest, current
+placement revision, reply target, consumed posts - recomputed byte for byte by the verifier. It
+creates no consent, no control and no rightsholder authority. Three service_role resolvers serve
+placement, discussion and responses; each composes both canonical gates.
+
+**Exact-version closure.** Every post and response binds the exact version it was made against, and
+that binding is what is served: the discussion and Public QANDEEL resolvers return rows bound to the
+CURRENTLY visible version only, a reply targets a post of the visible version, and Public QANDEEL
+replies to and consumes posts of the visible version only - a superseded version's conversation is
+never silently served, extended or consumed as the current version's. What a later reviewed successor
+publication does with earlier conversation is that slice's decision; I-05B chooses no Experience-wide
+policy. The verifier proves it against a simulated successor version with real V1 history behind it
+(a verifier-only simulation, rolled back): V1 rows are not served, replied to or consumed as V2's, and
+V2 conversation through the same writers is.
+
+```sh
+npm run verify:public-semantic-placement-discussion-qandeel:integration
+```
+
+### I-05B - Vitality and search / lens / panel projections (migration 0097)
+
+`0097_public_vitality_search_lens_panel_projections_v1.sql` creates derived state that is rebuilt and
+never trusted. `recompute_public_experience_vitality_v1` counts the public discussion and Public
+QANDEEL activity bound TO the visible version - a superseded version's activity is its own history,
+never the current version's heat - and writes only when the canonical answer differs from what is
+stored (`VITALITY_UNCHANGED` otherwise); for a non-visible target it writes nothing. The verifier
+proves, against a simulated successor version, that vitality computed for V2 counts none of V1's
+activity and that the V1 row is never served as V2's.
+`rebuild_public_experience_projection_v1` builds the search document from the public derivative
+bodies of the visible manifest in package order plus the current semantic label, with the `simple`
+text-search configuration (no ranking policy is invented), and DELETES the projection of an
+Experience that is not publicly visible, so no projection outlives the visibility it was derived from.
+
+Every read path - `resolve_public_experience_vitality_v1`, `search_public_experiences_v1`,
+`resolve_public_lens_v1`, `resolve_public_panel_v1` - composes the ONE visibility derivation with the
+admission gate again and serves a stored row only while it describes the CURRENTLY visible version, so
+a stale projection or a planted vitality row is never an independent source of truth and can never
+make an invisible Experience visible. Display labels are joined live, never copied. A later reviewed
+slice that ends public presence turns every read dark through the ONE derivation and clears the
+projection on the next rebuild without rewriting any historical post, response or placement.
+
+```sh
+npm run verify:public-vitality-search-lens-panel-projections:integration
+```
