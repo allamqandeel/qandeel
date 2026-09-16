@@ -150,6 +150,8 @@
     "verify:public-vitality-search-lens-panel-projections:integration": "node --env-file-if-exists=.env database/verify-migration-0097.mjs",
     "verify:public-continuing-eligibility-visibility-closure:integration": "node --env-file-if-exists=.env database/verify-migration-0098.mjs",
     "verify:public-experience-disappearance-runtime:integration": "node --env-file-if-exists=.env database/verify-migration-0099.mjs",
+    "verify:replay-foundation-source-manifest:integration": "node --env-file-if-exists=.env database/verify-migration-0100.mjs",
+    "verify:replay-authorized-draft-runtime:integration": "node --env-file-if-exists=.env database/verify-migration-0101.mjs",
     "test:shared-delivery-authority-revalidation-contract": "node --test tests/shared-delivery-authority-revalidation-contract.test.mjs",
     "test:connected-worlds-i03-authority-closure-contract": "node --test tests/connected-worlds-i03-authority-closure-contract.test.mjs",
     "test:integrated-intelligence-runtime-phase-closure-contract": "node --test tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs",

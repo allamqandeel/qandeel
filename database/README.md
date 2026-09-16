@@ -2003,3 +2003,125 @@ production today, and saying so is the point: publication fails closed, the sign
 unresolved, and every consequential primitive is executable by no application role. A later reviewed
 CW2-08 slice replaces the seam with the real gate and nothing in the publish boundary, the visibility
 truth or the disappearance runtime changes.
+
+## I-06A - Replay Foundation, Authorized Source Capture and Draft Runtime v1 (migrations 0100-0101)
+
+`I-06A` opens `I-06 - Replay Runtime`. The full phase document is
+[`docs/replay-runtime-v1.md`](../docs/replay-runtime-v1.md); this section records the substrate and how
+to run its verifiers. `I-06` is ACTIVE and `I-06A` is a CANDIDATE awaiting independent review.
+
+A Replay is a source-bound derived artifact - `MATERIAL_ARTIFACT` of kind `REPLAY_ARTIFACT` in the
+merged I-01A kernel - and never a World. The slice implements `REPLAY_CREATION_AUTHORITY` only.
+Creation authority and distribution authority are different architecture concepts and live nowhere
+near each other: no relation here carries a public, share, download, distribution approver, Premium,
+Safety or Launch column, and migration 0100 refuses to deploy if one appears.
+
+**There is deliberately no `REPLAY_VERSION`.** A canonical Replay Version binds four components -
+source manifest, selection spec, analytical projection and render contract. I-06A owns the first two;
+the projection and the render contract are I-06B. Rather than write a version bound to two real
+components and two placeholders, the stable Replay carries a private DRAFT composition and the first
+complete Replay Version belongs to the slice that can bind all four truthfully.
+
+### I-06A - Replay foundation persistence (migration 0100)
+
+`0100_replay_foundation_source_manifest_selection_v1.sql` is persistence only. It creates no writer,
+grants nothing and writes no row. Six relations:
+
+| Relation | Role |
+| --- | --- |
+| `replays` | the stable identity: creator, lifecycle `DRAFT` / `PREVIEW_READY` / `FINALIZED`, birth instant |
+| `replay_source_manifest_versions` | one immutable manifest bound to ONE authorized source context |
+| `replay_source_manifest_items` | its exact item set in canonical source order |
+| `replay_selection_spec_versions` | one immutable resolved selection over one exact manifest |
+| `replay_selection_spec_items` | the selected items with exact source-native anchors |
+| `replay_draft_state` | the ONE mutable current-composition pointer |
+
+The manifest binds exactly one context per class - a Personal Session the creator owns, one Shared
+World, or one exact Public Experience Version - through `creation_authority_basis` pinned by CHECK to
+`PERSONAL_SOURCE_OWNERSHIP`, `SHARED_HISTORY_VISIBILITY` or `PUBLIC_EXPERIENCE_CONTROL`. Items carry a
+one-way `sha256:` canonical source-identity digest and no content: there is no body, text, transcript,
+audio reference, payload or JSON column in the slice, no foreign key to any body relation that owner
+deletion destroys, and no reference at all to `publication_package_item_provenance`.
+
+`captured_source_digest` is the canonical BODY-IDENTITY digest each substrate already defines, recorded
+so a later revision is detectable - not an independent attestation of media bytes. For Personal source
+it is sha256 over the committed unit's exact UTF-8 text; for Shared text, sha256 over the material body
+text; for a Public item, that item's own `public_body_digest`; and for a Shared `HUMAN_VOICE_NOTE` it
+follows the frozen I-04G convention of sha256 over the opaque audio object REFERENCE and the transcript,
+which does NOT attest the underlying audio media bytes and grants no media delivery capability. This
+slice does not rename or redesign that convention.
+
+Foreign keys prove each source row EXISTS; they cannot prove the several columns an item stores came
+from the SAME row. A Replay-owned `BEFORE INSERT` guard proves that, for every role including the table
+owner: a Personal id, Session, Session Position and role must be ONE `conversation_units` row; a Shared
+material id, world and `history_item_id` must be ONE material row whose history item carries the
+captured instant; and a public ordinal and classification must be read from the exact package item
+named. It acts only once both compared parents exist, so it never preempts a foreign key, and it reads
+identity and never content. No candidate key was added to any frozen predecessor table.
+
+`FULL_SOURCE` is representable only over a manifest that captured the complete authorized universe,
+selected whole and contiguously - `universe_complete` is GENERATED from the captured counts and bound
+by composite foreign key, so a caller cannot self-assert completeness. The other coverage classes are
+`SELECTED_EXCERPT` and `HIGHLIGHT_SELECTION`. A `BEFORE INSERT` trigger makes a chronology reversal
+unrepresentable rather than merely refused. Every component relation is append-only for every role
+including the table owner, and every relation is postgres-owned with RLS on, zero policies and zero
+application-role privileges.
+
+### I-06A - Authorized source capture and draft runtime (migration 0101)
+
+`0101_replay_authorized_draft_runtime_v1.sql` adds the two typed command relations and eight
+functions. The two human primitives - `create_replay_draft_v1` and `revise_replay_draft_v1` - derive
+the human from `auth.uid()` and accept no actor, authority, audience, order, digest, medium or
+completeness parameter. `resolve_replay_draft_composition_v1` is the ONE read boundary: it answers the
+exact creator, returns zero rows to everybody else, and discloses no source identity of any kind.
+
+Source adapters, truthfully:
+
+```text
+MY_WORLD text                      SUPPORTED from canonical conversation_units, owner-exact
+MY_WORLD original audio / call     NOT PRODUCIBLE - no durable canonical source exists
+SHARED_WORLD HUMAN_TEXT            SUPPORTED when exact history visibility allows
+SHARED_WORLD HUMAN_VOICE_NOTE      source identity SUPPORTED; no media delivery is claimed
+SHARED_WORLD QANDEEL_OUTPUT        SUPPORTED when exact history visibility allows
+SHARED_WORLD QANDEEL_ANALYSIS      SUPPORTED when exact history visibility allows
+reserved Shared kinds              NOT PRODUCIBLE - unrepresentable by CHECK
+owned PUBLIC_EXPERIENCE            SUPPORTED only through exact Experience CONTROL
+Replay-of-Replay                   NOT IMPLEMENTED
+```
+
+Shared eligibility consumes the ONE canonical entry point
+`resolve_shared_world_history_visibility_v1` and is never re-derived from membership. Public
+eligibility requires an exact `public_experience_controllers` row for the creating human and is never
+taken from `resolve_public_visibility_state_v1`; the capture binds the bounded public derivative of the
+exact controlled current version as ONE row through the additive 0095 candidate key, and never
+traverses the sealed provenance. `derive_replay_source_manifest_currency_v1` is the ONE currency
+derivation, answering availability before access.
+
+Every consequential primitive, both internal cores, the lock helper and the currency derivation are
+executable by no application role, pending a reviewed CW2-08 wrapper. `service_role` alone may execute
+the read boundary.
+
+### I-06A - lock order
+
+```text
+replays FOR UPDATE
+  -> MY_WORLD          session_semantic_clocks, then conversation_units by id, FOR SHARE
+     SHARED_WORLD      shared_worlds, then materials by id, then history items by id, FOR SHARE
+     PUBLIC_EXPERIENCE public_world_state, then public_experiences, then the package, FOR SHARE
+  -> Replay component writes
+```
+
+The Replay object is taken first and each source domain keeps its own frozen relative order, so no
+Replay path can invert against a predecessor writer. The migration asserts this ordering of its own
+text at deploy time.
+
+### I-06A - verifier commands
+
+```bash
+npm run verify:replay-foundation-source-manifest:integration
+npm run verify:replay-authorized-draft-runtime:integration
+```
+
+Both need `DATABASE_URL` pointing at a FULLY migrated database and are run in CI as one reported group
+after the I-05C group. They roll back or explicitly remove every fixture they create and prove the
+residue is zero.
