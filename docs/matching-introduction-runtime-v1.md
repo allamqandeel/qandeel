@@ -2,7 +2,7 @@
 
 **Phase:** `I-07 — Introductions / Matching Runtime` — **OPEN**
 **Slice:** `I-07A — Matching Foundation, Participation & Private Authority Runtime v1` —
-**CANDIDATE — awaiting independent ChatGPT review**
+**CLOSED / FROZEN**
 **Architecture authority:** `QANDEEL_CW2-06 — Introductions / Matching Runtime Architecture v1.0 —
 CLOSED / FROZEN`, with binding `CW2-01`–`CW2-05` and `CW2-08`
 **Migrations:** `0108_matching_participation_private_setup_foundation_v1.sql`,
@@ -257,8 +257,24 @@ as the table owner inside a scenario that rolls back, and every weakening probe 
 production definition and proves it back byte for byte. No permissive definition is ever left
 installed. The serialization row is proven by a real committed race on two connections.
 
-## 13. Status
+## 13. Status and closure record
 
-`I-07A` is **`CANDIDATE — awaiting independent ChatGPT review`**. `I-07` is **OPEN**. Neither is
-closed or frozen by this slice, and the closing slice of the phase owns the `I-07` closure record
-under `BG-09`.
+`I-07A` is **CLOSED / FROZEN**. `I-07` remains **OPEN**; this closure does not start or close `I-07B`,
+`I-07C`, or `I-07D` and does not change any Product/runtime semantic above.
+
+Independent ChatGPT Architecture review passed on implementation head
+`fe61641f2205a464e1afa6ac35592b683a018b2f`. The review covered the actual PR diff, migrations
+`0108`/`0109`, the command and authority boundaries, the real-PostgreSQL verifiers, the exact-head CI
+state, and the order of the implementation/fix commits. No runtime, schema, verifier, or test-semantic
+finding required a revision.
+
+**BG-08 reconciliation:** no newly discovered cross-task obligation qualifies for admission from
+`I-07A`. The deferred capabilities listed in §11 are already owned by frozen `CW2-06` / `CW2-08` or by
+the named later `I-07` slices, so duplicating them in the canonical backlog would violate the intent of
+`BG-06`. No existing open canonical-backlog item is owned by `I-07A`, so there is no inherited item to
+tombstone, re-own, or carry forward here.
+
+**BG-09 synchronization:** the stale `CANDIDATE — awaiting independent ChatGPT review` banner was the
+pre-review state of this same task. This closure sync records that transition rather than leaving the
+primary document stale. `I-07` itself remains OPEN and its phase-level closure record stays owned by the
+closing slice of the phase.
