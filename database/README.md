@@ -2400,3 +2400,147 @@ it rolls back, or - for the six committed races - by restoring it in a `finally`
 production body back byte for byte. The 0106 verifier additionally simulates the canonical I-06A source
 currency for exactly one purpose - proving that current availability DELEGATES rather than re-derives -
 and proves that production body back too. No permissive seam is ever left installed.
+
+## I-07A - Matching Participation, Private Authority and Versioned Setup Foundation v1 (migrations 0108-0109)
+
+Matching v1 is exactly one Product capability: `MARRIAGE_INTRODUCTION`. It is hosted from `MY_WORLD`,
+it is a doorway, it is private by default and it is mediated by QANDEEL. It is not a Shared World, a
+dating feed, a candidate marketplace, a searchable people directory, a leaderboard or a direct-contact
+channel, and these two migrations create nothing that could become one. A later Mutual Match will
+create exactly one `SHARED_WORLD / INTRODUCTION`; that World belongs to `I-07C` and is neither
+created, reserved, pre-created nor simulated here.
+
+### Three independent authorities
+
+Participation, the Matching Context Grant and the Pre-Match Proposal Disclosure Authority are three
+separate truths. They are independently mutable, independently inspectable, and none of them may
+silently create another - so they are three separate table families with no foreign key, trigger or
+generated column joining one to another. Turning participation off revokes nothing, because no
+participation command has a database path into a grant, a profile, a requirement version or a
+disclosure authority; holding a grant creates no participation for the same reason. Whether a grant is
+EFFECTIVE for future candidate work is gated by participation later, in `I-07B`.
+
+```text
+matching_setup_locks                       the per-human serialization row, and nothing else
+  matching_participation_events            immutable act CHAIN   -> matching_participation_state
+  matching_context_grants                  ACTIVE | REVOKED      -> matching_context_consent_events
+  introduction_profile_versions            immutable versions    -> introduction_profile_state
+    introduction_profile_field_values      bounded private fields
+  matching_requirement_versions            immutable versions    -> matching_requirement_state
+    matching_requirement_items             HARD_DEALBREAKER | SOFT_PREFERENCE
+  pre_match_disclosure_authorities         bound to ONE exact profile version
+    pre_match_disclosure_authority_fields  bound to REAL fields OF THAT VERSION
+    pre_match_disclosure_authority_events  immutable authority history
+```
+
+### Current state is a pointer, never a second copy
+
+Every current truth is an explicit pointer to an exact historical identity, bound by a COMPOSITE
+foreign key so it can only ever name a row of its own human. The current participation state is the
+resulting state of the act the pointer names and is stored nowhere else, so divergence is
+unrepresentable rather than merely avoided and `latest timestamp wins` decides nothing. Absence of a
+pointer is `OFF`: participation is never inferred from a profile, a grant, a disclosure authority or
+conversation history. Every pointer family carries a prior-identity link with a partial unique index,
+so an identity is superseded at most once and the history is a CHAIN rather than a tree - and a truth
+trigger refuses a pointer move whose target does not chain from the value being replaced, which binds
+the table owner too.
+
+### Why the I-07A resume path cannot bypass a later gate
+
+All five CW2-06 pause reasons are representable. Only `USER_PAUSED` has an I-07A producer; the other
+four - `ACTIVE_INTRODUCTION`, `POST_INTRODUCTION`, `POST_SUCCESS`, `SYSTEM_POLICY` - are reserved for
+`I-07C` and `I-07D` exactly as migration 0089 carries reserved material kinds that pin no producer.
+Two rules close the loop together:
+
+1. `resume_matching_participation_v1` lifts `PAUSED / USER_PAUSED` and refuses every other pause
+   reason with a bounded `MATCHING_PAUSE_NOT_USER_RESUMABLE`.
+2. Activation is not a way around rule 1. It requires the current state to be `OFF`, so it can never
+   be applied to a pause directly - and an `OFF` reached FROM a pause I-07A may not resume is refused
+   with `MATCHING_REACTIVATION_REQUIRES_REVALIDATION`, because the obvious bypass is two steps rather
+   than one. The check is exactly one hop along the immutable chain, and one hop is the whole of it:
+   the only way to reach `OFF` from a pause is that single `TURN_OFF` act, and the chain cannot fork.
+
+Opting out is never blocked. It is the human's own privacy authority and works from any state,
+including a pause I-07A cannot resume; it simply does not launder the pause.
+
+### The bounded field representation
+
+The Product's Introduction Profile catalogue is DEFERRED by CW2-06 and neither migration decides it. A
+field is a bounded lower-case identifier key with a bounded private text value, so the catalogue stays
+configurable without a speculative marriage questionnaire being frozen into DDL. What the
+representation may never become is an arbitrary channel: there is no JSON and no array column, the
+value is structurally ceilinged, and a key may not name a DIRECT CONTACT ROUTE or an IDENTITY
+DOCUMENT - phone, email, a social handle, a street or geographic address, a photo or other media
+handle, a URL, an identifier number or a KYC artifact. That ban is what makes `no photo or contact
+disclosure behaviour in I-07A` structural rather than a comment: a disclosure authority approves a
+FIELD KEY, and no field key can name a contact route. The ban is token-delimited, so
+`handles_conflict_well` is an ordinary profile field while `whatsapp_handle` can never exist. It bans
+a contact-route FIELD; it does not police free text a human writes about themselves.
+
+### An authority over V1 never covers V2
+
+A Pre-Match Disclosure Authority binds one exact Introduction Profile version - the grantor's OWN, by
+composite foreign key - and each approved field is bound by composite foreign key to a REAL FIELD ROW
+OF THAT EXACT VERSION. A V1 authority therefore cannot name a V2 field even by accident: structural
+impossibility, not a runtime check that could be forgotten. When the profile moves on, the old
+authority stays bound to the old version and a NEW authority over the superseded version is refused;
+re-approving is an explicit act over the version the human is looking at.
+
+### The command boundary
+
+Eleven boundaries, all `SECURITY DEFINER` with a pinned empty `search_path`, all deriving their human
+from `auth.uid()`, all executable by `authenticated` and by nothing else. `PUBLIC`, `anon` and
+`service_role` receive nothing: the server may facilitate the experience later, but possession of the
+service-role credential must never be able to manufacture, widen or withdraw a human's Matching
+participation or consent.
+
+```text
+activate_matching_participation_v1      pause_matching_participation_v1
+resume_matching_participation_v1        turn_off_matching_participation_v1
+grant_matching_context_v1               revoke_matching_context_v1
+set_introduction_profile_v1             set_matching_requirements_v1
+grant_pre_match_disclosure_authority_v1 revoke_pre_match_disclosure_authority_v1
+get_my_matching_setup_v1
+```
+
+Four participation commands rather than one command with a kind parameter: the act is fixed by
+FUNCTION IDENTITY exactly as the grant semantics are fixed by table identity, so a caller cannot spell
+an act, cannot spell a pause reason, and cannot reach the resume path by asking an activate command
+for it.
+
+The command id IS the primary key of the row each command commits, so there is no second idempotency
+table and no idempotency key that can drift from the result. An equivalent retry returns the already
+committed result read back from the committed row rather than echoed from the retry's arguments; the
+same id carrying a different request fails closed with `23505`, and the comparison covers the WHOLE
+immutable request including the exact committed field or key SET. Every consequential command names
+the exact current identity it expects, and any other current state is a bounded `40001`.
+
+No command takes a human identifier, so a caller cannot even phrase a question about someone else, and
+the self-inspection projection takes no parameter at all. A grant, authority or version that is not
+the caller's own is reported through the same bounded error as one that never existed.
+
+### Lock order
+
+```text
+matching_setup_locks                 FOR UPDATE   the caller's own row, first and always
+  -> introduction_profile_state      FOR SHARE    disclosure grant only
+     introduction_profile_versions   FOR SHARE    disclosure grant only
+  -> the family the command owns     FOR UPDATE
+```
+
+A command only ever touches rows of ONE human - its own `auth.uid()` - so two humans can never
+contend, and two commands of the same human are serialized by that human's lock row before they reach
+anything else. There is no cycle to deadlock on, no advisory lock and no process-local mutex.
+
+### I-07A - verifier commands
+
+```bash
+npm run verify:matching-participation-private-setup-foundation:integration
+npm run verify:matching-setup-human-authority-commands:integration
+```
+
+Both need `DATABASE_URL` pointing at a FULLY migrated database and are run in CI as one reported group
+after the I-06D group. Both report every scenario independently through the permanent aggregator. The
+verifiers reach the four reserved pause reasons - which have no I-07A producer on purpose - only as
+the table owner inside a scenario that rolls back, and every weakening probe restores the production
+definition and proves it back byte for byte. No permissive definition is ever left installed.
