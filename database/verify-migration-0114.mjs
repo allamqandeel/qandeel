@@ -245,14 +245,17 @@ async function verifyAtomicity(report, humans, gateSeam) {
         'A01 the competitor was cancelled by the Match');
       const [link] = await rt.cancellationsOf(ids.command);
       assert.equal(link.cancelled_proposal_id, competitor.proposal, 'A01 the cancellation link names the competitor');
+      // The transition chain's instants belong to the 0112 writer (the 0110
+      // default, the transaction timestamp), so "inside the same transaction"
+      // is proven by equality with the winning transition's own instant.
       const [cancellation] = await rows(
         `SELECT t.prior_state, t.resulting_state, t.private_reason_code, t.first_recipient_actor_id, t.candidate_actor_id,
-                (t.occurred_at = c.committed_at) AS same_instant
-           FROM ${P.TRANSITIONS} t, ${MATCH.COMMITS} c WHERE t.id = $1 AND c.id = $2`, [link.cancellation_transition_id, ids.command]);
+                (t.occurred_at = w.occurred_at) AS same_transaction
+           FROM ${P.TRANSITIONS} t, ${P.TRANSITIONS} w WHERE t.id = $1 AND w.id = $2`, [link.cancellation_transition_id, ids.command]);
       assert.deepEqual(cancellation, {
         prior_state: 'OFFERED_TO_FIRST', resulting_state: 'CANCELLED_BY_COMPETING_MATCH', private_reason_code: COMPETING_REASON,
-        first_recipient_actor_id: null, candidate_actor_id: null, same_instant: true,
-      }, 'A01 moved from the exact state read under its row lock, by no human, with the private reason, at the one instant');
+        first_recipient_actor_id: null, candidate_actor_id: null, same_transaction: true,
+      }, 'A01 moved from the exact state read under its row lock, by no human, with the private reason, in the same transaction as the winner');
       assert.equal(await count(P.TRANSITIONS, "proposal_id = $1 AND resulting_state = 'STALE'", [competitor.proposal]), 0,
         'A01 the competitor was not left to become STALE later');
       await actAs(one);

@@ -454,7 +454,7 @@ async function verifyStructure(report, humans) {
       // Coherence: a status without its end instant, and an end without its status.
       await rejected(() => q(`UPDATE ${MATCH.RECORDS} SET introduction_status = 'CLOSED' WHERE id = $1`, [ids.record]),
         ['23514', '55000'], /closure_consistency_check|TRANSITION_INVALID/u);
-      await rejected(() => q(`UPDATE ${MATCH.RECORDS} SET ended_at = CURRENT_TIMESTAMP WHERE id = $1`, [ids.record]),
+      await rejected(() => q(`UPDATE ${MATCH.RECORDS} SET ended_at = clock_timestamp() WHERE id = $1`, [ids.record]),
         ['23514', '55000'], /closure_consistency_check|TRANSITION_INVALID/u);
       // Identity frozen, never deleted.
       await rejected(() => q(`UPDATE ${MATCH.RECORDS} SET world_id = $2 WHERE id = $1`, [ids.record, randomUUID()]),
@@ -462,14 +462,17 @@ async function verifyStructure(report, humans) {
       await rejected(() => q(`DELETE FROM ${MATCH.RECORDS} WHERE id = $1`, [ids.record]), ['55000'], /IS_DURABLE/u);
       // THE TERMINAL MOVE IS REPRESENTABLE - and I-07C has no producer for it,
       // which P07 proves - so I-07D adds a producer rather than relaxing this.
+      // The end instant is read from the clock: the record was started at a
+      // clock instant inside this transaction, and the transaction timestamp
+      // precedes it.
       await q('SAVEPOINT terminal');
-      await q(`UPDATE ${MATCH.RECORDS} SET introduction_status = 'CLOSED', ended_at = CURRENT_TIMESTAMP WHERE id = $1`, [ids.record]);
+      await q(`UPDATE ${MATCH.RECORDS} SET introduction_status = 'CLOSED', ended_at = clock_timestamp() WHERE id = $1`, [ids.record]);
       assert.equal((await rt.recordRow(ids.record)).introduction_status, 'CLOSED', 'S05 CLOSED is reachable by the one terminal move');
       await rejected(() => q(`UPDATE ${MATCH.RECORDS} SET introduction_status = 'ACTIVE', ended_at = NULL WHERE id = $1`, [ids.record]),
         ['55000'], /TRANSITION_INVALID/u);
       await q('ROLLBACK TO SAVEPOINT terminal');
       await q('RELEASE SAVEPOINT terminal');
-      await q(`UPDATE ${MATCH.RECORDS} SET introduction_status = 'COMPLETED', ended_at = CURRENT_TIMESTAMP WHERE id = $1`, [ids.record]);
+      await q(`UPDATE ${MATCH.RECORDS} SET introduction_status = 'COMPLETED', ended_at = clock_timestamp() WHERE id = $1`, [ids.record]);
       assert.equal((await rt.recordRow(ids.record)).introduction_status, 'COMPLETED', 'S05 and COMPLETED by the other');
     });
 
@@ -508,7 +511,7 @@ async function verifyStructure(report, humans) {
       await rejected(() => q(`UPDATE ${MATCH.CLAIMS} SET user_id = $2 WHERE id = $1`, [ids.firstClaim, three]),
         ['55000'], /IDENTITY_IS_FROZEN/u);
       await rejected(() => q(`DELETE FROM ${MATCH.CLAIMS} WHERE id = $1`, [ids.firstClaim]), ['55000'], /IS_DURABLE/u);
-      await q(`UPDATE ${MATCH.CLAIMS} SET claim_state = 'RELEASED', released_at = CURRENT_TIMESTAMP WHERE id = $1`, [ids.firstClaim]);
+      await q(`UPDATE ${MATCH.CLAIMS} SET claim_state = 'RELEASED', released_at = clock_timestamp() WHERE id = $1`, [ids.firstClaim]);
       await rejected(() => q(`UPDATE ${MATCH.CLAIMS} SET claim_state = 'HELD', released_at = NULL WHERE id = $1`, [ids.firstClaim]),
         ['55000'], /TRANSITION_INVALID/u);
       // Once released, a NEW claim for that human is representable again, which
@@ -555,10 +558,19 @@ async function verifyStructure(report, humans) {
       const fields = await rt.fieldsOf(ids.handoff);
       assert.equal(fields.length, 4, 'S09 the two approved and permitted fields, once per subject');
       const [aboutTwo] = subjects.filter((s) => s.subject_user_id === two);
-      // A field the view never disclosed - a real profile field, approved by nobody.
-      await rejected(() => q(`INSERT INTO ${MATCH.FIELDS} (package_version_id, subject_user_id, source_view_id, field_key, disclosed_value)
-               VALUES ($1, $2, $3, 'home_city_region', 'the quieter side of town')`,
-      [ids.handoff, two, aboutTwo.source_view_id]), ['23503'], /view_field_fk/u);
+      // A field the view never disclosed - a real profile field, approved by
+      // nobody. The truth guard (BEFORE ROW) meets it before the foreign key
+      // does, so both refusals are proven: the guard as deployed, and the key
+      // on its own with the guard lifted inside a savepoint.
+      const undisclosed = () => q(`INSERT INTO ${MATCH.FIELDS} (package_version_id, subject_user_id, source_view_id, field_key, disclosed_value)
+               VALUES ($1, $2, $3, 'home_city_region', 'the quieter side of town')`, [ids.handoff, two, aboutTwo.source_view_id]);
+      await rejected(undisclosed, ['55000'], /NOT_VIEW_VALUE/u);
+      await q('SAVEPOINT undisclosed');
+      await q(`ALTER TABLE ${MATCH.FIELDS} DISABLE TRIGGER matching_match_handoff_fields_truth`);
+      await rejected(undisclosed, ['23503'], /view_field_fk/u);
+      await q('ROLLBACK TO SAVEPOINT undisclosed');
+      await q('RELEASE SAVEPOINT undisclosed');
+      assert.equal(await rt.triggerEnabled(MATCH.FIELDS, 'matching_match_handoff_fields_truth'), true, 'S09 the guard is enabled again');
       // A value that differs from the view's, under a real disclosed key. The
       // copied row is append-only, so the probe lifts it for one statement
       // inside a savepoint and tries to write a different value in its place.

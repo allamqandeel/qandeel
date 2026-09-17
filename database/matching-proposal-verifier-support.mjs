@@ -503,8 +503,14 @@ export function createProposalRuntime(databaseUrl) {
     await rt.asRole('postgres');
     await q('BEGIN');
     try {
-      for (const [table, trigger] of MATCH_GUARDS) {
-        await q(`ALTER TABLE ${table} DISABLE TRIGGER ${trigger}`);
+      // The commit binds its children immediately and its children bind the
+      // commit restrictively - RESTRICT is checked at once even when deferrable
+      // - so by design nothing can delete a Match row by row. The teardown of
+      // COMMITTED race fixtures therefore lifts every trigger on the Match
+      // relations, referential ones included, as the superuser inside this one
+      // transaction, and restores them all before it commits.
+      for (const table of MATCH_TABLES) {
+        await q(`ALTER TABLE ${table} DISABLE TRIGGER ALL`);
       }
       const pairs = `(SELECT pr.id FROM ${P.PAIRS} pr
                        WHERE pr.lower_user_id = ANY($1::uuid[]) OR pr.higher_user_id = ANY($1::uuid[]))`;
@@ -531,8 +537,8 @@ export function createProposalRuntime(databaseUrl) {
       await q('DELETE FROM public.shared_world_membership_episodes WHERE world_id = ANY($1::uuid[])', [bornWorlds]);
       await q('DELETE FROM public.shared_worlds WHERE id = ANY($1::uuid[])', [bornWorlds]);
       await q(`DELETE FROM ${MATCH.BINDINGS} WHERE proposal_id IN ${proposals}`, [humans]);
-      for (const [table, trigger] of MATCH_GUARDS) {
-        await q(`ALTER TABLE ${table} ENABLE TRIGGER ${trigger}`);
+      for (const table of MATCH_TABLES) {
+        await q(`ALTER TABLE ${table} ENABLE TRIGGER ALL`);
       }
       await q('COMMIT');
     } catch (error) {
