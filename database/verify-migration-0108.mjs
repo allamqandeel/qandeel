@@ -559,25 +559,32 @@ async function verifyForwardSafety(report, humans) {
       'SELECT pg_get_functiondef(pr.oid) definition, pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure',
       ['public.reject_matching_setup_mutation_v1()']))[0];
     await report.isolated('f1 the append-only guard is what refuses an owner rewrite', async () => {
-      const row = act({ participant_user_id: one });
+      // THE MUTATION REWRITES ACTIVATION PROVENANCE, which is exactly the harm
+      // the guard exists to prevent and which no CHECK constrains: both entry
+      // channels are legal for an ACTIVATE act. A mutation that a CHECK would
+      // refuse anyway proves nothing about the guard, because the weakened run
+      // would fail for the other reason and read as "the guard still held".
+      const row = act({ participant_user_id: one, activation_entry_channel: 'MANUAL_MY_WORLD_ENTRY' });
       await insertAct(row);
-      await rejected(() => q(`UPDATE ${M.ACTS} SET resulting_state = 'OFF' WHERE id = $1`, [row.id]),
-        ['55000'], /MATCHING_SETUP_RECORD_IS_IMMUTABLE/u);
+      const rewrite = `UPDATE ${M.ACTS} SET activation_entry_channel = 'CONVERSATIONAL_ENTRY' WHERE id = $1`;
+      await rejected(() => q(rewrite, [row.id]), ['55000'], /MATCHING_SETUP_RECORD_IS_IMMUTABLE/u);
       const weakened = guard.definition.replace(
         "RAISE EXCEPTION 'MATCHING_SETUP_RECORD_IS_IMMUTABLE'",
         "RETURN NEW; RAISE EXCEPTION 'MATCHING_SETUP_RECORD_IS_IMMUTABLE'");
       assert.notEqual(weakened, guard.definition, 'f1 the weakening changed the guard');
       assert.ok(weakened.includes('RETURN NEW; RAISE EXCEPTION'), 'f1 and it introduced the early return');
       await q(weakened);
-      await q(`UPDATE ${M.ACTS} SET resulting_state = 'OFF' WHERE id = $1`, [row.id]);
-      assert.equal(await count(M.ACTS, "id = $1 AND resulting_state = 'OFF'", [row.id]), 1,
-        'f1 without the guard the owner really can rewrite a committed act, so the guard is load-bearing');
+      await q(rewrite, [row.id]);
+      assert.equal(await count(M.ACTS, "id = $1 AND activation_entry_channel = 'CONVERSATIONAL_ENTRY'",
+        [row.id]), 1,
+      'f1 without the guard the owner really can rewrite a human recorded entry channel, so the guard is load-bearing');
       await q(guard.definition);
       const [restored] = await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure',
         ['public.reject_matching_setup_mutation_v1()']);
       assert.equal(restored.prosrc, guard.prosrc, 'f1 the production guard is restored byte for byte');
-      await rejected(() => q(`UPDATE ${M.ACTS} SET resulting_state = 'ACTIVE' WHERE id = $1`, [row.id]),
-        ['55000'], /MATCHING_SETUP_RECORD_IS_IMMUTABLE/u);
+      await rejected(() => q(
+        `UPDATE ${M.ACTS} SET activation_entry_channel = 'MANUAL_MY_WORLD_ENTRY' WHERE id = $1`, [row.id]),
+      ['55000'], /MATCHING_SETUP_RECORD_IS_IMMUTABLE/u);
     });
 
     const pointer = (await rows(
