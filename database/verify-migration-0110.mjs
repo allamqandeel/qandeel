@@ -66,7 +66,7 @@ import {
   PROPOSAL_TRIGGER_FUNCTIONS, PROPOSAL_STATES, RESERVED_I07C_STATES, LIVE_STATES,
   ABSENT_ACCEPTANCE_STATES, REQUIREMENT_OUTCOMES, EVIDENCE_SOURCE_CLASSES,
   FORBIDDEN_SOURCE_CLASSES, FILTER_REFUSAL_CLASSES, POLICY_KINDS,
-  MATCHING_TABLES, LATER_SLICE_LIFECYCLE_RELATIONS, runVerifier, APP_ROLES,
+  MATCHING_TABLES, LATER_SLICE_LIFECYCLE_RELATIONS, I07C_LIFECYCLE_RELATIONS, runVerifier, APP_ROLES,
 } from './matching-proposal-verifier-support.mjs';
 
 const rt = createProposalRuntime(process.env.DATABASE_URL);
@@ -361,18 +361,36 @@ async function verifyCatalog() {
         AND c.relname ~* '^(matching_|introduction_|pre_match_)'
         AND c.relname ~* '(candidate|proposal|pair|mutual|commit|slot|snapshot|eligibility|compatib|leaderboard|rank|score)'
       ORDER BY 1`);
-  assert.deepEqual(lifecycle.map((r) => r.relname), LATER_SLICE_LIFECYCLE_RELATIONS,
-    'P06 exactly the eleven lifecycle relations I-07B owns exist in the Matching namespace');
+  // The reviewed ownership list is shared with I-07C, so the census compares
+  // against the subset its OWN predicate can reach: the eleven I-07B relations
+  // plus the one I-07C relation that carries a lifecycle word.
+  const LIFECYCLE_WORDS = /(candidate|proposal|pair|mutual|commit|slot|snapshot|eligibility|compatib|leaderboard|rank|score)/u;
+  assert.deepEqual(lifecycle.map((r) => r.relname), LATER_SLICE_LIFECYCLE_RELATIONS.filter((name) => LIFECYCLE_WORDS.test(name)),
+    'P06 every lifecycle relation in the Matching namespace is one I-07B or the reviewed I-07C slice owns');
   assert.deepEqual(
     LATER_SLICE_LIFECYCLE_RELATIONS.filter((name) => MATCHING_TABLES.includes(`public.${name}`)), [],
     'P06 and none of them is one of the fourteen relations I-07A created');
+  // THE FUTURE-SCOPE CENSUS, repaired from ABSENCE to EXPLICIT EQUALITY. At
+  // 0110's own deploy point this set was empty, and the migration's terminal
+  // self-assertion proved it so. I-07C legitimately creates relations in exactly
+  // this space, so the live assertion is that every relation the census reaches
+  // is one I-07C owns, and that none of them is one of the fifteen relations
+  // 0110 creates - both halves of what I-07B claimed. The predicate gains
+  // `_claim`, the name I-07C gave the Introduction slot, so the slot class is
+  // censused under its real name rather than escaping on spelling.
+  const MATCH_SCOPE_WORDS = /(mutual|match_commit|_slot|_claim|introduction_record|world|handoff)/u;
   const forbidden = await rows(
     `SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind IN ('r','v','m','p')
         AND c.relname ~* '^(matching_|introduction_|pre_match_)'
-        AND c.relname ~* '(mutual|match_commit|_slot|introduction_record|world|handoff)'
+        AND c.relname ~* '(mutual|match_commit|_slot|_claim|introduction_record|world|handoff)'
       ORDER BY 1`);
-  assert.deepEqual(forbidden, [], 'P06 no Mutual Match, Introduction slot, record, World or handoff relation exists');
+  assert.deepEqual(forbidden.map((r) => r.relname),
+    I07C_LIFECYCLE_RELATIONS.filter((name) => /^(matching_|introduction_|pre_match_)/u.test(name) && MATCH_SCOPE_WORDS.test(name)),
+    'P06 every Mutual Match, Introduction claim, Introduction record or handoff relation in the Matching namespace is one the reviewed I-07C slice owns');
+  assert.ok(forbidden.length > 0, 'P06 the census reaches the I-07C relations, so the equality is a statement about real rows');
+  assert.deepEqual(I07C_LIFECYCLE_RELATIONS.filter((name) => PROPOSAL_TABLES.includes(`public.${name}`)), [],
+    'P06 and none of the I-07C relations is one of the fifteen relations 0110 creates');
 
   const parents = await rows(
     `SELECT DISTINCT parent.relname FROM pg_constraint con

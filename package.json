@@ -163,6 +163,8 @@
     "verify:matching-pair-eligibility-proposal-persistence:integration": "node --env-file-if-exists=.env database/verify-migration-0110.mjs",
     "verify:matching-candidate-evaluation-disclosure-gate:integration": "node --env-file-if-exists=.env database/verify-migration-0111.mjs",
     "verify:matching-proposal-choreography-runtime:integration": "node --env-file-if-exists=.env database/verify-migration-0112.mjs",
+    "verify:matching-mutual-match-introduction-persistence:integration": "node --env-file-if-exists=.env database/verify-migration-0113.mjs",
+    "verify:matching-mutual-match-commit-transaction:integration": "node --env-file-if-exists=.env database/verify-migration-0114.mjs",
     "test:shared-delivery-authority-revalidation-contract": "node --test tests/shared-delivery-authority-revalidation-contract.test.mjs",
     "test:connected-worlds-i03-authority-closure-contract": "node --test tests/connected-worlds-i03-authority-closure-contract.test.mjs",
     "test:integrated-intelligence-runtime-phase-closure-contract": "node --test tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs",
