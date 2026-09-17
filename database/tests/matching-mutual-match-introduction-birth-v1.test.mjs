@@ -259,7 +259,6 @@ test('the Match core is caller-anonymous, enters before it reads, locks in canon
     'ORDER BY p.id',
     "assert_matching_recipient_view_current_v1(p_proposal_id, u, p_expected_view_id, 'CANDIDATE')",
     "proposal.proposal_state <> 'FORWARDED_TO_SECOND'",
-    'proposal.expires_at <= CURRENT_TIMESTAMP',
     'FROM public.matching_forward_approval_view_bindings b',
     'first_current_view IS DISTINCT FROM binding.approved_view_id',
     'resolve_matching_proposal_validity_v1(p_proposal_id)',
@@ -267,6 +266,7 @@ test('the Match core is caller-anonymous, enters before it reads, locks in canon
     'FROM public.matching_participation_state s',
     "gate.clearance <> 'CLEARED'",
     'birth_at := clock_timestamp()',
+    'proposal.expires_at <= birth_at',
     'DEFERRED;',
     "'FORWARDED_TO_SECOND', 'MUTUAL_MATCH_COMMITTED', NULL, u, NULL",
     "VALUES (p_world_id, 'ACTIVE', 'INTRODUCTION', 'MUTUAL_MATCH', birth_at, NULL)",
@@ -290,8 +290,14 @@ test('the Match core is caller-anonymous, enters before it reads, locks in canon
   assert.equal((CORE.match(/enter_matching_proposal_decision_v1/gu) ?? []).length, 1, 'the core enters the serialized region exactly once');
   assert.doesNotMatch(CORE, /lock_matching_pair_humans_v1|INSERT INTO public\.matching_setup_locks/u, 'and reaches the setup locks only through that entry point');
   assert.equal((CORE.match(/clock_timestamp\(\)/gu) ?? []).length, 1, 'exactly one instant is captured');
-  assert.equal((CORE.match(/CURRENT_TIMESTAMP/gu) ?? []).length, 1, 'the transaction clock is read once, to compare the deadline, and persisted never');
-  assert.doesNotMatch(CORE, /now\(\)|localtimestamp|transaction_timestamp|statement_timestamp/u, 'and no other clock exists');
+  // A transaction-fixed clock is settled before the canonical lock wait, so it
+  // can never decide the deadline of a command that waited (I07C-TIME-01): the
+  // captured birth instant is the only clock the core reads at all.
+  assert.doesNotMatch(CORE, /now\(\)|localtimestamp|current_timestamp|transaction_timestamp|statement_timestamp/iu, 'no other clock exists, and no transaction-fixed clock decides anything');
+  assert.ok(CORE.indexOf('proposal.expires_at <= birth_at') > CORE.indexOf('birth_at := clock_timestamp()'),
+    'the deadline is decided against the captured birth instant');
+  assert.ok(CORE.indexOf('proposal.expires_at <= birth_at') < CORE.indexOf('INSERT INTO public.shared_worlds'),
+    'and before anything at all is written');
   assert.doesNotMatch(CORE, /pg_advisory|LOCK TABLE|DELETE FROM|TRUNCATE/u, 'no advisory lock, no table lock, no deletion');
   assert.doesNotMatch(CORE, /INSERT INTO public\.matching_proposal_transitions/u, 'every transition goes through the one writer');
   assert.equal((CORE.match(/append_matching_proposal_transition_v1\(/gu) ?? []).length, 2, 'the winner and each competitor, through the one writer, and nothing else');
@@ -536,8 +542,14 @@ test('the two real-PostgreSQL verifiers are pinned into the toolchain and into C
   // competitor is OBSERVABLY waiting for a lock, observed from another connection.
   assert.match(matchSupport, /wait_event_type = 'Lock'/u, 'the barrier observes a real lock wait');
   assert.ok((VERIFIER['0114'].match(/await waitExtra\(\)/gu) ?? []).length >= 5, 'every race path waits for the barrier before releasing');
-  assert.ok((VERIFIER['0114'].match(/report\.section\('C\d\d /gu) ?? []).length >= 15, 'fifteen concurrency scenarios exist');
+  assert.ok((VERIFIER['0114'].match(/report\.section\('C\d\d /gu) ?? []).length >= 16, 'sixteen concurrency scenarios exist');
   assert.match(VERIFIER['0114'], /'40P01'/u, 'and a deadlock is a named failure, never a timeout');
+  // I07C-TIME-01: one of them crosses the proposal deadline while the Match is
+  // provably still blocked, and proves the waiter entered before that deadline.
+  assert.match(VERIFIER['0114'], /C16 a Match that waits on the canonical lock past the deadline/u,
+    'a race crosses the deadline during the lock wait');
+  assert.match(VERIFIER['0114'], /xact_start FROM pg_stat_activity/u,
+    'and proves the waiting Match entered while the proposal was still live');
   // The no-ghost proof injects a late failure and asserts ZERO surviving effects.
   assert.match(VERIFIER['0114'], /i07c_probe_late_failure/u, 'the late-failure probe exists');
   assert.match(VERIFIER['0114'], /const NOTHING = Object\.freeze\(\{\n\s+commits: 0, matchTransitions: 0, worlds: 0, episodes: 0, records: 0, births: 0, starts: 0,\n\s+claims: 0, pauses: 0, cancellations: 0, packages: 0, subjects: 0,/u,

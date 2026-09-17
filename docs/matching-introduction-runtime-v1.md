@@ -751,6 +751,21 @@ revocation, candidate-view supersession or first-approval-view supersession unde
 defeats a Match that read first, writing nothing; a Match against another Introduction birth for
 the same human yields exactly one.
 
+**The deadline is final-currentness, so it is decided on the birth instant.** `CURRENT_TIMESTAMP` is
+the TRANSACTION timestamp and is fixed before the transaction ever waits on a lock, so a Match that
+entered while its proposal was live, waited on the canonical pair lock and resumed after
+`expires_at` would compare a moment that had already gone by and commit a Match the proposal no
+longer authorized (review finding I07C-TIME-01). The core therefore finishes every currentness,
+authority and prerequisite check, captures the ONE canonical instant, and decides
+`expires_at <= birth_at` immediately before the irreversible write region, with nothing written yet
+— one Match clock, one persisted instant, the same value for the decision and for every persisted
+moment; the terminal self-assertion refuses any other clock, `CURRENT_TIMESTAMP` included. The
+sixteenth race is the proof: the Match is observably blocked on the lower human's lock, its own
+`xact_start` is shown to PRECEDE the deadline, the deadline passes while it is still waiting, and on
+release it fails `MATCHING_PROPOSAL_EXPIRED` with zero surviving effects and terminalizes nothing —
+expiry terminalization stays the `I-07B` boundary that owns it — after which the same request
+commits once the proposal is live again.
+
 **No ghost.** A verifier-local late failure and a late unique violation, each injected on the LAST
 write of the transaction after every other effect was written, leave ZERO surviving effects: no
 commit, no transition, no World, no episode, no record, no fact, no claim, no pause, no
@@ -816,6 +831,17 @@ durable exact-view binding was missing) was confirmed against the candidate head
 any acceptance round completed: the retry now fails closed before any view is compared, infers and
 backfills nothing, and the real `0114` verifier constructs the contradictory history as the owner and
 proves the refusal. The static contract pins the ordering.
+
+**Final review finding `I07C-TIME-01`** (the proposal deadline was compared against the transaction
+clock, which is fixed before the canonical lock wait, so a Match that waited past `expires_at` could
+still commit) was confirmed against the candidate head and corrected: the deadline is now decided
+against the one captured birth instant, immediately before the irreversible write region and with
+nothing written, and a sixteenth barrier-pinned race crosses the deadline while the Match is
+provably blocked and proves the refusal leaves zero effects (section 30). There is still exactly one
+persisted Match clock, the `CLEARED` prerequisite semantics, the anti-oracle failure classes, the
+lock order and the `I-07D` anti-scope are unchanged. Because this changed runtime semantics, the
+previously accepted head was DISCARDED and both complete acceptance rounds were rerun from scratch
+on the new head.
 
 **`BG-05` kickoff reconciliation:** the canonical backlog was read in full at kickoff. No open
 backlog item names `I-07` or `I-07C`; `QAN-BL-SEC-01` stays owned by `QAN-SEC-01`; `OPEN-06`,

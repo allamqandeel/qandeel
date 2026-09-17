@@ -2904,6 +2904,23 @@ Matches sharing only a competitor serialize on its row and BOTH commit; two Matc
 never wait. The real-PostgreSQL proofs pin every interleaving with a lock-wait barrier observed from
 another connection.
 
+### I-07C - why the deadline is decided on the birth instant
+
+`CURRENT_TIMESTAMP` is the TRANSACTION timestamp, fixed before the transaction ever waits on a lock.
+A Match that entered while its proposal was still live, waited on the canonical pair lock and
+resumed after `expires_at` would therefore compare a moment that had already gone by and commit a
+Match the proposal no longer authorized (review finding I07C-TIME-01). So the deadline is not part
+of the early re-read: `commit_matching_mutual_match_v1` finishes every currentness, authority and
+prerequisite check, captures the ONE canonical instant with `clock_timestamp()` immediately before
+the irreversible write region, and decides `expires_at <= birth_at` there, with nothing written yet.
+There is still exactly one Match clock and one persisted Match instant - the deadline decision and
+every persisted moment are the same value - and the core's terminal self-assertion refuses ANY other
+clock, `CURRENT_TIMESTAMP` included. Race `C16` is the proof: the Match is observably blocked on the
+lower human's lock, its own `xact_start` is shown to precede the deadline, the deadline passes while
+it is still waiting, and on release it fails `MATCHING_PROPOSAL_EXPIRED` with twelve zero
+cardinalities - no commit, transition, World, episode, record, fact, claim, pause, cancellation or
+handoff - after which the same request commits once the proposal is live again.
+
 ### I-07C - verifier commands
 
 ```bash
@@ -2922,7 +2939,7 @@ reads the live World; every refusal class writing nothing; the production seam r
 NO-GHOST proof (a verifier-local late failure and a late unique violation each leave ZERO surviving
 effects - no commit, transition, World, episode, record, fact, claim, pause, cancellation or handoff);
 the third-member freeze through the frozen 0084/0085 governance; competing-cancellation neutrality
-against expiry; and fifteen barrier-pinned two-connection races (same command, same proposal,
-A-B vs A-C, A-B vs C-B, reversed UUID order, the four-human competing lock set, disjoint pairs, and
-the Match against a concurrent pause, opt-out, profile, requirement, disclosure, candidate-view and
-first-approval-view change).
+against expiry; and sixteen barrier-pinned two-connection races (same command, same proposal,
+A-B vs A-C, A-B vs C-B, reversed UUID order, the four-human competing lock set, disjoint pairs, the
+Match against a concurrent pause, opt-out, profile, requirement, disclosure, candidate-view and
+first-approval-view change, and the deadline crossed while the Match is provably blocked).

@@ -123,6 +123,17 @@
 --
 -- ## The write region and the one instant
 --
+-- The one instant is captured AFTER every currentness, authority and
+-- prerequisite gate and BEFORE anything is written, and the proposal deadline
+-- is decided against it - never against `CURRENT_TIMESTAMP`, which PostgreSQL
+-- fixes at the start of the transaction and therefore before this command ever
+-- waits on the canonical pair lock. A Match that entered while its proposal was
+-- live, waited minutes on the lock and resumed past `expires_at` would read a
+-- moment that had already gone by and commit a Match the proposal no longer
+-- authorized (review finding I07C-TIME-01). Deciding on the real birth instant
+-- makes the deadline part of final currentness, and it fails closed with
+-- nothing written. There is still exactly ONE Match clock.
+--
 -- One `clock_timestamp()` is captured exactly once and persisted unchanged as
 -- the World's born_at, both episodes' joined_at, the Introduction Record's
 -- started_at, both facts' occurred_at, both claims' claimed_at, both pause acts'
@@ -391,7 +402,9 @@ BEGIN
   PERFORM public.assert_matching_recipient_view_current_v1(p_proposal_id, u, p_expected_view_id, 'CANDIDATE');
 
   -- 3-4. The winning proposal, re-read under its own row lock: exactly
-  -- FORWARDED_TO_SECOND, this caller its candidate, and not past its deadline.
+  -- FORWARDED_TO_SECOND and this caller its candidate. The DEADLINE is
+  -- deliberately NOT decided here; it is decided against the one real instant
+  -- below, for the reason recorded there.
   SELECT * INTO proposal FROM public.matching_proposals p WHERE p.id = p_proposal_id;
   IF proposal.candidate_user_id <> u THEN
     RAISE EXCEPTION 'MATCHING_PROPOSAL_NOT_FOUND' USING ERRCODE='P0002';
@@ -399,9 +412,6 @@ BEGIN
   IF proposal.proposal_state <> 'FORWARDED_TO_SECOND' THEN
     RAISE EXCEPTION 'MATCHING_STALE_STATE' USING ERRCODE='40001',
       DETAIL='A Mutual Match commits only from FORWARDED_TO_SECOND.';
-  END IF;
-  IF proposal.expires_at <= CURRENT_TIMESTAMP THEN
-    RAISE EXCEPTION 'MATCHING_PROPOSAL_EXPIRED' USING ERRCODE='55000';
   END IF;
 
   -- 5. THE FIRST ACCEPTANCE: durably bound, and its bound view STILL the first
@@ -459,6 +469,19 @@ BEGIN
 
   -- THE ONE canonical Match instant, read from the database clock exactly once.
   birth_at := clock_timestamp();
+
+  -- THE DEADLINE DECISION, taken against that exact instant and nothing else,
+  -- after every currentness, authority and prerequisite gate and with nothing
+  -- written yet. A transaction clock is fixed BEFORE this command waits on the
+  -- canonical locks: a Match that entered while the proposal was still live,
+  -- then waited on the pair lock until after expires_at, would compare a moment
+  -- that has already gone by and commit a Match the proposal no longer
+  -- authorizes. The instant this Match would really be born at is the only
+  -- lawful basis for the decision, and it is exactly the instant every
+  -- persisted moment below carries.
+  IF proposal.expires_at <= birth_at THEN
+    RAISE EXCEPTION 'MATCHING_PROPOSAL_EXPIRED' USING ERRCODE='55000';
+  END IF;
 
   -- THE IRREVERSIBLE WRITE REGION. Everything below commits together or not at
   -- all; a supplied identity that is already taken rolls the whole Match back.
@@ -730,6 +753,7 @@ DECLARE
   pointer_pos integer;
   gate_pos integer;
   clock_pos integer;
+  deadline_pos integer;
   writer_pos integer;
   world_pos integer;
   episode_pos integer;
@@ -856,9 +880,9 @@ BEGIN
   -- the two-human lock; lock every mutable proposal row in id order; check the
   -- exact candidate view; require FORWARDED_TO_SECOND; require the bound first
   -- approval view; run the ONE canonical revalidation; require empty claims;
-  -- lock the pointers; require CLEARED last; capture the ONE instant; then and
-  -- only then the writes, in their published order, the commit row last and
-  -- the deferred flush after it.
+  -- lock the pointers; require CLEARED last; capture the ONE instant; decide
+  -- the deadline against that instant; then and only then the writes, in their
+  -- published order, the commit row last and the deferred flush after it.
   entry_pos := strpos(cleaned, 'enter_matching_proposal_decision_v1');
   view_pos := strpos(cleaned, 'assert_matching_recipient_view_current_v1');
   state_pos := strpos(cleaned, 'proposal.proposal_state <> ''FORWARDED_TO_SECOND''');
@@ -868,6 +892,7 @@ BEGIN
   pointer_pos := strpos(cleaned, 'FROM public.matching_participation_state s');
   gate_pos := strpos(cleaned, 'resolve_matching_proposal_prerequisites_v1');
   clock_pos := strpos(cleaned, 'birth_at := clock_timestamp()');
+  deadline_pos := strpos(cleaned, 'proposal.expires_at <= birth_at');
   writer_pos := strpos(cleaned, '''FORWARDED_TO_SECOND'', ''MUTUAL_MATCH_COMMITTED''');
   world_pos := strpos(cleaned, 'INSERT INTO public.shared_worlds');
   episode_pos := strpos(cleaned, 'INSERT INTO public.shared_world_membership_episodes');
@@ -879,32 +904,31 @@ BEGIN
   commit_pos := strpos(cleaned, 'INSERT INTO public.matching_match_commits');
   flush_pos := strpos(cleaned, 'public.matching_match_handoff_packages_commit_fk IMMEDIATE');
   IF entry_pos = 0 OR view_pos = 0 OR state_pos = 0 OR binding_pos = 0 OR validity_pos = 0 OR claim_pos = 0
-     OR pointer_pos = 0 OR gate_pos = 0 OR clock_pos = 0 OR writer_pos = 0 OR world_pos = 0 OR episode_pos = 0
+     OR pointer_pos = 0 OR gate_pos = 0 OR clock_pos = 0 OR deadline_pos = 0 OR writer_pos = 0 OR world_pos = 0
+     OR episode_pos = 0
      OR record_pos = 0 OR claim_write_pos = 0 OR pause_pos = 0 OR cancel_pos = 0 OR handoff_pos = 0
      OR commit_pos = 0 OR flush_pos = 0
      OR NOT (entry_pos < view_pos AND view_pos < state_pos AND state_pos < binding_pos
              AND binding_pos < validity_pos AND validity_pos < claim_pos AND claim_pos < pointer_pos
-             AND pointer_pos < gate_pos AND gate_pos < clock_pos AND clock_pos < writer_pos
+             AND pointer_pos < gate_pos AND gate_pos < clock_pos AND clock_pos < deadline_pos
+             AND deadline_pos < writer_pos
              AND writer_pos < world_pos AND world_pos < episode_pos AND episode_pos < record_pos
              AND record_pos < claim_write_pos AND claim_write_pos < pause_pos AND pause_pos < cancel_pos
              AND cancel_pos < handoff_pos AND handoff_pos < commit_pos AND commit_pos < flush_pos) THEN
-    RAISE EXCEPTION 'I-07C: the Match core must lock, revalidate, gate, capture one instant and write in exactly the published order, the commit row last';
+    RAISE EXCEPTION 'I-07C: the Match core must lock, revalidate, gate, capture one instant, decide the deadline against it and write in exactly the published order, the commit row last';
   END IF;
   IF strpos(cleaned, 'ORDER BY p.id') = 0 OR strpos(cleaned, 'ORDER BY p.id') > view_pos THEN
     RAISE EXCEPTION 'I-07C: every mutable proposal row must be locked in ascending proposal id before any currentness is read';
   END IF;
 
-  -- ONE database-owned instant, captured exactly once; the deadline comparison
-  -- is the one and only other clock read, and it persists nothing.
+  -- ONE database-owned instant, captured exactly once, and it is the ONLY clock
+  -- this core reads. A transaction-fixed clock is settled before the canonical
+  -- lock wait, so it can never decide a deadline (review finding I07C-TIME-01).
   IF (length(p.prosrc) - length(replace(p.prosrc, 'clock_timestamp()', ''))) / length('clock_timestamp()') <> 1 THEN
     RAISE EXCEPTION 'I-07C: the canonical Match instant must be captured exactly once';
   END IF;
-  IF p.prosrc ~ 'now\(\)|localtimestamp|transaction_timestamp|statement_timestamp' THEN
-    RAISE EXCEPTION 'I-07C: every persisted Match moment must be the one captured instant, never a second clock read';
-  END IF;
-  IF (length(p.prosrc) - length(replace(p.prosrc, 'CURRENT_TIMESTAMP', ''))) / length('CURRENT_TIMESTAMP') <> 1
-     OR p.prosrc !~ 'proposal\.expires_at <= CURRENT_TIMESTAMP' THEN
-    RAISE EXCEPTION 'I-07C: the transaction clock may be read once, to compare the proposal deadline, and persisted never';
+  IF p.prosrc ~* 'now\(\)|localtimestamp|current_timestamp|transaction_timestamp|statement_timestamp' THEN
+    RAISE EXCEPTION 'I-07C: the one captured instant is the only clock the Match core may read, because a transaction-fixed clock precedes the lock wait';
   END IF;
 
   -- THE ONE WRITER IS CALLED for the winner and for the competitors, and the

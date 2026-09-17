@@ -996,6 +996,62 @@ async function verifyRaces(report, humans) {
       // `two` is the candidate of both P1 (one,two) and P2 (three,two): the
       // second serializes on `two`'s lock and finds its proposal cancelled.
       competingPair('C15', [one, two], [three, two]));
+
+    await report.section('C16 a Match that waits on the canonical lock past the deadline is refused at the real instant', async () => {
+      // I07C-TIME-01. A transaction clock is fixed BEFORE the lock wait, so a
+      // command that entered while the proposal was live and resumed after the
+      // deadline would compare a moment that had already gone by and commit a
+      // Match the proposal no longer authorized. The deadline is decided
+      // against the real birth instant instead, and only this interleaving can
+      // tell the two apart: the waiter's own transaction timestamp is proven to
+      // PRECEDE the deadline it is then refused against.
+      const f = await rt.bringToForwarded(one, two);
+      const ids = matchIds();
+      const deadline = await rt.deadlineIn(f.proposal, '2 seconds');
+      await asRole('postgres');
+      await q('BEGIN');
+      // Exactly the statement the canonical two-human lock takes, on the lower
+      // human's row: the Match blocks at its entry point, having read nothing.
+      await q(`INSERT INTO public.matching_setup_locks AS l (user_id) VALUES ($1)
+               ON CONFLICT (user_id) DO UPDATE SET created_at = l.created_at`, [f.lower]);
+      await actAsX(two);
+      const inFlight = outcomeOf(commitX(ids, f.proposal, f.secondView));
+      assert.equal(await waitExtra(), true, 'C16 the Match is observably waiting on the canonical human lock');
+      const [waiter] = await rows('SELECT xact_start FROM pg_stat_activity WHERE pid = $1', [extra.pid]);
+      assert.ok(new Date(waiter.xact_start) < new Date(deadline),
+        'C16 the waiting Match entered while the proposal was still live: its transaction clock precedes the deadline it will be refused against');
+      assert.equal(await rt.waitForInstant(deadline), true, 'C16 the deadline passes while the Match is still blocked');
+      assert.equal(await waitExtra(), true, 'C16 and it is STILL waiting, so it can only resume after the deadline');
+      await q('COMMIT');
+      const outcome = await inFlight;
+      noDeadlock(outcome, 'C16');
+      assert.ok(outcome, 'C16 a Match that resumes past the deadline must fail closed');
+      assert.equal(outcome.code, '55000', 'C16 with the deadline class');
+      assert.match(String(outcome.message), /MATCHING_PROPOSAL_EXPIRED/u, 'C16 named as an expiry and nothing else');
+      await asRole('postgres');
+      assert.deepEqual(await rt.matchEffects(ids, f.proposal), NOTHING, 'C16 ZERO Match effects survived');
+      assert.equal(await count(P.TRANSITIONS,
+        "proposal_id = $1 AND resulting_state IN ('MUTUAL_MATCH_COMMITTED','CANCELLED_BY_COMPETING_MATCH')",
+        [f.proposal]), 0, 'C16 no Match transition and no competing cancellation');
+      assert.equal((await rt.proposalRow(f.proposal)).proposal_state, 'FORWARDED_TO_SECOND',
+        'C16 and the refusal terminalizes nothing: expiry is the I-07B boundary that does that');
+      for (const human of [one, two]) {
+        assert.equal((await rt.currentParticipationOf(human)).resulting_state, 'ACTIVE', 'C16 nobody was paused');
+        assert.equal(await rt.heldClaimOf(human), null, 'C16 no claim survived');
+        assert.equal(await rt.activeIntroduction(human), false, 'C16 no Introduction was born');
+      }
+      assert.equal(await count('public.shared_worlds', 'id = $1', [ids.world]), 0, 'C16 no World');
+      assert.equal(await count(MATCH.PACKAGES, 'proposal_id = $1', [f.proposal]), 0, 'C16 no handoff');
+      // The deadline was the only thing in the way: the same request commits
+      // once the proposal is live again.
+      await rt.deadlineIn(f.proposal, '2 hours');
+      await actAs(two);
+      const [committed] = await rt.commitMatch(ids, f.proposal, f.secondView);
+      assert.equal(committed.outcome, 'MATCHED', 'C16 the deadline was the only thing in the way');
+      await asRole('postgres');
+      assert.deepEqual(await rt.matchEffects(ids, f.proposal), everything(0), 'C16 and then everything commits once');
+      await rt.cleanupRace([one, two]);
+    });
   } finally {
     await extra.close();
   }

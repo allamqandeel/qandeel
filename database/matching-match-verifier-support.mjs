@@ -328,6 +328,34 @@ export function createMatchRuntime(databaseUrl) {
       'the proposal identity trigger is enabled again immediately');
   }
 
+  /**
+   * Move one proposal's deadline to a REAL instant a short interval from now,
+   * read from the database clock rather than the transaction clock, and answer
+   * with that exact instant. A race that has to cross a deadline while it waits
+   * on a lock needs the moment it must cross, at full precision.
+   */
+  async function deadlineIn(proposal, interval) {
+    await asRole('postgres');
+    await q(`ALTER TABLE ${P.PROPOSALS} DISABLE TRIGGER matching_proposals_state_truth`);
+    const [row] = await rows(`UPDATE ${P.PROPOSALS}
+                                 SET expires_at = clock_timestamp() + $2::interval
+                               WHERE id = $1 RETURNING expires_at`, [proposal, interval]);
+    await q(`ALTER TABLE ${P.PROPOSALS} ENABLE TRIGGER matching_proposals_state_truth`);
+    assert.equal(await rt.triggerEnabled(P.PROPOSALS, 'matching_proposals_state_truth'), true,
+      'the proposal identity trigger is enabled again immediately');
+    return row.expires_at;
+  }
+
+  /** Waits until the database clock - not any transaction clock - is past one instant. */
+  async function waitForInstant(deadline) {
+    for (let attempt = 0; attempt < 400; attempt += 1) {
+      const [{ past }] = await rows('SELECT clock_timestamp() > $1::timestamptz AS past', [deadline]);
+      if (past) return true;
+      await new Promise((resolve) => { setTimeout(resolve, 25); });
+    }
+    return false;
+  }
+
   /** A bare ACTIVE / INTRODUCTION World with one open episode, written as the owner. */
   async function seedBareIntroductionWorld(human) {
     const world = randomUUID();
@@ -389,7 +417,7 @@ export function createMatchRuntime(databaseUrl) {
     commitMatch, commitRow, recordRow, bindingOf, claimsOf, heldClaimOf, packageOf, subjectsOf, fieldsOf,
     cancellationsOf, worldRow, episodesOf, currentParticipationOf, matchEffects, instantCoherence,
     seedMatchable, seedEligible, permitted, bringToOffered, bringToApproved, bringToForwarded, backdate,
-    seedBareIntroductionWorld, waitForLockWait, openExtra, cleanupRace,
+    deadlineIn, waitForInstant, seedBareIntroductionWorld, waitForLockWait, openExtra, cleanupRace,
   };
 }
 
