@@ -723,6 +723,47 @@ async function verifyRaces(report, humans) {
         'E06 the CURRENT view authorizes the same act, which is what makes the refusal meaningful');
       await asRole('postgres');
       await cleanupRace([one, two]);
+
+      // AND THE ORDERING IS WHAT MAKES IT FAIL CLOSED. A race that only showed
+      // the refusal would prove nothing about WHERE the refusal came from, so
+      // the pre-fix ordering is installed - the exact-view check moved back
+      // outside the serialization region - and the SAME interleaving is run
+      // again. It must then accept the superseded view, which is the defect this
+      // review found. The canonical definition is restored byte for byte on
+      // every path, because this section is not inside a transaction.
+      const pristine = await rt.captureMatchingSeam(PFN.DECLINE_FIRST);
+      try {
+        const entry = '  PERFORM public.enter_matching_proposal_decision_v1(p_proposal_id, u);\n';
+        const check = "  PERFORM public.assert_matching_recipient_view_current_v1(p_proposal_id, u, p_expected_view_id, 'FIRST_RECIPIENT');\n";
+        assert.ok(pristine.definition.includes(entry) && pristine.definition.includes(check),
+          'E06 the canonical definition carries both steps, so the mutation below has something to move');
+        const weakened = pristine.definition.replace(entry, '').replace(check, check + entry);
+        assert.notEqual(weakened, pristine.definition, 'E06 the weakening actually changed the definition');
+        assert.ok(weakened.indexOf('assert_matching_recipient_view_current_v1')
+          < weakened.indexOf('enter_matching_proposal_decision_v1'),
+        'E06 and it really did move the exact-view check outside the serialized region');
+        await q(weakened);
+
+        const g = await commitOffered(one, two);
+        const second = randomUUID();
+        await q2('BEGIN');
+        await q2('SELECT public.lock_matching_pair_humans_v1($1, $2)', [g.lower, g.higher]);
+        await q2('SELECT * FROM public.materialize_matching_recipient_view_core_v1($1, $2, $3, $4)',
+          [second, g.proposal, one, g.conclusionForFirst]);
+        await rt.actAs(one);
+        const stale = rt.declineFirst(randomUUID(), g.proposal, g.firstView).then(() => null, (error) => error);
+        await q2('COMMIT');
+        const accepted = await stale;
+        await asRole('postgres');
+        assert.equal(accepted, null,
+          'E06 without the ordering the superseded view really does authorize the act, so the ordering is load-bearing');
+        assert.equal((await rt.proposalRow(g.proposal)).proposal_state, 'FIRST_DECLINED',
+          'E06 and a transition really was committed from a view that was no longer current');
+        await cleanupRace([one, two]);
+      } finally {
+        await asRole('postgres');
+        await rt.restoreMatchingSeam(pristine);
+      }
     });
 
     await report.section('E07 reverse-direction concurrent work does not deadlock', async () => {
