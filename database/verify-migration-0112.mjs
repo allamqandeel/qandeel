@@ -333,10 +333,13 @@ async function verifyChoreography(report, humans) {
       // The one column a policy LIMIT may live in is the policy definition
       // itself, which is a configured maximum rather than a running total; the
       // assertion names any other offender so a failure says which.
+      // The counter words are matched as UNDERSCORE-DELIMITED TOKENS, not as
+      // substrings: `refused_at` is a timestamp that happens to contain `used`,
+      // and a substring match reports it as a running counter.
       const counters = await rows(
         `SELECT c.table_name, c.column_name FROM information_schema.columns c
           WHERE c.table_schema = 'public' AND c.table_name LIKE 'matching\\_%'
-            AND c.column_name ~* '(count|counter|quota|remaining|balance|used_|_used)'
+            AND c.column_name ~* '(^|_)(count|counter|quota|remaining|balance|used|total|tally)(_|$)'
           ORDER BY 1, 2`);
       const named = counters.map((r) => `${r.table_name}.${r.column_name}`);
       const running = named.filter((name) => !name.startsWith('matching_proposal_policy_versions.'));
