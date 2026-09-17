@@ -2774,6 +2774,16 @@ things that happen to concern the same human. Direction NEVER decides lock order
 take the smaller identifier first, always, which is what makes simultaneous (A,B) and (B,A) work
 impossible to deadlock.
 
+Every human decision enters through `enter_matching_proposal_decision_v1`, which answers the bounded
+not-found from the proposal's own immutable membership and THEN takes that lock. The order is
+load-bearing rather than tidy: `materialize_matching_recipient_view_core_v1` supersedes a recipient
+view while holding the same lock, so a decision that checked the exact view BEFORE taking it would
+leave a window in which V1 is accepted, a concurrent materialization commits V2 and releases, and the
+decision then acts on a view that is no longer current. The compare-and-swap on the proposal state
+does not close that window, because materializing a view does not change the proposal state. Scenario
+`E06` of the `0112` verifier proves both halves on two real connections: with the ordering the stale
+view is refused, and with the pre-fix ordering installed the same interleaving accepts it.
+
 ### I-07B - verifier commands
 
 ```bash

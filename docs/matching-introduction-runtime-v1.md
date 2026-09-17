@@ -473,6 +473,54 @@ order — both callers take the smaller identifier first, always — which is wh
 proposals that exist rather than stored in a counter, so a pause accumulates no backlog and returning
 cannot produce a flood.
 
+### The exact-view check is inside the serialization region, and that is an order
+
+Interim independent Concurrency review raised `I07B-CONC-01`, and it was
+**confirmed against the runtime**. All four human decision paths originally ran
+
+```text
+assert_matching_recipient_view_current_v1  ->  read proposal  ->  lock the pair
+```
+
+so the exact-view truth was read with **no lock held**.
+`materialize_matching_recipient_view_core_v1` supersedes a recipient view while
+holding the canonical two-human lock, which leaves a real window:
+
+```text
+T1  reads V1 and accepts it
+T2  takes the pair lock, materializes V2, moves the pointer, COMMITS
+T1  takes the now-free pair lock and acts on V1
+```
+
+The compare-and-swap in `append_matching_proposal_transition_v1` does not close
+it, because materializing a view does not change the proposal state, so the swap
+still succeeds. The delivery and protective paths were already lock-first; only
+the four decisions were affected.
+
+**The fix** is one entry point. `enter_matching_proposal_decision_v1` answers the
+bounded not-found from the proposal's own immutable membership and *then* takes
+the canonical two-human lock; all four decisions call it first, and everything
+they read about currentness — the committed transition, the exact view version,
+the proposal state — is read after it, under the same lock a materialization
+holds.
+
+The anti-oracle behaviour is preserved and slightly strengthened: a proposal that
+does not exist, one this human is no part of, and one they hold no view of are
+still the same `MATCHING_PROPOSAL_NOT_FOUND`, and a caller who is no part of the
+proposal now never causes a serialization row to be written for two humans they
+have nothing to do with.
+
+**The proof is a real two-connection race** (`0112` scenario `E06`), not an
+assertion about text. T2 holds the pair lock with an uncommitted V2 while T1's
+decline is already in flight, so T1 blocks exactly where the check has to happen;
+T2 commits; T1 must then fail closed with `MATCHING_RECIPIENT_VIEW_STALE`, no
+transition from the stale view exists, and acting on the **current** view then
+succeeds. The same scenario also installs the pre-fix ordering and runs the same
+interleaving again, where the superseded view **is** accepted — so the ordering is
+load-bearing rather than decorative — and restores the canonical definition byte
+for byte. A live `prosrc` ordering assertion and a static contract assertion stop
+the order drifting back; the race remains the authority.
+
 ## 24. `I-07B` anti-scope
 
 `I-07B` deliberately does not implement, and nothing in migrations 0110–0112 can represent:
