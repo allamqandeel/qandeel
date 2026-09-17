@@ -784,7 +784,11 @@ async function verifyAccess(report, humans) {
 
 // ----------------------------------------------------------- 7. serialization
 async function verifySerialization(report, humans) {
-  const [one] = humans;
+  // A THIRD human, because this is the one section that COMMITS. Racing on a
+  // human the rolled-back sections also use would leave committed participation
+  // behind, and every later probe that activates from nothing would then be
+  // refused as stale - a fixture defect reading as a runtime one.
+  const one = humans[2];
   const { q2, actAs2, close } = await rt.openSecondary();
   try {
     await report.section('X01 two concurrent first activations serialize on the caller own lock row', async () => {
@@ -812,7 +816,7 @@ async function verifySerialization(report, humans) {
       await q2('ROLLBACK');
 
       await asRole('postgres');
-      assert.equal(await count(rt.M.ACTS, 'participant_user_id = $1', [one]), 1,
+      assert.equal(await count(M.ACTS, 'participant_user_id = $1', [one]), 1,
         'X01 exactly one activation committed');
       assert.equal(await rt.currentActOf(one), winner.participation_event_id,
         'X01 and the pointer names it');
@@ -915,7 +919,9 @@ async function verifyForwardSafety(report, humans) {
 await runVerifier('0109', async (stage) => {
   await rt.client.connect();
   const report = createScenarioReport('0109', { query: q, restore: () => asRole('postgres') });
-  const humans = [randomUUID(), randomUUID()];
+  // Two humans for the rolled-back sections, and a third for the ONE section
+  // that commits.
+  const humans = [randomUUID(), randomUUID(), randomUUID()];
   try {
     stage('catalog');
     await report.section('the catalog is exactly what the migration installed', verifyCatalog);
