@@ -2547,6 +2547,12 @@ definition and proves it back byte for byte. No permissive definition is ever le
 
 ## I-07B - Candidate Eligibility, Proposal and Privacy Runtime v1 (migrations 0110-0112)
 
+```text
+0110_matching_pair_eligibility_proposal_persistence_v1.sql   pair, policy, eligibility, proposal, views
+0111_matching_candidate_evaluation_disclosure_gate_v1.sql    evaluation, filter, the disclosure gate
+0112_matching_proposal_choreography_runtime_v1.sql           choreography, revalidation, projections
+```
+
 `I-07A` created the private Matching SETUP substrate and deliberately stopped before candidates, pairs
 and proposals. `I-07B` is the first slice allowed to create durable Matching pair / eligibility /
 proposal / recipient-view state, and it implements the complete pre-Mutual-Match runtime up to - but

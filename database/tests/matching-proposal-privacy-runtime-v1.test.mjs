@@ -358,8 +358,15 @@ test('the frozen I-07B vocabularies are identical in the database and in the Typ
     assert.doesNotMatch(name, /Score|SCORE|Rank(?!ing)|RANK(?!ING)|Percent|PERCENT|Weight|WEIGHT|Leaderboard|LEADERBOARD/u,
       `${name} would be a ranking identifier, and Matching v1 has no ranking Product`);
   }
-  assert.doesNotMatch(executableTypescript, /SECOND_ACCEPTED|ACCEPTED_PENDING|MATCH_PENDING|MATCH_COMMIT|INTRODUCTION_SLOT/u,
-    'and no second-acceptance, match-commit or Introduction-slot value exists');
+  // The I-07C concept names are matched in FULL. A bare `MATCH_COMMIT` is a
+  // prefix of `MUTUAL_MATCH_COMMITTED`, which is a legitimately REPRESENTABLE
+  // reserved state, so the short form would refuse the very thing that keeps
+  // I-07C from having to relax a ceiling.
+  assert.doesNotMatch(executableTypescript,
+    /SECOND_ACCEPTED|ACCEPTED_PENDING_MATCH|MATCH_PENDING|MATCH_COMMIT_ID|ACTIVE_INTRODUCTION_SLOT|MATCH_HANDOFF/u,
+    'and no second-acceptance, match-commit, Introduction-slot or handoff value exists');
+  assert.ok(executableTypescript.includes('MUTUAL_MATCH_COMMITTED'),
+    'while the reserved I-07C state itself stays representable, which is the point of the full-name match above');
   // NON-VACUITY: a compatibility percentage really would be caught.
   assert.match('MatchingCompatibilityScore', /Score|SCORE/u, 'the ranking-identifier detector is exercised');
   // The I-07A vocabulary module is UNCHANGED: I-07B is its sibling, not its

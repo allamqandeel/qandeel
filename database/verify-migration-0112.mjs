@@ -338,14 +338,15 @@ async function verifyChoreography(report, humans) {
           WHERE c.table_schema = 'public' AND c.table_name LIKE 'matching\\_%'
             AND c.column_name ~* '(count|counter|quota|remaining|balance|used_|_used)'
           ORDER BY 1, 2`);
-      const running = counters.filter((r) => r.table_name !== 'matching_proposal_policy_versions');
-      assert.deepEqual(running.map((r) => `${r.table_name}.${r.column_name}`), [],
-        'B08 no cadence or pending counter is stored anywhere: both are derived from the proposals that exist');
+      const named = counters.map((r) => `${r.table_name}.${r.column_name}`);
+      const running = named.filter((name) => !name.startsWith('matching_proposal_policy_versions.'));
+      assert.deepEqual(running, [],
+        `B08 no cadence or pending counter may be stored: both are derived from the proposals that exist. Found ${running.join(', ')}`);
       // NON-VACUITY: the configured maximum really does exist, so the detector is
       // looking at a schema that has counter-shaped columns to find.
-      assert.deepEqual(counters.filter((r) => r.table_name === 'matching_proposal_policy_versions')
-        .map((r) => r.column_name), ['max_count'],
-      'B08 the only counter-shaped column is the configured policy maximum itself');
+      assert.deepEqual(named.filter((name) => name.startsWith('matching_proposal_policy_versions.')),
+        ['matching_proposal_policy_versions.max_count'],
+        `B08 the only counter-shaped column is the configured policy maximum itself. Found ${named.join(', ')}`);
     });
   } finally {
     await q('ROLLBACK');
