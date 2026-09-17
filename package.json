@@ -158,6 +158,8 @@
     "verify:replay-distribution-runtime-export-public-bridge:integration": "node --env-file-if-exists=.env database/verify-migration-0105.mjs",
     "verify:replay-post-finalization-source-availability:integration": "node --env-file-if-exists=.env database/verify-migration-0106.mjs",
     "verify:replay-distribution-reconciliation-closure:integration": "node --env-file-if-exists=.env database/verify-migration-0107.mjs",
+    "verify:matching-participation-private-setup-foundation:integration": "node --env-file-if-exists=.env database/verify-migration-0108.mjs",
+    "verify:matching-setup-human-authority-commands:integration": "node --env-file-if-exists=.env database/verify-migration-0109.mjs",
     "test:shared-delivery-authority-revalidation-contract": "node --test tests/shared-delivery-authority-revalidation-contract.test.mjs",
     "test:connected-worlds-i03-authority-closure-contract": "node --test tests/connected-worlds-i03-authority-closure-contract.test.mjs",
     "test:integrated-intelligence-runtime-phase-closure-contract": "node --test tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs",

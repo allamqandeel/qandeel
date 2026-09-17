@@ -413,6 +413,68 @@ jobs:
             printf '### I-06D real-PostgreSQL verifiers\n- 0106 = %s\n- 0107 = %s\n' "$result_0106" "$result_0107" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$status"
+      # The two I-07A verifiers are NEW. Each one's first contact with real
+      # PostgreSQL can expose a defect the other would not reveal so they run as
+      # ONE reported group rather than two hard-fail steps: a failure in 0108
+      # would otherwise skip 0109 entirely and cost a whole round per finding.
+      # Each exit code is captured and the step exits non-zero if either failed.
+      #
+      # 0108 proves the private Matching setup substrate: three independent
+      # authority families with no foreign key trigger or generated column
+      # joining one to another + participation as an immutable act CHAIN plus ONE
+      # pointer bound by composite key to an exact act of an exact human so the
+      # current state is stored once and cannot diverge + all five CW2-06 pause
+      # reasons representable with four of them carrying no I-07A producer at all
+      # + a worldless capability-scoped Matching Context Grant fixed by table
+      # identity with no scope purpose source permission or world column + bounded
+      # profile and requirement keys that can never name a contact route a media
+      # handle or an identity document + the frozen HARD_DEALBREAKER and
+      # SOFT_PREFERENCE distinction with no score rank weight or percentage column
+      # beside it + a disclosure authority bound by composite key to ONE exact
+      # profile version of its OWN human with every approved field bound to a real
+      # field row of THAT exact version so a V1 authority cannot name a V2 field +
+      # append-only history for every role including the table owner + one-way
+      # authority revocation compared over the whole row + forward-only pointer
+      # movement + RLS on with zero policies and zero application-role privileges
+      # + no candidate proposal pair Mutual Match or Introduction lifecycle
+      # relation and no command or read boundary of any kind.
+      #
+      # 0109 proves the human authority boundary: eleven auth.uid()-derived
+      # boundaries executable by authenticated alone and by no system credential +
+      # participation failing closed to OFF and never inferred from a profile a
+      # grant or a disclosure authority + four separate participation commands so
+      # the act and the pause reason are function identity rather than parameters
+      # + the USER_PAUSED resume ceiling refusing all four reserved pause reasons
+      # + a two-step turn-off-then-activate bypass refused one hop along the
+      # immutable chain while opting out itself stays always available + grant
+      # revocation and disclosure revocation working while participation is OFF or
+      # PAUSED because neither reads participation at all + durable idempotency
+      # comparing the WHOLE immutable request against the committed row +
+      # compare-and-swap refusing a stale expected state + immutable profile and
+      # requirement versions whose old truth is never rewritten + a disclosure
+      # authority bound to the CURRENT profile version that never follows the
+      # profile forward + one bounded error for another human's authority and for
+      # a nonexistent one + a parameterless self-inspection projection + the
+      # caller-lock-row serialization proven by a real committed race + three
+      # refused weakenings each proven non-vacuous.
+      - name: Verify the two I-07A Matching foundation and human authority command verifiers against real PostgreSQL as one reported group
+        run: |
+          status=0
+          result_0108=FAIL
+          result_0109=FAIL
+          echo "::group::migration 0108 - Matching participation private authority and versioned setup foundation"
+          if npm run verify:matching-participation-private-setup-foundation:integration; then result_0108=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0109 - Matching setup human authority commands and private self-inspection"
+          if npm run verify:matching-setup-human-authority-commands:integration; then result_0109=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "I-07A real-PostgreSQL verifier results"
+          echo "0108 = $result_0108"
+          echo "0109 = $result_0109"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            printf '### I-07A real-PostgreSQL verifiers\n- 0108 = %s\n- 0109 = %s\n' "$result_0108" "$result_0109" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
