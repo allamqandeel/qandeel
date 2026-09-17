@@ -814,10 +814,29 @@ async function verifyForwardSafety() {
   await q('SAVEPOINT forward_safety');
   try {
     // Exactly the names this file used to require to stay absent for ever.
-    for (const table of ['matching_proposals', 'introduction_records', 'invitations', 'world_invitations',
-      'invitation_credentials', 'shared_world_invitation_expiry']) {
+    //
+    // SOME OF THEM HAVE ARRIVED. `matching_proposals` is a relation I-07B
+    // creates, which is precisely the future this probe was written to survive -
+    // so a name that already exists is not planted, it is asserted PRESENT, and
+    // the catalog proof below then runs against the real relation rather than
+    // against a stub of it. Planting one anyway would be a duplicate-table error
+    // that aborts the transaction and reports every later statement as 25P02,
+    // which says nothing at all about migration 0081.
+    const predicted = ['matching_proposals', 'introduction_records', 'invitations', 'world_invitations',
+      'invitation_credentials', 'shared_world_invitation_expiry'];
+    let planted = 0;
+    let arrived = 0;
+    for (const table of predicted) {
+      const [{ present }] = await rows(
+        `SELECT count(*)::int present FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public' AND c.relname = $1`, [table]);
+      if (present > 0) { arrived += 1; continue; }
       await q(`CREATE TABLE public.${table} (id uuid PRIMARY KEY)`);
+      planted += 1;
     }
+    assert.equal(planted + arrived, predicted.length, 'every predicted name is either planted or already real');
+    assert.ok(planted > 0,
+      'the probe still plants a name the future has not taken, so forward safety is not bought by asserting nothing');
     await verifyCatalog();
 
     stage = 'forward safety: a real regression to an 0081-owned binding is still refused';
