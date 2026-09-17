@@ -552,6 +552,12 @@ async function verifyStructure(report, humans) {
 
     await report.isolated('S09 the handoff ceiling is structural', async () => {
       const f = await rt.bringToForwarded(one, two);
+      // A later materialization for the first recipient, made BEFORE the Match
+      // graph pauses both humans: a real view of this proposal, presented to
+      // this human, about this subject, with this conclusion - and not one of
+      // the two views the package binds.
+      const later = randomUUID();
+      await rt.materialize(later, f.proposal, one, f.conclusionForFirst);
       const { ids } = await seedMatchGraph(f);
       const subjects = await rt.subjectsOf(ids.handoff);
       assert.equal(subjects.length, 2, 'S09 one subject per exact view');
@@ -630,10 +636,9 @@ async function verifyStructure(report, humans) {
       // the other human: one subject per view refuses it first, and the audience
       // key would refuse it next.
       await rejected(() => insertSubject({ source_view_id: f.secondView }), ['23505', '23503'], /subjects_view_key|audience_fk|subject_fk/u);
-      // A view that is not one of the two the package binds - a later
-      // materialization for the same recipient - is refused by the guard.
-      const later = randomUUID();
-      await rt.materialize(later, f.proposal, one, f.conclusionForFirst);
+      // The later view satisfies every key - it is a real view of this exact
+      // audience, subject, name and conclusion - and only the guard refuses it,
+      // because it is not one of the two views the package binds.
       await rejected(() => insertSubject({ source_view_id: later }), ['55000'], /VIEW_NOT_IN_PACKAGE/u);
       await insertSubject({});
       assert.equal(await count(MATCH.SUBJECTS, 'package_version_id = $1', [ids.handoff]), 2, 'S09 the exact copy really is writable');
