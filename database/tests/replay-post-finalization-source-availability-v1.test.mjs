@@ -162,17 +162,30 @@ test('the source-content-bearing layer and the analytical visual layer stay dist
   const usability = bodyOf(USABILITY);
   // BOTH layers are answered on every row, including the refusals. That is what
   // makes CW2-05 section 32 operational rather than decorative.
-  for (const state of ['DEREFERENCEABLE', 'NOT_DEREFERENCEABLE', 'SEALED_HISTORICAL_EVIDENCE']) {
+  for (const state of ['DEREFERENCEABLE', 'NOT_DEREFERENCEABLE', 'SEALED_HISTORICAL_EVIDENCE',
+    'SEALED_EVIDENCE_INCOMPLETE']) {
     assert.ok(usability.includes(state), `the boundary answers ${state}`);
   }
-  // The source layer follows the SOURCE and the analytical layer follows the
-  // ANALYTICAL truth: neither is computed from the other.
+  // The source layer follows the SOURCE and the analytical layer follows THIS
+  // version's own sealed components: neither is computed from the other.
   assert.match(usability, /source_layer := CASE WHEN current_availability = 'CURRENT'/u,
     'the source layer follows current source availability alone');
-  assert.match(usability, /analytical_layer := CASE WHEN truth_state = 'CURRENT'/u,
-    'and the analytical layer follows the canonical I-06B truth currency alone');
-  assert.ok(usability.includes(`public.${CANONICAL_TRUTH}`),
-    'which is consumed rather than re-derived');
+  assert.ok(usability.includes('replay_analytical_projection_versions')
+    && usability.includes('replay_analytical_projection_points')
+    && usability.includes('replay_render_contract_versions'),
+  'and the analytical layer follows the sealed components this exact version binds');
+  assert.ok(usability.includes('sealed_points = declared_points'),
+    'complete rather than merely present: every point the projection declares is still sealed');
+  // IT DOES NOT COMPOSE THE OWNER-SCOPED I-06B TRUTH CURRENCY. That derivation
+  // reaches `get_session_historical_projection_v1`, which is scoped to
+  // `auth.uid()` and raises FORBIDDEN for anyone but the Session owner. This
+  // boundary names its human as a PARAMETER, the frozen narrow-resolver
+  // precedent, so composing the two would make the answer depend on which
+  // session asked rather than on which human was named.
+  assert.ok(!usability.includes(CANONICAL_TRUTH) && !usability.includes('get_session_historical_projection_v1'),
+    'a boundary whose human is a parameter composes no auth.uid()-scoped derivation');
+  assert.ok(selfAssertions.includes('the answer would depend on which session asked'),
+    'and the migration refuses to deploy if one is composed in');
   // AND THERE IS NO STATE IN WHICH ONE STANDS IN FOR THE OTHER.
   for (const forbidden of ['ANALYTICAL_ONLY', 'ANALYTICAL_FALLBACK', 'ANALYTICAL_SUBSTITUTE',
     'PARTIAL_REPLAY', 'DEGRADED_REPLAY']) {
@@ -188,7 +201,7 @@ test('a complete Replay fails CLOSED, in order, and the source gate is unconditi
   const finalization = usability.indexOf('REPLAY_VERSION_NOT_FINALIZED');
   const contradiction = usability.indexOf('SOURCE_STATE_CONTRADICTORY');
   const source = usability.indexOf('SOURCE_NOT_CURRENTLY_AVAILABLE');
-  const analytical = usability.indexOf('ANALYTICAL_TRUTH_DIVERGED');
+  const analytical = usability.indexOf('ANALYTICAL_EVIDENCE_INCOMPLETE');
   const usable = usability.indexOf('COMPLETE_REPLAY_CURRENTLY_USABLE');
   assert.ok(finalization > 0 && contradiction > finalization && source > contradiction
     && analytical > source && usable > analytical,

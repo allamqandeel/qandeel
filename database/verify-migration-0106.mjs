@@ -22,6 +22,8 @@
 //   S11 a Replay Version that was never finalized is not a complete Replay
 //   S12 source currentness RECOVERS when the exact source returns, because the
 //       answer is a live derivation and never a tombstone
+//   S17 incomplete sealed analytical evidence is reachable and refuses on its
+//       own, which is a different refusal from a source loss
 //   S13 the availability derivation DELEGATES: a canonical answer this fixture
 //       cannot produce is carried through, and SOURCE_CONTRADICTORY fails harder
 //       than NOT_CURRENT
@@ -104,8 +106,19 @@ async function verifyCatalog() {
       `S06 the availability derivation must not consult ${forbidden}: it re-derives no source truth and treats no digest or historical finalization as evidence of a current source`);
   }
   assert.ok(boundary.prosrc.includes('derive_replay_version_current_availability_v1')
-    && boundary.prosrc.includes('derive_replay_version_truth_currency_v1'),
-  'S05 the usability boundary composes the canonical source and analytical answers');
+    && boundary.prosrc.includes('replay_analytical_projection_points'),
+  'S05 the usability boundary consumes the ONE source availability derivation and establishes the sealed analytical evidence of its own exact version');
+  // AND IT DOES NOT COMPOSE THE OWNER-SCOPED I-06B TRUTH CURRENCY. That
+  // derivation reaches the canonical historical projection, which is scoped to
+  // auth.uid() and raises FORBIDDEN for anyone but the Session owner; this
+  // boundary names its human as a PARAMETER, so composing the two would make the
+  // answer depend on which session asked rather than on which human was named.
+  assert.ok(!boundary.prosrc.includes('derive_replay_version_truth_currency_v1')
+    && !boundary.prosrc.includes('get_session_historical_projection_v1'),
+  'S05 a boundary whose human is a parameter composes no auth.uid()-scoped derivation');
+  const canonical = await rt.functionPosture(CFN.TRUTH_CURRENCY);
+  assert.ok(canonical.prosrc.includes('get_session_historical_projection_v1'),
+    'S05 and the frozen I-06B truth currency is untouched, still asking its own owner-scoped question');
 
   // S15 THE EVIDENCE RELATION CARRIES NO SOURCE CONTENT AND NO PRIVATE CAUSE.
   const eventColumns = await rows(
@@ -295,6 +308,31 @@ async function verifyAvailability(report, f, base) {
         ['analytical_visual_layer', 'replay_id', 'replay_version_id', 'source_content_bearing_layer',
           'unavailable_class', 'usability_state'],
         'S09 the boundary returns exactly its bounded surface');
+    });
+
+    await report.isolated('S17 incomplete sealed analytical evidence is reachable, and refuses', async () => {
+      // The negative half of the analytical layer. It is unreachable in
+      // production because every I-06B component binds restrictively and is
+      // append-only - which is exactly why it is produced here by fixture
+      // surgery, so the state is proven to be a real check rather than a
+      // decorative constant that could never answer anything else.
+      const [{ n: before }] = await rows(
+        `SELECT count(*)::int n FROM ${V.POINTS} WHERE projection_version_id = $1`, [base.projection]);
+      assert.ok(before > 0, 'S17 the sealed projection really has points to lose');
+      await rt.asReplica(() => q(
+        `DELETE FROM ${V.POINTS} WHERE projection_version_id = $1 AND selected_ordinal = 1`,
+        [base.projection]));
+      await asRole('postgres');
+      const [{ n: after }] = await rows(
+        `SELECT count(*)::int n FROM ${V.POINTS} WHERE projection_version_id = $1`, [base.projection]);
+      assert.equal(after, before - 1, 'S17 one sealed point really is gone');
+      const [answer] = await rt.usability(base.replay, base.version, creator);
+      assert.equal(answer.analytical_visual_layer, 'SEALED_EVIDENCE_INCOMPLETE');
+      assert.equal(answer.usability_state, 'COMPLETE_REPLAY_NOT_CURRENTLY_USABLE');
+      assert.equal(answer.unavailable_class, 'ANALYTICAL_EVIDENCE_INCOMPLETE',
+        'S17 and the complete Replay is refused on the analytical layer, with the source still current');
+      assert.equal(answer.source_content_bearing_layer, 'DEREFERENCEABLE',
+        'S17 which is a different refusal from a source loss, and says so');
     });
 
     await report.isolated('S11 a Replay Version that was never finalized is not a complete Replay', async () => {

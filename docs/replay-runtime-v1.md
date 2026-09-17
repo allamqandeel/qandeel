@@ -1209,7 +1209,7 @@ both on every row, including its refusals:
 
 ```text
 SOURCE_CONTENT_BEARING_LAYER   DEREFERENCEABLE | NOT_DEREFERENCEABLE
-ANALYTICAL_VISUAL_LAYER        SEALED_HISTORICAL_EVIDENCE | SEALED_HISTORICAL_EVIDENCE_DIVERGED
+ANALYTICAL_VISUAL_LAYER        SEALED_HISTORICAL_EVIDENCE | SEALED_EVIDENCE_INCOMPLETE
 ```
 
 Read together they say exactly what the architecture says. A source loss makes the source layer
@@ -1225,8 +1225,20 @@ it could be offered as one, and the migration refuses to deploy if one is introd
 
 `resolve_replay_version_current_usability_v1(p_replay_id, p_replay_version_id, p_user_id)` answers
 `COMPLETE_REPLAY_CURRENTLY_USABLE` or `COMPLETE_REPLAY_NOT_CURRENTLY_USABLE`, fail-closed, in order:
-the historical finalization first, then current source availability, then the canonical `I-06B`
-`derive_replay_version_truth_currency_v1` — consumed, never re-derived — and only then usable.
+the historical finalization first, then current source availability, then the completeness of the
+sealed analytical evidence this exact version binds, and only then usable.
+
+It deliberately does **not** compose the canonical `I-06B`
+`derive_replay_version_truth_currency_v1`. That derivation reaches
+`get_session_historical_projection_v1`, which is scoped to `auth.uid()` and raises `FORBIDDEN` for
+anyone but the Session owner. This boundary names its human as a **parameter** — the frozen
+narrow-resolver precedent every Replay read boundary follows, and the shape the service tier calls it
+in — so composing the two would make the answer depend on which session asked rather than on which
+human was named. That is a gate which is arbitrary rather than fail-closed, and it would report a
+perfectly healthy Replay as diverged for every caller but one. Whether the sealed evidence still
+re-derives from current canonical state remains `I-06B`'s question, asked by `I-06B`'s own
+owner-scoped path; what this boundary establishes is that the evidence is still there and still
+complete, which is the fact `CW2-05` §32 asks it for and the fact a source loss must not change.
 
 It is creator-exact. Everyone else receives ZERO ROWS, which is also what a nonexistent Replay, a
 nonexistent version and another human's version answer, so the boundary is no existence oracle. The
@@ -1236,7 +1248,7 @@ creator receives the minimum actionable class and never the private cause:
 REPLAY_VERSION_NOT_FINALIZED
 SOURCE_NOT_CURRENTLY_AVAILABLE
 SOURCE_STATE_CONTRADICTORY
-ANALYTICAL_TRUTH_DIVERGED
+ANALYTICAL_EVIDENCE_INCOMPLETE
 ```
 
 ## 53. Source recovery is a live derivation, never a tombstone

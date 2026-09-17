@@ -219,12 +219,12 @@ ALTER FUNCTION public.derive_replay_version_current_availability_v1(uuid, uuid) 
 --    The MINIMUM ACTIONABLE current state. Four bounded classes, none of which
 --    is the private I-06A staleness class:
 --
---      REPLAY_VERSION_NOT_FINALIZED   this version was never finalized, so the
---                                     complete-Replay question does not apply
---      SOURCE_NOT_CURRENTLY_AVAILABLE the source layer cannot be dereferenced
---      SOURCE_STATE_CONTRADICTORY     the bound source is incoherent
---      ANALYTICAL_TRUTH_DIVERGED      the sealed analytical evidence no longer
---                                     re-derives from canonical current state
+--      REPLAY_VERSION_NOT_FINALIZED     this version was never finalized, so the
+--                                       complete-Replay question does not apply
+--      SOURCE_NOT_CURRENTLY_AVAILABLE   the source layer cannot be dereferenced
+--      SOURCE_STATE_CONTRADICTORY       the bound source is incoherent
+--      ANALYTICAL_EVIDENCE_INCOMPLETE   the sealed analytical evidence of this
+--                                       exact version is no longer complete
 --
 --    ## The two layers, always reported
 --
@@ -241,15 +241,27 @@ ALTER FUNCTION public.derive_replay_version_current_availability_v1(uuid, uuid) 
 --    analytical layer stands in for the missing source", because no such state
 --    is true.
 --
---    ## Why the analytical axis is here at all
+--    ## Why the analytical axis is an EVIDENCE fact rather than a re-derivation
 --
---    Because a complete Replay is both layers, and I-06B already owns the ONE
---    canonical question "does this version's immutable composition still hold" -
---    `derive_replay_version_truth_currency_v1`. This boundary consumes it rather
---    than writing a second evaluator, and fails closed when it answers DIVERGED.
---    The sealed evidence is still there and still immutable; what is no longer
---    true is that it re-derives, so it can no longer be presented as a current
---    complete Replay.
+--    I-06B owns the canonical question "does this version's immutable
+--    composition still re-derive" - `derive_replay_version_truth_currency_v1` -
+--    and this boundary deliberately does NOT compose it. That derivation reaches
+--    the canonical historical projection, `get_session_historical_projection_v1`,
+--    which is scoped to `auth.uid()` and raises FORBIDDEN for anyone but the
+--    Session owner. This boundary names its human as a PARAMETER instead, which
+--    is the frozen narrow-resolver precedent every Replay read boundary follows
+--    and the shape the service tier calls it in. Composing the two would make the
+--    answer depend on WHICH SESSION ASKED rather than on which human was named -
+--    a gate that is arbitrary rather than fail-closed, and one that would report
+--    a healthy Replay as diverged for every caller but one.
+--
+--    What this boundary CAN establish for the human it was given is that the
+--    sealed analytical evidence of this exact version is still there and still
+--    complete: the projection version it binds, every one of the points that
+--    version declares, and the render contract. That is the fact CW2-05 section
+--    32 asks it to report, and it is the fact a source loss must not change.
+--    Whether that sealed evidence still re-derives from current canonical state
+--    remains I-06B's question, asked by I-06B's own owner-scoped path.
 -- ---------------------------------------------------------------------------
 CREATE FUNCTION public.resolve_replay_version_current_usability_v1(
   p_replay_id uuid, p_replay_version_id uuid, p_user_id uuid
@@ -260,7 +272,8 @@ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path='' AS $$
 DECLARE
   version public.replay_versions;
   current_availability text;
-  truth_state text;
+  declared_points integer;
+  sealed_points integer;
   source_layer text;
   analytical_layer text;
 BEGIN
@@ -285,17 +298,22 @@ BEGIN
                        THEN 'DEREFERENCEABLE' ELSE 'NOT_DEREFERENCEABLE' END;
 
   -- THE SEALED ANALYTICAL EVIDENCE IS STILL THERE WHATEVER HAPPENED TO THE
-  -- SOURCE. A raise from the canonical I-06B derivation is read as divergence
-  -- rather than propagated, so this boundary stays total and closed.
-  BEGIN
-    SELECT t.currency_state INTO truth_state
-      FROM public.derive_replay_version_truth_currency_v1(p_replay_version_id) t;
-  EXCEPTION WHEN OTHERS THEN
-    truth_state := NULL;
-  END;
-  analytical_layer := CASE WHEN truth_state = 'CURRENT'
-                           THEN 'SEALED_HISTORICAL_EVIDENCE'
-                           ELSE 'SEALED_HISTORICAL_EVIDENCE_DIVERGED' END;
+  -- SOURCE: the projection version this version binds, every point that
+  -- projection declares, and the render contract. Read from the version's own
+  -- immutable composition, so the answer is about THIS version and not about
+  -- whoever happens to be asking.
+  SELECT pv.point_count INTO declared_points
+    FROM public.replay_analytical_projection_versions pv
+   WHERE pv.id = version.analytical_projection_version_id;
+  SELECT count(*)::integer INTO sealed_points
+    FROM public.replay_analytical_projection_points pt
+   WHERE pt.projection_version_id = version.analytical_projection_version_id;
+  analytical_layer := CASE
+    WHEN declared_points IS NOT NULL AND sealed_points = declared_points
+         AND EXISTS (SELECT 1 FROM public.replay_render_contract_versions rc
+                      WHERE rc.id = version.render_contract_version_id)
+    THEN 'SEALED_HISTORICAL_EVIDENCE'
+    ELSE 'SEALED_EVIDENCE_INCOMPLETE' END;
 
   -- FAIL CLOSED, IN ORDER. Historical finalization first, because a version that
   -- was never finalized is not a complete Replay whatever its source says.
@@ -317,7 +335,7 @@ BEGIN
   END IF;
   IF analytical_layer <> 'SEALED_HISTORICAL_EVIDENCE' THEN
     RETURN QUERY SELECT p_replay_id, p_replay_version_id, 'COMPLETE_REPLAY_NOT_CURRENTLY_USABLE'::text,
-                        source_layer, analytical_layer, 'ANALYTICAL_TRUTH_DIVERGED'::text;
+                        source_layer, analytical_layer, 'ANALYTICAL_EVIDENCE_INCOMPLETE'::text;
     RETURN;
   END IF;
 
@@ -542,9 +560,19 @@ BEGIN
    WHERE pr.oid = 'public.resolve_replay_version_current_usability_v1(uuid, uuid, uuid)'::regprocedure;
   IF body IS NULL
      OR body !~ 'derive_replay_version_current_availability_v1'
-     OR body !~ 'derive_replay_version_truth_currency_v1'
+     OR body !~ 'replay_analytical_projection_points'
      OR body !~ 'created_by_user_id = p_user_id' THEN
-    RAISE EXCEPTION 'I-06D: the usability boundary must be creator-exact and must compose the canonical source and analytical derivations';
+    RAISE EXCEPTION 'I-06D: the usability boundary must be creator-exact, must consume the ONE source availability derivation and must establish the sealed analytical evidence of its own exact version';
+  END IF;
+  -- IT DOES NOT COMPOSE THE OWNER-SCOPED I-06B TRUTH CURRENCY.
+  --
+  -- That derivation reaches `get_session_historical_projection_v1`, which is
+  -- scoped to auth.uid() and raises FORBIDDEN for anyone but the Session owner.
+  -- This boundary names its human as a PARAMETER, so composing the two would
+  -- make the answer depend on which session asked rather than on which human was
+  -- named - arbitrary rather than fail-closed.
+  IF body ~ 'derive_replay_version_truth_currency_v1|get_session_historical_projection_v1' THEN
+    RAISE EXCEPTION 'I-06D: a boundary whose human is a parameter may not compose an auth.uid()-scoped derivation: the answer would depend on which session asked';
   END IF;
   IF body ~ 'SOURCE_UNAVAILABLE|SOURCE_ACCESS_LOST|SOURCE_VERSION_NOT_CURRENT|PROJECTION_MOVED|CUT_UNSAFE|RENDER_CONTRACT_MOVED' THEN
     RAISE EXCEPTION 'I-06D: the creator boundary returns a bounded actionable class and never the private internal cause';

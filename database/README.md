@@ -2317,7 +2317,7 @@ on every row, which is what makes CW2-05 section 32 operational rather than deco
 
 ```text
 SOURCE_CONTENT_BEARING_LAYER   DEREFERENCEABLE | NOT_DEREFERENCEABLE
-ANALYTICAL_VISUAL_LAYER        SEALED_HISTORICAL_EVIDENCE | SEALED_HISTORICAL_EVIDENCE_DIVERGED
+ANALYTICAL_VISUAL_LAYER        SEALED_HISTORICAL_EVIDENCE | SEALED_EVIDENCE_INCOMPLETE
 ```
 
 A source loss makes the source layer `NOT_DEREFERENCEABLE`, leaves the analytical layer
@@ -2326,7 +2326,7 @@ complete Replay. There is deliberately NO state meaning "the analytical layer st
 missing source", because an analytical-only rendering is not the Replay it would be served as.
 
 The creator receives the minimum actionable class - `REPLAY_VERSION_NOT_FINALIZED`,
-`SOURCE_NOT_CURRENTLY_AVAILABLE`, `SOURCE_STATE_CONTRADICTORY` or `ANALYTICAL_TRUTH_DIVERGED` - and
+`SOURCE_NOT_CURRENTLY_AVAILABLE`, `SOURCE_STATE_CONTRADICTORY` or `ANALYTICAL_EVIDENCE_INCOMPLETE` - and
 never the private I-06A cause. Everyone else receives zero rows, which is also what a nonexistent
 Replay and another human's version answer, so the boundary is no existence oracle.
 
