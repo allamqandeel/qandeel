@@ -143,14 +143,17 @@ async function verifyPosture() {
   const pointer = at('FROM public.matching_participation_state s');
   const gate = at("gate.clearance <> 'CLEARED'");
   const clock = at('birth_at := clock_timestamp()');
+  const deadline = at('proposal.expires_at <= birth_at');
   const writer = at("'FORWARDED_TO_SECOND', 'MUTUAL_MATCH_COMMITTED'");
   const commit = at('INSERT INTO public.matching_match_commits');
   assert.ok(entry < rowLocks && rowLocks < view && view < binding && binding < validity && validity < claim
-    && claim < pointer && pointer < gate && gate < clock && clock < writer && writer < commit,
-  'P01 the core enters, locks every mutable proposal row, proves both exact views, revalidates, guards, gates, captures one instant, writes and commits last');
+    && claim < pointer && pointer < gate && gate < clock && clock < deadline && deadline < writer && writer < commit,
+  'P01 the core enters, locks every mutable proposal row, proves both exact views, revalidates, guards, gates, captures one instant, decides the deadline against it, writes and commits last');
   assert.equal(body.split('clock_timestamp()').length - 1, 1, 'P01 exactly one instant is captured');
-  assert.equal(body.split('CURRENT_TIMESTAMP').length - 1, 1, 'P01 the transaction clock is read once, to compare the deadline');
-  assert.doesNotMatch(body, /now\(\)|localtimestamp|transaction_timestamp|statement_timestamp/u, 'P01 and no other clock');
+  // A transaction-fixed clock is settled before the canonical lock wait, so it
+  // can decide no deadline of a command that waited (I07C-TIME-01).
+  assert.doesNotMatch(body, /now\(\)|localtimestamp|current_timestamp|transaction_timestamp|statement_timestamp/iu,
+    'P01 the captured instant is the only clock the core reads at all');
   assert.doesNotMatch(body, /pg_advisory|LOCK TABLE|DELETE FROM|TRUNCATE/u, 'P01 no advisory lock, no table lock, no deletion');
   assert.ok(!body.includes('INSERT INTO public.matching_proposal_transitions'),
     'P01 every transition goes through append_matching_proposal_transition_v1');
