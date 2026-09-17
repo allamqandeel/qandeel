@@ -923,10 +923,28 @@ async function verifyForwardSafety(report, f, base) {
       await rt.removeFromPublicWorld(randomUUID(), f.experience, spec.publicVersion);
       await asRole('postgres');
       assert.equal((await rt.eligibility(spec.package))[0].refusal_class, 'PUBLIC_DESTINATION_NOT_SERVING');
-      const weakened = derivation.definition.replace(
+
+      // THE GATE HAS TWO INDEPENDENT HALVES, and this proves both. Disabling the
+      // visibility-state half alone does NOT let an absent destination through:
+      // the canonical resolver answers a NULL visible manifest for an Experience
+      // that is not publicly visible, so the manifest half catches it on its own.
+      // A probe that stopped here would have reported a load-bearing gate while
+      // testing a condition that was still refusing.
+      const halfWeakened = derivation.definition.replace(
         "IF visible.state IS DISTINCT FROM 'PUBLICLY_VISIBLE'",
         "IF false AND visible.state IS DISTINCT FROM 'PUBLICLY_VISIBLE'");
-      assert.notEqual(weakened, derivation.definition, 'g3 the weakening changed the derivation');
+      assert.notEqual(halfWeakened, derivation.definition, 'g3 the first weakening changed the derivation');
+      await q(halfWeakened);
+      assert.equal((await rt.eligibility(spec.package))[0].refusal_class, 'PUBLIC_DESTINATION_NOT_SERVING',
+        'g3 the exact-manifest half refuses an absent destination on its own');
+
+      // NOW THE WHOLE GATE.
+      const weakened = derivation.definition.replace(
+        "    IF visible.state IS DISTINCT FROM 'PUBLICLY_VISIBLE'\n       OR visible.manifest IS DISTINCT FROM bridge.public_manifest_version_id THEN",
+        '    IF false THEN');
+      assert.notEqual(weakened, derivation.definition, 'g3 the whole-gate weakening changed the derivation');
+      assert.ok(!weakened.includes("visible.manifest IS DISTINCT FROM bridge.public_manifest_version_id"),
+        'g3 and it removed the destination gate entirely');
       await q(weakened);
       assert.equal((await rt.eligibility(spec.package))[0].eligibility_state, 'ELIGIBLE_FOR_FUTURE_DELIVERY',
         'g3 without the gate an absent Public destination really does read eligible, so the gate is load-bearing');
