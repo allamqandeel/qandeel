@@ -579,6 +579,25 @@ async function verifyRaces(report, humans) {
   const [one, two] = humans;
   const secondary = await rt.openSecondary();
   const { q2 } = secondary;
+  /**
+   * Waits until one backend is observably WAITING FOR A LOCK.
+   *
+   * A race whose interleaving is not pinned is not a proof: whichever side
+   * happens to arrive first decides the outcome, and the scenario reports a pass
+   * it did not earn. This is the synchronisation point - the primary connection
+   * has reached the two-human lock the secondary is holding - and it is observed
+   * from the OTHER connection, because the one being watched is busy.
+   */
+  const waitForLockWait = async (pid) => {
+    for (let attempt = 0; attempt < 200; attempt += 1) {
+      const { rows: [{ waiting }] } = await q2(
+        `SELECT count(*)::int waiting FROM pg_stat_activity
+          WHERE pid = $1 AND state = 'active' AND wait_event_type = 'Lock'`, [pid]);
+      if (waiting > 0) return true;
+      await new Promise((resolve) => { setTimeout(resolve, 25); });
+    }
+    return false;
+  };
   try {
     await report.section('E01 simultaneous A,B and B,A preparation yield one live proposal', async () => {
       const f = await commitEligible(one, two);
@@ -688,6 +707,13 @@ async function verifyRaces(report, humans) {
       // holds the lock and its uncommitted V2 while T1's call is already in
       // flight, so T1 blocks exactly where the check has to happen. T1 is
       // deliberately not awaited until T2 commits.
+      // T2 does not commit until T1 is OBSERVABLY waiting for the pair lock.
+      // Without that barrier the interleaving is itself a race: T2 could commit
+      // before T1's statement even reached the server, T1 would then read V2 and
+      // refuse for the ordinary reason, and the scenario would report a pass it
+      // had not earned. It is also what makes the pre-fix half below
+      // deterministic, because that half needs T1 to be PAST its unlocked read.
+      const [{ pid }] = await rows('SELECT pg_backend_pid() AS pid');
       const f = await commitOffered(one, two);
       const superseding = randomUUID();
       await q2('BEGIN');
@@ -698,6 +724,8 @@ async function verifyRaces(report, humans) {
       await rt.actAs(one);
       const command = randomUUID();
       const inFlight = rt.declineFirst(command, f.proposal, f.firstView).then(() => null, (error) => error);
+      assert.equal(await waitForLockWait(pid), true,
+        'E06 the decline reached the two-human serialization point and is waiting for the lock T2 holds');
       await q2('COMMIT');
       const outcome = await inFlight;
 
@@ -752,6 +780,11 @@ async function verifyRaces(report, humans) {
           [second, g.proposal, one, g.conclusionForFirst]);
         await rt.actAs(one);
         const stale = rt.declineFirst(randomUUID(), g.proposal, g.firstView).then(() => null, (error) => error);
+        // The SAME barrier, and here it is what makes the half deterministic: the
+        // weakened order reads the view with no lock held, so T2 must not commit
+        // until T1 has done that read and moved on to wait for the lock.
+        assert.equal(await waitForLockWait(pid), true,
+          'E06 the weakened decline read the view unlocked and is now waiting for the pair lock');
         await q2('COMMIT');
         const accepted = await stale;
         await asRole('postgres');
