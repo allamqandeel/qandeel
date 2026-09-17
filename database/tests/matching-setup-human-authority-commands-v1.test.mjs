@@ -78,7 +78,16 @@ test('0109 exists, is the forward migration after 0108, and edits no historical 
   assert.equal(migrations.indexOf(MIGRATION_NAME),
     migrations.indexOf('0108_matching_participation_private_setup_foundation_v1.sql') + 1,
     '0109 orders directly after 0108');
-  assert.equal(migrations[migrations.length - 1], MIGRATION_NAME, '0109 is the current migration tip');
+  // I-07A ENDS AT 0109, which is what this used to say as "0109 is the current
+  // migration tip". A tip assertion is only true until the next reviewed slice
+  // lands, and it would then be repaired by whichever task happened to trip it
+  // rather than by the one that owns the claim. The claim itself survives: no
+  // migration after 0109 belongs to I-07A.
+  const after = migrations.slice(migrations.indexOf(MIGRATION_NAME) + 1);
+  for (const later of after) {
+    const source = read(`../migrations/${later}`);
+    assert.doesNotMatch(source, /^-- I-07A/u, `${later} is a later slice, not an I-07A migration`);
+  }
   assert.match(migration, /^-- I-07A/u);
   assert.match(migration, /COMMIT;\n$/u);
   assert.doesNotMatch(executableSql, /DROP (?:TABLE|FUNCTION|TRIGGER|CONSTRAINT|POLICY|INDEX|COLUMN)/iu);
@@ -318,7 +327,11 @@ test('CROSS-CHECK: every error literal the verifiers assert on is a literal the 
   const JS_IDENTIFIERS = new Set(['MATCHING_TABLES', 'MATCHING_IMMUTABLE', 'MATCHING_GUARDED', 'MATCHING_CHAINS',
     'MATCHING_COMMANDS', 'MATCHING_TRIGGER_FUNCTIONS', 'MATCHING_DISCLOSURE_BAN', 'MATCHING_PARTICIPATION_STATES',
     'MATCHING_PAUSE_REASONS', 'MATCHING_ACTIVATION_ENTRY_CHANNELS', 'MATCHING_PARTICIPATION_ACTS',
-    'MATCHING_REQUIREMENT_STRENGTHS', 'MATCHING_AUTHORITY_EVENT_TYPES', 'MATCHING_AUTHORITY_STATUSES']);
+    'MATCHING_REQUIREMENT_STRENGTHS', 'MATCHING_AUTHORITY_EVENT_TYPES', 'MATCHING_AUTHORITY_STATUSES',
+    // Added when I-07B repaired the two censuses: this is the shared regex the
+    // 0108 and 0109 verifiers use to prove no I-07A relation is lifecycle-shaped,
+    // not an error literal any migration raises.
+    'MATCHING_LIFECYCLE_WORDS']);
   const referenced = new Set([...`${support}\n${verifier}\n${foundationVerifier}`.matchAll(/\bMATCHING_[A-Z_]+/gu)]
     .map((m) => m[0]).filter((name) => !JS_IDENTIFIERS.has(name)));
   assert.ok(referenced.size >= 12, `the verifiers assert on bounded Matching errors, found ${referenced.size}`);

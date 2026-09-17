@@ -64,6 +64,47 @@ export const MATCHING_GUARDED = [
   [M.AUTHORITIES, 'pre_match_disclosure_authorities_status_truth'],
 ];
 
+/**
+ * The candidate / proposal / pair / eligibility words a Matching relation NAME
+ * may carry only if a reviewed later slice owns it. This is the JavaScript half
+ * of the two censuses below; the SQL half lives in the verifiers that use it.
+ */
+export const MATCHING_LIFECYCLE_WORDS =
+  /(candidate|proposal|pair|mutual|commit|slot|snapshot|eligibility|compatib|leaderboard|rank|score)/u;
+
+/**
+ * Every relation in the `matching_` / `introduction_` / `pre_match_` namespace
+ * whose name carries one of those words, and which a REVIEWED LATER SLICE owns
+ * rather than I-07A. Today that is exactly the eleven I-07B adds in migrations
+ * 0110-0112.
+ *
+ * The `0108` and `0109` censuses compare this against the LIVE catalog, which is
+ * precisely what lets them catch a lifecycle relation nobody declared - and
+ * I-07B legitimately adds proposal, pair and eligibility state to that same
+ * namespace. The intended answer to one being added is to put it HERE, named and
+ * owned, exactly as `I-06C` put its new outward Public resolver into the `I-05C`
+ * census rather than renaming it out of the pattern. Renaming to dodge a census
+ * is the dodge the census exists to prevent.
+ *
+ * The censuses therefore assert an EQUALITY rather than an emptiness, and they
+ * keep both halves of what I-07A actually claimed: every lifecycle-shaped
+ * relation in the namespace is one a named later slice owns, AND none of them is
+ * one of the fourteen relations 0108 creates.
+ */
+export const LATER_SLICE_LIFECYCLE_RELATIONS = [
+  'matching_eligibility_snapshots',
+  'matching_pairs',
+  'matching_proposal_policy_state',
+  'matching_proposal_policy_versions',
+  'matching_proposal_safe_field_keys',
+  'matching_proposal_transitions',
+  'matching_proposals',
+  'matching_recipient_proposal_view_fields',
+  'matching_recipient_proposal_view_state',
+  'matching_recipient_proposal_views',
+  'matching_safe_conclusion_candidates',
+];
+
 /** Chains whose self reference is restrictive, so teardown peels them leaf-first. */
 export const MATCHING_CHAINS = [
   [M.ACTS, 'id', 'prior_event_id', 'participant_user_id'],

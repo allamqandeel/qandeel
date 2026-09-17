@@ -59,7 +59,8 @@ import { createScenarioReport } from './verifier-scenarios.mjs';
 import {
   createMatchingRuntime, M, MATCHING_TABLES, MATCHING_IMMUTABLE, MATCHING_GUARDED,
   MATCHING_TRIGGER_FUNCTIONS, PAUSE_REASONS, RESERVED_PAUSE_REASONS, ENTRY_CHANNELS,
-  REQUIREMENT_STRENGTHS, runVerifier, APP_ROLES,
+  REQUIREMENT_STRENGTHS, LATER_SLICE_LIFECYCLE_RELATIONS, MATCHING_LIFECYCLE_WORDS,
+  runVerifier, APP_ROLES,
 } from './matching-setup-verifier-support.mjs';
 
 const rt = createMatchingRuntime(process.env.DATABASE_URL);
@@ -156,15 +157,27 @@ async function verifyCatalog() {
   assert.deepEqual([...new Set(foreign.map((f) => f.parent))], ['users'],
     'S15 the only relation outside Matching that any Matching relation references is public.users');
 
-  // P07 NO CANDIDATE, PROPOSAL, PAIR, MUTUAL MATCH OR INTRODUCTION LIFECYCLE
-  // RELATION exists in the Matching / Introduction namespace.
-  const forbidden = await rows(
+  // P07 I-07A CREATED NO CANDIDATE, PROPOSAL, PAIR, MUTUAL MATCH OR INTRODUCTION
+  // LIFECYCLE RELATION.
+  //
+  // This census compares the LIVE catalog, which is what lets it catch a
+  // lifecycle relation nobody declared - and a reviewed later slice legitimately
+  // adds one to this namespace. The answer to that is to name it in
+  // LATER_SLICE_LIFECYCLE_RELATIONS, not to rename it out of the pattern, so the
+  // assertion is an EQUALITY and both halves of I-07A's claim stay proven: every
+  // lifecycle-shaped relation here is one a named later slice owns, and none of
+  // them is one of the fourteen relations 0108 creates.
+  const lifecycle = await rows(
     `SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind IN ('r','v','m','p')
         AND c.relname ~* '^(matching_|introduction_|pre_match_)'
         AND c.relname ~* '(candidate|proposal|pair|mutual|commit|slot|snapshot|eligibility|compatib|leaderboard|rank|score)'
       ORDER BY 1`);
-  assert.deepEqual(forbidden, [], 'P07 candidate, proposal, Mutual Match and Introduction lifecycle state do not exist');
+  assert.deepEqual(lifecycle.map((r) => r.relname), LATER_SLICE_LIFECYCLE_RELATIONS,
+    'P07 every candidate / proposal / pair / eligibility relation in the Matching namespace is one a reviewed later slice owns');
+  assert.deepEqual(
+    MATCHING_TABLES.map((t) => t.replace('public.', '')).filter((name) => MATCHING_LIFECYCLE_WORDS.test(name)),
+    [], 'P07 and none of them is one of the fourteen relations I-07A creates');
 }
 
 // ------------------------------------------------------- 2. the row scenarios

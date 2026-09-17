@@ -67,7 +67,8 @@ import process from 'node:process';
 import { createScenarioReport } from './verifier-scenarios.mjs';
 import {
   createMatchingRuntime, M, MFN, MATCHING_TABLES, MATCHING_COMMANDS, RESERVED_PAUSE_REASONS,
-  ENTRY_CHANNELS, MATCHING_DISCLOSURE_BAN, runVerifier, APP_ROLES,
+  ENTRY_CHANNELS, MATCHING_DISCLOSURE_BAN, LATER_SLICE_LIFECYCLE_RELATIONS, MATCHING_LIFECYCLE_WORDS,
+  runVerifier, APP_ROLES,
 } from './matching-setup-verifier-support.mjs';
 
 const rt = createMatchingRuntime(process.env.DATABASE_URL);
@@ -594,12 +595,23 @@ async function verifyVersions(report, humans) {
           ['23514'], /_strength_check/u);
       }
       await asRole('postgres');
+      // The census compares the LIVE catalog so a candidate, proposal or ranking
+      // relation nobody declared cannot hide from it. A reviewed later slice
+      // legitimately adds some to this namespace, and the answer to that is to
+      // NAME them in LATER_SLICE_LIFECYCLE_RELATIONS rather than rename them out
+      // of the pattern, so the assertion is an equality. What I-07A claimed and
+      // what stays proven is that none of them is an I-07A relation.
       const evaluated = await rows(
         `SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
           WHERE n.nspname = 'public' AND c.relkind IN ('r','v','m','p')
             AND c.relname ~* '^(matching_|introduction_|pre_match_)'
-            AND c.relname ~* '(candidate|proposal|pair|mutual|eligibility|compatib|rank|score|leaderboard)'`);
-      assert.deepEqual(evaluated, [], 'D02 no candidate, proposal, ranking or compatibility relation exists');
+            AND c.relname ~* '(candidate|proposal|pair|mutual|eligibility|compatib|rank|score|leaderboard)'
+          ORDER BY 1`);
+      assert.deepEqual(evaluated.map((r) => r.relname), LATER_SLICE_LIFECYCLE_RELATIONS,
+        'D02 every candidate, proposal, eligibility or ranking relation is one a reviewed later slice owns');
+      assert.deepEqual(
+        MATCHING_TABLES.map((t) => t.replace('public.', '')).filter((name) => MATCHING_LIFECYCLE_WORDS.test(name)),
+        [], 'D02 and I-07A evaluates, scores and ranks nobody: none of its own relations is one of them');
     });
 
     await report.isolated('C03 a profile field comes from the caller arguments and nowhere else', async () => {
