@@ -100,8 +100,23 @@ const insertProposal = async ({ pair, lower, higher, snapshot, first, candidate,
   return id;
 };
 
-const insertTransition = async (proposal, from, to, { firstActor = null, candidateActor = null,
-  prior = null, reason = null, id = randomUUID() } = {}) => {
+/**
+ * Append one transition row directly.
+ *
+ * `prior` defaults to the proposal's CURRENT transition rather than to NULL,
+ * because `matching_proposal_transitions_prior_check` requires a prior link for
+ * every state but `PREPARED` - and a scenario that left it NULL would trip that
+ * CHECK instead of the one it meant to prove. Several CHECKs can be violated by
+ * one row and PostgreSQL reports whichever it evaluates first, so a probe has to
+ * make its row legal in every respect except the one under test.
+ */
+const insertTransition = async (proposal, from, to, options = {}) => {
+  const { firstActor = null, candidateActor = null, reason = null, id = randomUUID() } = options;
+  let prior = options.prior;
+  if (prior === undefined) {
+    const [current] = await rows(`SELECT current_transition_id id FROM ${P.PROPOSALS} WHERE id = $1`, [proposal]);
+    prior = current?.id ?? null;
+  }
   await q(`INSERT INTO ${P.TRANSITIONS}
              (id, proposal_id, prior_state, resulting_state, prior_transition_id,
               first_recipient_actor_id, candidate_actor_id, private_reason_code)
@@ -112,8 +127,7 @@ const insertTransition = async (proposal, from, to, { firstActor = null, candida
 
 /** Append a transition AND move the pointer, the way 0112's writer does. */
 const step = async (proposal, from, to, options = {}) => {
-  const [current] = await rows(`SELECT current_transition_id id FROM ${P.PROPOSALS} WHERE id = $1`, [proposal]);
-  const transition = await insertTransition(proposal, from, to, { ...options, prior: current?.id ?? null });
+  const transition = await insertTransition(proposal, from, to, options);
   await q(`UPDATE ${P.PROPOSALS} SET proposal_state = $2, current_transition_id = $3 WHERE id = $1`,
     [proposal, to, transition]);
   return transition;
