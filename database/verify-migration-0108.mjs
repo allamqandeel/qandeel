@@ -173,7 +173,10 @@ async function verifyCatalog() {
         AND c.relname ~* '^(matching_|introduction_|pre_match_)'
         AND c.relname ~* '(candidate|proposal|pair|mutual|commit|slot|snapshot|eligibility|compatib|leaderboard|rank|score)'
       ORDER BY 1`);
-  assert.deepEqual(lifecycle.map((r) => r.relname), LATER_SLICE_LIFECYCLE_RELATIONS,
+  // The reviewed ownership list is shared by every later slice and filtered by
+  // THIS census's own predicate, so a relation the predicate cannot reach is
+  // never demanded of it and a relation it can reach can never hide.
+  assert.deepEqual(lifecycle.map((r) => r.relname), LATER_SLICE_LIFECYCLE_RELATIONS.filter((name) => MATCHING_LIFECYCLE_WORDS.test(name)),
     'P07 every candidate / proposal / pair / eligibility relation in the Matching namespace is one a reviewed later slice owns');
   assert.deepEqual(
     MATCHING_TABLES.map((t) => t.replace('public.', '')).filter((name) => MATCHING_LIFECYCLE_WORDS.test(name)),

@@ -91,7 +91,7 @@ export const MATCHING_LIFECYCLE_WORDS =
  * relation in the namespace is one a named later slice owns, AND none of them is
  * one of the fourteen relations 0108 creates.
  */
-export const LATER_SLICE_LIFECYCLE_RELATIONS = [
+export const I07B_LIFECYCLE_RELATIONS = [
   'matching_eligibility_snapshots',
   'matching_pairs',
   'matching_proposal_policy_state',
@@ -104,6 +104,42 @@ export const LATER_SLICE_LIFECYCLE_RELATIONS = [
   'matching_recipient_proposal_views',
   'matching_safe_conclusion_candidates',
 ];
+
+/**
+ * Every relation I-07C adds in migrations 0113 / 0114: the Mutual Match commit,
+ * the Introduction Record, the two birth facts, the active-Introduction claim,
+ * the first-approval view binding, the competing-cancellation link and the three
+ * handoff relations. They are named here for the same reason the I-07B list is:
+ * a census that compares the live catalog must name what a reviewed later slice
+ * owns rather than be dodged by renaming. Only `matching_match_commits` carries
+ * one of the I-07A census words (`commit`); the 0110 verifier's own census
+ * reaches the rest through its own predicate, and each census filters this one
+ * reviewed list by the predicate it actually evaluates, so two censuses with
+ * different predicates share one ownership registry rather than two lists.
+ */
+export const I07C_LIFECYCLE_RELATIONS = [
+  'introduction_records',
+  'matching_active_introduction_claims',
+  'matching_forward_approval_view_bindings',
+  'matching_match_commits',
+  'matching_match_competing_cancellations',
+  'matching_match_handoff_fields',
+  'matching_match_handoff_package_versions',
+  'matching_match_handoff_subjects',
+  'shared_world_introduction_started_events',
+  'shared_world_matching_birth_events',
+];
+
+/** The ONE reviewed ownership list every lifecycle census compares against. */
+export const LATER_SLICE_LIFECYCLE_RELATIONS = [...I07B_LIFECYCLE_RELATIONS, ...I07C_LIFECYCLE_RELATIONS].sort();
+
+/**
+ * The subset of the reviewed ownership list that one census's own predicate can
+ * reach. A census asserts equality against exactly this, so a relation the
+ * predicate cannot see is never demanded of it and a relation it can see is
+ * never allowed to hide.
+ */
+export const lifecycleCensusOf = (words) => LATER_SLICE_LIFECYCLE_RELATIONS.filter((name) => words.test(name));
 
 /** Chains whose self reference is restrictive, so teardown peels them leaf-first. */
 export const MATCHING_CHAINS = [

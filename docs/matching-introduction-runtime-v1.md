@@ -5,18 +5,23 @@
 **CLOSED / FROZEN**
 **Slice:** `I-07B — Candidate Eligibility, Proposal & Privacy Runtime v1` —
 **CLOSED / FROZEN**
+**Slice:** `I-07C — Atomic Mutual Match & Introduction Birth Runtime v1` —
+**I-07C — CANDIDATE — awaiting independent ChatGPT review**
 **Architecture authority:** `QANDEEL_CW2-06 — Introductions / Matching Runtime Architecture v1.0 —
 CLOSED / FROZEN`, with binding `CW2-01`–`CW2-05` and `CW2-08`
 **Migrations:** `0108_matching_participation_private_setup_foundation_v1.sql`,
 `0109_matching_setup_human_authority_commands_v1.sql`,
 `0110_matching_pair_eligibility_proposal_persistence_v1.sql`,
 `0111_matching_candidate_evaluation_disclosure_gate_v1.sql`,
-`0112_matching_proposal_choreography_runtime_v1.sql`
+`0112_matching_proposal_choreography_runtime_v1.sql`,
+`0113_matching_mutual_match_introduction_persistence_v1.sql`,
+`0114_matching_mutual_match_commit_transaction_v1.sql`
 
-This document records what `I-07A` and `I-07B` implemented, what they deliberately did not, and where
-each deferred capability is owned. It does not close `I-07` and it does not restate the frozen
-architecture. Sections 1–13 are the frozen `I-07A` record and are unchanged; sections 14–26 are the
-frozen `I-07B` record.
+This document records what `I-07A` and `I-07B` implemented, what the `I-07C` candidate implements,
+what each deliberately did not, and where each deferred capability is owned. It does not close
+`I-07` and it does not restate the frozen architecture. Sections 1–13 are the frozen `I-07A` record
+and are unchanged; sections 14–26 are the frozen `I-07B` record and are unchanged; sections 27–33
+are the `I-07C` candidate record, which is not frozen until independent review closes it.
 
 ---
 
@@ -616,4 +621,204 @@ freezes `I-07B` while leaving the parent `I-07` phase OPEN for `I-07C` and `I-07
 production: every boundary is executable by no application role, the `CW2-08` prerequisite answers
 `NOT_EVALUATED`, and the canonical first-name seam answers `UNRESOLVED_NO_CANONICAL_SOURCE`. The
 `I-07B` runtime is closed and frozen; production Matching remains fail-closed until its later owners
+open those boundaries.
+
+---
+
+## 27. `I-07C` — what the candidate implements
+
+`I-07C — CANDIDATE — awaiting independent ChatGPT review.` Baseline `main` at
+`308218bf661d1083ab023f6a4045a328c0a7e4bd` (the `I-07B` closure merge); migrations `0113` and
+`0114`, forward-only after the verified `0112` tip. Nothing above section 26 changes.
+
+`I-07C` is the ONE atomic transaction that turns a proposal in `FORWARDED_TO_SECOND` into a Mutual
+Match, and it is one macro slice on purpose. Mutual Match, Introduction Record birth,
+active-Introduction claim acquisition, competing-proposal terminalization, participation pause and
+Match handoff commit together or not at all; no part of it is separately merged, and no part of it
+is durable on its own.
+
+**Second acceptance is durable only as a successful Match.** There is no `SECOND_ACCEPTED`, no
+"accepted pending match", no reserved slot and no pre-created World. The candidate acts on the exact
+current `CANDIDATE` view; the acting human is `auth.uid()`; there is no actor parameter anywhere.
+
+**The Match command identity.** `commit_matching_mutual_match_v1` takes twelve opaque uuid
+identities — the command, the proposal, the exact accepted view and nine persistence identities
+(World, record, two episodes, two claims, two pause acts, handoff) — and returns nine bounded
+columns: the operation, the identities the caller supplied and the frozen birth constants. The
+command id IS the `MUTUAL_MATCH_COMMITTED` transition id and the `matching_match_commits` row id.
+Three durable idempotency passes compare the WHOLE request and answer from the committed row with
+the committed constants — never the live World or record, which `I-07D` legitimately moves on. A
+reused id naming any different request fails closed with `MATCHING_COMMAND_ID_CONFLICT`.
+
+**Two proven acceptances.** `FIRST_FORWARD_APPROVED` alone is not proof. The revised forward
+approval — byte-identical to `0112` in authority and order plus ONE write — durably binds the
+approving transition, the approving human and the exact `FIRST_RECIPIENT` view in
+`matching_forward_approval_view_bindings`. The Match core requires that bound view to STILL be the
+first recipient's current view; a superseded first approval is not carried forward.
+
+**Final acceptance revalidates everything, serialized.** Under both humans' canonical setup locks
+and every mutable proposal row: the exact candidate view, the winner exactly `FORWARDED_TO_SECOND`
+and unexpired, the first-approval binding, `resolve_matching_proposal_validity_v1` (participation,
+grants, profile and requirement versions, disclosure authorities, policies and the canonical
+active-Introduction truth), no `HELD` claim for either human, both participation pointers `ACTIVE`,
+and — LAST, after every privacy and authority gate — `resolve_matching_proposal_prerequisites_v1`
+must answer `CLEARED`. The production seam answers `NOT_EVALUATED`; no application role receives a
+bypass; no application role can execute either boundary.
+
+**Refusal vocabulary.** `MATCHING_AUTHENTICATION_REQUIRED` (42501), `MATCHING_COMMAND_INVALID`
+(22023), `MATCHING_PROPOSAL_NOT_FOUND` (P0002, the one bounded answer for a proposal this human is
+no part of, holds no candidate view of, or that never existed), `MATCHING_RECIPIENT_VIEW_STALE` /
+`MATCHING_STALE_STATE` / `MATCHING_MUTUAL_MATCH_NOT_COMMITTABLE` (40001 — every post-view
+currentness failure is ONE class, so a refusal never says which authority moved),
+`MATCHING_PROPOSAL_EXPIRED` and `MATCHING_PROPOSAL_LAUNCH_PREREQUISITE_UNRESOLVED` (55000),
+`MATCHING_COMMAND_ID_CONFLICT` and `MATCHING_MATCH_ID_CONFLICT` (23505),
+`MATCHING_MATCH_CONTRADICTORY_STATE` (P0001).
+
+## 28. `I-07C` — persistence (migration `0113`)
+
+Persistence and nothing else — no command, no resolver, no read boundary — exactly as `0108` and
+`0110` did for their slices:
+
+- seven additive candidate keys on predecessor relations, each over an existing primary key, so a
+  later row binds an EXACT row of that human, actor, view or World rather than two independently
+  satisfiable halves;
+- the `0110` private-reason CHECK rebuilt in place with exactly one more code,
+  `COMPETING_MATCH_COMMITTED`: the one reviewed `DROP` in the slice, adjacent to its rebuild;
+- `matching_forward_approval_view_bindings`, `matching_match_commits`, `introduction_records`
+  (`ACTIVE | COMPLETED | CLOSED`, born `ACTIVE`, one terminal move, never reopened),
+  `shared_world_matching_birth_events`, `shared_world_introduction_started_events`,
+  `matching_active_introduction_claims` (`HELD | RELEASED`, one partial unique index on `HELD` per
+  human), `matching_match_competing_cancellations`, and the three handoff relations;
+- six reverse bindings onto the commit, `DEFERRABLE INITIALLY DEFERRED` (the `0085` precedent), so
+  the commit row is written LAST and its truth trigger re-reads every effect: the World shape, two
+  open episodes, the record, both facts, both claims, both `ACTIVE_INTRODUCTION` pauses, the handoff,
+  all at ONE instant;
+- immutability guards on the eight append-only relations; truth triggers on the record, the claim,
+  the commit and the handoff; RLS enabled, zero policies, every relation revoked from every
+  application role.
+
+The claim is an INTERNAL concurrency guard only. It does not replace the canonical
+Shared-World-derived truth `resolve_matching_active_introduction_v1`; the core checks both, and a
+`HELD` claim with no Introduction World behind it is refused on its own.
+
+## 29. `I-07C` — the atomic effects (migration `0114`)
+
+In one transaction, at one `clock_timestamp()`: the winner `FORWARDED_TO_SECOND ->
+MUTUAL_MATCH_COMMITTED` through `append_matching_proposal_transition_v1` (the sole transition
+writer; the core inserts no transition itself); the Shared World on the canonical `0075` substrate
+— `ACTIVE / INTRODUCTION / MUTUAL_MATCH`, no closure moment; exactly two open peer episodes; the
+Introduction Record `ACTIVE`; `WORLD_BIRTH / MUTUAL_MATCH` and `INTRODUCTION_STARTED`; both claims
+`HELD`; both humans `PAUSE -> PAUSED / ACTIVE_INTRODUCTION` superseding their exact `ACTIVE` acts,
+through the `0108` act chain and pointer truth — `I-07C` is the reviewed producer `I-07A` reserved,
+and no `USER_PAUSED` is faked; every other LIVE proposal involving either human
+`-> CANCELLED_BY_COMPETING_MATCH` with private reason `COMPETING_MATCH_COMMITTED`, inside the same
+transaction, read from the exact state under its row lock, never left to become `STALE`; the Match
+Handoff Package; the commit row; the deferred bindings flushed `IMMEDIATE`.
+
+The Shared World birth reuses `shared_worlds` / `shared_world_membership_episodes` and the `0082`
+atomic-birth and idempotency patterns, and NOT the direct-invitation semantics or function: the
+direct birth core is byte-identical to what `0082` left, and exactly the two frozen birth paths
+create a Shared World. No third human can join while the phase is `INTRODUCTION`: the frozen `0084`
+governance capture refuses every governed operation for a World that is not `ACTIVE / STANDARD`,
+and the real verifier proves it against the born World. No Shared Standing Context Grant is created.
+The World is independent of Matching participation: after a Match the human may still turn Matching
+off, and cannot resume the reserved pause (`I-07A` law, unchanged).
+
+## 30. `I-07C` — lock order, concurrency proofs and the no-ghost proof
+
+**Published lock order.** (A) `enter_matching_proposal_decision_v1` — the bounded not-found before
+any lock, then BOTH humans' `matching_setup_locks` rows in globally canonical ascending user-id
+order, exactly once, never in competing-proposal order; (B) every proposal row this transaction may
+mutate — the winner and every live proposal involving either human — `FOR UPDATE` in ascending
+proposal id; (C) both participation pointers `FOR UPDATE`; (D) the new rows. No advisory lock, no
+table lock, no process mutex. The human lock set of one Match is provably exactly its own two
+humans (a competitor's setup state is never mutated), so a re-scan can never discover a human
+outside the precomputed set; a competitor terminalized by a disjoint Match is re-read under its row
+lock and skipped.
+
+**Real two-connection proofs**, every one pinned with a lock-wait barrier observed from another
+connection (a race whose interleaving is not pinned is not a proof): the same command retried
+concurrently commits once; two commands on one proposal yield one Match; A-B vs A-C and A-B vs C-B
+yield one winner with the loser cancelled INSIDE the winner; reversed UUID ordering does not
+deadlock; the four-human competing lock set (two disjoint winners crossing on two competitors) lets
+BOTH succeed and cancels every competitor exactly once; two disjoint Matches never wait on each
+other; a concurrent pause, opt-out, profile change, requirement change, disclosure-authority
+revocation, candidate-view supersession or first-approval-view supersession under the pair lock
+defeats a Match that read first, writing nothing; a Match against another Introduction birth for
+the same human yields exactly one.
+
+**No ghost.** A verifier-local late failure and a late unique violation, each injected on the LAST
+write of the transaction after every other effect was written, leave ZERO surviving effects: no
+commit, no transition, no World, no episode, no record, no fact, no claim, no pause, no
+cancellation, no handoff, no binding change — proven from live rows, with the probe removed on
+every path and the trigger set proven restored.
+
+## 31. `I-07C` — handoff privacy, neutrality and the `I-07D` anti-scope
+
+**The Match Handoff Package is a one-way, bounded projection.** Its subjects are bound by foreign
+keys to the exact view's subject, first name and permitted conclusion; its fields to a real field of
+the exact view; its values are route- and provenance-banned; its truth trigger requires the view to
+be in the package, the conclusion text to be the permitted text and the field value to be the view
+value. The core copies from exactly the two views that already crossed both disclosure gates and the
+value filter, composes nothing and fetches nothing from a profile. Raw `MY_WORLD` evidence, private
+reasoning, hidden provenance, the Matching Context Grant, private operational reasons and competing
+proposal information are unreachable from every handoff relation, by structure and by the real
+verifier's search for every private identity and text.
+
+**Competing-proposal privacy.** The recipient of a proposal cancelled by another human's Match is
+told `NO_LONGER_AVAILABLE` — the same columns, the same values and the same field projection as an
+expiry, with no winner, no commit, no World, no reason and no state name anywhere in the answer.
+
+**What `I-07C` deliberately does not do (`I-07D` and later):** no claim release (`RELEASED` is
+representable and produced by nothing); no `COMPLETED` / `CLOSED` record producer; no Introduction
+success transition to `STANDARD`; no unilateral Introduction end; no `POST_INTRODUCTION`,
+`POST_SUCCESS` or `SYSTEM_POLICY` pause producer; no resume of a reserved pause; no Shared Standing
+Context Grant; no launch, no application-executable boundary, no ranking, no contact route. The
+migration refuses to deploy a core that spells any of those lifecycles.
+
+## 32. `I-07C` — forward-seam reconciliation record
+
+Done in the same branch, never as a separate cleanup PR, and never by editing a historical
+migration; the `I-07C` static contract pins `0075`, `0082`, `0108`–`0112` and the frozen `I-07A` /
+`I-07B` TypeScript vocabulary modules by git blob id.
+
+- `verify-migration-0110.mjs` P06: the future-relation ABSENCE census is now an EQUALITY against the
+  named `I07C_LIFECYCLE_RELATIONS` list (regex extended to reach the `_claim` relation, the name
+  `I-07C` gave the slot), proven non-vacuous; the `I-07B` proposal `COLUMN_BAN` is preserved —
+  `matching_proposals` still carries exactly its eleven `0110` columns.
+- `verify-migration-0112.mjs`: the "no reserved-state producer" (A05) and "no acceptance producer"
+  (B01) assertions are equalities against `commit_matching_mutual_match_v1`;
+  `append_matching_proposal_transition_v1` remains the sole transition writer.
+- `verify-migration-0108.mjs` / `-0109.mjs`: the shared lifecycle census list is the union of one
+  array per reviewed slice (`I07B_LIFECYCLE_RELATIONS`, `I07C_LIFECYCLE_RELATIONS`), and each census
+  filters it by its own regex; the `I-07A` human-consent boundaries are unchanged and the `0114`
+  self-assertion proves the `I-07A` commands still name no `ACTIVE_INTRODUCTION`.
+- `verify-migration-0082.mjs`: the forward-safety probe predicted `introduction_records` as a name to
+  plant; it has arrived, and the probe counts an arrived relation instead of planting over it.
+- `database/tests/matching-proposal-privacy-runtime-v1.test.mjs`: reads the `I-07B` half of the
+  census from its own named array and asserts the union line.
+
+## 33. `I-07C` — candidate status, `BG-05` / `BG-08`, launch readiness
+
+`I-07C` is a **CANDIDATE — awaiting independent ChatGPT Architecture / Privacy / Database /
+Concurrency review**. It is not CLOSED, not FROZEN, not Ready for Review and not merged. `I-07`
+remains **OPEN**; `I-07A` and `I-07B` remain **CLOSED / FROZEN**. The exact accepted head, the two
+complete Focused Database Verification acceptance rounds over `0113` then `0114` on that one SHA,
+the predecessor regression runs, and the API CI / Mobile CI runs on that head are recorded in the
+Draft PR and in the implementation handoff, and will be transcribed here at closure synchronization.
+
+**`BG-05` kickoff reconciliation:** the canonical backlog was read in full at kickoff. No open
+backlog item names `I-07` or `I-07C`; `QAN-BL-SEC-01` stays owned by `QAN-SEC-01`; `OPEN-06`,
+`OPEN-08`, `OPEN-09`, `OPEN-19`, `NAV-01` and `NAV-02` are untouched. `I-07C` inherited nothing and
+admits nothing.
+
+**`BG-08` candidate residue:** none. The deferred capabilities in section 31 are owned by frozen
+`CW2-03` / `CW2-06` / `CW2-08` or by the named `I-07D`; duplicating them into the backlog would
+violate `BG-06`. The fail-closed Launch Gate and canonical-first-name seams remain implemented
+boundaries, not backlog deferrals.
+
+**Launch readiness is a different claim.** Nothing in `I-07C` can match anybody to anybody in
+production: both boundaries are executable by no application role, the `CW2-08` prerequisite
+answers `NOT_EVALUATED` and is required LAST, and the canonical first-name seam answers
+`UNRESOLVED_NO_CANONICAL_SOURCE`. Production Matching remains fail-closed until `I-09` / `CW2-08`
 open those boundaries.

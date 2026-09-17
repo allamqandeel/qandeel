@@ -2799,3 +2799,126 @@ competing-match cancellation are reached only as the table owner inside a scenar
 `I-07B` has no producer for them on purpose - and both fail-closed seams are replaced only inside a
 transaction and restored byte for byte afterwards, with the production answer asserted back at the end
 of the run. No permissive seam or policy is ever left installed.
+
+## I-07C - Atomic Mutual Match, Introduction Birth and Match Handoff Runtime v1 (migrations 0113-0114)
+
+`I-07B` stopped exactly where the second-party acceptance begins: a proposal in
+`FORWARDED_TO_SECOND`, with no durable "accepted but not matched" state and no producer for the two
+reserved states `MUTUAL_MATCH_COMMITTED` and `CANCELLED_BY_COMPETING_MATCH`. `I-07C` is the ONE
+atomic transaction that turns that proposal into a Mutual Match, and everything that transaction
+needs to be exact. It is one macro slice on purpose: Mutual Match, Introduction Record birth,
+active-Introduction claim acquisition, competing-proposal terminalization, participation pause and
+Match handoff either commit together or not at all.
+
+`0113_matching_mutual_match_introduction_persistence_v1.sql` creates persistence and nothing else -
+no command, no resolver, no read boundary:
+
+- seven **additive candidate keys** on predecessor relations (`matching_proposal_transitions` x2,
+  `matching_proposals`, `matching_recipient_proposal_views` x3, `shared_world_membership_episodes`),
+  each a candidate key over an existing primary key, so a later row binds an EXACT row of that human,
+  actor, view or World rather than two independently satisfiable halves;
+- the 0110 private-reason CHECK rebuilt in place with exactly one more code,
+  `COMPETING_MATCH_COMMITTED` - the ONE reviewed drop in the slice, adjacent to its rebuild;
+- `matching_forward_approval_view_bindings` - the durable first acceptance: the approving transition,
+  the approving human and the exact `FIRST_RECIPIENT` view, bound as one row;
+- `matching_match_commits` - the durable Match: its id IS the `MUTUAL_MATCH_COMMITTED` transition id
+  and the command id, binding the proposal, the pair, both humans, the first-approval binding, the
+  exact accepted candidate view, the World, both episodes, the record, both claims, both pause acts
+  and the handoff package, all at one `committed_at`;
+- `introduction_records` (`ACTIVE | COMPLETED | CLOSED`, born `ACTIVE`, one terminal move, never
+  reopened), `shared_world_matching_birth_events` (`WORLD_BIRTH / MUTUAL_MATCH`) and
+  `shared_world_introduction_started_events` (`INTRODUCTION_STARTED`);
+- `matching_active_introduction_claims` - the INTERNAL single-winner guard (`HELD | RELEASED`, one
+  partial unique index on `HELD` per human). It is a concurrency guard only; the canonical
+  active-Introduction truth stays `resolve_matching_active_introduction_v1` over the Shared World
+  substrate, and the Match core checks BOTH;
+- `matching_match_competing_cancellations` - the private link from a `CANCELLED_BY_COMPETING_MATCH`
+  transition to the Match that caused it;
+- `matching_match_handoff_package_versions`, `_subjects`, `_fields` - the Match Handoff Package as a
+  ONE-WAY structural projection: every subject row is bound by foreign keys to the exact view's
+  subject, first name and permitted conclusion, every field row to a real field of the exact view,
+  and the values are route- and provenance-banned. A handoff row that is not a copy of an exact
+  recipient-view row is unrepresentable. Nothing private - reasoning, refusals, snapshots, grants,
+  authorities, profile versions, competing proposals - can be reached from a handoff relation;
+- six **deferred reverse bindings** onto the commit (`DEFERRABLE INITIALLY DEFERRED`, the 0085
+  precedent), so the commit row can be written LAST and its truth trigger can re-read every effect;
+- immutability guards on the eight append-only relations and truth triggers on the record, the claim,
+  the commit (World shape, two open episodes, record, both facts, both claims, both
+  `ACTIVE_INTRODUCTION` pauses, handoff, all at one instant) and the handoff (view in package,
+  conclusion text is the permitted text, field value is the view value).
+
+`0114_matching_mutual_match_commit_transaction_v1.sql` creates `commit_matching_mutual_match_v1`
+(twelve opaque uuid identities in, nine bounded columns out, human = `auth.uid()`, no actor
+parameter) and revises `approve_matching_proposal_forward_core_v1` byte-for-byte in its authority
+and order plus ONE write: the exact-view binding. The core, in the published order:
+
+1. durable idempotency over the WHOLE request, before any lock;
+2. `enter_matching_proposal_decision_v1` - the bounded not-found, then BOTH humans' setup locks in
+   canonical user-id order, exactly once;
+3. every proposal row this transaction may mutate - the winner and every LIVE proposal involving
+   either human - `FOR UPDATE` in ascending proposal id;
+4. the exact current `CANDIDATE` view, the winner exactly `FORWARDED_TO_SECOND` and unexpired, the
+   durable first-approval binding whose bound view is STILL the first recipient's current view;
+5. `resolve_matching_proposal_validity_v1` - participation, grants, profile and requirement
+   versions, disclosure authorities, policies and the canonical active-Introduction truth;
+6. no `HELD` claim for either human; both participation pointers `FOR UPDATE` and `ACTIVE`;
+7. `resolve_matching_proposal_prerequisites_v1` must answer `CLEARED`, as the LAST gate;
+8. ONE `clock_timestamp()`, then the write region under the six deferred bindings: the
+   `MUTUAL_MATCH_COMMITTED` transition through `append_matching_proposal_transition_v1`, the Shared
+   World (`ACTIVE / INTRODUCTION / MUTUAL_MATCH`), two open episodes, the record, both facts, both
+   claims, both `PAUSE -> PAUSED / ACTIVE_INTRODUCTION` acts superseding the exact `ACTIVE` acts,
+   every competitor `-> CANCELLED_BY_COMPETING_MATCH` with private reason
+   `COMPETING_MATCH_COMMITTED` (database-generated ids, because their number is private), the
+   handoff package copied from the two exact views, the commit row, then the bindings flushed
+   `IMMEDIATE`.
+
+No advisory lock, no table lock, no direct transition insert, no second acceptance state, no
+`USER_PAUSED`, no `STANDARD`, no `READ_ONLY_CLOSED`, no `RELEASED`: the migration refuses to deploy
+a core that spells any of them, and the live producer censuses are equalities - exactly the core
+produces the two reserved states, the `ACTIVE_INTRODUCTION` pause, a commit, a claim, a record or a
+handoff; exactly the two frozen birth paths create a Shared World; exactly the one writer appends a
+transition; exactly the revised approval writes a binding. Both boundaries are executable by no
+application role; the `CW2-08` seam answers `NOT_EVALUATED` in production, so nothing can commit a
+Match before the Launch Gate exists.
+
+**Forward-seam reconciliation in the same branch, not a cleanup PR.** The 0110 future-relation
+absence census is now an EQUALITY against the named `I07C_LIFECYCLE_RELATIONS` list with the proposal
+column ban preserved; the 0112 "no reserved-state producer" and "no acceptance producer" assertions
+are equalities against `commit_matching_mutual_match_v1`; the 0108/0109 censuses filter the shared
+union by their own regexes; the 0082 forward-safety probe counts `introduction_records` as ARRIVED
+instead of planting over a real relation. No historical migration was edited: the I-07C static
+contract pins 0075, 0082 and 0108-0112 by git blob id.
+
+### I-07C - lock order
+
+Every `matching_setup_locks` row is acquired through the ONE entry point in globally canonical
+ascending user-id order, never in competing-proposal order; then every mutable proposal row in
+ascending proposal id; then both participation pointers; then the new rows. The human lock set of
+one Match is provably exactly its own two humans, so a re-scan can never discover a human outside
+the precomputed set. Two Matches sharing a human serialize on that human's lock; two disjoint
+Matches sharing only a competitor serialize on its row and BOTH commit; two Matches sharing nothing
+never wait. The real-PostgreSQL proofs pin every interleaving with a lock-wait barrier observed from
+another connection.
+
+### I-07C - verifier commands
+
+```bash
+npm run verify:matching-mutual-match-introduction-persistence:integration
+npm run verify:matching-mutual-match-commit-transaction:integration
+```
+
+Both need `DATABASE_URL` pointing at a FULLY migrated database and run in CI as one reported group
+after the `I-07B` group. `verify-migration-0113.mjs` writes the Match graph directly as the table
+owner - 0113 creates no command - inside transactions it rolls back, so what it proves is what the
+database itself refuses, which binds the owner too; the one revised boundary, forward approval, is
+exercised as the human. `verify-migration-0114.mjs` reaches every state through the real I-07A,
+I-07B and I-07C boundaries as the humans involved, replaces the two fail-closed seams for the run and
+restores them byte for byte, and proves: the happy path at one instant; exactly-once retry that never
+reads the live World; every refusal class writing nothing; the production seam refusing LAST; the
+NO-GHOST proof (a verifier-local late failure and a late unique violation each leave ZERO surviving
+effects - no commit, transition, World, episode, record, fact, claim, pause, cancellation or handoff);
+the third-member freeze through the frozen 0084/0085 governance; competing-cancellation neutrality
+against expiry; and fifteen barrier-pinned two-connection races (same command, same proposal,
+A-B vs A-C, A-B vs C-B, reversed UUID order, the four-human competing lock set, disjoint pairs, and
+the Match against a concurrent pause, opt-out, profile, requirement, disclosure, candidate-view and
+first-approval-view change).

@@ -445,11 +445,22 @@ test('the I-07A censuses name the relations I-07B adds rather than being dodged'
   // I-06C put its new outward Public resolver into the I-05C one. Renaming out
   // of the pattern is the dodge a census exists to prevent, and this asserts
   // that the list is complete rather than that it merely exists.
-  const listed = [...setupSupport.matchAll(/^ {2}'(matching_[a-z_]+)',$/gmu)].map((m) => m[1]);
+  // Since I-07C the shared list is the UNION of one array per reviewed slice,
+  // so the I-07B half is read from its own named array: every lifecycle-shaped
+  // relation 0110 creates is named there, and nothing else is. The union itself
+  // is asserted to be built from exactly the per-slice arrays, so a relation
+  // cannot enter the census without being owned by a named slice.
+  const i07bStart = setupSupport.indexOf('export const I07B_LIFECYCLE_RELATIONS = [');
+  assert.ok(i07bStart >= 0, 'the setup support names the I-07B half of the shared census list');
+  const i07bBlock = setupSupport.slice(i07bStart, setupSupport.indexOf('];', i07bStart));
+  const listed = [...i07bBlock.matchAll(/^ {2}'(matching_[a-z_]+)',$/gmu)].map((m) => m[1]);
   const declared = TABLES_0110.filter((name) =>
     /(candidate|proposal|pair|mutual|commit|slot|snapshot|eligibility|compatib|leaderboard|rank|score)/u.test(name));
   assert.deepEqual(listed.sort(), declared.sort(),
-    'every lifecycle-shaped relation 0110 creates is named in the shared census list, and nothing else is');
+    'every lifecycle-shaped relation 0110 creates is named in the I-07B half of the shared census list, and nothing else is');
+  assert.match(setupSupport,
+    /export const LATER_SLICE_LIFECYCLE_RELATIONS = \[\.\.\.I07B_LIFECYCLE_RELATIONS, \.\.\.I07C_LIFECYCLE_RELATIONS\]\.sort\(\);/u,
+    'the shared census list is exactly the union of the two reviewed per-slice arrays');
   for (const n of ['0108', '0109']) {
     const verifier = read(`../verify-migration-${n}.mjs`);
     assert.match(verifier, /LATER_SLICE_LIFECYCLE_RELATIONS/u,

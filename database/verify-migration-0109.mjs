@@ -601,13 +601,17 @@ async function verifyVersions(report, humans) {
       // NAME them in LATER_SLICE_LIFECYCLE_RELATIONS rather than rename them out
       // of the pattern, so the assertion is an equality. What I-07A claimed and
       // what stays proven is that none of them is an I-07A relation.
+      // The reviewed ownership list is shared by every later slice and is
+      // filtered by THIS census's own predicate, which is narrower than the 0108
+      // one on purpose: this scenario is about evaluation and ranking words.
+      const EVALUATION_WORDS = /(candidate|proposal|pair|mutual|eligibility|compatib|rank|score|leaderboard)/u;
       const evaluated = await rows(
         `SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
           WHERE n.nspname = 'public' AND c.relkind IN ('r','v','m','p')
             AND c.relname ~* '^(matching_|introduction_|pre_match_)'
             AND c.relname ~* '(candidate|proposal|pair|mutual|eligibility|compatib|rank|score|leaderboard)'
           ORDER BY 1`);
-      assert.deepEqual(evaluated.map((r) => r.relname), LATER_SLICE_LIFECYCLE_RELATIONS,
+      assert.deepEqual(evaluated.map((r) => r.relname), LATER_SLICE_LIFECYCLE_RELATIONS.filter((name) => EVALUATION_WORDS.test(name)),
         'D02 every candidate, proposal, eligibility or ranking relation is one a reviewed later slice owns');
       assert.deepEqual(
         MATCHING_TABLES.map((t) => t.replace('public.', '')).filter((name) => MATCHING_LIFECYCLE_WORDS.test(name)),

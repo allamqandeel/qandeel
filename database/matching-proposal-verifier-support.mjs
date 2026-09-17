@@ -88,6 +88,60 @@ export const PROPOSAL_TRIGGER_FUNCTIONS = [
   'public.matching_filter_outcome_truth_v1()',
 ];
 
+// ------------------------------------------------------ I-07C relations
+/**
+ * The I-07C Match relations (migrations 0113 / 0114), named HERE because the
+ * shared I-07B teardown must peel them before any I-07B row they bind: since
+ * I-07C a forward approval writes a view binding onto its own transition, and a
+ * committed Match binds transitions, views, proposals, pairs, participation
+ * acts, membership episodes and Worlds - every one of those keys restrictive.
+ * A verifier that removed its committed proposals without first removing the
+ * Match rows that bind them would be refused row by row.
+ */
+export const MATCH = Object.freeze({
+  BINDINGS: 'public.matching_forward_approval_view_bindings',
+  COMMITS: 'public.matching_match_commits',
+  RECORDS: 'public.introduction_records',
+  BIRTHS: 'public.shared_world_matching_birth_events',
+  STARTS: 'public.shared_world_introduction_started_events',
+  CLAIMS: 'public.matching_active_introduction_claims',
+  CANCELLATIONS: 'public.matching_match_competing_cancellations',
+  PACKAGES: 'public.matching_match_handoff_package_versions',
+  SUBJECTS: 'public.matching_match_handoff_subjects',
+  FIELDS: 'public.matching_match_handoff_fields',
+});
+
+/** Every relation 0113 creates, in the order its terminal self-assertion names them. */
+export const MATCH_TABLES = [
+  MATCH.BINDINGS, MATCH.COMMITS, MATCH.RECORDS, MATCH.BIRTHS, MATCH.STARTS,
+  MATCH.CLAIMS, MATCH.CANCELLATIONS, MATCH.PACKAGES, MATCH.SUBJECTS, MATCH.FIELDS,
+];
+
+/** Every guard 0113 installs, immutability and truth alike, with the relation it guards. */
+export const MATCH_GUARDS = [
+  [MATCH.BINDINGS, 'matching_forward_approval_view_bindings_immutable'],
+  [MATCH.COMMITS, 'matching_match_commits_immutable'],
+  [MATCH.COMMITS, 'matching_match_commits_truth'],
+  [MATCH.RECORDS, 'introduction_records_truth'],
+  [MATCH.BIRTHS, 'shared_world_matching_birth_events_immutable'],
+  [MATCH.STARTS, 'shared_world_introduction_started_events_immutable'],
+  [MATCH.CLAIMS, 'matching_active_introduction_claims_truth'],
+  [MATCH.CANCELLATIONS, 'matching_match_competing_cancellations_immutable'],
+  [MATCH.PACKAGES, 'matching_match_handoff_package_versions_immutable'],
+  [MATCH.SUBJECTS, 'matching_match_handoff_subjects_immutable'],
+  [MATCH.SUBJECTS, 'matching_match_handoff_subjects_truth'],
+  [MATCH.FIELDS, 'matching_match_handoff_fields_immutable'],
+  [MATCH.FIELDS, 'matching_match_handoff_fields_truth'],
+];
+
+/**
+ * The ONE reviewed producer of MUTUAL_MATCH_COMMITTED, CANCELLED_BY_COMPETING_MATCH
+ * and the ACTIVE_INTRODUCTION pause. The 0112 verifier's producer law is an
+ * EQUALITY against this name: not "at least one", and not any function a later
+ * slice adds without review.
+ */
+export const I07C_MATCH_PRODUCER = 'commit_matching_mutual_match_v1';
+
 // ------------------------------------------------------------------ functions
 export const PFN = Object.freeze({
   // 0111 pure classifiers
@@ -434,8 +488,66 @@ export function createProposalRuntime(databaseUrl) {
     return { human, grant, profileVersion, requirementVersion: state.matching_requirement_version_id, authority };
   }
 
+  /**
+   * Remove every COMMITTED I-07C row of the given humans, leaf-first, BEFORE the
+   * I-07B rows they bind.
+   *
+   * The commit row goes first: every key it holds is outgoing and immediate,
+   * while every key that points AT it is deferred, so its children can be
+   * removed afterwards inside the same transaction and the deferred checks find
+   * nothing left at COMMIT. The Worlds a Match bore are captured from the
+   * Introduction Records before those are deleted, because every link back to
+   * the fixture humans runs through the records.
+   */
+  async function removeCommittedMatchState(humans) {
+    await rt.asRole('postgres');
+    await q('BEGIN');
+    try {
+      for (const [table, trigger] of MATCH_GUARDS) {
+        await q(`ALTER TABLE ${table} DISABLE TRIGGER ${trigger}`);
+      }
+      const pairs = `(SELECT pr.id FROM ${P.PAIRS} pr
+                       WHERE pr.lower_user_id = ANY($1::uuid[]) OR pr.higher_user_id = ANY($1::uuid[]))`;
+      const proposals = `(SELECT p.id FROM ${P.PROPOSALS} p WHERE p.pair_id IN ${pairs})`;
+      const commits = `(SELECT c.id FROM ${MATCH.COMMITS} c
+                         WHERE c.lower_user_id = ANY($1::uuid[]) OR c.higher_user_id = ANY($1::uuid[]))`;
+      const records = `(SELECT r.id FROM ${MATCH.RECORDS} r
+                         WHERE r.lower_user_id = ANY($1::uuid[]) OR r.higher_user_id = ANY($1::uuid[]))`;
+      const bornWorlds = (await rows(
+        `SELECT r.world_id FROM ${MATCH.RECORDS} r
+          WHERE r.lower_user_id = ANY($1::uuid[]) OR r.higher_user_id = ANY($1::uuid[])`, [humans]))
+        .map((r) => r.world_id);
+      await q(`DELETE FROM ${MATCH.COMMITS} WHERE id IN ${commits}`, [humans]);
+      await q(`DELETE FROM ${MATCH.FIELDS} WHERE package_version_id IN
+                 (SELECT h.id FROM ${MATCH.PACKAGES} h WHERE h.introduction_record_id IN ${records})`, [humans]);
+      await q(`DELETE FROM ${MATCH.SUBJECTS} WHERE package_version_id IN
+                 (SELECT h.id FROM ${MATCH.PACKAGES} h WHERE h.introduction_record_id IN ${records})`, [humans]);
+      await q(`DELETE FROM ${MATCH.PACKAGES} WHERE introduction_record_id IN ${records}`, [humans]);
+      await q(`DELETE FROM ${MATCH.CANCELLATIONS} WHERE cancelled_proposal_id IN ${proposals}`, [humans]);
+      await q(`DELETE FROM ${MATCH.CLAIMS} WHERE user_id = ANY($1::uuid[]) OR introduction_record_id IN ${records}`, [humans]);
+      await q(`DELETE FROM ${MATCH.STARTS} WHERE introduction_record_id IN ${records}`, [humans]);
+      await q(`DELETE FROM ${MATCH.BIRTHS} WHERE introduction_record_id IN ${records}`, [humans]);
+      await q(`DELETE FROM ${MATCH.RECORDS} WHERE id IN ${records}`, [humans]);
+      await q('DELETE FROM public.shared_world_membership_episodes WHERE world_id = ANY($1::uuid[])', [bornWorlds]);
+      await q('DELETE FROM public.shared_worlds WHERE id = ANY($1::uuid[])', [bornWorlds]);
+      await q(`DELETE FROM ${MATCH.BINDINGS} WHERE proposal_id IN ${proposals}`, [humans]);
+      for (const [table, trigger] of MATCH_GUARDS) {
+        await q(`ALTER TABLE ${table} ENABLE TRIGGER ${trigger}`);
+      }
+      await q('COMMIT');
+    } catch (error) {
+      await q('ROLLBACK').catch(() => undefined);
+      throw error;
+    }
+    for (const [table, trigger] of MATCH_GUARDS) {
+      assert.equal(await rt.triggerEnabled(table, trigger), true, `${trigger} is enabled again after I-07C teardown`);
+    }
+  }
+
   /** Remove every COMMITTED I-07B row, leaf-first, then hand off to the I-07A teardown. */
   async function removeCommittedProposalState(humans) {
+    // The I-07C rows bind the I-07B rows restrictively, so they go first.
+    await removeCommittedMatchState(humans);
     await rt.asRole('postgres');
     await q('BEGIN');
     try {
@@ -525,12 +637,12 @@ export function createProposalRuntime(databaseUrl) {
     neutral, myProposal, myFields, classify, proposalRow, currentViewOf,
     installPolicies, supersedePolicy, captureMatchingSeam, restoreMatchingSeam,
     clearProposalPrerequisites, resolveFirstName,
-    provisionMatchableHuman, removeCommittedProposalState, removeCommittedPolicies,
+    provisionMatchableHuman, removeCommittedMatchState, removeCommittedProposalState, removeCommittedPolicies,
   };
 }
 
 export { runVerifier, APP_ROLES } from './matching-setup-verifier-support.mjs';
 export {
   MATCHING_TABLES, MATCHING_IMMUTABLE, MATCHING_GUARDED, MATCHING_COMMANDS, MFN, M,
-  LATER_SLICE_LIFECYCLE_RELATIONS,
+  LATER_SLICE_LIFECYCLE_RELATIONS, I07B_LIFECYCLE_RELATIONS, I07C_LIFECYCLE_RELATIONS, lifecycleCensusOf,
 } from './matching-setup-verifier-support.mjs';

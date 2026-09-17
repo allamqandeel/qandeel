@@ -60,7 +60,7 @@ import { createScenarioReport } from './verifier-scenarios.mjs';
 import {
   createProposalRuntime, P, PFN, PROPOSAL_BOUNDARIES, HUMAN_DECISIONS, DECISION_ENTRY_ORDER,
   AUDIENCE_PROJECTIONS, NEUTRAL_OUTCOMES, ABSENT_ACCEPTANCE_STATES, RESERVED_I07C_STATES,
-  RECIPIENT_DISCLOSURE_BAN, runVerifier, APP_ROLES,
+  RECIPIENT_DISCLOSURE_BAN, I07C_MATCH_PRODUCER, runVerifier, APP_ROLES,
 } from './matching-proposal-verifier-support.mjs';
 
 const rt = createProposalRuntime(process.env.DATABASE_URL);
@@ -146,12 +146,18 @@ async function verifyPosture() {
       WHERE n.nspname = 'public' AND pr.prosrc ~ 'INSERT INTO public\\.matching_proposal_transitions' ORDER BY 1`);
   assert.deepEqual(writers.map((r) => r.proname), ['append_matching_proposal_transition_v1'],
     'A05 exactly one function writes a proposal transition');
+  // THE RESERVED-STATE PRODUCER LAW, repaired from "no producer" to EXACT
+  // OWNERSHIP. At 0112's own deploy point no function beside the writer named
+  // either state, and the migration's terminal self-assertion proved it. I-07C
+  // is the reviewed producer of both, so the live truth is exactly the I-07C
+  // Match core and nothing else - not "at least one", and not any function a
+  // later slice might add without review.
   const producers = await rows(
     `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
       WHERE n.nspname = 'public' AND pr.prosrc ~ 'append_matching_proposal_transition_v1'
         AND pr.prosrc ~ $1 ORDER BY 1`, [`('${RESERVED_I07C_STATES.join(`'|'`)}')`]);
-  assert.deepEqual(producers, [],
-    'A05 no function that writes a transition names either reserved I-07C state, so both stay representable with no producer');
+  assert.deepEqual(producers.map((r) => r.proname), [I07C_MATCH_PRODUCER],
+    'A05 exactly the reviewed I-07C Match core names the two reserved states beside the writer; I-07B still has no producer for them');
 }
 
 // ----------------------------------------------------------- 2. choreography
@@ -176,12 +182,17 @@ async function verifyChoreography(report, humans) {
       const [declined] = await rt.declineSecond(randomUUID(), f.proposal, secondView);
       assert.equal(declined.declined_state, 'SECOND_DECLINED', 'B01 and the second recipient may decline');
       assert.equal(declined.neutral_outcome, 'CLOSED_BY_YOU', 'B01 which they know, because they did it');
-      // AND THERE IS NO ACCEPTANCE COUNTERPART. The asymmetry is the boundary.
+      // AND THE ONLY ACCEPTANCE COUNTERPART IS THE ATOMIC I-07C MATCH COMMIT.
+      // The asymmetry is the boundary: I-07B has no acceptance of its own, and
+      // the one second-acceptance boundary that exists is the reviewed Match
+      // core, exactly - no other function in the namespace accepts, matches or
+      // commits a Mutual Match.
       await asRole('postgres');
       const accept = await rows(
         `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
-          WHERE n.nspname = 'public' AND pr.proname ~* 'accept' AND pr.proname ~* 'match'`);
-      assert.deepEqual(accept, [], 'B01 no acceptance boundary exists in I-07B at all');
+          WHERE n.nspname = 'public' AND pr.proname ~* '(accept|mutual_match)' AND pr.proname ~* 'match' ORDER BY 1`);
+      assert.deepEqual(accept.map((r) => r.proname), [I07C_MATCH_PRODUCER],
+        'B01 the second acceptance exists exactly once, as the reviewed I-07C Match commit, and I-07B has none of its own');
     });
 
     await report.isolated('B02 the candidate is not notified by the first offer', async () => {

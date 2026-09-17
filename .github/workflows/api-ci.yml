@@ -564,6 +564,61 @@ jobs:
             printf '### I-07B real-PostgreSQL verifiers\n- 0110 = %s\n- 0111 = %s\n- 0112 = %s\n' "$result_0110" "$result_0111" "$result_0112" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$status"
+      # The two I-07C verifiers are NEW. Each one's first contact with real
+      # PostgreSQL can expose a defect the other would not reveal so they run as
+      # ONE reported group rather than two hard-fail steps: a failure in 0113
+      # would otherwise skip 0114 entirely and cost a whole round per finding.
+      # Each exit code is captured and the step exits non-zero if either failed.
+      #
+      # 0113 proves the Mutual Match persistence: a Match commit whose id IS the
+      # command id AND the MUTUAL_MATCH_COMMITTED transition id + one proposal to
+      # at most one commit and one commit to exactly one World one Introduction
+      # Record two episodes two claims two pauses and one handoff each bound as
+      # ONE exact row + an Introduction Record born ACTIVE with COMPLETED and
+      # CLOSED representable and produced by nothing + an active-Introduction
+      # claim that is an internal single-winner guard with at most one HELD claim
+      # per human and RELEASED representable and produced by nothing + a durable
+      # first-approval binding onto the exact FIRST_RECIPIENT view + a handoff
+      # package whose every field first name and conclusion is bound to the exact
+      # view row it copies and that can reach no private relation + exactly six
+      # deferred reverse bindings onto the commit and nothing else deferred + the
+      # private reason vocabulary gaining exactly COMPETING_MATCH_COMMITTED + the
+      # I-07B proposal column ban preserved + every immutability and truth guard
+      # proven load-bearing.
+      #
+      # 0114 proves the atomic Mutual Match commit: the accepting human is
+      # auth.uid() and must be the exact candidate on the exact current view +
+      # the first approval durably view-bound and still current + every current
+      # truth revalidated under both humans' canonical setup locks and every
+      # mutable proposal row in ascending id + the CW2-08 gate required CLEARED
+      # as the last gate + one atomic commit producing the transition the World
+      # the two episodes the record the two facts the two claims the two
+      # ACTIVE_INTRODUCTION pauses every competing cancellation and the handoff
+      # under one instant + retry returning the committed identities + fifteen
+      # real two-connection races each pinned by a lock-wait barrier including
+      # A-B vs A-C and A-B vs C-B and UUID-order inversion and the four-human
+      # lock set and disjoint Matches both succeeding + an injected late failure
+      # leaving zero surviving effects + the neutral projection unable to tell a
+      # competing cancellation from an expiry + no third human at birth + no
+      # Shared Standing Context Grant manufactured.
+      - name: Verify the two I-07C Matching Mutual Match persistence and atomic commit verifiers against real PostgreSQL as one reported group
+        run: |
+          status=0
+          result_0113=FAIL
+          result_0114=FAIL
+          echo "::group::migration 0113 - Mutual Match Introduction Record claim binding and handoff persistence"
+          if npm run verify:matching-mutual-match-introduction-persistence:integration; then result_0113=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0114 - the atomic Mutual Match commit and Matching Shared World birth"
+          if npm run verify:matching-mutual-match-commit-transaction:integration; then result_0114=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "I-07C real-PostgreSQL verifier results"
+          echo "0113 = $result_0113"
+          echo "0114 = $result_0114"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            printf '### I-07C real-PostgreSQL verifiers\n- 0113 = %s\n- 0114 = %s\n' "$result_0113" "$result_0114" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

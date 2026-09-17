@@ -925,10 +925,30 @@ async function verifyForwardSafety() {
   await q('SAVEPOINT forward_safety');
   try {
     // Exactly the names this file used to require to stay absent for ever.
-    for (const table of ['shared_world_settings', 'shared_world_launch_gates', 'launch_gate_snapshots',
-      'feature_flags', 'introduction_records', 'shared_world_events']) {
+    //
+    // SOME OF THEM HAVE ARRIVED. `introduction_records` is a relation I-07C
+    // creates (migration 0113), which is precisely the future this probe was
+    // written to survive - so a name that already exists is not planted, it is
+    // asserted PRESENT, and the catalog proof below then runs against the real
+    // relation rather than against a stub of it. Planting it anyway would be a
+    // duplicate-table error that aborts the transaction and reports every later
+    // statement as 25P02, which says nothing at all about migration 0082. This
+    // is the same repair 0081 received when I-07B created `matching_proposals`.
+    const predicted = ['shared_world_settings', 'shared_world_launch_gates', 'launch_gate_snapshots',
+      'feature_flags', 'introduction_records', 'shared_world_events'];
+    let planted = 0;
+    let arrived = 0;
+    for (const table of predicted) {
+      const [{ present }] = await rows(
+        `SELECT count(*)::int present FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public' AND c.relname = $1`, [table]);
+      if (present > 0) { arrived += 1; continue; }
       await q(`CREATE TABLE public.${table} (id uuid PRIMARY KEY)`);
+      planted += 1;
     }
+    assert.equal(planted + arrived, predicted.length, 'every predicted name is either planted or already real');
+    assert.ok(planted > 0,
+      'the probe still plants a name the future has not taken, so forward safety is not bought by asserting nothing');
     // And a later reviewed slice adding its OWN foreign key to an 0082 table,
     // with its own deletion rule, which 0082 has no authority over.
     await q(`CREATE TABLE public.${probe}_proposals (id uuid PRIMARY KEY)`);
