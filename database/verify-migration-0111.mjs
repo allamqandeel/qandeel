@@ -231,10 +231,18 @@ async function verifyResolvers(report, humans) {
       assert.equal(await rt.activeIntroduction(one), true,
         'B03 an open membership episode in an ACTIVE INTRODUCTION World is an active Introduction');
       // The resolver reads the Shared World substrate and nothing I-07B invented.
+      // `prosrc` INCLUDES COMMENTS, and this body's own comment says the word
+      // `slot` in order to say there is none - so the executable lines are the
+      // only honest thing to assert against. A detector that read its own
+      // explanation would report the explanation.
       const source = (await rt.functionPosture(PFN.ACTIVE_INTRODUCTION)).prosrc;
-      assert.match(source, /public\.shared_world_membership_episodes/u,
+      const executable = source.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n');
+      assert.match(executable, /public\.shared_world_membership_episodes/u,
         'B03 the resolver reads the canonical substrate 0075 owns');
-      assert.doesNotMatch(source, /slot/iu, 'B03 and I-07B implements no Introduction slot of its own');
+      assert.doesNotMatch(executable, /slot/iu,
+        'B03 and reads no Introduction slot relation, because I-07B implements none');
+      assert.equal(await count('pg_class', `relname ~* '(introduction|matching).*slot'`, []), 0,
+        'B03 and no Introduction slot relation exists anywhere for it to read');
     });
 
     await report.isolated('B04 discovery is bounded current silent and unranked', async () => {

@@ -412,9 +412,16 @@ BEGIN
   -- Simultaneous (A,B) and (B,A) converge on ONE row: they canonicalize to the
   -- same two columns and the unordered UNIQUE decides. The loser reads the
   -- winner's identity back rather than creating a second pair.
+  --
+  -- The conflict target NAMES THE CONSTRAINT rather than its columns. This
+  -- function RETURNS TABLE(..., lower_user_id, higher_user_id, ...), so those two
+  -- names are also plpgsql output variables, and an unqualified column list in
+  -- the conflict target is ambiguous between the two - a `42702` that no static
+  -- reading catches and that only appears when the statement runs. Naming the
+  -- constraint has no column reference in it to be ambiguous.
   INSERT INTO public.matching_pairs (id, lower_user_id, higher_user_id)
   VALUES (p_pair_id, lo, hi)
-  ON CONFLICT (lower_user_id, higher_user_id) DO NOTHING;
+  ON CONFLICT ON CONSTRAINT matching_pairs_unordered_key DO NOTHING;
 
   SELECT p.id INTO existing FROM public.matching_pairs p
    WHERE p.lower_user_id = lo AND p.higher_user_id = hi;
