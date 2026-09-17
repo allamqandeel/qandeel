@@ -4,7 +4,7 @@
 **Slice:** `I-07A — Matching Foundation, Participation & Private Authority Runtime v1` —
 **CLOSED / FROZEN**
 **Slice:** `I-07B — Candidate Eligibility, Proposal & Privacy Runtime v1` —
-**CANDIDATE — awaiting independent ChatGPT review**
+**CLOSED / FROZEN**
 **Architecture authority:** `QANDEEL_CW2-06 — Introductions / Matching Runtime Architecture v1.0 —
 CLOSED / FROZEN`, with binding `CW2-01`–`CW2-05` and `CW2-08`
 **Migrations:** `0108_matching_participation_private_setup_foundation_v1.sql`,
@@ -16,7 +16,7 @@ CLOSED / FROZEN`, with binding `CW2-01`–`CW2-05` and `CW2-08`
 This document records what `I-07A` and `I-07B` implemented, what they deliberately did not, and where
 each deferred capability is owned. It does not close `I-07` and it does not restate the frozen
 architecture. Sections 1–13 are the frozen `I-07A` record and are unchanged; sections 14–26 are the
-`I-07B` candidate record.
+frozen `I-07B` record.
 
 ---
 
@@ -576,29 +576,44 @@ the `I-05C` census. Renaming out of the pattern would have been the dodge those 
 prevent, and both halves of what `I-07A` claimed remain proven: every such relation is one a named
 later slice owns, and none of them is an `I-07A` relation. No `I-07A` migration was touched.
 
-## 26. `I-07B` status
+The final implementation/verifier head accepted for closure is
+`5165d0a4c0f664b26f5b17cc2ece1b031ead718d`. Two complete consecutive Focused Database Verification
+rounds ran from the trusted `main` harness against that exact 40-character target SHA, in migration
+order: round one `#102/#103/#104 = 0110/0111/0112`, round two `#105/#106/#107 = 0110/0111/0112`.
+All six runs completed successfully and their artifacts identify the same target head. API CI `#709`
+and Mobile CI `#278` also completed successfully on that same implementation head before this
+closure-only documentation sync.
 
-`I-07B` is **CANDIDATE — awaiting independent ChatGPT review**. `I-07` remains **OPEN** and `I-07A`
-remains **CLOSED / FROZEN**; this record starts no other `I-07` slice and changes no Product or runtime
-semantic above section 14.
+## 26. `I-07B` status and closure record
 
-**BG-05 kickoff reconciliation.** The canonical backlog was read in full at kickoff. No open item names
-`I-07`, `I-07A`, `I-07B` or Matching as its **Owner task**, so `I-07B` inherits nothing. `OPEN-06`,
-`OPEN-08`, `OPEN-09`, `OPEN-19`, `QAN-BL-NAV-01` and `QAN-BL-NAV-02` are `OPEN — UNASSIGNED`
-navigation, acknowledgement and Replay capabilities that `I-07B` neither implements nor blocks and
-does not claim; `QAN-BL-SEC-01` is owned by `QAN-SEC-01` and is untouched — `I-07B` changed no mobile
-auth persistence, no storage mechanism, no backup policy and no credential model, and introduced no
-cryptography. No finding from the `I-07A` review was moved into the backlog in violation of `BG-01`.
+`I-07B` is **CLOSED / FROZEN**. `I-07` remains **OPEN**; `I-07A` remains **CLOSED / FROZEN**. This
+closure starts no other `I-07` slice, does not implement any `I-07C`, `I-07D`, `I-08` or `I-09`
+capability, and changes no Product/runtime semantic above section 14.
 
-**BG-08 candidate residue.** No newly discovered cross-task obligation qualifies for admission. The
-deferred capabilities in section 24 are owned by frozen `CW2-06` / `CW2-08` or by the named later
-`I-07` slices, so duplicating them would violate the intent of `BG-06`; the two fail-closed seams are
-**implemented** rather than deferred, which is the same disposition the `I-04`, `I-05` and `I-06`
-closure records take for the same class of boundary, and `BG-01` forbids moving an active-contract
-requirement to the backlog rather than fixing it. Final `BG-08` / `BG-09` reconciliation belongs to the
-change that closes this slice after independent review.
+Independent ChatGPT Architecture / Privacy / Database / Concurrency review passed on implementation
+head `5165d0a4c0f664b26f5b17cc2ece1b031ead718d`. The review covered the actual PR diff, migrations
+`0110`–`0112`, the predecessor-verifier repairs, authority and privacy boundaries, proposal state and
+exact-view semantics, real-PostgreSQL concurrency behavior, anti-oracle projections, and exact-head
+Focused/API/Mobile evidence.
+
+The interim review finding `I07B-CONC-01` was confirmed and corrected before closure: all four human
+decision paths now acquire the canonical two-human serialization lock before revalidating the exact
+current recipient view. The real two-connection `0112` race proves the stale view is rejected after
+supersession, and the load-bearing negative proof demonstrates that the pre-fix ordering would accept
+it. No unresolved Architecture / Privacy / Database / Concurrency finding remains.
+
+**BG-05 / BG-08 reconciliation:** the canonical backlog was reviewed for ownership. No open backlog
+item is owned by `I-07B`, and no newly discovered cross-task obligation qualifies for admission. The
+deferred capabilities in section 24 are already owned by frozen `CW2-06` / `CW2-08` or by the named
+later `I-07` slices, so duplicating them would violate the intent of `BG-06`. The fail-closed Launch
+Gate and canonical-first-name seams are implemented boundaries, not backlog deferrals.
+
+**BG-09 synchronization:** the former `CANDIDATE — awaiting independent ChatGPT review` banner was the
+pre-review state of this same slice. This closure sync records the completed independent review and
+freezes `I-07B` while leaving the parent `I-07` phase OPEN for `I-07C` and `I-07D`.
 
 **Launch readiness is a different claim.** Nothing in `I-07B` can propose anybody to anybody in
-production: every boundary is executable by no role, the `CW2-08` prerequisite answers `NOT_EVALUATED`,
-and the canonical first-name seam answers `UNRESOLVED_NO_CANONICAL_SOURCE`. The runtime is complete and
-proven; it is not cleared.
+production: every boundary is executable by no application role, the `CW2-08` prerequisite answers
+`NOT_EVALUATED`, and the canonical first-name seam answers `UNRESOLVED_NO_CANONICAL_SOURCE`. The
+`I-07B` runtime is closed and frozen; production Matching remains fail-closed until its later owners
+open those boundaries.
