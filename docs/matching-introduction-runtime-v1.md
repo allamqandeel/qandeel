@@ -6,7 +6,7 @@
 **Slice:** `I-07B — Candidate Eligibility, Proposal & Privacy Runtime v1` —
 **CLOSED / FROZEN**
 **Slice:** `I-07C — Atomic Mutual Match & Introduction Birth Runtime v1` —
-**I-07C — CANDIDATE — awaiting independent ChatGPT review**
+**CLOSED / FROZEN**
 **Architecture authority:** `QANDEEL_CW2-06 — Introductions / Matching Runtime Architecture v1.0 —
 CLOSED / FROZEN`, with binding `CW2-01`–`CW2-05` and `CW2-08`
 **Migrations:** `0108_matching_participation_private_setup_foundation_v1.sql`,
@@ -17,11 +17,10 @@ CLOSED / FROZEN`, with binding `CW2-01`–`CW2-05` and `CW2-08`
 `0113_matching_mutual_match_introduction_persistence_v1.sql`,
 `0114_matching_mutual_match_commit_transaction_v1.sql`
 
-This document records what `I-07A` and `I-07B` implemented, what the `I-07C` candidate implements,
-what each deliberately did not, and where each deferred capability is owned. It does not close
-`I-07` and it does not restate the frozen architecture. Sections 1–13 are the frozen `I-07A` record
-and are unchanged; sections 14–26 are the frozen `I-07B` record and are unchanged; sections 27–33
-are the `I-07C` candidate record, which is not frozen until independent review closes it.
+This document records what `I-07A`, `I-07B` and `I-07C` implemented, what each deliberately did not,
+and where each deferred capability is owned. It does not close `I-07` and it does not restate the
+frozen architecture. Sections 1–13 are the frozen `I-07A` record and are unchanged; sections 14–26
+are the frozen `I-07B` record and are unchanged; sections 27–33 are the frozen `I-07C` record.
 
 ---
 
@@ -625,9 +624,9 @@ open those boundaries.
 
 ---
 
-## 27. `I-07C` — what the candidate implements
+## 27. `I-07C` — what the closed slice implements
 
-`I-07C — CANDIDATE — awaiting independent ChatGPT review.` Baseline `main` at
+`I-07C` is **CLOSED / FROZEN**. Baseline `main` at
 `308218bf661d1083ab023f6a4045a328c0a7e4bd` (the `I-07B` closure merge); migrations `0113` and
 `0114`, forward-only after the verified `0112` tip. Nothing above section 26 changes.
 
@@ -817,44 +816,56 @@ migration; the `I-07C` static contract pins `0075`, `0082`, `0108`–`0112` and 
 - `database/tests/matching-proposal-privacy-runtime-v1.test.mjs`: reads the `I-07B` half of the
   census from its own named array and asserts the union line.
 
-## 33. `I-07C` — candidate status, `BG-05` / `BG-08`, launch readiness
+## 33. `I-07C` — status and closure record
 
-`I-07C` is a **CANDIDATE — awaiting independent ChatGPT Architecture / Privacy / Database /
-Concurrency review**. It is not CLOSED, not FROZEN, not Ready for Review and not merged. `I-07`
-remains **OPEN**; `I-07A` and `I-07B` remain **CLOSED / FROZEN**. The exact accepted head, the two
-complete Focused Database Verification acceptance rounds over `0113` then `0114` on that one SHA,
-the predecessor regression runs, and the API CI / Mobile CI runs on that head are recorded in the
-Draft PR and in the implementation handoff, and will be transcribed here at closure synchronization.
+`I-07C` is **CLOSED / FROZEN**. `I-07` remains **OPEN** for `I-07D`; `I-07A` and `I-07B` remain
+**CLOSED / FROZEN**. This closure changes no Product/runtime semantic above section 27 and does not
+implement any `I-07D`, `I-08` or `I-09` capability.
 
-**Interim review finding `I07C-AUTH-01`** (revised forward-approval retry could report success when its
-durable exact-view binding was missing) was confirmed against the candidate head and corrected before
-any acceptance round completed: the retry now fails closed before any view is compared, infers and
-backfills nothing, and the real `0114` verifier constructs the contradictory history as the owner and
-proves the refusal. The static contract pins the ordering.
+Independent ChatGPT Architecture / Privacy / Database / Concurrency review passed on the final
+implementation/verifier head `338dc8294c2dbd481aafbdcd5cda2361fc081e84`. The review covered the
+actual PR #258 diff, migrations `0113`–`0114`, predecessor-verifier reconciliation, exact dual-consent
+authority, durable exact-view binding, atomic Match/World birth, idempotency, lock ordering, real
+PostgreSQL races, no-ghost rollback, handoff privacy, anti-oracle projection, and exact-head
+Focused/API/Mobile evidence. No unresolved Architecture / Privacy / Database / Concurrency finding
+remains.
 
-**Final review finding `I07C-TIME-01`** (the proposal deadline was compared against the transaction
-clock, which is fixed before the canonical lock wait, so a Match that waited past `expires_at` could
-still commit) was confirmed against the candidate head and corrected: the deadline is now decided
-against the one captured birth instant, immediately before the irreversible write region and with
-nothing written, and a sixteenth barrier-pinned race crosses the deadline while the Match is
-provably blocked and proves the refusal leaves zero effects (section 30). There is still exactly one
-persisted Match clock, the `CLEARED` prerequisite semantics, the anti-oracle failure classes, the
-lock order and the `I-07D` anti-scope are unchanged. Because this changed runtime semantics, the
-previously accepted head was DISCARDED and both complete acceptance rounds were rerun from scratch
-on the new head.
+Two independent-review findings were confirmed and corrected before closure. `I07C-AUTH-01` made a
+committed `FIRST_FORWARD_APPROVED` transition with a missing exact-view binding fail closed rather
+than report retry success; verifier scenario `A15` proves same-view idempotency, different-view
+conflict and missing-binding contradiction with no inference or backfill. `I07C-TIME-01` moved the
+final proposal-deadline decision from PostgreSQL transaction time to the one captured Match birth
+instant after lock waiting and all final-currentness gates; barrier-pinned race `C16` proves a Match
+that crosses `expires_at` while blocked resumes to `MATCHING_PROPOSAL_EXPIRED` with zero effects. The
+pre-fix accepted head `f0723d48e9de2806ee2a94ff3d5fe338678f0d1a` was discarded and all final
+acceptance evidence was rerun from scratch on `338dc8294c2dbd481aafbdcd5cda2361fc081e84`.
 
-**`BG-05` kickoff reconciliation:** the canonical backlog was read in full at kickoff. No open
-backlog item names `I-07` or `I-07C`; `QAN-BL-SEC-01` stays owned by `QAN-SEC-01`; `OPEN-06`,
-`OPEN-08`, `OPEN-09`, `OPEN-19`, `NAV-01` and `NAV-02` are untouched. `I-07C` inherited nothing and
-admits nothing.
+**Exact-head acceptance evidence:** two complete consecutive Focused Database Verification rounds ran
+from the trusted `main` harness against that exact 40-character target SHA, in migration order: round
+one `0113 #35238047201` and `0114 #35238232746`; round two `0113 #35238462345` and
+`0114 #35238624628`. `0113` passed `17/17` in both rounds and `0114` passed `35/35` in both rounds.
+Predecessor regressions also passed on the same target: `0082 #35238821298`, `0108 #35238831038`,
+`0109 #35238841436`, `0110 #35238851356`, `0112 #35238861684`. API CI `#717`
+(run `35237786130`) and Mobile CI `#286` (run `35237786592`) completed successfully on the same
+implementation head. Local gates were green: `test:database 1184/1184`, database hazards `0`,
+`test:toolchain 8/8`, TypeScript clean, with nothing skipped.
 
-**`BG-08` candidate residue:** none. The deferred capabilities in section 31 are owned by frozen
-`CW2-03` / `CW2-06` / `CW2-08` or by the named `I-07D`; duplicating them into the backlog would
-violate `BG-06`. The fail-closed Launch Gate and canonical-first-name seams remain implemented
-boundaries, not backlog deferrals.
+**BG-05 / BG-08 reconciliation:** the canonical backlog was reviewed at kickoff and again at closure.
+No open backlog item is owned by `I-07C`, no inherited item requires a state change, and no newly
+discovered cross-task obligation qualifies for admission. The deferred capabilities in section 31
+remain owned by frozen `CW2-03` / `CW2-06` / `CW2-08` or by the named `I-07D`; duplicating them in
+the backlog would violate the intent of `BG-06`. Existing unrelated backlog items remain untouched.
+
+**BG-09 synchronization:** the former `CANDIDATE — awaiting independent ChatGPT review` banner and
+section 33 candidate record were the pre-review state of this same slice. This documentation-only
+closure sync records the completed independent review and freezes `I-07C` while leaving the parent
+`I-07` phase OPEN. No runtime, schema, migration, verifier, static-contract or test semantic changes
+are part of this closure commit.
 
 **Launch readiness is a different claim.** Nothing in `I-07C` can match anybody to anybody in
-production: both boundaries are executable by no application role, the `CW2-08` prerequisite
-answers `NOT_EVALUATED` and is required LAST, and the canonical first-name seam answers
-`UNRESOLVED_NO_CANONICAL_SOURCE`. Production Matching remains fail-closed until `I-09` / `CW2-08`
-open those boundaries.
+production: both consequential boundaries remain executable by no application role, the `CW2-08`
+prerequisite answers `NOT_EVALUATED` and is required LAST, and the canonical first-name seam answers
+`UNRESOLVED_NO_CANONICAL_SOURCE`. Production Matching remains fail-closed until its later owners open
+those boundaries.
+
+**Next slice:** `I-07D — Introduction Lifecycle, Progressive Disclosure & I-07 Closure`.
