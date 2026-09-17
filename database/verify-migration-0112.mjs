@@ -9,7 +9,10 @@
 //       and executable by NO ROLE, so no production caller has a path around the
 //       CW2-08 Launch Gate that does not exist
 //   A02 the four human decisions derive their human from auth.uid(), take no
-//       identity parameter, and bind the exact view version the human saw
+//       identity parameter, and bind the exact view version the human saw -
+//       INSIDE the canonical two-human serialization region, because a
+//       recipient-view materialization supersedes a view while holding that same
+//       lock and a check taken before it could accept a view V2 has replaced
 //   A03 the CW2-08 gate is required on all five consequential boundaries and
 //       ABSENT on the three protective ones, because expiry, staleness and
 //       withdrawal end exposure rather than create it
@@ -46,14 +49,16 @@
 //       different request fails closed
 //   D02 compare-and-swap: a stale expected state is refused and applied to nothing
 //
-//   E01..E06 the required races, on two real connections with committed state
+//   E01..E07 the required races, on two real connections with committed state,
+//       including E06: a recipient view superseded under the canonical pair lock
+//       between a human reading it and acting on it must defeat the act
 //   F1..F2 forward safety
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import process from 'node:process';
 import { createScenarioReport } from './verifier-scenarios.mjs';
 import {
-  createProposalRuntime, P, PFN, PROPOSAL_BOUNDARIES, HUMAN_DECISIONS,
+  createProposalRuntime, P, PFN, PROPOSAL_BOUNDARIES, HUMAN_DECISIONS, DECISION_ENTRY_ORDER,
   AUDIENCE_PROJECTIONS, NEUTRAL_OUTCOMES, ABSENT_ACCEPTANCE_STATES, RESERVED_I07C_STATES,
   RECIPIENT_DISCLOSURE_BAN, runVerifier, APP_ROLES,
 } from './matching-proposal-verifier-support.mjs';
@@ -90,6 +95,17 @@ async function verifyPosture() {
     assert.match(p.prosrc, /auth\.uid\(\)/u, `A02 ${fn} derives its human from auth.uid()`);
     assert.match(p.prosrc, /assert_matching_recipient_view_current_v1/u,
       `A02 ${fn} binds the exact recipient view version the human saw`);
+    // A02 AND IT DOES SO INSIDE THE SERIALIZED REGION. A decision that checked
+    // the view before taking the canonical two-human lock could accept V1 while
+    // a concurrent materialization committed V2, and then act on a view that is
+    // no longer current. Comment lines are stripped because `prosrc` includes
+    // them and the body's own prose names both functions in the other order.
+    const executable = p.prosrc.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n');
+    const [entry, check] = DECISION_ENTRY_ORDER.map((name) => executable.indexOf(name.split('(')[0].replace('public.', '')));
+    assert.ok(entry >= 0, `A02 ${fn} enters through the serialized decision entry point`);
+    assert.ok(check >= 0, `A02 ${fn} checks the exact recipient view`);
+    assert.ok(entry < check,
+      `A02 ${fn} must take the canonical two-human lock BEFORE it checks the exact recipient view`);
     const parameters = await rt.inputParameters(fn);
     for (const name of parameters) {
       assert.doesNotMatch(name, /user|human|actor|grantor|owner|subject|on_behalf|candidate/u,
@@ -657,7 +673,59 @@ async function verifyRaces(report, humans) {
       await cleanupRace([one, two]);
     });
 
-    await report.section('E06 reverse-direction concurrent work does not deadlock', async () => {
+    await report.section('E06 a view superseded under the pair lock defeats a human action that read it first', async () => {
+      // THE TOCTOU THIS SLICE WAS REVIEWED FOR. A human decision reads the exact
+      // recipient view it was shown; `materialize_matching_recipient_view_core_v1`
+      // supersedes that view while holding the canonical two-human lock. If the
+      // decision checked the view BEFORE taking that lock, this interleaving
+      // would let V1 authorize a consequential act that V2 has already replaced:
+      //
+      //   T1  reads V1 and decides to act
+      //   T2  takes the pair lock, materializes V2, moves the pointer, COMMITS
+      //   T1  takes the now-free pair lock and acts on V1
+      //
+      // The race is constructed so the window is REAL rather than notional: T2
+      // holds the lock and its uncommitted V2 while T1's call is already in
+      // flight, so T1 blocks exactly where the check has to happen. T1 is
+      // deliberately not awaited until T2 commits.
+      const f = await commitOffered(one, two);
+      const superseding = randomUUID();
+      await q2('BEGIN');
+      await q2('SELECT public.lock_matching_pair_humans_v1($1, $2)', [f.lower, f.higher]);
+      await q2('SELECT * FROM public.materialize_matching_recipient_view_core_v1($1, $2, $3, $4)',
+        [superseding, f.proposal, one, f.conclusionForFirst]);
+
+      await rt.actAs(one);
+      const command = randomUUID();
+      const inFlight = rt.declineFirst(command, f.proposal, f.firstView).then(() => null, (error) => error);
+      await q2('COMMIT');
+      const outcome = await inFlight;
+
+      await asRole('postgres');
+      assert.ok(outcome, 'E06 the human action must fail closed rather than act on the superseded view');
+      assert.equal(outcome.code, '40001', 'E06 and fail with the bounded stale-state class');
+      assert.match(String(outcome.message), /RECIPIENT_VIEW_STALE/u,
+        'E06 naming the exact-view staleness, not something else that happened to go wrong');
+      // AND NOTHING WAS COMMITTED FROM THE STALE VIEW.
+      assert.equal(await count(P.TRANSITIONS, 'id = $1', [command]), 0,
+        'E06 no transition from the stale view exists');
+      assert.equal(await count(P.TRANSITIONS, 'proposal_id = $1 AND resulting_state = $2',
+        [f.proposal, 'FIRST_DECLINED']), 0, 'E06 and the proposal did not decline');
+      assert.equal((await rt.proposalRow(f.proposal)).proposal_state, 'OFFERED_TO_FIRST',
+        'E06 the proposal is exactly where it was');
+      // The SUPERSEDING view is current, and acting on IT works - so the refusal
+      // above was the staleness and not a broken fixture.
+      assert.equal(await rt.currentViewOf(f.proposal, one), superseding,
+        'E06 the concurrent materialization really did become current');
+      await rt.actAs(one);
+      const [declined] = await rt.declineFirst(randomUUID(), f.proposal, superseding);
+      assert.equal(declined.declined_state, 'FIRST_DECLINED',
+        'E06 the CURRENT view authorizes the same act, which is what makes the refusal meaningful');
+      await asRole('postgres');
+      await cleanupRace([one, two]);
+    });
+
+    await report.section('E07 reverse-direction concurrent work does not deadlock', async () => {
       const f = await commitEligible(one, two);
       // THE STRUCTURAL HALF. The two-human lock refuses to be taken in anything
       // but canonical user-id order, so proposal direction cannot decide it -
@@ -685,13 +753,13 @@ async function verifyRaces(report, humans) {
       await q2('COMMIT').catch(() => undefined);
       if (outcome) {
         assert.notEqual(outcome.code, '40P01',
-          'E06 no deadlock: the two-human lock is taken in canonical user-id order, never in proposal direction');
+          'E07 no deadlock: the two-human lock is taken in canonical user-id order, never in proposal direction');
         assert.notEqual(outcome.code, '55P03',
-          'E06 and no lock timeout once the first transaction released its locks');
+          'E07 and no lock timeout once the first transaction released its locks');
         throw outcome;
       }
       assert.equal(await count(P.SNAPSHOTS, 'pair_id = $1', [f.pair]) - before, 2,
-        'E06 both reverse-direction captures completed, one after the other');
+        'E07 both reverse-direction captures completed, one after the other');
       await cleanupRace([one, two]);
     });
   } finally {

@@ -115,6 +115,7 @@ export const PFN = Object.freeze({
   SNAPSHOT_VALIDITY: 'public.resolve_matching_snapshot_validity_v1(uuid)',
   PROPOSAL_VALIDITY: 'public.resolve_matching_proposal_validity_v1(uuid)',
   APPEND: 'public.append_matching_proposal_transition_v1(uuid,uuid,text,text,uuid,uuid,text)',
+  ENTER_DECISION: 'public.enter_matching_proposal_decision_v1(uuid,uuid)',
   ASSERT_VIEW: 'public.assert_matching_recipient_view_current_v1(uuid,uuid,uuid,text)',
   PREPARE: 'public.prepare_matching_proposal_core_v1(uuid,uuid,uuid)',
   OFFER: 'public.offer_matching_proposal_to_first_core_v1(uuid,uuid,uuid,uuid)',
@@ -142,6 +143,17 @@ export const READ_ONLY_RESOLVERS = [
   PFN.DISCOVER, PFN.SNAPSHOT_VALIDITY, PFN.PROPOSAL_VALIDITY, PFN.NEUTRAL,
   PFN.MY_PROPOSAL, PFN.MY_FIELDS, PFN.ASSERT_VIEW,
 ];
+
+/**
+ * The ordered pair every human decision must call in THIS order.
+ *
+ * `enter_matching_proposal_decision_v1` answers the bounded not-found and then
+ * takes the canonical two-human lock; the exact-view check must follow it, under
+ * that lock, because a recipient-view materialization supersedes a view while
+ * holding the same lock. Checking first and locking afterwards leaves a window
+ * in which V1 is accepted and V2 is committed before the act.
+ */
+export const DECISION_ENTRY_ORDER = [PFN.ENTER_DECISION, PFN.ASSERT_VIEW];
 
 /** The four human decision cores: auth.uid()-derived, exact-view bound. */
 export const HUMAN_DECISIONS = [PFN.DECLINE_FIRST, PFN.APPROVE, PFN.DECLINE_SECOND, PFN.WITHDRAW];

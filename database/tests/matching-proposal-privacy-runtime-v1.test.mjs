@@ -277,6 +277,45 @@ test('every regex whose pattern is built by concatenation parenthesizes it', () 
     'a regex pattern built by concatenation must be parenthesized, or it parses as (regex-match) || text');
 });
 
+test('every human decision enters the serialized region before it checks the exact view', () => {
+  // THE ORDERING IS THE PROPERTY. `materialize_matching_recipient_view_core_v1`
+  // supersedes a recipient view while holding the canonical two-human lock, so a
+  // decision that checked the view BEFORE taking that lock leaves a window: it
+  // accepts V1, a concurrent materialization commits V2 and releases, and the
+  // decision then acts on a view that is no longer current. The compare-and-swap
+  // on the proposal state does not close it, because materializing a view does
+  // not change the proposal state.
+  //
+  // The real PostgreSQL race (0112 scenario E06) is the authority; this only
+  // stops the order drifting back between runs of it.
+  const bodies = [...SOURCE['0112'].matchAll(
+    /CREATE FUNCTION public\.((?:decline|approve|withdraw)_matching_[a-z_]+_v1)\(([\s\S]*?)\nEND\$\$;/gu)];
+  assert.equal(bodies.length, 4, `the four human decision bodies are found, got ${bodies.length}`);
+  for (const [, name, body] of bodies) {
+    const executable = stripComments(body);
+    const entry = executable.indexOf('enter_matching_proposal_decision_v1');
+    const check = executable.indexOf('assert_matching_recipient_view_current_v1');
+    assert.ok(entry >= 0, `${name} enters through the serialized decision entry point`);
+    assert.ok(check >= 0, `${name} checks the exact recipient view version`);
+    assert.ok(entry < check,
+      `${name} must take the canonical two-human lock BEFORE it checks the exact recipient view`);
+    // And it never takes that lock a second way, which would make the order above
+    // true of one call and false of the real one.
+    assert.doesNotMatch(executable, /lock_matching_pair_humans_v1/u,
+      `${name} reaches the two-human lock only through the one entry point`);
+  }
+  // The entry point really is the thing that locks, and it answers the bounded
+  // not-found BEFORE locking so a caller who is no part of the proposal never
+  // causes a serialization row to be written.
+  const entryBody = stripComments(SOURCE['0112'].slice(
+    SOURCE['0112'].indexOf('CREATE FUNCTION public.enter_matching_proposal_decision_v1'),
+    SOURCE['0112'].indexOf('COMMENT ON FUNCTION public.enter_matching_proposal_decision_v1')));
+  assert.ok(entryBody.indexOf('MATCHING_PROPOSAL_NOT_FOUND') < entryBody.indexOf('lock_matching_pair_humans_v1'),
+    'the bounded not-found is answered before any lock is taken');
+  assert.equal((entryBody.match(/MATCHING_PROPOSAL_NOT_FOUND/gu) ?? []).length, 2,
+    'a nonexistent proposal and one this human is no part of are the SAME bounded answer');
+});
+
 test('the disclosed field needs both gates and the value ban is structural', () => {
   const fields = ddlOf('0110', 'CREATE TABLE public.matching_recipient_proposal_view_fields',
     'CREATE TABLE public.matching_recipient_proposal_view_state');

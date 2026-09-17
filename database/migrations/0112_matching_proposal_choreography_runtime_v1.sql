@@ -30,6 +30,25 @@
 -- have to be rewritten at that point, and rewriting a consent boundary at launch
 -- time is the thing this shape exists to avoid.
 --
+-- ## The exact-view check is INSIDE the serialization region, and that is an order
+--
+-- Every human decision begins with `enter_matching_proposal_decision_v1`, which
+-- answers the bounded not-found from the proposal's own immutable membership and
+-- THEN takes the canonical two-human lock. Everything a decision reads about
+-- currentness - the committed transition, the exact recipient view version, the
+-- proposal state - is read after that, under the same lock a recipient-view
+-- materialization holds.
+--
+-- The order is load-bearing rather than tidy. `materialize_matching_recipient_view_core_v1`
+-- supersedes a view while holding that lock, so a decision that checked the view
+-- FIRST and locked afterwards would leave a window: it accepts V1, a concurrent
+-- materialization commits V2 and releases, the decision then takes the lock and
+-- acts on a view that is no longer current. The compare-and-swap on the proposal
+-- state does not close that window, because materializing a view does not change
+-- the proposal state, so the swap still succeeds. The terminal self-assertion
+-- refuses a decision body whose order drifts back, and a two-connection race in
+-- the verifier is the authority.
+--
 -- ## The CW2-08 gate is the LAST gate, and only on the consequential half
 --
 -- Delivery and every human decision require exactly CLEARED from
@@ -255,7 +274,62 @@ COMMENT ON FUNCTION public.append_matching_proposal_transition_v1(uuid, uuid, te
   'refuses any current state but the exact one the caller named.';
 
 -- ---------------------------------------------------------------------------
--- 3. THE EXACT-VIEW GUARD the four human decisions share.
+-- 3. ENTERING A HUMAN DECISION: the bounded answer first, then the lock.
+--
+--    Every human decision begins here, and the ORDER is the whole of it.
+--
+--    The exact-view check below must run INSIDE the canonical two-human
+--    serialization region, because `materialize_matching_recipient_view_core_v1`
+--    supersedes a recipient view while holding exactly that lock. Checking the
+--    view first and locking afterwards leaves a window in which a concurrent
+--    materialization commits V2 between the two - and a human action that had
+--    already accepted V1 would then proceed on a view that is no longer current,
+--    which is precisely what "a stale view authorizes nothing" forbids. The
+--    compare-and-swap on the proposal state does not close it: materializing a
+--    view does not change the proposal state, so the swap still succeeds.
+--
+--    The bounded not-found is nevertheless taken BEFORE the lock, from the
+--    proposal's own immutable membership. A caller who is no part of this
+--    proposal therefore never causes a serialization row to be written for two
+--    humans they have nothing to do with - and the answer is unchanged: a
+--    proposal that does not exist, one this human is no part of, and one they
+--    hold no view of are all the same `MATCHING_PROPOSAL_NOT_FOUND`.
+-- ---------------------------------------------------------------------------
+CREATE FUNCTION public.enter_matching_proposal_decision_v1(p_proposal_id uuid, p_actor_user_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  proposal public.matching_proposals;
+BEGIN
+  IF p_proposal_id IS NULL OR p_actor_user_id IS NULL THEN
+    RAISE EXCEPTION 'MATCHING_COMMAND_INVALID' USING ERRCODE='22023';
+  END IF;
+  SELECT * INTO proposal FROM public.matching_proposals p WHERE p.id = p_proposal_id;
+  -- Two separate refusals rather than one `OR`: after a SELECT INTO that found
+  -- nothing every field is NULL, and `p_actor_user_id NOT IN (NULL, NULL)` is
+  -- NULL rather than true, which an `IF` reads as false.
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'MATCHING_PROPOSAL_NOT_FOUND' USING ERRCODE='P0002';
+  END IF;
+  IF p_actor_user_id NOT IN (proposal.first_recipient_user_id, proposal.candidate_user_id) THEN
+    RAISE EXCEPTION 'MATCHING_PROPOSAL_NOT_FOUND' USING ERRCODE='P0002';
+  END IF;
+  PERFORM public.lock_matching_pair_humans_v1(proposal.lower_user_id, proposal.higher_user_id);
+END$$;
+
+COMMENT ON FUNCTION public.enter_matching_proposal_decision_v1(uuid, uuid) IS
+  'The one entry point of every human proposal decision: the bounded not-found '
+  'for a proposal this human is no part of, taken from immutable membership '
+  'BEFORE any lock, and then the canonical two-human serialization lock. '
+  'Everything a decision reads about currentness - the committed transition, the '
+  'exact recipient view version, the proposal state - is read after it, under '
+  'the same lock a recipient-view materialization holds, so a view cannot be '
+  'superseded between the check and the act.';
+
+-- ---------------------------------------------------------------------------
+-- 4. THE EXACT-VIEW GUARD the four human decisions share.
+--
+--    It is only ever called from inside the serialized region above, and the
+--    terminal self-assertion refuses a decision body that calls it before it.
 -- ---------------------------------------------------------------------------
 CREATE FUNCTION public.assert_matching_recipient_view_current_v1(
   p_proposal_id uuid, p_viewer_user_id uuid, p_expected_view_id uuid, p_expected_role text
@@ -297,7 +371,7 @@ COMMENT ON FUNCTION public.assert_matching_recipient_view_current_v1(uuid, uuid,
   'not-found as one that never existed, and a superseded view authorizes nothing.';
 
 -- ---------------------------------------------------------------------------
--- 4. PROPOSAL PREPARATION - cadence and pending limits DERIVED, never counted.
+-- 5. PROPOSAL PREPARATION - cadence and pending limits DERIVED, never counted.
 -- ---------------------------------------------------------------------------
 CREATE FUNCTION public.prepare_matching_proposal_core_v1(
   p_proposal_id uuid, p_eligibility_snapshot_id uuid, p_first_recipient_user_id uuid
@@ -410,7 +484,7 @@ COMMENT ON FUNCTION public.prepare_matching_proposal_core_v1(uuid, uuid, uuid) I
   '0110 trigger refuses a snapshot whose every hard dealbreaker is not PASS.';
 
 -- ---------------------------------------------------------------------------
--- 5. DELIVERY - the first offer, and the INDEPENDENT second proposal.
+-- 6. DELIVERY - the first offer, and the INDEPENDENT second proposal.
 -- ---------------------------------------------------------------------------
 CREATE FUNCTION public.offer_matching_proposal_to_first_core_v1(
   p_command_id uuid, p_proposal_id uuid, p_view_id uuid, p_permitted_conclusion_id uuid
@@ -553,7 +627,7 @@ COMMENT ON FUNCTION public.forward_matching_proposal_to_second_core_v1(uuid, uui
   'than delivering.';
 
 -- ---------------------------------------------------------------------------
--- 6. THE FOUR HUMAN DECISIONS.
+-- 7. THE FOUR HUMAN DECISIONS.
 --
 --    Each derives its human from auth.uid() and takes NO actor parameter, each
 --    binds the EXACT recipient view version that human saw, and each answers an
@@ -566,18 +640,16 @@ CREATE FUNCTION public.decline_matching_proposal_as_first_core_v1(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE
   u uuid := auth.uid();
-  proposal public.matching_proposals;
   gate record;
 BEGIN
   IF u IS NULL THEN RAISE EXCEPTION 'MATCHING_AUTHENTICATION_REQUIRED' USING ERRCODE='42501'; END IF;
+  PERFORM public.enter_matching_proposal_decision_v1(p_proposal_id, u);
   IF EXISTS (SELECT 1 FROM public.matching_proposal_transitions t
               WHERE t.id = p_command_id AND t.proposal_id = p_proposal_id
                 AND t.resulting_state = 'FIRST_DECLINED' AND t.first_recipient_actor_id = u) THEN
     RETURN QUERY SELECT p_command_id, 'FIRST_DECLINED'::text, 'CLOSED_BY_YOU'::text; RETURN;
   END IF;
   PERFORM public.assert_matching_recipient_view_current_v1(p_proposal_id, u, p_expected_view_id, 'FIRST_RECIPIENT');
-  SELECT * INTO proposal FROM public.matching_proposals p WHERE p.id = p_proposal_id;
-  PERFORM public.lock_matching_pair_humans_v1(proposal.lower_user_id, proposal.higher_user_id);
 
   SELECT * INTO gate FROM public.resolve_matching_proposal_prerequisites_v1(p_proposal_id);
   IF gate.clearance <> 'CLEARED' THEN
@@ -605,19 +677,17 @@ CREATE FUNCTION public.approve_matching_proposal_forward_core_v1(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE
   u uuid := auth.uid();
-  proposal public.matching_proposals;
   validity record;
   gate record;
 BEGIN
   IF u IS NULL THEN RAISE EXCEPTION 'MATCHING_AUTHENTICATION_REQUIRED' USING ERRCODE='42501'; END IF;
+  PERFORM public.enter_matching_proposal_decision_v1(p_proposal_id, u);
   IF EXISTS (SELECT 1 FROM public.matching_proposal_transitions t
               WHERE t.id = p_command_id AND t.proposal_id = p_proposal_id
                 AND t.resulting_state = 'FIRST_FORWARD_APPROVED' AND t.first_recipient_actor_id = u) THEN
     RETURN QUERY SELECT p_command_id, 'FIRST_FORWARD_APPROVED'::text, 'IN_PROGRESS'::text; RETURN;
   END IF;
   PERFORM public.assert_matching_recipient_view_current_v1(p_proposal_id, u, p_expected_view_id, 'FIRST_RECIPIENT');
-  SELECT * INTO proposal FROM public.matching_proposals p WHERE p.id = p_proposal_id;
-  PERFORM public.lock_matching_pair_humans_v1(proposal.lower_user_id, proposal.higher_user_id);
 
   SELECT * INTO validity FROM public.resolve_matching_proposal_validity_v1(p_proposal_id);
   IF NOT validity.still_valid THEN
@@ -653,18 +723,16 @@ CREATE FUNCTION public.decline_matching_proposal_as_second_core_v1(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE
   u uuid := auth.uid();
-  proposal public.matching_proposals;
   gate record;
 BEGIN
   IF u IS NULL THEN RAISE EXCEPTION 'MATCHING_AUTHENTICATION_REQUIRED' USING ERRCODE='42501'; END IF;
+  PERFORM public.enter_matching_proposal_decision_v1(p_proposal_id, u);
   IF EXISTS (SELECT 1 FROM public.matching_proposal_transitions t
               WHERE t.id = p_command_id AND t.proposal_id = p_proposal_id
                 AND t.resulting_state = 'SECOND_DECLINED' AND t.candidate_actor_id = u) THEN
     RETURN QUERY SELECT p_command_id, 'SECOND_DECLINED'::text, 'CLOSED_BY_YOU'::text; RETURN;
   END IF;
   PERFORM public.assert_matching_recipient_view_current_v1(p_proposal_id, u, p_expected_view_id, 'CANDIDATE');
-  SELECT * INTO proposal FROM public.matching_proposals p WHERE p.id = p_proposal_id;
-  PERFORM public.lock_matching_pair_humans_v1(proposal.lower_user_id, proposal.higher_user_id);
 
   SELECT * INTO gate FROM public.resolve_matching_proposal_prerequisites_v1(p_proposal_id);
   IF gate.clearance <> 'CLEARED' THEN
@@ -693,9 +761,14 @@ CREATE FUNCTION public.withdraw_matching_proposal_core_v1(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE
   u uuid := auth.uid();
-  proposal public.matching_proposals;
 BEGIN
   IF u IS NULL THEN RAISE EXCEPTION 'MATCHING_AUTHENTICATION_REQUIRED' USING ERRCODE='42501'; END IF;
+  IF p_expected_state IS NULL
+     OR p_expected_state NOT IN ('OFFERED_TO_FIRST', 'FIRST_FORWARD_APPROVED', 'FORWARDED_TO_SECOND') THEN
+    RAISE EXCEPTION 'MATCHING_WITHDRAWAL_STATE_INVALID' USING ERRCODE='22023',
+      DETAIL='A human withdraws a proposal they were shown. A PREPARED proposal has been shown to nobody, so no I-07B path withdraws one.';
+  END IF;
+  PERFORM public.enter_matching_proposal_decision_v1(p_proposal_id, u);
   -- The retry comparison pins the prior state too, because WITHDRAWN is legal
   -- from three of them: the same command id carrying a different expected state
   -- must fail closed rather than answer as though it matched.
@@ -705,14 +778,7 @@ BEGIN
                 AND t.first_recipient_actor_id = u) THEN
     RETURN QUERY SELECT p_command_id, 'WITHDRAWN'::text, 'CLOSED_BY_YOU'::text; RETURN;
   END IF;
-  IF p_expected_state IS NULL
-     OR p_expected_state NOT IN ('OFFERED_TO_FIRST', 'FIRST_FORWARD_APPROVED', 'FORWARDED_TO_SECOND') THEN
-    RAISE EXCEPTION 'MATCHING_WITHDRAWAL_STATE_INVALID' USING ERRCODE='22023',
-      DETAIL='A human withdraws a proposal they were shown. A PREPARED proposal has been shown to nobody, so no I-07B path withdraws one.';
-  END IF;
   PERFORM public.assert_matching_recipient_view_current_v1(p_proposal_id, u, p_expected_view_id, 'FIRST_RECIPIENT');
-  SELECT * INTO proposal FROM public.matching_proposals p WHERE p.id = p_proposal_id;
-  PERFORM public.lock_matching_pair_humans_v1(proposal.lower_user_id, proposal.higher_user_id);
 
   -- Withdrawal is the human ending their OWN exposure, so it is deliberately not
   -- gated on the launch prerequisite. A proposal that could not be withdrawn
@@ -734,7 +800,7 @@ COMMENT ON FUNCTION public.withdraw_matching_proposal_core_v1(uuid, uuid, uuid, 
   'is no longer available - the same answer an expiry gives.';
 
 -- ---------------------------------------------------------------------------
--- 7. EXPIRY AND STALENESS - the protective terminals, ungated on purpose.
+-- 8. EXPIRY AND STALENESS - the protective terminals, ungated on purpose.
 -- ---------------------------------------------------------------------------
 CREATE FUNCTION public.expire_matching_proposal_core_v1(p_command_id uuid, p_proposal_id uuid)
 RETURNS TABLE(expiry_transition_id uuid, expired_state text)
@@ -817,7 +883,7 @@ COMMENT ON FUNCTION public.revalidate_matching_proposal_core_v1(uuid, uuid) IS
   'the private reason it records never reaches a recipient.';
 
 -- ---------------------------------------------------------------------------
--- 8. THE NEUTRAL RECIPIENT PROJECTIONS.
+-- 9. THE NEUTRAL RECIPIENT PROJECTIONS.
 --
 --    The only I-07B boundaries shaped like something a human could be shown, and
 --    the only ones whose result columns are audited as an audience contract.
@@ -946,7 +1012,7 @@ COMMENT ON FUNCTION public.resolve_my_matching_proposal_fields_v1(uuid) IS
   'decides nothing.';
 
 -- ---------------------------------------------------------------------------
--- 9. OWNERSHIP AND LEAST-PRIVILEGE ACL. Still nobody.
+-- 10. OWNERSHIP AND LEAST-PRIVILEGE ACL. Still nobody.
 -- ---------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -956,6 +1022,7 @@ BEGIN
     'public.resolve_matching_snapshot_validity_v1(uuid)',
     'public.resolve_matching_proposal_validity_v1(uuid)',
     'public.append_matching_proposal_transition_v1(uuid,uuid,text,text,uuid,uuid,text)',
+    'public.enter_matching_proposal_decision_v1(uuid,uuid)',
     'public.assert_matching_recipient_view_current_v1(uuid,uuid,uuid,text)',
     'public.prepare_matching_proposal_core_v1(uuid,uuid,uuid)',
     'public.offer_matching_proposal_to_first_core_v1(uuid,uuid,uuid,uuid)',
@@ -978,7 +1045,7 @@ BEGIN
 END$$;
 
 -- ---------------------------------------------------------------------------
--- 10. TERMINAL SELF-ASSERTIONS.
+-- 11. TERMINAL SELF-ASSERTIONS.
 -- ---------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -986,6 +1053,7 @@ DECLARE
     'public.resolve_matching_snapshot_validity_v1(uuid)',
     'public.resolve_matching_proposal_validity_v1(uuid)',
     'public.append_matching_proposal_transition_v1(uuid,uuid,text,text,uuid,uuid,text)',
+    'public.enter_matching_proposal_decision_v1(uuid,uuid)',
     'public.assert_matching_recipient_view_current_v1(uuid,uuid,uuid,text)',
     'public.prepare_matching_proposal_core_v1(uuid,uuid,uuid)',
     'public.offer_matching_proposal_to_first_core_v1(uuid,uuid,uuid,uuid)',
@@ -1021,6 +1089,7 @@ DECLARE
   p record;
   target_role text;
   offending text;
+  cleaned text;
 BEGIN
   FOREACH fn IN ARRAY all_boundaries LOOP
     SELECT pr.prosecdef, pr.provolatile, pr.proconfig, pr.prosrc,
@@ -1078,6 +1147,26 @@ BEGIN
     END IF;
     IF p.prosrc !~ 'assert_matching_recipient_view_current_v1' THEN
       RAISE EXCEPTION 'I-07B: % must bind the exact recipient view version the human saw', fn;
+    END IF;
+    -- THE EXACT-VIEW CHECK IS INSIDE THE SERIALIZED REGION, and the order is
+    -- what makes it true. `materialize_matching_recipient_view_core_v1`
+    -- supersedes a view while holding the canonical two-human lock, so a
+    -- decision that checked the view BEFORE taking that lock could accept V1,
+    -- wait for the lock, and act on a view the concurrent transaction has since
+    -- replaced. The compare-and-swap on the proposal state does not close that
+    -- window, because materializing a view does not change the proposal state.
+    --
+    -- Comment lines are removed before the positions are compared, because the
+    -- prose above names both functions in the opposite order in order to explain
+    -- the order, and `prosrc` includes comments.
+    SELECT string_agg(l.line, E'\n' ORDER BY l.n) INTO cleaned
+      FROM regexp_split_to_table(p.prosrc, E'\n') WITH ORDINALITY AS l(line, n)
+     WHERE btrim(l.line) NOT LIKE '--%';
+    IF strpos(cleaned, 'enter_matching_proposal_decision_v1') = 0
+       OR strpos(cleaned, 'assert_matching_recipient_view_current_v1') = 0
+       OR strpos(cleaned, 'enter_matching_proposal_decision_v1')
+          > strpos(cleaned, 'assert_matching_recipient_view_current_v1') THEN
+      RAISE EXCEPTION 'I-07B: % must enter the canonical two-human serialization region BEFORE it checks the exact recipient view, or a concurrent materialization can supersede that view between the check and the act', fn;
     END IF;
     SELECT string_agg(a.name, ', ') INTO offending
       FROM pg_proc pr,
