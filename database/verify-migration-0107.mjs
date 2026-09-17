@@ -637,7 +637,7 @@ async function verifyConcurrency(report, f, base) {
 
   let sourceRace = null;
   let withdrawalRace = null;
-  let reopenRace = null;
+  let publicRace = null;
   let duplicateRace = null;
   let newAuthorization = null;
   await q('BEGIN');
@@ -646,7 +646,7 @@ async function verifyConcurrency(report, f, base) {
     await rt.simulateDistributionPrerequisites();
     sourceRace = await rt.authorizePackage(base, f.creator, 'DOWNLOAD');
     withdrawalRace = await rt.authorizePackage(base, f.creator, 'SHARE_EXTERNALLY');
-    reopenRace = await rt.authorizePackage(base, f.creator, 'PUBLISH_TO_PUBLIC_WORLD', f.experience);
+    publicRace = await rt.authorizePackage(base, f.creator, 'PUBLISH_TO_PUBLIC_WORLD', f.experience);
     duplicateRace = await rt.authorizePackage(base, f.creator, 'DOWNLOAD');
     // Prepared and approved but NOT authorized: C06 is the act that authorizes it.
     newAuthorization = rt.freshPackage(base.replay, base.version, 'SHARE_EXTERNALLY');
@@ -733,10 +733,10 @@ async function verifyConcurrency(report, f, base) {
       await q2('BEGIN');
       await actAs2(f.creator);
       await q2('SELECT * FROM public.remove_public_experience_from_public_world_v1($1, $2, $3)',
-        [randomUUID(), f.experience, reopenRace.publicVersion]);
+        [randomUUID(), f.experience, publicRace.publicVersion]);
       await q('BEGIN');
       await actAs(f.creator);
-      const command = rt.freshReconciliation(base.replay, base.version, reopenRace.package);
+      const command = rt.freshReconciliation(base.replay, base.version, publicRace.package);
       const blocked = q('SELECT * FROM public.reconcile_replay_post_finalization_state_v1($1, $2, $3, $4)',
         [command.command, command.replay, command.version, command.package]);
       assert.equal(await rt.stillPending(blocked), true,
@@ -749,7 +749,7 @@ async function verifyConcurrency(report, f, base) {
       await asRole('postgres');
       assert.equal((await rt.visibility(f.experience))[0].visibility_state, 'NOT_PUBLICLY_VISIBLE',
         'C03 the Public Experience is still absent after the Replay reconciliation committed');
-      assert.equal((await rt.resolvePublicArtifact(reopenRace.reference, f.reader)).length, 0,
+      assert.equal((await rt.resolvePublicArtifact(publicRace.reference, f.reader)).length, 0,
         'C03 and nothing is served');
     });
 
@@ -1029,16 +1029,26 @@ await runVerifier('0107', async (stage) => {
     await verifyPublicNonRegression(report, f, base);
     stage('reconciliation');
     await verifyReconciliation(report, f, base);
-    stage('concurrency');
-    await verifyConcurrency(report, f, base);
+    // FORWARD SAFETY BEFORE CONCURRENCY, deliberately. Every section above runs
+    // inside a transaction it rolls back; the concurrency section is the only
+    // one that COMMITS, and one of the things it commits is a canonical Public
+    // disappearance. Running after it would hand the forward-safety probes an
+    // Experience that is ABSENT_FROM_PUBLIC_WORLD, and their Public scenario
+    // would fail on a lifecycle the section never intended to test.
     stage('forward safety');
     await verifyForwardSafety(report, f, base);
+    stage('concurrency');
+    await verifyConcurrency(report, f, base);
   } finally {
     stage('fixture removal');
     await rt.removeCommittedReconciliations(f.humans);
     await rt.removeCommittedDistributions(f.humans);
     await rt.removeCommittedReplayVersions(f.humans);
     await rt.removeCommittedReplays(f.humans);
+    // BEFORE the frozen I-06C Public teardown: both I-05C disappearance
+    // relations bind the publication record restrictively, and this verifier is
+    // the first to leave a committed disappearance behind.
+    await rt.removePublicDisappearanceRecord([f.experience].filter(Boolean));
     await rt.removePublicReplayFixture([f.experience].filter(Boolean));
     await rt.removePublicIdentities(f.humans);
     await rt.removeHistoricalFixture(f.humans);

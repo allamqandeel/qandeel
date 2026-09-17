@@ -242,6 +242,39 @@ export function createReplayClosureRuntime(databaseUrl) {
     `SELECT draft_revision FROM ${rt.R.DRAFT_STATE} WHERE replay_id = $1`, [replay]))[0].draft_revision);
 
   /**
+   * Remove the committed I-05C DISAPPEARANCE record of the given Experiences.
+   *
+   * The frozen I-06C teardown does not do this, and correctly: the I-06C
+   * verifier never performs a disappearance, so it never leaves one. The I-06D
+   * verifier does - proving that canonical Public disappearance dominates Replay
+   * state is the point of P03, P05 and C03 - and both disappearance relations
+   * bind `public_experience_publication_state` with ON DELETE RESTRICT. Without
+   * this, the frozen helper fails on a foreign key, at teardown, with a message
+   * about a table the reader has no reason to connect to what the run proved.
+   *
+   * It runs BEFORE the frozen helper and lifts only the ONE I-05C guard that
+   * exists here, inside ONE transaction, and proves it back.
+   */
+  async function removePublicDisappearanceRecord(experiences) {
+    if (experiences.length === 0) return;
+    const guard = ['public.public_experience_disappearance_state',
+      'public_experience_disappearance_state_immutable'];
+    await rt.asRole('postgres');
+    await q('BEGIN');
+    try {
+      await q(`ALTER TABLE ${guard[0]} DISABLE TRIGGER ${guard[1]}`);
+      await q('DELETE FROM public.public_experience_disappearance_commands WHERE experience_id = ANY($1::uuid[])',
+        [experiences]);
+      await q(`DELETE FROM ${guard[0]} WHERE experience_id = ANY($1::uuid[])`, [experiences]);
+      await q(`ALTER TABLE ${guard[0]} ENABLE TRIGGER ${guard[1]}`);
+    } finally {
+      await q('COMMIT').catch(async () => { await q('ROLLBACK'); });
+    }
+    assert.equal(await rt.triggerEnabled(guard[0], guard[1]), true,
+      `${guard[1]} is enabled again after the Public disappearance teardown`);
+  }
+
+  /**
    * Remove every committed I-06D row of the given humans, lifting the three
    * append-only guards inside ONE transaction and proving them back. Runs BEFORE
    * the I-06C teardown, because every I-06D relation binds an I-06C or I-06B
@@ -271,7 +304,7 @@ export function createReplayClosureRuntime(databaseUrl) {
     availability, usability, eligibility, distributionState, reconcile,
     asReplica, sourceTextOf, changeSourceText, restoreSourceText, detachSourceUnit, restoreSourceOwner,
     simulateSourceCurrency, authorizePackage, freshReconciliation, draftRevision,
-    removeCommittedReconciliations,
+    removeCommittedReconciliations, removePublicDisappearanceRecord,
   };
 }
 
