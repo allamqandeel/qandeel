@@ -610,11 +610,30 @@ async function verifyStructure(report, humans) {
       await rejected(() => insertSubject({ presented_first_name: 'Someone' }), ['23503'], /first_name_fk/u);
       await rejected(() => insertSubject({ safe_compatibility_conclusion: 'A composed sentence nobody permitted.' }),
         ['55000'], /NOT_PERMITTED_TEXT/u);
-      await rejected(() => insertSubject({ permitted_conclusion_id: f.conclusionForFirst }), ['23503'], /conclusion_fk/u);
-      // The candidate's UNFILTERED conclusion candidate is not a permitted row.
+      // A conclusion the filter PERMITTED - for the other recipient - with its
+      // own exact text, so the guard passes and the KEY refuses: a permitted
+      // conclusion is never re-aimed at a view that did not bind it.
+      const [other] = await rows(`SELECT c.permitted_text FROM ${P.PERMITTED_CONCLUSIONS} c WHERE c.id = $1`, [f.conclusionForCandidate]);
+      await rejected(() => insertSubject({ permitted_conclusion_id: f.conclusionForCandidate, safe_compatibility_conclusion: other.permitted_text }),
+        ['23503'], /conclusion_fk/u);
+      // The candidate's UNFILTERED conclusion candidate is not a permitted row:
+      // the guard refuses it as deployed, and the key refuses it on its own.
+      await rejected(() => insertSubject({ permitted_conclusion_id: f.candidateConclusionCandidate }), ['55000'], /NOT_PERMITTED_TEXT/u);
+      await q('SAVEPOINT unfiltered');
+      await q(`ALTER TABLE ${MATCH.SUBJECTS} DISABLE TRIGGER matching_match_handoff_subjects_truth`);
       await rejected(() => insertSubject({ permitted_conclusion_id: f.candidateConclusionCandidate }), ['23503'], /conclusion_fk|permitted_fk/u);
+      await q('ROLLBACK TO SAVEPOINT unfiltered');
+      await q('RELEASE SAVEPOINT unfiltered');
+      assert.equal(await rt.triggerEnabled(MATCH.SUBJECTS, 'matching_match_handoff_subjects_truth'), true, 'S09 the subject guard is enabled again');
       await rejected(() => insertSubject({ subject_user_id: three }), ['23503'], /subject_fk/u);
-      await rejected(() => insertSubject({ source_view_id: f.firstView }), ['23503', '55000'], /audience_fk|subject_fk|first_name_fk|conclusion_fk|VIEW_NOT_IN_PACKAGE/u);
+      // The package's OTHER view is about the other human and was presented to
+      // the other human: the audience key refuses it for this subject.
+      await rejected(() => insertSubject({ source_view_id: f.secondView }), ['23503'], /audience_fk|subject_fk|first_name_fk|conclusion_fk/u);
+      // A view that is not one of the two the package binds - a later
+      // materialization for the same recipient - is refused by the guard.
+      const later = randomUUID();
+      await rt.materialize(later, f.proposal, one, f.conclusionForFirst);
+      await rejected(() => insertSubject({ source_view_id: later }), ['55000'], /VIEW_NOT_IN_PACKAGE/u);
       await insertSubject({});
       assert.equal(await count(MATCH.SUBJECTS, 'package_version_id = $1', [ids.handoff]), 2, 'S09 the exact copy really is writable');
     });
