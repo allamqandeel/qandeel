@@ -306,10 +306,32 @@ happens to reversible history — are defined here.
 
 - **Title / Finding:** there is no Replay of how an analysis developed.
 - **Source:** [T-07 §12](return-navigation-layer-v1.md) ("no Replay").
-- **Why deferred:** T-07 explicitly excludes Replay, and no current owner is frozen.
+- **Why deferred:** T-07 explicitly excludes Replay, and no current owner is frozen. The Replay
+  *backend runtime* has since been built and closed by `I-06`; what this item names — a surface
+  through which a human can actually watch an analysis develop — has no frozen owner still.
 - **Owner task:** `UNASSIGNED`
 - **Severity:** `MEDIUM`
-- **Reopen condition:** Architecture opens a dedicated Replay contract.
+- **Reopen condition:** Architecture opens a dedicated Replay contract. *(Satisfied and consumed for
+  the runtime half: `CW2-05 — Replay Runtime Architecture v1.0` is `CLOSED / FROZEN` and `I-06`
+  implemented it. The condition is retained as written rather than rewritten, because the record of
+  what was asked for is what makes the remaining gap legible. For the remaining half the condition is
+  narrower: a canonical contract opens the mobile / Product Analysis Replay surface, and the CW2-08
+  and analytical subject-authority prerequisites in the current truth below are resolved.)*
+- **Current truth (BG-08 reconciliation at `I-06` closure):** the Replay **backend runtime** exists and
+  is `CLOSED / FROZEN` — migrations `0100`–`0107` implement authorized source capture and draft
+  construction, the analytical projection and render truth contract, preview and finalization,
+  distribution packaging, distribution authority, export privacy sanitization, the Public
+  `REPLAY_ARTIFACT` bridge, post-finalization source availability and current delivery eligibility.
+  None of that is the thing this item names. The **final mobile / Product Analysis Replay surface is
+  still not implemented** and is outside `I-06`. **Media, storage and transport remain outside `I-06`**
+  and deferred by `CW2-05` — no encoder, codec, container, object store, CDN, public URL or delivery
+  path exists, and `QANDEEL` guarantees no recall of already-exported copies. **Production Replay
+  distribution is `NOT CLEARED / FAIL-CLOSED`** while two prerequisites are unresolved: the
+  protected-human analytical subject authority, whose canonical seam answers
+  `UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT`, and the `CW2-08` Safety / moderation / entitlement /
+  feature / Launch Gate runtime, whose canonical seam answers `NOT_EVALUATED` on every dimension.
+  Neither is deferred *here*: each fails closed in the runtime itself and is owned by its own frozen
+  `CW2-0N` contract, which is why no new backlog item is admitted for either (`BG-01`, `BG-06`).
 - **Status:** `OPEN — UNASSIGNED`
 
 ### `QAN-BL-AUTH-01` — Mobile Product Sign-In Gateway
@@ -765,3 +787,81 @@ production while the `CW2-08` prerequisite is unimplemented.
 runtime documentation is [`database/README.md`](../database/README.md) — so `BG-09` has no stale banner
 to correct here. Independent architecture, privacy, security and database-runtime review is complete;
 this closure record is durable and intentionally carries no transient pull-request or merge-status text.
+
+### I-06 closure record (Connected Worlds v2 — Replay Runtime)
+
+**Inherited: one, and it is reconciled rather than tombstoned.** At the kickoff of `I-06D`, the
+phase-closing slice, this register was read in full. Exactly one item names what `I-06` built:
+`QAN-BL-NAV-02 — Analysis Replay`, whose finding is "there is no Replay of how an analysis developed"
+and whose reopen condition is "Architecture opens a dedicated Replay contract". That condition was
+satisfied by `CW2-05 — Replay Runtime Architecture v1.0 — CLOSED / FROZEN`, and `I-06` implemented it
+in migrations `0100`-`0107`. It is nevertheless **not** tombstoned, and the reason is the whole of the
+disposition: `I-06` closes the Replay *backend runtime*, and opens no Product surface through which a
+human can watch an analysis develop. Tombstoning would record a capability this repository does not
+have. `BG-08` permits three dispositions; `CLOSED — TOMBSTONE` would be untrue and `DEFERRED — OWNED`
+would require naming an owner that does not exist, which `BG-02` and `BG-08` both forbid inventing. The
+item therefore stays `OPEN — UNASSIGNED` with its **current truth** updated in §5 to record what now
+exists, what still does not, and what remains fail-closed. Every other item is untouched: `OPEN-06`,
+`OPEN-08`, `OPEN-09`, `OPEN-19` and `QAN-BL-NAV-01` are navigation, acknowledgement and Timeline
+capabilities `I-06` neither implements nor blocks, and `QAN-BL-SEC-01` is owned by `QAN-SEC-01` — `I-06`
+changed no mobile auth persistence, no storage mechanism and no credential model, and introduced no
+cryptography beyond the SHA-256 request, authority and content digests migrations `0091`-`0105` already
+established.
+
+**Admitted: none.** `I-06`'s anti-scope is anti-scope, and `BG-06` admits none of it. The boundaries
+`I-06` stated and kept — the video encoder, codec, container, bitrate, resolution, object storage, CDN,
+public URL, signed URL, watermark and DRM; email, SMS, social and share-sheet transport; any external
+provider contract, delivery receipt or recall capability; the final Replay player and the mobile Replay
+Product surface; a protected-human analytical subject-authority resolver; a Shared or Public historical
+analytical substrate; and `CW2-08` Safety / moderation / commercial entitlement / feature gate / Launch
+Gate — qualify under none of `BG-06`'s four admission routes. None carries an existing `OPEN`
+identifier; none is deferred to a future task **by a canonical document** as an obligation rather than
+as a scope boundary; none is carried forward for validation; and Architecture designated none. They are
+owned by their own frozen contracts, which is where they belong: `CW2-05` owns Replay and defers the
+media and transport craft explicitly, and `CW2-08` owns safety, moderation, entitlements and launch
+integration.
+
+**Both launch prerequisites are implemented as fail-closed seams, not deferred.** This is the same
+disposition the `I-04` and `I-05` closure records above take, for the same reason, and `I-06` has two
+of them rather than one. `resolve_replay_analytical_distribution_authority_v1` answers
+`UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT`, because the protected-human SUBJECT half of a QANDEEL
+analysis authority requirement has no canonical producer in this repository; migration `0104` makes that
+state **unrepresentable inside a distribution package** rather than merely refused, so unresolved can
+never be reinterpreted as zero approvers. `resolve_replay_distribution_prerequisites_v1` answers
+`NOT_EVALUATED` on every `CW2-08` dimension, and both the authorization boundary and the `I-06D` current
+eligibility derivation require exactly `CLEARED` from it as their LAST gate, after every privacy and
+ownership gate. Production Replay distribution therefore fails closed even when every authority gate is
+satisfied. Because each boundary is complete inside the phase, **no backlog item is admitted for
+either**: there is no outstanding correctness obligation to record, and `BG-01` forbids moving an
+active-contract requirement here rather than fixing it. The enabling capabilities are owned by the
+frozen `CW2-08` contract and by a future reviewed subject-authority slice, and both seams are additive
+precisely so those can replace them without reopening anything.
+
+**Source loss after finalization is implemented, and no Public rule was invented for it.** `CW2-05`
+declines to invent automatic Public withdrawal solely because a private source later became
+unavailable, and `I-06D` implements that as written: current source availability, current
+complete-Replay usability and current delivery eligibility are all derived live and all fail closed on
+source loss, while the canonical Public visibility resolver is consumed unchanged and no Public
+lifecycle transition is performed. Everything the Public runtime already fails closed on — approval
+withdrawal, controller disappearance, `ABSENT_FROM_PUBLIC_WORLD` and every other `I-05C`
+continuing-eligibility failure — still does, immediately, and no Replay state resurrects an Experience
+after any of them. `QANDEEL` cannot guarantee recall of already-exported external copies and this
+runtime records no claim that it can. These are preserved frozen distinctions rather than outstanding
+obligations, and they qualify under none of `BG-06`'s routes.
+
+**`I-06` implementation is complete; launch readiness is a different claim.** Migrations `0100`-`0107`
+leave no Replay runtime capability that `I-06A`, `I-06B`, `I-06C` or `I-06D` deferred to a later slice
+of `I-06`. Replay is NOT product-launch ready and this record does not say otherwise: nothing in it can
+distribute anything to anybody in production while the two prerequisites above are unimplemented, and
+there is no media, storage or transport for it to distribute through.
+
+**Banner state (`BG-09`).** `I-06` does have a primary canonical document —
+[`docs/replay-runtime-v1.md`](replay-runtime-v1.md) — so `BG-09` applies here, and both halves were
+performed by the closing change itself rather than left to a successor. Two stale banners existed and
+both are recorded rather than erased: `I-06C` still read `CANDIDATE — awaiting independent ChatGPT
+review` after the pull request that merged it, normalized by `I-06D` as the parent-closing slice and as
+governance reconciliation only; and `I-06D`'s own candidate banner was moved to `CLOSED / FROZEN` by
+the closure-sync change. Section 63 of that document carries the reviewed implementation SHA, the pull
+request, and the statement that final merge still requires review and CI on the exact closure-sync
+head. This register entry is durable and intentionally carries no transient merge-status text of its
+own.

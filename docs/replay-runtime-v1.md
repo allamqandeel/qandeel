@@ -1,6 +1,6 @@
 # QANDEEL — Replay Runtime v1
 
-**Phase:** `I-06 — Replay Runtime` — **ACTIVE**
+**Phase:** `I-06 — Replay Runtime` — **CLOSED / FROZEN**
 **Slice:** `I-06A — Replay Foundation, Authorized Source Capture and Draft Construction v1` —
 **CLOSED / MERGED**
 **Slice:** `I-06B — Replay Analytical Projection, Render Truth Contract and Preview / Finalization v1` —
@@ -8,7 +8,7 @@
 **Slice:** `I-06C — Replay Distribution Package, Distribution Authority, Export Privacy Sanitization
 and Destination Runtime v1` — **CLOSED / MERGED**
 **Slice:** `I-06D — Post-Finalization Source Availability, Distribution Reconciliation and Replay
-Runtime Closure v1` — **CANDIDATE — awaiting independent ChatGPT review**
+Runtime Closure v1` — **CLOSED / FROZEN**
 **Architecture authority:** `CW2-05 — Replay Runtime Architecture v1.0 — CLOSED / FROZEN`, with
 binding `CW2-01`–`CW2-04` and `CW2-08`
 **Migrations:** `0100_replay_foundation_source_manifest_selection_v1.sql`,
@@ -20,10 +20,12 @@ binding `CW2-01`–`CW2-04` and `CW2-08`
 `0106_replay_post_finalization_source_availability_v1.sql`,
 `0107_replay_distribution_current_eligibility_reconciliation_v1.sql`
 
-`I-06` is **not** closed or frozen. This document records what `I-06A`, `I-06B`, `I-06C` and `I-06D`
+The phase is closed and frozen. This document records what `I-06A`, `I-06B`, `I-06C` and `I-06D`
 implemented, what they deliberately did not, and where each deferred capability is owned. Sections
 1–16 describe the `I-06A` substrate, which the later slices consume unchanged; sections 18–31
-describe `I-06B`; sections 32–48 describe `I-06C`; sections 49–60 describe `I-06D`.
+describe `I-06B`; sections 32–48 describe `I-06C`; sections 49–60 describe `I-06D`; sections 61–63
+carry the closure record. **Closing the runtime is not clearing the launch** — section 62 states that
+distinction, and section 63 records the evidence this closure rests on.
 
 > **`I-06C` status normalization — governance reconciliation only.** Pull request
 > [#254](https://github.com/allamqandeel/qandeel/pull/254) merged `I-06C` into `main` as
@@ -442,14 +444,20 @@ in the backlog is Product authority and no runtime semantics were taken from it.
 ## 17. Status
 
 ```text
-I-06  — ACTIVE
+I-06  — CLOSED / FROZEN
 I-06A — CLOSED / MERGED
 I-06B — CLOSED / MERGED
 I-06C — CLOSED / MERGED
-I-06D — CANDIDATE — awaiting independent ChatGPT review
+I-06D — CLOSED / FROZEN
 ```
 
-`I-06` is not closed and not frozen, and Claude may not declare it so.
+The phase was **ACTIVE** from the opening of `I-06A` until the `I-06D` closure-sync change recorded in
+section 63, and `I-06D` carried the banner `CANDIDATE — awaiting independent ChatGPT review` until
+that same change. Both transitions are recorded rather than erased, on the `BG-09` rule: a register
+tidied until every task reads as though it closed cleanly is the next register to drift.
+
+Section 62 keeps the distinction this closure must not blur — the runtime is closed; the production
+launch is not cleared.
 
 ---
 
@@ -1407,15 +1415,15 @@ at least one of them.
 
 ## 61. Backlog and governance disposition at parent closure
 
-`QAN-BL-NAV-02 — Analysis Replay` remains `OPEN — UNASSIGNED` in
-[`docs/qandeel-canonical-backlog-v1.md`](qandeel-canonical-backlog-v1.md) on this candidate branch, and
-`I-06D` deliberately does not tombstone it yet. `BG-08` requires the disposition to be recorded before
-closure and to be one of three things; the **intended** disposition, prepared here for the independent
-review that must approve it, is:
+`BG-08` requires every backlog item a closing phase inherited to receive one explicit disposition
+before closure, and to be one of exactly three things. `I-06` inherited one:
+`QAN-BL-NAV-02 — Analysis Replay`. Its applied disposition, reconciled in
+[`docs/qandeel-canonical-backlog-v1.md`](qandeel-canonical-backlog-v1.md) by this closure, is:
 
 ```text
 QAN-BL-NAV-02 — Analysis Replay
-  intended disposition: OPEN — UNASSIGNED, with updated current truth
+  disposition: OPEN — UNASSIGNED, with updated current truth
+  owner task:  UNASSIGNED, unchanged
 
   why not CLOSED — TOMBSTONE
     the finding is "there is no Replay of how an analysis developed". I-06 closes the
@@ -1427,23 +1435,28 @@ QAN-BL-NAV-02 — Analysis Replay
     no named successor task exists, and BG-08 does not permit inventing one to make a
     closure read cleanly.
 
-  what changes
-    the item's current truth is updated to record that the Replay backend runtime
-    exists and is closed, that media, transport and the mobile Replay surface remain
-    deferred by CW2-05 and outside I-06, and that production distribution remains
-    fail-closed while the CW2-08 and analytical-authority prerequisites are unresolved.
+  what the updated truth now records
+    the Replay backend runtime exists and is CLOSED / FROZEN through migrations
+    0100-0107; the final mobile / Product Analysis Replay surface is still not
+    implemented and is outside I-06; media, storage and transport remain deferred by
+    CW2-05; and production Replay distribution remains NOT CLEARED / FAIL-CLOSED while
+    the protected-human analytical subject authority and the CW2-08 prerequisites are
+    unresolved.
 ```
 
-No current blocker is laundered into the backlog by this: every gate `I-06D` found unresolved is
-unresolved in the runtime itself, fail-closed, and documented in sections 54, 56 and 62 rather than
-deferred to a register. `BG-07` applies throughout — nothing in the backlog is Product authority.
+**Admitted: none.** No current blocker is laundered into the register by this closure. Every gate
+`I-06D` found unresolved is unresolved *in the runtime itself*, fail-closed there, and documented in
+sections 54, 56 and 62 — `BG-01` forbids moving an active-contract requirement into the backlog rather
+than fixing it, and each of these boundaries is owned by its own frozen `CW2-0N` contract rather than
+by an unassigned entry. `BG-07` applies throughout: nothing in the backlog is Product authority, and no
+runtime semantics were taken from it.
 
 ## 62. Closing the runtime is not clearing the launch
 
 When `I-06` closes, two different statements are true at once, and this document keeps them apart:
 
 ```text
-I-06 Replay Runtime implementation        CLOSED / FROZEN  (after independent review)
+I-06 Replay Runtime implementation        CLOSED / FROZEN
 production Replay distribution launch     NOT CLEARED / FAIL-CLOSED
 ```
 
@@ -1463,3 +1476,58 @@ the mobile Replay Product surface              outside I-06
 Closing the runtime means the architecture-defined runtime boundary is implemented truthfully. It does
 not mean users can export or share production video today, and nothing in this document should be read
 as saying they can.
+
+## 63. Closure record
+
+This section is the `BG-09` half of the closure: the change that closes `I-06` performs it, and the
+record says what it closed on rather than leaving a later task to reconstruct it.
+
+```text
+closing slice                 I-06D — Post-Finalization Source Availability, Distribution
+                              Reconciliation and Replay Runtime Closure v1
+pull request                  #254 closed I-06C; #255 carries I-06D
+reviewed implementation SHA   09e8f7d9763e29aea6c021cd510d48c3b414bdc8
+migrations at closure         0100-0107, with 0001-0099 untouched throughout
+```
+
+**What the reviewed SHA was reviewed against.** Independent review of `I-06D` was performed on
+`09e8f7d9763e29aea6c021cd510d48c3b414bdc8` and returned a PASS with no Product blocker. At that head
+the two `I-06D` real-PostgreSQL verifiers had run green in **two consecutive focused rounds on that one
+exact commit** — `0106` 23/23 and `0107` 35/35 each round, every run reporting
+`ACCEPTANCE-ELIGIBLE: the target is an exact commit SHA` — and full API CI was green end to end with
+every Replay group reported: `I-06A 0100 = PASS 0101 = PASS`, `I-06B 0102 = PASS 0103 = PASS`,
+`I-06C 0104 = PASS 0105 = PASS`, `I-06D 0106 = PASS 0107 = PASS`, alongside `I-05` Public
+non-regression, forward safety, toolchain, build and closure-governance. Mobile CI was green;
+`I-06D` adds no mobile surface.
+
+**What this closure-sync change contains.** Documentation and governance only. It changes no
+migration, no runtime SQL, no verifier semantics, no static contract and no application code — the
+`0106` and `0107` migrations reviewed at the SHA above are byte-identical to the ones this record
+closes over, and `0001`-`0105` were never touched by `I-06D` at all. **Final merge still requires
+review and CI on the exact closure-sync head**, which is a different commit from the reviewed
+implementation SHA; the merge commit does not exist yet and is deliberately not named here, because a
+record cannot contain its own future hash.
+
+**Banner transitions, recorded rather than erased (`BG-09`).** Two stale banners existed on the path
+to this closure and both are kept visible:
+
+```text
+I-06C   CANDIDATE — awaiting independent ChatGPT review   ->   CLOSED / MERGED
+        a residue that survived the merge of #254; normalized by I-06D as the
+        parent-closing slice, as governance reconciliation only, and recorded in
+        the header block above rather than deleted
+
+I-06D   CANDIDATE — awaiting independent ChatGPT review   ->   CLOSED / FROZEN
+        performed by this change, which is the change that closes the slice, so no
+        successor task is left responsible for it
+```
+
+**`BG-08`.** The one inherited register item, `QAN-BL-NAV-02 — Analysis Replay`, is reconciled in
+section 61 and in the canonical backlog's `I-06` closure record. It is **not** tombstoned: `I-06` closes
+the Replay backend runtime and opens no Product surface through which a human can watch an analysis
+develop. No new item is admitted, and no unresolved gate is moved into the register instead of being
+left fail-closed where it actually is.
+
+**What a reader should not conclude from this section.** That the runtime is closed says nothing about
+whether anything may be distributed. Section 62 is the binding statement: production Replay
+distribution is `NOT CLEARED / FAIL-CLOSED`, and every prerequisite it names is still unresolved.
