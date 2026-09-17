@@ -253,11 +253,7 @@ async function verifyChoreography(report, humans) {
       const f = await bringToOffered(one, two);
       await asRole('postgres');
       await rejected(() => rt.expire(randomUUID(), f.proposal), ['55000'], /NOT_YET_EXPIRED/u);
-      // There is no timestamp parameter through which a caller could supply an
-      // instant, so the fixture moves the DEADLINE rather than the clock.
-      await q(`ALTER TABLE ${P.PROPOSALS} DISABLE TRIGGER matching_proposals_state_truth`);
-      await q(`UPDATE ${P.PROPOSALS} SET expires_at = CURRENT_TIMESTAMP - interval '1 hour' WHERE id = $1`, [f.proposal]);
-      await q(`ALTER TABLE ${P.PROPOSALS} ENABLE TRIGGER matching_proposals_state_truth`);
+      await backdate(f.proposal);
       const [expired] = await rt.expire(randomUUID(), f.proposal);
       assert.equal(expired.expired_state, 'EXPIRED', 'B06 an expired proposal becomes terminal');
       await actAs(one);
@@ -360,10 +356,7 @@ async function verifyPrivacy(report, humans) {
         }],
         ['an expiry', async (f) => {
           await asRole('postgres');
-          await q(`ALTER TABLE ${P.PROPOSALS} DISABLE TRIGGER matching_proposals_state_truth`);
-          await q(`UPDATE ${P.PROPOSALS} SET expires_at = CURRENT_TIMESTAMP - interval '1 hour' WHERE id = $1`,
-            [f.proposal]);
-          await q(`ALTER TABLE ${P.PROPOSALS} ENABLE TRIGGER matching_proposals_state_truth`);
+          await backdate(f.proposal);
           await rt.expire(randomUUID(), f.proposal);
         }],
         ['a private invalidation', async (f) => {
@@ -507,9 +500,11 @@ async function verifyDurability(report, humans) {
       assert.deepEqual(again, first, 'D01 the approval retry returns the committed answer');
       assert.equal(await count(P.TRANSITIONS, 'proposal_id = $1 AND resulting_state = $2',
         [f.proposal, 'FIRST_FORWARD_APPROVED']), 1, 'D01 and appends no second transition');
-      // PREPARATION.
+      // PREPARATION, over a second pair that reuses the already-configured
+      // policy: there is one current pointer per policy kind, so a second
+      // install in the same state would collide on its primary key.
       await asRole('postgres');
-      const g = await seedEligible(one, humans[2]);
+      const g = await seedEligible(one, humans[2], { reusePolicy: f.policy });
       const command = randomUUID();
       const [prepared] = await rt.prepare(command, g.snapshot, one);
       const [preparedAgain] = await rt.prepare(command, g.snapshot, one);
@@ -568,7 +563,7 @@ async function verifyRaces(report, humans) {
         'E01 exactly one of the two directions survives, whichever arrived first');
       assert.equal(await count(P.PROPOSALS, 'pair_id = $1', [f.pair]), 1,
         'E01 and exactly one proposal row exists for the unordered pair');
-      await rt.removeCommittedProposalState([one, two]);
+      await cleanupRace([one, two]);
     });
 
     await report.section('E02 duplicate same-direction preparation is convergent', async () => {
@@ -583,7 +578,7 @@ async function verifyRaces(report, humans) {
       assert.ok(outcomes.some((o) => o.status === 'fulfilled'), 'E02 at least one caller gets an answer');
       assert.equal(await count(P.PROPOSALS, 'id = $1', [command]), 1,
         'E02 and the same command id produced exactly one proposal');
-      await rt.removeCommittedProposalState([one, two]);
+      await cleanupRace([one, two]);
     });
 
     await report.section('E03 first decline against forward approval leaves exactly one result', async () => {
@@ -628,11 +623,9 @@ async function verifyRaces(report, humans) {
     });
 
     await report.section('E05 expiry against a human action leaves exactly one winner', async () => {
-      const f = await commitOffered(one, two, { expiryHours: 1 });
+      const f = await commitOffered(one, two);
       await asRole('postgres');
-      await q(`ALTER TABLE ${P.PROPOSALS} DISABLE TRIGGER matching_proposals_state_truth`);
-      await q(`UPDATE ${P.PROPOSALS} SET expires_at = CURRENT_TIMESTAMP - interval '1 hour' WHERE id = $1`, [f.proposal]);
-      await q(`ALTER TABLE ${P.PROPOSALS} ENABLE TRIGGER matching_proposals_state_truth`);
+      await backdate(f.proposal);
       await q('BEGIN'); await q2('BEGIN');
       await rt.actAs(one);
       const expire = q2('SELECT * FROM public.expire_matching_proposal_core_v1($1, $2)', [randomUUID(), f.proposal]);
@@ -689,6 +682,29 @@ async function seedWorld(human, phase, lifecycle) {
   return world;
 }
 
+/**
+ * Move one proposal's preparation instant AND its deadline into the past.
+ *
+ * `CURRENT_TIMESTAMP` is the TRANSACTION timestamp, so inside one transaction
+ * `prepared_at` and "now" are the same instant - and `expires_at > prepared_at`
+ * together with `expires_at <= now` is then unsatisfiable. Moving only the
+ * deadline back produces a CHECK violation rather than an expired proposal, so
+ * both instants move. The identity trigger is lifted for exactly this statement
+ * because a proposal's preparation instant is frozen by design, which is the
+ * property being worked around rather than tested here; the expiry boundary
+ * itself takes no timestamp parameter at all, and that is what B06 proves.
+ */
+async function backdate(proposal) {
+  await q(`ALTER TABLE ${P.PROPOSALS} DISABLE TRIGGER matching_proposals_state_truth`);
+  await q(`UPDATE ${P.PROPOSALS}
+              SET prepared_at = CURRENT_TIMESTAMP - interval '3 hours',
+                  expires_at = CURRENT_TIMESTAMP - interval '1 hour'
+            WHERE id = $1`, [proposal]);
+  await q(`ALTER TABLE ${P.PROPOSALS} ENABLE TRIGGER matching_proposals_state_truth`);
+  assert.equal(await rt.triggerEnabled(P.PROPOSALS, 'matching_proposals_state_truth'), true,
+    'the proposal identity trigger is enabled again immediately');
+}
+
 /** Append a transition and move the pointer as the OWNER, for a state I-07B has no producer for. */
 async function stepOwner(proposal, from, to) {
   const [current] = await rows(`SELECT current_transition_id id FROM ${P.PROPOSALS} WHERE id = $1`, [proposal]);
@@ -701,10 +717,33 @@ async function stepOwner(proposal, from, to) {
   return id;
 }
 
-/** Two matchable humans, through the real I-07A human commands, plus policies. */
+/**
+ * Two matchable humans, built through the REAL I-07A human commands rather than
+ * by direct writes, so a fixture can never prove something the consent path
+ * would refuse.
+ *
+ * It is IDEMPOTENT: a human who is already matchable keeps their identities.
+ * Every I-07A command is a compare-and-swap that names the exact current state
+ * it expects, so a second `activate` on an already-active human is a correct
+ * `MATCHING_STALE_STATE` - and a scenario that built two pairs sharing a human,
+ * or a committed race section that seeded twice, would otherwise fail on the
+ * predecessor's guard rather than on anything I-07B does.
+ */
 async function seedMatchable(a, b, options = {}) {
   const byUser = {};
   for (const human of [a, b]) {
+    await asRole('postgres');
+    const [current] = await rt.setupState(human);
+    if (current.matchable) {
+      byUser[human] = {
+        event: current.participation_event_id,
+        grant: current.matching_context_grant_id,
+        profile: current.introduction_profile_version_id,
+        requirements: current.matching_requirement_version_id,
+        authority: current.pre_match_disclosure_authority_id,
+      };
+      continue;
+    }
     await actAs(human);
     await rt.activate(randomUUID(), 'MANUAL_MY_WORLD_ENTRY', null);
     const grant = randomUUID();
@@ -719,11 +758,20 @@ async function seedMatchable(a, b, options = {}) {
     byUser[human] = { event: state.participation_event_id, grant, profile, requirements, authority };
   }
   await asRole('postgres');
-  const policy = options.reusePolicy ?? await rt.installPolicies({
-    cadenceMax: options.cadenceMax ?? 5,
-    expiryHours: options.expiryHours ?? 72,
-    safeFieldKeys: APPROVED,
-  });
+  // The policy pointers are one row per kind, so a second install in the same
+  // state would collide on the primary key. An already-configured runtime is
+  // reused, which is also what a real one looks like.
+  const configured = await rows(`SELECT policy_kind, current_policy_version_id id FROM ${P.POLICY_STATE}`);
+  const policy = options.reusePolicy ?? (configured.length === 5
+    ? Object.fromEntries(configured.map((r) => [{
+      PROPOSAL_CADENCE: 'cadence', PENDING_PROPOSAL_LIMIT: 'pending', PROPOSAL_EXPIRY: 'expiry',
+      PROPOSAL_SAFE_FIELDS: 'fields', SENSITIVE_CONCLUSION_FILTER: 'filter',
+    }[r.policy_kind], r.id]))
+    : await rt.installPolicies({
+      cadenceMax: options.cadenceMax ?? 5,
+      expiryHours: options.expiryHours ?? 72,
+      safeFieldKeys: APPROVED,
+    }));
   const pairId = randomUUID();
   const [pair] = await rt.ensurePair(pairId, a, b);
   return { pair: pair.pair_id, lower: pair.lower_user_id, higher: pair.higher_user_id, byUser, policy };

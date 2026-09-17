@@ -475,6 +475,95 @@ jobs:
             printf '### I-07A real-PostgreSQL verifiers\n- 0108 = %s\n- 0109 = %s\n' "$result_0108" "$result_0109" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$status"
+      # The three I-07B verifiers are NEW. Each one's first contact with real
+      # PostgreSQL can expose a defect the others would not reveal so they run as
+      # ONE reported group rather than three hard-fail steps: a failure in 0110
+      # would otherwise skip 0111 and 0112 entirely and cost a whole round per
+      # finding. Each exit code is captured and the step exits non-zero if any
+      # of the three failed.
+      #
+      # 0110 proves the pair eligibility and proposal persistence: a canonical
+      # UNORDERED pair whose reverse direction is unwritable rather than merely
+      # de-duplicated + a proposal direction that can only ever be an arrangement
+      # of its own pair's two members + all eleven frozen CW2-06 states
+      # representable with the two I-07C ones carrying no producer at all + a
+      # legal transition list that lets nothing leave a terminal state + which
+      # role may have acted fixed by the resulting state so a candidate can never
+      # be recorded as declining the first offer + a current state bound to ONE
+      # EXACT transition by composite key so it cannot diverge + at most one LIVE
+      # proposal per unordered pair in either direction + PASS FAIL UNKNOWN where
+      # an UNKNOWN cannot carry a source and a third-party claim or an inference
+      # cannot be spelled at all + a FAIL an UNKNOWN and an UNANSWERED hard
+      # dealbreaker each blocking a proposal + a snapshot sealed once consumed +
+      # a permitted conclusion that may carry no contact route no source
+      # identifier no verbatim quote and no score rank or percentage + one
+      # conclusion with exactly one filter outcome + an audience-exact
+      # authority-exact recipient view + a disclosed field needing BOTH the
+      # human's approval and Product's permission with its VALUE filtered too +
+      # append-only history for every role including the table owner + RLS on
+      # with zero policies and zero application-role privileges + five
+      # forward-safety probes each proving its guard load-bearing.
+      #
+      # 0111 proves the private evaluation and the disclosure gate: every
+      # boundary executable by NO ROLE at all because the CW2-08 Launch Gate does
+      # not exist + private resolvers that are STABLE and write nothing so none
+      # can manufacture human consent + two seams that answer NOT_EVALUATED and
+      # UNRESOLVED and cannot be made to answer otherwise + five pure classifiers
+      # agreeing with the CHECK constraints they mirror over one corpus + a
+      # canonical pair that is one answer in both directions and converges under
+      # a second ensure + discovery that is bounded current silent and unranked
+      # and excludes a paused an off a mid-Introduction and an already-paired
+      # human + eligibility capture binding both humans' exact current identities
+      # and refusing without naming which human + a filter that refuses a contact
+      # route a source identifier a quoted span A PRIVATE NOTE QUOTED WITHOUT
+      # QUOTATION MARKS ranking language and a sensitive fact and records an
+      # unclassifiable result as a REFUSAL + a gate disclosing only the
+      # intersection of human authority and Product permission with the first
+      # name from the seam + a moved profile version staling it + an approved
+      # VALUE carrying a phone number refused BY NAME + the candidate view built
+      # as an INDEPENDENT disclosure over a different subject authority profile
+      # version and conclusion.
+      #
+      # 0112 proves the choreography and the privacy of every ending: the whole
+      # walk from preparation to the second decline with no acceptance
+      # counterpart anywhere + the candidate NOT notified by the first offer and
+      # every question they could ask answering exactly as for a proposal that
+      # never existed + a terminal first decline the candidate still learns
+      # nothing about + forward approval creating no World no Introduction and no
+      # Match and widening no I-07A authority + withdrawal leaving the delivered
+      # second view in place and saying only that it is unavailable + expiry
+      # decided by the DATABASE CLOCK + eight material changes each staling a
+      # live proposal without erasing a delivered view + cadence and pending
+      # limits DERIVED so a pause accumulates no flood + a neutral projection in
+      # which a second decline an expiry a private invalidation and a competing
+      # match cancellation are ONE answer + a stale view authorizing nothing + a
+      # human with no view getting the same bounded not-found as for nothing +
+      # durable idempotency and compare-and-swap on every command + six real
+      # two-connection races including reverse-direction work that cannot
+      # deadlock because the lock order is canonical user-id order.
+      - name: Verify the three I-07B Matching candidate eligibility proposal and privacy verifiers against real PostgreSQL as one reported group
+        run: |
+          status=0
+          result_0110=FAIL
+          result_0111=FAIL
+          result_0112=FAIL
+          echo "::group::migration 0110 - Matching pair eligibility and private proposal persistence"
+          if npm run verify:matching-pair-eligibility-proposal-persistence:integration; then result_0110=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0111 - Matching candidate evaluation and the proposal disclosure gate"
+          if npm run verify:matching-candidate-evaluation-disclosure-gate:integration; then result_0111=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0112 - Matching proposal choreography and the neutral recipient projection"
+          if npm run verify:matching-proposal-choreography-runtime:integration; then result_0112=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "I-07B real-PostgreSQL verifier results"
+          echo "0110 = $result_0110"
+          echo "0111 = $result_0111"
+          echo "0112 = $result_0112"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            printf '### I-07B real-PostgreSQL verifiers\n- 0110 = %s\n- 0111 = %s\n- 0112 = %s\n' "$result_0110" "$result_0111" "$result_0112" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

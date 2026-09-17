@@ -303,7 +303,9 @@ async function verifyEvaluation(report, humans) {
       const [retry] = await rt.capture(snapshot, f.pair, two, one);
       assert.equal(retry.eligibility_snapshot_id, snapshot, 'C01 an equivalent retry returns the committed snapshot');
       assert.equal(await count(P.SNAPSHOTS, 'pair_id = $1', [f.pair]), 1, 'C01 and writes nothing new');
-      // THE SAME COMMAND ID CARRYING A DIFFERENT REQUEST FAILS CLOSED.
+      // THE SAME COMMAND ID CARRYING A DIFFERENT REQUEST FAILS CLOSED. The
+      // second pair shares a human with the first, which is exactly why
+      // `seedSetup` is idempotent within a scenario.
       const other = await seedMatchablePair(one, humans[2]);
       await rejected(() => rt.capture(snapshot, other.pair, one, humans[2]), ['23505'], /COMMAND_ID_CONFLICT/u);
     });
@@ -321,14 +323,23 @@ async function verifyEvaluation(report, humans) {
         'C01 so it can never disclose which of the two is not participating');
     });
 
-    await report.isolated('C01 capture refuses an active Introduction and an unconfigured policy', async () => {
+    await report.isolated('C01 capture refuses an active Introduction', async () => {
       const f = await seedMatchablePair(one, two);
       await seedWorld(two, 'INTRODUCTION', 'ACTIVE');
       await rejected(() => rt.capture(randomUUID(), f.pair, one, two),
         ['55000'], /ACTIVE_INTRODUCTION_PRESENT/u);
       await q(`DELETE FROM public.shared_world_membership_episodes WHERE user_id = $1`, [two]);
-      // AN UNCONFIGURED POLICY IS NEVER A PERMISSIVE DEFAULT.
-      await q(`DELETE FROM ${P.POLICY_STATE} WHERE policy_kind = 'PROPOSAL_EXPIRY'`);
+      const [captured] = await rt.capture(randomUUID(), f.pair, one, two);
+      assert.ok(captured.eligibility_snapshot_id,
+        'C01 and the same call succeeds once the Introduction is over, so the refusal was the Introduction');
+    });
+
+    await report.isolated('C01 capture refuses an unconfigured policy', async () => {
+      // AN UNCONFIGURED POLICY IS NEVER A PERMISSIVE DEFAULT. The fixture is
+      // built WITHOUT the expiry policy rather than by deleting its pointer: a
+      // current policy pointer is durable by design, and production ships with
+      // no policy row at all, so never-configured is also the honest shape.
+      const f = await seedMatchablePair(one, two, { omit: ['PROPOSAL_EXPIRY'] });
       await rejected(() => rt.capture(randomUUID(), f.pair, one, two),
         ['55000'], /POLICY_UNCONFIGURED/u);
     });
@@ -413,10 +424,9 @@ async function verifyEvaluation(report, humans) {
     });
 
     await report.isolated('D03 an unconfigured filter policy refuses the call outright', async () => {
-      const f = await seedEligibleSnapshot(one, two);
+      const f = await seedEligibleSnapshot(one, two, { omit: ['SENSITIVE_CONCLUSION_FILTER'] });
       const candidateId = randomUUID();
       await rt.submitConclusion(candidateId, f.snapshot, one, two, CLEAN);
-      await q(`DELETE FROM ${P.POLICY_STATE} WHERE policy_kind = 'SENSITIVE_CONCLUSION_FILTER'`);
       // THERE IS NO "FILTER UNAVAILABLE, SO ALLOW" PATH.
       await rejected(() => rt.filterConclusion(randomUUID(), candidateId),
         ['55000'], /SENSITIVE_FILTER_UNCONFIGURED/u);
@@ -478,9 +488,9 @@ async function verifyDisclosureGate(report, humans) {
     });
 
     await report.isolated('E03 an unconfigured Product field policy discloses nothing', async () => {
-      const f = await seedProposalFixture(one, two);
-      await q(`DELETE FROM ${P.POLICY_STATE} WHERE policy_kind = 'PROPOSAL_SAFE_FIELDS'`);
-      // HUMAN AUTHORITY IS NECESSARY AND NOT SUFFICIENT.
+      // HUMAN AUTHORITY IS NECESSARY AND NOT SUFFICIENT: with no Product policy
+      // at all, a human who approved a field still discloses nothing.
+      const f = await seedProposalFixture(one, two, { omit: ['PROPOSAL_SAFE_FIELDS'] });
       await rejected(() => rt.materialize(randomUUID(), f.proposal, one, f.conclusionForFirst),
         ['55000'], /POLICY_UNCONFIGURED/u);
     });
@@ -607,7 +617,27 @@ async function seedWorld(human, phase, lifecycle) {
   return world;
 }
 
+/**
+ * One human's complete I-07A setup, written directly.
+ *
+ * It is IDEMPOTENT WITHIN A SCENARIO: a human who already has a participation
+ * pointer keeps their identities and is returned unchanged. A scenario that
+ * builds two pairs sharing a human would otherwise collide on
+ * `matching_participation_state_pkey`, and the collision says nothing about the
+ * migration under test.
+ */
 async function seedSetup(human, { skipParticipation = false, profile = PROFILE, approved = APPROVED } = {}) {
+  const [existing] = await rows(
+    `SELECT s.current_event_id AS event, g.id AS grant, ps.current_profile_version_id AS profile,
+            rs.current_requirement_version_id AS requirements, a.id AS authority
+       FROM public.matching_participation_state s
+       LEFT JOIN public.matching_context_grants g ON g.grantor_user_id = s.participant_user_id AND g.status = 'ACTIVE'
+       LEFT JOIN public.introduction_profile_state ps ON ps.owner_user_id = s.participant_user_id
+       LEFT JOIN public.matching_requirement_state rs ON rs.owner_user_id = s.participant_user_id
+       LEFT JOIN public.pre_match_disclosure_authorities a
+              ON a.grantor_user_id = s.participant_user_id AND a.status = 'ACTIVE'
+      WHERE s.participant_user_id = $1`, [human]);
+  if (existing) return existing;
   let event = null;
   if (!skipParticipation) {
     event = randomUUID();
@@ -646,24 +676,34 @@ async function seedSetup(human, { skipParticipation = false, profile = PROFILE, 
   return { event, grant, profile: profileVersion, requirements, authority };
 }
 
-async function seedPolicies({ safeFieldKeys = APPROVED } = {}) {
+/**
+ * One version of each policy kind, and a current pointer for each.
+ *
+ * `omit` leaves a kind UNCONFIGURED by never installing it. A current policy
+ * pointer is durable - the 0110 truth trigger refuses to delete one, on purpose
+ * - so "unconfigured" is a fixture that was never configured rather than one
+ * that had its pointer removed. That is also the honest shape: production ships
+ * with no policy row at all.
+ */
+async function seedPolicies({ safeFieldKeys = APPROVED, omit = [] } = {}) {
   const ids = { cadence: randomUUID(), pending: randomUUID(), expiry: randomUUID(),
     fields: randomUUID(), filter: randomUUID() };
-  await q(`INSERT INTO ${P.POLICY_VERSIONS} (id, policy_kind, window_days, max_count, expiry_hours)
-           VALUES ($1, 'PROPOSAL_CADENCE', 7, 5, NULL),
-                  ($2, 'PENDING_PROPOSAL_LIMIT', NULL, 3, NULL),
-                  ($3, 'PROPOSAL_EXPIRY', NULL, NULL, 72),
-                  ($4, 'PROPOSAL_SAFE_FIELDS', NULL, NULL, NULL),
-                  ($5, 'SENSITIVE_CONCLUSION_FILTER', NULL, NULL, NULL)`,
-  [ids.cadence, ids.pending, ids.expiry, ids.fields, ids.filter]);
-  if (safeFieldKeys.length > 0) {
+  const kinds = [
+    ['PROPOSAL_CADENCE', ids.cadence, 7, 5, null],
+    ['PENDING_PROPOSAL_LIMIT', ids.pending, null, 3, null],
+    ['PROPOSAL_EXPIRY', ids.expiry, null, null, 72],
+    ['PROPOSAL_SAFE_FIELDS', ids.fields, null, null, null],
+    ['SENSITIVE_CONCLUSION_FILTER', ids.filter, null, null, null],
+  ].filter(([kind]) => !omit.includes(kind));
+  for (const [kind, id, windowDays, maxCount, expiryHours] of kinds) {
+    await q(`INSERT INTO ${P.POLICY_VERSIONS} (id, policy_kind, window_days, max_count, expiry_hours)
+             VALUES ($1, $2, $3, $4, $5)`, [id, kind, windowDays, maxCount, expiryHours]);
+    await q(`INSERT INTO ${P.POLICY_STATE} (policy_kind, current_policy_version_id) VALUES ($1, $2)`, [kind, id]);
+  }
+  if (safeFieldKeys.length > 0 && !omit.includes('PROPOSAL_SAFE_FIELDS')) {
     await q(`INSERT INTO ${P.POLICY_FIELDS} (policy_version_id, field_key) SELECT $1, unnest($2::text[])`,
       [ids.fields, safeFieldKeys]);
   }
-  await q(`INSERT INTO ${P.POLICY_STATE} (policy_kind, current_policy_version_id)
-           VALUES ('PROPOSAL_CADENCE', $1), ('PENDING_PROPOSAL_LIMIT', $2), ('PROPOSAL_EXPIRY', $3),
-                  ('PROPOSAL_SAFE_FIELDS', $4), ('SENSITIVE_CONCLUSION_FILTER', $5)`,
-  [ids.cadence, ids.pending, ids.expiry, ids.fields, ids.filter]);
   return ids;
 }
 
