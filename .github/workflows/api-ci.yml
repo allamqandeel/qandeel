@@ -390,6 +390,29 @@ jobs:
             printf '### I-06C real-PostgreSQL verifiers\n- 0104 = %s\n- 0105 = %s\n' "$result_0104" "$result_0105" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$status"
+      # The two I-06D verifiers are NEW. Each one's first contact with real
+      # PostgreSQL can expose a defect the other would not reveal so they run as
+      # ONE reported group rather than two hard-fail steps: a failure in 0106
+      # would otherwise skip 0107 entirely and cost a whole round per finding.
+      # Each exit code is captured and the step exits non-zero if either failed.
+      - name: Verify the two I-06D Replay post-finalization source availability and reconciliation verifiers against real PostgreSQL as one reported group
+        run: |
+          status=0
+          result_0106=FAIL
+          result_0107=FAIL
+          echo "::group::migration 0106 - Replay post-finalization source availability and current usability"
+          if npm run verify:replay-post-finalization-source-availability:integration; then result_0106=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0107 - Replay current delivery eligibility and controlled reconciliation"
+          if npm run verify:replay-distribution-reconciliation-closure:integration; then result_0107=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "I-06D real-PostgreSQL verifier results"
+          echo "0106 = $result_0106"
+          echo "0107 = $result_0107"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            printf '### I-06D real-PostgreSQL verifiers\n- 0106 = %s\n- 0107 = %s\n' "$result_0106" "$result_0107" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

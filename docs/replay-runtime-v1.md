@@ -1,12 +1,14 @@
 # QANDEEL — Replay Runtime v1
 
-**Phase:** `I-06 — Replay Runtime` — **ACTIVE**
+**Phase:** `I-06 — Replay Runtime` — **CLOSED / FROZEN**
 **Slice:** `I-06A — Replay Foundation, Authorized Source Capture and Draft Construction v1` —
 **CLOSED / MERGED**
 **Slice:** `I-06B — Replay Analytical Projection, Render Truth Contract and Preview / Finalization v1` —
 **CLOSED / MERGED**
 **Slice:** `I-06C — Replay Distribution Package, Distribution Authority, Export Privacy Sanitization
-and Destination Runtime v1` — **CANDIDATE — awaiting independent ChatGPT review**
+and Destination Runtime v1` — **CLOSED / MERGED**
+**Slice:** `I-06D — Post-Finalization Source Availability, Distribution Reconciliation and Replay
+Runtime Closure v1` — **CLOSED / FROZEN**
 **Architecture authority:** `CW2-05 — Replay Runtime Architecture v1.0 — CLOSED / FROZEN`, with
 binding `CW2-01`–`CW2-04` and `CW2-08`
 **Migrations:** `0100_replay_foundation_source_manifest_selection_v1.sql`,
@@ -14,12 +16,27 @@ binding `CW2-01`–`CW2-04` and `CW2-08`
 `0102_replay_analytical_projection_render_contract_versioning_v1.sql`,
 `0103_replay_preview_finalization_runtime_v1.sql`,
 `0104_replay_distribution_package_authority_v1.sql`,
-`0105_replay_distribution_runtime_export_public_bridge_v1.sql`
+`0105_replay_distribution_runtime_export_public_bridge_v1.sql`,
+`0106_replay_post_finalization_source_availability_v1.sql`,
+`0107_replay_distribution_current_eligibility_reconciliation_v1.sql`
 
-`I-06` is **not** closed or frozen. This document records what `I-06A`, `I-06B` and `I-06C`
+The phase is closed and frozen. This document records what `I-06A`, `I-06B`, `I-06C` and `I-06D`
 implemented, what they deliberately did not, and where each deferred capability is owned. Sections
 1–16 describe the `I-06A` substrate, which the later slices consume unchanged; sections 18–31
-describe `I-06B`; sections 32–48 describe `I-06C`.
+describe `I-06B`; sections 32–48 describe `I-06C`; sections 49–60 describe `I-06D`; sections 61–63
+carry the closure record. **Closing the runtime is not clearing the launch** — section 62 states that
+distinction, and section 63 records the evidence this closure rests on.
+
+> **`I-06C` status normalization — governance reconciliation only.** Pull request
+> [#254](https://github.com/allamqandeel/qandeel/pull/254) merged `I-06C` into `main` as
+> `c94a8cf714a65925784be38fcc73171355b84c10`, with the reviewed implementation head
+> `b33bc7e92917a2afda45d3a366015a9592224062`. This document nevertheless still carried the pre-merge
+> banner `I-06C — CANDIDATE — awaiting independent ChatGPT review` at that baseline. `I-06D` is the
+> change that closes the `I-06` parent and therefore owns this document's closure record under
+> `BG-09`, so it normalizes that residue here. The normalization is **governance reconciliation
+> only**: not one `I-06C` Product semantic, migration, function, contract or verifier is reopened,
+> changed or re-judged by it, and the pre-merge banner is recorded above rather than erased, because
+> a record tidied until every task reads as though it closed cleanly is the next record to drift.
 
 ---
 
@@ -427,14 +444,20 @@ in the backlog is Product authority and no runtime semantics were taken from it.
 ## 17. Status
 
 ```text
-I-06  — ACTIVE
+I-06  — CLOSED / FROZEN
 I-06A — CLOSED / MERGED
 I-06B — CLOSED / MERGED
-I-06C — CANDIDATE — awaiting independent ChatGPT review
-I-06D — NOT STARTED
+I-06C — CLOSED / MERGED
+I-06D — CLOSED / FROZEN
 ```
 
-`I-06` is not closed and not frozen, and Claude may not declare it so.
+The phase was **ACTIVE** from the opening of `I-06A` until the `I-06D` closure-sync change recorded in
+section 63, and `I-06D` carried the banner `CANDIDATE — awaiting independent ChatGPT review` until
+that same change. Both transitions are recorded rather than erased, on the `BG-09` rule: a register
+tidied until every task reads as though it closed cleanly is the next register to drift.
+
+Section 62 keeps the distinction this closure must not blur — the runtime is closed; the production
+launch is not cleared.
 
 ---
 
@@ -1142,3 +1165,369 @@ delivery receipt with a real storage handle, a resolved analytical authority sea
 seam, additive columns, an index and a new CI gate all leave both `I-06C` contracts passing, while
 each deliberate weakening of an `I-06C` authority, privacy or truth invariant breaks at least one of
 them.
+
+---
+
+# I-06D
+
+## 49. Historical truth and current usability are two different facts
+
+This is the whole of `I-06D`, and every section below is a consequence of it.
+
+```text
+HISTORICAL_FINALIZATION_FACT      remains true, forever, append-only
+CURRENT_SOURCE_ELIGIBILITY        may change, and is derived live
+
+HISTORICAL_DISTRIBUTION_AUTHORIZATION   remains true at its historical instant
+CURRENT_DELIVERY_ELIGIBILITY            may change, and is derived live
+
+HISTORICAL_PUBLIC_PUBLICATION     remains true
+CURRENT_PUBLIC_SERVING            remains owned by the canonical Public runtime
+```
+
+A Replay Version that was historically FINALIZED stays historically finalized even when the source it
+once represented can no longer be legitimately dereferenced. No historical row is ever mutated to
+encode a current answer, and no current answer is ever read off a historical row.
+
+## 50. Current source availability for an exact Replay Version
+
+`derive_replay_version_current_availability_v1(p_replay_id, p_replay_version_id)` binds ONE exact
+Replay and ONE exact Replay Version as one row, reads that version's own captured source manifest from
+the immutable composition, and then **delegates the whole source question** to the canonical `I-06A`
+`derive_replay_source_manifest_currency_v1`. It is `STABLE` and takes no lock: a caller that needs a
+stable answer stabilizes the source first, exactly as the frozen derivations document.
+
+It answers three bounded states — `CURRENT`, `NOT_CURRENT`, `CONTRADICTORY` — and carries the private
+`I-06A` staleness class separately and internally. It writes no second source-currency evaluator, reads
+no source row of its own, recomputes no digest, and never treats historical finalization as evidence
+that a source is still current. A captured digest records what a source WAS; it is never evidence that
+it still IS, and the migration refuses to deploy if either function grows a digest comparison.
+
+At this baseline a bound Personal source cannot be hard-deleted while a Replay names it: migration
+`0100` binds `replay_source_manifest_items.personal_conversation_unit_id` to `conversation_units` with
+`ON DELETE RESTRICT`. `QANDEEL` therefore never needs to reconstruct a deleted Personal source, and
+never does: the reachable losses are a source that CHANGED and a source that is no longer the
+creator's at its captured Session Position.
+
+## 51. SOURCE_CONTENT_BEARING_LAYER and ANALYTICAL_VISUAL_LAYER
+
+`CW2-05` section 32 classifies Replay elements between two layers, and the consequence of a source
+becoming unavailable is different for each. `resolve_replay_version_current_usability_v1(...)` reports
+both on every row, including its refusals:
+
+```text
+SOURCE_CONTENT_BEARING_LAYER   DEREFERENCEABLE | NOT_DEREFERENCEABLE
+ANALYTICAL_VISUAL_LAYER        SEALED_HISTORICAL_EVIDENCE | SEALED_EVIDENCE_INCOMPLETE
+```
+
+Read together they say exactly what the architecture says. A source loss makes the source layer
+`NOT_DEREFERENCEABLE` — it cannot be regenerated, reconstructed or newly rendered from hidden or
+deleted source — while the analytical layer stays `SEALED_HISTORICAL_EVIDENCE`, because analytical
+history is not erased merely because a source moved. And the complete Replay is still refused.
+
+There is deliberately **no state meaning "the analytical layer stands in for the missing source"**.
+An analytical-only rendering is not the Replay it would be served as, so no vocabulary exists in which
+it could be offered as one, and the migration refuses to deploy if one is introduced.
+
+## 52. Current complete-Replay usability
+
+`resolve_replay_version_current_usability_v1(p_replay_id, p_replay_version_id, p_user_id)` answers
+`COMPLETE_REPLAY_CURRENTLY_USABLE` or `COMPLETE_REPLAY_NOT_CURRENTLY_USABLE`, fail-closed, in order:
+the historical finalization first, then current source availability, then the completeness of the
+sealed analytical evidence this exact version binds, and only then usable.
+
+It deliberately does **not** compose the canonical `I-06B`
+`derive_replay_version_truth_currency_v1`. That derivation reaches
+`get_session_historical_projection_v1`, which is scoped to `auth.uid()` and raises `FORBIDDEN` for
+anyone but the Session owner. This boundary names its human as a **parameter** — the frozen
+narrow-resolver precedent every Replay read boundary follows, and the shape the service tier calls it
+in — so composing the two would make the answer depend on which session asked rather than on which
+human was named. That is a gate which is arbitrary rather than fail-closed, and it would report a
+perfectly healthy Replay as diverged for every caller but one. Whether the sealed evidence still
+re-derives from current canonical state remains `I-06B`'s question, asked by `I-06B`'s own
+owner-scoped path; what this boundary establishes is that the evidence is still there and still
+complete, which is the fact `CW2-05` §32 asks it for and the fact a source loss must not change.
+
+It is creator-exact. Everyone else receives ZERO ROWS, which is also what a nonexistent Replay, a
+nonexistent version and another human's version answer, so the boundary is no existence oracle. The
+creator receives the minimum actionable class and never the private cause:
+
+```text
+REPLAY_VERSION_NOT_FINALIZED
+SOURCE_NOT_CURRENTLY_AVAILABLE
+SOURCE_STATE_CONTRADICTORY
+ANALYTICAL_EVIDENCE_INCOMPLETE
+```
+
+## 53. Source recovery is a live derivation, never a tombstone
+
+If a source becomes temporarily unavailable and the SAME exact canonical row returns unchanged, the
+canonical currency derivation answers `CURRENT` again and every answer built on it recovers with it.
+That is a property of deriving rather than of storing, and it needs no repair path.
+
+Recovery is not amnesty. A human approval that was withdrawn stays withdrawn, because effective state
+is derived from append-only withdrawal evidence. A Public Experience that reached
+`ABSENT_FROM_PUBLIC_WORLD` stays absent, because Public lifecycle is owned by the Public runtime. An
+immutable package does not mutate. And a source that was deleted and re-created under a NEW canonical
+identity is a different source: the currency derivation compares the exact captured identity, version
+and revision, so equal text or an equal digest never lets a replacement impersonate the original.
+
+## 54. Historical authorization is not a bearer right
+
+`I-06C` truthfully records `SHARE_EXTERNALLY` and `DOWNLOAD` reaching `AUTHORIZED_FOR_DELIVERY`, and no
+delivery, because no transport boundary exists. `I-06D` separates that historical fact from the current
+ability to use it. `derive_replay_distribution_current_eligibility_v1(...)` is total and fail-closed,
+and re-evaluates in a load-bearing order:
+
+```text
+1  a package never authorized has no authorization to use   NOT_AUTHORIZED
+2  the historical finalization it binds is still there      PACKAGE_STATE_CONTRADICTORY
+3  CURRENT SOURCE AVAILABILITY                              SOURCE_NOT_CURRENT
+4  the current authority identity and required set          AUTHORITY_UNRESOLVED / SUPERSEDED
+5  every required approval still effective                  APPROVAL_NOT_EFFECTIVE
+6  the sanitized export descriptor still re-derives         EXPORT_SURFACE_SUPERSEDED
+7  the destination's own current state                      PUBLIC_DESTINATION_NOT_SERVING
+8  the CW2-08 prerequisite, LAST                            PREREQUISITE_UNRESOLVED
+```
+
+Source is answered BEFORE authority on purpose: the analytical subject-authority seam still answers
+`UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` in production, so an authority-first order would make the
+source-loss refusal unreachable outside a test seam — and source loss is this slice's subject. The
+`CW2-08` seam is LAST, after every privacy and ownership gate, so a privacy failure is never reported
+as a launch failure.
+
+A historical authorization row is never deleted, rewritten or "refreshed". If current authority no
+longer matches an old package, the old package stays historical and currently unusable, and a future
+valid act needs the canonical new-package path. The answer vocabulary is about FUTURE eligibility and
+has no `DELIVERED` state at all.
+
+The creator boundary `resolve_replay_distribution_current_state_v1(...)` reports both facts side by
+side and collapses every authority failure — missing, withdrawn, superseded, unresolved — into ONE
+class, `AUTHORITY_NO_LONGER_CURRENT`, so a creator learns that the authority moved without learning
+which human moved it.
+
+## 55. Approval withdrawal after authorization
+
+A withdrawal has the same precedence it already has at new-distribution time: it blocks future use of
+that package's authorization. Nothing is mutated to express it. `APPROVED → REVOKED` is never a row
+update and `AUTHORIZED → DELETED` never happens; the approval row stays byte-identical, the withdrawal
+is one append-only event, and the effective state is derived. For `PUBLISH_TO_PUBLIC_WORLD` the
+`I-06C` one-human-act / two-evidence-store design is consumed unchanged, and no second Replay-only
+Public consent lifecycle exists.
+
+## 56. The Public destination rule, in both directions
+
+**Private Replay source loss alone invents no Public transition.** A private source that later becomes
+unavailable does not force a `PUBLISHED` Public Replay Experience to `ABSENT_FROM_PUBLIC_WORLD`, for
+four reasons: `CW2-05` explicitly declines to invent that rule; the `I-06C` Public `REPLAY_ARTIFACT` is
+a bounded sanitized derivative rather than a live private-source pointer; Public serving is owned by
+the canonical Public visibility resolver; and a private-source check inside that resolver would be
+both a cross-domain policy no contract froze and a private-source oracle addressable by any admitted
+viewer. `resolve_public_visibility_state_v1` is therefore not extended in any way — it is consumed —
+and the migration refuses to deploy if it ever grows a Replay-source check.
+
+**Everything the Public runtime already fails closed on still fails closed, immediately.** Canonical
+approval withdrawal, owner or controller disappearance, `ABSENT_FROM_PUBLIC_WORLD` and every other
+`I-05C` continuing-eligibility failure make the Public Replay artifact serve zero rows the moment they
+happen, and make this package's current delivery eligibility false. No Replay state of any kind — no
+reconciliation, no recovered source, no fresh authorization — can resurrect a Public Experience after
+any of them, and a Public viewer never receives a private source-loss cause.
+
+## 57. Reconciliation documents; it never decides
+
+`reconcile_replay_post_finalization_state_v1(p_command_id, p_replay_id, p_replay_version_id,
+p_distribution_package_version_id)` appends bounded convergence evidence and nothing else. Privacy and
+current eligibility never wait for it: the live derivation is the answer the moment it is asked, and a
+reconciliation row can only document a result it did not create. No derivation in `0106` or `0107`
+reads one, and the migration refuses to deploy if one starts to.
+
+It is creator-scoped through `auth.uid()`, because the canonical source lock is creator-scoped by
+construction and reconciling under any other principal would mean inventing a second source-lock path
+or skipping the lock. The lock order is Replay-first, with no inversion anywhere:
+
+```text
+1  public.replays                                  FOR UPDATE
+2  replay_distribution_package_versions             FOR SHARE, exact target
+   replay_versions                                  FOR SHARE
+3  replay_lock_source_manifest_v1(...)              each source domain's own frozen order
+4  replay_distribution_approvals                    FOR SHARE, ORDER BY approver
+5  public_world_state, public_experiences           FOR SHARE, and only for a Public destination
+6  the append-only I-06D writes
+```
+
+Public rows are taken `FOR SHARE` because reconciliation READS Public truth and never writes it, and
+they are not taken at all for a package that has no Public destination. The primitive mutates no
+immutable truth component, synthesizes no missing source, widens no audience, marks no external copy
+recalled, and performs no Public lifecycle transition.
+
+Its command identity binds the WHOLE immutable request — actor, exact Replay, exact Replay Version, the
+exact package or its explicit absence, and the purpose. Both idempotency passes, before the Replay lock
+and again under it, compare that digest and answer from the COMMITTED row; the same command id
+carrying any materially different request is `REPLAY_POST_FINALIZATION_COMMAND_ID_CONFLICT` and writes
+nothing. The command id IS the evidence id in both relations, so one command can never produce two
+observations of the same kind.
+
+## 58. No external recall, and no media, storage or transport
+
+`CW2-05` is explicit that Replay cannot guarantee recall of already-exported external copies, and this
+repository has no external transport or delivery record at all. The truthful statement this runtime
+makes is exactly one sentence: **future QANDEEL-controlled distribution is refused; copies that already
+left cannot be guaranteed recalled.** No relation may record `EXTERNAL_COPY_RECALLED`,
+`REMOTE_FILE_DELETED`, `RECIPIENT_COPY_DESTROYED`, `DOWNLOAD_REVOKED_ON_DEVICE` or
+`SOCIAL_POST_REMOVED`, and none may carry an encoder, codec, container, bitrate, object storage key,
+CDN reference, signed URL, watermark or DRM field. Those bans are scoped to the relations `I-06D` owns,
+so a later reviewed media or transport boundary remains possible everywhere else.
+
+## 59. Anti-oracle behaviour and ACL posture
+
+Every new relation is `postgres`-owned, RLS-enabled, carries zero policies, holds no privilege for
+`PUBLIC`, `anon`, `authenticated` or `service_role`, and is append-only for every role including its
+owner. The internal derivations and the reconciliation primitive are executable by NO application
+role while the `CW2-08` Launch Gate is unimplemented; the two creator read boundaries are
+`service_role`-only, the frozen narrow-resolver precedent. Every human principal comes from
+`auth.uid()` and no availability, currency, authority, eligibility, Safety, entitlement or launch
+verdict is ever a caller parameter.
+
+An unauthorized caller cannot distinguish an absent Replay from another human's, an absent version
+from one it may not see, or an absent package from a private one: all of them are zero rows or one
+bounded class. The private staleness cause, the private approval identity, the hidden World, the
+hidden participant and the internal component that went stale never cross any boundary.
+
+## 60. What I-06D did not do, and who owns it
+
+| Deferred | Owner |
+| --- | --- |
+| a protected-human subject-authority resolver for QANDEEL analysis | not opened — see section 35 |
+| a Shared or Public historical analytical substrate, and their finalized source-loss branches | not opened — see section 36 |
+| Safety, moderation, entitlement, feature flag and Launch Gate runtime | `CW2-08`, unimplemented |
+| encoder, codec, container, bitrate, resolution, object storage, CDN, public URL, signed URL | deferred by `CW2-05` |
+| email / SMS / social transport, watermark, DRM, social templates, mobile share sheet | deferred by `CW2-05` |
+| an external provider contract, a delivery receipt, and any recall capability | deferred by `CW2-05` |
+| mandatory Public withdrawal after later source deletion | deferred by `CW2-05` — see section 56 |
+| the mobile Replay Product surface, routes, controllers and RPC | outside `I-06` |
+
+Static contracts protect what this slice owns without becoming ceilings on that roadmap: a mirrored
+probe proves that a reviewed delivery receipt with a real storage handle and signed URL, an
+external-copy record with a recall column, a resolved analytical authority seam, a cleared `CW2-08`
+seam, additive columns, an index and a new CI gate all leave both `I-06D` contracts passing, while each
+deliberate weakening of an `I-06D` source, authority, privacy, Public or immutability invariant breaks
+at least one of them.
+
+## 61. Backlog and governance disposition at parent closure
+
+`BG-08` requires every backlog item a closing phase inherited to receive one explicit disposition
+before closure, and to be one of exactly three things. `I-06` inherited one:
+`QAN-BL-NAV-02 — Analysis Replay`. Its applied disposition, reconciled in
+[`docs/qandeel-canonical-backlog-v1.md`](qandeel-canonical-backlog-v1.md) by this closure, is:
+
+```text
+QAN-BL-NAV-02 — Analysis Replay
+  disposition: OPEN — UNASSIGNED, with updated current truth
+  owner task:  UNASSIGNED, unchanged
+
+  why not CLOSED — TOMBSTONE
+    the finding is "there is no Replay of how an analysis developed". I-06 closes the
+    backend Replay RUNTIME truthfully and fail-closed; it opens no Product surface
+    through which a human can watch an analysis develop. Tombstoning the item would
+    record a capability the repository does not have.
+
+  why not DEFERRED — OWNED
+    no named successor task exists, and BG-08 does not permit inventing one to make a
+    closure read cleanly.
+
+  what the updated truth now records
+    the Replay backend runtime exists and is CLOSED / FROZEN through migrations
+    0100-0107; the final mobile / Product Analysis Replay surface is still not
+    implemented and is outside I-06; media, storage and transport remain deferred by
+    CW2-05; and production Replay distribution remains NOT CLEARED / FAIL-CLOSED while
+    the protected-human analytical subject authority and the CW2-08 prerequisites are
+    unresolved.
+```
+
+**Admitted: none.** No current blocker is laundered into the register by this closure. Every gate
+`I-06D` found unresolved is unresolved *in the runtime itself*, fail-closed there, and documented in
+sections 54, 56 and 62 — `BG-01` forbids moving an active-contract requirement into the backlog rather
+than fixing it, and each of these boundaries is owned by its own frozen `CW2-0N` contract rather than
+by an unassigned entry. `BG-07` applies throughout: nothing in the backlog is Product authority, and no
+runtime semantics were taken from it.
+
+## 62. Closing the runtime is not clearing the launch
+
+When `I-06` closes, two different statements are true at once, and this document keeps them apart:
+
+```text
+I-06 Replay Runtime implementation        CLOSED / FROZEN
+production Replay distribution launch     NOT CLEARED / FAIL-CLOSED
+```
+
+Production distribution **fails closed** today, and will keep failing closed until each of these is
+resolved by its own reviewed work:
+
+```text
+protected-human analytical subject authority   resolve_replay_analytical_distribution_authority_v1
+                                               answers UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT
+canonical executable Safety / moderation       resolve_replay_distribution_prerequisites_v1
+commercial entitlement runtime                 answers NOT_EVALUATED on every dimension
+feature and Launch Gate runtime
+actual media encoder, storage and transport    deferred by CW2-05
+the mobile Replay Product surface              outside I-06
+```
+
+Closing the runtime means the architecture-defined runtime boundary is implemented truthfully. It does
+not mean users can export or share production video today, and nothing in this document should be read
+as saying they can.
+
+## 63. Closure record
+
+This section is the `BG-09` half of the closure: the change that closes `I-06` performs it, and the
+record says what it closed on rather than leaving a later task to reconstruct it.
+
+```text
+closing slice                 I-06D — Post-Finalization Source Availability, Distribution
+                              Reconciliation and Replay Runtime Closure v1
+pull request                  #254 closed I-06C; #255 carries I-06D
+reviewed implementation SHA   09e8f7d9763e29aea6c021cd510d48c3b414bdc8
+migrations at closure         0100-0107, with 0001-0099 untouched throughout
+```
+
+**What the reviewed SHA was reviewed against.** Independent review of `I-06D` was performed on
+`09e8f7d9763e29aea6c021cd510d48c3b414bdc8` and returned a PASS with no Product blocker. At that head
+the two `I-06D` real-PostgreSQL verifiers had run green in **two consecutive focused rounds on that one
+exact commit** — `0106` 23/23 and `0107` 35/35 each round, every run reporting
+`ACCEPTANCE-ELIGIBLE: the target is an exact commit SHA` — and full API CI was green end to end with
+every Replay group reported: `I-06A 0100 = PASS 0101 = PASS`, `I-06B 0102 = PASS 0103 = PASS`,
+`I-06C 0104 = PASS 0105 = PASS`, `I-06D 0106 = PASS 0107 = PASS`, alongside `I-05` Public
+non-regression, forward safety, toolchain, build and closure-governance. Mobile CI was green;
+`I-06D` adds no mobile surface.
+
+**What this closure-sync change contains.** Documentation and governance only. It changes no
+migration, no runtime SQL, no verifier semantics, no static contract and no application code — the
+`0106` and `0107` migrations reviewed at the SHA above are byte-identical to the ones this record
+closes over, and `0001`-`0105` were never touched by `I-06D` at all. **Final merge still requires
+review and CI on the exact closure-sync head**, which is a different commit from the reviewed
+implementation SHA; the merge commit does not exist yet and is deliberately not named here, because a
+record cannot contain its own future hash.
+
+**Banner transitions, recorded rather than erased (`BG-09`).** Two stale banners existed on the path
+to this closure and both are kept visible:
+
+```text
+I-06C   CANDIDATE — awaiting independent ChatGPT review   ->   CLOSED / MERGED
+        a residue that survived the merge of #254; normalized by I-06D as the
+        parent-closing slice, as governance reconciliation only, and recorded in
+        the header block above rather than deleted
+
+I-06D   CANDIDATE — awaiting independent ChatGPT review   ->   CLOSED / FROZEN
+        performed by this change, which is the change that closes the slice, so no
+        successor task is left responsible for it
+```
+
+**`BG-08`.** The one inherited register item, `QAN-BL-NAV-02 — Analysis Replay`, is reconciled in
+section 61 and in the canonical backlog's `I-06` closure record. It is **not** tombstoned: `I-06` closes
+the Replay backend runtime and opens no Product surface through which a human can watch an analysis
+develop. No new item is admitted, and no unresolved gate is moved into the register instead of being
+left fail-closed where it actually is.
+
+**What a reader should not conclude from this section.** That the runtime is closed says nothing about
+whether anything may be distributed. Section 62 is the binding statement: production Replay
+distribution is `NOT CLEARED / FAIL-CLOSED`, and every prerequisite it names is still unresolved.

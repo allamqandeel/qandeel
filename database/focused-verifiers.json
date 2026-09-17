@@ -15,6 +15,21 @@
   ],
   "version": 1,
   "groups": {
+    "i06d-0106": {
+      "title": "I-06D - Replay post-finalization source availability and current complete-Replay usability (migration 0106)",
+      "verifiers": ["database/verify-migration-0106.mjs"]
+    },
+    "i06d-0107": {
+      "title": "I-06D - Replay current delivery eligibility, controlled reconciliation and Replay Runtime closure (migration 0107)",
+      "verifiers": ["database/verify-migration-0107.mjs"]
+    },
+    "i06d-all": {
+      "title": "I-06D - both Replay post-finalization verifiers, in migration order",
+      "verifiers": [
+        "database/verify-migration-0106.mjs",
+        "database/verify-migration-0107.mjs"
+      ]
+    },
     "i06c-0104": {
       "title": "I-06C - Replay distribution package, distribution authority and the Public REPLAY_ARTIFACT bridge (migration 0104)",
       "verifiers": ["database/verify-migration-0104.mjs"]

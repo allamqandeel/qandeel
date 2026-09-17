@@ -2296,3 +2296,107 @@ after the I-06B group. Both report every scenario independently through the perm
 0105 verifier reaches past the two fail-closed seams only by replacing a seam BODY inside a
 transaction it rolls back, or - for the four committed races - by restoring it in a `finally` and
 proving the production body back byte for byte. No permissive seam is ever left installed.
+
+### I-06D - post-finalization source availability and current usability (migration 0106)
+
+`0106_replay_post_finalization_source_availability_v1.sql` makes ONE distinction operational: a Replay
+Version that was historically FINALIZED stays historically finalized forever, while whether the source
+it represents is still legitimately dereferenceable is a SEPARATE answer that may change.
+
+`derive_replay_version_current_availability_v1(...)` binds one exact `replay_id` + `replay_version_id`
+as one row, reads that version's own captured manifest from the immutable composition, and DELEGATES
+the whole source question to the canonical I-06A `derive_replay_source_manifest_currency_v1`. It
+re-derives nothing, reads no source row, recomputes no digest, and never treats historical
+finalization as evidence that source is still current. Three bounded answers - `CURRENT`,
+`NOT_CURRENT`, `CONTRADICTORY` - with the private I-06A staleness class carried separately and
+internally. A captured digest records what the source WAS; it is never evidence that it still IS.
+
+`resolve_replay_version_current_usability_v1(...)` is the creator-exact read boundary. It answers
+`COMPLETE_REPLAY_CURRENTLY_USABLE` or `COMPLETE_REPLAY_NOT_CURRENTLY_USABLE`, and reports BOTH layers
+on every row, which is what makes CW2-05 section 32 operational rather than decorative:
+
+```text
+SOURCE_CONTENT_BEARING_LAYER   DEREFERENCEABLE | NOT_DEREFERENCEABLE
+ANALYTICAL_VISUAL_LAYER        SEALED_HISTORICAL_EVIDENCE | SEALED_EVIDENCE_INCOMPLETE
+```
+
+A source loss makes the source layer `NOT_DEREFERENCEABLE`, leaves the analytical layer
+`SEALED_HISTORICAL_EVIDENCE` - it is not erased merely because the source moved - and still refuses the
+complete Replay. There is deliberately NO state meaning "the analytical layer stands in for the
+missing source", because an analytical-only rendering is not the Replay it would be served as.
+
+The creator receives the minimum actionable class - `REPLAY_VERSION_NOT_FINALIZED`,
+`SOURCE_NOT_CURRENTLY_AVAILABLE`, `SOURCE_STATE_CONTRADICTORY` or `ANALYTICAL_EVIDENCE_INCOMPLETE` - and
+never the private I-06A cause. Everyone else receives zero rows, which is also what a nonexistent
+Replay and another human's version answer, so the boundary is no existence oracle.
+
+At this baseline a bound Personal source cannot be hard-deleted at all: 0100 binds
+`replay_source_manifest_items.personal_conversation_unit_id` to `conversation_units` with
+`ON DELETE RESTRICT`. The reachable source-loss shapes for a finalized `MY_WORLD` Replay are therefore
+`SOURCE_CHANGED` and `SOURCE_UNAVAILABLE`, and both are exercised by real fixture surgery rather than
+by weakening a derivation.
+
+### I-06D - current delivery eligibility and controlled reconciliation (migration 0107)
+
+`0107_replay_distribution_current_eligibility_reconciliation_v1.sql` separates a HISTORICAL
+distribution authorization from the CURRENT ability to use it. A prior `AUTHORIZED_FOR_DELIVERY` fact
+stays exactly as written; it is evidence that an authorization existed at one instant, never a
+permanent bearer right to deliver after the world moved.
+
+`derive_replay_distribution_current_eligibility_v1(...)` is total and fail-closed, and re-evaluates in
+a load-bearing order: a package never authorized, the historical finalization it binds, CURRENT SOURCE
+AVAILABILITY, the current authority identity and required set, every required approval's effective
+state, the sanitized export descriptor, the destination's own current state, and the CW2-08
+prerequisite LAST. Source is answered BEFORE authority on purpose - the analytical subject-authority
+seam is unresolved in production, so an authority-first order would make the source-loss refusal
+unreachable outside a test seam. An unresolved seam is a bounded `AUTHORITY_UNRESOLVED` refusal, never
+an error a caller could read as permission and never reinterpreted as zero approvers.
+
+For a Public destination the derivation CONSUMES `resolve_public_visibility_state_v1` and compares the
+exact manifest that package bridged. It extends that resolver in no way, writes no second Public
+visibility truth, and performs no Public lifecycle transition. **A private Replay source that later
+becomes unavailable never forces `ABSENT_FROM_PUBLIC_WORLD`**: CW2-05 declines to invent that rule, the
+Public `REPLAY_ARTIFACT` is a bounded sanitized derivative rather than a live private-source pointer,
+and a private-source check inside the canonical Public resolver would be a source oracle addressable
+by any admitted viewer. What still fails closed is everything the Public runtime already fails closed
+on - approval withdrawal, controller disappearance, `ABSENT_FROM_PUBLIC_WORLD` and every other I-05C
+continuing-eligibility failure - and no Replay state resurrects an Experience after any of them.
+
+`reconcile_replay_post_finalization_state_v1(...)` is durable convergence evidence and nothing more. It
+is creator-scoped through `auth.uid()` because the canonical source lock is creator-scoped by
+construction, takes the canonical lock order Replay-first, and writes only append-only rows:
+
+```text
+replays                                   FOR UPDATE
+  -> replay_distribution_package_versions  FOR SHARE, exact target
+     replay_versions                       FOR SHARE
+  -> replay_lock_source_manifest_v1(...)   each source domain's own frozen order
+  -> replay_distribution_approvals         FOR SHARE, ORDER BY approver
+  -> public_world_state, public_experiences FOR SHARE, only for a Public destination
+  -> the append-only I-06D writes
+```
+
+Its command identity binds the WHOLE immutable request - actor, Replay, Replay Version, the exact
+package or its explicit absence, and the purpose - and both idempotency passes answer from the
+committed row rather than from what the retry says. The command id IS the evidence id in both
+relations, so one command can never produce two observations of the same kind.
+
+Privacy never waits for reconciliation. The live derivation is the answer the moment it is asked; a
+reconciliation row can only document a result it did not create, and no derivation in 0106 or 0107
+reads one. QANDEEL performs no delivery and claims no recall of already-exported external copies, and
+no column of any I-06D relation can say otherwise.
+
+### I-06D - verifier commands
+
+```bash
+npm run verify:replay-post-finalization-source-availability:integration
+npm run verify:replay-distribution-reconciliation-closure:integration
+```
+
+Both need `DATABASE_URL` pointing at a FULLY migrated database and are run in CI as one reported group
+after the I-06C group. Both report every scenario independently through the permanent aggregator. The
+0107 verifier reaches past the two fail-closed seams only by replacing a seam BODY inside a transaction
+it rolls back, or - for the six committed races - by restoring it in a `finally` and proving the
+production body back byte for byte. The 0106 verifier additionally simulates the canonical I-06A source
+currency for exactly one purpose - proving that current availability DELEGATES rather than re-derives -
+and proves that production body back too. No permissive seam is ever left installed.
