@@ -2850,7 +2850,11 @@ no command, no resolver, no read boundary:
 `0114_matching_mutual_match_commit_transaction_v1.sql` creates `commit_matching_mutual_match_v1`
 (twelve opaque uuid identities in, nine bounded columns out, human = `auth.uid()`, no actor
 parameter) and revises `approve_matching_proposal_forward_core_v1` byte-for-byte in its authority
-and order plus ONE write: the exact-view binding. The core, in the published order:
+and order plus ONE write: the exact-view binding. A retry of a committed approval answers from the
+committed rows; a different view under the reused id is `MATCHING_COMMAND_ID_CONFLICT`; a committed
+approval whose binding is missing is `MATCHING_MATCH_CONTRADICTORY_STATE` (review finding
+`I07C-AUTH-01`): no historical view is inferred and nothing is backfilled. The core, in the published
+order:
 
 1. durable idempotency over the WHOLE request, before any lock;
 2. `enter_matching_proposal_decision_v1` - the bounded not-found, then BOTH humans' setup locks in

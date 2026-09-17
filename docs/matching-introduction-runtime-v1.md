@@ -672,7 +672,11 @@ no part of, holds no candidate view of, or that never existed), `MATCHING_RECIPI
 currentness failure is ONE class, so a refusal never says which authority moved),
 `MATCHING_PROPOSAL_EXPIRED` and `MATCHING_PROPOSAL_LAUNCH_PREREQUISITE_UNRESOLVED` (55000),
 `MATCHING_COMMAND_ID_CONFLICT` and `MATCHING_MATCH_ID_CONFLICT` (23505),
-`MATCHING_MATCH_CONTRADICTORY_STATE` (P0001).
+`MATCHING_MATCH_CONTRADICTORY_STATE` (P0001). The revised forward approval answers an equivalent retry
+from its committed rows, refuses a different view under a reused id with `MATCHING_COMMAND_ID_CONFLICT`,
+and — since interim review finding `I07C-AUTH-01` — fails closed with `MATCHING_MATCH_CONTRADICTORY_STATE`
+when the committed `FIRST_FORWARD_APPROVED` transition exists but its exact-view binding is missing: no
+historical view is inferred and nothing is backfilled from the current view.
 
 ## 28. `I-07C` — persistence (migration `0113`)
 
@@ -806,6 +810,12 @@ remains **OPEN**; `I-07A` and `I-07B` remain **CLOSED / FROZEN**. The exact acce
 complete Focused Database Verification acceptance rounds over `0113` then `0114` on that one SHA,
 the predecessor regression runs, and the API CI / Mobile CI runs on that head are recorded in the
 Draft PR and in the implementation handoff, and will be transcribed here at closure synchronization.
+
+**Interim review finding `I07C-AUTH-01`** (revised forward-approval retry could report success when its
+durable exact-view binding was missing) was confirmed against the candidate head and corrected before
+any acceptance round completed: the retry now fails closed before any view is compared, infers and
+backfills nothing, and the real `0114` verifier constructs the contradictory history as the owner and
+proves the refusal. The static contract pins the ordering.
 
 **`BG-05` kickoff reconciliation:** the canonical backlog was read in full at kickoff. No open
 backlog item names `I-07` or `I-07C`; `QAN-BL-SEC-01` stays owned by `QAN-SEC-01`; `OPEN-06`,

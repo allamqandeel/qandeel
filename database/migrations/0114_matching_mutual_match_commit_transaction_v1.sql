@@ -177,10 +177,17 @@ BEGIN
                 AND t.resulting_state = 'FIRST_FORWARD_APPROVED' AND t.first_recipient_actor_id = u) THEN
     -- The committed approval binds ONE exact view. An equivalent retry answers
     -- from the committed rows; a retry naming any other view is a different
-    -- request under a reused id and fails closed.
+    -- request under a reused id and fails closed. A committed approval whose
+    -- binding is MISSING cannot prove which view authorized it: it is
+    -- contradictory rather than repairable, no historical view is inferred and
+    -- nothing is backfilled from the current view (review finding I07C-AUTH-01).
     SELECT * INTO bound FROM public.matching_forward_approval_view_bindings b
      WHERE b.approval_transition_id = p_command_id;
-    IF FOUND AND bound.approved_view_id IS DISTINCT FROM p_expected_view_id THEN
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'MATCHING_MATCH_CONTRADICTORY_STATE' USING ERRCODE='P0001',
+        DETAIL='A committed forward approval carries its durable exact-view binding; one without it proves nothing and is not repaired here.';
+    END IF;
+    IF bound.approved_view_id IS DISTINCT FROM p_expected_view_id THEN
       RAISE EXCEPTION 'MATCHING_COMMAND_ID_CONFLICT' USING ERRCODE='23505';
     END IF;
     RETURN QUERY SELECT p_command_id, 'FIRST_FORWARD_APPROVED'::text, 'IN_PROGRESS'::text; RETURN;

@@ -34,6 +34,8 @@
 //   A12 a second command on the same proposal after the Match is refused
 //   A13 the matched pair cannot birth a second World
 //   A14 the third-member freeze: the born World admits nobody through governance
+//   A15 a committed forward approval whose exact-view binding is missing fails
+//       closed on retry, inferring and backfilling nothing (I07C-AUTH-01)
 //
 //   R01 both humans are paused with exactly ACTIVE_INTRODUCTION, superseding their
 //       exact ACTIVE acts; no USER_PAUSED exists; the human can still turn off
@@ -376,6 +378,35 @@ async function verifyAtomicity(report, humans, gateSeam) {
       await actAs(three);
       await rejected(() => rt.commitMatch(matchIds(), g.proposal, g.secondView), ['40001'], /MATCHING_MUTUAL_MATCH_NOT_COMMITTABLE/u);
       await asRole('postgres');
+    });
+
+    await report.isolated('A15 a committed forward approval whose exact-view binding is missing fails closed on retry', async () => {
+      // I07C-AUTH-01. The approval writes its transition and its binding in one
+      // transaction, so the state cannot arise through the boundary; it is
+      // constructed as the owner inside this rolled-back scenario, exactly as a
+      // contradictory history would present itself.
+      const f = await rt.bringToApproved(one, two);
+      await actAs(one);
+      const [same] = await rt.approveForward(f.approval, f.proposal, f.firstView);
+      assert.equal(same.approved_state, 'FIRST_FORWARD_APPROVED', 'A15 the equivalent retry is answered from the committed rows');
+      await rejected(() => rt.approveForward(f.approval, f.proposal, randomUUID()), ['23505'], /MATCHING_COMMAND_ID_CONFLICT/u);
+      await asRole('postgres');
+      const transitions = await count(P.TRANSITIONS, 'proposal_id = $1', [f.proposal]);
+      await q(`ALTER TABLE ${MATCH.BINDINGS} DISABLE TRIGGER matching_forward_approval_view_bindings_immutable`);
+      await q(`DELETE FROM ${MATCH.BINDINGS} WHERE approval_transition_id = $1`, [f.approval]);
+      await q(`ALTER TABLE ${MATCH.BINDINGS} ENABLE TRIGGER matching_forward_approval_view_bindings_immutable`);
+      assert.equal(await count(P.TRANSITIONS, "id = $1 AND resulting_state = 'FIRST_FORWARD_APPROVED'", [f.approval]), 1,
+        'A15 the committed approval transition exists');
+      assert.equal(await rt.bindingOf(f.proposal), null, 'A15 and its exact-view binding does not');
+      await actAs(one);
+      for (const view of [f.firstView, randomUUID()]) {
+        await rejected(() => rt.approveForward(f.approval, f.proposal, view), ['P0001'], /MATCHING_MATCH_CONTRADICTORY_STATE/u);
+      }
+      await asRole('postgres');
+      assert.equal(await rt.bindingOf(f.proposal), null, 'A15 no binding was inferred or backfilled from the current view');
+      assert.equal(await count(P.TRANSITIONS, 'proposal_id = $1', [f.proposal]), transitions, 'A15 and nothing was appended');
+      assert.equal((await rt.proposalRow(f.proposal)).proposal_state, 'FIRST_FORWARD_APPROVED', 'A15 the proposal is where it was');
+      assert.equal(await rt.triggerEnabled(MATCH.BINDINGS, 'matching_forward_approval_view_bindings_immutable'), true, 'A15 the guard is enabled again');
     });
 
     await report.isolated('A07 every changed current setup authority is refused with one bounded class', async () => {

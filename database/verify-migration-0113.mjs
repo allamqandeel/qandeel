@@ -627,8 +627,9 @@ async function verifyStructure(report, humans) {
       assert.equal(await rt.triggerEnabled(MATCH.SUBJECTS, 'matching_match_handoff_subjects_truth'), true, 'S09 the subject guard is enabled again');
       await rejected(() => insertSubject({ subject_user_id: three }), ['23503'], /subject_fk/u);
       // The package's OTHER view is about the other human and was presented to
-      // the other human: the audience key refuses it for this subject.
-      await rejected(() => insertSubject({ source_view_id: f.secondView }), ['23503'], /audience_fk|subject_fk|first_name_fk|conclusion_fk/u);
+      // the other human: one subject per view refuses it first, and the audience
+      // key would refuse it next.
+      await rejected(() => insertSubject({ source_view_id: f.secondView }), ['23505', '23503'], /subjects_view_key|audience_fk|subject_fk/u);
       // A view that is not one of the two the package binds - a later
       // materialization for the same recipient - is refused by the guard.
       const later = randomUUID();

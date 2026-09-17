@@ -349,6 +349,15 @@ test('the revised forward approval keeps its 0112 signature and order and adds e
     'forward approval is not a Mutual Match: no World, no record, no claim, no handoff, no pause');
   assert.match(APPROVAL, /bound\.approved_view_id IS DISTINCT FROM p_expected_view_id[\s\S]{0,120}MATCHING_COMMAND_ID_CONFLICT/u,
     'a retry naming a different view under a reused command id fails closed');
+  // I07C-AUTH-01: a committed approval whose exact-view binding is missing
+  // proves nothing. The retry fails closed BEFORE the view comparison, infers no
+  // historical view and backfills nothing from the current one.
+  const retry = APPROVAL.slice(APPROVAL.indexOf('FROM public.matching_forward_approval_view_bindings b'), APPROVAL.indexOf("'FIRST_FORWARD_APPROVED'::text, 'IN_PROGRESS'::text"));
+  assert.match(retry, /IF NOT FOUND THEN\s+RAISE EXCEPTION 'MATCHING_MATCH_CONTRADICTORY_STATE' USING ERRCODE='P0001'/u,
+    'a committed approval without its binding is a bounded contradictory failure');
+  assert.ok(retry.indexOf("'MATCHING_MATCH_CONTRADICTORY_STATE'") < retry.indexOf('IS DISTINCT FROM p_expected_view_id'),
+    'refused before any view is compared');
+  assert.doesNotMatch(retry, /INSERT INTO|UPDATE |current_view_id/u, 'and nothing is inferred, reconstructed or backfilled on the retry path');
   // The binding relation is the only new thing the approval writes, and it is
   // one exact row: the approving transition, the approving human and the exact view.
   const bindings = sliceOf(SOURCE['0113'], 'CREATE TABLE public.matching_forward_approval_view_bindings', 'CREATE TABLE public.matching_match_commits');
