@@ -328,13 +328,24 @@ async function verifyChoreography(report, humans) {
       const g = await seedEligible(one, three, { reusePolicy: f.policy });
       await rejected(() => rt.prepare(randomUUID(), g.snapshot, one), ['55000'], /CADENCE_EXCEEDED/u);
       // A PAUSE ACCUMULATES NOTHING. Nothing is stored that could keep counting
-      // while a human is away, and the derivation has no backlog to hand back.
+      // while a human is away, and a derivation has no backlog to hand back.
+      //
+      // The one column a policy LIMIT may live in is the policy definition
+      // itself, which is a configured maximum rather than a running total; the
+      // assertion names any other offender so a failure says which.
       const counters = await rows(
         `SELECT c.table_name, c.column_name FROM information_schema.columns c
           WHERE c.table_schema = 'public' AND c.table_name LIKE 'matching\\_%'
-            AND c.column_name ~* '(count|counter|quota|remaining|used|balance)'`);
-      assert.deepEqual(counters.filter((r) => r.table_name !== 'matching_proposal_policy_versions'), [],
+            AND c.column_name ~* '(count|counter|quota|remaining|balance|used_|_used)'
+          ORDER BY 1, 2`);
+      const running = counters.filter((r) => r.table_name !== 'matching_proposal_policy_versions');
+      assert.deepEqual(running.map((r) => `${r.table_name}.${r.column_name}`), [],
         'B08 no cadence or pending counter is stored anywhere: both are derived from the proposals that exist');
+      // NON-VACUITY: the configured maximum really does exist, so the detector is
+      // looking at a schema that has counter-shaped columns to find.
+      assert.deepEqual(counters.filter((r) => r.table_name === 'matching_proposal_policy_versions')
+        .map((r) => r.column_name), ['max_count'],
+      'B08 the only counter-shaped column is the configured policy maximum itself');
     });
   } finally {
     await q('ROLLBACK');
@@ -644,26 +655,39 @@ async function verifyRaces(report, humans) {
 
     await report.section('E06 reverse-direction concurrent work does not deadlock', async () => {
       const f = await commitEligible(one, two);
-      // Both connections take BOTH humans' locks, from opposite-looking
-      // directions. Because the lock order is canonical user-id order rather
-      // than proposal direction, one waits for the other instead of deadlocking
-      // - and a deadlock would surface as 40P01 within the 10s lock timeout.
+      // THE STRUCTURAL HALF. The two-human lock refuses to be taken in anything
+      // but canonical user-id order, so proposal direction cannot decide it -
+      // which is the property that makes a cycle impossible in the first place.
+      await q('BEGIN');
+      await rejected(() => q('SELECT public.lock_matching_pair_humans_v1($1, $2)', [f.higher, f.lower]),
+        ['22023'], /PAIR_ORDER_INVALID/u);
+      await q('ROLLBACK');
+
+      // THE LIVE HALF. Both connections do two-human work over the SAME pair
+      // from opposite-looking directions. The second BLOCKS on the first rather
+      // than deadlocking with it, and completes once the first commits.
+      //
+      // The second call is deliberately NOT awaited before the first commits: a
+      // test that awaited both while holding the first transaction open would be
+      // waiting for a lock only it could release, and would report its own
+      // shape as a timeout.
+      const before = await count(P.SNAPSHOTS, 'pair_id = $1', [f.pair]);
       await q('BEGIN'); await q2('BEGIN');
-      const a = rt.capture(randomUUID(), f.pair, one, two);
-      const b = q2('SELECT * FROM public.capture_matching_eligibility_snapshot_core_v1($1, $2, $3, $4)',
+      await rt.capture(randomUUID(), f.pair, one, two);
+      const blocked = q2('SELECT * FROM public.capture_matching_eligibility_snapshot_core_v1($1, $2, $3, $4)',
         [randomUUID(), f.pair, two, one]);
-      const outcomes = await Promise.allSettled([a, b]);
-      await q('COMMIT').catch(() => undefined);
+      await q('COMMIT');
+      const outcome = await blocked.then(() => null, (error) => error);
       await q2('COMMIT').catch(() => undefined);
-      for (const outcome of outcomes) {
-        if (outcome.status === 'rejected') {
-          assert.notEqual(outcome.reason?.code, '40P01',
-            'E06 no deadlock: the two-human lock is taken in canonical user-id order, never in proposal direction');
-          assert.notEqual(outcome.reason?.code, '55P03', 'E06 and no lock timeout');
-        }
+      if (outcome) {
+        assert.notEqual(outcome.code, '40P01',
+          'E06 no deadlock: the two-human lock is taken in canonical user-id order, never in proposal direction');
+        assert.notEqual(outcome.code, '55P03',
+          'E06 and no lock timeout once the first transaction released its locks');
+        throw outcome;
       }
-      assert.ok(outcomes.some((o) => o.status === 'fulfilled'),
-        'E06 at least one of two reverse-direction captures completes');
+      assert.equal(await count(P.SNAPSHOTS, 'pair_id = $1', [f.pair]) - before, 2,
+        'E06 both reverse-direction captures completed, one after the other');
       await cleanupRace([one, two]);
     });
   } finally {

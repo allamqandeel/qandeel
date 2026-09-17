@@ -685,7 +685,23 @@ async function seedSetup(human, { skipParticipation = false, profile = PROFILE, 
  * that had its pointer removed. That is also the honest shape: production ships
  * with no policy row at all.
  */
+const POLICY_KEY = {
+  PROPOSAL_CADENCE: 'cadence', PENDING_PROPOSAL_LIMIT: 'pending', PROPOSAL_EXPIRY: 'expiry',
+  PROPOSAL_SAFE_FIELDS: 'fields', SENSITIVE_CONCLUSION_FILTER: 'filter',
+};
+
 async function seedPolicies({ safeFieldKeys = APPROVED, omit = [] } = {}) {
+  // There is ONE current pointer per policy kind, so a second install in the
+  // same scenario would collide on its primary key. An already-configured
+  // runtime is reused, which is also what a real one looks like. A scenario that
+  // deliberately omits a kind always starts from an unconfigured fixture, so it
+  // never reaches this branch.
+  if (omit.length === 0) {
+    const configured = await rows(`SELECT policy_kind, current_policy_version_id id FROM ${P.POLICY_STATE}`);
+    if (configured.length === Object.keys(POLICY_KEY).length) {
+      return Object.fromEntries(configured.map((r) => [POLICY_KEY[r.policy_kind], r.id]));
+    }
+  }
   const ids = { cadence: randomUUID(), pending: randomUUID(), expiry: randomUUID(),
     fields: randomUUID(), filter: randomUUID() };
   const kinds = [

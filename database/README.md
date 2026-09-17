@@ -2544,3 +2544,242 @@ after the I-06D group. Both report every scenario independently through the perm
 verifiers reach the four reserved pause reasons - which have no I-07A producer on purpose - only as
 the table owner inside a scenario that rolls back, and every weakening probe restores the production
 definition and proves it back byte for byte. No permissive definition is ever left installed.
+
+## I-07B - Candidate Eligibility, Proposal and Privacy Runtime v1 (migrations 0110-0112)
+
+`I-07A` created the private Matching SETUP substrate and deliberately stopped before candidates, pairs
+and proposals. `I-07B` is the first slice allowed to create durable Matching pair / eligibility /
+proposal / recipient-view state, and it implements the complete pre-Mutual-Match runtime up to - but
+not including - the second-party acceptance commit that can create an Introduction.
+
+```text
+private Matching setup                  I-07A, migrations 0108 / 0109
+     v
+candidate eligibility / pair evaluation
+     v
+bounded proposal preparation
+     v
+first recipient offer  ->  first decline  OR  first forward approval
+     v
+independent second-recipient proposal
+     v
+second decline / expiry / withdrawal / stale
+     v
+READY FOR THE I-07C ACCEPTANCE COMMIT
+```
+
+There is deliberately NO durable "accepted but not matched" intermediate state. `SECOND_ACCEPTED`,
+`ACCEPTED_PENDING_MATCH`, `MATCH_PENDING` and `INTRODUCTION_RESERVED` do not exist and cannot be
+spelled anywhere in the slice. The second recipient's acceptance must revalidate its exact view AND
+converge atomically with the Mutual Match / two-slot / Introduction-birth transaction, which is
+`I-07C`'s work; a durable intermediate state is precisely what would make splitting it look possible.
+
+### The canonical unordered pair
+
+`public.matching_pairs` stores ONE row per unordered pair, with the two members as `lower_user_id` and
+`higher_user_id`, a CHECK that the first really is the smaller, and a UNIQUE over the ordered column
+pair. The reverse direction is therefore UNWRITABLE rather than merely de-duplicated: there is no
+(B,A) row for a UNIQUE to collide with, because the CHECK refuses one. `PAIR_KEY(A,B) = PAIR_KEY(B,A)`
+is a property of the schema and not of a convention a later writer could forget.
+
+Direction belongs to a PROPOSAL, never to the pair, and it is immutable once prepared. A CHECK pins
+the first recipient and the candidate to the two arrangements of that pair's own members, so a
+proposal can never name a human who is not a member of its own pair and the two sides can never be the
+same person. AT MOST ONE LIVE PROPOSAL EXISTS PER PAIR, in either direction, enforced by a partial
+UNIQUE index on `pair_id` over the four live states - and because the pair row is unordered, one index
+is the whole of the rule.
+
+### PASS, FAIL, UNKNOWN - and why UNKNOWN never becomes PASS
+
+`public.matching_hard_requirement_results` records one outcome per HARD_DEALBREAKER of one human
+against one eligibility snapshot, bound by composite foreign key to a REAL requirement item of that
+human's exact version. The source-class vocabulary contains only the four allowed candidate self-truth
+classes plus `NOT_ESTABLISHED`: a third-party claim, and an inference from a name, a voice, a photo, a
+language style or any stereotype-bearing proxy, are not refused at runtime - they CANNOT BE SPELLED.
+
+The load-bearing CHECK is one line:
+
+```sql
+(requirement_outcome = 'UNKNOWN') = (evidence_source_class = 'NOT_ESTABLISHED')
+```
+
+An UNKNOWN therefore cannot carry a confirmed source and a PASS cannot exist without one, and the row
+is append-only for every role including the table owner. There is no weight, score, rank, percentage
+or priority column anywhere in the slice, so a strong soft signal has nothing to override a hard FAIL
+or a hard UNKNOWN with.
+
+AN UNEVALUATED HARD DEALBREAKER BLOCKS EXACTLY LIKE AN UNKNOWN ONE. A check that only inspected the
+results PRESENT would be satisfied by a snapshot carrying none at all, which is the most complete way
+possible for a dealbreaker to go unsatisfied - so a truth trigger requires every HARD_DEALBREAKER of
+both humans' bound requirement versions to carry a PASS of its own before a proposal may exist.
+SOFT_PREFERENCE items are deliberately not required: demanding one would be the quiet promotion of a
+preference into a gate.
+
+### The eligibility snapshot binds exact identities, and certifies nothing
+
+`public.matching_eligibility_snapshots` is the `CANDIDATE_ELIGIBILITY_SNAPSHOT`. Every identity it
+binds - participation act, Matching Context Grant, Introduction Profile version, requirement version
+and Pre-Match Disclosure Authority - is bound by a COMPOSITE foreign key to a row OF THAT EXACT HUMAN,
+using the composite identity keys `0108` already declares, so one human's participation can never be
+bound to another human's profile. The three proposal policy identities are bound the same way, each
+with its kind pinned by a single-value CHECK, so a cadence policy can never be consumed as an expiry.
+
+It carries no aggregate eligibility column, because an aggregate would be a second copy of a truth the
+results already hold. And it is never the authority for a continuing truth: every advancing step
+revalidates the CURRENT identities rather than trusting that the snapshot was valid when it was taken.
+
+`I-07B` implements no `ACTIVE_INTRODUCTION_SLOT`. "No active Introduction" is derived live from the
+canonical Shared World substrate migration `0075` owns - an open membership episode in an ACTIVE World
+whose phase is INTRODUCTION - and `no_active_introduction_at_capture` is pinned by a CHECK so a
+snapshot taken while one existed is unrepresentable.
+
+### The one-way privacy boundary, as four different relations
+
+```text
+private Matching reasoning        matching_private_reasoning_notes
+     v
+safe conclusion CANDIDATE         matching_safe_conclusion_candidates      untrusted input
+     v
+SENSITIVE_CONCLUSION_FILTER
+     v
+product-permitted conclusion      matching_permitted_safe_conclusions      filter_verdict = 'PERMITTED'
+     |                            matching_sensitive_filter_refusals       the PRIVATE reason
+     v
+authorized recipient proposal     matching_recipient_proposal_views
+```
+
+These are four different RELATIONS rather than four states of one row, because the boundary the
+architecture freezes is a change of TYPE and not a flag. A recipient view binds a permitted-conclusion
+row, and that relation's verdict column is pinned to `PERMITTED` by a single-value CHECK - so a
+refused or unclassified conclusion is not filtered out at read time, it cannot exist in the relation a
+view is able to reference. Absence IS refusal, which is what fail-closed means structurally. A safe
+conclusion candidate carries no "the model says this is safe" column: provider output is untrusted
+input to this pipeline and the only verdict that exists is the filter's own.
+
+The filter is deterministic and fail-closed. It refuses a contact route, hidden provenance, a long
+verbatim quoted span, VISIBLE RANKING LANGUAGE and an unauthorized sensitive fact; it records an
+unclassifiable result as a REFUSAL rather than a pass; and an unconfigured filter policy refuses the
+call outright, because there is no "filter unavailable, so allow" path. It also refuses a conclusion
+that carries a private reasoning note of its own snapshot WORD FOR WORD WITH NO QUOTATION MARKS, which
+is the leak a regex-only redaction layer never catches.
+
+### A disclosed field needs two independent gates
+
+A row in `public.matching_recipient_proposal_view_fields` is impossible unless BOTH are true, and each
+is a foreign key rather than a check somebody has to remember:
+
+```text
+pre_match_disclosure_authority_fields (authority_id, field_key)    the SUBJECT human approved it
+matching_proposal_safe_field_keys (policy_version_id, field_key)   Product permits it pre-Match
+```
+
+Human authority is necessary and NOT sufficient, exactly as `CW2-06` requires. The Product policy is
+versioned and configurable, freezes no Introduction Profile catalogue, and NO POLICY ROW SHIPS IN ANY
+MIGRATION - an unconfigured policy has no current version and every consequential path fails closed on
+that.
+
+`I-07A` bans a contact-route field KEY. A field VALUE is bounded free text, so `0110` bans the contact
+route in the VALUE as well and `0111`'s gate filters every value before writing it, refusing the
+offending field BY NAME: a benign key cannot smuggle a phone number, an email address, a URL, a bare
+domain or a social handle into a recipient view. The ban is deliberately fail-closed and will refuse
+some innocent text, because refusing to disclose a sentence is recoverable and disclosing a phone
+number before a Mutual Match is not.
+
+### Two independent disclosures, never one view with the names swapped
+
+`RECIPIENT_PROPOSAL_VIEW_VERSION` is immutable, bound to one exact proposal, one exact recipient and
+one exact materialized disclosure result, with the exact profile, authority, policy, eligibility and
+conclusion identities it was built from. The recipient is pinned by CHECK to the proposal member its
+ROLE names and the subject to the other, the authority must be the SUBJECT'S OWN and bound to exactly
+the profile version being disclosed, and the conclusion must have been filtered FOR that recipient
+ABOUT that subject.
+
+The first-recipient view and the candidate view are therefore INDEPENDENT disclosures over different
+subjects, different authorities, different profile versions and different conclusions. There is no
+copy path between them and the gate cannot even be asked to reuse one. Currentness is an explicit
+pointer that may only move forward along that recipient's own view chain; a superseded view is not
+erased, because it is the record of what that human was actually shown.
+
+### The neutral outcome IS the privacy property
+
+```text
+AWAITING_YOU          live, and this recipient is the one being asked
+IN_PROGRESS           live, and they are not
+CLOSED_BY_YOU         terminal by this recipient's own act
+NO_LONGER_AVAILABLE   terminal any other way, whatever the way was
+MATCH_CONCLUDED       the one I-07C terminal both humans are party to
+```
+
+A first recipient cannot distinguish a second decline from an expiry, from a private invalidation, or
+from a competing match that cancelled the proposal: all four are one answer. A second recipient cannot
+distinguish a withdrawal from an expiry. The private reason a proposal ended lives on the transition
+row and reaches no recipient projection at all.
+
+And neither human learns anything about a proposal they hold no view of: the projections answer only
+about a proposal THIS EXACT CALLER has a current recipient view for, and another human's proposal, one
+never offered to them and one that does not exist are the SAME bounded not-found. That is what keeps
+the candidate from having a "proposal existed" oracle - they hold no view until the first recipient
+explicitly approves forwarding, so until then every question they could ask answers exactly as it
+would for a proposal that was never prepared.
+
+### Nothing in I-07B is executable by any application role
+
+Every boundary in `0111` and `0112` is postgres-owned, `SECURITY DEFINER`, empty-`search_path`-pinned
+and revoked from PUBLIC, anon, authenticated AND service_role. No role holds EXECUTE on any of them.
+
+That is the repository's established pre-launch pattern rather than an omission. Delivering a proposal
+is a consequential disclosure about two humans, and the `CW2-08` Safety / moderation / entitlement /
+Launch Gate runtime that must clear it does not exist here: `resolve_matching_proposal_prerequisites_v1`
+answers `NOT_EVALUATED`, exactly as `I-05B`'s and `I-06`'s seams do, and every delivery and every human
+decision requires exactly `CLEARED` from it as its LAST gate. Expiry, staleness and withdrawal are
+deliberately NOT gated on it: all three end exposure rather than create it, and a proposal that could
+not be withdrawn because a launch gate was unavailable would be the opposite of fail-closed.
+
+The same rule answers the candidate-discovery question. `CW2-06` permits a narrow read-only service
+resolver over the sealed setup state; it does not require one, and a `service_role`-executable resolver
+that ENUMERATES currently matchable humans is precisely the oracle the anti-oracle law forbids.
+Discovery is internal too, and `service_role` gains nothing at all from this slice.
+
+The four HUMAN DECISION cores nevertheless derive their human from `auth.uid()` and take no actor
+parameter, exactly as every `I-07A` command does, so `I-09` can wrap them later by granting EXECUTE
+with no step that turns a system credential into human consent.
+
+### A second fail-closed seam: the canonical first name
+
+A pre-Match proposal may present the candidate's FIRST NAME from an allowed canonical source, and this
+repository has none: `public.users` carries an id, an auth subject and two timestamps. The Public World
+display label belongs to a different capability and reading it here would move a PUBLIC fact into
+private Matching, so `resolve_matching_canonical_first_name_v1` answers
+`UNRESOLVED_NO_CANONICAL_SOURCE` and the disclosure gate requires `RESOLVED`. The whole proposal path
+therefore fails closed on it, and the seam is replaceable without reopening anything.
+
+### I-07B - lock order
+
+```text
+1. both humans' matching_setup_locks   FOR UPDATE   in CANONICAL USER-ID ORDER
+2. the canonical pair row              FOR SHARE
+3. the proposal row                    FOR UPDATE
+4. recipient view, transition and policy rows
+```
+
+The two-human lock uses the SAME upsert-and-lock statement the `I-07A` commands use, so an `I-07A`
+setup command and an `I-07B` pair operation serialize on the same row rather than on two different
+things that happen to concern the same human. Direction NEVER decides lock order: both connections
+take the smaller identifier first, always, which is what makes simultaneous (A,B) and (B,A) work
+impossible to deadlock.
+
+### I-07B - verifier commands
+
+```bash
+npm run verify:matching-pair-eligibility-proposal-persistence:integration
+npm run verify:matching-candidate-evaluation-disclosure-gate:integration
+npm run verify:matching-proposal-choreography-runtime:integration
+```
+
+All three need `DATABASE_URL` pointing at a FULLY migrated database and run in CI as one reported
+group after the `I-07A` group. All three report every scenario independently through the permanent
+aggregator, so one defect cannot hide the rest. The two reserved `I-07C` states and the
+competing-match cancellation are reached only as the table owner inside a scenario that rolls back -
+`I-07B` has no producer for them on purpose - and both fail-closed seams are replaced only inside a
+transaction and restored byte for byte afterwards, with the production answer asserted back at the end
+of the run. No permissive seam or policy is ever left installed.
