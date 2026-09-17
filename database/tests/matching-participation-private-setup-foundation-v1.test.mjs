@@ -337,7 +337,7 @@ test('the terminal self-assertion refuses a reachable, generic, world-scoped or 
   assert.match(selfAssertion, /privilege\.grantee = 0\s*\) THEN\s+RAISE EXCEPTION 'I-07A: PUBLIC must hold no privilege/u);
   assert.match(selfAssertion, /FOREACH target_role IN ARRAY ARRAY\['anon','authenticated','service_role'\]/u);
   assert.match(selfAssertion, /FOREACH target_privilege IN ARRAY ARRAY\['SELECT','INSERT','UPDATE','DELETE'\]/u);
-  assert.match(selfAssertion, /c\.column_name ~\* '\(scope\|permission\|privilege\|admin\|actor\|on_behalf\|impersonat\|service'/u);
+  assert.match(selfAssertion, /c\.column_name ~\* \('\(scope\|permission\|privilege\|admin\|actor\|on_behalf\|impersonat\|service'/u);
   assert.match(selfAssertion, /c\.data_type IN \('json','jsonb','ARRAY'\)/u);
   assert.match(selfAssertion, /RAISE EXCEPTION 'I-07A: the per-human serialization row carries a human and a birth instant, and nothing else'/u);
   // The candidate / proposal scan is deliberately bounded to the Matching
@@ -350,6 +350,51 @@ test('the terminal self-assertion refuses a reachable, generic, world-scoped or 
       `the namespace-bounded scan cannot reach the reviewed predecessor ${predecessor}`);
   }
   assert.match(selfAssertion, /RAISE EXCEPTION 'I-07A: migration 0108 creates no Matching command or read boundary; that is 0109/u);
+});
+
+test('every regex whose pattern is built by concatenation parenthesizes it', () => {
+  // PostgreSQL puts `~`, `~*`, `!~`, `!~*` and `||` in the SAME "any other
+  // operator" precedence class, so they associate LEFT TO RIGHT and
+  // `col ~* 'A' || 'B'` parses as `(col ~* 'A') || 'B'` - a text value where a
+  // boolean belongs. It is accepted by every static check, by `psql --dry-run`
+  // (there is none) and by every reading, and it fails only when the statement
+  // actually runs. I-07A lost a focused round to exactly this.
+  //
+  // Comments are BLANKED rather than deleted so offsets stay true, and because
+  // the prose above necessarily spells the broken shape: a detector that read
+  // its own explanation would report the explanation.
+  const executableOnly = (sql) => sql.split('\n')
+    .map((line) => (line.trim().startsWith('--') ? ' '.repeat(line.length) : line)).join('\n');
+  /** The offset just past the single-quoted literal beginning at `from`, '' handled. */
+  const endOfLiteral = (text, from) => {
+    for (let i = from + 1; i < text.length; i += 1) {
+      if (text[i] !== "'") continue;
+      if (text[i + 1] === "'") { i += 1; continue; }
+      return i + 1;
+    }
+    return -1;
+  };
+  const offenders = [];
+  let concatenatedPatterns = 0;
+  for (const [name, source] of [[MIGRATION_NAME, migration],
+    ['0109_matching_setup_human_authority_commands_v1.sql', read('../migrations/0109_matching_setup_human_authority_commands_v1.sql')]]) {
+    const text = executableOnly(source);
+    for (const match of text.matchAll(/(!?~\*?)(\s*)(\(?)\s*'/gu)) {
+      const quoteAt = match.index + match[0].length - 1;
+      const after = endOfLiteral(text, quoteAt);
+      // Concatenated ONLY when `||` follows this exact literal with nothing but
+      // whitespace between, never when a later constraint happens to have one.
+      if (after < 0 || !/^\s*\|\|/u.test(text.slice(after, after + 40))) continue;
+      concatenatedPatterns += 1;
+      if (match[3] !== '(') {
+        offenders.push(`${name} line ${text.slice(0, match.index).split('\n').length}: ${match[1]}`);
+      }
+    }
+  }
+  assert.ok(concatenatedPatterns >= 2,
+    `the detector found ${concatenatedPatterns} concatenated pattern(s), so it is exercised rather than vacuous`);
+  assert.deepEqual(offenders, [],
+    'a regex pattern built by concatenation must be parenthesized, or it parses as (regex-match) || text');
 });
 
 test('the frozen CW2-06 vocabularies are identical in the database and in the TypeScript contract', () => {

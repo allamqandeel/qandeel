@@ -1017,10 +1017,15 @@ BEGIN
      -- `table_name` is a domain over `name`, so the comparison is cast rather
      -- than left to operator resolution against a text array.
      AND c.table_name::text = ANY(own_tables)
-     AND (c.column_name ~* '(scope|permission|privilege|admin|actor|on_behalf|impersonat|service'
-                        || '|world|shared|public_|replay|disclos|quote|copy|publish|export|provenance|transfer'
-                        || '|score|rank|weight|priorit|percent|compat|candidate|proposal|recipient|pair'
-                        || '|mutual|match_commit|introduction_slot|ttl|expir)'
+     -- The concatenation is PARENTHESIZED. `~*` and `||` share PostgreSQL's
+     -- "any other operator" precedence class and associate left to right, so
+     -- `col ~* 'A' || 'B'` parses as `(col ~* 'A') || 'B'` - a text value where
+     -- a boolean belongs. The CHECK constraints above parenthesize it for the
+     -- same reason.
+     AND (c.column_name ~* ('(scope|permission|privilege|admin|actor|on_behalf|impersonat|service'
+                         || '|world|shared|public_|replay|disclos|quote|copy|publish|export|provenance|transfer'
+                         || '|score|rank|weight|priorit|percent|compat|candidate|proposal|recipient|pair'
+                         || '|mutual|match_commit|introduction_slot|ttl|expir)')
           OR c.data_type IN ('json','jsonb','ARRAY'));
   IF offending IS NOT NULL THEN
     RAISE EXCEPTION 'I-07A: Matching semantics are fixed by table identity; these columns may not exist: %', offending;
