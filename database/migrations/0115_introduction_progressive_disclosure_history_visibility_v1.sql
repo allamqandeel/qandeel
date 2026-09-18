@@ -705,8 +705,19 @@ BEGIN
     -- a malformed payload reaches the bounded invalid-command class rather than
     -- leaking a constraint name - and so the two-part digest below can never be
     -- made ambiguous by an embedded separator.
+    --
+    -- The contact-route ban is repeated here for the same reason and for one
+    -- more: a key like `whatsapp_handle` satisfies the bounded-identifier shape
+    -- perfectly, so without this the command would accept it and the refusal
+    -- would arrive as a constraint name rather than as an answer. CONTACT_METHOD
+    -- is the ONE reviewed way to disclose a contact route.
     IF length(p_text_value) > 512 OR p_text_value ~ '[\n\r]'
-       OR (p_field_key IS NOT NULL AND p_field_key !~ '^[a-z][a-z0-9_]{2,47}$') THEN
+       OR (p_field_key IS NOT NULL
+           AND (p_field_key !~ '^[a-z][a-z0-9_]{2,47}$'
+             OR p_field_key ~ ('(^|_)(phone|mobile|email|whatsapp|telegram|instagram|snapchat|tiktok'
+                            || '|facebook|twitter|linkedin|handle|username|contact|address|street|geo|gps'
+                            || '|latitude|longitude|coordinates|url|uri|link|photo|image|avatar|selfie'
+                            || '|video|audio|passport|ssn|nid|kyc|password|token|id)(_|$)'))) THEN
       RAISE EXCEPTION 'INTRODUCTION_DISCLOSURE_COMMAND_INVALID' USING ERRCODE='22023';
     END IF;
     digest := 'sha256:' || encode(sha256(convert_to(

@@ -773,9 +773,13 @@ async function verifyHistoryVisibility(report, humans) {
     });
 
     await report.isolated('V06 an unspelled World mode is still refused', async () => {
+      // A MUTUAL_MATCH World, deliberately: the frozen 0075 direct-birth CHECK
+      // pins an ACCEPTED_INVITATION World to STANDARD at every persisted point,
+      // so moving the phase on one of those would violate a SECOND invariant and
+      // the probe would prove the weather rather than the resolver.
       const world = randomUUID();
       await q(`INSERT INTO ${D.WORLDS} (id, lifecycle, phase, birth_basis, born_at)
-               VALUES ($1, 'ACTIVE', 'STANDARD', 'ACCEPTED_INVITATION', clock_timestamp())`, [world]);
+               VALUES ($1, 'ACTIVE', 'STANDARD', 'MUTUAL_MATCH', clock_timestamp())`, [world]);
       // The phase CHECK is what makes an unspelled mode unrepresentable, so the
       // forward guard inside the resolver is proven by suspending exactly that
       // one constraint for the probe and restoring it immediately.
