@@ -3369,17 +3369,24 @@ carries the complete census of every Public consequential command family with du
 with a verdict per answer field; three families were already correct and one - the Public withdrawal -
 reads a derivation that is PROVEN pinned to `WITHDRAWN`, so neither is touched.
 
-The correction needs almost no new schema. `public_experience_lifecycle_events` is append-only,
-immutable for every role, and COMPLETE: exactly four statements in the whole tree move a Public
-Experience lifecycle, and every one writes an event in the same transaction at the same instant. So the
-lifecycle at a past instant is derived from that log, and the disappearance answer follows from it plus
-the sealed record the command already bound - including the case the frozen retry got outright wrong,
-where a `STILL_ELIGIBLE` answer that returned NULL was replayed as the command's target version. The
-ONE place durable evidence was genuinely missing is the Public Identity label, which has no history
-relation by design, so that family gets two typed columns on its own command row and a BEFORE INSERT
-guard that makes carrying the answer structural. A command committed before `0121` reconstructs its
-answer only while its committed `label_revision` still equals the current one - a witness, not a
-guess - and fails closed otherwise.
+The correction reads the exact evidence each command already left. The three lifecycle-moving commands
+write their lifecycle event with `id = p_command_id`, so the historical answer is not a temporal
+question at all - it is an identity binding that already exists, and the retry reads the event that
+command id names, validating the Experience, the version, the lifecycle and the command's own instant
+before it answers. It is deliberately NOT a "latest event at or before the committed instant"
+reconstruction: `occurred_at` is not a uniqueness key, so time is strictly weaker than the identity
+already recorded (`REM03-HIST-01`).
+
+A disappearance command can commit an answer WITHOUT moving a lifecycle - `STILL_ELIGIBLE`,
+`ALREADY_ABSENT` and both `NOT_APPLICABLE` branches write no event - so it has no event of its own
+to bind, and that family records its exact answer instead: three typed columns written atomically with
+the transition it reports, behind a `BEFORE INSERT` guard that makes carrying them structural. That
+includes the case the frozen retry got outright wrong, where a `STILL_ELIGIBLE` answer that returned
+NULL was replayed as the command's target version. Temporal reconstruction survives only as a bounded
+LEGACY fallback for a pre-`0121` no-op, reachable from exactly one place and failing closed on
+ambiguity. The Public Identity label gets the same typed treatment, because it has no history relation
+by design; a command committed before `0121` reconstructs its answer only while its committed
+`label_revision` still equals the current one - a witness, not a guess - and fails closed otherwise.
 
 ```sh
 npm run verify:public-replay-consistency-historical-retry-remediation:integration
@@ -3423,9 +3430,13 @@ deployment rather than being redacted as though an owner deletion had happened.
 
 Exact payload equivalence can no longer be proven for an erased command, so any retry of it fails
 closed with one bounded class. It ignores nothing, compares against nothing, reconstructs nothing and
-recreates nothing; the refusal is reachable only by the owner of that exact command with every
-immutable identity field matching, so a stranger still meets the frozen command conflict and learns
-nothing about whether a disclosure was deleted.
+recreates nothing. The refusal is reachable only when every SURVIVING immutable request identity field
+still matches - the owner, the World, the resource version, the material, the history item, the grant
+event AND the resource type. `resource_type` is an immutable input, is not content-derived and is
+retained as audit identity, so an erased `FULL_NAME` retried as a `CONTACT_METHOD` is still the command
+conflict the surviving evidence can prove (`REM03-ERASE-ID-01`). Only content identity is intentionally
+unknowable. A stranger still meets the frozen command conflict and learns nothing about whether a
+disclosure was deleted.
 
 ```sh
 npm run verify:introduction-disclosure-privacy-erasure:integration
