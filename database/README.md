@@ -1346,6 +1346,16 @@ boundary.
 npm run verify:shared-world-material-commit-owner-deletion:integration
 ```
 
+## Connected Worlds v2 - Public World Runtime
+
+**Phase:** `I-05 - Public World Runtime` - **CLOSED / FROZEN**
+
+The sections below, `I-05A` through `I-05C`, are the primary canonical record of the `I-05` phase.
+`I-05` has no standalone document of its own: its runtime is migrations `0091`-`0099` and this is
+where they are documented, so the lifecycle banner `BG-09` governs lives here. The closure itself is
+recorded once, in [`docs/qandeel-canonical-backlog-v1.md`](../docs/qandeel-canonical-backlog-v1.md);
+this line states the phase's current lifecycle state and nothing else.
+
 ## I-05A - Public World and Experience Foundation (migration 0091)
 
 `0091_public_world_experience_identity_foundation_v1.sql` is the first Public World persistence in

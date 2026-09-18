@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -40,6 +40,35 @@ import test from 'node:test';
 //
 // The floor at the bottom of `closedTaskIds` is what keeps that derivation honest: if the backlog is
 // reformatted so the parse stops finding anything, this fails loudly rather than passing vacuously.
+//
+// ## QAN-CW-REM-03 / ASSURE-F07 — the same rule, for a phase
+//
+// Everything above derives its subjects from `T-`, and scans only top-level `docs/*.md`. The
+// Connected Worlds phases are neither: they are `I-04` … `I-07`, they close through a
+// `### <id> closure record` section of the same canonical backlog rather than through a
+// `CLOSED — TOMBSTONE` index row, and one of them — `I-05` — has no standalone document at all,
+// because its canonical record is the Public World half of `database/README.md`.
+//
+// So this gate could not see any of them. Four closed phases, and the rule that catches a stale
+// banner governed none of them.
+//
+// The second half below closes that, on the same terms as the first. It is NOT a table of phases and
+// filenames — that is the second lifecycle registry `QAN-GOV-03` was forbidden to build, and a future
+// `I-08` would have to be added to it by hand or be silently ungoverned. Instead:
+//
+//   * the canonical backlog's own `### <id> closure record` heading says which phases are closed;
+//   * a document declares which phase it is the primary record OF, in a machine-readable
+//     `**Phase:**` banner it already carried;
+//   * a phase the backlog records as closed must have such a record, and that record's banners must
+//     state the closure and must not advertise a pre-closure state.
+//
+// `I-08` becomes governed the moment its closure record lands beside a document that says it is the
+// `I-08` record. Nothing here is edited for that to happen, and an OPEN phase is governed by nothing,
+// because the register makes no closure claim about it.
+//
+// Every derivation below is a pure function of text, so the genericity, the non-vacuity and the
+// stale-banner detection are each proved against synthetic input rather than against whatever the
+// repository happens to contain today.
 
 const rootPath = fileURLToPath(new URL('../', import.meta.url));
 
@@ -121,6 +150,101 @@ for (const file of readdirSync(join(rootPath, 'docs'))) {
 /** The documents this gate actually governs: a closed task's own primary document. */
 const governed = primaryDocuments.filter((doc) => closedTaskIds.has(doc.taskId));
 
+// ---------------------------------------------------------------------------------------------
+// Connected Worlds phases (ASSURE-F07). Pure derivations first, so each one can be proved against
+// synthetic text and cannot quietly stop matching anything.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * A Connected Worlds phase identifier, matched so that `I-07D` is itself and not `I-07`.
+ *
+ * The same boundary discipline as `TASK_ID`, and for the same reason: the register records `I-07` as
+ * closed and makes no claim about a slice id, so a loose match would drag a slice's banner into a
+ * gate that was never told anything about it.
+ */
+const PHASE_ID = /\bI-\d+[A-Za-z0-9]*\b/u;
+const PHASE_ID_ALL = /\bI-\d+[A-Za-z0-9]*\b/gu;
+
+/** `**Status:**` and `**Phase:**` — the two lifecycle banners a canonical record may carry. */
+const BANNER_LINE = /^\*\*(?:Status|Phase):\*\*/u;
+
+/**
+ * Every Connected Worlds phase the canonical backlog records a closure for.
+ *
+ * A phase closes through a `### <id> closure record` section, not through a `CLOSED — TOMBSTONE`
+ * index row: a phase that inherited nothing tombstones nothing, which is exactly why the row-based
+ * derivation above cannot see one. The heading is the register's own closure statement, and it is
+ * the authority here for the same reason the index row is the authority there.
+ */
+function closedPhaseIdsIn(backlogText) {
+  const closed = new Set();
+  for (const raw of backlogText.split('\n')) {
+    const heading = /^###\s+(\S+)\s+closure record\b/u.exec(raw.trim());
+    if (heading === null) continue;
+    const id = PHASE_ID.exec(heading[1]);
+    // `### T-14 closure record` is a task, and the first half of this file governs it.
+    if (id !== null && id[0] === heading[1]) closed.add(id[0]);
+  }
+  return closed;
+}
+
+/**
+ * The phases one document declares itself the primary canonical record OF, with the banner lines
+ * that speak about each.
+ *
+ * A `**Phase:**` banner naming a phase id is the declaration; a `**Status:**` banner naming the same
+ * id speaks about it too. `I-04` puts its lifecycle on `**Status:**` and `I-06` puts it on
+ * `**Phase:**`, so both are read and neither shape is privileged. A `**Slice:**` banner is
+ * deliberately not read: a slice is not the phase.
+ */
+function phaseRecordsIn(text) {
+  const spoken = new Map();
+  const declared = new Set();
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!BANNER_LINE.test(line)) continue;
+    const ids = line.match(PHASE_ID_ALL) ?? [];
+    for (const id of ids) {
+      if (line.startsWith('**Phase:**')) declared.add(id);
+      if (!spoken.has(id)) spoken.set(id, []);
+      spoken.get(id).push(line);
+    }
+  }
+  return [...declared].map((phaseId) => ({ phaseId, banners: spoken.get(phaseId) }));
+}
+
+/** A banner that positively states the phase reached its final lifecycle state. */
+const CLOSED_BANNER = /CLOSED \/ FROZEN/u;
+
+/**
+ * The canonical surfaces a phase record can live on.
+ *
+ * A shape rule, never a list of phases: top-level `docs/*.md`, the repository README, and the README
+ * of any top-level directory. `I-05`'s record is `database/README.md` and is reached by the third of
+ * those without being named; a future phase documented under `docs/` is reached by the first. A file
+ * that carries no `**Phase:**` banner contributes nothing wherever it sits.
+ */
+function canonicalRecordPaths() {
+  const paths = [];
+  if (existsSync(join(rootPath, 'README.md'))) paths.push('README.md');
+  for (const file of readdirSync(join(rootPath, 'docs'))) {
+    if (file.endsWith('.md')) paths.push(`docs/${file}`);
+  }
+  for (const entry of readdirSync(rootPath)) {
+    if (entry.startsWith('.') || entry === 'node_modules') continue;
+    if (!statSync(join(rootPath, entry)).isDirectory()) continue;
+    if (existsSync(join(rootPath, entry, 'README.md'))) paths.push(`${entry}/README.md`);
+  }
+  return paths;
+}
+
+const closedPhaseIds = closedPhaseIdsIn(backlog);
+/** Every phase record in the repository, whatever the register says about it. */
+const phaseRecords = canonicalRecordPaths()
+  .flatMap((file) => phaseRecordsIn(read(file)).map((record) => ({ file, ...record })));
+/** The ones this gate governs: a closed phase's own primary record. */
+const governedPhases = phaseRecords.filter((record) => closedPhaseIds.has(record.phaseId));
+
 test('the canonical backlog still names the tasks it records as closed', () => {
   // The non-vacuity floor. Every assertion below is derived from this parse, so a backlog whose
   // index this file can no longer read must fail here rather than quietly govern nothing.
@@ -160,6 +284,133 @@ test('T-13 and T-14 state their closure truthfully', () => {
         `docs/${doc.file} must state that ${taskId} is CLOSED / FROZEN`);
     }
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// G1P / G2P — the same rule, for a Connected Worlds phase (ASSURE-F07).
+// ---------------------------------------------------------------------------------------------
+
+test('the canonical backlog still names the Connected Worlds phases it records as closed', () => {
+  // The non-vacuity FLOOR for the phase half. It names four phase IDS and no filenames: a parse
+  // that stops reading the register must fail here rather than govern nothing, and nothing about
+  // this says how many phases there are or may later be.
+  for (const phaseId of ['I-04', 'I-05', 'I-06', 'I-07']) {
+    assert.ok(closedPhaseIds.has(phaseId),
+      `the backlog no longer records a ${phaseId} closure record; found ${[...closedPhaseIds].join(', ') || 'nothing'}`);
+  }
+  assert.ok(phaseRecords.length >= 4,
+    `phase-record discovery found ${phaseRecords.length} canonical phase records, which cannot be right`);
+});
+
+test('every closed Connected Worlds phase has a governed primary record', () => {
+  const ungoverned = [...closedPhaseIds]
+    .filter((phaseId) => !governedPhases.some((record) => record.phaseId === phaseId))
+    .sort();
+  assert.deepEqual(ungoverned, [],
+    'the canonical backlog records these phases as closed and no canonical document declares itself '
+    + 'their primary record, so their lifecycle banner is governed by nothing. A phase record '
+    + 'declares itself with a `**Phase:**` banner naming the phase; where a phase has no standalone '
+    + 'document, that banner belongs on the canonical record it does have.');
+});
+
+test('no closed Connected Worlds phase advertises a pre-closure lifecycle banner (BG-09)', () => {
+  const offenders = governedPhases
+    .flatMap((record) => record.banners
+      .filter((line) => PRE_CLOSURE.test(line))
+      .map((line) => `${record.file} (${record.phaseId}): ${line}`));
+  assert.deepEqual(offenders, [],
+    'the canonical backlog records these phases as closed while their own canonical records still '
+    + 'advertise a candidate or awaiting-review state. BG-09 applies to a phase exactly as it '
+    + 'applies to a task.');
+});
+
+test('every closed Connected Worlds phase states its closure truthfully', () => {
+  // Rejecting the stale banner is only half of status truth. A record that declines to say would
+  // pass the check above while telling a reader nothing.
+  const silent = governedPhases
+    .filter((record) => !record.banners.some((line) => CLOSED_BANNER.test(line)))
+    .map((record) => `${record.file} (${record.phaseId})`);
+  assert.deepEqual(silent, [],
+    'these canonical phase records must positively state that the phase is CLOSED / FROZEN');
+});
+
+test('I-05 is governed through the canonical record it actually has', () => {
+  // The specific gap ASSURE-F07 named. I-05 has no `docs/I-05….md`, so a `docs/`-only sweep could
+  // never reach it, and skipping it "because it has no document" is how it stayed ungoverned. This
+  // asserts that the phase is governed — not WHERE from, which discovery decides.
+  assert.ok(governedPhases.some((record) => record.phaseId === 'I-05'),
+    'I-05 must be governed through whichever canonical record declares itself its primary record');
+});
+
+// ---------------------------------------------------------------------------------------------
+// G5P — the phase derivations are generic, non-vacuous and actually detect the defect.
+//
+// Proved against synthetic text. A repository-shaped proof could only ever say "the four phases
+// that exist today pass", which is what a hardcoded registry would also say.
+// ---------------------------------------------------------------------------------------------
+
+test('phase discovery is generic: a future phase needs no edit here', () => {
+  const futureBacklog = ['## 8. Closure records', '', '### I-42 closure record (a phase nobody has written yet)',
+    '', '**Inherited: none.**', ''].join('\n');
+  assert.deepEqual([...closedPhaseIdsIn(futureBacklog)], ['I-42'],
+    'a future phase closure record must be discovered by shape, not by being listed here');
+
+  const futureRecord = ['# QANDEEL — Something v1', '', '**Phase:** `I-42 — Something` — **CLOSED / FROZEN**',
+    '**Slice:** `I-42A — a slice` — **CLOSED / MERGED**', ''].join('\n');
+  assert.deepEqual(phaseRecordsIn(futureRecord).map((r) => r.phaseId), ['I-42'],
+    'the primary record declares the phase, and a slice banner is not the phase');
+});
+
+test('phase discovery reads both banner shapes the repository already uses', () => {
+  const statusShape = ['# I-40 — A Phase v1', '', '**Status:** `I-40 — CLOSED / FROZEN`',
+    '**Phase:** Connected Worlds v2 — `I-40`', ''].join('\n');
+  const [statusRecord] = phaseRecordsIn(statusShape);
+  assert.equal(statusRecord.phaseId, 'I-40');
+  assert.ok(statusRecord.banners.some((line) => CLOSED_BANNER.test(line)),
+    'a phase whose lifecycle sits on the Status banner is read');
+
+  const phaseShape = ['# QANDEEL — A Phase v1', '', '**Phase:** `I-41 — A Phase` — **CLOSED / FROZEN**', ''].join('\n');
+  const [phaseRecord] = phaseRecordsIn(phaseShape);
+  assert.equal(phaseRecord.phaseId, 'I-41');
+  assert.ok(phaseRecord.banners.some((line) => CLOSED_BANNER.test(line)),
+    'a phase whose lifecycle sits on the Phase banner is read too');
+});
+
+test('a stale closed-phase banner is detected', () => {
+  // The mutation the gate exists for: the register says closed, the record says candidate.
+  const closed = closedPhaseIdsIn('### I-43 closure record (a closed phase)');
+  const stale = phaseRecordsIn('**Phase:** `I-43 — A Phase` — **CANDIDATE — awaiting independent review**');
+  const governedStale = stale.filter((record) => closed.has(record.phaseId));
+  assert.equal(governedStale.length, 1, 'the stale record is governed');
+  assert.ok(governedStale[0].banners.some((line) => PRE_CLOSURE.test(line)),
+    'a closed phase still advertising a candidate banner must be caught');
+  assert.ok(!governedStale[0].banners.some((line) => CLOSED_BANNER.test(line)),
+    'and it must not be able to pass the positive half either');
+});
+
+test('an open phase is not falsely forced closed', () => {
+  // `I-08` is real, unstarted, and must be governed by nothing: the register makes no closure claim
+  // about it, so neither does this gate.
+  const closed = closedPhaseIdsIn('### I-44 closure record (a closed phase)');
+  const open = phaseRecordsIn('**Phase:** `I-45 — an open phase` — **IN PROGRESS**');
+  assert.deepEqual(open.filter((record) => closed.has(record.phaseId)), [],
+    'a phase the register does not record as closed is governed by nothing');
+  assert.ok(!closedPhaseIds.has('I-08'),
+    'I-08 has not closed, so nothing here may require it to say that it has');
+});
+
+test('phase discovery cannot become vacuous', () => {
+  // Each derivation must return NOTHING for text that does not carry the real shape, and the floor
+  // above must therefore fail if either parser is loosened into matching everything or tightened
+  // into matching nothing.
+  assert.equal(closedPhaseIdsIn('### I-46 closure notes\n### closure record\nI-46 closure record').size, 0,
+    'only the canonical heading shape is a closure record');
+  assert.equal(closedPhaseIdsIn('### T-99 closure record').size, 0,
+    'a task closure record is not a phase closure record');
+  assert.equal(phaseRecordsIn('**Slice:** `I-47 — a slice` — **CLOSED / FROZEN**\nI-47 is closed.').length, 0,
+    'prose and a slice banner do not make a document a primary phase record');
+  assert.equal(phaseRecordsIn('**Phase:** VII — QANDEEL Connected Worlds').length, 0,
+    'a phase banner that names no Connected Worlds phase id declares nothing');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -246,6 +497,13 @@ test('AGENTS.md points closure work back at the canonical backlog', () => {
     [/Silence is not a disposition/u, 'that an unmentioned inherited item is not reconciled'],
     [/Leave no successor task responsible/u, 'that a successor must not inherit a closure record'],
     [/npm run test:task-closure-governance-contract/u, 'the gate that checks the result'],
+    // ASSURE-F07: the same discipline, said where a phase-closing agent will meet it.
+    [/A Connected Worlds phase \(`I-0N`\) closes on exactly these terms/u,
+      'that a Connected Worlds phase closes on the same terms as a task'],
+    [/`\*\*Phase:\*\*` banner that must reach `CLOSED \/ FROZEN` in the same change/u,
+      'the phase banner the closing change must move'],
+    [/A phase with no standalone document still has one/u,
+      'that a phase without its own document is still governed'],
   ]) {
     assert.match(agentsProse, clause, `the AGENTS.md closure rule no longer names ${what}`);
   }

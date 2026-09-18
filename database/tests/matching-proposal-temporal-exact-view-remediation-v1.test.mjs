@@ -170,10 +170,13 @@ const FROZEN_MIGRATIONS = {
   '0119_shared_historical_authority_remediation_v1.sql': '77f01566a8e1070fd038cefc52e70d3fe5ef7bba',
 };
 
-test('migration 0120 is one forward-only transaction at the tip of the chain', () => {
+// QAN-CW-REM-03 reconciled this test forward. It asserted `migrations.at(-1) === NAME` - that 0120
+// was the TIP of the chain - which was true when it was written and is not a property any migration
+// keeps, exactly as 0119's identical assertion was reconciled by 0120. The forward-only ORDERING
+// claim below is what it was really asserting, and that one is permanent.
+test('migration 0120 is one forward-only transaction, ordered after its predecessor', () => {
   const migrations = readdirSync(new URL('../migrations', import.meta.url)).filter((f) => f.endsWith('.sql')).sort();
   assert.equal(migrations.filter((name) => name.startsWith('0120_')).length, 1, 'exactly one migration carries 0120');
-  assert.equal(migrations.at(-1), NAME, 'and it is the current tip of the chain');
   assert.equal(migrations.indexOf(NAME),
     migrations.indexOf('0119_shared_historical_authority_remediation_v1.sql') + 1,
     'ordering directly after the reviewed QAN-CW-REM-01 tip');
