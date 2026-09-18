@@ -153,9 +153,24 @@ export const I07D_LIFECYCLE_RELATIONS = [
   'introduction_terminal_commits',
 ];
 
+/**
+ * The relation `QAN-CW-REM-02` adds in migration 0120: the durable exact-view
+ * binding of a TERMINAL human proposal decision.
+ *
+ * It carries the census word `proposal` because it genuinely is proposal
+ * lifecycle state, and it is NAMED here rather than renamed out of the pattern -
+ * which is what the 0108, 0109 and 0110 censuses ask for in so many words. A
+ * remediation is still a reviewed slice, so it owns what it adds under its own
+ * name rather than borrowing I-07B's or I-07C's.
+ */
+export const REM02_LIFECYCLE_RELATIONS = [
+  'matching_proposal_decision_view_bindings',
+];
+
 /** The ONE reviewed ownership list every lifecycle census compares against. */
 export const LATER_SLICE_LIFECYCLE_RELATIONS = [
   ...I07B_LIFECYCLE_RELATIONS, ...I07C_LIFECYCLE_RELATIONS, ...I07D_LIFECYCLE_RELATIONS,
+  ...REM02_LIFECYCLE_RELATIONS,
 ].sort();
 
 /**

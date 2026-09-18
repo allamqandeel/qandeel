@@ -127,7 +127,16 @@ const FROZEN_MIGRATIONS = {
 test('migration 0119 is one forward-only transaction that alters no predecessor schema', () => {
   const migrations = readdirSync(new URL('../migrations', import.meta.url)).filter((f) => f.endsWith('.sql')).sort();
   assert.equal(migrations.filter((name) => name.startsWith('0119_')).length, 1, 'exactly one migration carries 0119');
-  assert.equal(migrations.at(-1), NAME, 'and it is the current tip of the chain');
+  // RECONCILED BY QAN-CW-REM-02. This asserted that 0119 was the TIP of the
+  // chain, which was true when it was written and is not a property any
+  // migration keeps: `QAN-CW-REM-02` adds 0120 directly after it. The claim
+  // worth keeping is the forward-only ORDERING - that 0119 came after the
+  // reviewed 0118 tip and renumbered nothing - so that is what is asserted, and
+  // the tip claim is retired rather than moved to whichever migration is last
+  // today.
+  assert.equal(migrations.indexOf(NAME),
+    migrations.indexOf('0118_introduction_ordinary_shared_material_v1.sql') + 1,
+    'and it orders directly after the reviewed 0118 tip it was written against');
   assert.match(SOURCE, /^-- QAN-CW-REM-01/u, 'the migration declares its task');
   assert.equal((SOURCE.match(/\nBEGIN;\n/gu) ?? []).length, 1, 'it is one transaction');
   assert.match(SOURCE, /COMMIT;\n$/u, 'and it commits');

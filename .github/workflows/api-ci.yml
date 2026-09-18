@@ -677,6 +677,22 @@ jobs:
       # cycle on real PostgreSQL with a barrier-pinned three-connection race.
       - name: Verify the QAN-CW-REM-01 Shared historical authority remediation against real PostgreSQL
         run: npm run verify:shared-historical-authority-remediation:integration
+      # QAN-CW-REM-02 corrects two accepted phase-wide assurance findings in the
+      # Matching proposal runtime, and both of them need real concurrency to
+      # prove. This verifier holds the canonical two-human lock from one
+      # connection while a delivery blocks on it from another, lets the real
+      # deadline pass while that delivery is observably still waiting, and then
+      # requires it to refuse with ZERO disclosure - independently for the first
+      # and the second recipient - and it runs the SAME interleaving against the
+      # pre-fix ordering to show that a transaction-fixed clock really does
+      # deliver after the deadline. It also proves that each of the three
+      # corrected human decisions binds the exact view that authorized it, that
+      # a retry naming another view is a command conflict, that a committed
+      # decision whose binding is absent fails closed without inferring
+      # anything, and that the 0114 forward approval, the Mutual Match and the
+      # I07B-CONC-01 view-supersession race are all non-regressed.
+      - name: Verify the QAN-CW-REM-02 Matching proposal temporal correctness and exact-view identity against real PostgreSQL
+        run: npm run verify:matching-proposal-temporal-exact-view-remediation:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

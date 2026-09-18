@@ -44,6 +44,7 @@ export const P = Object.freeze({
   VIEWS: 'public.matching_recipient_proposal_views',
   VIEW_FIELDS: 'public.matching_recipient_proposal_view_fields',
   VIEW_STATE: 'public.matching_recipient_proposal_view_state',
+  DECISION_BINDINGS: 'public.matching_proposal_decision_view_bindings',
 });
 
 /** Every relation 0110 creates, in the order its terminal self-assertion names them. */
@@ -68,6 +69,21 @@ export const PROPOSAL_IMMUTABLE = [
   [P.TRANSITIONS, 'matching_proposal_transitions_immutable'],
   [P.VIEWS, 'matching_recipient_proposal_views_immutable'],
   [P.VIEW_FIELDS, 'matching_recipient_view_fields_immutable'],
+];
+
+/**
+ * The relation migration 0120 adds, with its append-only guard.
+ *
+ * It is deliberately NOT folded into `PROPOSAL_TABLES` or `PROPOSAL_IMMUTABLE`:
+ * those two are the 0110 census and asserting 0120's relation through them
+ * would make the 0110 verifier claim 0110 created it. It is named separately,
+ * owned by `QAN-CW-REM-02`, and the shared teardown peels it because a
+ * committed decline or withdrawal now binds a transition, a view and a proposal
+ * restrictively - so a race fixture that removed its proposals without removing
+ * this row first would be refused row by row.
+ */
+export const REM02_IMMUTABLE = [
+  [P.DECISION_BINDINGS, 'matching_proposal_decision_view_bindings_immutable'],
 ];
 
 /** The controlled relations, with the truth guard that bounds how they may change. */
@@ -338,6 +354,27 @@ export function createProposalRuntime(databaseUrl) {
     (await rows(`SELECT ${fn.split('(')[0]}($1) AS hit`, [text]))[0].hit;
 
   const proposalRow = async (id) => (await rows(`SELECT * FROM ${P.PROPOSALS} p WHERE p.id = $1`, [id]))[0] ?? null;
+  /** The durable exact-view binding one TERMINAL human decision committed, or null. */
+  const decisionBindingOf = async (commandId) =>
+    (await rows(`SELECT * FROM ${P.DECISION_BINDINGS} b WHERE b.decision_transition_id = $1`, [commandId]))[0] ?? null;
+  /**
+   * Remove one committed decision's exact-view binding, leaving the transition,
+   * the proposal state and the private reason exactly as they are.
+   *
+   * This is the ONLY representable shape of the pre-0120 state: a terminal human
+   * decision that really committed and really has no binding. The append-only
+   * guard is lifted for exactly this statement and re-enabled immediately, and
+   * nothing in the runtime can reach this path.
+   */
+  async function removeDecisionBinding(commandId) {
+    await rt.asRole('postgres');
+    await q(`ALTER TABLE ${P.DECISION_BINDINGS} DISABLE TRIGGER matching_proposal_decision_view_bindings_immutable`);
+    const result = await q(`DELETE FROM ${P.DECISION_BINDINGS} WHERE decision_transition_id = $1`, [commandId]);
+    await q(`ALTER TABLE ${P.DECISION_BINDINGS} ENABLE TRIGGER matching_proposal_decision_view_bindings_immutable`);
+    assert.equal(await rt.triggerEnabled(P.DECISION_BINDINGS, 'matching_proposal_decision_view_bindings_immutable'), true,
+      'the decision binding append-only guard is enabled again immediately');
+    assert.equal(result.rowCount, 1, 'exactly one committed binding was removed to represent the pre-0120 state');
+  }
   const currentViewOf = async (proposal, recipient) => {
     const [row] = await rows(
       `SELECT st.current_view_id id FROM ${P.VIEW_STATE} st
@@ -557,7 +594,7 @@ export function createProposalRuntime(databaseUrl) {
     await rt.asRole('postgres');
     await q('BEGIN');
     try {
-      for (const [table, trigger] of [...PROPOSAL_IMMUTABLE, ...PROPOSAL_GUARDED]) {
+      for (const [table, trigger] of [...PROPOSAL_IMMUTABLE, ...PROPOSAL_GUARDED, ...REM02_IMMUTABLE]) {
         await q(`ALTER TABLE ${table} DISABLE TRIGGER ${trigger}`);
       }
       const pairs = `(SELECT pr.id FROM ${P.PAIRS} pr
@@ -565,6 +602,10 @@ export function createProposalRuntime(databaseUrl) {
       const proposals = `(SELECT p.id FROM ${P.PROPOSALS} p WHERE p.pair_id IN ${pairs})`;
       const snapshots = `(SELECT s.id FROM ${P.SNAPSHOTS} s WHERE s.pair_id IN ${pairs})`;
       const views = `(SELECT v.id FROM ${P.VIEWS} v WHERE v.proposal_id IN ${proposals})`;
+      // Since QAN-CW-REM-02 a committed terminal decision binds its transition,
+      // its proposal and the exact view that authorized it, all restrictively,
+      // so the binding goes before any of the three.
+      await q(`DELETE FROM ${P.DECISION_BINDINGS} WHERE proposal_id IN ${proposals}`, [humans]);
       await q(`DELETE FROM ${P.VIEW_FIELDS} WHERE view_id IN ${views}`, [humans]);
       await q(`DELETE FROM ${P.VIEW_STATE} WHERE proposal_id IN ${proposals}`, [humans]);
       // The view chain is self-referencing and restrictive, so it peels leaf-first.
@@ -592,7 +633,7 @@ export function createProposalRuntime(databaseUrl) {
       await q(`DELETE FROM ${P.HARD_RESULTS} WHERE eligibility_snapshot_id IN ${snapshots}`, [humans]);
       await q(`DELETE FROM ${P.SNAPSHOTS} WHERE pair_id IN ${pairs}`, [humans]);
       await q(`DELETE FROM ${P.PAIRS} WHERE lower_user_id = ANY($1::uuid[]) OR higher_user_id = ANY($1::uuid[])`, [humans]);
-      for (const [table, trigger] of [...PROPOSAL_IMMUTABLE, ...PROPOSAL_GUARDED]) {
+      for (const [table, trigger] of [...PROPOSAL_IMMUTABLE, ...PROPOSAL_GUARDED, ...REM02_IMMUTABLE]) {
         await q(`ALTER TABLE ${table} ENABLE TRIGGER ${trigger}`);
       }
       await q('COMMIT');
@@ -600,7 +641,7 @@ export function createProposalRuntime(databaseUrl) {
       await q('ROLLBACK').catch(() => undefined);
       throw error;
     }
-    for (const [table, trigger] of [...PROPOSAL_IMMUTABLE, ...PROPOSAL_GUARDED]) {
+    for (const [table, trigger] of [...PROPOSAL_IMMUTABLE, ...PROPOSAL_GUARDED, ...REM02_IMMUTABLE]) {
       assert.equal(await rt.triggerEnabled(table, trigger), true, `${trigger} is enabled again after I-07B teardown`);
     }
   }
@@ -641,6 +682,7 @@ export function createProposalRuntime(databaseUrl) {
     submitConclusion, filterConclusion, materialize, prepare, offer, forward,
     declineFirst, approveForward, declineSecond, withdraw, expire, revalidate,
     neutral, myProposal, myFields, classify, proposalRow, currentViewOf,
+    decisionBindingOf, removeDecisionBinding,
     installPolicies, supersedePolicy, captureMatchingSeam, restoreMatchingSeam,
     clearProposalPrerequisites, resolveFirstName,
     provisionMatchableHuman, removeCommittedMatchState, removeCommittedProposalState, removeCommittedPolicies,
@@ -651,5 +693,5 @@ export { runVerifier, APP_ROLES } from './matching-setup-verifier-support.mjs';
 export {
   MATCHING_TABLES, MATCHING_IMMUTABLE, MATCHING_GUARDED, MATCHING_COMMANDS, MFN, M,
   LATER_SLICE_LIFECYCLE_RELATIONS, I07B_LIFECYCLE_RELATIONS, I07C_LIFECYCLE_RELATIONS,
-  I07D_LIFECYCLE_RELATIONS, lifecycleCensusOf,
+  I07D_LIFECYCLE_RELATIONS, REM02_LIFECYCLE_RELATIONS, lifecycleCensusOf,
 } from './matching-setup-verifier-support.mjs';
