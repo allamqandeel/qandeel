@@ -188,10 +188,14 @@ async function verifyPosture() {
  */
 async function verifyLifecycleLogComplete() {
   await asRole('postgres');
+  // The pattern names the RELATION, not just the column: `current_lifecycle` is
+  // also a column of `public.replays`, and a column-only census counts the three
+  // frozen I-06B Replay lifecycle writers as Public ones.
   const writers = await rows(
     `SELECT pr.proname, pr.prosrc FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
       WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
-        AND (pr.prosrc ~ 'SET current_lifecycle = ''' OR pr.prosrc ~ 'INSERT INTO public\\.public_experiences\\y')
+        AND (pr.prosrc ~ 'UPDATE public\\.public_experiences e\\s+SET current_lifecycle = '''
+          OR pr.prosrc ~ 'INSERT INTO public\\.public_experiences\\s+\\(id, public_world_singleton')
       ORDER BY pr.proname`);
   assert.deepEqual(writers.map((w) => w.proname), [
     'apply_public_experience_disappearance_v1',

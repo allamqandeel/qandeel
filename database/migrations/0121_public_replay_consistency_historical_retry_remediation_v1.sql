@@ -1623,18 +1623,23 @@ BEGIN
   --     historical truth rather than an approximation. Exactly four functions
   --     write `public_experiences.current_lifecycle`, and every one of them
   --     writes a lifecycle event in the same body.
+  --
+  --     THE PATTERN NAMES THE RELATION, not just the column. `current_lifecycle`
+  --     is also a column of `public.replays`, so a column-only census counts the
+  --     three frozen I-06B Replay lifecycle writers as Public ones - which is
+  --     exactly what the first run of this assertion did.
   SELECT count(*)::integer INTO writers
     FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
    WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
-     AND (pr.prosrc ~ 'SET current_lifecycle = '''
-       OR pr.prosrc ~ 'INSERT INTO public\.public_experiences\y');
+     AND (pr.prosrc ~ 'UPDATE public\.public_experiences e\s+SET current_lifecycle = '''
+       OR pr.prosrc ~ 'INSERT INTO public\.public_experiences\s+\(id, public_world_singleton');
   IF writers <> 4 THEN
     RAISE EXCEPTION 'QAN-CW-REM-03: exactly four functions may move a Public Experience lifecycle, found %', writers;
   END IF;
   FOR p IN SELECT pr.* FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
             WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
-              AND (pr.prosrc ~ 'SET current_lifecycle = '''
-                OR pr.prosrc ~ 'INSERT INTO public\.public_experiences\y') LOOP
+              AND (pr.prosrc ~ 'UPDATE public\.public_experiences e\s+SET current_lifecycle = '''
+                OR pr.prosrc ~ 'INSERT INTO public\.public_experiences\s+\(id, public_world_singleton') LOOP
     IF p.prosrc !~ 'INSERT INTO public\.public_experience_lifecycle_events' THEN
       RAISE EXCEPTION 'QAN-CW-REM-03: % moves a Public Experience lifecycle without writing the immutable event the historical derivation reads', p.proname;
     END IF;
