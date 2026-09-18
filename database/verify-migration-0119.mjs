@@ -95,7 +95,7 @@ const commitGrant = (command, manifest, grant, event) => rows(
   `SELECT outcome, history_command_id, committed_grant_id
      FROM public.commit_shared_world_history_access_grant_v1($1,$2,$3,$4)`, [command, manifest, grant, event]);
 const reconcile = () => rows(
-  'SELECT reconciled_material_count, remaining_unproven_count'
+  'SELECT reconciled_material_count, remaining_unproven_count, remaining_laundered_count'
   + ' FROM public.reconcile_shared_world_material_historical_authority_v1()');
 const ensureIdentity = (command, ref, mode, label) => rows(
   'SELECT * FROM public.ensure_public_identity_v1($1,$2,$3,$4)', [command, ref, mode, label]);
@@ -213,10 +213,18 @@ async function verifyPosture() {
   assert.ok((producer.proconfig ?? []).some((cfg) => cfg === 'search_path=' || cfg === 'search_path=""'));
   const inputs = producer.proargnames.filter((_, index) => producer.proargmodes[index] === 'i');
   const results = producer.proargnames.filter((_, index) => producer.proargmodes[index] === 't');
-  assert.equal(inputs.length, 14, 'P01 the producer keeps its exact 14 inputs: no authority parameter was added');
+  // THE INPUT LIST IS PINNED BY NAME AND POSITION, not by a word list. Two
+  // frozen parameters are legitimately NAMED for authority and audience because
+  // they carry the frozen I-03 revalidation and audience-snapshot EVIDENCE
+  // references; only the exact list can tell those apart from a new claim.
+  assert.deepEqual(inputs, [
+    'p_command_id', 'p_world_id', 'p_material_id', 'p_history_item_id',
+    'p_material_kind', 'p_body_text',
+    'p_effective_context_ref', 'p_output_digest', 'p_source_disclosure_gate_ref',
+    'p_authority_revalidation_ref', 'p_readiness_ref', 'p_audience_snapshot_ref',
+    'p_material_source_ids', 'p_reasoning_source_refs',
+  ], 'P01 the producer keeps the EXACT frozen input list: no authority claim was added to it');
   assert.equal(results.length, 11, 'P01 and its exact 11 result columns');
-  assert.deepEqual(inputs.filter((name) => /actor|approver|viewer|audience|subject|authority|uid|user/iu.test(name)), [],
-    'P01 no actor, approver, viewer or authority claim may be supplied by a caller');
   const [{ n: overloads }] = await rows(
     `SELECT count(*) n FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
       WHERE n.nspname = 'public' AND pr.proname = 'commit_shared_world_qandeel_material_v1'`);
@@ -228,8 +236,14 @@ async function verifyPosture() {
     'P01 the reasoning arm is unchanged');
   assert.match(body, /WHEN approvers > 0 THEN 'RESOLVED_EXACT_HUMAN_REQUIREMENT'/u,
     'P01 the known-owner arm is unchanged');
+  assert.match(body, /WHEN unresolved_sources > 0 THEN 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'/u,
+    'P01 an unresolved MATERIAL_DEPENDENCY source makes an unresolved target');
+  assert.ok(body.indexOf('WHEN unresolved_sources > 0') < body.indexOf('WHEN approvers > 0'),
+    'P01 and it is evaluated BEFORE the known-owner arm: known owners must not answer an unknown requirement');
   assert.match(body, /ELSE 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT' END;/u,
     'P01 and the corrected arm records unknown as unknown');
+  assert.match(body, /INTO unresolved_sources/u,
+    'P01 source authority is derived from the canonical relation rather than from approver rows alone');
   assert.doesNotMatch(body, /authority_resolution := CASE[^;]*RESOLVED_NO_HUMAN_REQUIREMENT/u,
     'P01 no arm of the resolution can reach the proven-empty clearance');
   assert.match(body, /authority_mode := CASE WHEN authority_resolution = 'RESOLVED_NO_HUMAN_REQUIREMENT'/u,
@@ -464,6 +478,90 @@ async function verifyProducer(report, humans) {
       assert.equal(await authorityOf(derivative.material), 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT',
         'A21 and the derivative is UNRESOLVED rather than inheriting a clearance nothing established');
     });
+
+    await report.isolated('A22 a KNOWN owner does not answer an unknown additional requirement across a MATERIAL_DEPENDENCY edge', async () => {
+      const w = await seedStandardWorld([author, counterpart]);
+      // H -> Q1 (material H + reasoning) -> Q2 (material Q1 only).
+      //
+      // Q1 is the shape the repository has always produced for a mixed case:
+      // UNRESOLVED, with the known owner genuinely required. Q2 declares NO
+      // reasoning of its own and inherits one real approver, so before this
+      // correction the known-owner arm resolved it EXACT - laundering Q1's
+      // unknown half away in exactly one edge.
+      const human = await rt.commitText(w.world, author, 'a statement a later analysis reproduces');
+      const q1 = await rt.commitQandeel(w.world, 'an analysis over a human statement AND private reasoning',
+        { sources: [human.material], reasoning: ['ctx:personal:rem01-auth-01'] });
+      assert.equal(await authorityOf(q1.material), 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT',
+        'A22 Q1 is unresolved, as it always was');
+      assert.deepEqual(await rt.requiredApproversOf(q1.item), [author],
+        'A22 with the known owner genuinely required - that half really is resolved');
+      assert.equal(await modeOf(q1.item), 'EXACT_HUMAN_APPROVER_SET');
+
+      const q2 = await rt.commitQandeel(w.world, 'an analysis that reproduces the unresolved analysis',
+        { sources: [q1.material] });
+      assert.equal(q2.outcome, 'MATERIAL_COMMITTED',
+        'A22 committing over an unresolved source is allowed: this narrows widening, not participation');
+      assert.equal(await authorityOf(q2.material), 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT',
+        'A22 and the target inherits the WHOLE requirement, not just the half it could enumerate');
+      assert.deepEqual(await rt.requiredApproversOf(q2.item), [author],
+        'A22 the known approver rows are still derived and still written: they are truthful');
+      assert.equal(Number(q2.authority_size), 1);
+      assert.equal(await modeOf(q2.item), 'EXACT_HUMAN_APPROVER_SET',
+        'A22 unresolved material is never approval-free');
+    });
+
+    await report.isolated('A23 the propagation is transitive: an unresolved ancestor keeps every descendant unresolved', async () => {
+      const w = await seedStandardWorld([author, counterpart]);
+      const human = await rt.commitText(w.world, author, 'a statement at the root of the chain');
+      const q1 = await rt.commitQandeel(w.world, 'the unresolved analysis',
+        { sources: [human.material], reasoning: ['ctx:personal:chain'] });
+      const q2 = await rt.commitQandeel(w.world, 'one edge downstream', { sources: [q1.material] });
+      const q3 = await rt.commitQandeel(w.world, 'two edges downstream', { sources: [q2.material] });
+      for (const [label, m] of [['Q1', q1], ['Q2', q2], ['Q3', q3]]) {
+        assert.equal(await authorityOf(m.material), 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT',
+          `A23 ${label} is unresolved: distance from the unknown does not resolve it`);
+      }
+      assert.deepEqual(await rt.requiredApproversOf(q3.item), [author],
+        'A23 and the known owner is still carried the whole way down');
+
+      // A MIXED PACKAGE OF SOURCES FAILS CLOSED ON THE UNRESOLVED ONE, rather
+      // than being rescued by the resolved one beside it.
+      const clean = await rt.commitText(w.world, counterpart, 'a second statement with resolved authority');
+      const mixed = await rt.commitQandeel(w.world, 'an analysis over one resolved and one unresolved source',
+        { sources: [clean.material, q2.material] });
+      assert.equal(await authorityOf(mixed.material), 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT',
+        'A23 one unresolved source is enough, however many resolved ones sit beside it');
+      assert.deepEqual(await rt.requiredApproversOf(mixed.item), [author, counterpart].sort(),
+        'A23 while the exact union of known owners is still exactly right');
+    });
+
+    await report.isolated('A26 a genuinely resolved source with no unresolved ancestry still resolves its target exactly', async () => {
+      const w = await seedStandardWorld([author, counterpart]);
+      // THE LOAD-BEARING NEGATIVE. If the arm above refused everything, the
+      // correction would be a ban rather than a rule - so the ordinary exact
+      // path is proven to still work, two edges deep.
+      const human = await rt.commitText(w.world, author, 'a statement with genuinely resolved authority');
+      const q1 = await rt.commitQandeel(w.world, 'an analysis over it, with no reasoning of its own',
+        { sources: [human.material] });
+      assert.equal(await authorityOf(q1.material), 'RESOLVED_EXACT_HUMAN_REQUIREMENT',
+        'A26 a resolved source still resolves its target exactly');
+      assert.deepEqual(await rt.requiredApproversOf(q1.item), [author]);
+
+      const q2 = await rt.commitQandeel(w.world, 'an analysis over the resolved analysis', { sources: [q1.material] });
+      assert.equal(await authorityOf(q2.material), 'RESOLVED_EXACT_HUMAN_REQUIREMENT',
+        'A26 and so does a resolved chain, two edges deep');
+      assert.deepEqual(await rt.requiredApproversOf(q2.item), [author]);
+
+      // AND IT IS STILL PACKAGEABLE, which is what proves the correction did not
+      // quietly disable ordinary selective history for everything downstream of
+      // a human statement.
+      const manifest = randomUUID();
+      const [prepared] = await preparePackage(manifest, w.world, counterpart, [q2.item]);
+      assert.equal(prepared.outcome, 'PREPARED',
+        'A26 a fully resolved chain still enters a history package normally');
+      assert.equal(Number(prepared.prepared_required_approver_count), 1,
+        'A26 requiring exactly the one human owner the chain really propagated');
+    });
   } finally {
     await q('ROLLBACK');
     await asRole('postgres');
@@ -545,6 +643,73 @@ async function verifyReconciliation(report, humans) {
         assert.ok((await rt.visibleItems(w.world, person)).includes(old.item),
           'R04 the exact already-authorized baseline audience still sees the reconciled material');
       }
+    });
+
+    await report.isolated('A25 the reconciliation reaches the laundering descendants, transitively, to a fixed point', async () => {
+      const w = await seedStandardWorld([author, counterpart]);
+      // THE EXACT PRE-REMEDIATION CHAIN, in the shape the OLD producer really
+      // wrote it: Q1 correctly unresolved with a known owner, and Q2 and Q3
+      // wrongly RESOLVED_EXACT because the old arm classified a target from its
+      // known approver COUNT alone. Every row below is a shape the old runtime
+      // could and did produce.
+      const human = await rt.commitText(w.world, author, 'a statement at the root of the laundered chain');
+      const q1 = await rt.commitQandeel(w.world, 'the analysis that was correctly unresolved',
+        { sources: [human.material], reasoning: ['ctx:personal:laundered'] });
+      assert.equal(await authorityOf(q1.material), 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT');
+      const q2 = await rt.commitQandeel(w.world, 'one edge downstream', { sources: [q1.material] });
+      const q3 = await rt.commitQandeel(w.world, 'two edges downstream', { sources: [q2.material] });
+
+      // The post-0119 producer already refuses to launder, so the OLD state is
+      // restored on exactly the two descendant rows - the one column the old
+      // producer would have written differently, and nothing else.
+      await q(`UPDATE ${AUTHORITY} SET resolution_state = 'RESOLVED_EXACT_HUMAN_REQUIREMENT'
+                WHERE material_id = ANY($1::uuid[])`, [[q2.material, q3.material]]);
+      assert.equal(await authorityOf(q2.material), 'RESOLVED_EXACT_HUMAN_REQUIREMENT',
+        'A25 the fixture really is the laundered state');
+      assert.equal(await authorityOf(q3.material), 'RESOLVED_EXACT_HUMAN_REQUIREMENT');
+      const approversBefore = {
+        q1: await rt.requiredApproversOf(q1.item),
+        q2: await rt.requiredApproversOf(q2.item),
+        q3: await rt.requiredApproversOf(q3.item),
+      };
+      const modesBefore = [await modeOf(q1.item), await modeOf(q2.item), await modeOf(q3.item)];
+
+      const [result] = await reconcile();
+      assert.equal(Number(result.remaining_laundered_count), 0,
+        'A25 no material still claims an exact resolution its own ancestry does not support');
+      assert.ok(Number(result.reconciled_material_count) >= 2,
+        'A25 and both laundering descendants really moved');
+
+      for (const [label, m] of [['Q1', q1], ['Q2', q2], ['Q3', q3]]) {
+        assert.equal(await authorityOf(m.material), 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT',
+          `A25 ${label} is unresolved after the fixed point`);
+      }
+      // THE KNOWN REQUIREMENTS SURVIVE UNCHANGED. Reconciliation removes no
+      // truthful requirement; it only stops claiming an unknown one is answered.
+      assert.deepEqual(
+        [await rt.requiredApproversOf(q1.item), await rt.requiredApproversOf(q2.item), await rt.requiredApproversOf(q3.item)],
+        [approversBefore.q1, approversBefore.q2, approversBefore.q3],
+        'A25 every known required approver row is exactly as it was');
+      assert.deepEqual([await modeOf(q1.item), await modeOf(q2.item), await modeOf(q3.item)], modesBefore,
+        'A25 and no frozen authority mode was rewritten');
+      // THE HUMAN ROOT IS UNTOUCHED: its authority really was established.
+      assert.equal(await authorityOf(human.material), 'RESOLVED_EXACT_HUMAN_REQUIREMENT',
+        'A25 the human statement the chain descends from keeps its exact resolution');
+
+      // A24 AND NO DESCENDANT CAN BE WIDENED. Both paths refuse, which is the
+      // consequence the whole reconciliation exists to produce.
+      for (const item of [q2.item, q3.item]) {
+        await rejected(() => preparePackage(randomUUID(), w.world, counterpart, [item]),
+          INCOMPLETE, /SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED/u);
+      }
+      await actAs(author);
+      await ensureIdentity(randomUUID(), randomUUID(), 'PSEUDONYM', 'the publisher');
+      const experience = randomUUID();
+      await createDraft(randomUUID(), experience);
+      await rejected(() => preparePublic(randomUUID(), experience, randomUUID(), randomUUID(),
+        [randomUUID()], [w.world], [q3.material]),
+      INCOMPLETE, /PUBLIC_EXPERIENCE_SOURCE_AUTHORITY_UNRESOLVED/u);
+      await asRole('postgres');
     });
   } finally {
     await q('ROLLBACK');

@@ -130,26 +130,30 @@ BEGIN;
 --    without rewriting any source history". This is that transition, in the
 --    fail-closed direction.
 --
---    IT MOVES EXACTLY ONE VALUE, IN EXACTLY ONE DIRECTION. A row may only go
---    from RESOLVED_NO_HUMAN_REQUIREMENT to UNRESOLVED_ADDITIONAL_HUMAN_
---    REQUIREMENT. RESOLVED_EXACT_HUMAN_REQUIREMENT is never touched, an
---    already-unresolved row is never touched, and nothing can ever be moved the
---    permissive way by this function - so re-running it can only ever be a
---    no-op, and it cannot be made into a clearance tool by any future caller.
+--    IT MOVES IN EXACTLY ONE DIRECTION. A row may only become
+--    UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT. Nothing can ever be moved the
+--    permissive way by this function, so re-running it can only ever be a no-op
+--    and it cannot be made into a clearance tool by any future caller.
 --
---    WHY EVERY SUCH ROW QUALIFIES, rather than only the zero-dependency ones.
---    Exactly one writer in this repository can produce that value: the ELSE arm
---    section 3 corrects. The human commit core writes the exact author, and the
---    one progressive-disclosure producer writes the exact owner; both write
---    RESOLVED_EXACT_HUMAN_REQUIREMENT unconditionally. So the set of rows
---    holding RESOLVED_NO_HUMAN_REQUIREMENT IS the set of rows the defect wrote,
---    and the producer-kind join below states that structurally rather than
---    trusting it. That set is a superset of the narrowest reading - a material
---    whose only dependency row is INDEPENDENT_TARGET_TRUTH - and it has to be:
---    a QANDEEL material sourced from a zero-dependency QANDEEL material also
---    derived an empty approver union and also landed in the same arm, so
---    reconciling only the narrow shape would leave the identical fail-open
---    reachable in one step through an ordinary derivative.
+--    IT MOVES TWO SHAPES, AND THE SECOND IS ONLY VISIBLE ONCE THE FIRST IS.
+--
+--    The first is the defect written directly: a row holding
+--    RESOLVED_NO_HUMAN_REQUIREMENT. Exactly one writer in this repository can
+--    produce that value - the ELSE arm section 3 corrects. The human commit core
+--    writes the exact author and the one progressive-disclosure producer writes
+--    the exact owner; both write RESOLVED_EXACT_HUMAN_REQUIREMENT
+--    unconditionally. So the set of rows holding the unproven clearance IS the
+--    set of rows the defect wrote, and the producer-kind condition below states
+--    that structurally rather than trusting it.
+--
+--    The second is the SAME defect written one edge later (REM01-AUTH-01): a row
+--    holding RESOLVED_EXACT_HUMAN_REQUIREMENT while depending, directly or
+--    transitively, on a source that is not itself positively resolved. The old
+--    producer classified a target from its known approver COUNT alone, so a
+--    target of an unresolved source inherited the known half and silently
+--    dropped the unknown half. Reconciling only the first shape would repair the
+--    ancestors and leave every laundering descendant exactly as it was - and a
+--    descendant is as widenable as an ancestor.
 --
 --    WHAT IT DOES NOT TOUCH. It writes one column of one relation. No source
 --    body, provenance row, material row, history item, occurrence instant,
@@ -165,29 +169,74 @@ BEGIN;
 --    state, not on the mode.
 -- ---------------------------------------------------------------------------
 CREATE FUNCTION public.reconcile_shared_world_material_historical_authority_v1()
-RETURNS TABLE(reconciled_material_count integer, remaining_unproven_count integer)
+RETURNS TABLE(reconciled_material_count integer, remaining_unproven_count integer,
+              remaining_laundered_count integer)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE
   moved integer;
   remaining integer;
+  laundered integer;
 BEGIN
+  -- THE TAINTED CLOSURE, TO A FIXED POINT.
+  --
+  -- Two different rows need moving, and the second is only visible once the
+  -- first is understood. A row holding the unproven clearance is the defect
+  -- written directly. A row holding RESOLVED_EXACT_HUMAN_REQUIREMENT while
+  -- depending, directly or transitively, on a source that is NOT positively
+  -- resolved is the SAME defect written one edge later: the old producer
+  -- classified a target from its known approver COUNT alone, so a target of an
+  -- unresolved source inherited the known half and silently dropped the unknown
+  -- half. Reconciling only the first would leave every descendant laundered.
+  --
+  -- The seed is every material that does not positively record
+  -- RESOLVED_EXACT_HUMAN_REQUIREMENT - unresolved, unproven-empty, or carrying no
+  -- authority row at all - and the closure follows MATERIAL_DEPENDENCY edges
+  -- FORWARD. Migration 0089's strict source-precedes-target CHECK makes that
+  -- graph acyclic, so the recursion terminates and one traversal really is the
+  -- fixed point rather than one round of an iteration nobody finished.
+  WITH RECURSIVE tainted(material_id) AS (
+    SELECT m.id
+      FROM public.shared_world_materials m
+     WHERE NOT EXISTS (SELECT 1 FROM public.shared_world_material_historical_authority a
+                        WHERE a.material_id = m.id
+                          AND a.resolution_state = 'RESOLVED_EXACT_HUMAN_REQUIREMENT')
+    UNION
+    SELECT d.target_material_id
+      FROM public.shared_world_material_dependencies d
+      JOIN tainted t ON t.material_id = d.source_material_id
+     WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY'
+  )
   UPDATE public.shared_world_material_historical_authority a
      SET resolution_state = 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'
-   WHERE a.resolution_state = 'RESOLVED_NO_HUMAN_REQUIREMENT'
+   WHERE a.resolution_state <> 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'
+     AND a.material_id IN (SELECT t.material_id FROM tainted t)
      AND EXISTS (SELECT 1 FROM public.shared_world_materials m
                   WHERE m.id = a.material_id AND m.world_id = a.world_id
                     AND m.producer_kind = 'QANDEEL');
   GET DIAGNOSTICS moved = ROW_COUNT;
 
-  -- THE ANSWER IS READ BACK FROM COMMITTED TRUTH, never reported from the
-  -- statement's own intent. Anything still holding the unproven state after the
-  -- update is a row this function could not reach, and the caller decides what
-  -- that means; at deploy time, below, it means the migration refuses.
+  -- BOTH ANSWERS ARE READ BACK FROM COMMITTED TRUTH, never reported from the
+  -- statement's own intent, and they are counted separately because they mean
+  -- different things: a row still holding the unproven clearance, and a row
+  -- still claiming an exact resolution its own ancestry does not support.
   SELECT count(*)::integer INTO remaining
     FROM public.shared_world_material_historical_authority a
    WHERE a.resolution_state = 'RESOLVED_NO_HUMAN_REQUIREMENT';
 
-  RETURN QUERY SELECT moved, remaining;
+  SELECT count(*)::integer INTO laundered
+    FROM public.shared_world_material_historical_authority a
+    JOIN public.shared_world_materials m ON m.id = a.material_id
+   WHERE a.resolution_state = 'RESOLVED_EXACT_HUMAN_REQUIREMENT'
+     AND m.producer_kind = 'QANDEEL'
+     AND EXISTS (
+       SELECT 1 FROM public.shared_world_material_dependencies d
+        WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY'
+          AND d.target_material_id = a.material_id
+          AND NOT EXISTS (SELECT 1 FROM public.shared_world_material_historical_authority sa
+                           WHERE sa.material_id = d.source_material_id
+                             AND sa.resolution_state = 'RESOLVED_EXACT_HUMAN_REQUIREMENT'));
+
+  RETURN QUERY SELECT moved, remaining, laundered;
 END$$;
 
 ALTER FUNCTION public.reconcile_shared_world_material_historical_authority_v1() OWNER TO postgres;
@@ -216,11 +265,20 @@ DO $$
 DECLARE
   moved integer;
   remaining integer;
+  laundered integer;
 BEGIN
-  SELECT r.reconciled_material_count, r.remaining_unproven_count INTO moved, remaining
+  SELECT r.reconciled_material_count, r.remaining_unproven_count, r.remaining_laundered_count
+    INTO moved, remaining, laundered
     FROM public.reconcile_shared_world_material_historical_authority_v1() r;
   IF remaining <> 0 THEN
     RAISE EXCEPTION 'QAN-CW-REM-01: % historical-authority row(s) still record a resolved-empty human requirement after reconciliation', remaining;
+  END IF;
+  -- THE FIXED POINT IS WITNESSED, not assumed. If no material still claims an
+  -- exact resolution while naming a source that is not itself exactly resolved,
+  -- then by induction over an acyclic graph no transitively laundered row
+  -- survives either - so this ONE-EDGE residue is the whole fixed-point proof.
+  IF laundered <> 0 THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: % historical-authority row(s) still claim an exact resolution their own MATERIAL_DEPENDENCY ancestry does not support', laundered;
   END IF;
   RAISE NOTICE 'QAN-CW-REM-01: reconciled % Shared QANDEEL historical-authority row(s) to UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT', moved;
 END$$;
@@ -260,6 +318,7 @@ DECLARE
   reasoning text[];
   viewers integer;
   approvers integer;
+  unresolved_sources integer;
   material_edges integer;
   reasoning_edges integer;
   affected integer;
@@ -491,6 +550,27 @@ BEGIN
     FROM public.shared_world_materials m
     JOIN public.shared_world_history_item_required_approvers ra ON ra.history_item_id = m.history_item_id
    WHERE m.id = ANY(sources);
+  -- AND THE AUTHORITY OF EVERY SOURCE IS READ, not just its approver rows
+  -- (QAN-CW-REM-01 / REM01-AUTH-01). A MATERIAL_DEPENDENCY means this target
+  -- REPRODUCES its source, so the source's whole authority requirement comes with
+  -- it - and a source whose ADDITIONAL protected-human requirement is unresolved
+  -- carries that unresolved half across the edge too. Counting only the source's
+  -- KNOWN approvers would let one edge turn "known owners PLUS an unknown
+  -- additional requirement" into "known owners only", which is the exact
+  -- absence-is-not-emptiness inversion this whole migration exists to correct.
+  --
+  -- The predicate is the frozen one migration 0093 and the 0105 replacement of
+  -- the Public authority derivation already use, reproduced here rather than
+  -- reinvented: a source counts as unresolved unless it POSITIVELY records one of
+  -- the two resolved states, so missing source-side authority metadata fails
+  -- closed for exactly the same reason an unresolved one does.
+  SELECT count(*)::integer INTO unresolved_sources
+    FROM public.shared_world_materials m
+   WHERE m.id = ANY(sources)
+     AND NOT EXISTS (SELECT 1 FROM public.shared_world_material_historical_authority a
+                      WHERE a.material_id = m.id
+                        AND a.resolution_state IN ('RESOLVED_EXACT_HUMAN_REQUIREMENT',
+                                                   'RESOLVED_NO_HUMAN_REQUIREMENT'));
   -- HISTORICAL-SHARING AUTHORITY RESOLUTION. A reasoning dependency propagates no
   -- material consent and never turns its grantor into an approver - but it DOES
   -- mean a protected human subject may be implicated whose authority this
@@ -521,8 +601,24 @@ BEGIN
   -- requirement for an arbitrary QANDEEL output. The value stays representable,
   -- and the mode derivation below stays exactly as it was, so a later reviewed
   -- subject-authority resolver re-enables both without reopening anything.
+  --
+  -- AND AN UNRESOLVED SOURCE MAKES AN UNRESOLVED TARGET (REM01-AUTH-01). The
+  -- rule this migration applies to a reasoning dependency is applied to a
+  -- MATERIAL_DEPENDENCY source that is itself unresolved, for the identical
+  -- reason: the target reproduces it, so it inherits the source's WHOLE
+  -- requirement, and the known half does not answer the unknown half. Without
+  -- this arm the unresolved state is launderable in exactly one edge - commit an
+  -- analysis over an unresolved analysis, declare no reasoning of your own, and
+  -- the known owners alone would have resolved it - and then transitively, which
+  -- would make the correction above cosmetic for every descendant.
+  --
+  -- The known approver rows are still derived and still written. An unresolved
+  -- target with known required humans is a shape this repository already
+  -- produces and already reads correctly: the mixed reasoning case has recorded
+  -- exactly it since I-04G.
   authority_resolution := CASE
     WHEN reasoning_edges > 0 THEN 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'
+    WHEN unresolved_sources > 0 THEN 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'
     WHEN approvers > 0 THEN 'RESOLVED_EXACT_HUMAN_REQUIREMENT'
     ELSE 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT' END;
   -- NO_HUMAN_APPROVAL_REQUIRED is written ONLY for a genuinely resolved empty
@@ -1152,13 +1248,22 @@ BEGIN
      OR (SELECT count(*) FROM unnest(p.proargnames, p.proargmodes) AS a(name, mode) WHERE a.mode = 't') <> 11 THEN
     RAISE EXCEPTION 'QAN-CW-REM-01: the QANDEEL commit core must keep its exact 14 inputs and 11 result columns';
   END IF;
-  -- AND NO NEW ACTOR, APPROVER, VIEWER OR AUTHORITY PARAMETER WAS ADDED. An
-  -- authority correction that accepted a claim from its caller would be the
-  -- opposite of a correction.
-  IF EXISTS (SELECT 1 FROM unnest(p.proargnames, p.proargmodes) AS a(name, mode)
-              WHERE a.mode = 'i'
-                AND a.name ~* 'actor|approver|viewer|audience|subject|authority|uid|user') THEN
-    RAISE EXCEPTION 'QAN-CW-REM-01: the QANDEEL commit core accepts no actor, approver, viewer or authority claim from a caller';
+  -- AND THE INPUT LIST IS THE EXACT FROZEN ONE, pinned by name and position
+  -- rather than by a word list. An authority correction that accepted a claim
+  -- from its caller would be the opposite of a correction - but two frozen
+  -- parameters are legitimately NAMED for authority and audience, because they
+  -- carry the frozen I-03 revalidation and audience-snapshot EVIDENCE
+  -- references. Only the exact list can tell those apart from a new claim, so
+  -- the exact list is what is pinned.
+  IF (SELECT array_agg(a.name ORDER BY a.n)
+        FROM unnest(p.proargnames, p.proargmodes) WITH ORDINALITY AS a(name, mode, n)
+       WHERE a.mode = 'i')
+     <> ARRAY['p_command_id', 'p_world_id', 'p_material_id', 'p_history_item_id',
+              'p_material_kind', 'p_body_text',
+              'p_effective_context_ref', 'p_output_digest', 'p_source_disclosure_gate_ref',
+              'p_authority_revalidation_ref', 'p_readiness_ref', 'p_audience_snapshot_ref',
+              'p_material_source_ids', 'p_reasoning_source_refs'] THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: the QANDEEL commit core must keep the EXACT frozen input list: no actor, approver, viewer or authority claim may be added to it';
   END IF;
 
   -- THE CORRECTION ITSELF, PINNED IN FULL. All THREE arms are pinned, because
@@ -1168,6 +1273,25 @@ BEGIN
   END IF;
   IF body !~ 'WHEN approvers > 0 THEN ''RESOLVED_EXACT_HUMAN_REQUIREMENT''' THEN
     RAISE EXCEPTION 'QAN-CW-REM-01: known exact material owners must still resolve the exact human requirement';
+  END IF;
+  -- AND AN UNRESOLVED SOURCE MUST REACH THE TARGET. Without this arm the
+  -- unresolved state is launderable in one MATERIAL_DEPENDENCY edge, and then
+  -- transitively, which would make the correction above cosmetic for every
+  -- descendant. It is pinned BEFORE the known-owner arm, because the order is
+  -- the semantics: known owners must not answer an unknown requirement.
+  IF body !~ 'WHEN unresolved_sources > 0 THEN ''UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT''' THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: a MATERIAL_DEPENDENCY source whose own additional human requirement is unresolved must make its target unresolved too';
+  END IF;
+  IF strpos(body, 'WHEN unresolved_sources > 0') > strpos(body, 'WHEN approvers > 0') THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: the unresolved-source arm must be evaluated BEFORE the known-owner arm';
+  END IF;
+  -- AND IT MUST BE DERIVED FROM THE SOURCE AUTHORITY RELATION, positively, with
+  -- absent metadata failing closed exactly as the frozen Public gate does.
+  IF body !~ 'INTO unresolved_sources'
+     OR body !~ 'FROM public\.shared_world_material_historical_authority a'
+     OR body !~ 'a\.resolution_state IN \(''RESOLVED_EXACT_HUMAN_REQUIREMENT'''
+     OR body !~ 'NOT EXISTS \(SELECT 1 FROM public\.shared_world_material_historical_authority a' THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: source authority must be read from the canonical relation, with missing metadata failing closed';
   END IF;
   IF body !~ 'ELSE ''UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'' END;' THEN
     RAISE EXCEPTION 'QAN-CW-REM-01: a QANDEEL commit with no enumerable required human must record UNRESOLVED, never a proven-empty requirement';
@@ -1327,24 +1451,55 @@ BEGIN
   -- IT MOVES ONE COLUMN OF ONE RELATION, IN ONE DIRECTION.
   IF body !~ 'UPDATE public\.shared_world_material_historical_authority'
      OR body !~ 'SET resolution_state = ''UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'''
-     OR body !~ 'a\.resolution_state = ''RESOLVED_NO_HUMAN_REQUIREMENT''' THEN
-    RAISE EXCEPTION 'QAN-CW-REM-01: the reconciliation must move exactly the unproven clearance forward, and nothing else';
+     OR body !~ 'a\.resolution_state <> ''UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT''' THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: the reconciliation must move authority forward in the fail-closed direction, and nothing else';
+  END IF;
+  -- AND IT MUST REACH THE LAUNDERING DESCENDANTS, transitively, to a fixed point
+  -- over MATERIAL_DEPENDENCY. Repairing an ancestor while leaving its
+  -- descendants exactly as they were would repair nothing that can be widened.
+  IF body !~ 'WITH RECURSIVE tainted'
+     OR body !~ 'JOIN tainted t ON t\.material_id = d\.source_material_id'
+     OR body !~ 'd\.dependency_kind = ''MATERIAL_DEPENDENCY''' THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: the reconciliation must propagate transitively over MATERIAL_DEPENDENCY to a fixed point';
+  END IF;
+  IF body !~ 'INTO laundered' THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: the reconciliation must report the residue that still claims an unsupported exact resolution';
   END IF;
   IF (SELECT count(*) FROM regexp_matches(body, 'UPDATE public\.', 'g')) <> 1
      OR body ~* 'DELETE FROM|INSERT INTO|TRUNCATE' THEN
     RAISE EXCEPTION 'QAN-CW-REM-01: the reconciliation writes exactly one relation and destroys nothing';
   END IF;
-  -- AND IT NEVER REWRITES IMMUTABLE SOURCE HISTORY.
-  IF body ~ 'authority_requirement_mode|shared_world_history_items|shared_world_material_dependencies'
+  -- AND IT NEVER REWRITES IMMUTABLE SOURCE HISTORY. Provenance is READ, to walk
+  -- the closure, and never written - the ONE UPDATE asserted above is the whole
+  -- of what this function writes - so the dependency relation is excluded from
+  -- this ban and given its own, narrower one below.
+  IF body ~ 'authority_requirement_mode|shared_world_history_items'
      || '|shared_world_history_item_baseline_viewers|shared_world_history_item_required_approvers'
      || '|_material_bodies|DISABLE TRIGGER|ALTER TABLE' THEN
     RAISE EXCEPTION 'QAN-CW-REM-01: the reconciliation rewrites no source history and disables no frozen immutability guard';
+  END IF;
+  IF body ~ 'UPDATE public\.shared_world_material_dependencies' THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: the reconciliation never rewrites provenance: a dependency edge is evidence, not a thing a correction edits';
   END IF;
   -- THE POST-STATE IS PROVEN, not assumed: nothing anywhere still records a
   -- clearance this repository cannot establish.
   IF EXISTS (SELECT 1 FROM public.shared_world_material_historical_authority a
               WHERE a.resolution_state = 'RESOLVED_NO_HUMAN_REQUIREMENT') THEN
     RAISE EXCEPTION 'QAN-CW-REM-01: no Shared material may still record a proven-empty human requirement after this migration';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.shared_world_material_historical_authority a
+      JOIN public.shared_world_materials m ON m.id = a.material_id
+     WHERE a.resolution_state = 'RESOLVED_EXACT_HUMAN_REQUIREMENT'
+       AND m.producer_kind = 'QANDEEL'
+       AND EXISTS (
+         SELECT 1 FROM public.shared_world_material_dependencies d
+          WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY'
+            AND d.target_material_id = a.material_id
+            AND NOT EXISTS (SELECT 1 FROM public.shared_world_material_historical_authority sa
+                             WHERE sa.material_id = d.source_material_id
+                               AND sa.resolution_state = 'RESOLVED_EXACT_HUMAN_REQUIREMENT'))) THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: no Shared material may still claim an exact resolution its own MATERIAL_DEPENDENCY ancestry does not support';
   END IF;
 
   -- NO APPLICATION ROLE REACHES ANY OF IT, and the ONE frozen resolver grant is

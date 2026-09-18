@@ -171,6 +171,22 @@ test('the QANDEEL producer is replaced forward-only, and no arm of its resolutio
     'known exact material owners still resolve the exact human requirement');
   assert.ok(core.includes("ELSE 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT' END;"),
     'and a commit with no enumerable required human records UNRESOLVED');
+
+  // AND THE ARM THAT STOPS THE LAUNDERING (REM01-AUTH-01). Without it the
+  // unresolved state is erasable in one MATERIAL_DEPENDENCY edge - commit an
+  // analysis over an unresolved analysis, declare no reasoning of your own, and
+  // the known-owner arm would have resolved it - and then transitively.
+  assert.ok(core.includes("WHEN unresolved_sources > 0 THEN 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'"),
+    'a MATERIAL_DEPENDENCY source whose own additional human requirement is unresolved makes its target unresolved');
+  assert.ok(core.indexOf('WHEN unresolved_sources > 0') < core.indexOf('WHEN approvers > 0'),
+    'and it is evaluated BEFORE the known-owner arm: the order is the semantics');
+  // IT IS DERIVED FROM THE CANONICAL RELATION, positively, with absent metadata
+  // failing closed - the exact predicate the frozen Public gates already use.
+  assert.ok(core.includes('INTO unresolved_sources'), 'source authority is read, not inferred from approver rows');
+  assert.match(core, /INTO unresolved_sources[\s\S]{0,400}NOT EXISTS \(SELECT 1 FROM public\.shared_world_material_historical_authority a/u,
+    'and a source counts as unresolved unless it POSITIVELY records a resolved state');
+  assert.match(core, /INTO unresolved_sources[\s\S]{0,500}a\.resolution_state IN \('RESOLVED_EXACT_HUMAN_REQUIREMENT',\s*\n?\s*'RESOLVED_NO_HUMAN_REQUIREMENT'\)/u,
+    'using the exact two-state predicate migrations 0093 and 0105 already use');
   // The assignment is bounded by its own terminating semicolon, so this is a
   // claim about the CASE rather than about the whole body - the mode derivation
   // below it still names the value, and still should.
@@ -212,20 +228,38 @@ test('the reconciliation moves one column of one relation, in the fail-closed di
   assert.equal((fn.match(/UPDATE public\./gu) ?? []).length, 1, 'and nothing else');
   assert.ok(fn.includes("SET resolution_state = 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'"),
     'it moves a row forward to unresolved');
-  assert.ok(fn.includes("WHERE a.resolution_state = 'RESOLVED_NO_HUMAN_REQUIREMENT'"),
-    'from exactly the unproven clearance, so it can only ever be fail-closed and is idempotent by construction');
+  assert.ok(fn.includes("WHERE a.resolution_state <> 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'"),
+    'in the fail-closed direction only, so it is idempotent by construction and can never become a clearance tool');
   assert.ok(fn.includes("AND m.producer_kind = 'QANDEEL'"),
     'and only for QANDEEL-produced material, stated structurally rather than trusted');
+
+  // IT REACHES THE LAUNDERING DESCENDANTS, transitively, to a fixed point. The
+  // old producer classified a target from its known approver COUNT alone, so a
+  // target of an unresolved source inherited the known half and dropped the
+  // unknown half; repairing only the ancestors would repair nothing widenable.
+  assert.ok(fn.includes('WITH RECURSIVE tainted'), 'it computes a transitive closure');
+  assert.ok(fn.includes('JOIN tainted t ON t.material_id = d.source_material_id'),
+    'following MATERIAL_DEPENDENCY edges FORWARD from every source that is not positively resolved');
+  assert.ok(fn.includes("WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY'"),
+    'over MATERIAL_DEPENDENCY alone: an analytical derivative is not a reproduction');
+  assert.ok(fn.includes('INTO laundered'),
+    'and it reports the residue that still claims an exact resolution its ancestry does not support');
 
   // IT REWRITES NO SOURCE HISTORY. The frozen authority_requirement_mode
   // immutability trigger is neither disabled nor bypassed: a reconciled item
   // keeps the mode its original commit really used.
   assert.doesNotMatch(fn, /authority_requirement_mode/u,
     'it never touches the frozen history-item authority mode');
-  assert.doesNotMatch(fn, /shared_world_history_items|shared_world_material_dependencies|_material_bodies/u,
-    'and no history item, provenance edge or material body');
+  assert.doesNotMatch(fn, /shared_world_history_items|_material_bodies/u,
+    'and never names a history item or a material body at all');
   assert.doesNotMatch(fn, /shared_world_history_item_baseline_viewers|shared_world_history_item_required_approvers/u,
     'and no baseline viewer or required approver');
+  // Provenance is READ, to walk the closure, and never written: the single
+  // `UPDATE public.` asserted above is the whole of what this function writes.
+  assert.ok(fn.includes('FROM public.shared_world_material_dependencies d'),
+    'the dependency graph is read to find the laundering descendants');
+  assert.doesNotMatch(fn, /UPDATE public\.shared_world_material_dependencies/u,
+    'and never rewritten: provenance is evidence, not a thing a correction edits');
   assert.doesNotMatch(fn, /DISABLE TRIGGER|ALTER TABLE|DELETE FROM|INSERT INTO|TRUNCATE/iu,
     'it disables no guard and destroys nothing');
   assert.doesNotMatch(fn, /auth\.uid|request\.jwt/u, 'and trusts no client claim');
@@ -242,6 +276,8 @@ test('the reconciliation moves one column of one relation, in the fail-closed di
     'the migration calls it');
   assert.match(executable, /IF remaining <> 0 THEN\s*\n\s*RAISE EXCEPTION 'QAN-CW-REM-01: % historical-authority row\(s\) still record/u,
     'and refuses to deploy if it left an unproven clearance behind');
+  assert.match(executable, /IF laundered <> 0 THEN\s*\n\s*RAISE EXCEPTION 'QAN-CW-REM-01: % historical-authority row\(s\) still claim an exact resolution/u,
+    'or if any row still claims an exact resolution its own ancestry does not support');
 });
 
 test('every widening boundary re-asks the current authority state, and none of them is a second model', () => {
@@ -358,12 +394,15 @@ test('the migration refuses to deploy if its own architecture is absent', () => 
     // the correction itself, all three arms
     "WHEN reasoning_edges > 0 THEN ''UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT''",
     "WHEN approvers > 0 THEN ''RESOLVED_EXACT_HUMAN_REQUIREMENT''",
+    "WHEN unresolved_sources > 0 THEN ''UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT''",
+    'the unresolved-source arm must be evaluated BEFORE the known-owner arm',
+    'source authority must be read from the canonical relation, with missing metadata failing closed',
     "ELSE ''UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'' END;",
     'authority_resolution := CASE[^;]*RESOLVED_NO_HUMAN_REQUIREMENT',
     // provenance, signature and posture
     "''INDEPENDENT_TARGET_TRUTH''",
     'must keep its exact 14 inputs and 11 result columns',
-    'accepts no actor, approver, viewer or authority claim from a caller',
+    'must keep the EXACT frozen input list',
     'must stay ONE function: no overload was authorized',
     // the consumers
     'the frozen preparation-time widening gate must still be installed and enabled',
@@ -374,9 +413,11 @@ test('the migration refuses to deploy if its own architecture is absent', () => 
     'closed viewing is entitlement, never membership',
     'a closure snapshot must not preserve a widening whose authority is now unresolved',
     // the reconciliation and its post-state
-    'the reconciliation must move exactly the unproven clearance forward, and nothing else',
+    'the reconciliation must move authority forward in the fail-closed direction, and nothing else',
+    'the reconciliation must propagate transitively over MATERIAL_DEPENDENCY to a fixed point',
     'the reconciliation rewrites no source history and disables no frozen immutability guard',
     'no Shared material may still record a proven-empty human requirement after this migration',
+    'no Shared material may still claim an exact resolution its own MATERIAL_DEPENDENCY ancestry does not support',
     'exactly one reviewed function may move a historical authority resolution',
     // privilege
     'must not execute % before the CW2-08 Launch Gate exists',
@@ -393,6 +434,7 @@ test('the 0119 verifier proves live semantics and is wired into the toolchain, C
   for (const label of [
     'A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08', 'A09', 'A10',
     'A11', 'A12', 'A13', 'A14', 'A15', 'A16', 'A17', 'A18', 'A19', 'A20', 'A21',
+    'A22', 'A23', 'A24', 'A25', 'A26',
     'R01', 'R02', 'R03', 'R04', 'C01', 'C02', 'C03', 'C04',
   ]) {
     assert.ok(VERIFIER.includes(label), `the verifier carries case ${label}`);

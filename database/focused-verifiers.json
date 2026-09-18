@@ -15,10 +15,6 @@
   ],
   "version": 1,
   "groups": {
-    "rem01-0119": {
-      "title": "QAN-CW-REM-01 - Shared historical authority resolution and the ASSURE-F04 verdict (migration 0119)",
-      "verifiers": ["database/verify-migration-0119.mjs"]
-    },
     "i06d-0106": {
       "title": "I-06D - Replay post-finalization source availability and current complete-Replay usability (migration 0106)",
       "verifiers": ["database/verify-migration-0106.mjs"]

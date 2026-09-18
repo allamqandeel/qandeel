@@ -3114,14 +3114,27 @@ protected humans. It bites hardest in `ACTIVE / INTRODUCTION`, the phase whose p
 speaking about BOTH matched humans while the dependency vocabulary has no representable edge for the
 Match handoff those observations come from.
 
-**One arm of one CASE changes.** A QANDEEL commit that reaches the end of the resolution with no
-enumerable required human now records `UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` - the state this
+**The resolution changes in two places.** A QANDEEL commit that reaches the end of the resolution with
+no enumerable required human now records `UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` - the state this
 repository already used for exactly this fact, on exactly this rationale, for the reasoning-bearing
 case. `INDEPENDENT_TARGET_TRUTH` is unchanged and still written: it is provenance, it is true, and it
 was never a protected-human clearance. No approver is invented, no counterpart is turned into one,
 World membership is still not an authority, and no signature gained a parameter. `RESOLVED_NO_HUMAN_
 REQUIREMENT` becomes unreachable from this producer, which is the honest state of the repository, and
 stays representable so a later reviewed subject-authority resolver re-enables it additively.
+
+**And an unresolved source makes an unresolved target** (`REM01-AUTH-01`, found by independent interim
+review of this change). The producer classified a target from its known approver COUNT alone, so a
+target whose `MATERIAL_DEPENDENCY` source was itself unresolved inherited that source's known owners,
+reached `WHEN approvers > 0`, and was recorded `RESOLVED_EXACT_HUMAN_REQUIREMENT` — laundering the
+source's unknown half away in exactly one edge, and then transitively, which would have made the
+correction above cosmetic for every descendant. A `MATERIAL_DEPENDENCY` means the target REPRODUCES
+its source, so it inherits the source's whole requirement, and the known half does not answer the
+unknown half. The new arm is evaluated BEFORE the known-owner arm, and source state is read through
+the same two-state predicate migrations `0093` and `0105` already use, so missing source-side
+authority metadata fails closed for the same reason an unresolved one does. **The known approver rows
+are still derived and still written.** An unresolved target with known required humans is a shape
+this repository has produced since I-04G for the mixed reasoning case and reads correctly everywhere.
 
 **Ordinary participation is untouched.** The material still commits, its exact baseline audience still
 sees it through the same resolver in both frozen World modes, and QANDEEL can still speak. What fails
@@ -3130,12 +3143,17 @@ established.
 
 **Four surfaces, each necessary.** The PRODUCER stops writing the unproven state. The RECONCILIATION -
 `reconcile_shared_world_material_historical_authority_v1`, postgres-only, fail-closed-direction-only,
-idempotent - moves rows already written under the old arm forward on the authority-resolution relation
+idempotent - moves rows already written under the old arms forward on the authority-resolution relation
 migration 0090 created for exactly that purpose; it writes one column of one relation and rewrites no
 source body, provenance identity, instant, baseline viewer, approver row or dependency edge, and the
 frozen `authority_requirement_mode` immutability trigger is neither disabled nor bypassed, so a
 reconciled item keeps the mode its original commit really used and is refused by CURRENT state rather
-than by a rewritten past. The GRANT BOUNDARY re-asks under the World lock, because the frozen
+than by a rewritten past. It moves **two** shapes: the unproven clearance written directly, and the
+`RESOLVED_EXACT_HUMAN_REQUIREMENT` rows that depend, directly or transitively, on a source that is not
+itself positively resolved — the same defect one edge later. The closure follows `MATERIAL_DEPENDENCY`
+forward from every source that is not exactly resolved; `0089`'s strict source-precedes-target CHECK
+makes that graph acyclic, so one traversal really is the fixed point, and the migration refuses to
+deploy unless the one-edge residue is zero, which by induction witnesses the whole fixed point. The GRANT BOUNDARY re-asks under the World lock, because the frozen
 preparation-time trigger cannot cover a manifest prepared BEFORE the correction and a manifest is
 immutable. EFFECTIVE VISIBILITY stops an already-committed grant from continuing to widen: the grant
 row and the `HISTORY_GRANTED` fact are retained as durable evidence, and the grant basis - and only
