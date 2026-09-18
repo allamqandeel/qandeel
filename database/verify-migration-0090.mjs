@@ -1329,10 +1329,16 @@ async function verifyReviewFixes(f) {
     `SELECT authority_requirement_mode mode FROM ${ITEMS} WHERE id = $1`, [independent.committed_history_item_id]);
   assert.equal(independentMode, 'EXACT_HUMAN_APPROVER_SET',
     'so it is never written as approval-free, and the frozen I-04F package path can never read it as one');
+  // AND IT CANNOT BE WIDENED. As with the reasoning-only item below, TWO
+  // independent fail-closed paths cover it and the FROZEN one reaches it first:
+  // an item claiming an exact approver set with no enumerable approver is
+  // already contradictory in the I-04F vocabulary, which is exactly what "the
+  // requirement exists and is not resolvable" looks like there. The refusal is
+  // asserted as it really is rather than as the one QAN-CW-REM-01 added.
   await identity('postgres');
   await rejected(() => rows(HISTORY_PREPARE_SQL,
     [randomUUID(), authorityWorld.worldId, f.fixAuthority, [independent.committed_history_item_id]]),
-  INCOMPLETE, /SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED/u);
+  CONTRADICTORY, /SHARED_WORLD_HISTORY_CONTRADICTORY_STATE/u);
 
   stage = 'FIX-D: reasoning-dependent material is UNRESOLVED and cannot be historically widened';
   const reasoningMaterial = await commitQandeel(authorityWorld.worldId, 'an analysis shaped by private reasoning',
