@@ -459,12 +459,20 @@ test('the I-07A censuses name the relations I-07B adds rather than being dodged'
   assert.deepEqual(listed.sort(), declared.sort(),
     'every lifecycle-shaped relation 0110 creates is named in the I-07B half of the shared census list, and nothing else is');
   // The shared census list is exactly the union of the reviewed per-slice
-  // arrays. It gains one array per reviewed later slice - I-07D added its own -
-  // and the property this contract owns is unchanged: the list is a UNION of
-  // named per-slice arrays, so nothing can enter the census unowned.
-  assert.match(setupSupport,
-    /export const LATER_SLICE_LIFECYCLE_RELATIONS = \[\n\s+\.\.\.I07B_LIFECYCLE_RELATIONS, \.\.\.I07C_LIFECYCLE_RELATIONS, \.\.\.I07D_LIFECYCLE_RELATIONS,\n\]\.sort\(\);/u,
-    'the shared census list is exactly the union of the reviewed per-slice arrays');
+  // arrays. It gains one array per reviewed later slice - I-07D added its own
+  // and QAN-CW-REM-02 added a fourth - and the property this contract owns is
+  // unchanged: the list is a UNION of named per-slice arrays, so nothing can
+  // enter the census unowned. That is now asserted as the PROPERTY rather than
+  // as a literal spelling of however many arrays exist today, because pinning
+  // the spelling made every reviewed later slice edit a contract whose claim it
+  // had not changed.
+  const union = setupSupport.match(/export const LATER_SLICE_LIFECYCLE_RELATIONS = \[([\s\S]*?)\]\.sort\(\);/u);
+  assert.ok(union, 'the setup support builds the shared census list as one sorted union');
+  const members = union[1].split(',').map((part) => part.trim()).filter(Boolean);
+  assert.ok(members.length >= 3, `the union really is built from per-slice arrays, found ${members.length}`);
+  assert.deepEqual(members.filter((name) => !/^\.\.\.\w+_LIFECYCLE_RELATIONS$/u.test(name)), [],
+    'the shared census list is exactly the union of named per-slice arrays and nothing else');
+  assert.ok(members.includes('...I07B_LIFECYCLE_RELATIONS'), 'and the I-07B half is one of them');
   for (const n of ['0108', '0109']) {
     const verifier = read(`../verify-migration-${n}.mjs`);
     assert.match(verifier, /LATER_SLICE_LIFECYCLE_RELATIONS/u,

@@ -170,6 +170,7 @@
     "verify:post-introduction-matching-reactivation:integration": "node --env-file-if-exists=.env database/verify-migration-0117.mjs",
     "verify:introduction-ordinary-shared-material:integration": "node --env-file-if-exists=.env database/verify-migration-0118.mjs",
     "verify:shared-historical-authority-remediation:integration": "node --env-file-if-exists=.env database/verify-migration-0119.mjs",
+    "verify:matching-proposal-temporal-exact-view-remediation:integration": "node --env-file-if-exists=.env database/verify-migration-0120.mjs",
     "test:shared-delivery-authority-revalidation-contract": "node --test tests/shared-delivery-authority-revalidation-contract.test.mjs",
     "test:connected-worlds-i03-authority-closure-contract": "node --test tests/connected-worlds-i03-authority-closure-contract.test.mjs",
     "test:integrated-intelligence-runtime-phase-closure-contract": "node --test tests/integrated-intelligence-runtime-phase-closure-contract.test.mjs",

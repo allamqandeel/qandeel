@@ -39,6 +39,19 @@ const vocabulary = read('../../apps/api/src/connected-worlds/matching/matching-m
 const proposalVocabulary = read('../../apps/api/src/connected-worlds/matching/matching-proposal.types.ts');
 const setupVocabulary = read('../../apps/api/src/connected-worlds/matching/matching-setup.types.ts');
 const source0110 = read('../migrations/0110_matching_pair_eligibility_proposal_persistence_v1.sql');
+
+/**
+ * The members of the shared lifecycle-census union, exactly as written.
+ *
+ * The union gains one array per reviewed later slice, so the property worth
+ * asserting is that every member IS a named per-slice array - not how many of
+ * them there happen to be today.
+ */
+const unionMembersOf = (source) => {
+  const union = source.match(/export const LATER_SLICE_LIFECYCLE_RELATIONS = \[([\s\S]*?)\]\.sort\(\);/u);
+  assert.ok(union, 'the setup support builds the shared census list as one sorted union');
+  return union[1].split(',').map((part) => part.trim()).filter(Boolean);
+};
 const source0112 = read('../migrations/0112_matching_proposal_choreography_runtime_v1.sql');
 const source0075 = read('../migrations/0075_connected_worlds_shared_persistence_foundation_v1.sql');
 
@@ -188,12 +201,16 @@ test('0113 introduces exactly the ten I-07C relations, only trigger functions, a
   const listed = [...setupSupport.slice(start, setupSupport.indexOf('];', start)).matchAll(/^ {2}'([a-z_]+)',$/gmu)].map((m) => m[1]);
   assert.deepEqual(listed.sort(), TABLES_0113, 'the I-07C census half is exactly the ten relations 0113 creates');
   // The I-07C half is unchanged; the list itself gains one array per reviewed
-  // later slice, and I-07D added its own. What this contract owns - that the
-  // shared list is a UNION of named per-slice arrays, so no relation enters the
-  // census unowned - is exactly as true with three as it was with two.
-  assert.match(setupSupport,
-    /export const LATER_SLICE_LIFECYCLE_RELATIONS = \[\n\s+\.\.\.I07B_LIFECYCLE_RELATIONS, \.\.\.I07C_LIFECYCLE_RELATIONS, \.\.\.I07D_LIFECYCLE_RELATIONS,\n\]\.sort\(\);/u,
-    'the shared census list is exactly the union of the reviewed per-slice arrays');
+  // later slice - I-07D added its own, and QAN-CW-REM-02 added a fourth. What
+  // this contract owns is that the shared list is a UNION of named per-slice
+  // arrays, so no relation enters the census unowned, and that is asserted as
+  // the PROPERTY rather than as a literal spelling of however many arrays exist
+  // today: pinning the spelling made the next reviewed slice edit a contract
+  // whose claim it had not changed.
+  assert.deepEqual(unionMembersOf(setupSupport).filter((name) => !/^\.\.\.\w+_LIFECYCLE_RELATIONS$/u.test(name)), [],
+    'the shared census list is exactly the union of named per-slice arrays and nothing else');
+  assert.ok(unionMembersOf(setupSupport).includes('...I07C_LIFECYCLE_RELATIONS'),
+    'and the I-07C half is one of them');
   // 0114 creates exactly one function and revises exactly one.
   assert.deepEqual([...bodyOf('0114').matchAll(/CREATE FUNCTION public\.(\w+)\(/gu)].map((m) => m[1]), ['commit_matching_mutual_match_v1'],
     '0114 creates exactly the Match core');
