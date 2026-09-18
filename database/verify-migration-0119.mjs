@@ -1352,53 +1352,56 @@ async function verifyLockCycle(report, fixture) {
       await deleter.qx('ROLLBACK').catch(() => undefined);
       await publisher.qx('ROLLBACK').catch(() => undefined);
     });
+
+    // C06 and C07 stay INSIDE this block on purpose: the three connections are
+    // closed by the `finally` below, and a scenario that ran after it would
+    // report a closed client rather than anything about locking.
+    await report.section('C06 / C07 legitimate same-World concurrency still serializes, and unrelated Worlds stay concurrent', async () => {
+      // C06 A REQUEST THAT NAMES ITS WORLD HONESTLY STILL SERIALIZES ON IT. This
+      // is the behaviour the finding said was already correct, and the correction
+      // must not have traded it away: the publisher takes the Shared World row
+      // FOR SHARE and therefore queues behind the deletion holding it FOR UPDATE,
+      // holding nothing of that World while it waits - which is why it is a queue
+      // and not a cycle.
+      await deleter.actAsX(fixture.author);
+      await deleter.qx('BEGIN');
+      await deleter.qx('SELECT 1 FROM public.shared_worlds WHERE id = $1 FOR UPDATE', [fixture.world]);
+
+      await publisher.actAsX(fixture.publisher);
+      await publisher.qx('BEGIN');
+      const honest = publisher.qx(
+      `SELECT outcome FROM public.prepare_public_experience_manifest_v1($1,$2,$3,$4,
+         ARRAY[]::uuid[], ARRAY[]::uuid[], $5::uuid[], $6::uuid[], $7::uuid[])`,
+      [randomUUID(), fixture.experience, randomUUID(), randomUUID(),
+        [randomUUID()], [fixture.world], [fixture.source]]).catch((error) => error);
+      assert.equal(await rt.waitForLockWait(q, publisher.pid), true,
+      'C06 an honest request queues on the exact Shared World row the deletion holds');
+      await deleter.qx('ROLLBACK');
+      const honestOutcome = await honest;
+      assert.notEqual(honestOutcome?.code, '40P01', 'C06 and then proceeds rather than deadlocking');
+      assert.notEqual(honestOutcome?.code, '55P03', 'C06 without timing out');
+      await publisher.qx('ROLLBACK').catch(() => undefined);
+
+      // C07 AND AN UNRELATED WORLD IS NOT DELAYED BY ANY OF IT.
+      await deleter.actAsX(fixture.author);
+      await deleter.qx('BEGIN');
+      await deleter.qx('SELECT 1 FROM public.shared_worlds WHERE id = $1 FOR UPDATE', [fixture.world]);
+      await publisher.actAsX(fixture.publisher);
+      const unrelated = await settlesWithin(publisher.qx(
+      `SELECT outcome FROM public.commit_shared_world_human_text_v1($1,$2,$3,$4,$5)`,
+      [randomUUID(), fixture.otherWorld, randomUUID(), randomUUID(), 'a statement in an unrelated World'])
+      .catch((error) => error), 5000);
+      assert.equal(unrelated.settled, true,
+      'C07 work in a different Shared World is not blocked by a deletion holding another one');
+      assert.notEqual(unrelated.value?.code, '40P01', 'C07 and never deadlocks against it');
+      await deleter.qx('ROLLBACK');
+      await publisher.qx('ROLLBACK').catch(() => undefined);
+    });
   } finally {
     await holder.close();
     await deleter.close();
     await publisher.close();
   }
-
-  await report.section('C06 / C07 legitimate same-World concurrency still serializes, and unrelated Worlds stay concurrent', async () => {
-    // C06 A REQUEST THAT NAMES ITS WORLD HONESTLY STILL SERIALIZES ON IT. This
-    // is the behaviour the finding said was already correct, and the correction
-    // must not have traded it away: the publisher takes the Shared World row
-    // FOR SHARE and therefore queues behind the deletion holding it FOR UPDATE,
-    // holding nothing of that World while it waits - which is why it is a queue
-    // and not a cycle.
-    await deleter.actAsX(fixture.author);
-    await deleter.qx('BEGIN');
-    await deleter.qx('SELECT 1 FROM public.shared_worlds WHERE id = $1 FOR UPDATE', [fixture.world]);
-
-    await publisher.actAsX(fixture.publisher);
-    await publisher.qx('BEGIN');
-    const honest = publisher.qx(
-      `SELECT outcome FROM public.prepare_public_experience_manifest_v1($1,$2,$3,$4,
-         ARRAY[]::uuid[], ARRAY[]::uuid[], $5::uuid[], $6::uuid[], $7::uuid[])`,
-      [randomUUID(), fixture.experience, randomUUID(), randomUUID(),
-        [randomUUID()], [fixture.world], [fixture.source]]).catch((error) => error);
-    assert.equal(await rt.waitForLockWait(q, publisher.pid), true,
-      'C06 an honest request queues on the exact Shared World row the deletion holds');
-    await deleter.qx('ROLLBACK');
-    const honestOutcome = await honest;
-    assert.notEqual(honestOutcome?.code, '40P01', 'C06 and then proceeds rather than deadlocking');
-    assert.notEqual(honestOutcome?.code, '55P03', 'C06 without timing out');
-    await publisher.qx('ROLLBACK').catch(() => undefined);
-
-    // C07 AND AN UNRELATED WORLD IS NOT DELAYED BY ANY OF IT.
-    await deleter.actAsX(fixture.author);
-    await deleter.qx('BEGIN');
-    await deleter.qx('SELECT 1 FROM public.shared_worlds WHERE id = $1 FOR UPDATE', [fixture.world]);
-    await publisher.actAsX(fixture.publisher);
-    const unrelated = await settlesWithin(publisher.qx(
-      `SELECT outcome FROM public.commit_shared_world_human_text_v1($1,$2,$3,$4,$5)`,
-      [randomUUID(), fixture.otherWorld, randomUUID(), randomUUID(), 'a statement in an unrelated World'])
-      .catch((error) => error), 5000);
-    assert.equal(unrelated.settled, true,
-      'C07 work in a different Shared World is not blocked by a deletion holding another one');
-    assert.notEqual(unrelated.value?.code, '40P01', 'C07 and never deadlocks against it');
-    await deleter.qx('ROLLBACK');
-    await publisher.qx('ROLLBACK').catch(() => undefined);
-  });
 
   await report.section(`C04 ASSURE-F04 on real PostgreSQL: REPRODUCED before the correction, ${verdict} after it`, async () => {
     const deadlocksAfter = Number((await rows(
