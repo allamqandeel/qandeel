@@ -662,6 +662,21 @@ jobs:
             printf '### I-07D real-PostgreSQL verifiers\n- 0115 = %s\n- 0116 = %s\n- 0117 = %s\n- 0118 = %s\n' "$result_0115" "$result_0116" "$result_0117" "$result_0118" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$status"
+      # QAN-CW-REM-01 corrects the accepted ASSURE-F02 fail-open: the canonical
+      # QANDEEL Shared material producer recorded a POSITIVELY RESOLVED EMPTY
+      # human requirement for material about which it had established nothing.
+      # 0119 proves that a zero-dependency QANDEEL output still commits and still
+      # reaches its exact baseline audience in both frozen World modes while its
+      # authority is recorded as unresolved - that material already committed
+      # under the old arm is reconciled forward without rewriting one byte of
+      # source history - that a package prepared before the correction cannot
+      # grant after it - that a grant-only widening stops carrying it while
+      # baseline visibility is untouched even through a closure snapshot - and
+      # that the frozen Public chain fails closed by composition with no Public
+      # code changed. It also decides the provisional ASSURE-F04 cross-World lock
+      # cycle on real PostgreSQL with a barrier-pinned three-connection race.
+      - name: Verify the QAN-CW-REM-01 Shared historical authority remediation against real PostgreSQL
+        run: npm run verify:shared-historical-authority-remediation:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

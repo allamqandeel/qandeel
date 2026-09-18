@@ -3098,3 +3098,104 @@ revoke). `verify-migration-0117.mjs` proves the three real reactivation paths, b
 ceilings still refusing with the resume ceiling proven load-bearing, the full revalidation set, that
 nothing revives, that one lineage is crossed at most once, the I-07 phase-closing forward contracts on
 the live catalog, and two barrier-pinned races.
+
+## QAN-CW-REM-01 - Shared historical authority resolution (migration 0119)
+
+`0119_shared_historical_authority_remediation_v1.sql` corrects the accepted `ASSURE-F02` finding of
+the Connected Worlds phase-wide architecture assurance. The canonical QANDEEL Shared material
+producer ended its authority resolution with `ELSE 'RESOLVED_NO_HUMAN_REQUIREMENT'`, so a
+`QANDEEL_OUTPUT` or `QANDEEL_ANALYSIS` committed with no `MATERIAL_DEPENDENCY` and no
+`REASONING_DEPENDENCY` was durably recorded as a POSITIVELY PROVEN EMPTY human requirement and its
+history item written `NO_HUMAN_APPROVAL_REQUIRED`. Both downstream widening paths then accepted it:
+the frozen I-04F history package admits a zero-approver manifest precisely when every item says
+approval-free, and the frozen I-05A publication authority admits a zero-approver package. Nothing had
+proved anything; the absence of a caller-supplied dependency array was being read as proof about
+protected humans. It bites hardest in `ACTIVE / INTRODUCTION`, the phase whose purpose is QANDEEL
+speaking about BOTH matched humans while the dependency vocabulary has no representable edge for the
+Match handoff those observations come from.
+
+**The resolution changes in two places.** A QANDEEL commit that reaches the end of the resolution with
+no enumerable required human now records `UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` - the state this
+repository already used for exactly this fact, on exactly this rationale, for the reasoning-bearing
+case. `INDEPENDENT_TARGET_TRUTH` is unchanged and still written: it is provenance, it is true, and it
+was never a protected-human clearance. No approver is invented, no counterpart is turned into one,
+World membership is still not an authority, and no signature gained a parameter. `RESOLVED_NO_HUMAN_
+REQUIREMENT` becomes unreachable from this producer, which is the honest state of the repository, and
+stays representable so a later reviewed subject-authority resolver re-enables it additively.
+
+**And an unresolved source makes an unresolved target** (`REM01-AUTH-01`, found by independent interim
+review of this change). The producer classified a target from its known approver COUNT alone, so a
+target whose `MATERIAL_DEPENDENCY` source was itself unresolved inherited that source's known owners,
+reached `WHEN approvers > 0`, and was recorded `RESOLVED_EXACT_HUMAN_REQUIREMENT` — laundering the
+source's unknown half away in exactly one edge, and then transitively, which would have made the
+correction above cosmetic for every descendant. A `MATERIAL_DEPENDENCY` means the target REPRODUCES
+its source, so it inherits the source's whole requirement, and the known half does not answer the
+unknown half. The new arm is evaluated BEFORE the known-owner arm, and source state is read through
+the same two-state predicate migrations `0093` and `0105` already use, so missing source-side
+authority metadata fails closed for the same reason an unresolved one does. **The known approver rows
+are still derived and still written.** An unresolved target with known required humans is a shape
+this repository has produced since I-04G for the mixed reasoning case and reads correctly everywhere.
+
+**Ordinary participation is untouched.** The material still commits, its exact baseline audience still
+sees it through the same resolver in both frozen World modes, and QANDEEL can still speak. What fails
+closed is a LATER AUDIENCE WIDENING of material whose protected-human requirement was never
+established.
+
+**Four surfaces, each necessary.** The PRODUCER stops writing the unproven state. The RECONCILIATION -
+`reconcile_shared_world_material_historical_authority_v1`, postgres-only, fail-closed-direction-only,
+idempotent - moves rows already written under the old arms forward on the authority-resolution relation
+migration 0090 created for exactly that purpose; it writes one column of one relation and rewrites no
+source body, provenance identity, instant, baseline viewer, approver row or dependency edge, and the
+frozen `authority_requirement_mode` immutability trigger is neither disabled nor bypassed, so a
+reconciled item keeps the mode its original commit really used and is refused by CURRENT state rather
+than by a rewritten past. It moves **two** shapes: the unproven clearance written directly, and the
+`RESOLVED_EXACT_HUMAN_REQUIREMENT` rows that depend, directly or transitively, on a source that is not
+itself positively resolved — the same defect one edge later. The closure follows `MATERIAL_DEPENDENCY`
+forward from every source that is not exactly resolved; `0089`'s strict source-precedes-target CHECK
+makes that graph acyclic, so one traversal really is the fixed point, and the migration refuses to
+deploy unless the one-edge residue is zero, which by induction witnesses the whole fixed point. The GRANT BOUNDARY re-asks under the World lock, because the frozen
+preparation-time trigger cannot cover a manifest prepared BEFORE the correction and a manifest is
+immutable. EFFECTIVE VISIBILITY stops an already-committed grant from continuing to widen: the grant
+row and the `HISTORY_GRANTED` fact are retained as durable evidence, and the grant basis - and only
+the grant basis - stops carrying currently-unresolved material, in the ACTIVE branch and in the
+`READ_ONLY_CLOSED / STANDARD` snapshot alike, with the membership-period basis untouched. The
+Introduction closed snapshot needs no such subtraction and gets none: its branch has no grant basis at
+all, so every item it can hold is already a baseline item of the human holding it.
+
+**The Public half is composition, not modification.** No Public code changes. Migration 0093's
+preparation and the 0105 replacement of `derive_public_publication_authority_v1` both already require
+a Shared source to be in one of the two RESOLVED states and both already raise
+`PUBLIC_EXPERIENCE_SOURCE_AUTHORITY_UNRESOLVED`; `derive_public_continuing_eligibility_v1` already
+turns that raise into `PUBLICATION_AUTHORITY_INVALIDATED`. Correcting the source state is the whole
+Public fix, and no Public lifecycle moves - this task is about authority invalidity, not source
+deletion, and the frozen rule that source unavailability alone creates no retroactive withdrawal is
+untouched. Historical migrations `0075`-`0118` are byte-identical.
+
+### QAN-CW-REM-01 - verifier command
+
+```bash
+npm run verify:shared-historical-authority-remediation:integration
+```
+
+`verify-migration-0119.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database and runs in CI
+after the I-07D group. It commits through the REAL frozen boundaries rather than writing the rows it
+then reads: a zero-dependency output commits and reaches its exact baseline audience in a Standard
+World and in a live Introduction reached through the real I-07A, I-07B and I-07C ladder; it records
+UNRESOLVED and never the proven-empty clearance; reasoning-only, exact-material-owner and human
+material are all proven non-regressed; and a derivative cannot launder a zero-dependency output back
+to proven-empty. The reconciliation is proven on a row seeded in EXACTLY the shape the pre-remediation
+producer wrote - migration 0119 makes that state unreachable from the boundary by design, so the old
+row is reproduced rather than faked by falsifying immutable history - and is proven idempotent, narrow
+and history-preserving by full before/after equality. The widening matrix packages, approves, grants
+and closes a World through the real frozen primitives, and the Public matrix prepares, reaches review
+and publishes through the real ones with the CW2-08 seam simulated inside the transaction and restored
+byte for byte.
+
+It also decides the provisional `ASSURE-F04` cross-World row-lock finding on real PostgreSQL. The
+claimed cycle is reconstructed from the live function bodies - `prepare_public_experience_manifest_v1`
+locks Shared World rows by the World ids the CALLER named but locks Shared materials by id alone, and
+migration 0089 orders dependency edges TEMPORALLY rather than on the uuid, so a target may sort below
+its source and the deletion's `X then Y` crosses every other site's ascending order - and then decided
+by a three-connection race whose interleaving is pinned on an observable lock wait and whose verdict
+is read from PostgreSQL's own deadlock accounting, never from a sleep. Migration 0119 changes no
+locking statement: the verdict is evidence, not a silent repair.

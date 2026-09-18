@@ -661,14 +661,15 @@ Public World, `CW2-05` owns Replay, `CW2-06` owns Matching and Introduction runt
 safety, moderation, entitlements and launch integration. A contract that already owns a capability does
 not also need a backlog entry claiming it.
 
-**The unresolved-authority boundary is implemented, not deferred.** I-04G's task contract admitted a
-second possible contributor to the QANDEEL required-approver set — protected-human subject authorities
-from an already-reviewed server-owned authority source — *if such a source exists*. It does not exist in
-this repository. That does **not** make the requirement empty, and I-04G does not treat it as empty:
-independent review FIX-01 required, and I-04G implements, an explicit
-`UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` state and a database-enforced fail-closed boundary that
-prevents such material from entering an I-04F history package at all. Current baseline-audience
-delivery is unaffected; only historical audience widening is blocked.
+**The unresolved-authority boundary is implemented, not deferred.** Phase-wide assurance later proved
+that the original I-04G implementation did not fully satisfy this law: an empty dependency/approver set
+could still be written as `RESOLVED_NO_HUMAN_REQUIREMENT`, and an unresolved source with known approvers
+could be laundered to `RESOLVED_EXACT_HUMAN_REQUIREMENT` through `MATERIAL_DEPENDENCY`. These were active
+correctness defects, not backlog candidates. `QAN-CW-REM-01` fixes both in forward migration `0119`:
+zero-dependency QANDEEL material and every QANDEEL descendant of unresolved material remain
+`UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` for later widening, while known approver rows and exact
+baseline-audience delivery remain intact. Already-persisted affected rows are reconciled transitively
+in the fail-closed direction without rewriting source history.
 
 Because that boundary is complete inside this PR, **no backlog item is admitted for it**. There is no
 outstanding correctness obligation to record, and BG-01 forbids moving an active-contract requirement
@@ -680,10 +681,20 @@ is not carried forward for validation, and Architecture designated none. The rep
 is additive precisely so that resolver can extend it without reopening anything, which is recorded in
 §4 of [`docs/shared-world-lifecycle-conversation-runtime-v1.md`](shared-world-lifecycle-conversation-runtime-v1.md).
 
-**Banner state.** `I-04`'s primary document reads `CANDIDATE — awaiting independent ChatGPT review`,
-which is the truth at this point: independent review has not happened. Under `BG-09` the change that
-actually closes the phase performs both halves itself — this reconciliation and that banner — and no
-successor task is left to finish either.
+**Independent closure review.** Exact implementation head `18dc934e67b951592838f7af33ecd7066efd84ab` passed independent ChatGPT
+Architecture / Privacy / Database / Concurrency review after the accepted authority defect and the
+same-class transitive propagation defect were corrected. `ASSURE-F04` was reproduced on real
+PostgreSQL before correction and the same barrier-pinned race proved the cycle broken afterward. Two
+complete Focused Database Verification rounds for `0119`, all required predecessor regressions, API
+CI and Mobile CI were green on the exact accepted implementation head.
+
+**BG-08:** no new cross-task backlog item is admitted. The authority and locking findings were active
+I-04 correctness defects and were fixed before closure under BG-01. Existing Product/launch boundaries
+remain owned by their already-frozen later contracts; `QAN-BL-SEC-01` remains owned by
+`QAN-SEC-01` and is untouched.
+
+**BG-09:** this same closure synchronization changes the primary I-04 banner to
+`CLOSED / FROZEN`. No successor task is left to synchronize lifecycle state.
 
 ### QAN-GOV-03 lifecycle reconciliation
 
