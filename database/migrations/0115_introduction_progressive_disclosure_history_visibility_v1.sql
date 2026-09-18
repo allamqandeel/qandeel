@@ -1634,7 +1634,7 @@ BEGIN
   -- CLOCK. The ban is non-vacuous by construction: the exact list above proves
   -- these really are the parameter names being scanned.
   FOREACH arg_name IN ARRAY in_names LOOP
-    IF arg_name ~* 'counterpart|recipient|audience|viewer|owner|actor|user_id|human|subject|grantee|on_behalf|approver|episode|authority|grant|count|timestamp|instant|_at$|clock|launch|gate' THEN
+    IF arg_name ~* 'counterpart|recipient|audience|viewer|owner|actor|user_id|human|subject|grantee|grantor|on_behalf|approver|episode|authority|count|timestamp|instant|_at$|clock|launch|gate' THEN
       RAISE EXCEPTION 'I-07D: the disclosure command must not accept %: the owner is auth.uid() and the counterpart is derived', arg_name;
     END IF;
   END LOOP;

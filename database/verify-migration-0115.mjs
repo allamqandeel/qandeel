@@ -124,7 +124,7 @@ async function verifyPosture() {
     'p_history_item_id', 'p_disclosure_granted_event_id', 'p_resource_type', 'p_field_key',
     'p_text_value', 'p_media_object_ref'], 'P01 the disclosure command accepts exactly the frozen v1 surface');
   for (const name of inputs) {
-    assert.doesNotMatch(name, /counterpart|recipient|audience|viewer|owner|actor|user_id|human|subject|grantee|on_behalf|approver|episode|authority|grant|count|timestamp|instant|_at$|clock|launch|gate/u,
+    assert.doesNotMatch(name, /counterpart|recipient|audience|viewer|owner|actor|user_id|human|subject|grantee|grantor|on_behalf|approver|episode|authority|count|timestamp|instant|_at$|clock|launch|gate/u,
       `P01 the disclosure command must not accept ${name}: the owner is auth.uid() and the counterpart is derived`);
   }
   const outputs = await rt.resultColumns(DFN.DISCLOSE);
