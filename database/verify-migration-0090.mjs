@@ -572,8 +572,12 @@ async function verifyCatalog() {
     `SELECT DISTINCT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
       WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
         AND pr.prosrc ~ 'INSERT INTO public\\.shared_world_materials\\y' ORDER BY 1`);
+  // Bare `proname`, because that is what the catalog returns: the constants
+  // above are full signatures for `regprocedure` lookups and are not names.
   assert.deepEqual(producers.map((r) => r.proname),
-    ['commit_introduction_progressive_disclosure_v1', HUMAN_CORE, QANDEEL_FN].sort(),
+    ['commit_introduction_progressive_disclosure_v1',
+      'commit_shared_world_human_material_v1',
+      'commit_shared_world_qandeel_material_v1'],
     'exactly three reviewed producers write a Shared material: the two extended cores and the one disclosure producer');
 
   stage = 'catalog: the historical widening gate is installed, sealed and on the exact frozen relation';

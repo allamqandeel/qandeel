@@ -486,8 +486,10 @@ async function verifySuccess(report, humans) {
       await actAs(f.lower);
       const [left] = await leave(f.world);
       await asRole('postgres');
-      assert.equal(left.end_reason, 'VOLUNTARY_LEAVE',
+      assert.equal(left.outcome, 'LEFT',
         'S18 the same frozen Standard capability that refused before the transition succeeds after it');
+      assert.equal(left.episode_end_reason, 'VOLUNTARY_LEAVE',
+        'S18 through its own frozen exit reason, not a reason this slice invented');
       assert.equal(await count(D.EPISODES, 'world_id = $1 AND ended_at IS NULL', [f.world]), 1,
         'S18 and really did move Standard membership');
     });
@@ -868,7 +870,11 @@ async function verifyNoGhost(report, humans) {
       // savepoint, so a RESET ROLE issued from a `finally` would land on an
       // ABORTED transaction and replace the real cause with 25P02 - the exact
       // trap the frozen `rejected` helper documents.
-      ['G02 END', (a, b) => rt.bringToIntroduction(a, b), (f) => rt.commitEnd(terminalIds(), f.world)],
+      // END is a HUMAN act, so its runner becomes the acting human itself -
+      // after the `before` snapshot, which has to be read as postgres, and
+      // inside the operation rather than around it.
+      ['G02 END', (a, b) => rt.bringToIntroduction(a, b),
+        async (f) => { await actAs(f.lower); return rt.commitEnd(terminalIds(), f.world); }],
     ]) {
       await report.isolated(`${label} NO GHOST: a late transactional failure leaves ZERO surviving effects`, async () => {
         const f = await build(one, two);

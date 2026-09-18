@@ -341,8 +341,16 @@ async function runMaterial(report, one, two, third) {
     await asRole('postgres');
     assert.equal(deleted.outcome, 'MATERIAL_DELETED', 'M06 the author deletes their own material, exactly as in a Standard World');
     assert.equal(Number(deleted.invalidated_targets), 1, 'M06 and the derivative is invalidated with it');
-    assert.deepEqual(await rt.visibleItems(f.world, f.higher), [analysis.item],
-      'M06 the deleted item leaves the counterpart visibility and the derivative remains as a real historical event');
+    // THE TWO STATES ARE DIFFERENT AND BOTH ARE FROZEN 0090 SEMANTICS: the
+    // owner's own item is DELETED_BY_OWNER, and the QANDEEL material that
+    // depended on it becomes UNAVAILABLE rather than being deleted - the source
+    // is gone, the derivative's own history is not rewritten.
+    assert.equal((await rt.itemRow(said.item)).availability_state, 'DELETED_BY_OWNER',
+      'M06 the deleted item carries the owner-deletion state');
+    assert.equal((await rt.itemRow(analysis.item)).availability_state, 'UNAVAILABLE',
+      'M06 and its derivative is invalidated rather than destroyed');
+    assert.deepEqual(await rt.visibleItems(f.world, f.higher), [],
+      'M06 so availability dominates and the counterpart now sees neither, in an Introduction exactly as in a Standard World');
   });
 
   await report.isolated('M07 the Introduction branch is STRICTER: without a live Record nothing commits', async () => {
@@ -352,7 +360,14 @@ async function runMaterial(report, one, two, third) {
       // The Record is moved out of ACTIVE beneath the World, which the frozen
       // lifecycle never does on its own. The commit must refuse rather than
       // trust the phase alone - the coherence floor the branch adds.
+      //
+      // Reaching that state needs the frozen 0113 truth guard lifted, because
+      // that guard is exactly what makes only the two reviewed terminal cores
+      // able to move a Record. The guard is not on trial here and is restored by
+      // the savepoint rollback below, which the scenario then asserts.
+      await q('ALTER TABLE public.introduction_records DISABLE TRIGGER introduction_records_truth');
       await q('UPDATE public.introduction_records SET introduction_status = $1 WHERE id = $2', ['CLOSED', f.record]);
+      await q('ALTER TABLE public.introduction_records ENABLE TRIGGER introduction_records_truth');
       await rejected(() => rt.commitText(f.world, f.lower, 'into an Introduction that is no longer live'),
         UNAVAILABLE, /SHARED_WORLD_MATERIAL_NOT_AVAILABLE/u);
       await rejected(() => rt.commitQandeel(f.world, 'an analysis of a settled Introduction'),
@@ -362,8 +377,12 @@ async function runMaterial(report, one, two, third) {
       await q('RELEASE SAVEPOINT m07_record');
       await asRole('postgres');
     }
-    // And with the Record restored, the very same commit succeeds - so the
-    // refusal above was the Record and nothing else.
+    // The guard is enabled again and the Record is ACTIVE again, and the very
+    // same commit now succeeds - so the refusal above was the Record's state and
+    // nothing else about the fixture.
+    assert.equal(await rt.triggerEnabled('public.introduction_records', 'introduction_records_truth'), true,
+      'M07 the frozen 0113 truth guard is enabled again');
+    assert.equal((await rt.recordRow(f.record)).introduction_status, 'ACTIVE', 'M07 and the Record is live again');
     const said = await rt.commitText(f.world, f.lower, 'into a live Introduction');
     assert.equal(said.outcome, 'MATERIAL_COMMITTED', 'M07 the same commit succeeds once the Record is live again');
   });

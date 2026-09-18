@@ -498,28 +498,29 @@ export function createIntroductionRuntime(databaseUrl) {
     ].join('\n'), 'utf8').digest('hex')}`;
   }
 
+  // NEITHER OF THESE RESETS THE ROLE FROM A `finally`. A scenario calls them
+  // inside `rejected`, which runs the operation in a SAVEPOINT - so a RESET ROLE
+  // issued while the refusal has aborted the transaction would land on an
+  // aborted one and replace the real cause with 25P02. The role is restored on
+  // the success path, and on the refusal path by the savepoint rollback and the
+  // scenario report's own restore, which is where it belongs.
+
   /** One real HUMAN_TEXT commit by one exact human, as that human. */
   async function commitText(world, human, body, ids = {}) {
     const { command = randomUUID(), material = randomUUID(), item = randomUUID() } = ids;
     await actAs(human);
-    try {
-      const [committed] = await rows(MATERIAL_SQL.TEXT, [command, world, material, item, body]);
-      return { ...committed, command, material, item };
-    } finally {
-      await asRole('postgres');
-    }
+    const [committed] = await rows(MATERIAL_SQL.TEXT, [command, world, material, item, body]);
+    await asRole('postgres');
+    return { ...committed, command, material, item };
   }
 
   /** One real HUMAN_VOICE_NOTE commit by one exact human, as that human. */
   async function commitVoice(world, human, audio, transcript = null, durationMs = null, ids = {}) {
     const { command = randomUUID(), material = randomUUID(), item = randomUUID() } = ids;
     await actAs(human);
-    try {
-      const [committed] = await rows(MATERIAL_SQL.VOICE, [command, world, material, item, audio, transcript, durationMs]);
-      return { ...committed, command, material, item };
-    } finally {
-      await asRole('postgres');
-    }
+    const [committed] = await rows(MATERIAL_SQL.VOICE, [command, world, material, item, audio, transcript, durationMs]);
+    await asRole('postgres');
+    return { ...committed, command, material, item };
   }
 
   /**
