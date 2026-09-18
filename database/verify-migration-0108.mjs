@@ -190,19 +190,25 @@ async function verifyCatalog() {
   // exactly one reviewed producer each, and what must stay proven is that I-07A
   // still produces NEITHER, that the reviewed producers are exactly the two
   // terminal Introduction cores, and that SYSTEM_POLICY is still untouched.
+  // The census names the VALUES shape that WRITES a pause reason, not every
+  // function that mentions one. A terminal core READS the exact
+  // ACTIVE_INTRODUCTION pause it supersedes and the reactivation boundary READS
+  // a POST_* reason to decide eligibility - both of which are exactly what they
+  // should do - so a predicate that could not tell producing from reading would
+  // convict all three for doing their jobs.
   const producersOf = async (pattern) => (await rows(
     `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
       WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
         AND pr.prosrc ~ 'INSERT INTO public\\.matching_participation_events'
         AND pr.prosrc ~ $1 ORDER BY 1`, [pattern])).map((r) => r.proname);
-  assert.deepEqual(await producersOf("'POST_SUCCESS'"), ['commit_introduction_success_v1'],
+  assert.deepEqual(await producersOf("'PAUSED', 'POST_SUCCESS'"), ['commit_introduction_success_v1'],
     'P08 exactly the reviewed I-07D success core writes a POST_SUCCESS pause');
-  assert.deepEqual(await producersOf("'POST_INTRODUCTION'"), ['commit_introduction_end_v1'],
+  assert.deepEqual(await producersOf("'PAUSED', 'POST_INTRODUCTION'"), ['commit_introduction_end_v1'],
     'P08 exactly the reviewed I-07D end core writes a POST_INTRODUCTION pause');
-  assert.deepEqual(await producersOf("'ACTIVE_INTRODUCTION'"), ['commit_matching_mutual_match_v1'],
+  assert.deepEqual(await producersOf("'PAUSED',\\s*'ACTIVE_INTRODUCTION'"), ['commit_matching_mutual_match_v1'],
     'P08 and exactly the frozen I-07C Match commit writes an ACTIVE_INTRODUCTION pause');
   assert.deepEqual(await producersOf("'SYSTEM_POLICY'"), [],
-    'P08 while SYSTEM_POLICY still has no producer at all: I-07D weakened nothing');
+    'P08 while SYSTEM_POLICY still has no producer at all - and no function even names it: I-07D weakened nothing');
   // AND NONE OF THEM IS AN I-07A COMMAND. Every I-07A participation command
   // still writes exactly USER_PAUSED or no pause reason at all.
   for (const fn of [MFN.ACTIVATE, MFN.PAUSE, MFN.RESUME, MFN.TURN_OFF]) {

@@ -247,13 +247,26 @@ async function verifyPosture() {
   assert.deepEqual(await producersOf('INSERT INTO public\\.introduction_terminal_commits'),
     ['commit_introduction_end_v1', 'commit_introduction_success_v1'],
     'P01 exactly the two reviewed terminal cores write a terminal commit');
+  // The census names the VALUES shape that WRITES a reserved pause, not every
+  // function that mentions one: the reactivation boundary reads a POST_* reason
+  // to decide eligibility and writes an ACTIVE act, which is exactly what it
+  // should do. A predicate that could not tell producing from reading would
+  // convict it for doing its job.
   const posters = await rows(
     `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
       WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
         AND pr.prosrc ~ 'INSERT INTO public\\.matching_participation_events'
-        AND (pr.prosrc ~ '''POST_SUCCESS''' OR pr.prosrc ~ '''POST_INTRODUCTION''') ORDER BY 1`);
+        AND pr.prosrc ~ '''PAUSED'', ''POST_(SUCCESS|INTRODUCTION)''' ORDER BY 1`);
   assert.deepEqual(posters.map((r) => r.proname), ['commit_introduction_end_v1', 'commit_introduction_success_v1'],
-    'P01 exactly the two reviewed terminal cores write a reserved post-terminal pause');
+    'P01 exactly the two reviewed terminal cores WRITE a reserved post-terminal pause');
+  const readers = await rows(
+    `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+      WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
+        AND pr.prosrc ~ 'INSERT INTO public\\.matching_participation_events'
+        AND (pr.prosrc ~ '''POST_SUCCESS''' OR pr.prosrc ~ '''POST_INTRODUCTION''') ORDER BY 1`);
+  assert.deepEqual(readers.map((r) => r.proname),
+    ['commit_introduction_end_v1', 'commit_introduction_success_v1', 'reactivate_matching_after_introduction_v1'],
+    'P01 and the only other function that names one at all is the reviewed reactivation boundary, which reads it');
   // And the frozen I-07C birth producer is still the only one.
   assert.deepEqual(await producersOf('INSERT INTO public\\.matching_match_commits'),
     ['commit_matching_mutual_match_v1'], 'P01 the frozen I-07C Match commit is untouched');

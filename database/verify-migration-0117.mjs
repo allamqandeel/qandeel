@@ -157,8 +157,14 @@ async function verifyPosture() {
 }
 
 // ------------------------------------------------------------ 2. reactivation
+// A human who has been through an Introduction is PAUSED or OFF, and the frozen
+// I-07A activation refuses both - so `seedMatchable` cannot climb them back to
+// ACTIVE. Any scenario that needs a SECOND Introduction therefore builds it from
+// a FRESH pair rather than reusing a human the first one left paused: reusing
+// one made a scenario pass or fail on which of the two canonical user ids
+// happened to sort lower, which is a coin flip rather than a proof.
 async function verifyReactivation(report, humans) {
-  const [one, two, three] = humans;
+  const [one, two, three, four] = humans;
   await asRole('postgres');
   await q('BEGIN');
   try {
@@ -220,7 +226,7 @@ async function verifyReactivation(report, humans) {
         ['ACTIVATE', 'ACTIVE', 'MANUAL_MY_WORLD_ENTRY', off.id],
         'R03 carrying one of the two frozen entry channels and superseding exactly the OFF act');
       // And an entry channel is refused on the RESUME path, for the same reason.
-      const g = await completedIntroduction(one, three);
+      const g = await completedIntroduction(three, four);
       const paused = await rt.currentActOf(g.lower);
       await actAs(g.lower);
       await rejected(() => rt.reactivate(randomUUID(), randomUUID(), paused.id, 'MANUAL_MY_WORLD_ENTRY'),
@@ -254,7 +260,7 @@ async function verifyReactivation(report, humans) {
       await q('SAVEPOINT ceiling');
       try {
         await q(weakened);
-        const g = await completedIntroduction(one, three);
+        const g = await completedIntroduction(three, four);
         const gPaused = await rt.currentActOf(g.lower);
         await actAs(g.lower);
         const [lifted] = await rt.resume(randomUUID(), gPaused.id);
@@ -290,21 +296,29 @@ async function verifyReactivation(report, humans) {
       assert.equal(result.participation_state, 'ACTIVE', 'R06 a current grant is what the gate actually required');
       // An absent Introduction Profile and an absent requirement version fail
       // closed too, proven by removing the current pointer directly.
-      const g = await endedIntroduction(one, three);
+      const g = await endedIntroduction(three, four);
       const gPaused = await rt.currentActOf(g.lower);
-      for (const [state, column, what] of [
-        ['public.introduction_profile_state', 'owner_user_id', 'Introduction Profile'],
-        ['public.matching_requirement_state', 'owner_user_id', 'Matching Requirements version'],
+      // A current pointer is durable truth: the frozen 0108 guard refuses to
+      // DELETE one, for every role including the owner. That guard is exactly
+      // right and is not on trial here, so it is lifted for the length of the
+      // probe and put back by the rollback, which also restores the row.
+      for (const [state, trigger, what] of [
+        ['public.introduction_profile_state', 'introduction_profile_state_truth', 'Introduction Profile'],
+        ['public.matching_requirement_state', 'matching_requirement_state_truth', 'Matching Requirements version'],
       ]) {
         await q('SAVEPOINT missing');
-        await q(`DELETE FROM ${state} WHERE ${column} = $1`, [g.lower]);
+        await q(`ALTER TABLE ${state} DISABLE TRIGGER ${trigger}`);
+        await q(`DELETE FROM ${state} WHERE owner_user_id = $1`, [g.lower]);
         await actAs(g.lower);
         await rejected(() => rt.reactivate(randomUUID(), randomUUID(), gPaused.id, null), REFUSED,
           /MATCHING_REACTIVATION_NOT_ELIGIBLE/u);
         await asRole('postgres');
         await q('ROLLBACK TO SAVEPOINT missing');
         await q('RELEASE SAVEPOINT missing');
-        assert.ok(what, `R06 an absent ${what} fails closed`);
+        assert.equal(await rt.triggerEnabled(state, trigger), true,
+          `R06 the frozen ${trigger} guard is enabled again immediately`);
+        assert.equal(await count(state, 'owner_user_id = $1', [g.lower]), 1,
+          `R06 and an absent ${what} fails closed without leaving the fixture damaged`);
       }
     });
 
@@ -340,7 +354,7 @@ async function verifyReactivation(report, humans) {
       await asRole('postgres');
       // A plain USER_PAUSED, a plain ACTIVE and a SYSTEM_POLICY pause all belong
       // to their own frozen commands and are refused here.
-      const g = await rt.seedMatchable(one, three);
+      const g = await rt.seedMatchable(three, four);
       for (const shape of ['ACTIVE', 'USER_PAUSED', 'SYSTEM_POLICY']) {
         await q('SAVEPOINT shape');
         let current = await rt.currentActOf(three);
@@ -363,7 +377,7 @@ async function verifyReactivation(report, humans) {
       assert.ok(g.pair, 'R09 the fixture pair exists');
       // An OFF that does NOT descend from an Introduction is refused too: this
       // boundary crosses exactly the reserved lineage and nothing else.
-      const h = await rt.seedMatchable(one, three);
+      const h = await rt.seedMatchable(three, four);
       await actAs(three);
       const active = await rt.currentActOf(three);
       await rt.turnOff(randomUUID(), active.id);
@@ -643,7 +657,11 @@ async function verifyRaces(report, humans) {
 }
 
 // ------------------------------------------------------------------ the run
-const humans = [randomUUID(), randomUUID(), randomUUID()];
+//
+// FOUR humans, not three: a scenario that needs a SECOND Introduction builds it
+// from a fresh pair, because the first one leaves both of its humans paused and
+// the frozen I-07A activation refuses to climb either back to ACTIVE.
+const humans = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
 await runVerifier('0117', async (setStage) => {
   await rt.client.connect();
   await q("SET lock_timeout = '10s'");
@@ -660,7 +678,9 @@ await runVerifier('0117', async (setStage) => {
     seams.push(await rt.captureMatchingSeam(fn));
   }
   try {
-    await rt.resolveFirstName({ [humans[0]]: 'Sara', [humans[1]]: 'Omar', [humans[2]]: 'Layla' });
+    await rt.resolveFirstName({
+      [humans[0]]: 'Sara', [humans[1]]: 'Omar', [humans[2]]: 'Layla', [humans[3]]: 'Adam',
+    });
     await rt.clearProposalPrerequisites();
     await rt.clearAllSeams();
 
