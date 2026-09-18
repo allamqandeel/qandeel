@@ -1,6 +1,6 @@
 # QANDEEL — Matching / Introduction Runtime v1
 
-**Phase:** `I-07 — Introductions / Matching Runtime` — **OPEN**
+**Phase:** `I-07 — Introductions / Matching Runtime` — **CLOSED / FROZEN**
 **Slice:** `I-07A — Matching Foundation, Participation & Private Authority Runtime v1` —
 **CLOSED / FROZEN**
 **Slice:** `I-07B — Candidate Eligibility, Proposal & Privacy Runtime v1` —
@@ -8,7 +8,7 @@
 **Slice:** `I-07C — Atomic Mutual Match & Introduction Birth Runtime v1` —
 **CLOSED / FROZEN**
 **Slice:** `I-07D — Introduction Lifecycle, Progressive Disclosure & I-07 Closure v1` —
-**CANDIDATE — awaiting independent ChatGPT review**
+**CLOSED / FROZEN**
 **Architecture authority:** `QANDEEL_CW2-06 — Introductions / Matching Runtime Architecture v1.0 —
 CLOSED / FROZEN`, with binding `CW2-01`–`CW2-05` and `CW2-08`
 **Migrations:** `0108_matching_participation_private_setup_foundation_v1.sql`,
@@ -21,14 +21,13 @@ CLOSED / FROZEN`, with binding `CW2-01`–`CW2-05` and `CW2-08`
 `0115_introduction_progressive_disclosure_history_visibility_v1.sql`,
 `0116_introduction_terminal_lifecycle_v1.sql`,
 `0117_post_introduction_matching_reactivation_v1.sql`,
-`0118_introduction_ordinary_shared_material_v1.sql`,
-`0117_post_introduction_matching_reactivation_v1.sql`
+`0118_introduction_ordinary_shared_material_v1.sql`
 
 This document records what `I-07A`, `I-07B`, `I-07C` and `I-07D` implemented, what each deliberately
-did not, and where each deferred capability is owned. It does not close `I-07` and it does not
-restate the frozen architecture. Sections 1–13 are the frozen `I-07A` record and are unchanged;
-sections 14–26 are the frozen `I-07B` record and are unchanged; sections 27–33 are the frozen `I-07C`
-record and are unchanged; sections 34–43 are the `I-07D` candidate record.
+did not, and where each deferred capability is owned. This closure synchronization closes and freezes
+parent phase `I-07`; it does not restate or reopen the frozen architecture. Sections 1–13 are the frozen
+`I-07A` record; sections 14–26 are the frozen `I-07B` record; sections 27–33 are the frozen `I-07C`
+record; sections 34–44 are the frozen `I-07D` record.
 
 ---
 
@@ -1220,9 +1219,9 @@ rendering algorithm, the blur or crop amount, the final disclosure copy, timing 
 Introduction Profile field catalogue, the pair cooldown or reproposal policy, or any ranking or score
 model. No media storage provider, upload path or credential is built.
 
-**Status.** `I-07D` is **CANDIDATE — awaiting independent ChatGPT review**. `I-07` remains **OPEN**;
-`I-07A`, `I-07B` and `I-07C` remain **CLOSED / FROZEN** and no semantic above section 34 is changed by
-this slice.
+**Status.** `I-07D` is **CLOSED / FROZEN**. Parent phase `I-07` is **CLOSED / FROZEN**;
+`I-07A`, `I-07B` and `I-07C` remain **CLOSED / FROZEN**. This status change is governance-only and
+changes no runtime, schema, verifier or test semantics.
 
 **BG-05 kickoff reconciliation.** `docs/qandeel-canonical-backlog-v1.md` was read in full at kickoff.
 No open item names `I-07`, `I-07D`, Introduction or Matching as its **Owner task**, and no item's
@@ -1318,3 +1317,34 @@ asserting a Standard-only gate it no longer owns and asserts the three things th
 what it built — the lifecycle is still an unconditional refusal, the Introduction branch is strictly
 narrower, and every Standard semantic is intact — plus three new forward-safety plants that each
 weaken one clause of the new envelope and must still be refused there.
+
+## 45. `I-07` — independent review and phase closure
+
+Independent ChatGPT Architecture / Privacy / Database / Concurrency review **PASSED** on exact accepted
+implementation head `9be1757fc4686bdf76a3c39e39ba099f98d7181a`. The review inspected the actual `PR #259` implementation, migrations
+`0115`–`0118`, the affected predecessor forward seams, real-PostgreSQL race and no-ghost proofs,
+and the exact-head CI state. The two interim findings recorded in §44 — `I07D-IDEM-01` and
+`I07D-SCOPE-01` — were both independently confirmed, corrected in the same slice, and re-accepted from
+scratch on the final implementation head. No third blocking finding remained.
+
+The exact accepted head completed two full Focused Database Verification rounds for `0115`, `0116`,
+`0117` and `0118`; the required predecessor regressions for `0087`, `0088`, `0089`, `0090`,
+`0108`, `0109`, `0113` and `0114`; and exact-head `API CI #730` plus `Mobile CI #299`, both green.
+Local acceptance was also green with `test:database 1200/1200`, zero database-hazard findings,
+`test:toolchain 8/8`, and clean API TypeScript checking.
+
+**BG-08 reconciliation:** no newly discovered cross-task obligation qualifies for admission from
+`I-07D` or parent `I-07`. The two review findings were active-contract defects and were fixed before
+closure rather than laundered into backlog. Launch/safety/moderation/entitlement work remains owned by
+frozen `CW2-08` / `I-09`; mobile Product surfaces remain owned by `I-08`; deferred Product choices remain
+deferred by `CW2-06`. Existing unassigned navigation/Replay-surface items are neither implemented nor
+blocked by this phase, and `QAN-BL-SEC-01` remains owned by `QAN-SEC-01`.
+
+**BG-09 synchronization:** this same closing change updates the primary document from
+`CANDIDATE — awaiting independent ChatGPT review` to `I-07D — CLOSED / FROZEN` and parent
+`I-07 — CLOSED / FROZEN`. No successor task is left to repair a stale lifecycle banner.
+
+This closure does **not** claim Product launch readiness. The reviewed write boundaries remain
+pre-launch/internal and the frozen `CW2-08` prerequisite seams stay fail-closed except for the deliberate
+human right to END an Introduction. Mobile integration and production launch integration remain later
+phases.
