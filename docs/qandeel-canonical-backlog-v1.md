@@ -865,3 +865,31 @@ the closure-sync change. Section 63 of that document carries the reviewed implem
 request, and the statement that final merge still requires review and CI on the exact closure-sync
 head. This register entry is durable and intentionally carries no transient merge-status text of its
 own.
+
+### I-07 closure record (Connected Worlds v2 — Matching / Introductions Runtime)
+
+**Inherited: none.** The canonical backlog was read in full at I-07D kickoff. No open item names
+`I-07`, `I-07D`, Matching or Introduction as its Owner task, and no existing reopen condition is
+satisfied by this phase. `OPEN-06`, `OPEN-08`, `OPEN-09`, `OPEN-19`, `QAN-BL-NAV-01` and
+`QAN-BL-NAV-02` remain navigation, acknowledgement, Timeline and Replay-surface items outside the
+Matching/Introduction backend closure. `QAN-BL-SEC-01` remains `DEFERRED — OWNED` by `QAN-SEC-01`.
+
+**Admitted: none.** I-07's anti-scope remains anti-scope under BG-06. The frozen later work — mobile
+integration, final Product copy and visual treatment, exact progressive-image rendering, safety,
+moderation, report/block, entitlements, pricing, feature rollout and Launch Gate integration — is
+already owned by `I-08`, `I-09`, `CW2-06` or `CW2-08`. No new backlog item is invented merely to
+repeat those ownership boundaries.
+
+**Review findings were fixed, not deferred.** Independent review found `I07D-IDEM-01` and
+`I07D-SCOPE-01`. Both were confirmed and corrected inside I-07D before acceptance: reactivation command
+identity now binds entry-channel provenance on both historical retry paths, and migration `0118`
+forward-extends the canonical Shared material cores so an `ACTIVE / INTRODUCTION` World supports normal
+human/QANDEEL conversation without a parallel material or history model. BG-01 therefore has no defect
+to move into this register.
+
+**Phase state.** Exact accepted implementation head
+`9be1757fc4686bdf76a3c39e39ba099f98d7181a` passed independent Architecture / Privacy / Database / Concurrency review after the fixes,
+two complete Focused Database Verification rounds for migrations `0115`–`0118`, the required
+predecessor regressions, and exact-head API/Mobile CI. `I-07A`, `I-07B`, `I-07C`, `I-07D` and parent
+`I-07` are now `CLOSED / FROZEN`. Launch readiness is explicitly not implied; production-enabling
+safety/entitlement/Launch Gate work remains fail-closed and owned by the later launch phase.
