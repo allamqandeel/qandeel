@@ -20,6 +20,8 @@ CLOSED / FROZEN`, with binding `CW2-01`–`CW2-05` and `CW2-08`
 `0114_matching_mutual_match_commit_transaction_v1.sql`,
 `0115_introduction_progressive_disclosure_history_visibility_v1.sql`,
 `0116_introduction_terminal_lifecycle_v1.sql`,
+`0117_post_introduction_matching_reactivation_v1.sql`,
+`0118_introduction_ordinary_shared_material_v1.sql`,
 `0117_post_introduction_matching_reactivation_v1.sql`
 
 This document records what `I-07A`, `I-07B`, `I-07C` and `I-07D` implemented, what each deliberately
@@ -1241,7 +1243,78 @@ consults no seam at all, because a human must always be able to leave.
 
 **Verification evidence.** Recorded at independent-review handoff, on the exact accepted implementation
 head, in the pull request body and in the implementation handoff that accompanies it: two complete
-consecutive Focused Database Verification rounds in migration order for `0115`, `0116` and `0117`; the
-required predecessor focused regressions for `0087`, `0088`, `0089`, `0090`, `0108`, `0109`, `0113` and
-`0114` on that same head; and API CI and Mobile CI on that same head. Local gates were green with
-nothing skipped.
+consecutive Focused Database Verification rounds in migration order for `0115`, `0116`, `0117` and
+`0118`; the required predecessor focused regressions for `0087`, `0088`, `0089`, `0090`, `0108`,
+`0109`, `0113` and `0114` on that same head; and API CI and Mobile CI on that same head. Local gates
+were green with nothing skipped.
+
+## 44. `I-07D` — `REV-01`: the two interim review findings
+
+An interim independent review of the candidate found two blocking defects. Both were verified against
+the code before anything was changed, and both are fixed inside this same slice and pull request.
+
+### 44.1 `I07D-IDEM-01` — a used command id could restate its own provenance
+
+`reactivate_matching_after_introduction_v1` compared three immutable columns —
+`participant_user_id`, `participation_event_id` and `prior_participation_event_id` — and
+`matching_introduction_reactivation_commands` stored no entry channel to compare against. So a
+committed `ACTIVATE` carrying `MANUAL_MY_WORLD_ENTRY` could be retried as a `CONVERSATIONAL_ENTRY`
+and be told it had succeeded, and a committed `RESUME`, which carries no channel at all, could be
+retried as though it had been a fresh entry. **Confirmed, and wider than reported:** BOTH idempotency
+passes run before ANY channel validation, so even a syntactically invalid channel was answered as an
+equivalent retry rather than refused.
+
+The channel is now compared on **both** passes against the exact immutable participation event the
+committed command PRODUCED. It is deliberately not stored a second time beside the command: the event
+is already the canonical record of what happened, a `RESTRICT` foreign key keeps it reachable for as
+long as the command exists, and one truth cannot drift from itself. An `ACTIVATE` retried with the
+same channel is an equivalent retry; a different channel, or none, is
+`MATCHING_REACTIVATION_COMMAND_ID_CONFLICT`. A `RESUME` retried with any channel is the same
+conflict. Nothing is reinterpreted and no provenance is backfilled. The migration refuses to deploy
+unless both passes bind it — the count is pinned at **two**, because one pass binding it leaves the
+other as an open door — and `R14` proves both sides against real PostgreSQL.
+
+### 44.2 `I07D-SCOPE-01` — an Introduction could not be spoken in
+
+**Confirmed by a census of the whole repository.** Exactly three functions produce a Shared material,
+and until `0118` two of them — `0090`'s human and QANDEEL commit cores — refused every World that was
+not `ACTIVE / STANDARD`, while the third produced only the reserved `EXPLICIT_DISCLOSURE`. `CW2-03`
+requires Shared v1 to carry `HUMAN_TEXT`, `HUMAN_VOICE_NOTE` and `QANDEEL_PARTICIPATION`, and the
+`ACTIVE / INTRODUCTION` phase exists precisely so QANDEEL can welcome the pair, break the ice, surface
+safe differences and agreements and propose the transition to Standard. An Introduction could disclose
+a phone number and could end, and neither human nor QANDEEL could say one ordinary thing in between.
+`I-07` must not close in that state. The task package had this omission; the review found it.
+
+`0118_introduction_ordinary_shared_material_v1.sql` closes it the way `0090` itself anticipated: its
+header already said the SCHEMA is not Standard-only and that a later reviewed Introduction producer
+would compose the same relations. So this is **not a new producer beside the old ones** — it REPLACES
+both cores forward-only, and the same primitives serve both World modes. There is no second material
+store, no second history model, no Introduction-specific commit path and no parallel truth to
+reconcile later; the two typed human entry points delegate to the one core and are not touched at all.
+
+In each core exactly one gate changes, and exactly one invariant is added on the Introduction branch
+alone. `ACTIVE` is still an unconditional floor; a phase outside the two frozen ones is still refused;
+an Introduction World is admitted only while its own Introduction Record is still `ACTIVE`, and only
+with exactly two derived humans — neither of which any Standard World is ever asked for. The envelope
+is therefore **the same as Standard or stricter, never looser**: no new privacy authority arrives with
+the phase, QANDEEL output still carries the exact same frozen `I-03` effective-context,
+disclosure-gate, revalidation and readiness evidence, no Matching Context Grant is transferred or
+consulted, no third member can exist, and no application role gains `EXECUTE` on anything. Everything
+else is preserved verbatim, which the file proves rather than claims: it was generated from `0090`'s
+own text, and its bodies differ by that one gate, that one check and their comments.
+
+Nothing downstream needed changing, which is the strongest evidence that the canonical model was the
+right thing to extend. `0115`'s Introduction visibility branch resolves history items by the
+baseline-audience conjunction alone and never filtered on material kind, so ordinary material reaches
+exactly the two humans the moment it commits and an `EXPLICIT_DISCLOSURE` and a `HUMAN_TEXT` sit in
+ONE history. `0116` snapshots the closed view through that same ONE visibility entry point, so END
+freezes ordinary material into the Introduction closed-view entitlement by itself; SUCCESS moves the
+World to `STANDARD` and touches no history at all, so the same material continues with nothing copied,
+rewritten or re-derived. Both terminal cores take the World row first, exactly as these cores do, so
+commit-versus-END and commit-versus-SUCCESS serialize on it with no hybrid and no partial outcome.
+
+Migration `0090` is **not edited**. Its runtime verifier is reconciled additively instead: it stops
+asserting a Standard-only gate it no longer owns and asserts the three things that actually protect
+what it built — the lifecycle is still an unconditional refusal, the Introduction branch is strictly
+narrower, and every Standard semantic is intact — plus three new forward-safety plants that each
+weaken one clause of the new envelope and must still be refused there.
