@@ -1473,9 +1473,12 @@ BEGIN
   -- the closure, and never written - the ONE UPDATE asserted above is the whole
   -- of what this function writes - so the dependency relation is excluded from
   -- this ban and given its own, narrower one below.
-  IF body ~ 'authority_requirement_mode|shared_world_history_items'
+  -- The concatenation is PARENTHESISED on purpose: `~` and `||` share a
+  -- precedence class in PostgreSQL, so `body ~ 'a' || 'b'` parses as
+  -- `(body ~ 'a') || 'b'` and fails at run time trying to read a boolean as text.
+  IF body ~ ('authority_requirement_mode|shared_world_history_items'
      || '|shared_world_history_item_baseline_viewers|shared_world_history_item_required_approvers'
-     || '|_material_bodies|DISABLE TRIGGER|ALTER TABLE' THEN
+     || '|_material_bodies|DISABLE TRIGGER|ALTER TABLE') THEN
     RAISE EXCEPTION 'QAN-CW-REM-01: the reconciliation rewrites no source history and disables no frozen immutability guard';
   END IF;
   IF body ~ 'UPDATE public\.shared_world_material_dependencies' THEN

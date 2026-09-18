@@ -388,6 +388,134 @@ test('no actor, approver or privilege is added anywhere, and the Public chain is
     'and unless continuing Public eligibility still fails closed through the ONE authority derivation');
 });
 
+/**
+ * One function's `prosrc` as PostgreSQL will store it: exactly the text between
+ * `AS $$` and the closing `$$`, with no CREATE header.
+ *
+ * The terminal self-assertions read `pg_proc.prosrc`, so a simulation that fed
+ * them the whole declaration would be testing something the database never sees.
+ */
+const prosrcOf = (name) => {
+  const start = SOURCE.indexOf(`FUNCTION public.${name}(`);
+  assert.ok(start >= 0, `${name} is declared`);
+  const open = SOURCE.indexOf('AS $$', start);
+  assert.ok(open > start, `${name} has a body`);
+  const close = SOURCE.indexOf('END$$;', open);
+  assert.ok(close > open, `${name} has a body terminator`);
+  return SOURCE.slice(open + 'AS $$'.length, close + 'END'.length);
+};
+
+test('the migration self-assertions accept the migration itself', () => {
+  // THE DEFECT CLASS THIS EXISTS FOR. A terminal self-assertion is executed by
+  // PostgreSQL at deploy time, so one that is wrong costs a whole CI round and
+  // verifies nothing - the chain never even applies. I-04F spent FIX-02 and
+  // FIX-03 on exactly that, and this change spent two rounds on it again: once
+  // on a parameter-name ban that rejected the frozen `p_authority_revalidation_
+  // ref`, and once on `body ~ 'a' || 'b'`, which parses as `(body ~ 'a') || 'b'`
+  // because `~` and `||` share a precedence class in PostgreSQL.
+  //
+  // So every text assertion the terminal block makes is simulated HERE, against
+  // the exact `prosrc` the database will hold, and the run costs milliseconds.
+  const bodies = {
+    producer: prosrcOf('commit_shared_world_qandeel_material_v1'),
+    grant: prosrcOf('commit_shared_world_history_access_grant_v1'),
+    entry: prosrcOf('resolve_shared_world_history_visibility_v1'),
+    closed: prosrcOf('resolve_shared_world_closed_history_visibility_v1'),
+    reconcile: prosrcOf('reconcile_shared_world_material_historical_authority_v1'),
+  };
+  // PostgreSQL's `~` matches `.` across newlines; JavaScript's does not, so the
+  // `s` flag is what makes these two engines agree.
+  const must = (key, pattern, why) => assert.match(bodies[key], new RegExp(pattern, 'su'), `${key}: ${why}`);
+  const mustNot = (key, pattern, why, flags = 'su') =>
+    assert.doesNotMatch(bodies[key], new RegExp(pattern, flags), `${key}: ${why}`);
+  const occurrences = (key, pattern) => (bodies[key].match(new RegExp(pattern, 'gsu')) ?? []).length;
+
+  // --- the producer
+  must('producer', "WHEN reasoning_edges > 0 THEN 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'", 'the reasoning arm');
+  must('producer', "WHEN approvers > 0 THEN 'RESOLVED_EXACT_HUMAN_REQUIREMENT'", 'the known-owner arm');
+  must('producer', "WHEN unresolved_sources > 0 THEN 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'", 'the unresolved-source arm');
+  must('producer', "ELSE 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT' END;", 'the corrected arm');
+  assert.ok(bodies.producer.indexOf('WHEN unresolved_sources > 0') < bodies.producer.indexOf('WHEN approvers > 0'),
+    'producer: the unresolved-source arm is evaluated first');
+  must('producer', 'INTO unresolved_sources', 'source authority is read');
+  must('producer', 'FROM public\\.shared_world_material_historical_authority a', 'from the canonical relation');
+  must('producer', "a\\.resolution_state IN \\('RESOLVED_EXACT_HUMAN_REQUIREMENT'", 'positively');
+  must('producer', 'NOT EXISTS \\(SELECT 1 FROM public\\.shared_world_material_historical_authority a', 'failing closed on absence');
+  mustNot('producer', 'authority_resolution := CASE[^;]*RESOLVED_NO_HUMAN_REQUIREMENT', 'no arm reaches the unproven clearance');
+  must('producer', "authority_mode := CASE WHEN authority_resolution = 'RESOLVED_NO_HUMAN_REQUIREMENT'", 'the mode derivation is unchanged');
+  must('producer', 'IF material_edges = 0 AND reasoning_edges = 0 THEN', 'the zero-dependency branch survives');
+  must('producer', "'INDEPENDENT_TARGET_TRUTH'", 'and still writes provenance');
+  mustNot('producer', 'auth\\.uid', 'QANDEEL derives no human');
+  must('producer', "IF world\\.lifecycle <> 'ACTIVE' THEN", 'the lifecycle gate');
+  must('producer', "ELSIF world\\.phase = 'INTRODUCTION' THEN", 'the Introduction branch');
+  must('producer', "r\\.world_id = p_world_id AND r\\.introduction_status = 'ACTIVE'", 'its live-Record floor');
+  must('producer', "IF world\\.phase = 'INTRODUCTION' AND array_length\\(audience, 1\\) <> 2 THEN", 'its two-human floor');
+  must('producer', "ELSIF world\\.phase <> 'STANDARD' THEN", 'and an unspelled mode is still refused');
+  must('producer', 'FROM public\\.shared_worlds w WHERE w\\.id = p_world_id FOR UPDATE', 'the World row is locked first');
+  must('producer', 'public\\.resolve_shared_world_human_audience_snapshot_v1\\(p_world_id\\)', 'the frozen audience boundary');
+  assert.equal(occurrences('producer', 'clock_timestamp\\(\\)'), 1, 'producer: one instant, read once');
+  mustNot('producer', 'DELETE FROM', 'it destroys nothing', 'siu');
+  mustNot('producer', 'pg_advisory|LOCK TABLE', 'only canonical row locks', 'siu');
+
+  // --- the grant boundary
+  must('grant', 'public\\.shared_world_material_historical_authority', 'it revalidates current authority');
+  must('grant', 'SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED', 'with the frozen bounded class');
+  mustNot('grant', 'auth\\.uid', 'a grant has no granting actor');
+  must('grant', 'FROM public\\.shared_worlds w WHERE w\\.id = target_world FOR UPDATE', 'World-first order');
+  must('grant', 'SHARED_WORLD_HISTORY_APPROVALS_INCOMPLETE', 'approval completeness survives');
+  assert.equal(occurrences('grant', 'clock_timestamp\\(\\)'), 1, 'grant: one instant, read once');
+
+  // --- the ONE entry point
+  must('entry', 'public\\.shared_world_material_historical_authority', 'the widened basis consumes current authority');
+  must('entry', 'i\\.occurred_at >= e\\.joined_at', 'membership-period bounds survive');
+  must('entry', 'e\\.ended_at IS NULL OR i\\.occurred_at <= e\\.ended_at', 'in both directions');
+  must('entry', 'shared_world_history_item_baseline_viewers', 'a membership interval alone is still not visibility');
+  assert.equal(occurrences('entry', 'shared_world_history_package_manifest_items'), 1,
+    'entry: the grant basis appears exactly once');
+  must('entry', 'SHARED_WORLD_HISTORY_VISIBILITY_UNSUPPORTED_WORLD_MODE', 'an unspelled mode is refused');
+  must('entry', 'resolve_shared_world_closed_history_visibility_v1', 'closed viewing still delegates');
+
+  // --- the closed reader
+  mustNot('closed', 'shared_world_membership_episodes', 'closed viewing is entitlement, never membership');
+  must('closed', 'shared_world_standard_closed_view_entitlement_items', 'the Standard branch survives');
+  must('closed', 'introduction_closed_view_entitlement_items', 'and the Introduction branch');
+  must('closed', "i\\.availability_state = 'AVAILABLE'", 'availability still dominates');
+  must('closed', 'public\\.shared_world_material_historical_authority', 'and a snapshot no longer preserves an invalid widening');
+
+  // --- the reconciliation
+  must('reconcile', 'UPDATE public\\.shared_world_material_historical_authority', 'it writes the authority relation');
+  must('reconcile', "SET resolution_state = 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'", 'forward only');
+  must('reconcile', "a\\.resolution_state <> 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'", 'in the fail-closed direction');
+  must('reconcile', 'WITH RECURSIVE tainted', 'it computes a closure');
+  must('reconcile', 'JOIN tainted t ON t\\.material_id = d\\.source_material_id', 'following edges forward');
+  must('reconcile', "d\\.dependency_kind = 'MATERIAL_DEPENDENCY'", 'over MATERIAL_DEPENDENCY alone');
+  must('reconcile', 'INTO laundered', 'and reports the one-edge residue');
+  assert.equal(occurrences('reconcile', 'UPDATE public\\.'), 1, 'reconcile: exactly one relation is written');
+  mustNot('reconcile', 'DELETE FROM|INSERT INTO|TRUNCATE', 'it destroys nothing', 'siu');
+  mustNot('reconcile',
+    'authority_requirement_mode|shared_world_history_items'
+    + '|shared_world_history_item_baseline_viewers|shared_world_history_item_required_approvers'
+    + '|_material_bodies|DISABLE TRIGGER|ALTER TABLE',
+    'and rewrites no source history');
+  mustNot('reconcile', 'UPDATE public\\.shared_world_material_dependencies', 'provenance is read, never rewritten');
+});
+
+test('no self-assertion concatenates a regex operand without parentheses', () => {
+  // `~` and `||` share a precedence class in PostgreSQL, so
+  //     body ~ 'a' || 'b'
+  // parses as `(body ~ 'a') || 'b'` and fails at DEPLOY time with "invalid input
+  // syntax for type boolean". It is invisible in review and costs a whole CI
+  // round, so it is banned structurally rather than remembered.
+  const lines = SOURCE.split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!/[!]?~\*?\s*'/u.test(lines[i])) continue;
+    const continues = /^\s*\|\|/u.test(lines[i + 1] ?? '');
+    if (!continues) continue;
+    assert.match(lines[i], /[!]?~\*?\s*\(/u,
+      `line ${i + 1} concatenates a regex operand and must parenthesise it: ${lines[i].trim()}`);
+  }
+});
+
 test('the migration refuses to deploy if its own architecture is absent', () => {
   const terminal = SOURCE.slice(SOURCE.indexOf('Terminal self-assertions'));
   for (const claim of [
