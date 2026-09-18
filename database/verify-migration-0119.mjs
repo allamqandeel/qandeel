@@ -60,6 +60,10 @@ import { createScenarioReport } from './verifier-scenarios.mjs';
 import {
   createIntroductionRuntime, D, DFN, PFN, evidenceFor, runVerifier, APP_ROLES,
 } from './introduction-lifecycle-verifier-support.mjs';
+// The Public relations this verifier's committed race fixture touches are
+// append-only for EVERY role, the table owner included, so their teardown lifts
+// exactly the frozen guard list the I-05 runtime already publishes.
+import { IMMUTABLE_RELATIONS } from './public-runtime-verifier-support.mjs';
 
 const rt = createIntroductionRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole, actAs, rejected } = rt;
@@ -1464,16 +1468,47 @@ async function provisionCycleFixture(author, publisher) {
   };
 }
 
+/**
+ * Removes everything the race fixture COMMITTED, leaf first.
+ *
+ * A Public Experience Version and a committed lifecycle transition are
+ * append-only for every role INCLUDING the table owner, so the frozen guards are
+ * lifted inside ONE transaction and put back inside the same one - the exact
+ * shape the I-05 and I-07D teardowns use - and the restoration is proven rather
+ * than assumed, because a run that left a guard disabled would make every later
+ * verifier prove less than it claims.
+ */
 async function removeCycleFixture(fixture, humans) {
   await asRole('postgres');
   const worlds = [fixture.world, fixture.otherWorld];
+  await q('BEGIN');
+  try {
+    for (const [table, trigger] of IMMUTABLE_RELATIONS) await q(`ALTER TABLE ${table} DISABLE TRIGGER ${trigger}`);
+    await removeCycleRows(fixture, humans, worlds);
+    for (const [table, trigger] of IMMUTABLE_RELATIONS) await q(`ALTER TABLE ${table} ENABLE TRIGGER ${trigger}`);
+    await q('COMMIT');
+  } catch (error) {
+    await q('ROLLBACK').catch(() => undefined);
+    throw error;
+  }
+  for (const [table, trigger] of IMMUTABLE_RELATIONS) {
+    assert.equal(await rt.triggerEnabled(table, trigger), true,
+      `${trigger} is enabled again after the race fixture teardown`);
+  }
+}
+
+async function removeCycleRows(fixture, humans, worlds) {
   await q('DELETE FROM public.publication_package_prepare_commands WHERE experience_id = $1', [fixture.experience]);
   await q('DELETE FROM public.public_experience_lifecycle_events WHERE experience_id = $1', [fixture.experience]);
   await q('DELETE FROM public.public_experience_draft_commands WHERE experience_id = $1', [fixture.experience]);
+  await q('UPDATE public.public_experiences SET current_experience_version_id = NULL WHERE id = $1', [fixture.experience]);
+  await q('DELETE FROM public.public_experience_versions WHERE experience_id = $1', [fixture.experience]);
+  await q('DELETE FROM public.publication_package_manifest_versions WHERE experience_id = $1', [fixture.experience]);
   await q('DELETE FROM public.public_experience_controllers WHERE experience_id = $1', [fixture.experience]);
   await q('DELETE FROM public.public_experiences WHERE id = $1', [fixture.experience]);
   await q('DELETE FROM public.public_identity_commands WHERE actor_user_id = ANY($1::uuid[])', [humans]);
-  await q('DELETE FROM public.public_identity_display_state WHERE user_id = ANY($1::uuid[])', [humans]);
+  await q(`DELETE FROM public.public_identity_display_state WHERE public_identity_ref IN
+             (SELECT public_identity_ref FROM public.public_identities WHERE user_id = ANY($1::uuid[]))`, [humans]);
   await q('DELETE FROM public.public_identities WHERE user_id = ANY($1::uuid[])', [humans]);
   const materials = `(SELECT m.id FROM ${D.MATERIALS} m WHERE m.world_id = ANY($1::uuid[]))`;
   await q(`DELETE FROM public.shared_world_material_delete_commands WHERE material_id IN ${materials}`, [worlds]);
