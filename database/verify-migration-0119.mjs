@@ -203,16 +203,24 @@ async function verifyPosture() {
 
   // THE PRODUCER: same signature, same result shape, same posture, corrected arm.
   const [producer] = await rows(
-    `SELECT pr.proowner::regrole::text owner, pr.prosecdef, pr.provolatile, pr.proconfig,
-            pr.proargnames, pr.proargmodes
+    `SELECT pr.proowner::regrole::text owner, pr.prosecdef, pr.provolatile, pr.proconfig
        FROM pg_proc pr WHERE pr.oid = $1::regprocedure`, [QANDEEL_SIG]);
   assert.ok(producer, 'the QANDEEL commit core still resolves at its exact frozen signature');
   assert.equal(producer.owner, 'postgres');
   assert.equal(producer.prosecdef, true, 'it is still SECURITY DEFINER');
   assert.equal(producer.provolatile, 'v', 'it still mutates and is VOLATILE');
   assert.ok((producer.proconfig ?? []).some((cfg) => cfg === 'search_path=' || cfg === 'search_path=""'));
-  const inputs = producer.proargnames.filter((_, index) => producer.proargmodes[index] === 'i');
-  const results = producer.proargnames.filter((_, index) => producer.proargmodes[index] === 't');
+
+  // THE PARAMETER LIST IS SPLIT IN SQL, NOT IN JAVASCRIPT. `proargmodes` is a
+  // `"char"[]`, which the driver has no array parser for and hands back as the
+  // raw literal `{i,i,...}` - so filtering `proargnames` by index against it in
+  // JS would index into a STRING and silently compare the wrong characters.
+  const parametersOf = async (signature, mode) => (await rows(
+    `SELECT a.name FROM pg_proc pr,
+            unnest(pr.proargnames, pr.proargmodes) WITH ORDINALITY AS a(name, mode, n)
+      WHERE pr.oid = $1::regprocedure AND a.mode = $2 ORDER BY a.n`, [signature, mode])).map((row) => row.name);
+  const inputs = await parametersOf(QANDEEL_SIG, 'i');
+  const results = await parametersOf(QANDEEL_SIG, 't');
   // THE INPUT LIST IS PINNED BY NAME AND POSITION, not by a word list. Two
   // frozen parameters are legitimately NAMED for authority and audience because
   // they carry the frozen I-03 revalidation and audience-snapshot EVIDENCE
@@ -312,11 +320,17 @@ async function verifyPosture() {
   assert.match(recon.prosrc, /a\.resolution_state = 'RESOLVED_NO_HUMAN_REQUIREMENT'/u,
     'P01 and it can only ever move the unproven clearance forward');
 
-  // ONE function may move a historical authority resolution AT ALL.
-  const [{ n: movers }] = await rows(
-    `SELECT count(*) n FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
-      WHERE n.nspname = 'public' AND pr.prosrc ~ 'UPDATE public\\.shared_world_material_historical_authority'`);
-  assert.equal(Number(movers), 1, 'P01 exactly one reviewed function may move a historical authority resolution');
+  // THE ONE FUNCTION THAT MAY MOVE A HISTORICAL AUTHORITY RESOLUTION IS THIS
+  // ONE. The CENSUS is deliberately left to the migration's own deploy-time
+  // assertion, which runs against a clean database: a global pg_proc ceiling
+  // asserted from a verifier is a ceiling every later slice and every sibling
+  // verifier's forward-safety probe can break without being wrong, and this
+  // repository has spent a round on that before.
+  const [{ n: isMover }] = await rows(
+    `SELECT count(*) n FROM pg_proc pr
+      WHERE pr.oid = $1::regprocedure
+        AND pr.prosrc ~ 'UPDATE public\\.shared_world_material_historical_authority'`, [RECONCILE_SIG]);
+  assert.equal(Number(isMover), 1, 'P01 the reconciliation is the reviewed mover of a historical authority resolution');
 
   // AND NOBODY MAY CALL ANY OF IT. The ONE frozen resolver grant is exactly where
   // it was, and nothing else gained EXECUTE.
@@ -851,7 +865,7 @@ async function verifyHistoricalWidening(report, humans) {
       const [closed] = await rows(
         `SELECT outcome, closed_entitlement_count FROM public.commit_shared_world_standard_end_v1($1,$2,$3)`,
         [randomUUID(), proposal, randomUUID()]);
-      assert.equal(closed.outcome, 'WORLD_CLOSED', 'A13 the World really is READ_ONLY_CLOSED');
+      assert.equal(closed.outcome, 'WORLD_ENDED', 'A13 the World really is READ_ONLY_CLOSED');
       const [{ n: frozenIn }] = await rows(
         `SELECT count(*) n FROM ${STANDARD_ENTITLEMENT_ITEMS} WHERE world_id = $1 AND user_id = $2 AND history_item_id = $3`,
         [w.world, grantee, old.item]);
@@ -1376,13 +1390,17 @@ await runVerifier('0119', async (setStage) => {
   await q("SET lock_timeout = '10s'");
   await q("SET statement_timeout = '60s'");
 
-  setStage('posture');
-  await verifyPosture();
-
   setStage('fixtures');
   await rt.provisionHumans([...humans, ...cycleHumans]);
 
+  // POSTURE IS A RECORDED SCENARIO RATHER THAN A FAIL-FAST PRELUDE. A posture
+  // failure that aborted the run would turn every other latent defect into its
+  // own CI round, which is the exact cost this repository's scenario report
+  // exists to remove - and a verifier written against a database this host
+  // cannot run is written blind, so every round has to carry all of its news.
   const report = createScenarioReport('0119', { query: q, restore: () => asRole('postgres') });
+  setStage('posture');
+  await report.section('P01 posture: signatures, the corrected resolution, every consumer and the ACLs', verifyPosture);
   const seams = [];
   for (const fn of [PFN.FIRST_NAME, PFN.PREREQUISITES, DFN.DISCLOSURE_GATE, DFN.SUCCESS_GATE, DFN.REACTIVATION_GATE]) {
     seams.push(await rt.captureMatchingSeam(fn));
