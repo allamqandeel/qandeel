@@ -89,6 +89,7 @@ const CORRECTED = [
 ];
 const REPLAY_STATE = 'derive_replay_distribution_approval_effective_state_v1';
 const DERIVATIONS = [
+  'derive_public_command_lifecycle_v1',
   'derive_public_experience_lifecycle_at_v1',
   'derive_public_identity_command_answer_v1',
   'derive_public_disappearance_command_answer_v1',
@@ -251,12 +252,14 @@ test('migration 0121 is one forward-only transaction, ordered after its predeces
   assert.doesNotMatch(executable, /CREATE (?:POLICY|VIEW|MATERIALIZED VIEW|EXTENSION|TYPE)|EXCLUDE USING/iu,
     'it introduces no policy, view, extension or enum type');
   assert.doesNotMatch(executable, /\bGRANT\b/u, 'and it grants nothing to anybody');
-  // THE ONLY PREDECESSOR RELATION IT ALTERS is the Public Identity command
-  // history, and the only thing it does to it is ADD the answer that relation's
-  // own frozen law says it should always have carried.
+  // THE ONLY PREDECESSOR RELATIONS IT ALTERS are the two command histories that
+  // had nowhere to keep the answer they committed, and the only thing it does to
+  // either is ADD the answer their own frozen law says they should always have
+  // carried.
   const altered = [...executable.matchAll(/ALTER TABLE public\.(\w+)/gu)].map((m) => m[1]);
-  assert.deepEqual([...new Set(altered)], ['public_identity_commands'],
-    'exactly one predecessor relation is altered');
+  assert.deepEqual([...new Set(altered)].sort(),
+    ['public_experience_disappearance_commands', 'public_identity_commands'],
+    'exactly the two command histories that store an answer are altered');
   assert.doesNotMatch(executable, /DROP COLUMN|ALTER COLUMN|RENAME/iu, 'and no column is dropped, altered or renamed');
 });
 
@@ -358,8 +361,8 @@ test('no corrected Public retry path reads the mutable current state it used to'
     'publish_public_experience_v1']) {
     const source = prosrcOf(name);
     assert.doesNotMatch(source, LIVE_LIFECYCLE, `${name} no longer reads the mutable current lifecycle`);
-    assert.match(source, /public\.derive_public_experience_lifecycle_at_v1\(\s*\n?\s*committed\.experience_id, committed\.committed_at\)/u,
-      `${name} answers its retry from the immutable lifecycle event log, AT THE INSTANT IT COMMITTED`);
+    assert.match(source, /public\.derive_public_command_lifecycle_v1\(\s*\n?\s*committed\.id, committed\.experience_id/u,
+      `${name} answers its retry from the lifecycle event ITS OWN command id names`);
   }
   assert.doesNotMatch(prosrcOf('create_public_experience_draft_v1'), LIVE_REVISION,
     'the draft retry no longer reads the mutable experience revision either');
@@ -379,32 +382,103 @@ test('no corrected Public retry path reads the mutable current state it used to'
   }
 });
 
-test('the historical lifecycle derivation reads the immutable log and nothing else', () => {
+// REM03-HIST-01. The exact truth already existed; the correction must bind it.
+test('a lifecycle retry binds the exact event its command id names, never a time', () => {
+  const source = prosrcOf('derive_public_command_lifecycle_v1');
+  assert.match(source, /FROM public\.public_experience_lifecycle_events le WHERE le\.id = p_command_id/u,
+    'the event is found by the COMMAND identity and by nothing else');
+  // The instant is an EQUALITY check on the command's own committed instant,
+  // never a bound: no ordering, no limit and no "latest" anywhere in it.
+  assert.doesNotMatch(source, /\bmax\s*\(|ORDER BY|LIMIT|occurred_at <=|occurred_at >=/iu,
+    'an instant is not a command identity, so nothing here searches by time');
+  assert.match(source, /moved\.occurred_at <> p_committed_at/u, 'it compares the instant for EQUALITY');
+  // Every axis the event can be checked on, so a right-id wrong-event answers nothing.
+  for (const [clause, what] of [
+    [/moved\.experience_id <> p_experience_id/u, 'the Experience the command bound'],
+    [/moved\.experience_version_id IS DISTINCT FROM p_experience_version_id/u, 'the version it bound'],
+    [/moved\.to_lifecycle <> p_committed_lifecycle/u, 'the lifecycle that family commits'],
+    [/moved\.occurred_at <> p_committed_at/u, 'the command own committed instant'],
+  ]) {
+    assert.match(source, clause, `the exact binding validates ${what}`);
+  }
+  assert.match(source, /PUBLIC_EXPERIENCE_CONTRADICTORY_HISTORY/u,
+    'and anything else is contradictory history rather than another plausible event');
+
+  // THE THREE FAMILIES REALLY WRITE THE EVENT UNDER THE COMMAND IDENTITY, which
+  // is what makes the binding available at all. Read from the FROZEN sources.
+  for (const [name, source0, expected] of [
+    ['create_public_experience_draft_v1', SOURCE_0093, "VALUES (p_command_id, p_experience_id, NULL, NULL, 'DRAFT'"],
+    ['commit_public_experience_ready_for_review_v1', SOURCE_0093,
+      "VALUES (p_command_id, p_experience_id, p_experience_version_id, 'DRAFT', 'READY_FOR_REVIEW'"],
+    ['publish_public_experience_v1', SOURCE_0095,
+      "VALUES (p_command_id, p_experience_id, p_experience_version_id, 'READY_FOR_REVIEW', 'PUBLISHED'"],
+  ]) {
+    assert.ok(prosrcOf(name, source0).includes(expected),
+      `the frozen ${name} already wrote its lifecycle event under the command identity`);
+    assert.ok(prosrcOf(name).includes(expected), `and the replacement still does`);
+  }
+});
+
+test('the temporal reconstruction is the LEGACY fallback and has exactly one caller', () => {
   const source = prosrcOf('derive_public_experience_lifecycle_at_v1');
   assert.match(source, /FROM public\.public_experience_lifecycle_events/u, 'it reads the append-only event log');
   assert.doesNotMatch(source, /public\.public_experiences\b/u, 'and never the mutable current pointer');
   assert.match(source, /le\.occurred_at <= p_at/u, 'bounded at the instant asked about');
-  // BOTH fail-closed branches: no evidence, and ambiguous evidence.
+  // BOTH fail-closed branches: no evidence, and ambiguous evidence. The second
+  // is why it can never be the primary store - `occurred_at` is not unique.
   assert.equal((source.match(/PUBLIC_EXPERIENCE_CONTRADICTORY_HISTORY/gu) ?? []).length, 2,
     'it fails closed on no event at or before the instant, and on two events sharing the latest instant');
   assert.match(source, /IF events <> 1 THEN/u, 'the ambiguity check is an exact-count check');
+
+  // AND NOTHING ELSE MAY REACH IT. A future family that answered by time would
+  // be caught here rather than by a silently weaker answer.
+  const body_ = body();
+  const callers = [...body_.matchAll(/derive_public_experience_lifecycle_at_v1/gu)];
+  // One declaration, one REVOKE pair, one COMMENT, and exactly one call site.
+  assert.match(prosrcOf('derive_public_disappearance_command_answer_v1'),
+    /derive_public_experience_lifecycle_at_v1\(committed\.experience_id, committed\.committed_at\)/u,
+    'the one caller is the legacy branch of the disappearance answer');
+  for (const name of ['create_public_experience_draft_v1', 'commit_public_experience_ready_for_review_v1',
+    'publish_public_experience_v1', 'remove_public_experience_from_public_world_v1',
+    'reconcile_public_experience_disappearance_v1', 'derive_public_identity_command_answer_v1']) {
+    assert.ok(!prosrcOf(name).includes('derive_public_experience_lifecycle_at_v1'),
+      `${name} does not reconstruct a historical answer by time`);
+  }
+  assert.ok(callers.length >= 1, 'the fallback is declared and reachable');
 });
 
-test('the disappearance answer derives every field from immutable evidence', () => {
+test('the disappearance family STORES its exact answer, and reads it first', () => {
+  const executable = body();
+  // REM03-HIST-01: temporal inference is not the primary store for a command
+  // that commits an answer without moving a lifecycle.
+  assert.match(executable, /ADD COLUMN committed_absent_experience_version_id uuid/u, 'the version it returned');
+  assert.match(executable, /ADD COLUMN committed_disappearance_basis text/u, 'the basis it returned');
+  assert.match(executable, /ADD COLUMN committed_lifecycle text/u, 'and the lifecycle it returned');
+  assert.doesNotMatch(executable, /\b(json|jsonb)\b/iu, 'no generic JSON response blob is introduced anywhere');
+  assert.match(executable, /committed_absent_experience_version_id = target_experience_version_id/u,
+    'an answer that reported an absence names the EXACT publication the command bound');
+  assert.match(executable, /CREATE TRIGGER public_experience_disappearance_commands_answer_required\s*\n\s*BEFORE INSERT/u,
+    'and a future command that does not carry its answer is refused structurally');
+
   const source = prosrcOf('derive_public_disappearance_command_answer_v1');
-  assert.match(source, /derive_public_experience_lifecycle_at_v1\(committed\.experience_id, committed\.committed_at\)/u,
-    'the lifecycle is the historical one');
-  // A command that reported no absence returns NULL for both other fields. This
-  // is the case the frozen retry got wrong immediately, with no state change.
-  assert.match(source, /IF historical <> 'ABSENT_FROM_PUBLIC_WORLD' THEN\s*\n\s*RETURN QUERY SELECT NULL::uuid, NULL::text, historical;/u,
-    'a command that reported no absence answers NULL, NULL and the lifecycle it saw');
-  // The basis comes from the sealed record BOUND TO THE EXACT PUBLICATION this
-  // command named, and only when that record predates the command.
+  const stored = source.indexOf('IF committed.committed_lifecycle IS NOT NULL THEN');
+  const exact = source.indexOf('WHERE le.id = p_command_id');
+  const legacy = source.indexOf('derive_public_experience_lifecycle_at_v1');
+  assert.ok(stored >= 0 && exact > stored && legacy > exact,
+    'three tiers, strongest first: the stored answer, then the event this command wrote, then the legacy fallback');
   assert.match(source, /d\.absent_experience_version_id = committed\.target_experience_version_id/u,
     'the sealed record is bound by the exact version the command committed against');
-  assert.match(source, /sealed\.absent_since > committed\.committed_at/u,
-    'and a record written AFTER the command is refused rather than answered from');
   assert.doesNotMatch(source, /public\.public_experiences\b/u, 'nothing here reads the mutable pointer');
+
+  // AND EVERY WRITER RECORDS IT. A branch that inserted without the answer
+  // would fall through to the fallback forever.
+  for (const name of ['remove_public_experience_from_public_world_v1',
+    'reconcile_public_experience_disappearance_v1']) {
+    const writer = prosrcOf(name);
+    const inserts = (writer.match(/INSERT INTO public\.public_experience_disappearance_commands/gu) ?? []).length;
+    const answers = (writer.match(/committed_absent_experience_version_id, committed_disappearance_basis, committed_lifecycle/gu) ?? []).length;
+    assert.equal(answers, inserts, `${name} records its answer on every one of its ${inserts} command writes`);
+  }
 });
 
 test('the Public Identity answer is typed, bounded and required of every future command', () => {
@@ -503,9 +577,12 @@ test('the verifier proves the semantics this contract only shapes', () => {
   // A structural contract cannot prove that a direct Public withdrawal really
   // makes a distribution refuse. These are the scenarios that do.
   for (const scenario of ['R04', 'R05', 'R06', 'R07', 'R08', 'R09', 'R10',
-    'F01', 'F02', 'F03p', 'F04', 'F05', 'F06', 'F07', 'F08', 'F09n', 'F10', 'F11']) {
+    'F01', 'F02', 'F03p', 'F04', 'F05', 'F06', 'F07', 'F08', 'F09n', 'F10', 'F11',
+    'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08']) {
     assert.ok(VERIFIER.includes(`'${scenario} `), `the verifier carries scenario ${scenario}`);
   }
+  assert.match(VERIFIER, /another plausible event exists at\s*\n\s*\/\/\s*the same instant|plant another one for the same/u,
+    'and it plants a plausible event a temporal reconstruction would have answered from');
   assert.match(VERIFIER, /withdraw_publication_approval_v1/u,
     'and it withdraws the Public half through the CANONICAL primitive, by its own name');
   assert.match(VERIFIER, /REPLAY_DISTRIBUTION_APPROVAL_NOT_EFFECTIVE/u,

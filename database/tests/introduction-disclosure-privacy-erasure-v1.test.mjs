@@ -201,6 +201,24 @@ test('a retry after erasure fails closed in every idempotency pass', () => {
     assert.ok((disclose.match(new RegExp(field.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'gu')) ?? []).length >= 6,
       `both the erased branch and the success branch bind ${field}, in all three passes`);
   }
+  // REM03-ERASE-ID-01: AND EVERY SURVIVING IMMUTABLE REQUEST FIELD IS COMPARED
+  // FIRST. `resource_type` is an immutable input, is not content-derived, and
+  // is retained as audit identity, so a retry that changes it is a DIFFERENT
+  // request the database can still prove - and must.
+  assert.equal((disclose.match(/committed\.resource_type = p_resource_type/gu) ?? []).length, 3,
+    'all three erased branches compare the surviving resource type before answering the deleted class');
+  for (const pass of disclose.split("committed.verifier_state = 'ERASED_BY_OWNER'").slice(0, 3)) {
+    assert.ok(pass.endsWith('committed.resource_type = p_resource_type\n       AND ')
+      || pass.endsWith('committed.resource_type = p_resource_type\n         AND '),
+    'the resource type is the LAST identity clause before the erased state is consulted');
+  }
+  // And the content-bearing half is deliberately NOT compared there.
+  for (const erased of disclose.split('INTRODUCTION_DISCLOSURE_ERASED_BY_OWNER').slice(0, 3)) {
+    const branch = erased.slice(erased.lastIndexOf("committed.verifier_state = 'ERASED_BY_OWNER'"));
+    assert.ok(!branch.includes('request_ref') && !branch.includes('payload_digest') && !branch.includes('digest'),
+      'the erased branch compares no content-derived value, because deletion destroyed it');
+  }
+
   // IT RECONSTRUCTS NOTHING.
   assert.ok(!disclose.includes('UPDATE public.introduction_disclosure_commands'),
     'the disclosure command neither erases nor restores a verifier');
@@ -286,9 +304,14 @@ test('the 0122 verifier is registered everywhere it has to run', () => {
 
 test('the verifier proves the privacy semantics this contract only shapes', () => {
   for (const scenario of ['D01', 'D02', 'D03', 'D04', 'D05', 'D06', 'D07', 'D08',
-    'D09', 'D10', 'D11', 'D12', 'D13', 'D14']) {
+    'D09', 'D10', 'D11', 'D12', 'D13', 'D14',
+    'E01', 'E02', 'E03', 'E04', 'E05', 'E06', 'E07']) {
     assert.ok(VERIFIER.includes(`${scenario} `), `the verifier carries scenario ${scenario}`);
   }
+  assert.match(VERIFIER, /rt\.disclose\(ids, f\.world, 'CONTACT_METHOD'/u,
+    'and drives the exact REM03-ERASE-ID-01 case: an erased FULL_NAME retried as a CONTACT_METHOD');
+  assert.match(VERIFIER, /rt\.disclose\(ids, f\.world, 'PARTIAL_IMAGE'/u,
+    'and its image counterpart');
   // THE OFFLINE-GUESS PROOF is the one that actually names the defect: a
   // correct guess of the deleted payload must match nothing that survived.
   assert.match(VERIFIER, /a correct guess of the deleted payload matches nothing that survived/u,

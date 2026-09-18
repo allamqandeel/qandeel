@@ -47,7 +47,25 @@
 //   F09n withdrawal and package preparation are immutable already - the
 //       negative evidence, proven rather than asserted
 //   F10 a changed immutable request under a spent command id still conflicts
-//   F11 the historical lifecycle derivation fails closed rather than guessing
+//   F11 the legacy temporal fallback fails closed rather than guessing
+//
+//   REM03-HIST-01 - the historical lifecycle is bound to the command, not found
+//   by time
+//   H01 DRAFT: the lifecycle event carries the COMMAND id, and the retry
+//       answers that exact event
+//   H02 READY: the same, including the exact version the command bound
+//   H03 PUBLISH: the same
+//   H04 the command's own event is gone and another plausible event exists at
+//       the same instant -> CONTRADICTORY_HISTORY, and the plausible one is
+//       never substituted
+//   H05 the event carries the command id but contradicts it -> the same
+//   H06 a no-op disappearance command STORES its exact answer, and the retry
+//       reads it with the whole event log deleted
+//   H07 an actual disappearance stores its answer too, retry-independent of
+//       every current state
+//   H08 a pre-0121 no-op reconstructs from the immutable log only while that
+//       log is unambiguous, and fails closed the moment it is not - while a
+//       command-bound answer is untouched by the same ambiguity
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import process from 'node:process';
@@ -74,12 +92,16 @@ const REPLACED = Object.freeze({
   RECONCILE: 'public.reconcile_public_experience_disappearance_v1(uuid, uuid)',
   REPLAY_STATE: 'public.derive_replay_distribution_approval_effective_state_v1(uuid)',
 });
-/** The three derivations 0121 creates. All internal, all read-only. */
+/** The four derivations 0121 creates. All internal, all read-only. */
 const DERIVED = Object.freeze({
+  COMMAND_LIFECYCLE: 'public.derive_public_command_lifecycle_v1(uuid, uuid, uuid, text, timestamptz)',
   LIFECYCLE_AT: 'public.derive_public_experience_lifecycle_at_v1(uuid, timestamptz)',
   IDENTITY_ANSWER: 'public.derive_public_identity_command_answer_v1(uuid)',
   DISAPPEARANCE_ANSWER: 'public.derive_public_disappearance_command_answer_v1(uuid)',
 });
+const LIFECYCLE_EVENTS = 'public.public_experience_lifecycle_events';
+const LIFECYCLE_GUARD = 'public_experience_lifecycle_events_immutable';
+const DISAPPEARANCE_COMMANDS = 'public.public_experience_disappearance_commands';
 /** The exact frozen result columns each replaced Public boundary must still declare. */
 const RESULT_COLUMNS = new Map([
   [REPLACED.ENSURE, ['outcome', 'public_identity_ref', 'label_mode', 'display_label', 'label_revision', 'committed_at']],
@@ -191,11 +213,14 @@ async function verifyPosture() {
 }
 
 /**
- * P02 - the claim section 2.1 of the migration rests on, asked of the catalog.
+ * P02 - the claim both historical derivations rest on, asked of the catalog.
  *
  * If a fifth writer of `public_experiences.current_lifecycle` ever appears
- * without writing the immutable event, the historical lifecycle derivation stops
- * being truth, silently. This is the check that would notice.
+ * without writing the immutable event, both the exact command binding and the
+ * legacy fallback stop being truth, silently. This is the check that would
+ * notice. It also pins the event id to the command id for the three
+ * lifecycle-moving families, which is what makes the binding exact rather than
+ * temporal (REM03-HIST-01).
  */
 async function verifyLifecycleLogComplete() {
   await asRole('postgres');
@@ -220,6 +245,34 @@ async function verifyLifecycleLogComplete() {
   }
   assert.equal(await rt.triggerEnabled(T.LIFECYCLE, 'public_experience_lifecycle_events_immutable'), true,
     'and that event log is append-only for every role');
+
+  // REM03-HIST-01: the three lifecycle-moving families write the event under
+  // the COMMAND identity, which is why their retries bind it by id. Asserted
+  // from the frozen sources, so a future replacement that stopped doing it
+  // would be caught here rather than by a silently weaker answer.
+  for (const [name, expected] of [
+    ['create_public_experience_draft_v1', "VALUES (p_command_id, p_experience_id, NULL, NULL, 'DRAFT'"],
+    ['commit_public_experience_ready_for_review_v1', "VALUES (p_command_id, p_experience_id, p_experience_version_id, 'DRAFT', 'READY_FOR_REVIEW'"],
+    ['publish_public_experience_v1', "VALUES (p_command_id, p_experience_id, p_experience_version_id, 'READY_FOR_REVIEW', 'PUBLISHED'"],
+  ]) {
+    const [{ prosrc }] = await rows(
+      `SELECT pr.prosrc FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+        WHERE n.nspname = 'public' AND pr.proname = $1`, [name]);
+    assert.ok(prosrc.includes(expected),
+      `${name} writes its lifecycle event under its own command identity`);
+    assert.ok(prosrc.includes('derive_public_command_lifecycle_v1'),
+      `${name} answers its retry from that exact event`);
+    assert.ok(!prosrc.includes('derive_public_experience_lifecycle_at_v1'),
+      `${name} never reconstructs the answer by time`);
+  }
+  // And the temporal fallback has exactly one caller: the legacy branch.
+  const callers = await rows(
+    `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+      WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
+        AND pr.proname <> 'derive_public_experience_lifecycle_at_v1'
+        AND pr.prosrc ~ 'derive_public_experience_lifecycle_at_v1' ORDER BY pr.proname`);
+  assert.deepEqual(callers.map((c) => c.proname), ['derive_public_disappearance_command_answer_v1'],
+    'the temporal reconstruction is reachable only from the legacy disappearance branch');
 }
 
 // ------------------------------------------------------- 2. ASSURE-F03 (F03)
@@ -758,6 +811,187 @@ async function verifyHistoricalAnswers(report, f, seam) {
       // A disappearance answer for a command that does not exist fails the same way.
       await rejected(() => disappearanceAnswer(randomUUID()), CONTRADICTORY, /CONTRADICTORY_HISTORY/u);
       await rejected(() => identityAnswer(randomUUID()), CONTRADICTORY, /CONTRADICTORY_HISTORY/u);
+    });
+
+    // ------------------------------------------------------------ REM03-HIST-01
+    //
+    // The historical lifecycle is bound to the command BY IDENTITY, not found
+    // by time. `occurred_at` is not a uniqueness key, so a "latest event at or
+    // before the committed instant" reconstruction is weaker than the truth the
+    // three lifecycle-moving commands already recorded.
+    await report.isolated('H01 DRAFT binds the exact lifecycle event its command id names', async () => {
+      const ids = freshIds();
+      const { drafted } = await draftToReady(f, ids);
+      await asRole('postgres');
+      const [own] = await rows(`SELECT * FROM ${LIFECYCLE_EVENTS} WHERE id = $1`, [ids.draftCommand]);
+      assert.ok(own, 'H01 the creation wrote its lifecycle event under the COMMAND identity');
+      assert.equal(own.experience_id, ids.experience);
+      assert.equal(own.to_lifecycle, 'DRAFT');
+      assert.equal(own.experience_version_id, null, 'H01 a birth names no version');
+      assert.equal(own.occurred_at.getTime(), drafted.committed_at.getTime(),
+        'H01 at the command own committed instant');
+      await actAs(f.mohamed);
+      const [retry] = await publicDraft(ids.draftCommand, ids.experience);
+      assert.equal(retry.current_lifecycle, own.to_lifecycle, 'H01 and the retry answers THAT event');
+    });
+
+    await report.isolated('H02 READY binds the exact lifecycle event its command id names', async () => {
+      const ids = freshIds();
+      const { ready } = await draftToReady(f, ids);
+      await asRole('postgres');
+      const [own] = await rows(`SELECT * FROM ${LIFECYCLE_EVENTS} WHERE id = $1`, [ids.readyCommand]);
+      assert.ok(own, 'H02 the transition wrote its event under the COMMAND identity');
+      assert.equal(own.experience_id, ids.experience);
+      assert.equal(own.experience_version_id, ids.version, 'H02 naming the exact version the command bound');
+      assert.equal(own.to_lifecycle, 'READY_FOR_REVIEW');
+      assert.equal(own.occurred_at.getTime(), ready.committed_at.getTime());
+      await actAs(f.mohamed);
+      assert.equal((await rt.commitReady(ids.readyCommand, ids.experience, ids.version))[0].current_lifecycle,
+        own.to_lifecycle, 'H02 and the retry answers THAT event');
+    });
+
+    await report.isolated('H03 PUBLISH binds the exact lifecycle event its command id names', async () => {
+      const ids = freshIds();
+      await draftToReady(f, ids);
+      const [published] = await rt.publishCleared(seam, f.mohamed, ids.publishCommand, ids.experience, ids.version);
+      await asRole('postgres');
+      const [own] = await rows(`SELECT * FROM ${LIFECYCLE_EVENTS} WHERE id = $1`, [ids.publishCommand]);
+      assert.ok(own, 'H03 the publication wrote its event under the COMMAND identity');
+      assert.equal(own.experience_version_id, ids.version);
+      assert.equal(own.to_lifecycle, 'PUBLISHED');
+      assert.equal(own.occurred_at.getTime(), published.committed_at.getTime());
+      await actAs(f.mohamed);
+      assert.equal((await rt.publish(ids.publishCommand, ids.experience, ids.version))[0].current_lifecycle,
+        own.to_lifecycle, 'H03 and the retry answers THAT event');
+    });
+
+    await report.isolated('H04 a missing exact event fails closed, with a plausible one present', async () => {
+      const ids = freshIds();
+      const { drafted } = await draftToReady(f, ids);
+      await asRole('postgres');
+      // Remove the command's OWN event and plant another one for the same
+      // Experience, at the same instant, saying exactly what the retry wants to
+      // hear. A temporal reconstruction would answer from it. This must not.
+      await q(`ALTER TABLE ${LIFECYCLE_EVENTS} DISABLE TRIGGER ${LIFECYCLE_GUARD}`);
+      await q(`DELETE FROM ${LIFECYCLE_EVENTS} WHERE id = $1`, [ids.draftCommand]);
+      await q(`INSERT INTO ${LIFECYCLE_EVENTS}
+                 (id, experience_id, experience_version_id, from_lifecycle, to_lifecycle, occurred_at)
+               VALUES ($1, $2, NULL, NULL, 'DRAFT', $3)`,
+      [randomUUID(), ids.experience, drafted.committed_at]);
+      await q(`ALTER TABLE ${LIFECYCLE_EVENTS} ENABLE TRIGGER ${LIFECYCLE_GUARD}`);
+      assert.equal(await count(LIFECYCLE_EVENTS, 'experience_id = $1', [ids.experience]), 2,
+        'H04 a plausible event, and the READY one, are both there');
+      await actAs(f.mohamed);
+      await rejected(() => publicDraft(ids.draftCommand, ids.experience), CONTRADICTORY,
+        /CONTRADICTORY_HISTORY/u);
+    });
+
+    await report.isolated('H05 an exact event that contradicts its command fails closed', async () => {
+      const ids = freshIds();
+      await draftToReady(f, ids);
+      await asRole('postgres');
+      await q(`ALTER TABLE ${LIFECYCLE_EVENTS} DISABLE TRIGGER ${LIFECYCLE_GUARD}`);
+      // The event still carries the command identity, and now disagrees about
+      // which lifecycle that command committed.
+      await q(`UPDATE ${LIFECYCLE_EVENTS} SET from_lifecycle = 'DRAFT', to_lifecycle = 'PUBLISHED' WHERE id = $1`,
+        [ids.readyCommand]);
+      await q(`ALTER TABLE ${LIFECYCLE_EVENTS} ENABLE TRIGGER ${LIFECYCLE_GUARD}`);
+      await actAs(f.mohamed);
+      await rejected(() => rt.commitReady(ids.readyCommand, ids.experience, ids.version), CONTRADICTORY,
+        /CONTRADICTORY_HISTORY/u);
+      // And an instant that is not the command's own instant is contradictory too.
+      await asRole('postgres');
+      await q(`ALTER TABLE ${LIFECYCLE_EVENTS} DISABLE TRIGGER ${LIFECYCLE_GUARD}`);
+      await q(`UPDATE ${LIFECYCLE_EVENTS}
+                  SET from_lifecycle = 'DRAFT', to_lifecycle = 'READY_FOR_REVIEW',
+                      occurred_at = occurred_at + interval '1 second' WHERE id = $1`, [ids.readyCommand]);
+      await q(`ALTER TABLE ${LIFECYCLE_EVENTS} ENABLE TRIGGER ${LIFECYCLE_GUARD}`);
+      await actAs(f.mohamed);
+      await rejected(() => rt.commitReady(ids.readyCommand, ids.experience, ids.version), CONTRADICTORY,
+        /CONTRADICTORY_HISTORY/u);
+    });
+
+    await report.isolated('H06 a no-op disappearance command STORES its exact answer', async () => {
+      const ids = freshIds();
+      await draftToReady(f, ids);
+      await rt.publishCleared(seam, f.mohamed, ids.publishCommand, ids.experience, ids.version);
+      await asRole('postgres');
+      const reconcileCommand = randomUUID();
+      const [eligible] = await rt.reconcileDisappearance(reconcileCommand, ids.experience);
+      assert.equal(eligible.outcome, 'STILL_ELIGIBLE');
+      const [stored] = await rows(`SELECT * FROM ${DISAPPEARANCE_COMMANDS} WHERE id = $1`, [reconcileCommand]);
+      assert.equal(stored.committed_lifecycle, 'PUBLISHED', 'H06 the lifecycle it returned is durable');
+      assert.equal(stored.committed_absent_experience_version_id, null,
+        'H06 and so is the ABSENCE OF an absent version, which the command target does not record');
+      assert.equal(stored.committed_disappearance_basis, null);
+      assert.notEqual(stored.target_experience_version_id, null,
+        'H06 the target it bound is still there and is deliberately NOT the answer');
+      // THE ANSWER IS READ FROM THE ROW, not reconstructed: with every lifecycle
+      // event of this Experience gone, a temporal reconstruction is impossible
+      // and the retry still answers.
+      await q(`ALTER TABLE ${LIFECYCLE_EVENTS} DISABLE TRIGGER ${LIFECYCLE_GUARD}`);
+      await q(`DELETE FROM ${LIFECYCLE_EVENTS} WHERE experience_id = $1`, [ids.experience]);
+      await q(`ALTER TABLE ${LIFECYCLE_EVENTS} ENABLE TRIGGER ${LIFECYCLE_GUARD}`);
+      const [retry] = await rt.reconcileDisappearance(reconcileCommand, ids.experience);
+      assert.equal(retry.outcome, 'ALREADY_COMMITTED');
+      assert.equal(retry.current_lifecycle, 'PUBLISHED', 'H06 from the stored answer alone');
+      assert.equal(retry.absent_experience_version_id, null);
+      assert.equal(retry.disappearance_basis, null);
+    });
+
+    await report.isolated('H07 an actual disappearance stores its exact answer too', async () => {
+      const ids = freshIds();
+      await draftToReady(f, ids);
+      await rt.publishCleared(seam, f.mohamed, ids.publishCommand, ids.experience, ids.version);
+      await actAs(f.mohamed);
+      await rt.removeFromPublicWorld(ids.removeCommand, ids.experience, ids.version);
+      await asRole('postgres');
+      const [stored] = await rows(`SELECT * FROM ${DISAPPEARANCE_COMMANDS} WHERE id = $1`, [ids.removeCommand]);
+      assert.equal(stored.committed_lifecycle, 'ABSENT_FROM_PUBLIC_WORLD');
+      assert.equal(stored.committed_absent_experience_version_id, ids.version);
+      assert.equal(stored.committed_disappearance_basis, 'AUTHORIZED_CONTROLLER_REMOVAL');
+      await q(`ALTER TABLE ${LIFECYCLE_EVENTS} DISABLE TRIGGER ${LIFECYCLE_GUARD}`);
+      await q(`DELETE FROM ${LIFECYCLE_EVENTS} WHERE experience_id = $1`, [ids.experience]);
+      await q(`ALTER TABLE ${LIFECYCLE_EVENTS} ENABLE TRIGGER ${LIFECYCLE_GUARD}`);
+      await actAs(f.mohamed);
+      const [retry] = await rt.removeFromPublicWorld(ids.removeCommand, ids.experience, ids.version);
+      assert.equal(retry.absent_experience_version_id, ids.version,
+        'H07 the retry is independent of every current state, including the event log');
+      assert.equal(retry.disappearance_basis, 'AUTHORIZED_CONTROLLER_REMOVAL');
+      assert.equal(retry.current_lifecycle, 'ABSENT_FROM_PUBLIC_WORLD');
+    });
+
+    await report.isolated('H08 a pre-0121 no-op reconstructs only when unique, else fails closed', async () => {
+      const ids = freshIds();
+      await draftToReady(f, ids);
+      await rt.publishCleared(seam, f.mohamed, ids.publishCommand, ids.experience, ids.version);
+      await asRole('postgres');
+      const reconcileCommand = randomUUID();
+      await rt.reconcileDisappearance(reconcileCommand, ids.experience);
+      // EXACTLY THE SHAPE A COMMAND COMMITTED BEFORE THIS MIGRATION HAS.
+      await q(`UPDATE ${DISAPPEARANCE_COMMANDS}
+                  SET committed_lifecycle = NULL, committed_disappearance_basis = NULL,
+                      committed_absent_experience_version_id = NULL WHERE id = $1`, [reconcileCommand]);
+      const [legacy] = await rt.reconcileDisappearance(reconcileCommand, ids.experience);
+      assert.equal(legacy.current_lifecycle, 'PUBLISHED',
+        'H08 the legacy fallback reconstructs it from the immutable event log');
+      assert.equal(legacy.absent_experience_version_id, null);
+      // NOW MAKE THE EVIDENCE AMBIGUOUS. Two events share the latest instant,
+      // so "the latest one" is no longer a fact, and the fallback fails closed
+      // rather than choosing.
+      await q(`ALTER TABLE ${LIFECYCLE_EVENTS} DISABLE TRIGGER ${LIFECYCLE_GUARD}`);
+      await q(`INSERT INTO ${LIFECYCLE_EVENTS}
+                 (id, experience_id, experience_version_id, from_lifecycle, to_lifecycle, occurred_at)
+               SELECT $1, le.experience_id, le.experience_version_id, 'PUBLISHED',
+                      'ABSENT_FROM_PUBLIC_WORLD', le.occurred_at
+                 FROM ${LIFECYCLE_EVENTS} le WHERE le.id = $2`, [randomUUID(), ids.publishCommand]);
+      await q(`ALTER TABLE ${LIFECYCLE_EVENTS} ENABLE TRIGGER ${LIFECYCLE_GUARD}`);
+      await rejected(() => rt.reconcileDisappearance(reconcileCommand, ids.experience), CONTRADICTORY,
+        /CONTRADICTORY_HISTORY/u);
+      // AND THE SAME AMBIGUITY CANNOT REACH A COMMAND THAT BINDS ITS OWN EVENT.
+      await actAs(f.mohamed);
+      assert.equal((await rt.publish(ids.publishCommand, ids.experience, ids.version))[0].current_lifecycle,
+        'PUBLISHED', 'H08 a command-bound answer is untouched by a second event at the same instant');
     });
   } finally {
     await q('ROLLBACK');

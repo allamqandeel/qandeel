@@ -121,10 +121,19 @@
 -- identity is what remains, and the deletion command's own idempotency - a
 -- different command family with its own history - is untouched.
 --
--- The refusal is reachable only by the owner of that exact command with every
--- immutable identity field matching. Anyone else, and anyone guessing a command
--- id, still receives the same command conflict they received before, so the new
--- class is not an oracle for whether a disclosure was deleted.
+-- REM03-ERASE-ID-01: the refusal is reachable only when every SURVIVING
+-- immutable request identity field still matches - the owner, the World, the
+-- resource version, the material, the history item, the grant event AND the
+-- resource type. `resource_type` is an immutable command input, it is not
+-- content-derived, and it is explicitly retained as audit identity, so a retry
+-- that changes it is a DIFFERENT immutable request and the database still has
+-- the evidence to say so. It stays the command conflict. Only content identity
+-- is intentionally unknowable after deletion - the field key, the text value,
+-- the media reference, the payload digest and the whole-request reference - and
+-- those are precisely what erasure destroyed, so those alone are not compared.
+-- Anyone else, and anyone guessing a command id, still receives the same
+-- command conflict they received before, so the new class is not an oracle for
+-- whether a disclosure was deleted.
 --
 -- ## Anti-scope
 --
@@ -826,6 +835,7 @@ BEGIN
        AND committed.material_id = p_material_id
        AND committed.history_item_id = p_history_item_id
        AND committed.disclosure_granted_event_id = p_disclosure_granted_event_id
+       AND committed.resource_type = p_resource_type
        AND committed.verifier_state = 'ERASED_BY_OWNER' THEN
       RAISE EXCEPTION 'INTRODUCTION_DISCLOSURE_ERASED_BY_OWNER' USING ERRCODE='55000',
         DETAIL='This disclosure was deleted by its owner and its payload-derived verifiers were destroyed with the payload. Exact payload equivalence can no longer be proven, so the historical command answers nothing. Its audit identity remains.';
@@ -864,6 +874,7 @@ BEGIN
        AND committed.material_id = p_material_id
        AND committed.history_item_id = p_history_item_id
        AND committed.disclosure_granted_event_id = p_disclosure_granted_event_id
+       AND committed.resource_type = p_resource_type
        AND committed.verifier_state = 'ERASED_BY_OWNER' THEN
       RAISE EXCEPTION 'INTRODUCTION_DISCLOSURE_ERASED_BY_OWNER' USING ERRCODE='55000',
         DETAIL='This disclosure was deleted by its owner and its payload-derived verifiers were destroyed with the payload. Exact payload equivalence can no longer be proven, so the historical command answers nothing. Its audit identity remains.';
@@ -1027,6 +1038,7 @@ BEGIN
          AND committed.material_id = p_material_id
          AND committed.history_item_id = p_history_item_id
          AND committed.disclosure_granted_event_id = p_disclosure_granted_event_id
+         AND committed.resource_type = p_resource_type
          AND committed.verifier_state = 'ERASED_BY_OWNER' THEN
         RAISE EXCEPTION 'INTRODUCTION_DISCLOSURE_ERASED_BY_OWNER' USING ERRCODE='55000',
           DETAIL='This disclosure was deleted by its owner and its payload-derived verifiers were destroyed with the payload. Exact payload equivalence can no longer be proven, so the historical command answers nothing. Its audit identity remains.';
@@ -1156,6 +1168,12 @@ BEGIN
    WHERE n.nspname = 'public' AND pr.proname = 'commit_introduction_progressive_disclosure_v1';
   IF p.prosrc !~ 'INTRODUCTION_DISCLOSURE_ERASED_BY_OWNER' THEN
     RAISE EXCEPTION 'QAN-CW-REM-03: a retry after verifier erasure must fail closed with its own bounded class';
+  END IF;
+  -- REM03-ERASE-ID-01: and it reaches that class only when EVERY surviving
+  -- immutable request identity field still matches, resource_type included.
+  IF (SELECT count(*) FROM regexp_matches(p.prosrc,
+        'committed\.resource_type = p_resource_type', 'g')) <> 3 THEN
+    RAISE EXCEPTION 'QAN-CW-REM-03: all three erased branches must compare the surviving resource type before answering ERASED_BY_OWNER';
   END IF;
   IF p.prosrc ~ 'verifier_erased_at' OR p.prosrc ~ 'UPDATE public\.introduction_disclosure_commands' THEN
     RAISE EXCEPTION 'QAN-CW-REM-03: the disclosure command may neither erase nor restore a verifier';

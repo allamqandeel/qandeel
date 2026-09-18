@@ -34,6 +34,16 @@
 //   D13 the erasure is one-way: no return to PRESENT, no replacement digest, no
 //       identity change, no DELETE, and no erasure while the payload lives
 //   D14 no other relation retains a payload-derived verifier of the disclosure
+//
+//   REM03-ERASE-ID-01 - erasure destroys content equivalence, not request identity
+//   E01 same surviving identity + the original payload   -> ERASED_BY_OWNER
+//   E02 same surviving identity + a different payload    -> ERASED_BY_OWNER
+//   E03 a changed TEXT resource_type                     -> COMMAND_ID_CONFLICT
+//   E04 a changed IMAGE resource_type                    -> COMMAND_ID_CONFLICT
+//   E05 a stranger                                       -> COMMAND_ID_CONFLICT
+//   E06 a changed World, resource version, material, history item or grant
+//       event                                            -> COMMAND_ID_CONFLICT
+//   E07 and none of them recreates a payload or a verifier
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import process from 'node:process';
@@ -392,6 +402,103 @@ async function verifyPrivacyErasure(report, humans) {
         DURABLE, /INTRODUCTION_DISCLOSURE_IS_DURABLE/u);
     });
 
+    // -------------------------------------------------------- REM03-ERASE-ID-01
+    //
+    // Erasure destroys CONTENT equivalence. It does not destroy request
+    // identity that survives, and the erased branch may not discard it: every
+    // surviving immutable field is still compared before the deleted class is
+    // reached, so a genuinely different request is still a conflict.
+    await report.isolated('E01 same surviving identity and the original payload is ERASED_BY_OWNER', async () => {
+      const f = await rt.bringToIntroduction(humans[0], humans[1]);
+      const { ids } = await rt.discloseAs(f.lower, f.world, 'FULL_NAME', { text: 'Sara Kamel' });
+      await deleteDisclosure(f.lower, f.world, ids.material);
+      await actAs(f.lower);
+      await rejected(() => rt.disclose(ids, f.world, 'FULL_NAME', { text: 'Sara Kamel' }), DURABLE,
+        /INTRODUCTION_DISCLOSURE_ERASED_BY_OWNER/u);
+    });
+
+    await report.isolated('E02 same surviving identity and a different payload is still ERASED_BY_OWNER', async () => {
+      const f = await rt.bringToIntroduction(humans[0], humans[1]);
+      const { ids } = await rt.discloseAs(f.lower, f.world, 'FULL_NAME', { text: 'Sara Kamel' });
+      await deleteDisclosure(f.lower, f.world, ids.material);
+      await actAs(f.lower);
+      // Content equivalence is intentionally unknowable, so the answer may not
+      // pretend to know it in either direction.
+      await rejected(() => rt.disclose(ids, f.world, 'FULL_NAME', { text: 'Someone Entirely Different' }),
+        DURABLE, /INTRODUCTION_DISCLOSURE_ERASED_BY_OWNER/u);
+    });
+
+    await report.isolated('E03 a changed text resource type is a COMMAND CONFLICT, not a deleted answer', async () => {
+      const f = await rt.bringToIntroduction(humans[0], humans[1]);
+      const { ids } = await rt.discloseAs(f.lower, f.world, 'FULL_NAME', { text: 'Sara Kamel' });
+      await deleteDisclosure(f.lower, f.world, ids.material);
+      await actAs(f.lower);
+      // `resource_type` is an immutable request input, it is NOT content-derived,
+      // and it survives deletion as audit identity - so the database still has
+      // the evidence to prove this is a different request, and must use it.
+      await rejected(() => rt.disclose(ids, f.world, 'CONTACT_METHOD', { text: 'Sara Kamel' }), CONFLICT,
+        /INTRODUCTION_DISCLOSURE_COMMAND_ID_CONFLICT/u);
+    });
+
+    await report.isolated('E04 a changed image resource type is a COMMAND CONFLICT too', async () => {
+      const f = await rt.bringToIntroduction(humans[0], humans[1]);
+      const reference = mediaRef('rem03-erase-identity');
+      const { ids } = await rt.discloseAs(f.lower, f.world, 'FULL_IMAGE', { media: reference });
+      await deleteDisclosure(f.lower, f.world, ids.material);
+      await actAs(f.lower);
+      await rejected(() => rt.disclose(ids, f.world, 'PARTIAL_IMAGE', { media: reference }), CONFLICT,
+        /INTRODUCTION_DISCLOSURE_COMMAND_ID_CONFLICT/u);
+      await rejected(() => rt.disclose(ids, f.world, 'FULL_IMAGE', { media: reference }), DURABLE,
+        /INTRODUCTION_DISCLOSURE_ERASED_BY_OWNER/u);
+    });
+
+    await report.isolated('E05 a stranger reaches the frozen conflict, never the deleted class', async () => {
+      const f = await rt.bringToIntroduction(humans[0], humans[1]);
+      const { ids } = await rt.discloseAs(f.lower, f.world, 'FULL_NAME', { text: 'Sara Kamel' });
+      await deleteDisclosure(f.lower, f.world, ids.material);
+      await actAs(f.higher);
+      await rejected(() => rt.disclose(ids, f.world, 'FULL_NAME', { text: 'Sara Kamel' }), CONFLICT,
+        /INTRODUCTION_DISCLOSURE_COMMAND_ID_CONFLICT/u);
+    });
+
+    await report.isolated('E06 a changed bound identity is a COMMAND CONFLICT', async () => {
+      const f = await rt.bringToIntroduction(humans[0], humans[1]);
+      const { ids } = await rt.discloseAs(f.lower, f.world, 'FULL_NAME', { text: 'Sara Kamel' });
+      await deleteDisclosure(f.lower, f.world, ids.material);
+      await actAs(f.lower);
+      // Each of the four remaining bound identities, one at a time.
+      for (const field of ['version', 'material', 'item', 'event']) {
+        await rejected(() => rt.disclose({ ...ids, [field]: randomUUID() }, f.world, 'FULL_NAME',
+          { text: 'Sara Kamel' }), CONFLICT, /INTRODUCTION_DISCLOSURE_COMMAND_ID_CONFLICT/u);
+      }
+      // And a different World, through a second real Introduction.
+      const other = await rt.bringToIntroduction(humans[2], humans[3]);
+      await actAs(f.lower);
+      await rejected(() => rt.disclose(ids, other.world, 'FULL_NAME', { text: 'Sara Kamel' }), CONFLICT,
+        /INTRODUCTION_DISCLOSURE_COMMAND_ID_CONFLICT/u);
+    });
+
+    await report.isolated('E07 none of those recreate a payload or a verifier', async () => {
+      const f = await rt.bringToIntroduction(humans[0], humans[1]);
+      const { ids } = await rt.discloseAs(f.lower, f.world, 'FULL_NAME', { text: 'Sara Kamel' });
+      await deleteDisclosure(f.lower, f.world, ids.material);
+      const before = await commandRow(ids.command);
+      await actAs(f.lower);
+      for (const [type, payload] of [
+        ['FULL_NAME', { text: 'Sara Kamel' }], ['FULL_NAME', { text: 'a different name' }],
+        ['CONTACT_METHOD', { text: 'Sara Kamel' }], ['DEEPER_PERSONAL_FIELD', { text: 'x', fieldKey: 'a_note' }],
+      ]) {
+        await rejected(() => rt.disclose(ids, f.world, type, payload), [...DURABLE, ...CONFLICT],
+          /INTRODUCTION_DISCLOSURE_(ERASED_BY_OWNER|COMMAND_ID_CONFLICT)/u);
+      }
+      await asRole('postgres');
+      assert.deepEqual(await commandRow(ids.command), before, 'E07 the command row is untouched throughout');
+      assert.equal(await rt.textPayload(ids.version), null, 'E07 no payload was recreated');
+      assert.equal(await rt.mediaPayload(ids.version), null, 'E07 by any of them');
+      assert.equal((await commandRow(ids.command)).payload_digest, null, 'E07 and no verifier either');
+      assert.equal((await commandRow(ids.command)).request_ref, null);
+    });
+
     await report.isolated('D14 no other relation retains a payload-derived verifier', async () => {
       const f = await rt.bringToIntroduction(humans[0], humans[1]);
       const { ids } = await rt.discloseAs(f.lower, f.world, 'DEEPER_PERSONAL_FIELD',
@@ -431,7 +538,7 @@ async function verifyPrivacyErasure(report, humans) {
 }
 
 // ------------------------------------------------------------------ the run
-const humans = [randomUUID(), randomUUID()];
+const humans = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
 await runVerifier('0122', async (setStage) => {
   await rt.client.connect();
   await q("SET lock_timeout = '10s'");
@@ -451,7 +558,7 @@ await runVerifier('0122', async (setStage) => {
     seams.push(await rt.captureMatchingSeam(fn));
   }
   try {
-    await rt.resolveFirstName({ [humans[0]]: 'Sara', [humans[1]]: 'Omar' });
+    await rt.resolveFirstName({ [humans[0]]: 'Sara', [humans[1]]: 'Omar', [humans[2]]: 'Layla', [humans[3]]: 'Karim' });
     await rt.clearProposalPrerequisites();
     await rt.clearAllSeams();
     setStage('privacy erasure');

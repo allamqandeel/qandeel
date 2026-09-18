@@ -75,42 +75,56 @@
 -- correct and are NOT touched; one reads a derivation that is provably pinned
 -- and is NOT touched either, with its proof recorded; five were defective.
 --
--- ## The strategy, and why it needs almost no new schema
+-- ## The strategy: the exact evidence each command already left
 --
--- `public_experience_lifecycle_events` is append-only, immutable for every role
--- including the owner, and COMPLETE: exactly four statements in the whole tree
--- write `public_experiences.current_lifecycle` - the 0093 draft INSERT, the 0093
--- READY update, the 0095 publish update and the 0099 disappearance update - and
--- every one of them writes a lifecycle event in the same transaction, at the
--- same database-owned instant.
+-- The three lifecycle-moving Public commands write their lifecycle event with
+-- `id = p_command_id`. The historical answer is therefore not a temporal
+-- question at all - it is an exact identity binding that already exists:
 --
--- So the lifecycle of one Experience at any past instant is not a guess: it is
--- the `to_lifecycle` of the latest immutable event at or before that instant.
--- Section 2.1 makes that one derivation, and five retry paths read it instead of
--- the mutable pointer. It answers correctly for commands committed BEFORE this
--- migration as well as after, because it consumes only evidence those commands
--- already wrote, and it fails closed rather than guessing when that evidence
--- does not exist.
+--     command id  ->  the exact lifecycle event  ->  its own to_lifecycle
 --
--- The disappearance family needs nothing more than that either: with the
--- historical lifecycle in hand, the two other fields of its answer follow from
--- immutable evidence the command already binds (section 2.3).
+-- Section 2.0 is that binding, and it validates every axis it can: the event
+-- belongs to the Experience the command bound, names the version it bound,
+-- carries the lifecycle that family commits, and occurred at the command's own
+-- instant. Anything else is contradictory history and fails closed rather than
+-- answering from another plausible event.
 --
--- The Public Identity family is the ONE place where durable evidence was
--- genuinely missing: a display label has no history relation - 0091 says so
--- deliberately, "Historical alias-label rendering is deferred, so there is no
--- label history" - so the label a command committed is recoverable from nothing.
--- That family gets the smallest typed durable shape: two typed columns on its
--- own command row, which is where the frozen law says the exact committed answer
--- belongs. No generic JSON result blob, no second Product relation, and no label
--- history surface: the columns are reachable only through that one command's own
--- retry.
+-- This is deliberately NOT a "latest event at or before the committed instant"
+-- reconstruction. `occurred_at` is not a uniqueness key - the relation has
+-- PRIMARY KEY (id) and an index on (experience_id, occurred_at), and nothing
+-- forbids two events sharing one timestamp - so time is strictly weaker than
+-- the identity already recorded, and a later legitimate event at the same
+-- instant would break an answer that remains perfectly identifiable by command
+-- id (REM03-HIST-01).
+--
+-- A disappearance command can commit an answer WITHOUT moving a lifecycle -
+-- STILL_ELIGIBLE, ALREADY_ABSENT and both NOT_APPLICABLE branches write no
+-- event - so it has no event of its own to bind. That family therefore RECORDS
+-- its exact answer: three typed columns on its own command row, written
+-- atomically with the transition it reports (section 2.3).
+--
+-- The Public Identity family is the other place durable evidence was genuinely
+-- missing: a display label has no history relation - 0091 says so deliberately,
+-- "Historical alias-label rendering is deferred, so there is no label history" -
+-- so the label a command committed is recoverable from nothing. It gets the same
+-- treatment: two typed columns on its own command row, which is where the frozen
+-- law says the exact committed answer belongs. No generic JSON result blob, no
+-- second Product relation, and no label history surface: the columns are
+-- reachable only through that one command's own retry.
 --
 -- ## Pre-0121 commands
 --
--- Every corrected family except the Public Identity one reconstructs its exact
--- historical answer from immutable evidence that already exists, so an old
--- command keeps answering - correctly, which it did not before.
+-- The three lifecycle-moving families need nothing special: their events were
+-- always written under the command's own identity, so an old command binds its
+-- own event exactly as a new one does.
+--
+-- An old disappearance command carries no stored answer. If it moved the
+-- lifecycle it still wrote its event under its own identity, and section 2.3
+-- answers it exactly from that. Only one that reported a STATE rather than a
+-- transition has no command-bound evidence at all, and only there does a
+-- temporal reconstruction appear - as a bounded LEGACY fallback (section 2.1),
+-- never as the store for anything written from here on, and failing closed on
+-- no evidence and on ambiguous evidence alike.
 --
 -- For an old Public Identity command the label is genuinely gone unless the
 -- display state has not moved since. The committed `label_revision` is the
@@ -234,7 +248,7 @@ COMMENT ON FUNCTION public.derive_replay_distribution_approval_effective_state_v
 --    create_public_experience_draft_v1      -> public_experience_draft_commands
 --      experience_id                    COMMAND
 --      created_by_public_identity_ref   COMMAND
---      current_lifecycle    LIVE  -> IMMUTABLE lifecycle event (section 2.1)
+--      current_lifecycle    LIVE  -> IMMUTABLE lifecycle event this command wrote (section 2.0)
 --      experience_revision  LIVE  -> CONSTANT 1: the creating INSERT writes the
 --                                   literal 1 and nothing else can create an
 --                                   Experience
@@ -260,7 +274,7 @@ COMMENT ON FUNCTION public.derive_replay_distribution_approval_effective_state_v
 --      experience_id / experience_version_id / manifest_version_id /
 --      satisfied_approval_count / authority_request_fingerprint / committed_at
 --                           COMMAND
---      current_lifecycle    LIVE  -> IMMUTABLE lifecycle event (section 2.1)
+--      current_lifecycle    LIVE  -> IMMUTABLE lifecycle event this command wrote (section 2.0)
 --
 --    withdraw_publication_approval_v1       -> publication_approval_withdrawal_commands
 --      approval_id / approved_manifest_version_id / committed_at   COMMAND
@@ -279,7 +293,7 @@ COMMENT ON FUNCTION public.derive_replay_distribution_approval_effective_state_v
 --      experience_id / experience_version_id / manifest_version_id /
 --      effective_approval_count / authority_request_fingerprint / committed_at
 --                           COMMAND
---      current_lifecycle    LIVE  -> IMMUTABLE lifecycle event (section 2.1)
+--      current_lifecycle    LIVE  -> IMMUTABLE lifecycle event this command wrote (section 2.0)
 --
 --    remove_public_experience_from_public_world_v1
 --                                           -> public_experience_disappearance_commands
@@ -326,14 +340,94 @@ COMMENT ON FUNCTION public.derive_replay_distribution_approval_effective_state_v
 -- ---------------------------------------------------------------------------
 
 -- ---------------------------------------------------------------------------
+-- 2.0 THE EXACT LIFECYCLE EVENT ONE COMMAND WROTE.
+--
+--     REM03-HIST-01. The three lifecycle-moving Public commands write their
+--     lifecycle event with `id = p_command_id`. The historical answer is
+--     therefore not a temporal-query problem at all - it is an exact identity
+--     binding that already exists:
+--
+--       command id  ->  the exact lifecycle event  ->  its own to_lifecycle
+--
+--     So that is what the retry reads. `occurred_at` is NOT a uniqueness key -
+--     the relation has PRIMARY KEY (id) and an index on
+--     (experience_id, occurred_at), and no uniqueness constraint on the pair -
+--     so a "latest event at or before the committed instant" reconstruction is
+--     strictly weaker than the truth available, and would let a future
+--     legitimate event sharing one PostgreSQL timestamp break an otherwise
+--     perfectly identifiable historical answer.
+--
+--     The caller states which family it is and what that family commits; the
+--     DATABASE proves the exact event agrees, on every axis it can:
+--
+--       the event exists under the command's own identity
+--       it belongs to the Experience the command bound
+--       it names the version the command bound (NULL for a birth, which the
+--         frozen 0091 CHECK already makes the only legal birth shape)
+--       it carries the lifecycle that command family commits and no other
+--       it occurred at the command's own committed instant
+--
+--     Anything else is contradictory history, and it fails closed rather than
+--     looking for another plausible event.
+--
+--     Internal, STABLE, write-free, lock-free, executable by nobody.
+-- ---------------------------------------------------------------------------
+CREATE FUNCTION public.derive_public_command_lifecycle_v1(
+  p_command_id uuid, p_experience_id uuid, p_experience_version_id uuid,
+  p_committed_lifecycle text, p_committed_at timestamptz
+) RETURNS text
+LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path='' AS $$
+DECLARE
+  moved public.public_experience_lifecycle_events;
+BEGIN
+  IF p_command_id IS NULL OR p_experience_id IS NULL
+     OR p_committed_lifecycle IS NULL OR p_committed_at IS NULL THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_COMMAND_INVALID' USING ERRCODE='22023';
+  END IF;
+
+  SELECT * INTO moved FROM public.public_experience_lifecycle_events le WHERE le.id = p_command_id;
+  IF NOT FOUND
+     OR moved.experience_id <> p_experience_id
+     OR moved.experience_version_id IS DISTINCT FROM p_experience_version_id
+     OR moved.to_lifecycle <> p_committed_lifecycle
+     OR moved.occurred_at <> p_committed_at THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_CONTRADICTORY_HISTORY' USING ERRCODE='P0001',
+      DETAIL='The immutable lifecycle event this Public command wrote is missing or does not agree with the command that names it. No other event may answer for it.';
+  END IF;
+  RETURN moved.to_lifecycle;
+END$$;
+
+ALTER FUNCTION public.derive_public_command_lifecycle_v1(uuid, uuid, uuid, text, timestamptz) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.derive_public_command_lifecycle_v1(uuid, uuid, uuid, text, timestamptz)
+  FROM PUBLIC, anon, authenticated;
+DO $$BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN
+  EXECUTE 'REVOKE ALL ON FUNCTION public.derive_public_command_lifecycle_v1(uuid, uuid, uuid, text, timestamptz) FROM service_role';
+END IF; END$$;
+
+COMMENT ON FUNCTION public.derive_public_command_lifecycle_v1(uuid, uuid, uuid, text, timestamptz) IS
+  'The lifecycle ONE Public command committed, read from the immutable event '
+  'that command itself wrote under its own identity. Never found by time: a '
+  'lifecycle event is identified by its id, and an instant is not a command '
+  'identity. It fails closed rather than answering from another event.';
+
+-- ---------------------------------------------------------------------------
 -- 2.1 THE HISTORICAL LIFECYCLE OF ONE EXPERIENCE AT ONE PAST INSTANT.
+--
+--     THE LEGACY FALLBACK, AND NOTHING ELSE. No command written from 0121
+--     forward answers through this: the three lifecycle-moving families bind
+--     their own event by identity (section 2.0), and every disappearance
+--     command from here on records its exact answer (section 2.3). What this
+--     exists for is the disappearance command committed BEFORE this migration
+--     that carries no stored answer and wrote no lifecycle event of its own - a
+--     STILL_ELIGIBLE or NOT_APPLICABLE row - where the only evidence left is the
+--     append-only event log and the instant the command recorded.
 --
 --     Internal, STABLE, write-free, lock-free, executable by nobody. It reads
 --     ONE relation: the append-only `public_experience_lifecycle_events`, which
 --     is guarded against UPDATE and DELETE for every role including the table
 --     owner.
 --
---     WHY THIS IS TRUTH AND NOT AN APPROXIMATION. Exactly four statements in the
+--     WHY IT IS SOUND FOR THAT CASE. Exactly four statements in the
 --     whole forward tree set `public_experiences.current_lifecycle`:
 --
 --       0093 create_public_experience_draft_v1            INSERT ... 'DRAFT'
@@ -391,10 +485,11 @@ DO $$BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN
 END IF; END$$;
 
 COMMENT ON FUNCTION public.derive_public_experience_lifecycle_at_v1(uuid, timestamptz) IS
-  'The lifecycle one Public Experience was in at one past instant, read from the '
-  'append-only lifecycle event log and from nothing else. It is how a committed '
-  'Public command answers its own retry without consulting the mutable current '
-  'pointer, and it fails closed rather than guessing.';
+  'THE LEGACY FALLBACK ONLY: the lifecycle one Public Experience was in at one '
+  'past instant, for a pre-0121 disappearance command that stored no answer and '
+  'wrote no lifecycle event of its own. Every command from 0121 forward answers '
+  'from its own exact evidence and never from this. It fails closed rather than '
+  'guessing, on no evidence and on ambiguous evidence alike.';
 
 -- ---------------------------------------------------------------------------
 -- 2.2 THE PUBLIC IDENTITY COMMAND'S OWN COMMITTED ANSWER.
@@ -507,37 +602,109 @@ DO $$BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN
 END IF; END$$;
 
 -- ---------------------------------------------------------------------------
--- 2.3 THE DISAPPEARANCE COMMAND'S OWN COMMITTED ANSWER.
+-- 2.3 THE DISAPPEARANCE COMMAND'S OWN COMMITTED ANSWER, STORED.
 --
---     Both consequential disappearance primitives return the same three derived
---     fields, so ONE derivation answers for both and there is nothing to drift.
---     It adds no column: every field follows from the historical lifecycle plus
---     evidence the command row already binds.
+--     A disappearance command can commit an answer without moving a lifecycle
+--     at all - STILL_ELIGIBLE, ALREADY_ABSENT and both NOT_APPLICABLE branches
+--     write no event - so there is no event for it to bind by identity the way
+--     section 2.0 binds one. REM03-HIST-01: that makes temporal reconstruction
+--     the wrong PRIMARY store for it too. Every command from here on records
+--     its exact answer.
 --
---       lifecycle at the committed instant is NOT ABSENT
---         The command reported no absence. Every such branch - STILL_ELIGIBLE
---         and both NOT_APPLICABLE branches - returned a NULL version and a NULL
---         basis beside that exact lifecycle. This is also the case the frozen
---         retry got outright wrong: it returned the command's TARGET version for
---         a STILL_ELIGIBLE answer that had returned NULL.
+--     Three typed columns, which is the whole answer: the version the command
+--     returned, the basis it returned, and the lifecycle it returned. A fourth
+--     "outcome class" column would add nothing a retry reads - a retry answers
+--     ALREADY_COMMITTED and these three fields - so it is not added.
 --
---       lifecycle at the committed instant IS ABSENT
---         The command reported the absence of ONE exact publication: the version
---         it bound, and the basis of the sealed append-only disappearance record
---         for that exact version. That record is written once per Experience, is
---         immutable for every role, and is bound here by BOTH the Experience and
---         the exact absent version, so the basis returned can only be the basis
---         of the publication this command answered about.
---
---     The `absent_since <= committed_at` test is the last binding: a record
---     written AFTER this command committed is not the absence this command
---     reported, and rather than answer from it the derivation fails closed.
+--     They are NULLABLE because a command committed before this migration has
+--     no answer to carry. `committed_lifecycle` is the presence marker: an
+--     answer always has one, so its absence means "pre-0121" and nothing else,
+--     and the INSERT guard below makes every future row carry it.
 -- ---------------------------------------------------------------------------
+ALTER TABLE public.public_experience_disappearance_commands
+    ADD COLUMN committed_absent_experience_version_id uuid,
+    ADD COLUMN committed_disappearance_basis text,
+    ADD COLUMN committed_lifecycle text;
+
+ALTER TABLE public.public_experience_disappearance_commands
+    ADD CONSTRAINT public_experience_disappearance_commands_answer_lifecycle_check
+        CHECK (committed_lifecycle IS NULL
+            OR committed_lifecycle IN ('DRAFT', 'READY_FOR_REVIEW', 'PUBLISHED', 'ABSENT_FROM_PUBLIC_WORLD')),
+    ADD CONSTRAINT public_experience_disappearance_commands_answer_basis_check
+        CHECK (committed_disappearance_basis IS NULL
+            OR committed_disappearance_basis IN ('AUTHORIZED_CONTROLLER_REMOVAL',
+                                                 'REQUIRED_APPROVAL_NOT_EFFECTIVE',
+                                                 'PUBLISHED_SOURCE_NOT_AVAILABLE',
+                                                 'PUBLICATION_AUTHORITY_INVALIDATED')),
+    -- AN ANSWER THAT REPORTED AN ABSENCE NAMES THE EXACT PUBLICATION THE
+    -- COMMAND BOUND AND ITS BASIS; ONE THAT REPORTED NONE NAMES NEITHER. Both
+    -- directions, so a half-recorded answer is unrepresentable rather than
+    -- merely unwritten, and the version can never be some OTHER publication.
+    ADD CONSTRAINT public_experience_disappearance_commands_answer_shape_check
+        CHECK (committed_lifecycle IS NULL
+            OR (committed_lifecycle = 'ABSENT_FROM_PUBLIC_WORLD'
+                    AND committed_disappearance_basis IS NOT NULL
+                    AND committed_absent_experience_version_id IS NOT NULL
+                    AND committed_absent_experience_version_id = target_experience_version_id)
+            OR (committed_lifecycle <> 'ABSENT_FROM_PUBLIC_WORLD'
+                    AND committed_disappearance_basis IS NULL
+                    AND committed_absent_experience_version_id IS NULL)),
+    -- And a pre-0121 row carries no half of an answer either.
+    ADD CONSTRAINT public_experience_disappearance_commands_answer_absent_check
+        CHECK (committed_lifecycle IS NOT NULL
+            OR (committed_disappearance_basis IS NULL
+                    AND committed_absent_experience_version_id IS NULL));
+
+COMMENT ON COLUMN public.public_experience_disappearance_commands.committed_lifecycle IS
+  'The lifecycle this command RETURNED when it committed, and the presence '
+  'marker for the stored answer. NULL only for a command committed before '
+  'migration 0121; every later one carries it.';
+COMMENT ON COLUMN public.public_experience_disappearance_commands.committed_disappearance_basis IS
+  'The disappearance basis this command RETURNED, or NULL where it reported no '
+  'absence. It is the exact committed answer, never a later convergence''s.';
+COMMENT ON COLUMN public.public_experience_disappearance_commands.committed_absent_experience_version_id IS
+  'The absent version this command RETURNED, or NULL where it reported no '
+  'absence - which the frozen retry got wrong by replaying the command''s target.';
+
+CREATE FUNCTION public.public_disappearance_command_answer_required_v1()
+RETURNS trigger LANGUAGE plpgsql SET search_path='' AS $$
+BEGIN
+  IF NEW.committed_lifecycle IS NULL THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_CONTRADICTORY_HISTORY'
+      USING ERRCODE='P0001',
+            DETAIL='A Public disappearance command row must carry the exact answer it committed. Only commands written before migration 0121 may lack one.';
+  END IF;
+  RETURN NEW;
+END$$;
+
+ALTER FUNCTION public.public_disappearance_command_answer_required_v1() OWNER TO postgres;
+
+CREATE TRIGGER public_experience_disappearance_commands_answer_required
+    BEFORE INSERT ON public.public_experience_disappearance_commands
+    FOR EACH ROW EXECUTE FUNCTION public.public_disappearance_command_answer_required_v1();
+
+-- ONE derivation of one disappearance command's committed answer, so the two
+-- primitives cannot drift. Three tiers, strongest first:
+--
+--   1. THE STORED ANSWER. Every command from 0121 forward wrote it atomically
+--      with the transition it reported. Nothing is inferred.
+--
+--   2. THE EXACT EVENT THIS COMMAND WROTE. A pre-0121 command that actually
+--      performed a disappearance wrote the lifecycle event under its own
+--      identity, so section 2.0's binding answers it exactly - the version from
+--      that event, and the basis of the sealed record bound to THAT version.
+--
+--   3. THE LEGACY TEMPORAL FALLBACK, and only here. A pre-0121 command that
+--      reported no transition left no event of its own, so the append-only log
+--      and the instant it recorded are the only evidence there is. It fails
+--      closed on no evidence and on ambiguous evidence, and an absence it did
+--      report is still bound to the exact publication it named.
 CREATE FUNCTION public.derive_public_disappearance_command_answer_v1(p_command_id uuid)
 RETURNS TABLE(absent_experience_version_id uuid, disappearance_basis text, current_lifecycle text)
 LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path='' AS $$
 DECLARE
   committed public.public_experience_disappearance_commands;
+  moved public.public_experience_lifecycle_events;
   sealed public.public_experience_disappearance_state;
   historical text;
 BEGIN
@@ -550,6 +717,37 @@ BEGIN
       DETAIL='No Public disappearance command row exists for the command asked about.';
   END IF;
 
+  -- TIER 1: the answer this command stored when it committed.
+  IF committed.committed_lifecycle IS NOT NULL THEN
+    RETURN QUERY SELECT committed.committed_absent_experience_version_id,
+                        committed.committed_disappearance_basis, committed.committed_lifecycle;
+    RETURN;
+  END IF;
+
+  -- TIER 2: the exact immutable event this pre-0121 command wrote, if it moved
+  -- the lifecycle at all.
+  SELECT * INTO moved FROM public.public_experience_lifecycle_events le WHERE le.id = p_command_id;
+  IF FOUND THEN
+    IF moved.experience_id <> committed.experience_id
+       OR moved.to_lifecycle <> 'ABSENT_FROM_PUBLIC_WORLD'
+       OR moved.experience_version_id IS DISTINCT FROM committed.target_experience_version_id
+       OR moved.occurred_at <> committed.committed_at THEN
+      RAISE EXCEPTION 'PUBLIC_EXPERIENCE_CONTRADICTORY_HISTORY' USING ERRCODE='P0001',
+        DETAIL='The lifecycle event this Public disappearance command wrote does not agree with the command that names it.';
+    END IF;
+    SELECT * INTO sealed FROM public.public_experience_disappearance_state d
+     WHERE d.experience_id = committed.experience_id
+       AND d.absent_experience_version_id = moved.experience_version_id;
+    IF NOT FOUND OR sealed.absent_since <> committed.committed_at THEN
+      RAISE EXCEPTION 'PUBLIC_EXPERIENCE_CONTRADICTORY_HISTORY' USING ERRCODE='P0001',
+        DETAIL='The sealed disappearance record this Public command wrote is missing or was not written by it.';
+    END IF;
+    RETURN QUERY SELECT moved.experience_version_id, sealed.disappearance_basis, moved.to_lifecycle;
+    RETURN;
+  END IF;
+
+  -- TIER 3: LEGACY ONLY. No stored answer and no event of its own, so this
+  -- command reported a state rather than a transition.
   historical := public.derive_public_experience_lifecycle_at_v1(committed.experience_id, committed.committed_at);
   IF historical <> 'ABSENT_FROM_PUBLIC_WORLD' THEN
     RETURN QUERY SELECT NULL::uuid, NULL::text, historical;
@@ -563,9 +761,9 @@ BEGIN
   SELECT * INTO sealed FROM public.public_experience_disappearance_state d
    WHERE d.experience_id = committed.experience_id
      AND d.absent_experience_version_id = committed.target_experience_version_id;
-  IF NOT FOUND OR sealed.absent_since > committed.committed_at THEN
+  IF NOT FOUND OR sealed.absent_since >= committed.committed_at THEN
     RAISE EXCEPTION 'PUBLIC_EXPERIENCE_CONTRADICTORY_HISTORY' USING ERRCODE='P0001',
-      DETAIL='The sealed disappearance record this Public command answered about does not exist, or was written after the command committed.';
+      DETAIL='The sealed disappearance record this Public command answered about does not exist, or was not already there when the command committed.';
   END IF;
   RETURN QUERY SELECT committed.target_experience_version_id, sealed.disappearance_basis, historical;
 END$$;
@@ -790,8 +988,8 @@ BEGIN
     END IF;
     RETURN QUERY SELECT 'ALREADY_COMMITTED'::text, committed.experience_id,
                         committed.created_by_public_identity_ref,
-                        public.derive_public_experience_lifecycle_at_v1(
-                          committed.experience_id, committed.committed_at),
+                        public.derive_public_command_lifecycle_v1(
+                          committed.id, committed.experience_id, NULL, 'DRAFT', committed.committed_at),
                         1::bigint,
                         committed.committed_at;
     RETURN;
@@ -807,8 +1005,8 @@ BEGIN
     END IF;
     RETURN QUERY SELECT 'ALREADY_COMMITTED'::text, committed.experience_id,
                         committed.created_by_public_identity_ref,
-                        public.derive_public_experience_lifecycle_at_v1(
-                          committed.experience_id, committed.committed_at),
+                        public.derive_public_command_lifecycle_v1(
+                          committed.id, committed.experience_id, NULL, 'DRAFT', committed.committed_at),
                         1::bigint,
                         committed.committed_at;
     RETURN;
@@ -899,8 +1097,9 @@ BEGIN
     -- immutable event - not the one a later publish or disappearance left.
     RETURN QUERY SELECT 'ALREADY_COMMITTED'::text, committed.experience_id,
                         committed.experience_version_id, committed.manifest_version_id,
-                        public.derive_public_experience_lifecycle_at_v1(
-                          committed.experience_id, committed.committed_at),
+                        public.derive_public_command_lifecycle_v1(
+                          committed.id, committed.experience_id, committed.experience_version_id,
+                          'READY_FOR_REVIEW', committed.committed_at),
                         committed.satisfied_approval_count,
                         committed.authority_request_fingerprint, committed.committed_at;
     RETURN;
@@ -920,8 +1119,9 @@ BEGIN
     END IF;
     RETURN QUERY SELECT 'ALREADY_COMMITTED'::text, committed.experience_id,
                         committed.experience_version_id, committed.manifest_version_id,
-                        public.derive_public_experience_lifecycle_at_v1(
-                          committed.experience_id, committed.committed_at),
+                        public.derive_public_command_lifecycle_v1(
+                          committed.id, committed.experience_id, committed.experience_version_id,
+                          'READY_FOR_REVIEW', committed.committed_at),
                         committed.satisfied_approval_count,
                         committed.authority_request_fingerprint, committed.committed_at;
     RETURN;
@@ -1078,8 +1278,9 @@ BEGIN
     END IF;
     RETURN QUERY SELECT 'ALREADY_COMMITTED'::text, committed.experience_id, committed.experience_version_id,
                         committed.manifest_version_id,
-                        public.derive_public_experience_lifecycle_at_v1(
-                          committed.experience_id, committed.committed_at),
+                        public.derive_public_command_lifecycle_v1(
+                          committed.id, committed.experience_id, committed.experience_version_id,
+                          'PUBLISHED', committed.committed_at),
                         committed.effective_approval_count, committed.authority_request_fingerprint,
                         committed.committed_at;
     RETURN;
@@ -1103,8 +1304,9 @@ BEGIN
     END IF;
     RETURN QUERY SELECT 'ALREADY_COMMITTED'::text, committed.experience_id, committed.experience_version_id,
                         committed.manifest_version_id,
-                        public.derive_public_experience_lifecycle_at_v1(
-                          committed.experience_id, committed.committed_at),
+                        public.derive_public_command_lifecycle_v1(
+                          committed.id, committed.experience_id, committed.experience_version_id,
+                          'PUBLISHED', committed.committed_at),
                         committed.effective_approval_count, committed.authority_request_fingerprint,
                         committed.committed_at;
     RETURN;
@@ -1285,6 +1487,7 @@ DECLARE
   experience public.public_experiences;
   publication public.public_experience_publication_state;
   applied record;
+  sealed_basis text;
   request text;
   instant timestamptz;
 BEGIN
@@ -1369,16 +1572,25 @@ BEGIN
 
   IF experience.current_lifecycle = 'ABSENT_FROM_PUBLIC_WORLD' THEN
     instant := clock_timestamp();
+    -- THE ANSWER THIS COMMAND IS ABOUT TO RETURN, read once and recorded with
+    -- it: the basis of the sealed record for the EXACT publication named.
+    SELECT d.disappearance_basis INTO sealed_basis
+      FROM public.public_experience_disappearance_state d
+     WHERE d.experience_id = p_experience_id
+       AND d.absent_experience_version_id = publication.published_experience_version_id;
+    IF sealed_basis IS NULL THEN
+      RAISE EXCEPTION 'PUBLIC_EXPERIENCE_CONTRADICTORY_STATE' USING ERRCODE='P0001';
+    END IF;
     INSERT INTO public.public_experience_disappearance_commands
       (id, command_kind, experience_id, target_experience_version_id, target_manifest_version_id,
-       actor_user_id, request_ref, committed_at)
+       actor_user_id, request_ref, committed_at,
+       committed_absent_experience_version_id, committed_disappearance_basis, committed_lifecycle)
     VALUES (p_command_id, 'CONTROLLER_REMOVAL', p_experience_id,
             publication.published_experience_version_id, publication.published_manifest_version_id,
-            u, request, instant);
+            u, request, instant,
+            publication.published_experience_version_id, sealed_basis, 'ABSENT_FROM_PUBLIC_WORLD');
     RETURN QUERY SELECT 'ALREADY_ABSENT'::text, p_experience_id,
-                        publication.published_experience_version_id,
-                        (SELECT d.disappearance_basis FROM public.public_experience_disappearance_state d
-                          WHERE d.experience_id = p_experience_id),
+                        publication.published_experience_version_id, sealed_basis,
                         experience.current_lifecycle, instant;
     RETURN;
   END IF;
@@ -1391,10 +1603,12 @@ BEGIN
 
   INSERT INTO public.public_experience_disappearance_commands
     (id, command_kind, experience_id, target_experience_version_id, target_manifest_version_id,
-     actor_user_id, request_ref, committed_at)
+     actor_user_id, request_ref, committed_at,
+     committed_absent_experience_version_id, committed_disappearance_basis, committed_lifecycle)
   VALUES (p_command_id, 'CONTROLLER_REMOVAL', p_experience_id,
           applied.absent_experience_version_id, applied.absent_manifest_version_id,
-          u, request, applied.absent_since);
+          u, request, applied.absent_since,
+          applied.absent_experience_version_id, 'AUTHORIZED_CONTROLLER_REMOVAL', 'ABSENT_FROM_PUBLIC_WORLD');
 
   RETURN QUERY SELECT 'REMOVED_FROM_PUBLIC_WORLD'::text, p_experience_id,
                       applied.absent_experience_version_id, 'AUTHORIZED_CONTROLLER_REMOVAL'::text,
@@ -1412,6 +1626,7 @@ DECLARE
   publication public.public_experience_publication_state;
   eligibility record;
   applied record;
+  sealed_basis text;
   request text;
   instant timestamptz;
 BEGIN
@@ -1479,24 +1694,33 @@ BEGIN
      OR experience.current_lifecycle NOT IN ('PUBLISHED', 'ABSENT_FROM_PUBLIC_WORLD') THEN
     INSERT INTO public.public_experience_disappearance_commands
       (id, command_kind, experience_id, target_experience_version_id, target_manifest_version_id,
-       actor_user_id, request_ref, committed_at)
-    VALUES (p_command_id, 'DISAPPEARANCE_RECONCILIATION', p_experience_id, NULL, NULL, NULL, request, instant);
+       actor_user_id, request_ref, committed_at,
+       committed_absent_experience_version_id, committed_disappearance_basis, committed_lifecycle)
+    VALUES (p_command_id, 'DISAPPEARANCE_RECONCILIATION', p_experience_id, NULL, NULL, NULL, request, instant,
+            NULL, NULL, experience.current_lifecycle);
     RETURN QUERY SELECT 'NOT_APPLICABLE'::text, p_experience_id, NULL::uuid, NULL::text,
                         experience.current_lifecycle, instant;
     RETURN;
   END IF;
 
   IF experience.current_lifecycle = 'ABSENT_FROM_PUBLIC_WORLD' THEN
+    SELECT d.disappearance_basis INTO sealed_basis
+      FROM public.public_experience_disappearance_state d
+     WHERE d.experience_id = p_experience_id
+       AND d.absent_experience_version_id = publication.published_experience_version_id;
+    IF sealed_basis IS NULL THEN
+      RAISE EXCEPTION 'PUBLIC_EXPERIENCE_CONTRADICTORY_STATE' USING ERRCODE='P0001';
+    END IF;
     INSERT INTO public.public_experience_disappearance_commands
       (id, command_kind, experience_id, target_experience_version_id, target_manifest_version_id,
-       actor_user_id, request_ref, committed_at)
+       actor_user_id, request_ref, committed_at,
+       committed_absent_experience_version_id, committed_disappearance_basis, committed_lifecycle)
     VALUES (p_command_id, 'DISAPPEARANCE_RECONCILIATION', p_experience_id,
             publication.published_experience_version_id, publication.published_manifest_version_id,
-            NULL, request, instant);
+            NULL, request, instant,
+            publication.published_experience_version_id, sealed_basis, 'ABSENT_FROM_PUBLIC_WORLD');
     RETURN QUERY SELECT 'ALREADY_ABSENT'::text, p_experience_id,
-                        publication.published_experience_version_id,
-                        (SELECT d.disappearance_basis FROM public.public_experience_disappearance_state d
-                          WHERE d.experience_id = p_experience_id),
+                        publication.published_experience_version_id, sealed_basis,
                         experience.current_lifecycle, instant;
     RETURN;
   END IF;
@@ -1535,12 +1759,17 @@ BEGIN
   SELECT * INTO eligibility FROM public.derive_public_continuing_eligibility_v1(p_experience_id);
 
   IF eligibility.eligibility_state = 'ELIGIBLE' THEN
+    -- THE ANSWER IS RECORDED AS THE ANSWER: no absent version and no basis,
+    -- beside the lifecycle the Experience really was in. The frozen retry
+    -- replayed the command's TARGET here, which this command never returned.
     INSERT INTO public.public_experience_disappearance_commands
       (id, command_kind, experience_id, target_experience_version_id, target_manifest_version_id,
-       actor_user_id, request_ref, committed_at)
+       actor_user_id, request_ref, committed_at,
+       committed_absent_experience_version_id, committed_disappearance_basis, committed_lifecycle)
     VALUES (p_command_id, 'DISAPPEARANCE_RECONCILIATION', p_experience_id,
             publication.published_experience_version_id, publication.published_manifest_version_id,
-            NULL, request, instant);
+            NULL, request, instant,
+            NULL, NULL, experience.current_lifecycle);
     RETURN QUERY SELECT 'STILL_ELIGIBLE'::text, p_experience_id, NULL::uuid, NULL::text,
                         experience.current_lifecycle, instant;
     RETURN;
@@ -1554,8 +1783,10 @@ BEGIN
                                              'PUBLICATION_AUTHORITY_INVALIDATED') THEN
     INSERT INTO public.public_experience_disappearance_commands
       (id, command_kind, experience_id, target_experience_version_id, target_manifest_version_id,
-       actor_user_id, request_ref, committed_at)
-    VALUES (p_command_id, 'DISAPPEARANCE_RECONCILIATION', p_experience_id, NULL, NULL, NULL, request, instant);
+       actor_user_id, request_ref, committed_at,
+       committed_absent_experience_version_id, committed_disappearance_basis, committed_lifecycle)
+    VALUES (p_command_id, 'DISAPPEARANCE_RECONCILIATION', p_experience_id, NULL, NULL, NULL, request, instant,
+            NULL, NULL, experience.current_lifecycle);
     RETURN QUERY SELECT 'NOT_APPLICABLE'::text, p_experience_id, NULL::uuid, NULL::text,
                         experience.current_lifecycle, instant;
     RETURN;
@@ -1568,10 +1799,12 @@ BEGIN
 
   INSERT INTO public.public_experience_disappearance_commands
     (id, command_kind, experience_id, target_experience_version_id, target_manifest_version_id,
-     actor_user_id, request_ref, committed_at)
+     actor_user_id, request_ref, committed_at,
+     committed_absent_experience_version_id, committed_disappearance_basis, committed_lifecycle)
   VALUES (p_command_id, 'DISAPPEARANCE_RECONCILIATION', p_experience_id,
           applied.absent_experience_version_id, applied.absent_manifest_version_id,
-          NULL, request, applied.absent_since);
+          NULL, request, applied.absent_since,
+          applied.absent_experience_version_id, eligibility.ineligibility_class, 'ABSENT_FROM_PUBLIC_WORLD');
 
   RETURN QUERY SELECT 'DISAPPEARANCE_CONVERGED'::text, p_experience_id,
                       applied.absent_experience_version_id, eligibility.ineligibility_class,
@@ -1619,7 +1852,8 @@ DECLARE
   target_role text;
   writers integer;
 BEGIN
-  -- A1. THE LIFECYCLE EVENT LOG IS COMPLETE, which is what makes section 2.1
+  -- A1. THE LIFECYCLE EVENT LOG IS COMPLETE, which is what makes both the exact
+  --     command binding of section 2.0 and the legacy fallback of section 2.1
   --     historical truth rather than an approximation. Exactly four functions
   --     write `public_experiences.current_lifecycle`, and every one of them
   --     writes a lifecycle event in the same body.
@@ -1645,19 +1879,29 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- A2. THE FIVE CORRECTED FAMILIES REALLY CONSUME THE HISTORICAL DERIVATIONS.
+  -- A2. THE FIVE CORRECTED FAMILIES REALLY CONSUME THE EXACT EVIDENCE.
+  --
+  --     REM03-HIST-01: the three lifecycle-moving families must bind their own
+  --     event BY COMMAND IDENTITY, and must not reach the temporal fallback at
+  --     all - an instant is not a command identity.
   FOR p IN SELECT pr.* FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
             WHERE n.nspname = 'public'
               AND pr.proname IN ('create_public_experience_draft_v1',
                                  'commit_public_experience_ready_for_review_v1',
                                  'publish_public_experience_v1') LOOP
-    IF p.prosrc !~ 'derive_public_experience_lifecycle_at_v1' THEN
-      RAISE EXCEPTION 'QAN-CW-REM-03: % must answer its retry from the historical lifecycle derivation', p.proname;
+    IF p.prosrc !~ 'derive_public_command_lifecycle_v1\(\s*\n?\s*committed\.id, committed\.experience_id' THEN
+      RAISE EXCEPTION 'QAN-CW-REM-03: % must answer its retry from the lifecycle event ITS OWN command id names', p.proname;
+    END IF;
+    IF p.prosrc ~ 'derive_public_experience_lifecycle_at_v1' THEN
+      RAISE EXCEPTION 'QAN-CW-REM-03: % may not answer from a temporal reconstruction: an instant is not a command identity', p.proname;
     END IF;
     IF p.prosrc ~ 'e\.current_lifecycle FROM public\.public_experiences' THEN
       RAISE EXCEPTION 'QAN-CW-REM-03: % still reads the mutable current lifecycle as a historical answer', p.proname;
     END IF;
   END LOOP;
+  --     And the disappearance family must both ANSWER from and RECORD its
+  --     committed answer: a future command that stored nothing would silently
+  --     fall through to the legacy fallback.
   FOR p IN SELECT pr.* FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
             WHERE n.nspname = 'public'
               AND pr.proname IN ('remove_public_experience_from_public_world_v1',
@@ -1665,7 +1909,21 @@ BEGIN
     IF p.prosrc !~ 'derive_public_disappearance_command_answer_v1' THEN
       RAISE EXCEPTION 'QAN-CW-REM-03: % must answer its retry from the committed-answer derivation', p.proname;
     END IF;
+    IF p.prosrc !~ 'committed_absent_experience_version_id, committed_disappearance_basis, committed_lifecycle' THEN
+      RAISE EXCEPTION 'QAN-CW-REM-03: % must record the exact answer it committed', p.proname;
+    END IF;
+    IF p.prosrc ~ 'derive_public_experience_lifecycle_at_v1' THEN
+      RAISE EXCEPTION 'QAN-CW-REM-03: % may not reconstruct by time: it stores its answer', p.proname;
+    END IF;
   END LOOP;
+  --     The temporal fallback is reachable from exactly ONE place, and that
+  --     place is the legacy branch of the committed-answer derivation.
+  IF (SELECT count(*) FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+       WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
+         AND pr.proname <> 'derive_public_experience_lifecycle_at_v1'
+         AND pr.prosrc ~ 'derive_public_experience_lifecycle_at_v1') <> 1 THEN
+    RAISE EXCEPTION 'QAN-CW-REM-03: the temporal lifecycle fallback may have exactly one caller, the legacy branch of the disappearance answer';
+  END IF;
   FOR p IN SELECT pr.* FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
             WHERE n.nspname = 'public'
               AND pr.proname IN ('ensure_public_identity_v1', 'update_public_display_label_v1') LOOP
@@ -1717,7 +1975,8 @@ BEGIN
        AND EXISTS (
          SELECT 1 FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
           WHERE n.nspname = 'public'
-            AND pr.proname IN ('derive_public_experience_lifecycle_at_v1',
+            AND pr.proname IN ('derive_public_command_lifecycle_v1',
+                               'derive_public_experience_lifecycle_at_v1',
                                'derive_public_identity_command_answer_v1',
                                'derive_public_disappearance_command_answer_v1',
                                'derive_replay_distribution_approval_effective_state_v1',
@@ -1737,7 +1996,8 @@ BEGIN
   --     locks they had.
   FOR p IN SELECT pr.* FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
             WHERE n.nspname = 'public'
-              AND pr.proname IN ('derive_public_experience_lifecycle_at_v1',
+              AND pr.proname IN ('derive_public_command_lifecycle_v1',
+                                 'derive_public_experience_lifecycle_at_v1',
                                  'derive_public_identity_command_answer_v1',
                                  'derive_public_disappearance_command_answer_v1',
                                  'derive_replay_distribution_approval_effective_state_v1') LOOP
@@ -1753,7 +2013,8 @@ BEGIN
   --     derivative because a source became unavailable.
   IF EXISTS (SELECT 1 FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
               WHERE n.nspname = 'public'
-                AND pr.proname IN ('derive_public_experience_lifecycle_at_v1',
+                AND pr.proname IN ('derive_public_command_lifecycle_v1',
+                                   'derive_public_experience_lifecycle_at_v1',
                                    'derive_public_identity_command_answer_v1',
                                    'derive_public_disappearance_command_answer_v1')
                 AND (pr.prosrc ~ 'DELETE FROM' OR pr.prosrc ~ 'UPDATE public\.'
