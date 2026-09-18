@@ -1300,21 +1300,39 @@ async function verifyReviewFixes(f) {
   assert.deepEqual(afterDeletion, exactRetry,
     'the committed answer does not change because a source was later withdrawn');
 
-  stage = 'FIX-D: a truly known zero human requirement is RESOLVED, and may be shared historically';
+  // QAN-CW-REM-01 RECONCILES THIS BLOCK FORWARD, and the reason is worth stating
+  // where it is read rather than only in the task that made the change.
+  //
+  // I-04G asserted here that a zero-dependency QANDEEL commit was a "truly known
+  // zero human requirement": RESOLVED_NO_HUMAN_REQUIREMENT, approval-free, and
+  // packageable. The phase-wide architecture assurance accepted ASSURE-F02
+  // against exactly that: nothing in the commit established anything about
+  // protected humans, so the absence of a caller-supplied dependency array was
+  // being read as proof about them. Migration 0119 corrects the arm, and the old
+  // expectation cannot survive it.
+  //
+  // It is reconciled rather than deleted, because this is still the only place
+  // the whole zero-dependency path is exercised against the real boundary, and
+  // the three things it always proved all still matter: the material commits,
+  // its exact baseline audience is unaffected, and the widening decision is
+  // really taken - now in the other direction.
+  stage = 'FIX-D: a zero-dependency QANDEEL commit is UNRESOLVED, and cannot be shared historically';
   const authorityWorld = await provisionWorld(f.inviter, f.fixAuthority, 'review-fix-authority');
   const independent = await commitQandeel(authorityWorld.worldId, 'an independently established analysis');
+  assert.equal(independent.outcome, 'MATERIAL_COMMITTED',
+    'a zero-dependency analysis still commits: the correction narrows WIDENING, not participation');
   const [{ resolution: independentState }] = await rows(
     `SELECT resolution_state resolution FROM ${AUTHORITY} WHERE material_id = $1`, [independent.committed_material_id]);
-  assert.equal(independentState, 'RESOLVED_NO_HUMAN_REQUIREMENT');
+  assert.equal(independentState, 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT',
+    'absence of known authority evidence is not a resolved-empty authority set');
   const [{ mode: independentMode }] = await rows(
     `SELECT authority_requirement_mode mode FROM ${ITEMS} WHERE id = $1`, [independent.committed_history_item_id]);
-  assert.equal(independentMode, 'NO_HUMAN_APPROVAL_REQUIRED',
-    'a genuinely resolved empty requirement is the ONLY thing written as approval-free');
-  const packagedManifest = randomUUID();
+  assert.equal(independentMode, 'EXACT_HUMAN_APPROVER_SET',
+    'so it is never written as approval-free, and the frozen I-04F package path can never read it as one');
   await identity('postgres');
-  const [packaged] = await rows(HISTORY_PREPARE_SQL,
-    [packagedManifest, authorityWorld.worldId, f.fixAuthority, [independent.committed_history_item_id]]);
-  assert.equal(packaged.outcome, 'PREPARED', 'and it enters a history package normally');
+  await rejected(() => rows(HISTORY_PREPARE_SQL,
+    [randomUUID(), authorityWorld.worldId, f.fixAuthority, [independent.committed_history_item_id]]),
+  INCOMPLETE, /SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED/u);
 
   stage = 'FIX-D: reasoning-dependent material is UNRESOLVED and cannot be historically widened';
   const reasoningMaterial = await commitQandeel(authorityWorld.worldId, 'an analysis shaped by private reasoning',
@@ -1356,10 +1374,20 @@ async function verifyReviewFixes(f) {
     [randomUUID(), authorityWorld.worldId, f.fixAuthority, [mixed.committed_history_item_id]]),
   INCOMPLETE, /SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED/u);
   // And one unresolved item poisons a package it is merely PART of, rather than
-  // being silently dropped from it.
+  // being silently dropped from it. The other item is the human statement above,
+  // whose authority really is resolved - so the refusal is unambiguously caused
+  // by the ONE unresolved member rather than by every member being unresolved.
   await rejected(() => rows(HISTORY_PREPARE_SQL, [randomUUID(), authorityWorld.worldId, f.fixAuthority,
-    [independent.committed_history_item_id, mixed.committed_history_item_id]]),
+    [owned.committed_history_item_id, mixed.committed_history_item_id]]),
   INCOMPLETE, /SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED/u);
+  // And that same resolved human item packages perfectly well on its own, which
+  // is what proves the refusal above is about authority and not about the World.
+  const lawful = randomUUID();
+  const [lawfulPackage] = await rows(HISTORY_PREPARE_SQL,
+    [lawful, authorityWorld.worldId, f.fixAuthority, [owned.committed_history_item_id]]);
+  assert.equal(lawfulPackage.outcome, 'PREPARED', 'ordinary selective history is untouched');
+  assert.equal(Number(lawfulPackage.prepared_required_approver_count), 1,
+    'with the exact human owner required, exactly as I-04F derived it');
 
   stage = 'FIX-D: a reasoning dependency never becomes material consent';
   const reasoningApprovers = (await rows(
@@ -1379,7 +1407,8 @@ async function verifyReviewFixes(f) {
   assert.ok(visible.includes(reasoningMaterial.committed_material_id),
     'the exact already-authorized baseline audience still sees reasoning-dependent material');
   assert.ok(visible.includes(mixed.committed_material_id));
-  assert.ok(visible.includes(independent.committed_material_id));
+  assert.ok(visible.includes(independent.committed_material_id),
+    'and so does the zero-dependency material QAN-CW-REM-01 moved to unresolved: current delivery is untouched');
   await identity('postgres');
 
   stage = 'FIX-D: a later reviewed subject-authority resolution extends this additively';
