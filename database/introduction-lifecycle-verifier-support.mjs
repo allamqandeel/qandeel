@@ -1,5 +1,5 @@
 // Shared support for the I-07D real-PostgreSQL verifiers (migrations 0115,
-// 0116 and 0117).
+// 0116, 0117 and 0118).
 //
 // It composes the I-07C Match runtime, because every I-07D fixture starts from
 // a REAL committed Mutual Match - a real ACTIVE / INTRODUCTION Shared World,
@@ -15,7 +15,7 @@
 //
 // Nothing in this module asserts anything about a migration on its own.
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createMatchRuntime, MATCH, matchIds, matchArgs } from './matching-match-verifier-support.mjs';
 
 // ------------------------------------------------------------------ catalog
@@ -178,6 +178,59 @@ export const DISCLOSURE_COLUMNS = [
 // ------------------------------------------------------------------ fixtures
 /** A bounded opaque media object reference in the frozen 0089 shape. */
 export const mediaRef = (label) => `introduction-media/${label}/${randomUUID()}`;
+
+// ---------------------------------------------------- ordinary Shared material
+//
+// Migration 0118 lets the two frozen I-04G commit cores operate in an ACTIVE /
+// INTRODUCTION World, so an Introduction verifier needs the same fixtures the
+// I-04G verifier uses. The three fingerprints below are reproduced from their
+// OWN frozen definitions - I-03F's output identity, I-03G's readiness reference
+// and I-03D's audience-state reference - so a fixture proves the real envelope
+// rather than whatever the core happens to accept.
+
+/** The exact frozen I-03F output identity: sha256 over the exact UTF-8 bytes. */
+export const digestOutput = (text) => `sha256:${createHash('sha256').update(text, 'utf8').digest('hex')}`;
+
+const READINESS_VERSION = 'QANDEEL_CWV2_SHARED_PRIVACY_AUTHORITY_DELIVERY_READINESS_V1';
+const readinessRef = ({ effectiveContextRef, outputDigest, sourceDisclosureGateRef, authorityRevalidationRef }) =>
+  `sha256:${createHash('sha256').update([
+    READINESS_VERSION,
+    `effectiveContext=${effectiveContextRef}`,
+    `output=${outputDigest}`,
+    `sourceDisclosureGate=${sourceDisclosureGateRef}`,
+    `authorityRevalidation=${authorityRevalidationRef}`,
+  ].join('\n'), 'utf8').digest('hex')}`;
+
+/** One complete, internally consistent I-03 evidence bundle for one body and audience. */
+export function evidenceFor(body, label, audienceSnapshotRef) {
+  const effectiveContextRef = `ec:${label}:${randomUUID()}`;
+  const sourceDisclosureGateRef = `gate:${label}:${randomUUID()}`;
+  const authorityRevalidationRef = `rev:${label}:${randomUUID()}`;
+  const outputDigest = digestOutput(body);
+  return {
+    effectiveContextRef,
+    outputDigest,
+    sourceDisclosureGateRef,
+    authorityRevalidationRef,
+    readiness: readinessRef({ effectiveContextRef, outputDigest, sourceDisclosureGateRef, authorityRevalidationRef }),
+    audienceSnapshotRef,
+  };
+}
+
+export const MATERIAL_SQL = Object.freeze({
+  TEXT: `SELECT outcome, command_id, material_world_id, committed_material_id, committed_history_item_id,
+           committed_material_kind, audience_size, material_established_at
+           FROM public.commit_shared_world_human_text_v1($1,$2,$3,$4,$5)`,
+  VOICE: `SELECT outcome, committed_material_id, committed_history_item_id, committed_material_kind, audience_size
+            FROM public.commit_shared_world_human_voice_note_v1($1,$2,$3,$4,$5,$6,$7)`,
+  QANDEEL: `SELECT outcome, committed_material_id, committed_history_item_id, committed_material_kind,
+              audience_size, authority_size, material_dependency_edges, reasoning_dependency_edges,
+              material_established_at
+              FROM public.commit_shared_world_qandeel_material_v1($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+  RESOLVE: `SELECT world_id, material_id, history_item_id, material_kind, established_at,
+              author_user_id, text_body, audio_object_ref, transcript_text
+              FROM public.resolve_shared_world_material_v1($1,$2)`,
+});
 
 /** One fresh set of the six opaque identities a disclosure creates. */
 export const disclosureIds = () => ({
@@ -416,6 +469,85 @@ export function createIntroductionRuntime(databaseUrl) {
     return { ...f, approvals };
   }
 
+  // ---- ordinary Shared material, through the frozen I-04G entry points
+  //
+  // These call the SAME primitives a Standard World calls. Nothing here is
+  // Introduction-specific, which is the point: if an Introduction needed its own
+  // commit path, these wrappers could not exist.
+
+  /**
+   * The exact frozen I-03D audience-state fingerprint of a World's CURRENT
+   * audience, reproduced from its own definition. It is per (user, EPISODE) and
+   * carries the exact World, so evidence generated for a different audience or a
+   * different World can never satisfy the QANDEEL core.
+   */
+  async function audienceSnapshotRef(world) {
+    const members = await rows(
+      'SELECT user_id, membership_episode_id FROM public.resolve_shared_world_human_audience_snapshot_v1($1)', [world]);
+    const byCodeUnit = (left, right) => (left < right ? -1 : left > right ? 1 : 0);
+    const rendered = members
+      .map((row) => ({ user: String(row.user_id).toLowerCase(), episode: String(row.membership_episode_id).toLowerCase() }))
+      .sort((left, right) => byCodeUnit(left.user, right.user) || byCodeUnit(left.episode, right.episode))
+      .map((member) => `${member.user}@${member.episode}`)
+      .join(',');
+    return `sha256:${createHash('sha256').update([
+      'QANDEEL_CWV2_SHARED_HUMAN_AUDIENCE_SNAPSHOT_V1',
+      'state=RESOLVED',
+      `world=${String(world).toLowerCase()}`,
+      `members=${rendered}`,
+    ].join('\n'), 'utf8').digest('hex')}`;
+  }
+
+  /** One real HUMAN_TEXT commit by one exact human, as that human. */
+  async function commitText(world, human, body, ids = {}) {
+    const { command = randomUUID(), material = randomUUID(), item = randomUUID() } = ids;
+    await actAs(human);
+    try {
+      const [committed] = await rows(MATERIAL_SQL.TEXT, [command, world, material, item, body]);
+      return { ...committed, command, material, item };
+    } finally {
+      await asRole('postgres');
+    }
+  }
+
+  /** One real HUMAN_VOICE_NOTE commit by one exact human, as that human. */
+  async function commitVoice(world, human, audio, transcript = null, durationMs = null, ids = {}) {
+    const { command = randomUUID(), material = randomUUID(), item = randomUUID() } = ids;
+    await actAs(human);
+    try {
+      const [committed] = await rows(MATERIAL_SQL.VOICE, [command, world, material, item, audio, transcript, durationMs]);
+      return { ...committed, command, material, item };
+    } finally {
+      await asRole('postgres');
+    }
+  }
+
+  /**
+   * One real QANDEEL commit. QANDEEL is a SYSTEM actor, so this runs with no
+   * session subject at all, and the evidence bundle is the real frozen one for
+   * this World's current audience unless a scenario deliberately supplies another.
+   */
+  async function commitQandeel(world, body, options = {}) {
+    const {
+      kind = 'QANDEEL_ANALYSIS', sources = [], reasoning = [], evidence = null,
+      command = randomUUID(), material = randomUUID(), item = randomUUID(),
+    } = options;
+    await asRole('postgres');
+    const e = evidence ?? evidenceFor(body, 'introduction', await audienceSnapshotRef(world));
+    const [committed] = await rows(MATERIAL_SQL.QANDEEL, [
+      command, world, material, item, kind, body,
+      e.effectiveContextRef, e.outputDigest, e.sourceDisclosureGateRef, e.authorityRevalidationRef,
+      e.readiness, e.audienceSnapshotRef, sources, reasoning]);
+    return { ...committed, command, material, item, evidence: e };
+  }
+
+  /** What the ONE narrow material resolver gives one exact human. */
+  const resolveMaterial = (world, human) => rows(MATERIAL_SQL.RESOLVE, [world, human]);
+
+  /** Exactly the history item ids the ONE visibility entry point gives one human. */
+  const visibleItems = async (world, human) =>
+    (await visibility(world, human)).map((row) => row.history_item_id);
+
   /** One real disclosure by one exact owner, through the real boundary. */
   async function discloseAs(owner, world, type, payload) {
     const ids = disclosureIds();
@@ -491,6 +623,14 @@ export function createIntroductionRuntime(databaseUrl) {
       await q(`DELETE FROM public.shared_world_material_deleted_events WHERE material_id IN ${materials}`, [humans]);
       await q(`DELETE FROM public.shared_world_material_historical_authority WHERE material_id IN ${materials}`, [humans]);
       await q(`DELETE FROM public.shared_world_material_dependencies WHERE target_material_id IN ${materials}`, [humans]);
+      // Migration 0118 lets ORDINARY material exist in an Introduction World, so
+      // the teardown has three more children to remove than the disclosure-only
+      // slice had. Every one of these binds its material RESTRICTively, so the
+      // material row below cannot go until all of them have.
+      await q(`DELETE FROM public.shared_world_text_material_bodies WHERE material_id IN ${materials}`, [humans]);
+      await q(`DELETE FROM public.shared_world_voice_note_material_bodies WHERE material_id IN ${materials}`, [humans]);
+      await q(`DELETE FROM public.shared_world_qandeel_material_evidence WHERE material_id IN ${materials}`, [humans]);
+      await q(`DELETE FROM public.shared_world_material_commit_commands WHERE material_id IN ${materials}`, [humans]);
       await q(`DELETE FROM ${D.MATERIALS} WHERE world_id IN ${worlds}`, [humans]);
       const worldItems = `(SELECT i.id FROM ${D.ITEMS} i WHERE i.world_id IN ${worlds})`;
       await q(`DELETE FROM ${D.APPROVERS} WHERE history_item_id IN ${worldItems}`, [humans]);
@@ -524,6 +664,7 @@ export function createIntroductionRuntime(databaseUrl) {
     terminalEffects, disclosureEffects, terminalInstantCoherence,
     clearSeam, clearAllSeams, seamClearance,
     bringToIntroduction, bringToSuccessProposed, bringToSuccessApproved, discloseAs,
+    commitText, commitVoice, commitQandeel, resolveMaterial, visibleItems, audienceSnapshotRef,
     currentActOf, turnOffDuringIntroduction,
     removeCommittedIntroductionState, cleanupIntroductionRace,
   };

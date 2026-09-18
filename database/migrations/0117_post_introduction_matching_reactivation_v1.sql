@@ -281,12 +281,30 @@ BEGIN
   -- DURABLE IDEMPOTENCY, FIRST PASS: before any lock, over immutable columns
   -- only, so an equivalent retry is answered from history even after the human
   -- has paused or turned Matching off again.
+  --
+  -- THE COMMAND IDENTITY BINDS THE WHOLE IMMUTABLE REQUEST, THE ENTRY CHANNEL
+  -- INCLUDED. The channel is activation PROVENANCE, and provenance that a retry
+  -- could silently restate is not provenance at all: without this, a committed
+  -- MANUAL_MY_WORLD_ENTRY could be retried as a CONVERSATIONAL_ENTRY and be told
+  -- it succeeded, and a committed RESUME - which carries no channel - could be
+  -- retried as though it had been an entry. Both would be answered here, BEFORE
+  -- the channel is ever validated below, so the validation could not catch them.
+  --
+  -- It is compared against the exact immutable participation event this command
+  -- PRODUCED rather than against a second copy stored beside it: the event is
+  -- already the canonical record of what happened, a RESTRICT foreign key keeps
+  -- it reachable for as long as the command exists, and one truth cannot drift
+  -- from itself. A retry that names a different channel is therefore a different
+  -- request wearing a used command id, and it is refused rather than reinterpreted.
   SELECT * INTO committed FROM public.matching_introduction_reactivation_commands c
    WHERE c.id = p_command_id;
   IF FOUND THEN
     IF committed.participant_user_id = u
        AND committed.participation_event_id = p_participation_event_id
-       AND committed.prior_participation_event_id = p_expected_current_event_id THEN
+       AND committed.prior_participation_event_id = p_expected_current_event_id
+       AND EXISTS (SELECT 1 FROM public.matching_participation_events e
+                    WHERE e.id = committed.participation_event_id
+                      AND e.activation_entry_channel IS NOT DISTINCT FROM p_entry_channel) THEN
       RETURN QUERY SELECT 'MATCHING_REACTIVATED'::text, committed.id, committed.participation_event_id,
                           committed.reactivation_act, 'ACTIVE'::text,
                           committed.prior_participation_event_id, committed.introduction_record_id,
@@ -308,7 +326,10 @@ BEGIN
   IF FOUND THEN
     IF committed.participant_user_id = u
        AND committed.participation_event_id = p_participation_event_id
-       AND committed.prior_participation_event_id = p_expected_current_event_id THEN
+       AND committed.prior_participation_event_id = p_expected_current_event_id
+       AND EXISTS (SELECT 1 FROM public.matching_participation_events e
+                    WHERE e.id = committed.participation_event_id
+                      AND e.activation_entry_channel IS NOT DISTINCT FROM p_entry_channel) THEN
       RETURN QUERY SELECT 'MATCHING_REACTIVATED'::text, committed.id, committed.participation_event_id,
                           committed.reactivation_act, 'ACTIVE'::text,
                           committed.prior_participation_event_id, committed.introduction_record_id,
@@ -640,6 +661,15 @@ BEGIN
   END IF;
   IF body ~ '''USER_PAUSED''|''SYSTEM_POLICY''|''PAUSE''|''TURN_OFF''' THEN
     RAISE EXCEPTION 'I-07D: reactivation may spell no participation act or reason outside RESUME and ACTIVATE';
+  END IF;
+  -- THE COMMAND IDENTITY BINDS THE WHOLE IMMUTABLE REQUEST. BOTH idempotency
+  -- passes - the one before any lock and the one under the setup lock - must
+  -- compare the requested entry channel against the exact event the committed
+  -- command produced. One pass binding it would leave the other as an open door,
+  -- so the count is pinned at two rather than merely at "present".
+  IF (SELECT count(*) FROM regexp_matches(
+        body, 'e\.activation_entry_channel IS NOT DISTINCT FROM p_entry_channel', 'g')) <> 2 THEN
+    RAISE EXCEPTION 'I-07D: both reactivation idempotency passes must bind the requested entry channel to the exact committed act, so a used command id can never restate its own provenance';
   END IF;
 
   -- THE FAIL-CLOSED SEAM.

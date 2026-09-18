@@ -513,6 +513,69 @@ async function verifyCatalog() {
   assert.deepEqual(destroyers.map((r) => r.proname), ['delete_shared_world_owned_material_v1'],
     'and it is still the only primitive in the database that destroys any source content');
 
+  stage = 'catalog: RECONCILED BY I-07D - the two commit cores serve BOTH World modes, and Standard is unchanged';
+  // 0090 refused every World that was not ACTIVE / STANDARD, and said so in its
+  // own header: the SCHEMA is not Standard-only, the PRIMITIVE refused a paired
+  // World because I-04G implemented no Introduction producer and would not guess
+  // at one. Migration 0118 is that reviewed producer. It does not add a second
+  // core beside these - it REPLACES both forward-only, so one canonical truth and
+  // history model serves both modes.
+  //
+  // This verifier therefore stops asserting a Standard-only gate it no longer
+  // owns, and asserts instead the three things that actually protect what 0090
+  // built: the lifecycle is still an unconditional refusal, the Introduction
+  // branch is STRICTER than the Standard one rather than looser, and every
+  // Standard semantic in this file is untouched. The runtime probes below prove
+  // the last of those against real rows - M14, M16 and M17 all still refuse.
+  for (const fnName of [HUMAN_CORE, QANDEEL_FN]) {
+    const core = await sourceOf(fnName);
+    assert.match(core, /IF world\.lifecycle <> 'ACTIVE' THEN/u,
+      `${fnName} still refuses every World that is not ACTIVE, before it considers any phase at all`);
+    assert.match(core, /ELSIF world\.phase <> 'STANDARD' THEN/u,
+      `${fnName} still refuses every World mode outside the two frozen ones, so a future mode inherits nothing`);
+    assert.match(core, /ELSIF world\.phase = 'INTRODUCTION' THEN/u,
+      `${fnName} branches on the Introduction phase rather than refusing it`);
+    // THE NARROWER ENVELOPE: an Introduction World must additionally have a LIVE
+    // Introduction Record and exactly two humans - neither of which any Standard
+    // World is ever asked for.
+    assert.match(core, /r\.world_id = p_world_id AND r\.introduction_status = 'ACTIVE'/u,
+      `${fnName} admits an Introduction World only while its exact Record is still ACTIVE`);
+    assert.match(core, /IF world\.phase = 'INTRODUCTION' AND array_length\(audience, 1\) <> 2 THEN/u,
+      `${fnName} refuses an Introduction whose derived audience is not exactly the two matched humans`);
+    // AND NOTHING 0090 OWNS MOVED. These are the same clauses asserted above for
+    // the whole commit family; they are restated here against the exact two
+    // replaced bodies so a future replacement cannot quietly relax one of them.
+    assert.doesNotMatch(core, /DELETE FROM/iu, `${fnName} still deletes nothing`);
+    assert.doesNotMatch(core, /UPDATE public\.shared_worlds|INSERT INTO public\.shared_worlds/u,
+      `${fnName} still creates, closes and mutates no Shared World`);
+    assert.doesNotMatch(core, /UPDATE public\.introduction_records|INSERT INTO public\.introduction_records/u,
+      `${fnName} reads the Introduction Record and never moves it: committing material is not a lifecycle act`);
+    assert.doesNotMatch(core, /CURRENT_TIMESTAMP|now\(\)|localtimestamp|transaction_timestamp|statement_timestamp/u,
+      `${fnName} still persists one database-owned instant`);
+    assert.match(core, /FROM public\.shared_worlds w WHERE w\.id = p_world_id FOR UPDATE/u,
+      `${fnName} still locks the exact World row FIRST, which is what serializes it against a terminal transition`);
+    assert.match(core, /public\.resolve_shared_world_human_audience_snapshot_v1\(p_world_id\)/u,
+      `${fnName} still derives its audience through the frozen I-03D boundary and never accepts one`);
+    assert.doesNotMatch(core, /'EXPLICIT_DISCLOSURE'/u,
+      `${fnName} did not acquire the reserved disclosure kind by being extended`);
+  }
+  // The typed human entry points were NOT replaced: they delegate to the one
+  // core and hold no gate of their own, which is why extending it was enough.
+  for (const fnName of [TEXT_FN, VOICE_FN]) {
+    const typed = await sourceOf(fnName);
+    assert.match(typed, /public\.commit_shared_world_human_material_v1/u, `${fnName} still delegates to the ONE core`);
+    assert.doesNotMatch(typed, /world\.phase|world\.lifecycle/u, `${fnName} still holds no lifecycle gate of its own`);
+  }
+  // ONE CANONICAL SHARED TRUTH MODEL. The Introduction did not get a material
+  // system of its own, which is the claim this file is best placed to police.
+  const producers = await rows(
+    `SELECT DISTINCT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+      WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
+        AND pr.prosrc ~ 'INSERT INTO public\\.shared_world_materials\\y' ORDER BY 1`);
+  assert.deepEqual(producers.map((r) => r.proname),
+    ['commit_introduction_progressive_disclosure_v1', HUMAN_CORE, QANDEEL_FN].sort(),
+    'exactly three reviewed producers write a Shared material: the two extended cores and the one disclosure producer');
+
   stage = 'catalog: the historical widening gate is installed, sealed and on the exact frozen relation';
   const [gate] = await rows(
     `SELECT pg_get_userbyid(pr.proowner) owner, pr.prosecdef secdef, pr.proconfig config, pr.prosrc
@@ -1350,7 +1413,7 @@ async function verifyNonRegression(f, worldIds) {
 // ---------------------------------------------------------------------------
 
 async function verifyForwardSafety(f) {
-  stage = 'forward safety: a later Introduction producer, a CW2-08 wrapper and Public and Replay consumers do not fail this verifier';
+  stage = 'forward safety: a FURTHER Introduction producer beyond 0118, a CW2-08 wrapper and Public and Replay consumers do not fail this verifier';
   await identity('postgres');
   const probe = `i04g_runtime_probe_${randomUUID().replace(/-/gu, '').slice(0, 12)}`;
   await q('SAVEPOINT forward_safety');
@@ -1494,6 +1557,104 @@ async function verifyForwardSafety(f) {
            RETURN;
          END$fn$`,
         /deletes nothing: committing destroys nothing/u],
+      // RECONCILED BY I-07D. The two plants below weaken the Introduction branch
+      // migration 0118 added, which is the branch this file is now responsible
+      // for policing: 0090 owns the commit cores, so a later slice relaxing the
+      // envelope they enforce has to be refused HERE, not only in its own
+      // verifier. Each stub satisfies every OTHER invariant in this catalog -
+      // auth.uid(), the World-row-first lock, no clock, no deletion, no World or
+      // episode mutation - so the assertion that fires is the one under test and
+      // not an incidental one.
+      ['the Introduction branch stops requiring a LIVE Introduction Record',
+        `CREATE OR REPLACE FUNCTION public.commit_shared_world_human_material_v1(
+           p_command_id uuid, p_world_id uuid, p_material_id uuid, p_history_item_id uuid,
+           p_material_kind text, p_body_text text, p_audio_object_ref text,
+           p_transcript_text text, p_duration_ms integer)
+         RETURNS TABLE(outcome text, command_id uuid, material_world_id uuid, committed_material_id uuid,
+                       committed_history_item_id uuid, committed_material_kind text,
+                       audience_size integer, material_established_at timestamptz)
+         LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+         DECLARE u uuid := auth.uid(); world public.shared_worlds; audience uuid[];
+         BEGIN
+           IF u IS NULL THEN RETURN; END IF;
+           SELECT * INTO world FROM public.shared_worlds w WHERE w.id = p_world_id FOR UPDATE;
+           IF world.lifecycle <> 'ACTIVE' THEN
+             RETURN;
+           ELSIF world.phase = 'INTRODUCTION' THEN
+             NULL;
+           ELSIF world.phase <> 'STANDARD' THEN
+             RETURN;
+           END IF;
+           SELECT array_agg(a.user_id) INTO audience
+             FROM public.resolve_shared_world_human_audience_snapshot_v1(p_world_id) a;
+           IF world.phase = 'INTRODUCTION' AND array_length(audience, 1) <> 2 THEN RETURN; END IF;
+           RETURN;
+         END$fn$`,
+        /only while its exact Record is still ACTIVE/u],
+      ['the Introduction branch stops requiring exactly the two matched humans',
+        `CREATE OR REPLACE FUNCTION public.commit_shared_world_human_material_v1(
+           p_command_id uuid, p_world_id uuid, p_material_id uuid, p_history_item_id uuid,
+           p_material_kind text, p_body_text text, p_audio_object_ref text,
+           p_transcript_text text, p_duration_ms integer)
+         RETURNS TABLE(outcome text, command_id uuid, material_world_id uuid, committed_material_id uuid,
+                       committed_history_item_id uuid, committed_material_kind text,
+                       audience_size integer, material_established_at timestamptz)
+         LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+         DECLARE u uuid := auth.uid(); world public.shared_worlds; audience uuid[];
+         BEGIN
+           IF u IS NULL THEN RETURN; END IF;
+           SELECT * INTO world FROM public.shared_worlds w WHERE w.id = p_world_id FOR UPDATE;
+           IF world.lifecycle <> 'ACTIVE' THEN
+             RETURN;
+           ELSIF world.phase = 'INTRODUCTION' THEN
+             IF NOT EXISTS (
+               SELECT 1 FROM public.introduction_records r
+                WHERE r.world_id = p_world_id AND r.introduction_status = 'ACTIVE'
+             ) THEN
+               RETURN;
+             END IF;
+           ELSIF world.phase <> 'STANDARD' THEN
+             RETURN;
+           END IF;
+           SELECT array_agg(a.user_id) INTO audience
+             FROM public.resolve_shared_world_human_audience_snapshot_v1(p_world_id) a;
+           RETURN;
+         END$fn$`,
+        /not exactly the two matched humans/u],
+      ['a commit core stops locking the World row first, so nothing serializes it against a terminal transition',
+        `CREATE OR REPLACE FUNCTION public.commit_shared_world_human_material_v1(
+           p_command_id uuid, p_world_id uuid, p_material_id uuid, p_history_item_id uuid,
+           p_material_kind text, p_body_text text, p_audio_object_ref text,
+           p_transcript_text text, p_duration_ms integer)
+         RETURNS TABLE(outcome text, command_id uuid, material_world_id uuid, committed_material_id uuid,
+                       committed_history_item_id uuid, committed_material_kind text,
+                       audience_size integer, material_established_at timestamptz)
+         LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+         DECLARE u uuid := auth.uid(); world public.shared_worlds; audience uuid[];
+         BEGIN
+           IF u IS NULL THEN RETURN; END IF;
+           -- Every gate is present and correct. Only the LOCK is gone, which is
+           -- exactly what would let a commit and a terminal transition both
+           -- believe they were first.
+           SELECT * INTO world FROM public.shared_worlds w WHERE w.id = p_world_id;
+           IF world.lifecycle <> 'ACTIVE' THEN
+             RETURN;
+           ELSIF world.phase = 'INTRODUCTION' THEN
+             IF NOT EXISTS (
+               SELECT 1 FROM public.introduction_records r
+                WHERE r.world_id = p_world_id AND r.introduction_status = 'ACTIVE'
+             ) THEN
+               RETURN;
+             END IF;
+           ELSIF world.phase <> 'STANDARD' THEN
+             RETURN;
+           END IF;
+           SELECT array_agg(a.user_id) INTO audience
+             FROM public.resolve_shared_world_human_audience_snapshot_v1(p_world_id) a;
+           IF world.phase = 'INTRODUCTION' AND array_length(audience, 1) <> 2 THEN RETURN; END IF;
+           RETURN;
+         END$fn$`,
+        /still locks the exact World row FIRST/u],
       ['owner deletion starts reopening the World lifecycle',
         `CREATE OR REPLACE FUNCTION public.delete_shared_world_owned_material_v1(
            p_command_id uuid, p_world_id uuid, p_material_id uuid, p_material_deleted_event_id uuid)

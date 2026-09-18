@@ -480,7 +480,7 @@ async function verifySuccess(report, humans) {
         rows('SELECT * FROM public.commit_shared_world_standard_voluntary_leave_v1($1,$2,$3)',
           [randomUUID(), world, randomUUID()]);
       await actAs(f.lower);
-      await rejected(() => leave(f.world), UNAVAILABLE, /SHARED_WORLD_VOLUNTARY_LEAVE_NOT_AVAILABLE/u);
+      await rejected(() => leave(f.world), UNAVAILABLE, /SHARED_WORLD_STANDARD_LEAVE_NOT_AVAILABLE/u);
       await asRole('postgres');
       await rt.commitSuccess(terminalIds(), f.version);
       await actAs(f.lower);
@@ -694,8 +694,11 @@ async function verifyEnd(report, humans) {
       assert.equal(await rt.textPayload(doomed.ids.version), null, 'E16 and really destroys the payload');
       assert.deepEqual((await rt.visibility(f.world, f.higher)).map((r) => r.history_item_id), [kept.ids.item],
         'E16 a frozen entitlement can never preserve deleted content: availability still dominates');
+      // BOTH matched humans were frozen with that item, so the snapshot holds
+      // two rows for it - one per entitlement holder - and owner deletion
+      // touches neither. What changed is availability, not the snapshot.
       assert.equal(await count(D.ENTITLEMENT_ITEMS, 'world_id = $1 AND history_item_id = $2',
-        [f.world, doomed.ids.item]), 1,
+        [f.world, doomed.ids.item]), 2,
       'E16 while the entitlement itself is untouched history: what changed is availability, not the snapshot');
       // E17: no Standing Context Grant and no history grant was manufactured.
       assert.equal(await count('public.shared_world_standing_context_grants', 'world_id = $1', [f.world]), 0,
@@ -746,10 +749,10 @@ async function verifyWinnerAndContinuity(report, humans) {
            lower_user_id, higher_user_id, ending_actor_user_id, success_transition_version_id,
            lower_claim_id, higher_claim_id, lower_participation_event_id, higher_participation_event_id,
            request_ref, committed_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7,
-                CASE WHEN $5 = 'CLOSED' THEN $6 ELSE NULL END,
-                CASE WHEN $5 = 'COMPLETED' THEN $8::uuid ELSE NULL END,
-                $9, $10, $11, $12, 'sha256:' || repeat('a', 64), $13::timestamptz)`,
+        VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::text, $6::uuid, $7::uuid,
+                CASE WHEN $5::text = 'CLOSED' THEN $6::uuid ELSE NULL END,
+                CASE WHEN $5::text = 'COMPLETED' THEN $8::uuid ELSE NULL END,
+                $9::uuid, $10::uuid, $11::uuid, $12::uuid, 'sha256:' || repeat('a', 64), $13::timestamptz)`,
       [randomUUID(), f.record, f.world, f.matchCommit, outcome, terminal.lower_user_id, terminal.higher_user_id,
         f.version, terminal.lower_claim_id, terminal.higher_claim_id,
         terminal.lower_participation_event_id, terminal.higher_participation_event_id, committed]);
@@ -815,8 +818,12 @@ async function verifyWinnerAndContinuity(report, humans) {
         'K01 the Introduction-period item reads on under Standard semantics, with no re-authorship');
       const material = await rt.materialRow(ids.material);
       assert.equal(material.author_user_id, f.lower, 'K01 authorship is unchanged');
+      // `availability_revision` is a bigint, which node-postgres hands back as a
+      // STRING so a 64-bit value cannot be silently rounded. Comparing it to a
+      // number would fail for the wrong reason.
       const item = await rt.itemRow(ids.item);
-      assert.equal(item.availability_revision, 1, 'K01 and no retrospective time or availability rewrite happened');
+      assert.equal(Number(item.availability_revision), 1,
+        'K01 and no retrospective time or availability rewrite happened');
       // K02: the humans are POST_SUCCESS. A later Standard World closure must
       // not touch that. The frozen I-04F closure needs unanimous governance,
       // which this two-human World cannot reach inside a verifier without
@@ -856,10 +863,12 @@ async function verifyNoGhost(report, humans) {
   try {
     for (const [label, build, run] of [
       ['G01 SUCCESS', (a, b) => rt.bringToSuccessApproved(a, b), (f) => rt.commitSuccess(terminalIds(), f.version)],
-      ['G02 END', (a, b) => rt.bringToIntroduction(a, b), async (f) => {
-        await actAs(f.lower);
-        try { return await rt.commitEnd(terminalIds(), f.world); } finally { await asRole('postgres'); }
-      }],
+      // The END path becomes the acting human BEFORE the call and does NOT
+      // reset the role inside it. `rejected` runs the operation inside a
+      // savepoint, so a RESET ROLE issued from a `finally` would land on an
+      // ABORTED transaction and replace the real cause with 25P02 - the exact
+      // trap the frozen `rejected` helper documents.
+      ['G02 END', (a, b) => rt.bringToIntroduction(a, b), (f) => rt.commitEnd(terminalIds(), f.world)],
     ]) {
       await report.isolated(`${label} NO GHOST: a late transactional failure leaves ZERO surviving effects`, async () => {
         const f = await build(one, two);
@@ -933,8 +942,27 @@ async function verifyRaces(report, humans) {
     'SELECT * FROM public.commit_introduction_progressive_disclosure_v1($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
     [ids.command, world, ids.version, ids.material, ids.item, ids.event, 'FULL_NAME', null, text, null]);
 
+  /**
+   * One race, whose COMMITTED fixtures are always removed - including when the
+   * race itself fails.
+   *
+   * These sections commit, so a failure that skipped its own teardown would
+   * leave both humans inside a terminal Introduction and every later race would
+   * fail while trying to rebuild them. One real finding would then be reported
+   * as several, and the several would all name the wrong thing.
+   */
+  const race = (name, body) => report.section(name, async () => {
+    try {
+      await body();
+    } finally {
+      await q('ROLLBACK');
+      await asRole('postgres');
+      await rt.cleanupIntroductionRace([one, two]);
+    }
+  });
+
   try {
-    await report.section('C01 SUCCESS vs END: exactly one commits, and there is no hybrid', async () => {
+    await race('C01 SUCCESS vs END: exactly one commits, and there is no hybrid', async () => {
       // END wins the World lock first; SUCCESS waits behind it and must observe
       // a settled Introduction.
       const f = await rt.bringToSuccessApproved(one, two);
@@ -954,7 +982,7 @@ async function verifyRaces(report, humans) {
       await rt.cleanupIntroductionRace([one, two]);
     });
 
-    await report.section('C01b SUCCESS vs END the other way: SUCCESS wins and END is refused', async () => {
+    await race('C01b SUCCESS vs END the other way: SUCCESS wins and END is refused', async () => {
       const f = await rt.bringToSuccessApproved(one, two);
       await q('BEGIN');
       await rt.commitSuccess(terminalIds(), f.version);
@@ -971,7 +999,7 @@ async function verifyRaces(report, humans) {
       await rt.cleanupIntroductionRace([one, two]);
     });
 
-    await report.section('C02 END by A vs END by B: exactly one terminal commit and one fact', async () => {
+    await race('C02 END by A vs END by B: exactly one terminal commit and one fact', async () => {
       const f = await rt.bringToIntroduction(one, two);
       await q('BEGIN');
       await actAs(f.lower);
@@ -994,7 +1022,7 @@ async function verifyRaces(report, humans) {
       await rt.cleanupIntroductionRace([one, two]);
     });
 
-    await report.section('C03 success commit vs approval withdrawal, pinned both ways', async () => {
+    await race('C03 success commit vs approval withdrawal, pinned both ways', async () => {
       // The withdrawal wins the World lock: the success commit then observes a
       // missing current approval and cannot commit.
       const f = await rt.bringToSuccessApproved(one, two);
@@ -1038,7 +1066,7 @@ async function verifyRaces(report, humans) {
       await rt.cleanupIntroductionRace([one, two]);
     });
 
-    await report.section('C04 two competing success commands yield exactly one completion', async () => {
+    await race('C04 two competing success commands yield exactly one completion', async () => {
       const f = await rt.bringToSuccessApproved(one, two);
       const ids = terminalIds();
       await q('BEGIN');
@@ -1060,7 +1088,7 @@ async function verifyRaces(report, humans) {
       await rt.cleanupIntroductionRace([one, two]);
     });
 
-    await report.section('C05 disclosure vs END, pinned both ways', async () => {
+    await race('C05 disclosure vs END, pinned both ways', async () => {
       // The disclosure commits first: END snapshots it into the frozen view.
       const first = await rt.bringToIntroduction(one, two);
       const delivered = await rt.discloseAs(first.lower, first.world, 'FULL_NAME', { text: 'Sara Kamel' });
@@ -1095,7 +1123,7 @@ async function verifyRaces(report, humans) {
       await rt.cleanupIntroductionRace([one, two]);
     });
 
-    await report.section('C06 disclosure vs SUCCESS, pinned both ways', async () => {
+    await race('C06 disclosure vs SUCCESS, pinned both ways', async () => {
       // The disclosure commits first: SUCCESS preserves it in the same World.
       const first = await rt.bringToSuccessApproved(one, two);
       const delivered = await rt.discloseAs(first.lower, first.world, 'FULL_NAME', { text: 'Sara Kamel' });
@@ -1123,7 +1151,7 @@ async function verifyRaces(report, humans) {
       await rt.cleanupIntroductionRace([one, two]);
     });
 
-    await report.section('C07 END vs owner deletion of already-disclosed material', async () => {
+    await race('C07 END vs owner deletion of already-disclosed material', async () => {
       const f = await rt.bringToIntroduction(one, two);
       const doomed = await rt.discloseAs(f.lower, f.world, 'CONTACT_METHOD', { text: '+20 100 000 0000' });
       await q('BEGIN');
@@ -1141,12 +1169,12 @@ async function verifyRaces(report, humans) {
       assert.equal(await rt.textPayload(doomed.ids.version), null, 'C07 and really destroyed the payload');
       assert.deepEqual(await rt.visibility(f.world, f.higher), [],
         'C07 so the frozen closed view no longer resolves the deleted item');
+      // One row per entitlement holder, and owner deletion touches neither.
       assert.equal(await count(D.ENTITLEMENT_ITEMS, 'world_id = $1 AND history_item_id = $2',
-        [f.world, doomed.ids.item]), 1, 'C07 while the entitlement snapshot itself is untouched history');
-      await rt.cleanupIntroductionRace([one, two]);
+        [f.world, doomed.ids.item]), 2, 'C07 while the entitlement snapshot itself is untouched history');
     });
 
-    await report.section('C08 terminal transition vs Matching TURN_OFF, pinned both ways', async () => {
+    await race('C08 terminal transition vs Matching TURN_OFF, pinned both ways', async () => {
       // TURN_OFF wins: the terminal commit leaves that human OFF.
       const first = await rt.bringToIntroduction(one, two);
       const current = await rt.currentActOf(first.higher);
@@ -1194,7 +1222,7 @@ async function verifyRaces(report, humans) {
       await rt.cleanupIntroductionRace([one, two]);
     });
 
-    await report.section('C09 terminal transition vs Matching Context Grant revoke: both commit', async () => {
+    await race('C09 terminal transition vs Matching Context Grant revoke: both commit', async () => {
       const f = await rt.bringToIntroduction(one, two);
       await q('BEGIN');
       await actAs(f.higher);

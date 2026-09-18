@@ -1,5 +1,5 @@
 // I-07D - Introduction lifecycle, progressive disclosure and I-07 closure v1:
-// secret-free structural contract over migrations 0115, 0116 and 0117.
+// secret-free structural contract over migrations 0115, 0116, 0117 and 0118.
 //
 // ONE file for three migrations, as the I-07C contract is one file for two and
 // the I-07B contract is one for three: the properties worth a static contract
@@ -27,6 +27,7 @@ const NAMES = {
   '0115': '0115_introduction_progressive_disclosure_history_visibility_v1.sql',
   '0116': '0116_introduction_terminal_lifecycle_v1.sql',
   '0117': '0117_post_introduction_matching_reactivation_v1.sql',
+  '0118': '0118_introduction_ordinary_shared_material_v1.sql',
 };
 const SOURCE = Object.fromEntries(Object.entries(NAMES).map(([n, file]) => [n, read(`../migrations/${file}`)]));
 const VERIFIER = Object.fromEntries(Object.keys(NAMES).map((n) => [n, read(`../verify-migration-${n}.mjs`)]));
@@ -78,6 +79,10 @@ const TABLES = {
     'introduction_success_required_approvers', 'introduction_success_transition_versions',
     'introduction_terminal_commits'],
   '0117': ['matching_introduction_reactivation_commands'],
+  // 0118 creates NOTHING. It replaces two frozen commit cores forward-only so
+  // they serve both World modes, which is exactly why ordinary Introduction
+  // material needed no store, no history model and no producer of its own.
+  '0118': [],
 };
 
 /** The three fail-closed CW2-08 seams this slice creates, and the ONE answer each may give. */
@@ -110,10 +115,10 @@ const BOUNDARIES = [
  */
 const FROZEN = {
   '../migrations/0075_connected_worlds_shared_persistence_foundation_v1.sql': '3119d34a4edd4c934067393eb278077fd294852b',
-  '../migrations/0087_shared_world_selective_history_access_v1.sql': null,
-  '../migrations/0088_shared_world_standard_closure_v1.sql': null,
-  '../migrations/0089_shared_world_material_persistence_v1.sql': null,
-  '../migrations/0090_shared_world_material_commit_owner_deletion_v1.sql': null,
+  '../migrations/0087_shared_world_selective_history_access_v1.sql': '46606903867c8cc3570d61ee068d0baf6b9d65d8',
+  '../migrations/0088_shared_world_standard_closure_v1.sql': 'dff71de8fbfc2f834d2d267949359d2ebbd3effe',
+  '../migrations/0089_shared_world_material_persistence_v1.sql': '82d6d5f0c293528649198efee2305ca0baa7b685',
+  '../migrations/0090_shared_world_material_commit_owner_deletion_v1.sql': 'c65bb170449e98454b4ba248dad3793b6ea363f8',
   '../migrations/0108_matching_participation_private_setup_foundation_v1.sql': '88845e0290809d1fd9949db1a5ebf3973bacdbb3',
   '../migrations/0109_matching_setup_human_authority_commands_v1.sql': '030de6db8d7982a4503cc2200927511f1c212e60',
   '../migrations/0110_matching_pair_eligibility_proposal_persistence_v1.sql': '5cf4dab35b921fa1d2f60a2875a5863964ca9139',
@@ -123,19 +128,20 @@ const FROZEN = {
   '../../apps/api/src/connected-worlds/matching/matching-setup.types.ts': '946731fbd8c869529bc3bcb8c363926e94bed619',
 };
 
-test('the three migrations order directly after the reviewed 0114 tip and are forward-only', () => {
+test('the four migrations order directly after the reviewed 0114 tip and are forward-only', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((n) => n.endsWith('.sql')).sort();
   assert.equal(migrations.indexOf(NAMES['0115']),
     migrations.indexOf('0114_matching_mutual_match_commit_transaction_v1.sql') + 1,
     '0115 orders directly after the reviewed 0114 tip');
   assert.equal(migrations.indexOf(NAMES['0116']), migrations.indexOf(NAMES['0115']) + 1, '0116 follows 0115');
   assert.equal(migrations.indexOf(NAMES['0117']), migrations.indexOf(NAMES['0116']) + 1, '0117 follows 0116');
-  // I-07D ENDS AT 0117. A tip assertion is only true until the next reviewed
+  assert.equal(migrations.indexOf(NAMES['0118']), migrations.indexOf(NAMES['0117']) + 1, '0118 follows 0117');
+  // I-07D ENDS AT 0118. A tip assertion is only true until the next reviewed
   // slice lands, and it would then be repaired by whichever task happened to
   // trip it rather than by the one that owns the claim - the repair the I-07A
   // and I-07C contracts each already made. The claim itself survives: no
-  // migration after 0117 belongs to I-07D.
-  for (const later of migrations.slice(migrations.indexOf(NAMES['0117']) + 1)) {
+  // migration after 0118 belongs to I-07D.
+  for (const later of migrations.slice(migrations.indexOf(NAMES['0118']) + 1)) {
     assert.doesNotMatch(read(`../migrations/${later}`), /^-- I-07D/u, `${later} is a later slice, not an I-07D migration`);
   }
   // Every "must not contain" assertion runs against the executable body with the
@@ -183,12 +189,17 @@ test('the three migrations order directly after the reviewed 0114 tip and are fo
   }
 });
 
-test('every identifier the three migrations create fits the PostgreSQL 63-byte limit and is unique', () => {
+test('every identifier the four migrations create fits the PostgreSQL 63-byte limit and is unique', () => {
   for (const [n, file] of Object.entries(NAMES)) {
     const identifiers = [...bodyOf(n).matchAll(
       /(?:CREATE TABLE public\.|(?<!DROP )CONSTRAINT |CREATE (?:UNIQUE )?INDEX |CREATE TRIGGER |CREATE (?:OR REPLACE )?FUNCTION public\.)(\w+)/gu)]
       .map((m) => m[1]);
-    assert.ok(identifiers.length >= 5, `${file} names its objects explicitly, found ${identifiers.length}`);
+    // A migration that creates relations names many objects; one that only
+    // replaces functions forward-only names exactly those functions. Both must
+    // name them EXPLICITLY - no generated or interpolated identifier anywhere -
+    // so the floor scales with what the migration actually creates.
+    const floor = TABLES[n].length > 0 ? 5 : 2;
+    assert.ok(identifiers.length >= floor, `${file} names its objects explicitly, found ${identifiers.length}`);
     for (const identifier of identifiers) {
       assert.ok(Buffer.byteLength(identifier) <= 63,
         `${identifier} (${Buffer.byteLength(identifier)} bytes) would be silently truncated by PostgreSQL`);
@@ -197,13 +208,22 @@ test('every identifier the three migrations create fits the PostgreSQL 63-byte l
   }
 });
 
-test('the three migrations create exactly their declared relations, all sealed and blob-free', () => {
+test('the four migrations create exactly their declared relations, all sealed and blob-free', () => {
   for (const [n, expected] of Object.entries(TABLES)) {
     const tables = [...EXECUTABLE[n].matchAll(/CREATE TABLE public\.(\w+)/gu)].map((m) => m[1]).sort();
     assert.deepEqual(tables, expected, `${NAMES[n]} creates exactly its declared relations`);
     for (const table of tables) {
       assert.match(EXECUTABLE[n], new RegExp(`ALTER TABLE %s OWNER TO postgres|ALTER TABLE public\\.${table} OWNER TO postgres`, 'u'),
         `${table} is postgres-owned`);
+    }
+    // A migration that creates NO relation has nothing to seal, and demanding a
+    // sealing statement from it would only invite a decorative one. What matters
+    // for such a migration is that it opened nothing, which the grant census
+    // below covers for the whole slice at once.
+    if (tables.length === 0) {
+      assert.doesNotMatch(EXECUTABLE[n], /CREATE TABLE|ENABLE ROW LEVEL SECURITY|CREATE POLICY/u,
+        `${NAMES[n]} creates and seals no relation because it creates none`);
+      continue;
     }
     // Every relation is sealed through the same loop or the same explicit pair.
     assert.match(EXECUTABLE[n], /ENABLE ROW LEVEL SECURITY/u, `${NAMES[n]} enables RLS`);
@@ -537,11 +557,12 @@ test('the predecessor forward seams are reconciled in the predecessors themselve
   }
 });
 
-test('the three verifiers are wired into the toolchain, API CI after the I-07C group, and the database README', () => {
+test('the four verifiers are wired into the toolchain, API CI after the I-07C group, and the database README', () => {
   const SCRIPTS = {
     '0115': 'verify:introduction-progressive-disclosure:integration',
     '0116': 'verify:introduction-terminal-lifecycle:integration',
     '0117': 'verify:post-introduction-matching-reactivation:integration',
+    '0118': 'verify:introduction-ordinary-shared-material:integration',
   };
   for (const [n, script] of Object.entries(SCRIPTS)) {
     assert.match(packageJson, new RegExp(`"${script}": "node --env-file-if-exists=\\.env database/verify-migration-${n}\\.mjs"`, 'u'),
@@ -550,24 +571,24 @@ test('the three verifiers are wired into the toolchain, API CI after the I-07C g
     assert.match(readme, new RegExp(`npm run ${script}`, 'u'), 'and the database README documents it');
   }
   // ONE reported group, after the I-07C group, so a failure in the first does
-  // not skip the other two and cost two whole rounds per finding.
-  assert.ok(workflow.indexOf('three I-07D Introduction lifecycle') > workflow.indexOf('two I-07C Matching Mutual Match'),
+  // not skip the others and cost a whole round per finding.
+  assert.ok(workflow.indexOf('four I-07D Introduction lifecycle') > workflow.indexOf('two I-07C Matching Mutual Match'),
     'the I-07D group runs after the I-07C group');
-  assert.match(workflow, /result_0115=FAIL\n\s+result_0116=FAIL\n\s+result_0117=FAIL/u,
-    'each exit code is captured so one failure does not hide the other two');
-  assert.match(workflow, /I-07D real-PostgreSQL verifier results/u, 'and all three outcomes are reported');
-  assert.match(readme, /^## I-07D - Introduction Lifecycle, Progressive Disclosure and I-07 Closure v1 \(migrations 0115-0117\)$/mu,
+  assert.match(workflow, /result_0115=FAIL\n\s+result_0116=FAIL\n\s+result_0117=FAIL\n\s+result_0118=FAIL/u,
+    'each exit code is captured so one failure does not hide the others');
+  assert.match(workflow, /I-07D real-PostgreSQL verifier results/u, 'and all four outcomes are reported');
+  assert.match(readme, /^## I-07D - Introduction Lifecycle, Progressive Disclosure and I-07 Closure v1 \(migrations 0115-0118\)$/mu,
     'the database README carries the I-07D section');
   assert.match(readme, /### I-07D - the published cross-domain lock order/u,
     'including the published lock order, which is the thing a reviewer needs to find');
   // The focused database gate needs no edit: a new migration is selectable
   // generically as migration-NNNN.
   const focused = read('../focused-verifiers.json');
-  assert.doesNotMatch(focused, /011[567]/u,
+  assert.doesNotMatch(focused, /011[5678]/u,
     'focused-verifiers.json needs no edit: a new migration is selectable generically as migration-NNNN');
 });
 
-test('the three verifiers prove the behaviour families the task requires', () => {
+test('the four verifiers prove the behaviour families the task requires', () => {
   for (const family of ['PD01', 'PD05', 'PD07', 'PD10', 'PD13', 'PD14', 'PD17', 'PD18', 'V01', 'V04', 'G01']) {
     assert.match(VERIFIER['0115'], new RegExp(`'${family} `, 'u'), `the 0115 verifier proves ${family}`);
   }
@@ -576,13 +597,36 @@ test('the three verifiers prove the behaviour families the task requires', () =>
     'C01', 'C02', 'C03', 'C04', 'C05', 'C06', 'C07', 'C08', 'C09']) {
     assert.match(VERIFIER['0116'], new RegExp(`(?:'|\`)${family}\\b`, 'u'), `the 0116 verifier proves ${family}`);
   }
-  for (const family of ['R01', 'R03', 'R04', 'R06', 'R07', 'R09', 'R10', 'R11', 'R12', 'F01', 'C10', 'C11']) {
+  for (const family of ['R01', 'R03', 'R04', 'R06', 'R07', 'R09', 'R10', 'R11', 'R12', 'R14', 'F01', 'C10', 'C11']) {
     assert.match(VERIFIER['0117'], new RegExp(`(?:'|\`)${family}\\b`, 'u'), `the 0117 verifier proves ${family}`);
   }
+  for (const family of ['M01', 'M02', 'M03', 'M04', 'M05', 'M06', 'M07', 'M08',
+    'T01', 'T02', 'T03', 'C01', 'C02', 'G01']) {
+    assert.match(VERIFIER['0118'], new RegExp(`(?:'|\`)${family}\\b`, 'u'), `the 0118 verifier proves ${family}`);
+  }
+  // I07D-IDEM-01: the reactivation command identity binds the WHOLE immutable
+  // request. The channel is compared on BOTH idempotency passes - one pass alone
+  // would leave the other as an open door - and the migration, its verifier and
+  // this contract all pin the same count rather than merely its presence.
+  const CHANNEL_BOUND = /e\.activation_entry_channel IS NOT DISTINCT FROM p_entry_channel/gu;
+  assert.equal((SOURCE['0117'].match(CHANNEL_BOUND) ?? []).length, 2,
+    'both reactivation idempotency passes bind the requested entry channel to the exact committed act');
+  assert.match(SOURCE['0117'], /both reactivation idempotency passes must bind the requested entry channel/u,
+    'and the migration refuses to deploy if either one stops doing so');
+  assert.match(VERIFIER['0117'], CHANNEL_BOUND, 'and the verifier proves it against the live stored body');
+  // I07D-SCOPE-01: ONE canonical Shared truth model serves both World modes.
+  assert.match(SOURCE['0118'], /CREATE OR REPLACE FUNCTION public\.commit_shared_world_human_material_v1/u,
+    '0118 extends the frozen human commit core forward-only rather than adding a second one');
+  assert.match(SOURCE['0118'], /CREATE OR REPLACE FUNCTION public\.commit_shared_world_qandeel_material_v1/u,
+    'and the frozen QANDEEL commit core the same way');
+  assert.doesNotMatch(EXECUTABLE['0118'], /CREATE TABLE/u,
+    'and it creates no relation at all: the Introduction gets no material store of its own');
+  assert.match(SOURCE['0118'], /exactly three reviewed producers may write a Shared material/u,
+    'the new tip pins the producer census, so a fourth producer cannot appear unnoticed');
   // EVERY RACE IS PINNED WITH AN OBSERVABLE LOCK-WAIT BARRIER. A race whose
   // interleaving is not pinned is not a proof: whichever side happens to arrive
   // first decides the outcome and the scenario reports a pass it did not earn.
-  const races = (VERIFIER['0116'].match(/await report\.section\('C\d/gu) ?? []).length;
+  const races = (VERIFIER['0116'].match(/await race\('C\d/gu) ?? []).length;
   assert.ok(races >= 9, `the 0116 verifier runs at least nine pinned races, found ${races}`);
   assert.equal((VERIFIER['0116'].match(/await waitExtra\(\)/gu) ?? []).length >= races, true,
     'and every one of them waits on an observable lock-wait barrier');

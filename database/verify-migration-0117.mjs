@@ -33,6 +33,10 @@
 //   R11 reactivation revives no proposal and reopens nothing
 //   R12 one exact lineage can be crossed at most once
 //   R13 an equivalent retry is idempotent; a different request fails closed
+//   R14 a used command id cannot restate its own entry-channel provenance:
+//       the requested channel is compared against the exact committed act on
+//       BOTH idempotency passes, so neither a resume nor an activation can be
+//       retried into a different entry
 //
 //   F01 the I-07 phase-closing forward contracts hold on the live catalog
 //
@@ -151,6 +155,15 @@ async function verifyPosture() {
   assert.equal(body.split('clock_timestamp()').length - 1, 1, 'P01 exactly one instant is captured');
   assert.doesNotMatch(body, /now\(\)|localtimestamp|current_timestamp|transaction_timestamp|statement_timestamp/iu,
     'P01 and no transaction clock is read at all');
+  // BOTH idempotency passes bind the requested entry channel to the exact act
+  // the committed command produced. One pass binding it would leave the other as
+  // an open door, so the count is pinned at two rather than merely at "present".
+  assert.equal(
+    body.split('e.activation_entry_channel IS NOT DISTINCT FROM p_entry_channel').length - 1, 2,
+    'P01 both idempotency passes bind the entry channel, so a used command id can never restate its own provenance');
+  assert.ok(body.indexOf('e.activation_entry_channel IS NOT DISTINCT FROM p_entry_channel')
+    < body.indexOf("IF p_entry_channel IS NULL OR p_entry_channel NOT IN ('CONVERSATIONAL_ENTRY'"),
+  'P01 and they bind it BEFORE the channel is validated, which is the only place a retry could be answered');
 
   assert.equal(await rt.seamClearance('public.resolve_matching_reactivation_prerequisites_v1'), 'NOT_EVALUATED',
     'P01 the reactivation prerequisite seam is fail-closed in production');
@@ -474,6 +487,54 @@ async function verifyReactivation(report, humans) {
       await asRole('postgres');
       assert.equal(await count(D.REACTIVATIONS, 'prior_participation_event_id = $1', [paused.id]), 1,
         'R12 exactly one reactivation ever crossed that exact lineage');
+    });
+
+    await report.isolated('R14 a used command id cannot restate its own entry-channel provenance', async () => {
+      // THE RESUME SIDE. A resume carries NO channel, so a retry that supplies
+      // one is a different request - and it must be refused BEFORE the channel
+      // validation below would ever see it, because idempotency answers first.
+      const f = await endedIntroduction(one, two);
+      const paused = await rt.currentActOf(f.lower);
+      const command = randomUUID();
+      const event = randomUUID();
+      await actAs(f.lower);
+      const [resumed] = await rt.reactivate(command, event, paused.id, null);
+      assert.equal(resumed.participation_act, 'RESUME', 'R14 the committed act is a resume, carrying no channel');
+      for (const channel of ['MANUAL_MY_WORLD_ENTRY', 'CONVERSATIONAL_ENTRY', 'QANDEEL_OFFER']) {
+        await rejected(() => rt.reactivate(command, event, paused.id, channel), CONFLICT,
+          /MATCHING_REACTIVATION_COMMAND_ID_CONFLICT/u);
+      }
+      assert.deepEqual(await rt.reactivate(command, event, paused.id, null), [resumed],
+        'R14 and the retry that names no channel is still the same request, answered from the committed row');
+      await asRole('postgres');
+
+      // THE ACTIVATE SIDE. An activation carries exactly one of the two frozen
+      // channels, and the OTHER one is a different request under the same id.
+      const g = await rt.bringToIntroduction(three, four);
+      await rt.turnOffDuringIntroduction(g.lower);
+      await actAs(g.higher);
+      await rt.commitEnd(terminalIds(), g.world);
+      await asRole('postgres');
+      const off = await rt.currentActOf(g.lower);
+      const activateCommand = randomUUID();
+      const activateEvent = randomUUID();
+      await actAs(g.lower);
+      const [activated] = await rt.reactivate(activateCommand, activateEvent, off.id, 'MANUAL_MY_WORLD_ENTRY');
+      assert.equal(activated.participation_act, 'ACTIVATE');
+      assert.deepEqual(await rt.reactivate(activateCommand, activateEvent, off.id, 'MANUAL_MY_WORLD_ENTRY'), [activated],
+        'R14 the SAME channel is an equivalent retry');
+      for (const channel of ['CONVERSATIONAL_ENTRY', null, 'QANDEEL_OFFER']) {
+        await rejected(() => rt.reactivate(activateCommand, activateEvent, off.id, channel), CONFLICT,
+          /MATCHING_REACTIVATION_COMMAND_ID_CONFLICT/u);
+      }
+      await asRole('postgres');
+
+      // AND THE COMMITTED PROVENANCE IS UNTOUCHED: a refused retry does not
+      // reinterpret, backfill or overwrite what actually happened.
+      assert.equal((await rt.currentActOf(g.lower)).activation_entry_channel, 'MANUAL_MY_WORLD_ENTRY',
+        'R14 the produced act still carries exactly the channel it was committed with');
+      assert.equal(await count(D.REACTIVATIONS, 'id = $1', [activateCommand]), 1,
+        'R14 and exactly one reactivation exists under that command id');
     });
   } finally {
     await q('ROLLBACK');
