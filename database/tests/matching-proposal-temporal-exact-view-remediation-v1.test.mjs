@@ -1,23 +1,31 @@
-// QAN-CW-REM-02 - Matching proposal temporal correctness and exact-view
-// decision identity v1: secret-free structural contract over migration 0120.
+// QAN-CW-REM-02 - Matching proposal temporal correctness and exact-view command
+// identity v1: secret-free structural contract over migration 0120.
 //
 // Migration 0120 corrects two accepted phase-wide assurance findings that I-07C
 // had already found and fixed at ONE site each while the sibling I-07B sites
-// kept them:
+// kept them, and the two interim-review findings that proved each of the two
+// corrections was still short of its own rule:
 //
-//   ASSURE-F01  the two proposal-delivery paths decided `expires_at` against a
-//               TRANSACTION-start clock, which PostgreSQL settles before the
-//               command ever waits on the canonical two-human lock
-//   ASSURE-F08  three of the four human decision retries returned historical
-//               success from the transition alone, proving no exact recipient
-//               view
+//   ASSURE-F01    the two proposal-delivery paths decided `expires_at` against a
+//                 TRANSACTION-start clock, which PostgreSQL settles before the
+//                 command ever waits on the canonical two-human lock
+//   REM02-TIME-01 and moving that decision to just before the disclosure gate
+//                 was still too early: the gate re-locks, re-reads, revalidates,
+//                 resolves a name and filters every value before it writes, and
+//                 the deadline can cross during all of it
+//   ASSURE-F08    three of the four human decision retries returned historical
+//                 success from the transition alone, proving no exact view
+//   REM02-IDEM-01 and the two DELIVERY retries had the same defect: they
+//                 reconstructed the delivered view from the MUTABLE current view
+//                 pointer and never compared the permitted conclusion
 //
-// This contract proves the SHAPE before deploy. Live semantics - the two
-// barrier-pinned cross-deadline races, the pre-fix demonstration, every retry
-// direction, the missing-binding refusal, the structural unrepresentability of a
-// wrong binding, and the I-07B/I-07C non-regressions - are proven by
-// database/verify-migration-0120.mjs against real PostgreSQL, which this file
-// also pins into the toolchain, CI and the database README.
+// This contract proves the SHAPE before deploy. Live semantics - the outer and
+// inner cross-deadline races, the pre-fix demonstration, every retry direction
+// for both deliveries and all three decisions, the missing-binding refusals, the
+// structural unrepresentability of a wrong binding, and the I-07B/I-07C
+// non-regressions - are proven by database/verify-migration-0120.mjs against
+// real PostgreSQL, which this file also pins into the toolchain, CI and the
+// database README.
 //
 // Prose comments explain WHY a construct is forbidden and therefore name it;
 // every "must not contain" assertion runs against EXECUTABLE SQL only, and never
@@ -31,6 +39,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
 const NAME = '0120_matching_proposal_temporal_exact_view_remediation_v1.sql';
 const SOURCE = read(`../migrations/${NAME}`);
+const SOURCE_0110 = read('../migrations/0110_matching_pair_eligibility_proposal_persistence_v1.sql');
+const SOURCE_0111 = read('../migrations/0111_matching_candidate_evaluation_disclosure_gate_v1.sql');
 const SOURCE_0112 = read('../migrations/0112_matching_proposal_choreography_runtime_v1.sql');
 const SOURCE_0113 = read('../migrations/0113_matching_mutual_match_introduction_persistence_v1.sql');
 const VERIFIER = read('../verify-migration-0120.mjs');
@@ -85,17 +95,25 @@ const prologueOf = (source, name) => {
   assert.ok(end > start, `${name} has a language clause`);
   return source.slice(start, end).trim();
 };
+/** The declared IN parameter names of one function, in order. */
+const inputsOf = (source, name) => {
+  const prologue = prologueOf(source, name);
+  return prologue.slice(prologue.indexOf('(') + 1, prologue.indexOf(') RETURNS'))
+    .split(',').map((part) => part.trim().split(/\s+/u)[0]).filter(Boolean);
+};
 /** The git blob id of one file's LF content: what `git rev-parse HEAD:<path>` prints. */
 const blobIdOf = (content) => createHash('sha1').update(`blob ${Buffer.byteLength(content)}\0`).update(content).digest('hex');
 
-const RELATION = 'matching_proposal_decision_view_bindings';
+const GATE = 'materialize_matching_recipient_view_core_v1';
+const DELIVERY_RELATION = 'matching_proposal_delivery_view_bindings';
+const DECISION_RELATION = 'matching_proposal_decision_view_bindings';
 const DELIVERIES = ['offer_matching_proposal_to_first_core_v1', 'forward_matching_proposal_to_second_core_v1'];
 const DECISIONS = [
   'decline_matching_proposal_as_first_core_v1',
   'decline_matching_proposal_as_second_core_v1',
   'withdraw_matching_proposal_core_v1',
 ];
-const REPLACED = [...DELIVERIES, ...DECISIONS];
+const REPLACED = [GATE, ...DELIVERIES, ...DECISIONS];
 /** Every clock PostgreSQL settles at the START of a transaction, in any spelling. */
 const TRANSACTION_CLOCK = /now\(\)|localtimestamp|current_timestamp|transaction_timestamp|statement_timestamp/iu;
 
@@ -165,27 +183,29 @@ test('migration 0120 is one forward-only transaction at the tip of the chain', (
 
   const executable = body();
   // A CORRECTION THAT DROPPED, REWROTE OR RENAMED SCHEMA WOULD NOT BE A
-  // CORRECTION. Every change is a forward function replacement, one additive
-  // relation and one additive candidate key over an existing primary key.
+  // CORRECTION. Every change is a forward function replacement, two additive
+  // relations and one additive candidate key over an existing primary key.
   assert.doesNotMatch(executable, /DROP (?:TABLE|FUNCTION|TRIGGER|POLICY|INDEX|COLUMN|CONSTRAINT|SCHEMA|ROLE)/iu,
     'it drops no object');
   assert.doesNotMatch(executable, /ADD COLUMN|DROP COLUMN|ALTER COLUMN|RENAME/iu,
     'it adds, drops, alters or renames no column');
   assert.doesNotMatch(executable, /CREATE (?:POLICY|VIEW|MATERIALIZED VIEW|EXTENSION|TYPE)|EXCLUDE USING/iu,
     'it introduces no policy, view, extension or enum type');
-  assert.doesNotMatch(executable, /TRUNCATE|DELETE FROM|UPDATE public\./iu,
-    'it destroys and rewrites nothing: no pre-0120 transition, reason or lifecycle is touched');
-  // The ONLY predecessor relation it alters is the one whose candidate key the
-  // new binding needs, and the only thing it does to it is ADD that key.
+  assert.doesNotMatch(executable, /TRUNCATE|DELETE FROM|UPDATE public\.(?!matching_recipient_proposal_view_state)/iu,
+    'it destroys nothing and rewrites no pre-0120 transition, reason or lifecycle');
+  // The ONLY predecessor relation it alters is the one whose candidate key both
+  // bindings need, and the only thing it does to it is ADD that key.
   const altered = [...executable.matchAll(/ALTER TABLE public\.(\w+)\s+ADD CONSTRAINT (\w+)\s+([\s\S]*?);/gu)];
   assert.deepEqual(altered.map((m) => [m[1], m[2], m[3].trim()]),
     [['matching_recipient_proposal_views', 'matching_recipient_proposal_views_role_identity_key',
       'UNIQUE (id, recipient_role)']],
     'exactly one additive candidate key is added, to exactly one predecessor relation');
-  assert.equal((executable.match(/ALTER TABLE public\./gu) ?? []).length,
-    // the additive key, plus the new relation's own owner and RLS statements
-    1 + 2, 'and no other ALTER TABLE touches anything');
   assert.doesNotMatch(executable, /ALTER TABLE public\.(?!matching_)/u, 'no non-Matching relation is touched at all');
+  // The only UPDATE anywhere is the frozen 0111 view-state pointer move, which
+  // now carries the one delivery instant instead of a transaction clock.
+  assert.equal((executable.match(/UPDATE public\./gu) ?? []).length, 1, 'exactly one UPDATE statement exists');
+  assert.match(executable, /SET current_view_id = p_view_id, updated_at = delivery_at/u,
+    'and it is the frozen pointer move, single-clocked on the one delivery instant');
 });
 
 test('migrations 0075 - 0119 are byte-identical: the chain is forward-only', () => {
@@ -195,84 +215,102 @@ test('migrations 0075 - 0119 are byte-identical: the chain is forward-only', () 
     assert.equal(blobIdOf(read(`../migrations/${file}`)), blob,
       `${file} is byte-identical to the QAN-CW-REM-02 canonical baseline`);
   }
-  // And the pinned set really is the contiguous range it claims to be, so a
-  // migration cannot escape the pin by being left out of the map.
   const numbers = pinned.map((file) => Number(file.slice(0, 4))).sort((a, b) => a - b);
   assert.deepEqual(numbers, Array.from({ length: 45 }, (_, i) => 75 + i),
     'the pin covers 0075 through 0119 with no gap');
 });
 
-test('the five replaced boundaries keep their exact 0112 signatures', () => {
+test('the six replaced boundaries keep their exact frozen signatures', () => {
   // A forward replacement that quietly changed a parameter, a result column or a
   // posture clause would be a NEW boundary wearing an old name, and every caller
   // and every frozen contract would still be pointed at the old one.
-  for (const name of REPLACED) {
+  assert.equal(prologueOf(SOURCE, GATE), prologueOf(SOURCE_0111, GATE),
+    'the disclosure gate is byte-identical to its 0111 declaration');
+  for (const name of [...DELIVERIES, ...DECISIONS]) {
     assert.equal(prologueOf(SOURCE, name), prologueOf(SOURCE_0112, name),
       `${name}: the parameters, the result columns and the posture are byte-identical to 0112`);
+  }
+  for (const name of REPLACED) {
     assert.ok(SOURCE.includes(`CREATE OR REPLACE FUNCTION public.${name}(`),
       `${name} is replaced forward-only rather than dropped and recreated`);
   }
-  assert.equal((SOURCE.match(/CREATE OR REPLACE FUNCTION/gu) ?? []).length, REPLACED.length,
-    'and exactly the five boundaries the two findings name are replaced');
+  assert.deepEqual([...SOURCE.matchAll(/CREATE OR REPLACE FUNCTION public\.(\w+)\(/gu)].map((m) => m[1]), REPLACED,
+    'exactly the six boundaries the four findings name are replaced, in that order');
   assert.equal((body().match(/CREATE FUNCTION/gu) ?? []).length, 0,
-    'the migration creates no new function at all: the correction is in the five that already exist');
+    'the migration creates no new function at all: the correction is in the six that already exist');
 });
 
-test('ASSURE-F01: each delivery decides its deadline on a wall clock read after the lock wait', () => {
-  for (const name of DELIVERIES) {
-    const prosrc = prosrcOf(name);
-    // OVER THE WHOLE SOURCE INCLUDING COMMENTS, because that is what
-    // `pg_proc.prosrc` holds and what the terminal self-assertion reads. A body
-    // whose prose spelled `CURRENT_TIMESTAMP` in order to explain the defect
-    // would make the migration refuse to deploy - which is exactly the
-    // self-matching trap this class of assertion keeps falling into.
-    assert.doesNotMatch(prosrc, TRANSACTION_CLOCK,
-      `${name}: a delivery path may not even NAME a transaction-fixed clock, because every one of them is settled before the canonical pair lock wait`);
-    assert.equal(prosrc.split('clock_timestamp()').length - 1, 1,
-      `${name}: the real delivery instant is captured exactly once`);
-    assert.ok(prosrc.includes('delivery_at := clock_timestamp();'),
-      `${name}: into one named instant`);
-    assert.ok(prosrc.includes('IF proposal.expires_at <= delivery_at THEN'),
-      `${name}: and the deadline is decided against exactly that instant`);
-    assert.ok(prosrc.includes('MATCHING_PROPOSAL_EXPIRED'),
-      `${name}: with the exact existing refusal, unchanged`);
+test('REM02-TIME-01: the ONE wall clock is read at the disclosure gate first write', () => {
+  const prosrc = prosrcOf(GATE);
+  // OVER THE WHOLE SOURCE INCLUDING COMMENTS, because that is what
+  // `pg_proc.prosrc` holds and what the terminal self-assertion reads. A body
+  // whose prose spelled `CURRENT_TIMESTAMP` in order to explain the defect
+  // would make the migration refuse to deploy - which is exactly the
+  // self-matching trap this class of assertion keeps falling into.
+  assert.doesNotMatch(prosrc, TRANSACTION_CLOCK,
+    'the disclosure gate may not even NAME a transaction-fixed clock: every one of them is settled before its locks and its checks');
+  assert.equal(prosrc.split('clock_timestamp()').length - 1, 1,
+    'the real delivery instant is captured exactly once');
+  assert.ok(prosrc.includes('delivery_at := clock_timestamp();'), 'into one named instant');
+  assert.ok(prosrc.includes('IF proposal.expires_at <= delivery_at THEN'),
+    'and the deadline is decided against exactly that instant');
+  assert.ok(prosrc.includes('MATCHING_PROPOSAL_EXPIRED'), 'with the exact existing refusal, unchanged');
 
-    // THE PLACEMENT IS THE PROPERTY: after the lock, after the historical retry
-    // path, after revalidation, after the CW2-08 gate, and immediately before
-    // the first irreversible delivery write.
-    const cleaned = cleanedOf(prosrc);
-    const at = (needle) => {
-      const position = cleaned.indexOf(needle);
-      assert.ok(position >= 0, `${name} carries ${needle}`);
-      return position;
-    };
-    const order = [
-      'lock_matching_pair_humans_v1',
-      'FROM public.matching_proposal_transitions t',
-      'resolve_matching_proposal_validity_v1',
-      "gate.clearance <> 'CLEARED'",
-      'delivery_at := clock_timestamp()',
-      'proposal.expires_at <= delivery_at',
-      'materialize_matching_recipient_view_core_v1',
-      'append_matching_proposal_transition_v1',
-    ].map(at);
-    for (let i = 1; i < order.length; i += 1) {
-      assert.ok(order[i] > order[i - 1], `${name}: delivery step ${i} follows step ${i - 1}`);
-    }
-    // AND THE HISTORICAL RETRY STILL COMES FIRST. Moving the expiry decision in
-    // front of the idempotency path would make a committed delivery answer its
-    // own retry differently once the deadline passed.
-    assert.ok(cleaned.indexOf('MATCHING_COMMAND_ID_CONFLICT') < cleaned.indexOf('proposal.expires_at'),
-      `${name}: the equivalent-retry answer is never re-decided against today's deadline`);
+  // THE PLACEMENT IS THE PROPERTY. The instant is read after the canonical pair
+  // lock, after the already-materialized-view answer, after the view-state row
+  // lock and after every field, policy, name and value check.
+  const cleaned = cleanedOf(prosrc);
+  const at = (needle) => {
+    const position = cleaned.indexOf(needle);
+    assert.ok(position >= 0, `the disclosure gate carries ${needle}`);
+    return position;
+  };
+  const order = [
+    'lock_matching_pair_humans_v1',
+    'INTO committed FROM public.matching_recipient_proposal_views v WHERE v.id = p_view_id',
+    'RETURN QUERY SELECT committed.id, committed.proposal_id, committed.recipient_role,',
+    'AND st.recipient_user_id = p_recipient_user_id FOR UPDATE',
+    'IF disclosed = 0 THEN',
+    'delivery_at := clock_timestamp()',
+    'proposal.expires_at <= delivery_at',
+    'INSERT INTO public.matching_recipient_proposal_views (',
+  ].map(at);
+  for (let i = 1; i < order.length; i += 1) {
+    assert.ok(order[i] > order[i - 1], `disclosure-gate step ${i} follows step ${i - 1}`);
   }
+  // AN ALREADY MATERIALIZED VIEW IS HISTORY, AND HISTORY IS NOT RE-DECIDED.
+  assert.ok(order[2] < order[5], 'the existing-view retry is answered before any deadline decision');
+  // AND NOTHING SEPARABLE STANDS BETWEEN THE DECISION AND THE WRITE. This is the
+  // whole of REM02-TIME-01: "before the first irreversible write" means the
+  // statement before it, not somewhere earlier in the function.
+  assert.ok(order[7] - order[6] <= 220,
+    'the deadline decision is the LAST statement before the first irreversible write');
+
+  // AND THE DELIVERY COMMANDS THEMSELVES HAVE NO CLOCK AT ALL. One temporal
+  // decision on the path, not two - a second, earlier, non-authoritative check
+  // would be a moment nobody acts on and a second thing to keep true.
+  for (const name of DELIVERIES) {
+    const delivery = prosrcOf(name);
+    assert.doesNotMatch(delivery, TRANSACTION_CLOCK, `${name} reads no transaction clock`);
+    assert.doesNotMatch(delivery, /clock_timestamp/u, `${name} reads no wall clock either`);
+    assert.match(delivery, /materialize_matching_recipient_view_core_v1/u,
+      `${name} discloses through the ONE gate that decides the deadline`);
+  }
+  // The gate keeps every 0111 property that made it the ONE gate.
+  for (const needed of ['resolve_matching_canonical_first_name_v1', 'matching_text_carries_contact_route_v1',
+    'MATCHING_DISCLOSURE_AUTHORITY_STALE', 'MATCHING_PROPOSAL_FIELD_VALUE_REFUSED',
+    'MATCHING_PROPOSAL_DISCLOSURE_EMPTY', 'MATCHING_SAFE_CONCLUSION_AUDIENCE_MISMATCH']) {
+    assert.ok(prosrc.includes(needed), `the gate still carries ${needed}`);
+  }
+  assert.doesNotMatch(prosrc, /public\.matching_private_reasoning_notes|public\.matching_safe_conclusion_candidates/u,
+    'and still reads no private reasoning and no unfiltered conclusion');
 });
 
 test('the temporal sweep is a CLASS correction, not a global clock replacement', () => {
-  // The other three transaction clocks in the proposal choreography were
-  // classified and deliberately left alone: in each, a stale clock can only
-  // refuse, delay or SHORTEN - never widen authority or exposure. Replacing
-  // preparation's would have LENGTHENED every proposal by minting its deadline
-  // from a later instant, which is the wrong direction entirely.
+  // The other transaction clocks in the proposal choreography were classified
+  // and deliberately left alone: in each, a stale clock can only refuse, delay or
+  // SHORTEN. Replacing preparation's would have LENGTHENED every proposal by
+  // minting its deadline from a later instant, which is the wrong direction.
   for (const name of ['prepare_matching_proposal_core_v1', 'expire_matching_proposal_core_v1',
     'revalidate_matching_proposal_core_v1', 'approve_matching_proposal_forward_core_v1']) {
     assert.ok(!SOURCE.includes(`FUNCTION public.${name}(`),
@@ -298,65 +336,122 @@ test('the temporal sweep is a CLASS correction, not a global clock replacement',
     'or if either of them gained a wall clock it was never meant to have');
 });
 
-test('ASSURE-F08: the binding relation makes a wrong binding unrepresentable', () => {
-  const ddl = sliceOf(SOURCE, `CREATE TABLE public.${RELATION} (`, `CREATE INDEX ${RELATION}_decider_idx`);
+test('both binding relations make a wrong binding unrepresentable', () => {
+  for (const [relation, transitionColumn, viewColumn, humanColumn, roleColumn, states, ownKey] of [
+    [DELIVERY_RELATION, 'delivery_transition_id', 'delivered_view_id', 'recipient_user_id', 'recipient_role',
+      ['OFFERED_TO_FIRST', 'FORWARDED_TO_SECOND'], 'UNIQUE \\(proposal_id, delivery_state\\)'],
+    [DECISION_RELATION, 'decision_transition_id', 'decided_view_id', 'decider_user_id', 'decider_role',
+      ['FIRST_DECLINED', 'SECOND_DECLINED', 'WITHDRAWN'], 'UNIQUE \\(proposal_id\\)'],
+  ]) {
+    const ddl = sliceOf(SOURCE, `CREATE TABLE public.${relation} (`, `CREATE INDEX ${relation}_`);
 
-  // ONE ROW PER TERMINAL DECISION, and all three ARE terminal.
-  assert.match(ddl, /decision_transition_id uuid PRIMARY KEY/u, 'the transition id IS the decision command id');
-  assert.match(ddl, /CONSTRAINT matching_proposal_decision_view_bindings_proposal_key UNIQUE \(proposal_id\)/u,
-    'and a proposal carries at most one, because all three decisions are terminal');
-  assert.match(ddl, /UNIQUE \(decision_transition_id, proposal_id, decided_view_id\)/u,
-    'the composite identity a retry compares is a candidate key');
+    assert.match(ddl, new RegExp(`${transitionColumn} uuid PRIMARY KEY`, 'u'),
+      `${relation}: the transition id IS the command id`);
+    assert.match(ddl, new RegExp(ownKey, 'u'), `${relation}: at most one row per proposal and state`);
+    assert.match(ddl, new RegExp(`UNIQUE \\(${transitionColumn}, proposal_id, ${viewColumn}\\)`, 'u'),
+      `${relation}: the composite identity a retry compares is a candidate key`);
 
-  // THE STRUCTURAL CHAIN. Each link is a real foreign key or CHECK, not a
-  // remembered rule, so a binding to another proposal's view, another human's
-  // view or a role the decision does not permit cannot be written at all.
-  assert.match(ddl, /CHECK \(decision_state IN \('FIRST_DECLINED', 'SECOND_DECLINED', 'WITHDRAWN'\)\)/u,
-    'exactly the three affected decision classes are representable');
-  assert.match(ddl, /CHECK \(decider_role = CASE decision_state\s+WHEN 'SECOND_DECLINED' THEN 'CANDIDATE'\s+ELSE 'FIRST_RECIPIENT' END\)/u,
-    'which role may have decided is fixed by the decision itself');
-  assert.match(ddl, /FOREIGN KEY \(decision_transition_id, proposal_id, decision_state\)\s+REFERENCES public\.matching_proposal_transitions \(id, proposal_id, resulting_state\)/u,
-    'the bound transition is THIS proposal transition into exactly THAT decision');
-  assert.match(ddl, /FOREIGN KEY \(decided_view_id, proposal_id, decider_user_id\)\s+REFERENCES public\.matching_recipient_proposal_views \(id, proposal_id, recipient_user_id\)/u,
-    'the decided view is a view of THIS proposal held by THAT human');
-  assert.match(ddl, /FOREIGN KEY \(decided_view_id, decider_role\)\s+REFERENCES public\.matching_recipient_proposal_views \(id, recipient_role\)/u,
-    'and it is a view of exactly the role the decision fixes');
-  // Which the frozen 0110 audience CHECK then pins to exactly one of the
-  // proposal's two members - so role, human and view cannot disagree.
-  assert.match(read('../migrations/0110_matching_pair_eligibility_proposal_persistence_v1.sql'),
-    /CONSTRAINT matching_recipient_proposal_views_audience_check/u,
-    'the 0110 audience CHECK that closes the chain is still there');
+    // THE STRUCTURAL CHAIN. Each link is a real foreign key or CHECK, not a
+    // remembered rule, so a binding to another proposal's view, another human's
+    // view or a role the state does not permit cannot be written at all.
+    assert.match(ddl, new RegExp(`CHECK \\(\\w+_state IN \\(${states.map((s) => `'${s}'`).join(', ')}\\)\\)`, 'u'),
+      `${relation}: exactly the affected states are representable`);
+    assert.match(ddl, new RegExp(`CHECK \\(${roleColumn} = CASE \\w+_state`, 'u'),
+      `${relation}: which role the row may carry is fixed by the state itself`);
+    assert.match(ddl, new RegExp(`FOREIGN KEY \\(${transitionColumn}, proposal_id, \\w+_state\\)\\s+REFERENCES public\\.matching_proposal_transitions \\(id, proposal_id, resulting_state\\)`, 'u'),
+      `${relation}: the bound transition is THIS proposal transition into exactly THAT state`);
+    assert.match(ddl, new RegExp(`FOREIGN KEY \\(${viewColumn}, proposal_id, ${humanColumn}\\)\\s+REFERENCES public\\.matching_recipient_proposal_views \\(id, proposal_id, recipient_user_id\\)`, 'u'),
+      `${relation}: the bound view is a view of THIS proposal held by THAT human`);
+    assert.match(ddl, new RegExp(`FOREIGN KEY \\(${viewColumn}, ${roleColumn}\\)\\s+REFERENCES public\\.matching_recipient_proposal_views \\(id, recipient_role\\)`, 'u'),
+      `${relation}: and it is a view of exactly the role the row fixes`);
 
-  // NOTHING IS OPTIONAL, NOTHING CASCADES, AND NOTHING IS UNTYPED.
-  assert.equal((ddl.match(/FOREIGN KEY/gu) ?? []).length, 3, 'the binding carries exactly three foreign keys');
-  assert.equal((ddl.match(/ON DELETE RESTRICT/gu) ?? []).length, 3, 'and every one of them is ON DELETE RESTRICT');
-  assert.doesNotMatch(ddl, /\b(jsonb?|bytea)\b|\w+\s+(?:uuid|text|integer)\[\]/iu,
-    'no untyped payload column and no array column exists');
-  const columns = [...ddl.matchAll(/^ {4}(\w+) (uuid|text|timestamptz)\b/gmu)].map((m) => m[1]);
-  assert.deepEqual(columns,
-    ['decision_transition_id', 'proposal_id', 'decision_state', 'decider_role', 'decider_user_id',
-      'decided_view_id', 'bound_at'],
-    'and the relation carries exactly the evidence it exists for, in order');
-  for (const column of columns) {
-    assert.doesNotMatch(column, /score|rank|weight|priorit|percent|rating|reason|private|world|replay|public_/u,
-      `${column} would duplicate Product truth or leak private state into authority evidence`);
+    // NOTHING IS OPTIONAL, NOTHING CASCADES, AND NOTHING IS UNTYPED.
+    assert.equal((ddl.match(/FOREIGN KEY/gu) ?? []).length, 3, `${relation}: exactly three foreign keys`);
+    assert.equal((ddl.match(/ON DELETE RESTRICT/gu) ?? []).length, 3, `${relation}: and every one is ON DELETE RESTRICT`);
+    assert.doesNotMatch(ddl, /\b(jsonb?|bytea)\b|\w+\s+(?:uuid|text|integer)\[\]/iu,
+      `${relation}: no untyped payload column and no array column exists`);
+    const columns = [...ddl.matchAll(/^ {4}(\w+) (uuid|text|timestamptz)\b/gmu)].map((m) => m[1]);
+    assert.equal(columns.length, 7, `${relation}: carries exactly the evidence it exists for`);
+    for (const column of columns) {
+      assert.doesNotMatch(column, /score|rank|weight|priorit|percent|rating|reason|private|world|replay|public_/u,
+        `${relation}.${column} would duplicate Product truth or leak private state into authority evidence`);
+    }
+    // THE CONCLUSION IS NOT COPIED. The bound view already carries its exact
+    // permitted conclusion immutably, and a second copy is a second thing to
+    // keep true.
+    assert.doesNotMatch(ddl, /conclusion/u,
+      `${relation}: the permitted conclusion is read from the bound view, never duplicated here`);
+
+    // APPEND-ONLY, SEALED, AND THROUGH THE GUARD 0110 ALREADY INSTALLED.
+    const executable = body();
+    assert.match(executable,
+      new RegExp(`CREATE TRIGGER ${relation}_immutable\\s+BEFORE UPDATE OR DELETE ON public\\.${relation}\\s+FOR EACH ROW EXECUTE FUNCTION public\\.reject_matching_proposal_mutation_v1\\(\\);`, 'u'),
+      `${relation} is append-only through the frozen 0110 mutation guard`);
+    assert.ok(executable.includes(`ALTER TABLE public.${relation} ENABLE ROW LEVEL SECURITY;`),
+      `${relation}: row level security is on`);
+    assert.ok(executable.includes(`REVOKE ALL ON TABLE public.${relation} FROM PUBLIC, anon, authenticated;`),
+      `${relation}: PUBLIC, anon and authenticated hold nothing`);
+    assert.ok(executable.includes(`EXECUTE 'REVOKE ALL ON TABLE public.${relation} FROM service_role'`),
+      `${relation}: service_role included`);
   }
-
-  // APPEND-ONLY, SEALED, AND THROUGH THE GUARD 0110 ALREADY INSTALLED for
-  // exactly this: a decision's authorizing view is history the moment it is
-  // written, and no new trigger function is invented to say so.
-  const executable = body();
-  assert.match(executable,
-    new RegExp(`CREATE TRIGGER ${RELATION}_immutable\\s+BEFORE UPDATE OR DELETE ON public\\.${RELATION}\\s+FOR EACH ROW EXECUTE FUNCTION public\\.reject_matching_proposal_mutation_v1\\(\\);`, 'u'),
-    'the binding is append-only through the frozen 0110 mutation guard');
-  assert.doesNotMatch(executable, /CREATE FUNCTION public\.\w+\(\)\nRETURNS trigger/u,
+  // NO NEW TRIGGER FUNCTION IS INVENTED for either of them.
+  assert.doesNotMatch(body(), /CREATE FUNCTION public\.\w+\(\)\nRETURNS trigger/u,
     'and no new trigger function is created');
-  assert.ok(executable.includes(`ALTER TABLE public.${RELATION} ENABLE ROW LEVEL SECURITY;`),
-    'row level security is on');
-  assert.ok(executable.includes(`REVOKE ALL ON TABLE public.${RELATION} FROM PUBLIC, anon, authenticated;`),
-    'and PUBLIC, anon and authenticated hold nothing');
-  assert.ok(executable.includes(`EXECUTE 'REVOKE ALL ON TABLE public.${RELATION} FROM service_role'`),
-    'service_role included: a system credential never manufactures human consent');
+  // The 0110 audience CHECK that closes both chains is still there.
+  assert.match(SOURCE_0110, /CONSTRAINT matching_recipient_proposal_views_audience_check/u,
+    'the frozen 0110 audience CHECK that pins a view role to a proposal member survives');
+});
+
+test('REM02-IDEM-01: each delivery proves its whole immutable request from a durable row', () => {
+  for (const name of DELIVERIES) {
+    const prosrc = prosrcOf(name);
+    const cleaned = cleanedOf(prosrc);
+    const at = (needle) => {
+      const position = cleaned.indexOf(needle);
+      assert.ok(position >= 0, `${name} carries ${needle}`);
+      return position;
+    };
+    const order = [
+      'lock_matching_pair_humans_v1',
+      'FROM public.matching_proposal_transitions t',
+      `FROM public.${DELIVERY_RELATION} b`,
+      "'MATCHING_DELIVERY_CONTRADICTORY_STATE'",
+      'delivered.permitted_conclusion_id IS DISTINCT FROM p_permitted_conclusion_id',
+      'bound.delivered_view_id, already;',
+      'resolve_matching_proposal_validity_v1',
+      "gate.clearance <> 'CLEARED'",
+      'materialize_matching_recipient_view_core_v1',
+      'append_matching_proposal_transition_v1',
+      `INSERT INTO public.${DELIVERY_RELATION}`,
+    ].map(at);
+    for (let i = 1; i < order.length; i += 1) {
+      assert.ok(order[i] > order[i - 1], `${name}: delivery step ${i} follows step ${i - 1}`);
+    }
+    // THE MUTABLE CURRENT VIEW POINTER IS NOT THE IDENTITY OF A HISTORICAL
+    // COMMAND, and this delivery does not reach it at all - which is the whole
+    // of REM02-IDEM-01's first half.
+    assert.doesNotMatch(prosrc, /matching_recipient_proposal_view_state/u,
+      `${name}: the current view pointer is never read; the durable binding is the historical identity`);
+    // THE CONCLUSION IS COMPARED, against the one the bound view immutably
+    // carries rather than against a second copy of it.
+    assert.match(cleaned, /SELECT \* INTO delivered FROM public\.matching_recipient_proposal_views v\s+WHERE v\.id = bound\.delivered_view_id;/u,
+      `${name}: the immutable bound view is read`);
+    assert.match(cleaned, /bound\.delivered_view_id IS DISTINCT FROM p_view_id\s*\n\s*OR delivered\.permitted_conclusion_id IS DISTINCT FROM p_permitted_conclusion_id/u,
+      `${name}: and BOTH the exact view and the exact conclusion are compared as one request`);
+    assert.match(prosrc, /MATCHING_COMMAND_ID_CONFLICT/u,
+      `${name}: a retry naming another view or another conclusion is a different request under a reused id`);
+    // A MISSING BINDING IS REFUSED BEFORE ANY VIEW IS COMPARED.
+    assert.ok(order[3] < order[4], `${name}: a committed delivery with no binding fails closed first`);
+    const retry = cleaned.slice(order[1], order[5]);
+    assert.doesNotMatch(retry,
+      /current_view_id|resolve_matching_proposal_prerequisites_v1|resolve_matching_proposal_validity_v1|expires_at|proposal_state/u,
+      `${name}: the retry path reads no current truth at all`);
+    assert.doesNotMatch(retry, /INSERT INTO|UPDATE |DELETE /u,
+      `${name}: and nothing is inferred, reconstructed or backfilled on it`);
+    // The binding is written in the SAME transaction as the transition, after it.
+    assert.ok(order[10] - order[9] < 400,
+      `${name}: the binding is written immediately after the transition, in one transaction`);
+  }
 });
 
 test('ASSURE-F08: each corrected decision binds its exact view and proves it on retry', () => {
@@ -372,13 +467,13 @@ test('ASSURE-F08: each corrected decision binds its exact view and proves it on 
     // any currentness is read, and the pair lock is reached only through it.
     const order = [
       'enter_matching_proposal_decision_v1',
-      `FROM public.${RELATION} b`,
+      `FROM public.${DECISION_RELATION} b`,
       "'MATCHING_DECISION_CONTRADICTORY_STATE'",
       'bound.decided_view_id IS DISTINCT FROM p_expected_view_id',
       "'CLOSED_BY_YOU'::text; RETURN;",
       'assert_matching_recipient_view_current_v1',
       'append_matching_proposal_transition_v1',
-      `INSERT INTO public.${RELATION}`,
+      `INSERT INTO public.${DECISION_RELATION}`,
     ].map(at);
     for (let i = 1; i < order.length; i += 1) {
       assert.ok(order[i] > order[i - 1], `${name}: decision step ${i} follows step ${i - 1}`);
@@ -386,23 +481,15 @@ test('ASSURE-F08: each corrected decision binds its exact view and proves it on 
     assert.doesNotMatch(cleaned, /lock_matching_pair_humans_v1|INSERT INTO public\.matching_setup_locks/u,
       `${name} reaches the setup locks only through the one entry point`);
     assert.match(prosrc, /auth\.uid\(\)/u, `${name} derives its human from auth.uid()`);
-    // A RETRY IS ANSWERED FROM DURABLE ROWS AND NOTHING ELSE. It must not
-    // re-read launch clearance, the current view, the current proposal state,
-    // the current deadline or the Matching setup - a retry that consulted any of
-    // them could answer differently from the call it repeats.
     const retry = cleaned.slice(order[1], order[4]);
     assert.doesNotMatch(retry,
       /current_view_id|resolve_matching_proposal_prerequisites_v1|resolve_matching_proposal_validity_v1|expires_at|proposal_state/u,
       `${name}: the retry path reads no current truth at all`);
     assert.doesNotMatch(retry, /INSERT INTO|UPDATE |DELETE /u,
       `${name}: and nothing is inferred, reconstructed or backfilled on it`);
-    // A MISSING BINDING IS REFUSED BEFORE ANY VIEW IS COMPARED, so no historical
-    // view is ever inferred from the one the caller happens to name.
     assert.ok(order[2] < order[3], `${name}: a committed decision with no binding fails closed first`);
     assert.match(prosrc, /MATCHING_COMMAND_ID_CONFLICT/u,
       `${name}: and a retry naming another view is a different request under a reused id`);
-    // The binding is written in the SAME transaction as the transition, after
-    // it, so no successful decision can exist without its authorizing view.
     assert.ok(order[7] - order[6] < 400,
       `${name}: the binding is written immediately after the transition, in one transaction`);
     assert.doesNotMatch(prosrc, TRANSACTION_CLOCK, `${name} reads no transaction clock`);
@@ -418,25 +505,22 @@ test('ASSURE-F08: each corrected decision binds its exact view and proves it on 
   // THE OTHER TWO HAVE NOTHING TO COMPARE: the 0110 legal-transition CHECK
   // leaves FIRST_DECLINED and SECOND_DECLINED exactly one lawful prior state
   // each, so it is derived from immutable committed truth rather than missing.
-  const legal = SOURCE_0112.length > 0 && read('../migrations/0110_matching_pair_eligibility_proposal_persistence_v1.sql');
-  assert.equal((legal.match(/\('OFFERED_TO_FIRST', 'FIRST_DECLINED'\)/gu) ?? []).length, 1,
+  assert.equal((SOURCE_0110.match(/\('OFFERED_TO_FIRST', 'FIRST_DECLINED'\)/gu) ?? []).length, 1,
     'FIRST_DECLINED is reachable from exactly one prior state');
-  assert.equal((legal.match(/\('FORWARDED_TO_SECOND', 'SECOND_DECLINED'\)/gu) ?? []).length, 1,
+  assert.equal((SOURCE_0110.match(/\('FORWARDED_TO_SECOND', 'SECOND_DECLINED'\)/gu) ?? []).length, 1,
     'and SECOND_DECLINED from exactly one');
 });
 
 test('the I-07C first-acceptance binding is neither replaced nor weakened', () => {
   // `matching_forward_approval_view_bindings` remains authoritative for
-  // FIRST_FORWARD_APPROVED and is consumed by the Mutual Match. The new relation
-  // is a SECOND, separate binding for the three terminal decisions.
+  // FIRST_FORWARD_APPROVED and is consumed by the Mutual Match. The two new
+  // relations are separate bindings for separate authority facts.
   assert.doesNotMatch(body(), /matching_forward_approval_view_bindings/u,
     'migration 0120 does not touch the I-07C binding relation at all');
   assert.ok(!SOURCE.includes('FUNCTION public.approve_matching_proposal_forward_core_v1('),
     'and does not replace the boundary that writes it');
   assert.match(SOURCE_0113, /CREATE TABLE public\.matching_forward_approval_view_bindings/u,
     'the 0113 relation is still declared exactly where it was');
-  // The terminal self-assertion holds both halves live, so a later slice cannot
-  // quietly unify them without the migration refusing to deploy.
   const terminal = SOURCE.slice(SOURCE.indexOf('TERMINAL SELF-ASSERTIONS'));
   assert.match(terminal, /exactly the forward approval still writes a first-acceptance view binding/u,
     'the migration asserts the I-07C producer law live');
@@ -446,7 +530,7 @@ test('the I-07C first-acceptance binding is neither replaced nor weakened', () =
     'and that exactly one function still writes a proposal transition');
 });
 
-test('no application role gains anything, and no actor parameter appears anywhere', () => {
+test('no application role gains anything, and no human decision takes an actor', () => {
   const executable = body();
   assert.deepEqual([...executable.matchAll(/GRANT\s+\w+/giu)].map((m) => m[0]), [],
     'the migration grants nothing to anybody');
@@ -462,20 +546,23 @@ test('no application role gains anything, and no actor parameter appears anywher
     'and from service_role, because CREATE OR REPLACE preserves an ACL rather than resetting it');
   // The three decisions still derive their human and take no identity input.
   for (const name of DECISIONS) {
-    const prologue = prologueOf(SOURCE, name);
-    assert.doesNotMatch(prologue.slice(0, prologue.indexOf(') RETURNS')),
-      /p_\w*(?:user|human|actor|grantor|owner|subject|on_behalf|candidate)\w*/u,
-      `${name} accepts no identity parameter`);
-    assert.doesNotMatch(prologue.slice(0, prologue.indexOf(') RETURNS')),
-      /p_\w*(?:timestamp|_at|occurred|clock|now|deadline|expir)\w*/u,
-      `${name} accepts no caller-supplied instant`);
+    for (const parameter of inputsOf(SOURCE, name)) {
+      assert.doesNotMatch(parameter, /user|human|actor|grantor|owner|subject|on_behalf|candidate/u,
+        `${name} accepts no identity parameter, found ${parameter}`);
+    }
   }
-  for (const name of DELIVERIES) {
-    const prologue = prologueOf(SOURCE, name);
-    assert.doesNotMatch(prologue.slice(0, prologue.indexOf(') RETURNS')),
-      /p_\w*(?:timestamp|_at|occurred|clock|deadline|expir)\w*/u,
-      `${name} accepts no caller-supplied instant: the database clock decides`);
+  // NOTHING accepts a caller-supplied instant: the database clock decides. The
+  // disclosure gate legitimately takes a recipient identity - it is a system
+  // primitive rather than a human decision - so the identity ban above is
+  // exactly the three decisions and the clock ban below is everything.
+  for (const name of REPLACED) {
+    for (const parameter of inputsOf(SOURCE, name)) {
+      assert.doesNotMatch(parameter, /timestamp|_at$|occurred|clock|deadline|expir/u,
+        `${name} accepts no caller-supplied instant, found ${parameter}`);
+    }
   }
+  assert.deepEqual(inputsOf(SOURCE, GATE), ['p_view_id', 'p_proposal_id', 'p_recipient_user_id', 'p_permitted_conclusion_id'],
+    'and the gate keeps the exact four identities 0111 gave it');
 });
 
 test('the migration self-assertions accept the migration itself', () => {
@@ -488,18 +575,41 @@ test('the migration self-assertions accept the migration itself', () => {
   // The sharpest case is the clock ban: it runs over `prosrc`, which INCLUDES
   // the body's own comments, so a body that explained the defect by naming
   // `CURRENT_TIMESTAMP` would make the migration refuse to deploy itself.
-  for (const name of DELIVERIES) {
+  const gate = prosrcOf(GATE);
+  assert.doesNotMatch(gate, TRANSACTION_CLOCK, 'the gate clock ban accepts the gate body');
+  assert.equal(gate.split('clock_timestamp()').length - 1, 1, 'the gate captures exactly one instant');
+  const gateCleaned = cleanedOf(gate);
+  for (const needle of ['lock_matching_pair_humans_v1',
+    'INTO committed FROM public.matching_recipient_proposal_views v WHERE v.id = p_view_id',
+    'RETURN QUERY SELECT committed.id, committed.proposal_id, committed.recipient_role,',
+    'AND st.recipient_user_id = p_recipient_user_id FOR UPDATE', 'IF disclosed = 0 THEN',
+    'delivery_at := clock_timestamp()', 'proposal.expires_at <= delivery_at',
+    'INSERT INTO public.matching_recipient_proposal_views (']) {
+    assert.ok(gateCleaned.includes(needle), `the gate ordering assertion can find ${needle}`);
+  }
+  assert.ok(gateCleaned.indexOf('INSERT INTO public.matching_recipient_proposal_views (')
+    - gateCleaned.indexOf('proposal.expires_at <= delivery_at') <= 220,
+  'and the 220-character write-boundary assertion accepts the gate body');
+
+  for (const name of REPLACED) {
     const prosrc = prosrcOf(name);
-    assert.doesNotMatch(prosrc, TRANSACTION_CLOCK, `${name}: the migration's own clock ban accepts its own body`);
-    assert.equal(prosrc.split('clock_timestamp()').length - 1, 1, `${name}: exactly one capture, as the assertion requires`);
     assert.doesNotMatch(prosrc, /DELETE FROM|TRUNCATE|pg_advisory|LOCK TABLE/iu, `${name}: the mutation bans accept it`);
     assert.doesNotMatch(prosrc, /INSERT INTO public\.matching_proposal_transitions/u,
       `${name}: the one-writer ban accepts it`);
+  }
+  for (const name of DELIVERIES) {
+    const prosrc = prosrcOf(name);
+    assert.doesNotMatch(prosrc, /current_timestamp|clock_timestamp|now\(\)|localtimestamp|transaction_timestamp|statement_timestamp/iu,
+      `${name}: the migration's own clock ban accepts its own body`);
+    assert.doesNotMatch(prosrc, /matching_recipient_proposal_view_state/u,
+      `${name}: the current-pointer ban accepts its own body`);
     const cleaned = cleanedOf(prosrc);
     for (const needle of ['lock_matching_pair_humans_v1', 'FROM public.matching_proposal_transitions t',
-      'resolve_matching_proposal_validity_v1', "gate.clearance <> 'CLEARED'",
-      'delivery_at := clock_timestamp()', 'proposal.expires_at <= delivery_at',
-      'materialize_matching_recipient_view_core_v1', 'append_matching_proposal_transition_v1']) {
+      `FROM public.${DELIVERY_RELATION} b`, "'MATCHING_DELIVERY_CONTRADICTORY_STATE'",
+      'delivered.permitted_conclusion_id IS DISTINCT FROM p_permitted_conclusion_id',
+      'bound.delivered_view_id, already;', 'resolve_matching_proposal_validity_v1',
+      "gate.clearance <> 'CLEARED'", 'materialize_matching_recipient_view_core_v1',
+      'append_matching_proposal_transition_v1', `INSERT INTO public.${DELIVERY_RELATION}`]) {
       assert.ok(cleaned.includes(needle), `${name}: the ordering assertion can find ${needle}`);
     }
   }
@@ -509,9 +619,9 @@ test('the migration self-assertions accept the migration itself', () => {
     assert.doesNotMatch(prosrc, /current_timestamp|clock_timestamp|now\(\)|transaction_timestamp|statement_timestamp/iu,
       `${name}: the migration's own clock ban accepts its own body`);
     for (const needle of ['enter_matching_proposal_decision_v1', 'assert_matching_recipient_view_current_v1',
-      `FROM public.${RELATION} b`, "'MATCHING_DECISION_CONTRADICTORY_STATE'",
+      `FROM public.${DECISION_RELATION} b`, "'MATCHING_DECISION_CONTRADICTORY_STATE'",
       'bound.decided_view_id IS DISTINCT FROM p_expected_view_id', "'CLOSED_BY_YOU'::text; RETURN;",
-      'append_matching_proposal_transition_v1', `INSERT INTO public.${RELATION}`]) {
+      'append_matching_proposal_transition_v1', `INSERT INTO public.${DECISION_RELATION}`]) {
       assert.ok(cleaned.includes(needle), `${name}: the ordering assertion can find ${needle}`);
     }
     // The historical answer really is distinguishable from the final one, or the
@@ -519,28 +629,24 @@ test('the migration self-assertions accept the migration itself', () => {
     assert.equal(cleaned.split("'CLOSED_BY_YOU'::text; RETURN;").length - 1, 1,
       `${name}: exactly one historical return carries the RETURN terminator`);
   }
-  // The producer census the terminal block asserts is an EQUALITY against three
+  // The producer censuses the terminal block asserts are EQUALITIES against
   // exact names, in the order `ORDER BY pr.proname` produces.
-  const producers = [...SOURCE.matchAll(/CREATE OR REPLACE FUNCTION public\.(\w+)\(/gu)].map((m) => m[1])
-    .filter((name) => prosrcOf(name).includes(`INSERT INTO public.${RELATION}`)).sort();
-  assert.deepEqual(producers, DECISIONS, 'the three producers the census names are exactly the three that write the binding');
+  const all = [...SOURCE.matchAll(/CREATE OR REPLACE FUNCTION public\.(\w+)\(/gu)].map((m) => m[1]);
+  assert.deepEqual(all.filter((n) => prosrcOf(n).includes(`INSERT INTO public.${DELIVERY_RELATION}`)).sort(),
+    [...DELIVERIES].sort(), 'the two delivery producers the census names are exactly the two that write the binding');
+  assert.deepEqual(all.filter((n) => prosrcOf(n).includes(`INSERT INTO public.${DECISION_RELATION}`)).sort(),
+    [...DECISIONS].sort(), 'and the three decision producers are exactly the three that write theirs');
   const terminal = SOURCE.slice(SOURCE.indexOf('TERMINAL SELF-ASSERTIONS'));
-  for (const name of DECISIONS) {
+  for (const name of [...DELIVERIES, ...DECISIONS]) {
     assert.ok(terminal.includes(name), `the census literal names ${name}`);
   }
-  // And the input-parameter equality it asserts really is the 0112 list, in the
-  // SAME ORDER as the array of boundaries it is indexed against - a reordering
-  // of either array alone would make the migration refuse to deploy itself.
-  const declaredInputs = REPLACED.map((name) => {
-    const prologue = prologueOf(SOURCE, name);
-    return prologue.slice(prologue.indexOf('(') + 1, prologue.indexOf(') RETURNS'))
-      .split(',').map((part) => part.trim().split(/\s+/u)[0]).filter(Boolean)
-      .join(', ');
-  });
+  // And the input-parameter equality it asserts really is the frozen list, in
+  // the SAME ORDER as the array of boundaries it is indexed against.
+  const declaredInputs = REPLACED.map((name) => inputsOf(SOURCE, name).join(', '));
   const expectedBlock = SOURCE.match(/expected_inputs text\[\] := ARRAY\[([\s\S]*?)\];/u);
   assert.ok(expectedBlock, 'the terminal block declares its expected input lists');
   assert.deepEqual([...expectedBlock[1].matchAll(/'([^']+)'/gu)].map((m) => m[1]), declaredInputs,
-    'the expected input lists are exactly what the five declarations carry, in the same order');
+    'the expected input lists are exactly what the six declarations carry, in the same order');
   const replacedBlock = SOURCE.match(/replaced text\[\] := ARRAY\[([\s\S]*?)\];/u);
   assert.ok(replacedBlock, 'the terminal block declares the boundaries it replaces');
   assert.deepEqual([...replacedBlock[1].matchAll(/public\.(\w+)\(/gu)].map((m) => m[1]), REPLACED,
@@ -565,10 +671,12 @@ test('no self-assertion concatenates a regex operand without parentheses', () =>
   }
   assert.ok(inspected >= 8, `the detector inspected ${inspected} regex operand(s), so it is exercised rather than vacuous`);
   // The same trap through a plain comparison: `IS DISTINCT FROM` binds LOOSER
-  // than `||`, so the census equality is parenthesised anyway rather than relying
-  // on a precedence table nobody re-reads.
-  assert.match(SOURCE, /IS DISTINCT FROM \('decline_matching_proposal_as_first_core_v1, '/u,
-    'the multi-line producer-census equality parenthesises its concatenated operand');
+  // than `||`, so every census equality is parenthesised anyway rather than
+  // relying on a precedence table nobody re-reads.
+  for (const first of ['forward_matching_proposal_to_second_core_v1', 'decline_matching_proposal_as_first_core_v1']) {
+    assert.ok(SOURCE.includes(`IS DISTINCT FROM ('${first}, '`),
+      `the multi-line census equality beginning ${first} parenthesises its concatenated operand`);
+  }
 });
 
 test('the migration refuses to deploy if its own architecture is absent', () => {
@@ -578,25 +686,34 @@ test('the migration refuses to deploy if its own architecture is absent', () => 
     'must be SECURITY DEFINER',
     'must pin an empty search_path',
     'PUBLIC must not execute',
-    'must keep its exact 0112 input parameters',
-    'may read no transaction-fixed clock',
-    'must capture the real delivery instant exactly once',
-    'must keep the exact existing expiry refusal',
+    'must keep its exact frozen input parameters',
+    'the disclosure gate may read no transaction-fixed clock',
+    'the disclosure gate must capture the real delivery instant exactly once',
+    'the disclosure gate must carry the exact existing expiry refusal',
+    'must answer an already materialized view BEFORE any deadline decision',
+    'the deadline decision must be the LAST statement before the first irreversible write',
+    'reads no clock: the one final delivery instant is the disclosure gate',
+    'must disclose through the ONE gate that decides the deadline',
+    'read its durable delivery binding, fail closed when it is absent',
+    'compare the whole immutable request',
+    'may read no current view pointer, clearance, validity, deadline or proposal state',
+    'may not reach the current view pointer at all',
     'must enter the canonical two-human serialization region BEFORE it checks the exact recipient view',
     'must read its durable exact-view binding',
-    'may read no current view, clearance, validity, deadline or proposal state',
     'a withdrawal retry must still prove the exact prior state its command named',
     'withdrawal ends exposure rather than creating it',
     'must require exactly CLEARED from the CW2-08 prerequisite seam',
+    'exactly the two corrected deliveries write a delivery view binding',
     'exactly the three corrected decisions write a decision view binding',
     'the I-07C Mutual Match must still decide its deadline against its one captured birth instant',
     'must exist with row level security enabled',
     'carries no policy',
-    'must hold no privilege on the decision view binding relation',
-    'append-only history the moment it is written',
-    'every decision binding foreign key is ON DELETE RESTRICT',
+    'must hold no privilege on',
+    'is append-only history the moment it is written',
+    'foreign key is ON DELETE RESTRICT',
+    'binds its transition, its exact view and that view',
     'the additive recipient-view role identity key must exist over the primary key',
-    'a recipient projection may not read the decision view binding',
+    'a recipient projection may not read a view binding',
     'must be exactly as 0109 and 0112 left them',
   ]) {
     assert.ok(terminal.includes(claim), `the terminal self-assertion refuses to deploy without: ${claim}`);
@@ -609,12 +726,13 @@ test('the migration refuses to deploy if its own architecture is absent', () => 
 });
 
 test('the 0120 verifier proves live semantics and is wired into the toolchain, CI and the database README', () => {
-  // THE PROOF MATRIX THE TASK REQUIRED, each case named in the verifier so a
-  // silently-removed scenario is visible in this contract rather than only in a
-  // green CI log.
+  // THE PROOF MATRIX THE TASK AND THE INTERIM REVIEW REQUIRED, each case named
+  // in the verifier so a silently-removed scenario is visible in this contract
+  // rather than only in a green CI log.
   for (const label of [
     'P01', 'P02', 'P03', 'P04', 'P05', 'P06', 'P07', 'P08',
-    'T01', 'T02', 'T02P', 'T03', 'T04', 'T05', 'T06', 'T07', 'T08',
+    'T01', 'T02', 'T02P', 'T03', 'T04', 'T05', 'T06', 'T07', 'T08', 'T09',
+    'D01', 'D02', 'D03', 'D04',
     'V01', 'V02', 'V03', 'V04', 'V05', 'V06', 'V07', 'V08',
     'N01', 'N02', 'N03', 'N04', 'N05',
   ]) {
@@ -626,13 +744,19 @@ test('the 0120 verifier proves live semantics and is wired into the toolchain, C
     'lock_matching_pair_humans_v1']) {
     assert.ok(VERIFIER.includes(boundary), `it exercises the real ${boundary}`);
   }
-  // BOTH CROSS-DEADLINE RACES ARE BARRIER-PINNED on observable PostgreSQL lock
-  // evidence and on the real database clock - never on a sleep.
+  // BOTH KINDS OF CROSS-DEADLINE RACE ARE BARRIER-PINNED on observable
+  // PostgreSQL lock evidence and on the real database clock - never on a sleep -
+  // and one of them puts the wait INSIDE the disclosure gate, which is the
+  // window REM02-TIME-01 is about.
   assert.match(VERIFIER, /waitForLockWait/u, 'the cross-deadline races are pinned on an observable lock-wait barrier');
   assert.match(VERIFIER, /pg_stat_activity/u, 'read from PostgreSQL activity rather than guessed');
   assert.match(VERIFIER, /waitForInstant/u, 'and the deadline crossing is read from the database clock');
   assert.match(VERIFIER, /xact_start/u,
     "and each waiter's own transaction clock is proven to PRECEDE the deadline it is refused against");
+  assert.match(VERIFIER, /resolveFirstNameBehindLock/u,
+    'the inner-boundary race makes the gate itself wait on a real row lock');
+  assert.match(VERIFIER, /INSIDE the disclosure gate, past the canonical pair lock/u,
+    'and says so in the assertion a failure would print');
   // THE PRE-FIX HALF EXISTS, is proven to have changed the definition, and is
   // restored byte for byte.
   assert.match(VERIFIER, /assert\.notEqual\(weakened, pristine\.definition/u,
@@ -656,12 +780,13 @@ test('the 0120 verifier proves live semantics and is wired into the toolchain, C
 
 test('the shared verifier support is reconciled narrowly rather than dodged', () => {
   // A CENSUS COMPARES THE LIVE CATALOG, which is what lets it catch a lifecycle
-  // relation nobody declared - and this remediation legitimately adds one that
-  // carries the census word `proposal`. The intended answer is to NAME it, under
-  // its own reviewed slice, exactly as I-07C and I-07D named theirs. Renaming out
-  // of the pattern is the dodge a census exists to prevent.
-  assert.match(SETUP_SUPPORT, /export const REM02_LIFECYCLE_RELATIONS = \[\n\s+'matching_proposal_decision_view_bindings',\n\];/u,
-    'the remediation owns exactly the one relation it adds, under its own name');
+  // relation nobody declared - and this remediation legitimately adds two that
+  // carry the census word `proposal`. The intended answer is to NAME them, under
+  // their own reviewed slice, exactly as I-07C and I-07D named theirs. Renaming
+  // out of the pattern is the dodge a census exists to prevent.
+  assert.match(SETUP_SUPPORT,
+    /export const REM02_LIFECYCLE_RELATIONS = \[\n\s+'matching_proposal_decision_view_bindings',\n\s+'matching_proposal_delivery_view_bindings',\n\];/u,
+    'the remediation owns exactly the two relations it adds, under its own name');
   const union = SETUP_SUPPORT.match(/export const LATER_SLICE_LIFECYCLE_RELATIONS = \[([\s\S]*?)\]\.sort\(\);/u);
   assert.ok(union, 'the setup support builds the shared census list as one sorted union');
   const members = union[1].split(',').map((part) => part.trim()).filter(Boolean);
@@ -669,39 +794,38 @@ test('the shared verifier support is reconciled narrowly rather than dodged', ()
     'and the shared census list is still exactly the union of named per-slice arrays and nothing else');
   assert.ok(members.includes('...REM02_LIFECYCLE_RELATIONS'),
     'with this remediation as one of them rather than folded into a predecessor slice');
-  // The 0110 census is an EQUALITY against that union, so naming it there is
-  // what keeps the 0108, 0109 and 0110 censuses true rather than merely quiet.
   for (const n of ['0108', '0109', '0110']) {
     assert.match(read(`../verify-migration-${n}.mjs`), /LATER_SLICE_LIFECYCLE_RELATIONS/u,
       `the ${n} census still asserts an equality against the named list`);
   }
-  // THE TEARDOWN PEELS THE BINDING BEFORE THE ROWS IT BINDS. A committed decline
-  // or withdrawal now binds a transition, a view and a proposal restrictively, so
-  // a race fixture that removed its proposals first would be refused row by row -
-  // in EVERY verifier that commits a decision, not only this one.
-  assert.match(PROPOSAL_SUPPORT, /export const REM02_IMMUTABLE = \[\n\s+\[P\.DECISION_BINDINGS, 'matching_proposal_decision_view_bindings_immutable'\],\n\];/u,
-    'the new relation and its guard are named separately from the 0110 census');
+  // THE TEARDOWN PEELS BOTH BINDINGS BEFORE THE ROWS THEY BIND. A committed
+  // delivery, decline or withdrawal now binds a transition, a view and a
+  // proposal restrictively, so a race fixture that removed its proposals first
+  // would be refused row by row - in EVERY verifier that commits one.
+  assert.match(PROPOSAL_SUPPORT, /export const REM02_IMMUTABLE = \[\n\s+\[P\.DELIVERY_BINDINGS, 'matching_proposal_delivery_view_bindings_immutable'\],\n\s+\[P\.DECISION_BINDINGS, 'matching_proposal_decision_view_bindings_immutable'\],\n\];/u,
+    'the new relations and their guards are named separately from the 0110 census');
   // NOT folded into the 0110 census lists, which would make the 0110 verifier
   // claim 0110 created a relation this remediation added. The array literals
-  // themselves are read, rather than an unbounded span that would match the
-  // separate REM02 declaration further down the file.
+  // themselves are read, rather than an unbounded span.
   const literalOf = (name) => {
     const start = PROPOSAL_SUPPORT.indexOf(`export const ${name} = [`);
     assert.ok(start >= 0, `the support module declares ${name}`);
     return PROPOSAL_SUPPORT.slice(start, PROPOSAL_SUPPORT.indexOf('];', start));
   };
   for (const list of ['PROPOSAL_TABLES', 'PROPOSAL_IMMUTABLE', 'PROPOSAL_GUARDED']) {
-    assert.doesNotMatch(literalOf(list), /DECISION_BINDINGS/u,
+    assert.doesNotMatch(literalOf(list), /DECISION_BINDINGS|DELIVERY_BINDINGS/u,
       `${list} is the 0110 census and must not claim a relation migration 0120 added`);
   }
   const teardown = PROPOSAL_SUPPORT.slice(PROPOSAL_SUPPORT.indexOf('async function removeCommittedProposalState'));
-  const peel = teardown.indexOf(`DELETE FROM \${P.DECISION_BINDINGS}`);
-  assert.ok(peel >= 0, 'the teardown removes the binding');
-  assert.ok(peel < teardown.indexOf(`DELETE FROM \${P.VIEWS}`), 'before the views it binds');
-  assert.ok(peel < teardown.indexOf(`DELETE FROM \${P.TRANSITIONS}`), 'before the transitions it binds');
-  assert.ok(peel < teardown.indexOf(`DELETE FROM \${P.PROPOSALS}`), 'and before the proposals it binds');
+  for (const binding of ['DECISION_BINDINGS', 'DELIVERY_BINDINGS']) {
+    const peel = teardown.indexOf(`DELETE FROM \${P.${binding}}`);
+    assert.ok(peel >= 0, `the teardown removes the ${binding} rows`);
+    assert.ok(peel < teardown.indexOf('DELETE FROM ${P.VIEWS}'), `${binding}: before the views it binds`);
+    assert.ok(peel < teardown.indexOf('DELETE FROM ${P.TRANSITIONS}'), `${binding}: before the transitions it binds`);
+    assert.ok(peel < teardown.indexOf('DELETE FROM ${P.PROPOSALS}'), `${binding}: and before the proposals it binds`);
+  }
   assert.match(teardown, /\[\.\.\.PROPOSAL_IMMUTABLE, \.\.\.PROPOSAL_GUARDED, \.\.\.REM02_IMMUTABLE\]/u,
-    'and its append-only guard is lifted and restored with the rest');
+    'and both append-only guards are lifted and restored with the rest');
 });
 
 test('the QAN-CW-REM-01 contract is reconciled forward rather than left contradicting the chain', () => {

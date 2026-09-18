@@ -3200,12 +3200,13 @@ by a three-connection race whose interleaving is pinned on an observable lock wa
 is read from PostgreSQL's own deadlock accounting, never from a sleep. Migration 0119 changes no
 locking statement: the verdict is evidence, not a silent repair.
 
-## QAN-CW-REM-02 - Matching proposal temporal correctness and exact-view identity (migration 0120)
+## QAN-CW-REM-02 - Matching proposal temporal correctness and exact-view command identity (migration 0120)
 
 `0120_matching_proposal_temporal_exact_view_remediation_v1.sql` corrects two accepted findings of the
-Connected Worlds phase-wide architecture assurance. Both are defect CLASSES that `I-07C` already found
-and fixed at one site each, in migration `0114`, while the sibling `I-07B` sites in migration `0112`
-kept them.
+Connected Worlds phase-wide architecture assurance, and the two interim-review findings that proved
+each of those corrections was still short of its own rule. All four are defect CLASSES that `I-07C`
+already found and fixed at one site each, in migration `0114`, while the sibling `I-07B` sites in
+migration `0112` kept them.
 
 **`ASSURE-F01` - a transaction clock decided a deadline after a lock wait.** Both proposal-delivery
 paths took the canonical two-human lock, then compared `expires_at` against `CURRENT_TIMESTAMP`, then
@@ -3213,52 +3214,91 @@ disclosed. `CURRENT_TIMESTAMP` is the TRANSACTION-START timestamp in PostgreSQL 
 `transaction_timestamp()` and `statement_timestamp()` - so it is settled BEFORE the command ever waits
 on that lock. A delivery that began while the proposal was live, blocked for minutes, crossed
 `expires_at` while blocked and then resumed compared a moment that had already gone by and disclosed
-protected proposal material after the real deadline. `offer_matching_proposal_to_first_core_v1` and
-`forward_matching_proposal_to_second_core_v1` now capture ONE `clock_timestamp()` after the lock,
-after the historical retry path, after revalidation and after the CW2-08 clearance gate, and decide
-the deadline against that instant immediately before the first irreversible write. The refusal is the
-existing `MATCHING_PROPOSAL_EXPIRED` and nothing changes about it.
+protected proposal material after the real deadline.
+
+**`REM02-TIME-01` - and "before the first irreversible write" means the first write.** Moving that
+decision to just before the disclosure gate was still too early. `materialize_matching_recipient_view_
+core_v1` re-enters the pair lock, answers its own view idempotency, derives the audience, re-reads the
+eligibility snapshot, revalidates the subject's CURRENT setup authority, reads the Product field
+policy, reads the permitted conclusion, resolves the canonical first name, takes the recipient's
+view-state row `FOR UPDATE` and scans every approved value through the output filter - and the deadline
+can cross during all of it. So the ONE final decision moved INTO the gate, at its real first-write
+boundary:
+
+```text
+historical existing-view retry          -> answered, before any deadline decision
+canonical pair lock, every current gate
+view-state row FOR UPDATE
+every field, policy, name and value check
+delivery_at := clock_timestamp()
+expires_at <= delivery_at               -> MATCHING_PROPOSAL_EXPIRED
+INSERT INTO matching_recipient_proposal_views   -- the first write
+```
+
+There is exactly ONE wall-clock decision on the delivery path, not two: the two delivery cores now read
+no clock at all, and the gate reads exactly one - which is also what the recipient's current-view
+pointer records as its `updated_at`, so the gate is single-clocked the way the Mutual Match is. The
+refusal is the existing `MATCHING_PROPOSAL_EXPIRED`, and an already materialized view answers its own
+retry before the decision, because history is not re-decided.
 
 **The sweep is a class correction, not a global clock replacement.** Every transaction-fixed clock in
-the proposal choreography was classified. The other three are left exactly as they are, because in
-each of them a stale clock can only refuse, delay or shorten. Preparation's cadence window moves its
-lower bound EARLIER and therefore counts MORE prior proposals and refuses more often; preparation's
-deadline is minted from the one coherent transaction instant `prepared_at` also carries, and an older
-clock yields a SHORTER life, so replacing it would have LENGTHENED every proposal; and the protective
-expiry terminal's `expires_at > CURRENT_TIMESTAMP` refusal can only decline to fire, never end a
-proposal that is not really past its deadline. The four human decisions read no clock at all. The
-terminal self-assertion pins all three of those in place, so a later sweep cannot tidy them away.
+the proposal choreography was classified. The other three are left exactly as they are, because in each
+of them a stale clock can only refuse, delay or shorten. Preparation's cadence window moves its lower
+bound EARLIER and therefore counts MORE prior proposals and refuses more often; preparation's deadline
+is minted from the one coherent transaction instant `prepared_at` also carries, and an older clock
+yields a SHORTER life, so replacing it would have LENGTHENED every proposal; and the protective expiry
+terminal's `expires_at > CURRENT_TIMESTAMP` refusal can only decline to fire, never end a proposal that
+is not really past its deadline. The four human decisions read no clock at all. The terminal
+self-assertion pins all three of those in place, so a later sweep cannot tidy them away.
 
 **`ASSURE-F08` - three human-decision retries proved no exact view.** Each of the four `I-07B` human
 decisions takes `p_expected_view_id`, because a consequential human act is authorized by the exact
 recipient view version that human saw. Migration `0114` made the `FIRST_FORWARD_APPROVED` retry prove
 it. Its three siblings - the first decline, the second decline and the withdrawal - still answered
 historical success from the transition alone, so a retry carrying a DIFFERENT view received the
-original committed answer, which is a different request answered under a reused command id. Each now
-writes `matching_proposal_decision_view_bindings` in the same transaction as its transition, and each
-retry answers from that durable row: the same view is the historical result, another view is
-`MATCHING_COMMAND_ID_CONFLICT`, and a committed transition whose binding is absent is
-`MATCHING_DECISION_CONTRADICTORY_STATE`. The historical view is never inferred from the current view
-pointer, which may have moved since the act. Withdrawal keeps `p_expected_state` as part of its
-command identity, because `WITHDRAWN` is legal from three states, and now compares BOTH.
+original committed answer, which is a different request answered under a reused command id.
 
-**The binding is structural rather than conventional.** `decision_state` fixes `decider_role` by
-CHECK; `decider_role` fixes the bound view's own role by foreign key; the view is bound to THIS
-proposal FOR THAT HUMAN by a second one; the transition is bound to this proposal and this exact
-decision by a third; and the frozen `0110` audience CHECK then pins the view's recipient to exactly
-one of the proposal's two members. A binding to another proposal's view, another human's view, or a
-role the decision does not permit is unrepresentable. The relation is append-only through the `0110`
-mutation guard, has row level security on with no policy, and is reachable by no application role.
-One additive candidate key - `UNIQUE (id, recipient_role)` over the recipient-view primary key - is
-the only predecessor change, and it refuses nothing `0110` accepted.
+**`REM02-IDEM-01` - and the two DELIVERIES had the same defect.** A delivery retry reconstructed the
+delivered view from the recipient's CURRENT view pointer, and never compared `p_permitted_conclusion_
+id` at all. The frozen `I-07B` model says in so many words that a recipient view is an immutable
+version, that currentness is a pointer which may move forward, and that a superseded view remains
+historical truth - so a mutable pointer cannot be the durable identity of a historical command. And the
+permitted conclusion is an immutable input that determines the immutable view being delivered, so same
+command, same view, different conclusion is a DIFFERENT REQUEST.
 
-**Transitions committed before `0120` are left exactly as they are.** No historical exact-view
-evidence is invented. Such a transition keeps its row, its private terminal reason and its terminal
-proposal lifecycle; nothing is backfilled and nothing is deleted. What its command can no longer do is
-claim an equivalent retry, because it cannot prove the view that authorized it - so that retry fails
-closed, which is the same answer `0114` chose for a forward approval with no binding.
-`matching_forward_approval_view_bindings` is untouched and remains authoritative for
-`FIRST_FORWARD_APPROVED`. Historical migrations `0075`-`0119` are byte-identical.
+**Three bindings, three different authority facts.** Migration 0120 adds two relations and replaces
+none:
+
+```text
+matching_forward_approval_view_bindings   what the first party APPROVED   (0113 / 0114)
+matching_proposal_delivery_view_bindings  what QANDEEL DELIVERED          (0120)
+matching_proposal_decision_view_bindings  what a human TERMINALLY DECIDED (0120)
+```
+
+Each producer writes its binding in the same transaction as its transition, and each retry answers from
+that durable row: the same immutable request is the historical result, any other view - or, for a
+delivery, any other conclusion - is `MATCHING_COMMAND_ID_CONFLICT`, and a committed transition whose
+binding is absent is `MATCHING_DELIVERY_CONTRADICTORY_STATE` or
+`MATCHING_DECISION_CONTRADICTORY_STATE`. A delivery retry reads the conclusion from the IMMUTABLE bound
+view rather than from a second copy of it. Withdrawal keeps `p_expected_state` as part of its command
+identity, because `WITHDRAWN` is legal from three states, and now compares both.
+
+**The bindings are structural rather than conventional.** The state fixes the role by CHECK; the role
+fixes the bound view's own role by foreign key; the view is bound to THIS proposal FOR THAT HUMAN by a
+second one; the transition is bound to this proposal and this exact state by a third; and the frozen
+`0110` audience CHECK then pins the view's recipient to exactly one of the proposal's two members. A
+binding to another proposal's view, another human's view, or a role the state does not permit is
+unrepresentable. Both relations are append-only through the `0110` mutation guard, have row level
+security on with no policy, and are reachable by no application role. One additive candidate key -
+`UNIQUE (id, recipient_role)` over the recipient-view primary key - is the only predecessor change, and
+it refuses nothing `0110` accepted.
+
+**Transitions committed before `0120` are left exactly as they are.** No historical exact-view evidence
+is invented. Such a transition keeps its row, its view rows, its private terminal reason and its
+terminal proposal lifecycle; nothing is backfilled and nothing is deleted. What its command can no
+longer do is claim an equivalent retry, because it cannot prove the view that authorized or carried it -
+so that retry fails closed, which is the same answer `0114` chose for a forward approval with no
+binding. Historical migrations `0075`-`0119` are byte-identical.
 
 ### QAN-CW-REM-02 - verifier command
 
@@ -3267,25 +3307,29 @@ npm run verify:matching-proposal-temporal-exact-view-remediation:integration
 ```
 
 `verify-migration-0120.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database and runs in CI
-after the `QAN-CW-REM-01` verifier. It drives the real boundaries throughout. The two cross-deadline
-races are barrier-pinned rather than timed: one connection holds exactly the row the canonical
-two-human lock takes, the delivery blocks on it from another, the waiter's own `xact_start` is proven
-to PRECEDE the deadline it will be refused against, the real database clock is then watched until the
-deadline passes, the waiter is confirmed to be STILL blocked, and only then is the lock released. The
-first-recipient and second-recipient proofs are independent, and each requires ZERO surviving delivery
-effects - no view, no fields, no pointer, no transition - and a proposal left exactly where it was.
-The SAME interleaving is then run against the pre-fix ordering, installed from the canonical
-`pg_get_functiondef` text and proven to have changed it, to show that a transaction-fixed clock really
-does disclose after the real deadline; the canonical definition is restored byte for byte and the
-teardown re-reads it rather than trusting the restore.
+after the `QAN-CW-REM-01` verifier. It drives the real boundaries throughout. The cross-deadline races
+are barrier-pinned rather than timed, and there are two kinds. The OUTER pair-lock races hold exactly
+the row the canonical two-human lock takes while the delivery blocks on it from another connection; the
+waiter's own `xact_start` is proven to PRECEDE the deadline it will be refused against, the real
+database clock is watched until the deadline passes, the waiter is confirmed to be STILL blocked, and
+only then is the lock released. The INNER race puts the wait past the pair lock and inside the
+disclosure gate itself, by making the canonical first-name seam - which this verifier already replaces,
+and whose future implementation is a real lookup that can wait - block on one inert serialization row
+belonging to a third human who is no part of the pair. Both require ZERO surviving delivery effects: no
+view, no fields, no pointer, no transition, no binding, and a proposal left exactly where it was. The
+first-recipient and second-recipient proofs are independent. The SAME outer interleaving is then run
+against the pre-fix decision, installed from the canonical `pg_get_functiondef` text and proven to have
+changed it, to show that a transaction-fixed clock really does disclose after the real deadline; the
+canonical definition is restored byte for byte and the teardown re-reads it rather than trusting the
+restore.
 
-The exact-view matrix commits each of the three decisions through the real boundary and proves the
-binding, the same-view retry, the different-view conflict, the full withdrawal matrix over prior state
-and view together, the missing-binding refusal for all three with nothing inferred or recreated, that
-a current view pointer moved AFTER the act changes no retry identity, that the transition and its
-binding roll back together, and that five wrong binding shapes are refused by the database itself. The
+The delivery identity matrix commits each delivery through the real boundary and proves the binding,
+the same-view-and-conclusion retry, the different-view conflict, the different-conclusion conflict, the
+missing-binding refusal for both states with nothing inferred and no new view materialized, and that a
+current view pointer moved AFTER the delivery changes no retry identity. The exact-view matrix does the
+same for the three decisions, and adds the full withdrawal matrix over prior state and view together,
+the roll-back-together proof, and five wrong binding shapes refused by the database itself. The
 non-regression half re-proves the `0114` forward approval in all three directions, a full Mutual Match
-on the exact bound approval view, the `I07B-CONC-01` view-supersession race, that no binding reaches
-any recipient projection while the neutral outcome vocabulary is unchanged, and that the CW2-08 gate
-still holds the four consequential boundaries while withdrawal still ends a human's own exposure
-without it.
+on the exact bound approval view, the `I07B-CONC-01` view-supersession race, that no binding reaches any
+recipient projection while the neutral outcome vocabulary is unchanged, and that the CW2-08 gate still
+holds the four consequential boundaries while withdrawal still ends a human's own exposure without it.

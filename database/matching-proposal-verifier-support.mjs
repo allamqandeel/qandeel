@@ -45,6 +45,7 @@ export const P = Object.freeze({
   VIEW_FIELDS: 'public.matching_recipient_proposal_view_fields',
   VIEW_STATE: 'public.matching_recipient_proposal_view_state',
   DECISION_BINDINGS: 'public.matching_proposal_decision_view_bindings',
+  DELIVERY_BINDINGS: 'public.matching_proposal_delivery_view_bindings',
 });
 
 /** Every relation 0110 creates, in the order its terminal self-assertion names them. */
@@ -72,9 +73,9 @@ export const PROPOSAL_IMMUTABLE = [
 ];
 
 /**
- * The relation migration 0120 adds, with its append-only guard.
+ * The two relations migration 0120 adds, with their append-only guards.
  *
- * It is deliberately NOT folded into `PROPOSAL_TABLES` or `PROPOSAL_IMMUTABLE`:
+ * They are deliberately NOT folded into `PROPOSAL_TABLES` or `PROPOSAL_IMMUTABLE`:
  * those two are the 0110 census and asserting 0120's relation through them
  * would make the 0110 verifier claim 0110 created it. It is named separately,
  * owned by `QAN-CW-REM-02`, and the shared teardown peels it because a
@@ -83,6 +84,7 @@ export const PROPOSAL_IMMUTABLE = [
  * this row first would be refused row by row.
  */
 export const REM02_IMMUTABLE = [
+  [P.DELIVERY_BINDINGS, 'matching_proposal_delivery_view_bindings_immutable'],
   [P.DECISION_BINDINGS, 'matching_proposal_decision_view_bindings_immutable'],
 ];
 
@@ -357,24 +359,32 @@ export function createProposalRuntime(databaseUrl) {
   /** The durable exact-view binding one TERMINAL human decision committed, or null. */
   const decisionBindingOf = async (commandId) =>
     (await rows(`SELECT * FROM ${P.DECISION_BINDINGS} b WHERE b.decision_transition_id = $1`, [commandId]))[0] ?? null;
+  /** The durable exact-view binding one DELIVERY committed, or null. */
+  const deliveryBindingOf = async (commandId) =>
+    (await rows(`SELECT * FROM ${P.DELIVERY_BINDINGS} b WHERE b.delivery_transition_id = $1`, [commandId]))[0] ?? null;
   /**
-   * Remove one committed decision's exact-view binding, leaving the transition,
-   * the proposal state and the private reason exactly as they are.
+   * Remove one committed command's exact-view binding, leaving the transition,
+   * the view rows, the proposal state and the private reason exactly as they are.
    *
-   * This is the ONLY representable shape of the pre-0120 state: a terminal human
-   * decision that really committed and really has no binding. The append-only
-   * guard is lifted for exactly this statement and re-enabled immediately, and
-   * nothing in the runtime can reach this path.
+   * This is the ONLY representable shape of the pre-0120 state: a delivery or a
+   * terminal human decision that really committed and really has no binding. The
+   * append-only guard is lifted for exactly this statement and re-enabled
+   * immediately, and nothing in the runtime can reach this path.
    */
-  async function removeDecisionBinding(commandId) {
+  async function removeViewBinding(relation, column, commandId) {
+    const guard = `${relation.replace('public.', '')}_immutable`;
     await rt.asRole('postgres');
-    await q(`ALTER TABLE ${P.DECISION_BINDINGS} DISABLE TRIGGER matching_proposal_decision_view_bindings_immutable`);
-    const result = await q(`DELETE FROM ${P.DECISION_BINDINGS} WHERE decision_transition_id = $1`, [commandId]);
-    await q(`ALTER TABLE ${P.DECISION_BINDINGS} ENABLE TRIGGER matching_proposal_decision_view_bindings_immutable`);
-    assert.equal(await rt.triggerEnabled(P.DECISION_BINDINGS, 'matching_proposal_decision_view_bindings_immutable'), true,
-      'the decision binding append-only guard is enabled again immediately');
+    await q(`ALTER TABLE ${relation} DISABLE TRIGGER ${guard}`);
+    const result = await q(`DELETE FROM ${relation} WHERE ${column} = $1`, [commandId]);
+    await q(`ALTER TABLE ${relation} ENABLE TRIGGER ${guard}`);
+    assert.equal(await rt.triggerEnabled(relation, guard), true,
+      `${guard} is enabled again immediately`);
     assert.equal(result.rowCount, 1, 'exactly one committed binding was removed to represent the pre-0120 state');
   }
+  const removeDecisionBinding = (commandId) =>
+    removeViewBinding(P.DECISION_BINDINGS, 'decision_transition_id', commandId);
+  const removeDeliveryBinding = (commandId) =>
+    removeViewBinding(P.DELIVERY_BINDINGS, 'delivery_transition_id', commandId);
   const currentViewOf = async (proposal, recipient) => {
     const [row] = await rows(
       `SELECT st.current_view_id id FROM ${P.VIEW_STATE} st
@@ -606,6 +616,7 @@ export function createProposalRuntime(databaseUrl) {
       // its proposal and the exact view that authorized it, all restrictively,
       // so the binding goes before any of the three.
       await q(`DELETE FROM ${P.DECISION_BINDINGS} WHERE proposal_id IN ${proposals}`, [humans]);
+      await q(`DELETE FROM ${P.DELIVERY_BINDINGS} WHERE proposal_id IN ${proposals}`, [humans]);
       await q(`DELETE FROM ${P.VIEW_FIELDS} WHERE view_id IN ${views}`, [humans]);
       await q(`DELETE FROM ${P.VIEW_STATE} WHERE proposal_id IN ${proposals}`, [humans]);
       // The view chain is self-referencing and restrictive, so it peels leaf-first.
@@ -682,7 +693,7 @@ export function createProposalRuntime(databaseUrl) {
     submitConclusion, filterConclusion, materialize, prepare, offer, forward,
     declineFirst, approveForward, declineSecond, withdraw, expire, revalidate,
     neutral, myProposal, myFields, classify, proposalRow, currentViewOf,
-    decisionBindingOf, removeDecisionBinding,
+    decisionBindingOf, deliveryBindingOf, removeDecisionBinding, removeDeliveryBinding,
     installPolicies, supersedePolicy, captureMatchingSeam, restoreMatchingSeam,
     clearProposalPrerequisites, resolveFirstName,
     provisionMatchableHuman, removeCommittedMatchState, removeCommittedProposalState, removeCommittedPolicies,

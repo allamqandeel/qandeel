@@ -154,17 +154,21 @@ export const I07D_LIFECYCLE_RELATIONS = [
 ];
 
 /**
- * The relation `QAN-CW-REM-02` adds in migration 0120: the durable exact-view
- * binding of a TERMINAL human proposal decision.
+ * The two relations `QAN-CW-REM-02` adds in migration 0120: the durable
+ * exact-view binding of a proposal DELIVERY, and the durable exact-view binding
+ * of a TERMINAL human proposal DECISION. They are different authority facts -
+ * what QANDEEL delivered, and what a human then decided - and neither absorbs
+ * the other or the 0114 first-acceptance binding.
  *
- * It carries the census word `proposal` because it genuinely is proposal
- * lifecycle state, and it is NAMED here rather than renamed out of the pattern -
- * which is what the 0108, 0109 and 0110 censuses ask for in so many words. A
- * remediation is still a reviewed slice, so it owns what it adds under its own
- * name rather than borrowing I-07B's or I-07C's.
+ * Both carry the census word `proposal` because they genuinely are proposal
+ * lifecycle state, and both are NAMED here rather than renamed out of the
+ * pattern - which is what the 0108, 0109 and 0110 censuses ask for in so many
+ * words. A remediation is still a reviewed slice, so it owns what it adds under
+ * its own name rather than borrowing I-07B's or I-07C's.
  */
 export const REM02_LIFECYCLE_RELATIONS = [
   'matching_proposal_decision_view_bindings',
+  'matching_proposal_delivery_view_bindings',
 ];
 
 /** The ONE reviewed ownership list every lifecycle census compares against. */
