@@ -626,7 +626,11 @@ async function verifyVersions(report, humans) {
       const resumeSource = (await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure', [MFN.RESUME]))[0];
       assert.match(resumeSource.prosrc, /current_act\.resulting_pause_reason <> 'USER_PAUSED'/u,
         'D02 the generic I-07A resume is still USER_PAUSED-only');
-      assert.doesNotMatch(resumeSource.prosrc, /POST_SUCCESS|POST_INTRODUCTION|introduction_terminal_commits/u,
+      // The QUOTED literal, because that is what a code path is: prosrc carries
+      // comments, and this resume's own ceiling comment names all four reserved
+      // reasons - so a bare-word ban would fire on the prose that documents the
+      // very rule it checks.
+      assert.doesNotMatch(resumeSource.prosrc, /'POST_SUCCESS'|'POST_INTRODUCTION'|introduction_terminal_commits/u,
         'D02 and has learned no reserved pause reason or terminal linkage');
       const activateSource = (await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure', [MFN.ACTIVATE]))[0];
       assert.match(activateSource.prosrc, /MATCHING_REACTIVATION_REQUIRES_REVALIDATION/u,

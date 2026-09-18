@@ -2005,7 +2005,12 @@ BEGIN
   IF p.prosrc !~ 'current_act\.resulting_pause_reason <> ''USER_PAUSED''' THEN
     RAISE EXCEPTION 'I-07D: the generic I-07A resume must remain USER_PAUSED-only';
   END IF;
-  IF p.prosrc ~ 'POST_SUCCESS|POST_INTRODUCTION|ACTIVE_INTRODUCTION' THEN
+  -- The QUOTED literal, because that is what a code path is. `prosrc` carries
+  -- comments, and 0109's resume EXPLAINS the four reserved reasons by name in
+  -- its own ceiling comment - so a bare-word ban would fire on the very prose
+  -- that documents the rule it is checking, and would pass only for a resume
+  -- that had stopped explaining itself.
+  IF p.prosrc ~ '''POST_SUCCESS''|''POST_INTRODUCTION''|''ACTIVE_INTRODUCTION''' THEN
     RAISE EXCEPTION 'I-07D: the generic I-07A resume must not learn any reserved pause reason';
   END IF;
 

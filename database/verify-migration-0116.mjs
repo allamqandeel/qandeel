@@ -227,7 +227,10 @@ async function verifyPosture() {
   const resume = await rt.functionPosture('public.resume_matching_participation_v1(uuid, uuid)');
   assert.match(resume.prosrc, /current_act\.resulting_pause_reason <> 'USER_PAUSED'/u,
     'P01 the generic I-07A resume is still USER_PAUSED-only');
-  assert.doesNotMatch(resume.prosrc, /POST_SUCCESS|POST_INTRODUCTION/u,
+  // The QUOTED literal, because that is what a code path is: prosrc carries
+  // comments, and 0109's resume explains the four reserved reasons by name in
+  // its own ceiling comment.
+  assert.doesNotMatch(resume.prosrc, /'POST_SUCCESS'|'POST_INTRODUCTION'|'ACTIVE_INTRODUCTION'/u,
     'P01 and has learned no reserved pause reason');
 
   // EXACT LIVE PRODUCER OWNERSHIP of the five previously producerless states.

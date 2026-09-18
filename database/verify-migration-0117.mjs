@@ -501,7 +501,9 @@ async function verifyForwardContracts(report) {
     const resume = await rt.functionPosture('public.resume_matching_participation_v1(uuid, uuid)');
     assert.match(resume.prosrc, /current_act\.resulting_pause_reason <> 'USER_PAUSED'/u,
       'F01 the generic I-07A resume remains USER_PAUSED-only');
-    assert.doesNotMatch(resume.prosrc, /POST_SUCCESS|POST_INTRODUCTION|introduction_terminal_commits/u,
+    // The QUOTED literal, because that is what a code path is: prosrc carries
+    // comments, and 0109's resume explains the four reserved reasons by name.
+    assert.doesNotMatch(resume.prosrc, /'POST_SUCCESS'|'POST_INTRODUCTION'|introduction_terminal_commits/u,
       'F01 and has learned no reserved pause reason or terminal linkage');
     const activate = await rt.functionPosture('public.activate_matching_participation_v1(uuid, text, uuid)');
     assert.match(activate.prosrc, /MATCHING_REACTIVATION_REQUIRES_REVALIDATION/u,

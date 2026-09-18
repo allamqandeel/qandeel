@@ -664,7 +664,11 @@ BEGIN
   IF p.prosrc !~ 'current_act\.resulting_pause_reason <> ''USER_PAUSED''' THEN
     RAISE EXCEPTION 'I-07D: the generic I-07A resume must remain USER_PAUSED-only';
   END IF;
-  IF p.prosrc ~ 'POST_SUCCESS|POST_INTRODUCTION|introduction_terminal_commits' THEN
+  -- The QUOTED literals, because that is what a code path is. `prosrc` carries
+  -- comments, and 0109's resume EXPLAINS the four reserved reasons by name in
+  -- its own ceiling comment - so a bare-word ban would fire on the very prose
+  -- that documents the rule it is checking.
+  IF p.prosrc ~ '''POST_SUCCESS''|''POST_INTRODUCTION''|introduction_terminal_commits' THEN
     RAISE EXCEPTION 'I-07D: the generic I-07A resume must not learn any reserved pause reason or terminal linkage';
   END IF;
   SELECT pr.prosrc INTO p FROM pg_proc pr WHERE pr.oid = activate_fn::regprocedure;
