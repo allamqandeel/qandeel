@@ -60,7 +60,7 @@ import {
   createMatchingRuntime, M, MATCHING_TABLES, MATCHING_IMMUTABLE, MATCHING_GUARDED,
   MATCHING_TRIGGER_FUNCTIONS, PAUSE_REASONS, RESERVED_PAUSE_REASONS, ENTRY_CHANNELS,
   REQUIREMENT_STRENGTHS, LATER_SLICE_LIFECYCLE_RELATIONS, MATCHING_LIFECYCLE_WORDS,
-  runVerifier, APP_ROLES,
+  MFN, runVerifier, APP_ROLES,
 } from './matching-setup-verifier-support.mjs';
 
 const rt = createMatchingRuntime(process.env.DATABASE_URL);
@@ -181,6 +181,41 @@ async function verifyCatalog() {
   assert.deepEqual(
     MATCHING_TABLES.map((t) => t.replace('public.', '')).filter((name) => MATCHING_LIFECYCLE_WORDS.test(name)),
     [], 'P07 and none of them is one of the fourteen relations I-07A creates');
+
+  // P08 THE FOUR RESERVED PAUSE REASONS, RECONCILED BY I-07D.
+  //
+  // 0108 made all five CW2-06 pause reasons representable and gave four of them
+  // no producer, because each needs revalidation I-07A does not implement. That
+  // was a statement about what existed, not a ceiling. Two of the four now have
+  // exactly one reviewed producer each, and what must stay proven is that I-07A
+  // still produces NEITHER, that the reviewed producers are exactly the two
+  // terminal Introduction cores, and that SYSTEM_POLICY is still untouched.
+  // The census names the VALUES shape that WRITES a pause reason, not every
+  // function that mentions one. A terminal core READS the exact
+  // ACTIVE_INTRODUCTION pause it supersedes and the reactivation boundary READS
+  // a POST_* reason to decide eligibility - both of which are exactly what they
+  // should do - so a predicate that could not tell producing from reading would
+  // convict all three for doing their jobs.
+  const producersOf = async (pattern) => (await rows(
+    `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+      WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
+        AND pr.prosrc ~ 'INSERT INTO public\\.matching_participation_events'
+        AND pr.prosrc ~ $1 ORDER BY 1`, [pattern])).map((r) => r.proname);
+  assert.deepEqual(await producersOf("'PAUSED', 'POST_SUCCESS'"), ['commit_introduction_success_v1'],
+    'P08 exactly the reviewed I-07D success core writes a POST_SUCCESS pause');
+  assert.deepEqual(await producersOf("'PAUSED', 'POST_INTRODUCTION'"), ['commit_introduction_end_v1'],
+    'P08 exactly the reviewed I-07D end core writes a POST_INTRODUCTION pause');
+  assert.deepEqual(await producersOf("'PAUSED',\\s*'ACTIVE_INTRODUCTION'"), ['commit_matching_mutual_match_v1'],
+    'P08 and exactly the frozen I-07C Match commit writes an ACTIVE_INTRODUCTION pause');
+  assert.deepEqual(await producersOf("'SYSTEM_POLICY'"), [],
+    'P08 while SYSTEM_POLICY still has no producer at all - and no function even names it: I-07D weakened nothing');
+  // AND NONE OF THEM IS AN I-07A COMMAND. Every I-07A participation command
+  // still writes exactly USER_PAUSED or no pause reason at all.
+  for (const fn of [MFN.ACTIVATE, MFN.PAUSE, MFN.RESUME, MFN.TURN_OFF]) {
+    const [p] = await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure', [fn]);
+    assert.doesNotMatch(p.prosrc, /'POST_SUCCESS'|'POST_INTRODUCTION'|'ACTIVE_INTRODUCTION'|'SYSTEM_POLICY'/u,
+      `P08 ${fn} still produces none of the four reserved pause reasons`);
+  }
 }
 
 // ------------------------------------------------------- 2. the row scenarios

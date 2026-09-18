@@ -130,8 +130,33 @@ export const I07C_LIFECYCLE_RELATIONS = [
   'shared_world_matching_birth_events',
 ];
 
+/**
+ * Every relation I-07D adds in migrations 0115 / 0116 / 0117 that ANY lifecycle
+ * census predicate can reach.
+ *
+ * Exactly one of them carries a census word: `introduction_terminal_commits`
+ * matches `commit`, because it genuinely is one - the durable one-winner
+ * substrate both terminal Introduction transitions converge on. It is NAMED
+ * here rather than renamed out of the pattern, which is what the 0108 and 0110
+ * censuses ask for in so many words: the point of comparing the LIVE catalog is
+ * that a lifecycle relation nobody declared cannot hide from it, and the answer
+ * to a reviewed later slice legitimately adding one is to declare it.
+ *
+ * I-07D's other fifteen relations - the disclosure resource versions and their
+ * two typed payloads, the grant fact, the disclosure command, the two
+ * Introduction closed-view entitlement relations, the success transition
+ * version, its derived required approvers, its approval act chain and current
+ * pointer, the two terminal facts and the reactivation record - carry no census
+ * word at all, so no census can reach them and none demands them.
+ */
+export const I07D_LIFECYCLE_RELATIONS = [
+  'introduction_terminal_commits',
+];
+
 /** The ONE reviewed ownership list every lifecycle census compares against. */
-export const LATER_SLICE_LIFECYCLE_RELATIONS = [...I07B_LIFECYCLE_RELATIONS, ...I07C_LIFECYCLE_RELATIONS].sort();
+export const LATER_SLICE_LIFECYCLE_RELATIONS = [
+  ...I07B_LIFECYCLE_RELATIONS, ...I07C_LIFECYCLE_RELATIONS, ...I07D_LIFECYCLE_RELATIONS,
+].sort();
 
 /**
  * The subset of the reviewed ownership list that one census's own predicate can

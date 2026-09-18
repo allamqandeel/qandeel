@@ -1,11 +1,13 @@
 # QANDEEL — Matching / Introduction Runtime v1
 
-**Phase:** `I-07 — Introductions / Matching Runtime` — **OPEN**
+**Phase:** `I-07 — Introductions / Matching Runtime` — **CLOSED / FROZEN**
 **Slice:** `I-07A — Matching Foundation, Participation & Private Authority Runtime v1` —
 **CLOSED / FROZEN**
 **Slice:** `I-07B — Candidate Eligibility, Proposal & Privacy Runtime v1` —
 **CLOSED / FROZEN**
 **Slice:** `I-07C — Atomic Mutual Match & Introduction Birth Runtime v1` —
+**CLOSED / FROZEN**
+**Slice:** `I-07D — Introduction Lifecycle, Progressive Disclosure & I-07 Closure v1` —
 **CLOSED / FROZEN**
 **Architecture authority:** `QANDEEL_CW2-06 — Introductions / Matching Runtime Architecture v1.0 —
 CLOSED / FROZEN`, with binding `CW2-01`–`CW2-05` and `CW2-08`
@@ -15,12 +17,17 @@ CLOSED / FROZEN`, with binding `CW2-01`–`CW2-05` and `CW2-08`
 `0111_matching_candidate_evaluation_disclosure_gate_v1.sql`,
 `0112_matching_proposal_choreography_runtime_v1.sql`,
 `0113_matching_mutual_match_introduction_persistence_v1.sql`,
-`0114_matching_mutual_match_commit_transaction_v1.sql`
+`0114_matching_mutual_match_commit_transaction_v1.sql`,
+`0115_introduction_progressive_disclosure_history_visibility_v1.sql`,
+`0116_introduction_terminal_lifecycle_v1.sql`,
+`0117_post_introduction_matching_reactivation_v1.sql`,
+`0118_introduction_ordinary_shared_material_v1.sql`
 
-This document records what `I-07A`, `I-07B` and `I-07C` implemented, what each deliberately did not,
-and where each deferred capability is owned. It does not close `I-07` and it does not restate the
-frozen architecture. Sections 1–13 are the frozen `I-07A` record and are unchanged; sections 14–26
-are the frozen `I-07B` record and are unchanged; sections 27–33 are the frozen `I-07C` record.
+This document records what `I-07A`, `I-07B`, `I-07C` and `I-07D` implemented, what each deliberately
+did not, and where each deferred capability is owned. This closure synchronization closes and freezes
+parent phase `I-07`; it does not restate or reopen the frozen architecture. Sections 1–13 are the frozen
+`I-07A` record; sections 14–26 are the frozen `I-07B` record; sections 27–33 are the frozen `I-07C`
+record; sections 34–44 are the frozen `I-07D` record.
 
 ---
 
@@ -869,3 +876,475 @@ prerequisite answers `NOT_EVALUATED` and is required LAST, and the canonical fir
 those boundaries.
 
 **Next slice:** `I-07D — Introduction Lifecycle, Progressive Disclosure & I-07 Closure`.
+
+---
+
+## 34. `I-07D` — what the candidate slice implements
+
+`I-07D` is the final implementation slice of `I-07`. `I-07C` left two humans inside a born
+`ACTIVE / INTRODUCTION` Shared World with an `ACTIVE` Introduction Record, two open membership
+episodes and two `HELD` claims — and no way for the Introduction to progress or to end. `I-07D` owns
+the whole of that in three forward-only migrations after the verified `0114` tip:
+
+- `0115` — owner-controlled progressive disclosure, the Introduction branch of the ONE canonical
+  historical visibility entry point, the Introduction closed-view entitlement family, the narrow
+  disclosure read boundary, and exactly one new branch in the canonical owner-deletion primitive;
+- `0116` — the two terminal outcomes and the one durable terminal winner both converge on: dual
+  human approval for `SUCCESS`, unilateral `END`, both terminal facts, the Introduction closed-view
+  snapshot, claim release and the two reserved post-terminal participation transitions;
+- `0117` — the one narrow explicit post-Introduction Matching reactivation boundary, and the
+  `I-07` phase-closing forward contracts asserted at the tip of the chain.
+
+No predecessor relation is altered. The three functions this slice replaces are replaced
+FORWARD-ONLY through `CREATE OR REPLACE`, and every historical migration file — `0001`–`0114`
+included — is untouched.
+
+## 35. `I-07D` — progressive disclosure
+
+**A QANDEEL suggestion creates zero authority, and has no representation at all.** There is no
+dormant suggestion object, no pending grant and no reusable "share everything with this person"
+permission. The owner's explicit grant and the protected delivery are ONE atomic act, which closes
+the revocation-before-delivery race by design rather than by policy: before the grant nothing is
+delivered, and after it delivery is historical Shared truth.
+
+**The owner is `auth.uid()`; the counterpart is DERIVED.** The command accepts no counterpart,
+recipient, audience or owner identifier of any kind — the counterpart is read from the exact
+Introduction Record's two matched humans under the World lock — so a disclosure cannot be rerouted to
+a third human however the caller is composed. The migration refuses to deploy a command that accepts
+one.
+
+**The resource vocabulary is closed at five broad categories.** `PARTIAL_IMAGE`, `FULL_IMAGE`,
+`FULL_NAME`, `CONTACT_METHOD` and `DEEPER_PERSONAL_FIELD`. There is no generic `RESOURCE_KIND` and no
+JSON payload anywhere. The type-to-payload binding is STRUCTURAL: the resource version carries
+`UNIQUE (id, resource_type)` and each typed payload relation composite-binds both columns, so a text
+resource carrying a media reference is a constraint violation rather than a bug a reviewer must
+catch. A field key exists exactly for `DEEPER_PERSONAL_FIELD`, and the frozen `0108` contact-route ban
+is kept for a reason that survives the Match: `CONTACT_METHOD` is the ONE reviewed way to disclose a
+contact route, so a deeper personal field can never become a second, unreviewed one. Image
+references are opaque server-side media object identities, CHECKed exactly as `0089` CHECKs a voice
+note: not a URL, no query, no fragment, no credential-shaped token. A partial image and a full image
+are two INDEPENDENT resource versions and neither authorizes the other, because no authority object
+spans them. The exact cropping, blurring and derivative-rendering algorithm stays deferred Product
+scope.
+
+**A delivered disclosure is real Shared history.** It creates an `I-04F` history item whose exact
+baseline audience is the owner and the counterpart and whose exact material authority is the owner
+alone; the reserved `EXPLICIT_DISCLOSURE` material `0089` created and deliberately gave no producer,
+with `producer_kind = HUMAN` and `body_form = RESERVED`; an `INDEPENDENT_TARGET_TRUTH` provenance edge,
+because the owner establishes their own truth and no Matching private reasoning is read to decide what
+to disclose; and a `RESOLVED_EXACT_HUMAN_REQUIREMENT` historical-authority row. `I-07D` is the ONE
+reviewed producer of that reserved material kind, which the migration, the verifier and the
+phase-closing contract each assert on the live catalog.
+
+**Non-reciprocity is structural.** A disclosure by A names A as owner and B as counterpart, in one
+row, in one direction. There is no code path that could create a reverse row: B's own disclosure
+exists only after B executes the command as themselves.
+
+**Owner deletion dominates future visibility.** `delete_shared_world_owned_material_v1` gains exactly
+one branch, named by kind: an `EXPLICIT_DISCLOSURE` loses its typed payload when its owner deletes it.
+Everything else is preserved exactly — the actor is still `auth.uid()`, the World row is still locked
+first, phase is still not a gate, `READ_ONLY_CLOSED` still permits it, the transitive
+`MATERIAL_DEPENDENCY` invalidation and the terminal `DELETED_BY_OWNER` transition are unchanged, and
+no `HUMAN_TEXT`, `HUMAN_VOICE_NOTE` or `QANDEEL` semantic moves. The resource version, its
+`DISCLOSURE_GRANTED` fact and its material envelope SURVIVE the deletion: audit identity remains,
+source content does not, a frozen closed-view entitlement can never preserve it, and the Introduction
+resolver cannot reconstruct it.
+
+**The read boundary is narrow and composed.** `resolve_shared_world_introduction_disclosure_v1` is
+`service_role`-only, CONSUMES the ONE canonical visibility entry point rather than re-deciding
+visibility, and returns a bounded render shape. A disclosure whose payload the owner destroyed
+produces no row, no count and no placeholder. It returns no authority row, no private reason, no
+source profile or grant identity, no Matching context, no proposal id, no private provenance and no
+undisclosed resource version, and it reads no Matching relation at all.
+
+## 36. `I-07D` — Introduction historical visibility
+
+`I-07D` extends the ONE existing entry point, `resolve_shared_world_history_visibility_v1`, rather
+than creating a competing resolver. `0087` refused `INTRODUCTION` with a bounded unsupported class;
+that was a truthful statement about what existed, not a ceiling.
+
+**The Standard branches are preserved exactly.** `ACTIVE / STANDARD` is the same union of
+membership-period visibility and explicit history grants, with the same temporal bounds; availability
+still dominates every mode; `READ_ONLY_CLOSED` still delegates to the closure slice's own reader; a
+human with no currently open episode still gets a truthful empty answer rather than a distinguishable
+error. The explicit history-grant basis appears exactly once in the replaced body, which is what
+proves the Introduction branch did not inherit it.
+
+**The Introduction branch is strictly narrower.** `ACTIVE / INTRODUCTION` requires an exact
+currently-open matched episode and returns the exact baseline-audience conjunction alone. Selective
+history packages are deliberately NOT extended into an Introduction: at v1 an Introduction has exactly
+two humans and no add, remove or rejoin flow, so there is no absence period for a package to bridge,
+and granting package semantics merely because Standard Worlds have them would be inventing Product
+law. No hidden placeholder is manufactured.
+
+**Failed-Introduction closed viewing is its own entitlement family.** The `shared_world_standard_*`
+entitlement tables are named for Standard closure and stay Standard-owned; treating them as generic
+would make one relation answer for two closures with different law. `introduction_closed_view_entitlements`
+and `introduction_closed_view_entitlement_items` are the narrow Introduction family, and `0088`'s
+closed reader gains the reviewed Introduction branch over them with its signature unchanged and its
+Standard branch intact. An entitlement is historical viewing authority and nothing else: not
+membership, not governance, not a history grant, not a Standing Context Grant. A human may
+legitimately hold one with zero items, and availability continues to dominate it — a later valid
+owner deletion narrows an entitlement that already exists.
+
+**Extending the ONE entry point widens every consumer that composes it.** That is what composing it
+means, and the consumer set is declared rather than discovered: the `I-04G` material resolver, the
+`I-04F` Standard closure snapshot, the two `I-05` Public manifest boundaries, the two `I-06A` Replay
+source adapters, `I-07D`'s own end core and its disclosure resolver. Three properties make the
+widening safe. The generic material resolver returns a material only when a `TEXT` or `VOICE_NOTE`
+body row exists, and an `EXPLICIT_DISCLOSURE` has neither, so a disclosure payload can never be
+rendered through it. Public publication derives its required-approver set from the exact
+`shared_world_history_item_required_approvers` relation, which for a disclosure is the OWNER and
+nobody else — so a counterpart can see a disclosure but can never publish it without the owner's
+explicit approval. And every downstream consequential path remains fail-closed in production on its
+own `CW2-08` seam. This is a reviewed consequence of the frozen "one entry point decides" rule rather
+than a new capability, and it is named here so the independent review can weigh it directly.
+
+## 37. `I-07D` — the successful Introduction
+
+**QANDEEL may propose; QANDEEL is not a consent provider.** The transition is an immutable exact
+version bound to one World and one Introduction Record, with a payload fixed by CHECK:
+`ACTIVE / INTRODUCTION` becomes `ACTIVE / STANDARD`, and nothing else is representable. Preparing one
+is not authority and reserves nothing; it derives no actor at all, because a proposal is not a consent
+act. A record may carry several versions over its life, which is what makes a stale approval
+structurally unable to contribute: an approval binds its exact version by foreign key, and the commit
+reads the approvals of exactly the version it commits.
+
+**Both matched humans must hold a CURRENT approval.** Approval is an immutable `APPROVE` / `WITHDRAW`
+act chain plus ONE current pointer per `(version, human)`, in the same shape `I-07A` models
+participation. The human is `auth.uid()` with no actor parameter, so no caller — QANDEEL included, a
+future launch-gated wrapper included — can manufacture or withdraw somebody else's consent. Only a
+required human of the exact version can ever have an approval row, structurally, through a composite
+foreign key into the derived required-approver set. Withdrawal works right up to the terminal commit,
+changing one human's approval never touches the other's, and a withdrawn act stays in the chain rather
+than being erased.
+
+**System execution, human authority.** `commit_introduction_success_v1` derives NO actor and writes no
+approval; the deploy-time assertion refuses a commit that reads `auth.uid()` or touches an approval
+relation. It may execute only BECAUSE both exact current approvals exist, revalidated under
+serialization together with the World, the Record, both matched humans, both open episodes, both HELD
+claims, the absence of a prior terminal commit and — LAST — the `CW2-08` prerequisite.
+
+**What SUCCESS changes, atomically and at one instant.** The SAME World becomes `ACTIVE / STANDARD`;
+the Introduction Record becomes `COMPLETED`; one `INTRODUCTION_COMPLETED` fact is appended; both HELD
+claims become `RELEASED`; a human still paused for this Introduction moves to `PAUSED / POST_SUCCESS`
+and a human who explicitly turned Matching OFF is left exactly as they are. The same `world_id`, the
+same two open membership episodes, the same history and the same provenance survive: no new World, no
+new episode, no closure instant, no closed-view entitlement, no re-authorship and no retrospective
+time rewrite. Introduction-period history reads on under Standard semantics, and an existing frozen
+Standard capability that refused before the transition succeeds after it.
+
+**A completed Introduction is not a relationship status.** The only Product truth is that both humans
+approved leaving guided Introduction mode and continuing in the same Shared World as Standard. No
+column, event, enum or check anywhere in the slice encodes a relationship, engagement, exclusivity,
+marriage or legal status, and both the migrations and the static contract refuse to deploy one.
+
+## 38. `I-07D` — the unilateral end
+
+Either matched human may end an `ACTIVE / INTRODUCTION` alone. There is no counterpart approval, no
+proposal and no waiting period, and the actor is `auth.uid()` with no actor parameter.
+
+**Ending is deliberately NOT gated on the `CW2-08` seam.** A safety system may restrict what a human
+can create, disclose or continue; it must never make them unable to leave. Disclosure and `SUCCESS`
+each require `CLEARED` from their own seam; `END` has none, and the deploy-time assertion refuses an
+END core that consults one.
+
+**What END changes, atomically and at one instant.** Each matched human's exact visible history is
+snapshotted through the ONE canonical visibility entry point WHILE the World is still `ACTIVE` and both
+episodes are still open — so the frozen set is genuinely what they could see immediately before
+closure — and only then does anything close. The SAME World becomes `READ_ONLY_CLOSED / INTRODUCTION`
+at that instant and keeps its phase; the Introduction Record becomes `CLOSED`; one
+`INTRODUCTION_ENDED` fact naming the exact ending human is appended; both open episodes close in place
+with `WORLD_CLOSED`; both claims are `RELEASED`; a still-paused human moves to
+`PAUSED / POST_INTRODUCTION` and an explicitly OFF human is left alone. No Standard `WORLD_ENDED` fact
+is fabricated — that belongs to unanimous Standard governance closure — and no Standard closed-view
+entitlement is written. After closure no ordinary Shared mutation is available, while the owner's
+privacy deletion still is, and it still narrows the frozen view.
+
+## 39. `I-07D` — exactly one terminal winner
+
+Both outcomes converge on ONE substrate, `introduction_terminal_commits`, written LAST after every
+other effect exists, under `UNIQUE (introduction_record_id)`. That single key is the whole one-winner
+guarantee: `SUCCESS` versus `END`, `END` by A versus `END` by B, and two competing commands of either
+kind all resolve to exactly one surviving row, because the second insert violates a unique index
+rather than losing a procedural comparison a concurrent transaction could read stale.
+
+The Product status on `introduction_records` remains the canonical truth and the frozen `0113` trigger
+still allows exactly one move from `ACTIVE`. Both are true at once on purpose, and the terminal truth
+trigger proves they agree rather than trusting either alone: it refuses the OTHER outcome's fact in
+both directions, requires both claims `RELEASED` at exactly the terminal instant, requires the exact
+World and membership shape each outcome implies, and requires every participation act it names to be
+that human's own post-terminal pause superseding the exact `ACTIVE_INTRODUCTION` pause the Match
+created — or, where it names none, that the human really is explicitly OFF over it.
+
+Terminal commands are durable and idempotent. An equivalent retry is answered ENTIRELY from the
+committed row, never by re-reading live World state, so a retry after later Standard changes still
+answers the original terminal result. The same command id carrying any different request fails closed.
+
+## 40. `I-07D` — Matching integration and explicit reactivation
+
+**There is no automatic Matching restart.** A failed Introduction preserves Matching setup and leaves
+the human paused; a successful one also leaves them paused; a later Standard World end reactivates
+nothing. Reactivation is explicit and fully revalidated.
+
+**The three real human states the lifecycle produces** are `PAUSED / POST_INTRODUCTION`,
+`PAUSED / POST_SUCCESS`, and an explicit `OFF` over that exact lineage — the last because
+participation is independent after the Match, so a human may turn Matching off while an Introduction
+is live and the terminal transition then leaves their own decision alone. The frozen `I-07A`
+activation refuses exactly that `OFF` with `MATCHING_REACTIVATION_REQUIRES_REVALIDATION`; this is the
+revalidation it was waiting for, and it is the ONLY path that may cross it. Neither frozen ceiling is
+widened: the generic resume stays `USER_PAUSED`-only, and both are proven still refusing — and proven
+load-bearing — on the live catalog.
+
+**Eligibility is proven from exact immutable identity, never from time.** One chain: the human's
+current act, the act it supersedes, the exact `I-07C` `ACTIVE_INTRODUCTION` pause of a Match commit or
+the exact `I-07D` `POST_*` act of a terminal commit, that terminal commit, its terminal Introduction
+Record, and this human's exact `RELEASED` claim from it. No timestamp is compared, no ordering is
+inferred and no set is searched for a best candidate. One lineage can be crossed at most once.
+
+**Every current truth is revalidated, and the seam is LAST.** Under the caller's own
+`matching_setup_locks` row: an eligible current state; a current active Matching Context Grant; a
+current Introduction Profile version; a current Matching Requirements version; no `HELD`
+active-Introduction claim anywhere; the canonical active-Introduction truth answering false; the prior
+Record terminal and the prior claim released; and then the `CW2-08` prerequisite. The canonical
+`I-07A` / `I-07B` resolvers are CONSUMED rather than re-implemented. The Pre-Match Proposal Disclosure
+Authority is deliberately not required here: it is the authority for a future pre-Match disclosure and
+the frozen `I-07B` boundary already requires it at that moment, so demanding it to change a
+participation state would make one authority a precondition of another.
+
+**Reactivation changes participation and nothing else.** It moves no proposal out of a terminal state,
+clones none, restores no recipient view pointer, revives no `CANCELLED_BY_COMPETING_MATCH`, `STALE`,
+`EXPIRED`, `WITHDRAWN` or declined proposal, and creates none; it reopens no World, no membership, no
+Introduction Record and no claim.
+
+## 41. `I-07D` — lock order, concurrency proofs and the no-ghost proofs
+
+**The published cross-domain order**, taken by both terminal cores: the exact Shared World row
+`FOR UPDATE`; the exact Introduction Record; BOTH humans' `matching_setup_locks` rows in canonical
+ASCENDING user-id order through the frozen `0111` helper — never in role order, never in pair
+direction order, never incrementally per counterparty; then the membership episodes, participation
+pointers, approval pointers and HELD claims in deterministic identity order; then the entitlement
+snapshot, the terminal event, the participation acts and the one terminal commit row. No advisory
+lock, no table lock, no process mutex.
+
+**Progressive disclosure is Shared-World-local.** It takes the World row and then the exact
+Introduction Record, and acquires NO Matching setup lock: after the Match the Shared World lifecycle is
+independent, and taking one here would re-couple Matching permission to Shared disclosure and invent a
+deadlock surface the law does not require. Approval and withdrawal take the same World-first order as
+the terminal commit. Reactivation is a one-human Matching act and takes the caller's own setup row and
+then their own participation pointer — the same relative order the terminal cores use, so the two
+block rather than deadlock.
+
+**One canonical instant per terminal transaction**, read AFTER every lock wait and every currentness
+check, immediately before the irreversible writes, and reused for every effect of that one event. The
+`I-07C` lesson is explicit: `CURRENT_TIMESTAMP`, `now()` and `transaction_timestamp()` are all settled
+before a lock wait begins and can therefore decide state that changed while the transaction waited.
+
+**Eleven real two-connection races**, each pinned with an observable lock-wait barrier rather than
+timing: `SUCCESS` versus `END` in both directions; `END` by A versus `END` by B; the success commit
+versus approval withdrawal in both directions; two competing success commands; disclosure versus `END`
+and versus `SUCCESS`, each in both directions; `END` versus owner deletion of already-disclosed
+material; the terminal transition versus Matching `TURN_OFF` in both directions; the terminal
+transition versus a Matching Context Grant revoke; and two reactivation races. Every one asserts no
+deadlock, no lock timeout, exact final cardinalities and no partial losing-path effects. The loser of
+an `END` versus `END` race is told only that the Introduction is already settled, and is told nothing
+about which human won.
+
+**Three no-ghost proofs.** A verifier-local late failure injected on the LAST write of each
+transaction — after every other effect is in place — must roll the whole thing back. For disclosure:
+no resource version, no payload, no grant fact, no history item, no baseline audience and no material.
+For `SUCCESS` and for `END`: no terminal commit, no terminal fact, no claim release, no entitlement, no
+episode closure, no participation move, the Record still `ACTIVE` and the World exactly as it was. Each
+probe is removed on every path and the same request then commits everything.
+
+## 42. `I-07D` — predecessor forward-seam reconciliation record
+
+Every predecessor census this slice legitimately advances is reconciled in the PREDECESSOR itself, not
+evaded and not deleted.
+
+- **`0087`** — the ONE entry point learned `INTRODUCTION`. Its verifier now proves that the Standard
+  union, the truthful temporal bounds, the baseline-audience requirement, availability dominance and
+  the closed delegation are all intact; that the explicit history-grant basis appears exactly once, so
+  the Introduction branch did not inherit selective-history semantics; that the reviewed Introduction
+  branch is present; that an unspelled World mode is still refused; and that there is still exactly
+  ONE server-role historical visibility boundary.
+- **`0088`** — `C23` no longer asserts the ABSENCE of Introduction closure. It now proves that `0088`
+  itself still closes Standard Worlds only, that `READ_ONLY_CLOSED / INTRODUCTION` and the
+  Introduction entitlement family are produced by exactly `commit_introduction_end_v1`, that the
+  Standard entitlement family is still written by exactly `commit_shared_world_standard_end_v1`, and
+  that the closed reader has exactly the Standard and Introduction branches and consults no membership
+  in either.
+- **`0089`** — the reserved `EXPLICIT_DISCLOSURE` kind keeps its frozen `RESERVED` body form and gains
+  exactly one reviewed producer. `0089`'s verifier deliberately carries no live census — a fixed list
+  there would be a ceiling on the roadmap rather than a fact about `0089` — so the exact-ownership
+  census lives where the producer does: in `0115`'s deploy-time assertion, in its verifier, and in the
+  phase-closing contract at the tip of the chain.
+- **`0090`** — the `DELETE` census is repaired to the exact four targets, with the two new ones proven
+  reachable ONLY inside the exact `EXPLICIT_DISCLOSURE` branch and the two frozen ones proven still
+  outside it. No other reserved kind became deletable, no old owner-deletion behaviour moved, and the
+  canonical primitive is still the only thing in the database that destroys any source content.
+- **`0108` / `0109`** — `I-07A` still produces neither reserved `POST_*` reason and neither
+  `ACTIVE_INTRODUCTION` nor `SYSTEM_POLICY`; `SYSTEM_POLICY` still has no producer at all. `POST_SUCCESS`
+  and `POST_INTRODUCTION` have exactly one reviewed producer each. The generic resume remains
+  `USER_PAUSED`-only and the generic activation still refuses the `OFF` lineage; exactly one reviewed
+  boundary crosses a post-Introduction pause.
+- **`0113`** — the `INSERT`-only producer census is still exactly true, and the `UPDATE` side it could
+  not speak to is now proven with the same exact-ownership shape: exactly the two reviewed terminal
+  cores move a Record to a terminal state and release a claim, both converge on one unique-keyed
+  winner, and the frozen `0113` truth triggers are unchanged.
+- **`0114`** — the `ACTIVE_INTRODUCTION` census could not tell a PRODUCER from a READER, which it did
+  not need to when nothing else existed. It is narrowed to the `VALUES` shape that produces one, the
+  two reviewed terminal cores that merely READ it are NAMED beside it, and the frozen Match core is
+  proven to produce no terminal state, no claim release and no post-terminal pause.
+- **The shared lifecycle census list** gains one named relation, `introduction_terminal_commits`,
+  because it genuinely carries a census word. It is NAMED rather than renamed out of the pattern, which
+  is what the `0108` and `0110` censuses ask for in so many words. The other fifteen `I-07D` relations
+  carry no census word, so no census reaches them and none demands them.
+- **Two tip-shaped assertions** were repaired forward-safely in the same shape `I-07A` already used:
+  the `I-07C` contract's "0114 is the migration tip" became "no migration after `0114` belongs to
+  `I-07C`", and the two contracts pinning the census expression now pin the union of three named
+  per-slice arrays instead of two. Neither claim was weakened.
+
+**No historical migration was edited.** The three replaced functions are replaced forward-only through
+`CREATE OR REPLACE` in `0115`.
+
+## 43. `I-07D` — anti-scope, status and verification
+
+**Anti-scope.** No `I-08` mobile surface of any kind: no Matching or Introduction screen, disclosure
+UI, image blur or crop UI, success celebration, navigation, proposal card, copywriting or design
+system. No `I-09`: no Launch Gate, production safety engine, moderation, report or block, entitlement
+or pricing, feature rollout, or production grant or wrapper — `I-07D` creates three fail-closed seams
+and implements none of them. No deferred Product decision is frozen: not the progressive image
+rendering algorithm, the blur or crop amount, the final disclosure copy, timing or cadence, the final
+Introduction Profile field catalogue, the pair cooldown or reproposal policy, or any ranking or score
+model. No media storage provider, upload path or credential is built.
+
+**Status.** `I-07D` is **CLOSED / FROZEN**. Parent phase `I-07` is **CLOSED / FROZEN**;
+`I-07A`, `I-07B` and `I-07C` remain **CLOSED / FROZEN**. This status change is governance-only and
+changes no runtime, schema, verifier or test semantics.
+
+**BG-05 kickoff reconciliation.** `docs/qandeel-canonical-backlog-v1.md` was read in full at kickoff.
+No open item names `I-07`, `I-07D`, Introduction or Matching as its **Owner task**, and no item's
+reopen condition is met by anything this slice builds. `OPEN-06`, `OPEN-08`, `OPEN-09`, `OPEN-19`,
+`QAN-BL-NAV-01` and `QAN-BL-NAV-02` are navigation, acknowledgement, Timeline and Replay-surface
+capabilities `I-07D` neither implements nor blocks; `QAN-BL-SEC-01` is owned by `QAN-SEC-01` and is
+untouched — this slice changes no mobile auth persistence, no storage mechanism, no backup policy and
+no platform credential model, and introduces no cryptography beyond the SHA-256 request and payload
+digests earlier migrations already established. Nothing is inherited. No finding from the `I-07C`
+review was moved into the backlog in violation of `BG-01`: the register carries no `I-07C` entry at
+all.
+
+**Launch readiness is a different claim.** Nothing in `I-07D` can disclose anything to anybody, complete
+any Introduction or re-enter any human into Matching in production. Every consequential boundary is
+executable by no application role, and the three `CW2-08` prerequisite seams answer `NOT_EVALUATED` and
+are each required LAST. The one exception is deliberate and is the point: ending an Introduction
+consults no seam at all, because a human must always be able to leave.
+
+**Verification evidence.** Recorded at independent-review handoff, on the exact accepted implementation
+head, in the pull request body and in the implementation handoff that accompanies it: two complete
+consecutive Focused Database Verification rounds in migration order for `0115`, `0116`, `0117` and
+`0118`; the required predecessor focused regressions for `0087`, `0088`, `0089`, `0090`, `0108`,
+`0109`, `0113` and `0114` on that same head; and API CI and Mobile CI on that same head. Local gates
+were green with nothing skipped.
+
+## 44. `I-07D` — `REV-01`: the two interim review findings
+
+An interim independent review of the candidate found two blocking defects. Both were verified against
+the code before anything was changed, and both are fixed inside this same slice and pull request.
+
+### 44.1 `I07D-IDEM-01` — a used command id could restate its own provenance
+
+`reactivate_matching_after_introduction_v1` compared three immutable columns —
+`participant_user_id`, `participation_event_id` and `prior_participation_event_id` — and
+`matching_introduction_reactivation_commands` stored no entry channel to compare against. So a
+committed `ACTIVATE` carrying `MANUAL_MY_WORLD_ENTRY` could be retried as a `CONVERSATIONAL_ENTRY`
+and be told it had succeeded, and a committed `RESUME`, which carries no channel at all, could be
+retried as though it had been a fresh entry. **Confirmed, and wider than reported:** BOTH idempotency
+passes run before ANY channel validation, so even a syntactically invalid channel was answered as an
+equivalent retry rather than refused.
+
+The channel is now compared on **both** passes against the exact immutable participation event the
+committed command PRODUCED. It is deliberately not stored a second time beside the command: the event
+is already the canonical record of what happened, a `RESTRICT` foreign key keeps it reachable for as
+long as the command exists, and one truth cannot drift from itself. An `ACTIVATE` retried with the
+same channel is an equivalent retry; a different channel, or none, is
+`MATCHING_REACTIVATION_COMMAND_ID_CONFLICT`. A `RESUME` retried with any channel is the same
+conflict. Nothing is reinterpreted and no provenance is backfilled. The migration refuses to deploy
+unless both passes bind it — the count is pinned at **two**, because one pass binding it leaves the
+other as an open door — and `R14` proves both sides against real PostgreSQL.
+
+### 44.2 `I07D-SCOPE-01` — an Introduction could not be spoken in
+
+**Confirmed by a census of the whole repository.** Exactly three functions produce a Shared material,
+and until `0118` two of them — `0090`'s human and QANDEEL commit cores — refused every World that was
+not `ACTIVE / STANDARD`, while the third produced only the reserved `EXPLICIT_DISCLOSURE`. `CW2-03`
+requires Shared v1 to carry `HUMAN_TEXT`, `HUMAN_VOICE_NOTE` and `QANDEEL_PARTICIPATION`, and the
+`ACTIVE / INTRODUCTION` phase exists precisely so QANDEEL can welcome the pair, break the ice, surface
+safe differences and agreements and propose the transition to Standard. An Introduction could disclose
+a phone number and could end, and neither human nor QANDEEL could say one ordinary thing in between.
+`I-07` must not close in that state. The task package had this omission; the review found it.
+
+`0118_introduction_ordinary_shared_material_v1.sql` closes it the way `0090` itself anticipated: its
+header already said the SCHEMA is not Standard-only and that a later reviewed Introduction producer
+would compose the same relations. So this is **not a new producer beside the old ones** — it REPLACES
+both cores forward-only, and the same primitives serve both World modes. There is no second material
+store, no second history model, no Introduction-specific commit path and no parallel truth to
+reconcile later; the two typed human entry points delegate to the one core and are not touched at all.
+
+In each core exactly one gate changes, and exactly one invariant is added on the Introduction branch
+alone. `ACTIVE` is still an unconditional floor; a phase outside the two frozen ones is still refused;
+an Introduction World is admitted only while its own Introduction Record is still `ACTIVE`, and only
+with exactly two derived humans — neither of which any Standard World is ever asked for. The envelope
+is therefore **the same as Standard or stricter, never looser**: no new privacy authority arrives with
+the phase, QANDEEL output still carries the exact same frozen `I-03` effective-context,
+disclosure-gate, revalidation and readiness evidence, no Matching Context Grant is transferred or
+consulted, no third member can exist, and no application role gains `EXECUTE` on anything. Everything
+else is preserved verbatim, which the file proves rather than claims: it was generated from `0090`'s
+own text, and its bodies differ by that one gate, that one check and their comments.
+
+Nothing downstream needed changing, which is the strongest evidence that the canonical model was the
+right thing to extend. `0115`'s Introduction visibility branch resolves history items by the
+baseline-audience conjunction alone and never filtered on material kind, so ordinary material reaches
+exactly the two humans the moment it commits and an `EXPLICIT_DISCLOSURE` and a `HUMAN_TEXT` sit in
+ONE history. `0116` snapshots the closed view through that same ONE visibility entry point, so END
+freezes ordinary material into the Introduction closed-view entitlement by itself; SUCCESS moves the
+World to `STANDARD` and touches no history at all, so the same material continues with nothing copied,
+rewritten or re-derived. Both terminal cores take the World row first, exactly as these cores do, so
+commit-versus-END and commit-versus-SUCCESS serialize on it with no hybrid and no partial outcome.
+
+Migration `0090` is **not edited**. Its runtime verifier is reconciled additively instead: it stops
+asserting a Standard-only gate it no longer owns and asserts the three things that actually protect
+what it built — the lifecycle is still an unconditional refusal, the Introduction branch is strictly
+narrower, and every Standard semantic is intact — plus three new forward-safety plants that each
+weaken one clause of the new envelope and must still be refused there.
+
+## 45. `I-07` — independent review and phase closure
+
+Independent ChatGPT Architecture / Privacy / Database / Concurrency review **PASSED** on exact accepted
+implementation head `9be1757fc4686bdf76a3c39e39ba099f98d7181a`. The review inspected the actual `PR #259` implementation, migrations
+`0115`–`0118`, the affected predecessor forward seams, real-PostgreSQL race and no-ghost proofs,
+and the exact-head CI state. The two interim findings recorded in §44 — `I07D-IDEM-01` and
+`I07D-SCOPE-01` — were both independently confirmed, corrected in the same slice, and re-accepted from
+scratch on the final implementation head. No third blocking finding remained.
+
+The exact accepted head completed two full Focused Database Verification rounds for `0115`, `0116`,
+`0117` and `0118`; the required predecessor regressions for `0087`, `0088`, `0089`, `0090`,
+`0108`, `0109`, `0113` and `0114`; and exact-head `API CI #730` plus `Mobile CI #299`, both green.
+Local acceptance was also green with `test:database 1200/1200`, zero database-hazard findings,
+`test:toolchain 8/8`, and clean API TypeScript checking.
+
+**BG-08 reconciliation:** no newly discovered cross-task obligation qualifies for admission from
+`I-07D` or parent `I-07`. The two review findings were active-contract defects and were fixed before
+closure rather than laundered into backlog. Launch/safety/moderation/entitlement work remains owned by
+frozen `CW2-08` / `I-09`; mobile Product surfaces remain owned by `I-08`; deferred Product choices remain
+deferred by `CW2-06`. Existing unassigned navigation/Replay-surface items are neither implemented nor
+blocked by this phase, and `QAN-BL-SEC-01` remains owned by `QAN-SEC-01`.
+
+**BG-09 synchronization:** this same closing change updates the primary document from
+`CANDIDATE — awaiting independent ChatGPT review` to `I-07D — CLOSED / FROZEN` and parent
+`I-07 — CLOSED / FROZEN`. No successor task is left to repair a stale lifecycle banner.
+
+This closure does **not** claim Product launch readiness. The reviewed write boundaries remain
+pre-launch/internal and the frozen `CW2-08` prerequisite seams stay fail-closed except for the deliberate
+human right to END an Introduction. Mobile integration and production launch integration remain later
+phases.

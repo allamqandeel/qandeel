@@ -2943,3 +2943,158 @@ against expiry; and sixteen barrier-pinned two-connection races (same command, s
 A-B vs A-C, A-B vs C-B, reversed UUID order, the four-human competing lock set, disjoint pairs, the
 Match against a concurrent pause, opt-out, profile, requirement, disclosure, candidate-view and
 first-approval-view change, and the deadline crossed while the Match is provably blocked).
+
+## I-07D - Introduction Lifecycle, Progressive Disclosure and I-07 Closure v1 (migrations 0115-0118)
+
+I-07C left two humans inside a born `ACTIVE / INTRODUCTION` Shared World with an `ACTIVE` Introduction
+Record, two open membership episodes and two `HELD` claims - and no way for the Introduction to
+progress or to end. I-07D owns the whole of that: owner-controlled progressive disclosure, the two
+terminal outcomes and their one winner, explicit post-Introduction Matching reactivation, and the
+ordinary communication the phase exists for. The four migrations ship, review and test together as
+one slice.
+
+`0115_introduction_progressive_disclosure_history_visibility_v1.sql` creates the disclosure substrate
+and the Introduction half of historical visibility. A disclosure is ONE atomic act: the owner is
+`auth.uid()`, the counterpart is DERIVED from the exact Introduction Record, and the grant and the
+delivery happen together - so there is no window in which a permission exists without a delivery, and
+no reusable "share everything with this person" object to revoke. The resource vocabulary is closed
+at five broad categories - `PARTIAL_IMAGE`, `FULL_IMAGE`, `FULL_NAME`, `CONTACT_METHOD` and
+`DEEPER_PERSONAL_FIELD` - with no generic kind and no JSON anywhere; the type-to-payload binding is
+structural, so a text resource carrying a media reference is a constraint violation rather than a bug
+a reviewer must catch. A partial image and a full image are two INDEPENDENT resource versions and
+neither authorizes the other. Image references are opaque server-side media object identities,
+CHECKed exactly as 0089 CHECKs a voice note: not a URL, no query, no fragment, no credential-shaped
+token. Every delivered disclosure becomes real Shared history - an I-04F history item whose exact
+baseline audience is the owner and the counterpart and whose exact material authority is the owner
+alone, plus the reserved `EXPLICIT_DISCLOSURE` material 0089 created and gave no producer, plus an
+`INDEPENDENT_TARGET_TRUTH` provenance edge, because the owner establishes their own truth and no
+Matching private reasoning is read to decide what to disclose. Non-reciprocity is structural: there
+is no code path that could create a reverse row.
+
+The same migration extends the ONE canonical historical visibility entry point,
+`resolve_shared_world_history_visibility_v1`, FORWARD-ONLY. Its Standard branches are preserved
+exactly - the same union of membership-period visibility and explicit history grants, the same
+temporal bounds, the same availability dominance. The `ACTIVE / INTRODUCTION` branch is strictly
+NARROWER: an exact currently-open matched episode is required and visibility is the baseline-audience
+conjunction alone, because at v1 an Introduction has exactly two humans and no add, remove or rejoin
+flow, so there is no absence period for a history package to bridge. `0088`'s closed reader gains the
+failed-Introduction branch over a NARROW Introduction entitlement family of its own - the
+`shared_world_standard_*` tables are named for Standard closure and stay Standard-owned. And
+`delete_shared_world_owned_material_v1` gains exactly one branch, named by kind: an
+`EXPLICIT_DISCLOSURE` loses its typed payload when its owner deletes it, while the resource version,
+its grant fact and its material envelope survive as non-content audit identity.
+
+`0116_introduction_terminal_lifecycle_v1.sql` owns the two terminal outcomes and makes "exactly one"
+a property of the database. Both converge on `introduction_terminal_commits`, written LAST, under
+`UNIQUE (introduction_record_id)`: SUCCESS versus END, END by A versus END by B and two competing
+commands of either kind all resolve to one surviving row, because the loser violates a unique index
+rather than losing a procedural comparison. SUCCESS requires BOTH matched humans to hold a CURRENT
+approval over ONE exact immutable transition version whose payload is fixed by CHECK; approval is an
+immutable act chain plus one pointer, the human is `auth.uid()` with no actor parameter, and
+withdrawal works right up to the commit. The commit itself derives NO actor: system execution may run
+only BECAUSE both approvals exist, and the deploy-time assertion refuses a commit that reads
+`auth.uid()` or writes an approval. END is unilateral by either matched human, needs no counterpart
+act, and is deliberately NOT gated on the CW2-08 seam - a safety system may restrict what a human can
+create, disclose or continue, but it must never make them unable to leave.
+
+`0117_post_introduction_matching_reactivation_v1.sql` owns the one narrow boundary that may cross a
+reserved post-Introduction pause. There is no automatic restart. Eligibility is proven from ONE exact
+chain of immutable identities - the current act, the act it supersedes, the exact I-07C
+`ACTIVE_INTRODUCTION` pause or I-07D `POST_*` act, the terminal commit, its terminal Introduction
+Record and this human's RELEASED claim - and never from a timestamp or a latest-record inference.
+Every current truth is revalidated through the canonical I-07A and I-07B resolvers rather than a
+second copy of their logic, and the CW2-08 seam is the LAST gate. The frozen I-07A ceilings are not
+widened: the generic resume stays USER_PAUSED-only and the generic activation still refuses an OFF
+that descends from a pause it may not lift.
+
+`0118_introduction_ordinary_shared_material_v1.sql` closes a gap independent review found: after a
+Mutual Match the two humans were given a Shared World they could not actually speak in. CW2-03
+requires Shared v1 to carry `HUMAN_TEXT`, `HUMAN_VOICE_NOTE` and `QANDEEL_PARTICIPATION`, and the
+`ACTIVE / INTRODUCTION` phase exists precisely so QANDEEL can welcome the pair, break the ice,
+surface safe differences and agreements and propose the transition to Standard - but 0115 gave the
+phase exactly ONE producer, the reserved `EXPLICIT_DISCLOSURE`, and 0090's two ordinary commit cores
+still refused every World that was not `ACTIVE / STANDARD`.
+
+The fix is forward-only and deliberately small. 0090 itself anticipated it: its header says the
+SCHEMA is not Standard-only and that a later reviewed Introduction producer would compose the same
+relations. This migration is that producer, and it is not a NEW one - it REPLACES the two existing
+cores through `CREATE OR REPLACE` so the SAME primitives serve both World modes. There is no second
+material store, no second history model, no Introduction-specific commit path and no parallel truth
+to reconcile later; the two typed human entry points delegate to the one core and are not touched at
+all. In each core exactly one gate changes - `ACTIVE` and `STANDARD` becomes `ACTIVE`, and then
+either `STANDARD` as before or `INTRODUCTION` while that World's Introduction Record is still
+`ACTIVE` - and exactly one invariant is ADDED on the Introduction branch alone: the derived audience
+must be exactly two humans. Everything else is preserved verbatim, including the human actor from
+`auth.uid()`, QANDEEL as a system actor that derives no human at all, the World-row-first lock
+order, the durable request identity and its three idempotency passes, the derived-never-supplied
+audience, and the exact frozen I-03 effective-context, disclosure-gate, revalidation and readiness
+evidence envelope. The Introduction envelope is the same as Standard or STRICTER, never looser: no
+new privacy authority arrives with the phase, no Matching Context Grant is transferred or consulted,
+no third member can exist, and no application role gains EXECUTE on anything.
+
+Nothing downstream needed changing, which is the strongest evidence that the canonical model was the
+right one to extend. 0115's Introduction visibility branch resolves history items by the
+baseline-audience conjunction alone and never filtered on material kind, so ordinary material is
+visible to exactly the two humans the moment it commits and an `EXPLICIT_DISCLOSURE` and a
+`HUMAN_TEXT` sit in ONE history. 0116 snapshots the closed view through that same ONE visibility
+entry point, so END freezes ordinary material into the Introduction closed-view entitlement
+automatically; SUCCESS moves the World to `STANDARD` and touches no history at all, so the same
+material continues into the Standard World with nothing copied, rewritten or re-derived. Both
+terminal cores take the World row first, exactly as these cores do, so commit-versus-END and
+commit-versus-SUCCESS serialize on it with no hybrid and no partial outcome. Migration 0090 is NOT
+edited; its runtime verifier is reconciled additively instead.
+
+### I-07D - the published cross-domain lock order
+
+A terminal Introduction crosses Shared World and Matching, so it publishes one order and both cores
+take it: the exact Shared World row `FOR UPDATE`; the exact Introduction Record; BOTH humans'
+`matching_setup_locks` rows in canonical ASCENDING user-id order through the frozen 0111 helper -
+never in role order, never in pair direction order, never incrementally per counterparty; then the
+membership episodes, participation pointers, approval pointers and HELD claims in deterministic
+identity order; then the entitlement snapshot, the terminal event, the participation acts and the one
+terminal commit row. No advisory lock, no table lock, no process mutex.
+
+Progressive disclosure takes the World row and then the exact Introduction Record, and acquires NO
+Matching setup lock: after the Match the Shared World lifecycle is independent, and taking one here
+would re-couple Matching permission to Shared disclosure and invent a deadlock surface the law does
+not require. Approval and withdrawal take the same World-first order as the terminal commit, which is
+what makes a withdrawal that wins the World lock able to make the commit observe a missing approval
+and an approval that loses it observe a closed Introduction. Reactivation is a ONE-HUMAN Matching act
+and takes exactly the locks one is entitled to: the caller's own setup row, then their own
+participation pointer.
+
+ONE database-owned instant is captured per terminal transaction, AFTER every lock wait and every
+currentness check, immediately before the irreversible writes, and every effect of that one event
+uses it. The I-07C lesson is explicit here: `CURRENT_TIMESTAMP`, `now()` and `transaction_timestamp()`
+are all settled before a lock wait begins and can therefore decide state that changed while the
+transaction was waiting.
+
+### I-07D - verifier commands
+
+```bash
+npm run verify:introduction-progressive-disclosure:integration
+npm run verify:introduction-terminal-lifecycle:integration
+npm run verify:post-introduction-matching-reactivation:integration
+npm run verify:introduction-ordinary-shared-material:integration
+```
+
+All four need `DATABASE_URL` pointing at a FULLY migrated database and run in CI as one reported
+group after the `I-07C` group. Every fixture reaches a live Introduction through the REAL I-07A,
+I-07B and I-07C boundaries as the humans involved, never by a direct write, and every seam replaced
+for a run is restored byte for byte on every path. `verify-migration-0115.mjs` proves the eighteen
+progressive-disclosure scenarios the contract requires - exact counterpart delivery, no third viewer,
+no reciprocal authority, independent image versions, structural payload separation, exact
+idempotency, refusal outside `ACTIVE / INTRODUCTION`, the production seam refusing with zero effects,
+owner deletion destroying the payload and the effective visibility, and no contact route created -
+plus the six visibility branches and a NO-GHOST proof. `verify-migration-0116.mjs` proves the success
+authority model, the unilateral end, the exact committed shape of both outcomes at one instant, the
+one-winner substrate with its key proven load-bearing, terminal idempotency that never re-reads live
+state, Standard continuity after SUCCESS, a later Standard end reactivating nothing, both NO-GHOST
+proofs, and nine barrier-pinned two-connection races (SUCCESS versus END in both directions, END
+versus END, the success commit versus approval withdrawal in both directions, competing success
+commands, disclosure versus END and versus SUCCESS in both directions, END versus owner deletion, the
+terminal transition versus `TURN_OFF` in both directions, and versus a Matching Context Grant
+revoke). `verify-migration-0117.mjs` proves the three real reactivation paths, both frozen I-07A
+ceilings still refusing with the resume ceiling proven load-bearing, the full revalidation set, that
+nothing revives, that one lineage is crossed at most once, the I-07 phase-closing forward contracts on
+the live catalog, and two barrier-pinned races.

@@ -650,5 +650,6 @@ export function createProposalRuntime(databaseUrl) {
 export { runVerifier, APP_ROLES } from './matching-setup-verifier-support.mjs';
 export {
   MATCHING_TABLES, MATCHING_IMMUTABLE, MATCHING_GUARDED, MATCHING_COMMANDS, MFN, M,
-  LATER_SLICE_LIFECYCLE_RELATIONS, I07B_LIFECYCLE_RELATIONS, I07C_LIFECYCLE_RELATIONS, lifecycleCensusOf,
+  LATER_SLICE_LIFECYCLE_RELATIONS, I07B_LIFECYCLE_RELATIONS, I07C_LIFECYCLE_RELATIONS,
+  I07D_LIFECYCLE_RELATIONS, lifecycleCensusOf,
 } from './matching-setup-verifier-support.mjs';

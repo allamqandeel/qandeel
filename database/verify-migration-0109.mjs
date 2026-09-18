@@ -616,6 +616,33 @@ async function verifyVersions(report, humans) {
       assert.deepEqual(
         MATCHING_TABLES.map((t) => t.replace('public.', '')).filter((name) => MATCHING_LIFECYCLE_WORDS.test(name)),
         [], 'D02 and I-07A evaluates, scores and ranks nobody: none of its own relations is one of them');
+      // RECONCILED BY I-07D: the two frozen I-07A ceilings still refuse, and
+      // exactly ONE reviewed boundary crosses a post-Introduction pause.
+      //
+      // 0109's resume is USER_PAUSED-only and its activation refuses an OFF
+      // that descends from a pause it may not lift. Both were written for
+      // exactly this moment, and neither was widened: I-07D added one dedicated
+      // boundary BESIDE them rather than relaxing either.
+      const resumeSource = (await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure', [MFN.RESUME]))[0];
+      assert.match(resumeSource.prosrc, /current_act\.resulting_pause_reason <> 'USER_PAUSED'/u,
+        'D02 the generic I-07A resume is still USER_PAUSED-only');
+      // The QUOTED literal, because that is what a code path is: prosrc carries
+      // comments, and this resume's own ceiling comment names all four reserved
+      // reasons - so a bare-word ban would fire on the prose that documents the
+      // very rule it checks.
+      assert.doesNotMatch(resumeSource.prosrc, /'POST_SUCCESS'|'POST_INTRODUCTION'|introduction_terminal_commits/u,
+        'D02 and has learned no reserved pause reason or terminal linkage');
+      const activateSource = (await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure', [MFN.ACTIVATE]))[0];
+      assert.match(activateSource.prosrc, /MATCHING_REACTIVATION_REQUIRES_REVALIDATION/u,
+        'D02 the generic I-07A activation still refuses an OFF that descends from a pause it may not lift');
+      assert.doesNotMatch(activateSource.prosrc, /introduction_terminal_commits|POST_SUCCESS|POST_INTRODUCTION/u,
+        'D02 and has not learned the post-Introduction lineage either');
+      const crossers = await rows(
+        `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+          WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
+            AND pr.prosrc ~ 'INSERT INTO public\\.matching_introduction_reactivation_commands' ORDER BY 1`);
+      assert.deepEqual(crossers.map((r) => r.proname), ['reactivate_matching_after_introduction_v1'],
+        'D02 exactly one reviewed boundary crosses a post-Introduction pause, and it is the dedicated I-07D one');
     });
 
     await report.isolated('C03 a profile field comes from the caller arguments and nowhere else', async () => {
