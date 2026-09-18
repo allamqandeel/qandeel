@@ -507,20 +507,43 @@ BEGIN
   -- identity order, so a concurrent owner deletion of a source serializes here
   -- rather than racing this commit.
   IF material_edges > 0 THEN
+    -- QAN-CW-REM-01 / ASSURE-F04: WORLD CONTAINMENT IS DECIDED BEFORE THE LOCK,
+    -- and the lock is SCOPED to the World this transaction already holds.
+    --
+    -- The phase-wide assurance found, and this slice's verifier REPRODUCED on
+    -- real PostgreSQL, that locking a globally unique row identity without also
+    -- pinning its already-known World lets a transaction hold row locks inside a
+    -- World whose World row it does not hold - which closes a directed cycle
+    -- against owner deletion, because migration 0089 orders dependency edges
+    -- TEMPORALLY rather than on the uuid, so a target may sort BELOW its source
+    -- and the deletion walks source-then-target while every other site walks
+    -- ascending.
+    --
+    -- A material's World is immutable, so containment is knowable without any
+    -- lock at all and the answer cannot go stale; AVAILABILITY is mutable and
+    -- therefore stays under the lock, below. Splitting the check this way is
+    -- what keeps the refusal class EXACTLY what it was: a foreign-World source
+    -- is still SHARED_WORLD_MATERIAL_STALE, not a missing-row answer.
+    IF EXISTS (
+      SELECT 1 FROM public.shared_world_materials m
+       WHERE m.id = ANY(sources) AND m.world_id <> p_world_id
+    ) THEN
+      RAISE EXCEPTION 'SHARED_WORLD_MATERIAL_STALE' USING ERRCODE='40001';
+    END IF;
     PERFORM 1 FROM public.shared_world_materials m
-      WHERE m.id = ANY(sources) ORDER BY m.id FOR UPDATE;
+      WHERE m.id = ANY(sources) AND m.world_id = p_world_id ORDER BY m.id FOR UPDATE;
     GET DIAGNOSTICS affected = ROW_COUNT;
     IF affected <> material_edges THEN
       RAISE EXCEPTION 'SHARED_WORLD_MATERIAL_NOT_AVAILABLE' USING ERRCODE='P0002';
     END IF;
-    -- EVERY SOURCE PRE-EXISTS, BELONGS TO THIS EXACT WORLD AND IS STILL
-    -- AVAILABLE. A deleted or invalidated source can never acquire a new
-    -- source-content-bearing derivative.
+    -- EVERY SOURCE IS STILL AVAILABLE, read under the lock it needs. A deleted
+    -- or invalidated source can never acquire a new source-content-bearing
+    -- derivative.
     IF EXISTS (
       SELECT 1 FROM public.shared_world_materials m
         JOIN public.shared_world_history_items i ON i.id = m.history_item_id
-       WHERE m.id = ANY(sources)
-         AND (m.world_id <> p_world_id OR i.availability_state <> 'AVAILABLE')
+       WHERE m.id = ANY(sources) AND m.world_id = p_world_id
+         AND i.availability_state <> 'AVAILABLE'
     ) THEN
       RAISE EXCEPTION 'SHARED_WORLD_MATERIAL_STALE' USING ERRCODE='40001';
     END IF;
@@ -784,6 +807,571 @@ BEGIN
   RETURN QUERY SELECT 'MATERIAL_COMMITTED'::text, p_command_id, p_world_id, p_material_id,
                       p_history_item_id, p_material_kind, viewers, approvers,
                       material_edges, reasoning_edges, commit_instant;
+END$$;
+
+-- ---------------------------------------------------------------------------
+-- 3b. THE TWO REMAINING UNSCOPED LOCK STATEMENTS, FORWARD-REPLACED.
+--
+--     ASSURE-F04 was provisional and is now REPRODUCED on real PostgreSQL by
+--     this slice's own verifier, so its correction is authorized and is made
+--     here - one scoping predicate per statement, and nothing else. Both
+--     functions are reproduced from their own migrations' text; every gate,
+--     order, instant, idempotency path and refusal class is byte-identical.
+--
+--     No result class changes. A mismatched request is still refused by the
+--     containment check each function already had, with the class it already
+--     raised; what changes is only that it no longer takes a lock inside a World
+--     it does not hold on the way to that refusal.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.prepare_shared_world_history_package_v1(
+  p_manifest_version_id uuid, p_world_id uuid, p_grantee_user_id uuid, p_history_item_ids uuid[]
+) RETURNS TABLE(outcome text, prepared_manifest_version_id uuid, prepared_world_id uuid,
+                prepared_grantee_user_id uuid, prepared_grantee_episode_id uuid,
+                prepared_item_count integer, prepared_required_approver_count integer,
+                prepared_at timestamptz)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  committed public.shared_world_history_package_manifest_versions;
+  world public.shared_worlds;
+  selected uuid[];
+  items integer;
+  approvers integer;
+  grantee_episode uuid;
+  affected integer;
+  prepare_instant timestamptz;
+BEGIN
+  IF p_manifest_version_id IS NULL OR p_world_id IS NULL OR p_grantee_user_id IS NULL
+     OR p_history_item_ids IS NULL OR array_length(p_history_item_ids, 1) IS NULL
+     OR array_position(p_history_item_ids, NULL) IS NOT NULL THEN
+    RAISE EXCEPTION 'SHARED_WORLD_HISTORY_COMMAND_INVALID' USING ERRCODE='22023';
+  END IF;
+  -- The selection is an exact SET. A repeated identity is refused rather than
+  -- silently folded, so "the exact item set" means the same thing to the caller,
+  -- to the idempotency comparison below and to every later revalidation.
+  IF (SELECT count(DISTINCT s.item) FROM unnest(p_history_item_ids) AS s(item))
+     <> array_length(p_history_item_ids, 1) THEN
+    RAISE EXCEPTION 'SHARED_WORLD_HISTORY_COMMAND_INVALID' USING ERRCODE='22023';
+  END IF;
+  SELECT array_agg(s.item ORDER BY s.item) INTO selected FROM unnest(p_history_item_ids) AS s(item);
+  items := array_length(selected, 1);
+
+  -- DURABLE IDEMPOTENCY, FIRST PASS: before any lock, so an equivalent retry of a
+  -- manifest that already committed is answered from immutable history even after
+  -- the grantee has left or rejoined. Nothing below this point reads CURRENT
+  -- topology: a historical answer must not start differing because a human moved.
+  SELECT * INTO committed FROM public.shared_world_history_package_manifest_versions c
+   WHERE c.id = p_manifest_version_id;
+  IF FOUND THEN
+    IF committed.world_id = p_world_id AND committed.grantee_user_id = p_grantee_user_id
+       AND (SELECT count(*) FROM public.shared_world_history_package_manifest_items mi
+             WHERE mi.manifest_version_id = committed.id) = items
+       AND NOT EXISTS (SELECT 1 FROM public.shared_world_history_package_manifest_items mi
+                        WHERE mi.manifest_version_id = committed.id
+                          AND NOT (mi.history_item_id = ANY(selected))) THEN
+      SELECT count(*)::integer INTO approvers
+        FROM public.shared_world_history_package_required_approvers pa
+       WHERE pa.manifest_version_id = committed.id;
+      RETURN QUERY SELECT 'PREPARED'::text, committed.id, committed.world_id, committed.grantee_user_id,
+                          committed.grantee_membership_episode_id, items, approvers, committed.created_at;
+      RETURN;
+    END IF;
+    RAISE EXCEPTION 'SHARED_WORLD_HISTORY_ID_CONFLICT' USING ERRCODE='23505';
+  END IF;
+
+  -- CANONICAL LOCK ORDER, STEP 1: the exact World row, before anything else.
+  SELECT * INTO world FROM public.shared_worlds w WHERE w.id = p_world_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'SHARED_WORLD_HISTORY_NOT_AVAILABLE' USING ERRCODE='P0002';
+  END IF;
+
+  -- DURABLE IDEMPOTENCY, SECOND PASS, under the World lock, so two concurrent
+  -- equivalent preparations serialize and the loser returns committed history.
+  SELECT * INTO committed FROM public.shared_world_history_package_manifest_versions c
+   WHERE c.id = p_manifest_version_id;
+  IF FOUND THEN
+    IF committed.world_id = p_world_id AND committed.grantee_user_id = p_grantee_user_id
+       AND (SELECT count(*) FROM public.shared_world_history_package_manifest_items mi
+             WHERE mi.manifest_version_id = committed.id) = items
+       AND NOT EXISTS (SELECT 1 FROM public.shared_world_history_package_manifest_items mi
+                        WHERE mi.manifest_version_id = committed.id
+                          AND NOT (mi.history_item_id = ANY(selected))) THEN
+      SELECT count(*)::integer INTO approvers
+        FROM public.shared_world_history_package_required_approvers pa
+       WHERE pa.manifest_version_id = committed.id;
+      RETURN QUERY SELECT 'PREPARED'::text, committed.id, committed.world_id, committed.grantee_user_id,
+                          committed.grantee_membership_episode_id, items, approvers, committed.created_at;
+      RETURN;
+    END IF;
+    RAISE EXCEPTION 'SHARED_WORLD_HISTORY_ID_CONFLICT' USING ERRCODE='23505';
+  END IF;
+
+  -- Selective history is an ordinary Shared mutation: ACTIVE / STANDARD only. An
+  -- archived World blocks it (CW2-03 section 35 / C31) and a paired World has its
+  -- own terminal transition, which this slice neither implements nor guesses.
+  IF world.lifecycle <> 'ACTIVE' OR world.phase <> 'STANDARD' THEN
+    RAISE EXCEPTION 'SHARED_WORLD_HISTORY_NOT_AVAILABLE' USING ERRCODE='P0002';
+  END IF;
+
+  -- THE GRANTEE'S OWN EXACT CURRENT OPEN EPISODE, resolved from canonical state
+  -- under the World lock rather than from any parameter. Migration 0075's partial
+  -- unique index already guarantees at most one; zero reaches the same bounded
+  -- class as every other unavailable case, so no future wrapper can turn this
+  -- primitive into a membership oracle.
+  IF (SELECT count(*) FROM public.shared_world_membership_episodes probe
+       WHERE probe.world_id = p_world_id AND probe.user_id = p_grantee_user_id
+         AND probe.ended_at IS NULL) <> 1 THEN
+    RAISE EXCEPTION 'SHARED_WORLD_HISTORY_NOT_AVAILABLE' USING ERRCODE='P0002';
+  END IF;
+  SELECT e.id INTO grantee_episode
+    FROM public.shared_world_membership_episodes e
+   WHERE e.world_id = p_world_id AND e.user_id = p_grantee_user_id AND e.ended_at IS NULL;
+
+  -- CANONICAL LOCK ORDER, STEP 2: the exact selected history items, in
+  -- deterministic UUID identity order. LockRows sits above the sort, so the rows
+  -- really are locked in that order and two packages sharing items cannot
+  -- deadlock against each other.
+  -- QAN-CW-REM-01 / ASSURE-F04: scoped to the World locked above, so this
+  -- transaction cannot hold a row lock inside a World whose World row it does
+  -- not hold. A foreign item now fails the row-count check immediately below
+  -- instead of the containment check immediately after it - and BOTH raise the
+  -- same SHARED_WORLD_HISTORY_NOT_AVAILABLE, so no refusal class changes.
+  PERFORM 1 FROM public.shared_world_history_items i
+    WHERE i.id = ANY(selected) AND i.world_id = p_world_id ORDER BY i.id FOR UPDATE;
+  GET DIAGNOSTICS affected = ROW_COUNT;
+  IF affected <> items THEN
+    RAISE EXCEPTION 'SHARED_WORLD_HISTORY_NOT_AVAILABLE' USING ERRCODE='P0002';
+  END IF;
+
+  -- Every selected item must belong to the exact same World and still be
+  -- AVAILABLE. A deleted or unavailable source is never packaged.
+  IF EXISTS (SELECT 1 FROM public.shared_world_history_items i
+              WHERE i.id = ANY(selected)
+                AND (i.world_id <> p_world_id OR i.availability_state <> 'AVAILABLE')) THEN
+    RAISE EXCEPTION 'SHARED_WORLD_HISTORY_NOT_AVAILABLE' USING ERRCODE='P0002';
+  END IF;
+
+  -- AUTHORITY METADATA IS EXACT, IN BOTH DIRECTIONS, OR IT FAILS CLOSED. An item
+  -- claiming EXACT_HUMAN_APPROVER_SET with no approver is missing metadata, and
+  -- an item claiming NO_HUMAN_APPROVAL_REQUIRED while carrying one is
+  -- contradictory. Neither is ever interpreted as approval-free.
+  IF EXISTS (
+    SELECT 1 FROM public.shared_world_history_items i
+     WHERE i.id = ANY(selected)
+       AND ((i.authority_requirement_mode = 'EXACT_HUMAN_APPROVER_SET'
+             AND NOT EXISTS (SELECT 1 FROM public.shared_world_history_item_required_approvers ra
+                              WHERE ra.history_item_id = i.id))
+         OR (i.authority_requirement_mode = 'NO_HUMAN_APPROVAL_REQUIRED'
+             AND EXISTS (SELECT 1 FROM public.shared_world_history_item_required_approvers ra
+                          WHERE ra.history_item_id = i.id)))
+  ) THEN
+    RAISE EXCEPTION 'SHARED_WORLD_HISTORY_CONTRADICTORY_STATE' USING ERRCODE='P0001';
+  END IF;
+
+  -- THE ONE canonical instant, read from the database clock exactly once.
+  prepare_instant := clock_timestamp();
+
+  BEGIN
+    INSERT INTO public.shared_world_history_package_manifest_versions
+      (id, world_id, grantee_user_id, grantee_membership_episode_id, created_at)
+    VALUES (p_manifest_version_id, p_world_id, p_grantee_user_id, grantee_episode, prepare_instant);
+
+    -- The exact item set, with each item's exact availability revision captured.
+    INSERT INTO public.shared_world_history_package_manifest_items
+      (manifest_version_id, world_id, history_item_id, captured_availability_revision)
+    SELECT p_manifest_version_id, i.world_id, i.id, i.availability_revision
+      FROM public.shared_world_history_items i WHERE i.id = ANY(selected);
+    GET DIAGNOSTICS affected = ROW_COUNT;
+    IF affected <> items THEN
+      RAISE EXCEPTION 'SHARED_WORLD_HISTORY_CONTRADICTORY_STATE' USING ERRCODE='P0001';
+    END IF;
+
+    -- THE DERIVED REQUIRED APPROVER SET: the exact UNION over the included items,
+    -- never a caller-supplied list and never World membership.
+    INSERT INTO public.shared_world_history_package_required_approvers
+      (manifest_version_id, approver_user_id)
+    SELECT DISTINCT p_manifest_version_id, ra.approver_user_id
+      FROM public.shared_world_history_item_required_approvers ra
+     WHERE ra.history_item_id = ANY(selected);
+    GET DIAGNOSTICS approvers = ROW_COUNT;
+  EXCEPTION WHEN unique_violation THEN
+    -- A manifest identity already committed for THIS World would have been
+    -- answered above under the World lock, so the only remaining collision is the
+    -- same identity committed for a DIFFERENT World, which can never be an
+    -- equivalent retry. The whole preparation - manifest, item set and derived
+    -- approver set - rolls back together, so a refused preparation leaves no
+    -- orphan manifest behind.
+    RAISE EXCEPTION 'SHARED_WORLD_HISTORY_ID_CONFLICT' USING ERRCODE='23505';
+  END;
+
+  RETURN QUERY SELECT 'PREPARED'::text, p_manifest_version_id, p_world_id, p_grantee_user_id,
+                      grantee_episode, items, approvers, prepare_instant;
+END$$;
+
+CREATE OR REPLACE FUNCTION public.prepare_public_experience_manifest_v1(
+  p_command_id uuid,
+  p_experience_id uuid,
+  p_manifest_version_id uuid,
+  p_experience_version_id uuid,
+  p_personal_package_item_ids uuid[],
+  p_personal_source_unit_ids uuid[],
+  p_shared_package_item_ids uuid[],
+  p_shared_source_world_ids uuid[],
+  p_shared_source_material_ids uuid[]
+) RETURNS TABLE(outcome text, manifest_version_id uuid, experience_version_id uuid,
+                version_ordinal integer, item_count integer, required_approver_count integer,
+                authority_request_fingerprint text, committed_at timestamptz)
+LANGUAGE plpgsql SECURITY DEFINER VOLATILE SET search_path='' AS $$
+DECLARE
+  u uuid := auth.uid();
+  committed public.publication_package_prepare_commands;
+  experience public.public_experiences;
+  controller public.public_experience_controllers;
+  personal_count integer := coalesce(array_length(p_personal_package_item_ids, 1), 0);
+  shared_count integer := coalesce(array_length(p_shared_package_item_ids, 1), 0);
+  total integer;
+  next_ordinal integer;
+  derived_approvers uuid[];
+  derived_count integer;
+  derived_fingerprint text;
+  request text;
+  instant timestamptz;
+BEGIN
+  IF u IS NULL THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_AUTHENTICATION_REQUIRED' USING ERRCODE='42501';
+  END IF;
+  IF p_command_id IS NULL OR p_experience_id IS NULL OR p_manifest_version_id IS NULL
+     OR p_experience_version_id IS NULL
+     OR p_personal_package_item_ids IS NULL OR p_personal_source_unit_ids IS NULL
+     OR p_shared_package_item_ids IS NULL OR p_shared_source_world_ids IS NULL
+     OR p_shared_source_material_ids IS NULL THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_COMMAND_INVALID' USING ERRCODE='22023';
+  END IF;
+  -- Aligned arrays of equal length, with no NULL element, and a NON-EMPTY package.
+  IF personal_count <> coalesce(array_length(p_personal_source_unit_ids, 1), 0)
+     OR shared_count <> coalesce(array_length(p_shared_source_world_ids, 1), 0)
+     OR shared_count <> coalesce(array_length(p_shared_source_material_ids, 1), 0)
+     OR array_position(p_personal_package_item_ids, NULL) IS NOT NULL
+     OR array_position(p_personal_source_unit_ids, NULL) IS NOT NULL
+     OR array_position(p_shared_package_item_ids, NULL) IS NOT NULL
+     OR array_position(p_shared_source_world_ids, NULL) IS NOT NULL
+     OR array_position(p_shared_source_material_ids, NULL) IS NOT NULL THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_COMMAND_INVALID' USING ERRCODE='22023';
+  END IF;
+  total := personal_count + shared_count;
+  IF total = 0 THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_COMMAND_INVALID' USING ERRCODE='22023';
+  END IF;
+  -- Distinct package item identities, distinct Personal sources and distinct
+  -- Shared sources: an item may appear in a package exactly once.
+  IF (SELECT count(DISTINCT x) FROM unnest(p_personal_package_item_ids || p_shared_package_item_ids) x) <> total
+     OR (SELECT count(DISTINCT x) FROM unnest(p_personal_source_unit_ids) x) <> personal_count
+     OR (SELECT count(*) FROM (SELECT DISTINCT w, m
+           FROM unnest(p_shared_source_world_ids, p_shared_source_material_ids) t(w, m)) d) <> shared_count THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_COMMAND_INVALID' USING ERRCODE='22023';
+  END IF;
+
+  request := 'sha256:' || encode(sha256(convert_to(
+      'QANDEEL_CWV2_PUBLIC_PACKAGE_PREPARE_COMMAND_V1' || E'\n'
+   || 'actor=' || lower(u::text) || E'\n'
+   || 'experience=' || lower(p_experience_id::text) || E'\n'
+   || 'manifest=' || lower(p_manifest_version_id::text) || E'\n'
+   || 'experienceVersion=' || lower(p_experience_version_id::text) || E'\n'
+   || 'personal=' || coalesce((SELECT string_agg(lower(t.pi::text) || '@' || lower(t.su::text), ','
+                                 ORDER BY lower(t.pi::text) COLLATE "C")
+                                 FROM unnest(p_personal_package_item_ids, p_personal_source_unit_ids)
+                                   AS t(pi, su)), '') || E'\n'
+   || 'shared=' || coalesce((SELECT string_agg(lower(t.pi::text) || '@' || lower(t.w::text)
+                                               || ':' || lower(t.m::text), ','
+                               ORDER BY lower(t.pi::text) COLLATE "C")
+                               FROM unnest(p_shared_package_item_ids, p_shared_source_world_ids,
+                                           p_shared_source_material_ids) AS t(pi, w, m)), ''), 'UTF8')), 'hex');
+
+  -- DURABLE IDEMPOTENCY, FIRST PASS.
+  SELECT * INTO committed FROM public.publication_package_prepare_commands c WHERE c.id = p_command_id;
+  IF FOUND THEN
+    IF committed.request_ref <> request THEN
+      RAISE EXCEPTION 'PUBLIC_EXPERIENCE_COMMAND_ID_CONFLICT' USING ERRCODE='23505';
+    END IF;
+    RETURN QUERY SELECT 'ALREADY_COMMITTED'::text, committed.manifest_version_id,
+                        committed.experience_version_id,
+                        (SELECT v.version_ordinal FROM public.public_experience_versions v
+                          WHERE v.id = committed.experience_version_id),
+                        committed.item_count, committed.required_approver_count,
+                        committed.authority_request_fingerprint, committed.committed_at;
+    RETURN;
+  END IF;
+
+  -- CANONICAL LOCK ORDER, STEP 1: the ONE Public World.
+  PERFORM 1 FROM public.public_world_state w WHERE w.singleton FOR UPDATE;
+  -- CANONICAL LOCK ORDER, STEP 2: the exact Experience.
+  SELECT * INTO experience FROM public.public_experiences e WHERE e.id = p_experience_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_NOT_AVAILABLE' USING ERRCODE='P0002';
+  END IF;
+
+  SELECT * INTO committed FROM public.publication_package_prepare_commands c WHERE c.id = p_command_id;
+  IF FOUND THEN
+    IF committed.request_ref <> request THEN
+      RAISE EXCEPTION 'PUBLIC_EXPERIENCE_COMMAND_ID_CONFLICT' USING ERRCODE='23505';
+    END IF;
+    RETURN QUERY SELECT 'ALREADY_COMMITTED'::text, committed.manifest_version_id,
+                        committed.experience_version_id,
+                        (SELECT v.version_ordinal FROM public.public_experience_versions v
+                          WHERE v.id = committed.experience_version_id),
+                        committed.item_count, committed.required_approver_count,
+                        committed.authority_request_fingerprint, committed.committed_at;
+    RETURN;
+  END IF;
+
+  -- THE EXACT CONTROLLER, and nobody else. A content rightsholder does not gain
+  -- this, and there is no controller parameter.
+  SELECT * INTO controller FROM public.public_experience_controllers c
+   WHERE c.experience_id = p_experience_id AND c.controller_user_id = u;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_NOT_AUTHORIZED' USING ERRCODE='42501';
+  END IF;
+  -- I-05A prepares packages for a DRAFT Experience only. It owns no transition
+  -- back out of READY_FOR_REVIEW and no public lifecycle at all.
+  IF experience.current_lifecycle <> 'DRAFT' THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_LIFECYCLE_INVALID' USING ERRCODE='55000';
+  END IF;
+
+  -- CANONICAL LOCK ORDER, STEP 4: the exact source rows, in the SAME relative
+  -- order every I-04 consequential mutation uses - the Shared World row, then
+  -- materials by id, then history items by id. SHARE locks throughout: Public
+  -- reads Shared truth and never writes it.
+  --
+  -- The Shared World row is the synchronization point source-view authority
+  -- needs. Every I-04 mutation that can change what this human may see - leave,
+  -- removal, rejoin, a history grant, closure, owner deletion - takes
+  -- `shared_worlds FOR UPDATE` FIRST, so a SHARE lock here means the visibility
+  -- answer resolved below cannot go stale before the body is copied. Taking it
+  -- creates no cycle: I-04 never takes a Public lock, and Public acquires the
+  -- three Shared relations in I-04's own order.
+  PERFORM 1 FROM public.shared_worlds w
+    WHERE w.id = ANY(p_shared_source_world_ids) ORDER BY w.id FOR SHARE;
+  -- QAN-CW-REM-01 / ASSURE-F04, the PRIMARY site: these are the only
+  -- (World, material) arrays a human's publication request supplies directly,
+  -- and locking a material by id ALONE let a mismatched request hold a row lock
+  -- inside a World whose row the statement above never took. That is the whole
+  -- of the cycle this slice's verifier reproduced against owner deletion on real
+  -- PostgreSQL. The predicate below makes the claim at the top of this comment
+  -- block - "Public acquires the three Shared relations in I-04's own order,
+  -- under the World row it holds" - true instead of merely intended.
+  --
+  -- A mismatched request is still refused by the exact containment check below,
+  -- with the exact same PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE class: what
+  -- changes is only that it no longer takes a foreign lock on the way there.
+  PERFORM 1 FROM public.shared_world_materials m
+    WHERE m.id = ANY(p_shared_source_material_ids)
+      AND m.world_id = ANY(p_shared_source_world_ids) ORDER BY m.id FOR SHARE;
+  PERFORM 1 FROM public.shared_world_history_items i
+    WHERE i.id IN (SELECT m.history_item_id FROM public.shared_world_materials m
+                    WHERE m.id = ANY(p_shared_source_material_ids)
+                      AND m.world_id = ANY(p_shared_source_world_ids))
+      AND i.world_id = ANY(p_shared_source_world_ids)
+    ORDER BY i.id FOR SHARE;
+  PERFORM 1 FROM public.conversation_units cu
+    WHERE cu.id = ANY(p_personal_source_unit_ids) ORDER BY cu.id FOR SHARE;
+
+  -- ===================== THE PERSONAL SOURCE ADAPTER =====================
+  -- Every named unit exists.
+  IF EXISTS (SELECT 1 FROM unnest(p_personal_source_unit_ids) s(id)
+              WHERE NOT EXISTS (SELECT 1 FROM public.conversation_units cu WHERE cu.id = s.id)) THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE' USING ERRCODE='P0002';
+  END IF;
+  -- The actor owns it exactly. Another human cannot prepare it.
+  IF EXISTS (SELECT 1 FROM public.conversation_units cu
+              WHERE cu.id = ANY(p_personal_source_unit_ids) AND cu.user_id <> u) THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_NOT_AUTHORIZED' USING ERRCODE='42501';
+  END IF;
+  -- PERSONAL QANDEEL ANALYSIS FAILS CLOSED. The exact protected-human authority
+  -- requirement is not resolvable from current reviewed repository truth, and
+  -- unresolved never means approval-free.
+  IF EXISTS (SELECT 1 FROM public.conversation_units cu
+              WHERE cu.id = ANY(p_personal_source_unit_ids) AND cu.source_role <> 'USER') THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_SOURCE_AUTHORITY_UNRESOLVED' USING ERRCODE='55000';
+  END IF;
+
+  -- ====================== THE SHARED SOURCE ADAPTER ======================
+  -- Every named material exists in the exact named World.
+  IF EXISTS (
+    SELECT 1 FROM unnest(p_shared_source_world_ids, p_shared_source_material_ids) t(w, m)
+     WHERE NOT EXISTS (SELECT 1 FROM public.shared_world_materials sm
+                        WHERE sm.id = t.m AND sm.world_id = t.w)
+  ) THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE' USING ERRCODE='P0002';
+  END IF;
+
+  -- ============ SOURCE-ACCESS AUTHORITY, BEFORE ANY BODY IS READ ============
+  --
+  -- Content publication authority is NOT source-access authority. A rightsholder
+  -- approving the widening of THEIR material says nothing about whether the human
+  -- assembling the package was ever entitled to SEE it. Without this check, a
+  -- controller who merely knew valid Shared identifiers could make this
+  -- SECURITY DEFINER path copy hidden bytes into their own DRAFT and then read
+  -- them back through the controller review boundary - before any rightsholder
+  -- approval, and before any audience expansion existed to be refused.
+  --
+  -- The entitlement question belongs to I-04F and is NOT re-implemented here.
+  -- This consumes the canonical entry point,
+  -- `resolve_shared_world_history_visibility_v1(world, human)`, which already
+  -- owns the whole meaning: the ACTIVE union of membership-period visibility and
+  -- explicit history grants, the READ_ONLY_CLOSED delegation to the exact frozen
+  -- closure entitlement, the requirement of an open episode, availability
+  -- dominating every basis, and a truthful EMPTY answer rather than a
+  -- distinguishable error for a human with no standing - so it is not a
+  -- membership oracle and neither is this.
+  --
+  -- A former member keeps material authority to APPROVE their own included
+  -- material (proven separately below). That is a different right from browsing,
+  -- and this check is what keeps preparation from becoming the backdoor.
+  --
+  -- The denial class is deliberately the SAME one a nonexistent material gets, so
+  -- a caller cannot learn from the error whether a hidden source id exists. It is
+  -- also evaluated BEFORE the kind, availability and authority checks below, so
+  -- none of those can answer that question either.
+  IF EXISTS (
+    SELECT 1 FROM public.shared_world_materials sm
+     WHERE sm.id = ANY(p_shared_source_material_ids)
+       AND NOT EXISTS (
+         SELECT 1 FROM public.resolve_shared_world_history_visibility_v1(sm.world_id, u) v
+          WHERE v.history_item_id = sm.history_item_id)
+  ) THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE' USING ERRCODE='P0002';
+  END IF;
+
+  -- Only a kind that has a PUBLIC body form may be included. HUMAN_VOICE_NOTE
+  -- has no reviewed public media boundary; EXPLICIT_DISCLOSURE and
+  -- WORLD_EVENT_DERIVED_MATERIAL have no producer at all.
+  IF EXISTS (
+    SELECT 1 FROM public.shared_world_materials sm
+     WHERE sm.id = ANY(p_shared_source_material_ids)
+       AND sm.material_kind NOT IN ('HUMAN_TEXT', 'QANDEEL_OUTPUT', 'QANDEEL_ANALYSIS')
+  ) THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_SOURCE_KIND_RESERVED' USING ERRCODE='0A000';
+  END IF;
+  -- The source must be currently available, and its body must still exist.
+  IF EXISTS (
+    SELECT 1 FROM public.shared_world_materials sm
+      JOIN public.shared_world_history_items i ON i.id = sm.history_item_id
+     WHERE sm.id = ANY(p_shared_source_material_ids) AND i.availability_state <> 'AVAILABLE'
+  ) OR EXISTS (
+    SELECT 1 FROM public.shared_world_materials sm
+     WHERE sm.id = ANY(p_shared_source_material_ids)
+       AND NOT EXISTS (SELECT 1 FROM public.shared_world_text_material_bodies b
+                        WHERE b.material_id = sm.id)
+  ) THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE' USING ERRCODE='P0002';
+  END IF;
+  -- UNRESOLVED ADDITIONAL HUMAN AUTHORITY FAILS CLOSED FOR PACKAGE INCLUSION,
+  -- and so does the absence of any source-side authority metadata.
+  IF EXISTS (
+    SELECT 1 FROM public.shared_world_materials sm
+     WHERE sm.id = ANY(p_shared_source_material_ids)
+       AND NOT EXISTS (SELECT 1 FROM public.shared_world_material_historical_authority ha
+                        WHERE ha.material_id = sm.id
+                          AND ha.resolution_state IN ('RESOLVED_EXACT_HUMAN_REQUIREMENT',
+                                                      'RESOLVED_NO_HUMAN_REQUIREMENT'))
+  ) THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_SOURCE_AUTHORITY_UNRESOLVED' USING ERRCODE='55000';
+  END IF;
+
+  -- THE NEXT VERSION ORDINAL of this exact Experience, under its own lock.
+  SELECT coalesce(max(v.version_ordinal), 0) + 1 INTO next_ordinal
+    FROM public.public_experience_versions v WHERE v.experience_id = p_experience_id;
+
+  -- ONE DATABASE-OWNED INSTANT for every authoritative fact of this preparation.
+  instant := clock_timestamp();
+
+  BEGIN
+    INSERT INTO public.publication_package_manifest_versions
+      (id, experience_id, public_world_singleton, publisher_public_identity_ref, publisher_user_id,
+       intended_publication_action, target_audience_class, authority_readiness,
+       prepared_authority_snapshot_version, item_count, created_at)
+    SELECT p_manifest_version_id, p_experience_id, true, controller.controller_public_identity_ref, u,
+           'PUBLISH_TO_PUBLIC_WORLD', 'PUBLIC_WORLD_AUDIENCE', 'PRIVACY_OWNERSHIP_AUTHORITY_ONLY',
+           w.state_version, total, instant
+      FROM public.public_world_state w WHERE w.singleton;
+  EXCEPTION WHEN unique_violation THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_COMMAND_ID_CONFLICT' USING ERRCODE='23505';
+  END;
+
+  -- THE ITEMS, THEIR PUBLIC BODIES, THEIR SEALED PROVENANCE AND THEIR PER-ITEM
+  -- AUTHORITY, all from the ONE item resolution over the exact locked source.
+  INSERT INTO public.publication_package_manifest_items
+    (manifest_version_id, experience_id, package_item_id, item_ordinal,
+     derivative_classification, public_body_form, public_body_digest)
+  SELECT p_manifest_version_id, p_experience_id, r.package_item_id, r.item_ordinal,
+         r.derivative_classification, 'PUBLIC_TEXT', r.public_body_digest
+    FROM public.resolve_public_package_items_v1(
+           p_personal_package_item_ids, p_personal_source_unit_ids, p_shared_package_item_ids,
+           p_shared_source_world_ids, p_shared_source_material_ids) r;
+
+  INSERT INTO public.public_experience_text_derivative_bodies
+    (package_item_id, public_body_form, public_text_body)
+  SELECT r.package_item_id, 'PUBLIC_TEXT', r.public_text_body
+    FROM public.resolve_public_package_items_v1(
+           p_personal_package_item_ids, p_personal_source_unit_ids, p_shared_package_item_ids,
+           p_shared_source_world_ids, p_shared_source_material_ids) r;
+
+  INSERT INTO public.publication_package_item_provenance
+    (package_item_id, manifest_version_id, source_class, personal_conversation_unit_id,
+     personal_owner_user_id, shared_world_id, shared_material_id, shared_history_item_id,
+     captured_availability_state, captured_availability_revision, captured_source_digest)
+  SELECT r.package_item_id, p_manifest_version_id, r.source_class, r.personal_conversation_unit_id,
+         r.personal_owner_user_id, r.shared_world_id, r.shared_material_id, r.shared_history_item_id,
+         'AVAILABLE', r.captured_availability_revision, r.public_body_digest
+    FROM public.resolve_public_package_items_v1(
+           p_personal_package_item_ids, p_personal_source_unit_ids, p_shared_package_item_ids,
+           p_shared_source_world_ids, p_shared_source_material_ids) r;
+
+  INSERT INTO public.publication_package_item_authority
+    (package_item_id, manifest_version_id, resolution_state, required_approver_count)
+  SELECT r.package_item_id, p_manifest_version_id,
+         CASE WHEN r.item_required_approver_count > 0
+              THEN 'RESOLVED_EXACT_HUMAN_REQUIREMENT' ELSE 'RESOLVED_NO_HUMAN_REQUIREMENT' END,
+         r.item_required_approver_count
+    FROM public.resolve_public_package_items_v1(
+           p_personal_package_item_ids, p_personal_source_unit_ids, p_shared_package_item_ids,
+           p_shared_source_world_ids, p_shared_source_material_ids) r;
+
+  -- THE PROSPECTIVE EXPERIENCE VERSION, bijective with this exact manifest.
+  BEGIN
+    INSERT INTO public.public_experience_versions
+      (id, experience_id, package_manifest_version_id, version_ordinal, created_at)
+    VALUES (p_experience_version_id, p_experience_id, p_manifest_version_id, next_ordinal, instant);
+  EXCEPTION WHEN unique_violation THEN
+    RAISE EXCEPTION 'PUBLIC_EXPERIENCE_COMMAND_ID_CONFLICT' USING ERRCODE='23505';
+  END;
+
+  -- THE DERIVED CONTENT RIGHTSHOLDER SET AND THE AUTHORITY REQUEST FINGERPRINT,
+  -- from the ONE derivation, over the rows just written. The three results are
+  -- read into explicitly typed scalars rather than a record, so every expression
+  -- built from them has a type the planner knows without inferring one.
+  SELECT d.required_approvers, d.required_approver_count, d.authority_fingerprint
+    INTO derived_approvers, derived_count, derived_fingerprint
+    FROM public.derive_public_publication_authority_v1(p_manifest_version_id) d;
+
+  INSERT INTO public.publication_manifest_required_approvers (manifest_version_id, approver_user_id)
+  SELECT p_manifest_version_id, a.approver FROM unnest(derived_approvers) AS a(approver);
+
+  -- The Experience moves forward one revision and points at the new prospective
+  -- version. Its lifecycle does NOT change: preparing a package is not a
+  -- lifecycle transition and widens no audience.
+  UPDATE public.public_experiences e
+     SET current_experience_version_id = p_experience_version_id,
+         experience_revision = e.experience_revision + 1
+   WHERE e.id = p_experience_id;
+
+  INSERT INTO public.publication_package_prepare_commands
+    (id, experience_id, manifest_version_id, experience_version_id, actor_user_id, command_action,
+     item_count, required_approver_count, authority_request_fingerprint, request_ref, committed_at)
+  VALUES (p_command_id, p_experience_id, p_manifest_version_id, p_experience_version_id, u,
+          'PREPARE_PUBLICATION', total, derived_count, derived_fingerprint, request, instant);
+
+  RETURN QUERY SELECT 'PACKAGE_PREPARED'::text, p_manifest_version_id, p_experience_version_id,
+                      next_ordinal, total, derived_count, derived_fingerprint, instant;
 END$$;
 
 -- ---------------------------------------------------------------------------
@@ -1347,6 +1935,39 @@ BEGIN
   END IF;
   IF body ~* 'DELETE FROM' OR body ~* 'pg_advisory|LOCK TABLE' THEN
     RAISE EXCEPTION 'QAN-CW-REM-01: % destroys nothing and takes only canonical row locks', qandeel_fn;
+  END IF;
+
+  -- =========================================================================
+  -- ASSURE-F04: NO STATEMENT LOCKS A ROW IN A WORLD IT DOES NOT HOLD.
+  --
+  -- The finding was provisional and is REPRODUCED on real PostgreSQL by this
+  -- slice's verifier, which is what authorizes the correction below. It is one
+  -- scoping predicate per statement: a globally unique row identity is never
+  -- locked without also pinning the World the transaction already knows.
+  -- =========================================================================
+  IF body !~ 'WHERE m\.id = ANY\(sources\) AND m\.world_id = p_world_id ORDER BY m\.id FOR UPDATE' THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: the QANDEEL producer must lock its sources only inside the World it locked first';
+  END IF;
+  IF strpos(body, 'WHERE m.id = ANY(sources) AND m.world_id <> p_world_id')
+     > strpos(body, 'WHERE m.id = ANY(sources) AND m.world_id = p_world_id ORDER BY m.id FOR UPDATE')
+     OR strpos(body, 'WHERE m.id = ANY(sources) AND m.world_id <> p_world_id') = 0 THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: World containment must be decided BEFORE the source lock, so the refusal class is unchanged';
+  END IF;
+  SELECT pr.prosrc INTO body FROM pg_proc pr
+   WHERE pr.oid = 'public.prepare_shared_world_history_package_v1(uuid, uuid, uuid, uuid[])'::regprocedure;
+  IF body !~ 'WHERE i\.id = ANY\(selected\) AND i\.world_id = p_world_id ORDER BY i\.id FOR UPDATE' THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: history package preparation must lock items only inside the World it locked first';
+  END IF;
+  SELECT pr.prosrc INTO body FROM pg_proc pr
+   WHERE pr.oid = 'public.prepare_public_experience_manifest_v1(uuid, uuid, uuid, uuid, uuid[], uuid[], uuid[], uuid[], uuid[])'::regprocedure;
+  IF body !~ 'AND m\.world_id = ANY\(p_shared_source_world_ids\) ORDER BY m\.id FOR SHARE'
+     OR body !~ 'AND i\.world_id = ANY\(p_shared_source_world_ids\)' THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: Public package preparation must lock Shared rows only inside the Worlds it named and locked';
+  END IF;
+  -- `\s*` rather than an explicit newline: a needle that spells its own line
+  -- break stops matching the moment a checkout uses different line endings.
+  IF body !~ 'FROM public\.shared_worlds w\s*WHERE w\.id = ANY\(p_shared_source_world_ids\) ORDER BY w\.id FOR SHARE' THEN
+    RAISE EXCEPTION 'QAN-CW-REM-01: and it must still take those World rows FIRST';
   END IF;
 
   -- =========================================================================

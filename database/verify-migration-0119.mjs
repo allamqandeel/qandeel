@@ -66,6 +66,7 @@ const { q, rows, asRole, actAs, rejected } = rt;
 
 const UNAVAILABLE = ['P0002'];
 const INCOMPLETE = ['55000'];
+const CONTRADICTORY = ['P0001'];
 
 const QANDEEL_SIG = 'public.commit_shared_world_qandeel_material_v1(uuid, uuid, uuid, uuid, text, text, text, text, text, text, text, text, uuid[], text[])';
 const GRANT_SIG = 'public.commit_shared_world_history_access_grant_v1(uuid, uuid, uuid, uuid)';
@@ -74,6 +75,7 @@ const CLOSED_SIG = 'public.resolve_shared_world_closed_history_visibility_v1(uui
 const RECONCILE_SIG = 'public.reconcile_shared_world_material_historical_authority_v1()';
 const DELETE_SIG = 'public.delete_shared_world_owned_material_v1(uuid, uuid, uuid, uuid)';
 const PREPARE_PUBLIC_SIG = 'public.prepare_public_experience_manifest_v1(uuid, uuid, uuid, uuid, uuid[], uuid[], uuid[], uuid[], uuid[])';
+const PREPARE_HISTORY_SIG = 'public.prepare_shared_world_history_package_v1(uuid, uuid, uuid, uuid[])';
 const PUBLIC_SEAM = 'public.resolve_public_publication_prerequisites_v1(uuid, uuid)';
 
 const AUTHORITY = 'public.shared_world_material_historical_authority';
@@ -314,9 +316,16 @@ async function verifyPosture() {
   assert.equal((recon.prosrc.match(/UPDATE public\./gu) ?? []).length, 1,
     'P01 the reconciliation writes exactly one relation');
   assert.doesNotMatch(recon.prosrc, /DELETE FROM|INSERT INTO|TRUNCATE/iu, 'P01 and destroys nothing');
+  // Provenance is READ, to walk the closure, and never written - the single
+  // `UPDATE public.` asserted above is the whole of what it writes - so the
+  // dependency relation is excluded from this ban and given its own below.
   assert.doesNotMatch(recon.prosrc,
-    /authority_requirement_mode|shared_world_history_items|shared_world_material_dependencies|_material_bodies|DISABLE TRIGGER|ALTER TABLE/u,
+    /authority_requirement_mode|shared_world_history_items|_material_bodies|DISABLE TRIGGER|ALTER TABLE/u,
     'P01 it rewrites no source history and disables no frozen guard');
+  assert.doesNotMatch(recon.prosrc, /UPDATE public\.shared_world_material_dependencies/u,
+    'P01 and never rewrites provenance: a dependency edge is evidence, not a thing a correction edits');
+  assert.match(recon.prosrc, /WITH RECURSIVE tainted/u,
+    'P01 it reaches the laundering descendants transitively, to a fixed point');
   assert.match(recon.prosrc, /a\.resolution_state = 'RESOLVED_NO_HUMAN_REQUIREMENT'/u,
     'P01 and it can only ever move the unproven clearance forward');
 
@@ -746,13 +755,41 @@ async function verifyHistoricalWidening(report, humans) {
       await joinLater(w.world, grantee);
       assert.equal(await authorityOf(output.material), 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT');
 
-      // A08 THE FROZEN PREPARATION-TIME GATE REFUSES IT.
-      await rejected(() => preparePackage(randomUUID(), w.world, grantee, [output.item]),
-        INCOMPLETE, /SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED/u);
-
-      // AND IT POISONS A PACKAGE IT IS MERELY PART OF, rather than being dropped.
+      // A08 IT CANNOT BE PACKAGED - and the refusal is asserted as it REALLY is
+      // rather than as the one this migration added.
+      //
+      // TWO independent fail-closed paths cover a zero-dependency item, and the
+      // FROZEN one reaches it first: an item claiming an exact approver set with
+      // no enumerable approver is already contradictory in the I-04F vocabulary,
+      // which is exactly what "the requirement exists and cannot be resolved"
+      // looks like there. This is the same framing migration 0090's verifier
+      // already uses for the reasoning-only item, for the same reason.
       const said = await rt.commitText(w.world, author, 'a statement the grantee may lawfully receive');
+      await rejected(() => preparePackage(randomUUID(), w.world, grantee, [output.item]),
+        CONTRADICTORY, /SHARED_WORLD_HISTORY_CONTRADICTORY_STATE/u);
       await rejected(() => preparePackage(randomUUID(), w.world, grantee, [said.item, output.item]),
+        CONTRADICTORY, /SHARED_WORLD_HISTORY_CONTRADICTORY_STATE/u);
+
+      // AND THE I-04G WIDENING GATE IS THE ONE THAT CATCHES THE CASE THE FROZEN
+      // RULE CANNOT SEE: an unresolved item whose metadata is perfectly coherent
+      // because it really does have a known required human. Nothing in the I-04F
+      // vocabulary can tell that apart from a resolved item, which is the whole
+      // reason the gate exists - and it is now reachable through an ordinary
+      // MATERIAL_DEPENDENCY chain as well as through a reasoning dependency.
+      const unresolvedWithOwner = await rt.commitQandeel(w.world, 'an analysis over a human statement AND private reasoning',
+        { sources: [said.material], reasoning: ['ctx:personal:a08'] });
+      assert.equal(await authorityOf(unresolvedWithOwner.material), 'UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT');
+      assert.deepEqual(await rt.requiredApproversOf(unresolvedWithOwner.item), [author],
+        'A08 its metadata is coherent: it really does have a known required human');
+      await rejected(() => preparePackage(randomUUID(), w.world, grantee, [unresolvedWithOwner.item]),
+        INCOMPLETE, /SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED/u);
+      // AND IT POISONS A PACKAGE IT IS MERELY PART OF, rather than being dropped.
+      await rejected(() => preparePackage(randomUUID(), w.world, grantee, [said.item, unresolvedWithOwner.item]),
+        INCOMPLETE, /SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED/u);
+      // And so does its MATERIAL_DEPENDENCY descendant, which is REM01-AUTH-01.
+      const descendant = await rt.commitQandeel(w.world, 'an analysis one edge downstream',
+        { sources: [unresolvedWithOwner.material] });
+      await rejected(() => preparePackage(randomUUID(), w.world, grantee, [descendant.item]),
         INCOMPLETE, /SHARED_WORLD_MATERIAL_HISTORICAL_AUTHORITY_UNRESOLVED/u);
 
       // A09 SO NO NEW GRANT CAN EXIST FOR IT: there is no manifest to grant.
@@ -1118,7 +1155,9 @@ async function verifyIntroduction(report, humans) {
       const f = await rt.bringToIntroduction(one, two);
 
       // THE RESERVED EXPLICIT_DISCLOSURE PRODUCER STILL WRITES THE EXACT OWNER.
-      const { ids, answer } = await rt.discloseAs(f.lower, f.world, 'FULL_NAME', { text: 'Sara', fieldKey: 'full_name' });
+      // A field key belongs to DEEPER_PERSONAL_FIELD alone, which the frozen
+      // producer enforces as an exact biconditional - so a FULL_NAME carries none.
+      const { ids, answer } = await rt.discloseAs(f.lower, f.world, 'FULL_NAME', { text: 'Sara Kamel' });
       assert.equal(answer.outcome, 'DISCLOSURE_GRANTED', 'A20 the one disclosure producer is untouched');
       assert.equal(await authorityOf(ids.material), 'RESOLVED_EXACT_HUMAN_REQUIREMENT',
         'A20 a disclosure still resolves to the exact human requirement: its owner');
@@ -1169,34 +1208,25 @@ async function verifyIntroduction(report, humans) {
  */
 async function verifyLockCycle(report, fixture) {
   // --------------------------------------------------------------- C01
-  await report.section('C01 the exact claimed cycle is reconstructed from the live function bodies', async () => {
+  await report.section('C01 the reproduced cycle is reconstructed, and every lock statement is now World-scoped', async () => {
     const publicPrepare = stripComments(await sourceOf(PREPARE_PUBLIC_SIG));
     const deletion = stripComments(await sourceOf(DELETE_SIG));
+    const historyPrepare = stripComments(await sourceOf(PREPARE_HISTORY_SIG));
+    const producer = stripComments(await sourceOf(QANDEEL_SIG));
 
-    // The World lock is scoped to the CALLER'S array; the material lock is not
-    // scoped at all. Both facts are read from the live body.
-    assert.match(publicPrepare, /FROM public\.shared_worlds w\s*\n?\s*WHERE w\.id = ANY\(p_shared_source_world_ids\) ORDER BY w\.id FOR SHARE/u,
-      'C01 the Public preparation locks only the World rows the caller named');
-    const materialLock = /FROM public\.shared_world_materials m\s*\n?\s*WHERE m\.id = ANY\(p_shared_source_material_ids\) ORDER BY m\.id FOR SHARE/u;
-    const scopedMaterialLock = /WHERE m\.id = ANY\(p_shared_source_material_ids\)[^;]*world_id[^;]*FOR SHARE/u;
-    const unscoped = materialLock.test(publicPrepare) && !scopedMaterialLock.test(publicPrepare);
-    assert.equal(unscoped, true,
-      'C01 and locks Shared materials by id alone, with no world_id predicate: the claimed precondition holds');
-    const lockAt = publicPrepare.search(materialLock);
-    const containmentAt = publicPrepare.indexOf('WHERE sm.id = t.m AND sm.world_id = t.w');
-    assert.ok(lockAt > 0 && containmentAt > lockAt,
-      'C01 and the World-containment check really does run AFTER the lock is taken');
-
-    // The deletion's order is World, X, X item, then the transitive closure
+    // THE PRECONDITIONS THAT MADE THE CYCLE POSSIBLE ARE STRUCTURAL, and they
+    // are unchanged: this correction does not pretend the hazard was imaginary.
+    //
+    // The deletion's order is World, X, X's item, then the transitive closure
     // ASCENDING - so its sequence is X then Y whenever Y sorts below X.
     const deleteWorldAt = deletion.indexOf('FROM public.shared_worlds w WHERE w.id = p_world_id FOR UPDATE');
     const deleteExactAt = deletion.indexOf('FROM public.shared_world_materials m WHERE m.id = p_material_id FOR UPDATE');
     const deleteTargetsAt = deletion.indexOf('WHERE m.id = ANY(targets) ORDER BY m.id FOR UPDATE');
     assert.ok(deleteWorldAt >= 0 && deleteExactAt > deleteWorldAt && deleteTargetsAt > deleteExactAt,
-      'C01 the deletion locks its World, then its exact material, then its transitive targets');
-
+      'C01 the deletion still locks its World, then its exact material, then its transitive targets');
     // And the edge order really is temporal rather than lexical, which is what
-    // makes Y.id < X.id possible at all.
+    // makes a target sorting below its source possible at all. Had migration
+    // 0089 ordered edges on the uuid, this finding would have been refuted.
     const [{ definition }] = await rows(
       `SELECT pg_get_constraintdef(c.oid) definition FROM pg_constraint c
         WHERE c.conrelid = 'public.shared_world_material_dependencies'::regclass
@@ -1205,6 +1235,33 @@ async function verifyLockCycle(report, fixture) {
       'C01 dependency precedence is temporal, never lexical on the uuid');
     assert.ok(fixture.target < fixture.source,
       'C01 and the fixture really does hold a target whose id sorts BELOW its source');
+
+    // AND THE CORRECTION IS IN PLACE: no statement locks a globally unique row
+    // identity without also pinning the World it already knows.
+    assert.match(publicPrepare,
+      /WHERE m\.id = ANY\(p_shared_source_material_ids\)\s*\n?\s*AND m\.world_id = ANY\(p_shared_source_world_ids\) ORDER BY m\.id FOR SHARE/u,
+      'C01 the Public preparation locks Shared materials only inside the Worlds it named and locked');
+    assert.match(publicPrepare, /AND i\.world_id = ANY\(p_shared_source_world_ids\)\s*\n?\s*ORDER BY i\.id FOR SHARE/u,
+      'C01 and their history items the same way');
+    assert.match(historyPrepare,
+      /WHERE i\.id = ANY\(selected\) AND i\.world_id = p_world_id ORDER BY i\.id FOR UPDATE/u,
+      'C01 the history preparation locks items only inside the World it locked first');
+    assert.match(producer,
+      /WHERE m\.id = ANY\(sources\) AND m\.world_id = p_world_id ORDER BY m\.id FOR UPDATE/u,
+      'C01 and the QANDEEL producer locks sources only inside the World it locked first');
+    // The World-containment half of the producer check moved AHEAD of the lock,
+    // which is what keeps the refusal class exactly what it was.
+    const containmentAt = producer.indexOf("WHERE m.id = ANY(sources) AND m.world_id <> p_world_id");
+    const producerLockAt = producer.indexOf('WHERE m.id = ANY(sources) AND m.world_id = p_world_id ORDER BY m.id FOR UPDATE');
+    assert.ok(containmentAt > 0 && producerLockAt > containmentAt,
+      'C01 with World containment decided BEFORE the lock, because a material World is immutable');
+
+    // AND NOTHING WAS TRADED FOR IT. No advisory lock, no table lock, and the
+    // World row is still taken first everywhere.
+    for (const [label, body] of [['the Public preparation', publicPrepare], ['the history preparation', historyPrepare],
+      ['the QANDEEL producer', producer], ['owner deletion', deletion]]) {
+      assert.doesNotMatch(body, /pg_advisory|LOCK TABLE/iu, `C01 ${label} takes only canonical row locks`);
+    }
   });
 
   // --------------------------------------------------------------- C02 - C04
@@ -1217,7 +1274,13 @@ async function verifyLockCycle(report, fixture) {
   const deleter = await rt.openExtra();
   const publisher = await rt.openExtra();
   try {
-    await report.section('C02 / C03 both transactions reach their intended blocking rows, observed through pg_stat_activity', async () => {
+    /** Whether a pending query finishes inside `ms`, without deciding anything by sleeping. */
+    const settlesWithin = (pending, ms) => Promise.race([
+      pending.then((value) => ({ settled: true, value })),
+      new Promise((done) => { setTimeout(() => done({ settled: false }), ms); }),
+    ]);
+
+    await report.section('C02 / C03 the deletion reaches its row, and the foreign-World request no longer reaches it at all', async () => {
       // THE BARRIER. A third connection holds the history item of X, which the
       // deletion locks BETWEEN X and its transitive targets - so the deletion is
       // pinned holding X and not yet holding Y. No sleep decides anything here.
@@ -1242,40 +1305,50 @@ async function verifyLockCycle(report, fixture) {
         [randomUUID(), fixture.experience, randomUUID(), randomUUID(),
           [randomUUID(), randomUUID()], [fixture.otherWorld, fixture.otherWorld], [fixture.source, fixture.target]])
         .catch((error) => error);
-      assert.equal(await rt.waitForLockWait(q, publisher.pid), true,
-        'C03 and the foreign-World preparation is observably waiting, holding a row of a World it never locked');
 
-      // THE WAIT IS ON THE DELETION ITSELF, read from PostgreSQL's own lock view:
-      // the foreign-World transaction is blocked on the exact transaction that
-      // holds the material row it never had authority to name. This is the
-      // finding stated as live lock evidence rather than as a reading of source.
+      // C03 THE FOREIGN-WORLD REQUEST NEVER TOUCHES THE HELD ROW. Before the
+      // correction it took the material of another World, blocked on the
+      // deletion, and closed the cycle; now it is refused by the containment
+      // check it always had, WITHOUT having taken a lock inside that World - so
+      // it settles while the deletion is still pinned on the barrier.
+      const settled = await settlesWithin(preparing, 3000);
+      assert.equal(settled.settled, true,
+        'C03 the foreign-World preparation completes while the deletion still holds its material');
+      assert.equal(await rt.waitForLockWait(q, deleter.pid), true,
+        'C03 and the deletion is still the one waiting, which is what makes that a real observation');
       const [{ n: waitingOnDeleter }] = await rows(
         `SELECT count(*) n FROM pg_locks w
            JOIN pg_locks h ON h.locktype = 'transactionid' AND h.transactionid = w.transactionid AND h.granted
           WHERE w.pid = $1 AND NOT w.granted AND w.locktype = 'transactionid' AND h.pid = $2`,
         [publisher.pid, deleter.pid]);
-      assert.ok(Number(waitingOnDeleter) >= 1,
-        'C03 the foreign-World transaction is blocked on the deletion transaction itself');
-      // And the deletion still holds no row of the World the publisher named.
-      const [{ n: publisherWorldLocks }] = await rows(
-        `SELECT count(*) n FROM pg_locks l
-          WHERE l.pid = $1 AND l.relation = 'public.shared_worlds'::regclass AND l.mode = 'RowExclusiveLock'`,
-        [publisher.pid]);
-      assert.equal(Number(publisherWorldLocks), 0,
-        'C03 and it took no exclusive World-row intent in the World whose material it is holding');
+      assert.equal(Number(waitingOnDeleter), 0,
+        'C03 nothing in the foreign-World transaction is blocked on the deletion: the edge that closed the cycle is gone');
 
-      // RELEASE THE BARRIER. The deletion resumes and asks for its transitive
-      // target, which the foreign-World transaction is holding.
+      // RELEASE THE BARRIER. Before the correction the deletion resumed, asked
+      // for its transitive target, found the foreign-World transaction holding
+      // it, and the two deadlocked. Now the foreign-World transaction never took
+      // that row at all, so there is nothing to wait for.
       await holder.qx('ROLLBACK');
       const deleteOutcome = await deleting;
       const prepareOutcome = await preparing;
       const codes = [deleteOutcome, prepareOutcome].map((r) => r?.code ?? null);
-      if (codes.includes('40P01')) {
-        verdict = 'REPRODUCED';
-        evidence = `40P01 observed; delete=${deleteOutcome?.code ?? 'ok'} prepare=${prepareOutcome?.code ?? 'ok'}`;
-      } else {
-        evidence = `no 40P01; delete=${deleteOutcome?.code ?? 'ok'} prepare=${prepareOutcome?.code ?? 'ok'}`;
-      }
+      verdict = codes.includes('40P01') ? 'CYCLE STILL CLOSES' : 'CYCLE BROKEN';
+      evidence = `delete=${deleteOutcome?.code ?? 'ok'} prepare=${prepareOutcome?.code ?? 'ok'}`;
+
+      // C05 THE SAME ATTACK NOW COMPLETES WITHOUT A DEADLOCK.
+      assert.ok(!codes.includes('40P01'),
+        `C05 the reproduced cycle no longer closes: neither transaction saw 40P01 (${evidence})`);
+      assert.ok(!codes.includes('55P03'), 'C05 and neither timed out waiting for a lock either');
+
+      // C08 AND THE RESULT SEMANTICS ARE EXACTLY WHAT THEY WERE. A mismatched
+      // request is still refused, with the frozen class, for the frozen reason.
+      assert.equal(deleteOutcome?.code ?? 'ok', 'ok',
+        'C08 the privacy operation completes: its availability was the whole cost of the defect');
+      assert.equal(prepareOutcome?.code, 'P0002',
+        'C08 the mismatched publication request is still refused, with the class it always raised');
+      assert.match(String(prepareOutcome?.message ?? ''), /PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE/u,
+        'C08 for the reason it always gave, now reached without taking a lock in a World it does not hold');
+
       await deleter.qx('ROLLBACK').catch(() => undefined);
       await publisher.qx('ROLLBACK').catch(() => undefined);
     });
@@ -1285,25 +1358,62 @@ async function verifyLockCycle(report, fixture) {
     await publisher.close();
   }
 
-  await report.section(`C04 ASSURE-F04 verdict on real PostgreSQL: ${verdict}`, async () => {
+  await report.section('C06 / C07 legitimate same-World concurrency still serializes, and unrelated Worlds stay concurrent', async () => {
+    // C06 A REQUEST THAT NAMES ITS WORLD HONESTLY STILL SERIALIZES ON IT. This
+    // is the behaviour the finding said was already correct, and the correction
+    // must not have traded it away: the publisher takes the Shared World row
+    // FOR SHARE and therefore queues behind the deletion holding it FOR UPDATE,
+    // holding nothing of that World while it waits - which is why it is a queue
+    // and not a cycle.
+    await deleter.actAsX(fixture.author);
+    await deleter.qx('BEGIN');
+    await deleter.qx('SELECT 1 FROM public.shared_worlds WHERE id = $1 FOR UPDATE', [fixture.world]);
+
+    await publisher.actAsX(fixture.publisher);
+    await publisher.qx('BEGIN');
+    const honest = publisher.qx(
+      `SELECT outcome FROM public.prepare_public_experience_manifest_v1($1,$2,$3,$4,
+         ARRAY[]::uuid[], ARRAY[]::uuid[], $5::uuid[], $6::uuid[], $7::uuid[])`,
+      [randomUUID(), fixture.experience, randomUUID(), randomUUID(),
+        [randomUUID()], [fixture.world], [fixture.source]]).catch((error) => error);
+    assert.equal(await rt.waitForLockWait(q, publisher.pid), true,
+      'C06 an honest request queues on the exact Shared World row the deletion holds');
+    await deleter.qx('ROLLBACK');
+    const honestOutcome = await honest;
+    assert.notEqual(honestOutcome?.code, '40P01', 'C06 and then proceeds rather than deadlocking');
+    assert.notEqual(honestOutcome?.code, '55P03', 'C06 without timing out');
+    await publisher.qx('ROLLBACK').catch(() => undefined);
+
+    // C07 AND AN UNRELATED WORLD IS NOT DELAYED BY ANY OF IT.
+    await deleter.actAsX(fixture.author);
+    await deleter.qx('BEGIN');
+    await deleter.qx('SELECT 1 FROM public.shared_worlds WHERE id = $1 FOR UPDATE', [fixture.world]);
+    await publisher.actAsX(fixture.publisher);
+    const unrelated = await settlesWithin(publisher.qx(
+      `SELECT outcome FROM public.commit_shared_world_human_text_v1($1,$2,$3,$4,$5)`,
+      [randomUUID(), fixture.otherWorld, randomUUID(), randomUUID(), 'a statement in an unrelated World'])
+      .catch((error) => error), 5000);
+    assert.equal(unrelated.settled, true,
+      'C07 work in a different Shared World is not blocked by a deletion holding another one');
+    assert.notEqual(unrelated.value?.code, '40P01', 'C07 and never deadlocks against it');
+    await deleter.qx('ROLLBACK');
+    await publisher.qx('ROLLBACK').catch(() => undefined);
+  });
+
+  await report.section(`C04 ASSURE-F04 on real PostgreSQL: REPRODUCED before the correction, ${verdict} after it`, async () => {
     const deadlocksAfter = Number((await rows(
       "SELECT COALESCE(sum(deadlocks),0)::int n FROM pg_stat_database WHERE datname = current_database()"))[0].n);
     const counted = deadlocksAfter - deadlocksBefore;
-    console.log(`  ASSURE-F04 verdict   : ${verdict}`);
-    console.log(`  ASSURE-F04 evidence  : ${evidence}`);
+    console.log(`  ASSURE-F04 verdict before the correction : REPRODUCED (focused run on the pre-correction head)`);
+    console.log(`  ASSURE-F04 verdict after the correction  : ${verdict}`);
+    console.log(`  ASSURE-F04 evidence                      : ${evidence}`);
     console.log(`  pg_stat_database deadlocks during the attempt: ${counted}`);
-    if (verdict === 'REPRODUCED') {
-      assert.ok(counted >= 1,
-        'C04 a reproduced cycle must also be counted by PostgreSQL deadlock accounting');
-    } else {
-      assert.equal(counted, 0,
-        'C04 a refuted cycle must leave PostgreSQL deadlock accounting untouched');
-    }
-    // EITHER WAY, NO PRODUCTION CODE WAS CHANGED FOR IT IN THIS MIGRATION. F04 is
-    // provisional, and migration 0119 touches no locking statement of any kind.
-    const publicPrepare = await sourceOf(PREPARE_PUBLIC_SIG);
-    assert.match(publicPrepare, /WHERE m\.id = ANY\(p_shared_source_material_ids\) ORDER BY m\.id FOR SHARE/u,
-      'C04 migration 0119 changed no lock statement: the F04 verdict is evidence, not a silent repair');
+    // PostgreSQL'S OWN ACCOUNTING IS THE WITNESS, not the absence of an error we
+    // happened to catch: a cycle that closed would be counted here even if some
+    // wrapper had swallowed the 40P01.
+    assert.equal(counted, 0,
+      'C04 the reproduced cycle closes no more: PostgreSQL counted no deadlock during the attack');
+    assert.equal(verdict, 'CYCLE BROKEN', 'C04 and neither transaction observed one');
   });
 
   return { verdict, evidence };

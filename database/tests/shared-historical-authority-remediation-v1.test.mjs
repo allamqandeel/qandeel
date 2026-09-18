@@ -1,4 +1,4 @@
-// QAN-CW-REM-01 - Shared historical authority resolution v1: secret-free
+﻿// QAN-CW-REM-01 - Shared historical authority resolution v1: secret-free
 // structural contract over migration 0119.
 //
 // Migration 0119 corrects an accepted fail-open authority defect (ASSURE-F02):
@@ -70,6 +70,8 @@ const GRANT_CORE = 'CREATE OR REPLACE FUNCTION public.commit_shared_world_histor
 const ENTRY_POINT = 'CREATE OR REPLACE FUNCTION public.resolve_shared_world_history_visibility_v1(';
 const CLOSED_READER = 'CREATE OR REPLACE FUNCTION public.resolve_shared_world_closed_history_visibility_v1(';
 const RECONCILE = 'CREATE FUNCTION public.reconcile_shared_world_material_historical_authority_v1(';
+const HISTORY_PREPARE = 'CREATE OR REPLACE FUNCTION public.prepare_shared_world_history_package_v1(';
+const PUBLIC_PREPARE = 'CREATE OR REPLACE FUNCTION public.prepare_public_experience_manifest_v1(';
 
 // Every Connected Worlds migration from the I-02A foundation to the I-07D tip,
 // pinned by git blob id at the QAN-CW-REM-01 canonical baseline. "Forward-only"
@@ -160,7 +162,7 @@ test('migrations 0075 - 0118 are byte-identical: the chain is forward-only', () 
 });
 
 test('the QANDEEL producer is replaced forward-only, and no arm of its resolution can claim an unproven clearance', () => {
-  const core = functionOf(QANDEEL_CORE, GRANT_CORE);
+  const core = functionOf(QANDEEL_CORE, HISTORY_PREPARE);
 
   // ALL THREE ARMS ARE PINNED. Migration 0118 pinned only the reasoning arm, and
   // the arm it left unpinned is the one that shipped the defect - so this
@@ -340,10 +342,58 @@ test('every widening boundary re-asks the current authority state, and none of t
   assert.deepEqual(created, [
     'commit_shared_world_history_access_grant_v1',
     'commit_shared_world_qandeel_material_v1',
+    'prepare_public_experience_manifest_v1',
+    'prepare_shared_world_history_package_v1',
     'reconcile_shared_world_material_historical_authority_v1',
     'resolve_shared_world_closed_history_visibility_v1',
     'resolve_shared_world_history_visibility_v1',
-  ], 'exactly four frozen functions are replaced forward-only, and exactly one is new');
+  ], 'exactly six frozen functions are replaced forward-only, and exactly one is new');
+});
+
+test('ASSURE-F04: no statement locks a row identity without pinning the World it already holds', () => {
+  // The finding was PROVISIONAL. It was reproduced on real PostgreSQL by this
+  // slice's own verifier, on the head before this correction, which is what
+  // authorizes the change: the task forbids repairing it blind. The correction
+  // is one scoping predicate per statement, and nothing else moves.
+  const producer = functionOf(QANDEEL_CORE, HISTORY_PREPARE);
+  assert.ok(producer.includes('WHERE m.id = ANY(sources) AND m.world_id = p_world_id ORDER BY m.id FOR UPDATE'),
+    'the QANDEEL producer locks its sources only inside the World it locked first');
+  // World containment moves AHEAD of the lock, because a material World is
+  // immutable and the answer cannot go stale - and that ordering is what keeps
+  // a foreign-World source answering SHARED_WORLD_MATERIAL_STALE rather than a
+  // missing-row class, which migration 0090's verifier pins.
+  const containsAt = producer.indexOf('WHERE m.id = ANY(sources) AND m.world_id <> p_world_id');
+  const locksAt = producer.indexOf('WHERE m.id = ANY(sources) AND m.world_id = p_world_id ORDER BY m.id FOR UPDATE');
+  assert.ok(containsAt > 0 && locksAt > containsAt, 'and decides containment before taking the lock');
+  assert.ok(producer.includes("RAISE EXCEPTION 'SHARED_WORLD_MATERIAL_STALE' USING ERRCODE='40001'"),
+    'with the frozen refusal class unchanged');
+  // Availability stays UNDER the lock, because it is mutable.
+  assert.match(producer, /ORDER BY m\.id FOR UPDATE[\s\S]*i\.availability_state <> 'AVAILABLE'/u,
+    'while availability stays under the lock, where a mutable fact belongs');
+
+  const historyPrepare = functionOf(
+    'CREATE OR REPLACE FUNCTION public.prepare_shared_world_history_package_v1(',
+    'CREATE OR REPLACE FUNCTION public.prepare_public_experience_manifest_v1(');
+  assert.ok(historyPrepare.includes('WHERE i.id = ANY(selected) AND i.world_id = p_world_id ORDER BY i.id FOR UPDATE'),
+    'history package preparation locks items only inside the World it locked first');
+  assert.ok(historyPrepare.includes('FROM public.shared_worlds w WHERE w.id = p_world_id FOR UPDATE'),
+    'and still takes that World row first');
+
+  const publicPrepare = functionOf(
+    'CREATE OR REPLACE FUNCTION public.prepare_public_experience_manifest_v1(', GRANT_CORE);
+  assert.ok(publicPrepare.includes('AND m.world_id = ANY(p_shared_source_world_ids) ORDER BY m.id FOR SHARE'),
+    'Public package preparation locks Shared materials only inside the Worlds it named and locked');
+  assert.ok(publicPrepare.includes('AND i.world_id = ANY(p_shared_source_world_ids)'),
+    'and their history items the same way');
+  assert.match(publicPrepare, /FROM public\.shared_worlds w\s*WHERE w\.id = ANY\(p_shared_source_world_ids\) ORDER BY w\.id FOR SHARE/u,
+    'with those World rows still taken FIRST');
+  assert.ok(publicPrepare.includes("RAISE EXCEPTION 'PUBLIC_EXPERIENCE_SOURCE_NOT_AVAILABLE' USING ERRCODE='P0002'"),
+    'and the frozen refusal for a mismatched request unchanged');
+
+  // NOTHING WAS TRADED FOR IT.
+  const executable = body();
+  assert.doesNotMatch(executable, /pg_advisory|LOCK TABLE|SELECT pg_sleep/iu,
+    'no advisory lock, no table lock and no sleep was introduced anywhere');
 });
 
 test('no actor, approver or privilege is added anywhere, and the Public chain is composed rather than modified', () => {
@@ -374,10 +424,41 @@ test('no actor, approver or privilege is added anywhere, and the Public chain is
 
   // THE PUBLIC HALF IS COMPOSITION. This migration must not contain a Public
   // rule of its own, and must not invent recall, withdrawal or deletion.
-  assert.doesNotMatch(executable, /CREATE (?:OR REPLACE )?FUNCTION public\.(?:prepare_public|derive_public|publish_public|resolve_public|commit_public)/u,
-    'it defines no Public function: the frozen Public derivations are consumed unchanged');
-  assert.doesNotMatch(executable, /public_experiences|public_experience_publication_state|publication_package_item_authority/u,
-    'it writes no Public relation');
+  // The ONE Public function it touches is `prepare_public_experience_manifest_v1`,
+  // and it is touched for the ASSURE-F04 lock scoping alone: no Public AUTHORITY
+  // derivation is redefined, and every authority gate inside it is verbatim.
+  assert.doesNotMatch(executable, /CREATE (?:OR REPLACE )?FUNCTION public\.(?:derive_public|publish_public|resolve_public|commit_public)/u,
+    'it redefines no Public authority, publication, visibility or serving function');
+  // AND THE TWO F04 REPLACEMENTS CHANGE NOTHING BUT THEIR LOCK PREDICATES,
+  // proven as a line-level diff against the frozen text rather than by spot
+  // checks: every executable line the predecessor had is still there, and every
+  // line this file adds is a scoping predicate.
+  for (const [label, mine, frozen] of [
+    ['the Public preparation', functionOf(PUBLIC_PREPARE, GRANT_CORE),
+      sliceOf(read('../migrations/0093_public_experience_review_ready_runtime_v1.sql'),
+        'CREATE FUNCTION public.prepare_public_experience_manifest_v1(', '-- 6. APPROVE AN EXACT PUBLICATION PACKAGE.')],
+    ['the history preparation', functionOf(HISTORY_PREPARE, PUBLIC_PREPARE),
+      sliceOf(read('../migrations/0087_shared_world_selective_history_access_v1.sql'),
+        'CREATE FUNCTION public.prepare_shared_world_history_package_v1(', '-- 13. PRIMITIVE B')],
+  ]) {
+    const normalise = (text) => text.replace('CREATE OR REPLACE FUNCTION', 'CREATE FUNCTION')
+      .split('\n').map((line) => line.trimEnd()).filter((line) => line.length > 0);
+    const mineLines = normalise(mine);
+    const frozenLines = normalise(frozen);
+    const removed = frozenLines.filter((line) => !mineLines.includes(line));
+    const added = mineLines.filter((line) => !frozenLines.includes(line));
+    for (const line of removed) {
+      assert.match(line, /ORDER BY (m|i)\.id FOR (UPDATE|SHARE);|WHERE m\.id = ANY\(p_shared_source_material_ids\)\)/u,
+        `${label} removed a line that is not one of the unscoped lock statements: ${line}`);
+    }
+    for (const line of added) {
+      assert.match(line,
+        /world_id = (ANY\(p_shared_source_world_ids\)|p_world_id)|ORDER BY (m|i)\.id FOR (UPDATE|SHARE);|WHERE (m|i)\.id = ANY\((p_shared_source_material_ids|selected|sources)\)$/u,
+        `${label} added a line that is not a scoping predicate or its own re-wrapping: ${line}`);
+    }
+    assert.ok(added.length > 0 && added.length <= 6,
+      `${label} changed a bounded number of lines, and really did change some`);
+  }
   assert.doesNotMatch(executable, /recall|retroactive|unpublish|ABSENT_FROM_PUBLIC_WORLD/iu,
     'and invents no Public recall or removal policy: this task is about authority invalidity, not source deletion');
 
@@ -563,7 +644,8 @@ test('the 0119 verifier proves live semantics and is wired into the toolchain, C
     'A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08', 'A09', 'A10',
     'A11', 'A12', 'A13', 'A14', 'A15', 'A16', 'A17', 'A18', 'A19', 'A20', 'A21',
     'A22', 'A23', 'A24', 'A25', 'A26',
-    'R01', 'R02', 'R03', 'R04', 'C01', 'C02', 'C03', 'C04',
+    'R01', 'R02', 'R03', 'R04',
+    'C01', 'C02', 'C03', 'C04', 'C05', 'C06', 'C07', 'C08',
   ]) {
     assert.ok(VERIFIER.includes(label), `the verifier carries case ${label}`);
   }
