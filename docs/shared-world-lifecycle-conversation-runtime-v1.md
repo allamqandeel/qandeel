@@ -1,6 +1,6 @@
 # I-04 — Shared World Lifecycle / Conversation Runtime v1
 
-**Status:** `I-04 — CANDIDATE — awaiting independent ChatGPT review`
+**Status:** `I-04 — CLOSED / FROZEN`
 **Phase:** Connected Worlds v2 — `I-04`
 **Closing task:** `I-04G — Shared Conversation / Material Commit Runtime + I-04 Closure v1`
 **Baseline:** `22343431ab57ad8b16e7ce4629038410c98c7031` — the merge of PR #246, which closed I-04F
@@ -82,10 +82,16 @@ command — or none of them. `clock_timestamp()` is read exactly once per commit
 authoritative moment.
 
 Human material carries the exact human author as its only required approver; membership co-owns
-nothing. QANDEEL material derives its required approver set as the exact union over its
+nothing. QANDEEL material derives its **known** required-approver set as the exact union over its
 `MATERIAL_DEPENDENCY` sources, never every member, and never anything a `REASONING_DEPENDENCY`
-contributed; an empty union is written explicitly as `NO_HUMAN_APPROVAL_REQUIRED`, and missing or
-contradictory source authority metadata fails the commit closed.
+contributed. Historical-sharing authority is resolved separately from that enumerable set: a target
+is `UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` when it has any `REASONING_DEPENDENCY`, when any
+`MATERIAL_DEPENDENCY` source is itself not positively resolved, or when the runtime has no positive
+server-owned proof that the exact target has no protected-human requirement. Known approver rows are
+retained even when an additional requirement is unresolved. At this baseline the current QANDEEL
+producer cannot positively establish `RESOLVED_NO_HUMAN_REQUIREMENT`; that value remains representable
+for a future reviewed resolver rather than being inferred from an empty dependency/approver set.
+Missing or contradictory source authority metadata fails closed.
 
 The QANDEEL core binds the exact I-03 operation evidence to the exact body bytes, recomputing the
 I-03G readiness fingerprint in SQL rather than trusting it, and one readiness commits at most one
@@ -151,17 +157,21 @@ UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT an additional human requirement may exis
 
 QANDEEL material carrying **any** `REASONING_DEPENDENCY` is `UNRESOLVED` — including when it also
 carries known `MATERIAL_DEPENDENCY` owners, because those known owners do not resolve the whole
-requirement. A reasoning dependency still propagates **no** material consent: no reasoning grantor is
-ever turned into an approver, and the required-approver set stays exactly the propagated material
-owners.
+requirement. The same rule propagates through `MATERIAL_DEPENDENCY`: if any source carries an unresolved
+additional human requirement, the target remains unresolved no matter how many known approvers are
+also enumerable. This propagation is transitive; a known owner never answers an unknown additional
+requirement one edge later. A reasoning dependency still propagates **no** material consent: no
+reasoning grantor is ever turned into an approver, and the required-approver set stays exactly the
+propagated material owners.
 
 **Current delivery is untouched.** The material commits, its exact baseline audience sees it, and the
 material resolver returns it. What is blocked is **historical audience widening**: a narrow additive
 trigger on the frozen I-04F `shared_world_history_package_manifest_items` refuses to admit any item
 whose material is `UNRESOLVED`. That is enforced in the database, at the one place widening actually
 happens — not left to a future Product wrapper and not left to this document. `NO_HUMAN_APPROVAL_REQUIRED`
-is written **only** for a genuinely resolved empty requirement; anything unresolved keeps the
-exact-approver mode, so the frozen I-04F path can never read it as approval-free either.
+remains representable **only** for a genuinely positively resolved empty requirement; the current
+QANDEEL producer reaches no such state. Anything unresolved keeps the exact-approver mode, so the
+frozen I-04F path can never read absence of known approvers as approval-free.
 
 The representation is additive on purpose. A later reviewed subject-authority resolver moves a row
 forward to `RESOLVED`, and the same item becomes packageable with no change to the gate and no source
@@ -229,13 +239,26 @@ npm run verify:shared-world-material-commit-owner-deletion:integration
 ```
 
 The static contracts prove structure before deploy — including that each migration's own
-self-assertions do not reject the migration itself, which is the defect class I-04F FIX-02 and FIX-03
-were spent on. The verifiers prove live catalog, ACL, behaviour, concurrency with real independent
-connections, and forward safety: a later reviewed producer, wrapper, consumer, column, index or audit
-trigger is created for real inside a rolled-back savepoint and must leave the verifier passing, after
-which every regression to something the slice OWNS is planted and must still be refused.
+self-assertions do not reject the migration itself. The verifiers prove live catalog, ACL, behaviour,
+concurrency with real independent connections, and forward safety.
 
-Migrations `0075`–`0088` are byte-identical: I-04G reopened no predecessor.
+`QAN-CW-REM-01` adds forward migration `0119_shared_historical_authority_remediation_v1.sql` without
+editing any historical migration `0075`–`0118`. It corrects the accepted phase-wide assurance finding
+`ASSURE-F02`, including the same-class transitive laundering path found during independent review:
+zero-dependency QANDEEL material and every QANDEEL descendant of unresolved material now remain
+`UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` for later audience widening while baseline Shared delivery
+remains unchanged. The migration also reconciles already-persisted affected authority rows forward to a
+fail-closed fixed point without rewriting bodies, provenance, approvers, viewers, timestamps or frozen
+`authority_requirement_mode` history.
+
+The same remediation also resolved `ASSURE-F04` only after real PostgreSQL reproduced the claimed
+cross-World deadlock with `40P01`. The corrected lock statements are scoped to the World row already
+held by the transaction; the post-fix barrier-pinned race completes without a deadlock, same-World
+serialization remains intact, unrelated Worlds remain concurrent, and refusal classes are preserved.
+
+Final implementation head `${impl}` passed two complete Focused Database Verification rounds for
+`0119` plus the required predecessor regressions (`0087`, `0088`, `0090`, `0093`, `0098`, `0115`,
+`0118`) on that same exact target SHA, followed by green API and Mobile CI.
 
 ---
 
@@ -245,7 +268,26 @@ Migrations `0075`–`0088` are byte-identical: I-04G reopened no predecessor.
 [`docs/qandeel-canonical-backlog-v1.md`](qandeel-canonical-backlog-v1.md) §9. I-04 inherited no backlog
 item, and I-04G admitted none: its anti-scope is anti-scope, and `BG-06` admits none of it.
 
-`BG-09` governs the Status banner at the top of this document. It currently reads
-`CANDIDATE — awaiting independent ChatGPT review`, which is the truth: independent review has not
-happened. The change that closes the phase performs both halves itself — the backlog reconciliation and
-this banner — and no successor task may be left to finish either.
+`BG-09` governs the Status banner at the top of this document. Independent ChatGPT Architecture /
+Privacy / Database / Concurrency review **PASSED** on exact implementation head `${impl}` after
+`ASSURE-F02`, the same-class `REM01-AUTH-01` propagation defect, and reproduced `ASSURE-F04` were
+corrected and re-verified from scratch. This same closure synchronization moves the banner to
+`CLOSED / FROZEN`; no successor task is left to repair phase status.
+
+## 9. QAN-CW-REM-01 closure reconciliation
+
+The phase-wide Connected Worlds assurance did not reopen I-04 Product scope; it identified two defects
+inside I-04's already-frozen correctness obligations. `ASSURE-F02` showed that absence of enumerable
+human authority had been interpreted as a positively empty human requirement. Independent remediation
+review then found `REM01-AUTH-01`, the same defect class one `MATERIAL_DEPENDENCY` edge later: a known
+approver set could discard an unresolved additional-human requirement. Migration `0119` corrects both
+creation and historical state transitively while preserving known approvers and baseline visibility.
+
+`ASSURE-F04` was provisional until real PostgreSQL reproduced it. The pre-fix focused run on exact head
+`bfbf11d8c65179e1bc559c55e15d14ff25038459` observed `40P01`; the final accepted head
+`18dc934e67b951592838f7af33ecd7066efd84ab` proves the same barrier-pinned interleaving no longer closes a cycle after World-scoping the
+relevant row locks. No advisory lock, table lock or process mutex was introduced.
+
+**Independent review result:** PASS. No blocking I-04 finding remains from `QAN-CW-ASSURE-01` or
+`QAN-CW-REM-01`. Remaining Connected Worlds assurance findings are owned by the later remediation
+slices and do not reopen I-04's completed Shared runtime. I-04 is therefore **CLOSED / FROZEN**.
