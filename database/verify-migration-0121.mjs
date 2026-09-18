@@ -53,7 +53,7 @@ import { randomUUID } from 'node:crypto';
 import process from 'node:process';
 import { createScenarioReport } from './verifier-scenarios.mjs';
 import {
-  createReplayClosureRuntime, runVerifier, APP_ROLES, R, D, DFN, T,
+  createReplayClosureRuntime, runVerifier, APP_ROLES, NONE, R, D, DFN, T,
 } from './replay-closure-verifier-support.mjs';
 
 const rt = createReplayClosureRuntime(process.env.DATABASE_URL);
@@ -98,8 +98,19 @@ const RESULT_COLUMNS = new Map([
     'effective_state', 'bound_authority_fingerprint', 'withdrawn_at']],
 ]);
 
-const lifecycleAt = async (experience, at) => (await rows(
-  'SELECT public.derive_public_experience_lifecycle_at_v1($1, $2) AS state', [experience, at]))[0].state;
+/**
+ * The historical lifecycle at one command's OWN committed instant, asked
+ * entirely inside SQL.
+ *
+ * Never through a JavaScript `Date`: `timestamptz` carries microseconds and a
+ * `Date` carries milliseconds, so a round-tripped instant is EARLIER than the
+ * one the command recorded and `occurred_at <= p_at` finds nothing. The
+ * production path never round-trips - it passes `committed.committed_at`
+ * directly - and neither does this probe.
+ */
+const lifecycleAtCommand = async (relation, command, offset = '0') => (await rows(
+  `SELECT public.derive_public_experience_lifecycle_at_v1(c.experience_id, c.committed_at + $2::interval) AS state
+     FROM ${relation} c WHERE c.id = $1`, [command, offset]))[0].state;
 const identityAnswer = (command) =>
   rows('SELECT * FROM public.derive_public_identity_command_answer_v1($1)', [command]);
 const disappearanceAnswer = (command) =>
@@ -442,8 +453,11 @@ async function draftToReady(f, ids) {
   await actAs(f.mohamed);
   const [drafted] = await publicDraft(ids.draftCommand, ids.experience);
   assert.equal(drafted.outcome, 'DRAFT_CREATED', 'fixture: the draft was created');
+  // THE PACKAGE ITEM IDENTITY IS PART OF THE IMMUTABLE REQUEST, so it comes
+  // from `ids` and is reused by every retry: a fresh one would be a DIFFERENT
+  // request under a spent command id, which is a conflict rather than a retry.
   const [prepared] = await preparePublic(ids.prepareCommand, ids.experience, ids.manifest, ids.version,
-    [randomUUID()], [f.userUnit], [randomUUID()], [f.world], [f.mohamedMaterial]);
+    NONE, NONE, [ids.sharedItem], [f.world], [f.mohamedMaterial]);
   assert.equal(prepared.outcome, 'PACKAGE_PREPARED', 'fixture: the package prepared');
   const required = await requiredApproversOf(ids.manifest);
   const approvals = new Map();
@@ -460,7 +474,7 @@ async function draftToReady(f, ids) {
 }
 
 const freshIds = () => ({
-  experience: randomUUID(), manifest: randomUUID(), version: randomUUID(),
+  experience: randomUUID(), manifest: randomUUID(), version: randomUUID(), sharedItem: randomUUID(),
   draftCommand: randomUUID(), prepareCommand: randomUUID(), readyCommand: randomUUID(),
   publishCommand: randomUUID(), removeCommand: randomUUID(),
 });
@@ -656,7 +670,7 @@ async function verifyHistoricalAnswers(report, f, seam) {
       // Take the same Experience all the way to PUBLISHED and then out again.
       await actAs(f.mohamed);
       const [prepared] = await preparePublic(ids.prepareCommand, ids.experience, ids.manifest, ids.version,
-        [randomUUID()], [f.userUnit], [randomUUID()], [f.world], [f.mohamedMaterial]);
+        NONE, NONE, [ids.sharedItem], [f.world], [f.mohamedMaterial]);
       assert.equal(prepared.outcome, 'PACKAGE_PREPARED');
       for (const approver of await requiredApproversOf(ids.manifest)) {
         await actAs(approver);
@@ -691,7 +705,7 @@ async function verifyHistoricalAnswers(report, f, seam) {
         true, 'F09n and the event relation refuses DELETE for every role, which is why it is pinned');
       await actAs(f.mohamed);
       const [prepareRetry] = await preparePublic(ids.prepareCommand, ids.experience, ids.manifest, ids.version,
-        [randomUUID()], [f.userUnit], [randomUUID()], [f.world], [f.mohamedMaterial]);
+        NONE, NONE, [ids.sharedItem], [f.world], [f.mohamedMaterial]);
       assert.equal(prepareRetry.outcome, 'ALREADY_COMMITTED');
       assert.equal(prepareRetry.version_ordinal, prepared.version_ordinal,
         'F09n the preparation retry reads an immutable version row, not a mutable pointer');
@@ -708,26 +722,42 @@ async function verifyHistoricalAnswers(report, f, seam) {
         /PUBLIC_EXPERIENCE_COMMAND_ID_CONFLICT/u);
       await rejected(() => rt.commitReady(ids.readyCommand, ids.experience, randomUUID()), CONFLICT,
         /PUBLIC_EXPERIENCE_COMMAND_ID_CONFLICT/u);
-      await rejected(() => rt.updateLabel(ids.draftCommand, 'REAL_NAME', 'a label that command never carried'),
+      await rejected(() => preparePublic(ids.prepareCommand, ids.experience, ids.manifest, ids.version,
+        NONE, NONE, [randomUUID()], [f.world], [f.mohamedMaterial]), CONFLICT,
+      /PUBLIC_EXPERIENCE_COMMAND_ID_CONFLICT/u);
+      // THE IDENTITY FAMILY TOO, where the answer columns 0121 added live. A
+      // command id is spent within its OWN family: each family has its own
+      // command relation, so this is asked of the identity command itself
+      // rather than of a draft id borrowed from another one.
+      const labelCommand = randomUUID();
+      const [updated] = await rt.updateLabel(labelCommand, 'PSEUDONYM', 'an alias this command committed');
+      assert.equal(updated.outcome, 'UPDATED');
+      await rejected(() => rt.updateLabel(labelCommand, 'REAL_NAME', 'an alias it never carried'),
         CONFLICT, /PUBLIC_EXPERIENCE_COMMAND_ID_CONFLICT/u);
+      const [again] = await rt.updateLabel(labelCommand, 'PSEUDONYM', 'an alias this command committed');
+      assert.equal(again.display_label, 'an alias this command committed',
+        'F10 while the equivalent retry still answers exactly what it committed');
     });
 
     await report.isolated('F11 the historical lifecycle derivation fails closed rather than guessing', async () => {
       const ids = freshIds();
       await actAs(f.mohamed);
-      const [drafted] = await publicDraft(ids.draftCommand, ids.experience);
+      await publicDraft(ids.draftCommand, ids.experience);
       await asRole('postgres');
-      assert.equal(await lifecycleAt(ids.experience, drafted.committed_at), 'DRAFT',
+      const commands = 'public.public_experience_draft_commands';
+      assert.equal(await lifecycleAtCommand(commands, ids.draftCommand), 'DRAFT',
         'F11 the instant of the creation itself answers DRAFT');
-      // One microsecond before the Experience existed there is no evidence, and
-      // the derivation says so instead of returning something plausible.
-      const before = new Date(drafted.committed_at.getTime() - 60_000);
-      await rejected(() => rows('SELECT public.derive_public_experience_lifecycle_at_v1($1, $2)',
-        [ids.experience, before]), CONTRADICTORY, /CONTRADICTORY_HISTORY/u);
-      await rejected(() => rows('SELECT public.derive_public_experience_lifecycle_at_v1($1, $2)',
-        [randomUUID(), drafted.committed_at]), CONTRADICTORY, /CONTRADICTORY_HISTORY/u);
+      // Before the Experience existed there is no evidence at all, and the
+      // derivation says so instead of returning something plausible.
+      await rejected(() => lifecycleAtCommand(commands, ids.draftCommand, '-1 minute'),
+        CONTRADICTORY, /CONTRADICTORY_HISTORY/u);
+      await rejected(() => rows(
+        `SELECT public.derive_public_experience_lifecycle_at_v1($1, c.committed_at)
+           FROM ${commands} c WHERE c.id = $2`, [randomUUID(), ids.draftCommand]),
+      CONTRADICTORY, /CONTRADICTORY_HISTORY/u);
       // A disappearance answer for a command that does not exist fails the same way.
       await rejected(() => disappearanceAnswer(randomUUID()), CONTRADICTORY, /CONTRADICTORY_HISTORY/u);
+      await rejected(() => identityAnswer(randomUUID()), CONTRADICTORY, /CONTRADICTORY_HISTORY/u);
     });
   } finally {
     await q('ROLLBACK');
@@ -749,6 +779,7 @@ await runVerifier('0121', async (stage) => {
   rf.humans = [rf.creator];
   let base = null;
   const pf = rt.newFixture();
+  const publicHumans = [pf.mohamed, pf.hadir, pf.stranger, pf.reader];
   const seam = await rt.captureSeam();
   try {
     await q('BEGIN');
@@ -765,11 +796,17 @@ await runVerifier('0121', async (stage) => {
     stage('ASSURE-F03 consent composition');
     await verifyConsentComposition(report, rf, base);
 
+    // THE SHARED SOURCE ONLY, deliberately. `provision` would also commit a
+    // Personal Session, turns and units, and the canonical Public teardown does
+    // not own those - it would leave a `conversation_sessions` row holding the
+    // fixture human by a restrictive foreign key. Nothing in the ASSURE-F09
+    // matrix needs a MY_WORLD item: every package below is one Shared material.
     stage('public fixture');
     await q('BEGIN');
     try {
       await asRole('postgres');
-      await rt.provision(pf);
+      await q('INSERT INTO auth.users(id) SELECT unnest($1::uuid[])', [publicHumans]);
+      await rt.provisionWorld(pf, pf.world);
       await rt.provisionIdentities(pf);
       await asRole('postgres');
     } finally {
@@ -784,9 +821,7 @@ await runVerifier('0121', async (stage) => {
     // A TEARDOWN FAILURE IS A FINDING, not something to swallow: a run that
     // left committed fixtures behind would make the next one prove less.
     await rt.restorePrerequisites(seam);
-    await rt.removeCommittedFixtures({
-      humans: [pf.mohamed, pf.hadir, pf.stranger, pf.reader], experiences: [], world: pf.world,
-    });
+    await rt.removeCommittedFixtures({ humans: publicHumans, experiences: [], world: pf.world });
     await rt.removeCommittedDistributions(rf.humans);
     await rt.removeCommittedReplayVersions(rf.humans);
     await rt.removeCommittedReplays(rf.humans);
@@ -818,6 +853,6 @@ await runVerifier('0121', async (stage) => {
           + (SELECT count(*) FROM ${R.REPLAYS} WHERE created_by_user_id = ANY($1::uuid[]))
           + (SELECT count(*) FROM public.public_identity_commands WHERE actor_user_id = ANY($1::uuid[]))
           + (SELECT count(*) FROM public.users WHERE id = ANY($1::uuid[])) AS residue`,
-    [[...rf.humans, pf.mohamed, pf.hadir, pf.stranger, pf.reader], [rf.experience].filter(Boolean)]);
+    [[...rf.humans, ...publicHumans], [rf.experience].filter(Boolean)]);
   assert.equal(Number(residue), 0, 'every fixture this verifier created was rolled back or removed');
 }, () => rt.client.end().catch(() => undefined));
