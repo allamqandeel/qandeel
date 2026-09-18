@@ -52,7 +52,7 @@ failure as well as on success.
 
 **Locally**, once a PostgreSQL is available:
 
-```sh
+````sh
 npm run verify:db:focused -- i06a-all
 ```
 
@@ -63,7 +63,7 @@ which reaches any `database/verify-migration-NNNN.mjs` with no mapping entry. Na
 
 **Before a push**, the defect classes that used to be found by CI are found by:
 
-```sh
+````sh
 npm run verify:db:hazards
 ```
 
@@ -92,7 +92,7 @@ pool mode for this migration check.
 
 From the repository root, run:
 
-```sh
+````sh
 npm run verify:database:integration
 npm run verify:memory:integration
 ```
@@ -112,7 +112,7 @@ exact-context metric snapshots. Its verifier proves explicit missingness versus
 numeric zero, unresolved metric confidence, definition identity/version integrity,
 server-derived ownership/history, bounded same-user provenance, and RLS isolation:
 
-```sh
+````sh
 npm run verify:him:integration
 ```
 
@@ -136,7 +136,7 @@ the source digest is `sha256(convert_to(content,'UTF8'))`. See
 Its verifier proves live semantics, including the forward-only source frontier
 and the existing-batch replay split:
 
-```sh
+````sh
 npm run verify:committed-conversational-unit-substrate:integration
 ```
 
@@ -165,7 +165,7 @@ LH, never a Timeline API. The internal same-SP sequencing seam
 verifier proves allocation, sealing, replay, the atomic exchange, the delivery
 surface, the ACL matrix and the activation guard against live semantics:
 
-```sh
+````sh
 npm run verify:session-semantic-clock-sp-lh-delivery:integration
 ```
 
@@ -180,7 +180,7 @@ The `qandeel-dev` project must have the Supabase Data API enabled and the intend
 displaying local values or response bodies before running the destructive smoke
 fixture lifecycle:
 
-```sh
+````sh
 npm run verify:integrations:diagnose
 ```
 
@@ -205,7 +205,7 @@ client-facing request path.
 
 Run from the repository root:
 
-```sh
+````sh
 npm run verify:auth:smoke
 ```
 
@@ -259,7 +259,7 @@ The secret-free structural contract runs under `npm run test:database`. The real
 PostgreSQL verifier proves the catalog, ACL matrix, policy absence, every check and
 FK rejection, open-episode uniqueness and the rejoin shape with rolled-back fixtures:
 
-```sh
+````sh
 npm run verify:connected-worlds-shared-persistence:integration
 ```
 
@@ -317,7 +317,7 @@ PostgreSQL verifier proves the catalog, ACL matrix, policy absence, every check 
 FK rejection, one-ACTIVE-grant uniqueness, the revoke-then-reconfirm shape and the
 audience ceiling with rolled-back fixtures:
 
-```sh
+````sh
 npm run verify:shared-world-standing-context-grants:integration
 ```
 ## Shared Standing Context Grant resolution boundary (migration 0077, I-03B)
@@ -371,7 +371,7 @@ PostgreSQL verifier proves the function catalog, the execute ACL, the still-seal
 direct table ACL, the canonical existence errors, ACTIVE-only resolution, the empty
 ceiling row and revoked-history exclusion with rolled-back fixtures:
 
-```sh
+````sh
 npm run verify:shared-standing-context-grant-resolution:integration
 ```
 
@@ -458,7 +458,7 @@ reconfirm with the old ceiling untouched, stale compare-and-swap, revoke (also a
 leaving and after closure), durable idempotency, the World-row race and the I-03B
 resolver composition with rolled-back or removed fixtures:
 
-```sh
+````sh
 npm run verify:shared-standing-context-consent-commands:integration
 ```
 ## Shared human audience snapshot resolution boundary (migration 0079, I-03D)
@@ -520,7 +520,7 @@ membership-table ACL, the canonical existence error, open-membership-only semant
 lifecycle separation, leave / rejoin episode identity and zero mutation with
 rolled-back fixtures:
 
-```sh
+````sh
 npm run verify:shared-human-audience-snapshot-resolution:integration
 ```
 ## Shared pre-model World-state resolution boundary and EffectiveContext (migration 0080, I-03E)
@@ -595,7 +595,7 @@ PostgreSQL verifier proves the function catalog, the execute ACL, the still-seal
 no membership or grant read, zero mutation and forward safety against a hypothetical
 later trigger, with rolled-back fixtures:
 
-```sh
+````sh
 npm run verify:shared-pre-model-world-state:integration
 ```
 
@@ -694,7 +694,7 @@ first setup and rotation, old-epoch invalidation, non-enumerating submission,
 idempotency, invitation-id collisions, that no World or membership row is ever created,
 and the two-connection races, with rolled-back and cleaned-up fixtures:
 
-```sh
+````sh
 npm run verify:shared-direct-invitation-runtime:integration
 ```
 
@@ -781,7 +781,7 @@ still-sealed 0075 / 0081 substrate, the atomic birth and its single instant, eve
 refusal, idempotency, identity-collision rollback and the multi-connection races, with
 rolled-back and cleaned-up fixtures:
 
-```sh
+````sh
 npm run verify:shared-direct-world-birth:integration
 ```
 
@@ -908,7 +908,7 @@ every 0075 invariant intact, the atomic closure and its single instant, every bo
 the audience transition through the frozen 0079 resolver, Standing Context Grant survival,
 idempotency and the multi-connection races, with rolled-back and cleaned-up fixtures:
 
-```sh
+````sh
 npm run verify:shared-world-standard-voluntary-leave:integration
 ```
 ## Exact membership snapshot and Shared governance approval foundation (migration 0084, I-04D)
@@ -993,7 +993,7 @@ leave-then-rejoin staleness, the removal exclusion, the empty-set refusals, idem
 multi-connection races and forward safety against the add-member consumer this foundation exists to
 serve, with rolled-back and cleaned-up fixtures:
 
-```sh
+````sh
 npm run verify:shared-world-governance-approval-foundation:integration
 ```
 ## Governed Standard membership lifecycle (migration 0085, I-04E)
@@ -1078,7 +1078,7 @@ the staleness law across a frozen leave and a same-human rejoin, the exact count
 history access is created, the multi-connection races and forward safety against the I-04F and I-04G
 substrate, with rolled-back and cleaned-up fixtures:
 
-```sh
+````sh
 npm run verify:shared-world-governed-membership-lifecycle:integration
 ```
 ## Governed Shared settings (migration 0086, I-04E)
@@ -1123,7 +1123,7 @@ instant, the non-reusable approval across a value that returns to an earlier one
 delta showing nothing else moved, the settings-versus-topology and settings-versus-settings races and
 forward safety against later additive settings schema, with rolled-back and cleaned-up fixtures:
 
-```sh
+````sh
 npm run verify:shared-world-governed-settings:integration
 ```
 
@@ -1185,7 +1185,7 @@ not a table freeze - a later reviewed slice may still append columns and write t
 `UNAVAILABLE` is permanently terminal is deliberately not decided: frozen canon does not require it,
 and an item that is merely unavailable may legitimately become available again.
 
-```sh
+````sh
 npm run verify:shared-world-selective-history-access:integration
 ```
 
@@ -1225,7 +1225,7 @@ reaches it as its own owner. I-04F therefore keeps exactly ONE application/serve
 visibility entry point, `resolve_shared_world_history_visibility_v1`. The helper also refuses any World
 that is not an archived Standard World, and consults no membership at all.
 
-```sh
+````sh
 npm run verify:shared-world-standard-closure:integration
 ```
 ## I-04G - Shared Material Persistence (migration 0089)
@@ -1278,7 +1278,7 @@ that still exist. It returns renderable material only: no row at all for an item
 or whose body is gone, and no provenance source identity, private context reference, material
 authority row, dependency or membership data. Every direct relation stays sealed.
 
-```sh
+````sh
 npm run verify:shared-world-material-persistence:integration
 ```
 
@@ -1342,7 +1342,7 @@ mutex. All five primitives are executable by no application role at all, `servic
 migration grants nothing to anybody, and 0089's read-only resolver stays the one material read
 boundary.
 
-```sh
+````sh
 npm run verify:shared-world-material-commit-owner-deletion:integration
 ```
 
@@ -1407,7 +1407,7 @@ The lifecycle vocabulary is complete - `DRAFT`, `READY_FOR_REVIEW`, `PUBLISHED`,
 than an invariant of this one. PART A creates no writer at all, so it can produce no lifecycle; the
 one function it owns is the append-only trigger function.
 
-```sh
+````sh
 npm run verify:public-world-experience-foundation:integration
 ```
 
@@ -1462,7 +1462,7 @@ required set by composite foreign key, exactly as the frozen I-04F history packa
 an approval by a human the exact manifest does not require is structurally impossible however the row
 is produced.
 
-```sh
+````sh
 npm run verify:public-experience-publication-authority:integration
 ```
 
@@ -1567,7 +1567,7 @@ the exact controller and nobody else, returns zero rows to anyone else, disclose
 identifier or contact endpoint and never reads sealed provenance. It is not the Public World serving
 resolver; I-05B creates that.
 
-```sh
+````sh
 npm run verify:public-experience-review-ready-runtime:integration
 ```
 
@@ -1638,7 +1638,7 @@ The frozen 0093 READY commit counts historical approval rows and is deliberately
 gate: the verifier proves READY still commits after a withdrawal, which is exactly why 0095 must
 re-read effective state at publish time.
 
-```sh
+````sh
 npm run verify:public-publication-effective-approval-state:integration
 ```
 
@@ -1682,7 +1682,7 @@ returns zero rows for nonexistent, `DRAFT`, `READY_FOR_REVIEW`, moved-pointer an
 never reads sealed provenance, and is service_role-executable alone, following the frozen narrow
 resolver precedent; every table stays deny-by-default and every other function is internal.
 
-```sh
+````sh
 npm run verify:public-experience-publication-visibility-serving:integration
 ```
 
@@ -1726,7 +1726,7 @@ policy. The verifier proves it against a simulated successor version with real V
 (a verifier-only simulation, rolled back): V1 rows are not served, replied to or consumed as V2's, and
 V2 conversation through the same writers is.
 
-```sh
+````sh
 npm run verify:public-semantic-placement-discussion-qandeel:integration
 ```
 
@@ -1752,7 +1752,7 @@ make an invisible Experience visible. Display labels are joined live, never copi
 slice that ends public presence turns every read dark through the ONE derivation and clears the
 projection on the next rebuild without rewriting any historical post, response or placement.
 
-```sh
+````sh
 npm run verify:public-vitality-search-lens-panel-projections:integration
 ```
 
@@ -1874,7 +1874,7 @@ vitality row is never an independent source of truth: the frozen readers serve a
 it describes the CURRENTLY visible version, and a rebuild deletes the projection of an Experience that
 is not publicly visible.
 
-```sh
+````sh
 npm run verify:public-continuing-eligibility-visibility-closure:integration
 ```
 
@@ -1963,7 +1963,7 @@ continuing eligibility and holds them while it decides AND while it writes, so t
 cannot go stale between the decision and the transition. No advisory lock, table lock, `TRUNCATE` or
 process mutex exists anywhere in I-05C.
 
-```sh
+````sh
 npm run verify:public-experience-disappearance-runtime:integration
 ```
 
@@ -3343,3 +3343,99 @@ non-regression half re-proves the `0114` forward approval in all three direction
 on the exact bound approval view, the `I07B-CONC-01` view-supersession race, that no binding reaches any
 recipient projection while the neutral outcome vocabulary is unchanged, and that the CW2-08 gate still
 holds the four consequential boundaries while withdrawal still ends a human's own exposure without it.
+
+## QAN-CW-REM-03 - Public/Replay current-consent composition and Public historical command truth (migration 0121)
+
+`0121_public_replay_consistency_historical_retry_remediation_v1.sql` corrects two accepted phase-wide
+assurance findings that are the same mistake in two shapes: a CURRENT answer and a HISTORICAL answer
+read from the same mutable place.
+
+**ASSURE-F03.** A Replay distribution to the Public World is ONE human consent act recorded in TWO
+evidence stores. Migration `0104` makes that structural - a `PUBLISH_TO_PUBLIC_WORLD` approval MUST
+carry `linked_public_approval_id` and every other destination MUST NOT - and `0105`'s withdrawal
+already honoured it by withdrawing both halves. The EFFECTIVE-STATE derivation did not: it read only a
+Replay withdrawal event and the Replay fingerprint, so a human who withdrew their canonical Public
+publication approval directly, through the one Public withdrawal primitive, left the Replay approval
+still answering `EFFECTIVE`. The derivation now COMPOSES the canonical `0094` answer for the exact
+approval row the consent act committed. Any explicit human withdrawal of either half is `WITHDRAWN`;
+a superseded or unresolvable linked Public approval is `SUPERSEDED`; a non-Public destination has no
+linked approval and is unchanged. No Public consent rule is re-implemented inside Replay, no synthetic
+Replay withdrawal event is invented, and no historical row is touched.
+
+**ASSURE-F09.** Five Public command families answered a committed retry by reading
+`public_experiences.current_lifecycle`, the current `experience_revision`, the current
+`public_identity_display_state` or the current disappearance record. Section 2 of the migration
+carries the complete census of every Public consequential command family with durable idempotency,
+with a verdict per answer field; three families were already correct and one - the Public withdrawal -
+reads a derivation that is PROVEN pinned to `WITHDRAWN`, so neither is touched.
+
+The correction needs almost no new schema. `public_experience_lifecycle_events` is append-only,
+immutable for every role, and COMPLETE: exactly four statements in the whole tree move a Public
+Experience lifecycle, and every one writes an event in the same transaction at the same instant. So the
+lifecycle at a past instant is derived from that log, and the disappearance answer follows from it plus
+the sealed record the command already bound - including the case the frozen retry got outright wrong,
+where a `STILL_ELIGIBLE` answer that returned NULL was replayed as the command's target version. The
+ONE place durable evidence was genuinely missing is the Public Identity label, which has no history
+relation by design, so that family gets two typed columns on its own command row and a BEFORE INSERT
+guard that makes carrying the answer structural. A command committed before `0121` reconstructs its
+answer only while its committed `label_revision` still equals the current one - a witness, not a
+guess - and fails closed otherwise.
+
+```sh
+npm run verify:public-replay-consistency-historical-retry-remediation:integration
+```
+
+`verify-migration-0121.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database and runs in
+CI after the `QAN-CW-REM-02` verifier. It drives the real boundaries throughout: it withdraws the
+Public half through the canonical primitive by its own name and requires the Replay half to become
+non-effective with no Replay withdrawal event in existence, prepares a second Public-linked package to
+supersede the first through the product path rather than a simulation, requires the distribution to
+refuse with `REPLAY_DISTRIBUTION_APPROVAL_NOT_EFFECTIVE` and leave nothing authorized and nothing
+published, and re-proves that `SHARE_EXTERNALLY` and `DOWNLOAD` behave exactly as they did. The
+historical half takes real Experiences through draft, package, approval, READY, publication and
+disappearance, and asks each committed command its own retry after the state it used to read has
+really moved.
+
+## QAN-CW-REM-03 - Introduction disclosure deletion-time privacy erasure (migration 0122)
+
+`0122_introduction_disclosure_privacy_erasure_v1.sql` closes `ASSURE-F06`. Migration `0115`
+destroys the payload of an owner-deleted `EXPLICIT_DISCLOSURE` and keeps its audit identity, which is
+the right shape - but it also kept `introduction_disclosure_commands.payload_digest`, an unsalted
+SHA-256 of the exact disclosed bytes, and `request_ref`, a digest over the whole request with that
+digest inside it. Every other input of that request survives deletion in plain form on the same row, so
+both are practical offline verifiers of a payload drawn from a deliberately low-entropy vocabulary: a
+name, a contact route, one bounded personal field. An attacker holding either could test guesses until
+one matched, after the owner had exercised deletion.
+
+A stored salt solves nothing - whoever reaches the row reaches both - and a secret-keyed verifier would
+introduce a key lifecycle this repository does not own. So the verifier is DESTROYED with the payload.
+`verifier_state` is explicit (`PRESENT` / `ERASED_BY_OWNER`), a CHECK makes the state and the
+columns one fact in both directions, and the blanket append-only trigger is replaced IN PLACE, under
+the same name, by a guard that permits exactly the one-way `PRESENT -> ERASED_BY_OWNER` transition -
+and only when canonical truth already proves the owner deleted it: an `EXPLICIT_DISCLOSURE` material,
+a `DELETED_BY_OWNER` history item, and no payload row of either form. Every other UPDATE and every
+DELETE stays refused, every audit identity column is pinned, and no replacement digest or
+payload-derived tombstone is representable. Owner deletion performs the erasure in the same transaction
+at the same instant, after the terminal transition the guard requires as its proof, and refuses to
+report success while any verifier survives. Rows already deleted before this migration are reconciled
+on the same canonical predicate; a payload-absent row whose history is NOT `DELETED_BY_OWNER` fails
+deployment rather than being redacted as though an owner deletion had happened.
+
+Exact payload equivalence can no longer be proven for an erased command, so any retry of it fails
+closed with one bounded class. It ignores nothing, compares against nothing, reconstructs nothing and
+recreates nothing; the refusal is reachable only by the owner of that exact command with every
+immutable identity field matching, so a stranger still meets the frozen command conflict and learns
+nothing about whether a disclosure was deleted.
+
+```sh
+npm run verify:introduction-disclosure-privacy-erasure:integration
+```
+
+`verify-migration-0122.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It delivers
+real disclosures of every text and image type through the canonical boundary, deletes them through the
+canonical owner-deletion capability, and then asks the database the attacker's question directly: the
+digest of a CORRECT guess of the deleted payload must match nothing that survived. It proves the full
+audit identity is unchanged column by column, that the resource version and the grant fact outlive the
+payload, that a legacy already-deleted row is erasable through the guard while a contradictory one is
+refused, that the counterpart's view carries no tombstone and no placeholder, and that the erasure
+admits no way back.
