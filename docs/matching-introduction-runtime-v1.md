@@ -1348,3 +1348,45 @@ This closure does **not** claim Product launch readiness. The reviewed write bou
 pre-launch/internal and the frozen `CW2-08` prerequisite seams stay fail-closed except for the deliberate
 human right to END an Introduction. Mobile integration and production launch integration remain later
 phases.
+
+## 46. `QAN-CW-REM-02` — post-closure assurance remediation
+
+The phase-wide Connected Worlds assurance later found two sibling defect classes inside the already
+closed `I-07B` proposal runtime. They did **not** reopen Product scope or the parent phase: they were
+correctness defects inside frozen semantics and therefore had to be corrected before the Connected
+Worlds assurance could proceed.
+
+`ASSURE-F01` showed that the two proposal-delivery paths in `0112` still decided expiry against
+PostgreSQL transaction-start time after a possible serialization wait. Independent interim review then
+found `REM02-TIME-01`: merely moving the wall-clock capture into the outer delivery command was still
+too early because the canonical materializer can perform additional pre-write waits and checks. Forward
+migration `0120_matching_proposal_temporal_exact_view_remediation_v1.sql` therefore places the ONE
+authoritative delivery-deadline decision inside
+`materialize_matching_recipient_view_core_v1`, after every lock and pre-write check and immediately
+before the first immutable recipient-view INSERT. Historical already-materialized views answer their
+own retry before that decision. Real-PostgreSQL scenarios `T02`, `T04` and `T09` prove that a
+delivery crossing the deadline either on the pair lock or inside the disclosure gate writes nothing,
+while `T02P` reinstalls the predecessor transaction-clock rule and reproduces the late disclosure.
+
+`ASSURE-F08` showed that three terminal human decisions returned historical success without durable
+proof of the exact recipient view that authorized the original act. Independent interim review then
+found `REM02-IDEM-01` in the two delivery retries as the same command-identity class: they reconstructed
+the delivered view from the mutable current-view pointer and did not compare the immutable permitted
+conclusion. Migration `0120` adds two separate, append-only evidence relations rather than merging
+distinct authorities: `matching_proposal_delivery_view_bindings` records what QANDEEL actually
+delivered, while `matching_proposal_decision_view_bindings` records what a human terminally decided.
+The existing `matching_forward_approval_view_bindings` remains unchanged as the first-party approval
+authority consumed by Mutual Match. Equivalent retries now succeed only when their whole immutable
+request is proven from durable rows; a changed view, conclusion or withdrawal prior state conflicts,
+and a committed pre-`0120` transition with no binding fails closed rather than inferring historical
+authority from current state.
+
+Independent ChatGPT Architecture / Privacy / Database / Concurrency review **PASSED** on exact
+implementation head `ff34ac84bec714644fcc0dc8cd064154c579c5fc`. Two complete serial Focused Database Verification rounds for
+`0120` and predecessor regressions `0110`–`0114` all targeted that exact SHA and were green.
+Exact-head `API CI #745` and `Mobile CI #314` were also green. Historical migrations
+`0075`–`0119` remain byte-identical.
+
+**BG-08 / BG-09:** no new backlog obligation is admitted and no phase status changes. `I-07A`,
+`I-07B`, `I-07C`, `I-07D` and parent `I-07` remain **CLOSED / FROZEN**; this section records a
+forward correctness remediation to those frozen semantics, not a reopening of Product scope.
