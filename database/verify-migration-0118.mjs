@@ -365,8 +365,13 @@ async function runMaterial(report, one, two, third) {
       // that guard is exactly what makes only the two reviewed terminal cores
       // able to move a Record. The guard is not on trial here and is restored by
       // the savepoint rollback below, which the scenario then asserts.
+      // The frozen closure-consistency CHECK ties the status to `ended_at`, so
+      // the plant sets both: an incoherent Record is the point, a Record that is
+      // not even representable is not.
       await q('ALTER TABLE public.introduction_records DISABLE TRIGGER introduction_records_truth');
-      await q('UPDATE public.introduction_records SET introduction_status = $1 WHERE id = $2', ['CLOSED', f.record]);
+      await q(`UPDATE public.introduction_records
+                  SET introduction_status = $1, ended_at = clock_timestamp()
+                WHERE id = $2`, ['CLOSED', f.record]);
       await q('ALTER TABLE public.introduction_records ENABLE TRIGGER introduction_records_truth');
       await rejected(() => rt.commitText(f.world, f.lower, 'into an Introduction that is no longer live'),
         UNAVAILABLE, /SHARED_WORLD_MATERIAL_NOT_AVAILABLE/u);
