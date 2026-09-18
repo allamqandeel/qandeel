@@ -180,8 +180,26 @@ async function verifyPosture() {
   assert.deepEqual(await census(`(p.prosrc LIKE '%''MUTUAL_MATCH_COMMITTED''%' OR p.prosrc LIKE '%''CANCELLED_BY_COMPETING_MATCH''%')
                                   AND p.prosrc LIKE '%append_matching_proposal_transition_v1(%'`),
   [I07C_MATCH_PRODUCER], 'P01 exactly the Match core produces the two I-07C proposal states');
+  // RECONCILED BY I-07D.
+  //
+  // The original predicate here was "writes a participation event AND mentions
+  // ACTIVE_INTRODUCTION", which could not tell a PRODUCER from a READER. It did
+  // not need to when nothing else existed. The two reviewed I-07D terminal
+  // cores now write a participation event of their own AND read the exact
+  // ACTIVE_INTRODUCTION pause they supersede - which is precisely what a
+  // terminal transition must do - so the producer predicate is narrowed to the
+  // VALUES shape that actually produces one, and the readers are NAMED beside
+  // it rather than being allowed to escape on spelling.
+  assert.deepEqual(await census(`p.prosrc ~ '''PAUSED'',\\s*''ACTIVE_INTRODUCTION'''`),
+    [I07C_MATCH_PRODUCER], 'P01 exactly the Match core PRODUCES the ACTIVE_INTRODUCTION pause');
   assert.deepEqual(await census(`p.prosrc LIKE '%INSERT INTO public.matching_participation_events%' AND p.prosrc LIKE '%''ACTIVE_INTRODUCTION''%'`),
-    [I07C_MATCH_PRODUCER], 'P01 exactly the Match core produces the ACTIVE_INTRODUCTION pause');
+    ['commit_introduction_end_v1', 'commit_introduction_success_v1', I07C_MATCH_PRODUCER].sort(),
+    'P01 and the only other functions that name it at all are the two reviewed I-07D terminal cores, which supersede it');
+  // The I-07C Match core itself is untouched: it still writes no terminal
+  // Introduction state, releases no claim and spells no post-terminal pause.
+  const [matchCore] = await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure', [MFN_MATCH.COMMIT]);
+  assert.doesNotMatch(matchCore.prosrc, /POST_SUCCESS|POST_INTRODUCTION|'COMPLETED'|'CLOSED'|'RELEASED'|introduction_terminal_commits/u,
+    'P01 the frozen Match core produces no terminal Introduction state, no claim release and no post-terminal pause');
   assert.deepEqual(await census(`p.prosrc LIKE '%INSERT INTO public.shared_worlds%'`),
     [I07C_MATCH_PRODUCER, 'commit_shared_world_direct_acceptance_birth_v1'], 'P01 exactly the two frozen birth paths create a Shared World');
   assert.deepEqual(await census(`p.prosrc LIKE '%INSERT INTO public.matching_forward_approval_view_bindings%'`),

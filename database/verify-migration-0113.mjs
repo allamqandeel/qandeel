@@ -349,6 +349,48 @@ async function verifyCatalog() {
       WHERE n.nspname = 'public' AND pr.prosrc ~ 'INSERT INTO public\\.matching_forward_approval_view_bindings' ORDER BY 1`);
   assert.deepEqual(binders.map((r) => r.proname), ['approve_matching_proposal_forward_core_v1'],
     'P07 exactly the revised forward approval writes a first-acceptance view binding');
+
+  // P08 THE FORWARD SEAM, RECONCILED BY I-07D.
+  //
+  // 0113 made COMPLETED, CLOSED and RELEASED representable and gave each of
+  // them NO producer, so that I-07D could add one rather than relax a ceiling.
+  // The census above is INSERT-only and is therefore still exactly true; what
+  // has legitimately advanced is the UPDATE side, and it is proven here with
+  // the same exact-ownership shape rather than left unstated.
+  //
+  // The I-07C Match and birth semantics remain frozen: nothing new INSERTs a
+  // commit, a Record, a claim or a birth fact, which P07 above already proves.
+  const movers = await rows(
+    `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+      WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
+        AND pr.prosrc ~ 'UPDATE public\\.introduction_records' ORDER BY 1`);
+  assert.deepEqual(movers.map((r) => r.proname), ['commit_introduction_end_v1', 'commit_introduction_success_v1'],
+    'P08 exactly the two reviewed I-07D terminal cores move an Introduction Record to a terminal state');
+  const releasers = await rows(
+    `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+      WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
+        AND pr.prosrc ~ 'UPDATE public\\.matching_active_introduction_claims' ORDER BY 1`);
+  assert.deepEqual(releasers.map((r) => r.proname), ['commit_introduction_end_v1', 'commit_introduction_success_v1'],
+    'P08 and exactly those two release an active-Introduction claim');
+  // The one-winner substrate both of them converge on is a UNIQUE key, so
+  // "exactly one terminal outcome per Introduction Record" is a property of the
+  // database rather than of a comparison either core remembered to make.
+  const [winner] = await rows(
+    `SELECT pg_get_constraintdef(c.oid) definition FROM pg_constraint c
+      WHERE c.conrelid = 'public.introduction_terminal_commits'::regclass
+        AND c.conname = 'introduction_terminal_commits_record_key'`);
+  assert.equal(winner?.definition, 'UNIQUE (introduction_record_id)',
+    'P08 and both converge on one durable terminal-winner substrate keyed by the exact Introduction Record');
+  // The frozen truth triggers 0113 owns are untouched: I-07D produces the moves
+  // they already left representable, and relaxed none of them.
+  const [recordTruth] = await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure',
+    ['public.introduction_record_truth_v1()']);
+  assert.match(recordTruth.prosrc, /OLD\.introduction_status = 'ACTIVE' AND NEW\.introduction_status IN \('COMPLETED', 'CLOSED'\)/u,
+    'P08 the frozen Introduction Record truth trigger still allows exactly one terminal move from ACTIVE');
+  const [claimTruth] = await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure',
+    ['public.matching_active_introduction_claim_truth_v1()']);
+  assert.match(claimTruth.prosrc, /OLD\.claim_state = 'HELD' AND NEW\.claim_state = 'RELEASED'/u,
+    'P08 and the frozen claim truth trigger still allows exactly HELD to RELEASED');
   for (const role of ['public', ...APP_ROLES]) {
     assert.equal(await rt.canExecute(role, MFN_MATCH.COMMIT), false, `P07 ${role} must not execute the Match core`);
     assert.equal(await rt.canExecute(role, PFN.APPROVE), false, `P07 ${role} must not execute the revised approval`);

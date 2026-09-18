@@ -619,6 +619,44 @@ jobs:
             printf '### I-07C real-PostgreSQL verifiers\n- 0113 = %s\n- 0114 = %s\n' "$result_0113" "$result_0114" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$status"
+      # I-07D closes the Introduction lifecycle. 0115 proves that one human can
+      # disclose one exact resource to their exact counterpart and to nobody else
+      # that the disclosure is real Shared history the owner still owns that
+      # nothing about it is reciprocal or reusable and that the ONE canonical
+      # historical visibility entry point learned Introduction without changing a
+      # single Standard answer. 0116 proves that an ACTIVE / INTRODUCTION World
+      # has exactly ONE terminal winner that SUCCESS needs both humans and END
+      # needs only one that an exit can never be gated and that every terminal
+      # effect happens at one instant or not at all - with nine real
+      # two-connection races each pinned by a lock-wait barrier. 0117 proves that
+      # re-entering Matching is explicit fully revalidated proven from exact
+      # immutable lineage and revives nothing. ONE reported group rather than
+      # three hard-fail steps: a failure in 0115 would otherwise skip 0116 and
+      # 0117 entirely and cost two whole rounds per finding. Each exit code is
+      # captured and the step exits non-zero if any of the three failed.
+      - name: Verify the three I-07D Introduction lifecycle and progressive disclosure verifiers against real PostgreSQL as one reported group
+        run: |
+          status=0
+          result_0115=FAIL
+          result_0116=FAIL
+          result_0117=FAIL
+          echo "::group::migration 0115 - Introduction progressive disclosure and Introduction historical visibility"
+          if npm run verify:introduction-progressive-disclosure:integration; then result_0115=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0116 - the Introduction terminal lifecycle and its one terminal winner"
+          if npm run verify:introduction-terminal-lifecycle:integration; then result_0116=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "::group::migration 0117 - explicit post-Introduction Matching reactivation"
+          if npm run verify:post-introduction-matching-reactivation:integration; then result_0117=PASS; else status=1; fi
+          echo "::endgroup::"
+          echo "I-07D real-PostgreSQL verifier results"
+          echo "0115 = $result_0115"
+          echo "0116 = $result_0116"
+          echo "0117 = $result_0117"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            printf '### I-07D real-PostgreSQL verifiers\n- 0115 = %s\n- 0116 = %s\n- 0117 = %s\n' "$result_0115" "$result_0116" "$result_0117" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

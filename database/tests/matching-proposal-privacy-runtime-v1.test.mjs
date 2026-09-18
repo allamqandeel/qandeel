@@ -458,9 +458,13 @@ test('the I-07A censuses name the relations I-07B adds rather than being dodged'
     /(candidate|proposal|pair|mutual|commit|slot|snapshot|eligibility|compatib|leaderboard|rank|score)/u.test(name));
   assert.deepEqual(listed.sort(), declared.sort(),
     'every lifecycle-shaped relation 0110 creates is named in the I-07B half of the shared census list, and nothing else is');
+  // The shared census list is exactly the union of the reviewed per-slice
+  // arrays. It gains one array per reviewed later slice - I-07D added its own -
+  // and the property this contract owns is unchanged: the list is a UNION of
+  // named per-slice arrays, so nothing can enter the census unowned.
   assert.match(setupSupport,
-    /export const LATER_SLICE_LIFECYCLE_RELATIONS = \[\.\.\.I07B_LIFECYCLE_RELATIONS, \.\.\.I07C_LIFECYCLE_RELATIONS\]\.sort\(\);/u,
-    'the shared census list is exactly the union of the two reviewed per-slice arrays');
+    /export const LATER_SLICE_LIFECYCLE_RELATIONS = \[\n\s+\.\.\.I07B_LIFECYCLE_RELATIONS, \.\.\.I07C_LIFECYCLE_RELATIONS, \.\.\.I07D_LIFECYCLE_RELATIONS,\n\]\.sort\(\);/u,
+    'the shared census list is exactly the union of the reviewed per-slice arrays');
   for (const n of ['0108', '0109']) {
     const verifier = read(`../verify-migration-${n}.mjs`);
     assert.match(verifier, /LATER_SLICE_LIFECYCLE_RELATIONS/u,

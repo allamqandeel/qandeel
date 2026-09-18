@@ -416,6 +416,48 @@ async function verifyCatalog() {
     ['service_role', RESOLVE_FN, 'EXECUTE']);
   assert.equal(serviceExecute, true, 'service_role is the only executor of the visibility resolver');
 
+  // RECONCILED BY I-07D.
+  //
+  // 0087 implemented Standard visibility only and refused INTRODUCTION with a
+  // bounded unsupported class. That was a truthful statement about what
+  // existed, not a ceiling: migration 0115 extended the SAME entry point - this
+  // one, forward-only through CREATE OR REPLACE - with the reviewed
+  // Introduction branch, and the file 0087 owns was not edited.
+  //
+  // What must stay proven is the three things that are load-bearing: this is
+  // still the ONE entry point; the Introduction support is EXACTLY the reviewed
+  // extension and is strictly narrower than Standard; and every Standard
+  // semantic 0087 froze is unchanged.
+  stage = 'catalog: the ONE entry point is still the ONE, and its Standard semantics are unchanged';
+  assert.equal(resolver.volatility, 's', 'the entry point is still STABLE after the I-07D extension');
+  // THE FROZEN STANDARD UNION, still exactly as 0087 wrote it.
+  assert.match(resolver.prosrc, /i\.occurred_at >= e\.joined_at/u,
+    'membership-period visibility still uses truthful temporal bounds');
+  assert.match(resolver.prosrc, /e\.ended_at IS NULL OR i\.occurred_at <= e\.ended_at/u,
+    'in both directions');
+  assert.match(resolver.prosrc, /shared_world_history_item_baseline_viewers/u,
+    'a membership interval alone is still never historical visibility');
+  assert.match(resolver.prosrc, /resolve_shared_world_closed_history_visibility_v1/u,
+    'and closed viewing still delegates to the exact closure entitlement snapshot');
+  // THE EXPLICIT HISTORY-GRANT BASIS BELONGS TO STANDARD ALONE. It appears
+  // exactly once, which is what proves the Introduction branch did NOT inherit
+  // selective-history semantics merely because Standard Worlds have them.
+  assert.equal((resolver.prosrc.match(/shared_world_history_package_manifest_items/gu) ?? []).length, 1,
+    'the explicit history-grant basis appears exactly once: it is the STANDARD branch, and the Introduction branch has none');
+  // THE REVIEWED INTRODUCTION BRANCH EXISTS, and an unspelled mode is still refused.
+  assert.match(resolver.prosrc, /world\.phase = 'INTRODUCTION'/u,
+    'the ONE entry point carries the reviewed I-07D Introduction branch');
+  assert.match(resolver.prosrc, /SHARED_WORLD_HISTORY_VISIBILITY_UNSUPPORTED_WORLD_MODE/u,
+    'and a World mode outside the frozen vocabulary is still refused rather than given Standard semantics');
+  // AND THERE IS STILL EXACTLY ONE server-role historical visibility boundary:
+  // the closed reader the Introduction branch delegates to stays internal to
+  // every application role, service_role included.
+  for (const role of APPLICATION_ROLES) {
+    const [{ allowed: closedReach }] = await rows('SELECT has_function_privilege($1, $2, $3) AS allowed',
+      [role, 'public.resolve_shared_world_closed_history_visibility_v1(uuid,uuid)', 'EXECUTE']);
+    assert.equal(closedReach, false, `${role} must not execute the internal closed reader: there is ONE entry point`);
+  }
+
   stage = 'catalog: temporal truth is immutable and owner deletion is terminal';
   const [truth] = await rows(
     'SELECT pr.prosrc, pg_get_userbyid(pr.proowner) owner FROM pg_proc pr WHERE pr.oid = $1::regprocedure',

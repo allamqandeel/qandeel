@@ -112,7 +112,16 @@ test('the two migrations order directly after the reviewed 0112 tip, are forward
   assert.equal(migrations.indexOf(NAMES['0113']),
     migrations.indexOf('0112_matching_proposal_choreography_runtime_v1.sql') + 1, '0113 orders directly after the reviewed 0112 tip');
   assert.equal(migrations.indexOf(NAMES['0114']), migrations.indexOf(NAMES['0113']) + 1, '0114 follows 0113');
-  assert.equal(migrations.length - 1, migrations.indexOf(NAMES['0114']), '0114 is the migration tip');
+  // I-07C ENDS AT 0114, which is what this used to say as "0114 is the migration
+  // tip". A tip assertion is only true until the next reviewed slice lands, and
+  // it would then be repaired by whichever task happened to trip it rather than
+  // by the one that owns the claim - which is exactly the repair the I-07A
+  // contract already made for the same reason. The claim itself survives intact:
+  // no migration after 0114 belongs to I-07C.
+  for (const later of migrations.slice(migrations.indexOf(NAMES['0114']) + 1)) {
+    assert.doesNotMatch(read(`../migrations/${later}`), /^-- I-07C/u,
+      `${later} is a later slice, not an I-07C migration`);
+  }
   for (const [n, file] of Object.entries(NAMES)) {
     assert.equal(migrations.filter((name) => name.startsWith(`${n}_`)).length, 1, `exactly one migration carries ${n}`);
     assert.match(SOURCE[n], /^-- I-07C/u, `${file} declares its slice`);
@@ -178,8 +187,12 @@ test('0113 introduces exactly the ten I-07C relations, only trigger functions, a
   assert.ok(start >= 0, 'the setup support names the I-07C half of the shared census list');
   const listed = [...setupSupport.slice(start, setupSupport.indexOf('];', start)).matchAll(/^ {2}'([a-z_]+)',$/gmu)].map((m) => m[1]);
   assert.deepEqual(listed.sort(), TABLES_0113, 'the I-07C census half is exactly the ten relations 0113 creates');
+  // The I-07C half is unchanged; the list itself gains one array per reviewed
+  // later slice, and I-07D added its own. What this contract owns - that the
+  // shared list is a UNION of named per-slice arrays, so no relation enters the
+  // census unowned - is exactly as true with three as it was with two.
   assert.match(setupSupport,
-    /export const LATER_SLICE_LIFECYCLE_RELATIONS = \[\.\.\.I07B_LIFECYCLE_RELATIONS, \.\.\.I07C_LIFECYCLE_RELATIONS\]\.sort\(\);/u,
+    /export const LATER_SLICE_LIFECYCLE_RELATIONS = \[\n\s+\.\.\.I07B_LIFECYCLE_RELATIONS, \.\.\.I07C_LIFECYCLE_RELATIONS, \.\.\.I07D_LIFECYCLE_RELATIONS,\n\]\.sort\(\);/u,
     'the shared census list is exactly the union of the reviewed per-slice arrays');
   // 0114 creates exactly one function and revises exactly one.
   assert.deepEqual([...bodyOf('0114').matchAll(/CREATE FUNCTION public\.(\w+)\(/gu)].map((m) => m[1]), ['commit_matching_mutual_match_v1'],

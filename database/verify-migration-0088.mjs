@@ -43,7 +43,10 @@
 //   * C21 a zero-active-human inert ACTIVE World cannot manufacture unanimous
 //     END_WORLD from an empty set;
 //   * C22 unrelated World activity never stales or widens this World's closure;
-//   * C23 no Introduction closure is implemented;
+//   * C23 0088 closes Standard Worlds only, and the Introduction closure line
+//     is exactly the reviewed I-07D producer (reconciled by I-07D: the live
+//     truth advanced, so the assertion proves exact ownership instead of
+//     absence);
 //   * C24 no Personal, Public, Replay or Matching state is mutated, proven by an
 //     exact count delta;
 //   * C05 / C06 concurrency, with real independent connections: end versus leave
@@ -522,20 +525,71 @@ async function verifyClosure(f) {
     [randomUUID(), inert, f.inviter]);
   await rejected(() => prepareEnd(ids(), inert), UNAVAILABLE, /SHARED_WORLD_GOVERNANCE_NOT_AVAILABLE/u);
 
-  stage = 'C23: no Introduction closure is implemented';
+  // C23, RECONCILED BY I-07D.
+  //
+  // What this scenario originally asserted was that NO Introduction closure
+  // existed anywhere and that the ONE visibility entry point refused an
+  // Introduction World outright. Both were truthful statements about what the
+  // repository contained, and neither was a ceiling: migration 0115 extended
+  // the SAME entry point with the reviewed Introduction branch and migration
+  // 0116 added the reviewed terminal producer.
+  //
+  // So the assertions are REPAIRED rather than deleted, and they now prove the
+  // three things that are actually load-bearing: 0088 itself still implements
+  // Standard closure only; the live Introduction support is EXACTLY the
+  // reviewed I-07D extension; and every Standard semantic 0088 owns is
+  // unchanged.
+  stage = 'C23: 0088 closes Standard Worlds only, and the Introduction line is exactly I-07D';
   const introduction = randomUUID();
   await q(`INSERT INTO ${WORLDS}(id, lifecycle, phase, birth_basis, born_at)
            VALUES($1,'ACTIVE','INTRODUCTION','MUTUAL_MATCH', now() - interval '10 days')`, [introduction]);
   await q(`INSERT INTO ${EPISODES}(id, world_id, user_id, joined_at) VALUES($1,$2,$3, now() - interval '10 days')`,
     [randomUUID(), introduction, f.inviter]);
+  // 0088's OWN governance preparation still refuses a non-Standard World.
   await rejected(() => prepareEnd(ids(), introduction), UNAVAILABLE, /SHARED_WORLD_GOVERNANCE_NOT_AVAILABLE/u);
-  await rejected(() => rows(VISIBILITY_SQL, [introduction, f.inviter]), UNSUPPORTED,
-    /SHARED_WORLD_HISTORY_VISIBILITY_UNSUPPORTED_WORLD_MODE/u);
+  // The ONE entry point now ANSWERS an ACTIVE / INTRODUCTION World through the
+  // reviewed I-07D branch. This bare fixture carries no history at all, so the
+  // truthful answer is empty - and it is an ANSWER rather than a refusal.
+  assert.deepEqual(await rows(VISIBILITY_SQL, [introduction, f.inviter]), [],
+    'the reviewed I-07D Introduction branch answers an ACTIVE / INTRODUCTION World truthfully and empty');
+  // The internal CLOSED reader still refuses it, because the World is ACTIVE:
+  // the Introduction branch it gained is the READ_ONLY_CLOSED one.
   await rejected(() => rows(CLOSED_VISIBILITY_SQL, [introduction, f.inviter]), UNSUPPORTED,
     /SHARED_WORLD_CLOSED_VISIBILITY_UNSUPPORTED_WORLD_MODE/u);
   const [introductionAfter] = await rows(`SELECT lifecycle, phase FROM ${WORLDS} WHERE id = $1`, [introduction]);
   assert.deepEqual(introductionAfter, { lifecycle: 'ACTIVE', phase: 'INTRODUCTION' },
     'the Introduction World is untouched: I-04F closes Standard Worlds only');
+  // EXACT OWNERSHIP, live: READ_ONLY_CLOSED / INTRODUCTION and the Introduction
+  // closed-view entitlement family are produced by exactly the reviewed I-07D
+  // end core, and by nothing 0088 owns.
+  const introductionClosers = await rows(
+    `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+      WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
+        AND pr.prosrc ~ 'INSERT INTO public\\.introduction_closed_view_entitlements' ORDER BY 1`);
+  assert.deepEqual(introductionClosers.map((r) => r.proname), ['commit_introduction_end_v1'],
+    'C23 exactly the reviewed I-07D end core freezes an Introduction closed-view entitlement');
+  for (const fnName of [PREPARE_FN, COMMIT_FN]) {
+    const [own] = await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure', [fnName]);
+    assert.doesNotMatch(own.prosrc, /introduction_closed_view_entitlement|introduction_records|introduction_ended_events/u,
+      `C23 ${fnName} implements no Introduction closure: that belongs to the Introduction line`);
+  }
+  // And the Standard entitlement family stays Standard-owned: the Introduction
+  // closure writes its OWN family and never borrows this one.
+  const standardEntitlers = await rows(
+    `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+      WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
+        AND pr.prosrc ~ 'INSERT INTO public\\.shared_world_standard_closed_view_entitlements' ORDER BY 1`);
+  assert.deepEqual(standardEntitlers.map((r) => r.proname), ['commit_shared_world_standard_end_v1'],
+    'C23 and the Standard closed-view entitlement family is still written by exactly the frozen Standard closure');
+  // THE CLOSED READER HAS EXACTLY TWO BRANCHES, and its Standard one is intact.
+  const [closedReader] = await rows('SELECT pr.prosrc FROM pg_proc pr WHERE pr.oid = $1::regprocedure',
+    ['public.resolve_shared_world_closed_history_visibility_v1(uuid,uuid)']);
+  assert.match(closedReader.prosrc, /shared_world_standard_closed_view_entitlement_items/u,
+    'C23 the closed reader keeps its exact Standard branch');
+  assert.match(closedReader.prosrc, /introduction_closed_view_entitlement_items/u,
+    'C23 and gained exactly the reviewed Introduction branch');
+  assert.doesNotMatch(closedReader.prosrc, /shared_world_membership_episodes/u,
+    'C23 while closed viewing is still entitlement and never active membership, in either mode');
 
   stage = 'C01: an exact unanimously approved END_WORLD closes ACTIVE/STANDARD to READ_ONLY_CLOSED/STANDARD';
   const world = await provisionWorld(f.inviter, f.second, 'closure');

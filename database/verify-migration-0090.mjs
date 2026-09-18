@@ -463,13 +463,55 @@ async function verifyCatalog() {
   for (const fnName of [HUMAN_CORE, TEXT_FN, VOICE_FN, QANDEEL_FN]) {
     assert.doesNotMatch(await sourceOf(fnName), /DELETE FROM/iu, `${fnName} deletes nothing: committing destroys nothing`);
   }
+  // RECONCILED BY I-07D.
+  //
+  // 0090 deliberately anticipated a later reviewed Introduction producer: its
+  // body-count assertion already allowed a RESERVED-form material to remove
+  // ZERO body rows, and its own comment says such material must stay deletable
+  // by its own owner without reopening this primitive. What it could not do was
+  // destroy a payload relation that did not exist yet.
+  //
+  // Migration 0115 added exactly one branch - EXPLICIT_DISCLOSURE, by name -
+  // so this census is REPAIRED to the exact new target set rather than deleted,
+  // and the three things that matter are proven beside it: the new targets are
+  // reachable ONLY under that exact kind, no other reserved kind became
+  // deletable, and no envelope, history item, audience, approver, dependency,
+  // grant, entitlement, episode, resource version or event is ever removed.
   const deletion = await sourceOf(DELETE_FN);
   const deletes = [...deletion.matchAll(/DELETE FROM public\.(\w+)/gu)].map((m) => m[1]);
   assert.deepEqual([...new Set(deletes)].sort(),
-    ['shared_world_text_material_bodies', 'shared_world_voice_note_material_bodies'],
-    'every DELETE owner deletion issues targets a material BODY relation and nothing else');
+    ['introduction_disclosure_media_payloads', 'introduction_disclosure_text_payloads',
+      'shared_world_text_material_bodies', 'shared_world_voice_note_material_bodies'],
+    'every DELETE owner deletion issues targets a material BODY relation or a reviewed disclosure PAYLOAD, and nothing else');
+  assert.match(deletion, /owned\.material_kind = 'EXPLICIT_DISCLOSURE'/u,
+    'and the new branch names the exact reserved kind rather than guessing at a body form');
+  assert.doesNotMatch(deletion, /WORLD_EVENT_DERIVED_MATERIAL/u,
+    'so no OTHER reserved material kind became deletable through guessed semantics');
+  // The two new targets are inside the exact-kind branch, and the two frozen
+  // ones are outside it: the branch narrows what it added rather than widening
+  // what was already there.
+  const introductionBranch = deletion.slice(deletion.indexOf("owned.material_kind = 'EXPLICIT_DISCLOSURE'"));
+  for (const frozen of ['shared_world_text_material_bodies', 'shared_world_voice_note_material_bodies']) {
+    assert.ok(deletion.indexOf(`DELETE FROM public.${frozen}`) < deletion.indexOf("owned.material_kind = 'EXPLICIT_DISCLOSURE'"),
+      `the frozen ${frozen} deletion still runs for every kind, outside the new branch`);
+  }
+  for (const added of ['introduction_disclosure_text_payloads', 'introduction_disclosure_media_payloads']) {
+    assert.match(introductionBranch, new RegExp(`DELETE FROM public\\.${added}`, 'u'),
+      `and ${added} is destroyed only inside the exact EXPLICIT_DISCLOSURE branch`);
+  }
   assert.doesNotMatch(deletion, /SET lifecycle|SET phase|SET closed_at/u,
     'a privacy material mutation never reopens or changes World lifecycle');
+  // The canonical owner-deletion primitive is still the ONLY thing in the
+  // database that destroys source content of any kind.
+  const destroyers = await rows(
+    `SELECT DISTINCT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+      WHERE n.nspname = 'public' AND pr.prorettype <> 'trigger'::regtype::oid
+        AND (pr.prosrc ~ 'DELETE FROM public\\.shared_world_text_material_bodies'
+          OR pr.prosrc ~ 'DELETE FROM public\\.shared_world_voice_note_material_bodies'
+          OR pr.prosrc ~ 'DELETE FROM public\\.introduction_disclosure_text_payloads'
+          OR pr.prosrc ~ 'DELETE FROM public\\.introduction_disclosure_media_payloads') ORDER BY 1`);
+  assert.deepEqual(destroyers.map((r) => r.proname), ['delete_shared_world_owned_material_v1'],
+    'and it is still the only primitive in the database that destroys any source content');
 
   stage = 'catalog: the historical widening gate is installed, sealed and on the exact frozen relation';
   const [gate] = await rows(
