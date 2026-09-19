@@ -52,7 +52,7 @@ failure as well as on success.
 
 **Locally**, once a PostgreSQL is available:
 
-````sh
+```sh
 npm run verify:db:focused -- i06a-all
 ```
 
@@ -63,7 +63,7 @@ which reaches any `database/verify-migration-NNNN.mjs` with no mapping entry. Na
 
 **Before a push**, the defect classes that used to be found by CI are found by:
 
-````sh
+```sh
 npm run verify:db:hazards
 ```
 
@@ -92,7 +92,7 @@ pool mode for this migration check.
 
 From the repository root, run:
 
-````sh
+```sh
 npm run verify:database:integration
 npm run verify:memory:integration
 ```
@@ -112,7 +112,7 @@ exact-context metric snapshots. Its verifier proves explicit missingness versus
 numeric zero, unresolved metric confidence, definition identity/version integrity,
 server-derived ownership/history, bounded same-user provenance, and RLS isolation:
 
-````sh
+```sh
 npm run verify:him:integration
 ```
 
@@ -136,7 +136,7 @@ the source digest is `sha256(convert_to(content,'UTF8'))`. See
 Its verifier proves live semantics, including the forward-only source frontier
 and the existing-batch replay split:
 
-````sh
+```sh
 npm run verify:committed-conversational-unit-substrate:integration
 ```
 
@@ -165,7 +165,7 @@ LH, never a Timeline API. The internal same-SP sequencing seam
 verifier proves allocation, sealing, replay, the atomic exchange, the delivery
 surface, the ACL matrix and the activation guard against live semantics:
 
-````sh
+```sh
 npm run verify:session-semantic-clock-sp-lh-delivery:integration
 ```
 
@@ -180,7 +180,7 @@ The `qandeel-dev` project must have the Supabase Data API enabled and the intend
 displaying local values or response bodies before running the destructive smoke
 fixture lifecycle:
 
-````sh
+```sh
 npm run verify:integrations:diagnose
 ```
 
@@ -205,7 +205,7 @@ client-facing request path.
 
 Run from the repository root:
 
-````sh
+```sh
 npm run verify:auth:smoke
 ```
 
@@ -259,7 +259,7 @@ The secret-free structural contract runs under `npm run test:database`. The real
 PostgreSQL verifier proves the catalog, ACL matrix, policy absence, every check and
 FK rejection, open-episode uniqueness and the rejoin shape with rolled-back fixtures:
 
-````sh
+```sh
 npm run verify:connected-worlds-shared-persistence:integration
 ```
 
@@ -317,7 +317,7 @@ PostgreSQL verifier proves the catalog, ACL matrix, policy absence, every check 
 FK rejection, one-ACTIVE-grant uniqueness, the revoke-then-reconfirm shape and the
 audience ceiling with rolled-back fixtures:
 
-````sh
+```sh
 npm run verify:shared-world-standing-context-grants:integration
 ```
 ## Shared Standing Context Grant resolution boundary (migration 0077, I-03B)
@@ -371,7 +371,7 @@ PostgreSQL verifier proves the function catalog, the execute ACL, the still-seal
 direct table ACL, the canonical existence errors, ACTIVE-only resolution, the empty
 ceiling row and revoked-history exclusion with rolled-back fixtures:
 
-````sh
+```sh
 npm run verify:shared-standing-context-grant-resolution:integration
 ```
 
@@ -458,7 +458,7 @@ reconfirm with the old ceiling untouched, stale compare-and-swap, revoke (also a
 leaving and after closure), durable idempotency, the World-row race and the I-03B
 resolver composition with rolled-back or removed fixtures:
 
-````sh
+```sh
 npm run verify:shared-standing-context-consent-commands:integration
 ```
 ## Shared human audience snapshot resolution boundary (migration 0079, I-03D)
@@ -520,7 +520,7 @@ membership-table ACL, the canonical existence error, open-membership-only semant
 lifecycle separation, leave / rejoin episode identity and zero mutation with
 rolled-back fixtures:
 
-````sh
+```sh
 npm run verify:shared-human-audience-snapshot-resolution:integration
 ```
 ## Shared pre-model World-state resolution boundary and EffectiveContext (migration 0080, I-03E)
@@ -595,7 +595,7 @@ PostgreSQL verifier proves the function catalog, the execute ACL, the still-seal
 no membership or grant read, zero mutation and forward safety against a hypothetical
 later trigger, with rolled-back fixtures:
 
-````sh
+```sh
 npm run verify:shared-pre-model-world-state:integration
 ```
 
@@ -694,7 +694,7 @@ first setup and rotation, old-epoch invalidation, non-enumerating submission,
 idempotency, invitation-id collisions, that no World or membership row is ever created,
 and the two-connection races, with rolled-back and cleaned-up fixtures:
 
-````sh
+```sh
 npm run verify:shared-direct-invitation-runtime:integration
 ```
 
@@ -781,7 +781,7 @@ still-sealed 0075 / 0081 substrate, the atomic birth and its single instant, eve
 refusal, idempotency, identity-collision rollback and the multi-connection races, with
 rolled-back and cleaned-up fixtures:
 
-````sh
+```sh
 npm run verify:shared-direct-world-birth:integration
 ```
 
@@ -908,7 +908,7 @@ every 0075 invariant intact, the atomic closure and its single instant, every bo
 the audience transition through the frozen 0079 resolver, Standing Context Grant survival,
 idempotency and the multi-connection races, with rolled-back and cleaned-up fixtures:
 
-````sh
+```sh
 npm run verify:shared-world-standard-voluntary-leave:integration
 ```
 ## Exact membership snapshot and Shared governance approval foundation (migration 0084, I-04D)
@@ -993,7 +993,7 @@ leave-then-rejoin staleness, the removal exclusion, the empty-set refusals, idem
 multi-connection races and forward safety against the add-member consumer this foundation exists to
 serve, with rolled-back and cleaned-up fixtures:
 
-````sh
+```sh
 npm run verify:shared-world-governance-approval-foundation:integration
 ```
 ## Governed Standard membership lifecycle (migration 0085, I-04E)
@@ -1078,7 +1078,7 @@ the staleness law across a frozen leave and a same-human rejoin, the exact count
 history access is created, the multi-connection races and forward safety against the I-04F and I-04G
 substrate, with rolled-back and cleaned-up fixtures:
 
-````sh
+```sh
 npm run verify:shared-world-governed-membership-lifecycle:integration
 ```
 ## Governed Shared settings (migration 0086, I-04E)
@@ -1123,7 +1123,7 @@ instant, the non-reusable approval across a value that returns to an earlier one
 delta showing nothing else moved, the settings-versus-topology and settings-versus-settings races and
 forward safety against later additive settings schema, with rolled-back and cleaned-up fixtures:
 
-````sh
+```sh
 npm run verify:shared-world-governed-settings:integration
 ```
 
@@ -1185,7 +1185,7 @@ not a table freeze - a later reviewed slice may still append columns and write t
 `UNAVAILABLE` is permanently terminal is deliberately not decided: frozen canon does not require it,
 and an item that is merely unavailable may legitimately become available again.
 
-````sh
+```sh
 npm run verify:shared-world-selective-history-access:integration
 ```
 
@@ -1225,7 +1225,7 @@ reaches it as its own owner. I-04F therefore keeps exactly ONE application/serve
 visibility entry point, `resolve_shared_world_history_visibility_v1`. The helper also refuses any World
 that is not an archived Standard World, and consults no membership at all.
 
-````sh
+```sh
 npm run verify:shared-world-standard-closure:integration
 ```
 ## I-04G - Shared Material Persistence (migration 0089)
@@ -1278,7 +1278,7 @@ that still exist. It returns renderable material only: no row at all for an item
 or whose body is gone, and no provenance source identity, private context reference, material
 authority row, dependency or membership data. Every direct relation stays sealed.
 
-````sh
+```sh
 npm run verify:shared-world-material-persistence:integration
 ```
 
@@ -1342,7 +1342,7 @@ mutex. All five primitives are executable by no application role at all, `servic
 migration grants nothing to anybody, and 0089's read-only resolver stays the one material read
 boundary.
 
-````sh
+```sh
 npm run verify:shared-world-material-commit-owner-deletion:integration
 ```
 
@@ -1407,7 +1407,7 @@ The lifecycle vocabulary is complete - `DRAFT`, `READY_FOR_REVIEW`, `PUBLISHED`,
 than an invariant of this one. PART A creates no writer at all, so it can produce no lifecycle; the
 one function it owns is the append-only trigger function.
 
-````sh
+```sh
 npm run verify:public-world-experience-foundation:integration
 ```
 
@@ -1462,7 +1462,7 @@ required set by composite foreign key, exactly as the frozen I-04F history packa
 an approval by a human the exact manifest does not require is structurally impossible however the row
 is produced.
 
-````sh
+```sh
 npm run verify:public-experience-publication-authority:integration
 ```
 
@@ -1567,7 +1567,7 @@ the exact controller and nobody else, returns zero rows to anyone else, disclose
 identifier or contact endpoint and never reads sealed provenance. It is not the Public World serving
 resolver; I-05B creates that.
 
-````sh
+```sh
 npm run verify:public-experience-review-ready-runtime:integration
 ```
 
@@ -1638,7 +1638,7 @@ The frozen 0093 READY commit counts historical approval rows and is deliberately
 gate: the verifier proves READY still commits after a withdrawal, which is exactly why 0095 must
 re-read effective state at publish time.
 
-````sh
+```sh
 npm run verify:public-publication-effective-approval-state:integration
 ```
 
@@ -1682,7 +1682,7 @@ returns zero rows for nonexistent, `DRAFT`, `READY_FOR_REVIEW`, moved-pointer an
 never reads sealed provenance, and is service_role-executable alone, following the frozen narrow
 resolver precedent; every table stays deny-by-default and every other function is internal.
 
-````sh
+```sh
 npm run verify:public-experience-publication-visibility-serving:integration
 ```
 
@@ -1726,7 +1726,7 @@ policy. The verifier proves it against a simulated successor version with real V
 (a verifier-only simulation, rolled back): V1 rows are not served, replied to or consumed as V2's, and
 V2 conversation through the same writers is.
 
-````sh
+```sh
 npm run verify:public-semantic-placement-discussion-qandeel:integration
 ```
 
@@ -1752,7 +1752,7 @@ make an invisible Experience visible. Display labels are joined live, never copi
 slice that ends public presence turns every read dark through the ONE derivation and clears the
 projection on the next rebuild without rewriting any historical post, response or placement.
 
-````sh
+```sh
 npm run verify:public-vitality-search-lens-panel-projections:integration
 ```
 
@@ -1874,7 +1874,7 @@ vitality row is never an independent source of truth: the frozen readers serve a
 it describes the CURRENTLY visible version, and a rebuild deletes the projection of an Experience that
 is not publicly visible.
 
-````sh
+```sh
 npm run verify:public-continuing-eligibility-visibility-closure:integration
 ```
 
@@ -1963,7 +1963,7 @@ continuing eligibility and holds them while it decides AND while it writes, so t
 cannot go stale between the decision and the transition. No advisory lock, table lock, `TRUNCATE` or
 process mutex exists anywhere in I-05C.
 
-````sh
+```sh
 npm run verify:public-experience-disappearance-runtime:integration
 ```
 
