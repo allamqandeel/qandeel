@@ -1088,7 +1088,7 @@ async function verifyHistoricalAnswers(report, f, seam) {
       const command = randomUUID();
       await rt.ensureIdentity(command, randomUUID(), 'PSEUDONYM', 'an alias nobody may edit');
       await asRole('postgres');
-      const [before] = await rows(`SELECT to_jsonb(c.*) row FROM ${IDENTITY_COMMANDS} c WHERE c.id = $1`, [command]);
+      const [before] = await rows(`SELECT to_jsonb(c.*) snapshot FROM ${IDENTITY_COMMANDS} c WHERE c.id = $1`, [command]);
       // THE ANSWER, THE IDENTITY, THE WITNESS, THE REQUEST AND THE INSTANT -
       // and last, a write that changes nothing at all, because a BEFORE UPDATE
       // guard that let a no-op through would let a same-value overwrite of a
@@ -1105,8 +1105,8 @@ async function verifyHistoricalAnswers(report, f, seam) {
         await rejected(() => q(`UPDATE ${IDENTITY_COMMANDS} c SET ${column} = ${value} WHERE c.id = $1`, [command]),
           IMMUTABLE_HISTORY, /PUBLIC_EXPERIENCE_HISTORY_IS_IMMUTABLE/u);
       }
-      const [after] = await rows(`SELECT to_jsonb(c.*) row FROM ${IDENTITY_COMMANDS} c WHERE c.id = $1`, [command]);
-      assert.deepEqual(after.row, before.row, 'H-IMM-01 and the row is byte for byte what it committed');
+      const [after] = await rows(`SELECT to_jsonb(c.*) snapshot FROM ${IDENTITY_COMMANDS} c WHERE c.id = $1`, [command]);
+      assert.deepEqual(after.snapshot, before.snapshot, 'H-IMM-01 and the row is byte for byte what it committed');
     });
 
     await report.isolated('H-IMM-02 a committed identity command cannot be DELETEd', async () => {
@@ -1132,7 +1132,7 @@ async function verifyHistoricalAnswers(report, f, seam) {
       await actAs(f.mohamed);
       await rt.removeFromPublicWorld(ids.removeCommand, ids.experience, ids.version);
       await asRole('postgres');
-      const [before] = await rows(`SELECT to_jsonb(c.*) row FROM ${DISAPPEARANCE_COMMANDS} c WHERE c.id = $1`,
+      const [before] = await rows(`SELECT to_jsonb(c.*) snapshot FROM ${DISAPPEARANCE_COMMANDS} c WHERE c.id = $1`,
         [ids.removeCommand]);
       for (const [column, value] of [
         ['committed_lifecycle', "'PUBLISHED'"],
@@ -1148,9 +1148,9 @@ async function verifyHistoricalAnswers(report, f, seam) {
           () => q(`UPDATE ${DISAPPEARANCE_COMMANDS} c SET ${column} = ${value} WHERE c.id = $1`, [ids.removeCommand]),
           IMMUTABLE_HISTORY, /PUBLIC_EXPERIENCE_HISTORY_IS_IMMUTABLE/u);
       }
-      const [after] = await rows(`SELECT to_jsonb(c.*) row FROM ${DISAPPEARANCE_COMMANDS} c WHERE c.id = $1`,
+      const [after] = await rows(`SELECT to_jsonb(c.*) snapshot FROM ${DISAPPEARANCE_COMMANDS} c WHERE c.id = $1`,
         [ids.removeCommand]);
-      assert.deepEqual(after.row, before.row, 'H-IMM-03 and the answer it committed is exactly what it was');
+      assert.deepEqual(after.snapshot, before.snapshot, 'H-IMM-03 and the answer it committed is exactly what it was');
     });
 
     await report.isolated('H-IMM-04 a committed disappearance command cannot be DELETEd', async () => {
@@ -1204,7 +1204,7 @@ async function verifyHistoricalAnswers(report, f, seam) {
       const reconcileCommand = randomUUID();
       const [eligible] = await rt.reconcileDisappearance(reconcileCommand, ids.experience);
       assert.equal(eligible.outcome, 'STILL_ELIGIBLE');
-      const [before] = await rows(`SELECT to_jsonb(c.*) row FROM ${DISAPPEARANCE_COMMANDS} c WHERE c.id = $1`,
+      const [before] = await rows(`SELECT to_jsonb(c.*) snapshot FROM ${DISAPPEARANCE_COMMANDS} c WHERE c.id = $1`,
         [reconcileCommand]);
       // THE PRODUCT MOVES AS FAR AS IT CAN FROM WHAT THAT COMMAND SAW: the
       // Experience leaves the Public World entirely, through the canonical
@@ -1215,9 +1215,9 @@ async function verifyHistoricalAnswers(report, f, seam) {
       assert.equal((await rows(`SELECT current_lifecycle FROM ${T.EXPERIENCES} WHERE id = $1`,
         [ids.experience]))[0].current_lifecycle, 'ABSENT_FROM_PUBLIC_WORLD',
       'H-IMM-06 the Experience is somewhere else entirely now');
-      const [after] = await rows(`SELECT to_jsonb(c.*) row FROM ${DISAPPEARANCE_COMMANDS} c WHERE c.id = $1`,
+      const [after] = await rows(`SELECT to_jsonb(c.*) snapshot FROM ${DISAPPEARANCE_COMMANDS} c WHERE c.id = $1`,
         [reconcileCommand]);
-      assert.deepEqual(after.row, before.row, 'H-IMM-06 and the earlier command row did not move with it');
+      assert.deepEqual(after.snapshot, before.snapshot, 'H-IMM-06 and the earlier command row did not move with it');
       const [retry] = await rt.reconcileDisappearance(reconcileCommand, ids.experience);
       assert.equal(retry.outcome, 'ALREADY_COMMITTED');
       assert.equal(retry.current_lifecycle, 'PUBLISHED', 'H-IMM-06 the retry still answers what it answered');
@@ -1319,38 +1319,44 @@ async function verifyWithdrawalRace(report, f, base, seam, experiences) {
     { expect: ['UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'] });
   const gate = await rt.captureSeamDefinition(DFN.PREREQUISITE_SEAM, { expect: ['NOT_EVALUATED'] });
 
-  // THE FIXTURES ARE COMMITTED, because the racers are other connections and
-  // an uncommitted fixture is invisible to them. Both CW2-08 seams stay
-  // simulated across the races and all three are restored below.
-  let withdrawalFirst = null;
-  let authorizationFirst = null;
-  await q('BEGIN');
+  // ALL THREE SEAMS ARE RESTORED WHATEVER HAPPENS, the fixture build included:
+  // a failure there would otherwise leave a simulated CW2-08 clearance standing
+  // for the rest of the run.
+  let holder = null;
+  let withdrawer = null;
+  let authorizer = null;
   try {
-    // ONE DRAFT EXPERIENCE PER RACE, through the canonical primitive. Not
-    // `provisionControlledExperience`: that also mints a Public Identity, and
-    // this creator already has the one the fixture gave them.
-    for (let race = 0; race < 2; race += 1) {
-      const experience = randomUUID();
-      await actAs(f.creator);
-      const [drafted] = await publicDraft(randomUUID(), experience);
-      assert.equal(drafted.outcome, 'DRAFT_CREATED', 'race fixture: the Public Experience draft was created');
-      experiences.push(experience);
+    // THE FIXTURES ARE COMMITTED, because the racers are other connections and
+    // an uncommitted fixture is invisible to them. Both CW2-08 seams stay
+    // simulated across the races.
+    let withdrawalFirst = null;
+    let authorizationFirst = null;
+    await q('BEGIN');
+    try {
+      // ONE DRAFT EXPERIENCE PER RACE, through the canonical primitive. Not
+      // `provisionControlledExperience`: that also mints a Public Identity, and
+      // this creator already has the one the fixture gave them.
+      for (let race = 0; race < 2; race += 1) {
+        const experience = randomUUID();
+        await actAs(f.creator);
+        const [drafted] = await publicDraft(randomUUID(), experience);
+        assert.equal(drafted.outcome, 'DRAFT_CREATED', 'race fixture: the Public Experience draft was created');
+        experiences.push(experience);
+      }
+      await asRole('postgres');
+      await rt.simulateAnalyticalAuthority([]);
+      await rt.simulateDistributionPrerequisites();
+      withdrawalFirst = await racedPackage(f, base, experiences.at(-2));
+      authorizationFirst = await racedPackage(f, base, experiences.at(-1));
+      await asRole('postgres');
+      await rt.clearPrerequisites();
+    } finally {
+      await q('COMMIT');
     }
-    await asRole('postgres');
-    await rt.simulateAnalyticalAuthority([]);
-    await rt.simulateDistributionPrerequisites();
-    withdrawalFirst = await racedPackage(f, base, experiences.at(-2));
-    authorizationFirst = await racedPackage(f, base, experiences.at(-1));
-    await asRole('postgres');
-    await rt.clearPrerequisites();
-  } finally {
-    await q('COMMIT');
-  }
 
-  const holder = await rt.openSecondary();
-  const withdrawer = await rt.openSecondary();
-  const authorizer = await rt.openSecondary();
-  try {
+    holder = await rt.openSecondary();
+    withdrawer = await rt.openSecondary();
+    authorizer = await rt.openSecondary();
     const [{ pid: withdrawPid }] = (await withdrawer.q2('SELECT pg_backend_pid() pid')).rows;
     const [{ pid: authorizePid }] = (await authorizer.q2('SELECT pg_backend_pid() pid')).rows;
     const [{ pid: holderPid }] = (await holder.q2('SELECT pg_backend_pid() pid')).rows;
@@ -1484,9 +1490,7 @@ async function verifyWithdrawalRace(report, f, base, seam, experiences) {
       await asRole('postgres');
     });
   } finally {
-    await holder.close();
-    await withdrawer.close();
-    await authorizer.close();
+    for (const side of [holder, withdrawer, authorizer]) if (side) await side.close();
     await asRole('postgres');
     await rt.restorePrerequisites(seam);
     await rt.restoreSeamDefinition(analytical);
