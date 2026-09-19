@@ -64,10 +64,17 @@ Before claiming a task is `CLOSED / FROZEN`, or preparing the change that closes
    only in a review comment, a final report or a task-local note.
 4. Update the task's own primary canonical document from its candidate/review banner to its final
    lifecycle state (BG-09), in the same closing change.
-5. Leave no successor task responsible for finishing any of the above. Repairing a predecessor's
+5. A Connected Worlds phase (`I-0N`) closes on exactly these terms. Its closure is recorded as an
+   `### I-0N closure record` section of the backlog, and its primary canonical record carries the
+   `**Phase:**` banner that must reach `CLOSED / FROZEN` in the same change. A phase with no
+   standalone document still has one — `I-05`'s is `database/README.md` — and "it has no document"
+   is not a reason for its lifecycle state to go unstated. A SLICE is not a phase: `I-07D` closes
+   as a slice, under `**Slice:**`, and never through an `### I-07D closure record` heading, which
+   would claim a phase closure that did not happen.
+6. Leave no successor task responsible for finishing any of the above. Repairing a predecessor's
    closure record is a governance task, not ordinary inheritance.
-6. Run `npm run test:task-closure-governance-contract`, which enforces 4 and the continued existence
-   of the rules behind 1–3.
+7. Run `npm run test:task-closure-governance-contract`, which enforces 4 and 5 and the continued
+   existence of the rules behind 1–3.
 
 ## 11. Default engineering bias
 When more than one valid implementation exists, prefer:

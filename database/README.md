@@ -1346,6 +1346,16 @@ boundary.
 npm run verify:shared-world-material-commit-owner-deletion:integration
 ```
 
+## Connected Worlds v2 - Public World Runtime
+
+**Phase:** `I-05 - Public World Runtime` - **CLOSED / FROZEN**
+
+The sections below, `I-05A` through `I-05C`, are the primary canonical record of the `I-05` phase.
+`I-05` has no standalone document of its own: its runtime is migrations `0091`-`0099` and this is
+where they are documented, so the lifecycle banner `BG-09` governs lives here. The closure itself is
+recorded once, in [`docs/qandeel-canonical-backlog-v1.md`](../docs/qandeel-canonical-backlog-v1.md);
+this line states the phase's current lifecycle state and nothing else.
+
 ## I-05A - Public World and Experience Foundation (migration 0091)
 
 `0091_public_world_experience_identity_foundation_v1.sql` is the first Public World persistence in
@@ -3333,3 +3343,147 @@ non-regression half re-proves the `0114` forward approval in all three direction
 on the exact bound approval view, the `I07B-CONC-01` view-supersession race, that no binding reaches any
 recipient projection while the neutral outcome vocabulary is unchanged, and that the CW2-08 gate still
 holds the four consequential boundaries while withdrawal still ends a human's own exposure without it.
+
+## QAN-CW-REM-03 - Public/Replay current-consent composition and Public historical command truth (migration 0121)
+
+`0121_public_replay_consistency_historical_retry_remediation_v1.sql` corrects two accepted phase-wide
+assurance findings that are the same mistake in two shapes: a CURRENT answer and a HISTORICAL answer
+read from the same mutable place.
+
+**ASSURE-F03.** A Replay distribution to the Public World is ONE human consent act recorded in TWO
+evidence stores. Migration `0104` makes that structural - a `PUBLISH_TO_PUBLIC_WORLD` approval MUST
+carry `linked_public_approval_id` and every other destination MUST NOT - and `0105`'s withdrawal
+already honoured it by withdrawing both halves. The EFFECTIVE-STATE derivation did not: it read only a
+Replay withdrawal event and the Replay fingerprint, so a human who withdrew their canonical Public
+publication approval directly, through the one Public withdrawal primitive, left the Replay approval
+still answering `EFFECTIVE`. The derivation now COMPOSES the canonical `0094` answer for the exact
+approval row the consent act committed. Any explicit human withdrawal of either half is `WITHDRAWN`;
+a superseded or unresolvable linked Public approval is `SUPERSEDED`; a non-Public destination has no
+linked approval and is unchanged. No Public consent rule is re-implemented inside Replay, no synthetic
+Replay withdrawal event is invented, and no historical row is touched.
+
+**ASSURE-F09.** Five Public command families answered a committed retry by reading
+`public_experiences.current_lifecycle`, the current `experience_revision`, the current
+`public_identity_display_state` or the current disappearance record. Section 2 of the migration
+carries the complete census of every Public consequential command family with durable idempotency,
+with a verdict per answer field; three families were already correct and one - the Public withdrawal -
+reads a derivation that is PROVEN pinned to `WITHDRAWN`, so neither is touched.
+
+The correction reads the exact evidence each command already left. The three lifecycle-moving commands
+write their lifecycle event with `id = p_command_id`, so the historical answer is not a temporal
+question at all - it is an identity binding that already exists, and the retry reads the event that
+command id names, validating the Experience, the version, the lifecycle and the command's own instant
+before it answers. It is deliberately NOT a "latest event at or before the committed instant"
+reconstruction: `occurred_at` is not a uniqueness key, so time is strictly weaker than the identity
+already recorded (`REM03-HIST-01`).
+
+A disappearance command can commit an answer WITHOUT moving a lifecycle - `STILL_ELIGIBLE`,
+`ALREADY_ABSENT` and both `NOT_APPLICABLE` branches write no event - so it has no event of its own
+to bind, and that family records its exact answer instead: three typed columns written atomically with
+the transition it reports, behind a `BEFORE INSERT` guard that makes carrying them structural. That
+includes the case the frozen retry got outright wrong, where a `STILL_ELIGIBLE` answer that returned
+NULL was replayed as the command's target version. Temporal reconstruction survives only as a bounded
+LEGACY fallback for a pre-`0121` no-op, reachable from exactly one place and failing closed on
+ambiguity. The Public Identity label gets the same typed treatment, because it has no history relation
+by design; a command committed before `0121` reconstructs its answer only while its committed
+`label_revision` still equals the current one - a witness, not a guess - and fails closed otherwise.
+
+**The two answer-carrying histories are append-only (`REM03-HIST-02`).** Making
+`public_identity_commands` and `public_experience_disappearance_commands` authoritative for an exact
+historical answer changes what has to be true of them. `0093` and `0099` gave them RLS, zero policies
+and revoked privileges, which is the right protection for a request log and the wrong one for an
+answer: a privilege binds roles, not the table owner, and says nothing about what a row may BECOME.
+Both now carry a `BEFORE UPDATE OR DELETE` guard through one shared rejection function - the same
+shape the Public domain already uses for versions, lifecycle events, approvals, withdrawals,
+publication state and the sealed disappearance record - refusing every UPDATE and every DELETE for
+every role, `postgres` included. There is no exception for the new answer columns, no
+application-facing update primitive, and no backfill: a pre-`0121` row keeps its NULL answer and is
+still reconstructed from immutable evidence or refused. A terminal self-assertion pins both triggers
+from `pg_trigger` - enabled, `BEFORE`, `ROW`, `UPDATE` and `DELETE`, and pointing at the shared guard
+- so a later migration that dropped or weakened either one fails at the end of this one.
+
+**The cross-domain withdrawal race (`REM03-CONC-01`).** The sequential proofs show that a direct
+Public withdrawal is composed the moment it exists; they do not answer the concurrent question. The
+Replay authorization checks the composed consent EARLY, under the Replay locks, and reaches the
+Public destination LATE, so a human can take the Public half back in between. What closes that window
+is the canonical Public boundary: `publish_public_experience_v1` re-derives every required approval's
+CURRENT effective state under the Public World lock, and the whole authorization is one transaction.
+No lock was added for this - the invariant either already held through the canonical Public
+serialization and revalidation or it did not - and the verifier proves it on real PostgreSQL with the
+interleaving pinned by `pg_blocking_pids` rather than by timing.
+
+```sh
+npm run verify:public-replay-consistency-historical-retry-remediation:integration
+```
+
+`verify-migration-0121.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database and runs in
+CI after the `QAN-CW-REM-02` verifier. It drives the real boundaries throughout: it withdraws the
+Public half through the canonical primitive by its own name and requires the Replay half to become
+non-effective with no Replay withdrawal event in existence, prepares a second Public-linked package to
+supersede the first through the product path rather than a simulation, requires the distribution to
+refuse with `REPLAY_DISTRIBUTION_APPROVAL_NOT_EFFECTIVE` and leave nothing authorized and nothing
+published, and re-proves that `SHARE_EXTERNALLY` and `DOWNLOAD` behave exactly as they did. The
+historical half takes real Experiences through draft, package, approval, READY, publication and
+disappearance, and asks each committed command its own retry after the state it used to read has
+really moved.
+
+It also proves the append-only guards against the LIVE triggers as the table owner - every answer
+column, every identity column, the request, the instant, and a write that changes nothing at all -
+and proves that the canonical INSERT paths of both families still commit, because a guard that broke
+writing would pass every other check. Finally it runs the cross-domain race on three connections: a
+holder takes the canonical Public World serialization row, the direct Public withdrawal queues on it
+first, the Replay authorization passes every Replay-side gate and queues BEHIND the withdrawal -
+proved by `pg_blocking_pids` and by the relation it is waiting on, which is what shows it got as far
+as the Public destination - and on release the withdrawal commits first and the authorization fails
+closed inside the canonical Public revalidation with `PUBLIC_EXPERIENCE_APPROVAL_NOT_EFFECTIVE`,
+leaving zero authorization, zero publication effect and zero synthetic Replay withdrawal event. The
+opposite linearization, where the authorization owns the serialization point first, is proved to be
+allowed: it commits, and the withdrawal commits after it.
+
+## QAN-CW-REM-03 - Introduction disclosure deletion-time privacy erasure (migration 0122)
+
+`0122_introduction_disclosure_privacy_erasure_v1.sql` closes `ASSURE-F06`. Migration `0115`
+destroys the payload of an owner-deleted `EXPLICIT_DISCLOSURE` and keeps its audit identity, which is
+the right shape - but it also kept `introduction_disclosure_commands.payload_digest`, an unsalted
+SHA-256 of the exact disclosed bytes, and `request_ref`, a digest over the whole request with that
+digest inside it. Every other input of that request survives deletion in plain form on the same row, so
+both are practical offline verifiers of a payload drawn from a deliberately low-entropy vocabulary: a
+name, a contact route, one bounded personal field. An attacker holding either could test guesses until
+one matched, after the owner had exercised deletion.
+
+A stored salt solves nothing - whoever reaches the row reaches both - and a secret-keyed verifier would
+introduce a key lifecycle this repository does not own. So the verifier is DESTROYED with the payload.
+`verifier_state` is explicit (`PRESENT` / `ERASED_BY_OWNER`), a CHECK makes the state and the
+columns one fact in both directions, and the blanket append-only trigger is replaced IN PLACE, under
+the same name, by a guard that permits exactly the one-way `PRESENT -> ERASED_BY_OWNER` transition -
+and only when canonical truth already proves the owner deleted it: an `EXPLICIT_DISCLOSURE` material,
+a `DELETED_BY_OWNER` history item, and no payload row of either form. Every other UPDATE and every
+DELETE stays refused, every audit identity column is pinned, and no replacement digest or
+payload-derived tombstone is representable. Owner deletion performs the erasure in the same transaction
+at the same instant, after the terminal transition the guard requires as its proof, and refuses to
+report success while any verifier survives. Rows already deleted before this migration are reconciled
+on the same canonical predicate; a payload-absent row whose history is NOT `DELETED_BY_OWNER` fails
+deployment rather than being redacted as though an owner deletion had happened.
+
+Exact payload equivalence can no longer be proven for an erased command, so any retry of it fails
+closed with one bounded class. It ignores nothing, compares against nothing, reconstructs nothing and
+recreates nothing. The refusal is reachable only when every SURVIVING immutable request identity field
+still matches - the owner, the World, the resource version, the material, the history item, the grant
+event AND the resource type. `resource_type` is an immutable input, is not content-derived and is
+retained as audit identity, so an erased `FULL_NAME` retried as a `CONTACT_METHOD` is still the command
+conflict the surviving evidence can prove (`REM03-ERASE-ID-01`). Only content identity is intentionally
+unknowable. A stranger still meets the frozen command conflict and learns nothing about whether a
+disclosure was deleted.
+
+```sh
+npm run verify:introduction-disclosure-privacy-erasure:integration
+```
+
+`verify-migration-0122.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It delivers
+real disclosures of every text and image type through the canonical boundary, deletes them through the
+canonical owner-deletion capability, and then asks the database the attacker's question directly: the
+digest of a CORRECT guess of the deleted payload must match nothing that survived. It proves the full
+audit identity is unchanged column by column, that the resource version and the grant fact outlive the
+payload, that a legacy already-deleted row is erasable through the guard while a contradictory one is
+refused, that the counterpart's view carries no tombstone and no placeholder, and that the erasure
+admits no way back.

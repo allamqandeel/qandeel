@@ -693,6 +693,28 @@ jobs:
       # I07B-CONC-01 view-supersession race are all non-regressed.
       - name: Verify the QAN-CW-REM-02 Matching proposal temporal correctness and exact-view identity against real PostgreSQL
         run: npm run verify:matching-proposal-temporal-exact-view-remediation:integration
+      # QAN-CW-REM-03 corrects two accepted assurance findings that are both the
+      # same mistake - a current answer and a historical answer read from the
+      # same mutable place. This verifier proves on real state transitions that
+      # a DIRECT withdrawal of the exact linked canonical Public approval makes
+      # the Replay approval it records non-effective with no Replay withdrawal
+      # event invented, that a superseded linked Public approval blocks the
+      # distribution, that a non-Public destination acquires no Public
+      # dependency at all, and that five Public command families now answer a
+      # committed retry from immutable evidence after the Experience has moved
+      # lifecycle, been published, disappeared or been renamed underneath them.
+      - name: Verify the QAN-CW-REM-03 Public/Replay consent composition and historical command truth against real PostgreSQL
+        run: npm run verify:public-replay-consistency-historical-retry-remediation:integration
+      # The privacy half of QAN-CW-REM-03. It proves that owner deletion of an
+      # Introduction disclosure destroys the payload digest and the
+      # payload-derived request reference with the payload itself, that the
+      # audit identity survives untouched, that the erasure is one-way and
+      # unreachable unless canonical truth already proves the owner deleted it,
+      # that a legacy already-deleted row is reconciled while a contradictory
+      # one is refused, and that any retry of an erased disclosure command fails
+      # closed without comparing, reconstructing or recreating anything.
+      - name: Verify the QAN-CW-REM-03 Introduction disclosure privacy erasure against real PostgreSQL
+        run: npm run verify:introduction-disclosure-privacy-erasure:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
