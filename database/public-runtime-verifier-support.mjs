@@ -76,6 +76,11 @@ export const IMMUTABLE_RELATIONS = [
   [T.POSTS, 'public_discussion_posts_immutable'],
   [T.RESPONSES, 'public_qandeel_responses_immutable'],
   [T.DISAPPEARANCE_STATE, 'public_experience_disappearance_state_immutable'],
+  // QAN-CW-REM-03 / REM03-HIST-02: the two command histories that carry an
+  // exact committed answer are append-only for every role from 0121 onward, so
+  // the teardown lifts them exactly as it lifts the rest.
+  [T.DISAPPEARANCE_COMMANDS, 'public_experience_disappearance_commands_immutable'],
+  ['public.public_identity_commands', 'public_identity_commands_immutable'],
 ];
 
 // ------------------------------------------------------------------- runtime

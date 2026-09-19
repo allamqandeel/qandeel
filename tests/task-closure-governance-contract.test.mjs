@@ -156,14 +156,25 @@ const governed = primaryDocuments.filter((doc) => closedTaskIds.has(doc.taskId))
 // ---------------------------------------------------------------------------------------------
 
 /**
- * A Connected Worlds phase identifier, matched so that `I-07D` is itself and not `I-07`.
+ * A Connected Worlds PARENT PHASE identifier: `I-04`, `I-08`, and nothing else.
  *
- * The same boundary discipline as `TASK_ID`, and for the same reason: the register records `I-07` as
- * closed and makes no claim about a slice id, so a loose match would drag a slice's banner into a
- * gate that was never told anything about it.
+ * The suffix is the whole point, and it runs the opposite way to `TASK_ID` above. There, `T-12` and
+ * `T-12P` are two different things the register speaks about separately, so the grammar admits both
+ * shapes and lets exact equality tell them apart. Here, `I-07` is a PHASE and `I-07A` … `I-07D` are
+ * its implementation slices — not phases at all, and never things this register records a phase
+ * closure for. ASSURE-F07 governs phase closure.
+ *
+ * A grammar that accepted the suffix would classify a future `### I-07D closure record` heading as a
+ * closed phase and then demand a primary `**Phase:** I-07D` record that should never exist. No slice
+ * closure heading is in the repository today, which is exactly why green CI could not have caught
+ * that: the proofs below therefore run the parsers against synthetic text that contains one.
+ *
+ * `\b` after `\d+` does the work. In `I-42A` the digits cannot be followed by a word boundary at any
+ * backtrack position, so the identifier does not match at all — rather than matching a truncated
+ * `I-42`, which would be worse than not matching.
  */
-const PHASE_ID = /\bI-\d+[A-Za-z0-9]*\b/u;
-const PHASE_ID_ALL = /\bI-\d+[A-Za-z0-9]*\b/gu;
+const PHASE_ID = /\bI-\d+\b/u;
+const PHASE_ID_ALL = /\bI-\d+\b/gu;
 
 /** `**Status:**` and `**Phase:**` — the two lifecycle banners a canonical record may carry. */
 const BANNER_LINE = /^\*\*(?:Status|Phase):\*\*/u;
@@ -182,7 +193,10 @@ function closedPhaseIdsIn(backlogText) {
     const heading = /^###\s+(\S+)\s+closure record\b/u.exec(raw.trim());
     if (heading === null) continue;
     const id = PHASE_ID.exec(heading[1]);
-    // `### T-14 closure record` is a task, and the first half of this file governs it.
+    // `### T-14 closure record` is a task, and the first half of this file governs it; `### I-07D
+    // closure record` is a slice, and the grammar above declines it. The equality is what stops a
+    // heading that merely CONTAINS a phase id — `### (I-42) closure record` — from being read as
+    // that phase's closure statement.
     if (id !== null && id[0] === heading[1]) closed.add(id[0]);
   }
   return closed;
@@ -194,8 +208,11 @@ function closedPhaseIdsIn(backlogText) {
  *
  * A `**Phase:**` banner naming a phase id is the declaration; a `**Status:**` banner naming the same
  * id speaks about it too. `I-04` puts its lifecycle on `**Status:**` and `I-06` puts it on
- * `**Phase:**`, so both are read and neither shape is privileged. A `**Slice:**` banner is
- * deliberately not read: a slice is not the phase.
+ * `**Phase:**`, so both are read and neither shape is privileged.
+ *
+ * A slice reaches this twice and is refused twice, on purpose. A `**Slice:**` banner is not a
+ * banner shape this reads at all, and a slice id is not an identifier `PHASE_ID_ALL` recognizes —
+ * so `**Slice:** I-07D` declares nothing, and so would `**Phase:** I-07D` if anyone ever wrote it.
  */
 function phaseRecordsIn(text) {
   const spoken = new Map();
@@ -399,6 +416,87 @@ test('an open phase is not falsely forced closed', () => {
     'I-08 has not closed, so nothing here may require it to say that it has');
 });
 
+// ---------------------------------------------------------------------------------------------
+// G-SCOPE — a slice is not a phase (REM03-GOV-01).
+//
+// The grammar recognizes parent phases only. The repository contains no slice closure heading
+// today, so every proof below is against synthetic text: a gate whose scope is only ever exercised
+// by the four ids that happen to exist has not been shown to have a scope at all.
+// ---------------------------------------------------------------------------------------------
+
+test('G-SCOPE-01 a parent phase closure heading is discovered', () => {
+  assert.deepEqual([...closedPhaseIdsIn('### I-42 closure record (a phase nobody has written yet)')],
+    ['I-42'], 'a parent phase closes through this heading and must be discovered by shape');
+});
+
+test('G-SCOPE-02 a SLICE closure heading discovers no phase', () => {
+  // The defect itself. A slice tombstone must not make the gate demand a `**Phase:** I-42A`
+  // record — there is no such thing, and the register never claimed a phase closed.
+  assert.deepEqual([...closedPhaseIdsIn('### I-42A closure record (a slice, not a phase)')], [],
+    'a slice closure heading is not a phase closure record');
+  for (const slice of ['I-07A', 'I-07B', 'I-07C', 'I-07D', 'I-04G', 'I-05C', 'I-06B']) {
+    assert.deepEqual([...closedPhaseIdsIn(`### ${slice} closure record`)], [],
+      `${slice} is an implementation slice and must never be discovered as a phase`);
+  }
+});
+
+test('G-SCOPE-03 a phase banner declares the parent phase', () => {
+  const record = ['# QANDEEL — Something v1', '',
+    '**Phase:** `I-42 — Something` — **CLOSED / FROZEN**', ''].join('\n');
+  assert.deepEqual(phaseRecordsIn(record).map((r) => r.phaseId), ['I-42']);
+});
+
+test('G-SCOPE-04 a slice banner declares no phase', () => {
+  assert.deepEqual(phaseRecordsIn('**Slice:** `I-42A — a slice` — **CLOSED / MERGED**'), [],
+    'a slice banner is not a phase declaration');
+  // And neither would a `**Phase:**` banner that named a slice id, which is the half the banner
+  // shape alone never covered.
+  assert.deepEqual(phaseRecordsIn('**Phase:** `I-42A — a slice` — **CLOSED / FROZEN**'), [],
+    'a slice id on a phase banner still declares no phase');
+});
+
+test('G-SCOPE-05 a phase line mentioning a slice in prose declares only the phase', () => {
+  // A `**Phase:**` banner is a line of prose as well as a declaration, and prose names slices.
+  // Every id on such a line is a declaration candidate, so this is where a suffix-accepting
+  // grammar manufactures a phase that does not exist — on the one line shape it reads hardest.
+  assert.deepEqual(
+    phaseRecordsIn('**Phase:** `I-42 — Something` — **CLOSED / FROZEN** (closed by slice I-42D)')
+      .map((r) => r.phaseId), ['I-42'],
+    'the parent phase is declared and the slice named beside it is not');
+
+  // And the whole document shape `I-07` actually has: the phase banner, its slice banners, a
+  // status line that mentions both, and prose. Exactly one phase comes out of it.
+  const document = ['# QANDEEL — Matching / Introductions Runtime v1', '',
+    '**Phase:** `I-42 — Introductions / Matching Runtime` — **CLOSED / FROZEN**',
+    '**Slice:** `I-42A — Foundation v1` — **CLOSED / MERGED**',
+    '**Slice:** `I-42B — Eligibility v1` — **CLOSED / MERGED**',
+    '**Status:** `I-42 — CLOSED / FROZEN` (slices I-42A and I-42B merged)',
+    '', 'I-42 closed once I-42D landed.', ''].join('\n');
+  const records = phaseRecordsIn(document);
+  assert.deepEqual(records.map((r) => r.phaseId), ['I-42'],
+    'one parent phase, and no slice invented from a line that mentions several');
+  assert.ok(records[0].banners.some((line) => CLOSED_BANNER.test(line)),
+    'and the banners that speak about it are still read');
+  assert.ok(!records[0].banners.some((line) => line.startsWith('**Slice:**')),
+    'while a slice banner is not one of them');
+});
+
+test('G-SCOPE-06 the four phases that exist today are still governed', () => {
+  // Narrowing the grammar must not narrow the gate. Every current phase is discovered, has a
+  // record, and that record still states its closure.
+  for (const phaseId of ['I-04', 'I-05', 'I-06', 'I-07']) {
+    assert.ok(closedPhaseIds.has(phaseId), `${phaseId} is still discovered as closed`);
+    const records = governedPhases.filter((record) => record.phaseId === phaseId);
+    assert.ok(records.length > 0, `${phaseId} still has a governed primary record`);
+    assert.ok(records.some((record) => record.banners.some((line) => CLOSED_BANNER.test(line))),
+      `${phaseId} still states CLOSED / FROZEN on a banner this gate reads`);
+  }
+  // And a future parent phase is still discovered with no edit here, which is the property the
+  // narrowing could plausibly have cost.
+  assert.deepEqual([...closedPhaseIdsIn('### I-08 closure record\n### I-09 closure record')].sort(),
+    ['I-08', 'I-09'], 'future parent phases are discovered generically');
+});
+
 test('phase discovery cannot become vacuous', () => {
   // Each derivation must return NOTHING for text that does not carry the real shape, and the floor
   // above must therefore fail if either parser is loosened into matching everything or tightened
@@ -504,6 +602,8 @@ test('AGENTS.md points closure work back at the canonical backlog', () => {
       'the phase banner the closing change must move'],
     [/A phase with no standalone document still has one/u,
       'that a phase without its own document is still governed'],
+    // REM03-GOV-01: the rule an agent needs before writing a closure heading.
+    [/A SLICE is not a phase/u, 'that a slice does not close as a phase'],
   ]) {
     assert.match(agentsProse, clause, `the AGENTS.md closure rule no longer names ${what}`);
   }

@@ -66,6 +66,24 @@
 //   H08 a pre-0121 no-op reconstructs from the immutable log only while that
 //       log is unambiguous, and fails closed the moment it is not - while a
 //       command-bound answer is untouched by the same ambiguity
+//
+//   REM03-HIST-02 - the two histories that now carry an answer are append-only
+//   H-IMM-01 no column of a committed Public Identity command can be UPDATEd
+//   H-IMM-02 and it cannot be DELETEd
+//   H-IMM-03 no column of a committed disappearance command can be UPDATEd
+//   H-IMM-04 and it cannot be DELETEd
+//   H-IMM-05 the canonical INSERT paths of both families are unaffected
+//   H-IMM-06 the stored answer is byte-identical after later Product state
+//       moves, and the retry still answers it
+//
+//   REM03-CONC-01 - the cross-domain withdrawal race, on real PostgreSQL
+//   C01 a direct Public withdrawal and a Replay authorization both queue on the
+//       canonical Public World serialization row, the withdrawal linearizes
+//       FIRST, and the authorization then fails closed inside the canonical
+//       Public boundary with zero authorization, zero publication effect and
+//       zero synthetic Replay withdrawal event
+//   C02 the opposite linearization is allowed: the authorization owns the
+//       serialization point first, commits, and the withdrawal commits after it
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import process from 'node:process';
@@ -80,6 +98,8 @@ const { q, rows, count, asRole, actAs, rejected } = rt;
 const CONTRADICTORY = ['P0001'];
 const CONFLICT = ['23505'];
 const NOT_EFFECTIVE = ['55000'];
+/** The append-only refusal class the Public domain already uses for immutable history. */
+const IMMUTABLE_HISTORY = ['55000'];
 
 /** The eight boundaries 0121 forward-replaces, with their exact frozen signatures. */
 const REPLACED = Object.freeze({
@@ -102,6 +122,12 @@ const DERIVED = Object.freeze({
 const LIFECYCLE_EVENTS = 'public.public_experience_lifecycle_events';
 const LIFECYCLE_GUARD = 'public_experience_lifecycle_events_immutable';
 const DISAPPEARANCE_COMMANDS = 'public.public_experience_disappearance_commands';
+const IDENTITY_COMMANDS = 'public.public_identity_commands';
+/** The two command histories 0121 made authoritative, with their append-only guards. */
+const COMMAND_HISTORIES = [
+  [IDENTITY_COMMANDS, 'public_identity_commands_immutable'],
+  [DISAPPEARANCE_COMMANDS, 'public_experience_disappearance_commands_immutable'],
+];
 /** The exact frozen result columns each replaced Public boundary must still declare. */
 const RESULT_COLUMNS = new Map([
   [REPLACED.ENSURE, ['outcome', 'public_identity_ref', 'label_mode', 'display_label', 'label_revision', 'committed_at']],
@@ -137,6 +163,30 @@ const identityAnswer = (command) =>
   rows('SELECT * FROM public.derive_public_identity_command_answer_v1($1)', [command]);
 const disappearanceAnswer = (command) =>
   rows('SELECT * FROM public.derive_public_disappearance_command_answer_v1($1)', [command]);
+
+/**
+ * Makes a row LOOK like one committed before 0121, with the append-only guard
+ * lifted for exactly that statement.
+ *
+ * A pre-0121 row cannot be produced any other way once 0121 is installed: the
+ * INSERT guard requires a whole answer of every new command, which is the point
+ * of it, and the append-only guard of REM03-HIST-02 then refuses to let one be
+ * removed. Lifting a guard inside a rolled-back verifier transaction is the
+ * established way other QANDEEL historical-state verifiers reach exactly this
+ * kind of fixture, and it is a FIXTURE: production retains no mutation path,
+ * which H-IMM-01 .. H-IMM-04 below prove against the live guard.
+ *
+ * No `finally`. If the statement fails the transaction aborts, the scenario's
+ * savepoint rolls the DISABLE back with it, and the original failure is the one
+ * that gets reported rather than a masking "transaction is aborted".
+ */
+async function asPre0121Row(relation, guard, statement, values) {
+  await q(`ALTER TABLE ${relation} DISABLE TRIGGER ${guard}`);
+  await q(statement, values);
+  await q(`ALTER TABLE ${relation} ENABLE TRIGGER ${guard}`);
+  assert.equal(await rt.triggerEnabled(relation, guard), true,
+    `${guard} is enabled again immediately after the legacy fixture`);
+}
 
 // THE PUBLIC PRIMITIVES, BY THEIR OWN NAMES. The Replay runtime legitimately
 // shadows `createDraft`, `prepare` and `approve` with its own, so a Public
@@ -208,8 +258,32 @@ async function verifyPosture() {
   assert.deepEqual(columns.map((c) => [c.column_name, c.data_type]),
     [['committed_display_label', 'text'], ['committed_label_mode', 'text']],
     'the committed label answer is two typed text columns');
-  assert.equal(await rt.triggerEnabled('public.public_identity_commands', 'public_identity_commands_answer_required'),
+  assert.equal(await rt.triggerEnabled(IDENTITY_COMMANDS, 'public_identity_commands_answer_required'),
     true, 'and a future command that does not carry its answer is refused structurally');
+  // REM03-HIST-02: AND THE ANSWER IS APPEND-ONLY once written. Read from
+  // `pg_trigger` rather than from the DDL, because what matters is the trigger
+  // that is installed and enabled RIGHT NOW: tgtype 27 is ROW + BEFORE + DELETE
+  // + UPDATE, and `tgenabled = 'O'` is the difference between a guard and a
+  // guard some earlier fixture left switched off.
+  for (const [relation, guard] of COMMAND_HISTORIES) {
+    const [installed] = await rows(
+      `SELECT tg.tgtype, tg.tgenabled, fn.proname
+         FROM pg_trigger tg JOIN pg_proc fn ON fn.oid = tg.tgfoid
+        WHERE tg.tgrelid = $1::regclass AND tg.tgname = $2 AND NOT tg.tgisinternal`,
+      [relation, guard]);
+    assert.ok(installed, `${relation} carries the append-only guard ${guard}`);
+    assert.equal(Number(installed.tgtype), 27,
+      `${guard} fires BEFORE every UPDATE and every DELETE, one row at a time`);
+    assert.equal(installed.tgenabled, 'O', `${guard} is enabled`);
+    assert.equal(installed.proname, 'reject_public_command_history_mutation_v1',
+      `${guard} rejects through the one shared Public command-history guard, so the two cannot drift`);
+  }
+  // And nothing anywhere can mutate one: the guard refuses what no code path asks for.
+  const [{ mutators }] = await rows(
+    `SELECT count(*) mutators FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+      WHERE n.nspname = 'public'
+        AND pr.prosrc ~ '(UPDATE|DELETE FROM)\\s+public\\.(public_identity_commands|public_experience_disappearance_commands)\\M'`);
+  assert.equal(Number(mutators), 0, 'no function in the database UPDATEs or DELETEs a Public command history row');
 }
 
 /**
@@ -630,7 +704,9 @@ async function verifyHistoricalAnswers(report, f, seam) {
       const [created] = await rt.ensureIdentity(ensureCommand, randomUUID(), 'PSEUDONYM', 'a legacy alias');
       await asRole('postgres');
       // EXACTLY THE SHAPE A COMMAND COMMITTED BEFORE THIS MIGRATION HAS.
-      await q('UPDATE public.public_identity_commands SET committed_label_mode = NULL, committed_display_label = NULL WHERE id = $1',
+      await asPre0121Row(...COMMAND_HISTORIES[0],
+        `UPDATE ${IDENTITY_COMMANDS}
+            SET committed_label_mode = NULL, committed_display_label = NULL WHERE id = $1`,
         [ensureCommand]);
       const [reconstructed] = await identityAnswer(ensureCommand);
       assert.equal(reconstructed.display_label, 'a legacy alias',
@@ -969,9 +1045,10 @@ async function verifyHistoricalAnswers(report, f, seam) {
       const reconcileCommand = randomUUID();
       await rt.reconcileDisappearance(reconcileCommand, ids.experience);
       // EXACTLY THE SHAPE A COMMAND COMMITTED BEFORE THIS MIGRATION HAS.
-      await q(`UPDATE ${DISAPPEARANCE_COMMANDS}
-                  SET committed_lifecycle = NULL, committed_disappearance_basis = NULL,
-                      committed_absent_experience_version_id = NULL WHERE id = $1`, [reconcileCommand]);
+      await asPre0121Row(...COMMAND_HISTORIES[1],
+        `UPDATE ${DISAPPEARANCE_COMMANDS}
+            SET committed_lifecycle = NULL, committed_disappearance_basis = NULL,
+                committed_absent_experience_version_id = NULL WHERE id = $1`, [reconcileCommand]);
       const [legacy] = await rt.reconcileDisappearance(reconcileCommand, ids.experience);
       assert.equal(legacy.current_lifecycle, 'PUBLISHED',
         'H08 the legacy fallback reconstructs it from the immutable event log');
@@ -993,9 +1070,427 @@ async function verifyHistoricalAnswers(report, f, seam) {
       assert.equal((await rt.publish(ids.publishCommand, ids.experience, ids.version))[0].current_lifecycle,
         'PUBLISHED', 'H08 a command-bound answer is untouched by a second event at the same instant');
     });
+
+    // ------------------------------------------------------- REM03-HIST-02
+    //
+    // The two relations above are now AUTHORITATIVE for an exact historical
+    // answer, so the question is no longer "who may write them" but "may this
+    // row ever change". Every attempt below runs as `postgres` on purpose: RLS
+    // and the 0093 / 0099 revocations already stop every application role, and
+    // a guard proven only against a role that was already denied proves
+    // nothing about the invariant this finding is about.
+
+    await report.isolated('H-IMM-01 no column of a committed identity command can be UPDATEd', async () => {
+      const human = randomUUID();
+      await asRole('postgres');
+      await q('INSERT INTO auth.users(id) VALUES ($1)', [human]);
+      await actAs(human);
+      const command = randomUUID();
+      await rt.ensureIdentity(command, randomUUID(), 'PSEUDONYM', 'an alias nobody may edit');
+      await asRole('postgres');
+      const [before] = await rows(`SELECT to_jsonb(c.*) row FROM ${IDENTITY_COMMANDS} c WHERE c.id = $1`, [command]);
+      // THE ANSWER, THE IDENTITY, THE WITNESS, THE REQUEST AND THE INSTANT -
+      // and last, a write that changes nothing at all, because a BEFORE UPDATE
+      // guard that let a no-op through would let a same-value overwrite of a
+      // column some later migration starts computing through.
+      for (const [column, value] of [
+        ['committed_display_label', "'a label this command never returned'"],
+        ['committed_label_mode', "'REAL_NAME'"],
+        ['label_revision', 'c.label_revision + 1'],
+        ['public_identity_ref', 'gen_random_uuid()'],
+        ['actor_user_id', 'c.actor_user_id'],
+        ['request_ref', "'sha256:' || repeat('0', 64)"],
+        ['committed_at', "c.committed_at + interval '1 second'"],
+      ]) {
+        await rejected(() => q(`UPDATE ${IDENTITY_COMMANDS} c SET ${column} = ${value} WHERE c.id = $1`, [command]),
+          IMMUTABLE_HISTORY, /PUBLIC_EXPERIENCE_HISTORY_IS_IMMUTABLE/u);
+      }
+      const [after] = await rows(`SELECT to_jsonb(c.*) row FROM ${IDENTITY_COMMANDS} c WHERE c.id = $1`, [command]);
+      assert.deepEqual(after.row, before.row, 'H-IMM-01 and the row is byte for byte what it committed');
+    });
+
+    await report.isolated('H-IMM-02 a committed identity command cannot be DELETEd', async () => {
+      const human = randomUUID();
+      await asRole('postgres');
+      await q('INSERT INTO auth.users(id) VALUES ($1)', [human]);
+      await actAs(human);
+      const command = randomUUID();
+      await rt.ensureIdentity(command, randomUUID(), 'PSEUDONYM', 'an alias nobody may erase');
+      await asRole('postgres');
+      await rejected(() => q(`DELETE FROM ${IDENTITY_COMMANDS} WHERE id = $1`, [command]),
+        IMMUTABLE_HISTORY, /PUBLIC_EXPERIENCE_HISTORY_IS_IMMUTABLE/u);
+      // Including the sweeping shape, which is how a history usually disappears.
+      await rejected(() => q(`DELETE FROM ${IDENTITY_COMMANDS} WHERE actor_user_id = $1`, [human]),
+        IMMUTABLE_HISTORY, /PUBLIC_EXPERIENCE_HISTORY_IS_IMMUTABLE/u);
+      assert.equal(await count(IDENTITY_COMMANDS, 'id = $1', [command]), 1, 'H-IMM-02 the command is still there');
+    });
+
+    await report.isolated('H-IMM-03 no column of a committed disappearance command can be UPDATEd', async () => {
+      const ids = freshIds();
+      await draftToReady(f, ids);
+      await rt.publishCleared(seam, f.mohamed, ids.publishCommand, ids.experience, ids.version);
+      await actAs(f.mohamed);
+      await rt.removeFromPublicWorld(ids.removeCommand, ids.experience, ids.version);
+      await asRole('postgres');
+      const [before] = await rows(`SELECT to_jsonb(c.*) row FROM ${DISAPPEARANCE_COMMANDS} c WHERE c.id = $1`,
+        [ids.removeCommand]);
+      for (const [column, value] of [
+        ['committed_lifecycle', "'PUBLISHED'"],
+        ['committed_disappearance_basis', "'PUBLISHED_SOURCE_NOT_AVAILABLE'"],
+        ['committed_absent_experience_version_id', 'NULL'],
+        ['experience_id', 'gen_random_uuid()'],
+        ['target_experience_version_id', 'NULL'],
+        ['actor_user_id', 'c.actor_user_id'],
+        ['request_ref', "'sha256:' || repeat('0', 64)"],
+        ['committed_at', "c.committed_at + interval '1 second'"],
+      ]) {
+        await rejected(
+          () => q(`UPDATE ${DISAPPEARANCE_COMMANDS} c SET ${column} = ${value} WHERE c.id = $1`, [ids.removeCommand]),
+          IMMUTABLE_HISTORY, /PUBLIC_EXPERIENCE_HISTORY_IS_IMMUTABLE/u);
+      }
+      const [after] = await rows(`SELECT to_jsonb(c.*) row FROM ${DISAPPEARANCE_COMMANDS} c WHERE c.id = $1`,
+        [ids.removeCommand]);
+      assert.deepEqual(after.row, before.row, 'H-IMM-03 and the answer it committed is exactly what it was');
+    });
+
+    await report.isolated('H-IMM-04 a committed disappearance command cannot be DELETEd', async () => {
+      const ids = freshIds();
+      await draftToReady(f, ids);
+      await rt.publishCleared(seam, f.mohamed, ids.publishCommand, ids.experience, ids.version);
+      await asRole('postgres');
+      const reconcileCommand = randomUUID();
+      await rt.reconcileDisappearance(reconcileCommand, ids.experience);
+      await rejected(() => q(`DELETE FROM ${DISAPPEARANCE_COMMANDS} WHERE id = $1`, [reconcileCommand]),
+        IMMUTABLE_HISTORY, /PUBLIC_EXPERIENCE_HISTORY_IS_IMMUTABLE/u);
+      await rejected(() => q(`DELETE FROM ${DISAPPEARANCE_COMMANDS} WHERE experience_id = $1`, [ids.experience]),
+        IMMUTABLE_HISTORY, /PUBLIC_EXPERIENCE_HISTORY_IS_IMMUTABLE/u);
+      assert.equal(await count(DISAPPEARANCE_COMMANDS, 'id = $1', [reconcileCommand]), 1,
+        'H-IMM-04 the command is still there');
+    });
+
+    await report.isolated('H-IMM-05 the canonical INSERT paths of both families still work', async () => {
+      // An append-only guard that also broke writing would be a different
+      // defect, and a quiet one: every proof above would still pass.
+      const human = randomUUID();
+      await asRole('postgres');
+      await q('INSERT INTO auth.users(id) VALUES ($1)', [human]);
+      await actAs(human);
+      const [created] = await rt.ensureIdentity(randomUUID(), randomUUID(), 'PSEUDONYM', 'a brand new alias');
+      assert.equal(created.outcome, 'CREATED', 'H-IMM-05 an identity is still created');
+      const [relabelled] = await rt.updateLabel(randomUUID(), 'REAL_NAME', 'and renamed afterwards');
+      assert.equal(relabelled.outcome, 'UPDATED', 'H-IMM-05 and relabelled');
+      assert.equal(Number(relabelled.label_revision), 2);
+
+      const ids = freshIds();
+      await draftToReady(f, ids);
+      await rt.publishCleared(seam, f.mohamed, ids.publishCommand, ids.experience, ids.version);
+      await asRole('postgres');
+      const [eligible] = await rt.reconcileDisappearance(randomUUID(), ids.experience);
+      assert.equal(eligible.outcome, 'STILL_ELIGIBLE', 'H-IMM-05 a reconciliation still commits');
+      await actAs(f.mohamed);
+      const [removed] = await rt.removeFromPublicWorld(ids.removeCommand, ids.experience, ids.version);
+      assert.equal(removed.outcome, 'REMOVED_FROM_PUBLIC_WORLD', 'H-IMM-05 and so does a removal');
+      // And both wrote their answer, which the INSERT guard required of them.
+      await asRole('postgres');
+      assert.equal(await count(DISAPPEARANCE_COMMANDS, 'id = $1 AND committed_lifecycle IS NOT NULL',
+        [ids.removeCommand]), 1, 'H-IMM-05 with the exact answer it committed');
+    });
+
+    await report.isolated('H-IMM-06 the stored answer survives every later Product move', async () => {
+      const ids = freshIds();
+      await draftToReady(f, ids);
+      await rt.publishCleared(seam, f.mohamed, ids.publishCommand, ids.experience, ids.version);
+      await asRole('postgres');
+      const reconcileCommand = randomUUID();
+      const [eligible] = await rt.reconcileDisappearance(reconcileCommand, ids.experience);
+      assert.equal(eligible.outcome, 'STILL_ELIGIBLE');
+      const [before] = await rows(`SELECT to_jsonb(c.*) row FROM ${DISAPPEARANCE_COMMANDS} c WHERE c.id = $1`,
+        [reconcileCommand]);
+      // THE PRODUCT MOVES AS FAR AS IT CAN FROM WHAT THAT COMMAND SAW: the
+      // Experience leaves the Public World entirely, through the canonical
+      // controller removal.
+      await actAs(f.mohamed);
+      await rt.removeFromPublicWorld(ids.removeCommand, ids.experience, ids.version);
+      await asRole('postgres');
+      assert.equal((await rows(`SELECT current_lifecycle FROM ${T.EXPERIENCES} WHERE id = $1`,
+        [ids.experience]))[0].current_lifecycle, 'ABSENT_FROM_PUBLIC_WORLD',
+      'H-IMM-06 the Experience is somewhere else entirely now');
+      const [after] = await rows(`SELECT to_jsonb(c.*) row FROM ${DISAPPEARANCE_COMMANDS} c WHERE c.id = $1`,
+        [reconcileCommand]);
+      assert.deepEqual(after.row, before.row, 'H-IMM-06 and the earlier command row did not move with it');
+      const [retry] = await rt.reconcileDisappearance(reconcileCommand, ids.experience);
+      assert.equal(retry.outcome, 'ALREADY_COMMITTED');
+      assert.equal(retry.current_lifecycle, 'PUBLISHED', 'H-IMM-06 the retry still answers what it answered');
+      assert.equal(retry.absent_experience_version_id, null);
+      assert.equal(retry.disappearance_basis, null);
+    });
   } finally {
     await q('ROLLBACK');
     await asRole('postgres');
+  }
+}
+
+// --------------------------------------------- 4. REM03-CONC-01 the real race
+//
+// ASSURE-F03's sequential proofs (R04, R05, R10) show that a direct Public
+// withdrawal is composed the moment it exists. They do not answer the
+// concurrent question, and the concurrent question is the one that matters:
+// the Replay authorization checks the composed consent EARLY - under the
+// Replay locks, at step 5 of its canonical lock order - and reaches the Public
+// destination LATE, at step 6. Between those two points a human can take the
+// Public half back, and nothing in the Replay domain would notice.
+//
+// What must be true is that the canonical Public boundary revalidates. It does:
+// `publish_public_experience_v1` re-derives every required approval's CURRENT
+// effective state under the Public World lock (its GATE 9), and the whole
+// authorization is one transaction, so a refusal there leaves nothing at all.
+// That is a claim about real lock queueing and real snapshot visibility, so it
+// is proved here on real PostgreSQL with the interleaving PINNED, and never by
+// reading the two functions and reasoning about them.
+//
+// NO NEW LOCK IS ADDED for this. The invariant either already holds through the
+// canonical Public serialization and revalidation or it does not; if it did not,
+// the honest response would be to report a runtime defect, not to install a lock
+// that makes a verifier pass.
+
+/** Launches a statement NOW and captures its outcome, rejection included. */
+const launched = (promise) => promise.then((value) => ({ value }), (error) => ({ error }));
+
+/**
+ * Waits until one backend is observably waiting for a lock AND `by` is one of
+ * the sessions ahead of it.
+ *
+ * `pg_blocking_pids` is what makes the QUEUE ORDER observable rather than
+ * assumed: for a row lock it names the current holder and, when the waiter is
+ * queued behind other waiters for the same tuple, those too. A race whose
+ * order is merely likely is not a proof - whichever side happened to arrive
+ * first would decide the outcome and the scenario would report a pass it did
+ * not earn.
+ */
+async function blockedBehind(pid, by) {
+  for (let attempt = 0; attempt < 400; attempt += 1) {
+    const [seen] = await rows(
+      'SELECT a.wait_event_type, pg_blocking_pids(a.pid) blockers FROM pg_stat_activity a WHERE a.pid = $1',
+      [pid]);
+    if (seen?.wait_event_type === 'Lock' && (seen.blockers ?? []).includes(by)) return true;
+    await new Promise((resolve) => { setTimeout(resolve, 25); });
+  }
+  return false;
+}
+
+/**
+ * Every lock one backend is WAITING for, as `locktype:relation`, which says
+ * where in its lock order it actually stopped.
+ *
+ * The second waiter for a row blocks acquiring the heavyweight TUPLE lock the
+ * first waiter is holding while IT waits, and that lock names the relation. The
+ * relation is the whole point: a Replay authorization stopped at
+ * `public_world_state` is one that already passed every Replay-side gate,
+ * which no assertion about the outcome alone could show.
+ */
+const awaitedLocks = async (pid) => (await rows(
+  `SELECT coalesce(string_agg(DISTINCT l.locktype || ':' || coalesce(l.relation::regclass::text, '-'), ', '),
+                   'nothing') locks
+     FROM pg_locks l WHERE l.pid = $1 AND NOT l.granted`, [pid]))[0].locks;
+
+/** One Public-linked Replay package, prepared, approved, and Public-READY. */
+async function racedPackage(f, base, experience) {
+  const spec = { ...rt.freshPackage(base.replay, base.version, 'PUBLISH_TO_PUBLIC_WORLD'),
+    ...rt.freshPublic(experience) };
+  await actAs(f.creator);
+  const [prepared] = await rt.prepare(spec);
+  assert.equal(prepared.outcome, 'REPLAY_DISTRIBUTION_PACKAGE_PREPARED', 'race fixture: the package prepared');
+  spec.approval = randomUUID();
+  spec.publicApproval = randomUUID();
+  const [approved] = await rt.approve({
+    approval: spec.approval, package: spec.package, publicApproval: spec.publicApproval });
+  assert.equal(approved.outcome, 'REPLAY_DISTRIBUTION_APPROVED', 'race fixture: one consent act, two records');
+  await actAs(f.creator);
+  const [ready] = await rows('SELECT * FROM public.commit_public_experience_ready_for_review_v1($1, $2, $3)',
+    [randomUUID(), experience, spec.publicVersion]);
+  assert.equal(ready.outcome, 'READY_FOR_REVIEW', 'race fixture: the Public half reached READY canonically');
+  spec.experience = experience;
+  return spec;
+}
+
+async function verifyWithdrawalRace(report, f, base, seam, experiences) {
+  await asRole('postgres');
+  const analytical = await rt.captureSeamDefinition(DFN.ANALYTICAL_SEAM,
+    { expect: ['UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT'] });
+  const gate = await rt.captureSeamDefinition(DFN.PREREQUISITE_SEAM, { expect: ['NOT_EVALUATED'] });
+
+  // THE FIXTURES ARE COMMITTED, because the racers are other connections and
+  // an uncommitted fixture is invisible to them. Both CW2-08 seams stay
+  // simulated across the races and all three are restored below.
+  let withdrawalFirst = null;
+  let authorizationFirst = null;
+  await q('BEGIN');
+  try {
+    // ONE DRAFT EXPERIENCE PER RACE, through the canonical primitive. Not
+    // `provisionControlledExperience`: that also mints a Public Identity, and
+    // this creator already has the one the fixture gave them.
+    for (let race = 0; race < 2; race += 1) {
+      const experience = randomUUID();
+      await actAs(f.creator);
+      const [drafted] = await publicDraft(randomUUID(), experience);
+      assert.equal(drafted.outcome, 'DRAFT_CREATED', 'race fixture: the Public Experience draft was created');
+      experiences.push(experience);
+    }
+    await asRole('postgres');
+    await rt.simulateAnalyticalAuthority([]);
+    await rt.simulateDistributionPrerequisites();
+    withdrawalFirst = await racedPackage(f, base, experiences.at(-2));
+    authorizationFirst = await racedPackage(f, base, experiences.at(-1));
+    await asRole('postgres');
+    await rt.clearPrerequisites();
+  } finally {
+    await q('COMMIT');
+  }
+
+  const holder = await rt.openSecondary();
+  const withdrawer = await rt.openSecondary();
+  const authorizer = await rt.openSecondary();
+  try {
+    const [{ pid: withdrawPid }] = (await withdrawer.q2('SELECT pg_backend_pid() pid')).rows;
+    const [{ pid: authorizePid }] = (await authorizer.q2('SELECT pg_backend_pid() pid')).rows;
+    const [{ pid: holderPid }] = (await holder.q2('SELECT pg_backend_pid() pid')).rows;
+
+    await report.section('C01 a Public withdrawal that linearizes first fails the authorization closed', async () => {
+      // Every race begins by clearing all three connections: a scenario that
+      // failed earlier would otherwise leave one holding the barrier, and the
+      // next race would report a lock timeout instead of what it proves.
+      for (const side of [holder, withdrawer, authorizer]) await side.q2('ROLLBACK');
+      await asRole('postgres');
+      const spec = withdrawalFirst;
+      const authorizeCommand = randomUUID();
+      const publishCommand = randomUUID();
+
+      // THE BARRIER. The holder takes the canonical Public World serialization
+      // row and nothing else, so every lock wait observed below is that row.
+      await holder.q2('BEGIN');
+      await holder.q2(`SELECT 1 FROM ${T.WORLD} w WHERE w.singleton FOR UPDATE`);
+
+      // T_WITHDRAW: the canonical Public withdrawal, which has never heard of
+      // Replay. It reaches the serialization row FIRST.
+      await withdrawer.actAs2(f.creator);
+      const withdrawing = launched(withdrawer.q2(
+        'SELECT * FROM public.withdraw_publication_approval_v1($1, $2)', [randomUUID(), spec.publicApproval]));
+      assert.equal(await blockedBehind(withdrawPid, holderPid), true,
+        'C01 the direct Public withdrawal is observably waiting on the Public World row the holder owns');
+
+      // T_AUTHORIZE: every Replay-side gate passes - the approval it composes
+      // is still EFFECTIVE at that instant, because nothing has committed yet -
+      // and it then queues BEHIND the withdrawal at the Public destination.
+      await authorizer.actAs2(f.creator);
+      const authorizing = launched(authorizer.q2(
+        'SELECT * FROM public.authorize_replay_distribution_v1($1, $2, $3)',
+        [authorizeCommand, spec.package, publishCommand]));
+      assert.equal(await blockedBehind(authorizePid, withdrawPid), true,
+        'C01 the Replay authorization is observably queued BEHIND the withdrawal, not merely blocked');
+      const waitingAt = await awaitedLocks(authorizePid);
+      assert.match(waitingAt, /public_world_state/u,
+        `C01 and it is waiting at the PUBLIC DESTINATION, which is proof it passed every Replay-side gate (observed: ${waitingAt})`);
+
+      // RELEASE. The queue order makes the human withdrawal commit first.
+      await holder.q2('COMMIT');
+      const withdrawn = await withdrawing;
+      assert.equal(withdrawn.error, undefined, `C01 the withdrawal commits: ${withdrawn.error?.message}`);
+      assert.equal(withdrawn.value.rows[0].outcome, 'WITHDRAWN', 'C01 the human took their consent back');
+
+      // AND THE AUTHORIZATION, RESUMING, MEETS THE CANONICAL PUBLIC
+      // REVALIDATION - which reads the consent it needs and finds it withdrawn.
+      const authorized = await authorizing;
+      assert.ok(authorized.error,
+        `C01 a withdrawal that linearized first must not be followed by a successful authorization on the stale consent (got ${JSON.stringify(authorized.value?.rows?.[0])})`);
+      assert.equal(authorized.error.code, '55000', 'C01 with the bounded not-effective class');
+      assert.match(authorized.error.message, /PUBLIC_EXPERIENCE_APPROVAL_NOT_EFFECTIVE/u,
+        'C01 raised by the CANONICAL Public boundary revalidating under the Public World lock, not by a second Replay rulebook');
+
+      // ZERO EFFECTS, on both sides of the bridge.
+      await asRole('postgres');
+      assert.equal(await count(D.AUTHORIZATIONS, 'distribution_package_version_id = $1', [spec.package]), 0,
+        'C01 no distribution authorization exists');
+      assert.equal(await count(D.AUTHORIZATION_COMMANDS, 'id = $1', [authorizeCommand]), 0,
+        'C01 and no authorization command either: the whole transaction is gone');
+      assert.equal(await count(T.PUBLICATION_STATE, 'experience_id = $1', [spec.experience]), 0,
+        'C01 nothing was published');
+      assert.equal(await count(T.PUBLISH_COMMANDS, 'id = $1', [publishCommand]), 0,
+        'C01 and the Public publish command it would have written does not exist');
+      assert.equal(await count(T.LIFECYCLE, "experience_id = $1 AND to_lifecycle = 'PUBLISHED'",
+        [spec.experience]), 0, 'C01 and no PUBLISHED lifecycle event was left behind');
+      assert.equal((await rows(`SELECT current_lifecycle FROM ${T.EXPERIENCES} WHERE id = $1`,
+        [spec.experience]))[0].current_lifecycle, 'READY_FOR_REVIEW',
+      'C01 the Experience is exactly where it was');
+
+      // AND NO SYNTHETIC REPLAY WITHDRAWAL WAS INVENTED. The Replay approval is
+      // WITHDRAWN because it COMPOSES the human act, not because anything wrote
+      // a second record of it.
+      assert.equal(await count(D.WITHDRAWALS, 'approval_id = $1', [spec.approval]), 0,
+        'C01 no Replay withdrawal event exists');
+      const [state] = await rt.approvalState(spec.approval);
+      assert.equal(state.effective_state, 'WITHDRAWN', 'C01 while the current effective state is WITHDRAWN');
+      assert.equal(state.withdrawn_at, null, 'C01 with the Replay withdrawal instant still NULL');
+      assert.equal(await count(D.APPROVALS, 'id = $1', [spec.approval]), 1,
+        'C01 and the historical Replay approval row is untouched');
+    });
+
+    await report.section('C02 the opposite linearization is allowed', async () => {
+      // The invariant is directional. An authorization that reaches the
+      // serialization point FIRST linearized before the withdrawal, and
+      // nothing about it was stale when it did.
+      for (const side of [holder, withdrawer, authorizer]) await side.q2('ROLLBACK');
+      await asRole('postgres');
+      const spec = authorizationFirst;
+      const authorizeCommand = randomUUID();
+      const publishCommand = randomUUID();
+
+      await holder.q2('BEGIN');
+      await holder.q2(`SELECT 1 FROM ${T.WORLD} w WHERE w.singleton FOR UPDATE`);
+
+      await authorizer.actAs2(f.creator);
+      const authorizing = launched(authorizer.q2(
+        'SELECT * FROM public.authorize_replay_distribution_v1($1, $2, $3)',
+        [authorizeCommand, spec.package, publishCommand]));
+      assert.equal(await blockedBehind(authorizePid, holderPid), true,
+        'C02 the authorization reaches the Public destination first this time');
+
+      await withdrawer.actAs2(f.creator);
+      const withdrawing = launched(withdrawer.q2(
+        'SELECT * FROM public.withdraw_publication_approval_v1($1, $2)', [randomUUID(), spec.publicApproval]));
+      assert.equal(await blockedBehind(withdrawPid, authorizePid), true,
+        'C02 and the withdrawal queues behind it');
+
+      await holder.q2('COMMIT');
+      const authorized = await authorizing;
+      assert.equal(authorized.error, undefined,
+        `C02 the authorization that linearized first commits: ${authorized.error?.message}`);
+      assert.equal(authorized.value.rows[0].distribution_state, 'PUBLIC_PUBLICATION_COMMITTED',
+        'C02 through the canonical Public boundary');
+      const withdrawn = await withdrawing;
+      assert.equal(withdrawn.error, undefined, `C02 and the withdrawal commits after it: ${withdrawn.error?.message}`);
+      assert.equal(withdrawn.value.rows[0].outcome, 'WITHDRAWN');
+
+      await asRole('postgres');
+      assert.equal(await count(D.AUTHORIZATIONS, 'distribution_package_version_id = $1', [spec.package]), 1,
+        'C02 exactly one authorization exists');
+      assert.equal(await count(T.PUBLICATION_STATE, 'experience_id = $1', [spec.experience]), 1,
+        'C02 and exactly one publication');
+      assert.equal((await rt.approvalState(spec.approval))[0].effective_state, 'WITHDRAWN',
+        'C02 while the consent given for it is now, currently, withdrawn - which is a fact about NOW, not about then');
+      await actAs(f.creator);
+      assert.equal((await rt.authorize({ command: authorizeCommand, package: spec.package,
+        publicPublishCommand: publishCommand }))[0].outcome, 'ALREADY_COMMITTED',
+      'C02 and the historical authorization still answers exactly what it committed');
+      await asRole('postgres');
+    });
+  } finally {
+    await holder.close();
+    await withdrawer.close();
+    await authorizer.close();
+    await asRole('postgres');
+    await rt.restorePrerequisites(seam);
+    await rt.restoreSeamDefinition(analytical);
+    await rt.restoreSeamDefinition(gate);
   }
 }
 
@@ -1011,6 +1506,8 @@ await runVerifier('0121', async (stage) => {
   stage('replay fixture');
   const rf = { creator: randomUUID(), creatorRef: randomUUID(), experience: null };
   rf.humans = [rf.creator];
+  /** Every Public Experience this run commits, so the teardown removes all of them. */
+  const racedExperiences = [];
   let base = null;
   const pf = rt.newFixture();
   const publicHumans = [pf.mohamed, pf.hadir, pf.stranger, pf.reader];
@@ -1029,6 +1526,9 @@ await runVerifier('0121', async (stage) => {
 
     stage('ASSURE-F03 consent composition');
     await verifyConsentComposition(report, rf, base);
+
+    stage('REM03-CONC-01 cross-domain withdrawal race');
+    await verifyWithdrawalRace(report, rf, base, seam, racedExperiences);
 
     // THE SHARED SOURCE ONLY, deliberately. `provision` would also commit a
     // Personal Session, turns and units, and the canonical Public teardown does
@@ -1059,7 +1559,7 @@ await runVerifier('0121', async (stage) => {
     await rt.removeCommittedDistributions(rf.humans);
     await rt.removeCommittedReplayVersions(rf.humans);
     await rt.removeCommittedReplays(rf.humans);
-    await rt.removePublicReplayFixture([rf.experience].filter(Boolean));
+    await rt.removePublicReplayFixture([rf.experience, ...racedExperiences].filter(Boolean));
     await rt.removePublicIdentities(rf.humans);
     await rt.removeHistoricalFixture(rf.humans);
     await rt.removeFixtureHumans(rf.humans);
@@ -1087,6 +1587,6 @@ await runVerifier('0121', async (stage) => {
           + (SELECT count(*) FROM ${R.REPLAYS} WHERE created_by_user_id = ANY($1::uuid[]))
           + (SELECT count(*) FROM public.public_identity_commands WHERE actor_user_id = ANY($1::uuid[]))
           + (SELECT count(*) FROM public.users WHERE id = ANY($1::uuid[])) AS residue`,
-    [[...rf.humans, ...publicHumans], [rf.experience].filter(Boolean)]);
+    [[...rf.humans, ...publicHumans], [rf.experience, ...racedExperiences].filter(Boolean)]);
   assert.equal(Number(residue), 0, 'every fixture this verifier created was rolled back or removed');
 }, () => rt.client.end().catch(() => undefined));

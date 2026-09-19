@@ -68,7 +68,9 @@ Before claiming a task is `CLOSED / FROZEN`, or preparing the change that closes
    `### I-0N closure record` section of the backlog, and its primary canonical record carries the
    `**Phase:**` banner that must reach `CLOSED / FROZEN` in the same change. A phase with no
    standalone document still has one — `I-05`'s is `database/README.md` — and "it has no document"
-   is not a reason for its lifecycle state to go unstated.
+   is not a reason for its lifecycle state to go unstated. A SLICE is not a phase: `I-07D` closes
+   as a slice, under `**Slice:**`, and never through an `### I-07D closure record` heading, which
+   would claim a phase closure that did not happen.
 6. Leave no successor task responsible for finishing any of the above. Repairing a predecessor's
    closure record is a governance task, not ordinary inheritance.
 7. Run `npm run test:task-closure-governance-contract`, which enforces 4 and 5 and the continued

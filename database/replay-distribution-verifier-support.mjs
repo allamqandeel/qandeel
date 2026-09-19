@@ -390,18 +390,30 @@ export function createReplayDistributionRuntime(databaseUrl) {
     }
   }
 
-  /** The Public Identities these verifiers mint, removed after their Experiences. */
+  /**
+   * The Public Identities these verifiers mint, removed after their Experiences.
+   *
+   * The command history is append-only for every role from 0121 onward
+   * (QAN-CW-REM-03 / REM03-HIST-02) - it carries the exact label answer each
+   * command returned - so the guard is lifted inside this ONE transaction and
+   * proven back afterwards, exactly as every other Public teardown does.
+   */
   async function removePublicIdentities(humans) {
+    const guard = ['public.public_identity_commands', 'public_identity_commands_immutable'];
     await rt.asRole('postgres');
     await q('BEGIN');
     try {
+      await q(`ALTER TABLE ${guard[0]} DISABLE TRIGGER ${guard[1]}`);
       await q('DELETE FROM public.public_identity_commands WHERE actor_user_id = ANY($1::uuid[])', [humans]);
       await q(`DELETE FROM public.public_identity_display_state WHERE public_identity_ref IN
                  (SELECT public_identity_ref FROM public.public_identities WHERE user_id = ANY($1::uuid[]))`, [humans]);
       await q('DELETE FROM public.public_identities WHERE user_id = ANY($1::uuid[])', [humans]);
+      await q(`ALTER TABLE ${guard[0]} ENABLE TRIGGER ${guard[1]}`);
     } finally {
       await q('COMMIT').catch(async () => { await q('ROLLBACK'); });
     }
+    assert.equal(await rt.triggerEnabled(guard[0], guard[1]), true,
+      `${guard[1]} is enabled again after the Public Identity teardown`);
   }
 
   return {

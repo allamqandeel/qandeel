@@ -257,21 +257,29 @@ export function createReplayClosureRuntime(databaseUrl) {
    */
   async function removePublicDisappearanceRecord(experiences) {
     if (experiences.length === 0) return;
-    const guard = ['public.public_experience_disappearance_state',
-      'public_experience_disappearance_state_immutable'];
+    // Two guards now, not one. QAN-CW-REM-03 / REM03-HIST-02 made the
+    // disappearance COMMAND history append-only for every role as well, because
+    // from 0121 it carries the exact answer each command returned.
+    const guards = [
+      ['public.public_experience_disappearance_state', 'public_experience_disappearance_state_immutable'],
+      ['public.public_experience_disappearance_commands',
+        'public_experience_disappearance_commands_immutable'],
+    ];
     await rt.asRole('postgres');
     await q('BEGIN');
     try {
-      await q(`ALTER TABLE ${guard[0]} DISABLE TRIGGER ${guard[1]}`);
+      for (const [table, trigger] of guards) await q(`ALTER TABLE ${table} DISABLE TRIGGER ${trigger}`);
       await q('DELETE FROM public.public_experience_disappearance_commands WHERE experience_id = ANY($1::uuid[])',
         [experiences]);
-      await q(`DELETE FROM ${guard[0]} WHERE experience_id = ANY($1::uuid[])`, [experiences]);
-      await q(`ALTER TABLE ${guard[0]} ENABLE TRIGGER ${guard[1]}`);
+      await q(`DELETE FROM ${guards[0][0]} WHERE experience_id = ANY($1::uuid[])`, [experiences]);
+      for (const [table, trigger] of guards) await q(`ALTER TABLE ${table} ENABLE TRIGGER ${trigger}`);
     } finally {
       await q('COMMIT').catch(async () => { await q('ROLLBACK'); });
     }
-    assert.equal(await rt.triggerEnabled(guard[0], guard[1]), true,
-      `${guard[1]} is enabled again after the Public disappearance teardown`);
+    for (const [table, trigger] of guards) {
+      assert.equal(await rt.triggerEnabled(table, trigger), true,
+        `${trigger} is enabled again after the Public disappearance teardown`);
+    }
   }
 
   /**

@@ -524,6 +524,93 @@ test('the two already-immutable families are left alone, with their proof record
     'the version row the preparation retry reads is immutable for every role');
 });
 
+// ------------------------------------------------------------ REM03-HIST-02
+test('both answer-carrying command histories are append-only for EVERY role', () => {
+  // The two relations 0121 makes authoritative for an exact historical answer
+  // had RLS and revoked privileges and nothing else. A privilege binds roles;
+  // it does not bind the owner, and it says nothing about what a row may
+  // become. Neither predecessor installed a mutation guard, which is precisely
+  // why this one is new rather than inherited.
+  assert.ok(!SOURCE_0093.includes('public_identity_commands_immutable'),
+    '0093 created the Public Identity command history with no UPDATE / DELETE guard');
+  assert.ok(!SOURCE_0099.includes('public_experience_disappearance_commands_immutable'),
+    'and 0099 created the disappearance command history with none either');
+
+  const executable = body();
+  assert.match(executable, /CREATE FUNCTION public\.reject_public_command_history_mutation_v1\(\)/u,
+    '0121 installs one guard function for both histories');
+  for (const relation of ['public_identity_commands', 'public_experience_disappearance_commands']) {
+    assert.match(executable,
+      new RegExp(`CREATE TRIGGER ${relation}_immutable\\s*\\n\\s*BEFORE UPDATE OR DELETE ON public\\.${relation}\\s*\\n\\s*FOR EACH ROW EXECUTE FUNCTION public\\.reject_public_command_history_mutation_v1\\(\\)`, 'u'),
+      `${relation} refuses every UPDATE and every DELETE, one row at a time`);
+  }
+  // ONE function for both, so the two relations cannot drift into different rules.
+  assert.equal((executable.match(/reject_public_command_history_mutation_v1\(\)/gu) ?? []).length, 4,
+    'the guard is declared once, owned once and installed on exactly two relations');
+
+  // NO EXCEPTION FOR THE ANSWER COLUMNS, and no conditional escape: the guard
+  // takes no column list and no WHEN clause, and its body only ever raises.
+  const guard = prosrcOf('reject_public_command_history_mutation_v1');
+  assert.match(guard, /RAISE EXCEPTION 'PUBLIC_EXPERIENCE_HISTORY_IS_IMMUTABLE'/u,
+    'it refuses with the class the Public domain already uses for immutable history');
+  assert.doesNotMatch(guard, /RETURN NEW|RETURN OLD|IF /u, 'and there is no path through it that permits anything');
+  assert.doesNotMatch(executable, /BEFORE UPDATE OF |CREATE TRIGGER [a-z_]+_immutable[\s\S]{0,200}?WHEN \(/u,
+    'no column-scoped or conditional variant of either guard exists');
+
+  // AND NO MUTATION PATH WAS ADDED ANYWHERE - not a primitive, not a backfill.
+  for (const relation of ['public_identity_commands', 'public_experience_disappearance_commands']) {
+    assert.ok(!new RegExp(`(UPDATE|DELETE FROM)\\s+public\\.${relation}\\b`, 'u').test(executable),
+      `nothing in 0121 UPDATEs or DELETEs public.${relation}`);
+  }
+  assert.doesNotMatch(executable, /ALTER COLUMN committed_(label_mode|display_label|lifecycle) SET NOT NULL/u,
+    'a pre-0121 row keeps its NULL answer: an unknown answer is not made known by freezing the row');
+
+  // The catalog assertion, so a later migration that dropped or disabled either
+  // guard fails at the end of THIS one rather than silently later.
+  const assertions = SOURCE.slice(SOURCE.indexOf('TERMINAL SELF-ASSERTIONS'));
+  assert.match(assertions, /tg\.tgtype = 27/u,
+    'the terminal assertion pins BEFORE + ROW + UPDATE + DELETE rather than "a trigger exists"');
+  assert.match(assertions, /tg\.tgenabled = 'O'/u, 'and pins that it is ENABLED');
+  assert.match(assertions, /fn\.proname = 'reject_public_command_history_mutation_v1'/u,
+    'and that it is the shared guard rather than some permissive replacement');
+});
+
+// ------------------------------------------------------------ REM03-CONC-01
+test('the cross-domain withdrawal race rests on revalidation, not on a new lock', () => {
+  // The invariant the race proves is a COMPOSITION of two frozen orderings, and
+  // both halves are pinned here so a future edit that broke either would fail
+  // this contract as well as the race.
+  //
+  //   the Replay authorization checks the composed consent EARLY, under the
+  //   Replay locks, and reaches the Public destination LATE
+  const authorize = stripComments(prosrcOf('authorize_replay_distribution_v1', SOURCE_0105));
+  const replayConsent = authorize.indexOf('derive_replay_distribution_effective_approvals_v1');
+  const publicWorld = authorize.indexOf('public.public_world_state w WHERE w.singleton FOR UPDATE');
+  const publish = authorize.indexOf('public.publish_public_experience_v1');
+  assert.ok(replayConsent >= 0 && publicWorld > replayConsent,
+    'the authorization composes consent BEFORE it reaches the Public World row - which is the race window');
+  assert.ok(publish > publicWorld,
+    'and performs the publication through the canonical Public boundary, under that lock');
+
+  //   and the canonical Public boundary re-derives every required approval's
+  //   CURRENT effective state AFTER taking that same row
+  const publishing = stripComments(prosrcOf('publish_public_experience_v1'));
+  const lock = publishing.indexOf('public.public_world_state w WHERE w.singleton FOR UPDATE');
+  const revalidation = publishing.indexOf('derive_publication_manifest_effective_approvals_v1');
+  assert.ok(lock >= 0 && revalidation > lock,
+    'the Public publish revalidates consent under the Public World lock, which is what closes the window');
+  assert.match(publishing, /PUBLIC_EXPERIENCE_APPROVAL_NOT_EFFECTIVE/u,
+    'and refuses with the class the race pins');
+
+  // NO NEW LOCK WAS ADDED TO MAKE THIS TRUE. 0121 does not replace the Replay
+  // authorization at all, and adds no lock to the boundary it does replace.
+  assert.ok(!SOURCE.includes('CREATE OR REPLACE FUNCTION public.authorize_replay_distribution_v1'),
+    '0121 does not touch the Replay authorization');
+  assert.equal((stripComments(prosrcOf('publish_public_experience_v1')).match(/FOR UPDATE|FOR SHARE/gu) ?? []).length,
+    (stripComments(prosrcOf('publish_public_experience_v1', SOURCE_0095)).match(/FOR UPDATE|FOR SHARE/gu) ?? []).length,
+    'and the replaced Public publish takes exactly the row locks it always took');
+});
+
 // -------------------------------------------------------------- lock posture
 test('0121 adds no lock of any kind', () => {
   const executable = body();
@@ -578,9 +665,30 @@ test('the verifier proves the semantics this contract only shapes', () => {
   // makes a distribution refuse. These are the scenarios that do.
   for (const scenario of ['R04', 'R05', 'R06', 'R07', 'R08', 'R09', 'R10',
     'F01', 'F02', 'F03p', 'F04', 'F05', 'F06', 'F07', 'F08', 'F09n', 'F10', 'F11',
-    'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08']) {
+    'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08',
+    'H-IMM-01', 'H-IMM-02', 'H-IMM-03', 'H-IMM-04', 'H-IMM-05', 'H-IMM-06',
+    'C01', 'C02']) {
     assert.ok(VERIFIER.includes(`'${scenario} `), `the verifier carries scenario ${scenario}`);
   }
+  // REM03-HIST-02: the guard is proved against the LIVE trigger, as the owner,
+  // on both relations, for UPDATE and for DELETE - and the canonical writes are
+  // proved still to work, because a guard that broke INSERT would pass the rest.
+  assert.match(VERIFIER, /PUBLIC_EXPERIENCE_HISTORY_IS_IMMUTABLE/u,
+    'the verifier pins the append-only refusal class');
+  assert.match(VERIFIER, /asPre0121Row/u,
+    'and reaches a pre-0121 row by lifting the guard inside the rolled-back verifier transaction, never by leaving a mutation path');
+  // REM03-CONC-01: the interleaving is PINNED, and pinned by queue position
+  // rather than by hope, and the refusal is the canonical Public one.
+  assert.match(VERIFIER, /pg_blocking_pids/u,
+    'the race observes the real lock queue rather than assuming an order');
+  assert.match(VERIFIER, /blockedBehind\(authorizePid, withdrawPid\)/u,
+    'and proves the authorization is queued BEHIND the withdrawal specifically');
+  assert.match(VERIFIER, /awaitedLocks\(authorizePid\)[\s\S]{0,200}?public_world_state/u,
+    'and that it is waiting at the Public destination, which is proof it passed every Replay-side gate');
+  assert.match(VERIFIER, /PUBLIC_EXPERIENCE_APPROVAL_NOT_EFFECTIVE/u,
+    'and that the canonical Public revalidation is what refuses it');
+  assert.match(VERIFIER, /C01 no Replay withdrawal event exists/u,
+    'and that no synthetic Replay withdrawal was invented to make the refusal happen');
   assert.match(VERIFIER, /another plausible event exists at\s*\n\s*\/\/\s*the same instant|plant another one for the same/u,
     'and it plants a plausible event a temporal reconstruction would have answered from');
   assert.match(VERIFIER, /withdraw_publication_approval_v1/u,

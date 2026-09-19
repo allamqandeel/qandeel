@@ -136,6 +136,20 @@
 -- bounded contradictory-history class rather than substituting a label the
 -- command never returned.
 --
+-- ## The two answer-carrying command histories are append-only
+--
+-- Two relations that were only a request and an instant are now authoritative
+-- for an exact historical answer, and that changes what has to be true of them.
+-- Deny-by-default privileges were the right protection for a request log; they
+-- bind roles, not the table owner, and they say nothing about what a row may
+-- BECOME. An answer that can be edited is not an answer. So section 2.4 makes
+-- `public_identity_commands` and `public_experience_disappearance_commands`
+-- append-only for every role through the same BEFORE UPDATE OR DELETE guard the
+-- Public domain already uses for versions, lifecycle events, approvals and the
+-- sealed disappearance record - with no exception for the new answer columns,
+-- no application-facing update primitive, and no backfill of an answer that
+-- cannot be proven (REM03-HIST-02).
+--
 -- ## What this migration does not do
 --
 -- It implements no part of ASSURE-F05. No Public derivative is recalled, no
@@ -779,6 +793,64 @@ COMMENT ON FUNCTION public.derive_public_disappearance_command_answer_v1(uuid) I
   'the historical lifecycle and the sealed append-only disappearance record it '
   'bound. Both consequential disappearance primitives answer their retries '
   'through it, so the two cannot drift.';
+
+-- ---------------------------------------------------------------------------
+-- 2.4 BOTH COMMAND HISTORIES ARE APPEND-ONLY, FOR EVERY ROLE (REM03-HIST-02).
+--
+--     Sections 2.2 and 2.3 made these two relations AUTHORITATIVE for an exact
+--     historical answer. Until now they carried only a request and an instant,
+--     and their protection was the deny-by-default posture 0093 and 0099 gave
+--     them: RLS on, zero policies, every application role revoked. That is a
+--     real protection and it is the wrong one for this job. A privilege binds
+--     roles; it does not bind the table owner, and it says nothing at all about
+--     what the row is allowed to BECOME. A historical answer that can be edited
+--     is not a historical answer.
+--
+--     So the same append-only guard the Public domain already uses for versions,
+--     lifecycle events, approvals, withdrawals, publication state and the sealed
+--     disappearance record now covers the two command histories that carry an
+--     answer. UPDATE and DELETE are refused for every role, `postgres` included.
+--
+--     INSERT is untouched: the canonical producers still write exactly as they
+--     did, and the two BEFORE INSERT guards above still require a whole answer
+--     from every future row.
+--
+--     THERE IS NO EXCEPTION FOR THE ANSWER COLUMNS. A narrower guard - one that
+--     froze only `committed_lifecycle` and its two companions - would leave the
+--     request, the actor and the instant editable, and every one of those is
+--     part of the identity the retry compares before it answers at all.
+--
+--     NOTHING IS BACKFILLED. A pre-0121 row keeps its NULL answer and stays
+--     exactly as legible as it was: section 2.2 and section 2.3 reconstruct it
+--     from immutable evidence, or fail closed. Freezing the rows does not make
+--     an unknown answer known, and inventing one to satisfy a column would be
+--     the opposite of what this section is for.
+--
+--     No application-facing update primitive is added, here or anywhere.
+-- ---------------------------------------------------------------------------
+CREATE FUNCTION public.reject_public_command_history_mutation_v1()
+RETURNS trigger LANGUAGE plpgsql SET search_path='' AS $$
+BEGIN
+  RAISE EXCEPTION 'PUBLIC_EXPERIENCE_HISTORY_IS_IMMUTABLE'
+    USING ERRCODE='55000',
+          DETAIL='A committed Public command and the exact answer it returned are append-only: UPDATE and DELETE are refused for every role, including the table owner.';
+END$$;
+
+ALTER FUNCTION public.reject_public_command_history_mutation_v1() OWNER TO postgres;
+
+COMMENT ON FUNCTION public.reject_public_command_history_mutation_v1() IS
+  'The append-only guard of the Public command histories that carry an exact '
+  'committed answer. One function for both, so the two relations cannot drift '
+  'into different rules, and the refusal class is the one the Public domain '
+  'already uses for immutable history.';
+
+CREATE TRIGGER public_identity_commands_immutable
+    BEFORE UPDATE OR DELETE ON public.public_identity_commands
+    FOR EACH ROW EXECUTE FUNCTION public.reject_public_command_history_mutation_v1();
+
+CREATE TRIGGER public_experience_disappearance_commands_immutable
+    BEFORE UPDATE OR DELETE ON public.public_experience_disappearance_commands
+    FOR EACH ROW EXECUTE FUNCTION public.reject_public_command_history_mutation_v1();
 
 -- ---------------------------------------------------------------------------
 -- 3. THE FIVE DEFECTIVE COMMAND FAMILIES, FORWARD-REPLACED.
@@ -2020,6 +2092,41 @@ BEGIN
                 AND (pr.prosrc ~ 'DELETE FROM' OR pr.prosrc ~ 'UPDATE public\.'
                   OR pr.prosrc ~ 'INSERT INTO')) THEN
     RAISE EXCEPTION 'QAN-CW-REM-03: a historical-answer derivation writes nothing';
+  END IF;
+
+  -- A8. BOTH ANSWER-CARRYING COMMAND HISTORIES ARE STRUCTURALLY APPEND-ONLY
+  --     (REM03-HIST-02). Not "no role may write them" - no ONE may, the owner
+  --     included - and not for some columns: for the row. Asserted from
+  --     `pg_trigger` rather than from the DDL above, so a later migration that
+  --     dropped or disabled either guard, or repointed it at a permissive
+  --     function, fails here instead of quietly restoring mutability to an
+  --     exact historical answer.
+  --
+  --     tgtype 27 = ROW (1) + BEFORE (2) + DELETE (8) + UPDATE (16), which is
+  --     the whole claim: every UPDATE and every DELETE, one row at a time.
+  FOR p IN SELECT unnest(ARRAY['public_identity_commands',
+                               'public_experience_disappearance_commands']) AS relname LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_trigger tg
+        JOIN pg_class c ON c.oid = tg.tgrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        JOIN pg_proc fn ON fn.oid = tg.tgfoid
+       WHERE n.nspname = 'public' AND c.relname = p.relname
+         AND tg.tgname = p.relname || '_immutable'
+         AND NOT tg.tgisinternal
+         AND tg.tgtype = 27
+         AND tg.tgenabled = 'O'
+         AND fn.proname = 'reject_public_command_history_mutation_v1') THEN
+      RAISE EXCEPTION 'QAN-CW-REM-03: public.% must carry an ENABLED BEFORE UPDATE OR DELETE append-only guard: an exact historical answer that can be edited is not one', p.relname;
+    END IF;
+  END LOOP;
+  --     And no mutation path was added for them anywhere: nothing in the
+  --     database UPDATEs or DELETEs either relation, so the guard refuses only
+  --     what was never meant to happen.
+  IF EXISTS (SELECT 1 FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
+              WHERE n.nspname = 'public'
+                AND pr.prosrc ~ '(UPDATE|DELETE FROM)\s+public\.(public_identity_commands|public_experience_disappearance_commands)\M') THEN
+    RAISE EXCEPTION 'QAN-CW-REM-03: no function may UPDATE or DELETE a Public command history row';
   END IF;
 END$$;
 

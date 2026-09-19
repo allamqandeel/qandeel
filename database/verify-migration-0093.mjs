@@ -719,6 +719,11 @@ const IMMUTABLE_RELATIONS = [
   [ITEM_AUTHORITY, 'publication_package_item_authority_immutable'],
   [REQUIRED, 'publication_manifest_required_approvers_immutable'],
   [APPROVALS, 'publication_manifest_approvals_immutable'],
+  // QAN-CW-REM-03 / REM03-HIST-02: from 0121 the Public Identity command
+  // history carries the exact label answer each command returned, and is
+  // append-only for every role. This teardown removes those rows, so it lifts
+  // that guard with the rest and proves it back with the rest.
+  ['public.public_identity_commands', 'public_identity_commands_immutable'],
 ];
 
 async function removeConcurrencyFixtures(c) {

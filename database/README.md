@@ -3388,6 +3388,30 @@ ambiguity. The Public Identity label gets the same typed treatment, because it h
 by design; a command committed before `0121` reconstructs its answer only while its committed
 `label_revision` still equals the current one - a witness, not a guess - and fails closed otherwise.
 
+**The two answer-carrying histories are append-only (`REM03-HIST-02`).** Making
+`public_identity_commands` and `public_experience_disappearance_commands` authoritative for an exact
+historical answer changes what has to be true of them. `0093` and `0099` gave them RLS, zero policies
+and revoked privileges, which is the right protection for a request log and the wrong one for an
+answer: a privilege binds roles, not the table owner, and says nothing about what a row may BECOME.
+Both now carry a `BEFORE UPDATE OR DELETE` guard through one shared rejection function - the same
+shape the Public domain already uses for versions, lifecycle events, approvals, withdrawals,
+publication state and the sealed disappearance record - refusing every UPDATE and every DELETE for
+every role, `postgres` included. There is no exception for the new answer columns, no
+application-facing update primitive, and no backfill: a pre-`0121` row keeps its NULL answer and is
+still reconstructed from immutable evidence or refused. A terminal self-assertion pins both triggers
+from `pg_trigger` - enabled, `BEFORE`, `ROW`, `UPDATE` and `DELETE`, and pointing at the shared guard
+- so a later migration that dropped or weakened either one fails at the end of this one.
+
+**The cross-domain withdrawal race (`REM03-CONC-01`).** The sequential proofs show that a direct
+Public withdrawal is composed the moment it exists; they do not answer the concurrent question. The
+Replay authorization checks the composed consent EARLY, under the Replay locks, and reaches the
+Public destination LATE, so a human can take the Public half back in between. What closes that window
+is the canonical Public boundary: `publish_public_experience_v1` re-derives every required approval's
+CURRENT effective state under the Public World lock, and the whole authorization is one transaction.
+No lock was added for this - the invariant either already held through the canonical Public
+serialization and revalidation or it did not - and the verifier proves it on real PostgreSQL with the
+interleaving pinned by `pg_blocking_pids` rather than by timing.
+
 ```sh
 npm run verify:public-replay-consistency-historical-retry-remediation:integration
 ```
@@ -3402,6 +3426,19 @@ published, and re-proves that `SHARE_EXTERNALLY` and `DOWNLOAD` behave exactly a
 historical half takes real Experiences through draft, package, approval, READY, publication and
 disappearance, and asks each committed command its own retry after the state it used to read has
 really moved.
+
+It also proves the append-only guards against the LIVE triggers as the table owner - every answer
+column, every identity column, the request, the instant, and a write that changes nothing at all -
+and proves that the canonical INSERT paths of both families still commit, because a guard that broke
+writing would pass every other check. Finally it runs the cross-domain race on three connections: a
+holder takes the canonical Public World serialization row, the direct Public withdrawal queues on it
+first, the Replay authorization passes every Replay-side gate and queues BEHIND the withdrawal -
+proved by `pg_blocking_pids` and by the relation it is waiting on, which is what shows it got as far
+as the Public destination - and on release the withdrawal commits first and the authorization fails
+closed inside the canonical Public revalidation with `PUBLIC_EXPERIENCE_APPROVAL_NOT_EFFECTIVE`,
+leaving zero authorization, zero publication effect and zero synthetic Replay withdrawal event. The
+opposite linearization, where the authorization owns the serialization point first, is proved to be
+allowed: it commits, and the withdrawal commits after it.
 
 ## QAN-CW-REM-03 - Introduction disclosure deletion-time privacy erasure (migration 0122)
 
