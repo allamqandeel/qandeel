@@ -17,6 +17,22 @@ production code, runtime behaviour, a database contract or a design system.
 
 **Phase VI itself remains OPEN. Only VI-01 closes.**
 
+### Post-freeze controlled amendment — I-08B3.1-G1.1
+
+The later integrated Product-shell proof made one narrow Product-language decision that supersedes
+VI-01's earlier vocabulary preference without reopening the language system:
+
+- Conversation surface / referential noun: **«المحادثة»**.
+- Conversation → Analysis depth action: **«تحليل المحادثة»**.
+- «القراءات» remains the analytical-content vocabulary inside that depth.
+- Ordinary phrases using «الكلام» remain valid where natural (for example «سياق الكلام» and
+  «كلامك هنا»); this is not a global lexical replacement.
+- English keeps **Conversation** for the Conversation surface. The English label for the
+  Conversation→Analysis depth remains `OPEN` in VI-01.
+
+This is a controlled additive/superseding amendment recorded by `I-08B3.1-G1.1`; it does not
+reopen VI-01's register, truth, gender, accessibility or bilingual-authorship contracts.
+
 VI-01 froze a *language system* — the register architecture, the truth boundaries, the
 semantic contracts and the core vocabulary. **It did not freeze every sentence.** Read the
 next two sections together; either one alone misrepresents the closure.
