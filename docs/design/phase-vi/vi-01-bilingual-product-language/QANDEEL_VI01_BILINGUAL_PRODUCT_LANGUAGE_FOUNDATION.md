@@ -616,13 +616,18 @@ and final.**
 > The panel keeps its existing honest explanatory sentence and gains no persistent visible title
 > chip. «الشغّال دلوقتي» and "Live Context" remain `INTERNAL ONLY`.
 
-### 7.3 Conversation / «الكلام» — retain
+### 7.3 Conversation / «المحادثة» — amended by I-08B3.1-G1.1
 
-Passes every test: plain, warm, transparent across markets, already load-bearing («اكتب
-لقنديل», «كمّل الكلام», «داخلة مع الكلام»), and it is what the thing actually is. English takes
-**"Conversation"**, not "Chat" (too casual, too app-ish) and not "Thread" (engineering).
+The integrated Product-shell proof supersedes VI-01's earlier choice of «الكلام» as the
+canonical visible / referential noun for the Conversation surface. Use **«المحادثة»** in
+T1 navigation and headings, and use **«تحليل المحادثة»** for the depth route from the
+Conversation into its analysis.
 
-`RETAIN`.
+This is a narrow naming amendment, not a global ban on the ordinary word «الكلام».
+Natural phrases such as «سياق الكلام», «كلامك هنا» and prose about what the user said
+remain valid where they are the more natural Arabic. English remains **"Conversation"**.
+
+`APPROVED — I-08B3.1-G1.1 AMENDMENT`.
 
 ### 7.4 Home — do not name
 
@@ -1297,7 +1302,7 @@ register-safe in fixed copy and needs no naturalness caveat.
 
 | Concept | Arabic | English |
 |---|---|---|
-| Conversation *(referential vocabulary, not necessarily a visible title)* | «الكلام» | Conversation |
+| Conversation *(visible / referential surface vocabulary)* | «المحادثة» | Conversation |
 | A reading | «قراءة» | reading |
 | The readings | «القراءات» | Readings |
 | Live Context *(Arabic semantic/product direction)* | **«سياق الكلام»** | *(wording `OPEN` — §19.2)* |

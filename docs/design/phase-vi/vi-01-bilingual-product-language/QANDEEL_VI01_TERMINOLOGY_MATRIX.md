@@ -1,6 +1,6 @@
 # QANDEEL — VI-01 · TERMINOLOGY MATRIX
 
-**Status:** `FREEZE CANDIDATE — FIX-03 CONSISTENCY SEAL APPLIED. ROWS ARE APPROVED / PROPOSED / OPEN / PROVISIONAL AS MARKED`
+**Status:** `FREEZE CANDIDATE — FIX-03 CONSISTENCY SEAL + I-08B3.1-G1.1 NAMING AMENDMENT APPLIED. ROWS ARE APPROVED / PROPOSED / OPEN / PROVISIONAL AS MARKED`
 **Canonical authority:** `docs/design/phase-v/` @ `4e83b1ce2d854f1ba49a6de15572f1025d196647`
 **Companion to:** `QANDEEL_VI01_BILINGUAL_PRODUCT_LANGUAGE_FOUNDATION.md`
 
@@ -41,9 +41,9 @@ visible-label need: **41 `YES` · 6 `CONTEXTUAL` · 12 `NO`.** Eight carry the s
 | ID | Internal concept | Visible label? | Prototype AR | Prototype EN | Proposed AR | Proposed EN | G | Status |
 |---|---|---|---|---|---|---|---|---|
 | S01 | Home surface | **NO** | — *(sr-only «قنديل»)* | — | *no product noun* | *no product noun* | — | `INTERNAL ONLY` |
-| S02 | Conversation | **YES** | «الكلام» | — | «الكلام» | Conversation | — | `APPROVED` |
+| S02 | Conversation | **YES** | «الكلام» | — | **«المحادثة»** | Conversation | — | `APPROVED — I-08B3.1-G1.1 AMENDMENT` |
 | S03 | Live Context | **CONTEXTUAL** | «الشغّال دلوقتي» | *(none — reviewer term "Live Context")* | **«سياق الكلام»** | *"In play" / "In play now"* | — | AR `APPROVED` · **EN `OPEN`** |
-| S04 | Deep Analysis | **CONTEXTUAL** | «المشهد» | *(none — reviewer term "Deep Analysis")* | «القراءات» *(contents, not container)* | Readings | — | `APPROVED` |
+| S04 | Deep Analysis | **CONTEXTUAL** | «المشهد» | *(none — reviewer term "Deep Analysis")* | **«تحليل المحادثة»** *(surface/depth name)* · «القراءات» *(contents)* | *surface/depth EN `OPEN`* · Readings *(contents)* | — | AR surface/depth `APPROVED — I-08B3.1-G1.1` · contents `APPROVED` · EN surface/depth `OPEN` |
 | S05 | Deep Analysis surface heading | **NO** | «المشهد · قرار الش…» | — | *the subject itself* | *the subject itself* | — | `PROPOSED` |
 | S06 | Paged peer stage | **NO** | «مساحات المشهد» | — | «القراءات» *(region name)* | Readings | — | `APPROVED` |
 
@@ -85,7 +85,7 @@ visible-label need: **41 `YES` · 6 `CONTEXTUAL` · 12 `NO`.** Eight carry the s
 | A08 | Remove from current context | **YES** | «شيلها من الشغّال» | — | ~~«استبعاد مؤقت»~~ *(evaluative overtone)* | *"Take out" — ambiguous alone* | — | **`OPEN` — VI-02/VI-03** *(semantics approved)* |
 | A09 | See role in readings | **YES** | «شوف دورها في القراءات» | — | «دورها في القراءات» | Its role in each reading | M | `APPROVED` |
 | A10 | Compose / continue | **YES** | «اكتب لقنديل» / «كمّل الكلام» | — | «رسالتك لقنديل» *(label)* · «كلامك هنا» *(placeholder)* | Your message to Qandeel · Write here | P | `PROPOSED` |
-| A11 | Open the readings | **YES** | «افتح المشهد» | — | «القراءات» | Readings | M | `APPROVED` |
+| A11 | Open Conversation Analysis | **YES** | «افتح المشهد» | — | **«تحليل المحادثة»** | *surface/depth EN `OPEN`* | M | AR `APPROVED — I-08B3.1-G1.1 AMENDMENT` · EN `OPEN` |
 | A12 | Start new conversation | **CONTEXTUAL** | — | — | «كلام جديد» | New conversation | — | `PROPOSED` ⚠ |
 | A13 | Refuse to decide | **NO** *(voice, not a control)* | «دي مش وظيفتي هنا.» | — | «دي مش وظيفتي هنا.» | That's not my part in this. | — | `RETAIN` |
 
@@ -136,9 +136,9 @@ the *principles*, not proposals.
 | ID | Alternative AR | Alternative EN | Reg. | Where it appears | Why this recommendation | Runtime / truth risk | Accessibility concern |
 |---|---|---|---|---|---|---|---|
 | S01 | — | — | — | app root | Home is **SIMULATED** per the canonical truth boundaries, and a user never refers to it. Framework Q1: they can act without knowing it exists | Naming a simulated surface implies product-shaped state fetch that does not exist | Root needs an accessible name; use the product name |
-| S02 | «المحادثة» | Chat, Thread | T1 | nav, headings | Plain, warm, transparent across markets, already load-bearing. «المحادثة» is stiffer; "Chat" is app-ish, "Thread" is engineering | none | — |
+| S02 | «الكلام» | Chat, Thread | T1 | nav, headings | **I-08B3.1-G1.1 Product direction supersedes the earlier VI-01 preference:** the canonical surface noun is «المحادثة». «الكلام» remains available inside natural phrases such as «سياق الكلام» and «كلامك هنا»; this amendment does not force a global lexical replacement. English remains "Conversation" | none | — |
 | S03 | «اللي معانا دلوقتي»، «السياق الحالي» | Current context, What's in play | T1 | drawer/column heading, control | Native Arabic collocation; **unifies a term the product currently splits** — panel «الشغّال دلوقتي» vs contents «السياق» | ⚠ "In play" must not imply computed relevance — production is a recency window. Explanatory sentence carries the bound | Drawer needs `aria-labelledby`; scrim button needs a full accessible name |
-| S04 | «المشهد»، «التفصيل» | Deep Analysis, The breakdown | T1 | route control, region name | The contents and the user's subject already orient; a container noun is an extra metaphor to learn, is ambiguous in the prototype, and makes the interface read as theatrical. **Not** because A15 forbids spatial meaning or A19 forbids naming a surface — both were overstatements, withdrawn | none | Region name must be count-independent |
+| S04 | «المشهد»، «التفصيل» | Deep Analysis, The breakdown | T1 | route control, region name | The old container metaphors remain rejected. **I-08B3.1-G1.1 now names the depth explicitly as «تحليل المحادثة»**, while «القراءات» remains the name of the analytical contents inside that depth. The English depth label remains open in VI-01 | none | Region/depth name must be count-independent |
 | S05 | — | — | T3 | surface heading | The subject is the user's own words; a product noun above it adds nothing. Resolves the freeze's open item 7 (app-bar subtitle truncation) by deletion | Subject anchor is **SIMULATED** (A20) — must not be presented as runtime output | Heading level must not skip |
 | S06 | — | — | T1 | pager `role="tablist"` | Prototype's «مساحات المشهد» dies with «المشهد» | none | Position/set-size from native semantics, never authored copy |
 | O01 | «الموضوع» | The subject, Topic | T3 | analysis heading | Framework Q2: the sentence on screen already carries it | **SIMULATED**; A20 is conditional on a runtime that may one day have it | — |
@@ -170,7 +170,7 @@ the *principles*, not proposals.
 | A08 | «شيلها» ✗، «احذف» ✗ | Remove, Delete ✗, Hide | T1 | context item | **`OPEN`.** Semantics approved: this is not destructive and the label must say so. But «استبعاد» can read as rejection or judgement — undesirable near **A15** — and bare "Take out" is ambiguous without context. **Requirement carried forward:** make the temporary, current-context scope clear without sounding destructive or evaluative | ⚠ Record is unchanged; effect is session-scoped (**A10**) | Accessible name completes the promise: "…for now — this doesn't delete it" |
 | A09 | «شوف دورها» ✗ *(gendered)* | See role, Where this appears | T1 | context item → readings | A bare noun phrase has no verb, so it is neutral by construction | Landing must be on the actual record (**B4**) | Announce arrival only after it has arrived |
 | A10 | «اكتب لقنديل» ✗ *(gendered)* | Message, Ask anything ✗ | T1 | composer | «اكتب» is a gendered imperative; a possessive label and a possessive placeholder are both neutral | "Ask anything" overclaims capability | `<label>` present even when visually hidden |
-| A11 | «افتح المشهد» ✗ | Open analysis ✗ | T1 | conversation → readings | see S04 | see O03 | Count-independent region name |
+| A11 | «افتح المشهد» ✗ | Open analysis ✗ | T1 | conversation → analysis | **Use «تحليل المحادثة».** This names the destination depth without renaming its internal contents; «القراءات» remains the content vocabulary. English depth wording remains `OPEN` | see O03 | Count-independent destination name |
 | A12 | «محادثة جديدة» | New chat | T1 | nav | ⚠ **Not listed in the canonical runtime-backed set.** Proposed on the assumption it exists; verify before use | ⚠ Unverified against runtime | — |
 | A13 | — | — | T2 | conversation | The product's thesis moment; already correct | Refusal must be plain and once, never softened into a hedge | — |
 | T01 | «بحمّل…» *(T2 form)* | — | T4 | any surface | Standard, unambiguous | none | `aria-busy` or status text |
@@ -225,9 +225,10 @@ where a row is marked `APPROVED` or `OPEN` following Product Direction FIX-01.
 | **Truth risk** | none | none | none |
 | **Better unnamed?** | **no** — three other concepts (S03, O04, T13) define themselves *by relation to it* | | |
 
-> **CLAUDE RECOMMENDATION: Direction A, `RETAIN`.** «الكلام» is the load-bearing referent for
-> «داخلة مع الكلام»، «سياق الكلام»، «كمّل الكلام». Its plainness is the personality, not a gap in
-> it. English takes "Conversation" — "Chat" is too casual for a product this restrained.
+> **PRODUCT DIRECTION AMENDMENT — I-08B3.1-G1.1:** Direction B is now selected for the
+> visible / referential surface noun: **«المحادثة»**. The earlier Direction-A recommendation is
+> retained above as historical evaluation, not current authority. «الكلام» remains valid inside
+> natural phrases such as «سياق الكلام» and «كلامك هنا». English remains "Conversation".
 
 ## HI-2 · Reading / peer reading
 
