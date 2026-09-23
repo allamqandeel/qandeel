@@ -1,0 +1,236 @@
+{
+  "what": "The official DTCG 2025.10 JSON Schemas, vendored for offline conformance validation.",
+  "why": "designtokens.org is unreachable from this environment on every transport tried, so the schema is pinned here with provenance instead of fetched at validation time. Pinning is also the behaviour the independent freeze review asked for.",
+  "officialBase": "https://www.designtokens.org/schemas/2025.10/",
+  "repository": "https://github.com/design-tokens/community-group",
+  "repositoryDescription": "The official DTCG repository for the design tokens site and specification.",
+  "builtBy": "schemas/schemas.config.json declares outputDirs [\"dist\", \"../www/public/schemas\"], so these sources are what designtokens.org/schemas/ serves.",
+  "branch": "main",
+  "schemaSourceCommit": "11f95e87701e (2026-06-09, \"Bundle JSON schema\" #412) - the last commit to touch schemas/src/2025.10/resolver*",
+  "publicationCommit": "f0f32a7dce0b (2025-10-28, \"Publish 2025.10\" #340)",
+  "retrieved": "2026-09-21",
+  "note": "The published files at designtokens.org are BUNDLES of these sources (the $refs inlined by schemas/scripts/bundle.ts). Validating against the sources plus their three sub-schemas applies exactly the same constraints; ajv resolves the $refs by $id instead of by inlining.",
+  "jsonSchemaDialect": "draft-07",
+  "files": [
+    {
+      "published": "resolver.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+      "repositoryPath": "schemas/src/2025.10/resolver.json",
+      "bytes": 2019,
+      "sha256": "C405CF595461A9650495DD5093CD0A8774D2AD083BEBAEE616F07A2629CBD4A5",
+      "gitBlobSha1": "4fd625b10c101a8bccde97ac010c20f7ca9b4a7a",
+      "gitBlobSha1Reported": "4fd625b10c101a8bccde97ac010c20f7ca9b4a7a",
+      "blobShaVerified": true
+    },
+    {
+      "published": "resolver/set.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/resolver/set.json",
+      "repositoryPath": "schemas/src/2025.10/resolver/set.json",
+      "bytes": 2756,
+      "sha256": "BA1C318D93AE6FECE70C1C97CCDA3E7FF535AE14EF6012D005446E2AD350D5D4",
+      "gitBlobSha1": "4cf1096a2872c08423c9ce466fa4fe3c6369a9e4",
+      "gitBlobSha1Reported": "4cf1096a2872c08423c9ce466fa4fe3c6369a9e4",
+      "blobShaVerified": true
+    },
+    {
+      "published": "resolver/modifier.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/resolver/modifier.json",
+      "repositoryPath": "schemas/src/2025.10/resolver/modifier.json",
+      "bytes": 3610,
+      "sha256": "110124517CEA87DFA3A231B729EF88CDB7286376C8253AF0A9725A286437C79D",
+      "gitBlobSha1": "838513028cf619d2fbfb7c5250c849339add2f3c",
+      "gitBlobSha1Reported": "838513028cf619d2fbfb7c5250c849339add2f3c",
+      "blobShaVerified": true
+    },
+    {
+      "published": "resolver/resolutionOrder.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/resolver/resolutionOrder.json",
+      "repositoryPath": "schemas/src/2025.10/resolver/resolutionOrder.json",
+      "bytes": 5666,
+      "sha256": "168D4948FF078FFFFF432EF199D40DFA8FCF30735627D40C6D39A6D9F396C2A5",
+      "gitBlobSha1": "f17c94a40b953d550b6e864a09050f529916dfb9",
+      "gitBlobSha1Reported": "f17c94a40b953d550b6e864a09050f529916dfb9",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format.json",
+      "repositoryPath": "schemas/src/2025.10/format.json",
+      "bytes": 3529,
+      "sha256": "7F40FE678340B756E6464A0C20FACFC29FE6FF055A202249132CC14EEAFC7678",
+      "gitBlobSha1": "70e12eb843297a478edf7e9d900ed96d081c4153",
+      "gitBlobSha1Reported": "70e12eb843297a478edf7e9d900ed96d081c4153",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/group.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/group.json",
+      "repositoryPath": "schemas/src/2025.10/format/group.json",
+      "bytes": 1834,
+      "sha256": "BFF8D3B46F005FAD4F78B50D41FDE3B2FB7303C9D246D03D3691D73112654562",
+      "gitBlobSha1": "7d3aae1754782eb69622f54bae419d4c0f566132",
+      "gitBlobSha1Reported": "7d3aae1754782eb69622f54bae419d4c0f566132",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/groupOrToken.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/groupOrToken.json",
+      "repositoryPath": "schemas/src/2025.10/format/groupOrToken.json",
+      "bytes": 552,
+      "sha256": "48F80D667161E61FFD12C26AAB214CC994D866BE9EE21B0CE1A806E02EF44AB4",
+      "gitBlobSha1": "29ca7a4fd8233837ebb71d9fa2b4ba86af8057c6",
+      "gitBlobSha1Reported": "29ca7a4fd8233837ebb71d9fa2b4ba86af8057c6",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/token.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/token.json",
+      "repositoryPath": "schemas/src/2025.10/format/token.json",
+      "bytes": 11845,
+      "sha256": "E42D903F33DD57E875BB8EEF67B7401891AE50F7A22D96FEB2929B795F7FEF65",
+      "gitBlobSha1": "eff51d1eb74d053ae8e26d00d736b16b9b45265a",
+      "gitBlobSha1Reported": "eff51d1eb74d053ae8e26d00d736b16b9b45265a",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/tokenType.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/tokenType.json",
+      "repositoryPath": "schemas/src/2025.10/format/tokenType.json",
+      "bytes": 471,
+      "sha256": "FCC4672F4FB0346CF872F6924D8FB622609F880B5F22885A5F6C543CE6AA5794",
+      "gitBlobSha1": "f47c4dc84bc42b8784b13c30ac6ba526c9d7ad07",
+      "gitBlobSha1Reported": "f47c4dc84bc42b8784b13c30ac6ba526c9d7ad07",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/border.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/border.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/border.json",
+      "bytes": 1397,
+      "sha256": "D316B38FBB9F7657D8BA49E0D62661C1D8159A88661AF87E40FC372A12953C4E",
+      "gitBlobSha1": "018db7129da7b3882d263fe5c1f4fa90339aefbd",
+      "gitBlobSha1Reported": "018db7129da7b3882d263fe5c1f4fa90339aefbd",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/color.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/color.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/color.json",
+      "bytes": 15823,
+      "sha256": "B721ABEC749FB2206CC397722861CCE4F109F57D7433D2089021EAF0CE5FD501",
+      "gitBlobSha1": "20d16f6cba476f50c2b81fd8a41b8aba9cf7e500",
+      "gitBlobSha1Reported": "20d16f6cba476f50c2b81fd8a41b8aba9cf7e500",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/cubicBezier.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/cubicBezier.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/cubicBezier.json",
+      "bytes": 1792,
+      "sha256": "B99B9896FBB99FC60F0E8DDBD82B2368CB3250B10ACCC7008966D5D0826B9831",
+      "gitBlobSha1": "eb994ecd05742c61a9e1caabb107d66f9b7cdc7f",
+      "gitBlobSha1Reported": "eb994ecd05742c61a9e1caabb107d66f9b7cdc7f",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/dimension.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/dimension.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/dimension.json",
+      "bytes": 1228,
+      "sha256": "90E6FC121A7E7CB6697959172F93B5BE05397124B6EB736EE281397E61F0E869",
+      "gitBlobSha1": "304fd787ed9bcdaf284763b122185e3cee8a4de4",
+      "gitBlobSha1Reported": "304fd787ed9bcdaf284763b122185e3cee8a4de4",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/duration.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/duration.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/duration.json",
+      "bytes": 1112,
+      "sha256": "FF8490104550B44258A744901B4BA24BB36A5A1761C893BBEFCA785D1DB1C07F",
+      "gitBlobSha1": "18fc39e5a51424798d4cbe8e4a6f14e028f0727c",
+      "gitBlobSha1Reported": "18fc39e5a51424798d4cbe8e4a6f14e028f0727c",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/fontFamily.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/fontFamily.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/fontFamily.json",
+      "bytes": 1099,
+      "sha256": "6F8082AE06EAB783F4CC2790CAE259488B6B3C8677EE4B660543593B5E16E173",
+      "gitBlobSha1": "3e8cb03d31bb2ca2543ef84e31a6936eaba149f5",
+      "gitBlobSha1Reported": "3e8cb03d31bb2ca2543ef84e31a6936eaba149f5",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/fontWeight.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/fontWeight.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/fontWeight.json",
+      "bytes": 1010,
+      "sha256": "FF4E05A302E2E1BDD92ABC2DC4B7BD3803A4FF4D3F3D47DF36603C1AEAE816E2",
+      "gitBlobSha1": "b5fa70f005c88e98f9522e7d691898bb321f3877",
+      "gitBlobSha1Reported": "b5fa70f005c88e98f9522e7d691898bb321f3877",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/gradient.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/gradient.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/gradient.json",
+      "bytes": 1606,
+      "sha256": "77ACFF5DBF54C009A5D32D3C209C79797EF0212F7BFB9485CEDD910B2CD9A603",
+      "gitBlobSha1": "dfddae43e02604c65b8e4614fcee9dc993f420a0",
+      "gitBlobSha1Reported": "dfddae43e02604c65b8e4614fcee9dc993f420a0",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/number.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/number.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/number.json",
+      "bytes": 367,
+      "sha256": "A8C0074125F0833E1CCE1DB28582B4D3974E1EA234BD5EFBF122CA107AAA079D",
+      "gitBlobSha1": "32727b5ea1c2882addfa6f6ce66608eb6cc8cda5",
+      "gitBlobSha1Reported": "32727b5ea1c2882addfa6f6ce66608eb6cc8cda5",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/shadow.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/shadow.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/shadow.json",
+      "bytes": 3448,
+      "sha256": "006827759F277106F5C2A2324F0FB597FEBEB8BE01DBE9195D28595138F63B50",
+      "gitBlobSha1": "7a3f9868036a8325b862aad3360e735cb237e221",
+      "gitBlobSha1Reported": "7a3f9868036a8325b862aad3360e735cb237e221",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/strokeStyle.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/strokeStyle.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/strokeStyle.json",
+      "bytes": 1974,
+      "sha256": "EEE4C04CAE1104853C8FD5EB742F68FEADFC07D8C0204F6B19F477055C356214",
+      "gitBlobSha1": "b3b6bd663945e6b2a233c51ec916a5ac11d629cc",
+      "gitBlobSha1Reported": "b3b6bd663945e6b2a233c51ec916a5ac11d629cc",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/transition.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/transition.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/transition.json",
+      "bytes": 1497,
+      "sha256": "77FCEF3A44F7D817456F12CCEED7C5E324A1BE418F68B050E522EFAFD4C76C8D",
+      "gitBlobSha1": "c854f5e854272a5e062b059c156ff67e1ee5113e",
+      "gitBlobSha1Reported": "c854f5e854272a5e062b059c156ff67e1ee5113e",
+      "blobShaVerified": true
+    },
+    {
+      "published": "format/values/typography.json",
+      "id": "https://www.designtokens.org/schemas/2025.10/format/values/typography.json",
+      "repositoryPath": "schemas/src/2025.10/format/values/typography.json",
+      "bytes": 2272,
+      "sha256": "991BB82C54166A8FBA7A7D521F40E0A109FC5BDD3F5B33E2856DF7669DE89307",
+      "gitBlobSha1": "24731471a5eb4c6e6c15d3ac4ce798d906ae8838",
+      "gitBlobSha1Reported": "24731471a5eb4c6e6c15d3ac4ce798d906ae8838",
+      "blobShaVerified": true
+    }
+  ]
+}

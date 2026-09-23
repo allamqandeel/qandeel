@@ -1,0 +1,5020 @@
+{
+ "fallbackGuard": {
+  "estedad": 1695.5,
+  "noFontControl": 1386.58,
+  "distinct": true,
+  "loadedFaces": 1,
+  "check": true
+ },
+ "latinI": {
+  "perString": {
+   "Confidence": 511.61,
+   "Hypothesis": 501.2,
+   "Memory Runtime": 765.11,
+   "identifier": 411.5,
+   "i": 25.31,
+   "iiiii": 126.5,
+   "fi": 62.41,
+   "ti": 64.61,
+   "Ti": 85.91
+  },
+  "Confidence_vs_Confdence": {
+   "with": 511.61,
+   "without": 486.31
+  },
+  "i_advance_100px": 25.31,
+  "i_ink": {
+   "up": 0.7074,
+   "down": 0,
+   "width": 25.3
+  },
+  "dotPresent": true
+ },
+ "diacritics": {
+  "samples": {
+   "مُتَّزِن": {
+    "up": 0.9063,
+    "down": 0.4168,
+    "extent": 1.3231
+   },
+   "التَّفكير": {
+    "up": 0.9063,
+    "down": 0.27,
+    "extent": 1.1763
+   },
+   "مُهِمٌّ": {
+    "up": 0.8817,
+    "down": 0.4686,
+    "extent": 1.3503
+   },
+   "لِأَنَّكَ": {
+    "up": 1.1094,
+    "down": 0.203,
+    "extent": 1.3124
+   },
+   "مَرَّةً": {
+    "up": 1.0224,
+    "down": 0.27,
+    "extent": 1.2924
+   },
+   "قِراءةٌ مُتعمِّقة": {
+    "up": 1.047,
+    "down": 0.27,
+    "extent": 1.317
+   }
+  },
+  "knownIssue": {
+   "ب ba": {
+    "bare": {
+     "up": 0.38,
+     "down": 0.2442
+    },
+    "plusShadda": {
+     "up": 0.4816,
+     "down": 0.2442
+    },
+    "legacy_FE74": {
+     "up": 0.4816,
+     "down": 0.2442,
+     "width": 112
+    },
+    "modern_064D": {
+     "up": 0.5693,
+     "down": 0.2442,
+     "width": 92.5
+    },
+    "legacyRaisesCeiling": false,
+    "modernRaisesCeiling": true,
+    "legacyLowersFloor": false,
+    "modernLowersFloor": false
+   },
+   "د dal": {
+    "bare": {
+     "up": 0.47,
+     "down": 0.01
+    },
+    "plusShadda": {
+     "up": 0.6884,
+     "down": 0.01
+    },
+    "legacy_FE74": {
+     "up": 0.6884,
+     "down": 0.22,
+     "width": 68.9
+    },
+    "modern_064D": {
+     "up": 0.7761,
+     "down": 0.01,
+     "width": 49.4
+    },
+    "legacyRaisesCeiling": false,
+    "modernRaisesCeiling": true,
+    "legacyLowersFloor": true,
+    "modernLowersFloor": false
+   },
+   "م meem": {
+    "bare": {
+     "up": 0.36,
+     "down": 0.36
+    },
+    "plusShadda": {
+     "up": 0.6079,
+     "down": 0.36
+    },
+    "legacy_FE74": {
+     "up": 0.6079,
+     "down": 0.36,
+     "width": 84.1
+    },
+    "modern_064D": {
+     "up": 0.6956,
+     "down": 0.36,
+     "width": 64.6
+    },
+    "legacyRaisesCeiling": false,
+    "modernRaisesCeiling": true,
+    "legacyLowersFloor": false,
+    "modernLowersFloor": false
+   },
+   "ه heh": {
+    "bare": {
+     "up": 0.49,
+     "down": 0.01
+    },
+    "plusShadda": {
+     "up": 0.725,
+     "down": 0.01
+    },
+    "legacy_FE74": {
+     "up": 0.725,
+     "down": 0.22,
+     "width": 67.6
+    },
+    "modern_064D": {
+     "up": 0.8127,
+     "down": 0.01,
+     "width": 48.1
+    },
+    "legacyRaisesCeiling": false,
+    "modernRaisesCeiling": true,
+    "legacyLowersFloor": true,
+    "modernLowersFloor": false
+   }
+  },
+  "stacks": {
+   "meem + damma + shadda": {
+    "text": "U+0645 U+064F U+0651",
+    "up": 0.8817,
+    "down": 0.36,
+    "extent": 1.2417
+   },
+   "meem + shadda + damma (canonical order)": {
+    "text": "U+0645 U+0651 U+064F",
+    "up": 0.8817,
+    "down": 0.36,
+    "extent": 1.2417
+   },
+   "qaf + dammatan": {
+    "text": "U+0642 U+064C",
+    "up": 0.9425,
+    "down": 0.24,
+    "extent": 1.1825
+   },
+   "qaf + shadda + dammatan": {
+    "text": "U+0642 U+0651 U+064C",
+    "up": 1.104,
+    "down": 0.24,
+    "extent": 1.344
+   },
+   "lam + kasra + alef-hamza": {
+    "text": "U+0644 U+0650 U+0623",
+    "up": 0.9328,
+    "down": 0.203,
+    "extent": 1.1358
+   },
+   "shadda + fatha, no base (standalone - what v8.4 adjusted)": {
+    "text": "U+0651 U+064E",
+    "up": 0.65,
+    "down": -0.34,
+    "extent": 0.31
+   }
+  }
+ },
+ "lineBox": {
+  "statement": {
+   "size": 32,
+   "leading": 50,
+   "ratioDeclared": 1.5625,
+   "vocalisedInk_px": 51.12,
+   "vocalisedInk_em": 1.5976,
+   "plainInk_em": 1.4454,
+   "fontLineBox_em": 1.5313,
+   "vocalisedFits": false,
+   "headroom_px": -1.12
+  },
+  "screenTitle": {
+   "size": 26,
+   "leading": 42,
+   "ratioDeclared": 1.6154,
+   "vocalisedInk_px": 41.15,
+   "vocalisedInk_em": 1.5828,
+   "plainInk_em": 1.4717,
+   "fontLineBox_em": 1.5385,
+   "vocalisedFits": true,
+   "headroom_px": 0.85
+  },
+  "sectionTitle": {
+   "size": 20,
+   "leading": 32,
+   "ratioDeclared": 1.6,
+   "vocalisedInk_px": 32.5,
+   "vocalisedInk_em": 1.6251,
+   "plainInk_em": 1.4755,
+   "fontLineBox_em": 1.55,
+   "vocalisedFits": false,
+   "headroom_px": -0.5
+  },
+  "body": {
+   "size": 17,
+   "leading": 30,
+   "ratioDeclared": 1.7647,
+   "vocalisedInk_px": 26.53,
+   "vocalisedInk_em": 1.5604,
+   "plainInk_em": 1.4044,
+   "fontLineBox_em": 1.5294,
+   "vocalisedFits": true,
+   "headroom_px": 3.47
+  },
+  "supporting": {
+   "size": 15,
+   "leading": 25,
+   "ratioDeclared": 1.6667,
+   "vocalisedInk_px": 23.94,
+   "vocalisedInk_em": 1.5957,
+   "plainInk_em": 1.4397,
+   "fontLineBox_em": 1.5333,
+   "vocalisedFits": true,
+   "headroom_px": 1.06
+  },
+  "action": {
+   "size": 14,
+   "leading": 23,
+   "ratioDeclared": 1.6429,
+   "vocalisedInk_px": 22.99,
+   "vocalisedInk_em": 1.6423,
+   "plainInk_em": 1.4901,
+   "fontLineBox_em": 1.5,
+   "vocalisedFits": true,
+   "headroom_px": 0.01
+  },
+  "metadata": {
+   "size": 12,
+   "leading": 20,
+   "ratioDeclared": 1.6667,
+   "vocalisedInk_px": 19.55,
+   "vocalisedInk_em": 1.629,
+   "plainInk_em": 1.3897,
+   "fontLineBox_em": 1.5,
+   "vocalisedFits": true,
+   "headroom_px": 0.45
+  },
+  "numeric": {
+   "size": 20,
+   "leading": 30,
+   "ratioDeclared": 1.5,
+   "vocalisedInk_px": 32.5,
+   "vocalisedInk_em": 1.6251,
+   "plainInk_em": 1.4755,
+   "fontLineBox_em": 1.55,
+   "vocalisedFits": false,
+   "headroom_px": -2.5
+  }
+ },
+ "figures": {
+  "western_default": {
+   "min": 41,
+   "max": 59.7,
+   "spread": 18.7
+  },
+  "western_tnum": {
+   "min": 73.81,
+   "max": 73.81,
+   "spread": 0
+  },
+  "arabicIndic_default": {
+   "min": 31.7,
+   "max": 70.5,
+   "spread": 38.8
+  },
+  "arabicIndic_tnum": {
+   "min": 73.81,
+   "max": 73.81,
+   "spread": 0
+  },
+  "percentSign": {
+   "western": 183.2,
+   "arabicPercent": 182.61
+  }
+ },
+ "separators": {
+  "glyphs": {
+   "U+00B7 middle dot": {
+    "advance_em": 0.2581,
+    "inkTop_em": 0.4,
+    "inkBottom_em": 0.28,
+    "inkHeight_em": 0.12,
+    "inkHeight_px_at12": 1.44
+   },
+   "U+0660 arabic-indic zero": {
+    "advance_em": 0.3341,
+    "inkTop_em": 0.32,
+    "inkBottom_em": 0.11,
+    "inkHeight_em": 0.21,
+    "inkHeight_px_at12": 2.52
+   },
+   "U+2022 bullet": {
+    "advance_em": 0.3031,
+    "inkTop_em": 0.43,
+    "inkBottom_em": 0.22,
+    "inkHeight_em": 0.21,
+    "inkHeight_px_at12": 2.52
+   },
+   "U+2013 en dash": {
+    "advance_em": 0.5361,
+    "inkTop_em": 0.33,
+    "inkBottom_em": 0.26,
+    "inkHeight_em": 0.07,
+    "inkHeight_px_at12": 0.84
+   },
+   "U+007C bar": {
+    "advance_em": 0.27,
+    "inkTop_em": 0.68,
+    "inkBottom_em": -0.22,
+    "inkHeight_em": 0.9,
+    "inkHeight_px_at12": 10.8
+   }
+  },
+  "dotVsZero": {
+   "inkHeightRatio": 0.571,
+   "inkHeightDelta_px_at12": 1.08,
+   "verticalCentreDelta_em": 0.125
+  }
+ },
+ "mixedScript": {
+  "arabicInk_em": 0.71,
+  "latinCapHeight_em": 0.66,
+  "latinXHeight_em": 0.5,
+  "arabicToLatinCap": 1.0758,
+  "latinLcAscender_em": 0.7074
+ },
+ "bidi": {
+  "para:قنديل ربط الكلام الحالي بذاك": [
+   {
+    "rank": 0,
+    "part": "Confidence",
+    "left": -100728.41,
+    "right": -100641.42,
+    "width": 86.98
+   },
+   {
+    "rank": 1,
+    "part": "Memory Runtime",
+    "left": -100423.2,
+    "right": -100293.12,
+    "width": 130.08
+   }
+  ],
+  "para:تم تحديث QANDEEL Human Map ب": [
+   {
+    "rank": 0,
+    "part": "QANDEEL Human Map",
+    "left": -100239.5,
+    "right": -100071.36,
+    "width": 168.14
+   }
+  ],
+  "para:القراءة ما زالت مرتبطة بـ Hy": [
+   {
+    "rank": 0,
+    "part": "Confidence",
+    "left": -100623.11,
+    "right": -100536.12,
+    "width": 86.98
+   },
+   {
+    "rank": 1,
+    "part": "Hypothesis H-04",
+    "left": -100297.87,
+    "right": -100167.56,
+    "width": 130.31
+   }
+  ],
+  "probe:PR #220": [
+   {
+    "rank": 0,
+    "part": "حتى",
+    "left": -100214.05,
+    "right": -100184.2,
+    "width": 29.84
+   },
+   {
+    "rank": 1,
+    "part": "PR #220",
+    "left": -100180.89,
+    "right": -100115.22,
+    "width": 65.67
+   },
+   {
+    "rank": 2,
+    "part": "القراءة",
+    "left": -100044.44,
+    "right": -99999,
+    "width": 45.44
+   }
+  ],
+  "probe:v8.5": [
+   {
+    "rank": 0,
+    "part": "حتى",
+    "left": -100180.34,
+    "right": -100150.5,
+    "width": 29.84
+   },
+   {
+    "rank": 1,
+    "part": "v8.5",
+    "left": -100147.19,
+    "right": -100115.22,
+    "width": 31.97
+   },
+   {
+    "rank": 2,
+    "part": "القراءة",
+    "left": -100044.44,
+    "right": -99999,
+    "width": 45.44
+   }
+  ],
+  "probe:0.68": [
+   {
+    "rank": 0,
+    "part": "حتى",
+    "left": -100182.53,
+    "right": -100152.69,
+    "width": 29.84
+   },
+   {
+    "rank": 1,
+    "part": "0.68",
+    "left": -100149.37,
+    "right": -100115.22,
+    "width": 34.16
+   },
+   {
+    "rank": 2,
+    "part": "القراءة",
+    "left": -100044.44,
+    "right": -99999,
+    "width": 45.44
+   }
+  ],
+  "probe:SHA-256": [
+   {
+    "rank": 0,
+    "part": "حتى",
+    "left": -100218.44,
+    "right": -100188.59,
+    "width": 29.84
+   },
+   {
+    "rank": 1,
+    "part": "SHA-256",
+    "left": -100185.28,
+    "right": -100115.22,
+    "width": 70.06
+   },
+   {
+    "rank": 2,
+    "part": "القراءة",
+    "left": -100044.44,
+    "right": -99999,
+    "width": 45.44
+   }
+  ],
+  "probe:H-04": [
+   {
+    "rank": 0,
+    "part": "حتى",
+    "left": -100190.17,
+    "right": -100160.33,
+    "width": 29.84
+   },
+   {
+    "rank": 1,
+    "part": "H-04",
+    "left": -100157.02,
+    "right": -100115.22,
+    "width": 41.8
+   },
+   {
+    "rank": 2,
+    "part": "القراءة",
+    "left": -100044.44,
+    "right": -99999,
+    "width": 45.44
+   }
+  ],
+  "isolateComparison": {
+   "bare": [
+    {
+     "rank": 0,
+     "part": "PR #220",
+     "left": -100180.89,
+     "right": -100115.22,
+     "width": 65.67
+    }
+   ],
+   "withFSI": [
+    {
+     "rank": 0,
+     "part": "PR #220",
+     "left": -100180.89,
+     "right": -100115.22,
+     "width": 65.67
+    }
+   ]
+  }
+ },
+ "readingMeasure": [
+  {
+   "label": "narrow phone, full bleed minus gutters",
+   "width": 328,
+   "px": 17,
+   "lh": 30,
+   "lines": 70,
+   "height": 2100,
+   "charsPerLine": 43.6,
+   "wordsPerLine": 7.8,
+   "minLineChars": 5,
+   "maxLineChars": 52
+  },
+  {
+   "label": "unbounded tablet third",
+   "width": 480,
+   "px": 17,
+   "lh": 30,
+   "lines": 47,
+   "height": 1410,
+   "charsPerLine": 65,
+   "wordsPerLine": 11.7,
+   "minLineChars": 46,
+   "maxLineChars": 74
+  },
+  {
+   "label": "candidate A",
+   "width": 560,
+   "px": 17,
+   "lh": 30,
+   "lines": 40,
+   "height": 1200,
+   "charsPerLine": 76.4,
+   "wordsPerLine": 13.7,
+   "minLineChars": 46,
+   "maxLineChars": 85
+  },
+  {
+   "label": "candidate B",
+   "width": 640,
+   "px": 17,
+   "lh": 30,
+   "lines": 35,
+   "height": 1050,
+   "charsPerLine": 87.3,
+   "wordsPerLine": 15.7,
+   "minLineChars": 69,
+   "maxLineChars": 99
+  },
+  {
+   "label": "tablet full bleed minus gutters - the unbounded case",
+   "width": 704,
+   "px": 17,
+   "lh": 30,
+   "lines": 32,
+   "height": 960,
+   "charsPerLine": 95.5,
+   "wordsPerLine": 17.1,
+   "minLineChars": 39,
+   "maxLineChars": 105
+  }
+ ],
+ "readingMeasureWordCount": 548,
+ "scaleFlow": {
+  "100%": {
+   "mul": {
+    "narrow": {
+     "width": 328,
+     "px": 17,
+     "lh": 30,
+     "lines": 7,
+     "height": 210,
+     "charsPerLine": 40.3,
+     "wordsPerLine": 7.3,
+     "minLineChars": 20,
+     "maxLineChars": 46
+    },
+    "standard": {
+     "width": 372,
+     "px": 17,
+     "lh": 30,
+     "lines": 6,
+     "height": 180,
+     "charsPerLine": 47,
+     "wordsPerLine": 8.5,
+     "minLineChars": 24,
+     "maxLineChars": 56
+    },
+    "tablet": {
+     "width": 704,
+     "px": 17,
+     "lh": 30,
+     "lines": 3,
+     "height": 90,
+     "charsPerLine": 94,
+     "wordsPerLine": 17,
+     "minLineChars": 92,
+     "maxLineChars": 97
+    }
+   },
+   "sp": {
+    "narrow": {
+     "width": 328,
+     "px": 17,
+     "lh": 30,
+     "lines": 7,
+     "height": 210,
+     "charsPerLine": 40.3,
+     "wordsPerLine": 7.3,
+     "minLineChars": 20,
+     "maxLineChars": 46
+    },
+    "standard": {
+     "width": 372,
+     "px": 17,
+     "lh": 30,
+     "lines": 6,
+     "height": 180,
+     "charsPerLine": 47,
+     "wordsPerLine": 8.5,
+     "minLineChars": 24,
+     "maxLineChars": 56
+    },
+    "tablet": {
+     "width": 704,
+     "px": 17,
+     "lh": 30,
+     "lines": 3,
+     "height": 90,
+     "charsPerLine": 94,
+     "wordsPerLine": 17,
+     "minLineChars": 92,
+     "maxLineChars": 97
+    }
+   }
+  },
+  "130%": {
+   "mul": {
+    "narrow": {
+     "width": 328,
+     "px": 20.9,
+     "lh": 36.9,
+     "lines": 9,
+     "height": 332.2,
+     "charsPerLine": 31.3,
+     "wordsPerLine": 5.7,
+     "minLineChars": 11,
+     "maxLineChars": 37
+    },
+    "standard": {
+     "width": 372,
+     "px": 20.9,
+     "lh": 36.9,
+     "lines": 7,
+     "height": 258.3,
+     "charsPerLine": 40.3,
+     "wordsPerLine": 7.3,
+     "minLineChars": 36,
+     "maxLineChars": 46
+    },
+    "tablet": {
+     "width": 704,
+     "px": 20.9,
+     "lh": 36.9,
+     "lines": 4,
+     "height": 147.6,
+     "charsPerLine": 70.5,
+     "wordsPerLine": 12.8,
+     "minLineChars": 45,
+     "maxLineChars": 84
+    }
+   },
+   "sp": {
+    "narrow": {
+     "width": 328,
+     "px": 20.9,
+     "lh": 30,
+     "lines": 9,
+     "height": 270,
+     "charsPerLine": 31.3,
+     "wordsPerLine": 5.7,
+     "minLineChars": 11,
+     "maxLineChars": 37
+    },
+    "standard": {
+     "width": 372,
+     "px": 20.9,
+     "lh": 30,
+     "lines": 7,
+     "height": 210,
+     "charsPerLine": 40.3,
+     "wordsPerLine": 7.3,
+     "minLineChars": 36,
+     "maxLineChars": 46
+    },
+    "tablet": {
+     "width": 704,
+     "px": 20.9,
+     "lh": 30,
+     "lines": 4,
+     "height": 120,
+     "charsPerLine": 70.5,
+     "wordsPerLine": 12.8,
+     "minLineChars": 45,
+     "maxLineChars": 84
+    }
+   }
+  },
+  "160%": {
+   "mul": {
+    "narrow": {
+     "width": 328,
+     "px": 24.6,
+     "lh": 43.4,
+     "lines": 10,
+     "height": 434.1,
+     "charsPerLine": 28.2,
+     "wordsPerLine": 5.1,
+     "minLineChars": 20,
+     "maxLineChars": 34
+    },
+    "standard": {
+     "width": 372,
+     "px": 24.6,
+     "lh": 43.4,
+     "lines": 9,
+     "height": 390.7,
+     "charsPerLine": 31.3,
+     "wordsPerLine": 5.7,
+     "minLineChars": 11,
+     "maxLineChars": 37
+    },
+    "tablet": {
+     "width": 704,
+     "px": 24.6,
+     "lh": 43.4,
+     "lines": 5,
+     "height": 217,
+     "charsPerLine": 56.4,
+     "wordsPerLine": 10.2,
+     "minLineChars": 20,
+     "maxLineChars": 71
+    }
+   },
+   "sp": {
+    "narrow": {
+     "width": 328,
+     "px": 24.6,
+     "lh": 31.6,
+     "lines": 10,
+     "height": 315.9,
+     "charsPerLine": 28.2,
+     "wordsPerLine": 5.1,
+     "minLineChars": 20,
+     "maxLineChars": 34
+    },
+    "standard": {
+     "width": 372,
+     "px": 24.6,
+     "lh": 31.6,
+     "lines": 9,
+     "height": 284.3,
+     "charsPerLine": 31.3,
+     "wordsPerLine": 5.7,
+     "minLineChars": 11,
+     "maxLineChars": 37
+    },
+    "tablet": {
+     "width": 704,
+     "px": 24.6,
+     "lh": 31.6,
+     "lines": 5,
+     "height": 158,
+     "charsPerLine": 56.4,
+     "wordsPerLine": 10.2,
+     "minLineChars": 20,
+     "maxLineChars": 71
+    }
+   }
+  },
+  "200%": {
+   "mul": {
+    "narrow": {
+     "width": 328,
+     "px": 29,
+     "lh": 51.2,
+     "lines": 12,
+     "height": 614.4,
+     "charsPerLine": 23.5,
+     "wordsPerLine": 4.3,
+     "minLineChars": 7,
+     "maxLineChars": 29
+    },
+    "standard": {
+     "width": 372,
+     "px": 29,
+     "lh": 51.2,
+     "lines": 11,
+     "height": 563.2,
+     "charsPerLine": 25.6,
+     "wordsPerLine": 4.6,
+     "minLineChars": 7,
+     "maxLineChars": 31
+    },
+    "tablet": {
+     "width": 704,
+     "px": 29,
+     "lh": 51.2,
+     "lines": 6,
+     "height": 307.2,
+     "charsPerLine": 47,
+     "wordsPerLine": 8.5,
+     "minLineChars": 7,
+     "maxLineChars": 58
+    }
+   },
+   "sp": {
+    "narrow": {
+     "width": 328,
+     "px": 29,
+     "lh": 38,
+     "lines": 12,
+     "height": 456,
+     "charsPerLine": 23.5,
+     "wordsPerLine": 4.3,
+     "minLineChars": 7,
+     "maxLineChars": 29
+    },
+    "standard": {
+     "width": 372,
+     "px": 29,
+     "lh": 38,
+     "lines": 11,
+     "height": 418,
+     "charsPerLine": 25.6,
+     "wordsPerLine": 4.6,
+     "minLineChars": 7,
+     "maxLineChars": 31
+    },
+    "tablet": {
+     "width": 704,
+     "px": 29,
+     "lh": 38,
+     "lines": 6,
+     "height": 228,
+     "charsPerLine": 47,
+     "wordsPerLine": 8.5,
+     "minLineChars": 7,
+     "maxLineChars": 58
+    }
+   }
+  }
+ },
+ "controls": {
+  "100%": {
+   "narrow": {
+    "full|رجوع": {
+     "container": 328,
+     "h": 48,
+     "textW": 28.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|حفظ": {
+     "container": 328,
+     "h": 48,
+     "textW": 27.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|متابعة": {
+     "container": 328,
+     "h": 48,
+     "textW": 36.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل": {
+     "container": 328,
+     "h": 48,
+     "textW": 76.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|العودة إلى الآن": {
+     "container": 328,
+     "h": 48,
+     "textW": 81.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|فتح الخريطة": {
+     "container": 328,
+     "h": 48,
+     "textW": 69.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|مشاركة": {
+     "container": 328,
+     "h": 48,
+     "textW": 42.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|إلغاء": {
+     "container": 328,
+     "h": 48,
+     "textW": 26.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإعدادات": {
+     "container": 328,
+     "h": 48,
+     "textW": 54.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإشعارات": {
+     "container": 328,
+     "h": 48,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|بحث": {
+     "container": 328,
+     "h": 48,
+     "textW": 27.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل الكامل لهذه القراءة": {
+     "container": 328,
+     "h": 48,
+     "textW": 186.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|رجوع": {
+     "container": 158,
+     "h": 48,
+     "textW": 28.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|حفظ": {
+     "container": 158,
+     "h": 48,
+     "textW": 27.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|متابعة": {
+     "container": 158,
+     "h": 48,
+     "textW": 36.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل": {
+     "container": 158,
+     "h": 48,
+     "textW": 76.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|العودة إلى الآن": {
+     "container": 158,
+     "h": 48,
+     "textW": 81.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|فتح الخريطة": {
+     "container": 158,
+     "h": 48,
+     "textW": 69.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|مشاركة": {
+     "container": 158,
+     "h": 48,
+     "textW": 42.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|إلغاء": {
+     "container": 158,
+     "h": 48,
+     "textW": 26.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإعدادات": {
+     "container": 158,
+     "h": 48,
+     "textW": 54.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإشعارات": {
+     "container": 158,
+     "h": 48,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|بحث": {
+     "container": 158,
+     "h": 48,
+     "textW": 27.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل الكامل لهذه القراءة": {
+     "container": 158,
+     "h": 66,
+     "textW": 130,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|رجوع": {
+     "container": 104,
+     "h": 48,
+     "textW": 28.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|حفظ": {
+     "container": 104,
+     "h": 48,
+     "textW": 27.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|متابعة": {
+     "container": 104,
+     "h": 48,
+     "textW": 36.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل": {
+     "container": 104,
+     "h": 66,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|العودة إلى الآن": {
+     "container": 104,
+     "h": 66,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|فتح الخريطة": {
+     "container": 104,
+     "h": 48,
+     "textW": 69.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|مشاركة": {
+     "container": 104,
+     "h": 48,
+     "textW": 42.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|إلغاء": {
+     "container": 104,
+     "h": 48,
+     "textW": 26.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإعدادات": {
+     "container": 104,
+     "h": 48,
+     "textW": 54.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإشعارات": {
+     "container": 104,
+     "h": 48,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|بحث": {
+     "container": 104,
+     "h": 48,
+     "textW": 27.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل الكامل لهذه القراءة": {
+     "container": 104,
+     "h": 112,
+     "textW": 76,
+     "lines": 4,
+     "overflows": false,
+     "meets48": true
+    }
+   },
+   "standard": {
+    "full|رجوع": {
+     "container": 372,
+     "h": 48,
+     "textW": 28.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|حفظ": {
+     "container": 372,
+     "h": 48,
+     "textW": 27.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|متابعة": {
+     "container": 372,
+     "h": 48,
+     "textW": 36.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل": {
+     "container": 372,
+     "h": 48,
+     "textW": 76.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|العودة إلى الآن": {
+     "container": 372,
+     "h": 48,
+     "textW": 81.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|فتح الخريطة": {
+     "container": 372,
+     "h": 48,
+     "textW": 69.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|مشاركة": {
+     "container": 372,
+     "h": 48,
+     "textW": 42.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|إلغاء": {
+     "container": 372,
+     "h": 48,
+     "textW": 26.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإعدادات": {
+     "container": 372,
+     "h": 48,
+     "textW": 54.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإشعارات": {
+     "container": 372,
+     "h": 48,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|بحث": {
+     "container": 372,
+     "h": 48,
+     "textW": 27.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل الكامل لهذه القراءة": {
+     "container": 372,
+     "h": 48,
+     "textW": 186.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|رجوع": {
+     "container": 180,
+     "h": 48,
+     "textW": 28.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|حفظ": {
+     "container": 180,
+     "h": 48,
+     "textW": 27.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|متابعة": {
+     "container": 180,
+     "h": 48,
+     "textW": 36.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل": {
+     "container": 180,
+     "h": 48,
+     "textW": 76.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|العودة إلى الآن": {
+     "container": 180,
+     "h": 48,
+     "textW": 81.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|فتح الخريطة": {
+     "container": 180,
+     "h": 48,
+     "textW": 69.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|مشاركة": {
+     "container": 180,
+     "h": 48,
+     "textW": 42.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|إلغاء": {
+     "container": 180,
+     "h": 48,
+     "textW": 26.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإعدادات": {
+     "container": 180,
+     "h": 48,
+     "textW": 54.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإشعارات": {
+     "container": 180,
+     "h": 48,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|بحث": {
+     "container": 180,
+     "h": 48,
+     "textW": 27.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل الكامل لهذه القراءة": {
+     "container": 180,
+     "h": 66,
+     "textW": 152,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|رجوع": {
+     "container": 104,
+     "h": 48,
+     "textW": 28.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|حفظ": {
+     "container": 104,
+     "h": 48,
+     "textW": 27.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|متابعة": {
+     "container": 104,
+     "h": 48,
+     "textW": 36.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل": {
+     "container": 104,
+     "h": 66,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|العودة إلى الآن": {
+     "container": 104,
+     "h": 66,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|فتح الخريطة": {
+     "container": 104,
+     "h": 48,
+     "textW": 69.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|مشاركة": {
+     "container": 104,
+     "h": 48,
+     "textW": 42.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|إلغاء": {
+     "container": 104,
+     "h": 48,
+     "textW": 26.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإعدادات": {
+     "container": 104,
+     "h": 48,
+     "textW": 54.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإشعارات": {
+     "container": 104,
+     "h": 48,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|بحث": {
+     "container": 104,
+     "h": 48,
+     "textW": 27.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل الكامل لهذه القراءة": {
+     "container": 104,
+     "h": 112,
+     "textW": 76,
+     "lines": 4,
+     "overflows": false,
+     "meets48": true
+    }
+   },
+   "tablet": {
+    "full|رجوع": {
+     "container": 704,
+     "h": 48,
+     "textW": 28.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|حفظ": {
+     "container": 704,
+     "h": 48,
+     "textW": 27.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|متابعة": {
+     "container": 704,
+     "h": 48,
+     "textW": 36.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل": {
+     "container": 704,
+     "h": 48,
+     "textW": 76.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|العودة إلى الآن": {
+     "container": 704,
+     "h": 48,
+     "textW": 81.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|فتح الخريطة": {
+     "container": 704,
+     "h": 48,
+     "textW": 69.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|مشاركة": {
+     "container": 704,
+     "h": 48,
+     "textW": 42.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|إلغاء": {
+     "container": 704,
+     "h": 48,
+     "textW": 26.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإعدادات": {
+     "container": 704,
+     "h": 48,
+     "textW": 54.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإشعارات": {
+     "container": 704,
+     "h": 48,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|بحث": {
+     "container": 704,
+     "h": 48,
+     "textW": 27.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل الكامل لهذه القراءة": {
+     "container": 704,
+     "h": 48,
+     "textW": 186.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|رجوع": {
+     "container": 346,
+     "h": 48,
+     "textW": 28.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|حفظ": {
+     "container": 346,
+     "h": 48,
+     "textW": 27.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|متابعة": {
+     "container": 346,
+     "h": 48,
+     "textW": 36.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل": {
+     "container": 346,
+     "h": 48,
+     "textW": 76.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|العودة إلى الآن": {
+     "container": 346,
+     "h": 48,
+     "textW": 81.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|فتح الخريطة": {
+     "container": 346,
+     "h": 48,
+     "textW": 69.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|مشاركة": {
+     "container": 346,
+     "h": 48,
+     "textW": 42.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|إلغاء": {
+     "container": 346,
+     "h": 48,
+     "textW": 26.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإعدادات": {
+     "container": 346,
+     "h": 48,
+     "textW": 54.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإشعارات": {
+     "container": 346,
+     "h": 48,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|بحث": {
+     "container": 346,
+     "h": 48,
+     "textW": 27.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل الكامل لهذه القراءة": {
+     "container": 346,
+     "h": 48,
+     "textW": 186.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|رجوع": {
+     "container": 104,
+     "h": 48,
+     "textW": 28.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|حفظ": {
+     "container": 104,
+     "h": 48,
+     "textW": 27.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|متابعة": {
+     "container": 104,
+     "h": 48,
+     "textW": 36.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل": {
+     "container": 104,
+     "h": 66,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|العودة إلى الآن": {
+     "container": 104,
+     "h": 66,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|فتح الخريطة": {
+     "container": 104,
+     "h": 48,
+     "textW": 69.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|مشاركة": {
+     "container": 104,
+     "h": 48,
+     "textW": 42.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|إلغاء": {
+     "container": 104,
+     "h": 48,
+     "textW": 26.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإعدادات": {
+     "container": 104,
+     "h": 48,
+     "textW": 54.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإشعارات": {
+     "container": 104,
+     "h": 48,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|بحث": {
+     "container": 104,
+     "h": 48,
+     "textW": 27.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل الكامل لهذه القراءة": {
+     "container": 104,
+     "h": 112,
+     "textW": 76,
+     "lines": 4,
+     "overflows": false,
+     "meets48": true
+    }
+   }
+  },
+  "130%": {
+   "narrow": {
+    "full|رجوع": {
+     "container": 328,
+     "h": 50.9,
+     "textW": 38.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|حفظ": {
+     "container": 328,
+     "h": 50.9,
+     "textW": 36.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|متابعة": {
+     "container": 328,
+     "h": 50.9,
+     "textW": 49.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل": {
+     "container": 328,
+     "h": 50.9,
+     "textW": 102.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|العودة إلى الآن": {
+     "container": 328,
+     "h": 50.9,
+     "textW": 109.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|فتح الخريطة": {
+     "container": 328,
+     "h": 50.9,
+     "textW": 92.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|مشاركة": {
+     "container": 328,
+     "h": 50.9,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|إلغاء": {
+     "container": 328,
+     "h": 50.9,
+     "textW": 35.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإعدادات": {
+     "container": 328,
+     "h": 50.9,
+     "textW": 72.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإشعارات": {
+     "container": 328,
+     "h": 50.9,
+     "textW": 75.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|بحث": {
+     "container": 328,
+     "h": 50.9,
+     "textW": 36.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل الكامل لهذه القراءة": {
+     "container": 328,
+     "h": 50.9,
+     "textW": 250.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|رجوع": {
+     "container": 158,
+     "h": 50.9,
+     "textW": 38.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|حفظ": {
+     "container": 158,
+     "h": 50.9,
+     "textW": 36.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|متابعة": {
+     "container": 158,
+     "h": 50.9,
+     "textW": 49.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل": {
+     "container": 158,
+     "h": 50.9,
+     "textW": 102.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|العودة إلى الآن": {
+     "container": 158,
+     "h": 50.9,
+     "textW": 109.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|فتح الخريطة": {
+     "container": 158,
+     "h": 50.9,
+     "textW": 92.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|مشاركة": {
+     "container": 158,
+     "h": 50.9,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|إلغاء": {
+     "container": 158,
+     "h": 50.9,
+     "textW": 35.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإعدادات": {
+     "container": 158,
+     "h": 50.9,
+     "textW": 72.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإشعارات": {
+     "container": 158,
+     "h": 50.9,
+     "textW": 75.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|بحث": {
+     "container": 158,
+     "h": 50.9,
+     "textW": 36.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل الكامل لهذه القراءة": {
+     "container": 158,
+     "h": 112.7,
+     "textW": 130,
+     "lines": 3,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|رجوع": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 38.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|حفظ": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 36.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|متابعة": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 49.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل": {
+     "container": 104,
+     "h": 81.8,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|العودة إلى الآن": {
+     "container": 104,
+     "h": 81.8,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|فتح الخريطة": {
+     "container": 104,
+     "h": 81.8,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|مشاركة": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|إلغاء": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 35.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإعدادات": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 72.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإشعارات": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 75.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|بحث": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 36.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل الكامل لهذه القراءة": {
+     "container": 104,
+     "h": 174.5,
+     "textW": 76,
+     "lines": 5,
+     "overflows": false,
+     "meets48": true
+    }
+   },
+   "standard": {
+    "full|رجوع": {
+     "container": 372,
+     "h": 50.9,
+     "textW": 38.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|حفظ": {
+     "container": 372,
+     "h": 50.9,
+     "textW": 36.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|متابعة": {
+     "container": 372,
+     "h": 50.9,
+     "textW": 49.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل": {
+     "container": 372,
+     "h": 50.9,
+     "textW": 102.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|العودة إلى الآن": {
+     "container": 372,
+     "h": 50.9,
+     "textW": 109.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|فتح الخريطة": {
+     "container": 372,
+     "h": 50.9,
+     "textW": 92.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|مشاركة": {
+     "container": 372,
+     "h": 50.9,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|إلغاء": {
+     "container": 372,
+     "h": 50.9,
+     "textW": 35.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإعدادات": {
+     "container": 372,
+     "h": 50.9,
+     "textW": 72.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإشعارات": {
+     "container": 372,
+     "h": 50.9,
+     "textW": 75.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|بحث": {
+     "container": 372,
+     "h": 50.9,
+     "textW": 36.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل الكامل لهذه القراءة": {
+     "container": 372,
+     "h": 50.9,
+     "textW": 250.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|رجوع": {
+     "container": 180,
+     "h": 50.9,
+     "textW": 38.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|حفظ": {
+     "container": 180,
+     "h": 50.9,
+     "textW": 36.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|متابعة": {
+     "container": 180,
+     "h": 50.9,
+     "textW": 49.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل": {
+     "container": 180,
+     "h": 50.9,
+     "textW": 102.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|العودة إلى الآن": {
+     "container": 180,
+     "h": 50.9,
+     "textW": 109.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|فتح الخريطة": {
+     "container": 180,
+     "h": 50.9,
+     "textW": 92.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|مشاركة": {
+     "container": 180,
+     "h": 50.9,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|إلغاء": {
+     "container": 180,
+     "h": 50.9,
+     "textW": 35.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإعدادات": {
+     "container": 180,
+     "h": 50.9,
+     "textW": 72.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإشعارات": {
+     "container": 180,
+     "h": 50.9,
+     "textW": 75.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|بحث": {
+     "container": 180,
+     "h": 50.9,
+     "textW": 36.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل الكامل لهذه القراءة": {
+     "container": 180,
+     "h": 81.8,
+     "textW": 152,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|رجوع": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 38.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|حفظ": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 36.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|متابعة": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 49.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل": {
+     "container": 104,
+     "h": 81.8,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|العودة إلى الآن": {
+     "container": 104,
+     "h": 81.8,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|فتح الخريطة": {
+     "container": 104,
+     "h": 81.8,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|مشاركة": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|إلغاء": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 35.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإعدادات": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 72.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإشعارات": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 75.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|بحث": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 36.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل الكامل لهذه القراءة": {
+     "container": 104,
+     "h": 174.5,
+     "textW": 76,
+     "lines": 5,
+     "overflows": false,
+     "meets48": true
+    }
+   },
+   "tablet": {
+    "full|رجوع": {
+     "container": 704,
+     "h": 50.9,
+     "textW": 38.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|حفظ": {
+     "container": 704,
+     "h": 50.9,
+     "textW": 36.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|متابعة": {
+     "container": 704,
+     "h": 50.9,
+     "textW": 49.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل": {
+     "container": 704,
+     "h": 50.9,
+     "textW": 102.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|العودة إلى الآن": {
+     "container": 704,
+     "h": 50.9,
+     "textW": 109.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|فتح الخريطة": {
+     "container": 704,
+     "h": 50.9,
+     "textW": 92.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|مشاركة": {
+     "container": 704,
+     "h": 50.9,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|إلغاء": {
+     "container": 704,
+     "h": 50.9,
+     "textW": 35.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإعدادات": {
+     "container": 704,
+     "h": 50.9,
+     "textW": 72.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإشعارات": {
+     "container": 704,
+     "h": 50.9,
+     "textW": 75.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|بحث": {
+     "container": 704,
+     "h": 50.9,
+     "textW": 36.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل الكامل لهذه القراءة": {
+     "container": 704,
+     "h": 50.9,
+     "textW": 250.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|رجوع": {
+     "container": 346,
+     "h": 50.9,
+     "textW": 38.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|حفظ": {
+     "container": 346,
+     "h": 50.9,
+     "textW": 36.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|متابعة": {
+     "container": 346,
+     "h": 50.9,
+     "textW": 49.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل": {
+     "container": 346,
+     "h": 50.9,
+     "textW": 102.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|العودة إلى الآن": {
+     "container": 346,
+     "h": 50.9,
+     "textW": 109.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|فتح الخريطة": {
+     "container": 346,
+     "h": 50.9,
+     "textW": 92.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|مشاركة": {
+     "container": 346,
+     "h": 50.9,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|إلغاء": {
+     "container": 346,
+     "h": 50.9,
+     "textW": 35.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإعدادات": {
+     "container": 346,
+     "h": 50.9,
+     "textW": 72.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإشعارات": {
+     "container": 346,
+     "h": 50.9,
+     "textW": 75.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|بحث": {
+     "container": 346,
+     "h": 50.9,
+     "textW": 36.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل الكامل لهذه القراءة": {
+     "container": 346,
+     "h": 50.9,
+     "textW": 250.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|رجوع": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 38.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|حفظ": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 36.4,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|متابعة": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 49.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل": {
+     "container": 104,
+     "h": 81.8,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|العودة إلى الآن": {
+     "container": 104,
+     "h": 81.8,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|فتح الخريطة": {
+     "container": 104,
+     "h": 81.8,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|مشاركة": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 56.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|إلغاء": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 35.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإعدادات": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 72.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإشعارات": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 75.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|بحث": {
+     "container": 104,
+     "h": 50.9,
+     "textW": 36.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل الكامل لهذه القراءة": {
+     "container": 104,
+     "h": 174.5,
+     "textW": 76,
+     "lines": 5,
+     "overflows": false,
+     "meets48": true
+    }
+   }
+  },
+  "160%": {
+   "narrow": {
+    "full|رجوع": {
+     "container": 328,
+     "h": 57.5,
+     "textW": 46.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|حفظ": {
+     "container": 328,
+     "h": 57.5,
+     "textW": 44.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|متابعة": {
+     "container": 328,
+     "h": 57.5,
+     "textW": 60,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل": {
+     "container": 328,
+     "h": 57.5,
+     "textW": 124.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|العودة إلى الآن": {
+     "container": 328,
+     "h": 57.5,
+     "textW": 132.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|فتح الخريطة": {
+     "container": 328,
+     "h": 57.5,
+     "textW": 112.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|مشاركة": {
+     "container": 328,
+     "h": 57.5,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|إلغاء": {
+     "container": 328,
+     "h": 57.5,
+     "textW": 43.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإعدادات": {
+     "container": 328,
+     "h": 57.5,
+     "textW": 88.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإشعارات": {
+     "container": 328,
+     "h": 57.5,
+     "textW": 91.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|بحث": {
+     "container": 328,
+     "h": 57.5,
+     "textW": 44.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل الكامل لهذه القراءة": {
+     "container": 328,
+     "h": 95,
+     "textW": 300,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|رجوع": {
+     "container": 158,
+     "h": 57.5,
+     "textW": 46.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|حفظ": {
+     "container": 158,
+     "h": 57.5,
+     "textW": 44.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|متابعة": {
+     "container": 158,
+     "h": 57.5,
+     "textW": 60,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل": {
+     "container": 158,
+     "h": 57.5,
+     "textW": 124.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|العودة إلى الآن": {
+     "container": 158,
+     "h": 95,
+     "textW": 130,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|فتح الخريطة": {
+     "container": 158,
+     "h": 57.5,
+     "textW": 112.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|مشاركة": {
+     "container": 158,
+     "h": 57.5,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|إلغاء": {
+     "container": 158,
+     "h": 57.5,
+     "textW": 43.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإعدادات": {
+     "container": 158,
+     "h": 57.5,
+     "textW": 88.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإشعارات": {
+     "container": 158,
+     "h": 57.5,
+     "textW": 91.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|بحث": {
+     "container": 158,
+     "h": 57.5,
+     "textW": 44.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل الكامل لهذه القراءة": {
+     "container": 158,
+     "h": 132.5,
+     "textW": 130,
+     "lines": 3,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|رجوع": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 46.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|حفظ": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 44.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|متابعة": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 60,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل": {
+     "container": 104,
+     "h": 95,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|العودة إلى الآن": {
+     "container": 104,
+     "h": 95,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|فتح الخريطة": {
+     "container": 104,
+     "h": 95,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|مشاركة": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|إلغاء": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 43.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإعدادات": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 88.1,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|الإشعارات": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 91.9,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|بحث": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 44.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل الكامل لهذه القراءة": {
+     "container": 104,
+     "h": 207.5,
+     "textW": 76,
+     "lines": 5,
+     "overflows": false,
+     "meets48": true
+    }
+   },
+   "standard": {
+    "full|رجوع": {
+     "container": 372,
+     "h": 57.5,
+     "textW": 46.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|حفظ": {
+     "container": 372,
+     "h": 57.5,
+     "textW": 44.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|متابعة": {
+     "container": 372,
+     "h": 57.5,
+     "textW": 60,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل": {
+     "container": 372,
+     "h": 57.5,
+     "textW": 124.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|العودة إلى الآن": {
+     "container": 372,
+     "h": 57.5,
+     "textW": 132.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|فتح الخريطة": {
+     "container": 372,
+     "h": 57.5,
+     "textW": 112.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|مشاركة": {
+     "container": 372,
+     "h": 57.5,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|إلغاء": {
+     "container": 372,
+     "h": 57.5,
+     "textW": 43.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإعدادات": {
+     "container": 372,
+     "h": 57.5,
+     "textW": 88.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإشعارات": {
+     "container": 372,
+     "h": 57.5,
+     "textW": 91.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|بحث": {
+     "container": 372,
+     "h": 57.5,
+     "textW": 44.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل الكامل لهذه القراءة": {
+     "container": 372,
+     "h": 57.5,
+     "textW": 303.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|رجوع": {
+     "container": 180,
+     "h": 57.5,
+     "textW": 46.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|حفظ": {
+     "container": 180,
+     "h": 57.5,
+     "textW": 44.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|متابعة": {
+     "container": 180,
+     "h": 57.5,
+     "textW": 60,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل": {
+     "container": 180,
+     "h": 57.5,
+     "textW": 124.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|العودة إلى الآن": {
+     "container": 180,
+     "h": 57.5,
+     "textW": 132.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|فتح الخريطة": {
+     "container": 180,
+     "h": 57.5,
+     "textW": 112.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|مشاركة": {
+     "container": 180,
+     "h": 57.5,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|إلغاء": {
+     "container": 180,
+     "h": 57.5,
+     "textW": 43.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإعدادات": {
+     "container": 180,
+     "h": 57.5,
+     "textW": 88.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإشعارات": {
+     "container": 180,
+     "h": 57.5,
+     "textW": 91.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|بحث": {
+     "container": 180,
+     "h": 57.5,
+     "textW": 44.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل الكامل لهذه القراءة": {
+     "container": 180,
+     "h": 132.5,
+     "textW": 152,
+     "lines": 3,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|رجوع": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 46.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|حفظ": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 44.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|متابعة": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 60,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل": {
+     "container": 104,
+     "h": 95,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|العودة إلى الآن": {
+     "container": 104,
+     "h": 95,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|فتح الخريطة": {
+     "container": 104,
+     "h": 95,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|مشاركة": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|إلغاء": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 43.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإعدادات": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 88.1,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|الإشعارات": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 91.9,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|بحث": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 44.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل الكامل لهذه القراءة": {
+     "container": 104,
+     "h": 207.5,
+     "textW": 76,
+     "lines": 5,
+     "overflows": false,
+     "meets48": true
+    }
+   },
+   "tablet": {
+    "full|رجوع": {
+     "container": 704,
+     "h": 57.5,
+     "textW": 46.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|حفظ": {
+     "container": 704,
+     "h": 57.5,
+     "textW": 44.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|متابعة": {
+     "container": 704,
+     "h": 57.5,
+     "textW": 60,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل": {
+     "container": 704,
+     "h": 57.5,
+     "textW": 124.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|العودة إلى الآن": {
+     "container": 704,
+     "h": 57.5,
+     "textW": 132.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|فتح الخريطة": {
+     "container": 704,
+     "h": 57.5,
+     "textW": 112.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|مشاركة": {
+     "container": 704,
+     "h": 57.5,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|إلغاء": {
+     "container": 704,
+     "h": 57.5,
+     "textW": 43.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإعدادات": {
+     "container": 704,
+     "h": 57.5,
+     "textW": 88.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإشعارات": {
+     "container": 704,
+     "h": 57.5,
+     "textW": 91.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|بحث": {
+     "container": 704,
+     "h": 57.5,
+     "textW": 44.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل الكامل لهذه القراءة": {
+     "container": 704,
+     "h": 57.5,
+     "textW": 303.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|رجوع": {
+     "container": 346,
+     "h": 57.5,
+     "textW": 46.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|حفظ": {
+     "container": 346,
+     "h": 57.5,
+     "textW": 44.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|متابعة": {
+     "container": 346,
+     "h": 57.5,
+     "textW": 60,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل": {
+     "container": 346,
+     "h": 57.5,
+     "textW": 124.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|العودة إلى الآن": {
+     "container": 346,
+     "h": 57.5,
+     "textW": 132.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|فتح الخريطة": {
+     "container": 346,
+     "h": 57.5,
+     "textW": 112.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|مشاركة": {
+     "container": 346,
+     "h": 57.5,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|إلغاء": {
+     "container": 346,
+     "h": 57.5,
+     "textW": 43.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإعدادات": {
+     "container": 346,
+     "h": 57.5,
+     "textW": 88.1,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإشعارات": {
+     "container": 346,
+     "h": 57.5,
+     "textW": 91.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|بحث": {
+     "container": 346,
+     "h": 57.5,
+     "textW": 44.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل الكامل لهذه القراءة": {
+     "container": 346,
+     "h": 57.5,
+     "textW": 303.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|رجوع": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 46.9,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|حفظ": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 44.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|متابعة": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 60,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل": {
+     "container": 104,
+     "h": 95,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|العودة إلى الآن": {
+     "container": 104,
+     "h": 95,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|فتح الخريطة": {
+     "container": 104,
+     "h": 95,
+     "textW": 76,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|مشاركة": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|إلغاء": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 43.6,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإعدادات": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 88.1,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|الإشعارات": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 91.9,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|بحث": {
+     "container": 104,
+     "h": 57.5,
+     "textW": 44.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل الكامل لهذه القراءة": {
+     "container": 104,
+     "h": 207.5,
+     "textW": 76,
+     "lines": 5,
+     "overflows": false,
+     "meets48": true
+    }
+   }
+  },
+  "200%": {
+   "narrow": {
+    "full|رجوع": {
+     "container": 328,
+     "h": 62.7,
+     "textW": 53.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|حفظ": {
+     "container": 328,
+     "h": 62.7,
+     "textW": 50.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|متابعة": {
+     "container": 328,
+     "h": 62.7,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل": {
+     "container": 328,
+     "h": 62.7,
+     "textW": 141.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|العودة إلى الآن": {
+     "container": 328,
+     "h": 62.7,
+     "textW": 151.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|فتح الخريطة": {
+     "container": 328,
+     "h": 62.7,
+     "textW": 128.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|مشاركة": {
+     "container": 328,
+     "h": 62.7,
+     "textW": 78.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|إلغاء": {
+     "container": 328,
+     "h": 62.7,
+     "textW": 49.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإعدادات": {
+     "container": 328,
+     "h": 62.7,
+     "textW": 100.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإشعارات": {
+     "container": 328,
+     "h": 62.7,
+     "textW": 104.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|بحث": {
+     "container": 328,
+     "h": 62.7,
+     "textW": 50.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل الكامل لهذه القراءة": {
+     "container": 328,
+     "h": 105.4,
+     "textW": 300,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|رجوع": {
+     "container": 158,
+     "h": 62.7,
+     "textW": 53.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|حفظ": {
+     "container": 158,
+     "h": 62.7,
+     "textW": 50.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|متابعة": {
+     "container": 158,
+     "h": 62.7,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل": {
+     "container": 158,
+     "h": 105.4,
+     "textW": 130,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|العودة إلى الآن": {
+     "container": 158,
+     "h": 105.4,
+     "textW": 130,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|فتح الخريطة": {
+     "container": 158,
+     "h": 62.7,
+     "textW": 128.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|مشاركة": {
+     "container": 158,
+     "h": 62.7,
+     "textW": 78.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|إلغاء": {
+     "container": 158,
+     "h": 62.7,
+     "textW": 49.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإعدادات": {
+     "container": 158,
+     "h": 62.7,
+     "textW": 100.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإشعارات": {
+     "container": 158,
+     "h": 62.7,
+     "textW": 104.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|بحث": {
+     "container": 158,
+     "h": 62.7,
+     "textW": 50.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل الكامل لهذه القراءة": {
+     "container": 158,
+     "h": 190.8,
+     "textW": 130,
+     "lines": 4,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|رجوع": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 53.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|حفظ": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 50.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|متابعة": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل": {
+     "container": 104,
+     "h": 105.4,
+     "textW": 82.3,
+     "lines": 2,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|العودة إلى الآن": {
+     "container": 104,
+     "h": 148.1,
+     "textW": 76,
+     "lines": 3,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|فتح الخريطة": {
+     "container": 104,
+     "h": 105.4,
+     "textW": 83.1,
+     "lines": 2,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|مشاركة": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 78.2,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|إلغاء": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 49.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإعدادات": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 100.5,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|الإشعارات": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 104.8,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|بحث": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 50.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل الكامل لهذه القراءة": {
+     "container": 104,
+     "h": 233.5,
+     "textW": 82.2,
+     "lines": 5,
+     "overflows": true,
+     "meets48": true
+    }
+   },
+   "standard": {
+    "full|رجوع": {
+     "container": 372,
+     "h": 62.7,
+     "textW": 53.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|حفظ": {
+     "container": 372,
+     "h": 62.7,
+     "textW": 50.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|متابعة": {
+     "container": 372,
+     "h": 62.7,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل": {
+     "container": 372,
+     "h": 62.7,
+     "textW": 141.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|العودة إلى الآن": {
+     "container": 372,
+     "h": 62.7,
+     "textW": 151.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|فتح الخريطة": {
+     "container": 372,
+     "h": 62.7,
+     "textW": 128.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|مشاركة": {
+     "container": 372,
+     "h": 62.7,
+     "textW": 78.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|إلغاء": {
+     "container": 372,
+     "h": 62.7,
+     "textW": 49.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإعدادات": {
+     "container": 372,
+     "h": 62.7,
+     "textW": 100.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإشعارات": {
+     "container": 372,
+     "h": 62.7,
+     "textW": 104.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|بحث": {
+     "container": 372,
+     "h": 62.7,
+     "textW": 50.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل الكامل لهذه القراءة": {
+     "container": 372,
+     "h": 105.4,
+     "textW": 344,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|رجوع": {
+     "container": 180,
+     "h": 62.7,
+     "textW": 53.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|حفظ": {
+     "container": 180,
+     "h": 62.7,
+     "textW": 50.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|متابعة": {
+     "container": 180,
+     "h": 62.7,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل": {
+     "container": 180,
+     "h": 62.7,
+     "textW": 141.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|العودة إلى الآن": {
+     "container": 180,
+     "h": 62.7,
+     "textW": 151.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|فتح الخريطة": {
+     "container": 180,
+     "h": 62.7,
+     "textW": 128.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|مشاركة": {
+     "container": 180,
+     "h": 62.7,
+     "textW": 78.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|إلغاء": {
+     "container": 180,
+     "h": 62.7,
+     "textW": 49.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإعدادات": {
+     "container": 180,
+     "h": 62.7,
+     "textW": 100.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإشعارات": {
+     "container": 180,
+     "h": 62.7,
+     "textW": 104.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|بحث": {
+     "container": 180,
+     "h": 62.7,
+     "textW": 50.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل الكامل لهذه القراءة": {
+     "container": 180,
+     "h": 148.1,
+     "textW": 152,
+     "lines": 3,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|رجوع": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 53.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|حفظ": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 50.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|متابعة": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل": {
+     "container": 104,
+     "h": 105.4,
+     "textW": 82.3,
+     "lines": 2,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|العودة إلى الآن": {
+     "container": 104,
+     "h": 148.1,
+     "textW": 76,
+     "lines": 3,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|فتح الخريطة": {
+     "container": 104,
+     "h": 105.4,
+     "textW": 83.1,
+     "lines": 2,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|مشاركة": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 78.2,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|إلغاء": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 49.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإعدادات": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 100.5,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|الإشعارات": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 104.8,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|بحث": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 50.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل الكامل لهذه القراءة": {
+     "container": 104,
+     "h": 233.5,
+     "textW": 82.2,
+     "lines": 5,
+     "overflows": true,
+     "meets48": true
+    }
+   },
+   "tablet": {
+    "full|رجوع": {
+     "container": 704,
+     "h": 62.7,
+     "textW": 53.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|حفظ": {
+     "container": 704,
+     "h": 62.7,
+     "textW": 50.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|متابعة": {
+     "container": 704,
+     "h": 62.7,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل": {
+     "container": 704,
+     "h": 62.7,
+     "textW": 141.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|العودة إلى الآن": {
+     "container": 704,
+     "h": 62.7,
+     "textW": 151.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|فتح الخريطة": {
+     "container": 704,
+     "h": 62.7,
+     "textW": 128.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|مشاركة": {
+     "container": 704,
+     "h": 62.7,
+     "textW": 78.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|إلغاء": {
+     "container": 704,
+     "h": 62.7,
+     "textW": 49.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإعدادات": {
+     "container": 704,
+     "h": 62.7,
+     "textW": 100.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|الإشعارات": {
+     "container": 704,
+     "h": 62.7,
+     "textW": 104.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|بحث": {
+     "container": 704,
+     "h": 62.7,
+     "textW": 50.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "full|عرض التحليل الكامل لهذه القراءة": {
+     "container": 704,
+     "h": 62.7,
+     "textW": 346.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|رجوع": {
+     "container": 346,
+     "h": 62.7,
+     "textW": 53.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|حفظ": {
+     "container": 346,
+     "h": 62.7,
+     "textW": 50.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|متابعة": {
+     "container": 346,
+     "h": 62.7,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل": {
+     "container": 346,
+     "h": 62.7,
+     "textW": 141.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|العودة إلى الآن": {
+     "container": 346,
+     "h": 62.7,
+     "textW": 151.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|فتح الخريطة": {
+     "container": 346,
+     "h": 62.7,
+     "textW": 128.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|مشاركة": {
+     "container": 346,
+     "h": 62.7,
+     "textW": 78.2,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|إلغاء": {
+     "container": 346,
+     "h": 62.7,
+     "textW": 49.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإعدادات": {
+     "container": 346,
+     "h": 62.7,
+     "textW": 100.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|الإشعارات": {
+     "container": 346,
+     "h": 62.7,
+     "textW": 104.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|بحث": {
+     "container": 346,
+     "h": 62.7,
+     "textW": 50.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "half|عرض التحليل الكامل لهذه القراءة": {
+     "container": 346,
+     "h": 105.4,
+     "textW": 318,
+     "lines": 2,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|رجوع": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 53.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|حفظ": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 50.3,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|متابعة": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 68.5,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل": {
+     "container": 104,
+     "h": 105.4,
+     "textW": 82.3,
+     "lines": 2,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|العودة إلى الآن": {
+     "container": 104,
+     "h": 148.1,
+     "textW": 76,
+     "lines": 3,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|فتح الخريطة": {
+     "container": 104,
+     "h": 105.4,
+     "textW": 83.1,
+     "lines": 2,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|مشاركة": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 78.2,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|إلغاء": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 49.7,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|الإعدادات": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 100.5,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|الإشعارات": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 104.8,
+     "lines": 1,
+     "overflows": true,
+     "meets48": true
+    },
+    "narrow|بحث": {
+     "container": 104,
+     "h": 62.7,
+     "textW": 50.8,
+     "lines": 1,
+     "overflows": false,
+     "meets48": true
+    },
+    "narrow|عرض التحليل الكامل لهذه القراءة": {
+     "container": 104,
+     "h": 233.5,
+     "textW": 82.2,
+     "lines": 5,
+     "overflows": true,
+     "meets48": true
+    }
+   }
+  }
+ },
+ "bidiHard": {
+  "trailing-token-then-arabic-stop": {
+   "text": "آخر قيمة مسجلة كانت Confidence 0.68.",
+   "visualLTR": ".Confidence 0.68 تناك ةلجسم ةميق رخآ",
+   "visualLTR_withIsolates": ".Confidence 0.68 تناك ةلجسم ةميق رخآ",
+   "isolateChangesOrder": false,
+   "finalStopIsLeftmost": true
+  },
+  "token-at-line-end-with-arabic-comma": {
+   "text": "القراءة مرتبطة بـ Hypothesis H-04، وآخر تحديث لها أمس.",
+   "visualLTR": ".سمأ اهل ثيدحت رخآو ،Hypothesis H-04 ـب ةطبترم ةءارقلا",
+   "visualLTR_withIsolates": ".سمأ اهل ثيدحت رخآو ،Hypothesis H-04 ـب ةطبترم ةءارقلا",
+   "isolateChangesOrder": false,
+   "finalStopIsLeftmost": true
+  },
+  "parenthesised-identifier": {
+   "text": "القراءة (المرتبطة بـ H-04) ما زالت مفتوحة.",
+   "visualLTR": ".ةحوتفم تلاز ام )H-04 ـب ةطبترملا( ةءارقلا",
+   "visualLTR_withIsolates": ".ةحوتفم تلاز ام )H-04 ـب ةطبترملا( ةءارقلا",
+   "isolateChangesOrder": false,
+   "finalStopIsLeftmost": true
+  },
+  "two-adjacent-latin-runs": {
+   "text": "حدّث QANDEEL Human Map بقيمة Confidence 0.68 اليوم.",
+   "visualLTR": ".مويلا Confidence 0.68 ةميقب QANDEEL Human Map ثدّح",
+   "visualLTR_withIsolates": ".مويلا Confidence 0.68 ةميقب QANDEEL Human Map ثدّح",
+   "isolateChangesOrder": false,
+   "finalStopIsLeftmost": true
+  },
+  "hash-and-digits": {
+   "text": "راجع PR #220 قبل الدمج.",
+   "visualLTR": ".جمدلا لبق PR #220 عجار",
+   "visualLTR_withIsolates": ".جمدلا لبق PR #220 عجار",
+   "isolateChangesOrder": false,
+   "finalStopIsLeftmost": true
+  },
+  "percent-eastern-digits": {
+   "text": "الثقة في القراءة ٧٢٪ حتى الآن.",
+   "visualLTR": ".نآلا ىتح ٪٧٢ ةءارقلا يف ةقثلا",
+   "visualLTR_withIsolates": ".نآلا ىتح ٪٧٢ ةءارقلا يف ةقثلا",
+   "isolateChangesOrder": false,
+   "finalStopIsLeftmost": true
+  },
+  "version-token-mid-sentence": {
+   "text": "النسخة v8.5 لم تتغير منذ المزامنة.",
+   "visualLTR": ".ةنمازملا ذنم ريغتت مل v8.5 ةخسنلا",
+   "visualLTR_withIsolates": ".ةنمازملا ذنم ريغتت مل v8.5 ةخسنلا",
+   "isolateChangesOrder": false,
+   "finalStopIsLeftmost": true
+  }
+ },
+ "scaleTable": {
+  "100%": [
+   {
+    "role": "MEANINGFUL STATEMENT",
+    "mul": {
+     "size": 32,
+     "leading": 50,
+     "ratio": 1.563,
+     "ratio0": 1.563,
+     "sizeFactor": 1
+    },
+    "sp": {
+     "size": 32,
+     "leading": 50,
+     "ratio": 1.563,
+     "ratio0": 1.563,
+     "sizeFactor": 1
+    }
+   },
+   {
+    "role": "SCREEN TITLE",
+    "mul": {
+     "size": 26,
+     "leading": 42,
+     "ratio": 1.615,
+     "ratio0": 1.615,
+     "sizeFactor": 1
+    },
+    "sp": {
+     "size": 26,
+     "leading": 42,
+     "ratio": 1.615,
+     "ratio0": 1.615,
+     "sizeFactor": 1
+    }
+   },
+   {
+    "role": "SECTION TITLE",
+    "mul": {
+     "size": 20,
+     "leading": 32,
+     "ratio": 1.6,
+     "ratio0": 1.6,
+     "sizeFactor": 1
+    },
+    "sp": {
+     "size": 20,
+     "leading": 32,
+     "ratio": 1.6,
+     "ratio0": 1.6,
+     "sizeFactor": 1
+    }
+   },
+   {
+    "role": "PRIMARY BODY",
+    "mul": {
+     "size": 17,
+     "leading": 30,
+     "ratio": 1.765,
+     "ratio0": 1.765,
+     "sizeFactor": 1
+    },
+    "sp": {
+     "size": 17,
+     "leading": 30,
+     "ratio": 1.765,
+     "ratio0": 1.765,
+     "sizeFactor": 1
+    }
+   },
+   {
+    "role": "SUPPORTING BODY",
+    "mul": {
+     "size": 15,
+     "leading": 25,
+     "ratio": 1.667,
+     "ratio0": 1.667,
+     "sizeFactor": 1
+    },
+    "sp": {
+     "size": 15,
+     "leading": 25,
+     "ratio": 1.667,
+     "ratio0": 1.667,
+     "sizeFactor": 1
+    }
+   },
+   {
+    "role": "ACTION / LABEL",
+    "mul": {
+     "size": 14,
+     "leading": 23,
+     "ratio": 1.643,
+     "ratio0": 1.643,
+     "sizeFactor": 1
+    },
+    "sp": {
+     "size": 14,
+     "leading": 23,
+     "ratio": 1.643,
+     "ratio0": 1.643,
+     "sizeFactor": 1
+    }
+   },
+   {
+    "role": "METADATA",
+    "mul": {
+     "size": 12,
+     "leading": 20,
+     "ratio": 1.667,
+     "ratio0": 1.667,
+     "sizeFactor": 1
+    },
+    "sp": {
+     "size": 12,
+     "leading": 20,
+     "ratio": 1.667,
+     "ratio0": 1.667,
+     "sizeFactor": 1
+    }
+   },
+   {
+    "role": "NUMERIC READING",
+    "mul": {
+     "size": 20,
+     "leading": 30,
+     "ratio": 1.5,
+     "ratio0": 1.5,
+     "sizeFactor": 1
+    },
+    "sp": {
+     "size": 20,
+     "leading": 30,
+     "ratio": 1.5,
+     "ratio0": 1.5,
+     "sizeFactor": 1
+    }
+   }
+  ],
+  "130%": [
+   {
+    "role": "MEANINGFUL STATEMENT",
+    "mul": {
+     "size": 32,
+     "leading": 50,
+     "ratio": 1.563,
+     "ratio0": 1.563,
+     "sizeFactor": 1
+    },
+    "sp": {
+     "size": 32,
+     "leading": 50,
+     "ratio": 1.563,
+     "ratio0": 1.563,
+     "sizeFactor": 1
+    }
+   },
+   {
+    "role": "SCREEN TITLE",
+    "mul": {
+     "size": 27.6,
+     "leading": 44.6,
+     "ratio": 1.615,
+     "ratio0": 1.615,
+     "sizeFactor": 1.062
+    },
+    "sp": {
+     "size": 27.6,
+     "leading": 42,
+     "ratio": 1.522,
+     "ratio0": 1.615,
+     "sizeFactor": 1.062
+    }
+   },
+   {
+    "role": "SECTION TITLE",
+    "mul": {
+     "size": 23.6,
+     "leading": 37.8,
+     "ratio": 1.6,
+     "ratio0": 1.6,
+     "sizeFactor": 1.18
+    },
+    "sp": {
+     "size": 23.6,
+     "leading": 32,
+     "ratio": 1.356,
+     "ratio0": 1.6,
+     "sizeFactor": 1.18
+    }
+   },
+   {
+    "role": "PRIMARY BODY",
+    "mul": {
+     "size": 20.9,
+     "leading": 36.9,
+     "ratio": 1.765,
+     "ratio0": 1.765,
+     "sizeFactor": 1.229
+    },
+    "sp": {
+     "size": 20.9,
+     "leading": 30,
+     "ratio": 1.435,
+     "ratio0": 1.765,
+     "sizeFactor": 1.229
+    }
+   },
+   {
+    "role": "SUPPORTING BODY",
+    "mul": {
+     "size": 19.5,
+     "leading": 32.5,
+     "ratio": 1.667,
+     "ratio0": 1.667,
+     "sizeFactor": 1.3
+    },
+    "sp": {
+     "size": 19.5,
+     "leading": 27,
+     "ratio": 1.385,
+     "ratio0": 1.667,
+     "sizeFactor": 1.3
+    }
+   },
+   {
+    "role": "ACTION / LABEL",
+    "mul": {
+     "size": 18.8,
+     "leading": 30.9,
+     "ratio": 1.643,
+     "ratio0": 1.643,
+     "sizeFactor": 1.343
+    },
+    "sp": {
+     "size": 18.8,
+     "leading": 25.7,
+     "ratio": 1.367,
+     "ratio0": 1.643,
+     "sizeFactor": 1.343
+    }
+   },
+   {
+    "role": "METADATA",
+    "mul": {
+     "size": 15.6,
+     "leading": 26,
+     "ratio": 1.667,
+     "ratio0": 1.667,
+     "sizeFactor": 1.3
+    },
+    "sp": {
+     "size": 15.6,
+     "leading": 23.6,
+     "ratio": 1.513,
+     "ratio0": 1.667,
+     "sizeFactor": 1.3
+    }
+   },
+   {
+    "role": "NUMERIC READING",
+    "mul": {
+     "size": 23.6,
+     "leading": 35.4,
+     "ratio": 1.5,
+     "ratio0": 1.5,
+     "sizeFactor": 1.18
+    },
+    "sp": {
+     "size": 23.6,
+     "leading": 30,
+     "ratio": 1.271,
+     "ratio0": 1.5,
+     "sizeFactor": 1.18
+    }
+   }
+  ],
+  "160%": [
+   {
+    "role": "MEANINGFUL STATEMENT",
+    "mul": {
+     "size": 33.6,
+     "leading": 52.4,
+     "ratio": 1.563,
+     "ratio0": 1.563,
+     "sizeFactor": 1.049
+    },
+    "sp": {
+     "size": 33.6,
+     "leading": 51.1,
+     "ratio": 1.524,
+     "ratio0": 1.563,
+     "sizeFactor": 1.049
+    }
+   },
+   {
+    "role": "SCREEN TITLE",
+    "mul": {
+     "size": 30.3,
+     "leading": 48.9,
+     "ratio": 1.615,
+     "ratio0": 1.615,
+     "sizeFactor": 1.164
+    },
+    "sp": {
+     "size": 30.3,
+     "leading": 43.3,
+     "ratio": 1.431,
+     "ratio0": 1.615,
+     "sizeFactor": 1.164
+    }
+   },
+   {
+    "role": "SECTION TITLE",
+    "mul": {
+     "size": 27.6,
+     "leading": 44.2,
+     "ratio": 1.6,
+     "ratio0": 1.6,
+     "sizeFactor": 1.38
+    },
+    "sp": {
+     "size": 27.6,
+     "leading": 33.6,
+     "ratio": 1.216,
+     "ratio0": 1.6,
+     "sizeFactor": 1.38
+    }
+   },
+   {
+    "role": "PRIMARY BODY",
+    "mul": {
+     "size": 24.6,
+     "leading": 43.4,
+     "ratio": 1.765,
+     "ratio0": 1.765,
+     "sizeFactor": 1.447
+    },
+    "sp": {
+     "size": 24.6,
+     "leading": 31.6,
+     "ratio": 1.285,
+     "ratio0": 1.765,
+     "sizeFactor": 1.447
+    }
+   },
+   {
+    "role": "SUPPORTING BODY",
+    "mul": {
+     "size": 23.4,
+     "leading": 39,
+     "ratio": 1.667,
+     "ratio0": 1.667,
+     "sizeFactor": 1.56
+    },
+    "sp": {
+     "size": 23.4,
+     "leading": 29.9,
+     "ratio": 1.279,
+     "ratio0": 1.667,
+     "sizeFactor": 1.56
+    }
+   },
+   {
+    "role": "ACTION / LABEL",
+    "mul": {
+     "size": 22.8,
+     "leading": 37.5,
+     "ratio": 1.643,
+     "ratio0": 1.643,
+     "sizeFactor": 1.629
+    },
+    "sp": {
+     "size": 22.8,
+     "leading": 29.1,
+     "ratio": 1.276,
+     "ratio0": 1.643,
+     "sizeFactor": 1.629
+    }
+   },
+   {
+    "role": "METADATA",
+    "mul": {
+     "size": 19.2,
+     "leading": 32,
+     "ratio": 1.667,
+     "ratio0": 1.667,
+     "sizeFactor": 1.6
+    },
+    "sp": {
+     "size": 19.2,
+     "leading": 27.6,
+     "ratio": 1.437,
+     "ratio0": 1.667,
+     "sizeFactor": 1.6
+    }
+   },
+   {
+    "role": "NUMERIC READING",
+    "mul": {
+     "size": 27.6,
+     "leading": 41.4,
+     "ratio": 1.5,
+     "ratio0": 1.5,
+     "sizeFactor": 1.38
+    },
+    "sp": {
+     "size": 27.6,
+     "leading": 31.6,
+     "ratio": 1.145,
+     "ratio0": 1.5,
+     "sizeFactor": 1.38
+    }
+   }
+  ],
+  "200%": [
+   {
+    "role": "MEANINGFUL STATEMENT",
+    "mul": {
+     "size": 39.8,
+     "leading": 62.1,
+     "ratio": 1.563,
+     "ratio0": 1.563,
+     "sizeFactor": 1.243
+    },
+    "sp": {
+     "size": 39.8,
+     "leading": 55.7,
+     "ratio": 1.401,
+     "ratio0": 1.563,
+     "sizeFactor": 1.243
+    }
+   },
+   {
+    "role": "SCREEN TITLE",
+    "mul": {
+     "size": 36.7,
+     "leading": 59.2,
+     "ratio": 1.615,
+     "ratio0": 1.615,
+     "sizeFactor": 1.41
+    },
+    "sp": {
+     "size": 36.7,
+     "leading": 48.6,
+     "ratio": 1.326,
+     "ratio0": 1.615,
+     "sizeFactor": 1.41
+    }
+   },
+   {
+    "role": "SECTION TITLE",
+    "mul": {
+     "size": 34,
+     "leading": 54.4,
+     "ratio": 1.6,
+     "ratio0": 1.6,
+     "sizeFactor": 1.7
+    },
+    "sp": {
+     "size": 34,
+     "leading": 39.8,
+     "ratio": 1.17,
+     "ratio0": 1.6,
+     "sizeFactor": 1.7
+    }
+   },
+   {
+    "role": "PRIMARY BODY",
+    "mul": {
+     "size": 29,
+     "leading": 51.2,
+     "ratio": 1.765,
+     "ratio0": 1.765,
+     "sizeFactor": 1.706
+    },
+    "sp": {
+     "size": 29,
+     "leading": 38,
+     "ratio": 1.31,
+     "ratio0": 1.765,
+     "sizeFactor": 1.706
+    }
+   },
+   {
+    "role": "SUPPORTING BODY",
+    "mul": {
+     "size": 27,
+     "leading": 45,
+     "ratio": 1.667,
+     "ratio0": 1.667,
+     "sizeFactor": 1.8
+    },
+    "sp": {
+     "size": 27,
+     "leading": 36.3,
+     "ratio": 1.346,
+     "ratio0": 1.667,
+     "sizeFactor": 1.8
+    }
+   },
+   {
+    "role": "ACTION / LABEL",
+    "mul": {
+     "size": 26,
+     "leading": 42.7,
+     "ratio": 1.643,
+     "ratio0": 1.643,
+     "sizeFactor": 1.857
+    },
+    "sp": {
+     "size": 26,
+     "leading": 35.5,
+     "ratio": 1.365,
+     "ratio0": 1.643,
+     "sizeFactor": 1.857
+    }
+   },
+   {
+    "role": "METADATA",
+    "mul": {
+     "size": 24,
+     "leading": 40,
+     "ratio": 1.667,
+     "ratio0": 1.667,
+     "sizeFactor": 2
+    },
+    "sp": {
+     "size": 24,
+     "leading": 34,
+     "ratio": 1.417,
+     "ratio0": 1.667,
+     "sizeFactor": 2
+    }
+   },
+   {
+    "role": "NUMERIC READING",
+    "mul": {
+     "size": 34,
+     "leading": 51,
+     "ratio": 1.5,
+     "ratio0": 1.5,
+     "sizeFactor": 1.7
+    },
+    "sp": {
+     "size": 34,
+     "leading": 38,
+     "ratio": 1.118,
+     "ratio0": 1.5,
+     "sizeFactor": 1.7
+    }
+   }
+  ]
+ },
+ "contrast": {
+  "primary": {
+   "hex": "#E6E8EB",
+   "ratio": 15.52
+  },
+  "secondary": {
+   "hex": "#9AA1A9",
+   "ratio": 7.3
+  },
+  "chrome": {
+   "hex": "#6E767F",
+   "ratio": 4.14
+  },
+  "rule": {
+   "hex": "#23272C",
+   "ratio": 1.27
+  },
+  "controlEdge": {
+   "hex": "#2C3138",
+   "ratio": 1.45
+  },
+  "_bg": "#0E1013"
+ },
+ "generated": "2026-09-20T15:52:58.404Z"
+}

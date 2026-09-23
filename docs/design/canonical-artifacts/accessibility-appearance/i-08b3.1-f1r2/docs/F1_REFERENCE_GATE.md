@@ -1,0 +1,234 @@
+# I-08B3.1-F1 — REFERENCE GATE
+
+**GENERATED from `data/F1_REFERENCES.json` by `tools/f1-references.mjs`.**
+
+**13 sources.** 12 changed something in F1;
+1 changed nothing and says so; 4 record a
+divergence where QANDEEL does something different and says why.
+
+> A reference read and found not to apply is a **result**. Hiding it would make the gate
+> look more decisive than the research was.
+
+## Host reachability, recorded rather than paraphrased
+
+| host | state |
+|---|---|
+| `reactnative.dev` | UNREACHABLE from this host, on two separate paths. Recorded, not paraphrased. The React Native rows use the SOURCE on the main branch instead. |
+| `archive.reactnative.dev` | UNREACHABLE. |
+| `developer.apple.com` | REACHABLE, but the Human Interface Guidelines is a JavaScript application and a plain fetch returns only a shell. Every Apple row was read from a rendered page in a headless browser, and the Dynamic Type tables were read out of the rendered DOM per table rather than recalled. |
+| `w3.org` | REACHABLE, fetched directly. |
+| `docs.swmansion.com` | REACHABLE, fetched directly. |
+| `raw.githubusercontent.com` | REACHABLE, fetched directly. |
+
+## Apple — Human Interface Guidelines, Accessibility (change log: "March 7, 2025 — Expanded and refined all guidance")
+
+`https://developer.apple.com/design/human-interface-guidelines/accessibility`
+
+*rendered in a headless browser; the page is a JS application and returns only a shell to a plain fetch*
+
+**What it says**
+
+- Under Reduce Motion: "ensure your app or game responds by reducing automatic and repetitive animations, including zooming, scaling, and peripheral motion", and the five best practices — "Tightening animation springs to reduce bounce effects", "Tracking animations directly with people's gestures", "Avoiding animating depth changes in z-axis layers", "Replacing transitions in x-, y-, and z-axes with fades to avoid motion", "Avoiding animating into and out of blurs".
+- "If your app doesn't provide this minimum contrast by default, ensure it at least provides a higher contrast color scheme when the system setting Increase Contrast is turned on."
+- Contrast minima: up to 17 pt all weights 4.5:1; 18 pt 3:1; all sizes bold 3:1.
+- "Ideally, give people the option to enlarge text by at least 200 percent."
+- "Convey information with more than color alone… Offer visual indicators, like distinct shapes or icons, in addition to color."
+- "Offer alternatives to gestures. Make sure your UI's core functionality is accessible through more than one type of physical interaction."
+
+**What it changed.** THE BLUR CLAUSE IS WHY qandeel.accessibility.motion.blur EXISTS AS A SEPARATE CHANNEL rather than being folded into "travel". It is also the clause I-08B3.1-D2R corrected the inherited D1 Connection for, and F1 inherits that correction rather than re-making it. The x/y/z-to-fades clause is the licence for the GUIDED THREAD's reduced counterpart: origin and destination both present, the relation arriving by LEVEL, no path drawn.
+
+**What it did NOT change.** The CONDITIONAL in the contrast sentence changed the FRAMING of Part B and deserves saying: QANDEEL's default already meets 4.5:1 for every reading rung — primary 12.95:1, secondary 8.38:1, tertiary 5.44:1. So Increase Contrast here is NOT a remedy for a failing default. It is an additional legitimate expression, which is exactly what §0 of the brief insists on.
+
+**What QANDEEL did differently.** Apple says "reducing… scaling". QANDEEL's ambient field has a SCALE that is a depth cue and never animates, so there is no scaling to reduce — and rather than claim a compliance it did not earn, the motion inventory records the ambient field's stillness as a decision already taken by D2R.
+
+## Apple — Human Interface Guidelines, Motion (change log: "September 9, 2025 — Added guidance for Liquid Glass")
+
+`https://developer.apple.com/design/human-interface-guidelines/motion`
+
+*rendered in a headless browser*
+
+**What it says**
+
+- "Make motion optional. Not everyone can or wants to experience the motion in your app or game, so it's essential to avoid using it as the only way to communicate important information."
+- "Avoid showing objects that oscillate in a sustained way. In particular, you want to avoid showing an oscillation that has a frequency of around 0.2 Hz because people can be very sensitive to this frequency."
+- "Consider using fades when you need to relocate an object… you can fade the object out before moving it and fade it back in after it's in the new location." And: "consider using instantaneous directional changes during a quick fade-out".
+
+**What it changed.** The fade clauses are the named alternative the GUIDED THREAD and the CONNECTION counterparts use, so the replacement channel is Apple's own rather than invented. "Avoid using motion as the ONLY way to communicate important information" is the sentence that makes qandeel.accessibility.motion a set of CHANNELS rather than a switch.
+
+**What it did NOT change.** The 0.2 Hz clause changed nothing in F1 and is recorded because of that: the ambient field is still, so there is nothing at that frequency to remove. A system with a breathing ring would have had to delete it here.
+
+## Apple — Human Interface Guidelines, VoiceOver (change log: "March 7, 2025 — New page")
+
+`https://developer.apple.com/design/human-interface-guidelines/voiceover`
+
+*rendered in a headless browser*
+
+**What it says**
+
+- "Specify how elements are grouped, ordered, or linked… Examine your app for places where relationships among elements are visual only. Then, describe these relationships to VoiceOver."
+- "VoiceOver reads elements in the same order people read content in their active language and locale."
+- "Support the VoiceOver rotor when possible. People can use an interface element called the VoiceOver rotor to navigate a document or webpage by headings, links, and other content types."
+- "Exclude purely decorative images from VoiceOver… Excluding these images shows respect for people's time and reduces cognitive load."
+- "Inform VoiceOver when visible content or layout changes occur."
+
+**What it changed.** THE SECOND QUOTE IS THE ONE THAT CHANGED A DECISION, AND IT DID SO BY BEING A WARNING RATHER THAN A RECOMMENDATION. VoiceOver's DEFAULT order is the locale's reading order — for an Arabic UI, right-to-left and top-to-bottom. That is a GEOMETRIC order, and geometry in QANDEEL carries no analytical meaning by contract. So the default had to be OVERRIDDEN, not inherited, and traversal is BY KIND. Without this sentence the projection would plausibly have been left to the platform and would have shipped a reading order derived from x/y — precisely what §12 forbids. The first quote is the licence for stating a PATTERN as a sentence. The fourth is why the whole field SVG carries aria-hidden.
+
+**What it did NOT change.** The rotor recommendation did not change the design because it COULD not: React Native does not expose UIAccessibilityCustomRotor. Headings are the nearest mechanism RN can express and are traversable by both VoiceOver and TalkBack, and the difference is recorded as a platform gap rather than hidden.
+
+## Apple — Human Interface Guidelines, Typography (Specifications: iOS/iPadOS Dynamic Type and larger accessibility type sizes)
+
+`https://developer.apple.com/design/human-interface-guidelines/typography`
+
+*rendered in a headless browser; the size tables were read out of the rendered DOM, per table, rather than recalled*
+
+**What it says**
+
+- iOS Body: 17 pt at Large (the default) and 53 pt at AX5. So the maximum Dynamic Type multiplier is 53/17 = 3.118.
+- "Keep text truncation to a minimum as font size increases… Avoid truncating text in scrollable regions unless people can open a separate view to read the rest of the content."
+- "Prioritize important content when responding to text-size changes. Not all content is equally important… they don't always want to increase the size of every word on the screen."
+- "Maintain a consistent information hierarchy regardless of the current font size."
+- "Consider adjusting your layout at large font sizes… consider using a stacked layout where text appears above secondary items."
+
+**What it changed.** THE TRUNCATION CLAUSE IS THE WHOLE OF PART E's ANSWER. "Unless people can open a separate view to read the rest of the content" is the escape the brief also demands — a legitimate layout or inspection alternative — and qandeel.accessibility.text.label-escape-scale is that escape as a value. 3.118 is the proof's largest test point and comes from the table rather than from the 200 % floor, because 200 % is a minimum and AX5 is what the system actually produces.
+
+**What it did NOT change.** The "prioritize important content" clause was read carefully and DELIBERATELY NOT USED as a licence to hold analytical labels small. It is about transient chrome — the page names tab titles and hit-damage values. A topic's name is the analytical identity channel, and §11 of the brief forbids exactly the reading this clause would have permitted if applied loosely.
+
+## Apple — Human Interface Guidelines, Materials
+
+`https://developer.apple.com/design/human-interface-guidelines/materials`
+
+*rendered in a headless browser*
+
+**What it says**
+
+- "The appearance of these variants can differ in response to certain system settings, like if people choose a preferred look for Liquid Glass in their device's settings, or turn on accessibility settings that reduce transparency or increase contrast in the interface."
+
+**What it changed.** Nothing.
+
+**What it did NOT change.** AND THE NOTHING IS THE RESULT. Apple's Reduce Transparency guidance is about Liquid Glass and the standard blur/vibrancy materials. QANDEEL has none of them: the functional Surface is an opaque matte, the navigation is opaque, CHROME.opacity is 1, and I-08B3.1-B4R recorded "Reduce Transparency has nothing to undo here" before this task existed. A package that shipped a chrome transformation for this setting would have been transforming something that does not exist.
+
+**What QANDEEL did differently.** So Part C is redirected onto the three subjects QANDEEL actually has — the ambient field, the PASSAGE scrim and the Light — and one of them, the Light, deliberately does not change. That redirection is F1's, not Apple's.
+
+## W3C — Understanding WCAG 2.2, SC 1.4.1 Use of Color
+
+`https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html`
+
+*fetched directly*
+
+**What it says**
+
+- Normative: "Color is not used as the only visual means of conveying information, indicating an action, prompting a response, or distinguishing a visual element."
+- A lightness difference counts as the additional visual distinction only when "the difference in relative luminance between the colors leads to a contrast ratio of 3:1 or greater".
+
+**What it changed.** The 3:1 escape hatch is what made E1 measure the error ink against the reading ramp and find it CLOSED at 1.03:1. F1 inherits that measurement and check N-03 re-runs it, which is why the error role's glyph, copy and role are treated as an obligation rather than a courtesy.
+
+**What it did NOT change.** It did not change the atmosphere palette, and the reason is the more interesting finding: the six hues measure a maximum of 1.0185:1 against EACH OTHER, so colour is not the only carrier there because colour is not a carrier there at all.
+
+## W3C — Understanding WCAG 2.2, SC 1.4.11 Non-text Contrast
+
+`https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html`
+
+*fetched directly*
+
+**What it says**
+
+- A 3:1 threshold for graphical objects required to understand the content, and for the visual indicators of user interface components.
+
+**What it changed.** ADOPTED AS THE INCREASED-CONTRAST TARGET, AND THE WORD "ADOPTED" IS DOING WORK. I-08B3.1-D2R argued on the record that a contour is atmosphere, carries nothing position and label do not also carry, and is therefore NOT a graphical object under this SC. F1 does not reopen that. It borrows 3:1 as the TARGET for an expression a user asked for, and tools/f1-derive.mjs says so in its header so that nobody later reads the number as an obligation the default is failing.
+
+**What it did NOT change.** The DEFAULT expression. 66 of 90 contour samples sit below 3:1 in the default and that remains correct under D2R's argument.
+
+## W3C — Understanding WCAG 2.2, SC 2.5.7 Dragging Movements
+
+`https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html`
+
+*fetched directly*
+
+**What it says**
+
+- A single-pointer alternative is required for author-controlled dragging operations.
+
+**What it changed.** IT FOUND AN OBLIGATION NOTHING ELSE IN THE BRIEF WOULD HAVE SURFACED. The Living Analysis Map's camera is panned by dragging, so it needs a non-drag alternative. That is neither a motion question nor a contrast question, so no other part of this task would have reached it. The camera row in the motion inventory carries the disposition CARRY FORWARD and the obligation is written into the F2/Product carry-forward rather than designed here, because §19 forbids F1 from designing the camera.
+
+**What it did NOT change.** Nothing that ships in F1 — the Map's gesture system is out of scope.
+
+## W3C — Understanding WCAG 2.2, SC 1.4.4 Resize Text and SC 1.4.10 Reflow
+
+`https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html`
+
+*fetched directly*
+
+**What it says**
+
+- Text must be resizable up to 200 % without loss of content or functionality; content must reflow without two-dimensional scrolling.
+
+**What it changed.** The 200 % row exists in the parity matrix as its own expression rather than being folded into the AX5 row, so the standard's own threshold is reported separately from the platform's maximum.
+
+**What it did NOT change.** The AX5 test point, which comes from Apple's table and is higher.
+
+## W3C — Understanding WCAG 2.2, SC 2.3.3 Animation from Interactions (AAA)
+
+`https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html`
+
+*fetched directly*
+
+**What it says**
+
+- Motion animation triggered by interaction can be disabled, unless the animation is essential to the functionality or information being conveyed.
+
+**What it changed.** The word ESSENTIAL is the second licence — alongside the accessibility skill's "non-essential" — for keeping semantic motion in a reduced expression instead of deleting it.
+
+## React Native — Libraries/Components/AccessibilityInfo/AccessibilityInfo.js, main branch (SOURCE, not the docs site)
+
+`https://raw.githubusercontent.com/facebook/react-native/main/packages/react-native/Libraries/Components/AccessibilityInfo/AccessibilityInfo.js`
+
+*downloaded and read line by line. reactnative.dev is UNREACHABLE from this host — I-08B3.1-E1 recorded the same — so the source was used, which is a stronger primary than the docs site.*
+
+**What it says**
+
+- isReduceMotionEnabled — no @platform annotation; both platforms have a native path.
+- isScreenReaderEnabled — no @platform annotation; both platforms.
+- isReduceTransparencyEnabled — "@platform ios"; the Android branch is `return Promise.resolve(false)`.
+- isDarkerSystemColorsEnabled — "@platform ios"; Android returns Promise.resolve(false).
+- isHighTextContrastEnabled — "@platform android"; iOS returns Promise.resolve(false).
+- isBoldTextEnabled — "@platform ios"; Android returns Promise.resolve(false).
+- prefersCrossFadeTransitions — "@platform ios"; Android returns Promise.resolve(false).
+- isGrayscaleEnabled and isInvertColorsEnabled — annotated "@platform ios", but BOTH have a real Android native path in the implementation, and both appear in the cross-platform half of the event map.
+- Event map: accessibilityServiceChanged and highTextContrastChanged are Android-only; announcementFinished, boldTextChanged, darkerSystemColorsChanged and reduceTransparencyChanged are iOS-only; change, grayscaleChanged, invertColorsChanged, reduceMotionChanged and screenReaderChanged are cross-platform.
+
+**What it changed.** THE ENTIRE PLATFORM MAPPING, AND IT KILLED A CROSS-PLATFORM STORY. Increase Contrast is NOT one signal: it is isDarkerSystemColorsEnabled on iOS and isHighTextContrastEnabled on Android, which are two different settings with two different scopes — one is a system-wide contrast preference, the other is specifically about TEXT. Reduce Transparency has NO Android equivalent at all. So the combined-settings matrix has fewer real cells on Android than on iOS, and F1_PLATFORM_MAPPING.md says which rather than implying parity.
+
+**What QANDEEL did differently.** A third-party binding consulted alongside the source lists isHighTextContrastEnabled and isDarkerSystemColorsEnabled as available on BOTH platforms. The source says otherwise, and the source wins. Recording the disagreement is the point: the plausible secondary is what a package would ship if it did not check.
+
+## React Native — ReactAndroid/.../accessibilityinfo/AccessibilityInfoModule.kt, main branch (SOURCE)
+
+`https://raw.githubusercontent.com/facebook/react-native/main/packages/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/accessibilityinfo/AccessibilityInfoModule.kt`
+
+*downloaded and read*
+
+**What it says**
+
+- Android "reduce motion" is derived from Settings.Global.TRANSITION_ANIMATION_SCALE being exactly 0 — with the code's own comment: "Disabling animations in developer settings will set the animation scale to '0.0' but setting 'reduce motion' / 'disable animations' will set the animation scale to '0'."
+- Android "grayscale" is NOT a grayscale setting: it is `accessibility_display_daltonizer_enabled == 1 && accessibility_display_daltonizer == 0`, i.e. colour correction set to the monochromacy mode.
+- ACCESSIBILITY_HIGH_TEXT_CONTRAST_ENABLED is read from the string key "high_text_contrast_enabled", and the source comments that the constant "is marked with @hide".
+
+**What it changed.** THREE HONEST QUALIFICATIONS THAT A DOCS PAGE WOULD NOT HAVE GIVEN. Android reduced motion is really an ANIMATOR SCALE, so a developer-options toggle produces the same signal as the accessibility setting. Android grayscale is really the DALTONIZER in one specific mode, so a user with colour correction set to any other mode reports false. And the Android high-contrast key is a HIDDEN setting, which is a stability risk worth a reviewer knowing about. All three are in F1_PLATFORM_MAPPING.md as SYSTEM-DETECTABLE WITH A QUALIFICATION rather than as plain support.
+
+## Software Mansion — Reanimated, Accessibility guide
+
+`https://docs.swmansion.com/react-native-reanimated/docs/guides/accessibility/`
+
+*fetched directly*
+
+**What it says**
+
+- "all animations are configured with ReduceMotion.System" by default.
+- "withSpring and withTiming return the toValue immediately"; "withDecay returns the current value immediately, taking into account the clamp parameter"; "withDelay initiates the next animation immediately"; "withSequence exclusively starts animations that have reduced motion disabled".
+- useReducedMotion "returns a boolean indicating whether the reduced motion setting was enabled WHEN THE APP STARTED".
+- (from the same library's performance/accessibility reference) entering, keyframe and layout animations "jump to the endpoint immediately"; exiting and shared element transitions are "omitted entirely".
+
+**What it changed.** IT MADE THE RUNTIME DEFAULT A FINDING RATHER THAN AN IMPLEMENTATION NOTE. Applied globally, ReduceMotion.System does not make a QANDEEL meaning event gentler — it makes it a CUT, and the omitted exit deletes the 1,150 ms settle that carries the result. That is §25's named failure condition, and it is the library default. The consequences are concrete: a token scalar named system-default-is-wrong-here, four specific remedies in tools/f1-motion.mjs, check M-03, and a Board D note. The app-start clause is why F1_PLATFORM_MAPPING.md requires AccessibilityInfo.reduceMotionChanged alongside the hook.
+
+**What it did NOT change.** One millisecond of the frozen lifecycle. F1 reads the timings and never writes them; check M-02 asserts it.
+
+**What QANDEEL did differently.** The library's model is "an animation is on or off". QANDEEL's is "a motion has CHANNELS, and the setting suppresses some of them". The two are reconciled by declaring the REPLACEMENT animation ReduceMotion.Never and switching the suppressed channels off at the value — which is the opposite of the obvious integration.

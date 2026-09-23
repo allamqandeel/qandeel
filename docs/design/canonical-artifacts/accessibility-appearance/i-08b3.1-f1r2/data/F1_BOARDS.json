@@ -1,0 +1,49 @@
+{
+  "generatedBy": "tools/f1-boards.mjs",
+  "boards": [
+    {
+      "file": "review/board/b01-default-spectacle.png",
+      "bytes": 570534
+    },
+    {
+      "file": "review/board/b02-increase-contrast.png",
+      "bytes": 579428
+    },
+    {
+      "file": "review/board/b03-reduce-transparency.png",
+      "bytes": 464185
+    },
+    {
+      "file": "review/board/b04-reduced-motion-light.png",
+      "bytes": 279010
+    },
+    {
+      "file": "review/board/b05-combined-contrast-transparency.png",
+      "bytes": 739297
+    },
+    {
+      "file": "review/board/b06-no-colour-dependence.png",
+      "bytes": 865461
+    },
+    {
+      "file": "review/board/b07-larger-text-arabic.png",
+      "bytes": 1138605
+    },
+    {
+      "file": "review/board/b08-focus-selected-error.png",
+      "bytes": 616095
+    },
+    {
+      "file": "review/board/b09-screen-reader-projection.png",
+      "bytes": 688288
+    },
+    {
+      "file": "review/board/b10-truth-parity.png",
+      "bytes": 570287
+    },
+    {
+      "file": "review/board/b11-inherited-default.png",
+      "bytes": 382556
+    }
+  ]
+}

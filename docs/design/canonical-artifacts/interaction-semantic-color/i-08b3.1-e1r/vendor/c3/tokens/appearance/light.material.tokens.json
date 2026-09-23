@@ -1,0 +1,10 @@
+{
+  "qandeel": {
+    "$description": "QANDEEL Living Brass, light appearance.",
+    "expression": {
+      "material": {
+        "$description": "DELIBERATELY EMPTY. No Light Brass value exists and none is derived here. Resolving against this set leaves every Living Brass name UNRESOLVED, which is the intended behaviour and is asserted by invariant I-13: the architecture is dark-led and not dark-locked, and a light expression that returned the dark body would be a value nobody designed, shipping under a name someone trusted. Owned by I-08B3.1-F, informed by D."
+      }
+    }
+  }
+}

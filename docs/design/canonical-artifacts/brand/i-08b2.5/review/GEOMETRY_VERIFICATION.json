@@ -1,0 +1,243 @@
+{
+  "task": "I-08B2.5",
+  "engine": "chrome 153.0.8010.48",
+  "generated": "2026-09-20T14:25:28.976Z",
+  "masterHashesAfter": {
+    "QANDEEL_Q_BASE_MASTER.svg": {
+      "sha256": "6C483AADC1492AF2606539F870B878686B6C9F672C975B5E11C599D91BCEAF05",
+      "bytes": 3183
+    },
+    "QANDEEL_Q_LUMINOUS.svg": {
+      "sha256": "66BE0AE40B222D63C5E3F4AECBF042399CC66401335F070377368DC8CC21DC98",
+      "bytes": 5045
+    },
+    "QANDEEL_WORDMARK_BASE_MASTER.svg": {
+      "sha256": "BE0EE251245BB1D184AB2E716FFA13B108D1DAA38E5D8A36DC0A36D1D44BF2BD",
+      "bytes": 5871
+    },
+    "QANDEEL_WORDMARK_LUMINOUS.svg": {
+      "sha256": "7BECFACF5522E61C559227979CF3E38789CEE263680240BC21616A7851839297",
+      "bytes": 9126
+    }
+  },
+  "frozenExpected": {
+    "QANDEEL_Q_BASE_MASTER.svg": {
+      "sha256": "6C483AADC1492AF2606539F870B878686B6C9F672C975B5E11C599D91BCEAF05",
+      "bytes": 3183
+    },
+    "QANDEEL_Q_LUMINOUS.svg": {
+      "sha256": "66BE0AE40B222D63C5E3F4AECBF042399CC66401335F070377368DC8CC21DC98",
+      "bytes": 5045
+    },
+    "QANDEEL_WORDMARK_BASE_MASTER.svg": {
+      "sha256": "BE0EE251245BB1D184AB2E716FFA13B108D1DAA38E5D8A36DC0A36D1D44BF2BD",
+      "bytes": 5871
+    },
+    "QANDEEL_WORDMARK_LUMINOUS.svg": {
+      "sha256": "7BECFACF5522E61C559227979CF3E38789CEE263680240BC21616A7851839297",
+      "bytes": 9126
+    }
+  },
+  "summary": {
+    "total": 39,
+    "passed": 39,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "name": "master unchanged: QANDEEL_Q_BASE_MASTER.svg",
+      "pass": true,
+      "detail": "6C483AADC1492AF2606539F870B878686B6C9F672C975B5E11C599D91BCEAF05 (3183 B)"
+    },
+    {
+      "name": "packaged copy identical: QANDEEL_Q_BASE_MASTER.svg",
+      "pass": true,
+      "detail": "6C483AADC1492AF2606539F870B878686B6C9F672C975B5E11C599D91BCEAF05"
+    },
+    {
+      "name": "master unchanged: QANDEEL_Q_LUMINOUS.svg",
+      "pass": true,
+      "detail": "66BE0AE40B222D63C5E3F4AECBF042399CC66401335F070377368DC8CC21DC98 (5045 B)"
+    },
+    {
+      "name": "packaged copy identical: QANDEEL_Q_LUMINOUS.svg",
+      "pass": true,
+      "detail": "66BE0AE40B222D63C5E3F4AECBF042399CC66401335F070377368DC8CC21DC98"
+    },
+    {
+      "name": "master unchanged: QANDEEL_WORDMARK_BASE_MASTER.svg",
+      "pass": true,
+      "detail": "BE0EE251245BB1D184AB2E716FFA13B108D1DAA38E5D8A36DC0A36D1D44BF2BD (5871 B)"
+    },
+    {
+      "name": "packaged copy identical: QANDEEL_WORDMARK_BASE_MASTER.svg",
+      "pass": true,
+      "detail": "BE0EE251245BB1D184AB2E716FFA13B108D1DAA38E5D8A36DC0A36D1D44BF2BD"
+    },
+    {
+      "name": "master unchanged: QANDEEL_WORDMARK_LUMINOUS.svg",
+      "pass": true,
+      "detail": "7BECFACF5522E61C559227979CF3E38789CEE263680240BC21616A7851839297 (9126 B)"
+    },
+    {
+      "name": "packaged copy identical: QANDEEL_WORDMARK_LUMINOUS.svg",
+      "pass": true,
+      "detail": "7BECFACF5522E61C559227979CF3E38789CEE263680240BC21616A7851839297"
+    },
+    {
+      "name": "frozen I-08B2.4 Variant B unchanged",
+      "pass": true,
+      "detail": "859665D86A7BBF4248FF479034031A8DF1F08833C7DB36336B3D29832BCDDD09"
+    },
+    {
+      "name": "canonical app icon is the frozen Variant B, byte for byte",
+      "pass": true,
+      "detail": "859665D86A7BBF4248FF479034031A8DF1F08833C7DB36336B3D29832BCDDD09"
+    },
+    {
+      "name": "path data byte-identical: app-icon/APP_ICON_B_DARK_LUMINOUS.svg",
+      "pass": true,
+      "detail": "3 paths"
+    },
+    {
+      "name": "single copy of each path: app-icon/APP_ICON_B_DARK_LUMINOUS.svg",
+      "pass": true,
+      "detail": "one each"
+    },
+    {
+      "name": "path data byte-identical: app-icon/android/source/ANDROID_FOREGROUND.svg",
+      "pass": true,
+      "detail": "3 paths"
+    },
+    {
+      "name": "single copy of each path: app-icon/android/source/ANDROID_FOREGROUND.svg",
+      "pass": true,
+      "detail": "one each"
+    },
+    {
+      "name": "path data byte-identical: derivatives/monochrome/QANDEEL_Q_MONOCHROME.svg",
+      "pass": true,
+      "detail": "3 paths"
+    },
+    {
+      "name": "single copy of each path: derivatives/monochrome/QANDEEL_Q_MONOCHROME.svg",
+      "pass": true,
+      "detail": "one each"
+    },
+    {
+      "name": "path data byte-identical: derivatives/light-background/QANDEEL_Q_LIGHT_BG.svg",
+      "pass": true,
+      "detail": "3 paths"
+    },
+    {
+      "name": "single copy of each path: derivatives/light-background/QANDEEL_Q_LIGHT_BG.svg",
+      "pass": true,
+      "detail": "one each"
+    },
+    {
+      "name": "path data byte-identical: derivatives/monochrome/QANDEEL_WORDMARK_MONOCHROME.svg",
+      "pass": true,
+      "detail": "10 paths"
+    },
+    {
+      "name": "single copy of each path: derivatives/monochrome/QANDEEL_WORDMARK_MONOCHROME.svg",
+      "pass": true,
+      "detail": "one each"
+    },
+    {
+      "name": "path data byte-identical: derivatives/light-background/QANDEEL_WORDMARK_LIGHT_BG.svg",
+      "pass": true,
+      "detail": "10 paths"
+    },
+    {
+      "name": "single copy of each path: derivatives/light-background/QANDEEL_WORDMARK_LIGHT_BG.svg",
+      "pass": true,
+      "detail": "one each"
+    },
+    {
+      "name": "placement matrix uniform and as declared: app-icon/APP_ICON_B_DARK_LUMINOUS.svg",
+      "pass": true,
+      "detail": "2 matrices, scale 0.312622, tx 244.616708, ty 340.621763"
+    },
+    {
+      "name": "placement matrix uniform and as declared: app-icon/android/source/ANDROID_FOREGROUND.svg",
+      "pass": true,
+      "detail": "2 matrices, scale 0.227361, tx 317.539813, ty 387.361532"
+    },
+    {
+      "name": "rendered geometry identical to master: app-icon/APP_ICON_B_DARK_LUMINOUS.svg",
+      "pass": true,
+      "detail": "0 differing pixels at 1400x1012"
+    },
+    {
+      "name": "rendered geometry identical to master: app-icon/android/source/ANDROID_FOREGROUND.svg",
+      "pass": true,
+      "detail": "0 differing pixels at 1400x1012"
+    },
+    {
+      "name": "rendered geometry identical to master: derivatives/monochrome/QANDEEL_Q_MONOCHROME.svg",
+      "pass": true,
+      "detail": "0 differing pixels at 1400x1012"
+    },
+    {
+      "name": "rendered geometry identical to master: derivatives/light-background/QANDEEL_Q_LIGHT_BG.svg",
+      "pass": true,
+      "detail": "0 differing pixels at 1400x1012"
+    },
+    {
+      "name": "rendered geometry identical to master: derivatives/monochrome/QANDEEL_WORDMARK_MONOCHROME.svg",
+      "pass": true,
+      "detail": "0 differing pixels at 1400x174"
+    },
+    {
+      "name": "rendered geometry identical to master: derivatives/light-background/QANDEEL_WORDMARK_LIGHT_BG.svg",
+      "pass": true,
+      "detail": "0 differing pixels at 1400x174"
+    },
+    {
+      "name": "VectorDrawable pathData byte-identical to master",
+      "pass": true,
+      "detail": "3 paths, verbatim"
+    },
+    {
+      "name": "VectorDrawable transform uniform and as declared",
+      "pass": true,
+      "detail": "scale 0.02397948 (expected 0.02397948)"
+    },
+    {
+      "name": "VectorDrawable declares nonZero fill",
+      "pass": true,
+      "detail": "all three paths"
+    },
+    {
+      "name": "no raster and no external reference: app-icon/APP_ICON_B_DARK_LUMINOUS.svg",
+      "pass": true,
+      "detail": "clean vector"
+    },
+    {
+      "name": "no raster and no external reference: app-icon/android/source/ANDROID_FOREGROUND.svg",
+      "pass": true,
+      "detail": "clean vector"
+    },
+    {
+      "name": "no raster and no external reference: derivatives/monochrome/QANDEEL_Q_MONOCHROME.svg",
+      "pass": true,
+      "detail": "clean vector"
+    },
+    {
+      "name": "no raster and no external reference: derivatives/light-background/QANDEEL_Q_LIGHT_BG.svg",
+      "pass": true,
+      "detail": "clean vector"
+    },
+    {
+      "name": "no raster and no external reference: derivatives/monochrome/QANDEEL_WORDMARK_MONOCHROME.svg",
+      "pass": true,
+      "detail": "clean vector"
+    },
+    {
+      "name": "no raster and no external reference: derivatives/light-background/QANDEEL_WORDMARK_LIGHT_BG.svg",
+      "pass": true,
+      "detail": "clean vector"
+    }
+  ]
+}

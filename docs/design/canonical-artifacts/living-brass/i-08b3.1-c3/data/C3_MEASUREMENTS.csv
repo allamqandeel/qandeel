@@ -1,0 +1,194 @@
+group,key,value,unit,note
+body,hex,#a58e6f,,THE ONE LITERAL — not canonical until the Design Director freezes C
+body,authored.L,0.66,Oklab L,the derivation source for the character tone
+body,authored.C,0.052,Oklab C,
+body,authored.H,75,deg,
+body,inGamut,true,,
+body,clipped,false,,
+body,contrast.world,6.070,:1,on #101010
+body,contrast.surface,5.664,:1,on #181818
+chroma,body,0.0516,Oklab C,
+chroma,frozenNeutralMax,0.0153,Oklab C,the warmest frozen neutral
+chroma,derivedFloor,0.0334,Oklab C,"midpoint — separates ""a second body"" from ""the frozen ramp"""
+character,targetAmplitude,0.032,Oklab L,accepted in C1R
+character,proofEraConstant,96,px,"RECORDED, NOT FROZEN"
+invariant,I-01,PASS,,Exactly one dark Living Brass body literal exists
+invariant.probe,I-01,FIRED,,
+invariant,I-02,PASS,,Identity aliases resolve to the one body
+invariant.probe,I-02,FIRED,,
+invariant,I-03,PASS,,Persistent navigation machinery resolves to the one body under P2
+invariant.probe,I-03,FIRED,,
+invariant,I-04,PASS,,"No state token resolves to the material, and no state sibling of the family exists"
+invariant.probe,I-04,FIRED,,
+invariant,I-05,PASS,,"No status token aliases the material, and the status namespace is empty"
+invariant.probe,I-05,FIRED,,
+invariant,I-06,PASS,,No analytical token resolves to the material
+invariant.probe,I-06,FIRED,,
+invariant,I-07,PASS,,No text or content token resolves to the material — BRASS NEVER SETS TYPE
+invariant.probe,I-07,FIRED,,
+invariant,I-08,PASS,,"No border, divider, rule or outline token resolves to the material — BRASS NEVER ENCLOSES"
+invariant.probe,I-08,FIRED,,
+invariant,I-09,PASS,,No Brass opacity ladder exists
+invariant.probe,I-09,FIRED,,
+invariant,I-10,PASS,,"No Brass lightness or chroma ladder exists — the character tone is derived, not stored"
+invariant.probe,I-10,FIRED,,
+invariant,I-11,PASS,,The retired bodies appear nowhere except where they are named as retired
+invariant.probe,I-11,FIRED,,
+invariant,I-12,PASS,,"No second Living Brass body exists, under any name"
+invariant.probe,I-12,FIRED,,
+invariant,I-13,PASS,,No Light appearance value is invented — light resolution FAILS LOUDLY
+invariant.probe,I-13,FIRED,,
+invariant,I-14,PASS,,"The QANDEEL Light namespace is reserved, empty, and not aliased to the material"
+invariant.probe,I-14,FIRED,,
+invariant,I-15,PASS,,Functional control families do not inherit the material
+invariant.probe,I-15,FIRED,,
+invariant,I-16,PASS,,The sRGB literal round-trips from the authored OkLCh triple
+invariant.probe,I-16,FIRED,,
+invariant,I-17,PASS,,Every inherited file is byte-identical to the sealed package it came from
+invariant.probe,I-17,FIRED,,checker threw
+invariant,I-18,PASS,,No font binary and no forbidden token name ships
+invariant.probe,I-18,FIRED,,
+invariant,I-19,PASS,,The material clears 3:1 on both frozen grounds where it is an essential component visual
+invariant.probe,I-19,FIRED,,
+invariant,I-20,PASS,,Every resolver $ref resolves to a file that exists
+invariant.probe,I-20,FIRED,,
+invariant,I-21,PASS,,"The character tone derives from the AUTHORED triple, and the obvious derivation is wrong"
+invariant.probe,I-21,FIRED,,
+scale,24px.deliveredAmplitude,0.0264,Oklab L,82 % of target
+scale,24px.interiorPixels,174,px@2x,
+scale,24px.distinctValues,47,,
+scale,24px.neverBrighterThanBody,true,,
+scale,30px.deliveredAmplitude,0.0264,Oklab L,82 % of target
+scale,30px.interiorPixels,326,px@2x,
+scale,30px.distinctValues,62,,
+scale,30px.neverBrighterThanBody,true,,
+scale,40px.deliveredAmplitude,0.0276,Oklab L,86 % of target
+scale,40px.interiorPixels,663,px@2x,
+scale,40px.distinctValues,71,,
+scale,40px.neverBrighterThanBody,true,,
+scale,48px.deliveredAmplitude,0.0297,Oklab L,93 % of target
+scale,48px.interiorPixels,993,px@2x,
+scale,48px.distinctValues,80,,
+scale,48px.neverBrighterThanBody,true,,
+scale,56px.deliveredAmplitude,0.0287,Oklab L,90 % of target
+scale,56px.interiorPixels,1366,px@2x,
+scale,56px.distinctValues,79,,
+scale,56px.neverBrighterThanBody,true,,
+scale,64px.deliveredAmplitude,0.0276,Oklab L,86 % of target
+scale,64px.interiorPixels,1858,px@2x,
+scale,64px.distinctValues,79,,
+scale,64px.neverBrighterThanBody,true,,
+scale,80px.deliveredAmplitude,0.0287,Oklab L,90 % of target
+scale,80px.interiorPixels,3027,px@2x,
+scale,80px.distinctValues,89,,
+scale,80px.neverBrighterThanBody,true,,
+scale,96px.deliveredAmplitude,0.0295,Oklab L,92 % of target
+scale,96px.interiorPixels,4418,px@2x,
+scale,96px.distinctValues,90,,
+scale,96px.neverBrighterThanBody,true,,
+scale,112px.deliveredAmplitude,0.0287,Oklab L,90 % of target
+scale,112px.interiorPixels,6176,px@2x,
+scale,112px.distinctValues,94,,
+scale,112px.neverBrighterThanBody,true,,
+scale,128px.deliveredAmplitude,0.0287,Oklab L,90 % of target
+scale,128px.interiorPixels,8163,px@2x,
+scale,128px.distinctValues,97,,
+scale,128px.neverBrighterThanBody,true,,
+scale,160px.deliveredAmplitude,0.0285,Oklab L,89 % of target
+scale,160px.interiorPixels,12952,px@2x,
+scale,160px.distinctValues,99,,
+scale,160px.neverBrighterThanBody,true,,
+scale,200px.deliveredAmplitude,0.0287,Oklab L,90 % of target
+scale,200px.interiorPixels,20526,px@2x,
+scale,200px.distinctValues,102,,
+scale,200px.neverBrighterThanBody,true,,
+scale,260px.deliveredAmplitude,0.0287,Oklab L,90 % of target
+scale,260px.interiorPixels,35103,px@2x,
+scale,260px.distinctValues,110,,
+scale,260px.neverBrighterThanBody,true,,
+scale,320px.deliveredAmplitude,0.0287,Oklab L,90 % of target
+scale,320px.interiorPixels,53441,px@2x,
+scale,320px.distinctValues,109,,
+scale,320px.neverBrighterThanBody,true,,
+scale,420px.deliveredAmplitude,0.0287,Oklab L,90 % of target
+scale,420px.interiorPixels,93025,px@2x,
+scale,420px.distinctValues,110,,
+scale,420px.neverBrighterThanBody,true,,
+scale,classification,NOT_A_CAPABILITY_THRESHOLD,,"C3.2 verdict, derived from the rows"
+scale.dpr,24px@1x.interiorPixels,4,px,
+scale.dpr,24px@1x.amplitude,0.0254,Oklab L,
+scale.dpr,24px@2x.interiorPixels,174,px,
+scale.dpr,24px@2x.amplitude,0.0264,Oklab L,
+scale.dpr,260px@1x.interiorPixels,8424,px,
+scale.dpr,260px@1x.amplitude,0.0287,Oklab L,
+scale.dpr,260px@2x.interiorPixels,35103,px,
+scale.dpr,260px@2x.amplitude,0.0287,Oklab L,
+scale.determinism,24px@1x,true,,the same page rendered twice
+scale.determinism,24px@2x,true,,the same page rendered twice
+scale.determinism,260px@1x,true,,the same page rendered twice
+scale.determinism,260px@2x,true,,the same page rendered twice
+repro.mapping,mark,#a58e6f,,"model #a58e6f, same true"
+repro.mapping,identity,#a58e6f,,"model #a58e6f, same true"
+repro.mapping,nav,#a58e6f,,"model #a58e6f, same true"
+repro.mapping,functional,#8b8982,,"model #8b8982, same true"
+repro,characterTone.token,#967f60,,accepted #967f60
+repro,c01-conversation.rasterBytesIdentical,true,,"PERSONAL CONVERSATION WORLD — ""THE QUIET CORE"""
+repro,c01-conversation.differingPixels,0,px of 2314400,
+repro,c02-map.rasterBytesIdentical,true,,"LIVING ANALYSIS MAP — ""THE PROPRIETARY WORLD"""
+repro,c02-map.differingPixels,0,px of 2314400,
+repro,c03-reading.rasterBytesIdentical,true,,"DEEP ANALYSIS READING — ""THE INTELLECTUAL TEST"""
+repro,c03-reading.differingPixels,0,px of 2314400,
+repro,c04-utility.rasterBytesIdentical,true,,"UTILITY / SYSTEM UI — ""THE BORING-SCREEN TEST"""
+repro,c04-utility.differingPixels,0,px of 2314400,
+repro,c05-map.rasterBytesIdentical,true,,"analytical plane, SELECTED state"
+repro,c05-map.differingPixels,0,px of 2314400,
+repro,c06-map.rasterBytesIdentical,true,,"analytical plane, PRESSED state"
+repro,c06-map.differingPixels,0,px of 2314400,
+repro,c07-map.rasterBytesIdentical,true,,"analytical plane, FOCUSED state"
+repro,c07-map.differingPixels,0,px of 2314400,
+repro,c08-map.rasterBytesIdentical,true,,"analytical plane, DISABLED state"
+repro,c08-map.differingPixels,0,px of 2314400,
+repro,c09-identity.rasterBytesIdentical,true,,"the large identity moment, brushed/handled character"
+repro,c09-identity.differingPixels,0,px of 1953600,
+life,inkFloor,0.3760,Oklab L,derived: midpoint of the hairline and the dimmest ink
+life,chromaFloor,0.0334,Oklab C,derived: midpoint of the warmest frozen neutral and the body
+life,c01-conversation.chromaticShareOfInk,3.93,%,"PERSONAL CONVERSATION WORLD — ""THE QUIET CORE"""
+life,c01-conversation.chromaticPixels,2109,px@2x,
+life,c01-conversation.inkPixels,53676,px@2x,
+life,c02-map.chromaticShareOfInk,3.51,%,"LIVING ANALYSIS MAP — ""THE PROPRIETARY WORLD"""
+life,c02-map.chromaticPixels,2109,px@2x,
+life,c02-map.inkPixels,60166,px@2x,
+life,c03-reading.chromaticShareOfInk,2.51,%,"DEEP ANALYSIS READING — ""THE INTELLECTUAL TEST"""
+life,c03-reading.chromaticPixels,2109,px@2x,
+life,c03-reading.inkPixels,83866,px@2x,
+life,c04-utility.chromaticShareOfInk,6.64,%,"UTILITY / SYSTEM UI — ""THE BORING-SCREEN TEST"""
+life,c04-utility.chromaticPixels,2109,px@2x,
+life,c04-utility.inkPixels,31780,px@2x,
+life,c05-map.chromaticShareOfInk,3.51,%,"analytical plane, SELECTED state"
+life,c05-map.chromaticPixels,2109,px@2x,
+life,c05-map.inkPixels,60134,px@2x,
+life,c06-map.chromaticShareOfInk,3.50,%,"analytical plane, PRESSED state"
+life,c06-map.chromaticPixels,2109,px@2x,
+life,c06-map.inkPixels,60241,px@2x,
+life,c07-map.chromaticShareOfInk,3.40,%,"analytical plane, FOCUSED state"
+life,c07-map.chromaticPixels,2109,px@2x,
+life,c07-map.inkPixels,62069,px@2x,
+life,c08-map.chromaticShareOfInk,3.51,%,"analytical plane, DISABLED state"
+life,c08-map.chromaticPixels,2109,px@2x,
+life,c08-map.inkPixels,60053,px@2x,
+life,c09-identity.chromaticShareOfInk,97.16,%,"the large identity moment, brushed/handled character"
+life,c09-identity.chromaticPixels,36429,px@2x,
+life,c09-identity.inkPixels,37495,px@2x,
+footprint,distinctChromaticPixelCounts,1,,across four environments AND four interaction states
+footprint,identicalAcrossEnvironmentsAndStates,true,,the material footprint does not move
+footprint,shareRange.min,2.51,%,
+footprint,shareRange.max,6.64,%,
+schema,tokens/base/material.tokens.json,CONFORMS,,https://www.designtokens.org/schemas/2025.10/format.json
+schema,tokens/appearance/dark.material.tokens.json,CONFORMS,,https://www.designtokens.org/schemas/2025.10/format.json
+schema,tokens/appearance/light.material.tokens.json,CONFORMS,,https://www.designtokens.org/schemas/2025.10/format.json
+schema,tokens/qandeel-living-brass.resolver.json,CONFORMS,,https://www.designtokens.org/schemas/2025.10/resolver.json
+skills,inventory,89,SKILL.md,walked from disk
+skills,used,6,,
+reference,sources,7,,
+reference,supports,6,,sentences running toward QANDEEL
+reference,departures,6,,"sentences running against, departed from on the record"

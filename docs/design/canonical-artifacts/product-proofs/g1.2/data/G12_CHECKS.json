@@ -1,0 +1,493 @@
+{
+ "checks": [
+  {
+   "id": "G12-01",
+   "gate": "G1.1 inherited",
+   "title": "The new-conversation opener is byte-for-byte the G1.1 locked wording",
+   "ok": true,
+   "detail": "79 bytes identical to the G1.1 closure §1 wording; {display_name} the only placeholder"
+  },
+  {
+   "id": "G12-02",
+   "gate": "G1.1 inherited",
+   "title": "Locked naming is unchanged (depth route, shared area, Replay scopes); «العالم» is never the Analysis doorway",
+   "ok": true,
+   "detail": "«تحليل المحادثة» / «المحادثة»; rail «مع الآخرين»; «عالم مشترك» / «عوالم مشتركة»; Replay «المحادثة كاملة» / «جزء من المحادثة» — unchanged"
+  },
+  {
+   "id": "G12-03",
+   "gate": "G1.1 inherited",
+   "title": "The reader's committed turn (text AND voice) is the canonical UTTERANCE role, one-tone",
+   "ok": true,
+   "detail": "the reader slab resolves qandeel.role.utterance.fill → qandeel.surface.functional → qandeel.expression.surface = #181818, the one functional Surface tone (G1.1 closure §3: no new colour)"
+  },
+  {
+   "id": "G12-04",
+   "gate": "Q1",
+   "title": "ONE relationship: the three ways of talking are not places — the rail is exactly the three canonical World types",
+   "ok": true,
+   "detail": "rail = kernel WORLD_TYPES [MY_WORLD, SHARED_WORLD, PUBLIC_WORLD] — no Voice Note, Live Call or Replay destination"
+  },
+  {
+   "id": "G12-05",
+   "gate": "Q12 / §26–27",
+   "title": "QANDEEL identity — Brass is not \"call active\", Light is not a sound meter, no red recording, no AI glow, no equalizer",
+   "ok": true,
+   "detail": "Brass reaches only the World rail and the opener Q; the error tone and every Meaning Light stop are absent from every voice and call state; no glow, no orb gradient, no waveform — the call is drawn only by the microphone's own line"
+  },
+  {
+   "id": "G12-06",
+   "gate": "§25–26 / carried",
+   "title": "Motion hygiene — MOTION EXPLAINS CONTINUITY: one curve, no loop, no pulse, no new duration",
+   "ok": true,
+   "detail": "one curve; no keyframes / transitions / loops / pulse; the G1.1 durations unchanged (resolve: 140, markerLead: 200, markerTrail: 280, dock: 220, depthOut: 200, depthIn: 320, depthInDelay: 100, voice: 220) — G1.2 adds no duration"
+  },
+  {
+   "id": "G12-07",
+   "gate": "§20 / §32",
+   "title": "Copy authority and truth — LOCKED / PROOF / OPEN on every string; no \"Thinking\", no \"Listening\", no fault-assigning or gendered copy",
+   "ok": true,
+   "detail": "49 Arabic strings, each with its authority: LOCKED (G1.1), PROOF, or OPEN (every voice/call string, VI-01 §14); no «!», no «بيفكّر» / «بسمعك» / «قاطعتني» / «فقدتك», no gendered imperative"
+  },
+  {
+   "id": "G12-08",
+   "gate": "§20 / VI-01 §14",
+   "title": "\"Recording\" is claimed only where something is recorded — never for the Live Call",
+   "ok": true,
+   "detail": "«بسجّل» labels only a voice-note capture (true: it IS captured); every call phase is named by its mechanism — «جاري الاتصال», «الميكروفون شغّال», «الميكروفون مكتوم», «قنديل بيتكلم», V06"
+  },
+  {
+   "id": "G12-09",
+   "gate": "§16 / Q7",
+   "title": "The microphone is requested only at the moment of intent — never at launch",
+   "ok": true,
+   "detail": "the browser microphone is requested in exactly one place (liveLevel.start), reached only from beginNote / beginCall — after the reader's act and the OS grant; never at load, never from the background"
+  },
+  {
+   "id": "G12-10",
+   "gate": "§15",
+   "title": "A committed Voice Note implies no transcript and no fake waveform",
+   "ok": true,
+   "detail": "a committed voice note carries its media control, its measured duration and «رسالة صوتية» — no transcript (none exists), no waveform (it would be invented data)"
+  },
+  {
+   "id": "G12-11",
+   "gate": "Q7 / Q9 / §9",
+   "title": "Store safety — the recommended declarations use background capability ONLY for the real user-visible Live Call; nothing \"just in case\"",
+   "ok": true,
+   "detail": "iOS UIBackgroundModes = [audio] for the Live Call only; Android 6 permissions, FGS types [phoneCall,microphone] — every one mapped to the Live Call or the Voice Note; no mediaPlayback, no background Voice Note capture, expo-audio background playback explicitly off"
+  },
+  {
+   "id": "G12-12",
+   "gate": "Q6 / §35 C",
+   "title": "Compliance note — every required section, every claim sourced from the official platform documentation, nothing claimed as implemented",
+   "ok": true,
+   "detail": "10 required sections; 10 official Apple / Android / Google Play / Expo sources cited by URL; no claim of implementation or device verification"
+  },
+  {
+   "id": "G12-13",
+   "gate": "§29 / §35 D",
+   "title": "Audio runtime dependency note — Voice Note audio, call transport, background, Replay audio, provider gaps",
+   "ok": true,
+   "detail": "the five dependency questions of §29 answered in seven sections; Personal original audio carried as NOT PRODUCIBLE; no transcript stands in for audio"
+  },
+  {
+   "id": "G12-14",
+   "gate": "§33",
+   "title": "Prototype boundary — nothing merged, no production permission or dependency added (tracked tree unchanged)",
+   "ok": true,
+   "detail": "no tracked repository file changed — the production app gains no permission, background mode, dependency or code from this proof"
+  },
+  {
+   "id": "G12-Q2",
+   "gate": "Q2 / §13",
+   "title": "Mode clarity — Writing, Voice Note and Live Call are immediately distinguishable without a toolbar",
+   "ok": true,
+   "detail": "two controls at the end of the one line — «رسالة صوتية» (microphone) and «مكالمة صوتية» (handset): different names, shapes, places (8 px apart, 44 px each) and OUTCOMES (Voice Note stays in the Conversation; Live Call opens the Analysis). No third toolbar, no overflow menu"
+  },
+  {
+   "id": "G12-Q3",
+   "gate": "Q3 / §16–17",
+   "title": "Live Call START is Analysis-first (after the OS grant when one is needed)",
+   "ok": true,
+   "detail": "START = Analysis-first: the call opens the Analysis at once (connecting → live at 1.2 s); with the permission not yet decided, nothing starts until the OS prompt is answered, then the same Analysis-first start"
+  },
+  {
+   "id": "G12-Q4Q5",
+   "gate": "Q4 / Q5 / §4–5, §18",
+   "title": "Background continuity and EXACT restore — lock or another app, then back to the same call on the same last surface",
+   "ok": true,
+   "detail": "lock while on the Analysis → return to the Analysis; another app while on the Conversation → return to the Conversation (not reset to the Analysis). Same call id call-3f9bb7, same Conversation conv-7c21, one call started, the call time kept counting while away (0:10 on return after 6 s away), mute / end call / «تحليل المحادثة» reachable at once"
+  },
+  {
+   "id": "G12-Q10",
+   "gate": "Q10 / §23 / §4",
+   "title": "Failure truth — a call that no longer exists never shows live controls; recovery is truthful; nothing committed is lost",
+   "ok": true,
+   "detail": "reconnecting is named (V06) and the recovered call is the same call; a failed reconnection returns to the Conversation with V07 «المكالمة وقفت. الكتابة متاحة.», Writing reachable, the record «مكالمة صوتية · 0:07 · وقفت», all 9 committed turns kept and NO call control; a call that ended while away returns the same truth; a force-quit relaunch shows no call, no controls and no invented record"
+  },
+  {
+   "id": "G12-P1",
+   "gate": "§15.10 / §16 / §30",
+   "title": "Microphone permission — asked at intent, never at launch; denial leaves Writing available",
+   "ok": true,
+   "detail": "nothing is asked at launch; the first intent opens the OS prompt (QANDEEL supplies only the purpose string); «Don't allow» leaves the Conversation, «الميكروفون غير متاح لقنديل. الكتابة متاحة.», the Settings route and the writing line; a later intent does not nag — it names the alternative again"
+  },
+  {
+   "id": "G12-VN",
+   "gate": "§15 (all ten states)",
+   "title": "Voice Note — capture, cancel, commit, playback, and leaving QANDEEL mid-capture",
+   "ok": true,
+   "detail": "capture stays in the Conversation («بسجّل»); cancel adds nothing; send commits ONE reader UTTERANCE on the right edge carrying its measured 0:06, «رسالة صوتية» and no transcript; playback tracks real elapsed time and ends with the note; leaving QANDEEL mid-capture STOPS the capture into an unsent draft (nothing is recorded in the background, nothing is sent without the reader), which can be sent or discarded on return"
+  },
+  {
+   "id": "G12-AN",
+   "gate": "§24 / §26",
+   "title": "Analysis during the call — the picture is not a sound meter; understanding changes only when a spoken turn commits",
+   "ok": true,
+   "detail": "over 40 s of live call sampled every 100 ms: the Analysis picture never changed; «سياق الكلام» changed 4 times, each within 100 ms after a spoken turn COMMITTED (5400, 14200, 25400, 34200 ms) and never at a speech edge; nothing changed while the line was down or at reconnection; every value is a reading drawn in the fixture world"
+  },
+  {
+   "id": "G12-Q11a",
+   "gate": "Q11 / §20 / §30",
+   "title": "Call state in words — every phase named, never clipped, at 100% and 200% text in both languages",
+   "ok": true,
+   "detail": "connecting · microphone on · QANDEEL speaking · muted · reconnecting: five distinct names, readable in full in Arabic and English at 100% and 200% text (14 of 24 placements use the full-width strip because the line could not hold the words) — no state lives in motion or colour alone"
+  },
+  {
+   "id": "G12-Q11b",
+   "gate": "Q11 / §30",
+   "title": "Every primary control has an accessible name, a 44 px target, and state beyond colour",
+   "ok": true,
+   "detail": "14 visible controls during a call, each named and ≥ 44 × 44; mute and speaker expose aria-pressed and change SHAPE (slashed microphone; filled / outline speaker); «المحادثة — المكالمة مستمرة» contains its visible label (WCAG 2.5.3)"
+  },
+  {
+   "id": "G12-Q11c",
+   "gate": "Q11 / carried",
+   "title": "Keyboard — Escape unwinds a layer and never ends a call",
+   "ok": true,
+   "detail": "Escape leaves the Analysis to the Conversation and never ends the call (twice)"
+  },
+  {
+   "id": "G12-R1",
+   "gate": "§28",
+   "title": "Replay coexistence — same place, no collision, never implies the live call or its audio is included",
+   "ok": true,
+   "detail": "Replay stands at [10,49,44,44] in the Conversation, the Analysis, and both during a call — the call controls never collide with it; during a call its entry says «المكالمة الجارية غير مشمولة.»; the call's markers are not selectable turns (Replay binds committed material only — replay-runtime-v1 §7, §19)"
+  },
+  {
+   "id": "G12-BI",
+   "gate": "G1.1 inherited / §31",
+   "title": "Arabic USER RIGHT, English USER LEFT — for Voice Notes too, and in the mixed-script thread",
+   "ok": true,
+   "detail": "every reader turn — text and voice note — touches the reader's own edge: RIGHT in Arabic (incl. the mixed-script thread), LEFT in English (G1.1 closure §1)"
+  },
+  {
+   "id": "G12-BARGE",
+   "gate": "§21",
+   "title": "Interruption / barge-in is shown only as a marked candidate, not invented as runtime truth",
+   "ok": true,
+   "detail": "speaking over QANDEEL stops QANDEEL's audio and hands the line to the reader — shown as a CANDIDATE of the Foundation Freeze principle (\"user interruption is a first-class realtime event\"); its runtime semantics stay an OPEN dependency"
+  },
+  {
+   "id": "G12-S1",
+   "gate": "§34",
+   "title": "The required proof set — 25 proofs, each capture verified to show the state it is named for",
+   "ok": true,
+   "detail": "all 25 required proofs present among 56 captures, and 19 of them verified against the prototype's own truth at capture (a screen named \"returned to the Conversation\" IS the Conversation, a live call, the same call)"
+  },
+  {
+   "id": "G12-M1",
+   "gate": "Q11 / §25 / §30",
+   "title": "Reduced Motion parity in all six journeys — every capability and every state preserved",
+   "ok": true,
+   "detail": "Reduced Motion reaches the same surface, call phase, call id, Conversation id, composer mode, notice, OS surface, call words, Live Context and reachable controls at every commit and settled point: A-voice-note 8 records · B-live-call-foreground 10 records · C-background-restore 14 records · D1-permission-denied 8 records · D2-network-interruption 10 records · D3-ended-while-away 8 records"
+  },
+  {
+   "id": "G12-M2",
+   "gate": "§18 / §25 A–D",
+   "title": "The six recorded journeys prove what they are named for (read from their truth logs)",
+   "ok": true,
+   "detail": "A stays in the Conversation and lands one note; B opens the Analysis and keeps one call id across «المحادثة» / «تحليل المحادثة» until the reader ends it; C returns to the Analysis after the lock and to the Conversation after another app — one call, one id; D1 never starts a call or opens the Analysis and writing continues; D2 resumes the SAME call, then fails truthfully into Writing; D3 returns without any live control"
+  },
+  {
+   "id": "G12-M3",
+   "gate": "§25",
+   "title": "Every recording exists and decodes to its full frame count (standard + Reduced Motion for all six journeys, and English C)",
+   "ok": true,
+   "detail": "13 MP4s at 60 fps, each at its full frame count; 56 rasters match their capture hashes"
+  },
+  {
+   "id": "G12-SK",
+   "gate": "§11",
+   "title": "Skill Gate — the ledger cites real Skills by path and hash, with every relevant host Skill accounted for",
+   "ok": true,
+   "detail": "43 hashed Skill rows, every cited file present on this host at the stated sha256 prefix; every relevant enumerated Skill accounted for (read + applied, or read + set aside with a reason)"
+  },
+  {
+   "id": "G12-D1",
+   "gate": "§35 A / Q6",
+   "title": "Final report — status, copy authority, open runtime dependencies, and what was NOT verified",
+   "ok": true,
+   "detail": "status READY FOR INDEPENDENT PRODUCT / DESIGN REVIEW; no G1.2 closure claimed; copy separated LOCKED / PROOF / OPEN; device-level verification stated as not performed; open runtime dependencies named"
+  }
+ ],
+ "probes": [
+  {
+   "id": "P-G12-01",
+   "targets": "G12-01",
+   "rejected": true,
+   "detail": "ar opener differs: «اهلا يا {display_name} ... انا مستنيك ... يلا نبدأ»"
+  },
+  {
+   "id": "P-G12-02",
+   "targets": "G12-02",
+   "rejected": true,
+   "detail": "door «العالم» ≠ «تحليل المحادثة»; «العالم» exposed as the Analysis doorway"
+  },
+  {
+   "id": "P-G12-03",
+   "targets": "G12-03",
+   "rejected": true,
+   "detail": "UTTERANCE #1e1e1e is a second tone (Surface #181818)"
+  },
+  {
+   "id": "P-G12-04",
+   "targets": "G12-04",
+   "rejected": true,
+   "detail": "rail MY_WORLD,call,SHARED_WORLD,PUBLIC_WORLD"
+  },
+  {
+   "id": "P-G12-05a",
+   "targets": "G12-05",
+   "rejected": true,
+   "detail": "error tone on #end-call"
+  },
+  {
+   "id": "P-G12-05b",
+   "targets": "G12-05",
+   "rejected": true,
+   "detail": "Brass on #composer"
+  },
+  {
+   "id": "P-G12-05c",
+   "targets": "G12-05",
+   "rejected": true,
+   "detail": "Meaning Light stop #fbf2db; a glow / orb gradient"
+  },
+  {
+   "id": "P-G12-05d",
+   "targets": "G12-05",
+   "rejected": true,
+   "detail": "a drawn waveform"
+  },
+  {
+   "id": "P-G12-06a",
+   "targets": "G12-06",
+   "rejected": true,
+   "detail": "CSS animation; a loop; rejected motion vocabulary"
+  },
+  {
+   "id": "P-G12-06b",
+   "targets": "G12-06",
+   "rejected": true,
+   "detail": "durations changed: resolve: 140, markerLead: 200, markerTrail: 280, dock: 220, depthOut: 200, depthIn: 320, depthInDelay: 100, voice: 220, callGlow: 900"
+  },
+  {
+   "id": "P-G12-07a",
+   "targets": "G12-07",
+   "rejected": true,
+   "detail": "micOn: VI-01 §14 forbidden «بسمعك»"
+  },
+  {
+   "id": "P-G12-07b",
+   "targets": "G12-07",
+   "rejected": true,
+   "detail": "qSpeaking: VI-01 §14 forbidden «قنديل بيفكّر»; qSpeaking is not marked OPEN (VI-01 §14: no voice string is a freeze candidate)"
+  },
+  {
+   "id": "P-G12-08",
+   "targets": "G12-08",
+   "rejected": true,
+   "detail": "a call state is labelled «بسجّل» / Recording"
+  },
+  {
+   "id": "P-G12-09",
+   "targets": "G12-09",
+   "rejected": true,
+   "detail": "the microphone is also started by applyPreset"
+  },
+  {
+   "id": "P-G12-10",
+   "targets": "G12-10",
+   "rejected": true,
+   "detail": "the reader's voice fixture carries a transcript"
+  },
+  {
+   "id": "P-G12-11a",
+   "targets": "G12-11",
+   "rejected": true,
+   "detail": "FGS type mediaPlayback declared"
+  },
+  {
+   "id": "P-G12-11b",
+   "targets": "G12-11",
+   "rejected": true,
+   "detail": "iOS background modes audio,fetch; iOS audio mode not tied to the Live Call"
+  },
+  {
+   "id": "P-G12-11c",
+   "targets": "G12-11",
+   "rejected": true,
+   "detail": "a background capability is declared for Voice Notes"
+  },
+  {
+   "id": "P-G12-12a",
+   "targets": "G12-12",
+   "rejected": true,
+   "detail": "missing section «## 3. Google Play»"
+  },
+  {
+   "id": "P-G12-12b",
+   "targets": "G12-12",
+   "rejected": true,
+   "detail": "claims an implementation or a device verification"
+  },
+  {
+   "id": "P-G12-13",
+   "targets": "G12-13",
+   "rejected": true,
+   "detail": "missing «## 4. Replay»"
+  },
+  {
+   "id": "P-G12-14",
+   "targets": "G12-14",
+   "rejected": true,
+   "detail": "tracked changes:  M apps/mobile/app.json"
+  },
+  {
+   "id": "P-G12-Q2",
+   "targets": "G12-Q2",
+   "rejected": true,
+   "detail": "one name for two modes; one glyph for two modes"
+  },
+  {
+   "id": "P-G12-Q3",
+   "targets": "G12-Q3",
+   "rejected": true,
+   "detail": "granted: not Analysis-first / not connecting; unknown → allowed: not Analysis-first"
+  },
+  {
+   "id": "P-G12-Q5a",
+   "targets": "G12-Q4Q5",
+   "rejected": true,
+   "detail": "other app while Conversation → returned to world; after return door is not reachable"
+  },
+  {
+   "id": "P-G12-Q5b",
+   "targets": "G12-Q4Q5",
+   "rejected": true,
+   "detail": "lock: the call did not continue while QANDEEL was away; lock → return: not the same call, or a second session; lock on Analysis → returned to conversation; other app → return: not the same live call; after return mute is not reachable; after return end-call is not reachable"
+  },
+  {
+   "id": "P-G12-Q5c",
+   "targets": "G12-Q4Q5",
+   "rejected": true,
+   "detail": "lock → return: not the same call, or a second session; other app → return: not the same live call"
+  },
+  {
+   "id": "P-G12-Q10a",
+   "targets": "G12-Q10",
+   "rejected": true,
+   "detail": "failed: {\"call\":\"reconnecting\",\"depth\":\"conversation\",\"notice\":\"failed\",\"controls\":[\"door\",\"end-call\",\"input\",\"mine\",\"mute\",\"notice-x\",\"public\",\"replay\",\"shared\"]}; away-drop: still live; ended while away → conversation, notice failed, controls door,end-call,input,mine,mute,notice-x,public,replay,route,shared"
+  },
+  {
+   "id": "P-G12-Q10b",
+   "targets": "G12-Q10",
+   "rejected": true,
+   "detail": "ended while away → world, notice null, controls back,mine,public,replay,shared"
+  },
+  {
+   "id": "P-G12-P1",
+   "targets": "G12-P1",
+   "rejected": true,
+   "detail": "asked at launch; the voice-note intent did not go through the OS prompt"
+  },
+  {
+   "id": "P-G12-VN",
+   "targets": "G12-VN",
+   "rejected": true,
+   "detail": "leaving mid-capture did not stop the capture into a draft; the draft was sent or lost while away"
+  },
+  {
+   "id": "P-G12-AN",
+   "targets": "G12-AN",
+   "rejected": true,
+   "detail": "«سياق الكلام» changed at 5400,6200,9400,14200,15000,18200,25400,26200,29400,34200,35000,38200 — commits at 5400,14200,25400,34200; it changes with sound, not with commits; it changed while the line was down or at reconnection (47100)"
+  },
+  {
+   "id": "P-G12-Q11a",
+   "targets": "G12-Q11a",
+   "rejected": true,
+   "detail": "ar 100% reconnecting: «الاتصال انقطع. جاري إعادة الاتصال.» strip CLIPPED; ar 200% connecting: «جاري الاتصال» strip CLIPPED; ar 200% live: «الميكروفون شغّال» strip CLIPPED; ar 200% live: «الميكروفون شغّال» strip CLIPPED"
+  },
+  {
+   "id": "P-G12-Q11b",
+   "targets": "G12-Q11b",
+   "rejected": true,
+   "detail": "route has no name; mute / speaker do not expose their pressed state"
+  },
+  {
+   "id": "P-G12-Q11c",
+   "targets": "G12-Q11c",
+   "rejected": true,
+   "detail": "[[\"conversation\",\"live\"],[\"conversation\",\"none\"]]"
+  },
+  {
+   "id": "P-G12-R1",
+   "targets": "G12-R1",
+   "rejected": true,
+   "detail": "Replay moves: [10,49,44,44] | [10,49,44,44] | [62,49,44,44] | [62,49,44,44]"
+  },
+  {
+   "id": "P-G12-BI",
+   "targets": "G12-BI",
+   "rejected": true,
+   "detail": "ar/voice voice reader turn at 0–254; en/voice voice reader turn at 136–390; ar/stress voice reader turn at 0–254"
+  },
+  {
+   "id": "P-G12-S1",
+   "targets": "G12-S1",
+   "rejected": true,
+   "detail": "bg-04-returned-same-conversation does not show what it is named for"
+  },
+  {
+   "id": "P-G12-M1",
+   "targets": "G12-M1",
+   "rejected": true,
+   "detail": "C-background-restore fg/settled: depth \"conversation\" vs \"world\""
+  },
+  {
+   "id": "P-G12-M2",
+   "targets": "G12-M2",
+   "rejected": true,
+   "detail": "C: other app on the Conversation → world"
+  },
+  {
+   "id": "P-G12-SK",
+   "targets": "G12-SK",
+   "rejected": true,
+   "detail": "react-native-best-practices: stated 0000000000000000, file is 2cafec6f98199a23"
+  },
+  {
+   "id": "P-G12-D1",
+   "targets": "G12-D1",
+   "rejected": true,
+   "detail": "missing «Not verified»"
+  }
+ ],
+ "summary": {
+  "checks": "33/33",
+  "probes": "42/42"
+ }
+}

@@ -1,0 +1,328 @@
+{
+  "purpose": "Deterministic correction of PR #265 from recovered final authorities. No redesign/render.",
+  "target_branch": "preservation/canonical-final-product-design-artifacts",
+  "target_pr": 265,
+  "archives": [
+    {
+      "name": "I-08B3.1-A3R2-FINAL-STATUS-RECONCILIATION.zip",
+      "sha256": "9663164db8325a6e3fff40f70264e9b07fb2196fbd388c1c73e7d96f30c03ee8",
+      "size": 8131270
+    },
+    {
+      "name": "I-08B3.1-C3R-FINAL-CLOSURE-RECONCILIATION.zip",
+      "sha256": "9380caba31799547b0f698ac0b1de014a011f8b2e48223df3588f7b2ba6ac288",
+      "size": 1580100
+    },
+    {
+      "name": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM(2).zip",
+      "sha256": "b0f039ec86b1c341f704fa3d444dee944d2b7101d6291698a03a59218c200888",
+      "size": 13595775
+    },
+    {
+      "name": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM(3).zip",
+      "sha256": "b0f039ec86b1c341f704fa3d444dee944d2b7101d6291698a03a59218c200888",
+      "size": 13595775
+    },
+    {
+      "name": "I-08B3.1-F2-LIGHT-APPEARANCE-CROSS-APPEARANCE-INTEGRATION_FINAL_CANONICAL.zip",
+      "sha256": "6ca4744d5402108f67edf629fd45b7d3e1290391d50d0f73647b009b3dff8aaa",
+      "size": 16880606
+    },
+    {
+      "name": "QANDEEL_I-08B3.1-G1.2-R1_DIRECT_CORRECTION.zip",
+      "sha256": "2e5e0ac41b44be19b5a773aec3a8da060b4a5f5221ef6cb0d1999146f8d23e11",
+      "size": 43890
+    }
+  ],
+  "domains": [
+    {
+      "domain": "Visual Foundation A3R2",
+      "all_diffs": [
+        [
+          "docs/A3R2_REVISION_RECORD.md",
+          "new"
+        ],
+        [
+          "docs/A3_MANIFEST.md",
+          "changed"
+        ],
+        [
+          "tools/a3-package.mjs",
+          "changed"
+        ]
+      ],
+      "included": [
+        {
+          "path": "docs/design/canonical-artifacts/visual-foundation/i-08b3.1-a3r/docs/A3R2_REVISION_RECORD.md",
+          "status": "new",
+          "sha256": "62e0173f1457cad5cdcd5d002ac8528afc89fe79c203f310ac895ccb5cf21b9e",
+          "size": 3515
+        },
+        {
+          "path": "docs/design/canonical-artifacts/visual-foundation/i-08b3.1-a3r/docs/A3_MANIFEST.md",
+          "status": "changed",
+          "sha256": "32b2e6191470c0ec52f45be8ee43883654cbf72f61e745057eb749c8337adc2b",
+          "size": 8624
+        },
+        {
+          "path": "docs/design/canonical-artifacts/visual-foundation/i-08b3.1-a3r/tools/a3-package.mjs",
+          "status": "changed",
+          "sha256": "50799b26cfe5fb21be6433817a60ec398152482cbf0362b08fca7a8b63ebc767",
+          "size": 13502
+        }
+      ]
+    },
+    {
+      "domain": "Living Brass C3R",
+      "all_diffs": [
+        [
+          "data/C3_MANIFEST.json",
+          "changed"
+        ],
+        [
+          "docs/C3_FINAL_CLOSURE_RECORD.md",
+          "new"
+        ],
+        [
+          "docs/C3_MANIFEST.md",
+          "changed"
+        ],
+        [
+          "tools/c3-manifest.mjs",
+          "changed"
+        ]
+      ],
+      "included": [
+        {
+          "path": "docs/design/canonical-artifacts/living-brass/i-08b3.1-c3/data/C3_MANIFEST.json",
+          "status": "changed",
+          "sha256": "1ca7b58f8244e7dd275e442a340161110351b854c348be9a7c2395f2e4341bc9",
+          "size": 18662
+        },
+        {
+          "path": "docs/design/canonical-artifacts/living-brass/i-08b3.1-c3/docs/C3_FINAL_CLOSURE_RECORD.md",
+          "status": "new",
+          "sha256": "6db709747760bb96595650484422c83564fa9473c97a7a8eafcaf30f6cf2c374",
+          "size": 2469
+        },
+        {
+          "path": "docs/design/canonical-artifacts/living-brass/i-08b3.1-c3/docs/C3_MANIFEST.md",
+          "status": "changed",
+          "sha256": "fb3b9c378dd4d23394eecc8e65f858fa1e3b649ae0f3cf7c1bc278b6f82937b4",
+          "size": 14351
+        },
+        {
+          "path": "docs/design/canonical-artifacts/living-brass/i-08b3.1-c3/tools/c3-manifest.mjs",
+          "status": "changed",
+          "sha256": "b5b735558d010035bc59ffe24459252915b82e21be336e42425d51a060b4829e",
+          "size": 7018
+        }
+      ]
+    },
+    {
+      "domain": "QANDEEL Light latest D2R",
+      "all_diffs": [
+        [
+          "D2R_AMBIENT_MEANING_ACTIVITY.md",
+          "changed"
+        ],
+        [
+          "D2R_CORRECTION.md",
+          "changed"
+        ],
+        [
+          "D2R_DESIGN_RATIONALE.md",
+          "changed"
+        ],
+        [
+          "D2R_MANIFEST.md",
+          "changed"
+        ],
+        [
+          "D2R_TRUTH_AUDIT.md",
+          "changed"
+        ],
+        [
+          "README.md",
+          "changed"
+        ],
+        [
+          "data/D2_MANIFEST.json",
+          "changed"
+        ],
+        [
+          "source/tools/d2-verify.mjs",
+          "changed"
+        ]
+      ],
+      "included": [
+        {
+          "path": "docs/design/canonical-artifacts/qandeel-light/i-08b3.1-d2r/D2R_AMBIENT_MEANING_ACTIVITY.md",
+          "status": "changed",
+          "sha256": "326da654e6e4e396f52c55dce815cc018630318d60bc16a96223befca1195a05",
+          "size": 10572
+        },
+        {
+          "path": "docs/design/canonical-artifacts/qandeel-light/i-08b3.1-d2r/D2R_CORRECTION.md",
+          "status": "changed",
+          "sha256": "8be0c5ffb856519bbea89633358d43e025db5678bdbe3cebbc4689f954cc71f7",
+          "size": 15010
+        },
+        {
+          "path": "docs/design/canonical-artifacts/qandeel-light/i-08b3.1-d2r/D2R_DESIGN_RATIONALE.md",
+          "status": "changed",
+          "sha256": "ce9518ac67ec491f22c788df96cdd2a80ba661a858b363dcb56f0067ad9e771f",
+          "size": 11901
+        },
+        {
+          "path": "docs/design/canonical-artifacts/qandeel-light/i-08b3.1-d2r/D2R_MANIFEST.md",
+          "status": "changed",
+          "sha256": "d896a1c87ff22e9013df280d598a1b238edde21486de88981ec33bba71975129",
+          "size": 12876
+        },
+        {
+          "path": "docs/design/canonical-artifacts/qandeel-light/i-08b3.1-d2r/D2R_TRUTH_AUDIT.md",
+          "status": "changed",
+          "sha256": "2f8912ed1e7be5e17981f4d2725bed2b3cb8c0a3fdcdded278b10e3fd3df99cf",
+          "size": 14603
+        },
+        {
+          "path": "docs/design/canonical-artifacts/qandeel-light/i-08b3.1-d2r/README.md",
+          "status": "changed",
+          "sha256": "d5b48af4ee280c17d72a3cd121fd7cc334ae18d7cf94cc7d180ba1eccfa247ab",
+          "size": 8111
+        },
+        {
+          "path": "docs/design/canonical-artifacts/qandeel-light/i-08b3.1-d2r/data/D2_MANIFEST.json",
+          "status": "changed",
+          "sha256": "f4d7d84142d568104db8ab74b72bb6a9e470c78690509eb3ae0da76899bcdcdb",
+          "size": 17749
+        },
+        {
+          "path": "docs/design/canonical-artifacts/qandeel-light/i-08b3.1-d2r/source/tools/d2-verify.mjs",
+          "status": "changed",
+          "sha256": "105b98445db4b0ff1b717fecb23ffe211fc25d2818ca034b657901dce1b86b46",
+          "size": 67045
+        }
+      ]
+    },
+    {
+      "domain": "Light Appearance F2 FINAL_CANONICAL",
+      "all_diffs": [
+        [
+          "README.md",
+          "changed"
+        ],
+        [
+          "data/F2_MANIFEST.json",
+          "changed"
+        ],
+        [
+          "docs/F2_FREEZE_CANDIDATE.md",
+          "changed"
+        ],
+        [
+          "docs/F2_MANIFEST.md",
+          "changed"
+        ],
+        [
+          "review/parity/dark-default.html",
+          "changed"
+        ],
+        [
+          "review/regression/f1-default-rerendered.html",
+          "changed"
+        ],
+        [
+          "vendor/f1/tools/f1-cdp.mjs",
+          "changed"
+        ]
+      ],
+      "included": [
+        {
+          "path": "docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/README.md",
+          "status": "changed",
+          "sha256": "2abc9f1d052a3318a75c40c1b25431ea0bf306c0c7eb3fec5b83b2226089bfc5",
+          "size": 9938
+        },
+        {
+          "path": "docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/data/F2_MANIFEST.json",
+          "status": "changed",
+          "sha256": "f67e1b2b810f8ce8dab7ff41f178b203d854285d091eca81eb7c7ab59680bd78",
+          "size": 52153
+        },
+        {
+          "path": "docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/docs/F2_FREEZE_CANDIDATE.md",
+          "status": "changed",
+          "sha256": "3cc7d71da59e4be6ace52913d3c0ebab9c0ed59afcb8c206df8d9a1e2dda5444",
+          "size": 8800
+        },
+        {
+          "path": "docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/docs/F2_MANIFEST.md",
+          "status": "changed",
+          "sha256": "d70e0fe6dbd37900c4fcf2b6eb28850be2cedb8619ce4840d34672b9ea788246",
+          "size": 27573
+        },
+        {
+          "path": "docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/tools/f1-cdp.mjs",
+          "status": "changed",
+          "sha256": "798b63c34eadb8f5ee8b9fb64ff57aa909904af744a83d3143c1da7412db11c4",
+          "size": 6327
+        }
+      ]
+    },
+    {
+      "domain": "G1.2 R1 final correction",
+      "all_diffs": [],
+      "included": [
+        {
+          "path": "docs/design/canonical-artifacts/product-proofs/g1.2/source/src/build.mjs",
+          "status": "changed",
+          "sha256": "b78e69b2a8309b6ba587c2512a542ca52253e21b907e5562bb096a6cff12ea35",
+          "size": 37685
+        },
+        {
+          "path": "docs/design/canonical-artifacts/product-proofs/g1.2/source/src/content.mjs",
+          "status": "changed",
+          "sha256": "2f5fe6da0b22dc18b1df5a3a3dd1052715bb7893afd489be0254ac4877a992e0",
+          "size": 18083
+        },
+        {
+          "path": "docs/design/canonical-artifacts/product-proofs/g1.2/source/src/runtime.js",
+          "status": "changed",
+          "sha256": "467f5b762e63c88b19337acef5c4b3d0224a74fd82d6c858a7f234715d933bd7",
+          "size": 48695
+        },
+        {
+          "path": "docs/design/canonical-artifacts/product-proofs/g1.2/r1/R1_CORRECTION_RECORD.md",
+          "status": "new",
+          "sha256": "9f565673ab71bfb6d8b588b8e7a5d5d719ef278d6ebfa2e7aa2a3e4249ecfa49",
+          "size": 5041
+        },
+        {
+          "path": "docs/design/canonical-artifacts/product-proofs/g1.2/r1/R1_TARGETED_CHECKS.json",
+          "status": "new",
+          "sha256": "a13ebc9f1150ed34958a84ec1d1527a8dd6466762cee1d16893593d06c1d2126",
+          "size": 2853
+        },
+        {
+          "path": "docs/design/canonical-artifacts/product-proofs/g1.2/r1/R1_SOURCE_PATCH.diff",
+          "status": "new",
+          "sha256": "999b06a1162b343eadbd23ba921cf04e09ee4da8165fe1098fe6b0a03ac56334",
+          "size": 12225
+        },
+        {
+          "path": "docs/design/canonical-artifacts/product-proofs/g1.2/r1/R1_MANIFEST.json",
+          "status": "new",
+          "sha256": "aabeab121d851b8a7a504bb4dcd02f41453cf6cc29419790af2391508da4d536",
+          "size": 1119
+        }
+      ]
+    }
+  ],
+  "do_not_add_as_final": [
+    "I-08B3.1-B2R2-FINAL-CLOSURE-RECONCILIATION.zip (superseded by B4R)",
+    "I-08B3.1-B3R2-FINAL-TRIGGER-SEMANTICS-CLOSURE.zip (superseded by B4R)",
+    "I-08B3.1-C0R2-FINAL-CLOSURE-RECONCILIATION.zip (historical foundation; C3R is final Living Brass closure)"
+  ]
+}

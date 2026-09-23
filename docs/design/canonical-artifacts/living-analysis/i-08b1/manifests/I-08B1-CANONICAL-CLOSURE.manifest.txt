@@ -1,0 +1,127 @@
+QANDEEL - I-08B1 - CORE VISUAL THESIS / VISIBLE MIND
+CLOSED / FROZEN - Product decision, 2026-09-20
+
+Canonical closure package. Minimum material to establish the final state.
+Large intermediate workshop material is NOT duplicated here - the dedicated
+NEAR, MID and FAR archives hold it and are named below.
+
+This manifest is kept OUTSIDE the archive it describes, because a file cannot
+record the hash of an archive that contains it.
+
+================ FINAL UNIFIED PROTOTYPE ================
+
+file      wf-living-constellation.html
+size      388374 bytes
+SHA-256   4DFD9D27D752C3A445168C0CC7067D71DF4ADA84BC61B806D12C8BB3202BC413
+
+================ FAR / MID / NEAR BASELINE SHA RECORD ================
+
+Accepted STATE baselines. The NEAR and MID baselines are NOT superseded by
+the unified prototype carrying a later hash; they remain canonical evidence
+for their own distances, and the unified prototype reproduces them exactly.
+
+FAR   A = 0    4DFD9D27D752C3A445168C0CC7067D71DF4ADA84BC61B806D12C8BB3202BC413
+               APPROVED / FROZEN / CANONICAL   0 of 2,480,100 px vs ws7rf-far-hero.png
+MID   A = 0.5  6D8EFDBCF155BCF6BDCB83CAF9F32D54F88AAC3E8EB6585312048B23A1AEBFF6
+               APPROVED / FROZEN / CANONICAL   0 of 2,480,100 px vs ws7rr-mid-hero.png
+NEAR  A = 1    7D7D5B5502D7B18D6D35F89F8A2DB74213A55851F65DC98068FEC6A726E39A34
+               APPROVED / FROZEN               0 of 2,480,100 px vs ws7rv2-near-hero.png
+
+superseded MID (historical, preserved, never deleted):
+               5225B4607CB5339E8E3BEFC33A0DC3B8AAC97F525FCDEFC10F50AA8F21C2CDD0
+
+The FAR window is EXACTLY 0 for every A >= 0.12, so every frame from there to
+A = 1 renders bit-identically with the window on or off - eleven values of A,
+0 of 1,101,800 pixels each.
+
+================ CLOSURE PACKAGE ================
+
+file      I-08B1-CANONICAL-CLOSURE.zip
+size      15966242 bytes
+SHA-256   9872271D7C7F8006078E076E164ADE67DFE3F4151897887DDF870D80E1819C62
+entries   7, flat, no directories
+verified  7 / 7 extracted and compared by SHA-256 against source, 0 mismatches
+
+================ ENTRIES ================
+
+I-08B1-CANONICAL-STATE.md
+  size     6403 bytes
+  SHA-256  385B8C942A2AEA25644415137964D56DCF2469F3D47F23AFEC6DC597A8F3149B
+  what     the closure / status record: baseline SHAs, verification, archives, reopen rule
+
+I-08B1-WS7R-NOTES.md
+  size     185752 bytes
+  SHA-256  FBAA8712E1454132A681F8F478BA75EE35CEAE7AF392A49D3F374EBAD8440704
+  what     the canonical notes - S26 FAR, S27 motion review, S28 FAR freeze, S29 closure
+
+I-08B1-WS7R-SKILL-USE.md
+  size     28576 bytes
+  SHA-256  C32D62D8BFF534BF01F54EA062947910305EB915B8BCA078AB0BACBC3C9504C2
+  what     the skill-use record
+
+wf-living-constellation.html
+  size     388374 bytes
+  SHA-256  4DFD9D27D752C3A445168C0CC7067D71DF4ADA84BC61B806D12C8BB3202BC413
+  what     the final unified prototype - one file, all three distances
+
+ws7rf-far-hero.png
+  size     4800017 bytes
+  SHA-256  A6B179FF1BA3E63F4720E0C19A1133274798B6BB0416E062FDE02A241F421B28
+  what     final FAR hero, A = 0, 2100x1181
+
+ws7rr-mid-hero.png
+  size     5861052 bytes
+  SHA-256  630C7B4EC1C05F849F4505C8B2F9A1DE34F904A95CA8B5991C858E03F13CE19D
+  what     final MID hero, A = 0.5, 2100x1181
+
+ws7rv2-near-hero.png
+  size     5194155 bytes
+  SHA-256  92A1DB238E12E41A10D02FEEDB5FB4B59464EB54271CBDBB26F2CBDF46AFB44F
+  what     final NEAR hero, A = 1, 2100x1181
+
+================ DEDICATED DISTANCE ARCHIVES ================
+
+I-08B1-FAR-BASELINE-APPROVED-WS7R-F.zip
+  size     35175221 bytes
+  SHA-256  279E4A10C8BEC9B337443EA6A559EBADA84E8A819B769316CED8B899818651DF
+I-08B1-MID-BASELINE-APPROVED-WS7R-R.zip
+  size     33017826 bytes
+  SHA-256  733D01750FBCB1553C4F53B36E99374ABBE09136DDCEA1713AC127864501FA15
+I-08B1-NEAR-BASELINE-APPROVED.zip
+  size     30975534 bytes
+  SHA-256  5A7F8E6D1A5E66B7BC4128C1894FF151B79B4849B13155FE80A5E415B81C85EA
+I-08B1-MID-BASELINE-APPROVED.zip
+  size     38476144 bytes
+  SHA-256  01FE469CEAC18821BC9C468216CDF1EBB26B3CEB8355B7804DC1F2028C3C00F5
+
+The first three are canonical. The fourth is the SUPERSEDED MID baseline,
+historical / non-canonical, preserved as a record and never deleted.
+Each has its own external .manifest.txt except the NEAR archive, whose
+manifest predates the convention.
+
+================ STATE ================
+
+I-08B1 - CORE VISUAL THESIS / VISIBLE MIND - CLOSED / FROZEN
+
+Approved: FAR world-at-distance; MID living life-map; NEAR local analytical
+constellation; FAR <-> MID <-> NEAR semantic-zoom continuity; world material
+language; cosmic atmosphere; territory language; session and local morphology;
+local constellation texture; Arabic readability behaviour; motion
+compatibility; reduced-motion parity; reversibility with zero hysteresis;
+semantic and authority preservation.
+
+  Nothing teleports. Meaning resolves.
+  Macro simplicity. Micro richness.
+
+REOPEN RULE. Closed to preference-driven visual iteration. FAR, MID and NEAR do
+NOT reopen for a fresh-eye critique, a new aesthetic reference, a change of
+preference or a wish for more polish. A frozen state reopens only for a genuine
+contradiction - preservation failure, unsupported semantic representation, real
+accessibility failure, real Arabic-readability failure, a portability defect
+from the Skia/Reanimated port requiring visible correction, a motion regression,
+or a canonical-state contradiction - and any reopening is targeted to that
+contradiction only.
+
+NOT closed by this: the Skia/Reanimated port, the responsive and device-class
+work, and every downstream product task. I-08B1 is the visual thesis, not the
+implementation.

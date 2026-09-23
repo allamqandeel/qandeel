@@ -1,0 +1,2035 @@
+{
+  "generated": "2026-09-21T18:51:39.909Z",
+  "layers": {
+    "A": {
+      "name": "invariants and negative probes",
+      "dependencies": "none — pure Node",
+      "result": "21/21"
+    },
+    "B": {
+      "name": "DTCG 2025.10 schema conformance",
+      "dependencies": "ajv",
+      "result": "CONFORMS"
+    },
+    "C": {
+      "name": "character scale sweep",
+      "dependencies": "headless Chrome (no font)",
+      "result": "NOT_A_CAPABILITY_THRESHOLD"
+    },
+    "D": {
+      "name": "token-driven reproduction of the accepted compositions",
+      "dependencies": "headless Chrome + the local Arabic font + the sealed I-08B3.1-C2 package",
+      "result": "9/9 byte-identical"
+    }
+  },
+  "tokenFiles": [
+    {
+      "rel": "base/material.tokens.json",
+      "bytes": 14376
+    },
+    {
+      "rel": "appearance/dark.material.tokens.json",
+      "bytes": 3441
+    },
+    {
+      "rel": "appearance/light.material.tokens.json",
+      "bytes": 587
+    },
+    {
+      "rel": "qandeel-living-brass.resolver.json",
+      "bytes": 2364
+    }
+  ],
+  "invariants": [
+    {
+      "id": "I-01",
+      "title": "Exactly one dark Living Brass body literal exists",
+      "why": "A second copy of the literal is indistinguishable from the first by eye and completely different in kind: it can be changed without changing the material, which is how a one-body system quietly becomes a two-body system.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "1 literal(s): darkMaterial:qandeel.expression.material.living-brass.body",
+      "probeFired": true,
+      "probeDetail": "2 literal(s): materialSemantic:qandeel.navigation.machinery, darkMaterial:qandeel.expression.material.living-brass.body",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-02",
+      "title": "Identity aliases resolve to the one body",
+      "why": "The point of a semantic layer is that the identity names ARRIVE at the material. An identity name that resolves to something else, or to nothing, is a name that lies.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "qandeel.identity.material, qandeel.identity.mark, qandeel.identity.moment",
+      "probeFired": true,
+      "probeDetail": "not the body: qandeel.identity.mark",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-03",
+      "title": "Persistent navigation machinery resolves to the one body under P2",
+      "why": "P2 IS this alias. If it does not arrive at the body, the coverage policy the Design Director selected is not the coverage policy the token file implements.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "#a58e6f via qandeel.navigation.machinery -> qandeel.identity.material -> qandeel.expression.material.living-brass.body",
+      "probeFired": true,
+      "probeDetail": "#a58e6f via qandeel.navigation.machinery -> qandeel.expression.material.living-brass.body",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-04",
+      "title": "No state token resolves to the material, and no state sibling of the family exists",
+      "why": "BRASS DOES NOT INDICATE SELECTION. The failure mode is not a token literally called \"selected\": it is a sibling of the navigation family — navigation.machinery.selected — which is exactly what a developer adds on the afternoon the designer asks for a highlight.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "no state name reaches the material; {qandeel.state} holds 0 value(s)",
+      "probeFired": true,
+      "probeDetail": "state names reaching the material: qandeel.navigation.selected",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-05",
+      "title": "No status token aliases the material, and the status namespace is empty",
+      "why": "Living Brass is forbidden as a status code. The namespace is reserved and empty so that this check has a real surface to guard rather than passing because nothing exists.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "status reserved and empty",
+      "probeFired": true,
+      "probeDetail": "qandeel.status.warning",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-06",
+      "title": "No analytical token resolves to the material",
+      "why": "The Living Analysis Map is the proprietary QANDEEL world and its truth is geometric. Brass on an analytical mark would make the material encode analytical importance — the single prohibition that has survived unchanged since C0.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "analytical plane entirely neutral",
+      "probeFired": true,
+      "probeDetail": "qandeel.analysis.node",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-07",
+      "title": "No text or content token resolves to the material — BRASS NEVER SETS TYPE",
+      "why": "A reading ramp with a warm member in it is a reading ramp whose rungs no longer mean only rank. This is also where a \"Brass heading\" would enter, which C2 captured as a failure.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "no type role reaches the material",
+      "probeFired": true,
+      "probeDetail": "qandeel.content.heading",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-08",
+      "title": "No border, divider, rule or outline token resolves to the material — BRASS NEVER ENCLOSES",
+      "why": "Brass borders around dark cards are named in the brief as a production failure, and they are the single fastest route from a material identity to a luxury relabel: an enclosure reads as a frame, and a warm frame on a dark card reads as gold trim.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "no enclosure reaches the material",
+      "probeFired": true,
+      "probeDetail": "qandeel.divider.hairline",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-09",
+      "title": "No Brass opacity ladder exists",
+      "why": "An opacity ladder is the most respectable-looking way to build a second, third and fourth Brass without ever authoring a second hex. Every rung is \"the same colour\", and the system ends up with five materials.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "the material is opaque and has one rung",
+      "probeFired": true,
+      "probeDetail": "darkMaterial:qandeel.expression.material.living-brass.muted @ alpha 0.6",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-10",
+      "title": "No Brass lightness or chroma ladder exists — the character tone is derived, not stored",
+      "why": "The character IS one lightness step below the body. Storing that step as a colour token would create a two-value Brass ladder, and a two-value ladder is how a five-value ladder starts. It is therefore specified as algorithmic intent — a ratio and a direction — and derived at render time.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "one warm value above the derived floor C 0.0334 (frozen neutrals top out at 0.0153, the body sits at 0.0516); the character tone is a ratio (0.63) and a direction",
+      "probeFired": true,
+      "probeDetail": "second warm value(s): darkMaterial:qandeel.expression.material.living-brass.shade = #967f60 (C 0.052, H 74.8)",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-11",
+      "title": "The retired bodies appear nowhere except where they are named as retired",
+      "why": "A retired value that survives anywhere in the production output is a value someone can resurrect by deleting a comment. The retirement record is allowed to name them; nothing else is.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "2 retired value(s) named ONLY in the retirement record at qandeel.expression.material.living-brass.body.$extensions[\"com.qandeel.provenance\"].retired",
+      "probeFired": true,
+      "probeDetail": "PAINTED materialSemantic:qandeel.identity.legacy = #857867",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-12",
+      "title": "No second Living Brass body exists, under any name",
+      "why": "I-01 counts copies of the one literal. This counts NEIGHBOURS of it: a \"brass-strong\" or \"brass-on-surface\" at a slightly different value would pass a duplicate check and would still be a second material.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "1 value(s) above the derived chroma floor C 0.0334: #a58e6f — the frozen reading ramp sits below it at C 0.0153 and is correctly NOT counted as a second body",
+      "probeFired": true,
+      "probeDetail": "2 value(s) above the derived chroma floor C 0.0334: #a58e6f, #ac9474 — the frozen reading ramp sits below it at C 0.0153 and is correctly NOT counted as a second body",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-13",
+      "title": "No Light appearance value is invented — light resolution FAILS LOUDLY",
+      "why": "A light set containing a copy of the dark body would be a Light Brass invented by accident, shipping under a name someone trusted. The architecture is dark-led and not dark-locked, and the difference between those two is exactly this check.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "light carries no value; all 4 material names UNRESOLVED and named",
+      "probeFired": true,
+      "probeDetail": "light carries 1 colour value(s)",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-14",
+      "title": "The QANDEEL Light namespace is reserved, empty, and not aliased to the material",
+      "why": "BRASS IS MATTER. LIGHT IS MEANING. The likeliest way that doctrine gets broken is not an argument but a collision: \"QANDEEL Light\" and \"light appearance\" share an English word, and an implementer who conflates them wires illumination to the material without ever deciding to.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "reserved, empty, and unaliased",
+      "probeFired": true,
+      "probeDetail": "illumination names reaching the material: qandeel.illumination.glow",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-15",
+      "title": "Functional control families do not inherit the material",
+      "why": "This is the boundary between P2 and \"every icon gold\". A functional control is not identity-bearing because it is visible, persistent or important, and the way that rule dies is group inheritance — one `$type`-style default on a parent and the whole family is warm.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "functional controls resolve to #8b8982 (the frozen tertiary neutral)",
+      "probeFired": true,
+      "probeDetail": "qandeel.control.action",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-16",
+      "title": "The sRGB literal round-trips from the authored OkLCh triple",
+      "why": "The token stores sRGB and records OkLCh as provenance. If the two ever disagree, the production value and the value every C-stage document describes are different colours — and the disagreement would be invisible, because each is internally consistent.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "oklch(0.66 0.052 75) -> #a58e6f; components -> #a58e6f; stored #a58e6f",
+      "probeFired": true,
+      "probeDetail": "oklch(0.66 0.052 75) -> #a58e6f; components -> #a68f70; stored #a58e6f",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-17",
+      "title": "Every inherited file is byte-identical to the sealed package it came from",
+      "why": "C3 builds on frozen work. \"Vendored\" has to mean UNCHANGED, or the freeze it claims to extend is a freeze of something else. The check hashes against the sealed predecessor packages rather than trusting the directory name.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "9 file(s) byte-identical to their sealed source",
+      "probeFired": true,
+      "probeDetail": "checker threw: ENOENT: no such file or directory, open 'E:\\QANDEEL\\QANDEEL PROJECT\\I-08B3.1-C3-LIVING-BRA",
+      "probeThrew": "ENOENT: no such file or directory, open 'E:\\QANDEEL\\QANDEEL PROJECT\\I-08B3.1-C3-LIVING-BRA",
+      "ok": true
+    },
+    {
+      "id": "I-18",
+      "title": "No font binary and no forbidden token name ships",
+      "why": "Two package-hygiene rules in one check because both are about what the ZIP contains rather than what the tokens mean. The font is a LOCAL RUNTIME DEPENDENCY, referenced and hashed, never redistributed. The names are the brief's list: gold, amber, yellow, accent, brandAccent, selectedColor — each one a name that would tell a future reader the wrong thing about what this is.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "no font binary; no forbidden token name",
+      "probeFired": true,
+      "probeDetail": "no font binary; FORBIDDEN NAMES: materialSemantic:qandeel.identity.accent",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-19",
+      "title": "The material clears 3:1 on both frozen grounds where it is an essential component visual",
+      "why": "Under P2 the persistent navigation family is an ESSENTIAL UI COMPONENT VISUAL, so WCAG 2.2 SC 1.4.11 applies to it and is not optional. C2 classified the four usages; C3 re-measures rather than citing, because a production spec that quotes a number it did not compute is a spec that cannot notice when the number changes.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "#a58e6f: 6.070:1 on the World #101010, 5.664:1 on the Surface #181818",
+      "probeFired": true,
+      "probeDetail": "#524738: 2.100:1 on the World #101010, 1.959:1 on the Surface #181818",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-20",
+      "title": "Every resolver $ref resolves to a file that exists",
+      "why": "The resolver is the document that says what the system IS. A $ref pointing at a file that was renamed resolves to nothing, and a resolver that silently drops a set produces a smaller system that still validates.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "8 file $ref(s), all present",
+      "probeFired": true,
+      "probeDetail": "missing: ./base/material.tokens.json.bak",
+      "probeThrew": null,
+      "ok": true
+    },
+    {
+      "id": "I-21",
+      "title": "The character tone derives from the AUTHORED triple, and the obvious derivation is wrong",
+      "why": "A production spec has to say which number an implementer starts from when two candidates are both called \"the body\". Starting from the 8-bit sRGB value — the obvious choice, and the one the token paints with — produces a character tone one step off the accepted material, and no colour test would catch it because both values are plausible Brass. This invariant asserts BOTH halves, so the divergence is a standing measurement rather than a remark that could go stale.",
+      "pass": true,
+      "unverifiable": false,
+      "detail": "spec route (authored oklch 0.66 0.052 75, depth 0.050794) -> #967f60 = accepted #967f60; obvious route (quantised #a58e6f) -> #957f60, which is DIFFERENT and is why the spec names a source",
+      "probeFired": true,
+      "probeDetail": "spec route (authored oklch 0.66 0.052 75, depth 0.050794) -> #967f60 = accepted #967f60; obvious route (quantised #a58e6f) -> #957f60, which is DIFFERENT and is why the spec names a source",
+      "probeThrew": null,
+      "ok": true
+    }
+  ],
+  "chromaFloor": {
+    "derived": 0.03342703019239072,
+    "frozenNeutralMax": 0.015261502957233409,
+    "bodyChroma": 0.05159255742754802
+  },
+  "schema": {
+    "available": true,
+    "integrity": [
+      {
+        "file": "resolver.json",
+        "ok": true,
+        "recorded": "C405CF595461A9650495DD5093CD0A8774D2AD083BEBAEE616F07A2629CBD4A5",
+        "got": "C405CF595461A9650495DD5093CD0A8774D2AD083BEBAEE616F07A2629CBD4A5"
+      },
+      {
+        "file": "resolver/set.json",
+        "ok": true,
+        "recorded": "BA1C318D93AE6FECE70C1C97CCDA3E7FF535AE14EF6012D005446E2AD350D5D4",
+        "got": "BA1C318D93AE6FECE70C1C97CCDA3E7FF535AE14EF6012D005446E2AD350D5D4"
+      },
+      {
+        "file": "resolver/modifier.json",
+        "ok": true,
+        "recorded": "110124517CEA87DFA3A231B729EF88CDB7286376C8253AF0A9725A286437C79D",
+        "got": "110124517CEA87DFA3A231B729EF88CDB7286376C8253AF0A9725A286437C79D"
+      },
+      {
+        "file": "resolver/resolutionOrder.json",
+        "ok": true,
+        "recorded": "168D4948FF078FFFFF432EF199D40DFA8FCF30735627D40C6D39A6D9F396C2A5",
+        "got": "168D4948FF078FFFFF432EF199D40DFA8FCF30735627D40C6D39A6D9F396C2A5"
+      },
+      {
+        "file": "format.json",
+        "ok": true,
+        "recorded": "7F40FE678340B756E6464A0C20FACFC29FE6FF055A202249132CC14EEAFC7678",
+        "got": "7F40FE678340B756E6464A0C20FACFC29FE6FF055A202249132CC14EEAFC7678"
+      },
+      {
+        "file": "format/group.json",
+        "ok": true,
+        "recorded": "BFF8D3B46F005FAD4F78B50D41FDE3B2FB7303C9D246D03D3691D73112654562",
+        "got": "BFF8D3B46F005FAD4F78B50D41FDE3B2FB7303C9D246D03D3691D73112654562"
+      },
+      {
+        "file": "format/groupOrToken.json",
+        "ok": true,
+        "recorded": "48F80D667161E61FFD12C26AAB214CC994D866BE9EE21B0CE1A806E02EF44AB4",
+        "got": "48F80D667161E61FFD12C26AAB214CC994D866BE9EE21B0CE1A806E02EF44AB4"
+      },
+      {
+        "file": "format/token.json",
+        "ok": true,
+        "recorded": "E42D903F33DD57E875BB8EEF67B7401891AE50F7A22D96FEB2929B795F7FEF65",
+        "got": "E42D903F33DD57E875BB8EEF67B7401891AE50F7A22D96FEB2929B795F7FEF65"
+      },
+      {
+        "file": "format/tokenType.json",
+        "ok": true,
+        "recorded": "FCC4672F4FB0346CF872F6924D8FB622609F880B5F22885A5F6C543CE6AA5794",
+        "got": "FCC4672F4FB0346CF872F6924D8FB622609F880B5F22885A5F6C543CE6AA5794"
+      },
+      {
+        "file": "format/values/border.json",
+        "ok": true,
+        "recorded": "D316B38FBB9F7657D8BA49E0D62661C1D8159A88661AF87E40FC372A12953C4E",
+        "got": "D316B38FBB9F7657D8BA49E0D62661C1D8159A88661AF87E40FC372A12953C4E"
+      },
+      {
+        "file": "format/values/color.json",
+        "ok": true,
+        "recorded": "B721ABEC749FB2206CC397722861CCE4F109F57D7433D2089021EAF0CE5FD501",
+        "got": "B721ABEC749FB2206CC397722861CCE4F109F57D7433D2089021EAF0CE5FD501"
+      },
+      {
+        "file": "format/values/cubicBezier.json",
+        "ok": true,
+        "recorded": "B99B9896FBB99FC60F0E8DDBD82B2368CB3250B10ACCC7008966D5D0826B9831",
+        "got": "B99B9896FBB99FC60F0E8DDBD82B2368CB3250B10ACCC7008966D5D0826B9831"
+      },
+      {
+        "file": "format/values/dimension.json",
+        "ok": true,
+        "recorded": "90E6FC121A7E7CB6697959172F93B5BE05397124B6EB736EE281397E61F0E869",
+        "got": "90E6FC121A7E7CB6697959172F93B5BE05397124B6EB736EE281397E61F0E869"
+      },
+      {
+        "file": "format/values/duration.json",
+        "ok": true,
+        "recorded": "FF8490104550B44258A744901B4BA24BB36A5A1761C893BBEFCA785D1DB1C07F",
+        "got": "FF8490104550B44258A744901B4BA24BB36A5A1761C893BBEFCA785D1DB1C07F"
+      },
+      {
+        "file": "format/values/fontFamily.json",
+        "ok": true,
+        "recorded": "6F8082AE06EAB783F4CC2790CAE259488B6B3C8677EE4B660543593B5E16E173",
+        "got": "6F8082AE06EAB783F4CC2790CAE259488B6B3C8677EE4B660543593B5E16E173"
+      },
+      {
+        "file": "format/values/fontWeight.json",
+        "ok": true,
+        "recorded": "FF4E05A302E2E1BDD92ABC2DC4B7BD3803A4FF4D3F3D47DF36603C1AEAE816E2",
+        "got": "FF4E05A302E2E1BDD92ABC2DC4B7BD3803A4FF4D3F3D47DF36603C1AEAE816E2"
+      },
+      {
+        "file": "format/values/gradient.json",
+        "ok": true,
+        "recorded": "77ACFF5DBF54C009A5D32D3C209C79797EF0212F7BFB9485CEDD910B2CD9A603",
+        "got": "77ACFF5DBF54C009A5D32D3C209C79797EF0212F7BFB9485CEDD910B2CD9A603"
+      },
+      {
+        "file": "format/values/number.json",
+        "ok": true,
+        "recorded": "A8C0074125F0833E1CCE1DB28582B4D3974E1EA234BD5EFBF122CA107AAA079D",
+        "got": "A8C0074125F0833E1CCE1DB28582B4D3974E1EA234BD5EFBF122CA107AAA079D"
+      },
+      {
+        "file": "format/values/shadow.json",
+        "ok": true,
+        "recorded": "006827759F277106F5C2A2324F0FB597FEBEB8BE01DBE9195D28595138F63B50",
+        "got": "006827759F277106F5C2A2324F0FB597FEBEB8BE01DBE9195D28595138F63B50"
+      },
+      {
+        "file": "format/values/strokeStyle.json",
+        "ok": true,
+        "recorded": "EEE4C04CAE1104853C8FD5EB742F68FEADFC07D8C0204F6B19F477055C356214",
+        "got": "EEE4C04CAE1104853C8FD5EB742F68FEADFC07D8C0204F6B19F477055C356214"
+      },
+      {
+        "file": "format/values/transition.json",
+        "ok": true,
+        "recorded": "77FCEF3A44F7D817456F12CCEED7C5E324A1BE418F68B050E522EFAFD4C76C8D",
+        "got": "77FCEF3A44F7D817456F12CCEED7C5E324A1BE418F68B050E522EFAFD4C76C8D"
+      },
+      {
+        "file": "format/values/typography.json",
+        "ok": true,
+        "recorded": "991BB82C54166A8FBA7A7D521F40E0A109FC5BDD3F5B33E2856DF7669DE89307",
+        "got": "991BB82C54166A8FBA7A7D521F40E0A109FC5BDD3F5B33E2856DF7669DE89307"
+      }
+    ],
+    "ok": true,
+    "results": [
+      {
+        "file": "tokens/base/material.tokens.json",
+        "schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+        "pass": true,
+        "errors": []
+      },
+      {
+        "file": "tokens/appearance/dark.material.tokens.json",
+        "schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+        "pass": true,
+        "errors": []
+      },
+      {
+        "file": "tokens/appearance/light.material.tokens.json",
+        "schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+        "pass": true,
+        "errors": []
+      },
+      {
+        "file": "tokens/qandeel-living-brass.resolver.json",
+        "schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+        "pass": true,
+        "errors": []
+      }
+    ],
+    "schemaFiles": 22,
+    "publicationCommit": "f0f32a7dce0b (2025-10-28, \"Publish 2025.10\" #340)"
+  },
+  "skills": {
+    "inventoryCount": 89,
+    "roots": [
+      "C:\\Users\\Al Asil Stores\\.claude",
+      "E:\\QANDEEL\\QANDEEL PROJECT\\.claude"
+    ],
+    "inventory": [
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\claude-plugins-official\\frontend-design\\85cce0381e78\\skills\\frontend-design\\SKILL.md",
+        "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3",
+        "bytes": 9390
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\claude-plugins-official\\frontend-design\\unknown\\skills\\frontend-design\\SKILL.md",
+        "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3",
+        "bytes": 9390
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\sibawayh\\sibawayh\\0.1.0\\skills\\designing-arabic-frontends\\SKILL.md",
+        "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2",
+        "bytes": 13757
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\sibawayh\\sibawayh\\0.1.0\\skills\\writing-eloquent-arabic\\SKILL.md",
+        "sha256": "6a673bd773a9245bd38f817edee4687fbf1d92612f680c80aa33f9b67e96150d",
+        "bytes": 9513
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\ui-ux-pro-max-skill\\ui-ux-pro-max\\2.13.0\\.claude\\skills\\ui-ux-pro-max\\SKILL.md",
+        "sha256": "ea087c341bfb5b23195c7302027268ede86da802554c18a5c4896a6017b439f9",
+        "bytes": 15969
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\discord\\skills\\access\\SKILL.md",
+        "sha256": "4fc3da872e033c37576a904b15a1bcac6b1ce6c7bc43f1f96abd7cad4855ac7a",
+        "bytes": 4357
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\discord\\skills\\configure\\SKILL.md",
+        "sha256": "9364d7895d6f38b917a711128e7b391884fb8b8d69a62c7d72a81e95b6e2b948",
+        "bytes": 4324
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\imessage\\skills\\access\\SKILL.md",
+        "sha256": "ac994a86aab3a2724651a13a62ee9deae985196c8687a33bb79c4b7898aa5be7",
+        "bytes": 4754
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\imessage\\skills\\configure\\SKILL.md",
+        "sha256": "3afdc7e9faa36aa0ba9813dce68509c45014a75b316d366ba44c46ebd8b098aa",
+        "bytes": 3546
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\telegram\\skills\\access\\SKILL.md",
+        "sha256": "6c87f59841c55a4a4f1b732c7427959581e47234f1b8c6fd633e4a5256ce6a3c",
+        "bytes": 4463
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\telegram\\skills\\configure\\SKILL.md",
+        "sha256": "16b06bf2ac5ede250d0c620ce4e6cf3878c9704246b8f52390fde5f280a17f73",
+        "bytes": 4308
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\claude-code-setup\\skills\\claude-automation-recommender\\SKILL.md",
+        "sha256": "441c57e26f0931b64dd085deaad9213c4e3efea27d916dd7443cd33c7e338227",
+        "bytes": 10995
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\claude-md-management\\skills\\claude-md-improver\\SKILL.md",
+        "sha256": "b06c7420be08ca1c7f6d75f7f4709fdb787624a2d363e2f8052216d8c780f85b",
+        "bytes": 6028
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\claude-security\\skills\\claude-security\\SKILL.md",
+        "sha256": "7e7b345240a34339d58da49dec690232023fe2382c1f9113bf3af5a46cf64ce1",
+        "bytes": 5246
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\cwc-makers\\skills\\cardputer-buddy\\SKILL.md",
+        "sha256": "dae31d1459c8ee7b4a03d04bf55485f4ece04bdd4f5a2650ad39eb3d07d9be10",
+        "bytes": 1887
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\cwc-makers\\skills\\m5-onboard\\SKILL.md",
+        "sha256": "c6ba88fd06f59a3e902fead2bb863b6834f189672cfcc75248941c23ae39bd2d",
+        "bytes": 23913
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\example-plugin\\skills\\example-command\\SKILL.md",
+        "sha256": "d561981660827f3818b0daec456ae5b31894f68c22407d8c495a77b3105ba96d",
+        "bytes": 1226
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\example-plugin\\skills\\example-skill\\SKILL.md",
+        "sha256": "87d90442621ace039aa3379805f99c3f95bf500e9f7b96f9e7876ac2dcf804f5",
+        "bytes": 2725
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\frontend-design\\skills\\frontend-design\\SKILL.md",
+        "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3",
+        "bytes": 9390
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\hookify\\skills\\writing-rules\\SKILL.md",
+        "sha256": "2994b5d3152243b1a1cbf8358e9d7c18f290f31a23920647f31053c3efdf990d",
+        "bytes": 8423
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\math-olympiad\\skills\\math-olympiad\\SKILL.md",
+        "sha256": "f697e195d343520f3db551bd4fb44c5120504ee2c47a9cc2016cd57767f23403",
+        "bytes": 19961
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\mcp-server-dev\\skills\\build-mcp-app\\SKILL.md",
+        "sha256": "d2fd94f0096506469ec855c581e48293d35480e58e6405b2bfcdba0486a0c218",
+        "bytes": 19391
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\mcp-server-dev\\skills\\build-mcp-server\\SKILL.md",
+        "sha256": "088cd04be7f03ebbdfd24973cbcbf93c7a2e09117c4bba7b2b06bcc3e0a556f6",
+        "bytes": 12084
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\mcp-server-dev\\skills\\build-mcpb\\SKILL.md",
+        "sha256": "6bb90afd0415754e13f353ee5982d13857c14826edbcbdf5f1481fa5563cd56b",
+        "bytes": 7867
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\playground\\skills\\playground\\SKILL.md",
+        "sha256": "521a3d62211e5f47b65ed17b660e001b15cf8d88d058cbf31bc00e889bcb63cc",
+        "bytes": 3824
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\agent-development\\SKILL.md",
+        "sha256": "6a2826571320828cc6f8f21ccd8e6eefd2bced62000c8c5e43a712c12e2d83a1",
+        "bytes": 11168
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\command-development\\SKILL.md",
+        "sha256": "c55ad02cfe4cbb2a947eea3b1ed5fa1871e722d627c3c6792c3ed87c10c4d7a8",
+        "bytes": 19233
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\hook-development\\SKILL.md",
+        "sha256": "f47e2d42f6360294216a859ae0c30b93caafdd2b2e5ffc007489ba4ca447fa5c",
+        "bytes": 16246
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\mcp-integration\\SKILL.md",
+        "sha256": "b9319d8e44c8f058c1c4f003168295ab2582567fd6329c8b933409116e938bc6",
+        "bytes": 12530
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\plugin-settings\\SKILL.md",
+        "sha256": "028b955244b937ebc1a5c268a12776b8ceae4cbfb60928fbca927227f4c8851d",
+        "bytes": 12097
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\plugin-structure\\SKILL.md",
+        "sha256": "a2dbc1e5502aacb360d0ca74732cdd7be4f6a12a49edf4f2ade4134fbc026247",
+        "bytes": 13796
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\skill-development\\SKILL.md",
+        "sha256": "d51b4e20043b13e462aa86c47ea82d43e216eb292871538127f4b12a54e4944f",
+        "bytes": 22825
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\project-artifact\\skills\\project-artifact\\SKILL.md",
+        "sha256": "34e13249dba8a066f33c5f723dbb7b9cb6174b80cc490dd866fbfd1736f0577f",
+        "bytes": 20425
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\receipts\\skills\\receipts\\SKILL.md",
+        "sha256": "5b2f407ff40639727310236f4b34986cacd4bf616c07d2e4198846726842e346",
+        "bytes": 17254
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\session-report\\skills\\session-report\\SKILL.md",
+        "sha256": "ef0fbc4259a41b7fd61b517fb1c9a95f02b83ea3c79ba0b3afbeee4942570397",
+        "bytes": 3149
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\skill-creator\\skills\\skill-creator\\SKILL.md",
+        "sha256": "dcd4803e61e913e6fc27294184cd3a71f09f5e924ff20c8a9a20173e7b3c2bcf",
+        "bytes": 33168
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\animate-expo\\SKILL.md",
+        "sha256": "2121fc72ffa476492c1b91ccf96c7b26aade9d1a332dc5834ba3526e1102b00d",
+        "bytes": 17564
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\animate\\SKILL.md",
+        "sha256": "f6317335da2662e92270dc0a6128bea95d7216cd751f86628e3ac6b72804e805",
+        "bytes": 11575
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\animation-vocabulary\\SKILL.md",
+        "sha256": "d718b48fe3c7898804d588f050a2e266d82c9f5ef51da256c8cb8b5951527757",
+        "bytes": 13128
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\assess-react-native-migration\\SKILL.md",
+        "sha256": "31730be40e4ecbe613615843b5b8d201fd1b112c0d35620675c45992d17876e3",
+        "bytes": 14591
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\create-react-native-library\\SKILL.md",
+        "sha256": "72fc31f0dbf032ce27d0ea9966d0e2bc946283639c6200f5696307d4cde3e4ef",
+        "bytes": 2736
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\detour\\detour-onboarding\\SKILL.md",
+        "sha256": "c19bbca057880f1cbd92397c7ea0e0e61090ad129c28cc49a693c979aaeaa157",
+        "bytes": 11230
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\detour\\migrate-to-detour\\SKILL.md",
+        "sha256": "955703ab3e2cd667de9d1f66ad2304ca8f85b73a856bcd176869a233ed39a5e6",
+        "bytes": 15692
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\emil-design-eng\\SKILL.md",
+        "sha256": "e71de849347050c2c573c1cf24d742d5a13459557ecffa6e562f08006f46b5b7",
+        "bytes": 27226
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\expo-horizon\\SKILL.md",
+        "sha256": "45a2b58e17824ccd13866059f48abf0062b3ad97c31973891f0adcafb9ee7874",
+        "bytes": 11267
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\find-animation-opportunities\\SKILL.md",
+        "sha256": "91c1243164057fbf824088d12faea937878a757a7ac653e8288b775e8b27b882",
+        "bytes": 9491
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\SKILL.md",
+        "sha256": "dba4eb81c9ac54d4e2e041801f1c34b3b5c049176bd9cc6a3b40c7b751f6b6d9",
+        "bytes": 3721
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\js-server-sdk\\SKILL.md",
+        "sha256": "397ae0fae63708ed8191006d3f3e398e3769c0930433f6027e70b678eabf28e4",
+        "bytes": 5525
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\platform\\SKILL.md",
+        "sha256": "4c0fc5e352b80eaae0120f4fdb73fb3845623eda60e486b5bf2bd6954dd12a58",
+        "bytes": 6675
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\python-server-sdk\\SKILL.md",
+        "sha256": "9b218ff0fc09f69ec94c79ec94a2e23435e5341126397e9209f55b74ddd3f702",
+        "bytes": 5333
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\react-client\\SKILL.md",
+        "sha256": "e313b94b3c7e50126742c1769014c83af8bc0fa4fee6239343b827518b2beb5f",
+        "bytes": 5964
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\react-native-client\\SKILL.md",
+        "sha256": "8b83dede866483023706b439fed173843f6fa36e45448a2c38a13efd12c61cd2",
+        "bytes": 7617
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\github-actions\\SKILL.md",
+        "sha256": "0d656b3361161b11a04ee741b06bf2e44c2b4dd96ea2d038aa7df0a048fc8850",
+        "bytes": 2812
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\impeccable\\SKILL.md",
+        "sha256": "125f732891f3f319ca7d247af404999f2517c4e508c02e4c5129b0caa3bfbd44",
+        "bytes": 10771
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\improve-animations\\SKILL.md",
+        "sha256": "68f17bbc4671593d2f43dba26a679243e2153ba5f26965fb7d59df52842534ff",
+        "bytes": 7915
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\moq-kit\\SKILL.md",
+        "sha256": "d0d5e071e22ed6e045f14347a8abe19f7752a1535ac35ff6e67099f9a7b6d6b7",
+        "bytes": 19986
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\prototype\\SKILL.md",
+        "sha256": "2ad8401c4deaddb54947fb65247f790e7b3d8784e35312bcbedbfb1d59cd89ce",
+        "bytes": 7488
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\pulsar-haptics\\SKILL.md",
+        "sha256": "fb58618ee4572ff6d3a1d294e4cb422ebd41249e2529d8f8909f3453e79a534e",
+        "bytes": 10272
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\radon-mcp\\SKILL.md",
+        "sha256": "1391deacb9d4ab04a2d757cb82855b7e6fe2e3e472354ff0772f9bdffb7a75fb",
+        "bytes": 2660
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\SKILL.md",
+        "sha256": "2cafec6f98199a23d58dce764a07bc815d4675cb4296d052428b51abfd8a64fd",
+        "bytes": 4489
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\animations\\SKILL.md",
+        "sha256": "cbf41937f716feb65c2b6fdc07c320623b6e19f9a9923b4b3c8a1462a0df8833",
+        "bytes": 3745
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\audio\\SKILL.md",
+        "sha256": "8e3d4d7b87ee7455956128a390577ebf9a82990bf6c18a0b3a56295f6eb2aa97",
+        "bytes": 4019
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\enable-worklets-bundle-mode\\SKILL.md",
+        "sha256": "c86a39fe84a20d1aaf60a8d71ef7ef7219d237c773bae249c679d73ac3e65c0f",
+        "bytes": 15938
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\gestures\\SKILL.md",
+        "sha256": "8608158a6b2979c42872a707dd5812fe641c82e9ccd9a150f7c9d9f5c758f438",
+        "bytes": 6941
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\jsi\\SKILL.md",
+        "sha256": "a70674691164d4c94b2615fab5da071536a3b00cdc769d96b9ec3c57538ff5a7",
+        "bytes": 3628
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\multithreading\\SKILL.md",
+        "sha256": "087d8fe9868f5453d1335dc72562db986181152d246c17358b9248ccc84ff02c",
+        "bytes": 4786
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\on-device-ai\\SKILL.md",
+        "sha256": "10570525ac88f34deb1aac24607d48ca741012f097c5b2f41faf81219782576d",
+        "bytes": 9574
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\rich-text\\SKILL.md",
+        "sha256": "79a0e06e4be4179d1a8247a59c00f88838af0748336be1b114dda07530e8b07a",
+        "bytes": 21622
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\svg\\SKILL.md",
+        "sha256": "92353d60d2a42cf16d5206aa930edcf352c6ba71bc04de004bba75a38928f1f3",
+        "bytes": 1017
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-brownfield-migration\\SKILL.md",
+        "sha256": "a01b34e0e03a0bc25cde1b96286ac5ba0d273d8aba56e3ac1ce53fca56c84ca6",
+        "bytes": 7035
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-moq\\SKILL.md",
+        "sha256": "235709c3c1be94cd07c5a6c2d0059fdf416ff67c5bd1740f036858b8e77f8bf2",
+        "bytes": 6449
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-tv-best-practices\\SKILL.md",
+        "sha256": "46b4524c57ce315b7be7a4d6c4a342ba31b020576ff50f76b949d61818bc39c5",
+        "bytes": 11166
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-navigation\\SKILL.md",
+        "sha256": "f127331ac68f2966168c5c12bb65217eac310804b91d2210f447672d1cbd0f1c",
+        "bytes": 3419
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\review-animations\\SKILL.md",
+        "sha256": "61cf8ac0c4c8e1f63385298c546b16c65ca9aec34abddcd04e821c16712d671d",
+        "bytes": 8108
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\rnrepo\\SKILL.md",
+        "sha256": "0effa7af402853b4df5e8c50bc63d2e8062bd530652bd751e81d8b5d9500359c",
+        "bytes": 2452
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\typegpu\\SKILL.md",
+        "sha256": "34e249af012a1ffbb0575cb36c20aaa9c966bc80676d3d014ed879d4523d51e6",
+        "bytes": 22400
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\upgrading-react-native\\SKILL.md",
+        "sha256": "5d81737d25e48a320ec56b12bca4be3fa99166ddd3186374ec31ca31d8417930",
+        "bytes": 4210
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\vendor\\sibawayh\\skills\\designing-arabic-frontends\\SKILL.md",
+        "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2",
+        "bytes": 13757
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\vendor\\sibawayh\\skills\\writing-eloquent-arabic\\SKILL.md",
+        "sha256": "6a673bd773a9245bd38f817edee4687fbf1d92612f680c80aa33f9b67e96150d",
+        "bytes": 9513
+      },
+      {
+        "path": "C:\\Users\\Al Asil Stores\\.claude\\vendor\\ui-ux-pro-max-skill\\.claude\\skills\\ui-ux-pro-max\\SKILL.md",
+        "sha256": "ea087c341bfb5b23195c7302027268ede86da802554c18a5c4896a6017b439f9",
+        "bytes": 15969
+      },
+      {
+        "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\apple-design\\SKILL.md",
+        "sha256": "11840b24a11d7f94f39c6aaab074750ae4e4de4ef54ee4b1dd97e16ebd485e61",
+        "bytes": 22715
+      },
+      {
+        "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\design-critique\\SKILL.md",
+        "sha256": "3a4f260eb9f60b431782bf6d90f22afb480c0c67860267a032df58a3e1bd19cd",
+        "bytes": 3923
+      },
+      {
+        "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\designing-arabic-frontends\\SKILL.md",
+        "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2",
+        "bytes": 13757
+      },
+      {
+        "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\emil-design-eng\\SKILL.md",
+        "sha256": "e71de849347050c2c573c1cf24d742d5a13459557ecffa6e562f08006f46b5b7",
+        "bytes": 27226
+      },
+      {
+        "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\fixing-accessibility\\SKILL.md",
+        "sha256": "549261e8a53b53a1a20c0ddbf736821e5fc0876ad82eee76e0efab8e9ee9dadf",
+        "bytes": 4718
+      },
+      {
+        "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\frontend-design\\SKILL.md",
+        "sha256": "1608ea77fbb6fc30d13a97d12cfa8ebf31358d40f0dd97beed24829d6b3f45dd",
+        "bytes": 8260
+      },
+      {
+        "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\prototype\\SKILL.md",
+        "sha256": "2ad8401c4deaddb54947fb65247f790e7b3d8784e35312bcbedbfb1d59cd89ce",
+        "bytes": 7488
+      },
+      {
+        "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\user-research\\SKILL.md",
+        "sha256": "fa18fc13d0f44aa869102962ef9466417ade726d659465195a40fbcf08cee156",
+        "bytes": 1751
+      },
+      {
+        "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\writing-eloquent-arabic\\SKILL.md",
+        "sha256": "6a673bd773a9245bd38f817edee4687fbf1d92612f680c80aa33f9b67e96150d",
+        "bytes": 9513
+      }
+    ],
+    "used": [
+      {
+        "skill": "react-native-best-practices / references/svg",
+        "files": [
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\svg\\SKILL.md",
+            "sha256": "92353d60d2a42cf16d5206aa930edcf352c6ba71bc04de004bba75a38928f1f3",
+            "bytes": 1017
+          },
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\svg\\svg.md",
+            "sha256": "65cf837356bb1e73a8d9069225f122429a229859b065b44cfaf55d4c339a2827",
+            "bytes": 5337
+          },
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\svg\\when-to-use.md",
+            "sha256": "41e5a1edf2285bb32290726485342c4bace3929cdd7ea328dd24832fa0b02bd4",
+            "bytes": 2708
+          }
+        ],
+        "missing": [],
+        "principle": "react-native-svg implements FeBlend, FeComposite, FeColorMatrix, FeDropShadow, FeFlood, FeGaussianBlur, FeMerge and FeOffset on native; other filters are web-only and warn. Every SVG element becomes a native view with no drawing cache, so static SVG is better served by other renderers, and complex SVGs with filters point to react-native-skia.",
+        "consequence": "THE SINGLE MOST CONSEQUENTIAL FINDING IN C3.10. The accepted brushed/handled character is built from feTurbulence + feColorMatrix + feFlood + feComposite. Three of those four are production-available in react-native-svg; feTurbulence is NOT — confirmed against the library's own USAGE.md, which lists it under \"Not supported yet\". So the identity moment cannot be shipped by transcribing the proof's filter chain, and C3_REACT_NATIVE_MAPPING.md §4 names the routes that can carry it instead. It also supplies the production reason for confining the character to the rare identity moment: the renderer that can do it is heavy per instance.",
+        "evidence": "docs/C3_REACT_NATIVE_MAPPING.md §4; docs/C3_REFERENCE_GATE.md §5"
+      },
+      {
+        "skill": "react-navigation (+ references/bottom-tabs, references/native-bottom-tabs)",
+        "files": [
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-navigation\\SKILL.md",
+            "sha256": "f127331ac68f2966168c5c12bb65217eac310804b91d2210f447672d1cbd0f1c",
+            "bytes": 3419
+          },
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-navigation\\references\\bottom-tabs.md",
+            "sha256": "a3a5531fbd9e4f61801c490d5292dc69483678bf09fdac5c71c561eff529fda3",
+            "bytes": 13020
+          },
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-navigation\\references\\native-bottom-tabs.md",
+            "sha256": "365348895d64f9b5df64e2abc50edfa5ef249069960a6baab83b2157c13efd5b",
+            "bytes": 8925
+          }
+        ],
+        "missing": [],
+        "principle": "React Navigation 7 renders a tab icon through `tabBarIcon({ focused, color, size })`, where `color` is computed by the navigator from `tabBarActiveTintColor` / `tabBarInactiveTintColor`. On the native tab navigator, tint support \"varies based on platform\".",
+        "consequence": "THE LIBRARY'S DEFAULT MODEL IS THE THING QANDEEL FORBIDS: the idiomatic implementation is `<Icon color={color} />`, which makes the navigation icon change colour on selection. C3_REACT_NATIVE_MAPPING.md §3 therefore states the rule as an explicit instruction — the QANDEEL navigation icon IGNORES the injected `color` and both tint options are set to the same material token, so the library's model is neutralised deliberately rather than by omission — and flags the native navigator's platform-varying tint as something that must be VERIFIED per platform, because a native tab bar that applies its own tint would break state invariance in a way no token check can see.",
+        "evidence": "docs/C3_REACT_NATIVE_MAPPING.md §3; docs/C3_INVARIANTS.md §4 (scope note)"
+      },
+      {
+        "skill": "apple-design (project-scoped)",
+        "files": [
+          {
+            "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\apple-design\\SKILL.md",
+            "sha256": "11840b24a11d7f94f39c6aaab074750ae4e4de4ef54ee4b1dd97e16ebd485e61",
+            "bytes": 22715
+          }
+        ],
+        "missing": [],
+        "principle": "Reach for current primary Apple guidance and quote it rather than paraphrasing remembered guidance; treat platform conventions as things to depart from deliberately and on the record.",
+        "consequence": "C3_REFERENCE_GATE.md re-reads Branding, Color and Icons at their live URLs, records the change-log date on each, and states five DEPARTURES with the sentence each departs from. It also records the two sentences that run TOWARD QANDEEL's choice, including the conditional one whose condition QANDEEL measurably meets.",
+        "evidence": "docs/C3_REFERENCE_GATE.md §2-§4"
+      },
+      {
+        "skill": "fixing-accessibility (project-scoped)",
+        "files": [
+          {
+            "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\fixing-accessibility\\SKILL.md",
+            "sha256": "549261e8a53b53a1a20c0ddbf736821e5fc0876ad82eee76e0efab8e9ee9dadf",
+            "bytes": 4718
+          }
+        ],
+        "missing": [],
+        "principle": "Establish which success criterion actually applies before asserting a threshold, and never let colour be the sole carrier of information.",
+        "consequence": "Invariant I-19 re-measures rather than citing C2: under P2 the persistent navigation family is an ESSENTIAL UI COMPONENT VISUAL, SC 1.4.11 applies, and the material clears 3:1 on both frozen grounds by measurement made in this package (6.070:1 and 5.664:1). The reserved-and-empty {qandeel.status} namespace carries SC 1.4.1 forward as a constraint on values E has not chosen yet, rather than leaving it to be rediscovered.",
+        "evidence": "tools/c3-invariants.mjs I-19; docs/C3_ICONOGRAPHY_MATERIAL_CONTRACT.md §6"
+      },
+      {
+        "skill": "frontend-design (project-scoped)",
+        "files": [
+          {
+            "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\frontend-design\\SKILL.md",
+            "sha256": "1608ea77fbb6fc30d13a97d12cfa8ebf31358d40f0dd97beed24829d6b3f45dd",
+            "bytes": 8260
+          }
+        ],
+        "missing": [],
+        "principle": "Named AI-default looks to avoid, one of which is a near-black background carrying a single bright accent.",
+        "consequence": "Recorded in C3_LUXURY_BOUNDARY.md as EXTERNAL CORROBORATION of the generic risk rather than as a reason to weaken the material — the corroboration is that QANDEEL is structurally adjacent to a current default, which is an argument about COVERAGE DISCIPLINE, which is what that document contains. NOTE: this skill exists at four installed paths on this host with two distinct contents; the hash recorded here is of the file actually read.",
+        "evidence": "docs/C3_LUXURY_BOUNDARY.md §5"
+      },
+      {
+        "skill": "designing-arabic-frontends (project-scoped)",
+        "files": [
+          {
+            "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\designing-arabic-frontends\\SKILL.md",
+            "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2",
+            "bytes": 13757
+          }
+        ],
+        "missing": [],
+        "principle": "RTL is a directional system, not a mirrored one: icons that encode direction must be mirrored by MEANING, and logical properties must be used rather than physical ones.",
+        "consequence": "C3 freezes no icon geometry, so this skill changed no glyph here. It is recorded as USED because it produced a STANDING CONSTRAINT written into C3_ICONOGRAPHY_MATERIAL_CONTRACT.md §7: the material contract grants paint and never geometry, and any future navigation icon set inherits the RTL obligations rather than the material's permission implying they are settled. In C2 this same skill caught a real defect — a send arrow pointing the wrong way in RTL — which is why it is consulted rather than assumed.",
+        "evidence": "docs/C3_ICONOGRAPHY_MATERIAL_CONTRACT.md §7"
+      }
+    ],
+    "inspectedNotApplicable": [
+      {
+        "skill": "emil-design-eng",
+        "why": "Design-engineering craft for building interfaces. C3 builds no interface: it freezes a material contract and specifies a mapping. Its craft rules bind the stage that builds components."
+      },
+      {
+        "skill": "ui-ux-pro-max",
+        "why": "Broad UI/UX generation guidance. C3 makes no design decisions — every visual decision it records was made in C0 through C2 and accepted by the Design Director."
+      },
+      {
+        "skill": "design-critique",
+        "why": "Critique of a design artefact. C3 ships no new visual artefact to critique; the reproduction proof is deliberately NOT an aesthetic comparison, by instruction."
+      },
+      {
+        "skill": "impeccable",
+        "why": "Craft-floor and audit references. Read; its audit discipline is already the operating method of this package. NOTE: reference/colorize.md — \"Add strategic color to monochromatic UIs\", the single most on-point document this host could hold for a Living Brass coverage stage — is STILL ABSENT, for the fifth consecutive stage."
+      },
+      {
+        "skill": "animate / animate-expo / animation-vocabulary / improve-animations / find-animation-opportunities",
+        "why": "Motion. C3 must NOT design or freeze motion, and explicitly leaves it to later contracts. Recorded in C3_EXPRESSIVE_HEADROOM_CONTRACT.md as reserved capacity, not exercised here."
+      },
+      {
+        "skill": "react-native-best-practices / references/animations",
+        "why": "Reanimated and GPU animation. Same boundary as above — and relevant later, because the lantern gateway moment and the Q-thread expression will need it."
+      },
+      {
+        "skill": "prototype / playground",
+        "why": "Prototyping harnesses. C3 produces a specification and a reproduction proof, not a prototype."
+      },
+      {
+        "skill": "writing-eloquent-arabic",
+        "why": "Arabic prose quality. C3 authors no new Arabic copy; the reproduction proof uses the sealed C2 copy verbatim so that the compositions remain the accepted ones."
+      },
+      {
+        "skill": "assess-react-native-migration / react-native-brownfield-migration / upgrading-react-native / create-react-native-library / rnrepo / expo-horizon / detour",
+        "why": "React Native project operations. C3 specifies consumption, builds nothing, and touches no project configuration."
+      },
+      {
+        "skill": "claude-security, hookify, plugin-dev, mcp-server-dev, skill-creator, github-actions, session-report, receipts, project-artifact, math-olympiad, cwc-makers, discord/imessage/telegram, fishjam, moq-kit, typegpu, pulsar-haptics, radon-mcp, react-native-tv-best-practices, user-research, claude-md-management, claude-code-setup, example-plugin",
+        "why": "Outside the subject matter of a material production specification."
+      }
+    ],
+    "notAvailable": [
+      {
+        "item": "impeccable/reference/colorize.md",
+        "note": "Referenced by the impeccable skill as \"Add strategic color to monochromatic UIs\" and not present on disk. FIFTH CONSECUTIVE STAGE. It is the most directly relevant missing document this host could have offered a Living Brass coverage and freeze stage, and its absence is recorded here rather than passed over so that the gap does not read as a gap in the work."
+      },
+      {
+        "item": "a design-token architecture skill",
+        "note": "No installed skill covers DTCG token architecture, resolver design or token-system freezing. That work rests on the DTCG 2025.10 specification itself, vendored in this package, and on the frozen I-08B3.1-B4R architecture it extends."
+      }
+    ],
+    "duplicates": [
+      {
+        "name": "frontend-design",
+        "installations": 4,
+        "distinctContents": 2,
+        "paths": [
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\claude-plugins-official\\frontend-design\\85cce0381e78\\skills\\frontend-design\\SKILL.md",
+            "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+          },
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\claude-plugins-official\\frontend-design\\unknown\\skills\\frontend-design\\SKILL.md",
+            "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+          },
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\frontend-design\\skills\\frontend-design\\SKILL.md",
+            "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+          },
+          {
+            "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\frontend-design\\SKILL.md",
+            "sha256": "1608ea77fbb6fc30d13a97d12cfa8ebf31358d40f0dd97beed24829d6b3f45dd"
+          }
+        ]
+      },
+      {
+        "name": "designing-arabic-frontends",
+        "installations": 3,
+        "distinctContents": 1,
+        "paths": [
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\sibawayh\\sibawayh\\0.1.0\\skills\\designing-arabic-frontends\\SKILL.md",
+            "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2"
+          },
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\vendor\\sibawayh\\skills\\designing-arabic-frontends\\SKILL.md",
+            "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2"
+          },
+          {
+            "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\designing-arabic-frontends\\SKILL.md",
+            "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2"
+          }
+        ]
+      },
+      {
+        "name": "writing-eloquent-arabic",
+        "installations": 3,
+        "distinctContents": 1,
+        "paths": [
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\sibawayh\\sibawayh\\0.1.0\\skills\\writing-eloquent-arabic\\SKILL.md",
+            "sha256": "6a673bd773a9245bd38f817edee4687fbf1d92612f680c80aa33f9b67e96150d"
+          },
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\vendor\\sibawayh\\skills\\writing-eloquent-arabic\\SKILL.md",
+            "sha256": "6a673bd773a9245bd38f817edee4687fbf1d92612f680c80aa33f9b67e96150d"
+          },
+          {
+            "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\writing-eloquent-arabic\\SKILL.md",
+            "sha256": "6a673bd773a9245bd38f817edee4687fbf1d92612f680c80aa33f9b67e96150d"
+          }
+        ]
+      },
+      {
+        "name": "access",
+        "installations": 3,
+        "distinctContents": 3,
+        "paths": [
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\discord\\skills\\access\\SKILL.md",
+            "sha256": "4fc3da872e033c37576a904b15a1bcac6b1ce6c7bc43f1f96abd7cad4855ac7a"
+          },
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\imessage\\skills\\access\\SKILL.md",
+            "sha256": "ac994a86aab3a2724651a13a62ee9deae985196c8687a33bb79c4b7898aa5be7"
+          },
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\telegram\\skills\\access\\SKILL.md",
+            "sha256": "6c87f59841c55a4a4f1b732c7427959581e47234f1b8c6fd633e4a5256ce6a3c"
+          }
+        ]
+      },
+      {
+        "name": "configure",
+        "installations": 3,
+        "distinctContents": 3,
+        "paths": [
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\discord\\skills\\configure\\SKILL.md",
+            "sha256": "9364d7895d6f38b917a711128e7b391884fb8b8d69a62c7d72a81e95b6e2b948"
+          },
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\imessage\\skills\\configure\\SKILL.md",
+            "sha256": "3afdc7e9faa36aa0ba9813dce68509c45014a75b316d366ba44c46ebd8b098aa"
+          },
+          {
+            "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\telegram\\skills\\configure\\SKILL.md",
+            "sha256": "16b06bf2ac5ede250d0c620ce4e6cf3878c9704246b8f52390fde5f280a17f73"
+          }
+        ]
+      }
+    ]
+  },
+  "reference": {
+    "sources": [
+      {
+        "id": "apple-branding",
+        "title": "Apple Human Interface Guidelines — Branding",
+        "url": "https://developer.apple.com/design/human-interface-guidelines/branding",
+        "read": "2026-09-21",
+        "changeLog": "September 9, 2026 — \"Refined guidance for using brand color.\"",
+        "note": "Re-read for C3 and UNCHANGED since I-08B3.1-C2 read it. The change-log line is identical, which is itself the verification: the guidance C2 weighed is the guidance C3 freezes against."
+      },
+      {
+        "id": "apple-color",
+        "title": "Apple Human Interface Guidelines — Color",
+        "url": "https://developer.apple.com/design/human-interface-guidelines/color",
+        "read": "2026-09-21",
+        "changeLog": "(no change-log entry surfaced on this reading)",
+        "note": "Re-read for C3. The conditional sentence about monochromatic content is the strongest primary-source support available for the coverage policy the Director selected."
+      },
+      {
+        "id": "apple-icons",
+        "title": "Apple Human Interface Guidelines — Icons",
+        "url": "https://developer.apple.com/design/human-interface-guidelines/icons",
+        "read": "2026-09-21",
+        "changeLog": "(no change-log entry surfaced on this reading)",
+        "note": "NEW IN C3. C2 did not read this page. It is the page that governs an iconography material contract, and it supplies both the strongest platform support for state invariance and a second, independent statement of the selected-tint model QANDEEL departs from."
+      },
+      {
+        "id": "m3-expressive",
+        "title": "Material Design — Start building with Material 3 Expressive",
+        "url": "https://m3.material.io/blog/building-with-m3-expressive",
+        "read": "2026-09-21",
+        "changeLog": "n/a",
+        "note": "Read ONLY for the documented expressiveness principle, per the brief. None of Material's visual language, components, shapes, motion or colour system is imported."
+      },
+      {
+        "id": "rn-svg",
+        "title": "react-native-svg — USAGE.md (main)",
+        "url": "https://raw.githubusercontent.com/software-mansion/react-native-svg/main/USAGE.md",
+        "read": "2026-09-21",
+        "changeLog": "n/a",
+        "note": "Read to VERIFY a claim taken from an installed skill rather than to trust it. The claim held and it is the most consequential production constraint C3 found."
+      },
+      {
+        "id": "dtcg-2025-10",
+        "title": "Design Tokens Community Group format + resolver, 2025.10",
+        "url": "https://www.designtokens.org/schemas/2025.10/",
+        "read": "vendored — designtokens.org is unreachable from this environment on every transport tried",
+        "changeLog": "publication commit f0f32a7dce0b (2025-10-28, \"Publish 2025.10\")",
+        "note": "The schemas are VENDORED in this package at vendor/schemas/2025.10/, byte-identical to the copy the frozen I-08B3.1-B4R package pinned, with that package's PROVENANCE.json carried alongside. Pinning a standard to its publication commit rather than fetching it at validation time is the behaviour an earlier independent freeze review asked for."
+      },
+      {
+        "id": "b4r-rn",
+        "title": "I-08B3.1-B4R — B4_REACT_NATIVE_MAPPING.md (frozen, internal)",
+        "url": "package-local: I-08B3.1-B4R-DTCG-RESOLVER-CONFORMANCE-FINAL/docs/B4_REACT_NATIVE_MAPPING.md",
+        "read": "2026-09-21",
+        "changeLog": "frozen",
+        "note": "reactnative.dev is NOT REACHABLE from this environment, so React Native appearance architecture is INHERITED from the frozen B4R mapping rather than re-derived from a source this session cannot open. That is stated as a limit, not presented as a fresh reading."
+      }
+    ],
+    "supports": [
+      {
+        "source": "apple-color",
+        "quote": "By contrast, in apps with primarily monochromatic content or backgrounds, choosing your brand color as the app accent color can be an effective way to tailor your app experience and reflect your company's identity.",
+        "effect": "THE CONDITION IS MEASURED, NOT ASSUMED. C2 measured 2.77-7.18 % of any QANDEEL frame as chromatic at all; C3 re-measures it off its own reproduction rasters. QANDEEL is a primarily monochromatic product by measurement, so it meets the condition of the one sentence in current Apple guidance that points toward a brand colour in the navigation. Recorded in C3_LUXURY_BOUNDARY.md and C3_ICONOGRAPHY_MATERIAL_CONTRACT.md as support for P2 that is conditional and whose condition holds."
+      },
+      {
+        "source": "apple-icons",
+        "quote": "You don't need to provide selected and unselected appearances for an icon that's used in standard system components such as toolbars, tab bars, and buttons.",
+        "effect": "Direct platform support for C3.4. The state-invariance contract is not a QANDEEL eccentricity that fights the platform; on this point the platform says the same thing."
+      },
+      {
+        "source": "apple-icons",
+        "quote": "Whether you use only custom icons or mix custom and system-provided ones, all interface icons in your app need to use a consistent size, level of detail, stroke thickness (or weight), and perspective.",
+        "effect": "Custom iconography is sanctioned, which the coverage policy needs. It also imposes a constraint C3 passes to integration rather than freezing: the Brass navigation family and the NEUTRAL functional icons must share size, detail, stroke weight and perspective. The C1/C2 proof harness does not currently satisfy it — navigation strokes are 1.75 at 24 px and functional strokes 1.6 at 20 px, which are different stroke-to-size ratios. That is a property of a proof harness, not of a frozen icon set, and C3 freezes no icon geometry. Recorded in C3_ICONOGRAPHY_MATERIAL_CONTRACT.md §7 as an integration obligation so it is not lost."
+      },
+      {
+        "source": "apple-color",
+        "quote": "Use color consistently throughout your interface, especially when you use it to help communicate information like status or interactivity.",
+        "effect": "The strongest external argument against the third coverage policy C2 was forbidden to invent (\"different screens use whichever looks better\"). QANDEEL's rule and the platform's rule agree. It is also why the material contract grants permission by CLASS rather than by screen."
+      },
+      {
+        "source": "m3-expressive",
+        "quote": "Expressive designs are easier to use, with participants spotting key UI elements up to four times faster in expressive screens.",
+        "effect": "The documented form of USABILITY AND EXPRESSIVENESS ARE NOT OPPOSITES, which is the one thing the brief asks be taken from Material. It is the evidential backbone of C3_VISUAL_VITALITY_DIRECTIVE.md. RECORDED WITH ITS PROVENANCE: this is the design system's own research reported on its own blog, so it is a vendor claim rather than independent evidence, and it is cited as a documented position rather than as a measured fact about QANDEEL."
+      },
+      {
+        "source": "frontend-design skill (project-scoped)",
+        "quote": "Where the brief pins down a visual direction, follow it exactly — the brief's own words always win, including when it asks for one of these looks.",
+        "effect": "Applies directly to the Product Owner directive. The directive pins the direction; C3 records it as authoritative Product direction and does not relitigate it."
+      }
+    ],
+    "departures": [
+      {
+        "source": "apple-branding",
+        "quote": "Minimize its use on controls and instead use it intentionally for primary actions or status indicators, like badges for unread content or an icon for the selected tab in a tab bar.",
+        "departure": "QANDEEL TAKES THE WARNING AND REFUSES THE REMEDY. The first half — brand colour applied too broadly overwhelms the interface — is accepted and is the entire reason C2 tested coverage rather than assuming it. The remedy is refused three times over: Living Brass is not an accent colour but a material identity; it may not mark primary actions, because that would make it encode interactivity; it may not mark status, because that is forbidden outright; and it may not mark THE SELECTED TAB, because Brass never turns on because an item is selected. C2's F04 capture shows the forbidden arrangement and records honestly that it looks good."
+      },
+      {
+        "source": "apple-icons",
+        "quote": "In a toolbar, a selected icon receives the app's accent color.",
+        "departure": "THE SAME DEPARTURE, FOUND ON A SECOND PAGE, AND THAT MATTERS. C2 met this model once and could reasonably have read it as one sentence. Meeting it again on the Icons page establishes that selected-state tinting is the platform's CONSISTENT model, not a stray line. QANDEEL departs from it deliberately: state is carried by achromatic weight, ink rank and a 2 px rule, which satisfies WCAG 2.2 SC 1.4.1 without colour and leaves the material free to mean only identity."
+      },
+      {
+        "source": "apple-color",
+        "quote": "If your app features colorful backgrounds or visually rich content, prefer a monochromatic appearance for toolbars and tab bars, or choose an accent color with sufficient visual differentiation.",
+        "departure": "NOT A DEPARTURE, AND LISTED HERE SO IT CANNOT BE QUOTED AS ONE. The sentence is CONDITIONAL and QANDEEL fails its condition: the Product has neither colourful backgrounds nor visually rich content. A partisan reading in either direction would quote this as an unconditional preference for monochromatic tab bars. It is not one."
+      },
+      {
+        "source": "apple-branding",
+        "quote": "Resist the temptation to display your logo throughout your app or game unless it's essential for providing context.",
+        "departure": "AN OPEN QUESTION, NOT A RESOLVED DEPARTURE, AND C3 DOES NOT CLOSE IT. C2 flagged that the canonical Q stands on every screen under BOTH coverage policies, so choosing between them could not resolve it. C3 cannot resolve it either, because it is a PLACEMENT question and the material contract grants material, not placement — `qandeel.identity.mark` says what the mark is made of if it is there, and says nothing about whether it should be. Carried forward explicitly in C3_FREEZE_RECORD.md as an open dependency of later Product/UI integration."
+      },
+      {
+        "source": "apple-branding",
+        "quote": "To express your brand through color, consider moving it into the content layer, where it scrolls beneath Liquid Glass controls and gets picked up dynamically.",
+        "departure": "DEPARTED FROM, AND THE REASON IS QANDEEL's, not a preference. The content layer of QANDEEL is analytical truth: conversation, analysis and the Living Analysis Map. Putting the identity material there would make the material land on content whose meaning is carried by rank, geometry and depth — which is the prohibition that has survived unchanged since C0. This is the sharpest single point at which a material identity and an accent-colour model come apart."
+      },
+      {
+        "source": "frontend-design skill (project-scoped and plugin copies)",
+        "quote": "AI-generated design right now clusters around three looks: … (2) a near-black background with a single bright acid-green or vermilion accent …",
+        "departure": "CORRECTING C2's OWN RECORD, WHICH WAS LOOSER THAN THE SENTENCE. C2 recorded this as corroboration that QANDEEL is structurally adjacent to a current AI default. The structural adjacency is real and stays on the record. But the sentence names a BRIGHT acid-green or vermilion accent, and Living Brass is the opposite of bright: C1R measured it 2.3-3.2x less chromatic than the census golds, and C3 measures it at Oklab C 0.0516. On the axis the sentence actually names, QANDEEL is distinguished rather than implicated. Both halves are recorded because overstating the corroboration would be as wrong as ignoring it."
+      }
+    ],
+    "verifications": [
+      {
+        "claim": "The accepted brushed/handled character can be shipped in React Native by transcribing its SVG filter chain.",
+        "source": "rn-svg",
+        "result": "FALSE, AND CONFIRMED AGAINST THE LIBRARY'S OWN DOCUMENTATION.",
+        "detail": "react-native-svg USAGE.md lists the implemented filters as FeBlend, FeComposite, FeColorMatrix, FeDropShadow, FeFlood, FeGaussianBlur, FeMerge and FeOffset, and lists FeTurbulence explicitly under \"Not supported yet\". The character chain is feTurbulence + feColorMatrix + feFlood + feComposite: three of the four are available and the NOISE GENERATOR is not. The page also notes that unimplemented filters \"will display a warning indicating they are not currently supported\" — so the failure mode on native is a warning and a mark WITHOUT its character, not a crash. A silent downgrade of the one composition where the material is allowed to have character. Routes that can carry it are named in C3_REACT_NATIVE_MAPPING.md §4."
+      },
+      {
+        "claim": "Apple's brand-colour guidance changed between C2 and C3.",
+        "source": "apple-branding",
+        "result": "NO. Unchanged.",
+        "detail": "The change-log still reads \"September 9, 2026 — Refined guidance for using brand color.\" The guidance C2 weighed is the guidance C3 freezes against, which is worth establishing rather than assuming across a stage boundary."
+      },
+      {
+        "claim": "reactnative.dev can be consulted for appearance architecture.",
+        "source": "b4r-rn",
+        "result": "NO — the host denies navigation to reactnative.dev.",
+        "detail": "Recorded as a LIMIT. React Native appearance architecture is inherited from the frozen B4R mapping, which derived it when the source was reachable, rather than restated from memory as though it had been re-read."
+      }
+    ],
+    "schemas": [
+      {
+        "file": "format/group.json",
+        "bytes": 1834,
+        "sha256": "bff8d3b46f005fad4f78b50d41fde3b2fb7303c9d246d03d3691d73112654562"
+      },
+      {
+        "file": "format/groupOrToken.json",
+        "bytes": 552,
+        "sha256": "48f80d667161e61ffd12c26aab214cc994d866be9ee21b0ce1a806e02ef44ab4"
+      },
+      {
+        "file": "format/token.json",
+        "bytes": 11845,
+        "sha256": "e42d903f33dd57e875bb8eef67b7401891ae50f7a22d96feb2929b795f7fef65"
+      },
+      {
+        "file": "format/tokenType.json",
+        "bytes": 471,
+        "sha256": "fcc4672f4fb0346cf872f6924d8fb622609f880b5f22885a5f6c543ce6aa5794"
+      },
+      {
+        "file": "format/values/border.json",
+        "bytes": 1397,
+        "sha256": "d316b38fbb9f7657d8ba49e0d62661c1d8159a88661af87e40fc372a12953c4e"
+      },
+      {
+        "file": "format/values/color.json",
+        "bytes": 15823,
+        "sha256": "b721abec749fb2206cc397722861cce4f109f57d7433d2089021eaf0ce5fd501"
+      },
+      {
+        "file": "format/values/cubicBezier.json",
+        "bytes": 1792,
+        "sha256": "b99b9896fbb99fc60f0e8ddbd82b2368cb3250b10accc7008966d5d0826b9831"
+      },
+      {
+        "file": "format/values/dimension.json",
+        "bytes": 1228,
+        "sha256": "90e6fc121a7e7cb6697959172f93b5be05397124b6eb736ee281397e61f0e869"
+      },
+      {
+        "file": "format/values/duration.json",
+        "bytes": 1112,
+        "sha256": "ff8490104550b44258a744901b4ba24bb36a5a1761c893bbefca785d1db1c07f"
+      },
+      {
+        "file": "format/values/fontFamily.json",
+        "bytes": 1099,
+        "sha256": "6f8082ae06eab783f4cc2790cae259488b6b3c8677ee4b660543593b5e16e173"
+      },
+      {
+        "file": "format/values/fontWeight.json",
+        "bytes": 1010,
+        "sha256": "ff4e05a302e2e1bdd92abc2dc4b7bd3803a4ff4d3f3d47df36603c1aeae816e2"
+      },
+      {
+        "file": "format/values/gradient.json",
+        "bytes": 1606,
+        "sha256": "77acff5dbf54c009a5d32d3c209c79797ef0212f7bfb9485cedd910b2cd9a603"
+      },
+      {
+        "file": "format/values/number.json",
+        "bytes": 367,
+        "sha256": "a8c0074125f0833e1cce1db28582b4d3974e1ea234bd5efbf122ca107aaa079d"
+      },
+      {
+        "file": "format/values/shadow.json",
+        "bytes": 3448,
+        "sha256": "006827759f277106f5c2a2324f0fb597febeb8be01dbe9195d28595138f63b50"
+      },
+      {
+        "file": "format/values/strokeStyle.json",
+        "bytes": 1974,
+        "sha256": "eee4c04cae1104853c8fd5eb742f68feadfc07d8c0204f6b19f477055c356214"
+      },
+      {
+        "file": "format/values/transition.json",
+        "bytes": 1497,
+        "sha256": "77fcef3a44f7d817456f12cceed7c5e324a1be418f68b050e522efafd4c76c8d"
+      },
+      {
+        "file": "format/values/typography.json",
+        "bytes": 2272,
+        "sha256": "991bb82c54166a8fba7a7d521f40e0a109fc5bdd3f5b33e2856df7669de89307"
+      },
+      {
+        "file": "format.json",
+        "bytes": 3529,
+        "sha256": "7f40fe678340b756e6464a0c20facfc29fe6ff055a202249132cc14eeafc7678"
+      },
+      {
+        "file": "PROVENANCE.json",
+        "bytes": 12132,
+        "sha256": "4afe74d361dffe0b73ad12e75572795edb2986feced42947026fb486a848111f"
+      },
+      {
+        "file": "resolver/modifier.json",
+        "bytes": 3610,
+        "sha256": "110124517cea87dfa3a231b729ef88cdb7286376c8253af0a9725a286437c79d"
+      },
+      {
+        "file": "resolver/resolutionOrder.json",
+        "bytes": 5666,
+        "sha256": "168d4948ff078fffff432ef199d40dfa8fcf30735627d40c6d39a6d9f396c2a5"
+      },
+      {
+        "file": "resolver/set.json",
+        "bytes": 2756,
+        "sha256": "ba1c318d93ae6fece70c1c97ccda3e7ff535ae14ef6012d005446e2ad350d5d4"
+      },
+      {
+        "file": "resolver.json",
+        "bytes": 2019,
+        "sha256": "c405cf595461a9650495dd5093cd0a8774d2ad083bebaee616f07a2629cbd4a5"
+      }
+    ]
+  },
+  "scale": {
+    "rows": [
+      {
+        "widthPx": 24,
+        "renderedHeightPx": 17,
+        "interiorPixels": 174,
+        "totalObjectPixels": 306,
+        "interiorShare": 0.5686274509803921,
+        "deliveredAmplitude": 0.026374441753091116,
+        "amplitudeVsTarget": -0.005625558246908885,
+        "amplitudeShareOfTarget": 0.8242013047840974,
+        "distinctInteriorValues": 47,
+        "meanInteriorL": 0.6485126672061412,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 30,
+        "renderedHeightPx": 22,
+        "interiorPixels": 326,
+        "totalObjectPixels": 503,
+        "interiorShare": 0.6481113320079522,
+        "deliveredAmplitude": 0.026374441753091116,
+        "amplitudeVsTarget": -0.005625558246908885,
+        "amplitudeShareOfTarget": 0.8242013047840974,
+        "distinctInteriorValues": 62,
+        "meanInteriorL": 0.6480205326866497,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 40,
+        "renderedHeightPx": 29,
+        "interiorPixels": 663,
+        "totalObjectPixels": 872,
+        "interiorShare": 0.7603211009174312,
+        "deliveredAmplitude": 0.027582015317646258,
+        "amplitudeVsTarget": -0.004417984682353743,
+        "amplitudeShareOfTarget": 0.8619379786764455,
+        "distinctInteriorValues": 71,
+        "meanInteriorL": 0.6475547584378484,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 48,
+        "renderedHeightPx": 35,
+        "interiorPixels": 993,
+        "totalObjectPixels": 1266,
+        "interiorShare": 0.7843601895734598,
+        "deliveredAmplitude": 0.029689245364062256,
+        "amplitudeVsTarget": -0.002310754635937745,
+        "amplitudeShareOfTarget": 0.9277889176269455,
+        "distinctInteriorValues": 80,
+        "meanInteriorL": 0.6478660837696539,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 56,
+        "renderedHeightPx": 40,
+        "interiorPixels": 1366,
+        "totalObjectPixels": 1677,
+        "interiorShare": 0.8145497912939773,
+        "deliveredAmplitude": 0.028690494559472035,
+        "amplitudeVsTarget": -0.0033095054405279656,
+        "amplitudeShareOfTarget": 0.8965779549835011,
+        "distinctInteriorValues": 79,
+        "meanInteriorL": 0.6479967413313649,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 64,
+        "renderedHeightPx": 46,
+        "interiorPixels": 1858,
+        "totalObjectPixels": 2210,
+        "interiorShare": 0.8407239819004525,
+        "deliveredAmplitude": 0.027582015317646258,
+        "amplitudeVsTarget": -0.004417984682353743,
+        "amplitudeShareOfTarget": 0.8619379786764455,
+        "distinctInteriorValues": 79,
+        "meanInteriorL": 0.6478588280641441,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 80,
+        "renderedHeightPx": 58,
+        "interiorPixels": 3027,
+        "totalObjectPixels": 3487,
+        "interiorShare": 0.8680814453685116,
+        "deliveredAmplitude": 0.028690494559472035,
+        "amplitudeVsTarget": -0.0033095054405279656,
+        "amplitudeShareOfTarget": 0.8965779549835011,
+        "distinctInteriorValues": 89,
+        "meanInteriorL": 0.648007602714945,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 96,
+        "renderedHeightPx": 69,
+        "interiorPixels": 4418,
+        "totalObjectPixels": 4939,
+        "interiorShare": 0.8945130593237497,
+        "deliveredAmplitude": 0.0294718663983754,
+        "amplitudeVsTarget": -0.002528133601624599,
+        "amplitudeShareOfTarget": 0.9209958249492313,
+        "distinctInteriorValues": 90,
+        "meanInteriorL": 0.6481273504934195,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 112,
+        "renderedHeightPx": 81,
+        "interiorPixels": 6176,
+        "totalObjectPixels": 6806,
+        "interiorShare": 0.9074346165148398,
+        "deliveredAmplitude": 0.028690494559472035,
+        "amplitudeVsTarget": -0.0033095054405279656,
+        "amplitudeShareOfTarget": 0.8965779549835011,
+        "distinctInteriorValues": 94,
+        "meanInteriorL": 0.6480445954180541,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 128,
+        "renderedHeightPx": 93,
+        "interiorPixels": 8163,
+        "totalObjectPixels": 8886,
+        "interiorShare": 0.9186360567184335,
+        "deliveredAmplitude": 0.028690494559472035,
+        "amplitudeVsTarget": -0.0033095054405279656,
+        "amplitudeShareOfTarget": 0.8965779549835011,
+        "distinctInteriorValues": 97,
+        "meanInteriorL": 0.6481289884364494,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 160,
+        "renderedHeightPx": 116,
+        "interiorPixels": 12952,
+        "totalObjectPixels": 13850,
+        "interiorShare": 0.9351624548736462,
+        "deliveredAmplitude": 0.028473763287432896,
+        "amplitudeVsTarget": -0.0035262367125671046,
+        "amplitudeShareOfTarget": 0.889805102732278,
+        "distinctInteriorValues": 99,
+        "meanInteriorL": 0.648107613871302,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 200,
+        "renderedHeightPx": 145,
+        "interiorPixels": 20526,
+        "totalObjectPixels": 21668,
+        "interiorShare": 0.9472955510430128,
+        "deliveredAmplitude": 0.028690494559472035,
+        "amplitudeVsTarget": -0.0033095054405279656,
+        "amplitudeShareOfTarget": 0.8965779549835011,
+        "distinctInteriorValues": 102,
+        "meanInteriorL": 0.6481398355992917,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 260,
+        "renderedHeightPx": 188,
+        "interiorPixels": 35103,
+        "totalObjectPixels": 36631,
+        "interiorShare": 0.9582866970598674,
+        "deliveredAmplitude": 0.028690494559472035,
+        "amplitudeVsTarget": -0.0033095054405279656,
+        "amplitudeShareOfTarget": 0.8965779549835011,
+        "distinctInteriorValues": 110,
+        "meanInteriorL": 0.6481409261859612,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 320,
+        "renderedHeightPx": 231,
+        "interiorPixels": 53441,
+        "totalObjectPixels": 55359,
+        "interiorShare": 0.9653534204013801,
+        "deliveredAmplitude": 0.028690494559472035,
+        "amplitudeVsTarget": -0.0033095054405279656,
+        "amplitudeShareOfTarget": 0.8965779549835011,
+        "distinctInteriorValues": 109,
+        "meanInteriorL": 0.648146766412097,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      {
+        "widthPx": 420,
+        "renderedHeightPx": 304,
+        "interiorPixels": 93025,
+        "totalObjectPixels": 95479,
+        "interiorShare": 0.9742980131756721,
+        "deliveredAmplitude": 0.028690494559472035,
+        "amplitudeVsTarget": -0.0033095054405279656,
+        "amplitudeShareOfTarget": 0.8965779549835011,
+        "distinctInteriorValues": 110,
+        "meanInteriorL": 0.6481547617422114,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      }
+    ],
+    "verdict": {
+      "classification": "NOT_A_CAPABILITY_THRESHOLD",
+      "floorA": "fewer than 64 fully covered interior pixels at 2x",
+      "floorB": "fewer than 8 distinct values painted inside the interior",
+      "deliveryRule": "at least 80 % of the accepted amplitude",
+      "highestFailingWidth": null,
+      "lowestDeliveringWidth": 24,
+      "bandPx": null,
+      "inheritedThreshold": 96,
+      "inheritedRow": {
+        "widthPx": 96,
+        "renderedHeightPx": 69,
+        "interiorPixels": 4418,
+        "totalObjectPixels": 4939,
+        "interiorShare": 0.8945130593237497,
+        "deliveredAmplitude": 0.0294718663983754,
+        "amplitudeVsTarget": -0.002528133601624599,
+        "amplitudeShareOfTarget": 0.9209958249492313,
+        "distinctInteriorValues": 90,
+        "meanInteriorL": 0.6481273504934195,
+        "bodyL": 0.6595326772534976,
+        "brightestInteriorL": 0.6595326772534976,
+        "neverBrighterThanBody": true
+      },
+      "inheritedIsInsideBand": false,
+      "inheritedDelivers": true
+    },
+    "conditions": {
+      "dpr": [
+        {
+          "widthPx": 24,
+          "dpr": 1,
+          "interiorPixels": 4,
+          "distinctInteriorValues": 4,
+          "deliveredAmplitude": 0.025377941868809373,
+          "amplitudeShareOfTarget": 0.7930606834002929
+        },
+        {
+          "widthPx": 24,
+          "dpr": 2,
+          "interiorPixels": 174,
+          "distinctInteriorValues": 47,
+          "deliveredAmplitude": 0.026374441753091116,
+          "amplitudeShareOfTarget": 0.8242013047840974
+        },
+        {
+          "widthPx": 260,
+          "dpr": 1,
+          "interiorPixels": 8424,
+          "distinctInteriorValues": 96,
+          "deliveredAmplitude": 0.028690494559472035,
+          "amplitudeShareOfTarget": 0.8965779549835011
+        },
+        {
+          "widthPx": 260,
+          "dpr": 2,
+          "interiorPixels": 35103,
+          "distinctInteriorValues": 110,
+          "deliveredAmplitude": 0.028690494559472035,
+          "amplitudeShareOfTarget": 0.8965779549835011
+        }
+      ],
+      "determinism": [
+        {
+          "widthPx": 24,
+          "dpr": 1,
+          "byteIdentical": true,
+          "bytes": 990
+        },
+        {
+          "widthPx": 24,
+          "dpr": 2,
+          "byteIdentical": true,
+          "bytes": 2395
+        },
+        {
+          "widthPx": 260,
+          "dpr": 1,
+          "byteIdentical": true,
+          "bytes": 14977
+        },
+        {
+          "widthPx": 260,
+          "dpr": 2,
+          "byteIdentical": true,
+          "bytes": 41979
+        }
+      ]
+    }
+  },
+  "repro": {
+    "mapping": [
+      {
+        "permissionClass": "mark",
+        "model": "#a58e6f",
+        "token": "#a58e6f",
+        "same": true,
+        "modelCharacter": null,
+        "tokenCharacter": null,
+        "characterSame": true,
+        "tokenChain": "qandeel.identity.mark -> qandeel.identity.material -> qandeel.expression.material.living-brass.body"
+      },
+      {
+        "permissionClass": "identity",
+        "model": "#a58e6f",
+        "token": "#a58e6f",
+        "same": true,
+        "modelCharacter": "#967f60",
+        "tokenCharacter": "#967f60",
+        "characterSame": true,
+        "tokenChain": "qandeel.identity.moment -> qandeel.identity.material -> qandeel.expression.material.living-brass.body"
+      },
+      {
+        "permissionClass": "nav",
+        "model": "#a58e6f",
+        "token": "#a58e6f",
+        "same": true,
+        "modelCharacter": null,
+        "tokenCharacter": null,
+        "characterSame": true,
+        "tokenChain": "qandeel.navigation.machinery -> qandeel.identity.material -> qandeel.expression.material.living-brass.body"
+      },
+      {
+        "permissionClass": "functional",
+        "model": "#8b8982",
+        "token": "#8b8982",
+        "same": true,
+        "modelCharacter": null,
+        "tokenCharacter": null,
+        "characterSame": true,
+        "tokenChain": "qandeel.control.functional -> qandeel.content.tertiary -> qandeel.expression.content.tertiary"
+      }
+    ],
+    "rows": [
+      {
+        "case": "c01-conversation",
+        "label": "PERSONAL CONVERSATION WORLD — \"THE QUIET CORE\"",
+        "rasterBytesIdentical": true,
+        "differingPixels": 0,
+        "totalPixels": 2314400,
+        "markupIdentical": true,
+        "inkFraction": 0.4568773764258555
+      },
+      {
+        "case": "c02-map",
+        "label": "LIVING ANALYSIS MAP — \"THE PROPRIETARY WORLD\"",
+        "rasterBytesIdentical": true,
+        "differingPixels": 0,
+        "totalPixels": 2314400,
+        "markupIdentical": true,
+        "inkFraction": 0.459613722779122
+      },
+      {
+        "case": "c03-reading",
+        "label": "DEEP ANALYSIS READING — \"THE INTELLECTUAL TEST\"",
+        "rasterBytesIdentical": true,
+        "differingPixels": 0,
+        "totalPixels": 2314400,
+        "markupIdentical": true,
+        "inkFraction": 0.4711545108883512
+      },
+      {
+        "case": "c04-utility",
+        "label": "UTILITY / SYSTEM UI — \"THE BORING-SCREEN TEST\"",
+        "rasterBytesIdentical": true,
+        "differingPixels": 0,
+        "totalPixels": 2314400,
+        "markupIdentical": true,
+        "inkFraction": 0.45295411337711716
+      },
+      {
+        "case": "c05-map",
+        "label": "analytical plane, SELECTED state",
+        "rasterBytesIdentical": true,
+        "differingPixels": 0,
+        "totalPixels": 2314400,
+        "markupIdentical": true,
+        "inkFraction": 0.45962236432768755
+      },
+      {
+        "case": "c06-map",
+        "label": "analytical plane, PRESSED state",
+        "rasterBytesIdentical": true,
+        "differingPixels": 0,
+        "totalPixels": 2314400,
+        "markupIdentical": true,
+        "inkFraction": 0.4596595229865192
+      },
+      {
+        "case": "c07-map",
+        "label": "analytical plane, FOCUSED state",
+        "rasterBytesIdentical": true,
+        "differingPixels": 0,
+        "totalPixels": 2314400,
+        "markupIdentical": true,
+        "inkFraction": 0.4604519529899758
+      },
+      {
+        "case": "c08-map",
+        "label": "analytical plane, DISABLED state",
+        "rasterBytesIdentical": true,
+        "differingPixels": 0,
+        "totalPixels": 2314400,
+        "markupIdentical": true,
+        "inkFraction": 0.4595986000691324
+      },
+      {
+        "case": "c09-identity",
+        "label": "the large identity moment, brushed/handled character",
+        "rasterBytesIdentical": true,
+        "differingPixels": 0,
+        "totalPixels": 1953600,
+        "markupIdentical": true,
+        "inkFraction": 1
+      }
+    ],
+    "tone": "#967f60",
+    "acceptedTone": "#967f60"
+  },
+  "life": [
+    {
+      "case": "c01-conversation",
+      "label": "PERSONAL CONVERSATION WORLD — \"THE QUIET CORE\"",
+      "inkFloor": 0.3759774113536526,
+      "chromaFloor": 0.03342703019239072,
+      "inkPixels": 53676,
+      "chromaticPixels": 2109,
+      "chromaticShareOfInk": 0.03929130337581042,
+      "totalPixels": 2314400
+    },
+    {
+      "case": "c02-map",
+      "label": "LIVING ANALYSIS MAP — \"THE PROPRIETARY WORLD\"",
+      "inkFloor": 0.3759774113536526,
+      "chromaFloor": 0.03342703019239072,
+      "inkPixels": 60166,
+      "chromaticPixels": 2109,
+      "chromaticShareOfInk": 0.0350530199780607,
+      "totalPixels": 2314400
+    },
+    {
+      "case": "c03-reading",
+      "label": "DEEP ANALYSIS READING — \"THE INTELLECTUAL TEST\"",
+      "inkFloor": 0.3759774113536526,
+      "chromaFloor": 0.03342703019239072,
+      "inkPixels": 83866,
+      "chromaticPixels": 2109,
+      "chromaticShareOfInk": 0.025147258722247396,
+      "totalPixels": 2314400
+    },
+    {
+      "case": "c04-utility",
+      "label": "UTILITY / SYSTEM UI — \"THE BORING-SCREEN TEST\"",
+      "inkFloor": 0.3759774113536526,
+      "chromaFloor": 0.03342703019239072,
+      "inkPixels": 31780,
+      "chromaticPixels": 2109,
+      "chromaticShareOfInk": 0.06636249213341724,
+      "totalPixels": 2314400
+    },
+    {
+      "case": "c05-map",
+      "label": "analytical plane, SELECTED state",
+      "inkFloor": 0.3759774113536526,
+      "chromaFloor": 0.03342703019239072,
+      "inkPixels": 60134,
+      "chromaticPixels": 2109,
+      "chromaticShareOfInk": 0.03507167326304587,
+      "totalPixels": 2314400
+    },
+    {
+      "case": "c06-map",
+      "label": "analytical plane, PRESSED state",
+      "inkFloor": 0.3759774113536526,
+      "chromaFloor": 0.03342703019239072,
+      "inkPixels": 60241,
+      "chromaticPixels": 2109,
+      "chromaticShareOfInk": 0.035009378994372606,
+      "totalPixels": 2314400
+    },
+    {
+      "case": "c07-map",
+      "label": "analytical plane, FOCUSED state",
+      "inkFloor": 0.3759774113536526,
+      "chromaFloor": 0.03342703019239072,
+      "inkPixels": 62069,
+      "chromaticPixels": 2109,
+      "chromaticShareOfInk": 0.03397831445649197,
+      "totalPixels": 2314400
+    },
+    {
+      "case": "c08-map",
+      "label": "analytical plane, DISABLED state",
+      "inkFloor": 0.3759774113536526,
+      "chromaFloor": 0.03342703019239072,
+      "inkPixels": 60053,
+      "chromaticPixels": 2109,
+      "chromaticShareOfInk": 0.03511897823589163,
+      "totalPixels": 2314400
+    },
+    {
+      "case": "c09-identity",
+      "label": "the large identity moment, brushed/handled character",
+      "inkFloor": 0.3759774113536526,
+      "chromaFloor": 0.03342703019239072,
+      "inkPixels": 37495,
+      "chromaticPixels": 36429,
+      "chromaticShareOfInk": 0.9715695426056807,
+      "totalPixels": 1953600
+    }
+  ],
+  "footprint": {
+    "productScreens": 8,
+    "distinctChromaticPixelCounts": 1,
+    "chromaticPixels": [
+      2109
+    ],
+    "identicalAcrossEnvironmentsAndStates": true,
+    "shareRange": [
+      0.025147258722247396,
+      0.06636249213341724
+    ],
+    "ordering": [
+      {
+        "case": "c04-utility",
+        "label": "UTILITY / SYSTEM UI — \"THE BORING-SCREEN TEST\"",
+        "share": 0.06636249213341724
+      },
+      {
+        "case": "c01-conversation",
+        "label": "PERSONAL CONVERSATION WORLD — \"THE QUIET CORE\"",
+        "share": 0.03929130337581042
+      },
+      {
+        "case": "c08-map",
+        "label": "analytical plane, DISABLED state",
+        "share": 0.03511897823589163
+      },
+      {
+        "case": "c05-map",
+        "label": "analytical plane, SELECTED state",
+        "share": 0.03507167326304587
+      },
+      {
+        "case": "c02-map",
+        "label": "LIVING ANALYSIS MAP — \"THE PROPRIETARY WORLD\"",
+        "share": 0.0350530199780607
+      },
+      {
+        "case": "c06-map",
+        "label": "analytical plane, PRESSED state",
+        "share": 0.035009378994372606
+      },
+      {
+        "case": "c07-map",
+        "label": "analytical plane, FOCUSED state",
+        "share": 0.03397831445649197
+      },
+      {
+        "case": "c03-reading",
+        "label": "DEEP ANALYSIS READING — \"THE INTELLECTUAL TEST\"",
+        "share": 0.025147258722247396
+      }
+    ]
+  }
+}

@@ -1,0 +1,1662 @@
+{
+  "generatedBy": "tools/f1-verify.mjs",
+  "checks": 59,
+  "passed": 59,
+  "failed": 0,
+  "probes": {
+    "total": 59,
+    "rejecting": 59
+  },
+  "results": [
+    {
+      "id": "V-01",
+      "what": "every vendored file matches the sealed package it was taken from",
+      "pass": true,
+      "detail": {
+        "files": 33,
+        "fail": 0,
+        "sourceAbsent": 0,
+        "note": "all sources present"
+      },
+      "probe": {
+        "input": "a published file whose recorded sha256 is altered",
+        "rejected": true
+      }
+    },
+    {
+      "id": "D-01",
+      "what": "with NO accessibility setting on, every inherited role resolves to E1's literal by E1's route",
+      "pass": true,
+      "detail": {
+        "rolesCompared": 23,
+        "diffs": []
+      },
+      "probe": {
+        "input": "the same comparison with one role re-pointed at another rung",
+        "rejected": true
+      }
+    },
+    {
+      "id": "D-02",
+      "what": "DEFAULT ACCESSIBILITY-OVERRIDE ISOLATION — with every accessibility override file emptied, the DEFAULT document is byte-identical",
+      "pass": true,
+      "detail": {
+        "name": "DEFAULT ACCESSIBILITY-OVERRIDE ISOLATION",
+        "what": "Every accessibility override file replaced with an empty stub; the DEFAULT document re-rendered.",
+        "proves": "The default expression does not read, and does not notice the absence of, any accessibility override. No accessibility value has leaked into the default path.",
+        "doesNotProve": "That the default expression is byte-identical to the pre-F1 I-08B3.1-D2R expression. Both sides run F1's own scene builder, so a change hardcoded into that builder would survive both. See data/F1_INHERITED_DEFAULT.json, which proves that separately and against the inherited package.",
+        "defaultHash": {
+          "html": "6651a36a2298e29d31391389fdd4d96aa02722d1406db39842bdc9dff73cb5e3",
+          "png": "0a8cb8e0c2ecaf2d9e2283920d28ce3736ef17e64573c81db40f09a0369f4d17"
+        },
+        "ablatedHash": {
+          "html": "6651a36a2298e29d31391389fdd4d96aa02722d1406db39842bdc9dff73cb5e3",
+          "png": "0a8cb8e0c2ecaf2d9e2283920d28ce3736ef17e64573c81db40f09a0369f4d17"
+        },
+        "htmlIdentical": true,
+        "pngIdentical": true,
+        "pass": true
+      },
+      "probe": {
+        "input": "the same hashes with one byte of the ablated document changed",
+        "rejected": true
+      }
+    },
+    {
+      "id": "D-04",
+      "what": "D-02 states, in the shipped record, the claim it does NOT support",
+      "pass": true,
+      "detail": {
+        "name": "DEFAULT ACCESSIBILITY-OVERRIDE ISOLATION",
+        "proves": "The default expression does not read, and does not notice the absence of, any accessibility override. No accessibility value has leaked into the default path.",
+        "doesNotProve": "That the default expression is byte-identical to the pre-F1 I-08B3.1-D2R expression. Both sides run F1's own scene builder, so a change hardcoded into that builder would survive both. See data/F1_INHERITED_DEFAULT.json, which proves that separately and against the inherited package."
+      },
+      "probe": {
+        "input": "a record that carries no doesNotProve field at all",
+        "rejected": true
+      }
+    },
+    {
+      "id": "D-03",
+      "what": "every accessibility modifier's DEFAULT context declares zero token values",
+      "pass": true,
+      "detail": [
+        {
+          "modifier": "contrast",
+          "context": "standard",
+          "file": "vendor/c3/b4r/standard.tokens.json",
+          "tokensDeclared": 0,
+          "tokens": []
+        },
+        {
+          "modifier": "transparency",
+          "context": "full",
+          "file": "tokens/transparency/full.accessibility.tokens.json",
+          "tokensDeclared": 0,
+          "tokens": []
+        }
+      ],
+      "probe": {
+        "input": "the increased-contrast context, which is NOT a default",
+        "rejected": true
+      }
+    },
+    {
+      "id": "S-01",
+      "what": "no accessibility override reaches a COLOUR under the identity material, the Light, a state ink or a status ink",
+      "pass": true,
+      "detail": {
+        "tokensDeclaredByF1": 56,
+        "colourViolations": [],
+        "resolveViolations": [],
+        "sanctionedNonColourOverridesOfAProtectedNamespace": [
+          {
+            "name": "qandeel.state.focus.thickness",
+            "type": "dimension",
+            "value": {
+              "value": 3,
+              "unit": "px"
+            },
+            "file": "tokens/contrast/increased.accessibility.tokens.json"
+          }
+        ],
+        "law": "A non-colour MAGNITUDE of a state may be overridden; a state COLOUR may not. The list above is the complete set of the former, and it is generated from the files rather than maintained by hand.",
+        "declaredExemption": "qandeel.illumination.reduced.* — F1 ALIASES D2R's own reduced-motion scalars rather than restating them, so the two can never drift. It reads a number; it does not write a colour."
+      },
+      "probe": {
+        "input": "a synthetic colour-typed override of qandeel.state.focus.indicator",
+        "rejected": true
+      }
+    },
+    {
+      "id": "S-02",
+      "what": "F1 introduces no colour literal except the computed opaque scrim substitution",
+      "pass": true,
+      "detail": {
+        "literalsFound": [
+          "tokens/transparency/reduced.accessibility.tokens.json:#080808"
+        ],
+        "computedScrimOverWorld": "#080808",
+        "note": "Every other colour F1 authors is an ALIAS to a frozen rung of the I-08B3.0 reading ramp."
+      },
+      "probe": {
+        "input": "the same scan run over E1's own dark appearance file, which does introduce literals",
+        "rejected": true
+      }
+    },
+    {
+      "id": "C-01",
+      "what": "the World fill and the functional Surface do NOT move under increased contrast",
+      "pass": true,
+      "detail": {
+        "world": "#101010",
+        "surface": "#181818"
+      },
+      "probe": {
+        "input": "pure black as a ground",
+        "rejected": true
+      }
+    },
+    {
+      "id": "C-02",
+      "what": "Living Brass, QANDEEL Light, the error ink and the disabled ink are unchanged under increased contrast",
+      "pass": true,
+      "detail": {
+        "brass": "#a58e6f",
+        "lightCore": "#fbf2db",
+        "error": "#fe907e",
+        "disabled": "#696762"
+      },
+      "probe": {
+        "input": "the rest ink, which DOES move",
+        "rejected": true
+      }
+    },
+    {
+      "id": "C-03",
+      "what": "every ambient contour reaches at least 3:1 under increased contrast",
+      "pass": true,
+      "detail": {
+        "worst": 3.02,
+        "best": 5.501,
+        "cases": 15,
+        "samples": 90
+      },
+      "probe": {
+        "input": "the DEFAULT atmosphere at its own alphas",
+        "rejected": true
+      }
+    },
+    {
+      "id": "C-04",
+      "what": "the meaning hierarchy WIDENS under increased contrast and does not compress",
+      "pass": true,
+      "detail": {
+        "defaultRatio": 1.2914,
+        "raisedRatio": 1.524,
+        "defaultLoudestContour": 4.209,
+        "raisedLoudestContour": 5.501
+      },
+      "probe": {
+        "input": "the atmosphere raised alone, with the analytical relation left where it was",
+        "rejected": true
+      }
+    },
+    {
+      "id": "C-05",
+      "what": "no ambient contour reaches the on-screen strength of the weakest analytical object",
+      "pass": true,
+      "detail": {
+        "loudestContour": 5.501,
+        "weakestAnalytical": 8.384,
+        "headroom": 2.883
+      },
+      "probe": {
+        "input": "a contour lifted to the analytical relation's own contrast",
+        "rejected": true
+      }
+    },
+    {
+      "id": "C-06",
+      "what": "the boundary is an existing reading rung and is NOT the availability ink",
+      "pass": true,
+      "detail": {
+        "boundary": "#8b8982",
+        "vsSurface": 5.072,
+        "vsWorld": 5.435,
+        "disabledInk": "#696762"
+      },
+      "probe": {
+        "input": "the availability ink as a boundary",
+        "rejected": true
+      }
+    },
+    {
+      "id": "C-07",
+      "what": "the focus perimeter thickens and the focus INK does not change",
+      "pass": true,
+      "detail": {
+        "defaultPx": 2,
+        "increasedPx": 3,
+        "indicator": "#d8d5ca",
+        "companion": "#101010"
+      },
+      "probe": {
+        "input": "a thickness that did not change",
+        "rejected": true
+      }
+    },
+    {
+      "id": "C-08",
+      "what": "the rest-to-unavailable distance widens under increased contrast",
+      "pass": true,
+      "detail": {
+        "before": 1.6137,
+        "after": 2.4892
+      },
+      "probe": {
+        "input": "the same ratio with the disabled ink raised too",
+        "rejected": true
+      }
+    },
+    {
+      "id": "T-01",
+      "what": "the PASSAGE scrim becomes exactly the value it produced over the World",
+      "pass": true,
+      "detail": {
+        "default": "#000000",
+        "reduced": "#080808",
+        "computed": "#080808"
+      },
+      "probe": {
+        "input": "the composite over the functional Surface, which is a different value",
+        "rejected": true
+      }
+    },
+    {
+      "id": "T-02",
+      "what": "the opaque substitution reproduces the composited value exactly, for every stroke the field draws",
+      "pass": true,
+      "detail": {
+        "strokes": 90,
+        "mismatches": 0
+      },
+      "probe": {
+        "input": "a substitution computed against the functional Surface instead of the World",
+        "rejected": true
+      }
+    },
+    {
+      "id": "T-03",
+      "what": "QANDEEL Light keeps its translucency under Reduce Transparency",
+      "pass": true,
+      "detail": {
+        "default": 0,
+        "reduced": 0,
+        "why": "A light is a thing whose nature is that what is behind it shows through. Removing its alpha would delete a meaning event's intensity."
+      },
+      "probe": {
+        "input": "a floor of 1, which would make the Light opaque",
+        "rejected": true
+      }
+    },
+    {
+      "id": "T-04",
+      "what": "no analytical or identity colour changes under Reduce Transparency",
+      "pass": true,
+      "detail": {
+        "brass": "#a58e6f",
+        "primary": "#d8d5ca",
+        "error": "#fe907e"
+      },
+      "probe": {
+        "input": "the scrim, which DOES change",
+        "rejected": true
+      }
+    },
+    {
+      "id": "N-01",
+      "what": "hue distinguishes NOTHING in the ambient field — measured, not asserted",
+      "pass": true,
+      "detail": [
+        {
+          "layer": 0,
+          "maxContrastBetweenAnyTwoHues": 1.0185,
+          "maxProtanDeltaEok": 0.03404,
+          "maxDeutanDeltaEok": 0.03139
+        },
+        {
+          "layer": 1,
+          "maxContrastBetweenAnyTwoHues": 1.0228,
+          "maxProtanDeltaEok": 0.03374,
+          "maxDeutanDeltaEok": 0.02912
+        },
+        {
+          "layer": 2,
+          "maxContrastBetweenAnyTwoHues": 1.0213,
+          "maxProtanDeltaEok": 0.0335,
+          "maxDeutanDeltaEok": 0.03014
+        }
+      ],
+      "probe": {
+        "input": "the error ink against the World, a pair that genuinely separates at 8.61:1",
+        "rejected": true
+      }
+    },
+    {
+      "id": "N-02",
+      "what": "every colour-bearing distinction declares a non-colour companion channel",
+      "pass": true,
+      "detail": {
+        "declared": [
+          "topic-identity",
+          "pattern-membership",
+          "selected",
+          "focus",
+          "unavailable",
+          "error"
+        ],
+        "missing": []
+      },
+      "probe": {
+        "input": "a distinction with no companion declared",
+        "rejected": true
+      }
+    },
+    {
+      "id": "N-03",
+      "what": "the error ink cannot rely on WCAG 1.4.1's lightness escape hatch, so its companion is an obligation",
+      "pass": true,
+      "detail": {
+        "errorVsSecondaryInk": 1.027,
+        "threshold": 3,
+        "note": "SC 1.4.1 lets a 3:1 lightness difference count as the non-colour cue. At 1.03:1 it does not, which is E1's measurement and is why the error role ships with a glyph, copy and a role."
+      },
+      "probe": {
+        "input": "the error ink against the World, where it does reach 3:1",
+        "rejected": true
+      }
+    },
+    {
+      "id": "X-01",
+      "what": "the combined expression is exactly the two overrides composed — no third set of values exists",
+      "pass": true,
+      "detail": {
+        "rolesChecked": 28
+      },
+      "probe": {
+        "input": "a role that differs in both single-setting expressions",
+        "rejected": true
+      }
+    },
+    {
+      "id": "X-02",
+      "what": "ARABIC MUST NOT CLIP and no element is truncated, at any text setting — tested against the current threshold (1.6)",
+      "pass": true,
+      "detail": {
+        "contract": {
+          "token": "qandeel.accessibility.text.arabic-must-not-clip",
+          "value": "adequate-glyph-extents",
+          "class": "product-contract"
+        },
+        "currentTestThreshold": {
+          "token": "qandeel.accessibility.text.leading-floor",
+          "value": 1.6,
+          "note": "PRODUCTION DEFAULT / VALIDATION THRESHOLD. A measured property of Estedad at this proof's sizes on this renderer — not a universal Product law. The contract above is independent of this literal."
+        },
+        "shippedRatio": 1.7,
+        "rows": [
+          {
+            "expression": "DEFAULT",
+            "scale": 1,
+            "truncated": false,
+            "belowThreshold": false,
+            "minMeasuredLeadingRatio": 1.7,
+            "minPx": 11
+          },
+          {
+            "expression": "REDUCED MOTION",
+            "scale": 1,
+            "truncated": false,
+            "belowThreshold": false,
+            "minMeasuredLeadingRatio": 1.7,
+            "minPx": 11
+          },
+          {
+            "expression": "INCREASE CONTRAST",
+            "scale": 1,
+            "truncated": false,
+            "belowThreshold": false,
+            "minMeasuredLeadingRatio": 1.7,
+            "minPx": 11
+          },
+          {
+            "expression": "REDUCE TRANSPARENCY",
+            "scale": 1,
+            "truncated": false,
+            "belowThreshold": false,
+            "minMeasuredLeadingRatio": 1.7,
+            "minPx": 11
+          },
+          {
+            "expression": "CONTRAST + TRANSPARENCY",
+            "scale": 1,
+            "truncated": false,
+            "belowThreshold": false,
+            "minMeasuredLeadingRatio": 1.7,
+            "minPx": 11
+          },
+          {
+            "expression": "REDUCED MOTION + CONTRAST",
+            "scale": 1,
+            "truncated": false,
+            "belowThreshold": false,
+            "minMeasuredLeadingRatio": 1.7,
+            "minPx": 11
+          },
+          {
+            "expression": "GRAYSCALE (diagnostic)",
+            "scale": 1,
+            "truncated": false,
+            "belowThreshold": false,
+            "minMeasuredLeadingRatio": 1.7,
+            "minPx": 11
+          },
+          {
+            "expression": "LARGER TEXT xxxLarge",
+            "scale": 1.3529411764705883,
+            "truncated": false,
+            "belowThreshold": false,
+            "minMeasuredLeadingRatio": 1.7,
+            "minPx": 14.88
+          },
+          {
+            "expression": "LARGER TEXT 200%",
+            "scale": 2,
+            "truncated": false,
+            "belowThreshold": false,
+            "minMeasuredLeadingRatio": 1.7,
+            "minPx": 22
+          },
+          {
+            "expression": "LARGER TEXT AX5 (311.8%)",
+            "scale": 3.118,
+            "truncated": false,
+            "belowThreshold": false,
+            "minMeasuredLeadingRatio": 1.7,
+            "minPx": 34.3
+          },
+          {
+            "expression": "BOLD TEXT",
+            "scale": 1,
+            "truncated": false,
+            "belowThreshold": false,
+            "minMeasuredLeadingRatio": 1.7,
+            "minPx": 11
+          }
+        ]
+      },
+      "probe": {
+        "input": "a row whose measured minimum leading ratio sits below the current threshold",
+        "rejected": true
+      }
+    },
+    {
+      "id": "X-03",
+      "what": "Bold Text preserves the 100-unit weight step SELECTED depends on",
+      "pass": true,
+      "detail": [
+        {
+          "expression": "DEFAULT",
+          "rest": "500",
+          "selected": "600",
+          "step": 100
+        },
+        {
+          "expression": "REDUCED MOTION",
+          "rest": "500",
+          "selected": "600",
+          "step": 100
+        },
+        {
+          "expression": "INCREASE CONTRAST",
+          "rest": "500",
+          "selected": "600",
+          "step": 100
+        },
+        {
+          "expression": "REDUCE TRANSPARENCY",
+          "rest": "500",
+          "selected": "600",
+          "step": 100
+        },
+        {
+          "expression": "CONTRAST + TRANSPARENCY",
+          "rest": "500",
+          "selected": "600",
+          "step": 100
+        },
+        {
+          "expression": "REDUCED MOTION + CONTRAST",
+          "rest": "500",
+          "selected": "600",
+          "step": 100
+        },
+        {
+          "expression": "GRAYSCALE (diagnostic)",
+          "rest": "500",
+          "selected": "600",
+          "step": 100
+        },
+        {
+          "expression": "LARGER TEXT xxxLarge",
+          "rest": "500",
+          "selected": "600",
+          "step": 100
+        },
+        {
+          "expression": "LARGER TEXT 200%",
+          "rest": "500",
+          "selected": "600",
+          "step": 100
+        },
+        {
+          "expression": "LARGER TEXT AX5 (311.8%)",
+          "rest": "500",
+          "selected": "600",
+          "step": 100
+        },
+        {
+          "expression": "BOLD TEXT",
+          "rest": "600",
+          "selected": "700",
+          "step": 100
+        }
+      ],
+      "probe": {
+        "input": "a step of 0",
+        "rejected": true
+      }
+    },
+    {
+      "id": "X-04",
+      "what": "every analytical object of every KIND is reachable at every text setting",
+      "pass": true,
+      "detail": {
+        "expected": {
+          "topic": 8,
+          "connection": 1,
+          "pattern": 1,
+          "insight": 1
+        },
+        "rows": [
+          {
+            "expression": "DEFAULT",
+            "scale": 1,
+            "byKind": {
+              "topic": 8,
+              "connection": 1,
+              "pattern": 1,
+              "insight": 1
+            }
+          },
+          {
+            "expression": "REDUCED MOTION",
+            "scale": 1,
+            "byKind": {
+              "topic": 8,
+              "connection": 1,
+              "pattern": 1,
+              "insight": 1
+            }
+          },
+          {
+            "expression": "INCREASE CONTRAST",
+            "scale": 1,
+            "byKind": {
+              "topic": 8,
+              "connection": 1,
+              "pattern": 1,
+              "insight": 1
+            }
+          },
+          {
+            "expression": "REDUCE TRANSPARENCY",
+            "scale": 1,
+            "byKind": {
+              "topic": 8,
+              "connection": 1,
+              "pattern": 1,
+              "insight": 1
+            }
+          },
+          {
+            "expression": "CONTRAST + TRANSPARENCY",
+            "scale": 1,
+            "byKind": {
+              "topic": 8,
+              "connection": 1,
+              "pattern": 1,
+              "insight": 1
+            }
+          },
+          {
+            "expression": "REDUCED MOTION + CONTRAST",
+            "scale": 1,
+            "byKind": {
+              "topic": 8,
+              "connection": 1,
+              "pattern": 1,
+              "insight": 1
+            }
+          },
+          {
+            "expression": "GRAYSCALE (diagnostic)",
+            "scale": 1,
+            "byKind": {
+              "topic": 8,
+              "connection": 1,
+              "pattern": 1,
+              "insight": 1
+            }
+          },
+          {
+            "expression": "LARGER TEXT xxxLarge",
+            "scale": 1.3529411764705883,
+            "byKind": {
+              "topic": 8,
+              "connection": 1,
+              "pattern": 1,
+              "insight": 1
+            }
+          },
+          {
+            "expression": "LARGER TEXT 200%",
+            "scale": 2,
+            "byKind": {
+              "topic": 8,
+              "connection": 1,
+              "pattern": 1,
+              "insight": 1
+            }
+          },
+          {
+            "expression": "LARGER TEXT AX5 (311.8%)",
+            "scale": 3.118,
+            "byKind": {
+              "topic": 8,
+              "connection": 1,
+              "pattern": 1,
+              "insight": 1
+            }
+          },
+          {
+            "expression": "BOLD TEXT",
+            "scale": 1,
+            "byKind": {
+              "topic": 8,
+              "connection": 1,
+              "pattern": 1,
+              "insight": 1
+            }
+          }
+        ]
+      },
+      "probe": {
+        "input": "a census in which only the topics are present, which is what the pre-F1R scene produced above the escape scale",
+        "rejected": true
+      }
+    },
+    {
+      "id": "M-01",
+      "what": "no semantic motion is removed, and every one names a SURVIVING channel that carries it",
+      "pass": true,
+      "detail": {
+        "total": 11,
+        "byDisposition": {
+          "REDUCE": [
+            "ambient.parallax",
+            "interaction.press"
+          ],
+          "REMOVE": [
+            "ambient.momentum"
+          ],
+          "REPLACE": [
+            "light.connection",
+            "light.pattern",
+            "light.insight",
+            "thread.guided"
+          ],
+          "KEEP": [
+            "light.ambientfield",
+            "interaction.focus",
+            "interaction.selected"
+          ],
+          "CARRY FORWARD": [
+            "camera.semanticzoom"
+          ]
+        },
+        "suppressed": [
+          "travel",
+          "blur",
+          "scale",
+          "parallaxDifferential",
+          "decay"
+        ],
+        "surviving": [
+          "level",
+          "ink",
+          "draw"
+        ]
+      },
+      "probe": {
+        "input": "a semantic row claiming to be carried by TRAVEL, which is suppressed",
+        "rejected": true
+      }
+    },
+    {
+      "id": "M-02",
+      "what": "F1 does not retune the frozen lifecycle",
+      "pass": true,
+      "detail": {
+        "rise": 260,
+        "fall": 1150
+      },
+      "probe": {
+        "input": "a shortened fall",
+        "rejected": true
+      }
+    },
+    {
+      "id": "M-03",
+      "what": "the runtime default for reduced motion is recorded as the failure mode it is",
+      "pass": true,
+      "detail": {
+        "rows": 7,
+        "remedies": 4
+      },
+      "probe": {
+        "input": "a record with no exiting-animation row",
+        "rejected": true
+      }
+    },
+    {
+      "id": "W-01",
+      "what": "F1R's own surfaces record D and E as CLOSED / FROZEN, and the untouched vendored language is declared rather than silently contradicted",
+      "pass": true,
+      "detail": {
+        "staleSurfaces": [],
+        "statesClosed": true,
+        "declaresTheVendorException": true,
+        "vendoredFilesStillCarryingTheirAuthoringLanguage": [
+          "vendor/d2r/tokens/qandeel-light.resolver.json",
+          "vendor/e1/tokens/qandeel-interaction.resolver.json"
+        ],
+        "why": "Editing a vendored file to update its status would break the provenance chain check V-01 rests on. The discrepancy is disclosed instead."
+      },
+      "probe": {
+        "input": "the withdrawn README line \"I-08B3.1-D2R  QANDEEL Light        freeze candidate\"",
+        "rejected": true
+      }
+    },
+    {
+      "id": "G-01",
+      "what": "the North Star is recorded as an OPEN obligation owned by G, and F1 claims no spectacle capacity",
+      "pass": true,
+      "detail": {
+        "state": "OPEN — NOT PROVEN BY F1, NOT WEAKENED BY F1",
+        "owner": "G — INTEGRATED PRODUCT PROOF",
+        "f1Claim": "F1 measured the distance on seven dimensions and decomposed it into framing, policy and density. It makes no claim that the capacity is reached.",
+        "whatGMustProve": [
+          "that the final default dark Living Analysis World reaches the Product Owner's required level of WORLD-SCALE AWE",
+          "ATMOSPHERIC RICHNESS",
+          "COLOUR RICHNESS",
+          "SPATIAL DEPTH",
+          "AUTHORED MICRO-DETAIL",
+          "DISCOVERY",
+          "MEANINGFUL LUMINOUS IMPACT",
+          "and all of it while preserving every frozen semantic truth"
+        ],
+        "ifGCannot": "If G cannot achieve that spectacle within the frozen I-08B3.1-D contract, THEN and only then a TARGETED D reconciliation may be required. F1R does not reopen D, does not propose one, and does not treat the measurement below as grounds for one.",
+        "measuredGaps": {
+          "atmosphereChromaCeilingVsNorthStarP95": "x3.69 — a POLICY gap owned by D2R",
+          "spatialDetail": "x3.72 — a DENSITY gap owned by nobody yet, and not granted to anyone by its absence from the token tree",
+          "paintedPixelChroma": "x1.41 — the apples-to-apples comparison"
+        }
+      },
+      "probe": {
+        "input": "a status of PROVEN",
+        "rejected": true
+      }
+    },
+    {
+      "id": "G-02",
+      "what": "no surface converts \"no token constrains density\" into permission to raise it, and the limit is stated",
+      "pass": true,
+      "detail": {
+        "authorisingSentencesFound": [],
+        "theLimitIsStated": true,
+        "note": "An occurrence within two lines of a withdrawal is a QUOTATION of the retracted sentence, not an assertion of it. The package must be able to name what it is retracting."
+      },
+      "probe": {
+        "input": "the withdrawn sentence, standing alone with no retraction near it",
+        "rejected": true
+      }
+    },
+    {
+      "id": "G-03",
+      "what": "F1R does not reopen D, and says what would have to be true before anyone did",
+      "pass": true,
+      "detail": {
+        "ifGCannot": "If G cannot achieve that spectacle within the frozen I-08B3.1-D contract, THEN and only then a TARGETED D reconciliation may be required. F1R does not reopen D, does not propose one, and does not treat the measurement below as grounds for one."
+      },
+      "probe": {
+        "input": "a carry-forward that proposes a D change outright",
+        "rejected": true
+      }
+    },
+    {
+      "id": "I-01",
+      "what": "every written attribute of the inherited ATMOSPHERE layer equals what D2R's OWN exported functions produce",
+      "pass": true,
+      "detail": {
+        "elements": 25,
+        "fields": 7,
+        "diffs": 0
+      },
+      "probe": {
+        "input": "the same comparison with one stroke alpha changed to 0.5",
+        "rejected": true
+      }
+    },
+    {
+      "id": "I-02",
+      "what": "the inherited layer of F1's DEFAULT document is pixel-identical to a reference built from D2R's exports ALONE",
+      "pass": true,
+      "detail": {
+        "f1": "0c52861c66b6427cecb61b93",
+        "reference": "0c52861c66b6427cecb61b93",
+        "identical": true
+      },
+      "probe": {
+        "input": "the same reference with one contour displaced by one pixel",
+        "rejected": true
+      }
+    },
+    {
+      "id": "I-03",
+      "what": "the settled analysis layer's GEOMETRY equals D2R's own sites, element for element",
+      "pass": true,
+      "detail": {
+        "elements": 12,
+        "diffs": 0
+      },
+      "probe": {
+        "input": "a comparison in which the element counts differ",
+        "rejected": true
+      }
+    },
+    {
+      "id": "I-04",
+      "what": "the inherited-default proof enumerates what it does NOT verify, including the chrome and D2R's own page",
+      "pass": true,
+      "detail": [
+        "THE CHROME, THE NAVIGATION AND THE PANEL. F1 composes a header, a navigation bar and a proof panel with no counterpart in the vendored D2R material. There is nothing inherited to compare their pixels against, and this package does not claim there is.",
+        "THE MOTION. F1 renders only the settled state. No frame of any sequence is compared, and no claim about the frames is made here — D2R proved the settled residue and F1 builds on that finding rather than re-establishing it.",
+        "QANDEEL LIGHT. It is not painted in the settled scene, so its pixels are inherited by reference rather than by comparison.",
+        "D2R'S OWN PAGE. Its HTML scaffold is not vendored in this package, so `makeRenderer` cannot be driven here. The reference is built from D2R's data and geometry functions instead, and this file says so rather than claiming the renderer was used."
+      ],
+      "probe": {
+        "input": "an empty unverified list",
+        "rejected": true
+      }
+    },
+    {
+      "id": "A-01",
+      "what": "no renderer or projection file writes a semantic value as a literal — they come from V only",
+      "pass": true,
+      "detail": {
+        "filesScanned": [
+          "tools/f1-scene.mjs",
+          "tools/f1-sr.mjs",
+          "tools/f1-parity.mjs"
+        ],
+        "literalsFound": [],
+        "sanctionedViewConstructors": [
+          {
+            "file": "tools/f1-sr.mjs",
+            "line": 639,
+            "found": "epistemic: '"
+          },
+          {
+            "file": "tools/f1-sr.mjs",
+            "line": 702,
+            "found": "epistemic: '"
+          }
+        ],
+        "note": "tools/f1-fixture.mjs is excluded by path: it is the disclosed view, and supplying these values is exactly its job. Lines marked V-INPUT construct an alternative view for a probe and are listed above rather than hidden."
+      },
+      "probe": {
+        "input": "the same scan run over tools/f1-fixture.mjs, which DOES author them",
+        "rejected": true
+      }
+    },
+    {
+      "id": "A-02",
+      "what": "every semantic value the view supplies is preserved, and a value it omits stays omitted",
+      "pass": true,
+      "detail": {
+        "rows": 11,
+        "preserved": true,
+        "varies": {
+          "epistemic": true,
+          "temporal": true,
+          "actionable": true
+        },
+        "unstated": [
+          "comparison"
+        ]
+      },
+      "probe": {
+        "input": "a view with the insight's epistemic status changed to observed — the projection must follow it, not its old hardcode",
+        "rejected": true
+      }
+    },
+    {
+      "id": "A-03",
+      "what": "the synthetic fixture's provenance is stamped into the rendered document and the projection",
+      "pass": true,
+      "detail": {
+        "inRenderedPage": true,
+        "inProjection": "SYNTHETIC TEST FIXTURE — NOT PRODUCT DATA",
+        "provenance": "SYNTHETIC TEST FIXTURE — NOT PRODUCT DATA"
+      },
+      "probe": {
+        "input": "a document with no provenance stamp",
+        "rejected": true
+      }
+    },
+    {
+      "id": "A-05",
+      "what": "a semantic field V did not supply produces no value AND no announcement — not «غير مُحدَّد», not observed, not hypothesis",
+      "pass": true,
+      "detail": {
+        "rows": [
+          {
+            "id": "comparison",
+            "valueInData": "ABSENT",
+            "spokenLabel": "موضوع، مقارنة بالآخرين، الآن",
+            "epistemicVocabularyInLabel": []
+          }
+        ],
+        "absentDidNotBecomeAStatus": true,
+        "nothingAnnounced": true,
+        "withdrawnStringAbsentFromThePage": true,
+        "aSuppliedValueIsStillAnnounced": true
+      },
+      "probe": {
+        "input": "the WITHDRAWN composer with its «غير مُحدَّد» fallback, run over the same unstated row",
+        "rejected": true
+      }
+    },
+    {
+      "id": "A-06",
+      "what": "an undisclosed Connection endpoint or Pattern member leaks no raw id and no recovered name, and the broken reference is DETECTED rather than turned into prose",
+      "pass": true,
+      "detail": {
+        "contract": {
+          "token": "qandeel.accessibility.projection.disclosure-boundary",
+          "value": "same-v-fail-closed",
+          "class": "product-contract"
+        },
+        "upstreamInvariant": "Canonical V is required to be referentially closed: every id a disclosed object references — a Connection endpoint, a Pattern member — must itself be disclosed in the SAME V. A view that references an object it does not disclose is malformed.",
+        "projectorBehaviour": "FAIL CLOSED, AND DO NOT RELY ON THE INVARIANT. Where a reference is not disclosed, the projection announces no substitute: no raw id, no name recovered from any other source, no member count, and no prose describing the relation. The inconsistency is recorded as a detectable referential-integrity failure instead of being turned into a sentence.",
+        "cases": [
+          {
+            "what": "a CONNECTION whose destination is absent from V",
+            "detected": true,
+            "rawIdInAField": false,
+            "rawIdInALabel": false,
+            "hiddenNameRecovered": false,
+            "prose": false,
+            "pass": true
+          },
+          {
+            "what": "a PATTERN one of whose members is absent from V",
+            "detected": true,
+            "rawIdInAField": false,
+            "rawIdInALabel": false,
+            "hiddenNameRecovered": false,
+            "prose": false,
+            "pass": true
+          },
+          {
+            "what": "a CONNECTION pointing at a REAL D2R topic that V does not disclose — the name is recoverable from TOPICS, and must not be recovered",
+            "detected": true,
+            "rawIdInAField": false,
+            "rawIdInALabel": false,
+            "hiddenNameRecovered": false,
+            "prose": false,
+            "pass": true
+          }
+        ]
+      },
+      "probe": {
+        "input": "the WITHDRAWN `disclosed name ?? raw id` resolver over the same broken view, which DOES leak the marker id",
+        "rejected": true
+      }
+    },
+    {
+      "id": "A-04",
+      "what": "the token tree carries ACCESSIBLE SEMANTICS = PROJECT(V) as a product-contract token",
+      "pass": true,
+      "detail": {
+        "token": "qandeel.accessibility.projection.derivation",
+        "value": "project-v",
+        "class": "product-contract"
+      },
+      "probe": {
+        "input": "the canvas token, which is an implementation strategy and must NOT be the contract",
+        "rejected": true
+      }
+    },
+    {
+      "id": "K-01",
+      "what": "every token F1 authors declares a freeze class from the enumerated set",
+      "pass": true,
+      "detail": {
+        "tokens": 56,
+        "classes": [
+          "product-contract",
+          "production-default",
+          "implementation-strategy"
+        ],
+        "byClass": {
+          "product-contract": 38,
+          "production-default": 16,
+          "implementation-strategy": 2
+        },
+        "unclassified": []
+      },
+      "probe": {
+        "input": "a token with the class \"frozen-forever\", which is not in the set",
+        "rejected": true
+      }
+    },
+    {
+      "id": "K-02",
+      "what": "every implementation-strategy token names a real product-contract token it serves",
+      "pass": true,
+      "detail": {
+        "strategies": [
+          {
+            "name": "qandeel.accessibility.motion.system-default-is-wrong-here",
+            "serves": "qandeel.accessibility.motion.semantic-events-must-survive",
+            "library": "react-native-reanimated — ReduceMotion.System / ReduceMotion.Never, behaviour read from the documented API, not inferred",
+            "replaceableWhen": "the library's reduced-motion behaviour stops omitting exiting animations, or QANDEEL stops using it"
+          },
+          {
+            "name": "qandeel.accessibility.projection.canvas",
+            "serves": "qandeel.accessibility.projection.derivation",
+            "library": "react-native-skia — Canvas contents are not exposed to UIAccessibility or the Android accessibility node tree",
+            "replaceableWhen": "the renderer exposes its contents to the platform accessibility API, or QANDEEL stops drawing the field on a canvas"
+          }
+        ],
+        "orphans": []
+      },
+      "probe": {
+        "input": "a strategy token whose `serves` names a token that does not exist",
+        "rejected": true
+      }
+    },
+    {
+      "id": "K-03",
+      "what": "the library-specific mechanisms are classified as implementation strategy, not as Product truth",
+      "pass": true,
+      "detail": [
+        {
+          "token": "qandeel.accessibility.motion.system-default-is-wrong-here",
+          "class": "implementation-strategy",
+          "serves": "qandeel.accessibility.motion.semantic-events-must-survive"
+        },
+        {
+          "token": "qandeel.accessibility.projection.canvas",
+          "class": "implementation-strategy",
+          "serves": "qandeel.accessibility.projection.derivation"
+        }
+      ],
+      "probe": {
+        "input": "the reduced-motion requirement itself, which IS Product truth and must stay contract",
+        "rejected": true
+      }
+    },
+    {
+      "id": "K-04",
+      "what": "every numeric accessibility calibration constant is PRODUCTION DEFAULT and names the requirement it instantiates",
+      "pass": true,
+      "detail": [
+        {
+          "token": "qandeel.accessibility.text.leading-ratio",
+          "class": "production-default",
+          "serves": "qandeel.accessibility.text.arabic-must-not-clip"
+        },
+        {
+          "token": "qandeel.accessibility.text.leading-floor",
+          "class": "production-default",
+          "serves": "qandeel.accessibility.text.arabic-must-not-clip"
+        },
+        {
+          "token": "qandeel.accessibility.text.bold-weight-delta",
+          "class": "production-default",
+          "serves": "qandeel.accessibility.text.selected-step-must-survive-bold"
+        },
+        {
+          "token": "qandeel.accessibility.text.max-scale",
+          "class": "production-default",
+          "serves": "the requirement that the platform's largest text size is survived with no truncation and no shrinking — measured by checks X-02 and X-04 at the rendered size rather than against this number"
+        },
+        {
+          "token": "qandeel.accessibility.text.label-escape-scale",
+          "class": "production-default",
+          "serves": "qandeel.accessibility.text.max-scale — the CONTRACT is that a label which no longer fits beside its contour moves to a full-size inspection view rather than truncating or shrinking. 1.6 is a measured property of this proof’s 390 pt viewport and will differ on another one."
+        },
+        {
+          "token": "qandeel.accessibility.contrast.boundary-width",
+          "class": "production-default",
+          "serves": "qandeel.accessibility.contrast.boundary — the CONTRACT is that a defined, contrasting border exists under increased contrast; one device-independent pixel is what this proof was drawn with and a device pass may want more."
+        },
+        {
+          "token": "qandeel.accessibility.contrast.focus-thickness",
+          "class": "production-default",
+          "serves": "qandeel.state.focus.indicator — the CONTRACT is that the focus perimeter is strengthened WITHOUT changing its colour, because thickening a perimeter cannot make an object look more important and brightening one can. 3 px is the magnitude this proof was drawn with; WCAG 2.2 SC 2.4.13 sets the floor at a 2 CSS px perimeter, which the default already meets."
+        }
+      ],
+      "probe": {
+        "input": "the rule that Bold Text must not erase SELECTED, which is Product truth and must stay contract",
+        "rejected": true
+      }
+    },
+    {
+      "id": "K-05",
+      "what": "no Ambient property D2R declares `encodes: null` is promoted into a required semantic accessibility carrier",
+      "pass": true,
+      "detail": {
+        "encodesNullProperties": [
+          "ring.radius",
+          "ring.layer",
+          "ring.contourCount",
+          "ring.contourShape",
+          "ring.hue",
+          "field.parallax"
+        ],
+        "productContractTokensNamingOne": [],
+        "presentationCraft": [
+          {
+            "name": "qandeel.accessibility.presentationCraft.depth",
+            "class": "production-default",
+            "carriesNoAnalyticalMeaning": true,
+            "about": [
+              "ring.contourCount",
+              "ring.layer"
+            ]
+          }
+        ],
+        "note": "The list of forbidden properties is read from I-08B3.1-D2R's own PRESENTATION_CONTRACT, not kept here. A property that later acquires a canonical meaning leaves this list by itself."
+      },
+      "probe": {
+        "input": "the withdrawn token `nonColorCue.depth = level-line-count+scale`, classified product-contract",
+        "rejected": true
+      }
+    },
+    {
+      "id": "K-06",
+      "what": "the Arabic Product contract is NO CLIPPING, and the numeric line-height threshold is a production default that serves it",
+      "pass": true,
+      "detail": {
+        "contract": {
+          "token": "qandeel.accessibility.text.arabic-must-not-clip",
+          "class": "product-contract"
+        },
+        "threshold": {
+          "token": "qandeel.accessibility.text.leading-floor",
+          "class": "production-default",
+          "serves": "qandeel.accessibility.text.arabic-must-not-clip"
+        },
+        "note": "The exact line-height needed depends on the font, the size, the renderer, the platform metrics and the content. What is irreversible is the outcome: Arabic must not clip, lose diacritics, collide destructively or become unreadable at any supported text scale."
+      },
+      "probe": {
+        "input": "the numeric threshold classified as an irreversible product contract, which is what F1R shipped",
+        "rejected": true
+      }
+    },
+    {
+      "id": "B-01",
+      "what": "the synthetic fixture's field set is never described as the complete semantic model of canonical V, and its scope ships as DATA",
+      "pass": true,
+      "detail": {
+        "exhaustiveClaimsFound": [],
+        "scopeIsData": true,
+        "scope": {
+          "exhaustive": false,
+          "fieldsSuppliedByThisFixture": [
+            "epistemic",
+            "temporal",
+            "actionable"
+          ],
+          "productContract": "Every user-exposable semantic fact legitimately disclosed in canonical V and required for understanding or operation must have an equivalent accessible expression. No accessibility projection may silently drop such a fact.",
+          "kindsOfFactTheContractCovers": [
+            "evidence",
+            "provenance",
+            "uncertainty / qualification",
+            "epistemic status",
+            "temporal truth",
+            "relationships",
+            "actions",
+            "any other user-exposable semantic field canonical V discloses"
+          ],
+          "whatTheProofEstablishes": "A BOUNDED PROOF. Every parity cell and every projection row is evidence about the dimensions this fixture supplies — epistemic status, temporal truth and actionability — plus structure, relationships and rendered presence. It is not evidence about a dimension the fixture does not supply.",
+          "whatTheProofDoesNotEstablish": [
+            "that the projection carries every semantic field a real canonical V may expose — no such V exists in this package",
+            "that the production mapping is exhaustive — it cannot be written until the canonical V schema is integrated",
+            "that three dimensions are the right number of dimensions for anything"
+          ],
+          "implementationDependency": "PRODUCTION ACCESSIBILITY MAPPING MUST BE EXHAUSTIVE AGAINST THE ACTUAL USER-EXPOSABLE V SCHEMA.",
+          "contractToken": "qandeel.accessibility.projection.completeness"
+        },
+        "note": "An occurrence within two lines of a withdrawal is a QUOTATION of the retracted sentence, not an assertion of it."
+      },
+      "probe": {
+        "input": "the withdrawn sentence \"the complete list of what a projection may carry\", standing alone",
+        "rejected": true
+      }
+    },
+    {
+      "id": "B-02",
+      "what": "the completeness contract is a product-contract token that records the production-mapping dependency, and an unmapped disclosed field is DETECTED rather than silently dropped",
+      "pass": true,
+      "detail": {
+        "token": "qandeel.accessibility.projection.completeness",
+        "value": "exhaustive-against-user-exposable-v",
+        "class": "product-contract",
+        "recordsTheImplementationDependency": true,
+        "shippedFixtureUnmapped": [],
+        "withAnUnmappedFieldSupplied": [
+          {
+            "object": "task-delay",
+            "field": "evidence"
+          }
+        ]
+      },
+      "probe": {
+        "input": "a view supplying a field the projector has no mapping for — it must be reported, and the shipped fixture must report none",
+        "rejected": true
+      }
+    },
+    {
+      "id": "B-03",
+      "what": "every document that quotes the parity matrix describes it as a BOUNDED proof of the tested dimensions",
+      "pass": true,
+      "detail": {
+        "cells": "132",
+        "documentsQuotingIt": [
+          "docs/F1R2_REVISION.md",
+          "docs/F1R_REVISION.md",
+          "docs/F1_ACCESSIBILITY_CONTRACT.md",
+          "docs/F1_ANALYTICAL_TRUTH_PARITY.md",
+          "docs/F1_COMBINED_SETTINGS.md",
+          "docs/F1_DETAIL_CLASSIFICATION.md",
+          "docs/F1_REVIEW_BOARD.md",
+          "README.md"
+        ],
+        "withoutTheBoundedQualification": [],
+        "scopeCarriedInTheMatrix": {
+          "boundedTo": [
+            "epistemic",
+            "temporal",
+            "actionable"
+          ],
+          "exhaustive": false,
+          "whatTheseCellsProve": "Rendered presence, naming, structure, relationships, and preservation of the semantic dimensions this fixture supplies — across every expression.",
+          "whatTheseCellsDoNotProve": "That the projection carries every semantic field a real canonical V may expose. No canonical V exists in this package.",
+          "productContract": "Every user-exposable semantic fact legitimately disclosed in canonical V and required for understanding or operation must have an equivalent accessible expression. No accessibility projection may silently drop such a fact.",
+          "implementationDependency": "PRODUCTION ACCESSIBILITY MAPPING MUST BE EXHAUSTIVE AGAINST THE ACTUAL USER-EXPOSABLE V SCHEMA.",
+          "unmappedFieldsDetected": []
+        },
+        "productContract": "NO USER-EXPOSABLE DISCLOSED ANALYTICAL TRUTH MAY BE LOST SOLELY BECAUSE THE EXPRESSION IS ACCESSIBLE. The complete production mapping is validated against the real canonical V schema during integration."
+      },
+      "probe": {
+        "input": "a document quoting the cell count with no bounding language anywhere in it",
+        "rejected": true
+      }
+    },
+    {
+      "id": "R-01",
+      "what": "every analytical object has an engine-computed accessible name, and relationships are stated in words",
+      "pass": true,
+      "detail": {
+        "axNodes": 183,
+        "namedNodes": 130,
+        "orderAgrees": [
+          {
+            "kind": "topic",
+            "rule": "neutral",
+            "emitted": [
+              "close-relations",
+              "comparison",
+              "energy-decline",
+              "fear-shortfall",
+              "mastery",
+              "sleep",
+              "task-delay",
+              "weekend-fatigue"
+            ],
+            "recomputed": [
+              "close-relations",
+              "comparison",
+              "energy-decline",
+              "fear-shortfall",
+              "mastery",
+              "sleep",
+              "task-delay",
+              "weekend-fatigue"
+            ],
+            "agrees": true
+          },
+          {
+            "kind": "connection",
+            "rule": "neutral",
+            "emitted": [
+              "connection:task-delay~comparison"
+            ],
+            "recomputed": [
+              "connection:task-delay~comparison"
+            ],
+            "agrees": true
+          },
+          {
+            "kind": "pattern",
+            "rule": "neutral",
+            "emitted": [
+              "pattern:four-topics"
+            ],
+            "recomputed": [
+              "pattern:four-topics"
+            ],
+            "agrees": true
+          },
+          {
+            "kind": "insight",
+            "rule": "neutral",
+            "emitted": [
+              "insight:mastery-precedes-sleep"
+            ],
+            "recomputed": [
+              "insight:mastery-precedes-sleep"
+            ],
+            "agrees": true
+          }
+        ],
+        "orderWordingClean": true,
+        "rankFieldsFound": [],
+        "expectedObjects": 11,
+        "missingAccessibleNames": [],
+        "headingsFound": [
+          "العالم الخاص — خريطة التحليل",
+          "المواضيع",
+          "العلاقات",
+          "الأنماط",
+          "ما فُهِم"
+        ],
+        "missingAxisHeadings": [],
+        "patternStatesItsMembersInWords": true,
+        "connectionStatesSourceAndDestination": true,
+        "probe": {
+          "label": "THIS ACCESSIBLE NAME DOES NOT EXIST",
+          "detectedAsMissing": true
+        },
+        "pass": true
+      },
+      "probe": {
+        "input": "a fabricated accessible name",
+        "rejected": true
+      }
+    },
+    {
+      "id": "R-02",
+      "what": "traversal order is the DECLARED algorithm, is explicitly non-semantic, and carries no rank",
+      "pass": true,
+      "detail": {
+        "perAxis": [
+          {
+            "kind": "topic",
+            "rule": "neutral",
+            "agrees": true
+          },
+          {
+            "kind": "connection",
+            "rule": "neutral",
+            "agrees": true
+          },
+          {
+            "kind": "pattern",
+            "rule": "neutral",
+            "agrees": true
+          },
+          {
+            "kind": "insight",
+            "rule": "neutral",
+            "agrees": true
+          }
+        ],
+        "wordingClean": true,
+        "rankFields": [],
+        "seam": "If a runtime later supplies a canonical presentation order for a kind, it arrives as V.canonicalOrder[kind] and neutralOrder() uses it. Until then the order is the declared non-semantic one. I-08B3.1-F1R does not invent a canonical order here."
+      },
+      "probe": {
+        "input": "the withdrawn wording \"the Product's own stable identity order\"",
+        "rejected": true
+      }
+    },
+    {
+      "id": "R-03",
+      "what": "permuting the source array changes neither the traversal order nor one semantic fact",
+      "pass": true,
+      "detail": {
+        "orderStable": true,
+        "factsStable": true,
+        "emitted": [
+          {
+            "kind": "topic",
+            "ids": "close-relations|comparison|energy-decline|fear-shortfall|mastery|sleep|task-delay|weekend-fatigue"
+          },
+          {
+            "kind": "connection",
+            "ids": "connection:task-delay~comparison"
+          },
+          {
+            "kind": "pattern",
+            "ids": "pattern:four-topics"
+          },
+          {
+            "kind": "insight",
+            "ids": "insight:mastery-precedes-sleep"
+          }
+        ]
+      },
+      "probe": {
+        "input": "the same comparison against an order sorted by a fabricated per-object strength",
+        "rejected": true
+      }
+    },
+    {
+      "id": "P-01",
+      "what": "the same analytical objects, relationships, temporal truth, epistemic status and actions exist in EVERY expression",
+      "pass": true,
+      "detail": {
+        "expressions": 12,
+        "objects": 11,
+        "cells": 132,
+        "failures": 0
+      },
+      "probe": {
+        "input": "a fabricated cell with a missing object",
+        "rejected": true
+      }
+    },
+    {
+      "id": "P-02",
+      "what": "removing ONE object from the rendering fails parity for that object and for no other — TOPIC, CONNECTION, PATTERN and INSIGHT independently",
+      "pass": true,
+      "detail": [
+        {
+          "kind": "topic",
+          "id": "task-delay",
+          "elementsRemoved": 2,
+          "reportedAbsent": true,
+          "othersUntouched": true,
+          "othersDisturbed": []
+        },
+        {
+          "kind": "connection",
+          "id": "connection:task-delay~comparison",
+          "elementsRemoved": 1,
+          "reportedAbsent": true,
+          "othersUntouched": true,
+          "othersDisturbed": []
+        },
+        {
+          "kind": "pattern",
+          "id": "pattern:four-topics",
+          "elementsRemoved": 2,
+          "reportedAbsent": true,
+          "othersUntouched": true,
+          "othersDisturbed": []
+        },
+        {
+          "kind": "insight",
+          "id": "insight:mastery-precedes-sleep",
+          "elementsRemoved": 2,
+          "reportedAbsent": true,
+          "othersUntouched": true,
+          "othersDisturbed": []
+        }
+      ],
+      "probe": {
+        "input": "a planted set covering only three of the four families",
+        "rejected": true
+      }
+    },
+    {
+      "id": "P-03",
+      "what": "the truth JSON alone cannot satisfy rendered presence",
+      "pass": true,
+      "detail": {
+        "note": "In every one of the four planted runs the object remains in #qd-truth and is still reported ABSENT. The JSON is read for the object's FACTS and is never evidence that it was drawn.",
+        "rows": [
+          {
+            "id": "task-delay",
+            "stillInTruthJSON": true,
+            "reportedAbsent": true
+          },
+          {
+            "id": "connection:task-delay~comparison",
+            "stillInTruthJSON": true,
+            "reportedAbsent": true
+          },
+          {
+            "id": "pattern:four-topics",
+            "stillInTruthJSON": true,
+            "reportedAbsent": true
+          },
+          {
+            "id": "insight:mastery-precedes-sleep",
+            "stillInTruthJSON": true,
+            "reportedAbsent": true
+          }
+        ]
+      },
+      "probe": {
+        "input": "a run in which the object was removed from the JSON too, which would prove nothing about the renderer",
+        "rejected": true
+      }
+    },
+    {
+      "id": "P-04",
+      "what": "no accessibility expression names fewer analytical objects than the DEFAULT, and every object is named in the projection and in the inspection view",
+      "pass": true,
+      "detail": {
+        "perExpression": [
+          {
+            "expression": "DEFAULT",
+            "named": 10,
+            "lost": []
+          },
+          {
+            "expression": "REDUCED MOTION",
+            "named": 10,
+            "lost": []
+          },
+          {
+            "expression": "INCREASE CONTRAST",
+            "named": 10,
+            "lost": []
+          },
+          {
+            "expression": "REDUCE TRANSPARENCY",
+            "named": 10,
+            "lost": []
+          },
+          {
+            "expression": "CONTRAST + TRANSPARENCY",
+            "named": 10,
+            "lost": []
+          },
+          {
+            "expression": "REDUCED MOTION + CONTRAST",
+            "named": 10,
+            "lost": []
+          },
+          {
+            "expression": "GRAYSCALE (diagnostic)",
+            "named": 10,
+            "lost": []
+          },
+          {
+            "expression": "LARGER TEXT xxxLarge",
+            "named": 10,
+            "lost": []
+          },
+          {
+            "expression": "LARGER TEXT 200%",
+            "named": 11,
+            "lost": []
+          },
+          {
+            "expression": "LARGER TEXT AX5 (311.8%)",
+            "named": 11,
+            "lost": []
+          },
+          {
+            "expression": "BOLD TEXT",
+            "named": 10,
+            "lost": []
+          },
+          {
+            "expression": "SCREEN READER PROJECTION",
+            "named": 11,
+            "lost": []
+          }
+        ],
+        "notNamedInProjection": [],
+        "notNamedInInspection": [],
+        "drawnButUnnamedByDefault": [
+          "connection:task-delay~comparison"
+        ]
+      },
+      "probe": {
+        "input": "an expression that lost one name relative to the default",
+        "rejected": true
+      }
+    }
+  ]
+}

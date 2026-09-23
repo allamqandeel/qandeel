@@ -1,0 +1,5 @@
+{
+  "qandeel": {
+    "$description": "QANDEEL, standard contrast. Deliberately empty and deliberately present: the standard contrast context overrides nothing, and saying so with a set is clearer than an absent one."
+  }
+}

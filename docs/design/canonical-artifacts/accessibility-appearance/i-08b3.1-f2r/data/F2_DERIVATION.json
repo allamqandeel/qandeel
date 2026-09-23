@@ -1,0 +1,3705 @@
+{
+  "generatedBy": "tools/f2-derive.mjs",
+  "requirements": {
+    "R-ORDER": {
+      "statement": "The chroma order of the ROLE FAMILIES is identical in both appearances: ERROR > BRASS > LIGHT > ATMOSPHERE > INK > GROUND.",
+      "class": "product-contract",
+      "why": "It is the only structural property that makes \"the same identity under different lighting\" checkable rather than asserted. IT IS A LADDER OF ROLES, NOT OF VALUES: the first version of this check compared the eleven literals one by one and failed because the three Light stops came out in a different internal order, which is a fact about one ramp's shape and not about what the system means. Families are compared band to band — every Light stop above every atmosphere value and below the identity material."
+    },
+    "R-HUE": {
+      "statement": "Every chromatic role keeps its hue across appearances, to within 3 degrees.",
+      "class": "product-contract",
+      "why": "Hue is what a per-channel inversion destroys. Holding it is what makes Light Brass the same material and Light Error the same error, and it is measurable in one number."
+    },
+    "R-RATIO": {
+      "statement": "The three reading inks keep their WCAG contrast ratios against their own ground.",
+      "class": "product-contract",
+      "why": "QANDEEL hierarchy is a set of ratios. I-08B3.1-F1 proved importance is a ratio when it forbade increased contrast from inventing importance; the same argument binds an appearance change."
+    },
+    "R-SEPARATION": {
+      "statement": "min dEok(Meaning Light composited at any intensity, Living Brass) >= 0.020.",
+      "class": "production-default",
+      "serves": "LIGHT IS MEANING / BRASS IS MATTER must stay separable at every intensity.",
+      "why": "I-08B3.1-D2R's own floor, re-run with D2R's own metric on the light ground. 0.020 is an engineering heuristic and D2R said so; F2 does not promote it."
+    },
+    "R-INK-SEPARATION": {
+      "statement": "min dEok(any STOP of the Meaning Light ramp, any reading ink) >= 0.020.",
+      "class": "production-default",
+      "serves": "A meaning event must not be mistakable for writing.",
+      "why": "IT IS MEASURED ON THE RAMP'S STOPS AND NOT ON ITS COMPOSITING PATH, AND THE FIRST VERSION GOT THAT WRONG IN A WAY WORTH RECORDING. Measured along the composite, the FROZEN DARK appearance fails it: a bright wash rising over a near-black World passes within dEok 0.0094 of the tertiary reading ink at about half intensity, on its way up. That is not a confusion and it is not a defect in a frozen package — a broad soft gradient transiently crossing an ink's tone while it rises is nothing like a glyph. What the requirement is actually about is an expression that RESTS at an ink's colour, which is what a darkening family does: its stops ARE ink-like tones. So the stops are what is measured. The composite-path minimum is reported alongside in both appearances, as information rather than as a verdict.",
+      "note": "This requirement did not exclude the darkening family. R-SOURCE did."
+    },
+    "R-GRAYSCALE": {
+      "statement": "The meaning event must remain perceptible with colour removed: gray dEok >= 0.020 at peak.",
+      "class": "product-contract",
+      "why": "I-08B3.1-E1 and F1 forbid colour being the only carrier. It is the requirement that kills the chroma-only answer to Part C, and it kills it by arithmetic rather than by preference."
+    },
+    "R-NOT-SHADOW": {
+      "statement": "At every intensity the illuminated composite carries at least as much chroma as the ground it replaces.",
+      "class": "product-contract",
+      "why": "Light ADDS colour to a material; shadow REMOVES it."
+    },
+    "R-SOURCE": {
+      "statement": "At its peak the event must be LIGHTER than its ground, by more than a just-noticeable step, with the colour removed.",
+      "class": "production-default",
+      "serves": "qandeel.appearance.light-remains-meaning",
+      "why": "THIS REQUIREMENT EXISTS BECAUSE THE FIRST SEARCH RETURNED THE ANSWER §8 FORBIDS BY NAME. With only a chroma-gain test for \"not shadow\", the DARKENING family was admissible and won on magnitude: on a ground whose own chroma is 0.0041, any chromatic darkening gains chroma. What actually distinguishes a light from a shadow is that a light HAS A SOURCE. The falloff may glaze deeper away from it — that is what a warm light does to a light material — but the place the light is must be brighter than the place it is not. It is also the requirement that bounds the Light World from above, because a ground at L 0.98 leaves a source nothing to rise into.",
+      "reclassified": "I-08B3.1-F2R DEMOTED THIS FROM PRODUCT CONTRACT ON INSTRUCTION, AND KEPT IT. Independent review was explicit that 'the source must always be lighter than the ground' is a derivation constraint and not frozen Product truth, and that a light-appearance expression may legitimately combine local lightening and darkening. It is retained as the production default because the only family in the search it excludes is F-B, pure DARKENING — every insight gets deeper — which §8 of the F2 brief forbids by name and F2R does not withdraw.",
+      "andWhatNowSHARESThatDoor": "R-SOURCE-DOMINANCE REJECTS F-B's STRONGEST CONFIGURATIONS BUT NOT THE FAMILY, AND THE DISTINCTION IS WORTH STATING PRECISELY RATHER THAN CLAIMING MORE. Pure darkening has no rise at any depth, so R-SOURCE is still the requirement that fails EVERY F-B variant and is still the one that excludes the family as a family. What R-SOURCE-DOMINANCE removes is the part of F-B that made it attractive: the deep configurations, which are the only ones whose magnitude clears R-EVENT, are also the ones that go darker than the World under its own passage scrim. The shallow ones that survive the new bound fail R-EVENT instead. So the door is no longer held by one sentence at one point of the falloff — but this requirement has not been retired, and reporting it as redundant would be reporting a wish."
+    },
+    "R-SOURCE-DOMINANCE": {
+      "statement": "No stop of the Meaning Light ramp may be DARKER than the World under its own passage scrim. On the shipped ground that is L 0.5423.",
+      "class": "production-default",
+      "serves": "qandeel.appearance.light-remains-meaning",
+      "why": "A LIGHT GROUND CANNOT LEND A SOURCE MUCH BRIGHTNESS, SO A PERCEIVABLE LIGHT EVENT MUST BORROW MAGNITUDE FROM DARKENING — at L 0.9491 a source can rise by at most about dEok 0.021 before it runs out of range. R-SOURCE says the source must be lighter than its ground; it does NOT say how much deepening may accompany it, and that silence is the hole. This requirement closes it from the other side, and it does so with a value the appearance already owns rather than with a threshold chosen to fit: the passage scrim is what QANDEEL paints over a region it is pushing behind something else, and it composites to L 0.5423 from an alpha solved against the dark appearance's suppression factor. An event that means 'QANDEEL UNDERSTOOD' may not be darker than the veil that means 'not this, not now'.",
+      "howItWasFound": "IT WAS NOT REASONED OUT IN ADVANCE. I-08B3.1-F2R derived the ratio-preserving floor in full, and the expression that cleared it satisfied every requirement in this table — hue drift well inside the tolerance, ladder preserved, separations clear, clean settle — and rendered as an opaque brown-grey sphere on a near-white World. A configuration that passes every check and fails on sight is evidence that a check is missing, not that the eye is wrong. The rejected expression's deepest stop sits BELOW the scrim, and by a narrow margin: the requirement is not calibrated to reject that configuration comfortably, it is calibrated to a frozen value and rejects it by whatever amount that produces. chosen.ratioFloorCost carries the figures from the run rather than this paragraph.",
+      "measuredOnTheStops": "ON THE STOPS, WHICH IS THE SOUND PLACE AND NOT THE CONVENIENT ONE. The composite at any intensity is a convex blend of a stop with a backdrop no darker than the ground, so the deepest stop bounds the lightness of EVERY PAINTED PIXEL from below: stops above the scrim guarantee a whole event above the scrim. Measured on the composite the test does not separate the two floors at all — the rejected expression's darkest pixel sits near L 0.583, above the scrim, because a partial glaze never reaches its own stop. A bound on the composite would be a bound on one frame; a bound on the stops is a bound on the expression. R-INK-SEPARATION is on the stops for the same reason.",
+      "whatIsNotClaimed": "THE DIP-TO-RISE RATIO IS REPORTED AND NOT BOUNDED. It is 6.9 : 1 for the shipped expression against 17 : 1 for the rejected one, and it is the number that best describes what a reader sees differently between them — but any threshold between those two values would be a threshold chosen from two samples, which is taste wearing a measurement. It is in the record as `dipOverRise` so a later brief can bound it if it finds a reason to."
+    },
+    "R-CONTINUOUS": {
+      "statement": "The expression reaches the unilluminated ground CONTINUOUSLY: one 8-bit intensity step above zero, the composite is already within a just-noticeable step of the ground.",
+      "class": "production-default",
+      "serves": "qandeel.appearance.light-remains-meaning",
+      "why": "R-SETTLE ASKS THE VALUE AT ZERO AND CANNOT SEE THE SHAPE ARRIVING AT IT. F2's glaze was a Gaussian centred on the split, which is non-zero at zero intensity; at a width of 0.14 the residue was far below one 8-bit step, so R-SETTLE passed and nothing was wrong. The F2R correction needs a WIDE glaze, and there the same shape leaves a visible tint at the intensity where the event is supposed to be over, with R-SETTLE still reporting a clean settle because `at(0)` is a special case in every profile. A requirement that is satisfied by a special case is satisfied by the special case and not by the design. The glaze weight is now normalised to vanish at zero, and this is the check that would notice if it stopped."
+    },
+    "R-SETTLE": {
+      "statement": "At intensity 0 the composite is the unilluminated ground, exactly.",
+      "class": "product-contract",
+      "why": "Inherited from I-08B3.1-D2R: no permanent Meaning glow. Asserted on the quantised hex, not on the float."
+    },
+    "R-EVENT": {
+      "statement": "The meaning event's AREA MEAN — its difference from the ground averaged over the source's disc, weighted by area along D2R's falloff — must exceed the smallest step of the appearance's own reading ramp AT EVERY PEAK LEVEL THE THREE MEANING CATEGORIES REACH, which means at whichever of them the expression scores lowest.",
+      "class": "production-default",
+      "serves": "qandeel.appearance.light-remains-meaning",
+      "why": "THIS BOUND HAS BEEN RESTATED THREE TIMES AND EVERY EARLIER VERSION WAS WRONG IN AN INSTRUCTIVE WAY. The first required the event to exceed the world's strongest CONTOUR — but a contour is a one-pixel line and an event is a broad soft region, and comparing their per-pixel dEok compares unlike things. The second used the World-to-Surface step, which is like-for-like but is the WEAKEST distinction in the system: a floor so low that it did no work and left the selection rule to decide everything. The third — the one F2 shipped — put the reading ramp's smallest adjacent step on the event's PEAK, and that is the version worth understanding, because it is the one that passed.",
+      "whyTheThirdVersionFailed": "A PEAK IS A PROPERTY OF ONE POINT ON THE FALLOFF AND AN EVENT IS A REGION. F2's expression reached dEok 0.1046 against a floor of 0.1017 — it cleared the requirement — on a glaze 0.14 wide in normalised intensity, which is to say on a thin annulus, with essentially bare ground on either side of it. Integrated over the disc a reader looks at, the same expression came to 0.0255: a QUARTER of the floor its peak had cleared, and one twelfth of the dark appearance's 0.3257. Independent review called the rendered CONNECTION near-static and the number agreed; the requirement had simply been measuring something else. The floor is unchanged and the QUANTITY is corrected: the smallest difference QANDEEL asks a reader to perceive as meaning something, required of the event's average rather than of its best pixel.",
+      "andItWasEvaluatedWhereTheProductNeverGoes": "EVERY VERSION BEFORE I-08B3.1-F2R MEASURED THE PROFILE AT INTENSITY 1.0, AND NO MEANING CATEGORY REACHES IT. I-08B3.1-D2R's own envelopes top out at 0.8598 for CONNECTION, 0.9587 for PATTERN and 0.9219 for INSIGHT. A requirement evaluated where the Product never goes is a requirement about nothing.",
+      "andTHENITWASEvaluatedAtTheFlatteringOneOfTheThree": "THE FIRST FIX WAS 'EVALUATE AT THE LEVEL THE QUIETEST CATEGORY REACHES', AND THAT WAS A GUESS ABOUT THE SHAPE WEARING A MEASUREMENT'S CLOTHES. It reads like the conservative choice. It is not, because THE SIGNED BLOOM'S AREA MEAN FALLS AS INTENSITY RISES: above the split the centre of the disc floods toward the core, and the core is only dEok 0.021 from a ground at L 0.9491, so a stronger event paints more of its own disc with the quietest colour it owns. The expression that came back from that fix measured 0.1026 at CONNECTION's 0.8598, 0.1009 at INSIGHT's 0.9219 and 0.0995 at PATTERN's 0.9587 against a floor of 0.1017 — it cleared the floor at the level the requirement looked at and FAILED IT AT THE OTHER TWO. Two of the three meaning categories did not meet a requirement the derivation reported as met.",
+      "andHowITWasFound": "BY THE VERIFIER DISAGREEING WITH THE RECORD. Check C-07 was still calling the area mean at its default level of 1.0 while the derivation called it at 0.8598, so the two reported different numbers for the same expression and each was internally consistent. That disagreement is normally a defect in the check. Here it was the only reason anyone looked at the third number. The quantity is now the SMALLEST area mean among the three levels the Product reaches, found per configuration, because for a non-monotonic expression the argmin is not a constant — and the two appearances demonstrate exactly that: the dark event is monotonically increasing and binds on CONNECTION, the light event is monotonically decreasing and binds on PATTERN. THE BINDING CATEGORY IS A PROPERTY OF THE EXPRESSION, NOT OF THE PRODUCT, which is why it could never have been a named constant."
+    },
+    "R-FOOTPRINT": {
+      "statement": "The light event's perceived extent must not exceed the dark event's by more than 0.10 of the source radius.",
+      "class": "product-contract",
+      "serves": "An alternate appearance may not make a meaning event cover more of the world than it does in the appearance it is a counterpart of.",
+      "why": "IT IS THE REQUIREMENT THE FIRST RENDER ASKED FOR IN WORDS. With no footprint bound and an objective of \"the largest admissible event\", the search drove the glaze to its deepest and widest setting and the five lobes of an INSIGHT laid a continuous wash over half the world. Measured, the event was correct; looked at, it was a stain. Extent is a property a reader perceives directly and a per-pixel distance cannot see, so it is stated separately and measured separately."
+    },
+    "R-GLARE": {
+      "statement": "The Light World is not #FFFFFF and carries a non-zero chroma stable under 8-bit quantisation.",
+      "class": "production-default",
+      "serves": "The World is a material, not paper.",
+      "why": "Apple and Material both ship a white light background. QANDEEL departs, and the reason is QANDEEL's own: this World has to be able to hold a light, and a ground with no chroma at all is the \"white utility app\" the Product Owner named."
+    },
+    "R-INK-DUTY": {
+      "statement": "Living Brass and Error meet 4.5:1 against BOTH the Light World and the Light Surface.",
+      "class": "product-contract",
+      "why": "Both are painted as TEXT — the identity mark, the navigation labels, the error line — at sizes below the WCAG large-text threshold. In dark one value could be a material and an ink at once; on a light ground the two duties pull apart and the ink duty is the binding one."
+    },
+    "R-SUPPRESSION": {
+      "statement": "The PASSAGE scrim darkens in BOTH appearances.",
+      "class": "product-contract",
+      "why": "A scrim expresses WORLD SUPPRESSION, and suppression is not a direction on the lightness axis — it is subtraction. Apple is explicit that a light translucent surface must never be stacked on another, so a \"light-mode scrim\" made by inverting the dark one would collapse the legibility it exists to protect."
+    }
+  },
+  "adopted": {
+    "SEPARATION_FLOOR": 0.02,
+    "INK_FLOOR_RATIO": 4.5,
+    "QUANTISATION_STABLE_CHROMA": 0.003,
+    "HUE_TOLERANCE_DEG": 3,
+    "JND_DEOK": 0.02,
+    "FOOTPRINT_TOLERANCE": 0.1
+  },
+  "selectionRule": "among admissible configurations, the mildest extreme — the floor makes the event read, and the selection takes the least departure the floor forces, with magnitude compared only down to a just-noticeable step so that an imperceptible sliver of it cannot outrank the cross-appearance contract",
+  "darkEvent": {
+    "eventPeak": 0.6925,
+    "grayPeak": 0.6907,
+    "areaMean": 0.2846,
+    "areaMeanGray": 0.2841,
+    "footprint": 0.995,
+    "technique": "additive-over-ground"
+  },
+  "readingHue": 93.1,
+  "lightChromaBand": 0.0317,
+  "dark": {
+    "WORLD": "#101010",
+    "SURFACE": "#181818",
+    "PRIMARY": "#d8d5ca",
+    "SECONDARY": "#afaca3",
+    "TERTIARY": "#8b8982",
+    "BRASS": "#a58e6f",
+    "CORE": "#fbf2db",
+    "MID": "#e8ddc2",
+    "LOW": "#d6caa9",
+    "ERROR": "#fe907e",
+    "DISABLED": "#696762",
+    "SCRIM_INK": "#000000",
+    "SCRIM_ALPHA": 0.5
+  },
+  "darkState": {
+    "REST": "#8b8982",
+    "PRESSED": "#d8d5ca",
+    "FOCUS": "#d8d5ca",
+    "FOCUS_COMPANION": "#101010",
+    "SELECTED": "#d8d5ca",
+    "SELECTED_MARKER": "#d8d5ca",
+    "WARNING": "#d8d5ca",
+    "SUCCESS": "#d8d5ca",
+    "INFORMATIONAL": "#afaca3"
+  },
+  "darkLadder": [
+    {
+      "role": "ERROR",
+      "hex": "#fe907e",
+      "L": 0.7671,
+      "C": 0.1364,
+      "H": 30.3
+    },
+    {
+      "role": "BRASS",
+      "hex": "#a58e6f",
+      "L": 0.6595,
+      "C": 0.0516,
+      "H": 75
+    },
+    {
+      "role": "LOW",
+      "hex": "#d6caa9",
+      "L": 0.8403,
+      "C": 0.0462,
+      "H": 90.4
+    },
+    {
+      "role": "MID",
+      "hex": "#e8ddc2",
+      "L": 0.8993,
+      "C": 0.0378,
+      "H": 88.5
+    },
+    {
+      "role": "CORE",
+      "hex": "#fbf2db",
+      "L": 0.9621,
+      "C": 0.0317,
+      "H": 89.1
+    },
+    {
+      "role": "PRIMARY",
+      "hex": "#d8d5ca",
+      "L": 0.8723,
+      "C": 0.0153,
+      "H": 94.2
+    },
+    {
+      "role": "SECONDARY",
+      "hex": "#afaca3",
+      "L": 0.7443,
+      "C": 0.0131,
+      "H": 91.6
+    },
+    {
+      "role": "TERTIARY",
+      "hex": "#8b8982",
+      "L": 0.6297,
+      "C": 0.0106,
+      "H": 93.6
+    },
+    {
+      "role": "DISABLED",
+      "hex": "#696762",
+      "L": 0.514,
+      "C": 0.0081,
+      "H": 88.7
+    },
+    {
+      "role": "WORLD",
+      "hex": "#101010",
+      "L": 0.173,
+      "C": 0,
+      "H": null
+    },
+    {
+      "role": "SURFACE",
+      "hex": "#181818",
+      "L": 0.209,
+      "C": 0,
+      "H": null
+    }
+  ],
+  "invertedWouldHaveBeen": [
+    {
+      "role": "WORLD",
+      "dark": "#101010",
+      "inverted": "#efefef",
+      "darkHue": null,
+      "invertedHue": null,
+      "hueRotation": null
+    },
+    {
+      "role": "SURFACE",
+      "dark": "#181818",
+      "inverted": "#e7e7e7",
+      "darkHue": null,
+      "invertedHue": null,
+      "hueRotation": null
+    },
+    {
+      "role": "PRIMARY",
+      "dark": "#d8d5ca",
+      "inverted": "#272a35",
+      "darkHue": 94.2,
+      "invertedHue": 273.1,
+      "hueRotation": 178.9
+    },
+    {
+      "role": "SECONDARY",
+      "dark": "#afaca3",
+      "inverted": "#50535c",
+      "darkHue": 91.6,
+      "invertedHue": 271.1,
+      "hueRotation": 179.5
+    },
+    {
+      "role": "TERTIARY",
+      "dark": "#8b8982",
+      "inverted": "#74767d",
+      "darkHue": 93.6,
+      "invertedHue": 273.2,
+      "hueRotation": 179.6
+    },
+    {
+      "role": "BRASS",
+      "dark": "#a58e6f",
+      "inverted": "#5a7190",
+      "darkHue": 75,
+      "invertedHue": 256,
+      "hueRotation": 179
+    },
+    {
+      "role": "CORE",
+      "dark": "#fbf2db",
+      "inverted": "#040d24",
+      "darkHue": 89.1,
+      "invertedHue": 263.3,
+      "hueRotation": 174.2
+    },
+    {
+      "role": "MID",
+      "dark": "#e8ddc2",
+      "inverted": "#17223d",
+      "darkHue": 88.5,
+      "invertedHue": 266,
+      "hueRotation": 177.5
+    },
+    {
+      "role": "LOW",
+      "dark": "#d6caa9",
+      "inverted": "#293556",
+      "darkHue": 90.4,
+      "invertedHue": 267.9,
+      "hueRotation": 177.5
+    },
+    {
+      "role": "ERROR",
+      "dark": "#fe907e",
+      "inverted": "#016f81",
+      "darkHue": 30.3,
+      "invertedHue": 214,
+      "hueRotation": 176.3
+    },
+    {
+      "role": "DISABLED",
+      "dark": "#696762",
+      "inverted": "#96989d",
+      "darkHue": 88.7,
+      "invertedHue": 268.5,
+      "hueRotation": 179.8
+    }
+  ],
+  "inversionMeanHueRotation": 178,
+  "sweep": [
+    {
+      "Lw": 0.88,
+      "world": "#d8d7d4",
+      "surface": "#d1d0cd",
+      "winner": "F-D",
+      "winnerEventPeak": 0.2423,
+      "eventFloor": 0.1057,
+      "atmoStrongestContourDEok": 0.3699,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0884,
+          "areaMean": 0.0327,
+          "areaMeanGray": 0.0314,
+          "tailAtOneStep": 0,
+          "risePeak": 0.085,
+          "dipPeak": 0,
+          "grayPeak": 0.085,
+          "minDEokToBrass": 0.4148,
+          "minDEokStopsToInk": 0.5025,
+          "minDEokPathToInk": 0.4409,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3764,
+          "areaMean": 0.1361,
+          "areaMeanGray": 0.1358,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3759,
+          "grayPeak": 0.3759,
+          "minDEokToBrass": 0.0411,
+          "minDEokStopsToInk": 0.0346,
+          "minDEokPathToInk": 0.0723,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0398,
+          "areaMean": 0.0154,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4115,
+          "minDEokStopsToInk": 0.4416,
+          "minDEokPathToInk": 0.44,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.2423,
+          "areaMean": 0.1297,
+          "areaMeanGray": 0.1265,
+          "tailAtOneStep": 0,
+          "risePeak": 0.073,
+          "dipPeak": 0.2391,
+          "grayPeak": 0.2391,
+          "minDEokToBrass": 0.1731,
+          "minDEokStopsToInk": 0.1646,
+          "minDEokPathToInk": 0.2031,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 3,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.885,
+      "world": "#dad9d6",
+      "surface": "#d3d2cf",
+      "winner": "F-D",
+      "winnerEventPeak": 0.242,
+      "eventFloor": 0.1054,
+      "atmoStrongestContourDEok": 0.3722,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0824,
+          "areaMean": 0.0307,
+          "areaMeanGray": 0.0294,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0788,
+          "dipPeak": 0,
+          "grayPeak": 0.0788,
+          "minDEokToBrass": 0.4163,
+          "minDEokStopsToInk": 0.4988,
+          "minDEokPathToInk": 0.4434,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3767,
+          "areaMean": 0.1363,
+          "areaMeanGray": 0.1361,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.375,
+          "grayPeak": 0.375,
+          "minDEokToBrass": 0.0417,
+          "minDEokStopsToInk": 0.0343,
+          "minDEokPathToInk": 0.074,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-HUE",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.041,
+          "areaMean": 0.0157,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4128,
+          "minDEokStopsToInk": 0.4441,
+          "minDEokPathToInk": 0.4423,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.242,
+          "areaMean": 0.1283,
+          "areaMeanGray": 0.1272,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0758,
+          "dipPeak": 0.2419,
+          "grayPeak": 0.2419,
+          "minDEokToBrass": 0.1747,
+          "minDEokStopsToInk": 0.1639,
+          "minDEokPathToInk": 0.2031,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 6,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.89,
+      "world": "#dcdbd7",
+      "surface": "#d5d4d0",
+      "winner": "F-D",
+      "winnerEventPeak": 0.1584,
+      "eventFloor": 0.1013,
+      "atmoStrongestContourDEok": 0.3746,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0764,
+          "areaMean": 0.0288,
+          "areaMeanGray": 0.0274,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0727,
+          "dipPeak": 0,
+          "grayPeak": 0.0727,
+          "minDEokToBrass": 0.4185,
+          "minDEokStopsToInk": 0.4952,
+          "minDEokPathToInk": 0.4456,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3764,
+          "areaMean": 0.1361,
+          "areaMeanGray": 0.1362,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3741,
+          "grayPeak": 0.3741,
+          "minDEokToBrass": 0.0444,
+          "minDEokStopsToInk": 0.0339,
+          "minDEokPathToInk": 0.076,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0393,
+          "areaMean": 0.0152,
+          "areaMeanGray": 0.0001,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0.0031,
+          "grayPeak": 0.0031,
+          "minDEokToBrass": 0.415,
+          "minDEokStopsToInk": 0.4457,
+          "minDEokPathToInk": 0.4446,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.1584,
+          "areaMean": 0.1053,
+          "areaMeanGray": 0.1025,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.0607,
+          "dipPeak": 0.1534,
+          "grayPeak": 0.1534,
+          "minDEokToBrass": 0.2619,
+          "minDEokStopsToInk": 0.2677,
+          "minDEokPathToInk": 0.2926,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 11,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.895,
+      "world": "#dddcd9",
+      "surface": "#d6d5d2",
+      "winner": "F-D",
+      "winnerEventPeak": 0.1588,
+      "eventFloor": 0.1049,
+      "atmoStrongestContourDEok": 0.3744,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0736,
+          "areaMean": 0.0279,
+          "areaMeanGray": 0.0264,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0697,
+          "dipPeak": 0,
+          "grayPeak": 0.0697,
+          "minDEokToBrass": 0.4184,
+          "minDEokStopsToInk": 0.4915,
+          "minDEokPathToInk": 0.4453,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3763,
+          "areaMean": 0.1362,
+          "areaMeanGray": 0.1361,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3737,
+          "grayPeak": 0.3737,
+          "minDEokToBrass": 0.0444,
+          "minDEokStopsToInk": 0.0351,
+          "minDEokPathToInk": 0.0759,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0409,
+          "areaMean": 0.0157,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4149,
+          "minDEokStopsToInk": 0.446,
+          "minDEokPathToInk": 0.4442,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.1588,
+          "areaMean": 0.1056,
+          "areaMeanGray": 0.1024,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.0576,
+          "dipPeak": 0.1533,
+          "grayPeak": 0.1533,
+          "minDEokToBrass": 0.2616,
+          "minDEokStopsToInk": 0.2673,
+          "minDEokPathToInk": 0.2922,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 7,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.9,
+      "world": "#dfdedb",
+      "surface": "#d8d7d4",
+      "winner": "F-D",
+      "winnerEventPeak": 0.1586,
+      "eventFloor": 0.1008,
+      "atmoStrongestContourDEok": 0.377,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0708,
+          "areaMean": 0.026,
+          "areaMeanGray": 0.0244,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0666,
+          "dipPeak": 0,
+          "grayPeak": 0.0666,
+          "minDEokToBrass": 0.4209,
+          "minDEokStopsToInk": 0.4879,
+          "minDEokPathToInk": 0.4478,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3755,
+          "areaMean": 0.136,
+          "areaMeanGray": 0.1358,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3728,
+          "grayPeak": 0.3728,
+          "minDEokToBrass": 0.0476,
+          "minDEokStopsToInk": 0.0357,
+          "minDEokPathToInk": 0.079,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0408,
+          "areaMean": 0.0157,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4175,
+          "minDEokStopsToInk": 0.4485,
+          "minDEokPathToInk": 0.4467,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.1586,
+          "areaMean": 0.1055,
+          "areaMeanGray": 0.1023,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.0545,
+          "dipPeak": 0.153,
+          "grayPeak": 0.153,
+          "minDEokToBrass": 0.2645,
+          "minDEokStopsToInk": 0.27,
+          "minDEokPathToInk": 0.2949,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 12,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.905,
+      "world": "#e0dfdc",
+      "surface": "#d9d8d5",
+      "winner": "F-D",
+      "winnerEventPeak": 0.1584,
+      "eventFloor": 0.1044,
+      "atmoStrongestContourDEok": 0.3769,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.068,
+          "areaMean": 0.0251,
+          "areaMeanGray": 0.0234,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0635,
+          "dipPeak": 0,
+          "grayPeak": 0.0635,
+          "minDEokToBrass": 0.4205,
+          "minDEokStopsToInk": 0.4843,
+          "minDEokPathToInk": 0.4472,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.376,
+          "areaMean": 0.1364,
+          "areaMeanGray": 0.1359,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3759,
+          "grayPeak": 0.3759,
+          "minDEokToBrass": 0.0471,
+          "minDEokStopsToInk": 0.0345,
+          "minDEokPathToInk": 0.0778,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-HUE",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0408,
+          "areaMean": 0.0157,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.417,
+          "minDEokStopsToInk": 0.4479,
+          "minDEokPathToInk": 0.4461,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.1584,
+          "areaMean": 0.1055,
+          "areaMeanGray": 0.1023,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.0515,
+          "dipPeak": 0.1528,
+          "grayPeak": 0.1528,
+          "minDEokToBrass": 0.2641,
+          "minDEokStopsToInk": 0.2696,
+          "minDEokPathToInk": 0.2945,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 8,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.91,
+      "world": "#e2e1de",
+      "surface": "#dbdad7",
+      "winner": "F-D",
+      "winnerEventPeak": 0.1581,
+      "eventFloor": 0.1042,
+      "atmoStrongestContourDEok": 0.376,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0621,
+          "areaMean": 0.0232,
+          "areaMeanGray": 0.0215,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0574,
+          "dipPeak": 0,
+          "grayPeak": 0.0574,
+          "minDEokToBrass": 0.423,
+          "minDEokStopsToInk": 0.4807,
+          "minDEokPathToInk": 0.4497,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3764,
+          "areaMean": 0.1362,
+          "areaMeanGray": 0.136,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.375,
+          "grayPeak": 0.375,
+          "minDEokToBrass": 0.0484,
+          "minDEokStopsToInk": 0.0352,
+          "minDEokPathToInk": 0.0795,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-HUE",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0407,
+          "areaMean": 0.0156,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4196,
+          "minDEokStopsToInk": 0.4504,
+          "minDEokPathToInk": 0.4486,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.1581,
+          "areaMean": 0.1054,
+          "areaMeanGray": 0.1023,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.0454,
+          "dipPeak": 0.1525,
+          "grayPeak": 0.1525,
+          "minDEokToBrass": 0.267,
+          "minDEokStopsToInk": 0.2724,
+          "minDEokPathToInk": 0.2972,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 5,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.915,
+      "world": "#e4e3e0",
+      "surface": "#dddcd9",
+      "winner": "F-D",
+      "winnerEventPeak": 0.1566,
+      "eventFloor": 0.1001,
+      "atmoStrongestContourDEok": 0.3786,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0581,
+          "areaMean": 0.0216,
+          "areaMeanGray": 0.0166,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0453,
+          "dipPeak": 0,
+          "grayPeak": 0.0453,
+          "minDEokToBrass": 0.4256,
+          "minDEokStopsToInk": 0.4687,
+          "minDEokPathToInk": 0.4522,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3759,
+          "areaMean": 0.1363,
+          "areaMeanGray": 0.1362,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3741,
+          "grayPeak": 0.3741,
+          "minDEokToBrass": 0.0512,
+          "minDEokStopsToInk": 0.0365,
+          "minDEokPathToInk": 0.0828,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0407,
+          "areaMean": 0.0156,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4221,
+          "minDEokStopsToInk": 0.4528,
+          "minDEokPathToInk": 0.4511,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.1566,
+          "areaMean": 0.1037,
+          "areaMeanGray": 0.1025,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.0483,
+          "dipPeak": 0.1554,
+          "grayPeak": 0.1554,
+          "minDEokToBrass": 0.2694,
+          "minDEokStopsToInk": 0.2727,
+          "minDEokPathToInk": 0.2978,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 11,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.92,
+      "world": "#e5e4e1",
+      "surface": "#deddda",
+      "winner": "F-D",
+      "winnerEventPeak": 0.1577,
+      "eventFloor": 0.1037,
+      "atmoStrongestContourDEok": 0.3782,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0558,
+          "areaMean": 0.0208,
+          "areaMeanGray": 0.0156,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0423,
+          "dipPeak": 0,
+          "grayPeak": 0.0423,
+          "minDEokToBrass": 0.4251,
+          "minDEokStopsToInk": 0.4651,
+          "minDEokPathToInk": 0.4516,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3755,
+          "areaMean": 0.1362,
+          "areaMeanGray": 0.136,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3737,
+          "grayPeak": 0.3737,
+          "minDEokToBrass": 0.0511,
+          "minDEokStopsToInk": 0.0364,
+          "minDEokPathToInk": 0.0827,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0406,
+          "areaMean": 0.0156,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4217,
+          "minDEokStopsToInk": 0.4523,
+          "minDEokPathToInk": 0.4505,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.1577,
+          "areaMean": 0.1053,
+          "areaMeanGray": 0.1023,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.0363,
+          "dipPeak": 0.1521,
+          "grayPeak": 0.1521,
+          "minDEokToBrass": 0.2695,
+          "minDEokStopsToInk": 0.2748,
+          "minDEokPathToInk": 0.2995,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 10,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.925,
+      "world": "#e7e6e3",
+      "surface": "#e0dfdc",
+      "winner": "F-D",
+      "winnerEventPeak": 0.1562,
+      "eventFloor": 0.1035,
+      "atmoStrongestContourDEok": 0.3805,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0515,
+          "areaMean": 0.0194,
+          "areaMeanGray": 0.0136,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0362,
+          "dipPeak": 0,
+          "grayPeak": 0.0362,
+          "minDEokToBrass": 0.4276,
+          "minDEokStopsToInk": 0.4615,
+          "minDEokPathToInk": 0.4541,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3765,
+          "areaMean": 0.1365,
+          "areaMeanGray": 0.136,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3763,
+          "grayPeak": 0.3763,
+          "minDEokToBrass": 0.0533,
+          "minDEokStopsToInk": 0.0361,
+          "minDEokPathToInk": 0.0837,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-HUE",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0406,
+          "areaMean": 0.0156,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4242,
+          "minDEokStopsToInk": 0.4547,
+          "minDEokPathToInk": 0.453,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.1562,
+          "areaMean": 0.1036,
+          "areaMeanGray": 0.1024,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.0422,
+          "dipPeak": 0.155,
+          "grayPeak": 0.155,
+          "minDEokToBrass": 0.2719,
+          "minDEokStopsToInk": 0.2751,
+          "minDEokPathToInk": 0.3001,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 11,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.93,
+      "world": "#e9e8e5",
+      "surface": "#e2e1de",
+      "winner": "F-D",
+      "winnerEventPeak": 0.1559,
+      "eventFloor": 0.0995,
+      "atmoStrongestContourDEok": 0.3831,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0474,
+          "areaMean": 0.0181,
+          "areaMeanGray": 0.0117,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0302,
+          "dipPeak": 0,
+          "grayPeak": 0.0302,
+          "minDEokToBrass": 0.428,
+          "minDEokStopsToInk": 0.458,
+          "minDEokPathToInk": 0.4566,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3763,
+          "areaMean": 0.1365,
+          "areaMeanGray": 0.1363,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3755,
+          "grayPeak": 0.3755,
+          "minDEokToBrass": 0.0526,
+          "minDEokStopsToInk": 0.0384,
+          "minDEokPathToInk": 0.0867,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-HUE",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0405,
+          "areaMean": 0.0156,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4246,
+          "minDEokStopsToInk": 0.4572,
+          "minDEokPathToInk": 0.4555,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.1559,
+          "areaMean": 0.1036,
+          "areaMeanGray": 0.1024,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.0362,
+          "dipPeak": 0.1547,
+          "grayPeak": 0.1547,
+          "minDEokToBrass": 0.2725,
+          "minDEokStopsToInk": 0.2779,
+          "minDEokPathToInk": 0.3028,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 9,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.935,
+      "world": "#eae9e6",
+      "surface": "#e3e2df",
+      "winner": "F-D",
+      "winnerEventPeak": 0.1593,
+      "eventFloor": 0.103,
+      "atmoStrongestContourDEok": 0.3835,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0456,
+          "areaMean": 0.0175,
+          "areaMeanGray": 0.0107,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0271,
+          "dipPeak": 0,
+          "grayPeak": 0.0271,
+          "minDEokToBrass": 0.4297,
+          "minDEokStopsToInk": 0.4544,
+          "minDEokPathToInk": 0.456,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3769,
+          "areaMean": 0.1367,
+          "areaMeanGray": 0.1365,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3751,
+          "grayPeak": 0.3751,
+          "minDEokToBrass": 0.0542,
+          "minDEokStopsToInk": 0.0375,
+          "minDEokPathToInk": 0.0855,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0405,
+          "areaMean": 0.0155,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4263,
+          "minDEokStopsToInk": 0.4566,
+          "minDEokPathToInk": 0.4549,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.1593,
+          "areaMean": 0.1065,
+          "areaMeanGray": 0.1032,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.0241,
+          "dipPeak": 0.1546,
+          "grayPeak": 0.1546,
+          "minDEokToBrass": 0.2724,
+          "minDEokStopsToInk": 0.2777,
+          "minDEokPathToInk": 0.3023,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 10,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.94,
+      "world": "#ecebe8",
+      "surface": "#e5e4e1",
+      "winner": "F-D",
+      "winnerEventPeak": 0.1574,
+      "eventFloor": 0.1022,
+      "atmoStrongestContourDEok": 0.3853,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.044,
+          "areaMean": 0.0164,
+          "areaMeanGray": 0.0087,
+          "tailAtOneStep": 0,
+          "risePeak": 0.0241,
+          "dipPeak": 0,
+          "grayPeak": 0.0241,
+          "minDEokToBrass": 0.4301,
+          "minDEokStopsToInk": 0.4508,
+          "minDEokPathToInk": 0.4585,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3761,
+          "areaMean": 0.1364,
+          "areaMeanGray": 0.1363,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3742,
+          "grayPeak": 0.3742,
+          "minDEokToBrass": 0.0551,
+          "minDEokStopsToInk": 0.0389,
+          "minDEokPathToInk": 0.0885,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0404,
+          "areaMean": 0.0155,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4267,
+          "minDEokStopsToInk": 0.4591,
+          "minDEokPathToInk": 0.4574,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.1574,
+          "areaMean": 0.1046,
+          "areaMeanGray": 0.1036,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.0271,
+          "dipPeak": 0.1543,
+          "grayPeak": 0.1543,
+          "minDEokToBrass": 0.2729,
+          "minDEokStopsToInk": 0.2781,
+          "minDEokPathToInk": 0.3031,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 9,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.945,
+      "world": "#eeedea",
+      "surface": "#e6e5e2",
+      "winner": "F-D",
+      "winnerEventPeak": 0.1571,
+      "eventFloor": 0.0988,
+      "atmoStrongestContourDEok": 0.3879,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0408,
+          "areaMean": 0.0155,
+          "areaMeanGray": 0.0068,
+          "tailAtOneStep": 0,
+          "risePeak": 0.018,
+          "dipPeak": 0,
+          "grayPeak": 0.018,
+          "minDEokToBrass": 0.4344,
+          "minDEokStopsToInk": 0.4473,
+          "minDEokPathToInk": 0.4607,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3775,
+          "areaMean": 0.1368,
+          "areaMeanGray": 0.1362,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3768,
+          "grayPeak": 0.3768,
+          "minDEokToBrass": 0.0592,
+          "minDEokStopsToInk": 0.0399,
+          "minDEokPathToInk": 0.0897,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-HUE",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0404,
+          "areaMean": 0.0155,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4314,
+          "minDEokStopsToInk": 0.4616,
+          "minDEokPathToInk": 0.4598,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.1571,
+          "areaMean": 0.1045,
+          "areaMeanGray": 0.1036,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.024,
+          "dipPeak": 0.154,
+          "grayPeak": 0.154,
+          "minDEokToBrass": 0.2779,
+          "minDEokStopsToInk": 0.2809,
+          "minDEokPathToInk": 0.3058,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 18,
+          "variantsTried": 120,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.95,
+      "world": "#efeeeb",
+      "surface": "#e7e6e3",
+      "winner": "F-D",
+      "winnerEventPeak": 0.157,
+      "eventFloor": 0.1017,
+      "atmoStrongestContourDEok": 0.3883,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0395,
+          "areaMean": 0.0151,
+          "areaMeanGray": 0.0058,
+          "tailAtOneStep": 0,
+          "risePeak": 0.015,
+          "dipPeak": 0,
+          "grayPeak": 0.015,
+          "minDEokToBrass": 0.4342,
+          "minDEokStopsToInk": 0.4437,
+          "minDEokPathToInk": 0.4601,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 27,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.4434,
+          "areaMean": 0.1594,
+          "areaMeanGray": 0.1594,
+          "tailAtOneStep": 0.003,
+          "risePeak": 0,
+          "dipPeak": 0.4424,
+          "grayPeak": 0.4424,
+          "minDEokToBrass": 0.0169,
+          "minDEokStopsToInk": 0.0363,
+          "minDEokPathToInk": 0.033,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 135,
+          "failed": [
+            "R-HUE",
+            "R-SEPARATION",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0416,
+          "areaMean": 0.0159,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4311,
+          "minDEokStopsToInk": 0.4608,
+          "minDEokPathToInk": 0.4593,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 27,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.157,
+          "areaMean": 0.1022,
+          "areaMeanGray": 0.1014,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0.021,
+          "dipPeak": 0.1539,
+          "grayPeak": 0.1539,
+          "minDEokToBrass": 0.2779,
+          "minDEokStopsToInk": 0.2805,
+          "minDEokPathToInk": 0.3054,
+          "becomesShadowAt": null,
+          "admissible": true,
+          "admissibleVariants": 2930,
+          "variantsTried": 50760,
+          "failed": [],
+          "failedOnEveryVariant": null
+        }
+      ]
+    },
+    {
+      "Lw": 0.955,
+      "world": "#f1f0ed",
+      "surface": "#e9e8e5",
+      "winner": null,
+      "winnerEventPeak": null,
+      "eventFloor": 0.1022,
+      "atmoStrongestContourDEok": 0.39,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0376,
+          "areaMean": 0.0145,
+          "areaMeanGray": 0.0038,
+          "tailAtOneStep": 0,
+          "risePeak": 0.009,
+          "dipPeak": 0,
+          "grayPeak": 0.009,
+          "minDEokToBrass": 0.4364,
+          "minDEokStopsToInk": 0.4402,
+          "minDEokPathToInk": 0.4626,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3775,
+          "areaMean": 0.1367,
+          "areaMeanGray": 0.1366,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3756,
+          "grayPeak": 0.3756,
+          "minDEokToBrass": 0.0605,
+          "minDEokStopsToInk": 0.0405,
+          "minDEokPathToInk": 0.0913,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.04,
+          "areaMean": 0.0154,
+          "areaMeanGray": 0.0001,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0.003,
+          "grayPeak": 0.003,
+          "minDEokToBrass": 0.4331,
+          "minDEokStopsToInk": 0.4633,
+          "minDEokPathToInk": 0.4616,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.4437,
+          "areaMean": 0.2932,
+          "areaMeanGray": 0.2925,
+          "tailAtOneStep": 0.0035,
+          "risePeak": 0.006,
+          "dipPeak": 0.4413,
+          "grayPeak": 0.4413,
+          "minDEokToBrass": 0.0164,
+          "minDEokStopsToInk": 0.0561,
+          "minDEokPathToInk": 0.0349,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 120,
+          "failed": [
+            "R-SEPARATION",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        }
+      ]
+    },
+    {
+      "Lw": 0.96,
+      "world": "#f3f2ef",
+      "surface": "#ebeae7",
+      "winner": null,
+      "winnerEventPeak": null,
+      "eventFloor": 0.102,
+      "atmoStrongestContourDEok": 0.3895,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0378,
+          "areaMean": 0.0141,
+          "areaMeanGray": 0.0019,
+          "tailAtOneStep": 0,
+          "risePeak": 0.006,
+          "dipPeak": 0,
+          "grayPeak": 0.006,
+          "minDEokToBrass": 0.4385,
+          "minDEokStopsToInk": 0.4367,
+          "minDEokPathToInk": 0.465,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3767,
+          "areaMean": 0.1365,
+          "areaMeanGray": 0.1364,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3748,
+          "grayPeak": 0.3748,
+          "minDEokToBrass": 0.0637,
+          "minDEokStopsToInk": 0.0424,
+          "minDEokPathToInk": 0.0944,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0402,
+          "areaMean": 0.0153,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4366,
+          "minDEokStopsToInk": 0.4661,
+          "minDEokPathToInk": 0.4647,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.4418,
+          "areaMean": 0.2934,
+          "areaMeanGray": 0.2924,
+          "tailAtOneStep": 0.0035,
+          "risePeak": 0,
+          "dipPeak": 0.4403,
+          "grayPeak": 0.4403,
+          "minDEokToBrass": 0.0147,
+          "minDEokStopsToInk": 0.0577,
+          "minDEokPathToInk": 0.0371,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 120,
+          "failed": [
+            "R-HUE",
+            "R-SEPARATION",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        }
+      ]
+    },
+    {
+      "Lw": 0.965,
+      "world": "#f4f3f0",
+      "surface": "#ecebe8",
+      "winner": null,
+      "winnerEventPeak": null,
+      "eventFloor": 0.1011,
+      "atmoStrongestContourDEok": 0.3899,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0369,
+          "areaMean": 0.014,
+          "areaMeanGray": 0.0027,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0.006,
+          "grayPeak": 0.006,
+          "minDEokToBrass": 0.4305,
+          "minDEokStopsToInk": 0.4226,
+          "minDEokPathToInk": 0.4589,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3767,
+          "areaMean": 0.1365,
+          "areaMeanGray": 0.1363,
+          "tailAtOneStep": 0.0014,
+          "risePeak": 0,
+          "dipPeak": 0.3744,
+          "grayPeak": 0.3744,
+          "minDEokToBrass": 0.0633,
+          "minDEokStopsToInk": 0.0432,
+          "minDEokPathToInk": 0.0944,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-HUE",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0389,
+          "areaMean": 0.0149,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4364,
+          "minDEokStopsToInk": 0.4649,
+          "minDEokPathToInk": 0.4642,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.4413,
+          "areaMean": 0.2931,
+          "areaMeanGray": 0.2922,
+          "tailAtOneStep": 0.0035,
+          "risePeak": 0,
+          "dipPeak": 0.4398,
+          "grayPeak": 0.4398,
+          "minDEokToBrass": 0.0147,
+          "minDEokStopsToInk": 0.0558,
+          "minDEokPathToInk": 0.0371,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 120,
+          "failed": [
+            "R-HUE",
+            "R-SEPARATION",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        }
+      ]
+    },
+    {
+      "Lw": 0.97,
+      "world": "#f6f5f2",
+      "surface": "#eeedea",
+      "winner": null,
+      "winnerEventPeak": null,
+      "eventFloor": 0.1009,
+      "atmoStrongestContourDEok": 0.3917,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0385,
+          "areaMean": 0.0145,
+          "areaMeanGray": 0.0048,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0.012,
+          "grayPeak": 0.012,
+          "minDEokToBrass": 0.4273,
+          "minDEokStopsToInk": 0.4191,
+          "minDEokPathToInk": 0.4562,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3777,
+          "areaMean": 0.1368,
+          "areaMeanGray": 0.1361,
+          "tailAtOneStep": 0.0013,
+          "risePeak": 0,
+          "dipPeak": 0.377,
+          "grayPeak": 0.377,
+          "minDEokToBrass": 0.0653,
+          "minDEokStopsToInk": 0.0434,
+          "minDEokPathToInk": 0.0954,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-HUE",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0325,
+          "areaMean": 0.0122,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.4389,
+          "minDEokStopsToInk": 0.4674,
+          "minDEokPathToInk": 0.4666,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 9,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.4417,
+          "areaMean": 0.2932,
+          "areaMeanGray": 0.2921,
+          "tailAtOneStep": 0.0035,
+          "risePeak": 0,
+          "dipPeak": 0.4389,
+          "grayPeak": 0.4389,
+          "minDEokToBrass": 0.0151,
+          "minDEokStopsToInk": 0.0581,
+          "minDEokPathToInk": 0.0391,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 120,
+          "failed": [
+            "R-SEPARATION",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        }
+      ]
+    },
+    {
+      "Lw": 0.975,
+      "world": "#f8f7f4",
+      "surface": "#f0efec",
+      "winner": null,
+      "winnerEventPeak": null,
+      "eventFloor": 0.101,
+      "atmoStrongestContourDEok": 0.3943,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.0406,
+          "areaMean": 0.0152,
+          "areaMeanGray": 0.0067,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0.018,
+          "grayPeak": 0.018,
+          "minDEokToBrass": 0.4243,
+          "minDEokStopsToInk": 0.4156,
+          "minDEokPathToInk": 0.4534,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3772,
+          "areaMean": 0.1367,
+          "areaMeanGray": 0.1366,
+          "tailAtOneStep": 0.0013,
+          "risePeak": 0,
+          "dipPeak": 0.3763,
+          "grayPeak": 0.3763,
+          "minDEokToBrass": 0.0674,
+          "minDEokStopsToInk": 0.0453,
+          "minDEokPathToInk": 0.0982,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-HUE",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0244,
+          "areaMean": 0.0092,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.442,
+          "minDEokStopsToInk": 0.47,
+          "minDEokPathToInk": 0.4694,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 8,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.4429,
+          "areaMean": 0.2941,
+          "areaMeanGray": 0.2931,
+          "tailAtOneStep": 0.0035,
+          "risePeak": 0,
+          "dipPeak": 0.4414,
+          "grayPeak": 0.4414,
+          "minDEokToBrass": 0.0146,
+          "minDEokStopsToInk": 0.058,
+          "minDEokPathToInk": 0.0394,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 120,
+          "failed": [
+            "R-HUE",
+            "R-SEPARATION",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        }
+      ]
+    },
+    {
+      "Lw": 0.98,
+      "world": "#f9f8f5",
+      "surface": "#f1f0ed",
+      "winner": null,
+      "winnerEventPeak": null,
+      "eventFloor": 0.1005,
+      "atmoStrongestContourDEok": 0.3947,
+      "families": [
+        {
+          "key": "F-A",
+          "eventPeak": 0.042,
+          "areaMean": 0.0157,
+          "areaMeanGray": 0.0076,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0.021,
+          "grayPeak": 0.021,
+          "minDEokToBrass": 0.4211,
+          "minDEokStopsToInk": 0.4121,
+          "minDEokPathToInk": 0.4498,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 6,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-B",
+          "eventPeak": 0.3778,
+          "areaMean": 0.1368,
+          "areaMeanGray": 0.1367,
+          "tailAtOneStep": 0.0013,
+          "risePeak": 0,
+          "dipPeak": 0.3759,
+          "grayPeak": 0.3759,
+          "minDEokToBrass": 0.067,
+          "minDEokStopsToInk": 0.0442,
+          "minDEokPathToInk": 0.097,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 12,
+          "failed": [
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        },
+        {
+          "key": "F-C",
+          "eventPeak": 0.0204,
+          "areaMean": 0.0079,
+          "areaMeanGray": 0,
+          "tailAtOneStep": 0,
+          "risePeak": 0,
+          "dipPeak": 0,
+          "grayPeak": 0,
+          "minDEokToBrass": 0.442,
+          "minDEokStopsToInk": 0.4692,
+          "minDEokPathToInk": 0.4688,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 7,
+          "failed": [
+            "R-HUE",
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ],
+          "failedOnEveryVariant": [
+            "R-GRAYSCALE",
+            "R-SOURCE",
+            "R-ORDER",
+            "R-EVENT"
+          ]
+        },
+        {
+          "key": "F-D",
+          "eventPeak": 0.4424,
+          "areaMean": 0.2938,
+          "areaMeanGray": 0.2928,
+          "tailAtOneStep": 0.0035,
+          "risePeak": 0,
+          "dipPeak": 0.4409,
+          "grayPeak": 0.4409,
+          "minDEokToBrass": 0.0152,
+          "minDEokStopsToInk": 0.0584,
+          "minDEokPathToInk": 0.0393,
+          "becomesShadowAt": null,
+          "admissible": false,
+          "admissibleVariants": 0,
+          "variantsTried": 120,
+          "failed": [
+            "R-HUE",
+            "R-SEPARATION",
+            "R-SOURCE",
+            "R-SOURCE-DOMINANCE"
+          ],
+          "failedOnEveryVariant": [
+            "R-SOURCE"
+          ]
+        }
+      ]
+    }
+  ],
+  "searchSize": {
+    "groundsEvaluated": 21,
+    "coarsePassConfigurationsPerGround": 147,
+    "coarsePassTotal": 53886,
+    "fullPassAtChosenGround": 50949,
+    "byFamilyAtChosenGround": {
+      "F-A": 27,
+      "F-B": 135,
+      "F-C": 27,
+      "F-D": 50760
+    }
+  },
+  "magnitudeInReadingSteps": {
+    "darkAreaMeanOverDarkReadingStep": 2.483,
+    "lightAreaMeanOverLightReadingStep": 1.005,
+    "ratioPreservingFloorWouldBe": 0.2525,
+    "ratioPreservingFloorReachable": true,
+    "greatestAreaMeanTheFamilyReaches": 0.2331,
+    "winnerMinStopLightness": 0.7685,
+    "suppressedWorldLightness": 0.5423,
+    "winnerDipOverRise": 7.32,
+    "note": "THE LIGHT APPEARANCE CANNOT STAND TO ITS OWN READING RAMP AS THE DARK ONE DOES, AND THE REASON IS NOW A REQUIREMENT RATHER THAN A LIMIT OF THE SEARCH. The floor a ratio transfer would set IS reachable on this ground; an expression that reaches it was derived in full and rendered, and its deepest stop is darker than the passage scrim of the very appearance it belongs to, so R-SOURCE-DOMINANCE rejects it. Closing the gap would mean a meaning event deeper than the veil the World draws over what it is suppressing. Reported as a contradiction, not closed."
+  },
+  "chosen": {
+    "Lw": 0.95,
+    "why": "the HIGHEST lightness at which an admissible meaning expression still exists — a light World darker than its own requirements force is a dim appearance wearing a light name",
+    "eventFloor": 0.1017,
+    "floorUsed": "the light appearance's own smallest reading step",
+    "eventFloorIsOn": "the AREA MEAN of the event across the source disc — corrected in I-08B3.1-F2R from the event PEAK, which a rim 0.14 wide cleared while the rendered event read as near-static",
+    "ratioFloorCost": {
+      "floor": 0.2525,
+      "countAbove": 2379,
+      "reachable": true,
+      "admissibleAtThatFloor": 0,
+      "maxAreaMean": 0.2912,
+      "failedByEveryConfigurationAboveIt": [
+        "R-SOURCE-DOMINANCE"
+      ],
+      "bestSeparationFromInkAmongThem": 0.0916,
+      "itsGlaze": "#716547",
+      "itsGlazeLightness": 0.5101,
+      "itsWorstRungHueDrift": 1.7,
+      "itsMinStopLightness": 0.5101,
+      "suppressedWorldLightness": 0.5423,
+      "itsDipOverRise": 31,
+      "darkerThanTheWorldsOwnSuppression": true,
+      "countDarkerThanSuppression": 2379,
+      "hueTolerance": 3,
+      "tertiaryInkLightness": 0.4887,
+      "primaryInkLightness": 0.2721,
+      "clearsTheSeparationFloor": true
+    },
+    "stoppedBy": {
+      "Lw": 0.955,
+      "world": "#f1f0ed",
+      "requirementsThatFailedEveryFamily": [
+        "R-GRAYSCALE",
+        "R-SOURCE",
+        "R-EVENT"
+      ]
+    }
+  },
+  "families": [
+    {
+      "key": "F-A",
+      "name": "ADDITIVE — the dark technique, unchanged",
+      "admissible": false,
+      "variantsTried": 27,
+      "admissibleVariants": 0,
+      "footprint": 0.64,
+      "footprintDeltaFromDark": -0.355,
+      "eventPeakDeltaFromDark": -0.653,
+      "areaMean": 0.0151,
+      "areaMeanGray": 0.0058,
+      "areaMeanBindsAt": 0.8598,
+      "areaMeanBindsOn": "connection",
+      "areaMeanByCategory": {
+        "connection": 0.0151,
+        "pattern": 0.0168,
+        "insight": 0.0162
+      },
+      "areaMeanOverDark": 0.053,
+      "tailAtOneStep": 0,
+      "hue": 92,
+      "hueDriftFromDarkLight": 3.46,
+      "stopHueDriftVsDarkStops": 8.95,
+      "stopHueDriftWorstRung": 3.71,
+      "perRungHueDriftVsDark": [
+        3.46,
+        3.71,
+        1.77
+      ],
+      "chroma": 0.046,
+      "stops": [
+        "#fff4d1",
+        "#f9eecc",
+        "#f3e8c6"
+      ],
+      "parts": null,
+      "shape": {
+        "glazeDrop": null,
+        "split": null,
+        "width": null,
+        "drop": null
+      },
+      "eventPeak": 0.0395,
+      "risePeak": 0.015,
+      "dipPeak": 0,
+      "grayPeak": 0.015,
+      "minStopLightness": 0.931,
+      "suppressedWorldLightness": 0.5423,
+      "lightnessAboveSuppression": 0.3888,
+      "dipOverRise": 0,
+      "minDEokToBrass": 0.4342,
+      "minDEokStopsToInk": 0.4437,
+      "minDEokPathToInk": 0.4601,
+      "minDEokToError": 0.439,
+      "stopChroma": [
+        0.047,
+        0.0459,
+        0.0461
+      ],
+      "settlesToGround": true,
+      "becomesShadowAt": null,
+      "pass": {
+        "R-HUE": false,
+        "R-SEPARATION": true,
+        "R-INK-SEPARATION": true,
+        "R-GRAYSCALE": false,
+        "R-NOT-SHADOW": true,
+        "R-CONTINUOUS": true,
+        "R-SOURCE": false,
+        "R-SETTLE": true,
+        "R-ORDER": true,
+        "R-EVENT": false,
+        "R-SOURCE-DOMINANCE": true,
+        "R-FOOTPRINT": true
+      },
+      "bestAttemptIs": "the largest area mean this family reaches — its best day, so \"it fails\" is reported against its strongest configuration rather than an average one",
+      "failedOnEveryVariant": [
+        "R-GRAYSCALE",
+        "R-EVENT"
+      ],
+      "failureCounts": {
+        "R-HUE": 17,
+        "R-GRAYSCALE": 27,
+        "R-SOURCE": 18,
+        "R-EVENT": 27
+      },
+      "ratioPreserving": {
+        "floor": 0.2525,
+        "countAbove": 0,
+        "reachable": false
+      }
+    },
+    {
+      "key": "F-B",
+      "name": "DARKENING — the insight gets deeper",
+      "admissible": false,
+      "variantsTried": 135,
+      "admissibleVariants": 0,
+      "footprint": 0.985,
+      "footprintDeltaFromDark": -0.01,
+      "eventPeakDeltaFromDark": -0.2491,
+      "areaMean": 0.1594,
+      "areaMeanGray": 0.1594,
+      "areaMeanBindsAt": 0.8598,
+      "areaMeanBindsOn": "connection",
+      "areaMeanByCategory": {
+        "connection": 0.1594,
+        "pattern": 0.1784,
+        "insight": 0.1713
+      },
+      "areaMeanOverDark": 0.5601,
+      "tailAtOneStep": 0.003,
+      "hue": 87,
+      "hueDriftFromDarkLight": 2.65,
+      "stopHueDriftVsDarkStops": 7.68,
+      "stopHueDriftWorstRung": 3.83,
+      "perRungHueDriftVsDark": [
+        1.87,
+        1.99,
+        3.83
+      ],
+      "chroma": 0.046,
+      "stops": [
+        "#5a4e32",
+        "#695c3f",
+        "#776a4d"
+      ],
+      "parts": null,
+      "shape": {
+        "glazeDrop": null,
+        "split": null,
+        "width": null,
+        "drop": 0.52
+      },
+      "eventPeak": 0.4434,
+      "risePeak": 0,
+      "dipPeak": 0.4424,
+      "grayPeak": 0.4424,
+      "minStopLightness": 0.4285,
+      "suppressedWorldLightness": 0.5423,
+      "lightnessAboveSuppression": -0.1138,
+      "dipOverRise": null,
+      "minDEokToBrass": 0.0169,
+      "minDEokStopsToInk": 0.0363,
+      "minDEokPathToInk": 0.033,
+      "minDEokToError": 0.121,
+      "stopChroma": [
+        0.0453,
+        0.0463,
+        0.0456
+      ],
+      "settlesToGround": true,
+      "becomesShadowAt": null,
+      "pass": {
+        "R-HUE": false,
+        "R-SEPARATION": false,
+        "R-INK-SEPARATION": true,
+        "R-GRAYSCALE": true,
+        "R-NOT-SHADOW": true,
+        "R-CONTINUOUS": true,
+        "R-SOURCE": false,
+        "R-SETTLE": true,
+        "R-ORDER": true,
+        "R-EVENT": true,
+        "R-SOURCE-DOMINANCE": false,
+        "R-FOOTPRINT": true
+      },
+      "bestAttemptIs": "the largest area mean this family reaches — its best day, so \"it fails\" is reported against its strongest configuration rather than an average one",
+      "failedOnEveryVariant": [
+        "R-SOURCE"
+      ],
+      "failureCounts": {
+        "R-HUE": 83,
+        "R-SOURCE": 135,
+        "R-EVENT": 54,
+        "R-SOURCE-DOMINANCE": 54,
+        "R-SEPARATION": 9
+      },
+      "ratioPreserving": {
+        "floor": 0.2525,
+        "countAbove": 0,
+        "reachable": false
+      }
+    },
+    {
+      "key": "F-C",
+      "name": "CHROMATIC — lightness held, everything spent on colour",
+      "admissible": false,
+      "variantsTried": 27,
+      "admissibleVariants": 0,
+      "footprint": 0.66,
+      "footprintDeltaFromDark": -0.335,
+      "eventPeakDeltaFromDark": -0.6509,
+      "areaMean": 0.0159,
+      "areaMeanGray": 0,
+      "areaMeanBindsAt": 0.8598,
+      "areaMeanBindsOn": "connection",
+      "areaMeanByCategory": {
+        "connection": 0.0159,
+        "pattern": 0.0176,
+        "insight": 0.017
+      },
+      "areaMeanOverDark": 0.0558,
+      "tailAtOneStep": 0,
+      "hue": 87,
+      "hueDriftFromDarkLight": 2.96,
+      "stopHueDriftVsDarkStops": 6.77,
+      "stopHueDriftWorstRung": 4.24,
+      "perRungHueDriftVsDark": [
+        1.24,
+        1.28,
+        4.24
+      ],
+      "chroma": 0.0516,
+      "stops": [
+        "#fdedc7",
+        "#fbedcd",
+        "#f9edd3"
+      ],
+      "parts": null,
+      "shape": {
+        "glazeDrop": null,
+        "split": null,
+        "width": null,
+        "drop": null
+      },
+      "eventPeak": 0.0416,
+      "risePeak": 0,
+      "dipPeak": 0,
+      "grayPeak": 0,
+      "minStopLightness": 0.9488,
+      "suppressedWorldLightness": 0.5423,
+      "lightnessAboveSuppression": 0.4065,
+      "dipOverRise": null,
+      "minDEokToBrass": 0.4311,
+      "minDEokStopsToInk": 0.4608,
+      "minDEokPathToInk": 0.4593,
+      "minDEokToError": 0.4341,
+      "stopChroma": [
+        0.0524,
+        0.0445,
+        0.0366
+      ],
+      "settlesToGround": true,
+      "becomesShadowAt": null,
+      "pass": {
+        "R-HUE": false,
+        "R-SEPARATION": true,
+        "R-INK-SEPARATION": true,
+        "R-GRAYSCALE": false,
+        "R-NOT-SHADOW": true,
+        "R-CONTINUOUS": true,
+        "R-SOURCE": false,
+        "R-SETTLE": true,
+        "R-ORDER": false,
+        "R-EVENT": false,
+        "R-SOURCE-DOMINANCE": true,
+        "R-FOOTPRINT": true
+      },
+      "bestAttemptIs": "the largest area mean this family reaches — its best day, so \"it fails\" is reported against its strongest configuration rather than an average one",
+      "failedOnEveryVariant": [
+        "R-GRAYSCALE",
+        "R-SOURCE",
+        "R-EVENT"
+      ],
+      "failureCounts": {
+        "R-HUE": 16,
+        "R-GRAYSCALE": 27,
+        "R-SOURCE": 27,
+        "R-EVENT": 27,
+        "R-ORDER": 11
+      },
+      "ratioPreserving": {
+        "floor": 0.2525,
+        "countAbove": 0,
+        "reachable": false
+      }
+    },
+    {
+      "key": "F-D",
+      "name": "SIGNED BLOOM — the core floods, the annulus glazes",
+      "admissible": true,
+      "variantsTried": 50760,
+      "admissibleVariants": 2930,
+      "footprint": 0.98,
+      "footprintDeltaFromDark": -0.015,
+      "eventPeakDeltaFromDark": -0.5355,
+      "areaMean": 0.1022,
+      "areaMeanGray": 0.1014,
+      "areaMeanBindsAt": 0.8598,
+      "areaMeanBindsOn": "connection",
+      "areaMeanByCategory": {
+        "connection": 0.1022,
+        "pattern": 0.1023,
+        "insight": 0.1027
+      },
+      "areaMeanOverDark": 0.3592,
+      "tailAtOneStep": 0.0014,
+      "hue": 89,
+      "hueDriftFromDarkLight": 1.57,
+      "stopHueDriftVsDarkStops": 2.94,
+      "stopHueDriftWorstRung": 2.85,
+      "perRungHueDriftVsDark": [
+        0,
+        0.09,
+        2.85
+      ],
+      "chroma": 0.0317,
+      "stops": [
+        "#fff6df",
+        "#ddd4be",
+        "#bcb39e"
+      ],
+      "parts": {
+        "ceiling": "#fff6df",
+        "glaze": "#bcb39e",
+        "split": 0.65,
+        "width": 0.8
+      },
+      "shape": {
+        "glazeDrop": 0.18,
+        "split": 0.65,
+        "width": 0.8,
+        "drop": null
+      },
+      "eventPeak": 0.157,
+      "risePeak": 0.021,
+      "dipPeak": 0.1539,
+      "grayPeak": 0.1539,
+      "minStopLightness": 0.7685,
+      "suppressedWorldLightness": 0.5423,
+      "lightnessAboveSuppression": 0.2262,
+      "dipOverRise": 7.32,
+      "minDEokToBrass": 0.2779,
+      "minDEokStopsToInk": 0.2805,
+      "minDEokPathToInk": 0.3054,
+      "minDEokToError": 0.2907,
+      "stopChroma": [
+        0.0316,
+        0.0312,
+        0.0308
+      ],
+      "settlesToGround": true,
+      "becomesShadowAt": null,
+      "pass": {
+        "R-HUE": true,
+        "R-SEPARATION": true,
+        "R-INK-SEPARATION": true,
+        "R-GRAYSCALE": true,
+        "R-NOT-SHADOW": true,
+        "R-CONTINUOUS": true,
+        "R-SOURCE": true,
+        "R-SETTLE": true,
+        "R-ORDER": true,
+        "R-EVENT": true,
+        "R-SOURCE-DOMINANCE": true,
+        "R-FOOTPRINT": true
+      },
+      "selectionAudit": {
+        "rule": "among admissible configurations, the mildest extreme — the floor makes the event read, and the selection takes the least departure the floor forces, with magnitude compared only down to a just-noticeable step so that an imperceptible sliver of it cannot outrank the cross-appearance contract",
+        "magnitudeBucketWidth": 0.02,
+        "configurationsSharingTheWinnersMagnitude": 45,
+        "totalHueDriftAmongThem": {
+          "chosen": 2.94,
+          "best": 2.94,
+          "worst": 7.07
+        },
+        "hueDriftWasNotBoughtWithImperceptibleMagnitude": true,
+        "whatTheUnquantisedObjectiveWouldHaveChosen": {
+          "stops": [
+            "#fff5de",
+            "#dfd5bf",
+            "#bfb6a1"
+          ],
+          "eventPeak": 0.1481,
+          "totalHueDrift": 6.71,
+          "worstRungHueDrift": 2.85
+        },
+        "whatASmallerDriftWouldCost": {
+          "configurationsWithLessDrift": 480,
+          "admissibleAmongThem": 0,
+          "leastDriftAvailable": 0.36,
+          "itsStops": [
+            "#fff4d8",
+            "#e1d6bb",
+            "#c4ba9f"
+          ],
+          "itsChroma": 0.0381,
+          "itsRise": 0.018,
+          "riseFloor": 0.02,
+          "failedByEveryConfigurationWithLessDrift": [],
+          "failureCounts": {
+            "R-EVENT": 416,
+            "R-SOURCE": 400
+          }
+        }
+      },
+      "feasibleAreaMeanRange": [
+        0.1017,
+        0.2331
+      ],
+      "feasibleEventPeakRange": [
+        0.1481,
+        0.3401
+      ],
+      "ratioPreserving": {
+        "floor": 0.2525,
+        "countAbove": 2379,
+        "reachable": true,
+        "admissibleAtThatFloor": 0,
+        "maxAreaMean": 0.2912,
+        "failedByEveryConfigurationAboveIt": [
+          "R-SOURCE-DOMINANCE"
+        ],
+        "bestSeparationFromInkAmongThem": 0.0916,
+        "itsGlaze": "#716547",
+        "itsGlazeLightness": 0.5101,
+        "itsWorstRungHueDrift": 1.7,
+        "itsMinStopLightness": 0.5101,
+        "suppressedWorldLightness": 0.5423,
+        "itsDipOverRise": 31,
+        "darkerThanTheWorldsOwnSuppression": true,
+        "countDarkerThanSuppression": 2379,
+        "hueTolerance": 3,
+        "tertiaryInkLightness": 0.4887,
+        "primaryInkLightness": 0.2721,
+        "clearsTheSeparationFloor": true
+      }
+    }
+  ],
+  "winningFamily": {
+    "key": "F-D",
+    "name": "SIGNED BLOOM — the core floods, the annulus glazes",
+    "admissible": true,
+    "variantsTried": 50760,
+    "admissibleVariants": 2930,
+    "footprint": 0.98,
+    "footprintDeltaFromDark": -0.015,
+    "eventPeakDeltaFromDark": -0.5355,
+    "areaMean": 0.1022,
+    "areaMeanGray": 0.1014,
+    "areaMeanBindsAt": 0.8598,
+    "areaMeanBindsOn": "connection",
+    "areaMeanByCategory": {
+      "connection": 0.1022,
+      "pattern": 0.1023,
+      "insight": 0.1027
+    },
+    "areaMeanOverDark": 0.3592,
+    "tailAtOneStep": 0.0014,
+    "hue": 89,
+    "hueDriftFromDarkLight": 1.57,
+    "stopHueDriftVsDarkStops": 2.94,
+    "stopHueDriftWorstRung": 2.85,
+    "perRungHueDriftVsDark": [
+      0,
+      0.09,
+      2.85
+    ],
+    "chroma": 0.0317,
+    "stops": [
+      "#fff6df",
+      "#ddd4be",
+      "#bcb39e"
+    ],
+    "parts": {
+      "ceiling": "#fff6df",
+      "glaze": "#bcb39e",
+      "split": 0.65,
+      "width": 0.8
+    },
+    "shape": {
+      "glazeDrop": 0.18,
+      "split": 0.65,
+      "width": 0.8,
+      "drop": null
+    },
+    "eventPeak": 0.157,
+    "risePeak": 0.021,
+    "dipPeak": 0.1539,
+    "grayPeak": 0.1539,
+    "minStopLightness": 0.7685,
+    "suppressedWorldLightness": 0.5423,
+    "lightnessAboveSuppression": 0.2262,
+    "dipOverRise": 7.32,
+    "minDEokToBrass": 0.2779,
+    "minDEokStopsToInk": 0.2805,
+    "minDEokPathToInk": 0.3054,
+    "minDEokToError": 0.2907,
+    "stopChroma": [
+      0.0316,
+      0.0312,
+      0.0308
+    ],
+    "settlesToGround": true,
+    "becomesShadowAt": null,
+    "pass": {
+      "R-HUE": true,
+      "R-SEPARATION": true,
+      "R-INK-SEPARATION": true,
+      "R-GRAYSCALE": true,
+      "R-NOT-SHADOW": true,
+      "R-CONTINUOUS": true,
+      "R-SOURCE": true,
+      "R-SETTLE": true,
+      "R-ORDER": true,
+      "R-EVENT": true,
+      "R-SOURCE-DOMINANCE": true,
+      "R-FOOTPRINT": true
+    },
+    "selectionAudit": {
+      "rule": "among admissible configurations, the mildest extreme — the floor makes the event read, and the selection takes the least departure the floor forces, with magnitude compared only down to a just-noticeable step so that an imperceptible sliver of it cannot outrank the cross-appearance contract",
+      "magnitudeBucketWidth": 0.02,
+      "configurationsSharingTheWinnersMagnitude": 45,
+      "totalHueDriftAmongThem": {
+        "chosen": 2.94,
+        "best": 2.94,
+        "worst": 7.07
+      },
+      "hueDriftWasNotBoughtWithImperceptibleMagnitude": true,
+      "whatTheUnquantisedObjectiveWouldHaveChosen": {
+        "stops": [
+          "#fff5de",
+          "#dfd5bf",
+          "#bfb6a1"
+        ],
+        "eventPeak": 0.1481,
+        "totalHueDrift": 6.71,
+        "worstRungHueDrift": 2.85
+      },
+      "whatASmallerDriftWouldCost": {
+        "configurationsWithLessDrift": 480,
+        "admissibleAmongThem": 0,
+        "leastDriftAvailable": 0.36,
+        "itsStops": [
+          "#fff4d8",
+          "#e1d6bb",
+          "#c4ba9f"
+        ],
+        "itsChroma": 0.0381,
+        "itsRise": 0.018,
+        "riseFloor": 0.02,
+        "failedByEveryConfigurationWithLessDrift": [],
+        "failureCounts": {
+          "R-EVENT": 416,
+          "R-SOURCE": 400
+        }
+      }
+    },
+    "feasibleAreaMeanRange": [
+      0.1017,
+      0.2331
+    ],
+    "feasibleEventPeakRange": [
+      0.1481,
+      0.3401
+    ],
+    "ratioPreserving": {
+      "floor": 0.2525,
+      "countAbove": 2379,
+      "reachable": true,
+      "admissibleAtThatFloor": 0,
+      "maxAreaMean": 0.2912,
+      "failedByEveryConfigurationAboveIt": [
+        "R-SOURCE-DOMINANCE"
+      ],
+      "bestSeparationFromInkAmongThem": 0.0916,
+      "itsGlaze": "#716547",
+      "itsGlazeLightness": 0.5101,
+      "itsWorstRungHueDrift": 1.7,
+      "itsMinStopLightness": 0.5101,
+      "suppressedWorldLightness": 0.5423,
+      "itsDipOverRise": 31,
+      "darkerThanTheWorldsOwnSuppression": true,
+      "countDarkerThanSuppression": 2379,
+      "hueTolerance": 3,
+      "tertiaryInkLightness": 0.4887,
+      "primaryInkLightness": 0.2721,
+      "clearsTheSeparationFloor": true
+    }
+  },
+  "atmosphere": {
+    "hues": [
+      150,
+      192,
+      228,
+      262,
+      300,
+      338
+    ],
+    "chromaCeilingDark": 0.0197,
+    "strokeAlpha": [
+      0.86,
+      0.6,
+      0.4
+    ],
+    "fillAlpha": 0.05,
+    "layers": [
+      {
+        "layer": "near",
+        "darkL": 0.62,
+        "darkInk": "#7a8990",
+        "ratioPreserved": 5.2631,
+        "lightL": 0.4944,
+        "lightInk": "#56646b"
+      },
+      {
+        "layer": "mid",
+        "darkL": 0.55,
+        "darkInk": "#66747b",
+        "ratioPreserved": 3.9407,
+        "lightL": 0.5618,
+        "lightInk": "#69787e"
+      },
+      {
+        "layer": "far",
+        "darkL": 0.48,
+        "darkInk": "#526066",
+        "ratioPreserved": 2.9211,
+        "lightL": 0.6356,
+        "lightInk": "#7f8d94"
+      }
+    ],
+    "darkStrongestContour": "#6b787e",
+    "darkStrongestContourDEok": 0.3913,
+    "lightStrongestContour": "#6b777d",
+    "strongestContourDEok": 0.3883
+  },
+  "brass": {
+    "hex": "#7a6446",
+    "L": 0.5165,
+    "ratioVsWorld": 4.841,
+    "ratioVsSurface": 4.5,
+    "dEokFromDark": 0.1424,
+    "hue": 75,
+    "chroma": 0.0516,
+    "rule": "meet 4.5:1 against both grounds, then minimise dEok from the frozen dark value",
+    "rejectedRatioParityCandidate": {
+      "hex": "#6b5538",
+      "L": 0.4652,
+      "ratioItWouldHold": 6.07,
+      "dEokFromDark": 0.195
+    }
+  },
+  "error": {
+    "hex": "#ad4739",
+    "L": 0.5305,
+    "ratioVsWorld": 4.843,
+    "ratioVsSurface": 4.502,
+    "dEokFromDark": 0.2361,
+    "hue": 30.3,
+    "chroma": 0.1364,
+    "rule": "meet 4.5:1 against both grounds, then minimise dEok from the frozen dark value",
+    "rejectedRatioParityCandidate": {
+      "hex": "#801c11",
+      "L": 0.3962,
+      "ratioItWouldHold": 8.612,
+      "dEokFromDark": 0.3716
+    }
+  },
+  "states": {
+    "disabled": {
+      "hex": "#83817c",
+      "L": 0.6024,
+      "hueDrift": 0.02,
+      "darkRatio": 3.3681,
+      "lightRatio": 3.3541
+    },
+    "belowTertiaryInDark": true,
+    "belowTertiaryInLight": true,
+    "aliasedRoles": {
+      "note": "These carry NO literal in either appearance. They are listed so the cross-appearance map can show that their light value changed because the thing they alias changed — which is the whole architecture working.",
+      "rest": "qandeel.state.rest.ink",
+      "pressed": "qandeel.state.pressed.ink",
+      "focus": "qandeel.state.focus.indicator",
+      "selected": "qandeel.state.selected.ink",
+      "warning": "qandeel.status.warning.ink",
+      "success": "qandeel.status.success.ink",
+      "informational": "qandeel.status.informational.ink"
+    },
+    "dark": {
+      "REST": "#8b8982",
+      "PRESSED": "#d8d5ca",
+      "FOCUS": "#d8d5ca",
+      "FOCUS_COMPANION": "#101010",
+      "SELECTED": "#d8d5ca",
+      "SELECTED_MARKER": "#d8d5ca",
+      "WARNING": "#d8d5ca",
+      "SUCCESS": "#d8d5ca",
+      "INFORMATIONAL": "#afaca3"
+    }
+  },
+  "scrim": {
+    "ink": "#000000",
+    "alpha": 0.532,
+    "suppressed": "#706f6e",
+    "suppressedInk": "#13120f",
+    "darkSuppressed": "#080808",
+    "darkUnscrimmedRatio": 12.9485,
+    "darkScrimmedRatio": 3.7467,
+    "darkSuppressionFactor": 3.456,
+    "lightUnscrimmedRatio": 12.8889,
+    "lightScrimmedRatio": 3.7355,
+    "lightSuppressionFactor": 3.4504,
+    "rule": "neutral black, at the alpha that reproduces the factor by which the dark scrim suppresses the World's own internal contrast",
+    "doesNotInvert": true,
+    "alphaDeltaFromDark": 0.032
+  },
+  "increasedContrast": {
+    "target": 3,
+    "note": "F1's increased-contrast context re-routes two ALIASES and those need nothing from F2. Only the three layer lightnesses are appearance-bound, and their direction reverses.",
+    "defaultWorstRatio": 1.692,
+    "afterAlphaWorstRatio": 2.9161,
+    "casesClearedByAlphaAlone": 12,
+    "casesTotal": 15,
+    "lightnessDelta": -0.008,
+    "direction": "DOWNWARD — the reverse of the dark appearance's +0.011, because on a near-white ground a contour buys contrast by deepening",
+    "lightnessNear": 0.4864,
+    "lightnessMid": 0.5538,
+    "lightnessFar": 0.6276,
+    "finalWorstRatio": 3.0209,
+    "finalLoudestRatio": 5.4072,
+    "layerSpacingDark": [
+      0.07,
+      0.07
+    ],
+    "layerSpacingLightDefault": [
+      0.0674,
+      0.0738
+    ],
+    "layerSpacingLightIncreased": [
+      0.0674,
+      0.0738
+    ],
+    "spacingPreserved": true,
+    "meaningHierarchy": {
+      "atmosphereLoudestDefault": 3.9347,
+      "atmosphereLoudestIncreased": 5.4072,
+      "analysisRelationDefault": 5.4243,
+      "analysisRelationIncreased": 8.3794,
+      "ratioDefault": 1.3786,
+      "ratioIfOnlyAtmosphereRose": 1.0032,
+      "ratioIncreased": 1.5497
+    }
+  },
+  "light": {
+    "WORLD": "#efeeeb",
+    "SURFACE": "#e7e6e3",
+    "PRIMARY": "#29271f",
+    "SECONDARY": "#47443c",
+    "TERTIARY": "#626059",
+    "BRASS": "#7a6446",
+    "CORE": "#fff6df",
+    "MID": "#ddd4be",
+    "LOW": "#bcb39e",
+    "ERROR": "#ad4739",
+    "DISABLED": "#83817c",
+    "SCRIM_INK": "#000000",
+    "SCRIM_ALPHA": 0.532
+  },
+  "lightLadder": [
+    {
+      "role": "ERROR",
+      "hex": "#ad4739",
+      "L": 0.5309,
+      "C": 0.1368,
+      "H": 30.1
+    },
+    {
+      "role": "BRASS",
+      "hex": "#7a6446",
+      "L": 0.5171,
+      "C": 0.0521,
+      "H": 74.8
+    },
+    {
+      "role": "CORE",
+      "hex": "#fff6df",
+      "L": 0.9741,
+      "C": 0.0316,
+      "H": 89.1
+    },
+    {
+      "role": "MID",
+      "hex": "#ddd4be",
+      "L": 0.8713,
+      "C": 0.0312,
+      "H": 88.4
+    },
+    {
+      "role": "LOW",
+      "hex": "#bcb39e",
+      "L": 0.7685,
+      "C": 0.0308,
+      "H": 87.6
+    },
+    {
+      "role": "PRIMARY",
+      "hex": "#29271f",
+      "L": 0.2721,
+      "C": 0.0145,
+      "H": 95.6
+    },
+    {
+      "role": "SECONDARY",
+      "hex": "#47443c",
+      "L": 0.387,
+      "C": 0.0138,
+      "H": 89.9
+    },
+    {
+      "role": "TERTIARY",
+      "hex": "#626059",
+      "L": 0.4887,
+      "C": 0.0112,
+      "H": 93.7
+    },
+    {
+      "role": "DISABLED",
+      "hex": "#83817c",
+      "L": 0.6034,
+      "C": 0.0078,
+      "H": 88.7
+    },
+    {
+      "role": "SURFACE",
+      "hex": "#e7e6e3",
+      "L": 0.9249,
+      "C": 0.0042,
+      "H": 91.4
+    },
+    {
+      "role": "WORLD",
+      "hex": "#efeeeb",
+      "L": 0.9491,
+      "C": 0.0041,
+      "H": 91.4
+    }
+  ],
+  "atmosphereCeilingLight": 0.0191,
+  "crossAppearance": {
+    "chromaOrderPreserved": true,
+    "darkBands": [
+      {
+        "band": "ERROR",
+        "min": 0.1364,
+        "max": 0.1364
+      },
+      {
+        "band": "BRASS",
+        "min": 0.0516,
+        "max": 0.0516
+      },
+      {
+        "band": "LIGHT",
+        "min": 0.0317,
+        "max": 0.0462
+      },
+      {
+        "band": "ATMOSPHERE",
+        "min": 0.0197,
+        "max": 0.0197
+      },
+      {
+        "band": "INK",
+        "min": 0.0081,
+        "max": 0.0153
+      },
+      {
+        "band": "GROUND",
+        "min": 0,
+        "max": 0
+      }
+    ],
+    "lightBands": [
+      {
+        "band": "ERROR",
+        "min": 0.1368,
+        "max": 0.1368
+      },
+      {
+        "band": "BRASS",
+        "min": 0.0521,
+        "max": 0.0521
+      },
+      {
+        "band": "LIGHT",
+        "min": 0.0308,
+        "max": 0.0316
+      },
+      {
+        "band": "ATMOSPHERE",
+        "min": 0.0191,
+        "max": 0.0191
+      },
+      {
+        "band": "INK",
+        "min": 0.0078,
+        "max": 0.0145
+      },
+      {
+        "band": "GROUND",
+        "min": 0.0041,
+        "max": 0.0042
+      }
+    ],
+    "ladderBreaks": [],
+    "hueDrift": [
+      {
+        "role": "WORLD",
+        "darkHue": null,
+        "lightHue": 91.4,
+        "drift": null,
+        "achromaticInBoth": false
+      },
+      {
+        "role": "SURFACE",
+        "darkHue": null,
+        "lightHue": 91.4,
+        "drift": null,
+        "achromaticInBoth": false
+      },
+      {
+        "role": "PRIMARY",
+        "darkHue": 94.2,
+        "lightHue": 95.6,
+        "drift": 1.35,
+        "achromaticInBoth": false
+      },
+      {
+        "role": "SECONDARY",
+        "darkHue": 91.6,
+        "lightHue": 89.9,
+        "drift": 1.7,
+        "achromaticInBoth": false
+      },
+      {
+        "role": "TERTIARY",
+        "darkHue": 93.6,
+        "lightHue": 93.7,
+        "drift": 0.06,
+        "achromaticInBoth": false
+      },
+      {
+        "role": "BRASS",
+        "darkHue": 75,
+        "lightHue": 74.8,
+        "drift": 0.13,
+        "achromaticInBoth": false
+      },
+      {
+        "role": "CORE",
+        "darkHue": 89.1,
+        "lightHue": 89.1,
+        "drift": 0,
+        "achromaticInBoth": false
+      },
+      {
+        "role": "MID",
+        "darkHue": 88.5,
+        "lightHue": 88.4,
+        "drift": 0.09,
+        "achromaticInBoth": false
+      },
+      {
+        "role": "LOW",
+        "darkHue": 90.4,
+        "lightHue": 87.6,
+        "drift": 2.85,
+        "achromaticInBoth": false
+      },
+      {
+        "role": "ERROR",
+        "darkHue": 30.3,
+        "lightHue": 30.1,
+        "drift": 0.2,
+        "achromaticInBoth": false
+      },
+      {
+        "role": "DISABLED",
+        "darkHue": 88.7,
+        "lightHue": 88.7,
+        "drift": 0.02,
+        "achromaticInBoth": false
+      }
+    ],
+    "maxHueDrift": 2.85
+  },
+  "aiDefaultCreamCheck": {
+    "value": "#f4f1ea",
+    "note": "The frontend-design skill names \"a warm cream background near #F4F1EA\" as one of three looks AI design clusters on. The derived World is measured against it rather than kept away from it by instinct.",
+    "dEok": 0.0111,
+    "derivedChroma": 0.0041,
+    "creamChroma": 0.0098
+  }
+}

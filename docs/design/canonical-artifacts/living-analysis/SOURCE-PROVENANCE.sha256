@@ -1,0 +1,15 @@
+6d8efdbcf155bcf6bdcb83caf9f32d54f88aac3e8eb6585312048b23a1aebff6  i-08b1/baselines/mid-6d8efdbc/wf-living-constellation.html
+7d7d5b5502d7b18d6d35f89f8a2db74213a55851f65dc98068fec6a726e39a34  i-08b1/baselines/near-7d7d5b55/wf-living-constellation.html
+385b8c942a2aea25644415137964d56dcf2469f3d47f23afec6dc597a8f3149b  i-08b1/I-08B1-CANONICAL-STATE.md
+fbaa8712e1454132a681f8f478ba75ee35ceae7af392a49d3f374ebad8440704  i-08b1/I-08B1-WS7R-NOTES.md
+c32d62d8bff534bf01f54ea062947910305eb915b8bca078ab0bacbc3c9504c2  i-08b1/I-08B1-WS7R-SKILL-USE.md
+1b25c8ea4262783512aeb2bea43e3476172f68e92f2e7aee79a335dec5cb07b0  i-08b1/manifests/I-08B1-CANONICAL-CLOSURE.manifest.txt
+d26f74b8f8bf1050c42ec2d3f61973dafc0a0c2127edce935c80a9c6eee1ca64  i-08b1/manifests/I-08B1-FAR-BASELINE-APPROVED-WS7R-F.manifest.txt
+b3aa35fc174c16099d2241cc82e1f0eac8f1e2b96ca68790a6e12bf8f1047cb2  i-08b1/manifests/I-08B1-MID-BASELINE-APPROVED-WS7R-R.manifest.txt
+d8d2c23f42739a8b3c8dc75d2d7ff37b5802433e1cf5a6c11524dc04c3e6df02  i-08b1/tools/board-server.mjs
+b5fd97cb989abd47d78d044c934c9f09db2db2d5fba718cfe5565b9c06095c7a  i-08b1/tools/ws7rq-measure.js
+1ad39b703d1de381fce8755052e12e14525d04aad4871d46e3674cb70ad96398  i-08b1/tools/ws7rr-boards.js
+4dfd9d27d752c3a445168c0cc7067d71df4ada84bc61b806d12c8bb3202bc413  i-08b1/wf-living-constellation.html
+a6b179ff1ba3e63f4720e0c19a1133274798b6bb0416e062fde02a241f421b28  i-08b1/ws7rf-far-hero.png
+630c7b4ec1c05f849f4505c8b2f9a1de34f904a95ca8b5991c858e03f13ce19d  i-08b1/ws7rr-mid-hero.png
+92a1db238e12e41a10d02feedb5fb4b59464eb54271cbdbb26f2cbdf46afb44f  i-08b1/ws7rv2-near-hero.png

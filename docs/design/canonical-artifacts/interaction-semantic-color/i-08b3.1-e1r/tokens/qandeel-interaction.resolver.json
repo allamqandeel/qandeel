@@ -1,0 +1,53 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+  "version": "2025.10",
+  "name": "QANDEEL interaction state and system status, over the frozen Light, Living Brass and Surface systems",
+  "description": "I-08B3.1-E1 — FREEZE CANDIDATE. Extends the I-08B3.1-D2R resolver rather than standing beside it, so that state, status, the identity material and the Meaning Light come out of ONE resolution. That is the only way \"a state or status name never reaches the material and never reaches the Light\" can be checked rather than asserted. Nothing here is frozen: independent Product and Design review owns that decision.",
+  "sets": {
+    "qandeel-light": {
+      "description": "INHERITED, BYTE-IDENTICAL, from I-08B3.1-D2R — which inherits C3 Living Brass, which inherits B4R Surface. E1 does not modify it and does not re-author it.",
+      "sources": [
+        {
+          "$ref": "../vendor/d2r/tokens/qandeel-light.resolver.json"
+        }
+      ]
+    },
+    "interaction-semantic": {
+      "description": "AUTHORED BY E1. Interaction state and system status, as roles.",
+      "sources": [
+        {
+          "$ref": "./base/interaction.tokens.json"
+        }
+      ]
+    }
+  },
+  "modifiers": {
+    "appearance": {
+      "description": "System light/dark appearance. Dark is the canonical expression and the only one with values; light is owned by I-08B3.1-F and resolving into it fails loudly rather than returning a colour nobody designed.",
+      "default": "dark",
+      "contexts": {
+        "dark": [
+          {
+            "$ref": "./appearance/dark.interaction.tokens.json"
+          }
+        ],
+        "light": [
+          {
+            "$ref": "./appearance/light.interaction.tokens.json"
+          }
+        ]
+      }
+    }
+  },
+  "resolutionOrder": [
+    {
+      "$ref": "#/sets/qandeel-light"
+    },
+    {
+      "$ref": "#/sets/interaction-semantic"
+    },
+    {
+      "$ref": "#/modifiers/appearance"
+    }
+  ]
+}

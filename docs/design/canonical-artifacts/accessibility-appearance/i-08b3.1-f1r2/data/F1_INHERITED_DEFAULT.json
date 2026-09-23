@@ -1,0 +1,38 @@
+{
+  "generatedBy": "tools/f1-inherit.mjs",
+  "state": "COMPARED",
+  "i01": {
+    "what": "Every written attribute of the inherited ATMOSPHERE layer, read out of F1's rendered default document, against the same channel computed by calling I-08B3.1-D2R's own exported functions.",
+    "elementsCompared": 25,
+    "fieldsPerElement": 7,
+    "diffs": [],
+    "pass": true,
+    "probe": {
+      "input": "the same comparison with one stroke alpha changed to 0.5",
+      "rejected": true
+    }
+  },
+  "i02": {
+    "what": "F1's DEFAULT document with everything that is not the inherited layer removed from the DOM, rasterised at 390x844 dpr 2, against a reference page built from D2R's exports alone.",
+    "f1Sha": "0c52861c66b6427cecb61b93e50eb89969fe7300aa470b0deea1fa4520932e78",
+    "referenceSha": "0c52861c66b6427cecb61b93e50eb89969fe7300aa470b0deea1fa4520932e78",
+    "identical": true,
+    "pass": true,
+    "probe": {
+      "input": "the same reference with one contour displaced by one pixel",
+      "rejected": true
+    }
+  },
+  "i03": {
+    "what": "The settled analysis layer's GEOMETRY against D2R's own PATTERN_LOCUS, PATTERN_MEMBERS, INSIGHT_SITE, INSIGHT_KEEL and topicById. Its INK is check D-01's subject, not this one's.",
+    "elementsCompared": 12,
+    "diffs": [],
+    "pass": true
+  },
+  "unverified": [
+    "THE CHROME, THE NAVIGATION AND THE PANEL. F1 composes a header, a navigation bar and a proof panel with no counterpart in the vendored D2R material. There is nothing inherited to compare their pixels against, and this package does not claim there is.",
+    "THE MOTION. F1 renders only the settled state. No frame of any sequence is compared, and no claim about the frames is made here — D2R proved the settled residue and F1 builds on that finding rather than re-establishing it.",
+    "QANDEEL LIGHT. It is not painted in the settled scene, so its pixels are inherited by reference rather than by comparison.",
+    "D2R'S OWN PAGE. Its HTML scaffold is not vendored in this package, so `makeRenderer` cannot be driven here. The reference is built from D2R's data and geometry functions instead, and this file says so rather than claiming the renderer was used."
+  ]
+}

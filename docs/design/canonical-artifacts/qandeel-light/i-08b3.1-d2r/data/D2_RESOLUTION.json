@@ -1,0 +1,389 @@
+{
+  "generated": "source/tools/d2-build.mjs",
+  "chrome": {
+    "identityMark": {
+      "role": "identityMark",
+      "token": "qandeel.identity.mark",
+      "throughIdentity": true,
+      "what": "the canonical QANDEEL Q in the functional header",
+      "value": "#a58e6f",
+      "chain": [
+        "qandeel.identity.mark",
+        "qandeel.identity.material",
+        "qandeel.expression.material.living-brass.body"
+      ],
+      "file": "c3/appearance/dark"
+    },
+    "navigationMachinery": {
+      "role": "navigationMachinery",
+      "token": "qandeel.navigation.machinery",
+      "throughIdentity": true,
+      "what": "the five persistent navigation icons, as ONE family, at every state",
+      "value": "#a58e6f",
+      "chain": [
+        "qandeel.navigation.machinery",
+        "qandeel.identity.material",
+        "qandeel.expression.material.living-brass.body"
+      ],
+      "file": "c3/appearance/dark"
+    },
+    "controlFunctional": {
+      "role": "controlFunctional",
+      "token": "qandeel.control.functional",
+      "throughIdentity": false,
+      "what": "ordinary functional and action controls — neutral by default",
+      "value": "#8b8982",
+      "chain": [
+        "qandeel.control.functional",
+        "qandeel.content.tertiary",
+        "qandeel.expression.content.tertiary"
+      ],
+      "file": "b4r/dark"
+    },
+    "analysisNode": {
+      "role": "analysisNode",
+      "token": "qandeel.analysis.node",
+      "throughIdentity": false,
+      "what": "an analytical node — neutral, permanently",
+      "value": "#d8d5ca",
+      "chain": [
+        "qandeel.analysis.node",
+        "qandeel.content.primary",
+        "qandeel.expression.content.primary"
+      ],
+      "file": "b4r/dark"
+    },
+    "analysisRelation": {
+      "role": "analysisRelation",
+      "token": "qandeel.analysis.relation",
+      "throughIdentity": false,
+      "what": "an analytical relation stroke — neutral, permanently",
+      "value": "#8b8982",
+      "chain": [
+        "qandeel.analysis.relation",
+        "qandeel.content.tertiary",
+        "qandeel.expression.content.tertiary"
+      ],
+      "file": "b4r/dark"
+    }
+  },
+  "foundation": {
+    "WORLD": {
+      "role": "WORLD",
+      "token": "qandeel.world.fill",
+      "value": "#101010",
+      "chain": [
+        "qandeel.world.fill",
+        "qandeel.expression.world"
+      ],
+      "file": "b4r/dark"
+    },
+    "SURFACE": {
+      "role": "SURFACE",
+      "token": "qandeel.surface.functional",
+      "value": "#181818",
+      "chain": [
+        "qandeel.surface.functional",
+        "qandeel.expression.surface"
+      ],
+      "file": "b4r/dark"
+    },
+    "PRIMARY": {
+      "role": "PRIMARY",
+      "token": "qandeel.content.primary",
+      "value": "#d8d5ca",
+      "chain": [
+        "qandeel.content.primary",
+        "qandeel.expression.content.primary"
+      ],
+      "file": "b4r/dark"
+    },
+    "SECONDARY": {
+      "role": "SECONDARY",
+      "token": "qandeel.content.secondary",
+      "value": "#afaca3",
+      "chain": [
+        "qandeel.content.secondary",
+        "qandeel.expression.content.secondary"
+      ],
+      "file": "b4r/dark"
+    },
+    "TERTIARY": {
+      "role": "TERTIARY",
+      "token": "qandeel.content.tertiary",
+      "value": "#8b8982",
+      "chain": [
+        "qandeel.content.tertiary",
+        "qandeel.expression.content.tertiary"
+      ],
+      "file": "b4r/dark"
+    },
+    "BRASS": {
+      "role": "BRASS",
+      "token": "qandeel.identity.material",
+      "value": "#a58e6f",
+      "chain": [
+        "qandeel.identity.material",
+        "qandeel.expression.material.living-brass.body"
+      ],
+      "file": "c3/appearance/dark"
+    }
+  },
+  "font": {
+    "family": "Estedad",
+    "version": "v8.5",
+    "designer": "Amin Abedi, Fontamin",
+    "license": "OFL-1.1",
+    "axis": "wght 100-900 (variable)",
+    "subsets": "arabic, latin, latin-ext, menu, vietnamese",
+    "upstream": "https://github.com/aminabedi68/Estedad",
+    "upstreamCommit": "69e879f78a4a1c7c4594baf7da13ba1c9f65ffd3",
+    "usedBy": "I-08B3.0-E1, I-08B3.0-E3, I-08B3.1-A through D0R — the typography is held constant across the whole track, which is the reason this package uses it rather than choosing it",
+    "path": "E:/QANDEEL/QANDEEL PROJECT/.i08b3-work/raw/estedad-v8.5/Estedad-v8.5/Estedad[wght].woff2",
+    "bytes": 120924,
+    "sha256": "b40ce2504e442a79e8adddf1d7b27bc4bd171bb94c9e7c93e0732d095bc051b0",
+    "mtime": "2026-03-20T04:29:34.000Z",
+    "magic": "wOF2",
+    "url": "file:///E:/QANDEEL/QANDEEL%20PROJECT/.i08b3-work/raw/estedad-v8.5/Estedad-v8.5/Estedad%5Bwght%5D.woff2",
+    "candidatesPresent": 3,
+    "candidatesAgree": true,
+    "note": "Referenced by file:// URL from the prototype and NOT shipped. All present copies hash identically; the package records the hash, never the bytes."
+  },
+  "relationContrast": {
+    "hex": "#8b8982",
+    "ratio": 5.44,
+    "superseded": {
+      "hex": "#4a4740",
+      "ratio": 2.05
+    }
+  },
+  "light": {
+    "CORE": "#fbf2db",
+    "MID": "#e8ddc2",
+    "LOW": "#d6caa9",
+    "status": "FREEZE CANDIDATE — proposed by I-08B3.1-D2, frozen by nobody",
+    "authored": {
+      "colorSpace": "oklch",
+      "hue": 89,
+      "chromaMax": 0.046,
+      "rampShapeInheritedFrom": "I-08B3.1-D0 diagnostic family"
+    },
+    "separationFromBrass": 0.0201,
+    "separationRequired": 0.02,
+    "diagnosticSeparation": 0.0118,
+    "measuredSeparation": {
+      "dE": 0.020074773494293062,
+      "stop": "LOW",
+      "ground": "#101010",
+      "alpha": 0.6953125,
+      "hex": "#9a917a"
+    },
+    "diagnostic": {
+      "CORE": "#fef1d6",
+      "MID": "#ecdcbc",
+      "LOW": "#dcc8a1"
+    }
+  },
+  "atmosphere": {
+    "chromaCeiling": 0.0197,
+    "hues": [
+      150,
+      192,
+      228,
+      262,
+      300,
+      338
+    ],
+    "L": {
+      "near": 0.62,
+      "mid": 0.55,
+      "far": 0.48
+    },
+    "brassC": 0.05159255742754802,
+    "lightC": 0.03171321993046868,
+    "ringMax": 0.020449494759399382,
+    "ringInks": [
+      {
+        "id": "task-delay",
+        "hue": 192,
+        "ink": "#798a89"
+      },
+      {
+        "id": "mastery",
+        "hue": 262,
+        "ink": "#808692"
+      },
+      {
+        "id": "comparison",
+        "hue": 150,
+        "ink": "#6a756c"
+      },
+      {
+        "id": "sleep",
+        "hue": 228,
+        "ink": "#7a8990"
+      },
+      {
+        "id": "fear-shortfall",
+        "hue": 300,
+        "ink": "#736f7c"
+      },
+      {
+        "id": "weekend-fatigue",
+        "hue": 338,
+        "ink": "#655a61"
+      },
+      {
+        "id": "close-relations",
+        "hue": 150,
+        "ink": "#566158"
+      },
+      {
+        "id": "energy-decline",
+        "hue": 228,
+        "ink": "#66747b"
+      }
+    ]
+  },
+  "pattern": {
+    "members": [
+      "mastery",
+      "sleep",
+      "fear-shortfall",
+      "energy-decline"
+    ],
+    "locus": {
+      "x": 240,
+      "y": 470
+    },
+    "locusIsAuthored": true,
+    "derivedFromMemberPositions": "nothing",
+    "note": "I-08B3.1-D2 fitted a principal axis to the member positions and drew residuals from it. Screen positions are a LAYOUT and carry no analytical authority, so that statistic said nothing about the pattern. D2R draws membership only: one locus, four identical links, four identical marks."
+  },
+  "insight": {
+    "site": {
+      "x": 248,
+      "y": 548
+    },
+    "text": "الإتقان يسبق السهر بيومين"
+  },
+  "presentationContract": {
+    "ring.radius": {
+      "encodes": null,
+      "is": "Composition. Rings vary in size so the field has rhythm rather than a uniform grid.",
+      "doesNotMean": "amount of material, importance, confidence, activity, size of anything"
+    },
+    "ring.layer": {
+      "encodes": null,
+      "is": "Apparent depth, for spatial richness and to give the pan something to reveal.",
+      "doesNotMean": "recency, age, relevance, rank, distance in time"
+    },
+    "ring.contourCount": {
+      "encodes": null,
+      "is": "A depth cue. Nearer layers are drawn with more level lines, the way a nearer hill on a map shows more of them.",
+      "doesNotMean": "temporal distance, quantity, density of anything analytical"
+    },
+    "ring.contourShape": {
+      "encodes": null,
+      "is": "Authored irregularity from a PRESENTATION SEED, so the field is not a set of circles. The seed is a composition choice; it is not derived from the topic's analytical identity and carries NO guarantee of stability across releases, devices or users.",
+      "doesNotMean": "identity, a signature, a permanent property of the topic, anything recognisable-by-shape"
+    },
+    "ring.hue": {
+      "encodes": null,
+      "is": "One of six authored atmosphere hues, assigned for composition. Every ring on a layer carries the same chroma and the same lightness.",
+      "doesNotMean": "category, identity, type, state, sentiment"
+    },
+    "world.treatment": {
+      "encodes": "WHICH WORLD IS OPEN — and nothing about any topic in it.",
+      "source": "The world kind is disclosed Product state: the user knows which world they opened. The TREATMENT is a uniform atmosphere applied to the whole field, identical for every topic in that world.",
+      "is": "A contextual atmosphere keyed to a single disclosed fact.",
+      "doesNotMean": "per-topic sharing, per-topic availability, how much of a topic is visible, how much is known"
+    },
+    "field.parallax": {
+      "encodes": null,
+      "is": "Depth response to the user's own hand. Layer rates are a spatial cue.",
+      "doesNotMean": "time, sequence, importance"
+    }
+  },
+  "geometryGate": {
+    "declared": 7,
+    "topics": 8,
+    "worlds": 3
+  },
+  "topics": [
+    {
+      "id": "task-delay",
+      "x": 286,
+      "y": 258,
+      "layer": 0,
+      "from": "D1 GEO.quiet[0]"
+    },
+    {
+      "id": "mastery",
+      "x": 108,
+      "y": 300,
+      "layer": 0,
+      "from": "D1 GEO.quiet[1]"
+    },
+    {
+      "id": "comparison",
+      "x": 300,
+      "y": 392,
+      "layer": 1,
+      "from": "D1 GEO.quiet[2]"
+    },
+    {
+      "id": "sleep",
+      "x": 96,
+      "y": 430,
+      "layer": 0,
+      "from": "D1 GEO.quiet[3]"
+    },
+    {
+      "id": "fear-shortfall",
+      "x": 145,
+      "y": 527,
+      "layer": 1,
+      "from": "D1 GEO.prior locus"
+    },
+    {
+      "id": "weekend-fatigue",
+      "x": 262,
+      "y": 650,
+      "layer": 2,
+      "from": "D1 GEO.quiet[4]"
+    },
+    {
+      "id": "close-relations",
+      "x": 66,
+      "y": 196,
+      "layer": 2,
+      "from": "D2"
+    },
+    {
+      "id": "energy-decline",
+      "x": 150,
+      "y": 690,
+      "layer": 1,
+      "from": "D2"
+    }
+  ],
+  "inherited": [
+    {
+      "file": "vendor/d1/d1-scene.mjs",
+      "sha256": "841dea14f60dde91ac3fd903afdbb64e56300d3327f30902a7ba029d0d7e0e46"
+    },
+    {
+      "file": "vendor/d1/d1-render.mjs",
+      "sha256": "e1ea2960e19d36eb3547b135d3e7a36eb0855b46f065d4d666fabde238d20940"
+    },
+    {
+      "file": "vendor/d1/d1-arrivals.mjs",
+      "sha256": "915ff97618bb40cc4e04d4d0c6e42dcf4f2bd9178cd39cbafc690a74a4b19efd"
+    }
+  ],
+  "prototype": {
+    "file": "prototypes/D2_LIGHT_SYSTEM.html",
+    "bytes": 231528
+  }
+}

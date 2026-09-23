@@ -1,0 +1,763 @@
+{
+  "generatedBy": "tools/f1-skills.mjs",
+  "state": "PASS",
+  "probe": {
+    "name": "the UNVERIFIABLE branch, fed a synthetic empty inventory",
+    "result": "UNVERIFIABLE — EXTERNAL SKILL SOURCE NOT PRESENT"
+  },
+  "inventoried": 90,
+  "rows": [
+    {
+      "status": "USED",
+      "name": "fixing-accessibility",
+      "found": true,
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\fixing-accessibility\\SKILL.md",
+      "sha256": "549261e8a53b53a1a20c0ddbf736821e5fc0876ad82eee76e0efab8e9ee9dadf",
+      "bytes": 4718,
+      "read": "§8 media and motion — \"respect prefers-reduced-motion for NON-ESSENTIAL motion\"; §7 contrast and states — \"disabled states must not rely on color alone\", \"do not remove focus outlines without a visible replacement\"; §5 forms and errors — \"disabled submit actions must explain why\", errors linked by aria-describedby; §1 accessible names — every interactive control must have one; §6 — \"toasts must not be the only way to convey critical information\".",
+      "consequence": "THE WORD \"NON-ESSENTIAL\" IS THE HINGE OF PART A. It is what licenses a motion audit by CATEGORY rather than a global switch, and it is why tools/f1-motion.mjs classifies eleven motions into KEEP / REDUCE / REPLACE / REMOVE instead of reporting \"reduced motion: supported\". §5 and §7 together are why the UNAVAILABLE row in every board carries a REASON in words, carried by aria-describedby on a real control rather than as a board caption — and why qandeel.accessibility.nonColorCue.unavailable is \"ink+stated-reason\" rather than just the ink. §1 is what check R-01 asserts, per object, against the tree the browser engine computed."
+    },
+    {
+      "status": "USED",
+      "name": "apple-design",
+      "found": true,
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\apple-design\\SKILL.md",
+      "sha256": "11840b24a11d7f94f39c6aaab074750ae4e4de4ef54ee4b1dd97e16ebd485e61",
+      "bytes": 22715,
+      "read": "§14 Reduced motion & accessibility — \"Reduced motion doesn't mean NO feedback — it means a gentler, non-vestibular equivalent\", and the THREE INDEPENDENT SIGNALS: prefers-reduced-motion, prefers-reduced-transparency, prefers-contrast: more, with \"near-solid backgrounds with a defined, contrasting border\" for the last; also \"avoid slow looping oscillations (near 0.2 Hz)\". §12 Materials — \"Never stack a light translucent surface on another\"; material weight encodes hierarchy. §15 Typography — \"Respect the user's text-size setting. Scale layout WITH the text — spacing in rem/em, not fixed px.\"",
+      "consequence": "THREE STRUCTURAL CONSEQUENCES. (1) THREE SIGNALS, THREE MODIFIERS — the resolver has a contrast modifier and a transparency modifier and deliberately does NOT have a motion one, because motion resolves to no colour; that split is this section's shape applied honestly rather than copied. (2) \"A DEFINED, CONTRASTING BORDER\" IS WHY qandeel.accessibility.contrast.boundary EXISTS AT ALL. Without it the increased-contrast expression would have had no answer for a World and a functional Surface separated by 1.072:1, and the tempting answer — lighten the Surface — would have moved a frozen value. (3) The 0.2 Hz line is why the ambient field's STILLNESS is recorded in the motion inventory as a decision already taken rather than as an absence."
+    },
+    {
+      "status": "USED",
+      "name": "animate-expo",
+      "found": true,
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\animate-expo\\SKILL.md",
+      "sha256": "2121fc72ffa476492c1b91ccf96c7b26aade9d1a332dc5834ba3526e1102b00d",
+      "bytes": 17564,
+      "read": "§9 Reduced motion and accessibility — \"Reduced motion means FEWER AND GENTLER, not zero: keep opacity and color changes that explain a state change, drop translation, scale, parallax and overshoot\"; the useReducedMotion / ReduceMotion.System API; and \"Text scales. allowFontScaling is on by default, so any height you measured at default type size is wrong at 200%. Never animate to a hardcoded height.\" §7 Press — feedback on press-in; 44x44pt minimum target.",
+      "consequence": "THE CHANNEL MODEL IS THIS SENTENCE TURNED INTO TOKENS. \"Keep opacity and colour changes, drop translation, scale, parallax and overshoot\" is exactly qandeel.accessibility.motion.{level,ink,draw} = 1 against {travel,scale,parallax-differential,decay,blur} = 0. And §9's SCALE clause is the reason F1 added interaction.press to a table D2R left implicit, splitting one behaviour into a ground response that survives and a scale that goes. The allowFontScaling note is why qandeel.accessibility.text.label-escape-scale exists as a LAYOUT switch rather than as a font-size clamp."
+    },
+    {
+      "status": "USED",
+      "name": "react-native-best-practices / references/animations/animations-performance.md",
+      "found": true,
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\animations\\animations-performance.md",
+      "sha256": "7e65406d6dc1d09c3fc60ea051b62870ba0cf4498c18e35c6c3c173b3bad385e",
+      "bytes": 5983,
+      "read": "The ACCESSIBILITY section: the full per-animation-type behaviour table under reduced motion — withSpring/withTiming \"jump to toValue immediately\", withRepeat infinite \"do not start\", \"Exiting / shared element transitions — OMITTED ENTIRELY\"; and \"useReducedMotion returns true if the device has reduced motion enabled AT APP START. Does not update at runtime if the user changes the setting.\"",
+      "consequence": "THE SINGLE MOST LOAD-BEARING SKILL LINE IN THIS PACKAGE, AND IT WENT AGAINST THE OBVIOUS DESIGN. The obvious implementation of Reduced Motion is a global <ReducedMotionConfig mode={ReduceMotion.System} />. This table says that global default DELETES the exit — and QANDEEL's exit is the 1,150 ms settle that carries the result. So the token file carries a scalar literally named system-default-is-wrong-here, tools/f1-motion.mjs ships RUNTIME_DEFAULT with the documented behaviour quoted and four specific remedies, check M-03 asserts the record contains the omitted-exit row, and Board D states it. Without this file F1 would have shipped a contract that the runtime silently violates."
+    },
+    {
+      "status": "USED",
+      "name": "designing-arabic-frontends",
+      "found": true,
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\sibawayh\\sibawayh\\0.1.0\\skills\\designing-arabic-frontends\\SKILL.md",
+      "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2",
+      "bytes": 13757,
+      "read": "§2 Line-height — \"Arabic ascenders, descenders, and diacritics need ~1.6+ line-height… clipping risk DOUBLES with truncate (overflow-hidden)\"; §5 — \"letter-spacing: never on Arabic\"; \"No italics on Arabic\"; logical-first CSS; §1 — avoid weights 100–300, use 400–700; §4 — \"lang matters as much as dir: it drives OS/browser Arabic font fallback and SCREEN-READER VOICE SELECTION\"; §7 — \"Arabic counted nouns: 3–10 take the plural\".",
+      "consequence": "FOUR, AND ONE OF THEM CHANGED AN ANSWER. (1) The line-height clause plus the TRUNCATE clause together are why Part E's answer to a growing label is a SEPARATE INSPECTION VIEW and never a truncation — the skill says the clipping risk doubles exactly where the tempting fix lives. (2) letter-spacing and italics are absent from every stylesheet F1 emits, and the absence is stated in the CSS so a reviewer can see it is deliberate. (3) lang=\"ar\" on the projection root is a SCREEN-READER decision, not a font one, and it is in Part F because of this sentence. (4) The counted-noun rule caught a defect: the projection summary read «1 علاقة، 1 نمط», an English sentence in Arabic words. tools/f1-sr.mjs now carries an arabicCount() with the 1 / 2 / 3–10 / 11+ rules and gender agreement, and the line reads «8 مواضيع، علاقة واحدة، نمط واحد، وفهم جديد واحد»."
+    },
+    {
+      "status": "USED",
+      "name": "writing-eloquent-arabic",
+      "found": true,
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\sibawayh\\sibawayh\\0.1.0\\skills\\writing-eloquent-arabic\\SKILL.md",
+      "sha256": "6a673bd773a9245bd38f817edee4687fbf1d92612f680c80aa33f9b67e96150d",
+      "bytes": 9513,
+      "read": "The register table — فصحى for errors and consent; the failure modes, in particular calque structure and robotic tone; and the principle that Arabic copy is written in Arabic structure rather than translated.",
+      "consequence": "THE PATTERN SENTENCE IS COPY AND IT IS LOAD-BEARING. A PATTERN is the largest accessibility obligation QANDEEL creates — a locus and four links is not readable to anyone who cannot see them — so the sentence that replaces it had to be written rather than assembled. It reads «نمط يجمع 4 مواضيع: «…» و«…»», where يجمع frames the pattern as GATHERING a set rather than as ordering a list, and the members are joined by و, which carries no ordinal reading. A comma-separated list in Arabic would have implied a sequence the Product does not have."
+    },
+    {
+      "status": "USED",
+      "name": "impeccable / reference/craft-floor.md",
+      "found": true,
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\impeccable\\reference\\craft-floor.md",
+      "sha256": "96e2e6bd4fcf9a2c6da65fb029f96d9176308fae2efd9d8653d3b8d838960e07",
+      "bytes": 4484,
+      "read": "Verify → Motion: \"Reach past transform and opacity: blur, backdrop-filter, clip-path, mask, and shadow belong to the palette when they stay smooth.\" Verify → Contrast: \"On colored surfaces tint secondary text from that hue or the foreground; never gray.\" Verify → States: \"hover, disabled, loading, error, empty. Plus real content, working controls, responsive composition, keyboard focus.\"",
+      "consequence": "THE MOTION LINE IS WHY \"DRAW\" IS A SURVIVING CHANNEL AND NOT AN OVERSIGHT. The naive reduced-motion palette is opacity only; this line says a clip-path or mask REVEAL is a legitimate technique, and a reveal at a fixed position is not vestibular motion. qandeel.accessibility.motion.draw = 1 is that distinction, and it is what lets a PATTERN's membership links and an INSIGHT's keel still ARRIVE rather than simply appear. The States line is why the interaction strip on every board carries six rows rather than an illustrative two."
+    },
+    {
+      "status": "USED",
+      "name": "ui-ux-pro-max / data/ux-guidelines.csv",
+      "found": true,
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\ui-ux-pro-max-skill\\ui-ux-pro-max\\2.13.0\\.claude\\skills\\ui-ux-pro-max\\SKILL.md",
+      "sha256": "ea087c341bfb5b23195c7302027268ede86da802554c18a5c4896a6017b439f9",
+      "bytes": 15969,
+      "read": "Rows 99–103 of data/ux-guidelines.csv, which are WCAG 2.2 specific: Focus Not Obscured (Minimum, AA) and (Enhanced, AAA); Focus Appearance (AAA, \"an indicator at least as large as a 2 CSS px perimeter with 3:1 state contrast\"); and row 103, DRAGGING MOVEMENTS — \"WCAG 2.2 AA requires a single-pointer alternative for author-controlled drag operations… Make dragging the only way to reorder resize or select\" is the failure.",
+      "consequence": "ROW 103 FOUND AN OBLIGATION NOTHING ELSE IN THE STACK NAMED. The Living Analysis Map's camera is panned by dragging, and SC 2.5.7 requires a single-pointer alternative for it. That is not a motion question and not a contrast question, so no other part of this brief would have surfaced it. It is recorded in F1_KNOWN_LIMITATIONS.md and in the F2/Product carry-forward as an open obligation on the camera, alongside SC 2.3.3 — and the camera row in the motion inventory carries the disposition CARRY FORWARD rather than a design F1 is forbidden to make. Row 102 is why the increased-contrast focus perimeter is described as strengthening something that already passes rather than repairing something that fails."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "animate",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\animate\\SKILL.md",
+          "sha256": "f6317335da2662e92270dc0a6128bea95d7216cd751f86628e3ac6b72804e805",
+          "bytes": 11575
+        }
+      ],
+      "why": "Read for its reduced-motion section. It is the WEB sibling of animate-expo and its guidance here is the same; the RN-specific runtime behaviour that changed F1's design came from animations-performance.md, so crediting this file would overstate it."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "animation-vocabulary",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\animation-vocabulary\\SKILL.md",
+          "sha256": "d718b48fe3c7898804d588f050a2e266d82c9f5ef51da256c8cb8b5951527757",
+          "bytes": 13128
+        }
+      ],
+      "why": "Read. I-08B3.1-D2R already named every QANDEEL motion in this glossary's own vocabulary — PARALLAX, ORCHESTRATION, LINE DRAWING, REVEAL, FOLLOW-THROUGH — and F1 inherits those names rather than renaming anything. Nothing here changed a disposition."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "improve-animations",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\improve-animations\\SKILL.md",
+          "sha256": "68f17bbc4671593d2f43dba26a679243e2153ba5f26965fb7d59df52842534ff",
+          "bytes": 7915
+        }
+      ],
+      "why": "Read. It plans codebase-wide motion audits and produces implementation plans for other agents. F1 audits a frozen PROOF system it may not modify, so the output shape does not apply."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "find-animation-opportunities",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\find-animation-opportunities\\SKILL.md",
+          "sha256": "91c1243164057fbf824088d12faea937878a757a7ac653e8288b775e8b27b882",
+          "bytes": 9491
+        }
+      ],
+      "why": "Read. It proposes motion where none exists. §19 forbids F1 from designing any new motion, so applying it would have produced work the brief rejects."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "emil-design-eng",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\emil-design-eng\\SKILL.md",
+          "sha256": "e71de849347050c2c573c1cf24d742d5a13459557ecffa6e562f08006f46b5b7",
+          "bytes": 27226
+        },
+        {
+          "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\emil-design-eng\\SKILL.md",
+          "sha256": "e71de849347050c2c573c1cf24d742d5a13459557ecffa6e562f08006f46b5b7",
+          "bytes": 27226
+        }
+      ],
+      "why": "Read. Its subject is component-level polish and the feel of interaction. F1 changes no component and adds no interaction; the interaction grammar is E1's and is inherited unchanged."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "frontend-design",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\claude-plugins-official\\frontend-design\\85cce0381e78\\skills\\frontend-design\\SKILL.md",
+          "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3",
+          "bytes": 9390
+        },
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\claude-plugins-official\\frontend-design\\unknown\\skills\\frontend-design\\SKILL.md",
+          "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3",
+          "bytes": 9390
+        },
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\frontend-design\\skills\\frontend-design\\SKILL.md",
+          "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3",
+          "bytes": 9390
+        },
+        {
+          "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\frontend-design\\SKILL.md",
+          "sha256": "1608ea77fbb6fc30d13a97d12cfa8ebf31358d40f0dd97beed24829d6b3f45dd",
+          "bytes": 8260
+        }
+      ],
+      "why": "Read, in BOTH installed copies — the project copy and the plugin-cache copy differ in content and both are hashed below. Its subject is choosing a visual direction. F1 has no direction to choose: every value it may touch is either frozen or derived by search."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "react-native-best-practices",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\SKILL.md",
+          "sha256": "2cafec6f98199a23d58dce764a07bc815d4675cb4296d052428b51abfd8a64fd",
+          "bytes": 4489
+        }
+      ],
+      "why": "Read as the index that routes to references/animations/. The routing file itself changed nothing; the reference it pointed to changed a great deal, and is credited under USED separately."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "react-navigation",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-navigation\\SKILL.md",
+          "sha256": "f127331ac68f2966168c5c12bb65217eac310804b91d2210f447672d1cbd0f1c",
+          "bytes": 3419
+        }
+      ],
+      "why": "Read for its safe-area and header guidance under larger text. QANDEEL's navigation morphology is unreconciled and out of scope for F1 — E1 recorded that — so applying it would have decided something F1 has no authority over."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "react-native-tv-best-practices",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-tv-best-practices\\SKILL.md",
+          "sha256": "46b4524c57ce315b7be7a4d6c4a342ba31b020576ff50f76b949d61818bc39c5",
+          "bytes": 11166
+        }
+      ],
+      "why": "Read specifically for its FOCUS guidance, since a D-pad product has the strictest focus requirements of any. Its model is directional focus between spatially adjacent elements, which depends on geometry meaning something. In QANDEEL geometry means nothing, so the model does not transfer."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "pulsar-haptics",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\pulsar-haptics\\SKILL.md",
+          "sha256": "fb58618ee4572ff6d3a1d294e4cb422ebd41249e2529d8f8909f3453e79a534e",
+          "bytes": 10272
+        }
+      ],
+      "why": "Read, and the reason is specific: haptics are a NON-VISUAL channel, and Apple's Motion page says to \"supplement visual feedback by also using alternatives like haptics and audio\". A haptic could in principle carry a meaning event under Reduced Motion. NOT APPLIED, because animate-expo's rule is absolute — \"never the only feedback… haptics are off system-wide for many users, and silent on most Android hardware\" — so a haptic could only ever be additive, and adding one would be designing new feedback, which §19 forbids. Recorded as an F2/Product option rather than taken."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "design-critique",
+      "copies": [
+        {
+          "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\design-critique\\SKILL.md",
+          "sha256": "3a4f260eb9f60b431782bf6d90f22afb480c0c67860267a032df58a3e1bd19cd",
+          "bytes": 3923
+        }
+      ],
+      "why": "Not opened for application. Independent Product and Design review owns the critique of this package, and inviting a second opinion into the execution would blur who decided what."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "user-research",
+      "copies": [
+        {
+          "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\user-research\\SKILL.md",
+          "sha256": "fa18fc13d0f44aa869102962ef9466417ade726d659465195a40fbcf08cee156",
+          "bytes": 1751
+        }
+      ],
+      "why": "Read. It plans research with people. No user was involved in F1 and none could be on this host; the absence is recorded in F1_KNOWN_LIMITATIONS.md rather than papered over with a method."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "prototype",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\prototype\\SKILL.md",
+          "sha256": "2ad8401c4deaddb54947fb65247f790e7b3d8784e35312bcbedbfb1d59cd89ce",
+          "bytes": 7488
+        },
+        {
+          "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\prototype\\SKILL.md",
+          "sha256": "2ad8401c4deaddb54947fb65247f790e7b3d8784e35312bcbedbfb1d59cd89ce",
+          "bytes": 7488
+        }
+      ],
+      "why": "Read. F1 ships rendered proofs and a token contract rather than an interactive prototype; the boards are the deliverable §22 asks for."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "react-native-best-practices / references/animations/canvas-animations.md",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\animations\\canvas-animations.md",
+          "sha256": "039a49b67158542f1cff2bbb8ecddc82ead633e50067c3f62b1aa9a1c5c7ef0d",
+          "bytes": 14623
+        }
+      ],
+      "why": "Read — this is the Skia coverage the brief asks about, and it exists under this name rather than as a skill of its own. Read for ONE fact: a Skia Canvas is a single opaque node to an accessibility API, so analytical content cannot live only inside it. That fact is already the inherited I-08B3.1-D2R §5 constraint, so it is credited there and restated as qandeel.accessibility.projection.canvas rather than claimed as new here."
+    },
+    {
+      "status": "INSPECTED — NOT APPLICABLE",
+      "name": "review-animations",
+      "copies": [
+        {
+          "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\review-animations\\SKILL.md",
+          "sha256": "61cf8ac0c4c8e1f63385298c546b16c65ca9aec34abddcd04e821c16712d671d",
+          "bytes": 8108
+        }
+      ],
+      "why": "PRESENT ON THIS HOST AND HASHED BELOW, BUT NOT INVOCABLE. It carries disable-model-invocation, and the Skill tool refuses it with \"Ask the user to run /review-animations themselves — it cannot be invoked via the Skill tool. Do not replicate this skill's workflow by other means.\" §20 names motion review as a relevant category, so this is said plainly rather than worked around: the file was not opened and its checklist was not reconstructed. animate-expo and react-native-best-practices/references/animations cover the runtime and reduced-motion ground, and both are credited above."
+    },
+    {
+      "status": "NOT AVAILABLE",
+      "name": "dataviz",
+      "why": "Not installed on this host under any scope — the inventory below is the evidence. Listed because a reader may expect it: F1 paints no chart and encodes no quantity, so its absence changes nothing."
+    },
+    {
+      "status": "NOT AVAILABLE",
+      "name": "an Android-accessibility skill",
+      "why": "None exists on this host under any name. Android guidance in F1 comes entirely from the Reference Gate — the React Native AccessibilityInfoModule.kt source on the main branch — and F1_PLATFORM_MAPPING.md says so rather than implying a skill covered it."
+    },
+    {
+      "status": "NOT AVAILABLE",
+      "name": "a screen-reader-semantics skill",
+      "why": "None exists on this host. The VoiceOver model in Part F comes from Apple's VoiceOver HIG page and from the browser accessibility tree, both recorded in the Reference Gate."
+    }
+  ],
+  "inventory": [
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\claude-plugins-official\\frontend-design\\85cce0381e78\\skills\\frontend-design\\SKILL.md",
+      "bytes": 9390,
+      "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\claude-plugins-official\\frontend-design\\unknown\\skills\\frontend-design\\SKILL.md",
+      "bytes": 9390,
+      "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\sibawayh\\sibawayh\\0.1.0\\skills\\designing-arabic-frontends\\SKILL.md",
+      "bytes": 13757,
+      "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\sibawayh\\sibawayh\\0.1.0\\skills\\writing-eloquent-arabic\\SKILL.md",
+      "bytes": 9513,
+      "sha256": "6a673bd773a9245bd38f817edee4687fbf1d92612f680c80aa33f9b67e96150d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\ui-ux-pro-max-skill\\ui-ux-pro-max\\2.13.0\\.claude\\skills\\ui-ux-pro-max\\SKILL.md",
+      "bytes": 15969,
+      "sha256": "ea087c341bfb5b23195c7302027268ede86da802554c18a5c4896a6017b439f9"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\discord\\skills\\access\\SKILL.md",
+      "bytes": 4357,
+      "sha256": "4fc3da872e033c37576a904b15a1bcac6b1ce6c7bc43f1f96abd7cad4855ac7a"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\discord\\skills\\configure\\SKILL.md",
+      "bytes": 4324,
+      "sha256": "9364d7895d6f38b917a711128e7b391884fb8b8d69a62c7d72a81e95b6e2b948"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\imessage\\skills\\access\\SKILL.md",
+      "bytes": 4754,
+      "sha256": "ac994a86aab3a2724651a13a62ee9deae985196c8687a33bb79c4b7898aa5be7"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\imessage\\skills\\configure\\SKILL.md",
+      "bytes": 3546,
+      "sha256": "3afdc7e9faa36aa0ba9813dce68509c45014a75b316d366ba44c46ebd8b098aa"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\telegram\\skills\\access\\SKILL.md",
+      "bytes": 4463,
+      "sha256": "6c87f59841c55a4a4f1b732c7427959581e47234f1b8c6fd633e4a5256ce6a3c"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\telegram\\skills\\configure\\SKILL.md",
+      "bytes": 4308,
+      "sha256": "16b06bf2ac5ede250d0c620ce4e6cf3878c9704246b8f52390fde5f280a17f73"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\claude-code-setup\\skills\\claude-automation-recommender\\SKILL.md",
+      "bytes": 10995,
+      "sha256": "441c57e26f0931b64dd085deaad9213c4e3efea27d916dd7443cd33c7e338227"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\claude-md-management\\skills\\claude-md-improver\\SKILL.md",
+      "bytes": 6028,
+      "sha256": "b06c7420be08ca1c7f6d75f7f4709fdb787624a2d363e2f8052216d8c780f85b"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\claude-security\\skills\\claude-security\\SKILL.md",
+      "bytes": 5246,
+      "sha256": "7e7b345240a34339d58da49dec690232023fe2382c1f9113bf3af5a46cf64ce1"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\cwc-makers\\skills\\cardputer-buddy\\SKILL.md",
+      "bytes": 1887,
+      "sha256": "dae31d1459c8ee7b4a03d04bf55485f4ece04bdd4f5a2650ad39eb3d07d9be10"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\cwc-makers\\skills\\m5-onboard\\SKILL.md",
+      "bytes": 23913,
+      "sha256": "c6ba88fd06f59a3e902fead2bb863b6834f189672cfcc75248941c23ae39bd2d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\example-plugin\\skills\\example-command\\SKILL.md",
+      "bytes": 1226,
+      "sha256": "d561981660827f3818b0daec456ae5b31894f68c22407d8c495a77b3105ba96d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\example-plugin\\skills\\example-skill\\SKILL.md",
+      "bytes": 2725,
+      "sha256": "87d90442621ace039aa3379805f99c3f95bf500e9f7b96f9e7876ac2dcf804f5"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\frontend-design\\skills\\frontend-design\\SKILL.md",
+      "bytes": 9390,
+      "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\hookify\\skills\\writing-rules\\SKILL.md",
+      "bytes": 8423,
+      "sha256": "2994b5d3152243b1a1cbf8358e9d7c18f290f31a23920647f31053c3efdf990d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\math-olympiad\\skills\\math-olympiad\\SKILL.md",
+      "bytes": 19961,
+      "sha256": "f697e195d343520f3db551bd4fb44c5120504ee2c47a9cc2016cd57767f23403"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\mcp-server-dev\\skills\\build-mcp-app\\SKILL.md",
+      "bytes": 19391,
+      "sha256": "d2fd94f0096506469ec855c581e48293d35480e58e6405b2bfcdba0486a0c218"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\mcp-server-dev\\skills\\build-mcp-server\\SKILL.md",
+      "bytes": 12084,
+      "sha256": "088cd04be7f03ebbdfd24973cbcbf93c7a2e09117c4bba7b2b06bcc3e0a556f6"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\mcp-server-dev\\skills\\build-mcpb\\SKILL.md",
+      "bytes": 7867,
+      "sha256": "6bb90afd0415754e13f353ee5982d13857c14826edbcbdf5f1481fa5563cd56b"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\playground\\skills\\playground\\SKILL.md",
+      "bytes": 3824,
+      "sha256": "521a3d62211e5f47b65ed17b660e001b15cf8d88d058cbf31bc00e889bcb63cc"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\agent-development\\SKILL.md",
+      "bytes": 11168,
+      "sha256": "6a2826571320828cc6f8f21ccd8e6eefd2bced62000c8c5e43a712c12e2d83a1"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\command-development\\SKILL.md",
+      "bytes": 19233,
+      "sha256": "c55ad02cfe4cbb2a947eea3b1ed5fa1871e722d627c3c6792c3ed87c10c4d7a8"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\hook-development\\SKILL.md",
+      "bytes": 16246,
+      "sha256": "f47e2d42f6360294216a859ae0c30b93caafdd2b2e5ffc007489ba4ca447fa5c"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\mcp-integration\\SKILL.md",
+      "bytes": 12530,
+      "sha256": "b9319d8e44c8f058c1c4f003168295ab2582567fd6329c8b933409116e938bc6"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\plugin-settings\\SKILL.md",
+      "bytes": 12097,
+      "sha256": "028b955244b937ebc1a5c268a12776b8ceae4cbfb60928fbca927227f4c8851d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\plugin-structure\\SKILL.md",
+      "bytes": 13796,
+      "sha256": "a2dbc1e5502aacb360d0ca74732cdd7be4f6a12a49edf4f2ade4134fbc026247"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\skill-development\\SKILL.md",
+      "bytes": 22825,
+      "sha256": "d51b4e20043b13e462aa86c47ea82d43e216eb292871538127f4b12a54e4944f"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\project-artifact\\skills\\project-artifact\\SKILL.md",
+      "bytes": 20425,
+      "sha256": "34e13249dba8a066f33c5f723dbb7b9cb6174b80cc490dd866fbfd1736f0577f"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\receipts\\skills\\receipts\\SKILL.md",
+      "bytes": 17254,
+      "sha256": "5b2f407ff40639727310236f4b34986cacd4bf616c07d2e4198846726842e346"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\session-report\\skills\\session-report\\SKILL.md",
+      "bytes": 3149,
+      "sha256": "ef0fbc4259a41b7fd61b517fb1c9a95f02b83ea3c79ba0b3afbeee4942570397"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\skill-creator\\skills\\skill-creator\\SKILL.md",
+      "bytes": 33168,
+      "sha256": "dcd4803e61e913e6fc27294184cd3a71f09f5e924ff20c8a9a20173e7b3c2bcf"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\animate-expo\\SKILL.md",
+      "bytes": 17564,
+      "sha256": "2121fc72ffa476492c1b91ccf96c7b26aade9d1a332dc5834ba3526e1102b00d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\animate\\SKILL.md",
+      "bytes": 11575,
+      "sha256": "f6317335da2662e92270dc0a6128bea95d7216cd751f86628e3ac6b72804e805"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\animation-vocabulary\\SKILL.md",
+      "bytes": 13128,
+      "sha256": "d718b48fe3c7898804d588f050a2e266d82c9f5ef51da256c8cb8b5951527757"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\assess-react-native-migration\\SKILL.md",
+      "bytes": 14591,
+      "sha256": "31730be40e4ecbe613615843b5b8d201fd1b112c0d35620675c45992d17876e3"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\create-react-native-library\\SKILL.md",
+      "bytes": 2736,
+      "sha256": "72fc31f0dbf032ce27d0ea9966d0e2bc946283639c6200f5696307d4cde3e4ef"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\detour\\detour-onboarding\\SKILL.md",
+      "bytes": 11230,
+      "sha256": "c19bbca057880f1cbd92397c7ea0e0e61090ad129c28cc49a693c979aaeaa157"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\detour\\migrate-to-detour\\SKILL.md",
+      "bytes": 15692,
+      "sha256": "955703ab3e2cd667de9d1f66ad2304ca8f85b73a856bcd176869a233ed39a5e6"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\emil-design-eng\\SKILL.md",
+      "bytes": 27226,
+      "sha256": "e71de849347050c2c573c1cf24d742d5a13459557ecffa6e562f08006f46b5b7"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\expo-horizon\\SKILL.md",
+      "bytes": 11267,
+      "sha256": "45a2b58e17824ccd13866059f48abf0062b3ad97c31973891f0adcafb9ee7874"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\find-animation-opportunities\\SKILL.md",
+      "bytes": 9491,
+      "sha256": "91c1243164057fbf824088d12faea937878a757a7ac653e8288b775e8b27b882"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\js-server-sdk\\SKILL.md",
+      "bytes": 5525,
+      "sha256": "397ae0fae63708ed8191006d3f3e398e3769c0930433f6027e70b678eabf28e4"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\platform\\SKILL.md",
+      "bytes": 6675,
+      "sha256": "4c0fc5e352b80eaae0120f4fdb73fb3845623eda60e486b5bf2bd6954dd12a58"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\python-server-sdk\\SKILL.md",
+      "bytes": 5333,
+      "sha256": "9b218ff0fc09f69ec94c79ec94a2e23435e5341126397e9209f55b74ddd3f702"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\react-client\\SKILL.md",
+      "bytes": 5964,
+      "sha256": "e313b94b3c7e50126742c1769014c83af8bc0fa4fee6239343b827518b2beb5f"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\react-native-client\\SKILL.md",
+      "bytes": 7617,
+      "sha256": "8b83dede866483023706b439fed173843f6fa36e45448a2c38a13efd12c61cd2"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\SKILL.md",
+      "bytes": 3721,
+      "sha256": "dba4eb81c9ac54d4e2e041801f1c34b3b5c049176bd9cc6a3b40c7b751f6b6d9"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\github-actions\\SKILL.md",
+      "bytes": 2812,
+      "sha256": "0d656b3361161b11a04ee741b06bf2e44c2b4dd96ea2d038aa7df0a048fc8850"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\impeccable\\reference\\craft-floor.md",
+      "bytes": 4484,
+      "sha256": "96e2e6bd4fcf9a2c6da65fb029f96d9176308fae2efd9d8653d3b8d838960e07"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\impeccable\\SKILL.md",
+      "bytes": 10771,
+      "sha256": "125f732891f3f319ca7d247af404999f2517c4e508c02e4c5129b0caa3bfbd44"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\improve-animations\\SKILL.md",
+      "bytes": 7915,
+      "sha256": "68f17bbc4671593d2f43dba26a679243e2153ba5f26965fb7d59df52842534ff"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\moq-kit\\SKILL.md",
+      "bytes": 19986,
+      "sha256": "d0d5e071e22ed6e045f14347a8abe19f7752a1535ac35ff6e67099f9a7b6d6b7"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\prototype\\SKILL.md",
+      "bytes": 7488,
+      "sha256": "2ad8401c4deaddb54947fb65247f790e7b3d8784e35312bcbedbfb1d59cd89ce"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\pulsar-haptics\\SKILL.md",
+      "bytes": 10272,
+      "sha256": "fb58618ee4572ff6d3a1d294e4cb422ebd41249e2529d8f8909f3453e79a534e"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\radon-mcp\\SKILL.md",
+      "bytes": 2660,
+      "sha256": "1391deacb9d4ab04a2d757cb82855b7e6fe2e3e472354ff0772f9bdffb7a75fb"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\animations\\animations-performance.md",
+      "bytes": 5983,
+      "sha256": "7e65406d6dc1d09c3fc60ea051b62870ba0cf4498c18e35c6c3c173b3bad385e"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\animations\\animations.md",
+      "bytes": 11838,
+      "sha256": "ed73feae2870774816baae2b609d5d533baee901ef66c4a39e46c4bbf3ec63dd"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\animations\\canvas-animations.md",
+      "bytes": 14623,
+      "sha256": "039a49b67158542f1cff2bbb8ecddc82ead633e50067c3f62b1aa9a1c5c7ef0d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\animations\\SKILL.md",
+      "bytes": 3745,
+      "sha256": "cbf41937f716feb65c2b6fdc07c320623b6e19f9a9923b4b3c8a1462a0df8833"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\audio\\SKILL.md",
+      "bytes": 4019,
+      "sha256": "8e3d4d7b87ee7455956128a390577ebf9a82990bf6c18a0b3a56295f6eb2aa97"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\enable-worklets-bundle-mode\\SKILL.md",
+      "bytes": 15938,
+      "sha256": "c86a39fe84a20d1aaf60a8d71ef7ef7219d237c773bae249c679d73ac3e65c0f"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\gestures\\SKILL.md",
+      "bytes": 6941,
+      "sha256": "8608158a6b2979c42872a707dd5812fe641c82e9ccd9a150f7c9d9f5c758f438"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\jsi\\SKILL.md",
+      "bytes": 3628,
+      "sha256": "a70674691164d4c94b2615fab5da071536a3b00cdc769d96b9ec3c57538ff5a7"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\multithreading\\SKILL.md",
+      "bytes": 4786,
+      "sha256": "087d8fe9868f5453d1335dc72562db986181152d246c17358b9248ccc84ff02c"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\on-device-ai\\SKILL.md",
+      "bytes": 9574,
+      "sha256": "10570525ac88f34deb1aac24607d48ca741012f097c5b2f41faf81219782576d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\rich-text\\SKILL.md",
+      "bytes": 21622,
+      "sha256": "79a0e06e4be4179d1a8247a59c00f88838af0748336be1b114dda07530e8b07a"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\svg\\SKILL.md",
+      "bytes": 1017,
+      "sha256": "92353d60d2a42cf16d5206aa930edcf352c6ba71bc04de004bba75a38928f1f3"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\SKILL.md",
+      "bytes": 4489,
+      "sha256": "2cafec6f98199a23d58dce764a07bc815d4675cb4296d052428b51abfd8a64fd"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-brownfield-migration\\SKILL.md",
+      "bytes": 7035,
+      "sha256": "a01b34e0e03a0bc25cde1b96286ac5ba0d273d8aba56e3ac1ce53fca56c84ca6"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-moq\\SKILL.md",
+      "bytes": 6449,
+      "sha256": "235709c3c1be94cd07c5a6c2d0059fdf416ff67c5bd1740f036858b8e77f8bf2"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-tv-best-practices\\SKILL.md",
+      "bytes": 11166,
+      "sha256": "46b4524c57ce315b7be7a4d6c4a342ba31b020576ff50f76b949d61818bc39c5"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-navigation\\SKILL.md",
+      "bytes": 3419,
+      "sha256": "f127331ac68f2966168c5c12bb65217eac310804b91d2210f447672d1cbd0f1c"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\review-animations\\SKILL.md",
+      "bytes": 8108,
+      "sha256": "61cf8ac0c4c8e1f63385298c546b16c65ca9aec34abddcd04e821c16712d671d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\rnrepo\\SKILL.md",
+      "bytes": 2452,
+      "sha256": "0effa7af402853b4df5e8c50bc63d2e8062bd530652bd751e81d8b5d9500359c"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\typegpu\\SKILL.md",
+      "bytes": 22400,
+      "sha256": "34e249af012a1ffbb0575cb36c20aaa9c966bc80676d3d014ed879d4523d51e6"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\upgrading-react-native\\SKILL.md",
+      "bytes": 4210,
+      "sha256": "5d81737d25e48a320ec56b12bca4be3fa99166ddd3186374ec31ca31d8417930"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\apple-design\\SKILL.md",
+      "bytes": 22715,
+      "sha256": "11840b24a11d7f94f39c6aaab074750ae4e4de4ef54ee4b1dd97e16ebd485e61"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\design-critique\\SKILL.md",
+      "bytes": 3923,
+      "sha256": "3a4f260eb9f60b431782bf6d90f22afb480c0c67860267a032df58a3e1bd19cd"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\designing-arabic-frontends\\SKILL.md",
+      "bytes": 13757,
+      "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\emil-design-eng\\SKILL.md",
+      "bytes": 27226,
+      "sha256": "e71de849347050c2c573c1cf24d742d5a13459557ecffa6e562f08006f46b5b7"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\fixing-accessibility\\SKILL.md",
+      "bytes": 4718,
+      "sha256": "549261e8a53b53a1a20c0ddbf736821e5fc0876ad82eee76e0efab8e9ee9dadf"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\frontend-design\\SKILL.md",
+      "bytes": 8260,
+      "sha256": "1608ea77fbb6fc30d13a97d12cfa8ebf31358d40f0dd97beed24829d6b3f45dd"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\prototype\\SKILL.md",
+      "bytes": 7488,
+      "sha256": "2ad8401c4deaddb54947fb65247f790e7b3d8784e35312bcbedbfb1d59cd89ce"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\user-research\\SKILL.md",
+      "bytes": 1751,
+      "sha256": "fa18fc13d0f44aa869102962ef9466417ade726d659465195a40fbcf08cee156"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\writing-eloquent-arabic\\SKILL.md",
+      "bytes": 9513,
+      "sha256": "6a673bd773a9245bd38f817edee4687fbf1d92612f680c80aa33f9b67e96150d"
+    }
+  ]
+}

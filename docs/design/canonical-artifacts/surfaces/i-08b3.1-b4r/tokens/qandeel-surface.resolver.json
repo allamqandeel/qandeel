@@ -1,0 +1,61 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+  "version": "2025.10",
+  "name": "QANDEEL Surface system",
+  "description": "I-08B3.1-B4. Dark is the canonical expression and the only one with values. Light and increased contrast are declared, empty, and owned by later work: resolving into them fails loudly instead of silently returning dark or an invented colour.",
+  "sets": {
+    "semantic": {
+      "description": "Appearance-independent Product semantics and the four Surface roles.",
+      "sources": [
+        {
+          "$ref": "./base/semantic.tokens.json"
+        }
+      ]
+    }
+  },
+  "modifiers": {
+    "appearance": {
+      "description": "System light/dark appearance.",
+      "default": "dark",
+      "contexts": {
+        "dark": [
+          {
+            "$ref": "./appearance/dark.tokens.json"
+          }
+        ],
+        "light": [
+          {
+            "$ref": "./appearance/light.tokens.json"
+          }
+        ]
+      }
+    },
+    "contrast": {
+      "description": "Increased-contrast accessibility override, applied within an appearance.",
+      "default": "standard",
+      "contexts": {
+        "standard": [
+          {
+            "$ref": "./contrast/standard.tokens.json"
+          }
+        ],
+        "increased": [
+          {
+            "$ref": "./contrast/increased.tokens.json"
+          }
+        ]
+      }
+    }
+  },
+  "resolutionOrder": [
+    {
+      "$ref": "#/sets/semantic"
+    },
+    {
+      "$ref": "#/modifiers/appearance"
+    },
+    {
+      "$ref": "#/modifiers/contrast"
+    }
+  ]
+}

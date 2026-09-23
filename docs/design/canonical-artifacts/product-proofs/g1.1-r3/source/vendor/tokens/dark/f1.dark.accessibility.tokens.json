@@ -1,0 +1,60 @@
+{
+  "qandeel": {
+    "expression": {
+      "accessibility": {
+        "$description": "I-08B3.1-F1 accessibility expression, DARK appearance. DELIBERATELY THIN. Every accessibility transformation F1 makes is either a re-route along the frozen reading ramp or a change to a value that d2-world's PRESENTATION_CONTRACT already declares `encodes: null`. Neither kind needs a new literal, and F1 introduces none. The LIGHT appearance of every one of these is owned by I-08B3.1-F2 and does not exist yet; the resolver fails loudly rather than returning a colour nobody designed.",
+        "$extensions": {
+          "com.qandeel.provenance": {
+            "authoredIn": "I-08B3.1-F1",
+            "newLiteralsIntroduced": 0,
+            "note": "Compare I-08B3.1-E1, which added exactly one colour and said so. F1 adds none, and that is not modesty — it is the consequence of the law that an accessibility setting changes representation only. A transformation that needed a new colour would be describing a thing the default cannot express, which would make it a design change wearing an accessibility name."
+          }
+        },
+        "atmosphere": {
+          "$type": "number",
+          "$description": "The ambient field's derived expression values, dark appearance. These are the ONLY numbers F1 authors that reach a painted pixel, and every one of them lands on a property PRESENTATION_CONTRACT declares meaningless.",
+          "lightness-near": {
+            "$value": 0.62,
+            "$description": "Default. Inherited byte-for-byte from I-08B3.1-D2R's qandeel.atmosphere.luminance.near. Present so that the increased-contrast override has something to override BY NAME rather than by patching a scene constant.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "why": "the DEFAULT, inherited byte-for-byte from I-08B3.1-D2R. It is present so the increased-contrast override has a name to override rather than a scene constant to patch; the value itself is D2R’s and is not F1’s to freeze."
+              }
+            }
+          },
+          "lightness-mid": {
+            "$value": 0.55,
+            "$description": "Default. Inherited from D2R.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "why": "as lightness-near."
+              }
+            }
+          },
+          "lightness-far": {
+            "$value": 0.48,
+            "$description": "Default. Inherited from D2R.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "why": "as lightness-near."
+              }
+            }
+          },
+          "stroke-alpha-multiplier": {
+            "$value": 1,
+            "$description": "Default. The field is drawn at D2R's own per-world stroke alphas, untouched.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "why": "the DEFAULT sentinel: the field is drawn at D2R’s own per-world stroke alphas, untouched."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

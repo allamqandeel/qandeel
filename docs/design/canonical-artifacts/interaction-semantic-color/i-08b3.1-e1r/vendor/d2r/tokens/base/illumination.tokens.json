@@ -1,0 +1,552 @@
+{
+  "$description": "QANDEEL LIGHT and ATMOSPHERE — semantic layer. I-08B3.1-D2. Extends the frozen I-08B3.1-C3 material layer; the two are resolved together and neither is complete alone.",
+  "qandeel": {
+    "illumination": {
+      "$type": "color",
+      "$description": "QANDEEL LIGHT. MEANING LIGHT, and nothing else. It is NOT loading, NOT generic thinking, NOT a selected state, NOT focus, NOT confidence, NOT importance, NOT severity, NOT a success or warning colour, and NOT generic AI decoration. It appears when meaning genuinely emerges or crystallizes, and it is EVENT-BASED: it has a beginning, a decay and an exact zero. ACTIVITY IS PROCESS. LIGHT IS MEANING. BRASS IS MATTER.",
+      "core": {
+        "$value": "{qandeel.expression.illumination.core}",
+        "$description": "The centre of a light.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+          }
+        }
+      },
+      "mid": {
+        "$value": "{qandeel.expression.illumination.mid}",
+        "$description": "The body of a light. Also the tone composited onto the identity material when light reaches it.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+          }
+        }
+      },
+      "low": {
+        "$value": "{qandeel.expression.illumination.low}",
+        "$description": "The deep end of a light.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+          }
+        }
+      },
+      "falloff": {
+        "$description": "HOW LIGHT FALLS OFF IN QANDEEL — one law, shared by all four categories. This is the load-bearing half of the coherence claim: AMBIENT, CONNECTION, PATTERN and INSIGHT differ in WHERE the light is and HOW MANY sources there are, and in nothing else. reach = radius × (base + gain × level); intensity = level × clamp(1 − distance/reach)^exponent × ceiling.",
+        "exponent": {
+          "$type": "number",
+          "$value": 0.7,
+          "$description": "The falloff exponent. Below 1 so a light keeps presence at its edge instead of ending in a hard ring.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "reach-base": {
+          "$type": "number",
+          "$value": 1.5,
+          "$description": "Reach as a multiple of the source radius at zero level.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "reach-gain": {
+          "$type": "number",
+          "$value": 2.5,
+          "$description": "How much further a light reaches as its level rises.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "ceiling": {
+          "$type": "number",
+          "$value": 0.75,
+          "$description": "The maximum share of a surface a light may take. A lit material never becomes the light.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        }
+      },
+      "lifecycle": {
+        "$description": "EMERGE → CRYSTALLIZE → SETTLE. Asymmetric, deliberately: the rise is the system responding and is the fast half; the fall is the world returning to rest after an answer, and a snappy fall reads as the insight being retracted. The rise curve is SMOOTHSTEP, q²(3−2q), which has no exact cubic-bézier and is therefore stated as a formula rather than approximated by one. The fall curve is the exact bézier below.",
+        "rise": {
+          "$type": "duration",
+          "$value": {
+            "value": 260,
+            "unit": "ms"
+          },
+          "$description": "Time from nothing to full light.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "fall": {
+          "$type": "duration",
+          "$value": {
+            "value": 1150,
+            "unit": "ms"
+          },
+          "$description": "Time from full light to EXACTLY zero. Never a fade-to-almost.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "scale-default": {
+          "$type": "number",
+          "$value": 1,
+          "$description": "The speed a small, local event runs at — one travelling relation between two objects.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "scale-large": {
+          "$type": "number",
+          "$value": 1.25,
+          "$description": "The speed a large event runs at — one spanning much of the map, with several simultaneous sources. Material 3's motion system ships three speeds of one spring for this reason: \"larger elements may use slow\".",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "easing": {
+          "$type": "cubicBezier",
+          "settle": {
+            "$value": [
+              0.38,
+              0,
+              0.32,
+              1
+            ],
+            "$description": "The fall. Derived in I-08B3.1-D0, unchanged since. Peak slope 2.23 — the house UI curves tear at this timescale and D0 recorded the measurement.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+              }
+            }
+          }
+        },
+        "$extensions": {
+          "com.qandeel.easing": {
+            "rise": {
+              "name": "smoothstep",
+              "formula": "q*q*(3-2*q)",
+              "note": "Eased at BOTH ends, peak slope 1.50. NOT a cubic-bézier; do not substitute one."
+            }
+          }
+        }
+      },
+      "intensity": {
+        "$description": "How much light an event is permitted. Not a ladder and not a scale of importance: every meaning event in QANDEEL is the same KIND of event, and these bound it rather than rank it.",
+        "event-peak": {
+          "$type": "number",
+          "$value": 0.86,
+          "$description": "The opacity of one light source at full level. Measured consequence: no D2 category exceeds the Light of the CONNECTION the Product Owner already accepted — check R8.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        }
+      },
+      "extent": {
+        "$description": "The size of a light source, in scene px at the 390 × 844 reference viewport.",
+        "source-blur": {
+          "$type": "dimension",
+          "$value": {
+            "value": 3.4,
+            "unit": "px"
+          },
+          "$description": "The gaussian applied to a source, so a light has no edge. A light with an edge is a shape.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "insight-residual-radius": {
+          "$type": "dimension",
+          "$value": {
+            "value": 21,
+            "unit": "px"
+          },
+          "$description": "How close a gathering may close. NEVER zero: five lobes contracting onto one coordinate stack into a bright disc, which is an orb, which is forbidden. A gather closes to a RING around the thing emerging.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "pattern-merge-fraction": {
+          "$type": "number",
+          "$value": 0.34,
+          "$description": "How far along the shared axis converging lights travel toward each other. Well under 1, for the same reason: convergence is a DIRECTION, not a destination.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "insight-lobes": {
+          "$type": "number",
+          "$value": 5,
+          "$description": "Fixed bearings a gather arrives from. Fixed, not drawn at random.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        }
+      },
+      "role": {
+        "$description": "THE THREE TRANSITION ROLES, so an implementer names the beat rather than inventing one. EMERGE: light appears where meaning is forming. CRYSTALLIZE: the neutral analytical geometry draws, while the light is still up — they overlap, because convergence and crystallization are one thing seen twice. SETTLE: light decays to exactly zero and a NEUTRAL RESIDUE remains, readable with no animation at all.",
+        "emerge": {
+          "$type": "number",
+          "$value": 0,
+          "$description": "Beat 0.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "crystallize": {
+          "$type": "number",
+          "$value": 1,
+          "$description": "Beat 1. Begins BEFORE emerge has finished.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "settle": {
+          "$type": "number",
+          "$value": 2,
+          "$description": "Beat 2. Ends at exactly zero light.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        }
+      },
+      "reduced": {
+        "$description": "REDUCED MOTION IS A DIFFERENT EXPRESSION, NOT A DISABLED ONE. Reanimated's own behaviour is why: with the setting on, withTiming and withSpring \"return the toValue immediately\" and entering animations \"jump to the endpoint\", so a global flag does not make an event gentler — it deletes it. These three say what to remove; everything not listed here is KEPT, including the light rising and falling in place, the ink resolving, and the structure appearing.",
+        "travel": {
+          "$type": "number",
+          "$value": 0,
+          "$description": "Lights do not travel. They appear at their arrived positions and stay there.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "blur": {
+          "$type": "number",
+          "$value": 0,
+          "$description": "No animated blur, anywhere. Apple's Reduce Motion guidance asks for \"avoiding animating into and out of blurs\" — a focal change is part of what the setting exists to remove. THIS CORRECTS THE I-08B3.1-D1 REDUCED-MOTION COUNTERPART, which kept a bridging blur.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "parallax-differential": {
+          "$type": "number",
+          "$value": 0,
+          "$description": "Depth planes move together, so there is no relative motion. APPARENT depth is still carried by scale, luminance and contour count, which are static — and carries no analytical meaning with or without the differential.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        }
+      }
+    },
+    "atmosphere": {
+      "$type": "color",
+      "$description": "THE WORLD'S CHARACTER, AND EXPLICITLY NOT ILLUMINATION. Atmosphere is present while nothing is being understood; Meaning Light appears only when something is. This group is a sibling of qandeel.illumination and never an alias into it. THE RULE THAT KEEPS THEM APART IS ARITHMETIC: atmosphere is never the most colourful thing on screen. Every ambient colour is bounded below BOTH the identity material's chroma and the Light's least chromatic stop, so a ring can never be mistaken for a meaning event — the mistake is unavailable rather than forbidden.",
+      "chroma-ceiling": {
+        "$type": "number",
+        "$value": 0.0197,
+        "$description": "The OKLCh chroma no ambient colour may reach. DERIVED as 0.62 × the Light's least chromatic stop, so it survives the Light being re-chosen. Measured on rasters by check R6.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+          }
+        }
+      },
+      "luminance": {
+        "$description": "One OKLCh lightness per depth plane. PRESENTATION ONLY. Depth here is APPARENT VISUAL DEPTH — a spatial cue that gives the still field layering and gives the pan something to reveal. It encodes NOTHING: not recency, not temporal distance, not amount, not importance, not rank. See ring.layer in PRESENTATION_CONTRACT, which build gate 6 reads.",
+        "near": {
+          "$type": "number",
+          "$value": 0.62,
+          "$description": "The nearest plane. Lightest, because it is nearest — and for no other reason.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "mid": {
+          "$type": "number",
+          "$value": 0.55,
+          "$description": "",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "far": {
+          "$type": "number",
+          "$value": 0.48,
+          "$description": "The furthest plane. Darkest, because it is furthest — and for no other reason.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        }
+      },
+      "hue": {
+        "$description": "SIX HUES, CLOSED, ALL OUTSIDE THE WARM BAND. PRESENTATION ONLY: a hue is assigned for composition and encodes nothing — not category, not identity, not type, not state. Every ring on a plane carries the same chroma and the same lightness, so nothing about the palette is ordinal and no ring can look more important than another. Six hues cannot give every topic a unique one, and they are not asked to: THE IDENTITY CHANNEL IN THIS PROOF IS THE TOPIC NAME, which is rendered for every topic in every world. Apple's guidance is explicit that colour must never be the only carrier, and here it carries nothing on its own.",
+        "h1": {
+          "$type": "number",
+          "$value": 150,
+          "$description": "OKLCh hue 150°.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "h2": {
+          "$type": "number",
+          "$value": 192,
+          "$description": "OKLCh hue 192°.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "h3": {
+          "$type": "number",
+          "$value": 228,
+          "$description": "OKLCh hue 228°.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "h4": {
+          "$type": "number",
+          "$value": 262,
+          "$description": "OKLCh hue 262°.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "h5": {
+          "$type": "number",
+          "$value": 300,
+          "$description": "OKLCh hue 300°.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "h6": {
+          "$type": "number",
+          "$value": 338,
+          "$description": "OKLCh hue 338°.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        }
+      },
+      "contour": {
+        "$description": "CONTROLLED IRREGULARITY, AUTHORED AND BOUNDED. PRESENTATION ONLY. A topic is drawn as a set of level sets whose radius is modulated by three harmonics with phases derived from an AUTHORED PRESENTATION SEED belonging to the scene — deliberately NOT from the topic's analytical identity. It is not an RNG aesthetic: the seed is fixed, so the composition is reproducible inside this proof. It is also NOT a signature: it carries no guarantee of stability across releases, devices or users, and a later release may reseed the whole field and lose nothing. Contour morphology does not identify a topic; the TOPIC NAME does.",
+        "harmonics": {
+          "$type": "number",
+          "$value": 3,
+          "$description": "Three, starting at k=2. A first harmonic is a translation, not a shape, and would move a ring off a real map position.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "amplitude-total": {
+          "$type": "number",
+          "$value": 0.06,
+          "$description": "The harmonics sum to at most this fraction of the radius. Bounded so shape reads as character; above roughly twice this it starts to look like a measurement of something, which would be a lie.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "rings-near": {
+          "$type": "number",
+          "$value": 3,
+          "$description": "Level sets drawn on the near plane.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "rings-mid": {
+          "$type": "number",
+          "$value": 2,
+          "$description": "",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "rings-far": {
+          "$type": "number",
+          "$value": 1,
+          "$description": "",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        }
+      },
+      "parallax": {
+        "$description": "THE ONLY MOTION AMBIENT HAS, AND IT IS THE USER'S HAND. The field does not move on its own — see D2R_AMBIENT_MEANING_ACTIVITY.md for the four independent reasons. These are the rates each depth plane tracks the gesture at. Under reduced motion every plane uses the NEAR rate.",
+        "near": {
+          "$type": "number",
+          "$value": 1,
+          "$description": "1:1 with the finger.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "mid": {
+          "$type": "number",
+          "$value": 0.72,
+          "$description": "",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "far": {
+          "$type": "number",
+          "$value": 0.48,
+          "$description": "",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "deceleration-rate": {
+          "$type": "number",
+          "$value": 0.998,
+          "$description": "The momentum projection constant, from Apple's Designing Fluid Interfaces sample: project(v) = (v/1000)·d/(1−d). The glide after release is the second half of ONE GESTURE, not an animation of the map, which is why it is a projection and not a curve.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        }
+      }
+    }
+  },
+  "$extensions": {
+    "com.qandeel.freeze-boundary": {
+      "note": "A token exists so an implementation is CONSISTENT. Freezing exists so a PRODUCT DECISION is irreversible. They are different jobs, and a value can have the first without the second. Every token below carries com.qandeel.freeze saying which it has.",
+      "productContract": [
+        "There are FOUR Light categories: AMBIENT, CONNECTION, PATTERN, INSIGHT. A fifth is a new Product decision.",
+        "They are four topologies of one falloff law: FIELD, DIRECTION, CONVERGENCE, EMERGENCE.",
+        "AMBIENT is not Meaning Light. ACTIVITY is neither, and has no expression in this system.",
+        "Meaning Light is EVENT-BASED: it begins, it decays, and it reaches EXACTLY zero.",
+        "The lifecycle is EMERGE -> CRYSTALLIZE -> SETTLE, with crystallization beginning before emergence ends.",
+        "No persistent glow, no looping pulse, no residual animation is required to understand any settled state.",
+        "Every meaning event ends in a NEUTRAL analytical residue readable with no animation.",
+        "Reduced motion is a real alternate expression reaching the SAME settled meaning, never animation switched off.",
+        "No animated blur under reduced motion, anywhere, including the inherited Connection.",
+        "Light may act ON the identity material; the material is never a source.",
+        "No analytical object carries the identity material.",
+        "Atmosphere is never the most colourful thing on screen — bounded below both the material and the Light.",
+        "GEOMETRY DOES NOT MANUFACTURE MEANING: no ambient visual property encodes an analytical quantity without a canonical contract granting it.",
+        "A PATTERN is a MEMBER SET. Nothing about its order, strength or structure is inferred from screen positions.",
+        "CONNECTION is the inherited I-08B3.1-D1 expression and is not reinterpreted."
+      ]
+    }
+  }
+}

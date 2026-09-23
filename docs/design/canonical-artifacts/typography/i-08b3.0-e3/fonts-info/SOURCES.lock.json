@@ -1,0 +1,70 @@
+{
+  "_": "I-08B3.0-E3 provenance lock. The typeface is not under test in E3; this records exactly which binary produced every board so the package can be reproduced byte-for-byte. No font binary is redistributed here.",
+  "generated": "2026-09-20",
+  "font": {
+    "family": "Estedad",
+    "status": "ACCEPTED typeface - not under test in I-08B3.0-E3",
+    "version": "Version 8.5",
+    "sourceOfRecord": "https://github.com/aminabedi68/Estedad",
+    "release": "https://github.com/aminabedi68/Estedad/releases/tag/8.5",
+    "releaseTag": "8.5",
+    "archive": "Estedad-v8.5.zip",
+    "file": "Estedad-v8.5/Estedad[wght].ttf",
+    "bytes": 284180,
+    "sha256": "3134E31A27D58E615967E714C7799FBFA2DE952876F8597B33DC57FFE0E99D03",
+    "variable": true,
+    "axes": [{ "tag": "wght", "min": 100, "default": 400, "max": 900 }],
+    "unitsPerEm": 1000,
+    "numGlyphs": 2276,
+    "verticalMetrics": {
+      "fsSelection_USE_TYPO_METRICS": true,
+      "typoAscender": 1025,
+      "typoDescender": -500,
+      "typoLineGap": 0,
+      "declaredLineBox_em": 1.525
+    },
+    "weightsUsed": [400, 500, 600],
+    "licence": "SIL Open Font License, Version 1.1",
+    "licenceReadFrom": "the binary's own name table, ID 13",
+    "licenceURL": "https://openfontlicense.org"
+  },
+  "knownIssuesInspected": [
+    {
+      "ref": "aminabedi68/Estedad#39",
+      "title": "Mark to base bug",
+      "state": "open, reported against v8.5",
+      "reproducedInThisPackage": true,
+      "finding": "Defect confirmed but the issue names the wrong codepoint. U+FE74 (ARABIC KASRATAN ISOLATED FORM) is a spacing presentation form that does not compose and does not raise the ink ceiling. U+064D (combining kasratan) - what a keyboard actually produces - is placed ABOVE the shadda on all four bases tested. See DIACRITIC_QA.png and report section 12."
+    },
+    {
+      "ref": "aminabedi68/Estedad#44",
+      "title": "English letter i not displaying (Office 2013, Windows 10)",
+      "state": "open, reported against v8.5",
+      "reproducedInThisPackage": false,
+      "finding": "Does not reproduce in Chrome/HarfBuzz. U+0069 carries a 25.31px advance at 100px and its tittle sits at 0.7074 em; 'Confidence' measures exactly that much wider than 'Confdence'. Appears to be a legacy-shaper problem specific to that application, not a defect in the font data."
+    },
+    {
+      "ref": "aminabedi68/Estedad#43",
+      "title": "avar table missing required mappings - font validation errors",
+      "state": "open",
+      "reproducedInThisPackage": false,
+      "finding": "Not exercised. Only three static weights (400/500/600) are instantiated from the variable axis in this package; no intermediate interpolation is relied upon."
+    },
+    {
+      "ref": "aminabedi68/Estedad#33",
+      "title": "Diacritic marks scattered in Excel",
+      "state": "open",
+      "reproducedInThisPackage": false,
+      "finding": "Host-application specific; out of scope for a mobile product proof."
+    }
+  ],
+  "renderer": {
+    "engine": "Google Chrome",
+    "version": "153.0.8010.48",
+    "mode": "--headless=new",
+    "devicePixelRatio": 2,
+    "colorProfile": "srgb",
+    "antialiasing": "greyscale, forced via --disable-lcd-text --disable-font-subpixel-positioning",
+    "fontDelivery": "base64 data: URI, single @font-face, font-weight 100 900, font-display block"
+  }
+}

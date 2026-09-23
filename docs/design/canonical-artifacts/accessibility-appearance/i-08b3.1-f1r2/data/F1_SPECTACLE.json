@@ -1,0 +1,196 @@
+{
+  "generatedBy": "tools/f1-spectacle.mjs",
+  "raw": {
+    "state": "MEASURED",
+    "ablation": {
+      "name": "DEFAULT ACCESSIBILITY-OVERRIDE ISOLATION",
+      "what": "Every accessibility override file replaced with an empty stub; the DEFAULT document re-rendered.",
+      "proves": "The default expression does not read, and does not notice the absence of, any accessibility override. No accessibility value has leaked into the default path.",
+      "doesNotProve": "That the default expression is byte-identical to the pre-F1 I-08B3.1-D2R expression. Both sides run F1's own scene builder, so a change hardcoded into that builder would survive both. See data/F1_INHERITED_DEFAULT.json, which proves that separately and against the inherited package.",
+      "defaultHash": {
+        "html": "6651a36a2298e29d31391389fdd4d96aa02722d1406db39842bdc9dff73cb5e3",
+        "png": "0a8cb8e0c2ecaf2d9e2283920d28ce3736ef17e64573c81db40f09a0369f4d17"
+      },
+      "ablatedHash": {
+        "html": "6651a36a2298e29d31391389fdd4d96aa02722d1406db39842bdc9dff73cb5e3",
+        "png": "0a8cb8e0c2ecaf2d9e2283920d28ce3736ef17e64573c81db40f09a0369f4d17"
+      },
+      "htmlIdentical": true,
+      "pngIdentical": true,
+      "pass": true
+    },
+    "northStar": {
+      "chromaAmongPaintedPixels": {
+        "count": 62128,
+        "share": 0.9894,
+        "p50": 0.0327,
+        "p95": 0.073,
+        "max": 0.1507
+      },
+      "pixels": 62792,
+      "size": [
+        2000,
+        1125
+      ],
+      "chroma": {
+        "mean": 0.0353,
+        "p50": 0.0324,
+        "p95": 0.0727,
+        "max": 0.1507
+      },
+      "lightness": {
+        "p05": 0.1538,
+        "p50": 0.2575,
+        "p95": 0.5126,
+        "range": 0.3587
+      },
+      "chromaticPixelShare": 0.7805,
+      "hueBinsOccupied": 36,
+      "spatialDetail": 9.765
+    },
+    "current": {
+      "chromaAmongPaintedPixels": {
+        "count": 1034,
+        "share": 0.0206,
+        "p50": 0.0106,
+        "p95": 0.0516,
+        "max": 0.1364
+      },
+      "pixels": 50180,
+      "size": [
+        780,
+        2314
+      ],
+      "chroma": {
+        "mean": 0.0004,
+        "p50": 0,
+        "p95": 0.0016,
+        "max": 0.1364
+      },
+      "lightness": {
+        "p05": 0.173,
+        "p50": 0.173,
+        "p95": 0.209,
+        "range": 0.036
+      },
+      "chromaticPixelShare": 0.0017,
+      "hueBinsOccupied": 3,
+      "spatialDetail": 2.625
+    }
+  },
+  "verdict": {
+    "ablation": {
+      "name": "DEFAULT ACCESSIBILITY-OVERRIDE ISOLATION",
+      "what": "Every accessibility override file replaced with an empty stub; the DEFAULT document re-rendered.",
+      "proves": "The default expression does not read, and does not notice the absence of, any accessibility override. No accessibility value has leaked into the default path.",
+      "doesNotProve": "That the default expression is byte-identical to the pre-F1 I-08B3.1-D2R expression. Both sides run F1's own scene builder, so a change hardcoded into that builder would survive both. See data/F1_INHERITED_DEFAULT.json, which proves that separately and against the inherited package.",
+      "defaultHash": {
+        "html": "6651a36a2298e29d31391389fdd4d96aa02722d1406db39842bdc9dff73cb5e3",
+        "png": "0a8cb8e0c2ecaf2d9e2283920d28ce3736ef17e64573c81db40f09a0369f4d17"
+      },
+      "ablatedHash": {
+        "html": "6651a36a2298e29d31391389fdd4d96aa02722d1406db39842bdc9dff73cb5e3",
+        "png": "0a8cb8e0c2ecaf2d9e2283920d28ce3736ef17e64573c81db40f09a0369f4d17"
+      },
+      "htmlIdentical": true,
+      "pngIdentical": true,
+      "pass": true
+    },
+    "dimensions": [
+      {
+        "name": "mean chroma",
+        "northStar": 0.0353,
+        "current": 0.0004,
+        "northStarIsThisManyTimesTheCurrent": 88.25,
+        "kind": "POLICY + framing — the ground is achromatic and occupies most of a phone frame",
+        "isPolicy": false
+      },
+      {
+        "name": "95th-percentile chroma, WHOLE FRAME",
+        "northStar": 0.0727,
+        "current": 0.0016,
+        "northStarIsThisManyTimesTheCurrent": 45.44,
+        "kind": "FRAMING — dominated by the achromatic ground, which occupies most of a phone frame",
+        "isPolicy": false
+      },
+      {
+        "name": "95th-percentile chroma, PAINTED PIXELS ONLY",
+        "northStar": 0.073,
+        "current": 0.0516,
+        "northStarIsThisManyTimesTheCurrent": 1.41,
+        "kind": "POLICY — the apples-to-apples comparison, and the one a crop cannot explain away",
+        "isPolicy": true
+      },
+      {
+        "name": "share of chromatic pixels (C > 0.02)",
+        "northStar": 0.7805,
+        "current": 0.0017,
+        "northStarIsThisManyTimesTheCurrent": 459.12,
+        "kind": "FRAMING — six worlds filling a frame against one world on a quiet ground",
+        "isPolicy": false
+      },
+      {
+        "name": "10-degree hue bins occupied",
+        "northStar": 36,
+        "current": 3,
+        "northStarIsThisManyTimesTheCurrent": 12,
+        "kind": "FRAMING + policy — QANDEEL authors exactly six hues and the ceiling puts four of them below the 0.02 threshold this statistic uses",
+        "isPolicy": false
+      },
+      {
+        "name": "lightness range p05..p95",
+        "northStar": 0.3587,
+        "current": 0.036,
+        "northStarIsThisManyTimesTheCurrent": 9.96,
+        "kind": "FRAMING — a bright nebula against a dark map",
+        "isPolicy": false
+      },
+      {
+        "name": "spatial detail (mean |dL| between neighbours)",
+        "northStar": 9.765,
+        "current": 2.625,
+        "northStarIsThisManyTimesTheCurrent": 3.72,
+        "kind": "FRAMING + density — the North Star draws thousands of points; the map draws eight topics",
+        "isPolicy": false
+      }
+    ],
+    "theOneNumber": {
+      "what": "the authored atmosphere chroma ceiling, against the North Star 95th percentile",
+      "chromaCeiling": 0.0197,
+      "northStarP95": 0.0727,
+      "factor": 3.69,
+      "owner": "I-08B3.1-D2R, derived as 0.62 of the minimum chroma of the three QANDEEL LIGHT stops",
+      "why": "so that ATMOSPHERE can never compete with LIGHT. It is a semantic separation, not a taste preference, which is exactly why F1 may not touch it and why raising it is a D-track question rather than an accessibility one."
+    },
+    "reading": [
+      "THE HEADLINE RATIOS ARE MOSTLY A CROP, AND THE DECOMPOSITION IS THE RESULT. Over the whole frame the North Star is 88x more chromatic and carries 459x the share of chromatic pixels. Almost all of that is framing: a full-bleed 1920-px landscape in which six worlds fill the frame, against a 390-pt phone screen showing ONE world on a deliberately quiet ground. Reading those numbers as a policy failure would be reading a crop.",
+      "AMONG THE PIXELS THAT ARE ACTUALLY PAINTED, THE GAP IS 1.41x. That is the apples-to-apples comparison and it is the surprising one: QANDEEL is not a desaturated product. Its painted 95th-percentile chroma is 0.0516, against the North Star's 0.073 — and the QANDEEL figure is carried by LIVING BRASS at C 0.0516 and the ERROR ink at C 0.1364, which is more chroma than the North Star reaches at its own 95th percentile.",
+      "THE REAL, NARROW, POLICY GAP IS IN THE ATMOSPHERE. qandeel.atmosphere.chroma-ceiling is 0.0197 against a North Star 95th percentile of 0.073 — 3.69x. So the honest statement is not \"QANDEEL is too quiet\"; it is \"QANDEEL's WORLD is 3.69x quieter than the reference image, by a deliberate semantic decision, while its identity material and its status colour are not quiet at all.\"",
+      "AND THAT DECISION IS NOT F1's. The ceiling is I-08B3.1-D2R's, derived at 0.62 of the minimum chroma of the three QANDEEL LIGHT stops so that ATMOSPHERE could never compete with LIGHT. It is a semantic separation, not a taste preference. Raising it is a D-track and Product question, and F1 is forbidden from touching it.",
+      "THE DIMENSION WHERE THE GAP IS NEITHER CROP NOR CEILING IS DENSITY. The North Star draws thousands of points; this map draws eight topics with three, two and one level line, and the measured spatial-detail gap is 3.72x. NO TOKEN IN ANY PACKAGE CONSTRAINS DENSITY — AND THAT IS AN OBSERVATION, NOT A PERMISSION. I-08B3.1-F1 wrote that this made density \"the cheapest available route\" to the North Star, which reads as though the absence of a prohibition were an authorisation to raise it. It is not. Nothing in the frozen record grants density to anyone, and F1R withdraws the sentence. What may be said is narrower and true: F1 imposes no ceiling on density, so whatever the Product later decides about it, no accessibility expression in this package has to change.",
+      "AND THE CAPACITY ITSELF IS NOT PROVEN. F1 measured a real gap on seven dimensions and decomposed it honestly. It did not demonstrate that the final default dark Living Analysis World can REACH the Product Owner's required level of awe, and nothing in this package should be read as demonstrating it. That obligation is OPEN and it is carried forward to G — INTEGRATED PRODUCT PROOF. See `northStarStatus` below."
+    ],
+    "northStarStatus": {
+      "state": "OPEN — NOT PROVEN BY F1, NOT WEAKENED BY F1",
+      "owner": "G — INTEGRATED PRODUCT PROOF",
+      "f1Claim": "F1 measured the distance on seven dimensions and decomposed it into framing, policy and density. It makes no claim that the capacity is reached.",
+      "whatGMustProve": [
+        "that the final default dark Living Analysis World reaches the Product Owner's required level of WORLD-SCALE AWE",
+        "ATMOSPHERIC RICHNESS",
+        "COLOUR RICHNESS",
+        "SPATIAL DEPTH",
+        "AUTHORED MICRO-DETAIL",
+        "DISCOVERY",
+        "MEANINGFUL LUMINOUS IMPACT",
+        "and all of it while preserving every frozen semantic truth"
+      ],
+      "ifGCannot": "If G cannot achieve that spectacle within the frozen I-08B3.1-D contract, THEN and only then a TARGETED D reconciliation may be required. F1R does not reopen D, does not propose one, and does not treat the measurement below as grounds for one.",
+      "measuredGaps": {
+        "atmosphereChromaCeilingVsNorthStarP95": "x3.69 — a POLICY gap owned by D2R",
+        "spatialDetail": "x3.72 — a DENSITY gap owned by nobody yet, and not granted to anyone by its absence from the token tree",
+        "paintedPixelChroma": "x1.41 — the apples-to-apples comparison"
+      }
+    },
+    "whatF1Guarantees": "F1 neither reduces nor caps that capacity, and DEFAULT ACCESSIBILITY-OVERRIDE ISOLATION plus the inherited-default comparison are the proof rather than the promise: every accessibility transformation is an override in a modifier context whose default overrides nothing, the default path resolves through none of them, emptying every override file leaves the default document byte-identical, and the inherited atmosphere layer is pixel-identical to a reference built from I-08B3.1-D2R's own functions with no F1 code in it. If the Product raises the chroma ceiling or the field's density tomorrow, every expression in this package follows it without one token changing — because not one of them names a chroma, and the increased-contrast derivation is a SEARCH over whatever the ceiling then is rather than a set of values copied out of today's one. That is a statement about F1 not being in the way. It is NOT a statement that the capacity has been demonstrated."
+  }
+}

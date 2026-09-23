@@ -1,0 +1,77 @@
+{
+  "qandeel": {
+    "$type": "color",
+    "expression": {
+      "material": {
+        "$description": "Material expression, dark appearance. I-08B3.1-C3.",
+        "living-brass": {
+          "body": {
+            "$value": {
+              "colorSpace": "srgb",
+              "components": [
+                0.647059,
+                0.556863,
+                0.435294
+              ],
+              "hex": "#a58e6f"
+            },
+            "$description": "LIVING BRASS — THE BODY. The single Living Brass value in QANDEEL. Quiet satin: one tone, no gradient, no second tone, no highlight. Selected by the Independent Design Director at the close of I-08B3.1-C2. Every identity and navigation-machinery name in the semantic layer reaches this token through an alias chain, and nothing else in the system carries this literal.",
+            "$extensions": {
+              "com.qandeel.provenance": {
+                "authoredAs": {
+                  "colorSpace": "oklch",
+                  "L": 0.66,
+                  "C": 0.052,
+                  "H": 75
+                },
+                "authoredNote": "The material was authored as this OkLCh triple and resolves to the sRGB value above. The sRGB value is canonical FOR PAINTING because it is the one every accepted C-stage raster, contrast figure and measurement was taken of; an OkLCh token would be re-converted by each consuming resolver and could ship a neighbouring colour under this name. c3-invariants.mjs re-derives the hex from the triple and requires it to match (I-16).",
+                "authoredTripleIsAProductionInput": true,
+                "authoredTripleNote": "THIS TRIPLE IS NOT DECORATION. It is the derivation source for the brushed/handled character tone — see qandeel.material.living-brass.character.derivation. Deriving that tone from the 8-bit sRGB body instead produces #957f60 rather than the accepted #967f60. Removing this extension would silently change the material at the one place it is allowed to have character.",
+                "selectedIn": "I-08B3.1-C2 (Design Director decision)",
+                "provenChain": [
+                  "I-08B3.1-C0R",
+                  "I-08B3.1-C1",
+                  "I-08B3.1-C1R",
+                  "I-08B3.1-C2"
+                ],
+                "retired": [
+                  {
+                    "key": "BODY A",
+                    "hex": "#857867",
+                    "why": "retired by the Design Director after C1R"
+                  },
+                  {
+                    "key": "BODY B",
+                    "hex": "#95836c",
+                    "why": "retired by the Design Director after C1R"
+                  },
+                  {
+                    "key": "D-2 FORMED",
+                    "why": "retired in C1R; implemented as an absence, not a disabled branch"
+                  }
+                ]
+              },
+              "com.qandeel.doesNotEncode": [
+                "selection",
+                "pressed",
+                "focus",
+                "hover",
+                "disabled",
+                "unread",
+                "status",
+                "success",
+                "warning",
+                "confidence",
+                "evidence",
+                "recency",
+                "analytical importance",
+                "FAR / MID / NEAR",
+                "premium entitlement"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The adaptive background layer. Variant B's ground is a flat colour, so the
+     background needs no raster at all and cannot band. It is the exact same
+     value as the field baked into the foreground layer, which is what makes the
+     opaque foreground safe under parallax. -->
+<resources>
+    <color name="ic_launcher_background">#0A0B0D</color>
+</resources>

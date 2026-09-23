@@ -1,0 +1,343 @@
+{
+  "engine": "chrome 153.0.8010.48",
+  "generated": "2026-09-20T14:24:26.214Z",
+  "framing": {
+    "canonical": {
+      "logoDp": 66,
+      "scale": 0.312622,
+      "tx": 244.616708,
+      "ty": 340.621763,
+      "targetR": 312.8889
+    },
+    "android": {
+      "logoDp": 48,
+      "targetR": 227.5556,
+      "scale": 0.227361,
+      "tx": 317.539813,
+      "ty": 387.361532
+    },
+    "perceived": {
+      "ios": 0.6111,
+      "androidIfUnchanged": 0.9167,
+      "android": 0.6667,
+      "exactParityDp": 44
+    }
+  },
+  "assets": [
+    {
+      "file": "masters/QANDEEL_Q_BASE_MASTER.svg",
+      "w": null,
+      "h": null,
+      "bytes": 3183,
+      "note": "approved I-08B2.3 master, byte-for-byte copy"
+    },
+    {
+      "file": "masters/QANDEEL_Q_LUMINOUS.svg",
+      "w": null,
+      "h": null,
+      "bytes": 5045,
+      "note": "approved I-08B2.3 master, byte-for-byte copy"
+    },
+    {
+      "file": "masters/QANDEEL_WORDMARK_BASE_MASTER.svg",
+      "w": null,
+      "h": null,
+      "bytes": 5871,
+      "note": "approved I-08B2.3 master, byte-for-byte copy"
+    },
+    {
+      "file": "masters/QANDEEL_WORDMARK_LUMINOUS.svg",
+      "w": null,
+      "h": null,
+      "bytes": 9126,
+      "note": "approved I-08B2.3 master, byte-for-byte copy"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-20.png",
+      "w": 20,
+      "h": 20,
+      "bytes": 267,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-29.png",
+      "w": 29,
+      "h": 29,
+      "bytes": 392,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-40.png",
+      "w": 40,
+      "h": 40,
+      "bytes": 632,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-58.png",
+      "w": 58,
+      "h": 58,
+      "bytes": 1052,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-60.png",
+      "w": 60,
+      "h": 60,
+      "bytes": 1096,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-76.png",
+      "w": 76,
+      "h": 76,
+      "bytes": 1495,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-80.png",
+      "w": 80,
+      "h": 80,
+      "bytes": 1550,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-87.png",
+      "w": 87,
+      "h": 87,
+      "bytes": 1707,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-120.png",
+      "w": 120,
+      "h": 120,
+      "bytes": 2523,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-152.png",
+      "w": 152,
+      "h": 152,
+      "bytes": 3456,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-167.png",
+      "w": 167,
+      "h": 167,
+      "bytes": 3889,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-180.png",
+      "w": 180,
+      "h": 180,
+      "bytes": 4299,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/ios/AppIcon.appiconset/AppIcon-1024.png",
+      "w": 1024,
+      "h": 1024,
+      "bytes": 69151,
+      "note": "no alpha channel"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-mdpi/ic_launcher_foreground.png",
+      "w": 108,
+      "h": 108,
+      "bytes": 1617,
+      "note": "adaptive foreground, 108dp @ 1x"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-hdpi/ic_launcher_foreground.png",
+      "w": 162,
+      "h": 162,
+      "bytes": 2603,
+      "note": "adaptive foreground, 108dp @ 1.5x"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-xhdpi/ic_launcher_foreground.png",
+      "w": 216,
+      "h": 216,
+      "bytes": 3932,
+      "note": "adaptive foreground, 108dp @ 2x"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-xxhdpi/ic_launcher_foreground.png",
+      "w": 324,
+      "h": 324,
+      "bytes": 6796,
+      "note": "adaptive foreground, 108dp @ 3x"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-xxxhdpi/ic_launcher_foreground.png",
+      "w": 432,
+      "h": 432,
+      "bytes": 12548,
+      "note": "adaptive foreground, 108dp @ 4x"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-mdpi/ic_launcher.png",
+      "w": 48,
+      "h": 48,
+      "bytes": 806,
+      "note": "legacy launcher, 48dp @ 1x"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-hdpi/ic_launcher.png",
+      "w": 72,
+      "h": 72,
+      "bytes": 1383,
+      "note": "legacy launcher, 48dp @ 1.5x"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-xhdpi/ic_launcher.png",
+      "w": 96,
+      "h": 96,
+      "bytes": 1902,
+      "note": "legacy launcher, 48dp @ 2x"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-xxhdpi/ic_launcher.png",
+      "w": 144,
+      "h": 144,
+      "bytes": 3243,
+      "note": "legacy launcher, 48dp @ 3x"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-xxxhdpi/ic_launcher.png",
+      "w": 192,
+      "h": 192,
+      "bytes": 4736,
+      "note": "legacy launcher, 48dp @ 4x"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-mdpi/ic_launcher_round.png",
+      "w": 48,
+      "h": 48,
+      "bytes": 1108,
+      "note": "legacy round launcher, 48dp @ 1x, circular delivery mask"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-hdpi/ic_launcher_round.png",
+      "w": 72,
+      "h": 72,
+      "bytes": 1811,
+      "note": "legacy round launcher, 48dp @ 1.5x, circular delivery mask"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-xhdpi/ic_launcher_round.png",
+      "w": 96,
+      "h": 96,
+      "bytes": 2562,
+      "note": "legacy round launcher, 48dp @ 2x, circular delivery mask"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-xxhdpi/ic_launcher_round.png",
+      "w": 144,
+      "h": 144,
+      "bytes": 4224,
+      "note": "legacy round launcher, 48dp @ 3x, circular delivery mask"
+    },
+    {
+      "file": "app-icon/android/res/mipmap-xxxhdpi/ic_launcher_round.png",
+      "w": 192,
+      "h": 192,
+      "bytes": 6109,
+      "note": "legacy round launcher, 48dp @ 4x, circular delivery mask"
+    },
+    {
+      "file": "app-icon/android/PLAY_STORE_ICON_512.png",
+      "w": 512,
+      "h": 512,
+      "bytes": 23443,
+      "note": "Play Store listing icon"
+    },
+    {
+      "file": "derivatives/png/QANDEEL_Q_BASE_512.png",
+      "w": 512,
+      "h": 370,
+      "bytes": 12783,
+      "note": "transparent, for dark surfaces"
+    },
+    {
+      "file": "derivatives/png/QANDEEL_Q_LUMINOUS_512.png",
+      "w": 512,
+      "h": 370,
+      "bytes": 58745,
+      "note": "carries the master ground"
+    },
+    {
+      "file": "derivatives/png/QANDEEL_Q_BASE_1024.png",
+      "w": 1024,
+      "h": 740,
+      "bytes": 29562,
+      "note": "transparent, for dark surfaces"
+    },
+    {
+      "file": "derivatives/png/QANDEEL_Q_LUMINOUS_1024.png",
+      "w": 1024,
+      "h": 740,
+      "bytes": 178006,
+      "note": "carries the master ground"
+    },
+    {
+      "file": "derivatives/png/QANDEEL_WORDMARK_BASE_2048.png",
+      "w": 2048,
+      "h": 255,
+      "bytes": 29263,
+      "note": "transparent, for dark surfaces"
+    },
+    {
+      "file": "derivatives/png/QANDEEL_WORDMARK_LUMINOUS_2048.png",
+      "w": 2048,
+      "h": 255,
+      "bytes": 96750,
+      "note": "carries the master ground"
+    },
+    {
+      "file": "derivatives/monochrome/QANDEEL_Q_MONOCHROME_512.png",
+      "w": 512,
+      "h": 370,
+      "bytes": 9509,
+      "note": "black ink, transparent"
+    },
+    {
+      "file": "derivatives/light-background/QANDEEL_Q_LIGHT_BG_512.png",
+      "w": 512,
+      "h": 370,
+      "bytes": 12041,
+      "note": "dark neutral ink, transparent"
+    },
+    {
+      "file": "derivatives/monochrome/QANDEEL_Q_MONOCHROME_1024.png",
+      "w": 1024,
+      "h": 740,
+      "bytes": 21833,
+      "note": "black ink, transparent"
+    },
+    {
+      "file": "derivatives/light-background/QANDEEL_Q_LIGHT_BG_1024.png",
+      "w": 1024,
+      "h": 740,
+      "bytes": 27745,
+      "note": "dark neutral ink, transparent"
+    },
+    {
+      "file": "derivatives/monochrome/QANDEEL_WORDMARK_MONOCHROME_2048.png",
+      "w": 2048,
+      "h": 255,
+      "bytes": 21862,
+      "note": "black ink, transparent"
+    },
+    {
+      "file": "derivatives/light-background/QANDEEL_WORDMARK_LIGHT_BG_2048.png",
+      "w": 2048,
+      "h": 255,
+      "bytes": 27567,
+      "note": "dark neutral ink, transparent"
+    }
+  ]
+}

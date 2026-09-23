@@ -1,0 +1,424 @@
+[
+ {
+  "at": 908,
+  "act": "note",
+  "phase": "commit",
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "note",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "door",
+    "input",
+    "mine",
+    "note-cancel",
+    "note-send",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  }
+ },
+ {
+  "at": 908,
+  "act": "note",
+  "phase": "settled",
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "note",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "door",
+    "mine",
+    "note-cancel",
+    "note-send",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  }
+ },
+ {
+  "at": 3308,
+  "act": "notesend",
+  "phase": "commit",
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "mic",
+    "mine",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 3308,
+  "act": "notesend",
+  "phase": "settled",
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 4608,
+  "act": "call",
+  "phase": "commit",
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "controls": [
+    "end-call",
+    "input",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 4608,
+  "act": "call",
+  "phase": "settled",
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 6808,
+  "act": "leave",
+  "phase": "commit",
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "controls": [
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 6808,
+  "act": "leave",
+  "phase": "settled",
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "door",
+    "end-call",
+    "mine",
+    "mute",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 8608,
+  "act": "enter",
+  "phase": "commit",
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "controls": [
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 8608,
+  "act": "enter",
+  "phase": "settled",
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 10408,
+  "act": "endcall",
+  "phase": "commit",
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "controls": [
+    "back",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 10408,
+  "act": "endcall",
+  "phase": "settled",
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "controls": [
+    "back",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 11808,
+  "act": "leave",
+  "phase": "commit",
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "controls": [
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 11808,
+  "act": "leave",
+  "phase": "settled",
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 13208,
+  "act": "menu",
+  "phase": "commit",
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": true,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "full",
+    "input",
+    "mic",
+    "mine",
+    "part",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ },
+ {
+  "at": 13208,
+  "act": "menu",
+  "phase": "settled",
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": true,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "full",
+    "input",
+    "mic",
+    "mine",
+    "part",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 10
+  }
+ }
+]

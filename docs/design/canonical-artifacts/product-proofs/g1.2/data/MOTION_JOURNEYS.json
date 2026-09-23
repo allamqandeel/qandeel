@@ -1,0 +1,216 @@
+{
+ "fps": 60,
+ "settleMs": 700,
+ "easing": "cubic-bezier(0.23, 1, 0.32, 1)",
+ "durationsMs": {
+  "resolve": 140,
+  "markerLead": 200,
+  "markerTrail": 280,
+  "dock": 220,
+  "depthOut": 200,
+  "depthIn": 320,
+  "depthInDelay": 100,
+  "voice": 220
+ },
+ "journeys": {
+  "A-voice-note": {
+   "q": "perm=unknown",
+   "end": 10000,
+   "events": [
+    {
+     "at": 900,
+     "target": "#mic",
+     "act": "note",
+     "label": "microphone — the intent; the OS asks (first time only)"
+    },
+    {
+     "at": 2100,
+     "target": "#os-allow",
+     "act": "allow",
+     "label": "allowed in the OS prompt — capture begins in the Conversation"
+    },
+    {
+     "at": 5300,
+     "target": "#note-send",
+     "act": "notesend",
+     "label": "sent — the note lands as the reader's UTTERANCE"
+    },
+    {
+     "at": 6500,
+     "target": ".thread .new .t.voice .play",
+     "act": "playlast",
+     "label": "playback of the committed note"
+    }
+   ]
+  },
+  "B-live-call-foreground": {
+   "q": "perm=granted",
+   "end": 15200,
+   "events": [
+    {
+     "at": 900,
+     "target": "#call",
+     "act": "call",
+     "label": "handset — Live Call starts Analysis-first (connecting)"
+    },
+    {
+     "at": 8200,
+     "target": "#back",
+     "act": "leave",
+     "label": "«المحادثة» — the Conversation; the same call continues"
+    },
+    {
+     "at": 10400,
+     "target": "#door",
+     "act": "enter",
+     "label": "«تحليل المحادثة» — back to the same call"
+    },
+    {
+     "at": 12600,
+     "target": "#mute",
+     "act": "mute",
+     "label": "microphone muted (shape + words)"
+    },
+    {
+     "at": 14200,
+     "target": "#end-call",
+     "act": "endcall",
+     "label": "the reader ends the call — stays where they are"
+    }
+   ]
+  },
+  "C-background-restore": {
+   "q": "perm=granted",
+   "end": 14600,
+   "events": [
+    {
+     "at": 700,
+     "target": "#call",
+     "act": "call",
+     "label": "Live Call — Analysis-first"
+    },
+    {
+     "at": 3400,
+     "act": "bg",
+     "label": "OS: the screen locks while the Analysis is on screen"
+    },
+    {
+     "at": 6400,
+     "act": "fg",
+     "label": "OS: back to QANDEEL — the same Analysis, the same call, 3 s later"
+    },
+    {
+     "at": 7800,
+     "target": "#back",
+     "act": "leave",
+     "label": "«المحادثة» — the Conversation during the call"
+    },
+    {
+     "at": 9200,
+     "act": "bgapp",
+     "label": "OS: another app comes to the front"
+    },
+    {
+     "at": 12200,
+     "act": "fg",
+     "label": "OS: back to QANDEEL — the Conversation, not the Analysis"
+    },
+    {
+     "at": 13600,
+     "target": "#door",
+     "act": "enter",
+     "label": "«تحليل المحادثة» — the same call continues"
+    }
+   ]
+  },
+  "D1-permission-denied": {
+   "q": "perm=unknown",
+   "end": 5800,
+   "events": [
+    {
+     "at": 900,
+     "target": "#call",
+     "act": "call",
+     "label": "handset — the OS asks for the microphone"
+    },
+    {
+     "at": 2300,
+     "target": "#os-deny",
+     "act": "deny",
+     "label": "not allowed — the Conversation stays; the notice names Writing"
+    },
+    {
+     "at": 3600,
+     "target": "#input",
+     "act": "type",
+     "label": "writing"
+    },
+    {
+     "at": 4800,
+     "target": "#send",
+     "act": "sendtext",
+     "label": "sent — the relationship continues in writing"
+    }
+   ]
+  },
+  "D2-network-interruption": {
+   "q": "perm=granted",
+   "end": 13000,
+   "events": [
+    {
+     "at": 700,
+     "target": "#call",
+     "act": "call",
+     "label": "Live Call — Analysis-first"
+    },
+    {
+     "at": 4600,
+     "act": "drop",
+     "label": "network drops — reconnecting (words, no live level)"
+    },
+    {
+     "at": 6600,
+     "act": "recover",
+     "label": "network returns — the SAME call resumes"
+    },
+    {
+     "at": 9000,
+     "act": "drop",
+     "label": "network drops again"
+    },
+    {
+     "at": 11800,
+     "act": "fail",
+     "label": "reconnection fails — the Conversation, Writing available, the call record"
+    }
+   ]
+  },
+  "D3-ended-while-away": {
+   "q": "perm=granted",
+   "end": 8200,
+   "events": [
+    {
+     "at": 700,
+     "target": "#call",
+     "act": "call",
+     "label": "Live Call — Analysis-first"
+    },
+    {
+     "at": 3000,
+     "act": "bg",
+     "label": "OS: the screen locks"
+    },
+    {
+     "at": 5000,
+     "act": "awaydrop",
+     "label": "OS: the call ends while QANDEEL is away"
+    },
+    {
+     "at": 7000,
+     "act": "fg",
+     "label": "OS: back — no live controls; the Conversation says what happened"
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,485 @@
+{
+  "generatedBy": "tools/f1-consistency.mjs",
+  "note": "Reads the SHIPPED documents and token files back from disk. Excludes the generated documents, which are generated from this same data, and excludes its own report by path.",
+  "surfacesRead": [
+    "docs/F1R2_REVISION.md",
+    "docs/F1R_REVISION.md",
+    "docs/F1_ACCESSIBILITY_CONTRACT.md",
+    "docs/F1_ANALYTICAL_TRUTH_PARITY.md",
+    "docs/F1_COMBINED_SETTINGS.md",
+    "docs/F1_CONTRADICTIONS.md",
+    "docs/F1_DEFAULT_MOTION_PRESERVATION.md",
+    "docs/F1_DETAIL_CLASSIFICATION.md",
+    "docs/F1_F2_CARRY_FORWARD.md",
+    "docs/F1_INCREASED_CONTRAST.md",
+    "docs/F1_KNOWN_LIMITATIONS.md",
+    "docs/F1_LARGER_TEXT_ARABIC.md",
+    "docs/F1_NON_COLOUR_CARRIERS.md",
+    "docs/F1_PLATFORM_MAPPING.md",
+    "docs/F1_REDUCED_MOTION.md",
+    "docs/F1_REDUCE_TRANSPARENCY.md",
+    "docs/F1_REVIEW_BOARD.md",
+    "docs/F1_SCREEN_READER_PROJECTION.md",
+    "docs/F1_SPECTACLE_PRESERVATION.md",
+    "docs/F1_TOKEN_ARCHITECTURE.md",
+    "README.md",
+    "tokens/base/accessibility.tokens.json",
+    "tokens/appearance/dark.accessibility.tokens.json",
+    "tokens/contrast/increased.accessibility.tokens.json",
+    "tokens/transparency/reduced.accessibility.tokens.json",
+    "tokens/qandeel-accessibility.resolver.json"
+  ],
+  "claims": 74,
+  "passed": 74,
+  "failed": 0,
+  "probe": {
+    "input": "a lightness delta of 0.0139, which no document quotes",
+    "rejected": true
+  },
+  "rows": [
+    {
+      "what": "the increased-contrast lightness delta = 0.011 — is it cited in an authored surface?",
+      "expected": "0.011",
+      "pass": true,
+      "where": "docs/F1_INCREASED_CONTRAST.md"
+    },
+    {
+      "what": "the increased-contrast layer lightnesses = 0.631 / 0.561 / 0.491 — is it cited in an authored surface?",
+      "expected": "0.631 / 0.561 / 0.491",
+      "pass": true,
+      "where": "docs/F1_INCREASED_CONTRAST.md"
+    },
+    {
+      "what": "the worst contour after = 3.02 — is it cited in an authored surface?",
+      "expected": "3.02",
+      "pass": true,
+      "where": "docs/F1_INCREASED_CONTRAST.md"
+    },
+    {
+      "what": "the loudest contour after = 5.501 — is it cited in an authored surface?",
+      "expected": "5.501",
+      "pass": true,
+      "where": "docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_COMBINED_SETTINGS.md, docs/F1_INCREASED_CONTRAST.md"
+    },
+    {
+      "what": "the default hierarchy ratio = 1.2914 — is it cited in an authored surface?",
+      "expected": "1.2914",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_CONTRADICTIONS.md, docs/F1_F2_CARRY_FORWARD.md, docs/F1_INCREASED_CONTRAST.md, docs/F1_REVIEW_BOARD.md, README.md"
+    },
+    {
+      "what": "the raised hierarchy ratio = 1.524 — is it cited in an authored surface?",
+      "expected": "1.524",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_CONTRADICTIONS.md, docs/F1_F2_CARRY_FORWARD.md, docs/F1_INCREASED_CONTRAST.md, docs/F1_REVIEW_BOARD.md, README.md"
+    },
+    {
+      "what": "the weakest analytical object, default = 5.435 — is it cited in an authored surface?",
+      "expected": "5.435",
+      "pass": true,
+      "where": "docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_INCREASED_CONTRAST.md"
+    },
+    {
+      "what": "the weakest analytical object, raised = 8.384 — is it cited in an authored surface?",
+      "expected": "8.384",
+      "pass": true,
+      "where": "docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_INCREASED_CONTRAST.md"
+    },
+    {
+      "what": "the loudest contour, default = 4.209 — is it cited in an authored surface?",
+      "expected": "4.209",
+      "pass": true,
+      "where": "docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_INCREASED_CONTRAST.md"
+    },
+    {
+      "what": "the stroke substitutions = 90 — is it cited in an authored surface?",
+      "expected": "90",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_INCREASED_CONTRAST.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_REDUCE_TRANSPARENCY.md, docs/F1_REVIEW_BOARD.md"
+    },
+    {
+      "what": "the fill substitutions = 18 — is it cited in an authored surface?",
+      "expected": "18",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_F2_CARRY_FORWARD.md, docs/F1_REDUCE_TRANSPARENCY.md, docs/F1_REVIEW_BOARD.md"
+    },
+    {
+      "what": "the parity cell count = 132 — is it cited in an authored surface?",
+      "expected": "132",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_COMBINED_SETTINGS.md, docs/F1_DETAIL_CLASSIFICATION.md, docs/F1_REVIEW_BOARD.md, README.md"
+    },
+    {
+      "what": "the parity expression count = 12 — is it cited in an authored surface?",
+      "expected": "12",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_COMBINED_SETTINGS.md, docs/F1_INCREASED_CONTRAST.md, docs/F1_REVIEW_BOARD.md, docs/F1_SCREEN_READER_PROJECTION.md, docs/F1_SPECTACLE_PRESERVATION.md"
+    },
+    {
+      "what": "the motion inventory size = 11 — is it cited in an authored surface?",
+      "expected": "11",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_COMBINED_SETTINGS.md, docs/F1_LARGER_TEXT_ARABIC.md, docs/F1_REVIEW_BOARD.md, docs/F1_SCREEN_READER_PROJECTION.md"
+    },
+    {
+      "what": "the motions inherited from D2R = 6 — is it cited in an authored surface?",
+      "expected": "6",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_DEFAULT_MOTION_PRESERVATION.md, docs/F1_INCREASED_CONTRAST.md, docs/F1_REDUCE_TRANSPARENCY.md, docs/F1_SPECTACLE_PRESERVATION.md, docs/F1_TOKEN_ARCHITECTURE.md"
+    },
+    {
+      "what": "the motions added by F1 = 5 — is it cited in an authored surface?",
+      "expected": "5",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_COMBINED_SETTINGS.md, docs/F1_INCREASED_CONTRAST.md, docs/F1_LARGER_TEXT_ARABIC.md, docs/F1_REDUCED_MOTION.md, docs/F1_REDUCE_TRANSPARENCY.md, docs/F1_REVIEW_BOARD.md, docs/F1_SCREEN_READER_PROJECTION.md, docs/F1_TOKEN_ARCHITECTURE.md"
+    },
+    {
+      "what": "the check count = 59 — is it cited in an authored surface?",
+      "expected": "59",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, README.md"
+    },
+    {
+      "what": "the AX nodes read = 183 — is it cited in an authored surface?",
+      "expected": "183",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_SCREEN_READER_PROJECTION.md"
+    },
+    {
+      "what": "the analytical objects in the projection = 11 — is it cited in an authored surface?",
+      "expected": "11",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_COMBINED_SETTINGS.md, docs/F1_LARGER_TEXT_ARABIC.md, docs/F1_REVIEW_BOARD.md, docs/F1_SCREEN_READER_PROJECTION.md"
+    },
+    {
+      "what": "the skill files enumerated = 90 — is it cited in an authored surface?",
+      "expected": "90",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_INCREASED_CONTRAST.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_REDUCE_TRANSPARENCY.md, docs/F1_REVIEW_BOARD.md"
+    },
+    {
+      "what": "the reference count = 13 — is it cited in an authored surface?",
+      "expected": "13",
+      "pass": true,
+      "where": "docs/F1_SPECTACLE_PRESERVATION.md"
+    },
+    {
+      "what": "the planted removals = 4 — is it cited in an authored surface?",
+      "expected": "4",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_CONTRADICTIONS.md, docs/F1_DETAIL_CLASSIFICATION.md, docs/F1_F2_CARRY_FORWARD.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_REDUCED_MOTION.md, docs/F1_REDUCE_TRANSPARENCY.md, docs/F1_SCREEN_READER_PROJECTION.md, docs/F1_TOKEN_ARCHITECTURE.md, README.md"
+    },
+    {
+      "what": "the inherited-layer elements compared by attribute = 25 — is it cited in an authored surface?",
+      "expected": "25",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_CONTRADICTIONS.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_REDUCED_MOTION.md, README.md"
+    },
+    {
+      "what": "the analysis-layer elements compared by geometry = 12 — is it cited in an authored surface?",
+      "expected": "12",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_COMBINED_SETTINGS.md, docs/F1_INCREASED_CONTRAST.md, docs/F1_REVIEW_BOARD.md, docs/F1_SCREEN_READER_PROJECTION.md, docs/F1_SPECTACLE_PRESERVATION.md"
+    },
+    {
+      "what": "the token values F1 authors = 56 — is it cited in an authored surface?",
+      "expected": "56",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_TOKEN_ARCHITECTURE.md"
+    },
+    {
+      "what": "the product-contract tokens = 38 — is it cited in an authored surface?",
+      "expected": "38",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_TOKEN_ARCHITECTURE.md"
+    },
+    {
+      "what": "the production-default tokens = 16 — is it cited in an authored surface?",
+      "expected": "16",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_F2_CARRY_FORWARD.md, docs/F1_PLATFORM_MAPPING.md, docs/F1_TOKEN_ARCHITECTURE.md"
+    },
+    {
+      "what": "the implementation-strategy tokens = 2 — is it cited in an authored surface?",
+      "expected": "2",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_COMBINED_SETTINGS.md, docs/F1_CONTRADICTIONS.md, docs/F1_DEFAULT_MOTION_PRESERVATION.md, docs/F1_DETAIL_CLASSIFICATION.md, docs/F1_F2_CARRY_FORWARD.md, docs/F1_INCREASED_CONTRAST.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_LARGER_TEXT_ARABIC.md, docs/F1_NON_COLOUR_CARRIERS.md, docs/F1_REDUCED_MOTION.md, docs/F1_REDUCE_TRANSPARENCY.md, docs/F1_REVIEW_BOARD.md, docs/F1_SCREEN_READER_PROJECTION.md, docs/F1_SPECTACLE_PRESERVATION.md, docs/F1_TOKEN_ARCHITECTURE.md, README.md"
+    },
+    {
+      "what": "the ablation passed and the documents say the default is byte-identical",
+      "expected": "byte-identical",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_COMBINED_SETTINGS.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_REDUCED_MOTION.md, docs/F1_REDUCE_TRANSPARENCY.md, docs/F1_SCREEN_READER_PROJECTION.md, docs/F1_SPECTACLE_PRESERVATION.md, README.md"
+    },
+    {
+      "what": "every probe rejects, and the documents claim it in those terms",
+      "expected": "59/59 probes",
+      "pass": true,
+      "where": "docs/F1_ACCESSIBILITY_CONTRACT.md, README.md"
+    },
+    {
+      "what": "NO surface quotes a stale check or probe count",
+      "expected": "59/59 checks, 59/59 probes",
+      "pass": true,
+      "where": "every quoted count is current"
+    },
+    {
+      "what": "F1 introduces no colour literal, and the ONE computed substitution is named",
+      "expected": "#080808",
+      "pass": true,
+      "where": "tokens/transparency/reduced.accessibility.tokens.json, docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_F2_CARRY_FORWARD.md, docs/F1_REDUCE_TRANSPARENCY.md, docs/F1_TOKEN_ARCHITECTURE.md, README.md"
+    },
+    {
+      "what": "the chroma ceiling is quoted correctly wherever it appears",
+      "expected": "0.0197",
+      "pass": true,
+      "where": "docs/F1_CONTRADICTIONS.md, docs/F1_F2_CARRY_FORWARD.md, docs/F1_INCREASED_CONTRAST.md, docs/F1_SPECTACLE_PRESERVATION.md"
+    },
+    {
+      "what": "the North Star painted-pixel ratio is cited, not only the framing ratios",
+      "expected": "1.41",
+      "pass": true,
+      "where": "docs/F1_CONTRADICTIONS.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_SPECTACLE_PRESERVATION.md"
+    },
+    {
+      "what": "the DEFAULT raster sha256 is quoted in an authored surface",
+      "expected": "0a8cb8e0c2ecaf2d",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_SPECTACLE_PRESERVATION.md, README.md"
+    },
+    {
+      "what": "the inherited layer is stated as PIXEL-IDENTICAL to a reference built from D2R's exports",
+      "expected": "pixel-identical",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_REVIEW_BOARD.md, docs/F1_SPECTACLE_PRESERVATION.md, README.md"
+    },
+    {
+      "what": "DEFAULT ACCESSIBILITY-OVERRIDE ISOLATION is named, so the narrower claim has a name",
+      "expected": "DEFAULT ACCESSIBILITY-OVERRIDE ISOLATION",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_SPECTACLE_PRESERVATION.md, README.md"
+    },
+    {
+      "what": "the synthetic fixture's provenance appears in the documents, not only in the data",
+      "expected": "SYNTHETIC TEST FIXTURE — NOT PRODUCT DATA",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, README.md"
+    },
+    {
+      "what": "ACCESSIBLE SEMANTICS = PROJECT(V) is stated in the documents AND in the token tree",
+      "expected": "PROJECT(V)",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_SCREEN_READER_PROJECTION.md, README.md, tokens/base/accessibility.tokens.json"
+    },
+    {
+      "what": "the parity proof is described as BOUNDED to the dimensions the fixture supplies",
+      "expected": "bounded",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_COMBINED_SETTINGS.md, docs/F1_DETAIL_CLASSIFICATION.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_REDUCED_MOTION.md, docs/F1_REVIEW_BOARD.md, README.md"
+    },
+    {
+      "what": "the completeness contract is stated in the documents AND in the token tree",
+      "expected": "exhaustive-against-user-exposable-V",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_SCREEN_READER_PROJECTION.md, tokens/base/accessibility.tokens.json"
+    },
+    {
+      "what": "the disclosure boundary is stated in the documents AND in the token tree",
+      "expected": "same-V-fail-closed",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_SCREEN_READER_PROJECTION.md, tokens/base/accessibility.tokens.json"
+    },
+    {
+      "what": "the Arabic Product contract is stated as NO CLIPPING rather than as a line-height number",
+      "expected": "adequate-glyph-extents",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_LARGER_TEXT_ARABIC.md, docs/F1_TOKEN_ARCHITECTURE.md, tokens/base/accessibility.tokens.json"
+    },
+    {
+      "what": "the measured minimum Arabic leading ratio is cited, not only the verdict",
+      "expected": "1.7",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_LARGER_TEXT_ARABIC.md, docs/F1_TOKEN_ARCHITECTURE.md"
+    },
+    {
+      "what": "the North Star is stated as an OPEN obligation owned by G",
+      "expected": "G — INTEGRATED PRODUCT PROOF",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_F2_CARRY_FORWARD.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_SPECTACLE_PRESERVATION.md"
+    },
+    {
+      "what": "NO a frozen claim appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "NO a claim that F is closed appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "NO a light-appearance design claim appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "NO a claim that a screen reader was run appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "NO a claim of device validation appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "NO a cross-platform parity claim for Reduce Transparency appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "NO a claim that the ablation proves the pre-F1 default unchanged appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "NO a claim that North Star spectacle capacity is proven appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "NO the withdrawn \"Product's own stable identity order\" appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "NO a claim that the fixture's field list is the complete semantic model appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "NO a claim that the parity matrix proves every possible analytical fact appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "NO a claim that 1.6 is an irreversible universal Arabic law appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "NO a claim that browser AX-tree evidence equals screen-reader validation appears anywhere",
+      "expected": "absent",
+      "pass": true,
+      "where": "absent"
+    },
+    {
+      "what": "the package STATES: no screen reader was run",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1_KNOWN_LIMITATIONS.md, docs/F1_SCREEN_READER_PROJECTION.md"
+    },
+    {
+      "what": "the package STATES: no device",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1_KNOWN_LIMITATIONS.md, docs/F1_LARGER_TEXT_ARABIC.md, docs/F1_PLATFORM_MAPPING.md, docs/F1_SCREEN_READER_PROJECTION.md"
+    },
+    {
+      "what": "the package STATES: no native Arabic copy review",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1_KNOWN_LIMITATIONS.md, docs/F1_LARGER_TEXT_ARABIC.md"
+    },
+    {
+      "what": "the package STATES: the crossing-contour difference",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_COMBINED_SETTINGS.md, docs/F1_DETAIL_CLASSIFICATION.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_LARGER_TEXT_ARABIC.md, docs/F1_PLATFORM_MAPPING.md, docs/F1_REDUCED_MOTION.md, docs/F1_REDUCE_TRANSPARENCY.md, docs/F1_TOKEN_ARCHITECTURE.md"
+    },
+    {
+      "what": "the package STATES: the dragging-movements obligation",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1_F2_CARRY_FORWARD.md, docs/F1_KNOWN_LIMITATIONS.md"
+    },
+    {
+      "what": "the package STATES: what the inherited-default proof does NOT verify",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_KNOWN_LIMITATIONS.md"
+    },
+    {
+      "what": "the package STATES: that absence of a prohibition is not Product authority",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_F2_CARRY_FORWARD.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_SPECTACLE_PRESERVATION.md"
+    },
+    {
+      "what": "the package STATES: that D and E are CLOSED / FROZEN",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_F2_CARRY_FORWARD.md, README.md"
+    },
+    {
+      "what": "the package STATES: that the CONNECTION is drawn and not named in the default map",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1R_REVISION.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_KNOWN_LIMITATIONS.md"
+    },
+    {
+      "what": "the package STATES: that the parity proof is BOUNDED to the tested dimensions",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1R_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_COMBINED_SETTINGS.md, docs/F1_REVIEW_BOARD.md, README.md"
+    },
+    {
+      "what": "the package STATES: the production-mapping integration dependency",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_ANALYTICAL_TRUTH_PARITY.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_SCREEN_READER_PROJECTION.md"
+    },
+    {
+      "what": "the package STATES: that where V supplies no value the projection announces none",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_ACCESSIBILITY_CONTRACT.md, docs/F1_SCREEN_READER_PROJECTION.md"
+    },
+    {
+      "what": "the package STATES: that the projection may not expand disclosure and fails closed",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_SCREEN_READER_PROJECTION.md"
+    },
+    {
+      "what": "the package STATES: that a device screen-reader run is a MANDATORY validation gate",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_F2_CARRY_FORWARD.md, docs/F1_KNOWN_LIMITATIONS.md"
+    },
+    {
+      "what": "the package STATES: that browser AX-tree evidence is NOT screen-reader validation",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1_F2_CARRY_FORWARD.md, docs/F1_KNOWN_LIMITATIONS.md"
+    },
+    {
+      "what": "the package STATES: that a property encoding nothing is not a required semantic carrier",
+      "expected": "present",
+      "pass": true,
+      "where": "docs/F1R2_REVISION.md, docs/F1_DETAIL_CLASSIFICATION.md, docs/F1_KNOWN_LIMITATIONS.md, docs/F1_NON_COLOUR_CARRIERS.md, docs/F1_REDUCE_TRANSPARENCY.md, docs/F1_TOKEN_ARCHITECTURE.md"
+    }
+  ]
+}

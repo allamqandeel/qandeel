@@ -1,0 +1,3466 @@
+{
+  "generatedBy": "tools/f1-parity.mjs",
+  "matrix": {
+    "scope": {
+      "boundedTo": [
+        "epistemic",
+        "temporal",
+        "actionable"
+      ],
+      "exhaustive": false,
+      "whatTheseCellsProve": "Rendered presence, naming, structure, relationships, and preservation of the semantic dimensions this fixture supplies — across every expression.",
+      "whatTheseCellsDoNotProve": "That the projection carries every semantic field a real canonical V may expose. No canonical V exists in this package.",
+      "productContract": "Every user-exposable semantic fact legitimately disclosed in canonical V and required for understanding or operation must have an equivalent accessible expression. No accessibility projection may silently drop such a fact.",
+      "implementationDependency": "PRODUCTION ACCESSIBILITY MAPPING MUST BE EXHAUSTIVE AGAINST THE ACTUAL USER-EXPOSABLE V SCHEMA.",
+      "unmappedFieldsDetected": []
+    },
+    "expressions": [
+      "DEFAULT",
+      "REDUCED MOTION",
+      "INCREASE CONTRAST",
+      "REDUCE TRANSPARENCY",
+      "CONTRAST + TRANSPARENCY",
+      "REDUCED MOTION + CONTRAST",
+      "GRAYSCALE (diagnostic)",
+      "LARGER TEXT xxxLarge",
+      "LARGER TEXT 200%",
+      "LARGER TEXT AX5 (311.8%)",
+      "BOLD TEXT",
+      "SCREEN READER PROJECTION"
+    ],
+    "objects": [
+      {
+        "id": "task-delay",
+        "kind": "topic"
+      },
+      {
+        "id": "mastery",
+        "kind": "topic"
+      },
+      {
+        "id": "comparison",
+        "kind": "topic"
+      },
+      {
+        "id": "sleep",
+        "kind": "topic"
+      },
+      {
+        "id": "fear-shortfall",
+        "kind": "topic"
+      },
+      {
+        "id": "weekend-fatigue",
+        "kind": "topic"
+      },
+      {
+        "id": "close-relations",
+        "kind": "topic"
+      },
+      {
+        "id": "energy-decline",
+        "kind": "topic"
+      },
+      {
+        "id": "connection:task-delay~comparison",
+        "kind": "connection"
+      },
+      {
+        "id": "pattern:four-topics",
+        "kind": "pattern"
+      },
+      {
+        "id": "insight:mastery-precedes-sleep",
+        "kind": "insight"
+      }
+    ],
+    "cells": [
+      {
+        "expression": "DEFAULT",
+        "object": "task-delay",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            77.16,
+            79.44
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "DEFAULT",
+        "object": "mastery",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            72.92,
+            73.32
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "DEFAULT",
+        "object": "comparison",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            68.3,
+            58.96
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "DEFAULT",
+        "object": "sleep",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            66.17,
+            64.23
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "DEFAULT",
+        "object": "fear-shortfall",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            87.91,
+            87.19
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "DEFAULT",
+        "object": "weekend-fatigue",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            79.52,
+            51.34
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "DEFAULT",
+        "object": "close-relations",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            70.95,
+            45.48
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "DEFAULT",
+        "object": "energy-decline",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            55.24,
+            54.67
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "DEFAULT",
+        "object": "connection:task-delay~comparison",
+        "kind": "connection",
+        "exists": true,
+        "named": false,
+        "renderedPresence": {
+          "present": true,
+          "named": false,
+          "drawnElements": 1,
+          "namedElements": 0,
+          "elements": 1,
+          "laidOutElements": 1,
+          "box": [
+            14,
+            134
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "DEFAULT",
+        "object": "pattern:four-topics",
+        "kind": "pattern",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            152.2,
+            396.4
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "DEFAULT",
+        "object": "insight:mastery-precedes-sleep",
+        "kind": "insight",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            135.41,
+            41.5
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION",
+        "object": "task-delay",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            77.16,
+            79.44
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION",
+        "object": "mastery",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            72.92,
+            73.32
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION",
+        "object": "comparison",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            68.3,
+            58.96
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION",
+        "object": "sleep",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            66.17,
+            64.23
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION",
+        "object": "fear-shortfall",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            87.91,
+            87.19
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION",
+        "object": "weekend-fatigue",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            79.52,
+            51.34
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION",
+        "object": "close-relations",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            70.95,
+            45.48
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION",
+        "object": "energy-decline",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            55.24,
+            54.67
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION",
+        "object": "connection:task-delay~comparison",
+        "kind": "connection",
+        "exists": true,
+        "named": false,
+        "renderedPresence": {
+          "present": true,
+          "named": false,
+          "drawnElements": 1,
+          "namedElements": 0,
+          "elements": 1,
+          "laidOutElements": 1,
+          "box": [
+            14,
+            134
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION",
+        "object": "pattern:four-topics",
+        "kind": "pattern",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            152.2,
+            396.4
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION",
+        "object": "insight:mastery-precedes-sleep",
+        "kind": "insight",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            135.41,
+            41.5
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "INCREASE CONTRAST",
+        "object": "task-delay",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            77.16,
+            79.44
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "INCREASE CONTRAST",
+        "object": "mastery",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            72.92,
+            73.32
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "INCREASE CONTRAST",
+        "object": "comparison",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            68.3,
+            58.96
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "INCREASE CONTRAST",
+        "object": "sleep",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            66.17,
+            64.23
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "INCREASE CONTRAST",
+        "object": "fear-shortfall",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            87.91,
+            87.19
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "INCREASE CONTRAST",
+        "object": "weekend-fatigue",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            79.52,
+            51.34
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "INCREASE CONTRAST",
+        "object": "close-relations",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            70.95,
+            45.48
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "INCREASE CONTRAST",
+        "object": "energy-decline",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            55.24,
+            54.67
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "INCREASE CONTRAST",
+        "object": "connection:task-delay~comparison",
+        "kind": "connection",
+        "exists": true,
+        "named": false,
+        "renderedPresence": {
+          "present": true,
+          "named": false,
+          "drawnElements": 1,
+          "namedElements": 0,
+          "elements": 1,
+          "laidOutElements": 1,
+          "box": [
+            14,
+            134
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "INCREASE CONTRAST",
+        "object": "pattern:four-topics",
+        "kind": "pattern",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            152.2,
+            396.4
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "INCREASE CONTRAST",
+        "object": "insight:mastery-precedes-sleep",
+        "kind": "insight",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            135.41,
+            41.5
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCE TRANSPARENCY",
+        "object": "task-delay",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            77.16,
+            79.44
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCE TRANSPARENCY",
+        "object": "mastery",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            72.92,
+            73.32
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCE TRANSPARENCY",
+        "object": "comparison",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            68.3,
+            58.96
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCE TRANSPARENCY",
+        "object": "sleep",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            66.17,
+            64.23
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCE TRANSPARENCY",
+        "object": "fear-shortfall",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            87.91,
+            87.19
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCE TRANSPARENCY",
+        "object": "weekend-fatigue",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            79.52,
+            51.34
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCE TRANSPARENCY",
+        "object": "close-relations",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            70.95,
+            45.48
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCE TRANSPARENCY",
+        "object": "energy-decline",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            55.24,
+            54.67
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCE TRANSPARENCY",
+        "object": "connection:task-delay~comparison",
+        "kind": "connection",
+        "exists": true,
+        "named": false,
+        "renderedPresence": {
+          "present": true,
+          "named": false,
+          "drawnElements": 1,
+          "namedElements": 0,
+          "elements": 1,
+          "laidOutElements": 1,
+          "box": [
+            14,
+            134
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCE TRANSPARENCY",
+        "object": "pattern:four-topics",
+        "kind": "pattern",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            152.2,
+            396.4
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCE TRANSPARENCY",
+        "object": "insight:mastery-precedes-sleep",
+        "kind": "insight",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            135.41,
+            41.5
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "CONTRAST + TRANSPARENCY",
+        "object": "task-delay",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            77.16,
+            79.44
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "CONTRAST + TRANSPARENCY",
+        "object": "mastery",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            72.92,
+            73.32
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "CONTRAST + TRANSPARENCY",
+        "object": "comparison",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            68.3,
+            58.96
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "CONTRAST + TRANSPARENCY",
+        "object": "sleep",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            66.17,
+            64.23
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "CONTRAST + TRANSPARENCY",
+        "object": "fear-shortfall",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            87.91,
+            87.19
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "CONTRAST + TRANSPARENCY",
+        "object": "weekend-fatigue",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            79.52,
+            51.34
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "CONTRAST + TRANSPARENCY",
+        "object": "close-relations",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            70.95,
+            45.48
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "CONTRAST + TRANSPARENCY",
+        "object": "energy-decline",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            55.24,
+            54.67
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "CONTRAST + TRANSPARENCY",
+        "object": "connection:task-delay~comparison",
+        "kind": "connection",
+        "exists": true,
+        "named": false,
+        "renderedPresence": {
+          "present": true,
+          "named": false,
+          "drawnElements": 1,
+          "namedElements": 0,
+          "elements": 1,
+          "laidOutElements": 1,
+          "box": [
+            14,
+            134
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "CONTRAST + TRANSPARENCY",
+        "object": "pattern:four-topics",
+        "kind": "pattern",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            152.2,
+            396.4
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "CONTRAST + TRANSPARENCY",
+        "object": "insight:mastery-precedes-sleep",
+        "kind": "insight",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            135.41,
+            41.5
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION + CONTRAST",
+        "object": "task-delay",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            77.16,
+            79.44
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION + CONTRAST",
+        "object": "mastery",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            72.92,
+            73.32
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION + CONTRAST",
+        "object": "comparison",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            68.3,
+            58.96
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION + CONTRAST",
+        "object": "sleep",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            66.17,
+            64.23
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION + CONTRAST",
+        "object": "fear-shortfall",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            87.91,
+            87.19
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION + CONTRAST",
+        "object": "weekend-fatigue",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            79.52,
+            51.34
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION + CONTRAST",
+        "object": "close-relations",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            70.95,
+            45.48
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION + CONTRAST",
+        "object": "energy-decline",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            55.24,
+            54.67
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION + CONTRAST",
+        "object": "connection:task-delay~comparison",
+        "kind": "connection",
+        "exists": true,
+        "named": false,
+        "renderedPresence": {
+          "present": true,
+          "named": false,
+          "drawnElements": 1,
+          "namedElements": 0,
+          "elements": 1,
+          "laidOutElements": 1,
+          "box": [
+            14,
+            134
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION + CONTRAST",
+        "object": "pattern:four-topics",
+        "kind": "pattern",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            152.2,
+            396.4
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "REDUCED MOTION + CONTRAST",
+        "object": "insight:mastery-precedes-sleep",
+        "kind": "insight",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            135.41,
+            41.5
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "GRAYSCALE (diagnostic)",
+        "object": "task-delay",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            77.16,
+            79.44
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "GRAYSCALE (diagnostic)",
+        "object": "mastery",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            72.92,
+            73.32
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "GRAYSCALE (diagnostic)",
+        "object": "comparison",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            68.3,
+            58.96
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "GRAYSCALE (diagnostic)",
+        "object": "sleep",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            66.17,
+            64.23
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "GRAYSCALE (diagnostic)",
+        "object": "fear-shortfall",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            87.91,
+            87.19
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "GRAYSCALE (diagnostic)",
+        "object": "weekend-fatigue",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            79.52,
+            51.34
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "GRAYSCALE (diagnostic)",
+        "object": "close-relations",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            70.95,
+            45.48
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "GRAYSCALE (diagnostic)",
+        "object": "energy-decline",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            55.24,
+            54.67
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "GRAYSCALE (diagnostic)",
+        "object": "connection:task-delay~comparison",
+        "kind": "connection",
+        "exists": true,
+        "named": false,
+        "renderedPresence": {
+          "present": true,
+          "named": false,
+          "drawnElements": 1,
+          "namedElements": 0,
+          "elements": 1,
+          "laidOutElements": 1,
+          "box": [
+            14,
+            134
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "GRAYSCALE (diagnostic)",
+        "object": "pattern:four-topics",
+        "kind": "pattern",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            152.2,
+            396.4
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "GRAYSCALE (diagnostic)",
+        "object": "insight:mastery-precedes-sleep",
+        "kind": "insight",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            135.41,
+            41.5
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT xxxLarge",
+        "object": "task-delay",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            78.69,
+            79.44
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT xxxLarge",
+        "object": "mastery",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            98.64,
+            73.32
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT xxxLarge",
+        "object": "comparison",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            92.38,
+            58.96
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT xxxLarge",
+        "object": "sleep",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            66.17,
+            64.23
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT xxxLarge",
+        "object": "fear-shortfall",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            112.36,
+            87.19
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT xxxLarge",
+        "object": "weekend-fatigue",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            107.56,
+            51.34
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT xxxLarge",
+        "object": "close-relations",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            95.98,
+            45.48
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT xxxLarge",
+        "object": "energy-decline",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            73.33,
+            54.67
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT xxxLarge",
+        "object": "connection:task-delay~comparison",
+        "kind": "connection",
+        "exists": true,
+        "named": false,
+        "renderedPresence": {
+          "present": true,
+          "named": false,
+          "drawnElements": 1,
+          "namedElements": 0,
+          "elements": 1,
+          "laidOutElements": 1,
+          "box": [
+            14,
+            134
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT xxxLarge",
+        "object": "pattern:four-topics",
+        "kind": "pattern",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            152.2,
+            396.4
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT xxxLarge",
+        "object": "insight:mastery-precedes-sleep",
+        "kind": "insight",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            183.25,
+            41.5
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT 200%",
+        "object": "task-delay",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            79.44
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT 200%",
+        "object": "mastery",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            73.32
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT 200%",
+        "object": "comparison",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            58.96
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT 200%",
+        "object": "sleep",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            64.23
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT 200%",
+        "object": "fear-shortfall",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            87.19
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT 200%",
+        "object": "weekend-fatigue",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            51.34
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT 200%",
+        "object": "close-relations",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            50.39
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT 200%",
+        "object": "energy-decline",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            54.67
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT 200%",
+        "object": "connection:task-delay~comparison",
+        "kind": "connection",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            134
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT 200%",
+        "object": "pattern:four-topics",
+        "kind": "pattern",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            396.4
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT 200%",
+        "object": "insight:mastery-precedes-sleep",
+        "kind": "insight",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            84.39
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT AX5 (311.8%)",
+        "object": "task-delay",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            79.44
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT AX5 (311.8%)",
+        "object": "mastery",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            73.32
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT AX5 (311.8%)",
+        "object": "comparison",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            71.3
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT AX5 (311.8%)",
+        "object": "sleep",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            71.3
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT AX5 (311.8%)",
+        "object": "fear-shortfall",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            87.19
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT AX5 (311.8%)",
+        "object": "weekend-fatigue",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            71.3
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT AX5 (311.8%)",
+        "object": "close-relations",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            71.3
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT AX5 (311.8%)",
+        "object": "energy-decline",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            71.3
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT AX5 (311.8%)",
+        "object": "connection:task-delay~comparison",
+        "kind": "connection",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            177.33
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT AX5 (311.8%)",
+        "object": "pattern:four-topics",
+        "kind": "pattern",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            396.4
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "LARGER TEXT AX5 (311.8%)",
+        "object": "insight:mastery-precedes-sleep",
+        "kind": "insight",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            362,
+            182.61
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "BOLD TEXT",
+        "object": "task-delay",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            77.16,
+            79.44
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "BOLD TEXT",
+        "object": "mastery",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            73.25,
+            73.32
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "BOLD TEXT",
+        "object": "comparison",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            68.58,
+            58.96
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "BOLD TEXT",
+        "object": "sleep",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            66.17,
+            64.23
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "BOLD TEXT",
+        "object": "fear-shortfall",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            87.91,
+            87.19
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "BOLD TEXT",
+        "object": "weekend-fatigue",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            79.84,
+            51.34
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "BOLD TEXT",
+        "object": "close-relations",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            71.16,
+            45.48
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "BOLD TEXT",
+        "object": "energy-decline",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            55.24,
+            54.67
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "BOLD TEXT",
+        "object": "connection:task-delay~comparison",
+        "kind": "connection",
+        "exists": true,
+        "named": false,
+        "renderedPresence": {
+          "present": true,
+          "named": false,
+          "drawnElements": 1,
+          "namedElements": 0,
+          "elements": 1,
+          "laidOutElements": 1,
+          "box": [
+            14,
+            134
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "BOLD TEXT",
+        "object": "pattern:four-topics",
+        "kind": "pattern",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            152.2,
+            396.4
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "BOLD TEXT",
+        "object": "insight:mastery-precedes-sleep",
+        "kind": "insight",
+        "exists": true,
+        "named": true,
+        "renderedPresence": {
+          "present": true,
+          "named": true,
+          "drawnElements": 1,
+          "namedElements": 1,
+          "elements": 2,
+          "laidOutElements": 2,
+          "box": [
+            136.06,
+            41.5
+          ]
+        },
+        "inTruthJSON": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "SCREEN READER PROJECTION",
+        "object": "task-delay",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "SCREEN READER PROJECTION",
+        "object": "mastery",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "SCREEN READER PROJECTION",
+        "object": "comparison",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "SCREEN READER PROJECTION",
+        "object": "sleep",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "SCREEN READER PROJECTION",
+        "object": "fear-shortfall",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "SCREEN READER PROJECTION",
+        "object": "weekend-fatigue",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "SCREEN READER PROJECTION",
+        "object": "close-relations",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "SCREEN READER PROJECTION",
+        "object": "energy-decline",
+        "kind": "topic",
+        "exists": true,
+        "named": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "SCREEN READER PROJECTION",
+        "object": "connection:task-delay~comparison",
+        "kind": "connection",
+        "exists": true,
+        "named": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "SCREEN READER PROJECTION",
+        "object": "pattern:four-topics",
+        "kind": "pattern",
+        "exists": true,
+        "named": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      {
+        "expression": "SCREEN READER PROJECTION",
+        "object": "insight:mastery-precedes-sleep",
+        "kind": "insight",
+        "exists": true,
+        "named": true,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      }
+    ],
+    "cellCount": 132,
+    "failures": [],
+    "naming": {
+      "perExpression": [
+        {
+          "expression": "DEFAULT",
+          "namedCount": 10,
+          "lostRelativeToDefault": [],
+          "regression": false
+        },
+        {
+          "expression": "REDUCED MOTION",
+          "namedCount": 10,
+          "lostRelativeToDefault": [],
+          "regression": false
+        },
+        {
+          "expression": "INCREASE CONTRAST",
+          "namedCount": 10,
+          "lostRelativeToDefault": [],
+          "regression": false
+        },
+        {
+          "expression": "REDUCE TRANSPARENCY",
+          "namedCount": 10,
+          "lostRelativeToDefault": [],
+          "regression": false
+        },
+        {
+          "expression": "CONTRAST + TRANSPARENCY",
+          "namedCount": 10,
+          "lostRelativeToDefault": [],
+          "regression": false
+        },
+        {
+          "expression": "REDUCED MOTION + CONTRAST",
+          "namedCount": 10,
+          "lostRelativeToDefault": [],
+          "regression": false
+        },
+        {
+          "expression": "GRAYSCALE (diagnostic)",
+          "namedCount": 10,
+          "lostRelativeToDefault": [],
+          "regression": false
+        },
+        {
+          "expression": "LARGER TEXT xxxLarge",
+          "namedCount": 10,
+          "lostRelativeToDefault": [],
+          "regression": false
+        },
+        {
+          "expression": "LARGER TEXT 200%",
+          "namedCount": 11,
+          "lostRelativeToDefault": [],
+          "regression": false
+        },
+        {
+          "expression": "LARGER TEXT AX5 (311.8%)",
+          "namedCount": 11,
+          "lostRelativeToDefault": [],
+          "regression": false
+        },
+        {
+          "expression": "BOLD TEXT",
+          "namedCount": 10,
+          "lostRelativeToDefault": [],
+          "regression": false
+        },
+        {
+          "expression": "SCREEN READER PROJECTION",
+          "namedCount": 11,
+          "lostRelativeToDefault": [],
+          "regression": false
+        }
+      ],
+      "objectsNotNamedInTheScreenReaderProjection": [],
+      "objectsNotNamedInTheInspectionView": [],
+      "drawnButNotNamedInTheDefaultVisualExpression": [
+        "connection:task-delay~comparison"
+      ],
+      "note": "The last row is an INHERITED property of I-08B3.1-D2R's grammar, not an F1 decision: a relation is drawn as a stroke between two named topics and carries no label of its own. F1 may not add one, because that would change the accepted default pixels. It is named in the inspection view and in the screen-reader projection, and F1_KNOWN_LIMITATIONS.md records it.",
+      "pass": true
+    },
+    "planted": [
+      {
+        "removed": {
+          "kind": "topic",
+          "id": "task-delay"
+        },
+        "elementsRemoved": 2,
+        "stillInTruthJSON": true,
+        "victimReportedAbsent": true,
+        "everyOtherObjectStillPresent": true,
+        "othersDisturbed": [],
+        "caught": true
+      },
+      {
+        "removed": {
+          "kind": "connection",
+          "id": "connection:task-delay~comparison"
+        },
+        "elementsRemoved": 1,
+        "stillInTruthJSON": true,
+        "victimReportedAbsent": true,
+        "everyOtherObjectStillPresent": true,
+        "othersDisturbed": [],
+        "caught": true
+      },
+      {
+        "removed": {
+          "kind": "pattern",
+          "id": "pattern:four-topics"
+        },
+        "elementsRemoved": 2,
+        "stillInTruthJSON": true,
+        "victimReportedAbsent": true,
+        "everyOtherObjectStillPresent": true,
+        "othersDisturbed": [],
+        "caught": true
+      },
+      {
+        "removed": {
+          "kind": "insight",
+          "id": "insight:mastery-precedes-sleep"
+        },
+        "elementsRemoved": 2,
+        "stillInTruthJSON": true,
+        "victimReportedAbsent": true,
+        "everyOtherObjectStillPresent": true,
+        "othersDisturbed": [],
+        "caught": true
+      }
+    ],
+    "plantedAllCaught": true,
+    "truthJsonIsNotEvidenceOfRendering": true,
+    "probe": {
+      "cell": {
+        "expression": "PROBE",
+        "object": "probe:absent",
+        "exists": false,
+        "relationshipSame": true,
+        "temporalSame": true,
+        "epistemicSame": true,
+        "actionsSame": true
+      },
+      "caught": true
+    },
+    "pass": true
+  },
+  "text": [
+    {
+      "expression": "DEFAULT",
+      "textScale": 1,
+      "bold": false,
+      "labelsVisibleOnMapOrList": 8,
+      "objectsRenderedByKind": {
+        "topic": 8,
+        "connection": 1,
+        "pattern": 1,
+        "insight": 1
+      },
+      "anyTruncated": false,
+      "anyArabicLeadingBelowThreshold": false,
+      "minMeasuredLeadingRatio": 1.7,
+      "minRenderedFontPx": 11,
+      "restWeight": "500",
+      "selectedWeight": "600",
+      "weightStepPreserved": 100
+    },
+    {
+      "expression": "REDUCED MOTION",
+      "textScale": 1,
+      "bold": false,
+      "labelsVisibleOnMapOrList": 8,
+      "objectsRenderedByKind": {
+        "topic": 8,
+        "connection": 1,
+        "pattern": 1,
+        "insight": 1
+      },
+      "anyTruncated": false,
+      "anyArabicLeadingBelowThreshold": false,
+      "minMeasuredLeadingRatio": 1.7,
+      "minRenderedFontPx": 11,
+      "restWeight": "500",
+      "selectedWeight": "600",
+      "weightStepPreserved": 100
+    },
+    {
+      "expression": "INCREASE CONTRAST",
+      "textScale": 1,
+      "bold": false,
+      "labelsVisibleOnMapOrList": 8,
+      "objectsRenderedByKind": {
+        "topic": 8,
+        "connection": 1,
+        "pattern": 1,
+        "insight": 1
+      },
+      "anyTruncated": false,
+      "anyArabicLeadingBelowThreshold": false,
+      "minMeasuredLeadingRatio": 1.7,
+      "minRenderedFontPx": 11,
+      "restWeight": "500",
+      "selectedWeight": "600",
+      "weightStepPreserved": 100
+    },
+    {
+      "expression": "REDUCE TRANSPARENCY",
+      "textScale": 1,
+      "bold": false,
+      "labelsVisibleOnMapOrList": 8,
+      "objectsRenderedByKind": {
+        "topic": 8,
+        "connection": 1,
+        "pattern": 1,
+        "insight": 1
+      },
+      "anyTruncated": false,
+      "anyArabicLeadingBelowThreshold": false,
+      "minMeasuredLeadingRatio": 1.7,
+      "minRenderedFontPx": 11,
+      "restWeight": "500",
+      "selectedWeight": "600",
+      "weightStepPreserved": 100
+    },
+    {
+      "expression": "CONTRAST + TRANSPARENCY",
+      "textScale": 1,
+      "bold": false,
+      "labelsVisibleOnMapOrList": 8,
+      "objectsRenderedByKind": {
+        "topic": 8,
+        "connection": 1,
+        "pattern": 1,
+        "insight": 1
+      },
+      "anyTruncated": false,
+      "anyArabicLeadingBelowThreshold": false,
+      "minMeasuredLeadingRatio": 1.7,
+      "minRenderedFontPx": 11,
+      "restWeight": "500",
+      "selectedWeight": "600",
+      "weightStepPreserved": 100
+    },
+    {
+      "expression": "REDUCED MOTION + CONTRAST",
+      "textScale": 1,
+      "bold": false,
+      "labelsVisibleOnMapOrList": 8,
+      "objectsRenderedByKind": {
+        "topic": 8,
+        "connection": 1,
+        "pattern": 1,
+        "insight": 1
+      },
+      "anyTruncated": false,
+      "anyArabicLeadingBelowThreshold": false,
+      "minMeasuredLeadingRatio": 1.7,
+      "minRenderedFontPx": 11,
+      "restWeight": "500",
+      "selectedWeight": "600",
+      "weightStepPreserved": 100
+    },
+    {
+      "expression": "GRAYSCALE (diagnostic)",
+      "textScale": 1,
+      "bold": false,
+      "labelsVisibleOnMapOrList": 8,
+      "objectsRenderedByKind": {
+        "topic": 8,
+        "connection": 1,
+        "pattern": 1,
+        "insight": 1
+      },
+      "anyTruncated": false,
+      "anyArabicLeadingBelowThreshold": false,
+      "minMeasuredLeadingRatio": 1.7,
+      "minRenderedFontPx": 11,
+      "restWeight": "500",
+      "selectedWeight": "600",
+      "weightStepPreserved": 100
+    },
+    {
+      "expression": "LARGER TEXT xxxLarge",
+      "textScale": 1.3529411764705883,
+      "bold": false,
+      "labelsVisibleOnMapOrList": 8,
+      "objectsRenderedByKind": {
+        "topic": 8,
+        "connection": 1,
+        "pattern": 1,
+        "insight": 1
+      },
+      "anyTruncated": false,
+      "anyArabicLeadingBelowThreshold": false,
+      "minMeasuredLeadingRatio": 1.7,
+      "minRenderedFontPx": 14.88,
+      "restWeight": "500",
+      "selectedWeight": "600",
+      "weightStepPreserved": 100
+    },
+    {
+      "expression": "LARGER TEXT 200%",
+      "textScale": 2,
+      "bold": false,
+      "labelsVisibleOnMapOrList": 8,
+      "objectsRenderedByKind": {
+        "topic": 8,
+        "connection": 1,
+        "pattern": 1,
+        "insight": 1
+      },
+      "anyTruncated": false,
+      "anyArabicLeadingBelowThreshold": false,
+      "minMeasuredLeadingRatio": 1.7,
+      "minRenderedFontPx": 22,
+      "restWeight": "500",
+      "selectedWeight": "600",
+      "weightStepPreserved": 100
+    },
+    {
+      "expression": "LARGER TEXT AX5 (311.8%)",
+      "textScale": 3.118,
+      "bold": false,
+      "labelsVisibleOnMapOrList": 8,
+      "objectsRenderedByKind": {
+        "topic": 8,
+        "connection": 1,
+        "pattern": 1,
+        "insight": 1
+      },
+      "anyTruncated": false,
+      "anyArabicLeadingBelowThreshold": false,
+      "minMeasuredLeadingRatio": 1.7,
+      "minRenderedFontPx": 34.3,
+      "restWeight": "500",
+      "selectedWeight": "600",
+      "weightStepPreserved": 100
+    },
+    {
+      "expression": "BOLD TEXT",
+      "textScale": 1,
+      "bold": true,
+      "labelsVisibleOnMapOrList": 8,
+      "objectsRenderedByKind": {
+        "topic": 8,
+        "connection": 1,
+        "pattern": 1,
+        "insight": 1
+      },
+      "anyTruncated": false,
+      "anyArabicLeadingBelowThreshold": false,
+      "minMeasuredLeadingRatio": 1.7,
+      "minRenderedFontPx": 11,
+      "restWeight": "600",
+      "selectedWeight": "700",
+      "weightStepPreserved": 100
+    }
+  ]
+}

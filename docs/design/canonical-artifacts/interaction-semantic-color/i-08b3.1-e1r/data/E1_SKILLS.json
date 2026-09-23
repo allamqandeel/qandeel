@@ -1,0 +1,501 @@
+{
+  "generatedBy": "tools/e1-skills.mjs",
+  "state": "PASS",
+  "probe": {
+    "name": "the UNVERIFIABLE branch, fed a synthetic empty inventory",
+    "result": "UNVERIFIABLE — EXTERNAL SKILL SOURCE NOT PRESENT"
+  },
+  "inventoried": 85,
+  "used": [
+    {
+      "name": "fixing-accessibility",
+      "read": "§5 forms and errors — \"errors must be linked to fields using aria-describedby\", \"invalid fields must set aria-invalid\", \"disabled submit actions must explain why\"; §7 contrast and states — \"disabled states must not rely on color alone\", \"do not remove focus outlines without a visible replacement\"; §2 keyboard access — \"focus must be visible for keyboard users\". RE-READ AT I-08B3.1-E1R against the question REV-01 turned on, and the answer is that IT DOES NOT ADDRESS IT: the file says what a disabled control must EXPLAIN and must not rely on, and says nothing about whether it stays in the focus order.",
+      "consequence": "THE DISABLED COMMIT BUTTON IN EVERY PROOF STATES ITS REASON, and that reason is a real control in the markup carrying aria-describedby, not a caption on the board. The error field carries aria-invalid and aria-describedby and its message carries role=\"alert\". And \"do not remove focus outlines without a visible replacement\" is the second behavioural probe in tools/e1-focus.mjs, which strips the outline and requires the visibility obligation to reject the result. AND ONE NEGATIVE CONSEQUENCE, WHICH IS THE I-08B3.1-E1R DELTA: because this file is silent on the focusability of an unavailable control, the skill stack could not have caught the absolute E1 froze, and did not supply the correction either. REV-01 rests entirely on the Reference Gate — W3C APG Developing a Keyboard Interface, and MDN aria-disabled — and that is recorded here rather than letting a skill take credit for a decision it had no part in.",
+      "found": true,
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\fixing-accessibility\\SKILL.md",
+      "sha256": "549261e8a53b53a1a20c0ddbf736821e5fc0876ad82eee76e0efab8e9ee9dadf",
+      "bytes": 4718
+    },
+    {
+      "name": "apple-design",
+      "read": "§1 Response — \"Respond on pointer-down, not on release. Waiting for click/touch-up to show feedback feels dead.\"; §16 Design foundations — \"Feedback comes in four kinds: status, completion, warning, error\"; and Agency — \"a confirmation dialog only for genuinely destructive, irreversible actions (use sparingly; overusing it trains people to click through)\"",
+      "consequence": "PRESS BEGINS ON POINTER-DOWN is a product-contract statement rather than an implementation note. And §16 is the hinge of the whole functional-role analysis: Apple names four kinds of FEEDBACK, not four COLOURS, which is what licensed E1 to keep four status roles while giving only one of them a hue. The warning expression — on the commit boundary, used sparingly — is the Agency principle applied.",
+      "found": true,
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\apple-design\\SKILL.md",
+      "sha256": "11840b24a11d7f94f39c6aaab074750ae4e4de4ef54ee4b1dd97e16ebd485e61",
+      "bytes": 22715
+    },
+    {
+      "name": "designing-arabic-frontends",
+      "read": "§5 — \"letter-spacing: never on Arabic — it visibly breaks the connected script\"; \"No italics on Arabic. Use weight/color for emphasis\"; logical-first CSS; §1 — \"Avoid weights 100–300 for Arabic at UI sizes; use 400–700\"; §2 — Arabic needs ~1.6+ line-height; §4 — LTR islands",
+      "consequence": "WEIGHT IS THE SELECTED STATE’S TYPOGRAPHIC CHANNEL BECAUSE THE SCRIPT LEAVES NOTHING ELSE OPEN: italic is unavailable and letter-spacing is forbidden. The two weights are 500 and 600, inside the 400–700 band. The selection marker is on inset-inline-start, which in RTL is the RIGHT edge, and every state expression uses logical properties. It also caught a defect in the boards themselves: the English review captions were being reordered by the RTL root until each English run was isolated.",
+      "found": true,
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\sibawayh\\sibawayh\\0.1.0\\skills\\designing-arabic-frontends\\SKILL.md",
+      "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2",
+      "bytes": 13757
+    },
+    {
+      "name": "writing-eloquent-arabic",
+      "read": "Register table — فصحى for errors, consent and destructive confirms; the 8 failure modes, in particular robotic-tone (\"لم نتمكّن confession-framing\" → frame around the process) and wrong-preposition (\"اتصالك\" → \"اتصالك بالإنترنت\")",
+      "consequence": "THE COPY IS A LOAD-BEARING CHANNEL IN E1, NOT DECORATION — it is one of the non-colour carriers the error role is contractually required to ship with — so it had to be written in Arabic structure rather than translated. The sync failure reads «تعذّرت مزامنة العالَم», framing the PROCESS as having failed, not «لم نتمكن من»; the preposition is spelled out; ثمّ sequences the two instructions instead of a flat و. The destructive-publish warning is فصحى and states the consequence directly.",
+      "found": true,
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\sibawayh\\sibawayh\\0.1.0\\skills\\writing-eloquent-arabic\\SKILL.md",
+      "sha256": "6a673bd773a9245bd38f817edee4687fbf1d92612f680c80aa33f9b67e96150d",
+      "bytes": 9513
+    },
+    {
+      "name": "frontend-design",
+      "read": "\"Spend your boldness in one place. Let the signature element be the one memorable thing, keep everything around it quiet and disciplined\"; the writing section — \"Errors don’t apologize, and they are never vague about what happened\"; \"An action keeps the same name through the whole flow, so the button that says Publish produces a toast that says Published\"; and the calibration warning that a near-black background with a single bright accent is one of three CURRENT AI DEFAULTS.",
+      "consequence": "THREE, AND THE THIRD IS UNCOMFORTABLE. (1) One colour, spent on failure, and every other status role kept without one — boldness in one place. (2) The Arabic error copy does not apologise and is not vague: «تعذّرت مزامنة العالَم» names what failed and the next clause says how to fix it, with no «نأسف» anywhere in the package. The commit is «اجعله عامًّا» and the confirmation is «أصبح العالَم عامًّا» — one root, carried through the flow. (3) THE CALIBRATION WARNING NAMES E1’S OWN SHAPE: a near-black ground with a single bright accent is listed as a default rather than a choice. The dark foundation is frozen in I-08B3.0 and the brief’s own words win there, so the honest response is not to deny the resemblance but to say where the difference is: the accent was DERIVED, and the derivation is reproducible and attackable. E1_KNOWN_LIMITATIONS.md records that a reviewer may still find the result generic, and that the argument for it is the derivation and not the look.",
+      "found": true,
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\claude-plugins-official\\frontend-design\\85cce0381e78\\skills\\frontend-design\\SKILL.md",
+      "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3",
+      "bytes": 9390
+    }
+  ],
+  "notUsedAndWhy": [
+    [
+      "animate / animate-expo / improve-animations / review-animations",
+      "E1 is explicitly forbidden from pulling the motion track into itself. Press feedback carries one duration and one scale and both are classified production-default craft."
+    ],
+    [
+      "dataviz",
+      "E1 paints no chart. The analytical plane is D and the Map track; nothing here encodes a quantity."
+    ],
+    [
+      "react-native-best-practices",
+      "read for the mapping in E1_REACT_NATIVE_MAPPING.md, but not USED in the sense this gate means: no design decision here would have been different without it."
+    ],
+    [
+      "design-critique / user-research / impeccable / ui-ux-pro-max",
+      "not opened. Independent Product and Design review owns the critique of this package, and inviting a second opinion into the execution would blur who decided what."
+    ]
+  ],
+  "inventory": [
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\claude-plugins-official\\frontend-design\\85cce0381e78\\skills\\frontend-design\\SKILL.md",
+      "bytes": 9390,
+      "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\claude-plugins-official\\frontend-design\\unknown\\skills\\frontend-design\\SKILL.md",
+      "bytes": 9390,
+      "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\sibawayh\\sibawayh\\0.1.0\\skills\\designing-arabic-frontends\\SKILL.md",
+      "bytes": 13757,
+      "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\cache\\sibawayh\\sibawayh\\0.1.0\\skills\\writing-eloquent-arabic\\SKILL.md",
+      "bytes": 9513,
+      "sha256": "6a673bd773a9245bd38f817edee4687fbf1d92612f680c80aa33f9b67e96150d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\discord\\skills\\access\\SKILL.md",
+      "bytes": 4357,
+      "sha256": "4fc3da872e033c37576a904b15a1bcac6b1ce6c7bc43f1f96abd7cad4855ac7a"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\discord\\skills\\configure\\SKILL.md",
+      "bytes": 4324,
+      "sha256": "9364d7895d6f38b917a711128e7b391884fb8b8d69a62c7d72a81e95b6e2b948"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\imessage\\skills\\access\\SKILL.md",
+      "bytes": 4754,
+      "sha256": "ac994a86aab3a2724651a13a62ee9deae985196c8687a33bb79c4b7898aa5be7"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\imessage\\skills\\configure\\SKILL.md",
+      "bytes": 3546,
+      "sha256": "3afdc7e9faa36aa0ba9813dce68509c45014a75b316d366ba44c46ebd8b098aa"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\telegram\\skills\\access\\SKILL.md",
+      "bytes": 4463,
+      "sha256": "6c87f59841c55a4a4f1b732c7427959581e47234f1b8c6fd633e4a5256ce6a3c"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\external_plugins\\telegram\\skills\\configure\\SKILL.md",
+      "bytes": 4308,
+      "sha256": "16b06bf2ac5ede250d0c620ce4e6cf3878c9704246b8f52390fde5f280a17f73"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\claude-code-setup\\skills\\claude-automation-recommender\\SKILL.md",
+      "bytes": 10995,
+      "sha256": "441c57e26f0931b64dd085deaad9213c4e3efea27d916dd7443cd33c7e338227"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\claude-md-management\\skills\\claude-md-improver\\SKILL.md",
+      "bytes": 6028,
+      "sha256": "b06c7420be08ca1c7f6d75f7f4709fdb787624a2d363e2f8052216d8c780f85b"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\claude-security\\skills\\claude-security\\SKILL.md",
+      "bytes": 5246,
+      "sha256": "7e7b345240a34339d58da49dec690232023fe2382c1f9113bf3af5a46cf64ce1"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\cwc-makers\\skills\\cardputer-buddy\\SKILL.md",
+      "bytes": 1887,
+      "sha256": "dae31d1459c8ee7b4a03d04bf55485f4ece04bdd4f5a2650ad39eb3d07d9be10"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\cwc-makers\\skills\\m5-onboard\\SKILL.md",
+      "bytes": 23913,
+      "sha256": "c6ba88fd06f59a3e902fead2bb863b6834f189672cfcc75248941c23ae39bd2d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\example-plugin\\skills\\example-command\\SKILL.md",
+      "bytes": 1226,
+      "sha256": "d561981660827f3818b0daec456ae5b31894f68c22407d8c495a77b3105ba96d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\example-plugin\\skills\\example-skill\\SKILL.md",
+      "bytes": 2725,
+      "sha256": "87d90442621ace039aa3379805f99c3f95bf500e9f7b96f9e7876ac2dcf804f5"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\frontend-design\\skills\\frontend-design\\SKILL.md",
+      "bytes": 9390,
+      "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\hookify\\skills\\writing-rules\\SKILL.md",
+      "bytes": 8423,
+      "sha256": "2994b5d3152243b1a1cbf8358e9d7c18f290f31a23920647f31053c3efdf990d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\math-olympiad\\skills\\math-olympiad\\SKILL.md",
+      "bytes": 19961,
+      "sha256": "f697e195d343520f3db551bd4fb44c5120504ee2c47a9cc2016cd57767f23403"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\mcp-server-dev\\skills\\build-mcp-app\\SKILL.md",
+      "bytes": 19391,
+      "sha256": "d2fd94f0096506469ec855c581e48293d35480e58e6405b2bfcdba0486a0c218"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\mcp-server-dev\\skills\\build-mcp-server\\SKILL.md",
+      "bytes": 12084,
+      "sha256": "088cd04be7f03ebbdfd24973cbcbf93c7a2e09117c4bba7b2b06bcc3e0a556f6"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\mcp-server-dev\\skills\\build-mcpb\\SKILL.md",
+      "bytes": 7867,
+      "sha256": "6bb90afd0415754e13f353ee5982d13857c14826edbcbdf5f1481fa5563cd56b"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\playground\\skills\\playground\\SKILL.md",
+      "bytes": 3824,
+      "sha256": "521a3d62211e5f47b65ed17b660e001b15cf8d88d058cbf31bc00e889bcb63cc"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\agent-development\\SKILL.md",
+      "bytes": 11168,
+      "sha256": "6a2826571320828cc6f8f21ccd8e6eefd2bced62000c8c5e43a712c12e2d83a1"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\command-development\\SKILL.md",
+      "bytes": 19233,
+      "sha256": "c55ad02cfe4cbb2a947eea3b1ed5fa1871e722d627c3c6792c3ed87c10c4d7a8"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\hook-development\\SKILL.md",
+      "bytes": 16246,
+      "sha256": "f47e2d42f6360294216a859ae0c30b93caafdd2b2e5ffc007489ba4ca447fa5c"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\mcp-integration\\SKILL.md",
+      "bytes": 12530,
+      "sha256": "b9319d8e44c8f058c1c4f003168295ab2582567fd6329c8b933409116e938bc6"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\plugin-settings\\SKILL.md",
+      "bytes": 12097,
+      "sha256": "028b955244b937ebc1a5c268a12776b8ceae4cbfb60928fbca927227f4c8851d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\plugin-structure\\SKILL.md",
+      "bytes": 13796,
+      "sha256": "a2dbc1e5502aacb360d0ca74732cdd7be4f6a12a49edf4f2ade4134fbc026247"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\plugin-dev\\skills\\skill-development\\SKILL.md",
+      "bytes": 22825,
+      "sha256": "d51b4e20043b13e462aa86c47ea82d43e216eb292871538127f4b12a54e4944f"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\project-artifact\\skills\\project-artifact\\SKILL.md",
+      "bytes": 20425,
+      "sha256": "34e13249dba8a066f33c5f723dbb7b9cb6174b80cc490dd866fbfd1736f0577f"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\receipts\\skills\\receipts\\SKILL.md",
+      "bytes": 17254,
+      "sha256": "5b2f407ff40639727310236f4b34986cacd4bf616c07d2e4198846726842e346"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\session-report\\skills\\session-report\\SKILL.md",
+      "bytes": 3149,
+      "sha256": "ef0fbc4259a41b7fd61b517fb1c9a95f02b83ea3c79ba0b3afbeee4942570397"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\plugins\\marketplaces\\claude-plugins-official\\plugins\\skill-creator\\skills\\skill-creator\\SKILL.md",
+      "bytes": 33168,
+      "sha256": "dcd4803e61e913e6fc27294184cd3a71f09f5e924ff20c8a9a20173e7b3c2bcf"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\animate-expo\\SKILL.md",
+      "bytes": 17564,
+      "sha256": "2121fc72ffa476492c1b91ccf96c7b26aade9d1a332dc5834ba3526e1102b00d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\animate\\SKILL.md",
+      "bytes": 11575,
+      "sha256": "f6317335da2662e92270dc0a6128bea95d7216cd751f86628e3ac6b72804e805"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\animation-vocabulary\\SKILL.md",
+      "bytes": 13128,
+      "sha256": "d718b48fe3c7898804d588f050a2e266d82c9f5ef51da256c8cb8b5951527757"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\assess-react-native-migration\\SKILL.md",
+      "bytes": 14591,
+      "sha256": "31730be40e4ecbe613615843b5b8d201fd1b112c0d35620675c45992d17876e3"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\create-react-native-library\\SKILL.md",
+      "bytes": 2736,
+      "sha256": "72fc31f0dbf032ce27d0ea9966d0e2bc946283639c6200f5696307d4cde3e4ef"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\detour\\detour-onboarding\\SKILL.md",
+      "bytes": 11230,
+      "sha256": "c19bbca057880f1cbd92397c7ea0e0e61090ad129c28cc49a693c979aaeaa157"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\detour\\migrate-to-detour\\SKILL.md",
+      "bytes": 15692,
+      "sha256": "955703ab3e2cd667de9d1f66ad2304ca8f85b73a856bcd176869a233ed39a5e6"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\emil-design-eng\\SKILL.md",
+      "bytes": 27226,
+      "sha256": "e71de849347050c2c573c1cf24d742d5a13459557ecffa6e562f08006f46b5b7"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\expo-horizon\\SKILL.md",
+      "bytes": 11267,
+      "sha256": "45a2b58e17824ccd13866059f48abf0062b3ad97c31973891f0adcafb9ee7874"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\find-animation-opportunities\\SKILL.md",
+      "bytes": 9491,
+      "sha256": "91c1243164057fbf824088d12faea937878a757a7ac653e8288b775e8b27b882"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\js-server-sdk\\SKILL.md",
+      "bytes": 5525,
+      "sha256": "397ae0fae63708ed8191006d3f3e398e3769c0930433f6027e70b678eabf28e4"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\platform\\SKILL.md",
+      "bytes": 6675,
+      "sha256": "4c0fc5e352b80eaae0120f4fdb73fb3845623eda60e486b5bf2bd6954dd12a58"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\python-server-sdk\\SKILL.md",
+      "bytes": 5333,
+      "sha256": "9b218ff0fc09f69ec94c79ec94a2e23435e5341126397e9209f55b74ddd3f702"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\react-client\\SKILL.md",
+      "bytes": 5964,
+      "sha256": "e313b94b3c7e50126742c1769014c83af8bc0fa4fee6239343b827518b2beb5f"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\references\\react-native-client\\SKILL.md",
+      "bytes": 7617,
+      "sha256": "8b83dede866483023706b439fed173843f6fa36e45448a2c38a13efd12c61cd2"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\fishjam\\SKILL.md",
+      "bytes": 3721,
+      "sha256": "dba4eb81c9ac54d4e2e041801f1c34b3b5c049176bd9cc6a3b40c7b751f6b6d9"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\github-actions\\SKILL.md",
+      "bytes": 2812,
+      "sha256": "0d656b3361161b11a04ee741b06bf2e44c2b4dd96ea2d038aa7df0a048fc8850"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\impeccable\\SKILL.md",
+      "bytes": 10771,
+      "sha256": "125f732891f3f319ca7d247af404999f2517c4e508c02e4c5129b0caa3bfbd44"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\improve-animations\\SKILL.md",
+      "bytes": 7915,
+      "sha256": "68f17bbc4671593d2f43dba26a679243e2153ba5f26965fb7d59df52842534ff"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\moq-kit\\SKILL.md",
+      "bytes": 19986,
+      "sha256": "d0d5e071e22ed6e045f14347a8abe19f7752a1535ac35ff6e67099f9a7b6d6b7"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\prototype\\SKILL.md",
+      "bytes": 7488,
+      "sha256": "2ad8401c4deaddb54947fb65247f790e7b3d8784e35312bcbedbfb1d59cd89ce"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\pulsar-haptics\\SKILL.md",
+      "bytes": 10272,
+      "sha256": "fb58618ee4572ff6d3a1d294e4cb422ebd41249e2529d8f8909f3453e79a534e"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\radon-mcp\\SKILL.md",
+      "bytes": 2660,
+      "sha256": "1391deacb9d4ab04a2d757cb82855b7e6fe2e3e472354ff0772f9bdffb7a75fb"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\animations\\SKILL.md",
+      "bytes": 3745,
+      "sha256": "cbf41937f716feb65c2b6fdc07c320623b6e19f9a9923b4b3c8a1462a0df8833"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\audio\\SKILL.md",
+      "bytes": 4019,
+      "sha256": "8e3d4d7b87ee7455956128a390577ebf9a82990bf6c18a0b3a56295f6eb2aa97"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\enable-worklets-bundle-mode\\SKILL.md",
+      "bytes": 15938,
+      "sha256": "c86a39fe84a20d1aaf60a8d71ef7ef7219d237c773bae249c679d73ac3e65c0f"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\gestures\\SKILL.md",
+      "bytes": 6941,
+      "sha256": "8608158a6b2979c42872a707dd5812fe641c82e9ccd9a150f7c9d9f5c758f438"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\jsi\\SKILL.md",
+      "bytes": 3628,
+      "sha256": "a70674691164d4c94b2615fab5da071536a3b00cdc769d96b9ec3c57538ff5a7"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\multithreading\\SKILL.md",
+      "bytes": 4786,
+      "sha256": "087d8fe9868f5453d1335dc72562db986181152d246c17358b9248ccc84ff02c"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\on-device-ai\\SKILL.md",
+      "bytes": 9574,
+      "sha256": "10570525ac88f34deb1aac24607d48ca741012f097c5b2f41faf81219782576d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\rich-text\\SKILL.md",
+      "bytes": 21622,
+      "sha256": "79a0e06e4be4179d1a8247a59c00f88838af0748336be1b114dda07530e8b07a"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\references\\svg\\SKILL.md",
+      "bytes": 1017,
+      "sha256": "92353d60d2a42cf16d5206aa930edcf352c6ba71bc04de004bba75a38928f1f3"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-best-practices\\SKILL.md",
+      "bytes": 4489,
+      "sha256": "2cafec6f98199a23d58dce764a07bc815d4675cb4296d052428b51abfd8a64fd"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-brownfield-migration\\SKILL.md",
+      "bytes": 7035,
+      "sha256": "a01b34e0e03a0bc25cde1b96286ac5ba0d273d8aba56e3ac1ce53fca56c84ca6"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-moq\\SKILL.md",
+      "bytes": 6449,
+      "sha256": "235709c3c1be94cd07c5a6c2d0059fdf416ff67c5bd1740f036858b8e77f8bf2"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-native-tv-best-practices\\SKILL.md",
+      "bytes": 11166,
+      "sha256": "46b4524c57ce315b7be7a4d6c4a342ba31b020576ff50f76b949d61818bc39c5"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\react-navigation\\SKILL.md",
+      "bytes": 3419,
+      "sha256": "f127331ac68f2966168c5c12bb65217eac310804b91d2210f447672d1cbd0f1c"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\review-animations\\SKILL.md",
+      "bytes": 8108,
+      "sha256": "61cf8ac0c4c8e1f63385298c546b16c65ca9aec34abddcd04e821c16712d671d"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\rnrepo\\SKILL.md",
+      "bytes": 2452,
+      "sha256": "0effa7af402853b4df5e8c50bc63d2e8062bd530652bd751e81d8b5d9500359c"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\typegpu\\SKILL.md",
+      "bytes": 22400,
+      "sha256": "34e249af012a1ffbb0575cb36c20aaa9c966bc80676d3d014ed879d4523d51e6"
+    },
+    {
+      "path": "C:\\Users\\Al Asil Stores\\.claude\\skills\\upgrading-react-native\\SKILL.md",
+      "bytes": 4210,
+      "sha256": "5d81737d25e48a320ec56b12bca4be3fa99166ddd3186374ec31ca31d8417930"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\apple-design\\SKILL.md",
+      "bytes": 22715,
+      "sha256": "11840b24a11d7f94f39c6aaab074750ae4e4de4ef54ee4b1dd97e16ebd485e61"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\design-critique\\SKILL.md",
+      "bytes": 3923,
+      "sha256": "3a4f260eb9f60b431782bf6d90f22afb480c0c67860267a032df58a3e1bd19cd"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\designing-arabic-frontends\\SKILL.md",
+      "bytes": 13757,
+      "sha256": "ab70493bf1b15461ab5ff6cba9848871e27a7e5144042b7458d566070c2d87b2"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\emil-design-eng\\SKILL.md",
+      "bytes": 27226,
+      "sha256": "e71de849347050c2c573c1cf24d742d5a13459557ecffa6e562f08006f46b5b7"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\fixing-accessibility\\SKILL.md",
+      "bytes": 4718,
+      "sha256": "549261e8a53b53a1a20c0ddbf736821e5fc0876ad82eee76e0efab8e9ee9dadf"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\frontend-design\\SKILL.md",
+      "bytes": 8260,
+      "sha256": "1608ea77fbb6fc30d13a97d12cfa8ebf31358d40f0dd97beed24829d6b3f45dd"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\prototype\\SKILL.md",
+      "bytes": 7488,
+      "sha256": "2ad8401c4deaddb54947fb65247f790e7b3d8784e35312bcbedbfb1d59cd89ce"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\user-research\\SKILL.md",
+      "bytes": 1751,
+      "sha256": "fa18fc13d0f44aa869102962ef9466417ade726d659465195a40fbcf08cee156"
+    },
+    {
+      "path": "E:\\QANDEEL\\QANDEEL PROJECT\\.claude\\skills\\writing-eloquent-arabic\\SKILL.md",
+      "bytes": 9513,
+      "sha256": "6a673bd773a9245bd38f817edee4687fbf1d92612f680c80aa33f9b67e96150d"
+    }
+  ]
+}

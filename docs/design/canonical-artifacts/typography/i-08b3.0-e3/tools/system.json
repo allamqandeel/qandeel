@@ -1,0 +1,246 @@
+{
+  "_": "I-08B3.0-E3 - the single source of truth. The proposed type contract exactly as the brief states it, the test content, and the controlled test surface. Every board and every measurement reads from this file; nothing is retyped per board.",
+
+  "typeface": {
+    "family": "Estedad",
+    "version": "Version 8.5",
+    "status": "ACCEPTED - not under test in E3. E3 tests the SYSTEM proposed around it.",
+    "file": "Estedad[wght].ttf",
+    "source": "https://github.com/aminabedi68/Estedad release tag 8.5",
+    "bytes": 284180,
+    "sha256": "3134E31A27D58E615967E714C7799FBFA2DE952876F8597B33DC57FFE0E99D03",
+    "variable": true,
+    "axis": "wght 100..900 (default 400)"
+  },
+
+  "roles": [
+    { "key": "statement", "n": 1, "name": "MEANINGFUL STATEMENT", "size": 32, "leading": 50, "weight": 500 },
+    { "key": "screenTitle", "n": 2, "name": "SCREEN TITLE", "size": 26, "leading": 42, "weight": 600 },
+    { "key": "sectionTitle", "n": 3, "name": "SECTION TITLE", "size": 20, "leading": 32, "weight": 600 },
+    { "key": "body", "n": 4, "name": "PRIMARY BODY", "size": 17, "leading": 30, "weight": 400 },
+    { "key": "supporting", "n": 5, "name": "SUPPORTING BODY", "size": 15, "leading": 25, "weight": 400 },
+    { "key": "action", "n": 6, "name": "ACTION / LABEL", "size": 14, "leading": 23, "weight": 500 },
+    { "key": "metadata", "n": 7, "name": "METADATA", "size": 12, "leading": 20, "weight": 400, "weightAlt": 500 },
+    { "key": "numeric", "n": 8, "name": "NUMERIC READING", "size": 20, "leading": 30, "weight": 600 }
+  ],
+
+  "weightPolicy": { "regular": 400, "medium": 500, "semibold": 600, "floor": 400, "ceilingUnlessProven": 600 },
+
+  "arabicRules": {
+    "letterSpacing": 0,
+    "justify": false,
+    "kashida": false,
+    "align": "start",
+    "direction": "rtl",
+    "lang": "ar-EG"
+  },
+
+  "devices": [
+    { "key": "narrow", "name": "MOBILE NARROW", "w": 360, "note": "~360 logical px class" },
+    { "key": "standard", "name": "MOBILE STANDARD", "w": 412, "note": "~390-430 logical px class" },
+    { "key": "tablet", "name": "TABLET / WIDE", "w": 768, "note": "~768 logical px class" }
+  ],
+
+  "gutters": { "narrow": 16, "standard": 20, "tablet": 32 },
+
+  "scales": [100, 130, 160, 200],
+
+  "readingMeasures": [
+    { "w": 328, "label": "narrow phone, full bleed minus gutters" },
+    { "w": 480, "label": "unbounded tablet third" },
+    { "w": 560, "label": "candidate A" },
+    { "w": 640, "label": "candidate B" },
+    { "w": 704, "label": "tablet full bleed minus gutters - the unbounded case" }
+  ],
+
+  "surface": {
+    "_": "COMPARISON CONTROLS ONLY. Not QANDEEL colour tokens. Not frozen by this task. One controlled dark-led environment, near-black and deliberately not #000000.",
+    "bg": "#0E1013",
+    "raised": "#14171B",
+    "primary": "#E6E8EB",
+    "secondary": "#9AA1A9",
+    "rule": "#23272C",
+    "chrome": "#6E767F",
+    "control": "#1B1F24",
+    "controlEdge": "#2C3138"
+  },
+
+  "proofA": {
+    "title": "PROOF A - CONVERSATION",
+    "screenTitle": "قراءة الحوار",
+    "messages": [
+      { "from": "user", "time": "٨:٣١ م", "text": "أنا حاسس إني كل مرة أوصل لقرار وأقول خلاص، أرجع بعدها بساعات وأفكر من الأول." },
+      { "from": "qandeel", "time": "٨:٣٢ م", "text": "اللي بيتكرر هنا مش مجرد تردد قبل الاختيار.\nأنت غالبًا بتكون أهدأ قبل القرار، وبعد ما القرار يبقى حقيقي يبدأ عقلك يدور على الاحتمالات اللي ممكن تكون فاتتك." },
+      { "from": "user", "time": "٨:٣٣ م", "text": "وده بالضبط اللي بيحصل. أول ما أحس إني قفلت الباب على اختيار تاني أبدأ أقلق." },
+      { "from": "qandeel", "time": "٨:٣٤ م", "text": "وده يخلي السؤال الأهم مش:\n«هل القرار صح؟»\n\nلكن:\n«إيه اللي بيتغير جواك لما الاختيار يبقى نهائي؟»" }
+    ],
+    "footerMeta": "مرتبط بـ Hypothesis H-04 · Confidence 0.68",
+    "actions": ["عرض التحليل", "حفظ"]
+  },
+
+  "proofB": {
+    "title": "PROOF B - LONG ANALYSIS",
+    "screenTitle": "قراءة ممتدة: ما الذي يتغير بعد الحسم",
+    "meta": "آخر تحديث ١٤ سبتمبر، ٨:٣٤ م · ٣ ذكريات مرتبطة",
+    "sections": [
+      {
+        "h": "ما الذي يتكرر فعلًا",
+        "p": [
+          "يظهر في حديثك نمط ثابت لا يتعلق بصعوبة الاختيار نفسه. أنت تصل إلى القرار بهدوء نسبي، وترتّب أسبابك، وتغلق النقاش مع نفسك. ثم تبدأ المراجعة بعد ساعات، لا قبلها. هذا الترتيب الزمني هو أهم ما في القراءة، لأنه ينقل السؤال من «هل تتردد؟» إلى «متى تتردد؟»، والفرق بين الصيغتين ليس لفظيًا.",
+          "التردد قبل القرار وظيفته المقارنة: أنت تزن البدائل وأنت ما زلت تملكها كلها. أما ما يحدث عندك فيبدأ بعد أن تفقد البدائل صفتها كبدائل، أي بعد أن يصير واحد منها واقعًا والباقي احتمالات ملغاة. عندها لا يعود العقل يقارن، بل يبحث عن خطأ. وهذه حركة مختلفة تمامًا، وإن بدت من الخارج ترددًا."
+        ]
+      },
+      {
+        "h": "ما الذي يتغير حين يصبح الاختيار حقيقيًا",
+        "p": [
+          "قبل الحسم تبقى الاحتمالات مجانية، إذ تتخيل كل مسار دون أن تدفع ثمن أي منها. وما إن تختار حتى يتحول المسار الواحد إلى كلفة، وتتحول المسارات المتروكة إلى خسارة متخيَّلة.",
+          "والخسارة المتخيَّلة أثقل من الواقعية، لأنها لا تُختبر ولا تُدحض. فالمسار الذي سلكته تراه بعيوبه كاملة لأنك تعيشه، والمسارات التي تركتها تبقى في أحسن صورها لأنها لم تُجرَّب. هذا الاختلال في المعلومات، لا ضعف العزيمة، هو ما يغذّي القلق بعد القرار."
+        ]
+      },
+      {
+        "h": "لماذا يشتد الأمر بعد ساعات لا فورًا",
+        "p": [
+          "تحمل لحظة الحسم ارتياحًا حقيقيًا: ينتهي الجهد، ويهدأ التوتر، ويشعر العقل بأنه أنجز شيئًا. لكن هذا الارتياح يستهلك نفسه سريعًا، ثم تعود الطاقة الذهنية وقد تحررت من مهمة الاختيار. والعقل حين يتحرر يبحث عن عمل، وأقرب عمل أمامه فحص ما جرى للتو.",
+          "لذلك تتكرر الفجوة الزمنية نفسها في كل مرة: ساعات قليلة بين الإغلاق وإعادة الفتح. وهذه الفجوة ليست عرضية، بل أثر مباشر لتتابع الراحة ثم عودة الانتباه."
+        ]
+      },
+      {
+        "h": "ما الذي تفعله المراجعة فعلًا",
+        "p": [
+          "ليست المراجعة بعد القرار عبثًا دائمًا. فهي أحيانًا تكشف معلومة أُهملت، وأحيانًا تعدّل التنفيذ دون أن تمسّ الاختيار نفسه. لكن ما يظهر عندك يختلف عن ذلك: الأسئلة التي تعود لا تضيف معلومة جديدة، بل تعيد ترتيب المعلومات نفسها.",
+          "وهذا تمييز عملي مفيد، لأنه يفصل بين مراجعة تستحق وقتك وأخرى تستهلكه دون أن تغيّر شيئًا. الأولى تنتهي إلى قرار معدَّل، والثانية تنتهي إلى القرار ذاته بعد جهد إضافي."
+        ]
+      },
+      {
+        "h": "أين يظهر هذا في ذاكرتك",
+        "p": [
+          "ظهر النمط في ثلاثة مواضع محفوظة خلال الأسابيع الماضية، وفي كل موضع كان القرار قابلًا للتنفيذ فورًا وغير قابل للتراجع بسهولة. هذان الشرطان يبدوان مرتبطين بشدة المراجعة، ولا يتكرر الأثر نفسه حين تكون الخطوة تجريبية أو قابلة للإلغاء.",
+          "ولا تزال هذه الملاحظة مرتبطة بـ Hypothesis H-04، وآخر قيمة مسجلة لها كانت Confidence 0.68، وهو مستوى يكفي للانتباه ولا يكفي لتثبيت الاستنتاج."
+        ]
+      },
+      {
+        "h": "كيف تستعمل هذه الملاحظة",
+        "p": [
+          "أقرب استعمال عملي لها أن تنتبه إلى التوقيت وحده. حين تعود الأسئلة بعد ساعات من الحسم، اسأل نفسك سؤالًا واحدًا قبل أن تفتح الملف من جديد: هل معي الآن معلومة لم تكن معي وقت القرار؟ إن كان الجواب نعم، فالمراجعة في محلها وتستحق وقتها كاملًا. وإن كان لا، فأنت تعيد ترتيب ما تعرفه أصلًا، وهذا لا ينتهي إلى قرار أفضل بل إلى إرهاق أطول.",
+          "ولا يعني هذا أن تكبت المراجعة أو تتعامل معها كعيب. فالقلق بعد الحسم ليس خللًا في التفكير، بل أثر طبيعي لفقدان البدائل. لكن تسميته باسمه تخفّف ثقله، لأنك تتوقف عن قراءته كدليل على أن القرار كان خاطئًا. أنت لا تراجع لأن الاختيار سيئ، بل لأنه صار نهائيًا، والفرق بين السببين هو كل ما في الأمر."
+        ]
+      },
+      {
+        "h": "ما لا تدّعيه هذه القراءة",
+        "p": [
+          "هذه ملاحظة عن نمط متكرر، لا حكم على شخصيتك ولا تفسير لكل قراراتك. ظهر النمط في سياقات محدودة، وقد لا ينطبق حين تكون الكلفة صغيرة أو حين يكون القرار قابلًا للتراجع.",
+          "وثبات القراءة يحتاج إلى مواضع أكثر مما توفر حتى الآن. ما بين يديك الآن يصلح لأن تنتبه إليه في القرار القادم، لا لأن تبني عليه قاعدة عن نفسك."
+        ]
+      }
+    ]
+  },
+
+  "proofC": {
+    "title": "PROOF C - MEANINGFUL MOMENT",
+    "statement": "أنت لا تتردد قبل القرار.\nأنت تتردد بعد أن يصبح حقيقيًا.",
+    "supporting": "ظهر هذا النمط في ثلاثة مواضع محفوظة، وكلها قرارات كانت قابلة للتنفيذ فورًا. المراجعة بدأت بعد الحسم لا قبله.",
+    "steps": [
+      { "label": "one step smaller", "size": 26, "leading": 42 },
+      { "label": "PROPOSED", "size": 32, "leading": 50 },
+      { "label": "one step larger", "size": 36, "leading": 54 }
+    ]
+  },
+
+  "proofD": {
+    "title": "PROOF D - DENSE METADATA / NUMERICS",
+    "items": [
+      "الثقة في القراءة ٧٢٪",
+      "آخر تحديث ١٤ سبتمبر، ٨:٣٤ م",
+      "٣ ذكريات مرتبطة",
+      "Hypothesis H-04",
+      "Confidence 0.68",
+      "PR #220",
+      "قبل ١٢ دقيقة"
+    ],
+    "numericRows": [
+      { "label": "الثقة في القراءة", "value": "٧٢٪" },
+      { "label": "اتساق النمط", "value": "٦٨٪" },
+      { "label": "مواضع مطابقة", "value": "٣" },
+      { "label": "آخر مراجعة", "value": "١٢ د" }
+    ],
+    "changingRows": [
+      { "label": "الثقة", "a": "٧٢٪", "b": "٦٨٪", "c": "١٠٠٪" },
+      { "label": "الاتساق", "a": "٩٪", "b": "١٢٪", "c": "٨٧٪" },
+      { "label": "المواضع", "a": "٣", "b": "١١", "c": "٧" }
+    ],
+    "technical": ["H-04", "v8.5", "0.68", "PR #220", "SHA-256"]
+  },
+
+  "proofE": {
+    "title": "PROOF E - MIXED SCRIPT",
+    "paragraphs": [
+      "قنديل ربط الكلام الحالي بذاكرة محفوظة في Memory Runtime من محادثة سابقة، لكن مستوى Confidence ما زال غير كافٍ لتحويل القراءة إلى استنتاج ثابت.",
+      "تم تحديث QANDEEL Human Map بدون تغيير القراءة الحالية.",
+      "القراءة ما زالت مرتبطة بـ Hypothesis H-04، بينما آخر قيمة مسجلة كانت Confidence 0.68."
+    ],
+    "inlineTerms": ["Memory Runtime", "Confidence", "QANDEEL Human Map", "Hypothesis H-04", "PR #220", "v8.5"],
+    "bidiProbes": ["PR #220", "v8.5", "0.68", "SHA-256", "H-04"],
+    "bidiHard": [
+      { "id": "trailing-token-then-arabic-stop", "text": "آخر قيمة مسجلة كانت Confidence 0.68." },
+      { "id": "token-at-line-end-with-arabic-comma", "text": "القراءة مرتبطة بـ Hypothesis H-04، وآخر تحديث لها أمس." },
+      { "id": "parenthesised-identifier", "text": "القراءة (المرتبطة بـ H-04) ما زالت مفتوحة." },
+      { "id": "two-adjacent-latin-runs", "text": "حدّث QANDEEL Human Map بقيمة Confidence 0.68 اليوم." },
+      { "id": "hash-and-digits", "text": "راجع PR #220 قبل الدمج." },
+      { "id": "percent-eastern-digits", "text": "الثقة في القراءة ٧٢٪ حتى الآن." },
+      { "id": "version-token-mid-sentence", "text": "النسخة v8.5 لم تتغير منذ المزامنة." }
+    ]
+  },
+
+  "proofF": {
+    "title": "PROOF F - UI LABELS / CONTROLS",
+    "labels": ["رجوع", "حفظ", "متابعة", "عرض التحليل", "العودة إلى الآن", "فتح الخريطة", "مشاركة", "إلغاء", "الإعدادات", "الإشعارات", "بحث"],
+    "primaryPair": ["عرض التحليل", "إلغاء"],
+    "narrowGroup": ["رجوع", "حفظ", "مشاركة"],
+    "contextual": ["العودة إلى الآن", "فتح الخريطة"]
+  },
+
+  "proofG": {
+    "title": "PROOF G - STRESS COPY",
+    "longTitle": "قراءة ممتدة في أنماط التردد المتأخر بعد القرارات غير القابلة للتراجع خلال الأسابيع الستة الماضية",
+    "longAction": "عرض التحليل الكامل لهذه القراءة",
+    "longMixed": "قنديل ربط هذه القراءة بذاكرة محفوظة في Memory Runtime، ثم حدّث QANDEEL Human Map بقيمة Confidence 0.68 المرتبطة بـ Hypothesis H-04، دون أن يغيّر الاستنتاج المعروض في PR #220.",
+    "twoLineMeta": "آخر تحديث ١٤ سبتمبر، ٨:٣٤ م · ٣ ذكريات مرتبطة · الثقة في القراءة ٧٢٪ · قبل ١٢ دقيقة",
+    "denseDateTime": "الأحد ١٤ سبتمبر ٢٠٢٥، ٨:٣٤:١٢ م (توقيت القاهرة، ت ع م+٣)",
+    "punctuation": "هل القرار صح؟ أم أن السؤال نفسه خاطئ؟! «ما الذي يتغير جوّاك؟» — هذا هو السؤال؛ وليس غيره…",
+    "brackets": "القراءة (المرتبطة بـ H-04) تعتمد على ثلاثة مواضع [محفوظة] بنسبة ثقة ٧٢٪ — راجع {PR #220} للتفاصيل.",
+    "identifierProse": "لم يتغيّر SHA-256 الخاص بالنسخة v8.5 منذ آخر مزامنة، رغم أن PR #220 عدّل قيمة Confidence من 0.61 إلى 0.68.",
+    "vocalised": "إِنَّ الَّذِي يَتَكَرَّرُ هُنَا لَيْسَ تَرَدُّدًا قَبْلَ الِاخْتِيَارِ، بَلْ مُرَاجَعَةٌ مُتَأَخِّرَةٌ بَعْدَ أَنْ يُصْبِحَ الْقَرَارُ حَقِيقِيًّا."
+  },
+
+  "diacritics": {
+    "title": "DIACRITIC QA - Estedad v8.5",
+    "samples": ["مُتَّزِن", "التَّفكير", "مُهِمٌّ", "لِأَنَّكَ", "مَرَّةً", "قِراءةٌ مُتعمِّقة"],
+    "knownIssue": {
+      "ref": "aminabedi68/Estedad issue #39 - open, reported against v8.5",
+      "claim": "U+FE74 (kasratan) after shadda is positioned ABOVE the shadda instead of below it, and shadda collides with Arabic letters.",
+      "legacy": "بّـﹴ",
+      "legacyNote": "ba + shadda + U+FE74 ARABIC KASRATAN ISOLATED FORM (the presentation form named in the issue)",
+      "modern": "بٍّ",
+      "modernNote": "ba + shadda + U+064D ARABIC KASRATAN (the normal encoding a keyboard and an IME produce)",
+      "pairs": [
+        { "l": "بّﹴ", "m": "بٍّ", "base": "ب ba" },
+        { "l": "دّﹴ", "m": "دٍّ", "base": "د dal" },
+        { "l": "مّﹴ", "m": "مٍّ", "base": "م meem" },
+        { "l": "هّﹴ", "m": "هٍّ", "base": "ه heh" }
+      ]
+    },
+    "stacks": [
+      { "t": "مُّ", "n": "meem + damma + shadda" },
+      { "t": "مُّ", "n": "meem + shadda + damma (canonical order)" },
+      { "t": "قٌ", "n": "qaf + dammatan" },
+      { "t": "قٌّ", "n": "qaf + shadda + dammatan" },
+      { "t": "لِأ", "n": "lam + kasra + alef-hamza" },
+      { "t": "َّ", "n": "shadda + fatha, no base (standalone - what v8.4 adjusted)" }
+    ]
+  },
+
+  "latinI": {
+    "_": "aminabedi68/Estedad issue #44 - open: lowercase 'i' reported not displaying in Office 2013 on Windows 10 with v8.5. QANDEEL's mixed-script content is full of it (Confidence, Hypothesis, Runtime), so it is tested here rather than assumed.",
+    "probes": ["Confidence", "Hypothesis", "Memory Runtime", "identifier", "i", "iiiii", "fi", "ti", "Ti"]
+  }
+}

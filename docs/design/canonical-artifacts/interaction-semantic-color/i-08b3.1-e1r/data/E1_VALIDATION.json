@@ -1,0 +1,434 @@
+{
+  "generatedBy": "tools/e1-verify.mjs",
+  "checks": [
+    {
+      "id": "R01",
+      "layer": "A",
+      "name": "no member of qandeel.state or qandeel.status reaches the identity material or the illumination",
+      "pass": true,
+      "detail": "20 names checked, every hop of every chain"
+    },
+    {
+      "id": "R02",
+      "layer": "A",
+      "name": "interaction state introduces NO colour: every colour under qandeel.state is an alias into the frozen ramp, and E1 authors exactly ONE state literal",
+      "pass": true,
+      "detail": "literals under qandeel.state: [] (must be none); under qandeel.expression.state: [\"qandeel.expression.state.disabled\"]"
+    },
+    {
+      "id": "R03",
+      "layer": "A",
+      "name": "status colour is EARNED, not capped: the graph agrees with the shipped policy, and every uncoloured role carries an overturn condition and a Product-evidence route",
+      "pass": true,
+      "detail": "policy declares a dedicated hue for [\"error\"]; the graph reaches a status literal for [\"error\"]; uncoloured roles with no overturn condition or no evidence route: [] — and the policy states in terms that the count is not a cap: \"That a hue must be EARNED, and that the evidence is a Product case rather than a taxonomy. Not the number.\""
+    },
+    {
+      "id": "R04",
+      "layer": "A",
+      "name": "every E1 token carries a freeze classification, and classify() throws on one that does not",
+      "pass": true,
+      "detail": "20 authored tokens, all classified"
+    },
+    {
+      "id": "R05",
+      "layer": "A",
+      "name": "none of the forbidden names appears anywhere in E1’s token output",
+      "pass": true,
+      "detail": "scanned three token documents by KEY, so a description may discuss the words"
+    },
+    {
+      "id": "R06",
+      "layer": "A",
+      "name": "the retired diagnostic literal appears only inside the record that names it retired, located STRUCTURALLY",
+      "pass": true,
+      "detail": "occurrences in all three token documents: 1; the permitted one is reached by path qandeel.expression.state.disabled.$extensions.com.qandeel.provenance.retires"
+    },
+    {
+      "id": "R07",
+      "layer": "A",
+      "name": "E1 writes nothing into a frozen namespace",
+      "pass": true,
+      "detail": "35 authored names, none inside a frozen namespace"
+    },
+    {
+      "id": "R08",
+      "layer": "A",
+      "name": "the resolved state and status groups carry E1’s description, not C3’s \"RESERVED AND DELIBERATELY EMPTY\"",
+      "pass": true,
+      "detail": "both groups resolve to e1/base; a tree that still calls them empty has not picked up E1"
+    },
+    {
+      "id": "R09",
+      "layer": "A",
+      "name": "the disabled ink is a FULL RUNG below the dimmest ink the Product paints at rest",
+      "pass": true,
+      "detail": "dL 0.1157 against the ramp’s own smallest rung 0.1146; dEok 0.1157"
+    },
+    {
+      "id": "R10",
+      "layer": "A",
+      "name": "the focus PAIR reaches 3:1 against every colour QANDEEL can paint beside it, and the indicator ALONE does not",
+      "pass": true,
+      "detail": "pair 13/13, indicator alone 5/13 — the companion covers 8 colours, so it is not decoration"
+    },
+    {
+      "id": "R11",
+      "layer": "A",
+      "name": "the press wash is made from the Product’s own reading ink, and cannot be the Light or the material",
+      "pass": true,
+      "detail": "qandeel.state.pressed.ink -> qandeel.content.primary -> qandeel.expression.content.primary  |  MEASURED, not relied on: the pressed grounds composite to chroma 0.00179 / 0.00184, but at these alphas over a near-black ground almost any wash does, so the chain is what is checked"
+    },
+    {
+      "id": "R12",
+      "layer": "A",
+      "name": "the pressed World never lands on the one functional Surface value",
+      "pass": true,
+      "detail": "pressed World is #242423, the functional Surface is #181818"
+    },
+    {
+      "id": "R13",
+      "layer": "A",
+      "name": "the error is the most chromatic value in QANDEEL",
+      "pass": true,
+      "detail": "ERROR 0.1364 > BRASS 0.0516 > LIGHT-low 0.0462 > LIGHT-mid 0.0378"
+    },
+    {
+      "id": "R14",
+      "layer": "A",
+      "name": "the error keeps every derived floor on the quantised value, including under protanopia and deuteranopia",
+      "pass": true,
+      "detail": "28 floors, 0 unmet; BINDING: [\"protan: dEok from SECONDARY\"]"
+    },
+    {
+      "id": "R15",
+      "layer": "A",
+      "name": "the inherited collision as stated in C2/C3 does not survive measurement, and C1R’s statement of it does",
+      "pass": true,
+      "detail": "the retired disabled ink sits dL 0.1628 / dEok 0.1629 from the rest ink, against ramp rungs 0.1280 and 0.1146 and the E1 floor 0.05129 — FURTHER apart than two adjacent rungs of the reading ramp"
+    },
+    {
+      "id": "R16",
+      "layer": "A",
+      "name": "every vendored inherited artefact is byte-identical to the sealed package it came from",
+      "pass": true,
+      "detail": "16/16 local copies verified; 0 re-verified against the sealed packages; 16 source(s) not present (a bare extraction still verifies the local half)"
+    },
+    {
+      "id": "R17",
+      "layer": "A",
+      "name": "the light appearance is deliberately empty, so resolving into it leaves E1’s two values UNRESOLVED and named",
+      "pass": true,
+      "detail": "light expression group is empty; without the dark set these resolve to nothing and name what is missing: qandeel.status.error.ink, qandeel.state.disabled.ink"
+    },
+    {
+      "id": "R18",
+      "layer": "A",
+      "name": "the dichromacy model passes every property test that does not depend on remembering its constants",
+      "pass": true,
+      "detail": "26/26 — grey is a fixed point, the projections are idempotent, protan loses red luminance and deutan does not, and the tritan single-plane LIMIT is asserted rather than hidden"
+    },
+    {
+      "id": "R26",
+      "layer": "A",
+      "name": "DISABLED describes AVAILABILITY, not focusability: two patterns ship, they differ ONLY in focusability, and neither can activate",
+      "pass": true,
+      "detail": "NATIVE NON-DISCOVERABLE UNAVAILABLE: focusable=false, activates=false | DISCOVERABLE UNAVAILABLE: focusable=true, activates=false — availability is constant across the patterns and focusability is not, which is the whole of the correction"
+    },
+    {
+      "id": "R32",
+      "layer": "A",
+      "name": "SELECTED + UNAVAILABLE is ruled AT THE CONTROL TYPE, and is not claimed globally impossible",
+      "pass": true,
+      "detail": "4 control types ruled individually — a chosen value in a set: REACHABLE, AND EXPRESSED; a list row that is the current destination: PRODUCT-OWNED; a persistent navigation item: NOT EXPRESSIBLE IN E1R; a button: NOT APPLICABLE — at least one is REACHABLE and none of them generalises to a Product law"
+    },
+    {
+      "id": "R27",
+      "layer": "A",
+      "name": "every one of the sixteen state combinations has a declared verdict and the precedence rule that produced it",
+      "pass": true,
+      "detail": "16 combinations, 0 missing, 0 without a verdict or a rule — 9 REACHABLE, 4 UNREACHABLE, 3 CONDITIONAL"
+    },
+    {
+      "id": "R28",
+      "layer": "A",
+      "name": "the composition model is TRUTHFUL: every channel the matrix shows two states writing is declared shared and carries a precedence rule",
+      "pass": true,
+      "detail": "5 visual channels reconciled against the matrix; 1 of them written by more than one state. THE WITHDRAWN CLAIM IS FALSE BY THIS DOCUMENT’S OWN CONTENT, which is the point: the expression was always right and the explanation was not"
+    },
+    {
+      "id": "R29",
+      "layer": "A",
+      "name": "no shipped Product-contract statement caps the number of status hues, and the policy states the route out",
+      "pass": true,
+      "detail": "13 product-contract statements, 0 of them a cap on the number of status hues; the policy names a Product-evidence route out and still forbids a generic traffic-light palette"
+    },
+    {
+      "id": "R30",
+      "layer": "A",
+      "name": "LIVING BRASS IS STATE-INVARIANT IN APPEARANCE: no rule in the shipping stylesheet repaints, dims or filters a Brass-bearing element under a state selector",
+      "pass": true,
+      "detail": "72 rules parsed out of the stylesheet the proof actually serves; 15 of them carry a state selector, and none touches the identity material or applies opacity or a filter"
+    },
+    {
+      "id": "R25",
+      "layer": "A",
+      "name": "the proof holds no colour the token tree does not know about",
+      "pass": true,
+      "detail": "tools/e1-scene.mjs and tools/e1-boards.mjs contain no hex literal at all — every colour arrives through resolveAll(). I-08B3.1-D0 painted its chrome from constants it declared itself and inherited the WRONG COVERAGE POLICY while doing it."
+    },
+    {
+      "id": "R19",
+      "layer": "B",
+      "name": "every rendered board is Estedad and not a fallback",
+      "pass": true,
+      "detail": "12 rendered boards; the Arabic fingerprint is 163.53px against a serif fallback of 102.38px"
+    },
+    {
+      "id": "R20",
+      "layer": "B",
+      "name": "no board silently squeezed or cropped its own content",
+      "pass": true,
+      "detail": "12 boards measured their own clipping containers; 0 overflowing"
+    },
+    {
+      "id": "R21",
+      "layer": "B",
+      "name": "the greyscale transform of the integrated screen contains ZERO chromatic pixels, and the screen is still legible",
+      "pass": true,
+      "detail": "greyscale: 0 chromatic pixels, 199 distinct greys (the colour original has 2705 colours and 51659 chromatic pixels)"
+    },
+    {
+      "id": "R22",
+      "layer": "B",
+      "name": "the dichromacy boards are derived from the raster, not from a second render",
+      "pass": true,
+      "detail": "both declare derivedFrom review/board/b10-integrated-screen.png"
+    },
+    {
+      "id": "R23",
+      "layer": "C",
+      "name": "the behavioural focus and tab-ring obligations all hold under real key events",
+      "pass": true,
+      "detail": "15/15 obligations"
+    },
+    {
+      "id": "R24",
+      "layer": "C",
+      "name": "the focus indicator a REAL Tab key produces is the token’s, not the browser’s default",
+      "pass": true,
+      "detail": "saw [\"rgb(216, 213, 202)\"] expected rgb(216, 213, 202)"
+    },
+    {
+      "id": "R31",
+      "layer": "C",
+      "name": "the two availability patterns behave as specified under real keys: the native one is skipped, the discoverable one is REACHED, and neither activates",
+      "pass": true,
+      "detail": "MET — a NATIVE NON-DISCOVERABLE unavailable control is skipped by the tab ring | MET — a DISCOVERABLE unavailable control REMAINS REACHABLE by the tab ring | MET — a DISCOVERABLE unavailable control CANNOT be activated by the same key | MET — an AVAILABLE control activates under a real Enter key"
+    }
+  ],
+  "probes": [
+    {
+      "id": "R01",
+      "name": "a state token aliasing the identity material",
+      "fired": true,
+      "detail": "qandeel.state.selected.marker -> qandeel.identity.material -> qandeel.expression.material.living-brass.body"
+    },
+    {
+      "id": "R02",
+      "name": "a hue given to the selection marker",
+      "fired": true,
+      "detail": "the check would report [\"qandeel.state.selected.marker\"] under qandeel.state and fail"
+    },
+    {
+      "id": "R03",
+      "name": "a role given a hue by taxonomy — declared nowhere, earned nowhere, and simply aliased",
+      "fired": true,
+      "detail": "the graph would reach a status literal for [\"error\",\"warning\"] while the shipped policy declares [\"error\"] — a hue that nobody wrote down as earned is rejected, which is the OTHER direction of REV-03: removing the cap must not remove the discipline"
+    },
+    {
+      "id": "R04",
+      "name": "a token path with no classification",
+      "fired": true,
+      "detail": "e1-tokens: token \"qandeel.state.hover.ink\" carries no freeze classification. Classify it or do not ship it."
+    },
+    {
+      "id": "R05",
+      "name": "a token group actually named accent",
+      "fired": true,
+      "detail": "[\".qandeel.state.accent\"]"
+    },
+    {
+      "id": "R06",
+      "name": "the retired literal used as a value",
+      "fired": true,
+      "detail": "a probe document containing it as a value is rejected by the count rule"
+    },
+    {
+      "id": "R07",
+      "name": "an E1 token written into the frozen content ramp",
+      "fired": true,
+      "detail": "qandeel.expression.content.quaternary would be rejected"
+    },
+    {
+      "id": "R08",
+      "name": "resolving WITHOUT E1’s file",
+      "fired": true,
+      "detail": "C3 alone still says: RESERVED AND DELIBERATELY EMPTY. Interaction state exp..."
+    },
+    {
+      "id": "R09",
+      "name": "a disabled ink only just below the tertiary",
+      "fired": true,
+      "detail": "#7f7d77 sits only 0.0401 below"
+    },
+    {
+      "id": "R10",
+      "name": "dropping the companion",
+      "fired": true,
+      "detail": "without it the indicator fails 3:1 against PRIMARY, SECONDARY, TERTIARY, BRASS, LIGHT-low, LIGHT-mid, LIGHT-core, ERROR"
+    },
+    {
+      "id": "R11",
+      "name": "a press wash pointed at QANDEEL LIGHT",
+      "fired": true,
+      "detail": "qandeel.state.pressed.ink -> qandeel.illumination.core -> qandeel.expression.illumination.core is rejected by the chain rule — and note it composites to #2f2e2c, chroma 0.00383, which a chroma ceiling would have WAVED THROUGH"
+    },
+    {
+      "id": "R12",
+      "name": "a press alpha that produces the Surface value exactly",
+      "fired": true,
+      "detail": "alpha 0.041 would collide and this check would reject it"
+    },
+    {
+      "id": "R13",
+      "name": "a more chromatic value elsewhere in the system",
+      "fired": true,
+      "detail": "the most chromatic would become FAKE"
+    },
+    {
+      "id": "R14",
+      "name": "the IDENTICAL floors applied to two error reds nobody derived against THIS palette",
+      "fired": true,
+      "detail": "Material 3 dark error #f2b8b5: 3 floors unmet — protan: dEok from LIGHT-low 0.0419 < 0.051294338032078474; deutan: dEok from PRIMARY 0.0406 < 0.051294338032078474; deutan: dEok from LIGHT-low 0.0181 < 0.051294338032078474  ||  Apple systemRed dark #ff453a: 2 floors unmet — protan: contrast on WORLD 3.7436 < 4.5; protan: contrast on SURFACE 3.4934 < 4.5  — the floors are specific to THIS palette, not a generic bar, which is why E1 derived a value instead of adopting one"
+    },
+    {
+      "id": "R15",
+      "name": "the C1R statement, which is about the Brass MARK and is not measured here",
+      "fired": true,
+      "detail": "C1R: \"a disabled item whose mark is at full material strength does not look disabled at a glance\". E1 resolves it by ruling the case out of the product, not by measurement — and says so."
+    },
+    {
+      "id": "R16",
+      "name": "a corrupted vendored copy",
+      "fired": true,
+      "detail": "one trailing byte changes the digest, and the check compares digests"
+    },
+    {
+      "id": "R17",
+      "name": "the dark values copied into the light set — the corruption an implementer actually commits, because \"it looks fine\"",
+      "fired": true,
+      "detail": "a light set carrying #fe907e would be a light-mode error colour invented by accident; every floor that produced it is a statement about a NEAR-BLACK ground"
+    },
+    {
+      "id": "R18",
+      "name": "the tritan limit, asserted as a check rather than discovered by a reviewer",
+      "fired": true,
+      "detail": "moved 0.00001; tritan is EXCLUDED from every derived floor"
+    },
+    {
+      "id": "R26",
+      "name": "I-08B3.1-E1’s own frozen absolute, fed back in: a single pattern in which unavailable always means unfocusable",
+      "fired": true,
+      "detail": "one pattern, focusable=false for every unavailable control — this is exactly what E1 froze, and the check rejects it. W3C APG: screen reader users are far less likely to discover disabled elements that are not focusable, because moving focus is one of their primary methods of discovery"
+    },
+    {
+      "id": "R32",
+      "name": "the combination declared impossible everywhere at once, with no control type named",
+      "fired": true,
+      "detail": "a single blanket row with no proof is rejected on three counts at once: too few control types, no proof, and a global claim"
+    },
+    {
+      "id": "R27",
+      "name": "a combination left undefined — the gap the old model hid by declaring one of them impossible",
+      "fired": true,
+      "detail": "removing focus+disabled leaves [\"focus+disabled\"] undefined, and the check fails — which is the state I-08B3.1-E1 shipped in, with that combination recorded as \"cannot occur\""
+    },
+    {
+      "id": "R28",
+      "name": "the ownership table asserting exclusivity the matrix contradicts — the exact shape of the withdrawn claim",
+      "fired": true,
+      "detail": "the shipped matrix has [\"selected\",\"disabled\"] writing the INK channel; a model declaring only [\"selected\"] is rejected. This is not a hypothetical: it is what the package shipped, stated as a frozen Product contract"
+    },
+    {
+      "id": "R29",
+      "name": "the cap sentence I-08B3.1-E1 actually froze, put back into the shipped contract list",
+      "fired": true,
+      "detail": "restoring E1’s statement 9 makes this check fail — the cap is detected in the token document that ships, not in a guard’s prose"
+    },
+    {
+      "id": "R30",
+      "name": "the rule I-08B3.1-E1 SHIPPED — the navigation icon repainted to the unavailable ink when the item became unavailable",
+      "fired": true,
+      "detail": "both are caught: .navitem[data-state~=\"disabled\"] .ic and .ctl[data-state~=\"disabled\"]. The first is not invented — it was in the stylesheet for the whole of E1, two packages after the material’s state-invariance was frozen, because a universal law had made it unreachable and therefore unexamined"
+    },
+    {
+      "id": "R25",
+      "name": "a scene holding one hex of its own",
+      "fired": true,
+      "detail": "even a literal that happens to be CORRECT today is rejected: it would drift the moment anything upstream moved, and it is the same category of claim D0 made"
+    },
+    {
+      "id": "R19",
+      "name": "a board rendered without the font",
+      "fired": true,
+      "detail": "the page measures its own fingerprint against the serif fallback; equal widths mean every glyph is a fallback and the render exits non-zero"
+    },
+    {
+      "id": "R20",
+      "name": "the guard’s own history",
+      "fired": true,
+      "detail": "this guard was added AFTER an over-full screen squeezed three panels without looking broken, and its first version measured the children instead of the container that clips them, so it reported 0 while the last panel was being cut off"
+    },
+    {
+      "id": "R21",
+      "name": "a saturation-slider \"greyscale\" instead of the WCAG transform",
+      "fired": true,
+      "detail": "the transform is WCAG relative luminance applied to the PIXELS Chrome drew. Re-rendering the scene with desaturated tokens would only prove that a different scene looks different."
+    },
+    {
+      "id": "R22",
+      "name": "a dichromacy board with no stated source",
+      "fired": true,
+      "detail": "the check reads derivedFrom and fails when it is absent"
+    },
+    {
+      "id": "R23",
+      "name": "the two behavioural probes, neither of them invented",
+      "fired": true,
+      "detail": "disabled-paint-without-the-attribute / outline-removed-with-no-replacement / discoverable-unavailable-that-still-activates / only-the-native-pattern-styled / the-override-taking-the-record-too — both are ordinary implementer mistakes, and both are rejected"
+    },
+    {
+      "id": "R24",
+      "name": "the defect this check actually caught",
+      "fired": true,
+      "detail": "an earlier build styled only [data-state~=\"focus\"], so every STILL painted a ring the real focus state never produced and the keyboard got Chrome’s 1px default outline. No still could have seen it."
+    },
+    {
+      "id": "R31",
+      "name": "the three behavioural probes E1 could not have written, because it had ruled the pattern out of existence",
+      "fired": true,
+      "detail": "FIRED discoverable-unavailable-that-still-activates · FIRED only-the-native-pattern-styled · FIRED the-override-taking-the-record-too — the first is the ordinary aria-disabled mistake: reachable, painted unavailable, fully operable"
+    }
+  ],
+  "summary": {
+    "checks": 32,
+    "passed": 32,
+    "probes": 32,
+    "fired": 32,
+    "byLayer": {
+      "A": 25,
+      "B": 4,
+      "C": 3
+    }
+  }
+}

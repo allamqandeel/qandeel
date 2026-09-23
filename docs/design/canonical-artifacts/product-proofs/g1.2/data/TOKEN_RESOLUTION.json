@@ -1,0 +1,614 @@
+{
+ "dark/standard": {
+  "colors": {
+   "world": "#101010",
+   "surface": "#181818",
+   "field": "#181818",
+   "functional": "#181818",
+   "primary": "#d8d5ca",
+   "secondary": "#afaca3",
+   "tertiary": "#8b8982",
+   "scrim": "#000000",
+   "brass": "#a58e6f",
+   "mark": "#a58e6f",
+   "lightCore": "#fbf2db",
+   "lightMid": "#e8ddc2",
+   "lightLow": "#d6caa9",
+   "error": "#fe907e",
+   "disabled": "#696762",
+   "restInk": "#8b8982",
+   "pressedInk": "#d8d5ca",
+   "focusIndicator": "#d8d5ca",
+   "focusCompanion": "#101010",
+   "selectedInk": "#d8d5ca",
+   "selectedMarker": "#d8d5ca"
+  },
+  "alpha": {
+   "world": 1,
+   "surface": 1,
+   "field": 1,
+   "functional": 1,
+   "primary": 1,
+   "secondary": 1,
+   "tertiary": 1,
+   "scrim": 0.5,
+   "brass": 1,
+   "mark": 1,
+   "lightCore": 1,
+   "lightMid": 1,
+   "lightLow": 1,
+   "error": 1,
+   "disabled": 1,
+   "restInk": 1,
+   "pressedInk": 1,
+   "focusIndicator": 1,
+   "focusCompanion": 1,
+   "selectedInk": 1,
+   "selectedMarker": 1
+  },
+  "routes": {
+   "world": [
+    "qandeel.world.fill",
+    "qandeel.expression.world"
+   ],
+   "surface": [
+    "qandeel.role.apparatus.fill",
+    "qandeel.surface.functional",
+    "qandeel.expression.surface"
+   ],
+   "field": [
+    "qandeel.role.field.fill",
+    "qandeel.surface.functional",
+    "qandeel.expression.surface"
+   ],
+   "functional": [
+    "qandeel.role.utterance.fill",
+    "qandeel.surface.functional",
+    "qandeel.expression.surface"
+   ],
+   "primary": [
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "secondary": [
+    "qandeel.content.secondary",
+    "qandeel.expression.content.secondary"
+   ],
+   "tertiary": [
+    "qandeel.content.tertiary",
+    "qandeel.expression.content.tertiary"
+   ],
+   "scrim": [
+    "qandeel.role.passage.scrim",
+    "qandeel.passage.scrim",
+    "qandeel.expression.scrim"
+   ],
+   "brass": [
+    "qandeel.navigation.machinery",
+    "qandeel.identity.material",
+    "qandeel.expression.material.living-brass.body"
+   ],
+   "mark": [
+    "qandeel.identity.mark",
+    "qandeel.identity.material",
+    "qandeel.expression.material.living-brass.body"
+   ],
+   "lightCore": [
+    "qandeel.expression.illumination.core"
+   ],
+   "lightMid": [
+    "qandeel.expression.illumination.mid"
+   ],
+   "lightLow": [
+    "qandeel.expression.illumination.low"
+   ],
+   "error": [
+    "qandeel.status.error.ink",
+    "qandeel.expression.status.error"
+   ],
+   "disabled": [
+    "qandeel.state.disabled.ink",
+    "qandeel.expression.state.disabled"
+   ],
+   "restInk": [
+    "qandeel.state.rest.ink",
+    "qandeel.control.functional",
+    "qandeel.content.tertiary",
+    "qandeel.expression.content.tertiary"
+   ],
+   "pressedInk": [
+    "qandeel.state.pressed.ink",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "focusIndicator": [
+    "qandeel.state.focus.indicator",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "focusCompanion": [
+    "qandeel.state.focus.companion",
+    "qandeel.world.fill",
+    "qandeel.expression.world"
+   ],
+   "selectedInk": [
+    "qandeel.state.selected.ink",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "selectedMarker": [
+    "qandeel.state.selected.marker",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ]
+  },
+  "numbers": {
+   "restWeight": 500,
+   "selectedWeight": 600,
+   "pressedPresence": 0.1,
+   "focusThickness": 2,
+   "focusCompanionThickness": 1,
+   "focusOffset": 2,
+   "markerThickness": 2
+  }
+ },
+ "dark/increased": {
+  "colors": {
+   "world": "#101010",
+   "surface": "#181818",
+   "field": "#181818",
+   "functional": "#181818",
+   "primary": "#d8d5ca",
+   "secondary": "#afaca3",
+   "tertiary": "#8b8982",
+   "scrim": "#000000",
+   "brass": "#a58e6f",
+   "mark": "#a58e6f",
+   "lightCore": "#fbf2db",
+   "lightMid": "#e8ddc2",
+   "lightLow": "#d6caa9",
+   "error": "#fe907e",
+   "disabled": "#696762",
+   "restInk": "#afaca3",
+   "pressedInk": "#d8d5ca",
+   "focusIndicator": "#d8d5ca",
+   "focusCompanion": "#101010",
+   "selectedInk": "#d8d5ca",
+   "selectedMarker": "#d8d5ca"
+  },
+  "alpha": {
+   "world": 1,
+   "surface": 1,
+   "field": 1,
+   "functional": 1,
+   "primary": 1,
+   "secondary": 1,
+   "tertiary": 1,
+   "scrim": 0.5,
+   "brass": 1,
+   "mark": 1,
+   "lightCore": 1,
+   "lightMid": 1,
+   "lightLow": 1,
+   "error": 1,
+   "disabled": 1,
+   "restInk": 1,
+   "pressedInk": 1,
+   "focusIndicator": 1,
+   "focusCompanion": 1,
+   "selectedInk": 1,
+   "selectedMarker": 1
+  },
+  "routes": {
+   "world": [
+    "qandeel.world.fill",
+    "qandeel.expression.world"
+   ],
+   "surface": [
+    "qandeel.role.apparatus.fill",
+    "qandeel.surface.functional",
+    "qandeel.expression.surface"
+   ],
+   "field": [
+    "qandeel.role.field.fill",
+    "qandeel.surface.functional",
+    "qandeel.expression.surface"
+   ],
+   "functional": [
+    "qandeel.role.utterance.fill",
+    "qandeel.surface.functional",
+    "qandeel.expression.surface"
+   ],
+   "primary": [
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "secondary": [
+    "qandeel.content.secondary",
+    "qandeel.expression.content.secondary"
+   ],
+   "tertiary": [
+    "qandeel.content.tertiary",
+    "qandeel.expression.content.tertiary"
+   ],
+   "scrim": [
+    "qandeel.role.passage.scrim",
+    "qandeel.passage.scrim",
+    "qandeel.expression.scrim"
+   ],
+   "brass": [
+    "qandeel.navigation.machinery",
+    "qandeel.identity.material",
+    "qandeel.expression.material.living-brass.body"
+   ],
+   "mark": [
+    "qandeel.identity.mark",
+    "qandeel.identity.material",
+    "qandeel.expression.material.living-brass.body"
+   ],
+   "lightCore": [
+    "qandeel.expression.illumination.core"
+   ],
+   "lightMid": [
+    "qandeel.expression.illumination.mid"
+   ],
+   "lightLow": [
+    "qandeel.expression.illumination.low"
+   ],
+   "error": [
+    "qandeel.status.error.ink",
+    "qandeel.expression.status.error"
+   ],
+   "disabled": [
+    "qandeel.state.disabled.ink",
+    "qandeel.expression.state.disabled"
+   ],
+   "restInk": [
+    "qandeel.state.rest.ink",
+    "qandeel.control.functional",
+    "qandeel.content.secondary",
+    "qandeel.expression.content.secondary"
+   ],
+   "pressedInk": [
+    "qandeel.state.pressed.ink",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "focusIndicator": [
+    "qandeel.state.focus.indicator",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "focusCompanion": [
+    "qandeel.state.focus.companion",
+    "qandeel.world.fill",
+    "qandeel.expression.world"
+   ],
+   "selectedInk": [
+    "qandeel.state.selected.ink",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "selectedMarker": [
+    "qandeel.state.selected.marker",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ]
+  },
+  "numbers": {
+   "restWeight": 500,
+   "selectedWeight": 600,
+   "pressedPresence": 0.1,
+   "focusThickness": 3,
+   "focusCompanionThickness": 1,
+   "focusOffset": 2,
+   "markerThickness": 2
+  }
+ },
+ "light/standard": {
+  "colors": {
+   "world": "#efeeeb",
+   "surface": "#e7e6e3",
+   "field": "#e7e6e3",
+   "functional": "#e7e6e3",
+   "primary": "#29271f",
+   "secondary": "#47443c",
+   "tertiary": "#626059",
+   "scrim": "#000000",
+   "brass": "#7a6446",
+   "mark": "#7a6446",
+   "lightCore": "#fff6df",
+   "lightMid": "#ddd4be",
+   "lightLow": "#bcb39e",
+   "error": "#ad4739",
+   "disabled": "#83817c",
+   "restInk": "#626059",
+   "pressedInk": "#29271f",
+   "focusIndicator": "#29271f",
+   "focusCompanion": "#efeeeb",
+   "selectedInk": "#29271f",
+   "selectedMarker": "#29271f"
+  },
+  "alpha": {
+   "world": 1,
+   "surface": 1,
+   "field": 1,
+   "functional": 1,
+   "primary": 1,
+   "secondary": 1,
+   "tertiary": 1,
+   "scrim": 0.532,
+   "brass": 1,
+   "mark": 1,
+   "lightCore": 1,
+   "lightMid": 1,
+   "lightLow": 1,
+   "error": 1,
+   "disabled": 1,
+   "restInk": 1,
+   "pressedInk": 1,
+   "focusIndicator": 1,
+   "focusCompanion": 1,
+   "selectedInk": 1,
+   "selectedMarker": 1
+  },
+  "routes": {
+   "world": [
+    "qandeel.world.fill",
+    "qandeel.expression.world"
+   ],
+   "surface": [
+    "qandeel.role.apparatus.fill",
+    "qandeel.surface.functional",
+    "qandeel.expression.surface"
+   ],
+   "field": [
+    "qandeel.role.field.fill",
+    "qandeel.surface.functional",
+    "qandeel.expression.surface"
+   ],
+   "functional": [
+    "qandeel.role.utterance.fill",
+    "qandeel.surface.functional",
+    "qandeel.expression.surface"
+   ],
+   "primary": [
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "secondary": [
+    "qandeel.content.secondary",
+    "qandeel.expression.content.secondary"
+   ],
+   "tertiary": [
+    "qandeel.content.tertiary",
+    "qandeel.expression.content.tertiary"
+   ],
+   "scrim": [
+    "qandeel.role.passage.scrim",
+    "qandeel.passage.scrim",
+    "qandeel.expression.scrim"
+   ],
+   "brass": [
+    "qandeel.navigation.machinery",
+    "qandeel.identity.material",
+    "qandeel.expression.material.living-brass.body"
+   ],
+   "mark": [
+    "qandeel.identity.mark",
+    "qandeel.identity.material",
+    "qandeel.expression.material.living-brass.body"
+   ],
+   "lightCore": [
+    "qandeel.expression.illumination.core"
+   ],
+   "lightMid": [
+    "qandeel.expression.illumination.mid"
+   ],
+   "lightLow": [
+    "qandeel.expression.illumination.low"
+   ],
+   "error": [
+    "qandeel.status.error.ink",
+    "qandeel.expression.status.error"
+   ],
+   "disabled": [
+    "qandeel.state.disabled.ink",
+    "qandeel.expression.state.disabled"
+   ],
+   "restInk": [
+    "qandeel.state.rest.ink",
+    "qandeel.control.functional",
+    "qandeel.content.tertiary",
+    "qandeel.expression.content.tertiary"
+   ],
+   "pressedInk": [
+    "qandeel.state.pressed.ink",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "focusIndicator": [
+    "qandeel.state.focus.indicator",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "focusCompanion": [
+    "qandeel.state.focus.companion",
+    "qandeel.world.fill",
+    "qandeel.expression.world"
+   ],
+   "selectedInk": [
+    "qandeel.state.selected.ink",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "selectedMarker": [
+    "qandeel.state.selected.marker",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ]
+  },
+  "numbers": {
+   "restWeight": 500,
+   "selectedWeight": 600,
+   "pressedPresence": 0.1,
+   "focusThickness": 2,
+   "focusCompanionThickness": 1,
+   "focusOffset": 2,
+   "markerThickness": 2
+  }
+ },
+ "light/increased": {
+  "colors": {
+   "world": "#efeeeb",
+   "surface": "#e7e6e3",
+   "field": "#e7e6e3",
+   "functional": "#e7e6e3",
+   "primary": "#29271f",
+   "secondary": "#47443c",
+   "tertiary": "#626059",
+   "scrim": "#000000",
+   "brass": "#7a6446",
+   "mark": "#7a6446",
+   "lightCore": "#fff6df",
+   "lightMid": "#ddd4be",
+   "lightLow": "#bcb39e",
+   "error": "#ad4739",
+   "disabled": "#83817c",
+   "restInk": "#626059",
+   "pressedInk": "#29271f",
+   "focusIndicator": "#29271f",
+   "focusCompanion": "#efeeeb",
+   "selectedInk": "#29271f",
+   "selectedMarker": "#29271f"
+  },
+  "alpha": {
+   "world": 1,
+   "surface": 1,
+   "field": 1,
+   "functional": 1,
+   "primary": 1,
+   "secondary": 1,
+   "tertiary": 1,
+   "scrim": 0.532,
+   "brass": 1,
+   "mark": 1,
+   "lightCore": 1,
+   "lightMid": 1,
+   "lightLow": 1,
+   "error": 1,
+   "disabled": 1,
+   "restInk": 1,
+   "pressedInk": 1,
+   "focusIndicator": 1,
+   "focusCompanion": 1,
+   "selectedInk": 1,
+   "selectedMarker": 1
+  },
+  "routes": {
+   "world": [
+    "qandeel.world.fill",
+    "qandeel.expression.world"
+   ],
+   "surface": [
+    "qandeel.role.apparatus.fill",
+    "qandeel.surface.functional",
+    "qandeel.expression.surface"
+   ],
+   "field": [
+    "qandeel.role.field.fill",
+    "qandeel.surface.functional",
+    "qandeel.expression.surface"
+   ],
+   "functional": [
+    "qandeel.role.utterance.fill",
+    "qandeel.surface.functional",
+    "qandeel.expression.surface"
+   ],
+   "primary": [
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "secondary": [
+    "qandeel.content.secondary",
+    "qandeel.expression.content.secondary"
+   ],
+   "tertiary": [
+    "qandeel.content.tertiary",
+    "qandeel.expression.content.tertiary"
+   ],
+   "scrim": [
+    "qandeel.role.passage.scrim",
+    "qandeel.passage.scrim",
+    "qandeel.expression.scrim"
+   ],
+   "brass": [
+    "qandeel.navigation.machinery",
+    "qandeel.identity.material",
+    "qandeel.expression.material.living-brass.body"
+   ],
+   "mark": [
+    "qandeel.identity.mark",
+    "qandeel.identity.material",
+    "qandeel.expression.material.living-brass.body"
+   ],
+   "lightCore": [
+    "qandeel.expression.illumination.core"
+   ],
+   "lightMid": [
+    "qandeel.expression.illumination.mid"
+   ],
+   "lightLow": [
+    "qandeel.expression.illumination.low"
+   ],
+   "error": [
+    "qandeel.status.error.ink",
+    "qandeel.expression.status.error"
+   ],
+   "disabled": [
+    "qandeel.state.disabled.ink",
+    "qandeel.expression.state.disabled"
+   ],
+   "restInk": [
+    "qandeel.state.rest.ink",
+    "qandeel.control.functional",
+    "qandeel.content.tertiary",
+    "qandeel.expression.content.tertiary"
+   ],
+   "pressedInk": [
+    "qandeel.state.pressed.ink",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "focusIndicator": [
+    "qandeel.state.focus.indicator",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "focusCompanion": [
+    "qandeel.state.focus.companion",
+    "qandeel.world.fill",
+    "qandeel.expression.world"
+   ],
+   "selectedInk": [
+    "qandeel.state.selected.ink",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ],
+   "selectedMarker": [
+    "qandeel.state.selected.marker",
+    "qandeel.content.primary",
+    "qandeel.expression.content.primary"
+   ]
+  },
+  "numbers": {
+   "restWeight": 500,
+   "selectedWeight": 600,
+   "pressedPresence": 0.1,
+   "focusThickness": 2,
+   "focusCompanionThickness": 1,
+   "focusOffset": 2,
+   "markerThickness": 2
+  }
+ }
+}

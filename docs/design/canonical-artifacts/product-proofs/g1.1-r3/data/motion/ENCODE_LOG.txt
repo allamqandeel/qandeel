@@ -1,0 +1,6 @@
+journey-ar-dark 859 frames 64255 ms
+journey-ar-dark-reduced-motion 859 frames 62079 ms
+journey-en-dark 859 frames 65599 ms
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g11r3-work\\out\\motion\\journey-ar-dark.mp4","bytes":7175629,"frames":859}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g11r3-work\\out\\motion\\journey-ar-dark-reduced-motion.mp4","bytes":5496089,"frames":859}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g11r3-work\\out\\motion\\journey-en-dark.mp4","bytes":8110731,"frames":859}
