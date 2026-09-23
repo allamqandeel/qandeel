@@ -30,8 +30,9 @@ The following G1.1 Product decisions are accepted:
 - Analysis → Conversation uses **«المحادثة»**.
 - Internal `MY_WORLD` / World vocabulary is not the user-facing name of the Conversation-analysis depth.
 - Replay is an action on the current Conversation / Analysis context, not a World or primary tab.
-- The shared-area primary navigation remains count-neutral; inside the area Arabic uses
-  **«عالم مشترك»** for exactly one and **«عوالم مشتركة»** for more than one.
+- **Superseded by I-08B3.1-G1.2:** the stable Shared World Product-area name is
+  **«العالم المشترك»** in Arabic and **Shared World** in English, singular regardless of how many
+  Shared Worlds currently exist. The earlier count-neutral / count-dependent proof wording is historical only.
 - The normal Arabic new-conversation opener is:
   **«اهلا يا {display_name} ... انا في انتظارك ... يلا نبدأ»**.
 

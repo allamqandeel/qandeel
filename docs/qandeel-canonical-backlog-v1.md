@@ -152,6 +152,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-T13-01` | Restart / Recovery / Persistence | `T-13 — Recovery / Persistence v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-NAV-01` | Cross-Session Timeline | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-NAV-02` | Analysis Replay | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-VOICE-01` | Personal Voice / Live Call Runtime + Durable Audio Source | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `T-14 — Mobile Product Sign-In Gateway v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 
 ---
@@ -333,6 +334,36 @@ happens to reversible history — are defined here.
   Neither is deferred *here*: each fails closed in the runtime itself and is owned by its own frozen
   `CW2-0N` contract, which is why no new backlog item is admitted for either (`BG-01`, `BG-06`).
 - **Status:** `OPEN — UNASSIGNED`
+
+### `QAN-BL-VOICE-01` — Personal Voice / Live Call Runtime + Durable Audio Source
+
+- **Title / Finding:** the Product interaction for Writing / Voice Note / Live Call is now closed at
+  proof level, including Analysis-first Live Call, background continuation and exact in-call surface
+  restoration, but the repository still has **no canonical Personal Voice / Live Call runtime** and
+  no durable Personal original-audio source.
+- **Source:** `I-08B3.1-G1.2 — Voice + Live Conversation Experience Proof`, closed after independent
+  Product / Design review. Reviewed proof ZIP SHA-256:
+  `1b297be9402960928dfc85574cdf7fc3a88b1c59e6777af806e5a1d9f7ec3e96`; bounded R1 direct
+  correction ZIP SHA-256:
+  `2e5e0ac41b44be19b5a773aec3a8da060b4a5f5221ef6cb0d1999146f8d23e11`.
+- **Why deferred:** G1.2 deliberately proves Product behavior without inventing the provider,
+  realtime transport, native call lifecycle, media persistence, audio retention/deletion,
+  interruption semantics, device integration or production permission/service declarations.
+  Personal Replay original audio remains non-producible until a reviewed durable source exists.
+- **Owner task:** `UNASSIGNED`
+- **Severity:** `HIGH`
+- **Reopen condition:** Architecture opens the Personal Voice / Live Call runtime implementation
+  track, or a production implementation task explicitly claims realtime two-way audio, Voice Note
+  persistence/playback, background-call lifecycle, or durable Personal original audio.
+- **Required future properties:** one canonical call/session authority; provider-agnostic realtime
+  audio boundary; native iOS/Android call lifecycle and background behavior; truthful microphone and
+  route state; interruption/reconnection semantics; durable Voice Note audio if history playback is
+  shipped; consent/retention/deletion for any Personal original audio; and a reviewed source
+  contract before audio-led Replay can claim the original call.
+- **Status:** `OPEN — UNASSIGNED`
+
+This item does not reopen G1.2 Product proof. It records the implementation/runtime residue that G1.2
+was explicitly forbidden to invent.
 
 ### `QAN-BL-AUTH-01` — Mobile Product Sign-In Gateway
 
