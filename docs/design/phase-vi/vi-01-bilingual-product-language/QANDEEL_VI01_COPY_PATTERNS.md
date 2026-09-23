@@ -84,11 +84,11 @@ construction: the subject is the material, not the reader.
 
 | | |
 |---|---|
-| **AR** | «القراءات» · «سياق الكلام» · «إرسال التصحيح» |
-| **EN** | Readings · Send correction · ⟨context panel — wording `OPEN`, *"In play"* candidate⟩ |
+| **AR** | **«تحليل المحادثة»** · «سياق الكلام» · «إرسال التصحيح» |
+| **EN** | ⟨conversation-analysis depth label — wording `OPEN`⟩ · Send correction · ⟨context panel — wording `OPEN`, *"In play"* candidate⟩ |
 | **Intent** | Name the outcome. The word survives into the resulting state. |
 
-**Usage rule.** Verb-first in English; in Arabic, **reach for the masdar or a bare noun phrase
+**G1.1 amendment.** «تحليل المحادثة» names the route into the analysis depth. «القراءات» remains the content/region vocabulary inside that depth; it is no longer the Conversation→Analysis route label. The English depth label remains `OPEN` in VI-01.\n\n**Usage rule.** Verb-first in English; in Arabic, **reach for the masdar or a bare noun phrase
 first** — it is the native Arabic UI convention and it carries no addressee inflection
 (Foundation §3.6.2). **But the masdar is a first tool, not a requirement.** If it produces a
 constructed or bureaucratic noun, the string is `OPEN` and the interaction is reconsidered —
